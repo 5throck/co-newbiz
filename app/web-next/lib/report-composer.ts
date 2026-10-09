@@ -6,7 +6,7 @@
 // textarea prefills. Deterministic only — the draft is PROPOSAL text; the
 // human edits and owns what gets saved.
 import type { Database } from "bun:sqlite";
-import { listBusinessCases, type BusinessCaseView } from "./business-case.ts";
+import { findAdoptedCase, listBusinessCases, type BusinessCaseView } from "./business-case.ts";
 import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
 import { evaluateProcess, latestGateDecisions, type GateId } from "./process-flow.ts";
 import { buildBriefingPack } from "./briefing-pack.ts";
@@ -27,8 +27,9 @@ export function composeProjectReport(db: Database, projectId: string, projectNo:
   const lines: string[] = [];
 
   // ── Adopted business case + dual-variant comparison (ADR-0117) ──
-  const { cases, adoption } = listBusinessCases(projectId);
-  const adopted = cases.find((c) => c.adopted) ?? null;
+  const list = listBusinessCases(projectId);
+  const { cases, adoption } = list;
+  const adopted = findAdoptedCase(list);
   const simOf = (c: BusinessCaseView, p: string) => c.simulations.find((x) => x.percentile === p);
   lines.push(`# 투자 검토 보고서 — ${projectName}`);
   lines.push("");
@@ -41,7 +42,7 @@ export function composeProjectReport(db: Database, projectId: string, projectNo:
   if (adopted) {
     const p50 = simOf(adopted, "p50");
     const p05 = simOf(adopted, "p05");
-    lines.push(`- 채택된 사업 케이스: **${adopted.name}** (${adopted.variant === "market_forward" ? "시장 기반" : "과거 기반"} · 채택자 ${adoption?.adoptedBy ?? "—"}${adoption?.adoptedAt ? `, ${adoption.adoptedAt.slice(0, 10)}` : ""})`);
+    lines.push(`- 채택된 사업 케이스: **${adopted.name}**${adopted.archived_at ? " [보관됨]" : ""} (${adopted.variant === "market_forward" ? "시장 기반" : "과거 기반"} · 채택자 ${adoption?.adoptedBy ?? "—"}${adoption?.adoptedAt ? `, ${adoption.adoptedAt.slice(0, 10)}` : ""})`);
     lines.push(`- NPV p05 ${num(p05?.npv_krw_m)} / p50 ${num(p50?.npv_krw_m)} / p95 ${num(simOf(adopted, "p95")?.npv_krw_m)} 백만 KRW · IRR ${pct(p50?.irr ?? null)}`);
     // Sibling-variant comparison — how much the growth assumption alone moves p50.
     const sibling = cases.find((c) => c.scenario === adopted.scenario && c.id !== adopted.id);

@@ -12,6 +12,7 @@ import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
+import { listLegacyModels } from "../../../../../lib/business-case-cleanup.ts";
 import { listBusinessCases } from "../../../../../lib/business-case.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 
@@ -34,7 +35,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!auth.ok) return auth.response;
   const { id } = await params;
   if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
-  const { cases, recommendedScenario, adoption, targetSelection, targets, enginesMixed } = listBusinessCases(id);
+  const { cases, archived, recommendedScenario, adoption, targetSelection, targets, enginesMixed } = listBusinessCases(id);
   const db = getDb();
   // 에스컬레이션 조정 CAGR (design 2026-09-20-escalation-downstream §4-Q2) —
   // 과거 기반 관점과의 괴리 경고용. 프로젝트 → 원 기회의 산업에서 resolver 조회.
@@ -48,7 +49,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     : undefined;
   const eff = ind ? resolveEffectiveCagr(db, ind.id) : null;
   return ok(
-    { cases, recommended_scenario: recommendedScenario, adoption, target_selection: targetSelection, targets, engines_mixed: enginesMixed, escalated_cagr_pct: eff?.source === "escalated" ? eff.cagrPct : null },
+    { cases, archived, legacy_models: listLegacyModels(id), recommended_scenario: recommendedScenario, adoption, target_selection: targetSelection, targets, engines_mixed: enginesMixed, escalated_cagr_pct: eff?.source === "escalated" ? eff.cagrPct : null },
     200,
     { count: cases.length },
   );

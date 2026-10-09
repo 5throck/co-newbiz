@@ -10,6 +10,8 @@
 
 export interface LegacyCaseProbe {
   target_id: string | null;
+  /** ADR-0158: an archived legacy model no longer counts toward the notice. */
+  archived_at?: string | null;
 }
 
 /** True when the project is shortlist-scoped (ADR-0143 brownfield): the S8 business-case response exposes target comparison rows. */
@@ -24,5 +26,5 @@ export function isShortlistScoped(targets: readonly unknown[]): boolean {
  */
 export function countLegacyUnassignedModels(cases: readonly LegacyCaseProbe[], targets: readonly unknown[]): number {
   if (!isShortlistScoped(targets)) return 0;
-  return cases.filter((c) => c.target_id === null).length;
+  return cases.filter((c) => c.target_id === null && !c.archived_at).length;
 }

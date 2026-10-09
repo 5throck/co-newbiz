@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.0.1
 /**
  * fin-project.ts — fin:project (Wave A3): one project's financial rollup as
  * JSON. Read-only aggregate over what already exists:
@@ -38,7 +38,7 @@ export function projectFinancialRollup(projectId: string): ProjectFinancialRollu
     .query(
       `SELECT m.id, m.name, m.created_at, m.horizon_years
        FROM business_case_model m
-       WHERE m.project_id = ?
+       WHERE m.project_id = ? AND m.archived_at IS NULL
        ORDER BY m.created_at DESC, m.id DESC`,
     )
     .all(projectId) as Array<{ id: string; name: string; created_at: string; horizon_years: number | null }>;

@@ -59,6 +59,10 @@ export interface BusinessCaseView {
   created_by: string;
   inputs_json?: string | null;
   created_at: string;
+  /** ADR-0158 — set when a human archived this pre-ADR-0143 model instead of
+   *  deleting it (it is referenced by an adoption / gate record). */
+  archived_at: string | null;
+  archived_by: string | null;
   lines: LineRow[];
   simulations: SimulationRow[];
 }
@@ -157,6 +161,9 @@ export function selectTarget(projectId: string, targetId: string, rationale: str
  * brownfield — the target comparison rows and the selection record. */
 export function listBusinessCases(projectId: string): {
   cases: BusinessCaseView[];
+  /** ADR-0158: archived legacy models — excluded from `cases` (list, comparison,
+   *  predicates) but kept resolvable for the adoption / IC-package history views. */
+  archived: BusinessCaseView[];
   recommendedScenario: Scenario | null;
   adoption: AdoptionRecord | null;
   targetSelection: TargetSelectionRecord | null;
@@ -169,11 +176,11 @@ export function listBusinessCases(projectId: string): {
     .query(
       `SELECT m.id, m.kind, m.name, m.horizon_years, m.created_by, m.created_at,
               COALESCE(m.variant, 'market_forward') AS variant, m.inputs_json, m.target_id,
-              bt.company_name AS target_name
+              m.archived_at, m.archived_by, bt.company_name AS target_name
        FROM business_case_model m LEFT JOIN brownfield_target bt ON bt.id = m.target_id
        WHERE m.project_id = ? ORDER BY m.created_at, m.id`,
     )
-    .all(projectId) as Array<{ id: string; kind: string; name: string; horizon_years: number; created_by: string; created_at: string; variant: "market_forward" | "historical"; inputs_json: string | null; target_id: string | null; target_name: string | null }>;
+    .all(projectId) as Array<{ id: string; kind: string; name: string; horizon_years: number; created_by: string; created_at: string; variant: "market_forward" | "historical"; inputs_json: string | null; target_id: string | null; archived_at: string | null; archived_by: string | null; target_name: string | null }>;
   const lines = db
     .query(
       `SELECT id, model_id, category, name, annual_amount_krw_m, sales_volume, unit_price_krw, start_year, growth_rate, note
@@ -207,12 +214,21 @@ export function listBusinessCases(projectId: string): {
       adopted: adoption?.modelId === m.id,
       created_by: m.created_by,
       created_at: m.created_at,
+      archived_at: m.archived_at,
+      archived_by: m.archived_by,
       inputs_json: m.inputs_json ?? null,
       lines: lines.filter((l) => l.model_id === m.id).map(({ model_id: _m, ...rest }) => rest),
       simulations: modelSims,
     };
   });
-  return { cases, recommendedScenario: recommended, adoption, targetSelection, targets, enginesMixed: enginesMixedAcrossTargets(targets) };
+  return { cases: cases.filter((c) => c.archived_at === null), archived: cases.filter((c) => c.archived_at !== null), recommendedScenario: recommended, adoption, targetSelection, targets, enginesMixed: enginesMixedAcrossTargets(targets) };
+}
+
+/** The adopted case for history views (adoption / IC package / report): looks in
+ * the active set first, then in the archived one (ADR-0158 — an archived legacy
+ * model that a human adopted must still resolve). */
+export function findAdoptedCase(list: { cases: BusinessCaseView[]; archived: BusinessCaseView[] }): BusinessCaseView | null {
+  return list.cases.find((c) => c.adopted) ?? list.archived.find((c) => c.adopted) ?? null;
 }
 
 /** Human-only adoption (boundary #2): record WHICH case feeds the fs gate.
@@ -222,10 +238,11 @@ export function listBusinessCases(projectId: string): {
  * belongs to the selected target. */
 export function adoptBusinessCase(projectId: string, modelId: string, adoptedBy: string): AdoptionRecord {
   const db = getDb();
-  const model = db.query("SELECT id, target_id FROM business_case_model WHERE id = ? AND project_id = ?").get(modelId, projectId) as
-    | { id: string; target_id: string | null }
+  const model = db.query("SELECT id, target_id, archived_at FROM business_case_model WHERE id = ? AND project_id = ?").get(modelId, projectId) as
+    | { id: string; target_id: string | null; archived_at: string | null }
     | undefined;
   if (!model) throw new NotFoundError(`business case '${modelId}' not found for project '${projectId}'`);
+  if (model.archived_at) throw new Error("보관된 모델은 채택할 수 없습니다 (ADR-0158)");
   const project = db
     .query("SELECT track, source_opportunity_id FROM md_project WHERE id = ?")
     .get(projectId) as { track: "greenfield" | "brownfield" | null; source_opportunity_id: string | null } | undefined;

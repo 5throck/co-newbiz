@@ -106,7 +106,7 @@ function deriveIrrMargin(db: Database, projectId: string): number {
       `SELECT m.inputs_json AS inputs, v.irr AS irr
        FROM business_case_model m
        JOIN valuation_simulation v ON v.model_id = m.id AND v.scenario = 'base' AND v.percentile = 'p50'
-       WHERE m.project_id = ? AND COALESCE(m.variant, 'market_forward') = 'market_forward'
+       WHERE m.project_id = ? AND m.archived_at IS NULL AND COALESCE(m.variant, 'market_forward') = 'market_forward'
        ORDER BY m.created_at DESC, m.id DESC LIMIT 1`,
     )
     .get(projectId) as { inputs: string | null; irr: number | null } | undefined;

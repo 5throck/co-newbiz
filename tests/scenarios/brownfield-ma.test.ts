@@ -135,6 +135,43 @@ describe("brownfield M&A S1 to S12", () => {
     }
   }, 60_000);
 
+  test("S8 예전 모델 정리 deletes unreferenced legacy models, archives the adopted one, leaves per-target models (ADR-0158)", async () => {
+    const now = new Date().toISOString();
+    const perTargetBefore = app.readDb((d) => d.query("SELECT COUNT(*) c FROM business_case_model WHERE project_id=? AND target_id IS NOT NULL").get(P)) as { c: number };
+    app.writeDb((d) => {
+      for (const [id, name] of [["bc-legacy-clean-free", "정리 대상 예전 모델"], ["bc-legacy-clean-adopted", "채택된 예전 모델"]] as const) {
+        d.run("INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, inputs_json) VALUES (?,?,?,?,?,?,?,?)", [id, P, "valuation", name, 5, "analyst", now, "{}"]);
+      }
+      d.run(
+        "INSERT INTO process_run (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        ["e2e-legacy-adopt", "project", P, P, "e2e", "s8_case_adopt", "done", "web", "analyst", now, now, JSON.stringify({ model_id: "bc-legacy-clean-adopted" })],
+      );
+    });
+    try {
+      await visit(s.page, app, `/projects/${P}/business-case`);
+      await see(s.page, "대상 미지정 모델 2건");
+      await see(s.page, "참조됨 — 보관");
+      await see(s.page, "미참조 — 삭제");
+      await s.page.getByRole("button", { name: /예전 모델 정리 \(전체 2건\)/ }).click();
+      const dialog = s.page.getByRole("alertdialog");
+      await dialog.waitFor({ state: "visible", timeout: 20_000 });
+      const done = s.page.waitForResponse((r) => r.request().method() === "POST" && /business-case\/legacy-cleanup$/.test(r.url()));
+      await dialog.getByRole("button", { name: "정리", exact: true }).click();
+      expect((await done).status()).toBe(200);
+      await seeNot(s.page, "대상 미지정 모델");
+      const rows = app.readDb((d) => d.query("SELECT id, archived_at FROM business_case_model WHERE id LIKE 'bc-legacy-clean-%'").all()) as Array<{ id: string; archived_at: string | null }>;
+      expect(rows.map((r) => r.id)).toEqual(["bc-legacy-clean-adopted"]);
+      expect(rows[0].archived_at).not.toBeNull();
+      const perTargetAfter = app.readDb((d) => d.query("SELECT COUNT(*) c FROM business_case_model WHERE project_id=? AND target_id IS NOT NULL").get(P)) as { c: number };
+      expect(perTargetAfter.c).toBe(perTargetBefore.c);
+    } finally {
+      app.writeDb((d) => {
+        d.run("DELETE FROM process_run WHERE id = 'e2e-legacy-adopt'");
+        d.run("DELETE FROM business_case_model WHERE id LIKE 'bc-legacy-clean-%'");
+      });
+    }
+  }, 90_000);
+
   test("S8 대상별 재생성 bypasses the already-run guard and creates per-target models (R2-F)", async () => {
     // Legacy NULL-target model + a DONE s8_business_case_generation run: the
     // idempotency guard used to return that run and the regeneration button
