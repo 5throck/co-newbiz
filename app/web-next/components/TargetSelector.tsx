@@ -13,6 +13,8 @@ export interface AnalysisTarget {
   name: string;
   companyId: string | null;
   isBound: boolean;
+  /** Optional short status badge (ADR-0157: e.g. "DD 미개설"); text, never color alone. */
+  note?: string;
 }
 
 interface TargetSelectorProps {
@@ -20,6 +22,12 @@ interface TargetSelectorProps {
   /** null = project-level (ADR-0116 bound subject / fs-gate view). */
   selected: string | null;
   onSelect: (targetId: string | null) => void;
+  /** Label of the project-level chip; pass null to omit it (ADR-0157 DD scope: the selected target is itself a chip). Default "프로젝트 기준". */
+  projectLabel?: string | null;
+  /** Badge on the bound target chip. Default "게이트 기준". */
+  boundLabel?: string;
+  /** Accessible name of the chip group. Default "분석 대상 선택". */
+  ariaLabel?: string;
 }
 
 const chipBase =
@@ -29,23 +37,25 @@ const chipIdle =
 const chipActive =
   "border-[var(--color-primary,theme(colors.blue.600))] bg-[var(--color-primary-soft,theme(colors.blue.50))] font-medium text-[var(--color-primary,theme(colors.blue.700))]";
 
-export default function TargetSelector({ targets, selected, onSelect }: TargetSelectorProps) {
+export default function TargetSelector({ targets, selected, onSelect, projectLabel = "프로젝트 기준", boundLabel = "게이트 기준", ariaLabel = "분석 대상 선택" }: TargetSelectorProps) {
   if (targets.length <= 1) return null;
   return (
     <div
       role="group"
-      aria-label="분석 대상 선택"
+      aria-label={ariaLabel}
       className="flex flex-wrap items-center gap-2"
       data-testid="target-selector"
     >
-      <button
-        type="button"
-        className={`${chipBase} ${selected === null ? chipActive : chipIdle}`}
-        aria-pressed={selected === null}
-        onClick={() => onSelect(null)}
-      >
-        프로젝트 기준
-      </button>
+      {projectLabel !== null ? (
+        <button
+          type="button"
+          className={`${chipBase} ${selected === null ? chipActive : chipIdle}`}
+          aria-pressed={selected === null}
+          onClick={() => onSelect(null)}
+        >
+          {projectLabel}
+        </button>
+      ) : null}
       {targets.map((t) => (
         <button
           key={t.targetId}
@@ -59,7 +69,12 @@ export default function TargetSelector({ targets, selected, onSelect }: TargetSe
           {t.name}
           {t.isBound ? (
             <span className="rounded-full bg-[var(--color-primary-soft,theme(colors.blue.100))] px-1.5 text-[length:var(--fs-caption)]">
-              게이트 기준
+              {boundLabel}
+            </span>
+          ) : null}
+          {t.note ? (
+            <span className="rounded-full border border-[var(--border-secondary,theme(colors.gray.300))] px-1.5 text-[length:var(--fs-caption)]">
+              {t.note}
             </span>
           ) : null}
           {!t.companyId ? <span aria-hidden="true">·</span> : null}

@@ -58,7 +58,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const { cases } = listBusinessCases(id);
   const adoptedCase = adoption ? cases.find((c) => c.id === adoption.modelId) : undefined;
   const findings = db
-    .query("SELECT category, description, value_impact FROM dd_finding WHERE project_id = ? ORDER BY created_at DESC LIMIT 6")
+    .query("SELECT category, description, value_impact FROM dd_finding WHERE project_id = ? AND target_id IS NULL ORDER BY created_at DESC LIMIT 6")
     .all(id) as Array<{ category: string; description: string; value_impact: string | null }>;
   const waccRows = db
     .query(

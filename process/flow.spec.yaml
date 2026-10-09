@@ -21,7 +21,15 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.5.0"
+  version: "2.6.0"
+  # v2.6.0 — Brownfield S9 선택적 대상별 DD (ADR-0157, design
+  #   2026-10-09-optional-per-target-dd). 선정 대상 DD가 게이트의 판정 대상인
+  #   것은 그대로이며, 사람이 명시적으로 열면 다른 Short List 대상에도 비교
+  #   근거용 DD를 수행할 수 있다. 문언만 변경: S9 objective에 선택적 비교 DD를
+  #   덧붙이고 outputs에 "대상별 DD 비교(선택)"을 추가한다. completionCriteria는
+  #   "적용 체크리스트…" 그대로 선정 대상에 묶인다. procedures/**·policies/**
+  #   변경 없음 — brownfield-dd 프로시저는 열린 대상마다 디스패치 계층에서
+  #   반복된다 (ADR-0143 §6 패턴).
   # v2.5.0 — Brownfield S8 다중 대상 사업성 분석 (ADR-0143, design
   #   2026-09-22-s8-multi-target-feasibility). Short List에 오른 각 대상이
   #   S8의 분석 주체(subject)가 된다: stage schema에 subjectScope 키를 새로
@@ -483,7 +491,7 @@ stages:
 
   - id: S9
     name: 실사·검증
-    objective: 사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 S8에서 선정된 대상 DD, greenfield는 실현가능성 검증)
+    objective: 사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 S8에서 선정된 대상 DD, 선택적으로 다른 Short List 대상 DD를 비교 근거로 열 수 있다. greenfield는 실현가능성 검증)
     inputs:
       - 게이트 체크리스트 (commercial/technical/legal)
       - 조사 근거
@@ -491,6 +499,7 @@ stages:
     outputs:
       - DD 체크리스트 판정
       - 조사내역(dd_finding)
+      - 대상별 DD 비교(선택)
     entryCriteria:
       - S8 완료
     activities:

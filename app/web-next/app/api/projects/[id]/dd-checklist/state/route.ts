@@ -9,6 +9,8 @@ import { authenticate } from "../../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
 import { upsertChecklistState, STATE_STATUSES, type ChecklistStateStatus } from "../../../../../../lib/dd-checklist-tailor.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { DdTargetError } from "../../../../../../lib/dd-target.ts";
+import { ddTargetErrorResponse, scopeOrResponse } from "../../../../../../lib/dd-target-http.ts";
 import { recordHumanFinalForStageArtifacts } from "../../../../../../lib/review/human-final.ts";
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -25,6 +27,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     note?: string;
     evidence_ref?: string;
     waiver_id?: string;
+    target_id?: string;
   } | null;
   if (!body?.checklist_id?.trim() || !body.item_id?.trim()) {
     return badRequest("invalid_request", "checklist_id와 item_id는 필수입니다.");
@@ -32,11 +35,21 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if (!(STATE_STATUSES as readonly string[]).includes(body.status ?? "")) {
     return badRequest("invalid_request", `status는 ${STATE_STATUSES.join(" | ")} 중 하나입니다.`);
   }
-  const result = upsertChecklistState(id, body.checklist_id.trim(), body.item_id.trim(), body.status as ChecklistStateStatus, ctx.userId, {
-    note: body.note,
-    evidenceRef: body.evidence_ref,
-    waiverId: body.waiver_id,
-  });
+  // ADR-0157: a non-NULL target_id must be an opened comparison target (409 otherwise).
+  const scope = scopeOrResponse(id, body.target_id);
+  if ("response" in scope) return scope.response;
+  let result: { id: string } | null;
+  try {
+    result = upsertChecklistState(id, body.checklist_id.trim(), body.item_id.trim(), body.status as ChecklistStateStatus, ctx.userId, {
+      note: body.note,
+      evidenceRef: body.evidence_ref,
+      waiverId: body.waiver_id,
+      targetId: scope.targetId,
+    });
+  } catch (err) {
+    if (err instanceof DdTargetError) return ddTargetErrorResponse(err);
+    throw err;
+  }
   // ADR-0153: the human's checklist judgment is the human_final review of the S9 artifact.
   recordHumanFinalForStageArtifacts("S9", id, ctx.userId, "dd_checklist_judgment");
   if (!result) return notFound();

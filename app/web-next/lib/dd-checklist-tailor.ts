@@ -31,6 +31,7 @@ import { runActivityChain, type ActivitySpec, type EntityRef } from "./agent-orc
 import { specAgentFor } from "./spec-activities.ts";
 import { DD_WORKSPACE_CHECKLISTS, SUB_TRACK_DD_CHECKLISTS, getChecklistItems, type ChecklistItemDef } from "./library.ts";
 import { WAVE_F_PREDICATE_DATE } from "./wave-f-date.ts";
+import { DdTargetError, selectedTargetId, type DdTargetSummary } from "./dd-target.ts";
 import { isWebResearchConfigured, tavilySearch, type WebSource } from "./web-research.ts";
 
 // ADR-0104 — DD workspace expanded to 7 domains (financial/hr/market/financing
@@ -56,6 +57,8 @@ export const DD_DOMAIN_AGENTS: Record<DdDomain, string> = Object.fromEntries(
 ) as Record<DdDomain, string>;
 
 export const DD_TAILOR_STAGE = "s9_dd_checklist_tailoring";
+/** ADR-0157: tailoring runs for opened comparison targets (kept apart from the selected scope's guard). */
+export const DD_TAILOR_TARGET_STAGE = "s9_dd_checklist_tailoring_target";
 /** checklist_id prefix under which an APPROVED custom item gets its judgment state row. */
 export const CUSTOM_CHECKLIST_PREFIX = "custom:";
 
@@ -153,16 +156,16 @@ export function setDdTailorExecutorFactory(next: DdExecutorFactory | null): void
   executorFactory = next;
 }
 
-function persistDrafts(projectId: string, domain: DdDomain, agentKey: string, drafts: TailorItemDraft[]): void {
+function persistDrafts(projectId: string, domain: DdDomain, agentKey: string, drafts: TailorItemDraft[], targetId: string | null): void {
   const db = getDb();
   const now = nowIso();
   for (const d of drafts) {
     if (!d.itemLabel?.trim()) continue; // never persist an empty proposal
     db.run(
       `INSERT INTO project_checklist_item_custom
-         (id, project_id, domain, item_label, rationale, source_url, source_reliability, proposed_by_agent, status, created_at)
-       VALUES (?,?,?,?,?,?,?,?, 'proposed', ?)`,
-      [ulid(), projectId, domain, d.itemLabel.trim(), d.rationale?.trim() ?? null, d.sourceUrl ?? null, d.sourceReliability ?? null, agentKey, now],
+         (id, project_id, domain, item_label, rationale, source_url, source_reliability, proposed_by_agent, status, created_at, target_id)
+       VALUES (?,?,?,?,?,?,?,?, 'proposed', ?, ?)`,
+      [ulid(), projectId, domain, d.itemLabel.trim(), d.rationale?.trim() ?? null, d.sourceUrl ?? null, d.sourceReliability ?? null, agentKey, now, targetId],
     );
   }
 }
@@ -235,8 +238,9 @@ export interface TailorResult {
  */
 export async function tailorDdChecklist(
   projectId: string,
-  opts: { actor: string; domains?: DdDomain[]; source?: string },
+  opts: { actor: string; domains?: DdDomain[]; source?: string; /** ADR-0157: an opened comparison target; omitted = the selected/legacy scope. */ targetId?: string | null },
 ): Promise<TailorResult> {
+  const targetId = opts.targetId ?? null;
   const domains = opts.domains?.length ? opts.domains : [...DD_DOMAINS];
   const industry = industryLabelForProject(projectId);
   const executor = getDdTailorExecutor();
@@ -251,7 +255,7 @@ export async function tailorDdChecklist(
       prompt: `Propose 5-10 industry-tailored DD checklist items for the ${domain} domain — industry: ${industry} (project ${projectId})`,
       execute: async () => {
         const drafts = await executor(domain, { projectId, industry });
-        persistDrafts(projectId, domain, agentKey, drafts);
+        persistDrafts(projectId, domain, agentKey, drafts, targetId);
         const unsourced = drafts.filter((d) => !d.sourceUrl).length;
         return [
           `### [${domain}] ${agentKey} — 산업 맞춤 DD 체크리스트 제안`,
@@ -266,7 +270,9 @@ export async function tailorDdChecklist(
   const result = await runActivityChain(entity, activities, {
     actor: opts.actor,
     source: opts.source ?? "web",
-    stage: DD_TAILOR_STAGE,
+    // A comparison target's run uses its own stage key so it can never trip
+    // the selected scope's already-run guard (ADR-0157).
+    stage: targetId ? DD_TAILOR_TARGET_STAGE : DD_TAILOR_STAGE,
   });
   return { processRunId: result.processRunId, status: result.status, proposedCount: proposalCount(projectId) - before };
 }
@@ -298,8 +304,8 @@ export function reviewDdCustomItem(
 ): { id: string; domain: DdDomain; status: TailorReviewDecision } | null {
   const db = getDb();
   const item = db
-    .query("SELECT id, domain, status FROM project_checklist_item_custom WHERE id = ? AND project_id = ?")
-    .get(itemId, projectId) as { id: string; domain: DdDomain; status: string } | undefined;
+    .query("SELECT id, domain, status, target_id FROM project_checklist_item_custom WHERE id = ? AND project_id = ?")
+    .get(itemId, projectId) as { id: string; domain: DdDomain; status: string; target_id: string | null } | undefined;
   if (!item || item.status !== "proposed") return null;
   const now = nowIso();
   const apply = db.transaction(() => {
@@ -311,9 +317,9 @@ export function reviewDdCustomItem(
     ]);
     if (decision === "approved") {
       db.run(
-        `INSERT INTO project_checklist_item_state (id, project_id, checklist_id, item_id, status, assessed_by, assessed_at)
-         VALUES (?,?,?,?, 'pending', ?, ?)`,
-        [ulid(), projectId, customChecklistId(item.domain), itemId, userId, now],
+        `INSERT INTO project_checklist_item_state (id, project_id, checklist_id, item_id, status, assessed_by, assessed_at, target_id)
+         VALUES (?,?,?,?, 'pending', ?, ?, ?)`,
+        [ulid(), projectId, customChecklistId(item.domain), itemId, userId, now, item.target_id],
       );
     }
   });
@@ -339,25 +345,33 @@ export function upsertChecklistState(
   itemId: string,
   status: ChecklistStateStatus,
   userId: string,
-  opts: { note?: string; evidenceRef?: string; waiverId?: string } = {},
+  opts: { note?: string; evidenceRef?: string; waiverId?: string; /** ADR-0157: resolved scope (see resolveDdScope); NULL = selected/legacy. */ targetId?: string | null } = {},
 ): { id: string } | null {
   const db = getDb();
+  const targetId = opts.targetId ?? null;
   let known = false;
   if (checklistId.startsWith(CUSTOM_CHECKLIST_PREFIX)) {
     known =
       !!db
-        .query("SELECT id FROM project_checklist_item_custom WHERE id = ? AND project_id = ? AND status = 'approved'")
-        .get(itemId, projectId);
+        .query("SELECT id FROM project_checklist_item_custom WHERE id = ? AND project_id = ? AND status = 'approved' AND target_id IS ?")
+        .get(itemId, projectId, targetId);
   } else {
     const items = getChecklistItems(checklistId);
     known = !!items?.some((i) => i.id === itemId);
   }
   if (!known) return null;
   if (status === "waived" && !opts.waiverId) return null;
+  if (opts.waiverId) {
+    // A waiver applies to exactly one DD scope (ADR-0157): matched on target_id equality.
+    const waiver = db.query("SELECT target_id FROM waiver WHERE id = ? AND project_id = ?").get(opts.waiverId, projectId) as { target_id: string | null } | undefined;
+    if (waiver && waiver.target_id !== targetId) {
+      throw new DdTargetError(400, "waiver_target_mismatch", "이 waiver는 다른 대상의 DD 범위에 속합니다 — 같은 대상의 waiver만 연결할 수 있습니다.");
+    }
+  }
   const now = nowIso();
   const existing = db
-    .query("SELECT id FROM project_checklist_item_state WHERE project_id = ? AND checklist_id = ? AND item_id = ?")
-    .get(projectId, checklistId, itemId) as { id: string } | undefined;
+    .query("SELECT id FROM project_checklist_item_state WHERE project_id = ? AND target_id IS ? AND checklist_id = ? AND item_id = ?")
+    .get(projectId, targetId, checklistId, itemId) as { id: string } | undefined;
   if (existing) {
     db.run(
       "UPDATE project_checklist_item_state SET status = ?, note = COALESCE(?, note), evidence_ref = COALESCE(?, evidence_ref), waiver_id = COALESCE(?, waiver_id), assessed_by = ?, assessed_at = ? WHERE id = ?",
@@ -367,9 +381,9 @@ export function upsertChecklistState(
   }
   const id = ulid();
   db.run(
-    `INSERT INTO project_checklist_item_state (id, project_id, checklist_id, item_id, status, note, evidence_ref, waiver_id, assessed_by, assessed_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?)`,
-    [id, projectId, checklistId, itemId, status, opts.note ?? null, opts.evidenceRef ?? null, opts.waiverId ?? null, userId, now],
+    `INSERT INTO project_checklist_item_state (id, project_id, checklist_id, item_id, status, note, evidence_ref, waiver_id, assessed_by, assessed_at, target_id)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+    [id, projectId, checklistId, itemId, status, opts.note ?? null, opts.evidenceRef ?? null, opts.waiverId ?? null, userId, now, targetId],
   );
   return { id };
 }
@@ -442,12 +456,19 @@ export function subTrackChecklistIds(projectId: string): string[] {
   return SUB_TRACK_DD_CHECKLISTS[route.sub_track] ?? [];
 }
 
-export function ddCompletionSummary(projectId: string): DdCompletionSummary {
+/**
+ * ADR-0157: the completion summary of ONE DD scope. The default (no options)
+ * reads target_id IS NULL — the selected/legacy scope — so the S9 predicate and
+ * the dd gate readiness, which call it with no target, can never be moved by
+ * rows recorded on another target. A comparison view passes an opened target id.
+ */
+export function ddCompletionSummary(projectId: string, opts: { targetId?: string | null } = {}): DdCompletionSummary {
+  const targetId = opts.targetId ?? null;
   const rows = getDb()
     .query(
-      `SELECT checklist_id, item_id, status, waiver_id FROM project_checklist_item_state WHERE project_id = ?`,
+      `SELECT checklist_id, item_id, status, waiver_id FROM project_checklist_item_state WHERE project_id = ? AND target_id IS ?`,
     )
-    .all(projectId) as Array<{ checklist_id: string; item_id: string; status: string; waiver_id: string | null }>;
+    .all(projectId, targetId) as Array<{ checklist_id: string; item_id: string; status: string; waiver_id: string | null }>;
   const extraIds = subTrackChecklistIds(projectId);
   const extraSet = new Set(extraIds);
   let pending = 0;
@@ -503,6 +524,12 @@ export interface DdWorkspaceView {
   }>;
   findings: FindingRow[];
   completion: DdCompletionSummary;
+  /** ADR-0157: the scope this payload describes — null = the selected/legacy scope that the gate judges. */
+  scope_target_id: string | null;
+  /** The target the dd gate judges (the S8 selection), if any. */
+  selected_target_id: string | null;
+  /** One entry per shortlisted target (brownfield only; empty otherwise). */
+  targets: DdTargetSummary[];
 }
 
 export interface DdItemState {
@@ -540,12 +567,13 @@ export interface FindingRow {
 }
 
 /** Assemble the whole S9 surface: standard items + live state, custom items with provenance, findings, completion. */
-export function listDdWorkspace(projectId: string): DdWorkspaceView {
+export function listDdWorkspace(projectId: string, opts: { targetId?: string | null } = {}): DdWorkspaceView {
   const db = getDb();
+  const targetId = opts.targetId ?? null;
   const states = new Map<string, DdItemState>();
   for (const s of db
-    .query("SELECT checklist_id, item_id, status, note, evidence_ref, waiver_id, assessed_by, assessed_at FROM project_checklist_item_state WHERE project_id = ?")
-    .all(projectId) as Array<{ checklist_id: string; item_id: string; status: ChecklistStateStatus; note: string | null; evidence_ref: string | null; waiver_id: string | null; assessed_by: string | null; assessed_at: string | null }>) {
+    .query("SELECT checklist_id, item_id, status, note, evidence_ref, waiver_id, assessed_by, assessed_at FROM project_checklist_item_state WHERE project_id = ? AND target_id IS ?")
+    .all(projectId, targetId) as Array<{ checklist_id: string; item_id: string; status: ChecklistStateStatus; note: string | null; evidence_ref: string | null; waiver_id: string | null; assessed_by: string | null; assessed_at: string | null }>) {
     states.set(`${s.checklist_id}:${s.item_id}`, { status: s.status, note: s.note, evidence_ref: s.evidence_ref, waiver_id: s.waiver_id, assessed_by: s.assessed_by, assessed_at: s.assessed_at });
   }
 
@@ -553,9 +581,9 @@ export function listDdWorkspace(projectId: string): DdWorkspaceView {
   for (const c of db
     .query(
       `SELECT id, domain, item_label, rationale, source_url, source_reliability, proposed_by_agent, status, approved_by, approved_at, created_at
-       FROM project_checklist_item_custom WHERE project_id = ? ORDER BY created_at, id`,
+       FROM project_checklist_item_custom WHERE project_id = ? AND target_id IS ? ORDER BY created_at, id`,
     )
-    .all(projectId) as Array<Omit<CustomItemRow, "state">>) {
+    .all(projectId, targetId) as Array<Omit<CustomItemRow, "state">>) {
     const row: CustomItemRow = { ...c, state: states.get(`${customChecklistId(c.domain)}:${c.id}`) ?? null };
     const list = customByDomain.get(c.domain) ?? [];
     list.push(row);
@@ -565,9 +593,9 @@ export function listDdWorkspace(projectId: string): DdWorkspaceView {
   const findings = db
     .query(
       `SELECT id, category, description, value_impact, assumption_key, evidence_ref, created_at
-       FROM dd_finding WHERE project_id = ? ORDER BY created_at DESC, id`,
+       FROM dd_finding WHERE project_id = ? AND target_id IS ? ORDER BY created_at DESC, id`,
     )
-    .all(projectId) as unknown as FindingRow[];
+    .all(projectId, targetId) as unknown as FindingRow[];
 
   const domainLabels: Record<DdDomain, string> = { commercial: "Commercial DD", technical: "Technical DD", legal: "Legal DD" };
   const domains = DD_DOMAINS.map((domain) => {
@@ -594,5 +622,67 @@ export function listDdWorkspace(projectId: string): DdWorkspaceView {
     items: (getChecklistItems(checklistId) ?? []).map((i) => ({ ...i, state: states.get(`${checklistId}:${i.id}`) ?? null })),
     custom: [] as CustomItemRow[],
   }));
-  return { domains: [...domains, ...extra], findings, completion: ddCompletionSummary(projectId) };
+  return {
+    domains: [...domains, ...extra],
+    findings,
+    completion: ddCompletionSummary(projectId, { targetId }),
+    scope_target_id: targetId,
+    selected_target_id: selectedTargetId(projectId, db),
+    targets: listDdTargetSummaries(projectId),
+  };
+}
+
+/**
+ * ADR-0157: one summary row per shortlisted target — the comparison-table
+ * source. The selected target's row is the gate scope (target_id IS NULL);
+ * every other row is comparison evidence, never a verdict.
+ */
+export function listDdTargetSummaries(projectId: string): DdTargetSummary[] {
+  const db = getDb();
+  const project = db.query("SELECT track, source_opportunity_id FROM md_project WHERE id = ?").get(projectId) as
+    | { track: string | null; source_opportunity_id: string | null }
+    | undefined;
+  if (!project || project.track !== "brownfield") return [];
+  const selected = selectedTargetId(projectId, db);
+  const targets = db
+    .query(
+      `SELECT bt.id, bt.company_name FROM brownfield_target bt
+       WHERE bt.opportunity_id = ? AND bt.status = 'shortlisted'
+       ORDER BY bt.rank IS NULL, bt.rank, bt.created_at`,
+    )
+    .all(project.source_opportunity_id ?? "") as Array<{ id: string; company_name: string }>;
+  const opens = new Map(
+    (db.query("SELECT target_id, opened_at, opened_by, rationale FROM dd_target_open WHERE project_id = ?").all(projectId) as Array<{ target_id: string; opened_at: string; opened_by: string; rationale: string }>).map(
+      (o) => [o.target_id, o],
+    ),
+  );
+  const out: DdTargetSummary[] = [];
+  for (const t of targets) {
+    const isSelected = t.id === selected;
+    const open = opens.get(t.id);
+    const opened = isSelected || !!open;
+    const scope = isSelected ? null : t.id;
+    const c = opened ? ddCompletionSummary(projectId, { targetId: scope }) : { total: 0, pending: 0, unassessed: 0, mandatoryUnmet: 0 };
+    const f = opened
+      ? (db
+          .query("SELECT COUNT(*) AS n, COALESCE(SUM(CASE WHEN value_impact IS NOT NULL THEN 1 ELSE 0 END), 0) AS v FROM dd_finding WHERE project_id = ? AND target_id IS ?")
+          .get(projectId, scope) as { n: number; v: number })
+      : { n: 0, v: 0 };
+    out.push({
+      target_id: t.id,
+      name: t.company_name,
+      is_selected: isSelected,
+      opened,
+      opened_at: open?.opened_at ?? null,
+      opened_by: open?.opened_by ?? null,
+      rationale: open?.rationale ?? null,
+      total: c.total,
+      unassessed: c.unassessed,
+      pending: c.pending,
+      mandatory_unmet: c.mandatoryUnmet,
+      findings: f.n,
+      findings_with_value_impact: f.v,
+    });
+  }
+  return out;
 }

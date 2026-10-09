@@ -195,15 +195,18 @@ const BASE_TOOLS: readonly RegistryTool[] = [
   }),
   defineTool({
     name: "get_project_dd_workspace",
-    description: "S9 tailored DD workspace (S1-S11 chain) — standard checklist items with live judgment state, custom items with provenance, findings, and the completion summary. Read-only; tailoring and proposal review are web-first human decisions.",
+    description: "S9 tailored DD workspace (S1-S11 chain) — standard checklist items with live judgment state, custom items with provenance, findings, the completion summary, and targets[] (comparison table source). Default scope is the selected target the gate judges; optional target_id reads an opened comparison target. Read-only; tailoring review and opening DD on another target are web-first human decisions.",
     scope: "read", kind: "read", stageActivities: ["commercial-dd", "technical-dd", "legal-dd"],
     inputSchema: {
       type: "object",
-      properties: { projectId: { type: "string", description: "Project ULID (promoted at S8)." } },
+      properties: {
+        projectId: { type: "string", description: "Project ULID (promoted at S8)." },
+        target_id: { type: "string", description: "Optional (ADR-0157): an OPENED comparison target. Omitted = the selected target the dd gate judges. Opening DD is a human act; this tool never opens it." },
+      },
       required: ["projectId"],
     },
-    args: z.object({ projectId: requiredString }),
-    handler: (ctx, a) => getProjectDdWorkspace(ctx.port, a.projectId),
+    args: z.object({ projectId: requiredString, target_id: optString }),
+    handler: (ctx, a) => getProjectDdWorkspace(ctx.port, a.projectId, a.target_id),
   }),
 ];
 

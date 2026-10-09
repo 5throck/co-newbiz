@@ -74,6 +74,10 @@ exclusions:
     kind: route
     route: "PUT /api/projects/{}/dd-checklist/state"
     reason: A checklist judgment stamps a human_final review (propose_approval, subject dd_checklist_judgment).
+  - id: dd-target-open
+    kind: route
+    route: "POST /api/projects/{}/dd/targets"
+    reason: Opening DD on another shortlisted target is a human, cost-bearing act with a recorded rationale (ADR-0157); an agent may only suggest it through propose_approval.
   - id: four-axis-completion
     kind: body_action
     route: "POST /api/projects/{}/deal-structure"

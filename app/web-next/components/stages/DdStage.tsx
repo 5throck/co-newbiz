@@ -21,6 +21,7 @@ import { useModalFocus } from "../../lib/use-modal-focus.ts";
 import { useToast } from "../ui.tsx";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
+import TargetSelector, { type AnalysisTarget } from "../TargetSelector.tsx";
 
 // S9 실사·검증 — 표준 DD 체크리스트 판정 + 산업 맞춤 제안 승인 화면 (ADR-0099 §4).
 // 표준 체크리스트 3개(commercial/technical/legal) 탭 + 산업 맞춤 제안 패널
@@ -74,10 +75,29 @@ interface DomainView {
   items: StdItem[];
   custom: CustomItem[];
 }
+/** ADR-0157: one row per shortlisted target — the comparison-table source. */
+interface DdTargetRow {
+  target_id: string;
+  name: string;
+  is_selected: boolean;
+  opened: boolean;
+  opened_at: string | null;
+  opened_by: string | null;
+  rationale: string | null;
+  total: number;
+  unassessed: number;
+  pending: number;
+  mandatory_unmet: number;
+  findings: number;
+  findings_with_value_impact: number;
+}
 interface WorkspaceView {
   domains: DomainView[];
   findings: FindingRow[];
   completion: { total: number; pending: number; unassessed: number; mandatoryUnmet: number };
+  scope_target_id: string | null;
+  selected_target_id: string | null;
+  targets: DdTargetRow[];
 }
 
 // P5: 상태는 색+아이콘+텍스트의 조합 — 색 단독으로 상태를 전달하지 않는다.
@@ -106,6 +126,9 @@ export function DdStage({ projectId }: { projectId: string }) {
   const [notice, setNotice] = useState<string | null>(null);
   const { toast } = useToast();
   const [filter, setFilter] = useState<ItemFilter>("all");
+  // ADR-0157: null = the selected target the gate judges; an id = a comparison target (비교 근거).
+  const [viewTarget, setViewTarget] = useState<string | null>(null);
+  const [openDlg, setOpenDlg] = useState<{ targetId: string; name: string } | null>(null);
   // Row-level waiver dialog (R2-B item 5): link an active waiver, or request a new one prefilled with the item.
   const [waiverDlg, setWaiverDlg] = useState<{
     checklistId: string; itemId: string; label: string;
@@ -113,13 +136,44 @@ export function DdStage({ projectId }: { projectId: string }) {
     docs: Array<{ id: string; layer: string; key: string; title: string }>;
   } | null>(null);
 
-  const load = useCallback(() => {
-    api.get<WorkspaceView>(`/api/projects/${encodeURIComponent(projectId)}/dd`)
+  const load = useCallback((scope: string | null) => {
+    const qs = scope ? `?target_id=${encodeURIComponent(scope)}` : "";
+    api.get<WorkspaceView>(`/api/projects/${encodeURIComponent(projectId)}/dd${qs}`)
       .then((r) => setData(r.data))
       .catch((e) => setError(e instanceof Error ? e.message : "실사 데이터를 불러오지 못했습니다."));
   }, [projectId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(null); }, [load]);
+
+  const targets = data?.targets ?? [];
+  const selectedTarget = targets.find((t) => t.is_selected) ?? null;
+  const viewSummary = viewTarget ? targets.find((t) => t.target_id === viewTarget) ?? null : null;
+  // A comparison target whose DD was never opened has no checklist to show or edit.
+  const viewNotOpened = !!viewSummary && !viewSummary.opened;
+  const scopeParam = viewSummary?.opened ? viewSummary.target_id : null;
+  const comparing = scopeParam !== null;
+  const reload = () => load(scopeParam);
+
+  const selectorTargets: AnalysisTarget[] = [...targets]
+    .sort((a, b) => Number(b.is_selected) - Number(a.is_selected))
+    .map((t) => ({
+      targetId: t.target_id,
+      name: t.name,
+      // The selector's "no company data" hint is a financial-analysis concern; DD has no such limit.
+      companyId: t.target_id,
+      isBound: t.is_selected,
+      note: t.is_selected ? undefined : t.opened ? "비교 근거" : "DD 미개설",
+    }));
+  const comparisonRows = targets.filter((t) => t.is_selected || t.opened);
+
+  function chooseTarget(id: string | null) {
+    const next = id === null || id === selectedTarget?.target_id ? null : id;
+    setViewTarget(next);
+    setTab(0); setError(null); setNotice(null);
+    const summary = next ? targets.find((t) => t.target_id === next) : null;
+    if (next === null) load(null);
+    else if (summary?.opened) load(next);
+  }
 
   async function tailor() {
     if (busy) return;
@@ -127,12 +181,12 @@ export function DdStage({ projectId }: { projectId: string }) {
     try {
       const r = await api.post<{ runId: string; proposedCount: number }>(
         `/api/projects/${encodeURIComponent(projectId)}/dd-checklist/tailor`,
-        {},
+        scopeParam ? { target_id: scopeParam } : {},
       );
       setNotice(
         `산업 맞춤 제안 생성 완료 (run ${r.data.runId}, 제안 ${r.data.proposedCount}건) — 제안 상태로만 기록되었습니다. 승인 전까지 완료 기준에 반영되지 않습니다.`,
       );
-      load();
+      reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : "산업 맞춤 제안 생성 실패");
     } finally {
@@ -156,7 +210,7 @@ export function DdStage({ projectId }: { projectId: string }) {
                 ? "승인됨 — 항목이 판정 대상 체크리스트에 편입되었습니다 (판정 대기 상태)."
                 : "기각됨 — 항목이 판정 대상에서 제외되었습니다.",
             );
-            load();
+            reload();
           } catch (e) {
             setError(e instanceof Error ? e.message : "승인/기각 실패");
           } finally {
@@ -182,9 +236,10 @@ export function DdStage({ projectId }: { projectId: string }) {
         checklist_id: checklistId,
         item_id: itemId,
         status,
+        target_id: scopeParam ?? undefined,
       });
       setNotice("판정이 기록되었습니다.");
-      load();
+      reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : "판정 기록 실패");
     } finally {
@@ -196,7 +251,7 @@ export function DdStage({ projectId }: { projectId: string }) {
   function openWaiverDialog(checklistId: string, itemId: string, label: string) {
     setError(null);
     api.get<{ waivers: Array<{ id: string; clause_ref: string; governance_doc_id: string; expires_at: string; effective_status: string }>; governanceDocs: Array<{ id: string; layer: string; key: string; title: string }> }>(
-      `/api/projects/${encodeURIComponent(projectId)}/waivers`,
+      `/api/projects/${encodeURIComponent(projectId)}/waivers${scopeParam ? `?target_id=${encodeURIComponent(scopeParam)}` : ""}`,
     )
       .then((r) => setWaiverDlg({ checklistId, itemId, label, active: r.data.waivers.filter((w) => w.effective_status === "active"), docs: r.data.governanceDocs }))
       .catch((e) => setError(e instanceof Error ? e.message : "waiver 목록 조회 실패"));
@@ -211,11 +266,12 @@ export function DdStage({ projectId }: { projectId: string }) {
         item_id: waiverDlg.itemId,
         status: "waived",
         waiver_id: waiverId,
+        target_id: scopeParam ?? undefined,
       });
       setNotice("waiver가 연결된 판정(waived)이 기록되었습니다.");
       toast("면제(waived) 판정을 기록했습니다.");
       setWaiverDlg(null);
-      load();
+      reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : "waived 판정 기록 실패");
     } finally {
@@ -248,7 +304,78 @@ export function DdStage({ projectId }: { projectId: string }) {
           <span className="ml-2 status-chip status-not-started">에이전트 제안 ≠ 승인 — 승인은 사람의 행위입니다</span>
         </p>
 
-        {canAct && (
+        {targets.length >= 2 && selectedTarget && (
+          <div className="mb-3">
+            <TargetSelector
+              targets={selectorTargets}
+              selected={viewTarget ?? selectedTarget.target_id}
+              onSelect={chooseTarget}
+              projectLabel={null}
+              boundLabel="선정 대상"
+              ariaLabel="DD 대상 선택"
+            />
+            {comparing && (
+              <p role="note" className="status-chip status-amber mt-2" data-testid="dd-comparison-banner">
+                <span aria-hidden="true">⚠ </span>비교 근거 — 게이트 판정에 반영되지 않습니다
+              </p>
+            )}
+          </div>
+        )}
+
+        {comparisonRows.length >= 2 && (
+          <section className="market-section sizing-step mb-3" aria-label="비교 근거">
+            <h3 className="sizing-step-title text-[0.9rem]">비교 근거</h3>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
+              열린 대상별 DD 현황입니다. 합격·불합격 표시 없이 아직 확인하지 못한 항목 수를 그대로 보여주며, 선정 대상 외 행은 게이트 판정에 반영되지 않습니다.
+            </p>
+            <div className="table-scroll">
+              <table className="data-table" aria-label="대상별 DD 비교 근거">
+                <caption className="sr-only">열린 대상별 DD 비교 근거 — 전체 항목, 미판정, 판정 대기, 필수 미충족, 가치 영향 조사내역</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">대상</th>
+                    <th scope="col">구분</th>
+                    <th scope="col" className="col-num">전체 항목</th>
+                    <th scope="col" className="col-num">미판정</th>
+                    <th scope="col" className="col-num">판정 대기</th>
+                    <th scope="col" className="col-num">필수 미충족</th>
+                    <th scope="col" className="col-num">가치 영향 조사내역</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparisonRows.map((t) => (
+                    <tr key={t.target_id}>
+                      <th scope="row" data-label="대상">{t.name}</th>
+                      <td data-label="구분">{t.is_selected ? "선정 대상 (게이트 판정)" : "비교 근거"}</td>
+                      <td data-label="전체 항목" className="col-num tabular-nums">{t.total}</td>
+                      <td data-label="미판정" className="col-num tabular-nums">{t.unassessed}</td>
+                      <td data-label="판정 대기" className="col-num tabular-nums">{t.pending}</td>
+                      <td data-label="필수 미충족" className="col-num tabular-nums">{t.mandatory_unmet}</td>
+                      <td data-label="가치 영향 조사내역" className="col-num tabular-nums">{t.findings_with_value_impact} / {t.findings}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
+        {viewNotOpened && viewSummary && (
+          <section className="market-section sizing-step mb-3" aria-label="DD 미개설 대상">
+            <p className="text-[length:var(--fs-body)] mb-2">
+              <strong>{viewSummary.name}</strong>: DD가 열리지 않은 대상입니다. 비교 근거로 DD를 열면 이 대상의 체크리스트 판정·맞춤 항목·조사내역·waiver가 따로 기록되며, 게이트 판정에는 반영되지 않습니다.
+            </p>
+            {canAct ? (
+              <button type="button" className="btn-ghost btn-sm" onClick={() => setOpenDlg({ targetId: viewSummary.target_id, name: viewSummary.name })}>
+                DD 열기
+              </button>
+            ) : (
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">DD 열기는 analyst 역할 이상의 사람만 할 수 있습니다.</p>
+            )}
+          </section>
+        )}
+
+        {canAct && !viewNotOpened && (
           <div className="mb-3">
             <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void tailor()}>
               {busy ? "생성 중..." : "산업 맞춤 제안 생성 (commercial-dd-agent · technical-dd-agent · legal-counsel)"}
@@ -259,7 +386,7 @@ export function DdStage({ projectId }: { projectId: string }) {
         {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
         {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {notice}</p>}
 
-        {domain && (
+        {domain && !viewNotOpened && (
           <>
             <TabNav
               className="mb-0"
@@ -411,9 +538,13 @@ export function DdStage({ projectId }: { projectId: string }) {
         )}
 
         <div className="mt-4">
-          <WaiverPanel projectId={projectId} />
+          <WaiverPanel projectId={projectId} targetId={scopeParam} />
         </div>
         <div className="mt-4">
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="dd-gate-subject">
+            게이트 판정 대상: <strong>{selectedTarget?.name ?? "선정 대상 없음 (프로젝트 기준)"}</strong>
+            {targets.length >= 2 && " — 다른 대상의 DD는 비교 근거이며 이 판정에 반영되지 않습니다."}
+          </p>
           <GateDecisionPanel
             opportunityId={projectId}
             gates={["dd"]}
@@ -426,6 +557,7 @@ export function DdStage({ projectId }: { projectId: string }) {
           <WaiverDialog
             dlg={waiverDlg}
             projectId={projectId}
+            targetId={scopeParam}
             busy={busy}
             onLink={(id) => void judgeWaived(id)}
             onClose={() => setWaiverDlg(null)}
@@ -433,15 +565,30 @@ export function DdStage({ projectId }: { projectId: string }) {
           />
         )}
         {confirmDialog}
+        {openDlg && (
+          <OpenDdDialog
+            projectId={projectId}
+            target={openDlg}
+            onClose={() => setOpenDlg(null)}
+            onOpened={(targetId) => {
+              setOpenDlg(null);
+              setViewTarget(targetId);
+              setTab(0);
+              load(targetId);
+              toast("대상별 DD를 열었습니다. 비교 근거로만 기록됩니다.");
+            }}
+          />
+        )}
       </StageFrame>
 </>
   );
 }
 
 /** Per-row waiver dialog: link an existing active waiver, or request a new one prefilled with the item. */
-function WaiverDialog({ dlg, projectId, busy, onLink, onClose, onRequested }: {
+function WaiverDialog({ dlg, projectId, targetId, busy, onLink, onClose, onRequested }: {
   dlg: { checklistId: string; itemId: string; label: string; active: Array<{ id: string; clause_ref: string; governance_doc_id: string; expires_at: string }>; docs: Array<{ id: string; layer: string; key: string; title: string }> };
   projectId: string;
+  targetId: string | null;
   busy: boolean;
   onLink: (waiverId: string) => void;
   onClose: () => void;
@@ -470,7 +617,69 @@ function WaiverDialog({ dlg, projectId, busy, onLink, onClose, onRequested }: {
           </ul>
         )}
         <h4 className="text-[length:var(--fs-body)] mb-1">새 waiver 요청</h4>
-        <WaiverRequestForm projectId={projectId} docs={dlg.docs} prefill={{ clause: `${dlg.checklistId} ${dlg.itemId}`, checklist_id: dlg.checklistId, item_id: dlg.itemId }} onDone={onRequested} onCancel={onClose} />
+        <WaiverRequestForm projectId={projectId} docs={dlg.docs} prefill={{ clause: `${dlg.checklistId} ${dlg.itemId}`, checklist_id: dlg.checklistId, item_id: dlg.itemId }} targetId={targetId} onDone={onRequested} onCancel={onClose} />
+      </div>
+    </div>
+  );
+}
+
+/** `DD 열기` dialog (ADR-0157): a human opens comparison DD on a non-selected shortlisted target with a required rationale. */
+function OpenDdDialog({ projectId, target, onClose, onOpened }: {
+  projectId: string;
+  target: { targetId: string; name: string };
+  onClose: () => void;
+  onOpened: (targetId: string) => void;
+}) {
+  const { panelRef, onKeyDown } = useModalFocus(onClose);
+  const [rationale, setRationale] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const missing = rationale.trim().length === 0;
+  async function submit() {
+    if (saving || missing) return;
+    setSaving(true); setError(null);
+    try {
+      await api.post(`/api/projects/${encodeURIComponent(projectId)}/dd/targets`, { target_id: target.targetId, rationale: rationale.trim() });
+      onOpened(target.targetId);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "DD를 열지 못했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  }
+  return (
+    <div className="modal-backdrop" role="presentation" onKeyDown={onKeyDown} onClick={onClose}>
+      <div ref={panelRef} className="modal-panel" role="dialog" aria-modal="true" aria-labelledby="dd-open-title" style={{ maxWidth: "36rem", width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <h3 id="dd-open-title" className="text-[1rem] font-semibold mb-1">DD 열기 — {target.name}</h3>
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
+          선정 대상이 아닌 대상에 DD를 추가하면 체크리스트 판정, 맞춤 항목, 조사내역, waiver 작업이 대상마다 더해져 검토 비용이 늘어납니다.
+          이 DD는 비교 근거로만 기록되며 게이트 판정에는 반영되지 않습니다. 근거는 감사 기록에 남습니다.
+        </p>
+        <label className="text-[length:var(--fs-caption)] block" htmlFor="dd-open-rationale">
+          DD를 여는 근거 (필수)
+        </label>
+        <textarea
+          id="dd-open-rationale"
+          className="sizing-new-input mt-1 w-full"
+          rows={4}
+          value={rationale}
+          maxLength={4000}
+          required
+          aria-required="true"
+          aria-describedby="dd-open-error"
+          onChange={(e) => setRationale(e.target.value)}
+          placeholder="왜 이 대상을 비교 근거로 실사해야 하는가"
+        />
+        <p id="dd-open-error" role="alert" aria-live="assertive" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-1 min-h-[1.25rem]">
+          {error ? `✕ ${error}` : ""}
+        </p>
+        <div className="flex flex-wrap items-center justify-end gap-2 mt-2">
+          {missing && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">근거를 입력해야 열 수 있습니다.</span>}
+          <button type="button" className="btn-ghost btn-sm" onClick={onClose}>취소</button>
+          <button type="button" className="btn-premium btn-sm" disabled={saving || missing} onClick={() => void submit()}>
+            {saving ? "여는 중..." : "DD 열기"}
+          </button>
+        </div>
       </div>
     </div>
   );

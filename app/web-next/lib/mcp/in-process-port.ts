@@ -143,6 +143,7 @@ export const HUMAN_ONLY_ROUTES: readonly HumanOnlyRule[] = [
   { method: "POST", pattern: "/api/projects/:id/transition-decision" },
   { method: "POST", pattern: "/api/projects/:id/charter/confirm" },
   { method: "PUT", pattern: "/api/projects/:id/dd-checklist/state" },
+  { method: "POST", pattern: "/api/projects/:id/dd/targets" },
   { method: "POST", pattern: "/api/projects/:id/deal-structure", bodyField: { field: "action", value: "complete_four_axis" } },
   { method: "POST", pattern: "/api/projects/:id/close" },
   { method: "PATCH", pattern: "/api/projects/:id/close" },

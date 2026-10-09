@@ -208,9 +208,9 @@ function ddSummary(db: Database, projectId: string): string {
   try {
     const s = ddCompletionSummary(projectId);
     const findings = db
-      .query("SELECT category, description, value_impact FROM dd_finding WHERE project_id = ? ORDER BY created_at DESC LIMIT 8")
+      .query("SELECT category, description, value_impact FROM dd_finding WHERE project_id = ? AND target_id IS NULL ORDER BY created_at DESC LIMIT 8")
       .all(projectId) as Array<{ category: string; description: string; value_impact: string | null }>;
-    const waiverCount = db.query("SELECT COUNT(*) c FROM waiver WHERE project_id = ?").get(projectId) as unknown as { c: number };
+    const waiverCount = db.query("SELECT COUNT(*) c FROM waiver WHERE project_id = ? AND target_id IS NULL").get(projectId) as unknown as { c: number };
     return [
       `체크리스트: 전체 ${s.total}건, 미판정 ${s.pending + s.unassessed}건, 필수 미충족 ${s.mandatoryUnmet}건`,
       `waiver ${waiverCount.c}건`,

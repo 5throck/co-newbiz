@@ -152,7 +152,8 @@ const SPECS: readonly RouteToolSpec[] = [
 
   // ── S9 due diligence ─────────────────────────────────────────────────
   { name: "tailor_dd_checklist", kind: "generate", method: "POST", path: "/api/projects/{projectId}/dd-checklist/tailor", body: "optional",
-    activities: ["commercial-dd", "technical-dd", "legal-dd"], description: "Run the industry-tailored DD checklist chain. Writes PROPOSED custom items only; a person reviews them." },
+    bodyHint: "{domains?: [commercial|technical|legal], target_id?: string} — target_id (ADR-0157) must be a target whose DD a person already opened; omitted = the selected target. A write to an unopened target fails with 409.",
+    activities: ["commercial-dd", "technical-dd", "legal-dd"], description: "Run the industry-tailored DD checklist chain. Writes PROPOSED custom items only; a person reviews them. Optional body.target_id scopes it to an opened comparison target." },
   { name: "record_dd_finding", kind: "write", method: "POST", path: "/api/projects/{projectId}/partners/{partnerId}/findings", body: "required", bodyHint: BODY,
     activities: ["commercial-dd", "legal-dd"], description: "Record a DD finding against a partner candidate (with its value impact)." },
   { name: "record_customer_coc", kind: "write", method: "POST", path: "/api/projects/{projectId}/customer-coc", body: "required", bodyHint: BODY,
@@ -165,7 +166,8 @@ const SPECS: readonly RouteToolSpec[] = [
     activities: ["technical-dd"], description: "Record site/facility assessment scores." },
   { name: "record_permit", kind: "write", method: "POST", path: "/api/projects/{projectId}/permits", body: "required", bodyHint: BODY,
     activities: ["legal-dd"], description: "Record a permit or certification (tracked separately)." },
-  { name: "request_dd_waiver", kind: "write", method: "POST", path: "/api/projects/{projectId}/waivers", body: "required", bodyHint: BODY,
+  { name: "request_dd_waiver", kind: "write", method: "POST", path: "/api/projects/{projectId}/waivers", body: "required",
+    bodyHint: "Waiver request fields (governance_doc_id, clause_ref, reason, approver_role, expires_at, or dd_item); optional target_id (ADR-0157) scopes it to an opened comparison target — 409 when DD was never opened there. A waiver on one target never applies to another.",
     activities: ["dd-waiver-review"], description: "File a waiver REQUEST. Approval routing and the waiver decision are human acts." },
 
   // ── S10 investment structure ─────────────────────────────────────────
