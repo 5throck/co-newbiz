@@ -62,6 +62,17 @@ entries:
       ko: docs/runbooks/rag-host-scheduler_ko.md
     status: active
 
+  - id: rb-beta-series
+    layer: runbook
+    title: "Runbook — KRX Beta Series Collection (Manual, KRX Approval Pending)"
+    audience: operators, deal analysts
+    owner: backend-engineer
+    screens: ["/projects/[id]/wacc"]
+    files:
+      en: docs/runbooks/beta-series-collection.md
+      ko: docs/runbooks/beta-series-collection_ko.md
+    status: active
+
   # ── Guidelines ───────────────────────────────────────────────────────────
   - id: gdl-evidence-file-policy
     layer: guideline

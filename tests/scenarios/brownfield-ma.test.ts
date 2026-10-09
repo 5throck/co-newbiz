@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { startApp, type TestApp } from "./_support/harness.ts";
 import { launchBrowser, loginThroughUi, visit, axeScan, formatAxe, type AxeResult, type Session } from "./_support/browser.ts";
 import { BROWNFIELD, seedBrownfieldDeal } from "./_support/deals.ts";
-import { recordGate, recordTransition, closeProjectViaModal, see } from "./_support/ui.ts";
+import { recordGate, recordTransition, closeProjectViaModal, see, seeNot } from "./_support/ui.ts";
 import type { Browser } from "./_support/playwright.ts";
 
 let app: TestApp;
@@ -23,6 +23,55 @@ afterAll(async () => {
   await app?.stop();
 });
 
+
+/** ADR-0156 E2E fixture: a second shortlisted target with its own md_company
+ *  and two years of fact_financial rows, so the target selector has a real
+ *  choice and the per-target financial view has data to render. */
+function seedSecondTarget(app: TestApp): void {
+  app.writeDb((d) => {
+    const now = new Date().toISOString();
+    d.run(
+      "INSERT OR IGNORE INTO md_company (id, dart_corp_code, name_ko, name_en, created_at) VALUES ('e2e-target-b-company', 'DEMO0002', '레인보우로보틱스 E2E', 'Rainbow Robotics E2E', ?)",
+      [now],
+    );
+    d.run(
+      `INSERT OR REPLACE INTO brownfield_target
+       (id, opportunity_id, company_name, dart_corp_code, universe_note, status, rank, created_at, updated_at, discovery_source)
+       VALUES ('e2e-target-b', '${O}', '레인보우로보틱스 E2E', 'DEMO0002', 'E2E selector fixture', 'shortlisted', 2, ?, ?, 'manual')`,
+      [now, now],
+    );
+    for (const [pid, fy] of [["e2e-tb-py", 2023], ["e2e-tb-ly", 2024]] as const) {
+      d.run("INSERT OR IGNORE INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?, 'annual', ?, ?, ?, ?)", [pid, `${fy}-01-01`, `${fy}-12-31`, fy, now]);
+    }
+    const rows: Array<[string, string, number]> = [
+      ["01J8MDACC0REVENUE0000000000", "e2e-tb-py", 410_000_000_000],
+      ["01J8MDACC0OPERATING0000000000", "e2e-tb-py", 20_000_000_000],
+      ["01J8MDACC0PROFITLOSS000000000", "e2e-tb-py", 15_000_000_000],
+      ["01J8MDACC0LIABILITIES00000000", "e2e-tb-py", 300_000_000_000],
+      ["01J8MDACC0EQUITY000000000000", "e2e-tb-py", 500_000_000_000],
+      ["01J8MDACC0REVENUE0000000000", "e2e-tb-ly", 500_000_000_000],
+      ["01J8MDACC0OPERATING0000000000", "e2e-tb-ly", 30_000_000_000],
+      ["01J8MDACC0PROFITLOSS000000000", "e2e-tb-ly", 22_000_000_000],
+      ["01J8MDACC0LIABILITIES00000000", "e2e-tb-ly", 320_000_000_000],
+      ["01J8MDACC0EQUITY000000000000", "e2e-tb-ly", 540_000_000_000],
+    ];
+    for (const [accountId, periodId, value] of rows) {
+      d.run(
+        "INSERT OR IGNORE INTO fact_financial (id, company_id, period_id, account_id, value, revision_no, created_at) VALUES (?, 'e2e-target-b-company', ?, ?, ?, 0, ?)",
+        [`e2e-tb-${periodId}-${accountId}`, periodId, accountId, value, now],
+      );
+    }
+  });
+}
+
+/** Remove the ADR-0156 fixture so the later gate prerequisites (S7 screening
+ *  of every shortlisted target) run against the original single-target deal. */
+function removeSecondTarget(app: TestApp): void {
+  app.writeDb((d) => {
+    d.run("DELETE FROM brownfield_target WHERE id = 'e2e-target-b'");
+  });
+}
+
 describe("brownfield M&A S1 to S12", () => {
   test("S1-S10 evidence is complete; S11 is the current stage", async () => {
     await visit(s.page, app, `/projects/${P}/process`);
@@ -32,6 +81,33 @@ describe("brownfield M&A S1 to S12", () => {
     await visit(s.page, app, "/deals");
     await see(s.page, "S1-S12 데모 Brownfield 프로젝트");
     axe.push(await axeScan(s.page, "shell: deal board"));
+  }, 60_000);
+
+  test("ADR-0156: both shortlisted targets are analyzable via the target selector (WACC)", async () => {
+    seedSecondTarget(app);
+    await visit(s.page, app, `/projects/${P}/wacc`);
+    await see(s.page, "분석 대상");
+    const chip = s.page.getByRole("button", { name: /레인보우로보틱스 E2E/ });
+    await chip.click();
+    await see(s.page, "개별 대상 세션"); // per-target scope note — the GET refetches with target_id
+    const scoped = s.page.waitForResponse((r) => r.request().method() === "GET" && /target_id=/.test(r.url()));
+    await s.page.getByRole("button", { name: "프로젝트 기준" }).click();
+    await scoped;
+    await seeNot(s.page, "개별 대상 세션");
+    axe.push(await axeScan(s.page, "wacc target selector"));
+  }, 60_000);
+
+  test("ADR-0156: financial-analysis shows the per-target company metrics", async () => {
+    await visit(s.page, app, `/projects/${P}/financial-analysis`);
+    await see(s.page, "분석 대상");
+    await s.page.getByRole("button", { name: /레인보우로보틱스 E2E/ }).click();
+    await see(s.page, "레인보우로보틱스 E2E");
+    await see(s.page, "매출액 (최근 연도)"); // metrics card rendered from fact_financial
+    await see(s.page, "개별 대상 보기는 읽기 전용입니다");
+    // Back to the project-level binding (게이트 기준).
+    await s.page.getByRole("button", { name: "프로젝트 기준" }).click();
+    await see(s.page, "S1-S12 데모 대상회사");
+    removeSecondTarget(app);
   }, 60_000);
 
   test("S7 target screening gate GO", async () => {
