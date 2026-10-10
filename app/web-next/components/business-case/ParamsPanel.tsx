@@ -21,6 +21,9 @@ interface ResolvedParams {
   opexRatio: number; opexSource: string;
   capexRatio: number; capexSource: string;
   initialInvestmentRatio: number; initialInvestmentSource: string;
+  acquisitionEvRevenue: number | null; acquisitionEvRevenueSource: string;
+  fadeHorizonYears: number; fadeHorizonSource: string;
+  growthTerminal: number | null; growthTerminalSource: string;
   growthOverride: number | null; growthOverrideSource: string;
   sigmaOverride: number | null; sigmaOverrideSource: string;
   horizonYears: number; horizonSource: string;
@@ -72,6 +75,7 @@ const DRIVER_LABELS: Record<string, string> = {
   opex_ratio: "운영비 비율",
   capex_ratio: "설비투자 비율",
   initial_investment: "초기 투자 (year-0)",
+  exit_ev_revenue: "처분 EV/매출 배수 (회수 시점)",
 };
 
 export function ParamsPanel({ projectId }: { projectId: string }) {
@@ -170,6 +174,9 @@ export function ParamsPanel({ projectId }: { projectId: string }) {
                 ["초기투자 비율 (year-1 매출 대비)", resolved.initialInvestmentRatio, resolved.initialInvestmentSource],
               ] as Array<[string, number, string]>).map(([label, v, source]): ParamRow => ({ label, value: (v * 100).toFixed(1), unit: "%", source: <SourceChip source={source} /> }))),
               { label: "가동률 램프업", value: resolved.rampUp.map((v) => v.toFixed(2)).join(" → "), unit: "비율", source: <SourceChip source={resolved.rampSource} /> },
+              { label: "인수 EV/Revenue 배수 (브라운필드)", value: resolved.acquisitionEvRevenue != null ? resolved.acquisitionEvRevenue.toFixed(2) : "3.0 — 미확정 시 컴프 기본값 (글로벌 로보틱스 M&A 2–6×)", unit: resolved.acquisitionEvRevenue != null ? "배" : "", source: <SourceChip source={resolved.acquisitionEvRevenueSource} /> },
+              { label: "교차검증 창구 (페이드 DCF)", value: String(resolved.fadeHorizonYears), unit: "년", source: <SourceChip source={resolved.fadeHorizonSource} /> },
+              { label: "말기 성장률 (페이드 DCF 수렴점)", value: resolved.growthTerminal != null ? (resolved.growthTerminal * 100).toFixed(1) : "3.0 — 미확정 시 기본값", unit: resolved.growthTerminal != null ? "%" : "", source: <SourceChip source={resolved.growthTerminalSource} /> },
               { label: "성장률 오버라이드", value: resolved.growthOverride != null ? (resolved.growthOverride * 100).toFixed(1) : "— (유도값 사용)", unit: resolved.growthOverride != null ? "%" : "", source: <SourceChip source={resolved.growthOverrideSource} /> },
               { label: "변동성 오버라이드", value: resolved.sigmaOverride != null ? (resolved.sigmaOverride * 100).toFixed(1) : "— (유도값 사용)", unit: resolved.sigmaOverride != null ? "%" : "", source: <SourceChip source={resolved.sigmaOverrideSource} /> },
               { label: "회수 기간", value: String(resolved.horizonYears), unit: "년", source: <SourceChip source={resolved.horizonSource} /> },
@@ -188,6 +195,9 @@ export function ParamsPanel({ projectId }: { projectId: string }) {
             <label className="grid gap-1 text-sm">운영비 비율 (예: 0.6)<input className="form-input" value={form.opex_ratio ?? ""} onChange={(e) => setForm({ ...form, opex_ratio: e.target.value })} placeholder="0.6" /></label>
             <label className="grid gap-1 text-sm">설비투자 비율 (예: 0.1)<input className="form-input" value={form.capex_ratio ?? ""} onChange={(e) => setForm({ ...form, capex_ratio: e.target.value })} placeholder="0.1" /></label>
             <label className="grid gap-1 text-sm">초기투자 비율 (예: 0.5)<input className="form-input" value={form.initial_investment_ratio ?? ""} onChange={(e) => setForm({ ...form, initial_investment_ratio: e.target.value })} placeholder="0.5" /></label>
+            <label className="grid gap-1 text-sm">인수 EV/매출 배수 (예: 3.0 — 확정 시 인수가·처분가 모두 이 배수)<input className="form-input" value={form.acquisition_ev_revenue ?? ""} onChange={(e) => setForm({ ...form, acquisition_ev_revenue: e.target.value })} placeholder="3.0" /></label>
+            <label className="grid gap-1 text-sm">교차검증 창구 (페이드 DCF 연수, 예: 10)<input className="form-input" value={form.fade_horizon_years ?? ""} onChange={(e) => setForm({ ...form, fade_horizon_years: e.target.value })} placeholder="10" /></label>
+            <label className="grid gap-1 text-sm">말기 성장률 (비율, 예: 0.03)<input className="form-input" value={form.growth_terminal ?? ""} onChange={(e) => setForm({ ...form, growth_terminal: e.target.value })} placeholder="0.03" /></label>
             <label className="grid gap-1 text-sm">성장률 오버라이드 (비율)<input className="form-input" value={form.growth_override ?? ""} onChange={(e) => setForm({ ...form, growth_override: e.target.value })} placeholder="0.05" /></label>
             <label className="grid gap-1 text-sm">변동성 오버라이드 (비율)<input className="form-input" value={form.sigma_override ?? ""} onChange={(e) => setForm({ ...form, sigma_override: e.target.value })} placeholder="0.03" /></label>
             <label className="grid gap-1 text-sm">회수 기간 (년)<input className="form-input" value={form.horizon_years ?? ""} onChange={(e) => setForm({ ...form, horizon_years: e.target.value })} placeholder="5" /></label>

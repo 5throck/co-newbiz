@@ -75,6 +75,18 @@ export async function register() {
     }
     const db = getDb();
 
+    // Boot transparency (사용자 요청 2026-10-10): WHICH database file this
+    // server is bound to — printed once per boot. A wrong CO_NEWBIZ_DB_PATH
+    // or a stale-launch divergence must be visible at a glance in the boot
+    // log, not discovered through divergent data. PRAGMA failure never
+    // blocks boot.
+    try {
+      const main = (db.query("PRAGMA database_list").all() as Array<{ name: string; file: string }>).find((r) => r.name === "main");
+      console.log(`[bootstrap] database: ${main?.file || "(in-memory)"}`);
+    } catch {
+      console.warn("[bootstrap] database path could not be resolved (PRAGMA database_list failed).");
+    }
+
     // S1 market-sizing queue recovery — recoverQueuePass is normally driven by
     // the OS-scheduled watch:run cycle (never an in-process timer), but local
     // dev has no such scheduler running. Every dev-server restart abandons any

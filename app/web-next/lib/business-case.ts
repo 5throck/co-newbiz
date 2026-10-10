@@ -10,7 +10,7 @@
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
-import { SCENARIOS, recommendedFromDb, recommendTargetsFromDb, enginesMixedAcrossTargets, type Scenario, type TargetComparisonRow } from "./business-case-generator.ts";
+import { SCENARIOS, recommendedFromDb, recommendTargetsFromDb, enginesMixedAcrossTargets, methodsMixedAcrossTargets, type Scenario, type TargetComparisonRow } from "./business-case-generator.ts";
 import { resolveOrCreateCompany } from "./brownfield-targets.ts";
 import { SPEC_VERSION } from "./spec-activities.generated.ts";
 import { applyDdReselection, selectedTargetId } from "./dd-target.ts";
@@ -35,6 +35,8 @@ export interface LineRow {
   category: "labor" | "opex" | "capex" | "revenue";
   name: string;
   annual_amount_krw_m: number;
+  /** 단위 계약(migration 0134) — 금액 행마다 명시. 기본 'KRW_M'(백만 원). */
+  unit: string | null;
   start_year: number;
   growth_rate: number;
   note: string | null;
@@ -170,6 +172,10 @@ export function listBusinessCases(projectId: string): {
   targets: TargetComparisonRow[];
   /** D2: true when compared targets' cases come from different engines. */
   enginesMixed: boolean;
+  /** True when compared targets' cases use different valuation bases
+   *  (company-revenue anchor vs market-capture fallback) — the p05 ranking
+   *  comparison is then apples-to-oranges and the UI warns. */
+  methodsMixed: boolean;
 } {
   const db = getDb();
   const models = db
@@ -183,7 +189,7 @@ export function listBusinessCases(projectId: string): {
     .all(projectId) as Array<{ id: string; kind: string; name: string; horizon_years: number; created_by: string; created_at: string; variant: "market_forward" | "historical"; inputs_json: string | null; target_id: string | null; archived_at: string | null; archived_by: string | null; target_name: string | null }>;
   const lines = db
     .query(
-      `SELECT id, model_id, category, name, annual_amount_krw_m, sales_volume, unit_price_krw, start_year, growth_rate, note
+      `SELECT id, model_id, category, name, annual_amount_krw_m, unit, sales_volume, unit_price_krw, start_year, growth_rate, note
        FROM business_case_line
        WHERE model_id IN (SELECT id FROM business_case_model WHERE project_id = ?)
        ORDER BY category, start_year, id`,
@@ -221,7 +227,7 @@ export function listBusinessCases(projectId: string): {
       simulations: modelSims,
     };
   });
-  return { cases: cases.filter((c) => c.archived_at === null), archived: cases.filter((c) => c.archived_at !== null), recommendedScenario: recommended, adoption, targetSelection, targets, enginesMixed: enginesMixedAcrossTargets(targets) };
+  return { cases: cases.filter((c) => c.archived_at === null), archived: cases.filter((c) => c.archived_at !== null), recommendedScenario: recommended, adoption, targetSelection, targets, enginesMixed: enginesMixedAcrossTargets(targets), methodsMixed: methodsMixedAcrossTargets(targets) };
 }
 
 /** The adopted case for history views (adoption / IC package / report): looks in

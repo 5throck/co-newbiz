@@ -138,7 +138,7 @@ export async function seedGreenfieldDeal(dbPath: string, analystId: string): Pro
     db.run(
       `INSERT INTO process_run (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json)
        VALUES ('e2e-gf-adopt', 'project', ?, ?, 'e2e', 's8_case_adopt', 'done', 'human', ?, ?, ?, ?)`,
-      [projectId, projectId, actor, now, now, json({ adopted_model_id: "e2e-gf-model" })],
+      [projectId, projectId, actor, now, now, json({ model_id: "e2e-gf-model" })],
     );
 
     for (const checklistId of Object.values(DD_WORKSPACE_CHECKLISTS)) {

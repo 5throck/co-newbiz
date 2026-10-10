@@ -24,6 +24,7 @@ import { TabNav } from "../TabNav.tsx";
 import { WaccPanel } from "../wacc/WaccPanel.tsx";
 import { ParamsPanel } from "../business-case/ParamsPanel.tsx";
 import { TargetCostingPanel } from "../business-case/TargetCostingPanel.tsx";
+import { ValuationMethodology } from "../business-case/ValuationMethodology.tsx";
 import { FinancialAnalysisPanel } from "../FinancialAnalysisPanel.tsx";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject, isReadOnlyAdmin } from "../../lib/project-write-access.ts";
@@ -79,6 +80,7 @@ interface TargetComparisonRow {
   caseCount: number;
   recommended: boolean;
   engine: "python-sim-engine" | "ts-fallback" | "mixed" | null;
+  anchorMethod: "company_revenue" | "market_capture" | null;
 }
 interface LegacyModelRow {
   id: string;
@@ -96,6 +98,7 @@ interface CasesResponse {
   target_selection: { targetId: string; rationale: string; selectedBy: string; selectedAt: string } | null;
   targets: TargetComparisonRow[];
   engines_mixed?: boolean;
+  methods_mixed?: boolean;
   escalated_cagr_pct: number | null;
 }
 interface ActivityRow {
@@ -503,6 +506,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               <th scope="col" className="num">IRR <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">(%)</span></th>
               <th scope="col" className="num">케이스</th>
               <th scope="col">계산 엔진</th>
+              <th scope="col" title="이 대상의 케이스가 어떤 매출 기준으로 평가되었는가 — 회사 실적 앵커(DART 연매출)와 시장 포획 폴백(시장규모 × 포획률)이 섞이면 p05 순위 비교가 부적합합니다.">평가 기준</th>
               <th scope="col"></th>
             </tr>
           </thead>
@@ -523,6 +527,15 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                   <td className="num">{t.caseCount}</td>
                   <td><span className="status-chip status-not-started">{ENGINE_LABEL[t.engine ?? ""] ?? "엔진 미기록"}</span></td>
                   <td>
+                    {t.anchorMethod === "company_revenue" && (
+                      <span className="status-chip status-green" title="대상 회사 최신 연매출(DART)을 매출 앵커로 평가 — 대상 간 비교 가능">실적 앵커 (DART)</span>
+                    )}
+                    {t.anchorMethod === "market_capture" && (
+                      <span className="status-chip status-amber" title="회사 실적이 연결되지 않아 시장규모 × 포획률 폴백으로 평가 — 실적 앵커 대상과는 기준이 다릅니다. 재무분석 탭에서 회사 연결 후 재생성하세요.">시장 포획 폴백</span>
+                    )}
+                    {!t.anchorMethod && <span className="status-chip status-not-started">미평가</span>}
+                  </td>
+                  <td>
                     {canAct && !isSelected && (
                       <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => { setSelecting({ targetId: t.targetId, name: t.companyName }); setSelectionRationale(""); }}>
                         대상 선택
@@ -537,6 +550,13 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         {data?.engines_mixed && (
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" role="note">
             * 비교된 케이스가 서로 다른 계산 엔진에서 산출되었으므로 순위는 유의하여 해석하세요.
+          </p>
+        )}
+        {data?.methods_mixed && (
+          <p className="text-[length:var(--fs-caption)] mt-1" role="alert">
+            <span className="status-chip status-amber mr-1">⚠ 평가 기준 불일치</span>
+            비교 대상의 평가 기준이 섞여 있습니다 — 일부 대상이 <b>회사 실적 앵커</b>(DART 연매출)가 아닌 <b>시장 포획 폴백</b>(시장규모 × 포획률)으로 평가되어
+            p05 순위·★ 권고안 비교가 부적합합니다. 재무분석 탭에서 해당 대상의 회사를 연결한 뒤 재생성하세요.
           </p>
         )}
         {targets.every((t) => t.caseCount === 0) && (
@@ -589,6 +609,13 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           과거 기반은 비교용이며, 둘의 차이가 클수록 성장 가정의 불확실성이 크다는 신호입니다.
         </p>
       </section>
+
+      {/* 기업가치 계산 방법 — 계산 사슬 공개 (사용자 요청 2026-10-10) */}
+      <ValuationMethodology
+        projectId={projectId}
+        marketCase={(byScenario.get("base") ?? []).find((c) => c.variant === "market_forward") ?? null}
+        historicalCase={(byScenario.get("base") ?? []).find((c) => c.variant === "historical") ?? null}
+      />
 
       {canAct && (
         <div className="mb-3">
@@ -693,6 +720,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                     <th scope="col" className="num">NPV p95<UnitNote /></th>
                     <th scope="col" className="num">IRR <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">(%)</span></th>
                     <th scope="col" className="num">p50 차이<span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">({KRW_MILLIONS_UNIT}, 시장 기반 대비 %)</span></th>
+                    <th scope="col" className="num" title="이중 구조 교차검증 — 같은 케이스를 고전 장기창구 DCF로 재평가: 명시적 창구(기본 10년) 안에서 성장률이 말기 성장률(기본 3%)로 선형 수렴하고 마지막 해에 동일 배수로 처분한 결정론적 NPV. 기본 구조(5년 홀드+exit)와 크게 어긋나면 성장-배수 가정이 불일치한다는 신호.">페이드 DCF p50<UnitNote /></th>
                     <th scope="col"></th>
                   </tr>
                 </thead>
@@ -738,6 +766,13 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                             </span>
                           )}
                         </td>
+                        <td className="num mono-num">
+                          {note.xcheck_fade_npv ? (
+                            <span title={`페이드 DCF 교차검증 — 명시적 ${note.xcheck_horizon ?? "?"}년 창구, 성장률 → ${(Number(note.xcheck_terminal_growth ?? "0") * 100).toFixed(1)}% 선형 수렴, 동일 배수 처분 · IRR ${note.xcheck_fade_irr && note.xcheck_fade_irr !== "null" ? `${(Number(note.xcheck_fade_irr) * 100).toFixed(1)}%` : "—"}`}>
+                              {fmt(Number(note.xcheck_fade_npv))}
+                            </span>
+                          ) : "—"}
+                        </td>
                         <td>
                           {canAct && (
                             <div className="flex flex-wrap gap-1">
@@ -756,7 +791,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                   })}
                   {!hasHistorical && (
                     <tr>
-                      <td colSpan={9} className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
+                      <td colSpan={10} className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
                         과거 기반 관점 N/A — 대상 회사 연결 + DART 동기화 후 재생성하면 추가됩니다.{" "}
                         <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("financial-analysis")}>재무분석 탭에서 연결 →</button>
                       </td>
@@ -768,6 +803,9 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             {(cases[0]?.simulations?.[0]?.note) && (
               <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" title="재현 근거 (동일 시드로 재계산해도 같은 결과)">{cases[0].simulations[0].note}</p>
             )}
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
+              계산 사슬(매출 앵커 → 성장·변동성 → 마진 → 인수가 → 할인·처분 → 몬테카를로)과 두 관점 차이의 원인은 <b>설명·생성·권고</b> 탭의 <b>기업가치 계산 방법</b>을 참고하세요.
+            </p>
           </section>
         );
       })}
