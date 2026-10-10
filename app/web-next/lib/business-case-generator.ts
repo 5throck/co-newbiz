@@ -355,6 +355,10 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
 
 // ── Case inputs (anchored to the promoting opportunity's market facts) ─────
 
+/** ADR-0156 소비 스코프 — 'project'(게이트 기준 수치) 또는 'target'(그 대상
+ *  회사의 자체 WACC 세션; companyId는 job-spec 스냅샷 식별용). */
+export type CaseWaccScope = { scope: "project" } | { scope: "target"; companyId: string };
+
 export interface CaseInputs {
   projectId: string;
   /** ADR-0143 target axis — set for brownfield per-target cases (the shortlist
@@ -364,6 +368,10 @@ export interface CaseInputs {
   marketSizeKrwM: number;
   anchorGrowth: number;
   wacc: WaccResolution;
+  /** ADR-0156 소비 스코프 — 'project'(게이트 기준) 또는 'target'(그 대상
+   *  회사의 자체 WACC 세션). 없으면 프로젝트로 해석한다(수제 컨텍스트
+   *  하위호환). note·job-spec 근거 라벨의 원천. */
+  waccScope?: CaseWaccScope;
   /** Dual-perspective parameters (ADR-0117). Optional so legacy callers
    *  constructing CaseInputs by hand keep working — without it both variants
    *  fall back to the legacy anchor + 2% dispersion. */
@@ -637,6 +645,7 @@ export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "g
     marketSizeKrwM: row?.market_size_krw_m ?? 50000,
     anchorGrowth: row?.growth_rate ?? 0.05,
     wacc: resolveProjectWacc(getDb(), projectId),
+    waccScope: { scope: "project" },
     bcParams: resolveBusinessCaseParams(getDb(), projectId),
     waccSubject: resolveProjectWaccSubject(getDb(), projectId),
     targetCostWiring: resolveDownsideOpexUplift(getDb(), projectId) ?? undefined,
@@ -656,13 +665,37 @@ export function caseInputsForProject(projectId: string): CaseInputs {
  *  degrade to historical N/A per target — never fabricated. Pass a
  *  pre-resolved project base to avoid re-running the project-level queries
  *  for every subject in a multi-target run (D3). */
+/** ADR-0156 소비 규칙: 바운드 대상(md_project.company_id)은 게이트 기준인
+ *  프로젝트 스코프를 그대로 쓴다(WACC 페이지의 '게이트 기준' 칩과 동일
+ *  규칙). 그 외 대상은 자기 회사 스코프의 세션이 있을 때만 그 세션으로
+ *  바꾼다 — 세션이 없거나(source 'default') 회사를 특정할 수 없는 대상은
+ *  프로젝트 스코프로 폴백한다. 자동 생성이 수동 WACC 확정 여부에 블록되지
+ *  않게 하기 위함이고, 어떤 스코프를 썼는지는 wacc_scope 라벨로 남는다. */
+function resolveTargetCaseWacc(
+  projectId: string,
+  target: { companyId: string | null },
+  projectWacc: WaccResolution,
+): { wacc: WaccResolution; waccScope: CaseWaccScope } {
+  if (!target.companyId) return { wacc: projectWacc, waccScope: { scope: "project" } };
+  const bound = getDb()
+    .query("SELECT company_id FROM md_project WHERE id = ?")
+    .get(projectId) as { company_id: string | null } | undefined;
+  if (!bound || bound.company_id === target.companyId) return { wacc: projectWacc, waccScope: { scope: "project" } };
+  const scoped = resolveProjectWacc(getDb(), projectId, { subjectCompanyId: target.companyId });
+  if (scoped.source === "default") return { wacc: projectWacc, waccScope: { scope: "project" } };
+  return { wacc: scoped, waccScope: { scope: "target", companyId: target.companyId } };
+}
+
 export function caseInputsForTarget(
   projectId: string,
   target: { id: string; companyId: string | null },
   base: Omit<CaseInputs, "growthModel" | "targetId"> = caseInputsBaseForProject(projectId),
 ): CaseInputs {
+  const { wacc, waccScope } = resolveTargetCaseWacc(projectId, target, base.wacc);
   return {
     ...base,
+    wacc,
+    waccScope,
     targetId: target.id,
     growthModel: resolveGrowthModel(getDb(), projectId, { companyId: target.companyId }),
   };
@@ -740,13 +773,22 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
   // so without the subject in the case_id two targets with identical market
   // drivers would draw the IDENTICAL sample stream.
   const subjectKey = inputs.targetId ? `${inputs.projectId}:${inputs.targetId}` : inputs.projectId;
+  // ADR-0156 소비 스코프를 스냅샷에 싣는다 — target이면 어떤 회사의 세션으로
+  // 할인했는지 subject_company_id까지 식별 가능(REQ-W5-1 재현 계약).
+  const waccScope = inputs.waccScope ?? { scope: "project" as const };
   return {
     job_id: `s8:${subjectKey}:${scenario}:${variant}`,
     seed_policy: { base: subjectKey, hash: "fnv1a" },
     device: "auto",
     iterations: bc.iterations,
     horizon_years: bc.horizonYears,
-    discount_rate: { value: inputs.wacc.value, subject: inputs.waccSubject?.subject ?? "promoter", source: inputs.wacc.source },
+    discount_rate: {
+      value: inputs.wacc.value,
+      subject: inputs.waccSubject?.subject ?? "promoter",
+      source: inputs.wacc.source,
+      scope: waccScope.scope,
+      ...("companyId" in waccScope ? { subject_company_id: waccScope.companyId } : {}),
+    },
     cases: [
       {
         case_id: `${inputs.targetId ? `${inputs.targetId}:` : ""}${scenario}:${variant}`,
@@ -889,7 +931,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
         "",
         `확정 WACC ${(ctx.inputs.wacc.value * 100).toFixed(1)}%·회수기간 ${horizonOf(ctx.inputs)}년 기준 NPV ${npv.toFixed(1)} 억원,`,
         `성장 ${(eff.growth * 100).toFixed(2)}% (${eff.growthSource}) · sigma ${pct1(eff.disp)} (${eff.dispSource}).`,
-        `WACC 출처: ${ctx.inputs.wacc.source}${ctx.inputs.wacc.run_id ? ` (run ${ctx.inputs.wacc.run_id})` : ""}.`,
+        `WACC 출처: ${ctx.inputs.wacc.source}${ctx.inputs.waccScope?.scope === "target" ? " · 대상별 세션" : ""}${ctx.inputs.wacc.run_id ? ` (run ${ctx.inputs.wacc.run_id})` : ""}.`,
         `IRR ${((irr(flows) ?? 0) * 100).toFixed(1)}% (greenfield-fs step 3). 모델/라인 3건 영속화 (model ${modelId}).`,
       ].join("\n");
     }
@@ -913,7 +955,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       const tcFragment = ctx.inputs.targetCostWiring
         ? `; tc_gap_ratio=${ctx.inputs.targetCostWiring.gapRatio.toFixed(4)}; tc_downside_opex_uplift=${(ctx.scenario === "downside" ? ctx.inputs.targetCostWiring.uplift : 1).toFixed(4)}`
         : "";
-      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; wacc_subject=${waccSubject}; capture_rate=${bc.captureRate}; capture_source=${bc.captureSource}; ramp_source=${bc.rampSource}; ${provenance}${tcFragment}; engine=${engineMeta.engine}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}`;
+      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}; wacc_scope=${ctx.inputs.waccScope?.scope ?? "project"}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; wacc_subject=${waccSubject}; capture_rate=${bc.captureRate}; capture_source=${bc.captureSource}; ramp_source=${bc.rampSource}; ${provenance}${tcFragment}; engine=${engineMeta.engine}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}`;
       db.run(`UPDATE business_case_model SET inputs_json = ? WHERE id = ?`, [JSON.stringify(jobSpec), modelId]);
       for (const pct of ["p05", "p50", "p95"] as const) {
         const isP50 = pct === "p50";

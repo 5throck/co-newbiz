@@ -70,3 +70,8 @@ criteria, snapshot filling and S10/S11.
 ## Amendment 2026-10-09
 
 The project-level selector chip is removed on multi-target brownfield projects. The default chip is the S8-selected target (bound on `md_project.company_id`), else the first shortlisted target; the bound target keeps the `게이트 기준` marker and uses the project-level scope, so decision 2 (gate semantics) is unchanged. See design 2026-10-09-ui-units-targets-dd.
+
+## Amendment 2026-10-10 (2) — S8 generator consumption
+
+Decision 2's per-target sessions now feed the S8 valuation itself. The generator consumes WACC with the same scope rule the WACC page displays (amendment 1): the bound target uses the project-level (gate) scope; a non-bound shortlisted target with its own session uses `{ subjectCompanyId }`, and falls back to the project scope when no session exists — labeled `wacc_scope=project|target` in the simulation note and carried on the job-spec snapshot (`discount_rate.scope`, `subject_company_id`). Greenfield stays project-level; `wacc_subject` (REQ-W4) and every gate-path resolution (fs gate, kill criteria, snapshot filling, S10/S11) remain project-level. Design of record: `docs/designs/2026-10-10-s8-per-target-wacc-consumption-design.md`.
+
