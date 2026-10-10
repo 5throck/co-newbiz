@@ -71,7 +71,7 @@ export function composeProjectReport(db: Database, projectId: string, projectNo:
     const note = parseNote(simOf(adopted, "p50")?.note);
     if (Object.keys(note).length > 0) {
       lines.push("");
-      lines.push(`> 산출 근거: seed=${note.seed ?? "—"} · iterations=${note.iterations ?? "—"} · WACC ${note.wacc ?? "—"} (${note.wacc_source ?? "—"}) · 성장 ${note.growth ?? "—"} (${note.growth_source ?? "—"}) · σ ${note.sigma ?? "—"} (${note.sigma_source ?? "—"})`);
+      lines.push(`> 산출 근거: seed=${note.seed ?? "—"} · iterations=${note.iterations ?? "—"} · WACC ${note.wacc ?? "—"} (${note.wacc_source ?? "—"}${note.wacc_scope === "target" ? " · 대상별 세션" : ""}) · 성장 ${note.growth ?? "—"} (${note.growth_source ?? "—"}) · σ ${note.sigma ?? "—"} (${note.sigma_source ?? "—"})`);
     }
   } else {
     lines.push("(채택된 케이스 없음)");
