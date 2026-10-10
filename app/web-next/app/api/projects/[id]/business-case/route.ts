@@ -35,7 +35,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!auth.ok) return auth.response;
   const { id } = await params;
   if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
-  const { cases, archived, recommendedScenario, adoption, targetSelection, targets, enginesMixed } = listBusinessCases(id);
+  const { cases, archived, recommendedScenario, adoption, targetSelection, targets, enginesMixed, methodsMixed } = listBusinessCases(id);
   const db = getDb();
   // 에스컬레이션 조정 CAGR (design 2026-09-20-escalation-downstream §4-Q2) —
   // 과거 기반 관점과의 괴리 경고용. 프로젝트 → 원 기회의 산업에서 resolver 조회.
@@ -49,7 +49,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     : undefined;
   const eff = ind ? resolveEffectiveCagr(db, ind.id) : null;
   return ok(
-    { cases, archived, legacy_models: listLegacyModels(id), recommended_scenario: recommendedScenario, adoption, target_selection: targetSelection, targets, engines_mixed: enginesMixed, escalated_cagr_pct: eff?.source === "escalated" ? eff.cagrPct : null },
+    { cases, archived, legacy_models: listLegacyModels(id), recommended_scenario: recommendedScenario, adoption, target_selection: targetSelection, targets, engines_mixed: enginesMixed, methods_mixed: methodsMixed, escalated_cagr_pct: eff?.source === "escalated" ? eff.cagrPct : null },
     200,
     { count: cases.length },
   );
@@ -211,14 +211,15 @@ function validateLines(lines: LineInput[]): string | null {
 function insertLines(db: ReturnType<typeof getDb>, modelId: string, lines: LineInput[], userId: string, now: string): void {
   for (const line of lines) {
     db.run(
-      `INSERT INTO business_case_line (id, model_id, category, name, annual_amount_krw_m, sales_volume, unit_price_krw, start_year, growth_rate, note, created_by, created_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      `INSERT INTO business_case_line (id, model_id, category, name, annual_amount_krw_m, unit, sales_volume, unit_price_krw, start_year, growth_rate, note, created_by, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         ulid(),
         modelId,
         line.category,
         line.name?.trim() || line.category,
         line.annual_amount_krw_m,
+        "KRW_M",
         typeof line.sales_volume === "number" ? line.sales_volume : null,
         typeof line.unit_price_krw === "number" ? line.unit_price_krw : null,
         typeof line.start_year === "number" && line.start_year >= 1 ? Math.floor(line.start_year) : 1,

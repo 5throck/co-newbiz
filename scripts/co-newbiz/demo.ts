@@ -14,35 +14,53 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { REPO_ROOT, startApp, type TestApp } from "../../tests/scenarios/_support/harness.ts";
-import { grantProjectLead, seedGreenfieldDeal } from "../../tests/scenarios/_support/deals.ts";
+import { grantProjectLead } from "../../tests/scenarios/_support/deals.ts";
 import { launchBrowser, loginThroughUi, visit } from "../../tests/scenarios/_support/browser.ts";
-import { seedS1ToS12Demo } from "./seed-s1-s12-demo.ts";
+import { seedS1ToS12Demo, seedGreenfieldS1ToS12Demo } from "./seed-s1-s12-demo.ts";
 
 const EVIDENCE_DIR = join(REPO_ROOT, "docs", "evidence", "demo");
 
-/** The demo brownfield chain with its human decisions already recorded, plus the greenfield deal. */
-async function seed({ dbPath, analystId }: { dbPath: string; analystId: string }): Promise<{ opportunityId: string; projectId: string }> {
-  const ids = seedS1ToS12Demo(dbPath, { humanDecisions: true, subTrackDd: true });
-  grantProjectLead(dbPath, ids.projectId, analystId);
-  await seedGreenfieldDeal(dbPath, analystId);
-  return ids;
+interface DemoIds {
+  brownfield: { opportunityId: string; projectId: string };
+  greenfield: { opportunityId: string; projectId: string };
 }
 
-async function capture(app: TestApp, ids: { opportunityId: string; projectId: string }): Promise<string[]> {
+/** Both demo chains with their human decisions already recorded — the full
+ *  S1→S12 lifecycle per track (brownfield M&A and greenfield 신설). */
+async function seed({ dbPath, analystId }: { dbPath: string; analystId: string }): Promise<DemoIds> {
+  const brownfield = seedS1ToS12Demo(dbPath, { humanDecisions: true, subTrackDd: true });
+  grantProjectLead(dbPath, brownfield.projectId, analystId);
+  const greenfield = await seedGreenfieldS1ToS12Demo(dbPath, { humanDecisions: true });
+  grantProjectLead(dbPath, greenfield.projectId, analystId);
+  return { brownfield, greenfield };
+}
+
+async function capture(app: TestApp, ids: DemoIds): Promise<string[]> {
   mkdirSync(EVIDENCE_DIR, { recursive: true });
-  const O = ids.opportunityId;
-  const P = ids.projectId;
+  const BF = ids.brownfield;
+  const GF = ids.greenfield;
   const shots: Array<[string, string]> = [
+    // Brownfield track — S1 → S12 through the target axis.
     ["01-deal-board", "/deals"],
-    ["02-s1-market-analysis", `/deals/${O}/s1`],
-    ["03-s2-opportunity", `/deals/${O}/s2`],
-    ["04-s4-route-decision", `/deals/${O}/s4`],
-    ["05-s6-s7-target-screening", `/deals/${O}/s7`],
-    ["06-s8-business-case", `/projects/${P}/business-case`],
-    ["07-s9-dd-workspace", `/projects/${P}/dd`],
-    ["08-s10-deal-structure", `/projects/${P}/deal-structure`],
-    ["09-s11-ic-review", `/projects/${P}/ic-review`],
-    ["10-s12-portfolio", `/projects/${P}/portfolio`],
+    ["02-s1-market-analysis", `/deals/${BF.opportunityId}/s1`],
+    ["03-s2-opportunity", `/deals/${BF.opportunityId}/s2`],
+    ["04-s4-route-decision", `/deals/${BF.opportunityId}/s4`],
+    ["05-s6-s7-target-screening", `/deals/${BF.opportunityId}/s7`],
+    ["06-s8-business-case", `/projects/${BF.projectId}/business-case`],
+    ["07-s9-dd-workspace", `/projects/${BF.projectId}/dd`],
+    ["08-s10-deal-structure", `/projects/${BF.projectId}/deal-structure`],
+    ["09-s11-ic-review", `/projects/${BF.projectId}/ic-review`],
+    ["10-s12-portfolio", `/projects/${BF.projectId}/portfolio`],
+    // Greenfield track — S1 → S5 (entry strategy, no target axis) → S8 → S12.
+    ["11-gf-s1-market-analysis", `/deals/${GF.opportunityId}/s1`],
+    ["12-gf-s2-opportunity", `/deals/${GF.opportunityId}/s2`],
+    ["13-gf-s4-route-decision", `/deals/${GF.opportunityId}/s4`],
+    ["14-gf-s5-entry-strategy", `/deals/${GF.opportunityId}/s5`],
+    ["15-gf-s8-business-case", `/projects/${GF.projectId}/business-case`],
+    ["16-gf-s9-dd-workspace", `/projects/${GF.projectId}/dd`],
+    ["17-gf-s10-deal-structure", `/projects/${GF.projectId}/deal-structure`],
+    ["18-gf-s11-ic-review", `/projects/${GF.projectId}/ic-review`],
+    ["19-gf-s12-portfolio", `/projects/${GF.projectId}/portfolio`],
   ];
   const browser = await launchBrowser();
   const written: string[] = [];
@@ -64,7 +82,7 @@ async function capture(app: TestApp, ids: { opportunityId: string; projectId: st
 
 async function main(): Promise<void> {
   const captureMode = process.argv.includes("--capture");
-  let ids: { opportunityId: string; projectId: string } = { opportunityId: "", projectId: "" };
+  let ids: DemoIds = { brownfield: { opportunityId: "", projectId: "" }, greenfield: { opportunityId: "", projectId: "" } };
   const app = await startApp("demo", {
     seed: async (ctx) => {
       ids = await seed(ctx);
@@ -83,7 +101,8 @@ async function main(): Promise<void> {
   console.log(`  analyst (deal work)  user: ${app.analystId}  first-login password: ${app.analystPassword}`);
   console.log(`  admin (no deal data) user: ${app.adminId}  first-login password: ${app.adminPassword}`);
   console.log("  passwords are generated for this run only; the first login forces a change.");
-  console.log(`  demo deal: ${app.baseUrl}/deals/${ids.opportunityId}  ·  project: ${app.baseUrl}/projects/${ids.projectId}/process`);
+  console.log(`  brownfield (M&A)      deal: ${app.baseUrl}/deals/${ids.brownfield.opportunityId}  ·  project: ${app.baseUrl}/projects/${ids.brownfield.projectId}/process`);
+  console.log(`  greenfield (신설)      deal: ${app.baseUrl}/deals/${ids.greenfield.opportunityId}  ·  project: ${app.baseUrl}/projects/${ids.greenfield.projectId}/process`);
   // The harness's own SIGINT/SIGTERM handlers kill the server and delete the temp directory.
   console.log("Ctrl-C stops the server and deletes the temporary database.");
   await new Promise<never>(() => undefined);

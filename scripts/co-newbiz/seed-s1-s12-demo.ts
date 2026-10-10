@@ -1,9 +1,10 @@
-// @version 1.7.0
-// Idempotent S1→S12 brownfield demo chain seed.
+// @version 1.8.0
+// Idempotent S1→S12 demo chain seeds — BROWNFIELD (seedS1ToS12Demo) and
+// GREENFIELD (seedGreenfieldS1ToS12Demo), one full lifecycle per track.
 //
 // The operational DB is intentionally gitignored, so a fresh/local database
-// can pass schema checks while still lacking a single deal that demonstrates
-// the full S1-S12 lifecycle. This script creates one compact, clearly-labelled
+// can pass schema checks while still lacking a deal that demonstrates
+// the full S1-S12 lifecycle. Each seed creates one compact, clearly-labelled
 // demo chain that satisfies the process-flow predicates without fabricating it
 // as production data.
 //
@@ -318,7 +319,7 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
       `INSERT OR IGNORE INTO process_run
        (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json)
        VALUES (?, 'project', ?, ?, 'demo-s1-s12', 's8_case_adopt', 'done', 'human', ?, ?, ?, ?)`,
-      [DEMO.adoptionRunId, DEMO.projectId, DEMO.projectId, actor, now, now, json({ adopted_model_id: DEMO.modelId })],
+      [DEMO.adoptionRunId, DEMO.projectId, DEMO.projectId, actor, now, now, json({ model_id: DEMO.modelId })],
     );
 
     // Wave F-6: brownfield M&A S11 requires the human-recorded PMI kickoff.
@@ -442,4 +443,288 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
 if (import.meta.main) {
   const result = seedS1ToS12Demo(argValue(process.argv.slice(2), "--db-path"));
   console.log(`S1-S12 demo seed ready: opportunity=${result.opportunityId}, project=${result.projectId}`);
+}
+
+// ── Greenfield twin (2026-10-10) — S1→S12 with the track-appropriate stages ──
+// Same lifecycle shape as the brownfield seed, but through the greenfield
+// branch: S4 routes to 자체 진출, S5 carries the entry-strategy evidence
+// (NO S6/S7 target axis), S8 runs the REAL generator (project-level,
+// market-capture anchor — no DART company anchor, no acquisition pricing),
+// S11 records the 설립 실행 5단계 instead of the brownfield PMI kickoff,
+// and the gate set drops target_screening (brownfield-only).
+
+const GF = {
+  industryId: "demo-gf-industry",
+  companyId: "demo-gf-company",
+  oppId: "demo-gf-opportunity",
+  projectId: "demo-gf-project",
+  analysisId: "demo-gf-analysis",
+  versionId: "demo-gf-analysis-v1",
+  routeId: "demo-gf-route",
+  assessmentId: "demo-gf-assessment",
+  adoptionRunId: "demo-gf-adoption-run",
+  runId: "demo-gf-run",
+  structureId: "demo-gf-structure",
+} as const;
+
+/** Full SizingMatrix — the S1 report UI dereferences every field below
+ *  (the E2E greenfield fixture's compact payload is NOT enough for the demo). */
+const GF_MATRIX: SizingMatrix = {
+  industryLabel: "S1-S12 데모 신설 산업 (데모 데이터)",
+  provenance: "llm-estimate",
+  synthesized: true,
+  anchor: { sources: [{ label: "데모 앵커 (실제 출처 아님)", estimate: 0.8, status: "consensus", note: "demo seed — not a real estimate" }], total: 0.8 },
+  segments: [
+    { code: "demo_gf_core", label: "핵심 수요처 (데모)" },
+    { code: "demo_gf_service", label: "연계 서비스 (데모)" },
+  ],
+  regions: [
+    { code: "KR", label: "한국 (데모)", weight: 70, mix: { demo_gf_core: 75, demo_gf_service: 25 }, adjustment: "demo seed" },
+    { code: "ROW", label: "기타 지역 (데모)", weight: 30, mix: { demo_gf_core: 65, demo_gf_service: 35 }, adjustment: "demo seed" },
+  ],
+  baseline2026: { KR: { demo_gf_core: 0.35, demo_gf_service: 0.15 }, ROW: { demo_gf_core: 0.15, demo_gf_service: 0.05 } },
+  cagrBase: { KR: { demo_gf_core: 0.12, demo_gf_service: 0.09 }, ROW: { demo_gf_core: 0.1, demo_gf_service: 0.07 } },
+  chainGrade: { grade: "B", statisticalHops: 0, note: "demo seed: no statistical hop, llm-estimate source cap" },
+  chainDirection: { position: "upstream", note: "demo seed", relatedIndustries: [{ relation: "후방", name: "데모 소재 산업" }] },
+  qualitative: { opportunityFactors: ["데모 기회 요인 — 신규 수요"], riskFactors: ["데모 위험 요인 — 진입 지연"] },
+  consistency: { bottomUpCagr: 0.1, topDownCagr: 0.11, tolerance: "demo seed" },
+  crossValidation: [],
+  limitations: ["데모 시드 데이터 — 실제 시장 분석이 아닙니다."],
+  competitive: {
+    structure: "데모 경쟁 구조 — 분산 (실제 데이터 아님)",
+    players: [
+      { name: "데모 경쟁사 A", tier: "leader", note: "demo seed" },
+      { name: "데모 경쟁사 B", tier: "challenger", note: "demo seed" },
+    ],
+  },
+};
+
+export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): Promise<{ opportunityId: string; projectId: string }> {
+  const humanDecisions = opts.humanDecisions ?? true;
+  runMigrations(dbPath);
+  const db = getDb(dbPath);
+  const now = nowIso();
+  const actor = "demo-seed";
+
+  db.transaction(() => {
+    db.run(
+      `INSERT OR IGNORE INTO md_industry (id, ksic_code, name_ko, name_en, created_at, pinned)
+       VALUES (?, 'DEMO-GF', ?, ?, ?, 1)`,
+      [GF.industryId, "S1-S12 데모 신설 산업", "S1-S12 Demo Greenfield Industry", now],
+    );
+    db.run(
+      `INSERT OR IGNORE INTO md_company (id, dart_corp_code, name_ko, name_en, created_at)
+       VALUES (?, NULL, ?, ?, ?)`,
+      [GF.companyId, "S1-S12 데모 신설 법인", "S1-S12 Demo NewCo", now],
+    );
+    db.run(
+      `INSERT OR IGNORE INTO market_sizing_analysis
+       (id, industry_id, status, current_step, methodology_version, created_by, created_at, completed_at)
+       VALUES (?, ?, 'completed', 6, 'demo-gf', ?, ?, ?)`,
+      [GF.analysisId, GF.industryId, actor, now, now],
+    );
+    db.run(
+      `INSERT OR IGNORE INTO market_sizing_version
+       (id, analysis_id, version_no, payload, changelog, created_by, created_at, data_confidence_grade, chain_hops, confidence_basis)
+       VALUES (?, ?, 1, ?, 'S1-S12 greenfield demo market sizing baseline', ?, ?, 'B', 0, 'demo seed: no statistical hop, llm-estimate source cap')`,
+      [GF.versionId, GF.analysisId, json({ matrix: GF_MATRIX }), actor, now],
+    );
+
+    db.run(
+      `INSERT OR IGNORE INTO opportunity
+       (id, project_id, name, market_scope, value_chain_node, market_size_krw_m, growth_rate,
+        attractiveness_score, synergy_score, status, rationale, decided_by, decided_at, created_by, created_at,
+        capability_gap_json, synergy_score_confirmed_at, synergy_score_confirmed_by, industry_id)
+       VALUES (?, ?, ?, ?, ?, 200000, 0.11, 75, 79, 'selected', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        GF.oppId, null, "S1-S12 데모 Greenfield 기회", "S1-S12 데모 신설 산업", "직접 진출 밸류체인 노드 (신설)",
+        "시장 성장·자체 역량 조합에서 직접 진출 기회가 명확함", actor, now, actor, now,
+        json({
+          rows: [
+            { capability: "핵심 생산 설비 운영", source: "manual", held: { status: "none" }, mitigation: "신규 채용 + 설비 도입" },
+            { capability: "품질 인증 체계", source: "manual", held: { status: "partial" }, mitigation: "Build — 내재화" },
+          ],
+        }),
+        now, actor, GF.industryId,
+      ],
+    );
+
+    db.run(
+      `INSERT OR IGNORE INTO md_project
+       (id, project_no, created_at, current_stage_gate, company_id, origin, source_opportunity_id, track,
+        project_name, charter_json, charter_confirmed_at, status, subject_company_rationale)
+       VALUES (?, 'DEMO-GF', ?, 'group_ic', ?, 'internal', ?, 'greenfield', ?, ?, ?, 'open', ?)`,
+      [
+        GF.projectId, now, GF.companyId, GF.oppId, "S1-S12 데모 Greenfield 프로젝트",
+        json({ milestones: ["법인 설립", "설비 가동", "흑자 전환"], owner: actor, note: "S1-S12 greenfield demo charter baseline" }),
+        now, "자체 역량 격차를 Build/Hire로 해소해 직접 진출",
+      ],
+    );
+    db.run("UPDATE opportunity SET project_id = ?, promoted_at = COALESCE(promoted_at, ?) WHERE id = ?", [GF.projectId, now, GF.oppId]);
+
+    db.run(
+      `INSERT OR IGNORE INTO route_decision
+       (id, opportunity_id, project_id, track, sub_track, rationale, alternatives_considered, decided_by, decided_at,
+        intent, total_score, status, updated_at, is_current)
+       VALUES (?, ?, ?, 'greenfield', NULL, ?, ?, ?, ?, 'integration', 13, 'final', ?, 1)`,
+      [GF.routeId, GF.oppId, GF.projectId, "통제력과 내재화가 핵심이므로 자체 신설(Greenfield)로 진행", "M&A/JV 검토 후 통제력·역량 내재화 측면에서 후순위", actor, now, now],
+    );
+    for (const [idx, criterion] of ["control_need", "capability_criticality", "market_uncertainty", "integration_capacity", "speed_to_capability"].entries()) {
+      db.run(
+        `INSERT OR IGNORE INTO route_decision_score
+         (id, decision_id, intent, criterion, score, evidence_note, created_at)
+         VALUES (?, ?, 'integration', ?, ?, ?, ?)`,
+        [`demo-gf-route-score-${criterion}`, GF.routeId, criterion, idx === 3 ? 2 : 3, "S1-S12 greenfield demo route scoring evidence", now],
+      );
+    }
+
+    // S5 — 역량 격차 평가 + 진출전략 (greenfield 전용 단계의 필수 산출물).
+    db.run(
+      `INSERT OR IGNORE INTO greenfield_assessment
+       (id, opportunity_id, entry_strategy, alternatives_considered, rationale, created_by, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [GF.assessmentId, GF.oppId, "신설 법인 설립 + 설비 투자 후 단계적 가동 (Build + Hire)", "JV·M&A 대안 검토 후 통제력·내재화 우선으로 제외", "S1-S12 greenfield demo 진출전략 — 격차는 채용·내재화로 해소", actor, now, now],
+    );
+
+    db.run(
+      `INSERT OR IGNORE INTO project_classification
+       (project_id, sensitivity, mnpi_flag, wall_group, classified_by, classified_at)
+       VALUES (?, 'internal', 0, NULL, ?, ?)`,
+      [GF.projectId, actor, now],
+    );
+
+    // S9 — greenfield sub_track은 없으므로 표준 DD만 (SUB_TRACK_DD_CHECKLISTS 미적용).
+    db.run(
+      `INSERT OR IGNORE INTO project_checklist_item_custom
+       (id, project_id, domain, item_label, rationale, source_reliability, proposed_by_agent, status, approved_by, approved_at, created_at)
+       VALUES ('demo-gf-dd-custom', ?, 'technical', 'S1-S12 greenfield demo DD required item', 'Demo DD coverage', 'C', ?, 'approved', ?, ?, ?)`,
+      [GF.projectId, actor, actor, now, now],
+    );
+    db.run(
+      `INSERT OR IGNORE INTO project_checklist_item_state
+       (id, project_id, checklist_id, item_id, status, note, evidence_ref, assessed_by, assessed_at)
+       VALUES ('demo-gf-dd-state', ?, 'custom:technical', 'demo-gf-dd-custom', 'pass', 'Demo DD completed', 'demo:gf-dd', ?, ?)`,
+      [GF.projectId, actor, now],
+    );
+    for (const checklistId of Object.values(DD_WORKSPACE_CHECKLISTS)) {
+      for (const item of getChecklistItems(checklistId) ?? []) {
+        db.run(
+          `INSERT OR IGNORE INTO project_checklist_item_state
+           (id, project_id, checklist_id, item_id, status, note, assessed_by, assessed_at)
+           VALUES (?, ?, ?, ?, 'pass', 'Demo DD completed', ?, ?)`,
+          [`demo-gf-dd-${checklistId}-${item.id}`, GF.projectId, checklistId, item.id, actor, now],
+        );
+      }
+    }
+
+    // S10 — 투자 구조·자금조달 (greenfield: 자산 중심 build).
+    db.run(
+      `INSERT OR IGNORE INTO run (id, project_id, label, input_hash, created_by, created_at)
+       VALUES (?, ?, 'S1-S12 greenfield demo scorecard run', 'demo-gf-input-hash', ?, ?)`,
+      [GF.runId, GF.projectId, actor, now],
+    );
+    db.run(
+      `INSERT OR IGNORE INTO deal_structure_hypothesis
+       (id, project_id, run_id, asset_or_stock, stake_type, instrument_mix, vehicle, commercialization_path,
+        tax_structure_note, liability_isolation_note, financing_leverage_note, exit_structure_note,
+        four_axis_review_completed, hypothesized_by, hypothesized_at, rationale)
+       VALUES (?, ?, ?, 'asset', 'full', 'primary', 'direct', 'build', ?, ?, ?, ?, 1, ?, ?, ?)`,
+      [
+        GF.structureId, GF.projectId, GF.runId,
+        "신설 법인 세무 검토 완료", "신설 법인 자체로 책임 격리", "자기자본 중심 — 초기 부담 최소화",
+        "단계적 증설 확장 (exit 아님)", actor, now, "S10 four-axis greenfield demo structure completed",
+      ],
+    );
+    for (const [id, kind, name, amount] of [
+      ["equity", "source", "Equity contribution", 9000],
+      ["debt", "source", "Facility loan", 3000],
+      ["plant", "use", "Plant & equipment", 10000],
+      ["wc", "use", "Working capital", 2000],
+    ] as const) {
+      db.run(
+        `INSERT OR IGNORE INTO financing_sources_uses
+         (id, project_id, kind, name, amount_krw_m, note, created_by, created_at)
+         VALUES (?, ?, ?, ?, ?, 'S1-S12 greenfield demo balanced plan', ?, ?)`,
+        [`demo-gf-fin-${id}`, GF.projectId, kind, name, amount, actor, now],
+      );
+    }
+
+    // S11 — greenfield 실행은 설립 5단계 (entity-establishment-execution,
+    // ADR-0085). 완료확인(5단계)은 1~4 완료 후에만 유효한 순서로 기록.
+    for (const stepNo of [1, 2, 3, 4, 5]) {
+      db.run(
+        `INSERT OR IGNORE INTO entity_establishment_step
+         (id, opportunity_id, project_id, step_no, status, origin, checklist_item, evidence_url, note, owner, updated_at)
+         VALUES (?, ?, ?, ?, 'done', 'internal', NULL, NULL, ?, ?, ?)`,
+        [`demo-gf-est-${stepNo}`, GF.oppId, GF.projectId, stepNo, `S1-S12 greenfield demo 설립 ${stepNo}/5 완료`, actor, now],
+      );
+    }
+
+    if (humanDecisions) for (const [entityType, entityId, gate] of [
+      ["opportunity", GF.oppId, "screening"],
+      ["opportunity", GF.oppId, "pre_fs"],
+      ["project", GF.projectId, "fs"],
+      ["project", GF.projectId, "dd"],
+      ["project", GF.projectId, "entity_ic"],
+      ["project", GF.projectId, "group_ic"],
+    ] as const) {
+      db.run(
+        `INSERT OR IGNORE INTO gate_decision
+         (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at)
+         VALUES (?, ?, ?, ?, 'go', 'S1-S12 greenfield demo human-final gate approval', ?, ?)`,
+        [`demo-gf-gate-${entityType}-${gate}`, entityType, entityId, gate, actor, now],
+      );
+    }
+
+    const cycle = currentReviewCycle();
+    for (const [section, measure, target, actual] of [
+      ["financial", "revenue_ramp", ">=35%", "38%"],
+      ["strategic", "plant_commissioning", "on schedule", "on schedule"],
+    ] as const) {
+      db.run(
+        `INSERT OR IGNORE INTO venture_scorecard
+         (id, run_id, project_id, source_procedure, review_cycle, venture_class, section, measure_key,
+          target_value, actual_value, status, evidence_ref, observed_at, created_at)
+         VALUES (?, ?, ?, 'portfolio-venture-monitoring', ?, 'driving', ?, ?, ?, ?, 'on_target', ?, ?, ?)`,
+        [`demo-gf-score-${measure}`, GF.runId, GF.projectId, cycle, section, measure, target, actual, `demo:gf-scorecard:${measure}`, now, now],
+      );
+    }
+    if (humanDecisions) db.run(
+      `INSERT OR IGNORE INTO venture_transition_decision
+         (id, run_id, project_id, review_cycle, decision, decided_by, decided_at, rationale, learning_capture, core_handoff, created_at)
+       VALUES (?, ?, ?, ?, 'graduate_to_core', 'venture-portfolio-ic', ?, ?, ?, ?, ?)`,
+      ["demo-gf-transition", GF.runId, GF.projectId, cycle, now, "S1-S12 greenfield demo — 핵심사업 인계: 설립 법인을 사업부 운영으로 이관한다", null,
+        "핵심사업 인계: 설립 법인을 사업부 운영으로 이관한다 (ADR-0151 core_handoff)", now],
+    );
+  })();
+
+  // S8 — run the REAL generator (greenfield path: project-level subjects,
+  // market-capture anchor, no target axis). Guarded for idempotency: only
+  // when the project has no cases yet, so re-running the seed against a
+  // persistent DB does not stack models.
+  const existing = db.query("SELECT id FROM business_case_model WHERE project_id = ? LIMIT 1").get(GF.projectId);
+  if (!existing) {
+    const { generateBusinessCases } = await import("../../app/web-next/lib/business-case-generator.ts");
+    // source must satisfy the process_run CHECK ('web'|'claude-desktop'|'cli'|
+    // 'system'|'agent'|'human') — a seed-driven run is 'system'.
+    const result = await generateBusinessCases(GF.projectId, { actor, source: "system" });
+    if (result.status !== "done") throw new Error(`greenfield demo S8 generation failed (run ${result.processRunId})`);
+    const adopted = db
+      .query(
+        `SELECT m.id FROM business_case_model m
+         WHERE m.project_id = ? AND COALESCE(m.variant, 'market_forward') = 'market_forward' AND m.target_id IS NULL
+         ORDER BY m.created_at ASC LIMIT 1`,
+      )
+      .get(GF.projectId) as { id: string } | undefined;
+    if (adopted) {
+      db.run(
+        `INSERT OR IGNORE INTO process_run
+         (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json)
+         VALUES (?, 'project', ?, ?, 'demo-gf', 's8_case_adopt', 'done', 'human', ?, ?, ?, ?)`,
+        [GF.adoptionRunId, GF.projectId, GF.projectId, actor, now, now, json({ model_id: adopted.id })],
+      );
+    }
+  }
+
+  return { opportunityId: GF.oppId, projectId: GF.projectId };
 }

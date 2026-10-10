@@ -140,6 +140,41 @@ describe("sim_engine", () => {
     expect(ENGINE_AVAILABLE).toBe(true);
   });
 
+  test.skipIf(!ENGINE_AVAILABLE)("exit value parity: exit_ev_revenue sells the business at the final year for the same multiple", async () => {
+    const exitJob = {
+      ...CONSTANT_JOB,
+      job_id: "test:exit",
+      cases: [
+        {
+          case_id: "exit:market_forward",
+          drivers: {
+            ...CONSTANT_JOB.cases[0].drivers,
+            exit_ev_revenue: { dist: "constant", value: 3, unit: "multiple" },
+          },
+        },
+      ],
+    };
+    const { code, stdout, stderr } = await runEngine(exitJob);
+    expect(stderr).toBe("");
+    expect(code).toBe(0);
+    const kase = (JSON.parse(stdout) as EngineResult).cases[0];
+    // Constant growth 0 → revenue 250 every year; entry 100, FCF 75/yr,
+    // exit 250×3 realized at year 5: analytic NPV is exact.
+    const annuity = [1, 2, 3, 4, 5].reduce((acc, t) => acc + 1 / 1.1 ** t, 0);
+    const expectedNpv = -100 + 75 * annuity + (250 * 3) / 1.1 ** 5;
+    expect(kase.npv.base).toBeCloseTo(expectedNpv, 6);
+    expect(kase.npv.std).toBeLessThan(1e-9);
+    expect(kase.npv.p05).toBe(kase.npv.p50);
+    expect(kase.npv.p50).toBe(kase.npv.p95);
+    expect(kase.irr).not.toBeNull(); // the exit inflow keeps IRR defined
+    // Absent the driver, the same job must reproduce the legacy number
+    // exactly — the exit driver is purely additive (0 default).
+    const legacy = await runEngine(CONSTANT_JOB);
+    const legacyCase = (JSON.parse(legacy.stdout) as EngineResult).cases[0];
+    const noExitNpv = -100 + 75 * annuity;
+    expect(legacyCase.npv.base).toBeCloseTo(noExitNpv, 6);
+  });
+
   test.skipIf(!ENGINE_AVAILABLE)("closed-form parity: constant drivers reproduce the analytic NPV/payback and std=0", async () => {
     const { code, stdout, stderr } = await runEngine(CONSTANT_JOB);
     expect(stderr).toBe("");

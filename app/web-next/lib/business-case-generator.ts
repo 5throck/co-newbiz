@@ -84,6 +84,11 @@ export interface GrowthModel {
   market: GrowthModelVariant;
   /** null = 대상 회사 데이터 부족 — historical 변형은 생성하지 않는다 (N/A). */
   historical: GrowthModelVariant | null;
+  /** The subject company's latest annual revenue (DART, KRW millions) — the
+   *  revenue-level anchor for brownfield per-target cases. null when the
+   *  company is unbound or has no revenue series (≥1 year suffices; the
+   *  historical VARIANT needs ≥2 years for a CAGR, the LEVEL needs one). */
+  companyRevenue: { krwM: number; year: string } | null;
 }
 
 /** Dispersion guardrails — the legacy hardcoded sigma was 2%; extreme input
@@ -123,6 +128,7 @@ export function resolveGrowthModel(db: ReturnType<typeof getDb>, projectId: stri
   let histCagr: number | null = null;
   let histVol: number | null = null;
   let histYears = 0;
+  let companyRevenue: { krwM: number; year: string } | null = null;
   // ADR-0143: opts.companyId가 주어지면(대상별 분석) 그 회사의 series로,
   // null이면 historical를 만들지 않는다. 미지정이면 기존대로
   // md_project.company_id (greenfield/project-level 호환).
@@ -144,6 +150,16 @@ export function resolveGrowthModel(db: ReturnType<typeof getDb>, projectId: stri
       histCagr = stats.cagr;
       histVol = stats.revenueVol;
       histYears = analysis.years.length;
+      // Latest actual revenue — one positive data point is enough to anchor
+      // the level; growth still needs the CAGR series above. NOTE:
+      // deriveFinancialAnalysis normalizes DART 원 to 억원 (unit "KRW" → /1e8),
+      // so the series point is 억원 — ×100 back to KRW millions.
+      const revPoints = (analysis.series.find((s) => s.key === "revenue")?.points ?? [])
+        .filter((pt): pt is { year: string; value: number } => pt.value !== null && pt.value > 0);
+      if (revPoints.length > 0) {
+        const latest = revPoints.reduce((a, b) => (a.year > b.year ? a : b));
+        companyRevenue = { krwM: latest.value * 100, year: latest.year };
+      }
     } catch {
       // 회사 미연결 또는 fact 부재 — historical는 N/A (임의치 대체 금지).
     }
@@ -182,6 +198,7 @@ export function resolveGrowthModel(db: ReturnType<typeof getDb>, projectId: stri
             growthSource: `과거 ${histYears}년 매출 CAGR (DART)`,
             dispSource: histVol !== null ? "과거 매출 증감률 표준편차 (DART)" : "과거 변동성 부족 — 하한 적용",
           },
+    companyRevenue,
   };
 }
 
@@ -194,8 +211,26 @@ const CAPTURE_RATE = 0.005;
 const OPEX_RATIO = 0.6;
 const CAPEX_RATIO = 0.1;
 /** ADR-0106 — year-0 초기투자(시설·설립 셋업)를 year-1 매출 대비 비율로 모델링.
- *  초기투자가 없으면 모든 플로우가 양수라 IRR이 정의되지 않는다(null/0%). */
+ *  초기투자가 없으면 모든 플로우가 양수라 IRR이 정의되지 않는다(null/0%).
+ *  그린필드/프로젝트 레벨 케이스의 기본 경로다. */
 const INITIAL_INVESTMENT_RATIO = 0.5;
+/** 브라운필드 인수 가격 — 진입 EV/Revenue 배수 기본값. 외부 사례 (design
+ *  2026-10-10-s8-acquisition-price-benchmark): 글로벌 로보틱스/자동화 M&A
+ *  컴프는 2~6× 매출 배수 밴드(하드웨어 중심 저마진 1~3×, SW 결합형 5~10×),
+ *  한국 전략적 휴머노이드 프리미엄은 훨씬 높다(삼성전자–레인보우로보틱스
+ *  2023.12: 지분+유상증자 약 2,674억 — 당기 매출 152억; 2026년 기업가치
+ *  약 2조 / 매출 341억 ≈ 59×). 3.0×는 보수적 스크리닝 기준값이며,
+ *  딜 특성 프리미엄은 bc.acquisition_ev_revenue(kind=user, 근거 필수)로
+ *  분석가가 확정한다. */
+export const ACQUISITION_EV_REVENUE_DEFAULT = 3.0;
+/** 이중 구조 교차검증(페이드 DCF)의 명시적 창구 기본 연수 — 표준 기업가치
+ *  DCF의 명시적 전망 창구(10년) 관행을 따른다 (사용자 bc.fade_horizon_years
+ *  로 조정). 이 창구 안에서 케이스 성장률이 말기 성장률(기본 3%)로 선형
+ *  수렴한다 — 고성장(예: 40%)이 10년간 무수렴 지속되면 NPV가 5배로
+ *  폭증하는 인공물(기간 민감도 분석, design 2026-10-10)을 막는 조건이다. */
+export const FADE_HORIZON_YEARS = 10;
+/** 페이드 DCF 말기 성장률 기본값 — 인플레이션±실질성장 수준의 영구 성장률. */
+export const GROWTH_TERMINAL_DEFAULT = 0.03;
 /** Scenario deltas — upside/downside are base ±20% on growth AND dispersion (ADR-0098). */
 const SCENARIO_DELTA: Record<Scenario, { growth: number; disp: number }> = {
   base: { growth: 1.0, disp: 1.0 },
@@ -315,17 +350,19 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
   const eff = effGrowthDisp(inputs, scenario, variant);
   const anchorGrowth = eff.growth;
   const disp = eff.disp;
-  const year1Revenue = inputs.marketSizeKrwM * captureRateOf(inputs) * delta.growth;
+  const year1Revenue = year1RevenueOf(inputs, delta.growth).value;
   const horizon = horizonOf(inputs);
   const opexRatio = opexRatioOf(inputs, scenario);
   const capexRatio = capexRatioOf(inputs);
 
   const npvs: number[] = [];
-  const initialInvestment = year1Revenue * initialInvestmentRatioOf(inputs);
+  const initialInvestment = initialInvestmentOf(inputs, year1Revenue).value;
+  const exitMult = exitEvRevenueOf(inputs);
+  const discount = (v: number, year: number) => v / Math.pow(1 + inputs.wacc.value, year);
   const ramp = rampUpOf(inputs);
   for (let it = 0; it < iterationsOf(inputs); it++) {
     let revenue = year1Revenue;
-    let npv = -initialInvestment; // year-0 설립 투자
+    let npv = -initialInvestment; // year-0 인수/설립 투자
     for (let year = 1; year <= horizon; year++) {
       if (year > 1) {
         const [z1] = normalPair(rng);
@@ -333,8 +370,11 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
       }
       const fcf = revenue * (1 - opexRatio) - revenue * capexRatio;
       const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
-      npv += (fcf * utilization) / Math.pow(1 + inputs.wacc.value, year);
+      npv += discount(fcf * utilization, year);
     }
+    // Exit value — the business is sold at the entry multiple on the final
+    // year's drawn revenue (matches the engine: raw revenue, no ramp).
+    if (exitMult > 0) npv += discount(revenue * exitMult, horizon);
     npvs.push(npv);
   }
   npvs.sort((a, b) => a - b);
@@ -342,15 +382,15 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
   const variance = npvs.reduce((a, b) => a + (b - mean) * (b - mean), 0) / npvs.length;
   const q = (p: number) => npvs[Math.min(npvs.length - 1, Math.max(0, Math.floor(p * npvs.length)))];
   // Deterministic path — same BEP/payback definition as the engine.
-  const initialInvestmentRatio = initialInvestmentRatioOf(inputs);
-  const detFlows: number[] = [-year1Revenue * initialInvestmentRatio];
+  const detFlows: number[] = [-initialInvestmentOf(inputs, year1Revenue).value];
   let detRevenue = year1Revenue;
   for (let year = 1; year <= horizon; year++) {
     if (year > 1) detRevenue *= 1 + anchorGrowth;
     const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
     detFlows.push(detRevenue * (1 - opexRatio - capexRatio) * utilization);
   }
-  return { seed, iterations: iterationsOf(inputs), p05: q(0.05), p50: q(0.5), p95: q(0.95), mean, std: Math.sqrt(variance), bepYear: discountedPaybackYear(year1Revenue * initialInvestmentRatio, detFlows.slice(1), inputs.wacc.value), bepVolume: null };
+  if (exitMult > 0) detFlows[detFlows.length - 1] += detRevenue * exitMult; // 처분가치는 마지막 연도 플로우와 함께 실현
+  return { seed, iterations: iterationsOf(inputs), p05: q(0.05), p50: q(0.5), p95: q(0.95), mean, std: Math.sqrt(variance), bepYear: discountedPaybackYear(initialInvestmentOf(inputs, year1Revenue).value, detFlows.slice(1), inputs.wacc.value), bepVolume: null };
 }
 
 // ── Case inputs (anchored to the promoting opportunity's market facts) ─────
@@ -376,6 +416,19 @@ export interface CaseInputs {
    *  constructing CaseInputs by hand keep working — without it both variants
    *  fall back to the legacy anchor + 2% dispersion. */
   growthModel?: GrowthModel;
+  /** Brownfield per-target revenue anchor (ADR-0143 subjects): year-1 revenue
+   *  is the TARGET company's latest annual revenue (DART), not
+   *  market-size × capture-rate — an M&A case discounts the acquired revenue
+   *  base, not a from-scratch market entry. Absent (greenfield/project-level,
+   *  or a target without company facts) → the market-capture model applies. */
+  revenueAnchor?: { krwM: number; source: string };
+  /** Brownfield acquisition pricing (benchmark design 2026-10-10): the year-0
+   *  outflow is the ACQUISITION enterprise value — anchor revenue ×
+   *  EV/Revenue multiple — instead of a greenfield setup ratio. Exit at the
+   *  horizon reuses the same multiple (no expansion assumed). Set only
+   *  alongside revenueAnchor; an explicit user bc.initial_investment_ratio
+   *  still wins (the direct investment-size knob). */
+  acquisition?: { evRevenue: number; source: string };
   /** Sales-plan parameters (design REQ-W1-2/3): capture rate and the
    *  utilization ramp-up curve, resolvable as bc.* user assumptions with
    *  provenance labels. Optional so hand-built contexts fall back to the
@@ -403,6 +456,15 @@ export interface BusinessCaseParams {
   capexSource: string;
   initialInvestmentRatio: number;
   initialInvestmentSource: string;
+  /** 인수 EV/Revenue 배수 (user 확정 없으면 null → 컴프 기본값). */
+  acquisitionEvRevenue: number | null;
+  acquisitionEvRevenueSource: string;
+  /** 이중 구조 교차검증(페이드 DCF) — 명시적 창구 연수 (기본 10년). */
+  fadeHorizonYears: number;
+  fadeHorizonSource: string;
+  /** 페이드 DCF의 말기 성장률 (기본 3% — 고성장이 영구히 지속되지 않는다). */
+  growthTerminal: number | null;
+  growthTerminalSource: string;
   growthOverride: number | null;
   growthOverrideSource: string;
   sigmaOverride: number | null;
@@ -452,6 +514,9 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
   const opex = ratio("bc.opex_ratio", OPEX_RATIO);
   const capex = ratio("bc.capex_ratio", CAPEX_RATIO);
   const initInv = ratio("bc.initial_investment_ratio", INITIAL_INVESTMENT_RATIO);
+  const acqEv = scalar("bc.acquisition_ev_revenue");
+  const fadeH = ratio("bc.fade_horizon_years", FADE_HORIZON_YEARS);
+  const gTerminal = scalar("bc.growth_terminal");
   const growthOv = scalar("bc.growth_override");
   const sigmaOv = scalar("bc.sigma_override");
   const horizon = ratio("bc.horizon_years", HORIZON_YEARS);
@@ -467,6 +532,12 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
     capexSource: capex.source,
     initialInvestmentRatio: initInv.value,
     initialInvestmentSource: initInv.source,
+    acquisitionEvRevenue: acqEv !== null && acqEv >= 0 ? acqEv : null,
+    acquisitionEvRevenueSource: acqEv !== null && acqEv >= 0 ? "사용자 확정 (bc.acquisition_ev_revenue)" : "기본값",
+    fadeHorizonYears: Math.min(Math.max(Math.round(fadeH.value), 1), 50),
+    fadeHorizonSource: fadeH.source,
+    growthTerminal: gTerminal !== null && gTerminal >= 0 ? gTerminal : null,
+    growthTerminalSource: gTerminal !== null && gTerminal >= 0 ? "사용자 확정 (bc.growth_terminal)" : "기본값",
     growthOverride: growthOv,
     growthOverrideSource: growthOv !== null ? "사용자 오버라이드 (bc.growth_override)" : "기본값",
     // a stored negative is discarded (falls back to the derived model) —
@@ -492,8 +563,11 @@ export async function recordBusinessCaseParams(
       ramp_up?: number[];
       opex_ratio?: number;
       capex_ratio?: number;
-      initial_investment_ratio?: number;
-      growth_override?: number;
+    initial_investment_ratio?: number;
+    acquisition_ev_revenue?: number;
+    fade_horizon_years?: number;
+    growth_terminal?: number;
+    growth_override?: number;
       sigma_override?: number;
       horizon_years?: number;
       iterations?: number;
@@ -524,6 +598,9 @@ export async function recordBusinessCaseParams(
     ["bc.opex_ratio", p.opex_ratio],
     ["bc.capex_ratio", p.capex_ratio],
     ["bc.initial_investment_ratio", p.initial_investment_ratio],
+    ["bc.acquisition_ev_revenue", p.acquisition_ev_revenue],
+    ["bc.fade_horizon_years", p.fade_horizon_years],
+    ["bc.growth_terminal", p.growth_terminal],
     ["bc.growth_override", p.growth_override],
     ["bc.sigma_override", p.sigma_override],
     ["bc.horizon_years", p.horizon_years],
@@ -551,6 +628,12 @@ function resolveBusinessCaseParamsDefaults(): BusinessCaseParams {
     capexSource: "기본값",
     initialInvestmentRatio: INITIAL_INVESTMENT_RATIO,
     initialInvestmentSource: "기본값",
+    acquisitionEvRevenue: null,
+    acquisitionEvRevenueSource: "기본값",
+    fadeHorizonYears: FADE_HORIZON_YEARS,
+    fadeHorizonSource: "기본값",
+    growthTerminal: null,
+    growthTerminalSource: "기본값",
     growthOverride: null,
     growthOverrideSource: "기본값",
     sigmaOverride: null,
@@ -566,6 +649,85 @@ function resolveBusinessCaseParamsDefaults(): BusinessCaseParams {
  *  legacy constants (REQ-W6-1's resolution tail: default). */
 function captureRateOf(inputs: CaseInputs): number {
   return inputs.bcParams?.captureRate ?? CAPTURE_RATE;
+}
+
+/** Year-1 revenue and its provenance label. Brownfield per-target cases with
+ *  a company revenue anchor discount the acquired revenue base (scenario
+ *  delta applies on top, preserving scenario semantics); everything else
+ *  keeps the market-size × capture-rate model unchanged. */
+function year1RevenueOf(inputs: CaseInputs, deltaGrowth: number): { value: number; source: string } {
+  if (inputs.revenueAnchor) {
+    return { value: inputs.revenueAnchor.krwM * deltaGrowth, source: inputs.revenueAnchor.source };
+  }
+  const bc = inputs.bcParams ?? resolveBusinessCaseParamsDefaults();
+  return {
+    value: inputs.marketSizeKrwM * bc.captureRate * deltaGrowth,
+    source: `시장규모 × 포획률 ${(bc.captureRate * 100).toFixed(1)}% (${bc.captureSource})`,
+  };
+}
+
+/** Year-0 outflow and its provenance. An acquisition-priced case pays the
+ *  enterprise value — anchor revenue × EV/Revenue multiple, scenario-
+ *  INDEPENDENT (the price is negotiated once; scenarios vary post-deal
+ *  performance) — unless the user pinned the direct ratio knob
+ *  (bc.initial_investment_ratio kind=user), which wins. Everything else
+ *  keeps ADR-0106's year-1-revenue ratio. */
+function initialInvestmentOf(inputs: CaseInputs, year1Revenue: number): { value: number; source: string } {
+  const ratioUserPinned = inputs.bcParams?.initialInvestmentSource.startsWith("사용자") ?? false;
+  if (inputs.acquisition && inputs.revenueAnchor && !ratioUserPinned) {
+    return {
+      value: inputs.revenueAnchor.krwM * inputs.acquisition.evRevenue,
+      source: `인수 기업가치 — 대상 매출 × ${inputs.acquisition.evRevenue.toFixed(2)}배 (${inputs.acquisition.source})`,
+    };
+  }
+  const bc = inputs.bcParams ?? resolveBusinessCaseParamsDefaults();
+  return { value: year1Revenue * bc.initialInvestmentRatio, source: `ADR-0106 (${bc.initialInvestmentSource})` };
+}
+
+/** Exit (terminal) value multiple at the horizon — the entry multiple reused
+ *  (no multiple expansion assumed). 0 = no exit value (legacy contract). */
+function exitEvRevenueOf(inputs: CaseInputs): number {
+  const ratioUserPinned = inputs.bcParams?.initialInvestmentSource.startsWith("사용자") ?? false;
+  if (inputs.acquisition && inputs.revenueAnchor && !ratioUserPinned) return inputs.acquisition.evRevenue;
+  return 0;
+}
+
+/** 이중 구조 교차검증(design 2026-10-10-s8-acquisition-price-benchmark 기간
+ *  민감도 절): 같은 케이스를 고전 장기창구 DCF 구조로 재평가한다 —
+ *  bc.fade_horizon_years(기본 10년) 창구 안에서 케이스 성장률이
+ *  bc.growth_terminal(기본 3%)까지 **선형 수렴**하고, 마지막 해에 동일
+ *  배수로 처분한다. 배수가 공정하면 두 구조의 값은 일치해야 한다(exit
+ *  가격이 창구 이후 연도를 이미 자본화) — 큰 괴리는 성장 가정과 배수
+ *  가정의 불일치 신호다. 결정론적 경로만 계산한다(구조를 검증하는 것이지
+ *  분포를 재도출하는 게 아니다). 인수 가격 케이스가 아니면 null. */
+export function fadedExitDcf(
+  inputs: CaseInputs,
+  scenario: Scenario,
+  variant: CaseVariant = "market_forward",
+): { horizon: number; terminalGrowth: number; npv: number; irr: number | null } | null {
+  const exitMult = exitEvRevenueOf(inputs);
+  if (exitMult <= 0) return null;
+  const bc = inputs.bcParams ?? resolveBusinessCaseParamsDefaults();
+  const horizon = bc.fadeHorizonYears;
+  const terminalGrowth = bc.growthTerminal ?? GROWTH_TERMINAL_DEFAULT;
+  const eff = effGrowthDisp(inputs, scenario, variant);
+  const year1 = year1RevenueOf(inputs, SCENARIO_DELTA[scenario].growth).value;
+  const entry = initialInvestmentOf(inputs, year1).value;
+  const ramp = rampUpOf(inputs);
+  const flows: number[] = [-entry];
+  let revenue = year1;
+  for (let t = 1; t <= horizon; t++) {
+    if (t > 1) {
+      // 선형 수렴: 2년차 성장률 = 케이스 성장률(무페이드), H년차 = 말기 성장률.
+      const f = horizon > 2 ? (t - 2) / (horizon - 2) : 0;
+      revenue *= 1 + eff.growth + (terminalGrowth - eff.growth) * f;
+    }
+    const utilization = ramp[t - 1] ?? ramp[ramp.length - 1] ?? 1;
+    flows.push(revenue * (1 - opexRatioOf(inputs, scenario) - capexRatioOf(inputs)) * utilization);
+  }
+  flows[flows.length - 1] += revenue * exitMult; // 처분가치는 마지막 연도 플로우와 함께 실현
+  const npv = flows.reduce((acc, cf, i) => acc + cf / Math.pow(1 + inputs.wacc.value, i), 0);
+  return { horizon, terminalGrowth, npv, irr: irr(flows) };
 }
 
 function rampUpOf(inputs: CaseInputs): number[] {
@@ -692,12 +854,38 @@ export function caseInputsForTarget(
   base: Omit<CaseInputs, "growthModel" | "targetId"> = caseInputsBaseForProject(projectId),
 ): CaseInputs {
   const { wacc, waccScope } = resolveTargetCaseWacc(projectId, target, base.wacc);
+  const growthModel = resolveGrowthModel(getDb(), projectId, { companyId: target.companyId });
+  // Brownfield revenue anchor: an M&A case discounts the TARGET's acquired
+  // revenue base — market-size × capture-rate models a from-scratch entry and
+  // ignores the target's scale entirely (a 몇백억-revenue target valued at
+  // 몇억). Falls back to the market-capture model when the company has no
+  // revenue series; the fallback's provenance stays labeled.
+  const revenueAnchor = growthModel.companyRevenue
+    ? { krwM: growthModel.companyRevenue.krwM, source: `대상 회사 최신 연매출 ${growthModel.companyRevenue.year} (DART)` }
+    : undefined;
+  // Acquisition pricing (benchmark design 2026-10-10): with a revenue anchor
+  // the year-0 outflow becomes the acquisition EV — revenue × EV/Revenue
+  // multiple. Default 3.0× is the conservative global robotics-M&A screening
+  // band midpoint; deal-specific premiums are a user bc.acquisition_ev_revenue
+  // assumption with mandatory rationale.
+  const acquisition =
+    revenueAnchor && base.bcParams
+      ? {
+          evRevenue: base.bcParams.acquisitionEvRevenue ?? ACQUISITION_EV_REVENUE_DEFAULT,
+          source:
+            base.bcParams.acquisitionEvRevenue !== null
+              ? "사용자 확정 (bc.acquisition_ev_revenue)"
+              : `컴프 기본값 ${ACQUISITION_EV_REVENUE_DEFAULT.toFixed(1)}× — 글로벌 로보틱스 M&A 밴드 2–6× (보수 스크리닝)`,
+        }
+      : undefined;
   return {
     ...base,
     wacc,
     waccScope,
     targetId: target.id,
-    growthModel: resolveGrowthModel(getDb(), projectId, { companyId: target.companyId }),
+    growthModel,
+    ...(revenueAnchor ? { revenueAnchor } : {}),
+    ...(acquisition ? { acquisition } : {}),
   };
 }
 
@@ -727,15 +915,18 @@ export function listShortlistSubjects(db: ReturnType<typeof getDb>, opportunityI
 function deterministicCashflows(inputs: CaseInputs, scenario: Scenario, variant: CaseVariant = "market_forward"): number[] {
   const delta = SCENARIO_DELTA[scenario];
   const eff = effGrowthDisp(inputs, scenario, variant);
-  let revenue = inputs.marketSizeKrwM * captureRateOf(inputs) * delta.growth;
-  const initialInvestment = revenue * initialInvestmentRatioOf(inputs);
+  const year1Revenue = year1RevenueOf(inputs, delta.growth).value;
+  const exitMult = exitEvRevenueOf(inputs);
+  const initialInvestment = initialInvestmentOf(inputs, year1Revenue).value;
+  let revenue = year1Revenue;
   const ramp = rampUpOf(inputs);
-  const flows: number[] = [-initialInvestment]; // year-0 설립 투자
+  const flows: number[] = [-initialInvestment]; // year-0 인수/설립 투자
   for (let year = 1; year <= horizonOf(inputs); year++) {
     if (year > 1) revenue *= 1 + eff.growth;
     const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
     flows.push(revenue * (1 - opexRatioOf(inputs, scenario) - capexRatioOf(inputs)) * utilization);
   }
+  if (exitMult > 0) flows[flows.length - 1] += revenue * exitMult; // 처분가치는 마지막 연도 플로우와 함께 실현
   return flows;
 }
 
@@ -766,7 +957,9 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
   const eff = effGrowthDisp(inputs, scenario, variant);
   const bc = inputs.bcParams ?? resolveBusinessCaseParamsDefaults();
   const opexRatio = opexRatioOf(inputs, scenario);
-  const year1Revenue = inputs.marketSizeKrwM * bc.captureRate * delta.growth;
+  const y1 = year1RevenueOf(inputs, delta.growth);
+  const initInv = initialInvestmentOf(inputs, y1.value);
+  const exitMult = exitEvRevenueOf(inputs);
   // ADR-0143: brownfield per-target cases carry the target in the subject
   // key (job_id + seed_policy base, the persisted snapshot contract) AND in
   // the engine case_id — the engine derives its seed from case_id + drivers,
@@ -793,7 +986,7 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
       {
         case_id: `${inputs.targetId ? `${inputs.targetId}:` : ""}${scenario}:${variant}`,
         drivers: {
-          revenue_y1: { dist: "constant", value: year1Revenue, unit: "KRW_M", source: `시장규모 × 포획률 ${(bc.captureRate * 100).toFixed(1)}% (${bc.captureSource})` },
+          revenue_y1: { dist: "constant", value: y1.value, unit: "KRW_M", source: y1.source },
           ramp_up: { dist: "constant", value: bc.rampUp, source: bc.rampSource },
           revenue_growth: { dist: "normal", mean: eff.growth, sigma: eff.disp, unit: "ratio", source: eff.growthSource },
           opex_ratio: {
@@ -805,7 +998,10 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
               : bc.opexSource,
           },
           capex_ratio: { dist: "constant", value: bc.capexRatio, unit: "ratio", source: bc.capexSource },
-          initial_investment: { dist: "constant", value: year1Revenue * bc.initialInvestmentRatio, unit: "KRW_M", source: `ADR-0106 (${bc.initialInvestmentSource})` },
+          initial_investment: { dist: "constant", value: initInv.value, unit: "KRW_M", source: initInv.source },
+          ...(exitMult > 0
+            ? { exit_ev_revenue: { dist: "constant", value: exitMult, unit: "multiple", source: `회수 시점 처분 — 진입 배수와 동일 ${exitMult.toFixed(2)}× (멀티플 확대 없음)` } }
+            : {}),
         },
       },
     ],
@@ -893,12 +1089,15 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
     const eff = effGrowthDisp(ctx.inputs, ctx.scenario, variant);
     const provenance = `variant=${variant}; growth_source=${eff.growthSource}; sigma=${eff.disp.toFixed(4)}; sigma_source=${eff.dispSource}`;
     if (step === "growth_projection") {
+      const y1 = year1RevenueOf(ctx.inputs, delta.growth);
       return [
         `### [재무 분석] financial-analyst — 성장 전망 (${SCENARIO_LABEL[ctx.scenario]} · ${VARIANT_LABEL[variant]})`,
         "",
         `성장 근거: ${eff.growthSource} ${(eff.growth * 100).toFixed(2)}%/년 (시나리오 계수 ×${delta.growth}),`,
         `변동성 근거: ${eff.dispSource} (sigma ${pct1(eff.disp)} ×${delta.disp}).`,
-        `1차년도 매출은 시장 점유율 ${captureRateOf(ctx.inputs) * 100}% 가정으로 ${(ctx.inputs.marketSizeKrwM * captureRateOf(ctx.inputs) * delta.growth).toFixed(1)} 억원 (가동률 ${rampUpOf(ctx.inputs).map((v) => v.toFixed(1)).join(" → ")}).`,
+        ctx.inputs.revenueAnchor
+          ? `1차년도 매출은 ${(y1.value / 100).toFixed(1)} 억원 — ${y1.source} 기준, 인수 대상의 기존 매출 규모를 반영한다 (가동률 ${rampUpOf(ctx.inputs).map((v) => v.toFixed(1)).join(" → ")}).`
+          : `1차년도 매출은 시장 점유율 ${captureRateOf(ctx.inputs) * 100}% 가정으로 ${(y1.value / 100).toFixed(1)} 억원 (가동률 ${rampUpOf(ctx.inputs).map((v) => v.toFixed(1)).join(" → ")}).`,
         `베이스레이트 점검: 산업 성장률 대비 ±20% 밴드 내 (greenfield-fs step 1).`,
       ].join("\n");
     }
@@ -911,17 +1110,18 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
         `INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, variant, target_id) VALUES (?,?,?,?,?,?,?,?,?)`,
         [modelId, ctx.inputs.projectId, "valuation", `S8 자동 생성 — ${subjectLabel}${ctx.scenario} — ${VARIANT_LABEL[variant]}`, horizonOf(ctx.inputs), "business-case-generator", nowIso(), variant, ctx.target?.id ?? null],
       );
-      const year1Revenue = ctx.inputs.marketSizeKrwM * captureRateOf(ctx.inputs) * delta.growth;
+      const y1 = year1RevenueOf(ctx.inputs, delta.growth);
+      const initInv = initialInvestmentOf(ctx.inputs, y1.value);
       const lines: Array<[string, "revenue" | "opex" | "capex", string, number]> = [
-        ["revenue", "revenue", "시나리오 매출 (year-1 앵커)", year1Revenue],
-        ["opex", "opex", `운영비 (매출의 ${Math.round(opexRatioOf(ctx.inputs) * 100)}%)`, year1Revenue * opexRatioOf(ctx.inputs)],
-        ["capex", "capex", `설비 투자 (year-1, 매출의 ${Math.round(capexRatioOf(ctx.inputs) * 100)}%)`, year1Revenue * capexRatioOf(ctx.inputs)],
+        ["revenue", "revenue", ctx.inputs.revenueAnchor ? `시나리오 매출 (대상 회사 연매출 앵커 — ${ctx.inputs.revenueAnchor.source})` : "시나리오 매출 (year-1 앵커)", y1.value],
+        ["opex", "opex", `운영비 (매출의 ${Math.round(opexRatioOf(ctx.inputs) * 100)}%)`, y1.value * opexRatioOf(ctx.inputs)],
+        ["capex", "capex", `설비 투자 (year-1, 매출의 ${Math.round(capexRatioOf(ctx.inputs) * 100)}%)`, y1.value * capexRatioOf(ctx.inputs)],
       ];
       for (const [category, _kind, name, amount] of lines) {
         db.run(
-          `INSERT INTO business_case_line (id, model_id, category, name, annual_amount_krw_m, start_year, growth_rate, note, created_by, created_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?)`,
-          [ulid(), modelId, category, name, amount, 1, eff.growth,
+          `INSERT INTO business_case_line (id, model_id, category, name, annual_amount_krw_m, unit, start_year, growth_rate, note, created_by, created_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+          [ulid(), modelId, category, name, amount, "KRW_M", 1, eff.growth,
             `scenario=${ctx.scenario}; delta=${delta.growth}; ${provenance}`, "business-case-generator", nowIso()],
         );
       }
@@ -929,9 +1129,12 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       return [
         `### [밸류에이션] valuation-agent — 밸류에이션 모델 (${SCENARIO_LABEL[ctx.scenario]} · ${VARIANT_LABEL[variant]})`,
         "",
-        `확정 WACC ${(ctx.inputs.wacc.value * 100).toFixed(1)}%·회수기간 ${horizonOf(ctx.inputs)}년 기준 NPV ${npv.toFixed(1)} 억원,`,
+        `확정 WACC ${(ctx.inputs.wacc.value * 100).toFixed(1)}%·회수기간 ${horizonOf(ctx.inputs)}년 기준 NPV ${(npv / 100).toFixed(1)} 억원,`,
         `성장 ${(eff.growth * 100).toFixed(2)}% (${eff.growthSource}) · sigma ${pct1(eff.disp)} (${eff.dispSource}).`,
         `WACC 출처: ${ctx.inputs.wacc.source}${ctx.inputs.waccScope?.scope === "target" ? " · 대상별 세션" : ""}${ctx.inputs.wacc.run_id ? ` (run ${ctx.inputs.wacc.run_id})` : ""}.`,
+        ...(exitEvRevenueOf(ctx.inputs) > 0 && ctx.inputs.revenueAnchor
+          ? [`인수 가격: 대상 매출 ${initInv.source.includes("사용자") ? "× 사용자 확정 배수" : "× 컴프 기본 배수"} = ${(initInv.value / 100).toFixed(1)} 억원 (${initInv.source}) — 회수 시점 동일 배수로 처분 가정.`]
+          : []),
         `IRR ${((irr(flows) ?? 0) * 100).toFixed(1)}% (greenfield-fs step 3). 모델/라인 3건 영속화 (model ${modelId}).`,
       ].join("\n");
     }
@@ -955,14 +1158,28 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       const tcFragment = ctx.inputs.targetCostWiring
         ? `; tc_gap_ratio=${ctx.inputs.targetCostWiring.gapRatio.toFixed(4)}; tc_downside_opex_uplift=${(ctx.scenario === "downside" ? ctx.inputs.targetCostWiring.uplift : 1).toFixed(4)}`
         : "";
-      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}; wacc_scope=${ctx.inputs.waccScope?.scope ?? "project"}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; wacc_subject=${waccSubject}; capture_rate=${bc.captureRate}; capture_source=${bc.captureSource}; ramp_source=${bc.rampSource}; ${provenance}${tcFragment}; engine=${engineMeta.engine}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}`;
+      // Revenue-anchor provenance: a company-anchored case has no capture
+      // rate to stamp — record WHICH revenue anchors it instead (REQ-W5-1
+      // reproducibility contract keeps the same note format otherwise).
+      // Acquisition-priced cases stamp the entry/exit multiples and the
+      // fade-DCF cross-check fragments (machine-readable, UI-parseable).
+      const exitMult = exitEvRevenueOf(ctx.inputs);
+      const acqFragment = exitMult > 0 ? `; acq_ev=${exitMult.toFixed(2)}x; exit_ev=${exitMult.toFixed(2)}x` : "";
+      const xcheck = fadedExitDcf(ctx.inputs, ctx.scenario, variant);
+      const xcheckFragment = xcheck
+        ? `; xcheck=fade-dcf; xcheck_horizon=${xcheck.horizon}; xcheck_terminal_growth=${xcheck.terminalGrowth.toFixed(4)}; xcheck_fade_npv=${xcheck.npv.toFixed(2)}; xcheck_fade_irr=${xcheck.irr != null ? xcheck.irr.toFixed(4) : "null"}`
+        : "";
+      const anchorFragment = ctx.inputs.revenueAnchor
+        ? `revenue_anchor=${ctx.inputs.revenueAnchor.source}${acqFragment}${xcheckFragment}`
+        : `capture_rate=${bc.captureRate}; capture_source=${bc.captureSource}`;
+      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}; wacc_scope=${ctx.inputs.waccScope?.scope ?? "project"}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; wacc_subject=${waccSubject}; ${anchorFragment}; ramp_source=${bc.rampSource}; ${provenance}${tcFragment}; engine=${engineMeta.engine}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}`;
       db.run(`UPDATE business_case_model SET inputs_json = ? WHERE id = ?`, [JSON.stringify(jobSpec), modelId]);
       for (const pct of ["p05", "p50", "p95"] as const) {
         const isP50 = pct === "p50";
         db.run(
-          `INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, irr, note, created_at, bep_year, bep_volume, payback_discounted_years)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-          [ulid(), ctx.inputs.projectId, modelId, ctx.scenario, pct, sim[pct], isP50 ? irr(flows) : null, note, nowIso(), isP50 ? sim.bepYear : null, isP50 ? sim.bepVolume : null, isP50 ? sim.bepYear : null],
+          `INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, unit, irr, note, created_at, bep_year, bep_volume, payback_discounted_years)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          [ulid(), ctx.inputs.projectId, modelId, ctx.scenario, pct, sim[pct], "KRW_M", isP50 ? irr(flows) : null, note, nowIso(), isP50 ? sim.bepYear : null, isP50 ? sim.bepVolume : null, isP50 ? sim.bepYear : null],
         );
       }
       return [
@@ -970,8 +1187,13 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
         "",
         `시드 ${sim.seed}·${sim.iterations}회 몬테카를로 (ADR-0052 §D.4, 결정론적 재현 가능; 엔진 ${engineMeta.engine} · ${engineMeta.device}):`,
         `성장 ${(eff.growth * 100).toFixed(2)}% (${eff.growthSource}) · sigma ${pct1(eff.disp)} (${eff.dispSource}).`,
-        `NPV p05 ${sim.p05.toFixed(1)} / p50 ${sim.p50.toFixed(1)} / p95 ${sim.p95.toFixed(1)} 억원,`,
+        `NPV p05 ${(sim.p05 / 100).toFixed(1)} / p50 ${(sim.p50 / 100).toFixed(1)} / p95 ${(sim.p95 / 100).toFixed(1)} 억원,`,
         `분산(표준편차) ${sim.std.toFixed(1)} — 지점 추정+서술 각주 금지, 분위수 영속화 완료 (valuation_simulation 3행).`,
+        ...(xcheck
+          ? [
+              `구조 교차검증 (페이드 DCF ${xcheck.horizon}년 — 성장 ${pct1(eff.growth)} → ${pct1(xcheck.terminalGrowth)} 선형 수렴, 동일 배수 처분): NPV ${(xcheck.npv / 100).toFixed(1)} 억원 · IRR ${xcheck.irr != null ? (xcheck.irr * 100).toFixed(1) : "—"}% — 기본 구조 p50 대비 ${xcheck.npv >= sim.p50 ? "+" : ""}${(((xcheck.npv - sim.p50) / Math.abs(sim.p50)) * 100).toFixed(1)}% (두 표준 구조의 일치/괴리가 성장-배수 가정의 일관성 신호).`,
+            ]
+          : []),
       ].join("\n");
     }
     // scenario_risk_assessment (step 5) — covenant-style downside review for
@@ -981,7 +1203,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
     return [
       `### [정량 방법론] quant-methodologist — 시나리오 리스크 평가 (${SCENARIO_LABEL[ctx.scenario]} · ${VARIANT_LABEL[variant]})`,
       "",
-      `하락 스트레스: p05 NPV ${(ctx.sim?.result ?? runSeededSimulation(ctx.inputs, ctx.scenario, variant)).p05.toFixed(1)} 억원 기준,`,
+      `하락 스트레스: p05 NPV ${(((ctx.sim?.result ?? runSeededSimulation(ctx.inputs, ctx.scenario, variant)).p05) / 100).toFixed(1)} 억원 기준,`,
       ctx.scenario === "downside"
         ? "금리 충격 시 계약(커버넌트) 테스트 관점에서 p05가 0 이하로 내려가는 구간에 대한 완충 확인 필요."
         : "금리 충격 시 계약(커버넌트) 테스트 통과 여향 — 하락 시나리오의 p05 대비 완충 명시 권장.",
@@ -1141,6 +1363,22 @@ export function enginesMixedAcrossTargets(rows: TargetComparisonRow[]): boolean 
   return seen.has("mixed") || seen.size > 1;
 }
 
+/** Classify one simulation note's revenue-anchor provenance — WHICH valuation
+ *  basis produced the case. Mixed bases inside ONE comparison table make the
+ *  p05 ranking apples-to-oranges (a 몇백억 company-revenue anchor next to a
+ *  market-capture fallback), so the read model surfaces the basis per target. */
+export function anchorMethodOfNote(note: string | null): "company_revenue" | "market_capture" | null {
+  if (!note) return null;
+  return /(?:^|;\s*)revenue_anchor=/.test(note) ? "company_revenue" : /(?:^|;\s*)capture_rate=/.test(note) ? "market_capture" : null;
+}
+
+/** True when the compared targets' cases come from DIFFERENT valuation bases
+ *  (one anchored on company revenue, another on the market-capture fallback). */
+export function methodsMixedAcrossTargets(rows: TargetComparisonRow[]): boolean {
+  const seen = new Set(rows.map((r) => r.anchorMethod).filter((m): m is "company_revenue" | "market_capture" => m !== null));
+  return seen.size > 1;
+}
+
 export interface TargetComparisonRow {
   targetId: string;
   companyName: string;
@@ -1154,6 +1392,10 @@ export interface TargetComparisonRow {
    *  `engine=` fragment each simulation note records. null = unrecorded. Rank
    *  and RECOMMENDED are NOT adjusted by it — a human judges. */
   engine: TargetEngine;
+  /** Valuation basis of those cases (company-revenue anchor vs market-capture
+   *  fallback), from the note's anchor provenance. null = no cases. A MIXED
+   *  basis across targets invalidates the p05 ranking comparison. */
+  anchorMethod: "company_revenue" | "market_capture" | null;
   /** RECOMMENDED flag — the same p05-survival rule as the scenario
    *  recommendation, applied across targets. A PROPOSAL only (boundary #2). */
   recommended: boolean;
@@ -1216,6 +1458,12 @@ export function recommendTargetsFromDb(projectId: string): TargetComparisonRow[]
     }
     baseByModel.set(r.model_id, entry);
   }
+  // Valuation-basis provenance of each latest model (p50 note's anchor
+  // fragment) — surfaced per target so a mixed-basis comparison is visible.
+  const anchorByModel = new Map<string, "company_revenue" | "market_capture" | null>();
+  for (const r of simRows) {
+    if (r.percentile === "p50" && !anchorByModel.has(r.model_id)) anchorByModel.set(r.model_id, anchorMethodOfNote(r.note));
+  }
 
   return flagRecommendedTarget(
     targets.map((t) => {
@@ -1230,6 +1478,7 @@ export function recommendTargetsFromDb(projectId: string): TargetComparisonRow[]
         irr: sim?.irr ?? null,
         caseCount: counts.get(t.id) ?? 0,
         engine: modelId ? mergeEngines(engineByModel.get(modelId) ?? []) : null,
+        anchorMethod: modelId ? anchorByModel.get(modelId) ?? null : null,
         recommended: false,
       };
     }),

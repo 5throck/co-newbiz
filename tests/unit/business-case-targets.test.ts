@@ -329,9 +329,9 @@ describe("S8 brownfield per-target generation (ADR-0143)", () => {
 
   test("flagRecommendedTarget: positive pool first, then max p05 (pure rule)", () => {
     const rows = [
-      { targetId: "t1", companyName: "A", rank: 1, baseP05: -5, baseP50: 10, irr: 0.1, caseCount: 3, engine: null, recommended: false },
-      { targetId: "t2", companyName: "B", rank: 2, baseP05: 3, baseP50: 12, irr: 0.2, caseCount: 3, engine: null, recommended: false },
-      { targetId: "t3", companyName: "C", rank: 3, baseP05: 1, baseP50: 30, irr: 0.3, caseCount: 3, engine: null, recommended: false },
+      { targetId: "t1", companyName: "A", rank: 1, baseP05: -5, baseP50: 10, irr: 0.1, caseCount: 3, engine: null, anchorMethod: null, recommended: false },
+      { targetId: "t2", companyName: "B", rank: 2, baseP05: 3, baseP50: 12, irr: 0.2, caseCount: 3, engine: null, anchorMethod: null, recommended: false },
+      { targetId: "t3", companyName: "C", rank: 3, baseP05: 1, baseP50: 30, irr: 0.3, caseCount: 3, engine: null, anchorMethod: null, recommended: false },
     ];
     const flagged = flagRecommendedTarget(rows);
     expect(flagged[0].targetId).toBe("t2"); // positive pool, max p05 — not the max p50
@@ -372,7 +372,7 @@ describe("D2 engine provenance on the target comparison", () => {
   });
 
   test("a target whose own cases mix engines is 'mixed'; flagRecommendedTarget stays pure", () => {
-    const base = { rank: 1, baseP05: 1, baseP50: 2, irr: 0.1, caseCount: 1, recommended: false };
+    const base = { rank: 1, baseP05: 1, baseP50: 2, irr: 0.1, caseCount: 1, anchorMethod: "company_revenue" as const, recommended: false };
     const rows = [
       { ...base, targetId: "a", companyName: "A", engine: "mixed" as const },
       { ...base, targetId: "b", companyName: "B", engine: null },

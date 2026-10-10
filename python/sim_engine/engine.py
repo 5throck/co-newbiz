@@ -67,6 +67,11 @@ def run_case(case: dict, spec: dict, device_info: DeviceInfo) -> dict:
     opex_driver = drivers.get("opex_ratio", {"dist": "constant", "value": 0.0})
     capex_driver = drivers.get("capex_ratio", {"dist": "constant", "value": 0.0})
     initial_investment = _scalar_driver(drivers, "initial_investment")
+    # Exit (terminal) value multiple — M&A cases sell the business at the
+    # entry EV/Revenue multiple on the FINAL year's revenue, realized at
+    # year H (no multiple expansion assumed). 0.0 = no exit value (the
+    # legacy greenfield contract, unchanged).
+    exit_multiple = _scalar_driver(drivers, "exit_ev_revenue")
 
     # Simulated paths — (iterations, horizon). Year 1 column is the anchor
     # (no noise), growth applies to years 2..H exactly like the legacy model.
@@ -95,6 +100,8 @@ def run_case(case: dict, spec: dict, device_info: DeviceInfo) -> dict:
     npvs = backend.full((iterations,), -initial_investment)
     for t in range(horizon):
         npvs = npvs + fcf[:, t] * discount_factors[t] * ramp[t]
+    if exit_multiple > 0:
+        npvs = npvs + revenue[:, horizon - 1] * exit_multiple * discount_factors[horizon - 1]
 
     # Contingent liabilities — drawn into EVERY iteration (ADR-0026).
     for liability in drivers.get("contingent_liabilities", []):
@@ -111,13 +118,18 @@ def run_case(case: dict, spec: dict, device_info: DeviceInfo) -> dict:
     # Deterministic path — every driver at its central value, no liabilities.
     deterministic_flows: list[float] = []
     revenue_det = revenue_y1
+    revenue_final = revenue_y1
     growth_mean = driver_expected_value(growth_driver)
     opex_mean = driver_expected_value(opex_driver)
     capex_mean = driver_expected_value(capex_driver)
     deterministic_flows.append(-initial_investment)
     for t in range(horizon):
+        revenue_final = revenue_det
         deterministic_flows.append(revenue_det * (1.0 - opex_mean - capex_mean) * ramp[t])
         revenue_det *= 1.0 + growth_mean
+    if exit_multiple > 0:
+        # Realized together with the year-H operating flow.
+        deterministic_flows[horizon] += revenue_final * exit_multiple
     base_npv = sum(cf / (1.0 + rate) ** t for t, cf in enumerate(deterministic_flows))
 
     payback = discounted_payback_year(initial_investment, deterministic_flows[1:], rate)
