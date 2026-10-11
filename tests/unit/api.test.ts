@@ -119,11 +119,12 @@ describe("auth", () => {
 describe("bearer API tokens", () => {
   let readToken: string;
 
-  test("a token is returned once, on issue", async () => {
+  test("a token is returned once, on issue, with the cnb_pat_ prefix", async () => {
     const res = await req("/api/tokens", { method: "POST", headers: { cookie: bobCookie }, body: JSON.stringify({ label: "mcp", scopes: ["read"] }) });
     const body = (await res.json()).data;
     expect(res.status).toBe(201);
-    expect(body.token).toHaveLength(64);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(body.token).toMatch(/^cnb_pat_[0-9a-f]{64}$/);
     readToken = body.token;
   });
 
@@ -132,10 +133,10 @@ describe("bearer API tokens", () => {
     expect(res.status).toBe(200);
   });
 
-  test("a read-scoped token cannot mutate", async () => {
+  test("a bearer token cannot mint tokens (session-only issuance)", async () => {
     const res = await req("/api/tokens", { method: "POST", headers: { authorization: `Bearer ${readToken}` }, body: JSON.stringify({ label: "x" }) });
     expect(res.status).toBe(403);
-    expect((await res.json()).error.code).toBe("insufficient_scope");
+    expect((await res.json()).error.code).toBe("session_required");
   });
 });
 

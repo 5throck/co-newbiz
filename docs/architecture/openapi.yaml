@@ -343,7 +343,15 @@ paths:
   /api/tokens:
     post:
       operationId: issueToken
-      summary: Issue a Bearer API token — plaintext returned exactly once.
+      summary: Issue a personal Bearer API token — human web session only; plaintext returned exactly once.
+      description: >-
+        Session-only issuance (403 session_required for any Bearer credential).
+        Scopes are ["read"] or ["read","write"]; viewer and admin accounts are
+        read-only (ADR-0146). Expiry defaults to 30 days; allowed values are
+        7, 30, or 90. At most 5 active personal tokens per user
+        (409 token_limit_reached) and 10 issues per user per hour
+        (429 rate_limited). New tokens carry the cnb_pat_ prefix. The 201
+        response is Cache-Control: no-store; the token is never logged.
       tags:
         - Tokens
       requestBody:
@@ -357,6 +365,7 @@ paths:
               properties:
                 label:
                   type: string
+                  maxLength: 80
                 scopes:
                   type: array
                   items:
@@ -364,6 +373,10 @@ paths:
                     enum:
                       - read
                       - write
+                expiresInDays:
+                  type: integer
+                  enum: [7, 30, 90]
+                  default: 30
       responses:
         '201':
           $ref: '#/components/responses/Created'
@@ -373,9 +386,18 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
     get:
       operationId: listTokens
       summary: List the caller's tokens — identity columns only, hash never leaves the engine.
+      description: >-
+        Available to any authenticated caller (owner-scoped). Each row carries
+        id, display_id (last 6 chars of the id), label, scopes, created_at,
+        last_used_at, expires_at, revoked_at, and computed status
+        (active | expired | revoked).
       tags:
         - Tokens
       responses:
@@ -386,7 +408,7 @@ paths:
   /api/tokens/{id}:
     delete:
       operationId: revokeToken
-      summary: Revoke a token — owner-scoped (someone else's id is indistinguishable from nonexistent).
+      summary: Revoke a token — human web session only; owner-scoped (someone else's id is indistinguishable from nonexistent).
       tags:
         - Tokens
       parameters:
@@ -396,6 +418,8 @@ paths:
           $ref: '#/components/responses/Ok'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /api/mcp:
@@ -6532,6 +6556,12 @@ components:
             $ref: '#/components/schemas/Envelope'
     Conflict:
       description: Supersession/conflict rejection.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+    TooManyRequests:
+      description: Rate limit exceeded (429 rate_limited) — retry later.
       content:
         application/json:
           schema:

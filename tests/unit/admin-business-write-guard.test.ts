@@ -112,16 +112,25 @@ describe("ADR-0146 token issuance", () => {
   const issue = (cookie: string, scopes: string[]) =>
     req("/api/tokens", { method: "POST", headers: { cookie }, body: JSON.stringify({ label: "t", scopes }) });
 
+  // 2026-10-11: the personal-token scope vocabulary is ["read"] or
+  // ["read","write"] (write implies read) — a bare ["write"] request is now
+  // 400 invalid_request, so the ADR-0146 role refusals are exercised with
+  // ["read","write"].
   test("admin + write scope -> 403 role_forbidden", async () => {
-    const res = await issue(adminCookie, ["write"]);
+    const res = await issue(adminCookie, ["read", "write"]);
     expect(res.status).toBe(403);
     expect(await errCode(res)).toBe("role_forbidden");
   });
   test("admin + read scope -> 201", async () => {
     expect((await issue(adminCookie, ["read"])).status).toBe(201);
   });
+  test("bare write scope -> 400 invalid_request (vocabulary: write implies read)", async () => {
+    const res = await issue(analystCookie, ["write"]);
+    expect(res.status).toBe(400);
+    expect(await errCode(res)).toBe("invalid_request");
+  });
   test("viewer + write scope -> 403 role_required (unchanged)", async () => {
-    const res = await issue(viewerCookie, ["write"]);
+    const res = await issue(viewerCookie, ["read", "write"]);
     expect(res.status).toBe(403);
     expect(await errCode(res)).toBe("role_required");
   });
