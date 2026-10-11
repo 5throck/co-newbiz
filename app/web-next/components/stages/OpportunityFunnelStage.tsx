@@ -514,7 +514,7 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
             {statusFilter ? "필터 조건에 맞는 기회가 없습니다." : "등록된 기회가 없습니다 — 분석된 산업에서 기회 발굴을 시작하세요."}
           </p>
         ) : (
-          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table list-table" aria-label="기회 퍼널 목록">
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table list-table opp-funnel-table" aria-label="기회 퍼널 목록">
             <caption className="sr-only">기회 퍼널 목록</caption>
             <thead>
               <tr>
@@ -523,8 +523,8 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
                     폭을 흡수하지만 테이블 최대 폭(64rem) 안에서 유지된다. */}
                 <th scope="col">기회명</th>
                 <th scope="col" className="w-[6rem]">매력도</th>
-                <th scope="col" className="w-[7rem]">시너지</th>
-                <th scope="col" className="w-[13rem]"><span className="sr-only">작업</span></th>
+                <th scope="col" className="w-[10rem]">시너지</th>
+                <th scope="col" className="w-[20rem]"><span className="sr-only">작업</span></th>
               </tr>
             </thead>
             <tbody>
