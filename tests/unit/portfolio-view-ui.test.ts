@@ -67,7 +67,8 @@ describe("portfolio-view overlap UI (design 2026-10-11)", () => {
 
   test("member links reuse the deals-board targets via the payload href", () => {
     expect(src).toMatch(/href=\{m\.href\}/);
-    expect(src).toMatch(/\/opportunities\?opportunity=/);
+    expect(src).toMatch(/dealStageHref/);
+    expect(src).not.toMatch(/\/opportunities\?opportunity=/);
     expect(src).toMatch(/\/projects\/\$\{p\.id\}\/process/);
   });
 

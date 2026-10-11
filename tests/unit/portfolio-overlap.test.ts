@@ -59,7 +59,7 @@ describe("portfolio overlap grouping", () => {
     expect(g.key_label).toBeUndefined();
     expect(g.members.map((m) => m.kind)).toEqual(["opportunity", "project"]);
     expect(g.members[0]).toMatchObject({
-      href: "/opportunities?opportunity=o1",
+      href: "/deals/o1/s3",
       status: "assessed",
       industry_pinned: true,
     });

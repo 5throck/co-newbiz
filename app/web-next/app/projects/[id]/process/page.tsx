@@ -10,6 +10,7 @@ import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { PageHeader } from "../../../../components/layout.tsx";
 import { api } from "../../../../lib/api.ts";
+import { dealStageHref } from "../../../../lib/deal-links.ts";
 import { DECISION_LABEL, GATE_LABEL, RECORD_KEY_LABEL, STAGE_STATUS_LABEL, labelText, resolveLabel, trackLabel, trackLabelParts } from "../../../../lib/labels.ts";
 import { RawKey } from "../../../../components/RawKey.tsx";
 
@@ -170,7 +171,7 @@ export default function ProjectProcessPage() {
       {data.opportunity && (
         <section aria-label="기회 단계 (S1~S4)" className="market-section">
           <h2 className="text-[0.92rem] font-semibold">
-            기회 단계 <a className="text-[color:var(--accent)] underline text-[length:var(--fs-caption)]" href={`/opportunities?opportunity=${data.opportunity.id}`}>기회 화면 →</a>
+            기회 단계 <a className="text-[color:var(--accent)] underline text-[length:var(--fs-caption)]" href={dealStageHref(data.opportunity.id, opportunityStages?.find((s) => s.status === "current")?.id)}>기회 화면 →</a>
           </h2>
           <StageList stages={opportunityStages ?? []} gateStatus={data.opportunity.gateStatus} />
         </section>
