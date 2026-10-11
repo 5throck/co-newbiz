@@ -38,7 +38,7 @@ Next.js's own build serves both `/api/**` (Route Handlers) and the App Router pa
 cd app/web-next && bun --bun run start
 ```
 
-Runs on port 7749 by default (`package.json`'s `start` script; moved from 8787 — the Phase 5 cutover default, chosen back then for `CO_NEWBIZ_API_BASE_URL` compatibility — to 7749 on 2026-09-20 after an unrelated local Docker service took 8787 on operator machines). `bun --bun` is required, not plain `bun run` — Next's dev/start scripts otherwise execute under Node, which cannot resolve `bun:sqlite` (`db/client.ts`'s import), found empirically during Phase 2.
+Runs on port 7748 by default (`package.json`'s `dev`/`start` scripts; 8787 until 2026-09-20, then 7749, then swapped to 7748 on 2026-10-11 so that 7749 can belong to the Docker production container the Cloudflare tunnel targets). `bun --bun` is required, not plain `bun run` — Next's dev/start scripts otherwise execute under Node, which cannot resolve `bun:sqlite` (`db/client.ts`'s import), found empirically during Phase 2.
 
 Health check: `GET /api/health` should return `{"status":"ok"}`. This is the "health check immediately after" step ADR-0014 requires — confirm it before considering the release complete, not just that the process started without crashing.
 
@@ -63,11 +63,31 @@ Deployment maps one-to-one onto the ADR-0014 discipline:
 
 1. **Backup before migration** — `docker/entrypoint.sh` copies the SQLite file (plus WAL/SHM sidecars; the server is not yet running, so a plain copy is consistent) to `backups/pre-deploy-<timestamp>.db` on every container start that finds an existing database.
 2. **Migrate** — server boot applies pending migrations automatically (`CO_NEWBIZ_BOOTSTRAP_MIGRATIONS=auto`, `app/web-next/instrumentation.ts`); a fresh volume also bootstraps the first admin account (random password printed once to the container log — capture it: `docker logs co-newbiz-web | grep -i password`).
-3. **Health check after** — `bun scripts/deploy-web.ts` polls `http://127.0.0.1:7748/api/health` and fails loudly (with rollback hints) if it does not pass. On failure: tag the previous image back (the script prints the exact `docker tag` command) and follow §6 for the database half — code rollback and DB rollback remain separate, sequenced actions.
+3. **Health check after** — `bun scripts/deploy-web.ts` polls `http://127.0.0.1:7749/api/health` and fails loudly (with rollback hints) if it does not pass. On failure: tag the previous image back (the script prints the exact `docker tag` command) and follow §6 for the database half — code rollback and DB rollback remain separate, sequenced actions.
 
-Layout: host port **7748** → container 7749 (7749 belongs to the dev server; 8787 is taken by an unrelated local Docker service). The database lives in the `co-newbiz-data` named volume mounted at the app's own `<repo>/db/data` directory — never point `CO_NEWBIZ_DB_PATH` elsewhere, because `db/client.ts` derives the migrations location from the DB path's grandparent directory — so container replacement never touches data. Secrets live only in the host-local `.env.prod` (create from `.env.prod.sample`; gitignored, never baked into the image). The repository is private, so the published package is private too: `docker login ghcr.io` once with a PAT holding `read:packages` before the first pull (repeat after PAT rotation).
+Layout: host port **7749** → container 7749 (compose `7749:7749`; the dev server runs on 7748; 8787 is taken by an unrelated local Docker service). The database lives in the `co-newbiz-data` named volume mounted at the app's own `<repo>/db/data` directory — never point `CO_NEWBIZ_DB_PATH` elsewhere, because `db/client.ts` derives the migrations location from the DB path's grandparent directory — so container replacement never touches data. Secrets live only in the host-local `.env.prod` (create from `.env.prod.sample`; gitignored, never baked into the image). The repository is private, so the published package is private too: `docker login ghcr.io` once with a PAT holding `read:packages` before the first pull (repeat after PAT rotation).
 
 §7 post-deployment checks apply unchanged: scheduled jobs stay registered at the **host OS scheduler** (launchd) per ADR-0019 — the container runs no in-process timers, and container replacement must not disturb the host scheduler registrations.
+
+### Operator cutover steps (2026-10-11 port swap)
+
+The Cloudflare tunnel (`cloudflared`, a docker container on the operator machine, configured outside this repository) targets host port 7749 for `https://newbiz.bizknights.org`. Until the swap, 7749 was the dev server; afterwards it is the production container. Run in order:
+
+```bash
+# 1. stop the dev server that currently holds 7749 (Ctrl-C in its terminal, or)
+lsof -ti tcp:7749 | xargs kill
+# 2. start dev on the new dev port
+cd app/web-next && bun run dev            # http://localhost:7748
+# 3. start production (pull the latest image first, or add --build to build locally)
+docker compose pull web && docker compose up -d
+bun scripts/deploy-web.ts                 # alternative: pull + up + health check in one step
+curl -s http://127.0.0.1:7749/api/health  # expect {"status":"ok"}
+curl -sI https://newbiz.bizknights.org/ | head -1
+```
+
+Also set `CO_NEWBIZ_PUBLIC_ORIGIN=https://newbiz.bizknights.org` in `.env.prod` (see `.env.prod.sample`) and update any local MCP client config to `CO_NEWBIZ_API_BASE_URL=http://localhost:7748` (or the public URL). The production container starts with a fresh volume unless `co-newbiz-data` already exists; on first boot capture the admin password with `docker logs co-newbiz-web | grep -i password`.
+
+Rollback: `docker compose down`, then start the dev server on 7749 again (`cd app/web-next && bun --bun next dev -p 7749`) so the tunnel serves it as before; revert the port swap commit to restore the scripts.
 
 ## 9. Related
 

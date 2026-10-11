@@ -146,7 +146,12 @@ function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggle
     : isDealFlowFlatRoute(pathname)
       ? { href: "/deals", label: "검토/안건 보드" }
       : null;
-  const projectBack = projectSubMatch
+  // The project list (/projects) is off the sidebar too; like the other
+  // deal-less list screens it gets the topbar back to the board instead of
+  // an in-page breadcrumb.
+  const projectBack = pathname === "/projects"
+    ? { href: "/deals", label: "검토/안건 보드" }
+    : projectSubMatch
     ? { href: `/projects/${projectSubMatch[1]}`, label: "프로젝트 개요" }
     : projectOverviewMatch && projectOverviewMatch[1] !== "archives"
       ? { href: "/deals", label: "검토/안건 보드" }

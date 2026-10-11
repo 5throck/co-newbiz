@@ -1,6 +1,7 @@
 // E2E harness (Wave C-1). Each scenario file gets its OWN production-mode Next
 // server on a free port against a temp SQLite DB, and tears both down. It never
-// binds or touches port 7749 (the operator's dev server).
+// binds or touches port 7748 (the operator's dev server) or 7749 (the Docker
+// production container).
 //
 // Boundary notes:
 //  - The only direct DB writes happen BEFORE the server starts: migrations, the
@@ -24,8 +25,8 @@ const WEB_DIR = join(REPO_ROOT, "app", "web-next");
 const DIST_DIR = ".next/e2e";
 const BUILD_LOCK = join(tmpdir(), "co-newbiz-e2e-build.lock");
 
-/** Never allowed: the operator's dev server port. */
-const FORBIDDEN_PORT = 7749;
+/** Never allowed: the operator's dev server port (7748) and Docker production (7749). */
+const FORBIDDEN_PORTS = [7748, 7749];
 
 export interface TestApp {
   baseUrl: string;
@@ -59,7 +60,7 @@ async function freePort(): Promise<number> {
         srv.close(() => resolvePort(p));
       });
     });
-    if (port !== FORBIDDEN_PORT && port > 1024) return port;
+    if (!FORBIDDEN_PORTS.includes(port) && port > 1024) return port;
   }
   throw new Error("could not find a free port");
 }

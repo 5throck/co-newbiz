@@ -57,7 +57,7 @@ python3 -m venv .venv && .venv/bin/pip install -r python/requirements.txt
 cd app/web-next
 bun install
 bun run dev          # first boot prints the initial admin credentials
-# open http://localhost:7749
+# open http://localhost:7748
 ```
 
 Manual DB/account management (optional):
@@ -72,7 +72,7 @@ Note: the database path is anchored to the repository (`<repo>/db/data/co-newbiz
 
 ### Internal demo
 
-`bun run demo` starts the production build on a free port (never 7749). It uses a throwaway SQLite database seeded with the S1–S12 brownfield demo deal (human decisions recorded) and the greenfield E2E deal. LLM, DART and web-research settings are blanked, so every executor runs its deterministic fallback. The command prints the URL and the run-only passwords for `analyst` (deal work) and `admin` (no deal data, ADR-0091). Each first login forces a password change. Ctrl-C stops the server and deletes the database. `bun run demo -- --capture` walks S1 to S12 headlessly and writes the numbered screenshots in [`docs/evidence/demo/`](docs/evidence/demo/). Requirements: `bun install` in the repository root and in `app/web-next`, plus a Chromium or an installed Chrome.
+`bun run demo` starts the production build on a free port (never 7748 or 7749). It uses a throwaway SQLite database seeded with the S1–S12 brownfield demo deal (human decisions recorded) and the greenfield E2E deal. LLM, DART and web-research settings are blanked, so every executor runs its deterministic fallback. The command prints the URL and the run-only passwords for `analyst` (deal work) and `admin` (no deal data, ADR-0091). Each first login forces a password change. Ctrl-C stops the server and deletes the database. `bun run demo -- --capture` walks S1 to S12 headlessly and writes the numbered screenshots in [`docs/evidence/demo/`](docs/evidence/demo/). Requirements: `bun install` in the repository root and in `app/web-next`, plus a Chromium or an installed Chrome.
 
 ```mermaid
 flowchart LR
@@ -206,4 +206,4 @@ Internal workspace project — not for external distribution. Governed by the sa
 
 ---
 
-*Last Updated: 2026-10-08*
+*Last Updated: 2026-10-11*

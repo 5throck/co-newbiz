@@ -19,7 +19,7 @@ const IMAGE = "ghcr.io/5throck/co-newbiz-web:latest";
 const SERVICE = "web";
 const CONTAINER = "co-newbiz-web";
 const REPO_ROOT = join(import.meta.dir, "..");
-const HEALTH_URL = process.env.CO_NEWBIZ_HEALTH_URL ?? "http://127.0.0.1:7748/api/health";
+const HEALTH_URL = process.env.CO_NEWBIZ_HEALTH_URL ?? "http://127.0.0.1:7749/api/health";
 const TIMEOUT_SECONDS = Number(process.env.CO_NEWBIZ_HEALTH_TIMEOUT ?? "120");
 
 interface RunResult {

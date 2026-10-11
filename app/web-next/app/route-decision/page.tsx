@@ -14,7 +14,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "../../lib/api.ts";
 import { PageState, PrimaryAction } from "../../components/ui.tsx";
-import { Breadcrumb } from "../../components/Breadcrumb.tsx";
 
 interface OpportunityRow {
   id: string; name: string; attractiveness_score: number | null; synergy_score: number | null;
@@ -171,7 +170,6 @@ function RouteDecisionRedirect() {
 function StageFrameLite() {
   return (
     <>
-      <Breadcrumb items={[{ label: "검토/안건 보드", href: "/deals" }, { label: "S4 진출방식 결정" }]} />
       <div className="stage-head">
         <h1>S4 진출방식 결정</h1>
         <PrimaryAction inline href="/market?new=1" label="새 검토 시작 (시장분석부터)" />

@@ -2,11 +2,11 @@
   "name": "co-newbiz-web-next",
   "version": "0.0.1",
   "private": true,
-  "description": "co-newbiz web + API (Next.js/Prisma). System of record as of Phase 5 cutover (ADR-0069/0070). Runs on port 7749. IMPORTANT: db/client.ts imports bun:sqlite, so next must run under the Bun runtime — the dev/start scripts pass --bun; a bare `next start` under Node fails on every DB route.",
+  "description": "co-newbiz web + API (Next.js/Prisma). System of record as of Phase 5 cutover (ADR-0069/0070). Runs on port 7748. IMPORTANT: db/client.ts imports bun:sqlite, so next must run under the Bun runtime — the dev/start scripts pass --bun; a bare `next start` under Node fails on every DB route.",
   "scripts": {
-    "dev": "bun --bun next dev -p 7749",
+    "dev": "bun --bun next dev -p 7748",
     "build": "bun --bun next build",
-    "start": "bun --bun next start -p 7749",
+    "start": "bun --bun next start -p 7748",
     "prisma:pull": "prisma db pull",
     "prisma:generate": "prisma generate",
     "lint:design": "bun scripts/design-lint.ts"

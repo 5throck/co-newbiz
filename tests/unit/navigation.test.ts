@@ -43,7 +43,7 @@ function allPageRoutes(): string[] {
   return out.sort();
 }
 
-const { NAV_SECTIONS, NON_MENU_ROUTES, menuHrefs, ADMIN_NAV } = await import(NAV_MODULE);
+const { NAV_SECTIONS, NON_MENU_ROUTES, menuHrefs, ADMIN_NAV, isDealFlowFlatRoute } = await import(NAV_MODULE);
 // AppShell must be the only renderer — assert it consumes the SSOT.
 const appShellSource = readFileSync(join(PROJECT_ROOT, "app/web-next/components/AppShell.tsx"), "utf8");
 
@@ -115,13 +115,22 @@ describe("navigation SSOT (ADR-0105)", () => {
     expect(appShellSource).not.toMatch(/const NAV_SECTIONS/);
   });
 
-  // Post-merge follow-up (2026-10-11-ui-label-and-mobile-table-sweep): /projects
-  // is reached from the deal board, so it carries the shared breadcrumb trail
-  // "deal board > Projects" with a working link back to /deals.
-  test("/projects renders the shared breadcrumb with a back link to /deals", () => {
+  // 2026-10-11-ui-polish-back-nav-token-table-inbox-link: /projects uses the
+  // same top-bar back (to the deal board) as the other deal-less list screens,
+  // not an in-page breadcrumb.
+  test("/projects uses the topbar back to /deals and no in-page breadcrumb", () => {
     const src = readFileSync(join(APP_DIR, "projects", "page.tsx"), "utf8");
-    expect(src).toContain('from "../../components/Breadcrumb.tsx"');
-    expect(src).toContain('label: "검토/안건 보드", href: "/deals"');
-    expect(src).toContain('{ label: "프로젝트" }');
+    expect(src).not.toContain("Breadcrumb");
+    expect(appShellSource).toMatch(/pathname === "\/projects"\s*\?\s*\{ href: "\/deals", label: "검토\/안건 보드" \}/);
+  });
+
+  // Flat deal-less routes: the top-bar back (to the board) replaces the in-page breadcrumb.
+  test("/route-decision, /agents, /our-company have no in-page breadcrumb and back to the board", () => {
+    for (const dir of ["route-decision", "agents", "our-company"]) {
+      const src = readFileSync(join(APP_DIR, dir, "page.tsx"), "utf8");
+      expect(src).not.toContain("Breadcrumb");
+      expect(isDealFlowFlatRoute(`/${dir}`)).toBe(true);
+    }
+    expect(appShellSource).toMatch(/isDealFlowFlatRoute\(pathname\)\s*\?\s*\{ href: "\/deals", label: "검토\/안건 보드" \}/);
   });
 });

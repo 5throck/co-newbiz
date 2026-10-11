@@ -6,13 +6,11 @@
 // 동일 컴포넌트를 소비한다
 // (URL ?member= 선택은 페이지 모드에서만 동작한다).
 import { Suspense } from "react";
-import { Breadcrumb } from "../../components/Breadcrumb.tsx";
 import { OurCompanyStage } from "../../components/stages/OurCompanyStage.tsx";
 
 function OurCompanyView() {
   return (
     <main>
-      <Breadcrumb items={[{ label: "홈", href: "/" }, { label: "그룹/계열사 분석" }]} />
       <h1>그룹/계열사 분석</h1>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
         그룹과 계열사를 등록해 자사 강점/약점을 분석합니다. 이 프로파일은 단계 S3 시너지·적합성 평가의 입력(자사 역량·포트폴리오 정보)으로 사용됩니다.
