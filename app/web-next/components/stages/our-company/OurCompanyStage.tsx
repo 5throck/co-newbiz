@@ -23,7 +23,7 @@ export function OurCompanyStage(props0: { memberId?: string; embedded?: boolean 
   const ctx = { ...h0, ...h1, ...h2 };
   const { confirmDialog, error, openMember, canAct, selectedGroup, profiles, analyzeMember, setShowGroupForm, setShowMemberForm } = ctx;
   return (
-    <>
+    <div className="our-company-stage">
       {confirmDialog}
       {!canAct ? (
         <PrimaryAction label="계열사 추가" disabled disabledReason="그룹·계열사 편집은 analyst 권한이 필요합니다." />
@@ -59,6 +59,6 @@ export function OurCompanyStage(props0: { memberId?: string; embedded?: boolean 
       {/* ── 계열사 리포트 (상세 전용 뷰 — 시너지 정합성과 동일 흐름) ── */}
       <ProfileSection ctx={ctx} />
 
-    </>
+    </div>
   );
 }

@@ -6,7 +6,7 @@
 //  - 수정: RowEdit (행 내 편집 모드 — 입력 + 저장/취소, Enter 저장)
 //  - 삭제: useConfirm() + ConfirmDialog (대상명 표시 확인, 라벨 "삭제", btn-danger, 행 액션 맨 끝)
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useModalFocus } from "../lib/use-modal-focus.ts";
 
@@ -162,6 +162,123 @@ export function RowEdit({
       <button type="button" className="btn-ghost btn-sm" onClick={onCancel}>
         취소
       </button>
+    </span>
+  );
+}
+
+
+/* ── RowMenu: overflow ("more actions") menu for rows and toolbars ──
+   Same role="menu" / role="menuitem" pattern as StageTabs' More menu. Arrows/Home/End move,
+   Escape closes and returns focus to the trigger, Tab and outside click close. The panel is
+   position: fixed so a .table-scroll ancestor never clips it. */
+
+export interface RowMenuItem {
+  key: string;
+  label: string;
+  onSelect: () => void;
+  danger?: boolean;
+  disabled?: boolean;
+  /** render a separator line above this item */
+  separatorBefore?: boolean;
+}
+
+export function RowMenu({ label, items, triggerClassName = "btn-ghost btn-sm" }: { label: string; items: RowMenuItem[]; triggerClassName?: string }) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number | "auto"; bottom: number | "auto"; right: number } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const itemEls = () => Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not([disabled])') ?? []);
+  const close = useCallback((returnFocus: boolean) => {
+    setOpen(false);
+    if (returnFocus) triggerRef.current?.focus();
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const r = triggerRef.current.getBoundingClientRect();
+    const right = Math.max(8, window.innerWidth - r.right);
+    const h = menuRef.current?.offsetHeight ?? 0;
+    setPos(r.bottom + h + 8 > window.innerHeight && r.top > h ? { top: "auto", bottom: window.innerHeight - r.top + 4, right } : { top: r.bottom + 4, bottom: "auto", right });
+  }, [open]);
+
+  // Focus the first item once the panel is positioned (opacity:0 while unpositioned; visibility:hidden would block focus).
+  useEffect(() => {
+    if (open && pos) itemEls()[0]?.focus({ preventScroll: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, pos]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!menuRef.current?.contains(t) && !triggerRef.current?.contains(t)) close(false);
+    };
+    const onDismiss = () => close(false);
+    document.addEventListener("mousedown", onDown);
+    window.addEventListener("resize", onDismiss);
+    window.addEventListener("scroll", onDismiss, true);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      window.removeEventListener("resize", onDismiss);
+      window.removeEventListener("scroll", onDismiss, true);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, close]);
+
+  function onMenuKeyDown(e: React.KeyboardEvent) {
+    const els = itemEls();
+    const i = els.indexOf(document.activeElement as HTMLButtonElement);
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(true); }
+    else if (e.key === "Tab") close(false);
+    else if (e.key === "ArrowDown") { e.preventDefault(); els[(i + 1) % els.length]?.focus({ preventScroll: true }); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); els[(i - 1 + els.length) % els.length]?.focus({ preventScroll: true }); }
+    else if (e.key === "Home") { e.preventDefault(); els[0]?.focus({ preventScroll: true }); }
+    else if (e.key === "End") { e.preventDefault(); els[els.length - 1]?.focus({ preventScroll: true }); }
+  }
+
+  return (
+    <span className="row-menu-wrap">
+      <button
+        ref={triggerRef}
+        type="button"
+        className={`${triggerClassName} row-menu-trigger`}
+        aria-label={label}
+        title={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => { setPos(null); setOpen((v) => !v); }}
+        onKeyDown={(e) => { if (e.key === "ArrowDown" && !open) { e.preventDefault(); setPos(null); setOpen(true); } }}
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
+          <circle cx="8" cy="3" r="1.4" /><circle cx="8" cy="8" r="1.4" /><circle cx="8" cy="13" r="1.4" />
+        </svg>
+      </button>
+      {open && (
+        <div
+          ref={menuRef}
+          role="menu"
+          aria-label={label}
+          className="stage-tab-menu row-menu"
+          style={{ ...(pos ?? { top: 0, bottom: "auto", right: 0, opacity: 0 }) }}
+          onKeyDown={onMenuKeyDown}
+        >
+          {items.map((it) => (
+            <div key={it.key} role="none">
+              {it.separatorBefore && <div role="separator" className="row-menu-sep" />}
+              <button
+                type="button"
+                role="menuitem"
+                disabled={it.disabled}
+                className={`stage-tab-menu-item row-menu-item${it.danger ? " row-menu-item-danger" : ""}`}
+                onClick={() => { close(true); it.onSelect(); }}
+              >
+                {it.label}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </span>
   );
 }

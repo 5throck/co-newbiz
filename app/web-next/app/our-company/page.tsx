@@ -7,15 +7,17 @@
 // (URL ?member= 선택은 페이지 모드에서만 동작한다).
 import { Suspense } from "react";
 import { OurCompanyStage } from "../../components/stages/OurCompanyStage.tsx";
+import { OUR_COMPANY_COPY } from "../../components/stages/our-company/constants.ts";
 
 function OurCompanyView() {
   return (
     <main>
       <h1>그룹/계열사 분석</h1>
-      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
-        그룹과 계열사를 등록해 자사 강점/약점을 분석합니다. 이 프로파일은 단계 S3 시너지·적합성 평가의 입력(자사 역량·포트폴리오 정보)으로 사용됩니다.
-        상장 계열사는 DART 재무제표, 전체는 애널리스트 리포트·산업 동향 리서치로 분석합니다.
-      </p>
+      <p className="mt-[0.15rem] mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">{OUR_COMPANY_COPY.s3Lead}</p>
+      <details className="how-used mb-3">
+        <summary>{OUR_COMPANY_COPY.howUsedSummary}</summary>
+        <p className="mt-2 mb-0 text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{OUR_COMPANY_COPY.howUsedBody}</p>
+      </details>
       <OurCompanyStage />
     </main>
   );

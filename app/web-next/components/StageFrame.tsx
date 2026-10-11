@@ -13,6 +13,7 @@ import { localizeRequirement } from "../lib/labels.ts";
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
+import { CheckCircle2, Circle, MinusCircle } from "lucide-react";
 import { GATE_LABEL, STAGE_META, type StageMetaId, type TrackId } from "../lib/stage-meta.ts";
 import { STAGE_HANDOFF } from "../lib/stage-handoff.ts";
 import { PrimarySlot } from "./ui.tsx";
@@ -148,6 +149,13 @@ interface GuidanceInfo {
   requiredArtifacts: string[];
 }
 
+function StepIcon({ state }: { state: StageRailStatus }) {
+  if (state === "complete") return <CheckCircle2 size={14} aria-hidden="true" className="stage-step-icon stage-step-icon-done" />;
+  if (state === "current") return <Circle size={14} fill="currentColor" aria-hidden="true" className="stage-step-icon stage-step-icon-current" />;
+  if (state === "skipped") return <MinusCircle size={14} aria-hidden="true" className="stage-step-icon" />;
+  return null;
+}
+
 function StageGuidance({ projectId, stageId }: { projectId: string; stageId: string }) {
   const [info, setInfo] = useState<GuidanceInfo | null>(null);
   const [hidden, setHidden] = useState(false);
@@ -197,7 +205,23 @@ function StageGuidance({ projectId, stageId }: { projectId: string; stageId: str
 /** Layer 2 of the IA (design §3.3): one stepper, roving tabindex, arrow keys,
     aria-current="step". At <=880px it collapses to "S8 / 12 · name" with a
     disclosure list. Status is text (current/skipped), never colour alone. */
-export function StageRail({ current, track }: { current: StageMetaId[]; track?: TrackId }) {
+export type StageRailStatus = "complete" | "current" | "skipped" | "pending";
+// INTERIM-WORDING: state words shown to assistive tech (full rail) and as text (compact list).
+const RAIL_STATE_TEXT: Record<StageRailStatus, string> = { complete: "완료", current: "진행 중", skipped: "건너뜀", pending: "" };
+
+export function StageRail({
+  current,
+  track,
+  status,
+  sticky = true,
+}: {
+  current: StageMetaId[];
+  track?: TrackId;
+  /** Opt-in per-stage state: icon + visually hidden word in the full rail, visible word in the compact list, neighbour names in the compact summary. */
+  status?: Partial<Record<StageMetaId, StageRailStatus>>;
+  /** false = static (overview pages); stage pages keep the sticky default. */
+  sticky?: boolean;
+}) {
   const linkFor = useStageLinks();
   const listRef = useRef<HTMLDivElement>(null);
   const cur = STAGE_META.find((s) => s.id === current[0])!;
@@ -237,14 +261,26 @@ export function StageRail({ current, track }: { current: StageMetaId[]; track?: 
     row.scrollLeft = Math.max(0, el.offsetLeft - (row.clientWidth - el.offsetWidth) / 2);
   }, [currentKey]);
 
+  const stateOf = (id: StageMetaId): StageRailStatus | null => (status ? status[id] ?? "pending" : null);
+  const neighbours = status
+    ? { prev: STAGE_META.find((s) => s.sequence === cur.sequence - 1) ?? null, next: STAGE_META.find((s) => s.sequence === cur.sequence + 1) ?? null }
+    : null;
   const linked = STAGE_META.filter((s) => hrefFor(s));
   const tabStopId = (linked.find((s) => current.includes(s.id)) ?? linked[0])?.id;
 
   return (
-    <nav aria-label="Stages" className="stage-stepper-wrap">
+    <nav aria-label="Stages" className={`stage-stepper-wrap${sticky ? "" : " stage-stepper-wrap--static"}${status ? " stage-stepper--status" : ""}`}>
       <details className="stage-stepper-compact">
         <summary>
           <span className="stage-stepper-compact-label">{cur.id} / 12 · {cur.name}</span>
+          {neighbours && (neighbours.prev || neighbours.next) && (
+            // INTERIM-WORDING: previous/next labels.
+            <span className="stage-stepper-compact-near">
+              {neighbours.prev ? `이전: ${neighbours.prev.id} ${neighbours.prev.name}` : ""}
+              {neighbours.prev && neighbours.next ? " · " : ""}
+              {neighbours.next ? `다음: ${neighbours.next.id} ${neighbours.next.name}` : ""}
+            </span>
+          )}
         </summary>
         <ol className="stage-stepper-compact-list">
           {STAGE_META.map((s) => {
@@ -255,7 +291,7 @@ export function StageRail({ current, track }: { current: StageMetaId[]; track?: 
               <li key={s.id}>
                 {href ? (
                   <Link href={href} aria-current={isCurrent ? "step" : undefined} className="stage-step-compact-link">
-                    {s.sequence}. {s.name}{isCurrent ? " (현재)" : ""}
+                    {s.sequence}. {s.name}{status ? (RAIL_STATE_TEXT[stateOf(s.id)!] ? ` (${RAIL_STATE_TEXT[stateOf(s.id)!]})` : "") : isCurrent ? " (현재)" : ""}
                   </Link>
                 ) : (
                   <span className="stage-step-compact-link stage-step-skipped">{s.sequence}. {s.name} ({blocked ? "승격 후 열림" : "미적용"})</span>
@@ -280,7 +316,9 @@ export function StageRail({ current, track }: { current: StageMetaId[]; track?: 
             <>
               <span className="stage-step-num">{s.sequence}</span>
               <span className="stage-step-name">{s.name}</span>
-              {isCurrent && <span className="stage-step-state">현재</span>}
+              {status && <StepIcon state={stateOf(s.id)!} />}
+              {status && RAIL_STATE_TEXT[stateOf(s.id)!] && <span className="sr-only">{RAIL_STATE_TEXT[stateOf(s.id)!]}</span>}
+              {!status && isCurrent && <span className="stage-step-state">현재</span>}
               {skipped && <span className="stage-step-state">미적용</span>}
               {!skipped && !href && blocked && <span className="stage-step-state">승격 후</span>}
             </>

@@ -21,7 +21,7 @@ describe("displayOrNotRecorded / localizeRequirement", () => {
 
 describe("buildDealOverview", () => {
   test.each([["identified", "S2"], ["assessed", "S3"], ["selected", "S4"]])("status %s -> %s", (status, stage) => {
-    const o = buildDealOverview("D1", { status, attractiveness_score: null, synergy_score: null }, proc());
+    const o = buildDealOverview("D1", { status, attractiveness_score: null, synergy_score: null }, proc({ requiredArtifacts: ["X"], blockers: ["X"] }));
     expect(o.currentStage?.id).toBe(stage);
     expect(o.nextAction?.href).toBe(`/deals/D1/${stage.toLowerCase()}`);
     expect(o.flow.current).toBe(o.currentStage?.name);
@@ -29,7 +29,7 @@ describe("buildDealOverview", () => {
   });
   test("null values render as not recorded; synergy note only when unconfirmed value", () => {
     const o = buildDealOverview("D1", { status: "assessed", attractiveness_score: null, synergy_score: null }, proc());
-    expect(o.facts.every((f) => f.value.empty)).toBe(true);
+    expect(o.facts.filter((f) => ["attractiveness", "synergy", "track"].includes(f.key)).every((f) => f.value.empty)).toBe(true);
     const o2 = buildDealOverview("D1", { status: "assessed", attractiveness_score: 72, synergy_score: 60 }, proc({ track: "greenfield" }));
     expect(o2.facts.find((f) => f.key === "synergy")?.note).not.toBeNull();
     expect(o2.facts.find((f) => f.key === "track")?.value.empty).toBe(false);
@@ -39,7 +39,8 @@ describe("buildDealOverview", () => {
   test("artifact in blockers is not done; unmatched blockers listed separately", () => {
     const o = buildDealOverview("D1", { status: "selected", attractiveness_score: 1, synergy_score: 1 },
       proc({ requiredArtifacts: ["기회 선택(selected)", "A"], blockers: ["기회 선택(selected)이 필요합니다 — x", "other blocker"] }));
-    expect(o.completion).toEqual([{ label: "기회 선택", done: false }, { label: "A", done: true }]);
+    expect(o.completion).toEqual([{ label: "기회 선택", done: false, isNext: true }, { label: "A", done: true, isNext: false }]);
+    expect(o.completionCounts).toEqual({ done: 1, total: 2 });
     expect(o.otherBlockers).toEqual(["other blocker"]);
     expect(isArtifactDone("A", [])).toBe(true);
   });
@@ -53,6 +54,57 @@ describe("buildDealOverview", () => {
       proc({ gateStatus: { screening: "hold" } }), [{ entityType: "opportunity", entityId: "D1", gate: "screening" }]);
     expect(o.holds[0]!.href).toBe("/deals/D1/s3");
     expect(o.gates[0]).toMatchObject({ gate: "screening", decision: "hold" });
+  });
+});
+
+describe("buildDealOverview data contract (refinement Row 1)", () => {
+  const NOW = Date.parse("2026-10-11T00:00:00Z");
+  const opp = (o = {}) => ({ name: "Opp", status: "assessed", attractiveness_score: null, synergy_score: null, ...o });
+
+  test("identity: project name wins over opportunity name; status label and stage", () => {
+    const a = buildDealOverview("D1", opp(), proc());
+    expect(a.identity).toEqual({ name: "Opp", statusLabel: "평가", stage: { id: "S3", name: "시너지·전략적 적합성" }, terminated: false });
+    expect(buildDealOverview("P1", opp(), proc({ projectName: "Proj" })).identity.name).toBe("Proj");
+    expect(buildDealOverview("D1", opp({ name: null }), proc()).identity.name).toBe("기록 없음");
+  });
+  test("nextAction: record_artifact names the first open artifact", () => {
+    const o = buildDealOverview("D1", opp(), proc({ requiredArtifacts: ["A", "B"], blockers: ["B 필요"] }));
+    expect(o.nextAction).toMatchObject({ type: "record_artifact", subject: "B", href: "/deals/D1/s3", reason: { type: "artifact_missing", done: 1, total: 2 } });
+  });
+  test("nextAction: gate decision when all artifacts done; advance when the stage has no open gate", () => {
+    const g = buildDealOverview("D1", opp(), proc({ requiredArtifacts: ["A"] }));
+    expect(g.nextAction).toMatchObject({ type: "request_gate_decision", href: "/deals/D1/s3", reason: { type: "gate_pending", gate: "screening" } });
+    const adv = buildDealOverview("D1", opp(), proc({ requiredArtifacts: ["A"], gateStatus: { screening: "go" }, nextStage: "S4" }));
+    expect(adv.nextAction).toMatchObject({ type: "advance_stage", subject: "진출방식 결정", href: "/deals/D1/s4" });
+  });
+  test("nextAction: hold takes priority and carries age in days", () => {
+    const o = buildDealOverview("D1", opp(), proc({ gateStatus: { screening: "hold" } }),
+      [{ entityType: "opportunity", entityId: "D1", gate: "screening", decidedAt: "2026-10-01T00:00:00Z" }], NOW);
+    expect(o.nextAction).toMatchObject({ type: "resolve_hold", reason: { type: "hold", gate: "screening", ageDays: 10 } });
+    expect(o.holds[0]).toMatchObject({ heldSince: "2026-10-01T00:00:00Z", ageDays: 10 });
+    expect(buildDealOverview("D1", opp(), proc(), [{ entityType: "opportunity", entityId: "D1", gate: "screening" }]).holds[0]).toMatchObject({ heldSince: null, ageDays: null });
+  });
+  test("facts: pending before the recording stage, missing links to it, none gate links to decision screen", () => {
+    const s2 = buildDealOverview("D1", opp({ status: "identified" }), proc());
+    const by = (o: typeof s2, k: string) => o.facts.find((f) => f.key === k)!;
+    expect(by(s2, "attractiveness")).toMatchObject({ state: "missing", href: "/deals/D1/s2" });
+    expect(by(s2, "synergy")).toMatchObject({ state: "pending", applicableFromStage: "S3" });
+    expect(by(s2, "track")).toMatchObject({ state: "pending", applicableFromStage: "S4" });
+    expect(by(s2, "gate")).toMatchObject({ state: "none", href: "/deals/D1/s3" });
+    const s4 = buildDealOverview("D1", opp({ status: "selected", attractiveness_score: 5 }), proc());
+    expect(by(s4, "attractiveness").state).toBe("value");
+    expect(by(s4, "track")).toMatchObject({ state: "missing", href: "/deals/D1/s4" });
+    expect(s2.nextGate).toMatchObject({ gate: "screening", href: "/deals/D1/s3" });
+  });
+  test("project fact only when a linked project id exists", () => {
+    expect(buildDealOverview("D1", opp(), proc()).facts.some((f) => f.key === "project")).toBe(false);
+    expect(buildDealOverview("D1", opp(), proc({ projectId: "P1" })).facts.find((f) => f.key === "project")).toMatchObject({ href: "/deals/P1", state: "value" });
+  });
+  test("flow entries carry artifacts from process stages, [] otherwise", () => {
+    const o = buildDealOverview("D1", opp(), proc({ stages: [{ id: "S2", requiredArtifacts: ["기회 등록(x)"] }, { id: "S4", requiredArtifacts: ["트랙 결정"] }] }));
+    expect(o.flow.previous).toEqual({ id: "S2", name: "기회 발굴", artifacts: ["기회 등록"] });
+    expect(o.flow.next).toEqual({ id: "S4", name: "진출방식 결정", artifacts: ["트랙 결정"] });
+    expect(buildDealOverview("D1", opp(), proc()).flow.next?.artifacts).toEqual([]);
   });
 });
 

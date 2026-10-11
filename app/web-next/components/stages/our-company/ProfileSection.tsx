@@ -13,9 +13,10 @@ export function ProfileSection({ ctx }: { ctx: OurCompanyStageState }) {
   return (
     <>{openMember && (
         <section aria-label="계열사 프로파일 리포트" className="market-section sizing-step">
+          {/* Back navigation sits on its own line so the toolbar keeps one action + one next-stage link. */}
+          <div className="mb-2"><ListBackButton onClick={backToList} /></div>
           <SectionToolbar
             title="계열사 프로파일 분석"
-            icon="🏢"
             summary={<ProfileChips profile={profiles[openMember]} />}
             actions={
               <>
@@ -37,7 +38,6 @@ export function ProfileSection({ ctx }: { ctx: OurCompanyStageState }) {
                   {profiles[openMember] === "loading" ? "분석 중..." : "재분석"}
                 </button>
                 )}
-                <ListBackButton onClick={backToList} />
               </>
             }
           />
