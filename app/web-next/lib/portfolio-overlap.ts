@@ -21,6 +21,8 @@
 // Everything with a key but fewer than 2 members is simply not a group;
 // members with NO key surface in the na bucket, never force-grouped.
 
+import { opportunityStatusHref } from "./deal-links.ts";
+
 export type OverlapTier = "exact" | "name_prefix";
 
 export interface OverlapIndustry {
@@ -130,7 +132,7 @@ function opportunityMember(o: OverlapOpportunityInput, pinned: boolean): Overlap
     kind: "opportunity",
     id: o.id,
     name: o.name,
-    href: `/opportunities?opportunity=${o.id}`,
+    href: opportunityStatusHref(o.id, o.status),
     status: o.status,
     industry_pinned: pinned,
   };

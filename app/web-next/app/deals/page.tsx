@@ -10,6 +10,8 @@ import { FilterChip, PageState, PrimaryAction } from "../../components/ui.tsx";
 import { STAGE_TAB_GROUPS } from "../../lib/stage-tabs.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { GATE_LABEL, type GateMetaId } from "../../lib/stage-meta.ts";
+import { opportunityStatusHref } from "../../lib/deal-links.ts";
+import { gateHoldHref } from "../../lib/inbox.ts";
 import { buildCardChips } from "../../lib/deal-card-label.ts";
 
 interface PipelineProject {
@@ -156,7 +158,7 @@ function DealsBoard() {
           tone: "gray",
           hold, track: null,
           meta: `매력도 ${o.attractiveness_score ?? "—"} · 시너지 ${o.synergy_score ?? "—"}`,
-          href: `/opportunities?opportunity=${o.id}`,
+          href: opportunityStatusHref(o.id, o.status),
         };
       });
     const projectCards: Card[] = (data?.projects ?? []).map((p): Card => {
@@ -325,7 +327,7 @@ function DealsBoard() {
                     {[...data.currentHolds].sort((a, b) => b.ageDays - a.ageDays).map((r) => (
                       <tr key={`${r.entityType}:${r.entityId}:${r.gate}`}>
                         <td className="text-[length:var(--fs-caption)]">
-                          <Link href={r.entityType === "project" ? `/projects/${r.entityId}/process` : `/opportunities?opportunity=${r.entityId}`}>
+                          <Link href={r.entityType === "project" ? `/projects/${r.entityId}/process` : gateHoldHref(r)}>
                             {r.label}
                           </Link>
                         </td>

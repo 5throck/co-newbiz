@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "../../lib/api.ts";
+import { dealStageHref } from "../../lib/deal-links.ts";
 import { useConfirm } from "../../components/crud.tsx";
 import { ClosureModal } from "../../components/ClosureModal.tsx";
 
@@ -121,7 +122,7 @@ export function ProjectsView() {
                   </td>
                   <td>
                     {p.source_opportunity_id ? (
-                      <Link href={`/opportunities?opportunity=${p.source_opportunity_id}`}>기회 보기</Link>
+                      <Link href={dealStageHref(p.source_opportunity_id)}>기회 보기</Link>
                     ) : (
                       <span className="text-[color:var(--muted-fg)]">—</span>
                     )}

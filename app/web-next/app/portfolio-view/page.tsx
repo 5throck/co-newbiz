@@ -9,6 +9,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "../../lib/api.ts";
+import { dealStageHref } from "../../lib/deal-links.ts";
 import { dedupTermNames } from "../../lib/labels.ts";
 import { PageState } from "../../components/ui.tsx";
 
@@ -189,7 +190,7 @@ function PortfolioView() {
           </p>
           <ul className="pl-5 text-[length:var(--fs-caption)]">
             {result.na.opportunities_without_industry.map((o) => (
-              <li key={o.id}><Link href={`/opportunities?opportunity=${o.id}`} className="underline">기회 — {o.name}</Link> <span className="note">({naReason(o.reason, "산업 미지정")})</span></li>
+              <li key={o.id}><Link href={dealStageHref(o.id)} className="underline">기회 — {o.name}</Link> <span className="note">({naReason(o.reason, "산업 미지정")})</span></li>
             ))}
             {result.na.projects_without_industry.map((p) => (
               <li key={p.id}><Link href={`/projects/${p.id}/process`} className="underline">프로젝트 — {p.project_no}</Link> <span className="note">({naReason(p.reason, "산업 바인딩 없음")})</span></li>
