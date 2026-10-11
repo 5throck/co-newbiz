@@ -6,12 +6,30 @@ import { getDb } from "../../../../../db/client.ts";
 import { authenticate, requireBusinessActor } from "../../../lib/auth.ts";
 import { ok } from "../../../lib/envelope.ts";
 
+// md_company row created by migration 0060; synergy_analysis.company_id points here
+// for registry-target analyses (see api/synergy/analyses/route.ts).
+const SYNERGY_REGISTRY_SENTINEL_ID = "md-synergy-registry-sentinel";
+
 export async function GET(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const denied = requireBusinessActor(auth.auth, "read");
   if (denied) return denied;
-  const q = new URL(request.url).searchParams.get("q")?.trim() ?? "";
+  const params = new URL(request.url).searchParams;
+  const q = params.get("q")?.trim() ?? "";
+  // scope=targets: acquisition-target / analysis-base companies only. Hides
+  // group/affiliate profile companies (company_group_member, no FK to
+  // md_company, so matched by DART code or, without a code, exact name) and
+  // the internal synergy-registry sentinel. Read-only filter; no param = all rows.
+  const targetsOnly = params.get("scope") === "targets";
+  const scopeClause = targetsOnly
+    ? `AND c.id <> '${SYNERGY_REGISTRY_SENTINEL_ID}'
+         AND NOT EXISTS (
+           SELECT 1 FROM company_group_member m
+            WHERE m.deleted_at IS NULL
+              AND ((COALESCE(c.dart_corp_code, '') <> '' AND m.dart_corp_code = c.dart_corp_code)
+                OR (COALESCE(c.dart_corp_code, '') = '' AND TRIM(m.company_name) = TRIM(c.name_ko))))`
+    : "";
   const db = getDb();
   const rows = db
     .query(
@@ -22,6 +40,7 @@ export async function GET(request: Request) {
               (SELECT MAX(f.created_at) FROM fact_financial f WHERE f.company_id = c.id) AS latest_sync_at
        FROM md_company c
        WHERE (? = '' OR c.name_ko LIKE '%' || ? || '%')
+       ${scopeClause}
        ORDER BY c.name_ko
        LIMIT 50`,
     )

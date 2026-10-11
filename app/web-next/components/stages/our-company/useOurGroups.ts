@@ -1,7 +1,7 @@
 "use client";
 
 // Split from components/stages/OurCompanyStage.tsx (Wave U-3 decomposition); behavior unchanged.
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "../../../lib/api.ts";
 import type { useOurCompanyBase } from "./useOurCompanyBase.ts";
 import type { useOurCompetitors } from "./useOurCompetitors.ts";
@@ -9,6 +9,7 @@ import type { GroupRow, GroupDetail, Profile } from "./types.ts";
 
 export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & ReturnType<typeof useOurCompetitors>) {
   const { urlSync, router, setLocalMember, setOpenMember, profiles, openMember, setSynergyLink, searchParams, localMember, setGroups, setError, setSelectedGroup, selectedGroup, setProfiles, groupName, busy, setBusy, setGroupName, setShowGroupForm, memberForm, dartSearching, setDartSearching, setDartResults, groupNameDraft, setEditGroupName, confirm, setMemberForm, setShowMemberForm, setEditMember, editMember, savingMember, setSavingMember, savingRole, setSavingRole, setUploadingMember, setUploadedNames, setProfileTab, setS1Requests } = prev;
+ const [loadingGroupId, setLoadingGroupId] = useState<string | null>(null);
  // 리포트 차트 테마 — 훅은 최상위에서 1회만 호출
 
   // 시너지 정합성과 동일한 선택→상세 흐름: ?member=<id> 가 상태의 유일한 원본
@@ -50,7 +51,8 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
   }, []);
 
   const loadGroup = useCallback((id: string) => {
-    api.get<GroupDetail>(`/api/our-company/groups/${encodeURIComponent(id)}`).then((r) => setSelectedGroup(r.data)).catch((e) => setError(e instanceof Error ? e.message : "그룹 불러오기 실패"));
+    setLoadingGroupId(id);
+    api.get<GroupDetail>(`/api/our-company/groups/${encodeURIComponent(id)}`).then((r) => setSelectedGroup(r.data)).catch((e) => setError(e instanceof Error ? e.message : "그룹 불러오기 실패")).finally(() => setLoadingGroupId((cur) => (cur === id ? null : cur)));
   }, []);
 
   useEffect(() => { loadGroups(); }, [loadGroups]);
@@ -300,7 +302,7 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
       setS1Requests((prev) => { const n = { ...prev }; delete n[industry]; return n; });
     }
   }
-  return { createGroup, backToList, loadGroup, saveGroupName, removeGroup, addMember, searchMemberDart, saveMemberEdit, openDetail, updateMemberRole, analyzeMember, startMemberEdit, uploadMemberFile, removeMember, requestS1Analysis };
+  return { loadingGroupId, createGroup, backToList, loadGroup, saveGroupName, removeGroup, addMember, searchMemberDart, saveMemberEdit, openDetail, updateMemberRole, analyzeMember, startMemberEdit, uploadMemberFile, removeMember, requestS1Analysis };
 }
 
 export type OurCompanyStageState = ReturnType<typeof useOurCompanyBase> & ReturnType<typeof useOurCompetitors> & ReturnType<typeof useOurGroups>;

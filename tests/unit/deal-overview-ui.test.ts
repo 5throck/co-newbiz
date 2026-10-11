@@ -9,17 +9,52 @@ describe("deal overview page structure", () => {
     for (const h of ["현재 단계", "다음 할 일", "완료 조건", "주요 사실"]) expect(page).toContain(h);
     expect(page).toContain("aria-labelledby");
     expect(page).not.toContain("DealBreadcrumb");
-    expect(page.match(/ov\.nextAction\.href/g)?.length).toBe(1);
+    expect(page.match(/href=\{a\.href\}/g)?.length).toBe(1);
   });
-  test("stepper uses stage names and aria-current; values go through displayOrNotRecorded", () => {
-    expect(page).toContain("STAGE_META");
-    expect(page).toContain('aria-current={isCurrent ? "step" : undefined}');
-    expect(page).toContain("displayOrNotRecorded");
-    expect(page).not.toMatch(/tabIndex/);
+  test("identity header: deal name is the H1, title is set per deal, one h1", () => {
+    expect(page).toContain('<h1 id="deal-title">{knownName ?? EYEBROW}</h1>');
+    expect(page).toContain("document.title = documentTitle(knownName, EYEBROW)");
+    expect(page).toContain('aria-labelledby="deal-title"');
+    expect(page.match(/<h1\b/g)?.length).toBe(3); // loaded, loading (sr-only), error
   });
-  test("HOLD rows link to the decision screen; no hardcoded colors", () => {
-    expect(page).toContain("h.href");
+  test("stepper is the shared StageRail with status, non-sticky; no ad-hoc rail", () => {
+    expect(page).toContain("<StageRail");
+    expect(page).toContain("status={railStatus}");
+    expect(page).toContain("sticky={false}");
+    expect(page).not.toContain("sizing-step-rail");
+    expect(page).not.toContain(".handoff");
+    expect(page).not.toContain("NEXT_ACTION_LABEL");
+  });
+  test("facts use the four states; gate chips carry icons; error states retry without reload", () => {
+    expect(page).toContain("factView(");
+    expect(page).toContain("GateChip");
+    expect(page).toContain("onRetry={retryAll}");
+    expect(page).toContain("onRetry={retryOpp}");
+    expect(page).not.toContain("window.location.reload");
+  });
+  test("HOLD card renders once per breakpoint; links to the decision screen; no hardcoded colors", () => {
+    expect(page).toContain('suffix="inline"');
+    expect(page).toContain('suffix="aside"');
+    expect(page).toContain("href={h.href}");
     expect(page).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+    const css = read("app/styles.css");
+    expect(css).toMatch(/\.deal-overview-hold-aside\s*\{\s*display:\s*none/);
+    expect(css).toMatch(/@media \(min-width: 1024px\)\s*\{[^}]*grid-template-columns: minmax\(0, 2fr\) minmax\(18rem, 1fr\)/);
+  });
+});
+
+describe("StageRail backward compatibility", () => {
+  const frame = read("components/StageFrame.tsx");
+  test("status and sticky are optional; default stays sticky and unchanged for other callers", () => {
+    expect(frame).toContain("status?: Partial<Record<StageMetaId, StageRailStatus>>");
+    expect(frame).toContain("sticky = true");
+    expect(frame).toContain("{!status && isCurrent && <span className=\"stage-step-state\">현재</span>}");
+  });
+  test("state words are sr-only in the full rail; later steps use a colour token, not opacity", () => {
+    expect(frame).toContain('<span className="sr-only">');
+    const css = read("app/styles.css");
+    expect(css).toContain(".stage-stepper--status .stage-step-current");
+    expect(css).not.toMatch(/\.stage-stepper--status[^{]*\{[^}]*opacity/);
   });
 });
 

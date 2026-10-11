@@ -850,6 +850,15 @@
       "last_updated": "2026-10-10"
     },
     {
+      "id": "2026-10-11-companies-list-exclude-group-affiliates-design",
+      "title": "companies list exclude group affiliates design",
+      "file": "docs/designs/2026-10-11-companies-list-exclude-group-affiliates-design.md",
+      "status": "draft",
+      "source": "manual",
+      "created": "2026-10-11",
+      "last_updated": "2026-10-11"
+    },
+    {
       "id": "2026-10-11-company-financials-wacc-reference-fix-design",
       "title": "company financials wacc reference fix design",
       "file": "docs/designs/2026-10-11-company-financials-wacc-reference-fix-design.md",
@@ -868,6 +877,15 @@
       "last_updated": "2026-10-11"
     },
     {
+      "id": "2026-10-11-deal-overview-ui-refinement-design",
+      "title": "deal overview ui refinement design",
+      "file": "docs/designs/2026-10-11-deal-overview-ui-refinement-design.md",
+      "status": "proposed",
+      "source": "manual",
+      "created": "2026-10-11",
+      "last_updated": "2026-10-11"
+    },
+    {
       "id": "2026-10-11-direct-deal-stage-links-design",
       "title": "direct deal stage links design",
       "file": "docs/designs/2026-10-11-direct-deal-stage-links-design.md",
@@ -880,6 +898,15 @@
       "id": "2026-10-11-docker-build-missing-workspace-dirs-design",
       "title": "docker build missing workspace dirs design",
       "file": "docs/designs/2026-10-11-docker-build-missing-workspace-dirs-design.md",
+      "status": "draft",
+      "source": "manual",
+      "created": "2026-10-11",
+      "last_updated": "2026-10-11"
+    },
+    {
+      "id": "2026-10-11-our-company-ui-refinement-design",
+      "title": "our company ui refinement design",
+      "file": "docs/designs/2026-10-11-our-company-ui-refinement-design.md",
       "status": "draft",
       "source": "manual",
       "created": "2026-10-11",

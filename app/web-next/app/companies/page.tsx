@@ -22,7 +22,7 @@ export default function CompaniesPage() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback((query: string) => {
-    api.get<{ companies: CompanyRow[] }>(`/api/companies?q=${encodeURIComponent(query)}`)
+    api.get<{ companies: CompanyRow[] }>(`/api/companies?scope=targets&q=${encodeURIComponent(query)}`)
       .then((r) => setRows(r.data.companies))
       .catch((e) => setError(e instanceof Error ? e.message : "회사 목록을 불러오지 못했습니다."));
   }, []);
@@ -32,6 +32,8 @@ export default function CompaniesPage() {
     <main className="market-page">
       <h1 className="text-[1.35rem] font-extrabold tracking-tight mt-6">회사</h1>
       <p className="text-[color:var(--muted-fg)] text-[0.9rem] mb-3">인수 대상 및 분석 기준 회사의 재무성과 분석 화면입니다. 회사를 검색해 선택하세요.</p>
+      {/* INTERIM-WORDING */}
+      <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-body)] mb-3">그룹·계열사 프로파일에 등록된 회사는 <Link className="text-[color:var(--accent)] font-bold" href="/our-company">우리 회사</Link>에서 관리합니다.</p>
 
       <form
         className="flex gap-2 mb-3"

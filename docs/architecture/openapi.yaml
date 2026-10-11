@@ -203,6 +203,17 @@ paths:
           required: false
           schema:
             type: string
+        - name: scope
+          in: query
+          required: false
+          description: >-
+            "targets" hides companies present in the group/affiliate profile (non-deleted company_group_member,
+            matched by DART code or exact name when no code) and the internal synergy-registry sentinel.
+            Omitted = every company.
+          schema:
+            type: string
+            enum:
+              - targets
       responses:
         '200':
           $ref: '#/components/responses/Ok'

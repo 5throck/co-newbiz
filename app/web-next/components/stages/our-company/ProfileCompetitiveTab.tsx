@@ -1,7 +1,8 @@
 "use client";
 
 // Split from components/stages/OurCompanyStage.tsx (Wave U-3 decomposition); behavior unchanged.
-import { CROSSCHECK_VERDICT_META, CROSSCHECK_STATUS_META } from "./constants.ts";
+import { CROSSCHECK_VERDICT_META, CROSSCHECK_STATUS_META, COMPETITOR_COL_PCT, OUR_COMPANY_COPY as COPY } from "./constants.ts";
+import { RowMenu } from "../../crud.tsx";
 import type { OurCompanyStageState } from "./useOurGroups.ts";
 import type { Profile } from "./types.ts";
 
@@ -25,16 +26,19 @@ export function ProfileCompetitiveTab({ ctx, profile }: { ctx: OurCompanyStageSt
                     </p>
                   ) : (
                     <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-                      <table className="data-table report-table" aria-label="확정 경쟁사">
+                      <table className="data-table report-table competitor-table" aria-label="확정 경쟁사">
                         <caption className="sr-only">확정 경쟁사</caption>
+                        <colgroup>
+                          {COMPETITOR_COL_PCT.map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}
+                        </colgroup>
                         <thead>
                           <tr>
-                            <th scope="col" className="col-label">경쟁사</th>
-                            <th scope="col" className="w-[7rem]">DART 고유번호</th>
-                            <th scope="col" className="col-text">경쟁 관계</th>
-                            <th scope="col" className="w-[7rem]">출처</th>
-                            <th scope="col" className="w-[6.5rem]">대조</th>
-                            <th scope="col" className="w-[10rem]">관리</th>
+                            <th scope="col">경쟁사</th>
+                            <th scope="col">DART 고유번호</th>
+                            <th scope="col">경쟁 관계</th>
+                            <th scope="col">출처</th>
+                            <th scope="col">대조</th>
+                            <th scope="col">관리</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -44,11 +48,11 @@ export function ProfileCompetitiveTab({ ctx, profile }: { ctx: OurCompanyStageSt
                             const excluding = excludingCompetitor?.id === c.id;
                             return (
                               <tr key={c.id}>
-                                <td className="col-label font-semibold">{c.name}</td>
+                                <td className="competitor-name font-semibold" title={c.name}>{c.name}</td>
                                 <td className="text-[length:var(--fs-caption)] tabular-nums">
-                                  {editing ? <input value={editingCompetitor.dart} onChange={(e) => setEditingCompetitor({ ...editingCompetitor, dart: e.target.value })} className="sizing-new-input" style={{ width: "7rem" }} placeholder="고유번호" /> : (c.dart_corp_code || "—")}
+                                  {editing ? <input value={editingCompetitor.dart} onChange={(e) => setEditingCompetitor({ ...editingCompetitor, dart: e.target.value })} className="sizing-new-input" style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box" }} placeholder="고유번호" /> : (c.dart_corp_code || "—")}
                                 </td>
-                                <td className="col-text text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                                <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                                   {editing ? <input value={editingCompetitor.note} onChange={(e) => setEditingCompetitor({ ...editingCompetitor, note: e.target.value })} className="sizing-new-input" style={{ width: "100%" }} placeholder="경쟁 관계" /> : (c.note || "—")}
                                 </td>
                                 <td>{c.discovery_source === "ai_proposal" ? <span className="status-chip status-in-progress">AI 추천 수용</span> : <span className="status-chip status-not-started">수작업</span>}</td>
@@ -61,14 +65,17 @@ export function ProfileCompetitiveTab({ ctx, profile }: { ctx: OurCompanyStageSt
                                     </span>
                                   ) : excluding ? (
                                     <span className="actions-row">
-                                      <input value={excludingCompetitor.reason} onChange={(e) => setExcludingCompetitor({ ...excludingCompetitor, reason: e.target.value })} className="sizing-new-input" style={{ width: "8rem" }} placeholder="제외 사유 *" />
+                                      <input value={excludingCompetitor.reason} onChange={(e) => setExcludingCompetitor({ ...excludingCompetitor, reason: e.target.value })} className="sizing-new-input" style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box" }} placeholder="제외 사유 *" />
                                       <button type="button" className="btn-danger btn-sm" disabled={compBusy || !excludingCompetitor.reason.trim()} onClick={() => void saveCompetitorExclude()}>확인</button>
                                       <button type="button" className="btn-ghost btn-sm" onClick={() => setExcludingCompetitor(null)}>취소</button>
                                     </span>
                                   ) : !canAct ? null : (
                                     <span className="actions-row">
                                       <button type="button" className="btn-ghost btn-sm" onClick={() => setEditingCompetitor({ id: c.id, note: c.note ?? "", dart: c.dart_corp_code ?? "" })}>수정</button>
-                                      <button type="button" className="btn-ghost btn-sm" onClick={() => setExcludingCompetitor({ id: c.id, reason: "" })}>제외</button>
+                                      <RowMenu
+                                        label={`${c.name} ${COPY.rowMore}`}
+                                        items={[{ key: "exclude", label: "제외", danger: true, onSelect: () => setExcludingCompetitor({ id: c.id, reason: "" }) }]}
+                                      />
                                     </span>
                                   )}
                                 </td>
@@ -173,11 +180,15 @@ export function ProfileCompetitiveTab({ ctx, profile }: { ctx: OurCompanyStageSt
                 {canAct && (<div className="market-section mb-3">
                   <h4 className="text-[0.9rem] font-semibold mb-2">수작업 등록</h4>
                   <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <input value={competitorForm.name} onChange={(e) => setCompetitorForm({ ...competitorForm, name: e.target.value })} className="sizing-new-input" style={{ width: "14rem" }} placeholder="경쟁사명 *" aria-label="경쟁사명" />
-                    <button type="button" className="btn-ghost btn-sm" disabled={competitorDartSearching || !competitorForm.name.trim()} onClick={() => void searchCompetitorDart()}>DART 검색</button>
+                    <span className="flex items-center gap-2">
+                      <input value={competitorForm.name} onChange={(e) => setCompetitorForm({ ...competitorForm, name: e.target.value })} className="sizing-new-input" style={{ width: "14rem", maxWidth: "100%" }} placeholder="경쟁사명 *" aria-label="경쟁사명" />
+                      <button type="button" className="btn-ghost btn-sm" disabled={competitorDartSearching || !competitorForm.name.trim()} onClick={() => void searchCompetitorDart()}>DART 검색</button>
+                    </span>
                     <input value={competitorForm.dart_corp_code} onChange={(e) => setCompetitorForm({ ...competitorForm, dart_corp_code: e.target.value })} className="sizing-new-input" style={{ width: "10rem" }} placeholder="DART 고유번호 (선택, 8자리)" aria-label="경쟁사 DART 고유번호" />
-                    <input value={competitorForm.note} onChange={(e) => setCompetitorForm({ ...competitorForm, note: e.target.value })} className="sizing-new-input" style={{ flex: "1 1 14rem" }} placeholder="경쟁 관계 (선택)" aria-label="경쟁 관계" />
-                    <button type="button" className="btn-ghost btn-sm" disabled={compBusy || !competitorForm.name.trim()} onClick={() => void registerManualCompetitor()}>등록</button>
+                    <span className="flex items-center gap-2" style={{ flex: "1 1 22rem" }}>
+                      <input value={competitorForm.note} onChange={(e) => setCompetitorForm({ ...competitorForm, note: e.target.value })} className="sizing-new-input" style={{ flex: "1 1 auto", minWidth: 0 }} placeholder="경쟁 관계 (선택)" aria-label="경쟁 관계" />
+                      <button type="button" className="btn-ghost btn-sm" disabled={compBusy || !competitorForm.name.trim()} onClick={() => void registerManualCompetitor()}>등록</button>
+                    </span>
                   </div>
                   {competitorDartResults.length > 0 && (
                     <ul className="sizing-note-list">

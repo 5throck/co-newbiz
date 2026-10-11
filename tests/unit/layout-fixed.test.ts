@@ -18,6 +18,7 @@ const FIXED_ALLOWLIST = [
   '.app-shell[data-sidebar-state="closed"] .app-sidebar',
   ".modal-backdrop",
   ".toast-region",
+  ".row-menu", // RowMenu overflow panel: anchored to its trigger via inline right/top|bottom, never left/bottom-left
 ];
 
 function fixedRules(): Array<{ selector: string; body: string }> {

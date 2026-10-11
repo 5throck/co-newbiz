@@ -25,7 +25,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     : null;
   return ok(
     {
-      project: { id, project_no: project.project_no ?? null },
+      project: { id, project_no: project.project_no ?? null, project_name: project.project_name ?? null },
       stages: evaluation.stages,
       currentStage: evaluation.currentStage,
       completedStages: evaluation.completedStages,
