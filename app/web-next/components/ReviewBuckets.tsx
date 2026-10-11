@@ -12,8 +12,7 @@ import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness, canWriteProject } from "../lib/project-write-access.ts";
 import { GATE_LABEL, type GateMetaId } from "../lib/stage-meta.ts";
-import { localizeMessage } from "../lib/labels.ts";
-import { BUCKET_TITLE, bucketCounts, citationLabel, gateDisplayName, localizeItem } from "../lib/review/review-display.ts";
+import { BUCKET_TITLE, bucketCounts, citationLabel, gateDisplayName, localizeItem, localizeNotPerformedReason, reviewOriginText } from "../lib/review/review-display.ts";
 import { TabNav } from "./TabNav.tsx";
 import { PrimaryAction } from "./ui.tsx";
 
@@ -99,12 +98,6 @@ function CountStrip({ counts, label }: { counts: ReturnType<typeof bucketCounts>
       </span>
     </span>
   );
-}
-
-function originOf(s: StageView): string {
-  return s.origin === "AI 1st"
-    ? "AI 1차 (결정론 검사)"
-    : `AI 2차 · ${s.reviewer_domain ?? "?"} 도메인 · ${s.reviewer_agent}`;
 }
 
 export function ReviewBuckets({
@@ -284,9 +277,9 @@ export function ReviewBuckets({
             <ul className="sizing-note-list mb-2 text-[length:var(--fs-caption)]" aria-label="검토 단계 출처">
               {stages.map((s) => (
                 <li key={s.id}>
-                  <span className="font-semibold">{originOf(s)}</span>
+                  <span className="font-semibold">{reviewOriginText(s)}</span>
                   {s.author_domain ? ` — 작성 도메인 ${s.author_domain}` : ""}
-                  {!s.performed && <span title="수행되지 않음"> — 수행되지 않음: {s.not_performed_reason ? localizeMessage(s.not_performed_reason) : null}</span>}
+                  {!s.performed && s.not_performed_reason && <span title="수행되지 않음"> — {localizeNotPerformedReason(s.not_performed_reason)}</span>}
                   {!s.current && <span> — 이전 산출물 기준의 결과입니다. 산출물이 바뀌었습니다.</span>}
                 </li>
               ))}

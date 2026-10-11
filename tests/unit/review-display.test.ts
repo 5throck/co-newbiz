@@ -122,3 +122,57 @@ describe("item 5 - ko catalog", () => {
     expect(bucketCounts([s("AI 1st", true), s("AI 2nd", false)])).toEqual({ verified: 2, could_not_verify: 1, needs_judgement: 3 });
   });
 });
+
+import { readFileSync } from "node:fs";
+import { localizeItem as _li, localizeNotPerformedReason, reviewDomainLabel, reviewOriginText, tidyReasonText } from "../../app/web-next/lib/review/review-display.ts";
+
+describe("inbox text hygiene (QA sweep B1/B2)", () => {
+  test("cleanList drops punctuation-only entries", () => {
+    expect(cleanList([".", " - ", "a", "3"])).toEqual(["a", "3"]);
+  });
+  test("B1 reproduction: empty payloads render no ': .' or '..'", () => {
+    const stored = "screening 진행 HOLD — 보완 필요: . Missing: ..";
+    const out = _li({ claim: "Stage S6 (Screening) is incomplete", reason: stored }).reason;
+    expect(out).not.toMatch(/: \.|\.\./);
+    expect(out).toContain("근거 확인");
+    expect(out).not.toContain("누락된 산출물");
+  });
+  test("non-empty lists unchanged; unknown text passes through", () => {
+    const r = _li({ claim: "Stage S6 (X) is incomplete", reason: "screening 진행 HOLD — 보완 필요: a. Missing: b; c." }).reason;
+    expect(r).toContain("누락된 산출물: b; c.");
+    expect(_li({ claim: "zzz", reason: "free text.." }).reason).toBe("free text.");
+    expect(tidyReasonText("Some... ellipsis")).toBe("Some... ellipsis");
+    expect(_li({ claim: "zzz", reason: "plain" })).toEqual({ claim: "zzz", reason: "plain", localized: false });
+  });
+  test("reviewOriginText", () => {
+    expect(reviewOriginText({ origin: "AI 1st", performed: true })).toBe("AI 1차 (결정론 검사)");
+    expect(reviewOriginText({ origin: "AI 2nd", performed: true, reviewer_domain: "technical", reviewer_agent: "platform-lead" })).toBe("AI 2차 · 기술 도메인 · platform-lead");
+    for (const s of [
+      { origin: "AI 2nd", performed: false, reviewer_domain: null, reviewer_agent: "none" },
+      { origin: "AI 2nd", performed: true, reviewer_domain: null, reviewer_agent: "none" },
+    ]) {
+      const t = reviewOriginText(s);
+      expect(t).toBe("AI 2차 · 수행되지 않음");
+      expect(t).not.toMatch(/\?|none/);
+    }
+    expect(reviewDomainLabel("none")).toBeNull();
+    expect(citationLabel("AI 2nd", null)).toBe("AI 2차");
+  });
+  test("B2 reproduction: structural-gaps reason is Korean", () => {
+    const en = "AI 1st found structural gaps (incomplete or locked stages); nothing worth cross-domain review yet";
+    expect(localizeNotPerformedReason(en)).not.toMatch(/[A-Za-z]{4}/);
+  });
+  test("guard: every not-performed reason in ai-second.ts / domains.ts has a Korean catalog entry", () => {
+    const root = "app/web-next/lib/review/";
+    const src = readFileSync(root + "ai-second.ts", "utf8") + readFileSync(root + "domains.ts", "utf8");
+    const lits = [...src.matchAll(/\breason(?::|\s*\?\?)\s*"([^"]+)"|\breason:\s*`([^`]+)`/g)].map((m) => (m[1] ?? m[2]!).replace(/\$\{[^}]*\}/g, (e) => (/used|cap/.test(e) ? "5" : "x")));
+    expect(lits.length).toBeGreaterThanOrEqual(7);
+    for (const l of lits) {
+      const k = localizeNotPerformedReason(l);
+      expect({ l, changed: k !== l }).toEqual({ l, changed: true });
+      expect(k).not.toMatch(/[A-Za-z]{4}/);
+    }
+    const claims = [...src.matchAll(/claim: "([^"]+)"/g)].map((m) => m[1]!);
+    for (const c of claims) expect(localizeNotPerformedReason(c)).not.toBe(c);
+  });
+});

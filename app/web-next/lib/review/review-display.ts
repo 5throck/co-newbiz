@@ -34,9 +34,9 @@ const GATE_ID_RE = /\b(screening|pre_fs|target_screening|fs|dd|entity_ic|group_i
 /** Replace internal gate ids that precede "진행 HOLD" / "게이트" with display names. */
 export const withGateNames = (text: string): string => text.replace(GATE_ID_RE, (g) => gateDisplayName(g));
 
-/** Drop blank entries so an empty list never renders as a dangling label. */
+/** Drop blank and punctuation-only entries so an empty list never renders as a dangling label. */
 export const cleanList = (xs: readonly (string | null | undefined)[] | null | undefined): string[] =>
-  (xs ?? []).map((x) => (x ?? "").trim()).filter((x) => x.length > 0);
+  (xs ?? []).map((x) => (x ?? "").trim()).filter((x) => /[\p{L}\p{N}]/u.test(x));
 
 /** `보완 필요:` blocker text from a HOLD verdict; never renders an empty list. */
 export function holdBlockerText(gate: string, missing: readonly (string | null | undefined)[] | null | undefined): string {
@@ -64,6 +64,61 @@ export interface LocalizedItem {
 
 const stripDot = (s: string): string => s.replace(/\.+\s*$/, "");
 
+/** Display-only repair of stored reason text: an empty "보완 필요:" payload gets the
+ *  "근거 확인" wording, an empty "누락된 산출물" clause is omitted, and ".." collapses to ".". */
+export function tidyReasonText(text: string): string {
+  return text
+    .replace(/\s*(?:누락된 산출물|Missing artifacts|Missing):\s*[.,;\s]*$/g, "")
+    .replace(/보완 필요:\s*[.,;\s]*(?=\/|$)/g, "보완 필요: 근거 확인")
+    .replace(/(?<!\.)\.\.(?!\.)/g, ".")
+    .trim();
+}
+
+/** Internal review-domain ids -> Korean labels (never show the raw id or "?"). */
+export const REVIEW_DOMAIN_LABEL: Record<string, string> = {
+  functional: "기능",
+  technical: "기술",
+  industry: "산업",
+  region: "지역",
+};
+export const reviewDomainLabel = (d: string | null | undefined): string | null =>
+  d && d !== "none" ? (REVIEW_DOMAIN_LABEL[d] ?? d) : null;
+
+/** Korean text for AI 2nd "not performed" claims/reasons (lib/review/ai-second.ts, domains.ts). Unknown -> unchanged. */
+export function localizeNotPerformedReason(text: string): string {
+  let m: RegExpExecArray | null;
+  if (text === "AI 1st found structural gaps (incomplete or locked stages); nothing worth cross-domain review yet")
+    return "AI 1차에서 미완료·잠김 단계 같은 구조적 빈틈이 발견되어, 아직 교차 도메인 검토를 할 단계가 아닙니다.";
+  if (text === "LLM provider is not configured") return "LLM 제공자가 설정되지 않아 검토하지 못했습니다.";
+  if ((m = /^monthly token cap reached \(used (\d+) of (\d+)\)$/.exec(text)))
+    return `월간 토큰 한도에 도달해 검토하지 못했습니다 (${m[2]} 중 ${m[1]} 사용).`;
+  if (/^LLM call failed(?::|$)/.test(text)) return "LLM 호출에 실패해 검토하지 못했습니다.";
+  if (text === "reviewer output was not valid after one retry") return "검토 결과가 한 번 다시 시도한 뒤에도 올바른 형식이 아니어서 쓰지 않았습니다.";
+  if (text === "reviewer domain unresolved") return "작성 에이전트의 도메인을 확인하지 못해 검토자를 정하지 못했습니다.";
+  if ((m = /^no cross-domain reviewer: authors span (.*) and the default reviewer domain (\S+) is among them$/.exec(text))) {
+    const names = m[1]!.split(/,\s*/).map((d) => reviewDomainLabel(d) ?? d).join(", ");
+    return `작성자가 ${names} 도메인에 걸쳐 있고 기본 검토 도메인(${reviewDomainLabel(m[2]) ?? m[2]})도 포함되어, 다른 도메인 검토자를 정하지 못했습니다.`;
+  }
+  if (text === "unspecified") return "사유가 기록되지 않았습니다.";
+  if (text === "AI 2nd cross-domain review was not performed") return "AI 2차 교차 도메인 검토가 수행되지 않았습니다";
+  if (text === "Domain of some authoring agents could not be resolved") return "일부 작성 에이전트의 도메인을 확인하지 못했습니다";
+  if ((m = /^Excluded from the cross-domain check: (.*)\.$/.exec(text))) return `교차 도메인 검사에서 제외됨: ${m[1]}.`;
+  return text;
+}
+
+/** Origin line of a review stage; never prints "?" or the raw "none" agent. */
+export function reviewOriginText(s: {
+  origin: string;
+  performed: boolean;
+  reviewer_agent?: string | null;
+  reviewer_domain?: string | null;
+}): string {
+  if (s.origin === "AI 1st") return "AI 1차 (결정론 검사)";
+  const agent = s.reviewer_agent && s.reviewer_agent !== "none" ? s.reviewer_agent : null;
+  const domain = reviewDomainLabel(s.reviewer_domain);
+  if (!s.performed || (!agent && !domain)) return "AI 2차 · 수행되지 않음";
+  return ["AI 2차", domain ? `${domain} 도메인` : null, agent].filter(Boolean).join(" · ");
+}
 /** Korean display text for AI 1st's deterministic templates (lib/review/ai-first.ts). */
 export function localizeItem(it: ItemLike): LocalizedItem {
   const { claim, reason } = it;
@@ -100,7 +155,8 @@ export function localizeItem(it: ItemLike): LocalizedItem {
     // reason = `${blockers.join(" / ") || fallback}${" Missing: a; b."}`
     const miss = /\s*Missing: (.*?)\.?\s*$/s.exec(reason);
     const head = miss ? reason.slice(0, miss.index) : reason;
-    const blockers = head.trim() === "Completion predicate not satisfied." ? "완료 조건이 충족되지 않았습니다" : stripDot(withGateNames(head.trim()));
+    const blockers =
+      head.trim() === "Completion predicate not satisfied." ? "완료 조건이 충족되지 않았습니다" : stripDot(tidyReasonText(withGateNames(head.trim())));
     const missing = miss ? cleanList(miss[1]!.split(";")) : [];
     return {
       claim: `${m[1]} ${m[2]} 단계가 아직 완료되지 않았습니다`,
@@ -136,12 +192,16 @@ export function localizeItem(it: ItemLike): LocalizedItem {
       localized: true,
     };
   }
-  return { claim, reason: withGateNames(reason), localized: false };
+  const lc = localizeNotPerformedReason(claim);
+  const lr = localizeNotPerformedReason(reason);
+  if (lc !== claim || lr !== reason) return { claim: lc, reason: lr, localized: true };
+  return { claim, reason: tidyReasonText(withGateNames(reason)), localized: false };
 }
 
 /** User-facing citation: no stage:S8 style identifiers. */
 export function citationLabel(origin: string, reviewerDomain: string | null, ref?: string): string {
-  const who = origin === "AI 1st" ? "AI 1차" : `AI 2차 · ${reviewerDomain ?? "?"}`;
+  const d = reviewDomainLabel(reviewerDomain);
+  const who = origin === "AI 1st" ? "AI 1차" : d ? `AI 2차 · ${d}` : "AI 2차";
   const m = ref ? /^stage:(S\d+)$/.exec(ref) : null;
   return m ? `${who} · ${m[1]} 단계` : who;
 }
