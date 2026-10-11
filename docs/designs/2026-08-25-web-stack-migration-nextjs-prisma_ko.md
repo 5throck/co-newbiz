@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # 설계 — 웹 스택 전면 재구축 (Hono/Vite/bun:sqlite → Next.js/Prisma)
 
 **상태**: **컷오버 완료 (2026-08-26).** Phase 0-6 전체 완료 — PR #141 머지됨. Next.js(`app/web-next/`)가 포트 8787에서 REST API + 웹 UI를 서빙하는 유일한 스택이며, `app/server`(Hono)와 구 `app/web`(Vite SPA)은 저장소에서 완전히 삭제됨. ADR-0069/0070은 여전히 `Proposed` — 각 Phase는 그 정식 승인과 무관하게 사용자 직접 지시로 실행됨(§6 마지막 문단 참조).

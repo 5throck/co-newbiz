@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # Design: 디자인 프로세스 확립 — 원칙에서 표준 화면까지 (2026-09-01)
 
 **Status**: Accepted (ADR-0087)

@@ -3,7 +3,6 @@ name: i18n-specialist
 formal_name: I18N Specialist Agent
 role: specialist
 status: active
-domain: _shared
 tier:
   claude: medium
   gemini: medium
@@ -30,11 +29,6 @@ required_skills:
   - i18n-formatting
   - i18n-layout
   - i18n-audit
-lifecycle:
-  phase: production
-  created: "2026-08-24"
-  last_updated: "2026-09-15"
-  governance: docs/lifecycle/agents/i18n-specialist.md
 ---
 
 ## Role

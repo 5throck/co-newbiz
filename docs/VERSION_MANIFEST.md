@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-11T01:12:12.651Z
+**Generated**: 2026-10-11T01:25:26.263Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -137,7 +137,7 @@
 | pmi-planning | 1.1.0 | active | skills/pmi-planning/SKILL.md | workspace | PMI planning, post-merger integration, integration timeline, day-one integration plan | pmi-agent |
 | policy-and-procedure-governance | 1.0.1 | experimental | skills/policy-and-procedure-governance/SKILL.md | workspace | procedure governance, policy procedure, process governance | process-governance-manager |
 | portfolio-fit-assessment | 1.3.0 | active | skills/portfolio-fit-assessment/SKILL.md | workspace | portfolio overlap, cannibalization, portfolio fit, group agenda ranking, rank against other group companies | group-review-agent |
-| project-review | 1.3.1 | active | skills/project-review/SKILL.md | workspace | project review, review project, audit project, quality review | pm |
+| project-review | 1.3.2 | active | skills/project-review/SKILL.md | workspace | project review, review project, audit project, quality review | pm |
 | proxy-industry-chain | 1.1.0 | active | skills/proxy-industry-chain/SKILL.md | workspace | proxy chain, no direct market data, chain reliability grade, demand estimation via proxy industry | quant-methodologist |
 | quality-of-earnings | 1.2.0 | active | skills/quality-of-earnings/SKILL.md | workspace | quality of earnings, EBITDA adjustments, normalized earnings, QoE report | financial-analyst |
 | rag-scoring-framework | 1.1.0 | active | skills/rag-scoring-framework/SKILL.md | workspace | RAG grade, RAG scoring, overall grade calculation, hysteresis, structural vs behavioral remedy grading | process-governance-manager |
@@ -156,7 +156,7 @@
 | stage-gate-governance | 1.4.1 | active | skills/stage-gate-governance/SKILL.md | workspace | stage gate, kill criteria, gate sequence, halt the project, does this trigger a kill criterion | process-governance-manager |
 | standup-synthesizer | 1.0.0 | active | skills/standup-synthesizer/SKILL.md | workspace | standup digest, daily standup, synthesize standup, work summary | pm |
 | strategic-fit-screening | 1.1.0 | active | skills/strategic-fit-screening/SKILL.md | workspace | strategic fit screen, knock-out criteria, hunt zone fit | process-governance-manager |
-| sync | 1.7.0 | active | skills/sync/SKILL.md | workspace | sync, /sync, commit and push, create PR | pm |
+| sync | 1.8.0 | active | skills/sync/SKILL.md | workspace | sync, /sync, commit and push, create PR | pm |
 | systematic-market-sizing | 1.5.0 | active | skills/systematic-market-sizing/SKILL.md | workspace | market sizing, TAM SAM SOM, market matrix, region segment demand estimate, market cross-validation, scenario bands | market-intelligence-agent |
 | talent-pipeline-planning | 1.1.0 | active | skills/talent-pipeline-planning/SKILL.md | workspace | talent pipeline, labor market assessment, hiring ramp-up plan, workforce availability | hr-integration-agent |
 | target-costing-analysis | 1.0.1 | experimental | skills/target-costing-analysis/SKILL.md | workspace | target costing, allowable cost, cost gap | process-governance-manager |
@@ -195,7 +195,7 @@
 | archive-memory.ts | 1.1.0 | scripts/archive-memory.ts | N/A |
 | assume.ts | 1.0.0 | scripts/co-newbiz/assume.ts | N/A |
 | audit-variant.ts | 1.0.0 | scripts/co-newbiz/audit-variant.ts | N/A |
-| audit.ts | 2.51.0 | scripts/audit.ts | bun |
+| audit.ts | 2.52.0 | scripts/audit.ts | bun |
 | backfill-brownfield-financial-criteria.ts | 1.0.0 | scripts/co-newbiz/backfill-brownfield-financial-criteria.ts | N/A |
 | backfill-capability-gap.ts | 1.0.0 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
 | backfill-hyd-brk-report.ts | 1.1.0 | scripts/co-newbiz/backfill-hyd-brk-report.ts | N/A |
@@ -236,7 +236,7 @@
 | design-lint.ts | 1.4.0 | scripts/co-newbiz/design-lint.ts | N/A |
 | design-lint.ts | 2.1.0 | scripts/design-lint.ts | js-yaml |
 | deterministic.ts | 1.1.0 | scripts/eval/deterministic.ts | N/A |
-| dev-sync.ts | 1.23.0 | scripts/dev-sync.ts | bun |
+| dev-sync.ts | 1.25.0 | scripts/dev-sync.ts | bun |
 | dispatch-parallel.ts | 1.1.1 | scripts/dispatch-parallel.ts | N/A |
 | dispatch-serial.ts | 1.1.2 | scripts/dispatch-serial.ts | N/A |
 | dispatch.ts | 1.1.1 | scripts/dispatch.ts | N/A |
@@ -255,11 +255,11 @@
 | generate-process-flow.ts | 1.4.0 | scripts/co-newbiz/generate-process-flow.ts | js-yaml |
 | generate-prompt-registry.ts | 1.0.0 | scripts/co-newbiz/generate-prompt-registry.ts | N/A |
 | generate-raci.ts | 1.2.0 | scripts/generate-raci.ts | js-yaml |
-| generate-skill-graph.ts | 1.15.0 | scripts/generate-skill-graph.ts | js-yaml |
+| generate-skill-graph.ts | 2.0.0 | scripts/generate-skill-graph.ts | js-yaml |
 | generate-spec-activities.ts | 1.1.0 | scripts/co-newbiz/generate-spec-activities.ts | js-yaml |
 | generate-version-manifest.ts | 1.10.0 | scripts/generate-version-manifest.ts | bun, js-yaml |
 | glossary-lint.ts | 1.1.1 | scripts/co-newbiz/glossary-lint.ts | js-yaml |
-| graph-delta-log.ts | 1.0.0 | scripts/graph-delta-log.ts | N/A |
+| graph-delta-log.ts | 1.1.0 | scripts/graph-delta-log.ts | N/A |
 | graph-map.ts | 1.2.0 | scripts/co-newbiz/graph-map.ts | js-yaml |
 | graph.ts | 0.6.0 | scripts/co-newbiz/graph.ts | js-yaml |
 | handbook-doctor.ts | 1.0.0 | scripts/handbook/handbook-doctor.ts | N/A |
@@ -302,8 +302,8 @@
 | setup-github-branch-protection.ts | 1.0.1 | scripts/setup-github-branch-protection.ts | bun |
 | shadow-compare.ts | 1.0.0 | scripts/co-newbiz/shadow-compare.ts | N/A |
 | simulate.ts | 1.0.0 | scripts/co-newbiz/simulate.ts | N/A |
-| skill-lifecycle-audit.ts | 1.6.0 | scripts/skill-lifecycle-audit.ts | N/A |
-| skill-session-review.ts | 1.1.0 | scripts/skill-session-review.ts | bun |
+| skill-lifecycle-audit.ts | 1.7.1 | scripts/skill-lifecycle-audit.ts | N/A |
+| skill-session-review.ts | 1.2.0 | scripts/skill-session-review.ts | bun |
 | source-adapters.ts | 1.2.0 | scripts/co-newbiz/source-adapters.ts | N/A |
 | spec-register.ts | 1.6.0 | scripts/spec-register.ts | N/A |
 | sync-agent-personas.ts | 1.1.0 | scripts/co-newbiz/sync-agent-personas.ts | N/A |
@@ -324,7 +324,7 @@
 | validate-doc-folder.ts | 1.2.1 | scripts/validate-doc-folder.ts | fs, path |
 | validate-docs-links.ts | 1.5.0 | scripts/validate-docs-links.ts | fs, path |
 | validate-handbook.ts | 1.1.0 | scripts/handbook/validate-handbook.ts | N/A |
-| validate-md-language.ts | 1.14.0 | scripts/validate-md-language.ts | fs |
+| validate-md-language.ts | 1.15.0 | scripts/validate-md-language.ts | fs |
 | validate-model-registry.ts | 1.4.1 | scripts/validate-model-registry.ts | N/A |
 | validate-nav.ts | 1.0.0 | scripts/handbook/validate-nav.ts | N/A |
 | validate-pm-extends.ts | 0.3.1 | scripts/validate-pm-extends.ts | N/A |
@@ -333,15 +333,15 @@
 | validate-raci.ts | 1.2.0 | scripts/validate-raci.ts | js-yaml |
 | validate-skills.ts | 1.5.1 | scripts/validate-skills.ts | N/A |
 | validate-surface-registry.ts | 1.1.1 | scripts/validate-surface-registry.ts | N/A |
-| validate-templates.ts | 1.51.0 | scripts/validate-templates.ts | js-yaml |
+| validate-templates.ts | 1.54.0 | scripts/validate-templates.ts | js-yaml |
 | validate-variant-readiness.ts | 1.1.0 | scripts/validate-variant-readiness.ts | N/A |
 | verify-agent-deliverables.ts | 1.0.1 | scripts/verify-agent-deliverables.ts | fs |
 | verify-memory.ts | 1.2.0 | scripts/verify-memory.ts | fs, path |
 | verify-platform-lifecycle.ts | 1.6.0 | scripts/verify-platform-lifecycle.ts | N/A |
 | verify-readme-sync.ts | 1.4.1 | scripts/verify-readme-sync.ts | bun, fs, path |
 | verify-scripts.ts | 1.12.0 | scripts/verify-scripts.ts | fs, path |
-| verify-skill-graph.ts | 1.7.0 | scripts/verify-skill-graph.ts | N/A |
-| verify-skills.ts | 1.5.1 | scripts/verify-skills.ts | N/A |
+| verify-skill-graph.ts | 2.0.0 | scripts/verify-skill-graph.ts | N/A |
+| verify-skills.ts | 1.5.2 | scripts/verify-skills.ts | N/A |
 | watch-run.ts | 1.1.0 | scripts/co-newbiz/watch-run.ts | bun:sqlite |
 
 ---

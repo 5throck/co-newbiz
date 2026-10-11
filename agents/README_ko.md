@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # agents/ (한국어 README)
 
 co-newbiz 신사업 심사 팀의 에이전트 정의 파일. 정본 로스터(수량·도메인·티어)는

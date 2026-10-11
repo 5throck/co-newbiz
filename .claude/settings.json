@@ -9,10 +9,10 @@
       "Bash(bun scripts/validate-templates.ts *)",
       "WebSearch(*)",
       "WebFetch(*)",
+      "Bash(node dist/cli.js:*)",
       "Bash(graft:*)",
       "Bash(npx graft:*)",
-      "Bash(graft-dev:*)",
-      "Bash(node dist/cli.js:*)"
+      "Bash(graft-dev:*)"
     ],
     "deny": [
       "Bash(git push --force*)",

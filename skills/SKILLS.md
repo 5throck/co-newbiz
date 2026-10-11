@@ -137,7 +137,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `policy-change-impact-analysis` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — mandatory pre-amendment impact analysis, `project_policy_pin` retroactivity |
 | `portfolio-fit-assessment` | 1.3.0 | active | group-review-agent | 2026-08-23 | — | Wave 5.8C — overlap finding + agenda-ranking formula (meeting M2 D-M2-2) |
 | `procedure-reference-override` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8B — ADR-0020 shared/entity/region override mechanics, `proc:resolve` |
-|`project-review`|1.3.1|active|pm|2026-09-21|—|Graph-aligned project review runbook refresh|
+| `project-review` | 1.3.2 | active | pm | 2026-10-08 | — | Graph-aligned project review runbook refresh |
 | `proxy-industry-chain` | 1.1.0 | active | quant-methodologist | 2026-08-23 | — | Wave 5.8F (design §9.3 market/proxy-chain group) — ADR-0006 statistical-hop-only grading rule |
 | `quality-of-earnings` | 1.2.0 | active | financial-analyst | 2026-10-01 | — | Wave 5.8G — EBITDA normalization bridge for Brown Field DD; customer-level inputs to cdd-08 |
 | `query-performance-tuning` | 1.0.0 | active | dba | 2026-08-20 | — | Wave 5.8J — membership-filtering join as the highest-traffic query pattern |
@@ -165,7 +165,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `statute-change-monitoring` | 1.0.0 | active | legal-counsel | 2026-08-20 | — | Wave 5.8H — project-scoped DD counterpart to regulation-monitoring |
 | `strategic-fit-screening` | 1.1.0 | active | process-governance-manager | 2026-08-23 | — | ADR-0051 (PR-10 workflow concretization) — entity-level knock-out + scorecard screen at first gate per chk-strategic-fit; thresholds illustrative until the thresholds meeting |
 | `sync` | 1.6.0 | active | pm | 2026-09-17 | — | Full project sync pipeline — lifecycle, audit, publish, commit, push, PR. Reassigned from lifecycle-manager — same orphan cause as security-scan |
-| `sync` | 1.7.0 | active | pm | 2026-09-17 | — | Full project sync pipeline — lifecycle, audit, publish, commit, push, PR. Reassigned from lifecycle-manager — same orphan cause as security-scan |
+| `sync` | 1.8.0 | active | pm | 2026-10-08 | — | Full project sync pipeline — lifecycle, audit, publish, commit, push, PR. Reassigned from lifecycle-manager — same orphan cause as security-scan |
 | `systematic-market-sizing` | 1.5.0 | active | market-intelligence-agent | 2026-09-03 | — | — |
 | `talent-pipeline-planning` | 1.1.0 | active | hr-integration-agent | 2026-08-23 | — | Wave 5.8C — Green Field local labor-market supply assessment |
 | `team-builder` | 1.1.0 | active | pm | 2026-06-13 | — | — |
