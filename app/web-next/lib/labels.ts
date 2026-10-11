@@ -71,7 +71,7 @@ export const BF_SUB: Record<string, string> = {
   jv: "JV(합작)",
   strategic_investment: "전략적 투자",
   minority_investment: "소수지분 투자",
-  partnership: "파트너십", // INTERIM-WORDING Q1 (existing route-decision wording, no glossary term)
+  partnership: "전략 제휴", // human-approved 2026-10-11 (was "파트너십"; design Q1 resolution)
   rbd: "R&BD(공동연구)",
   corporate_venture: "사내벤처(CVC)",
 };
@@ -136,12 +136,13 @@ export const TRANSITION_DECISION_LABEL: Record<string, string> = {
 /** RAG dimensions (packages/core-scoring RAG_DIMENSIONS, canonical order). */
 export const RAG_DIMENSION_ORDER = ["financial", "market", "data_confidence", "regulatory_permit", "technical_execution", "risk"] as const;
 export const RAG_DIMENSION_LABEL: Record<string, string> = {
-  financial: "재무", // INTERIM-WORDING Q6 (skills/rag-scoring-framework "Financial"; no Korean name in docs)
-  market: "시장", // INTERIM-WORDING Q6 (skill "Market")
-  data_confidence: "데이터 신뢰도", // docs/governance/rag-framework_ko.md s3 (still confirm under Q6)
-  regulatory_permit: "규제·인허가", // INTERIM-WORDING Q6 (skill "Regulatory/Permit")
-  technical_execution: "기술·실행", // INTERIM-WORDING Q6 (skill "Technical/Execution")
-  risk: "리스크", // INTERIM-WORDING Q6 (skill "Risk")
+  // Verbatim from glossary/technical.yaml "RAG Dimension" definition_ko: 재무성·시장·데이터 신뢰도·규제인허가·기술실행·리스크 (Q6 resolved 2026-10-11).
+  financial: "재무성",
+  market: "시장",
+  data_confidence: "데이터 신뢰도",
+  regulatory_permit: "규제인허가",
+  technical_execution: "기술실행",
+  risk: "리스크",
 };
 
 /** Korean list of RAG dimension names in canonical order (unknown keys last, input order, as placeholder). */
