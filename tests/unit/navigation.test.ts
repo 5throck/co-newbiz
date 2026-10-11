@@ -114,4 +114,14 @@ describe("navigation SSOT (ADR-0105)", () => {
     expect(appShellSource).toContain('from "../lib/navigation.ts"');
     expect(appShellSource).not.toMatch(/const NAV_SECTIONS/);
   });
+
+  // Post-merge follow-up (2026-10-11-ui-label-and-mobile-table-sweep): /projects
+  // is reached from the deal board, so it carries the shared breadcrumb trail
+  // "deal board > Projects" with a working link back to /deals.
+  test("/projects renders the shared breadcrumb with a back link to /deals", () => {
+    const src = readFileSync(join(APP_DIR, "projects", "page.tsx"), "utf8");
+    expect(src).toContain('from "../../components/Breadcrumb.tsx"');
+    expect(src).toContain('label: "검토/안건 보드", href: "/deals"');
+    expect(src).toContain('{ label: "프로젝트" }');
+  });
 });

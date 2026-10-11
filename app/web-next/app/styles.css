@@ -3576,6 +3576,26 @@ a.stage-step:focus-visible, .stage-tab:focus-visible, .stage-tab-menu-item:focus
 form.grid { grid-template-columns: minmax(0, 1fr); }
 .topbar-actions { flex-wrap: wrap; justify-content: flex-end; }
 
+/* 개인 API 토큰 발급 폼 (connected-apps): 라벨은 컨트롤 위에, 데스크톱에서는
+   라벨·권한·유효기간·제출이 한 줄. ~640px 이하에서는 단일 열로 쌓인다. */
+.pat-form-grid {
+  display: grid;
+  grid-template-columns: minmax(16rem, 1fr) auto auto auto;
+  gap: var(--space-3, 1rem);
+  align-items: end;
+}
+.pat-field { display: flex; flex-direction: column; gap: var(--space-1, 0.25rem); }
+.pat-field-label { display: block; font-size: var(--fs-caption, 0.8rem); color: var(--muted-fg); }
+.pat-field .form-input { width: 100%; min-width: 14rem; }
+.pat-scope-field { border: 0; margin: 0; padding: 0; min-inline-size: auto; }
+.pat-scope-field legend { padding: 0; }
+.pat-scope-field label { display: inline-flex; align-items: center; gap: 0.25rem; margin-right: var(--space-2, 0.5rem); white-space: nowrap; }
+@media (max-width: 640px) {
+  .pat-form-grid { grid-template-columns: minmax(0, 1fr); align-items: stretch; }
+  .pat-form-grid > :last-child { justify-self: start; }
+  .pat-field .form-input { min-width: 0; }
+}
+
 
 /* ── Critique 2026-10-09: review block (items 4, 6, 7), stepper (item 10) ── */
 .review-block { container-type: inline-size; }

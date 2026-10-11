@@ -200,3 +200,32 @@ horizontal scroll). Screenshots go in the PR.
 - Q3 (`corp_code`) and the tranche / decision-mode glossary entries: DEFERRED to the next glossary cycle. No glossary YAML added now.
 - Q6: RAG_DIMENSION_LABEL aligned verbatim to the glossary/technical.yaml "RAG Dimension" definition names (all six, in Korean, as defined there; marker removed).
 - Q7: the unclassified placeholder keeps its current Korean wording (confirmed).
+
+## 11. Post-merge follow-ups (2026-10-11)
+
+Two defects found in the logged-in QA sweep after the label/mobile sweep merged, fixed the same day
+on main. Display-layer only; no ADR, no API or schema change.
+
+1. **/projects had no back affordance.** The h1 sat alone with no breadcrumb or back link. Fixed in
+   `app/web-next/app/projects/page.tsx` by rendering the shared `Breadcrumb` component
+   (deal board crumb linking to `/deals`, then a non-link current crumb for the projects page) above
+   the h1 — same component and label pattern as the deal pages, no new component.
+2. **/settings/connected-apps personal-token issue form was squeezed at desktop** (label input at
+   default width, the scope radio group legend floating above, no grid). Fixed by replacing the
+   ad-hoc flex row with a `pat-form-grid` (styles.css): labels stacked above full-width controls,
+   desktop row of label (min 16rem, grows) / scope / expiry / submit, single column below 640px,
+   token-based spacing. Also added `cell-nowrap` to the created/expires/last-used date cells of the
+   personal-token list table so localized timestamps do not break mid-line inside `.table-scroll`.
+
+Source-reading tests extended: `tests/unit/navigation.test.ts` (breadcrumb present on /projects with
+a working `/deals` link), `tests/unit/connected-apps-page.test.ts` (grid classes present, no ad-hoc
+flex alignment, media query in styles.css, nowrap date cells).
+
+**Mobile verification (375px, CDP device-metrics emulation on the logged-in session)** —
+`document.scrollWidth` vs 375px viewport: /projects 375, /deals 375, /projects/[id]/process 375,
+/settings/connected-apps 375, /glossary 375. No page-level horizontal overflow on any of the five.
+Screenshots reviewed: /projects shows the breadcrumb trail above the h1 and the table scrolling
+inside its wrapper; the process page stage list stacks gate chips under readable stage names;
+connected-apps stacks the issue form single-column with labels above controls; /deals and /glossary
+unchanged and clean. Emulation was reset afterwards. Desktop check of the token form shows a single
+aligned row with the label input at a sane width.
