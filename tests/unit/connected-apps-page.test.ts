@@ -84,4 +84,25 @@ describe("connected-apps personal API tokens UI", () => {
     expect(PAGE).toMatch(/aria-hidden="true">\{s\.icon\}/);
     for (const label of ["활성", "만료됨", "해지됨"]) expect(PAGE).toContain(label);
   });
+
+  // Post-merge follow-up (2026-10-11-ui-label-and-mobile-table-sweep): the
+  // issue form uses the responsive .pat-form-grid (labels above controls,
+  // single column below 640px via styles.css) and date cells keep nowrap so
+  // localized timestamps do not break mid-line inside .table-scroll.
+  test("issue form uses the shared grid layout, not ad-hoc flex rows", () => {
+    expect(PAGE).toContain("pat-form-grid");
+    expect(PAGE).not.toMatch(/alignItems: "flex-end"/);
+    for (const cls of ["pat-field", "pat-field-label", "pat-scope-field"]) {
+      expect(PAGE).toContain(cls);
+    }
+    const css = readFileSync("app/web-next/app/styles.css", "utf8");
+    expect(css).toMatch(/\.pat-form-grid/);
+    expect(css).toMatch(/@media \(max-width: 640px\)[\s\S]*\.pat-form-grid \{ grid-template-columns: minmax\(0, 1fr\)/);
+  });
+
+  test("token list date cells keep nowrap so timestamps do not break mid-line", () => {
+    expect(PAGE).toMatch(/<td className="cell-nowrap">\{fmt\(t\.created_at\)\}<\/td>/);
+    expect(PAGE).toMatch(/<td className="cell-nowrap">\{t\.expires_at/);
+    expect(PAGE).toMatch(/<td className="cell-nowrap">\{fmt\(t\.last_used_at\)\}<\/td>/);
+  });
 });

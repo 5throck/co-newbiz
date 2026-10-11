@@ -263,9 +263,9 @@ function PersonalTokensSection() {
                 void submit();
               }}
             >
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-3, 1rem)", alignItems: "flex-end" }}>
-                <div>
-                  <label htmlFor="pat-label" style={{ display: "block" }}>
+              <div className="pat-form-grid">
+                <div className="pat-field">
+                  <label htmlFor="pat-label" className="pat-field-label">
                     라벨 (필수)
                   </label>
                   <input
@@ -277,9 +277,9 @@ function PersonalTokensSection() {
                     placeholder="예: 내 노트북 stdio MCP"
                   />
                 </div>
-                <fieldset style={{ border: "none", margin: 0, padding: 0 }}>
-                  <legend>권한</legend>
-                  <label style={{ marginRight: "var(--space-2, 0.5rem)" }}>
+                <fieldset className="pat-field pat-scope-field">
+                  <legend className="pat-field-label">권한</legend>
+                  <label>
                     <input type="radio" name="pat-scope" checked={!withWrite} onChange={() => setWithWrite(false)} />{" "}
                     읽기 전용
                   </label>
@@ -288,8 +288,8 @@ function PersonalTokensSection() {
                     읽기·쓰기
                   </label>
                 </fieldset>
-                <div>
-                  <label htmlFor="pat-expiry" style={{ display: "block" }}>
+                <div className="pat-field">
+                  <label htmlFor="pat-expiry" className="pat-field-label">
                     유효기간
                   </label>
                   <select
@@ -360,9 +360,9 @@ function PersonalTokensSection() {
                             <span aria-hidden="true">{s.icon}</span> {s.label}
                           </span>
                         </td>
-                        <td>{fmt(t.created_at)}</td>
-                        <td>{t.expires_at ? fmt(t.expires_at) : "—"}</td>
-                        <td>{fmt(t.last_used_at)}</td>
+                        <td className="cell-nowrap">{fmt(t.created_at)}</td>
+                        <td className="cell-nowrap">{t.expires_at ? fmt(t.expires_at) : "—"}</td>
+                        <td className="cell-nowrap">{fmt(t.last_used_at)}</td>
                         <td className="sizing-actions-cell">
                           {t.status === "active" && (
                             <Button

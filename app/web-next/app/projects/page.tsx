@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "../../lib/api.ts";
 import { useConfirm } from "../../components/crud.tsx";
 import { ClosureModal } from "../../components/ClosureModal.tsx";
+import { Breadcrumb } from "../../components/Breadcrumb.tsx";
 
 // 프로젝트 (/projects) — S8~S12(사업성 분석·DD·투심·포트폴리오)로 이어지는
 // 프로젝트 키 화면군의 진입점. 승격된 프로젝트는 이전까지 /opportunities의
@@ -66,6 +67,12 @@ export function ProjectsView() {
 
   return (
     <main>
+      <Breadcrumb
+        items={[
+          { label: "검토/안건 보드", href: "/deals" },
+          { label: "프로젝트" },
+        ]}
+      />
       <h1>프로젝트</h1>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
         추진된 프로젝트의 사업성 분석(S8)·실사(S9)·투심(S11)·포트폴리오(S12) 화면으로 이동합니다.
