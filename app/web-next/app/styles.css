@@ -2293,12 +2293,26 @@
    갖도록 design-lint가 강제한다. 긴 칩은 열 안에서 줄바꿈된다(nowrap 해제). */
 .list-table { table-layout: fixed; max-width: 64rem; }
 .list-table .status-chip { white-space: normal; }
+/* Column sizing system (design 2026-10-11-table-column-sizing-system): a <ColGroup> of percentages
+   keeps every column's share stable; below --table-min the .table-scroll wrapper scrolls instead
+   of crushing a column. Always used inside .table-scroll. */
+.table-fixed-pct { table-layout: fixed; width: 100%; min-width: var(--table-min, 40rem); }
+.table-fixed-pct.tmin-32 { --table-min: 32rem; }
+.table-fixed-pct.tmin-40 { --table-min: 40rem; }
+.table-fixed-pct.tmin-48 { --table-min: 48rem; }
+.table-fixed-pct.tmin-56 { --table-min: 56rem; }
+.table-fixed-pct.tmin-64 { --table-min: 64rem; }
+.table-fixed-pct.tmin-80 { --table-min: 80rem; }
+.table-fixed-pct td, .table-fixed-pct th { overflow-wrap: anywhere; }
+.cell-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cell-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 /* S1 시장분석 목록 — 분석 상태 열(긴 진행률 칩) 예산을 위해 상향.
    모든 열이 th 고정 폭을 가져 폭 흡수 왜곡 없이 남는 폭이 비례 배분된다. */
 .list-table.market-list-table { max-width: 72rem; }
 /* S2 기회 퍼널 — 작업 열(버튼 2~3개)이 셀 밖으로 넘치지 않도록 폭을 넓히고,
    좁은 화면에서는 .table-scroll 안에서 가로 스크롤한다. */
-.list-table.opp-funnel-table { max-width: 80rem; min-width: 56rem; }
+.list-table.list-wide { max-width: 80rem; }
+.list-table.list-mid { max-width: 72rem; }
 /* S3 시너지 목록 — 열 고정 폭 합(약 77rem)이 좁은 화면에서 잘리지 않도록 .table-scroll 안에서 스크롤한다. */
 .list-table.synergy-list-table { max-width: 80rem; min-width: 56rem; }
 .opportunity-create { margin-bottom: 1.25rem; }
@@ -3732,14 +3746,10 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
 /* All three DD tables (technical / legal / commercial) share one fixed column grid so a long
    item text wraps in its own column instead of squeezing judgement, evidence and waiver. */
 @media (min-width: 641px) {
-  .dd-table { table-layout: fixed; width: 100%; min-width: 48rem; }
-  .dd-table .dd-col-item { width: auto; min-width: 14rem; }
-  .dd-table .dd-col-req { width: 4.5rem; }
-  .dd-table .dd-col-judge { width: 9.5rem; }
-  .dd-table .dd-col-act { width: 20rem; }
-  .dd-table td { overflow-wrap: anywhere; vertical-align: top; }
+  .dd-table td { vertical-align: top; }
 }
 @media (max-width: 640px) {
+  .dd-table { min-width: 0; }
   .dd-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .dd-table, .dd-table tbody, .dd-table tr, .dd-table td { display: block; width: 100%; }
   .dd-table tr { border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 0.6rem; padding: 0.4rem 0.6rem; }
@@ -3760,7 +3770,9 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
      (design 2026-10-11-ui-label-and-mobile-table-sweep §3): 표는 내용 크기가 되어
      .table-scroll 안에서만 가로 스크롤되고, 칩·버튼은 한 줄을 유지한다.
      .targets-table 규칙은 이 규칙에 흡수되었다(더 이상 별도 규칙 없음). */
-  .table-scroll .data-table { display: table; width: max-content; min-width: 100%; max-width: none; overflow: visible; }
+  .table-scroll .data-table:not(.table-fixed-pct) { display: table; width: max-content; min-width: 100%; max-width: none; overflow: visible; }
+  /* Fixed-percentage tables keep their colgroup widths on mobile and scroll below --table-min. */
+  .table-scroll .table-fixed-pct:not(.dd-table) { display: table; max-width: none; overflow: visible; }
   .table-scroll .data-table .status-chip,
   .table-scroll .data-table .btn-ghost,
   .table-scroll .data-table .btn-primary,
@@ -3796,13 +3808,12 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
 .group-meta { margin: 0 0 var(--space-3); font-size: var(--fs-caption); color: var(--muted-fg); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .stale-cue { display: inline-flex; align-items: center; gap: 0.25rem; margin-left: var(--space-2); color: var(--amber-fg); font-size: var(--fs-caption); white-space: nowrap; }
 .group-meta .stale-cue { margin-left: 0; }
-.list-table.members-list-table { max-width: 72rem; min-width: 54rem; }
+.list-table.members-list-table { max-width: 72rem; }
 .members-list-table .member-date-cell { white-space: nowrap; }
 .members-list-table .member-date-cell .stale-cue { display: flex; margin-left: 0; white-space: normal; }
 .members-list-table .member-edit-input { width: 100%; max-width: 100%; box-sizing: border-box; }
 .members-list-table .actions-row { justify-content: flex-start; }
 /* Competitors table: percentage columns (colgroup) so every column scales together; wraps/ellipsis inside the cell. */
-.report-table.competitor-table { table-layout: fixed; width: 100%; min-width: 48rem; }
 .competitor-table td { overflow: hidden; overflow-wrap: anywhere; }
 .competitor-table .competitor-name { white-space: nowrap; text-overflow: ellipsis; }
 .competitor-table .actions-row { flex-wrap: wrap; justify-content: flex-start; gap: var(--space-2); }

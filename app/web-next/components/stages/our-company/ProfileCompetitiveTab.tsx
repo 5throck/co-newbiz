@@ -1,6 +1,7 @@
 "use client";
 
 // Split from components/stages/OurCompanyStage.tsx (Wave U-3 decomposition); behavior unchanged.
+import { ColGroup } from "../../ui.tsx";
 import { CROSSCHECK_VERDICT_META, CROSSCHECK_STATUS_META, COMPETITOR_COL_PCT, OUR_COMPANY_COPY as COPY } from "./constants.ts";
 import { RowMenu } from "../../crud.tsx";
 import type { OurCompanyStageState } from "./useOurGroups.ts";
@@ -26,11 +27,9 @@ export function ProfileCompetitiveTab({ ctx, profile }: { ctx: OurCompanyStageSt
                     </p>
                   ) : (
                     <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-                      <table className="data-table report-table competitor-table" aria-label="확정 경쟁사">
+                      <table className="data-table report-table competitor-table table-fixed-pct tmin-48" aria-label="확정 경쟁사">
                         <caption className="sr-only">확정 경쟁사</caption>
-                        <colgroup>
-                          {COMPETITOR_COL_PCT.map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}
-                        </colgroup>
+                        <ColGroup widths={COMPETITOR_COL_PCT} />
                         <thead>
                           <tr>
                             <th scope="col">경쟁사</th>

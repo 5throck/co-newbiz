@@ -5,6 +5,7 @@ import { useRef } from "react";
 import { SectionToolbar } from "../../layout.tsx";
 import { RowMenu, type RowMenuItem } from "../../crud.tsx";
 import type { OurCompanyStageState } from "./useOurGroups.ts";
+import { ColGroup } from "../../ui.tsx";
 import { OUR_COMPANY_COPY as COPY, MEMBER_COL_PCT } from "./constants.ts";
 import { groupAnalysisMeta, isStaleAnalysis } from "./member-stats.ts";
 import { ClockIcon } from "./icons.tsx";
@@ -132,11 +133,9 @@ export function MembersPanel({ ctx }: { ctx: OurCompanyStageState }) {
             <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">계열사가 없습니다. "＋ 계열사 등록"으로 추가하세요.</p>
           ) : (
             <div className="table-scroll" tabIndex={0} role="region" aria-label="계열사 목록 영역">
-            <table className="data-table list-table members-list-table" aria-label="계열사 목록">
+            <table className="data-table list-table members-list-table table-fixed-pct tmin-56" aria-label="계열사 목록">
               <caption className="sr-only">계열사 목록</caption>
-              <colgroup>
-                {MEMBER_COL_PCT.map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}
-              </colgroup>
+              <ColGroup widths={MEMBER_COL_PCT} />
               <thead>
                 <tr>
                   <th scope="col">회사명</th><th scope="col">역할</th><th scope="col">DART 고유번호</th>

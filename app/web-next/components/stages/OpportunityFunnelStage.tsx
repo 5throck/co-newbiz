@@ -18,8 +18,11 @@ import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { useConfirm } from "../crud.tsx";
 import { SectionToolbar } from "../layout.tsx";
-import { PrimaryAction } from "../ui.tsx";
+import { ColGroup, PrimaryAction } from "../ui.tsx";
 import { isDegeneratePct, NOT_COMPUTABLE_TEXT, SYNTHETIC_BADGE_TEXT } from "../../lib/synthetic-value.ts";
+
+/** Column shares (%) in header order: status, name, attractiveness, synergy, actions. */
+const FUNNEL_COL_PCT = [14, 34, 12, 16, 24] as const;
 
 interface OpportunityRow {
   id: string;
@@ -514,17 +517,17 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
             {statusFilter ? "필터 조건에 맞는 기회가 없습니다." : "등록된 기회가 없습니다 — 분석된 산업에서 기회 발굴을 시작하세요."}
           </p>
         ) : (
-          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table list-table opp-funnel-table" aria-label="기회 퍼널 목록">
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table list-table list-wide table-fixed-pct tmin-56 opp-funnel-table" aria-label="기회 퍼널 목록">
             <caption className="sr-only">기회 퍼널 목록</caption>
+            <ColGroup widths={FUNNEL_COL_PCT} />
             <thead>
               <tr>
-                <th scope="col" className="w-[6rem]">상태</th>
-                {/* 기회명은 유일한 무제한 열 — .list-table 고정 레이아웃에서 나머지
-                    폭을 흡수하지만 테이블 최대 폭(64rem) 안에서 유지된다. */}
+                <th scope="col">상태</th>
+                {/* 열 폭은 FUNNEL_COL_PCT(%)가 정한다 — 기회명 칸은 넘치면 말줄임(…) 처리한다. */}
                 <th scope="col">기회명</th>
-                <th scope="col" className="w-[6rem]">매력도</th>
-                <th scope="col" className="w-[10rem]">시너지</th>
-                <th scope="col" className="w-[20rem]"><span className="sr-only">작업</span></th>
+                <th scope="col">매력도</th>
+                <th scope="col">시너지</th>
+                <th scope="col"><span className="sr-only">작업</span></th>
               </tr>
             </thead>
             <tbody>
@@ -538,8 +541,8 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
                   <td>
                     <Link
                       href={`/opportunities/${encodeURIComponent(o.id)}`}
-                      className="font-semibold text-left underline-offset-2 hover:underline"
-                      title="기회 상세 화면으로 이동합니다 (기회/위험 요인·비즈니스 모델 검토)"
+                      className="block cell-truncate font-semibold text-left underline-offset-2 hover:underline"
+                      title={o.name}
                     >
                       {o.name}
                     </Link>
