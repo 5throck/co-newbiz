@@ -212,6 +212,12 @@ paths:
     get:
       operationId: getCompanyFinancials
       summary: Latest-revision DART financial facts, derived analysis, commentary layer, and the subject-company WACC reference card.
+      description: >-
+        wacc_reference.entries[] items carry key, label, value (ratio for risk_free/credit_spread, multiple for
+        observed_de/beta_levered), unit ("ratio"|"multiple"), as_of ("YYYY-MM" for rates, "YYYY-12-31" for D/E),
+        anchor_ref, source_label, reason (only when value is null), note (caveat when value is present).
+        wacc_reference also carries latest_year, missing[] (keys with null value) and disclaimer. beta_levered is a
+        null placeholder ("KRX data-use approval pending"). Proposal only; no writes.
       tags:
         - Analysis
       parameters:
@@ -4296,7 +4302,7 @@ paths:
   /api/projects/{id}/business-case/params:
     get:
       operationId: getProjectBusinessCaseParams
-      summary: Resolve the live bc.* simulation parameter set with provenance (user > derived > default).
+      summary: Resolve the live bc.* simulation parameter set with provenance (user > derived > default). Includes the read-only acquisitionEvRevenueBand (nullable, human-confirmed). The business-case list/comparison response carries evRevenueBand and per-target acqEvBandSource; acqEvRevenueInBand is null unless a band is confirmed.
       tags:
         - Analysis
       parameters:
@@ -4334,6 +4340,51 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /api/projects/{id}/business-case/ev-band:
+    post:
+      operationId: confirmProjectEvRevenueBand
+      summary: Human-only confirmation of the project entry EV/Revenue band (analyst+; boundary #2, refused for MCP agent callers).
+      description: |
+        Body {min, max, rationale, source}. Validation: 0 < min < max <= 50, rationale 10-2000 chars, source 3-500 chars (after trim).
+        Writes two kind='user' assumption rows in one run (overwrite-only; latest complete pair wins). Responds with
+        {run_id, evRevenueBand:{confirmed, reference:{min,max,label,sourced:false}, optimismFlag, spreadFlag, stale, ageDays}}.
+        spreadFlag (max/min > 4.5) and stale (confirmed >= 90 days ago) are warnings only; they never block or re-rank.
+        Unknown server errors return 500 internal_error with a generic message. The band is display-only
+        and never re-ranks targets. The general params route rejects band keys with 400.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [min, max, rationale, source]
+              properties:
+                min: { type: number, exclusiveMinimum: 0 }
+                max: { type: number, maximum: 50 }
+                rationale: { type: string, minLength: 10, maxLength: 2000 }
+                source: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          description: Unexpected server error (generic message, details logged server-side).
 
   /api/projects/{id}/business-case/generate:
     post:

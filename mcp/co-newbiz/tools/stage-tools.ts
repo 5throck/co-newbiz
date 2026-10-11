@@ -133,7 +133,7 @@ const SPECS: readonly RouteToolSpec[] = [
   { name: "save_business_case", kind: "write", method: "POST", path: "/api/projects/{projectId}/business-case", body: "required", bodyHint: BODY,
     activities: ["business-case-modeling"], artifacts: ["stage:S8:1"], description: "Create a business-case model (manual cost/revenue lines or valuation)." },
   { name: "set_business_case_params", kind: "write", method: "POST", path: "/api/projects/{projectId}/business-case/params", body: "required", bodyHint: BODY,
-    activities: ["valuation", "quant-methods"], description: "Set the business-case generation parameters." },
+    activities: ["valuation", "quant-methods"], description: "Set the business-case generation parameters. The EV/Revenue band is human-only and cannot be set here." },
   { name: "generate_business_case", kind: "generate", method: "POST", path: "/api/projects/{projectId}/business-case/generate", body: "optional", bodyHint: BODY,
     activities: ["business-case-modeling", "valuation", "quant-methods"], artifacts: ["stage:S8:1", "stage:S8:2", "stage:S8:3"],
     description: "Generate business cases, NPV quantile simulation, and BEP. Flags a RECOMMENDED case; adoption is a proposal a person confirms." },

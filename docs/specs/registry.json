@@ -850,6 +850,24 @@
       "last_updated": "2026-10-10"
     },
     {
+      "id": "2026-10-11-company-financials-wacc-reference-fix-design",
+      "title": "company financials wacc reference fix design",
+      "file": "docs/designs/2026-10-11-company-financials-wacc-reference-fix-design.md",
+      "status": "approved",
+      "source": "manual",
+      "created": "2026-10-11",
+      "last_updated": "2026-10-11"
+    },
+    {
+      "id": "2026-10-11-s8-ev-band-user-confirmed-design",
+      "title": "s8 ev band user confirmed design",
+      "file": "docs/designs/2026-10-11-s8-ev-band-user-confirmed-design.md",
+      "status": "draft",
+      "source": "manual",
+      "created": "2026-10-11",
+      "last_updated": "2026-10-11"
+    },
+    {
       "id": "2026-10-11-s8-target-comparison-crosscheck-design",
       "title": "s8 target comparison crosscheck design",
       "file": "docs/designs/2026-10-11-s8-target-comparison-crosscheck-design.md",

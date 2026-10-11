@@ -22,7 +22,10 @@ export interface ReferenceEntry {
   as_of: string | null;
   anchor_ref: string | null;
   source_label: string | null;
+  /** Why the value is null. Null whenever a value is present. */
   reason: string | null;
+  /** Caveat attached to a present value (e.g. approximation). */
+  note?: string | null;
 }
 
 export interface WaccReference {
@@ -47,6 +50,38 @@ function latestObservation(db: Database, seriesId: string): { asOf: string; valu
     )
     .get(seriesId) as { ym: string; value: number } | undefined;
   return row ? { asOf: row.ym, value: row.value } : null;
+}
+
+/** Observation (max revision) of one series for one YYYY-MM month. */
+function observationAt(db: Database, seriesId: string, ym: string): { asOf: string; value: number } | null {
+  const row = db
+    .query(
+      `SELECT o.value
+       FROM fact_market_observation o
+       JOIN md_period p ON p.id = o.period_id
+       WHERE o.series_id = ? AND substr(p.start_date, 1, 7) = ?
+         AND o.revision_no = (SELECT MAX(revision_no) FROM fact_market_observation o2
+                              WHERE o2.series_id = o.series_id AND o2.period_id = o.period_id)
+       LIMIT 1`,
+    )
+    .get(seriesId, ym) as { value: number } | undefined;
+  return row ? { asOf: ym, value: row.value } : null;
+}
+
+/** Latest month in which BOTH series have an observation. */
+function latestCommonMonth(db: Database, a: string, b: string): string | null {
+  const row = db
+    .query(
+      `SELECT substr(p.start_date, 1, 7) AS ym
+       FROM fact_market_observation o JOIN md_period p ON p.id = o.period_id
+       WHERE o.series_id = ?
+         AND substr(p.start_date, 1, 7) IN (
+           SELECT substr(p2.start_date, 1, 7) FROM fact_market_observation o2
+           JOIN md_period p2 ON p2.id = o2.period_id WHERE o2.series_id = ?)
+       ORDER BY p.start_date DESC LIMIT 1`,
+    )
+    .get(a, b) as { ym: string } | undefined;
+  return row?.ym ?? null;
 }
 
 function pctEntry(key: string, label: string, obs: { asOf: string; value: number } | null, sourceLabel: string): ReferenceEntry {
@@ -90,8 +125,24 @@ export function computeWaccReference(db: Database, subjectCompanyId: string): Wa
   const equity = pick("자본총계", latestYear);
   const observedDe = debt !== null && equity !== null && equity !== 0 ? debt / equity : null;
 
-  // Credit spread: 회사채(AA−) − 국고채, same period required.
-  const spread = rf && corp && rf.asOf === corp.asOf ? corp.value - rf.value : null;
+  // Credit spread: 회사채(AA−) − 국고채 computed from the latest month in which
+  // BOTH series have an observation (human-decision default, 2026-10-11).
+  const commonMonth = rf && corp ? latestCommonMonth(db, RF_SERIES_ID, CORP_BOND_SERIES_ID) : null;
+  const rfC = commonMonth ? observationAt(db, RF_SERIES_ID, commonMonth) : null;
+  const corpC = commonMonth ? observationAt(db, CORP_BOND_SERIES_ID, commonMonth) : null;
+  const spread = rfC && corpC ? corpC.value - rfC.value : null;
+  let spreadReason: string | null = null;
+  let spreadNote: string | null = null;
+  if (spread === null) {
+    spreadReason =
+      rf && corp
+        ? `Rf와 회사채 공통 월 없음 (Rf 최신 ${rf.asOf}, 회사채 최신 ${corp.asOf}) — 가산금리 미산출`
+        : "ECOS 시계열 미수집 — fetch --source ecos 먼저 실행";
+  } else {
+    spreadNote =
+      `${commonMonth} 기준 산출 (Rf·회사채 공통 최신 월${rf && rf.asOf !== commonMonth ? `; Rf 최신 월은 ${rf.asOf}` : ""}). ` +
+      "개별 회사등급 미반영 근사값 — 필요 시 직접 입력으로 대체";
+  }
 
   const entries: ReferenceEntry[] = [
     {
@@ -107,10 +158,11 @@ export function computeWaccReference(db: Database, subjectCompanyId: string): Wa
       key: "credit_spread",
       label: "신용등급 가산금리 (회사채 AA− − 국고채 3년)",
       value: spread,
-      as_of: corp ? corp.asOf : null,
+      as_of: spread !== null ? commonMonth : null,
       anchor_ref: spread !== null ? "src:ecos" : null,
       source_label: spread !== null ? "한국은행 ECOS 시장금리(월별)" : null,
-      reason: spread === null ? "ECOS 시계열 미수집 — fetch --source ecos 먼저 실행" : "개별 회사등급 미반영 근사값 — 필요 시 직접 입력으로 대체",
+      reason: spreadReason,
+      note: spreadNote,
     },
     {
       key: "observed_de",
@@ -120,6 +172,7 @@ export function computeWaccReference(db: Database, subjectCompanyId: string): Wa
       anchor_ref: observedDe !== null ? "src:dart" : null,
       source_label: observedDe !== null ? "DART 연결재무제표" : null,
       reason: observedDe === null ? "DART 재무 fact 없음 — 회사 화면에서 동기화" : null,
+      note: observedDe !== null ? "장부가 D/E (최신 사업연도 재무제표의 부채/자본), 시가 D/E 아님 — 베타 재레버링 전 검토 필요" : null,
     },
   ];
 

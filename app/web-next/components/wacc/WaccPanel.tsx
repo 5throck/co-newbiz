@@ -9,6 +9,7 @@
 // 않는다. 화면 구성은 승인된 목업
 // docs/designs/mockups/2026-09-10-wacc-capm-ui-mockup_ko.html 기준.
 
+import { suggestionToInputValue } from "../../lib/wacc-suggestion-convert.ts";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SourceTooltip } from "../SourceTooltip.tsx";
 import { ParamTable } from "../ui.tsx";
@@ -192,7 +193,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   const [mode, setMode] = useState<"direct" | "capm">("capm");
 
   // ── 참조값 (ADR-0116 Phase 4; 제안일 뿐 — 확정은 사람) ──
-  interface Sugg { key: string; value: number | null; as_of?: string; anchor_ref?: string; source_label?: string; reason?: string }
+  interface Sugg { key: string; value: number | null; as_of?: string; anchor_ref?: string; source_label?: string; reason?: string; note?: string | null }
   const [sugg, setSugg] = useState<{ subject: { name_ko: string | null } | null; suggestions: Sugg[]; missing?: string[] } | null>(null);
   const targetQuery = selectedTarget ? `?target_id=${encodeURIComponent(selectedTarget)}` : "";
   const loadSugg = useCallback(() => {
@@ -207,9 +208,8 @@ export function WaccPanel({ projectId }: { projectId: string }) {
       .catch(() => setTargets([]));
   }, [projectId]);
   const applyRef = useCallback((key: string, e: Sugg) => {
-    // ECOS reference values are percent numbers (3.788 = 3.788%); the session
-    // inputs take ratios (0.03788) — convert on apply.
-    const ratio = e.value !== null ? e.value / 100 : null;
+    // ECOS percent points (risk_free, credit_spread) become ratios; observed_de is already a multiple.
+    const ratio = suggestionToInputValue(key, e.value);
     const cited = { value: ratio !== null ? String(ratio) : "", source: e.source_label ?? "", url: e.anchor_ref ?? "", asOf: e.as_of ?? "" };
     if (key === "risk_free") setRf(cited);
     if (key === "credit_spread") setKdSpread(cited);
@@ -546,6 +546,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                     <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
                       {x.key === "risk_free" ? "Rf (국고채 3년)" : x.key === "credit_spread" ? "가산금리 (AA− − 국고채)" : "관측 D/E"} · {x.as_of}
                     </div>
+                    {x.note ? <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] max-w-[22rem]">{x.note}</div> : null}
                   </div>
                 ))}
               </div>
