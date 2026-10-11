@@ -2707,6 +2707,13 @@ paths:
       summary: List synergy analyses.
       tags:
         - Analysis
+      parameters:
+        - name: opportunityId
+          in: query
+          required: false
+          description: Only analyses linked to this opportunity. Unknown id returns an empty list.
+          schema:
+            type: string
       responses:
         '200':
           $ref: '#/components/responses/Ok'

@@ -14,6 +14,12 @@ export async function GET(request: Request) {
   const denied = requireBusinessActor(auth.auth, "read");
   if (denied) return denied;
   const db = getDb();
+  // Optional additive filter. Unknown / malformed ids yield an empty list, never an error.
+  const rawOpp = new URL(request.url).searchParams.get("opportunityId");
+  const oppFilter = rawOpp === null ? null : rawOpp.trim();
+  if (oppFilter !== null && !/^[A-Za-z0-9_-]{1,64}$/.test(oppFilter)) {
+    return ok({ analyses: [] }, 200, { count: 0 });
+  }
   const analyses = db
     .query(
       `SELECT sa.id, sa.status, sa.current_step, sa.created_at, sa.completed_at,
@@ -29,9 +35,10 @@ export async function GET(request: Request) {
        LEFT JOIN company_group g ON g.id = sa.group_id
        WHERE sa.deleted_at IS NULL
          AND (sa.opportunity_id IS NULL OR o.deleted_at IS NULL)
+         ${oppFilter !== null ? "AND sa.opportunity_id = ?" : ""}
        ORDER BY sa.created_at DESC`,
     )
-    .all();
+    .all(...(oppFilter !== null ? [oppFilter] : []));
   return ok({ analyses }, 200, { count: analyses.length });
 }
 

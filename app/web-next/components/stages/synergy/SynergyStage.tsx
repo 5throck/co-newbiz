@@ -17,7 +17,7 @@ import { SynergyListSection } from "./SynergyListSection.tsx";
 import { NewSynergyForm } from "./NewSynergyForm.tsx";
 import { SynergyResult } from "./SynergyResult.tsx";
 
-export function SynergyStage(props0: { opportunityId?: string; analysisId?: string; embedded?: boolean }) {
+export function SynergyStage(props0: { opportunityId?: string; analysisId?: string; embedded?: boolean; noSourceOpportunity?: boolean }) {
   const h0 = useSynergyList(props0);
   const ctx = { ...h0 };
   const { confirmDialog, error, opportunityId, selected, detail, tab, setTab, backToList, rerun, refreshDetail, canCurate, showNewForm, setShowNewForm, targetSel, creating, createAnalysis } = ctx;

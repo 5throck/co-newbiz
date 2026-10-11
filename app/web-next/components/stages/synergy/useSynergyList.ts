@@ -10,7 +10,7 @@ import { api } from "../../../lib/api.ts";
 import type { SynergyAnalysis } from "./types.ts";
 import type { TabKey } from "./synergyFormat.ts";
 
-export function useSynergyList({ opportunityId, analysisId, embedded }: { opportunityId?: string; analysisId?: string; embedded?: boolean }) {
+export function useSynergyList({ opportunityId, analysisId, embedded, noSourceOpportunity }: { opportunityId?: string; analysisId?: string; embedded?: boolean; noSourceOpportunity?: boolean }) {
 
   const { me } = useAuth();
   const canCurate = canWriteBusiness(me?.role);
@@ -31,17 +31,29 @@ export function useSynergyList({ opportunityId, analysisId, embedded }: { opport
   const [creating, setCreating] = useState(false);
   const { confirm, confirmDialog } = useConfirm();
   const [tab, setTab] = useState<TabKey>("overview");
+  // S3 deal scope (design 2026-10-11): inside a deal the list defaults to this deal's analyses.
+  const dealScoped = !!embedded && (!!opportunityId || !!noSourceOpportunity);
+  const [scope, setScope] = useState<"deal" | "all">("deal");
+  const listUrl = dealScoped && scope === "deal"
+    ? `/api/synergy/analyses?opportunityId=${encodeURIComponent(opportunityId!)}`
+    : "/api/synergy/analyses";
 
   const urlSync = !analysisId && !embedded;
   const [localSelectedId, setLocalSelectedId] = useState<string | null>(analysisId ?? null);
   const selectedId = urlSync ? searchParams.get("company") : localSelectedId;
 
+  const changeScope = useCallback((next: "deal" | "all") => {
+    if (next !== scope) { setAnalyses(null); setScope(next); }
+  }, [scope]);
+
   const refresh = useCallback(() => {
     loadTargets(); // 대상(그룹/계열사 프로파일) 목록 갱신 — ADR-0090
-    return api.get<{ analyses: SynergyAnalysis[] }>("/api/synergy/analyses")
+    // Project deal without a source opportunity: nothing can be linked, skip the fetch.
+    if (dealScoped && scope === "deal" && !opportunityId) { setAnalyses([]); setError(null); return Promise.resolve(); }
+    return api.get<{ analyses: SynergyAnalysis[] }>(listUrl)
       .then((r) => { setAnalyses(r.data.analyses); setError(null); })
       .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
-  }, []);
+  }, [listUrl, dealScoped, scope, opportunityId]);
 
   useEffect(() => { void refresh(); }, [refresh]);
 
@@ -147,7 +159,7 @@ export function useSynergyList({ opportunityId, analysisId, embedded }: { opport
         groupId: targetSel.kind === "group" ? targetSel.id : undefined,
         opportunityId: oppSel || undefined,
       });
-      const list = await api.get<{ analyses: SynergyAnalysis[] }>("/api/synergy/analyses");
+      const list = await api.get<{ analyses: SynergyAnalysis[] }>(listUrl);
       setAnalyses(list.data.analyses);
       setShowNewForm(false);
       const created = list.data.analyses.find((x) => x.id === res.data.analysis_id);
@@ -204,7 +216,7 @@ export function useSynergyList({ opportunityId, analysisId, embedded }: { opport
       setError(err instanceof Error ? err.message : "재분석 시작 실패");
     }
   }
-  return { confirmDialog, error, opportunityId, selected, detail, tab, setTab, backToList, rerun, refreshDetail, analyses, canCurate, setShowNewForm, showNewForm, selectedId, openDetail, removeAnalysis, hasInProgress, targets, targetSel, setTargetSel, oppSel, setOppSel, opps, creating, createAnalysis };
+  return { dealScoped, scope, setScope: changeScope, confirmDialog, error, opportunityId, selected, detail, tab, setTab, backToList, rerun, refreshDetail, analyses, canCurate, setShowNewForm, showNewForm, selectedId, openDetail, removeAnalysis, hasInProgress, targets, targetSel, setTargetSel, oppSel, setOppSel, opps, creating, createAnalysis };
 }
 
 export type SynergyStageState = ReturnType<typeof useSynergyList>;

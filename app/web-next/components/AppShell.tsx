@@ -359,8 +359,12 @@ function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar, inboxCount = 0 }
           <nav className="sidebar-nav" aria-label={idx === 0 ? "Primary" : section.label}>
             {section.items.map((item) => {
               // The deal board owns its family of deal-less flat routes (R2-A item 2).
-              const active = pathname === item.href || pathname.startsWith(item.href + "/")
-                || (item.href === "/deals" && isDealFlowFlatRoute(pathname));
+              // Inside a deal the contextual "current review/deal overview" item is the
+              // active one; the board item must not light up as well.
+              const active = (item.href === "/deals" && dealId)
+                ? false
+                : pathname === item.href || pathname.startsWith(item.href + "/")
+                  || (item.href === "/deals" && isDealFlowFlatRoute(pathname));
               return (
                 <Link
                   key={item.href}
@@ -383,7 +387,7 @@ function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar, inboxCount = 0 }
             {idx === 0 && dealOverviewHref && (
               <Link
                 href={dealOverviewHref}
-                className={`side-nav-link ${pathname === dealOverviewHref ? "side-nav-link-active" : ""}`}
+                className={`side-nav-link ${dealId ? "side-nav-link-active" : ""}`}
                 aria-current={pathname === dealOverviewHref ? "page" : undefined}
               >
                 <FolderKanban size={18} />
