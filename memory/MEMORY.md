@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-10-12](2026-10-12.md) | chore: workspace sync |
 | [2026-10-11](2026-10-11.md) | chore: update |
 | [2026-10-10](2026-10-10.md) | fix(s8): consume per-target WACC in brownfield business-case valuation (ADR-0156 amendment 2) |
 | [2026-10-09](2026-10-09.md) | fix(web-next): guard incomplete sizing matrix and register graft surfaces |
