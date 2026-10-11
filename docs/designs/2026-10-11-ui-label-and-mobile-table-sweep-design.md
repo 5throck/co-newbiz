@@ -192,3 +192,11 @@ horizontal scroll). Screenshots go in the PR.
 |---|---|---|
 | 1 | backend-engineer | `lib/labels.ts` new maps and helpers, move PortfolioStage/localizeMessage/intent maps in, `RawKey` data contract, `labels.test.ts` incl. glossary source-reading test |
 | 2 | frontend-engineer | wire all section 1.2 sites, `RawKey` disclosure component, /agents and /our-company shell, styles.css table tokens and StageList layout, admin notice, /settings redirect, company h1, project not-found state, source-reading tests, preview verification at 2+ breakpoints |
+
+## 10. Q1-Q7 resolution amendment (2026-10-11, human-approved)
+
+- Q1 `partnership` now renders as the Korean for "strategic partnership" (approved; marker removed). `existing_business_rbd` keeps its existing Korean label unchanged (confirmed, no registration needed).
+- Q2, Q4, Q5 interim wordings confirmed as-is; markers may stay until the optional registrations land. No blocker.
+- Q3 (`corp_code`) and the tranche / decision-mode glossary entries: DEFERRED to the next glossary cycle. No glossary YAML added now.
+- Q6: RAG_DIMENSION_LABEL aligned verbatim to the glossary/technical.yaml "RAG Dimension" definition names (all six, in Korean, as defined there; marker removed).
+- Q7: the unclassified placeholder keeps its current Korean wording (confirmed).
