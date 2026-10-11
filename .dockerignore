@@ -12,6 +12,13 @@ db/dev.db
 !procedures/**
 !process/**
 !docs/**
+!mcp/**
+!packages/**
+!glossary/**
+!config/**
+packages/**/tests/**
+packages/**/node_modules/**
+mcp/**/node_modules/**
 !docker/entrypoint.sh
 !app/web-next/**
 app/web-next/node_modules/**
