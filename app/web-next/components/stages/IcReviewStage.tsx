@@ -4,7 +4,7 @@
 // /deals/[id]/s11 탭이 동일 컴포넌트를 소비한다). StageTabs·StageFrame이
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 
-import { DECISION_LABEL, GATE_LABEL } from "../../lib/labels.ts";
+import { DECISION_LABEL, FINDING_CATEGORY_LABEL, GATE_LABEL, ragDimensionsLabel } from "../../lib/labels.ts";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
@@ -263,7 +263,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
             <ul className="sizing-note-list mt-1">
               {pkg!.dd.findings.map((f) => (
                 <li key={f.id}>
-                  <strong>{f.category}</strong>: {f.description}
+                  <strong>{FINDING_CATEGORY_LABEL[f.category] ?? f.category}</strong>: {f.description}
                   {f.value_impact != null && <span className="ml-1 tabular-nums">(가치 영향 {f.value_impact})</span>}
                 </li>
               ))}
@@ -303,7 +303,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
               )}
               <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
                 {pkg?.rag.missing_dimensions?.length
-                  ? `종합 등급을 낼 수 없습니다 — 미평가 차원: ${pkg.rag.missing_dimensions.join(", ")}. 여섯 차원이 모두 평가되어야 종합 등급이 산정됩니다 (빨강 신호는 예외로 즉시 표시).`
+                  ? `종합 등급을 낼 수 없습니다 — 미평가 차원: ${ragDimensionsLabel(pkg.rag.missing_dimensions)}. 여섯 차원이 모두 평가되어야 종합 등급이 산정됩니다 (빨강 신호는 예외로 즉시 표시).`
                   : "RAG 평가 기록이 없습니다 — 입력이 채워지면 자동 제안됩니다."}
               </span>
             </p>
@@ -337,7 +337,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
             담당자는 단계를 기록한 사람입니다. 완료 처리는 증적(URL 또는 설명)과 함께 사람이 기록하며, 에이전트는 대신 완료할 수 없습니다.
             {!estApplies && " 이 프로젝트는 내부 추진·합작이 아니어서 설립 실행이 적용되지 않습니다."}
           </p>
-          <div className="table-scroll">
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
           <table className="data-table" aria-label="설립 실행 단계 현황">
             <caption className="sr-only">설립 실행 5단계 진행 현황</caption>
             <thead>

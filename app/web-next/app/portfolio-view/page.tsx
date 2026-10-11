@@ -58,7 +58,7 @@ function PortfolioView() {
         {opps === null || projs === null ? <PageState state="loading" /> : dup.length === 0 ? (
           <PageState state="empty" emptyText="중복 노출 후보가 없습니다." />
         ) : (
-          <div className="table-scroll">
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
             <table className="data-table" aria-label="중복 감지">
               <caption className="sr-only">시장 중복 감지</caption>
               <thead><tr><th>시장 범위</th><th>노출</th><th>권고</th></tr></thead>

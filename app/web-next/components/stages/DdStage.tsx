@@ -4,7 +4,7 @@
 // /deals/[id]/s9 탭이 동일 컴포넌트를 소비한다). StageTabs·StageFrame이
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 
-import { DD_DOMAIN_LABEL } from "../../lib/labels.ts";
+import { DD_DOMAIN_LABEL, FINDING_CATEGORY_LABEL } from "../../lib/labels.ts";
 import { useCallback, useEffect, useState } from "react";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
@@ -352,7 +352,7 @@ export function DdStage({ projectId }: { projectId: string }) {
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               열린 대상별 DD 현황입니다. 합격·불합격 표시 없이 아직 확인하지 못한 항목 수를 그대로 보여주며, 선정 대상 외 행은 게이트 판정에 반영되지 않습니다.
             </p>
-            <div className="table-scroll">
+            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
               <table className="data-table" aria-label="대상별 DD 비교 근거">
                 <caption className="sr-only">열린 대상별 DD 비교 근거 — 전체 항목, 미판정, 판정 대기, 필수 미충족, 가치 영향 조사내역</caption>
                 <thead>
@@ -428,7 +428,7 @@ export function DdStage({ projectId }: { projectId: string }) {
               {!canAct && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">판정 기록은 analyst 역할 이상만 할 수 있어 기록 버튼이 보이지 않습니다.</span>}
               {busy && <span role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">기록 중입니다 - 완료될 때까지 판정 버튼이 잠깁니다.</span>}
             </div>
-            <div className="table-scroll">
+            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
             <table className="data-table dd-table" aria-label={`${domain.title} 체크리스트`}>
               <caption className="sr-only">{domain.title} 체크리스트 판정</caption>
               <thead>
@@ -551,7 +551,7 @@ export function DdStage({ projectId }: { projectId: string }) {
               <ul className="sizing-note-list">
                 {(data?.findings ?? []).map((f) => (
                   <li key={f.id}>
-                    <strong>{f.category}</strong>: {f.description}
+                    <strong>{FINDING_CATEGORY_LABEL[f.category] ?? f.category}</strong>: {f.description}
                     {f.value_impact != null && <span className="ml-1 tabular-nums">(가치 영향 {f.value_impact})</span>}
                     {f.evidence_ref && <span className="ml-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title="증적 참조">증적: {f.evidence_ref}</span>}
                   </li>

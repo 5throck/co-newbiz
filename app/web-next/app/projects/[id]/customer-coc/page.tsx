@@ -57,7 +57,7 @@ function CocView() {
         {rows === null ? <PageState state="loading" /> : rows.length === 0 ? (
           <PageState state="empty" emptyText="등록된 계약이 없습니다." />
         ) : (
-          <div className="table-scroll">
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
             <table className="data-table" aria-label="계약 CoC">
               <caption className="sr-only">계약 CoC</caption>
               <thead><tr><th>상대</th><th>방향</th><th>CoC 조항</th><th className="col-num">집중도</th><th className="col-num">추정 이탈</th></tr></thead>

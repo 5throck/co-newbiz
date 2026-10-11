@@ -87,7 +87,7 @@ export function ProfileIndustryTab({ ctx, profile }: { ctx: OurCompanyStageState
                   산업 노출 항목을 S1 시장분석 매트릭스와 연결합니다 — 완료된 시장분석이 있으면 앵커·CAGR·외부 전망 격차가 실측 연결됩니다.
                 </p>
                 {profile.industryLinkage && profile.industryLinkage.length > 0 ? (
-                  <div className="table-scroll">
+                  <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
                     <table className="data-table report-table" aria-label="산업 노출 × S1 매트릭스 연계">
                       <caption className="sr-only">산업 노출 × S1 매트릭스 연계</caption>
                       <thead>

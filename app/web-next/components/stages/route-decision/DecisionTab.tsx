@@ -153,7 +153,7 @@ export function DecisionTab({ ctx, selected }: { ctx: RouteDecisionStageState; s
                   ) : filtered.length === 0 ? (
                     <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">선택한 기간에 기록된 결정이 없습니다.</p>
                   ) : (
-                    <div className="table-scroll">
+                    <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
                       <table className="data-table report-table" aria-label="진출방식 결정 이력">
                         <caption className="sr-only">진출방식 결정 이력</caption>
                         <thead>

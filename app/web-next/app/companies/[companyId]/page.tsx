@@ -12,6 +12,7 @@ import { api, ApiError } from "../../../lib/api.ts";
 import { formatAsOfLabel, formatWaccValue, mapSyncError, syncSuccessMessage } from "../../../lib/company-page-format.ts";
 import { useAuth } from "../../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../../lib/project-write-access.ts";
+import { DART_CORP_CODE_LABEL } from "../../../lib/labels.ts";
 
 interface SummaryCard { key: string; label: string; value: number | null; format: "percent" | "ratio"; trend: "up" | "down" | "flat" | null; trendText: string | null; say: string }
 interface Callout { tone: "warn" | "good" | "info"; text: string }
@@ -78,8 +79,12 @@ export default function CompanyFinancialsPage() {
     <main className="market-page">
       <h1 className="text-[1.35rem] font-extrabold tracking-tight mt-6">
         회사 재무성과 분석 — {view?.company.name_ko ?? "…"}
-        {view?.company.dart_corp_code && <span className="font-mono text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] font-normal ml-2">dart corp code {view.company.dart_corp_code}</span>}
       </h1>
+      {view?.company.dart_corp_code && (
+        <p className="font-mono text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] -mt-2 mb-3">
+          {DART_CORP_CODE_LABEL} <span lang="en">{view.company.dart_corp_code}</span>
+        </p>
+      )}
       <p className="text-[color:var(--muted-fg)] text-[0.9rem] mb-3">인수 대상 · 분석 기준 회사의 과거 실적과 재무 건전성을 한 화면에서 확인합니다. 프로젝트 재무분석 탭은 이 화면의 요약에 연결됩니다.</p>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {error}</p>}

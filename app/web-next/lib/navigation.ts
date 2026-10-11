@@ -91,6 +91,7 @@ export const NON_MENU_ROUTES: string[] = [
   "/login",
   "/register",
   "/password-change",
+  "/settings", // redirect-only index → /settings/connected-apps (2026-10-11 sweep)
   "/oauth/authorize", // ADR-0154: OAuth consent for MCP connectors
   "/proposals/[id]/confirm", // ADR-0154: human confirmation of an agent's decision proposal (deep link)
   "/agents",

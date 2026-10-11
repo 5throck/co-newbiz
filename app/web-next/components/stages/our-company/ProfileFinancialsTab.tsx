@@ -36,7 +36,7 @@ export function ProfileFinancialsTab({ ctx, profile }: { ctx: OurCompanyStageSta
                         <EChartsCore option={chartOption} style={{ height: 300 }} />
                         <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">단위: 억원 · 출처: DART 사업보고서</p>
                       </div>
-                      <div className="table-scroll">
+                      <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
                         <table className="data-table report-table" aria-label="DART 재무 요약 (계정 × 연도)">
                           <caption className="sr-only">DART 재무 요약 (계정 × 연도)</caption>
                           <thead>
@@ -84,7 +84,7 @@ export function ProfileFinancialsTab({ ctx, profile }: { ctx: OurCompanyStageSta
                           style={{ height: 280 }}
                         />
                       </div>
-                      <div className="table-scroll">
+                      <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
                         <table className="data-table report-table mt-3 min-w-[40rem]" aria-label="재무 비율 (연도별)">
                           <caption className="sr-only">재무 비율 (연도별)</caption>
                           <thead>

@@ -10,6 +10,8 @@ import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { PageHeader } from "../../../../components/layout.tsx";
 import { api } from "../../../../lib/api.ts";
+import { DECISION_LABEL, GATE_LABEL, RECORD_KEY_LABEL, STAGE_STATUS_LABEL, labelText, resolveLabel, trackLabel, trackLabelParts } from "../../../../lib/labels.ts";
+import { RawKey } from "../../../../components/RawKey.tsx";
 
 interface StageView {
   id: string;
@@ -39,14 +41,7 @@ interface ProcessView {
   } | null;
 }
 
-const STATUS_LABEL: Record<StageView["status"], string> = {
-  complete: "완료",
-  current: "진행",
-  blocked: "차단",
-  locked: "대기",
-  skipped: "미적용",
-  terminated: "종료",
-};
+const STATUS_LABEL = STAGE_STATUS_LABEL as Record<StageView["status"], string>;
 const STATUS_CLASS: Record<StageView["status"], string> = {
   complete: "status-green",
   current: "status-in-progress",
@@ -75,26 +70,35 @@ function StageList({ stages, gateStatus }: { stages: StageView[]; gateStatus: Re
   return (
     <ol className="mt-2 space-y-1">
       {stages.map((s) => (
-        <li key={s.id} className="flex items-start gap-2 text-[0.88rem]">
-          <span className={`status-chip ${STATUS_CLASS[s.status]} w-[5.2rem] justify-center`}>{STATUS_LABEL[s.status]}</span>
+        <li key={s.id} className="flex flex-wrap items-start gap-2 text-[0.88rem]">
+          <span className={`status-chip ${STATUS_CLASS[s.status]} whitespace-nowrap justify-center`}>{STATUS_LABEL[s.status]}</span>
           <span className="w-8 font-semibold tabular-nums">{s.id}</span>
-          <span className="flex-1">
+          <span className="flex-1 min-w-0">
             {s.name}
             {s.status === "current" && s.requiredArtifacts.length > 0 && (
-              <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">필요: {s.requiredArtifacts.join(", ")}</span>
+              <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                필요: {s.requiredArtifacts.map((k) => labelText(RECORD_KEY_LABEL, k)).join(", ")}
+                {s.requiredArtifacts.some((k) => resolveLabel(RECORD_KEY_LABEL, k).isFallback) && (
+                  <RawKey parts={s.requiredArtifacts.map((k) => resolveLabel(RECORD_KEY_LABEL, k))} />
+                )}
+              </span>
             )}
           </span>
           {s.gateIds && s.gateIds.length > 0 && (
-            <span className="flex gap-1">
-              {s.gateIds.map((g: string) => (
-                <span
-                  key={g}
-                  className={`status-chip ${gateStatus[g] === "go" ? "status-green" : gateStatus[g] === "hold" ? "status-in-progress" : gateStatus[g] === "kill" ? "status-red" : "status-not-started"}`}
-                  title={`${g}: ${gateStatus[g] ?? "미기록"}`}
-                >
-                  {g}
-                </span>
-              ))}
+            <span className="flex flex-wrap gap-1 basis-full sm:basis-auto">
+              {s.gateIds.map((g: string) => {
+                const decision = gateStatus[g];
+                return (
+                  <span
+                    key={g}
+                    className={`status-chip whitespace-nowrap ${decision === "go" ? "status-green" : decision === "hold" ? "status-in-progress" : decision === "kill" ? "status-red" : "status-not-started"}`}
+                    title={`${GATE_LABEL[g] ?? g}: ${decision ? labelText(DECISION_LABEL, decision) : "미기록"}`}
+                  >
+                    게이트 {GATE_LABEL[g] ?? g}
+                    {decision ? ` · ${labelText(DECISION_LABEL, decision)}` : ""}
+                  </span>
+                );
+              })}
             </span>
           )}
         </li>
@@ -129,6 +133,11 @@ export default function ProjectProcessPage() {
     ...s,
     gateIds: GATES_BY_STAGE[s.id] ?? [],
   }));
+  const stageNameOf = (id: string | null): string => {
+    if (!id) return "—";
+    const hit = [...data.stages, ...(data.opportunity?.stages ?? [])].find((x) => x.id === id);
+    return hit ? `${hit.id} ${hit.name}` : id;
+  };
 
   return (
     <main className="p-6 space-y-4">
@@ -137,8 +146,9 @@ export default function ProjectProcessPage() {
         <PageHeader title={`프로세스 현황 — ${data.project.project_no ?? data.project.id}`} />
         {data.track && (
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-            트랙: {data.track}{data.subTrack ? ` / ${data.subTrack}` : ""} · 현재 {data.currentStage ?? "—"} · 다음 {data.nextStage ?? "—"}
+            트랙: {trackLabel(data.track, data.subTrack)} · 현재 {stageNameOf(data.currentStage)} · 다음 {stageNameOf(data.nextStage)}
             {data.terminated && " · KILL로 종료됨"}
+            <RawKey parts={trackLabelParts(data.track, data.subTrack)} />
           </p>
         )}
       </header>

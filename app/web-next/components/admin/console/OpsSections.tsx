@@ -190,7 +190,7 @@ export function NotificationsPanel({ ctx }: { ctx: AdminConsoleState }) {
         ) : notifications.length === 0 ? (
           <p className="text-[color:var(--muted-fg)] italic">수신된 알림이 없습니다.</p>
         ) : (
-          <div className="table-scroll">
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
 <table className="data-table report-table">
             <caption className="sr-only">알림 목록 (사용자 수신 기준)</caption>
             <thead>

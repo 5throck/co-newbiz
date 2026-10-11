@@ -95,7 +95,7 @@ function DebtView() {
         {rows === null ? <PageState state="loading" /> : rows.length === 0 ? (
           <PageState state="empty" emptyText="등록된 차입이 없습니다." />
         ) : (
-          <div className="table-scroll">
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
             <table className="data-table" aria-label="차입">
               <caption className="sr-only">차입</caption>
               <thead><tr><th>대출기관</th><th className="col-num">원금</th><th>금리</th><th>만기</th><th>커버넌트</th><th>담보·선위</th></tr></thead>
@@ -122,7 +122,7 @@ function DebtView() {
           <label className="text-[length:var(--fs-caption)] flex items-center gap-1" style={{ marginBottom: 4 }}><input type="checkbox" checked={stress} onChange={(e) => setStress(e.target.checked)} /> 금리 +2%p 스트레스</label>
         </div>
         {rows && rows.length > 0 && scenarioCf && Number(scenarioCf) > 0 ? (
-          <div className="table-scroll">
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
             <table className="data-table" aria-label="커버넌트 시나리오">
               <caption className="sr-only">커버넌트 시나리오 계산</caption>
               <thead><tr><th>차입</th><th className="col-num">연간 상환액</th><th className="col-num">DSCR</th><th>임계값</th><th>판정</th></tr></thead>

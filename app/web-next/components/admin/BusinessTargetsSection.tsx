@@ -301,7 +301,7 @@ export function BusinessTargetsSection() {
             ) : targets.length === 0 ? (
               <p className="text-[color:var(--muted-fg)] italic">등록된 사업목표 기준이 없습니다.</p>
             ) : (
-              <div className="table-scroll">
+              <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
                 <table className="data-table list-table" aria-label="사업목표 기준 목록">
                   <thead>
                     <tr>

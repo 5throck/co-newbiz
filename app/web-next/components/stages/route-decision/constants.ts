@@ -1,18 +1,7 @@
 // Split from components/stages/RouteDecisionStage.tsx (Wave U-3 decomposition); behavior unchanged.
 
-export const GF_SUB: Record<string, string> = {
-  existing_business_rbd: "기존 사업 R&BD 확장",
-  intra_venture: "사내벤처(CVC)",
-};
-export const BF_SUB: Record<string, string> = {
-  m_and_a: "M&A",
-  jv: "JV(합작)",
-  strategic_investment: "전략적 투자",
-  minority_investment: "소수지분 투자",
-  partnership: "파트너십",
-  rbd: "R&BD(공동연구)",
-  corporate_venture: "사내벤처(CVC)",
-};
+// GF_SUB / BF_SUB live in lib/labels.ts (single label map); re-exported so existing imports keep working.
+export { GF_SUB, BF_SUB } from "../../../lib/labels.ts";
 // Stage 2 채점 기준 (각 20% × 1–3점)
 export const CRITERIA: Array<{ key: string; label: string; hint: string }> = [
   { key: "control_need", label: "통제 필요도", hint: "1=성과만 공유돼도 충분 ~ 3=운영 통제 없으면 위험" },

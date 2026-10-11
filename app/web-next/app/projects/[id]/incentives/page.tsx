@@ -56,7 +56,7 @@ function IncentivesView() {
         {rows === null ? <PageState state="loading" /> : rows.length === 0 ? (
           <PageState state="empty" emptyText="등록된 인센티브가 없습니다." />
         ) : (
-          <div className="table-scroll">
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
             <table className="data-table" aria-label="인센티브">
               <caption className="sr-only">인센티브</caption>
               <thead><tr><th>프로그램</th><th>부여기관</th><th>방향</th><th className="col-num">NPV</th><th>클로백 조건</th></tr></thead>

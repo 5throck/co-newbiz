@@ -50,7 +50,7 @@ const MODULES = [
   },
   {
     name: "용어집·거버넌스 레지스트리",
-    desc: "why_it_matters_ko 기반 용어 통치, 해석 Q&A 레지스트리, ADR 인덱스. 조직 지식 자산화.",
+    desc: "왜 중요한가(why-it-matters) 설명 기반 용어 통치, 해석 Q&A 레지스트리, ADR 인덱스. 조직 지식 자산화.",
     market: "Low-Medium",
     license: "내부 자산 (외부 비매각)",
     pricingNote: "플랫폼 로열티에 내재, 별도 판매 지양",

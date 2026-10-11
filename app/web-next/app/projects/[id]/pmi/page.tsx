@@ -106,7 +106,7 @@ export default function PmiPage() {
 
       <section className="market-section mb-3" aria-label="핵심인력">
         <h2 className="text-[0.92rem] font-semibold mb-2">핵심인력 잔존 ({talents?.length ?? 0}명)</h2>
-        <div className="table-scroll">
+        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
           <table className="data-table">
             <caption className="sr-only">PMI 핵심인력 목록</caption>
             <thead>
@@ -156,7 +156,7 @@ export default function PmiPage() {
 
       <section className="market-section" aria-label="시너지 인증">
         <h2 className="text-[0.92rem] font-semibold mb-2">시너지 인증 ({certs?.length ?? 0}건)</h2>
-        <div className="table-scroll">
+        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
           <table className="data-table">
             <caption className="sr-only">PMI 시너지 인증 목록</caption>
             <thead>

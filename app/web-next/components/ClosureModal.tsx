@@ -7,7 +7,7 @@
 // never "approve", and the server rejects agent identities. Unmet
 // preconditions keep submit disabled with the reason stated in text, and link
 // to the place where the missing record is created.
-import { CLOSURE_RECORD_LABEL, CLOSURE_TYPE_LABEL, closureRecordLabel, localizeMessage } from "../lib/labels.ts";
+import { CLOSURE_RECORD_LABEL, CLOSURE_TYPE_LABEL, TRANSITION_DECISION_LABEL, closureRecordLabel, localizeMessage } from "../lib/labels.ts";
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
@@ -45,12 +45,12 @@ const TYPE_LABEL: Record<ClosureType, { name: string; hint: string }> = {
   },
   graduated_to_core: {
     name: CLOSURE_TYPE_LABEL.graduated_to_core,
-    hint: "S12 전환 결정 graduate_to_core와 인계 기록(core_handoff)이 있어야 합니다.",
+    hint: `S12 전환 결정 '${TRANSITION_DECISION_LABEL.graduate_to_core}'와 인계 기록이 있어야 합니다.`,
   },
-  divested: { name: CLOSURE_TYPE_LABEL.divested, hint: "S12 전환 결정 reduce_or_divest와 처분 계획(divest_plan)이 있어야 합니다." },
+  divested: { name: CLOSURE_TYPE_LABEL.divested, hint: `S12 전환 결정 '${TRANSITION_DECISION_LABEL.reduce_or_divest}'와 처분 계획이 있어야 합니다.` },
   killed_with_learning: {
     name: CLOSURE_TYPE_LABEL.killed_with_learning,
-    hint: "S12 전환 결정 kill_with_learning_captured와 학습 포착 기록이 있어야 합니다.",
+    hint: `S12 전환 결정 '${TRANSITION_DECISION_LABEL.kill_with_learning_captured}'와 학습 포착 기록이 있어야 합니다.`,
   },
   dropped: {
     name: CLOSURE_TYPE_LABEL.dropped,

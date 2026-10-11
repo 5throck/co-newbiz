@@ -16,6 +16,7 @@ import { useAuth } from "../../lib/auth-client.tsx";
 import { StageFrame } from "../StageFrame.tsx";
 import { PrimaryAction, useToast } from "../ui.tsx";
 import { TabNav } from "../TabNav.tsx";
+import { RECORD_KEY_LABEL } from "../../lib/labels.ts";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 
@@ -177,7 +178,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
   function completeFourAxis(h: HypothesisRow) {
     const ref = (artifactRef[h.id] ?? "").trim();
     if (!ref) {
-      setError("4축 검토 완료에는 deal_structure_review 아티팩트 참조가 필수입니다.");
+      setError(`4축 검토 완료에는 ${RECORD_KEY_LABEL.deal_structure_review} 아티팩트 참조가 필수입니다.`);
       return;
     }
     confirm("4축 검토 완료 처리", () => { void post({ action: "complete_four_axis", hypothesis_id: h.id, artifact_ref: ref }); },
@@ -323,7 +324,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                   <input
                     className="sizing-new-input text-[length:var(--fs-caption)]"
                     style={{ minWidth: "18rem" }}
-                    placeholder="deal_structure_review 아티팩트 참조 (필수)"
+                    placeholder={`${RECORD_KEY_LABEL.deal_structure_review} 아티팩트 참조 (필수)`}
                     value={artifactRef[h.id] ?? ""}
                     onChange={(e) => setArtifactRef({ ...artifactRef, [h.id]: e.target.value })}
                     aria-label="아티팩트 참조"

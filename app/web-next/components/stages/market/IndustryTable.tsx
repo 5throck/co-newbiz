@@ -14,7 +14,7 @@ export function IndustryTable({ ctx }: { ctx: MarketAnalysisStageState }) {
         ) : visibleIndustries.length === 0 ? (
           <p className="text-[color:var(--muted-fg)] italic">검색·필터 조건에 맞는 산업이 없습니다.</p>
         ) : (
-          <div className="table-scroll">
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
           <table className="data-table list-table market-list-table" aria-label="분석 대상 산업 목록">
             <caption className="sr-only">분석 대상 산업 목록</caption>
             <thead>

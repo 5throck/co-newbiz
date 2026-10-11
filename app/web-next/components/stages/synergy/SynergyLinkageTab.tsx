@@ -15,7 +15,7 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
               <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                 연계 시장: {p.marketLinkage.marketSummaries.map((m) => `${m.industry} (CAGR ${m.cagrPct ?? "?"}%${m.gapPct !== null ? `, 격차 ${m.gapPct > 0 ? "+" : ""}${m.gapPct}%` : ""})`).join(" · ") || "없음"}
               </p>
-              <div className="table-scroll">
+              <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
               <table className="data-table report-table" aria-label="시너지 영역">
                 <caption className="sr-only">시너지 영역</caption>
                 <thead>
@@ -105,7 +105,7 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                       필요 역량 행이 없습니다 — 분석(재분석)을 실행하면 시너지 영역에서 자동 도출되고, 아래 입력이나 &quot;필요 역량 추가 제안&quot;으로도 추가할 수 있습니다. 비즈니스 모델 검토에 필요 역량(requiredCapabilities)이 있으면 이 섹션에서 시드됩니다.
                     </p>
                   ) : (
-                    <div className="table-scroll">
+                    <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
                       {/* 쓰기 권한이 없으면 레지스터의 셀렉트·입력란을 비활성화한다 —
                           기록값은 그대로 보인다(표시 유지, 편집만 차단). */}
                       <fieldset disabled={!canCurate} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>

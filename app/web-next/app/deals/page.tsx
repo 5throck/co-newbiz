@@ -315,7 +315,7 @@ function DealsBoard() {
             {data.currentHolds.length === 0 ? (
               <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">HOLD·KILL 진행이 없습니다.</p>
             ) : (
-              <div className="table-scroll">
+              <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
                 <table className="data-table" aria-label="진행 에이징">
                   <caption className="sr-only">진행 에이징 — 경과일 내림차순</caption>
                   <thead>

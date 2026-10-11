@@ -34,7 +34,7 @@ describe("synthetic and degenerate values", () => {
 
 describe("label map", () => {
   test("gates and decisions have Korean labels and unknown keys fall back to themselves", () => {
-    expect(GATE_LABEL.entity_ic).toContain("투자심사");
+    expect(GATE_LABEL.entity_ic).toContain("투자심의");
     expect(DECISION_LABEL.kill).toContain("중단");
     expect(closureRecordLabel("gate_decision(kill)")).not.toContain("gate_decision");
     expect(closureRecordLabel("something_new")).toBe("something_new");

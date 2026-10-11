@@ -115,7 +115,7 @@ export function ProjectArchivesView() {
         ) : archived.length === 0 ? (
           <p className="text-[color:var(--muted-fg)]">보관 중인 프로젝트가 없습니다.</p>
         ) : (
-          <div className="table-scroll">
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
             <table className="data-table" style={{ minWidth: "760px" }}>
               <caption className="sr-only">보관 프로젝트 목록</caption>
               <thead>

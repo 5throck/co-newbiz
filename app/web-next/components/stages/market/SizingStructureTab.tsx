@@ -70,7 +70,7 @@ export function SizingStructureTab({ ctx }: { ctx: SizingReportState }) {
             이 산업에 등록된 가치사슬 연계 링크가 없습니다 — 아래 승인 대기 제안에서 등록하거나, 신규 분석 산업은 드라이버 민감도가 구조 증거를 대신합니다.
           </p>
         ) : (
-          <div className="table-scroll">
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
           <table className="data-table report-table" aria-label="가치사슬 연계 링크">
             <caption className="sr-only">가치사슬 연계 링크</caption>
             <thead>
