@@ -37,9 +37,10 @@ const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { promoteOpportunity } = await import("../../db/repositories/project.repository.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
 const { evaluateProcess } = await import("../../app/web-next/lib/process-flow.ts");
-const { flagRecommendedTarget, recommendTargetsFromDb, enginesMixedAcrossTargets } = await import("../../app/web-next/lib/business-case-generator.ts");
+const { flagRecommendedTarget, recommendTargetsFromDb, enginesMixedAcrossTargets, crossCheckOfNote, XCHECK_DIVERGENCE_WARN_RATIO, ACQUISITION_EV_REVENUE_BAND } = await import("../../app/web-next/lib/business-case-generator.ts");
 
 const NOW = new Date().toISOString();
+const NOXC = { xcheckFadeNpv: null, xcheckFadeIrr: null, xcheckDivergence: null, structureMismatch: false, acqEvRevenue: null, acqEvRevenueInBand: null };
 
 function req(path: string, init?: RequestInit) {
   return nextRequest(path, init);
@@ -329,9 +330,9 @@ describe("S8 brownfield per-target generation (ADR-0143)", () => {
 
   test("flagRecommendedTarget: positive pool first, then max p05 (pure rule)", () => {
     const rows = [
-      { targetId: "t1", companyName: "A", rank: 1, baseP05: -5, baseP50: 10, irr: 0.1, caseCount: 3, engine: null, anchorMethod: null, recommended: false },
-      { targetId: "t2", companyName: "B", rank: 2, baseP05: 3, baseP50: 12, irr: 0.2, caseCount: 3, engine: null, anchorMethod: null, recommended: false },
-      { targetId: "t3", companyName: "C", rank: 3, baseP05: 1, baseP50: 30, irr: 0.3, caseCount: 3, engine: null, anchorMethod: null, recommended: false },
+      { targetId: "t1", companyName: "A", rank: 1, baseP05: -5, baseP50: 10, irr: 0.1, caseCount: 3, engine: null, anchorMethod: null, recommended: false, ...NOXC },
+      { targetId: "t2", companyName: "B", rank: 2, baseP05: 3, baseP50: 12, irr: 0.2, caseCount: 3, engine: null, anchorMethod: null, recommended: false, ...NOXC },
+      { targetId: "t3", companyName: "C", rank: 3, baseP05: 1, baseP50: 30, irr: 0.3, caseCount: 3, engine: null, anchorMethod: null, recommended: false, ...NOXC },
     ];
     const flagged = flagRecommendedTarget(rows);
     expect(flagged[0].targetId).toBe("t2"); // positive pool, max p05 — not the max p50
@@ -372,7 +373,7 @@ describe("D2 engine provenance on the target comparison", () => {
   });
 
   test("a target whose own cases mix engines is 'mixed'; flagRecommendedTarget stays pure", () => {
-    const base = { rank: 1, baseP05: 1, baseP50: 2, irr: 0.1, caseCount: 1, anchorMethod: "company_revenue" as const, recommended: false };
+    const base = { rank: 1, baseP05: 1, baseP50: 2, irr: 0.1, caseCount: 1, anchorMethod: "company_revenue" as const, recommended: false, ...NOXC };
     const rows = [
       { ...base, targetId: "a", companyName: "A", engine: "mixed" as const },
       { ...base, targetId: "b", companyName: "B", engine: null },
@@ -382,5 +383,110 @@ describe("D2 engine provenance on the target comparison", () => {
     const out = flagRecommendedTarget(rows);
     expect(JSON.stringify(rows)).toBe(frozen);
     expect(out[0]).not.toBe(rows[0]);
+  });
+});
+
+describe("S8 fade-DCF cross-check and acquisition benchmark (display-only)", () => {
+  // Built exactly the way the generator builds the p50 note fragments.
+  const genNote = (npv: number, irr: number | null, ev: number) =>
+    `seed=1; revenue_anchor=company; acq_ev=${ev.toFixed(2)}x; exit_ev=${ev.toFixed(2)}x; xcheck=fade-dcf; xcheck_horizon=10; xcheck_terminal_growth=0.0300; xcheck_fade_npv=${npv.toFixed(2)}; xcheck_fade_irr=${irr != null ? irr.toFixed(4) : "null"}; engine=python-sim-engine`;
+  const row = (id: string, p05: number, p50: number, fade: number | null, ev: number | null, rank = 1) => {
+    const div = fade !== null && p50 !== 0 ? (fade - p50) / Math.abs(p50) : null;
+    return {
+      targetId: id, companyName: id, rank, baseP05: p05, baseP50: p50, irr: 0.1, caseCount: 1, engine: null, anchorMethod: null, recommended: false,
+      xcheckFadeNpv: fade, xcheckFadeIrr: null, xcheckDivergence: div, structureMismatch: false,
+      acqEvRevenue: ev, acqEvRevenueInBand: ev === null ? null : ev >= ACQUISITION_EV_REVENUE_BAND.min && ev <= ACQUISITION_EV_REVENUE_BAND.max,
+    };
+  };
+
+  test("UI-mirrored constants match the generator", async () => {
+    const src = await Bun.file("app/web-next/components/stages/BusinessCaseStage.tsx").text();
+    const warn = /const XCHECK_WARN_PCT = (\d+(?:\.\d+)?);/.exec(src);
+    const band = /const ACQ_BAND = \{ min: (\d+(?:\.\d+)?), max: (\d+(?:\.\d+)?) \}/.exec(src);
+    expect(warn).not.toBeNull();
+    expect(band).not.toBeNull();
+    expect(Number(warn![1]) / 100).toBe(XCHECK_DIVERGENCE_WARN_RATIO);
+    expect({ min: Number(band![1]), max: Number(band![2]) }).toEqual(ACQUISITION_EV_REVENUE_BAND);
+  });
+
+  test("constants", () => {
+    expect(XCHECK_DIVERGENCE_WARN_RATIO).toBe(0.5);
+    expect(ACQUISITION_EV_REVENUE_BAND).toEqual({ min: 2, max: 6 });
+  });
+
+  test("crossCheckOfNote parses the generator format, incl. irr=null", () => {
+    expect(crossCheckOfNote(genNote(1234.5, 0.1234, 3))).toEqual({ fadeNpv: 1234.5, fadeIrr: 0.1234, acqEvRevenue: 3 });
+    expect(crossCheckOfNote(genNote(-80.25, null, 2.5))).toEqual({ fadeNpv: -80.25, fadeIrr: null, acqEvRevenue: 2.5 });
+  });
+
+  test("crossCheckOfNote returns all-null for market-capture, null and garbage notes (never 0)", () => {
+    const empty = { fadeNpv: null, fadeIrr: null, acqEvRevenue: null };
+    expect(crossCheckOfNote("seed=1; capture_rate=0.05; capture_source=default; engine=x")).toEqual(empty);
+    expect(crossCheckOfNote(null)).toEqual(empty);
+    expect(crossCheckOfNote("xcheck_fade_npv=abc; xcheck_fade_irr=; acq_ev=NaNx")).toEqual(empty);
+    expect(crossCheckOfNote("xcheck_fade_npv=Infinity; acq_ev=x")).toEqual(empty);
+  });
+
+  test("divergence sign and zero p50", () => {
+    expect(row("a", 1, 1000, 1300, 3).xcheckDivergence).toBeCloseTo(0.3);
+    expect(row("a", 1, 1000, 400, 3).xcheckDivergence).toBeCloseTo(-0.6);
+    expect(row("a", 1, 0, 400, 3).xcheckDivergence).toBeNull();
+    expect(row("a", 1, -1000, -500, 3).xcheckDivergence).toBeCloseTo(0.5);
+  });
+
+  test("structureMismatch only on the starred row; ranking invariant", () => {
+    const rows = [row("best", 50, 1000, 400, 3, 2), row("other", 10, 1000, 100, 3, 1), row("clean", 5, 1000, 1300, 3, 3)];
+    const out = flagRecommendedTarget(rows);
+    expect(out.map((r) => r.targetId)).toEqual(["best", "other", "clean"]); // same order as pre-change rule
+    expect(out[0].recommended).toBe(true);
+    expect(out[0].structureMismatch).toBe(true); // -0.6
+    expect(out.slice(1).every((r) => !r.structureMismatch)).toBe(true); // other is -0.9 but not starred
+    const ok = flagRecommendedTarget([row("x", 50, 1000, 1300, 3)]);
+    expect(ok[0].structureMismatch).toBe(false);
+    const boundary = flagRecommendedTarget([row("x", 50, 1000, 500, 3)]); // exactly -0.5 -> not > threshold
+    expect(boundary[0].structureMismatch).toBe(false);
+  });
+
+  test("no cross-check: nulls, no mismatch, still recommendable", () => {
+    const out = flagRecommendedTarget([row("n", 50, 1000, null, null)]);
+    expect(out[0].recommended).toBe(true);
+    expect(out[0].xcheckFadeNpv).toBeNull();
+    expect(out[0].xcheckDivergence).toBeNull();
+    expect(out[0].structureMismatch).toBe(false);
+    expect(out[0].acqEvRevenueInBand).toBeNull();
+  });
+
+  test("band inclusive ends; out-of-band target stays recommendable", () => {
+    const inBand = (ev: number | null) => row("b", 1, 1, 1, ev).acqEvRevenueInBand;
+    expect(inBand(1.5)).toBe(false);
+    expect(inBand(2.0)).toBe(true);
+    expect(inBand(6.0)).toBe(true);
+    expect(inBand(6.5)).toBe(false);
+    expect(inBand(null)).toBeNull();
+    const out = flagRecommendedTarget([row("out", 50, 1000, 1000, 9), row("in", 10, 1000, 1000, 3)]);
+    expect(out[0].targetId).toBe("out");
+    expect(out[0].recommended).toBe(true);
+  });
+
+  test("recommendTargetsFromDb populates fields from the latest base model's p50 note only", () => {
+    const before = recommendTargetsFromDb(projectId).map((r) => ({ id: r.targetId, rank: r.rank, rec: r.recommended, p05: r.baseP05 }));
+    const modelOf = (t: string) =>
+      (db.query("SELECT m.id FROM business_case_model m WHERE m.project_id = ? AND m.target_id = ? AND m.archived_at IS NULL AND COALESCE(m.variant,'market_forward')='market_forward' AND EXISTS (SELECT 1 FROM valuation_simulation v WHERE v.model_id = m.id AND v.scenario='base') ORDER BY m.created_at DESC, m.id DESC").get(projectId, t) as { id: string }).id;
+    const mid = modelOf(targetAId);
+    const p50 = (db.query("SELECT npv_krw_m FROM valuation_simulation WHERE model_id = ? AND scenario='base' AND percentile='p50'").get(mid) as { npv_krw_m: number }).npv_krw_m;
+    // p05 note carries a decoy that must be ignored.
+    db.run("UPDATE valuation_simulation SET note = ? WHERE model_id = ? AND scenario='base' AND percentile='p05'", [genNote(999999, 0.9, 9), mid]);
+    db.run("UPDATE valuation_simulation SET note = ? WHERE model_id = ? AND scenario='base' AND percentile='p50'", [genNote(p50 * 0.4, 0.07, 6), mid]);
+    const a = recommendTargetsFromDb(projectId).find((r) => r.targetId === targetAId)!;
+    expect(a.xcheckFadeNpv).toBeCloseTo(p50 * 0.4, 1);
+    expect(a.xcheckFadeIrr).toBeCloseTo(0.07);
+    expect(a.xcheckDivergence).toBeCloseTo(-0.6, 2);
+    expect(a.acqEvRevenue).toBe(6);
+    expect(a.acqEvRevenueInBand).toBe(true);
+    const b = recommendTargetsFromDb(projectId).find((r) => r.targetId === targetBId)!;
+    expect(b.structureMismatch).toBe(false);
+    const after = recommendTargetsFromDb(projectId).map((r) => ({ id: r.targetId, rank: r.rank, rec: r.recommended, p05: r.baseP05 }));
+    expect(after).toEqual(before);
+    expect(a.structureMismatch).toBe(a.recommended && Math.abs(a.xcheckDivergence!) > 0.5);
   });
 });

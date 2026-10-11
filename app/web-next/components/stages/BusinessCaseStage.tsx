@@ -81,7 +81,17 @@ interface TargetComparisonRow {
   recommended: boolean;
   engine: "python-sim-engine" | "ts-fallback" | "mixed" | null;
   anchorMethod: "company_revenue" | "market_capture" | null;
+  xcheckFadeNpv?: number | null;
+  xcheckFadeIrr?: number | null;
+  xcheckDivergence?: number | null;
+  structureMismatch?: boolean;
+  acqEvRevenue?: number | null;
+  acqEvRevenueInBand?: boolean | null;
 }
+// Mirrors XCHECK_DIVERGENCE_WARN_RATIO / ACQUISITION_EV_REVENUE_BAND in lib/business-case-generator.ts
+// (that module imports the DB and cannot be bundled into a client component).
+const XCHECK_WARN_PCT = 50;
+const ACQ_BAND = { min: 2, max: 6 } as const;
 interface LegacyModelRow {
   id: string;
   name: string;
@@ -506,6 +516,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               <th scope="col" className="num">IRR <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">(%)</span></th>
               <th scope="col" className="num">케이스</th>
               <th scope="col">계산 엔진</th>
+              <th scope="col" title="페이드 DCF(성장률이 선형 수렴하는 대안 구조) NPV가 기본 구조 p50과 얼마나 벌어지는지 — 표시 전용이며 순위에 반영되지 않습니다.">구조 교차검증<span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">(페이드 DCF vs p50)</span></th>
+              <th scope="col" title="생성기가 진입(acq_ev)과 처분(exit_ev)에 같은 배수를 적용하므로 진입 전용 배수가 아닌 가정치입니다. 스크리닝 범위 2–6배는 가격 적정성 판단이 아닙니다. 표시 전용이며 순위에 반영되지 않습니다.">가정 EV/매출 배수 (진입=처분)</th>
               <th scope="col" title="이 대상의 케이스가 어떤 매출 기준으로 평가되었는가 — 회사 실적 앵커(DART 연매출)와 시장 포획 폴백(시장규모 × 포획률)이 섞이면 p05 순위 비교가 부적합합니다.">평가 기준</th>
               <th scope="col"></th>
             </tr>
@@ -526,6 +538,45 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                   <td className="num mono-num">{t.irr != null ? `${(t.irr * 100).toFixed(1)}%` : "—"}</td>
                   <td className="num">{t.caseCount}</td>
                   <td><span className="status-chip status-not-started">{ENGINE_LABEL[t.engine ?? ""] ?? "엔진 미기록"}</span></td>
+                  <td className="num">
+                    {t.xcheckDivergence != null ? (
+                      <>
+                        <span className="mono-num">{t.xcheckDivergence >= 0 ? "+" : "−"}{Math.abs(t.xcheckDivergence * 100).toFixed(1)}%</span>
+                        {t.xcheckFadeNpv != null && t.baseP50 != null && (
+                          <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] block">
+                            차이 {t.xcheckFadeNpv - t.baseP50 >= 0 ? "+" : "−"}{fmt(Math.abs(t.xcheckFadeNpv - t.baseP50))} (페이드 NPV {fmt(t.xcheckFadeNpv)})
+                          </span>
+                        )}
+                      </>
+                    ) : t.recommended ? (
+                      <span className="status-chip status-amber" title="이 ★ 권고 대상에는 페이드 DCF 교차검증이 기록되지 않았습니다. 기록이 없다는 것은 검증되었다는 뜻이 아닙니다.">
+                        <span aria-hidden="true">⚠</span> 교차검증 없음
+                      </span>
+                    ) : (
+                      <span aria-label="해당 없음: 교차검증 기록 없음" title="이 케이스에는 페이드 DCF 교차검증이 기록되지 않았습니다.">N/A</span>
+                    )}
+                    {t.structureMismatch && (
+                      <span className="status-chip status-amber block mt-1" role="note">
+                        <span aria-hidden="true">⚠</span> 구조 불일치 — 페이드 DCF가 기본 p50과 {XCHECK_WARN_PCT}% 넘게 벌어집니다. 성장률·처분 배수 가정을 검토하세요.
+                      </span>
+                    )}
+                  </td>
+                  <td className="num">
+                    {t.acqEvRevenue != null ? (
+                      <>
+                        <span className="mono-num">{t.acqEvRevenue.toFixed(1)}×</span>
+                        {t.acqEvRevenueInBand ? (
+                          <span className="status-chip status-not-started block mt-1" title="로봇 M&A 스크리닝 범위일 뿐 가격 적정성 판단이 아닙니다.">{ACQ_BAND.min}–{ACQ_BAND.max}× 스크리닝 범위 내 (참고)</span>
+                        ) : (
+                          <span className="status-chip status-amber block mt-1" title="로봇 M&A 스크리닝 범위일 뿐 가격 적정성 판단이 아닙니다.">
+                            <span aria-hidden="true">⚠</span> {ACQ_BAND.min}–{ACQ_BAND.max}× 범위 밖 — 확인 필요
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span aria-label="해당 없음: 인수가 기반 배수 없음" title="인수가 기반으로 평가되지 않은 케이스입니다.">N/A</span>
+                    )}
+                  </td>
                   <td>
                     {t.anchorMethod === "company_revenue" && (
                       <span className="status-chip status-green" title="대상 회사 최신 연매출(DART)을 매출 앵커로 평가 — 대상 간 비교 가능">실적 앵커 (DART)</span>
@@ -547,6 +598,10 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             })}
           </tbody>
         </table></div>
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" role="note">
+          * 구조 교차검증과 가정 EV/매출 배수 열은 표시 전용이며 순위·★ 권고안에 반영되지 않습니다. 2–6× 범위는 로봇 M&A 스크리닝 참고 범위일 뿐 가격 적정성 판단이 아닙니다. 권고는 제안일 뿐이며 대상 선정은 사람이 근거를 남겨 결정합니다.
+          {data?.methods_mixed && " 평가 기준이 대상마다 다르므로 교차검증 괴리율은 대상 간에 비교할 수 없습니다."}
+        </p>
         {data?.engines_mixed && (
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" role="note">
             * 비교된 케이스가 서로 다른 계산 엔진에서 산출되었으므로 순위는 유의하여 해석하세요.
