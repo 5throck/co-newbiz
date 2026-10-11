@@ -65,9 +65,11 @@ describe("our-company layout source", () => {
   test("tables use percentage colgroups summing to 100 and no auto column", () => {
     expect(MEMBER_COL_PCT.reduce((a, b) => a + b, 0)).toBe(100);
     expect(COMPETITOR_COL_PCT.reduce((a, b) => a + b, 0)).toBe(100);
-    expect(members).toContain("<colgroup>");
-    expect(members).toContain("MEMBER_COL_PCT.map");
-    expect(competitive).toContain("COMPETITOR_COL_PCT.map");
+    expect(members).toContain("<ColGroup");
+    expect(members).toContain("<ColGroup widths={MEMBER_COL_PCT} />");
+    expect(competitive).toContain("<ColGroup widths={COMPETITOR_COL_PCT} />");
+    expect(members).toContain("table-fixed-pct");
+    expect(competitive).toContain("table-fixed-pct");
     // header cells carry no fixed widths that would fight the colgroup
     expect(members).not.toMatch(/<th[^>]*className="w-\[/);
     expect(css).toMatch(/\.member-name-btn \{[^}]*text-overflow: ellipsis/s);

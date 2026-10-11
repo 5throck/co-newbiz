@@ -18,7 +18,7 @@ import { WaiverPanel, WaiverRequestForm } from "../WaiverPanel.tsx";
 import { koChecklistText, nonWaivableReason } from "../../lib/dd-checklist-ko.ts";
 import { ddItemDisplay, matchesFilter, type ItemFilter } from "../../lib/dd-item-display.ts";
 import { useModalFocus } from "../../lib/use-modal-focus.ts";
-import { useToast } from "../ui.tsx";
+import { ColGroup, useToast } from "../ui.tsx";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import TargetSelector, { type AnalysisTarget } from "../TargetSelector.tsx";
@@ -29,6 +29,10 @@ import TargetSelector, { type AnalysisTarget } from "../TargetSelector.tsx";
 // 하고, 제안의 승인(판정 대상 편입)과 dd 진행 기록은 사람이 한다. 출처 없는
 // 제안은 "출처 없음 (C)"로 눈에 보이게 표시된다 — 결코 출처가 있는 것처럼
 // 보이지 않는다 (ADR-0099 §6 정직성 제약).
+
+/** Column shares (%): item, required, judgement, [record actions]. Read-only viewers have no actions column. */
+const DD_COL_PCT_ACT = [44, 9, 17, 30] as const;
+const DD_COL_PCT_READONLY = [64, 12, 24] as const;
 
 interface ItemState {
   status: string;
@@ -429,14 +433,15 @@ export function DdStage({ projectId }: { projectId: string }) {
               {busy && <span role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">기록 중입니다 - 완료될 때까지 판정 버튼이 잠깁니다.</span>}
             </div>
             <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table dd-table" aria-label={`${domain.title} 체크리스트`}>
+            <table className="data-table dd-table table-fixed-pct tmin-48" aria-label={`${domain.title} 체크리스트`}>
               <caption className="sr-only">{domain.title} 체크리스트 판정</caption>
+              <ColGroup widths={canAct ? DD_COL_PCT_ACT : DD_COL_PCT_READONLY} />
               <thead>
                 <tr>
-                  <th scope="col" className="dd-col-item">항목</th>
-                  <th scope="col" className="dd-col-req">필수</th>
-                  <th scope="col" className="dd-col-judge">판정</th>
-                  {canAct && <th scope="col" className="dd-col-act">판정 기록</th>}
+                  <th scope="col">항목</th>
+                  <th scope="col">필수</th>
+                  <th scope="col">판정</th>
+                  {canAct && <th scope="col">판정 기록</th>}
                 </tr>
               </thead>
               <tbody>

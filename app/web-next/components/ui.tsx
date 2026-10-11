@@ -10,6 +10,21 @@ import Link from "next/link";
 import { useAuth } from "../lib/auth-client.tsx";
 import { VIEWER_READONLY_TEXT } from "../lib/labels.ts";
 
+/* ── ColGroup — percentage column widths for .table-fixed-pct tables ──
+   Numbers only: there is no way to express `auto`, so no single column can absorb
+   the width change. Presets live next to the screen as `X_COL_PCT = [..] as const`. */
+
+export function ColGroup({ widths }: { widths: readonly number[] }) {
+  if (process.env.NODE_ENV !== "production") {
+    if (widths.some((w) => typeof w !== "number" || !Number.isFinite(w) || w <= 0)) {
+      throw new Error("ColGroup: every column needs a positive percentage");
+    }
+    const sum = widths.reduce((a, b) => a + b, 0);
+    if (Math.abs(sum - 100) > 0.01) throw new Error(`ColGroup: widths sum to ${sum}, expected 100`);
+  }
+  return <colgroup>{widths.map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>;
+}
+
 /* ── Button — btn-primary (ONE per screen/section) / btn-ghost / btn-danger ── */
 
 export function Button({

@@ -59,7 +59,7 @@ describe("ui label sweep (design 2026-10-11)", () => {
 
   test("styles.css has the shared table-scroll data-table rule and cell tokens", () => {
     const css = read("app/styles.css");
-    expect(css).toMatch(/\.table-scroll \.data-table \{ display: table; width: max-content/);
+    expect(css).toMatch(/\.table-scroll \.data-table:not\(\.table-fixed-pct\) \{ display: table; width: max-content/);
     expect(css).toMatch(/\.cell-nowrap \{ white-space: nowrap; \}/);
     expect(css).toMatch(/\.cell-wrap \{ max-width: 28ch; \}/);
     // The old targets-table-only rules are folded in (no standalone selector block).

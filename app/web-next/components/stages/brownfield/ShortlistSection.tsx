@@ -6,7 +6,8 @@ import { normalizeVerdict, precheckRecommendation, KNOCKOUT_IDS, SCREENING_VERDI
 import { CommitteePanel } from "../../CommitteePanel.tsx";
 import { GateDecisionPanel } from "../../GateDecisionPanel.tsx";
 import { PromotionPanel } from "../../PromotionPanel.tsx";
-import { SECTION_IDS } from "./constants.ts";
+import { ColGroup } from "../../ui.tsx";
+import { SECTION_IDS, shortlistColPct } from "./constants.ts";
 import { buildEvalBriefMd } from "./evalBrief.ts";
 import type { BrownfieldStageState } from "./useBrownfieldTargets.ts";
 
@@ -63,9 +64,10 @@ export function ShortlistSection({ ctx }: { ctx: BrownfieldStageState }) {
                   제안, 2026-09-16). 후보 간 비교와 위원회 검토에 맞는 형태다.
                   셀은 판정 select 하나로 압축하고, 근거(제안 사유·출처·기확보
                   구분)는 툴팁과 표식으로 보여준다. */}
-              <div className="overflow-x-auto">
-                <table className="data-table" aria-label="사전 검토 · 위원회 추천">
+              <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+                <table className="data-table table-fixed-pct tmin-80" aria-label="사전 검토 · 위원회 추천">
                   <caption className="sr-only">Short List 후보 × chk-target-screening 항목 판정표</caption>
+                  <ColGroup widths={shortlistColPct(checklistItems.length)} />
                   <thead>
                     <tr>
                       <th rowSpan={2} scope="col">후보</th>
@@ -75,7 +77,7 @@ export function ShortlistSection({ ctx }: { ctx: BrownfieldStageState }) {
                     </tr>
                     <tr>
                       {checklistItems.map((it) => (
-                        <th key={it.id} scope="col" className="whitespace-nowrap" title={`${it.text}${it.mandatory ? " (필수)" : ""}`}>
+                        <th key={it.id} scope="col" title={`${it.text}${it.mandatory ? " (필수)" : ""}`}>
                           <code className="dd-item-id mr-1">{it.id}</code>{it.text.split(" — ")[0]}
                         </th>
                       ))}
