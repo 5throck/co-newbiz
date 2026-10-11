@@ -35,6 +35,10 @@ COPY scripts ./scripts
 COPY procedures ./procedures
 COPY process ./process
 COPY docs ./docs
+COPY mcp ./mcp
+COPY packages ./packages
+COPY glossary ./glossary
+COPY config ./config
 COPY app/web-next ./app/web-next
 # prisma.config.ts reads app/web-next/.env only when DATABASE_URL is unset —
 # provide a build-time value so `prisma generate` never needs a (gitignored,
@@ -59,6 +63,10 @@ COPY --from=build /repo/scripts ./scripts
 COPY --from=build /repo/procedures ./procedures
 COPY --from=build /repo/process ./process
 COPY --from=build /repo/docs ./docs
+COPY --from=build /repo/mcp ./mcp
+COPY --from=build /repo/packages ./packages
+COPY --from=build /repo/glossary ./glossary
+COPY --from=build /repo/config ./config
 COPY --from=build /repo/app/web-next/node_modules ./app/web-next/node_modules
 COPY --from=build /repo/app/web-next/.next ./app/web-next/.next
 COPY --from=build /repo/app/web-next/public ./app/web-next/public
