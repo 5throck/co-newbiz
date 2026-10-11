@@ -1379,6 +1379,37 @@ export function methodsMixedAcrossTargets(rows: TargetComparisonRow[]): boolean 
   return seen.size > 1;
 }
 
+/** |fade-DCF NPV − base p50| / |base p50| above which the RECOMMENDED target
+ *  carries a "structure mismatch" warning. Display-only; never re-ranks. */
+export const XCHECK_DIVERGENCE_WARN_RATIO = 0.5;
+/** Global robotics M&A EV/Revenue screening band (inclusive), same source as
+ *  ACQUISITION_EV_REVENUE_DEFAULT. */
+export const ACQUISITION_EV_REVENUE_BAND = { min: 2, max: 6 } as const;
+
+export interface CrossCheckOfNote {
+  fadeNpv: number | null;
+  fadeIrr: number | null;
+  acqEvRevenue: number | null;
+}
+
+/** Single typed reader of the `xcheck_fade_npv` / `xcheck_fade_irr` / `acq_ev`
+ *  note fragments written at generation. Missing, "null" or non-finite values
+ *  yield null (never 0). */
+export function crossCheckOfNote(note: string | null): CrossCheckOfNote {
+  const num = (re: RegExp): number | null => {
+    const m = re.exec(note ?? "");
+    if (!m) return null;
+    const raw = m[1].trim();
+    const v = Number(raw);
+    return raw !== "" && Number.isFinite(v) ? v : null;
+  };
+  return {
+    fadeNpv: num(/(?:^|;\s*)xcheck_fade_npv=([^;]*)/),
+    fadeIrr: num(/(?:^|;\s*)xcheck_fade_irr=([^;]*)/),
+    acqEvRevenue: num(/(?:^|;\s*)acq_ev=([^;x]*)x?/),
+  };
+}
+
 export interface TargetComparisonRow {
   targetId: string;
   companyName: string;
@@ -1399,6 +1430,17 @@ export interface TargetComparisonRow {
   /** RECOMMENDED flag — the same p05-survival rule as the scenario
    *  recommendation, applied across targets. A PROPOSAL only (boundary #2). */
   recommended: boolean;
+  /** Fade-DCF cross-check of the latest base model's p50 note (KRW_M). null = not recorded. */
+  xcheckFadeNpv: number | null;
+  xcheckFadeIrr: number | null;
+  /** (xcheckFadeNpv - baseP50) / |baseP50|, signed. null if either input is null or baseP50 === 0. */
+  xcheckDivergence: number | null;
+  /** True only on the RECOMMENDED row when |xcheckDivergence| > XCHECK_DIVERGENCE_WARN_RATIO.
+   *  Display-only; set after the star is chosen. */
+  structureMismatch: boolean;
+  /** Assumed entry EV/Revenue multiple (acq_ev). null = not acquisition-priced. */
+  acqEvRevenue: number | null;
+  acqEvRevenueInBand: boolean | null;
 }
 
 /**
@@ -1464,11 +1506,19 @@ export function recommendTargetsFromDb(projectId: string): TargetComparisonRow[]
   for (const r of simRows) {
     if (r.percentile === "p50" && !anchorByModel.has(r.model_id)) anchorByModel.set(r.model_id, anchorMethodOfNote(r.note));
   }
+  const xcheckByModel = new Map<string, CrossCheckOfNote>();
+  for (const r of simRows) {
+    if (r.percentile === "p50" && !xcheckByModel.has(r.model_id)) xcheckByModel.set(r.model_id, crossCheckOfNote(r.note));
+  }
 
   return flagRecommendedTarget(
     targets.map((t) => {
       const modelId = latest.get(t.id);
       const sim = modelId ? baseByModel.get(modelId) : undefined;
+      const xc = modelId ? xcheckByModel.get(modelId) : undefined;
+      const p50 = sim?.p50 ?? null;
+      const fadeNpv = xc?.fadeNpv ?? null;
+      const acq = xc?.acqEvRevenue ?? null;
       return {
         targetId: t.id,
         companyName: t.name,
@@ -1480,6 +1530,12 @@ export function recommendTargetsFromDb(projectId: string): TargetComparisonRow[]
         engine: modelId ? mergeEngines(engineByModel.get(modelId) ?? []) : null,
         anchorMethod: modelId ? anchorByModel.get(modelId) ?? null : null,
         recommended: false,
+        xcheckFadeNpv: fadeNpv,
+        xcheckFadeIrr: xc?.fadeIrr ?? null,
+        xcheckDivergence: fadeNpv !== null && p50 !== null && p50 !== 0 ? (fadeNpv - p50) / Math.abs(p50) : null,
+        structureMismatch: false,
+        acqEvRevenue: acq,
+        acqEvRevenueInBand: acq === null ? null : acq >= ACQUISITION_EV_REVENUE_BAND.min && acq <= ACQUISITION_EV_REVENUE_BAND.max,
       };
     }),
   );
@@ -1493,7 +1549,15 @@ export function flagRecommendedTarget(rows: TargetComparisonRow[]): TargetCompar
   const pool = positive.length > 0 ? positive : analyzed;
   const best = pool.reduce<TargetComparisonRow | null>((acc, r) => (!acc || (r.baseP05 ?? 0) > (acc.baseP05 ?? 0) ? r : acc), null);
   return [...rows]
-    .map((r) => (r === best ? { ...r, recommended: true } : r))
+    .map((r) =>
+      r === best
+        ? {
+            ...r,
+            recommended: true,
+            structureMismatch: r.xcheckDivergence != null && Math.abs(r.xcheckDivergence) > XCHECK_DIVERGENCE_WARN_RATIO,
+          }
+        : { ...r, structureMismatch: false },
+    )
     .sort((a, b) => {
     if (a.recommended !== b.recommended) return a.recommended ? -1 : 1;
     const p05 = (b.baseP05 ?? -Infinity) - (a.baseP05 ?? -Infinity);
