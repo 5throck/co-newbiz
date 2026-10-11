@@ -134,7 +134,7 @@ export function ParamTable({
   const hasSource = rows.some((r) => r.source);
   const valueCls = `param-value${valueAlign === "start" ? " param-value-start" : ""}`;
   return (
-    <div className="table-scroll">
+    <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
       <table className="param-table">
         {caption && <caption className="sr-only">{caption}</caption>}
         <thead>

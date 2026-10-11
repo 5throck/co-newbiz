@@ -68,7 +68,7 @@ export function GovernancePanel({ ctx }: { ctx: AdminConsoleState }) {
         ) : governance.length === 0 ? (
           <p className="text-[color:var(--muted-fg)] italic">등록된 거버넌스 문서가 없습니다.</p>
         ) : (
-          <div className="table-scroll">
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
 <table className="data-table">
             <caption className="sr-only">거버넌스 문서 레지스트리</caption>
             <thead>

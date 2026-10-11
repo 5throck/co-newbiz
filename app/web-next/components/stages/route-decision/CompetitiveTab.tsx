@@ -22,7 +22,7 @@ export function CompetitiveTab({ ctx, selected }: { ctx: RouteDecisionStageState
               </h4>
               <p className="text-[length:var(--fs-caption)] mb-1">{advisory.s1Evidence.competitive.structure}</p>
               {advisory.s1Evidence.competitive.players.length > 0 && (
-                <div className="table-scroll">
+                <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
                   <table className="data-table mb-0" aria-label="경쟁 구조 — 주요 기업">
                     <caption className="sr-only">경쟁 구조 — 주요 기업</caption>
                     <thead>

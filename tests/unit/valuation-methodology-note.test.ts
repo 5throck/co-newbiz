@@ -29,6 +29,10 @@ describe("targets table chips do not wrap", () => {
   test("band chip and row action are no-wrap; table sized to content", () => {
     expect(src).toMatch(/status-not-started block mt-1 whitespace-nowrap/);
     expect(src).toContain("btn-ghost btn-sm whitespace-nowrap");
-    expect(src).toContain("data-table targets-table");
+    // 2026-10-11 sweep: the targets table uses the shared mobile table rule
+    // (.table-scroll .data-table) — no standalone targets-table selector.
+    expect(src).toContain("data-table");
+    expect(src).not.toContain("targets-table");
+    expect(src).toMatch(/table-scroll" role="region" aria-label=/);
   });
 });

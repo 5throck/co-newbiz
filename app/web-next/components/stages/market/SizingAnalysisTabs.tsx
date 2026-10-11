@@ -20,7 +20,7 @@ export function SizingPipelineTab({ ctx }: { ctx: SizingReportState }) {
             시장 추정의 상방 근거로만 취급해야 합니다.
           </p>
           {matrix.demandPipeline && matrix.demandPipeline.length > 0 ? (
-            <div className="table-scroll">
+            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
             <table className="data-table report-table" aria-label="수요 파이프라인 프로젝트">
               <caption className="sr-only">수요 파이프라인 프로젝트 목록</caption>
               <thead>
@@ -73,7 +73,7 @@ export function SizingRegulationTab({ ctx }: { ctx: SizingReportState }) {
             미확인(간접 추정) 항목은 법률 검토 전 인용할 수 없습니다.
           </p>
           {matrix.regulatoryComparison && matrix.regulatoryComparison.length > 0 ? (
-            <div className="table-scroll">
+            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
             <table className="data-table report-table min-w-[52rem]" aria-label="규제 환경 비교">
               <caption className="sr-only">관할권별 규제 비교</caption>
               <thead>
@@ -201,7 +201,7 @@ export function SizingValidateTab({ ctx }: { ctx: SizingReportState }) {
           카테고리 내 상장사의 연차보고서·중간보고서 원문으로 매트릭스의 각 주장을 검증합니다.
           구조적으로 검증 불가능한 항목은 <strong>검증 불가</strong>로 명시합니다(탐색 실패가 아닌 공시 구조의 한계).
         </p>
-        <div className="table-scroll">
+        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
         <table className="data-table report-table" aria-label="기업 공시 교차검증 결과">
           <caption className="sr-only">기업 공시 교차검증 결과</caption>
           <thead>

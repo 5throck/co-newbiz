@@ -185,7 +185,7 @@ export function WaiverPanel({ projectId, prefill, onRequested, targetId }: { pro
       {waivers.length === 0 ? (
         <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">등록된 waiver가 없습니다.</p>
       ) : (
-        <div className="table-scroll">
+        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
           <table className="data-table">
             <caption className="sr-only">프로젝트 waiver 목록 — 실효 상태는 만료일 기준으로 파생</caption>
             <thead>

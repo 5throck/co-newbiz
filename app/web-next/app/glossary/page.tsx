@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, type GlossaryTermSummary } from "../../lib/api.ts";
+import { dedupTermNames, glossaryCategoryLabel } from "../../lib/labels.ts";
 
 // 용어집 (Glossary) — 목록 카드(정의 미리보기 포함) + 클릭 시 상세 사이드
 // 패널(정의·중요성·별칭·관련 용어·사용 프로시저/스킬·소유 에이전트). 상세는
@@ -79,11 +80,12 @@ export function GlossaryView() {
                     onClick={() => loadDetail(t.key)}
                   >
                     <div className="glossary-card-head">
-                      <strong>{t.ko}</strong>
-                      {t.category && <span className="dd-category-badge">{t.category}</span>}
+                      <strong>{dedupTermNames(t.ko, t.en).primary}</strong>
+                      {t.category && <span className="dd-category-badge">{glossaryCategoryLabel(t.category).label}</span>}
                     </div>
                     <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
-                      {t.en} · <code>{t.key}</code>
+                      {dedupTermNames(t.ko, t.en).secondary && `${dedupTermNames(t.ko, t.en).secondary} · `}
+                      <code>{t.key}</code>
                     </p>
                     <GlossaryPreview termKey={t.key} />
                   </button>
@@ -164,8 +166,9 @@ function GlossaryDetailPanel({
         </button>
       </div>
       <p className="glossary-detail-en">
-        {detail.en} · <code>{detail.key}</code>
-        {detail.category && <span className="dd-category-badge ml-2">{detail.category}</span>}
+        {dedupTermNames(detail.ko, detail.en).secondary && `${dedupTermNames(detail.ko, detail.en).secondary} · `}
+        <code>{detail.key}</code>
+        {detail.category && <span className="dd-category-badge ml-2">{glossaryCategoryLabel(detail.category).label}</span>}
       </p>
       <section aria-label="정의">
         <h3>정의</h3>

@@ -24,7 +24,7 @@ export function ProfileCompetitiveTab({ ctx, profile }: { ctx: OurCompanyStageSt
                       아직 확정된 경쟁사가 없습니다 — 아래 AI 추천을 수용하거나 직접 등록하세요.
                     </p>
                   ) : (
-                    <div className="table-scroll">
+                    <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
                       <table className="data-table report-table" aria-label="확정 경쟁사">
                         <caption className="sr-only">확정 경쟁사</caption>
                         <thead>
@@ -218,7 +218,7 @@ export function ProfileCompetitiveTab({ ctx, profile }: { ctx: OurCompanyStageSt
                           </p>
                         )}
                         {profile.competitive.crossCheck.claims.length > 0 ? (
-                          <div className="table-scroll">
+                          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
                             <table className="data-table" aria-label="경쟁 주장 대조 결과">
                               <caption className="sr-only">경쟁 주장 대조 결과</caption>
                               <thead>

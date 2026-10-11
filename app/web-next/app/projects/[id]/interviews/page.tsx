@@ -56,7 +56,7 @@ function InterviewsView() {
         {rows === null ? <PageState state="loading" /> : rows.length === 0 ? (
           <PageState state="empty" emptyText="기록된 인터뷰가 없습니다." />
         ) : (
-          <div className="table-scroll">
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
             <table className="data-table" aria-label="인터뷰">
               <caption className="sr-only">인터뷰</caption>
               <thead><tr><th>대상</th><th>주제</th><th>응답 요지</th><th>엇갈림</th><th>후속 확인</th><th>증적</th></tr></thead>

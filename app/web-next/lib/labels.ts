@@ -1,17 +1,55 @@
 // Glossary-backed label map (R2-C 8): the one place that turns machine keys (gate ids, decisions,
 // stages, enums, record keys, English error text) into the Korean wording shown to people.
-// Terms follow glossary/*.yaml (FS = 타당성 분석, IC = 투자심사위원회, DD = 실사, WACC = 가중평균자본비용).
-// A key without an entry falls back to itself so nothing ever renders blank.
+// Terms follow glossary/*.yaml `ko` (Pre-FS = 예비타당성 검토, Entity IC = 각사 투자심의위원회,
+// Group IC = 그룹 투자심의위원회, Green/Brown Field = 그린필드/브라운필드); WACC/FS/DD wording follows the
+// existing labels. Client-safe: NO imports (consumed by client components).
+//
+// Wording that is not yet confirmed by glossary-curator / the product owner carries a machine-greppable
+// INTERIM-WORDING marker (design 2026-10-11-ui-label-and-mobile-table-sweep-design.md section 5,
+// Q1-Q7). `grep -rn INTERIM-WORDING app/web-next/lib/labels.ts` lists every entry to confirm.
+//
+// Legacy maps/functions (GATE_LABEL, DECISION_LABEL, closureRecordLabel ...) keep their original
+// "unknown key falls back to itself" behaviour. New code should use `resolveLabel()` so the UI can hide
+// the raw key inside a developer-details disclosure.
+
+/** Result of `resolveLabel`: `label` is what the UI shows; `raw` goes only into a developer-details disclosure. */
+export interface LabelResult {
+  label: string;
+  raw: string;
+  /** True when no map entry matched (label is the placeholder, never the raw key). */
+  isFallback: boolean;
+}
+
+/** INTERIM-WORDING Q7: neutral placeholder for an unmapped key ("unclassified" option of the design). */
+export const UNCLASSIFIED_LABEL = "분류 미정";
+/** Shown for an absent (null/empty) value. */
+export const EMPTY_LABEL = "—";
+
+/** Look `key` up in `map`. Never returns the raw key as the label and never returns blank. */
+export function resolveLabel(map: Readonly<Record<string, string>>, key: string | null | undefined): LabelResult {
+  const raw = (key ?? "").trim();
+  if (!raw) return { label: EMPTY_LABEL, raw: "", isFallback: true };
+  const hit = Object.prototype.hasOwnProperty.call(map, raw) ? map[raw] : undefined;
+  return hit ? { label: hit, raw, isFallback: false } : { label: UNCLASSIFIED_LABEL, raw, isFallback: true };
+}
+
+/** Convenience: only the display text of `resolveLabel`. */
+export function labelText(map: Readonly<Record<string, string>>, key: string | null | undefined): string {
+  return resolveLabel(map, key).label;
+}
 
 export const GATE_LABEL: Record<string, string> = {
   screening: "스크리닝",
-  pre_fs: "사전 타당성(Pre-FS)",
+  pre_fs: "예비타당성 검토(Pre-FS)", // glossary Pre-FS.ko
   target_screening: "대상 선정",
   fs: "타당성 분석(FS)",
   dd: "실사(DD)",
-  entity_ic: "법인 투자심사(Entity IC)",
-  group_ic: "그룹 투자심사(Group IC)",
+  entity_ic: "각사 투자심의위원회(Entity IC)", // glossary Entity IC.ko
+  group_ic: "그룹 투자심의위원회(Group IC)", // glossary Group IC.ko
+  transition: "S12 전환", // lib/review/review-display.ts GATE_DISPLAY
 };
+
+export const gateLabel = (id: string | null | undefined): string => labelText(GATE_LABEL, id);
 
 export const DECISION_LABEL: Record<string, string> = {
   go: "진행(GO)",
@@ -20,11 +58,144 @@ export const DECISION_LABEL: Record<string, string> = {
   pending: "대기",
 };
 
+// glossary Green Field.ko / Brown Field.ko
 export const TRACK_LABEL: Record<string, string> = { greenfield: "그린필드(신규 설립)", brownfield: "브라운필드(인수합병)" };
 
-export const ORIGIN_LABEL: Record<string, string> = { internal: "내부 추진", joint: "합작", external: "외부 인수" };
+/** Sub-track names. Source: components/stages/route-decision/constants.ts (GF_SUB / BF_SUB, moved here). */
+export const GF_SUB: Record<string, string> = {
+  existing_business_rbd: "기존 사업 R&BD 확장", // INTERIM-WORDING Q1 (existing route-decision wording, no glossary term)
+  intra_venture: "사내벤처(CVC)",
+};
+export const BF_SUB: Record<string, string> = {
+  m_and_a: "M&A",
+  jv: "JV(합작)",
+  strategic_investment: "전략적 투자",
+  minority_investment: "소수지분 투자",
+  partnership: "파트너십", // INTERIM-WORDING Q1 (existing route-decision wording, no glossary term)
+  rbd: "R&BD(공동연구)",
+  corporate_venture: "사내벤처(CVC)",
+};
+export const SUB_TRACK_LABEL: Record<string, string> = { ...GF_SUB, ...BF_SUB };
+
+/** Undecided track wording (process page / deal page). */
+export const TRACK_UNDECIDED_LABEL = "미결정";
+
+/** Track (+ optional sub-track) as text, e.g. "브라운필드(인수합병) · M&A". Null track -> "미결정". */
+export function trackLabel(track: string | null | undefined, subTrack?: string | null): string {
+  const parts = trackLabelParts(track, subTrack);
+  return parts.map((p) => p.label).join(" · ");
+}
+
+/** Same as `trackLabel` but per part, so the UI can list the raw keys in a developer-details disclosure. */
+export function trackLabelParts(track: string | null | undefined, subTrack?: string | null): LabelResult[] {
+  if (!track) return [{ label: TRACK_UNDECIDED_LABEL, raw: "", isFallback: true }];
+  const parts = [resolveLabel(TRACK_LABEL, track)];
+  if (subTrack) parts.push(resolveLabel(SUB_TRACK_LABEL, subTrack));
+  return parts;
+}
+
+export const ORIGIN_LABEL: Record<string, string> = {
+  internal: "내부 추진",
+  joint: "합작",
+  external: "외부 인수",
+  hybrid: "하이브리드", // components/PromotionPanel.tsx origin option
+};
+
+/** Route-decision intent. Source: DecisionTab.tsx option text. */
+export const INTENT_LABEL: Record<string, string> = { integration: "통합", capability_access: "역량접근" };
+
+/** Stage status. Source: app/projects/[id]/page.tsx + process/page.tsx STATUS_LABEL (moved here). */
+export const STAGE_STATUS_LABEL: Record<string, string> = {
+  complete: "완료",
+  completed: "완료",
+  current: "진행",
+  in_progress: "진행", // same wording as `current`
+  blocked: "차단",
+  locked: "대기",
+  pending: "대기", // DECISION_LABEL.pending
+  skipped: "미적용",
+  terminated: "종료",
+};
+
+/** Committee decision mode. Source: components/CommitteePanel.tsx option descriptions. */
+export const DECISION_MODE_LABEL: Record<string, string> = {
+  agent_team: "위원회 심의 후 제안", // INTERIM-WORDING Q5
+  hybrid: "라운드별 인간 입장 포함", // INTERIM-WORDING Q5
+  human_only: "인간 심의만", // INTERIM-WORDING Q5
+};
+
+/** S12 transition decisions (flow.spec v2.0.0). Source: PortfolioStage.tsx TRANSITION_LABELS (moved here). */
+export const TRANSITION_DECISION_LABEL: Record<string, string> = {
+  next_tranche_released: "다음 트랜치 집행", // INTERIM-WORDING Q2 (PortfolioStage interim wording)
+  held_evidence_incomplete: "보류 — 근거 미완결", // INTERIM-WORDING Q2 (PortfolioStage interim wording)
+  graduate_to_core: "코어 사업 전환",
+  reduce_or_divest: "축소·매각",
+  kill_with_learning_captured: "중단 — 학습 내용 회수",
+};
+
+/** RAG dimensions (packages/core-scoring RAG_DIMENSIONS, canonical order). */
+export const RAG_DIMENSION_ORDER = ["financial", "market", "data_confidence", "regulatory_permit", "technical_execution", "risk"] as const;
+export const RAG_DIMENSION_LABEL: Record<string, string> = {
+  financial: "재무", // INTERIM-WORDING Q6 (skills/rag-scoring-framework "Financial"; no Korean name in docs)
+  market: "시장", // INTERIM-WORDING Q6 (skill "Market")
+  data_confidence: "데이터 신뢰도", // docs/governance/rag-framework_ko.md s3 (still confirm under Q6)
+  regulatory_permit: "규제·인허가", // INTERIM-WORDING Q6 (skill "Regulatory/Permit")
+  technical_execution: "기술·실행", // INTERIM-WORDING Q6 (skill "Technical/Execution")
+  risk: "리스크", // INTERIM-WORDING Q6 (skill "Risk")
+};
+
+/** Korean list of RAG dimension names in canonical order (unknown keys last, input order, as placeholder). */
+export function ragDimensionsLabel(keys: readonly string[] | null | undefined): string {
+  const given = [...new Set((keys ?? []).filter(Boolean))];
+  const known = (RAG_DIMENSION_ORDER as readonly string[]).filter((k) => given.includes(k));
+  const unknown = given.filter((k) => !(RAG_DIMENSION_ORDER as readonly string[]).includes(k));
+  return [...known.map((k) => RAG_DIMENSION_LABEL[k]!), ...unknown.map(() => UNCLASSIFIED_LABEL)].join(", ");
+}
+
+/** Record / field keys that leak into prose. Sources: PortfolioStage RECORD_FIELD, CLOSURE_RECORD_LABEL. */
+export const RECORD_KEY_LABEL: Record<string, string> = {
+  venture_transition_decision: "S12 전환 결정", // CLOSURE_RECORD_LABEL
+  decided_by: "결정자", // CLOSURE_RECORD_LABEL
+  learning_capture: "학습 포착", // CLOSURE_RECORD_LABEL
+  tranche_condition: "차기 트랜치 조건", // PortfolioStage RECORD_FIELD
+  core_handoff: "핵심사업 인계 기록", // PortfolioStage RECORD_FIELD
+  divest_plan: "매각/청산 계획", // PortfolioStage RECORD_FIELD
+  deal_structure: "투자구조", // INTERIM-WORDING Qx (S10 stage name "투자구조 설계")
+  deal_structure_review: "투자구조 검토", // INTERIM-WORDING Qx
+};
+
+/** Glossary category (glossary/_schema.yaml enum, stored lowercase; matched case-insensitively). */
+export const GLOSSARY_CATEGORY_LABEL: Record<string, string> = {
+  business: "사업", // INTERIM-WORDING Q4
+  financial: "재무", // INTERIM-WORDING Q4
+  legal: "법무", // INTERIM-WORDING Q4 (cf. DD_DOMAIN_LABEL "법무 실사")
+  technical: "기술", // INTERIM-WORDING Q4
+  unit: "단위", // INTERIM-WORDING Q4
+  industry: "산업", // INTERIM-WORDING Q4 (cf. REVIEW_DOMAIN_LABEL.industry)
+};
+export const glossaryCategoryLabel = (category: string | null | undefined): LabelResult =>
+  resolveLabel(GLOSSARY_CATEGORY_LABEL, (category ?? "").toLowerCase());
+
+/** Glossary term `corp_code` -> glossary/industry.yaml corp_code.ko. INTERIM-WORDING Q3 (whether it stays a term). */
+export const DART_CORP_CODE_LABEL = "DART 고유번호";
+
+/** Show the English term only when it adds information (case/space-insensitive equal -> null). */
+export function dedupTermNames(ko: string | null | undefined, en: string | null | undefined): { primary: string; secondary: string | null } {
+  const k = (ko ?? "").trim();
+  const e = (en ?? "").trim();
+  if (!k) return { primary: e, secondary: null };
+  if (!e || e.toLowerCase() === k.toLowerCase()) return { primary: k, secondary: null };
+  return { primary: k, secondary: e };
+}
+
 
 export const DD_DOMAIN_LABEL: Record<string, string> = { commercial: "상업 실사", technical: "기술 실사", legal: "법무 실사" };
+
+/** DD finding category (dd_finding.category): the DD domains plus `rbd` (db migration 0019 rbd_source rule). */
+export const FINDING_CATEGORY_LABEL: Record<string, string> = {
+  ...DD_DOMAIN_LABEL,
+  rbd: "R&BD 실사", // INTERIM-WORDING Qx (cf. BF_SUB.rbd "R&BD(공동연구)")
+};
 
 /** Closure precondition record keys (db/repositories/closure.repository.ts) shown in the closure modal. */
 export const CLOSURE_RECORD_LABEL: Record<string, { label: string; message: string }> = {
@@ -75,8 +246,7 @@ export function localizeMessage(message: string): string {
   return localizeRequirement(message)
     // closure.repository.ts의 영어 전제조건 문구 → 한글 (레코드 키는 라벨 맵이 처리)
     .replace(/The latest S12 transition decision must be '([a-z_]+)'\.?/g, (_m, key) => {
-      const names: Record<string, string> = { graduate_to_core: "코어 사업 전환", reduce_or_divest: "축소·매각", kill_with_learning_captured: "중단 — 학습 내용 회수" };
-      return `최신 S12 전환 결정이 '${names[key] ?? key}'(으)로 기록되어 있어야 합니다.`;
+      return `최신 S12 전환 결정이 '${TRANSITION_DECISION_LABEL[key] ?? key}'(으)로 기록되어 있어야 합니다.`;
     });
 }
 

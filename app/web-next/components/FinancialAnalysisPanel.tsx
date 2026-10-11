@@ -12,6 +12,7 @@ import TargetSelector, { type AnalysisTarget } from "./TargetSelector.tsx";
 import { resolveTargetScope } from "../lib/target-default.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteProject } from "../lib/project-write-access.ts";
+import { DART_CORP_CODE_LABEL } from "../lib/labels.ts";
 
 interface CompanySummary {
   id: string;
@@ -114,7 +115,7 @@ export function FinancialAnalysisPanel({ projectId }: { projectId: string }) {
               <h3 className="sizing-step-title">연결된 대상 회사 <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">{roleChip}</span></h3>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[1.05rem] font-extrabold">{company.name_ko}</span>
-                {company.dart_corp_code && <span className="font-mono text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">dart corp code {company.dart_corp_code}</span>}
+                {company.dart_corp_code && <span className="font-mono text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{DART_CORP_CODE_LABEL} <span lang="en">{company.dart_corp_code}</span></span>}
                 <span className={company.latest_sync_at ? "inline-block rounded-full px-2 py-0.5 text-[length:var(--fs-caption)] font-bold whitespace-nowrap bg-[color:var(--success-bg)] text-[color:var(--success)]" : "inline-block rounded-full px-2 py-0.5 text-[length:var(--fs-caption)] font-bold whitespace-nowrap bg-[color:var(--warning-bg)] text-[color:var(--amber-fg)]"}>{company.latest_sync_at ? `동기화됨 · ${new Date(company.latest_sync_at).toLocaleDateString("ko-KR")}` : "동기화 전 — 회사 화면에서 동기화하세요"}</span>
               </div>
               <div className="grid gap-2 md:grid-cols-4 mt-2">

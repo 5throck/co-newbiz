@@ -4,9 +4,12 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
+import { INTENT_LABEL, trackLabel, trackLabelParts } from "../../../../lib/labels.ts";
+import { RawKey } from "../../../../components/RawKey.tsx";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
+
 
 // 프로젝트 추진계획 (ADR-0104) — 최신 추진계획 버전 열람 + KPI 사전 확정(pre-commit)표
 // + 버전 이력 + 수정안(amendment) 제출. 추진계획 수정은 append-only: 기존 버전을
@@ -45,7 +48,6 @@ function parseKpis(text: string): CharterKpi[] {
     .map((parts) => ({ key: parts[0], label: parts[1] ?? parts[0], target: parts[2] }));
 }
 
-const TRACK_LABEL: Record<string, string> = { greenfield: "Greenfield", brownfield: "Brownfield" };
 
 function CharterViewInner() {
   const params = useParams<{ id: string }>();
@@ -162,9 +164,12 @@ function CharterViewInner() {
               <dt className="text-[color:var(--muted-fg)]">트랙</dt>
               <dd>
                 <span className={`status-chip ${latest.track === "brownfield" ? "status-amber" : "status-green"}`}>
-                  {TRACK_LABEL[latest.track] ?? latest.track}{latest.subTrack ? ` · ${latest.subTrack}` : ""}
+                  {trackLabel(latest.track, latest.subTrack)}
                 </span>
-                {latest.intent && <span className="ml-1 text-[length:var(--fs-caption)]">{latest.intent === "integration" ? "통합 의도" : "역량접근 의도"}</span>}
+                {latest.track && (
+                  <RawKey parts={trackLabelParts(latest.track, latest.subTrack)} />
+                )}
+                {latest.intent && <span className="ml-1 text-[length:var(--fs-caption)]">{INTENT_LABEL[latest.intent] ?? latest.intent} 의도</span>}
                 {latest.totalScore !== null && <span className="ml-1 tabular-nums text-[length:var(--fs-caption)]">채점 {latest.totalScore}/3.0</span>}
               </dd>
               <dt className="text-[color:var(--muted-fg)]">트랙 근거</dt><dd>{latest.trackRationale}</dd>

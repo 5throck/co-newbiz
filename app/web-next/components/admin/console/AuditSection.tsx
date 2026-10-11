@@ -75,7 +75,7 @@ export function AuditPanel({ ctx }: { ctx: AdminConsoleState }) {
               ) : auditLog.length === 0 ? (
                 <p className="text-[color:var(--muted-fg)] italic">조건에 맞는 감사 기록이 없습니다.</p>
               ) : (
-                <div className="table-scroll">
+                <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
                 <table className="data-table report-table" aria-label="감사 로그">
                   <caption className="sr-only">감사 로그 (append-only — 삭제 기능 없음)</caption>
                   <thead>

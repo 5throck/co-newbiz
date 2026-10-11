@@ -26,7 +26,7 @@ export function EvalTab({ ctx, selected }: { ctx: RouteDecisionStageState; selec
                 <details className="mb-3">
                   <summary className="cursor-pointer text-[length:var(--fs-body)]">신호별 근거 (S1~S3 — {advisory.signals.length}건)</summary>
                   <h4 className="text-[length:var(--fs-body)] mb-2 mt-2">신호별 근거 (S1~S3)</h4>
-                  <div className="table-scroll">
+                  <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
                     <table className="data-table mb-3" aria-label="신호별 근거">
                       <caption className="sr-only">신호별 근거</caption>
                       <thead>

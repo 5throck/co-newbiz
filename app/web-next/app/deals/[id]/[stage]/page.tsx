@@ -12,6 +12,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { api } from "../../../../lib/api.ts";
+import { STAGE_STATUS_LABEL, labelText, trackLabel } from "../../../../lib/labels.ts";
 import { PageState } from "../../../../components/ui.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { DealBreadcrumb } from "../../../../components/DealBreadcrumb.tsx";
@@ -242,11 +243,11 @@ function StageGuidanceTab({ carrierId, stageId }: { carrierId: string; stageId: 
       {!proc && !error && <PageState state="loading" />}
 
       {proc && !applicable && (
-        <PageState state="empty" emptyText={`${stageId}는 이 검토/안건의 트랙(${proc.track ?? "미결정"})에 적용되지 않는 단계입니다.`} />
+        <PageState state="empty" emptyText={`${stageId}는 이 검토/안건의 트랙(${trackLabel(proc.track)})에 적용되지 않는 단계입니다.`} />
       )}
       {proc && applicable && (
         <div className="market-section">
-          <p className="text-[length:var(--fs-body)]">이 단계의 상태: <span className={`status-chip ${stage?.status === "complete" ? "status-green" : "status-amber"}`}>{stage?.status}</span></p>
+          <p className="text-[length:var(--fs-body)]">이 단계의 상태: <span className={`status-chip ${stage?.status === "complete" ? "status-green" : "status-amber"}`}>{labelText(STAGE_STATUS_LABEL, stage?.status)}</span></p>
           <ul className="sizing-note-list">
             {[...new Set([...proc.blockers, ...proc.requiredArtifacts])].map((b, i) => <li key={i}>{b}</li>)}
           </ul>

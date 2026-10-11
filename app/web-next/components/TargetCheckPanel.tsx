@@ -97,7 +97,7 @@ export function TargetCheckPanel({ projectId }: { projectId: string }) {
         </p>
       ) : (
         <>
-          <div className="table-scroll">
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
             <table className="data-table" aria-label="목표 대비 판정">
               <thead>
                 <tr>

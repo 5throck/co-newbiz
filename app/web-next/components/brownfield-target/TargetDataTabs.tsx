@@ -38,7 +38,7 @@ export function TargetFinancialsTab({ ctx }: { ctx: TargetDetailViewState }) {
                   <h4 className="text-[0.9rem] mb-2">DART 재무 현황 ({companyProfile.profile.dartFinancials!.year}년)</h4>
                   <EChart option={chartOption} height={300} ariaLabel="DART 재무 현황 — 계정별 연도 비교" />
                   <p className="mt-1 mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">단위: 억원 · 출처: DART 사업보고서</p>
-                  <div className="table-scroll">
+                  <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
                     <table className="data-table report-table" aria-label="DART 재무 요약 (계정 × 연도)">
                       <caption className="sr-only">DART 재무 요약 (계정 × 연도)</caption>
                       <thead>

@@ -514,7 +514,7 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
             {statusFilter ? "필터 조건에 맞는 기회가 없습니다." : "등록된 기회가 없습니다 — 분석된 산업에서 기회 발굴을 시작하세요."}
           </p>
         ) : (
-          <div className="table-scroll"><table className="data-table list-table" aria-label="기회 퍼널 목록">
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table list-table" aria-label="기회 퍼널 목록">
             <caption className="sr-only">기회 퍼널 목록</caption>
             <thead>
               <tr>

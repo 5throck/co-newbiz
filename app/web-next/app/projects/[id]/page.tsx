@@ -7,6 +7,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "../../../lib/api.ts";
 import { StageTabs } from "../../../components/StageTabs.tsx";
+import { STAGE_STATUS_LABEL, trackLabel, trackLabelParts } from "../../../lib/labels.ts";
+import { RawKey } from "../../../components/RawKey.tsx";
 
 interface CharterKpi { key: string; label: string; target: string }
 interface CharterVersion {
@@ -29,9 +31,7 @@ interface CharterData { project_name: string | null; charter_confirmed_at: strin
 interface ProcessData { currentStage: string | null; nextStage: string | null; track: string | null; subTrack: string | null; stages: StageView[] }
 interface OverviewData { project_name: string | null; charter_confirmed_at: string | null; versions: CharterVersion[]; process: ProcessData | null }
 
-const STATUS_LABEL: Record<StageView["status"], string> = {
-  complete: "완료", current: "진행", blocked: "차단", locked: "대기", skipped: "미적용", terminated: "종료",
-};
+const STATUS_LABEL = STAGE_STATUS_LABEL as Record<StageView["status"], string>;
 const STATUS_CLASS: Record<StageView["status"], string> = {
   complete: "status-green", current: "status-in-progress", blocked: "status-red",
   locked: "status-not-started", skipped: "status-not-started", terminated: "status-red",
@@ -96,7 +96,8 @@ export default function ProjectOverviewPage() {
           </ol>
           {process.track && (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2">
-              트랙: {process.track}{process.subTrack ? ` / ${process.subTrack}` : ""}
+              트랙: {trackLabel(process.track, process.subTrack)}
+              <RawKey parts={trackLabelParts(process.track, process.subTrack)} />
             </p>
           )}
         </section>

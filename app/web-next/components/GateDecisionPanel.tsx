@@ -297,7 +297,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
               {briefLoading ? "생성 중..." : briefData ? "재생성" : "🤖 AI 브리프 생성"}
             </button>
             <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              {form.gate} 진행 기준 — 제안은 결정 select를 바꾸지 않으며, 기록은 사람이 합니다 (경계 #2)
+              {GATE_LABEL[form.gate] ?? form.gate} 진행 기준 — 제안은 결정 선택을 바꾸지 않으며, 기록은 사람이 합니다 (경계 #2)
             </span>
           </div>
           {briefError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-1 mb-0">{briefError}</p>}

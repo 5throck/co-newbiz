@@ -3715,9 +3715,23 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
 @media (max-width: 640px) {
   .data-table { display: block; max-width: 100%; overflow-x: auto; }
   .btn-primary, .btn-ghost, .btn-danger, .status-chip { white-space: normal; max-width: 100%; text-align: left; overflow-wrap: anywhere; }
+  /* PR-497의 .targets-table 방식을 .table-scroll 안의 모든 .data-table로 일반화
+     (design 2026-10-11-ui-label-and-mobile-table-sweep §3): 표는 내용 크기가 되어
+     .table-scroll 안에서만 가로 스크롤되고, 칩·버튼은 한 줄을 유지한다.
+     .targets-table 규칙은 이 규칙에 흡수되었다(더 이상 별도 규칙 없음). */
+  .table-scroll .data-table { display: table; width: max-content; min-width: 100%; max-width: none; overflow: visible; }
+  .table-scroll .data-table .status-chip,
+  .table-scroll .data-table .btn-ghost,
+  .table-scroll .data-table .btn-primary,
+  .table-scroll .data-table .btn-danger { white-space: nowrap; max-width: none; text-align: center; overflow-wrap: normal; }
 }
 
-/* S8 targets table: chips and row action stay on one line; the table sizes to its
-   content and scrolls inside .table-scroll (beats the 640px wrap rule above by specificity). */
-.data-table.targets-table { display: table; width: max-content; min-width: 100%; max-width: none; overflow: visible; }
-.targets-table .status-chip, .targets-table .btn-ghost { white-space: nowrap; max-width: none; text-align: center; overflow-wrap: normal; }
+/* ── cell tokens (design §3): 표의 날짜·id·프로젝트번호·이름·칩 셀은 한 줄,
+   서술 셀은 28ch까지 감싸기 — 페이지별 nowrap 하드코딩 대신 이 토큰을 쓴다. */
+.cell-nowrap { white-space: nowrap; }
+.cell-wrap { max-width: 28ch; }
+
+/* Scrollable data-table wrappers are keyboard reachable (WCAG 2.1.1 / design §7):
+   tabIndex=0 + role=region 속성은 각 JSX 사용처에서 부여한다(공통 aria-label).
+   Here only the focus outline is styled. */
+.table-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

@@ -9,6 +9,8 @@ import { useParams } from "next/navigation";
 import { api } from "../../../lib/api.ts";
 import { PageState } from "../../../components/ui.tsx";
 import { DealBreadcrumb } from "../../../components/DealBreadcrumb.tsx";
+import { DECISION_LABEL, GATE_LABEL, RECORD_KEY_LABEL, labelText, trackLabel, trackLabelParts } from "../../../lib/labels.ts";
+import { RawKey } from "../../../components/RawKey.tsx";
 
 interface StageLite { id: string; status: string; gateIds?: string[] }
 interface ProcessView {
@@ -86,15 +88,16 @@ function DealOverview() {
             ) : (
               <ul className="sizing-note-list">
                 {[...new Set([...proc.blockers, ...proc.requiredArtifacts])].map((b, i) => (
-                  <li key={i}>{b}</li>
+                  <li key={i}>{/^[a-z_]+$/.test(b) ? labelText(RECORD_KEY_LABEL, b) : b}</li>
                 ))}
               </ul>
             )}
             <p className="note" style={{ marginTop: 8 }}>
-              트랙: {proc.track ?? "미결정"}{proc.subTrack ? ` · ${proc.subTrack}` : ""} · 진행:{" "}
+              트랙: {trackLabel(proc.track, proc.subTrack)} · 진행:{" "}
+              <RawKey parts={trackLabelParts(proc.track, proc.subTrack)} />
               {Object.entries(proc.gateStatus).map(([g, v]) => (
                 <span key={g} className={`status-chip ${v === "go" ? "status-green" : v === "kill" ? "status-red" : "status-amber"}`} style={{ marginRight: 4 }}>
-                  {g} {v.toUpperCase()}
+                  게이트 {GATE_LABEL[g] ?? g} {DECISION_LABEL[v] ?? v.toUpperCase()}
                 </span>
               ))}
             </p>

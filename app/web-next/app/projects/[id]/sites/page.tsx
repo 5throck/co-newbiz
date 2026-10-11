@@ -57,7 +57,7 @@ function SitesView() {
         {rows === null ? <PageState state="loading" /> : rows.length === 0 ? (
           <PageState state="empty" emptyText="등록된 부지가 없습니다." />
         ) : (
-          <div className="table-scroll">
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
             <table className="data-table" aria-label="부지 비교">
               <caption className="sr-only">부지 비교</caption>
               <thead><tr><th>부지</th><th>지역</th><th className="col-num">인프라</th><th className="col-num">물류</th><th className="col-num">노동력</th><th className="col-num">인허가(일)</th><th className="col-num">총점</th><th>순위</th></tr></thead>

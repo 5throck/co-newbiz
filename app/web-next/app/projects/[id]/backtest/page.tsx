@@ -36,7 +36,7 @@ function BacktestView() {
         {rows === null ? <PageState state="loading" /> : rows.length === 0 ? (
           <PageState state="empty" emptyText="백테스트 대상(채택된 케이스가 있는 프로젝트)이 없습니다." />
         ) : (
-          <div className="table-scroll">
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
             <table className="data-table" aria-label="백테스트">
               <caption className="sr-only">예측-실적 백테스트</caption>
               <thead><tr><th>프로젝트</th><th className="col-num">NPV 예측 (p50)</th><th className="col-num">실적 환산</th><th className="col-num">괴리</th><th>판정</th></tr></thead>

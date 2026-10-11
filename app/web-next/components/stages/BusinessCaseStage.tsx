@@ -567,7 +567,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             </p>
           )}
         </div>
-        <div className="table-scroll"><table className="data-table targets-table">
+        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table">
           <thead>
             <tr>
               <th scope="col">대상</th>
@@ -714,7 +714,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       {/* 두 관점의 의미 */}
       <section className="market-section sizing-step mb-3" aria-label="두 관점의 의미">
         <h3 className="sizing-step-title">두 관점의 의미</h3>
-        <div className="table-scroll"><table className="data-table">
+        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table">
           <thead><tr><th scope="col">관점</th><th scope="col">성장률 근거</th><th scope="col">변동성(sigma) 근거</th><th scope="col">쓰임</th></tr></thead>
           <tbody>
             <tr>
@@ -836,7 +836,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                 이 시나리오의 케이스가 없습니다 — 자동 생성을 실행하세요.
               </p>
             ) : (
-              <div className="table-scroll"><table className="data-table">
+              <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table">
                 <thead>
                   <tr>
                     <th scope="col">관점</th>

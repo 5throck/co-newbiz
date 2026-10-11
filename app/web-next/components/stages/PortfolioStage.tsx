@@ -14,6 +14,8 @@ import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
+import { RECORD_KEY_LABEL, TRANSITION_DECISION_LABEL, resolveLabel } from "../../lib/labels.ts";
+import { RawKey } from "../RawKey.tsx";
 import { ClosureModal } from "../ClosureModal.tsx";
 import { useRouter } from "next/navigation";
 
@@ -22,7 +24,8 @@ import { useRouter } from "next/navigation";
 // 표면이다 (경계 #2 — 트랜치 집행과 kill/divest는 투자결정이므로 사람의
 // 행위다): 스코어카드는 데이터만 보여주며 kill/fund 권고를 하지 않고, 결정
 // 기록은 명시적 P4 확인(useConfirm)을 거친 analyst+ 행위다. 기록자(recorder)는
-// 세션 사용자, 결정자(decided_by)는 사람 역할 키로 화면에 분리 표기한다.
+// 세션 사용자, 결정자는 사람 역할 키로 화면에 분리 표기한다(레코드 키는 개발자
+// 상세 공개에만 노출 — design 2026-10-11-ui-label-and-mobile-table-sweep).
 
 interface RollupRow {
   id: string;
@@ -50,15 +53,9 @@ interface ScorecardView {
   decisions: { latest: DecisionRow | null; history: DecisionRow[] };
 }
 
-// flow.spec v2.0.0 S12 어휘 5종 (PORTFOLIO_TRANSITIONS의 UI 라벨). 0071 CHECK와
-// 동일 어휘 — 서버가 재검증한다.
-const TRANSITION_LABELS: Record<string, string> = {
-  next_tranche_released: "다음 트랜치 집행",
-  held_evidence_incomplete: "보류 — 근거 미완결",
-  graduate_to_core: "코어 사업 전환",
-  reduce_or_divest: "축소·매각",
-  kill_with_learning_captured: "중단 — 학습 내용 회수",
-};
+// flow.spec v2.0.0 S12 어휘 5종 — 라벨은 lib/labels.ts TRANSITION_DECISION_LABEL로
+// 통합 (design 2026-10-11-ui-label-and-mobile-table-sweep §1.2). 서버가 재검증한다.
+const TRANSITION_LABELS = TRANSITION_DECISION_LABEL;
 
 // P5: 상태는 색+아이콘+텍스트의 조합 — 색 단독으로 상태를 전달하지 않는다.
 const STATUS_META: Record<string, { icon: string; label: string; cls: string }> = {
@@ -76,10 +73,10 @@ const EMPTY_FORM = { decision: "next_tranche_released", rationale: "", learning_
 // ADR-0151: each non-kill transition carries its own dedicated record column;
 // the route answers 400 without it, so the form must collect it.
 const RECORD_FIELD: Record<string, { key: "tranche_condition" | "core_handoff" | "divest_plan"; label: string }> = {
-  next_tranche_released: { key: "tranche_condition", label: "차기 트랜치 조건 (tranche_condition — 필수)" },
-  held_evidence_incomplete: { key: "tranche_condition", label: "차기 트랜치 조건 (tranche_condition — 필수)" },
-  graduate_to_core: { key: "core_handoff", label: "핵심사업 인계 기록 (core_handoff — 필수)" },
-  reduce_or_divest: { key: "divest_plan", label: "매각/청산 계획 (divest_plan — 필수)" },
+  next_tranche_released: { key: "tranche_condition", label: "차기 트랜치 조건 (필수)" },
+  held_evidence_incomplete: { key: "tranche_condition", label: "차기 트랜치 조건 (필수)" },
+  graduate_to_core: { key: "core_handoff", label: "핵심사업 인계 기록 (필수)" },
+  reduce_or_divest: { key: "divest_plan", label: "매각/청산 계획 (필수)" },
 };
 
 export function PortfolioStage({ projectId }: { projectId: string }) {
@@ -209,7 +206,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
             <span className="sizing-step-badge">📈</span> 스코어카드 트렌드 — 분기별 요약
           </h3>
           {(view?.trend.length ?? 0) > 0 ? (
-            <div className="table-scroll"><table className="data-table" aria-label="분기별 스코어카드 요약">
+            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table" aria-label="분기별 스코어카드 요약">
               <caption className="sr-only">리뷰 주기별 측정 요약</caption>
               <thead>
                 <tr><th scope="col">리뷰 주기</th><th scope="col">측정 수</th><th scope="col">목표 달성</th><th scope="col">이탈</th><th scope="col">근거 부족</th></tr>
@@ -240,7 +237,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
             {rollup?.review_cycle && <span className="status-chip status-not-started ml-2">{rollup.review_cycle}</span>}
           </h3>
           {(rollup?.class_rollup.length ?? 0) > 0 && (
-            <div className="table-scroll"><table className="data-table" aria-label="벤처 클래스 롤업">
+            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table" aria-label="벤처 클래스 롤업">
               <caption className="sr-only">클래스별 롤업 요약</caption>
               <thead>
                 <tr><th scope="col">클래스</th><th scope="col">벤처 수</th><th scope="col">측정</th><th scope="col">달성</th><th scope="col">이탈</th><th scope="col">근거 부족</th></tr>
@@ -263,7 +260,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
             <div key={section} className="mt-2">
               <h4 className="text-[length:var(--fs-body)] mb-1">{section === "financial" ? "재무" : "전략"} 섹션</h4>
               {(rollup?.[section].length ?? 0) > 0 ? (
-                <div className="table-scroll"><table className="data-table" aria-label={`${section} 측정 상세`}>
+                <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table" aria-label={`${section} 측정 상세`}>
                   <caption className="sr-only">{section} 섹션 측정 상세</caption>
                   <thead>
                     <tr><th scope="col">측정</th><th scope="col">클래스</th><th scope="col">목표</th><th scope="col">실적</th><th scope="col">상태</th></tr>
@@ -359,11 +356,12 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
           </h3>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
             아래 기록은 사람(venture-portfolio-IC)의 결정이며, 이 화면의 사용자는 그 결정을 <strong>기록</strong>하는
-            역할만 수행합니다. 결정자(decided_by)는 사람 역할 키로 고정되고
-            기록자(recorded_by)는 세션 사용자로 남습니다.
+            역할만 수행합니다. 결정자는 사람 역할 키로 고정되고
+            기록자는 세션 사용자로 남습니다.
+            <RawKey parts={[resolveLabel(RECORD_KEY_LABEL, "decided_by"), resolveLabel(RECORD_KEY_LABEL, "recorded_by")]} />
           </p>
           {(view?.decisions.history.length ?? 0) > 0 ? (
-            <div className="table-scroll"><table className="data-table" aria-label="전환 결정 이력">
+            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table" aria-label="전환 결정 이력">
               <caption className="sr-only">전환 결정 이력 (추가 전용)</caption>
               <thead>
                 <tr><th scope="col">주기</th><th scope="col">결정</th><th scope="col">근거</th><th scope="col">결정일</th><th scope="col">기록자</th></tr>
@@ -435,7 +433,10 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
               )}
               {recordField && (
                 <label className="text-[length:var(--fs-caption)] block mt-2">
-                  <span className="block mb-1">{recordField.label}</span>
+                  <span className="block mb-1">
+                    {recordField.label}
+                    <RawKey parts={resolveLabel(RECORD_KEY_LABEL, recordField.key)} />
+                  </span>
                   <input
                     value={form.record}
                     onChange={(e) => setForm({ ...form, record: e.target.value })}

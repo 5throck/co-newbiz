@@ -86,7 +86,7 @@ export function ValuationMethodology({
       {!marketCase ? (
         <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">아직 생성된 케이스가 없습니다 — 생성 후 이곳에 실제 값으로 계산 구조가 표시됩니다.</p>
       ) : (
-        <div className="table-scroll"><table className="data-table">
+        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table">
           <caption className="sr-only">기업가치 계산 사슬 — 단계와 현재 적용값</caption>
           <thead><tr><th scope="col">단계</th><th scope="col">내용</th><th scope="col">현재 값</th></tr></thead>
           <tbody>

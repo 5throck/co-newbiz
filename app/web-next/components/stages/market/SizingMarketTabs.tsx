@@ -80,7 +80,7 @@ export function SizingCompetitiveTab({ ctx }: { ctx: SizingReportState }) {
               const attrOf = (pl: (typeof players)[number], label: string) =>
                 pl.attributes?.find((a) => a.label === label)?.value ?? "—";
               return (
-              <div className="table-scroll">
+              <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
               <table className="data-table report-table" aria-label="경쟁 구조 — 주요 기업">
                 <caption className="sr-only">경쟁 구조 주요 기업</caption>
                 <thead>
