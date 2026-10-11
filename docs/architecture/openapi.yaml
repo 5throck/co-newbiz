@@ -5238,6 +5238,28 @@ paths:
           $ref: '#/components/responses/Ok'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/portfolio/overlap:
+    get:
+      operationId: getPortfolioOverlap
+      summary: Same-industry exposure overlap across the portfolio, keyed by md_industry.id — exact tier (FK-verified) kept strictly separate from the name_prefix fallback tier (trimmed market_scope string coincidence, NULL industry); promoted opportunities count on the project side only; unkeyed members surface in the na bucket. Projects member-visible only (listVisibleProjects, no admin bypass).
+      tags:
+        - Reference
+      responses:
+        '200':
+          description: Ok envelope whose data is a PortfolioOverlapResponse (groups + na + counts).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PortfolioOverlapResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/projects/{id}/process:
     get:
       operationId: getProjectProcess
@@ -6604,3 +6626,112 @@ components:
           type: string
         message:
           type: string
+    PortfolioOverlapResponse:
+      type: object
+      description: Same-industry exposure overlap (design 2026-10-11-portfolio-view-overlap §4). Groups are keyed by md_industry.id; the name_prefix tier is a clearly-labeled fallback, never merged into exact.
+      required: [groups, na, counts]
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/PortfolioOverlapGroup'
+        na:
+          $ref: '#/components/schemas/PortfolioOverlapNa'
+        counts:
+          $ref: '#/components/schemas/PortfolioOverlapCounts'
+    PortfolioOverlapGroup:
+      type: object
+      required: [tier, industry, members]
+      properties:
+        tier:
+          type: string
+          enum: [exact, name_prefix]
+          description: exact = shared industry_id (FK-verified); name_prefix = identical trimmed market_scope with NULL industry (string coincidence, verify before acting).
+        industry:
+          type: [object, 'null']
+          description: null for the name_prefix tier.
+          required: [id, name_ko, name_en, ksic_code]
+          properties:
+            id: { type: string }
+            name_ko: { type: string }
+            name_en: { type: string }
+            ksic_code:
+              type: [string, 'null']
+              description: null = unpinned KSIC (ADR-0111) — shown as such, never a grouping key.
+        key_label:
+          type: string
+          description: Identical normalized scope text — name_prefix tier only.
+        members:
+          type: array
+          minItems: 2
+          items:
+            $ref: '#/components/schemas/PortfolioOverlapMember'
+    PortfolioOverlapMember:
+      type: object
+      required: [kind, id, name, href, industry_pinned]
+      properties:
+        kind:
+          type: string
+          enum: [opportunity, project]
+        id: { type: string }
+        name: { type: string }
+        href:
+          type: string
+          description: /opportunities?opportunity=<id> or /projects/<id>/process
+        status:
+          type: string
+          description: Opportunity funnel status — opportunities only.
+        industry_pinned:
+          type: boolean
+          description: false only inside name_prefix groups.
+        project_no:
+          type: string
+          description: Projects only.
+        track:
+          type: [string, 'null']
+          description: Projects only.
+    PortfolioOverlapNa:
+      type: object
+      description: Members that could not be keyed — never force-grouped (no backfill, no auto-pinning).
+      required: [opportunities_without_industry, projects_without_industry, hidden_promoted]
+      properties:
+        hidden_promoted:
+          type: object
+          description: Count-only. Promoted live opportunities whose project the caller cannot see; no ids, names or industries are disclosed.
+          required: [count]
+          properties:
+            count: { type: integer }
+        opportunities_without_industry:
+          type: array
+          items:
+            type: object
+            required: [id, name, reason]
+            properties:
+              id: { type: string }
+              name: { type: string }
+              reason:
+                type: string
+                enum: [no_pinned_industry, industry_unresolved]
+        projects_without_industry:
+          type: array
+          items:
+            type: object
+            required: [id, project_no, reason]
+            properties:
+              id: { type: string }
+              project_no: { type: string }
+              reason:
+                type: string
+                enum: [no_live_binding, industry_unresolved]
+    PortfolioOverlapCounts:
+      type: object
+      required: [active_opportunities, projects, exact_groups, name_prefix_groups, na_opportunities, na_projects, na_total, hidden_promoted_opportunities]
+      properties:
+        active_opportunities: { type: integer }
+        projects: { type: integer }
+        exact_groups: { type: integer }
+        name_prefix_groups: { type: integer }
+        na_opportunities: { type: integer }
+        na_projects: { type: integer }
+        na_total: { type: integer, description: 'na_opportunities + na_projects.' }
+        hidden_promoted_opportunities: { type: integer, description: 'Promoted live opportunities whose project is not visible to the caller (count only).' }
