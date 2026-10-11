@@ -65,7 +65,7 @@ Deployment maps one-to-one onto the ADR-0014 discipline:
 2. **Migrate** — server boot applies pending migrations automatically (`CO_NEWBIZ_BOOTSTRAP_MIGRATIONS=auto`, `app/web-next/instrumentation.ts`); a fresh volume also bootstraps the first admin account (random password printed once to the container log — capture it: `docker logs co-newbiz-web | grep -i password`).
 3. **Health check after** — `bun scripts/deploy-web.ts` polls `http://127.0.0.1:7749/api/health` and fails loudly (with rollback hints) if it does not pass. On failure: tag the previous image back (the script prints the exact `docker tag` command) and follow §6 for the database half — code rollback and DB rollback remain separate, sequenced actions.
 
-Layout: host port **7749** → container 7749 (compose `7749:7749`; the dev server runs on 7748; 8787 is taken by an unrelated local Docker service). The database lives in the `co-newbiz-data` named volume mounted at the app's own `<repo>/db/data` directory — never point `CO_NEWBIZ_DB_PATH` elsewhere, because `db/client.ts` derives the migrations location from the DB path's grandparent directory — so container replacement never touches data. Secrets live only in the host-local `.env.prod` (create from `.env.prod.sample`; gitignored, never baked into the image). The repository is private, so the published package is private too: `docker login ghcr.io` once with a PAT holding `read:packages` before the first pull (repeat after PAT rotation).
+Layout: host port **7749** → container 7749 (compose `7749:7749`; the dev server runs on 7748; 8787 is taken by an unrelated local Docker service). The database lives in the `co-newbiz-data` named volume mounted at the app's own `<repo>/db/data` directory — never point `CO_NEWBIZ_DB_PATH` elsewhere, because `db/client.ts` derives the migrations location from the DB path's grandparent directory — so container replacement never touches data. Secrets live only in the host-local `.env.prod` (create from the Production section of `.env.sample`; gitignored, never baked into the image). The repository is private, so the published package is private too: `docker login ghcr.io` once with a PAT holding `read:packages` before the first pull (repeat after PAT rotation).
 
 §7 post-deployment checks apply unchanged: scheduled jobs stay registered at the **host OS scheduler** (launchd) per ADR-0019 — the container runs no in-process timers, and container replacement must not disturb the host scheduler registrations.
 
@@ -85,9 +85,24 @@ curl -s http://127.0.0.1:7749/api/health  # expect {"status":"ok"}
 curl -sI https://newbiz.bizknights.org/ | head -1
 ```
 
-Also set `CO_NEWBIZ_PUBLIC_ORIGIN=https://newbiz.bizknights.org` in `.env.prod` (see `.env.prod.sample`) and update any local MCP client config to `CO_NEWBIZ_API_BASE_URL=http://localhost:7748` (or the public URL). The production container starts with a fresh volume unless `co-newbiz-data` already exists; on first boot capture the admin password with `docker logs co-newbiz-web | grep -i password`.
+Any new Cloudflare or Tailscale hostname that fronts the dev server (for example `dev-newbiz.bizknights.org`) must be listed in `CO_NEWBIZ_ALLOWED_DEV_ORIGINS` in the root `.env` (comma- or space-separated bare hostnames or IPs, no scheme or port; no code change needed). Restart the dev server afterwards: `next.config` is evaluated at startup and the root `.env` is not watched. Otherwise the dev server returns 403 for `/_next/webpack-hmr` and dev chunks and the page cannot hydrate. Production builds ignore this variable.
+
+Also set `CO_NEWBIZ_PUBLIC_ORIGIN=https://newbiz.bizknights.org` in `.env.prod` (see the Production section of `.env.sample`) and update any local MCP client config to `CO_NEWBIZ_API_BASE_URL=http://localhost:7748` (or the public URL). The production container starts with a fresh volume unless `co-newbiz-data` already exists; on first boot capture the admin password with `docker logs co-newbiz-web | grep -i password`.
 
 Rollback: `docker compose down`, then start the dev server on 7749 again (`cd app/web-next && bun --bun next dev -p 7749`) so the tunnel serves it as before; revert the port swap commit to restore the scripts.
+
+### Production environment settings
+
+The container reads `.env.prod` (compose `env_file`), **not** the root `.env`. Create it by copying the commented lines of the Production section of the tracked `.env.sample` (placeholders only; the real file stays gitignored). Changes apply only after `docker compose up -d --force-recreate`.
+
+| Variable | Purpose | Format | Default | When to set |
+|---|---|---|---|---|
+| `CO_NEWBIZ_PUBLIC_ORIGIN` | Pins the OAuth issuer and the MCP resource identifier. Without it the origin comes from the request Host header, which a spoofed Host can change. | `https://host[:port]`, no path | unset | Always in production (boot logs a warning if unset or malformed) |
+| `CO_NEWBIZ_MCP_ALLOWED_ORIGINS` | Extra browser Origins allowed to call `/api/mcp`; the public origin is always allowed. | comma list of origins | empty | Only when a browser app on another origin calls `/api/mcp` |
+| `CO_NEWBIZ_OAUTH_REDIRECT_HOST_ALLOWLIST` | Hosts allowed as OAuth client redirect targets. | comma list of hosts | empty (https or loopback only) | Only for OAuth clients redirecting to other hosts |
+| `CO_NEWBIZ_ALLOWED_DEV_ORIGINS` | Dev server HMR hostnames. | bare hostnames/IPs | built-in list | Development only (root `.env`); ignored in production |
+
+The cookie-session CSRF check only compares the request Origin host with the Host header, so a new public hostname needs no app setting unless it calls `/api/mcp` from a browser.
 
 ## 9. Related
 

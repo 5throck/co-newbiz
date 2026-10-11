@@ -11,6 +11,15 @@ function randomPassword(bytes = 16): string {
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
+  // Production hardening hint (never throws, never blocks boot): warn once per
+  // process when the public origin is unset or malformed.
+  try {
+    const { checkPublicOrigin } = await import("./lib/public-origin-check.ts");
+    for (const w of checkPublicOrigin()) console.warn(`[bootstrap] ${w}`);
+  } catch {
+    // diagnostics only
+  }
+
   // Executor seams (ADR-0097 §5 / ADR-0098 / ADR-0099): committee deliberation
   // (above) plus the S8 business-case and S9 DD-tailor executors. Each is
   // activated by its own CO_NEWBIZ_*_AGENTS=llm env var AND a configured LLM

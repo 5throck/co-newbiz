@@ -2,14 +2,26 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { BUILTIN_DEV_ORIGINS } from "../../app/web-next/lib/dev-origins.ts";
+
+const origins = [...BUILTIN_DEV_ORIGINS];
 const source = readFileSync(join(import.meta.dir, "..", "..", "app", "web-next", "next.config.ts"), "utf8");
-const match = source.match(/allowedDevOrigins:\s*\[([^\]]*)\]/);
-const origins = (match?.[1] ?? "").split(",").map((s) => s.trim().replace(/^"|"$/g, "")).filter(Boolean);
 
 describe("next.config allowedDevOrigins", () => {
   test("includes the production hostname and keeps the old one", () => {
     expect(origins).toContain("newbiz.bizknights.org");
     expect(origins).toContain("co-newbiz.bizknights.org");
+  });
+  test("includes the dev tunnel hostname, current Tailscale IP and MagicDNS name, and keeps older entries", () => {
+    for (const o of ["dev-newbiz.bizknights.org", "100.87.220.26", "macmini.tail03efbe.ts.net", "100.104.16.127", "192.168.0.44"]) {
+      expect(origins).toContain(o);
+    }
+  });
+});
+
+describe("next.config wiring", () => {
+  test("allowedDevOrigins is resolved from the env-aware helper", () => {
+    expect(source).toContain("allowedDevOrigins: resolveAllowedDevOrigins(");
   });
 });
 

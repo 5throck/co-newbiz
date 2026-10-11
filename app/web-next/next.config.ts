@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveAllowedDevOrigins } from "./lib/dev-origins.ts";
 
 const appRoot = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(/*turbopackIgnore: true*/ appRoot, "..", "..");
@@ -32,7 +33,10 @@ const nextConfig: NextConfig = {
   // sidebar); production builds never render it. tests/unit/layout-fixed.test.ts
   // guards this together with the fixed-position CSS allowlist.
   devIndicators: { position: "bottom-right" },
-  allowedDevOrigins: ["100.104.16.127", "192.168.0.44", "co-newbiz.bizknights.org", "newbiz.bizknights.org"],
+  // Bare hostnames/IPs only (no scheme, no port). Built-in defaults live in
+  // lib/dev-origins.ts; extra hosts come from CO_NEWBIZ_ALLOWED_DEV_ORIGINS
+  // (process env, else the repo-root .env). Evaluated at dev-server startup.
+  allowedDevOrigins: resolveAllowedDevOrigins(repoRoot),
   // ADR-0154: the OAuth consent and connected-apps screens must never be
   // framed (clickjacking a consent "허용") and must not leak the query
   // (client_id/state/PKCE challenge) through Referer.

@@ -66,7 +66,7 @@ MCP 서버는 각 AI 클라이언트 자체의 설정(Claude Code는 `.mcp.json`
 2. **마이그레이션** — 서버 부팅이 대기 중인 마이그레이션을 자동 적용합니다(`CO_NEWBIZ_BOOTSTRAP_MIGRATIONS=auto`, `app/web-next/instrumentation.ts`). 새 볼륨의 첫 부팅은 첫 관리자 계정도 부트스트랩합니다(무작위 비밀번호가 컨테이너 로그에 한 번 출력 — 확인: `docker logs co-newbiz-web | grep -i password`).
 3. **직후 헬스 체크** — `bun scripts/deploy-web.ts`는 `http://127.0.0.1:7749/api/health`를 폴링하며, 통과하지 못하면 롤백 힌트와 함께 실패합니다. 실패 시: 이전 이미지를 되돌리고(스크립트가 정확한 `docker tag` 명령을 출력) DB 쪽은 §6을 따릅니다 — 코드 롤백과 DB 롤백은 여전히 분리되고 순서화된 작업입니다.
 
-구성: 호스트 포트 **7749** → 컨테이너 7749(compose `7749:7749`; 개발 서버는 7748, 8787은 무관한 로컬 Docker 서비스가 점유). 데이터베이스는 앱 자체의 `<repo>/db/data` 디렉터리에 마운트된 `co-newbiz-data` named volume에 존재합니다 — `CO_NEWBIZ_DB_PATH`를 다른 곳으로 지정하지 마십시오(`db/client.ts`가 DB 경로의 조부모 디렉터리에서 마이그레이션 위치를 도출합니다) — 컨테이너 교체는 데이터에 손대지 않습니다. 시크릿은 호스트 로컬의 `.env.prod`에만 존재합니다(`.env.prod.sample`에서 생성; gitignore 처리, 이미지에 베이크되지 않음). 저장소가 비공개이므로 게시된 패키지도 비공개입니다: 첫 pull 전에 `read:packages` 권한의 PAT로 `docker login ghcr.io`를 1회 수행합니다(PAT 순환 후 재수행).
+구성: 호스트 포트 **7749** → 컨테이너 7749(compose `7749:7749`; 개발 서버는 7748, 8787은 무관한 로컬 Docker 서비스가 점유). 데이터베이스는 앱 자체의 `<repo>/db/data` 디렉터리에 마운트된 `co-newbiz-data` named volume에 존재합니다 — `CO_NEWBIZ_DB_PATH`를 다른 곳으로 지정하지 마십시오(`db/client.ts`가 DB 경로의 조부모 디렉터리에서 마이그레이션 위치를 도출합니다) — 컨테이너 교체는 데이터에 손대지 않습니다. 시크릿은 호스트 로컬의 `.env.prod`에만 존재합니다(`.env.sample`의 Production 섹션에서 생성; gitignore 처리, 이미지에 베이크되지 않음). 저장소가 비공개이므로 게시된 패키지도 비공개입니다: 첫 pull 전에 `read:packages` 권한의 PAT로 `docker login ghcr.io`를 1회 수행합니다(PAT 순환 후 재수행).
 
 §7의 배포 후 확인은 동일하게 적용됩니다: 예약 작업은 ADR-0019에 따라 **호스트 OS 스케줄러**(launchd)에 등록된 채로 유지됩니다 — 컨테이너는 in-process 타이머를 실행하지 않으며, 컨테이너 교체가 호스트 스케줄러 등록을 흔들어서는 안 됩니다.
 
@@ -86,9 +86,24 @@ curl -s http://127.0.0.1:7749/api/health  # {"status":"ok"} 기대
 curl -sI https://newbiz.bizknights.org/ | head -1
 ```
 
-또한 `.env.prod`에 `CO_NEWBIZ_PUBLIC_ORIGIN=https://newbiz.bizknights.org`를 설정하고(`.env.prod.sample` 참조), 로컬 MCP 클라이언트 설정은 `CO_NEWBIZ_API_BASE_URL=http://localhost:7748`(또는 공개 URL)로 갱신합니다. `co-newbiz-data` 볼륨이 이미 없으면 운영 컨테이너는 빈 볼륨으로 시작하며, 첫 부팅 시 관리자 비밀번호는 `docker logs co-newbiz-web | grep -i password`로 확인합니다.
+개발 서버를 가리키는 Cloudflare 또는 Tailscale 호스트명(예: `dev-newbiz.bizknights.org`)을 새로 추가하면 루트 `.env`의 `CO_NEWBIZ_ALLOWED_DEV_ORIGINS`에 쉼표 또는 공백으로 구분해 넣습니다(스킴·포트 없는 호스트명 또는 IP, 코드 변경 불필요). 이후 개발 서버를 재시작해야 합니다. `next.config`는 시작 시점에 평가되고 루트 `.env`는 감시되지 않기 때문입니다. 그렇지 않으면 개발 서버가 `/_next/webpack-hmr`와 개발 청크에 403을 반환하여 페이지가 hydrate되지 않습니다. 운영 빌드는 이 변수를 무시합니다.
+
+또한 `.env.prod`에 `CO_NEWBIZ_PUBLIC_ORIGIN=https://newbiz.bizknights.org`를 설정하고(`.env.sample`의 Production 섹션 참조), 로컬 MCP 클라이언트 설정은 `CO_NEWBIZ_API_BASE_URL=http://localhost:7748`(또는 공개 URL)로 갱신합니다. `co-newbiz-data` 볼륨이 이미 없으면 운영 컨테이너는 빈 볼륨으로 시작하며, 첫 부팅 시 관리자 비밀번호는 `docker logs co-newbiz-web | grep -i password`로 확인합니다.
 
 롤백: `docker compose down` 후 개발 서버를 다시 7749에서 시작(`cd app/web-next && bun --bun next dev -p 7749`)하여 터널이 이전처럼 서빙하게 하고, 스크립트 복원은 포트 교체 커밋을 되돌립니다.
+
+### 운영 환경 설정
+
+컨테이너는 루트 `.env`가 아니라 `.env.prod`(compose `env_file`)를 읽습니다. git에 추적되는 `.env.sample`의 Production 섹션(placeholder만 포함) 주석 줄을 복사해 만들며, 실제 파일은 gitignore 상태로 유지합니다. 변경은 `docker compose up -d --force-recreate` 후에만 적용됩니다.
+
+| 변수 | 용도 | 형식 | 기본값 | 설정 시점 |
+|---|---|---|---|---|
+| `CO_NEWBIZ_PUBLIC_ORIGIN` | OAuth issuer와 MCP resource 식별자를 고정합니다. 없으면 요청 Host 헤더에서 origin을 얻으며, 위조된 Host로 바뀔 수 있습니다. | `https://host[:port]`, 경로 없음 | 미설정 | 운영에서는 항상(미설정 또는 형식 오류 시 부팅 로그에 경고) |
+| `CO_NEWBIZ_MCP_ALLOWED_ORIGINS` | `/api/mcp`를 호출할 수 있는 추가 브라우저 Origin(공개 origin은 항상 허용). | origin 쉼표 목록 | 비어 있음 | 다른 origin의 브라우저 앱이 `/api/mcp`를 호출할 때만 |
+| `CO_NEWBIZ_OAUTH_REDIRECT_HOST_ALLOWLIST` | OAuth 클라이언트 리디렉션 대상으로 허용할 호스트. | 호스트 쉼표 목록 | 비어 있음(https 또는 루프백만 허용) | 다른 호스트로 리디렉션하는 OAuth 클라이언트가 있을 때만 |
+| `CO_NEWBIZ_ALLOWED_DEV_ORIGINS` | 개발 서버 HMR 호스트명. | 스킴 없는 호스트명/IP | 내장 목록 | 개발 전용(루트 `.env`), 운영에서는 무시 |
+
+쿠키 세션 CSRF 검사는 요청 Origin의 호스트와 Host 헤더만 비교하므로, 새 공개 호스트명은 브라우저에서 `/api/mcp`를 호출하지 않는 한 앱 설정이 필요 없습니다.
 
 ## 9. 관련 문서
 
