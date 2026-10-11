@@ -1,0 +1,94 @@
+import { test, expect, describe, beforeAll, afterAll } from "bun:test";
+import { existsSync, rmSync } from "node:fs";
+import { buildDealOverview, isArtifactDone } from "../../app/web-next/lib/deal-overview.ts";
+import { displayOrNotRecorded, localizeRequirement, NOT_RECORDED_LABEL } from "../../app/web-next/lib/labels.ts";
+
+const proc = (o: Partial<Parameters<typeof buildDealOverview>[2]> = {}) => ({
+  currentStage: null, blockers: [], requiredArtifacts: [], track: null, ...o,
+});
+
+describe("displayOrNotRecorded / localizeRequirement", () => {
+  test("null, undefined, blank -> not recorded; 0 is a value", () => {
+    for (const v of [null, undefined, "", "  "]) expect(displayOrNotRecorded(v)).toEqual({ text: NOT_RECORDED_LABEL, empty: true });
+    expect(displayOrNotRecorded(0)).toEqual({ text: "0", empty: false });
+    expect(displayOrNotRecorded(72)).toEqual({ text: "72", empty: false });
+  });
+  test("no raw (snake_case) token survives", () => {
+    expect(localizeRequirement("기회 선택(selected)이 필요합니다")).toBe("기회 선택이 필요합니다");
+    expect(localizeRequirement("기회 선택(selected)")).not.toMatch(/\([a-z_]+\)/);
+  });
+});
+
+describe("buildDealOverview", () => {
+  test.each([["identified", "S2"], ["assessed", "S3"], ["selected", "S4"]])("status %s -> %s", (status, stage) => {
+    const o = buildDealOverview("D1", { status, attractiveness_score: null, synergy_score: null }, proc());
+    expect(o.currentStage?.id).toBe(stage);
+    expect(o.nextAction?.href).toBe(`/deals/D1/${stage.toLowerCase()}`);
+    expect(o.flow.current).toBe(o.currentStage?.name);
+    expect(o.flow.previous).not.toBeNull();
+  });
+  test("null values render as not recorded; synergy note only when unconfirmed value", () => {
+    const o = buildDealOverview("D1", { status: "assessed", attractiveness_score: null, synergy_score: null }, proc());
+    expect(o.facts.every((f) => f.value.empty)).toBe(true);
+    const o2 = buildDealOverview("D1", { status: "assessed", attractiveness_score: 72, synergy_score: 60 }, proc({ track: "greenfield" }));
+    expect(o2.facts.find((f) => f.key === "synergy")?.note).not.toBeNull();
+    expect(o2.facts.find((f) => f.key === "track")?.value.empty).toBe(false);
+    const o3 = buildDealOverview("D1", { status: "assessed", attractiveness_score: 72, synergy_score: 60, synergy_score_confirmed_at: "x" }, proc());
+    expect(o3.facts.find((f) => f.key === "synergy")?.note).toBeNull();
+  });
+  test("artifact in blockers is not done; unmatched blockers listed separately", () => {
+    const o = buildDealOverview("D1", { status: "selected", attractiveness_score: 1, synergy_score: 1 },
+      proc({ requiredArtifacts: ["기회 선택(selected)", "A"], blockers: ["기회 선택(selected)이 필요합니다 — x", "other blocker"] }));
+    expect(o.completion).toEqual([{ label: "기회 선택", done: false }, { label: "A", done: true }]);
+    expect(o.otherBlockers).toEqual(["other blocker"]);
+    expect(isArtifactDone("A", [])).toBe(true);
+  });
+  test("terminated -> no primary action, status text", () => {
+    const o = buildDealOverview("D1", { status: "assessed", attractiveness_score: null, synergy_score: null }, proc({ terminated: true }));
+    expect(o.nextAction).toBeNull();
+    expect(o.statusText).not.toBeNull();
+  });
+  test("hold mapping uses gateHoldHref; gate chips labelled", () => {
+    const o = buildDealOverview("D1", { status: "assessed", attractiveness_score: null, synergy_score: null },
+      proc({ gateStatus: { screening: "hold" } }), [{ entityType: "opportunity", entityId: "D1", gate: "screening" }]);
+    expect(o.holds[0]!.href).toBe("/deals/D1/s3");
+    expect(o.gates[0]).toMatchObject({ gate: "screening", decision: "hold" });
+  });
+});
+
+const DB = "db/data/test-synergy-opp-filter.sqlite";
+process.env.CO_NEWBIZ_DB_PATH = DB;
+for (const s of ["", "-wal", "-shm"]) if (existsSync(DB + s)) rmSync(DB + s);
+const { resetDb, getDb } = await import("../../db/client.ts");
+const { runMigrations } = await import("../../db/migrate.ts");
+const { ulid } = await import("../../db/lib/ulid.ts");
+const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
+const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
+
+describe("GET /api/synergy/analyses?opportunityId=", () => {
+  const NOW = "2026-09-10T00:00:00Z";
+  let cookie = ""; let oppA = ""; let oppB = ""; let synA = "";
+  beforeAll(async () => {
+    resetDb(); runMigrations(DB);
+    const db = getDb(DB);
+    await createUser(db, { userId: "syn-flt", role: "analyst", password: "pw-syn-flt-12345", createdBy: "test", now: NOW });
+    approveUser(db, { userId: "syn-flt", approvedBy: "test", now: NOW });
+    db.run("UPDATE app_user SET must_change_password = 0");
+    const res = await nextRequest("/api/auth/login", { method: "POST", body: JSON.stringify({ userId: "syn-flt", password: "pw-syn-flt-12345" }) });
+    cookie = (res.headers.getSetCookie()[0] ?? "").split(";")[0];
+    oppA = ulid(); oppB = ulid(); synA = ulid();
+    for (const id of [oppA, oppB]) db.run("INSERT INTO opportunity (id, name, status, created_by, created_at) VALUES (?,?,?,?,?)", [id, "o" + id, "assessed", "test", NOW]);
+    db.run("INSERT INTO synergy_analysis (id, company_id, status, current_step, created_by, created_at, opportunity_id) VALUES (?,?,?,?,?,?,?)", [synA, "md-synergy-registry-sentinel", "completed", 3, "test", NOW, oppA]);
+    db.run("INSERT INTO synergy_analysis (id, company_id, status, current_step, created_by, created_at) VALUES (?,?,?,?,?,?)", [ulid(), "md-synergy-registry-sentinel", "completed", 3, "test", NOW]);
+  });
+  afterAll(() => { resetDb(); for (const s of ["", "-wal", "-shm"]) if (existsSync(DB + s)) rmSync(DB + s); });
+  const list = async (q = "") => ((await (await nextRequest(`/api/synergy/analyses${q}`, { headers: { cookie } })).json()) as { data: { analyses: Array<{ id: string }> } }).data.analyses;
+
+  test("match, no match, unknown/malformed id, unfiltered unchanged", async () => {
+    expect((await list(`?opportunityId=${oppA}`)).map((a) => a.id)).toEqual([synA]);
+    expect(await list(`?opportunityId=${oppB}`)).toEqual([]);
+    expect(await list("?opportunityId=NOPE")).toEqual([]);
+    expect(await list("?opportunityId=%27%20OR%201%3D1")).toEqual([]);
+    expect((await list()).length).toBe(2);
+  });
+});

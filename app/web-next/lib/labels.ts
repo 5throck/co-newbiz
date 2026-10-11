@@ -254,6 +254,10 @@ export function localizeMessage(message: string): string {
 /** Stage requirement text coming from the process spec: keep the meaning, drop set notation. */
 export function localizeRequirement(text: string): string {
   return text
+    // raw enum token glued to Korean text, e.g. "기회 선택(selected)" -> "기회 선택"
+    .replace(/(?<=[가-힣])\s*\([a-z]+(?:_[a-z]+)*\)/g, "")
+    // lower-case gate id opening a parenthetical, e.g. "(fs 진행 입력)" -> "(FS 진행 입력)"
+    .replace(/\((screening|pre_fs|target_screening|fs|dd|entity_ic|group_ic)(?=\s)/g, (_m, g: string) => `(${GATE_LABEL[g] ?? g}`)
     .replace(/origin\s*∈\s*\{\s*internal\s*,\s*joint\s*\}/g, "내부 추진·합작 프로젝트에 한함")
     .replace(/gate_decision\(kill\)/g, "게이트 중단(KILL) 결정")
     .replace(/missing_artifacts/g, "미완료 산출물 목록");
@@ -261,3 +265,13 @@ export function localizeRequirement(text: string): string {
 
 /** Shown beside every action a read-only viewer cannot use. */
 export const VIEWER_READONLY_TEXT = "보기 권한만 있습니다";
+
+/** Shown for a null/empty fact on a detail surface (single path for "not recorded"). */
+export const NOT_RECORDED_LABEL = "기록 없음";
+
+/** Display text for a possibly empty value; `empty` tells the caller to use the muted style. */
+export function displayOrNotRecorded(value: string | number | null | undefined): { text: string; empty: boolean } {
+  if (value === null || value === undefined) return { text: NOT_RECORDED_LABEL, empty: true };
+  const text = String(value).trim();
+  return text === "" ? { text: NOT_RECORDED_LABEL, empty: true } : { text, empty: false };
+}

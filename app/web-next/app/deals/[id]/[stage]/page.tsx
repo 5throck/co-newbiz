@@ -27,6 +27,7 @@ import { BusinessCaseStage } from "../../../../components/stages/BusinessCaseSta
 import { DdStage } from "../../../../components/stages/DdStage.tsx";
 import { DealStructureStage } from "../../../../components/stages/DealStructureStage.tsx";
 import { IcReviewStage } from "../../../../components/stages/IcReviewStage.tsx";
+import { useDealOpportunityId } from "../../../../components/stages/use-deal-opportunity-id.ts";
 import { PortfolioStage } from "../../../../components/stages/PortfolioStage.tsx";
 
 interface ProcessView {
@@ -117,7 +118,7 @@ function StageTab() {
               결과와 연결해 시너지 영역 후보를 도출하고 우선 시너지 영역으로 좁힙니다. 기회를 연결하면 완료 시 해당 기회에
               synergy_score 권고가 기록됩니다.
             </StageFrame>
-            <SynergyStage opportunityId={params.id} analysisId={searchParams.get("analysis") ?? undefined} embedded />
+            <S3Synergy routeId={params.id} analysisId={searchParams.get("analysis") ?? undefined} />
           </>
         )}
       </main>
@@ -162,6 +163,15 @@ function StageTab() {
   }
 
   return <StageGuidanceTab carrierId={params.id} stageId={stageId} />;
+}
+
+// S3 body: the route id may be a promoted project id, so the synergy list is scoped by the
+// resolved source opportunity (shared resolver with the deal overview).
+function S3Synergy({ routeId, analysisId }: { routeId: string; analysisId?: string }) {
+  const st = useDealOpportunityId(routeId);
+  if (st.status === "loading") return <PageState state="loading" />;
+  if (st.status === "error") return <PageState state="error" errorText={st.message} onRetry={() => window.location.reload()} />;
+  return <SynergyStage opportunityId={st.opportunityId ?? undefined} noSourceOpportunity={st.opportunityId === null} analysisId={analysisId} embedded />;
 }
 
 // S8~S12 프로젝트 단계 탭 — Wave 3(components/stages/*Stage.tsx 공유 컴포넌트).

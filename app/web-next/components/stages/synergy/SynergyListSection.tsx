@@ -9,7 +9,15 @@ import type { SynergyStageState } from "./useSynergyList.ts";
 import type { SynergyAnalysis } from "./types.ts";
 
 export function SynergyListSection({ ctx }: { ctx: SynergyStageState }) {
-  const { analyses, canCurate, setShowNewForm, showNewForm, selectedId, openDetail, rerun, removeAnalysis, hasInProgress, opportunityId } = ctx;
+  const { analyses, canCurate, setShowNewForm, showNewForm, selectedId, openDetail, rerun, removeAnalysis, hasInProgress, opportunityId, dealScoped, scope, setScope, setOppSel, opps } = ctx;
+  // A project id (or unknown id) is not an opportunity: no analysis can be linked to it.
+  const oppKnown = !!opportunityId && opps.some((o) => o.id === opportunityId);
+  const startDisabledReason = !canCurate
+    ? "시너지 분석은 analyst 권한이 필요합니다."
+    : !opportunityId || (opps.length > 0 && !oppKnown)
+      ? "이 딜에 연결된 원천 기회가 없어 딜 기준으로 분석을 시작할 수 없습니다."
+      : null;
+  const dealEmpty = dealScoped && scope === "deal" && analyses !== null && analyses.length === 0;
   return (
     <section aria-label="분석 대상 회사" className="market-section">
         <SectionToolbar
@@ -30,8 +38,30 @@ export function SynergyListSection({ ctx }: { ctx: SynergyStageState }) {
           }
         />
 
+        {dealScoped && (
+          <div role="group" aria-label="분석 범위" className="flex flex-wrap gap-1 mb-2">
+            <button type="button" className={scope === "deal" ? "btn-primary btn-sm" : "btn-ghost btn-sm"} aria-pressed={scope === "deal"} onClick={() => setScope("deal")}>이 딜만</button>
+            <button type="button" className={scope === "all" ? "btn-primary btn-sm" : "btn-ghost btn-sm"} aria-pressed={scope === "all"} onClick={() => setScope("all")}>전체</button>
+          </div>
+        )}
+
         {analyses === null ? (
           <p>불러오는 중...</p>
+        ) : dealEmpty ? (
+          <div className="text-[length:var(--fs-body)]" role="status">
+            <p className="mb-2">이 딜에 연결된 시너지 분석이 없습니다.</p>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={startDisabledReason !== null}
+              aria-describedby={startDisabledReason ? "synergy-deal-start-reason" : undefined}
+              onClick={() => { if (opportunityId) setOppSel(opportunityId); setShowNewForm(true); setTimeout(() => document.querySelector(".sizing-new-form")?.scrollIntoView({ block: "center" }), 0); }}
+            >
+              이 딜로 분석 시작
+            </button>
+            {startDisabledReason && <p id="synergy-deal-start-reason" className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{startDisabledReason}</p>}
+            <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">다른 딜의 분석은 「전체」에서 볼 수 있습니다. 분석 대상은 다음 화면에서 직접 고르며, 자동으로 제출되지 않습니다.</p>
+          </div>
         ) : analyses.length === 0 ? (
           <div className="text-[length:var(--fs-body)]">
             <p className="text-[color:var(--muted-fg)] mb-2">
@@ -41,7 +71,8 @@ export function SynergyListSection({ ctx }: { ctx: SynergyStageState }) {
             <span className="ml-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">프로파일을 만든 뒤 이 화면으로 돌아와 「＋ 새 분석」을 누르세요.</span>
           </div>
         ) : (
-          <table className="data-table list-table" aria-label="분석 대상 회사 목록">
+          <div className="table-scroll">
+          <table className="data-table list-table synergy-list-table" aria-label="분석 대상 회사 목록">
             <caption className="sr-only">분석 대상 회사 목록</caption>
             <thead>
               <tr>
@@ -105,6 +136,9 @@ export function SynergyListSection({ ctx }: { ctx: SynergyStageState }) {
                       >
                         {a.opportunity_name ?? "— (시장 연계만)"}
                       </button>
+                      {scope === "all" && dealScoped && opportunityId && a.opportunity_id === opportunityId && (
+                        <span className="control-chip status-green ml-1">이 딜</span>
+                      )}
                     </td>
                     <td>{a.target_type ? <span className="control-chip status-not-started">{a.target_type === "group" ? "그룹" : "계열사"}</span> : <span className="control-chip status-amber" title="기존 별도 등록 분석(legacy)">legacy</span>}</td>
                     <td>
@@ -143,6 +177,7 @@ export function SynergyListSection({ ctx }: { ctx: SynergyStageState }) {
               })()}
             </tbody>
           </table>
+          </div>
         )}
         {hasInProgress && <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" role="status">분석이 진행 중입니다 — 완료되면 목록이 자동으로 갱신됩니다.</p>}
       </section>

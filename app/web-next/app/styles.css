@@ -2299,6 +2299,8 @@
 /* S2 기회 퍼널 — 작업 열(버튼 2~3개)이 셀 밖으로 넘치지 않도록 폭을 넓히고,
    좁은 화면에서는 .table-scroll 안에서 가로 스크롤한다. */
 .list-table.opp-funnel-table { max-width: 80rem; min-width: 56rem; }
+/* S3 시너지 목록 — 열 고정 폭 합(약 77rem)이 좁은 화면에서 잘리지 않도록 .table-scroll 안에서 스크롤한다. */
+.list-table.synergy-list-table { max-width: 80rem; min-width: 56rem; }
 .opportunity-create { margin-bottom: 1.25rem; }
 .opportunity-create summary { display: inline-flex; cursor: pointer; list-style: none; }
 .opportunity-form { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; align-items: center; }
