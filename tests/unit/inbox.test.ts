@@ -3,7 +3,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { buildInbox, loadInbox, type ProposalSrc } from "../../app/web-next/lib/inbox.ts";
+import { buildInbox, gateHoldHref, loadInbox, type ProposalSrc } from "../../app/web-next/lib/inbox.ts";
 
 const NOW = Date.parse("2026-10-08T12:00:00Z");
 const proposal = (over: Partial<ProposalSrc>): ProposalSrc => ({
@@ -47,6 +47,28 @@ describe("buildInbox", () => {
     const [c] = buildInbox({ pipeline: { projects: [{ projectId: "d9", projectNo: "N9", projectName: null, currentStage: "S12", blockers: ["transition decision missing"] }], currentHolds: [] } }, NOW);
     expect(c.kind).toBe("closure_precondition");
     expect(c.href).toBe("/projects/d9/portfolio");
+  });
+});
+
+describe("gate HOLD links", () => {
+  const hold = (entityType: "opportunity" | "project", entityId: string, gate: string) =>
+    ({ entityType, entityId, gate, label: "L", decision: "hold", decidedAt: "2026-10-01T00:00:00Z", ageDays: 3 });
+  test("screening HOLD opens the S3 tab where the screening gate form lives", () => {
+    const [i] = buildInbox({ pipeline: { projects: [], currentHolds: [hold("opportunity", "o1", "screening")] } }, NOW);
+    expect(i.kind).toBe("gate_hold");
+    expect(i.href).toBe("/deals/o1/s3");
+  });
+  test("each gate maps to the stage tab hosting its decision panel", () => {
+    expect(gateHoldHref(hold("opportunity", "o1", "pre_fs"))).toBe("/deals/o1/s5");
+    expect(gateHoldHref(hold("opportunity", "o1", "target_screening"))).toBe("/deals/o1/s7");
+    expect(gateHoldHref(hold("project", "p 1", "fs"))).toBe("/deals/p%201/s8");
+    expect(gateHoldHref(hold("project", "p1", "dd"))).toBe("/deals/p1/s9");
+    expect(gateHoldHref(hold("project", "p1", "entity_ic"))).toBe("/deals/p1/s11");
+    expect(gateHoldHref(hold("project", "p1", "group_ic"))).toBe("/deals/p1/s11");
+  });
+  test("unknown gate falls back to the previous entity pages", () => {
+    expect(gateHoldHref(hold("project", "p1", "zzz"))).toBe("/projects/p1/process");
+    expect(gateHoldHref(hold("opportunity", "o1", "zzz"))).toBe("/opportunities/o1");
   });
 });
 

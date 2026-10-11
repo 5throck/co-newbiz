@@ -50,6 +50,13 @@ function fmt(iso: string | null): string {
   return iso ? new Date(iso).toLocaleString("ko-KR") : "사용 기록 없음";
 }
 
+// Compact date-time for the token table cells (e.g. "26. 10. 11. 15:04").
+function fmtShort(iso: string | null): string {
+  return iso
+    ? new Date(iso).toLocaleString("ko-KR", { dateStyle: "short", timeStyle: "short", hour12: false })
+    : "사용 기록 없음";
+}
+
 function scopeLabel(scopes: string): string {
   // The API returns a comma-joined string — parse instead of includes() over
   // the raw value (a substring hit would be a false positive).
@@ -331,18 +338,18 @@ function PersonalTokensSection() {
             <PageState state="empty" emptyText="발급한 개인 API 토큰이 없습니다." />
           ) : (
             <div className="table-scroll" style={{ marginTop: "var(--space-3, 1rem)" }}>
-              <table className="data-table list-table" aria-label="개인 API 토큰 목록">
+              <table className="data-table list-table pat-token-table" aria-label="개인 API 토큰 목록">
                 <caption className="sr-only">내가 발급한 개인 API 토큰 목록</caption>
                 <thead>
                   <tr>
-                    <th scope="col">라벨</th>
-                    <th scope="col">식별자</th>
-                    <th scope="col">권한</th>
-                    <th scope="col">상태</th>
-                    <th scope="col">생성</th>
-                    <th scope="col">만료</th>
-                    <th scope="col">마지막 사용</th>
-                    <th scope="col">작업</th>
+                    <th scope="col" className="pat-col-label">라벨</th>
+                    <th scope="col" className="pat-col-id">식별자</th>
+                    <th scope="col" className="pat-col-scope">권한</th>
+                    <th scope="col" className="pat-col-status">상태</th>
+                    <th scope="col" className="pat-col-date">생성</th>
+                    <th scope="col" className="pat-col-date">만료</th>
+                    <th scope="col" className="pat-col-date">마지막 사용</th>
+                    <th scope="col" className="pat-col-actions">작업</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -350,7 +357,7 @@ function PersonalTokensSection() {
                     const s = TOKEN_STATUS[t.status];
                     return (
                       <tr key={t.id}>
-                        <td>{t.label}</td>
+                        <td><span className="pat-label-text" title={t.label}>{t.label}</span></td>
                         <td>
                           <code>{maskedId(t.display_id)}</code>
                         </td>
@@ -360,9 +367,9 @@ function PersonalTokensSection() {
                             <span aria-hidden="true">{s.icon}</span> {s.label}
                           </span>
                         </td>
-                        <td className="cell-nowrap">{fmt(t.created_at)}</td>
-                        <td className="cell-nowrap">{t.expires_at ? fmt(t.expires_at) : "—"}</td>
-                        <td className="cell-nowrap">{fmt(t.last_used_at)}</td>
+                        <td className="cell-nowrap">{fmtShort(t.created_at)}</td>
+                        <td className="cell-nowrap">{t.expires_at ? fmtShort(t.expires_at) : "—"}</td>
+                        <td className="cell-nowrap">{fmtShort(t.last_used_at)}</td>
                         <td className="sizing-actions-cell">
                           {t.status === "active" && (
                             <Button

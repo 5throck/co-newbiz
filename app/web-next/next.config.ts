@@ -22,13 +22,17 @@ const nextConfig: NextConfig = {
   // Remote (IP) access: dev resources (/_next/webpack-hmr etc.) are blocked
   // cross-origin by default. List every host the operator browses dev from —
   // the Tailscale IP, the LAN IP of this workstation, and the public domain
-  // served through the Cloudflare tunnel to this dev server (7749).
+  // served through the Cloudflare tunnel (production hostname
+  // newbiz.bizknights.org plus the older co-newbiz host). The tunnel targets
+  // 7749, which is now the Docker production container; the dev server runs on
+  // 7748. The entry stays so a dev server reached through the public name
+  // does not lose HMR (403 on /_next/webpack-hmr).
   // Wave U-1 (finding 5): the dev-only Next indicator defaults to bottom-left
   // and overlaps the sidebar footer. Anchor it bottom-right (clear of the
   // sidebar); production builds never render it. tests/unit/layout-fixed.test.ts
   // guards this together with the fixed-position CSS allowlist.
   devIndicators: { position: "bottom-right" },
-  allowedDevOrigins: ["100.104.16.127", "192.168.0.44", "co-newbiz.bizknights.org"],
+  allowedDevOrigins: ["100.104.16.127", "192.168.0.44", "co-newbiz.bizknights.org", "newbiz.bizknights.org"],
   // ADR-0154: the OAuth consent and connected-apps screens must never be
   // framed (clickjacking a consent "허용") and must not leak the query
   // (client_id/state/PKCE challenge) through Referer.

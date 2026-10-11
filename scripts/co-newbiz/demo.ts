@@ -2,7 +2,7 @@
 // Internal demo (Wave C-2). Boots the production build of the web app on a free
 // port against a throwaway SQLite DB seeded with the S1-S12 demo deals, using
 // the same harness as the E2E scenarios (tests/scenarios/_support/harness.ts):
-// never port 7749, LLM / DART / web-research env blanked (offline fallbacks),
+// never port 7748 or 7749, LLM / DART / web-research env blanked (offline fallbacks),
 // temp directory removed on exit.
 //
 // Usage:

@@ -101,8 +101,20 @@ describe("connected-apps personal API tokens UI", () => {
   });
 
   test("token list date cells keep nowrap so timestamps do not break mid-line", () => {
-    expect(PAGE).toMatch(/<td className="cell-nowrap">\{fmt\(t\.created_at\)\}<\/td>/);
+    expect(PAGE).toMatch(/<td className="cell-nowrap">\{fmtShort\(t\.created_at\)\}<\/td>/);
     expect(PAGE).toMatch(/<td className="cell-nowrap">\{t\.expires_at/);
-    expect(PAGE).toMatch(/<td className="cell-nowrap">\{fmt\(t\.last_used_at\)\}<\/td>/);
+    expect(PAGE).toMatch(/<td className="cell-nowrap">\{fmtShort\(t\.last_used_at\)\}<\/td>/);
+  });
+
+  test("token table uses explicit column sizing: auto layout, min widths, ellipsis label, scroll wrapper", () => {
+    const css = readFileSync("app/web-next/app/styles.css", "utf8");
+    expect(PAGE).toContain("pat-token-table");
+    expect(PAGE).toMatch(/<div className="table-scroll"[\s\S]*pat-token-table/);
+    expect(PAGE).toMatch(/title=\{t\.label\}/);
+    expect(css).toMatch(/\.data-table\.pat-token-table \{[^}]*table-layout: auto[^}]*min-width: 44rem/);
+    expect(css).toMatch(/\.pat-token-table \.pat-col-id \{ min-width: 10\.5rem/);
+    expect(css).toMatch(/\.pat-token-table \.pat-col-date \{ min-width: 6\.5rem/);
+    expect(css).toMatch(/\.pat-label-text \{[^}]*text-overflow: ellipsis/);
+    expect(PAGE).toContain('dateStyle: "short"');
   });
 });

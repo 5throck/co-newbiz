@@ -36,7 +36,7 @@ function requireToken(): string {
 }
 
 function baseUrl(): string {
-  return process.env.CO_NEWBIZ_API_BASE_URL ?? "http://localhost:7749";
+  return process.env.CO_NEWBIZ_API_BASE_URL ?? "http://localhost:7748";
 }
 
 // Read tools get a larger budget than write tools per mcp-integration §5.

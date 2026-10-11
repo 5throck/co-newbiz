@@ -39,7 +39,7 @@ Next.js 자체 빌드가 하나의 프로세스에서 `/api/**`(Route Handlers)�
 cd app/web-next && bun --bun run start
 ```
 
-기본 포트 7749에서 실행(`package.json`의 `start` 스크립트; 2026-09-20, 일부 운영 환경에서 무관한 Docker 서비스가 8787을 점유함에 따라 Phase 5 컷오버 기본값이던 8787에서 변경). `bun run`이 아닌 `bun --bun`이 필요 — 그렇지 않으면 Next의 dev/start 스크립트가 Node 하에서 실행되며, Node는 `bun:sqlite`(`db/client.ts`의 import)를 해석할 수 없습니다. Phase 2에서 경험적으로 발견된 사항입니다.
+기본 포트 7748에서 실행(`package.json`의 `dev`/`start` 스크립트; 2026-09-20까지 8787, 이후 7749, 2026-10-11에 7748로 교체 — 7749를 Cloudflare 터널이 가리키는 Docker 운영 컨테이너에 배정하기 위함). `bun run`이 아닌 `bun --bun`이 필요 — 그렇지 않으면 Next의 dev/start 스크립트가 Node 하에서 실행되며, Node는 `bun:sqlite`(`db/client.ts`의 import)를 해석할 수 없습니다. Phase 2에서 경험적으로 발견된 사항입니다.
 
 헬스 체크: `GET /api/health`가 `{"status":"ok"}`를 반환해야 합니다. 이것이 ADR-0014가 요구하는 "직후 헬스 체크" 단계 — 프로세스가 크래시 없이 시작된 것만이 아니라, 릴리스를 완료로 간주하기 전에 확인해야 합니다.
 
@@ -64,11 +64,31 @@ MCP 서버는 각 AI 클라이언트 자체의 설정(Claude Code는 `.mcp.json`
 
 1. **마이그레이션 전 백업** — `docker/entrypoint.sh`는 기존 데이터베이스가 있는 상태의 모든 컨테이너 시작에서 SQLite 파일(WAL/SHM 사이드카 포함; 서버가 아직 실행 중이 아니므로 단순 복사가 일관된 스냅샷)을 `backups/pre-deploy-<timestamp>.db`로 복사합니다.
 2. **마이그레이션** — 서버 부팅이 대기 중인 마이그레이션을 자동 적용합니다(`CO_NEWBIZ_BOOTSTRAP_MIGRATIONS=auto`, `app/web-next/instrumentation.ts`). 새 볼륨의 첫 부팅은 첫 관리자 계정도 부트스트랩합니다(무작위 비밀번호가 컨테이너 로그에 한 번 출력 — 확인: `docker logs co-newbiz-web | grep -i password`).
-3. **직후 헬스 체크** — `bun scripts/deploy-web.ts`는 `http://127.0.0.1:7748/api/health`를 폴링하며, 통과하지 못하면 롤백 힌트와 함께 실패합니다. 실패 시: 이전 이미지를 되돌리고(스크립트가 정확한 `docker tag` 명령을 출력) DB 쪽은 §6을 따릅니다 — 코드 롤백과 DB 롤백은 여전히 분리되고 순서화된 작업입니다.
+3. **직후 헬스 체크** — `bun scripts/deploy-web.ts`는 `http://127.0.0.1:7749/api/health`를 폴링하며, 통과하지 못하면 롤백 힌트와 함께 실패합니다. 실패 시: 이전 이미지를 되돌리고(스크립트가 정확한 `docker tag` 명령을 출력) DB 쪽은 §6을 따릅니다 — 코드 롤백과 DB 롤백은 여전히 분리되고 순서화된 작업입니다.
 
-구성: 호스트 포트 **7748** → 컨테이너 7749(7749는 개발 서버 소유, 8787은 무관한 로컬 Docker 서비스가 점유). 데이터베이스는 앱 자체의 `<repo>/db/data` 디렉터리에 마운트된 `co-newbiz-data` named volume에 존재합니다 — `CO_NEWBIZ_DB_PATH`를 다른 곳으로 지정하지 마십시오(`db/client.ts`가 DB 경로의 조부모 디렉터리에서 마이그레이션 위치를 도출합니다) — 컨테이너 교체는 데이터에 손대지 않습니다. 시크릿은 호스트 로컬의 `.env.prod`에만 존재합니다(`.env.prod.sample`에서 생성; gitignore 처리, 이미지에 베이크되지 않음). 저장소가 비공개이므로 게시된 패키지도 비공개입니다: 첫 pull 전에 `read:packages` 권한의 PAT로 `docker login ghcr.io`를 1회 수행합니다(PAT 순환 후 재수행).
+구성: 호스트 포트 **7749** → 컨테이너 7749(compose `7749:7749`; 개발 서버는 7748, 8787은 무관한 로컬 Docker 서비스가 점유). 데이터베이스는 앱 자체의 `<repo>/db/data` 디렉터리에 마운트된 `co-newbiz-data` named volume에 존재합니다 — `CO_NEWBIZ_DB_PATH`를 다른 곳으로 지정하지 마십시오(`db/client.ts`가 DB 경로의 조부모 디렉터리에서 마이그레이션 위치를 도출합니다) — 컨테이너 교체는 데이터에 손대지 않습니다. 시크릿은 호스트 로컬의 `.env.prod`에만 존재합니다(`.env.prod.sample`에서 생성; gitignore 처리, 이미지에 베이크되지 않음). 저장소가 비공개이므로 게시된 패키지도 비공개입니다: 첫 pull 전에 `read:packages` 권한의 PAT로 `docker login ghcr.io`를 1회 수행합니다(PAT 순환 후 재수행).
 
 §7의 배포 후 확인은 동일하게 적용됩니다: 예약 작업은 ADR-0019에 따라 **호스트 OS 스케줄러**(launchd)에 등록된 채로 유지됩니다 — 컨테이너는 in-process 타이머를 실행하지 않으며, 컨테이너 교체가 호스트 스케줄러 등록을 흔들어서는 안 됩니다.
+
+### 운영자 전환 절차 (2026-10-11 포트 교체)
+
+Cloudflare 터널(`cloudflared`, 운영 PC의 docker 컨테이너이며 설정은 이 저장소 밖에 있음)은 `https://newbiz.bizknights.org`를 호스트 포트 7749로 연결합니다. 교체 전 7749는 개발 서버였고, 교체 후에는 운영 컨테이너입니다. 순서대로 실행:
+
+```bash
+# 1. 현재 7749를 점유한 개발 서버 중지 (해당 터미널에서 Ctrl-C 또는)
+lsof -ti tcp:7749 | xargs kill
+# 2. 새 개발 포트로 개발 서버 시작
+cd app/web-next && bun run dev            # http://localhost:7748
+# 3. 운영 시작 (먼저 최신 이미지 pull, 로컬 빌드는 --build 추가)
+docker compose pull web && docker compose up -d
+bun scripts/deploy-web.ts                 # 대안: pull + up + 헬스 체크를 한 번에
+curl -s http://127.0.0.1:7749/api/health  # {"status":"ok"} 기대
+curl -sI https://newbiz.bizknights.org/ | head -1
+```
+
+또한 `.env.prod`에 `CO_NEWBIZ_PUBLIC_ORIGIN=https://newbiz.bizknights.org`를 설정하고(`.env.prod.sample` 참조), 로컬 MCP 클라이언트 설정은 `CO_NEWBIZ_API_BASE_URL=http://localhost:7748`(또는 공개 URL)로 갱신합니다. `co-newbiz-data` 볼륨이 이미 없으면 운영 컨테이너는 빈 볼륨으로 시작하며, 첫 부팅 시 관리자 비밀번호는 `docker logs co-newbiz-web | grep -i password`로 확인합니다.
+
+롤백: `docker compose down` 후 개발 서버를 다시 7749에서 시작(`cd app/web-next && bun --bun next dev -p 7749`)하여 터널이 이전처럼 서빙하게 하고, 스크립트 복원은 포트 교체 커밋을 되돌립니다.
 
 ## 9. 관련 문서
 

@@ -16,7 +16,7 @@ import { join } from "node:path";
 const PROJECT_ROOT = join(import.meta.dirname, "../..");
 const TEST_DB_PATH = join(PROJECT_ROOT, "db/data/test-mcp-oauth.sqlite");
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
-const ORIGIN = "http://localhost:7749";
+const ORIGIN = "http://localhost:7748";
 process.env.CO_NEWBIZ_PUBLIC_ORIGIN = ORIGIN;
 const RESOURCE = `${ORIGIN}/api/mcp`;
 

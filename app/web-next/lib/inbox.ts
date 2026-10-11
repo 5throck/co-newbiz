@@ -111,6 +111,30 @@ export interface InboxSources {
   notifications?: NotificationSrc[];
 }
 
+/**
+ * Stage tab that hosts each gate's decision form (GateDecisionPanel). The deal
+ * id is the carrier id (opportunity or project), which the stage tabs resolve.
+ * Verified against the components: screening -> SynergyResult (S3), pre_fs ->
+ * GreenfieldStage (S5), target_screening -> brownfield ShortlistSection (S7),
+ * fs -> S8, dd -> S9, entity_ic/group_ic -> S11.
+ */
+export const GATE_STAGE_TAB: Record<string, string> = {
+  screening: "s3",
+  pre_fs: "s5",
+  target_screening: "s7",
+  fs: "s8",
+  dd: "s9",
+  entity_ic: "s11",
+  group_ic: "s11",
+};
+
+export function gateHoldHref(h: Pick<HoldSrc, "entityType" | "entityId" | "gate">): string {
+  const id = encodeURIComponent(h.entityId);
+  const tab = GATE_STAGE_TAB[h.gate];
+  if (tab) return `/deals/${id}/${tab}`;
+  return h.entityType === "project" ? `/projects/${id}/process` : `/opportunities/${id}`;
+}
+
 export function ageInDays(iso: string, now: number): number {
   const t = Date.parse(iso);
   if (Number.isNaN(t)) return 0;
@@ -178,7 +202,7 @@ export function buildInbox(src: InboxSources, nowMs: number = Date.now()): Inbox
       title: `${gateDisplayName(h.gate)} 게이트 HOLD 해소 대기`,
       ageDays: h.ageDays,
       severity: h.ageDays >= 14 ? "high" : h.ageDays >= 7 ? "medium" : "low",
-      href: h.entityType === "project" ? `/projects/${encodeURIComponent(h.entityId)}/process` : `/opportunities/${encodeURIComponent(h.entityId)}`,
+      href: gateHoldHref(h),
       createdAt: h.decidedAt,
     });
   }

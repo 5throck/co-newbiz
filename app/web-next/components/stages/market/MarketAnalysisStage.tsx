@@ -80,11 +80,7 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
     <>
       {confirmDialog}
       {linkNotice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-body)] mb-2">{linkNotice}</p>}
-      {dealId ? (
-        <DealBreadcrumb dealId={dealId} stageId="S1" />
-      ) : (
-        <Breadcrumb items={[{ label: "검토/안건 보드", href: "/deals" }, { label: "S1 시장분석" }]} />
-      )}
+      {dealId && <DealBreadcrumb dealId={dealId} stageId="S1" />}
       <MarketPrimaryAction ctx={ctx} />
       <StageFrame stageId="S1">
         <span className="flex flex-wrap items-center justify-between gap-2">

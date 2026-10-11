@@ -22,7 +22,6 @@ import { PageState, PrimaryAction } from "./ui.tsx";
 import { MarketAnalysisStage } from "./stages/MarketAnalysisStage.tsx";
 import { OpportunityFunnelStage } from "./stages/OpportunityFunnelStage.tsx";
 import { StageFrame } from "./StageFrame.tsx";
-import { Breadcrumb } from "./Breadcrumb.tsx";
 
 export type FlatRouteKey = "market" | "opportunities" | "synergy" | "greenfield" | "brownfield";
 
@@ -168,7 +167,6 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
   if (route === "opportunities" && !carrierId && !error && rows !== null && (rows.length === 0 || startsKnownTarget || startsNew)) {
     return (
       <main>
-        <Breadcrumb items={[{ label: "검토/안건 보드", href: "/deals" }, { label: "S2 기회 발굴" }]} />
         <StageFrame stageId="S2">{SUMMARY_BY_ROUTE.opportunities}</StageFrame>
         <OpportunityFunnelStage startRegister={startsKnownTarget || startsNew ? (startsKnownTarget ? "known_target" : "name") : undefined} />
       </main>
@@ -185,7 +183,6 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
 
   return (
     <main>
-      <Breadcrumb items={[{ label: "검토/안건 보드", href: "/deals" }, { label: TITLE_BY_ROUTE[route] }]} />
       <div className="stage-head">
         <h1>{TITLE_BY_ROUTE[route]}</h1>
         <PrimaryAction inline href={CREATE_BY_ROUTE[route].href} label={CREATE_BY_ROUTE[route].label} />
