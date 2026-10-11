@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { KRW_MILLIONS_UNIT } from "../../lib/format.ts";
+import { noteNumber, parseSimNote } from "../../lib/sim-note.ts";
 
 interface MethodCase {
   id: string;
@@ -34,17 +35,6 @@ interface ResolvedParams {
 const pct1 = (v: number) => `${(v * 100).toFixed(1)}%`;
 const 억 = (krwM: number) => `${(krwM / 100).toLocaleString("ko-KR", { maximumFractionDigits: 1 })}억원`;
 
-/** simulation note의 key=value; 파싱 — 계산 근거를 note에서 읽어온다. */
-function parseNote(note: string | null | undefined): Record<string, string> {
-  if (!note) return {};
-  const out: Record<string, string> = {};
-  for (const part of note.split("; ")) {
-    const i = part.indexOf("=");
-    if (i > 0) out[part.slice(0, i)] = part.slice(i + 1);
-  }
-  return out;
-}
-
 export function ValuationMethodology({
   projectId,
   marketCase,
@@ -66,20 +56,23 @@ export function ValuationMethodology({
   if (error) return <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">{error}</p>;
 
   const mf = marketCase?.simulations.find((s) => s.percentile === "p50");
-  const n = parseNote(mf?.note);
+  const n = parseSimNote(mf?.note);
   const hist = historicalCase?.simulations.find((s) => s.percentile === "p50");
-  const hn = parseNote(hist?.note);
+  const hn = parseSimNote(hist?.note);
   const revLine = marketCase?.lines.find((l) => l.category === "revenue");
-  const acqEv = n.acq_ev ? Number(n.acq_ev) : null;
-  const exitEv = n.exit_ev ? Number(n.exit_ev) : null;
+  const acqEv = noteNumber(n.acq_ev);
+  const exitEv = noteNumber(n.exit_ev);
   const isAcquisition = acqEv !== null && revLine != null;
-  const wacc = n.wacc ? Number(n.wacc) : null;
-  const iterations = n.iterations ? Number(n.iterations) : params?.iterations ?? null;
-  const horizon = params?.horizonYears ?? (Number(n.horizon) || 5);
+  const wacc = noteNumber(n.wacc);
+  const sigma = noteNumber(n.sigma);
+  const xTerminal = noteNumber(n.xcheck_terminal_growth);
+  const xNpv = noteNumber(n.xcheck_fade_npv);
+  const iterations = noteNumber(n.iterations) ?? params?.iterations ?? null;
+  const horizon = params?.horizonYears ?? (noteNumber(n.horizon) || 5);
 
   // 두 관점 차이의 원인 수치 — 같은 앵커·인수가·마진에서 성장률만 다르다.
-  const gMf = n.growth ? Number(n.growth) : null;
-  const gHist = hn.growth ? Number(hn.growth) : null;
+  const gMf = noteNumber(n.growth);
+  const gHist = noteNumber(hn.growth);
   const terminalMultipleMf = gMf != null && horizon > 1 ? Math.pow(1 + gMf, horizon - 1) : null;
   const terminalMultipleHist = gHist != null && horizon > 1 ? Math.pow(1 + gHist, horizon - 1) : null;
 
@@ -112,7 +105,7 @@ export function ValuationMethodology({
             <tr>
               <td>③ 변동성(σ)</td>
               <td>연도별 매출 성장 노이즈의 표준편차 — 몬테카를로 분포의 폭</td>
-              <td className="num mono-num">{n.sigma ? pct1(Number(n.sigma)) : "—"} ({n.sigma_source ?? ""})</td>
+              <td className="num mono-num">{sigma != null ? pct1(sigma) : "—"} ({n.sigma_source ?? ""})</td>
             </tr>
             <tr>
               <td>④ 손익 구조</td>
@@ -133,19 +126,19 @@ export function ValuationMethodology({
             <tr>
               <td>⑥ 할인·처분</td>
               <td>{horizon}년 FCF를 WACC로 할인{isAcquisition ? " + 마지막 해에 동일 배수로 처분(멀티플 확대 없음)" : ""}</td>
-              <td className="num mono-num">WACC {wacc != null ? pct1(wacc) : "—"} ({n.wacc_source ?? ""}){exitEv ? ` · 처분 ${exitEv.toFixed(2)}배` : ""}</td>
+              <td className="num mono-num">WACC {wacc != null ? pct1(wacc) : "—"} ({n.wacc_source ?? ""}){exitEv != null ? ` · 처분 ${exitEv.toFixed(2)}배` : ""}</td>
             </tr>
             <tr>
               <td>⑦ 분포 산출</td>
               <td>시드 기반 몬테카를로 — 동일 시드로 재현 가능 (ADR-0052 §D.4)</td>
-              <td className="num mono-num">{iterations ? iterations.toLocaleString() + "회" : "—"} → p05/p50/p95·IRR</td>
+              <td className="num mono-num">{iterations != null ? iterations.toLocaleString() + "회" : "—"} → p05/p50/p95·IRR</td>
             </tr>
             <tr>
               <td>⑧ 구조 교차검증</td>
               <td>같은 케이스를 페이드 DCF(장기창구, 성장률 → 말기 성장률 수렴, 동일 배수 처분)로 재평가</td>
               <td className="num mono-num">
                 {n.xcheck === "fade-dcf"
-                  ? `${n.xcheck_horizon}년 · → ${n.xcheck_terminal_growth ? pct1(Number(n.xcheck_terminal_growth)) : "—"} · NPV ${n.xcheck_fade_npv ? 억(Number(n.xcheck_fade_npv)) : "—"}`
+                  ? `${n.xcheck_horizon}년 · → ${xTerminal != null ? pct1(xTerminal) : "—"} · NPV ${xNpv != null ? 억(xNpv) : "—"}`
                   : "— (인수 가격 케이스에만)"}
               </td>
             </tr>

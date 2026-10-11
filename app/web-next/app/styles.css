@@ -3716,3 +3716,8 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
   .data-table { display: block; max-width: 100%; overflow-x: auto; }
   .btn-primary, .btn-ghost, .btn-danger, .status-chip { white-space: normal; max-width: 100%; text-align: left; overflow-wrap: anywhere; }
 }
+
+/* S8 targets table: chips and row action stay on one line; the table sizes to its
+   content and scrolls inside .table-scroll (beats the 640px wrap rule above by specificity). */
+.data-table.targets-table { display: table; width: max-content; min-width: 100%; max-width: none; overflow: visible; }
+.targets-table .status-chip, .targets-table .btn-ghost { white-space: nowrap; max-width: none; text-align: center; overflow-wrap: normal; }

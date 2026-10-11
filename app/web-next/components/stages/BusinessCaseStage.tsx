@@ -567,7 +567,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             </p>
           )}
         </div>
-        <div className="table-scroll"><table className="data-table">
+        <div className="table-scroll"><table className="data-table targets-table">
           <thead>
             <tr>
               <th scope="col">대상</th>
@@ -580,7 +580,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               <th scope="col" title="페이드 DCF(성장률이 선형 수렴하는 대안 구조) NPV가 기본 구조 p50과 얼마나 벌어지는지 — 표시 전용이며 순위에 반영되지 않습니다.">구조 교차검증<span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">(페이드 DCF vs p50)</span></th>
               <th scope="col" title="생성기가 진입(acq_ev)과 처분(exit_ev)에 같은 배수를 적용하므로 진입 전용 배수가 아닌 가정치입니다. 사람이 확정한 프로젝트 밴드가 있을 때만 범위 내/밖을 표시하며, 글로벌 2–6배는 이 영역의 근거가 없는 참고값입니다. 가격 적정성 판단이 아니며 표시 전용으로 순위에 반영되지 않습니다.">가정 EV/매출 배수 (진입=처분)</th>
               <th scope="col" title="이 대상의 케이스가 어떤 매출 기준으로 평가되었는가 — 회사 실적 앵커(DART 연매출)와 시장 포획 폴백(시장규모 × 포획률)이 섞이면 p05 순위 비교가 부적합합니다.">평가 기준</th>
-              <th scope="col"></th>
+              <th scope="col" className="min-w-[calc(var(--space-8)*3)]"><span className="sr-only">작업</span></th>
             </tr>
           </thead>
           <tbody>
@@ -598,8 +598,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                   <td className="num mono-num">{t.baseP50 !== null ? fmt(t.baseP50) : "—"}</td>
                   <td className="num mono-num">{t.irr != null ? `${(t.irr * 100).toFixed(1)}%` : "—"}</td>
                   <td className="num">{t.caseCount}</td>
-                  <td><span className="status-chip status-not-started">{ENGINE_LABEL[t.engine ?? ""] ?? "엔진 미기록"}</span></td>
-                  <td className="num">
+                  <td><span className="status-chip status-not-started whitespace-nowrap">{ENGINE_LABEL[t.engine ?? ""] ?? "엔진 미기록"}</span></td>
+                  <td className="num min-w-[calc(var(--space-8)*5)]">
                     {t.xcheckDivergence != null ? (
                       <>
                         <span className="mono-num">{t.xcheckDivergence >= 0 ? "+" : "−"}{Math.abs(t.xcheckDivergence * 100).toFixed(1)}%</span>
@@ -622,13 +622,13 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                       </span>
                     )}
                   </td>
-                  <td className="num">
+                  <td className="num min-w-[calc(var(--space-8)*5)]">
                     {t.acqEvRevenue != null ? (
                       <>
                         <span className="mono-num">{t.acqEvRevenue.toFixed(1)}×</span>
                         {evBand?.confirmed && t.acqEvRevenueInBand != null ? (
                           <span
-                            className={`status-chip block mt-1 ${t.acqEvRevenueInBand ? "status-not-started" : "status-amber"}`}
+                            className={`status-chip block mt-1 whitespace-nowrap ${t.acqEvRevenueInBand ? "status-not-started" : "status-amber"}`}
                             title={`사람이 확정한 프로젝트 밴드 ${evBand.confirmed.min}–${evBand.confirmed.max}× 기준의 참고 표시이며 가격 적정성 판단이 아닙니다. 근거: ${evBand.confirmed.rationale} · 출처: ${evBand.confirmed.source} · 확정: ${evBand.confirmed.confirmedBy}, ${evBand.confirmed.confirmedAt}${evBand.stale ? ` · 재확인 필요: 확정 후 ${evBand.ageDays}일 경과 (알림일 뿐 순위에 영향 없음)` : ""}${data?.methods_mixed ? " · 평가 기준이 다른 대상 간에는 밴드 판정을 비교할 수 없습니다." : ""}`}
                           >
                             <span aria-hidden="true">{t.acqEvRevenueInBand ? "ⓘ" : "⚠"}</span>{" "}
@@ -637,7 +637,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                           </span>
                         ) : (
                           <span
-                            className="status-chip status-not-started block mt-1"
+                            className="status-chip status-not-started block mt-1 whitespace-nowrap"
                             aria-label={`밴드 미확정. 참고: 글로벌 로보틱스·자동화 M&A ${refBand.min}에서 ${refBand.max}배, 이 영역의 근거 없음`}
                             title="사람이 확정한 프로젝트 밴드가 없어 범위 내/밖 판정을 하지 않습니다."
                           >
@@ -649,18 +649,18 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                       <span aria-label="해당 없음: 인수가 기반 배수 없음" title="인수가 기반으로 평가되지 않은 케이스입니다.">N/A</span>
                     )}
                   </td>
-                  <td>
+                  <td className="min-w-[calc(var(--space-8)*5)]">
                     {t.anchorMethod === "company_revenue" && (
-                      <span className="status-chip status-green" title="대상 회사 최신 연매출(DART)을 매출 앵커로 평가 — 대상 간 비교 가능">실적 앵커 (DART)</span>
+                      <span className="status-chip status-green whitespace-nowrap" title="대상 회사 최신 연매출(DART)을 매출 앵커로 평가 — 대상 간 비교 가능">실적 앵커 (DART)</span>
                     )}
                     {t.anchorMethod === "market_capture" && (
-                      <span className="status-chip status-amber" title="회사 실적이 연결되지 않아 시장규모 × 포획률 폴백으로 평가 — 실적 앵커 대상과는 기준이 다릅니다. 재무분석 탭에서 회사 연결 후 재생성하세요.">시장 포획 폴백</span>
+                      <span className="status-chip status-amber whitespace-nowrap" title="회사 실적이 연결되지 않아 시장규모 × 포획률 폴백으로 평가 — 실적 앵커 대상과는 기준이 다릅니다. 재무분석 탭에서 회사 연결 후 재생성하세요.">시장 포획 폴백</span>
                     )}
-                    {!t.anchorMethod && <span className="status-chip status-not-started">미평가</span>}
+                    {!t.anchorMethod && <span className="status-chip status-not-started whitespace-nowrap">미평가</span>}
                   </td>
-                  <td>
+                  <td className="min-w-[calc(var(--space-8)*3)]">
                     {canAct && !isSelected && (
-                      <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => { setSelecting({ targetId: t.targetId, name: t.companyName }); setSelectionRationale(""); }}>
+                      <button type="button" className="btn-ghost btn-sm whitespace-nowrap" disabled={busy} onClick={() => { setSelecting({ targetId: t.targetId, name: t.companyName }); setSelectionRationale(""); }}>
                         대상 선택
                       </button>
                     )}

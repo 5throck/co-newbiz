@@ -25,6 +25,7 @@
 // (human click) and the fs gate record are the only confirmations, and
 // tests/unit/business-case.test.ts proves generation alone produces neither.
 
+import { noteNumber, parseSimNote } from "./sim-note.ts";
 import { resolveEffectiveCagr } from "./market-calibration.ts";
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
@@ -1525,17 +1526,11 @@ export interface CrossCheckOfNote {
  *  note fragments written at generation. Missing, "null" or non-finite values
  *  yield null (never 0). */
 export function crossCheckOfNote(note: string | null): CrossCheckOfNote {
-  const num = (re: RegExp): number | null => {
-    const m = re.exec(note ?? "");
-    if (!m) return null;
-    const raw = m[1].trim();
-    const v = Number(raw);
-    return raw !== "" && Number.isFinite(v) ? v : null;
-  };
+  const n = parseSimNote(note);
   return {
-    fadeNpv: num(/(?:^|;\s*)xcheck_fade_npv=([^;]*)/),
-    fadeIrr: num(/(?:^|;\s*)xcheck_fade_irr=([^;]*)/),
-    acqEvRevenue: num(/(?:^|;\s*)acq_ev=([^;x]*)x?/),
+    fadeNpv: noteNumber(n.xcheck_fade_npv),
+    fadeIrr: noteNumber(n.xcheck_fade_irr),
+    acqEvRevenue: noteNumber(n.acq_ev),
   };
 }
 
