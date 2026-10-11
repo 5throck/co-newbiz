@@ -2296,6 +2296,9 @@
 /* S1 시장분석 목록 — 분석 상태 열(긴 진행률 칩) 예산을 위해 상향.
    모든 열이 th 고정 폭을 가져 폭 흡수 왜곡 없이 남는 폭이 비례 배분된다. */
 .list-table.market-list-table { max-width: 72rem; }
+/* S2 기회 퍼널 — 작업 열(버튼 2~3개)이 셀 밖으로 넘치지 않도록 폭을 넓히고,
+   좁은 화면에서는 .table-scroll 안에서 가로 스크롤한다. */
+.list-table.opp-funnel-table { max-width: 80rem; min-width: 56rem; }
 .opportunity-create { margin-bottom: 1.25rem; }
 .opportunity-create summary { display: inline-flex; cursor: pointer; list-style: none; }
 .opportunity-form { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; align-items: center; }
@@ -2993,7 +2996,8 @@ main li { overflow-wrap: anywhere; }
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  gap: var(--space-2, 0.5rem);
 }
 
 .sizing-new-form {
