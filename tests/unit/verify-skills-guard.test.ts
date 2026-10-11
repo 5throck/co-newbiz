@@ -38,10 +38,12 @@ test("the gate keys off the SKILLS.md header — the hand-maintained lifecycle r
   expect(SOURCE).toContain("hand-maintained");
 });
 
-test("both index writes are gated — generateSkillsIndex plus the --check regenerate path (1.5.1)", () => {
-  // two Bun.write sites: generateSkillsIndex and the --check stub-regeneration.
-  // Both must sit behind the regenerable gate — a curated index is never written.
-  expect((SOURCE.match(/Bun\.write\(/g) ?? []).length).toBe(2);
-  expect(SOURCE).toMatch(/if \(regenerable\) \{\s*\/\/ A missing\/stub index is not drift[^\n]*\n\s*await Bun\.write\(/);
+test("all index writes are gated — generateSkillsIndex plus the --check missing/stub paths (1.5.2+)", () => {
+  // three Bun.write sites: generateSkillsIndex, the --check missing-index
+  // regeneration, and the --check stale-stub regeneration. All sit behind
+  // regenerability — a curated index is never written.
+  expect((SOURCE.match(/Bun\.write\(/g) ?? []).length).toBe(3);
+  expect(SOURCE).toMatch(/if \(existing === null\) \{[\s\S]*?await Bun\.write\(skillsMdPath, generated\);/);
+  expect(SOURCE).toMatch(/if \(isExactGeneratedStub\(existing\)\) \{[\s\S]*?normExisting === normGenerated[\s\S]*?return;[\s\S]*?await Bun\.write\(skillsMdPath, generated\);/);
   expect(SOURCE).toMatch(/if \(regenerable\) \{\s*await generateSkillsIndex\(checks\);\s*\}/);
 });
