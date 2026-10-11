@@ -37,7 +37,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const suggestion = (key: string) => {
     const e = byKey.get(key);
     if (!e || e.value === null) return { key, value: null, reason: e?.reason ?? "데이터 없음" };
-    return { key, value: e.value, as_of: e.as_of, anchor_ref: e.anchor_ref, source_label: e.source_label };
+    return { key, value: e.value, as_of: e.as_of, anchor_ref: e.anchor_ref, source_label: e.source_label, note: e.note ?? null };
   };
   const suggestions = [suggestion("risk_free"), suggestion("credit_spread"), suggestion("observed_de")];
   return ok(

@@ -87,9 +87,27 @@ interface TargetComparisonRow {
   structureMismatch?: boolean;
   acqEvRevenue?: number | null;
   acqEvRevenueInBand?: boolean | null;
+  acqEvBandSource?: "confirmed" | "none";
+}
+interface EvBandConfirmed {
+  min: number;
+  max: number;
+  rationale: string;
+  source: string;
+  confirmedBy: string;
+  confirmedAt: string;
+}
+interface EvRevenueBandPayload {
+  confirmed: EvBandConfirmed | null;
+  reference: { min: number; max: number; label: string; sourced: boolean };
+  optimismFlag: boolean;
+  spreadFlag?: boolean;
+  stale?: boolean;
+  ageDays?: number | null;
 }
 // Mirrors XCHECK_DIVERGENCE_WARN_RATIO / ACQUISITION_EV_REVENUE_BAND in lib/business-case-generator.ts
 // (that module imports the DB and cannot be bundled into a client component).
+// ACQ_BAND is only the fallback for the unsourced global reference; the payload's evRevenueBand.reference wins.
 const XCHECK_WARN_PCT = 50;
 const ACQ_BAND = { min: 2, max: 6 } as const;
 interface LegacyModelRow {
@@ -107,6 +125,7 @@ interface CasesResponse {
   adoption: { modelId: string; adoptedBy: string; adoptedAt: string } | null;
   target_selection: { targetId: string; rationale: string; selectedBy: string; selectedAt: string } | null;
   targets: TargetComparisonRow[];
+  evRevenueBand?: EvRevenueBandPayload;
   engines_mixed?: boolean;
   methods_mixed?: boolean;
   escalated_cagr_pct: number | null;
@@ -353,6 +372,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
     if (targetFilter && targets.some((t) => t.targetId === targetFilter)) return targetFilter;
     return data?.target_selection?.targetId ?? targets[0]?.targetId ?? null;
   }, [targets, targetFilter, data?.target_selection?.targetId]);
+  const evBand = data?.evRevenueBand;
+  const refBand = evBand?.reference ?? ACQ_BAND;
   const selectedTargetName = targets.find((t) => t.targetId === data?.target_selection?.targetId)?.companyName ?? null;
 
   const byScenario = useMemo(() => {
@@ -506,6 +527,46 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             <span className="text-[color:var(--muted-fg)]">({data?.target_selection?.selectedBy})</span>
           </p>
         )}
+        <div className="mb-2 grid gap-1" aria-label="EV/매출 밴드 상태">
+          {evBand?.confirmed ? (
+            <p className="text-[length:var(--fs-caption)]" role="note">
+              <span className="status-chip status-green mr-1"><span aria-hidden="true">✓</span> 사람이 확정한 밴드</span>
+              <b className="mono-num">{evBand.confirmed.min}–{evBand.confirmed.max}×</b> — 근거: {evBand.confirmed.rationale} · 출처: {evBand.confirmed.source}{" "}
+              <span className="text-[color:var(--muted-fg)]">(확정: {evBand.confirmed.confirmedBy}, {evBand.confirmed.confirmedAt})</span>
+              <span className="text-[color:var(--muted-fg)]"> · 참고(글로벌): {refBand.min}–{refBand.max}× — 이 영역의 근거 없음, 참고용</span>
+            </p>
+          ) : (
+            <p className="text-[length:var(--fs-caption)]" role="note">
+              <span className="status-chip status-not-started mr-1"><span aria-hidden="true">ⓘ</span> 밴드 미확정</span>
+              범위 내/밖 판정은 표시하지 않습니다. 참고: 글로벌 로보틱스·자동화 M&amp;A {refBand.min}–{refBand.max}× (이 영역의 근거 없음, 참고용). 파라미터·스냅샷 탭에서 사람이 근거와 함께 확정할 수 있습니다.
+            </p>
+          )}
+          {evBand?.spreadFlag && evBand.confirmed && (
+            <p className="status-chip status-amber" role="note">
+              <span aria-hidden="true">⚠</span> 확정 밴드 폭이 넓습니다 (상한/하한 {(evBand.confirmed.max / evBand.confirmed.min).toFixed(1)}배 &gt; 4.5배) — 밴드가 너무 느슨하지 않은지 점검하세요. (경고일 뿐 순위·저장에 영향 없음)
+            </p>
+          )}
+          {evBand?.stale && evBand.confirmed && (
+            <p className="status-chip status-amber" role="note">
+              <span aria-hidden="true">⏱</span> 재확인 필요 — 확정 후 {evBand.ageDays}일 경과 (확정일 {evBand.confirmed.confirmedAt}). 알림일 뿐 순위에는 영향이 없습니다.
+            </p>
+          )}
+          {evBand?.confirmed && data?.methods_mixed && (
+            <p className="status-chip status-amber" role="note">
+              <span aria-hidden="true">⚠</span> 평가 기준이 서로 다른 대상이 섞여 있어 밴드 판정을 대상 간에 비교할 수 없습니다.
+            </p>
+          )}
+          {evBand?.confirmed && data?.target_selection && data.target_selection.selectedBy === evBand.confirmed.confirmedBy && (
+            <p className="status-chip status-amber" role="note">
+              <span aria-hidden="true">⚠</span> 밴드를 확정한 사람과 대상을 선정한 사람이 같습니다 ({evBand.confirmed.confirmedBy}) — 다른 검토자의 확인을 권장합니다. (표시 전용, 진행을 막지 않습니다)
+            </p>
+          )}
+          {evBand?.optimismFlag && evBand.confirmed && (
+            <p className="status-chip status-amber" role="note">
+              <span aria-hidden="true">⚠</span> 확정 상한 {evBand.confirmed.max}×가 글로벌 참고 상한({refBand.max}×)의 1.5배를 넘습니다 — 낙관 편향 여부를 점검하세요. (경고일 뿐 순위·저장에 영향 없음)
+            </p>
+          )}
+        </div>
         <div className="table-scroll"><table className="data-table">
           <thead>
             <tr>
@@ -517,7 +578,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               <th scope="col" className="num">케이스</th>
               <th scope="col">계산 엔진</th>
               <th scope="col" title="페이드 DCF(성장률이 선형 수렴하는 대안 구조) NPV가 기본 구조 p50과 얼마나 벌어지는지 — 표시 전용이며 순위에 반영되지 않습니다.">구조 교차검증<span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">(페이드 DCF vs p50)</span></th>
-              <th scope="col" title="생성기가 진입(acq_ev)과 처분(exit_ev)에 같은 배수를 적용하므로 진입 전용 배수가 아닌 가정치입니다. 스크리닝 범위 2–6배는 가격 적정성 판단이 아닙니다. 표시 전용이며 순위에 반영되지 않습니다.">가정 EV/매출 배수 (진입=처분)</th>
+              <th scope="col" title="생성기가 진입(acq_ev)과 처분(exit_ev)에 같은 배수를 적용하므로 진입 전용 배수가 아닌 가정치입니다. 사람이 확정한 프로젝트 밴드가 있을 때만 범위 내/밖을 표시하며, 글로벌 2–6배는 이 영역의 근거가 없는 참고값입니다. 가격 적정성 판단이 아니며 표시 전용으로 순위에 반영되지 않습니다.">가정 EV/매출 배수 (진입=처분)</th>
               <th scope="col" title="이 대상의 케이스가 어떤 매출 기준으로 평가되었는가 — 회사 실적 앵커(DART 연매출)와 시장 포획 폴백(시장규모 × 포획률)이 섞이면 p05 순위 비교가 부적합합니다.">평가 기준</th>
               <th scope="col"></th>
             </tr>
@@ -565,11 +626,22 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                     {t.acqEvRevenue != null ? (
                       <>
                         <span className="mono-num">{t.acqEvRevenue.toFixed(1)}×</span>
-                        {t.acqEvRevenueInBand ? (
-                          <span className="status-chip status-not-started block mt-1" title="로봇 M&A 스크리닝 범위일 뿐 가격 적정성 판단이 아닙니다.">{ACQ_BAND.min}–{ACQ_BAND.max}× 스크리닝 범위 내 (참고)</span>
+                        {evBand?.confirmed && t.acqEvRevenueInBand != null ? (
+                          <span
+                            className={`status-chip block mt-1 ${t.acqEvRevenueInBand ? "status-not-started" : "status-amber"}`}
+                            title={`사람이 확정한 프로젝트 밴드 ${evBand.confirmed.min}–${evBand.confirmed.max}× 기준의 참고 표시이며 가격 적정성 판단이 아닙니다. 근거: ${evBand.confirmed.rationale} · 출처: ${evBand.confirmed.source} · 확정: ${evBand.confirmed.confirmedBy}, ${evBand.confirmed.confirmedAt}${evBand.stale ? ` · 재확인 필요: 확정 후 ${evBand.ageDays}일 경과 (알림일 뿐 순위에 영향 없음)` : ""}${data?.methods_mixed ? " · 평가 기준이 다른 대상 간에는 밴드 판정을 비교할 수 없습니다." : ""}`}
+                          >
+                            <span aria-hidden="true">{t.acqEvRevenueInBand ? "ⓘ" : "⚠"}</span>{" "}
+                            {t.acqEvRevenueInBand ? `확정 밴드 ${evBand.confirmed.min}–${evBand.confirmed.max}× 범위 내 (참고 표시)` : `확정 밴드 ${evBand.confirmed.min}–${evBand.confirmed.max}× 범위 밖 — 확인 필요`}
+                            {evBand.stale && <> · <span aria-hidden="true">⏱</span> 재확인 필요</>}
+                          </span>
                         ) : (
-                          <span className="status-chip status-amber block mt-1" title="로봇 M&A 스크리닝 범위일 뿐 가격 적정성 판단이 아닙니다.">
-                            <span aria-hidden="true">⚠</span> {ACQ_BAND.min}–{ACQ_BAND.max}× 범위 밖 — 확인 필요
+                          <span
+                            className="status-chip status-not-started block mt-1"
+                            aria-label={`밴드 미확정. 참고: 글로벌 로보틱스·자동화 M&A ${refBand.min}에서 ${refBand.max}배, 이 영역의 근거 없음`}
+                            title="사람이 확정한 프로젝트 밴드가 없어 범위 내/밖 판정을 하지 않습니다."
+                          >
+                            <span aria-hidden="true">ⓘ</span> 밴드 미확정
                           </span>
                         )}
                       </>
@@ -599,7 +671,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           </tbody>
         </table></div>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" role="note">
-          * 구조 교차검증과 가정 EV/매출 배수 열은 표시 전용이며 순위·★ 권고안에 반영되지 않습니다. 2–6× 범위는 로봇 M&A 스크리닝 참고 범위일 뿐 가격 적정성 판단이 아닙니다. 권고는 제안일 뿐이며 대상 선정은 사람이 근거를 남겨 결정합니다.
+          * 구조 교차검증과 가정 EV/매출 배수 열은 표시 전용이며 순위·★ 권고안에 반영되지 않습니다. 글로벌 2–6× 범위는 이 영역의 근거가 없는 참고값이며, 범위 내/밖 표시는 사람이 확정한 프로젝트 밴드에 대해서만 나타나고 가격 적정성 판단이 아닙니다. 권고는 제안일 뿐이며 대상 선정은 사람이 근거를 남겨 결정합니다.
           {data?.methods_mixed && " 평가 기준이 대상마다 다르므로 교차검증 괴리율은 대상 간에 비교할 수 없습니다."}
         </p>
         {data?.engines_mixed && (

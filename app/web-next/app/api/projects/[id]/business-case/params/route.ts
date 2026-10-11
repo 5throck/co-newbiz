@@ -32,6 +32,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const rationale = typeof body?.rationale === "string" ? body.rationale.trim() : "";
   if (!rationale) return badRequest("invalid_request", "파라미터 확정에는 근거(rationale)가 필수입니다.");
   const raw = body?.params ?? {};
+  if (Object.keys(raw).some((k) => k.replace(/^bc\./, "").startsWith("acquisition_ev_revenue_band"))) {
+    return badRequest("invalid_request", "EV/Revenue 밴드는 사람 전용 경로(business-case/ev-band)로만 확정할 수 있습니다 (use the human-only ev-band route).");
+  }
   const num = (key: string): number | undefined => {
     const v = raw[key];
     if (v === undefined || v === null || v === "") return undefined;

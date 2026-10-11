@@ -10,7 +10,7 @@
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
-import { SCENARIOS, recommendedFromDb, recommendTargetsFromDb, enginesMixedAcrossTargets, methodsMixedAcrossTargets, type Scenario, type TargetComparisonRow } from "./business-case-generator.ts";
+import { SCENARIOS, recommendedFromDb, recommendTargetsFromDb, enginesMixedAcrossTargets, methodsMixedAcrossTargets, resolveConfirmedEvBand, evRevenueBandPayload, type EvRevenueBandPayload, type Scenario, type TargetComparisonRow } from "./business-case-generator.ts";
 import { resolveOrCreateCompany } from "./brownfield-targets.ts";
 import { SPEC_VERSION } from "./spec-activities.generated.ts";
 import { applyDdReselection, selectedTargetId } from "./dd-target.ts";
@@ -176,6 +176,8 @@ export function listBusinessCases(projectId: string): {
    *  (company-revenue anchor vs market-capture fallback) — the p05 ranking
    *  comparison is then apples-to-oranges and the UI warns. */
   methodsMixed: boolean;
+  /** Project EV/Revenue band: human-confirmed (or null) beside the unsourced global reference. */
+  evRevenueBand: EvRevenueBandPayload;
 } {
   const db = getDb();
   const models = db
@@ -227,7 +229,7 @@ export function listBusinessCases(projectId: string): {
       simulations: modelSims,
     };
   });
-  return { cases: cases.filter((c) => c.archived_at === null), archived: cases.filter((c) => c.archived_at !== null), recommendedScenario: recommended, adoption, targetSelection, targets, enginesMixed: enginesMixedAcrossTargets(targets), methodsMixed: methodsMixedAcrossTargets(targets) };
+  return { cases: cases.filter((c) => c.archived_at === null), archived: cases.filter((c) => c.archived_at !== null), recommendedScenario: recommended, adoption, targetSelection, targets, enginesMixed: enginesMixedAcrossTargets(targets), methodsMixed: methodsMixedAcrossTargets(targets), evRevenueBand: evRevenueBandPayload(resolveConfirmedEvBand(db, projectId)) };
 }
 
 /** The adopted case for history views (adoption / IC package / report): looks in

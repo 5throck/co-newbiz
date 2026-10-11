@@ -445,6 +445,127 @@ export interface CaseInputs {
 /** Default sales-plan curve (design REQ-W1-2) — utilization by year. */
 export const DEFAULT_RAMP_UP = [0.4, 0.7, 0.9, 1.0, 1.0];
 
+/** Optimism-bias flag: confirmed band max above factor x the global reference max. */
+export const EV_BAND_OPTIMISM_FLAG_FACTOR = 1.5;
+/** An EV/Revenue above this is treated as an input error, not a band. */
+export const EV_BAND_MAX_SANE = 50;
+/** Spread flag: confirmed max/min above 1.5x the global band's max/min ratio (3) = 4.5. Warning only. */
+export const EV_BAND_SPREAD_FLAG_RATIO = 4.5;
+/** A confirmed band older than this many days is flagged stale. Warning only. */
+export const EV_BAND_STALE_DAYS = 90;
+export const EV_BAND_RATIONALE_MAX = 2000;
+export const EV_BAND_SOURCE_MAX = 500;
+export class EvBandValidationError extends Error {}
+export const EV_BAND_MIN_KEY = "bc.acquisition_ev_revenue_band.min";
+export const EV_BAND_MAX_KEY = "bc.acquisition_ev_revenue_band.max";
+
+export interface ConfirmedEvBand {
+  min: number;
+  max: number;
+  rationale: string;
+  source: string;
+  /** run.created_by / run.created_at of the confirming run. */
+  confirmedBy: string;
+  confirmedAt: string;
+  runId: string;
+}
+
+type EvBandDb = { query: (sql: string) => { get: (...args: unknown[]) => unknown; all: (...args: unknown[]) => unknown[] } };
+
+/** Latest run that carries BOTH band keys (kind='user'); a half-written run is
+ *  ignored so a new min is never paired with an old max. */
+export function resolveConfirmedEvBand(db: EvBandDb, projectId: string): ConfirmedEvBand | null {
+  const rows = db
+    .query(
+      `SELECT a.run_id, a.assumption_key, a.value, a.rationale, a.anchor_ref, r.created_by, r.created_at
+       FROM assumption a JOIN run r ON r.id = a.run_id
+       WHERE r.project_id = ? AND a.kind = 'user' AND a.assumption_key IN (?, ?)
+       ORDER BY r.created_at DESC, r.id DESC, a.id DESC`,
+    )
+    .all(projectId, EV_BAND_MIN_KEY, EV_BAND_MAX_KEY) as Array<{
+    run_id: string; assumption_key: string; value: number; rationale: string | null; anchor_ref: string | null; created_by: string; created_at: string;
+  }>;
+  const byRun = new Map<string, { min?: (typeof rows)[number]; max?: (typeof rows)[number] }>();
+  for (const r of rows) {
+    const e = byRun.get(r.run_id) ?? {};
+    if (r.assumption_key === EV_BAND_MIN_KEY && !e.min) e.min = r;
+    if (r.assumption_key === EV_BAND_MAX_KEY && !e.max) e.max = r;
+    byRun.set(r.run_id, e); // Map preserves insertion order = newest run first
+  }
+  for (const [runId, e] of byRun) {
+    if (!e.min || !e.max) continue;
+    if (!Number.isFinite(e.min.value) || !Number.isFinite(e.max.value) || !(e.min.value > 0) || !(e.min.value < e.max.value)) continue;
+    return {
+      min: e.min.value,
+      max: e.max.value,
+      rationale: e.min.rationale ?? "",
+      source: e.min.anchor_ref ?? "",
+      confirmedBy: e.min.created_by,
+      confirmedAt: e.min.created_at,
+      runId,
+    };
+  }
+  return null;
+}
+
+/** Validate a band confirmation (server-authoritative). Throws Error with a field-specific message. */
+export function validateEvBandInput(input: { min: unknown; max: unknown; rationale: unknown; source: unknown }): { min: number; max: number; rationale: string; source: string } {
+  const { min, max } = input;
+  const bad = (m: string) => new EvBandValidationError(m);
+  if (typeof min !== "number" || !Number.isFinite(min) || min <= 0) throw bad("min은 0보다 큰 유한한 숫자여야 합니다.");
+  if (typeof max !== "number" || !Number.isFinite(max)) throw bad("max는 유한한 숫자여야 합니다.");
+  if (min >= max) throw bad("min은 max보다 작아야 합니다.");
+  if (max > EV_BAND_MAX_SANE) throw bad(`max는 ${EV_BAND_MAX_SANE}x 이하여야 합니다 (입력 오류로 간주).`);
+  const rationale = typeof input.rationale === "string" ? input.rationale.trim() : "";
+  if (rationale.length < 10) throw bad("rationale은 10자 이상이어야 합니다.");
+  if (rationale.length > EV_BAND_RATIONALE_MAX) throw bad(`rationale은 ${EV_BAND_RATIONALE_MAX}자 이하여야 합니다.`);
+  const source = typeof input.source === "string" ? input.source.trim() : "";
+  if (source.length < 3) throw bad("source는 3자 이상이어야 합니다.");
+  if (source.length > EV_BAND_SOURCE_MAX) throw bad(`source는 ${EV_BAND_SOURCE_MAX}자 이하여야 합니다.`);
+  return { min, max, rationale, source };
+}
+
+/** Human-only write: two kind='user' rows in ONE fresh run; overwrite-only. */
+export async function recordEvRevenueBand(
+  db: { run: (sql: string, ...args: unknown[]) => void },
+  opts: { projectId: string; min: number; max: number; rationale: string; source: string; actor: string; now?: string },
+): Promise<{ run_id: string; written: string[] }> {
+  const v = validateEvBandInput(opts);
+  const { createRun } = await import("../../../db/lib/versioning.ts");
+  const { recordAssumption } = await import("../../../db/lib/assumption.ts");
+  const now = opts.now ?? new Date().toISOString();
+  const run = createRun(db as never, { projectId: opts.projectId, label: "EV/Revenue band confirmation", createdBy: opts.actor, overrides: {}, now });
+  for (const [key, value] of [[EV_BAND_MIN_KEY, v.min], [EV_BAND_MAX_KEY, v.max]] as const) {
+    recordAssumption(db as never, { runId: run.run_id, assumptionKey: key, kind: "user", value, asOf: now.slice(0, 10), rationale: v.rationale, anchorRef: v.source, actor: opts.actor, now });
+  }
+  return { run_id: run.run_id, written: [EV_BAND_MIN_KEY, EV_BAND_MAX_KEY] };
+}
+
+export interface EvRevenueBandPayload {
+  confirmed: ConfirmedEvBand | null;
+  reference: { min: number; max: number; label: string; sourced: false };
+  optimismFlag: boolean;
+  /** confirmed.max/confirmed.min > EV_BAND_SPREAD_FLAG_RATIO. Warning only. */
+  spreadFlag: boolean;
+  /** confirmedAt older than EV_BAND_STALE_DAYS (false when not confirmed). Warning only. */
+  stale: boolean;
+  /** Whole days since confirmedAt; null when not confirmed. */
+  ageDays: number | null;
+}
+
+export function evRevenueBandPayload(confirmed: ConfirmedEvBand | null, now: Date = new Date()): EvRevenueBandPayload {
+  const t = confirmed ? Date.parse(confirmed.confirmedAt) : NaN;
+  const ageDays = Number.isFinite(t) ? Math.floor((now.getTime() - t) / 86_400_000) : null;
+  return {
+    spreadFlag: confirmed !== null && confirmed.max / confirmed.min > EV_BAND_SPREAD_FLAG_RATIO,
+    stale: ageDays !== null && ageDays >= EV_BAND_STALE_DAYS,
+    ageDays,
+    confirmed,
+    reference: { min: ACQUISITION_EV_REVENUE_BAND.min, max: ACQUISITION_EV_REVENUE_BAND.max, label: "global robotics/automation M&A screening band", sourced: false },
+    optimismFlag: confirmed !== null && confirmed.max > EV_BAND_OPTIMISM_FLAG_FACTOR * ACQUISITION_EV_REVENUE_BAND.max,
+  };
+}
+
 export interface BusinessCaseParams {
   captureRate: number;
   captureSource: string;
@@ -459,6 +580,9 @@ export interface BusinessCaseParams {
   /** 인수 EV/Revenue 배수 (user 확정 없으면 null → 컴프 기본값). */
   acquisitionEvRevenue: number | null;
   acquisitionEvRevenueSource: string;
+  /** Human-confirmed project EV/Revenue band (read-only here; written only via
+   *  the human-only ev-band route). null = not confirmed. */
+  acquisitionEvRevenueBand: ConfirmedEvBand | null;
   /** 이중 구조 교차검증(페이드 DCF) — 명시적 창구 연수 (기본 10년). */
   fadeHorizonYears: number;
   fadeHorizonSource: string;
@@ -534,6 +658,7 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
     initialInvestmentSource: initInv.source,
     acquisitionEvRevenue: acqEv !== null && acqEv >= 0 ? acqEv : null,
     acquisitionEvRevenueSource: acqEv !== null && acqEv >= 0 ? "사용자 확정 (bc.acquisition_ev_revenue)" : "기본값",
+    acquisitionEvRevenueBand: resolveConfirmedEvBand(db, projectId),
     fadeHorizonYears: Math.min(Math.max(Math.round(fadeH.value), 1), 50),
     fadeHorizonSource: fadeH.source,
     growthTerminal: gTerminal !== null && gTerminal >= 0 ? gTerminal : null,
@@ -587,6 +712,9 @@ export async function recordBusinessCaseParams(
     written.push(key);
   };
   const p = opts.params;
+  if (Object.keys(p as Record<string, unknown>).some((k) => k.startsWith("acquisition_ev_revenue_band"))) {
+    throw new Error("use the human-only ev-band route");
+  }
   if (p.capture_rate !== undefined) put("bc.capture_rate", p.capture_rate);
   if (p.ramp_up !== undefined) {
     if (!Array.isArray(p.ramp_up) || p.ramp_up.length === 0 || !p.ramp_up.every((v) => Number.isFinite(v) && v >= 0)) {
@@ -630,6 +758,7 @@ function resolveBusinessCaseParamsDefaults(): BusinessCaseParams {
     initialInvestmentSource: "기본값",
     acquisitionEvRevenue: null,
     acquisitionEvRevenueSource: "기본값",
+    acquisitionEvRevenueBand: null,
     fadeHorizonYears: FADE_HORIZON_YEARS,
     fadeHorizonSource: "기본값",
     growthTerminal: null,
@@ -875,7 +1004,7 @@ export function caseInputsForTarget(
           source:
             base.bcParams.acquisitionEvRevenue !== null
               ? "사용자 확정 (bc.acquisition_ev_revenue)"
-              : `컴프 기본값 ${ACQUISITION_EV_REVENUE_DEFAULT.toFixed(1)}× — 글로벌 로보틱스 M&A 밴드 2–6× (보수 스크리닝)`,
+              : `컴프 기본값 ${ACQUISITION_EV_REVENUE_DEFAULT.toFixed(1)}× — 글로벌 로보틱스/자동화 M&A 밴드 2–6× (이 도메인에 대한 출처 없음, 참고용)`,
         }
       : undefined;
   return {
@@ -1440,7 +1569,9 @@ export interface TargetComparisonRow {
   structureMismatch: boolean;
   /** Assumed entry EV/Revenue multiple (acq_ev). null = not acquisition-priced. */
   acqEvRevenue: number | null;
+  /** Computed ONLY against a human-confirmed band; null when none (never the global band). */
   acqEvRevenueInBand: boolean | null;
+  acqEvBandSource: "confirmed" | "none";
 }
 
 /**
@@ -1511,6 +1642,7 @@ export function recommendTargetsFromDb(projectId: string): TargetComparisonRow[]
     if (r.percentile === "p50" && !xcheckByModel.has(r.model_id)) xcheckByModel.set(r.model_id, crossCheckOfNote(r.note));
   }
 
+  const confirmedBand = resolveConfirmedEvBand(db, projectId);
   return flagRecommendedTarget(
     targets.map((t) => {
       const modelId = latest.get(t.id);
@@ -1535,7 +1667,8 @@ export function recommendTargetsFromDb(projectId: string): TargetComparisonRow[]
         xcheckDivergence: fadeNpv !== null && p50 !== null && p50 !== 0 ? (fadeNpv - p50) / Math.abs(p50) : null,
         structureMismatch: false,
         acqEvRevenue: acq,
-        acqEvRevenueInBand: acq === null ? null : acq >= ACQUISITION_EV_REVENUE_BAND.min && acq <= ACQUISITION_EV_REVENUE_BAND.max,
+        acqEvRevenueInBand: acq === null || !confirmedBand ? null : acq >= confirmedBand.min && acq <= confirmedBand.max,
+        acqEvBandSource: confirmedBand ? "confirmed" : "none",
       };
     }),
   );

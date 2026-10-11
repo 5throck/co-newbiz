@@ -37,10 +37,10 @@ const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { promoteOpportunity } = await import("../../db/repositories/project.repository.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
 const { evaluateProcess } = await import("../../app/web-next/lib/process-flow.ts");
-const { flagRecommendedTarget, recommendTargetsFromDb, enginesMixedAcrossTargets, crossCheckOfNote, XCHECK_DIVERGENCE_WARN_RATIO, ACQUISITION_EV_REVENUE_BAND } = await import("../../app/web-next/lib/business-case-generator.ts");
+const { flagRecommendedTarget, recommendTargetsFromDb, enginesMixedAcrossTargets, crossCheckOfNote, XCHECK_DIVERGENCE_WARN_RATIO, ACQUISITION_EV_REVENUE_BAND, resolveConfirmedEvBand, recordEvRevenueBand, recordBusinessCaseParams, evRevenueBandPayload, EV_BAND_OPTIMISM_FLAG_FACTOR, EV_BAND_MAX_SANE, EV_BAND_RATIONALE_MAX, EV_BAND_SOURCE_MAX, EV_BAND_SPREAD_FLAG_RATIO, EV_BAND_STALE_DAYS, validateEvBandInput } = await import("../../app/web-next/lib/business-case-generator.ts");
 
 const NOW = new Date().toISOString();
-const NOXC = { xcheckFadeNpv: null, xcheckFadeIrr: null, xcheckDivergence: null, structureMismatch: false, acqEvRevenue: null, acqEvRevenueInBand: null };
+const NOXC = { xcheckFadeNpv: null, xcheckFadeIrr: null, xcheckDivergence: null, structureMismatch: false, acqEvRevenue: null, acqEvRevenueInBand: null, acqEvBandSource: "none" as const };
 
 function req(path: string, init?: RequestInit) {
   return nextRequest(path, init);
@@ -395,7 +395,7 @@ describe("S8 fade-DCF cross-check and acquisition benchmark (display-only)", () 
     return {
       targetId: id, companyName: id, rank, baseP05: p05, baseP50: p50, irr: 0.1, caseCount: 1, engine: null, anchorMethod: null, recommended: false,
       xcheckFadeNpv: fade, xcheckFadeIrr: null, xcheckDivergence: div, structureMismatch: false,
-      acqEvRevenue: ev, acqEvRevenueInBand: ev === null ? null : ev >= ACQUISITION_EV_REVENUE_BAND.min && ev <= ACQUISITION_EV_REVENUE_BAND.max,
+      acqEvRevenue: ev, acqEvRevenueInBand: null, acqEvBandSource: "none" as const,
     };
   };
 
@@ -407,6 +407,33 @@ describe("S8 fade-DCF cross-check and acquisition benchmark (display-only)", () 
     expect(band).not.toBeNull();
     expect(Number(warn![1]) / 100).toBe(XCHECK_DIVERGENCE_WARN_RATIO);
     expect({ min: Number(band![1]), max: Number(band![2]) }).toEqual(ACQUISITION_EV_REVENUE_BAND);
+  });
+
+  test("ParamsPanel EV-band mirrored constants match the generator", async () => {
+    const src = await Bun.file("app/web-next/components/business-case/ParamsPanel.tsx").text();
+    const factor = /const EV_BAND_OPTIMISM_FLAG_FACTOR = (\d+(?:\.\d+)?);/.exec(src);
+    const sane = /const EV_BAND_MAX_SANE = (\d+(?:\.\d+)?);/.exec(src);
+    const ref = /const EV_BAND_REF = \{ min: (\d+(?:\.\d+)?), max: (\d+(?:\.\d+)?) \}/.exec(src);
+    const spread = /const EV_BAND_SPREAD_FLAG_RATIO = (\d+(?:\.\d+)?);/.exec(src);
+    expect(factor && sane && ref && spread).toBeTruthy();
+    const gen = await import("../../app/web-next/lib/business-case-generator.ts");
+    expect(Number(factor![1])).toBe(gen.EV_BAND_OPTIMISM_FLAG_FACTOR);
+    expect(Number(sane![1])).toBe(gen.EV_BAND_MAX_SANE);
+    expect(Number(spread![1])).toBe(gen.EV_BAND_SPREAD_FLAG_RATIO);
+    expect({ min: Number(ref![1]), max: Number(ref![2]) }).toEqual(ACQUISITION_EV_REVENUE_BAND);
+  });
+
+  test("BusinessCaseStage renders band review warnings (display only)", async () => {
+    const src = await Bun.file("app/web-next/components/stages/BusinessCaseStage.tsx").text();
+    const gen = await import("../../app/web-next/lib/business-case-generator.ts");
+    expect(src).toContain(`&gt; ${gen.EV_BAND_SPREAD_FLAG_RATIO}배`);
+    expect(src).toContain("evBand?.spreadFlag");
+    expect(src).toContain("evBand?.stale");
+    expect(src).toContain("data.target_selection.selectedBy === evBand.confirmed.confirmedBy");
+    expect(src).toContain("재확인 필요");
+    expect(src).toContain("(참고 표시)");
+    expect(src).not.toContain("범위 내</");
+    expect(src).toContain("평가 기준이 다른 대상 간에는 밴드 판정을 비교할 수 없습니다");
   });
 
   test("constants", () => {
@@ -456,13 +483,7 @@ describe("S8 fade-DCF cross-check and acquisition benchmark (display-only)", () 
     expect(out[0].acqEvRevenueInBand).toBeNull();
   });
 
-  test("band inclusive ends; out-of-band target stays recommendable", () => {
-    const inBand = (ev: number | null) => row("b", 1, 1, 1, ev).acqEvRevenueInBand;
-    expect(inBand(1.5)).toBe(false);
-    expect(inBand(2.0)).toBe(true);
-    expect(inBand(6.0)).toBe(true);
-    expect(inBand(6.5)).toBe(false);
-    expect(inBand(null)).toBeNull();
+  test("out-of-high-multiple target stays recommendable", () => {
     const out = flagRecommendedTarget([row("out", 50, 1000, 1000, 9), row("in", 10, 1000, 1000, 3)]);
     expect(out[0].targetId).toBe("out");
     expect(out[0].recommended).toBe(true);
@@ -482,11 +503,186 @@ describe("S8 fade-DCF cross-check and acquisition benchmark (display-only)", () 
     expect(a.xcheckFadeIrr).toBeCloseTo(0.07);
     expect(a.xcheckDivergence).toBeCloseTo(-0.6, 2);
     expect(a.acqEvRevenue).toBe(6);
-    expect(a.acqEvRevenueInBand).toBe(true);
+    expect(a.acqEvRevenueInBand).toBeNull(); // no confirmed band -> never judged against the global band
+    expect(a.acqEvBandSource).toBe("none");
     const b = recommendTargetsFromDb(projectId).find((r) => r.targetId === targetBId)!;
     expect(b.structureMismatch).toBe(false);
     const after = recommendTargetsFromDb(projectId).map((r) => ({ id: r.targetId, rank: r.rank, rec: r.recommended, p05: r.baseP05 }));
     expect(after).toEqual(before);
     expect(a.structureMismatch).toBe(a.recommended && Math.abs(a.xcheckDivergence!) > 0.5);
+  });
+});
+
+describe("S8 human-confirmed EV/Revenue band (design 2026-10-11-s8-ev-band-user-confirmed)", () => {
+  const bandRoute = (cookie: string, body: unknown) =>
+    req(`/api/projects/${projectId}/business-case/ev-band`, { method: "POST", headers: { cookie }, body: JSON.stringify(body) });
+  const good = { min: 4, max: 8, rationale: "service robot comps reviewed by analyst", source: "management judgement: analyst" };
+  const setTargetEv = (targetId: string, ev: number) => {
+    const mid = (db.query("SELECT m.id FROM business_case_model m WHERE m.project_id = ? AND m.target_id = ? AND m.archived_at IS NULL AND COALESCE(m.variant,'market_forward')='market_forward' AND EXISTS (SELECT 1 FROM valuation_simulation v WHERE v.model_id = m.id AND v.scenario='base') ORDER BY m.created_at DESC, m.id DESC").get(projectId, targetId) as { id: string }).id;
+    db.run("UPDATE valuation_simulation SET note = ? WHERE model_id = ? AND scenario='base' AND percentile='p50'", [`seed=1; acq_ev=${ev.toFixed(2)}x; engine=python-sim-engine`, mid]);
+  };
+  const snapshot = () => recommendTargetsFromDb(projectId).map((r) => ({ id: r.targetId, rank: r.rank, rec: r.recommended, p05: r.baseP05 }));
+
+  test("1-null: nothing confirmed -> inBand null even with acq 3.0 (regression), source none", () => {
+    setTargetEv(targetAId, 3.0);
+    const a = recommendTargetsFromDb(projectId).find((r) => r.targetId === targetAId)!;
+    expect(a.acqEvRevenue).toBe(3);
+    expect(a.acqEvRevenueInBand).toBeNull();
+    expect(a.acqEvBandSource).toBe("none");
+    expect(resolveConfirmedEvBand(db, projectId)).toBeNull();
+    expect(evRevenueBandPayload(null).optimismFlag).toBe(false);
+    expect(evRevenueBandPayload(null).reference).toEqual({ min: 2, max: 6, label: "global robotics/automation M&A screening band", sourced: false });
+  });
+
+  test("validation rejects bad input", async () => {
+    const bad: Array<Record<string, unknown>> = [
+      { ...good, min: 0 }, { ...good, min: 5, max: 5 }, { ...good, min: 9, max: 5 }, { ...good, min: Number.NaN },
+      { ...good, max: Infinity }, { ...good, max: EV_BAND_MAX_SANE + 1 }, { ...good, rationale: "   " }, { ...good, rationale: "short" }, { ...good, source: "" },
+    ];
+    for (const b of bad) {
+      await expect(recordEvRevenueBand(db, { projectId, ...(b as typeof good), actor: ANALYST })).rejects.toThrow();
+    }
+    expect(resolveConfirmedEvBand(db, projectId)).toBeNull();
+    // route-level: NaN/Infinity cannot be JSON, so strings/missing fields are 400
+    expect((await bandRoute(analystCookie, { ...good, min: "4" })).status).toBe(400);
+    expect((await bandRoute(analystCookie, { ...good, source: "ab" })).status).toBe(400);
+    expect((await bandRoute(analystCookie, { ...good, max: 51 })).status).toBe(400);
+  });
+
+  test("role gate: viewer 403, outsider 404, analyst 201 and audited", async () => {
+    expect((await bandRoute(viewerCookie, good)).status).toBe(403);
+    expect((await bandRoute(outsiderCookie, good)).status).toBe(404);
+    const before = snapshot();
+    const res = await bandRoute(analystCookie, good);
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { data: { evRevenueBand: { confirmed: { min: number; max: number; confirmedBy: string; source: string; rationale: string } | null; optimismFlag: boolean } } };
+    expect(body.data.evRevenueBand.confirmed).toMatchObject({ min: 4, max: 8, confirmedBy: ANALYST, source: good.source, rationale: good.rationale });
+    expect(body.data.evRevenueBand.optimismFlag).toBe(false);
+    const audits = db.query("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'assumption_set' AND target LIKE '%bc.acquisition_ev_revenue_band.%'").get() as { n: number };
+    expect(audits.n).toBe(2);
+    expect(snapshot()).toEqual(before); // display-only invariant
+  });
+
+  test("4: confirmed 4-8 -> 3.0 false, 5.0 true, inclusive boundaries; ranking unchanged", () => {
+    const before = snapshot();
+    const inBand = (ev: number) => {
+      setTargetEv(targetAId, ev);
+      return recommendTargetsFromDb(projectId).find((r) => r.targetId === targetAId)!;
+    };
+    expect(inBand(3.0).acqEvRevenueInBand).toBe(false);
+    expect(inBand(5.0).acqEvRevenueInBand).toBe(true);
+    expect(inBand(4.0).acqEvRevenueInBand).toBe(true);
+    expect(inBand(8.0).acqEvRevenueInBand).toBe(true);
+    expect(inBand(8.01).acqEvRevenueInBand).toBe(false);
+    expect(inBand(5.0).acqEvBandSource).toBe("confirmed");
+    expect(snapshot()).toEqual(before);
+  });
+
+  test("latest run wins; half-written (min-only) newer run is ignored", async () => {
+    await recordEvRevenueBand(db, { projectId, min: 3, max: 7, rationale: "second confirmation rationale", source: "src two", actor: ANALYST, now: new Date(Date.now() + 5000).toISOString() });
+    expect(resolveConfirmedEvBand(db, projectId)).toMatchObject({ min: 3, max: 7, source: "src two" });
+    const { createRun } = await import("../../db/lib/versioning.ts");
+    const { recordAssumption } = await import("../../db/lib/assumption.ts");
+    const later = new Date(Date.now() + 10000).toISOString();
+    const run = createRun(db, { projectId, label: "half", createdBy: ANALYST, overrides: {}, now: later });
+    recordAssumption(db, { runId: run.run_id, assumptionKey: "bc.acquisition_ev_revenue_band.min", kind: "user", value: 1, asOf: later.slice(0, 10), rationale: "orphan min only", anchorRef: "x", actor: ANALYST, now: later });
+    expect(resolveConfirmedEvBand(db, projectId)).toMatchObject({ min: 3, max: 7 });
+  });
+
+  test("5: optimismFlag true at max 9.01, false at 9", () => {
+    expect(EV_BAND_OPTIMISM_FLAG_FACTOR * ACQUISITION_EV_REVENUE_BAND.max).toBe(9);
+    const mk = (max: number) => evRevenueBandPayload({ min: 2, max, rationale: "r", source: "s", confirmedBy: "u", confirmedAt: "t", runId: "x" }).optimismFlag;
+    expect(mk(9.01)).toBe(true);
+    expect(mk(9)).toBe(false);
+  });
+
+  test("6: general params route and recordBusinessCaseParams reject band keys; GET shows band read-only", async () => {
+    const res = await req(`/api/projects/${projectId}/business-case/params`, {
+      method: "POST", headers: { cookie: analystCookie },
+      body: JSON.stringify({ params: { acquisition_ev_revenue_band_min: 1 }, rationale: "try to write band via params" }),
+    });
+    expect(res.status).toBe(400);
+    await expect(recordBusinessCaseParams(db, { projectId, params: { acquisition_ev_revenue_band_max: 99 } as never, rationale: "x", actor: ANALYST })).rejects.toThrow(/ev-band/);
+    const get = await req(`/api/projects/${projectId}/business-case/params`, { headers: { cookie: analystCookie } });
+    const j = (await get.json()) as { data: { params: { acquisitionEvRevenueBand: { min: number; max: number } | null } } };
+    expect(j.data.params.acquisitionEvRevenueBand).toMatchObject({ min: 3, max: 7 });
+  });
+
+  test("7: ev-band is human-only and refused by the in-process port", async () => {
+    const { isHumanOnly } = await import("../../app/web-next/lib/mcp/in-process-port.ts");
+    expect(isHumanOnly("POST", "/api/projects/x/business-case/ev-band", {})).toBe(true);
+  });
+
+  test("listBusinessCases exposes evRevenueBand payload", async () => {
+    const { listBusinessCases } = await import("../../app/web-next/lib/business-case.ts");
+    const l = listBusinessCases(projectId);
+    expect(l.evRevenueBand.confirmed).toMatchObject({ min: 3, max: 7 });
+    expect(l.evRevenueBand.reference.sourced).toBe(false);
+    expect(l.evRevenueBand.optimismFlag).toBe(false);
+  });
+
+  test("review amendments: length caps at boundary", () => {
+    expect(() => validateEvBandInput({ ...good, rationale: "r".repeat(EV_BAND_RATIONALE_MAX) })).not.toThrow();
+    expect(() => validateEvBandInput({ ...good, rationale: "r".repeat(EV_BAND_RATIONALE_MAX + 1) })).toThrow(/rationale/);
+    expect(() => validateEvBandInput({ ...good, source: "s".repeat(EV_BAND_SOURCE_MAX) })).not.toThrow();
+    expect(() => validateEvBandInput({ ...good, source: "s".repeat(EV_BAND_SOURCE_MAX + 1) })).toThrow(/source/);
+    expect(() => validateEvBandInput({ ...good, source: " ".repeat(600) + "abc" })).not.toThrow(); // cap applies after trim
+  });
+
+  test("review amendments: route 400 for oversized fields; unknown errors are generic 500", async () => {
+    const res = await bandRoute(analystCookie, { ...good, rationale: "r".repeat(EV_BAND_RATIONALE_MAX + 1) });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: { message: string } }).error.message).toContain("rationale");
+    const orig = db.run.bind(db);
+    (db as { run: unknown }).run = () => { throw new Error("SQLITE_SECRET_internal_detail"); };
+    const origErr = console.error; console.error = () => {};
+    try {
+      const r = await bandRoute(analystCookie, good);
+      expect(r.status).toBe(500);
+      expect(JSON.stringify(await r.json())).not.toContain("SQLITE_SECRET");
+    } finally {
+      (db as { run: unknown }).run = orig; console.error = origErr;
+    }
+  });
+
+  test("review amendments: spreadFlag boundary at exactly 4.5", () => {
+    expect(EV_BAND_SPREAD_FLAG_RATIO).toBe(1.5 * (ACQUISITION_EV_REVENUE_BAND.max / ACQUISITION_EV_REVENUE_BAND.min));
+    const mk = (min: number, max: number) => evRevenueBandPayload({ min, max, rationale: "r", source: "s", confirmedBy: "u", confirmedAt: new Date().toISOString(), runId: "x" }).spreadFlag;
+    expect(mk(2, 9)).toBe(false); // exactly 4.5
+    expect(mk(2, 9.02)).toBe(true);
+    expect(mk(4, 8)).toBe(false);
+    expect(evRevenueBandPayload(null).spreadFlag).toBe(false);
+  });
+
+  test("review amendments: stale at 89/90/91 days with injected now", () => {
+    const at = new Date("2026-10-11T00:00:00.000Z");
+    const mk = (days: number) => evRevenueBandPayload({ min: 2, max: 6, rationale: "r", source: "s", confirmedBy: "u", confirmedAt: new Date(at.getTime() - days * 86_400_000).toISOString(), runId: "x" }, at);
+    expect(EV_BAND_STALE_DAYS).toBe(90);
+    expect(mk(89)).toMatchObject({ stale: false, ageDays: 89 });
+    expect(mk(90)).toMatchObject({ stale: true, ageDays: 90 });
+    expect(mk(91)).toMatchObject({ stale: true, ageDays: 91 });
+    expect(evRevenueBandPayload(null, at)).toMatchObject({ stale: false, ageDays: null });
+  });
+
+  test("review amendments: audit_log content, methodsMixed alongside band, rank invariant across none/confirmed/flagged", async () => {
+    const audits = db.query("SELECT target FROM audit_log WHERE action = 'assumption_set' AND target LIKE '%bc.acquisition_ev_revenue_band.%'").all() as Array<{ target: string }>;
+    expect(audits.length).toBeGreaterThanOrEqual(2);
+    for (const a of audits) expect(a.target).toMatch(/^[^:]+:bc\.acquisition_ev_revenue_band\.(min|max):user$/); // run:key:kind only; values not logged
+    const { listBusinessCases } = await import("../../app/web-next/lib/business-case.ts");
+    const l = listBusinessCases(projectId);
+    expect(typeof l.methodsMixed).toBe("boolean");
+    expect(l.evRevenueBand).toBeDefined();
+    const base = snapshot();
+    await recordEvRevenueBand(db, { projectId, min: 1, max: 30, rationale: "optimistic wide band for invariant", source: "invariant test", actor: ANALYST, now: new Date(Date.now() + 60000).toISOString() });
+    const p = evRevenueBandPayload(resolveConfirmedEvBand(db, projectId));
+    expect(p.optimismFlag).toBe(true);
+    expect(p.spreadFlag).toBe(true);
+    expect(snapshot()).toEqual(base);
+  });
+
+  test("9: generator rationale carries the no-source relabel", async () => {
+    const src = await Bun.file("app/web-next/lib/business-case-generator.ts").text();
+    expect(src).toContain("이 도메인에 대한 출처 없음, 참고용");
+    expect(src).not.toContain("(보수 스크리닝)");
   });
 });

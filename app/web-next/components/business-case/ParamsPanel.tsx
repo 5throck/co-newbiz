@@ -10,6 +10,31 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { ParamTable, type ParamRow } from "../ui.tsx";
+import { useAuth } from "../../lib/auth-client.tsx";
+import { canWriteProject } from "../../lib/project-write-access.ts";
+
+// Mirrors EV_BAND_OPTIMISM_FLAG_FACTOR / EV_BAND_MAX_SANE / EV_BAND_SPREAD_FLAG_RATIO / ACQUISITION_EV_REVENUE_BAND in
+// lib/business-case-generator.ts (DB-bound module, not bundleable here); drift is caught by
+// tests/unit/business-case-targets.test.ts. The server stays authoritative.
+const EV_BAND_OPTIMISM_FLAG_FACTOR = 1.5;
+const EV_BAND_MAX_SANE = 50;
+const EV_BAND_SPREAD_FLAG_RATIO = 4.5;
+const EV_BAND_REF = { min: 2, max: 6 } as const;
+
+interface ConfirmedBand { min: number; max: number; rationale: string; source: string; confirmedBy: string; confirmedAt: string }
+
+function validateBand(minRaw: string, maxRaw: string, rationale: string, source: string) {
+  const errs: { min?: string; max?: string; rationale?: string; source?: string } = {};
+  const min = minRaw.trim() === "" ? NaN : Number(minRaw);
+  const max = maxRaw.trim() === "" ? NaN : Number(maxRaw);
+  if (!Number.isFinite(min) || min <= 0) errs.min = "하한은 0보다 큰 숫자여야 합니다.";
+  if (!Number.isFinite(max)) errs.max = "상한은 숫자여야 합니다.";
+  else if (max > EV_BAND_MAX_SANE) errs.max = `상한은 ${EV_BAND_MAX_SANE}배 이하여야 합니다 (입력 오류로 간주).`;
+  if (!errs.min && !errs.max && min >= max) errs.max = "하한은 상한보다 작아야 합니다.";
+  if (rationale.trim().length < 10) errs.rationale = "근거는 10자 이상 입력하세요.";
+  if (source.trim().length < 3) errs.source = "출처는 3자 이상 입력하세요 (예: 경영진 판단: 담당자명).";
+  return { errs, min, max, valid: Object.keys(errs).length === 0 };
+}
 
 function SourceChip({ source }: { source: string }) {
   return <span className="status-chip status-info">{source}</span>;
@@ -22,6 +47,7 @@ interface ResolvedParams {
   capexRatio: number; capexSource: string;
   initialInvestmentRatio: number; initialInvestmentSource: string;
   acquisitionEvRevenue: number | null; acquisitionEvRevenueSource: string;
+  acquisitionEvRevenueBand?: ConfirmedBand | null;
   fadeHorizonYears: number; fadeHorizonSource: string;
   growthTerminal: number | null; growthTerminalSource: string;
   growthOverride: number | null; growthOverrideSource: string;
@@ -86,6 +112,41 @@ export function ParamsPanel({ projectId }: { projectId: string }) {
   const [rationale, setRationale] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { me } = useAuth();
+  const canAct = canWriteProject(me?.role);
+  const [bandMin, setBandMin] = useState("");
+  const [bandMax, setBandMax] = useState("");
+  const [bandRationale, setBandRationale] = useState("");
+  const [bandSource, setBandSource] = useState("");
+  const [bandTouched, setBandTouched] = useState(false);
+  const [bandMsg, setBandMsg] = useState<string | null>(null);
+  const [bandErr, setBandErr] = useState<string | null>(null);
+  const [bandBusy, setBandBusy] = useState(false);
+  const bandCheck = validateBand(bandMin, bandMax, bandRationale, bandSource);
+  const bandOptimism = Number.isFinite(bandCheck.max) && bandCheck.max > EV_BAND_OPTIMISM_FLAG_FACTOR * EV_BAND_REF.max;
+
+  const bandSpread = Number.isFinite(bandCheck.min) && Number.isFinite(bandCheck.max) && bandCheck.min > 0 && bandCheck.max / bandCheck.min > EV_BAND_SPREAD_FLAG_RATIO;
+
+  async function submitBand(e: React.FormEvent) {
+    e.preventDefault();
+    setBandMsg(null);
+    setBandErr(null);
+    setBandTouched(true);
+    if (!bandCheck.valid) return;
+    setBandBusy(true);
+    try {
+      await api.post(`/api/projects/${encodeURIComponent(projectId)}/business-case/ev-band`, {
+        min: bandCheck.min, max: bandCheck.max, rationale: bandRationale.trim(), source: bandSource.trim(),
+      });
+      setBandMsg("밴드를 확정했습니다. 대상 비교 탭에 확정 밴드 기준으로 반영됩니다.");
+      setBandMin(""); setBandMax(""); setBandRationale(""); setBandSource(""); setBandTouched(false);
+      load();
+    } catch (err) {
+      setBandErr(err instanceof Error ? err.message : "밴드 확정에 실패했습니다.");
+    } finally {
+      setBandBusy(false);
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -222,6 +283,66 @@ export function ParamsPanel({ projectId }: { projectId: string }) {
           <button className="btn-ghost justify-self-start" type="submit">파라미터 확정</button>
           <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">확정된 값은 사용자 등급(user) 가정으로 기록됩니다. 시나리오 비교 탭의 재생성을 실행하면 새 파라미터로 다시 시뮬레이션됩니다.</p>
         </form>
+      </section>
+
+      {/* EV/매출 밴드 확정 — 사람 전용 (경계 #2: 에이전트는 설정할 수 없음) */}
+      <section className="market-section sizing-step mt-3" aria-label="EV/매출 밴드 확정">
+        <h3 className="sizing-step-title">EV/매출 밴드 확정 <span className="status-chip status-info">사람 전용 — 에이전트는 설정할 수 없습니다</span></h3>
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
+          참고(글로벌 로보틱스·자동화 M&amp;A): {EV_BAND_REF.min}–{EV_BAND_REF.max}× — 이 영역의 근거 없음, 참고용. 확정한 밴드만 대상 비교의 범위 내/밖 표시 기준이 되며 순위·밸류에이션에는 영향이 없습니다.
+        </p>
+        {resolved?.acquisitionEvRevenueBand ? (
+          <p className="text-[length:var(--fs-caption)] mb-2" role="status">
+            <span className="status-chip status-green mr-1"><span aria-hidden="true">✓</span> 현재 확정 밴드</span>
+            <b className="mono-num">{resolved.acquisitionEvRevenueBand.min}–{resolved.acquisitionEvRevenueBand.max}×</b> — 근거: {resolved.acquisitionEvRevenueBand.rationale} · 출처: {resolved.acquisitionEvRevenueBand.source}{" "}
+            <span className="text-[color:var(--muted-fg)]">(확정: {resolved.acquisitionEvRevenueBand.confirmedBy}, {resolved.acquisitionEvRevenueBand.confirmedAt})</span>
+          </p>
+        ) : (
+          <p className="text-[length:var(--fs-caption)] mb-2" role="status">
+            <span className="status-chip status-not-started mr-1"><span aria-hidden="true">ⓘ</span> 밴드 미확정</span>
+            아직 확정된 밴드가 없어 대상 비교에서 범위 내/밖 판정을 표시하지 않습니다.
+          </p>
+        )}
+        {!canAct ? (
+          <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+            <span className="status-chip status-not-started mr-1">읽기 전용</span>
+            현재 역할은 밴드를 확정할 수 없습니다 (분석가만 가능).
+          </p>
+        ) : (
+          <form className="grid gap-3" onSubmit={submitBand} noValidate style={{ maxWidth: 560 }}>
+            <div className="grid gap-2 md:grid-cols-2">
+              <label className="grid gap-1 text-sm" htmlFor="evband-min">하한 (배, 필수)
+                <input id="evband-min" className="form-input" inputMode="decimal" value={bandMin} onChange={(e) => setBandMin(e.target.value)} placeholder="2" aria-invalid={bandTouched && !!bandCheck.errs.min} aria-describedby={bandTouched && bandCheck.errs.min ? "evband-min-err" : undefined} />
+                {bandTouched && bandCheck.errs.min && <span id="evband-min-err" role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {bandCheck.errs.min}</span>}
+              </label>
+              <label className="grid gap-1 text-sm" htmlFor="evband-max">상한 (배, 필수)
+                <input id="evband-max" className="form-input" inputMode="decimal" value={bandMax} onChange={(e) => setBandMax(e.target.value)} placeholder="6" aria-invalid={bandTouched && !!bandCheck.errs.max} aria-describedby={bandTouched && bandCheck.errs.max ? "evband-max-err" : undefined} />
+                {bandTouched && bandCheck.errs.max && <span id="evband-max-err" role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {bandCheck.errs.max}</span>}
+              </label>
+            </div>
+            {bandOptimism && (
+              <p className="status-chip status-amber" role="status">
+                <span aria-hidden="true">⚠</span> 상한 {bandCheck.max}×가 글로벌 참고 상한({EV_BAND_REF.max}×)의 {EV_BAND_OPTIMISM_FLAG_FACTOR}배({EV_BAND_REF.max * EV_BAND_OPTIMISM_FLAG_FACTOR}×)를 넘습니다 — 낙관 편향 여부를 점검하세요. (경고일 뿐 저장은 가능합니다)
+              </p>
+            )}
+            {bandSpread && (
+              <p className="status-chip status-amber" role="status">
+                <span aria-hidden="true">⚠</span> 밴드 폭이 넓습니다 (상한/하한 {(bandCheck.max / bandCheck.min).toFixed(1)}배 &gt; {EV_BAND_SPREAD_FLAG_RATIO}배) — 너무 느슨한 밴드가 아닌지 점검하세요. (경고일 뿐 저장은 가능합니다)
+              </p>
+            )}
+            <label className="grid gap-1 text-sm" htmlFor="evband-rationale">근거 (필수, 10자 이상)
+              <textarea id="evband-rationale" className="form-input" value={bandRationale} onChange={(e) => setBandRationale(e.target.value)} aria-invalid={bandTouched && !!bandCheck.errs.rationale} aria-describedby={bandTouched && bandCheck.errs.rationale ? "evband-rationale-err" : undefined} placeholder="이 밴드를 선택한 이유를 기재하세요" />
+              {bandTouched && bandCheck.errs.rationale && <span id="evband-rationale-err" role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {bandCheck.errs.rationale}</span>}
+            </label>
+            <label className="grid gap-1 text-sm" htmlFor="evband-source">출처 (필수, 3자 이상)
+              <input id="evband-source" className="form-input" value={bandSource} onChange={(e) => setBandSource(e.target.value)} aria-invalid={bandTouched && !!bandCheck.errs.source} aria-describedby={bandTouched && bandCheck.errs.source ? "evband-source-err" : undefined} placeholder="문헌·문서·URL 또는 경영진 판단: 담당자명" />
+              {bandTouched && bandCheck.errs.source && <span id="evband-source-err" role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {bandCheck.errs.source}</span>}
+            </label>
+            <button className="btn-ghost justify-self-start" type="submit" disabled={bandBusy}>{bandBusy ? "확정 중..." : "밴드 확정"}</button>
+            {bandErr && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {bandErr}</p>}
+            {bandMsg && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)]">✓ {bandMsg}</p>}
+          </form>
+        )}
       </section>
 
       {/* 실행 스냅샷 — 최근 생성 모델의 job-spec (REQ-W5-1/2) */}

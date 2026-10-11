@@ -8,7 +8,8 @@
 // N/A — the screen never invents a value.
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { api } from "../../../lib/api.ts";
+import { api, ApiError } from "../../../lib/api.ts";
+import { formatAsOfLabel, formatWaccValue, mapSyncError, syncSuccessMessage } from "../../../lib/company-page-format.ts";
 import { useAuth } from "../../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../../lib/project-write-access.ts";
 
@@ -16,14 +17,14 @@ interface SummaryCard { key: string; label: string; value: number | null; format
 interface Callout { tone: "warn" | "good" | "info"; text: string }
 interface MetricCommentary { key: string; name: string; sub: string; say: string }
 interface FactRow { id: string; value: number; account_name: string; ifrs_code: string; fiscal_year: number; source_code: string | null }
-interface WaccEntry { key: string; label: string; value: number | null; as_of: string | null; anchor_ref: string | null; reason: string | null }
+interface WaccEntry { key: string; label: string; value: number | null; unit: "ratio" | "multiple"; as_of: string | null; anchor_ref: string | null; source_label: string | null; reason: string | null; note: string | null }
 interface View {
   company: { id: string; name_ko: string; dart_corp_code: string | null };
   latest_sync_at: string | null;
   financials: FactRow[];
   analysis: { years: string[]; ratios: Array<{ year: string; revenueGrowth?: number | null; operatingMargin?: number | null; debtRatio?: number | null; roe?: number | null }>; notes: string[] };
   commentary: { summary: SummaryCard[]; callouts: Callout[]; metrics: MetricCommentary[] };
-  wacc_reference: { entries: WaccEntry[]; latest_year: string | null };
+  wacc_reference: { entries: WaccEntry[]; latest_year: string | null; disclaimer?: string };
 }
 
 const ACCOUNT_ORDER = ["매출액", "영업이익", "당기순이익", "자산총계", "부채총계", "자본총계"];
@@ -36,6 +37,7 @@ export default function CompanyFinancialsPage() {
   const [view, setView] = useState<View | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
   const load = useCallback(() => {
@@ -51,12 +53,13 @@ export default function CompanyFinancialsPage() {
   async function runSync() {
     setSyncing(true);
     setMessage(null);
+    setSyncError(null);
     try {
       const r = await api.post<{ sync: { inserted: number; unchanged: number; years: number[] } }>(`/api/companies/${encodeURIComponent(companyId)}/sync`, {});
-      setMessage(`동기화 완료 — 신규 ${r.data.sync.inserted}건 · 변경 없음 ${r.data.sync.unchanged}건 (${r.data.sync.years.join(", ")}년)`);
+      setMessage(syncSuccessMessage(r.data.sync));
       load();
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "동기화에 실패했습니다.");
+      setSyncError(e instanceof ApiError ? mapSyncError(e.status, e.code, e.message) : mapSyncError(null, null, e instanceof Error ? e.message : ""));
     } finally {
       setSyncing(false);
     }
@@ -80,7 +83,7 @@ export default function CompanyFinancialsPage() {
       <p className="text-[color:var(--muted-fg)] text-[0.9rem] mb-3">인수 대상 · 분석 기준 회사의 과거 실적과 재무 건전성을 한 화면에서 확인합니다. 프로젝트 재무분석 탭은 이 화면의 요약에 연결됩니다.</p>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {error}</p>}
-      {message && <p className="text-[length:var(--fs-caption)] text-[color:var(--accent)]">{message}</p>}
+      {message && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--success)]">✓ {message}</p>}
       {!view ? (
         <p className="text-[color:var(--muted-fg)]">불러오는 중...</p>
       ) : (
@@ -112,6 +115,7 @@ export default function CompanyFinancialsPage() {
               <div>
                 <p className="text-[color:var(--muted-fg)]">{canAct ? "재무 fact가 없습니다 — 아래 동기화 버튼으로 DART에서 5개 회계연도 실적을 가져오세요." : "아직 수집된 재무 데이터가 없습니다."}</p>
                 {canAct && <button className="bg-[color:var(--accent)] text-[color:var(--accent-fg)] rounded-lg px-4 py-2 text-[0.88rem] font-bold cursor-pointer mt-2" type="button" onClick={runSync} disabled={syncing}>{syncing ? "동기화 중..." : "DART에서 최신 실적 동기화"}</button>}
+                {syncError && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-2">✕ {syncError}</p>}
               </div>
             ) : (
               <table className="data-table">
@@ -153,8 +157,15 @@ export default function CompanyFinancialsPage() {
               {view.wacc_reference.entries.map((e) => (
                 <div key={e.key} className="border border-[color:var(--border)] rounded-lg p-3 bg-[color:var(--muted-bg)]">
                   <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{e.label}</div>
-                  <div className="font-extrabold text-[1.05rem] tabular-nums">{e.value === null ? "N/A" : e.key === "observed_de" ? e.value.toFixed(2) : pct(e.value)}</div>
-                  <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{e.reason ?? (e.anchor_ref ? `${e.anchor_ref} · ${e.as_of ? new Date(e.as_of).toLocaleDateString("ko-KR") : ""}` : "")}</div>
+                  <div className="font-extrabold text-[1.05rem] tabular-nums">{formatWaccValue(e.value, e.unit)}</div>
+                  {e.value === null ? (
+                    <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{e.reason ?? "산출 근거 없음"}</div>
+                  ) : (
+                    <>
+                      <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{[formatAsOfLabel(e.as_of), e.source_label].filter(Boolean).join(" · ")}</div>
+                      {e.note && <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-0.5">{e.note}</div>}
+                    </>
+                  )}
                 </div>
               ))}
             </div>
@@ -167,6 +178,7 @@ export default function CompanyFinancialsPage() {
               <div className="flex gap-2 items-center flex-wrap">
                 {canAct && <button className="bg-[color:var(--accent)] text-[color:var(--accent-fg)] rounded-lg px-4 py-2 text-[0.88rem] font-bold cursor-pointer" type="button" onClick={runSync} disabled={syncing}>{syncing ? "동기화 중..." : "DART에서 최신 실적 동기화"}</button>}
                 <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">마지막 동기화 {view.latest_sync_at ? new Date(view.latest_sync_at).toLocaleString("ko-KR") : "—"}</span>
+                {syncError && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-2">✕ {syncError}</p>}
               </div>
               <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mt-2">동기화는 DART 공시 원천을 다시 읽어 값을 갱신합니다. 같은 값이면 새 기록을 만들지 않고, 바뀐 값만 새 revision으로 남깁니다(덮어쓰기 없음).</p>
             </section>
