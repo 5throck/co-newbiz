@@ -14,7 +14,7 @@ services:
     ports:
       - "7749:7749"
     env_file:
-      # Create from .env.prod.sample — secrets never enter git or the image.
+      # Create from the Production section of .env.sample — secrets never enter git or the image.
       - path: .env.prod
         required: false
     volumes:
