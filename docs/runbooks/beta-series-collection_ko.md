@@ -23,6 +23,20 @@ bun scripts/co-newbiz/beta-series.ts --project <id> --from 2025-10 --to 2026-10
 
 단축코드가 자동 해석되지 않으면 `--ticker 회사명=058050`으로 지정할 수 있습니다. 해석된 단축코드는 `db/data/krx-stock-code-cache.json`에 캐시됩니다.
 
+## 지수 선택 (상장시장 기준)
+
+베타 회귀는 기본적으로 종목의 **상장시장 지수**와 짝지어 계산합니다. 코스닥 상장사(예: 로보티즈 108490, 레인보우로보틱스 277810)는 코스닥 지수, 코스피 상장사는 코스피 지수와 회귀합니다. 다른 지수도 패널의 "시장 지수" 선택 상자("수집 데이터 불러오기" 옆)나 `GET .../wacc/beta-series?index=KOSPI|KOSDAQ`로 고를 수 있습니다.
+
+- 수집기는 해석한 단축코드와 상장시장을 DB 원천 계층(`raw_payload`, id `krx:stock-master:<md_company.id>`)에 기록하고, 웹 경로는 여기서 읽습니다(로컬 `krx-stock-code-cache.json`은 웹 앱에서 보이지 않습니다).
+- 상장시장 기록이 없으면(이 기록이 생기기 전에 수집한 경우) 예전처럼 코스피를 기본으로 씁니다.
+- 기본 지수에 수집 데이터가 없고 다른 지수에는 있으면 그쪽으로 바꾸고 `hint_code: index_fallback`으로 알립니다. 빈 시계열과 몰래 짝짓지 않습니다.
+
+v1.2.0 이전에 수집한 회사는 한 번만 아래를 실행해 상장시장을 채웁니다(여러 번 실행해도 같은 결과, KRX 호출 없음, API 키 불필요 — 로컬 캐시만 읽음):
+
+```bash
+bun scripts/co-newbiz/beta-series.ts --project <md_project.id> --backfill-market
+```
+
 ## 전제: KRX 서비스 승인
 
 KRX 데이터 마켓플레이스 키에 6개 서비스(idx/kospi_dd_trd 등 6개)의 승인이 필요합니다. 미승인 상태에서는 모든 호출이 `respCode 401 — Unauthorized API Call`이고 스크립트는 관측 0건으로 종료합니다(재신청: 포털 마이페이지 → API 사용 신청). 승인 후 재실행하세요.

@@ -1,5 +1,5 @@
-version: 1.0.0
-last_updated: 2026-08-19
+version: 1.1.0
+last_updated: 2026-10-13
 terms:
   Green Field:
     ko: 그린필드
@@ -22,6 +22,26 @@ terms:
     related: [Green Field, Change of Control]
     used_in: [brownfield-feasibility]
     owner: brownfield-agent
+
+  Investment Vehicle:
+    ko: 투자 주체
+    en: Investment Vehicle
+    definition_ko: 투자가 실행되는 주체이자 통로(직접 투자, SPC, 지주회사, 사내 분사, 합작법인 등). S10에서 4축(세무 구조·책임 분리·재무 레버리지·엑시트 구조) 검토와 함께 정한다(ADR-0045).
+    why_it_matters_ko: 투자 주체의 선택이 세금 비용, 책임 분리, 차입 여력, 엑시트 선택지를 함께 결정하며, 계약 체결 뒤에는 적은 비용으로 바꾸기 어렵다. 과거 음차어 '비히클' 대신 '투자 주체'를 쓴다.
+    category: business
+    related: [Brown Field, Establishment Entity Form, Stage Gate]
+    used_in: [investment-vehicle-structuring, brownfield-feasibility, jv-structuring]
+    owner: brownfield-agent
+
+  Establishment Entity Form:
+    ko: 설립 법인 형태
+    en: Establishment Entity Form
+    definition_ko: 그린필드 신규 설립 시 사업을 담을 법인의 형태(단독 법인, 합작법인, 지점·사업장 등). S10에서 그린필드 경로의 투자 주체 자리에 쓰는 표현이다.
+    why_it_matters_ko: 법인 형태에 따라 인허가 주체, 세무 처리, 책임 범위, 자금 조달 방식이 달라지며 설립 뒤 변경은 비용이 크다. 그린필드에서는 '투자 주체' 대신 이 표현을 쓴다.
+    category: business
+    related: [Investment Vehicle, Green Field]
+    used_in: [greenfield-feasibility, investment-vehicle-structuring]
+    owner: greenfield-agent
 
   Stage Gate:
     ko: 스테이지 게이트

@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-12T14:57:58.591Z
+**Generated**: 2026-10-12T21:38:58.336Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -200,7 +200,7 @@
 | backfill-capability-gap.ts | 1.0.0 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
 | backfill-hyd-brk-report.ts | 1.1.0 | scripts/co-newbiz/backfill-hyd-brk-report.ts | N/A |
 | backup.ts | 1.0.1 | scripts/co-newbiz/backup.ts | N/A |
-| beta-series.ts | 1.1.0 | scripts/co-newbiz/beta-series.ts | N/A |
+| beta-series.ts | 1.2.0 | scripts/co-newbiz/beta-series.ts | N/A |
 | bootstrap-stages.ts | 1.1.0 | scripts/bootstrap-stages.ts | fs, js-yaml, path |
 | build-search-index.ts | 1.0.0 | scripts/handbook/build-search-index.ts | N/A |
 | calibrate.ts | 1.1.0 | scripts/co-newbiz/calibrate.ts | N/A |

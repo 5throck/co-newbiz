@@ -22,6 +22,7 @@ meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
   version: "2.8.0"
+  # (v2.8.0 문구 정정, 2026-10-13: S10 투자 수단 음차어 표기를 "투자 주체"로 교체 — 텍스트만 변경, 버전 유지)
   # v2.8.0 — S11/S12 실행·사후관리를 트랙·세부 트랙별로 범위화한다 (ADR-0161,
   #   Proposed; Q1~Q7은 2026-10-12 채팅에서 사용자가 결정). S11에
   #   greenfield-execution-baseline(greenfield-agent; capex_tranche 행과 S10
@@ -576,7 +577,7 @@ stages:
 
   - id: S10
     name: 투자구조 설계
-    objective: "어떤 그릇으로, 어떤 자금으로 들어갈 것인가? — 비히클(direct/SPC/holdco/내부 스핀오프/JV)과 ADR-0045 4대 축(절세 구조·책임 격리·재무 레버리지·엑싯 구조)을 검토하고 자금조달 계획(sources & uses)을 균형시킨다 (IC 심의의 입력 설계)"
+    objective: "어떤 그릇으로, 어떤 자금으로 들어갈 것인가? — 투자 주체(direct/SPC/holdco/내부 스핀오프/JV)과 ADR-0045 4대 축(절세 구조·책임 격리·재무 레버리지·엑싯 구조)을 검토하고 자금조달 계획(sources & uses)을 균형시킨다 (IC 심의의 입력 설계)"
     inputs:
       - S8 채택 Business Case
       - S9 DD 발견사항(dd_finding value_impact 포함)
@@ -591,7 +592,7 @@ stages:
         agent: brownfield-agent
         skills: [investment-vehicle-structuring]
         procedure: [deal-structuring, brownfield-fs, deal-shape-chain]
-        # 비히클(direct/SPC/holdco/internal_venture_spinoff/jv)·자산/주식·지분·
+        # 투자 주체(direct/SPC/holdco/internal_venture_spinoff/jv)·자산/주식·지분·
         # 수표/instrument 믹스 가설을 세우고 4대 축 노트(절세·책임격리·
         # 레버리지·엑싯)를 기록한다. 완료 플래그는 근거 아티팩트 참조가
         # 필수인 별도의 심사 행위다 (deal-structure-hypothesis.repository).
@@ -616,11 +617,11 @@ stages:
     objective: "투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 IC 패키지로 묶어 Entity/Group IC 심사를 통과하고, 승인되면 트랙에 맞는 실행에 들어간다(인수 종결, 법인 설립, greenfield 실행 기준선 확정)"
     inputs:
       - IC 패키지(사업계획·DD·RAG·검토)
-      - 투자 구조안(S10 투자구조 설계의 산출물 — 비히클·4축 검토·자금조달 계획)
+      - 투자 구조안(S10 투자구조 설계의 산출물 — 투자 주체·4축 검토·자금조달 계획)
       - 사람 최종 승인 산출물
     outputs:
       - IC 결정
-      - 투자 구조 확정(비히클·자금 조달 mix·지급 일정)
+      - 투자 구조 확정(투자 주체·자금 조달 mix·지급 일정)
       - 설립 완료 법인(신설 법인 — 사내벤처·자회사, origin∈{internal,joint})
       - 실행 진입(PMI / 벤처 모니터링 / R&BD 실행)
       - 실행 기준선(greenfield — capex_tranche 연결·인허가/인증 마일스톤·채용·램프업 KPI·인센티브 의무, 사람 확인)
@@ -647,7 +648,7 @@ stages:
         agent: brownfield-agent
         skills: []
         procedure: [entity-ic-review, jv-lifecycle-governance]
-        # S11은 투자 구조를 설계하지 않는다 — S10 투자구조 설계 산출물(비히클·
+        # S11은 투자 구조를 설계하지 않는다 — S10 투자구조 설계 산출물(투자 주체·
         # 4축 검토·자금조달 계획)을 IC 패키지에 참조로 묶을 뿐이다.
         # jv-lifecycle-governance는 Route가 JV인 경우에 적용한다 (설립·거버넌스·
         # 출구 전 라이프사이클 약속의 기준선).

@@ -1,13 +1,21 @@
 // GET /api/projects/[id]/wacc/beta-series — collected KRX beta inputs for the
 // beta regression panel. Joins fact_market_observation ↔ md_period for the
-// subject company's daily-close series (krx:stock:<companyId>:close) and the
-// KOSPI index series (krx:index:KOSPI:close), aligns rows by date, and returns
+// subject company's daily-close series (krx:stock:<companyId>:close) and a
+// market index series (krx:index:KOSPI|KOSDAQ:close), aligns rows by date, and returns
 // date/price/index triples ready for parseSeriesInput-style paste or direct
 // regression. Read-only — collection runs through scripts/co-newbiz/beta-series.ts.
+//
+// Index choice: default = the stock's listing-market index (KOSDAQ-listed ->
+// KOSDAQ), read from the raw_payload stock-master record the collector writes
+// (db/repositories/krx-listing.repository.ts). Unknown market -> KOSPI. Never
+// pairs silently with an empty index: if the default has no data and the other
+// one does, it falls back and reports hint_code 'index_fallback'. ?index=KOSPI|KOSDAQ
+// overrides (allow-list; anything else -> 400 invalid_request).
 import { getDb } from "../../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
+import { readKrxListingMarket } from "../../../../../../../../db/repositories/krx-listing.repository.ts";
 
 interface ObsRow {
   date: string;
@@ -29,11 +37,13 @@ function loadSeries(db: ReturnType<typeof getDb>, seriesId: string): ObsRow[] {
     .filter((r) => Number.isFinite(r.value));
 }
 
-const INDEX_SERIES_ID = "krx:index:KOSPI:close";
+const INDEX_MARKETS = ["KOSPI", "KOSDAQ"] as const;
+type IndexMarket = (typeof INDEX_MARKETS)[number];
+const indexSeriesId = (m: IndexMarket) => `krx:index:${m}:close`;
 const MIN_ROWS = 63;
 
 type CollectionStatus = "ready" | "insufficient" | "no_index" | "no_stock" | "none";
-type HintCode = "run_collection" | "ticker_unresolved" | "insufficient_overlap" | "ok";
+type HintCode = "run_collection" | "ticker_unresolved" | "insufficient_overlap" | "ok" | "index_fallback";
 
 interface SeriesStat {
   count: number;
@@ -62,6 +72,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
+  const indexParam = new URL(request.url).searchParams.get("index");
+  if (indexParam !== null && !(INDEX_MARKETS as readonly string[]).includes(indexParam)) {
+    return badRequest("invalid_request", "index는 KOSPI 또는 KOSDAQ만 허용됩니다.");
+  }
   if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const db = getDb();
 
@@ -86,7 +100,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const stockSeriesId = `krx:stock:${companyId}:close`;
   const price = loadSeries(db, stockSeriesId);
-  const index = loadSeries(db, INDEX_SERIES_ID);
+  const indexData: Record<IndexMarket, ObsRow[]> = {
+    KOSPI: loadSeries(db, indexSeriesId("KOSPI")),
+    KOSDAQ: loadSeries(db, indexSeriesId("KOSDAQ")),
+  };
+  const listingMarket = readKrxListingMarket(db, companyId) ?? "unknown";
+  const preferred: IndexMarket = listingMarket === "KOSDAQ" ? "KOSDAQ" : "KOSPI";
+  const other: IndexMarket = preferred === "KOSPI" ? "KOSDAQ" : "KOSPI";
+  // Default never pairs with an empty index when the other one has data.
+  const indexFallback = indexData[preferred].length === 0 && indexData[other].length > 0;
+  const defaultIndex: IndexMarket = indexFallback ? other : preferred;
+  const selected: IndexMarket = (indexParam as IndexMarket | null) ?? defaultIndex;
+  const usedFallback = indexParam === null && indexFallback;
+  const index = indexData[selected];
 
   // Align by date — regression needs both legs on the same trading day.
   const indexByDate = new Map(index.map((r) => [r.date, r.value]));
@@ -98,24 +124,37 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const company = db.query("SELECT name_ko FROM md_company WHERE id = ?").get(companyId) as { name_ko: string } | undefined;
   const sourceRegistered = db.query("SELECT 1 AS present FROM md_source WHERE code = 'krx'").get() != null;
   const diag = diagnose(price.length, index.length, rows.length);
+  const hintCode: HintCode = usedFallback && diag.hint_code === "ok" ? "index_fallback" : diag.hint_code;
+  const indexOptions = INDEX_MARKETS.map((m) => ({
+    series_id: indexSeriesId(m),
+    label: m,
+    count: indexData[m].length,
+    selected: m === selected,
+  }));
 
   return ok({
     collection: {
       subject_company_id: companyId,
       subject_company_name: company?.name_ko ?? null,
       stock_series_id: stockSeriesId,
-      index_series_id: INDEX_SERIES_ID,
+      index_series_id: indexSeriesId(selected),
+      index_market: selected,
+      listing_market: listingMarket,
+      index_fallback: usedFallback,
       price: statOf(price),
       index: statOf(index),
       aligned: statOf(rows),
       source_registered: sourceRegistered,
       status: diag.status,
       min_rows: MIN_ROWS,
-      hint_code: diag.hint_code,
+      hint_code: hintCode,
       // Plain text only; the UI shows it read-only and never executes it.
       runbook_command: `bun scripts/co-newbiz/beta-series.ts --project ${id}`,
     },
     stock_series_id: stockSeriesId,
+    listing_market: listingMarket,
+    default_index: defaultIndex,
+    index_options: indexOptions,
     price_count: price.length,
     index_count: index.length,
     aligned_count: rows.length,

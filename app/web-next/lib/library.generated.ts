@@ -10,7 +10,7 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "file": "checklists/brownfield-feasibility-checklist.yaml",
     "gate": "FS/DD",
     "enforceability": "mixed",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "owner_agent": "brownfield-agent",
     "item_count": 13,
     "lang": "en"
@@ -130,7 +130,7 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "file": "checklists/ma-special-topics-checklist.yaml",
     "gate": "DD",
     "enforceability": "mixed",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "owner_agent": "brownfield-agent",
     "item_count": 12,
     "lang": "en"
@@ -1005,11 +1005,11 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "checklists/brownfield-feasibility-checklist.yaml",
     "gate": "FS/DD",
     "enforceability": "mixed",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "owner_agent": "brownfield-agent",
     "item_count": 13,
     "lang": "en",
-    "content": "governance_doc_id: chk-brownfield-feasibility\nlayer: checklist\ntitle: \"Brown Field Feasibility Checklist\"\nscope: shared\nenforceability: mixed\nowner_agent: brownfield-agent\nversion: \"1.0.0\"\neffective_from: \"2026-08-20\"\ngate: FS/DD\n\nitems:\n  - id: bf-01\n    text: \"All six mandatory M&A validators run and recorded: antitrust, customer-retention, incentive, hr-integration, certification transferability, region-lead labor review\"\n    mandatory: true\n    waiver_eligible: false   # design's explicit \"no waiver path\" for this completeness check\n  - id: bf-02\n    text: \"WACC and hurdle IRR confirmed kind=user (not assumed) before FS gate opened\"\n    mandatory: true\n    waiver_eligible: false   # policy §2.2 — a provisional discount rate invalidates the analysis; load-bearing figures are never waivable into 'assumed'\n  - id: bf-03\n    text: \"Certification change-of-control transferability confirmed against the certification body's own regulations (not the target's characterization), where load-bearing to the deal thesis\"\n    mandatory: true\n    waiver_eligible: false   # design non-negotiable rule — inference about transferability is disallowed, so a waiver cannot substitute for confirmation\n  - id: bf-04\n    text: \"Golden parachute / CoC-trigger executive compensation identified and modeled as a day-one cash outflow\"\n    mandatory: true\n    waiver_eligible: true\n  - id: bf-05\n    text: \"Compensation harmonization cost estimated with upward-bias default applied (never modeled as a savings line)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: bf-06\n    text: \"Customer contracts scanned for change-of-control termination clauses\"\n    mandatory: true\n    waiver_eligible: true\n  - id: bf-07\n    text: \"Quality-of-earnings normalization completed (one-off items stripped, owner compensation normalized)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: bf-08\n    text: \"Contingent liabilities modeled as probability x amount x timing distributions feeding Monte Carlo, not narrative-only\"\n    mandatory: true\n    waiver_eligible: true\n  - id: bf-09\n    text: \"Covenant breach tested under the +200bp downside scenario\"\n    mandatory: true\n    waiver_eligible: true\n  - id: bf-10\n    text: \"PMI synergy assumptions reconciled against valuation-agent's deal model (not independently optimistic)\"\n    mandatory: false\n    waiver_eligible: true\n  - id: bf-11\n    text: \"Gun-jumping compliance confirmed — no integration activity before clearance in any jurisdiction with a filing requirement\"\n    mandatory: true\n    waiver_eligible: true\n  - id: bf-12\n    text: \"Investment vehicle structuring reviewed against all four ADR-0045 axes (tax structure, liability isolation, financing leverage, exit structure) as part of the deal structure hypothesis — not just the acquisition mechanics (stake/structure)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: bf-13\n    text: \"WACC 적용 주체가 대상기업(target)으로 확정되고 근거가 기록되었다 — 인수·지분참여의 현금흐름 리스크는 대상기업에 귀속되며, 프로포르마 자본구조로 재레버링한 베타 근거가 세션에 남는다\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"Group New Business Review Policy §2.3, §4\"\n  - \"procedures/_shared/brownfield-screening/schema.yaml\"\n  - \"Meeting M5\"\n  - \"ADR-0045 (investment vehicle structuring as a mandatory deal-structure-hypothesis axis)\"\n"
+    "content": "governance_doc_id: chk-brownfield-feasibility\nlayer: checklist\ntitle: \"Brown Field Feasibility Checklist\"\nscope: shared\nenforceability: mixed\nowner_agent: brownfield-agent\nversion: \"1.2.0\"\neffective_from: \"2026-08-20\"\ngate: FS/DD\n\nitems:\n  - id: bf-01\n    text: \"필수 인수합병(M&A) 검증 6종이 모두 수행·기록됨: 독과점(antitrust), 고객 유지(customer-retention), 인센티브(incentive), 인력 통합(hr-integration), 인증 승계 가능성(certification transferability), 지역 리드 노무 검토(region-lead labor review)\"\n    mandatory: true\n    waiver_eligible: false   # design's explicit \"no waiver path\" for this completeness check\n  - id: bf-02\n    text: \"FS 게이트 개시 전 WACC와 허들 IRR이 kind=user(가정치 아님)로 확정됨\"\n    mandatory: true\n    waiver_eligible: false   # policy §2.2 — a provisional discount rate invalidates the analysis; load-bearing figures are never waivable into 'assumed'\n  - id: bf-03\n    text: \"딜 논리의 핵심 전제인 경우, 지배권 변경(change of control) 시 인증 승계 가능성을 대상 회사의 설명이 아닌 인증기관 자체 규정에 비추어 확인함\"\n    mandatory: true\n    waiver_eligible: false   # design non-negotiable rule — inference about transferability is disallowed, so a waiver cannot substitute for confirmation\n  - id: bf-04\n    text: \"황금낙하산(golden parachute)·지배권 변경 촉발(CoC-trigger) 경영진 보상을 식별하고 거래 종결일(day-one) 현금 유출로 모델링함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: bf-05\n    text: \"상향 편향(upward-bias) 기본값을 적용해 보상 평준화(compensation harmonization) 비용을 추정함 (절감 항목으로 모델링하지 않음)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: bf-06\n    text: \"고객 계약에서 지배권 변경(change-of-control) 해지 조항을 검토함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: bf-07\n    text: \"이익의 질(quality-of-earnings) 정상화 완료 (일회성 항목 제거, 소유주 보상 정상화)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: bf-08\n    text: \"우발채무를 서술로만 남기지 않고 확률 x 금액 x 시점 분포로 모델링해 몬테카를로(Monte Carlo)에 반영함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: bf-09\n    text: \"+200bp 하방 시나리오에서 재무약정 등 확약사항(covenants) 위반 여부를 검증함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: bf-10\n    text: \"PMI 시너지 가정을 valuation-agent의 딜 모델과 대사함 (별도로 낙관적인 가정 금지)\"\n    mandatory: false\n    waiver_eligible: true\n  - id: bf-11\n    text: \"건 점핑(gun-jumping) 준수 확인 — 신고 의무가 있는 모든 관할에서 승인 전 통합 활동이 없음\"\n    mandatory: true\n    waiver_eligible: true\n  - id: bf-12\n    text: \"투자 주체 구조화를 인수 방식(지분·구조)에 그치지 않고 딜 구조 가설의 일부로서 ADR-0045의 네 축(세무 구조, 책임 격리, 자금조달 레버리지, 엑시트 구조) 모두에 비추어 검토함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: bf-13\n    text: \"WACC 적용 주체가 대상기업(target)으로 확정되고 근거가 기록되었다 — 인수·지분참여의 현금흐름 리스크는 대상기업에 귀속되며, 프로포르마 자본구조로 재레버링한 베타 근거가 세션에 남는다\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"Group New Business Review Policy §2.3, §4\"\n  - \"procedures/_shared/brownfield-screening/schema.yaml\"\n  - \"Meeting M5\"\n  - \"ADR-0045 (investment vehicle structuring as a mandatory deal-structure-hypothesis axis)\"\n"
   },
   "chk-commercial-dd-checklist": {
     "id": "chk-commercial-dd-checklist",
@@ -1135,11 +1135,11 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "checklists/ma-special-topics-checklist.yaml",
     "gate": "DD",
     "enforceability": "mixed",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "owner_agent": "brownfield-agent",
     "item_count": 12,
     "lang": "en",
-    "content": "governance_doc_id: chk-ma-special-topics\nlayer: checklist\ntitle: \"M&A Special Topics Checklist (Brown Field)\"\nscope: shared\nenforceability: mixed\nowner_agent: brownfield-agent\nversion: \"1.3.0\"\neffective_from: \"2026-08-20\"\ngate: DD\n\n# Evaluation order per meeting M5: (1) antitrust + HR integration, (2) customer\n# retention + incentive, (3) certification transferability last — a non-transferable\n# certification can strip the acquisition premium and must not be computed against\n# a valuation that already assumed it. This checklist's item order follows that.\n\nitems:\n  - id: ma-01\n    text: \"Relevant market defined (product and geographic) and HHI/HHI-delta calculated — including common-ownership/common-control combinations (e.g. a financial sponsor already controlling one competitor acquiring another), not only direct mergers of the target entities themselves (pilot 010 finding F-2)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-02\n    text: \"Merger-control filing requirements confirmed for every applicable jurisdiction (multi-jurisdiction filing check, not just the primary market)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-03\n    text: \"Gun-jumping prohibition acknowledged — no integration action taken before clearance\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-04\n    text: \"Executive compensation package (CoC triggers, golden-parachute payout estimate, accelerated vesting) recorded against management_package\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-05\n    text: \"Non-compete enforceability confirmed per applicable jurisdiction before relying on it for key-person retention\"\n    mandatory: false\n    waiver_eligible: true\n  - id: ma-06\n    text: \"Employee compensation benchmark completed at job-family/grade level (comp_benchmark), upward-bias harmonization cost calculated in both directions\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-07\n    text: \"Change-of-control clauses scanned across customer AND supplier contracts, debt covenants, and executive compensation — a retained seller as an ongoing supplier is the same risk category as a customer contract, not a separate one (pilot 002 finding F-2)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-08\n    text: \"Customer/supplier concentration and competitive-overlap risk assessed for post-acquisition attrition — includes a seller who retains a commercial relationship with the target post-close, not customer-side contracts only; concentration measured both pre- and post-close, since the deal itself can shift it; where cdd-08 is performed, revenue recurrence is measured pre- and post-close as well\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-09\n    text: \"Incentive inventory (both prospective and granted) reviewed for clawback exposure on any contemplated relocation or restructuring\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-10\n    text: \"Contingent liabilities (litigation, environmental, unfunded pension, warranty/recall) entered with probability/amount distribution for Monte Carlo integration — no narrative-only entries\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-11\n    text: \"Covenant breach scenario tested under a +200bp rate shock; CoC acceleration clauses on debt instruments identified\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-12\n    text: \"Certification transferability on change of control confirmed last, against the actual certifying body's rules — not inferred (design's explicit rule: inference disallowed here)\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"docs/ma-special-topics.md (forward reference — Stage 4 documentation)\"\n  - \"memory/meeting-2026-08-20-m5-ma-model-linkage.md\"\n  - \"ADR-0026 (contingent liability modeling), ADR-0027 (compensation upward bias)\"\n"
+    "content": "governance_doc_id: chk-ma-special-topics\nlayer: checklist\ntitle: \"M&A Special Topics Checklist (Brown Field)\"\nscope: shared\nenforceability: mixed\nowner_agent: brownfield-agent\nversion: \"1.4.0\"\neffective_from: \"2026-08-20\"\ngate: DD\n\n# Evaluation order per meeting M5: (1) antitrust + HR integration, (2) customer\n# retention + incentive, (3) certification transferability last — a non-transferable\n# certification can strip the acquisition premium and must not be computed against\n# a valuation that already assumed it. This checklist's item order follows that.\n\nitems:\n  - id: ma-01\n    text: \"관련시장(제품·지역)을 획정하고 HHI 및 HHI 증분(HHI-delta)을 산정함 — 대상 회사 간 직접 결합뿐 아니라 공동 소유·공동 지배 결합(예: 이미 경쟁사 한 곳을 지배하는 재무적 투자자가 다른 경쟁사를 인수하는 경우)도 포함 (파일럿 010 발견사항 F-2)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-02\n    text: \"주된 시장뿐 아니라 해당되는 모든 관할에서 기업결합 신고(merger-control filing) 요건을 확인함 (복수 관할 신고 점검)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-03\n    text: \"건 점핑(gun-jumping) 금지를 인지함 — 승인 전 통합 조치를 하지 않음\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-04\n    text: \"경영진 보상 패키지(지배권 변경 촉발 조건(CoC triggers), 황금낙하산(golden parachute) 지급 추정액, 가속 베스팅(accelerated vesting))를 management_package에 기록함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-05\n    text: \"핵심 인력 유지에 경업금지(non-compete) 약정을 활용하기 전에 해당 관할별 집행 가능성을 확인함\"\n    mandatory: false\n    waiver_eligible: true\n  - id: ma-06\n    text: \"직무군·직급 수준의 임직원 보상 벤치마크(comp_benchmark)를 완료하고, 양방향 모두에 상향 편향(upward-bias) 평준화 비용을 산정함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-07\n    text: \"고객 및 공급사 계약, 부채 재무약정 등 확약사항(covenants), 경영진 보상 전반에서 지배권 변경(change-of-control) 조항을 검토함 — 거래 후 계속 공급사로 남는 매도인은 고객 계약과 같은 위험 범주이며 별도 범주가 아님 (파일럿 002 발견사항 F-2)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-08\n    text: \"인수 후 이탈에 대비해 고객·공급사 집중도와 경쟁 중첩 위험을 평가함 — 고객 측 계약만이 아니라 거래 종결 후에도 대상 회사와 거래 관계를 유지하는 매도인을 포함; 딜 자체가 집중도를 바꿀 수 있으므로 종결 전후 모두 측정; cdd-08을 수행하는 경우 매출 반복성도 종결 전후 모두 측정\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-09\n    text: \"이전·구조조정을 검토할 경우 인센티브 목록(신청 예정분과 수혜분 모두)의 환수(clawback) 노출을 검토함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-10\n    text: \"우발채무(소송, 환경, 미적립 연금, 보증·리콜)를 몬테카를로(Monte Carlo) 연계를 위해 확률·금액 분포와 함께 입력함 — 서술로만 남긴 항목 금지\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-11\n    text: \"+200bp 금리 충격에서 재무약정 등 확약사항(covenants) 위반 시나리오를 검증하고, 채무증권의 지배권 변경 기한이익상실(CoC acceleration) 조항을 식별함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-12\n    text: \"지배권 변경 시 인증 승계 가능성은 맨 마지막에, 실제 인증기관의 규정에 비추어 확인함 — 추론 금지 (설계의 명시 규칙: 여기서는 추론 불허)\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"docs/ma-special-topics.md (forward reference — Stage 4 documentation)\"\n  - \"memory/meeting-2026-08-20-m5-ma-model-linkage.md\"\n  - \"ADR-0026 (contingent liability modeling), ADR-0027 (compensation upward bias)\"\n"
   },
   "chk-market-dd-checklist": {
     "id": "chk-market-dd-checklist",
@@ -1262,7 +1262,7 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "title": "비즈니스 매뉴얼 — analyst와 위원회 심사자",
     "file": "docs/manuals/business-manual_ko.md",
     "lang": "ko",
-    "content": "---\nsync_version: 1\ntranslated_from_hash: PLACEHOLDER\nlang: ko\nlang_reason: source-material\n---\ncounterpart: business-manual.md\n---\n\n# 비즈니스 매뉴얼 — analyst와 위원회 심사자\n\n> **언어**: [English](business-manual.md) · **한국어**\n\n**독자**: analyst, Entity IC / Group IC reviewer\n**대상 아님**: 시스템 운영자(`operations-manual.md` 참조) 및 시스템 관리자(`admin-manual.md` 참조) — 이 분리는 의도된 것이다. 세 매뉴얼을 하나로 합치면 아무도 끝까지 읽지 않게 된다(design 10.5절).\n\n## 이 매뉴얼이 다루는 것\n\n각 게이트에서 무엇을 해야 하는지, 체크리스트를 어떻게 읽는지, 산출물이 어디로 가는지, 그리고 RAG 등급과 Kill Criteria 판정 결과를 어떻게 해석하는지.\n\n## 1. 게이트별 역할\n\n권위 있는 산출물/승인자/RACI 표는 `docs/governance/process-map.md`를 참조할 것. 요약하면:\n\n| 게이트 | analyst인 경우 | IC reviewer인 경우 |\n|---|---|---|\n| Screening | 초기 산출물 작성(후보지 숏리스트 또는 타깃 롱리스트) | 아직 참여하지 않음 |\n| Pre-FS | 딜 스폰서와 함께 WACC/hurdle IRR 입력값 확정 | 아직 참여하지 않음 |\n| FS | 밸류에이션과 성장 전망 완료, (BF) 6검증자 교차검증 개시 | 아직 참여하지 않음 |\n| DD | 모든 DD 발견사항을 `value_impact`(정수, 단위 = KRW 백만원 — ADR-0061)와 함께 `dd_finding`으로 착지 — 발견사항을 서술로만 남기지 말 것 | 아직 참여하지 않음 |\n| (S10 투자구조 설계 — DD와 Entity IC 사이) | 투자구조 가설(비히클: SPC 포함)·4축 검토(절세·책임격리·레버리지·엑싯)를 기록하고 완료 처리하며, 자금조달 sources & uses를 균형시킨다 (ADR-0106). 완료되지 않으면 S11로 진행 불가 | 아직 참여하지 않음 — IC가 심의하는 구조는 이 단계의 산출물 |\n| Entity IC | IC 메모 준비(템플릿 참조) | 검토하고, AI가 제안한 RAG 등급을 확인 또는 정정 — **정정하는 경우 사유를 붙인다** — 승인/거절/추가 작업 요청 |\n| Group IC | 요청받으면 랭킹 논의 지원 | 이 제안을 동시 진행 중인 `group_agenda` 항목들과 비교해 랭킹; 승인/거절/**조건부** 결정 |\n\n## 2. 체크리스트 읽는 법\n\n체크리스트는 필수 항목과 권장 항목이 섞여 있다(항목별 `mandatory: true/false` — `checklists/*.yaml` 참조). 필수 항목은 활성 waiver가 없으면 게이트를 막는다. 권장 항목의 부재는 waiver가 아니라 사유 진술만 있으면 충분하다.\n\n## 3. RAG 등급 읽는 법\n\n- **종합 색상 하나를 표면값으로 받아들이지 말 것** — 6차원 세부내역을 읽을 것. 종합 Green은 data confidence를 포함해 *6개 차원 전부*가 Green일 때만 나온다.\n- **data confidence가 전체를 제한한다.** 종합 Amber인데 재무 차원이 강하게 보이면 data confidence부터 확인할 것 — B등급 proxy chain은 숫자가 아무리 좋아 보여도 전체 평가를 Amber로 제한한다.\n- **rationale 행은 색상이 아니라 어떤 rule이 발화했는지를 알려준다.** 그렇지 않다면 결함이다 — 플래그하라.\n- **Amber 등급은 무엇을 하면 등급이 올라가는지 말해줘야 한다.** \"Data confidence B\"는 실행 가능한 정보가 아니다. \"A에 도달하려면 직접 출하 데이터를 확인하라\"가 실행 가능한 정보다.\n\n## 4. Kill Criteria\n\nKill Criteria 적중은 프로젝트를 정지시킨다. 권고 사항이 아니다. 구속력 있는 목록은 `policies/group/neb-policy.md` §4를 참조할 것. 하나를 무시하려면 명시적인 Group IC 결정이 필요하다 — 어느 analyst도, 어느 단일 reviewer도 Kill Criteria를 일방적으로 면제할 수 없다.\n\n## 5. 산출물이 가는 곳\n\n- IC 메모: `templates/deliverables/ic-memo-template.md` — Stage 4/5에서 시스템이 착지하면 산출물 출력 폴더 구조를 함께 참조.\n- DD 발견사항: 해당하는 `dd_finding` 스키마에 기록하고 `assumption_key`에 연결.\n- 회의 결과: `memory/meeting-*.md`, 액션 아이템은 설계의 명시적 규칙에 따라 라우팅 — 소유자와 착지 위치 없는 액션 아이템은 존재하지 않는다.\n\n## 6. Brown Field 특수 주제 — 평가 순서\n\n미팅 M5에 따라, 밸류에이션을 조립할 때 6개 필수 검증자는 다음 순서로 확정한다: (1) antitrust + HR 통합의 현금흐름 일정 효과, (2) 고객 유지 + 인센티브 수익/비용 빌드, (3) 인증 이전가능성은 **마지막**. 이전 불가능한 인증은 인수 프리미엄 전체를 걷어낼 수 있으므로, 그 인증을 이미 전제한 밸류에이션에 대고 계산되어서는 안 된다.\n"
+    "content": "---\nsync_version: 1\ntranslated_from_hash: PLACEHOLDER\nlang: ko\nlang_reason: source-material\n---\ncounterpart: business-manual.md\n---\n\n# 비즈니스 매뉴얼 — analyst와 위원회 심사자\n\n> **언어**: [English](business-manual.md) · **한국어**\n\n**독자**: analyst, Entity IC / Group IC reviewer\n**대상 아님**: 시스템 운영자(`operations-manual.md` 참조) 및 시스템 관리자(`admin-manual.md` 참조) — 이 분리는 의도된 것이다. 세 매뉴얼을 하나로 합치면 아무도 끝까지 읽지 않게 된다(design 10.5절).\n\n## 이 매뉴얼이 다루는 것\n\n각 게이트에서 무엇을 해야 하는지, 체크리스트를 어떻게 읽는지, 산출물이 어디로 가는지, 그리고 RAG 등급과 Kill Criteria 판정 결과를 어떻게 해석하는지.\n\n## 1. 게이트별 역할\n\n권위 있는 산출물/승인자/RACI 표는 `docs/governance/process-map.md`를 참조할 것. 요약하면:\n\n| 게이트 | analyst인 경우 | IC reviewer인 경우 |\n|---|---|---|\n| Screening | 초기 산출물 작성(후보지 숏리스트 또는 타깃 롱리스트) | 아직 참여하지 않음 |\n| Pre-FS | 딜 스폰서와 함께 WACC/hurdle IRR 입력값 확정 | 아직 참여하지 않음 |\n| FS | 밸류에이션과 성장 전망 완료, (BF) 6검증자 교차검증 개시 | 아직 참여하지 않음 |\n| DD | 모든 DD 발견사항을 `value_impact`(정수, 단위 = KRW 백만원 — ADR-0061)와 함께 `dd_finding`으로 착지 — 발견사항을 서술로만 남기지 말 것 | 아직 참여하지 않음 |\n| (S10 투자구조 설계 — DD와 Entity IC 사이) | 투자구조 가설(투자 주체: SPC 포함)·4축 검토(절세·책임격리·레버리지·엑싯)를 기록하고 완료 처리하며, 자금조달 sources & uses를 균형시킨다 (ADR-0106). 완료되지 않으면 S11로 진행 불가 | 아직 참여하지 않음 — IC가 심의하는 구조는 이 단계의 산출물 |\n| Entity IC | IC 메모 준비(템플릿 참조) | 검토하고, AI가 제안한 RAG 등급을 확인 또는 정정 — **정정하는 경우 사유를 붙인다** — 승인/거절/추가 작업 요청 |\n| Group IC | 요청받으면 랭킹 논의 지원 | 이 제안을 동시 진행 중인 `group_agenda` 항목들과 비교해 랭킹; 승인/거절/**조건부** 결정 |\n\n## 2. 체크리스트 읽는 법\n\n체크리스트는 필수 항목과 권장 항목이 섞여 있다(항목별 `mandatory: true/false` — `checklists/*.yaml` 참조). 필수 항목은 활성 waiver가 없으면 게이트를 막는다. 권장 항목의 부재는 waiver가 아니라 사유 진술만 있으면 충분하다.\n\n## 3. RAG 등급 읽는 법\n\n- **종합 색상 하나를 표면값으로 받아들이지 말 것** — 6차원 세부내역을 읽을 것. 종합 Green은 data confidence를 포함해 *6개 차원 전부*가 Green일 때만 나온다.\n- **data confidence가 전체를 제한한다.** 종합 Amber인데 재무 차원이 강하게 보이면 data confidence부터 확인할 것 — B등급 proxy chain은 숫자가 아무리 좋아 보여도 전체 평가를 Amber로 제한한다.\n- **rationale 행은 색상이 아니라 어떤 rule이 발화했는지를 알려준다.** 그렇지 않다면 결함이다 — 플래그하라.\n- **Amber 등급은 무엇을 하면 등급이 올라가는지 말해줘야 한다.** \"Data confidence B\"는 실행 가능한 정보가 아니다. \"A에 도달하려면 직접 출하 데이터를 확인하라\"가 실행 가능한 정보다.\n\n## 4. Kill Criteria\n\nKill Criteria 적중은 프로젝트를 정지시킨다. 권고 사항이 아니다. 구속력 있는 목록은 `policies/group/neb-policy.md` §4를 참조할 것. 하나를 무시하려면 명시적인 Group IC 결정이 필요하다 — 어느 analyst도, 어느 단일 reviewer도 Kill Criteria를 일방적으로 면제할 수 없다.\n\n## 5. 산출물이 가는 곳\n\n- IC 메모: `templates/deliverables/ic-memo-template.md` — Stage 4/5에서 시스템이 착지하면 산출물 출력 폴더 구조를 함께 참조.\n- DD 발견사항: 해당하는 `dd_finding` 스키마에 기록하고 `assumption_key`에 연결.\n- 회의 결과: `memory/meeting-*.md`, 액션 아이템은 설계의 명시적 규칙에 따라 라우팅 — 소유자와 착지 위치 없는 액션 아이템은 존재하지 않는다.\n\n## 6. Brown Field 특수 주제 — 평가 순서\n\n미팅 M5에 따라, 밸류에이션을 조립할 때 6개 필수 검증자는 다음 순서로 확정한다: (1) antitrust + HR 통합의 현금흐름 일정 효과, (2) 고객 유지 + 인센티브 수익/비용 빌드, (3) 인증 이전가능성은 **마지막**. 이전 불가능한 인증은 인수 프리미엄 전체를 걷어낼 수 있으므로, 그 인증을 이미 전제한 밸류에이션에 대고 계산되어서는 안 된다.\n"
   },
   "man-operations-manual": {
     "id": "man-operations-manual",
@@ -1658,7 +1658,7 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "title": "런북 — KRX 베타 시계열 수집(수동, KRX 승인 대기)",
     "file": "docs/runbooks/beta-series-collection_ko.md",
     "lang": "ko",
-    "content": "---\nlang: ko\nlang_reason: source-material\ncounterpart: beta-series-collection.md\n---\n\n**대상**: 운영자, 딜 분석가\n**책임**: backend-engineer\n**화면**: /projects/[id]/wacc\n\n## 목적\n\n일별종가 시계열(코스피/코스닥 지수 + 주식회사/대상사 종가)은 WACC 베타 회귀 패널의 \"수집 데이터 불러오기\" 액션에 쓰입니다. `scripts/co-newbiz/beta-series.ts`로 수집하며 `newbiz fetch`와 같은 ensure_fresh 경로로 `fact_market_observation`에 적재됩니다.\n\n## 스케줄링 스토리\n\n로컬에서는 호스트 스케줄러가 돌지 않으므로 수집은 **수동**입니다(호스트 cron 확보 전까지 — 같은 패턴은 [rag-host-scheduler.md](rag-host-scheduler.md) 참고). 매월 한 번 이상 실행하세요. ensure_fresh 덕에 재실행은 캐시 히트라 과잉 수집은 API 할당량만 소모합니다.\n\n```bash\nbun scripts/co-newbiz/beta-series.ts --project <md_project.id>            # 최근 약 13개월\nbun scripts/co-newbiz/beta-series.ts --project <id> --from 2025-10 --to 2026-10\n```\n\n단축코드가 자동 해석되지 않으면 `--ticker 회사명=058050`으로 지정할 수 있습니다. 해석된 단축코드는 `db/data/krx-stock-code-cache.json`에 캐시됩니다.\n\n## 전제: KRX 서비스 승인\n\nKRX 데이터 마켓플레이스 키에 6개 서비스(idx/kospi_dd_trd 등 6개)의 승인이 필요합니다. 미승인 상태에서는 모든 호출이 `respCode 401 — Unauthorized API Call`이고 스크립트는 관측 0건으로 종료합니다(재신청: 포털 마이페이지 → API 사용 신청). 승인 후 재실행하세요.\n\n## 요청 방식: 서비스·평일마다 한 번 호출\n\nKRX 일별 서비스는 모두 기준일 하나(`basDd=YYYYMMDD`)를 받아 그날의 모든 행(같은 계열의 모든 지수, 또는 그 시장의 모든 상장 종목)을 돌려줍니다. 기간 조회(`bgnDd`/`endDd`)는 지원되지 않으며, 보내면 HTTP 200에 빈 `OutBlock_1`이 옵니다. 요청·필드 이름은 2026-10-12에 실제 호출로 확인했습니다.\n\n- 수집기는 달마다 평일을 하나씩 돌며(토·일과 미래 날짜는 건너뜀) 서비스를 하루 한 번씩 호출합니다. 동시 호출은 2개이고 호출 사이를 250ms 이상 띄우며, 네트워크 오류·5xx·호출 제한(403/429, 더 긴 대기)에는 한 번 다시 시도합니다.\n- 하루치 응답은 (서비스, 날짜) 단위로 프로세스 안에 캐시되므로 코스닥 지수와 코스닥 상장사 시계열은 하루 한 번의 호출을 함께 씁니다.\n- 평일인데 `OutBlock_1`이 비어 있으면 휴장일로 보고 건너뛰며 개수만 셉니다.\n- 지수 행은 `IDX_NM`이 정확히 `코스피`/`코스닥`이고 `CLSPRC_IDX`가 숫자인 행만 고릅니다. `코스피 (외국주포함)`처럼 종가가 빈 행은 쓰지 않습니다. 종목 행은 `ISU_CD`(6자리 단축코드)로 고르고 종가는 `TDD_CLSPRC`입니다.\n- 종목 기본정보(`sto/*_isu_base_info`)는 비어 있지 않은 가장 최근 평일의 `basDd`로 호출하고 `ISU_ABBRV`/`ISU_NM`을 정확히 일치 → 앞부분 일치 → 포함 순으로 맞춥니다. 후보가 여럿이면 짐작하지 않고 알립니다.\n\n**호출량**: 대략 평일 수 × 서비스 수입니다. 13개월은 평일 약 280일이고 코스피 지수·코스닥 지수·종목 서비스 하나를 쓰면 약 850회, 여기에 회사마다 기본정보 호출 1~2회가 더해집니다. 실행당 기본 호출 한도는 2000회이며 `--budget N`으로 바꿀 수 있습니다. 스크립트는 호출 수, 캐시 적중 수, 빈 날짜 수를 출력합니다.\n\n## 문제 해결\n\n| 증상 | 뜻 | 조치 |\n|---|---|---|\n| 관측 0건, \"every KRX payload was empty\" | 잘못된 요청 인자(`basDd` 대신 기간) 또는 범위가 모두 휴장일 | 스크립트 버전 확인, `--from/--to` 넓히기 |\n| `respCode 401 ... re-apply` | 키는 유효하나 서비스 미승인·만료 | 포털 마이페이지 → API 사용 신청에서 재신청 |\n| 재시도 후에도 `HTTP 403`/`5xx`/시간 초과 | KRX 호출 제한(동시 4개에서 관찰) 또는 장애 | 기다렸다 재실행(재실행은 캐시 적중) |\n| `not found in KOSDAQ master` / `ambiguous` | 회사 이름이 상장 약칭과 다름 | `--ticker 회사명=<6자리 코드>`로 지정 |\n| `call budget exhausted` | 범위에 비해 한도가 작음 | `--budget` 올리거나 범위 줄이기 |\n"
+    "content": "---\nlang: ko\nlang_reason: source-material\ncounterpart: beta-series-collection.md\n---\n\n**대상**: 운영자, 딜 분석가\n**책임**: backend-engineer\n**화면**: /projects/[id]/wacc\n\n## 목적\n\n일별종가 시계열(코스피/코스닥 지수 + 주식회사/대상사 종가)은 WACC 베타 회귀 패널의 \"수집 데이터 불러오기\" 액션에 쓰입니다. `scripts/co-newbiz/beta-series.ts`로 수집하며 `newbiz fetch`와 같은 ensure_fresh 경로로 `fact_market_observation`에 적재됩니다.\n\n## 스케줄링 스토리\n\n로컬에서는 호스트 스케줄러가 돌지 않으므로 수집은 **수동**입니다(호스트 cron 확보 전까지 — 같은 패턴은 [rag-host-scheduler.md](rag-host-scheduler.md) 참고). 매월 한 번 이상 실행하세요. ensure_fresh 덕에 재실행은 캐시 히트라 과잉 수집은 API 할당량만 소모합니다.\n\n```bash\nbun scripts/co-newbiz/beta-series.ts --project <md_project.id>            # 최근 약 13개월\nbun scripts/co-newbiz/beta-series.ts --project <id> --from 2025-10 --to 2026-10\n```\n\n단축코드가 자동 해석되지 않으면 `--ticker 회사명=058050`으로 지정할 수 있습니다. 해석된 단축코드는 `db/data/krx-stock-code-cache.json`에 캐시됩니다.\n\n## 지수 선택 (상장시장 기준)\n\n베타 회귀는 기본적으로 종목의 **상장시장 지수**와 짝지어 계산합니다. 코스닥 상장사(예: 로보티즈 108490, 레인보우로보틱스 277810)는 코스닥 지수, 코스피 상장사는 코스피 지수와 회귀합니다. 다른 지수도 패널의 \"시장 지수\" 선택 상자(\"수집 데이터 불러오기\" 옆)나 `GET .../wacc/beta-series?index=KOSPI|KOSDAQ`로 고를 수 있습니다.\n\n- 수집기는 해석한 단축코드와 상장시장을 DB 원천 계층(`raw_payload`, id `krx:stock-master:<md_company.id>`)에 기록하고, 웹 경로는 여기서 읽습니다(로컬 `krx-stock-code-cache.json`은 웹 앱에서 보이지 않습니다).\n- 상장시장 기록이 없으면(이 기록이 생기기 전에 수집한 경우) 예전처럼 코스피를 기본으로 씁니다.\n- 기본 지수에 수집 데이터가 없고 다른 지수에는 있으면 그쪽으로 바꾸고 `hint_code: index_fallback`으로 알립니다. 빈 시계열과 몰래 짝짓지 않습니다.\n\nv1.2.0 이전에 수집한 회사는 한 번만 아래를 실행해 상장시장을 채웁니다(여러 번 실행해도 같은 결과, KRX 호출 없음, API 키 불필요 — 로컬 캐시만 읽음):\n\n```bash\nbun scripts/co-newbiz/beta-series.ts --project <md_project.id> --backfill-market\n```\n\n## 전제: KRX 서비스 승인\n\nKRX 데이터 마켓플레이스 키에 6개 서비스(idx/kospi_dd_trd 등 6개)의 승인이 필요합니다. 미승인 상태에서는 모든 호출이 `respCode 401 — Unauthorized API Call`이고 스크립트는 관측 0건으로 종료합니다(재신청: 포털 마이페이지 → API 사용 신청). 승인 후 재실행하세요.\n\n## 요청 방식: 서비스·평일마다 한 번 호출\n\nKRX 일별 서비스는 모두 기준일 하나(`basDd=YYYYMMDD`)를 받아 그날의 모든 행(같은 계열의 모든 지수, 또는 그 시장의 모든 상장 종목)을 돌려줍니다. 기간 조회(`bgnDd`/`endDd`)는 지원되지 않으며, 보내면 HTTP 200에 빈 `OutBlock_1`이 옵니다. 요청·필드 이름은 2026-10-12에 실제 호출로 확인했습니다.\n\n- 수집기는 달마다 평일을 하나씩 돌며(토·일과 미래 날짜는 건너뜀) 서비스를 하루 한 번씩 호출합니다. 동시 호출은 2개이고 호출 사이를 250ms 이상 띄우며, 네트워크 오류·5xx·호출 제한(403/429, 더 긴 대기)에는 한 번 다시 시도합니다.\n- 하루치 응답은 (서비스, 날짜) 단위로 프로세스 안에 캐시되므로 코스닥 지수와 코스닥 상장사 시계열은 하루 한 번의 호출을 함께 씁니다.\n- 평일인데 `OutBlock_1`이 비어 있으면 휴장일로 보고 건너뛰며 개수만 셉니다.\n- 지수 행은 `IDX_NM`이 정확히 `코스피`/`코스닥`이고 `CLSPRC_IDX`가 숫자인 행만 고릅니다. `코스피 (외국주포함)`처럼 종가가 빈 행은 쓰지 않습니다. 종목 행은 `ISU_CD`(6자리 단축코드)로 고르고 종가는 `TDD_CLSPRC`입니다.\n- 종목 기본정보(`sto/*_isu_base_info`)는 비어 있지 않은 가장 최근 평일의 `basDd`로 호출하고 `ISU_ABBRV`/`ISU_NM`을 정확히 일치 → 앞부분 일치 → 포함 순으로 맞춥니다. 후보가 여럿이면 짐작하지 않고 알립니다.\n\n**호출량**: 대략 평일 수 × 서비스 수입니다. 13개월은 평일 약 280일이고 코스피 지수·코스닥 지수·종목 서비스 하나를 쓰면 약 850회, 여기에 회사마다 기본정보 호출 1~2회가 더해집니다. 실행당 기본 호출 한도는 2000회이며 `--budget N`으로 바꿀 수 있습니다. 스크립트는 호출 수, 캐시 적중 수, 빈 날짜 수를 출력합니다.\n\n## 문제 해결\n\n| 증상 | 뜻 | 조치 |\n|---|---|---|\n| 관측 0건, \"every KRX payload was empty\" | 잘못된 요청 인자(`basDd` 대신 기간) 또는 범위가 모두 휴장일 | 스크립트 버전 확인, `--from/--to` 넓히기 |\n| `respCode 401 ... re-apply` | 키는 유효하나 서비스 미승인·만료 | 포털 마이페이지 → API 사용 신청에서 재신청 |\n| 재시도 후에도 `HTTP 403`/`5xx`/시간 초과 | KRX 호출 제한(동시 4개에서 관찰) 또는 장애 | 기다렸다 재실행(재실행은 캐시 적중) |\n| `not found in KOSDAQ master` / `ambiguous` | 회사 이름이 상장 약칭과 다름 | `--ticker 회사명=<6자리 코드>`로 지정 |\n| `call budget exhausted` | 범위에 비해 한도가 작음 | `--budget` 올리거나 범위 줄이기 |\n"
   },
   "rb-beta-series": {
     "id": "rb-beta-series",
@@ -1666,7 +1666,7 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "title": "Runbook — KRX Beta Series Collection (Manual, KRX Approval Pending)",
     "file": "docs/runbooks/beta-series-collection.md",
     "lang": "en",
-    "content": "---\nlang: en\ncounterpart: beta-series-collection_ko.md\n---\n\n**Audience**: operators, deal analysts\n**Owner**: backend-engineer\n**Screens**: /projects/[id]/wacc\n\n## Purpose\n\nDaily-close time series (KOSPI/KOSDAQ index + subject/target company closes) feed the WACC beta regression panel (\"수집 데이터 불러오기\"). Series are collected with `scripts/co-newbiz/beta-series.ts` into `fact_market_observation` via the same ensure_fresh path as `newbiz fetch`.\n\n## Scheduling story\n\nThere is no host scheduler running locally — collection is **manual** until a\nhost cron exists (see [rag-host-scheduler.md](rag-host-scheduler.md) for the\nsame pattern). Run monthly, or more often; ensure_fresh makes reruns cache-hit,\nso over-collecting costs API quota, not correctness.\n\n```bash\nbun scripts/co-newbiz/beta-series.ts --project <md_project.id>            # last ~13 months\nbun scripts/co-newbiz/beta-series.ts --project <id> --from 2025-10 --to 2026-10\nbun scripts/co-newbiz/beta-series.ts --project <id> --ticker 회사명=058050   # pin an unresolved short code\n```\n\n## Prerequisite: KRX service approval\n\nThe KRX Data Marketplace key must have the six services approved\n(idx/kospi_dd_trd, idx/kosdaq_dd_trd, sto/stk_bydd_trd, sto/ksq_bydd_trd, sto/stk_isu_base_info, sto/ksq_isu_base_info —\nre-apply via portal 마이페이지 → API 사용 신청).\nUntil then every call returns `respCode 401 — Unauthorized API Call` and the\nscript exits 1 with 0 observations. Re-apply, wait for approval, and rerun;\nresolved 단축코드 are cached in `db/data/krx-stock-code-cache.json`.\n\n## Request shape: one call per (service, weekday)\n\nEvery KRX daily service takes a single reference date, `basDd=YYYYMMDD`, and\nreturns all rows of that day (every index of the family, or every listed stock\nof the market). A date range (`bgnDd`/`endDd`) is not supported: KRX answers\nHTTP 200 with an empty `OutBlock_1`. Request and field names were verified live\non 2026-10-12.\n\n- The collector iterates the weekdays of each month (Saturdays, Sundays and\n  future dates are skipped) and calls each service once per day with a\n  two concurrent workers spaced at least 250 ms apart, and one retry on network errors, 5xx, or throttling (403/429, longer backoff).\n- A day payload is cached in-process per (service, day), so the KOSDAQ index\n  and every KOSDAQ-listed company share one call per day.\n- An empty `OutBlock_1` on a weekday is a holiday/non-trading day; it is\n  skipped and counted.\n- Index rows are picked by exact `IDX_NM` (`코스피`, `코스닥`) with a numeric\n  `CLSPRC_IDX`; rows such as `코스피 (외국주포함)` (empty close) are never used.\n  Stock rows are picked by `ISU_CD` (6-digit short code) with close\n  `TDD_CLSPRC`.\n- The stock master (`sto/*_isu_base_info`) is called with `basDd` of the most\n  recent non-empty weekday and matched on `ISU_ABBRV`/`ISU_NM` (exact, then\n  prefix, then substring; ambiguity is reported, not guessed).\n\n**Call volume**: about weekdays x distinct services. Thirteen months is about\n280 weekdays; with the KOSPI index, KOSDAQ index, and one stock service that is\nroughly 850 calls, plus 1-2 master calls per company. The default per-run call\nbudget is 2000 (`--budget N` to change it). The script prints calls, cache\nhits, and empty-day counts.\n\n## Troubleshooting\n\n| Symptom | Meaning | Action |\n|---|---|---|\n| `0 observations` and \"every KRX payload was empty\" | wrong params (range instead of `basDd`) or only non-trading days in range | check the script version; widen `--from/--to` |\n| `respCode 401 ... re-apply` | key valid but service not approved/expired | re-apply at portal 마이페이지 → API 사용 신청 |\n| `HTTP 403` / `5xx` / timeout after retry | KRX burst throttling (seen at concurrency 4) or outage | wait and rerun (reruns are cache hits) |\n| `not found in KOSDAQ master` / `ambiguous` | name does not match the listed abbreviation | pin with `--ticker 회사명=<6-digit code>` |\n| `call budget exhausted` | range too large for the budget | raise `--budget` or narrow the range |\n"
+    "content": "---\nlang: en\ncounterpart: beta-series-collection_ko.md\n---\n\n**Audience**: operators, deal analysts\n**Owner**: backend-engineer\n**Screens**: /projects/[id]/wacc\n\n## Purpose\n\nDaily-close time series (KOSPI/KOSDAQ index + subject/target company closes) feed the WACC beta regression panel (\"수집 데이터 불러오기\"). Series are collected with `scripts/co-newbiz/beta-series.ts` into `fact_market_observation` via the same ensure_fresh path as `newbiz fetch`.\n\n## Scheduling story\n\nThere is no host scheduler running locally — collection is **manual** until a\nhost cron exists (see [rag-host-scheduler.md](rag-host-scheduler.md) for the\nsame pattern). Run monthly, or more often; ensure_fresh makes reruns cache-hit,\nso over-collecting costs API quota, not correctness.\n\n```bash\nbun scripts/co-newbiz/beta-series.ts --project <md_project.id>            # last ~13 months\nbun scripts/co-newbiz/beta-series.ts --project <id> --from 2025-10 --to 2026-10\nbun scripts/co-newbiz/beta-series.ts --project <id> --ticker 회사명=058050   # pin an unresolved short code\n```\n\n## Index choice (listing market)\n\nThe beta regression pairs the stock with the index of its **listing market**\nby default: a KOSDAQ-listed company (e.g. 로보티즈 108490, 레인보우로보틱스\n277810) is regressed against the KOSDAQ index, a KOSPI-listed one against\nKOSPI. The other index stays selectable in the panel (\"시장 지수\" select next\nto \"수집 데이터 불러오기\") and through `GET .../wacc/beta-series?index=KOSPI|KOSDAQ`.\n\n- The collector records the resolved short code and market in the DB raw\n  layer (`raw_payload`, id `krx:stock-master:<md_company.id>`); the web route\n  reads it from there (the local `krx-stock-code-cache.json` is not visible to\n  the web app).\n- Unknown market (collected before this record existed) -> KOSPI default, as\n  before.\n- If the default index has no collected rows but the other one does, the API\n  falls back to it and reports `hint_code: index_fallback`; it never pairs\n  with an empty series silently.\n\nBackfill for companies collected before v1.2.0 (one-time, idempotent, no KRX\ncalls, no API key needed — reads the local cache only):\n\n```bash\nbun scripts/co-newbiz/beta-series.ts --project <md_project.id> --backfill-market\n```\n\n## Prerequisite: KRX service approval\n\nThe KRX Data Marketplace key must have the six services approved\n(idx/kospi_dd_trd, idx/kosdaq_dd_trd, sto/stk_bydd_trd, sto/ksq_bydd_trd, sto/stk_isu_base_info, sto/ksq_isu_base_info —\nre-apply via portal 마이페이지 → API 사용 신청).\nUntil then every call returns `respCode 401 — Unauthorized API Call` and the\nscript exits 1 with 0 observations. Re-apply, wait for approval, and rerun;\nresolved 단축코드 are cached in `db/data/krx-stock-code-cache.json`.\n\n## Request shape: one call per (service, weekday)\n\nEvery KRX daily service takes a single reference date, `basDd=YYYYMMDD`, and\nreturns all rows of that day (every index of the family, or every listed stock\nof the market). A date range (`bgnDd`/`endDd`) is not supported: KRX answers\nHTTP 200 with an empty `OutBlock_1`. Request and field names were verified live\non 2026-10-12.\n\n- The collector iterates the weekdays of each month (Saturdays, Sundays and\n  future dates are skipped) and calls each service once per day with a\n  two concurrent workers spaced at least 250 ms apart, and one retry on network errors, 5xx, or throttling (403/429, longer backoff).\n- A day payload is cached in-process per (service, day), so the KOSDAQ index\n  and every KOSDAQ-listed company share one call per day.\n- An empty `OutBlock_1` on a weekday is a holiday/non-trading day; it is\n  skipped and counted.\n- Index rows are picked by exact `IDX_NM` (`코스피`, `코스닥`) with a numeric\n  `CLSPRC_IDX`; rows such as `코스피 (외국주포함)` (empty close) are never used.\n  Stock rows are picked by `ISU_CD` (6-digit short code) with close\n  `TDD_CLSPRC`.\n- The stock master (`sto/*_isu_base_info`) is called with `basDd` of the most\n  recent non-empty weekday and matched on `ISU_ABBRV`/`ISU_NM` (exact, then\n  prefix, then substring; ambiguity is reported, not guessed).\n\n**Call volume**: about weekdays x distinct services. Thirteen months is about\n280 weekdays; with the KOSPI index, KOSDAQ index, and one stock service that is\nroughly 850 calls, plus 1-2 master calls per company. The default per-run call\nbudget is 2000 (`--budget N` to change it). The script prints calls, cache\nhits, and empty-day counts.\n\n## Troubleshooting\n\n| Symptom | Meaning | Action |\n|---|---|---|\n| `0 observations` and \"every KRX payload was empty\" | wrong params (range instead of `basDd`) or only non-trading days in range | check the script version; widen `--from/--to` |\n| `respCode 401 ... re-apply` | key valid but service not approved/expired | re-apply at portal 마이페이지 → API 사용 신청 |\n| `HTTP 403` / `5xx` / timeout after retry | KRX burst throttling (seen at concurrency 4) or outage | wait and rerun (reruns are cache hits) |\n| `not found in KOSDAQ master` / `ambiguous` | name does not match the listed abbreviation | pin with `--ticker 회사명=<6-digit code>` |\n| `call budget exhausted` | range too large for the budget | raise `--budget` or narrow the range |\n"
   },
   "rb-deployment-ko": {
     "id": "rb-deployment-ko",
@@ -2122,73 +2122,73 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
   "chk-brownfield-feasibility-checklist": [
     {
       "id": "bf-01",
-      "text": "All six mandatory M&A validators run and recorded: antitrust, customer-retention, incentive, hr-integration, certification transferability, region-lead labor review",
+      "text": "필수 인수합병(M&A) 검증 6종이 모두 수행·기록됨: 독과점(antitrust), 고객 유지(customer-retention), 인센티브(incentive), 인력 통합(hr-integration), 인증 승계 가능성(certification transferability), 지역 리드 노무 검토(region-lead labor review)",
       "mandatory": true,
       "waiver_eligible": false
     },
     {
       "id": "bf-02",
-      "text": "WACC and hurdle IRR confirmed kind=user (not assumed) before FS gate opened",
+      "text": "FS 게이트 개시 전 WACC와 허들 IRR이 kind=user(가정치 아님)로 확정됨",
       "mandatory": true,
       "waiver_eligible": false
     },
     {
       "id": "bf-03",
-      "text": "Certification change-of-control transferability confirmed against the certification body's own regulations (not the target's characterization), where load-bearing to the deal thesis",
+      "text": "딜 논리의 핵심 전제인 경우, 지배권 변경(change of control) 시 인증 승계 가능성을 대상 회사의 설명이 아닌 인증기관 자체 규정에 비추어 확인함",
       "mandatory": true,
       "waiver_eligible": false
     },
     {
       "id": "bf-04",
-      "text": "Golden parachute / CoC-trigger executive compensation identified and modeled as a day-one cash outflow",
+      "text": "황금낙하산(golden parachute)·지배권 변경 촉발(CoC-trigger) 경영진 보상을 식별하고 거래 종결일(day-one) 현금 유출로 모델링함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "bf-05",
-      "text": "Compensation harmonization cost estimated with upward-bias default applied (never modeled as a savings line)",
+      "text": "상향 편향(upward-bias) 기본값을 적용해 보상 평준화(compensation harmonization) 비용을 추정함 (절감 항목으로 모델링하지 않음)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "bf-06",
-      "text": "Customer contracts scanned for change-of-control termination clauses",
+      "text": "고객 계약에서 지배권 변경(change-of-control) 해지 조항을 검토함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "bf-07",
-      "text": "Quality-of-earnings normalization completed (one-off items stripped, owner compensation normalized)",
+      "text": "이익의 질(quality-of-earnings) 정상화 완료 (일회성 항목 제거, 소유주 보상 정상화)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "bf-08",
-      "text": "Contingent liabilities modeled as probability x amount x timing distributions feeding Monte Carlo, not narrative-only",
+      "text": "우발채무를 서술로만 남기지 않고 확률 x 금액 x 시점 분포로 모델링해 몬테카를로(Monte Carlo)에 반영함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "bf-09",
-      "text": "Covenant breach tested under the +200bp downside scenario",
+      "text": "+200bp 하방 시나리오에서 재무약정 등 확약사항(covenants) 위반 여부를 검증함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "bf-10",
-      "text": "PMI synergy assumptions reconciled against valuation-agent's deal model (not independently optimistic)",
+      "text": "PMI 시너지 가정을 valuation-agent의 딜 모델과 대사함 (별도로 낙관적인 가정 금지)",
       "mandatory": false,
       "waiver_eligible": true
     },
     {
       "id": "bf-11",
-      "text": "Gun-jumping compliance confirmed — no integration activity before clearance in any jurisdiction with a filing requirement",
+      "text": "건 점핑(gun-jumping) 준수 확인 — 신고 의무가 있는 모든 관할에서 승인 전 통합 활동이 없음",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "bf-12",
-      "text": "Investment vehicle structuring reviewed against all four ADR-0045 axes (tax structure, liability isolation, financing leverage, exit structure) as part of the deal structure hypothesis — not just the acquisition mechanics (stake/structure)",
+      "text": "투자 주체 구조화를 인수 방식(지분·구조)에 그치지 않고 딜 구조 가설의 일부로서 ADR-0045의 네 축(세무 구조, 책임 격리, 자금조달 레버리지, 엑시트 구조) 모두에 비추어 검토함",
       "mandatory": true,
       "waiver_eligible": true
     },
@@ -2970,73 +2970,73 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
   "chk-ma-special-topics-checklist": [
     {
       "id": "ma-01",
-      "text": "Relevant market defined (product and geographic) and HHI/HHI-delta calculated — including common-ownership/common-control combinations (e.g. a financial sponsor already controlling one competitor acquiring another), not only direct mergers of the target entities themselves (pilot 010 finding F-2)",
+      "text": "관련시장(제품·지역)을 획정하고 HHI 및 HHI 증분(HHI-delta)을 산정함 — 대상 회사 간 직접 결합뿐 아니라 공동 소유·공동 지배 결합(예: 이미 경쟁사 한 곳을 지배하는 재무적 투자자가 다른 경쟁사를 인수하는 경우)도 포함 (파일럿 010 발견사항 F-2)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ma-02",
-      "text": "Merger-control filing requirements confirmed for every applicable jurisdiction (multi-jurisdiction filing check, not just the primary market)",
+      "text": "주된 시장뿐 아니라 해당되는 모든 관할에서 기업결합 신고(merger-control filing) 요건을 확인함 (복수 관할 신고 점검)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ma-03",
-      "text": "Gun-jumping prohibition acknowledged — no integration action taken before clearance",
+      "text": "건 점핑(gun-jumping) 금지를 인지함 — 승인 전 통합 조치를 하지 않음",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ma-04",
-      "text": "Executive compensation package (CoC triggers, golden-parachute payout estimate, accelerated vesting) recorded against management_package",
+      "text": "경영진 보상 패키지(지배권 변경 촉발 조건(CoC triggers), 황금낙하산(golden parachute) 지급 추정액, 가속 베스팅(accelerated vesting))를 management_package에 기록함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ma-05",
-      "text": "Non-compete enforceability confirmed per applicable jurisdiction before relying on it for key-person retention",
+      "text": "핵심 인력 유지에 경업금지(non-compete) 약정을 활용하기 전에 해당 관할별 집행 가능성을 확인함",
       "mandatory": false,
       "waiver_eligible": true
     },
     {
       "id": "ma-06",
-      "text": "Employee compensation benchmark completed at job-family/grade level (comp_benchmark), upward-bias harmonization cost calculated in both directions",
+      "text": "직무군·직급 수준의 임직원 보상 벤치마크(comp_benchmark)를 완료하고, 양방향 모두에 상향 편향(upward-bias) 평준화 비용을 산정함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ma-07",
-      "text": "Change-of-control clauses scanned across customer AND supplier contracts, debt covenants, and executive compensation — a retained seller as an ongoing supplier is the same risk category as a customer contract, not a separate one (pilot 002 finding F-2)",
+      "text": "고객 및 공급사 계약, 부채 재무약정 등 확약사항(covenants), 경영진 보상 전반에서 지배권 변경(change-of-control) 조항을 검토함 — 거래 후 계속 공급사로 남는 매도인은 고객 계약과 같은 위험 범주이며 별도 범주가 아님 (파일럿 002 발견사항 F-2)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ma-08",
-      "text": "Customer/supplier concentration and competitive-overlap risk assessed for post-acquisition attrition — includes a seller who retains a commercial relationship with the target post-close, not customer-side contracts only; concentration measured both pre- and post-close, since the deal itself can shift it; where cdd-08 is performed, revenue recurrence is measured pre- and post-close as well",
+      "text": "인수 후 이탈에 대비해 고객·공급사 집중도와 경쟁 중첩 위험을 평가함 — 고객 측 계약만이 아니라 거래 종결 후에도 대상 회사와 거래 관계를 유지하는 매도인을 포함; 딜 자체가 집중도를 바꿀 수 있으므로 종결 전후 모두 측정; cdd-08을 수행하는 경우 매출 반복성도 종결 전후 모두 측정",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ma-09",
-      "text": "Incentive inventory (both prospective and granted) reviewed for clawback exposure on any contemplated relocation or restructuring",
+      "text": "이전·구조조정을 검토할 경우 인센티브 목록(신청 예정분과 수혜분 모두)의 환수(clawback) 노출을 검토함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ma-10",
-      "text": "Contingent liabilities (litigation, environmental, unfunded pension, warranty/recall) entered with probability/amount distribution for Monte Carlo integration — no narrative-only entries",
+      "text": "우발채무(소송, 환경, 미적립 연금, 보증·리콜)를 몬테카를로(Monte Carlo) 연계를 위해 확률·금액 분포와 함께 입력함 — 서술로만 남긴 항목 금지",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ma-11",
-      "text": "Covenant breach scenario tested under a +200bp rate shock; CoC acceleration clauses on debt instruments identified",
+      "text": "+200bp 금리 충격에서 재무약정 등 확약사항(covenants) 위반 시나리오를 검증하고, 채무증권의 지배권 변경 기한이익상실(CoC acceleration) 조항을 식별함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ma-12",
-      "text": "Certification transferability on change of control confirmed last, against the actual certifying body's rules — not inferred (design's explicit rule: inference disallowed here)",
+      "text": "지배권 변경 시 인증 승계 가능성은 맨 마지막에, 실제 인증기관의 규정에 비추어 확인함 — 추론 금지 (설계의 명시 규칙: 여기서는 추론 불허)",
       "mandatory": true,
       "waiver_eligible": true
     }

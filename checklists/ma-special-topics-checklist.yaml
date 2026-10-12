@@ -4,7 +4,7 @@ title: "M&A Special Topics Checklist (Brown Field)"
 scope: shared
 enforceability: mixed
 owner_agent: brownfield-agent
-version: "1.3.0"
+version: "1.4.0"
 effective_from: "2026-08-20"
 gate: DD
 
@@ -15,51 +15,51 @@ gate: DD
 
 items:
   - id: ma-01
-    text: "Relevant market defined (product and geographic) and HHI/HHI-delta calculated — including common-ownership/common-control combinations (e.g. a financial sponsor already controlling one competitor acquiring another), not only direct mergers of the target entities themselves (pilot 010 finding F-2)"
+    text: "관련시장(제품·지역)을 획정하고 HHI 및 HHI 증분(HHI-delta)을 산정함 — 대상 회사 간 직접 결합뿐 아니라 공동 소유·공동 지배 결합(예: 이미 경쟁사 한 곳을 지배하는 재무적 투자자가 다른 경쟁사를 인수하는 경우)도 포함 (파일럿 010 발견사항 F-2)"
     mandatory: true
     waiver_eligible: true
   - id: ma-02
-    text: "Merger-control filing requirements confirmed for every applicable jurisdiction (multi-jurisdiction filing check, not just the primary market)"
+    text: "주된 시장뿐 아니라 해당되는 모든 관할에서 기업결합 신고(merger-control filing) 요건을 확인함 (복수 관할 신고 점검)"
     mandatory: true
     waiver_eligible: true
   - id: ma-03
-    text: "Gun-jumping prohibition acknowledged — no integration action taken before clearance"
+    text: "건 점핑(gun-jumping) 금지를 인지함 — 승인 전 통합 조치를 하지 않음"
     mandatory: true
     waiver_eligible: true
   - id: ma-04
-    text: "Executive compensation package (CoC triggers, golden-parachute payout estimate, accelerated vesting) recorded against management_package"
+    text: "경영진 보상 패키지(지배권 변경 촉발 조건(CoC triggers), 황금낙하산(golden parachute) 지급 추정액, 가속 베스팅(accelerated vesting))를 management_package에 기록함"
     mandatory: true
     waiver_eligible: true
   - id: ma-05
-    text: "Non-compete enforceability confirmed per applicable jurisdiction before relying on it for key-person retention"
+    text: "핵심 인력 유지에 경업금지(non-compete) 약정을 활용하기 전에 해당 관할별 집행 가능성을 확인함"
     mandatory: false
     waiver_eligible: true
   - id: ma-06
-    text: "Employee compensation benchmark completed at job-family/grade level (comp_benchmark), upward-bias harmonization cost calculated in both directions"
+    text: "직무군·직급 수준의 임직원 보상 벤치마크(comp_benchmark)를 완료하고, 양방향 모두에 상향 편향(upward-bias) 평준화 비용을 산정함"
     mandatory: true
     waiver_eligible: true
   - id: ma-07
-    text: "Change-of-control clauses scanned across customer AND supplier contracts, debt covenants, and executive compensation — a retained seller as an ongoing supplier is the same risk category as a customer contract, not a separate one (pilot 002 finding F-2)"
+    text: "고객 및 공급사 계약, 부채 재무약정 등 확약사항(covenants), 경영진 보상 전반에서 지배권 변경(change-of-control) 조항을 검토함 — 거래 후 계속 공급사로 남는 매도인은 고객 계약과 같은 위험 범주이며 별도 범주가 아님 (파일럿 002 발견사항 F-2)"
     mandatory: true
     waiver_eligible: true
   - id: ma-08
-    text: "Customer/supplier concentration and competitive-overlap risk assessed for post-acquisition attrition — includes a seller who retains a commercial relationship with the target post-close, not customer-side contracts only; concentration measured both pre- and post-close, since the deal itself can shift it; where cdd-08 is performed, revenue recurrence is measured pre- and post-close as well"
+    text: "인수 후 이탈에 대비해 고객·공급사 집중도와 경쟁 중첩 위험을 평가함 — 고객 측 계약만이 아니라 거래 종결 후에도 대상 회사와 거래 관계를 유지하는 매도인을 포함; 딜 자체가 집중도를 바꿀 수 있으므로 종결 전후 모두 측정; cdd-08을 수행하는 경우 매출 반복성도 종결 전후 모두 측정"
     mandatory: true
     waiver_eligible: true
   - id: ma-09
-    text: "Incentive inventory (both prospective and granted) reviewed for clawback exposure on any contemplated relocation or restructuring"
+    text: "이전·구조조정을 검토할 경우 인센티브 목록(신청 예정분과 수혜분 모두)의 환수(clawback) 노출을 검토함"
     mandatory: true
     waiver_eligible: true
   - id: ma-10
-    text: "Contingent liabilities (litigation, environmental, unfunded pension, warranty/recall) entered with probability/amount distribution for Monte Carlo integration — no narrative-only entries"
+    text: "우발채무(소송, 환경, 미적립 연금, 보증·리콜)를 몬테카를로(Monte Carlo) 연계를 위해 확률·금액 분포와 함께 입력함 — 서술로만 남긴 항목 금지"
     mandatory: true
     waiver_eligible: true
   - id: ma-11
-    text: "Covenant breach scenario tested under a +200bp rate shock; CoC acceleration clauses on debt instruments identified"
+    text: "+200bp 금리 충격에서 재무약정 등 확약사항(covenants) 위반 시나리오를 검증하고, 채무증권의 지배권 변경 기한이익상실(CoC acceleration) 조항을 식별함"
     mandatory: true
     waiver_eligible: true
   - id: ma-12
-    text: "Certification transferability on change of control confirmed last, against the actual certifying body's rules — not inferred (design's explicit rule: inference disallowed here)"
+    text: "지배권 변경 시 인증 승계 가능성은 맨 마지막에, 실제 인증기관의 규정에 비추어 확인함 — 추론 금지 (설계의 명시 규칙: 여기서는 추론 불허)"
     mandatory: true
     waiver_eligible: true
 

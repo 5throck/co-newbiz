@@ -198,6 +198,19 @@ export function localizeItem(it: ItemLike): LocalizedItem {
   return { claim, reason: tidyReasonText(withGateNames(reason)), localized: false };
 }
 
+/**
+ * Status line shown after an AI 2nd review request. The reason is rendered in the AI 2nd line
+ * ABOVE the buckets, so this message repeats it instead of pointing at a direction.
+ */
+// INTERIM-WORDING
+export function ai2ndStatusMessage(stage: { performed: boolean; not_performed_reason: string | null } | null | undefined): string {
+  if (!stage || stage.performed) return "AI 2차 검토 결과가 갱신되었습니다.";
+  const reason = stage.not_performed_reason ? localizeNotPerformedReason(stage.not_performed_reason).trim() : "";
+  return reason
+    ? `AI 2차 검토는 수행되지 않았습니다 — ${reason}`
+    : 'AI 2차 검토는 수행되지 않았습니다. 위쪽 "AI 2차" 줄에서 사유를 확인하세요.';
+}
+
 /** User-facing citation: no stage:S8 style identifiers. */
 export function citationLabel(origin: string, reviewerDomain: string | null, ref?: string): string {
   const d = reviewDomainLabel(reviewerDomain);

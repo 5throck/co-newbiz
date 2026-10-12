@@ -4,57 +4,57 @@ title: "Brown Field Feasibility Checklist"
 scope: shared
 enforceability: mixed
 owner_agent: brownfield-agent
-version: "1.0.0"
+version: "1.2.0"
 effective_from: "2026-08-20"
 gate: FS/DD
 
 items:
   - id: bf-01
-    text: "All six mandatory M&A validators run and recorded: antitrust, customer-retention, incentive, hr-integration, certification transferability, region-lead labor review"
+    text: "필수 인수합병(M&A) 검증 6종이 모두 수행·기록됨: 독과점(antitrust), 고객 유지(customer-retention), 인센티브(incentive), 인력 통합(hr-integration), 인증 승계 가능성(certification transferability), 지역 리드 노무 검토(region-lead labor review)"
     mandatory: true
     waiver_eligible: false   # design's explicit "no waiver path" for this completeness check
   - id: bf-02
-    text: "WACC and hurdle IRR confirmed kind=user (not assumed) before FS gate opened"
+    text: "FS 게이트 개시 전 WACC와 허들 IRR이 kind=user(가정치 아님)로 확정됨"
     mandatory: true
     waiver_eligible: false   # policy §2.2 — a provisional discount rate invalidates the analysis; load-bearing figures are never waivable into 'assumed'
   - id: bf-03
-    text: "Certification change-of-control transferability confirmed against the certification body's own regulations (not the target's characterization), where load-bearing to the deal thesis"
+    text: "딜 논리의 핵심 전제인 경우, 지배권 변경(change of control) 시 인증 승계 가능성을 대상 회사의 설명이 아닌 인증기관 자체 규정에 비추어 확인함"
     mandatory: true
     waiver_eligible: false   # design non-negotiable rule — inference about transferability is disallowed, so a waiver cannot substitute for confirmation
   - id: bf-04
-    text: "Golden parachute / CoC-trigger executive compensation identified and modeled as a day-one cash outflow"
+    text: "황금낙하산(golden parachute)·지배권 변경 촉발(CoC-trigger) 경영진 보상을 식별하고 거래 종결일(day-one) 현금 유출로 모델링함"
     mandatory: true
     waiver_eligible: true
   - id: bf-05
-    text: "Compensation harmonization cost estimated with upward-bias default applied (never modeled as a savings line)"
+    text: "상향 편향(upward-bias) 기본값을 적용해 보상 평준화(compensation harmonization) 비용을 추정함 (절감 항목으로 모델링하지 않음)"
     mandatory: true
     waiver_eligible: true
   - id: bf-06
-    text: "Customer contracts scanned for change-of-control termination clauses"
+    text: "고객 계약에서 지배권 변경(change-of-control) 해지 조항을 검토함"
     mandatory: true
     waiver_eligible: true
   - id: bf-07
-    text: "Quality-of-earnings normalization completed (one-off items stripped, owner compensation normalized)"
+    text: "이익의 질(quality-of-earnings) 정상화 완료 (일회성 항목 제거, 소유주 보상 정상화)"
     mandatory: true
     waiver_eligible: true
   - id: bf-08
-    text: "Contingent liabilities modeled as probability x amount x timing distributions feeding Monte Carlo, not narrative-only"
+    text: "우발채무를 서술로만 남기지 않고 확률 x 금액 x 시점 분포로 모델링해 몬테카를로(Monte Carlo)에 반영함"
     mandatory: true
     waiver_eligible: true
   - id: bf-09
-    text: "Covenant breach tested under the +200bp downside scenario"
+    text: "+200bp 하방 시나리오에서 재무약정 등 확약사항(covenants) 위반 여부를 검증함"
     mandatory: true
     waiver_eligible: true
   - id: bf-10
-    text: "PMI synergy assumptions reconciled against valuation-agent's deal model (not independently optimistic)"
+    text: "PMI 시너지 가정을 valuation-agent의 딜 모델과 대사함 (별도로 낙관적인 가정 금지)"
     mandatory: false
     waiver_eligible: true
   - id: bf-11
-    text: "Gun-jumping compliance confirmed — no integration activity before clearance in any jurisdiction with a filing requirement"
+    text: "건 점핑(gun-jumping) 준수 확인 — 신고 의무가 있는 모든 관할에서 승인 전 통합 활동이 없음"
     mandatory: true
     waiver_eligible: true
   - id: bf-12
-    text: "Investment vehicle structuring reviewed against all four ADR-0045 axes (tax structure, liability isolation, financing leverage, exit structure) as part of the deal structure hypothesis — not just the acquisition mechanics (stake/structure)"
+    text: "투자 주체 구조화를 인수 방식(지분·구조)에 그치지 않고 딜 구조 가설의 일부로서 ADR-0045의 네 축(세무 구조, 책임 격리, 자금조달 레버리지, 엑시트 구조) 모두에 비추어 검토함"
     mandatory: true
     waiver_eligible: true
   - id: bf-13
