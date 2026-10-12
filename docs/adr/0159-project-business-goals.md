@@ -1,8 +1,8 @@
 # ADR-0159 — Project-level business goals above group/affiliate standards
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-11
-- Deciders: Human reviewer (pending). Drafted by platform-lead. AI review alone cannot accept this ADR (DB schema change).
+- Deciders: Accepted by the user (account techcross, chat, 2026-10-12). Drafted by platform-lead. AI review alone cannot accept this ADR (DB schema change).
 - Design of record: `docs/designs/2026-10-11-s8-project-business-goals-design.md`
 - Related: ADR-0114 (business-target standards, reference-only fs evidence), ADR-0146 (admin role vs business content), ADR-0154 (human-only actions), ADR-0158 (human-only S8 route precedent), ADR-0061 (money units), ADR-0014 (additive-only migrations)
 

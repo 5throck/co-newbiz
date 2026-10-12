@@ -153,8 +153,8 @@ describe("scorecard form payload", () => {
 });
 
 describe("scorecard errors and effective class text", () => {
-  test("run_required explains the new-run rule", () => {
-    expect(scorecardErrorText("run_required", 409, "x")).toContain("새 분석 실행이 필요합니다");
+  test("run_required explains the missing-run rule (no analysis run at all)", () => {
+    expect(scorecardErrorText("run_required", 409, "x")).toContain("분석 실행(run)이 없습니다");
   });
   test("every documented API error code has Korean text", () => {
     for (const c of ["invalid_request", "human_only", "role_required", "insider_required", "not_applicable_track", "needs_classification", "cycle_exists", "run_required"]) {

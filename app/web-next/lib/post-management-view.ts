@@ -282,7 +282,7 @@ export const SCORECARD_ERROR_LABEL: Record<string, string> = {
   not_applicable_track: "스코어카드 주기 기록은 신규 사업(greenfield)에만 적용됩니다.",
   needs_classification: "트랙 분류가 확정되지 않아 기록할 수 없습니다 — 먼저 사람이 트랙(case_type)을 분류해야 합니다.",
   cycle_exists: "이 리뷰 주기는 이미 기록되었습니다 — 한 번 기록한 주기는 바꿀 수 없으니 다음 주기를 입력하세요.",
-  run_required: "같은 지표를 다음 분기에 기록하려면 새 분석 실행이 필요합니다.",
+  run_required: "이 프로젝트에 분석 실행(run)이 없습니다 — 스코어카드 행은 run 단위로 저장됩니다.",
 }; // INTERIM-WORDING
 
 /** Korean message for a scorecard POST failure. The server detail is appended for invalid_request only (it names the offending field). */

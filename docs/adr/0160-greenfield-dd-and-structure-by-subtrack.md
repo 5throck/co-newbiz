@@ -1,8 +1,9 @@
 # ADR-0160 — Greenfield S9 plan verification and S10 establishment structure by sub-track
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-11
-- Deciders: Human reviewer (pending). Drafted by process-governance-manager. AI review alone cannot accept this ADR (procedure, checklist applicability and kill-criteria change).
+- Deciders: Accepted by the user (account techcross, chat, 2026-10-12). Drafted by process-governance-manager. AI review alone cannot accept this ADR (procedure, checklist applicability and kill-criteria change).
+- Addenda accepted together with this ADR (2026-10-12).
 - Design of record: `docs/designs/2026-10-11-greenfield-dd-and-investment-structure-by-subtrack-design.md`
 - Related: ADR-0045, ADR-0047, ADR-0052, ADR-0074, ADR-0099, ADR-0104, ADR-0157, ADR-0159, Wave F-8
 

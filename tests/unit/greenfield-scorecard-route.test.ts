@@ -140,13 +140,14 @@ describe("POST post-management/scorecard — human-only, greenfield-only", () =>
   test("override audited with before/after/note; every cycle audited; GET returns effective class and latest values", async () => {
     const p = seedProject("greenfield", null);
     await post(p, { review_cycle: "2026-Q3", measures: [m("utilisation_pct")] });
-    // Same measure on the same run is refused (migration 0024 UNIQUE excludes review_cycle) until a newer run exists.
-    const blocked = await post(p, { review_cycle: "2026-Q4", measures: [m("utilisation_pct")] });
-    expect(blocked.status).toBe(409);
-    expect((await json(blocked)).error.code).toBe("run_required");
-    db.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)", [ulid(), p, "t2", "h2", A1, new Date(Date.now() + 1000).toISOString()]);
+    // Migration 0139 (ADR-0164): review_cycle is part of the unique key, so
+    // the NEXT quarter (with the class override) lands on the SAME run — no
+    // new run needed anymore.
     const r = await post(p, { review_cycle: "2026-Q4", venture_class: "enabling", note: "기존 사업 설비를 공유하므로 enabling으로 분류", measures: [m("utilisation_pct", { value: 92.5 }), m("revenue_vs_case", { value: 1.25, target_value: 1 })] });
     expect(r.status).toBe(201);
+    const runIds = (db.query("SELECT DISTINCT run_id FROM venture_scorecard WHERE project_id = ?").all(p) as Array<{ run_id: string }>).map((x) => x.run_id);
+    expect(runIds.length).toBe(1); // both quarters on the single seeded run
+    expect((db.query("SELECT COUNT(*) n FROM venture_scorecard WHERE project_id = ?").get(p) as { n: number }).n).toBe(3);
     const ov = db.query("SELECT actor_user_id, target FROM audit_log WHERE action = 'venture_scorecard.venture_class_override' AND target LIKE ?").all(`${p}:%`) as Array<{ actor_user_id: string; target: string }>;
     expect(ov.length).toBe(1);
     expect(ov[0].actor_user_id).toBe(A1);

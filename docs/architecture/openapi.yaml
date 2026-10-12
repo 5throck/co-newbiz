@@ -4916,7 +4916,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          description: "not_applicable_track (brownfield), needs_classification (unresolved track), cycle_exists (cycle already recorded), run_required (no run can hold these measures)."
+          description: "not_applicable_track (brownfield), needs_classification (unresolved track), cycle_exists (cycle already recorded), run_required (the project has no analysis run; consecutive quarters share the same run since migration 0139 - ADR-0164)."
 
   /api/projects/{id}/business-case/legacy-cleanup:
     post:

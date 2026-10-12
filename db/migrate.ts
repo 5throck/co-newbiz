@@ -19,12 +19,141 @@
  * when the FK-toggle requirement leaves no other option; a pre-migration
  * backup (ADR-0014) is the recovery path if it fails partway.
  *
+ * Statements are executed one-by-one (splitSqlStatements, ADR-0163) so a
+ * constraint failure in ANY statement aborts the migration: bun:sqlite's
+ * multi-statement Database.run() silently swallows errors raised by
+ * non-final statements, which previously let CHECK-guarded safety
+ * assertions inside migrations (0132, 0137) pass vacuously.
+ *
  * Usage: bun db/migrate.ts [--db-path <path>]
  */
 
 import { getDb, DB_DIR } from "./client.ts";
 import { readdirSync, readFileSync } from "node:fs";
 import { join, basename } from "node:path";
+
+// bun:sqlite's Database.run() executes a multi-statement script through
+// sqlite3_exec, which does NOT surface an error raised by a non-final
+// statement — a constraint failure mid-script was silently ignored, so
+// CHECK-guarded row-count safety assertions inside migrations (0132, 0137
+// headers) could never abort. To get stop-on-error semantics each statement
+// is split out and executed individually: a single db.run(statement) throws
+// on failure. The splitter below is a small tokenizer that is aware of:
+//   - '--' line comments and '/**/' block comments (skipped, never split on)
+//   - single-quoted strings (with '' escaping), double-quoted identifiers,
+//     [bracket] and `backtick` identifiers
+//   - trigger bodies: after CREATE [TEMP] TRIGGER ... BEGIN, ';' inside
+//     the body does not end the statement until the matching END (nesting
+//     counted for nested BEGIN; CASE ... END inside the body is paired so
+//     it does not close the trigger early).
+export function splitSqlStatements(sql: string): string[] {
+  const statements: string[] = [];
+  let current = "";
+  let i = 0;
+  let triggerDepth = 0; // >0 while inside a CREATE TRIGGER body
+  let expectingTriggerBody = false; // saw CREATE ... TRIGGER, waiting for BEGIN
+
+  const flush = () => {
+    const trimmed = current.trim();
+    // Drop chunks that carry no executable SQL (pure comment blocks).
+    const executable = trimmed.replace(/--[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "").trim();
+    if (executable.length > 0) statements.push(trimmed);
+    current = "";
+  };
+
+  const wordAt = (pos: number): { word: string; end: number } | null => {
+    const m = /^[A-Za-z_][A-Za-z0-9_$]*/.exec(sql.slice(pos));
+    return m ? { word: m[0].toUpperCase(), end: pos + m[0].length } : null;
+  };
+
+  while (i < sql.length) {
+    const ch = sql[i];
+    const next = sql[i + 1];
+
+    // Comments: copied verbatim (so stored CREATE-statement text stays
+    // byte-identical to what the old multi-statement run persisted), but a
+    // ';' inside a comment never ends a statement.
+    if (ch === "-" && next === "-") {
+      const nl = sql.indexOf("\n", i);
+      const end = nl === -1 ? sql.length : nl + 1;
+      current += sql.slice(i, end);
+      i = end;
+      continue;
+    }
+    if (ch === "/" && next === "*") {
+      const close = sql.indexOf("*/", i + 2);
+      const end = close === -1 ? sql.length : close + 2;
+      current += sql.slice(i, end);
+      i = end;
+      continue;
+    }
+
+    // Strings and quoted identifiers: copy verbatim, '' escapes.
+    if (ch === "'") {
+      current += ch;
+      i++;
+      while (i < sql.length) {
+        current += sql[i];
+        if (sql[i] === "'") {
+          if (sql[i + 1] === "'") { current += sql[i + 1]; i += 2; continue; }
+          i++;
+          break;
+        }
+        i++;
+      }
+      continue;
+    }
+    if (ch === '"' || ch === "`" || ch === "[") {
+      const closeCh = ch === "[" ? "]" : ch;
+      current += ch;
+      i++;
+      while (i < sql.length) {
+        current += sql[i];
+        if (sql[i] === closeCh) {
+          if (sql[i + 1] === closeCh && closeCh !== "]") { current += sql[i + 1]; i += 2; continue; }
+          i++;
+          break;
+        }
+        i++;
+      }
+      continue;
+    }
+
+    // Words: track trigger BEGIN/END nesting.
+    if (/[A-Za-z_]/.test(ch)) {
+      const hit = wordAt(i);
+      if (!hit) { current += ch; i++; continue; }
+      const { word, end } = hit;
+      if (word === "TRIGGER") expectingTriggerBody = true;
+      else if (word === "BEGIN") {
+        if (expectingTriggerBody) { triggerDepth = 1; expectingTriggerBody = false; }
+        else if (triggerDepth > 0) triggerDepth++;
+      } else if (word === "CASE" && triggerDepth > 0) triggerDepth++;
+      else if (word === "END" && triggerDepth > 0) {
+        triggerDepth--;
+      }
+      current += sql.slice(i, end);
+      i = end;
+      continue;
+    }
+
+    if (ch === ";" && triggerDepth === 0) {
+      flush();
+      i++;
+      continue;
+    }
+
+    current += ch;
+    i++;
+  }
+  flush();
+  return statements;
+}
+
+/** Execute a SQL script statement-by-statement, aborting on the first error. */
+function runScript(db: ReturnType<typeof getDb>, sql: string): void {
+  for (const statement of splitSqlStatements(sql)) db.run(statement);
+}
 
 // Prefer this file's own directory (exact under the plain Bun runtime);
 // fall back to DB_DIR (see db/client.ts) when bundled by Next/Turbopack,
@@ -86,14 +215,14 @@ export function runMigrations(dbPath?: string): { applied: string[]; skipped: st
     const sql = readFileSync(join(MIGRATIONS_DIR, file), "utf-8");
     const noTransaction = sql.startsWith("-- @notransaction");
     if (noTransaction) {
-      db.run(sql);
+      runScript(db, sql);
       db.run(
         "INSERT INTO schema_migrations (id, filename, applied_at) VALUES (?, ?, ?)",
         [basename(file), file, new Date().toISOString()]
       );
     } else {
       db.transaction(() => {
-        db.run(sql);
+        runScript(db, sql);
         db.run(
           "INSERT INTO schema_migrations (id, filename, applied_at) VALUES (?, ?, ?)",
           [basename(file), file, new Date().toISOString()]

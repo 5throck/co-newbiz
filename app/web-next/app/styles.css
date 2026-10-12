@@ -3611,19 +3611,11 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
 .pat-scope-field { border: 0; margin: 0; padding: 0; min-inline-size: auto; }
 .pat-scope-field legend { padding: 0; }
 .pat-scope-field label { display: inline-flex; align-items: center; gap: 0.25rem; margin-right: var(--space-2, 0.5rem); white-space: nowrap; }
-/* 개인 API 토큰 표: 고정(equal-width) 레이아웃 대신 자동 레이아웃 + 열별
-   최소 폭. 식별자·날짜는 줄바꿈 없이 전체가 보이고, 라벨 열만 말줄임으로
-   줄어든다. 좁은 화면에서는 .table-scroll 안에서 가로 스크롤된다. */
-.data-table.pat-token-table { table-layout: auto; max-width: none; min-width: 44rem; width: 100%; }
+/* 개인 API 토큰 표: 2026-10-11-table-column-sizing-system batch 2 — 고정 백분율
+   레이아웃(.table-fixed-pct + ColGroup TOKEN_COL_PCT)으로 이전. 좁은 화면에서는
+   .table-scroll 안에서 가로 스크롤된다(tmin-64). */
 .pat-token-table th, .pat-token-table td { padding-inline: var(--space-1, 0.25rem) var(--space-2, 0.5rem); white-space: nowrap; }
-.pat-token-table .pat-col-label { width: 100%; min-width: 5rem; }
-.pat-token-table .pat-label-text { display: block; max-width: 16rem; overflow: hidden; text-overflow: ellipsis; }
 .pat-token-table code { font-family: var(--font-mono); font-size: var(--fs-body); }
-.pat-token-table .pat-col-id { min-width: 10.5rem; }
-.pat-token-table .pat-col-scope { min-width: 4.5rem; }
-.pat-token-table .pat-col-status { min-width: 5rem; }
-.pat-token-table .pat-col-date { min-width: 6.5rem; }
-.pat-token-table .pat-col-actions { width: 4.5rem; min-width: 4.5rem; }
 .pat-token-table .status-chip { white-space: nowrap; }
 @media (max-width: 640px) {
   .pat-form-grid { grid-template-columns: minmax(0, 1fr); align-items: stretch; }

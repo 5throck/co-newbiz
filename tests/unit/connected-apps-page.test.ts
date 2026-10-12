@@ -106,15 +106,17 @@ describe("connected-apps personal API tokens UI", () => {
     expect(PAGE).toMatch(/<td className="cell-nowrap">\{fmtShort\(t\.last_used_at\)\}<\/td>/);
   });
 
-  test("token table uses explicit column sizing: auto layout, min widths, ellipsis label, scroll wrapper", () => {
-    const css = readFileSync("app/web-next/app/styles.css", "utf8");
+  test("token table uses explicit column sizing: shared system (table-fixed-pct + ColGroup), ellipsis label, scroll wrapper", () => {
+    // 2026-10-12 table-sizing batch 2: the bespoke .pat-col-* CSS was replaced
+    // by the shared system (ColGroup + table-fixed-pct + tmin + cell-truncate),
+    // so the old auto-layout/min-width CSS assertions no longer apply.
     expect(PAGE).toContain("pat-token-table");
     expect(PAGE).toMatch(/<div className="table-scroll"[\s\S]*pat-token-table/);
     expect(PAGE).toMatch(/title=\{t\.label\}/);
-    expect(css).toMatch(/\.data-table\.pat-token-table \{[^}]*table-layout: auto[^}]*min-width: 44rem/);
-    expect(css).toMatch(/\.pat-token-table \.pat-col-id \{ min-width: 10\.5rem/);
-    expect(css).toMatch(/\.pat-token-table \.pat-col-date \{ min-width: 6\.5rem/);
-    expect(css).toMatch(/\.pat-label-text \{[^}]*text-overflow: ellipsis/);
+    expect(PAGE).toContain("table-fixed-pct tmin-64");
+    expect(PAGE).toContain("ColGroup widths={TOKEN_COL_PCT}");
+    expect(PAGE).toMatch(/const TOKEN_COL_PCT = \[22, 16, 12, 14, 10, 10, 10, 6\] as const/);
+    expect(PAGE).toMatch(/<td className="cell-truncate" title=\{t\.label\}>/);
     expect(PAGE).toContain('dateStyle: "short"');
   });
 });
