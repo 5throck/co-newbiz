@@ -271,9 +271,11 @@ export function recordVentureScorecardCycle(input: RecordVentureScorecardInput, 
     if (!/^\d{4}-\d{2}-\d{2}/.test(r.observed_at ?? "")) {
       throw new Error(`venture_scorecard_rejected: ${at} measure '${r.measure_key}' observed_at '${r.observed_at}' must be an ISO-shaped timestamp (YYYY-MM-DD...).`);
     }
-    // The UNIQUE (run_id, source_procedure, section, measure_key) key is
-    // constant per call — a duplicate measure in one section is a caller bug
-    // worth a named error instead of the raw SQLite abort mid-transaction.
+    // The UNIQUE (run_id, source_procedure, review_cycle, section,
+    // measure_key) key (migration 0139, ADR-0164 — 0024's key widened with
+    // review_cycle so one run can hold every quarter) is constant per call —
+    // a duplicate measure in one section is a caller bug worth a named error
+    // instead of the raw SQLite abort mid-transaction.
     const key = `${r.section} ${r.measure_key}`;
     if (seenMeasures.has(key)) {
       throw new Error(

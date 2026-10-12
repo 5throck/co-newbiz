@@ -2,7 +2,8 @@
 
 // Split from components/stages/RouteDecisionStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import Link from "next/link";
-import { SCORE_LABEL } from "./constants.ts";
+import { ColGroup } from "../../ui.tsx";
+import { CAPABILITY_REG_COL_PCT, SCORE_LABEL } from "./constants.ts";
 import type { RouteDecisionStageState } from "./useRouteDecision.ts";
 import type { OpportunityRow } from "./types.ts";
 
@@ -81,8 +82,9 @@ export function EvalTab({ ctx, selected }: { ctx: RouteDecisionStageState; selec
                           {advisory.capabilityGap.coveragePct !== null ? ` · 충족률 ${advisory.capabilityGap.coveragePct}%` : ""}) 보기
                         </summary>
                         <div className="table-scroll mt-2">
-                          <table className="data-table mb-0" aria-label="필요 역량 수준 레지스터 (S3 연계)">
+                          <table className="data-table mb-0 table-fixed-pct tmin-56" aria-label="필요 역량 수준 레지스터 (S3 연계)">
                             <caption className="sr-only">필요 역량 수준 레지스터 — S3 연계, 읽기 전용</caption>
+                            <ColGroup widths={CAPABILITY_REG_COL_PCT} />
                             <thead>
                               <tr>
                                 <th scope="col">필요 역량</th><th scope="col">보유 판정</th>

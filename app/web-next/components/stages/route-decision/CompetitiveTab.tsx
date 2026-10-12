@@ -2,6 +2,8 @@
 
 // Split from components/stages/RouteDecisionStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import Link from "next/link";
+import { ColGroup } from "../../ui.tsx";
+import { S4_COMPETITIVE_COL_PCT } from "./constants.ts";
 import type { RouteDecisionStageState } from "./useRouteDecision.ts";
 import type { OpportunityRow } from "./types.ts";
 
@@ -23,8 +25,9 @@ export function CompetitiveTab({ ctx, selected }: { ctx: RouteDecisionStageState
               <p className="text-[length:var(--fs-caption)] mb-1">{advisory.s1Evidence.competitive.structure}</p>
               {advisory.s1Evidence.competitive.players.length > 0 && (
                 <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-                  <table className="data-table mb-0" aria-label="경쟁 구조 — 주요 기업">
+                  <table className="data-table mb-0 table-fixed-pct tmin-40" aria-label="경쟁 구조 — 주요 기업">
                     <caption className="sr-only">경쟁 구조 — 주요 기업</caption>
+                    <ColGroup widths={S4_COMPETITIVE_COL_PCT} />
                     <thead>
                       <tr><th scope="col">기업</th><th scope="col">티어</th><th scope="col">비고</th></tr>
                     </thead>
@@ -37,7 +40,7 @@ export function CompetitiveTab({ ctx, selected }: { ctx: RouteDecisionStageState
                               {p.tier === "leader" ? "리더" : p.tier === "challenger" ? "도전자" : "니치"}
                             </span>
                           </td>
-                          <td className="text-[length:var(--fs-caption)]">{p.note}</td>
+                          <td className="cell-truncate text-[length:var(--fs-caption)]">{p.note}</td>
                         </tr>
                       ))}
                     </tbody>

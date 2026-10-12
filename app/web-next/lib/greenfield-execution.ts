@@ -851,6 +851,9 @@ function finiteOrNull(v: unknown, field: string): { ok: true; value: number | nu
  * (<= 2000 chars) and is audited with before/after/note. Every cycle gets a
  * GREENFIELD_CYCLE_ACTION audit entry on top of the repository's own entry.
  * S8 goals (goal:<metric_key>) are reference evidence only — never blocking.
+ * Cycles are per review_cycle on the project's latest active run (migration
+ * 0139 put review_cycle in the unique key, ADR-0164) — run_required remains
+ * only when the project has no analysis run at all.
  */
 export function recordGreenfieldScorecardFromRequest(
   input: { projectId: string; body: unknown; actor: string; now?: string },
@@ -919,20 +922,21 @@ export function recordGreenfieldScorecardFromRequest(
     .query("SELECT COUNT(*) AS n FROM venture_scorecard WHERE project_id = ? AND source_procedure = 'portfolio-venture-monitoring' AND review_cycle = ?")
     .get(input.projectId, cycle) as { n: number };
   if (prior.n > 0) return sfail("cycle_exists", `${cycle} 주기는 이미 기록되었습니다 — 주기는 변경할 수 없는 단위입니다 (ADR-0005).`);
-  // venture_scorecard is UNIQUE (run_id, source_procedure, section, measure_key)
-  // (migration 0024 — review_cycle is not part of the key), so a cycle goes
-  // on the latest run that does not already carry any of these measures.
+  // venture_scorecard is UNIQUE (run_id, source_procedure, review_cycle,
+  // section, measure_key) since migration 0139 (ADR-0164) — review_cycle is
+  // part of the key, so consecutive quarters all land on the SAME latest run
+  // (a run is a lineage snapshot, ADR-0005, not a one-cycle bucket). The
+  // cycle_exists guard above keeps one record per project+procedure+cycle;
+  // run_required survives only for the genuinely impossible case: no run at
+  // all (rows are run-scoped, migration 0024 FK).
   const runs = db
     .query("SELECT id FROM run WHERE project_id = ? AND superseded_by IS NULL ORDER BY created_at DESC, id DESC")
     .all(input.projectId) as Array<{ id: string }>;
-  const taken = db.prepare("SELECT 1 FROM venture_scorecard WHERE run_id = ? AND source_procedure = 'portfolio-venture-monitoring' AND section = ? AND measure_key = ? LIMIT 1");
-  const run = runs.find((rn) => rows.every((r) => !taken.get(rn.id, r.section, r.measure_key)));
+  const run = runs[0];
   if (!run) {
     return sfail(
       "run_required",
-      runs.length
-        ? "이 측정값을 담을 수 있는 분석 실행(run)이 없습니다 — 최신 run에 이미 같은 측정이 기록되어 있습니다. 새 분석 실행 스냅샷을 만든 뒤 다시 기록하세요 (migration 0024 UNIQUE)."
-        : "이 프로젝트에 분석 실행(run)이 없습니다 — 스코어카드 행은 run 단위로 저장됩니다 (migration 0024).",
+      "이 프로젝트에 분석 실행(run)이 없습니다 — 스코어카드 행은 run 단위로 저장됩니다 (migration 0024).",
     );
   }
   const out = db.transaction(() => {

@@ -3,6 +3,11 @@
 // Split from components/stages/SynergyStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import Link from "next/link";
 import { SectionToolbar } from "../../layout.tsx";
+import { ColGroup } from "../../ui.tsx";
+
+// 분석 대상 회사 목록 표 열 비율(2026-10-11-table-column-sizing-system batch 2) —
+// 연결 기회·분석 상태(칩 텍스트가 길다)에 폭을 주고 구분·분석일·작업은 좁게.
+const SYNERGY_COL_PCT = [16, 22, 10, 28, 10, 14] as const;
 import { profileHrefFor } from "./synergyFormat.ts";
 import { analysisGroupKey, targetLabel } from "./synergyFormat.ts";
 import type { SynergyStageState } from "./useSynergyList.ts";
@@ -72,16 +77,17 @@ export function SynergyListSection({ ctx }: { ctx: SynergyStageState }) {
           </div>
         ) : (
           <div className="table-scroll">
-          <table className="data-table list-table synergy-list-table" aria-label="분석 대상 회사 목록">
+          <table className="data-table list-table synergy-list-table table-fixed-pct tmin-56" aria-label="분석 대상 회사 목록">
             <caption className="sr-only">분석 대상 회사 목록</caption>
+            <ColGroup widths={SYNERGY_COL_PCT} />
             <thead>
               <tr>
-                <th scope="col" className="w-[10rem]">회사명</th>
-                <th scope="col" className="w-[22rem]">연결 기회</th>
-                <th scope="col" className="w-[5rem]">구분</th>
-                <th scope="col" className="w-[17rem]">분석 상태</th>
+                <th scope="col">회사명</th>
+                <th scope="col">연결 기회</th>
+                <th scope="col">구분</th>
+                <th scope="col">분석 상태</th>
                 <th scope="col" className="col-date">분석일</th>
-                <th scope="col" className="w-[13rem]"><span className="sr-only">작업</span></th>
+                <th scope="col"><span className="sr-only">작업</span></th>
               </tr>
             </thead>
             <tbody>

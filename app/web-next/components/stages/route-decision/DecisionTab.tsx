@@ -2,8 +2,8 @@
 
 // Split from components/stages/RouteDecisionStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import { SectionToolbar } from "../../layout.tsx";
-import { ParamTable } from "../../ui.tsx";
-import { OVERRIDDEN_SUBS, BF_SUB, GF_SUB } from "./constants.ts";
+import { ColGroup, ParamTable } from "../../ui.tsx";
+import { DECISION_COL_PCT, OVERRIDDEN_SUBS, BF_SUB, GF_SUB } from "./constants.ts";
 import type { RouteDecisionStageState } from "./useRouteDecision.ts";
 import type { OpportunityRow } from "./types.ts";
 
@@ -154,8 +154,9 @@ export function DecisionTab({ ctx, selected }: { ctx: RouteDecisionStageState; s
                     <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">선택한 기간에 기록된 결정이 없습니다.</p>
                   ) : (
                     <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-                      <table className="data-table report-table" aria-label="진출방식 결정 이력">
+                      <table className="data-table report-table table-fixed-pct tmin-64" aria-label="진출방식 결정 이력">
                         <caption className="sr-only">진출방식 결정 이력</caption>
+                        <ColGroup widths={DECISION_COL_PCT} />
                         <thead>
                           <tr>
                             <th scope="col">트랙</th><th scope="col">라우트</th><th scope="col">의도</th>
@@ -182,8 +183,8 @@ export function DecisionTab({ ctx, selected }: { ctx: RouteDecisionStageState; s
                                   <span className="block text-[length:var(--fs-caption)] text-[color:var(--accent)]" title={d.staging_recommended}>step-up 권고</span>
                                 )}
                               </td>
-                              <td className="text-[length:var(--fs-caption)]">{d.rationale}</td>
-                              <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{d.alternatives_considered ?? "—"}</td>
+                              <td className="cell-truncate text-[length:var(--fs-caption)]">{d.rationale}</td>
+                              <td className="cell-truncate text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{d.alternatives_considered ?? "—"}</td>
                               <td className="text-[length:var(--fs-caption)] tabular-nums">{d.decided_by} · {d.decided_at.slice(0, 10)}</td>
                             </tr>
                           ))}

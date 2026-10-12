@@ -285,6 +285,48 @@ describe("recordVentureScorecardCycle — happy path", () => {
   });
 });
 
+describe("ADR-0164 — consecutive quarters on the SAME run (migration 0139 unique key)", () => {
+  test("two consecutive quarters both store on one run; cycle guard stays per (project, procedure, cycle)", () => {
+    const projectId = insertProject();
+    grantMember(projectId, U1);
+    const runId = insertRun(projectId);
+
+    record(projectId, runId, [row({ measure_key: "same-quarter-a" })], { reviewCycle: "2026-Q3" });
+    // The SAME measure on the SAME run, next quarter — legal since 0139.
+    record(projectId, runId, [row({ measure_key: "same-quarter-a" })], { reviewCycle: "2026-Q4" });
+    // The same cycle again is still the immutable unit (repository guard, unchanged).
+    expect(() => record(projectId, runId, [row({ measure_key: "same-quarter-a" })], { reviewCycle: "2026-Q4" }))
+      .toThrow(/one record per project\+procedure\+cycle/);
+
+    const cycles = (db.query("SELECT review_cycle, COUNT(*) n FROM venture_scorecard WHERE run_id = ? GROUP BY review_cycle ORDER BY review_cycle").all(runId) as Array<{ review_cycle: string; n: number }>);
+    expect(cycles).toEqual([{ review_cycle: "2026-Q3", n: 1 }, { review_cycle: "2026-Q4", n: 1 }]);
+
+    // Latest-cycle read resolves to Q4 only, ordered by cycle then measure.
+    const latest = getVentureScorecard({ projectId, actor: U1 }, db);
+    expect(latest).toHaveLength(1);
+    expect(latest[0].review_cycle).toBe("2026-Q4");
+  });
+
+  test("greenfieldRampUpView + effectiveVentureClass resolve the LATEST cycle even when one run holds both quarters", async () => {
+    const { greenfieldRampUpView, effectiveVentureClass } = await import("../../app/web-next/lib/greenfield-execution.ts");
+    const projectId = insertProject();
+    grantMember(projectId, U1);
+    const runId = insertRun(projectId);
+    const opp = ulid();
+    db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)", [opp, "t", "테스트", "selected", U1, NOW]);
+    db.run("INSERT INTO route_decision (id, opportunity_id, track, sub_track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,?,1)", [ulid(), opp, "greenfield", null, "t", U1, NOW]);
+    db.run("UPDATE md_project SET track = 'greenfield', source_opportunity_id = ? WHERE id = ?", [opp, projectId]);
+
+    record(projectId, runId, [row({ measure_key: "ramp-view", venture_class: "driving" })], { reviewCycle: "2026-Q3" });
+    record(projectId, runId, [row({ measure_key: "ramp-view", venture_class: "enabling" })], { reviewCycle: "2026-Q4" });
+
+    expect(greenfieldRampUpView(projectId, db)!.review_cycle).toBe("2026-Q4");
+    const view = greenfieldRampUpView(projectId, db)!;
+    expect(view.measures.map((x: { venture_class: string }) => x.venture_class)).toEqual(["enabling"]);
+    expect(effectiveVentureClass(projectId, db).effective).toBe("enabling");
+  });
+});
+
 describe("getVentureScorecard — the project read", () => {
   test("explicit cycle returns that cycle's rows; latest-cycle fallback returns MAX(review_cycle) only", () => {
     const projectId = insertProject();

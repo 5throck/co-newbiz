@@ -6,6 +6,12 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
+import { ColGroup } from "../../components/ui.tsx";
+
+// 표 열 비율(2026-10-11-table-column-sizing-system batch 2) — 에이전트 로스터와
+// 체인 단계 기록 모두 본문 열(역할/요약)에 폭을 주고 좁은 칩·숫자 열은 균등 분할.
+const AGENT_ROSTER_COL_PCT = [18, 18, 48, 16] as const;
+const AGENT_STEPS_COL_PCT = [8, 16, 18, 44, 14] as const;
 
 interface AgentEntry { key: string; name: string; role: string; domain: string | null }
 interface StepResult { step: number; agentKey: string; purpose: string; summary: string; source: string }
@@ -107,8 +113,10 @@ export function AgentsView() {
               <span className="status-chip status-amber">제안 전용</span>
             </div>
             {result.steps && result.steps.length > 0 && (
-              <table className="data-table mb-2" aria-label="체인 단계별 실행 기록">
+              <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+              <table className="data-table mb-2 table-fixed-pct tmin-48" aria-label="체인 단계별 실행 기록">
                 <caption className="sr-only">체인 단계별 실행 기록</caption>
+                <ColGroup widths={AGENT_STEPS_COL_PCT} />
                 <thead>
                   <tr><th scope="col">단계</th><th scope="col">에이전트</th><th scope="col">수행</th><th scope="col">요약</th><th scope="col">출처</th></tr>
                 </thead>
@@ -118,12 +126,13 @@ export function AgentsView() {
                       <td className="tabular-nums">{s.step}</td>
                       <td>{s.agentKey}</td>
                       <td>{s.purpose}</td>
-                      <td className="text-[length:var(--fs-caption)]">{s.summary}</td>
+                      <td className="cell-truncate text-[length:var(--fs-caption)]">{s.summary}</td>
                       <td>{s.source === "llm" ? "AI" : "결정론"}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
             <p className="text-[length:var(--fs-body)] mb-0" style={{ whiteSpace: "pre-line" }}>{result.answer}</p>
           </div>
@@ -139,20 +148,23 @@ export function AgentsView() {
         ) : (
           <details>
             <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">배정 가능 에이전트 {roster.length}건 보기</summary>
-            <table className="data-table mt-2" aria-label="에이전트 로스터">
+            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+            <table className="data-table mt-2 table-fixed-pct tmin-40" aria-label="에이전트 로스터">
               <caption className="sr-only">에이전트 로스터</caption>
+              <ColGroup widths={AGENT_ROSTER_COL_PCT} />
               <thead><tr><th scope="col">키</th><th scope="col">이름</th><th scope="col">역할</th><th scope="col">도메인</th></tr></thead>
               <tbody>
                 {roster.map((a) => (
                   <tr key={a.key}>
                     <td><code className="dd-item-id">{a.key}</code></td>
                     <td className="font-semibold">{a.name}</td>
-                    <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{a.role}</td>
+                    <td className="cell-truncate text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{a.role}</td>
                     <td>{a.domain ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           </details>
         )}
       </section>

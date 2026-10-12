@@ -18,6 +18,7 @@ import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { SectionToolbar } from "../layout.tsx";
+import { ColGroup } from "../ui.tsx";
 import { GateDecisionPanel } from "../GateDecisionPanel.tsx";
 import { PromotionPanel } from "../PromotionPanel.tsx";
 import { PrimaryAction } from "../ui.tsx";
@@ -58,6 +59,10 @@ const RESOLUTIONS = Object.keys(RESOLUTION_LABEL) as GapResolution[];
 const CATEGORY_LABEL: Record<BcLine["category"], string> = { labor: "인건비", opex: "운영비", capex: "설비투자", revenue: "수익", gov_rnd: "정부 R&D" };
 const PERIOD_LABEL: Record<BcLine["period"], string> = { monthly: "월", quarterly: "분기", yearly: "년", lumpsum: "일시불(총액)" };
 const CURRENCY_LABEL: Record<BcLine["currency"], string> = { KRW: "원화", USD: "달러", EUR: "유로", JPY: "엔화", CNY: "위안" };
+
+// 필요 역량 확인 표 — 열 비율(2026-10-11-table-column-sizing-system batch 2):
+// 역량명·비고가 본문, 칩·인풋 열은 균등 분할.
+const GAP_COL_PCT = [28, 18, 18, 18, 18] as const;
 
 export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: string; onSaved?: () => void }) {
   const { me } = useAuth();
@@ -220,8 +225,10 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
             </p>
           ) : (
             <>
-              <table className="data-table mb-2" aria-label="필요 역량 확인">
+              <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+              <table className="data-table mb-2 table-fixed-pct tmin-56" aria-label="필요 역량 확인">
                 <caption className="sr-only">필요 역량 확인</caption>
+                <ColGroup widths={GAP_COL_PCT} />
                 <thead>
                   <tr>
                     <th scope="col">필요 역량 (S3)</th>
@@ -254,6 +261,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   ))}
                 </tbody>
               </table>
+              </div>
               <div className="flex items-center gap-2 mb-3">
                 {canAct && (
                   <button type="button" className="btn-ghost btn-sm" disabled={savingGaps} onClick={() => void saveGaps()}>

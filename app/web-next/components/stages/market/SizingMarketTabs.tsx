@@ -3,6 +3,8 @@
 // Split from components/stages/MarketAnalysisStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import { segmentsOf } from "../../../lib/market-sizing.ts";
 import { StepSection } from "./MarketReport.tsx";
+import { competitiveColPct } from "./constants.ts";
+import { ColGroup } from "../../ui.tsx";
 import { CompetitiveInputForm } from "./CompetitiveInputForm.tsx";
 import { AnchorChart, RegionWeightDonut, SegmentMixStack, RegionTable } from "./SizingCharts.tsx";
 import type { SizingReportState } from "./useSizingReport.ts";
@@ -81,8 +83,9 @@ export function SizingCompetitiveTab({ ctx }: { ctx: SizingReportState }) {
                 pl.attributes?.find((a) => a.label === label)?.value ?? "—";
               return (
               <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-              <table className="data-table report-table" aria-label="경쟁 구조 — 주요 기업">
+              <table className="data-table report-table table-fixed-pct tmin-80" aria-label="경쟁 구조 — 주요 기업">
                 <caption className="sr-only">경쟁 구조 주요 기업</caption>
+                <ColGroup widths={competitiveColPct(1 + (hasTechType ? 1 : 0) + (hasCapacity ? 1 : 0) + (hasProjectStatus ? 1 : 0) + Math.min(attrLabels.length, 4))} />
                 <thead>
                   <tr>
                     <th scope="col" className="col-label">기업</th>
@@ -107,7 +110,7 @@ export function SizingCompetitiveTab({ ctx }: { ctx: SizingReportState }) {
                       {hasCapacity && <td className="col-num tabular-nums">{pl.capacityMWe !== undefined ? pl.capacityMWe.toLocaleString() : "—"}</td>}
                       {hasProjectStatus && <td className="col-type">{pl.projectStatus ? <span className="status-chip status-in-progress">{pl.projectStatus}</span> : "—"}</td>}
                       {attrLabels.slice(0, 4).map((label) => <td key={label} className="col-type">{attrOf(pl, label)}</td>)}
-                      <td className="col-text text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{pl.note}</td>
+                      <td className="col-text cell-truncate text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{pl.note}</td>
                     </tr>
                   ))}
                 </tbody>

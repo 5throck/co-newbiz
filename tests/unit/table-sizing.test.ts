@@ -107,13 +107,6 @@ const WIDE_TABLE_HEADER_CELLS = 6; // same threshold as the design-lint table-si
  *  - `css:<selector>`         column class declaring width auto / 100%
  */
 const KNOWN_OFFENDERS: string[] = [
-  // batch 2 (audited tables 2, 3, 5, 6, 7, 10)
-  "auto-wide:app/agents/page.tsx:에이전트 로스터",
-  "auto-wide:app/deals/page.tsx:진행 에이징",
-  "auto-wide:app/settings/connected-apps/page.tsx:개인 API 토큰 목록",
-  "auto-wide:components/stages/GreenfieldStage.tsx:필요 역량 확인",
-  "auto-wide:components/stages/market/SizingMarketTabs.tsx:경쟁 구조 — 주요 기업",
-  "css:.pat-token-table .pat-col-label",
   // batch 3 (audited tables 8, 9, 11, 12, 14)
   "auto-wide:app/projects/[id]/backtest/page.tsx:백테스트",
   "auto-wide:app/projects/[id]/charter/page.tsx:KPI 사전 확정",
@@ -239,6 +232,43 @@ describe("table column sizing guard", () => {
     expect(fresh).toEqual([]);
     // Fixed offender => delete it from KNOWN_OFFENDERS (the list must reach empty after batch 3).
     expect(stale).toEqual([]);
+  });
+
+  test("batch 2 migrated tables keep the shared classes", () => {
+    // Per-table source-reading checks: ColGroup presence and pct sums for fixed-pct tables are
+    // covered generically above; here we pin each batch-2 table to its tmin token and the
+    // long-text truncation classes so a later edit cannot silently drop them.
+    const batch2: Array<{ file: string; label: string; tmin: string; expect: string[] }> = [
+      { file: "components/stages/route-decision/DecisionTab.tsx", label: "진출방식 결정 이력", tmin: "tmin-64", expect: ["table-fixed-pct", "cell-truncate"] },
+      { file: "components/stages/route-decision/CompetitiveTab.tsx", label: "경쟁 구조 — 주요 기업", tmin: "tmin-40", expect: ["table-fixed-pct", "cell-truncate"] },
+      { file: "components/stages/route-decision/EvalTab.tsx", label: "필요 역량 수준 레지스터", tmin: "tmin-56", expect: ["table-fixed-pct"] },
+      { file: "components/stages/GreenfieldStage.tsx", label: "필요 역량 확인", tmin: "tmin-56", expect: ["table-fixed-pct"] },
+      { file: "components/stages/market/SizingMarketTabs.tsx", label: "경쟁 구조 — 주요 기업", tmin: "tmin-80", expect: ["table-fixed-pct", "cell-truncate"] },
+      { file: "app/agents/page.tsx", label: "에이전트 로스터", tmin: "tmin-40", expect: ["table-fixed-pct"] },
+      { file: "app/agents/page.tsx", label: "체인 단계별 실행 기록", tmin: "tmin-48", expect: ["table-fixed-pct", "cell-truncate"] },
+      { file: "app/deals/page.tsx", label: "진행 에이징", tmin: "tmin-48", expect: ["table-fixed-pct", "cell-truncate"] },
+      { file: "app/settings/connected-apps/page.tsx", label: "개인 API 토큰 목록", tmin: "tmin-64", expect: ["table-fixed-pct", "cell-truncate"] },
+      { file: "components/stages/synergy/SynergyListSection.tsx", label: "분석 대상 회사 목록", tmin: "tmin-56", expect: ["table-fixed-pct"] },
+    ];
+    const problems: string[] = [];
+    for (const c of batch2) {
+      const src = readFileSync(join(ROOT, c.file), "utf8");
+      // Pick the <table ...> open tag that carries this aria-label (a section aria-label with the
+      // same text can appear earlier in the file, so search open tags, not raw offsets).
+      const openTag = [...src.matchAll(/<table\b[^>]*>/g)].map((m) => m[0]).find((t) => t.includes(c.label));
+      if (!openTag) { problems.push(c.file + ': table "' + c.label + '" not found'); continue; }
+      if (!openTag.includes("table-fixed-pct")) problems.push(c.file + ': "' + c.label + '" missing table-fixed-pct');
+      if (!openTag.includes(c.tmin)) problems.push(c.file + ': "' + c.label + '" missing ' + c.tmin);
+      const blockStart = src.indexOf(openTag);
+      const end = src.indexOf("</table>", blockStart);
+      const block = src.slice(blockStart, end === -1 ? undefined : end + 8);
+      if (!block.includes("<ColGroup")) problems.push(c.file + ': "' + c.label + '" missing ColGroup');
+      for (const frag of c.expect) {
+        if (frag === "table-fixed-pct") continue;
+        if (!block.includes(frag)) problems.push(c.file + ': "' + c.label + '" missing ' + frag);
+      }
+    }
+    expect(problems).toEqual([]);
   });
 
   test("allowlist entries carry a reason", () => {

@@ -1,15 +1,16 @@
 # ADR-0161 — Greenfield execution (S11) and post-management (S12) scoped by track and sub-track
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-11 (updated 2026-10-12)
-- Deciders: Human reviewer (pending final acceptance). Drafted by process-governance-manager. AI review alone cannot accept this ADR (procedure, checklist applicability, flow.spec change, retroactive policy application).
+- Deciders: Accepted by the user (account techcross, chat, 2026-10-12). Drafted by process-governance-manager. AI review alone cannot accept this ADR (procedure, checklist applicability, flow.spec change, retroactive policy application).
+- Addenda accepted together with this ADR (2026-10-12).
 - Design of record: `docs/designs/2026-10-11-greenfield-investment-execution-and-post-management-design.md`
 - Related: ADR-0047, ADR-0052, ADR-0059, ADR-0150, ADR-0159, ADR-0160
 - Prerequisite: PR #511 (migration 0136 `capex_tranche`, flow.spec v2.7.0, ADR-0159, ADR-0160, migration 0138, human-only route pattern) merged first.
 
 ## Update 2026-10-12
 
-Open questions Q1-Q7 were decided by the user in chat on 2026-10-12. The ADR stays Proposed until the human final review accepts the full text.
+Open questions Q1-Q7 were decided by the user in chat on 2026-10-12. The full text was accepted by the user (chat, 2026-10-12).
 
 | # | Decision | Decided by |
 |---|---|---|

@@ -6,13 +6,17 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "../../lib/api.ts";
-import { FilterChip, PageState, PrimaryAction } from "../../components/ui.tsx";
+import { ColGroup, FilterChip, PageState, PrimaryAction } from "../../components/ui.tsx";
 import { STAGE_TAB_GROUPS } from "../../lib/stage-tabs.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { GATE_LABEL, type GateMetaId } from "../../lib/stage-meta.ts";
 import { opportunityStatusHref } from "../../lib/deal-links.ts";
 import { gateHoldHref } from "../../lib/inbox.ts";
 import { buildCardChips } from "../../lib/deal-card-label.ts";
+
+// 진행 에이징 표 열 비율(2026-10-11-table-column-sizing-system batch 2) —
+// 안건명이 본문, 게이트·결정·날짜·경과 열은 좁게.
+const AGING_COL_PCT = [32, 16, 14, 20, 18] as const;
 
 interface PipelineProject {
   projectId: string;
@@ -318,15 +322,16 @@ function DealsBoard() {
               <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">HOLD·KILL 진행이 없습니다.</p>
             ) : (
               <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-                <table className="data-table" aria-label="진행 에이징">
+                <table className="data-table table-fixed-pct tmin-48" aria-label="진행 에이징">
                   <caption className="sr-only">진행 에이징 — 경과일 내림차순</caption>
+                  <ColGroup widths={AGING_COL_PCT} />
                   <thead>
                     <tr><th scope="col">검토/안건</th><th scope="col">게이트</th><th scope="col">결정</th><th scope="col">결정일</th><th scope="col" className="col-num">경과</th></tr>
                   </thead>
                   <tbody>
                     {[...data.currentHolds].sort((a, b) => b.ageDays - a.ageDays).map((r) => (
                       <tr key={`${r.entityType}:${r.entityId}:${r.gate}`}>
-                        <td className="text-[length:var(--fs-caption)]">
+                        <td className="cell-truncate text-[length:var(--fs-caption)]">
                           <Link href={r.entityType === "project" ? `/projects/${r.entityId}/process` : gateHoldHref(r)}>
                             {r.label}
                           </Link>

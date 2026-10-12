@@ -1,8 +1,9 @@
 # ADR-0162 — Brownfield S9 workspace items scoped per brownfield sub-track
 
-- Status: Proposed (draft; not yet listed in `docs/adr/README.md`)
+- Status: Accepted
 - Date: 2026-10-12
-- Deciders: Human reviewer (pending). Drafted by process-governance-manager. AI review alone cannot accept this ADR (checklist applicability is governance).
+- Deciders: Accepted by the user (account techcross, chat, 2026-10-12). Drafted by process-governance-manager. AI review alone cannot accept this ADR (checklist applicability is governance).
+- Addenda accepted together with this ADR (2026-10-12).
 - Design of record: `docs/designs/2026-10-12-brownfield-dd-workspace-scope-by-subtrack-design.md`
 - Related: ADR-0048, ADR-0051, ADR-0052, ADR-0148, ADR-0157, ADR-0160 (addendum b: greenfield overlay mechanism reused here)
 

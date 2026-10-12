@@ -9,7 +9,12 @@ import { api, ApiError } from "../../../lib/api.ts";
 import { useAuth } from "../../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../../lib/project-write-access.ts";
 import { Button, PageState, PrimaryAction, useToast } from "../../../components/ui.tsx";
+import { ColGroup } from "../../../components/ui.tsx";
 import { useModalFocus } from "../../../lib/use-modal-focus.ts";
+
+// 개인 API 토큰 목록 표 열 비율(2026-10-11-table-column-sizing-system batch 2) —
+// 라벨이 본문(cell-truncate), 식별자·권한·상태·날짜·작업은 좁게.
+const TOKEN_COL_PCT = [22, 16, 12, 14, 10, 10, 10, 6] as const;
 
 interface ConnectedApp {
   client_id: string;
@@ -338,18 +343,19 @@ function PersonalTokensSection() {
             <PageState state="empty" emptyText="발급한 개인 API 토큰이 없습니다." />
           ) : (
             <div className="table-scroll" style={{ marginTop: "var(--space-3, 1rem)" }}>
-              <table className="data-table list-table pat-token-table" aria-label="개인 API 토큰 목록">
+              <table className="data-table list-table pat-token-table table-fixed-pct tmin-64" aria-label="개인 API 토큰 목록">
                 <caption className="sr-only">내가 발급한 개인 API 토큰 목록</caption>
+                <ColGroup widths={TOKEN_COL_PCT} />
                 <thead>
                   <tr>
-                    <th scope="col" className="pat-col-label">라벨</th>
-                    <th scope="col" className="pat-col-id">식별자</th>
-                    <th scope="col" className="pat-col-scope">권한</th>
-                    <th scope="col" className="pat-col-status">상태</th>
-                    <th scope="col" className="pat-col-date">생성</th>
-                    <th scope="col" className="pat-col-date">만료</th>
-                    <th scope="col" className="pat-col-date">마지막 사용</th>
-                    <th scope="col" className="pat-col-actions">작업</th>
+                    <th scope="col">라벨</th>
+                    <th scope="col">식별자</th>
+                    <th scope="col">권한</th>
+                    <th scope="col">상태</th>
+                    <th scope="col">생성</th>
+                    <th scope="col">만료</th>
+                    <th scope="col">마지막 사용</th>
+                    <th scope="col">작업</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -357,7 +363,7 @@ function PersonalTokensSection() {
                     const s = TOKEN_STATUS[t.status];
                     return (
                       <tr key={t.id}>
-                        <td><span className="pat-label-text" title={t.label}>{t.label}</span></td>
+                        <td className="cell-truncate" title={t.label}>{t.label}</td>
                         <td>
                           <code>{maskedId(t.display_id)}</code>
                         </td>
