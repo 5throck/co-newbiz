@@ -214,7 +214,7 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "file": "checklists/technical-dd-checklist.yaml",
     "gate": "DD",
     "enforceability": "mixed",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "owner_agent": "technical-dd-agent",
     "item_count": 8,
     "lang": "en"
@@ -418,7 +418,7 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
   {
     "id": "proc-entity-ic-review",
     "category": "procedure",
-    "title": "Entity IC 심의",
+    "title": "법인 투자심의",
     "file": "procedures/_shared/entity-ic-review/schema.yaml",
     "gate": "S11",
     "lang": "ko"
@@ -1226,11 +1226,11 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "checklists/technical-dd-checklist.yaml",
     "gate": "DD",
     "enforceability": "mixed",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "owner_agent": "technical-dd-agent",
     "item_count": 8,
     "lang": "en",
-    "content": "governance_doc_id: chk-technical-dd\nlayer: checklist\ntitle: \"Technical Due Diligence Checklist\"\nscope: shared\nenforceability: mixed\nowner_agent: technical-dd-agent\nversion: \"1.0.0\"\neffective_from: \"2026-08-20\"\ngate: DD\n\nitems:\n  - id: tdd-01\n    text: \"현장 실사 실시 (Site Visit — 사전 자료요청 목록·현장 점검표 포함)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: tdd-02\n    text: \"실사 증적 확보 (사진·계측·로그 — 증적 없는 관찰은 IC 심의에서 효력 없음)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: tdd-03\n    text: \"핵심 생산 공정의 기술 성숙도 평가 (TRL, Technology Readiness Level)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: tdd-04\n    text: \"병목 공정 식별 (Bottleneck Process)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: tdd-05\n    text: \"주요 설비의 잔존 수명 평가 (Remaining Useful Life)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: tdd-06\n    text: \"환경·안전(EHS) 부채 노출 평가\"\n    mandatory: true\n    waiver_eligible: true\n  - id: tdd-07\n    text: \"CAPEX 계획의 독립 검증 (경영진 제시치를 그대로 수용하지 않고 물적·기술적 근거로 검증)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: tdd-08\n    text: \"주요 생산 라인 인증 현황 확인 (Certification, certification-agent 연계)\"\n    mandatory: false\n    waiver_eligible: true\n\nlegal_basis:\n  - \"skills/technical-due-diligence, skills/site-visit-protocol (design v1.0 section 5.3)\"\n"
+    "content": "governance_doc_id: chk-technical-dd\nlayer: checklist\ntitle: \"Technical Due Diligence Checklist\"\nscope: shared\nenforceability: mixed\nowner_agent: technical-dd-agent\nversion: \"1.0.1\"\neffective_from: \"2026-08-20\"\ngate: DD\n\nitems:\n  - id: tdd-01\n    text: \"현장 실사 실시 (Site Visit — 사전 자료요청 목록·현장 점검표 포함)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: tdd-02\n    text: \"실사 증적 확보 (사진·계측·로그 — 증적 없는 관찰은 투자심의에서 효력 없음)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: tdd-03\n    text: \"핵심 생산 공정의 기술 성숙도 평가 (TRL, Technology Readiness Level)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: tdd-04\n    text: \"병목 공정 식별 (Bottleneck Process)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: tdd-05\n    text: \"주요 설비의 잔존 수명 평가 (Remaining Useful Life)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: tdd-06\n    text: \"환경·안전(EHS) 부채 노출 평가\"\n    mandatory: true\n    waiver_eligible: true\n  - id: tdd-07\n    text: \"CAPEX 계획의 독립 검증 (경영진 제시치를 그대로 수용하지 않고 물적·기술적 근거로 검증)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: tdd-08\n    text: \"주요 생산 라인 인증 현황 확인 (Certification, certification-agent 연계)\"\n    mandatory: false\n    waiver_eligible: true\n\nlegal_basis:\n  - \"skills/technical-due-diligence, skills/site-visit-protocol (design v1.0 section 5.3)\"\n"
   },
   "man-admin-manual": {
     "id": "man-admin-manual",
@@ -1457,7 +1457,7 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
   "proc-entity-ic-review": {
     "id": "proc-entity-ic-review",
     "category": "procedure",
-    "title": "Entity IC 심의",
+    "title": "법인 투자심의",
     "file": "procedures/_shared/entity-ic-review/schema.yaml",
     "gate": "S11",
     "lang": "ko",
@@ -3470,7 +3470,7 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
     },
     {
       "id": "tdd-02",
-      "text": "실사 증적 확보 (사진·계측·로그 — 증적 없는 관찰은 IC 심의에서 효력 없음)",
+      "text": "실사 증적 확보 (사진·계측·로그 — 증적 없는 관찰은 투자심의에서 효력 없음)",
       "mandatory": true,
       "waiver_eligible": true
     },

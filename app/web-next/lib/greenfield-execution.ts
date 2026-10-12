@@ -445,7 +445,7 @@ export function confirmExecutionBaseline(
   const g = writeGuard(input.projectId, input.actor, db);
   if (g) return g;
   if (!isProjectLead(input.projectId, input.actor, db)) {
-    return bfail("lead_required", "실행 기준선 확인은 프로젝트 lead(Entity IC 책임자)만 할 수 있습니다.");
+    return bfail("lead_required", "실행 기준선 확인은 프로젝트 lead(법인 투자심의위원회 책임자)만 할 수 있습니다.");
   }
   const rationale = s(input.rationale);
   if (!rationale) return bfail("invalid_request", "실행 기준선 확인에는 rationale(근거)이 필요합니다.");

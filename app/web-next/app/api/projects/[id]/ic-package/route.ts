@@ -111,7 +111,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
                 p05: c.simulations.find((x) => x.percentile === "p05")?.npv_krw_m ?? null,
               })),
           }
-        : { adopted: null, adoption, note: "채택(adopt)된 Business Case가 없습니다 — Entity IC 심사 전 S8 채택이 필요합니다." },
+        : { adopted: null, adoption, note: "채택(adopt)된 Business Case가 없습니다 — 법인 투자심의위원회 심사 전 S8 채택이 필요합니다." },
       dd: { completion, findings, finding_count: findings.length },
       rag: {
         status: rag.status,

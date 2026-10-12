@@ -465,7 +465,7 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
   {
     "id": "S10",
     "name": "투자구조 설계",
-    "objective": "어떤 그릇으로, 어떤 자금으로 들어갈 것인가? — 투자 주체(direct/SPC/holdco/내부 스핀오프/JV)과 ADR-0045 4대 축(절세 구조·책임 격리·재무 레버리지·엑싯 구조)을 검토하고 자금조달 계획(sources & uses)을 균형시킨다 (IC 심의의 입력 설계)",
+    "objective": "어떤 그릇으로, 어떤 자금으로 들어갈 것인가? — 투자 주체(direct/SPC/holdco/내부 스핀오프/JV)과 ADR-0045 4대 축(절세 구조·책임 격리·재무 레버리지·엑싯 구조)을 검토하고 자금조달 계획(sources & uses)을 균형시킨다 (투자심의의 입력 설계)",
     "applicableTracks": [
       "greenfield",
       "brownfield"
@@ -501,7 +501,7 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
   {
     "id": "S11",
     "name": "투자심사·실행",
-    "objective": "투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 투자심의 자료로 묶어 Entity/Group IC 심사를 통과하고, 승인되면 트랙에 맞는 실행에 들어간다(인수 종결, 법인 설립, greenfield 실행 기준선 확정)",
+    "objective": "투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 투자심의 자료로 묶어 법인·그룹 투자심의위원회 심사를 통과하고, 승인되면 트랙에 맞는 실행에 들어간다(인수 종결, 법인 설립, greenfield 실행 기준선 확정)",
     "applicableTracks": [
       "greenfield",
       "brownfield"
@@ -579,7 +579,7 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
       "설립 실행 기록(설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint})"
     ],
     "completionCriteria": [
-      "Entity IC와 Group IC 승인이 모두 기록되었다",
+      "법인 투자심의위원회와 그룹 투자심의위원회 승인이 모두 기록되었다",
       "추진계획(차터) 기준선이 확정되고 append-only 변경 이력이 시작되었다",
       "origin∈{internal,joint}인 프로젝트는 entity-establishment-execution 5단계 완료 기록이 존재한다"
     ]

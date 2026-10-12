@@ -23,8 +23,8 @@ export const GATE_LABEL: Record<GateMetaId, string> = {
   target_screening: "Target Screening",
   fs: "FS",
   dd: "DD",
-  entity_ic: "Entity IC",
-  group_ic: "Group IC",
+  entity_ic: "법인 심의",
+  group_ic: "그룹 심의",
 };
 
 export const STAGE_META: StageMeta[] = [

@@ -425,7 +425,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
                     value={form.rationale}
                     onChange={(e) => setForm({ ...form, rationale: e.target.value })}
                     className="sizing-new-input w-full"
-                    placeholder="IC 심의 근거 — 근거 없는 결정은 기록될 수 없습니다"
+                    placeholder="투자심의 근거 — 근거 없는 결정은 기록될 수 없습니다"
                   />
                 </label>
               </div>

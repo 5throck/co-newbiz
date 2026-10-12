@@ -349,7 +349,7 @@ describe("(e) S11 completion — both gates go AND establishment 5/5", () => {
     const before = evaluateProcess({ type: "project", id: projectId });
     expect(before.gateStatus.entity_ic).toBe("go");
     expect(before.completedStages).not.toContain("S11");
-    expect(before.blockers.join("\n")).toContain("Group IC");
+    expect(before.blockers.join("\n")).toContain("그룹 투자심의위원회");
   });
 
   test("both gates go + charter confirmed + 5/5 flips S11 complete (origin internal)", async () => {
