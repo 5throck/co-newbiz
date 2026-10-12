@@ -4,7 +4,7 @@ title: "HR Due Diligence Checklist (Brown Field DD)"
 scope: shared
 enforceability: mixed
 owner_agent: hr-integration-agent
-version: "1.0.0"
+version: "1.2.0"
 effective_from: "2026-08-22"
 gate: DD
 
@@ -20,47 +20,47 @@ gate: DD
 
 items:
   - id: hdd-01
-    text: "Key-person map produced — every person/role whose loss would damage operations or integration, each mapped to a named retention action"
+    text: "핵심 인력 지도 작성 — 이탈 시 운영·통합에 타격을 주는 모든 인원·직무를 식별하고 각각에 지정된 유지(retention) 조치 연결"
     mandatory: true
     waiver_eligible: true
   - id: hdd-02
-    text: "Stay/retention bonus budget covering critical talent for the post-closing window (illustrative benchmark: 12-24 months — see header note)"
+    text: "거래종결 후 기간 동안 핵심 인재를 대상으로 하는 잔류·유지 보너스(stay/retention bonus) 예산 (예시 벤치마크: 12~24개월 — 머리말 주석 참조)"
     mandatory: true
     waiver_eligible: true
   - id: hdd-03
-    text: "Day-1 retention plan prepared — pre-drafted retention offers, stay bonuses, and communication scripts for critical staff"
+    text: "Day-1 인재 유지 계획 준비 — 핵심 인력을 위한 사전 작성된 유지 제안, 잔류 보너스, 소통 스크립트"
     mandatory: true
     waiver_eligible: true
   - id: hdd-04
-    text: "Organization documented — org charts, management structure, headcount by function, job descriptions"
+    text: "조직 문서화 — 조직도, 경영 구조, 기능별 인원, 직무기술서"
     mandatory: true
     waiver_eligible: true
   - id: hdd-05
-    text: "Leadership bench assessed — who is needed for the first 100 days vs. who will exit"
+    text: "경영진 후계 층(leadership bench) 평가 — 첫 100일에 필요한 인원과 퇴진할 인원 구분"
     mandatory: true
     waiver_eligible: true
   - id: hdd-06
-    text: "Where CBAs exist: successorship clauses, open grievance backlog, and CBA expiry vs. deal timeline reviewed (mark not-applicable with rationale where no CBA exists)"
+    text: "단체협약(CBA)이 있는 경우: 승계 조항, 미해결 고충 처리 건, 거래 일정 대비 단체협약 만료 시점 검토 (단체협약이 없으면 근거와 함께 해당 없음 표시)"
     mandatory: true
     waiver_eligible: true
   - id: hdd-07
-    text: "Pension/benefits liabilities quantified — unfunded status, multiemployer withdrawal liability, retiree medical where applicable"
+    text: "연금·복리후생 부채 정량화 — 적립 부족 상태, 다수 사용자 연금 탈퇴 부채(multiemployer withdrawal liability), 해당 시 퇴직자 의료비"
     mandatory: true
     waiver_eligible: true
   - id: hdd-08
-    text: "Works-council information & consultation plan prepared for EU targets — can gate timing and structure"
+    text: "EU 대상 기업의 종업원평의회(works council, 한국 노사협의회와 다른 제도) 정보 제공·협의 계획 준비 — 거래 시점과 구조를 좌우할 수 있음"
     mandatory: false
     waiver_eligible: true
   - id: hdd-09
-    text: "Employment-transfer regime determined per jurisdiction for the contemplated deal structure (TUPE / EU ARD analogues / Korean business-transfer doctrine) — cross-references chk-entity-formation ef-08; the regime determination is made here for acquisition routes"
+    text: "검토 중인 거래 구조에 대해 관할별 고용 승계 제도 판단 (TUPE / EU ARD 유사 제도 / 한국 영업양도 법리) — chk-entity-formation ef-08과 교차 참조; 인수 경로의 제도 판단은 이 항목에서 수행"
     mandatory: true
     waiver_eligible: true
   - id: hdd-10
-    text: "Culture distance assessed with a standardized instrument (e.g. OCAI / Denison-model), covering decision-making speed, risk appetite, and management style — feeding integration design"
+    text: "표준화된 도구(예: OCAI, Denison 모델)로 문화 차이 평가 — 의사결정 속도, 위험 선호, 경영 스타일을 포함하며 통합 설계에 반영"
     mandatory: true
     waiver_eligible: true
   - id: hdd-11
-    text: "Day-1 and first-100-days HR plan drafted — payroll and benefits continuity, HR policy alignment, leadership communication to all staff, HR systems integration"
+    text: "Day-1 및 첫 100일 인사 계획 초안 작성 — 급여·복리후생 연속성, 인사 정책 정렬, 전 직원 대상 경영진 소통, 인사 시스템 통합"
     mandatory: true
     waiver_eligible: true
 

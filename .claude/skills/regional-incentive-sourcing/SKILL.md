@@ -28,6 +28,7 @@ metadata:
   procedure_keys:
     - greenfield-pre-fs
     - greenfield-screening
+    - deal-structuring
 relates_to:
   - skill: permit-pathway-mapping
     type: follows

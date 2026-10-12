@@ -335,7 +335,7 @@ describe("Wave 0 — backtest (honest degradation) + comments", () => {
     );
     await req(`/api/projects/${projectId}/business-case/adopt`, {
       method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
-      body: JSON.stringify({ model_id: "bc-wave0" }),
+      body: JSON.stringify({ model_id: "bc-wave0", goals_ack: { acknowledged: true, note: "test: 목표 비교 없이 진행" } }),
     });
     const res = await req(`/api/portfolio/backtest`, { headers: { cookie: analystCookie } });
     expect(res.status).toBe(200);

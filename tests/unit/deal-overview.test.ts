@@ -24,7 +24,7 @@ describe("buildDealOverview", () => {
     const o = buildDealOverview("D1", { status, attractiveness_score: null, synergy_score: null }, proc({ requiredArtifacts: ["X"], blockers: ["X"] }));
     expect(o.currentStage?.id).toBe(stage);
     expect(o.nextAction?.href).toBe(`/deals/D1/${stage.toLowerCase()}`);
-    expect(o.flow.current).toBe(o.currentStage?.name);
+    expect(o.flow.current).toBe(o.currentStage?.name ?? null);
     expect(o.flow.previous).not.toBeNull();
   });
   test("null values render as not recorded; synergy note only when unconfirmed value", () => {

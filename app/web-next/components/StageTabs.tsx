@@ -12,18 +12,38 @@ import { Suspense, useEffect, useRef, useState, type KeyboardEvent } from "react
 import {
   activeTabIndex,
   groupForSegment,
+  groupForTrack,
   projectSegment,
   tabHref,
   type StageTabGroup,
 } from "../lib/stage-tabs.ts";
 import { StageRail } from "./StageFrame.tsx";
 import { PrimarySlot } from "./ui.tsx";
+import { api } from "../lib/api.ts";
+
+// Track per project, cached for the session: only S8 needs it (greenfield hides the target tab).
+const trackCache = new Map<string, string | null>();
+
+function useProjectTrack(projectId: string, enabled: boolean): string | null {
+  const [track, setTrack] = useState<string | null>(trackCache.get(projectId) ?? null);
+  useEffect(() => {
+    if (!enabled || trackCache.has(projectId)) { if (enabled) setTrack(trackCache.get(projectId) ?? null); return; }
+    let live = true;
+    api.get<{ track: string | null }>(`/api/projects/${encodeURIComponent(projectId)}/process`)
+      .then((r) => { trackCache.set(projectId, r.data.track ?? null); if (live) setTrack(r.data.track ?? null); })
+      .catch(() => { /* unknown track: keep every tab */ });
+    return () => { live = false; };
+  }, [projectId, enabled]);
+  return track;
+}
 
 function StageTabsInner({ projectId }: { projectId: string }) {
   const pathname = usePathname();
   const tabParam = useSearchParams().get("tab");
   const seg = projectSegment(pathname);
-  const group: StageTabGroup | null = seg === null ? null : groupForSegment(seg);
+  const baseGroup: StageTabGroup | null = seg === null ? null : groupForSegment(seg);
+  const track = useProjectTrack(projectId, baseGroup?.stage === "S8");
+  const group: StageTabGroup | null = baseGroup ? groupForTrack(baseGroup, track) : null;
   const [moreOpen, setMoreOpen] = useState(false);
   const moreBtn = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);

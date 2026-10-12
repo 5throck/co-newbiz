@@ -79,7 +79,7 @@ describe.each<McpTransportKind>(["stdio", "http"])("prompts and resources on %s"
   test("a guide maps activities to tools and never restates procedure steps", async () => {
     const { client } = await connect(transport, scopes);
     const s9 = textOf((await client.getPrompt({ name: "stage_guide_s9" })).messages[0]);
-    expect(s9).toContain("get_project_dd_workspace"); // activity commercial-dd/technical-dd/legal-dd
+    expect(s9).toContain("get_project_dd_workspace"); // activity commercial/technical/legal/financial/hr/market/financing-dd
     expect(s9).toContain("propose_gate_decision");
     expect(s9).toContain("a person decides");
 

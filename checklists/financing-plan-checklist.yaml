@@ -4,7 +4,7 @@ title: "Financing Plan Checklist"
 scope: shared
 enforceability: mixed
 owner_agent: valuation-agent
-version: "1.0.0"
+version: "1.2.0"
 effective_from: "2026-08-22"
 gate: FS
 
@@ -20,39 +20,39 @@ gate: FS
 
 items:
   - id: fin-01
-    text: "Cash/debt/equity mix decided with tenor and amortization profile, and the sources-and-uses table attached"
+    text: "현금·부채·자본 구성을 만기·상환 일정과 함께 결정하고 자금 원천·용도표(sources and uses) 첨부"
     mandatory: true
     waiver_eligible: true
   - id: fin-02
-    text: "Executed commitment papers obtained — equity commitment letter; debt commitment letter + fee letter + term sheet — OR a documented internal-funds approval path where the deal is balance-sheet funded"
+    text: "서명된 확약 문서 확보 — 지분 출자 확약서(equity commitment letter); 대출 확약서(debt commitment letter) + 수수료 서한(fee letter) + 주요 조건서(term sheet) — 또는 대차대조표 자금으로 조달하는 거래라면 문서화된 내부 자금 승인 경로"
     mandatory: true
     waiver_eligible: true
   - id: fin-03
-    text: "Covenant headroom / leverage analysis completed against the lender's terms"
+    text: "대주(lender) 조건 기준으로 재무약정 등 확약사항(covenants) 여유분·레버리지 분석 완료"
     mandatory: true
     waiver_eligible: true
   - id: fin-04
-    text: "Funds-flow memorandum drafted — every inflow/outflow, account, timing, and FX leg of closing day mapped"
+    text: "자금 흐름 메모(funds-flow memorandum) 초안 작성 — 거래종결일의 모든 유입·유출, 계좌, 시점, 외환 구간 정리"
     mandatory: true
     waiver_eligible: true
   - id: fin-05
-    text: "FX plan stated (forwards, options, deal-contingent FX) whenever the consideration spans more than one currency"
+    text: "인수 대가가 둘 이상의 통화에 걸치는 경우 외환 계획(선물환, 옵션, 거래 조건부 외환) 명시"
     mandatory: true
     waiver_eligible: true
   - id: fin-06
-    text: "Limited-conditionality ('certain funds') structure reviewed by legal-counsel — funding conditioned only on the specified acquisition-agreement representations, closing substantially per the agreement, and closing certificates; no market-MAC out"
+    text: "자금 확실성(certain funds) 조건 구조를 legal-counsel이 검토 — 대출 인출 거부(draw-stop) 조건을 인수계약의 지정 진술, 계약에 따른 실질적 거래종결, 종결 확인서로만 한정; 시장 상황 악화(market MAC)를 인출 거부·선행조건 사유로 두지 않음"
     mandatory: true
     waiver_eligible: true
   - id: fin-07
-    text: "Escrow/paying agent appointed and escrow sized against indemnity exposure"
+    text: "에스크로·지급 대리인 선임 및 면책(indemnity) 노출 규모 대비 에스크로 금액 산정"
     mandatory: true
     waiver_eligible: true
   - id: fin-08
-    text: "Reverse-termination fee sized where the buyer retains debt-funding risk (illustrative benchmark: 4-7% of enterprise value — see header note)"
+    text: "인수자가 차입 조달 위험을 부담하는 경우 역해지 수수료(reverse-termination fee) 규모 산정 (예시 벤치마크: 기업가치의 4~7% — 머리말 주석 참조)"
     mandatory: false
     waiver_eligible: true
   - id: fin-09
-    text: "Certainty of funds evidenced in the IC package before final IC — commitment letters or internal-funds approval per fin-02, sources & uses, covenant headroom, funds-flow draft, and FX plan all present; missing financing evidence is a precondition fail at entity-ic-review, not a judgment call"
+    text: "최종 투자심의위원회(IC) 전에 IC 패키지에서 자금 확실성(certainty of funds) 입증 — fin-02에 따른 확약서 또는 내부 자금 승인, 자금 원천·용도, 재무약정 등 확약사항(covenants) 여유분, 자금 흐름 초안, 외환 계획이 모두 있어야 함; 자금 조달 증거 누락은 판단 사항이 아니라 entity-ic-review의 전제조건 불충족임"
     mandatory: true
     waiver_eligible: false   # completeness fact: the evidence pack is either present or it is not
 

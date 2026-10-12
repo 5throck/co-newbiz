@@ -793,6 +793,26 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0159",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0160",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0161",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0162",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent:root/antitrust-agent",
       "type": "agent",
       "layer": "L3",
@@ -1033,7 +1053,7 @@
       "name": "i18n-specialist",
       "scope": "root",
       "capability": "i18n-specialist",
-      "content_hash": "62770284cab0f1f7",
+      "content_hash": "51ec9fbc38b827a5",
       "version": "1.1.0",
       "mirrors": [
         "agents/i18n-specialist.md"
@@ -1372,6 +1392,11 @@
     },
     {
       "id": "dec:DEC-20261008-01",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
+      "id": "dec:DEC-20261012-01",
       "type": "decision",
       "layer": "L3"
     },
@@ -2229,7 +2254,7 @@
       "name": "investment-feasibility-modeling",
       "scope": "root",
       "capability": "investment-feasibility-modeling",
-      "content_hash": "65eee47c8217cea5",
+      "content_hash": "b1a64e013e54a861",
       "version": "1.2.0",
       "mirrors": [
         "skills/investment-feasibility-modeling/SKILL.md",
@@ -2499,7 +2524,7 @@
       "name": "org-readiness-assessment",
       "scope": "root",
       "capability": "org-readiness-assessment",
-      "content_hash": "669ddde1a511e66c",
+      "content_hash": "9bb4783de284ea0b",
       "version": "1.1.0",
       "mirrors": [
         "skills/org-readiness-assessment/SKILL.md",
@@ -2751,7 +2776,7 @@
       "name": "regional-incentive-sourcing",
       "scope": "root",
       "capability": "regional-incentive-sourcing",
-      "content_hash": "059c1a7d8fb69b2a",
+      "content_hash": "537b2bcb07251616",
       "version": "1.1.0",
       "mirrors": [
         "skills/regional-incentive-sourcing/SKILL.md",
@@ -3119,7 +3144,7 @@
       "name": "technical-due-diligence",
       "scope": "root",
       "capability": "technical-due-diligence",
-      "content_hash": "85ea2d73a1148e80",
+      "content_hash": "5de2dacaea157a34",
       "version": "1.1.0",
       "mirrors": [
         "skills/technical-due-diligence/SKILL.md",
@@ -4251,6 +4276,48 @@
     },
     {
       "type": "references",
+      "from": "adr:0160",
+      "to": "skill:root/competitive-intelligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0160",
+      "to": "skill:root/financing-plan-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0160",
+      "to": "skill:root/historical-financial-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0160",
+      "to": "skill:root/management-incentive-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0160",
+      "to": "skill:root/org-readiness-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0160",
+      "to": "skill:root/quality-of-earnings",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0160",
+      "to": "skill:root/talent-pipeline-planning",
+      "source": "prose"
+    },
+    {
+      "type": "references",
       "from": "agent:root/i18n-specialist",
       "to": "skill:root/i18n-audit",
       "source": "prose"
@@ -4343,6 +4410,18 @@
       "type": "cites_skill",
       "from": "dec:DEC-20261008-01",
       "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261012-01",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261012-01",
+      "to": "skill:root/policy-and-procedure-governance",
       "source": "skills_used"
     },
     {

@@ -191,7 +191,7 @@ describe("S8 generation (ADR-0098)", () => {
     const res = await req(`/api/projects/${projectId}/business-case/adopt`, {
       method: "POST",
       headers: { cookie: analystCookie },
-      body: JSON.stringify({ model_id: modelId }),
+      body: JSON.stringify({ model_id: modelId, goals_ack: { acknowledged: true, note: "test: 목표 비교 없이 진행" } }),
     });
     expect(res.status).toBe(201);
     expect(markers()).toEqual({ adopt: 1, gate: 0 });

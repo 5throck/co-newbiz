@@ -2,7 +2,13 @@
 // Source documents still live under policies/, procedures/, checklists/, docs/,
 // and templates/. The generated module keeps server routes from performing broad
 // filesystem traversal during `next build` NFT tracing.
-import { LIBRARY_CHECKLIST_ITEMS, LIBRARY_CONTENT, LIBRARY_DOCS } from "./library.generated.ts";
+import {
+  LIBRARY_BROWNFIELD_WORKSPACE_OVERLAY,
+  LIBRARY_CHECKLIST_ITEMS,
+  LIBRARY_CONTENT,
+  LIBRARY_DOCS,
+  LIBRARY_WORKSPACE_OVERLAY,
+} from "./library.generated.ts";
 
 export type LibraryCategory = "checklist" | "manual" | "policy" | "procedure" | "reference" | "template" | "design" | "dd" | "runbook" | "guideline";
 
@@ -47,6 +53,25 @@ export interface ChecklistItemDef {
 
 export function getChecklistItems(checklistDocId: string): ChecklistItemDef[] | null {
   return LIBRARY_CHECKLIST_ITEMS[checklistDocId] ?? null;
+}
+
+/**
+ * ADR-0160 addendum (b): the S9 workspace scope overlay as projected from
+ * checklists/_overlays/greenfield-workspace-scope.yaml (drift-checked by
+ * sync-library-projection.ts --check). Shape is validated by checklists/_validate.ts;
+ * lib/greenfield-subtrack.ts reads it defensively (fail-closed to "apply as-is").
+ */
+export function getWorkspaceOverlay(): unknown {
+  return LIBRARY_WORKSPACE_OVERLAY;
+}
+
+/**
+ * ADR-0162: the brownfield S9 workspace scope overlay as projected from
+ * checklists/_overlays/brownfield-workspace-scope.yaml (same drift check).
+ * lib/brownfield-subtrack.ts reads it defensively (fail-closed to "apply as-is").
+ */
+export function getBrownfieldWorkspaceOverlay(): unknown {
+  return LIBRARY_BROWNFIELD_WORKSPACE_OVERLAY;
 }
 
 /** DD workspace kinds → their gate-checklist doc ids. */

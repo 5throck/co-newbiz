@@ -1,0 +1,1559 @@
+# Initial content transcribed from docs/designs/2026-10-12-greenfield-dd-workspace-domains-by-track-design.md
+# section 4 (corrected classification) and section 6A.3 (step -> tab map).
+# Governance overlay (ADR-0160 addendum 2026-10-12 b). Checklist YAML text is
+# NOT edited; this file only scopes the seven ADR-0148 S9 workspace checklists
+# per greenfield sub-track. Brownfield is unaffected. Changes follow the
+# policies/procedures lifecycle row (impact analysis, policy pin, ADR addendum).
+# Validated by checklists/_validate.ts (coverage, codes, replacement targets,
+# binding-item guard, approval records, counts).
+governance_doc_id: ovl-greenfield-workspace-scope
+layer: checklist-overlay
+title: Greenfield S9 workspace scope by sub-track (plan verification)
+owner_agent: process-governance-manager
+maintainer: process-governance-manager
+version: 1.1.0
+status: proposed
+decision_record: DEC-20261012-01
+track: greenfield
+procedure_id: shared-greenfield-dd
+sub_track_keys:
+  none: greenfield route with a NULL sub-track (plain new site)
+  existing_business_rbd: existing_business_rbd
+  intra_venture: intra_venture
+codes:
+  A: Apply as-is
+  R: Apply reinterpreted (greenfield reading shown)
+  X: Replace (pointer to replacing item; not in Y)
+  'N': Not applicable by track rule (reason shown; not in Y)
+  C: Conditional on site_required (ADR-0160 GF_SITE_ITEM_SCOPE)
+fail_closed: An item missing from this overlay, or a row without an approved approval record, is treated as A (apply as-is), never as N.
+legal_basis:
+  - docs/adr/0160-greenfield-dd-and-structure-by-subtrack.md
+  - docs/designs/2026-10-12-greenfield-dd-workspace-domains-by-track-design.md
+  - ADR-0148 (seven S9 workspace domains)
+expected_counts:
+  none:
+    A: 14
+    R: 42
+    X: 2
+    'N': 19
+    C: 0
+    judgeable: 56
+  existing_business_rbd:
+    A: 13
+    R: 47
+    X: 1
+    'N': 13
+    C: 3
+    judgeable: 60
+  intra_venture:
+    A: 11
+    R: 44
+    X: 4
+    'N': 15
+    C: 3
+    judgeable: 55
+tab_labels_status: interim
+tab_labels_note: '그린필드 탭에만 쓰는 이름입니다(브라운필드 이름은 그대로). 인력/조직 계획은 사용자가 정한 최종 이름입니다. 나머지 한국어 이름은 아직 임시 작업 이름이며 용어 관리자(glossary-curator) 검토용 제안이고, 최종 이름은 사람이 정합니다.'
+tab_labels:
+  commercial:
+    en: Commercial plan
+    ko: 판매 계획
+  technical:
+    en: Technical plan
+    ko: 기술 계획
+  legal:
+    en: Legal and regulatory plan
+    ko: 법무·인허가 계획
+  market:
+    en: Market evidence
+    ko: 시장 근거
+  financial:
+    en: Financial plan
+    ko: 재무 계획
+  hr:
+    en: People plan
+    ko: 인력/조직 계획
+  financing:
+    en: Funding plan
+    ko: 자금 마련 계획
+  rbd_technology:
+    en: R&BD technology
+    ko: R&BD 기술
+  entity_formation:
+    en: Entity formation
+    ko: 법인 설립 준비
+  plan_readiness:
+    en: Plan readiness
+    ko: 계획 준비 상태
+steps:
+  - step: 1
+    purpose: '현장 방문'
+    tabs:
+      - technical
+    items:
+      - checklist: chk-technical-dd-checklist
+        ids:
+          - tdd-01
+          - tdd-02
+    pointers: []
+    applies:
+      none: 'yes'
+      existing_business_rbd: if_site_required
+      intra_venture: if_site_required
+    note: '부지 선정은 S9 작업 공간에 없으며 Screening/Pre-FS 단계에서 판정합니다.'
+  - step: 2
+    purpose: '인력 확보 경로'
+    tabs:
+      - hr
+    items:
+      - checklist: chk-hr-dd-checklist
+        ids:
+          - hdd-11
+    pointers:
+      - checklist: chk-site-selection-checklist
+        ids:
+          - ss-07
+        stage: 'Screening/Pre-FS (그린필드 타당성 체크리스트, 읽기 전용 참조)'
+    applies:
+      none: 'yes'
+      existing_business_rbd: replaced_by_step_6
+      intra_venture: replaced_by_step_6
+  - step: 3
+    purpose: '지역 사회 수용성'
+    tabs:
+      - legal
+    items: []
+    pointers:
+      - checklist: chk-site-selection-checklist
+        ids:
+          - ss-08
+        stage: 'Screening/Pre-FS (그린필드 타당성 체크리스트, 읽기 전용 참조)'
+    applies:
+      none: 'yes'
+      existing_business_rbd: if_site_required
+      intra_venture: if_site_required
+    note: '단계 표시만 합니다. S9 작업 공간 항목은 없습니다.'
+  - step: 4
+    purpose: '실사 결과의 가치평가 반영'
+    tabs:
+      - plan_readiness
+    items: []
+    pointers: []
+    artefact: 'dd_finding.value_impact 연결(cdd-06, ldd-21에서 넘어옴)'
+    applies:
+      none: 'yes'
+      existing_business_rbd: 'yes'
+      intra_venture: 'yes'
+  - step: 5
+    purpose: '게이트 기록, 법인 투자심의(IC) 열기'
+    tabs:
+      - plan_readiness
+    items: []
+    pointers: []
+    artefact: '게이트 기록'
+    applies:
+      none: 'yes'
+      existing_business_rbd: 'yes'
+      intra_venture: 'yes'
+  - step: 6
+    purpose: '핵심 팀 준비 상태'
+    tabs:
+      - plan_readiness
+      - hr
+    items:
+      - checklist: chk-hr-dd-checklist
+        ids:
+          - hdd-01
+          - hdd-05
+    pointers: []
+    artefact: '조직 준비도 평가(org-readiness-assessment)'
+    applies:
+      none: 'no'
+      existing_business_rbd: 'yes'
+      intra_venture: 'yes'
+  - step: 7
+    purpose: '기술·시장 계획 검증'
+    tabs:
+      - rbd_technology
+      - market
+    items:
+      - checklist: chk-market-dd-checklist
+        ids:
+          - mdd-01
+          - mdd-02
+          - mdd-03
+          - mdd-04
+          - mdd-05
+          - mdd-06
+          - mdd-07
+          - mdd-08
+          - mdd-09
+          - mdd-10
+          - mdd-11
+    pointers: []
+    note: 'R&BD 기술 체크리스트는 모든 항목(TRL/MRL 행, rbd-05, rbd-07)이 범위에 들고, 시장 실사(market-dd)는 항목별 분류를 따릅니다.'
+    applies:
+      none: 'no'
+      existing_business_rbd: 'yes'
+      intra_venture: 'yes'
+  - step: 8
+    purpose: '법인 준비 상태'
+    tabs:
+      - entity_formation
+    items:
+      - checklist: chk-entity-formation-checklist
+        ids:
+          - ef-01
+          - ef-03
+          - ef-07
+    pointers: []
+    applies:
+      none: 'no'
+      existing_business_rbd: 'no'
+      intra_venture: 'yes'
+checklists:
+  chk-commercial-dd-checklist:
+    domain: commercial
+    file: commercial-dd-checklist.yaml
+    items:
+      - id: cdd-01
+        topic: Customer concentration
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획 매출 기반의 쏠림 정도를 봅니다. 의향서(LOI), 구매 약정(offtake), 영업 파이프라인에서 상위 예상 고객이 차지하는 비중입니다.'
+          existing_business_rbd:
+            code: R
+            reading: '확장이 기대는 우리 회사 기존 고객의 쏠림 정도를 자사 판매 자료로 봅니다.'
+          intra_venture:
+            code: R
+            reading: '계획 매출 기반의 쏠림 정도를 봅니다. 의향서(LOI), 구매 약정(offtake), 영업 파이프라인에서 상위 예상 고객이 차지하는 비중입니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: cdd-02
+        topic: Customer churn history
+        sub_tracks:
+          none:
+            code: 'N'
+            na_reason: '신규 사업에는 고객 이력이 없습니다. 고객 유지는 cdd-03과 mdd-02에서 따져 보는 가정입니다.'
+          existing_business_rbd:
+            code: R
+            reading: '목표 시장에서 우리 회사 기존 고객의 이탈을 봅니다.'
+          intra_venture:
+            code: 'N'
+            na_reason: '신규 사업에는 고객 이력이 없습니다. 고객 유지는 cdd-03과 mdd-02에서 따져 보는 가정입니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: cdd-03
+        topic: Pricing power
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획한 가격이 원가 상승을 견딜 수 있는지 봅니다. 계획의 가격 가정을 시장의 가격 전가 근거와 맞대어 따져 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '계획한 가격이 원가 상승을 견딜 수 있는지 봅니다. 계획의 가격 가정을 시장의 가격 전가 근거와 맞대어 따져 봅니다.'
+          intra_venture:
+            code: R
+            reading: '계획한 가격이 원가 상승을 견딜 수 있는지 봅니다. 계획의 가격 가정을 시장의 가격 전가 근거와 맞대어 따져 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: cdd-04
+        topic: Win/loss analysis
+        sub_tracks:
+          none:
+            code: X
+            replaced_by:
+              - checklist: chk-greenfield-feasibility-checklist
+                item: gf-09
+                stage: 'Screening/Pre-FS (그린필드 타당성 체크리스트, 읽기 전용 참조)'
+            note: 'gf-09(경쟁사 생산능력 증설과 가격 가정 비교)로 대체하며, 그린필드 타당성 체크리스트에서 Screening/Pre-FS 단계에 판정합니다.'
+          existing_business_rbd:
+            code: R
+            reading: '해당 시장에서 우리 회사의 수주 성공·실패 기록을 봅니다.'
+          intra_venture:
+            code: 'N'
+            na_reason: '새 사내 벤처에는 살펴볼 판매 실적이 없습니다. 예상 고객 근거는 cdd-07과 mdd-03에서 따져 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: cdd-05
+        topic: Channel check
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획한 판매 경로를 예상 유통사나 구매자와 함께 확인합니다.'
+          existing_business_rbd:
+            code: A
+            note: '우리 회사의 기존 판매 경로를 그대로 봅니다.'
+          intra_venture:
+            code: R
+            reading: '계획한 판매 경로를 예상 유통사나 구매자와 함께 확인합니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: cdd-06
+        topic: Findings tied to assumption_key / value_impact
+        sub_tracks:
+          none:
+            code: A
+          existing_business_rbd:
+            code: A
+          intra_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: cdd-07
+        topic: Expert interview triangulation
+        sub_tracks:
+          none:
+            code: A
+          existing_business_rbd:
+            code: A
+          intra_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: cdd-08
+        topic: Revenue quality (recommended)
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획 가정에 따른 앞으로의 매출 품질을 봅니다. 계획 매출의 쏠림 정도, 이익률, 회수 기간, 반복성입니다(greenfield-feasibility 스킬).'
+          existing_business_rbd:
+            code: R
+            reading: '확장의 바탕이 되는 기존 사업 분야의 매출 품질을 봅니다.'
+          intra_venture:
+            code: R
+            reading: '계획 가정에 따른 앞으로의 매출 품질을 봅니다. 계획 매출의 쏠림 정도, 이익률, 회수 기간, 반복성입니다(greenfield-feasibility 스킬).'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+  chk-technical-dd-checklist:
+    domain: technical
+    file: technical-dd-checklist.yaml
+    items:
+      - id: tdd-01
+        topic: Site visit
+        sub_tracks:
+          none:
+            code: A
+            note: '그대로 적용합니다. 일반 신규 부지 건에는 부지 필요 여부(site_required) 확인 절차가 없어 부지 항목이 늘 적용됩니다.'
+          existing_business_rbd:
+            code: C
+            site_rule: GF_SITE_ITEM_SCOPE (ADR-0160)
+            na_reason: '사람이 부지 필요 여부(site_required = true)를 확인한 경우에만 적용합니다. 확인되기 전이거나 부지가 범위 밖으로 확인되면 이 계획에서는 이 부지 항목을 판정하지 않습니다.'
+          intra_venture:
+            code: C
+            site_rule: GF_SITE_ITEM_SCOPE (ADR-0160)
+            na_reason: '사람이 부지 필요 여부(site_required = true)를 확인한 경우에만 적용합니다. 확인되기 전이거나 부지가 범위 밖으로 확인되면 이 계획에서는 이 부지 항목을 판정하지 않습니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: tdd-02
+        topic: Site visit evidence
+        sub_tracks:
+          none:
+            code: A
+            note: '그대로 적용합니다. 일반 신규 부지 건에는 부지 필요 여부(site_required) 확인 절차가 없어 부지 항목이 늘 적용됩니다.'
+          existing_business_rbd:
+            code: C
+            site_rule: GF_SITE_ITEM_SCOPE (ADR-0160)
+            na_reason: '사람이 부지 필요 여부(site_required = true)를 확인한 경우에만 적용합니다. 확인되기 전이거나 부지가 범위 밖으로 확인되면 이 계획에서는 이 부지 항목을 판정하지 않습니다.'
+          intra_venture:
+            code: C
+            site_rule: GF_SITE_ITEM_SCOPE (ADR-0160)
+            na_reason: '사람이 부지 필요 여부(site_required = true)를 확인한 경우에만 적용합니다. 확인되기 전이거나 부지가 범위 밖으로 확인되면 이 계획에서는 이 부지 항목을 판정하지 않습니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: tdd-03
+        topic: TRL of core production process
+        sub_tracks:
+          none:
+            code: A
+            note: '계획한 공정의 기술 성숙도(TRL)와 제조 성숙도(MRL)를 봅니다.'
+          existing_business_rbd:
+            code: A
+            note: '계획한 공정의 기술 성숙도(TRL)와 제조 성숙도(MRL)를 봅니다. 핵심 지식재산(IP)의 TRL은 rbd-01에서 다룹니다.'
+          intra_venture:
+            code: A
+            note: '계획한 공정의 기술 성숙도(TRL)와 제조 성숙도(MRL)를 봅니다. 핵심 지식재산(IP)의 TRL은 rbd-01에서 다룹니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: tdd-04
+        topic: Bottleneck process
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획한 공정 설계와 생산능력 모델의 병목을 봅니다.'
+          existing_business_rbd:
+            code: A
+            note: '확장에 쓰이는 우리 회사의 기존 생산 라인을 봅니다.'
+          intra_venture:
+            code: R
+            reading: '계획한 공정 설계와 생산능력 모델의 병목을 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: tdd-05
+        topic: Remaining useful life of equipment
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획한 신규 설비의 수명과 교체 주기를 tdd-07 설비투자(capex) 검증과 함께 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '확장에 다시 쓰이는 우리 회사 설비의 남은 수명을 봅니다.'
+          intra_venture:
+            code: R
+            reading: '모회사가 설비를 출자하는 경우 잔존 수명을 평가합니다'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: 'risk-officer review 2026-10-12: reclassified; user decision pending (approval record predates this change)'
+      - id: tdd-06
+        topic: EHS liability exposure
+        sub_tracks:
+          none:
+            code: R
+            reading: '후보 부지의 과거 오염을 포함해, 계획한 운영의 앞으로의 환경·보건·안전(EHS) 준수와 인허가 위험을 봅니다(ldd-16과 함께 봄).'
+          existing_business_rbd:
+            code: R
+            reading: '계획한 운영의 앞으로의 환경·보건·안전(EHS) 준수와 인허가 위험, 그리고 확장이 더해지는 우리 회사 기존 사업장의 위험을 봅니다.'
+          intra_venture:
+            code: R
+            reading: '계획한 운영의 앞으로의 환경·보건·안전(EHS) 준수와 인허가 위험을 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: tdd-07
+        topic: Independent capex verification
+        sub_tracks:
+          none:
+            code: A
+          existing_business_rbd:
+            code: A
+          intra_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: tdd-08
+        topic: Production line certification status
+        sub_tracks:
+          none:
+            code: R
+            reading: '현재 인증 상태가 아니라, 계획한 라인의 인증 계획(로드맵과 소요 기간, gf-08과 일치)을 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '현재 인증 상태가 아니라, 계획한 라인의 인증 계획(로드맵과 소요 기간, gf-08과 일치)을 봅니다.'
+          intra_venture:
+            code: R
+            reading: '현재 인증 상태가 아니라, 계획한 라인의 인증 계획(로드맵과 소요 기간, gf-08과 일치)을 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+  chk-legal-dd-checklist:
+    domain: legal
+    file: legal-dd-checklist.yaml
+    items:
+      - id: ldd-01
+        topic: Good standing of target and subsidiaries
+        sub_tracks:
+          none:
+            code: 'N'
+            na_reason: '인수하는 법인이 없고, 우리 회사의 법인 존속·정상 상태(good standing)는 검토 대상이 아닙니다. 사내 벤처 법인 설립은 ef-01(법인 설립)에서 다룹니다.'
+          existing_business_rbd:
+            code: 'N'
+            na_reason: '인수하는 법인이 없고, 우리 회사의 법인 존속·정상 상태(good standing)는 검토 대상이 아닙니다. 사내 벤처 법인 설립은 ef-01(법인 설립)에서 다룹니다.'
+          intra_venture:
+            code: 'N'
+            na_reason: '인수하는 법인이 없고, 우리 회사의 법인 존속·정상 상태(good standing)는 검토 대상이 아닙니다. 사내 벤처 법인 설립은 ef-01(법인 설립)에서 다룹니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-02
+        topic: Cap table
+        sub_tracks:
+          none:
+            code: 'N'
+            na_reason: '인수하는 지분이 없습니다.'
+          existing_business_rbd:
+            code: 'N'
+            na_reason: '인수하는 지분이 없습니다.'
+          intra_venture:
+            code: X
+            replaced_by:
+              - checklist: chk-entity-formation-checklist
+                item: ef-03
+                stage: 'S9 (법인 설립 준비 탭)'
+            note: 'ef-03(사내 벤처 법인의 지분 구조와 배분)으로 대체합니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-03
+        topic: Shareholder consents, ROFR, tag/drag
+        sub_tracks:
+          none:
+            code: 'N'
+            na_reason: '인수 대상의 기존 주주가 없습니다.'
+          existing_business_rbd:
+            code: 'N'
+            na_reason: '인수 대상의 기존 주주가 없습니다.'
+          intra_venture:
+            code: R
+            reading: '사내 벤처 주주 간 계약(모회사, 창업자, 공동 투자자)의 조건을 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-04
+        topic: Signing authority
+        sub_tracks:
+          none:
+            code: 'N'
+            na_reason: '구속할 인수 대상이 없습니다. 우리 회사의 서명 권한은 그룹 승인 체계(2단계 승인)를 따르고, 그룹 내 사내 벤처는 법인 설립 때(S11, ef-06) 법인 권한을 정합니다.'
+          existing_business_rbd:
+            code: 'N'
+            na_reason: '구속할 인수 대상이 없습니다. 우리 회사의 서명 권한은 그룹 승인 체계(2단계 승인)를 따르고, 그룹 내 사내 벤처는 법인 설립 때(S11, ef-06) 법인 권한을 정합니다.'
+          intra_venture:
+            code: 'N'
+            na_reason: '구속할 인수 대상이 없습니다. 우리 회사의 서명 권한은 그룹 승인 체계(2단계 승인)를 따르고, 그룹 내 사내 벤처는 법인 설립 때(S11, ef-06) 법인 권한을 정합니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-05
+        topic: Borrowing and guarantee restrictions
+        sub_tracks:
+          none:
+            code: R
+            reading: '우리 회사의 기존 자금 조달 약정(담보제공제한 약정(negative pledge), 재무약정 등 확약사항(covenants), 보증 한도)이 이 계획의 자금 마련을 제한하는지 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '우리 회사의 기존 자금 조달 약정(담보제공제한 약정(negative pledge), 재무약정 등 확약사항(covenants), 보증 한도)이 이 계획의 자금 마련을 제한하는지 봅니다.'
+          intra_venture:
+            code: R
+            reading: '우리 회사의 기존 자금 조달 약정(담보제공제한 약정(negative pledge), 재무약정 등 확약사항(covenants), 보증 한도)이 이 계획의 자금 마련을 제한하는지 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-06
+        topic: Top-20 contract change-of-control scan
+        sub_tracks:
+          none:
+            code: 'N'
+            na_reason: '신규 사업에서는 경영권 변경이 일어나지 않습니다. 계획된 주요 계약(EPC, 구매 약정, 공급)은 cdd-05와 tdd-07에서 따져 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '자사의 독점·비경쟁·최혜대우(MFN) 약정이 신규 사업을 막는지, 계약·IP가 새 법인으로 옮겨질 때 동의가 필요한지 봅니다'
+          intra_venture:
+            code: R
+            reading: '자사의 독점·비경쟁·최혜대우(MFN) 약정이 신규 사업을 막는지, 계약·IP가 새 법인으로 옮겨질 때 동의가 필요한지 봅니다'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: 'risk-officer review 2026-10-12: reclassified; user decision pending (approval record predates this change)'
+      - id: ldd-07
+        topic: Asset vs share transfer
+        sub_tracks:
+          none:
+            code: 'N'
+            na_reason: '인수·양도 거래가 없고 새 법인으로 옮길 계약·IP도 없습니다.'
+          existing_business_rbd:
+            code: 'N'
+            na_reason: '인수·양도 거래가 없고 새 법인으로 옮길 계약·IP도 없습니다.'
+          intra_venture:
+            code: R
+            reading: '계약·IP를 새 법인으로 옮길 때 상대방 동의가 필요한지, 자동 이전되는지 봅니다'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: 'risk-officer review 2026-10-12: reclassified; user decision pending (approval record predates this change)'
+      - id: ldd-08
+        topic: Loans requiring consent at close
+        sub_tracks:
+          none:
+            code: 'N'
+            na_reason: '거래 종결(closing)이 없습니다. 우리 회사의 기존 대출 제한은 ldd-05에서 다룹니다.'
+          existing_business_rbd:
+            code: 'N'
+            na_reason: '거래 종결(closing)이 없습니다. 우리 회사의 기존 대출 제한은 ldd-05에서 다룹니다.'
+          intra_venture:
+            code: 'N'
+            na_reason: '거래 종결(closing)이 없습니다. 우리 회사의 기존 대출 제한은 ldd-05에서 다룹니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-09
+        topic: Litigation and regulatory investigations
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획에 영향을 주는 진행 중이거나 제기될 수 있는 분쟁(부지, 지식재산, 인허가, 이 사업 분야에서의 우리 회사 소송)을 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '계획에 영향을 주는 진행 중이거나 제기될 수 있는 분쟁(부지, 지식재산, 인허가, 이 사업 분야에서의 우리 회사 소송)을 봅니다.'
+          intra_venture:
+            code: R
+            reading: '계획에 영향을 주는 진행 중이거나 제기될 수 있는 분쟁(부지, 지식재산, 인허가, 이 사업 분야에서의 우리 회사 소송)을 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-10
+        topic: IP inventory and inventor assignment
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획이 기대는 지식재산(IP) 목록(보유분 또는 라이선스분)을 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: 'rbd-03(자유실시(FTO) 분석와 소유권) 밖의 나머지 범위를 봅니다. 목록의 완전성과 발명자에서 회사로의 권리 이전입니다.'
+          intra_venture:
+            code: X
+            replaced_by:
+              - checklist: chk-entity-formation-checklist
+                item: ef-07
+                stage: 'S9 (법인 설립 준비 탭)'
+              - checklist: chk-rbd-technology-checklist
+                item: rbd-03
+                stage: 'S9 (R&BD 기술 탭)'
+            note: 'ef-07(사내 벤처 법인으로의 지식재산 이전)과 rbd-03(자유실시(FTO) 분석와 소유권)으로 대체합니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-11
+        topic: In/out licences
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획에 필요한 라이선스와 그 조건을 봅니다. 경영권 변경 조항 부분은 적용하지 않습니다.'
+          existing_business_rbd:
+            code: R
+            reading: '계획에 필요한 라이선스와 그 조건을 봅니다. 경영권 변경 조항 부분은 적용하지 않습니다.'
+          intra_venture:
+            code: R
+            reading: '계획에 필요한 라이선스와 그 조건을 봅니다. 경영권 변경 조항 부분은 적용하지 않습니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-12
+        topic: IP encumbrances, fees, disputes
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획이 기대는 지식재산(IP)에 걸린 담보·제한을 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: 'rbd-03 밖의 나머지 범위를 봅니다. 담보권, 유지·갱신 수수료, 진행 중이거나 제기될 수 있는 지식재산 분쟁입니다.'
+          intra_venture:
+            code: R
+            reading: 'rbd-03 밖의 나머지 범위를 봅니다. 담보권, 유지·갱신 수수료, 진행 중이거나 제기될 수 있는 지식재산 분쟁입니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-13
+        topic: PIIA coverage
+        sub_tracks:
+          none:
+            code: R
+            reading: '사업 인력의 고용 조건에 발명 양도와 비밀 유지 조항이 들어 있는지 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '확장 사업의 지식재산이 될 성과를 낸 R&BD 팀이 임직원 직무발명 승계(직무발명 규정·승계 통지)·비밀유지 약정(PIIA)을 맺었는지 봅니다.'
+          intra_venture:
+            code: X
+            replaced_by:
+              - checklist: chk-entity-formation-checklist
+                item: ef-07
+                stage: 'S9 (법인 설립 준비 탭)'
+            note: 'ef-07(사내 벤처 법인으로의 지식재산 이전)로 대체합니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-14
+        topic: Union and pension (CBA succession)
+        sub_tracks:
+          none:
+            code: R
+            reading: '우리 회사의 기존 단체협약이 새 사업장 인력에게도 적용되는지 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '우리 회사의 기존 단체협약이 확장 인력에게도 적용되는지 봅니다.'
+          intra_venture:
+            code: R
+            reading: '우리 회사의 기존 단체협약이 모회사에서 옮겨 오는 인력에게 그대로 따라가는지 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-15
+        topic: Permit transfer classification
+        sub_tracks:
+          none:
+            code: X
+            replaced_by:
+              - checklist: chk-greenfield-feasibility-checklist
+                item: gf-04
+                stage: 'Screening/Pre-FS (그린필드 타당성 체크리스트, 읽기 전용 참조)'
+            note: 'gf-04(인허가 핵심 경로)로 대체하며, 그린필드 타당성 체크리스트에서 Screening/Pre-FS 단계에 판정합니다.'
+          existing_business_rbd:
+            code: R
+            reading: '우리 회사의 기존 인허가가 늘어난 범위를 담는지, 변경이 필요한지 봅니다.'
+          intra_venture:
+            code: R
+            reading: '사내 벤처가 자기 이름으로 받아야 할 인허가와 모회사가 가진 인허가를 나눠 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-16
+        topic: Environmental notices, land survey, contamination
+        sub_tracks:
+          none:
+            code: A
+            note: '후보 부지의 이력을 그대로 봅니다.'
+          existing_business_rbd:
+            code: C
+            site_rule: GF_SITE_ITEM_SCOPE (ADR-0160)
+            na_reason: '사람이 부지 필요 여부(site_required = true)를 확인한 경우에만 적용합니다. 확인되기 전이거나 부지가 범위 밖으로 확인되면 이 계획에서는 이 부지 항목을 판정하지 않습니다.'
+          intra_venture:
+            code: C
+            site_rule: GF_SITE_ITEM_SCOPE (ADR-0160)
+            na_reason: '사람이 부지 필요 여부(site_required = true)를 확인한 경우에만 적용합니다. 확인되기 전이거나 부지가 범위 밖으로 확인되면 이 계획에서는 이 부지 항목을 판정하지 않습니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-17
+        topic: Real estate title and leases
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획한 부지나 공간의 소유권 또는 임차권을 봅니다. 임대차의 경영권 변경 조항 부분은 적용하지 않습니다.'
+          existing_business_rbd:
+            code: R
+            reading: '계획한 부지나 공간의 소유권 또는 임차권을 봅니다. 임대차의 경영권 변경 조항 부분은 적용하지 않습니다.'
+          intra_venture:
+            code: R
+            reading: '모회사가 내어 주는 권리를 포함해, 계획한 부지나 공간의 사용권을 봅니다. 임대차의 경영권 변경 조항 부분은 적용하지 않습니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-18
+        topic: Privacy
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획한 개인정보 처리의 준수 설계(처리 방침, 국외 이전 근거)를 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '계획한 개인정보 처리의 준수 설계(처리 방침, 국외 이전 근거)를 봅니다.'
+          intra_venture:
+            code: R
+            reading: '계획한 개인정보 처리의 준수 설계(처리 방침, 국외 이전 근거)를 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-19
+        topic: Anti-bribery and sanctions screening
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획의 거래 상대방을 점검합니다. 협력사, 공급사, EPC 시공사, 인센티브 중개인입니다.'
+          existing_business_rbd:
+            code: R
+            reading: '계획의 거래 상대방을 점검합니다. 협력사, 공급사, EPC 시공사, 인센티브 중개인입니다.'
+          intra_venture:
+            code: R
+            reading: '계획의 거래 상대방을 점검합니다. 협력사, 공급사, EPC 시공사, 인센티브 중개인입니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-20
+        topic: Tax filings current
+        sub_tracks:
+          none:
+            code: 'N'
+            na_reason: '인수하는 법인이 없습니다. 계획의 세무 상황은 fdd-04에서 검토합니다.'
+          existing_business_rbd:
+            code: 'N'
+            na_reason: '인수하는 법인이 없습니다. 계획의 세무 상황은 fdd-04에서 검토합니다.'
+          intra_venture:
+            code: 'N'
+            na_reason: '인수하는 법인이 없습니다. 계획의 세무 상황은 fdd-04에서 검토합니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-21
+        topic: Findings register (RAG)
+        sub_tracks:
+          none:
+            code: A
+          existing_business_rbd:
+            code: A
+          intra_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-22
+        topic: Korean business-transfer employee succession
+        sub_tracks:
+          none:
+            code: 'N'
+            na_reason: '영업양도가 없습니다. 인력은 새로 뽑거나 재배치합니다. 모회사 인력을 새 법인으로 옮기는 경우(전적·전출 동의)는 법인 설립 체크리스트 ef-08(인력 이전 실행)에서 판정합니다.'
+          existing_business_rbd:
+            code: 'N'
+            na_reason: '영업양도가 없습니다. 인력은 새로 뽑거나 재배치합니다. 모회사 인력을 새 법인으로 옮기는 경우(전적·전출 동의)는 법인 설립 체크리스트 ef-08(인력 이전 실행)에서 판정합니다.'
+          intra_venture:
+            code: R
+            reading: '모회사에서 사내 벤처로 옮기는 인력을 봅니다(개별 동의 또는 파견, S11의 ef-08 참조).'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+  chk-market-dd-checklist:
+    domain: market
+    file: market-dd-checklist.yaml
+    items:
+      - id: mdd-01
+        topic: TAM/SAM triangulation
+        sub_tracks:
+          none:
+            code: A
+          existing_business_rbd:
+            code: A
+          intra_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: mdd-02
+        topic: Growth drivers vs management assumptions
+        sub_tracks:
+          none:
+            code: R
+            reading: '우리 계획의 성장 가정을 독립적인 시장 전망과 비교해 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '우리 계획의 성장 가정을 독립적인 시장 전망과 비교해 봅니다.'
+          intra_venture:
+            code: R
+            reading: '우리 계획의 성장 가정을 독립적인 시장 전망과 비교해 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: mdd-03
+        topic: Competitive landscape from customers, win/loss
+        sub_tracks:
+          none:
+            code: R
+            reading: '예상 고객의 구매 기준을 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '예상 고객의 구매 기준을 봅니다. 수주 성공·실패 부분은 우리 회사 기록으로만 봅니다.'
+          intra_venture:
+            code: R
+            reading: '예상 고객의 구매 기준을 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: mdd-04
+        topic: Share, concentration, pricing power
+        sub_tracks:
+          none:
+            code: A
+          existing_business_rbd:
+            code: A
+          intra_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: mdd-05
+        topic: Target's moat
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획이 내세우는 우리 회사의 경쟁 우위(moat)를 같은 척도로 평가합니다.'
+          existing_business_rbd:
+            code: R
+            reading: '계획이 내세우는 우리 회사의 경쟁 우위(moat)를 같은 척도로 평가합니다.'
+          intra_venture:
+            code: R
+            reading: '계획이 내세우는 우리 회사의 경쟁 우위(moat)를 같은 척도로 평가합니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: mdd-06
+        topic: Concentration (uses cdd-01)
+        sub_tracks:
+          none:
+            code: R
+            reading: 'cdd-01의 그린필드 해석을 따릅니다.'
+          existing_business_rbd:
+            code: R
+            reading: 'cdd-01의 그린필드 해석을 따릅니다.'
+          intra_venture:
+            code: R
+            reading: 'cdd-01의 그린필드 해석을 따릅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: mdd-07
+        topic: Churn and retention (uses cdd-02)
+        sub_tracks:
+          none:
+            code: 'N'
+            na_reason: 'cdd-02를 따릅니다. 신규 사업에는 고객 이력이 없으며, 고객 유지는 cdd-03과 mdd-02에서 따져 보는 가정입니다.'
+          existing_business_rbd:
+            code: R
+            reading: 'cdd-02의 해석을 따릅니다. 목표 시장에서 우리 회사 기존 고객의 이탈을 봅니다.'
+          intra_venture:
+            code: 'N'
+            na_reason: 'cdd-02를 따릅니다. 신규 사업에는 고객 이력이 없으며, 고객 유지는 cdd-03과 mdd-02에서 따져 보는 가정입니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: mdd-08
+        topic: 80/20 revenue analysis
+        sub_tracks:
+          none:
+            code: 'N'
+            na_reason: '살펴볼 매출이 없습니다.'
+          existing_business_rbd:
+            code: R
+            reading: '기존 사업 부문의 매출을 봅니다.'
+          intra_venture:
+            code: 'N'
+            na_reason: '살펴볼 매출이 없습니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: mdd-09
+        topic: Expansion revenue breadth
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획의 대표 고객 집중도와 확장 매출 의존을 봅니다; cdd-01과 함께 판정'
+          existing_business_rbd:
+            code: R
+            reading: '우리 회사 기존 고객에게서 늘어나는 매출을 봅니다.'
+          intra_venture:
+            code: R
+            reading: '계획의 대표 고객 집중도와 확장 매출 의존을 봅니다; cdd-01과 함께 판정'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: 'risk-officer review 2026-10-12: reclassified; user decision pending (approval record predates this change)'
+      - id: mdd-10
+        topic: Distribution structure
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획한 유통 경로, 가격 책정 논리, 고객 구성을 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '계획한 유통 경로, 가격 책정 논리, 고객 구성을 봅니다.'
+          intra_venture:
+            code: R
+            reading: '계획한 유통 경로, 가격 책정 논리, 고객 구성을 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: mdd-11
+        topic: Thesis verdicts and bid adjustment
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획의 핵심 가설마다 판정합니다. 조정 대상은 입찰 가격이 아니라 투자 금액이나 단계별 집행(tranche) 조건입니다.'
+          existing_business_rbd:
+            code: R
+            reading: '계획의 핵심 가설마다 판정합니다. 조정 대상은 입찰 가격이 아니라 투자 금액이나 단계별 집행(tranche) 조건입니다.'
+          intra_venture:
+            code: R
+            reading: '계획의 핵심 가설마다 판정합니다. 조정 대상은 입찰 가격이 아니라 투자 금액이나 단계별 집행(tranche) 조건입니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+  chk-financial-dd-checklist:
+    domain: financial
+    file: financial-dd-checklist.yaml
+    items:
+      - id: fdd-01
+        topic: Quality of earnings
+        sub_tracks:
+          none:
+            code: 'N'
+            na_reason: '과거 이익 실적이 없습니다.'
+          existing_business_rbd:
+            code: R
+            reading: '기존 사업 분야 기준선의 이익 품질을 봅니다.'
+          intra_venture:
+            code: 'N'
+            na_reason: '과거 이익 실적이 없습니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fdd-02
+        topic: Working capital
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획에 담긴 순운전자본 필요액, 계절성, 최소 현금 보유액을 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '계획에 담긴 순운전자본 필요액, 계절성, 최소 현금 보유액을 봅니다.'
+          intra_venture:
+            code: R
+            reading: '계획에 담긴 순운전자본 필요액, 계절성, 최소 현금 보유액을 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fdd-03
+        topic: Debt and contingent liabilities
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획한 차입금과, 계획으로 생기는 우리 회사의 우발 채무(보증, 인센티브 환수)를 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '계획한 차입금과, 계획으로 생기는 우리 회사의 우발 채무(보증, 인센티브 환수)를 봅니다.'
+          intra_venture:
+            code: R
+            reading: '계획한 차입금과, 계획으로 생기는 우리 회사의 우발 채무(보증, 인센티브 환수)를 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fdd-04
+        topic: Tax position
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획의 세무 가정을 봅니다. 실효세율, 세제 혜택, 그룹 내 거래의 이전가격입니다.'
+          existing_business_rbd:
+            code: R
+            reading: '계획의 세무 가정을 봅니다. 실효세율, 세제 혜택, 그룹 내 거래의 이전가격입니다.'
+          intra_venture:
+            code: R
+            reading: '계획의 세무 가정을 봅니다. 실효세율, 세제 혜택, 그룹 내 거래의 이전가격입니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fdd-05
+        topic: Cash-flow quality
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획의 유지·성장 설비투자(capex) 구분과, 매출채권 회수 기간(DSO)·매입채무 지급 기간(DPO) 가정을 동종 기업과 비교해 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '계획의 유지·성장 설비투자(capex) 구분과, 매출채권 회수 기간(DSO)·매입채무 지급 기간(DPO) 가정을 동종 기업과 비교해 봅니다.'
+          intra_venture:
+            code: R
+            reading: '계획의 유지·성장 설비투자(capex) 구분과, 매출채권 회수 기간(DSO)·매입채무 지급 기간(DPO) 가정을 동종 기업과 비교해 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fdd-06
+        topic: Related-party transactions
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획에 담긴 그룹 내 공급·용역·라이선스 조건이 정상가격(arm''s length)인지 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '계획에 담긴 그룹 내 공급·용역·라이선스 조건이 정상가격(arm''s length)인지 봅니다.'
+          intra_venture:
+            code: R
+            reading: '모회사와 사내 벤처 사이의 그룹 내 공급·용역·라이선스 조건이 정상가격(arm''s length)인지 봅니다(이 세부 유형의 핵심 항목).'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fdd-07
+        topic: Management vs audited accounts
+        sub_tracks:
+          none:
+            code: 'N'
+            na_reason: '아직 회계 장부가 없습니다.'
+          existing_business_rbd:
+            code: R
+            reading: '사업 부문의 관리 회계를 감사받은 재무제표와 비교해 봅니다.'
+          intra_venture:
+            code: 'N'
+            na_reason: '아직 회계 장부가 없습니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fdd-08
+        topic: Forecast assessment
+        sub_tracks:
+          none:
+            code: A
+          existing_business_rbd:
+            code: A
+          intra_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+  chk-hr-dd-checklist:
+    domain: hr
+    file: hr-dd-checklist.yaml
+    items:
+      - id: hdd-01
+        topic: Key person map
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획에 필요한 핵심 역할과 역할별 채용 또는 유지 계획을 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '계획에 필요한 핵심 역할과 역할별 채용 또는 유지 계획을 봅니다.'
+          intra_venture:
+            code: R
+            reading: '계획에 필요한 핵심 역할과 역할별 채용 또는 유지 계획을 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: hdd-02
+        topic: Stay bonus after closing
+        sub_tracks:
+          none:
+            code: R
+            reading: '신규 사업에 필요한 인력의 신규 채용과 핵심 인력 확보, 그리고 이들을 붙잡아 둘 유지 보상(잔류 인센티브) 계획을 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '신규 사업에 필요한 인력의 신규 채용과 핵심 인력 확보, 그리고 이들을 붙잡아 둘 유지 보상(잔류 인센티브) 계획을 봅니다.'
+          intra_venture:
+            code: R
+            reading: '창업 팀을 붙잡아 둘 보상(예: 사내 벤처 지분)을 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: hdd-03
+        topic: Day-1 retention plan
+        sub_tracks:
+          none:
+            code: 'N'
+            na_reason: '인수 첫날(Day 1)이 없습니다. 핵심 인력 유지는 hdd-01에서 다룹니다.'
+          existing_business_rbd:
+            code: 'N'
+            na_reason: '인수 첫날(Day 1)이 없습니다. 핵심 인력 유지는 hdd-01에서 다룹니다.'
+          intra_venture:
+            code: 'N'
+            na_reason: '인수 첫날(Day 1)이 없습니다. 핵심 인력 유지는 hdd-01에서 다룹니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: hdd-04
+        topic: Organisation documentation
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획한 조직도와 인원 계획을 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '계획한 조직도와 인원 계획을 봅니다.'
+          intra_venture:
+            code: R
+            reading: '계획한 조직도와 인원 계획을 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: hdd-05
+        topic: Leadership bench
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획한 경영진의 핵심 팀 준비 상태를 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '계획한 경영진의 핵심 팀 준비 상태를 봅니다.'
+          intra_venture:
+            code: R
+            reading: '계획한 경영진의 핵심 팀 준비 상태를 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: hdd-06
+        topic: CBA
+        sub_tracks:
+          none:
+            code: R
+            reading: 'ldd-14와 같은 해석입니다. 우리 회사의 기존 단체협약이 새 사업장 인력에게도 적용되는지 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: 'ldd-14와 같은 해석입니다. 우리 회사의 기존 단체협약이 확장 인력에게도 적용되는지 봅니다.'
+          intra_venture:
+            code: R
+            reading: 'ldd-14와 같은 해석입니다. 우리 회사의 기존 단체협약이 모회사에서 옮겨 오는 인력에게 그대로 따라가는지 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: hdd-07
+        topic: Pension and benefit liabilities
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획의 복리후생 비용 가정을 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '계획의 복리후생 비용 가정을 봅니다.'
+          intra_venture:
+            code: R
+            reading: '계획의 복리후생 비용 가정과, 옮겨 오는 인력과 함께 넘어오는 부채를 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: hdd-08
+        topic: EU works council
+        sub_tracks:
+          none:
+            code: 'N'
+            na_reason: '협의할 거래가 없습니다. 계획이 기존 EU 인력을 재편하는 경우에만 다시 적용합니다.'
+          existing_business_rbd:
+            code: 'N'
+            na_reason: '협의할 거래가 없습니다. 계획이 기존 EU 인력을 재편하는 경우에만 다시 적용합니다.'
+          intra_venture:
+            code: 'N'
+            na_reason: '협의할 거래가 없습니다. 계획이 기존 EU 인력을 재편하는 경우에만 다시 적용합니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: hdd-09
+        topic: Employment succession regime
+        sub_tracks:
+          none:
+            code: R
+            reading: '신규 사업에서 새로 채용하는 인력에게 적용되는 관할별 고용 관계 규정과 단체협약의 영향을 판단합니다.'
+          existing_business_rbd:
+            code: R
+            reading: '신규 사업에서 새로 채용하는 인력에게 적용되는 관할별 고용 관계 규정과 단체협약의 영향을 판단합니다.'
+          intra_venture:
+            code: R
+            reading: '모회사에서 옮겨 오는 인력의 고용 승계 방식을 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: hdd-10
+        topic: Culture gap
+        sub_tracks:
+          none:
+            code: R
+            reading: '신규 사업 조직의 설계와 조직 문화를 평가합니다.'
+          existing_business_rbd:
+            code: R
+            reading: '신규 사업 조직의 설계와 조직 문화를 평가합니다.'
+          intra_venture:
+            code: R
+            reading: '사내 벤처의 자율성과 모회사 문화 사이의 차이를 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: hdd-11
+        topic: Day-1 and 100-day HR plan
+        sub_tracks:
+          none:
+            code: R
+            reading: '채용과 적응 지원의 단계별 계획을 봅니다(gf-06 / ss-07과 일치).'
+          existing_business_rbd:
+            code: R
+            reading: '채용과 적응 지원의 단계별 계획을 봅니다(gf-06 / ss-07과 일치).'
+          intra_venture:
+            code: R
+            reading: '채용과 적응 지원의 단계별 계획을 봅니다(gf-06 / ss-07과 일치).'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+  chk-financing-plan-checklist:
+    domain: financing
+    file: financing-plan-checklist.yaml
+    items:
+      - id: fin-01
+        topic: Sources and uses
+        sub_tracks:
+          none:
+            code: A
+          existing_business_rbd:
+            code: A
+          intra_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fin-02
+        topic: Signed commitment letters
+        sub_tracks:
+          none:
+            code: R
+            reading: '계획 단계에서는 내부 자금 승인이나 대주의 예비 조건을 봅니다. 서명된 확약서는 S11에서 다룹니다.'
+          existing_business_rbd:
+            code: R
+            reading: '계획 단계에서는 내부 자금 승인이나 대주의 예비 조건을 봅니다. 서명된 확약서는 S11에서 다룹니다.'
+          intra_venture:
+            code: R
+            reading: '계획 단계에서는 내부 자금 승인이나 대주의 예비 조건을 봅니다. 서명된 확약서는 S11에서 다룹니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fin-03
+        topic: Covenant headroom
+        sub_tracks:
+          none:
+            code: A
+          existing_business_rbd:
+            code: A
+          intra_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fin-04
+        topic: Funds-flow memorandum at closing
+        sub_tracks:
+          none:
+            code: R
+            reading: '거래 종결(closing)이 없으므로 자금 인출 계획으로 해석합니다. 설비투자(capex) 인출의 시기, 계좌, 환전 시점을 봅니다.'
+          existing_business_rbd:
+            code: X
+            replaced_by:
+              - checklist: chk-rbd-technology-checklist
+                item: rbd-15
+                stage: 'S9 (R&BD 기술 탭)'
+            note: '거래 종결(closing)이 없습니다. rbd-15(실물옵션으로서의 단계별 자금 투입)로 대체하며, 단계별 집행분(tranche)은 capex_tranche(migration 0136)에 기록합니다.'
+          intra_venture:
+            code: X
+            replaced_by:
+              - checklist: chk-rbd-technology-checklist
+                item: rbd-15
+                stage: 'S9 (R&BD 기술 탭)'
+            note: '거래 종결(closing)이 없습니다. rbd-15(실물옵션으로서의 단계별 자금 투입)로 대체하며, 단계별 집행분(tranche)은 capex_tranche(migration 0136)에 기록합니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fin-05
+        topic: FX plan
+        sub_tracks:
+          none:
+            code: R
+            reading: '인수 대금이 아니라, 여러 통화로 이뤄지는 설비투자(capex)와 자금 조달의 환율 계획을 봅니다.'
+          existing_business_rbd:
+            code: R
+            reading: '인수 대금이 아니라, 여러 통화로 이뤄지는 설비투자(capex)와 자금 조달의 환율 계획을 봅니다.'
+          intra_venture:
+            code: R
+            reading: '인수 대금이 아니라, 여러 통화로 이뤄지는 설비투자(capex)와 자금 조달의 환율 계획을 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fin-06
+        topic: Certain-funds structure
+        sub_tracks:
+          none:
+            code: 'N'
+            na_reason: '자금 확실성 구조(certain funds)는 계약 서명 때 매도인을 보호하는 장치인데, 이 건에는 매도인이 없습니다.'
+          existing_business_rbd:
+            code: 'N'
+            na_reason: '자금 확실성 구조(certain funds)는 계약 서명 때 매도인을 보호하는 장치인데, 이 건에는 매도인이 없습니다.'
+          intra_venture:
+            code: 'N'
+            na_reason: '자금 확실성 구조(certain funds)는 계약 서명 때 매도인을 보호하는 장치인데, 이 건에는 매도인이 없습니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fin-07
+        topic: Escrow and paying agent
+        sub_tracks:
+          none:
+            code: 'N'
+            na_reason: '담보할 인수 대금이나 손해배상 약정이 없습니다.'
+          existing_business_rbd:
+            code: 'N'
+            na_reason: '담보할 인수 대금이나 손해배상 약정이 없습니다.'
+          intra_venture:
+            code: 'N'
+            na_reason: '담보할 인수 대금이나 손해배상 약정이 없습니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fin-08
+        topic: Reverse termination fee
+        sub_tracks:
+          none:
+            code: 'N'
+            na_reason: '인수 계약이 없습니다.'
+          existing_business_rbd:
+            code: 'N'
+            na_reason: '인수 계약이 없습니다.'
+          intra_venture:
+            code: 'N'
+            na_reason: '인수 계약이 없습니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fin-09
+        topic: Certainty of funds before IC
+        sub_tracks:
+          none:
+            code: A
+          existing_business_rbd:
+            code: A
+          intra_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: 'risk-officer review 2026-10-12: reclassified; user decision pending (approval record predates this change)'

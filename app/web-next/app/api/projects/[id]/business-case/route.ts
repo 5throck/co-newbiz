@@ -14,6 +14,7 @@ import { authenticate } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { listLegacyModels } from "../../../../../lib/business-case-cleanup.ts";
 import { listBusinessCases } from "../../../../../lib/business-case.ts";
+import { evaluateTargetsForCase, resolveProjectTargets } from "../../../../../lib/business-targets.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 
 const KINDS = new Set(["greenfield_cost", "revenue", "valuation", "investment_return"]);
@@ -48,8 +49,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     ? (db.query("SELECT id FROM md_industry WHERE name_ko = ?").get(opp.market_scope) as { id: string } | undefined)
     : undefined;
   const eff = ind ? resolveEffectiveCagr(db, ind.id) : null;
+  // ADR-0159: per-case goal attainment so the scenario comparison can show it for
+  // EVERY case (lib functions only; reference evidence, never a gate block).
+  // A failed goals lookup must never take the S8 page down (additive field only).
+  let goalsResolved: ReturnType<typeof resolveProjectTargets>["resolved"] = [];
+  try { goalsResolved = resolveProjectTargets(id).resolved; } catch { /* goals unavailable: attainment omitted */ }
+  const goalAttainment: Record<string, ReturnType<typeof evaluateTargetsForCase>> = {};
+  if (goalsResolved.length > 0) for (const c of cases) goalAttainment[c.id] = evaluateTargetsForCase(goalsResolved, c);
   return ok(
-    { cases, archived, legacy_models: listLegacyModels(id), recommended_scenario: recommendedScenario, adoption, target_selection: targetSelection, targets, engines_mixed: enginesMixed, methods_mixed: methodsMixed, escalated_cagr_pct: eff?.source === "escalated" ? eff.cagrPct : null },
+    { cases, archived, goal_attainment: goalAttainment, goal_count: goalsResolved.length, legacy_models: listLegacyModels(id), recommended_scenario: recommendedScenario, adoption, target_selection: targetSelection, targets, engines_mixed: enginesMixed, methods_mixed: methodsMixed, escalated_cagr_pct: eff?.source === "escalated" ? eff.cagrPct : null },
     200,
     { count: cases.length },
   );

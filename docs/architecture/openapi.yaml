@@ -4259,7 +4259,7 @@ paths:
   /api/projects/{id}/target-check:
     get:
       operationId: getProjectTargetCheck
-      summary: fs-gate evidence (ADR-0114) — the project's resolved business-target standards vs the adopted business case. Display only; never blocks a gate.
+      summary: fs-gate evidence (ADR-0114, ADR-0159) — the project's resolved business goals (project > affiliate > group per metric; entries carry source, shadowed, shadowed_note, rationale, set_by; scope is null when the standards scope is unresolved; goal_count_by_source) vs the adopted business case. Display only; never blocks a gate.
       tags:
         - Analysis
       parameters:
@@ -4522,7 +4522,7 @@ paths:
   /api/projects/{id}/business-case/adopt:
     post:
       operationId: adoptProjectBusinessCase
-      summary: Human-only adoption of one business case (boundary #2) — the sole writer of the adoption marker (analyst+).
+      summary: Human-only adoption of one business case (boundary #2) — the sole writer of the adoption marker (analyst+). Optional body goals_ack {acknowledged, note?}; when no business goals apply (project, affiliate and group all empty) and acknowledged is not true the response is 409 goals_ack_required (ADR-0159).
       tags:
         - Analysis
       parameters:
@@ -4542,6 +4542,247 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          description: goals_ack_required — no business goals apply, or every applying goal is indeterminate/manual, and no acknowledgement was sent. A goals_ack always needs a non-empty note (400 goals_ack_note_required).
+  /api/projects/{id}/business-goals:
+    get:
+      operationId: listProjectBusinessGoals
+      summary: Project business goals plus the resolved view (project > affiliate > group per metric) and metric presets (ADR-0159). history=1 includes superseded and retired versions. Admin is blocked from deal content (404).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: history
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: writeProjectBusinessGoal
+      summary: Human-only project goal write (ADR-0159, boundary #2; analyst+, cookie session + CSRF; bearer/OAuth/agent callers get 403 human_only). Body action = create | supersede | retire; history is append-only; rationale required; every write is audited.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: goal_exists (create on an active metric) or goal_not_active (supersede/retire of a superseded or retired goal).
+
+  /api/projects/{id}/greenfield-scope:
+    get:
+      operationId: getGreenfieldScope
+      summary: "Greenfield S9 sub-track selection (ADR-0160 addendum, migration 0136) - extra checklists, site scope (confirmed / default / unconfirmed), excluded steps, warnings; greenfield_scope is null for brownfield or unrouted projects. Carries workspace_scope (ADR-0160 addendum b) when the S9 workspace scope is active."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: writeGreenfieldScope
+      summary: "Human-only (boundary #2; analyst+, cookie session + CSRF; bearer/OAuth/agent callers get 403 human_only). Site confirmation body = {site_required: boolean, rationale: string (required, non-empty)} with action omitted or confirm_site_required; single-person confirmation effective immediately (user decision 2026-10-12, ADR-0160 addendum d; the asserter's review is recorded in the same transaction, audited single_person_confirmation with the rationale; re-confirming supersedes; response site.basis confirmed; evidence_ref is not collected and is ignored if sent; review_site_required is removed). action = opt_in (migration_note) records the pin migration to greenfield-dd 1.1.0 selection."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: not_greenfield, no_run, write_rejected (dimension-input repository refusal, e.g. non-member or non-insider on an MNPI project), already_opted_in.
+
+  /api/projects/{id}/greenfield-scope/workspace-opt-in:
+    get:
+      operationId: previewGreenfieldWorkspaceOptIn
+      summary: "Read-only opt-in preview for the S9 workspace scope (ADR-0160 addendum b) - before/after judged and judgeable counts (Y), judgements that move to \"judged under previous scope\", recorded fails that stay unmet, eligible flag, whether the ADR-0160 sub-track pin is recorded too, and newly_counted (hr items that enter the count for a pre-2026-10-01 project, with those already judged). Nothing is written."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: not_greenfield.
+    post:
+      operationId: optInGreenfieldWorkspaceScope
+      summary: "Human-only (boundary #2; analyst+, cookie session + CSRF; bearer/OAuth/agent callers get 403 human_only). Body migration_note (required, max 2000 chars). Pins ovl-greenfield-workspace-scope at the overlay version (and shared-greenfield-dd 1.1.0 when the sub-track selection is not active yet) in one transaction with the already_opted_in check, so a failure leaves neither pin; audited policy_pin_migrated. Never touches checklist item state."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: not_greenfield, already_opted_in (scope already active), overlay_unavailable.
+
+  /api/projects/{id}/brownfield-scope/workspace-opt-in:
+    get:
+      operationId: previewBrownfieldWorkspaceOptIn
+      summary: "Read-only opt-in preview for the brownfield S9 workspace scope (ADR-0162) - before/after judged and judgeable counts (Y), judgements that move to \"judged under previous scope\", recorded fails that stay unmet, eligible flag (false for m_and_a, a null sub-track or a project already in scope), extras_attached_by_opt_in (extra checklists the opt-in attaches, with judgeable and excluded counts). Nothing is written."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: not_brownfield.
+    post:
+      operationId: optInBrownfieldWorkspaceScope
+      summary: "Human-only (boundary #2; analyst+, cookie session + CSRF; bearer/OAuth/agent callers get 403 human_only). Body migration_note (required, max 2000 chars). Pins ovl-brownfield-workspace-scope at the overlay version (already_opted_in re-checked in the same transaction), audited policy_pin_migrated. Never touches checklist item state. The pin also attaches the sub-track extra checklists (section-scoped by the overlay), even for a project predating the Wave F cut-off."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: not_brownfield, no_scope_change (m_and_a baseline or null sub-track), already_opted_in (scope already active), overlay_unavailable.
+
+  /api/projects/{id}/capex-tranches:
+    get:
+      operationId: listCapexTranches
+      summary: Greenfield phased capex tranches (capex_tranche, migration 0136). history=1 includes retired rows.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: history
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: writeCapexTranche
+      summary: "Human-only (boundary #2; analyst+, cookie session + CSRF; bearer/OAuth/agent callers get 403 human_only). Body action = create (tranche_no, amount, currency, release_condition max 2000 chars, source_stage) | update (refused with 409 release_pending while a release request is open; audit records before/after amount, currency, release_condition) | set_status (status planned/released/withheld + reason max 2000 chars; released is two-person - the first call returns release_pending=true with tranche.pending_release {requested_by, requested_at} and audits the reason, a second call by someone other than the creator, the requester and anyone who edited the tranche since the request releases it) | retire (reason). Released tranches are immutable; every write is audited."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: not_greenfield, tranche_exists (live tranche_no taken), invalid_transition (e.g. released to planned, edit or retire of a released tranche), second_person_required (release approval by the tranche creator or by someone who edited the tranche since the request), release_pending (update while a release request is open).
 
   /api/projects/{id}/business-case/legacy-cleanup:
     post:
@@ -5583,7 +5824,7 @@ paths:
   /api/projects/{id}/dd:
     get:
       operationId: getProjectDdWorkspace
-      summary: S9 DD workspace aggregate — standard items with live state, custom items with provenance, findings, and completion (ADR-0099). Adds targets[] (one comparison summary per shortlisted target) and scope_target_id / selected_target_id (ADR-0157).
+      summary: "S9 DD workspace aggregate — standard items with live state, custom items with provenance, findings, and completion (ADR-0099). Adds targets[] (one comparison summary per shortlisted target) and scope_target_id / selected_target_id (ADR-0157). Each of the seven domains carries counted (false + counted_reason for financial/hr/market/financing of a project created before 2026-10-01: judgeable, recorded for reference, not in completion). ADR-0160 addendum (b), greenfield projects in the workspace scope only: items[].scope (code A/R/X/N, reading, reason, replaced_by pointers with read-only status, fallback, steps), greenfield_scope.workspace_scope (items, tab_labels, step_tabs, plan_readiness rows for steps 4/5/6, previous_scope, counts) and completion.judged / judgeable / workspace_judgeable / excluded. Brownfield m_and_a, null sub-track and grandfathered payloads carry none of these keys. ADR-0162, brownfield non-baseline sub-tracks in the workspace scope only (created on/after BF_WORKSPACE_SCOPE_DATE or opted in): items[].scope on the seven domains AND the attached extra tabs (excluded deal-shape sections carry code N), brownfield_scope.workspace_scope (items, extra_checklists, previous_scope, opted_in, counts incl. extras_excluded) and the same completion keys. Each custom item also carries proposed_by_user (display name, else account id, of the human proposer from the dd_custom_item.create audit entry; null for agent proposals or when unknown, never an agent id) and is_proposer (true when the calling user proposed it and therefore cannot review it)."
       tags:
         - Analysis
       parameters:
@@ -5691,7 +5932,7 @@ paths:
   /api/projects/{id}/dd-checklist/state:
     put:
       operationId: putProjectDdChecklistState
-      summary: Upsert a judgment (pass/fail/pending/waived) on an applied checklist item; proposed-only items are 404 (analyst+). Body target_id (ADR-0157) scopes it to an opened comparison target; a waiver must belong to the same scope.
+      summary: "Upsert a judgment (pass/fail/pending/waived) on an applied checklist item; proposed-only items are 404 (analyst+). Body target_id (ADR-0157) scopes it to an opened comparison target; a waiver must belong to the same scope. ADR-0160 addendum (b): for a greenfield project in the workspace scope, a NEW judgement on an item classified not applicable or replaced is 409 dd_item_out_of_scope (an item already carrying a row may be re-judged); `na` on any of the seven workspace checklists needs a note (400 na_reason_required). ADR-0162: the same 409 and na-reason rules for a brownfield non-baseline sub-track in the workspace scope, including excluded sections of attached extra checklists."
       tags:
         - Analysis
       parameters:
@@ -5729,6 +5970,46 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
+  /api/projects/{id}/dd-checklist/custom:
+    post:
+      operationId: createProjectDdChecklistCustomItem
+      summary: "A person proposes one custom DD checklist item on any of the seven S9 domains (migration 0137). Written as 'proposed' with no state row; it counts only after the review route approves it. For a project created before 2026-10-01, items on financial/hr/market/financing are recorded for reference and not counted in S9 completion (analyst+). Human-only - cookie session and no agent principal; bearer/OAuth/agent callers get 403 human_only. The proposer is recorded as the actor of audit dd_custom_item.create and may not review the item."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [domain, item_label]
+              properties:
+                domain: { type: string, enum: [commercial, technical, legal, financial, hr, market, financing] }
+                item_label: { type: string, maxLength: 200 }
+                rationale: { type: string, maxLength: 2000 }
+                source_url: { type: string, format: uri, maxLength: 2000, description: "http(s) URL only (validated server-side)." }
+                source_reliability: { type: string, enum: [A, B, C] }
+                target_id: { type: string, description: "ADR-0157: an opened comparison target; omitted = the selected-target scope." }
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
   /api/projects/{id}/dd-checklist/tailor:
     post:
       operationId: tailorProjectDdChecklist
@@ -5748,7 +6029,7 @@ paths:
             schema:
               type: object
               properties:
-                domains: { type: array, items: { type: string, enum: [commercial, technical, legal] } }
+                domains: { type: array, description: "Tailoring templates exist for these three domains only; custom items on financial/hr/market/financing use POST dd-checklist/custom.", items: { type: string, enum: [commercial, technical, legal] } }
                 target_id: { type: string }
       responses:
         '201':
@@ -5767,7 +6048,7 @@ paths:
   /api/projects/{id}/dd-checklist/tailor/{itemId}/review:
     put:
       operationId: reviewProjectDdChecklistTailorItem
-      summary: Human approve/reject decision on a proposed custom item; approval inserts the state row in the same transaction (ADR-0099 §4).
+      summary: "Human-only route (cookie session; bearer/OAuth/MCP principal/agent callers get 403 human_only). Human approve/reject decision on a proposed custom item (any of the seven domains); approval inserts the state row in the same transaction (ADR-0099 §4). For a pre-2026-10-01 project, financial/hr/market/financing items are recorded for reference only (not counted in S9 completion). The reviewer must differ from the human proposer (409 second_person_required); each decision is audited dd_custom_item.review."
       tags:
         - Analysis
       parameters:
@@ -5792,6 +6073,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          description: second_person_required (the reviewer proposed the item); dd target conflicts.
 
   /api/projects/{id}/close:
     post:

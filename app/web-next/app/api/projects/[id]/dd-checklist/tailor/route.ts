@@ -8,7 +8,7 @@
 import { getDb } from "../../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
-import { tailorDdChecklist, DD_TAILOR_STAGE, DD_DOMAINS, type DdDomain } from "../../../../../../lib/dd-checklist-tailor.ts";
+import { tailorDdChecklist, DD_TAILOR_STAGE, DD_TAILOR_DOMAINS, type DdTailorDomain } from "../../../../../../lib/dd-checklist-tailor.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { scopeOrResponse } from "../../../../../../lib/dd-target-http.ts";
 
@@ -28,12 +28,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // ADR-0157: tailoring for an opened comparison target writes proposals scoped to it.
   const scope = scopeOrResponse(id, body?.target_id);
   if ("response" in scope) return scope.response;
-  let domains: DdDomain[] = [...DD_DOMAINS];
+  let domains: DdTailorDomain[] = [...DD_TAILOR_DOMAINS];
   if (body?.domains?.length) {
-    if (!body.domains.every((d) => (DD_DOMAINS as readonly string[]).includes(d))) {
-      return badRequest("invalid_request", `domains는 ${DD_DOMAINS.join(" | ")} 중 선택입니다.`);
+    if (!body.domains.every((d) => (DD_TAILOR_DOMAINS as readonly string[]).includes(d))) {
+      return badRequest("invalid_request", `domains는 ${DD_TAILOR_DOMAINS.join(" | ")} 중 선택입니다.`);
     }
-    domains = [...new Set(body.domains)] as DdDomain[];
+    domains = [...new Set(body.domains)] as DdTailorDomain[];
   }
 
   const existing = getDb()

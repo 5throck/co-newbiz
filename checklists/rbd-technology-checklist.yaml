@@ -4,7 +4,7 @@ title: "R&BD (Research & Business Development) Technology Checklist"
 scope: shared
 enforceability: mixed
 owner_agent: brownfield-agent
-version: "1.3.0"
+version: "1.5.0"
 effective_from: "2026-08-23"
 gate: DD
 
@@ -30,63 +30,63 @@ gate: DD
 
 items:
   - id: rbd-01
-    text: "Technology Readiness Level (TRL) assessed for the core IP/technology itself, distinct from production-process TRL (technical-dd-checklist tdd-03) — an R&BD target's core risk is whether the underlying technology works at all, before production readiness is even relevant. For a license-in deal (rbd_source: external_technology_acquisition), prioritize direct technical documentation from the licensor over public-source corroboration — license announcements rarely carry the track-record framing a spin-off announcement does (pilot 013 finding F-1)"
+    text: "핵심 IP·기술 자체의 기술 성숙도 평가 (TRL, Technology Readiness Level) — 생산 공정 TRL(technical-dd-checklist tdd-03)과 구분. R&BD 대상의 핵심 위험은 생산 준비도 이전에 기반 기술이 실제로 작동하는지 여부임. 기술 도입(license-in) 거래(rbd_source: external_technology_acquisition)는 공개 자료 교차확인보다 기술 제공자(licensor)의 직접 기술 문서를 우선 확보 — 라이선스 발표에는 분사(spin-off) 발표와 달리 실적 근거가 거의 담기지 않음 (pilot 013 finding F-1)"
     mandatory: true
     waiver_eligible: true
   - id: rbd-02
-    text: "Government co-funding conditions identified if applicable: technology-fee repayment obligation (기술료), IP walk-away/ownership conditions, employment or localization conditions attached to the grant — these can survive a change of control and are easy to miss in a standard DD pass. First classify any government-research-institute relationship as a formal co-funded grant (binding conditions apply) or an informal/in-kind research collaboration (conditions may not apply) — the two carry materially different DD implications (pilot 014 finding F-1, see docs/pilots/pilot-014-c2y-university-techholdings.md)"
+    text: "국가연구개발사업 정부출연금·기업 부담금 조건 확인 (해당 시): 기술료 상환 의무, IP 포기·소유 조건, 출연에 붙은 고용·현지화 조건 — 지배권 변경(change of control) 후에도 유지될 수 있어 일반 실사에서 놓치기 쉬움. 먼저 정부출연연구기관과의 관계를 공식 국가연구개발사업 과제(정부출연금·기업 부담금 구조, 구속 조건 적용)와 비공식·현물 공동연구(조건 미적용 가능)로 구분할 것 — 두 경우의 실사 함의가 크게 다름 (pilot 014 finding F-1, docs/pilots/pilot-014-c2y-university-techholdings.md 참조)"
     mandatory: true
     waiver_eligible: true
   - id: rbd-03
-    text: "Freedom-to-operate (FTO) / IP ownership diligence completed — who actually owns the IP (the target entity, a parent/spin-off originator, a co-development partner, or a government-funded research institute) and whether license terms transfer cleanly on the contemplated deal structure. For active co-research/co-development relationships (as opposed to a completed transfer of pre-existing IP), explicitly diligence joint-IP-ownership terms with the research partner — this is a materially different question from a simple license-in chain (pilot 014 finding F-2)"
+    text: "자유실시(FTO, Freedom-to-Operate) 분석·IP 소유권 실사 완료 — IP의 실제 소유자(대상 법인, 모회사·분사 원천, 공동개발 파트너, 정부출연연구기관)와 검토 중인 거래 구조에서 라이선스 조건이 온전히 이전되는지 확인. 기존 IP의 이전이 끝난 경우가 아니라 공동연구·공동개발이 진행 중인 관계라면 연구 파트너와의 공동 IP 소유 조건을 명시적으로 실사할 것 — 단순 기술 도입 경로와는 본질적으로 다른 문제임 (pilot 014 finding F-2)"
     mandatory: true
     waiver_eligible: true
   - id: rbd-04
-    text: "Commercialization path decision documented with rationale: build as an internal business unit, license the technology out, spin off as an independent entity, or acquire a minority venture stake — the paths have materially different valuation, control, and risk profiles and should not default to one without an explicit comparison. This item concerns the REVIEWING ENTITY's chosen path to the technology, not the target's own founding history (captured separately via rbd_source) — an independently-founded, university/government-research-backed startup that was never anyone's spin-off still requires this decision from the reviewing entity's side (pilot 014 finding F-3)"
+    text: "사업화 경로 결정과 근거 문서화: 내부 사업부로 육성, 기술 이전(license-out), 독립 법인으로 분사, 소수 지분 투자 — 경로별 가치평가·지배력·위험 구조가 크게 다르므로 명시적 비교 없이 한 경로로 기본 설정하지 않음. 이 항목은 대상의 설립 이력(rbd_source로 별도 기록)이 아니라 검토 주체가 기술에 접근하는 경로에 관한 것임 — 누구의 분사도 아닌, 대학·정부 연구 기반의 독립 창업 기업이라도 검토 주체 쪽의 이 결정은 필요함 (pilot 014 finding F-3)"
     mandatory: true
     waiver_eligible: true
   - id: rbd-05
-    text: "The continuing relationship with the technology's originator is documented as part of the deal structure, not treated as fully independent — for a spin-off (rbd_source: internal_only / accelerator_partnered), this is equity retained, customer/supplier relationship, brand association, non-compete scope (see docs/pilots/pilot-011-posco-amberoad.md); for a license-in from an external source such as a research institute (rbd_source: external_technology_acquisition), this is ongoing royalty obligations and eligibility for the licensor's own follow-on co-funding programs, not equity or brand (pilot 013 finding F-2, see docs/pilots/pilot-013-hexapro-etri.md)"
+    text: "기술 원천과의 지속 관계를 완전히 독립된 것으로 보지 않고 거래 구조의 일부로 문서화 — 분사(rbd_source: internal_only / accelerator_partnered)의 경우 잔여 지분, 고객·공급 관계, 브랜드 연계, 경업금지 범위(docs/pilots/pilot-011-posco-amberoad.md 참조); 연구기관 등 외부 원천으로부터의 기술 도입(rbd_source: external_technology_acquisition)의 경우 지분·브랜드가 아니라 지속적 로열티 의무와 기술 제공자의 후속 공동출연 사업 참여 자격 (pilot 013 finding F-2, docs/pilots/pilot-013-hexapro-etri.md 참조)"
     mandatory: true
     waiver_eligible: true
   - id: rbd-06
-    text: "Track record evidence (prior internal deployments, pilot results, disclosed performance metrics) verified against source, not accepted from the target's own pitch materials without corroboration"
+    text: "실적 증거(내부 적용 이력, 시범 결과, 공개 성능 지표)를 원천 자료와 대조해 검증 — 대상 회사의 자체 홍보 자료를 교차확인 없이 받아들이지 않음"
     mandatory: false
     waiver_eligible: true
   - id: rbd-07
-    text: "Technology-obsolescence/substitution risk assessed on the same horizon as the investment's expected holding period — a technology that is state-of-the-art today may not be in 3-5 years"
+    text: "기술 진부화·대체 위험을 투자 예상 보유 기간과 같은 기간 기준으로 평가 — 오늘의 최신 기술이 3~5년 뒤에도 그러하리라는 보장은 없음"
     mandatory: false
     waiver_eligible: true
   - id: rbd-08
-    text: "TRL/MRL evidence matrix — SCREENING row (ADR-0052 §D.1; cutoff APPROVED per docs/decisions/2026-08-24-class-c-decisions.md (a)): scientific basis, roadmap pull, preliminary prior-art/FTO screen; readiness floor TRL 1-2. Typical kill: no plausible principle-to-application path; roadmap absent"
+    text: "TRL/MRL 증거 매트릭스 — 스크리닝(SCREENING) 단계 (ADR-0052 §D.1; 기준값은 docs/decisions/2026-08-24-class-c-decisions.md (a)로 승인): 과학적 근거, 로드맵 수요, 선행기술·FTO 예비 검토; 최소 성숙도 TRL 1-2. 대표 중단 사유: 원리에서 응용까지의 타당한 경로 없음, 로드맵 부재"
     mandatory: true
     waiver_eligible: true
   - id: rbd-09
-    text: "TRL/MRL evidence matrix — PRE-FS row: concept memo, critical-function list, POC experiment protocol; readiness floor TRL 2. Typical kill: concept not credible vs state of the art"
+    text: "TRL/MRL 증거 매트릭스 — 사전 타당성(PRE-FS) 단계: 개념 메모, 핵심 기능 목록, 개념검증(POC) 실험 계획서; 최소 성숙도 TRL 2. 대표 중단 사유: 최신 기술 수준 대비 개념의 신뢰성 부족"
     mandatory: true
     waiver_eligible: true
   - id: rbd-10
-    text: "TRL/MRL evidence matrix — FS-ENTRY row: POC results demonstrating the critical function, reproducible; readiness floor TRL 3. Typical kill: technical feasibility wall"
+    text: "TRL/MRL 증거 매트릭스 — 타당성 착수(FS-ENTRY) 단계: 핵심 기능을 입증하는 재현 가능한 POC 결과; 최소 성숙도 TRL 3. 대표 중단 사유: 기술적 실현 가능성의 벽"
     mandatory: true
     waiver_eligible: true
   - id: rbd-11
-    text: "TRL/MRL evidence matrix — FS/DD row: integrated test data, relevant-environment validation plan, FTO opinion, patent strategy, updated cost model; readiness floor TRL 4-5 / MRL 4-5. Typical kill: FTO failure (blocking third-party IP); unit cost over value ceiling"
+    text: "TRL/MRL 증거 매트릭스 — 타당성·실사(FS/DD) 단계: 통합 시험 데이터, 실사용 환경 검증 계획, FTO 의견서, 특허 전략, 갱신된 원가 모델; 최소 성숙도 TRL 4-5 / MRL 4-5. 대표 중단 사유: FTO 실패(제3자 IP에 의한 저촉), 단위 원가가 가치 상한 초과"
     mandatory: true
     waiver_eligible: true
   - id: rbd-12
-    text: "TRL/MRL evidence matrix — ENTITY-IC (business-case gate) row: full business case; make/buy/partner decision (routes into the deal-shape chain, ADR-0052 §A); real-options valuation; staged funding request for the NEXT stage only; readiness floor TRL 5-6 / MRL 5-6. Typical kill: no viable business model; option value below stage premium"
+    text: "TRL/MRL 증거 매트릭스 — 법인 투자심의(ENTITY-IC, 사업계획 게이트) 단계: 완성된 사업계획(business case); 자체개발·인수·제휴(make/buy/partner) 결정(거래 형태 체인으로 연결, ADR-0052 §A); 실물옵션 가치평가; 다음 단계에 한정한 단계별 자금 요청; 최소 성숙도 TRL 5-6 / MRL 5-6. 대표 중단 사유: 실현 가능한 사업모델 없음, 옵션 가치가 단계 프리미엄에 미달"
     mandatory: true
     waiver_eligible: true
   - id: rbd-13
-    text: "TRL/MRL evidence matrix — POST-IC EXECUTION row: operational-environment demonstration, pilot-line capability, regulatory pathway; readiness floor TRL 7-8 / MRL 7-8. Typical kill: manufacturability failure; regulatory rejection"
+    text: "TRL/MRL 증거 매트릭스 — 투자심의 이후 실행(POST-IC EXECUTION) 단계: 운영 환경 실증, 시범 생산라인 역량, 인허가 경로; 최소 성숙도 TRL 7-8 / MRL 7-8. 대표 중단 사유: 양산성 실패, 인허가 거부"
     mandatory: true
     waiver_eligible: true
   - id: rbd-14
-    text: "Evidence quality rules (GAO TRA Guide, GAO-20-48G — ADR-0052 §D.2): every TRL/MRL claim supported by named tests, test environments, and data artifacts — not assertion; readiness assessments reviewed by a reviewer NOT reporting to the project champion; the assessment records HOW maturity was demonstrated, not only the level claimed; known limitations of readiness scales noted in gate records"
+    text: "증거 품질 규칙 (GAO TRA Guide, GAO-20-48G — ADR-0052 §D.2): 모든 TRL/MRL 주장은 단순 주장이 아니라 이름이 명시된 시험·시험 환경·데이터 산출물로 뒷받침; 성숙도 평가는 프로젝트 책임자(champion)에게 보고하지 않는 검토자가 검토; 평가에는 주장된 수준뿐 아니라 성숙도를 어떻게 입증했는지를 기록; 성숙도 척도의 알려진 한계를 게이트 기록에 남김"
     mandatory: true
     waiver_eligible: true
   - id: rbd-15
-    text: "Staged funding as real options (ADR-0052 §D.3): each stage approval is the exercise of a sequential option — the stage budget is the premium, the next gate the exercise decision; the funding request covers the next stage only, with the option-value vs stage-premium comparison recorded. A negative static NPV does not by itself kill an early technology bet when staging options carry positive value; kill discipline remains when option value sits below the next premium even under favorable scenarios"
+    text: "실물옵션으로서의 단계별 자금 집행 (ADR-0052 §D.3): 각 단계 승인은 순차 옵션의 행사임 — 단계 예산은 프리미엄, 다음 게이트는 행사 결정; 자금 요청은 다음 단계에 한정하고 옵션 가치와 단계 프리미엄 비교를 기록. 정적 NPV가 음수라는 사실만으로 초기 기술 투자를 중단하지 않음(단계 옵션이 양의 가치를 가질 때). 다만 유리한 시나리오에서도 옵션 가치가 다음 프리미엄에 못 미치면 중단 원칙을 유지"
     mandatory: true
     waiver_eligible: true
 

@@ -64,7 +64,7 @@ let rateCookie: string; // analyst, rate-limit scenario
 let bearerToken: string;
 
 beforeAll(async () => {
-  const seed: [string, string, string, string][] = [
+  const seed: [string, "admin" | "analyst" | "viewer", string, string][] = [
     ["pat", "analyst", "pw-pat-1234567", "patCookie"],
     ["patv", "viewer", "pw-patv-123456", "viewerCookie"],
     ["patadmin", "admin", "pw-patadm-12345", "adminCookie"],

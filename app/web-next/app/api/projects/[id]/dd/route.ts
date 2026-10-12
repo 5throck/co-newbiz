@@ -21,6 +21,6 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
   // ADR-0157: optional ?target_id= — omitted = the selected/legacy scope the gate judges.
   const scope = scopeOrResponse(id, new URL(request.url).searchParams.get("target_id"));
   if ("response" in scope) return scope.response;
-  const workspace = listDdWorkspace(id, { targetId: scope.targetId });
+  const workspace = listDdWorkspace(id, { targetId: scope.targetId, viewerId: auth.auth.userId });
   return ok(workspace, 200, { domain_count: workspace.domains.length });
 }

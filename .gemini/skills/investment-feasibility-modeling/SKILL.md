@@ -29,6 +29,7 @@ metadata:
     - brownfield-fs-comparative
     - greenfield-fs
     - greenfield-capability-assessment
+    - deal-structuring
 relates_to:
   - skill: monte-carlo-simulation
     type: follows

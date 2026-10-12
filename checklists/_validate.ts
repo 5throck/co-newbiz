@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.1.0
+// @version 1.3.0
 /**
  * Checklist Validator — co-newbiz
  *
@@ -20,6 +20,25 @@
  *   - item ids not matching the <prefix>-<number> convention
  *   - waiver_eligible: false on a RECOMMENDED item (a recommended item never
  *     blocks, so a no-waiver flag on it is a contradiction)
+ *
+ * Overlays (checklists/_overlays/*.yaml, ADR-0160 addendum b) — ERROR when:
+ *   - meta missing, unknown checklist id, overlay row for a non-existent
+ *     item, or a checklist item missing from the overlay
+ *   - invalid code (A/R/X/N/C), R without reading, N/C without na_reason,
+ *     X without existing replacement targets
+ *   - a binding item (mandatory, waiver_eligible: false) classified anything but A (R/X/N/C)
+ *     (always an error; no exemption)
+ *   - a row without an approved human approval record
+ *   - declared expected_counts differ from the recomputed counts
+ *   - a `steps` entry naming an unknown procedure step, tab, or item, or a
+ *     procedure step left unmapped
+ *   - one of the seven ADR-0148 workspace checklists missing from the overlay
+ *   - brownfield overlays (ADR-0162): code C used; a baseline_sub_track
+ *     (m_and_a) cell that is not A, or a baseline exclusion in
+ *     extra_checklists; an X target not in an extra checklist attached to that
+ *     sub-track (or excluded there); an extra_checklists exclusion of an
+ *     unknown or binding item (bf-01..03 etc.), or without na_reason; declared
+ *     extras_judgeable / total_judgeable differing from the recomputed values
  *
  * What is a WARN:
  *   - legal_basis entries pointing at repo paths that do not exist
@@ -104,6 +123,366 @@ function validateItem(file: string, item: ItemShape, seenIds: Set<string>): Issu
   return issues;
 }
 
+// ---------------------------------------------------------------------------
+// Overlay validation (checklists/_overlays/*.yaml) — ADR-0160 addendum (b).
+// An overlay scopes existing checklist items per track/sub-track without
+// editing checklist text. It is governance: every row needs a human approval
+// record, and the declared counts are recomputed here (fail on mismatch).
+// ---------------------------------------------------------------------------
+
+export const OVERLAY_CODES = ["A", "R", "X", "N", "C"] as const;
+export type OverlayCode = (typeof OVERLAY_CODES)[number];
+
+export interface ChecklistItemFacts {
+  mandatory: boolean;
+  waiver_eligible: boolean;
+}
+
+export interface OverlayContext {
+  /** checklist id (chk-<file stem>) -> item id -> facts */
+  checklists: Map<string, Map<string, ChecklistItemFacts>>;
+  /** procedure id -> step ids */
+  procedureSteps: Map<string, Set<string>>;
+}
+
+/** The seven ADR-0148 S9 workspace checklists every overlay must cover. */
+export const WORKSPACE_CHECKLIST_IDS = [
+  "chk-commercial-dd-checklist",
+  "chk-technical-dd-checklist",
+  "chk-legal-dd-checklist",
+  "chk-market-dd-checklist",
+  "chk-financial-dd-checklist",
+  "chk-hr-dd-checklist",
+  "chk-financing-plan-checklist",
+] as const;
+
+/** Codes allowed per track. C (site_required) exists only on greenfield. */
+const TRACK_CODES: Record<string, readonly OverlayCode[]> = {
+  greenfield: OVERLAY_CODES,
+  brownfield: ["A", "R", "X", "N"],
+};
+
+const OVERLAY_META = ["governance_doc_id", "layer", "title", "owner_agent", "maintainer", "version", "track", "procedure_id"] as const;
+
+function nonEmpty(v: unknown): v is string {
+  return typeof v === "string" && v.trim().length > 0;
+}
+
+export function checklistIdForFile(file: string): string {
+  return `chk-${file.replace(/\.ya?ml$/i, "")}`;
+}
+
+export function validateOverlay(file: string, doc: unknown, ctx: OverlayContext): Issue[] {
+  const issues: Issue[] = [];
+  const err = (item: string, message: string) => issues.push({ file, item, message, severity: "error" });
+
+  if (typeof doc !== "object" || doc === null) {
+    err("(root)", "Overlay root is not a mapping");
+    return issues;
+  }
+  const root = doc as Record<string, unknown>;
+  for (const f of OVERLAY_META) if (!nonEmpty(root[f])) err("(meta)", `Missing or empty required field '${f}'`);
+  if (root.layer !== undefined && root.layer !== "checklist-overlay") err("(meta)", "'layer' must be 'checklist-overlay'");
+  // Approval provenance: every overlay names the decision record (docs/decisions/DEC-YYYYMMDD-NN.md)
+  // that records who approved its classifications and what changed after review.
+  if (!nonEmpty(root.decision_record) || !/^DEC-\d{8}-\d{2}$/.test(String(root.decision_record))) {
+    err("(meta)", "Missing or malformed 'decision_record' (expected DEC-YYYYMMDD-NN)");
+  }
+
+  const subTrackKeys = root.sub_track_keys;
+  if (typeof subTrackKeys !== "object" || subTrackKeys === null || Object.keys(subTrackKeys).length === 0) {
+    err("(meta)", "Missing or empty 'sub_track_keys' mapping");
+    return issues;
+  }
+  const subTracks = Object.keys(subTrackKeys);
+  const track = String(root.track ?? "");
+  const brownfield = track === "brownfield";
+  if (root.track !== undefined && !(track in TRACK_CODES)) err("(meta)", `Unknown track '${track}' (expected ${Object.keys(TRACK_CODES).join("/")})`);
+  const codes = TRACK_CODES[track] ?? OVERLAY_CODES;
+  const baseline = brownfield ? String(root.baseline_sub_track ?? "") : "";
+  if (brownfield && !subTracks.includes(baseline)) err("(meta)", `'baseline_sub_track' must name a declared sub-track (got '${baseline}')`);
+
+  // Brownfield extra checklists: which sub-tracks they attach to and which items are excluded per sub-track.
+  const extraBlocks = (brownfield ? root.extra_checklists ?? {} : {}) as Record<string, Record<string, unknown> | null>;
+  const attachedTo = (checklistId: string): string[] => {
+    const a = extraBlocks[checklistId]?.attached_to;
+    return Array.isArray(a) ? a.map(String) : [];
+  };
+  const excludedIds = (checklistId: string, st: string): Set<string> => {
+    const cell = (extraBlocks[checklistId]?.sub_tracks as Record<string, Record<string, unknown>> | undefined)?.[st];
+    const out = new Set<string>();
+    for (const e of (Array.isArray(cell?.excluded) ? cell.excluded : []) as Record<string, unknown>[])
+      for (const id of (Array.isArray(e?.ids) ? e.ids : []) as unknown[]) out.add(String(id));
+    return out;
+  };
+
+  const checklists = root.checklists;
+  if (typeof checklists !== "object" || checklists === null) {
+    err("(checklists)", "Missing 'checklists' mapping");
+    return issues;
+  }
+
+  for (const id of WORKSPACE_CHECKLIST_IDS)
+    if (!(id in (checklists as Record<string, unknown>))) err(id, "Workspace checklist missing from overlay (ADR-0148 seven domains)");
+
+  const counts: Record<string, Record<OverlayCode, number>> = {};
+  for (const st of subTracks) counts[st] = { A: 0, R: 0, X: 0, N: 0, C: 0 };
+
+  const refExists = (checklist: unknown, item: unknown) =>
+    nonEmpty(checklist) && nonEmpty(item) && (ctx.checklists.get(checklist)?.has(item) ?? false);
+
+  for (const [checklistId, block] of Object.entries(checklists as Record<string, unknown>)) {
+    const facts = ctx.checklists.get(checklistId);
+    if (!facts) {
+      err(checklistId, `Unknown checklist id '${checklistId}' (expected chk-<file stem> of a checklists/*.yaml file)`);
+      continue;
+    }
+    const items = (block as Record<string, unknown> | null)?.items;
+    if (!Array.isArray(items)) {
+      err(checklistId, "Missing or non-array 'items'");
+      continue;
+    }
+    const seen = new Set<string>();
+    for (const raw of items) {
+      const row = (raw ?? {}) as Record<string, unknown>;
+      const id = nonEmpty(row.id) ? row.id : "(missing id)";
+      const label = `${checklistId}/${id}`;
+      if (!nonEmpty(row.id)) {
+        err(label, "Overlay row without 'id'");
+        continue;
+      }
+      if (seen.has(id)) err(label, "Duplicate overlay row");
+      seen.add(id);
+      const itemFacts = facts.get(id);
+      if (!itemFacts) err(label, `Item '${id}' does not exist in checklist '${checklistId}'`);
+
+      const approval = row.approval as Record<string, unknown> | undefined;
+      if (!approval || approval.status !== "approved" || !nonEmpty(approval.approved_by) || !nonEmpty(approval.approved_at)) {
+        err(label, "Missing approval record (status: approved, approved_by, approved_at) — checklist applicability cannot pass on AI review alone");
+      } else if (!/^\d{4}-\d{2}-\d{2}$/.test(String(approval.approved_at))) {
+        err(label, "approval.approved_at must be an ISO date (YYYY-MM-DD)");
+      }
+
+      const cells = row.sub_tracks as Record<string, unknown> | undefined;
+      if (!cells || typeof cells !== "object") {
+        err(label, "Missing 'sub_tracks' mapping");
+        continue;
+      }
+      for (const key of Object.keys(cells)) if (!subTracks.includes(key)) err(label, `Unknown sub-track key '${key}'`);
+      for (const st of subTracks) {
+        const cell = cells[st] as Record<string, unknown> | undefined;
+        const where = `${label}[${st}]`;
+        if (brownfield && cell?.code === "C") {
+          err(where, "C (conditional on site_required) is not used on brownfield — no site rule exists on the brownfield route");
+          continue;
+        }
+        if (!cell || !codes.includes(cell.code as OverlayCode)) {
+          err(where, `Missing or invalid code (expected one of ${codes.join("/")})`);
+          continue;
+        }
+        const code = cell.code as OverlayCode;
+        counts[st][code]++;
+        if (brownfield && st === baseline && code !== "A") err(where, `Baseline sub-track '${baseline}' must be A on every row (byte-identical baseline)`);
+        if (code === "R" && !nonEmpty(cell.reading)) err(where, `R (reinterpreted) requires a ${brownfield ? "brownfield" : "greenfield"} 'reading'`);
+        if ((code === "N" || code === "C") && !nonEmpty(cell.na_reason)) err(where, `${code} requires a user-facing 'na_reason'`);
+        if (code === "C" && !nonEmpty(cell.site_rule)) err(where, "C (conditional) requires 'site_rule'");
+        if (code === "X") {
+          const reps = cell.replaced_by;
+          if (!Array.isArray(reps) || reps.length === 0) err(where, "X (replace) requires a non-empty 'replaced_by' list");
+          else
+            for (const r of reps as Record<string, unknown>[]) {
+              if (!refExists(r?.checklist, r?.item)) err(where, `Replacement target '${r?.checklist}/${r?.item}' does not exist`);
+              if (!nonEmpty(r?.stage)) err(where, "Replacement target needs 'stage' (where it is judged)");
+              if (brownfield && refExists(r?.checklist, r?.item)) {
+                const cid = String(r.checklist);
+                if (!attachedTo(cid).includes(st)) err(where, `Replacement target '${cid}/${String(r.item)}' is not in a checklist attached to sub-track '${st}'`);
+                else if (excludedIds(cid, st).has(String(r.item))) err(where, `Replacement target '${cid}/${String(r.item)}' is itself excluded for sub-track '${st}'`);
+              }
+            }
+        }
+        if (code !== "A" && itemFacts && itemFacts.mandatory && !itemFacts.waiver_eligible) {
+          err(where, `Binding item (mandatory, waiver_eligible: false) classified ${code} — binding items must be A in every column (never reinterpreted, replaced, or scoped out)`);
+        }
+      }
+    }
+    for (const id of facts.keys()) if (!seen.has(id)) err(`${checklistId}/${id}`, "Checklist item missing from overlay (would fail closed to A)");
+  }
+
+  // Declared counts must equal the recomputed counts.
+  const expected = root.expected_counts as Record<string, Record<string, unknown>> | undefined;
+  if (!expected || typeof expected !== "object") {
+    err("(expected_counts)", "Missing 'expected_counts'");
+  } else {
+    for (const st of subTracks) {
+      const exp = expected[st];
+      if (!exp) {
+        err("(expected_counts)", `No expected counts for sub-track '${st}'`);
+        continue;
+      }
+      const got = counts[st];
+      for (const c of codes) {
+        if (exp[c] !== got[c]) err("(expected_counts)", `${st}.${c}: declared ${String(exp[c])}, recomputed ${got[c]}`);
+      }
+      const judgeable = got.A + got.R;
+      if (exp.judgeable !== judgeable) err("(expected_counts)", `${st}.judgeable (A+R): declared ${String(exp.judgeable)}, recomputed ${judgeable}`);
+    }
+  }
+
+  if (brownfield) issues.push(...validateExtraChecklists(file, root, subTracks, baseline, ctx));
+
+  // steps: procedure step -> tabs / items.
+  const tabLabels = (root.tab_labels ?? {}) as Record<string, unknown>;
+  const steps = root.steps;
+  if (steps !== undefined) {
+    const procId = String(root.procedure_id ?? "");
+    const stepIds = ctx.procedureSteps.get(procId);
+    if (!stepIds) err("(steps)", `Unknown procedure_id '${procId}'`);
+    if (!Array.isArray(steps)) err("(steps)", "'steps' must be an array");
+    else {
+      const mapped = new Set<string>();
+      for (const s of steps as Record<string, unknown>[]) {
+        const sid = String(s?.step ?? "");
+        const where = `(steps)/${sid}`;
+        if (stepIds && !stepIds.has(sid)) err(where, `Step '${sid}' does not exist in procedure '${procId}'`);
+        mapped.add(sid);
+        const tabs = s?.tabs;
+        if (!Array.isArray(tabs) || tabs.length === 0) err(where, "Step needs at least one tab");
+        else for (const t of tabs) if (!(String(t) in tabLabels)) err(where, `Tab '${String(t)}' has no entry in 'tab_labels'`);
+        for (const key of ["items", "pointers"] as const) {
+          const refs = s?.[key];
+          if (refs === undefined) continue;
+          if (!Array.isArray(refs)) {
+            err(where, `'${key}' must be an array`);
+            continue;
+          }
+          for (const ref of refs as Record<string, unknown>[]) {
+            for (const item of (Array.isArray(ref?.ids) ? ref.ids : []) as unknown[]) {
+              if (!refExists(ref?.checklist, item)) err(where, `${key} reference '${ref?.checklist}/${String(item)}' does not exist`);
+            }
+          }
+        }
+      }
+      if (stepIds) for (const sid of stepIds) if (!mapped.has(sid)) err("(steps)", `Procedure step '${sid}' is not mapped to any tab`);
+    }
+  }
+  for (const [tab, label] of Object.entries(tabLabels)) {
+    const l = label as Record<string, unknown> | null;
+    if (!nonEmpty(l?.en) || !nonEmpty(l?.ko)) err("(tab_labels)", `Tab '${tab}' needs non-empty 'en' and 'ko' labels`);
+  }
+
+  return issues;
+}
+
+/**
+ * Brownfield `extra_checklists` (ADR-0162 design section 6): section/item
+ * scoping of the sub-track extra checklists. Items not excluded count as
+ * judgeable; binding items can never be excluded; the baseline sub-track
+ * excludes nothing. Recomputes extras_judgeable and total_judgeable.
+ */
+function validateExtraChecklists(file: string, root: Record<string, unknown>, subTracks: string[], baseline: string, ctx: OverlayContext): Issue[] {
+  const issues: Issue[] = [];
+  const err = (item: string, message: string) => issues.push({ file, item, message, severity: "error" });
+  const blocks = root.extra_checklists;
+  if (typeof blocks !== "object" || blocks === null) {
+    err("(extra_checklists)", "Missing 'extra_checklists' mapping (brownfield overlays declare the attached extras, even when unscoped)");
+    return issues;
+  }
+  const extras: Record<string, number> = Object.fromEntries(subTracks.map((s) => [s, 0]));
+  for (const [cid, raw] of Object.entries(blocks as Record<string, unknown>)) {
+    const label = `(extra_checklists)/${cid}`;
+    const block = (raw ?? {}) as Record<string, unknown>;
+    const facts = ctx.checklists.get(cid);
+    if (!facts) {
+      err(label, `Unknown checklist id '${cid}'`);
+      continue;
+    }
+    if ((WORKSPACE_CHECKLIST_IDS as readonly string[]).includes(cid)) err(label, "A workspace checklist cannot also be an extra checklist");
+    const approval = block.approval as Record<string, unknown> | undefined;
+    if (!approval || approval.status !== "approved" || !nonEmpty(approval.approved_by) || !/^\d{4}-\d{2}-\d{2}$/.test(String(approval.approved_at ?? ""))) {
+      err(label, "Missing approval record (status: approved, approved_by, approved_at YYYY-MM-DD) — checklist applicability cannot pass on AI review alone");
+    }
+    const attached = Array.isArray(block.attached_to) ? block.attached_to.map(String) : [];
+    if (attached.length === 0) err(label, "Missing or empty 'attached_to'");
+    for (const st of attached) if (!subTracks.includes(st)) err(label, `Unknown sub-track '${st}' in attached_to`);
+    const cells = (block.sub_tracks ?? {}) as Record<string, Record<string, unknown> | null>;
+    for (const st of Object.keys(cells)) if (!attached.includes(st)) err(`${label}[${st}]`, "Sub-track scoped but not listed in attached_to");
+    for (const st of attached) {
+      if (!subTracks.includes(st)) continue;
+      const where = `${label}[${st}]`;
+      const cell = cells[st];
+      if (!cell) {
+        err(where, "Attached sub-track has no scoping entry (use 'excluded: []' for unscoped)");
+        continue;
+      }
+      if (!Array.isArray(cell.excluded)) {
+        err(where, "'excluded' must be an array");
+        continue;
+      }
+      const excluded = new Set<string>();
+      for (const e of cell.excluded as Record<string, unknown>[]) {
+        if (!nonEmpty(e?.na_reason)) err(where, "Exclusion requires a user-facing 'na_reason'");
+        const ids = Array.isArray(e?.ids) ? (e.ids as unknown[]).map(String) : [];
+        if (ids.length === 0) err(where, "Exclusion requires a non-empty 'ids' list");
+        for (const id of ids) {
+          const f = facts.get(id);
+          if (!f) err(where, `Excluded item '${id}' does not exist in checklist '${cid}'`);
+          else if (f.mandatory && !f.waiver_eligible) err(where, `Binding item '${id}' (mandatory, waiver_eligible: false) excluded — binding items can never be scoped out (no exemption)`);
+          if (excluded.has(id)) err(where, `Item '${id}' excluded twice`);
+          excluded.add(id);
+        }
+      }
+      if (st === baseline && excluded.size > 0) err(where, `Baseline sub-track '${baseline}' extras must stay unscoped (byte-identical baseline)`);
+      extras[st] += [...facts.keys()].filter((id) => !excluded.has(id)).length;
+    }
+  }
+  // Baseline extras must keep their attached checklists; a baseline column must exist.
+  if (subTracks.includes(baseline) && !Object.values(blocks as Record<string, Record<string, unknown> | null>).some((b) => Array.isArray(b?.attached_to) && b.attached_to.includes(baseline))) {
+    err("(extra_checklists)", `No extra checklist attached to baseline sub-track '${baseline}'`);
+  }
+  const expected = (root.expected_counts ?? {}) as Record<string, Record<string, unknown>>;
+  for (const st of subTracks) {
+    const exp = expected[st];
+    if (!exp) continue; // reported by the main pass
+    if (exp.extras_judgeable !== extras[st]) err("(expected_counts)", `${st}.extras_judgeable: declared ${String(exp.extras_judgeable)}, recomputed ${extras[st]}`);
+    const total = (typeof exp.judgeable === "number" ? exp.judgeable : NaN) + extras[st];
+    if (exp.total_judgeable !== total) err("(expected_counts)", `${st}.total_judgeable: declared ${String(exp.total_judgeable)}, recomputed ${total}`);
+  }
+  return issues;
+}
+
+async function loadOverlayContext(checklistFiles: string[]): Promise<OverlayContext> {
+  const checklists = new Map<string, Map<string, ChecklistItemFacts>>();
+  for (const file of checklistFiles) {
+    try {
+      const doc = yaml.load(await readFile(join(CHECKLIST_DIR, file), "utf-8"), { schema: yaml.JSON_SCHEMA }) as { items?: ItemShape[] };
+      const items = new Map<string, ChecklistItemFacts>();
+      for (const it of doc?.items ?? []) {
+        if (typeof it?.id === "string") items.set(it.id, { mandatory: it.mandatory === true, waiver_eligible: it.waiver_eligible !== false });
+      }
+      checklists.set(checklistIdForFile(file), items);
+    } catch {
+      // parse errors are reported by the checklist pass
+    }
+  }
+  const procedureSteps = new Map<string, Set<string>>();
+  const sharedDir = join(REPO_ROOT, "procedures", "_shared");
+  if (existsSync(sharedDir)) {
+    for (const dir of await readdir(sharedDir)) {
+      const schema = join(sharedDir, dir, "schema.yaml");
+      if (!existsSync(schema)) continue;
+      try {
+        const doc = yaml.load(await readFile(schema, "utf-8"), { schema: yaml.JSON_SCHEMA }) as { procedure_id?: string; steps?: { id?: unknown }[] };
+        if (typeof doc?.procedure_id === "string") {
+          procedureSteps.set(doc.procedure_id, new Set((doc.steps ?? []).map((s) => String(s?.id))));
+        }
+      } catch {
+        // procedure parse errors are reported by procedures/_validate.ts
+      }
+    }
+  }
+  return { checklists, procedureSteps };
+}
+
 async function main() {
   const files = (await readdir(CHECKLIST_DIR)).filter((f) => f.endsWith(".yaml") && !f.startsWith("_"));
 
@@ -173,6 +552,24 @@ async function main() {
     }
   }
 
+  // Overlays.
+  const overlayDir = join(CHECKLIST_DIR, "_overlays");
+  let overlayCount = 0;
+  if (existsSync(overlayDir)) {
+    const overlayFiles = (await readdir(overlayDir)).filter((f) => f.endsWith(".yaml"));
+    const ctx = await loadOverlayContext(files);
+    for (const f of overlayFiles) {
+      overlayCount++;
+      const rel = `_overlays/${f}`;
+      try {
+        const doc = yaml.load(await readFile(join(overlayDir, f), "utf-8"), { schema: yaml.JSON_SCHEMA });
+        allIssues.push(...validateOverlay(rel, doc, ctx));
+      } catch (e) {
+        allIssues.push({ file: rel, item: "(parse)", message: `YAML parse error: ${(e as Error).message}`, severity: "error" });
+      }
+    }
+  }
+
   const errors = allIssues.filter((i) => i.severity === "error");
   const warnings = allIssues.filter((i) => i.severity === "warn");
 
@@ -183,7 +580,7 @@ async function main() {
     }
   }
 
-  console.log(`\nChecklist validation: ${files.length} file(s), ${totalItems} item(s), ${errors.length} error(s), ${warnings.length} warning(s).`);
+  console.log(`\nChecklist validation: ${files.length} file(s), ${totalItems} item(s), ${overlayCount} overlay(s), ${errors.length} error(s), ${warnings.length} warning(s).`);
 
   if (errors.length > 0) {
     console.error("❌ Checklist validation failed.");
@@ -192,4 +589,4 @@ async function main() {
   console.log("✅ Checklist validation passed.");
 }
 
-main();
+if (import.meta.main) main();

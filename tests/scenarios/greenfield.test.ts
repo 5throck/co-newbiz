@@ -22,7 +22,7 @@ afterAll(async () => { await browser?.close(); await app?.stop(); });
 describe("greenfield S1 to S12", () => {
   test("S1-S5 and S8-S10 evidence is complete; S6/S7 do not apply to greenfield; S11 is current", async () => {
     await visit(s.page, app, `/projects/${P}/process`);
-    await see(s.page, "트랙: greenfield");
+    await see(s.page, "트랙: 그린필드(신규 설립)");
     await see(s.page, /현재 S11/);
     await see(s.page, "미적용");
     axe.push(await axeScan(s.page, "process (stage rail)"));
@@ -44,8 +44,13 @@ describe("greenfield S1 to S12", () => {
     await visit(s.page, app, `/projects/${P}/ic-review`);
     // R2-B: each step has its own "증적과 함께 완료" action (owner = the person who records it).
     for (let step = 1; step <= 5; step++) {
-      // Completed steps switch to "완료됨", so the first remaining action is always the next step.
-      const action = s.page.getByRole("button", { name: "증적과 함께 완료" }).first();
+      // The UI clears its busy flag before the post-PUT reload lands, so the just-recorded
+      // step's button can briefly still read "증적과 함께 완료". Wait for that step to show
+      // "완료됨" (state, not a sleep), then target this step's own button by aria-controls.
+      if (step > 1) {
+        await s.page.locator(`button[aria-controls="est-step-${step - 1}"]`).filter({ hasText: "완료됨" }).waitFor({ state: "visible", timeout: 30_000 });
+      }
+      const action = s.page.locator(`button[aria-controls="est-step-${step}"]`).filter({ hasText: "증적과 함께 완료" });
       await action.waitFor({ state: "visible", timeout: 30_000 });
       await action.click();
       const form = s.page.locator(`form[aria-label="설립 실행 ${step}단계 기록"]`);

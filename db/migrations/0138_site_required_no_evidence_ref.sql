@@ -1,0 +1,24 @@
+-- 0138_site_required_no_evidence_ref.sql
+-- @reversible: true (one UPDATE of one seed row written by 0136; no schema
+-- change, no other row touched. Manual rollback restores the 0136 value:
+-- ROLLBACK-SQL-BEGIN
+--   UPDATE evidence_var SET requires_evidence_ref = 1 WHERE var_key = 'project.site_required';
+-- ROLLBACK-SQL-END
+-- After a rollback, project.site_required rows written while 0138 was live
+-- keep evidence_ref = '' (dimension_input.evidence_ref is NOT NULL; the
+-- repository stores '' when no reference is collected) — history is never
+-- rewritten; only NEW assertions need a reference again. Rollback mechanism
+-- of record: pre-migration backup restore (scripts/co-newbiz/restore.ts,
+-- ADR-0014). Code rollback: revert the PR.)
+--
+-- ADR-0160 addendum (d) — user decision 2026-10-12: the S9 site_required
+-- confirmation takes effect on one person's confirmation (no second-person
+-- review) and the evidence reference is no longer collected. The repository's
+-- requires_evidence_ref check (db/repositories/dimension-input.repository.ts
+-- assert()) reads this flag, so clearing it is what lets an assertion of
+-- THIS var carry an empty evidence_ref; every other evidenced var is
+-- unchanged. Migration 0136 is not edited (applied migrations are immutable).
+--
+-- No dynamic date functions (ADR-0002); no timestamp column is touched.
+
+UPDATE evidence_var SET requires_evidence_ref = 0 WHERE var_key = 'project.site_required';

@@ -104,13 +104,14 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const load = useCallback(() => {
-    api.get<IcPackage>(`/api/projects/${encodeURIComponent(projectId)}/ic-package`)
+  const load = useCallback((): Promise<unknown> => {
+    const pkgP = api.get<IcPackage>(`/api/projects/${encodeURIComponent(projectId)}/ic-package`)
       .then((r) => setPkg(r.data))
       .catch((e) => setError(e instanceof Error ? e.message : "IC 패키지를 불러오지 못했습니다."));
-    api.get<EstablishmentView>(`/api/projects/${encodeURIComponent(projectId)}/establishment`)
+    const estP = api.get<EstablishmentView>(`/api/projects/${encodeURIComponent(projectId)}/establishment`)
       .then((r) => setEst(r.data))
       .catch(() => { /* the IC package already carries establishment progress */ });
+    return Promise.all([pkgP, estP]);
   }, [projectId]);
 
   useEffect(() => { load(); }, [load]);
@@ -133,9 +134,10 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
           });
           setNotice("설립 실행 단계가 기록되었습니다. 완료확인(5단계)은 선행 4단계가 모두 완료된 후에만 완료할 수 있습니다.");
           toast(`설립 실행 ${stepNo}단계를 기록했습니다.`);
+          // Reload before clearing busy/closing the form so no stale enabled button is clickable.
+          await load();
           setOpenStep(null);
           setForm({ status: "done", evidence_url: "", note: "" });
-          load();
         } catch (e) {
           setError(e instanceof Error ? e.message : "설립 실행 기록 실패");
         } finally {
@@ -365,6 +367,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
                             type="button"
                             className="btn-ghost btn-sm"
                             disabled={busy || isDone}
+                            aria-busy={busy}
                             aria-expanded={open}
                             aria-controls={`est-step-${n}`}
                             onClick={() => { setOpenStep(open ? null : n); setForm({ status: "done", evidence_url: "", note: "" }); }}

@@ -85,11 +85,11 @@ function adoptedCase(): NonNullable<Parameters<typeof evaluateTargets>[2]> {
     created_by: "test",
     created_at: NOW,
     lines: [
-      { id: "l1", category: "revenue", name: "장비 매출", annual_amount_krw_m: 40000, start_year: 1, growth_rate: 0.05, note: null },
-      { id: "l2", category: "labor", name: "인건비", annual_amount_krw_m: 20000, start_year: 1, growth_rate: 0, note: null },
-      { id: "l3", category: "opex", name: "운영비", annual_amount_krw_m: 10000, start_year: 1, growth_rate: 0, note: null },
+      { id: "l1", category: "revenue", name: "장비 매출", annual_amount_krw_m: 40000, start_year: 1, growth_rate: 0.05, unit: null, note: null },
+      { id: "l2", category: "labor", name: "인건비", annual_amount_krw_m: 20000, start_year: 1, growth_rate: 0, unit: null, note: null },
+      { id: "l3", category: "opex", name: "운영비", annual_amount_krw_m: 10000, start_year: 1, growth_rate: 0, unit: null, note: null },
       // capex is investment — must stay out of the operating-margin numerator
-      { id: "l4", category: "capex", name: "설비 투자", annual_amount_krw_m: 20000, start_year: 1, growth_rate: 0, note: null },
+      { id: "l4", category: "capex", name: "설비 투자", annual_amount_krw_m: 20000, start_year: 1, growth_rate: 0, unit: null, note: null },
     ],
     simulations: [],
   };
@@ -248,6 +248,20 @@ describe("business-target standards (ADR-0114)", () => {
     // custom KPI → manual
     expect(byMetric.custom.status).toBe("manual");
     expect(byMetric.custom.label).toBe("R&D 투자 비중");
+  });
+
+  test("NPV/IRR use only the recommended scenario p50; a missing one is indeterminate (no first-p50 fallback)", () => {
+    const resolved = resolveBusinessTargets(G1, M1);
+    const sim = (scenario: string) => ({ id: `s-${scenario}`, model_id: "case-1", scenario, percentile: "p50", npv_krw_m: 90000, irr: 0.2, note: null });
+    const c = { ...adoptedCase(), simulations: [sim("bull")] } as ReturnType<typeof adoptedCase>;
+    const miss = Object.fromEntries(evaluateTargets(resolved, SCOPE, c, "base").map((e) => [e.metric_key, e]));
+    expect(miss.npv.status).toBe("indeterminate");
+    expect(miss.npv.actual).toBeNull();
+    expect(miss.npv.actual_basis).toContain("대체하지 않음");
+    const none = Object.fromEntries(evaluateTargets(resolved, SCOPE, c, null).map((e) => [e.metric_key, e]));
+    expect(none.npv.status).toBe("indeterminate");
+    const hit = Object.fromEntries(evaluateTargets(resolved, SCOPE, c, "bull").map((e) => [e.metric_key, e]));
+    expect(hit.npv.actual).toBe(90000);
   });
 
   test("no adopted case → indeterminate for computable metrics, manual for custom", () => {

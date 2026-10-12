@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * @version 1.0.1
+ * @version 1.2.0
  */
 // sync-library-projection.ts — refreshes app/web-next/lib/library.generated.ts from
 // its source files. SSOT is the source documents (checklists/, procedures/, docs/);
@@ -8,6 +8,12 @@
 // projection: `content` for every entry, and for checklists also version, item_count
 // (LIBRARY_DOCS + LIBRARY_CONTENT) and LIBRARY_CHECKLIST_ITEMS. It never adds or
 // removes a document — a new library document still needs its entry added by hand.
+// It also embeds the S9 workspace scope overlay (ADR-0160 addendum b,
+// checklists/_overlays/greenfield-workspace-scope.yaml) as LIBRARY_WORKSPACE_OVERLAY,
+// so an overlay edit without a regenerated projection fails --check.
+// v1.2.0 also embeds the brownfield overlay (ADR-0162,
+// checklists/_overlays/brownfield-workspace-scope.yaml) as
+// LIBRARY_BROWNFIELD_WORKSPACE_OVERLAY under the same drift check.
 //
 // Usage:
 //   bun scripts/co-newbiz/sync-library-projection.ts           # rewrite the projection
@@ -58,12 +64,25 @@ for (const id of Object.keys(ITEMS)) {
   }
 }
 
+function loadOverlay(name: string): unknown {
+  const file = join(ROOT, "checklists", "_overlays", name);
+  const doc = existsSync(file) ? yaml.load(readFileSync(file, "utf-8"), { schema: yaml.JSON_SCHEMA }) : null;
+  if (!doc) console.warn(`[warn] overlay missing: ${file} (projection carries null — every item applies as-is)`);
+  return doc ?? null;
+}
+const OVERLAY = loadOverlay("greenfield-workspace-scope.yaml");
+const BF_OVERLAY = loadOverlay("brownfield-workspace-scope.yaml");
+
 const head = src.slice(0, src.indexOf("export const LIBRARY_DOCS"));
 const next =
   head +
   `export const LIBRARY_DOCS: LibraryDocSummary[] = ${JSON.stringify(DOCS, null, 2)};\n\n` +
   `export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = ${JSON.stringify(CONTENT, null, 2)};\n\n` +
-  `export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = ${JSON.stringify(ITEMS, null, 2)};\n`;
+  `export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = ${JSON.stringify(ITEMS, null, 2)};\n\n` +
+  `// Source: checklists/_overlays/greenfield-workspace-scope.yaml (read by lib/greenfield-subtrack.ts; null = no overlay, fail-closed to A).\n` +
+  `export const LIBRARY_WORKSPACE_OVERLAY: unknown = ${JSON.stringify(OVERLAY, null, 2)};\n\n` +
+  `// Source: checklists/_overlays/brownfield-workspace-scope.yaml (read by lib/brownfield-subtrack.ts; null = no overlay, fail-closed to A).\n` +
+  `export const LIBRARY_BROWNFIELD_WORKSPACE_OVERLAY: unknown = ${JSON.stringify(BF_OVERLAY, null, 2)};\n`;
 
 for (const m of missing) console.warn(`[warn] source file missing, entry left as is: ${m}`);
 

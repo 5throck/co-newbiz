@@ -29,6 +29,9 @@ import { FinancialAnalysisPanel } from "../FinancialAnalysisPanel.tsx";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject, isReadOnlyAdmin } from "../../lib/project-write-access.ts";
 import { countLegacyUnassignedModels } from "../../lib/business-case-legacy.ts";
+import { GoalPromptDialog, GoalsBanner, GoalsPanel, type GoalsData } from "../business-case/GoalsPanel.tsx";
+import { GOALS_ACK_REQUIRED_CODE, goalsAckErrorText, goalsLoadErrorText, resolveS8Tab, shouldRedirectTargetsTab, type CaseAttainmentEntry } from "../../lib/business-goals-view.ts";
+import { GoalAttainmentTable, NoGoalsCallout } from "../business-case/GoalAttainment.tsx";
 
 // S8 사업성 분석 — 이중 관점 밸류에이션 비교 (ADR-0117; approved mockup
 // docs/designs/mockups/2026-09-11-dual-view-valuation-ui-mockup_ko.html).
@@ -129,6 +132,9 @@ interface CasesResponse {
   engines_mixed?: boolean;
   methods_mixed?: boolean;
   escalated_cagr_pct: number | null;
+  /** ADR-0159: per-case goal attainment keyed by case id (absent/empty = no goals). */
+  goal_attainment?: Record<string, CaseAttainmentEntry[]>;
+  goal_count?: number;
 }
 interface ActivityRow {
   activityId: string;
@@ -164,7 +170,9 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   const urlSync = !embedded;
   const [localTab, setLocalTab] = useState("scenarios");
   const tabParam = urlSync ? searchParams.get("tab") : localTab;
-  const tab = tabParam === "decision" || tabParam === "overview" || tabParam === "params" || tabParam === "target-costing" || tabParam === "wacc" || tabParam === "financial-analysis" || tabParam === "targets" ? tabParam : "scenarios";
+  // Greenfield (no target axis) hides the target compare/select tab; old deep links land on scenarios (ADR-0159).
+  const [greenfield, setGreenfield] = useState(false);
+  const tab = resolveS8Tab(tabParam, { greenfield });
   const setTab = (key: string) => {
     if (urlSync) router.replace(`/projects/${projectId}/business-case?tab=${key}`, { scroll: false });
     else setLocalTab(key);
@@ -175,11 +183,19 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
     if (tabParam === "wacc") router.replace(`/projects/${projectId}/wacc`);
     else if (tabParam === "financial-analysis") router.replace(`/projects/${projectId}/financial-analysis`);
   }, [urlSync, tabParam, projectId, router]);
+  useEffect(() => {
+    if (urlSync && shouldRedirectTargetsTab(tabParam, greenfield)) router.replace(`/projects/${projectId}/business-case?tab=scenarios`, { scroll: false });
+  }, [urlSync, tabParam, greenfield, projectId, router]);
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
   const readOnlyAdmin = isReadOnlyAdmin(me?.role);
   const { confirm, confirmDialog } = useConfirm();
   const [data, setData] = useState<CasesResponse | null>(null);
+  const [goalsData, setGoalsData] = useState<GoalsData | null>(null);
+  // Adoption without goals needs an explicit acknowledgement (409 goals_ack_required).
+  const [ackFor, setAckFor] = useState<string | null>(null);
+  const [ackError, setAckError] = useState<string | null>(null);
+  const [goalsLoadError, setGoalsLoadError] = useState<string | null>(null);
   // 에스컬레이션 조정 CAGR (§4-Q2) — 과거 기반 관점과의 괴리 경고용
   const [escalatedCagrPct, setEscalatedCagrPct] = useState<number | null>(null);
   const [run, setRun] = useState<{ runId: string; status: string; activities: ActivityRow[] } | null>(null);
@@ -245,11 +261,19 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
   const load = useCallback(() => {
     api.get<CasesResponse>(`/api/projects/${encodeURIComponent(projectId)}/business-case`)
-      .then((r) => { setData(r.data); setEscalatedCagrPct(r.data.escalated_cagr_pct ?? null); })
+      .then((r) => { setData(r.data); setGreenfield(r.data.targets.length === 0); setEscalatedCagrPct(r.data.escalated_cagr_pct ?? null); })
       .catch((e) => setError(e instanceof Error ? e.message : "사업성 분석 데이터를 불러오지 못했습니다."));
   }, [projectId]);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadGoals = useCallback(() => {
+    api.get<GoalsData>(`/api/projects/${encodeURIComponent(projectId)}/business-goals`)
+      .then((r) => { setGoalsData(r.data); setGoalsLoadError(null); })
+      .catch((e) => { setGoalsData(null); setGoalsLoadError(goalsLoadErrorText(e, "사업 목표를 불러오지 못했습니다.")); }); // INTERIM-WORDING; goals are reference evidence: a failed load never blocks S8
+  }, [projectId]);
+  useEffect(() => { loadGoals(); }, [loadGoals]);
+  const onGoalsChanged = useCallback(() => { loadGoals(); load(); }, [loadGoals, load]);
 
   // regenerate=true — "대상별 재생성": bypasses the already-run guard and
   // starts a NEW generation run (per-target models, ADR-0143). The ordinary
@@ -279,22 +303,27 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
     }
   }
 
+  async function postAdopt(modelId: string, goalsAck?: { acknowledged: true; note: string }) {
+    setBusy(true); setError(null); setAckError(null);
+    try {
+      await api.post(`/api/projects/${encodeURIComponent(projectId)}/business-case/adopt`, { model_id: modelId, ...(goalsAck ? { goals_ack: goalsAck } : {}) });
+      setAckFor(null);
+      load();
+    } catch (e) {
+      // ADR-0159: no goals apply -> a confirmation requirement, not a block. The note is mandatory (400 goals_ack_note_required).
+      const noteProblem = goalsAckErrorText(e);
+      if (noteProblem) { setAckFor(modelId); setAckError(noteProblem); }
+      else if ((e as { code?: string } | null)?.code === GOALS_ACK_REQUIRED_CODE) setAckFor(modelId);
+      else setError(e instanceof Error ? e.message : "채택 실패");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function adopt(modelId: string, scenario: string | null, variant: string) {
     confirm(
       `사업 케이스 채택${scenario ? ` — ${SCEN_LABEL[scenario] ?? scenario} · ${VARIANT_LABEL[variant] ?? variant}` : ""}`,
-      () => {
-        void (async () => {
-          setBusy(true); setError(null);
-          try {
-            await api.post(`/api/projects/${encodeURIComponent(projectId)}/business-case/adopt`, { model_id: modelId });
-            load();
-          } catch (e) {
-            setError(e instanceof Error ? e.message : "채택 실패");
-          } finally {
-            setBusy(false);
-          }
-        })();
-      },
+      () => { void postAdopt(modelId); },
       { body: "이 케이스를 타당성 분석(FS) 진행 입력으로 채택합니다. 채택은 인간 결정이며 감사 기록으로 남습니다." },
     );
   }
@@ -387,6 +416,12 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
     }
     return map;
   }, [data, targets.length, effectiveTargetFilter]);
+
+  // Goal counts: the goals endpoint is authoritative; the cases payload is the fallback.
+  const goalsLoaded = goalsData !== null || data?.goal_count !== undefined;
+  const goalCount = goalsData
+    ? goalsData.goal_count_by_source.project + goalsData.goal_count_by_source.affiliate + goalsData.goal_count_by_source.group
+    : data?.goal_count ?? 0;
 
   const hasHistorical = (data?.cases ?? []).some((c) => c.variant === "historical");
 
@@ -491,9 +526,10 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         active={tab}
         onSelect={setTab}
         tabs={[
+          { key: "goals", label: "사업 목표" }, // INTERIM-WORDING
+          { key: "scenarios", label: "시나리오 비교" },
           ...(targets.length > 0 ? [{ key: "targets", label: "대상 비교·선정" }] : []),
           { key: "overview", label: "설명·생성·권고" },
-          { key: "scenarios", label: "시나리오 비교" },
           { key: "params", label: "파라미터·스냅샷" },
           { key: "target-costing", label: "타겟코스팅" },
           { key: "wacc", label: "WACC" },
@@ -502,8 +538,10 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         ]}
       />
       )}
+      <GoalsBanner data={goalsData} loadError={goalsLoadError} onOpenGoals={() => setTab("goals")} hideAction={tab === "goals"} />
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">{error}</p>}
 
+      {tab === "goals" && <GoalsPanel projectId={projectId} data={goalsData} canAct={canAct} onChanged={onGoalsChanged} loadError={goalsLoadError} />}
       {tab === "params" && <ParamsPanel projectId={projectId} />}
       {tab === "target-costing" && <TargetCostingPanel projectId={projectId} />}
       {tab === "wacc" && <WaccPanel projectId={projectId} />}
@@ -820,6 +858,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           />
         </div>
       )}
+      {goalsLoaded && goalCount === 0 && <NoGoalsCallout onOpenGoals={() => setTab("goals")} />}
       {SCENARIOS.map((s) => {
         const cases = byScenario.get(s) ?? [];
         const newestMf = cases.find((c) => c.variant === "market_forward");
@@ -927,6 +966,11 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                 </tbody>
               </table></div>
             )}
+            <GoalAttainmentTable
+              cases={cases.map((c) => ({ id: c.id, header: VARIANT_LABEL[c.variant] ?? c.variant }))}
+              attainment={data?.goal_attainment}
+              goalCount={goalCount}
+            />
             {(cases[0]?.simulations?.[0]?.note) && (
               <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" title="재현 근거 (동일 시드로 재계산해도 같은 결과)">{cases[0].simulations[0].note}</p>
             )}
@@ -974,6 +1018,19 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       )}
       </StageFrame>
       {confirmDialog}
+      {ackFor && (
+        <GoalPromptDialog
+          title="목표 비교 없이 채택" // INTERIM-WORDING
+          body="이 프로젝트에는 적용되는 사업 목표가 없거나, 적용되는 목표가 모두 판정 불가·수동 확인뿐이라 자동 비교가 되지 않습니다. 목표 비교 없이 케이스를 채택하려면 사유를 반드시 적어야 하며, 확인 내용과 사유는 채택 기록에 남습니다." // INTERIM-WORDING
+          confirmLabel="목표 비교 없이 채택"
+          textLabel="채택 사유"
+          textRequired
+          checkLabel="목표와의 자동 비교 없이 채택함을 확인합니다."
+          errorText={ackError}
+          onConfirm={(note) => void postAdopt(ackFor, { acknowledged: true, note })}
+          onClose={() => { setAckFor(null); setAckError(null); }}
+        />
+      )}
 </>
   );
 }

@@ -284,7 +284,7 @@ describe("S8 brownfield per-target generation (ADR-0143)", () => {
     const adopt = await req(`/api/projects/${projectId}/business-case/adopt`, {
       method: "POST",
       headers: { cookie: analystCookie },
-      body: JSON.stringify({ model_id: modelOf(targetBId) }),
+      body: JSON.stringify({ model_id: modelOf(targetBId), goals_ack: { acknowledged: true, note: "test: 목표 비교 없이 진행" } }),
     });
     expect(adopt.status).toBe(201);
     const list = await req(`/api/projects/${projectId}/business-case`, { headers: { cookie: analystCookie } });

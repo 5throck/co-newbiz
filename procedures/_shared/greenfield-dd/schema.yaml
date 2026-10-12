@@ -3,15 +3,71 @@ procedure_id: shared-greenfield-dd
 title: "Green Field Due Diligence"
 scope: shared
 level: entity
-version: "1.0.0"
+version: "1.1.0"
 status: active
 applicability: mandatory
 workflow_type: core
 gate: DD
 
+# v1.1.0 (ADR-0160, Proposed; design 2026-10-11-greenfield-dd-and-investment-
+# structure-by-subtrack) — sub-track-aware evidence steps. The procedure id,
+# gate DD, mandatory applicability, the waiver path and the DD completion
+# criterion are unchanged; only WHICH evidence steps apply differs.
+#
+# Selection rule (greenfield sub-track values: null | existing_business_rbd |
+# intra_venture; any other value on a greenfield route is treated as unknown
+# -> the null/site-based default applies and a warning is surfaced, never a
+# block or a guess):
+#   step 1, 2, 3  — null sub-track: always (byte-identical to v1.0.0).
+#                   existing_business_rbd / intra_venture: steps 1 and 3 unless
+#                   a human confirmed site_required = false; step 2 -> step 6.
+#   step 6        — existing_business_rbd, intra_venture.
+#   step 7        — existing_business_rbd, intra_venture (optional for null
+#                   when the plan is technology-led).
+#   step 8        — intra_venture only.
+#   step 4, 5     — every sub-track.
+# site_required is a human-confirmed fact recorded as a project.site_required
+# dimension_input assertion confirmed by a single person with a written
+# rationale (no evidence reference is required) through the human-only
+# greenfield-scope route; each confirmation writes the audit entry
+# dimension_input_single_person_confirmation. A null (plain) sub-track cannot
+# be confirmed as site_required = false (rule being changed in the backend,
+# 2026-10-12; the code in greenfield-subtrack.ts is authoritative).
+# Null sub-track defaults to true; existing_business_rbd and intra_venture have
+# NO default — a human must always confirm it (site steps apply until then).
+#
+# NOT RUNTIME-EVALUATED: the step applies_when predicates below are
+# documentation only. app/web-next/lib/greenfield-subtrack.ts is authoritative
+# for which steps apply; tests/unit/greenfield-subtrack.test.ts parses this file
+# and fails on drift from the code's excluded_steps.
+#
+# Machine applies_when (ADR-0160 addendum, migration 0136): project.sub_track
+# (column var off the current route_decision; a route with no sub-track reads
+# 'none') and project.site_required (asserted, live AND reviewed only) are
+# seeded routing vars, so the conditions above are applies_when predicates.
+# Predicate semantics (db/lib/applies-when.ts, fail-closed):
+#   - no current route (sub_track UNASSESSED) -> every step applies;
+#   - 'none' or any unknown / brownfield value -> the null-sub-track result
+#     (steps 1-5 apply, 6-8 do not); the selection code surfaces a warning
+#     for an unknown value, never a block;
+#   - existing_business_rbd / intra_venture without a reviewed site_required ->
+#     UNASSESSED -> site steps APPLY until a human confirms (no default).
+# Step 7's "optional for the null sub-track when technology-led" stays prose:
+# it is a human choice, not a routing fact. Projects whose earliest
+# project_policy_pin predates GF_SUBTRACK_PREDICATE_DATE keep v1.0.0
+# selection unless a human opts them in through a recorded pin migration
+# (migration_note in the audit trail).
+
 steps:
   - id: 1
     gate: DD
+    applies_when:
+      op: none_of
+      of:
+        - op: all_of
+          of:
+            - { op: "in", var: "project.sub_track", values: ["existing_business_rbd", "intra_venture"] }
+            - { op: "cmp", var: "project.site_required", cmp: "eq", value: false }
     agent_key: technical-dd-agent
     skill_key: site-visit-protocol
     output_type: dd_finding
@@ -19,18 +75,75 @@ steps:
       Site visit(s) against `checklists/technical-dd-checklist.yaml` and
       `checklists/site-selection-checklist.yaml` — findings land as
       dd_finding records with value_impact, never narrative-only.
+      Applies to the null sub-track always; to existing_business_rbd and
+      intra_venture only when site_required = true.
   - id: 2
     gate: DD
+    applies_when:
+      op: none_of
+      of:
+        - { op: "in", var: "project.sub_track", values: ["existing_business_rbd", "intra_venture"] }
     agent_key: greenfield-agent
     skill_key: talent-pipeline-planning
     output_type: dd_finding
-    description: Talent pipeline and ramp-up curve validation against `checklists/site-selection-checklist.yaml` ss-07.
+    description: >
+      Talent pipeline and ramp-up curve validation against
+      `checklists/site-selection-checklist.yaml` ss-07. Null sub-track only;
+      existing_business_rbd and intra_venture use step 6 instead.
   - id: 3
     gate: DD
+    applies_when:
+      op: none_of
+      of:
+        - op: all_of
+          of:
+            - { op: "in", var: "project.sub_track", values: ["existing_business_rbd", "intra_venture"] }
+            - { op: "cmp", var: "project.site_required", cmp: "eq", value: false }
     agent_key: greenfield-agent
     skill_key: community-partnership-planning
     output_type: dd_finding
-    description: Community acceptance and prior dispute history check (`checklists/site-selection-checklist.yaml` ss-08).
+    description: >
+      Community acceptance and prior dispute history check
+      (`checklists/site-selection-checklist.yaml` ss-08). Applies to the null
+      sub-track always; to existing_business_rbd and intra_venture only when
+      site_required = true.
+  - id: 6
+    gate: DD
+    applies_when: { op: "in", var: "project.sub_track", values: ["existing_business_rbd", "intra_venture"] }
+    agent_key: greenfield-agent
+    skill_key: org-readiness-assessment
+    output_type: dd_finding
+    description: >
+      Core-team and capability readiness (design step 2b) — R&BD team
+      composition, key-person dependency and capability gaps, recorded as
+      dd_finding with value_impact from the org-readiness-assessment
+      artifact (no new checklist item; ADR-0160 Q4). Applies to
+      existing_business_rbd and intra_venture.
+  - id: 7
+    gate: DD
+    applies_when: { op: "in", var: "project.sub_track", values: ["existing_business_rbd", "intra_venture"] }
+    agent_key: technical-dd-agent
+    skill_key: technical-due-diligence
+    output_type: dd_finding
+    description: >
+      Technology and market plan verification (design step 3b) against
+      `checklists/rbd-technology-checklist.yaml` (TRL/MRL evidence rows
+      rbd-08..rbd-14 at the FS/DD row, FTO rbd-03, originator relationship
+      rbd-05, obsolescence rbd-07) and `checklists/market-dd-checklist.yaml`.
+      Applies to existing_business_rbd and intra_venture; optional for the
+      null sub-track when the plan is technology-led.
+  - id: 8
+    gate: DD
+    applies_when: { op: "cmp", var: "project.sub_track", cmp: "eq", value: "intra_venture" }
+    agent_key: greenfield-agent
+    skill_key: org-readiness-assessment
+    output_type: dd_finding
+    description: >
+      Entity readiness for the venture vehicle (design step 3c) —
+      `checklists/entity-formation-checklist.yaml` ef-01, ef-03 and ef-07
+      (pre-formation IP) read as plan-verification evidence only; formation
+      execution stays in S11 (entity-establishment-execution). Applies to
+      intra_venture only.
   - id: 4
     gate: DD
     agent_key: risk-officer
@@ -47,6 +160,14 @@ steps:
     output_type: gate_pass_record
     description: Confirm DD deliverables complete; open Entity IC.
 
+# Kill-criteria scope (ADR-0160): the valuation-bridge criterion applies to
+# every greenfield sub-track. The wastewater criterion is scoped to plans
+# with site_required = true; it is NOT deleted. Its registry predicate counts
+# sites with an insufficient, unmitigated wastewater assessment, so a plan
+# with no site in scope cannot trip it — the scope is a selection rule, not a
+# second predicate (the kill-criterion record itself is unchanged by 0136). No
+# FTO-blocked kill criterion is added here (ADR-0160 Q6: follow-up for
+# legal-counsel).
 kill_criteria:
   - condition: wastewater_capacity_insufficient_and_no_mitigation
     action: halt
@@ -58,6 +179,8 @@ legal_basis:
   - "Design v1.0 §5.3, §12 (DD-to-valuation-bridge verification gate)"
   - "docs/governance/process-map.md — DD row"
   - "checklists/technical-dd-checklist.yaml, checklists/site-selection-checklist.yaml"
+  - "checklists/rbd-technology-checklist.yaml, checklists/market-dd-checklist.yaml, checklists/entity-formation-checklist.yaml (ef-01, ef-03, ef-07)"
+  - "ADR-0160 (Proposed) — sub-track-aware greenfield S9 steps; addendum 2026-10-12 (migration 0136 routing vars)"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-08-20"
+last_reviewed: "2026-10-11"

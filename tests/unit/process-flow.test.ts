@@ -118,6 +118,26 @@ describe("process flow spec integrity (ADR-0074)", () => {
     }
   });
 
+  test("S9 dispatches every ADR-0148 DD domain as a stage-level activity (v2.7.0, ADR-0160 addendum c)", () => {
+    const s9 = spec.stages.find((s) => s.id === "S9")!;
+    expect(s9.activities.map((a) => `${a.id}:${a.agent}`)).toEqual([
+      "commercial-dd:commercial-dd-agent",
+      "technical-dd:technical-dd-agent",
+      "legal-dd:legal-counsel",
+      "financial-dd:financial-analyst",
+      "hr-dd:hr-integration-agent",
+      "market-dd:market-intelligence-agent",
+      "financing-dd:financing-agent",
+      "dd-waiver-review:compliance-officer",
+    ]);
+    for (const a of s9.activities) expect(a.procedure).toEqual(["greenfield-dd", "brownfield-dd"]);
+    const skillsOf = (id: string) => s9.activities.find((a) => a.id === id)!.skills;
+    expect(skillsOf("financial-dd")).toEqual(["quality-of-earnings", "historical-financial-analysis"]);
+    expect(skillsOf("hr-dd")).toEqual(["org-readiness-assessment", "talent-pipeline-planning"]);
+    expect(skillsOf("market-dd")).toEqual(["competitive-intelligence"]);
+    expect(skillsOf("financing-dd")).toEqual([]);
+  });
+
   test("applicable tracks are valid", () => {
     for (const s of spec.stages) {
       for (const t of s.applicableTracks) expect(VALID_TRACKS).toContain(t);

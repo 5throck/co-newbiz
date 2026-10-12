@@ -166,7 +166,7 @@ function RouteDecisionRedirect() {
 }
 
 /** 검토/안건 미지정 진입 전용 — 검토/안건 컨텍스트(project id)가 없어 스테이지 레일 없이
-    breadcrumb · h1 · 만들기 액션 · 설명을 표시한다(R2-A 페이지 계약). */
+    h1 · 만들기 액션 · 설명을 표시한다(R2-A 페이지 계약). */
 function StageFrameLite() {
   return (
     <>

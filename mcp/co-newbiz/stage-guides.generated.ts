@@ -4,7 +4,7 @@
 // prompts and flowspec:// resources (ADR-0154, Wave M M-3).
 import type { StageGuideSpec } from "./stage-guides.ts";
 
-export const GUIDE_SPEC_VERSION = "2.6.0";
+export const GUIDE_SPEC_VERSION = "2.7.0";
 export const GUIDE_STAGES: StageGuideSpec[] = [
   {
     "id": "S1",
@@ -409,6 +409,38 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
       {
         "id": "legal-dd",
         "agent": "legal-counsel",
+        "procedure": [
+          "greenfield-dd",
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "financial-dd",
+        "agent": "financial-analyst",
+        "procedure": [
+          "greenfield-dd",
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "hr-dd",
+        "agent": "hr-integration-agent",
+        "procedure": [
+          "greenfield-dd",
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "market-dd",
+        "agent": "market-intelligence-agent",
+        "procedure": [
+          "greenfield-dd",
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "financing-dd",
+        "agent": "financing-agent",
         "procedure": [
           "greenfield-dd",
           "brownfield-dd"

@@ -28,6 +28,17 @@ export const METRIC_PRESETS: MetricPreset[] = [
 
 export const CUSTOM_METRIC_KEY = "custom";
 
+const DIRECTIONS = new Set<TargetDirection>(["gte", "lte"]);
+
+export function parseDirection(value: unknown): TargetDirection | null {
+  return typeof value === "string" && DIRECTIONS.has(value as TargetDirection) ? (value as TargetDirection) : null;
+}
+
+export function parseTargetValue(value: unknown): number | null {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
 export function presetFor(metricKey: string): MetricPreset | null {
   return METRIC_PRESETS.find((p) => p.key === metricKey) ?? null;
 }

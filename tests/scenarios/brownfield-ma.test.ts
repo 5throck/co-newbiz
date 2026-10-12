@@ -76,7 +76,7 @@ describe("brownfield M&A S1 to S12", () => {
   test("S1-S10 evidence is complete; S11 is the current stage", async () => {
     await visit(s.page, app, `/projects/${P}/process`);
     await see(s.page, /현재 S9/);
-    await see(s.page, "트랙: brownfield / m_and_a");
+    await see(s.page, "트랙: 브라운필드(인수합병) · M&A");
     axe.push(await axeScan(s.page, "process (stage rail)"));
     await visit(s.page, app, "/deals");
     await see(s.page, "S1-S12 데모 Brownfield 프로젝트");

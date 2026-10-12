@@ -28,13 +28,14 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
   {
     stage: "S8", name: "사업성 분석",
     tabs: [
-      { seg: "", label: "요약" },
+      { seg: "/business-case", query: "goals", label: "사업 목표" }, // INTERIM-WORDING (ADR-0159)
       { seg: "/business-case", label: "시나리오 비교" },
       { seg: "/business-case", query: "targets", label: "대상 비교·선정" },
       { seg: "/wacc", label: "WACC" },
       { seg: "/financial-analysis", label: "재무분석" },
     ],
     more: [
+      { seg: "", label: "요약" },
       { seg: "/business-case", query: "overview", label: "설명·생성·권고" },
       { seg: "/business-case", query: "params", label: "파라미터·스냅샷" },
       { seg: "/business-case", query: "target-costing", label: "타겟코스팅" },
@@ -118,4 +119,11 @@ export function activeTabIndex(group: StageTabGroup, seg: string, tabParam: stri
 export function tabHref(projectId: string, t: StageTabDef): string {
   const base = `/projects/${projectId}${t.seg}`;
   return t.query ? `${base}?tab=${t.query}` : base;
+}
+
+/** Greenfield has no target axis (ADR-0159): drop the target compare/select tab. */
+export function groupForTrack(group: StageTabGroup, track: string | null | undefined): StageTabGroup {
+  if (track !== "greenfield") return group;
+  const keep = (t: StageTabDef) => !(t.seg === "/business-case" && t.query === "targets");
+  return { ...group, tabs: group.tabs.filter(keep), more: group.more.filter(keep) };
 }

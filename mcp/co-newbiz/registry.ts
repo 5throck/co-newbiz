@@ -196,7 +196,9 @@ const BASE_TOOLS: readonly RegistryTool[] = [
   defineTool({
     name: "get_project_dd_workspace",
     description: "S9 tailored DD workspace (S1-S11 chain) — standard checklist items with live judgment state, custom items with provenance, findings, the completion summary, and targets[] (comparison table source). Default scope is the selected target the gate judges; optional target_id reads an opened comparison target. Read-only; tailoring review and opening DD on another target are web-first human decisions.",
-    scope: "read", kind: "read", stageActivities: ["commercial-dd", "technical-dd", "legal-dd"],
+    // flow.spec v2.7.0 (ADR-0160 addendum c): the workspace renders all seven
+    // ADR-0148 domains, so the four added S9 activities read through it too.
+    scope: "read", kind: "read", stageActivities: ["commercial-dd", "technical-dd", "legal-dd", "financial-dd", "hr-dd", "market-dd", "financing-dd"],
     inputSchema: {
       type: "object",
       properties: {
