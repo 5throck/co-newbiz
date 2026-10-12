@@ -345,4 +345,42 @@ describe("agent boundary (HUMAN_ONLY_ROUTES)", () => {
     expect(halted.error).toBeNull();
     expect(stepRow(4).status).toBe("halted");
   });
+
+  test("assign resolves the existing row even when it carries a checklist_item; GET hides a stray duplicate", async () => {
+    let real = db.query("SELECT id FROM entity_establishment_step WHERE project_id = ? AND step_no = 3").get(projectId) as { id: string } | null;
+    if (!real) {
+      real = { id: ulid() };
+      db.run(
+        `INSERT INTO entity_establishment_step (id, opportunity_id, project_id, step_no, status, origin, checklist_item, evidence_url, owner, updated_at)
+         VALUES (?,?,?,3,'done','internal','seeded item','https://evidence.example/3','seed',?)`,
+        [real.id, oppId, projectId, NOW],
+      );
+    }
+    const realId = real.id;
+    db.run("UPDATE entity_establishment_step SET status='done', checklist_item='seeded item', assignee_user_id=NULL WHERE id = ?", [realId]);
+    const before = (db.query("SELECT COUNT(*) c FROM entity_establishment_step WHERE project_id = ? AND step_no = 3").get(projectId) as { c: number }).c;
+    const res = await assign({ step_no: 3, assignee_user_id: MEMBER });
+    expect(res.status).toBe(200);
+    const rows = db.query("SELECT id, assignee_user_id FROM entity_establishment_step WHERE project_id = ? AND step_no = 3").all(projectId) as Array<Record<string, any>>;
+    expect(rows.length).toBe(before);
+    expect(rows[0].id).toBe(realId);
+    expect(rows[0].assignee_user_id).toBe(MEMBER);
+
+    // Pre-existing stray pending duplicate (the reported bug): hidden, assign hits the real row.
+    const strayId = ulid();
+    db.run(
+      `INSERT INTO entity_establishment_step (id, opportunity_id, project_id, step_no, status, origin, checklist_item, owner, updated_at, assignee_user_id)
+       VALUES (?,?,?,3,'pending','internal',NULL,'seed',?,?)`,
+      [strayId, oppId, projectId, NOW, LEAD],
+    );
+    const { listEstablishmentSteps } = await import("../../app/web-next/lib/establishment.ts");
+    const listed = listEstablishmentSteps(projectId).filter((r) => r.step_no === 3);
+    expect(listed.length).toBe(1);
+    expect(listed[0].id).toBe(realId);
+    expect(listed[0].status).toBe("done");
+    expect((await assign({ step_no: 3, assignee_user_id: null })).status).toBe(200);
+    expect((db.query("SELECT assignee_user_id a FROM entity_establishment_step WHERE id = ?").get(realId) as any).a).toBeNull();
+    expect((db.query("SELECT COUNT(*) c FROM entity_establishment_step WHERE project_id = ? AND step_no = 3").get(projectId) as { c: number }).c).toBe(before + 1);
+    db.run("DELETE FROM entity_establishment_step WHERE id = ?", [strayId]);
+  });
 });

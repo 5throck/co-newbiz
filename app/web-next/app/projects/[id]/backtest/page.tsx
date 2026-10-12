@@ -1,5 +1,6 @@
 "use client";
 
+import { fmtNpvInteger } from "@/lib/npv-format";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
@@ -46,8 +47,8 @@ function BacktestView() {
               <tbody>{rows.map((r) => (
                 <tr key={r.project_id} className={r.project_id === id ? "row-selected" : undefined}>
                   <td className="font-semibold cell-truncate">{r.name} <span className="note">{r.project_id === id ? "· 이 검토/안건" : ""}</span></td>
-                  <td className="col-num tabular-nums">{r.forecast_npv_krw_m}억</td>
-                  <td className="col-num tabular-nums">{r.actual_npv_krw_m != null ? `${r.actual_npv_krw_m}억` : "—"}</td>
+                  <td className="col-num tabular-nums">{fmtNpvInteger(r.forecast_npv_krw_m)}억</td>
+                  <td className="col-num tabular-nums">{r.actual_npv_krw_m != null ? `${fmtNpvInteger(r.actual_npv_krw_m)}억` : "—"}</td>
                   <td className="col-num tabular-nums">{r.deviation_pct != null ? `${r.deviation_pct > 0 ? "+" : ""}${r.deviation_pct}%` : "—"}</td>
                   <td>{r.status === "within_band" ? <span className="status-chip status-green">예측권 내</span> : r.status === "outlier" ? <span className="status-chip status-red">아웃라이어</span> : <span className="status-chip status-gray">증거 부족</span>}</td>
                 </tr>
