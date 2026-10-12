@@ -162,11 +162,11 @@ gates:
       - 미해소 필수 미충족이 0건이다
     killCriteria:
       - waiver 불가능한 필수 항목 미충족 지속
-    fundingDecision: IC 패키지 작성 자원 배정
+    fundingDecision: 투자심의 자료 작성 자원 배정
   - id: entity_ic
     name: Entity IC
     decisionCriteria:
-      - IC 패키지가 완비되었다
+      - 투자심의 자료가 완비되었다
       - 사람 최종 승인 필수 산출물의 reviewed_by가 기록되었다
     killCriteria:
       - 필수 산출물 미승인
@@ -601,7 +601,7 @@ stages:
         skills: [financing-plan-review]
         procedure: [deal-structuring]
         # sources & uses를 수집해 균형(조달=사용)을 맞추고, 커버넌트 여력·
-        # 자금 확정성 증빙을 IC 패키지에 첨부 가능한 형태로 남긴다.
+        # 자금 확정성 증빙을 투자심의 자료에 첨부 가능한 형태로 남긴다.
     requiredArtifacts:
       - 투자구조 가설(4축 검토 완료)
       - 자금조달 계획(sources & uses 균형)
@@ -614,9 +614,9 @@ stages:
 
   - id: S11
     name: 투자심사·실행
-    objective: "투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 IC 패키지로 묶어 Entity/Group IC 심사를 통과하고, 승인되면 트랙에 맞는 실행에 들어간다(인수 종결, 법인 설립, greenfield 실행 기준선 확정)"
+    objective: "투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 투자심의 자료로 묶어 Entity/Group IC 심사를 통과하고, 승인되면 트랙에 맞는 실행에 들어간다(인수 종결, 법인 설립, greenfield 실행 기준선 확정)"
     inputs:
-      - IC 패키지(사업계획·DD·RAG·검토)
+      - 투자심의 자료(사업계획·DD·RAG·검토)
       - 투자 구조안(S10 투자구조 설계의 산출물 — 투자 주체·4축 검토·자금조달 계획)
       - 사람 최종 승인 산출물
     outputs:
@@ -649,7 +649,7 @@ stages:
         skills: []
         procedure: [entity-ic-review, jv-lifecycle-governance]
         # S11은 투자 구조를 설계하지 않는다 — S10 투자구조 설계 산출물(투자 주체·
-        # 4축 검토·자금조달 계획)을 IC 패키지에 참조로 묶을 뿐이다.
+        # 4축 검토·자금조달 계획)을 투자심의 자료에 참조로 묶을 뿐이다.
         # jv-lifecycle-governance는 Route가 JV인 경우에 적용한다 (설립·거버넌스·
         # 출구 전 라이프사이클 약속의 기준선).
         # v2.8.0 (ADR-0161 Q6): owner는 brownfield-agent 그대로(활동 필드는 트랙별로
@@ -688,7 +688,7 @@ stages:
         # 램프업 KPI 목표(S8 채택 케이스·ADR-0159 목표는 참고) → 인센티브 의무 → 사람 확인
         # (1인·근거 필수). 신설 법인이면 entity-establishment-execution이 함께 실행된다.
     requiredArtifacts:
-      - IC 패키지
+      - 투자심의 자료
       - 추진계획(차터) 기준선 — 목적·트랙 근거·진출 범위·KPI 선커밋
       - 사람 최종 승인(reviewer 기록)
       - 설립 실행 기록(설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint})

@@ -241,7 +241,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
       <StageFrame stageId="S10" heading={isGf ? `S10 ${GF_S10_STAGE_LABEL} — 설립 법인 형태·4축 검토·자금조달·집행 단계` : "S10 투자구조 설계 — 투자 주체·4축 검토·자금조달"}>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
           {isGf ? "설립 법인 형태(SPC 포함)" : "투자 주체(SPC 포함)"}와 절세 구조·책임 격리·재무 레버리지·엑싯 구조 4대 축을 검토하고,
-          자금조달 sources &amp; uses를 균형시킵니다. 이 산출물이 S11 IC 패키지의 입력입니다.
+          자금조달 sources &amp; uses를 균형시킵니다. 이 산출물이 S11 투자심의 자료의 입력입니다.
         </p>
 
         {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">{error}</p>}

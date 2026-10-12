@@ -10,7 +10,7 @@ import { canWriteProject } from "../../../../lib/project-write-access.ts";
 
 // 보고서 탭 — 스냅샷 · 렌더러 (ADR-0116 Phase 6; approved mockup
 // docs/designs/mockups/2026-09-11-reports-composer-ui-mockup_ko.html).
-// IC 패키지로 초안을 만들고, 포맷(docx/pdf/hwpx)을 지정해 저장·렌더링,
+// 투자심의 자료로 초안을 만들고, 포맷(docx/pdf/hwpx)을 지정해 저장·렌더링,
 // 이력에서 다운로드한다. 스냅샷은 불변 이력이며 초안 생성은 어디까지나 제안.
 
 interface RenderRow { snapshot_id: string; format: string; created_at: string }
@@ -48,7 +48,7 @@ export default function ReportsPage() {
       );
       setTitle(r.data.title);
       setContent(r.data.content_md);
-      setMessage(`IC 패키지 초안 생성 완료 — 섹션: ${r.data.sections.join(" · ")}. 검토·수정 후 저장하세요.`);
+      setMessage(`투자심의 자료 초안 생성 완료 — 섹션: ${r.data.sections.join(" · ")}. 검토·수정 후 저장하세요.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "초안 생성에 실패했습니다.");
     } finally {
@@ -88,7 +88,7 @@ export default function ReportsPage() {
       <h3 className="sizing-step-title">새 보고서 스냅샷</h3>
       <div className="flex gap-2 items-center flex-wrap mt-1">
         <button type="button" className="btn-ghost btn-sm" disabled={composing || busy} onClick={() => void compose()}>
-          {composing ? "초안 생성 중..." : "🧾 IC 패키지로 초안 생성"}
+          {composing ? "초안 생성 중..." : "🧾 투자심의 자료로 초안 생성"}
         </button>
         <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">채택된 사업 케이스(NPV/IRR) · DD 완료 요약 · RAG 제안 · 진행 이력 · 이중 관점 비교를 자동 구성합니다</span>
       </div>
@@ -118,7 +118,7 @@ export default function ReportsPage() {
     <section className="market-section sizing-step mt-3">
       <h3 className="sizing-step-title">보고서 이력 <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">— 최신순 · 렌더 파일 다운로드</span></h3>
       {!view ? <p>불러오는 중...</p> : view.reports.length === 0 ? (
-        <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">저장된 보고서가 없습니다 — 위에서 <b>IC 패키지로 초안 생성</b> 후 스냅샷을 저장하세요.</p>
+        <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">저장된 보고서가 없습니다 — 위에서 <b>투자심의 자료로 초안 생성</b> 후 스냅샷을 저장하세요.</p>
       ) : (
         <table className="data-table">
           <thead><tr><th scope="col">제목</th><th scope="col">생성</th><th scope="col">렌더 파일</th><th scope="col">상태</th></tr></thead>

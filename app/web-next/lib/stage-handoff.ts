@@ -18,7 +18,7 @@ export const STAGE_HANDOFF: Record<StageMetaId, StageHandoff> = {
   S7: { inputs: ["S6 Universe 정의", "S6 Long List"], output: "S8 사업성 분석 (승격)" },
   S8: { inputs: ["S5 진출전략·BC 라인 (GF)", "S7 Short List 재무 (BF)", "WACC 확정값"], output: "S9 실사·검증" },
   S9: { inputs: ["S8 채택 BC (체크리스트 테일러링)", "진행 체크리스트"], output: "S10 투자구조 설계" },
-  S10: { inputs: ["S8 채택 BC", "S9 발견사항 (가치 영향)", "WACC·hurdle"], output: "S11 투자심사 (IC 패키지)" },
+  S10: { inputs: ["S8 채택 BC", "S9 발견사항 (가치 영향)", "WACC·hurdle"], output: "S11 투자심사 (투자심의 자료)" },
   S11: { inputs: ["S10 구조 가설·자금조달", "채택 BC", "차터 기준선", "DD 발견사항"], output: "S12 사후 관리" },
   S12: { inputs: ["S11 IC 승인", "차터 KPI 선커밋 (목표값 자동 병합)", "PMI 시너지 추적"], output: "포트폴리오 전환 결정 (종료)" },
 };

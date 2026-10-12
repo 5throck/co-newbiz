@@ -111,7 +111,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (icGo && openGaps.length > 0 && !gapRationale) {
     return unprocessable(
       "ic_gap_rationale_required",
-      `누락 산출물이 있는 상태의 ${body.gate} GO에는 예외 근거(gap_rationale)가 필요합니다 — 누락: ${openGaps.join("; ")}. 근거는 결정 기록과 함께 저장되어 IC 패키지에 남습니다.`,
+      `누락 산출물이 있는 상태의 ${body.gate} GO에는 예외 근거(gap_rationale)가 필요합니다 — 누락: ${openGaps.join("; ")}. 근거는 결정 기록과 함께 저장되어 투자심의 자료에 남습니다.`,
     );
   }
   const gapOverride = icGo && gapRationale && openGaps.length > 0

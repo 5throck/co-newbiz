@@ -72,7 +72,7 @@ function GapDialog({ gateLabel, gaps, onCancel, onSubmit }: { gateLabel: string;
       <div ref={panelRef} className="modal-panel" role="alertdialog" aria-modal="true" aria-label="누락 산출물 경고" style={{ maxWidth: "32rem", width: "100%" }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-head"><h2 style={{ fontSize: "0.95rem" }}>{gateLabel} GO - 누락된 산출물이 있습니다</h2></div>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2 mb-2">
-          아래 항목이 갖춰지지 않은 채로 GO를 기록하려 합니다. 시스템은 기록을 막지 않습니다 - 결정은 사람의 몫입니다(경계 #2). 다만 예외 근거를 직접 적어야 하며, 근거는 IC 패키지에 함께 남습니다.
+          아래 항목이 갖춰지지 않은 채로 GO를 기록하려 합니다. 시스템은 기록을 막지 않습니다 - 결정은 사람의 몫입니다(경계 #2). 다만 예외 근거를 직접 적어야 하며, 근거는 투자심의 자료에 함께 남습니다.
         </p>
         <ul className="sizing-note-list mb-2" aria-label="누락 항목">
           {gaps.map((g) => <li key={g}>{g}</li>)}
