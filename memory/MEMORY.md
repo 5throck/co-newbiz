@@ -4,13 +4,14 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-10-13](2026-10-13.md) | chore(scripts): workspace sync (16 files) |
 | [2026-10-12](2026-10-12.md) | chore: workspace sync |
 | [2026-10-11](2026-10-11.md) | chore: update |
 | [2026-10-10](2026-10-10.md) | fix(s8): consume per-target WACC in brownfield business-case valuation (ADR-0156 amendment 2) |
 | [2026-10-09](2026-10-09.md) | fix(web-next): guard incomplete sizing matrix and register graft surfaces |
 | [2026-10-08](2026-10-08.md) | chore: upgrade template to 0.14.0 |
 | [2026-10-07](2026-10-07.md) | chore: upgrade template to 0.13.1 |
-| [2026-10-05](2026-10-05.md) | chore: upgrade template to 0.12.0 |
+| 2026-10-05 | chore: upgrade template to 0.12.0 |
 | 2026-10-03 | chore: upgrade template to 0.10.0 |
 | 2026-10-03 | chore(upgrade): template sync v0.10.0 delivery (2026-10-03) |
 | 2026-10-02 | chore(upgrade): template sync v0.9.0 fleet rollout (T-20261001-021) |

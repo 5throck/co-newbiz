@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-12T22:29:27.493Z
+**Generated**: 2026-10-12T23:50:01.809Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -236,7 +236,7 @@
 | design-lint.ts | 1.4.0 | scripts/co-newbiz/design-lint.ts | N/A |
 | design-lint.ts | 2.1.0 | scripts/design-lint.ts | js-yaml |
 | deterministic.ts | 1.1.0 | scripts/eval/deterministic.ts | N/A |
-| dev-sync.ts | 1.26.0 | scripts/dev-sync.ts | bun |
+| dev-sync.ts | 1.27.0 | scripts/dev-sync.ts | bun |
 | dispatch-parallel.ts | 1.1.1 | scripts/dispatch-parallel.ts | N/A |
 | dispatch-serial.ts | 1.1.2 | scripts/dispatch-serial.ts | N/A |
 | dispatch.ts | 1.1.1 | scripts/dispatch.ts | N/A |
@@ -318,7 +318,7 @@
 | typecheck.ts | 1.2.0 | scripts/typecheck.ts | N/A |
 | types.ts | 1.1.0 | scripts/eval/types.ts | N/A |
 | update-footers.ts | 1.0.0 | scripts/handbook/update-footers.ts | N/A |
-| upgrade-project.ts | 1.70.0 | scripts/upgrade-project.ts | N/A |
+| upgrade-project.ts | 1.70.2 | scripts/upgrade-project.ts | N/A |
 | ux-layout-check.ts | 1.0.0 | scripts/co-newbiz/ux-layout-check.ts | N/A |
 | validate-agents.ts | 1.3.2 | scripts/validate-agents.ts | N/A |
 | validate-decisions.ts | 1.1.0 | scripts/validate-decisions.ts | js-yaml |
