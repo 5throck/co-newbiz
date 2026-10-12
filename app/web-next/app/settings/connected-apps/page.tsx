@@ -10,6 +10,7 @@ import { useAuth } from "../../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../../lib/project-write-access.ts";
 import { Button, PageState, PrimaryAction, useToast } from "../../../components/ui.tsx";
 import { ColGroup } from "../../../components/ui.tsx";
+import { useConfirm } from "../../../components/crud.tsx";
 import { useModalFocus } from "../../../lib/use-modal-focus.ts";
 
 // 개인 API 토큰 목록 표 열 비율(2026-10-11-table-column-sizing-system batch 2) —
@@ -185,6 +186,7 @@ function PersonalTokensSection() {
   const { me } = useAuth();
   const canIssue = canWriteBusiness(me?.role);
   const { toast } = useToast();
+  const { confirm, confirmDialog } = useConfirm();
 
   const [tokens, setTokens] = useState<PersonalToken[] | null>(null);
   const [listError, setListError] = useState<string | null>(null);
@@ -229,13 +231,18 @@ function PersonalTokensSection() {
     }
   }
 
-  async function revoke(t: PersonalToken) {
-    if (
-      !window.confirm(
-        `"${t.label}" 토큰을 해지할까요? 해지는 되돌릴 수 없으며, 이 토큰을 사용 중인 앱은 즉시 접근이 차단됩니다.`,
-      )
-    )
-      return;
+  function revoke(t: PersonalToken) {
+    confirm(
+      `"${t.label}" 토큰 해지`,
+      () => void doRevoke(t),
+      {
+        body: "해지는 되돌릴 수 없으며, 이 토큰을 사용 중인 앱은 즉시 접근이 차단됩니다.",
+        confirmLabel: "해지",
+      },
+    );
+  }
+
+  async function doRevoke(t: PersonalToken) {
     try {
       await api.delete(`/api/tokens/${encodeURIComponent(t.id)}`);
       toast(`"${t.label}" 토큰을 해지했습니다.`);
@@ -254,6 +261,7 @@ function PersonalTokensSection() {
 
   return (
     <section aria-labelledby="pat-heading" className="market-section" style={{ marginTop: "var(--space-5, 1.5rem)" }}>
+      {confirmDialog}
       <h2 id="pat-heading">개인 API 토큰</h2>
       <p className="objective">
         로컬 stdio MCP 서버(<code>mcp/co-newbiz</code>)나 스크립트를 내 계정으로 연결할 때 발급합니다. 호스팅 AI 앱은
@@ -409,6 +417,7 @@ export default function ConnectedAppsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
   const { toast } = useToast();
+  const { confirm, confirmDialog } = useConfirm();
 
   const load = useCallback(() => {
     setError(null);
@@ -420,8 +429,14 @@ export default function ConnectedAppsPage() {
 
   useEffect(load, [load]);
 
-  async function revoke(app: ConnectedApp) {
-    if (!window.confirm(`"${app.name}" 연결을 해지할까요? 이 앱은 즉시 접근 권한을 잃습니다.`)) return;
+  function revoke(app: ConnectedApp) {
+    confirm(`"${app.name}" 연결 해지`, () => void doRevoke(app), {
+      body: "이 앱은 즉시 접근 권한을 잃습니다.",
+      confirmLabel: "해지",
+    });
+  }
+
+  async function doRevoke(app: ConnectedApp) {
     setBusyId(app.client_id);
     try {
       await api.delete(`/api/oauth/apps/${encodeURIComponent(app.client_id)}`);
@@ -436,6 +451,7 @@ export default function ConnectedAppsPage() {
 
   return (
     <main aria-labelledby="apps-heading">
+      {confirmDialog}
       <div className="page-header-row">
         <h1 id="apps-heading">연결된 앱</h1>
         <span className="ml-auto">

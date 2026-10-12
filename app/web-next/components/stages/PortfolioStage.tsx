@@ -363,12 +363,12 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
           <h3 className="sizing-step-title text-[0.95rem]">
             <span className="sizing-step-badge">⚖️</span> 포트폴리오 전환 결정 — venture-portfolio-IC 인적 결정 장부
           </h3>
-          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
+          <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
             아래 기록은 사람(venture-portfolio-IC)의 결정이며, 이 화면의 사용자는 그 결정을 <strong>기록</strong>하는
             역할만 수행합니다. 결정자는 사람 역할 키로 고정되고
             기록자는 세션 사용자로 남습니다.
             <RawKey parts={[resolveLabel(RECORD_KEY_LABEL, "decided_by"), resolveLabel(RECORD_KEY_LABEL, "recorded_by")]} />
-          </p>
+          </div>
           {(view?.decisions.history.length ?? 0) > 0 ? (
             <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table" aria-label="전환 결정 이력">
               <caption className="sr-only">전환 결정 이력 (추가 전용)</caption>

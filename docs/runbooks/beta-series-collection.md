@@ -32,3 +32,42 @@ re-apply via portal 마이페이지 → API 사용 신청).
 Until then every call returns `respCode 401 — Unauthorized API Call` and the
 script exits 1 with 0 observations. Re-apply, wait for approval, and rerun;
 resolved 단축코드 are cached in `db/data/krx-stock-code-cache.json`.
+
+## Request shape: one call per (service, weekday)
+
+Every KRX daily service takes a single reference date, `basDd=YYYYMMDD`, and
+returns all rows of that day (every index of the family, or every listed stock
+of the market). A date range (`bgnDd`/`endDd`) is not supported: KRX answers
+HTTP 200 with an empty `OutBlock_1`. Request and field names were verified live
+on 2026-10-12.
+
+- The collector iterates the weekdays of each month (Saturdays, Sundays and
+  future dates are skipped) and calls each service once per day with a
+  two concurrent workers spaced at least 250 ms apart, and one retry on network errors, 5xx, or throttling (403/429, longer backoff).
+- A day payload is cached in-process per (service, day), so the KOSDAQ index
+  and every KOSDAQ-listed company share one call per day.
+- An empty `OutBlock_1` on a weekday is a holiday/non-trading day; it is
+  skipped and counted.
+- Index rows are picked by exact `IDX_NM` (`코스피`, `코스닥`) with a numeric
+  `CLSPRC_IDX`; rows such as `코스피 (외국주포함)` (empty close) are never used.
+  Stock rows are picked by `ISU_CD` (6-digit short code) with close
+  `TDD_CLSPRC`.
+- The stock master (`sto/*_isu_base_info`) is called with `basDd` of the most
+  recent non-empty weekday and matched on `ISU_ABBRV`/`ISU_NM` (exact, then
+  prefix, then substring; ambiguity is reported, not guessed).
+
+**Call volume**: about weekdays x distinct services. Thirteen months is about
+280 weekdays; with the KOSPI index, KOSDAQ index, and one stock service that is
+roughly 850 calls, plus 1-2 master calls per company. The default per-run call
+budget is 2000 (`--budget N` to change it). The script prints calls, cache
+hits, and empty-day counts.
+
+## Troubleshooting
+
+| Symptom | Meaning | Action |
+|---|---|---|
+| `0 observations` and "every KRX payload was empty" | wrong params (range instead of `basDd`) or only non-trading days in range | check the script version; widen `--from/--to` |
+| `respCode 401 ... re-apply` | key valid but service not approved/expired | re-apply at portal 마이페이지 → API 사용 신청 |
+| `HTTP 403` / `5xx` / timeout after retry | KRX burst throttling (seen at concurrency 4) or outage | wait and rerun (reruns are cache hits) |
+| `not found in KOSDAQ master` / `ambiguous` | name does not match the listed abbreviation | pin with `--ticker 회사명=<6-digit code>` |
+| `call budget exhausted` | range too large for the budget | raise `--budget` or narrow the range |

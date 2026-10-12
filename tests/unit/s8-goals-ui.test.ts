@@ -60,8 +60,8 @@ describe("banner state", () => {
     expect(applied.kind).toBe("applied");
     const t = bannerText(applied);
     expect(t.message).toContain("3건");
-    expect(t.message).toContain("프로젝트 2");
-    expect(t.message).toContain("그룹 1");
+    expect(t.message).toContain("프로젝트 목표 2건");
+    expect(t.message).toContain("그룹 목표 1건");
     expect(t.message).not.toContain("계열사");
     expect(t.actionLabel).toBe("목표 검토");
     expect(t.standardsNote).toContain("적용됩니다");
@@ -143,5 +143,26 @@ describe("ack note, migration_pending and two-person release", () => {
     expect(releaseAction({ ...base, pending_release: pending }, "x")).toMatchObject({ allowed: true, kind: "approve", label: "집행 승인" });
     expect(trancheErrorText("second_person_required", "f")).toMatch(/다른 사람/);
     expect(read("components/stages/CapexTrancheTable.tsx")).toContain('aria-live="polite"');
+  });
+});
+
+describe("S8 scenario row actions (RowMenu)", () => {
+  const src = readFileSync(join(import.meta.dir, "../../app/web-next/components/stages/BusinessCaseStage.tsx"), "utf8");
+  test("keeps adopt as a visible button and moves lines/delete into RowMenu", () => {
+    expect(src).toContain("<RowMenu");
+    expect(src).toMatch(/key: "delete", label: "삭제", danger: true[^}]*onSelect: \(\) => remove\(c\)/);
+    expect(src).toMatch(/key: "lines", label: "라인 편집"[^}]*startEdit\(c\)/);
+    expect(src).toMatch(/aria-label=\{`\$\{rowCtx\} 채택`\}[^>]*onClick=\{\(\) => adopt\(/);
+    expect(src).not.toMatch(/btn-danger btn-sm[^\n]*remove\(c\)/);
+  });
+  test("lines action is labelled 라인 편집 and scrolls/focuses the editor, naming the row", () => {
+    expect(src).toContain('label: "라인 편집"');
+    expect(src).not.toContain('label: "라인 보기"');
+    expect(src).toMatch(/scrollIntoView\(\{ block: "start"/);
+    expect(src).toContain("prefers-reduced-motion");
+    expect(src).toContain("editorTextRef.current?.focus");
+    expect(src).toContain("편집 대상:");
+    expect(src).toContain("라인 편집기가 아래에 열렸습니다");
+    expect(src).toContain('.row-menu-trigger`)?.focus()');
   });
 });

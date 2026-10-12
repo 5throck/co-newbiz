@@ -1171,8 +1171,8 @@ export function listDdWorkspace(projectId: string, opts: { targetId?: string | n
     .all(projectId, targetId) as unknown as FindingRow[];
 
   const domainLabels: Record<DdDomain, string> = {
-    commercial: "Commercial DD", technical: "Technical DD", legal: "Legal DD",
-    // The four ADR-0148 domains carry the Korean DD_DOMAIN_LABEL titles.
+    commercial: DD_DOMAIN_LABEL.commercial!, technical: DD_DOMAIN_LABEL.technical!, legal: DD_DOMAIN_LABEL.legal!,
+    // All seven domains carry the Korean DD_DOMAIN_LABEL titles (UI tabs, payload and reports agree).
     financial: DD_DOMAIN_LABEL.financial!, hr: DD_DOMAIN_LABEL.hr!, market: DD_DOMAIN_LABEL.market!, financing: DD_DOMAIN_LABEL.financing!,
   };
   const countsNewDomains = countsUnassessedItems(projectId);
@@ -1198,11 +1198,12 @@ export function listDdWorkspace(projectId: string, opts: { targetId?: string | n
   });
 
   // Wave F-8 (audit B1): sub-track-specific checklists appended as extra tabs.
+  // INTERIM-WORDING: Korean tab titles (no glossary term exists for partnership / pre-signing).
   const SUB_TRACK_TITLES: Record<string, string> = {
-    "chk-brownfield-feasibility-checklist": "M&A 6대 검증 (Brownfield Feasibility)",
+    "chk-brownfield-feasibility-checklist": "M&A 6대 검증(브라운필드 타당성)", // INTERIM-WORDING
     "chk-ma-special-topics-checklist": "M&A 특수 주제",
-    "chk-partnership-checklist": "Partnership",
-    "chk-deal-shape-presigning-checklist": "Pre-signing 딜 구조",
+    "chk-partnership-checklist": "파트너십 점검", // INTERIM-WORDING
+    "chk-deal-shape-presigning-checklist": "체결 전 딜 구조 점검", // INTERIM-WORDING
     "chk-rbd-technology-checklist": "R&BD 기술",
     "chk-entity-formation-checklist": "법인 설립 준비 (계획 검증)",
   };

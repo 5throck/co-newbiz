@@ -1,4 +1,4 @@
-// @version 1.2.0
+// @version 1.3.0
 /**
  * source-adapters.ts — the pluggable data-source adapter framework
  * (design: docs/designs/2026-09-09-source-adapter-framework-design.md).
@@ -368,31 +368,30 @@ const KRX_BASE = "https://data-dbg.krx.co.kr/svc/apis";
  *                                 beta-series API resolvable from a project
  *                                 row alone.
  *
- * ⚠ Per-service request PARAMETER and output FIELD names ship UNVERIFIED: the
- * k-krx skill publishes the API IDs and the AUTH_KEY transport (verified
- * 2026-09-11), but field names live in each service's 개발 명세서 behind a
- * portal login, and the workspace key had no services approved at
- * implementation time (2026-10-09 — every service call returned 401
- * Unauthorized API Call), so they could not be confirmed live. They follow
- * the documented openapi.krx.co.kr examples; on first approved use, confirm
- * against the spec and update KRX_FIELD/params maps if the API disagrees.
+ * Request shape (verified live 2026-10-12 against data-dbg.krx.co.kr): every
+ * daily service takes ONE reference date `basDd=YYYYMMDD` and returns all rows
+ * of that day (every index of the family, or every listed stock of the
+ * market). A date range (bgnDd/endDd) is NOT supported — KRX answers HTTP 200
+ * with an empty OutBlock_1. Weekends/holidays also return an empty
+ * OutBlock_1. Collection therefore iterates weekdays and shares one call per
+ * (service, day) across every series of that service (see krxDayRows).
  */
 export const KRX_SEED_SERIES: SeriesDescriptor[] = [
   {
     seriesId: "krx:index:KOSPI:close",
     adapter: "krx",
-    title: "코스피 지수 일별종가 — idx/kospi_dd_trd (params unverified — k-krx 개발 명세서)",
+    title: "코스피 지수 일별종가 — idx/kospi_dd_trd (basDd per day)",
     unitCode: "index",
     periodType: "day",
-    _verified: false,
+    _verified: true,
   },
   {
     seriesId: "krx:index:KOSDAQ:close",
     adapter: "krx",
-    title: "코스닥 지수 일별종가 — idx/kosdaq_dd_trd (params unverified — k-krx 개발 명세서)",
+    title: "코스닥 지수 일별종가 — idx/kosdaq_dd_trd (basDd per day)",
     unitCode: "index",
     periodType: "day",
-    _verified: false,
+    _verified: true,
   },
 ];
 
@@ -417,10 +416,10 @@ export function krxStockSeries(companyId: string, ticker: string, companyName: s
     adapter: "krx",
     ticker,
     market,
-    title: `${companyName} 일별종가 — KRX 단축코드 ${ticker} (params unverified — k-krx 개발 명세서)`,
+    title: `${companyName} 일별종가 — KRX 단축코드 ${ticker} (basDd per day)`,
     unitCode: "krw",
     periodType: "day",
-    _verified: false,
+    _verified: true,
   };
 }
 
@@ -432,34 +431,21 @@ export interface KrxDailyRow {
   raw: string;
 }
 
-/** Output FIELD names per service family — see the unverified note above. */
-interface KrxFieldMap {
-  /** date field (BAS_DD = 기준일자). */
-  date: string;
-  /** close-price/index field. */
-  close: string;
-  /** instrument-name filter field (idx services). */
-  name?: string;
-}
+/** Output FIELD names per service family (verified live 2026-10-12). */
+const KRX_INDEX_FIELDS = { date: "BAS_DD", close: "CLSPRC_IDX", name: "IDX_NM" } as const;
 
-const KRX_INDEX_FIELDS: Record<string, KrxFieldMap> = {
-  KOSPI: { date: "BAS_DD", close: "IDX_CLPRC", name: "IDX_NM" },
-  KOSDAQ: { date: "BAS_DD", close: "IDX_CLPRC", name: "IDX_NM" },
-};
-
-/** KOSPI/KOSDAQ index row match — the idx services return multiple series per day. */
-const KRX_INDEX_NAME_MATCH: Record<string, string> = {
+/**
+ * EXACT IDX_NM of the headline index row. The idx services return every index
+ * of the family per day, including '코스피 (외국주포함)' style rows whose close
+ * is empty — those must never be picked.
+ */
+const KRX_INDEX_NAME: Record<string, string> = {
   KOSPI: "코스피",
   KOSDAQ: "코스닥",
 };
 
-const KRX_STOCK_FIELDS: KrxFieldMap = { date: "BAS_DD", close: "TDD_CLPRC" };
-
-/** Request PARAMETER names per service — see the unverified note above. */
-const KRX_PARAMS = {
-  bgnDd: "bgnDd",
-  endDd: "endDd",
-};
+/** sto/*_bydd_trd rows: ISU_CD carries the 6-digit 단축코드, close is TDD_CLSPRC. */
+const KRX_STOCK_FIELDS = { date: "BAS_DD", close: "TDD_CLSPRC", code: "ISU_CD", name: "ISU_NM" } as const;
 
 /** Stock-master lookup result (단축코드 resolution). */
 export interface KrxStockMasterRow {
@@ -471,12 +457,19 @@ export interface KrxStockMasterRow {
   market: "KOSPI" | "KOSDAQ" | "KONEX";
 }
 
+/** HTTP-level KRX failure — status kept so callers can decide retry/diagnosis. */
+export class KrxHttpError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
+
 async function krxGetJson(url: string, apiKey: string): Promise<unknown> {
   const res = await fetch(url, {
     headers: { AUTH_KEY: apiKey, accept: "application/json" },
     signal: AbortSignal.timeout(30_000),
   });
-  if (!res.ok) throw new Error(`KRX API HTTP ${res.status} from ${new URL(url).host}`);
+  if (!res.ok) throw new KrxHttpError(`KRX API HTTP ${res.status} from ${new URL(url).host}`, res.status);
   const text = await res.text();
   const trimmed = text.trimStart();
   if (trimmed.startsWith("<")) throw new Error(`KRX API non-JSON response: ${trimmed.slice(0, 120)}`);
@@ -507,47 +500,250 @@ function krxServiceFor(series: SeriesDescriptor): { path: string; indexCode: str
   return { path: stockMarket === "kospi" ? "sto/stk_bydd_trd" : "sto/ksq_bydd_trd", indexCode: null };
 }
 
-/**
- * Fetch one month's daily rows for a KRX series — ONE API call per
- * (series × month), reused across the month's trading days. This is the
- * collection unit both newbiz.ts fetch (day-grain series) and
- * beta-series.ts consume; the per-day Fetcher closures read from it.
- */
-export async function listKrxDailyRows(seriesId: string, month: string): Promise<KrxDailyRow[]> {
+// ── per-run call accounting + per-day payload cache ────────────────────────
+
+/** Per-process KRX call statistics (read by beta-series.ts for its report). */
+export interface KrxRunStats {
+  /** HTTP calls actually issued (retries included). */
+  calls: number;
+  /** Weekdays whose payload was empty (holiday / non-trading day / future). */
+  emptyDays: number;
+  /** Distinct (service, day) payloads served from the in-process cache. */
+  cacheHits: number;
+  /** Failure messages by kind, for the 0-rows diagnosis. */
+  errors: string[];
+  /** Call budget for this run; exceeding it throws. */
+  budget: number;
+}
+
+const KRX_DEFAULT_BUDGET = 2000;
+// Concurrency 4 with no pacing tripped KRX burst throttling (HTTP 403 after
+// ~150 calls, live 2026-10-12); 2 workers + a minimum spacing stays under it.
+const KRX_CONCURRENCY = 2;
+const krxDayCache = new Map<string, Promise<Array<Record<string, string>>>>();
+let krxStats: KrxRunStats = { calls: 0, emptyDays: 0, cacheHits: 0, errors: [], budget: KRX_DEFAULT_BUDGET };
+let krxRetryDelayMs = 800;
+let krxMinIntervalMs = 250;
+let krxNextSlot = 0;
+
+/** Reset the day cache and statistics (new run / tests). */
+export function resetKrxRunState(opts: { budget?: number; retryDelayMs?: number; minIntervalMs?: number } = {}): void {
+  krxDayCache.clear();
+  krxStats = { calls: 0, emptyDays: 0, cacheHits: 0, errors: [], budget: opts.budget ?? KRX_DEFAULT_BUDGET };
+  krxRetryDelayMs = opts.retryDelayMs ?? 800;
+  krxMinIntervalMs = opts.minIntervalMs ?? 250;
+  krxNextSlot = 0;
+}
+
+export function krxRunStats(): Readonly<KrxRunStats> {
+  return krxStats;
+}
+
+function krxApiKey(): string {
   loadPipelineKeys();
   const apiKey = process.env.KRX_API_KEY;
   if (!apiKey) throw new Error("KRX_API_KEY is not set — the krx adapter is disabled until configured.");
+  return apiKey;
+}
+
+/** Global pacing: calls start at least krxMinIntervalMs apart across workers. */
+async function krxPace(): Promise<void> {
+  const now = Date.now();
+  const slot = Math.max(now, krxNextSlot);
+  krxNextSlot = slot + krxMinIntervalMs;
+  if (slot > now) await new Promise((r) => setTimeout(r, slot - now));
+}
+
+/**
+ * One HTTP call with a single retry on network errors / 5xx, and on KRX
+ * throttling (403/429) with a 5x longer backoff.
+ */
+async function krxCall(path: string, basDd: string, apiKey: string): Promise<Array<Record<string, string>>> {
+  const url = `${KRX_BASE}/${path}.json?${new URLSearchParams({ basDd }).toString()}`;
+  for (let attempt = 0; ; attempt++) {
+    if (krxStats.calls >= krxStats.budget) {
+      throw new Error(`KRX call budget exhausted (${krxStats.budget} calls) — raise --budget or narrow --from/--to.`);
+    }
+    await krxPace();
+    krxStats.calls += 1;
+    try {
+      return krxRequireRows(await krxGetJson(url, apiKey), path);
+    } catch (err) {
+      const throttled = err instanceof KrxHttpError && (err.status === 403 || err.status === 429);
+      const retryable = err instanceof KrxHttpError ? err.status >= 500 || throttled : err instanceof TypeError || (err as Error)?.name === "TimeoutError";
+      if (!retryable || attempt >= 1) throw err;
+      await new Promise((r) => setTimeout(r, krxRetryDelayMs * (attempt + 1) * (throttled ? 5 : 1)));
+    }
+  }
+}
+
+/**
+ * All rows of one service for one day, cached per (service, day) for the
+ * process — the KOSPI index series and every KOSPI stock series share the
+ * same call per day. Errors are not cached.
+ */
+async function krxDayRows(path: string, basDd: string, apiKey: string): Promise<Array<Record<string, string>>> {
+  const key = `${path}|${basDd}`;
+  const hit = krxDayCache.get(key);
+  if (hit) {
+    krxStats.cacheHits += 1;
+    return hit;
+  }
+  const p = krxCall(path, basDd, apiKey).then((rows) => {
+    if (rows.length === 0) krxStats.emptyDays += 1;
+    return rows;
+  });
+  krxDayCache.set(key, p);
+  p.catch(() => krxDayCache.delete(key));
+  return p;
+}
+
+/** Weekdays (YYYYMMDD) of a month, excluding dates after `today`. */
+export function krxWeekdays(month: string, today: Date = new Date()): string[] {
+  const [y, m] = month.split("-").map(Number);
+  if (!y || !m) throw new Error(`krx: month must be YYYY-MM (got '${month}')`);
+  const todayKey = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
+  const days: string[] = [];
+  const last = new Date(y, m, 0).getDate();
+  for (let d = 1; d <= last; d++) {
+    const dow = new Date(y, m - 1, d).getDay();
+    if (dow === 0 || dow === 6) continue;
+    const key = `${y}${String(m).padStart(2, "0")}${String(d).padStart(2, "0")}`;
+    if (key > todayKey) continue;
+    days.push(key);
+  }
+  return days;
+}
+
+async function krxPool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  async function worker(): Promise<void> {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
+}
+
+function krxNumber(raw: string | undefined): number | null {
+  if (raw === undefined || raw.trim() === "") return null;
+  const v = Number(raw.replaceAll(",", ""));
+  return Number.isFinite(v) && v > 0 ? v : null;
+}
+
+function krxIsoDate(raw: string): string | null {
+  const d = raw.replaceAll("/", "").replaceAll("-", "").replaceAll(".", "");
+  return /^\d{8}$/.test(d) ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}` : null;
+}
+
+/** Pick the series' row out of one day's payload, or null. */
+export function krxPickRow(
+  rows: Array<Record<string, string>>,
+  pick: { indexCode: string } | { ticker: string },
+): KrxDailyRow | null {
+  let row: Record<string, string> | undefined;
+  let close: number | null = null;
+  if ("indexCode" in pick) {
+    const name = KRX_INDEX_NAME[pick.indexCode];
+    row = rows.find((r) => r[KRX_INDEX_FIELDS.name] === name && krxNumber(r[KRX_INDEX_FIELDS.close]) !== null);
+    close = row ? krxNumber(row[KRX_INDEX_FIELDS.close]) : null;
+  } else {
+    row = rows.find((r) => (r[KRX_STOCK_FIELDS.code] ?? r.ISU_SRT_CD) === pick.ticker);
+    close = row ? krxNumber(row[KRX_STOCK_FIELDS.close]) : null;
+  }
+  if (!row || close === null) return null;
+  const date = krxIsoDate(row[KRX_INDEX_FIELDS.date] ?? "");
+  if (!date) return null;
+  return { date, value: close, raw: JSON.stringify(row) };
+}
+
+/**
+ * Fetch one month's daily rows for a KRX series: one basDd call per weekday
+ * (cached per service/day and shared across series), concurrency
+ * KRX_CONCURRENCY with global pacing. Empty weekday payloads are non-trading days and are
+ * skipped (counted in krxRunStats().emptyDays). This is the collection unit
+ * both newbiz.ts fetch (day-grain series) and beta-series.ts consume.
+ */
+export async function listKrxDailyRows(seriesId: string, month: string, today: Date = new Date()): Promise<KrxDailyRow[]> {
+  const apiKey = krxApiKey();
   const series = KRX_DYNAMIC_SERIES.get(seriesId) ?? KRX_SEED_SERIES.find((s) => s.seriesId === seriesId);
   if (!series) throw new Error(`krx: unknown series '${seriesId}'`);
   const { path, indexCode } = krxServiceFor(series);
-  const [y, m] = month.split("-").map(Number);
-  if (!y || !m) throw new Error(`krx: month must be YYYY-MM (got '${month}')`);
-  const from = `${y}${String(m).padStart(2, "0")}01`;
-  const to = `${y}${String(m).padStart(2, "0")}${String(new Date(y, m, 0).getDate()).padStart(2, "0")}`;
-  const params = new URLSearchParams({ [KRX_PARAMS.bgnDd]: from, [KRX_PARAMS.endDd]: to });
-  const payload = await krxGetJson(`${KRX_BASE}/${path}.json?${params.toString()}`, apiKey);
-  const rows = krxRequireRows(payload, path);
-  const isIndex = indexCode !== null;
-  const fields = isIndex ? KRX_INDEX_FIELDS[indexCode] : KRX_STOCK_FIELDS;
-  const matched = rows.filter((r) => {
-    if (isIndex && fields.name) {
-      const nm = r[fields.name] ?? "";
-      return nm.includes(KRX_INDEX_NAME_MATCH[indexCode]);
-    }
-    if (!isIndex) return series.ticker ? r.ISU_SRT_CD === series.ticker : true;
-    return true;
-  });
-  const out: KrxDailyRow[] = [];
-  for (const r of matched) {
-    const dateRaw = r[fields.date] ?? "";
-    const closeRaw = r[fields.close] ?? "";
-    const date = dateRaw.replaceAll("/", "-").replaceAll(".", "-");
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || closeRaw === "") continue;
-    const value = Number(closeRaw.replaceAll(",", ""));
-    if (!Number.isFinite(value) || value <= 0) continue;
-    out.push({ date, value, raw: JSON.stringify(r) });
+  if (indexCode === null && !series.ticker) throw new Error(`krx: stock series '${seriesId}' has no ticker (단축코드)`);
+  const pick = indexCode !== null ? { indexCode } : { ticker: series.ticker! };
+  const days = krxWeekdays(month, today);
+  const picked = await krxPool(days, KRX_CONCURRENCY, async (day) => krxPickRow(await krxDayRows(path, day, apiKey), pick));
+  return picked.filter((r): r is KrxDailyRow => r !== null).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export type KrxMasterResult =
+  | { ok: true; row: KrxStockMasterRow; basDd: string }
+  | { ok: false; reason: string; candidates?: string[] };
+
+/**
+ * Resolve a company's 단축코드 from the stock master (sto/stk_isu_base_info or
+ * sto/ksq_isu_base_info, basDd = most recent weekday with a non-empty
+ * payload, looking back up to 10 weekdays). Name match on ISU_ABBRV / ISU_NM:
+ * exact, then startsWith, then includes; more than one candidate at the first
+ * matching tier is reported as ambiguous. Failures return the real reason.
+ */
+export async function resolveKrxStockMaster(
+  companyName: string,
+  market: "kospi" | "kosdaq",
+  today: Date = new Date(),
+): Promise<KrxMasterResult> {
+  let apiKey: string;
+  try {
+    apiKey = krxApiKey();
+  } catch (err) {
+    return { ok: false, reason: (err as Error).message };
   }
-  return out.sort((a, b) => a.date.localeCompare(b.date));
+  const service = market === "kospi" ? "sto/stk_isu_base_info" : "sto/ksq_isu_base_info";
+  const label = market === "kospi" ? "KOSPI" : "KOSDAQ";
+  const candidatesDays: string[] = [];
+  for (let back = 0; candidatesDays.length < 10 && back < 20; back++) {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - back);
+    if (d.getDay() === 0 || d.getDay() === 6) continue;
+    candidatesDays.push(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`);
+  }
+  let rows: Array<Record<string, string>> = [];
+  let basDd = "";
+  for (const day of candidatesDays) {
+    try {
+      rows = await krxDayRows(service, day, apiKey);
+    } catch (err) {
+      return { ok: false, reason: `${service} basDd=${day}: ${(err as Error).message}` };
+    }
+    if (rows.length > 0) {
+      basDd = day;
+      break;
+    }
+  }
+  if (rows.length === 0) {
+    return { ok: false, reason: `${service}: empty payload for the last ${candidatesDays.length} weekdays` };
+  }
+  const target = companyName.trim();
+  const names = (r: Record<string, string>) => [r.ISU_ABBRV ?? "", r.ISU_NM ?? ""];
+  const tiers: Array<(n: string) => boolean> = [(n) => n === target, (n) => n.startsWith(target), (n) => n.includes(target)];
+  let hits: Array<Record<string, string>> = [];
+  for (const tier of tiers) {
+    hits = rows.filter((r) => names(r).some((n) => n !== "" && tier(n)));
+    if (hits.length > 0) break;
+  }
+  if (hits.length === 0) return { ok: false, reason: `'${target}' not found in ${label} master (${service} basDd=${basDd})` };
+  if (hits.length > 1) {
+    const candidates = hits.map((r) => `${r.ISU_ABBRV ?? r.ISU_NM}=${r.ISU_SRT_CD}`);
+    return { ok: false, reason: `'${target}' is ambiguous in ${label} master: ${candidates.join(", ")} — pin with --ticker`, candidates };
+  }
+  const hit = hits[0];
+  const shortCode = hit.ISU_SRT_CD ?? "";
+  if (!/^[0-9A-Z]{6}$/.test(shortCode)) return { ok: false, reason: `${label} master row for '${target}' has no 6-char ISU_SRT_CD` };
+  const rawMarket = (hit.MKT_TP_NM ?? label).toUpperCase();
+  const resolvedMarket = rawMarket === "KOSDAQ" ? "KOSDAQ" : rawMarket === "KONEX" ? "KONEX" : "KOSPI";
+  return { ok: true, basDd, row: { shortCode, isin: hit.ISU_CD ?? null, nameKo: hit.ISU_ABBRV ?? target, market: resolvedMarket } };
 }
 
 function krxResolveSeries(seriesId: string): SeriesDescriptor | undefined {

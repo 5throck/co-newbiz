@@ -29,6 +29,35 @@ function loadSeries(db: ReturnType<typeof getDb>, seriesId: string): ObsRow[] {
     .filter((r) => Number.isFinite(r.value));
 }
 
+const INDEX_SERIES_ID = "krx:index:KOSPI:close";
+const MIN_ROWS = 63;
+
+type CollectionStatus = "ready" | "insufficient" | "no_index" | "no_stock" | "none";
+type HintCode = "run_collection" | "ticker_unresolved" | "insufficient_overlap" | "ok";
+
+interface SeriesStat {
+  count: number;
+  first_date: string | null;
+  last_date: string | null;
+}
+
+// Rows arrive sorted by date, so first/last come straight from the ends.
+function statOf(rows: Array<{ date: string }>): SeriesStat {
+  return {
+    count: rows.length,
+    first_date: rows.length > 0 ? rows[0].date : null,
+    last_date: rows.length > 0 ? rows[rows.length - 1].date : null,
+  };
+}
+
+function diagnose(price: number, index: number, aligned: number): { status: CollectionStatus; hint_code: HintCode } {
+  if (price === 0 && index === 0) return { status: "none", hint_code: "run_collection" };
+  if (price === 0) return { status: "no_stock", hint_code: "ticker_unresolved" };
+  if (index === 0) return { status: "no_index", hint_code: "run_collection" };
+  if (aligned < MIN_ROWS) return { status: "insufficient", hint_code: "insufficient_overlap" };
+  return { status: "ready", hint_code: "ok" };
+}
+
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
@@ -57,7 +86,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const stockSeriesId = `krx:stock:${companyId}:close`;
   const price = loadSeries(db, stockSeriesId);
-  const index = loadSeries(db, "krx:index:KOSPI:close");
+  const index = loadSeries(db, INDEX_SERIES_ID);
 
   // Align by date — regression needs both legs on the same trading day.
   const indexByDate = new Map(index.map((r) => [r.date, r.value]));
@@ -65,7 +94,27 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     .filter((p) => indexByDate.has(p.date))
     .map((p) => ({ date: p.date, price: p.value, index: indexByDate.get(p.date)! }));
 
+  // Additive diagnostics so the panel can explain an empty result without a migration.
+  const company = db.query("SELECT name_ko FROM md_company WHERE id = ?").get(companyId) as { name_ko: string } | undefined;
+  const sourceRegistered = db.query("SELECT 1 AS present FROM md_source WHERE code = 'krx'").get() != null;
+  const diag = diagnose(price.length, index.length, rows.length);
+
   return ok({
+    collection: {
+      subject_company_id: companyId,
+      subject_company_name: company?.name_ko ?? null,
+      stock_series_id: stockSeriesId,
+      index_series_id: INDEX_SERIES_ID,
+      price: statOf(price),
+      index: statOf(index),
+      aligned: statOf(rows),
+      source_registered: sourceRegistered,
+      status: diag.status,
+      min_rows: MIN_ROWS,
+      hint_code: diag.hint_code,
+      // Plain text only; the UI shows it read-only and never executes it.
+      runbook_command: `bun scripts/co-newbiz/beta-series.ts --project ${id}`,
+    },
     stock_series_id: stockSeriesId,
     price_count: price.length,
     index_count: index.length,

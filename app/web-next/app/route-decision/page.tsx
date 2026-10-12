@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "../../lib/api.ts";
 import { PageState, PrimaryAction } from "../../components/ui.tsx";
+import { StageFrame } from "../../components/StageFrame.tsx";
 
 interface OpportunityRow {
   id: string; name: string; attractiveness_score: number | null; synergy_score: number | null;
@@ -169,15 +170,10 @@ function RouteDecisionRedirect() {
     h1 · 만들기 액션 · 설명을 표시한다(R2-A 페이지 계약). */
 function StageFrameLite() {
   return (
-    <>
-      <div className="stage-head">
-        <h1>S4 진출방식 결정</h1>
-        <PrimaryAction inline href="/market?new=1" label="새 검토 시작 (시장분석부터)" />
-      </div>
-      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
-        어떻게 들어갈 것인가? — Greenfield vs Brownfield를 결정한다 (Brownfield ≠ M&A). 결정 화면은 검토/안건별로 열리며, 새 검토는 시장분석부터 시작합니다.
-      </p>
-    </>
+    <StageFrame stageId="S4">
+      <PrimaryAction href="/market?new=1" label="새 검토 시작 (시장분석부터)" />
+      Greenfield vs Brownfield를 결정한다 (Brownfield ≠ M&A). 결정 화면은 검토/안건별로 열리며, 새 검토는 시장분석부터 시작합니다.
+    </StageFrame>
   );
 }
 

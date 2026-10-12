@@ -70,7 +70,7 @@ export function goalsBannerState(counts: GoalCountBySource | null | undefined, s
 export function bannerText(state: BannerState): { message: string; standardsNote: string; actionLabel: string } {
   const standardsNote = state.standardsApply
     ? "그룹/계열사 기준이 함께 적용됩니다." // INTERIM-WORDING
-    : "적용되는 그룹/계열사 기준 범위가 없습니다."; // INTERIM-WORDING
+    : "적용되는 그룹/계열사 기준은 없습니다."; // INTERIM-WORDING
   if (state.kind === "none") {
     return {
       message: "사업 목표가 설정되지 않았습니다. 시나리오는 목표 없이 비교됩니다.", // INTERIM-WORDING
@@ -79,9 +79,9 @@ export function bannerText(state: BannerState): { message: string; standardsNote
     };
   }
   const parts: string[] = [];
-  if (state.counts.project > 0) parts.push(`프로젝트 ${state.counts.project}`);
-  if (state.counts.affiliate > 0) parts.push(`계열사 ${state.counts.affiliate}`);
-  if (state.counts.group > 0) parts.push(`그룹 ${state.counts.group}`);
+  if (state.counts.project > 0) parts.push(`프로젝트 목표 ${state.counts.project}건`);
+  if (state.counts.affiliate > 0) parts.push(`계열사 목표 ${state.counts.affiliate}건`);
+  if (state.counts.group > 0) parts.push(`그룹 목표 ${state.counts.group}건`);
   return {
     message: `목표 ${state.total}건 적용 중 — ${parts.join(" · ")}`, // INTERIM-WORDING
     standardsNote,

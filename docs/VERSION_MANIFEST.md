@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-11T17:45:59.275Z
+**Generated**: 2026-10-12T14:57:58.591Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -200,7 +200,7 @@
 | backfill-capability-gap.ts | 1.0.0 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
 | backfill-hyd-brk-report.ts | 1.1.0 | scripts/co-newbiz/backfill-hyd-brk-report.ts | N/A |
 | backup.ts | 1.0.1 | scripts/co-newbiz/backup.ts | N/A |
-| beta-series.ts | 1.0.0 | scripts/co-newbiz/beta-series.ts | N/A |
+| beta-series.ts | 1.1.0 | scripts/co-newbiz/beta-series.ts | N/A |
 | bootstrap-stages.ts | 1.1.0 | scripts/bootstrap-stages.ts | fs, js-yaml, path |
 | build-search-index.ts | 1.0.0 | scripts/handbook/build-search-index.ts | N/A |
 | calibrate.ts | 1.1.0 | scripts/co-newbiz/calibrate.ts | N/A |
@@ -278,7 +278,7 @@
 | migrate-quality-gates.ts | 1.1.0 | scripts/migrate-quality-gates.ts | fs, js-yaml, path |
 | model.ts | 1.0.0 | scripts/co-newbiz/model.ts | N/A |
 | nav-utils.ts | 1.0.0 | scripts/handbook/nav-utils.ts | N/A |
-| newbiz.ts | 1.20.0 | scripts/co-newbiz/newbiz.ts | N/A |
+| newbiz.ts | 1.21.0 | scripts/co-newbiz/newbiz.ts | N/A |
 | normalize-registry-provenance.ts | 1.1.0 | scripts/normalize-registry-provenance.ts | fs, path |
 | policy-sync.ts | 1.0.1 | scripts/co-newbiz/policy-sync.ts | N/A |
 | proc-resolve.ts | 1.2.1 | scripts/co-newbiz/proc-resolve.ts | js-yaml |
@@ -304,10 +304,10 @@
 | simulate.ts | 1.0.0 | scripts/co-newbiz/simulate.ts | N/A |
 | skill-lifecycle-audit.ts | 1.8.0 | scripts/skill-lifecycle-audit.ts | N/A |
 | skill-session-review.ts | 1.2.0 | scripts/skill-session-review.ts | bun |
-| source-adapters.ts | 1.2.0 | scripts/co-newbiz/source-adapters.ts | N/A |
+| source-adapters.ts | 1.3.0 | scripts/co-newbiz/source-adapters.ts | N/A |
 | spec-register.ts | 1.6.0 | scripts/spec-register.ts | N/A |
 | sync-agent-personas.ts | 1.1.0 | scripts/co-newbiz/sync-agent-personas.ts | N/A |
-| sync-library-projection.ts | 1.0.1 | scripts/co-newbiz/sync-library-projection.ts | js-yaml |
+| sync-library-projection.ts | 1.2.0 | scripts/co-newbiz/sync-library-projection.ts | js-yaml |
 | sync-md.ts | 1.4.0 | scripts/sync-md.ts | N/A |
 | sync-skill-status.ts | 1.1.0 | scripts/sync-skill-status.ts | N/A |
 | sync-skills.ts | 1.11.0 | scripts/sync-skills.ts | N/A |

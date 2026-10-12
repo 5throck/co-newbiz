@@ -76,7 +76,8 @@ describe("connected-apps personal API tokens UI", () => {
 
   test("revoke confirms irreversibility before api.delete", () => {
     expect(PAGE).toMatch(/되돌릴 수 없으며/);
-    expect(PAGE).toMatch(/window\.confirm\([\s\S]*?api\.delete\(`\/api\/tokens/);
+    expect(PAGE).not.toMatch(/window\.confirm/);
+    expect(PAGE).toMatch(/confirm\([\s\S]*?doRevoke\(t\)[\s\S]*?api\.delete\(`\/api\/tokens/);
   });
 
   test("status chips pair icon + text, never color alone", () => {

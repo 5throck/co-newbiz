@@ -34,7 +34,7 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "file": "checklists/deal-shape-presigning-checklist.yaml",
     "gate": "P4",
     "enforceability": "mixed",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "owner_agent": "legal-counsel",
     "item_count": 26,
     "lang": "en"
@@ -154,7 +154,7 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "file": "checklists/partnership-checklist.yaml",
     "gate": "DD",
     "enforceability": "mixed",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "owner_agent": "partnership-agent",
     "item_count": 12,
     "lang": "en"
@@ -1031,11 +1031,11 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "checklists/deal-shape-presigning-checklist.yaml",
     "gate": "P4",
     "enforceability": "mixed",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "owner_agent": "legal-counsel",
     "item_count": 26,
     "lang": "en",
-    "content": "governance_doc_id: chk-deal-shape-presigning\nlayer: checklist\ntitle: \"Deal-Shape Pre-Signing Checklists (License-in / Co-development / Minority / JV)\"\nscope: shared\nenforceability: mixed\nowner_agent: legal-counsel\nversion: \"1.0.0\"\neffective_from: \"2026-08-23\"\ngate: P4   # enforced at the deal-shape chain's pre-signing gate (step 5 of shared-deal-shape-chain)\n\n# One checklist set per deal shape, from the design of record §A.2\n# (docs/designs/2026-08-23-track-coverage-extension-design.md) and its\n# research basis [rbd 3.1-3.4]. Full M&A deliberately has NO set here: that\n# outcome routes out to the brownfield chain unchanged, whose own gates\n# govern. JV formation mechanics are NOT duplicated here — they ride PR-10's\n# `entity-formation` JV addendum (ef-13..17); this checklist owns the\n# deal-shape decision's contract terms only.\n\nitems:\n  # ── License-in [rbd 3.1] ─────────────────────────────────────────────\n  - id: lic-01\n    text: \"Grant scope explicit; any exclusivity justified against a public-interest-style test, not assumed\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-02\n    text: \"Field of use and territory no broader than what we can actually exploit\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-03\n    text: \"Complete financial stack documented — upfront payment, milestones, royalties, minimums (no element left 'to be discussed')\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-04\n    text: \"Development benchmarks dated, with annual reporting obligations against them\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-05\n    text: \"Anti-shelving revocation for non-use (NIH-style) included — a license we can sit on is a license the licensor can take back\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-06\n    text: \"Grantback terms for improvements we create stated explicitly\"\n    mandatory: false\n    waiver_eligible: true\n  - id: lic-07\n    text: \"Audit rights over the licensor's royalty/compliance accounting\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-08\n    text: \"Government strings identified where applicable (Bayh-Dole-style march-in, manufacture preference) and their consequence for exclusivity assessed\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-09\n    text: \"Inventor-assignment title chain verified BEFORE term sheet — chain-of-title defects discovered after signing are the classic license-in failure\"\n    mandatory: true\n    waiver_eligible: true\n\n  # ── Co-development [rbd 3.2] ────────────────────────────────────────\n  - id: cdv-01\n    text: \"Background-IP defined per party, exhaustively — the #1 co-dev dispute source is 'we thought that was ours'\"\n    mandatory: true\n    waiver_eligible: true\n  - id: cdv-02\n    text: \"Foreground-IP ownership rule chosen deliberately (joint vs by-field vs by-inventor) with the choice rationale recorded — never defaulted\"\n    mandatory: true\n    waiver_eligible: true\n  - id: cdv-03\n    text: \"Joint steering committee with named decision rights AND a deadlock ladder (who breaks ties at which level)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: cdv-04\n    text: \"Budgets milestone-tranched, with explicit failure-to-fund consequences for each party\"\n    mandatory: true\n    waiver_eligible: true\n  - id: cdv-05\n    text: \"Publication review windows agreed (protection of patentable findings before disclosure)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: cdv-06\n    text: \"Exit/step-in triggers stated, with data handover and sublicense survival on exit\"\n    mandatory: true\n    waiver_eligible: true\n\n  # ── Minority investment [rbd 3.3] ────────────────────────────────────\n  - id: min-01\n    text: \"NVCA-standard rights package enumerated and negotiated as a package — board designation, information rights, registration rights, ROFR/co-sale, management rights letter, pro-rata participation\"\n    mandatory: true\n    waiver_eligible: true\n  - id: min-02\n    text: \"Technology access licensed SEPARATELY from equity — the stake is not the license, and the license is not the stake\"\n    mandatory: true\n    waiver_eligible: true\n  - id: min-03\n    text: \"Any exclusivity window carries a sunset date — perpetual exclusivity via a minority stake is a control right bought at a non-control price\"\n    mandatory: true\n    waiver_eligible: true\n  - id: min-04\n    text: \"Standstill and information-barrier terms agreed (protects both sides' MNPI handling)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: min-05\n    text: \"Foreign-investment screening assessment completed where the stake or nationality triggers it\"\n    mandatory: true\n    waiver_eligible: true\n\n  # ── JV (origin=joint) [rbd 3.4] ─────────────────────────────────────\n  # Formation mechanics ride `entity-formation` ef-13..17 (PR-10) — the\n  # items below are the decision-side contract terms this chain owns.\n  - id: jvd-01\n    text: \"Parent contributions committed and valued (technology contributions independently valued — pt-07 of chk-partnership, never at the contributing party's stated figure)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: jvd-02\n    text: \"Board composition, reserved-matters map, and deadlock terms documented before term-sheet negotiation (extends pt-06 of chk-partnership)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: jvd-03\n    text: \"IP licenses in and out of the JV each documented — scope, term, and what happens at JV exit\"\n    mandatory: true\n    waiver_eligible: true\n  - id: jvd-04\n    text: \"Exit architecture designed AT SIGNING: put/call, ROFR, drag/tag, and the valuation mechanism (incl. the two-appraisers-then-third process where used)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: jvd-05\n    text: \"JV-specific antitrust clearance assessed (a JV can concentrate markets its parents do not)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: jvd-06\n    text: \"Wind-down terms agreed — who takes what people, IP, and liabilities if the JV dissolves\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"ADR-0052 (track coverage extension, Section A.2)\"\n  - \"docs/designs/2026-08-23-track-coverage-extension-design.md §A.2\"\n  - \"docs/research/rbd-partnership-best-practice.md [rbd 3.1-3.4]\"\n  - \"ADR-0031 (partner-sourcing failure modeled as termination)\"\n"
+    "content": "governance_doc_id: chk-deal-shape-presigning\nlayer: checklist\ntitle: \"Deal-Shape Pre-Signing Checklists (License-in / Co-development / Minority / JV)\"\nscope: shared\nenforceability: mixed\nowner_agent: legal-counsel\nversion: \"1.1.0\"\neffective_from: \"2026-08-23\"\ngate: P4   # enforced at the deal-shape chain's pre-signing gate (step 5 of shared-deal-shape-chain)\n\n# One checklist set per deal shape, from the design of record §A.2\n# (docs/designs/2026-08-23-track-coverage-extension-design.md) and its\n# research basis [rbd 3.1-3.4]. Full M&A deliberately has NO set here: that\n# outcome routes out to the brownfield chain unchanged, whose own gates\n# govern. JV formation mechanics are NOT duplicated here — they ride PR-10's\n# `entity-formation` JV addendum (ef-13..17); this checklist owns the\n# deal-shape decision's contract terms only.\n\nitems:\n  # ── License-in [rbd 3.1] ─────────────────────────────────────────────\n  - id: lic-01\n    text: \"허여 범위(grant scope)를 명시하고, 독점권은 당연시하지 않고 공익성 기준에 준하는 테스트로 정당화\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-02\n    text: \"실시 분야(field of use)와 지역은 당사가 실제로 활용할 수 있는 범위를 넘지 않을 것\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-03\n    text: \"전체 대가 구조 문서화 — 선급금, 마일스톤, 로열티, 최소 실시료 ('추후 협의'로 남기는 항목 없음)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-04\n    text: \"개발 목표 시점(development benchmarks)을 일자로 정하고 이에 대한 연차 보고 의무 부과\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-05\n    text: \"미실시에 따른 사장(死藏) 방지 해지 조항(NIH 방식) 포함 — 당사가 묵혀둘 수 있는 라이선스는 라이선서가 회수할 수 있는 라이선스임\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-06\n    text: \"당사가 만든 개량 발명에 대한 그랜트백(grantback) 조건을 명시\"\n    mandatory: false\n    waiver_eligible: true\n  - id: lic-07\n    text: \"라이선서의 로열티·컴플라이언스 회계에 대한 감사권\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-08\n    text: \"해당 시 정부 부대조건(Bayh-Dole 방식 개입권(march-in), 국내 생산 우선) 식별 및 독점권에 미치는 영향 평가\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-09\n    text: \"텀시트 전에 발명자 권리 승계(직무발명 승계(PIIA)) 권원 체인 검증 — 서명 후 발견되는 권원 하자는 라이선스 도입(license-in)의 전형적 실패 원인\"\n    mandatory: true\n    waiver_eligible: true\n\n  # ── Co-development [rbd 3.2] ────────────────────────────────────────\n  - id: cdv-01\n    text: \"당사자별 기존 IP(background IP)를 빠짐없이 정의 — 공동개발 분쟁의 1순위 원인은 '그건 우리 것인 줄 알았다'임\"\n    mandatory: true\n    waiver_eligible: true\n  - id: cdv-02\n    text: \"신규 IP(foreground IP) 귀속 원칙(공동 소유 / 분야별 / 발명자별)을 의도적으로 선택하고 선택 근거를 기록 — 기본값 적용 금지\"\n    mandatory: true\n    waiver_eligible: true\n  - id: cdv-03\n    text: \"의사결정 권한이 명시된 공동운영위원회(joint steering committee)와 단계별 교착 해소 절차(deadlock ladder: 어느 단계에서 누가 결정하는지)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: cdv-04\n    text: \"예산을 마일스톤별로 분할 집행하고, 당사자별 자금 미납 시 결과를 명시\"\n    mandatory: true\n    waiver_eligible: true\n  - id: cdv-05\n    text: \"공개 전 검토 기간 합의 (공개 전에 특허 가능한 성과 보호)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: cdv-06\n    text: \"엑시트·개입(step-in) 사유를 명시하고, 엑시트 시 데이터 인계와 재실시권(sublicense) 존속을 규정\"\n    mandatory: true\n    waiver_eligible: true\n\n  # ── Minority investment [rbd 3.3] ────────────────────────────────────\n  - id: min-01\n    text: \"NVCA 표준 권리 묶음을 열거하고 묶음 단위로 협상 — 이사 지명권, 정보요구권, 등록청구권, 우선매수권(ROFR)/공동매도권(co-sale), 경영권 서한(management rights letter), 지분비례 참여권(pro-rata)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: min-02\n    text: \"기술 접근권은 지분과 별도로 라이선스 — 지분이 곧 라이선스가 아니며, 라이선스가 곧 지분도 아님\"\n    mandatory: true\n    waiver_eligible: true\n  - id: min-03\n    text: \"모든 독점 기간에는 종료일(sunset) 설정 — 소수 지분을 통한 영구 독점은 비지배 가격으로 산 지배권임\"\n    mandatory: true\n    waiver_eligible: true\n  - id: min-04\n    text: \"지분 매집 제한(standstill) 및 정보 차단벽(information barrier) 조건 합의 (양측의 미공개 중요정보(MNPI) 취급 보호)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: min-05\n    text: \"지분 규모나 국적상 해당되는 경우 외국인투자 심사 평가 완료\"\n    mandatory: true\n    waiver_eligible: true\n\n  # ── JV (origin=joint) [rbd 3.4] ─────────────────────────────────────\n  # Formation mechanics ride `entity-formation` ef-13..17 (PR-10) — the\n  # items below are the decision-side contract terms this chain owns.\n  - id: jvd-01\n    text: \"모회사 출자 약정 및 가치평가 (기술 출자는 독립 가치평가 — chk-partnership의 pt-07, 출자 당사자 제시 금액 그대로 수용 금지)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: jvd-02\n    text: \"이사회 구성, 유보 사항(reserved matters) 목록, 교착(deadlock) 조건을 텀시트 협상 전에 문서화 (chk-partnership pt-06 확장)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: jvd-03\n    text: \"합작(JV)으로 들어오고 나가는 IP 라이선스를 각각 문서화 — 범위, 기간, 합작(JV) 엑시트 시 처리\"\n    mandatory: true\n    waiver_eligible: true\n  - id: jvd-04\n    text: \"서명 시점에 엑시트 구조 설계: 풋/콜, 우선매수권(ROFR), 드래그/태그, 가치평가 방식(사용 시 감정인 2인 후 제3 감정인 절차 포함)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: jvd-05\n    text: \"합작(JV) 고유의 경쟁법 승인 평가 (합작(JV)은 모회사들이 집중시키지 않는 시장도 집중시킬 수 있음)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: jvd-06\n    text: \"청산 조건 합의 — 합작(JV) 해산 시 인력·IP·부채를 누가 가져가는지\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"ADR-0052 (track coverage extension, Section A.2)\"\n  - \"docs/designs/2026-08-23-track-coverage-extension-design.md §A.2\"\n  - \"docs/research/rbd-partnership-best-practice.md [rbd 3.1-3.4]\"\n  - \"ADR-0031 (partner-sourcing failure modeled as termination)\"\n"
   },
   "chk-entity-formation-checklist": {
     "id": "chk-entity-formation-checklist",
@@ -1161,11 +1161,11 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "checklists/partnership-checklist.yaml",
     "gate": "DD",
     "enforceability": "mixed",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "owner_agent": "partnership-agent",
     "item_count": 12,
     "lang": "en",
-    "content": "governance_doc_id: chk-partnership\nlayer: checklist\ntitle: \"Partnership Sourcing and JV Checklist\"\nscope: shared\nenforceability: mixed\nowner_agent: partnership-agent\nversion: \"1.1.0\"\neffective_from: \"2026-08-23\"   # v1.1.0 adds pt-08..pt-12 (P1 partnership screen criteria, ADR-0052 §A / [rbd 2.2]); pt-01..pt-07 unchanged\ngate: DD\n\nitems:\n  - id: pt-01\n    text: \"Capability gap defining the need for a partner is stated explicitly before sourcing starts\"\n    mandatory: true\n    waiver_eligible: true\n  - id: pt-02\n    text: \"Compliance screening (sanctions, anti-corruption history) completed for every shortlisted partner candidate — not optional, since a partner's exposure transfers to us\"\n    mandatory: true\n    waiver_eligible: true\n  - id: pt-03\n    text: \"Financial stability and capacity scores recorded per candidate with evidence references\"\n    mandatory: true\n    waiver_eligible: true\n  - id: pt-04\n    text: \"Dependency risk assessed — including the risk the partner becomes a competitor after technology transfer\"\n    mandatory: true\n    waiver_eligible: true\n  - id: pt-05\n    text: \"Where the business model has a hard partner dependency, partner-sourcing failure is modeled as a Kill Criteria candidate (deal termination), not a schedule delay (ADR-0031)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: pt-06\n    text: \"For JV structures: governance (board composition, veto matters), contribution valuation, exit clauses (put/call, drag/tag), and deadlock-resolution mechanism all documented before term-sheet negotiation\"\n    mandatory: true\n    waiver_eligible: true\n  - id: pt-07\n    text: \"Technology contribution independently valued, not accepted at the contributing party's stated figure\"\n    mandatory: false\n    waiver_eligible: true\n  # pt-08..pt-12 added v1.1.0 — the P1 partnership-screen criteria families of\n  # the deal-shape chain (ADR-0052 §A.1 P1 / [rbd 2.2]): the screen scores the\n  # PARTNERSHIP, not the market, reusing the strategic-fit knock-out+scorecard\n  # method with partner-facing criteria.\n  - id: pt-08\n    text: \"Strategic complementarity assessed — what we bring plus what the partner brings jointly closes the named capability gap (pt-01), with the combination rationale written down\"\n    mandatory: true\n    waiver_eligible: true\n  - id: pt-09\n    text: \"Partner technical capability evidenced against OUR next gate's requirement — test data, certifications, or demonstrated delivery, not marketing claims\"\n    mandatory: true\n    waiver_eligible: true\n  - id: pt-10\n    text: \"Operational and cultural fit assessed — working style, decision speed, and the geographic/timezone operating reality of the collaboration\"\n    mandatory: true\n    waiver_eligible: true\n  - id: pt-11\n    text: \"Alliance track record assessed, with references to at least two of the partner's other alliance partners as required evidence [rbd 2.4]\"\n    mandatory: true\n    waiver_eligible: true\n  - id: pt-12\n    text: \"Organizational readiness on both sides — dedicated resources, a named executive sponsor, and decision authority delegated for the negotiation itself\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"docs/partnership-playbook.md (forward reference — Stage 4 documentation)\"\n  - \"ADR-0031 (partner-sourcing failure modeled as termination)\"\n  - \"ADR-0052 §A (deal-shape chain, P1 partnership screen)\"\n  - \"docs/research/rbd-partnership-best-practice.md [rbd 2.2, 2.4]\"\n"
+    "content": "governance_doc_id: chk-partnership\nlayer: checklist\ntitle: \"Partnership Sourcing and JV Checklist\"\nscope: shared\nenforceability: mixed\nowner_agent: partnership-agent\nversion: \"1.2.0\"\neffective_from: \"2026-08-23\"   # v1.1.0 adds pt-08..pt-12 (P1 partnership screen criteria, ADR-0052 §A / [rbd 2.2]); pt-01..pt-07 unchanged\ngate: DD\n\nitems:\n  - id: pt-01\n    text: \"파트너 필요성을 정의하는 역량 격차(capability gap)를 발굴 착수 전에 명시적으로 기술\"\n    mandatory: true\n    waiver_eligible: true\n  - id: pt-02\n    text: \"최종후보 파트너 전원에 대한 컴플라이언스 심사(제재·부패방지 이력) 완료 — 파트너의 위험 노출이 당사로 전이되므로 선택 사항이 아님\"\n    mandatory: true\n    waiver_eligible: true\n  - id: pt-03\n    text: \"후보별 재무 안정성·역량 점수를 근거 참조와 함께 기록\"\n    mandatory: true\n    waiver_eligible: true\n  - id: pt-04\n    text: \"의존 위험 평가 — 기술 이전 후 파트너가 경쟁자가 될 위험 포함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: pt-05\n    text: \"사업모델에 파트너 의존이 필수적인 경우, 파트너 발굴 실패를 일정 지연이 아닌 중단 기준(Kill Criteria) 후보(딜 종료)로 모델링 (ADR-0031)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: pt-06\n    text: \"합작(JV) 구조의 경우: 지배구조(이사회 구성, 거부권 사항), 출자 가치평가, 엑시트 조항(풋/콜, 드래그/태그), 교착 해소 장치(deadlock-resolution)를 텀시트 협상 전에 모두 문서화\"\n    mandatory: true\n    waiver_eligible: true\n  - id: pt-07\n    text: \"기술 출자는 출자 당사자가 제시한 금액을 그대로 수용하지 않고 독립적으로 가치평가\"\n    mandatory: false\n    waiver_eligible: true\n  # pt-08..pt-12 added v1.1.0 — the P1 partnership-screen criteria families of\n  # the deal-shape chain (ADR-0052 §A.1 P1 / [rbd 2.2]): the screen scores the\n  # PARTNERSHIP, not the market, reusing the strategic-fit knock-out+scorecard\n  # method with partner-facing criteria.\n  - id: pt-08\n    text: \"전략적 상호보완성 평가 — 당사와 파트너가 각각 가져오는 것이 합쳐져 명시된 역량 격차(pt-01)를 해소하는지, 결합 논리를 문서로 기록\"\n    mandatory: true\n    waiver_eligible: true\n  - id: pt-09\n    text: \"파트너의 기술 역량을 당사 다음 게이트 요건에 비추어 입증 — 마케팅 주장이 아닌 시험 데이터, 인증, 납품 실적\"\n    mandatory: true\n    waiver_eligible: true\n  - id: pt-10\n    text: \"운영·문화 적합성 평가 — 일하는 방식, 의사결정 속도, 협업의 지리·시간대 운영 현실\"\n    mandatory: true\n    waiver_eligible: true\n  - id: pt-11\n    text: \"제휴 실적(alliance track record) 평가 — 파트너의 다른 제휴 상대 최소 2곳의 평판 조회를 필수 근거로 확보 [rbd 2.4]\"\n    mandatory: true\n    waiver_eligible: true\n  - id: pt-12\n    text: \"양측의 조직 준비도 — 전담 인력, 지정된 경영진 후원자(executive sponsor), 협상 자체에 대한 의사결정 권한 위임\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"docs/partnership-playbook.md (forward reference — Stage 4 documentation)\"\n  - \"ADR-0031 (partner-sourcing failure modeled as termination)\"\n  - \"ADR-0052 §A (deal-shape chain, P1 partnership screen)\"\n  - \"docs/research/rbd-partnership-best-practice.md [rbd 2.2, 2.4]\"\n"
   },
   "chk-rbd-technology-checklist": {
     "id": "chk-rbd-technology-checklist",
@@ -1658,7 +1658,7 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "title": "런북 — KRX 베타 시계열 수집(수동, KRX 승인 대기)",
     "file": "docs/runbooks/beta-series-collection_ko.md",
     "lang": "ko",
-    "content": "---\nlang: ko\nlang_reason: source-material\ncounterpart: beta-series-collection.md\n---\n\n**대상**: 운영자, 딜 분석가\n**책임**: backend-engineer\n**화면**: /projects/[id]/wacc\n\n## 목적\n\n일별종가 시계열(코스피/코스닥 지수 + 주식회사/대상사 종가)은 WACC 베타 회귀 패널의 \"수집 데이터 불러오기\" 액션에 쓰입니다. `scripts/co-newbiz/beta-series.ts`로 수집하며 `newbiz fetch`와 같은 ensure_fresh 경로로 `fact_market_observation`에 적재됩니다.\n\n## 스케줄링 스토리\n\n로컬에서는 호스트 스케줄러가 돌지 않으므로 수집은 **수동**입니다(호스트 cron 확보 전까지 — 같은 패턴은 [rag-host-scheduler.md](rag-host-scheduler.md) 참고). 매월 한 번 이상 실행하세요. ensure_fresh 덕에 재실행은 캐시 히트라 과잉 수집은 API 할당량만 소모합니다.\n\n```bash\nbun scripts/co-newbiz/beta-series.ts --project <md_project.id>            # 최근 약 13개월\nbun scripts/co-newbiz/beta-series.ts --project <id> --from 2025-10 --to 2026-10\n```\n\n단축코드가 자동 해석되지 않으면 `--ticker 회사명=058050`으로 지정할 수 있습니다. 해석된 단축코드는 `db/data/krx-stock-code-cache.json`에 캐시됩니다.\n\n## 전제: KRX 서비스 승인\n\nKRX 데이터 마켓플레이스 키에 6개 서비스(idx/kospi_dd_trd 등 6개)의 승인이 필요합니다. 미승인 상태에서는 모든 호출이 `respCode 401 — Unauthorized API Call`이고 스크립트는 관측 0건으로 종료합니다(재신청: 포털 마이페이지 → API 사용 신청). 승인 후 재실행하세요.\n"
+    "content": "---\nlang: ko\nlang_reason: source-material\ncounterpart: beta-series-collection.md\n---\n\n**대상**: 운영자, 딜 분석가\n**책임**: backend-engineer\n**화면**: /projects/[id]/wacc\n\n## 목적\n\n일별종가 시계열(코스피/코스닥 지수 + 주식회사/대상사 종가)은 WACC 베타 회귀 패널의 \"수집 데이터 불러오기\" 액션에 쓰입니다. `scripts/co-newbiz/beta-series.ts`로 수집하며 `newbiz fetch`와 같은 ensure_fresh 경로로 `fact_market_observation`에 적재됩니다.\n\n## 스케줄링 스토리\n\n로컬에서는 호스트 스케줄러가 돌지 않으므로 수집은 **수동**입니다(호스트 cron 확보 전까지 — 같은 패턴은 [rag-host-scheduler.md](rag-host-scheduler.md) 참고). 매월 한 번 이상 실행하세요. ensure_fresh 덕에 재실행은 캐시 히트라 과잉 수집은 API 할당량만 소모합니다.\n\n```bash\nbun scripts/co-newbiz/beta-series.ts --project <md_project.id>            # 최근 약 13개월\nbun scripts/co-newbiz/beta-series.ts --project <id> --from 2025-10 --to 2026-10\n```\n\n단축코드가 자동 해석되지 않으면 `--ticker 회사명=058050`으로 지정할 수 있습니다. 해석된 단축코드는 `db/data/krx-stock-code-cache.json`에 캐시됩니다.\n\n## 전제: KRX 서비스 승인\n\nKRX 데이터 마켓플레이스 키에 6개 서비스(idx/kospi_dd_trd 등 6개)의 승인이 필요합니다. 미승인 상태에서는 모든 호출이 `respCode 401 — Unauthorized API Call`이고 스크립트는 관측 0건으로 종료합니다(재신청: 포털 마이페이지 → API 사용 신청). 승인 후 재실행하세요.\n\n## 요청 방식: 서비스·평일마다 한 번 호출\n\nKRX 일별 서비스는 모두 기준일 하나(`basDd=YYYYMMDD`)를 받아 그날의 모든 행(같은 계열의 모든 지수, 또는 그 시장의 모든 상장 종목)을 돌려줍니다. 기간 조회(`bgnDd`/`endDd`)는 지원되지 않으며, 보내면 HTTP 200에 빈 `OutBlock_1`이 옵니다. 요청·필드 이름은 2026-10-12에 실제 호출로 확인했습니다.\n\n- 수집기는 달마다 평일을 하나씩 돌며(토·일과 미래 날짜는 건너뜀) 서비스를 하루 한 번씩 호출합니다. 동시 호출은 2개이고 호출 사이를 250ms 이상 띄우며, 네트워크 오류·5xx·호출 제한(403/429, 더 긴 대기)에는 한 번 다시 시도합니다.\n- 하루치 응답은 (서비스, 날짜) 단위로 프로세스 안에 캐시되므로 코스닥 지수와 코스닥 상장사 시계열은 하루 한 번의 호출을 함께 씁니다.\n- 평일인데 `OutBlock_1`이 비어 있으면 휴장일로 보고 건너뛰며 개수만 셉니다.\n- 지수 행은 `IDX_NM`이 정확히 `코스피`/`코스닥`이고 `CLSPRC_IDX`가 숫자인 행만 고릅니다. `코스피 (외국주포함)`처럼 종가가 빈 행은 쓰지 않습니다. 종목 행은 `ISU_CD`(6자리 단축코드)로 고르고 종가는 `TDD_CLSPRC`입니다.\n- 종목 기본정보(`sto/*_isu_base_info`)는 비어 있지 않은 가장 최근 평일의 `basDd`로 호출하고 `ISU_ABBRV`/`ISU_NM`을 정확히 일치 → 앞부분 일치 → 포함 순으로 맞춥니다. 후보가 여럿이면 짐작하지 않고 알립니다.\n\n**호출량**: 대략 평일 수 × 서비스 수입니다. 13개월은 평일 약 280일이고 코스피 지수·코스닥 지수·종목 서비스 하나를 쓰면 약 850회, 여기에 회사마다 기본정보 호출 1~2회가 더해집니다. 실행당 기본 호출 한도는 2000회이며 `--budget N`으로 바꿀 수 있습니다. 스크립트는 호출 수, 캐시 적중 수, 빈 날짜 수를 출력합니다.\n\n## 문제 해결\n\n| 증상 | 뜻 | 조치 |\n|---|---|---|\n| 관측 0건, \"every KRX payload was empty\" | 잘못된 요청 인자(`basDd` 대신 기간) 또는 범위가 모두 휴장일 | 스크립트 버전 확인, `--from/--to` 넓히기 |\n| `respCode 401 ... re-apply` | 키는 유효하나 서비스 미승인·만료 | 포털 마이페이지 → API 사용 신청에서 재신청 |\n| 재시도 후에도 `HTTP 403`/`5xx`/시간 초과 | KRX 호출 제한(동시 4개에서 관찰) 또는 장애 | 기다렸다 재실행(재실행은 캐시 적중) |\n| `not found in KOSDAQ master` / `ambiguous` | 회사 이름이 상장 약칭과 다름 | `--ticker 회사명=<6자리 코드>`로 지정 |\n| `call budget exhausted` | 범위에 비해 한도가 작음 | `--budget` 올리거나 범위 줄이기 |\n"
   },
   "rb-beta-series": {
     "id": "rb-beta-series",
@@ -1666,7 +1666,7 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "title": "Runbook — KRX Beta Series Collection (Manual, KRX Approval Pending)",
     "file": "docs/runbooks/beta-series-collection.md",
     "lang": "en",
-    "content": "---\nlang: en\ncounterpart: beta-series-collection_ko.md\n---\n\n**Audience**: operators, deal analysts\n**Owner**: backend-engineer\n**Screens**: /projects/[id]/wacc\n\n## Purpose\n\nDaily-close time series (KOSPI/KOSDAQ index + subject/target company closes) feed the WACC beta regression panel (\"수집 데이터 불러오기\"). Series are collected with `scripts/co-newbiz/beta-series.ts` into `fact_market_observation` via the same ensure_fresh path as `newbiz fetch`.\n\n## Scheduling story\n\nThere is no host scheduler running locally — collection is **manual** until a\nhost cron exists (see [rag-host-scheduler.md](rag-host-scheduler.md) for the\nsame pattern). Run monthly, or more often; ensure_fresh makes reruns cache-hit,\nso over-collecting costs API quota, not correctness.\n\n```bash\nbun scripts/co-newbiz/beta-series.ts --project <md_project.id>            # last ~13 months\nbun scripts/co-newbiz/beta-series.ts --project <id> --from 2025-10 --to 2026-10\nbun scripts/co-newbiz/beta-series.ts --project <id> --ticker 회사명=058050   # pin an unresolved short code\n```\n\n## Prerequisite: KRX service approval\n\nThe KRX Data Marketplace key must have the six services approved\n(idx/kospi_dd_trd, idx/kosdaq_dd_trd, sto/stk_bydd_trd, sto/ksq_bydd_trd, sto/stk_isu_base_info, sto/ksq_isu_base_info —\nre-apply via portal 마이페이지 → API 사용 신청).\nUntil then every call returns `respCode 401 — Unauthorized API Call` and the\nscript exits 1 with 0 observations. Re-apply, wait for approval, and rerun;\nresolved 단축코드 are cached in `db/data/krx-stock-code-cache.json`.\n"
+    "content": "---\nlang: en\ncounterpart: beta-series-collection_ko.md\n---\n\n**Audience**: operators, deal analysts\n**Owner**: backend-engineer\n**Screens**: /projects/[id]/wacc\n\n## Purpose\n\nDaily-close time series (KOSPI/KOSDAQ index + subject/target company closes) feed the WACC beta regression panel (\"수집 데이터 불러오기\"). Series are collected with `scripts/co-newbiz/beta-series.ts` into `fact_market_observation` via the same ensure_fresh path as `newbiz fetch`.\n\n## Scheduling story\n\nThere is no host scheduler running locally — collection is **manual** until a\nhost cron exists (see [rag-host-scheduler.md](rag-host-scheduler.md) for the\nsame pattern). Run monthly, or more often; ensure_fresh makes reruns cache-hit,\nso over-collecting costs API quota, not correctness.\n\n```bash\nbun scripts/co-newbiz/beta-series.ts --project <md_project.id>            # last ~13 months\nbun scripts/co-newbiz/beta-series.ts --project <id> --from 2025-10 --to 2026-10\nbun scripts/co-newbiz/beta-series.ts --project <id> --ticker 회사명=058050   # pin an unresolved short code\n```\n\n## Prerequisite: KRX service approval\n\nThe KRX Data Marketplace key must have the six services approved\n(idx/kospi_dd_trd, idx/kosdaq_dd_trd, sto/stk_bydd_trd, sto/ksq_bydd_trd, sto/stk_isu_base_info, sto/ksq_isu_base_info —\nre-apply via portal 마이페이지 → API 사용 신청).\nUntil then every call returns `respCode 401 — Unauthorized API Call` and the\nscript exits 1 with 0 observations. Re-apply, wait for approval, and rerun;\nresolved 단축코드 are cached in `db/data/krx-stock-code-cache.json`.\n\n## Request shape: one call per (service, weekday)\n\nEvery KRX daily service takes a single reference date, `basDd=YYYYMMDD`, and\nreturns all rows of that day (every index of the family, or every listed stock\nof the market). A date range (`bgnDd`/`endDd`) is not supported: KRX answers\nHTTP 200 with an empty `OutBlock_1`. Request and field names were verified live\non 2026-10-12.\n\n- The collector iterates the weekdays of each month (Saturdays, Sundays and\n  future dates are skipped) and calls each service once per day with a\n  two concurrent workers spaced at least 250 ms apart, and one retry on network errors, 5xx, or throttling (403/429, longer backoff).\n- A day payload is cached in-process per (service, day), so the KOSDAQ index\n  and every KOSDAQ-listed company share one call per day.\n- An empty `OutBlock_1` on a weekday is a holiday/non-trading day; it is\n  skipped and counted.\n- Index rows are picked by exact `IDX_NM` (`코스피`, `코스닥`) with a numeric\n  `CLSPRC_IDX`; rows such as `코스피 (외국주포함)` (empty close) are never used.\n  Stock rows are picked by `ISU_CD` (6-digit short code) with close\n  `TDD_CLSPRC`.\n- The stock master (`sto/*_isu_base_info`) is called with `basDd` of the most\n  recent non-empty weekday and matched on `ISU_ABBRV`/`ISU_NM` (exact, then\n  prefix, then substring; ambiguity is reported, not guessed).\n\n**Call volume**: about weekdays x distinct services. Thirteen months is about\n280 weekdays; with the KOSPI index, KOSDAQ index, and one stock service that is\nroughly 850 calls, plus 1-2 master calls per company. The default per-run call\nbudget is 2000 (`--budget N` to change it). The script prints calls, cache\nhits, and empty-day counts.\n\n## Troubleshooting\n\n| Symptom | Meaning | Action |\n|---|---|---|\n| `0 observations` and \"every KRX payload was empty\" | wrong params (range instead of `basDd`) or only non-trading days in range | check the script version; widen `--from/--to` |\n| `respCode 401 ... re-apply` | key valid but service not approved/expired | re-apply at portal 마이페이지 → API 사용 신청 |\n| `HTTP 403` / `5xx` / timeout after retry | KRX burst throttling (seen at concurrency 4) or outage | wait and rerun (reruns are cache hits) |\n| `not found in KOSDAQ master` / `ambiguous` | name does not match the listed abbreviation | pin with `--ticker 회사명=<6-digit code>` |\n| `call budget exhausted` | range too large for the budget | raise `--budget` or narrow the range |\n"
   },
   "rb-deployment-ko": {
     "id": "rb-deployment-ko",
@@ -2252,157 +2252,157 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
   "chk-deal-shape-presigning-checklist": [
     {
       "id": "lic-01",
-      "text": "Grant scope explicit; any exclusivity justified against a public-interest-style test, not assumed",
+      "text": "허여 범위(grant scope)를 명시하고, 독점권은 당연시하지 않고 공익성 기준에 준하는 테스트로 정당화",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "lic-02",
-      "text": "Field of use and territory no broader than what we can actually exploit",
+      "text": "실시 분야(field of use)와 지역은 당사가 실제로 활용할 수 있는 범위를 넘지 않을 것",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "lic-03",
-      "text": "Complete financial stack documented — upfront payment, milestones, royalties, minimums (no element left 'to be discussed')",
+      "text": "전체 대가 구조 문서화 — 선급금, 마일스톤, 로열티, 최소 실시료 ('추후 협의'로 남기는 항목 없음)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "lic-04",
-      "text": "Development benchmarks dated, with annual reporting obligations against them",
+      "text": "개발 목표 시점(development benchmarks)을 일자로 정하고 이에 대한 연차 보고 의무 부과",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "lic-05",
-      "text": "Anti-shelving revocation for non-use (NIH-style) included — a license we can sit on is a license the licensor can take back",
+      "text": "미실시에 따른 사장(死藏) 방지 해지 조항(NIH 방식) 포함 — 당사가 묵혀둘 수 있는 라이선스는 라이선서가 회수할 수 있는 라이선스임",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "lic-06",
-      "text": "Grantback terms for improvements we create stated explicitly",
+      "text": "당사가 만든 개량 발명에 대한 그랜트백(grantback) 조건을 명시",
       "mandatory": false,
       "waiver_eligible": true
     },
     {
       "id": "lic-07",
-      "text": "Audit rights over the licensor's royalty/compliance accounting",
+      "text": "라이선서의 로열티·컴플라이언스 회계에 대한 감사권",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "lic-08",
-      "text": "Government strings identified where applicable (Bayh-Dole-style march-in, manufacture preference) and their consequence for exclusivity assessed",
+      "text": "해당 시 정부 부대조건(Bayh-Dole 방식 개입권(march-in), 국내 생산 우선) 식별 및 독점권에 미치는 영향 평가",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "lic-09",
-      "text": "Inventor-assignment title chain verified BEFORE term sheet — chain-of-title defects discovered after signing are the classic license-in failure",
+      "text": "텀시트 전에 발명자 권리 승계(직무발명 승계(PIIA)) 권원 체인 검증 — 서명 후 발견되는 권원 하자는 라이선스 도입(license-in)의 전형적 실패 원인",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "cdv-01",
-      "text": "Background-IP defined per party, exhaustively — the #1 co-dev dispute source is 'we thought that was ours'",
+      "text": "당사자별 기존 IP(background IP)를 빠짐없이 정의 — 공동개발 분쟁의 1순위 원인은 '그건 우리 것인 줄 알았다'임",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "cdv-02",
-      "text": "Foreground-IP ownership rule chosen deliberately (joint vs by-field vs by-inventor) with the choice rationale recorded — never defaulted",
+      "text": "신규 IP(foreground IP) 귀속 원칙(공동 소유 / 분야별 / 발명자별)을 의도적으로 선택하고 선택 근거를 기록 — 기본값 적용 금지",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "cdv-03",
-      "text": "Joint steering committee with named decision rights AND a deadlock ladder (who breaks ties at which level)",
+      "text": "의사결정 권한이 명시된 공동운영위원회(joint steering committee)와 단계별 교착 해소 절차(deadlock ladder: 어느 단계에서 누가 결정하는지)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "cdv-04",
-      "text": "Budgets milestone-tranched, with explicit failure-to-fund consequences for each party",
+      "text": "예산을 마일스톤별로 분할 집행하고, 당사자별 자금 미납 시 결과를 명시",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "cdv-05",
-      "text": "Publication review windows agreed (protection of patentable findings before disclosure)",
+      "text": "공개 전 검토 기간 합의 (공개 전에 특허 가능한 성과 보호)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "cdv-06",
-      "text": "Exit/step-in triggers stated, with data handover and sublicense survival on exit",
+      "text": "엑시트·개입(step-in) 사유를 명시하고, 엑시트 시 데이터 인계와 재실시권(sublicense) 존속을 규정",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "min-01",
-      "text": "NVCA-standard rights package enumerated and negotiated as a package — board designation, information rights, registration rights, ROFR/co-sale, management rights letter, pro-rata participation",
+      "text": "NVCA 표준 권리 묶음을 열거하고 묶음 단위로 협상 — 이사 지명권, 정보요구권, 등록청구권, 우선매수권(ROFR)/공동매도권(co-sale), 경영권 서한(management rights letter), 지분비례 참여권(pro-rata)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "min-02",
-      "text": "Technology access licensed SEPARATELY from equity — the stake is not the license, and the license is not the stake",
+      "text": "기술 접근권은 지분과 별도로 라이선스 — 지분이 곧 라이선스가 아니며, 라이선스가 곧 지분도 아님",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "min-03",
-      "text": "Any exclusivity window carries a sunset date — perpetual exclusivity via a minority stake is a control right bought at a non-control price",
+      "text": "모든 독점 기간에는 종료일(sunset) 설정 — 소수 지분을 통한 영구 독점은 비지배 가격으로 산 지배권임",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "min-04",
-      "text": "Standstill and information-barrier terms agreed (protects both sides' MNPI handling)",
+      "text": "지분 매집 제한(standstill) 및 정보 차단벽(information barrier) 조건 합의 (양측의 미공개 중요정보(MNPI) 취급 보호)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "min-05",
-      "text": "Foreign-investment screening assessment completed where the stake or nationality triggers it",
+      "text": "지분 규모나 국적상 해당되는 경우 외국인투자 심사 평가 완료",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "jvd-01",
-      "text": "Parent contributions committed and valued (technology contributions independently valued — pt-07 of chk-partnership, never at the contributing party's stated figure)",
+      "text": "모회사 출자 약정 및 가치평가 (기술 출자는 독립 가치평가 — chk-partnership의 pt-07, 출자 당사자 제시 금액 그대로 수용 금지)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "jvd-02",
-      "text": "Board composition, reserved-matters map, and deadlock terms documented before term-sheet negotiation (extends pt-06 of chk-partnership)",
+      "text": "이사회 구성, 유보 사항(reserved matters) 목록, 교착(deadlock) 조건을 텀시트 협상 전에 문서화 (chk-partnership pt-06 확장)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "jvd-03",
-      "text": "IP licenses in and out of the JV each documented — scope, term, and what happens at JV exit",
+      "text": "합작(JV)으로 들어오고 나가는 IP 라이선스를 각각 문서화 — 범위, 기간, 합작(JV) 엑시트 시 처리",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "jvd-04",
-      "text": "Exit architecture designed AT SIGNING: put/call, ROFR, drag/tag, and the valuation mechanism (incl. the two-appraisers-then-third process where used)",
+      "text": "서명 시점에 엑시트 구조 설계: 풋/콜, 우선매수권(ROFR), 드래그/태그, 가치평가 방식(사용 시 감정인 2인 후 제3 감정인 절차 포함)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "jvd-05",
-      "text": "JV-specific antitrust clearance assessed (a JV can concentrate markets its parents do not)",
+      "text": "합작(JV) 고유의 경쟁법 승인 평가 (합작(JV)은 모회사들이 집중시키지 않는 시장도 집중시킬 수 있음)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "jvd-06",
-      "text": "Wind-down terms agreed — who takes what people, IP, and liabilities if the JV dissolves",
+      "text": "청산 조건 합의 — 합작(JV) 해산 시 인력·IP·부채를 누가 가져가는지",
       "mandatory": true,
       "waiver_eligible": true
     }
@@ -3112,73 +3112,73 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
   "chk-partnership-checklist": [
     {
       "id": "pt-01",
-      "text": "Capability gap defining the need for a partner is stated explicitly before sourcing starts",
+      "text": "파트너 필요성을 정의하는 역량 격차(capability gap)를 발굴 착수 전에 명시적으로 기술",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "pt-02",
-      "text": "Compliance screening (sanctions, anti-corruption history) completed for every shortlisted partner candidate — not optional, since a partner's exposure transfers to us",
+      "text": "최종후보 파트너 전원에 대한 컴플라이언스 심사(제재·부패방지 이력) 완료 — 파트너의 위험 노출이 당사로 전이되므로 선택 사항이 아님",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "pt-03",
-      "text": "Financial stability and capacity scores recorded per candidate with evidence references",
+      "text": "후보별 재무 안정성·역량 점수를 근거 참조와 함께 기록",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "pt-04",
-      "text": "Dependency risk assessed — including the risk the partner becomes a competitor after technology transfer",
+      "text": "의존 위험 평가 — 기술 이전 후 파트너가 경쟁자가 될 위험 포함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "pt-05",
-      "text": "Where the business model has a hard partner dependency, partner-sourcing failure is modeled as a Kill Criteria candidate (deal termination), not a schedule delay (ADR-0031)",
+      "text": "사업모델에 파트너 의존이 필수적인 경우, 파트너 발굴 실패를 일정 지연이 아닌 중단 기준(Kill Criteria) 후보(딜 종료)로 모델링 (ADR-0031)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "pt-06",
-      "text": "For JV structures: governance (board composition, veto matters), contribution valuation, exit clauses (put/call, drag/tag), and deadlock-resolution mechanism all documented before term-sheet negotiation",
+      "text": "합작(JV) 구조의 경우: 지배구조(이사회 구성, 거부권 사항), 출자 가치평가, 엑시트 조항(풋/콜, 드래그/태그), 교착 해소 장치(deadlock-resolution)를 텀시트 협상 전에 모두 문서화",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "pt-07",
-      "text": "Technology contribution independently valued, not accepted at the contributing party's stated figure",
+      "text": "기술 출자는 출자 당사자가 제시한 금액을 그대로 수용하지 않고 독립적으로 가치평가",
       "mandatory": false,
       "waiver_eligible": true
     },
     {
       "id": "pt-08",
-      "text": "Strategic complementarity assessed — what we bring plus what the partner brings jointly closes the named capability gap (pt-01), with the combination rationale written down",
+      "text": "전략적 상호보완성 평가 — 당사와 파트너가 각각 가져오는 것이 합쳐져 명시된 역량 격차(pt-01)를 해소하는지, 결합 논리를 문서로 기록",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "pt-09",
-      "text": "Partner technical capability evidenced against OUR next gate's requirement — test data, certifications, or demonstrated delivery, not marketing claims",
+      "text": "파트너의 기술 역량을 당사 다음 게이트 요건에 비추어 입증 — 마케팅 주장이 아닌 시험 데이터, 인증, 납품 실적",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "pt-10",
-      "text": "Operational and cultural fit assessed — working style, decision speed, and the geographic/timezone operating reality of the collaboration",
+      "text": "운영·문화 적합성 평가 — 일하는 방식, 의사결정 속도, 협업의 지리·시간대 운영 현실",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "pt-11",
-      "text": "Alliance track record assessed, with references to at least two of the partner's other alliance partners as required evidence [rbd 2.4]",
+      "text": "제휴 실적(alliance track record) 평가 — 파트너의 다른 제휴 상대 최소 2곳의 평판 조회를 필수 근거로 확보 [rbd 2.4]",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "pt-12",
-      "text": "Organizational readiness on both sides — dedicated resources, a named executive sponsor, and decision authority delegated for the negotiation itself",
+      "text": "양측의 조직 준비도 — 전담 인력, 지정된 경영진 후원자(executive sponsor), 협상 자체에 대한 의사결정 권한 위임",
       "mandatory": true,
       "waiver_eligible": true
     }
