@@ -7,6 +7,7 @@ import { ulid } from "../../../../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { route } from "../../../../../../lib/route.ts";
+import { PMI_NOT_APPLICABLE_MESSAGE, pmiApplicability } from "../../../../../../lib/pmi-kickoff.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
 
 export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
@@ -30,6 +31,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   if (ctx.role === "viewer") return forbidden("role_required", "시너지 인증은 analyst 역할 이상이어야 합니다.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
+  if (!pmiApplicability(getDb(), id).applies) return forbidden("not_applicable_track", PMI_NOT_APPLICABLE_MESSAGE);
   const body = (await request.json().catch(() => null)) as {
     run_rate_bp?: number; sustained_quarters?: number; baseline_locked_at?: string;
   } | null;

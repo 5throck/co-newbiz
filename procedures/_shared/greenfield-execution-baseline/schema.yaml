@@ -1,0 +1,153 @@
+schema_version: "1.0"
+procedure_id: shared-greenfield-execution-baseline
+title: "Greenfield Execution Baseline (post-approval, S11)"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+# ADR-0161 (Proposed; user decisions Q1-Q7 in chat 2026-10-12), design
+# docs/designs/2026-10-11-greenfield-investment-execution-and-post-management-design.md
+# section 5.2. Greenfield has no acquisition closing, so the post-approval
+# execution content (capex tranches bound to S10 conditions, permit and
+# certification milestones, hiring plan, ramp-up KPI targets, incentive
+# obligations) needs its own baseline. Q1: a new procedure, NOT an extension
+# of entity-establishment-execution (entity-shaped and origin-gated;
+# existing_business_rbd creates no new entity). When a new entity is created,
+# entity-establishment-execution runs alongside this procedure unchanged.
+#
+# Track discrimination (Q5): track/case_type, never origin. The routing-var
+# registry (migrations 0014, 0136) seeds project.case_type (the track value,
+# greenfield | brownfield) and project.sub_track; there is no separate
+# project.track var, so the predicate reads project.case_type only.
+# Fail-closed (design 5.1.5): an unassessed case_type evaluates per
+# db/lib/applies-when.ts; a project whose track cannot be resolved is surfaced
+# as "needs human classification" by the UI/API guard (design row 2), never
+# treated as brownfield by default.
+#
+# Retroactive application (Q2, design section 8): applied to in-flight
+# projects by this predicate against flow.spec v2.8.0, without re-pinning
+# project_policy_pin; one human-initiated policy_migration audit entry per
+# in-flight project records it. For a project that has ALREADY completed S11
+# every step below is RECOMMENDED, not blocking; it blocks only where S11 is
+# not yet reached or its gates are not yet decided. Nothing is deleted and no
+# completed gate is reopened. Enforcement of that rule is the backend/UI work
+# of design rows 2-3; this file states the rule.
+#
+# Tranches (Q4): the schedule IS the capex_tranche table (migration 0136,
+# deal-structuring v1.1.0 step 6). This procedure reads and reconciles those
+# rows; it never stores tranches elsewhere and never writes tranche status.
+# Release stays the human-only, two-person route from PR #511.
+applicability: conditional
+applies_when: { op: "cmp", var: "project.case_type", cmp: "eq", value: "greenfield" }
+workflow_type: core
+gate: "Entity IC"   # execution after entity_ic approval, same gate slot as entity-establishment-execution
+owner_agent: greenfield-agent
+legal_basis:
+  - "ADR-0161 (greenfield execution and post-management by track; Proposed — Q1-Q7 decided by the user in chat 2026-10-12)"
+  - "docs/designs/2026-10-11-greenfield-investment-execution-and-post-management-design.md §5.2, §6.1, §8"
+  - "ADR-0160 (greenfield sub-track S9/S10; deal-structuring step 6 phased capex tranches, migration 0136 capex_tranche)"
+  - "ADR-0159 (S8 project business goals — reference evidence only, never gate-blocking)"
+  - "checklists/entity-formation-checklist.yaml (gx-01..gx-03 execution-baseline group)"
+
+# Sub-track notes (sub_track values: none | existing_business_rbd | intra_venture):
+#   step 2 (permits/certifications) does not apply to intra_venture (no new
+#   site or product licence by default — design matrix 3.1);
+#   step 3 for intra_venture links to entity-establishment-execution step 4
+#   (people transfer) instead of restating it;
+#   every other step applies to every greenfield sub-track.
+# skill_key binding (ADR-0161 Row 1 follow-up, user-approved 2026-10-12): every
+# step names its skill, and each named skill lists this procedure in its
+# SKILL.md metadata.procedure_keys, satisfying the skill-graph bidirectional
+# contract (scripts/co-newbiz/graph-map.ts). Skills reference this procedure
+# key and never restate its steps (boundary #3). Metadata-only change; the
+# procedure version stays 1.0.0 (no step semantics changed).
+#
+# The step applies_when below are documentation-grade predicates in the same
+# style as greenfield-dd v1.1.0; the app-side selection (design row 2) is
+# authoritative at runtime.
+
+steps:
+  - id: 1
+    gate: "Entity IC"
+    agent_key: financing-agent
+    skill_key: financing-plan-review
+    output_type: capex_tranche_schedule
+    description: >
+      Capex tranche schedule bound to the live capex_tranche rows of the
+      project (tranche_no, amount, currency, release_condition, status;
+      retired rows excluded), which deal-structuring step 6 created from the
+      S10 deal-structure conditions (source_stage S10). Reconcile the
+      non-retired tranche sum against the S8 adopted case capex profile in
+      the same currency. READ AND RECONCILE ONLY: this step never writes a
+      tranche, never changes a tranche status, and never converts currency.
+      A gap (no rows, a condition with no tranche, or a sum that differs
+      from the case) is a finding for the human in step 6, never an
+      auto-fix; no numeric tolerance auto-passes (design open question O2).
+  - id: 2
+    gate: "Entity IC"
+    applies_when:
+      op: none_of
+      of:
+        - { op: "in", var: "project.sub_track", values: ["intra_venture"] }
+    agent_key: certification-agent
+    skill_key: certification-roadmap
+    output_type: permit_certification_milestones
+    description: >
+      Permit and certification execution milestones, kept as two separate
+      lists (boundary #5: a permit lets you operate, a certification lets
+      you sell; different issuers, procedures and critical paths). Permits
+      come from the S5 permit records (record_permit) with legal-counsel
+      co-review of the permit pathway (permit-pathway-mapping); certifications
+      come from the certification roadmap. Each milestone carries issuer,
+      target date and the capex tranche or ramp-up KPI it gates, if any.
+  - id: 3
+    gate: "Entity IC"
+    agent_key: greenfield-agent
+    skill_key: talent-pipeline-planning
+    output_type: hiring_plan_baseline
+    description: >
+      Hiring plan baseline — headcount ramp by role family and quarter,
+      aggregate only (no individual rows). For intra_venture the team
+      transfer is entity-establishment-execution step 4 (people transfer);
+      this step links to it and does not restate it.
+  - id: 4
+    gate: "Entity IC"
+    agent_key: greenfield-agent
+    skill_key: greenfield-feasibility
+    output_type: ramp_up_kpi_targets
+    description: >
+      Ramp-up KPI targets the S12 scorecard measures against: first revenue
+      date, utilisation ramp, BEP month, revenue and EBITDA versus the S8
+      adopted case, plus the ADR-0159 project business goals as reference
+      evidence (goal:<metric_key>). Goals are never gate-blocking and never
+      select a transition term; an unjudged goal is shown as "not judged".
+      Measure keys are listed in portfolio-venture-monitoring v1.2.0.
+  - id: 5
+    gate: "Entity IC"
+    agent_key: incentive-agent
+    skill_key: incentive-clawback-assessment
+    output_type: incentive_obligation_register
+    description: >
+      Incentive obligation register — clawback-bearing obligations from the
+      S10 incentive records (employment commitments, investment amount,
+      deadlines), each with the milestone or tranche it depends on.
+  - id: 6
+    gate: "Entity IC"
+    agent_key: execution-baseline-confirmer   # human role — procedures/_human-roles.yaml registry (ADR-0053)
+    decision_authority: human
+    skill_key: stage-gate-governance
+    output_type: execution_baseline_confirmation
+    description: >
+      Human confirmation of the execution baseline (steps 1-5) by one person
+      — the Entity IC owner or a delegate with project write access — with a
+      mandatory non-empty rationale. Agents draft steps 1-5 and never
+      confirm. The confirmation stores only confirmer, timestamp, rationale
+      and a snapshot hash of the referenced capex_tranche ids; tranches stay
+      in capex_tranche. Evidence: entity-formation-checklist gx-01..gx-03.
+      Open step-1 gaps are shown to the confirmer as findings; confirming
+      with an open gap requires the rationale to address it.
+
+# No kill_criteria: the design names none. Step-1 gaps are findings for the
+# human confirmation, and tranche release / kill decisions belong to the S12
+# venture-portfolio-ic (portfolio-venture-monitoring step 3), not to a
+# gate-time halt here. Do not add one without a design amendment.

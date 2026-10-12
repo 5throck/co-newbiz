@@ -219,6 +219,17 @@ beforeAll(async () => {
       });
       expect(res.status).toBe(201);
     }
+    // ADR-0161: greenfield execution-baseline human confirmation (S11 reached after the rule).
+    { const base = `/api/projects/${pid}/execution-baseline`;
+      const entries = { permit_milestones: [{ name: "건축허가", issuer: "시청", target_date: "2027-03-01" }], hiring_plan: [{ role_family: "생산", quarter: "2027-Q1", headcount: 10 }], kpi_targets: [{ metric_key: "revenue_vs_case", target_value: 100, due: "2028-Q4" }] };
+      expect((await req(base, { method: "POST", headers: { cookie: analystCookie }, body: JSON.stringify({ action: "record_entries", entries }) })).status).toBe(201);
+      const first = await req(base, { method: "POST", headers: { cookie: analystCookie }, body: JSON.stringify({ action: "confirm", rationale: "S12 도달을 위한 실행 기준선 확인 (테스트)" }) });
+      let st = first.status;
+      if (st === 409) {
+        const open = ((await first.json()) as { meta: { open_findings: Array<{ code: string }> } }).meta.open_findings;
+        st = (await req(base, { method: "POST", headers: { cookie: analystCookie }, body: JSON.stringify({ action: "confirm", rationale: "S12 도달을 위한 실행 기준선 확인 (테스트)", acknowledged_findings: open.map((f) => ({ code: f.code, rationale: "테스트 픽스처: 확인" })) }) })).status;
+      }
+      expect(st).toBe(201); }
   }
 
   runId = ulid();

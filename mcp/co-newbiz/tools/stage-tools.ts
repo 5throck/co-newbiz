@@ -197,7 +197,7 @@ const SPECS: readonly RouteToolSpec[] = [
   { name: "record_establishment", kind: "write", method: "PUT", path: "/api/projects/{projectId}/establishment", body: "required", bodyHint: BODY,
     activities: ["entity-establishment-execution"], artifacts: ["stage:S11:4"], description: "Record an entity-establishment step (preparation, registration, permits, staffing, completion)." },
   { name: "record_pmi_key_talent", kind: "write", method: "POST", path: "/api/projects/{projectId}/pmi/key-talent", body: "required", bodyHint: BODY,
-    description: "PMI planning draft: a key-talent retention entry. (PMI kickoff itself is not exposed.)" },
+    description: "PMI planning draft: a key-talent retention entry (status: active | departed_regretted | departed_planned). (PMI kickoff itself is not exposed.)" },
   { name: "record_pmi_synergy_certification", kind: "write", method: "POST", path: "/api/projects/{projectId}/pmi/synergy-certifications", body: "required", bodyHint: BODY,
     description: "PMI planning draft: a synergy-certification entry. (PMI kickoff itself is not exposed.)" },
 

@@ -138,6 +138,25 @@ describe("process flow spec integrity (ADR-0074)", () => {
     expect(skillsOf("financing-dd")).toEqual([]);
   });
 
+  test("S11/S12 track-scoped execution and monitoring activities (v2.8.0, ADR-0161)", () => {
+    const act = (stage: string) => spec.stages.find((s) => s.id === stage)!.activities;
+    expect(act("S11").map((a) => a.id)).toEqual([
+      "ic-preparation", "charter-baseline", "investment-structuring", "risk-review", "group-review",
+      "entity-establishment-execution", "pmi-kickoff", "greenfield-execution-baseline",
+    ]);
+    // Q6: one activity id, owner unchanged; the greenfield owner lives in entity-ic-review step 3.1.
+    expect(act("S11").find((a) => a.id === "investment-structuring")!.agent).toBe("brownfield-agent");
+    const gx = act("S11").find((a) => a.id === "greenfield-execution-baseline")!;
+    expect([gx.agent, gx.skills, gx.procedure]).toEqual(["greenfield-agent", [], ["greenfield-execution-baseline"]]);
+    expect(act("S12").map((a) => `${a.id}:${a.agent}:${a.procedure.join(",")}`)).toEqual([
+      "portfolio-monitoring:group-review-agent:portfolio-venture-monitoring",
+      "integration-monitoring:pmi-agent:pmi-integration-execution",
+      "partnership-monitoring:partnership-agent:jv-lifecycle-governance",
+    ]);
+    // Activity-level applicableTracks is not supported (ADR-0160 follow-up, ADR-0161 §5.5).
+    for (const s of spec.stages) for (const a of s.activities) expect((a as Record<string, unknown>).applicableTracks).toBeUndefined();
+  });
+
   test("applicable tracks are valid", () => {
     for (const s of spec.stages) {
       for (const t of s.applicableTracks) expect(VALID_TRACKS).toContain(t);

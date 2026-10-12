@@ -34,7 +34,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const db = getDb();
   const run = db
-    .query("SELECT id, status, stage, started_at, finished_at, meta_json FROM process_run WHERE id = ? AND entity_type = 'project' AND entity_id = ?")
+    .query("SELECT id, status, stage, started_at, finished_at, meta_json FROM process_run WHERE id = ? AND entity_type = 'project' AND entity_id = ? AND stage <> 's11_execution_baseline'")
     .get(runId, id) as RunRow | undefined;
   if (!run) return notFound();
 

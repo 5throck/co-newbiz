@@ -21,7 +21,27 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.7.0"
+  version: "2.8.0"
+  # v2.8.0 — S11/S12 실행·사후관리를 트랙·세부 트랙별로 범위화한다 (ADR-0161,
+  #   Proposed; Q1~Q7은 2026-10-12 채팅에서 사용자가 결정). S11에
+  #   greenfield-execution-baseline(greenfield-agent; capex_tranche 행과 S10
+  #   조건을 읽기만 하는 6단계 기준선, 마지막 단계는 사람 확인) 활동을, S12에
+  #   integration-monitoring(pmi-agent; pmi-integration-execution step 6 사후
+  #   통합 모니터링, m_and_a·strategic_investment)과 partnership-monitoring
+  #   (partnership-agent; jv-lifecycle-governance step 2 파트너십 변형) 활동을
+  #   추가한다. investment-structuring은 하나의 id·owner brownfield-agent를
+  #   유지하고, greenfield 소유(greenfield-agent, financing-agent 공동검토)는
+  #   entity-ic-review step 3.1로 procedure 계층에서 표현한다 (Q6).
+  #   활동 수준 applicableTracks는 지원하지 않는다 — 범위는 각 procedure의
+  #   applies_when과 UI/API 가드(설계 row 2)가 강제한다. 소급 적용(Q2): 재핀
+  #   없이 predicate로 적용하고 진행 중 프로젝트마다 사람이 policy_migration
+  #   감사 항목 1건을 기록한다. 이미 완료한 stage의 새 단계는 권고(비차단)다.
+  #   설계 §5.4 정합 후속(2026-10-12 사용자 승인, 버전은 v2.8.0 유지): S11
+  #   objective를 트랙 중립 문언(인수 종결·법인 설립·greenfield 실행 기준선
+  #   확정)으로 바꾸고 S12 requiredArtifacts에 "실행 기준선 대비 차이(greenfield)"를
+  #   더한다. app/web-next/lib/process-flow.ts STAGES 문자열도 같은 변경으로
+  #   맞췄다(정합 테스트).
+  #   stage/gate 구조 변경 없음.
   # v2.7.0 — S9 활동에 financial-dd(financial-analyst)·hr-dd(hr-integration-agent)·
   #   market-dd(market-intelligence-agent)·financing-dd(financing-agent)를 추가해
   #   ADR-0148 7개 DD 도메인 전부가 spec 활동으로 디스패치된다 (ADR-0160 addendum
@@ -593,7 +613,7 @@ stages:
 
   - id: S11
     name: 투자심사·실행
-    objective: "투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 IC 패키지로 묶어 Entity/Group IC 심사를 통과하고, 승인되면 실행(법인 설립 또는 인수 종결)한다"
+    objective: "투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 IC 패키지로 묶어 Entity/Group IC 심사를 통과하고, 승인되면 트랙에 맞는 실행에 들어간다(인수 종결, 법인 설립, greenfield 실행 기준선 확정)"
     inputs:
       - IC 패키지(사업계획·DD·RAG·검토)
       - 투자 구조안(S10 투자구조 설계의 산출물 — 비히클·4축 검토·자금조달 계획)
@@ -603,6 +623,7 @@ stages:
       - 투자 구조 확정(비히클·자금 조달 mix·지급 일정)
       - 설립 완료 법인(신설 법인 — 사내벤처·자회사, origin∈{internal,joint})
       - 실행 진입(PMI / 벤처 모니터링 / R&BD 실행)
+      - 실행 기준선(greenfield — capex_tranche 연결·인허가/인증 마일스톤·채용·램프업 KPI·인센티브 의무, 사람 확인)
     entryCriteria:
       - S10 완료
     activities:
@@ -630,6 +651,9 @@ stages:
         # 4축 검토·자금조달 계획)을 IC 패키지에 참조로 묶을 뿐이다.
         # jv-lifecycle-governance는 Route가 JV인 경우에 적용한다 (설립·거버넌스·
         # 출구 전 라이프사이클 약속의 기준선).
+        # v2.8.0 (ADR-0161 Q6): owner는 brownfield-agent 그대로(활동 필드는 트랙별로
+        # 바꿀 수 없다). greenfield는 greenfield-agent가 소유하고 financing-agent가
+        # 공동검토한다 — entity-ic-review step 3.1(case_type=greenfield)이 이를 강제한다.
       - id: risk-review
         agent: risk-officer
         skills: [legal-risk-register]
@@ -653,6 +677,15 @@ stages:
         # 실행 진입(PMI) — brownfield(M&A/JV/전략적 투자)에서 Entity/Group IC 승인
         # 이후 통합 계획 기준선을 수립한다. 시너지 실현 추적과 통합 리스크 평가의
         # 초기 스냅샷을 S11 사후관리로 이관한다.
+      - id: greenfield-execution-baseline
+        agent: greenfield-agent
+        skills: []
+        procedure: [greenfield-execution-baseline]
+        # greenfield 전용 (ADR-0161 Q1/Q5) — procedure applies_when(case_type=greenfield)이
+        # 강제한다. origin이 아니라 트랙으로 판별한다. 단계: capex_tranche 행·S10 조건
+        # 대조(읽기 전용, 상태를 쓰지 않음) → 인허가/인증 마일스톤(분리) → 채용 계획 →
+        # 램프업 KPI 목표(S8 채택 케이스·ADR-0159 목표는 참고) → 인센티브 의무 → 사람 확인
+        # (1인·근거 필수). 신설 법인이면 entity-establishment-execution이 함께 실행된다.
     requiredArtifacts:
       - IC 패키지
       - 추진계획(차터) 기준선 — 목적·트랙 근거·진출 범위·KPI 선커밋
@@ -675,6 +708,7 @@ stages:
     outputs:
       - 포트폴리오 스코어카드
       - 사업 성과 리포트
+      - 실행 기준선 대비 차이(greenfield)
       - "포트폴리오 전환 결정(어휘 5종: next_tranche_released / held_evidence_incomplete / graduate_to_core / reduce_or_divest / kill_with_learning_captured)"
     entryCriteria:
       - S11 완료 (IC 승인, internal/joint는 설립 실행 완료 포함)
@@ -683,10 +717,27 @@ stages:
         agent: group-review-agent
         skills: [portfolio-fit-assessment]
         procedure: [portfolio-venture-monitoring]
+        # v2.8.0 (ADR-0161): portfolio-venture-monitoring v1.2.0은 greenfield를
+        # case_type으로도 포함한다 (origin이 비어 있어도 적용). 기본 venture_class:
+        # 신규 부지 driving / existing_business_rbd enabling / intra_venture emergent.
+      - id: integration-monitoring
+        agent: pmi-agent
+        skills: [pmi-planning]
+        procedure: [pmi-integration-execution]
+        # brownfield m_and_a·strategic_investment의 사후 통합 모니터링 (ADR-0161 Q3) —
+        # pmi-integration-execution step 6(시너지 run-rate·핵심인재 유지·고객 이탈).
+        # step 1~5와 pmi-kickoff는 바뀌지 않는다. 범위는 step applies_when이 강제한다.
+      - id: partnership-monitoring
+        agent: partnership-agent
+        skills: []
+        procedure: [jv-lifecycle-governance]
+        # brownfield partnership의 사후 관리 (ADR-0161 Q3) — jv-lifecycle-governance
+        # step 2 건강 스코어카드의 파트너십 변형. 다른 단계는 origin=joint에서만 적용.
     requiredArtifacts:
       - 벤처 스코어카드
       - "사람 전환 결정 기록(어휘 5종, decided_by=venture-portfolio-ic, rationale 필수 — venture_transition_decision 원장)"
       - "전환별 결정 부속 기록: 차기 트랜치 조건(next_tranche_released/held_evidence_incomplete), 핵심사업 인계 기록(graduate_to_core), 매각/청산 계획(reduce_or_divest), 학습 포착 기록(kill_with_learning_captured — group-review-agent 기록, risk-officer가 S1/S2 기본률에 환류)"
+      - 실행 기준선 대비 차이(greenfield)
     completionCriteria:
       # ADR-0150 (accepted 2026-10-02) — 즉시 전면 적용(진행 중 핀 프로젝트 포함, 컷오프 없음)
       - "리뷰 주기별로 스코어카드 검토가 존재한다"
@@ -695,6 +746,8 @@ stages:
       - "확장 결정(graduate_to_core)은 핵심사업 인계를 기록한다"
       - "축소/철수 결정(reduce_or_divest)은 매각 또는 청산 계획을 기록한다"
       - "중단 결정(kill_with_learning_captured)은 포착된 학습을 기록하고 S1/S2 기본률에 환류한다"
+      # ADR-0161 (Proposed) — greenfield 참고 기준, 게이트 차단 아님
+      - "greenfield는 각 스코어카드 주기에 S11 실행 기준선·S8 채택 케이스·S8 사업 목표(참고) 대비 차이를 보고한다"
       # 이 단계의 kill/graduate는 S1~S11의 Kill Criteria와 범주가 다른 포트폴리오 거버넌스 결정이다
       # (procedures/_shared/portfolio-venture-monitoring — venture-portfolio-ic 결정 어휘 5종)
     applicableTracks: [greenfield, brownfield]

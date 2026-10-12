@@ -12,6 +12,7 @@ import { hasScreeningEvidence, listTargets, longListCandidateGaps, screeningSumm
 import { countSourcedCapabilityRows } from "./capability-gap.ts";
 import { AGENT_KEYS } from "./agent-registry.generated.ts";
 import { latestPmiKickoff, pmiKickoffApplies } from "./pmi-kickoff.ts";
+import { executionBaselineS11Check } from "./greenfield-execution.ts";
 import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
 import { establishmentProgress } from "./establishment.ts";
 import { isFreshReviewCycle } from "./portfolio.ts";
@@ -46,8 +47,8 @@ export const STAGES: StageDefinition[] = [
   { id: "S8", name: "사업성 분석", sequence: 8, objective: "돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 Short List 대상별 밸류에이션을 정량화해 비교·선정한다", applicableTracks: ["all"], gateIds: ["fs"], requiredArtifacts: ["Business Case(비용·수익 라인 또는 밸류에이션 — brownfield는 대상별)", "시뮬레이션 NPV 분위수", "BEP 시점과 시뮬레이션 입력 스냅샷", "Target 비교 분석 (brownfield)", "대상 선정 기록 (brownfield)"] },
   { id: "S9", name: "실사·검증", sequence: 9, objective: "사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 S8에서 선정된 대상 DD, 선택적으로 다른 Short List 대상 DD를 비교 근거로 열 수 있다. greenfield는 실현가능성 검증)", applicableTracks: ["all"], gateIds: ["dd"], requiredArtifacts: ["DD 체크리스트 판정(필수 항목 해소)"] },
   { id: "S10", name: "투자구조 설계", sequence: 10, objective: "어떤 그릇으로, 어떤 자금으로 들어갈 것인가? — 비히클(direct/SPC/holdco/내부 스핀오프/JV)과 ADR-0045 4대 축(절세 구조·책임 격리·재무 레버리지·엑싯 구조)을 검토하고 자금조달 계획(sources & uses)을 균형시킨다 (IC 심의의 입력 설계)", applicableTracks: ["all"], gateIds: [], requiredArtifacts: ["투자구조 가설(4축 검토 완료)", "자금조달 계획(sources & uses 균형)"] },
-  { id: "S11", name: "투자심사·실행", sequence: 11, objective: "투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 IC 패키지로 묶어 Entity/Group IC 심사를 통과하고, 승인되면 실행(법인 설립 또는 인수 종결)한다", applicableTracks: ["all"], gateIds: ["entity_ic", "group_ic"], requiredArtifacts: ["IC 패키지", "추진계획(차터) 기준선 — 목적·트랙 근거·진출 범위·KPI 선커밋", "사람 최종 승인(reviewer 기록)", "설립 실행 기록(설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint})"] },
-  { id: "S12", name: "사후 관리", sequence: 12, objective: "투자 후 사업이 궤도에 올랐는가? — 포트폴리오 성과를 모니터링한다", applicableTracks: ["all"], gateIds: [], requiredArtifacts: ["벤처 스코어카드", "사람 전환 결정 기록(어휘 5종, decided_by=venture-portfolio-ic, rationale 필수 — venture_transition_decision 원장)", "전환별 결정 부속 기록: 차기 트랜치 조건(next_tranche_released/held_evidence_incomplete), 핵심사업 인계 기록(graduate_to_core), 매각/청산 계획(reduce_or_divest), 학습 포착 기록(kill_with_learning_captured — group-review-agent 기록, risk-officer가 S1/S2 기본률에 환류)"] },
+  { id: "S11", name: "투자심사·실행", sequence: 11, objective: "투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 IC 패키지로 묶어 Entity/Group IC 심사를 통과하고, 승인되면 트랙에 맞는 실행에 들어간다(인수 종결, 법인 설립, greenfield 실행 기준선 확정)", applicableTracks: ["all"], gateIds: ["entity_ic", "group_ic"], requiredArtifacts: ["IC 패키지", "추진계획(차터) 기준선 — 목적·트랙 근거·진출 범위·KPI 선커밋", "사람 최종 승인(reviewer 기록)", "설립 실행 기록(설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint})"] },
+  { id: "S12", name: "사후 관리", sequence: 12, objective: "투자 후 사업이 궤도에 올랐는가? — 포트폴리오 성과를 모니터링한다", applicableTracks: ["all"], gateIds: [], requiredArtifacts: ["벤처 스코어카드", "사람 전환 결정 기록(어휘 5종, decided_by=venture-portfolio-ic, rationale 필수 — venture_transition_decision 원장)", "전환별 결정 부속 기록: 차기 트랜치 조건(next_tranche_released/held_evidence_incomplete), 핵심사업 인계 기록(graduate_to_core), 매각/청산 계획(reduce_or_divest), 학습 포착 기록(kill_with_learning_captured — group-review-agent 기록, risk-officer가 S1/S2 기본률에 환류)", "실행 기준선 대비 차이(greenfield)"] },
 ];
 
 /** S12 포트폴리오 전환 결정 어휘 5종 (flow.spec S12, portfolio-venture-monitoring). */
@@ -661,6 +662,21 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
       if (done < 5) {
         blockers.push(`설립 실행 미완료 (${done}/5단계)`);
         missing.push("설립 실행 기록(5단계 완료)");
+      }
+    }
+    // ADR-0161 (Q2 retroactive): greenfield execution baseline confirmation —
+    // blocking while S11 is not yet completed; recommended (never reopening the
+    // stage) when S11 was already completed before the rule. Brownfield and
+    // unclassified projects are untouched here.
+    // Review R1-R4: a track-classification CONFLICT blocks with its own text; no
+    // signal at all never blocks (warning on the execution-baseline surface only,
+    // so brownfield output stays byte-identical); reconfirm_required blocks only
+    // while S11 is not otherwise complete.
+    {
+      const gx = executionBaselineS11Check(project.id, { otherCriteriaMet: missing.length === 0 });
+      if (gx.blocks && gx.blocker) {
+        blockers.push(gx.blocker);
+        missing.push(gx.requirement === "classification_conflict" ? "트랙 분류 정리 (case_type ↔ route)" : "실행 기준선 확인 (greenfield)");
       }
     }
     return { complete: missing.length === 0, blockers, missing };

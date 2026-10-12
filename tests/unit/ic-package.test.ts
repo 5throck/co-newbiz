@@ -365,6 +365,22 @@ describe("(e) S11 completion — both gates go AND establishment 5/5", () => {
     });
     expect(confirm.status).toBe(200);
 
+    // ADR-0161: a greenfield S11 reached after the rule also needs the human
+    // execution-baseline confirmation (blocking for a not-yet-completed S11).
+    const pending = evaluateProcess({ type: "project", id: projectId });
+    expect(pending.completedStages).not.toContain("S11");
+    expect(pending.requiredArtifacts).toContain("실행 기준선 확인 (greenfield)");
+    { const base = `/api/projects/${projectId}/execution-baseline`;
+      const entries = { permit_milestones: [{ name: "건축허가", issuer: "시청", target_date: "2027-03-01" }], hiring_plan: [{ role_family: "생산", quarter: "2027-Q1", headcount: 10 }], kpi_targets: [{ metric_key: "revenue_vs_case", target_value: 100, due: "2028-Q4" }] };
+      expect((await req(base, { method: "POST", headers: { cookie: analystCookie }, body: JSON.stringify({ action: "record_entries", entries }) })).status).toBe(201);
+      const first = await req(base, { method: "POST", headers: { cookie: analystCookie }, body: JSON.stringify({ action: "confirm", rationale: "IC 승인 조건 기준 실행 기준선 확인 (테스트)" }) });
+      let st = first.status;
+      if (st === 409) {
+        const open = ((await first.json()) as { meta: { open_findings: Array<{ code: string }> } }).meta.open_findings;
+        st = (await req(base, { method: "POST", headers: { cookie: analystCookie }, body: JSON.stringify({ action: "confirm", rationale: "IC 승인 조건 기준 실행 기준선 확인 (테스트)", acknowledged_findings: open.map((f) => ({ code: f.code, rationale: "테스트 픽스처: 확인" })) }) })).status;
+      }
+      expect(st).toBe(201); }
+
     const after = evaluateProcess({ type: "project", id: projectId });
     expect(after.gateStatus).toMatchObject({ entity_ic: "go", group_ic: "go" });
     expect(after.completedStages).toContain("S11");

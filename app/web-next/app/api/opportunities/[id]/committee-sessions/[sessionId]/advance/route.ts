@@ -3,6 +3,8 @@
 // with the ADR-0096 §6 verbatim-dissent rule; it NEVER writes a
 // gate_decision / route_decision / brownfield_target record (design
 // boundary #2 — the confirm click is always human).
+import { committeeSessionForOpportunity } from "../../../../../../../lib/committee-session.ts";
+import { visibleProject } from "../../../../../../../lib/project-visibility.ts";
 import { authenticate, requireBusinessActor } from "../../../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../../db/client.ts";
@@ -19,13 +21,8 @@ export async function POST(
   { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "위원회 진행은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
   const { id, sessionId } = await params;
   const db = getDb();
-  if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();
-  // Session binding: the session's process_run must address THIS path
-  // opportunity — a session of another entity is 404 here, never advanceable.
-  const run = db.query("SELECT entity_type, entity_id FROM process_run WHERE id = ?").get(sessionId) as
-    | { entity_type: string; entity_id: string }
-    | undefined;
-  if (!run || run.entity_type !== "opportunity" || run.entity_id !== id) return notFound();
+  // Session binding (opportunity + committee stage + promoted-project visibility).
+  if (!committeeSessionForOpportunity(id, sessionId, (pid) => !!visibleProject(ctx, pid, { includeClosed: true }))) return notFound();
   try {
     const result = await advanceCommitteeSession(sessionId, { actor: ctx.userId });
     appendAudit(db, {

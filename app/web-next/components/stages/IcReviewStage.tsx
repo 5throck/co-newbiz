@@ -17,6 +17,7 @@ import { GateDecisionJump, GateDecisionPanel } from "../GateDecisionPanel.tsx";
 import { useToast } from "../ui.tsx";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
+import { ExecutionBaselinePanel } from "./ExecutionBaselinePanel.tsx";
 
 // S11 투자심사·실행 — IC 패키지 열람 + Entity/Group IC 진행 기록 + 설립 실행
 // 5단계 진행 화면 (ADR-0100 §3). 경계 #2: RAG 등급은 'AI 추천'으로만 표시되고
@@ -410,6 +411,9 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
           </table>
           </div>
         </section>
+
+        {/* ── 신규 사업 실행 기준선 (ADR-0161) — greenfield 전용, 그 외 트랙은 아무것도 그리지 않는다 ── */}
+        <ExecutionBaselinePanel projectId={projectId} canAct={canAct} />
 
         {/* ── PMI 킥오프 (brownfield M&A·JV·전략적 투자) ─────────────── */}
         {pkg?.pmi_kickoff.applies && (

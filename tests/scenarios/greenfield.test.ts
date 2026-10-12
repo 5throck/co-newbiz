@@ -62,6 +62,37 @@ describe("greenfield S1 to S12", () => {
       if (res.status() >= 300) throw new Error(`establishment PUT ${res.status()}: ${await res.text()}`);
       await form.waitFor({ state: "detached", timeout: 15_000 });
     }
+    // ADR-0161: the greenfield execution baseline must be confirmed by a person before S11 can complete.
+    // Review fix: the confirm POST refuses with 409 baseline_empty until the KPI targets, the
+    // hiring plan and at least one permit (or certification) milestone are recorded, so the
+    // scenario records one entry per required section through its own add-form first.
+    const postBaseline = () => s.page.waitForResponse((r) => /execution-baseline$/.test(new URL(r.url()).pathname) && r.request().method() === "POST");
+    const addEntry = async (formLabel: string, fields: Array<[string, string]>) => {
+      const f = s.page.locator(`form[aria-label="${formLabel}"]`);
+      for (const [name, value] of fields) await f.getByLabel(name, { exact: true }).fill(value);
+      const save = postBaseline();
+      await f.locator('button[type="submit"]').click();
+      const res = await save;
+      if (res.status() >= 300) throw new Error(`${formLabel} POST ${res.status()}: ${await res.text()}`);
+    };
+    await addEntry("KPI 목표 추가", [["지표 키 (필수)", "utilisation_pct"], ["목표값 (필수)", "70"], ["기한 (YYYY-Qn 또는 YYYY-MM-DD) (필수)", "2027-Q2"]]);
+    await addEntry("채용 계획 추가", [["직군 (필수)", "생산"], ["분기 (YYYY-Qn) (필수)", "2027-Q1"], ["인원 (명) (필수)", "12"]]);
+    await addEntry("인허가 마일스톤 추가", [["인허가 이름 (필수)", "사업장 인허가"], ["발급 기관 (필수)", "지방자치단체"], ["목표일 (필수)", "2027-06-30"]]);
+    await s.page.locator('form[aria-label="실행 기준선 확인"] textarea').fill("실행 기준선: 트랜치와 케이스 차이를 검토했고 사람이 확인함");
+    await s.page.locator('form[aria-label="실행 기준선 확인"] button[type="submit"]').click();
+    // Review fix: the confirm dialog now carries a REQUIRED per-finding acknowledgement
+    // textarea for each open finding. Fill every textarea the dialog shows (0 in the clean
+    // path) before "확인 기록" is enabled.
+    const dialog = s.page.getByRole("alertdialog");
+    const acks = dialog.locator("textarea");
+    if (await acks.count() > 0) {
+      for (let i = 0; i < await acks.count(); i++) await acks.nth(i).fill("확인 필요 항목 근거: 검토했고 사람이 확인함");
+    }
+    const confirmPost = s.page.waitForResponse((r) => /execution-baseline$/.test(new URL(r.url()).pathname) && r.request().method() === "POST");
+    await dialog.getByRole("button", { name: "확인 기록", exact: true }).click();
+    const confirmRes = await confirmPost;
+    if (confirmRes.status() >= 300) throw new Error(`execution-baseline POST ${confirmRes.status()}: ${await confirmRes.text()}`);
+    await see(s.page, "● 확정됨");
     await recordGate(s.page, app, `/projects/${P}/ic-review`, null, "go", "Entity IC: 설립 실행과 투자 구조를 승인", { panelIndex: 0 });
     await recordGate(s.page, app, `/projects/${P}/ic-review`, null, "go", "Group IC: 그룹 자본배분에 부합", { panelIndex: 1 });
     await visit(s.page, app, `/projects/${P}/process`);

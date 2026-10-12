@@ -118,9 +118,50 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+/**
+ * A process_run is a committee session only when its stage is not a stage
+ * ledger (s<N>_*, e.g. s11_execution_baseline) and its meta_json carries a
+ * committee_key. Every reader/writer below goes through this, so a
+ * request-supplied run id can never read or rewrite another ledger's meta_json.
+ */
+export function isCommitteeRun(stage: unknown, metaJson: unknown): boolean {
+  // Stage ledgers (s8_case_adopt, s11_pmi_kickoff, s11_execution_baseline, ...) are never sessions.
+  if (typeof stage !== "string" || /^s\d+_/.test(stage)) return false;
+  if (typeof metaJson !== "string") return false;
+  try {
+    const m = JSON.parse(metaJson) as { committee_key?: unknown };
+    return !!m && typeof m === "object" && typeof m.committee_key === "string" && m.committee_key.trim() !== "";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Route binding for /api/opportunities/:id/committee-sessions/:sessionId/*:
+ * the run must exist, address THIS opportunity, and be a committee stage.
+ * When the opportunity was promoted, the caller must also see that project
+ * (`canSeeProject`, the routes' visibleProject). Null = 404.
+ */
+export function committeeSessionForOpportunity(
+  opportunityId: string,
+  sessionId: string,
+  canSeeProject: (projectId: string) => boolean,
+): { id: string; stage: string } | null {
+  const db = getDb();
+  if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(opportunityId)) return null;
+  const run = db.query("SELECT id, entity_type, entity_id, stage, meta_json FROM process_run WHERE id = ?").get(sessionId) as
+    | { id: string; entity_type: string; entity_id: string; stage: string; meta_json: string | null }
+    | undefined;
+  if (!run || run.entity_type !== "opportunity" || run.entity_id !== opportunityId || !isCommitteeRun(run.stage, run.meta_json)) return null;
+  const promoted = db.query("SELECT id FROM md_project WHERE source_opportunity_id = ?").all(opportunityId) as { id: string }[];
+  if (promoted.length > 0 && !promoted.some((p) => canSeeProject(p.id))) return null;
+  return { id: run.id, stage: run.stage };
+}
+
 function readMeta(runId: string): { meta: SessionMeta; run: Record<string, unknown> } | null {
   const run = getDb().query("SELECT * FROM process_run WHERE id = ?").get(runId) as Record<string, unknown> | undefined;
   if (!run) return null;
+  if (!isCommitteeRun(run.stage, run.meta_json)) return null; // not a committee session (e.g. another ledger's run)
   if (typeof run.meta_json !== "string") return null; // not a committee session
   try {
     return { meta: JSON.parse(run.meta_json) as SessionMeta, run };
@@ -130,6 +171,9 @@ function readMeta(runId: string): { meta: SessionMeta; run: Record<string, unkno
 }
 
 function writeMeta(runId: string, meta: SessionMeta): void {
+  const run = getDb().query("SELECT stage FROM process_run WHERE id = ?").get(runId) as { stage: string } | undefined;
+  // The engine creates the run first, so writeMeta only refuses stage ledgers here.
+  if (!run || /^s\d+_/.test(run.stage)) throw new CommitteeError("not_found", `committee session '${runId}' does not exist`);
   getDb().run("UPDATE process_run SET meta_json = ? WHERE id = ?", [JSON.stringify(meta), runId]);
 }
 

@@ -3,7 +3,7 @@ procedure_id: shared-pmi-integration-execution
 title: "PMI Integration Execution (post-approval, Brown Field)"
 scope: shared
 level: entity
-version: "1.0.0"
+version: "1.1.0"
 status: active
 # Design §B.1 frame: applies_when covers the CLASSIFICATION part only —
 # case_type = brownfield. "Approval granted at entity/group IC, activated at
@@ -17,6 +17,15 @@ status: active
 # Control scope is determined by the stake per ADR-0045's stake axis, which
 # lives in deal_structure_hypothesis, NOT in the routing registry — so this
 # scope rule is deliberately prose, not a step-level applies_when.
+#
+# v1.1.0 (ADR-0161, Proposed; user decision Q3 2026-10-12): adds step 6, the
+# post-close monitoring step behind the S12 activity integration-monitoring,
+# so external acquisitions (m_and_a, strategic_investment) have an applicable
+# S12 procedure (portfolio-venture-monitoring is origin/greenfield-gated).
+# Steps 1-5 (incl. 4.5), the kill criteria, the pmi-kickoff activity and the
+# pmi_* tables are UNCHANGED (brownfield byte-identical invariant). Step 6 is
+# additive and separately keyed; retroactively (Q2) it is RECOMMENDED, not
+# blocking, for any project that already completed S11 — S12 has no gate.
 applicability: conditional
 applies_when: { op: "cmp", var: "project.case_type", cmp: "eq", value: "brownfield" }
 workflow_type: core
@@ -28,6 +37,7 @@ legal_basis:
   - "ADR-0045 (stake axis — determines the reduced-phase scope for non-control acquisitions)"
   - "ADR-0051 (brownfield-dd step 13 HR DD produces this procedure's retention inputs — B.5 boundary)"
   - "docs/research/pmi-jv-lifecycle-best-practice.md [pmi-jv A.1-A.6]"
+  - "ADR-0161 (v1.1.0 — step 6 post-close integration monitoring for S12; Proposed, Q3 decided by the user 2026-10-12)"
 
 steps:
   - id: 1
@@ -123,6 +133,32 @@ steps:
       PR-10's financing precondition: an uncertified run-rate HALTS the
       handover (kill criterion below), it is not weighed against other
       merits. Decision vocabulary: demobilization_approved | held_pending_certification | conditional_with_named_gaps.
+  - id: 6
+    gate: post_close
+    # Same deal shapes as the S12 integration-monitoring activity: m_and_a and
+    # strategic_investment (and an unassessed or 'none' sub-track, fail-closed:
+    # the step applies). jv keeps portfolio-venture-monitoring (origin joint)
+    # and partnership uses jv-lifecycle-governance step 2; the PMI-excluded
+    # sub-tracks mirror NON_PMI_SUB_TRACKS in app/web-next/lib/pmi-kickoff.ts.
+    applies_when:
+      op: none_of
+      of:
+        - { op: "in", var: "project.sub_track", values: ["jv", "minority_investment", "partnership", "rbd", "corporate_venture", "existing_business_rbd", "intra_venture"] }
+    agent_key: pmi-agent
+    skill_key: pmi-planning
+    output_type: integration_monitoring_scorecard
+    description: >
+      Post-close integration monitoring (S12 activity integration-monitoring,
+      ADR-0161): per review cycle, synergy run-rate against the certified
+      baseline and key-talent retention, read from the existing pmi_*
+      ledgers (pmi_synergy_certification, pmi_key_talent), plus customer
+      attrition. Cycle rows are read from those ledgers and are NOT written
+      to venture_scorecard: its source_procedure CHECK (migration 0024)
+      admits only jv-lifecycle-governance and portfolio-venture-monitoring,
+      and no migration is introduced for this step. Reads the records steps
+      1-5 produced and never rewrites them; continues after the BAU exit of
+      step 5. Monitoring only — it adds no decision, no kill criterion and
+      no gate; any portfolio transition stays a human decision.
 
 kill_criteria:
   - condition: synergy_run_rate_uncertified_at_bau_handover

@@ -4,6 +4,8 @@
 // (append-only, recorded in process_run meta).
 import { getDb } from "../../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
+import { committeeSessionForOpportunity } from "../../../../../../../lib/committee-session.ts";
+import { visibleProject } from "../../../../../../../lib/project-visibility.ts";
 import { authenticate, requireBusinessActor } from "../../../../../../../lib/auth.ts";
 import { buildCommitteeMinutes, confirmCommitteeMinutes } from "../../../../../../../lib/committee-scorecard.ts";
 import { badRequest, fail, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
@@ -12,7 +14,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   { const denied = requireBusinessActor(auth.auth, "read"); if (denied) return denied; }
-  const { sessionId } = await params;
+  const { id, sessionId } = await params;
+  if (!committeeSessionForOpportunity(id, sessionId, (pid) => !!visibleProject(auth.auth, pid, { includeClosed: true }))) return notFound();
   const minutes = buildCommitteeMinutes(getDb(), sessionId);
   if (minutes === null) return notFound();
   return new Response(minutes, {
@@ -27,7 +30,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const ctx = auth.auth;
   { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "회의록 확정은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
   const { id, sessionId } = await params;
-  if (!getDb().query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();
+  if (!committeeSessionForOpportunity(id, sessionId, (pid) => !!visibleProject(ctx, pid, { includeClosed: true }))) return notFound();
   const body = (await request.json().catch(() => null)) as { confirm?: boolean } | null;
   if (body?.confirm !== true) {
     return badRequest("invalid_request", '회의록 확정은 {"confirm": true} 본문이 필요합니다.');

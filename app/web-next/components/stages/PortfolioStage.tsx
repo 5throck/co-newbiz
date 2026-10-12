@@ -18,6 +18,8 @@ import { RECORD_KEY_LABEL, TRANSITION_DECISION_LABEL, resolveLabel } from "../..
 import { RawKey } from "../RawKey.tsx";
 import { ClosureModal } from "../ClosureModal.tsx";
 import { useRouter } from "next/navigation";
+import { PostManagementPanel } from "./PostManagementPanel.tsx";
+import { PolicyMigrationPanel } from "./PolicyMigrationPanel.tsx";
 
 // S12 사후 관리 — 포트폴리오 스코어카드 열람 + 포트폴리오 전환 결정 기록 화면
 // (ADR-0101 §3). 이 화면은 venture-portfolio-IC의 '인적 결정'을 기록하는
@@ -296,6 +298,9 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
           )}
         </section>
 
+        {/* ── ADR-0161: 적용되는 사후 관리 항목 · 신규 사업 가동 지표 · 통합/파트너십 모니터링 (읽기 전용) ── */}
+        <PostManagementPanel projectId={projectId} />
+
         {/* ── LLM 모니터링 브리프 (결정 지원) — ADR-0118: 초안은 LLM, 전환 결정은 사람 ── */}
         {canAct && (
           <section className="market-section sizing-step mt-3" aria-label="AI 모니터링 브리프">
@@ -450,6 +455,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
             </form>
           )}
         </section>
+        <PolicyMigrationPanel projectId={projectId} canAct={canAct} />
         {confirmDialog}
       </StageFrame>
 </>

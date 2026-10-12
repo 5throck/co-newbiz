@@ -112,8 +112,8 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - S8 사업성 분석: `financial-analyst`, `valuation-agent`, `quant-methodologist`, `pm`
 - S9 실사·검증: `commercial-dd-agent`, `technical-dd-agent`, `legal-counsel`, `financial-analyst`, `hr-integration-agent`, `market-intelligence-agent`, `financing-agent`, `compliance-officer`
 - S10 투자구조 설계: `brownfield-agent`, `valuation-agent`
-- S11 투자심사·실행: `pm`, `brownfield-agent`, `risk-officer`, `group-review-agent`, `process-governance-manager`, `pmi-agent`
-- S12 사후 관리: `group-review-agent`
+- S11 투자심사·실행: `pm`, `brownfield-agent`, `risk-officer`, `group-review-agent`, `process-governance-manager`, `pmi-agent`, `greenfield-agent`
+- S12 사후 관리: `group-review-agent`, `pmi-agent`, `partnership-agent`
 
 스킬·프로시저 대응은 각 스테이지의 Activities 표를, 전체 매핑 근거는 ADR-0074를 참고한다.
 
@@ -509,7 +509,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 ## S11 — 투자심사·실행
 
-**목표**: 투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 IC 패키지로 묶어 Entity/Group IC 심사를 통과하고, 승인되면 실행(법인 설립 또는 인수 종결)한다
+**목표**: 투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 IC 패키지로 묶어 Entity/Group IC 심사를 통과하고, 승인되면 트랙에 맞는 실행에 들어간다(인수 종결, 법인 설립, greenfield 실행 기준선 확정)
 
 **입력**
 - IC 패키지(사업계획·DD·RAG·검토)
@@ -524,6 +524,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - group-review · agent: `group-review-agent` · skills: `group-level-review` · procedure: `entity-ic-review`, `group-investment-review`
 - entity-establishment-execution · agent: `process-governance-manager` · skills: `legal-due-diligence`, `k-law`, `certification-transferability`, `org-readiness-assessment`, `stage-gate-governance` · procedure: `entity-establishment-execution`
 - pmi-kickoff · agent: `pmi-agent` · skills: `pmi-planning` · procedure: `pmi-integration-execution`
+- greenfield-execution-baseline · agent: `greenfield-agent` · skills:  · procedure: `greenfield-execution-baseline`
 
 **필수 산출물**
 - IC 패키지
@@ -571,11 +572,14 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 **Activities**
 - portfolio-monitoring · agent: `group-review-agent` · skills: `portfolio-fit-assessment` · procedure: `portfolio-venture-monitoring`
+- integration-monitoring · agent: `pmi-agent` · skills: `pmi-planning` · procedure: `pmi-integration-execution`
+- partnership-monitoring · agent: `partnership-agent` · skills:  · procedure: `jv-lifecycle-governance`
 
 **필수 산출물**
 - 벤처 스코어카드
 - 사람 전환 결정 기록(어휘 5종, decided_by=venture-portfolio-ic, rationale 필수 — venture_transition_decision 원장)
 - 전환별 결정 부속 기록: 차기 트랜치 조건(next_tranche_released/held_evidence_incomplete), 핵심사업 인계 기록(graduate_to_core), 매각/청산 계획(reduce_or_divest), 학습 포착 기록(kill_with_learning_captured — group-review-agent 기록, risk-officer가 S1/S2 기본률에 환류)
+- 실행 기준선 대비 차이(greenfield)
 
 **완료 기준**
 - 리뷰 주기별로 스코어카드 검토가 존재한다
@@ -584,6 +588,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 확장 결정(graduate_to_core)은 핵심사업 인계를 기록한다
 - 축소/철수 결정(reduce_or_divest)은 매각 또는 청산 계획을 기록한다
 - 중단 결정(kill_with_learning_captured)은 포착된 학습을 기록하고 S1/S2 기본률에 환류한다
+- greenfield는 각 스코어카드 주기에 S11 실행 기준선·S8 채택 케이스·S8 사업 목표(참고) 대비 차이를 보고한다
 
 **적용 트랙**: greenfield, brownfield
 

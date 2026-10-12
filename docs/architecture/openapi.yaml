@@ -2037,7 +2037,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       operationId: recordPmiKickoff
-      summary: Record the S11 PMI kickoff (owner + integration plan baseline). Analyst+, human only (recorded_by is the session user; agents rejected); append-only; audited.
+      summary: "Record the S11 PMI kickoff (owner + integration plan baseline). Analyst+, human only (recorded_by is the session user; agents rejected); append-only; audited. ADR-0161 - greenfield projects, non-PMI brownfield sub-tracks and unresolved tracks get 403 not_applicable_track."
       tags:
         - Deal Review
       parameters:
@@ -2081,7 +2081,7 @@ paths:
   /api/projects/{id}/pmi/key-talent:
     get:
       operationId: listPmiKeyTalent
-      summary: PMI workspace — key talent retention list with status (active|retained|exited) and exit dates (S11 PMI flow).
+      summary: "PMI workspace — key talent retention list with status (active|departed_regretted|departed_planned) and exit dates (S11 PMI flow)."
       tags:
         - Deal Review
       parameters:
@@ -2099,7 +2099,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       operationId: createPmiKeyTalent
-      summary: Add a key talent to the PMI retention list. Analyst+; audited.
+      summary: "Add a key talent to the PMI retention list. status must be active|departed_regretted|departed_planned (DB CHECK), otherwise 400 invalid_request. Analyst+; audited. ADR-0161 - greenfield projects, non-PMI brownfield sub-tracks and unresolved tracks get 403 not_applicable_track."
       tags:
         - Deal Review
       parameters:
@@ -2122,7 +2122,7 @@ paths:
   /api/projects/{id}/pmi/key-talent/{talentId}:
     put:
       operationId: updatePmiKeyTalent
-      summary: Update key talent status (retention confirmation, exit — sets exit_date automatically). Analyst+; audited.
+      summary: "Update key talent status (active|departed_regretted|departed_planned per DB CHECK, otherwise 400 invalid_request; departed_* sets exit_date automatically, active clears it). Analyst+; audited. ADR-0161 - greenfield projects, non-PMI brownfield sub-tracks and unresolved tracks get 403 not_applicable_track."
       tags:
         - Deal Review
       parameters:
@@ -2149,7 +2149,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     delete:
       operationId: deletePmiKeyTalent
-      summary: Remove a key talent entry. Analyst+; audited.
+      summary: "Remove a key talent entry. Analyst+; audited. ADR-0161 - greenfield projects, non-PMI brownfield sub-tracks and unresolved tracks get 403 not_applicable_track."
       tags:
         - Deal Review
       parameters:
@@ -2193,7 +2193,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       operationId: createPmiSynergyCertification
-      summary: Certify a synergy (run_rate_bp + sustained_quarters); certified_by is forced to the session user. Analyst+; audited.
+      summary: "Certify a synergy (run_rate_bp + sustained_quarters); certified_by is forced to the session user. Analyst+; audited. ADR-0161 - greenfield projects, non-PMI brownfield sub-tracks and unresolved tracks get 403 not_applicable_track."
       tags:
         - Deal Review
       parameters:
@@ -2216,7 +2216,7 @@ paths:
   /api/projects/{id}/pmi/synergy-certifications/{certificationId}:
     delete:
       operationId: deletePmiSynergyCertification
-      summary: Un-certify (revoke) a synergy certification. Analyst+; audited.
+      summary: "Un-certify (revoke) a synergy certification. Analyst+; audited. ADR-0161 - greenfield projects, non-PMI brownfield sub-tracks and unresolved tracks get 403 not_applicable_track."
       tags:
         - Deal Review
       parameters:
@@ -2242,7 +2242,7 @@ paths:
   put /api/projects/{id}/sites:
     PUT:
       operationId: updateSiteCandidate
-      summary: Update a site candidate. Analyst+; audited.
+      summary: "Update a site candidate. Analyst+; audited. ADR-0161 - greenfield projects, non-PMI brownfield sub-tracks and unresolved tracks get 403 not_applicable_track."
       tags:
         - Deal Review
       responses:
@@ -4783,6 +4783,140 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           description: not_greenfield, tranche_exists (live tranche_no taken), invalid_transition (e.g. released to planned, edit or retire of a released tranche), second_person_required (release approval by the tranche creator or by someone who edited the tranche since the request), release_pending (update while a release request is open).
+
+  /api/projects/{id}/execution-baseline:
+    get:
+      operationId: getExecutionBaseline
+      summary: "Greenfield S11 execution baseline status (ADR-0161). Members only, MNPI insider check (403 insider_required). Returns applicability (track + case_type via the shared resolver, never origin), requirement (satisfied | blocking | recommended | reconfirm_required | not_applicable | needs_classification | classification_conflict), blocks (boolean), warning (string or null), reconciliation (capex_tranche planned + released rows only vs the S8 adopted case capex; exact match; withheld rows listed but excluded; a null or non-KRW_M unit, non-KRW tranche, missing case or S10 structure is a finding), findings (codes the confirmer must acknowledge), missing_sections, sources, record (latest) and confirmed_record (latest confirmed)."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: writeExecutionBaseline
+      summary: "Human-only (boundary #2; analyst+, cookie session + CSRF, MNPI insider check; bearer/OAuth/agent callers get 403 human_only). Body action = record_entries (entries - permit_milestones, certification_milestones, hiring_plan aggregate rows, kpi_targets, incentive_obligations; max 100 rows per list) | confirm (project lead only, else 403 lead_required; rationale required max 2000 chars; acknowledged_findings [{code, rationale 1..500 chars}] must cover EVERY open finding code). Reads and write run in one immediate transaction; the confirmation stores recorder, confirmer, entries hash, tranche ids + hash and the acknowledgements. Never writes capex_tranche. Audit targets hold hashes and a 120-char summary only."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: "needs_classification (no track signal or conflict) | baseline_empty (meta.missing_sections) | findings_open (meta.open_findings - each code must be acknowledged)."
+
+  /api/projects/{id}/policy-migration:
+    get:
+      operationId: getPolicyMigration
+      summary: "ADR-0161 retroactive application preview for one project. Members only, MNPI insider check. Returns applies, completed_stages (server-computed S8-S12) and the existing policy_migration entry (migration_note summary up to 120 chars + migration_note_hash)."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: recordPolicyMigration
+      summary: "Human-only (boundary #2; analyst+, cookie session + CSRF, MNPI insider check) and project lead only (403 lead_required). Records ONE append-only audit entry (action policy_migration; adr ADR-0161, from_spec 2.7.0, to_spec 2.8.0, migration_note summary up to 120 chars + migration_note_hash, server-computed completed_stages, applies). Only a snapshot listing S11 keeps an unconfirmed S11 recommended. Never re-pins project_policy_pin."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: already_migrated (one entry per project).
+
+  /api/projects/{id}/post-management:
+    get:
+      operationId: getPostManagement
+      summary: "S12 post-management read surface (ADR-0161). Members only (closed projects included, deleted excluded), MNPI insider check. Returns which items apply (all recommended, never blocking) and read views over existing pmi_*, jv_term and venture_scorecard rows; greenfield ramp-up resolves goal keys to ADR-0159 goals as reference only."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/projects/{id}/post-management/scorecard:
+    post:
+      operationId: recordGreenfieldScorecardCycle
+      summary: "Human-only (boundary #2; analyst+, cookie session + CSRF, MNPI insider check; bearer/OAuth/agent callers get 403 human_only). Records one greenfield S12 review cycle (portfolio-venture-monitoring v1.2.0) through the venture_scorecard repository. Body: review_cycle (YYYY-Qn, n 1-4, not later than the current quarter + 1), venture_class (optional; driving, enabling or emergent; default by sub-track), note (max 2000 chars; required when venture_class differs from the default), measures (documented greenfield keys or goal:<metric_key>; value and target_value finite numbers or null; status; evidence_ref; observed_at optional, strict YYYY-MM-DD or full ISO 8601 datetime, not more than one day in the future). Audits venture_scorecard.venture_class_override (before/after, note summary up to 120 chars + hash) and venture_scorecard.greenfield_cycle_recorded (counts, statuses, measures hash, row ids - values stay in venture_scorecard)."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: "not_applicable_track (brownfield), needs_classification (unresolved track), cycle_exists (cycle already recorded), run_required (no run can hold these measures)."
 
   /api/projects/{id}/business-case/legacy-cleanup:
     post:

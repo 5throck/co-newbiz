@@ -44,6 +44,7 @@ export const STAGE_ARTIFACT_LABELS: readonly StageArtifactLabel[] = [
   { key: "stage:S12:1", stageId: "S12", label: "S12 벤처 스코어카드" },
   { key: "stage:S12:2", stageId: "S12", label: "S12 사람 전환 결정 기록" },
   { key: "stage:S12:3", stageId: "S12", label: "S12 전환별 결정 부속 기록" },
+  { key: "stage:S12:4", stageId: "S12", label: "S12 실행 기준선 대비 차이(greenfield)" },
 ];
 
 export const stageArtifactLabel = (key: string): string =>
