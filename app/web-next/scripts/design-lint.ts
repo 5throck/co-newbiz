@@ -26,8 +26,10 @@ const add = (file: string, line: number, rule: string, message: string) =>
 const IS_PAGE = (f: string) => /[\\/]app[\\/].+page\.tsx$/.test(f);
 // R4는 프로세스 단계 화면(StageFrame 규약 화면)에만 적용 — 참조·운영 페이지와
 // 목록/개요 페이지(benchmarks/library/projects 목록·개요)는 예외.
+// /our-company는 단계 외피가 없는 그룹 프로파일 도구 화면이다(ui-label-sweep 2026-10-11:
+// StageFrame 미사용, 제목은 단계명이 아님) — /agents와 같이 예외 쪽에 둔다.
 const STAGE_ROUTES = [
-  "market", "opportunities", "our-company", "synergy", "route-decision", "greenfield", "brownfield",
+  "market", "opportunities", "synergy", "route-decision", "greenfield", "brownfield",
   "pipeline",
   "projects/[id]/business-case", "projects/[id]/dd", "projects/[id]/deal-structure",
   "projects/[id]/ic-review", "projects/[id]/portfolio", "projects/[id]/charter", "projects/[id]/process",

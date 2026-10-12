@@ -4,37 +4,37 @@ title: "Partnership Sourcing and JV Checklist"
 scope: shared
 enforceability: mixed
 owner_agent: partnership-agent
-version: "1.1.0"
+version: "1.2.0"
 effective_from: "2026-08-23"   # v1.1.0 adds pt-08..pt-12 (P1 partnership screen criteria, ADR-0052 §A / [rbd 2.2]); pt-01..pt-07 unchanged
 gate: DD
 
 items:
   - id: pt-01
-    text: "Capability gap defining the need for a partner is stated explicitly before sourcing starts"
+    text: "파트너 필요성을 정의하는 역량 격차(capability gap)를 발굴 착수 전에 명시적으로 기술"
     mandatory: true
     waiver_eligible: true
   - id: pt-02
-    text: "Compliance screening (sanctions, anti-corruption history) completed for every shortlisted partner candidate — not optional, since a partner's exposure transfers to us"
+    text: "최종후보 파트너 전원에 대한 컴플라이언스 심사(제재·부패방지 이력) 완료 — 파트너의 위험 노출이 당사로 전이되므로 선택 사항이 아님"
     mandatory: true
     waiver_eligible: true
   - id: pt-03
-    text: "Financial stability and capacity scores recorded per candidate with evidence references"
+    text: "후보별 재무 안정성·역량 점수를 근거 참조와 함께 기록"
     mandatory: true
     waiver_eligible: true
   - id: pt-04
-    text: "Dependency risk assessed — including the risk the partner becomes a competitor after technology transfer"
+    text: "의존 위험 평가 — 기술 이전 후 파트너가 경쟁자가 될 위험 포함"
     mandatory: true
     waiver_eligible: true
   - id: pt-05
-    text: "Where the business model has a hard partner dependency, partner-sourcing failure is modeled as a Kill Criteria candidate (deal termination), not a schedule delay (ADR-0031)"
+    text: "사업모델에 파트너 의존이 필수적인 경우, 파트너 발굴 실패를 일정 지연이 아닌 중단 기준(Kill Criteria) 후보(딜 종료)로 모델링 (ADR-0031)"
     mandatory: true
     waiver_eligible: true
   - id: pt-06
-    text: "For JV structures: governance (board composition, veto matters), contribution valuation, exit clauses (put/call, drag/tag), and deadlock-resolution mechanism all documented before term-sheet negotiation"
+    text: "합작(JV) 구조의 경우: 지배구조(이사회 구성, 거부권 사항), 출자 가치평가, 엑시트 조항(풋/콜, 드래그/태그), 교착 해소 장치(deadlock-resolution)를 텀시트 협상 전에 모두 문서화"
     mandatory: true
     waiver_eligible: true
   - id: pt-07
-    text: "Technology contribution independently valued, not accepted at the contributing party's stated figure"
+    text: "기술 출자는 출자 당사자가 제시한 금액을 그대로 수용하지 않고 독립적으로 가치평가"
     mandatory: false
     waiver_eligible: true
   # pt-08..pt-12 added v1.1.0 — the P1 partnership-screen criteria families of
@@ -42,23 +42,23 @@ items:
   # PARTNERSHIP, not the market, reusing the strategic-fit knock-out+scorecard
   # method with partner-facing criteria.
   - id: pt-08
-    text: "Strategic complementarity assessed — what we bring plus what the partner brings jointly closes the named capability gap (pt-01), with the combination rationale written down"
+    text: "전략적 상호보완성 평가 — 당사와 파트너가 각각 가져오는 것이 합쳐져 명시된 역량 격차(pt-01)를 해소하는지, 결합 논리를 문서로 기록"
     mandatory: true
     waiver_eligible: true
   - id: pt-09
-    text: "Partner technical capability evidenced against OUR next gate's requirement — test data, certifications, or demonstrated delivery, not marketing claims"
+    text: "파트너의 기술 역량을 당사 다음 게이트 요건에 비추어 입증 — 마케팅 주장이 아닌 시험 데이터, 인증, 납품 실적"
     mandatory: true
     waiver_eligible: true
   - id: pt-10
-    text: "Operational and cultural fit assessed — working style, decision speed, and the geographic/timezone operating reality of the collaboration"
+    text: "운영·문화 적합성 평가 — 일하는 방식, 의사결정 속도, 협업의 지리·시간대 운영 현실"
     mandatory: true
     waiver_eligible: true
   - id: pt-11
-    text: "Alliance track record assessed, with references to at least two of the partner's other alliance partners as required evidence [rbd 2.4]"
+    text: "제휴 실적(alliance track record) 평가 — 파트너의 다른 제휴 상대 최소 2곳의 평판 조회를 필수 근거로 확보 [rbd 2.4]"
     mandatory: true
     waiver_eligible: true
   - id: pt-12
-    text: "Organizational readiness on both sides — dedicated resources, a named executive sponsor, and decision authority delegated for the negotiation itself"
+    text: "양측의 조직 준비도 — 전담 인력, 지정된 경영진 후원자(executive sponsor), 협상 자체에 대한 의사결정 권한 위임"
     mandatory: true
     waiver_eligible: true
 

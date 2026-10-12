@@ -146,11 +146,11 @@ export default function ProjectProcessPage() {
       <header>
         <PageHeader title={`프로세스 현황 — ${data.project.project_no ?? data.project.id}`} />
         {data.track && (
-          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+          <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
             트랙: {trackLabel(data.track, data.subTrack)} · 현재 {stageNameOf(data.currentStage)} · 다음 {stageNameOf(data.nextStage)}
             {data.terminated && " · KILL로 종료됨"}
             <RawKey parts={trackLabelParts(data.track, data.subTrack)} />
-          </p>
+          </div>
         )}
       </header>
 

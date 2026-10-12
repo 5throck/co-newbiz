@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.20.0
+// @version 1.21.0
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
@@ -117,7 +117,8 @@ function upsertPeriod(db: ReturnType<typeof getDb>, periodKey: string): string {
   const [y, m] = periodKey.split("-").map(Number);
   const startDate = isDay ? periodKey : `${periodKey}-01`;
   const endDate = isDay ? periodKey : new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
-  const periodType = isDay ? "day" : "month";
+  // md_period CHECK allows date|month|quarter|year — the day grain is stored as "date".
+  const periodType = isDay ? "date" : "month";
   const found = db
     .query("SELECT id FROM md_period WHERE period_type=? AND start_date=? AND end_date=?")
     .get(periodType, startDate, endDate) as { id: string } | undefined;

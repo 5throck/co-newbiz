@@ -6766,7 +6766,8 @@ paths:
   /api/projects/{id}/wacc/beta-series:
     get:
       operationId: getProjectWaccBetaSeries
-      summary: Collected KRX beta inputs for the regression panel — subject-company daily closes aligned by date with the KOSPI index. Read-only; collection runs through scripts/co-newbiz/beta-series.ts.
+      summary: "Collected KRX beta inputs for the regression panel — subject-company daily closes aligned by date with the KOSPI index. Read-only; collection runs through scripts/co-newbiz/beta-series.ts."
+      description: "Additive diagnostics: data.collection = {subject_company_id, subject_company_name, stock_series_id, index_series_id, price/index/aligned: {count, first_date, last_date}, source_registered, status: ready|insufficient|no_index|no_stock|none, min_rows: 63, hint_code: run_collection|ticker_unresolved|insufficient_overlap|ok, runbook_command (plain text, never executed by the API)}. Existing fields (stock_series_id, price_count, index_count, aligned_count, rows) are unchanged."
       tags:
         - Analysis
       parameters:

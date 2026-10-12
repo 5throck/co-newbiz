@@ -185,12 +185,23 @@ export function reconciliationVerdict(rec: TrancheReconciliationView): Reconcili
   }
   return {
     cls: "status-amber",
-    chip: `▲ 불일치 — 차이 ${fmtNumber(rec.difference)} 백만 KRW`,
+    chip: `▲ 불일치 — 차이 ${fmtMoney(rec.difference)} 백만 KRW`,
     text: "차이는 확인 필요 항목이며 자동으로 통과되지 않습니다 — 사람이 판단합니다.", // INTERIM-WORDING
   };
 }
 
 export const fmtNumber = (n: number) => n.toLocaleString("ko-KR", { maximumFractionDigits: 6 });
+
+/**
+ * Display-only money format: thousand separators, at most 1 decimal for KRW (백만 KRW) and at
+ * most 2 for other currencies. A nonzero value that would round to 0 keeps full precision so a
+ * real difference is never shown as "0". Never used for exact-match comparison.
+ */
+export function fmtMoney(n: number, currency: string | null = "KRW"): string {
+  const max = !currency || currency === "KRW" ? 1 : 2;
+  const out = n.toLocaleString("ko-KR", { maximumFractionDigits: max });
+  return n !== 0 && Number(out.replace(/,/g, "")) === 0 ? fmtNumber(n) : out;
+}
 
 /** Withheld tranches are listed but excluded from the total (server rule R5). */
 export const isExcludedTranche = (t: { status: string }) => t.status === "withheld";
@@ -213,11 +224,9 @@ export const FINDING_LABEL: Record<string, string> = {
   permit_step_not_applicable: "사내벤처에는 인허가·인증 단계가 기본 적용되지 않아 기록된 항목은 참고로만 표시합니다.",
 }; // INTERIM-WORDING
 
-/** Korean finding text; appends the server message (amounts, tranche numbers) when it adds detail. */
+/** Korean finding text per code; the raw server message is shown ONLY for unknown codes. */
 export function findingText(f: Finding): string {
-  const label = FINDING_LABEL[f.code];
-  if (!label) return f.message;
-  return f.message && f.message !== label ? `${label} (${f.message})` : label;
+  return FINDING_LABEL[f.code] ?? f.message;
 }
 
 /** Finding codes the confirmer must acknowledge: the reconciliation findings (not the informational notes). */

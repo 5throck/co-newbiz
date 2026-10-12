@@ -36,6 +36,7 @@ import {
   entriesClearConfirmation,
   findingText,
   fmtNumber,
+  fmtMoney,
   isExcludedTranche,
   missingSectionViews,
   permitStepNote,
@@ -400,7 +401,7 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
                   {rec.tranches.map((t) => (
                     <tr key={t.id} className={isExcludedTranche(t) ? "text-[color:var(--muted-fg)] opacity-70" : undefined} data-excluded={isExcludedTranche(t) ? "true" : undefined}>
                       <td className="tabular-nums">{t.tranche_no}</td>
-                      <td className="tabular-nums">{fmtNumber(t.amount)}</td>
+                      <td className="tabular-nums">{fmtMoney(t.amount, t.currency)}</td>
                       <td>{t.currency}</td>
                       <td className="text-[length:var(--fs-caption)]">{t.release_condition || "—"}</td>
                       <td>
@@ -414,8 +415,8 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
               </table>
             </div>
             <p className="text-[length:var(--fs-caption)] mt-1">
-              트랜치 합계(보류 행 제외) <span className="tabular-nums">{fmtNumber(rec.tranche_total)}</span>
-              {rec.case.capex_total_krw_m !== null && <> · S8 채택 케이스 capex <span className="tabular-nums">{fmtNumber(rec.case.capex_total_krw_m)}</span> 백만 KRW</>}
+              트랜치 합계(보류 행 제외) <span className="tabular-nums">{fmtMoney(rec.tranche_total, rec.tranche_currencies.length === 1 ? rec.tranche_currencies[0] : "KRW")}</span>
+              {rec.case.capex_total_krw_m !== null && <> · S8 채택 케이스 capex <span className="tabular-nums">{fmtMoney(rec.case.capex_total_krw_m)}</span> 백만 KRW</>}
             </p>
             {verdict && (
               <p className="text-[length:var(--fs-caption)] mt-1">

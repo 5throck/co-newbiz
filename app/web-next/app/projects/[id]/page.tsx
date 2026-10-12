@@ -95,10 +95,10 @@ export default function ProjectOverviewPage() {
             ))}
           </ol>
           {process.track && (
-            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2">
+            <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2">
               트랙: {trackLabel(process.track, process.subTrack)}
               <RawKey parts={trackLabelParts(process.track, process.subTrack)} />
-            </p>
+            </div>
           )}
         </section>
       )}

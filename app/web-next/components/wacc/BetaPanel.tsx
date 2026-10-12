@@ -5,7 +5,7 @@
 // (b) 시계열 회귀: 붙여넣은 price/index 시계열 → OLS β·R²·연율화 변동성(자산 vs 시장)
 // 승인된 UI 목업(docs/designs/mockups/2026-09-10-wacc-capm-ui-mockup_ko.html) 기준.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { EChartsOption } from "echarts";
 import { EChart } from "../EChart.tsx";
 import { ColGroup } from "../ui.tsx";
@@ -15,6 +15,15 @@ import {
   scatterPoints,
   type BetaRegressionResult,
 } from "../../../../db/lib/beta-regression.ts";
+import {
+  formatSeriesStat,
+  parseBetaSeriesResponse,
+  shouldFillRows,
+  showsRunbook,
+  statusMessage,
+  statusTone,
+  type BetaCollection,
+} from "../../lib/beta-collection-view.ts";
 
 // 동종사 베타 6열 — 동종사명·출처가 텍스트 입력 셀이라 table-scroll 안에서 고정 비율 유지.
 const PEER_BETA_COL_PCT = [24, 14, 10, 18, 24, 10] as const;
@@ -123,25 +132,49 @@ export function BetaPanel({
     }
   }, [regressionText]);
   const [insufficientRows, setInsufficientRows] = useState(false);
-  const loadCollectedSeries = async () => {
-    setLoading(true);
-    setLoadError(null);
-    setInsufficientRows(false);
+  const [collection, setCollection] = useState<BetaCollection | null>(null);
+  const [copied, setCopied] = useState(false);
+  // fill=false is the read-only status probe on mount; the textarea stays untouched.
+  const fetchCollected = async (fill: boolean) => {
+    if (fill) {
+      setLoading(true);
+      setLoadError(null);
+      setInsufficientRows(false);
+    }
     try {
       const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/wacc/beta-series`);
-      const body = (await res.json().catch(() => null)) as { ok?: boolean; error?: { message?: string }; data?: { rows?: Array<{ date: string; price: number; index: number }> } } | null;
-      if (!res.ok || !body?.ok || !body.data) {
-        setLoadError(body?.error?.message ?? "수집 데이터를 불러오지 못했습니다.");
+      const body: unknown = await res.json().catch(() => null);
+      const parsed = parseBetaSeriesResponse(res.ok, body);
+      if (!parsed.ok) {
+        if (fill) setLoadError(parsed.message);
         return;
       }
-      const rows = body.data.rows ?? [];
+      const c = parsed.collection;
+      setCollection(c);
+      if (!fill) return;
+      // Do not fill the textarea when nothing usable was collected.
+      if (c && !shouldFillRows(c.status)) return;
+      const rows = parsed.rows;
       const csv = rows.map((r) => `${r.date},${r.price},${r.index}`).join("\n");
       onRegressionText(csv);
       setInsufficientRows(rows.length < 63);
     } catch {
-      setLoadError("수집 데이터를 불러오지 못했습니다.");
+      if (fill) setLoadError("수집 데이터를 불러오지 못했습니다.");
     } finally {
-      setLoading(false);
+      if (fill) setLoading(false);
+    }
+  };
+  const loadCollectedSeries = () => fetchCollected(true);
+  useEffect(() => {
+    void fetchCollected(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+  const copyRunbook = async (cmd: string) => {
+    try {
+      await navigator.clipboard.writeText(cmd);
+      setCopied(true);
+    } catch {
+      setCopied(false);
     }
   };
 
@@ -218,6 +251,28 @@ export function BetaPanel({
             <button type="button" className="ghost-button" disabled={loading} onClick={() => void loadCollectedSeries()}>
               {loading ? "불러오는 중…" : "수집 데이터 불러오기"}
             </button>
+          </div>
+          <div aria-live="polite" className="mt-2">
+            {collection && (
+              <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)] text-[length:var(--fs-caption)]">
+                <p className={`font-semibold ${statusTone(collection.status) === "ok" ? "text-[color:var(--accent)]" : statusTone(collection.status) === "warn" ? "text-[color:var(--warning,var(--warning-fg,var(--muted-fg)))]" : "text-[color:var(--red-fg,var(--danger))]"}`}>
+                  {statusMessage(collection)}
+                </p>
+                <ul className="mt-1 text-[color:var(--muted-fg)] tabular-nums">
+                  <li>{formatSeriesStat(`종목${collection.subject_company_name ? ` (${collection.subject_company_name})` : ""}`, collection.price)}</li>
+                  <li>{formatSeriesStat("KOSPI 지수", collection.index)}</li>
+                  <li>정렬된 거래일 {collection.aligned.count}일 / 최소 {collection.min_rows}일</li>
+                </ul>
+                {showsRunbook(collection.status) && (
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <code className="font-mono select-all rounded border border-[color:var(--border-subtle)] px-1.5 py-0.5">{collection.runbook_command}</code>
+                    <button type="button" className="ghost-button" onClick={() => void copyRunbook(collection.runbook_command)}>
+                      {copied ? "복사됨" : "명령 복사"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           {loadError && <p role="alert" className="text-[color:var(--red-fg,var(--danger))] text-[length:var(--fs-caption)] mt-2">✕ {loadError}</p>}
           {insufficientRows && collectedRowCount < 63 && (

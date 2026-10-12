@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * beta-series.ts — register and collect KRX beta inputs (index + subject/target
  * daily closes) for one brownfield project (WACC beta regression, issue #2 of
@@ -10,20 +10,23 @@
  * collects KOSPI + KOSDAQ index closes plus each company's daily closes into
  * fact_market_observation via the same ensure_fresh path as `newbiz fetch`.
  *
+ * KRX request shape: every daily service is called with ONE reference date
+ * (basDd=YYYYMMDD) per weekday; one call per (service, day) is shared across
+ * all series of that service (source-adapters.ts listKrxDailyRows). Expect
+ * roughly weekdays x distinct services calls (~22 x 3 per month here).
+ *
  * 단축코드 (short code) resolution: the stock-master services
- * (sto/stk_isu_base_info / sto/ksq_isu_base_info — k-krx skill catalog) are
- * called WITHOUT params and filtered by abbreviated name in-process; the
- * per-service param spec (개발 명세서) is not public, so this resolution is
- * UNVERIFIED — a resolved code is cached in db/data/krx-stock-code-cache.json
- * keyed by md_company.id so it only has to work once. Pass --ticker to pin a
- * code explicitly.
+ * (sto/stk_isu_base_info / sto/ksq_isu_base_info) are called with basDd and
+ * filtered by abbreviated name (exact → startsWith → includes; ambiguity is
+ * reported). A resolved code is cached in db/data/krx-stock-code-cache.json
+ * keyed by md_company.id. Pass --ticker to pin a code explicitly.
  *
  * Scheduling: there is no host scheduler running locally — run this manually
  * (monthly, or more often; ensure_fresh makes reruns cache-hit), or wire it
  * into the host cron when one exists. See docs/runbooks/beta-series-collection.md.
  *
  * Usage:
- *   bun scripts/co-newbiz/beta-series.ts --project <md_project.id> [--from YYYY-MM] [--to YYYY-MM] [--ticker <companyName=code>]...
+ *   bun scripts/co-newbiz/beta-series.ts --project <md_project.id> [--from YYYY-MM] [--to YYYY-MM] [--ticker <companyName=code>]... [--budget N]
  *
  * Authorization note: writes ONLY market data (md_source/md_unit/md_period/
  * fact_market_observation) to the production DB — nothing else.
@@ -39,7 +42,10 @@ import {
   listKrxDailyRows,
   registerKrxSeries,
   krxStockSeries,
-  type KrxStockMasterRow,
+  krxRunStats,
+  krxWeekdays,
+  resetKrxRunState,
+  resolveKrxStockMaster,
 } from "./source-adapters.ts";
 
 const CACHE_PATH = resolve(import.meta.dir, "../../db/data/krx-stock-code-cache.json");
@@ -64,34 +70,6 @@ function loadCache(): StockCodeCache {
 async function saveCache(cache: StockCodeCache): Promise<void> {
   cache.updated_at = new Date().toISOString();
   await Bun.write(CACHE_PATH, JSON.stringify(cache, null, 2) + "\n");
-}
-
-/**
- * Best-effort 단축코드 resolution via the stock-base-info services. These are
- * attempted param-less (per-service params are not public — see header); the
- * resulting row shape follows the KRX envelope convention and is UNVERIFIED.
- * Failure here is non-fatal: pin the code with --ticker <이름=코드> instead.
- */
-async function resolveStockMaster(companyName: string, market: "kospi" | "kosdaq"): Promise<KrxStockMasterRow | null> {
-  loadPipelineKeys();
-  const apiKey = process.env.KRX_API_KEY;
-  if (!apiKey) return null;
-  const service = market === "kospi" ? "sto/stk_isu_base_info" : "sto/ksq_isu_base_info";
-  const res = await fetch(`https://data-dbg.krx.co.kr/svc/apis/${service}.json`, {
-    headers: { AUTH_KEY: apiKey, accept: "application/json" },
-    signal: AbortSignal.timeout(30_000),
-  });
-  if (!res.ok) return null;
-  const payload = (await res.json()) as { OutBlock_1?: Array<Record<string, string>> };
-  const rows = payload.OutBlock_1 ?? [];
-  // Field names follow the KRX envelope convention — treat as unverified.
-  const hit = rows.find((r) => (r.ISU_ABBRV ?? r.ISU_NM ?? "").includes(companyName));
-  if (!hit) return null;
-  const shortCode = hit.ISU_SRT_CD ?? "";
-  if (!/^\d{6}$/.test(shortCode)) return null;
-  const rawMarket = (hit.MKT_NM ?? (market === "kospi" ? "KOSPI" : "KOSDAQ")).toUpperCase();
-  const resolvedMarket = rawMarket === "KOSDAQ" ? "KOSDAQ" : rawMarket === "KONEX" ? "KONEX" : "KOSPI";
-  return { shortCode, isin: hit.ISIN_CD ?? null, nameKo: hit.ISU_ABBRV ?? companyName, market: resolvedMarket };
 }
 
 function ensureUnit(db: ReturnType<typeof getDb>, unitCode: string): string {
@@ -139,6 +117,15 @@ async function main(): Promise<void> {
     }
   }
 
+  const budgetIdx = args.indexOf("--budget");
+  const budget = budgetIdx >= 0 ? Number(args[budgetIdx + 1]) : undefined;
+  resetKrxRunState({ budget: budget && budget > 0 ? budget : undefined });
+  loadPipelineKeys();
+  if (!process.env.KRX_API_KEY) {
+    console.error("beta-series: KRX_API_KEY is not set (.env) — nothing can be collected.");
+    process.exit(1);
+  }
+
   const db = getDb();
   const project = db.query("SELECT id, project_name, company_id, source_opportunity_id FROM md_project WHERE id = ?")
     .get(projectId) as { id: string; project_name: string; company_id: string | null; source_opportunity_id: string | null } | undefined;
@@ -182,27 +169,38 @@ async function main(): Promise<void> {
 
   async function upsertPeriod(dayIso: string): Promise<string> {
     const key = dayIso.slice(0, 10);
-    const existing = db.query("SELECT id FROM md_period WHERE period_type = 'day' AND start_date = ? AND end_date = ?")
+    // md_period CHECK allows date|month|quarter|year (no 'day'); fiscal_year is NOT NULL.
+    const existing = db.query("SELECT id FROM md_period WHERE period_type = 'date' AND start_date = ? AND end_date = ?")
       .get(key, key) as { id: string } | undefined;
     if (existing) return existing.id;
     const id = ulid();
-    db.run("INSERT INTO md_period (id, period_type, start_date, end_date, created_at) VALUES (?,?,?,?,?)",
-      [id, "day", key, key, new Date().toISOString()]);
+    db.run("INSERT INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?,?,?,?,?,?)",
+      [id, "date", key, key, Number(key.slice(0, 4)), new Date().toISOString()]);
     return id;
   }
 
   let collected = 0;
-  const ranges = new Map<string, { count: number; min: string | null; max: string | null }>();
+  interface SeriesReport { months: number; weekdays: number; tradingDays: number; written: number; errors: number; min: string | null; max: string | null }
+  const reports = new Map<string, SeriesReport>();
 
   async function collect(seriesId: string, unitId: string): Promise<void> {
+    const rep: SeriesReport = { months: 0, weekdays: 0, tradingDays: 0, written: 0, errors: 0, min: null, max: null };
+    reports.set(seriesId, rep);
     for (const month of months) {
+      rep.months += 1;
+      rep.weekdays += krxWeekdays(month).length;
       let rows;
       try {
         rows = await listKrxDailyRows(seriesId, month);
       } catch (err) {
-        console.error(`  ${seriesId}@${month}: ${err instanceof Error ? err.message : err}`);
+        rep.errors += 1;
+        const msg = err instanceof Error ? err.message : String(err);
+        krxRunStats().errors.push(msg);
+        console.error(`  ${seriesId}@${month}: ${msg}`);
+        if (msg.includes("budget exhausted")) return;
         continue;
       }
+      rep.tradingDays += rows.length;
       for (const row of rows) {
         try {
           const periodId = await upsertPeriod(row.date);
@@ -210,17 +208,18 @@ async function main(): Promise<void> {
             seriesId, periodId, unitId, sourceId,
             fetcher: async () => ({ value: row.value, contentHash: await sha256Hex(row.raw), raw: row.raw }),
           });
-          const stat = ranges.get(seriesId) ?? { count: 0, min: null, max: null };
-          stat.count += 1;
-          if (!stat.min || row.date < stat.min) stat.min = row.date;
-          if (!stat.max || row.date > stat.max) stat.max = row.date;
-          ranges.set(seriesId, stat);
+          rep.written += 1;
+          if (!rep.min || row.date < rep.min) rep.min = row.date;
+          if (!rep.max || row.date > rep.max) rep.max = row.date;
           collected += 1;
         } catch (err) {
+          rep.errors += 1;
+          krxRunStats().errors.push(err instanceof Error ? err.message : String(err));
           console.error(`  ${seriesId}@${row.date}: ${err instanceof Error ? err.message : err}`);
         }
       }
     }
+    console.log(`  ${seriesId}: ${rep.months} month(s), ${rep.weekdays} weekday(s) attempted, ${rep.tradingDays} trading day(s) matched, ${rep.written} row(s) written, ${rep.errors} error(s); KRX calls so far ${krxRunStats().calls}`);
   }
 
   // 1) Index closes (seed descriptors — registered implicitly by listKrxDailyRows).
@@ -236,6 +235,9 @@ async function main(): Promise<void> {
     const pinned = tickers.find(([name]) => company.nameKo.includes(name));
     let shortCode = pinned?.[1];
     let market: "kospi" | "kosdaq" | undefined;
+    if (pinned && cache.codes[company.id]?.shortCode === shortCode) {
+      market = cache.codes[company.id].market.toLowerCase() === "kosdaq" ? "kosdaq" : "kospi";
+    }
     if (!shortCode && cache.codes[company.id]) {
       const cached = cache.codes[company.id];
       shortCode = cached.shortCode;
@@ -244,17 +246,21 @@ async function main(): Promise<void> {
     }
     if (!shortCode) {
       // Try KOSPI master first, then KOSDAQ (robotics small-caps often KOSDAQ).
+      const reasons: string[] = [];
       for (const m of ["kospi", "kosdaq"] as const) {
-        const row = await resolveStockMaster(company.nameKo, m).catch(() => null);
-        if (row) {
-          shortCode = row.shortCode;
-          market = m;
-          cache.codes[company.id] = { shortCode, market: row.market, nameKo: row.nameKo, resolvedAt: new Date().toISOString() };
+        const res = await resolveKrxStockMaster(company.nameKo, m);
+        if (res.ok) {
+          shortCode = res.row.shortCode;
+          market = res.row.market === "KOSDAQ" ? "kosdaq" : "kospi";
+          cache.codes[company.id] = { shortCode, market: res.row.market, nameKo: res.row.nameKo, resolvedAt: new Date().toISOString() };
           cacheDirty = true;
-          console.log(`${company.nameKo}: 단축코드 ${shortCode} resolved via ${row.market} stock master (unverified shape)`);
+          console.log(`${company.nameKo}: 단축코드 ${shortCode} resolved via ${res.row.market} stock master (basDd=${res.basDd})`);
           break;
         }
+        reasons.push(res.reason);
+        if (res.candidates) break; // ambiguous — do not fall through to the other market
       }
+      if (!shortCode) console.error(`${company.nameKo}: stock master lookup failed — ${reasons.join("; ")}`);
     }
     if (!shortCode) {
       console.error(`${company.nameKo}: 단축코드 not resolved — pass --ticker ${company.nameKo}=<6-digit code> to pin it.`);
@@ -267,14 +273,29 @@ async function main(): Promise<void> {
   }
   if (cacheDirty) await saveCache(cache);
 
-  console.log(`\nbeta-series done: ${collected} observation(s) written.`);
-  for (const [seriesId, stat] of ranges) {
-    console.log(`  ${seriesId}: ${stat.count} obs, ${stat.min} ~ ${stat.max}`);
+  const stats = krxRunStats();
+  console.log(`\nbeta-series done: ${collected} observation(s) written; KRX calls ${stats.calls} (budget ${stats.budget}), cache hits ${stats.cacheHits}, empty (non-trading) day payloads ${stats.emptyDays}.`);
+  for (const [seriesId, rep] of reports) {
+    console.log(`  ${seriesId}: ${rep.written} obs, ${rep.min ?? "-"} ~ ${rep.max ?? "-"} (${rep.weekdays} weekdays, ${rep.tradingDays} trading days)`);
   }
   if (collected === 0) {
-    console.error("\nbeta-series: 0 observations collected — see errors above (KRX service approval 401 means re-apply at openapi.krx.co.kr).");
+    console.error(`\nbeta-series: 0 observations collected. Most likely cause: ${diagnoseZero(stats)}`);
     process.exit(1);
   }
+}
+
+/** Explain a 0-row run from the observed KRX responses. */
+function diagnoseZero(stats: Readonly<{ calls: number; emptyDays: number; errors: string[] }>): string {
+  const errs = stats.errors.join(" | ");
+  if (/error 401|HTTP 401/.test(errs)) return "KRX 401 — the key is valid but the service is not approved/expired (re-apply at openapi.krx.co.kr 마이페이지 → API 사용 신청).";
+  if (/KRX_API_KEY is not set/.test(errs)) return "KRX_API_KEY missing from .env.";
+  if (/budget exhausted/.test(errs)) return "the per-run call budget was exhausted — raise --budget.";
+  if (/HTTP 5\d\d|non-JSON|fetch failed|Timeout/i.test(errs)) return `KRX service/network errors: ${errs.slice(0, 300)}`;
+  if (/HTTP 403/.test(errs)) return "KRX HTTP 403 — access refused (likely rate limiting/daily quota or IP block); wait and rerun later, reruns are cache hits.";
+  if (/CHECK constraint|NOT NULL constraint/.test(errs)) return `DB write rejected: ${errs.slice(0, 200)}`;
+  if (stats.calls > 0 && stats.emptyDays === stats.calls) return "every KRX payload was empty (OutBlock_1: []) — wrong request params (must be basDd) or a range of only non-trading days.";
+  if (stats.calls === 0) return "no KRX calls were made — no series/companies in scope or every month is in the future.";
+  return `payloads returned rows but none matched the series (index name / 단축코드) — check --ticker and KRX field names. ${errs.slice(0, 200)}`;
 }
 
 await main();

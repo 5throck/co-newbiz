@@ -39,6 +39,14 @@ describe("seven-domain DD workspace", () => {
     expect(DD_DOMAIN_AGENTS.financing).toBe("financing-agent");
   });
 
+  test("every tab title is Korean and the seven domains match DD_DOMAIN_LABEL", () => {
+    const { projectId } = demo();
+    const ws = listDdWorkspace(projectId);
+    for (const d of ws.domains.slice(0, 7)) expect(d.title).toBe(DD_DOMAIN_LABEL[d.domain]!);
+    for (const d of ws.domains) expect(d.title).toMatch(/[가-힣]/);
+    expect(ws.domains.map((d) => d.title)).not.toContain("Commercial DD");
+  });
+
   test("new project: seven shared tabs, new tabs judgeable and counted", () => {
     const { db, projectId } = demo();
     db.run("UPDATE md_project SET created_at = '2026-10-05T00:00:00.000Z' WHERE id = ?", [projectId]);

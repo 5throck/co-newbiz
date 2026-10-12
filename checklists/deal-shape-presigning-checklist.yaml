@@ -4,7 +4,7 @@ title: "Deal-Shape Pre-Signing Checklists (License-in / Co-development / Minorit
 scope: shared
 enforceability: mixed
 owner_agent: legal-counsel
-version: "1.0.0"
+version: "1.1.0"
 effective_from: "2026-08-23"
 gate: P4   # enforced at the deal-shape chain's pre-signing gate (step 5 of shared-deal-shape-chain)
 
@@ -19,87 +19,87 @@ gate: P4   # enforced at the deal-shape chain's pre-signing gate (step 5 of shar
 items:
   # ── License-in [rbd 3.1] ─────────────────────────────────────────────
   - id: lic-01
-    text: "Grant scope explicit; any exclusivity justified against a public-interest-style test, not assumed"
+    text: "허여 범위(grant scope)를 명시하고, 독점권은 당연시하지 않고 공익성 기준에 준하는 테스트로 정당화"
     mandatory: true
     waiver_eligible: true
   - id: lic-02
-    text: "Field of use and territory no broader than what we can actually exploit"
+    text: "실시 분야(field of use)와 지역은 당사가 실제로 활용할 수 있는 범위를 넘지 않을 것"
     mandatory: true
     waiver_eligible: true
   - id: lic-03
-    text: "Complete financial stack documented — upfront payment, milestones, royalties, minimums (no element left 'to be discussed')"
+    text: "전체 대가 구조 문서화 — 선급금, 마일스톤, 로열티, 최소 실시료 ('추후 협의'로 남기는 항목 없음)"
     mandatory: true
     waiver_eligible: true
   - id: lic-04
-    text: "Development benchmarks dated, with annual reporting obligations against them"
+    text: "개발 목표 시점(development benchmarks)을 일자로 정하고 이에 대한 연차 보고 의무 부과"
     mandatory: true
     waiver_eligible: true
   - id: lic-05
-    text: "Anti-shelving revocation for non-use (NIH-style) included — a license we can sit on is a license the licensor can take back"
+    text: "미실시에 따른 사장(死藏) 방지 해지 조항(NIH 방식) 포함 — 당사가 묵혀둘 수 있는 라이선스는 라이선서가 회수할 수 있는 라이선스임"
     mandatory: true
     waiver_eligible: true
   - id: lic-06
-    text: "Grantback terms for improvements we create stated explicitly"
+    text: "당사가 만든 개량 발명에 대한 그랜트백(grantback) 조건을 명시"
     mandatory: false
     waiver_eligible: true
   - id: lic-07
-    text: "Audit rights over the licensor's royalty/compliance accounting"
+    text: "라이선서의 로열티·컴플라이언스 회계에 대한 감사권"
     mandatory: true
     waiver_eligible: true
   - id: lic-08
-    text: "Government strings identified where applicable (Bayh-Dole-style march-in, manufacture preference) and their consequence for exclusivity assessed"
+    text: "해당 시 정부 부대조건(Bayh-Dole 방식 개입권(march-in), 국내 생산 우선) 식별 및 독점권에 미치는 영향 평가"
     mandatory: true
     waiver_eligible: true
   - id: lic-09
-    text: "Inventor-assignment title chain verified BEFORE term sheet — chain-of-title defects discovered after signing are the classic license-in failure"
+    text: "텀시트 전에 발명자 권리 승계(직무발명 승계(PIIA)) 권원 체인 검증 — 서명 후 발견되는 권원 하자는 라이선스 도입(license-in)의 전형적 실패 원인"
     mandatory: true
     waiver_eligible: true
 
   # ── Co-development [rbd 3.2] ────────────────────────────────────────
   - id: cdv-01
-    text: "Background-IP defined per party, exhaustively — the #1 co-dev dispute source is 'we thought that was ours'"
+    text: "당사자별 기존 IP(background IP)를 빠짐없이 정의 — 공동개발 분쟁의 1순위 원인은 '그건 우리 것인 줄 알았다'임"
     mandatory: true
     waiver_eligible: true
   - id: cdv-02
-    text: "Foreground-IP ownership rule chosen deliberately (joint vs by-field vs by-inventor) with the choice rationale recorded — never defaulted"
+    text: "신규 IP(foreground IP) 귀속 원칙(공동 소유 / 분야별 / 발명자별)을 의도적으로 선택하고 선택 근거를 기록 — 기본값 적용 금지"
     mandatory: true
     waiver_eligible: true
   - id: cdv-03
-    text: "Joint steering committee with named decision rights AND a deadlock ladder (who breaks ties at which level)"
+    text: "의사결정 권한이 명시된 공동운영위원회(joint steering committee)와 단계별 교착 해소 절차(deadlock ladder: 어느 단계에서 누가 결정하는지)"
     mandatory: true
     waiver_eligible: true
   - id: cdv-04
-    text: "Budgets milestone-tranched, with explicit failure-to-fund consequences for each party"
+    text: "예산을 마일스톤별로 분할 집행하고, 당사자별 자금 미납 시 결과를 명시"
     mandatory: true
     waiver_eligible: true
   - id: cdv-05
-    text: "Publication review windows agreed (protection of patentable findings before disclosure)"
+    text: "공개 전 검토 기간 합의 (공개 전에 특허 가능한 성과 보호)"
     mandatory: true
     waiver_eligible: true
   - id: cdv-06
-    text: "Exit/step-in triggers stated, with data handover and sublicense survival on exit"
+    text: "엑시트·개입(step-in) 사유를 명시하고, 엑시트 시 데이터 인계와 재실시권(sublicense) 존속을 규정"
     mandatory: true
     waiver_eligible: true
 
   # ── Minority investment [rbd 3.3] ────────────────────────────────────
   - id: min-01
-    text: "NVCA-standard rights package enumerated and negotiated as a package — board designation, information rights, registration rights, ROFR/co-sale, management rights letter, pro-rata participation"
+    text: "NVCA 표준 권리 묶음을 열거하고 묶음 단위로 협상 — 이사 지명권, 정보요구권, 등록청구권, 우선매수권(ROFR)/공동매도권(co-sale), 경영권 서한(management rights letter), 지분비례 참여권(pro-rata)"
     mandatory: true
     waiver_eligible: true
   - id: min-02
-    text: "Technology access licensed SEPARATELY from equity — the stake is not the license, and the license is not the stake"
+    text: "기술 접근권은 지분과 별도로 라이선스 — 지분이 곧 라이선스가 아니며, 라이선스가 곧 지분도 아님"
     mandatory: true
     waiver_eligible: true
   - id: min-03
-    text: "Any exclusivity window carries a sunset date — perpetual exclusivity via a minority stake is a control right bought at a non-control price"
+    text: "모든 독점 기간에는 종료일(sunset) 설정 — 소수 지분을 통한 영구 독점은 비지배 가격으로 산 지배권임"
     mandatory: true
     waiver_eligible: true
   - id: min-04
-    text: "Standstill and information-barrier terms agreed (protects both sides' MNPI handling)"
+    text: "지분 매집 제한(standstill) 및 정보 차단벽(information barrier) 조건 합의 (양측의 미공개 중요정보(MNPI) 취급 보호)"
     mandatory: true
     waiver_eligible: true
   - id: min-05
-    text: "Foreign-investment screening assessment completed where the stake or nationality triggers it"
+    text: "지분 규모나 국적상 해당되는 경우 외국인투자 심사 평가 완료"
     mandatory: true
     waiver_eligible: true
 
@@ -107,27 +107,27 @@ items:
   # Formation mechanics ride `entity-formation` ef-13..17 (PR-10) — the
   # items below are the decision-side contract terms this chain owns.
   - id: jvd-01
-    text: "Parent contributions committed and valued (technology contributions independently valued — pt-07 of chk-partnership, never at the contributing party's stated figure)"
+    text: "모회사 출자 약정 및 가치평가 (기술 출자는 독립 가치평가 — chk-partnership의 pt-07, 출자 당사자 제시 금액 그대로 수용 금지)"
     mandatory: true
     waiver_eligible: true
   - id: jvd-02
-    text: "Board composition, reserved-matters map, and deadlock terms documented before term-sheet negotiation (extends pt-06 of chk-partnership)"
+    text: "이사회 구성, 유보 사항(reserved matters) 목록, 교착(deadlock) 조건을 텀시트 협상 전에 문서화 (chk-partnership pt-06 확장)"
     mandatory: true
     waiver_eligible: true
   - id: jvd-03
-    text: "IP licenses in and out of the JV each documented — scope, term, and what happens at JV exit"
+    text: "합작(JV)으로 들어오고 나가는 IP 라이선스를 각각 문서화 — 범위, 기간, 합작(JV) 엑시트 시 처리"
     mandatory: true
     waiver_eligible: true
   - id: jvd-04
-    text: "Exit architecture designed AT SIGNING: put/call, ROFR, drag/tag, and the valuation mechanism (incl. the two-appraisers-then-third process where used)"
+    text: "서명 시점에 엑시트 구조 설계: 풋/콜, 우선매수권(ROFR), 드래그/태그, 가치평가 방식(사용 시 감정인 2인 후 제3 감정인 절차 포함)"
     mandatory: true
     waiver_eligible: true
   - id: jvd-05
-    text: "JV-specific antitrust clearance assessed (a JV can concentrate markets its parents do not)"
+    text: "합작(JV) 고유의 경쟁법 승인 평가 (합작(JV)은 모회사들이 집중시키지 않는 시장도 집중시킬 수 있음)"
     mandatory: true
     waiver_eligible: true
   - id: jvd-06
-    text: "Wind-down terms agreed — who takes what people, IP, and liabilities if the JV dissolves"
+    text: "청산 조건 합의 — 합작(JV) 해산 시 인력·IP·부채를 누가 가져가는지"
     mandatory: true
     waiver_eligible: true
 

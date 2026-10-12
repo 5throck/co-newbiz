@@ -12,10 +12,10 @@ import { ColGroup, DevRef } from "../ui.tsx";
 // 케이스 비교 11열 — 대상·계산 엔진·구조 교차검증·EV/매출 배수가 텍스트 열, 나머지는 수치.
 const CASE_COMPARE_COL_PCT = [12, 7, 9, 9, 7, 7, 9, 13, 13, 8, 6] as const;
 // 시나리오 케이스 10열 — 관점·성장률·sigma 출처와 수치 열.
-const SCENARIO_CASE_COL_PCT = [10, 10, 10, 9, 9, 9, 7, 12, 14, 10] as const;
+const SCENARIO_CASE_COL_PCT = [11, 14, 9, 9, 9, 9, 6, 12, 11, 10] as const;
 import TargetSelector from "../TargetSelector.tsx";
 import { KRW_MILLIONS_UNIT, formatKrwMillionsPlain } from "../../lib/format.ts";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
@@ -31,7 +31,7 @@ import { ParamsPanel } from "../business-case/ParamsPanel.tsx";
 import { TargetCostingPanel } from "../business-case/TargetCostingPanel.tsx";
 import { ValuationMethodology } from "../business-case/ValuationMethodology.tsx";
 import { FinancialAnalysisPanel } from "../FinancialAnalysisPanel.tsx";
-import { useConfirm } from "../crud.tsx";
+import { RowMenu, useConfirm } from "../crud.tsx";
 import { canWriteProject, isReadOnlyAdmin } from "../../lib/project-write-access.ts";
 import { countLegacyUnassignedModels } from "../../lib/business-case-legacy.ts";
 import { GoalPromptDialog, GoalsBanner, GoalsPanel, type GoalsData } from "../business-case/GoalsPanel.tsx";
@@ -206,7 +206,9 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   const [run, setRun] = useState<{ runId: string; status: string; activities: ActivityRow[] } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editing, setEditing] = useState<{ modelId: string; text: string } | null>(null);
+  const [editing, setEditing] = useState<{ modelId: string; text: string; label: string } | null>(null);
+  const editorSectionRef = useRef<HTMLElement>(null);
+  const editorTextRef = useRef<HTMLTextAreaElement>(null);
   // ADR-0143 — brownfield 대상 축: 비교 탭의 선정 근거 입력과 시나리오
   // 매트릭스의 대상 필터. 기본 필터는 선정 대상(없으면 권고/1순위 대상).
   const [targetFilter, setTargetFilter] = useState<string | null>(null);
@@ -334,7 +336,23 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   }
 
   function startEdit(c: CaseView) {
-    setEditing({ modelId: c.id, text: JSON.stringify(c.lines.map(({ id: _id, ...l }) => l), null, 2) });
+    const label = `${c.target_name ?? "대상 미지정"} · ${c.scenario ? `${SCEN_LABEL[c.scenario] ?? c.scenario} · ` : ""}${VARIANT_LABEL[c.variant] ?? c.variant}`;
+    setEditing({ modelId: c.id, text: JSON.stringify(c.lines.map(({ id: _id, ...l }) => l), null, 2), label });
+  }
+
+  // The editor renders below all tables: bring it into view and focus it so the row action visibly works.
+  const editingModelId = editing?.modelId ?? null;
+  useEffect(() => {
+    if (!editingModelId) return;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    editorSectionRef.current?.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+    editorTextRef.current?.focus({ preventScroll: true });
+  }, [editingModelId]);
+
+  function closeEditor() {
+    const id = editing?.modelId;
+    setEditing(null);
+    if (id) requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-case-id="${id}"] .row-menu-trigger`)?.focus());
   }
 
   async function saveEdit() {
@@ -343,7 +361,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
     try {
       const lines = JSON.parse(editing.text) as Array<{ category: string; name: string; annual_amount_krw_m: number; start_year?: number; growth_rate?: number; note?: string }>;
       await api.put(`/api/projects/${encodeURIComponent(projectId)}/business-case`, { model_id: editing.modelId, lines });
-      setEditing(null);
+      closeEditor();
       load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "라인 저장 실패 (JSON 형식·category 값을 확인하세요)");
@@ -521,7 +539,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           ?tab= entries. The embedded deal tab has no StageTabs row, so it keeps this TabNav. */}
       {!embedded && (
         <p className="sr-only" id="s8-analysis-tabs-note">
-          S8 분석 탭(대상 비교·설명·시나리오·파라미터·타겟코스팅·결정)은 위 단계 탭 행에서 선택합니다.
+          S8 분석 탭(사업 목표·시나리오 비교·대상 비교·선정·WACC·재무분석·더보기)은 위 단계 탭 행에서 선택합니다.
         </p>
       )}
       {embedded && (
@@ -881,7 +899,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                 이 시나리오의 케이스가 없습니다 — 자동 생성을 실행하세요.
               </p>
             ) : (
-              <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table table-fixed-pct tmin-80">
+              <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table table-fixed-pct tmin-56">
                 <ColGroup widths={SCENARIO_CASE_COL_PCT} />
                 <thead>
                   <tr>
@@ -894,7 +912,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                     <th scope="col" className="num">IRR <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">(%)</span></th>
                     <th scope="col" className="num">p50 차이<span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">({KRW_MILLIONS_UNIT}, 시장 기반 대비 %)</span></th>
                     <th scope="col" className="num" title="이중 구조 교차검증 — 같은 케이스를 고전 장기창구 DCF로 재평가: 명시적 창구(기본 10년) 안에서 성장률이 말기 성장률(기본 3%)로 선형 수렴하고 마지막 해에 동일 배수로 처분한 결정론적 NPV. 기본 구조(5년 홀드+exit)와 크게 어긋나면 성장-배수 가정이 불일치한다는 신호.">페이드 DCF p50<UnitNote /></th>
-                    <th scope="col"></th>
+                    <th scope="col"><span className="sr-only">작업</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -913,10 +931,10 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                         </td>
                         <td>
                           {note.growth ? `${(Number(note.growth) * 100).toFixed(1)}%` : "—"}
-                          <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]"> {note.growth_source ?? ""}</span>
+                          <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] cell-clamp-3"> {note.growth_source ?? ""}</span>
                           {c.variant === "historical" && note.growth && escalatedCagrPct !== null && Math.abs(Number(note.growth) * 100 - escalatedCagrPct) > 15 && (
                             <span
-                              className="status-chip status-amber ml-1"
+                              className="status-chip status-amber mt-1 block w-fit max-w-full whitespace-normal [overflow-wrap:anywhere]"
                               title={`에스컬레이션 조정 CAGR(${escalatedCagrPct.toFixed(1)}%)와 과거 CAGR의 차이가 15%p를 넘습니다 — 성장 가정의 불확실성 신호입니다.`}
                             >
                               ⚠ 조정치와 {(Number(note.growth) * 100 - escalatedCagrPct).toFixed(1)}%p 차이
@@ -946,18 +964,26 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                             </span>
                           ) : "—"}
                         </td>
-                        <td>
-                          {canAct && (
-                            <div className="flex flex-wrap gap-1">
-                              {!c.adopted && (
-                                <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => adopt(c.id, c.scenario, c.variant)}>
-                                  채택
-                                </button>
-                              )}
-                              <button type="button" className="btn-ghost btn-sm" onClick={() => startEdit(c)}>라인</button>
-                              <button type="button" className="btn-danger btn-sm" disabled={busy} onClick={() => remove(c)} aria-label={`삭제 — 대상: ${c.target_name ?? "대상 미지정"}`}>삭제</button>
-                            </div>
-                          )}
+                        <td className="align-middle">
+                          {canAct && (() => {
+                            const rowCtx = `${VARIANT_LABEL[c.variant] ?? c.variant} · ${SCEN_LABEL[c.scenario ?? s] ?? c.scenario ?? s}`;
+                            return (
+                              <div className="flex items-center justify-end gap-1 whitespace-nowrap" data-testid="scenario-row-actions" data-case-id={c.id}>
+                                {!c.adopted && (
+                                  <button type="button" className="btn-ghost btn-sm whitespace-nowrap font-semibold text-[color:var(--accent)]" disabled={busy} aria-label={`${rowCtx} 채택`} onClick={() => adopt(c.id, c.scenario, c.variant)}>
+                                    채택
+                                  </button>
+                                )}
+                                <RowMenu
+                                  label={`${rowCtx} 작업`}
+                                  items={[
+                                    { key: "lines", label: "라인 편집", onSelect: () => startEdit(c) },
+                                    { key: "delete", label: "삭제", danger: true, separatorBefore: true, disabled: busy, onSelect: () => remove(c) },
+                                  ]}
+                                />
+                              </div>
+                            );
+                          })()}
                         </td>
                       </tr>
                     );
@@ -979,7 +1005,10 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               goalCount={goalCount}
             />
             {(cases[0]?.simulations?.[0]?.note) && (
-              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" title="재현 근거 (동일 시드로 재계산해도 같은 결과)">{cases[0].simulations[0].note}</p>
+              <details className="raw-key-details mt-1" title="재현 근거 (동일 시드로 재계산해도 같은 결과)">
+                <summary>계산 파라미터(원문)</summary> {/* INTERIM-WORDING */}
+                <code lang="en" className="block mono-num text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] whitespace-pre-wrap [overflow-wrap:anywhere] select-all">{cases[0].simulations[0].note}</code>
+              </details>
             )}
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
               계산 사슬(매출 앵커 → 성장·변동성 → 마진 → 인수가 → 할인·처분 → 몬테카를로)과 두 관점 차이의 원인은 <b>설명·생성·권고</b> 탭의 <b>기업가치 계산 방법</b>을 참고하세요.
@@ -995,9 +1024,13 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       )}
 
       {editing && (
-        <section className="market-section sizing-step mt-3" aria-label="라인 편집">
+        <section ref={editorSectionRef} className="market-section sizing-step mt-3 scroll-mt-20" aria-label="라인 편집">
           <h3 className="sizing-step-title text-[0.9rem]">라인 편집 (JSON — 저장 시 전체 교체)</h3>
+          <p className="text-[length:var(--fs-caption)] mb-1" data-testid="line-editor-caption">편집 대상: <b>{editing.label}</b></p>
+          <p className="sr-only" role="status" aria-live="polite">라인 편집기가 아래에 열렸습니다 — {editing.label}</p>
           <textarea
+            ref={editorTextRef}
+            aria-label={`라인 JSON — ${editing.label}`}
             className="sizing-new-input w-full font-mono text-[length:var(--fs-caption)]"
             rows={10}
             value={editing.text}
@@ -1006,7 +1039,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           />
           <div className="flex gap-1 mt-1">
             <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void saveEdit()}>저장</button>
-            <button type="button" className="btn-ghost btn-sm" onClick={() => setEditing(null)}>취소</button>
+            <button type="button" className="btn-ghost btn-sm" onClick={closeEditor}>취소</button>
           </div>
         </section>
       )}

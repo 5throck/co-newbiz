@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import {
   EMPTY_ENTRIES, ENTRY_KINDS, ENTRY_SPECS, buildEntry, canAddEntry, canConfirm, confirmationView, cumulativeHeadcounts, emptyValues,
   entriesClearConfirmation, permitStepNote, baselineErrorText, reconciliationVerdict, requirementView, rowCells, validateRationale, valuesOf, withEntry,
+  FINDING_LABEL, findingText, fmtMoney,
   type BaselineRecord, type TrancheReconciliationView,
 } from "../../app/web-next/lib/execution-baseline-view.ts";
 
@@ -214,5 +215,25 @@ describe("ADR-0161 review-fix wiring (source checks)", () => {
     const hook = src("components/stages/useIsProjectLead.ts");
     expect(hook).toContain("/api/projects?status=all");
     expect(hook).toContain("is_lead === true");
+  });
+});
+
+describe("findingText / fmtMoney (display only)", () => {
+  test("known codes never show the raw backend message", () => {
+    for (const code of Object.keys(FINDING_LABEL)) {
+      expect(findingText({ code, message: "RAW backend message (planned·released)" })).toBe(FINDING_LABEL[code]);
+    }
+  });
+  test("unknown codes fall back to the message", () => {
+    expect(findingText({ code: "zzz_unknown", message: "raw" })).toBe("raw");
+  });
+  test("KRW: separators, at most 1 decimal; others at most 2", () => {
+    expect(fmtMoney(10030.133473)).toBe("10,030.1");
+    expect(fmtMoney(1234567, "KRW")).toBe("1,234,567");
+    expect(fmtMoney(1234.5678, "USD")).toBe("1,234.57");
+  });
+  test("a tiny nonzero difference is not shown as 0", () => {
+    expect(fmtMoney(0.04)).not.toBe("0");
+    expect(fmtMoney(0)).toBe("0");
   });
 });
