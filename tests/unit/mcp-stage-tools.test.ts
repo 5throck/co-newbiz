@@ -173,6 +173,20 @@ describe("thin wrappers", () => {
     expect(calls).toHaveLength(1);
   });
 
+  test("record_establishment refuses done (ADR-0165) but records in_progress / halted / escalated", async () => {
+    const { port, calls } = recorder();
+    await expect(
+      callTool("stdio", { port }, "record_establishment", { projectId: "p1", body: { step_no: 1, status: "done", origin: "internal", note: "n" } }),
+    ).rejects.toThrow(/human-only/);
+    expect(calls).toEqual([]);
+    for (const status of ["in_progress", "halted", "escalated"]) {
+      await callTool("stdio", { port }, "record_establishment", { projectId: "p1", body: { step_no: 1, status, origin: "internal" } });
+    }
+    expect(calls).toHaveLength(3);
+    expect(isHumanOnly("PUT", "/api/projects/p1/establishment/assignee", {})).toBe(true);
+    expect(isHumanOnly("POST", "/api/projects/p1/establishment/reopen", {})).toBe(true);
+  });
+
   test("propose tools call POST /api/proposals with the right kind and never a decision route", async () => {
     const { port, calls } = recorder();
     await callTool("stdio", { port }, "propose_gate_decision", { entityId: "o1", gate: "screening", decision: "go", rationale: "r" });

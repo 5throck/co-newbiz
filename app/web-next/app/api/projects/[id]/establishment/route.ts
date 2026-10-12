@@ -5,18 +5,25 @@
 // backlink only for rows that predate the backfill. Deny-by-default:
 // getProjectIfVisible via visibleProject — non-members get 404 (FR-SEC-01);
 // admins are excluded by role separation. PUT is analyst+ (viewer 403).
+// ADR-0165: PUT is a status change (in_progress | done | halted | escalated;
+// done needs evidence, a done row needs POST .../reopen first); assignee and
+// reopen live on sibling routes. `done` via an agent is refused by the
+// in-process guard (HUMAN_ONLY_ROUTES bodyField).
 import { getDb } from "../../../../../../../db/client.ts";
-import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import {
   ESTABLISHMENT_ORIGINS,
-  ESTABLISHMENT_STATUSES,
   listEstablishmentSteps,
   establishmentProgress,
-  upsertEstablishmentStep,
+  changeEstablishmentStatus,
+  listEstablishmentEvents,
+  listEstablishmentMembers,
 } from "../../../../../lib/establishment.ts";
+import { establishmentErrorResponse } from "../../../../../lib/establishment-http.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
+
+const CHANGEABLE = ["in_progress", "done", "halted", "escalated"] as const;
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
@@ -34,6 +41,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     {
       project: { id: project.id, project_no: project.project_no, origin },
       steps,
+      members: listEstablishmentMembers(id),
+      history: listEstablishmentEvents(id, 20),
       complete: progress.complete,
       progress: `${progress.done}/5`,
     },
@@ -51,45 +60,47 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
     step_no?: number; status?: string; origin?: string;
-    checklist_item?: string; evidence_url?: string; note?: string;
+    checklist_item?: string; evidence_url?: string; note?: string; assignee_user_id?: string | null;
   } | null;
   const stepNo = Number(body?.step_no);
   if (!Number.isInteger(stepNo) || stepNo < 1 || stepNo > 5) return badRequest("invalid_request", "step_no는 1–5 사이 정수입니다.");
   const status = body?.status;
-  if (!status || !ESTABLISHMENT_STATUSES.includes(status as (typeof ESTABLISHMENT_STATUSES)[number])) {
-    return badRequest("invalid_request", `status는 ${ESTABLISHMENT_STATUSES.join(" | ")} 중 하나입니다.`);
+  if (!status || !CHANGEABLE.includes(status as (typeof CHANGEABLE)[number])) {
+    return badRequest("invalid_request", `status는 ${CHANGEABLE.join(" | ")} 중 하나입니다.`);
   }
   const origin = body?.origin;
   if (!origin || !ESTABLISHMENT_ORIGINS.includes(origin as (typeof ESTABLISHMENT_ORIGINS)[number])) {
     return badRequest("invalid_request", "origin은 internal | joint 중 하나입니다 (ADR-0047).");
   }
+  for (const f of ["evidence_url", "note", "checklist_item"] as const) {
+    if (body?.[f] != null && typeof body[f] !== "string") return badRequest("invalid_request", `${f}는 문자열이어야 합니다.`);
+  }
+  if ((body?.note?.length ?? 0) > 2000) return badRequest("invalid_request", "note는 2000자 이하입니다.");
+  const hasAssignee = !!body && Object.prototype.hasOwnProperty.call(body, "assignee_user_id");
+  if (hasAssignee && body?.assignee_user_id != null && typeof body.assignee_user_id !== "string") {
+    return badRequest("invalid_request", "assignee_user_id는 문자열 또는 null입니다.");
+  }
 
-  const result = upsertEstablishmentStep(
+  const result = changeEstablishmentStatus(
     id,
     {
       step_no: stepNo,
-      status: status as (typeof ESTABLISHMENT_STATUSES)[number],
+      status: status as (typeof CHANGEABLE)[number],
       origin: origin as (typeof ESTABLISHMENT_ORIGINS)[number],
       checklist_item: body?.checklist_item ?? null,
       evidence_url: body?.evidence_url ?? null,
       note: body?.note ?? null,
+      ...(hasAssignee ? { assignee_user_id: body?.assignee_user_id ?? null } : {}),
     },
     ctx.userId,
   );
-  if (!result.ok) {
-    if (result.error === "sequence_violation") {
-      return badRequest("invalid_request", "완료확인(5단계)은 선행 4단계가 모두 완료된 후에만 완료할 수 있습니다.");
-    }
-    return badRequest("invalid_request", "이 프로젝트에는 설립 실행 기록의 근원 기회(origin opportunity) 연결이 없어 새 단계를 생성할 수 없습니다.");
-  }
-  appendAudit(getDb(), { actor: ctx.userId, action: "entity_establishment.update", target: id, now: result.updated_at });
+  if (!result.ok) return establishmentErrorResponse(result.error);
 
-  const steps = listEstablishmentSteps(id);
   const progress = establishmentProgress(id);
   return ok(
     {
       id: result.id, step_no: result.step_no, status: result.status, title: result.title,
-      step_done: result.step_done, updated_at: result.updated_at,
+      step_done: result.step_done, assignee_user_id: result.assignee_user_id, updated_at: result.updated_at,
       complete: progress.complete, progress: `${progress.done}/5`,
     },
     200,

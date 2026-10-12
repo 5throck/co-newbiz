@@ -261,13 +261,25 @@ describe("(c) project establishment route — sequence, roles, membership", () =
   });
 
   test("steps 1–4 done, then step 5 completes the record", async () => {
+    // ADR-0165: the legacy ef-01 row is already done, so a plain PUT is refused
+    // until it is reopened (the reopen ADOPTS the legacy row onto the project key).
+    const refused = await req(`/api/projects/${projectId}/establishment`, {
+      method: "PUT", headers: { cookie: analystCookie },
+      body: JSON.stringify({ step_no: 1, status: "done", origin: "internal", checklist_item: "ef-01", note: "n" }),
+    });
+    expect(refused.status).toBe(409);
+    const reopened = await req(`/api/projects/${projectId}/establishment/reopen`, {
+      method: "POST", headers: { cookie: analystCookie },
+      body: JSON.stringify({ step_no: 1, reason: "legacy 행 재기록을 위해 재개합니다" }),
+    });
+    expect(reopened.status).toBe(200);
     for (const n of [1, 2, 3, 4]) {
       const res = await req(`/api/projects/${projectId}/establishment`, {
         method: "PUT", headers: { cookie: analystCookie },
         // Step 1 re-uses the legacy row's checklist key (ef-01), so the upsert
         // ADOPTS the backfilled row instead of duplicating it — the opportunity
         // view and the project view must stay one ledger.
-        body: JSON.stringify({ step_no: n, status: "done", origin: "internal", checklist_item: n === 1 ? "ef-01" : null }),
+        body: JSON.stringify({ step_no: n, status: "done", origin: "internal", checklist_item: n === 1 ? "ef-01" : null, evidence_url: `https://dataroom.example/ef-0${n}` }),
       });
       expect(res.status).toBe(200);
     }
@@ -393,5 +405,20 @@ describe("(e) S11 completion — both gates go AND establishment 5/5", () => {
     expect(halted.completedStages).not.toContain("S11");
     db.run("UPDATE entity_establishment_step SET status = 'done' WHERE project_id = ? AND step_no = 5", [projectId]);
     expect(evaluateProcess({ type: "project", id: projectId }).completedStages).toContain("S11");
+  });
+
+  test("ADR-0165: reopening a step after the gate drops S11 and progress but leaves gate decisions untouched", async () => {
+    const gatesBefore = (db.query("SELECT COUNT(*) c FROM gate_decision WHERE entity_id = ?").get(projectId) as { c: number }).c;
+    const res = await req(`/api/projects/${projectId}/establishment/reopen`, {
+      method: "POST", headers: { cookie: analystCookie },
+      body: JSON.stringify({ step_no: 5, reason: "게이트 이후 거버넌스 베이스라인 재확인" }),
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()).data).toMatchObject({ complete: false, progress: "4/5" });
+    const after = evaluateProcess({ type: "project", id: projectId });
+    expect(after.gateStatus).toMatchObject({ entity_ic: "go", group_ic: "go" });
+    expect(after.completedStages).not.toContain("S11");
+    expect((db.query("SELECT COUNT(*) c FROM gate_decision WHERE entity_id = ?").get(projectId) as { c: number }).c).toBe(gatesBefore);
+    db.run("UPDATE entity_establishment_step SET status = 'done' WHERE project_id = ? AND step_no = 5", [projectId]);
   });
 });

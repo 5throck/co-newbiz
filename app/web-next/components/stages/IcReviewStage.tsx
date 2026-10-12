@@ -5,7 +5,7 @@
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 
 import { DECISION_LABEL, FINDING_CATEGORY_LABEL, GATE_LABEL, ragDimensionsLabel } from "../../lib/labels.ts";
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
@@ -16,8 +16,8 @@ import { StageFrame } from "../StageFrame.tsx";
 import { GateDecisionJump, GateDecisionPanel } from "../GateDecisionPanel.tsx";
 import { useToast } from "../ui.tsx";
 import { useConfirm } from "../crud.tsx";
-import { ColGroup } from "../ui.tsx";
-import { estStepColPct } from "./constants.ts";
+import { EstablishmentPanel } from "./EstablishmentPanel.tsx";
+import { establishmentApplies, type EventView, type MemberView, type StepRowView } from "../../lib/establishment-view.ts";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import { ExecutionBaselinePanel } from "./ExecutionBaselinePanel.tsx";
 
@@ -51,34 +51,14 @@ interface IcPackage {
   };
 }
 
-interface StepRow { step_no: number; status: string; origin: string; checklist_item: string | null; evidence_url: string | null; note: string | null; owner: string; updated_at: string; keyed_by: string }
 interface EstablishmentView {
   project: { id: string; project_no: string; origin: string | null };
-  steps: StepRow[];
+  steps: StepRowView[];
+  members: MemberView[];
+  history: EventView[];
   complete: boolean;
   progress: string;
 }
-
-// P5: 상태는 색+아이콘+텍스트의 조합 — 색 단독으로 상태를 전달하지 않는다.
-const STEP_STATUS_META: Record<string, { icon: string; label: string; cls: string }> = {
-  pending: { icon: "○", label: "대기", cls: "status-not-started" },
-  in_progress: { icon: "◐", label: "진행 중", cls: "status-amber" },
-  done: { icon: "●", label: "완료", cls: "status-green" },
-  halted: { icon: "✕", label: "중단", cls: "status-red" },
-  escalated: { icon: "▲", label: "에스컬레이션", cls: "status-amber" },
-};
-
-function stepMeta(status: string | undefined) {
-  return STEP_STATUS_META[status ?? "pending"] ?? { icon: "?", label: status ?? "unknown", cls: "status-not-started" };
-}
-
-const STEP_TITLES: Record<number, string> = {
-  1: "설립준비(관할·주식구조·이사회 결의)",
-  2: "법인등기·정관·사업자등록",
-  3: "인허가 이전/재발급 분류",
-  4: "인력이전(신 근로계약+PIIA)",
-  5: "완료확인(IP양도체인·거버넌스 베이스라인)",
-};
 
 const RAG_META: Record<string, { icon: string; cls: string }> = {
   green: { icon: "●", cls: "status-green" },
@@ -96,11 +76,6 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
   const { confirm, confirmDialog } = useConfirm();
   const [pkg, setPkg] = useState<IcPackage | null>(null);
   const [est, setEst] = useState<EstablishmentView | null>(null);
-  // Per-step action panel (R2-B item 7): which establishment step is open, and its draft.
-  const [openStep, setOpenStep] = useState<number | null>(null);
-  const [form, setForm] = useState<{ status: string; evidence_url: string; note: string }>({
-    status: "done", evidence_url: "", note: "",
-  });
   const { toast } = useToast();
   const [pmiForm, setPmiForm] = useState<{ owner: string; plan_note: string }>({ owner: "", plan_note: "" });
   const [busy, setBusy] = useState(false);
@@ -118,41 +93,6 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
   }, [projectId]);
 
   useEffect(() => { load(); }, [load]);
-
-  function updateStep(stepNo: number) {
-    if (form.status === "done" && !form.evidence_url.trim() && !form.note.trim()) {
-      setError("완료 처리에는 증적 URL 또는 비고(증적 설명)가 필요합니다.");
-      return;
-    }
-    confirm(`설립 실행 ${stepNo}단계 기록`, () => {
-      void (async () => {
-        setBusy(true); setError(null);
-        try {
-          await api.put(`/api/projects/${encodeURIComponent(projectId)}/establishment`, {
-            step_no: stepNo,
-            status: form.status,
-            origin: est?.project.origin ?? "internal",
-            evidence_url: form.evidence_url || undefined,
-            note: form.note || undefined,
-          });
-          setNotice("설립 실행 단계가 기록되었습니다. 완료확인(5단계)은 선행 4단계가 모두 완료된 후에만 완료할 수 있습니다.");
-          toast(`설립 실행 ${stepNo}단계를 기록했습니다.`);
-          // Reload before clearing busy/closing the form so no stale enabled button is clickable.
-          await load();
-          setOpenStep(null);
-          setForm({ status: "done", evidence_url: "", note: "" });
-        } catch (e) {
-          setError(e instanceof Error ? e.message : "설립 실행 기록 실패");
-        } finally {
-          setBusy(false);
-        }
-      })();
-    }, {
-      body: "설립 실행 단계 상태를 기록합니다. 기록하는 사람이 이 단계의 담당자로 남으며, 이 기록은 담당자가 확인한 실행 증적입니다. 에이전트가 대신 완료 처리할 수 없습니다.",
-      confirmLabel: "기록",
-      tone: "neutral",
-    });
-  }
 
   function recordKickoff() {
     confirm("PMI 킥오프 기록", () => {
@@ -183,7 +123,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
   );
   const estComplete = pkg?.establishment.complete ?? false;
   const origin = est?.project.origin;
-  const estApplies = origin === "internal" || origin === "joint";
+  const estApplies = establishmentApplies(origin);
 
   return (
 <>
@@ -197,7 +137,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
           존재해야 S11이 완료됩니다.
           <Link href={`/projects/${projectId}/charter`} className="ml-2 underline">프로젝트 추진계획(차터) 보기 →</Link>
           <span className={`status-chip ${bothGatesGo ? "status-green" : "status-amber"} ml-2`}>
-            {bothGatesGo ? "● IC 진행 2/2 GO" : "○ IC 진행 미승인"}
+            {bothGatesGo ? "● 투자심의위원회 2/2 GO" : "○ 투자심의위원회 미승인"}
           </span>
           {estApplies && (
             <span className={`status-chip ${estComplete ? "status-green" : "status-amber"} ml-1`}>
@@ -333,87 +273,15 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
           })()}
         </section>
 
-        {/* ── 설립 실행 5단계 ────────────────────────────────────────── */}
-        <section className="market-section sizing-step mt-3" aria-label="설립 실행 5단계">
-          <h3 className="sizing-step-title text-[0.95rem]">
-            <span className="sizing-step-badge">🏗</span> 설립 실행 — 5단계 (내부 추진·합작 프로젝트)
-          </h3>
-          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-            담당자는 단계를 기록한 사람입니다. 완료 처리는 증적(URL 또는 설명)과 함께 사람이 기록하며, 에이전트는 대신 완료할 수 없습니다.
-            {!estApplies && " 이 프로젝트는 내부 추진·합작이 아니어서 설립 실행이 적용되지 않습니다."}
-          </p>
-          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-          <table className="data-table table-fixed-pct tmin-48" aria-label="설립 실행 단계 현황">
-            <caption className="sr-only">설립 실행 5단계 진행 현황</caption>
-            <ColGroup widths={estStepColPct(canAct && estApplies ? 5 : 4)} />
-            <thead>
-              <tr><th scope="col">단계</th><th scope="col">상태</th><th scope="col">담당자 (기록자)</th><th scope="col">갱신</th>{canAct && estApplies && <th scope="col">작업</th>}</tr>
-            </thead>
-            <tbody>
-              {[1, 2, 3, 4, 5].map((n) => {
-                const row = est?.steps.find((s) => s.step_no === n) ?? pkg?.establishment.steps.find((s) => s.step_no === n);
-                const meta = stepMeta(row?.status);
-                const isDone = row?.status === "done";
-                const open = openStep === n;
-                return (
-                  <Fragment key={n}>
-                    <tr>
-                      <td><span className="tabular-nums mr-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{n}</span>{STEP_TITLES[n]}</td>
-                      <td><span className={`status-chip ${meta.cls}`}>{meta.icon} {meta.label}</span></td>
-                      <td className="text-[length:var(--fs-caption)]">
-                        {row?.owner ?? "미지정"}
-                        {row?.evidence_url && <span className="block text-[color:var(--muted-fg)]">증적: {row.evidence_url}</span>}
-                      </td>
-                      <td className="text-[length:var(--fs-caption)] tabular-nums">{row?.updated_at?.slice(0, 10) ?? "—"}</td>
-                      {canAct && estApplies && (
-                        <td>
-                          <button
-                            type="button"
-                            className="btn-ghost btn-sm"
-                            disabled={busy || isDone}
-                            aria-busy={busy}
-                            aria-expanded={open}
-                            aria-controls={`est-step-${n}`}
-                            onClick={() => { setOpenStep(open ? null : n); setForm({ status: "done", evidence_url: "", note: "" }); }}
-                          >
-                            {isDone ? "완료됨" : open ? "닫기" : "증적과 함께 완료"}
-                          </button>
-                          {isDone && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">이미 완료 처리됨</span>}
-                        </td>
-                      )}
-                    </tr>
-                    {open && canAct && estApplies && (
-                      <tr id={`est-step-${n}`}>
-                        <td colSpan={5}>
-                          <form className="sizing-new-form" aria-label={`설립 실행 ${n}단계 기록`} onSubmit={(e) => { e.preventDefault(); updateStep(n); }}>
-                            <div className="flex flex-wrap items-end gap-2">
-                              <label className="text-[length:var(--fs-caption)]">
-                                <span className="block mb-1">상태</span>
-                                <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="sizing-new-input sizing-new-input-sm">
-                                  {Object.entries(STEP_STATUS_META).filter(([k]) => k !== "pending").map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
-                                </select>
-                              </label>
-                              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]">
-                                <span className="block mb-1">증적 URL (완료 시 URL 또는 비고 필수)</span>
-                                <input value={form.evidence_url} onChange={(e) => setForm({ ...form, evidence_url: e.target.value })} className="sizing-new-input w-full" placeholder="data room 링크" />
-                              </label>
-                              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]">
-                                <span className="block mb-1">비고</span>
-                                <input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} className="sizing-new-input w-full" />
-                              </label>
-                              <button type="submit" className="btn-ghost btn-sm" disabled={busy}>{busy ? "기록 중..." : "단계 기록 (확인 필요)"}</button>
-                            </div>
-                          </form>
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-          </div>
-        </section>
+        {/* ── 설립 실행 5단계 (ADR-0165) ───────────────────────────────── */}
+        <EstablishmentPanel
+          projectId={projectId}
+          canAct={canAct}
+          est={est}
+          fallbackSteps={pkg?.establishment.steps ?? []}
+          gateHistory={pkg?.gates.history ?? []}
+          onChanged={load}
+        />
 
         {/* ── 신규 사업 실행 기준선 (ADR-0161) — greenfield 전용, 그 외 트랙은 아무것도 그리지 않는다 ── */}
         <ExecutionBaselinePanel projectId={projectId} canAct={canAct} />
@@ -467,22 +335,12 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
           </section>
         )}
 
-        {/* ── 의사결정 ×2 (검토 블록은 상단에 한 번만) ───────────────── */}
+        {/* ── 의사결정: 법인 → 그룹 투자심의위원회 한 구역 (검토 블록은 상단에 한 번만) ── */}
         <div className="mt-4">
           <GateDecisionPanel
             opportunityId={projectId}
-            gates={["entity_ic"]}
-            entityType="project"
-            killHint={null}
-            showReview={false}
-            goGaps={pkg?.gates.go_gaps}
-            nextStage={{ label: "그룹 투자심의위원회 결정 기록", href: "#gate-decision-group_ic" }}
-          />
-        </div>
-        <div className="mt-3">
-          <GateDecisionPanel
-            opportunityId={projectId}
-            gates={["group_ic"]}
+            gates={["entity_ic", "group_ic"]}
+            sequence
             entityType="project"
             killHint={null}
             showReview={false}
