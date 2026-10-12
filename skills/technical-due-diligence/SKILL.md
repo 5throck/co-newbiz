@@ -26,6 +26,7 @@ metadata:
 
   procedure_keys:
     - brownfield-dd
+    - greenfield-dd
 relates_to:
   - skill: competitive-intelligence
     type: follows

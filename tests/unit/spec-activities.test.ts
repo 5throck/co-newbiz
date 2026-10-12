@@ -24,6 +24,13 @@ describe("spec-activities loader", () => {
     }
   });
 
+  test("S9 spec activities cover the four v2.7.0 DD domains (ADR-0160 addendum c)", () => {
+    expect(specAgentFor("S9", "financial-dd")).toBe("financial-analyst");
+    expect(specAgentFor("S9", "hr-dd")).toBe("hr-integration-agent");
+    expect(specAgentFor("S9", "market-dd")).toBe("market-intelligence-agent");
+    expect(specAgentFor("S9", "financing-dd")).toBe("financing-agent");
+  });
+
   test("unknown stage / activity throws", () => {
     expect(() => loadStageActivities("S13")).toThrow(/Unknown stage/);
     expect(() => specAgentFor("S1", "no-such-activity")).toThrow(/no activity/);
@@ -47,14 +54,14 @@ describe("spec-activities loader", () => {
   });
 
   test("S9 domain agents resolve from the spec (previous hardcoded values)", () => {
-    const expected: Record<DdDomain, string> = {
+    const expected: Partial<Record<DdDomain, string>> = {
       commercial: "commercial-dd-agent",
       technical: "technical-dd-agent",
       legal: "legal-counsel",
     };
     for (const domain of Object.keys(expected) as DdDomain[]) {
-      expect(specAgentFor("S9", DD_DOMAIN_TO_SPEC_ACTIVITY[domain])).toBe(expected[domain]);
-      expect(DD_DOMAIN_AGENTS[domain]).toBe(expected[domain]);
+      expect(specAgentFor("S9", DD_DOMAIN_TO_SPEC_ACTIVITY[domain])).toBe(expected[domain]!);
+      expect(DD_DOMAIN_AGENTS[domain]).toBe(expected[domain]!);
     }
   });
 });

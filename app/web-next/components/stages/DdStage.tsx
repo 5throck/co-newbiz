@@ -5,6 +5,13 @@
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 
 import { DD_DOMAIN_LABEL, FINDING_CATEGORY_LABEL } from "../../lib/labels.ts";
+import {
+  PLAN_READINESS_KEY, PLAN_STATUS_TEXT, codeMeta, countAnnouncement, countLocation, judgedLine, needsNaReason, notCountedNotice, planArtefactHref, planReadinessLabel,
+  REPLACED_PENDING_NOTE, pointerText, replacementUndecided, s9Heading, splitItems, statusText, tabCounts, tabLabel, tabStepTags, validateNaReason, workspaceView, type GfScope, type WsItemScope,
+} from "../../lib/greenfield-dd-view.ts";
+import { GreenfieldScopePanel } from "./GreenfieldScopePanel.tsx";
+import { BrownfieldScopePanel } from "./BrownfieldScopePanel.tsx";
+import { bfCodeMeta, bfExcludedGroups, bfNeedsNaReason, bfPreviousForTab, bfScopeBlock, isBfExtraTab, type BfScopeBlock } from "../../lib/brownfield-dd-view.ts";
 import { useCallback, useEffect, useState } from "react";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
@@ -19,6 +26,7 @@ import { koChecklistText, nonWaivableReason } from "../../lib/dd-checklist-ko.ts
 import { ddItemDisplay, matchesFilter, type ItemFilter } from "../../lib/dd-item-display.ts";
 import { useModalFocus } from "../../lib/use-modal-focus.ts";
 import { ColGroup, useToast } from "../ui.tsx";
+import { GF_DD_STEP_LABEL } from "../../lib/labels.ts";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import TargetSelector, { type AnalysisTarget } from "../TargetSelector.tsx";
@@ -33,6 +41,8 @@ import TargetSelector, { type AnalysisTarget } from "../TargetSelector.tsx";
 /** Column shares (%): item, required, judgement, [record actions]. Read-only viewers have no actions column. */
 const DD_COL_PCT_ACT = [44, 9, 17, 30] as const;
 const DD_COL_PCT_READONLY = [64, 12, 24] as const;
+/** Column shares (%): step, scope, status, evidence / link. */
+const PLAN_COL_PCT = [30, 20, 20, 30] as const;
 
 interface ItemState {
   status: string;
@@ -43,6 +53,7 @@ interface ItemState {
   assessed_at?: string | null;
 }
 interface StdItem {
+  scope?: WsItemScope;
   id: string;
   text: string;
   mandatory: boolean;
@@ -57,6 +68,8 @@ interface CustomItem {
   source_url: string | null;
   source_reliability: string | null;
   proposed_by_agent: string | null;
+  proposed_by_user: string | null;
+  is_proposer: boolean;
   status: "proposed" | "approved" | "rejected";
   approved_by: string | null;
   approved_at: string | null;
@@ -78,6 +91,9 @@ interface DomainView {
   title: string;
   items: StdItem[];
   custom: CustomItem[];
+  /** ADR-0148 section 6B: false = judgeable and recorded, but outside the completion count (project created before 2026-10-01). */
+  counted?: boolean;
+  counted_reason?: string;
 }
 /** ADR-0157: one row per shortlisted target — the comparison-table source. */
 interface DdTargetRow {
@@ -102,6 +118,10 @@ interface WorkspaceView {
   scope_target_id: string | null;
   selected_target_id: string | null;
   targets: DdTargetRow[];
+  /** ADR-0160: present for greenfield routes only; absent for brownfield (payload unchanged). */
+  greenfield_scope?: GfScope;
+  /** ADR-0162: present only for brownfield non-baseline sub-tracks in the scoped view; absent for m_and_a, null and grandfathered (payload unchanged). */
+  brownfield_scope?: BfScopeBlock;
 }
 
 // P5: 상태는 색+아이콘+텍스트의 조합 — 색 단독으로 상태를 전달하지 않는다.
@@ -119,6 +139,7 @@ function stateMeta(status: string | undefined) {
 
 const DOMAIN_LABEL: Record<string, string> = DD_DOMAIN_LABEL;
 
+
 export function DdStage({ projectId }: { projectId: string }) {
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
@@ -132,6 +153,7 @@ export function DdStage({ projectId }: { projectId: string }) {
   const [filter, setFilter] = useState<ItemFilter>("all");
   // ADR-0157: null = the selected target the gate judges; an id = a comparison target (비교 근거).
   const [viewTarget, setViewTarget] = useState<string | null>(null);
+  const [naDlg, setNaDlg] = useState<{ checklistId: string; itemId: string; label: string } | null>(null);
   const [openDlg, setOpenDlg] = useState<{ targetId: string; name: string } | null>(null);
   // Row-level waiver dialog (R2-B item 5): link an active waiver, or request a new one prefilled with the item.
   const [waiverDlg, setWaiverDlg] = useState<{
@@ -216,7 +238,7 @@ export function DdStage({ projectId }: { projectId: string }) {
             );
             reload();
           } catch (e) {
-            setError(e instanceof Error ? e.message : "승인/기각 실패");
+            setError((e as { code?: string } | null)?.code === "second_person_required" ? "맞춤 항목을 제안한 사람은 직접 승인/기각할 수 없습니다. 다른 사람이 검토해야 합니다." /* INTERIM-WORDING */ : e instanceof Error ? e.message : "승인/기각 실패");
           } finally {
             setBusy(false);
           }
@@ -232,7 +254,7 @@ export function DdStage({ projectId }: { projectId: string }) {
     );
   }
 
-  async function judge(checklistId: string, itemId: string, status: "pass" | "fail" | "na") {
+  async function judge(checklistId: string, itemId: string, status: "pass" | "fail" | "na", note?: string) {
     if (busy) return;
     setBusy(true); setError(null);
     try {
@@ -240,6 +262,7 @@ export function DdStage({ projectId }: { projectId: string }) {
         checklist_id: checklistId,
         item_id: itemId,
         status,
+        ...(note ? { note } : {}),
         target_id: scopeParam ?? undefined,
       });
       setNotice("판정이 기록되었습니다.");
@@ -249,6 +272,12 @@ export function DdStage({ projectId }: { projectId: string }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  /** `na` on a sub-track-ruled checklist needs a written reason (ADR-0160 section 4.4); other `na` judgements are unchanged. */
+  function requestNa(checklistId: string, itemId: string, label: string) {
+    if (needsNaReason(data?.greenfield_scope, checklistId, itemId) || bfNeedsNaReason(data?.brownfield_scope, checklistId)) setNaDlg({ checklistId, itemId, label });
+    else void judge(checklistId, itemId, "na");
   }
 
   /** 면제 - 항목 행에서 바로 연다: 활성 waiver 연결 또는 항목이 채워진 새 요청. */
@@ -284,13 +313,27 @@ export function DdStage({ projectId }: { projectId: string }) {
   }
 
   const domain = data?.domains[tab];
+  const rowCanAct = canAct;
+  const ws = workspaceView(data?.greenfield_scope);
+  const bf = bfScopeBlock(data?.brownfield_scope);
+  // The virtual "plan readiness" tab sits after the real domain tabs (workspace scope only).
+  const planTab = !!ws && !!data && tab === data.domains.length;
+  const domainTabs = (data?.domains ?? []).map((d, i) => ({ key: String(i), label: tabLabel(data?.greenfield_scope, d) }));
+  const tabItems = ws && data ? [...domainTabs, { key: String(data.domains.length), label: planReadinessLabel(data.greenfield_scope) }] : domainTabs;
+  const headerCount = countLocation(data?.greenfield_scope) === "header" ? judgedLine(data?.greenfield_scope, data?.domains ?? []) : null;
+  const split = domain ? splitItems(domain.items) : null;
+  const counts = domain ? tabCounts(domain) : null;
+  const stepTags = domain ? tabStepTags(data?.greenfield_scope, domain) : [];
+  const notCounted = domain ? notCountedNotice(domain) : null;
+  const previousHere = domain ? (ws ? ws.previous_scope.filter((p) => p.checklist_id === domain.checklistId) : bfPreviousForTab(bf, domain.checklistId)) : [];
+  const bfExtraTab = !!domain && isBfExtraTab(bf, domain.checklistId);
 
   return (
 <>
       <StageTabs projectId={projectId} />
       <GateDecisionJump gate="dd" />
       <ReviewBuckets entityType="project" entityId={projectId} gates={["dd"]} artifacts={stageArtifactTabs("S9")} />
-      <StageFrame stageId="S9" heading="S9 실사·검증 — DD 체크리스트 판정">
+      <StageFrame stageId="S9" heading={s9Heading(data?.greenfield_scope)}>
         {data && (
           <div className="mb-3 flex flex-wrap items-center gap-2" data-testid="dd-subject-header">
             {targets.length === 0 ? (
@@ -320,7 +363,7 @@ export function DdStage({ projectId }: { projectId: string }) {
           적용 체크리스트의 모든 항목이 판정되고 필수 미충족이 0건이어야 S9이 완료됩니다 (flow.spec v2.0.0).
           {data && (
             <>
-              {" — "}
+              {countLocation(data.greenfield_scope) === "panel" ? null : <>{" — "}
               <span className={`status-chip ${data.completion.pending === 0 && data.completion.unassessed === 0 && data.completion.mandatoryUnmet === 0 && data.completion.total > 0 ? "status-green" : "status-amber"}`}>
                 {data.completion.total === 0 && data.completion.unassessed === 0
                   ? "판정 기록 없음"
@@ -328,10 +371,38 @@ export function DdStage({ projectId }: { projectId: string }) {
                     ? "✓ 판정 완료 · 필수 미충족 0건"
                     : `○ 대기 ${data.completion.pending}건 · 미판정 ${data.completion.unassessed}건 · ✕ 필수 미충족 ${data.completion.mandatoryUnmet}건`}
               </span>
+              {headerCount && (
+                <span className="ml-2 status-chip status-not-started" role="status" aria-live="polite" aria-atomic="true" data-testid="dd-header-judged">
+                  {headerCount.text}<span className="sr-only">{countAnnouncement(headerCount)}</span>
+                </span>
+              )}</>}
             </>
           )}
           <span className="ml-2 status-chip status-not-started">에이전트 제안 ≠ 승인 — 승인은 사람의 행위입니다</span>
         </p>
+
+        {data?.greenfield_scope && (
+          <GreenfieldScopePanel
+            projectId={projectId}
+            scope={data.greenfield_scope}
+            domains={data.domains}
+            meUserId={me?.userId ?? null}
+            canAct={canAct}
+            onChanged={reload}
+            onSelectTab={setTab}
+          />
+        )}
+
+        {data && !data.greenfield_scope && (
+          <BrownfieldScopePanel
+            projectId={projectId}
+            block={data.brownfield_scope}
+            domains={data.domains}
+            canAct={canAct}
+            previewEnabled={!comparing}
+            onChanged={reload}
+          />
+        )}
 
         {targets.length >= 2 && selectedTarget && (
           <div className="mb-3">
@@ -414,16 +485,76 @@ export function DdStage({ projectId }: { projectId: string }) {
         {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
         {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {notice}</p>}
 
-        {domain && !viewNotOpened && (
+        {(domain || planTab) && !viewNotOpened && (
           <>
             <TabNav
               className="mb-0"
               label="DD 체크리스트 도메인"
               active={String(tab)}
               onSelect={(key) => setTab(Number(key))}
-              tabs={(data?.domains ?? []).map((d, i) => ({ key: String(i), label: DOMAIN_LABEL[d.domain] ?? d.title }))}
+              tabs={tabItems}
             />
+            {planTab && ws && (
+              <section className="market-section sizing-step mt-3" aria-label="계획 준비 상태" data-testid="dd-plan-readiness">
+                <h3 className="sizing-step-title text-[0.9rem]">{planReadinessLabel(data?.greenfield_scope)}</h3>
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
+                  체크리스트 항목이 없는 단계(4·5·6)의 상태입니다. 완료 집계에 들어가지 않으며, 판정 버튼도 없습니다. {/* INTERIM-WORDING */}
+                </p>
+                <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+                  <table className="data-table table-fixed-pct tmin-40" aria-label="계획 준비 상태">
+                    <caption className="sr-only">단계 4·5·6의 상태 — 완료 집계에 포함되지 않음</caption>
+                    <ColGroup widths={PLAN_COL_PCT} />
+                    <thead>
+                      <tr><th scope="col">단계</th><th scope="col">범위</th><th scope="col">상태</th><th scope="col">근거·연결</th></tr>
+                    </thead>
+                    <tbody>
+                      {ws.plan_readiness.map((r) => {
+                        const st = PLAN_STATUS_TEXT[r.status];
+                        const href = planArtefactHref(r.step);
+                        return (
+                          <tr key={r.step}>
+                            <th scope="row" data-label="단계" className="text-left">{r.step}단계 {GF_DD_STEP_LABEL[r.step] ?? r.purpose}</th>
+                            <td data-label="범위">{r.in_scope ? "✓ 범위 안" : "— 범위 밖"}{r.reason && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{r.reason}</span>}</td>
+                            <td data-label="상태"><span className={`status-chip ${r.status === "recorded" ? "status-green" : "status-not-started"}`}>{st.icon} {st.text}</span></td>
+                            <td data-label="근거·연결">
+                              {r.detail && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{r.detail}</span>}
+                              {r.artefact && <span className="block text-[length:var(--fs-caption)]">{r.artefact}</span>}
+                              {href && <a className="text-[length:var(--fs-caption)]" href={href}>해당 위치로 이동</a>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
 
+            {domain && split && counts && (<>
+            <div className="mt-3 mb-2" data-testid="dd-tab-header">
+              <h3 className="sizing-step-title text-[0.9rem]">
+                {tabLabel(data?.greenfield_scope, domain)}
+                {(ws || bf) && (
+                  <span className="ml-2 text-[length:var(--fs-caption)] font-normal text-[color:var(--muted-fg)]" role="status" aria-live="polite" data-testid="dd-tab-count">
+                    이 탭에서 {counts.judged} / {counts.judgeable} 판정
+                  </span>
+                )}
+              </h3>
+              {stepTags.length > 0 && (
+                <ul className="flex flex-wrap gap-2 mt-1" aria-label="이 탭이 맡는 절차 단계" data-testid="dd-step-tags">
+                  {stepTags.map((t) => (
+                    <li key={t.step} className={`status-chip ${t.inScope ? "status-green" : "status-not-started"}`} title={t.reason ?? undefined}>
+                      <span aria-hidden="true">{t.icon} </span>{t.step}단계 {t.label} — {t.stateText}{t.reason ? ` (${t.reason})` : ""}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {notCounted && (
+                <p role="note" className="status-chip status-amber block mt-2" data-testid="dd-not-counted">
+                  <span aria-hidden="true">ⓘ </span>{notCounted.text}
+                </p>
+              )}
+            </div>
             <div className="flex flex-wrap items-center gap-2 mb-2" role="group" aria-label="항목 필터">
               <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">보기:</span>
               {([["all", "전체"], ["pending", "판정 대기만"], ["fail", "미충족만"]] as const).map(([k, label]) => (
@@ -433,19 +564,19 @@ export function DdStage({ projectId }: { projectId: string }) {
               {busy && <span role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">기록 중입니다 - 완료될 때까지 판정 버튼이 잠깁니다.</span>}
             </div>
             <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table dd-table table-fixed-pct tmin-48" aria-label={`${domain.title} 체크리스트`}>
-              <caption className="sr-only">{domain.title} 체크리스트 판정</caption>
-              <ColGroup widths={canAct ? DD_COL_PCT_ACT : DD_COL_PCT_READONLY} />
+            <table className="data-table dd-table table-fixed-pct tmin-48" aria-label={`${tabLabel(data?.greenfield_scope, domain)} 체크리스트`}>
+              <caption className="sr-only">{tabLabel(data?.greenfield_scope, domain)} 체크리스트 판정</caption>
+              <ColGroup widths={rowCanAct ? DD_COL_PCT_ACT : DD_COL_PCT_READONLY} />
               <thead>
                 <tr>
                   <th scope="col">항목</th>
                   <th scope="col">필수</th>
                   <th scope="col">판정</th>
-                  {canAct && <th scope="col">판정 기록</th>}
+                  {rowCanAct && <th scope="col">판정 기록</th>}
                 </tr>
               </thead>
               <tbody>
-                {domain.items.map((item) => {
+                {split.judgeable.map((item) => {
                   const display = ddItemDisplay(item.state);
                   if (!matchesFilter(filter, display)) return null;
                   const meta = stateMeta(display.status);
@@ -456,18 +587,19 @@ export function DdStage({ projectId }: { projectId: string }) {
                         <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] tabular-nums mr-1">{item.id}</span>
                         <span title={ko.translated ? item.text : undefined}>{ko.text}</span>
                         {item.state?.waiver_id && <span className="status-chip status-amber ml-1" title={`waiver ${item.state.waiver_id}`}>⚖ waiver</span>}
+                        {item.scope && <ScopeNote sc={item.scope} brownfield={!!bf} />}
                       </td>
                       <td data-label="필수">{item.mandatory ? "필수" : "선택"}</td>
                       <td data-label="판정">
                         <span className={`status-chip ${meta.cls}`}>{meta.icon} {meta.label}</span>
                         <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{display.judged ? (display.byline ? `판정: ${display.byline}` : "판정됨") : "아직 판정하지 않음"}</span>
                       </td>
-                      {canAct && (
+                      {rowCanAct && (
                         <td data-label="판정 기록">
                           <span className="actions-row dd-actions">
                             <button type="button" className="btn-ghost btn-sm" disabled={busy} title="충족 판정" onClick={() => void judge(domain.checklistId, item.id, "pass")}>✓ 충족</button>
                             <button type="button" className="btn-danger btn-sm" disabled={busy} title="미충족 판정 (필수 항목은 waiver 없이 S9 완료 불가)" onClick={() => void judge(domain.checklistId, item.id, "fail")}>✕ 미충족</button>
-                            <button type="button" className="btn-ghost btn-sm" disabled={busy} title="해당 없음 판정" onClick={() => void judge(domain.checklistId, item.id, "na")}>— 해당없음</button>
+                            <button type="button" className="btn-ghost btn-sm" disabled={busy} title="해당 없음 판정" onClick={() => requestNa(domain.checklistId, item.id, `${item.id} ${ko.text}`)}>— 해당없음</button>
                             {item.waiver_eligible ? (
                               <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => openWaiverDialog(domain.checklistId, item.id, `${item.id} ${ko.text}`)}>
                                 ⚖ 면제 요청·연결
@@ -499,7 +631,7 @@ export function DdStage({ projectId }: { projectId: string }) {
                         <span className={`status-chip ${meta.cls}`}>{meta.icon} {meta.label}</span>
                         <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{display.judged ? (display.byline ? `판정: ${display.byline}` : "판정됨") : "아직 판정하지 않음"}</span>
                       </td>
-                      {canAct && (
+                      {rowCanAct && (
                         <td data-label="판정 기록">
                           <span className="actions-row dd-actions">
                             <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void judge(`custom:${c.domain}`, c.id, "pass")}>✓ 충족</button>
@@ -515,6 +647,44 @@ export function DdStage({ projectId }: { projectId: string }) {
             </table>
             </div>
 
+            {split.excluded.length > 0 && (
+              <details className="mt-3" data-testid="dd-excluded">
+                <summary className="cursor-pointer text-[length:var(--fs-body)]">트랙 규칙으로 제외된 항목 ({split.excluded.length}건) — 판정하지 않습니다</summary> {/* INTERIM-WORDING */}
+                {bfExcludedGroups(split.excluded, bfExtraTab).map((g) => (
+                  <div key={g.key} role="group" aria-label={g.label ?? undefined} data-testid={g.label ? "dd-excluded-section" : undefined}>
+                    {g.label && <p className="mt-2 text-[length:var(--fs-caption)] font-semibold">{g.label}</p>}
+                    <ul className="sizing-note-list mt-2">
+                      {g.items.map((item) => {
+                        const ko = koChecklistText(domain.checklistId, item.id, item.text);
+                        return (
+                          <li key={item.id}>
+                            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] tabular-nums mr-1">{item.id}</span>
+                            {ko.text}
+                            {item.scope && <ScopeNote sc={item.scope} brownfield={!!bf} />}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ))}
+              </details>
+            )}
+            {previousHere.length > 0 && (
+              <details className="mt-2" data-testid="dd-previous-scope">
+                <summary className="cursor-pointer text-[length:var(--fs-body)]">이전 범위에서 판정됨 ({previousHere.length}건)</summary> {/* INTERIM-WORDING */}
+                <ul className="sizing-note-list mt-2">
+                  {previousHere.map((p) => (
+                    <li key={p.item_id}>
+                      <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] tabular-nums mr-1">{p.item_id}</span>
+                      {p.code === "X" ? "X 대체됨" : "N 해당 없음"} · 기록된 판정: {statusText(p.status)}
+                      {p.assessed_by && ` (${p.assessed_by}${p.assessed_at ? ` · ${p.assessed_at.slice(0, 10)}` : ""})`}
+                      {p.stays_unmet && <span className="status-chip status-red ml-1">✕ 미충족으로 남음 — 사람이 다시 판정하기 전까지</span>}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+
             <section className="market-section sizing-step mt-3" aria-label="산업 맞춤 제안">
               <h3 className="sizing-step-title text-[0.9rem]">산업 맞춤 제안 (proposed)</h3>
               {domain.custom.filter((c) => c.status === "proposed").length === 0 && (
@@ -524,8 +694,8 @@ export function DdStage({ projectId }: { projectId: string }) {
                 {domain.custom.filter((c) => c.status === "proposed").map((c) => (
                   <li key={c.id}>
                     {c.item_label}
-                    <span className="ml-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title={`제안 에이전트 ${c.proposed_by_agent ?? ""}`}>
-                      ({DOMAIN_LABEL[c.domain] ?? c.domain} · {c.proposed_by_agent ?? "unknown agent"})
+                    <span className="ml-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title={proposerLabel(c)}>
+                      ({DOMAIN_LABEL[c.domain] ?? c.domain} · {proposerLabel(c)})
                     </span>
                     {c.rationale && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">근거: {c.rationale}</span>}
                     {c.source_url ? (
@@ -537,7 +707,10 @@ export function DdStage({ projectId }: { projectId: string }) {
                         출처 없음 (C)
                       </span>
                     )}
-                    {canAct && (
+                    {canAct && c.is_proposer && (
+                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="dd-self-approval-hint">{SELF_APPROVAL_HINT}</span>
+                    )}
+                    {canAct && !c.is_proposer && (
                       <span className="actions-row ml-2">
                         <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => review(c, "approved")}>승인</button>
                         <button type="button" className="btn-danger btn-sm" disabled={busy} onClick={() => review(c, "rejected")}>기각</button>
@@ -548,7 +721,9 @@ export function DdStage({ projectId }: { projectId: string }) {
               </ul>
             </section>
 
-            <section className="market-section sizing-step mt-3" aria-label="조사내역 (dd_finding)">
+            </>)}
+
+            <section className="market-section sizing-step mt-3" aria-label="조사내역 (dd_finding)" id="dd-findings">
               <h3 className="sizing-step-title text-[0.9rem]">조사내역 (dd_finding)</h3>
               {(data?.findings.length ?? 0) === 0 && (
                 <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">등록된 조사내역이 없습니다 — 실사 수행 중 발견한 사실을 상단 폼에서 기록하세요.</p>
@@ -594,6 +769,14 @@ export function DdStage({ projectId }: { projectId: string }) {
           />
         )}
         {confirmDialog}
+        {naDlg && (
+          <NaReasonDialog
+            label={naDlg.label}
+            busy={busy}
+            onClose={() => setNaDlg(null)}
+            onSubmit={(note) => { const d = naDlg; setNaDlg(null); void judge(d.checklistId, d.itemId, "na", note); }}
+          />
+        )}
         {openDlg && (
           <OpenDdDialog
             projectId={projectId}
@@ -610,6 +793,33 @@ export function DdStage({ projectId }: { projectId: string }) {
         )}
       </StageFrame>
 </>
+  );
+}
+
+/** Proposer label: human proposals show the person, agent proposals the agent, neither shows an explicit "no record" text. */
+function proposerLabel(c: { proposed_by_agent: string | null; proposed_by_user: string | null }): string {
+  if (c.proposed_by_agent) return c.proposed_by_agent;
+  if (c.proposed_by_user) return `제안: ${c.proposed_by_user}`; // INTERIM-WORDING
+  return "제안자 기록 없음"; // INTERIM-WORDING
+}
+const SELF_APPROVAL_HINT = "제안한 사람은 직접 승인할 수 없습니다 — 다른 사람이 검토해야 합니다"; // INTERIM-WORDING
+
+/** Code badge (text + icon, never colour only) with the reading / reason / replacement pointer the overlay gives, rendered as given. */
+function ScopeNote({ sc, brownfield = false }: { sc: WsItemScope; brownfield?: boolean }) {
+  // Brownfield: a plain "A" row (as written, nothing special) carries no badge; only R / X / N and fail-closed rows do.
+  if (brownfield && sc.code === "A" && sc.rule !== "fail_closed") return null;
+  const m = brownfield ? bfCodeMeta(sc) : codeMeta(sc);
+  const fallbackNote = sc.fallback === "replacement_not_judged" ? "대체 항목이 아직 판정되지 않아 이 항목을 판정합니다." : null; // INTERIM-WORDING
+  return (
+    <span className="block mt-1 text-[length:var(--fs-caption)]" data-testid="dd-scope-note" data-code={sc.code}>
+      <span className="status-chip status-not-started" title={m.hint}><span aria-hidden="true">{m.icon} </span>{m.label}</span>
+      {m.ruleText && <span className="ml-1 text-[color:var(--muted-fg)]">{m.ruleText}</span>}
+      {sc.code === "R" && sc.reading && <span className="block text-[color:var(--muted-fg)]">{brownfield ? "읽는 방법" : "그린필드 해석"}: {sc.reading}</span>}
+      {sc.code === "N" && !sc.judgeable && <span className="block text-[color:var(--muted-fg)]">제외 사유: {sc.reason ?? "사유 없음"} — 판정 대상이 아닙니다</span>}
+      {sc.code === "X" && sc.replaced_by.map((p) => <span key={`${p.checklist_id}:${p.item_id}`} className="block text-[color:var(--muted-fg)]">{brownfield ? "대체 항목" : "대체"}: {pointerText(p)}</span>)}
+      {sc.code === "X" && replacementUndecided(sc) && <span className="block text-[color:var(--muted-fg)]" data-testid="dd-replaced-pending">{REPLACED_PENDING_NOTE}</span>}
+      {fallbackNote && <span className="block text-[color:var(--muted-fg)]">{fallbackNote}</span>}
+    </span>
   );
 }
 
@@ -707,6 +917,47 @@ function OpenDdDialog({ projectId, target, onClose, onOpened }: {
           <button type="button" className="btn-ghost btn-sm" onClick={onClose}>취소</button>
           <button type="button" className="btn-premium btn-sm" disabled={saving || missing} onClick={() => void submit()}>
             {saving ? "여는 중..." : "DD 열기"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Reason dialog for `na` on a checklist whose applicability the sub-track rule decided (no silent drops). */
+function NaReasonDialog({ label, busy, onClose, onSubmit }: { label: string; busy: boolean; onClose: () => void; onSubmit: (note: string) => void }) {
+  const { panelRef, onKeyDown } = useModalFocus(onClose);
+  const [note, setNote] = useState("");
+  const [touched, setTouched] = useState(false);
+  const problem = validateNaReason(note);
+  return (
+    <div className="modal-backdrop" role="presentation" onKeyDown={onKeyDown} onClick={onClose}>
+      <div ref={panelRef} className="modal-panel" role="dialog" aria-modal="true" aria-labelledby="dd-na-title" style={{ maxWidth: "36rem", width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <h3 id="dd-na-title" className="text-[1rem] font-semibold mb-1">해당 없음 사유</h3>
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
+          대상 항목: {label}. 이 항목은 세부 트랙 규칙으로 적용 여부가 정해지므로, 해당 없음 판정에는 사유가 필요하며 감사 기록에 남습니다.
+        </p>
+        <label className="text-[length:var(--fs-caption)] block" htmlFor="dd-na-reason">사유 (필수)</label>
+        <textarea
+          id="dd-na-reason"
+          className="sizing-new-input mt-1 w-full"
+          rows={3}
+          value={note}
+          maxLength={2000}
+          required
+          aria-required="true"
+          aria-invalid={touched && !!problem}
+          aria-describedby="dd-na-error"
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="왜 이 항목이 이 계획에 해당하지 않는가"
+        />
+        <p id="dd-na-error" role="alert" aria-live="assertive" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-1 min-h-[1.25rem]">
+          {touched && problem ? `✕ ${problem}` : ""}
+        </p>
+        <div className="flex flex-wrap items-center justify-end gap-2 mt-2">
+          <button type="button" className="btn-ghost btn-sm" onClick={onClose}>취소</button>
+          <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => { setTouched(true); if (!problem) onSubmit(note.trim()); }}>
+            해당 없음으로 기록
           </button>
         </div>
       </div>

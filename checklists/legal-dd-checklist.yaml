@@ -4,7 +4,7 @@ title: "Legal Due Diligence Checklist (Brown Field DD)"
 scope: shared
 enforceability: mixed
 owner_agent: legal-counsel
-version: "1.0.0"
+version: "1.1.0"
 effective_from: "2026-08-22"
 gate: DD
 
@@ -16,7 +16,7 @@ gate: DD
 
 items:
   - id: ldd-01
-    text: "법인 적격성 확인 (Good Standing) — 대상 및 모든 자회사의 정관·이사회 의사록 3개년 검토"
+    text: "법인 존속·정상 상태(good standing) 확인 — 대상 및 모든 자회사의 정관·이사회 의사록 3개년 검토"
     mandatory: true
     waiver_eligible: true
   - id: ldd-02
@@ -64,7 +64,7 @@ items:
     mandatory: true
     waiver_eligible: true
   - id: ldd-13
-    text: "임직원·컨트랙터 PIIA(발명 양도+비밀유지계약) 서명 확인 — 전원 이행 여부"
+    text: "임직원·컨트랙터의 임직원 직무발명 승계(직무발명 규정·승계 통지)·비밀유지 약정(PIIA) 서명 확인 — 전원 이행 여부"
     mandatory: true
     waiver_eligible: true
   - id: ldd-14
@@ -100,7 +100,7 @@ items:
     mandatory: true
     waiver_eligible: true
   - id: ldd-22
-    text: "한국 유의사항 (한국 근로자 + 영업양도 경로 검토 시) — 영업양도 근로자 승계는 판례 확립(대법원 2000다8448 계열), 개별 동의가 안전 관행. 현행 법령·한국 변호사 확인 필요 — 선택"
+    text: "한국 유의사항 (한국 근로자 + 영업양도 경로 검토 시) — 영업양도 근로자 승계는 판례 확립(대법원 2000다8448 계열 — 인용 판례는 변호사 확인 필요(citation to be verified by counsel)), 개별 동의가 안전 관행. 현행 법령·한국 변호사 확인 필요 — 선택"
     mandatory: false
     waiver_eligible: true
 

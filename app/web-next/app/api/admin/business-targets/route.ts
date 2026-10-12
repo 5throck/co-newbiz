@@ -9,6 +9,8 @@ import { badRequest, ok } from "../../../../lib/envelope.ts";
 import {
   CUSTOM_METRIC_KEY,
   METRIC_PRESETS,
+  parseDirection,
+  parseTargetValue,
   createBusinessTarget,
   deleteBusinessTarget,
   listBusinessTargets,
@@ -16,17 +18,7 @@ import {
   type TargetDirection,
 } from "../../../../lib/business-targets.ts";
 
-const DIRECTIONS = new Set<TargetDirection>(["gte", "lte"]);
 const PRESET_KEYS = new Set(METRIC_PRESETS.map((p) => p.key));
-
-function parseDirection(value: unknown): TargetDirection | null {
-  return typeof value === "string" && DIRECTIONS.has(value as TargetDirection) ? (value as TargetDirection) : null;
-}
-
-function parseTargetValue(value: unknown): number | null {
-  const n = Number(value);
-  return Number.isFinite(n) && n >= 0 ? n : null;
-}
 
 export async function GET(request: Request) {
   const auth = authenticate(request);

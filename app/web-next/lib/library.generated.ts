@@ -58,7 +58,7 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "file": "checklists/financial-dd-checklist.yaml",
     "gate": "DD",
     "enforceability": "mixed",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "owner_agent": "financial-analyst",
     "item_count": 8,
     "lang": "en"
@@ -70,7 +70,7 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "file": "checklists/financing-plan-checklist.yaml",
     "gate": "FS",
     "enforceability": "mixed",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "owner_agent": "valuation-agent",
     "item_count": 9,
     "lang": "en"
@@ -94,7 +94,7 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "file": "checklists/hr-dd-checklist.yaml",
     "gate": "DD",
     "enforceability": "mixed",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "owner_agent": "hr-integration-agent",
     "item_count": 11,
     "lang": "en"
@@ -106,7 +106,7 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "file": "checklists/legal-dd-checklist.yaml",
     "gate": "DD",
     "enforceability": "mixed",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "owner_agent": "legal-counsel",
     "item_count": 22,
     "lang": "en"
@@ -142,7 +142,7 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "file": "checklists/market-dd-checklist.yaml",
     "gate": "DD",
     "enforceability": "mixed",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "owner_agent": "market-intelligence-agent",
     "item_count": 11,
     "lang": "en"
@@ -166,7 +166,7 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "file": "checklists/rbd-technology-checklist.yaml",
     "gate": "DD",
     "enforceability": "mixed",
-    "version": "1.3.0",
+    "version": "1.5.0",
     "owner_agent": "brownfield-agent",
     "item_count": 15,
     "lang": "en"
@@ -1057,11 +1057,11 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "checklists/financial-dd-checklist.yaml",
     "gate": "DD",
     "enforceability": "mixed",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "owner_agent": "financial-analyst",
     "item_count": 8,
     "lang": "en",
-    "content": "governance_doc_id: chk-financial-dd-checklist\nlayer: checklist\ntitle: \"Financial Due Diligence Checklist\"\nscope: shared\nenforceability: mixed\nowner_agent: financial-analyst\nversion: \"1.1.0\"\neffective_from: \"2026-09-05\"\ngate: DD\n\nitems:\n  - id: fdd-01\n    text: \"Quality of earnings assessed — revenue recognition policy reviewed, one-time/non-recurring items identified and normalized\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fdd-02\n    text: \"Working capital analysis completed — normalized NWC, seasonal patterns, and minimum cash requirements quantified\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fdd-03\n    text: \"Debt schedule confirmed — all borrowings, lease liabilities, contingent liabilities, and off-balance-sheet items listed with rates and maturities\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fdd-04\n    text: \"Tax position reviewed — effective tax rate vs. statutory, open audits, NOL carryforwards, transfer-pricing exposure\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fdd-05\n    text: \"Cash flow quality verified — operating cash flow vs. EBITDA reconciliation, capex split maintenance vs. growth, DSO/DPO trends (where cdd-08 is performed, customer-level DSO/aging and margin are supplied to it)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fdd-06\n    text: \"Related-party transactions identified and evaluated — pricing fairness, necessity, and post-closing treatment determined\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fdd-07\n    text: \"Management accounts vs. audited statements bridged — material variances explained and adjustments validated\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fdd-08\n    text: \"Financial projections (budget/plan) assessed — assumptions vs. historical performance, market benchmarks, and sensitivity analysis performed\"\n    mandatory: true\n    waiver_eligible: true\n"
+    "content": "governance_doc_id: chk-financial-dd-checklist\nlayer: checklist\ntitle: \"Financial Due Diligence Checklist\"\nscope: shared\nenforceability: mixed\nowner_agent: financial-analyst\nversion: \"1.2.0\"\neffective_from: \"2026-09-05\"\ngate: DD\n\nitems:\n  - id: fdd-01\n    text: \"이익의 질(QoE, Quality of Earnings) 평가 — 수익 인식 정책 검토, 일회성·비경상 항목 식별 및 정상화\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fdd-02\n    text: \"운전자본 분석 완료 — 정상 순운전자본(NWC), 계절성 패턴, 최소 현금 보유 요건 정량화\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fdd-03\n    text: \"차입금 내역 확정 — 모든 차입금, 리스부채, 우발부채, 부외 항목을 이자율·만기와 함께 목록화\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fdd-04\n    text: \"세무 현황 검토 — 법정세율 대비 유효세율, 진행 중인 세무조사, 이월결손금(NOL), 이전가격(transfer pricing) 노출\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fdd-05\n    text: \"현금흐름의 질 검증 — 영업현금흐름과 EBITDA 대사, 유지·성장 설비투자(capex) 구분, 매출채권회전일수(DSO)·매입채무회전일수(DPO) 추세 (cdd-08을 수행하는 경우 고객별 DSO·연령분석과 마진을 cdd-08에 제공)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fdd-06\n    text: \"특수관계자 거래 식별·평가 — 가격 공정성, 필요성, 거래종결(closing) 후 처리 방안 결정\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fdd-07\n    text: \"관리회계 자료와 감사받은 재무제표 간 차이 조정 — 중요한 차이 설명 및 조정 사항 검증\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fdd-08\n    text: \"재무 전망(예산·계획) 평가 — 가정을 과거 실적·시장 벤치마크와 비교하고 민감도 분석 수행\"\n    mandatory: true\n    waiver_eligible: true\n"
   },
   "chk-financing-plan-checklist": {
     "id": "chk-financing-plan-checklist",
@@ -1070,11 +1070,11 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "checklists/financing-plan-checklist.yaml",
     "gate": "FS",
     "enforceability": "mixed",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "owner_agent": "valuation-agent",
     "item_count": 9,
     "lang": "en",
-    "content": "governance_doc_id: chk-financing\nlayer: checklist\ntitle: \"Financing Plan Checklist\"\nscope: shared\nenforceability: mixed\nowner_agent: valuation-agent\nversion: \"1.0.0\"\neffective_from: \"2026-08-22\"\ngate: FS\n\n# Certainty of funds must be evidenced BEFORE final IC — a financing contingency\n# shifts risk to the seller and weakens the bid (Goodwin). The evidence pack below\n# is assembled at FS (financing-plan-review at brownfield-dd step 12) and re-tested\n# as a precondition at entity-ic-review.\n#\n# BENCHMARKS ARE DEFAULT POLICY (DEC-20260909-05): the reverse-termination-fee range cited in fin-08\n# (4-7% of enterprise value) is a market-practice benchmark from published deal\n# practice, not activated policy — whether it becomes policy is ADR-0051 open\n# question (c) for the thresholds meeting.\n\nitems:\n  - id: fin-01\n    text: \"Cash/debt/equity mix decided with tenor and amortization profile, and the sources-and-uses table attached\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fin-02\n    text: \"Executed commitment papers obtained — equity commitment letter; debt commitment letter + fee letter + term sheet — OR a documented internal-funds approval path where the deal is balance-sheet funded\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fin-03\n    text: \"Covenant headroom / leverage analysis completed against the lender's terms\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fin-04\n    text: \"Funds-flow memorandum drafted — every inflow/outflow, account, timing, and FX leg of closing day mapped\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fin-05\n    text: \"FX plan stated (forwards, options, deal-contingent FX) whenever the consideration spans more than one currency\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fin-06\n    text: \"Limited-conditionality ('certain funds') structure reviewed by legal-counsel — funding conditioned only on the specified acquisition-agreement representations, closing substantially per the agreement, and closing certificates; no market-MAC out\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fin-07\n    text: \"Escrow/paying agent appointed and escrow sized against indemnity exposure\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fin-08\n    text: \"Reverse-termination fee sized where the buyer retains debt-funding risk (illustrative benchmark: 4-7% of enterprise value — see header note)\"\n    mandatory: false\n    waiver_eligible: true\n  - id: fin-09\n    text: \"Certainty of funds evidenced in the IC package before final IC — commitment letters or internal-funds approval per fin-02, sources & uses, covenant headroom, funds-flow draft, and FX plan all present; missing financing evidence is a precondition fail at entity-ic-review, not a judgment call\"\n    mandatory: true\n    waiver_eligible: false   # completeness fact: the evidence pack is either present or it is not\n\nlegal_basis:\n  - \"ADR-0051 (workflow gap closure — financing workstream added; chain step 13)\"\n  - \"procedures/_shared/brownfield-dd/schema.yaml step 12 (financing-plan-review), procedures/_shared/entity-ic-review/schema.yaml (precondition step)\"\n  - \"Goodwin (deal and financing certainty); Practical Law commitment-letter and funds-flow resources; SRS Acquiom (escrow sizing)\"\n"
+    "content": "governance_doc_id: chk-financing\nlayer: checklist\ntitle: \"Financing Plan Checklist\"\nscope: shared\nenforceability: mixed\nowner_agent: valuation-agent\nversion: \"1.2.0\"\neffective_from: \"2026-08-22\"\ngate: FS\n\n# Certainty of funds must be evidenced BEFORE final IC — a financing contingency\n# shifts risk to the seller and weakens the bid (Goodwin). The evidence pack below\n# is assembled at FS (financing-plan-review at brownfield-dd step 12) and re-tested\n# as a precondition at entity-ic-review.\n#\n# BENCHMARKS ARE DEFAULT POLICY (DEC-20260909-05): the reverse-termination-fee range cited in fin-08\n# (4-7% of enterprise value) is a market-practice benchmark from published deal\n# practice, not activated policy — whether it becomes policy is ADR-0051 open\n# question (c) for the thresholds meeting.\n\nitems:\n  - id: fin-01\n    text: \"현금·부채·자본 구성을 만기·상환 일정과 함께 결정하고 자금 원천·용도표(sources and uses) 첨부\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fin-02\n    text: \"서명된 확약 문서 확보 — 지분 출자 확약서(equity commitment letter); 대출 확약서(debt commitment letter) + 수수료 서한(fee letter) + 주요 조건서(term sheet) — 또는 대차대조표 자금으로 조달하는 거래라면 문서화된 내부 자금 승인 경로\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fin-03\n    text: \"대주(lender) 조건 기준으로 재무약정 등 확약사항(covenants) 여유분·레버리지 분석 완료\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fin-04\n    text: \"자금 흐름 메모(funds-flow memorandum) 초안 작성 — 거래종결일의 모든 유입·유출, 계좌, 시점, 외환 구간 정리\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fin-05\n    text: \"인수 대가가 둘 이상의 통화에 걸치는 경우 외환 계획(선물환, 옵션, 거래 조건부 외환) 명시\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fin-06\n    text: \"자금 확실성(certain funds) 조건 구조를 legal-counsel이 검토 — 대출 인출 거부(draw-stop) 조건을 인수계약의 지정 진술, 계약에 따른 실질적 거래종결, 종결 확인서로만 한정; 시장 상황 악화(market MAC)를 인출 거부·선행조건 사유로 두지 않음\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fin-07\n    text: \"에스크로·지급 대리인 선임 및 면책(indemnity) 노출 규모 대비 에스크로 금액 산정\"\n    mandatory: true\n    waiver_eligible: true\n  - id: fin-08\n    text: \"인수자가 차입 조달 위험을 부담하는 경우 역해지 수수료(reverse-termination fee) 규모 산정 (예시 벤치마크: 기업가치의 4~7% — 머리말 주석 참조)\"\n    mandatory: false\n    waiver_eligible: true\n  - id: fin-09\n    text: \"최종 투자심의위원회(IC) 전에 IC 패키지에서 자금 확실성(certainty of funds) 입증 — fin-02에 따른 확약서 또는 내부 자금 승인, 자금 원천·용도, 재무약정 등 확약사항(covenants) 여유분, 자금 흐름 초안, 외환 계획이 모두 있어야 함; 자금 조달 증거 누락은 판단 사항이 아니라 entity-ic-review의 전제조건 불충족임\"\n    mandatory: true\n    waiver_eligible: false   # completeness fact: the evidence pack is either present or it is not\n\nlegal_basis:\n  - \"ADR-0051 (workflow gap closure — financing workstream added; chain step 13)\"\n  - \"procedures/_shared/brownfield-dd/schema.yaml step 12 (financing-plan-review), procedures/_shared/entity-ic-review/schema.yaml (precondition step)\"\n  - \"Goodwin (deal and financing certainty); Practical Law commitment-letter and funds-flow resources; SRS Acquiom (escrow sizing)\"\n"
   },
   "chk-greenfield-feasibility-checklist": {
     "id": "chk-greenfield-feasibility-checklist",
@@ -1096,11 +1096,11 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "checklists/hr-dd-checklist.yaml",
     "gate": "DD",
     "enforceability": "mixed",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "owner_agent": "hr-integration-agent",
     "item_count": 11,
     "lang": "en",
-    "content": "governance_doc_id: chk-hr-dd\nlayer: checklist\ntitle: \"HR Due Diligence Checklist (Brown Field DD)\"\nscope: shared\nenforceability: mixed\nowner_agent: hr-integration-agent\nversion: \"1.0.0\"\neffective_from: \"2026-08-22\"\ngate: DD\n\n# HR DD workstream (key person / organization / labor relations / culture / day-1) —\n# deliberately does NOT duplicate compensation topics, which stay in\n# chk-ma-special-topics: ma-04..06 (executive CoC compensation, non-compete,\n# comp benchmark) and ma-09 (incentive clawback). Employment-transfer regime\n# determination cross-references chk-entity-formation (ef-08) rather than restating it.\n#\n# BENCHMARKS ARE DEFAULT POLICY (DEC-20260909-05): the stay-bonus coverage window cited in hdd-02\n# (12-24 months post-closing) is a market-practice benchmark, not activated policy —\n# whether it becomes policy is ADR-0051 open question (c) for the thresholds meeting.\n\nitems:\n  - id: hdd-01\n    text: \"Key-person map produced — every person/role whose loss would damage operations or integration, each mapped to a named retention action\"\n    mandatory: true\n    waiver_eligible: true\n  - id: hdd-02\n    text: \"Stay/retention bonus budget covering critical talent for the post-closing window (illustrative benchmark: 12-24 months — see header note)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: hdd-03\n    text: \"Day-1 retention plan prepared — pre-drafted retention offers, stay bonuses, and communication scripts for critical staff\"\n    mandatory: true\n    waiver_eligible: true\n  - id: hdd-04\n    text: \"Organization documented — org charts, management structure, headcount by function, job descriptions\"\n    mandatory: true\n    waiver_eligible: true\n  - id: hdd-05\n    text: \"Leadership bench assessed — who is needed for the first 100 days vs. who will exit\"\n    mandatory: true\n    waiver_eligible: true\n  - id: hdd-06\n    text: \"Where CBAs exist: successorship clauses, open grievance backlog, and CBA expiry vs. deal timeline reviewed (mark not-applicable with rationale where no CBA exists)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: hdd-07\n    text: \"Pension/benefits liabilities quantified — unfunded status, multiemployer withdrawal liability, retiree medical where applicable\"\n    mandatory: true\n    waiver_eligible: true\n  - id: hdd-08\n    text: \"Works-council information & consultation plan prepared for EU targets — can gate timing and structure\"\n    mandatory: false\n    waiver_eligible: true\n  - id: hdd-09\n    text: \"Employment-transfer regime determined per jurisdiction for the contemplated deal structure (TUPE / EU ARD analogues / Korean business-transfer doctrine) — cross-references chk-entity-formation ef-08; the regime determination is made here for acquisition routes\"\n    mandatory: true\n    waiver_eligible: true\n  - id: hdd-10\n    text: \"Culture distance assessed with a standardized instrument (e.g. OCAI / Denison-model), covering decision-making speed, risk appetite, and management style — feeding integration design\"\n    mandatory: true\n    waiver_eligible: true\n  - id: hdd-11\n    text: \"Day-1 and first-100-days HR plan drafted — payroll and benefits continuity, HR policy alignment, leadership communication to all staff, HR systems integration\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"ADR-0051 (workflow gap closure — HR DD step added at brownfield-dd step 13; chain step 14 management linkage)\"\n  - \"procedures/_shared/brownfield-dd/schema.yaml step 13 (hr-integration-agent / org-readiness-assessment)\"\n  - \"Soteria HR, MergerIntegration.com, MA Science (key person/retention); Acas TUPE guidance; Denison & Ko cultural due diligence\"\n  - \"checklists/ma-special-topics-checklist.yaml ma-04..06, ma-09 (compensation topics — not duplicated here)\"\n"
+    "content": "governance_doc_id: chk-hr-dd\nlayer: checklist\ntitle: \"HR Due Diligence Checklist (Brown Field DD)\"\nscope: shared\nenforceability: mixed\nowner_agent: hr-integration-agent\nversion: \"1.2.0\"\neffective_from: \"2026-08-22\"\ngate: DD\n\n# HR DD workstream (key person / organization / labor relations / culture / day-1) —\n# deliberately does NOT duplicate compensation topics, which stay in\n# chk-ma-special-topics: ma-04..06 (executive CoC compensation, non-compete,\n# comp benchmark) and ma-09 (incentive clawback). Employment-transfer regime\n# determination cross-references chk-entity-formation (ef-08) rather than restating it.\n#\n# BENCHMARKS ARE DEFAULT POLICY (DEC-20260909-05): the stay-bonus coverage window cited in hdd-02\n# (12-24 months post-closing) is a market-practice benchmark, not activated policy —\n# whether it becomes policy is ADR-0051 open question (c) for the thresholds meeting.\n\nitems:\n  - id: hdd-01\n    text: \"핵심 인력 지도 작성 — 이탈 시 운영·통합에 타격을 주는 모든 인원·직무를 식별하고 각각에 지정된 유지(retention) 조치 연결\"\n    mandatory: true\n    waiver_eligible: true\n  - id: hdd-02\n    text: \"거래종결 후 기간 동안 핵심 인재를 대상으로 하는 잔류·유지 보너스(stay/retention bonus) 예산 (예시 벤치마크: 12~24개월 — 머리말 주석 참조)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: hdd-03\n    text: \"Day-1 인재 유지 계획 준비 — 핵심 인력을 위한 사전 작성된 유지 제안, 잔류 보너스, 소통 스크립트\"\n    mandatory: true\n    waiver_eligible: true\n  - id: hdd-04\n    text: \"조직 문서화 — 조직도, 경영 구조, 기능별 인원, 직무기술서\"\n    mandatory: true\n    waiver_eligible: true\n  - id: hdd-05\n    text: \"경영진 후계 층(leadership bench) 평가 — 첫 100일에 필요한 인원과 퇴진할 인원 구분\"\n    mandatory: true\n    waiver_eligible: true\n  - id: hdd-06\n    text: \"단체협약(CBA)이 있는 경우: 승계 조항, 미해결 고충 처리 건, 거래 일정 대비 단체협약 만료 시점 검토 (단체협약이 없으면 근거와 함께 해당 없음 표시)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: hdd-07\n    text: \"연금·복리후생 부채 정량화 — 적립 부족 상태, 다수 사용자 연금 탈퇴 부채(multiemployer withdrawal liability), 해당 시 퇴직자 의료비\"\n    mandatory: true\n    waiver_eligible: true\n  - id: hdd-08\n    text: \"EU 대상 기업의 종업원평의회(works council, 한국 노사협의회와 다른 제도) 정보 제공·협의 계획 준비 — 거래 시점과 구조를 좌우할 수 있음\"\n    mandatory: false\n    waiver_eligible: true\n  - id: hdd-09\n    text: \"검토 중인 거래 구조에 대해 관할별 고용 승계 제도 판단 (TUPE / EU ARD 유사 제도 / 한국 영업양도 법리) — chk-entity-formation ef-08과 교차 참조; 인수 경로의 제도 판단은 이 항목에서 수행\"\n    mandatory: true\n    waiver_eligible: true\n  - id: hdd-10\n    text: \"표준화된 도구(예: OCAI, Denison 모델)로 문화 차이 평가 — 의사결정 속도, 위험 선호, 경영 스타일을 포함하며 통합 설계에 반영\"\n    mandatory: true\n    waiver_eligible: true\n  - id: hdd-11\n    text: \"Day-1 및 첫 100일 인사 계획 초안 작성 — 급여·복리후생 연속성, 인사 정책 정렬, 전 직원 대상 경영진 소통, 인사 시스템 통합\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"ADR-0051 (workflow gap closure — HR DD step added at brownfield-dd step 13; chain step 14 management linkage)\"\n  - \"procedures/_shared/brownfield-dd/schema.yaml step 13 (hr-integration-agent / org-readiness-assessment)\"\n  - \"Soteria HR, MergerIntegration.com, MA Science (key person/retention); Acas TUPE guidance; Denison & Ko cultural due diligence\"\n  - \"checklists/ma-special-topics-checklist.yaml ma-04..06, ma-09 (compensation topics — not duplicated here)\"\n"
   },
   "chk-legal-dd-checklist": {
     "id": "chk-legal-dd-checklist",
@@ -1109,11 +1109,11 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "checklists/legal-dd-checklist.yaml",
     "gate": "DD",
     "enforceability": "mixed",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "owner_agent": "legal-counsel",
     "item_count": 22,
     "lang": "en",
-    "content": "governance_doc_id: chk-legal-dd\nlayer: checklist\ntitle: \"Legal Due Diligence Checklist (Brown Field DD)\"\nscope: shared\nenforceability: mixed\nowner_agent: legal-counsel\nversion: \"1.0.0\"\neffective_from: \"2026-08-22\"\ngate: DD\n\n# DD-grade legal workstream — distinct from screening-level chk-legal-regulatory\n# (lr-* items are NOT duplicated here; where a topic appears at both grades, this\n# checklist extends it to DD depth). Merger-control specifics stay in\n# chk-ma-special-topics (ma-01..03); permit/certification transferability classification\n# below cross-references certification-transferability rather than restating it.\n\nitems:\n  - id: ldd-01\n    text: \"법인 적격성 확인 (Good Standing) — 대상 및 모든 자회사의 정관·이사회 의사록 3개년 검토\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-02\n    text: \"자본구조 재구성 (Cap Table) — 주식종류별 승인/발행 주수, 옵션·워런트·전환사채의 귀속·만기 목록\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-03\n    text: \"주주 의결권·동의 요건 식별 — 양도제한·우선매수권·ROFR/태그얼롱/드래그얼롱 매핑\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-04\n    text: \"계약 체결 권한 검증 (Signing Authority) — 대상·자회사를 구속할 수 있는 자를 명시\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-05\n    text: \"차입·리파이낸싱·보증 제한 매핑 — 기업방어책(이사회 분산 등) 존재 시 식별\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-06\n    text: \"상위 20개 고객·공급 계약의 지배권 변경(CoC)·양도금지 조항 스캔 — 통지기간·동의요건·해지 결과 기록, 독점·MFN·최소물량 커밋 캡처\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-07\n    text: \"자산거래 vs 주식거래 양도 구분 — 동의가 필요한 계약과 자동 승계 계약 구분\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-08\n    text: \"Close 시 동의·재융자가 필요한 대출·담보 문서 플래그\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-09\n    text: \"계속·예고 소송·중재·규제조사 목록화 — 노출 추정액·충당금 적정성, 판결·집행·파산 검색 포함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-10\n    text: \"IP 인벤토리 완료 (특허·상표·저작권·도메인·영업비밀) + 발명자-회사 귀속 연계 검증\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-11\n    text: \"In/Out 라이선스 검토 — 독점성·서브라이선스·양도 가능성·CoC 트리거\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-12\n    text: \"IP 담보권·부담 검색, 유지·갱신료 납부 확인, 진행·예고 IP 분쟁 목록화\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-13\n    text: \"임직원·컨트랙터 PIIA(발명 양도+비밀유지계약) 서명 확인 — 전원 이행 여부\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-14\n    text: \"노조·퇴직연금 (해당 시) — CBA 승계조항·분쟁 잔여·만기 vs 딜 일정 확인, 노출 정량화 (없으면 not-applicable + 사유)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-15\n    text: \"사업 인허가별 이전 분류 명시 — 자동 승계 / 동의 필요 / 재발급 (certification-transferability 판단의 법적 근거)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-16\n    text: \"환경 통지·사전 토지조사·오염 이력 확보\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-17\n    text: \"부동산 소유권·임차권 검증 (보유·임차 지분) — 임대차 CoC 조항 확인\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-18\n    text: \"개인정보 보호 검토 — 처리방침·침해 기록·국외 이전 적법 근거\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-19\n    text: \"부정방지(anti-bribery) 통제 테스트 + 상대방·실소유자(UBO) 제재 스크리닝\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-20\n    text: \"세무 신고 현재성 확인 — 진행 중 세무조사·과세 예고 식별\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-21\n    text: \"발견사항 대장(RAG 등급) 작성 — red=구조적/시정 필요, amber=보증·면책, green=수용 → SPA 보호·밸류에이션 조정(dd-to-valuation-bridge) 투입\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-22\n    text: \"한국 유의사항 (한국 근로자 + 영업양도 경로 검토 시) — 영업양도 근로자 승계는 판례 확립(대법원 2000다8448 계열), 개별 동의가 안전 관행. 현행 법령·한국 변호사 확인 필요 — 선택\"\n    mandatory: false\n    waiver_eligible: true\n\nlegal_basis:\n  - \"ADR-0051 (workflow gap closure — legal DD step added at brownfield-dd step 5)\"\n  - \"procedures/_shared/brownfield-dd/schema.yaml step 5 (legal-counsel / legal-due-diligence)\"\n  - \"Thomson Reuters Practical Law M&A DD guide; datarooms.org legal DD checklist; Lumenci IP DD checklist\"\n  - \"checklists/legal-regulatory-checklist.yaml (screening-grade — this checklist extends, not replaces, lr-*)\"\n  - \"checklists/ma-special-topics-checklist.yaml ma-01..03 (merger control), ma-12 (certification transferability)\"\n"
+    "content": "governance_doc_id: chk-legal-dd\nlayer: checklist\ntitle: \"Legal Due Diligence Checklist (Brown Field DD)\"\nscope: shared\nenforceability: mixed\nowner_agent: legal-counsel\nversion: \"1.1.0\"\neffective_from: \"2026-08-22\"\ngate: DD\n\n# DD-grade legal workstream — distinct from screening-level chk-legal-regulatory\n# (lr-* items are NOT duplicated here; where a topic appears at both grades, this\n# checklist extends it to DD depth). Merger-control specifics stay in\n# chk-ma-special-topics (ma-01..03); permit/certification transferability classification\n# below cross-references certification-transferability rather than restating it.\n\nitems:\n  - id: ldd-01\n    text: \"법인 존속·정상 상태(good standing) 확인 — 대상 및 모든 자회사의 정관·이사회 의사록 3개년 검토\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-02\n    text: \"자본구조 재구성 (Cap Table) — 주식종류별 승인/발행 주수, 옵션·워런트·전환사채의 귀속·만기 목록\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-03\n    text: \"주주 의결권·동의 요건 식별 — 양도제한·우선매수권·ROFR/태그얼롱/드래그얼롱 매핑\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-04\n    text: \"계약 체결 권한 검증 (Signing Authority) — 대상·자회사를 구속할 수 있는 자를 명시\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-05\n    text: \"차입·리파이낸싱·보증 제한 매핑 — 기업방어책(이사회 분산 등) 존재 시 식별\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-06\n    text: \"상위 20개 고객·공급 계약의 지배권 변경(CoC)·양도금지 조항 스캔 — 통지기간·동의요건·해지 결과 기록, 독점·MFN·최소물량 커밋 캡처\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-07\n    text: \"자산거래 vs 주식거래 양도 구분 — 동의가 필요한 계약과 자동 승계 계약 구분\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-08\n    text: \"Close 시 동의·재융자가 필요한 대출·담보 문서 플래그\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-09\n    text: \"계속·예고 소송·중재·규제조사 목록화 — 노출 추정액·충당금 적정성, 판결·집행·파산 검색 포함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-10\n    text: \"IP 인벤토리 완료 (특허·상표·저작권·도메인·영업비밀) + 발명자-회사 귀속 연계 검증\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-11\n    text: \"In/Out 라이선스 검토 — 독점성·서브라이선스·양도 가능성·CoC 트리거\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-12\n    text: \"IP 담보권·부담 검색, 유지·갱신료 납부 확인, 진행·예고 IP 분쟁 목록화\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-13\n    text: \"임직원·컨트랙터의 임직원 직무발명 승계(직무발명 규정·승계 통지)·비밀유지 약정(PIIA) 서명 확인 — 전원 이행 여부\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-14\n    text: \"노조·퇴직연금 (해당 시) — CBA 승계조항·분쟁 잔여·만기 vs 딜 일정 확인, 노출 정량화 (없으면 not-applicable + 사유)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-15\n    text: \"사업 인허가별 이전 분류 명시 — 자동 승계 / 동의 필요 / 재발급 (certification-transferability 판단의 법적 근거)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-16\n    text: \"환경 통지·사전 토지조사·오염 이력 확보\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-17\n    text: \"부동산 소유권·임차권 검증 (보유·임차 지분) — 임대차 CoC 조항 확인\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-18\n    text: \"개인정보 보호 검토 — 처리방침·침해 기록·국외 이전 적법 근거\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-19\n    text: \"부정방지(anti-bribery) 통제 테스트 + 상대방·실소유자(UBO) 제재 스크리닝\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-20\n    text: \"세무 신고 현재성 확인 — 진행 중 세무조사·과세 예고 식별\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-21\n    text: \"발견사항 대장(RAG 등급) 작성 — red=구조적/시정 필요, amber=보증·면책, green=수용 → SPA 보호·밸류에이션 조정(dd-to-valuation-bridge) 투입\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ldd-22\n    text: \"한국 유의사항 (한국 근로자 + 영업양도 경로 검토 시) — 영업양도 근로자 승계는 판례 확립(대법원 2000다8448 계열 — 인용 판례는 변호사 확인 필요(citation to be verified by counsel)), 개별 동의가 안전 관행. 현행 법령·한국 변호사 확인 필요 — 선택\"\n    mandatory: false\n    waiver_eligible: true\n\nlegal_basis:\n  - \"ADR-0051 (workflow gap closure — legal DD step added at brownfield-dd step 5)\"\n  - \"procedures/_shared/brownfield-dd/schema.yaml step 5 (legal-counsel / legal-due-diligence)\"\n  - \"Thomson Reuters Practical Law M&A DD guide; datarooms.org legal DD checklist; Lumenci IP DD checklist\"\n  - \"checklists/legal-regulatory-checklist.yaml (screening-grade — this checklist extends, not replaces, lr-*)\"\n  - \"checklists/ma-special-topics-checklist.yaml ma-01..03 (merger control), ma-12 (certification transferability)\"\n"
   },
   "chk-legal-regulatory-checklist": {
     "id": "chk-legal-regulatory-checklist",
@@ -1148,11 +1148,11 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "checklists/market-dd-checklist.yaml",
     "gate": "DD",
     "enforceability": "mixed",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "owner_agent": "market-intelligence-agent",
     "item_count": 11,
     "lang": "en",
-    "content": "governance_doc_id: chk-market-dd\nlayer: checklist\ntitle: \"Market Due Diligence Checklist (Brown Field DD)\"\nscope: shared\nenforceability: mixed\nowner_agent: market-intelligence-agent\nversion: \"1.1.0\"\neffective_from: \"2026-08-22\"\ngate: DD\n\n# Market DD is the market-facing subset of commercial DD: it validates market size,\n# growth, and structure. The target's own commercial position (customer relationships,\n# achievable growth) is already covered by chk-commercial-dd (commercial-dd-agent);\n# this checklist adds the independent market-side test that was previously missing.\n#\n# Single computation owner (v1.1.0): customer concentration and churn FIGURES are\n# computed once, in commercial DD (cdd-01 / cdd-02), from the target's own data.\n# mdd-06 and mdd-07 take those figures as given and add what only the market side\n# can supply — customer-voice evidence, switching costs, leading churn indicators,\n# and the industry/peer norm — then reconcile. Recomputing the same ratios from the\n# same data room is not an independent test. Evidence gathering (customer-voice\n# interviews, peer norms) may run in parallel with commercial DD; the\n# reconciliation waits until the cdd-01 / cdd-02 figures exist. If commercial DD\n# waived or did not complete one of them, the market side computes that figure\n# itself and records it, so the item never has an empty input. Item IDs are unchanged: per-project\n# state (project_checklist_item_state) is keyed by item id.\n\nitems:\n  - id: mdd-01\n    text: \"TAM/SAM triangulated via at least two independent methods (top-down industry data, bottom-up build, demand/supply-side check) reconciling within a stated tolerance — including reconciliation against any proxy-chain demand estimate produced at Screening/Pre-FS (proxy-industry-chain)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: mdd-02\n    text: \"Market growth drivers and disruptors stated, with management's growth assumption tested against independent market forecasts\"\n    mandatory: true\n    waiver_eligible: true\n  - id: mdd-03\n    text: \"Competitive set built as described by customers, not management — win/loss dynamics captured ('chosen as best' vs. 'cheapest/first/already integrated')\"\n    mandatory: true\n    waiver_eligible: true\n  - id: mdd-04\n    text: \"Market shares and concentration estimated; each competitor's pricing power classified\"\n    mandatory: true\n    waiver_eligible: true\n  - id: mdd-05\n    text: \"Target's moat rated on the standard ladder — proprietary data (strong) > integration depth (moderate) > brand/relationship (weak) > price (weakest)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: mdd-06\n    text: \"Customer concentration tested from the market side — the top-10 share is taken from cdd-01 (not recomputed; if cdd-01 was waived or not completed, compute it here and record that) and, where a benchmark exists, set against the industry/peer norm (industry profile revenue_quality_norms, else peer-benchmarking), with relationship depth and switching costs captured for the top accounts from customer evidence; any material gap between the market-side view and cdd-01 is raised as a finding\"\n    mandatory: true\n    waiver_eligible: true\n  - id: mdd-07\n    text: \"Churn/retention tested from the market side — the 2-3 year by-segment rates are taken from cdd-02 (not recomputed; if cdd-02 was waived or not completed, compute them here and record that), with leading churn indicators listed from customer evidence (executive sponsor departure, budget reallocation, active competitive evaluations, single-champion relationships); any material gap between the market-side view and cdd-02 is raised as a finding\"\n    mandatory: true\n    waiver_eligible: true\n  - id: mdd-08\n    text: \"80/20 revenue analysis performed and validated against the investment thesis\"\n    mandatory: true\n    waiver_eligible: true\n  - id: mdd-09\n    text: \"Expansion-revenue breadth tested — broad-based vs. concentrated in few accounts (a concentration red flag)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: mdd-10\n    text: \"Channel structure mapped — distributors, pricing logic, customer mix from the data room\"\n    mandatory: true\n    waiver_eligible: true\n  - id: mdd-11\n    text: \"Thesis-by-thesis validation verdicts produced (validated / partially validated / invalidated) with retention-adjusted revenue impact feeding the valuation bridge (dd-to-valuation-bridge) and bid-adjustment recommendations (base-case adjustments, downside scenario, earnout structuring)\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"ADR-0051 (workflow gap closure — market DD step added at brownfield-dd step 4)\"\n  - \"procedures/_shared/brownfield-dd/schema.yaml step 4 (market-intelligence-agent / competitive-intelligence)\"\n  - \"Ducker Carlisle CDD case study; userintuition CDD report guide; Strategex 80/20 analysis\"\n  - \"checklists/commercial-dd-checklist.yaml (target-side commercial position — complementary, not duplicated)\"\n"
+    "content": "governance_doc_id: chk-market-dd\nlayer: checklist\ntitle: \"Market Due Diligence Checklist (Brown Field DD)\"\nscope: shared\nenforceability: mixed\nowner_agent: market-intelligence-agent\nversion: \"1.2.0\"\neffective_from: \"2026-08-22\"\ngate: DD\n\n# Market DD is the market-facing subset of commercial DD: it validates market size,\n# growth, and structure. The target's own commercial position (customer relationships,\n# achievable growth) is already covered by chk-commercial-dd (commercial-dd-agent);\n# this checklist adds the independent market-side test that was previously missing.\n#\n# Single computation owner (v1.1.0): customer concentration and churn FIGURES are\n# computed once, in commercial DD (cdd-01 / cdd-02), from the target's own data.\n# mdd-06 and mdd-07 take those figures as given and add what only the market side\n# can supply — customer-voice evidence, switching costs, leading churn indicators,\n# and the industry/peer norm — then reconcile. Recomputing the same ratios from the\n# same data room is not an independent test. Evidence gathering (customer-voice\n# interviews, peer norms) may run in parallel with commercial DD; the\n# reconciliation waits until the cdd-01 / cdd-02 figures exist. If commercial DD\n# waived or did not complete one of them, the market side computes that figure\n# itself and records it, so the item never has an empty input. Item IDs are unchanged: per-project\n# state (project_checklist_item_state) is keyed by item id.\n\nitems:\n  - id: mdd-01\n    text: \"TAM/SAM을 둘 이상의 독립적 방법(하향식 산업 자료, 상향식 구축, 수요·공급 측 점검)으로 삼각검증하여 명시된 허용 범위 안에서 일치 확인 — 스크리닝·사전 타당성(Pre-FS) 단계에서 산출한 대리 산업 사슬(proxy-industry-chain) 수요 추정치와의 대사 포함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: mdd-02\n    text: \"시장 성장 동인과 교란 요인을 명시하고, 경영진의 성장 가정을 독립적 시장 전망과 대조 검증\"\n    mandatory: true\n    waiver_eligible: true\n  - id: mdd-03\n    text: \"경쟁 구도를 경영진이 아닌 고객의 설명으로 구성 — 수주·실주(win/loss) 동학 파악 ('최선이라 선택' vs. '가장 저렴·최초·이미 연동됨')\"\n    mandatory: true\n    waiver_eligible: true\n  - id: mdd-04\n    text: \"시장 점유율과 집중도 추정; 경쟁사별 가격 결정력 분류\"\n    mandatory: true\n    waiver_eligible: true\n  - id: mdd-05\n    text: \"대상 회사의 경쟁 우위(moat)를 표준 등급으로 평가 — 독점 데이터(강) > 연동 깊이(중) > 브랜드·관계(약) > 가격(최약)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: mdd-06\n    text: \"시장 측면에서 고객 집중도 검증 — 상위 10개 고객 비중은 cdd-01 값을 사용(재계산하지 않음; cdd-01이 면제되었거나 완료되지 않았으면 여기서 계산하고 그 사실을 기록)하고, 벤치마크가 있으면 산업·동종 기업 기준(산업 프로필 revenue_quality_norms, 없으면 peer-benchmarking)과 비교하며, 상위 고객의 관계 깊이와 전환 비용을 고객 증거로 파악; 시장 측 관점과 cdd-01 사이에 중요한 차이가 있으면 발견사항(finding)으로 제기\"\n    mandatory: true\n    waiver_eligible: true\n  - id: mdd-07\n    text: \"시장 측면에서 이탈·유지율 검증 — 2~3년 세그먼트별 비율은 cdd-02 값을 사용(재계산하지 않음; cdd-02가 면제되었거나 완료되지 않았으면 여기서 계산하고 그 사실을 기록)하고, 고객 증거로 이탈 선행 지표(경영진 후원자 이탈, 예산 재배정, 진행 중인 경쟁 평가, 단일 담당자 의존 관계)를 나열; 시장 측 관점과 cdd-02 사이에 중요한 차이가 있으면 발견사항(finding)으로 제기\"\n    mandatory: true\n    waiver_eligible: true\n  - id: mdd-08\n    text: \"80/20 매출 분석을 수행하고 투자 논리(investment thesis)와 대조 검증\"\n    mandatory: true\n    waiver_eligible: true\n  - id: mdd-09\n    text: \"확장 매출(expansion revenue)의 저변 검증 — 광범위한 분포인지 소수 고객 집중인지(집중은 위험 신호)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: mdd-10\n    text: \"유통 구조 파악 — 데이터룸 기준 유통업체, 가격 결정 논리, 고객 구성\"\n    mandatory: true\n    waiver_eligible: true\n  - id: mdd-11\n    text: \"투자 논리별 검증 판정(검증됨 / 부분 검증 / 반증됨) 산출 — 유지율 조정 매출 영향을 가치평가 연결(dd-to-valuation-bridge)과 입찰가 조정 권고(기본 시나리오 조정, 하방 시나리오, 언아웃(earnout) 구조)에 반영\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"ADR-0051 (workflow gap closure — market DD step added at brownfield-dd step 4)\"\n  - \"procedures/_shared/brownfield-dd/schema.yaml step 4 (market-intelligence-agent / competitive-intelligence)\"\n  - \"Ducker Carlisle CDD case study; userintuition CDD report guide; Strategex 80/20 analysis\"\n  - \"checklists/commercial-dd-checklist.yaml (target-side commercial position — complementary, not duplicated)\"\n"
   },
   "chk-partnership-checklist": {
     "id": "chk-partnership-checklist",
@@ -1174,11 +1174,11 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "checklists/rbd-technology-checklist.yaml",
     "gate": "DD",
     "enforceability": "mixed",
-    "version": "1.3.0",
+    "version": "1.5.0",
     "owner_agent": "brownfield-agent",
     "item_count": 15,
     "lang": "en",
-    "content": "governance_doc_id: chk-rbd-technology\nlayer: checklist\ntitle: \"R&BD (Research & Business Development) Technology Checklist\"\nscope: shared\nenforceability: mixed\nowner_agent: brownfield-agent\nversion: \"1.3.0\"\neffective_from: \"2026-08-23\"\ngate: DD\n\n# ADR-0052 §D.1 TRL/MRL evidence matrix (items rbd-08..rbd-13): each item\n# names the OUR-gate it binds at; the readiness cutoffs were ILLUSTRATIVE\n# until APPROVED by docs/decisions/2026-08-24-class-c-decisions.md (a) —\n# confirmed verbatim with MRL hardware-making-ventures-only from A2-4 and the\n# TRL 5→7 rows as the recycle/hold zone (external anchors: EU EIC windows,\n# DoD milestone congruence). Enforcement\n# wiring: this checklist is referenced by brownfield-pre-fs and brownfield-dd\n# (their gates); at the other gates the applicable rows ride the\n# gate_pass_record completeness check via stage-gate-governance. The gate\n# vocabulary for tech bets adds Hold/Recycle alongside Go/Kill — evidence\n# immaturity holds rather than kills (design §D.1).\n#\n# R&BD is routed by the 3-axis classification's technology_track=rbd axis\n# value (case_type stays brownfield — the deal is structured as an equity\n# stake, license-in, or spin-off carve-out, all BF mechanics, not a new\n# physical site; the retired `case_subtype` field was folded into\n# `technology_track` by ADR-0047). This checklist runs IN ADDITION TO\n# checklists/technical-dd-checklist.yaml and\n# checklists/ma-special-topics-checklist.yaml when technology_track=rbd.\n\nitems:\n  - id: rbd-01\n    text: \"Technology Readiness Level (TRL) assessed for the core IP/technology itself, distinct from production-process TRL (technical-dd-checklist tdd-03) — an R&BD target's core risk is whether the underlying technology works at all, before production readiness is even relevant. For a license-in deal (rbd_source: external_technology_acquisition), prioritize direct technical documentation from the licensor over public-source corroboration — license announcements rarely carry the track-record framing a spin-off announcement does (pilot 013 finding F-1)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-02\n    text: \"Government co-funding conditions identified if applicable: technology-fee repayment obligation (기술료), IP walk-away/ownership conditions, employment or localization conditions attached to the grant — these can survive a change of control and are easy to miss in a standard DD pass. First classify any government-research-institute relationship as a formal co-funded grant (binding conditions apply) or an informal/in-kind research collaboration (conditions may not apply) — the two carry materially different DD implications (pilot 014 finding F-1, see docs/pilots/pilot-014-c2y-university-techholdings.md)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-03\n    text: \"Freedom-to-operate (FTO) / IP ownership diligence completed — who actually owns the IP (the target entity, a parent/spin-off originator, a co-development partner, or a government-funded research institute) and whether license terms transfer cleanly on the contemplated deal structure. For active co-research/co-development relationships (as opposed to a completed transfer of pre-existing IP), explicitly diligence joint-IP-ownership terms with the research partner — this is a materially different question from a simple license-in chain (pilot 014 finding F-2)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-04\n    text: \"Commercialization path decision documented with rationale: build as an internal business unit, license the technology out, spin off as an independent entity, or acquire a minority venture stake — the paths have materially different valuation, control, and risk profiles and should not default to one without an explicit comparison. This item concerns the REVIEWING ENTITY's chosen path to the technology, not the target's own founding history (captured separately via rbd_source) — an independently-founded, university/government-research-backed startup that was never anyone's spin-off still requires this decision from the reviewing entity's side (pilot 014 finding F-3)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-05\n    text: \"The continuing relationship with the technology's originator is documented as part of the deal structure, not treated as fully independent — for a spin-off (rbd_source: internal_only / accelerator_partnered), this is equity retained, customer/supplier relationship, brand association, non-compete scope (see docs/pilots/pilot-011-posco-amberoad.md); for a license-in from an external source such as a research institute (rbd_source: external_technology_acquisition), this is ongoing royalty obligations and eligibility for the licensor's own follow-on co-funding programs, not equity or brand (pilot 013 finding F-2, see docs/pilots/pilot-013-hexapro-etri.md)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-06\n    text: \"Track record evidence (prior internal deployments, pilot results, disclosed performance metrics) verified against source, not accepted from the target's own pitch materials without corroboration\"\n    mandatory: false\n    waiver_eligible: true\n  - id: rbd-07\n    text: \"Technology-obsolescence/substitution risk assessed on the same horizon as the investment's expected holding period — a technology that is state-of-the-art today may not be in 3-5 years\"\n    mandatory: false\n    waiver_eligible: true\n  - id: rbd-08\n    text: \"TRL/MRL evidence matrix — SCREENING row (ADR-0052 §D.1; cutoff APPROVED per docs/decisions/2026-08-24-class-c-decisions.md (a)): scientific basis, roadmap pull, preliminary prior-art/FTO screen; readiness floor TRL 1-2. Typical kill: no plausible principle-to-application path; roadmap absent\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-09\n    text: \"TRL/MRL evidence matrix — PRE-FS row: concept memo, critical-function list, POC experiment protocol; readiness floor TRL 2. Typical kill: concept not credible vs state of the art\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-10\n    text: \"TRL/MRL evidence matrix — FS-ENTRY row: POC results demonstrating the critical function, reproducible; readiness floor TRL 3. Typical kill: technical feasibility wall\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-11\n    text: \"TRL/MRL evidence matrix — FS/DD row: integrated test data, relevant-environment validation plan, FTO opinion, patent strategy, updated cost model; readiness floor TRL 4-5 / MRL 4-5. Typical kill: FTO failure (blocking third-party IP); unit cost over value ceiling\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-12\n    text: \"TRL/MRL evidence matrix — ENTITY-IC (business-case gate) row: full business case; make/buy/partner decision (routes into the deal-shape chain, ADR-0052 §A); real-options valuation; staged funding request for the NEXT stage only; readiness floor TRL 5-6 / MRL 5-6. Typical kill: no viable business model; option value below stage premium\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-13\n    text: \"TRL/MRL evidence matrix — POST-IC EXECUTION row: operational-environment demonstration, pilot-line capability, regulatory pathway; readiness floor TRL 7-8 / MRL 7-8. Typical kill: manufacturability failure; regulatory rejection\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-14\n    text: \"Evidence quality rules (GAO TRA Guide, GAO-20-48G — ADR-0052 §D.2): every TRL/MRL claim supported by named tests, test environments, and data artifacts — not assertion; readiness assessments reviewed by a reviewer NOT reporting to the project champion; the assessment records HOW maturity was demonstrated, not only the level claimed; known limitations of readiness scales noted in gate records\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-15\n    text: \"Staged funding as real options (ADR-0052 §D.3): each stage approval is the exercise of a sequential option — the stage budget is the premium, the next gate the exercise decision; the funding request covers the next stage only, with the option-value vs stage-premium comparison recorded. A negative static NPV does not by itself kill an early technology bet when staging options carry positive value; kill discipline remains when option value sits below the next premium even under favorable scenarios\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"design v1.0 §10 user decision (2026-08-20): R&BD treated as a Brown Field sub-type\"\n  - \"ADR-0052 §D.1-D.3 (TRL/MRL evidence matrix, GAO evidence-quality rules, staged funding as real options — items rbd-08..rbd-15)\"\n  - \"docs/pilots/pilot-006-orion-ligachem-bio.md findings F-1/F-2 (certification and QoE steps don't fit R&D-stage/asset-tied-regulatory-pathway targets — the same gap class R&BD targets exercise)\"\n  - \"docs/pilots/pilot-011-posco-amberoad.md\"\n  - \"docs/pilots/pilot-012-lg-studio341.md\"\n  - \"docs/pilots/pilot-013-hexapro-etri.md\"\n  - \"docs/pilots/pilot-014-c2y-university-techholdings.md\"\n"
+    "content": "governance_doc_id: chk-rbd-technology\nlayer: checklist\ntitle: \"R&BD (Research & Business Development) Technology Checklist\"\nscope: shared\nenforceability: mixed\nowner_agent: brownfield-agent\nversion: \"1.5.0\"\neffective_from: \"2026-08-23\"\ngate: DD\n\n# ADR-0052 §D.1 TRL/MRL evidence matrix (items rbd-08..rbd-13): each item\n# names the OUR-gate it binds at; the readiness cutoffs were ILLUSTRATIVE\n# until APPROVED by docs/decisions/2026-08-24-class-c-decisions.md (a) —\n# confirmed verbatim with MRL hardware-making-ventures-only from A2-4 and the\n# TRL 5→7 rows as the recycle/hold zone (external anchors: EU EIC windows,\n# DoD milestone congruence). Enforcement\n# wiring: this checklist is referenced by brownfield-pre-fs and brownfield-dd\n# (their gates); at the other gates the applicable rows ride the\n# gate_pass_record completeness check via stage-gate-governance. The gate\n# vocabulary for tech bets adds Hold/Recycle alongside Go/Kill — evidence\n# immaturity holds rather than kills (design §D.1).\n#\n# R&BD is routed by the 3-axis classification's technology_track=rbd axis\n# value (case_type stays brownfield — the deal is structured as an equity\n# stake, license-in, or spin-off carve-out, all BF mechanics, not a new\n# physical site; the retired `case_subtype` field was folded into\n# `technology_track` by ADR-0047). This checklist runs IN ADDITION TO\n# checklists/technical-dd-checklist.yaml and\n# checklists/ma-special-topics-checklist.yaml when technology_track=rbd.\n\nitems:\n  - id: rbd-01\n    text: \"핵심 IP·기술 자체의 기술 성숙도 평가 (TRL, Technology Readiness Level) — 생산 공정 TRL(technical-dd-checklist tdd-03)과 구분. R&BD 대상의 핵심 위험은 생산 준비도 이전에 기반 기술이 실제로 작동하는지 여부임. 기술 도입(license-in) 거래(rbd_source: external_technology_acquisition)는 공개 자료 교차확인보다 기술 제공자(licensor)의 직접 기술 문서를 우선 확보 — 라이선스 발표에는 분사(spin-off) 발표와 달리 실적 근거가 거의 담기지 않음 (pilot 013 finding F-1)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-02\n    text: \"국가연구개발사업 정부출연금·기업 부담금 조건 확인 (해당 시): 기술료 상환 의무, IP 포기·소유 조건, 출연에 붙은 고용·현지화 조건 — 지배권 변경(change of control) 후에도 유지될 수 있어 일반 실사에서 놓치기 쉬움. 먼저 정부출연연구기관과의 관계를 공식 국가연구개발사업 과제(정부출연금·기업 부담금 구조, 구속 조건 적용)와 비공식·현물 공동연구(조건 미적용 가능)로 구분할 것 — 두 경우의 실사 함의가 크게 다름 (pilot 014 finding F-1, docs/pilots/pilot-014-c2y-university-techholdings.md 참조)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-03\n    text: \"자유실시(FTO, Freedom-to-Operate) 분석·IP 소유권 실사 완료 — IP의 실제 소유자(대상 법인, 모회사·분사 원천, 공동개발 파트너, 정부출연연구기관)와 검토 중인 거래 구조에서 라이선스 조건이 온전히 이전되는지 확인. 기존 IP의 이전이 끝난 경우가 아니라 공동연구·공동개발이 진행 중인 관계라면 연구 파트너와의 공동 IP 소유 조건을 명시적으로 실사할 것 — 단순 기술 도입 경로와는 본질적으로 다른 문제임 (pilot 014 finding F-2)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-04\n    text: \"사업화 경로 결정과 근거 문서화: 내부 사업부로 육성, 기술 이전(license-out), 독립 법인으로 분사, 소수 지분 투자 — 경로별 가치평가·지배력·위험 구조가 크게 다르므로 명시적 비교 없이 한 경로로 기본 설정하지 않음. 이 항목은 대상의 설립 이력(rbd_source로 별도 기록)이 아니라 검토 주체가 기술에 접근하는 경로에 관한 것임 — 누구의 분사도 아닌, 대학·정부 연구 기반의 독립 창업 기업이라도 검토 주체 쪽의 이 결정은 필요함 (pilot 014 finding F-3)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-05\n    text: \"기술 원천과의 지속 관계를 완전히 독립된 것으로 보지 않고 거래 구조의 일부로 문서화 — 분사(rbd_source: internal_only / accelerator_partnered)의 경우 잔여 지분, 고객·공급 관계, 브랜드 연계, 경업금지 범위(docs/pilots/pilot-011-posco-amberoad.md 참조); 연구기관 등 외부 원천으로부터의 기술 도입(rbd_source: external_technology_acquisition)의 경우 지분·브랜드가 아니라 지속적 로열티 의무와 기술 제공자의 후속 공동출연 사업 참여 자격 (pilot 013 finding F-2, docs/pilots/pilot-013-hexapro-etri.md 참조)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-06\n    text: \"실적 증거(내부 적용 이력, 시범 결과, 공개 성능 지표)를 원천 자료와 대조해 검증 — 대상 회사의 자체 홍보 자료를 교차확인 없이 받아들이지 않음\"\n    mandatory: false\n    waiver_eligible: true\n  - id: rbd-07\n    text: \"기술 진부화·대체 위험을 투자 예상 보유 기간과 같은 기간 기준으로 평가 — 오늘의 최신 기술이 3~5년 뒤에도 그러하리라는 보장은 없음\"\n    mandatory: false\n    waiver_eligible: true\n  - id: rbd-08\n    text: \"TRL/MRL 증거 매트릭스 — 스크리닝(SCREENING) 단계 (ADR-0052 §D.1; 기준값은 docs/decisions/2026-08-24-class-c-decisions.md (a)로 승인): 과학적 근거, 로드맵 수요, 선행기술·FTO 예비 검토; 최소 성숙도 TRL 1-2. 대표 중단 사유: 원리에서 응용까지의 타당한 경로 없음, 로드맵 부재\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-09\n    text: \"TRL/MRL 증거 매트릭스 — 사전 타당성(PRE-FS) 단계: 개념 메모, 핵심 기능 목록, 개념검증(POC) 실험 계획서; 최소 성숙도 TRL 2. 대표 중단 사유: 최신 기술 수준 대비 개념의 신뢰성 부족\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-10\n    text: \"TRL/MRL 증거 매트릭스 — 타당성 착수(FS-ENTRY) 단계: 핵심 기능을 입증하는 재현 가능한 POC 결과; 최소 성숙도 TRL 3. 대표 중단 사유: 기술적 실현 가능성의 벽\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-11\n    text: \"TRL/MRL 증거 매트릭스 — 타당성·실사(FS/DD) 단계: 통합 시험 데이터, 실사용 환경 검증 계획, FTO 의견서, 특허 전략, 갱신된 원가 모델; 최소 성숙도 TRL 4-5 / MRL 4-5. 대표 중단 사유: FTO 실패(제3자 IP에 의한 저촉), 단위 원가가 가치 상한 초과\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-12\n    text: \"TRL/MRL 증거 매트릭스 — 법인 투자심의(ENTITY-IC, 사업계획 게이트) 단계: 완성된 사업계획(business case); 자체개발·인수·제휴(make/buy/partner) 결정(거래 형태 체인으로 연결, ADR-0052 §A); 실물옵션 가치평가; 다음 단계에 한정한 단계별 자금 요청; 최소 성숙도 TRL 5-6 / MRL 5-6. 대표 중단 사유: 실현 가능한 사업모델 없음, 옵션 가치가 단계 프리미엄에 미달\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-13\n    text: \"TRL/MRL 증거 매트릭스 — 투자심의 이후 실행(POST-IC EXECUTION) 단계: 운영 환경 실증, 시범 생산라인 역량, 인허가 경로; 최소 성숙도 TRL 7-8 / MRL 7-8. 대표 중단 사유: 양산성 실패, 인허가 거부\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-14\n    text: \"증거 품질 규칙 (GAO TRA Guide, GAO-20-48G — ADR-0052 §D.2): 모든 TRL/MRL 주장은 단순 주장이 아니라 이름이 명시된 시험·시험 환경·데이터 산출물로 뒷받침; 성숙도 평가는 프로젝트 책임자(champion)에게 보고하지 않는 검토자가 검토; 평가에는 주장된 수준뿐 아니라 성숙도를 어떻게 입증했는지를 기록; 성숙도 척도의 알려진 한계를 게이트 기록에 남김\"\n    mandatory: true\n    waiver_eligible: true\n  - id: rbd-15\n    text: \"실물옵션으로서의 단계별 자금 집행 (ADR-0052 §D.3): 각 단계 승인은 순차 옵션의 행사임 — 단계 예산은 프리미엄, 다음 게이트는 행사 결정; 자금 요청은 다음 단계에 한정하고 옵션 가치와 단계 프리미엄 비교를 기록. 정적 NPV가 음수라는 사실만으로 초기 기술 투자를 중단하지 않음(단계 옵션이 양의 가치를 가질 때). 다만 유리한 시나리오에서도 옵션 가치가 다음 프리미엄에 못 미치면 중단 원칙을 유지\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"design v1.0 §10 user decision (2026-08-20): R&BD treated as a Brown Field sub-type\"\n  - \"ADR-0052 §D.1-D.3 (TRL/MRL evidence matrix, GAO evidence-quality rules, staged funding as real options — items rbd-08..rbd-15)\"\n  - \"docs/pilots/pilot-006-orion-ligachem-bio.md findings F-1/F-2 (certification and QoE steps don't fit R&D-stage/asset-tied-regulatory-pathway targets — the same gap class R&BD targets exercise)\"\n  - \"docs/pilots/pilot-011-posco-amberoad.md\"\n  - \"docs/pilots/pilot-012-lg-studio341.md\"\n  - \"docs/pilots/pilot-013-hexapro-etri.md\"\n  - \"docs/pilots/pilot-014-c2y-university-techholdings.md\"\n"
   },
   "chk-site-selection-checklist": {
     "id": "chk-site-selection-checklist",
@@ -1434,7 +1434,7 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "procedures/_shared/greenfield-dd/schema.yaml",
     "gate": "S9",
     "lang": "ko",
-    "content": "schema_version: \"1.0\"\nprocedure_id: shared-greenfield-dd\ntitle: \"Green Field Due Diligence\"\nscope: shared\nlevel: entity\nversion: \"1.0.0\"\nstatus: active\napplicability: mandatory\nworkflow_type: core\ngate: DD\n\nsteps:\n  - id: 1\n    gate: DD\n    agent_key: technical-dd-agent\n    skill_key: site-visit-protocol\n    output_type: dd_finding\n    description: >\n      Site visit(s) against `checklists/technical-dd-checklist.yaml` and\n      `checklists/site-selection-checklist.yaml` — findings land as\n      dd_finding records with value_impact, never narrative-only.\n  - id: 2\n    gate: DD\n    agent_key: greenfield-agent\n    skill_key: talent-pipeline-planning\n    output_type: dd_finding\n    description: Talent pipeline and ramp-up curve validation against `checklists/site-selection-checklist.yaml` ss-07.\n  - id: 3\n    gate: DD\n    agent_key: greenfield-agent\n    skill_key: community-partnership-planning\n    output_type: dd_finding\n    description: Community acceptance and prior dispute history check (`checklists/site-selection-checklist.yaml` ss-08).\n  - id: 4\n    gate: DD\n    agent_key: risk-officer\n    skill_key: dd-to-valuation-bridge\n    output_type: dd_valuation_bridge\n    description: >\n      Every dd_finding with value_impact must land in the valuation bridge —\n      design's most-common-failure-mode rule (DD and the model must not run\n      separately).\n  - id: 5\n    gate: DD\n    agent_key: process-governance-manager\n    skill_key: stage-gate-governance\n    output_type: gate_pass_record\n    description: Confirm DD deliverables complete; open Entity IC.\n\nkill_criteria:\n  - condition: wastewater_capacity_insufficient_and_no_mitigation\n    action: halt\n  - condition: dd_finding_with_value_impact_not_in_valuation_bridge\n    action: halt\n\nlegal_basis:\n  - \"Group New Business Review Policy §2.3\"\n  - \"Design v1.0 §5.3, §12 (DD-to-valuation-bridge verification gate)\"\n  - \"docs/governance/process-map.md — DD row\"\n  - \"checklists/technical-dd-checklist.yaml, checklists/site-selection-checklist.yaml\"\n\nowner_agent: process-governance-manager\nlast_reviewed: \"2026-08-20\"\n"
+    "content": "schema_version: \"1.0\"\nprocedure_id: shared-greenfield-dd\ntitle: \"Green Field Due Diligence\"\nscope: shared\nlevel: entity\nversion: \"1.1.0\"\nstatus: active\napplicability: mandatory\nworkflow_type: core\ngate: DD\n\n# v1.1.0 (ADR-0160, Proposed; design 2026-10-11-greenfield-dd-and-investment-\n# structure-by-subtrack) — sub-track-aware evidence steps. The procedure id,\n# gate DD, mandatory applicability, the waiver path and the DD completion\n# criterion are unchanged; only WHICH evidence steps apply differs.\n#\n# Selection rule (greenfield sub-track values: null | existing_business_rbd |\n# intra_venture; any other value on a greenfield route is treated as unknown\n# -> the null/site-based default applies and a warning is surfaced, never a\n# block or a guess):\n#   step 1, 2, 3  — null sub-track: always (byte-identical to v1.0.0).\n#                   existing_business_rbd / intra_venture: steps 1 and 3 unless\n#                   a human confirmed site_required = false; step 2 -> step 6.\n#   step 6        — existing_business_rbd, intra_venture.\n#   step 7        — existing_business_rbd, intra_venture (optional for null\n#                   when the plan is technology-led).\n#   step 8        — intra_venture only.\n#   step 4, 5     — every sub-track.\n# site_required is a human-confirmed fact recorded as a project.site_required\n# dimension_input assertion confirmed by a single person with a written\n# rationale (no evidence reference is required) through the human-only\n# greenfield-scope route; each confirmation writes the audit entry\n# dimension_input_single_person_confirmation. A null (plain) sub-track cannot\n# be confirmed as site_required = false (rule being changed in the backend,\n# 2026-10-12; the code in greenfield-subtrack.ts is authoritative).\n# Null sub-track defaults to true; existing_business_rbd and intra_venture have\n# NO default — a human must always confirm it (site steps apply until then).\n#\n# NOT RUNTIME-EVALUATED: the step applies_when predicates below are\n# documentation only. app/web-next/lib/greenfield-subtrack.ts is authoritative\n# for which steps apply; tests/unit/greenfield-subtrack.test.ts parses this file\n# and fails on drift from the code's excluded_steps.\n#\n# Machine applies_when (ADR-0160 addendum, migration 0136): project.sub_track\n# (column var off the current route_decision; a route with no sub-track reads\n# 'none') and project.site_required (asserted, live AND reviewed only) are\n# seeded routing vars, so the conditions above are applies_when predicates.\n# Predicate semantics (db/lib/applies-when.ts, fail-closed):\n#   - no current route (sub_track UNASSESSED) -> every step applies;\n#   - 'none' or any unknown / brownfield value -> the null-sub-track result\n#     (steps 1-5 apply, 6-8 do not); the selection code surfaces a warning\n#     for an unknown value, never a block;\n#   - existing_business_rbd / intra_venture without a reviewed site_required ->\n#     UNASSESSED -> site steps APPLY until a human confirms (no default).\n# Step 7's \"optional for the null sub-track when technology-led\" stays prose:\n# it is a human choice, not a routing fact. Projects whose earliest\n# project_policy_pin predates GF_SUBTRACK_PREDICATE_DATE keep v1.0.0\n# selection unless a human opts them in through a recorded pin migration\n# (migration_note in the audit trail).\n\nsteps:\n  - id: 1\n    gate: DD\n    applies_when:\n      op: none_of\n      of:\n        - op: all_of\n          of:\n            - { op: \"in\", var: \"project.sub_track\", values: [\"existing_business_rbd\", \"intra_venture\"] }\n            - { op: \"cmp\", var: \"project.site_required\", cmp: \"eq\", value: false }\n    agent_key: technical-dd-agent\n    skill_key: site-visit-protocol\n    output_type: dd_finding\n    description: >\n      Site visit(s) against `checklists/technical-dd-checklist.yaml` and\n      `checklists/site-selection-checklist.yaml` — findings land as\n      dd_finding records with value_impact, never narrative-only.\n      Applies to the null sub-track always; to existing_business_rbd and\n      intra_venture only when site_required = true.\n  - id: 2\n    gate: DD\n    applies_when:\n      op: none_of\n      of:\n        - { op: \"in\", var: \"project.sub_track\", values: [\"existing_business_rbd\", \"intra_venture\"] }\n    agent_key: greenfield-agent\n    skill_key: talent-pipeline-planning\n    output_type: dd_finding\n    description: >\n      Talent pipeline and ramp-up curve validation against\n      `checklists/site-selection-checklist.yaml` ss-07. Null sub-track only;\n      existing_business_rbd and intra_venture use step 6 instead.\n  - id: 3\n    gate: DD\n    applies_when:\n      op: none_of\n      of:\n        - op: all_of\n          of:\n            - { op: \"in\", var: \"project.sub_track\", values: [\"existing_business_rbd\", \"intra_venture\"] }\n            - { op: \"cmp\", var: \"project.site_required\", cmp: \"eq\", value: false }\n    agent_key: greenfield-agent\n    skill_key: community-partnership-planning\n    output_type: dd_finding\n    description: >\n      Community acceptance and prior dispute history check\n      (`checklists/site-selection-checklist.yaml` ss-08). Applies to the null\n      sub-track always; to existing_business_rbd and intra_venture only when\n      site_required = true.\n  - id: 6\n    gate: DD\n    applies_when: { op: \"in\", var: \"project.sub_track\", values: [\"existing_business_rbd\", \"intra_venture\"] }\n    agent_key: greenfield-agent\n    skill_key: org-readiness-assessment\n    output_type: dd_finding\n    description: >\n      Core-team and capability readiness (design step 2b) — R&BD team\n      composition, key-person dependency and capability gaps, recorded as\n      dd_finding with value_impact from the org-readiness-assessment\n      artifact (no new checklist item; ADR-0160 Q4). Applies to\n      existing_business_rbd and intra_venture.\n  - id: 7\n    gate: DD\n    applies_when: { op: \"in\", var: \"project.sub_track\", values: [\"existing_business_rbd\", \"intra_venture\"] }\n    agent_key: technical-dd-agent\n    skill_key: technical-due-diligence\n    output_type: dd_finding\n    description: >\n      Technology and market plan verification (design step 3b) against\n      `checklists/rbd-technology-checklist.yaml` (TRL/MRL evidence rows\n      rbd-08..rbd-14 at the FS/DD row, FTO rbd-03, originator relationship\n      rbd-05, obsolescence rbd-07) and `checklists/market-dd-checklist.yaml`.\n      Applies to existing_business_rbd and intra_venture; optional for the\n      null sub-track when the plan is technology-led.\n  - id: 8\n    gate: DD\n    applies_when: { op: \"cmp\", var: \"project.sub_track\", cmp: \"eq\", value: \"intra_venture\" }\n    agent_key: greenfield-agent\n    skill_key: org-readiness-assessment\n    output_type: dd_finding\n    description: >\n      Entity readiness for the venture vehicle (design step 3c) —\n      `checklists/entity-formation-checklist.yaml` ef-01, ef-03 and ef-07\n      (pre-formation IP) read as plan-verification evidence only; formation\n      execution stays in S11 (entity-establishment-execution). Applies to\n      intra_venture only.\n  - id: 4\n    gate: DD\n    agent_key: risk-officer\n    skill_key: dd-to-valuation-bridge\n    output_type: dd_valuation_bridge\n    description: >\n      Every dd_finding with value_impact must land in the valuation bridge —\n      design's most-common-failure-mode rule (DD and the model must not run\n      separately).\n  - id: 5\n    gate: DD\n    agent_key: process-governance-manager\n    skill_key: stage-gate-governance\n    output_type: gate_pass_record\n    description: Confirm DD deliverables complete; open Entity IC.\n\n# Kill-criteria scope (ADR-0160): the valuation-bridge criterion applies to\n# every greenfield sub-track. The wastewater criterion is scoped to plans\n# with site_required = true; it is NOT deleted. Its registry predicate counts\n# sites with an insufficient, unmitigated wastewater assessment, so a plan\n# with no site in scope cannot trip it — the scope is a selection rule, not a\n# second predicate (the kill-criterion record itself is unchanged by 0136). No\n# FTO-blocked kill criterion is added here (ADR-0160 Q6: follow-up for\n# legal-counsel).\nkill_criteria:\n  - condition: wastewater_capacity_insufficient_and_no_mitigation\n    action: halt\n  - condition: dd_finding_with_value_impact_not_in_valuation_bridge\n    action: halt\n\nlegal_basis:\n  - \"Group New Business Review Policy §2.3\"\n  - \"Design v1.0 §5.3, §12 (DD-to-valuation-bridge verification gate)\"\n  - \"docs/governance/process-map.md — DD row\"\n  - \"checklists/technical-dd-checklist.yaml, checklists/site-selection-checklist.yaml\"\n  - \"checklists/rbd-technology-checklist.yaml, checklists/market-dd-checklist.yaml, checklists/entity-formation-checklist.yaml (ef-01, ef-03, ef-07)\"\n  - \"ADR-0160 (Proposed) — sub-track-aware greenfield S9 steps; addendum 2026-10-12 (migration 0136 routing vars)\"\n\nowner_agent: process-governance-manager\nlast_reviewed: \"2026-10-11\"\n"
   },
   "proc-brownfield-dd": {
     "id": "proc-brownfield-dd",
@@ -1452,7 +1452,7 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "procedures/_shared/deal-structuring/schema.yaml",
     "gate": "S10",
     "lang": "ko",
-    "content": "schema_version: \"1.0\"\nprocedure_id: shared-deal-structuring\ntitle: \"Deal Structuring (S10)\"\nscope: shared\nlevel: entity\nversion: \"1.0.0\"\nstatus: active\napplicability: unconditional\nworkflow_type: core\ngate: \"DD\"\n# flow.spec v2.2.0 — S10 투자구조 설계 sits between the DD gate (S9) and the\n# IC gates (S11). It is a DESIGN stage, not a review gate: it produces the\n# structure the IC committees later approve, so it carries no gate of its own.\n# The ADR-0045 four mandatory axes (tax structure, liability isolation,\n# financing leverage, exit structure) and the vehicle choice\n# (direct / SPC / holdco / internal-venture spinoff / JV) land in\n# deal_structure_hypothesis (migration 0013) via the governance repository —\n# rationale mandatory, four-axis completion is a separate deliberate act that\n# requires a deal_structure_review artifact reference. The financing plan\n# (sources & uses, migration 0075) must balance (sources == uses > 0) — the\n# S10 completion predicate enforces both mechanically.\n#\n# Pre-FS relationship: brownfield-pre-fs step 2 drafts the EARLY structure\n# hypothesis (deal_structure_hypothesis, PR-5b). This procedure is where that\n# hypothesis is matured post-DD into the reviewable structure: DD findings\n# (dd_finding.value_impact, ADR-0061) feed the liability-isolation and\n# financing-leverage axes; the adopted S8 business case bounds the sources\n# side. A NEWER incomplete hypothesis always supersedes an older completed\n# one (latest-wins) so a stale \"complete\" flag can never mask a re-opened\n# structure question.\n\nsteps:\n  - id: 1\n    gate: \"DD\"\n    agent_key: brownfield-agent\n    skill_key: investment-vehicle-structuring\n    output_type: deal_structure_review\n    description: >\n      Mature the deal-structure hypothesis: settle the vehicle\n      (direct / SPC / holdco / internal_venture_spinoff / jv), the\n      asset-or-stock form, the stake type, and the primary/secondary\n      instrument mix; record the ADR-0045 four mandatory axis notes —\n      tax structure, liability isolation, financing leverage, exit\n      structure — each grounded in DD findings where they bear\n      (contingent liabilities -> liability isolation; withholding and\n      deal-tax posture -> tax structure; acquisition-finance capacity ->\n      financing leverage; staged exit or trade-sale path -> exit\n      structure). Record the rationale (mandatory) via\n      db/repositories/deal-structure-hypothesis.repository.ts; a structure\n      hypothesis without its rationale is rejected at the write layer.\n  - id: 2\n    gate: \"DD\"\n    agent_key: brownfield-agent\n    skill_key: investment-vehicle-structuring\n    output_type: four_axis_review_completion\n    description: >\n      Human-reviewer completion of the four-axis review — a deliberate,\n      attributable act (completeFourAxisReview) that REQUIRES a\n      deal_structure_review artifact reference; the completion is refused\n      twice (no artifact ref, or already-completed hypothesis) rather than\n      silently overwritten. The audit_log entry\n      (four_axis_review_completed) is the review's evidence trail.\n  - id: 3\n    gate: \"DD\"\n    agent_key: valuation-agent\n    skill_key: financing-plan-review\n    output_type: financing_sources_uses_plan\n    description: >\n      Assemble the financing plan (sources & uses, migration 0075) —\n      every funding line (equity commitment, acquisition debt, parent\n      loans, incentive proceeds) on the sources side and every deployment\n      line (purchase price, fees, working-capital injection, reserve)\n      on the uses side, in KRW 백만원 (the ADR-0061 unit convention).\n      Certainty of funds is evidenced, never assumed: commitment papers\n      or internal-funds approvals are referenced in the note column per\n      skills/financing-plan-review. The S10 completion predicate requires\n      sources == uses > 0 — an unbalanced plan blocks stage exit the same\n      way an unproven structure does.\n\noutputs:\n  - deal_structure_review (four-axis complete, artifact-referenced)\n  - financing_sources_uses_plan (balanced)\n\nreferences:\n  - process/flow.spec.yaml (S10, v2.2.0)\n  - db/repositories/deal-structure-hypothesis.repository.ts\n  - db/repositories/financing-plan.repository.ts\n  - skills/investment-vehicle-structuring/SKILL.md\n  - skills/financing-plan-review/SKILL.md\nlegal_basis:\n  - \"Group New Business Review Policy §2.3\"\n  - \"Design v1.0 §4-6\"\n  - \"docs/governance/process-map.md — Deal structuring stage (S10)\"\n  - \"ADR-0045 (four mandatory structure axes + vehicle choice)\"\n  - \"ADR-0106 (S10 투자구조 설계 as its own stage between S9 and IC)\"\n  - \"db/migrations/0013_classification_infra.sql — deal_structure_hypothesis incl. four_axis_review_completed\"\n  - \"db/migrations/0075 — financing_sources_uses (balanced sources == uses > 0)\"\n\nowner_agent: process-governance-manager\nlast_reviewed: \"2026-09-08\"\n"
+    "content": "schema_version: \"1.0\"\nprocedure_id: shared-deal-structuring\ntitle: \"Deal Structuring (S10)\"\nscope: shared\nlevel: entity\nversion: \"1.1.0\"\nstatus: active\napplicability: unconditional\nworkflow_type: core\ngate: \"DD\"\n# flow.spec v2.2.0 — S10 투자구조 설계 sits between the DD gate (S9) and the\n# IC gates (S11). It is a DESIGN stage, not a review gate: it produces the\n# structure the IC committees later approve, so it carries no gate of its own.\n# The ADR-0045 four mandatory axes (tax structure, liability isolation,\n# financing leverage, exit structure) and the vehicle choice\n# (direct / SPC / holdco / internal-venture spinoff / JV) land in\n# deal_structure_hypothesis (migration 0013) via the governance repository —\n# rationale mandatory, four-axis completion is a separate deliberate act that\n# requires a deal_structure_review artifact reference. The financing plan\n# (sources & uses, migration 0075) must balance (sources == uses > 0) — the\n# S10 completion predicate enforces both mechanically.\n#\n# Pre-FS relationship: brownfield-pre-fs step 2 drafts the EARLY structure\n# hypothesis (deal_structure_hypothesis, PR-5b). This procedure is where that\n# hypothesis is matured post-DD into the reviewable structure: DD findings\n# (dd_finding.value_impact, ADR-0061) feed the liability-isolation and\n# financing-leverage axes; the adopted S8 business case bounds the sources\n# side. A NEWER incomplete hypothesis always supersedes an older completed\n# one (latest-wins) so a stale \"complete\" flag can never mask a re-opened\n# structure question.\n#\n# v1.1.0 (ADR-0160, Proposed) — track-aware hypothesis steps. Step 1 is the\n# brownfield hypothesis (unchanged text, now applies_when case_type =\n# brownfield). Steps 4-7 are the greenfield establishment-structure steps\n# (applies_when case_type = greenfield). Steps 2 and 3 — the ADR-0045\n# four-axis review and the sources == uses > 0 rule — stay SHARED and carry\n# no applies_when: the S10 completion predicate is one track-neutral rule.\n# project.case_type is a seeded routing var (0014); fail-closed semantics\n# (db/lib/applies-when.ts) mean an unclassified project gets BOTH step sets,\n# never neither. For greenfield the M&A-only inputs (asset_or_stock,\n# instrument_mix; stake_type except vehicle = jv) are not used and are\n# stored null. Greenfield extras (tranches, release conditions, lease vs\n# build) live in financing-plan rows and the four-axis evidence artifact;\n# phased capex tranches and their release conditions live in the typed\n# capex_tranche table (migration 0136, ADR-0160 addendum 2026-10-12).\n\nsteps:\n  - id: 1\n    gate: \"DD\"\n    applies_when: { op: \"cmp\", var: \"project.case_type\", cmp: \"eq\", value: \"brownfield\" }\n    agent_key: brownfield-agent\n    skill_key: investment-vehicle-structuring\n    output_type: deal_structure_review\n    description: >\n      Mature the deal-structure hypothesis: settle the vehicle\n      (direct / SPC / holdco / internal_venture_spinoff / jv), the\n      asset-or-stock form, the stake type, and the primary/secondary\n      instrument mix; record the ADR-0045 four mandatory axis notes —\n      tax structure, liability isolation, financing leverage, exit\n      structure — each grounded in DD findings where they bear\n      (contingent liabilities -> liability isolation; withholding and\n      deal-tax posture -> tax structure; acquisition-finance capacity ->\n      financing leverage; staged exit or trade-sale path -> exit\n      structure). Record the rationale (mandatory) via\n      db/repositories/deal-structure-hypothesis.repository.ts; a structure\n      hypothesis without its rationale is rejected at the write layer.\n  - id: 4\n    gate: \"DD\"\n    applies_when: { op: \"cmp\", var: \"project.case_type\", cmp: \"eq\", value: \"greenfield\" }\n    agent_key: greenfield-agent\n    skill_key: investment-vehicle-structuring\n    output_type: deal_structure_review\n    description: >\n      Greenfield establishment vehicle: direct (in-house unit), SPC,\n      subsidiary (holdco or directly owned), internal venture spin-off, or\n      JV (same vehicle enum; jv-structuring skill and the \"our share in JV\"\n      stake for vehicle = jv only). When the vehicle creates an entity, link\n      the plan evidence to `checklists/entity-formation-checklist.yaml`\n      ef-01 and ef-03; formation execution stays in S11. Rationale is\n      mandatory, as for step 1.\n  - id: 5\n    gate: \"DD\"\n    applies_when: { op: \"cmp\", var: \"project.case_type\", cmp: \"eq\", value: \"greenfield\" }\n    agent_key: financing-agent\n    skill_key: financing-plan-review\n    output_type: financing_sources_uses_plan\n    description: >\n      Greenfield capital contribution and funding sources: equity, project\n      finance, government funds and subsidies, and the lease-versus-build\n      choice for site and equipment (site-facility-agent input when\n      site_required = true). Every source lands as a financing-plan sources\n      row; certainty of funds is evidenced, never assumed.\n  - id: 6\n    gate: \"DD\"\n    applies_when: { op: \"cmp\", var: \"project.case_type\", cmp: \"eq\", value: \"greenfield\" }\n    agent_key: greenfield-agent\n    skill_key: investment-feasibility-modeling\n    output_type: deal_structure_review\n    description: >\n      Phased capex tranches and their release conditions (milestone-gated),\n      prepared with valuation-agent; for the R&BD sub-tracks link the\n      staged-funding evidence of `checklists/rbd-technology-checklist.yaml`\n      rbd-15. Tranches and their release conditions are recorded as\n      capex_tranche rows (human-only capex-tranches route, migration 0136).\n  - id: 7\n    gate: \"DD\"\n    applies_when: { op: \"cmp\", var: \"project.case_type\", cmp: \"eq\", value: \"greenfield\" }\n    agent_key: incentive-agent\n    skill_key: regional-incentive-sourcing\n    output_type: deal_structure_review\n    description: >\n      Tax and regional incentives for the establishment, each with its\n      clawback conditions (incentive-clawback-assessment); incentive\n      proceeds enter the sources side only with evidenced eligibility.\n  - id: 2\n    gate: \"DD\"\n    agent_key: brownfield-agent\n    skill_key: investment-vehicle-structuring\n    output_type: four_axis_review_completion\n    description: >\n      Human-reviewer completion of the four-axis review — a deliberate,\n      attributable act (completeFourAxisReview) that REQUIRES a\n      deal_structure_review artifact reference; the completion is refused\n      twice (no artifact ref, or already-completed hypothesis) rather than\n      silently overwritten. The audit_log entry\n      (four_axis_review_completed) is the review's evidence trail.\n      Shared by both tracks; for greenfield the track lead preparing the\n      review is greenfield-agent.\n  - id: 3\n    gate: \"DD\"\n    agent_key: valuation-agent\n    skill_key: financing-plan-review\n    output_type: financing_sources_uses_plan\n    description: >\n      Assemble the financing plan (sources & uses, migration 0075) —\n      every funding line (equity commitment, acquisition debt, parent\n      loans, incentive proceeds) on the sources side and every deployment\n      line (purchase price, fees, working-capital injection, reserve)\n      on the uses side, in KRW 백만원 (the ADR-0061 unit convention).\n      Certainty of funds is evidenced, never assumed: commitment papers\n      or internal-funds approvals are referenced in the note column per\n      skills/financing-plan-review. The S10 completion predicate requires\n      sources == uses > 0 — an unbalanced plan blocks stage exit the same\n      way an unproven structure does. Shared by both tracks; for greenfield\n      financing-agent reviews the plan (covenant headroom fin-03).\n\noutputs:\n  - deal_structure_review (four-axis complete, artifact-referenced)\n  - financing_sources_uses_plan (balanced)\n\nreferences:\n  - process/flow.spec.yaml (S10, v2.2.0)\n  - db/repositories/deal-structure-hypothesis.repository.ts\n  - db/repositories/financing-plan.repository.ts\n  - skills/investment-vehicle-structuring/SKILL.md\n  - skills/financing-plan-review/SKILL.md\nlegal_basis:\n  - \"Group New Business Review Policy §2.3\"\n  - \"Design v1.0 §4-6\"\n  - \"docs/governance/process-map.md — Deal structuring stage (S10)\"\n  - \"ADR-0045 (four mandatory structure axes + vehicle choice)\"\n  - \"ADR-0106 (S10 투자구조 설계 as its own stage between S9 and IC)\"\n  - \"db/migrations/0013_classification_infra.sql — deal_structure_hypothesis incl. four_axis_review_completed\"\n  - \"db/migrations/0075 — financing_sources_uses (balanced sources == uses > 0)\"\n  - \"ADR-0160 (Proposed) — greenfield establishment-structure steps\"\n\nowner_agent: process-governance-manager\nlast_reviewed: \"2026-10-11\"\n"
   },
   "proc-entity-ic-review": {
     "id": "proc-entity-ic-review",
@@ -1522,7 +1522,7 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "title": "Process Map",
     "file": "docs/governance/process-map.md",
     "lang": "en",
-    "content": "---\nlang: en\nlang_reason: proper-noun\ncounterpart: process-map_ko.md\n---\n\n# Process Map — co-newbiz New Business Review\n\n**Owner**: process-governance-manager\n**Design of record**: [`docs/designs/2026-08-19-co-newbiz-design_ko.md`](https://github.com/5throck/ai-workspace-standards/blob/main/docs/designs/2026-08-19-co-newbiz-design_ko.md) section 6, refined by [Stage 1 meetings](../../memory/archive/meeting-2026-08-20-m1-process-skeleton.md) M1/M2/M6.\n\n> **Do not confuse this with the product build Phase 0–6** (design section 4/10). This document maps the *business review process* the team's system implements. The product-build phases are how the team builds and ships that system; this map is what the system, once built, actually runs.\n\n## Stage Gate Sequence\n\n```\nScreening → Pre-FS → Target Screening (brownfield) → FS → DD → Entity IC → Group IC\n```\n\n**Stage chain (flow.spec v2.2.0, ADR-0106)**: S1 market analysis → S2 opportunity discovery → S3 synergy/fit → S4 entry-mode decision → S5 capability assessment & entry strategy (GF) / S6–S7 target identification & screening (BF) → S8 business-case analysis → S9 DD & verification → **S10 deal structuring** → S11 investment review & execution → S12 post-investment management. (Korean stage names in the ko counterpart.) Stages are work intervals; gates (Screening~Group IC, unchanged ids) sit between them. Stage ≠ Gate; historical ADRs keep their pre-v2.2.0 numbering (ADR-0106 is the mapping of record).\n\n**Agent-assignment authority**: `process/flow.spec.yaml` `activities[].agent` is authoritative for **stage-level pipeline dispatch** (who PM dispatches for the stage's work); each procedure's `agent_key` is authoritative for its **internal steps**. A divergence between the two for the same work is a defect to reconcile, not a choice (see AGENTS.md \"Process authority layering\"). Harness dispatch mechanics are the `deal-pipeline-orchestration` skill.\n\n**Deal structuring stage (S10, ADR-0045/0106)**: between the DD gate and Entity IC, the deal structure is designed in `procedures/_shared/deal-structuring/` — the vehicle (direct / SPC / holdco / internal-venture spinoff / JV) plus the four mandatory axes (tax structure, liability isolation, financing leverage, exit structure) land in `deal_structure_hypothesis` with an artifact-referenced four-axis review, and the financing plan (`financing_sources_uses`, migration 0075) must balance (sources == uses > 0). The S11 IC package embeds this structure so the committees approve what S10 produced. The pre-FS step-2 hypothesis remains the early draft this stage matures.\n\n## Per-Gate Deliverables, Approvers, and RACI\n\n| Gate | Deliverable | Blocking Condition (Kill Criteria candidate) | Approver | R | A | C | I |\n|---|---|---|---|---|---|---|---|\n| **Screening** | GF: market size + site shortlist. BF: target longlist (origin-gated — internal origin exempts the longlist step only) + preliminary HHI screen (fact-gated on `target.has_external_market_presence`, never on the origin label — 2026-08-22 design Decision 5e; both `applies_when` predicates evaluated by `db/lib/applies-when.ts`). | GF: zero site candidate clears mandatory infrastructure minimums (wastewater capacity is the headline case — checked before power). | process-governance-manager | greenfield-agent / brownfield-agent | pm | industry-lead, region-lead | risk-officer |\n| **Pre-FS** | GF: infra lead-time/cost estimate + incentive-NPV site comparison. BF: deal structure hypothesis. WACC/hurdle IRR confirmed `kind=user`. | WACC/hurdle IRR still `assumed` — FS cannot open with provisional discount rates. Certification transferability unconfirmed where load-bearing to a BF thesis. | process-governance-manager | valuation-agent, quant-methodologist | pm | certification-agent, legal-counsel | risk-officer |\n| **FS** | GF: full capex schedule with permit critical path. BF: full valuation, six-way M&A cross-check *started*. | Growth projection outside top-decile base rate without risk-officer sign-off. | process-governance-manager | financial-analyst, market-intelligence-agent | pm | quant-methodologist | risk-officer |\n| **DD** | Commercial + technical DD complete. BF: all six M&A validators covered — completed compliance rows, or a live `not_applicable` skip row for a validator the applicability registry does not apply (brownfield-dd steps 6-11, ADR-0048). | Any APPLICABLE one of the six BF validators (antitrust, hr-comp, customer, incentive, contingent-liability, certification) missing at DD exit — **no waiver path**, this is a completeness check; the record is 6 declared / N applicable / M completed. | process-governance-manager | commercial-dd-agent, technical-dd-agent | pm | brownfield-agent | risk-officer |\n| **Entity IC** | IC memo, RAG assessment (proposed by agents, confirmed by human reviewer). | `analysis_task.reviewed_by` NULL on any required deliverable. | Entity IC (human) | process-governance-manager | Entity IC | valuation-agent, risk-officer | group-review-agent |\n| **Group IC** | `group_agenda` ranking entry. Requires completed Entity IC approval recorded in `approval_chain`. | Entity IC approval not yet recorded — Group-level procedures are unreachable, system-enforced. | Group IC (human) | group-review-agent | Group IC | process-governance-manager | pm |\n\n## Green Field vs. Brown Field Divergence\n\n| | Green Field | Brown Field |\n|---|---|---|\n| Primary risk axis | Infrastructure, permits, talent, community | Deal structure, contingent liabilities, six-validator completeness recorded as 6 declared / N applicable / M completed (classification-aware, ADR-0048) |\n| Screening-stage hard filter | Infrastructure minimums (wastewater before power) | Preliminary antitrust screen (rough HHI) |\n| Unique mandatory validators | site-infrastructure-assessment, talent-pipeline-planning, community-partnership-planning | antitrust, hr-comp (executive CoC compensation), customer (CoC retention), incentive clawback, contingent-liability, certification-transferability — the steps 6-11 six (ADR-0048 registry decides which apply per classification) |\n| Site/target comparison | Two-stage: hard pre-filter → weighted score (infra 30 / incentive-NPV 25 / logistics 15 / labor 15 / permit-critical-path 15%) | Deal structure hypothesis → valuation with sequenced special-topic linkage |\n\n## Certification & Permit Tracks (Parallel, Not Merged)\n\nPermits (`permit`/`permit_edge`) and certifications (`certification`/`certification_edge`) run as **separate DAGs with separate critical paths** — a permit lets you operate, a certification lets you sell. See the glossary entry *seon-geup (type approval)* in `glossary/industry.yaml` and design section 8.8-1.\n\n## RACI Legend\nR = Responsible (does the work), A = Accountable (owns the outcome, single name), C = Consulted (two-way input before decision), I = Informed (told after decision).\n\n## Gate Procedures\n\nEvery gate in the sequence above now has a formal `procedures/_shared/*/schema.yaml` (closed 2026-08-20, informed by pilots 001-004's findings — see `docs/pilots/`):\n\n| Gate | Green Field | Brown Field |\n|---|---|---|\n| Screening | `procedures/_shared/greenfield-screening/` | `procedures/_shared/brownfield-screening/` |\n| Pre-FS | `procedures/_shared/greenfield-pre-fs/` | `procedures/_shared/brownfield-pre-fs/` |\n| FS | `procedures/_shared/greenfield-fs/` | `procedures/_shared/brownfield-fs/` |\n| DD | `procedures/_shared/greenfield-dd/` | `procedures/_shared/brownfield-dd/` (six-validator no-waiver completeness check, step 14; validators at steps 6-11 per ADR-0051) |\n| Entity IC | `procedures/_shared/entity-ic-review/` (shared — same shape for both) | |\n| Group IC | `procedures/_shared/group-investment-review/` (shared — same shape for both) | |\n\nThe Entity IC and Group IC decision models both carry a fourth state, `withdrawn_pending_resubmission`, added per `docs/pilots/pilot-003-doosan-bobcat-robotics.md` finding F-2 — a real case's withdraw-and-re-propose pattern that the original three-state (approved/rejected/conditional) model couldn't represent.\n\n**Parallel entry chain — deal-shape selection (ADR-0052 §A)**: `procedures/_shared/deal-shape-chain/` is a SECOND entry route alongside the market-shaped chains above, for capability-gap closures that want a partner before (or instead of) an acquisition: P0 need & funnel → P1 partnership screen → P2 partner DD → P3 deal-shape selection → P4 contracting (shape-keyed pre-signing gate, `checklists/deal-shape-presigning-checklist.yaml`) → P5 post-launch review. The full-M&A outcome routes OUT to the brownfield chain unchanged; the P3 decision *writes* the classification axes (ADR-0047 §A.5), which is why the chain itself carries no `applies_when` — it runs before classification exists.\n\n**Post-close chain — PMI (ADR-0052 §B)**: where a Brown Field acquisition completes, `procedures/_shared/pmi-integration-execution/` owns signing → close → integration → BAU at the NEW `post_close` gate slot after Group IC: pre-close (IMO, integration thesis, clean team, staged synergy targets) → day-1 (continuity, control handover) → first 100 days (cadence, promised-vs-actual synergy, 30/60/90 attrition) → BAU exit — a human Finance certification (`bau-exit-certifier`); an uncertified synergy run-rate halts the handover. Non-control acquisitions run the reduced phase set (pre-close + day-1 + monitoring only), scoped by ADR-0045's stake axis.\n\n**Post-formation lifecycle — JV governance (ADR-0052 §C)**: `procedures/_shared/jv-lifecycle-governance/` (`applies_when: origin = joint`) owns the decade between formation and exit that `entity-establishment-execution` deliberately stops at (its step-5 completion confirm, JV addendum ef-13..17): operate (board-approved governance framework, reserved-matters map, three-type CoI protocol, arm's-length pricing) → monitor (seven-dimension health scorecard; annual strategic asset review carrying the parent-side disciplines — designated executive accountability, portfolio gameboard, lookbacks) → restructure (metric-tied triggers, six-item menu, time-boxed deadlock ladder) → exit (the five-step practice exercising the formation-time ef-16 exit clauses — designed at formation, executed here). Steps 1–2 run on standing cadence, 3 annually, 4–5 on trigger — phases, not one-shot gates. Scorecard storage (a schema addition) is ADR-0052 open question (e), the prerequisite for the Section E portfolio script.\n\n**FS quant dispatches + R&BD gating (ADR-0052 §D)**: both FS procedures now dispatch `quant-methodologist` — `monte-carlo-simulation` at valuation (seeded P50/P95 NPV + value-at-risk, `distributional_valuation`; proxy-chain reliability enters as demand-driver dispersion) and `scenario-planning` at risk assessment (downside/base/upside + the rate-shock covenant test, `scenario_risk_assessment`), closing the agent's zero-dispatch status on both tracks. The R&BD track's per-gate TRL/MRL evidence matrix (cutoffs ILLUSTRATIVE until the thresholds meeting), the GAO-20-48G evidence-quality rules (named tests/environments/artifacts, non-champion reviewer), and staged-funding-as-real-options discipline live in `checklists/rbd-technology-checklist.yaml` v1.3.0 (rbd-08..rbd-15) — enforced at pre-FS/DD via the referencing procedures, at the other gates via the `gate_pass_record` completeness check; gate vocabulary for tech bets adds Hold/Recycle alongside Go/Kill.\n\n**Portfolio monitoring — venture cells (ADR-0052 §E)**: `procedures/_shared/portfolio-venture-monitoring/` (group level, `applies_when: origin in [internal, hybrid, joint]`) gives the venture-character cells (5/6/7/8/9/10) post-IC visibility: a bifurcated financial/strategic scorecard rollup per review cycle, a stage-transition evidence pack (tranche preconditions, contribution-responsibility obligations, time-boxed windows, six-option exit-path evaluation: integrate / standalone / spinout / reduce ownership / divest / kill), and a human tranche + kill/graduate decision (`venture-portfolio-ic` — a kill is a governed decision with learning capture, not a silent starve). The scripted view (stage-progression ledger, capital-vs-milestone comparison) waits on the scorecard-storage schema — ADR-0052 open question (e), the longest-lead chain.\n\n## Related\n- `skills/stage-gate-governance/SKILL.md` — the gate sequence and the 6-item binding Kill Criteria list as an operational skill\n- `docs/stage-gates.md` *(this doc's companion — not yet created — Stage 2.4)*\n- `docs/audits/2026-08-23-readiness-audit.md` — four-axis readiness audit of the procedures described above (verdicts + residual register R1–R10)\n- `docs/pilots/` — four real-case manual pilots that informed the gate procedures above\n- [Meeting M1](../../memory/archive/meeting-2026-08-20-m1-process-skeleton.md), [M2](../../memory/archive/meeting-2026-08-20-m2-entity-group-boundary.md), [M6](../../memory/archive/meeting-2026-08-20-m6-site-selection-criteria.md)\n"
+    "content": "---\nlang: en\nlang_reason: proper-noun\ncounterpart: process-map_ko.md\n---\n\n# Process Map — co-newbiz New Business Review\n\n**Owner**: process-governance-manager\n**Design of record**: [`docs/designs/2026-08-19-co-newbiz-design_ko.md`](https://github.com/5throck/ai-workspace-standards/blob/main/docs/designs/2026-08-19-co-newbiz-design_ko.md) section 6, refined by [Stage 1 meetings](../../memory/archive/meeting-2026-08-20-m1-process-skeleton.md) M1/M2/M6.\n\n> **Do not confuse this with the product build Phase 0–6** (design section 4/10). This document maps the *business review process* the team's system implements. The product-build phases are how the team builds and ships that system; this map is what the system, once built, actually runs.\n\n## Stage Gate Sequence\n\n```\nScreening → Pre-FS → Target Screening (brownfield) → FS → DD → Entity IC → Group IC\n```\n\n**Stage chain (flow.spec v2.2.0, ADR-0106)**: S1 market analysis → S2 opportunity discovery → S3 synergy/fit → S4 entry-mode decision → S5 capability assessment & entry strategy (GF) / S6–S7 target identification & screening (BF) → S8 business-case analysis → S9 DD & verification → **S10 deal structuring** → S11 investment review & execution → S12 post-investment management. (Korean stage names in the ko counterpart.) Stages are work intervals; gates (Screening~Group IC, unchanged ids) sit between them. Stage ≠ Gate; historical ADRs keep their pre-v2.2.0 numbering (ADR-0106 is the mapping of record).\n\n**Agent-assignment authority**: `process/flow.spec.yaml` `activities[].agent` is authoritative for **stage-level pipeline dispatch** (who PM dispatches for the stage's work); each procedure's `agent_key` is authoritative for its **internal steps**. A divergence between the two for the same work is a defect to reconcile, not a choice (see AGENTS.md \"Process authority layering\"). Harness dispatch mechanics are the `deal-pipeline-orchestration` skill.\n\n**Deal structuring stage (S10, ADR-0045/0106)**: between the DD gate and Entity IC, the deal structure is designed in `procedures/_shared/deal-structuring/` — the vehicle (direct / SPC / holdco / internal-venture spinoff / JV) plus the four mandatory axes (tax structure, liability isolation, financing leverage, exit structure) land in `deal_structure_hypothesis` with an artifact-referenced four-axis review, and the financing plan (`financing_sources_uses`, migration 0075) must balance (sources == uses > 0). The S11 IC package embeds this structure so the committees approve what S10 produced. The pre-FS step-2 hypothesis remains the early draft this stage matures. **Track-aware steps (deal-structuring v1.1.0, ADR-0160 Proposed)**: step 1 (asset/stock, stake, instrument mix — brownfield-agent) applies when `project.case_type = brownfield`; greenfield uses steps 4-7 instead — establishment vehicle (greenfield-agent; ef-01/ef-03 link when an entity is created), funding sources incl. project finance, government funds and subsidies, and lease versus build (financing-agent), phased capex tranches and release conditions (greenfield-agent with valuation-agent; rbd-15 for R&BD), incentives with clawback conditions (incentive-agent). The four-axis review and sources == uses > 0 stay shared. The flow.spec S10 activity list is unchanged in this revision: activity-level `applicableTracks` is not supported by the flow.spec schema (see ADR-0160 follow-ups).\n\n## Per-Gate Deliverables, Approvers, and RACI\n\n| Gate | Deliverable | Blocking Condition (Kill Criteria candidate) | Approver | R | A | C | I |\n|---|---|---|---|---|---|---|---|\n| **Screening** | GF: market size + site shortlist. BF: target longlist (origin-gated — internal origin exempts the longlist step only) + preliminary HHI screen (fact-gated on `target.has_external_market_presence`, never on the origin label — 2026-08-22 design Decision 5e; both `applies_when` predicates evaluated by `db/lib/applies-when.ts`). | GF: zero site candidate clears mandatory infrastructure minimums (wastewater capacity is the headline case — checked before power). | process-governance-manager | greenfield-agent / brownfield-agent | pm | industry-lead, region-lead | risk-officer |\n| **Pre-FS** | GF: infra lead-time/cost estimate + incentive-NPV site comparison. BF: deal structure hypothesis. WACC/hurdle IRR confirmed `kind=user`. | WACC/hurdle IRR still `assumed` — FS cannot open with provisional discount rates. Certification transferability unconfirmed where load-bearing to a BF thesis. | process-governance-manager | valuation-agent, quant-methodologist | pm | certification-agent, legal-counsel | risk-officer |\n| **FS** | GF: full capex schedule with permit critical path. BF: full valuation, six-way M&A cross-check *started*. | Growth projection outside top-decile base rate without risk-officer sign-off. | process-governance-manager | financial-analyst, market-intelligence-agent | pm | quant-methodologist | risk-officer |\n| **DD** | Commercial + technical DD complete. BF: all six M&A validators covered — completed compliance rows, or a live `not_applicable` skip row for a validator the applicability registry does not apply (brownfield-dd steps 6-11, ADR-0048). | Any APPLICABLE one of the six BF validators (antitrust, hr-comp, customer, incentive, contingent-liability, certification) missing at DD exit — **no waiver path**, this is a completeness check; the record is 6 declared / N applicable / M completed. | process-governance-manager | commercial-dd-agent, technical-dd-agent | pm | brownfield-agent | risk-officer |\n| **Entity IC** | IC memo, RAG assessment (proposed by agents, confirmed by human reviewer). | `analysis_task.reviewed_by` NULL on any required deliverable. | Entity IC (human) | process-governance-manager | Entity IC | valuation-agent, risk-officer | group-review-agent |\n| **Group IC** | `group_agenda` ranking entry. Requires completed Entity IC approval recorded in `approval_chain`. | Entity IC approval not yet recorded — Group-level procedures are unreachable, system-enforced. | Group IC (human) | group-review-agent | Group IC | process-governance-manager | pm |\n\n## Green Field vs. Brown Field Divergence\n\n| | Green Field | Brown Field |\n|---|---|---|\n| Primary risk axis | Infrastructure, permits, talent, community | Deal structure, contingent liabilities, six-validator completeness recorded as 6 declared / N applicable / M completed (classification-aware, ADR-0048) |\n| Screening-stage hard filter | Infrastructure minimums (wastewater before power) | Preliminary antitrust screen (rough HHI) |\n| Unique mandatory validators | site-infrastructure-assessment, talent-pipeline-planning, community-partnership-planning | antitrust, hr-comp (executive CoC compensation), customer (CoC retention), incentive clawback, contingent-liability, certification-transferability — the steps 6-11 six (ADR-0048 registry decides which apply per classification) |\n| Site/target comparison | Two-stage: hard pre-filter → weighted score (infra 30 / incentive-NPV 25 / logistics 15 / labor 15 / permit-critical-path 15%) | Deal structure hypothesis → valuation with sequenced special-topic linkage |\n\n## Certification & Permit Tracks (Parallel, Not Merged)\n\nPermits (`permit`/`permit_edge`) and certifications (`certification`/`certification_edge`) run as **separate DAGs with separate critical paths** — a permit lets you operate, a certification lets you sell. See the glossary entry *seon-geup (type approval)* in `glossary/industry.yaml` and design section 8.8-1.\n\n## RACI Legend\nR = Responsible (does the work), A = Accountable (owns the outcome, single name), C = Consulted (two-way input before decision), I = Informed (told after decision).\n\n## Gate Procedures\n\nEvery gate in the sequence above now has a formal `procedures/_shared/*/schema.yaml` (closed 2026-08-20, informed by pilots 001-004's findings — see `docs/pilots/`):\n\n| Gate | Green Field | Brown Field |\n|---|---|---|\n| Screening | `procedures/_shared/greenfield-screening/` | `procedures/_shared/brownfield-screening/` |\n| Pre-FS | `procedures/_shared/greenfield-pre-fs/` | `procedures/_shared/brownfield-pre-fs/` |\n| FS | `procedures/_shared/greenfield-fs/` | `procedures/_shared/brownfield-fs/` |\n| DD | `procedures/_shared/greenfield-dd/` (v1.1.0, ADR-0160 Proposed: sub-track-aware — null sub-track unchanged; `existing_business_rbd` / `intra_venture` replace talent pipeline with core-team readiness, add rbd-technology + market plan verification, `intra_venture` adds entity readiness ef-01/ef-03/ef-07; site visit, community and the wastewater kill criterion only when the human-confirmed `site_required` is true; valuation-bridge kill criterion for every sub-track) | `procedures/_shared/brownfield-dd/` (six-validator no-waiver completeness check, step 14; validators at steps 6-11 per ADR-0051) |\n| Entity IC | `procedures/_shared/entity-ic-review/` (shared — same shape for both) | |\n| Group IC | `procedures/_shared/group-investment-review/` (shared — same shape for both) | |\n\n**Greenfield S9 workspace scope overlay (ADR-0160 addendum 2026-10-12 b, Proposed)**: a greenfield S9 is a verification of our own plan, not diligence of another company. `checklists/_overlays/greenfield-workspace-scope.yaml` (`ovl-greenfield-workspace-scope` v1.1.0, decision record DEC-20261012-01, owner process-governance-manager) classifies each of the 77 items of the seven ADR-0148 workspace checklists per greenfield sub-track as apply as-is (A), apply reinterpreted with a greenfield reading (R), replace with a pointer (X), not applicable with a user-facing reason (N), or conditional on the human-confirmed `site_required` (C). Counts (after the risk-officer review 2026-10-12, user decision pending) — null sub-track A14/R42/X2/N19/C0 (56 judgeable); `existing_business_rbd` A13/R47/X1/N13/C3 (60 judgeable, 63 with the site in scope); `intra_venture` A11/R44/X4/N15/C3 (55 +3). For a greenfield project in this scope the hr tab is counted in S9 completion even when the project was created before 2026-10-01, and step 6 (core-team readiness) reads the hr item hdd-01. Checklist text is not edited and brownfield is unchanged. The overlay also maps each `greenfield-dd` step to the tab and items it is judged in (`steps` key) and carries interim greenfield tab labels. Rows without an approved human approval record, and items missing from the overlay, fail closed to A; the only binding item (fin-09) is A in every sub-track and the validator rejects any non-A code on a binding item; `checklists/_validate.ts` recomputes the counts and rejects mismatches. Overlay changes follow the `policies/**`/`procedures/**` lifecycle row (impact analysis, policy pin, ADR addendum). The loader and UI (design rows 2-3) are not yet wired, so the overlay has no runtime effect until then.\n\n**Brownfield S9 workspace scope overlay (ADR-0162, Proposed)**: `checklists/_overlays/brownfield-workspace-scope.yaml` (`ovl-brownfield-workspace-scope` v1.1.0, decision record DEC-20261012-01, owner process-governance-manager) uses the same overlay schema to scope the 77 workspace items per brownfield sub-track by deal shape, with codes A/R/X/N only (C is rejected on brownfield). `m_and_a` is the baseline: every row is A and its extras are unscoped. Judgeable workspace items — `m_and_a` 77, `jv` 75, `strategic_investment` 71, `minority_investment` 71, `partnership` 52 (fdd-01/fdd-07 replaced by pt-03), `rbd` 77, `corporate_venture` 71. An `extra_checklists` block scopes the attached extras by section without changing which extras attach: deal-shape-presigning keeps jvd for `jv`, min for `minority_investment`, lic and cdv for `partnership`; pt-06 is N outside `jv`. Workspace plus extras gives 102 / 93 / 71 / 87 / 78 / 92 / 71 (revised after the 2026-10-12 legal-counsel review). Binding items (fin-09; bf-01..bf-03) can never be N, X or excluded, and fin-09 is A in every column (risk-officer review 2026-10-12; judgeable counts unchanged). `checklists/_validate.ts` dispatches on `track`, enforces the baseline, binding guard, attached X targets, reasons, readings and approvals, and recomputes all counts. Every row records the user's chat approval of the design (2026-10-12); the cross review in design section 11 is still pending. The brownfield loader, cut-off date, opt-in and UI (design rows 3-4) are not yet wired, so the overlay has no runtime effect until then.\n\n**S9 dispatch covers all seven DD domains (flow.spec v2.7.0, ADR-0160 addendum c, Proposed)**: alongside `commercial-dd`, `technical-dd`, `legal-dd` and `dd-waiver-review`, S9 declares `financial-dd` (financial-analyst), `hr-dd` (hr-integration-agent), `market-dd` (market-intelligence-agent) and `financing-dd` (financing-agent), each over `[greenfield-dd, brownfield-dd]` for both tracks. Each activity lists only skills owned by its own agent (`financing-dd` has none, since `financing-plan-review` belongs to valuation-agent). These are stage-level dispatch entries only; the procedures' `agent_key` values still own their internal steps, and the gate and completion criteria are unchanged.\n\nThe Entity IC and Group IC decision models both carry a fourth state, `withdrawn_pending_resubmission`, added per `docs/pilots/pilot-003-doosan-bobcat-robotics.md` finding F-2 — a real case's withdraw-and-re-propose pattern that the original three-state (approved/rejected/conditional) model couldn't represent.\n\n**Parallel entry chain — deal-shape selection (ADR-0052 §A)**: `procedures/_shared/deal-shape-chain/` is a SECOND entry route alongside the market-shaped chains above, for capability-gap closures that want a partner before (or instead of) an acquisition: P0 need & funnel → P1 partnership screen → P2 partner DD → P3 deal-shape selection → P4 contracting (shape-keyed pre-signing gate, `checklists/deal-shape-presigning-checklist.yaml`) → P5 post-launch review. The full-M&A outcome routes OUT to the brownfield chain unchanged; the P3 decision *writes* the classification axes (ADR-0047 §A.5), which is why the chain itself carries no `applies_when` — it runs before classification exists.\n\n**Post-close chain — PMI (ADR-0052 §B)**: where a Brown Field acquisition completes, `procedures/_shared/pmi-integration-execution/` owns signing → close → integration → BAU at the NEW `post_close` gate slot after Group IC: pre-close (IMO, integration thesis, clean team, staged synergy targets) → day-1 (continuity, control handover) → first 100 days (cadence, promised-vs-actual synergy, 30/60/90 attrition) → BAU exit — a human Finance certification (`bau-exit-certifier`); an uncertified synergy run-rate halts the handover. Non-control acquisitions run the reduced phase set (pre-close + day-1 + monitoring only), scoped by ADR-0045's stake axis.\n\n**Post-formation lifecycle — JV governance (ADR-0052 §C)**: `procedures/_shared/jv-lifecycle-governance/` (`applies_when: origin = joint`) owns the decade between formation and exit that `entity-establishment-execution` deliberately stops at (its step-5 completion confirm, JV addendum ef-13..17): operate (board-approved governance framework, reserved-matters map, three-type CoI protocol, arm's-length pricing) → monitor (seven-dimension health scorecard; annual strategic asset review carrying the parent-side disciplines — designated executive accountability, portfolio gameboard, lookbacks) → restructure (metric-tied triggers, six-item menu, time-boxed deadlock ladder) → exit (the five-step practice exercising the formation-time ef-16 exit clauses — designed at formation, executed here). Steps 1–2 run on standing cadence, 3 annually, 4–5 on trigger — phases, not one-shot gates. Scorecard storage (a schema addition) is ADR-0052 open question (e), the prerequisite for the Section E portfolio script.\n\n**FS quant dispatches + R&BD gating (ADR-0052 §D)**: both FS procedures now dispatch `quant-methodologist` — `monte-carlo-simulation` at valuation (seeded P50/P95 NPV + value-at-risk, `distributional_valuation`; proxy-chain reliability enters as demand-driver dispersion) and `scenario-planning` at risk assessment (downside/base/upside + the rate-shock covenant test, `scenario_risk_assessment`), closing the agent's zero-dispatch status on both tracks. The R&BD track's per-gate TRL/MRL evidence matrix (cutoffs ILLUSTRATIVE until the thresholds meeting), the GAO-20-48G evidence-quality rules (named tests/environments/artifacts, non-champion reviewer), and staged-funding-as-real-options discipline live in `checklists/rbd-technology-checklist.yaml` v1.3.0 (rbd-08..rbd-15) — enforced at pre-FS/DD via the referencing procedures, at the other gates via the `gate_pass_record` completeness check; gate vocabulary for tech bets adds Hold/Recycle alongside Go/Kill.\n\n**Portfolio monitoring — venture cells (ADR-0052 §E)**: `procedures/_shared/portfolio-venture-monitoring/` (group level, `applies_when: origin in [internal, hybrid, joint]`) gives the venture-character cells (5/6/7/8/9/10) post-IC visibility: a bifurcated financial/strategic scorecard rollup per review cycle, a stage-transition evidence pack (tranche preconditions, contribution-responsibility obligations, time-boxed windows, six-option exit-path evaluation: integrate / standalone / spinout / reduce ownership / divest / kill), and a human tranche + kill/graduate decision (`venture-portfolio-ic` — a kill is a governed decision with learning capture, not a silent starve). The scripted view (stage-progression ledger, capital-vs-milestone comparison) waits on the scorecard-storage schema — ADR-0052 open question (e), the longest-lead chain.\n\n## Related\n- `skills/stage-gate-governance/SKILL.md` — the gate sequence and the 6-item binding Kill Criteria list as an operational skill\n- `docs/stage-gates.md` *(this doc's companion — not yet created — Stage 2.4)*\n- `docs/audits/2026-08-23-readiness-audit.md` — four-axis readiness audit of the procedures described above (verdicts + residual register R1–R10)\n- `docs/pilots/` — four real-case manual pilots that informed the gate procedures above\n- [Meeting M1](../../memory/archive/meeting-2026-08-20-m1-process-skeleton.md), [M2](../../memory/archive/meeting-2026-08-20-m2-entity-group-boundary.md), [M6](../../memory/archive/meeting-2026-08-20-m6-site-selection-criteria.md)\n"
   },
   "ref-raci-ko": {
     "id": "ref-raci-ko",
@@ -2526,49 +2526,49 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
   "chk-financial-dd-checklist": [
     {
       "id": "fdd-01",
-      "text": "Quality of earnings assessed — revenue recognition policy reviewed, one-time/non-recurring items identified and normalized",
+      "text": "이익의 질(QoE, Quality of Earnings) 평가 — 수익 인식 정책 검토, 일회성·비경상 항목 식별 및 정상화",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "fdd-02",
-      "text": "Working capital analysis completed — normalized NWC, seasonal patterns, and minimum cash requirements quantified",
+      "text": "운전자본 분석 완료 — 정상 순운전자본(NWC), 계절성 패턴, 최소 현금 보유 요건 정량화",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "fdd-03",
-      "text": "Debt schedule confirmed — all borrowings, lease liabilities, contingent liabilities, and off-balance-sheet items listed with rates and maturities",
+      "text": "차입금 내역 확정 — 모든 차입금, 리스부채, 우발부채, 부외 항목을 이자율·만기와 함께 목록화",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "fdd-04",
-      "text": "Tax position reviewed — effective tax rate vs. statutory, open audits, NOL carryforwards, transfer-pricing exposure",
+      "text": "세무 현황 검토 — 법정세율 대비 유효세율, 진행 중인 세무조사, 이월결손금(NOL), 이전가격(transfer pricing) 노출",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "fdd-05",
-      "text": "Cash flow quality verified — operating cash flow vs. EBITDA reconciliation, capex split maintenance vs. growth, DSO/DPO trends (where cdd-08 is performed, customer-level DSO/aging and margin are supplied to it)",
+      "text": "현금흐름의 질 검증 — 영업현금흐름과 EBITDA 대사, 유지·성장 설비투자(capex) 구분, 매출채권회전일수(DSO)·매입채무회전일수(DPO) 추세 (cdd-08을 수행하는 경우 고객별 DSO·연령분석과 마진을 cdd-08에 제공)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "fdd-06",
-      "text": "Related-party transactions identified and evaluated — pricing fairness, necessity, and post-closing treatment determined",
+      "text": "특수관계자 거래 식별·평가 — 가격 공정성, 필요성, 거래종결(closing) 후 처리 방안 결정",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "fdd-07",
-      "text": "Management accounts vs. audited statements bridged — material variances explained and adjustments validated",
+      "text": "관리회계 자료와 감사받은 재무제표 간 차이 조정 — 중요한 차이 설명 및 조정 사항 검증",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "fdd-08",
-      "text": "Financial projections (budget/plan) assessed — assumptions vs. historical performance, market benchmarks, and sensitivity analysis performed",
+      "text": "재무 전망(예산·계획) 평가 — 가정을 과거 실적·시장 벤치마크와 비교하고 민감도 분석 수행",
       "mandatory": true,
       "waiver_eligible": true
     }
@@ -2576,55 +2576,55 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
   "chk-financing-plan-checklist": [
     {
       "id": "fin-01",
-      "text": "Cash/debt/equity mix decided with tenor and amortization profile, and the sources-and-uses table attached",
+      "text": "현금·부채·자본 구성을 만기·상환 일정과 함께 결정하고 자금 원천·용도표(sources and uses) 첨부",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "fin-02",
-      "text": "Executed commitment papers obtained — equity commitment letter; debt commitment letter + fee letter + term sheet — OR a documented internal-funds approval path where the deal is balance-sheet funded",
+      "text": "서명된 확약 문서 확보 — 지분 출자 확약서(equity commitment letter); 대출 확약서(debt commitment letter) + 수수료 서한(fee letter) + 주요 조건서(term sheet) — 또는 대차대조표 자금으로 조달하는 거래라면 문서화된 내부 자금 승인 경로",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "fin-03",
-      "text": "Covenant headroom / leverage analysis completed against the lender's terms",
+      "text": "대주(lender) 조건 기준으로 재무약정 등 확약사항(covenants) 여유분·레버리지 분석 완료",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "fin-04",
-      "text": "Funds-flow memorandum drafted — every inflow/outflow, account, timing, and FX leg of closing day mapped",
+      "text": "자금 흐름 메모(funds-flow memorandum) 초안 작성 — 거래종결일의 모든 유입·유출, 계좌, 시점, 외환 구간 정리",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "fin-05",
-      "text": "FX plan stated (forwards, options, deal-contingent FX) whenever the consideration spans more than one currency",
+      "text": "인수 대가가 둘 이상의 통화에 걸치는 경우 외환 계획(선물환, 옵션, 거래 조건부 외환) 명시",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "fin-06",
-      "text": "Limited-conditionality ('certain funds') structure reviewed by legal-counsel — funding conditioned only on the specified acquisition-agreement representations, closing substantially per the agreement, and closing certificates; no market-MAC out",
+      "text": "자금 확실성(certain funds) 조건 구조를 legal-counsel이 검토 — 대출 인출 거부(draw-stop) 조건을 인수계약의 지정 진술, 계약에 따른 실질적 거래종결, 종결 확인서로만 한정; 시장 상황 악화(market MAC)를 인출 거부·선행조건 사유로 두지 않음",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "fin-07",
-      "text": "Escrow/paying agent appointed and escrow sized against indemnity exposure",
+      "text": "에스크로·지급 대리인 선임 및 면책(indemnity) 노출 규모 대비 에스크로 금액 산정",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "fin-08",
-      "text": "Reverse-termination fee sized where the buyer retains debt-funding risk (illustrative benchmark: 4-7% of enterprise value — see header note)",
+      "text": "인수자가 차입 조달 위험을 부담하는 경우 역해지 수수료(reverse-termination fee) 규모 산정 (예시 벤치마크: 기업가치의 4~7% — 머리말 주석 참조)",
       "mandatory": false,
       "waiver_eligible": true
     },
     {
       "id": "fin-09",
-      "text": "Certainty of funds evidenced in the IC package before final IC — commitment letters or internal-funds approval per fin-02, sources & uses, covenant headroom, funds-flow draft, and FX plan all present; missing financing evidence is a precondition fail at entity-ic-review, not a judgment call",
+      "text": "최종 투자심의위원회(IC) 전에 IC 패키지에서 자금 확실성(certainty of funds) 입증 — fin-02에 따른 확약서 또는 내부 자금 승인, 자금 원천·용도, 재무약정 등 확약사항(covenants) 여유분, 자금 흐름 초안, 외환 계획이 모두 있어야 함; 자금 조달 증거 누락은 판단 사항이 아니라 entity-ic-review의 전제조건 불충족임",
       "mandatory": true,
       "waiver_eligible": false
     }
@@ -2706,67 +2706,67 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
   "chk-hr-dd-checklist": [
     {
       "id": "hdd-01",
-      "text": "Key-person map produced — every person/role whose loss would damage operations or integration, each mapped to a named retention action",
+      "text": "핵심 인력 지도 작성 — 이탈 시 운영·통합에 타격을 주는 모든 인원·직무를 식별하고 각각에 지정된 유지(retention) 조치 연결",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "hdd-02",
-      "text": "Stay/retention bonus budget covering critical talent for the post-closing window (illustrative benchmark: 12-24 months — see header note)",
+      "text": "거래종결 후 기간 동안 핵심 인재를 대상으로 하는 잔류·유지 보너스(stay/retention bonus) 예산 (예시 벤치마크: 12~24개월 — 머리말 주석 참조)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "hdd-03",
-      "text": "Day-1 retention plan prepared — pre-drafted retention offers, stay bonuses, and communication scripts for critical staff",
+      "text": "Day-1 인재 유지 계획 준비 — 핵심 인력을 위한 사전 작성된 유지 제안, 잔류 보너스, 소통 스크립트",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "hdd-04",
-      "text": "Organization documented — org charts, management structure, headcount by function, job descriptions",
+      "text": "조직 문서화 — 조직도, 경영 구조, 기능별 인원, 직무기술서",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "hdd-05",
-      "text": "Leadership bench assessed — who is needed for the first 100 days vs. who will exit",
+      "text": "경영진 후계 층(leadership bench) 평가 — 첫 100일에 필요한 인원과 퇴진할 인원 구분",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "hdd-06",
-      "text": "Where CBAs exist: successorship clauses, open grievance backlog, and CBA expiry vs. deal timeline reviewed (mark not-applicable with rationale where no CBA exists)",
+      "text": "단체협약(CBA)이 있는 경우: 승계 조항, 미해결 고충 처리 건, 거래 일정 대비 단체협약 만료 시점 검토 (단체협약이 없으면 근거와 함께 해당 없음 표시)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "hdd-07",
-      "text": "Pension/benefits liabilities quantified — unfunded status, multiemployer withdrawal liability, retiree medical where applicable",
+      "text": "연금·복리후생 부채 정량화 — 적립 부족 상태, 다수 사용자 연금 탈퇴 부채(multiemployer withdrawal liability), 해당 시 퇴직자 의료비",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "hdd-08",
-      "text": "Works-council information & consultation plan prepared for EU targets — can gate timing and structure",
+      "text": "EU 대상 기업의 종업원평의회(works council, 한국 노사협의회와 다른 제도) 정보 제공·협의 계획 준비 — 거래 시점과 구조를 좌우할 수 있음",
       "mandatory": false,
       "waiver_eligible": true
     },
     {
       "id": "hdd-09",
-      "text": "Employment-transfer regime determined per jurisdiction for the contemplated deal structure (TUPE / EU ARD analogues / Korean business-transfer doctrine) — cross-references chk-entity-formation ef-08; the regime determination is made here for acquisition routes",
+      "text": "검토 중인 거래 구조에 대해 관할별 고용 승계 제도 판단 (TUPE / EU ARD 유사 제도 / 한국 영업양도 법리) — chk-entity-formation ef-08과 교차 참조; 인수 경로의 제도 판단은 이 항목에서 수행",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "hdd-10",
-      "text": "Culture distance assessed with a standardized instrument (e.g. OCAI / Denison-model), covering decision-making speed, risk appetite, and management style — feeding integration design",
+      "text": "표준화된 도구(예: OCAI, Denison 모델)로 문화 차이 평가 — 의사결정 속도, 위험 선호, 경영 스타일을 포함하며 통합 설계에 반영",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "hdd-11",
-      "text": "Day-1 and first-100-days HR plan drafted — payroll and benefits continuity, HR policy alignment, leadership communication to all staff, HR systems integration",
+      "text": "Day-1 및 첫 100일 인사 계획 초안 작성 — 급여·복리후생 연속성, 인사 정책 정렬, 전 직원 대상 경영진 소통, 인사 시스템 통합",
       "mandatory": true,
       "waiver_eligible": true
     }
@@ -2774,7 +2774,7 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
   "chk-legal-dd-checklist": [
     {
       "id": "ldd-01",
-      "text": "법인 적격성 확인 (Good Standing) — 대상 및 모든 자회사의 정관·이사회 의사록 3개년 검토",
+      "text": "법인 존속·정상 상태(good standing) 확인 — 대상 및 모든 자회사의 정관·이사회 의사록 3개년 검토",
       "mandatory": true,
       "waiver_eligible": true
     },
@@ -2846,7 +2846,7 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
     },
     {
       "id": "ldd-13",
-      "text": "임직원·컨트랙터 PIIA(발명 양도+비밀유지계약) 서명 확인 — 전원 이행 여부",
+      "text": "임직원·컨트랙터의 임직원 직무발명 승계(직무발명 규정·승계 통지)·비밀유지 약정(PIIA) 서명 확인 — 전원 이행 여부",
       "mandatory": true,
       "waiver_eligible": true
     },
@@ -2900,7 +2900,7 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
     },
     {
       "id": "ldd-22",
-      "text": "한국 유의사항 (한국 근로자 + 영업양도 경로 검토 시) — 영업양도 근로자 승계는 판례 확립(대법원 2000다8448 계열), 개별 동의가 안전 관행. 현행 법령·한국 변호사 확인 필요 — 선택",
+      "text": "한국 유의사항 (한국 근로자 + 영업양도 경로 검토 시) — 영업양도 근로자 승계는 판례 확립(대법원 2000다8448 계열 — 인용 판례는 변호사 확인 필요(citation to be verified by counsel)), 개별 동의가 안전 관행. 현행 법령·한국 변호사 확인 필요 — 선택",
       "mandatory": false,
       "waiver_eligible": true
     }
@@ -3026,67 +3026,67 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
   "chk-market-dd-checklist": [
     {
       "id": "mdd-01",
-      "text": "TAM/SAM triangulated via at least two independent methods (top-down industry data, bottom-up build, demand/supply-side check) reconciling within a stated tolerance — including reconciliation against any proxy-chain demand estimate produced at Screening/Pre-FS (proxy-industry-chain)",
+      "text": "TAM/SAM을 둘 이상의 독립적 방법(하향식 산업 자료, 상향식 구축, 수요·공급 측 점검)으로 삼각검증하여 명시된 허용 범위 안에서 일치 확인 — 스크리닝·사전 타당성(Pre-FS) 단계에서 산출한 대리 산업 사슬(proxy-industry-chain) 수요 추정치와의 대사 포함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "mdd-02",
-      "text": "Market growth drivers and disruptors stated, with management's growth assumption tested against independent market forecasts",
+      "text": "시장 성장 동인과 교란 요인을 명시하고, 경영진의 성장 가정을 독립적 시장 전망과 대조 검증",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "mdd-03",
-      "text": "Competitive set built as described by customers, not management — win/loss dynamics captured ('chosen as best' vs. 'cheapest/first/already integrated')",
+      "text": "경쟁 구도를 경영진이 아닌 고객의 설명으로 구성 — 수주·실주(win/loss) 동학 파악 ('최선이라 선택' vs. '가장 저렴·최초·이미 연동됨')",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "mdd-04",
-      "text": "Market shares and concentration estimated; each competitor's pricing power classified",
+      "text": "시장 점유율과 집중도 추정; 경쟁사별 가격 결정력 분류",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "mdd-05",
-      "text": "Target's moat rated on the standard ladder — proprietary data (strong) > integration depth (moderate) > brand/relationship (weak) > price (weakest)",
+      "text": "대상 회사의 경쟁 우위(moat)를 표준 등급으로 평가 — 독점 데이터(강) > 연동 깊이(중) > 브랜드·관계(약) > 가격(최약)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "mdd-06",
-      "text": "Customer concentration tested from the market side — the top-10 share is taken from cdd-01 (not recomputed; if cdd-01 was waived or not completed, compute it here and record that) and, where a benchmark exists, set against the industry/peer norm (industry profile revenue_quality_norms, else peer-benchmarking), with relationship depth and switching costs captured for the top accounts from customer evidence; any material gap between the market-side view and cdd-01 is raised as a finding",
+      "text": "시장 측면에서 고객 집중도 검증 — 상위 10개 고객 비중은 cdd-01 값을 사용(재계산하지 않음; cdd-01이 면제되었거나 완료되지 않았으면 여기서 계산하고 그 사실을 기록)하고, 벤치마크가 있으면 산업·동종 기업 기준(산업 프로필 revenue_quality_norms, 없으면 peer-benchmarking)과 비교하며, 상위 고객의 관계 깊이와 전환 비용을 고객 증거로 파악; 시장 측 관점과 cdd-01 사이에 중요한 차이가 있으면 발견사항(finding)으로 제기",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "mdd-07",
-      "text": "Churn/retention tested from the market side — the 2-3 year by-segment rates are taken from cdd-02 (not recomputed; if cdd-02 was waived or not completed, compute them here and record that), with leading churn indicators listed from customer evidence (executive sponsor departure, budget reallocation, active competitive evaluations, single-champion relationships); any material gap between the market-side view and cdd-02 is raised as a finding",
+      "text": "시장 측면에서 이탈·유지율 검증 — 2~3년 세그먼트별 비율은 cdd-02 값을 사용(재계산하지 않음; cdd-02가 면제되었거나 완료되지 않았으면 여기서 계산하고 그 사실을 기록)하고, 고객 증거로 이탈 선행 지표(경영진 후원자 이탈, 예산 재배정, 진행 중인 경쟁 평가, 단일 담당자 의존 관계)를 나열; 시장 측 관점과 cdd-02 사이에 중요한 차이가 있으면 발견사항(finding)으로 제기",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "mdd-08",
-      "text": "80/20 revenue analysis performed and validated against the investment thesis",
+      "text": "80/20 매출 분석을 수행하고 투자 논리(investment thesis)와 대조 검증",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "mdd-09",
-      "text": "Expansion-revenue breadth tested — broad-based vs. concentrated in few accounts (a concentration red flag)",
+      "text": "확장 매출(expansion revenue)의 저변 검증 — 광범위한 분포인지 소수 고객 집중인지(집중은 위험 신호)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "mdd-10",
-      "text": "Channel structure mapped — distributors, pricing logic, customer mix from the data room",
+      "text": "유통 구조 파악 — 데이터룸 기준 유통업체, 가격 결정 논리, 고객 구성",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "mdd-11",
-      "text": "Thesis-by-thesis validation verdicts produced (validated / partially validated / invalidated) with retention-adjusted revenue impact feeding the valuation bridge (dd-to-valuation-bridge) and bid-adjustment recommendations (base-case adjustments, downside scenario, earnout structuring)",
+      "text": "투자 논리별 검증 판정(검증됨 / 부분 검증 / 반증됨) 산출 — 유지율 조정 매출 영향을 가치평가 연결(dd-to-valuation-bridge)과 입찰가 조정 권고(기본 시나리오 조정, 하방 시나리오, 언아웃(earnout) 구조)에 반영",
       "mandatory": true,
       "waiver_eligible": true
     }
@@ -3168,91 +3168,91 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
   "chk-rbd-technology-checklist": [
     {
       "id": "rbd-01",
-      "text": "Technology Readiness Level (TRL) assessed for the core IP/technology itself, distinct from production-process TRL (technical-dd-checklist tdd-03) — an R&BD target's core risk is whether the underlying technology works at all, before production readiness is even relevant. For a license-in deal (rbd_source: external_technology_acquisition), prioritize direct technical documentation from the licensor over public-source corroboration — license announcements rarely carry the track-record framing a spin-off announcement does (pilot 013 finding F-1)",
+      "text": "핵심 IP·기술 자체의 기술 성숙도 평가 (TRL, Technology Readiness Level) — 생산 공정 TRL(technical-dd-checklist tdd-03)과 구분. R&BD 대상의 핵심 위험은 생산 준비도 이전에 기반 기술이 실제로 작동하는지 여부임. 기술 도입(license-in) 거래(rbd_source: external_technology_acquisition)는 공개 자료 교차확인보다 기술 제공자(licensor)의 직접 기술 문서를 우선 확보 — 라이선스 발표에는 분사(spin-off) 발표와 달리 실적 근거가 거의 담기지 않음 (pilot 013 finding F-1)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "rbd-02",
-      "text": "Government co-funding conditions identified if applicable: technology-fee repayment obligation (기술료), IP walk-away/ownership conditions, employment or localization conditions attached to the grant — these can survive a change of control and are easy to miss in a standard DD pass. First classify any government-research-institute relationship as a formal co-funded grant (binding conditions apply) or an informal/in-kind research collaboration (conditions may not apply) — the two carry materially different DD implications (pilot 014 finding F-1, see docs/pilots/pilot-014-c2y-university-techholdings.md)",
+      "text": "국가연구개발사업 정부출연금·기업 부담금 조건 확인 (해당 시): 기술료 상환 의무, IP 포기·소유 조건, 출연에 붙은 고용·현지화 조건 — 지배권 변경(change of control) 후에도 유지될 수 있어 일반 실사에서 놓치기 쉬움. 먼저 정부출연연구기관과의 관계를 공식 국가연구개발사업 과제(정부출연금·기업 부담금 구조, 구속 조건 적용)와 비공식·현물 공동연구(조건 미적용 가능)로 구분할 것 — 두 경우의 실사 함의가 크게 다름 (pilot 014 finding F-1, docs/pilots/pilot-014-c2y-university-techholdings.md 참조)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "rbd-03",
-      "text": "Freedom-to-operate (FTO) / IP ownership diligence completed — who actually owns the IP (the target entity, a parent/spin-off originator, a co-development partner, or a government-funded research institute) and whether license terms transfer cleanly on the contemplated deal structure. For active co-research/co-development relationships (as opposed to a completed transfer of pre-existing IP), explicitly diligence joint-IP-ownership terms with the research partner — this is a materially different question from a simple license-in chain (pilot 014 finding F-2)",
+      "text": "자유실시(FTO, Freedom-to-Operate) 분석·IP 소유권 실사 완료 — IP의 실제 소유자(대상 법인, 모회사·분사 원천, 공동개발 파트너, 정부출연연구기관)와 검토 중인 거래 구조에서 라이선스 조건이 온전히 이전되는지 확인. 기존 IP의 이전이 끝난 경우가 아니라 공동연구·공동개발이 진행 중인 관계라면 연구 파트너와의 공동 IP 소유 조건을 명시적으로 실사할 것 — 단순 기술 도입 경로와는 본질적으로 다른 문제임 (pilot 014 finding F-2)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "rbd-04",
-      "text": "Commercialization path decision documented with rationale: build as an internal business unit, license the technology out, spin off as an independent entity, or acquire a minority venture stake — the paths have materially different valuation, control, and risk profiles and should not default to one without an explicit comparison. This item concerns the REVIEWING ENTITY's chosen path to the technology, not the target's own founding history (captured separately via rbd_source) — an independently-founded, university/government-research-backed startup that was never anyone's spin-off still requires this decision from the reviewing entity's side (pilot 014 finding F-3)",
+      "text": "사업화 경로 결정과 근거 문서화: 내부 사업부로 육성, 기술 이전(license-out), 독립 법인으로 분사, 소수 지분 투자 — 경로별 가치평가·지배력·위험 구조가 크게 다르므로 명시적 비교 없이 한 경로로 기본 설정하지 않음. 이 항목은 대상의 설립 이력(rbd_source로 별도 기록)이 아니라 검토 주체가 기술에 접근하는 경로에 관한 것임 — 누구의 분사도 아닌, 대학·정부 연구 기반의 독립 창업 기업이라도 검토 주체 쪽의 이 결정은 필요함 (pilot 014 finding F-3)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "rbd-05",
-      "text": "The continuing relationship with the technology's originator is documented as part of the deal structure, not treated as fully independent — for a spin-off (rbd_source: internal_only / accelerator_partnered), this is equity retained, customer/supplier relationship, brand association, non-compete scope (see docs/pilots/pilot-011-posco-amberoad.md); for a license-in from an external source such as a research institute (rbd_source: external_technology_acquisition), this is ongoing royalty obligations and eligibility for the licensor's own follow-on co-funding programs, not equity or brand (pilot 013 finding F-2, see docs/pilots/pilot-013-hexapro-etri.md)",
+      "text": "기술 원천과의 지속 관계를 완전히 독립된 것으로 보지 않고 거래 구조의 일부로 문서화 — 분사(rbd_source: internal_only / accelerator_partnered)의 경우 잔여 지분, 고객·공급 관계, 브랜드 연계, 경업금지 범위(docs/pilots/pilot-011-posco-amberoad.md 참조); 연구기관 등 외부 원천으로부터의 기술 도입(rbd_source: external_technology_acquisition)의 경우 지분·브랜드가 아니라 지속적 로열티 의무와 기술 제공자의 후속 공동출연 사업 참여 자격 (pilot 013 finding F-2, docs/pilots/pilot-013-hexapro-etri.md 참조)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "rbd-06",
-      "text": "Track record evidence (prior internal deployments, pilot results, disclosed performance metrics) verified against source, not accepted from the target's own pitch materials without corroboration",
+      "text": "실적 증거(내부 적용 이력, 시범 결과, 공개 성능 지표)를 원천 자료와 대조해 검증 — 대상 회사의 자체 홍보 자료를 교차확인 없이 받아들이지 않음",
       "mandatory": false,
       "waiver_eligible": true
     },
     {
       "id": "rbd-07",
-      "text": "Technology-obsolescence/substitution risk assessed on the same horizon as the investment's expected holding period — a technology that is state-of-the-art today may not be in 3-5 years",
+      "text": "기술 진부화·대체 위험을 투자 예상 보유 기간과 같은 기간 기준으로 평가 — 오늘의 최신 기술이 3~5년 뒤에도 그러하리라는 보장은 없음",
       "mandatory": false,
       "waiver_eligible": true
     },
     {
       "id": "rbd-08",
-      "text": "TRL/MRL evidence matrix — SCREENING row (ADR-0052 §D.1; cutoff APPROVED per docs/decisions/2026-08-24-class-c-decisions.md (a)): scientific basis, roadmap pull, preliminary prior-art/FTO screen; readiness floor TRL 1-2. Typical kill: no plausible principle-to-application path; roadmap absent",
+      "text": "TRL/MRL 증거 매트릭스 — 스크리닝(SCREENING) 단계 (ADR-0052 §D.1; 기준값은 docs/decisions/2026-08-24-class-c-decisions.md (a)로 승인): 과학적 근거, 로드맵 수요, 선행기술·FTO 예비 검토; 최소 성숙도 TRL 1-2. 대표 중단 사유: 원리에서 응용까지의 타당한 경로 없음, 로드맵 부재",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "rbd-09",
-      "text": "TRL/MRL evidence matrix — PRE-FS row: concept memo, critical-function list, POC experiment protocol; readiness floor TRL 2. Typical kill: concept not credible vs state of the art",
+      "text": "TRL/MRL 증거 매트릭스 — 사전 타당성(PRE-FS) 단계: 개념 메모, 핵심 기능 목록, 개념검증(POC) 실험 계획서; 최소 성숙도 TRL 2. 대표 중단 사유: 최신 기술 수준 대비 개념의 신뢰성 부족",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "rbd-10",
-      "text": "TRL/MRL evidence matrix — FS-ENTRY row: POC results demonstrating the critical function, reproducible; readiness floor TRL 3. Typical kill: technical feasibility wall",
+      "text": "TRL/MRL 증거 매트릭스 — 타당성 착수(FS-ENTRY) 단계: 핵심 기능을 입증하는 재현 가능한 POC 결과; 최소 성숙도 TRL 3. 대표 중단 사유: 기술적 실현 가능성의 벽",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "rbd-11",
-      "text": "TRL/MRL evidence matrix — FS/DD row: integrated test data, relevant-environment validation plan, FTO opinion, patent strategy, updated cost model; readiness floor TRL 4-5 / MRL 4-5. Typical kill: FTO failure (blocking third-party IP); unit cost over value ceiling",
+      "text": "TRL/MRL 증거 매트릭스 — 타당성·실사(FS/DD) 단계: 통합 시험 데이터, 실사용 환경 검증 계획, FTO 의견서, 특허 전략, 갱신된 원가 모델; 최소 성숙도 TRL 4-5 / MRL 4-5. 대표 중단 사유: FTO 실패(제3자 IP에 의한 저촉), 단위 원가가 가치 상한 초과",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "rbd-12",
-      "text": "TRL/MRL evidence matrix — ENTITY-IC (business-case gate) row: full business case; make/buy/partner decision (routes into the deal-shape chain, ADR-0052 §A); real-options valuation; staged funding request for the NEXT stage only; readiness floor TRL 5-6 / MRL 5-6. Typical kill: no viable business model; option value below stage premium",
+      "text": "TRL/MRL 증거 매트릭스 — 법인 투자심의(ENTITY-IC, 사업계획 게이트) 단계: 완성된 사업계획(business case); 자체개발·인수·제휴(make/buy/partner) 결정(거래 형태 체인으로 연결, ADR-0052 §A); 실물옵션 가치평가; 다음 단계에 한정한 단계별 자금 요청; 최소 성숙도 TRL 5-6 / MRL 5-6. 대표 중단 사유: 실현 가능한 사업모델 없음, 옵션 가치가 단계 프리미엄에 미달",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "rbd-13",
-      "text": "TRL/MRL evidence matrix — POST-IC EXECUTION row: operational-environment demonstration, pilot-line capability, regulatory pathway; readiness floor TRL 7-8 / MRL 7-8. Typical kill: manufacturability failure; regulatory rejection",
+      "text": "TRL/MRL 증거 매트릭스 — 투자심의 이후 실행(POST-IC EXECUTION) 단계: 운영 환경 실증, 시범 생산라인 역량, 인허가 경로; 최소 성숙도 TRL 7-8 / MRL 7-8. 대표 중단 사유: 양산성 실패, 인허가 거부",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "rbd-14",
-      "text": "Evidence quality rules (GAO TRA Guide, GAO-20-48G — ADR-0052 §D.2): every TRL/MRL claim supported by named tests, test environments, and data artifacts — not assertion; readiness assessments reviewed by a reviewer NOT reporting to the project champion; the assessment records HOW maturity was demonstrated, not only the level claimed; known limitations of readiness scales noted in gate records",
+      "text": "증거 품질 규칙 (GAO TRA Guide, GAO-20-48G — ADR-0052 §D.2): 모든 TRL/MRL 주장은 단순 주장이 아니라 이름이 명시된 시험·시험 환경·데이터 산출물로 뒷받침; 성숙도 평가는 프로젝트 책임자(champion)에게 보고하지 않는 검토자가 검토; 평가에는 주장된 수준뿐 아니라 성숙도를 어떻게 입증했는지를 기록; 성숙도 척도의 알려진 한계를 게이트 기록에 남김",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "rbd-15",
-      "text": "Staged funding as real options (ADR-0052 §D.3): each stage approval is the exercise of a sequential option — the stage budget is the premium, the next gate the exercise decision; the funding request covers the next stage only, with the option-value vs stage-premium comparison recorded. A negative static NPV does not by itself kill an early technology bet when staging options carry positive value; kill discipline remains when option value sits below the next premium even under favorable scenarios",
+      "text": "실물옵션으로서의 단계별 자금 집행 (ADR-0052 §D.3): 각 단계 승인은 순차 옵션의 행사임 — 단계 예산은 프리미엄, 다음 게이트는 행사 결정; 자금 요청은 다음 단계에 한정하고 옵션 가치와 단계 프리미엄 비교를 기록. 정적 NPV가 음수라는 사실만으로 초기 기술 투자를 중단하지 않음(단계 옵션이 양의 가치를 가질 때). 다만 유리한 시나리오에서도 옵션 가치가 다음 프리미엄에 못 미치면 중단 원칙을 유지",
       "mandatory": true,
       "waiver_eligible": true
     }
@@ -3493,4 +3493,5271 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
       "waiver_eligible": true
     }
   ]
+};
+
+// Source: checklists/_overlays/greenfield-workspace-scope.yaml (read by lib/greenfield-subtrack.ts; null = no overlay, fail-closed to A).
+export const LIBRARY_WORKSPACE_OVERLAY: unknown = {
+  "governance_doc_id": "ovl-greenfield-workspace-scope",
+  "layer": "checklist-overlay",
+  "title": "Greenfield S9 workspace scope by sub-track (plan verification)",
+  "owner_agent": "process-governance-manager",
+  "maintainer": "process-governance-manager",
+  "version": "1.1.0",
+  "status": "proposed",
+  "decision_record": "DEC-20261012-01",
+  "track": "greenfield",
+  "procedure_id": "shared-greenfield-dd",
+  "sub_track_keys": {
+    "none": "greenfield route with a NULL sub-track (plain new site)",
+    "existing_business_rbd": "existing_business_rbd",
+    "intra_venture": "intra_venture"
+  },
+  "codes": {
+    "A": "Apply as-is",
+    "R": "Apply reinterpreted (greenfield reading shown)",
+    "X": "Replace (pointer to replacing item; not in Y)",
+    "N": "Not applicable by track rule (reason shown; not in Y)",
+    "C": "Conditional on site_required (ADR-0160 GF_SITE_ITEM_SCOPE)"
+  },
+  "fail_closed": "An item missing from this overlay, or a row without an approved approval record, is treated as A (apply as-is), never as N.",
+  "legal_basis": [
+    "docs/adr/0160-greenfield-dd-and-structure-by-subtrack.md",
+    "docs/designs/2026-10-12-greenfield-dd-workspace-domains-by-track-design.md",
+    "ADR-0148 (seven S9 workspace domains)"
+  ],
+  "expected_counts": {
+    "none": {
+      "A": 14,
+      "R": 42,
+      "X": 2,
+      "N": 19,
+      "C": 0,
+      "judgeable": 56
+    },
+    "existing_business_rbd": {
+      "A": 13,
+      "R": 47,
+      "X": 1,
+      "N": 13,
+      "C": 3,
+      "judgeable": 60
+    },
+    "intra_venture": {
+      "A": 11,
+      "R": 44,
+      "X": 4,
+      "N": 15,
+      "C": 3,
+      "judgeable": 55
+    }
+  },
+  "tab_labels_status": "interim",
+  "tab_labels_note": "그린필드 탭에만 쓰는 이름입니다(브라운필드 이름은 그대로). 인력/조직 계획은 사용자가 정한 최종 이름입니다. 나머지 한국어 이름은 아직 임시 작업 이름이며 용어 관리자(glossary-curator) 검토용 제안이고, 최종 이름은 사람이 정합니다.",
+  "tab_labels": {
+    "commercial": {
+      "en": "Commercial plan",
+      "ko": "판매 계획"
+    },
+    "technical": {
+      "en": "Technical plan",
+      "ko": "기술 계획"
+    },
+    "legal": {
+      "en": "Legal and regulatory plan",
+      "ko": "법무·인허가 계획"
+    },
+    "market": {
+      "en": "Market evidence",
+      "ko": "시장 근거"
+    },
+    "financial": {
+      "en": "Financial plan",
+      "ko": "재무 계획"
+    },
+    "hr": {
+      "en": "People plan",
+      "ko": "인력/조직 계획"
+    },
+    "financing": {
+      "en": "Funding plan",
+      "ko": "자금 마련 계획"
+    },
+    "rbd_technology": {
+      "en": "R&BD technology",
+      "ko": "R&BD 기술"
+    },
+    "entity_formation": {
+      "en": "Entity formation",
+      "ko": "법인 설립 준비"
+    },
+    "plan_readiness": {
+      "en": "Plan readiness",
+      "ko": "계획 준비 상태"
+    }
+  },
+  "steps": [
+    {
+      "step": 1,
+      "purpose": "현장 방문",
+      "tabs": [
+        "technical"
+      ],
+      "items": [
+        {
+          "checklist": "chk-technical-dd-checklist",
+          "ids": [
+            "tdd-01",
+            "tdd-02"
+          ]
+        }
+      ],
+      "pointers": [],
+      "applies": {
+        "none": "yes",
+        "existing_business_rbd": "if_site_required",
+        "intra_venture": "if_site_required"
+      },
+      "note": "부지 선정은 S9 작업 공간에 없으며 Screening/Pre-FS 단계에서 판정합니다."
+    },
+    {
+      "step": 2,
+      "purpose": "인력 확보 경로",
+      "tabs": [
+        "hr"
+      ],
+      "items": [
+        {
+          "checklist": "chk-hr-dd-checklist",
+          "ids": [
+            "hdd-11"
+          ]
+        }
+      ],
+      "pointers": [
+        {
+          "checklist": "chk-site-selection-checklist",
+          "ids": [
+            "ss-07"
+          ],
+          "stage": "Screening/Pre-FS (그린필드 타당성 체크리스트, 읽기 전용 참조)"
+        }
+      ],
+      "applies": {
+        "none": "yes",
+        "existing_business_rbd": "replaced_by_step_6",
+        "intra_venture": "replaced_by_step_6"
+      }
+    },
+    {
+      "step": 3,
+      "purpose": "지역 사회 수용성",
+      "tabs": [
+        "legal"
+      ],
+      "items": [],
+      "pointers": [
+        {
+          "checklist": "chk-site-selection-checklist",
+          "ids": [
+            "ss-08"
+          ],
+          "stage": "Screening/Pre-FS (그린필드 타당성 체크리스트, 읽기 전용 참조)"
+        }
+      ],
+      "applies": {
+        "none": "yes",
+        "existing_business_rbd": "if_site_required",
+        "intra_venture": "if_site_required"
+      },
+      "note": "단계 표시만 합니다. S9 작업 공간 항목은 없습니다."
+    },
+    {
+      "step": 4,
+      "purpose": "실사 결과의 가치평가 반영",
+      "tabs": [
+        "plan_readiness"
+      ],
+      "items": [],
+      "pointers": [],
+      "artefact": "dd_finding.value_impact 연결(cdd-06, ldd-21에서 넘어옴)",
+      "applies": {
+        "none": "yes",
+        "existing_business_rbd": "yes",
+        "intra_venture": "yes"
+      }
+    },
+    {
+      "step": 5,
+      "purpose": "게이트 기록, 법인 투자심의(IC) 열기",
+      "tabs": [
+        "plan_readiness"
+      ],
+      "items": [],
+      "pointers": [],
+      "artefact": "게이트 기록",
+      "applies": {
+        "none": "yes",
+        "existing_business_rbd": "yes",
+        "intra_venture": "yes"
+      }
+    },
+    {
+      "step": 6,
+      "purpose": "핵심 팀 준비 상태",
+      "tabs": [
+        "plan_readiness",
+        "hr"
+      ],
+      "items": [
+        {
+          "checklist": "chk-hr-dd-checklist",
+          "ids": [
+            "hdd-01",
+            "hdd-05"
+          ]
+        }
+      ],
+      "pointers": [],
+      "artefact": "조직 준비도 평가(org-readiness-assessment)",
+      "applies": {
+        "none": "no",
+        "existing_business_rbd": "yes",
+        "intra_venture": "yes"
+      }
+    },
+    {
+      "step": 7,
+      "purpose": "기술·시장 계획 검증",
+      "tabs": [
+        "rbd_technology",
+        "market"
+      ],
+      "items": [
+        {
+          "checklist": "chk-market-dd-checklist",
+          "ids": [
+            "mdd-01",
+            "mdd-02",
+            "mdd-03",
+            "mdd-04",
+            "mdd-05",
+            "mdd-06",
+            "mdd-07",
+            "mdd-08",
+            "mdd-09",
+            "mdd-10",
+            "mdd-11"
+          ]
+        }
+      ],
+      "pointers": [],
+      "note": "R&BD 기술 체크리스트는 모든 항목(TRL/MRL 행, rbd-05, rbd-07)이 범위에 들고, 시장 실사(market-dd)는 항목별 분류를 따릅니다.",
+      "applies": {
+        "none": "no",
+        "existing_business_rbd": "yes",
+        "intra_venture": "yes"
+      }
+    },
+    {
+      "step": 8,
+      "purpose": "법인 준비 상태",
+      "tabs": [
+        "entity_formation"
+      ],
+      "items": [
+        {
+          "checklist": "chk-entity-formation-checklist",
+          "ids": [
+            "ef-01",
+            "ef-03",
+            "ef-07"
+          ]
+        }
+      ],
+      "pointers": [],
+      "applies": {
+        "none": "no",
+        "existing_business_rbd": "no",
+        "intra_venture": "yes"
+      }
+    }
+  ],
+  "checklists": {
+    "chk-commercial-dd-checklist": {
+      "domain": "commercial",
+      "file": "commercial-dd-checklist.yaml",
+      "items": [
+        {
+          "id": "cdd-01",
+          "topic": "Customer concentration",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획 매출 기반의 쏠림 정도를 봅니다. 의향서(LOI), 구매 약정(offtake), 영업 파이프라인에서 상위 예상 고객이 차지하는 비중입니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "확장이 기대는 우리 회사 기존 고객의 쏠림 정도를 자사 판매 자료로 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획 매출 기반의 쏠림 정도를 봅니다. 의향서(LOI), 구매 약정(offtake), 영업 파이프라인에서 상위 예상 고객이 차지하는 비중입니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "cdd-02",
+          "topic": "Customer churn history",
+          "sub_tracks": {
+            "none": {
+              "code": "N",
+              "na_reason": "신규 사업에는 고객 이력이 없습니다. 고객 유지는 cdd-03과 mdd-02에서 따져 보는 가정입니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "목표 시장에서 우리 회사 기존 고객의 이탈을 봅니다."
+            },
+            "intra_venture": {
+              "code": "N",
+              "na_reason": "신규 사업에는 고객 이력이 없습니다. 고객 유지는 cdd-03과 mdd-02에서 따져 보는 가정입니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "cdd-03",
+          "topic": "Pricing power",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획한 가격이 원가 상승을 견딜 수 있는지 봅니다. 계획의 가격 가정을 시장의 가격 전가 근거와 맞대어 따져 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "계획한 가격이 원가 상승을 견딜 수 있는지 봅니다. 계획의 가격 가정을 시장의 가격 전가 근거와 맞대어 따져 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획한 가격이 원가 상승을 견딜 수 있는지 봅니다. 계획의 가격 가정을 시장의 가격 전가 근거와 맞대어 따져 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "cdd-04",
+          "topic": "Win/loss analysis",
+          "sub_tracks": {
+            "none": {
+              "code": "X",
+              "replaced_by": [
+                {
+                  "checklist": "chk-greenfield-feasibility-checklist",
+                  "item": "gf-09",
+                  "stage": "Screening/Pre-FS (그린필드 타당성 체크리스트, 읽기 전용 참조)"
+                }
+              ],
+              "note": "gf-09(경쟁사 생산능력 증설과 가격 가정 비교)로 대체하며, 그린필드 타당성 체크리스트에서 Screening/Pre-FS 단계에 판정합니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "해당 시장에서 우리 회사의 수주 성공·실패 기록을 봅니다."
+            },
+            "intra_venture": {
+              "code": "N",
+              "na_reason": "새 사내 벤처에는 살펴볼 판매 실적이 없습니다. 예상 고객 근거는 cdd-07과 mdd-03에서 따져 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "cdd-05",
+          "topic": "Channel check",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획한 판매 경로를 예상 유통사나 구매자와 함께 확인합니다."
+            },
+            "existing_business_rbd": {
+              "code": "A",
+              "note": "우리 회사의 기존 판매 경로를 그대로 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획한 판매 경로를 예상 유통사나 구매자와 함께 확인합니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "cdd-06",
+          "topic": "Findings tied to assumption_key / value_impact",
+          "sub_tracks": {
+            "none": {
+              "code": "A"
+            },
+            "existing_business_rbd": {
+              "code": "A"
+            },
+            "intra_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "cdd-07",
+          "topic": "Expert interview triangulation",
+          "sub_tracks": {
+            "none": {
+              "code": "A"
+            },
+            "existing_business_rbd": {
+              "code": "A"
+            },
+            "intra_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "cdd-08",
+          "topic": "Revenue quality (recommended)",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획 가정에 따른 앞으로의 매출 품질을 봅니다. 계획 매출의 쏠림 정도, 이익률, 회수 기간, 반복성입니다(greenfield-feasibility 스킬)."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "확장의 바탕이 되는 기존 사업 분야의 매출 품질을 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획 가정에 따른 앞으로의 매출 품질을 봅니다. 계획 매출의 쏠림 정도, 이익률, 회수 기간, 반복성입니다(greenfield-feasibility 스킬)."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        }
+      ]
+    },
+    "chk-technical-dd-checklist": {
+      "domain": "technical",
+      "file": "technical-dd-checklist.yaml",
+      "items": [
+        {
+          "id": "tdd-01",
+          "topic": "Site visit",
+          "sub_tracks": {
+            "none": {
+              "code": "A",
+              "note": "그대로 적용합니다. 일반 신규 부지 건에는 부지 필요 여부(site_required) 확인 절차가 없어 부지 항목이 늘 적용됩니다."
+            },
+            "existing_business_rbd": {
+              "code": "C",
+              "site_rule": "GF_SITE_ITEM_SCOPE (ADR-0160)",
+              "na_reason": "사람이 부지 필요 여부(site_required = true)를 확인한 경우에만 적용합니다. 확인되기 전이거나 부지가 범위 밖으로 확인되면 이 계획에서는 이 부지 항목을 판정하지 않습니다."
+            },
+            "intra_venture": {
+              "code": "C",
+              "site_rule": "GF_SITE_ITEM_SCOPE (ADR-0160)",
+              "na_reason": "사람이 부지 필요 여부(site_required = true)를 확인한 경우에만 적용합니다. 확인되기 전이거나 부지가 범위 밖으로 확인되면 이 계획에서는 이 부지 항목을 판정하지 않습니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "tdd-02",
+          "topic": "Site visit evidence",
+          "sub_tracks": {
+            "none": {
+              "code": "A",
+              "note": "그대로 적용합니다. 일반 신규 부지 건에는 부지 필요 여부(site_required) 확인 절차가 없어 부지 항목이 늘 적용됩니다."
+            },
+            "existing_business_rbd": {
+              "code": "C",
+              "site_rule": "GF_SITE_ITEM_SCOPE (ADR-0160)",
+              "na_reason": "사람이 부지 필요 여부(site_required = true)를 확인한 경우에만 적용합니다. 확인되기 전이거나 부지가 범위 밖으로 확인되면 이 계획에서는 이 부지 항목을 판정하지 않습니다."
+            },
+            "intra_venture": {
+              "code": "C",
+              "site_rule": "GF_SITE_ITEM_SCOPE (ADR-0160)",
+              "na_reason": "사람이 부지 필요 여부(site_required = true)를 확인한 경우에만 적용합니다. 확인되기 전이거나 부지가 범위 밖으로 확인되면 이 계획에서는 이 부지 항목을 판정하지 않습니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "tdd-03",
+          "topic": "TRL of core production process",
+          "sub_tracks": {
+            "none": {
+              "code": "A",
+              "note": "계획한 공정의 기술 성숙도(TRL)와 제조 성숙도(MRL)를 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "A",
+              "note": "계획한 공정의 기술 성숙도(TRL)와 제조 성숙도(MRL)를 봅니다. 핵심 지식재산(IP)의 TRL은 rbd-01에서 다룹니다."
+            },
+            "intra_venture": {
+              "code": "A",
+              "note": "계획한 공정의 기술 성숙도(TRL)와 제조 성숙도(MRL)를 봅니다. 핵심 지식재산(IP)의 TRL은 rbd-01에서 다룹니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "tdd-04",
+          "topic": "Bottleneck process",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획한 공정 설계와 생산능력 모델의 병목을 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "A",
+              "note": "확장에 쓰이는 우리 회사의 기존 생산 라인을 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획한 공정 설계와 생산능력 모델의 병목을 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "tdd-05",
+          "topic": "Remaining useful life of equipment",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획한 신규 설비의 수명과 교체 주기를 tdd-07 설비투자(capex) 검증과 함께 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "확장에 다시 쓰이는 우리 회사 설비의 남은 수명을 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "모회사가 설비를 출자하는 경우 잔존 수명을 평가합니다"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "risk-officer review 2026-10-12: reclassified; user decision pending (approval record predates this change)"
+          }
+        },
+        {
+          "id": "tdd-06",
+          "topic": "EHS liability exposure",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "후보 부지의 과거 오염을 포함해, 계획한 운영의 앞으로의 환경·보건·안전(EHS) 준수와 인허가 위험을 봅니다(ldd-16과 함께 봄)."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "계획한 운영의 앞으로의 환경·보건·안전(EHS) 준수와 인허가 위험, 그리고 확장이 더해지는 우리 회사 기존 사업장의 위험을 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획한 운영의 앞으로의 환경·보건·안전(EHS) 준수와 인허가 위험을 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "tdd-07",
+          "topic": "Independent capex verification",
+          "sub_tracks": {
+            "none": {
+              "code": "A"
+            },
+            "existing_business_rbd": {
+              "code": "A"
+            },
+            "intra_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "tdd-08",
+          "topic": "Production line certification status",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "현재 인증 상태가 아니라, 계획한 라인의 인증 계획(로드맵과 소요 기간, gf-08과 일치)을 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "현재 인증 상태가 아니라, 계획한 라인의 인증 계획(로드맵과 소요 기간, gf-08과 일치)을 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "현재 인증 상태가 아니라, 계획한 라인의 인증 계획(로드맵과 소요 기간, gf-08과 일치)을 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        }
+      ]
+    },
+    "chk-legal-dd-checklist": {
+      "domain": "legal",
+      "file": "legal-dd-checklist.yaml",
+      "items": [
+        {
+          "id": "ldd-01",
+          "topic": "Good standing of target and subsidiaries",
+          "sub_tracks": {
+            "none": {
+              "code": "N",
+              "na_reason": "인수하는 법인이 없고, 우리 회사의 법인 존속·정상 상태(good standing)는 검토 대상이 아닙니다. 사내 벤처 법인 설립은 ef-01(법인 설립)에서 다룹니다."
+            },
+            "existing_business_rbd": {
+              "code": "N",
+              "na_reason": "인수하는 법인이 없고, 우리 회사의 법인 존속·정상 상태(good standing)는 검토 대상이 아닙니다. 사내 벤처 법인 설립은 ef-01(법인 설립)에서 다룹니다."
+            },
+            "intra_venture": {
+              "code": "N",
+              "na_reason": "인수하는 법인이 없고, 우리 회사의 법인 존속·정상 상태(good standing)는 검토 대상이 아닙니다. 사내 벤처 법인 설립은 ef-01(법인 설립)에서 다룹니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-02",
+          "topic": "Cap table",
+          "sub_tracks": {
+            "none": {
+              "code": "N",
+              "na_reason": "인수하는 지분이 없습니다."
+            },
+            "existing_business_rbd": {
+              "code": "N",
+              "na_reason": "인수하는 지분이 없습니다."
+            },
+            "intra_venture": {
+              "code": "X",
+              "replaced_by": [
+                {
+                  "checklist": "chk-entity-formation-checklist",
+                  "item": "ef-03",
+                  "stage": "S9 (법인 설립 준비 탭)"
+                }
+              ],
+              "note": "ef-03(사내 벤처 법인의 지분 구조와 배분)으로 대체합니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-03",
+          "topic": "Shareholder consents, ROFR, tag/drag",
+          "sub_tracks": {
+            "none": {
+              "code": "N",
+              "na_reason": "인수 대상의 기존 주주가 없습니다."
+            },
+            "existing_business_rbd": {
+              "code": "N",
+              "na_reason": "인수 대상의 기존 주주가 없습니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "사내 벤처 주주 간 계약(모회사, 창업자, 공동 투자자)의 조건을 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-04",
+          "topic": "Signing authority",
+          "sub_tracks": {
+            "none": {
+              "code": "N",
+              "na_reason": "구속할 인수 대상이 없습니다. 우리 회사의 서명 권한은 그룹 승인 체계(2단계 승인)를 따르고, 그룹 내 사내 벤처는 법인 설립 때(S11, ef-06) 법인 권한을 정합니다."
+            },
+            "existing_business_rbd": {
+              "code": "N",
+              "na_reason": "구속할 인수 대상이 없습니다. 우리 회사의 서명 권한은 그룹 승인 체계(2단계 승인)를 따르고, 그룹 내 사내 벤처는 법인 설립 때(S11, ef-06) 법인 권한을 정합니다."
+            },
+            "intra_venture": {
+              "code": "N",
+              "na_reason": "구속할 인수 대상이 없습니다. 우리 회사의 서명 권한은 그룹 승인 체계(2단계 승인)를 따르고, 그룹 내 사내 벤처는 법인 설립 때(S11, ef-06) 법인 권한을 정합니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-05",
+          "topic": "Borrowing and guarantee restrictions",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "우리 회사의 기존 자금 조달 약정(담보제공제한 약정(negative pledge), 재무약정 등 확약사항(covenants), 보증 한도)이 이 계획의 자금 마련을 제한하는지 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "우리 회사의 기존 자금 조달 약정(담보제공제한 약정(negative pledge), 재무약정 등 확약사항(covenants), 보증 한도)이 이 계획의 자금 마련을 제한하는지 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "우리 회사의 기존 자금 조달 약정(담보제공제한 약정(negative pledge), 재무약정 등 확약사항(covenants), 보증 한도)이 이 계획의 자금 마련을 제한하는지 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-06",
+          "topic": "Top-20 contract change-of-control scan",
+          "sub_tracks": {
+            "none": {
+              "code": "N",
+              "na_reason": "신규 사업에서는 경영권 변경이 일어나지 않습니다. 계획된 주요 계약(EPC, 구매 약정, 공급)은 cdd-05와 tdd-07에서 따져 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "자사의 독점·비경쟁·최혜대우(MFN) 약정이 신규 사업을 막는지, 계약·IP가 새 법인으로 옮겨질 때 동의가 필요한지 봅니다"
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "자사의 독점·비경쟁·최혜대우(MFN) 약정이 신규 사업을 막는지, 계약·IP가 새 법인으로 옮겨질 때 동의가 필요한지 봅니다"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "risk-officer review 2026-10-12: reclassified; user decision pending (approval record predates this change)"
+          }
+        },
+        {
+          "id": "ldd-07",
+          "topic": "Asset vs share transfer",
+          "sub_tracks": {
+            "none": {
+              "code": "N",
+              "na_reason": "인수·양도 거래가 없고 새 법인으로 옮길 계약·IP도 없습니다."
+            },
+            "existing_business_rbd": {
+              "code": "N",
+              "na_reason": "인수·양도 거래가 없고 새 법인으로 옮길 계약·IP도 없습니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계약·IP를 새 법인으로 옮길 때 상대방 동의가 필요한지, 자동 이전되는지 봅니다"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "risk-officer review 2026-10-12: reclassified; user decision pending (approval record predates this change)"
+          }
+        },
+        {
+          "id": "ldd-08",
+          "topic": "Loans requiring consent at close",
+          "sub_tracks": {
+            "none": {
+              "code": "N",
+              "na_reason": "거래 종결(closing)이 없습니다. 우리 회사의 기존 대출 제한은 ldd-05에서 다룹니다."
+            },
+            "existing_business_rbd": {
+              "code": "N",
+              "na_reason": "거래 종결(closing)이 없습니다. 우리 회사의 기존 대출 제한은 ldd-05에서 다룹니다."
+            },
+            "intra_venture": {
+              "code": "N",
+              "na_reason": "거래 종결(closing)이 없습니다. 우리 회사의 기존 대출 제한은 ldd-05에서 다룹니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-09",
+          "topic": "Litigation and regulatory investigations",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획에 영향을 주는 진행 중이거나 제기될 수 있는 분쟁(부지, 지식재산, 인허가, 이 사업 분야에서의 우리 회사 소송)을 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "계획에 영향을 주는 진행 중이거나 제기될 수 있는 분쟁(부지, 지식재산, 인허가, 이 사업 분야에서의 우리 회사 소송)을 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획에 영향을 주는 진행 중이거나 제기될 수 있는 분쟁(부지, 지식재산, 인허가, 이 사업 분야에서의 우리 회사 소송)을 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-10",
+          "topic": "IP inventory and inventor assignment",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획이 기대는 지식재산(IP) 목록(보유분 또는 라이선스분)을 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "rbd-03(자유실시(FTO) 분석와 소유권) 밖의 나머지 범위를 봅니다. 목록의 완전성과 발명자에서 회사로의 권리 이전입니다."
+            },
+            "intra_venture": {
+              "code": "X",
+              "replaced_by": [
+                {
+                  "checklist": "chk-entity-formation-checklist",
+                  "item": "ef-07",
+                  "stage": "S9 (법인 설립 준비 탭)"
+                },
+                {
+                  "checklist": "chk-rbd-technology-checklist",
+                  "item": "rbd-03",
+                  "stage": "S9 (R&BD 기술 탭)"
+                }
+              ],
+              "note": "ef-07(사내 벤처 법인으로의 지식재산 이전)과 rbd-03(자유실시(FTO) 분석와 소유권)으로 대체합니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-11",
+          "topic": "In/out licences",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획에 필요한 라이선스와 그 조건을 봅니다. 경영권 변경 조항 부분은 적용하지 않습니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "계획에 필요한 라이선스와 그 조건을 봅니다. 경영권 변경 조항 부분은 적용하지 않습니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획에 필요한 라이선스와 그 조건을 봅니다. 경영권 변경 조항 부분은 적용하지 않습니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-12",
+          "topic": "IP encumbrances, fees, disputes",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획이 기대는 지식재산(IP)에 걸린 담보·제한을 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "rbd-03 밖의 나머지 범위를 봅니다. 담보권, 유지·갱신 수수료, 진행 중이거나 제기될 수 있는 지식재산 분쟁입니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "rbd-03 밖의 나머지 범위를 봅니다. 담보권, 유지·갱신 수수료, 진행 중이거나 제기될 수 있는 지식재산 분쟁입니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-13",
+          "topic": "PIIA coverage",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "사업 인력의 고용 조건에 발명 양도와 비밀 유지 조항이 들어 있는지 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "확장 사업의 지식재산이 될 성과를 낸 R&BD 팀이 임직원 직무발명 승계(직무발명 규정·승계 통지)·비밀유지 약정(PIIA)을 맺었는지 봅니다."
+            },
+            "intra_venture": {
+              "code": "X",
+              "replaced_by": [
+                {
+                  "checklist": "chk-entity-formation-checklist",
+                  "item": "ef-07",
+                  "stage": "S9 (법인 설립 준비 탭)"
+                }
+              ],
+              "note": "ef-07(사내 벤처 법인으로의 지식재산 이전)로 대체합니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-14",
+          "topic": "Union and pension (CBA succession)",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "우리 회사의 기존 단체협약이 새 사업장 인력에게도 적용되는지 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "우리 회사의 기존 단체협약이 확장 인력에게도 적용되는지 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "우리 회사의 기존 단체협약이 모회사에서 옮겨 오는 인력에게 그대로 따라가는지 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-15",
+          "topic": "Permit transfer classification",
+          "sub_tracks": {
+            "none": {
+              "code": "X",
+              "replaced_by": [
+                {
+                  "checklist": "chk-greenfield-feasibility-checklist",
+                  "item": "gf-04",
+                  "stage": "Screening/Pre-FS (그린필드 타당성 체크리스트, 읽기 전용 참조)"
+                }
+              ],
+              "note": "gf-04(인허가 핵심 경로)로 대체하며, 그린필드 타당성 체크리스트에서 Screening/Pre-FS 단계에 판정합니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "우리 회사의 기존 인허가가 늘어난 범위를 담는지, 변경이 필요한지 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "사내 벤처가 자기 이름으로 받아야 할 인허가와 모회사가 가진 인허가를 나눠 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-16",
+          "topic": "Environmental notices, land survey, contamination",
+          "sub_tracks": {
+            "none": {
+              "code": "A",
+              "note": "후보 부지의 이력을 그대로 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "C",
+              "site_rule": "GF_SITE_ITEM_SCOPE (ADR-0160)",
+              "na_reason": "사람이 부지 필요 여부(site_required = true)를 확인한 경우에만 적용합니다. 확인되기 전이거나 부지가 범위 밖으로 확인되면 이 계획에서는 이 부지 항목을 판정하지 않습니다."
+            },
+            "intra_venture": {
+              "code": "C",
+              "site_rule": "GF_SITE_ITEM_SCOPE (ADR-0160)",
+              "na_reason": "사람이 부지 필요 여부(site_required = true)를 확인한 경우에만 적용합니다. 확인되기 전이거나 부지가 범위 밖으로 확인되면 이 계획에서는 이 부지 항목을 판정하지 않습니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-17",
+          "topic": "Real estate title and leases",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획한 부지나 공간의 소유권 또는 임차권을 봅니다. 임대차의 경영권 변경 조항 부분은 적용하지 않습니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "계획한 부지나 공간의 소유권 또는 임차권을 봅니다. 임대차의 경영권 변경 조항 부분은 적용하지 않습니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "모회사가 내어 주는 권리를 포함해, 계획한 부지나 공간의 사용권을 봅니다. 임대차의 경영권 변경 조항 부분은 적용하지 않습니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-18",
+          "topic": "Privacy",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획한 개인정보 처리의 준수 설계(처리 방침, 국외 이전 근거)를 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "계획한 개인정보 처리의 준수 설계(처리 방침, 국외 이전 근거)를 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획한 개인정보 처리의 준수 설계(처리 방침, 국외 이전 근거)를 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-19",
+          "topic": "Anti-bribery and sanctions screening",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획의 거래 상대방을 점검합니다. 협력사, 공급사, EPC 시공사, 인센티브 중개인입니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "계획의 거래 상대방을 점검합니다. 협력사, 공급사, EPC 시공사, 인센티브 중개인입니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획의 거래 상대방을 점검합니다. 협력사, 공급사, EPC 시공사, 인센티브 중개인입니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-20",
+          "topic": "Tax filings current",
+          "sub_tracks": {
+            "none": {
+              "code": "N",
+              "na_reason": "인수하는 법인이 없습니다. 계획의 세무 상황은 fdd-04에서 검토합니다."
+            },
+            "existing_business_rbd": {
+              "code": "N",
+              "na_reason": "인수하는 법인이 없습니다. 계획의 세무 상황은 fdd-04에서 검토합니다."
+            },
+            "intra_venture": {
+              "code": "N",
+              "na_reason": "인수하는 법인이 없습니다. 계획의 세무 상황은 fdd-04에서 검토합니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-21",
+          "topic": "Findings register (RAG)",
+          "sub_tracks": {
+            "none": {
+              "code": "A"
+            },
+            "existing_business_rbd": {
+              "code": "A"
+            },
+            "intra_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-22",
+          "topic": "Korean business-transfer employee succession",
+          "sub_tracks": {
+            "none": {
+              "code": "N",
+              "na_reason": "영업양도가 없습니다. 인력은 새로 뽑거나 재배치합니다. 모회사 인력을 새 법인으로 옮기는 경우(전적·전출 동의)는 법인 설립 체크리스트 ef-08(인력 이전 실행)에서 판정합니다."
+            },
+            "existing_business_rbd": {
+              "code": "N",
+              "na_reason": "영업양도가 없습니다. 인력은 새로 뽑거나 재배치합니다. 모회사 인력을 새 법인으로 옮기는 경우(전적·전출 동의)는 법인 설립 체크리스트 ef-08(인력 이전 실행)에서 판정합니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "모회사에서 사내 벤처로 옮기는 인력을 봅니다(개별 동의 또는 파견, S11의 ef-08 참조)."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        }
+      ]
+    },
+    "chk-market-dd-checklist": {
+      "domain": "market",
+      "file": "market-dd-checklist.yaml",
+      "items": [
+        {
+          "id": "mdd-01",
+          "topic": "TAM/SAM triangulation",
+          "sub_tracks": {
+            "none": {
+              "code": "A"
+            },
+            "existing_business_rbd": {
+              "code": "A"
+            },
+            "intra_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "mdd-02",
+          "topic": "Growth drivers vs management assumptions",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "우리 계획의 성장 가정을 독립적인 시장 전망과 비교해 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "우리 계획의 성장 가정을 독립적인 시장 전망과 비교해 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "우리 계획의 성장 가정을 독립적인 시장 전망과 비교해 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "mdd-03",
+          "topic": "Competitive landscape from customers, win/loss",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "예상 고객의 구매 기준을 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "예상 고객의 구매 기준을 봅니다. 수주 성공·실패 부분은 우리 회사 기록으로만 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "예상 고객의 구매 기준을 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "mdd-04",
+          "topic": "Share, concentration, pricing power",
+          "sub_tracks": {
+            "none": {
+              "code": "A"
+            },
+            "existing_business_rbd": {
+              "code": "A"
+            },
+            "intra_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "mdd-05",
+          "topic": "Target's moat",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획이 내세우는 우리 회사의 경쟁 우위(moat)를 같은 척도로 평가합니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "계획이 내세우는 우리 회사의 경쟁 우위(moat)를 같은 척도로 평가합니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획이 내세우는 우리 회사의 경쟁 우위(moat)를 같은 척도로 평가합니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "mdd-06",
+          "topic": "Concentration (uses cdd-01)",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "cdd-01의 그린필드 해석을 따릅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "cdd-01의 그린필드 해석을 따릅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "cdd-01의 그린필드 해석을 따릅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "mdd-07",
+          "topic": "Churn and retention (uses cdd-02)",
+          "sub_tracks": {
+            "none": {
+              "code": "N",
+              "na_reason": "cdd-02를 따릅니다. 신규 사업에는 고객 이력이 없으며, 고객 유지는 cdd-03과 mdd-02에서 따져 보는 가정입니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "cdd-02의 해석을 따릅니다. 목표 시장에서 우리 회사 기존 고객의 이탈을 봅니다."
+            },
+            "intra_venture": {
+              "code": "N",
+              "na_reason": "cdd-02를 따릅니다. 신규 사업에는 고객 이력이 없으며, 고객 유지는 cdd-03과 mdd-02에서 따져 보는 가정입니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "mdd-08",
+          "topic": "80/20 revenue analysis",
+          "sub_tracks": {
+            "none": {
+              "code": "N",
+              "na_reason": "살펴볼 매출이 없습니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "기존 사업 부문의 매출을 봅니다."
+            },
+            "intra_venture": {
+              "code": "N",
+              "na_reason": "살펴볼 매출이 없습니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "mdd-09",
+          "topic": "Expansion revenue breadth",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획의 대표 고객 집중도와 확장 매출 의존을 봅니다; cdd-01과 함께 판정"
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "우리 회사 기존 고객에게서 늘어나는 매출을 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획의 대표 고객 집중도와 확장 매출 의존을 봅니다; cdd-01과 함께 판정"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "risk-officer review 2026-10-12: reclassified; user decision pending (approval record predates this change)"
+          }
+        },
+        {
+          "id": "mdd-10",
+          "topic": "Distribution structure",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획한 유통 경로, 가격 책정 논리, 고객 구성을 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "계획한 유통 경로, 가격 책정 논리, 고객 구성을 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획한 유통 경로, 가격 책정 논리, 고객 구성을 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "mdd-11",
+          "topic": "Thesis verdicts and bid adjustment",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획의 핵심 가설마다 판정합니다. 조정 대상은 입찰 가격이 아니라 투자 금액이나 단계별 집행(tranche) 조건입니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "계획의 핵심 가설마다 판정합니다. 조정 대상은 입찰 가격이 아니라 투자 금액이나 단계별 집행(tranche) 조건입니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획의 핵심 가설마다 판정합니다. 조정 대상은 입찰 가격이 아니라 투자 금액이나 단계별 집행(tranche) 조건입니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        }
+      ]
+    },
+    "chk-financial-dd-checklist": {
+      "domain": "financial",
+      "file": "financial-dd-checklist.yaml",
+      "items": [
+        {
+          "id": "fdd-01",
+          "topic": "Quality of earnings",
+          "sub_tracks": {
+            "none": {
+              "code": "N",
+              "na_reason": "과거 이익 실적이 없습니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "기존 사업 분야 기준선의 이익 품질을 봅니다."
+            },
+            "intra_venture": {
+              "code": "N",
+              "na_reason": "과거 이익 실적이 없습니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fdd-02",
+          "topic": "Working capital",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획에 담긴 순운전자본 필요액, 계절성, 최소 현금 보유액을 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "계획에 담긴 순운전자본 필요액, 계절성, 최소 현금 보유액을 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획에 담긴 순운전자본 필요액, 계절성, 최소 현금 보유액을 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fdd-03",
+          "topic": "Debt and contingent liabilities",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획한 차입금과, 계획으로 생기는 우리 회사의 우발 채무(보증, 인센티브 환수)를 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "계획한 차입금과, 계획으로 생기는 우리 회사의 우발 채무(보증, 인센티브 환수)를 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획한 차입금과, 계획으로 생기는 우리 회사의 우발 채무(보증, 인센티브 환수)를 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fdd-04",
+          "topic": "Tax position",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획의 세무 가정을 봅니다. 실효세율, 세제 혜택, 그룹 내 거래의 이전가격입니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "계획의 세무 가정을 봅니다. 실효세율, 세제 혜택, 그룹 내 거래의 이전가격입니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획의 세무 가정을 봅니다. 실효세율, 세제 혜택, 그룹 내 거래의 이전가격입니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fdd-05",
+          "topic": "Cash-flow quality",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획의 유지·성장 설비투자(capex) 구분과, 매출채권 회수 기간(DSO)·매입채무 지급 기간(DPO) 가정을 동종 기업과 비교해 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "계획의 유지·성장 설비투자(capex) 구분과, 매출채권 회수 기간(DSO)·매입채무 지급 기간(DPO) 가정을 동종 기업과 비교해 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획의 유지·성장 설비투자(capex) 구분과, 매출채권 회수 기간(DSO)·매입채무 지급 기간(DPO) 가정을 동종 기업과 비교해 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fdd-06",
+          "topic": "Related-party transactions",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획에 담긴 그룹 내 공급·용역·라이선스 조건이 정상가격(arm's length)인지 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "계획에 담긴 그룹 내 공급·용역·라이선스 조건이 정상가격(arm's length)인지 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "모회사와 사내 벤처 사이의 그룹 내 공급·용역·라이선스 조건이 정상가격(arm's length)인지 봅니다(이 세부 유형의 핵심 항목)."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fdd-07",
+          "topic": "Management vs audited accounts",
+          "sub_tracks": {
+            "none": {
+              "code": "N",
+              "na_reason": "아직 회계 장부가 없습니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "사업 부문의 관리 회계를 감사받은 재무제표와 비교해 봅니다."
+            },
+            "intra_venture": {
+              "code": "N",
+              "na_reason": "아직 회계 장부가 없습니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fdd-08",
+          "topic": "Forecast assessment",
+          "sub_tracks": {
+            "none": {
+              "code": "A"
+            },
+            "existing_business_rbd": {
+              "code": "A"
+            },
+            "intra_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        }
+      ]
+    },
+    "chk-hr-dd-checklist": {
+      "domain": "hr",
+      "file": "hr-dd-checklist.yaml",
+      "items": [
+        {
+          "id": "hdd-01",
+          "topic": "Key person map",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획에 필요한 핵심 역할과 역할별 채용 또는 유지 계획을 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "계획에 필요한 핵심 역할과 역할별 채용 또는 유지 계획을 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획에 필요한 핵심 역할과 역할별 채용 또는 유지 계획을 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "hdd-02",
+          "topic": "Stay bonus after closing",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "신규 사업에 필요한 인력의 신규 채용과 핵심 인력 확보, 그리고 이들을 붙잡아 둘 유지 보상(잔류 인센티브) 계획을 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "신규 사업에 필요한 인력의 신규 채용과 핵심 인력 확보, 그리고 이들을 붙잡아 둘 유지 보상(잔류 인센티브) 계획을 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "창업 팀을 붙잡아 둘 보상(예: 사내 벤처 지분)을 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "hdd-03",
+          "topic": "Day-1 retention plan",
+          "sub_tracks": {
+            "none": {
+              "code": "N",
+              "na_reason": "인수 첫날(Day 1)이 없습니다. 핵심 인력 유지는 hdd-01에서 다룹니다."
+            },
+            "existing_business_rbd": {
+              "code": "N",
+              "na_reason": "인수 첫날(Day 1)이 없습니다. 핵심 인력 유지는 hdd-01에서 다룹니다."
+            },
+            "intra_venture": {
+              "code": "N",
+              "na_reason": "인수 첫날(Day 1)이 없습니다. 핵심 인력 유지는 hdd-01에서 다룹니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "hdd-04",
+          "topic": "Organisation documentation",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획한 조직도와 인원 계획을 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "계획한 조직도와 인원 계획을 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획한 조직도와 인원 계획을 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "hdd-05",
+          "topic": "Leadership bench",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획한 경영진의 핵심 팀 준비 상태를 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "계획한 경영진의 핵심 팀 준비 상태를 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획한 경영진의 핵심 팀 준비 상태를 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "hdd-06",
+          "topic": "CBA",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "ldd-14와 같은 해석입니다. 우리 회사의 기존 단체협약이 새 사업장 인력에게도 적용되는지 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "ldd-14와 같은 해석입니다. 우리 회사의 기존 단체협약이 확장 인력에게도 적용되는지 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "ldd-14와 같은 해석입니다. 우리 회사의 기존 단체협약이 모회사에서 옮겨 오는 인력에게 그대로 따라가는지 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "hdd-07",
+          "topic": "Pension and benefit liabilities",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획의 복리후생 비용 가정을 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "계획의 복리후생 비용 가정을 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획의 복리후생 비용 가정과, 옮겨 오는 인력과 함께 넘어오는 부채를 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "hdd-08",
+          "topic": "EU works council",
+          "sub_tracks": {
+            "none": {
+              "code": "N",
+              "na_reason": "협의할 거래가 없습니다. 계획이 기존 EU 인력을 재편하는 경우에만 다시 적용합니다."
+            },
+            "existing_business_rbd": {
+              "code": "N",
+              "na_reason": "협의할 거래가 없습니다. 계획이 기존 EU 인력을 재편하는 경우에만 다시 적용합니다."
+            },
+            "intra_venture": {
+              "code": "N",
+              "na_reason": "협의할 거래가 없습니다. 계획이 기존 EU 인력을 재편하는 경우에만 다시 적용합니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "hdd-09",
+          "topic": "Employment succession regime",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "신규 사업에서 새로 채용하는 인력에게 적용되는 관할별 고용 관계 규정과 단체협약의 영향을 판단합니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "신규 사업에서 새로 채용하는 인력에게 적용되는 관할별 고용 관계 규정과 단체협약의 영향을 판단합니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "모회사에서 옮겨 오는 인력의 고용 승계 방식을 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "hdd-10",
+          "topic": "Culture gap",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "신규 사업 조직의 설계와 조직 문화를 평가합니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "신규 사업 조직의 설계와 조직 문화를 평가합니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "사내 벤처의 자율성과 모회사 문화 사이의 차이를 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "hdd-11",
+          "topic": "Day-1 and 100-day HR plan",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "채용과 적응 지원의 단계별 계획을 봅니다(gf-06 / ss-07과 일치)."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "채용과 적응 지원의 단계별 계획을 봅니다(gf-06 / ss-07과 일치)."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "채용과 적응 지원의 단계별 계획을 봅니다(gf-06 / ss-07과 일치)."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        }
+      ]
+    },
+    "chk-financing-plan-checklist": {
+      "domain": "financing",
+      "file": "financing-plan-checklist.yaml",
+      "items": [
+        {
+          "id": "fin-01",
+          "topic": "Sources and uses",
+          "sub_tracks": {
+            "none": {
+              "code": "A"
+            },
+            "existing_business_rbd": {
+              "code": "A"
+            },
+            "intra_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fin-02",
+          "topic": "Signed commitment letters",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "계획 단계에서는 내부 자금 승인이나 대주의 예비 조건을 봅니다. 서명된 확약서는 S11에서 다룹니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "계획 단계에서는 내부 자금 승인이나 대주의 예비 조건을 봅니다. 서명된 확약서는 S11에서 다룹니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "계획 단계에서는 내부 자금 승인이나 대주의 예비 조건을 봅니다. 서명된 확약서는 S11에서 다룹니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fin-03",
+          "topic": "Covenant headroom",
+          "sub_tracks": {
+            "none": {
+              "code": "A"
+            },
+            "existing_business_rbd": {
+              "code": "A"
+            },
+            "intra_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fin-04",
+          "topic": "Funds-flow memorandum at closing",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "거래 종결(closing)이 없으므로 자금 인출 계획으로 해석합니다. 설비투자(capex) 인출의 시기, 계좌, 환전 시점을 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "X",
+              "replaced_by": [
+                {
+                  "checklist": "chk-rbd-technology-checklist",
+                  "item": "rbd-15",
+                  "stage": "S9 (R&BD 기술 탭)"
+                }
+              ],
+              "note": "거래 종결(closing)이 없습니다. rbd-15(실물옵션으로서의 단계별 자금 투입)로 대체하며, 단계별 집행분(tranche)은 capex_tranche(migration 0136)에 기록합니다."
+            },
+            "intra_venture": {
+              "code": "X",
+              "replaced_by": [
+                {
+                  "checklist": "chk-rbd-technology-checklist",
+                  "item": "rbd-15",
+                  "stage": "S9 (R&BD 기술 탭)"
+                }
+              ],
+              "note": "거래 종결(closing)이 없습니다. rbd-15(실물옵션으로서의 단계별 자금 투입)로 대체하며, 단계별 집행분(tranche)은 capex_tranche(migration 0136)에 기록합니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fin-05",
+          "topic": "FX plan",
+          "sub_tracks": {
+            "none": {
+              "code": "R",
+              "reading": "인수 대금이 아니라, 여러 통화로 이뤄지는 설비투자(capex)와 자금 조달의 환율 계획을 봅니다."
+            },
+            "existing_business_rbd": {
+              "code": "R",
+              "reading": "인수 대금이 아니라, 여러 통화로 이뤄지는 설비투자(capex)와 자금 조달의 환율 계획을 봅니다."
+            },
+            "intra_venture": {
+              "code": "R",
+              "reading": "인수 대금이 아니라, 여러 통화로 이뤄지는 설비투자(capex)와 자금 조달의 환율 계획을 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fin-06",
+          "topic": "Certain-funds structure",
+          "sub_tracks": {
+            "none": {
+              "code": "N",
+              "na_reason": "자금 확실성 구조(certain funds)는 계약 서명 때 매도인을 보호하는 장치인데, 이 건에는 매도인이 없습니다."
+            },
+            "existing_business_rbd": {
+              "code": "N",
+              "na_reason": "자금 확실성 구조(certain funds)는 계약 서명 때 매도인을 보호하는 장치인데, 이 건에는 매도인이 없습니다."
+            },
+            "intra_venture": {
+              "code": "N",
+              "na_reason": "자금 확실성 구조(certain funds)는 계약 서명 때 매도인을 보호하는 장치인데, 이 건에는 매도인이 없습니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fin-07",
+          "topic": "Escrow and paying agent",
+          "sub_tracks": {
+            "none": {
+              "code": "N",
+              "na_reason": "담보할 인수 대금이나 손해배상 약정이 없습니다."
+            },
+            "existing_business_rbd": {
+              "code": "N",
+              "na_reason": "담보할 인수 대금이나 손해배상 약정이 없습니다."
+            },
+            "intra_venture": {
+              "code": "N",
+              "na_reason": "담보할 인수 대금이나 손해배상 약정이 없습니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fin-08",
+          "topic": "Reverse termination fee",
+          "sub_tracks": {
+            "none": {
+              "code": "N",
+              "na_reason": "인수 계약이 없습니다."
+            },
+            "existing_business_rbd": {
+              "code": "N",
+              "na_reason": "인수 계약이 없습니다."
+            },
+            "intra_venture": {
+              "code": "N",
+              "na_reason": "인수 계약이 없습니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fin-09",
+          "topic": "Certainty of funds before IC",
+          "sub_tracks": {
+            "none": {
+              "code": "A"
+            },
+            "existing_business_rbd": {
+              "code": "A"
+            },
+            "intra_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "risk-officer review 2026-10-12: reclassified; user decision pending (approval record predates this change)"
+          }
+        }
+      ]
+    }
+  }
+};
+
+// Source: checklists/_overlays/brownfield-workspace-scope.yaml (read by lib/brownfield-subtrack.ts; null = no overlay, fail-closed to A).
+export const LIBRARY_BROWNFIELD_WORKSPACE_OVERLAY: unknown = {
+  "governance_doc_id": "ovl-brownfield-workspace-scope",
+  "layer": "checklist-overlay",
+  "title": "Brownfield S9 workspace scope by sub-track (deal shape)",
+  "owner_agent": "process-governance-manager",
+  "maintainer": "process-governance-manager",
+  "version": "1.1.0",
+  "status": "proposed",
+  "decision_record": "DEC-20261012-01",
+  "track": "brownfield",
+  "procedure_id": "shared-brownfield-dd",
+  "baseline_sub_track": "m_and_a",
+  "sub_track_keys": {
+    "m_and_a": "인수합병(M&A)",
+    "jv": "합작법인(JV)",
+    "strategic_investment": "전략적 투자",
+    "minority_investment": "소수 지분 투자",
+    "partnership": "전략적 제휴(지분 없는 계약 제휴)",
+    "rbd": "R&BD(기술 중심 인수)",
+    "corporate_venture": "기업주도형 벤처캐피탈(CVC)"
+  },
+  "codes": {
+    "A": "그대로 적용",
+    "R": "해석을 바꿔 적용(세부 유형별 읽는 법 표시)",
+    "X": "대체(대신 판정하는 항목을 가리킴, Y에 넣지 않음)",
+    "N": "거래 형태상 해당 없음(이유 표시, Y에 넣지 않음)"
+  },
+  "fail_closed": "이 오버레이에 없는 항목이나 승인 기록이 없는 행은 A(그대로 적용)로 다루며, N으로 다루지 않습니다. 세부 유형이 비어 있는 브라운필드 프로젝트에는 오버레이를 적용하지 않습니다.",
+  "legal_basis": [
+    "docs/adr/0162-brownfield-dd-workspace-scope-by-subtrack.md",
+    "docs/designs/2026-10-12-brownfield-dd-workspace-scope-by-subtrack-design.md",
+    "ADR-0148 (seven S9 workspace domains)",
+    "ADR-0160 addendum b (overlay mechanism)"
+  ],
+  "expected_counts": {
+    "m_and_a": {
+      "A": 77,
+      "R": 0,
+      "X": 0,
+      "N": 0,
+      "judgeable": 77,
+      "extras_judgeable": 25,
+      "total_judgeable": 102
+    },
+    "jv": {
+      "A": 57,
+      "R": 18,
+      "X": 0,
+      "N": 2,
+      "judgeable": 75,
+      "extras_judgeable": 18,
+      "total_judgeable": 93
+    },
+    "strategic_investment": {
+      "A": 56,
+      "R": 15,
+      "X": 0,
+      "N": 6,
+      "judgeable": 71,
+      "extras_judgeable": 0,
+      "total_judgeable": 71
+    },
+    "minority_investment": {
+      "A": 56,
+      "R": 15,
+      "X": 0,
+      "N": 6,
+      "judgeable": 71,
+      "extras_judgeable": 16,
+      "total_judgeable": 87
+    },
+    "partnership": {
+      "A": 22,
+      "R": 30,
+      "X": 2,
+      "N": 23,
+      "judgeable": 52,
+      "extras_judgeable": 26,
+      "total_judgeable": 78
+    },
+    "rbd": {
+      "A": 75,
+      "R": 2,
+      "X": 0,
+      "N": 0,
+      "judgeable": 77,
+      "extras_judgeable": 15,
+      "total_judgeable": 92
+    },
+    "corporate_venture": {
+      "A": 56,
+      "R": 15,
+      "X": 0,
+      "N": 6,
+      "judgeable": 71,
+      "extras_judgeable": 0,
+      "total_judgeable": 71
+    }
+  },
+  "extra_checklists": {
+    "chk-brownfield-feasibility-checklist": {
+      "attached_to": [
+        "m_and_a"
+      ],
+      "sub_tracks": {
+        "m_and_a": {
+          "excluded": []
+        }
+      },
+      "approval": {
+        "status": "approved",
+        "approved_by": "user",
+        "approved_at": "2026-10-12",
+        "note": "approved in chat with the design"
+      }
+    },
+    "chk-ma-special-topics-checklist": {
+      "attached_to": [
+        "m_and_a"
+      ],
+      "sub_tracks": {
+        "m_and_a": {
+          "excluded": []
+        }
+      },
+      "approval": {
+        "status": "approved",
+        "approved_by": "user",
+        "approved_at": "2026-10-12",
+        "note": "approved in chat with the design"
+      }
+    },
+    "chk-rbd-technology-checklist": {
+      "attached_to": [
+        "rbd"
+      ],
+      "sub_tracks": {
+        "rbd": {
+          "excluded": []
+        }
+      },
+      "approval": {
+        "status": "approved",
+        "approved_by": "user",
+        "approved_at": "2026-10-12",
+        "note": "approved in chat with the design"
+      }
+    },
+    "chk-partnership-checklist": {
+      "attached_to": [
+        "jv",
+        "partnership",
+        "minority_investment"
+      ],
+      "sub_tracks": {
+        "jv": {
+          "excluded": []
+        },
+        "minority_investment": {
+          "excluded": [
+            {
+              "ids": [
+                "pt-06"
+              ],
+              "na_reason": "합작법인(JV) 지배구조는 합작법인 구조에만 해당합니다."
+            }
+          ]
+        },
+        "partnership": {
+          "excluded": [
+            {
+              "ids": [
+                "pt-06"
+              ],
+              "na_reason": "합작법인(JV) 지배구조는 합작법인 구조에만 해당합니다."
+            }
+          ]
+        }
+      },
+      "approval": {
+        "status": "approved",
+        "approved_by": "user",
+        "approved_at": "2026-10-12",
+        "note": "approved in chat with the design"
+      }
+    },
+    "chk-deal-shape-presigning-checklist": {
+      "attached_to": [
+        "jv",
+        "partnership",
+        "minority_investment"
+      ],
+      "sub_tracks": {
+        "jv": {
+          "excluded": [
+            {
+              "section": "lic",
+              "ids": [
+                "lic-01",
+                "lic-02",
+                "lic-03",
+                "lic-04",
+                "lic-05",
+                "lic-06",
+                "lic-07",
+                "lic-08",
+                "lic-09"
+              ],
+              "na_reason": "이 구간(라이선스 도입)은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 합작법인(JV)입니다."
+            },
+            {
+              "section": "cdv",
+              "ids": [
+                "cdv-01",
+                "cdv-02",
+                "cdv-03",
+                "cdv-04",
+                "cdv-05",
+                "cdv-06"
+              ],
+              "na_reason": "이 구간(공동 개발)은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 합작법인(JV)입니다."
+            },
+            {
+              "section": "min",
+              "ids": [
+                "min-01",
+                "min-02",
+                "min-03",
+                "min-04",
+                "min-05"
+              ],
+              "na_reason": "이 구간(소수 지분 투자)은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 합작법인(JV)입니다."
+            }
+          ]
+        },
+        "minority_investment": {
+          "excluded": [
+            {
+              "section": "lic",
+              "ids": [
+                "lic-01",
+                "lic-02",
+                "lic-03",
+                "lic-04",
+                "lic-05",
+                "lic-06",
+                "lic-07",
+                "lic-08",
+                "lic-09"
+              ],
+              "na_reason": "이 구간(라이선스 도입)은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 소수 지분 투자입니다."
+            },
+            {
+              "section": "cdv",
+              "ids": [
+                "cdv-01",
+                "cdv-02",
+                "cdv-03",
+                "cdv-04",
+                "cdv-05",
+                "cdv-06"
+              ],
+              "na_reason": "이 구간(공동 개발)은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 소수 지분 투자입니다."
+            },
+            {
+              "section": "jvd",
+              "ids": [
+                "jvd-01",
+                "jvd-02",
+                "jvd-03",
+                "jvd-04",
+                "jvd-05",
+                "jvd-06"
+              ],
+              "na_reason": "이 구간(합작법인(JV))은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 소수 지분 투자입니다."
+            }
+          ]
+        },
+        "partnership": {
+          "excluded": [
+            {
+              "section": "min",
+              "ids": [
+                "min-01",
+                "min-02",
+                "min-03",
+                "min-04",
+                "min-05"
+              ],
+              "na_reason": "이 구간(소수 지분 투자)은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 전략적 제휴(지분 없는 계약 제휴)입니다."
+            },
+            {
+              "section": "jvd",
+              "ids": [
+                "jvd-01",
+                "jvd-02",
+                "jvd-03",
+                "jvd-04",
+                "jvd-05",
+                "jvd-06"
+              ],
+              "na_reason": "이 구간(합작법인(JV))은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 전략적 제휴(지분 없는 계약 제휴)입니다."
+            }
+          ]
+        }
+      },
+      "approval": {
+        "status": "approved",
+        "approved_by": "user",
+        "approved_at": "2026-10-12",
+        "note": "approved in chat with the design"
+      }
+    }
+  },
+  "checklists": {
+    "chk-commercial-dd-checklist": {
+      "domain": "commercial",
+      "file": "commercial-dd-checklist.yaml",
+      "items": [
+        {
+          "id": "cdd-01",
+          "topic": "Customer concentration",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "제휴 매출이 상대방 고객 기반에 기대는 경우에만 상대방 고객의 쏠림 정도를 봅니다. 그렇지 않으면 공동 제품·서비스의 예상 고객 쏠림을 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "cdd-02",
+          "topic": "Customer churn history",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "계약 기반 제휴로는 고객 기반을 넘겨받지 않습니다. 상대방의 믿음직함은 pt-03과 pt-11에서 따져 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "cdd-03",
+          "topic": "Pricing power",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "공동 제품·서비스의 가격 결정력과 수익 배분 비율을 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "cdd-04",
+          "topic": "Win/loss analysis",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "제휴가 겨냥하는 시장에서 상대방의 수주 성공·실패 기록을 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "cdd-05",
+          "topic": "Channel check",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "cdd-06",
+          "topic": "Findings tied to assumption_key / value_impact",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "cdd-07",
+          "topic": "Expert interview triangulation",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "cdd-08",
+          "topic": "Revenue quality (recommended)",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "사업 계획에 잡힌 제휴 매출의 질을 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        }
+      ]
+    },
+    "chk-technical-dd-checklist": {
+      "domain": "technical",
+      "file": "technical-dd-checklist.yaml",
+      "items": [
+        {
+          "id": "tdd-01",
+          "topic": "Site visit",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "tdd-02",
+          "topic": "Site visit evidence",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "tdd-03",
+          "topic": "TRL of core production process",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "tdd-04",
+          "topic": "Bottleneck process",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "tdd-05",
+          "topic": "Remaining useful life of equipment",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "R",
+              "reading": "합작법인(JV)에 출자하는 설비의 남은 사용 가능 기간을 봅니다."
+            },
+            "strategic_investment": {
+              "code": "R",
+              "reading": "지분 비율에 맞춰 중요한 자산만 봅니다."
+            },
+            "minority_investment": {
+              "code": "R",
+              "reading": "지분 비율에 맞춰 중요한 자산만 봅니다."
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "계약 기반 제휴에서는 설비를 넘겨받거나 출자하지 않습니다. 상대방의 역량은 pt-09에서 따져 봅니다."
+            },
+            "rbd": {
+              "code": "R",
+              "reading": "기술과 함께 넘겨받는 시험·연구 설비를 봅니다."
+            },
+            "corporate_venture": {
+              "code": "R",
+              "reading": "지분 비율에 맞춰 중요한 자산만 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "tdd-06",
+          "topic": "EHS liability exposure",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "함께 하거나 우리 대신 수행하는 활동의 환경·보건·안전(EHS) 책임(도급 책임)을 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "tdd-07",
+          "topic": "Independent capex verification",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "제휴에 따라 우리가 약정하는 설비 투자(capex)를 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "tdd-08",
+          "topic": "Production line certification status",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        }
+      ]
+    },
+    "chk-legal-dd-checklist": {
+      "domain": "legal",
+      "file": "legal-dd-checklist.yaml",
+      "items": [
+        {
+          "id": "ldd-01",
+          "topic": "Good standing of target and subsidiaries",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "계약 상대 법인 자체가 적법하게 존속하는지만 봅니다(자회사는 보지 않습니다)."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-02",
+          "topic": "Cap table",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "지분을 취득하지 않습니다. 실제 소유자는 ldd-19와 pt-02에서 확인합니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-03",
+          "topic": "Shareholder consents, ROFR, tag/drag",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "주식이 오가지 않습니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-04",
+          "topic": "Signing authority",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-05",
+          "topic": "Borrowing and guarantee restrictions",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "상대방의 이행 능력을 묶는 제한(제휴에 내놓는 자산에 걸린 금지 약정)을 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-06",
+          "topic": "Top-20 contract change-of-control scan",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "R",
+              "reading": "합작법인에 출자하는 사업의 계약(이전 동의)과, 합작법인 설립으로 발동하는 상대방 계약을 봅니다."
+            },
+            "strategic_investment": {
+              "code": "R",
+              "reading": "우리 지분이 대상 회사 계약의 지배권 변경(CoC)이나 동의 기준선을 넘는지 봅니다."
+            },
+            "minority_investment": {
+              "code": "R",
+              "reading": "우리 지분이 대상 회사 계약의 지배권 변경(CoC)이나 동의 기준선을 넘는지 봅니다."
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "상대방 계약 가운데 제휴를 막는 독점·경업 금지·최혜 대우(MFN) 조항을 봅니다. 상대방이 경쟁사이면 경쟁 민감 정보 교환 범위, 클린팀(clean team) 운영, 공정거래법 제40조(부당한 공동행위, 정보 교환 포함) 검토도 함께 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "R",
+              "reading": "우리 지분이 대상 회사 계약의 지배권 변경(CoC)이나 동의 기준선을 넘는지 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-07",
+          "topic": "Asset vs share transfer",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "R",
+              "reading": "합작법인에 내놓는 사업이나 자산의 출자 방식을 봅니다."
+            },
+            "strategic_investment": {
+              "code": "N",
+              "na_reason": "신주 인수나 구주 매입이므로 자산 이전이 없습니다."
+            },
+            "minority_investment": {
+              "code": "N",
+              "na_reason": "신주 인수나 구주 매입이므로 자산 이전이 없습니다."
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "이전되는 것이 없습니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "N",
+              "na_reason": "신주 인수나 구주 매입이므로 자산 이전이 없습니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-08",
+          "topic": "Loans requiring consent at close",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "R",
+              "reading": "우리 참여로 동의나 조기 상환이 필요해지는 대상 회사 차입을 봅니다."
+            },
+            "strategic_investment": {
+              "code": "R",
+              "reading": "우리 참여로 동의나 조기 상환이 필요해지는 대상 회사 차입을 봅니다."
+            },
+            "minority_investment": {
+              "code": "R",
+              "reading": "우리 참여로 동의나 조기 상환이 필요해지는 대상 회사 차입을 봅니다."
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "거래 종결(closing)이 없습니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "R",
+              "reading": "우리 참여로 동의나 조기 상환이 필요해지는 대상 회사 차입을 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-09",
+          "topic": "Litigation and regulatory investigations",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-10",
+          "topic": "IP inventory and inventor assignment",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "상대방이 제휴에 가져오는 지식재산(기존 IP)을 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-11",
+          "topic": "In/out licences",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-12",
+          "topic": "IP encumbrances, fees, disputes",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "제휴에 쓰는 상대방 기존 IP에 걸린 담보·부담·분쟁을 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-13",
+          "topic": "PIIA coverage",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "공동 작업에 배치되는 상대방 직원의 직무발명 승계(직무발명 규정·승계 통지)·비밀유지 약정(PIIA) 적용 범위를 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-14",
+          "topic": "Union and pension (CBA succession)",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "R",
+              "reading": "합작법인으로 옮기는 직원의 단체협약(CBA) 승계를 봅니다."
+            },
+            "strategic_investment": {
+              "code": "N",
+              "na_reason": "고용주가 바뀌지 않습니다. 대상 회사의 노사 관계는 hdd-06에서 따져 봅니다."
+            },
+            "minority_investment": {
+              "code": "N",
+              "na_reason": "고용주가 바뀌지 않습니다. 대상 회사의 노사 관계는 hdd-06에서 따져 봅니다."
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "옮겨 오는 직원이 없습니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "N",
+              "na_reason": "고용주가 바뀌지 않습니다. 대상 회사의 노사 관계는 hdd-06에서 따져 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-15",
+          "topic": "Permit transfer classification",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "R",
+              "reading": "합작법인 이름으로 받아야 할 인허가와 모회사가 가진 인허가를 나눠 봅니다."
+            },
+            "strategic_investment": {
+              "code": "R",
+              "reading": "주주 구성이 바뀔 때 신고나 승인이 필요한 인허가를 봅니다."
+            },
+            "minority_investment": {
+              "code": "R",
+              "reading": "주주 구성이 바뀔 때 신고나 승인이 필요한 인허가를 봅니다."
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "각 당사자가 맡은 작업에 필요한 인허가를 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "R",
+              "reading": "주주 구성이 바뀔 때 신고나 승인이 필요한 인허가를 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-16",
+          "topic": "Environmental notices, land survey, contamination",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "함께 쓰는 부지만 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-17",
+          "topic": "Real estate title and leases",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "함께 쓰는 부동산만 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-18",
+          "topic": "Privacy",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "제휴로 주고받는 개인정보(공유 근거, 국외 이전)를 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-19",
+          "topic": "Anti-bribery and sanctions screening",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-20",
+          "topic": "Tax filings current",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "인수하는 법인이 없습니다. 제휴의 세금 영향은 fdd-04에서 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-21",
+          "topic": "Findings register (RAG)",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "ldd-22",
+          "topic": "Korean business-transfer employee succession",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "R",
+              "reading": "사업 양도로 합작법인에 옮기는 직원을 봅니다."
+            },
+            "strategic_investment": {
+              "code": "R",
+              "reading": "출자·투자에 사업부·인력 이전(현물출자 포함)이 수반되면 적용"
+            },
+            "minority_investment": {
+              "code": "R",
+              "reading": "출자·투자에 사업부·인력 이전(현물출자 포함)이 수반되면 적용"
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "사업 양도가 없습니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "R",
+              "reading": "출자·투자에 사업부·인력 이전(현물출자 포함)이 수반되면 적용"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        }
+      ]
+    },
+    "chk-market-dd-checklist": {
+      "domain": "market",
+      "file": "market-dd-checklist.yaml",
+      "items": [
+        {
+          "id": "mdd-01",
+          "topic": "TAM/SAM triangulation",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "mdd-02",
+          "topic": "Growth drivers vs management assumptions",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "mdd-03",
+          "topic": "Competitive landscape from customers, win/loss",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "mdd-04",
+          "topic": "Share, concentration, pricing power",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "mdd-05",
+          "topic": "Target's moat",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "공동 제품·서비스의 경쟁 우위(해자)를 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "mdd-06",
+          "topic": "Concentration (uses cdd-01)",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "cdd-01의 제휴 해석을 따릅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "mdd-07",
+          "topic": "Churn and retention (uses cdd-02)",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "cdd-02와 같습니다. 계약 기반 제휴로는 고객 기반을 넘겨받지 않습니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "mdd-08",
+          "topic": "80/20 revenue analysis",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "제휴가 기대는 상대방 매출의 80/20 구조를 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "mdd-09",
+          "topic": "Expansion revenue breadth",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "확장 매출을 잴 수 있는, 넘겨받는 고객 기반이 없습니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "mdd-10",
+          "topic": "Distribution structure",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "mdd-11",
+          "topic": "Thesis verdicts and bid adjustment",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "R",
+              "reading": "조정 대상은 출자 가치나 지분 배분입니다."
+            },
+            "strategic_investment": {
+              "code": "R",
+              "reading": "조정 대상은 투자 전 기업가치(pre-money)나 투자 조건입니다."
+            },
+            "minority_investment": {
+              "code": "R",
+              "reading": "조정 대상은 투자 전 기업가치(pre-money)나 투자 조건입니다."
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "조정 대상은 수익 배분이나 단계별 지급(마일스톤) 조건입니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "R",
+              "reading": "조정 대상은 투자 전 기업가치(pre-money)나 투자 조건입니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        }
+      ]
+    },
+    "chk-financial-dd-checklist": {
+      "domain": "financial",
+      "file": "financial-dd-checklist.yaml",
+      "items": [
+        {
+          "id": "fdd-01",
+          "topic": "Quality of earnings",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "X",
+              "replaced_by": [
+                {
+                  "checklist": "chk-partnership-checklist",
+                  "item": "pt-03",
+                  "stage": "S9 (이 세부 유형에 붙는 제휴 체크리스트)"
+                }
+              ],
+              "note": "pt-03(상대방의 재무 안정성과 역량, 근거 포함)으로 대체합니다. 이 세부 유형에 붙는 제휴 체크리스트에서 같은 S9 단계에 판정합니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fdd-02",
+          "topic": "Working capital",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "넘겨받는 재무상태표가 없습니다. 제휴에 필요한 운전자본은 fin-01에서 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fdd-03",
+          "topic": "Debt and contingent liabilities",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "이행을 위협하는 상대방 부채와, 제휴에 따른 우리의 우발 의무를 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fdd-04",
+          "topic": "Tax position",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "제휴 대금의 세무 처리(원천징수, 국경 간 거래의 이전가격)를 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fdd-05",
+          "topic": "Cash-flow quality",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "넘겨받는 현금흐름이 없습니다. 상대방의 역량은 pt-03에서 따져 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fdd-06",
+          "topic": "Related-party transactions",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "제휴에 닿는 상대방의 특수관계자 거래를 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fdd-07",
+          "topic": "Management vs audited accounts",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "X",
+              "replaced_by": [
+                {
+                  "checklist": "chk-partnership-checklist",
+                  "item": "pt-03",
+                  "stage": "S9 (이 세부 유형에 붙는 제휴 체크리스트)"
+                }
+              ],
+              "note": "pt-03(상대방의 재무 안정성과 역량, 근거 포함)으로 대체합니다. 이 세부 유형에 붙는 제휴 체크리스트에서 같은 S9 단계에 판정합니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fdd-08",
+          "topic": "Forecast assessment",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "제휴 매출·비용 계획의 전망을 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        }
+      ]
+    },
+    "chk-hr-dd-checklist": {
+      "domain": "hr",
+      "file": "hr-dd-checklist.yaml",
+      "items": [
+        {
+          "id": "hdd-01",
+          "topic": "Key person map",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "R",
+              "reading": "떠나면 우리 지분 가치를 해치는 핵심 인물을 봅니다. 붙잡아 둘 수단은 우리 쪽 제안이 아니라 이사회·주주 권리입니다."
+            },
+            "minority_investment": {
+              "code": "R",
+              "reading": "떠나면 우리 지분 가치를 해치는 핵심 인물을 봅니다. 붙잡아 둘 수단은 우리 쪽 제안이 아니라 이사회·주주 권리입니다."
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "제휴 계약에 이름이 오른 상대방 핵심 인물(핵심 인력 조항)을 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "R",
+              "reading": "떠나면 우리 지분 가치를 해치는 핵심 인물을 봅니다. 붙잡아 둘 수단은 우리 쪽 제안이 아니라 이사회·주주 권리입니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "hdd-02",
+          "topic": "Stay bonus after closing",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "R",
+              "reading": "합작법인에 파견하거나 옮기는 핵심 직원을 붙잡아 둘 방안을 봅니다."
+            },
+            "strategic_investment": {
+              "code": "N",
+              "na_reason": "대상 회사 직원을 우리가 고용하지 않으며, 잔류 보너스도 내지 않습니다."
+            },
+            "minority_investment": {
+              "code": "N",
+              "na_reason": "대상 회사 직원을 우리가 고용하지 않으며, 잔류 보너스도 내지 않습니다."
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "대상 회사 직원을 우리가 고용하지 않으며, 잔류 보너스도 내지 않습니다."
+            },
+            "rbd": {
+              "code": "R",
+              "reading": "기술과 함께 넘겨받는 발명자와 핵심 연구원을 붙잡아 둘 방안을 봅니다."
+            },
+            "corporate_venture": {
+              "code": "N",
+              "na_reason": "대상 회사 직원을 우리가 고용하지 않으며, 잔류 보너스도 내지 않습니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "hdd-03",
+          "topic": "Day-1 retention plan",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "R",
+              "reading": "합작법인 직원의 첫날(Day 1) 잔류 계획을 봅니다."
+            },
+            "strategic_investment": {
+              "code": "N",
+              "na_reason": "인수 첫날(Day 1)이 없습니다. 핵심 인물 위험은 hdd-01에서 따져 봅니다."
+            },
+            "minority_investment": {
+              "code": "N",
+              "na_reason": "인수 첫날(Day 1)이 없습니다. 핵심 인물 위험은 hdd-01에서 따져 봅니다."
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "인수 첫날(Day 1)이 없습니다. 핵심 인물 위험은 hdd-01에서 따져 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "N",
+              "na_reason": "인수 첫날(Day 1)이 없습니다. 핵심 인물 위험은 hdd-01에서 따져 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "hdd-04",
+          "topic": "Organisation documentation",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "제휴 운영 구조와 팀 구성을 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "hdd-05",
+          "topic": "Leadership bench",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "R",
+              "reading": "두 모회사에서 오는 합작법인 경영진을 봅니다."
+            },
+            "strategic_investment": {
+              "code": "R",
+              "reading": "경영진의 역량을 투자 위험으로 봅니다."
+            },
+            "minority_investment": {
+              "code": "R",
+              "reading": "경영진의 역량을 투자 위험으로 봅니다."
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "상대방의 제휴 책임자와 지정된 후원 임원을 봅니다(pt-12와 함께)."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "R",
+              "reading": "경영진의 역량을 투자 위험으로 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "hdd-06",
+          "topic": "CBA",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "옮겨 오는 직원이 없습니다. 상대방의 노사 분규 위험은 pt-04에서 따져 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "hdd-07",
+          "topic": "Pension and benefit liabilities",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "R",
+              "reading": "옮기는 직원과 함께 넘어오는 퇴직·복리후생 부채를 봅니다."
+            },
+            "strategic_investment": {
+              "code": "R",
+              "reading": "연금 부족액을 지분 비율만큼 가치평가 항목으로 봅니다."
+            },
+            "minority_investment": {
+              "code": "R",
+              "reading": "연금 부족액을 지분 비율만큼 가치평가 항목으로 봅니다."
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "넘겨받는 복리후생 부채가 없습니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "R",
+              "reading": "연금 부족액을 지분 비율만큼 가치평가 항목으로 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "hdd-08",
+          "topic": "EU works council",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "유럽 상대방이나 자사 사업장 인력·업무가 제휴로 재편되는 경우 적용"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "hdd-09",
+          "topic": "Employment succession regime",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "R",
+              "reading": "합작법인으로 옮기는 직원에게 적용되는 고용 승계 제도를 봅니다."
+            },
+            "strategic_investment": {
+              "code": "R",
+              "reading": "출자·투자에 사업부·인력 이전(현물출자 포함)이 수반되면 적용"
+            },
+            "minority_investment": {
+              "code": "R",
+              "reading": "출자·투자에 사업부·인력 이전(현물출자 포함)이 수반되면 적용"
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "사업(영업) 이전이 없습니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "R",
+              "reading": "출자·투자에 사업부·인력 이전(현물출자 포함)이 수반되면 적용"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "hdd-10",
+          "topic": "Culture gap",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "R",
+              "reading": "합작법인 안에서 두 모회사의 조직 문화를 봅니다."
+            },
+            "strategic_investment": {
+              "code": "R",
+              "reading": "우리 팀과 투자 대상 회사의 협업 궁합을 봅니다."
+            },
+            "minority_investment": {
+              "code": "R",
+              "reading": "이사 지명권이나 거부권이 있으면 적용"
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "일하는 방식의 궁합을 봅니다(pt-10과 함께)."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "R",
+              "reading": "우리 팀과 투자 대상 회사의 협업 궁합을 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "hdd-11",
+          "topic": "Day-1 and 100-day HR plan",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "R",
+              "reading": "합작법인 인사 체계를 세우는 계획(급여, 규정)을 봅니다."
+            },
+            "strategic_investment": {
+              "code": "N",
+              "na_reason": "우리 조직에 합쳐지는 조직이 없습니다."
+            },
+            "minority_investment": {
+              "code": "N",
+              "na_reason": "우리 조직에 합쳐지는 조직이 없습니다."
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "우리 조직에 합쳐지는 조직이 없습니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "N",
+              "na_reason": "우리 조직에 합쳐지는 조직이 없습니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        }
+      ]
+    },
+    "chk-financing-plan-checklist": {
+      "domain": "financing",
+      "file": "financing-plan-checklist.yaml",
+      "items": [
+        {
+          "id": "fin-01",
+          "topic": "Sources and uses",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fin-02",
+          "topic": "Signed commitment letters",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "R",
+              "reading": "각 모회사가 약정한 출자금을 봅니다."
+            },
+            "strategic_investment": {
+              "code": "R",
+              "reading": "우리 투자금이나 제휴 예산에 대한 내부 자금 승인을 봅니다. 차입으로 조달할 때만 외부 확약서를 봅니다."
+            },
+            "minority_investment": {
+              "code": "R",
+              "reading": "우리 투자금이나 제휴 예산에 대한 내부 자금 승인을 봅니다. 차입으로 조달할 때만 외부 확약서를 봅니다."
+            },
+            "partnership": {
+              "code": "R",
+              "reading": "우리 투자금이나 제휴 예산에 대한 내부 자금 승인을 봅니다. 차입으로 조달할 때만 외부 확약서를 봅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "R",
+              "reading": "우리 투자금이나 제휴 예산에 대한 내부 자금 승인을 봅니다. 차입으로 조달할 때만 외부 확약서를 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fin-03",
+          "topic": "Covenant headroom",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fin-04",
+          "topic": "Funds-flow memorandum at closing",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "R",
+              "reading": "합작법인 설립 때의 자금 흐름(출자 요청)을 봅니다."
+            },
+            "strategic_investment": {
+              "code": "R",
+              "reading": "투자 종결 때의 투자금 자금 흐름을 봅니다."
+            },
+            "minority_investment": {
+              "code": "R",
+              "reading": "투자 종결 때의 투자금 자금 흐름을 봅니다."
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "거래 종결(closing)이 없습니다. 제휴 대금은 fin-01에 담긴 계약 일정을 따릅니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "R",
+              "reading": "투자 종결 때의 투자금 자금 흐름을 봅니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fin-05",
+          "topic": "FX plan",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fin-06",
+          "topic": "Certain-funds structure",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "N",
+              "na_reason": "자금 확실성(certain funds)은 경쟁 인수에서 매도인을 보호하는 장치입니다. 신주 인수, 출자, 제휴에는 그런 매도인이 없습니다."
+            },
+            "strategic_investment": {
+              "code": "R",
+              "reading": "구주 매입이 포함되면 적용하고, 신주 인수만이면 해당 없음"
+            },
+            "minority_investment": {
+              "code": "R",
+              "reading": "구주 매입이 포함되면 적용하고, 신주 인수만이면 해당 없음"
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "자금 확실성(certain funds)은 경쟁 인수에서 매도인을 보호하는 장치입니다. 신주 인수, 출자, 제휴에는 그런 매도인이 없습니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "R",
+              "reading": "구주 매입이 포함되면 적용하고, 신주 인수만이면 해당 없음"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fin-07",
+          "topic": "Escrow and paying agent",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "R",
+              "reading": "출자 사업의 가치에 이견이 있을 때 쓰는 에스크로(escrow)나 사후 정산을 봅니다."
+            },
+            "strategic_investment": {
+              "code": "N",
+              "na_reason": "지켜야 할 매매 대금이나 손해배상 약정이 없습니다."
+            },
+            "minority_investment": {
+              "code": "N",
+              "na_reason": "지켜야 할 매매 대금이나 손해배상 약정이 없습니다."
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "지켜야 할 매매 대금이나 손해배상 약정이 없습니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "N",
+              "na_reason": "지켜야 할 매매 대금이나 손해배상 약정이 없습니다."
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fin-08",
+          "topic": "Reverse termination fee",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "N",
+              "na_reason": "매수인이 자금 위험을 지는 인수 계약이 없습니다."
+            },
+            "strategic_investment": {
+              "code": "R",
+              "reading": "구주 매입이 포함되면 적용하고, 신주 인수만이면 해당 없음"
+            },
+            "minority_investment": {
+              "code": "R",
+              "reading": "구주 매입이 포함되면 적용하고, 신주 인수만이면 해당 없음"
+            },
+            "partnership": {
+              "code": "N",
+              "na_reason": "매수인이 자금 위험을 지는 인수 계약이 없습니다."
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "R",
+              "reading": "구주 매입이 포함되면 적용하고, 신주 인수만이면 해당 없음"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "approved in chat with the design"
+          }
+        },
+        {
+          "id": "fin-09",
+          "topic": "Certainty of funds before IC (BINDING)",
+          "sub_tracks": {
+            "m_and_a": {
+              "code": "A"
+            },
+            "jv": {
+              "code": "A"
+            },
+            "strategic_investment": {
+              "code": "A"
+            },
+            "minority_investment": {
+              "code": "A"
+            },
+            "partnership": {
+              "code": "A"
+            },
+            "rbd": {
+              "code": "A"
+            },
+            "corporate_venture": {
+              "code": "A"
+            }
+          },
+          "approval": {
+            "status": "approved",
+            "approved_by": "user",
+            "approved_at": "2026-10-12",
+            "note": "risk-officer review 2026-10-12: reclassified; user decision pending (approval record predates this change)"
+          }
+        }
+      ]
+    }
+  }
 };

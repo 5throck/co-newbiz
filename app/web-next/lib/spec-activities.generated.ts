@@ -5,7 +5,7 @@
 // this projection mirrors the spec.)
 import type { SpecStage } from "./spec-activities.ts";
 
-export const SPEC_VERSION = "2.6.0";
+export const SPEC_VERSION = "2.7.0";
 export const SPEC_STAGES: SpecStage[] = [
   {
     "id": "S1",
@@ -352,6 +352,50 @@ export const SPEC_STAGES: SpecStage[] = [
           "legal-due-diligence",
           "regulatory-screening"
         ],
+        "procedure": [
+          "greenfield-dd",
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "financial-dd",
+        "agent": "financial-analyst",
+        "skills": [
+          "quality-of-earnings",
+          "historical-financial-analysis"
+        ],
+        "procedure": [
+          "greenfield-dd",
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "hr-dd",
+        "agent": "hr-integration-agent",
+        "skills": [
+          "org-readiness-assessment",
+          "talent-pipeline-planning"
+        ],
+        "procedure": [
+          "greenfield-dd",
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "market-dd",
+        "agent": "market-intelligence-agent",
+        "skills": [
+          "competitive-intelligence"
+        ],
+        "procedure": [
+          "greenfield-dd",
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "financing-dd",
+        "agent": "financing-agent",
+        "skills": [],
         "procedure": [
           "greenfield-dd",
           "brownfield-dd"

@@ -45,7 +45,7 @@ const ROUTING_KEYS = [
 /** 0014's seed set, as var_key -> full row, in seed order (routing prefixes only). */
 function seedRows(): { var_key: string; label_ko: string; value_type: string; unit: string | null; source_kind: string; requires_evidence_ref: number; max_age_days: number | null; created_at: string }[] {
   return db
-    .query("SELECT var_key, label_ko, value_type, unit, source_kind, requires_evidence_ref, max_age_days, created_at FROM evidence_var WHERE var_key LIKE 'target.%' OR var_key LIKE 'project.%' ORDER BY rowid")
+    .query("SELECT var_key, label_ko, value_type, unit, source_kind, requires_evidence_ref, max_age_days, created_at FROM evidence_var WHERE (var_key LIKE 'target.%' OR var_key LIKE 'project.%') AND var_key NOT IN ('project.sub_track','project.site_required') ORDER BY rowid") // 0136's two greenfield routing vars are 0136's to pin (tests/unit/greenfield-subtrack.test.ts)
     .all() as never[];
 }
 

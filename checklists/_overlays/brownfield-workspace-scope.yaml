@@ -1,0 +1,2118 @@
+# Initial content transcribed from docs/designs/2026-10-12-brownfield-dd-workspace-scope-by-subtrack-design.md
+# section 4 (item-level classification) and section 6 (sub-track extra checklists).
+# Governance overlay (ADR-0162, Proposed). Checklist YAML text is NOT edited; this
+# file only scopes the seven ADR-0148 S9 workspace checklists, and sections of the
+# attached extra checklists, per brownfield sub-track. m_and_a is the baseline and
+# stays all A. Which extra checklists attach is unchanged (SUB_TRACK_DD_CHECKLISTS,
+# app/web-next/lib/library.ts); `attached_to` below mirrors it. Changes follow the
+# policies/procedures lifecycle row (impact analysis, policy pin, ADR).
+# Validated by checklists/_validate.ts (coverage, codes, C rejected, baseline all A,
+# binding-item guard, replacement targets attached, approval records, counts).
+governance_doc_id: ovl-brownfield-workspace-scope
+layer: checklist-overlay
+title: Brownfield S9 workspace scope by sub-track (deal shape)
+owner_agent: process-governance-manager
+maintainer: process-governance-manager
+version: 1.1.0
+status: proposed
+decision_record: DEC-20261012-01
+track: brownfield
+procedure_id: shared-brownfield-dd
+baseline_sub_track: m_and_a
+sub_track_keys:
+  m_and_a: '인수합병(M&A)'
+  jv: '합작법인(JV)'
+  strategic_investment: '전략적 투자'
+  minority_investment: '소수 지분 투자'
+  partnership: '전략적 제휴(지분 없는 계약 제휴)'
+  rbd: 'R&BD(기술 중심 인수)'
+  corporate_venture: '기업주도형 벤처캐피탈(CVC)'
+codes:
+  A: '그대로 적용'
+  R: '해석을 바꿔 적용(세부 유형별 읽는 법 표시)'
+  X: '대체(대신 판정하는 항목을 가리킴, Y에 넣지 않음)'
+  'N': '거래 형태상 해당 없음(이유 표시, Y에 넣지 않음)'
+fail_closed: '이 오버레이에 없는 항목이나 승인 기록이 없는 행은 A(그대로 적용)로 다루며, N으로 다루지 않습니다. 세부 유형이 비어 있는 브라운필드 프로젝트에는 오버레이를 적용하지 않습니다.'
+legal_basis:
+  - docs/adr/0162-brownfield-dd-workspace-scope-by-subtrack.md
+  - docs/designs/2026-10-12-brownfield-dd-workspace-scope-by-subtrack-design.md
+  - ADR-0148 (seven S9 workspace domains)
+  - ADR-0160 addendum b (overlay mechanism)
+expected_counts:
+  m_and_a:
+    A: 77
+    R: 0
+    X: 0
+    'N': 0
+    judgeable: 77
+    extras_judgeable: 25
+    total_judgeable: 102
+  jv:
+    A: 57
+    R: 18
+    X: 0
+    'N': 2
+    judgeable: 75
+    extras_judgeable: 18
+    total_judgeable: 93
+  strategic_investment:
+    A: 56
+    R: 15
+    X: 0
+    'N': 6
+    judgeable: 71
+    extras_judgeable: 0
+    total_judgeable: 71
+  minority_investment:
+    A: 56
+    R: 15
+    X: 0
+    'N': 6
+    judgeable: 71
+    extras_judgeable: 16
+    total_judgeable: 87
+  partnership:
+    A: 22
+    R: 30
+    X: 2
+    'N': 23
+    judgeable: 52
+    extras_judgeable: 26
+    total_judgeable: 78
+  rbd:
+    A: 75
+    R: 2
+    X: 0
+    'N': 0
+    judgeable: 77
+    extras_judgeable: 15
+    total_judgeable: 92
+  corporate_venture:
+    A: 56
+    R: 15
+    X: 0
+    'N': 6
+    judgeable: 71
+    extras_judgeable: 0
+    total_judgeable: 71
+extra_checklists:
+  chk-brownfield-feasibility-checklist:
+    attached_to:
+      - m_and_a
+    sub_tracks:
+      m_and_a:
+        excluded: []
+    approval:
+      status: approved
+      approved_by: user
+      approved_at: '2026-10-12'
+      note: approved in chat with the design
+  chk-ma-special-topics-checklist:
+    attached_to:
+      - m_and_a
+    sub_tracks:
+      m_and_a:
+        excluded: []
+    approval:
+      status: approved
+      approved_by: user
+      approved_at: '2026-10-12'
+      note: approved in chat with the design
+  chk-rbd-technology-checklist:
+    attached_to:
+      - rbd
+    sub_tracks:
+      rbd:
+        excluded: []
+    approval:
+      status: approved
+      approved_by: user
+      approved_at: '2026-10-12'
+      note: approved in chat with the design
+  chk-partnership-checklist:
+    attached_to:
+      - jv
+      - partnership
+      - minority_investment
+    sub_tracks:
+      jv:
+        excluded: []
+      minority_investment:
+        excluded:
+          - ids:
+              - pt-06
+            na_reason: '합작법인(JV) 지배구조는 합작법인 구조에만 해당합니다.'
+      partnership:
+        excluded:
+          - ids:
+              - pt-06
+            na_reason: '합작법인(JV) 지배구조는 합작법인 구조에만 해당합니다.'
+    approval:
+      status: approved
+      approved_by: user
+      approved_at: '2026-10-12'
+      note: approved in chat with the design
+  chk-deal-shape-presigning-checklist:
+    attached_to:
+      - jv
+      - partnership
+      - minority_investment
+    sub_tracks:
+      jv:
+        excluded:
+          - section: lic
+            ids:
+              - lic-01
+              - lic-02
+              - lic-03
+              - lic-04
+              - lic-05
+              - lic-06
+              - lic-07
+              - lic-08
+              - lic-09
+            na_reason: '이 구간(라이선스 도입)은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 합작법인(JV)입니다.'
+          - section: cdv
+            ids:
+              - cdv-01
+              - cdv-02
+              - cdv-03
+              - cdv-04
+              - cdv-05
+              - cdv-06
+            na_reason: '이 구간(공동 개발)은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 합작법인(JV)입니다.'
+          - section: min
+            ids:
+              - min-01
+              - min-02
+              - min-03
+              - min-04
+              - min-05
+            na_reason: '이 구간(소수 지분 투자)은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 합작법인(JV)입니다.'
+      minority_investment:
+        excluded:
+          - section: lic
+            ids:
+              - lic-01
+              - lic-02
+              - lic-03
+              - lic-04
+              - lic-05
+              - lic-06
+              - lic-07
+              - lic-08
+              - lic-09
+            na_reason: '이 구간(라이선스 도입)은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 소수 지분 투자입니다.'
+          - section: cdv
+            ids:
+              - cdv-01
+              - cdv-02
+              - cdv-03
+              - cdv-04
+              - cdv-05
+              - cdv-06
+            na_reason: '이 구간(공동 개발)은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 소수 지분 투자입니다.'
+          - section: jvd
+            ids:
+              - jvd-01
+              - jvd-02
+              - jvd-03
+              - jvd-04
+              - jvd-05
+              - jvd-06
+            na_reason: '이 구간(합작법인(JV))은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 소수 지분 투자입니다.'
+      partnership:
+        excluded:
+          - section: min
+            ids:
+              - min-01
+              - min-02
+              - min-03
+              - min-04
+              - min-05
+            na_reason: '이 구간(소수 지분 투자)은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 전략적 제휴(지분 없는 계약 제휴)입니다.'
+          - section: jvd
+            ids:
+              - jvd-01
+              - jvd-02
+              - jvd-03
+              - jvd-04
+              - jvd-05
+              - jvd-06
+            na_reason: '이 구간(합작법인(JV))은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 전략적 제휴(지분 없는 계약 제휴)입니다.'
+    approval:
+      status: approved
+      approved_by: user
+      approved_at: '2026-10-12'
+      note: approved in chat with the design
+checklists:
+  chk-commercial-dd-checklist:
+    domain: commercial
+    file: commercial-dd-checklist.yaml
+    items:
+      - id: cdd-01
+        topic: 'Customer concentration'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '제휴 매출이 상대방 고객 기반에 기대는 경우에만 상대방 고객의 쏠림 정도를 봅니다. 그렇지 않으면 공동 제품·서비스의 예상 고객 쏠림을 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: cdd-02
+        topic: 'Customer churn history'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: 'N'
+            na_reason: '계약 기반 제휴로는 고객 기반을 넘겨받지 않습니다. 상대방의 믿음직함은 pt-03과 pt-11에서 따져 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: cdd-03
+        topic: 'Pricing power'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '공동 제품·서비스의 가격 결정력과 수익 배분 비율을 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: cdd-04
+        topic: 'Win/loss analysis'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '제휴가 겨냥하는 시장에서 상대방의 수주 성공·실패 기록을 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: cdd-05
+        topic: 'Channel check'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: cdd-06
+        topic: 'Findings tied to assumption_key / value_impact'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: cdd-07
+        topic: 'Expert interview triangulation'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: cdd-08
+        topic: 'Revenue quality (recommended)'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '사업 계획에 잡힌 제휴 매출의 질을 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+  chk-technical-dd-checklist:
+    domain: technical
+    file: technical-dd-checklist.yaml
+    items:
+      - id: tdd-01
+        topic: 'Site visit'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: tdd-02
+        topic: 'Site visit evidence'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: tdd-03
+        topic: 'TRL of core production process'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: tdd-04
+        topic: 'Bottleneck process'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: tdd-05
+        topic: 'Remaining useful life of equipment'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: R
+            reading: '합작법인(JV)에 출자하는 설비의 남은 사용 가능 기간을 봅니다.'
+          strategic_investment:
+            code: R
+            reading: '지분 비율에 맞춰 중요한 자산만 봅니다.'
+          minority_investment:
+            code: R
+            reading: '지분 비율에 맞춰 중요한 자산만 봅니다.'
+          partnership:
+            code: 'N'
+            na_reason: '계약 기반 제휴에서는 설비를 넘겨받거나 출자하지 않습니다. 상대방의 역량은 pt-09에서 따져 봅니다.'
+          rbd:
+            code: R
+            reading: '기술과 함께 넘겨받는 시험·연구 설비를 봅니다.'
+          corporate_venture:
+            code: R
+            reading: '지분 비율에 맞춰 중요한 자산만 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: tdd-06
+        topic: 'EHS liability exposure'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '함께 하거나 우리 대신 수행하는 활동의 환경·보건·안전(EHS) 책임(도급 책임)을 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: tdd-07
+        topic: 'Independent capex verification'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '제휴에 따라 우리가 약정하는 설비 투자(capex)를 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: tdd-08
+        topic: 'Production line certification status'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+  chk-legal-dd-checklist:
+    domain: legal
+    file: legal-dd-checklist.yaml
+    items:
+      - id: ldd-01
+        topic: 'Good standing of target and subsidiaries'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '계약 상대 법인 자체가 적법하게 존속하는지만 봅니다(자회사는 보지 않습니다).'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-02
+        topic: 'Cap table'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: 'N'
+            na_reason: '지분을 취득하지 않습니다. 실제 소유자는 ldd-19와 pt-02에서 확인합니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-03
+        topic: 'Shareholder consents, ROFR, tag/drag'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: 'N'
+            na_reason: '주식이 오가지 않습니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-04
+        topic: 'Signing authority'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-05
+        topic: 'Borrowing and guarantee restrictions'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '상대방의 이행 능력을 묶는 제한(제휴에 내놓는 자산에 걸린 금지 약정)을 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-06
+        topic: 'Top-20 contract change-of-control scan'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: R
+            reading: '합작법인에 출자하는 사업의 계약(이전 동의)과, 합작법인 설립으로 발동하는 상대방 계약을 봅니다.'
+          strategic_investment:
+            code: R
+            reading: '우리 지분이 대상 회사 계약의 지배권 변경(CoC)이나 동의 기준선을 넘는지 봅니다.'
+          minority_investment:
+            code: R
+            reading: '우리 지분이 대상 회사 계약의 지배권 변경(CoC)이나 동의 기준선을 넘는지 봅니다.'
+          partnership:
+            code: R
+            reading: '상대방 계약 가운데 제휴를 막는 독점·경업 금지·최혜 대우(MFN) 조항을 봅니다. 상대방이 경쟁사이면 경쟁 민감 정보 교환 범위, 클린팀(clean team) 운영, 공정거래법 제40조(부당한 공동행위, 정보 교환 포함) 검토도 함께 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: R
+            reading: '우리 지분이 대상 회사 계약의 지배권 변경(CoC)이나 동의 기준선을 넘는지 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-07
+        topic: 'Asset vs share transfer'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: R
+            reading: '합작법인에 내놓는 사업이나 자산의 출자 방식을 봅니다.'
+          strategic_investment:
+            code: 'N'
+            na_reason: '신주 인수나 구주 매입이므로 자산 이전이 없습니다.'
+          minority_investment:
+            code: 'N'
+            na_reason: '신주 인수나 구주 매입이므로 자산 이전이 없습니다.'
+          partnership:
+            code: 'N'
+            na_reason: '이전되는 것이 없습니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: 'N'
+            na_reason: '신주 인수나 구주 매입이므로 자산 이전이 없습니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-08
+        topic: 'Loans requiring consent at close'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: R
+            reading: '우리 참여로 동의나 조기 상환이 필요해지는 대상 회사 차입을 봅니다.'
+          strategic_investment:
+            code: R
+            reading: '우리 참여로 동의나 조기 상환이 필요해지는 대상 회사 차입을 봅니다.'
+          minority_investment:
+            code: R
+            reading: '우리 참여로 동의나 조기 상환이 필요해지는 대상 회사 차입을 봅니다.'
+          partnership:
+            code: 'N'
+            na_reason: '거래 종결(closing)이 없습니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: R
+            reading: '우리 참여로 동의나 조기 상환이 필요해지는 대상 회사 차입을 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-09
+        topic: 'Litigation and regulatory investigations'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-10
+        topic: 'IP inventory and inventor assignment'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '상대방이 제휴에 가져오는 지식재산(기존 IP)을 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-11
+        topic: 'In/out licences'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-12
+        topic: 'IP encumbrances, fees, disputes'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '제휴에 쓰는 상대방 기존 IP에 걸린 담보·부담·분쟁을 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-13
+        topic: 'PIIA coverage'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '공동 작업에 배치되는 상대방 직원의 직무발명 승계(직무발명 규정·승계 통지)·비밀유지 약정(PIIA) 적용 범위를 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-14
+        topic: 'Union and pension (CBA succession)'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: R
+            reading: '합작법인으로 옮기는 직원의 단체협약(CBA) 승계를 봅니다.'
+          strategic_investment:
+            code: 'N'
+            na_reason: '고용주가 바뀌지 않습니다. 대상 회사의 노사 관계는 hdd-06에서 따져 봅니다.'
+          minority_investment:
+            code: 'N'
+            na_reason: '고용주가 바뀌지 않습니다. 대상 회사의 노사 관계는 hdd-06에서 따져 봅니다.'
+          partnership:
+            code: 'N'
+            na_reason: '옮겨 오는 직원이 없습니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: 'N'
+            na_reason: '고용주가 바뀌지 않습니다. 대상 회사의 노사 관계는 hdd-06에서 따져 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-15
+        topic: 'Permit transfer classification'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: R
+            reading: '합작법인 이름으로 받아야 할 인허가와 모회사가 가진 인허가를 나눠 봅니다.'
+          strategic_investment:
+            code: R
+            reading: '주주 구성이 바뀔 때 신고나 승인이 필요한 인허가를 봅니다.'
+          minority_investment:
+            code: R
+            reading: '주주 구성이 바뀔 때 신고나 승인이 필요한 인허가를 봅니다.'
+          partnership:
+            code: R
+            reading: '각 당사자가 맡은 작업에 필요한 인허가를 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: R
+            reading: '주주 구성이 바뀔 때 신고나 승인이 필요한 인허가를 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-16
+        topic: 'Environmental notices, land survey, contamination'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '함께 쓰는 부지만 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-17
+        topic: 'Real estate title and leases'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '함께 쓰는 부동산만 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-18
+        topic: 'Privacy'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '제휴로 주고받는 개인정보(공유 근거, 국외 이전)를 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-19
+        topic: 'Anti-bribery and sanctions screening'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-20
+        topic: 'Tax filings current'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: 'N'
+            na_reason: '인수하는 법인이 없습니다. 제휴의 세금 영향은 fdd-04에서 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-21
+        topic: 'Findings register (RAG)'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: ldd-22
+        topic: 'Korean business-transfer employee succession'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: R
+            reading: '사업 양도로 합작법인에 옮기는 직원을 봅니다.'
+          strategic_investment:
+            code: R
+            reading: '출자·투자에 사업부·인력 이전(현물출자 포함)이 수반되면 적용'
+          minority_investment:
+            code: R
+            reading: '출자·투자에 사업부·인력 이전(현물출자 포함)이 수반되면 적용'
+          partnership:
+            code: 'N'
+            na_reason: '사업 양도가 없습니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: R
+            reading: '출자·투자에 사업부·인력 이전(현물출자 포함)이 수반되면 적용'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+  chk-market-dd-checklist:
+    domain: market
+    file: market-dd-checklist.yaml
+    items:
+      - id: mdd-01
+        topic: 'TAM/SAM triangulation'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: mdd-02
+        topic: 'Growth drivers vs management assumptions'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: mdd-03
+        topic: 'Competitive landscape from customers, win/loss'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: mdd-04
+        topic: 'Share, concentration, pricing power'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: mdd-05
+        topic: 'Target''s moat'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '공동 제품·서비스의 경쟁 우위(해자)를 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: mdd-06
+        topic: 'Concentration (uses cdd-01)'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: 'cdd-01의 제휴 해석을 따릅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: mdd-07
+        topic: 'Churn and retention (uses cdd-02)'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: 'N'
+            na_reason: 'cdd-02와 같습니다. 계약 기반 제휴로는 고객 기반을 넘겨받지 않습니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: mdd-08
+        topic: '80/20 revenue analysis'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '제휴가 기대는 상대방 매출의 80/20 구조를 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: mdd-09
+        topic: 'Expansion revenue breadth'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: 'N'
+            na_reason: '확장 매출을 잴 수 있는, 넘겨받는 고객 기반이 없습니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: mdd-10
+        topic: 'Distribution structure'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: mdd-11
+        topic: 'Thesis verdicts and bid adjustment'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: R
+            reading: '조정 대상은 출자 가치나 지분 배분입니다.'
+          strategic_investment:
+            code: R
+            reading: '조정 대상은 투자 전 기업가치(pre-money)나 투자 조건입니다.'
+          minority_investment:
+            code: R
+            reading: '조정 대상은 투자 전 기업가치(pre-money)나 투자 조건입니다.'
+          partnership:
+            code: R
+            reading: '조정 대상은 수익 배분이나 단계별 지급(마일스톤) 조건입니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: R
+            reading: '조정 대상은 투자 전 기업가치(pre-money)나 투자 조건입니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+  chk-financial-dd-checklist:
+    domain: financial
+    file: financial-dd-checklist.yaml
+    items:
+      - id: fdd-01
+        topic: 'Quality of earnings'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: X
+            replaced_by:
+              - checklist: chk-partnership-checklist
+                item: pt-03
+                stage: 'S9 (이 세부 유형에 붙는 제휴 체크리스트)'
+            note: 'pt-03(상대방의 재무 안정성과 역량, 근거 포함)으로 대체합니다. 이 세부 유형에 붙는 제휴 체크리스트에서 같은 S9 단계에 판정합니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fdd-02
+        topic: 'Working capital'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: 'N'
+            na_reason: '넘겨받는 재무상태표가 없습니다. 제휴에 필요한 운전자본은 fin-01에서 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fdd-03
+        topic: 'Debt and contingent liabilities'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '이행을 위협하는 상대방 부채와, 제휴에 따른 우리의 우발 의무를 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fdd-04
+        topic: 'Tax position'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '제휴 대금의 세무 처리(원천징수, 국경 간 거래의 이전가격)를 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fdd-05
+        topic: 'Cash-flow quality'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: 'N'
+            na_reason: '넘겨받는 현금흐름이 없습니다. 상대방의 역량은 pt-03에서 따져 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fdd-06
+        topic: 'Related-party transactions'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '제휴에 닿는 상대방의 특수관계자 거래를 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fdd-07
+        topic: 'Management vs audited accounts'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: X
+            replaced_by:
+              - checklist: chk-partnership-checklist
+                item: pt-03
+                stage: 'S9 (이 세부 유형에 붙는 제휴 체크리스트)'
+            note: 'pt-03(상대방의 재무 안정성과 역량, 근거 포함)으로 대체합니다. 이 세부 유형에 붙는 제휴 체크리스트에서 같은 S9 단계에 판정합니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fdd-08
+        topic: 'Forecast assessment'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '제휴 매출·비용 계획의 전망을 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+  chk-hr-dd-checklist:
+    domain: hr
+    file: hr-dd-checklist.yaml
+    items:
+      - id: hdd-01
+        topic: 'Key person map'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: R
+            reading: '떠나면 우리 지분 가치를 해치는 핵심 인물을 봅니다. 붙잡아 둘 수단은 우리 쪽 제안이 아니라 이사회·주주 권리입니다.'
+          minority_investment:
+            code: R
+            reading: '떠나면 우리 지분 가치를 해치는 핵심 인물을 봅니다. 붙잡아 둘 수단은 우리 쪽 제안이 아니라 이사회·주주 권리입니다.'
+          partnership:
+            code: R
+            reading: '제휴 계약에 이름이 오른 상대방 핵심 인물(핵심 인력 조항)을 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: R
+            reading: '떠나면 우리 지분 가치를 해치는 핵심 인물을 봅니다. 붙잡아 둘 수단은 우리 쪽 제안이 아니라 이사회·주주 권리입니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: hdd-02
+        topic: 'Stay bonus after closing'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: R
+            reading: '합작법인에 파견하거나 옮기는 핵심 직원을 붙잡아 둘 방안을 봅니다.'
+          strategic_investment:
+            code: 'N'
+            na_reason: '대상 회사 직원을 우리가 고용하지 않으며, 잔류 보너스도 내지 않습니다.'
+          minority_investment:
+            code: 'N'
+            na_reason: '대상 회사 직원을 우리가 고용하지 않으며, 잔류 보너스도 내지 않습니다.'
+          partnership:
+            code: 'N'
+            na_reason: '대상 회사 직원을 우리가 고용하지 않으며, 잔류 보너스도 내지 않습니다.'
+          rbd:
+            code: R
+            reading: '기술과 함께 넘겨받는 발명자와 핵심 연구원을 붙잡아 둘 방안을 봅니다.'
+          corporate_venture:
+            code: 'N'
+            na_reason: '대상 회사 직원을 우리가 고용하지 않으며, 잔류 보너스도 내지 않습니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: hdd-03
+        topic: 'Day-1 retention plan'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: R
+            reading: '합작법인 직원의 첫날(Day 1) 잔류 계획을 봅니다.'
+          strategic_investment:
+            code: 'N'
+            na_reason: '인수 첫날(Day 1)이 없습니다. 핵심 인물 위험은 hdd-01에서 따져 봅니다.'
+          minority_investment:
+            code: 'N'
+            na_reason: '인수 첫날(Day 1)이 없습니다. 핵심 인물 위험은 hdd-01에서 따져 봅니다.'
+          partnership:
+            code: 'N'
+            na_reason: '인수 첫날(Day 1)이 없습니다. 핵심 인물 위험은 hdd-01에서 따져 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: 'N'
+            na_reason: '인수 첫날(Day 1)이 없습니다. 핵심 인물 위험은 hdd-01에서 따져 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: hdd-04
+        topic: 'Organisation documentation'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '제휴 운영 구조와 팀 구성을 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: hdd-05
+        topic: 'Leadership bench'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: R
+            reading: '두 모회사에서 오는 합작법인 경영진을 봅니다.'
+          strategic_investment:
+            code: R
+            reading: '경영진의 역량을 투자 위험으로 봅니다.'
+          minority_investment:
+            code: R
+            reading: '경영진의 역량을 투자 위험으로 봅니다.'
+          partnership:
+            code: R
+            reading: '상대방의 제휴 책임자와 지정된 후원 임원을 봅니다(pt-12와 함께).'
+          rbd:
+            code: A
+          corporate_venture:
+            code: R
+            reading: '경영진의 역량을 투자 위험으로 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: hdd-06
+        topic: 'CBA'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: 'N'
+            na_reason: '옮겨 오는 직원이 없습니다. 상대방의 노사 분규 위험은 pt-04에서 따져 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: hdd-07
+        topic: 'Pension and benefit liabilities'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: R
+            reading: '옮기는 직원과 함께 넘어오는 퇴직·복리후생 부채를 봅니다.'
+          strategic_investment:
+            code: R
+            reading: '연금 부족액을 지분 비율만큼 가치평가 항목으로 봅니다.'
+          minority_investment:
+            code: R
+            reading: '연금 부족액을 지분 비율만큼 가치평가 항목으로 봅니다.'
+          partnership:
+            code: 'N'
+            na_reason: '넘겨받는 복리후생 부채가 없습니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: R
+            reading: '연금 부족액을 지분 비율만큼 가치평가 항목으로 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: hdd-08
+        topic: 'EU works council'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: R
+            reading: '유럽 상대방이나 자사 사업장 인력·업무가 제휴로 재편되는 경우 적용'
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: hdd-09
+        topic: 'Employment succession regime'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: R
+            reading: '합작법인으로 옮기는 직원에게 적용되는 고용 승계 제도를 봅니다.'
+          strategic_investment:
+            code: R
+            reading: '출자·투자에 사업부·인력 이전(현물출자 포함)이 수반되면 적용'
+          minority_investment:
+            code: R
+            reading: '출자·투자에 사업부·인력 이전(현물출자 포함)이 수반되면 적용'
+          partnership:
+            code: 'N'
+            na_reason: '사업(영업) 이전이 없습니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: R
+            reading: '출자·투자에 사업부·인력 이전(현물출자 포함)이 수반되면 적용'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: hdd-10
+        topic: 'Culture gap'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: R
+            reading: '합작법인 안에서 두 모회사의 조직 문화를 봅니다.'
+          strategic_investment:
+            code: R
+            reading: '우리 팀과 투자 대상 회사의 협업 궁합을 봅니다.'
+          minority_investment:
+            code: R
+            reading: '이사 지명권이나 거부권이 있으면 적용'
+          partnership:
+            code: R
+            reading: '일하는 방식의 궁합을 봅니다(pt-10과 함께).'
+          rbd:
+            code: A
+          corporate_venture:
+            code: R
+            reading: '우리 팀과 투자 대상 회사의 협업 궁합을 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: hdd-11
+        topic: 'Day-1 and 100-day HR plan'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: R
+            reading: '합작법인 인사 체계를 세우는 계획(급여, 규정)을 봅니다.'
+          strategic_investment:
+            code: 'N'
+            na_reason: '우리 조직에 합쳐지는 조직이 없습니다.'
+          minority_investment:
+            code: 'N'
+            na_reason: '우리 조직에 합쳐지는 조직이 없습니다.'
+          partnership:
+            code: 'N'
+            na_reason: '우리 조직에 합쳐지는 조직이 없습니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: 'N'
+            na_reason: '우리 조직에 합쳐지는 조직이 없습니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+  chk-financing-plan-checklist:
+    domain: financing
+    file: financing-plan-checklist.yaml
+    items:
+      - id: fin-01
+        topic: 'Sources and uses'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fin-02
+        topic: 'Signed commitment letters'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: R
+            reading: '각 모회사가 약정한 출자금을 봅니다.'
+          strategic_investment:
+            code: R
+            reading: '우리 투자금이나 제휴 예산에 대한 내부 자금 승인을 봅니다. 차입으로 조달할 때만 외부 확약서를 봅니다.'
+          minority_investment:
+            code: R
+            reading: '우리 투자금이나 제휴 예산에 대한 내부 자금 승인을 봅니다. 차입으로 조달할 때만 외부 확약서를 봅니다.'
+          partnership:
+            code: R
+            reading: '우리 투자금이나 제휴 예산에 대한 내부 자금 승인을 봅니다. 차입으로 조달할 때만 외부 확약서를 봅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: R
+            reading: '우리 투자금이나 제휴 예산에 대한 내부 자금 승인을 봅니다. 차입으로 조달할 때만 외부 확약서를 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fin-03
+        topic: 'Covenant headroom'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fin-04
+        topic: 'Funds-flow memorandum at closing'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: R
+            reading: '합작법인 설립 때의 자금 흐름(출자 요청)을 봅니다.'
+          strategic_investment:
+            code: R
+            reading: '투자 종결 때의 투자금 자금 흐름을 봅니다.'
+          minority_investment:
+            code: R
+            reading: '투자 종결 때의 투자금 자금 흐름을 봅니다.'
+          partnership:
+            code: 'N'
+            na_reason: '거래 종결(closing)이 없습니다. 제휴 대금은 fin-01에 담긴 계약 일정을 따릅니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: R
+            reading: '투자 종결 때의 투자금 자금 흐름을 봅니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fin-05
+        topic: 'FX plan'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fin-06
+        topic: 'Certain-funds structure'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: 'N'
+            na_reason: '자금 확실성(certain funds)은 경쟁 인수에서 매도인을 보호하는 장치입니다. 신주 인수, 출자, 제휴에는 그런 매도인이 없습니다.'
+          strategic_investment:
+            code: R
+            reading: '구주 매입이 포함되면 적용하고, 신주 인수만이면 해당 없음'
+          minority_investment:
+            code: R
+            reading: '구주 매입이 포함되면 적용하고, 신주 인수만이면 해당 없음'
+          partnership:
+            code: 'N'
+            na_reason: '자금 확실성(certain funds)은 경쟁 인수에서 매도인을 보호하는 장치입니다. 신주 인수, 출자, 제휴에는 그런 매도인이 없습니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: R
+            reading: '구주 매입이 포함되면 적용하고, 신주 인수만이면 해당 없음'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fin-07
+        topic: 'Escrow and paying agent'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: R
+            reading: '출자 사업의 가치에 이견이 있을 때 쓰는 에스크로(escrow)나 사후 정산을 봅니다.'
+          strategic_investment:
+            code: 'N'
+            na_reason: '지켜야 할 매매 대금이나 손해배상 약정이 없습니다.'
+          minority_investment:
+            code: 'N'
+            na_reason: '지켜야 할 매매 대금이나 손해배상 약정이 없습니다.'
+          partnership:
+            code: 'N'
+            na_reason: '지켜야 할 매매 대금이나 손해배상 약정이 없습니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: 'N'
+            na_reason: '지켜야 할 매매 대금이나 손해배상 약정이 없습니다.'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fin-08
+        topic: 'Reverse termination fee'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: 'N'
+            na_reason: '매수인이 자금 위험을 지는 인수 계약이 없습니다.'
+          strategic_investment:
+            code: R
+            reading: '구주 매입이 포함되면 적용하고, 신주 인수만이면 해당 없음'
+          minority_investment:
+            code: R
+            reading: '구주 매입이 포함되면 적용하고, 신주 인수만이면 해당 없음'
+          partnership:
+            code: 'N'
+            na_reason: '매수인이 자금 위험을 지는 인수 계약이 없습니다.'
+          rbd:
+            code: A
+          corporate_venture:
+            code: R
+            reading: '구주 매입이 포함되면 적용하고, 신주 인수만이면 해당 없음'
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: approved in chat with the design
+      - id: fin-09
+        topic: 'Certainty of funds before IC (BINDING)'
+        sub_tracks:
+          m_and_a:
+            code: A
+          jv:
+            code: A
+          strategic_investment:
+            code: A
+          minority_investment:
+            code: A
+          partnership:
+            code: A
+          rbd:
+            code: A
+          corporate_venture:
+            code: A
+        approval:
+          status: approved
+          approved_by: user
+          approved_at: '2026-10-12'
+          note: 'risk-officer review 2026-10-12: reclassified; user decision pending (approval record predates this change)'

@@ -88,6 +88,8 @@ const ROOT = resolve(import.meta.dirname);
 const PROJECT_ROOT = resolve(ROOT, "..");
 const SKILLS_DIR = join(PROJECT_ROOT, "skills");
 const ROUTING_VARS_MIGRATION = join(PROJECT_ROOT, "db", "migrations", "0014_routing_vars.sql");
+/** ADR-0160 addendum: the routing-var seeds added by 0136 (project.sub_track, project.site_required). */
+const ROUTING_VARS_MIGRATIONS = [ROUTING_VARS_MIGRATION, join(PROJECT_ROOT, "db", "migrations", "0136_greenfield_subtrack_vars.sql")];
 const HUMAN_ROLES_FILE = join(ROOT, "_human-roles.yaml");
 const OUTPUT_TYPES_FILE = join(ROOT, "_output-types.yaml");
 const COMMITTEES_FILE = join(ROOT, "_committees.yaml");
@@ -483,7 +485,7 @@ export function checkAppliesWhen(file: string, where: string, appliesWhen: unkno
     if (!seeded.has(varKey)) {
       issues.push({
         file,
-        message: `${where}: applies_when references var_key '${varKey}' — not seeded in db/migrations/0014_routing_vars.sql (the registry is the only legal var vocabulary)`,
+        message: `${where}: applies_when references var_key '${varKey}' — not seeded in the routing-var migrations (0014, 0136) (the registry is the only legal var vocabulary)`,
         severity: "error",
       });
     }
@@ -494,7 +496,11 @@ export function checkAppliesWhen(file: string, where: string, appliesWhen: unkno
 /** Load the seed set once per run; a missing/unreadable migration file is itself an error. */
 async function loadSeedSet(): Promise<{ seeded: Set<string>; error: Issue | null }> {
   try {
-    return { seeded: seededVarKeys(await readFile(ROUTING_VARS_MIGRATION, "utf-8")), error: null };
+    const seeded = new Set<string>();
+    for (const file of ROUTING_VARS_MIGRATIONS) {
+      for (const key of seededVarKeys(await readFile(file, "utf-8"))) seeded.add(key);
+    }
+    return { seeded, error: null };
   } catch (e) {
     return {
       seeded: new Set<string>(),

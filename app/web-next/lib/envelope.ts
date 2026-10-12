@@ -45,3 +45,10 @@ export const forbidden = (code: string, message: string) => fail(403, code, mess
 export const notFound = (message = "Not found.") => fail(404, "not_found", message);
 export const badRequest = (code: string, message: string) => fail(400, code, message);
 export const unprocessable = (code: string, message: string) => fail(422, code, message);
+
+/** SQLite "no such table/column" from a pending migration -> 503 migration_pending; null for any other error. */
+export function migrationPendingResponse(e: unknown) {
+  const msg = e instanceof Error ? e.message : "";
+  if (!/no such (table|column)/i.test(msg)) return null;
+  return fail(503, "migration_pending", "Restart the server to apply pending migrations");
+}

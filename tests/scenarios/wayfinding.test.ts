@@ -114,16 +114,19 @@ describe("R2-A wayfinding", () => {
   }, 90_000);
 
   test("picker pages have an h1, a breadcrumb, a create action, an active sidebar item and a back control", async () => {
-    const cases: Array<[string, RegExp, RegExp]> = [
-      ["/market", /S1 시장분석/, /새 시장분석 시작/],
-      ["/opportunities", /S2 기회 발굴/, /새 기회 등록/],
-      ["/synergy", /S3 시너지/, /그룹·계열사 프로파일 등록/],
-      ["/route-decision", /S4 진출방식 결정/, /새 검토 시작/],
+    // ADR-0105 / tests/unit/navigation.test.ts: /route-decision is a flat deal-less route whose
+    // top-bar back (button.back-link) replaces the in-page breadcrumb; CarrierGate pickers keep one.
+    const cases: Array<[string, RegExp, RegExp, boolean]> = [
+      ["/market", /S1 시장분석/, /새 시장분석 시작/, true],
+      ["/opportunities", /S2 기회 발굴/, /새 기회 등록/, true],
+      ["/synergy", /S3 시너지/, /그룹·계열사 프로파일 등록/, true],
+      ["/route-decision", /S4 진출방식 결정/, /새 검토 시작/, false],
     ];
-    for (const [path, title, create] of cases) {
+    for (const [path, title, create, hasBreadcrumb] of cases) {
       await visit(s.page, app, path);
       await s.page.getByRole("heading", { level: 1, name: title }).waitFor({ state: "visible", timeout: 30_000 });
-      await s.page.getByRole("navigation", { name: "현재 위치" }).waitFor({ state: "visible" });
+      if (hasBreadcrumb) await s.page.getByRole("navigation", { name: "현재 위치" }).waitFor({ state: "visible" });
+      else expect(await s.page.getByRole("navigation", { name: "현재 위치" }).count()).toBe(0);
       expect(await s.page.getByRole("link", { name: create }).count()).toBeGreaterThan(0);
       expect(await s.page.locator("aside a.side-nav-link-active", { hasText: "검토/안건 보드" }).count()).toBe(1);
       expect(await s.page.locator("button.back-link").count()).toBe(1);

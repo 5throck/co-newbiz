@@ -190,7 +190,7 @@ export function dedupTermNames(ko: string | null | undefined, en: string | null 
 }
 
 
-export const DD_DOMAIN_LABEL: Record<string, string> = { commercial: "상업 실사", technical: "기술 실사", legal: "법무 실사" };
+export const DD_DOMAIN_LABEL: Record<string, string> = { commercial: "상업 실사", technical: "기술 실사", legal: "법무 실사", financial: "재무 실사", hr: "인사 실사", market: "시장 실사", financing: "자금조달 계획" };
 
 /** DD finding category (dd_finding.category): the DD domains plus `rbd` (db migration 0019 rbd_source rule). */
 export const FINDING_CATEGORY_LABEL: Record<string, string> = {
@@ -275,3 +275,69 @@ export function displayOrNotRecorded(value: string | number | null | undefined):
   const text = String(value).trim();
   return text === "" ? { text: NOT_RECORDED_LABEL, empty: true } : { text, empty: false };
 }
+
+// ── Greenfield S9 plan verification / S10 establishment structure (ADR-0160) ──
+// Wording for the greenfield-facing screens. Final terms belong to glossary-curator and the human
+// (design 2026-10-11-greenfield-dd-and-investment-structure-by-subtrack-design.md, Q1).
+
+/** Greenfield-facing S9 heading wording (non-default sub-tracks only; the null sub-track keeps the legacy heading). */
+export const GF_S9_STAGE_LABEL = "계획 검증"; // INTERIM-WORDING Q1 ("plan verification" family)
+/** Greenfield-facing S10 heading wording. */
+export const GF_S10_STAGE_LABEL = "설립 구조"; // INTERIM-WORDING Q1 ("establishment structure" family)
+
+/** `greenfield-dd` step ids (procedure v1.1.0) -> display name. */
+export const GF_DD_STEP_LABEL: Record<number, string> = {
+  1: "부지 방문 실사", // INTERIM-WORDING Q1
+  2: "인력 확보 계획(talent pipeline)", // INTERIM-WORDING Q1
+  3: "지역사회 수용성", // INTERIM-WORDING Q1
+  4: "실사 결과의 가치평가 반영", // INTERIM-WORDING Q1
+  5: "게이트 통과 기록", // INTERIM-WORDING Q1
+  6: "핵심 인력·역량 준비도", // INTERIM-WORDING Q1
+  7: "기술·시장 계획 검증", // INTERIM-WORDING Q1
+  8: "설립 준비도(사내벤처)", // INTERIM-WORDING Q1
+};
+
+/** Sub-track class shown on the S9 panel (class is 'none' | sub-track | 'unknown'). */
+export const GF_SUB_TRACK_CLASS_LABEL: Record<string, string> = {
+  none: "신규 부지 설립(세부 트랙 없음)", // INTERIM-WORDING Q1
+  existing_business_rbd: GF_SUB.existing_business_rbd,
+  intra_venture: GF_SUB.intra_venture,
+  unknown: "알 수 없는 세부 트랙", // INTERIM-WORDING Q1
+};
+
+/** Establishment vehicle wording for greenfield routes (stored enum values unchanged). */
+export const GF_VEHICLE_LABEL: Record<string, string> = {
+  direct: "사내 직접 추진(사업부 내 조직)", // INTERIM-WORDING Q1
+  spc: "SPC/SPV(목적법인)",
+  holdco: "자회사 설립(홀딩스 경유)", // INTERIM-WORDING Q1
+  internal_venture_spinoff: "내부 벤처 분사", // INTERIM-WORDING Q1
+  jv: "합작회사(JV) 설립", // INTERIM-WORDING Q1
+};
+
+/** JV share wording ("our share in JV") for greenfield; the full-acquisition value is not offered. */
+export const GF_JV_STAKE_LABEL: Record<string, string> = {
+  majority: "합작 지분 과반",
+  minority: "합작 지분 소수",
+  joint_control: "공동 통제",
+};
+
+/** Suggested funding-source / use row names for greenfield (stored as free-text financing-plan rows). */
+export const GF_FUNDING_SOURCE_PRESETS = [
+  "자기자본(출자)",
+  "프로젝트 파이낸싱",
+  "정부 자금·보조금",
+  "차입금(금융기관)",
+] as const; // INTERIM-WORDING Q1
+export const GF_FUNDING_USE_PRESETS = [
+  "부지·설비 자체 건설(build)",
+  "부지·설비 임차(lease)",
+  "연구개발·인력",
+  "운전자금",
+] as const; // INTERIM-WORDING Q1
+
+/** Capex tranche status wording. */
+export const TRANCHE_STATUS_LABEL: Record<string, string> = {
+  planned: "집행 예정",
+  released: "집행 완료",
+  withheld: "보류",
+}; // INTERIM-WORDING Q1

@@ -16,7 +16,9 @@ import { useAuth } from "../../lib/auth-client.tsx";
 import { StageFrame } from "../StageFrame.tsx";
 import { PrimaryAction, useToast } from "../ui.tsx";
 import { TabNav } from "../TabNav.tsx";
-import { RECORD_KEY_LABEL } from "../../lib/labels.ts";
+import { RECORD_KEY_LABEL, GF_FUNDING_SOURCE_PRESETS, GF_FUNDING_USE_PRESETS, GF_JV_STAKE_LABEL, GF_S10_STAGE_LABEL, GF_VEHICLE_LABEL } from "../../lib/labels.ts";
+import { balanceView, buildHypothesisPayload, hypothesisFieldVisibility, type TrancheView } from "../../lib/greenfield-structure-view.ts";
+import { CapexTrancheTable } from "./CapexTrancheTable.tsx";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 
@@ -81,7 +83,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
   const urlSync = !embedded;
   const [localTab, setLocalTab] = useState("scenarios");
   const tabParam = urlSync ? searchParams.get("tab") : null;
-  const tab = tabParam === "reco" || tabParam === "financing" ? tabParam : "hypotheses";
+  const tab = tabParam === "reco" || tabParam === "financing" || tabParam === "capex" ? tabParam : "hypotheses";
   const setTab = (key: string) => {
     if (urlSync) router.replace(`/projects/${projectId}/deal-structure?tab=${key}`, { scroll: false });
     else setLocalTab(key);
@@ -114,6 +116,9 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
       cautions: string[];
     };
   }
+  // ADR-0160: greenfield routes get the establishment-structure view (M&A-only fields hidden, capex tranches).
+  const [isGf, setIsGf] = useState(false);
+  const [tranches, setTranches] = useState<TrancheView[]>([]);
   const [reco, setReco] = useState<DealStructureReco | null>(null);
   const [recoLoading, setRecoLoading] = useState(false);
   const [recoError, setRecoError] = useState<string | null>(null);
@@ -122,13 +127,25 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
     api.get<View>(`/api/projects/${encodeURIComponent(projectId)}/deal-structure`)
       .then((r) => setData(r.data))
       .catch((e) => setError(e instanceof Error ? e.message : "투자구조 데이터를 불러오지 못했습니다."));
+    // Track detection: greenfield_scope is null for brownfield / unrouted projects (brownfield view unchanged).
+    api.get<{ greenfield_scope: unknown | null }>(`/api/projects/${encodeURIComponent(projectId)}/greenfield-scope`)
+      .then((r) => {
+        const gf = !!r.data.greenfield_scope;
+        setIsGf(gf);
+        if (gf) {
+          api.get<{ tranches: TrancheView[] }>(`/api/projects/${encodeURIComponent(projectId)}/capex-tranches`)
+            .then((t) => setTranches(t.data.tranches))
+            .catch((e) => setError(e instanceof Error ? e.message : "capex 트랜치를 불러오지 못했습니다."));
+        }
+      })
+      .catch(() => setIsGf(false));
   }, [projectId]);
   useEffect(() => { load(); }, [load]);
 
   /** Records the drafted structure hypothesis (the form's own submit; the header primary opens and focuses the form). */
   function saveStructure() {
     if (!newHyp.rationale.trim()) { setError("근거(rationale)는 필수입니다."); return; }
-    void post({ action: "hypothesize", ...newHyp, vehicle: newHyp.vehicle || null, asset_or_stock: newHyp.asset_or_stock || null, stake_type: newHyp.stake_type || null, instrument_mix: newHyp.instrument_mix || null }, "투자구조 가설을 기록했습니다.");
+    void post(buildHypothesisPayload(isGf, newHyp), "투자구조 가설을 기록했습니다.");
     setFormOpen(false);
     setNewHyp({ vehicle: "", asset_or_stock: "", stake_type: "", instrument_mix: "", tax_structure_note: "", liability_isolation_note: "", financing_leverage_note: "", exit_structure_note: "", rationale: "" });
   }
@@ -152,8 +169,9 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
     setNewHyp((h) => ({
       ...h,
       vehicle: r.vehicle ?? h.vehicle,
-      stake_type: r.stake_type ?? h.stake_type,
-      instrument_mix: r.instrument_mix ?? h.instrument_mix,
+      // Greenfield: M&A-only suggestions (stake, instrument mix) are never copied into the form.
+      stake_type: isGf ? h.stake_type : r.stake_type ?? h.stake_type,
+      instrument_mix: isGf ? h.instrument_mix : r.instrument_mix ?? h.instrument_mix,
       tax_structure_note: r.four_axis.tax_structure_note !== "검증 필요" ? r.four_axis.tax_structure_note : h.tax_structure_note,
       liability_isolation_note: r.four_axis.liability_isolation_note !== "검증 필요" ? r.four_axis.liability_isolation_note : h.liability_isolation_note,
       financing_leverage_note: r.four_axis.financing_leverage_note !== "검증 필요" ? r.four_axis.financing_leverage_note : h.financing_leverage_note,
@@ -195,7 +213,11 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
     setNewEntry({ kind: newEntry.kind, name: "", amount_krw_m: "", note: "" });
   }
 
+  const vehicleLabels = isGf ? GF_VEHICLE_LABEL : VEHICLE_LABEL;
+  const vis = hypothesisFieldVisibility(isGf, newHyp.vehicle);
+  const axisLabel = (k: string) => (isGf && k === "tax_structure_note" ? "절세·지역 인센티브 (환수 조건 포함)" : AXIS_LABEL[k]);
   const totals = data?.financing.totals;
+  const balance = isGf ? balanceView(totals) : null;
   const diff = totals ? Math.round((totals.sources - totals.uses) * 10) / 10 : 0;
 
   return (
@@ -215,7 +237,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
         disabled={!canAct}
         disabledReason="투자구조 가설 기록은 analyst 권한이 필요합니다."
       />
-      <StageFrame stageId="S10" heading="S10 투자구조 설계 — 비히클·4축 검토·자금조달">
+      <StageFrame stageId="S10" heading={isGf ? `S10 ${GF_S10_STAGE_LABEL} — 설립 비히클·4축 검토·자금조달·집행 단계` : "S10 투자구조 설계 — 비히클·4축 검토·자금조달"}>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
           비히클(SPC 포함)과 절세 구조·책임 격리·재무 레버리지·엑싯 구조 4대 축을 검토하고,
           자금조달 sources &amp; uses를 균형시킵니다. 이 산출물이 S11 IC 패키지의 입력입니다.
@@ -232,6 +254,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
             ...(canAct ? [{ key: "reco", label: "AI 추천" }] : []),
             { key: "hypotheses", label: "투자구조 가설", count: data?.hypotheses.length },
             { key: "financing", label: "자금조달 계획" },
+            ...(isGf ? [{ key: "capex", label: "capex 집행 단계", count: tranches.length }] : []),
           ]}
         />
 
@@ -256,9 +279,9 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                   <span className={`status-chip ${reco.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
                     {reco.source === "llm" ? `AI 추천${reco.provider ? ` · ${reco.provider}` : ""}` : "결정론 폴백"}
                   </span>
-                  {reco.recommendation.vehicle && <span className="status-chip status-amber">{VEHICLE_LABEL[reco.recommendation.vehicle] ?? reco.recommendation.vehicle}</span>}
-                  {reco.recommendation.stake_type && <span className="status-chip status-not-started">지분: {STAKE_LABEL[reco.recommendation.stake_type] ?? reco.recommendation.stake_type}</span>}
-                  {reco.recommendation.instrument_mix && <span className="status-chip status-not-started">지급 수단 구성: {INSTRUMENT_LABEL[reco.recommendation.instrument_mix] ?? reco.recommendation.instrument_mix}</span>}
+                  {reco.recommendation.vehicle && <span className="status-chip status-amber">{vehicleLabels[reco.recommendation.vehicle] ?? reco.recommendation.vehicle}</span>}
+                  {!isGf && reco.recommendation.stake_type && <span className="status-chip status-not-started">지분: {STAKE_LABEL[reco.recommendation.stake_type] ?? reco.recommendation.stake_type}</span>}
+                  {!isGf && reco.recommendation.instrument_mix && <span className="status-chip status-not-started">지급 수단 구성: {INSTRUMENT_LABEL[reco.recommendation.instrument_mix] ?? reco.recommendation.instrument_mix}</span>}
                 </p>
                 {reco.note && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{reco.note}</p>}
                 {reco.recommendation.rationale_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">구조 근거 초안:</span> {reco.recommendation.rationale_draft}</p>}
@@ -267,7 +290,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                   <tbody>
                     {(["tax_structure_note", "liability_isolation_note", "financing_leverage_note", "exit_structure_note"] as const).map((k) => (
                       <tr key={k}>
-                        <th scope="row" style={{ width: "8rem" }}>{AXIS_LABEL[k]}</th>
+                        <th scope="row" style={{ width: "8rem" }}>{axisLabel(k)}</th>
                         <td className="text-[length:var(--fs-caption)]">{reco.recommendation.four_axis[k]}</td>
                       </tr>
                     ))}
@@ -298,7 +321,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
           {(data?.hypotheses ?? []).map((h) => (
             <div key={h.id} className="sizing-grade-card mb-2">
               <div className="flex flex-wrap items-center gap-1 mb-1">
-                {h.vehicle && <span className="status-chip status-amber">{VEHICLE_LABEL[h.vehicle] ?? h.vehicle}</span>}
+                {h.vehicle && <span className="status-chip status-amber">{vehicleLabels[h.vehicle] ?? h.vehicle}</span>}
                 {h.asset_or_stock && <span className="status-chip status-not-started">{h.asset_or_stock === "asset" ? "자산 인수" : h.asset_or_stock === "stock" ? "주식 인수" : "혼합"}</span>}
                 {h.stake_type && <span className="status-chip status-not-started">지분: {STAKE_LABEL[h.stake_type] ?? h.stake_type}</span>}
                 {h.instrument_mix && <span className="status-chip status-not-started">지급 수단 구성: {INSTRUMENT_LABEL[h.instrument_mix] ?? h.instrument_mix}</span>}
@@ -312,7 +335,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                 <tbody>
                   {(["tax_structure_note", "liability_isolation_note", "financing_leverage_note", "exit_structure_note"] as const).map((k) => (
                     <tr key={k}>
-                      <th scope="row" style={{ width: "8rem" }}>{AXIS_LABEL[k]}</th>
+                      <th scope="row" style={{ width: "8rem" }}>{axisLabel(k)}</th>
                       <td>{h[k] ?? "—"}</td>
                     </tr>
                   ))}
@@ -345,9 +368,10 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                 <label>비히클
                   <select className="sizing-new-input ml-1" value={newHyp.vehicle} onChange={(e) => setNewHyp({ ...newHyp, vehicle: e.target.value })}>
                     <option value="">—</option>
-                    {Object.entries(VEHICLE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    {Object.entries(vehicleLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </label>
+                {vis.assetOrStock && (
                 <label>자산/주식
                   <select className="sizing-new-input ml-1" value={newHyp.asset_or_stock} onChange={(e) => setNewHyp({ ...newHyp, asset_or_stock: e.target.value })}>
                     <option value="">—</option>
@@ -356,22 +380,32 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                     <option value="mixed">혼합</option>
                   </select>
                 </label>
-                <label>지분
+                )}
+                {vis.stakeType && (
+                <label>{isGf ? "합작 지분(우리 몫)" : "지분"}
                   <select className="sizing-new-input ml-1" value={newHyp.stake_type} onChange={(e) => setNewHyp({ ...newHyp, stake_type: e.target.value })}>
                     <option value="">—</option>
-                    {Object.entries(STAKE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    {Object.entries(isGf ? GF_JV_STAKE_LABEL : STAKE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </label>
+                )}
+                {vis.instrumentMix && (
                 <label>지급 수단 구성
                   <select className="sizing-new-input ml-1" value={newHyp.instrument_mix} onChange={(e) => setNewHyp({ ...newHyp, instrument_mix: e.target.value })}>
                     <option value="">—</option>
                     {Object.entries(INSTRUMENT_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </label>
+                )}
               </div>
+              {isGf && (
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
+                  설립 구조에서는 자산/주식 인수 형태와 지급 수단 구성을 쓰지 않습니다. 자금 조달 구성은 '자금조달 계획' 탭의 조달 항목으로, 집행 단계는 'capex 집행 단계' 탭으로 기록합니다.
+                </p>
+              )}
               <div className="grid grid-1 gap-1 mt-2 text-[length:var(--fs-caption)]">
                 {(["tax_structure_note", "liability_isolation_note", "financing_leverage_note", "exit_structure_note"] as const).map((k) => (
-                  <label key={k}>{AXIS_LABEL[k]}
+                  <label key={k}>{axisLabel(k)}
                     <input className="sizing-new-input w-full" value={newHyp[k]} onChange={(e) => setNewHyp({ ...newHyp, [k]: e.target.value })} />
                   </label>
                 ))}
@@ -406,6 +440,12 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
               {totals.balanced
                 ? <span className="status-chip status-green">균형</span>
                 : <span className="status-chip status-red">불균형 — S10 완료 요건 미충족</span>}
+            </p>
+          )}
+          {balance && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{balance.balanced ? "✓" : "✕"} {balance.text}</p>}
+          {isGf && (
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
+              조달 항목에는 자기자본, 프로젝트 파이낸싱, 정부 자금·보조금을, 사용 항목에는 부지·설비 임차 대 자체 건설 선택을 기록하세요. 지역 인센티브를 받는 경우 환수 조건을 비고에 함께 적습니다.
             </p>
           )}
           <table className="data-table" aria-label="자금조달 항목">
@@ -444,7 +484,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                 </select>
               </label>
               <label>항목명
-                <input className="sizing-new-input ml-1" value={newEntry.name} onChange={(e) => setNewEntry({ ...newEntry, name: e.target.value })} />
+                <input className="sizing-new-input ml-1" list={isGf ? "gf-entry-presets" : undefined} value={newEntry.name} onChange={(e) => setNewEntry({ ...newEntry, name: e.target.value })} />
               </label>
               <label>금액 (백만 KRW)
                 <input className="sizing-new-input mono-num ml-1" style={{ width: "8rem" }} value={newEntry.amount_krw_m} onChange={(e) => setNewEntry({ ...newEntry, amount_krw_m: e.target.value })} />
@@ -453,9 +493,18 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                 <input className="sizing-new-input ml-1" value={newEntry.note} onChange={(e) => setNewEntry({ ...newEntry, note: e.target.value })} />
               </label>
               <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={addEntry}>추가</button>
+              {isGf && (
+                <datalist id="gf-entry-presets">
+                  {(newEntry.kind === "source" ? GF_FUNDING_SOURCE_PRESETS : GF_FUNDING_USE_PRESETS).map((n) => <option key={n} value={n} />)}
+                </datalist>
+              )}
             </div>
           )}
         </section>
+        )}
+
+        {tab === "capex" && isGf && (
+          <CapexTrancheTable projectId={projectId} tranches={tranches} canAct={canAct} onChanged={load} meUserId={me?.userId ?? null} />
         )}
       </StageFrame>
       {confirmDialog}

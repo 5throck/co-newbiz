@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * applies_when routing resolver + evaluation — design of record
  * docs/designs/2026-08-22-rag-formalization-and-case-classification-design.md,
@@ -11,7 +11,8 @@
  *   - resolveRoutingVars   THE DB READER — exactly two hand-written query
  *     families (constraint: no dynamic SQL identifier interpolation anywhere,
  *     schema findings F-7/F-8). Returns a VarLookup serving ONLY the routing
- *     var_keys seeded by db/migrations/0014_routing_vars.sql; every other
+ *     var_keys seeded by db/migrations/0014_routing_vars.sql and
+ *     0136_greenfield_subtrack_vars.sql (four families); every other
  *     key resolves to undefined (= missing).
  *
  * FAIL-CLOSED SEMANTICS (spec constraint 2, the bug class this redesign
@@ -66,7 +67,18 @@ export const ROUTING_VAR_KEYS = {
   origin: "project.origin",
   technologyTrack: "project.technology_track",
   externalMarketPresence: "target.has_external_market_presence",
+  /** 0136 (ADR-0160 addendum) — column var off the current route_decision. */
+  subTrack: "project.sub_track",
+  /** 0136 (ADR-0160 addendum) — asserted var, live AND reviewed only. */
+  siteRequired: "project.site_required",
 } as const;
+
+/**
+ * Value project.sub_track resolves to when the current route_decision row
+ * exists but carries no sub_track — the plain new-site greenfield case. A
+ * decided "no sub-track" is a fact (present), not missing evidence.
+ */
+export const SUB_TRACK_NONE = "none";
 
 // ---------------------------------------------------------------------------
 // Routing resolver — the ONLY database touch in this module
@@ -92,6 +104,18 @@ const SQL_LIVE_CLASSIFICATION =
  */
 const SQL_LIVE_REVIEWED_FACT =
   "SELECT value_kind, value_text FROM dimension_input WHERE project_id = ? AND var_key = 'target.has_external_market_presence' AND superseded_by IS NULL AND reviewed_by IS NOT NULL";
+
+/**
+ * Family (a') — route (0136). The current route_decision row of the project's
+ * source opportunity. No current row => project.sub_track stays missing
+ * (UNASSESSED, fail-closed).
+ */
+const SQL_CURRENT_ROUTE =
+  "SELECT r.sub_track FROM route_decision r JOIN md_project m ON m.source_opportunity_id = r.opportunity_id WHERE m.id = ? AND r.is_current = 1";
+
+/** Family (b') — the live AND reviewed project.site_required assertion (0136). */
+const SQL_LIVE_REVIEWED_SITE =
+  "SELECT value_kind, value_text FROM dimension_input WHERE project_id = ? AND var_key = 'project.site_required' AND superseded_by IS NULL AND reviewed_by IS NOT NULL";
 
 interface ClassificationRow {
   case_type: string;
@@ -127,6 +151,16 @@ export function resolveRoutingVars(projectId: string, db: Database = getDb()): V
   // rather than guessed.
   if (fact && fact.value_kind === "bool" && (fact.value_text === "true" || fact.value_text === "false")) {
     snapshots[ROUTING_VAR_KEYS.externalMarketPresence] = { status: "present", value: fact.value_text === "true" };
+  }
+
+  const route = db.query(SQL_CURRENT_ROUTE).get(projectId) as { sub_track: string | null } | undefined;
+  if (route) {
+    snapshots[ROUTING_VAR_KEYS.subTrack] = { status: "present", value: route.sub_track ?? SUB_TRACK_NONE };
+  }
+
+  const site = db.query(SQL_LIVE_REVIEWED_SITE).get(projectId) as FactRow | undefined;
+  if (site && site.value_kind === "bool" && (site.value_text === "true" || site.value_text === "false")) {
+    snapshots[ROUTING_VAR_KEYS.siteRequired] = { status: "present", value: site.value_text === "true" };
   }
 
   return (varKey: string) => snapshots[varKey];

@@ -66,6 +66,30 @@ exclusions:
     kind: route
     route: "POST /api/projects/{}/business-case/ev-band"
     reason: Human-only EV/Revenue band confirmation, boundary #2 (agents may only propose).
+  - id: project-business-goals
+    kind: route
+    route: "POST /api/projects/{}/business-goals"
+    reason: Human-only project goal setting, boundary #2 (agents may only propose; ADR-0159).
+  - id: greenfield-scope
+    kind: route
+    route: "POST /api/projects/{}/greenfield-scope"
+    reason: Human-only site_required single-person confirmation and sub-track selection opt-in (ADR-0160 addendum, boundary #2).
+  - id: greenfield-workspace-opt-in
+    kind: route
+    route: "POST /api/projects/{}/greenfield-scope/workspace-opt-in"
+    reason: Human-only S9 workspace scope opt-in with migration_note (ADR-0160 addendum b, boundary #2).
+  - id: brownfield-workspace-opt-in
+    kind: route
+    route: "POST /api/projects/{}/brownfield-scope/workspace-opt-in"
+    reason: Human-only brownfield S9 workspace scope opt-in with migration_note (ADR-0162, boundary #2).
+  - id: capex-tranches
+    kind: route
+    route: "POST /api/projects/{}/capex-tranches"
+    reason: Human-only capex tranche records and release/withhold decisions (ADR-0160 addendum, boundary #2).
+  - id: dd-custom-item-propose
+    kind: route
+    route: "POST /api/projects/{}/dd-checklist/custom"
+    reason: A direct custom DD item proposal is a human act recorded with the proposer for the two-person review; agents propose through tailor_dd_checklist (ADR-0099, boundary #2).
   - id: target-selection
     kind: route
     route: "POST /api/projects/{}/target-selection"

@@ -148,7 +148,7 @@ const SPECS: readonly RouteToolSpec[] = [
   { name: "calibrate_proxy_chain", kind: "generate", method: "POST", path: "/api/projects/{projectId}/proxy-chain/calibrate", body: "optional",
     activities: ["quant-methods"], description: "Calibrate the project's proxy chain statistically." },
   { name: "get_target_check", kind: "read", method: "GET", path: "/api/projects/{projectId}/target-check",
-    activities: ["target-comparison"], description: "Business-target standard check for the adopted case." },
+    activities: ["target-comparison"], description: "Business-goal check for the adopted case: project goals (set by analysts, ADR-0159) plus affiliate/group standards, resolved project > affiliate > group per metric. Each entry has source (project|affiliate|group), shadowed, rationale and status; scope is null when the standards scope is unresolved but project goals still apply. Read only." },
 
   // ── S9 due diligence ─────────────────────────────────────────────────
   { name: "tailor_dd_checklist", kind: "generate", method: "POST", path: "/api/projects/{projectId}/dd-checklist/tailor", body: "optional",

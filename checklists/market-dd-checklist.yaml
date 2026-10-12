@@ -4,7 +4,7 @@ title: "Market Due Diligence Checklist (Brown Field DD)"
 scope: shared
 enforceability: mixed
 owner_agent: market-intelligence-agent
-version: "1.1.0"
+version: "1.2.0"
 effective_from: "2026-08-22"
 gate: DD
 
@@ -27,47 +27,47 @@ gate: DD
 
 items:
   - id: mdd-01
-    text: "TAM/SAM triangulated via at least two independent methods (top-down industry data, bottom-up build, demand/supply-side check) reconciling within a stated tolerance — including reconciliation against any proxy-chain demand estimate produced at Screening/Pre-FS (proxy-industry-chain)"
+    text: "TAM/SAM을 둘 이상의 독립적 방법(하향식 산업 자료, 상향식 구축, 수요·공급 측 점검)으로 삼각검증하여 명시된 허용 범위 안에서 일치 확인 — 스크리닝·사전 타당성(Pre-FS) 단계에서 산출한 대리 산업 사슬(proxy-industry-chain) 수요 추정치와의 대사 포함"
     mandatory: true
     waiver_eligible: true
   - id: mdd-02
-    text: "Market growth drivers and disruptors stated, with management's growth assumption tested against independent market forecasts"
+    text: "시장 성장 동인과 교란 요인을 명시하고, 경영진의 성장 가정을 독립적 시장 전망과 대조 검증"
     mandatory: true
     waiver_eligible: true
   - id: mdd-03
-    text: "Competitive set built as described by customers, not management — win/loss dynamics captured ('chosen as best' vs. 'cheapest/first/already integrated')"
+    text: "경쟁 구도를 경영진이 아닌 고객의 설명으로 구성 — 수주·실주(win/loss) 동학 파악 ('최선이라 선택' vs. '가장 저렴·최초·이미 연동됨')"
     mandatory: true
     waiver_eligible: true
   - id: mdd-04
-    text: "Market shares and concentration estimated; each competitor's pricing power classified"
+    text: "시장 점유율과 집중도 추정; 경쟁사별 가격 결정력 분류"
     mandatory: true
     waiver_eligible: true
   - id: mdd-05
-    text: "Target's moat rated on the standard ladder — proprietary data (strong) > integration depth (moderate) > brand/relationship (weak) > price (weakest)"
+    text: "대상 회사의 경쟁 우위(moat)를 표준 등급으로 평가 — 독점 데이터(강) > 연동 깊이(중) > 브랜드·관계(약) > 가격(최약)"
     mandatory: true
     waiver_eligible: true
   - id: mdd-06
-    text: "Customer concentration tested from the market side — the top-10 share is taken from cdd-01 (not recomputed; if cdd-01 was waived or not completed, compute it here and record that) and, where a benchmark exists, set against the industry/peer norm (industry profile revenue_quality_norms, else peer-benchmarking), with relationship depth and switching costs captured for the top accounts from customer evidence; any material gap between the market-side view and cdd-01 is raised as a finding"
+    text: "시장 측면에서 고객 집중도 검증 — 상위 10개 고객 비중은 cdd-01 값을 사용(재계산하지 않음; cdd-01이 면제되었거나 완료되지 않았으면 여기서 계산하고 그 사실을 기록)하고, 벤치마크가 있으면 산업·동종 기업 기준(산업 프로필 revenue_quality_norms, 없으면 peer-benchmarking)과 비교하며, 상위 고객의 관계 깊이와 전환 비용을 고객 증거로 파악; 시장 측 관점과 cdd-01 사이에 중요한 차이가 있으면 발견사항(finding)으로 제기"
     mandatory: true
     waiver_eligible: true
   - id: mdd-07
-    text: "Churn/retention tested from the market side — the 2-3 year by-segment rates are taken from cdd-02 (not recomputed; if cdd-02 was waived or not completed, compute them here and record that), with leading churn indicators listed from customer evidence (executive sponsor departure, budget reallocation, active competitive evaluations, single-champion relationships); any material gap between the market-side view and cdd-02 is raised as a finding"
+    text: "시장 측면에서 이탈·유지율 검증 — 2~3년 세그먼트별 비율은 cdd-02 값을 사용(재계산하지 않음; cdd-02가 면제되었거나 완료되지 않았으면 여기서 계산하고 그 사실을 기록)하고, 고객 증거로 이탈 선행 지표(경영진 후원자 이탈, 예산 재배정, 진행 중인 경쟁 평가, 단일 담당자 의존 관계)를 나열; 시장 측 관점과 cdd-02 사이에 중요한 차이가 있으면 발견사항(finding)으로 제기"
     mandatory: true
     waiver_eligible: true
   - id: mdd-08
-    text: "80/20 revenue analysis performed and validated against the investment thesis"
+    text: "80/20 매출 분석을 수행하고 투자 논리(investment thesis)와 대조 검증"
     mandatory: true
     waiver_eligible: true
   - id: mdd-09
-    text: "Expansion-revenue breadth tested — broad-based vs. concentrated in few accounts (a concentration red flag)"
+    text: "확장 매출(expansion revenue)의 저변 검증 — 광범위한 분포인지 소수 고객 집중인지(집중은 위험 신호)"
     mandatory: true
     waiver_eligible: true
   - id: mdd-10
-    text: "Channel structure mapped — distributors, pricing logic, customer mix from the data room"
+    text: "유통 구조 파악 — 데이터룸 기준 유통업체, 가격 결정 논리, 고객 구성"
     mandatory: true
     waiver_eligible: true
   - id: mdd-11
-    text: "Thesis-by-thesis validation verdicts produced (validated / partially validated / invalidated) with retention-adjusted revenue impact feeding the valuation bridge (dd-to-valuation-bridge) and bid-adjustment recommendations (base-case adjustments, downside scenario, earnout structuring)"
+    text: "투자 논리별 검증 판정(검증됨 / 부분 검증 / 반증됨) 산출 — 유지율 조정 매출 영향을 가치평가 연결(dd-to-valuation-bridge)과 입찰가 조정 권고(기본 시나리오 조정, 하방 시나리오, 언아웃(earnout) 구조)에 반영"
     mandatory: true
     waiver_eligible: true
 

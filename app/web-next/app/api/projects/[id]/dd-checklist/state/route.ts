@@ -12,6 +12,8 @@ import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envel
 import { DdTargetError } from "../../../../../../lib/dd-target.ts";
 import { ddTargetErrorResponse, scopeOrResponse } from "../../../../../../lib/dd-target-http.ts";
 import { recordHumanFinalForStageArtifacts } from "../../../../../../lib/review/human-final.ts";
+import { naRequiresReason } from "../../../../../../lib/greenfield-subtrack.ts";
+import { brownfieldNaRequiresReason } from "../../../../../../lib/brownfield-subtrack.ts";
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
@@ -34,6 +36,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   }
   if (!(STATE_STATUSES as readonly string[]).includes(body.status ?? "")) {
     return badRequest("invalid_request", `status는 ${STATE_STATUSES.join(" | ")} 중 하나입니다.`);
+  }
+  // ADR-0160 §4.4: an `na` on a checklist whose applicability the greenfield
+  // sub-track rule decided needs a reason (no silent drops). ADR-0162 §10: the same for
+  // an in-scope brownfield project (non-baseline sub-track); m_and_a / grandfathered: never.
+  if (
+    body.status === "na" &&
+    !body.note?.trim() &&
+    (naRequiresReason(id, body.checklist_id.trim(), body.item_id.trim()) || brownfieldNaRequiresReason(id, body.checklist_id.trim()))
+  ) {
+    return badRequest("na_reason_required", "세부 트랙 규칙으로 적용 여부가 정해진 항목을 '해당 없음(na)'으로 판정하려면 note에 사유가 필요합니다.");
   }
   // ADR-0157: a non-NULL target_id must be an opened comparison target (409 otherwise).
   const scope = scopeOrResponse(id, body.target_id);

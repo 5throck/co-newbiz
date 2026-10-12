@@ -21,6 +21,7 @@ import { api } from "../lib/api.ts";
 import { PageState, PrimaryAction } from "./ui.tsx";
 import { MarketAnalysisStage } from "./stages/MarketAnalysisStage.tsx";
 import { OpportunityFunnelStage } from "./stages/OpportunityFunnelStage.tsx";
+import { Breadcrumb } from "./Breadcrumb.tsx";
 import { StageFrame } from "./StageFrame.tsx";
 
 export type FlatRouteKey = "market" | "opportunities" | "synergy" | "greenfield" | "brownfield";
@@ -183,6 +184,7 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
 
   return (
     <main>
+      <Breadcrumb items={[{ label: "홈", href: "/" }, { label: "검토/안건", href: "/deals" }, { label: TITLE_BY_ROUTE[route] }]} />
       <div className="stage-head">
         <h1>{TITLE_BY_ROUTE[route]}</h1>
         <PrimaryAction inline href={CREATE_BY_ROUTE[route].href} label={CREATE_BY_ROUTE[route].label} />

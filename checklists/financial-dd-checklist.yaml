@@ -4,40 +4,40 @@ title: "Financial Due Diligence Checklist"
 scope: shared
 enforceability: mixed
 owner_agent: financial-analyst
-version: "1.1.0"
+version: "1.2.0"
 effective_from: "2026-09-05"
 gate: DD
 
 items:
   - id: fdd-01
-    text: "Quality of earnings assessed — revenue recognition policy reviewed, one-time/non-recurring items identified and normalized"
+    text: "이익의 질(QoE, Quality of Earnings) 평가 — 수익 인식 정책 검토, 일회성·비경상 항목 식별 및 정상화"
     mandatory: true
     waiver_eligible: true
   - id: fdd-02
-    text: "Working capital analysis completed — normalized NWC, seasonal patterns, and minimum cash requirements quantified"
+    text: "운전자본 분석 완료 — 정상 순운전자본(NWC), 계절성 패턴, 최소 현금 보유 요건 정량화"
     mandatory: true
     waiver_eligible: true
   - id: fdd-03
-    text: "Debt schedule confirmed — all borrowings, lease liabilities, contingent liabilities, and off-balance-sheet items listed with rates and maturities"
+    text: "차입금 내역 확정 — 모든 차입금, 리스부채, 우발부채, 부외 항목을 이자율·만기와 함께 목록화"
     mandatory: true
     waiver_eligible: true
   - id: fdd-04
-    text: "Tax position reviewed — effective tax rate vs. statutory, open audits, NOL carryforwards, transfer-pricing exposure"
+    text: "세무 현황 검토 — 법정세율 대비 유효세율, 진행 중인 세무조사, 이월결손금(NOL), 이전가격(transfer pricing) 노출"
     mandatory: true
     waiver_eligible: true
   - id: fdd-05
-    text: "Cash flow quality verified — operating cash flow vs. EBITDA reconciliation, capex split maintenance vs. growth, DSO/DPO trends (where cdd-08 is performed, customer-level DSO/aging and margin are supplied to it)"
+    text: "현금흐름의 질 검증 — 영업현금흐름과 EBITDA 대사, 유지·성장 설비투자(capex) 구분, 매출채권회전일수(DSO)·매입채무회전일수(DPO) 추세 (cdd-08을 수행하는 경우 고객별 DSO·연령분석과 마진을 cdd-08에 제공)"
     mandatory: true
     waiver_eligible: true
   - id: fdd-06
-    text: "Related-party transactions identified and evaluated — pricing fairness, necessity, and post-closing treatment determined"
+    text: "특수관계자 거래 식별·평가 — 가격 공정성, 필요성, 거래종결(closing) 후 처리 방안 결정"
     mandatory: true
     waiver_eligible: true
   - id: fdd-07
-    text: "Management accounts vs. audited statements bridged — material variances explained and adjustments validated"
+    text: "관리회계 자료와 감사받은 재무제표 간 차이 조정 — 중요한 차이 설명 및 조정 사항 검증"
     mandatory: true
     waiver_eligible: true
   - id: fdd-08
-    text: "Financial projections (budget/plan) assessed — assumptions vs. historical performance, market benchmarks, and sensitivity analysis performed"
+    text: "재무 전망(예산·계획) 평가 — 가정을 과거 실적·시장 벤치마크와 비교하고 민감도 분석 수행"
     mandatory: true
     waiver_eligible: true

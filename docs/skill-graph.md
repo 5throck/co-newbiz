@@ -314,6 +314,10 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0156` | adr | — | — | — |
 | `adr:0157` | adr | — | — | — |
 | `adr:0158` | adr | — | — | — |
+| `adr:0159` | adr | — | — | — |
+| `adr:0160` | adr | — | root/competitive-intelligence, root/financing-plan-review, root/historical-financial-analysis, root/management-incentive-review, root/org-readiness-assessment, root/quality-of-earnings, root/talent-pipeline-planning | — |
+| `adr:0161` | adr | — | — | — |
+| `adr:0162` | adr | — | — | — |
 | `dec:DEC-20260908-01` | decision | `root/project-review` | — | — |
 | `dec:DEC-20260908-02` | decision | `root/waiver-management` | — | — |
 | `dec:DEC-20260909-01` | decision | — | — | — |
@@ -324,6 +328,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20260909-06` | decision | — | — | — |
 | `dec:DEC-20260909-07` | decision | — | — | dec:DEC-20260909-06 |
 | `dec:DEC-20261008-01` | decision | `root/decision-record` | — | — |
+| `dec:DEC-20261012-01` | decision | `root/decision-record`, `root/policy-and-procedure-governance` | — | — |
 | `doc:AGENTS.md` | doc | `root/agent-lifecycle-manager`, `root/skill-lifecycle-manager` | — | — |
 | `doc:CODEX.md` | doc | `root/meeting-facilitation` | — | — |
 | `doc:procedures/README.md` | doc | `root/antitrust-screening`, `root/brownfield-feasibility`, `root/regional-incentive-sourcing`, `root/site-infrastructure-assessment` | — | — |
@@ -496,10 +501,10 @@ None — every capability has a single content hash.
 
 | Type | Count | Nodes |
 |------|-------|-------|
-| adr | 152 | (expected until docs `references` edges are mined) |
+| adr | 155 | (expected until docs `references` edges are mined) |
 | agent | 18 | root/backend-engineer, root/data-architect, root/dba, root/design-system-agent, root/financing-agent, root/frontend-engineer, root/glossary-curator, root/industry-lead, root/infra-automation-engineer, root/ip-agent, root/ir-agent, root/platform-lead, root/region-lead, root/release-engineer, root/security-engineer, root/site-facility-agent, root/sre, root/ux-designer-agent |
 | decision | 4 | (expected until docs `references` edges are mined) |
-| skill | 18 | root/api-documentation, root/assumption-audit, root/explain-me, root/finishing-a-development-branch, root/forward-industry-research, root/gateguard, root/market-data-pipeline, root/platform-command-lifecycle-manager, root/platform-skill-lifecycle-manager, root/policy-and-procedure-governance, root/sample-driven-report-writing, root/source-command-commit-push-pr, root/standup-synthesizer, root/sync, root/target-costing-analysis, root/value-chain-driver-identification, root/value-chain-stage-financials, root/zod-contract-gate |
+| skill | 17 | root/api-documentation, root/assumption-audit, root/explain-me, root/finishing-a-development-branch, root/forward-industry-research, root/gateguard, root/market-data-pipeline, root/platform-command-lifecycle-manager, root/platform-skill-lifecycle-manager, root/sample-driven-report-writing, root/source-command-commit-push-pr, root/standup-synthesizer, root/sync, root/target-costing-analysis, root/value-chain-driver-identification, root/value-chain-stage-financials, root/zod-contract-gate |
 
 ## Skills Without `used_by` (G6)
 

@@ -190,8 +190,8 @@ describe("S9 tailored DD checklists (ADR-0099)", () => {
       domains: Array<{ domain: string; custom: Array<{ source_url: string | null; source_reliability: string | null; status: string }> }>;
       completion: { total: number };
     };
-    expect(data.domains.length).toBe(3);
-    for (const d of data.domains) {
+    expect(data.domains.length).toBe(7);
+    for (const d of data.domains.filter((x) => ["commercial", "technical", "legal"].includes(x.domain))) {
       expect(d.custom.length).toBeGreaterThanOrEqual(5);
       for (const c of d.custom) {
         expect(c.status).toBe("proposed");
@@ -283,6 +283,12 @@ describe("S9 tailored DD checklists (ADR-0099)", () => {
           headers: { cookie: analystCookie },
           body: JSON.stringify({ checklist_id: checklistId, item_id: item.id, status: "pass" }),
         });
+        // ADR-0160 addendum (b): a greenfield project in the workspace scope refuses a NEW
+        // judgement on an item excluded by the track rule (409 dd_item_out_of_scope).
+        if (r.status === 409) {
+          expect(((await r.json()) as { error: { code: string } }).error.code).toBe("dd_item_out_of_scope");
+          continue;
+        }
         expect(r.status).toBe(200);
       }
     }

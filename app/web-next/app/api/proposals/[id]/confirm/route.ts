@@ -86,7 +86,7 @@ export const POST = route(async (request: Request, { params }: Params) => {
     return fail(409, `proposal_${p.status}`, p.status === "expired" ? "This proposal has expired; ask for a new one." : `This proposal is already ${p.status}.`);
   }
 
-  const body = (await request.json().catch(() => null)) as { nonce?: string; payload?: unknown } | null;
+  const body = (await request.json().catch(() => null)) as { nonce?: string; payload?: unknown; goals_ack?: { acknowledged?: unknown; note?: unknown } } | null;
   if (!body?.nonce) return badRequest("invalid_request", "nonce is required — load the confirmation view first.");
 
   // The human may edit before confirming; the edited payload must satisfy the
@@ -99,6 +99,12 @@ export const POST = route(async (request: Request, { params }: Params) => {
       return badRequest("invalid_payload", "The edit moves the decision to a different carrier; propose it again instead.");
     }
     payload = validated.payload;
+  }
+
+  // ADR-0159: the no-goals acknowledgement is the HUMAN's, supplied at confirm
+  // time (never part of the agent's stored proposal) and forwarded to adopt.
+  if (p.kind === "case_adoption" && body.goals_ack && typeof body.goals_ack === "object") {
+    payload = { ...payload, goals_ack: { acknowledged: body.goals_ack.acknowledged === true, ...(typeof body.goals_ack.note === "string" ? { note: body.goals_ack.note } : {}) } };
   }
 
   if (!claimConfirmNonce(p.id, body.nonce)) {

@@ -3,7 +3,7 @@ procedure_id: shared-deal-structuring
 title: "Deal Structuring (S10)"
 scope: shared
 level: entity
-version: "1.0.0"
+version: "1.1.0"
 status: active
 applicability: unconditional
 workflow_type: core
@@ -28,10 +28,26 @@ gate: "DD"
 # side. A NEWER incomplete hypothesis always supersedes an older completed
 # one (latest-wins) so a stale "complete" flag can never mask a re-opened
 # structure question.
+#
+# v1.1.0 (ADR-0160, Proposed) — track-aware hypothesis steps. Step 1 is the
+# brownfield hypothesis (unchanged text, now applies_when case_type =
+# brownfield). Steps 4-7 are the greenfield establishment-structure steps
+# (applies_when case_type = greenfield). Steps 2 and 3 — the ADR-0045
+# four-axis review and the sources == uses > 0 rule — stay SHARED and carry
+# no applies_when: the S10 completion predicate is one track-neutral rule.
+# project.case_type is a seeded routing var (0014); fail-closed semantics
+# (db/lib/applies-when.ts) mean an unclassified project gets BOTH step sets,
+# never neither. For greenfield the M&A-only inputs (asset_or_stock,
+# instrument_mix; stake_type except vehicle = jv) are not used and are
+# stored null. Greenfield extras (tranches, release conditions, lease vs
+# build) live in financing-plan rows and the four-axis evidence artifact;
+# phased capex tranches and their release conditions live in the typed
+# capex_tranche table (migration 0136, ADR-0160 addendum 2026-10-12).
 
 steps:
   - id: 1
     gate: "DD"
+    applies_when: { op: "cmp", var: "project.case_type", cmp: "eq", value: "brownfield" }
     agent_key: brownfield-agent
     skill_key: investment-vehicle-structuring
     output_type: deal_structure_review
@@ -48,6 +64,54 @@ steps:
       structure). Record the rationale (mandatory) via
       db/repositories/deal-structure-hypothesis.repository.ts; a structure
       hypothesis without its rationale is rejected at the write layer.
+  - id: 4
+    gate: "DD"
+    applies_when: { op: "cmp", var: "project.case_type", cmp: "eq", value: "greenfield" }
+    agent_key: greenfield-agent
+    skill_key: investment-vehicle-structuring
+    output_type: deal_structure_review
+    description: >
+      Greenfield establishment vehicle: direct (in-house unit), SPC,
+      subsidiary (holdco or directly owned), internal venture spin-off, or
+      JV (same vehicle enum; jv-structuring skill and the "our share in JV"
+      stake for vehicle = jv only). When the vehicle creates an entity, link
+      the plan evidence to `checklists/entity-formation-checklist.yaml`
+      ef-01 and ef-03; formation execution stays in S11. Rationale is
+      mandatory, as for step 1.
+  - id: 5
+    gate: "DD"
+    applies_when: { op: "cmp", var: "project.case_type", cmp: "eq", value: "greenfield" }
+    agent_key: financing-agent
+    skill_key: financing-plan-review
+    output_type: financing_sources_uses_plan
+    description: >
+      Greenfield capital contribution and funding sources: equity, project
+      finance, government funds and subsidies, and the lease-versus-build
+      choice for site and equipment (site-facility-agent input when
+      site_required = true). Every source lands as a financing-plan sources
+      row; certainty of funds is evidenced, never assumed.
+  - id: 6
+    gate: "DD"
+    applies_when: { op: "cmp", var: "project.case_type", cmp: "eq", value: "greenfield" }
+    agent_key: greenfield-agent
+    skill_key: investment-feasibility-modeling
+    output_type: deal_structure_review
+    description: >
+      Phased capex tranches and their release conditions (milestone-gated),
+      prepared with valuation-agent; for the R&BD sub-tracks link the
+      staged-funding evidence of `checklists/rbd-technology-checklist.yaml`
+      rbd-15. Tranches and their release conditions are recorded as
+      capex_tranche rows (human-only capex-tranches route, migration 0136).
+  - id: 7
+    gate: "DD"
+    applies_when: { op: "cmp", var: "project.case_type", cmp: "eq", value: "greenfield" }
+    agent_key: incentive-agent
+    skill_key: regional-incentive-sourcing
+    output_type: deal_structure_review
+    description: >
+      Tax and regional incentives for the establishment, each with its
+      clawback conditions (incentive-clawback-assessment); incentive
+      proceeds enter the sources side only with evidenced eligibility.
   - id: 2
     gate: "DD"
     agent_key: brownfield-agent
@@ -60,6 +124,8 @@ steps:
       twice (no artifact ref, or already-completed hypothesis) rather than
       silently overwritten. The audit_log entry
       (four_axis_review_completed) is the review's evidence trail.
+      Shared by both tracks; for greenfield the track lead preparing the
+      review is greenfield-agent.
   - id: 3
     gate: "DD"
     agent_key: valuation-agent
@@ -75,7 +141,8 @@ steps:
       or internal-funds approvals are referenced in the note column per
       skills/financing-plan-review. The S10 completion predicate requires
       sources == uses > 0 — an unbalanced plan blocks stage exit the same
-      way an unproven structure does.
+      way an unproven structure does. Shared by both tracks; for greenfield
+      financing-agent reviews the plan (covenant headroom fin-03).
 
 outputs:
   - deal_structure_review (four-axis complete, artifact-referenced)
@@ -95,6 +162,7 @@ legal_basis:
   - "ADR-0106 (S10 투자구조 설계 as its own stage between S9 and IC)"
   - "db/migrations/0013_classification_infra.sql — deal_structure_hypothesis incl. four_axis_review_completed"
   - "db/migrations/0075 — financing_sources_uses (balanced sources == uses > 0)"
+  - "ADR-0160 (Proposed) — greenfield establishment-structure steps"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-09-08"
+last_reviewed: "2026-10-11"

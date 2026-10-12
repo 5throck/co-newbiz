@@ -22,6 +22,7 @@ import {
 import { badRequest, notFound, ok, forbidden } from "../../../../../lib/envelope.ts";
 import { recordHumanFinalForStageArtifacts } from "../../../../../lib/review/human-final.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
+import { greenfieldHypothesisIssue } from "../../../../../lib/greenfield-structure.ts";
 
 interface DealStructureView {
   hypotheses: HypothesisRow[];
@@ -57,6 +58,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   try {
     if (action === "hypothesize") {
+      // ADR-0160: greenfield establishment structure — M&A-only inputs rejected.
+      // Returns null for brownfield/unrouted projects (their path is unchanged).
+      const gfIssue = greenfieldHypothesisIssue(id, body ?? {}, db);
+      if (gfIssue) return badRequest("greenfield_field_not_applicable", gfIssue);
       const row = hypothesize(
         {
           project_id: id,

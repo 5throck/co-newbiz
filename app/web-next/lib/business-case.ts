@@ -11,6 +11,7 @@ import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
 import { SCENARIOS, recommendedFromDb, recommendTargetsFromDb, enginesMixedAcrossTargets, methodsMixedAcrossTargets, resolveConfirmedEvBand, evRevenueBandPayload, type EvRevenueBandPayload, type Scenario, type TargetComparisonRow } from "./business-case-generator.ts";
+import { evaluateTargets, resolveProjectTargets } from "./business-targets.ts";
 import { resolveOrCreateCompany } from "./brownfield-targets.ts";
 import { SPEC_VERSION } from "./spec-activities.generated.ts";
 import { applyDdReselection, selectedTargetId } from "./dd-target.ts";
@@ -244,7 +245,31 @@ export function findAdoptedCase(list: { cases: BusinessCaseView[]; archived: Bus
  * explicit click — marks adoption. ADR-0143: a brownfield case (target_id
  * set) can only be adopted after the human target selection, and only when it
  * belongs to the selected target. */
-export function adoptBusinessCase(projectId: string, modelId: string, adoptedBy: string): AdoptionRecord {
+/** Thrown when no goals apply (project, affiliate and group all empty) and the
+ * adopter did not acknowledge it (ADR-0159). A confirmation requirement, not a gate block. */
+export class GoalsAckRequiredError extends Error {
+  constructor(reason: "no_goals" | "no_evaluable_goals" = "no_goals") {
+    super(
+      reason === "no_goals"
+        ? "적용되는 사업 목표가 없습니다 — 목표 비교 없이 채택하려면 확인(goals_ack)이 필요합니다."
+        : "적용되는 목표가 모두 판정 불가 또는 수동 확인뿐입니다 — 자동 비교 없이 채택하려면 확인(goals_ack)이 필요합니다.",
+    );
+  }
+}
+
+/** The acknowledgement was given without the mandatory non-empty note. */
+export class GoalsAckNoteRequiredError extends Error {
+  constructor() {
+    super("goals_ack 확인에는 사유(note)가 필요합니다 — 목표 비교 없이 채택하는 이유를 적어 주세요.");
+  }
+}
+
+export interface GoalsAckInput {
+  acknowledged: boolean;
+  note?: string;
+}
+
+export function adoptBusinessCase(projectId: string, modelId: string, adoptedBy: string, opts: { goalsAck?: GoalsAckInput } = {}): AdoptionRecord {
   const db = getDb();
   const model = db.query("SELECT id, target_id, archived_at FROM business_case_model WHERE id = ? AND project_id = ?").get(modelId, projectId) as
     | { id: string; target_id: string | null; archived_at: string | null }
@@ -269,10 +294,31 @@ export function adoptBusinessCase(projectId: string, modelId: string, adoptedBy:
     }
   }
   const now = new Date().toISOString();
+  // ADR-0159: no schema change — the goal context rides in meta_json.
+  const { scope, resolved } = resolveProjectTargets(projectId);
+  const meta: Record<string, unknown> = { model_id: modelId };
+  const ackNote = opts.goalsAck?.acknowledged === true ? opts.goalsAck.note?.trim() ?? "" : null;
+  const recordAck = (goalCount: number, reason: "no_goals" | "no_evaluable_goals") => {
+    if (ackNote === null) throw new GoalsAckRequiredError(reason);
+    if (!ackNote) throw new GoalsAckNoteRequiredError();
+    meta.goals_ack = { acknowledged: true, note: ackNote, goal_count: goalCount, at: now };
+  };
+  if (resolved.length === 0) {
+    recordAck(0, "no_goals");
+  } else {
+    const { cases, recommendedScenario } = listBusinessCases(projectId);
+    const view = cases.find((c) => c.id === modelId);
+    const counts = { met: 0, missed: 0, indeterminate: 0, manual: 0 };
+    for (const e of evaluateTargets(resolved, scope, view ?? null, recommendedScenario)) counts[e.status] += 1;
+    meta.goal_count = resolved.length;
+    meta.attainment = counts;
+    // Goals exist but none could be judged automatically: same human acknowledgement as "no goals".
+    if (counts.met + counts.missed === 0) recordAck(resolved.length, "no_evaluable_goals");
+  }
   db.run(
     `INSERT INTO process_run (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-    [ulid(), "project", projectId, projectId, SPEC_VERSION, "s8_case_adopt", "done", "web", adoptedBy, now, now, JSON.stringify({ model_id: modelId })],
+    [ulid(), "project", projectId, projectId, SPEC_VERSION, "s8_case_adopt", "done", "web", adoptedBy, now, now, JSON.stringify(meta)],
   );
   appendAudit(db, { actor: adoptedBy, action: "business_case_adopted", target: `${projectId}:${modelId}`, now });
   return { modelId, adoptedBy, adoptedAt: now };

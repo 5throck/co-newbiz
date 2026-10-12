@@ -96,7 +96,8 @@ describe("S10 deal-structure route + repositories (flow.spec v2.2.0)", () => {
     const res = await req(`/api/projects/${projectId}/deal-structure`, {
       method: "POST", headers: { cookie: analystCookie },
       body: JSON.stringify({
-        action: "hypothesize", vehicle: "spc", asset_or_stock: "stock", stake_type: "majority",
+        // greenfield route: M&A-only inputs (asset_or_stock, stake_type unless jv) are refused (ADR-0160)
+        action: "hypothesize", vehicle: "spc",
         tax_structure_note: "법인세 특례", liability_isolation_note: "SPC 격리",
         financing_leverage_note: "AC 60%", exit_structure_note: "5년 매각",
         rationale: "SPC 경유 — 절세·격리 근거",

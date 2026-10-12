@@ -41,7 +41,8 @@ describe("coverage gate", () => {
   test("mcp-coverage passes: every activity and artifact has a tool, no exclusion gained one", async () => {
     const report = await runCoverage();
     expect(report.errors).toEqual([]);
-    expect(report.activities).toBe(38);
+    // Pinned on purpose: flow.spec v2.7.0 has 42 activities (four new S9 activities).
+    expect(report.activities).toBe(42);
     expect(report.artifacts).toBe(32);
   });
 

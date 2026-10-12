@@ -218,7 +218,7 @@ describe("(b) the IC package aggregates the S11 read surface", () => {
   test("adopted case + simulations + DD completion + RAG proposal + gates + establishment", async () => {
     // Adopt the S8 case — a human action through the adopt endpoint.
     const adopt = await req(`/api/projects/${projectId}/business-case/adopt`, {
-      method: "POST", headers: { cookie: analystCookie }, body: JSON.stringify({ model_id: "bc-ic1" }),
+      method: "POST", headers: { cookie: analystCookie }, body: JSON.stringify({ model_id: "bc-ic1", goals_ack: { acknowledged: true, note: "test: 목표 비교 없이 진행" } }),
     });
     expect(adopt.status).toBe(201);
 
@@ -234,7 +234,8 @@ describe("(b) the IC package aggregates the S11 read surface", () => {
 
     expect(pkg.business_case.adopted?.id).toBe("bc-ic1");
     expect(pkg.business_case.adopted!.simulations.length).toBe(1);
-    expect(pkg.dd.completion).toEqual({ total: 1 + standardCount, pending: 0, unassessed: 0, mandatoryUnmet: 0 });
+    // ADR-0160 addendum (b) / ADR-0162: in-scope projects also carry judged / judgeable / workspace_judgeable / excluded.
+    expect(pkg.dd.completion).toMatchObject({ total: 1 + standardCount, pending: 0, unassessed: 0, mandatoryUnmet: 0 });
     expect(pkg.dd.findings.length).toBe(1);
     expect(pkg.rag.grade).toBe("amber");
     expect(pkg.rag.confidence_cap).toBe("amber");

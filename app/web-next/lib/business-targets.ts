@@ -7,16 +7,19 @@ import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
 import type { BusinessCaseView } from "./business-case.ts";
+import { listProjectGoals, type ProjectGoalRow } from "./project-goals.ts";
 import {
   CUSTOM_METRIC_KEY,
   METRIC_PRESETS,
   formatDirectionLabel,
   formatTargetValue,
+  parseDirection,
+  parseTargetValue,
   presetFor,
 } from "./business-targets-format.ts";
 import type { MetricPreset, TargetDirection, TargetUnit } from "./business-targets-format.ts";
 
-export { CUSTOM_METRIC_KEY, METRIC_PRESETS, formatDirectionLabel, formatTargetValue, presetFor };
+export { CUSTOM_METRIC_KEY, METRIC_PRESETS, formatDirectionLabel, formatTargetValue, parseDirection, parseTargetValue, presetFor };
 export type { MetricPreset, TargetDirection, TargetUnit };
 
 export interface BusinessTargetRow {
@@ -48,11 +51,34 @@ export function listBusinessTargets(): BusinessTargetRow[] {
     .all() as unknown as BusinessTargetRow[];
 }
 
-export interface ResolvedTarget {
+/** The fields evaluation needs. Standards rows and project goals both satisfy it. */
+export type TargetRowCore = Pick<
+  BusinessTargetRow,
+  "id" | "metric_key" | "label" | "direction" | "target_value" | "created_at"
+> & { updated_at?: string | null };
+
+export type StandardSource = "affiliate" | "group";
+export type TargetSource = "project" | StandardSource;
+
+export interface ShadowedTarget {
+  source: StandardSource;
   row: BusinessTargetRow;
-  source: "affiliate" | "group";
-  /** Group-common row shadowed by an affiliate-specific standard (display only). */
+}
+
+export interface ResolvedTarget {
+  row: TargetRowCore;
+  source: TargetSource;
+  /** Lower-precedence rows this one shadows (project > affiliate > group). */
+  shadowed: ShadowedTarget[];
+  /** Legacy alias (kept one release, ADR-0159): group-common row shadowed by an
+   * affiliate-specific standard. Always null for project goals. */
   overridden: BusinessTargetRow | null;
+  /** Display name of the source (project / affiliate / group). Filled by
+   * resolveProjectTargets; evaluateTargets falls back to the scope. */
+  source_name?: string;
+  /** Project goals only. */
+  rationale?: string | null;
+  set_by?: string | null;
 }
 
 /** Per-metric resolution: an affiliate-specific row wins over the group-common
@@ -80,8 +106,12 @@ export function resolveBusinessTargets(groupId: string, memberId: string | null)
   }
   const resolved: ResolvedTarget[] = [];
   for (const [, slot] of byKey) {
-    if (slot.affiliate) resolved.push({ row: slot.affiliate, source: "affiliate", overridden: slot.group ?? null });
-    else if (slot.group) resolved.push({ row: slot.group, source: "group", overridden: null });
+    if (slot.affiliate) {
+      const shadowed: ShadowedTarget[] = slot.group ? [{ source: "group", row: slot.group }] : [];
+      resolved.push({ row: slot.affiliate, source: "affiliate", shadowed, overridden: slot.group ?? null, source_name: slot.affiliate.member_name ?? undefined });
+    } else if (slot.group) {
+      resolved.push({ row: slot.group, source: "group", shadowed: [], overridden: null, source_name: slot.group.group_name });
+    }
   }
   return resolved;
 }
@@ -128,6 +158,33 @@ export function projectTargetScope(projectId: string): ProjectTargetScope | null
   return null;
 }
 
+/** Project goals > affiliate standard > group standard, per metric (ADR-0159).
+ * Project goals apply even when the standards scope is unresolved (scope null);
+ * the standards merge in only when `projectTargetScope` resolves. */
+export function resolveProjectTargets(projectId: string): { scope: ProjectTargetScope | null; resolved: ResolvedTarget[] } {
+  const scope = projectTargetScope(projectId);
+  const standards = scope ? resolveBusinessTargets(scope.groupId, scope.memberId) : [];
+  const goals = listProjectGoals(projectId);
+  if (goals.length === 0) return { scope, resolved: standards };
+
+  const proj = getDb().query("SELECT COALESCE(project_name, project_no) AS name FROM md_project WHERE id = ?").get(projectId) as { name: string } | null;
+  const keyOf = (r: { metric_key: string; label: string | null }) => `${r.metric_key}\u0000${r.label ?? ""}`;
+  const standardByKey = new Map(standards.map((t) => [keyOf(t.row), t]));
+  const goalKeys = new Set<string>();
+  const resolved: ResolvedTarget[] = [];
+  for (const g of goals as ProjectGoalRow[]) {
+    const key = keyOf(g);
+    goalKeys.add(key);
+    const std = standardByKey.get(key);
+    // Shadowed list mirrors precedence: the winning standard first (affiliate
+    // before group), then whatever that standard itself shadowed.
+    const shadowed: ShadowedTarget[] = std ? [{ source: std.source as StandardSource, row: std.row as BusinessTargetRow }, ...std.shadowed] : [];
+    resolved.push({ row: g, source: "project", shadowed, overridden: null, source_name: proj?.name ?? projectId, rationale: g.rationale, set_by: g.created_by });
+  }
+  for (const t of standards) if (!goalKeys.has(keyOf(t.row))) resolved.push(t);
+  return { scope, resolved };
+}
+
 // ── fs evidence: standards vs adopted case ─────────────────────────────────
 
 export type TargetCheckStatus = "met" | "missed" | "indeterminate" | "manual";
@@ -139,10 +196,17 @@ export interface TargetCheckEntry {
   target_value: number;
   unit: TargetUnit;
   custom: boolean;
-  source: "affiliate" | "group";
+  source: TargetSource;
   source_name: string;
-  /** Present when an affiliate row shadows a group-common row. */
+  /** Structured lower-precedence values this entry shadows (ADR-0159). */
+  shadowed: Array<{ source: StandardSource; target_value: number }>;
+  /** Human-readable form of `shadowed`; null when nothing is shadowed. */
+  shadowed_note: string | null;
+  /** Legacy alias of `shadowed_note` (kept one release). */
   overridden_note: string | null;
+  /** Project goals only: why the goal was set, and by whom. */
+  rationale: string | null;
+  set_by: string | null;
   as_of: string; // standard's updated_at ?? created_at
   actual: number | null;
   actual_basis: string;
@@ -150,8 +214,16 @@ export interface TargetCheckEntry {
 }
 
 export interface TargetCheckResult {
-  scope: ProjectTargetScope;
+  /** Standards (group/affiliate) scope; null when unresolved. Project goals apply regardless. */
+  scope: ProjectTargetScope | null;
+  goal_count_by_source: Record<TargetSource, number>;
   entries: TargetCheckEntry[];
+}
+
+export function countGoalsBySource(entries: Array<{ source: TargetSource }>): Record<TargetSource, number> {
+  const out: Record<TargetSource, number> = { project: 0, affiliate: 0, group: 0 };
+  for (const e of entries) out[e.source] += 1;
+  return out;
 }
 
 /** Final-year amount of a business-case line: `annual_amount_krw_m` is the
@@ -180,37 +252,39 @@ export function finalYearCaseFigures(adopted: BusinessCaseView): { revenueKrwM: 
   return { revenueKrwM: revenue, operatingMargin: (revenue - operatingCost) / revenue };
 }
 
-function baseCaseSim(adopted: BusinessCaseView, recommendedScenario: string | null): { npv_krw_m: number | null; irr: number | null } {
-  const p50 = adopted.simulations.filter((s) => s.percentile === "p50");
-  const base = p50.find((s) => recommendedScenario != null && s.scenario === recommendedScenario) ?? p50[0];
-  if (!base) return { npv_krw_m: null, irr: null };
-  return { npv_krw_m: base.npv_krw_m, irr: base.irr };
+/** p50 NPV/IRR of the requested scenario only. No fallback to another scenario's p50: when the
+ * recommended scenario (or its p50) is missing the result is indeterminate with `missing` set. */
+function baseCaseSim(adopted: BusinessCaseView, recommendedScenario: string | null): { npv_krw_m: number | null; irr: number | null; missing: boolean } {
+  const base = adopted.simulations.find((s) => s.percentile === "p50" && recommendedScenario != null && s.scenario === recommendedScenario);
+  if (!base) return { npv_krw_m: null, irr: null, missing: true };
+  return { npv_krw_m: base.npv_krw_m, irr: base.irr, missing: false };
 }
 
 function directionMet(direction: TargetDirection, actual: number, target: number): boolean {
   return direction === "gte" ? actual >= target : actual <= target;
 }
 
-/** Build the fs-gate evidence entries. `adoptedCase === null` (no human adoption
- * yet) yields "indeterminate" for computable metrics — a missing adoption is a
- * fact, not a judgement. Custom metrics are always "manual". */
-export function evaluateTargets(
-  resolved: ResolvedTarget[],
-  scope: ProjectTargetScope,
-  adoptedCase: BusinessCaseView | null,
-  recommendedScenario: string | null,
-): TargetCheckEntry[] {
-  const figures = adoptedCase ? finalYearCaseFigures(adoptedCase) : { revenueKrwM: null, operatingMargin: null };
-  const sim = adoptedCase ? baseCaseSim(adoptedCase, recommendedScenario) : { npv_krw_m: null, irr: null };
+const SHADOW_LABEL: Record<StandardSource, string> = { affiliate: "계열사 기준", group: "그룹 공통 기준" };
 
-  return resolved.map(({ row, source, overridden }) => {
+interface EvalContext {
+  /** Prefix for the NPV/IRR basis text, e.g. "권장 시나리오". */
+  simBasis: string;
+  caseCase: BusinessCaseView | null;
+  sim: { npv_krw_m: number | null; irr: number | null; missing?: boolean };
+}
+
+function evaluateResolved(resolved: ResolvedTarget[], scope: ProjectTargetScope | null, ctx: EvalContext): TargetCheckEntry[] {
+  const { caseCase: adoptedCase, sim } = ctx;
+  const figures = adoptedCase ? finalYearCaseFigures(adoptedCase) : { revenueKrwM: null, operatingMargin: null };
+
+  return resolved.map(({ row, source, shadowed, source_name, rationale, set_by }) => {
     const preset = presetFor(row.metric_key);
     const unit: TargetUnit = preset?.unit ?? "none";
     const custom = !preset;
     const label = preset?.label ?? row.label ?? row.metric_key;
-    const overridden_note =
-      overridden != null
-        ? `그룹 공통 기준 ${formatTargetValue(overridden.target_value, unit)}보다 우선`
+    const shadowed_note =
+      shadowed.length > 0
+        ? `${shadowed.map((x) => `${SHADOW_LABEL[x.source]} ${formatTargetValue(x.row.target_value, unit)}`).join(" · ")}보다 우선`
         : null;
     const as_of = row.updated_at ?? row.created_at;
 
@@ -237,11 +311,11 @@ export function evaluateTargets(
       status = directionMet(row.direction, actual, row.target_value) ? "met" : "missed";
     } else if (row.metric_key === "npv") {
       actual = sim.npv_krw_m;
-      actual_basis = `권장 시나리오 p50 NPV (${adoptedCase.scenario ?? "시나리오 미지정"})`;
+      actual_basis = sim.missing ? "권장 시나리오의 p50 시뮬레이션 없음 — 다른 시나리오로 대체하지 않음" : `${ctx.simBasis} p50 NPV (${adoptedCase.scenario ?? "시나리오 미지정"})`;
       status = actual == null ? "indeterminate" : directionMet(row.direction, actual, row.target_value) ? "met" : "missed";
     } else if (row.metric_key === "irr") {
       actual = sim.irr;
-      actual_basis = `권장 시나리오 p50 IRR (${adoptedCase.scenario ?? "시나리오 미지정"})`;
+      actual_basis = sim.missing ? "권장 시나리오의 p50 시뮬레이션 없음 — 다른 시나리오로 대체하지 않음" : `${ctx.simBasis} p50 IRR (${adoptedCase.scenario ?? "시나리오 미지정"})`;
       status = actual == null ? "indeterminate" : directionMet(row.direction, actual, row.target_value) ? "met" : "missed";
     } else {
       status = "manual";
@@ -256,14 +330,44 @@ export function evaluateTargets(
       unit,
       custom,
       source,
-      source_name: source === "affiliate" ? scope.memberName ?? "" : scope.groupName,
-      overridden_note,
+      source_name: source_name ?? (source === "affiliate" ? scope?.memberName ?? "" : scope?.groupName ?? ""),
+      shadowed: shadowed.map((x) => ({ source: x.source, target_value: x.row.target_value })),
+      shadowed_note,
+      overridden_note: shadowed_note,
+      rationale: rationale ?? null,
+      set_by: set_by ?? null,
       as_of,
       actual,
       actual_basis,
       status,
     };
   });
+}
+
+/** Build the fs-gate evidence entries. `adoptedCase === null` (no human adoption
+ * yet) yields "indeterminate" for computable metrics — a missing adoption is a
+ * fact, not a judgement. Custom metrics are always "manual". */
+export function evaluateTargets(
+  resolved: ResolvedTarget[],
+  scope: ProjectTargetScope | null,
+  adoptedCase: BusinessCaseView | null,
+  recommendedScenario: string | null,
+): TargetCheckEntry[] {
+  const sim = adoptedCase ? baseCaseSim(adoptedCase, recommendedScenario) : { npv_krw_m: null, irr: null, missing: false };
+  return evaluateResolved(resolved, scope, { simBasis: "권장 시나리오", caseCase: adoptedCase, sim });
+}
+
+/** Same status logic as evaluateTargets, for ANY scenario case so the scenario
+ * comparison can show goal attainment per case (ADR-0159). `scenario` selects
+ * which of the case's p50 simulations feeds NPV/IRR (default: the case's own
+ * scenario). A missing simulation yields "indeterminate", never "missed". */
+export function evaluateTargetsForCase(
+  resolved: ResolvedTarget[],
+  caseView: BusinessCaseView,
+  scenario: string | null = caseView.scenario,
+): TargetCheckEntry[] {
+  const sim = baseCaseSim(caseView, scenario);
+  return evaluateResolved(resolved, null, { simBasis: "해당 Case", caseCase: caseView, sim });
 }
 
 // ── admin CRUD (soft delete per the 0081 tombstone convention) ──────────────

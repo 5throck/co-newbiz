@@ -305,3 +305,50 @@ export function review(input: ReviewInput, db: ReturnType<typeof getDb> = getDb(
   })();
   return db.query(SELECT_BY_ID).get(input.input_id) as DimensionInputRow;
 }
+
+/**
+ * Variables whose confirmation is effective on ONE person's assertion — by
+ * explicit user decision (2026-10-12, ADR-0160 addendum (d)). The cross-person
+ * review rule of review() is NOT weakened for any other variable: this path
+ * refuses every var_key outside this allowlist.
+ */
+export const SINGLE_PERSON_CONFIRMATION_VARS: readonly string[] = ["project.site_required"];
+
+/**
+ * Assert AND record the review by the same person in ONE transaction, for an
+ * allowlisted variable only. Every assert() check still applies (registry
+ * coherence, rationale, run scope, membership, insider status). The row is
+ * born live and reviewed (reviewed_by = asserted_by), so routing reads it
+ * immediately; a re-confirmation supersedes the previous live row exactly as
+ * assert() does. The audit trail carries a 'single_person_confirmation'
+ * entry with the rationale so the weaker review is visible after the fact.
+ */
+export function assertWithSinglePersonConfirmation(input: AssertInput, db: ReturnType<typeof getDb> = getDb()): DimensionInputRow {
+  if (!SINGLE_PERSON_CONFIRMATION_VARS.includes(input.var_key)) {
+    throw new Error(
+      `dimension_input_write_rejected: '${input.var_key}' is not eligible for single-person confirmation — its assertion needs a review by a different person (Decision 3, non-negotiable boundary #2).`,
+    );
+  }
+  const now = input.now ?? new Date().toISOString();
+  let row: DimensionInputRow | null = null;
+  db.transaction(() => {
+    const asserted = assert({ ...input, now }, db);
+    db.run("UPDATE dimension_input SET reviewed_by = ? WHERE id = ?", [input.asserted_by, asserted.id]);
+    logDataAccess(db, {
+      userId: input.asserted_by,
+      tableKey: "dimension_input",
+      recordRef: `${input.project_id}:${input.var_key}:${asserted.id}:review`,
+      projectId: input.project_id,
+      action: "write",
+      at: now,
+    });
+    appendAudit(db, {
+      actor: input.asserted_by,
+      action: "dimension_input_single_person_confirmation",
+      target: `${input.project_id}:${input.var_key}:${asserted.id} single_person_confirmation rationale=${input.rationale.trim()}`,
+      now,
+    });
+    row = db.query(SELECT_BY_ID).get(asserted.id) as DimensionInputRow;
+  })();
+  return row as unknown as DimensionInputRow;
+}
