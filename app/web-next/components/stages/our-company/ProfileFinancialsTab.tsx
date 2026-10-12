@@ -2,6 +2,10 @@
 
 // Split from components/stages/OurCompanyStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import { EChartsCore } from "./constants.ts";
+import { ColGroup } from "../../ui.tsx";
+
+// 재무 비율 (연도별) 6열 — 연도 + 수치 지표 5열, 균등 배분.
+const RATIOS_COL_PCT = [20, 16, 16, 16, 16, 16] as const;
 import type { OurCompanyStageState } from "./useOurGroups.ts";
 import type { Profile } from "./types.ts";
 
@@ -85,8 +89,9 @@ export function ProfileFinancialsTab({ ctx, profile }: { ctx: OurCompanyStageSta
                         />
                       </div>
                       <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-                        <table className="data-table report-table mt-3 min-w-[40rem]" aria-label="재무 비율 (연도별)">
+                        <table className="data-table table-fixed-pct tmin-40 mt-3" aria-label="재무 비율 (연도별)">
                           <caption className="sr-only">재무 비율 (연도별)</caption>
+                          <ColGroup widths={RATIOS_COL_PCT} />
                           <thead>
                             <tr>
                               <th scope="col" className="col-label">연도</th>

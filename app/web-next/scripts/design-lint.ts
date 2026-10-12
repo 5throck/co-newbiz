@@ -67,6 +67,31 @@ for (const file of [...walkTsxs(APP_DIR), ...walkTsxs(COMPONENT_DIR)]) {
   const r8 = src.match(/<details[\s\S]{0,400}?<summary[^>]*>[\s\S]{0,200}?\+[^<]*<\/summary>/);
   if (r8) add(file, 1, "R8 details-create", "생성 폼은 details 접기 대신 ＝ 등록 토글 + sizing-new-form 사용");
 
+
+
+  // R10 — 테이블 열 폭 시스템 (table-sizing rollout, A.5). 넓은 표(헤더 6+,
+  // WIDE_TABLE_HEADER_CELLS와 동일 기준)의 .data-table 표는 반드시 table-fixed-pct
+  // (ColGroup 고정 %)여야 하고, th에 하드코딩 폭 클래스(w-[3.5rem] 등)를 쓰지 않는다
+  // — ColGroup/table-fixed-pct/tmin-*/cell-truncate 공용 시스템 사용. 정말 불가한
+  // 표만 표 시작 5줄 이내의 {/* table-sizing: skip */} 마커로 예외를 문서화한다.
+  for (const m of src.matchAll(/<table\b[^>]*>/g)) {
+    const line = src.slice(0, m.index).split("\n").length;
+    const above = lines.slice(Math.max(0, line - 6), line).join("\n");
+    if (above.includes("table-sizing: skip")) continue;
+    const openTag = m[0];
+    const blockEnd = src.indexOf("</table>", m.index);
+    const block = src.slice(m.index, blockEnd === -1 ? undefined : blockEnd);
+    const firstTr = block.match(/<tr\b[\s\S]*?<\/tr>/)?.[0] ?? "";
+    const headerCellsMax = (firstTr.match(/<th\b/g) ?? []).length;
+    if (openTag.includes("data-table") && !openTag.includes("table-fixed-pct") && headerCellsMax >= 6) {
+      add(file, line, "R10 table-sizing", `헤더 6+ .data-table 표에 table-fixed-pct 누락 — 공용 시스템(ColGroup 고정 % + .table-scroll, 필요시 tmin-*/cell-truncate)으로 이전. 불가한 표는 바로 위에 {/* table-sizing: skip */} 마커`);
+    }
+    const thHardWidth = block.match(/<th\b[^>]*className="[^"]*\bw-\[\d/);
+    if (thHardWidth && headerCellsMax >= 6) {
+      add(file, line, "R10 table-sizing", `넓은 표 th에 하드코딩 폭 클래스(w-[...]) 금지 — ColGroup 고정 % 사용`);
+    }
+  }
+
   // R9 — 테이블 th/td col-* 정합성 (ADR-0088: 헤더 정렬은 셀 정렬과 일치).
   // col-num/col-label/col-type/col-text는 th와 td 양쪽에 미러링되어야 한다.
   // 한쪽에만 있으면 열 정렬이 어긋나거나 죽은 클래스가 된다. 조건부 열·map 렌더에도

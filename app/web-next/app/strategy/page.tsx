@@ -11,6 +11,11 @@ import {
   DollarSign,
   ShieldCheck,
 } from "lucide-react";
+import { ColGroup } from "../../components/ui.tsx";
+
+// 모듈별 시장성 매트릭스 열 비율 — 모듈명·설명·라이선스·가격 전략이 긴 문단이므로
+// 설명·가격에 넉넉한 몫을 주고 나머지는 균등 배분한다.
+const MODULES_COL_PCT = [14, 34, 12, 20, 20] as const;
 
 const MODULES = [
   {
@@ -172,8 +177,9 @@ export default function StrategyPage() {
           <Building2 size={20} className="text-[color:var(--primary)]" />
           모듈별 시장성 · 라이선스 매트릭스
         </h2>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+          <table className="w-full border-collapse table-fixed-pct tmin-56">
+            <ColGroup widths={MODULES_COL_PCT} />
             <thead>
               <tr className="text-left text-sm">
                 <th className="p-3 border-b border-[color:var(--border)]">모듈</th>
@@ -189,7 +195,7 @@ export default function StrategyPage() {
                   <td className="p-3 border-b border-[color:var(--border-subtle)] font-semibold">
                     {m.name}
                   </td>
-                  <td className="p-3 border-b border-[color:var(--border-subtle)] text-[color:var(--muted-fg)] max-w-xs">
+                  <td className="p-3 border-b border-[color:var(--border-subtle)] text-[color:var(--muted-fg)] cell-clamp-3">
                     {m.desc}
                   </td>
                   <td className="p-3 border-b border-[color:var(--border-subtle)]">
@@ -198,7 +204,7 @@ export default function StrategyPage() {
                   <td className="p-3 border-b border-[color:var(--border-subtle)] text-[color:var(--muted-fg)]">
                     {m.license}
                   </td>
-                  <td className="p-3 border-b border-[color:var(--border-subtle)] text-[color:var(--muted-fg)] max-w-xs">
+                  <td className="p-3 border-b border-[color:var(--border-subtle)] text-[color:var(--muted-fg)] cell-clamp-3">
                     {m.pricingNote}
                   </td>
                 </tr>

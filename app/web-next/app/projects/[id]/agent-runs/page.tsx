@@ -5,7 +5,10 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
-import { PageState } from "../../../../components/ui.tsx";
+import { ColGroup, PageState } from "../../../../components/ui.tsx";
+
+// 실행 타임라인 6열 — 시각·단계·유형·상태는 좁게, 활동 id에 넉넉한 몫.
+const AGENT_RUN_COL_PCT = [18, 12, 28, 12, 14, 16] as const;
 
 // 에이전트 실행 이력 (ADR-0123 #1) — 어떤 에이전트가 언제 무엇을 실행/제안했는지
 // 타임라인으로 추적한다. 읽기 전용 — 제안(PROPOSAL)과 사람 기록은 항상 구분된다.
@@ -37,8 +40,9 @@ function AgentRunsView() {
           <PageState state="empty" emptyText="실행된 에이전트 활동이 없습니다." emptyAction={<Link href="/deals" className="text-[color:var(--accent)] underline not-italic">파이프라인 시작 →</Link>} />
         ) : (
           <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table" aria-label="실행 타임라인">
+            <table className="data-table table-fixed-pct tmin-48" aria-label="실행 타임라인">
               <caption className="sr-only">에이전트 실행 타임라인</caption>
+              <ColGroup widths={AGENT_RUN_COL_PCT} />
               <thead><tr><th>시각</th><th>단계</th><th>활동</th><th>유형</th><th>상태</th><th>실행자</th></tr></thead>
               <tbody>{data.runs.map((r, i) => (
                 <tr key={`${r.run_id}-${i}`}>

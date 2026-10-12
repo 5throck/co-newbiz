@@ -2,7 +2,10 @@
 
 // Split from components/admin/AdminConsole.tsx (Wave U-3 decomposition); behavior unchanged.
 import type { AdminConsoleState } from "./useAdminActions.ts";
-import { DevRef } from "../../ui.tsx";
+import { ColGroup, DevRef } from "../../ui.tsx";
+
+// 거버넌스 문서 레지스트리 8열 — ID·키·제목이 긴 텍스트라 고정 비율 유지.
+const GOVERNANCE_COL_PCT = [18, 8, 14, 26, 7, 9, 10, 8] as const;
 
 export function ReviewAuditPanel({ ctx }: { ctx: AdminConsoleState }) {
   const { section, reviewAudit } = ctx;
@@ -69,8 +72,9 @@ export function GovernancePanel({ ctx }: { ctx: AdminConsoleState }) {
           <p className="text-[color:var(--muted-fg)] italic">등록된 거버넌스 문서가 없습니다.</p>
         ) : (
           <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-<table className="data-table">
+<table className="data-table table-fixed-pct tmin-56">
             <caption className="sr-only">거버넌스 문서 레지스트리</caption>
+            <ColGroup widths={GOVERNANCE_COL_PCT} />
             <thead>
               <tr>
                 <th scope="col">ID</th>

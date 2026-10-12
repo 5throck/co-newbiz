@@ -4,7 +4,10 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
-import { PageState, useToast } from "../../../../components/ui.tsx";
+import { ColGroup, PageState, useToast } from "../../../../components/ui.tsx";
+
+// 차입 6열 — 대출기관·커버넌트·담보 텍스트에 여유, 수치·날짜는 좁게.
+const DEBT_COL_PCT = [20, 13, 13, 11, 22, 21] as const;
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
 
@@ -96,8 +99,9 @@ function DebtView() {
           <PageState state="empty" emptyText="등록된 차입이 없습니다." />
         ) : (
           <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table" aria-label="차입">
+            <table className="data-table table-fixed-pct tmin-48" aria-label="차입">
               <caption className="sr-only">차입</caption>
+              <ColGroup widths={DEBT_COL_PCT} />
               <thead><tr><th>대출기관</th><th className="col-num">원금</th><th>금리</th><th>만기</th><th>커버넌트</th><th>담보·선위</th></tr></thead>
               <tbody>{rows.map((r) => (
                 <tr key={r.id}>

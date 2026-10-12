@@ -15,3 +15,14 @@ export function competitiveColPct(extra: number): number[] {
   middles[extra - 1] = Math.round((100 - first - last - share * (extra - 1)) * 100) / 100;
   return [first, ...middles, last];
 }
+
+/**
+ * 가치사슬 연계 링크 (SizingStructureTab) — 관계/산업/hop/계수β/시차/근거
+ * (+관리 when curatable). n = 6 → [13, 18, 13, 18, 12, 26]; n = 7 → [12, 16, 12, 16, 10, 22, 12];
+ * other counts fall back to an equal split (the sizing guard sweeps n = 1..20).
+ */
+export function chainLinkColPct(n: number): number[] {
+  if (n === 6) return [13, 18, 13, 18, 12, 26];
+  if (n === 7) return [12, 16, 12, 16, 10, 22, 12];
+  return Array.from({ length: Math.max(n, 1) }, () => 100 / Math.max(n, 1));
+}

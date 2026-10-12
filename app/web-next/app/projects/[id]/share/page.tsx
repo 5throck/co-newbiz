@@ -4,7 +4,10 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
-import { PageState, useToast } from "../../../../components/ui.tsx";
+import { ColGroup, PageState, useToast } from "../../../../components/ui.tsx";
+
+// 공유 링크 6열 — 자료 제목·수신자가 긴 텍스트라 table-scroll 안에서 고정 비율 유지.
+const SHARE_COL_PCT = [26, 20, 12, 10, 18, 14] as const;
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
 
@@ -64,12 +67,14 @@ function ShareView() {
         {rows === null ? <PageState state="loading" /> : rows.length === 0 ? (
           <PageState state="empty" emptyText="활성·만료된 공유 링크가 없습니다." />
         ) : (
-          <table className="data-table" aria-label="공유 링크">
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+          <table className="data-table table-fixed-pct tmin-48" aria-label="공유 링크">
             <caption className="sr-only">공유 링크</caption>
+            <ColGroup widths={SHARE_COL_PCT} />
             <thead><tr><th>자료</th><th>수신자</th><th>만료</th><th className="col-num">열람</th><th>상태</th><th></th></tr></thead>
             <tbody>{rows.map((r) => (
               <tr key={r.id}>
-                <td className="font-semibold">{r.title}</td>
+                <td className="font-semibold cell-truncate">{r.title}</td>
                 <td>{r.recipient}</td>
                 <td className="tabular-nums text-[length:var(--fs-caption)]">{r.expires_at.slice(0, 10)}</td>
                 <td className="col-num tabular-nums">{r.access_count}회</td>
@@ -78,6 +83,7 @@ function ShareView() {
               </tr>
             ))}</tbody>
           </table>
+          </div>
         )}
       </section>
       {canAct && (

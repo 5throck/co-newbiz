@@ -2,6 +2,8 @@
 
 // Split from components/stages/MarketAnalysisStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import { segmentsOf } from "../../../lib/market-sizing.ts";
+import { ColGroup } from "../../ui.tsx";
+import { chainLinkColPct } from "./constants.ts";
 import { StepSection } from "./MarketReport.tsx";
 import { POSITION_LABELS } from "./marketFormat.ts";
 import { StepSensitivityChart } from "./SizingCharts.tsx";
@@ -71,10 +73,11 @@ export function SizingStructureTab({ ctx }: { ctx: SizingReportState }) {
           </p>
         ) : (
           <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-          <table className="data-table report-table" aria-label="가치사슬 연계 링크">
+          <table className="data-table table-fixed-pct tmin-56" aria-label="가치사슬 연계 링크">
             <caption className="sr-only">가치사슬 연계 링크</caption>
+            <ColGroup widths={chainLinkColPct(canCurate ? 7 : 6)} />
             <thead>
-              <tr><th scope="col" className="w-[8rem]">관계</th><th scope="col">산업</th><th scope="col">hop</th><th scope="col">계수/β</th><th scope="col">시차(월)</th><th scope="col">근거</th>{canCurate && <th scope="col">관리</th>}</tr>
+              <tr><th scope="col">관계</th><th scope="col">산업</th><th scope="col">hop</th><th scope="col">계수/β</th><th scope="col">시차(월)</th><th scope="col">근거</th>{canCurate && <th scope="col">관리</th>}</tr>
             </thead>
             <tbody>
               {view.chain.links.map((l, i) => (

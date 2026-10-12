@@ -4,6 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { InlineCreateForm, useConfirm } from "../crud.tsx";
 import { SectionToolbar } from "../layout.tsx";
+import { ColGroup } from "../ui.tsx";
+
+// 사업목표 기준 목록 6열 — 그룹·적용 범위·지표·기준·등록일·작업 고정 비율.
+const TARGETS_COL_PCT = [20, 16, 26, 16, 12, 10] as const;
 import {
   CUSTOM_METRIC_KEY,
   METRIC_PRESETS,
@@ -302,15 +306,16 @@ export function BusinessTargetsSection() {
               <p className="text-[color:var(--muted-fg)] italic">등록된 사업목표 기준이 없습니다.</p>
             ) : (
               <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-                <table className="data-table list-table" aria-label="사업목표 기준 목록">
+                <table className="data-table list-table table-fixed-pct tmin-48" aria-label="사업목표 기준 목록">
+                  <ColGroup widths={TARGETS_COL_PCT} />
                   <thead>
                     <tr>
                       <th scope="col">그룹</th>
-                      <th scope="col" className="w-[8rem]">적용 범위</th>
-                      <th scope="col" className="w-[8rem]">지표</th>
-                      <th scope="col" className="col-num w-[7rem]">기준</th>
+                      <th scope="col">적용 범위</th>
+                      <th scope="col">지표</th>
+                      <th scope="col" className="col-num">기준</th>
                       <th scope="col" className="col-date">등록일</th>
-                      <th scope="col" className="w-[10rem]"><span className="sr-only">작업</span></th>
+                      <th scope="col"><span className="sr-only">작업</span></th>
                     </tr>
                   </thead>
                   <tbody>

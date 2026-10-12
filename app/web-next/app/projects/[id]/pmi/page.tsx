@@ -12,6 +12,10 @@ import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
 import { KEY_TALENT_STATUS_LABEL } from "../../../../lib/labels.ts";
 import { PMI_HIDDEN_NOTE, pmiErrorText } from "../../../../lib/post-management-view.ts";
+import { ColGroup } from "../../../../components/ui.tsx";
+
+// 시너지 인증 6열 — 인증자·관리에 여유, 나머지는 날짜·수치 열로 좁게.
+const PMI_CERT_COL_PCT = [20, 12, 18, 17, 17, 16] as const;
 
 interface Talent {
   id: string;
@@ -177,8 +181,9 @@ export default function PmiPage() {
       <section className="market-section" aria-label="시너지 인증">
         <h2 className="text-[0.92rem] font-semibold mb-2">시너지 인증 ({certs?.length ?? 0}건)</h2>
         <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-          <table className="data-table">
+          <table className="data-table table-fixed-pct tmin-48">
             <caption className="sr-only">PMI 시너지 인증 목록</caption>
+            <ColGroup widths={PMI_CERT_COL_PCT} />
             <thead>
               <tr>
                 <th scope="col">런레이트</th><th scope="col">지속 분기</th><th scope="col">인증자</th>

@@ -7,7 +7,12 @@
 // 유지한다 — router로 프로젝트 페이지를 건드리지 않는다.
 
 import Link from "next/link";
-import { DevRef } from "../ui.tsx";
+import { ColGroup, DevRef } from "../ui.tsx";
+
+// 케이스 비교 11열 — 대상·계산 엔진·구조 교차검증·EV/매출 배수가 텍스트 열, 나머지는 수치.
+const CASE_COMPARE_COL_PCT = [12, 7, 9, 9, 7, 7, 9, 13, 13, 8, 6] as const;
+// 시나리오 케이스 10열 — 관점·성장률·sigma 출처와 수치 열.
+const SCENARIO_CASE_COL_PCT = [10, 10, 10, 9, 9, 9, 7, 12, 14, 10] as const;
 import TargetSelector from "../TargetSelector.tsx";
 import { KRW_MILLIONS_UNIT, formatKrwMillionsPlain } from "../../lib/format.ts";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -605,7 +610,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             </p>
           )}
         </div>
-        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table">
+        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table table-fixed-pct tmin-80">
+          <ColGroup widths={CASE_COMPARE_COL_PCT} />
           <thead>
             <tr>
               <th scope="col">대상</th>
@@ -875,7 +881,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                 이 시나리오의 케이스가 없습니다 — 자동 생성을 실행하세요.
               </p>
             ) : (
-              <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table">
+              <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table table-fixed-pct tmin-80">
+                <ColGroup widths={SCENARIO_CASE_COL_PCT} />
                 <thead>
                   <tr>
                     <th scope="col">관점</th>
