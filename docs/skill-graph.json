@@ -1401,6 +1401,11 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20261012-02",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "doc:AGENTS.md",
       "type": "doc",
       "layer": "L3"
@@ -1588,7 +1593,7 @@
       "name": "certification-roadmap",
       "scope": "root",
       "capability": "certification-roadmap",
-      "content_hash": "9cebd9cacf30cd20",
+      "content_hash": "ec55d2b9b053e177",
       "version": "1.0.0",
       "mirrors": [
         "skills/certification-roadmap/SKILL.md",
@@ -1948,7 +1953,7 @@
       "name": "financing-plan-review",
       "scope": "root",
       "capability": "financing-plan-review",
-      "content_hash": "d4a2a46168ac7cee",
+      "content_hash": "06c94a1ef4b218f9",
       "version": "1.2.0",
       "mirrors": [
         "skills/financing-plan-review/SKILL.md",
@@ -2020,7 +2025,7 @@
       "name": "greenfield-feasibility",
       "scope": "root",
       "capability": "greenfield-feasibility",
-      "content_hash": "d89bab775df8a389",
+      "content_hash": "c936c3a394e7d190",
       "version": "1.2.0",
       "mirrors": [
         "skills/greenfield-feasibility/SKILL.md",
@@ -2200,7 +2205,7 @@
       "name": "incentive-clawback-assessment",
       "scope": "root",
       "capability": "incentive-clawback-assessment",
-      "content_hash": "e0a575afdd4d7e54",
+      "content_hash": "0d4869350a2f895a",
       "version": "1.1.0",
       "mirrors": [
         "skills/incentive-clawback-assessment/SKILL.md",
@@ -2996,7 +3001,7 @@
       "name": "stage-gate-governance",
       "scope": "root",
       "capability": "stage-gate-governance",
-      "content_hash": "960d8ea5a83fda13",
+      "content_hash": "64fbac2af7da062b",
       "version": "1.4.1",
       "mirrors": [
         "skills/stage-gate-governance/SKILL.md",
@@ -3090,7 +3095,7 @@
       "name": "talent-pipeline-planning",
       "scope": "root",
       "capability": "talent-pipeline-planning",
-      "content_hash": "b365788582907c93",
+      "content_hash": "65c64b9c72628d00",
       "version": "1.1.0",
       "mirrors": [
         "skills/talent-pipeline-planning/SKILL.md",
@@ -4421,6 +4426,18 @@
     {
       "type": "cites_skill",
       "from": "dec:DEC-20261012-01",
+      "to": "skill:root/policy-and-procedure-governance",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261012-02",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261012-02",
       "to": "skill:root/policy-and-procedure-governance",
       "source": "skills_used"
     },

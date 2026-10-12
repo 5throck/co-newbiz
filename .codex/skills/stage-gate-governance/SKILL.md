@@ -60,6 +60,7 @@ metadata:
     - brownfield-target-screening
     - brownfield-fs-comparative
     - company-profile-analysis
+    - greenfield-execution-baseline
 ---
 
 ## Context

@@ -10,6 +10,7 @@ import type { Database } from "bun:sqlite";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { AGENT_KEYS } from "./agent-registry.generated.ts";
 import { SPEC_VERSION } from "./spec-activities.generated.ts";
+import { resolveTrack } from "./project-track.ts";
 
 export const PMI_KICKOFF_STAGE = "s11_pmi_kickoff";
 
@@ -75,3 +76,17 @@ export function recordPmiKickoff(
   );
   return { id, recordedBy: input.recordedBy, recordedAt: now, owner, planNote };
 }
+
+/**
+ * ADR-0161 PMI guard via the ONE shared track resolver (lib/project-track.ts:
+ * case_type + route / md_project.track, never origin). Fail-closed: an
+ * unresolved or conflicting track never applies. The applies decision itself
+ * is still pmiKickoffApplies, so brownfield M&A / JV / strategic investment
+ * keep today's success path.
+ */
+export function pmiApplicability(db: Database, projectId: string): { track: string | null; subTrack: string | null; applies: boolean } {
+  const r = resolveTrack(projectId, db);
+  return { track: r.track, subTrack: r.sub_track, applies: pmiKickoffApplies(r.track, r.sub_track) };
+}
+
+export const PMI_NOT_APPLICABLE_MESSAGE = "PMI는 Brownfield M&A·JV·전략적 투자 Route에만 적용됩니다 (greenfield·비PMI 세부 트랙은 기록할 수 없음 — ADR-0161).";

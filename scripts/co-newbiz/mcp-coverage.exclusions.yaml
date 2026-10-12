@@ -86,6 +86,18 @@ exclusions:
     kind: route
     route: "POST /api/projects/{}/capex-tranches"
     reason: Human-only capex tranche records and release/withhold decisions (ADR-0160 addendum, boundary #2).
+  - id: execution-baseline
+    kind: route
+    route: "POST /api/projects/{}/execution-baseline"
+    reason: Human-only greenfield S11 execution baseline entries and single-person confirmation with rationale (ADR-0161, boundary #2).
+  - id: post-management-scorecard
+    kind: route
+    route: "POST /api/projects/{}/post-management/scorecard"
+    reason: Human-only greenfield S12 scorecard cycle with the venture_class default and audited override (ADR-0161, boundary #2).
+  - id: policy-migration
+    kind: route
+    route: "POST /api/projects/{}/policy-migration"
+    reason: Human-only ADR-0161 retroactive policy_migration audit entry, recorded by the process owner (project lead) with a migration_note (boundary #2).
   - id: dd-custom-item-propose
     kind: route
     route: "POST /api/projects/{}/dd-checklist/custom"

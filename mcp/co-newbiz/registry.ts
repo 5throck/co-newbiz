@@ -180,7 +180,8 @@ const BASE_TOOLS: readonly RegistryTool[] = [
   defineTool({
     name: "get_project_ic_package",
     description: "S10 IC package (read-only) — adopted business case + simulations, DD completion, AI-proposed RAG grade (labeled a proposal), entity_ic/group_ic gate history, establishment progress.",
-    scope: "read", kind: "read", stageActivities: ["ic-preparation"],
+    // greenfield-execution-baseline (ADR-0161): read context for the S11 baseline drafts; the step-6 confirmation stays human-only.
+    scope: "read", kind: "read", stageActivities: ["ic-preparation", "greenfield-execution-baseline"],
     inputSchema: { type: "object", properties: { projectId: { type: "string" } }, required: ["projectId"] },
     args: z.object({ projectId: requiredString }),
     handler: (ctx, a) => getProjectIcPackage(ctx.port, a.projectId),
@@ -229,7 +230,7 @@ const BASE_META: Record<string, { routes: string[]; activities?: string[]; artif
   list_committee_sessions: { routes: ["GET /api/opportunities/{opportunityId}/committee-sessions"] },
   get_committee_session: { routes: ["GET /api/opportunities/{opportunityId}/committee-sessions/{sessionId}"] },
   get_project_ic_package: { routes: ["GET /api/projects/{projectId}/ic-package"], artifacts: ["stage:S11:1"] },
-  get_portfolio_scorecard: { routes: ["GET /api/projects/{projectId}/scorecard"], activities: ["portfolio-monitoring"], artifacts: ["stage:S12:1"] },
+  get_portfolio_scorecard: { routes: ["GET /api/projects/{projectId}/scorecard"], activities: ["portfolio-monitoring", "integration-monitoring", "partnership-monitoring"], artifacts: ["stage:S12:1", "stage:S12:4"] },
   get_project_dd_workspace: { routes: ["GET /api/projects/{projectId}/dd"] },
 };
 

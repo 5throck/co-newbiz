@@ -4,7 +4,7 @@ title: "Entity Formation Checklist (Internal / Joint Origin Execution)"
 scope: shared
 enforceability: mixed
 owner_agent: legal-counsel
-version: "1.0.0"
+version: "1.1.0"
 effective_from: "2026-08-22"
 gate: "Entity IC"
 
@@ -14,6 +14,15 @@ gate: "Entity IC"
 # entities (mark not-applicable for internal origin, mirroring brownfield-dd step 3's
 # conditional-applicability pattern). JV governance design cross-references the
 # jv-structuring skill rather than restating it.
+#
+# gx-01..gx-03 (v1.1.0, ADR-0161 Proposed) are a separate group: the greenfield
+# execution baseline (procedures/_shared/greenfield-execution-baseline), which
+# applies by case_type = greenfield regardless of origin and of whether a new
+# entity is formed. They replace, for greenfield at S11, the closing-specific
+# financing items fin-04..fin-08 (financing-plan-checklist S11 track scope).
+# Mark them not-applicable for brownfield projects. Retroactively (ADR-0161
+# Q2) they are recommended, not blocking, for a project that already
+# completed S11.
 
 items:
   - id: ef-01
@@ -93,9 +102,23 @@ items:
     text: "Korea note (only where a company split is the formation route): a split (물적분할/인적분할) requires a shareholders' special resolution and the creditor-protection procedure — individual notice to known creditors plus public notice with an objection window of at least one month (Commercial Act arts. 527-2/527-5). Verify against the current KLRI statute text before enforcement use."
     mandatory: false
     waiver_eligible: true
+  # Greenfield execution baseline — case_type = greenfield only (ADR-0161)
+  - id: gx-01
+    text: "Greenfield only: capex tranche schedule bound to the project's capex_tranche rows and the S10 deal-structure release conditions, reconciled against the S8 adopted case capex; every gap recorded as a finding, none auto-fixed"
+    mandatory: true
+    waiver_eligible: true
+  - id: gx-02
+    text: "Greenfield only: ramp-up KPI targets (first revenue, utilisation, BEP month, revenue and EBITDA vs the S8 adopted case) set, with the S8 project business goals referenced as non-blocking evidence"
+    mandatory: true
+    waiver_eligible: true
+  - id: gx-03
+    text: "Greenfield only: execution baseline confirmed by one person (Entity IC owner or delegate) with a non-empty rationale; no agent confirmation"
+    mandatory: true
+    waiver_eligible: false   # a human confirmation is not waivable (ADR-0161 Row 1 follow-up, user-approved 2026-10-12)
 
 legal_basis:
   - "ADR-0051 (workflow gap closure — internal-origin entity-formation chain step)"
   - "procedures/_shared/entity-establishment-execution/schema.yaml (execution procedure consuming this checklist)"
   - "DLA Piper pre/post-incorporation checklists; Robinson+Cole employee IP assignment; Umbrex JV governance architecture; KLRI Commercial Act English text"
   - "skills/jv-structuring (JV governance design — cross-referenced, not restated)"
+  - "procedures/_shared/greenfield-execution-baseline/schema.yaml (gx-01..gx-03 — ADR-0161)"

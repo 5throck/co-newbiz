@@ -248,6 +248,20 @@ async function runScenario(track: Track, path: Path): Promise<RunResult> {
     trace.push(snapshot(`gate:${g.gate}`, ids));
   }
 
+  // ADR-0161: the greenfield execution baseline is human-only on BOTH paths (no MCP tool may confirm it).
+  if (track === "greenfield") {
+    { const base = `/api/projects/${ids.projectId}/execution-baseline`;
+      const entries = { permit_milestones: [{ name: "건축허가", issuer: "시청", target_date: "2027-03-01" }], hiring_plan: [{ role_family: "생산", quarter: "2027-Q1", headcount: 10 }], kpi_targets: [{ metric_key: "revenue_vs_case", target_value: 100, due: "2028-Q4" }] };
+      expect((await nextRequest(base, { method: "POST", headers: human.headers, body: JSON.stringify({ action: "record_entries", entries }) })).status).toBe(201);
+      const first = await nextRequest(base, { method: "POST", headers: human.headers, body: JSON.stringify({ action: "confirm", rationale: "Parity scenario: the baseline is confirmed by the human." }) });
+      let st = first.status;
+      if (st === 409) {
+        const open = ((await first.json()) as { meta: { open_findings: Array<{ code: string }> } }).meta.open_findings;
+        st = (await nextRequest(base, { method: "POST", headers: human.headers, body: JSON.stringify({ action: "confirm", rationale: "Parity scenario: the baseline is confirmed by the human.", acknowledged_findings: open.map((f) => ({ code: f.code, rationale: "테스트 픽스처: 확인" })) }) })).status;
+      }
+      expect(st).toBe(201); }
+  }
+
   if (path === "rest") await restTransition();
   else await proposeThenConfirm("propose_transition_decision", { projectId: ids.projectId, decision: "graduate_to_core", rationale: transitionBody().rationale, core_handoff: transitionBody().core_handoff });
   trace.push(snapshot("transition", ids));

@@ -3,14 +3,27 @@ procedure_id: shared-jv-lifecycle-governance
 title: "JV Lifecycle Governance (post-formation, origin=joint)"
 scope: shared
 level: entity
-version: "1.0.0"
+version: "1.1.0"
 status: active
 # Design §C.1 open decision 1 — RESOLVED as a SIBLING procedure (ADR-0052):
 # entity-establishment-execution is formation-scoped with a clean completion
 # gate (step 5); the lifecycle phases have different cadence and gate
 # semantics, so they do not extend the formation file.
+#
+# v1.1.0 (ADR-0161, Proposed; user decision Q3 2026-10-12): the brownfield
+# partnership sub-track (origin external, no JV entity) had no applicable S12
+# procedure. The S12 activity partnership-monitoring runs step 2 (the health
+# scorecard, partnership variant) for it. The procedure predicate gains a
+# sub_track = partnership branch, and steps 1, 3, 4 and 5 carry a step-level
+# origin = joint predicate, so for every joint-origin JV the applicable step
+# set is exactly v1.0.0 (byte-identical behaviour). Retroactively (Q2) step 2
+# is RECOMMENDED, not blocking, for a partnership project already past S11.
 applicability: conditional
-applies_when: { op: "cmp", var: "project.origin", cmp: "eq", value: "joint" }
+applies_when:
+  op: any_of
+  of:
+    - { op: "cmp", var: "project.origin", cmp: "eq", value: "joint" }
+    - { op: "cmp", var: "project.sub_track", cmp: "eq", value: "partnership" }
 workflow_type: core
 gate: post_close   # begins after entity-establishment-execution completes formation (ef-13..17 verified)
 owner_agent: partnership-agent
@@ -19,6 +32,7 @@ legal_basis:
   - "docs/designs/2026-08-23-track-coverage-extension-design.md §C"
   - "ADR-0047 (origin=joint routing value)"
   - "docs/research/pmi-jv-lifecycle-best-practice.md [pmi-jv B.1-B.6]"
+  - "ADR-0161 (v1.1.0 — partnership predicate branch, step 2 partnership variant for S12 partnership-monitoring; Proposed, Q3 decided by the user 2026-10-12)"
 
 # Four phases: operate -> monitor -> restructure -> exit. Between formation
 # and exit — typically a decade (median JV lifespan 10 years, ILLUSTRATIVE
@@ -31,6 +45,7 @@ legal_basis:
 steps:
   - id: 1
     gate: post_close
+    applies_when: { op: "cmp", var: "project.origin", cmp: "eq", value: "joint" }
     agent_key: legal-counsel
     skill_key: jv-structuring
     output_type: jv_governance_review
@@ -62,9 +77,15 @@ steps:
       recordVentureScorecardCycle with source_procedure
       'jv-lifecycle-governance' (ADR-0059, migration 0024): the seven
       dimensions map into the financial/strategic sections, and
-      measure_key preserves dimension identity.
+      measure_key preserves dimension identity. Partnership variant (S12
+      activity partnership-monitoring, ADR-0161): for a brownfield
+      partnership (no JV entity) the same scorecard covers the dimensions
+      that exist without a shared board — performance, partner alignment,
+      milestones and funding, value-distribution symmetry — and records the
+      others as not applicable with a reason; venture_class jv.
   - id: 3
     gate: post_close
+    applies_when: { op: "cmp", var: "project.origin", cmp: "eq", value: "joint" }
     agent_key: group-review-agent
     skill_key: portfolio-fit-assessment
     output_type: jv_strategic_asset_review
@@ -77,6 +98,7 @@ steps:
       portfolio rollup (portfolio-venture-monitoring step 1).
   - id: 4
     gate: post_close
+    applies_when: { op: "cmp", var: "project.origin", cmp: "eq", value: "joint" }
     agent_key: legal-counsel
     skill_key: jv-structuring
     output_type: jv_restructuring_decision
@@ -93,6 +115,7 @@ steps:
       ("inability to evolve" is a named failure cause).
   - id: 5
     gate: post_close
+    applies_when: { op: "cmp", var: "project.origin", cmp: "eq", value: "joint" }
     agent_key: legal-counsel
     skill_key: jv-structuring
     output_type: jv_exit_execution

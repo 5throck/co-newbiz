@@ -10,6 +10,8 @@ import { useConfirm } from "../../../../components/crud.tsx";
 import { api } from "../../../../lib/api.ts";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
+import { KEY_TALENT_STATUS_LABEL } from "../../../../lib/labels.ts";
+import { PMI_HIDDEN_NOTE, pmiErrorText } from "../../../../lib/post-management-view.ts";
 
 interface Talent {
   id: string;
@@ -29,8 +31,9 @@ interface Certification {
   created_at: string;
 }
 
-const TALENT_STATUS_LABEL: Record<string, string> = { active: "활동 중", retained: "잔존 확정", exited: "퇴사" };
-const TALENT_STATUS_CLASS: Record<string, string> = { active: "status-in-progress", retained: "status-green", exited: "status-red" };
+// pmi_key_talent.status allows exactly active | departed_regretted | departed_planned (DB CHECK).
+const TALENT_STATUS_CLASS: Record<string, string> = { active: "status-green", departed_regretted: "status-red", departed_planned: "status-amber" };
+const TALENT_STATUS_ICON: Record<string, string> = { active: "●", departed_regretted: "✕", departed_planned: "◐" };
 
 function bpToPercent(bp: number): string {
   return `${(bp / 100).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}%`;
@@ -40,7 +43,9 @@ export default function PmiPage() {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
   const { me } = useAuth();
-  const canAct = canWriteProject(me?.role);
+  // ADR-0161: PMI writes are refused (403 not_applicable_track) for greenfield and non-PMI sub-tracks.
+  const [pmiApplies, setPmiApplies] = useState<boolean | null>(null);
+  const canAct = canWriteProject(me?.role) && pmiApplies !== false;
   const { confirm, confirmDialog } = useConfirm();
   const [talents, setTalents] = useState<Talent[] | null>(null);
   const [certs, setCerts] = useState<Certification[] | null>(null);
@@ -59,6 +64,11 @@ export default function PmiPage() {
       .catch((e) => setError(e instanceof Error ? e.message : "PMI 데이터를 불러오지 못했습니다."));
   }, [base]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    api.get<{ applicability: { pmi_applies: boolean } }>(`${base}/post-management`)
+      .then((r) => setPmiApplies(r.data.applicability.pmi_applies))
+      .catch(() => { /* unknown: keep today's behaviour; the server still guards every write */ });
+  }, [base]);
 
   async function send(method: "post" | "put" | "delete", path: string, body?: unknown) {
     setBusy(true); setError(null);
@@ -66,7 +76,7 @@ export default function PmiPage() {
       await api[method](`${base}${path}`, body);
       load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "저장 실패");
+      setError(pmiErrorText((e as { code?: string } | null)?.code, e instanceof Error ? e.message : undefined, "저장 실패"));
     } finally {
       setBusy(false);
     }
@@ -102,6 +112,12 @@ export default function PmiPage() {
         </p>
       </header>
 
+      {pmiApplies === false && (
+        <p role="note" className="text-[length:var(--fs-caption)] mb-2" data-testid="pmi-not-applicable">
+          <span className="status-chip status-not-started">○ 이 트랙에는 적용되지 않음</span>
+          <span className="block mt-1 text-[color:var(--muted-fg)]">{PMI_HIDDEN_NOTE}</span>
+        </p>
+      )}
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">{error}</p>}
 
       <section className="market-section mb-3" aria-label="핵심인력">
@@ -119,19 +135,23 @@ export default function PmiPage() {
               {(talents ?? []).map((t) => (
                 <tr key={t.id}>
                   <td>{t.role_ref}</td>
-                  <td><span className={`status-chip ${TALENT_STATUS_CLASS[t.status] ?? "status-not-started"}`}>{TALENT_STATUS_LABEL[t.status] ?? t.status}</span></td>
+                  <td><span className={`status-chip ${TALENT_STATUS_CLASS[t.status] ?? "status-not-started"}`}>{TALENT_STATUS_ICON[t.status] ?? "?"} {KEY_TALENT_STATUS_LABEL[t.status] ?? t.status}</span></td>
                   <td>{t.exit_date ? t.exit_date.slice(0, 10) : "—"}</td>
                   <td>{t.created_at.slice(0, 10)}</td>
                   <td>
                     {canAct && (
                       <span className="flex gap-1">
-                        {t.status !== "retained" && (
+                        {t.status !== "active" && (
                           <button type="button" className="btn-ghost btn-sm" disabled={busy}
-                            onClick={() => void send("put", `/pmi/key-talent/${t.id}`, { status: "retained" })}>잔존 확정</button>
+                            onClick={() => confirm("재직 중으로 되돌림", () => { void send("put", `/pmi/key-talent/${t.id}`, { status: "active" }); }, { body: "이탈 기록을 해제하고 퇴사일을 지웁니다.", tone: "neutral", confirmLabel: "되돌림" })}>재직으로 되돌림</button>
                         )}
-                        {t.status !== "exited" && (
+                        {t.status !== "departed_regretted" && (
                           <button type="button" className="btn-ghost btn-sm" disabled={busy}
-                            onClick={() => confirm("핵심인력 퇴사 처리", () => { void send("put", `/pmi/key-talent/${t.id}`, { status: "exited" }); }, { body: "퇴사일이 오늘로 기록됩니다." })}>퇴사</button>
+                            onClick={() => confirm("아쉬운 퇴사 처리", () => { void send("put", `/pmi/key-talent/${t.id}`, { status: "departed_regretted" }); }, { body: "남기고 싶었던 핵심인력의 이탈로 기록하며 퇴사일이 오늘로 기록됩니다." })}>아쉬운 퇴사</button>
+                        )}
+                        {t.status !== "departed_planned" && (
+                          <button type="button" className="btn-ghost btn-sm" disabled={busy}
+                            onClick={() => confirm("계획된 퇴사·이동 처리", () => { void send("put", `/pmi/key-talent/${t.id}`, { status: "departed_planned" }); }, { body: "예정된 퇴사·이동으로 기록하며 퇴사일이 오늘로 기록됩니다." })}>계획된 퇴사·이동</button>
                         )}
                         <button type="button" className="btn-ghost btn-sm" disabled={busy}
                           onClick={() => confirm("핵심인력 삭제", () => { void send("delete", `/pmi/key-talent/${t.id}`); }, { body: `'${t.role_ref}' 항목이 삭제됩니다.`, confirmLabel: "삭제" })}>삭제</button>

@@ -7,7 +7,7 @@
 //   * confirm: the chair's minutes sign-off is recorded in process_run
 //     meta_json (minutes_confirmed_by/at) — append-only, no UPDATE of content.
 import type { Database } from "bun:sqlite";
-import { getCommitteeSession, parsePositionMeta, type CommitteeTranscript } from "./committee-session.ts";
+import { getCommitteeSession, isCommitteeRun, parsePositionMeta, type CommitteeTranscript } from "./committee-session.ts";
 
 export const CRITERIA = ["control_need", "capability_criticality", "market_uncertainty", "integration_capacity", "speed_to_capability"] as const;
 export type Criterion = (typeof CRITERIA)[number];
@@ -151,10 +151,11 @@ export function buildCommitteeMinutes(db: Database, sessionId: string): string |
 
 /** A3 — chair sign-off. Append-only: recorded once in process_run meta. */
 export function confirmCommitteeMinutes(db: Database, sessionId: string, confirmedBy: string): void {
-  const row = db.query("SELECT meta_json FROM process_run WHERE id = ?").get(sessionId) as
-    | { meta_json: string | null }
+  const row = db.query("SELECT meta_json, stage FROM process_run WHERE id = ?").get(sessionId) as
+    | { meta_json: string | null; stage: string }
     | undefined;
-  if (!row) throw new Error(`committee session ${sessionId} not found`);
+  // Only a committee-stage run is a session (never e.g. s11_execution_baseline).
+  if (!row || !isCommitteeRun(row.stage, row.meta_json)) throw new Error(`committee session ${sessionId} not found`);
   const meta = row.meta_json ? (JSON.parse(row.meta_json) as Record<string, unknown>) : {};
   if (meta.minutes_confirmed_by) throw new Error("minutes already confirmed — the record is append-only");
   meta.minutes_confirmed_by = confirmedBy;

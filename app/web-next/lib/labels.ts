@@ -341,3 +341,54 @@ export const TRANCHE_STATUS_LABEL: Record<string, string> = {
   released: "집행 완료",
   withheld: "보류",
 }; // INTERIM-WORDING Q1
+
+// ── ADR-0161 (greenfield S11 execution baseline, S12 post-management) ──
+// All strings below are INTERIM-WORDING until the glossary review of ADR-0161 is accepted.
+
+/** pmi_key_talent.status — the DB CHECK allows exactly these three values. */
+export const KEY_TALENT_STATUS_LABEL: Record<string, string> = {
+  active: "재직 중 (잔존)",
+  departed_regretted: "이탈 — 아쉬운 퇴사",
+  departed_planned: "이탈 — 계획된 퇴사·이동",
+}; // INTERIM-WORDING ADR-0161
+
+/** venture_scorecard.venture_class (Q7 defaults: driving / enabling / emergent). */
+export const VENTURE_CLASS_LABEL: Record<string, string> = {
+  driving: "성장 주도형 (driving)",
+  enabling: "역량 지원형 (enabling)",
+  emergent: "신생 탐색형 (emergent)",
+}; // INTERIM-WORDING ADR-0161
+
+/** S8 goal judgement shown next to a ramp-up measure; unjudged goals never read as met. */
+export const GOAL_JUDGEMENT_LABEL: Record<string, string> = {
+  not_judged: "판정 안 됨",
+  on_target: "목표 달성",
+  deviation: "이탈",
+  insufficient_evidence: "근거 부족",
+}; // INTERIM-WORDING ADR-0161
+
+/** Korean meaning of the five transition terms for a 신규 사업 (greenfield) project. Terms themselves stay in TRANSITION_DECISION_LABEL. */
+export const GREENFIELD_TRANSITION_HELP: Record<string, string> = {
+  next_tranche_released: "S10에서 기록한 다음 capex 트랜치의 집행 조건이 충족되어 집행을 진행합니다 (집행 자체는 두 사람이 하는 별도 절차).",
+  held_evidence_incomplete: "집행 조건의 근거가 아직 완결되지 않아 트랜치를 보류합니다.",
+  graduate_to_core: "손익분기·안정 가동에 도달해 운영 사업부로 인계합니다.",
+  reduce_or_divest: "신규 사업 규모를 줄이거나 매각·정리합니다.",
+  kill_with_learning_captured: "사업을 중단하고 학습 내용을 S1·S2 기준 비율(base rate)에 환류합니다.",
+}; // INTERIM-WORDING ADR-0161
+
+/** S12 post-management items introduced by ADR-0161 (procedure id -> Korean name). */
+export const POST_MANAGEMENT_ITEM_LABEL: Record<string, string> = {
+  portfolio_venture_monitoring: "포트폴리오 벤처 모니터링 (신규 사업 가동·성과 추적 포함)",
+  integration_monitoring: "통합 모니터링 (인수 후 시너지·핵심인력)",
+  partnership_monitoring: "파트너십 모니터링 (JV·제휴 조건·성과)",
+}; // INTERIM-WORDING ADR-0161
+
+/** API error codes of the PMI write routes and the ADR-0161 routes -> Korean explanation. */
+export const ADR0161_ERROR_LABEL: Record<string, string> = {
+  not_applicable_track: "PMI는 인수합병·JV·전략적 투자 Route에만 적용됩니다. 신규 사업(greenfield)과 PMI 비대상 세부 트랙에서는 기록할 수 없습니다.",
+  needs_classification: "트랙 분류가 확정되지 않아 기록할 수 없습니다 — 먼저 사람이 트랙(case_type)을 분류해야 합니다.",
+  human_only: "이 기록은 사람만 할 수 있습니다 (에이전트 불가).",
+  lead_required: "정책 이행 기록은 프로젝트 lead만 남길 수 있습니다.",
+  already_migrated: "이 프로젝트의 정책 이행 기록이 이미 있습니다.",
+  insider_required: "비공개 정보(MNPI) 접근 권한이 있는 사람만 기록할 수 있습니다.",
+}; // INTERIM-WORDING ADR-0161

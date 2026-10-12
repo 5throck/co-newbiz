@@ -2,6 +2,8 @@
 // The 0065 member_type='human' seat: in human_only / hybrid modes, human
 // members deliberate alongside (or instead of) agents. The submitter's
 // app_user id is taken from the authenticated session — never from the body.
+import { committeeSessionForOpportunity } from "../../../../../../../lib/committee-session.ts";
+import { visibleProject } from "../../../../../../../lib/project-visibility.ts";
 import { authenticate, requireBusinessActor } from "../../../../../../../lib/auth.ts";
 import { badRequest, fail, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../../db/client.ts";
@@ -20,13 +22,8 @@ export async function POST(
   { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "위원회 입장 제출은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
   const { id, sessionId } = await params;
   const db = getDb();
-  if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();
-  // Session binding: the session's process_run must address THIS path
-  // opportunity — positions cannot be filed against another entity's session.
-  const run = db.query("SELECT entity_type, entity_id FROM process_run WHERE id = ?").get(sessionId) as
-    | { entity_type: string; entity_id: string }
-    | undefined;
-  if (!run || run.entity_type !== "opportunity" || run.entity_id !== id) return notFound();
+  // Session binding (opportunity + committee stage + promoted-project visibility).
+  if (!committeeSessionForOpportunity(id, sessionId, (pid) => !!visibleProject(ctx, pid, { includeClosed: true }))) return notFound();
   const body = (await request.json().catch(() => null)) as {
     seat?: string; positionMd?: string; confidence?: number; recommendation?: string; vetoDissent?: boolean; criteriaScores?: Record<string, number>;
   } | null;

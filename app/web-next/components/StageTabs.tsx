@@ -14,6 +14,7 @@ import {
   groupForSegment,
   groupForTrack,
   projectSegment,
+  stageTabGroupsFor,
   tabHref,
   type StageTabGroup,
 } from "../lib/stage-tabs.ts";
@@ -37,13 +38,36 @@ function useProjectTrack(projectId: string, enabled: boolean): string | null {
   return track;
 }
 
+// ADR-0161: PMI applies only to brownfield M&A / JV / strategic investment. Cached per project;
+// null = not known yet (or the lookup failed): keep every tab, as with an unknown track.
+const pmiCache = new Map<string, boolean>();
+
+function useProjectPmiApplies(projectId: string, enabled: boolean): boolean | null {
+  const [applies, setApplies] = useState<boolean | null>(pmiCache.get(projectId) ?? null);
+  useEffect(() => {
+    if (!enabled) return;
+    if (pmiCache.has(projectId)) { setApplies(pmiCache.get(projectId) ?? null); return; }
+    let live = true;
+    api.get<{ applicability: { pmi_applies: boolean } }>(`/api/projects/${encodeURIComponent(projectId)}/post-management`)
+      .then((r) => { pmiCache.set(projectId, r.data.applicability.pmi_applies); if (live) setApplies(r.data.applicability.pmi_applies); })
+      .catch(() => { /* unknown applicability: keep every tab */ });
+    return () => { live = false; };
+  }, [projectId, enabled]);
+  return applies;
+}
+
 function StageTabsInner({ projectId }: { projectId: string }) {
   const pathname = usePathname();
   const tabParam = useSearchParams().get("tab");
   const seg = projectSegment(pathname);
   const baseGroup: StageTabGroup | null = seg === null ? null : groupForSegment(seg);
   const track = useProjectTrack(projectId, baseGroup?.stage === "S8");
-  const group: StageTabGroup | null = baseGroup ? groupForTrack(baseGroup, track) : null;
+  const pmiApplies = useProjectPmiApplies(projectId, baseGroup?.stage === "S12");
+  // The PMI tab is removed from the DOM when PMI does not apply; PMI-applicable projects get the same group object.
+  const pmiGroup: StageTabGroup | null = baseGroup && pmiApplies === false
+    ? (stageTabGroupsFor({ pmiApplies: false }).find((g) => g.stage === baseGroup.stage) ?? baseGroup)
+    : baseGroup;
+  const group: StageTabGroup | null = pmiGroup ? groupForTrack(pmiGroup, track) : null;
   const [moreOpen, setMoreOpen] = useState(false);
   const moreBtn = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);

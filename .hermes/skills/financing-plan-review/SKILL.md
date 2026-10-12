@@ -25,6 +25,7 @@ metadata:
     - deal-structuring
     - brownfield-dd
     - entity-ic-review
+    - greenfield-execution-baseline
 relates_to:
   - skill: insight-synthesis
     type: follows

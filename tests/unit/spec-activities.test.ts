@@ -31,6 +31,12 @@ describe("spec-activities loader", () => {
     expect(specAgentFor("S9", "financing-dd")).toBe("financing-agent");
   });
 
+  test("S11/S12 spec activities added in v2.8.0 resolve (ADR-0161)", () => {
+    expect(specAgentFor("S11", "greenfield-execution-baseline")).toBe("greenfield-agent");
+    expect(specAgentFor("S12", "integration-monitoring")).toBe("pmi-agent");
+    expect(specAgentFor("S12", "partnership-monitoring")).toBe("partnership-agent");
+  });
+
   test("unknown stage / activity throws", () => {
     expect(() => loadStageActivities("S13")).toThrow(/Unknown stage/);
     expect(() => specAgentFor("S1", "no-such-activity")).toThrow(/no activity/);

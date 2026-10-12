@@ -3,7 +3,7 @@ procedure_id: shared-portfolio-venture-monitoring
 title: "Venture Portfolio Monitoring (post-approval, group level)"
 scope: shared
 level: group
-version: "1.1.0"
+version: "1.2.0"
 status: active
 # Design §E: cells with venture character — internal venture (cells 9/10),
 # minority/hybrid (5/6), JV (7/8, feeding in via jv-lifecycle-governance
@@ -13,7 +13,40 @@ status: active
 # character — the venture scope is prose keyed to the classification
 # matrix (ADR-0047 §G), the same pattern as PMI's case_type-only predicate.
 applicability: conditional
-applies_when: { op: "in", var: "project.origin", values: ["internal", "hybrid", "joint"] }
+#
+# v1.2.0 (ADR-0161, Proposed; user decision Q5 2026-10-12): the predicate is
+# widened to any_of(origin in {internal, hybrid, joint}, case_type eq
+# greenfield). Greenfield is identified by track/case_type, never origin —
+# greenfield rows with a null origin previously had NO applicable S12
+# procedure. The origin branch is unchanged, so every project that applied
+# under v1.1.0 still applies. External brownfield deals are covered by their
+# own S12 activities instead: integration-monitoring (pmi-integration-
+# execution step 6) and partnership-monitoring (jv-lifecycle-governance
+# step 2). Retroactive application (Q2): evaluated against flow.spec v2.8.0
+# for every in-flight project without re-pinning; one human-initiated
+# policy_migration audit entry per project. S12 has no gate, so the widened
+# scope is recommended, never blocking, for projects already in S12.
+#
+# Greenfield ramp-up measure keys (venture_scorecard.measure_key is free
+# text, migration 0024 — no schema change). Targets come from the S11
+# greenfield-execution-baseline step 4 (ramp_up_kpi_targets):
+#   financial: capex_deployed_vs_tranche, revenue_vs_case, ebitda_vs_case,
+#              bep_month_vs_plan, goal:<metric_key>
+#   strategic: first_revenue_reached, utilisation_pct, headcount_vs_plan,
+#              permit_milestones_met, certification_milestones_met
+# goal:<metric_key> rows reference the S8 project business goals (ADR-0159)
+# as REFERENCE EVIDENCE ONLY: never gate-blocking, never auto-selecting a
+# transition term, an unmet goal does not by itself trigger a kill, and a goal
+# a human has not judged is reported as "not judged".
+#
+# Default venture_class (Q7) — a prefill the person recording can change
+# (the change is audited): driving for a new site (sub_track none),
+# enabling for existing_business_rbd, emergent for intra_venture.
+applies_when:
+  op: any_of
+  of:
+    - { op: "in", var: "project.origin", values: ["internal", "hybrid", "joint"] }
+    - { op: "cmp", var: "project.case_type", cmp: "eq", value: "greenfield" }
 workflow_type: core
 gate: post_close
 owner_agent: process-governance-manager
@@ -22,6 +55,8 @@ legal_basis:
   - "ADR-0150 (S12 completion criteria mapped to portfolio transitions — accepted 2026-10-02, immediate full application; version 1.0.0 → 1.1.0 adds per-transition records and criterion-6 data ownership)"
   - "docs/designs/2026-08-23-track-coverage-extension-design.md §E"
   - "ADR-0047 (12-cell classification matrix — venture-character cells)"
+  - "ADR-0161 (v1.2.0 — greenfield predicate branch, ramp-up measure keys, greenfield transition mapping; Proposed, Q1-Q7 decided by the user 2026-10-12)"
+  - "ADR-0159 (S8 project business goals — reference evidence in the scorecard only)"
   - "docs/research/pmi-jv-lifecycle-best-practice.md [pmi-jv C.1-C.3]"
 
 # Group-level cadence, not a per-project one-shot: step 1 runs per review
@@ -43,7 +78,12 @@ steps:
       Benchmark odds: 20-30% success is normal for CVC (ILLUSTRATIVE) —
       continued funding beyond that band requires explicit evidence.
       Inputs: gate_pass_record outputs, jv-lifecycle-governance step 2
-      scorecards, the PMI synergy tracker. Per-venture rows persist via
+      scorecards, the PMI synergy tracker (brownfield only; a greenfield
+      cycle never reads synergy certifications or key talent), and for
+      greenfield the S11 greenfield-execution-baseline (capex_tranche rows,
+      ramp-up KPI targets, permit/certification milestones) with variance
+      against the baseline, the S8 adopted case and the S8 project goals
+      (reference only). Per-venture rows persist via
       db/repositories/venture-scorecard.repository.ts
       recordVentureScorecardCycle (ADR-0059, migration 0024), and the
       group rollup reads them via `bun scripts/co-newbiz/newbiz.ts
@@ -80,7 +120,15 @@ steps:
       the kill/graduate call in one sitting — both fire at stage
       transitions. Decision vocabulary: next_tranche_released |
       held_evidence_incomplete | graduate_to_core | reduce_or_divest |
-      kill_with_learning_captured. Kill decisions are recorded with
+      kill_with_learning_captured. Greenfield mapping (ADR-0161; the five
+      terms and their labels are unchanged): next_tranche_released =
+      release the next capex_tranche row once its release_condition is met
+      (the release itself is the two-person human route);
+      held_evidence_incomplete = hold, or mark the tranche withheld;
+      graduate_to_core = hand over to the operating business unit after
+      BEP / stable ramp; reduce_or_divest = scale down, sell or wind down;
+      kill_with_learning_captured = stop, with the learning fed to the
+      S1/S2 base rates. Kill decisions are recorded with
       rationale and learning capture recycled into the playbook — a kill
       is a governed decision, not a silent starve.
 

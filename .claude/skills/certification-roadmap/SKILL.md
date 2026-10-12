@@ -19,6 +19,7 @@ metadata:
   procedure_keys:
     - brownfield-pre-fs
     - greenfield-pre-fs
+    - greenfield-execution-baseline
   type: domain
   triggers:
     - certification requirements

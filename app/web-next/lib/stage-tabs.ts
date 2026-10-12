@@ -127,3 +127,18 @@ export function groupForTrack(group: StageTabGroup, track: string | null | undef
   const keep = (t: StageTabDef) => !(t.seg === "/business-case" && t.query === "targets");
   return { ...group, tabs: group.tabs.filter(keep), more: group.more.filter(keep) };
 }
+
+/**
+ * ADR-0161 PMI guard for the tab map: the S12 PMI tab is shown only when
+ * `pmiKickoffApplies(track, subTrack)` is true (pass that result in). Pure;
+ * every other tab and every group for PMI-applicable projects is returned
+ * unchanged (same object identity), so brownfield M&A renders byte-identical.
+ */
+export function stageTabGroupsFor(opts: { pmiApplies: boolean }, groups: StageTabGroup[] = STAGE_TAB_GROUPS): StageTabGroup[] {
+  if (opts.pmiApplies) return groups;
+  return groups.map((g) =>
+    g.tabs.some((t) => t.seg === "/pmi") || g.more.some((t) => t.seg === "/pmi")
+      ? { ...g, tabs: g.tabs.filter((t) => t.seg !== "/pmi"), more: g.more.filter((t) => t.seg !== "/pmi") }
+      : g,
+  );
+}

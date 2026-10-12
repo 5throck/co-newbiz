@@ -4,7 +4,7 @@ title: "Financing Plan Checklist"
 scope: shared
 enforceability: mixed
 owner_agent: valuation-agent
-version: "1.2.0"
+version: "1.3.0"
 effective_from: "2026-08-22"
 gate: FS
 
@@ -17,6 +17,29 @@ gate: FS
 # (4-7% of enterprise value) is a market-practice benchmark from published deal
 # practice, not activated policy — whether it becomes policy is ADR-0051 open
 # question (c) for the thresholds meeting.
+#
+# S11 TRACK SCOPE (ADR-0161, Proposed; design 2026-10-11 §5.2, user decisions
+# 2026-10-12): at the S11 execution and IC financing-precondition use of this
+# checklist, fin-04..fin-08 are closing-specific (funds flow at closing, FX on
+# the consideration, certain funds, escrow, reverse-termination fee) and are
+# scoped to case_type = brownfield. For a greenfield project at S11 they are
+# not applicable; their replacements are entity-formation-checklist
+# gx-01..gx-03 (capex_tranche schedule bound to S10 conditions, ramp-up KPI
+# targets, human baseline confirmation). fin-01..fin-03 apply to both tracks.
+# fin-09 is binding (mandatory, not waivable) and is never scoped out.
+# Greenfield reading of fin-09 (user-approved 2026-10-12): for case_type =
+# greenfield the funds-flow requirement is read as the capex drawdown plan
+# (the capex_tranche schedule plus the S10 deal-structure release
+# conditions), and the FX plan applies only when there is foreign-currency
+# exposure. This is a reading note, not a scope-out: fin-09 stays binding on
+# both tracks and its text is unchanged.
+# Item text is unchanged. Any fin-04..fin-08 record already written on a
+# greenfield project stays visible as historical evidence, marked "not
+# applicable under flow.spec v2.8.0" — nothing is deleted.
+# This S11 scope does NOT change the S9 workspace overlays: the per-sub-track
+# S9 classification of fin-04..fin-08 in checklists/_overlays/greenfield-
+# workspace-scope.yaml and brownfield-workspace-scope.yaml (DEC-20261012-01)
+# stays as approved. Runtime enforcement of the S11 scope is design row 2.
 
 items:
   - id: fin-01

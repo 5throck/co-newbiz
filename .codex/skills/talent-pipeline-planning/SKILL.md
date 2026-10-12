@@ -24,6 +24,7 @@ metadata:
 
   procedure_keys:
     - greenfield-dd
+    - greenfield-execution-baseline
 relates_to:
   - skill: community-partnership-planning
     type: follows

@@ -15,6 +15,8 @@ export class ApiError extends Error {
     public status: number,
     public code: string,
     message: string,
+    /** Response envelope meta (e.g. open_findings / missing_sections on a 409). */
+    public meta: Record<string, unknown> = {},
   ) {
     super(message);
   }
@@ -68,7 +70,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<Envelope<T>
     if (body === undefined) throw invalidResponse(res);
   }
   if (!res.ok) {
-    throw new ApiError(res.status, body.error?.code ?? "unknown_error", localizeMessage(body.error?.message ?? "Request failed."));
+    throw new ApiError(res.status, body.error?.code ?? "unknown_error", localizeMessage(body.error?.message ?? "Request failed."), body.meta ?? {});
   }
   return body;
 }

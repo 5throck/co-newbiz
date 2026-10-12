@@ -9,15 +9,11 @@ import { authenticate } from "../../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { route } from "../../../../../../lib/route.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
-import { latestPmiKickoff, PmiKickoffError, pmiKickoffApplies, recordPmiKickoff } from "../../../../../../lib/pmi-kickoff.ts";
-import { latestRouteDecision } from "../../../../../../lib/process-flow.ts";
+import { latestPmiKickoff, PmiKickoffError, pmiApplicability, recordPmiKickoff } from "../../../../../../lib/pmi-kickoff.ts";
 
+// ONE shared resolver (ADR-0161 review F6) — same as the other PMI writes.
 function applicability(projectId: string): { track: string | null; subTrack: string | null; applies: boolean } {
-  const p = getDb().query("SELECT track, source_opportunity_id FROM md_project WHERE id = ?").get(projectId) as
-    | { track: string | null; source_opportunity_id: string | null }
-    | undefined;
-  const subTrack = p?.source_opportunity_id ? (latestRouteDecision(p.source_opportunity_id)?.sub_track ?? null) : null;
-  return { track: p?.track ?? null, subTrack, applies: pmiKickoffApplies(p?.track ?? null, subTrack) };
+  return pmiApplicability(getDb(), projectId);
 }
 
 export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
@@ -37,7 +33,8 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   if (!visibleProject(ctx, id)) return notFound();
   const a = applicability(id);
   if (!a.applies) {
-    return badRequest("not_applicable", "PMI 킥오프는 Brownfield M&A·JV·전략적 투자 Route에만 적용됩니다.");
+    // ADR-0161: greenfield and non-PMI sub-tracks are refused like the other PMI writes.
+    return forbidden("not_applicable_track", "PMI 킥오프는 Brownfield M&A·JV·전략적 투자 Route에만 적용됩니다.");
   }
   const body = (await request.json().catch(() => null)) as { owner?: string; plan_note?: string } | null;
   const db = getDb();
