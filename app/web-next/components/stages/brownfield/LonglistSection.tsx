@@ -4,6 +4,11 @@
 import { SectionToolbar } from "../../layout.tsx";
 import { Fragment } from "react";
 import { SECTION_IDS, STATUS_LABEL } from "./constants.ts";
+import { ColGroup } from "../../ui.tsx";
+
+// Long List — 후보명·DART·재무기술 칩 2개·잠정 순위·상태·제외 사유 6열.
+// 상태 열에는 칩+버튼이 들어가고 후보명·제외 사유는 긴 텍스트다.
+const LONG_LIST_COL_PCT = [22, 12, 18, 14, 18, 16] as const;
 import type { BrownfieldStageState } from "./useBrownfieldTargets.ts";
 
 export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
@@ -31,8 +36,10 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
           ) : displayedTargets.length === 0 ? (
             <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)] mb-0">해당 상태의 후보가 없습니다.</p>
           ) : (
-            <table className="data-table" aria-label="Long List">
+            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+            <table className="data-table table-fixed-pct tmin-56" aria-label="Long List">
               <caption className="sr-only">Long List 후보 — 평가 점수·잠정 순위·상태</caption>
+              <ColGroup widths={LONG_LIST_COL_PCT} />
               <thead>
                 <tr>
                   <th scope="col">후보</th><th scope="col">DART</th>
@@ -50,7 +57,7 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                   return (
                     <Fragment key={t.id}>
                       <tr>
-                        <td className="cell-primary">
+                        <td className="cell-primary cell-truncate">
                           <a
                             href={`/brownfield/targets/${encodeURIComponent(t.id)}`}
                             className="font-semibold text-[color:var(--fg)] underline-offset-2 hover:underline"
@@ -115,6 +122,7 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                 })}
               </tbody>
             </table>
+            </div>
           )}
           </div>
         </section>

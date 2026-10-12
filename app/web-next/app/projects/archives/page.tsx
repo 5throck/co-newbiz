@@ -10,6 +10,10 @@ import Link from "next/link";
 import { api } from "../../../lib/api.ts";
 import { useConfirm } from "../../../components/crud.tsx";
 import { closureTypeLabel } from "../../../lib/labels.ts";
+import { ColGroup } from "../../../components/ui.tsx";
+
+// 보관 프로젝트 7열 — 번호·종료일·상태는 좁게, 프로젝트명·사유·바로가기에 넉넉한 몫.
+const ARCHIVE_COL_PCT = [13, 22, 12, 11, 13, 17, 12] as const;
 
 interface ArchiveProjectRow {
   id: string;
@@ -116,8 +120,9 @@ export function ProjectArchivesView() {
           <p className="text-[color:var(--muted-fg)]">보관 중인 프로젝트가 없습니다.</p>
         ) : (
           <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table" style={{ minWidth: "760px" }}>
+            <table className="data-table table-fixed-pct tmin-48">
               <caption className="sr-only">보관 프로젝트 목록</caption>
+              <ColGroup widths={ARCHIVE_COL_PCT} />
               <thead>
                 <tr>
                   <th className="text-left">프로젝트 번호</th>

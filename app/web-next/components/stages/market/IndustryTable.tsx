@@ -2,6 +2,10 @@
 
 // Split from components/stages/MarketAnalysisStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import type { MarketAnalysisStageState } from "./useMarketList.ts";
+import { ColGroup } from "../../ui.tsx";
+
+// 분석 대상 산업 목록 6열 — 산업명·분석 상태가 가장 긴 텍스트 열.
+const INDUSTRY_COL_PCT = [26, 8, 10, 22, 12, 22] as const;
 import type { AnalysisInfo } from "./types.ts";
 
 export function IndustryTable({ ctx }: { ctx: MarketAnalysisStageState }) {
@@ -15,19 +19,20 @@ export function IndustryTable({ ctx }: { ctx: MarketAnalysisStageState }) {
           <p className="text-[color:var(--muted-fg)] italic">검색·필터 조건에 맞는 산업이 없습니다.</p>
         ) : (
           <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-          <table className="data-table list-table market-list-table" aria-label="분석 대상 산업 목록">
+          <table className="data-table list-table market-list-table table-fixed-pct tmin-64" aria-label="분석 대상 산업 목록">
             <caption className="sr-only">분석 대상 산업 목록</caption>
+            <ColGroup widths={INDUSTRY_COL_PCT} />
             <thead>
               <tr>
-                <th scope="col" className="w-[25rem]">산업명</th>
-                <th scope="col" className="w-[5rem]">KSIC 코드</th>
-                <th scope="col" className="w-[6rem]">연결 드라이버</th>
+                <th scope="col">산업명</th>
+                <th scope="col">KSIC 코드</th>
+                <th scope="col">연결 드라이버</th>
                 {/* 분석 상태는 가장 긴 텍스트 열(재분석 진행률·버전 유지 문구 칩) —
                     10rem에서는 3줄로 뭉개지므로 14rem으로 늘린다(max-width는
                     market-list-table이 72rem으로 상향, 아래 styles.css 참조). */}
-                <th scope="col" className="w-[14rem]">분석 상태</th>
+                <th scope="col">분석 상태</th>
                 <th scope="col" className="col-date">분석일</th>
-                <th scope="col" className="w-[11rem]"><span className="sr-only">작업</span></th>
+                <th scope="col"><span className="sr-only">작업</span></th>
               </tr>
             </thead>
             <tbody>

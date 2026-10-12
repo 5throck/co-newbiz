@@ -2,6 +2,10 @@
 
 // Split from components/admin/AdminConsole.tsx (Wave U-3 decomposition); behavior unchanged.
 import type { AdminConsoleState } from "./useAdminActions.ts";
+import { ColGroup } from "../../ui.tsx";
+
+// 알림 목록 7열 — 프로젝트·트리거·발송일이 긴 텍스트라 고정 비율 유지.
+const NOTIFICATIONS_COL_PCT = [22, 16, 10, 10, 10, 20, 12] as const;
 
 export function DataSourcesPanel({ ctx }: { ctx: AdminConsoleState }) {
   const { section, sources } = ctx;
@@ -191,9 +195,9 @@ export function NotificationsPanel({ ctx }: { ctx: AdminConsoleState }) {
           <p className="text-[color:var(--muted-fg)] italic">수신된 알림이 없습니다.</p>
         ) : (
           <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-<table className="data-table report-table">
+<table className="data-table report-table table-fixed-pct tmin-48">
             <caption className="sr-only">알림 목록 (사용자 수신 기준)</caption>
-            <thead>
+            <ColGroup widths={NOTIFICATIONS_COL_PCT} />            <thead>
               <tr>
                 <th scope="col">프로젝트</th>
                 <th scope="col">트리거</th>

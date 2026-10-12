@@ -107,22 +107,8 @@ const WIDE_TABLE_HEADER_CELLS = 6; // same threshold as the design-lint table-si
  *  - `css:<selector>`         column class declaring width auto / 100%
  */
 const KNOWN_OFFENDERS: string[] = [
-  // batch 3 (audited tables 8, 9, 11, 12, 14)
-  "auto-wide:app/projects/[id]/backtest/page.tsx:백테스트",
-  "auto-wide:app/projects/[id]/charter/page.tsx:KPI 사전 확정",
-  "auto-wide:app/strategy/page.tsx:w-full border-collapse",
-  "auto-wide:components/stages/IcReviewStage.tsx:설립 실행 단계 현황",
-  "auto-wide:components/stages/brownfield/LonglistSection.tsx:Long List",
-  "no-scroll:components/stages/brownfield/LonglistSection.tsx#1",
-  // wide tables outside the design's audited list: need .table-scroll or an allowlist reason (batch 3)
-  "no-scroll:app/projects/[id]/proxy-chain/page.tsx#2",
-  "no-scroll:app/projects/[id]/proxy-chain/page.tsx#3",
-  "no-scroll:app/projects/[id]/share/page.tsx#1",
-  "no-scroll:components/DataTab.tsx#1",
-  "no-scroll:components/admin/console/UsersSection.tsx#2",
-  "no-scroll:components/stages/synergy/SynergyTabs.tsx#1",
-  "no-scroll:components/wacc/BetaPanel.tsx#1",
-];
+  // batch 3 landed — the rollout is complete; the list must stay empty.
+]
 
 function offenders(tables: TableInfo[]): string[] {
   const found: string[] = [];
@@ -265,6 +251,40 @@ describe("table column sizing guard", () => {
       if (!block.includes("<ColGroup")) problems.push(c.file + ': "' + c.label + '" missing ColGroup');
       for (const frag of c.expect) {
         if (frag === "table-fixed-pct") continue;
+        if (!block.includes(frag)) problems.push(c.file + ': "' + c.label + '" missing ' + frag);
+      }
+    }
+    expect(problems).toEqual([]);
+  });
+
+
+  test("batch 3 migrated tables keep the shared classes", () => {
+    // Same per-table source pins as batch 2, for the batch-3 rollout.
+    const batch3 = [
+      { file: "app/projects/[id]/backtest/page.tsx", label: "백테스트", tmin: "tmin-40", expect: ["cell-truncate"] },
+      { file: "app/projects/[id]/charter/page.tsx", label: "KPI 사전 확정", tmin: "tmin-32", expect: [] },
+      { file: "app/strategy/page.tsx", label: "w-full border-collapse", tmin: "tmin-56", expect: ["cell-clamp-3"] },
+      { file: "components/stages/IcReviewStage.tsx", label: "설립 실행 단계 현황", tmin: "tmin-48", expect: [] },
+      { file: "components/stages/brownfield/LonglistSection.tsx", label: "Long List", tmin: "tmin-56", expect: ["cell-truncate"] },
+      { file: "app/projects/[id]/proxy-chain/page.tsx", label: "tmin-64", tmin: "tmin-64", expect: [] },
+      { file: "app/projects/[id]/proxy-chain/page.tsx", label: "tmin-56", tmin: "tmin-56", expect: [] },
+      { file: "app/projects/[id]/share/page.tsx", label: "공유 링크", tmin: "tmin-48", expect: ["cell-truncate"] },
+      { file: "components/DataTab.tsx", label: "tmin-48", tmin: "tmin-48", expect: ["cell-truncate"] },
+      { file: "components/stages/synergy/SynergyTabs.tsx", label: "우선 시너지 영역", tmin: "tmin-56", expect: ["cell-truncate"] },
+      { file: "components/wacc/BetaPanel.tsx", label: "w-full text-[length:var(--fs-body)]", tmin: "tmin-48", expect: [] },
+    ];
+    const problems: string[] = [];
+    for (const c of batch3) {
+      const src = readFileSync(join(ROOT, c.file), "utf8");
+      const openTag = [...src.matchAll(/<table\b[^>]*>/g)].map((m) => m[0]).find((t) => t.includes(c.label));
+      if (!openTag) { problems.push(c.file + ': table "' + c.label + '" not found'); continue; }
+      if (!openTag.includes("table-fixed-pct")) problems.push(c.file + ': "' + c.label + '" missing table-fixed-pct');
+      if (!openTag.includes(c.tmin)) problems.push(c.file + ': "' + c.label + '" missing ' + c.tmin);
+      const blockStart = src.indexOf(openTag);
+      const end = src.indexOf("</table>", blockStart);
+      const block = src.slice(blockStart, end === -1 ? undefined : end + 8);
+      if (!block.includes("<ColGroup")) problems.push(c.file + ': "' + c.label + '" missing ColGroup');
+      for (const frag of c.expect) {
         if (!block.includes(frag)) problems.push(c.file + ': "' + c.label + '" missing ' + frag);
       }
     }

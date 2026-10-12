@@ -16,6 +16,8 @@ import { StageFrame } from "../StageFrame.tsx";
 import { GateDecisionJump, GateDecisionPanel } from "../GateDecisionPanel.tsx";
 import { useToast } from "../ui.tsx";
 import { useConfirm } from "../crud.tsx";
+import { ColGroup } from "../ui.tsx";
+import { estStepColPct } from "./constants.ts";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import { ExecutionBaselinePanel } from "./ExecutionBaselinePanel.tsx";
 
@@ -341,8 +343,9 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
             {!estApplies && " 이 프로젝트는 내부 추진·합작이 아니어서 설립 실행이 적용되지 않습니다."}
           </p>
           <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-          <table className="data-table" aria-label="설립 실행 단계 현황">
+          <table className="data-table table-fixed-pct tmin-48" aria-label="설립 실행 단계 현황">
             <caption className="sr-only">설립 실행 5단계 진행 현황</caption>
+            <ColGroup widths={estStepColPct(canAct && estApplies ? 5 : 4)} />
             <thead>
               <tr><th scope="col">단계</th><th scope="col">상태</th><th scope="col">담당자 (기록자)</th><th scope="col">갱신</th>{canAct && estApplies && <th scope="col">작업</th>}</tr>
             </thead>

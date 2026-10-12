@@ -5,6 +5,10 @@ import { api, type DataChangeRow, type ObservationRow, type SeriesRow } from "..
 import { SourceTooltip } from "./SourceTooltip.tsx";
 import { useChartTheme } from "../lib/echarts-theme.ts";
 import { EChart } from "./EChart.tsx";
+import { ColGroup } from "./ui.tsx";
+
+// 시계열 목록 6열 — series_id가 긴 문자열이라 table-scroll 안에서 고정 비율 유지.
+const SERIES_COL_PCT = [30, 10, 12, 12, 16, 20] as const;
 
 // 데이터 (Data) tab — ui-spec §2: series browser (search + selected series'
 // latest-revision observations, unit/source per row) plus the recent
@@ -109,7 +113,9 @@ export function DataTab() {
         ) : series.length === 0 ? (
           <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 검색어와 일치하는 시계열이 없습니다.</p>
         ) : (
-          <table className="w-full border-collapse mt-2 mb-6 [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
+          <div className="table-scroll mt-2 mb-6" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+          <table className="w-full border-collapse table-fixed-pct tmin-48 [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
+            <ColGroup widths={SERIES_COL_PCT} />
             <caption className="sr-only">시계열 목록</caption>
             <thead>
               <tr>
@@ -124,7 +130,7 @@ export function DataTab() {
             <tbody>
               {series.map((s) => (
                 <tr key={s.series_id} className={selected === s.series_id ? "row-selected" : undefined}>
-                  <td>
+                  <td className="cell-truncate">
                     <button type="button" className="border-0 bg-transparent p-0 text-[color:var(--accent)] underline cursor-pointer" onClick={() => setSelected(s.series_id)}>
                       {s.series_id}
                     </button>
@@ -150,6 +156,7 @@ export function DataTab() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
 

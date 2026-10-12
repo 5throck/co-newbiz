@@ -3,6 +3,8 @@
 // Split from components/stages/SynergyStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import type { SynergyResultState } from "./useSynergyResult.ts";
 import type { SynergyPayload } from "./types.ts";
+import { ColGroup } from "../../ui.tsx";
+import { shortlistColPct } from "./constants.ts";
 
 export function SynergyOverviewTab({ ctx, p }: { ctx: SynergyResultState; p: SynergyPayload }) {
   const { tab, confirmError, currentScore, synState, currentRationale, canCurate, opportunityId, confirmForm, setConfirmForm, confirmSaving, confirmSynergyScore, retractSynergyScore } = ctx;
@@ -111,9 +113,11 @@ export function SynergyShortlistTab({ ctx, p }: { ctx: SynergyResultState; p: Sy
     <>{tab === "shortlist" && (
             <div className="text-[0.88rem]">
               <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge sizing-step-badge-deep">4</span> 우선 시너지 영역 — 선별 결과</h3>
-              <table className="data-table list-table" aria-label="우선 시너지 영역">
+              <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+              <table className="data-table list-table table-fixed-pct tmin-56" aria-label="우선 시너지 영역">
                 <caption className="sr-only">우선 시너지 영역</caption>
-                <thead><tr><th scope="col" className="w-[3.5rem]">순위</th><th scope="col" className="w-[12rem]">영역</th><th scope="col" className="w-[8rem]">판정</th><th scope="col">사유</th><th scope="col" className="w-[6rem]">출처</th>{canCurate && <th scope="col" className="w-[10rem]"><span className="sr-only">작업</span></th>}</tr></thead>
+                <ColGroup widths={shortlistColPct(canCurate ? 6 : 5)} />
+                <thead><tr><th scope="col">순위</th><th scope="col">영역</th><th scope="col">판정</th><th scope="col">사유</th><th scope="col">출처</th>{canCurate && <th scope="col"><span className="sr-only">작업</span></th>}</tr></thead>
                 <tbody>
                   {p.shortList.map((s) => {
                     const isEditing = editingArea === s.area;
@@ -136,7 +140,7 @@ export function SynergyShortlistTab({ ctx, p }: { ctx: SynergyResultState; p: Sy
                         ) : (
                           <>
                             <td><span className={`status-chip ${s.verdict.includes("Short") ? "status-green" : "status-not-started"}`}>{s.verdict.includes("Short") ? "선별" : s.verdict}</span></td>
-                            <td className="text-[length:var(--fs-body)]">{s.reason}</td>
+                            <td className="text-[length:var(--fs-body)] cell-truncate" title={s.reason}>{s.reason}</td>
                           </>
                         )}
                         <td>
@@ -163,6 +167,7 @@ export function SynergyShortlistTab({ ctx, p }: { ctx: SynergyResultState; p: Sy
                   })}
                 </tbody>
               </table>
+              </div>
               {editError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-1">{editError}</p>}
               {canCurate && (
                 <div className="mt-3">

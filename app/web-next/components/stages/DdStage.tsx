@@ -43,6 +43,8 @@ const DD_COL_PCT_ACT = [44, 9, 17, 30] as const;
 const DD_COL_PCT_READONLY = [64, 12, 24] as const;
 /** Column shares (%): step, scope, status, evidence / link. */
 const PLAN_COL_PCT = [30, 20, 20, 30] as const;
+// 대상별 DD 비교 근거 7열 — 대상·구분 + 수치 5열.
+const DD_COMPARE_COL_PCT = [22, 12, 11, 11, 11, 11, 22] as const;
 
 interface ItemState {
   status: string;
@@ -428,8 +430,9 @@ export function DdStage({ projectId }: { projectId: string }) {
               열린 대상별 DD 현황입니다. 합격·불합격 표시 없이 아직 확인하지 못한 항목 수를 그대로 보여주며, 선정 대상 외 행은 게이트 판정에 반영되지 않습니다.
             </p>
             <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-              <table className="data-table" aria-label="대상별 DD 비교 근거">
+              <table className="data-table table-fixed-pct tmin-56" aria-label="대상별 DD 비교 근거">
                 <caption className="sr-only">열린 대상별 DD 비교 근거 — 전체 항목, 미판정, 판정 대기, 필수 미충족, 가치 영향 조사내역</caption>
+                <ColGroup widths={DD_COMPARE_COL_PCT} />
                 <thead>
                   <tr>
                     <th scope="col">대상</th>

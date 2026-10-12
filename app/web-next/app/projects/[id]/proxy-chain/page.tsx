@@ -7,6 +7,12 @@ import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { api } from "../../../../lib/api.ts";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
+import { ColGroup } from "../../../../components/ui.tsx";
+
+// 가치사슬 링크 7열 / 보정 proxy link 6열 — 숫자·근거 참조가 좁아지지 않도록
+// .table-scroll 안에서 고정 비율 유지(tmin-64)한다.
+const LINK_COL_PCT = [10, 20, 10, 14, 12, 12, 22] as const;
+const PROXY_LINK_COL_PCT = [24, 12, 12, 10, 16, 26] as const;
 
 // 가치사슬 연계 탭 — 링크와 보정 근거 (구칭: 프록시 체인) (ADR-0116 Phase 5; approved
 // mockup docs/designs/mockups/2026-09-11-proxy-chain-ui-mockup_ko.html).
@@ -190,7 +196,9 @@ export default function ProxyChainPage() {
       {!view || view.links.length === 0 ? (
         <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">링크가 없습니다 — 아래 폼에서 분석 근거와 함께 등록하세요.</p>
       ) : (
-        <table className="data-table">
+        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+        <table className="data-table table-fixed-pct tmin-64">
+          <ColGroup widths={LINK_COL_PCT} />
           <thead><tr><th scope="col">방향</th><th scope="col">from → to</th><th scope="col" className="num">탄력성</th><th scope="col" className="num">상관(R²)</th><th scope="col">전환비용</th><th scope="col">대체위협</th><th scope="col">근거</th></tr></thead>
           <tbody>
             {view.links.map((l) => (
@@ -206,6 +214,7 @@ export default function ProxyChainPage() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
 
       {canAct && (
@@ -256,7 +265,9 @@ export default function ProxyChainPage() {
           <div className="callout-warn mt-2"><b>데이터 의존 안내</b> — 통계 보정에는 바인딩 산업의 <b>관측 시계열</b>이 필요합니다. 시계열 수집 파이프라인(KOSIS·ECOS 어댑터)이 활성화되면 실행이 가능합니다.</div>
         </div>
       ) : (
-        <table className="data-table">
+        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+        <table className="data-table table-fixed-pct tmin-56">
+          <ColGroup widths={PROXY_LINK_COL_PCT} />
           <thead><tr><th scope="col">Hop</th><th scope="col">유형</th><th scope="col" className="num">계수/β</th><th scope="col" className="num">R²</th><th scope="col" className="num">95% CI</th><th scope="col">근거</th></tr></thead>
           <tbody>
             {view.proxyLinks.map((p) => (
@@ -271,6 +282,7 @@ export default function ProxyChainPage() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
       {canAct && (
         <div className="flex gap-2 items-center flex-wrap mt-2">

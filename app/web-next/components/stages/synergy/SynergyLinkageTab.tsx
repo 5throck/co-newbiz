@@ -5,6 +5,10 @@ import { SectionToolbar } from "../../layout.tsx";
 import { type GapHeldStatus, HELD_STATUS_CHIP, HELD_STATUS_LABEL, type GapResolution, RESOLUTION_LABEL, summarizeGap } from "../../../lib/capability-gap.ts";
 import type { SynergyResultState } from "./useSynergyResult.ts";
 import type { SynergyPayload } from "./types.ts";
+import { ColGroup } from "../../ui.tsx";
+
+// 시너지 영역 6열 — 근거·기회·위험이 긴 문단 열.
+const SYNERGY_AREA_COL_PCT = [14, 10, 30, 20, 16, 10] as const;
 
 export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: SynergyPayload }) {
   const { tab, canCurate, showLinkageForm, setShowLinkageForm, linkageForm, setLinkageForm, linkageError, setLinkageError, linkageSaving, addLinkageItem, opportunityId, gapRows, gapBusy, draftGap, saveGap, gap, gapNote, gapError, updateGapHeld, updateGapRow, setGapRows, newGapCap, setNewGapCap, addGapRow } = ctx;
@@ -16,8 +20,9 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                 연계 시장: {p.marketLinkage.marketSummaries.map((m) => `${m.industry} (CAGR ${m.cagrPct ?? "?"}%${m.gapPct !== null ? `, 격차 ${m.gapPct > 0 ? "+" : ""}${m.gapPct}%` : ""})`).join(" · ") || "없음"}
               </p>
               <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-              <table className="data-table report-table" aria-label="시너지 영역">
+              <table className="data-table table-fixed-pct tmin-64" aria-label="시너지 영역">
                 <caption className="sr-only">시너지 영역</caption>
+                <ColGroup widths={SYNERGY_AREA_COL_PCT} />
                 <thead>
                   <tr><th scope="col" className="col-label">영역</th><th scope="col" className="col-type">유형</th><th scope="col" className="col-text">근거</th><th scope="col" className="col-text">기회</th><th scope="col" className="col-text">위험</th><th scope="col" className="col-type">출처</th></tr>
                 </thead>

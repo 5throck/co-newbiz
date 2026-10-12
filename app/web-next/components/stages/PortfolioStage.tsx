@@ -9,7 +9,10 @@ import { StageTabs } from "../StageTabs.tsx";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { StageFrame } from "../StageFrame.tsx";
-import { PrimaryAction } from "../ui.tsx";
+import { ColGroup, PrimaryAction } from "../ui.tsx";
+
+// 벤처 클래스 롤업 6열 — 클래스명 + 수치 5열.
+const CLASS_ROLLUP_COL_PCT = [25, 15, 15, 15, 15, 15] as const;
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { useConfirm } from "../crud.tsx";
@@ -239,8 +242,9 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
             {rollup?.review_cycle && <span className="status-chip status-not-started ml-2">{rollup.review_cycle}</span>}
           </h3>
           {(rollup?.class_rollup.length ?? 0) > 0 && (
-            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table" aria-label="벤처 클래스 롤업">
+            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table table-fixed-pct tmin-40" aria-label="벤처 클래스 롤업">
               <caption className="sr-only">클래스별 롤업 요약</caption>
+              <ColGroup widths={CLASS_ROLLUP_COL_PCT} />
               <thead>
                 <tr><th scope="col">클래스</th><th scope="col">벤처 수</th><th scope="col">측정</th><th scope="col">달성</th><th scope="col">이탈</th><th scope="col">근거 부족</th></tr>
               </thead>

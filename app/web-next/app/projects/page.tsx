@@ -6,6 +6,10 @@ import { api } from "../../lib/api.ts";
 import { dealStageHref } from "../../lib/deal-links.ts";
 import { useConfirm } from "../../components/crud.tsx";
 import { ClosureModal } from "../../components/ClosureModal.tsx";
+import { ColGroup } from "../../components/ui.tsx";
+
+// 프로젝트 목록 7열 — 번호·트랙·생성일은 좁게, 프로젝트명·원본 기회에 여유.
+const PROJECTS_COL_PCT = [13, 22, 10, 12, 21, 11, 11] as const;
 
 // 프로젝트 (/projects) — S8~S12(사업성 분석·DD·투심·포트폴리오)로 이어지는
 // 프로젝트 키 화면군의 진입점. 승격된 프로젝트는 이전까지 /opportunities의
@@ -82,8 +86,9 @@ export function ProjectsView() {
         <p className="text-[color:var(--muted-fg)]">접근 가능한 프로젝트가 없습니다.</p>
       ) : (
         <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-          <table className="data-table" style={{ minWidth: "820px" }}>
+          <table className="data-table table-fixed-pct tmin-56">
             <caption className="sr-only">프로젝트 목록</caption>
+            <ColGroup widths={PROJECTS_COL_PCT} />
             <thead>
               <tr>
                 <th className="text-left">프로젝트 번호</th>

@@ -9,6 +9,9 @@ import { RawKey } from "../../../../components/RawKey.tsx";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
+import { ColGroup } from "../../../../components/ui.tsx";
+
+const KPI_COL_PCT = [45, 25, 30] as const;
 
 
 // 프로젝트 추진계획 (ADR-0104) — 최신 추진계획 버전 열람 + KPI 사전 확정(pre-commit)표
@@ -181,8 +184,10 @@ function CharterViewInner() {
         {latest && latest.kpis.length > 0 && (
           <section className="market-section sizing-step mt-3" aria-label="KPI 사전 확정">
             <h3 className="sizing-step-title text-[0.9rem]">KPI 사전 확정 (pre-commit)</h3>
-            <table className="data-table" aria-label="KPI 사전 확정">
+            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+            <table className="data-table table-fixed-pct tmin-32" aria-label="KPI 사전 확정">
               <caption className="sr-only">KPI 사전 확정 — 목표값</caption>
+              <ColGroup widths={KPI_COL_PCT} />
               <thead>
                 <tr><th scope="col">KPI</th><th scope="col">키</th><th scope="col">목표값</th></tr>
               </thead>
@@ -196,6 +201,7 @@ function CharterViewInner() {
                 ))}
               </tbody>
             </table>
+            </div>
           </section>
         )}
 

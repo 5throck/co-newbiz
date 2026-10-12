@@ -11,6 +11,12 @@ import { useConfirm } from "../../../../components/crud.tsx";
 import { api } from "../../../../lib/api.ts";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
+import { ColGroup } from "../../../../components/ui.tsx";
+
+// 파트너 후보 12열 — 후보명·컴플라이언스 리스크·관리에 여유, 점수·상태·NDA는 좁게.
+const PARTNER_COL_PCT = [13, 7, 7, 7, 7, 7, 8, 14, 9, 7, 7, 7] as const;
+// JV 조건 9열 — 파트너에 여유, JSON·조항 텍스트 열에 균등한 몫.
+const JV_TERM_COL_PCT = [12, 10, 12, 12, 12, 12, 10, 10, 10] as const;
 
 interface Finding {
   id: string;
@@ -160,8 +166,9 @@ export default function PartnershipPage() {
           <h2 className="text-[0.92rem] font-semibold">파트너 후보 ({data?.partners.length ?? 0}건)</h2>
         </div>
         <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-          <table className="data-table">
+          <table className="data-table table-fixed-pct tmin-64">
             <caption className="sr-only">파트너 후보 목록</caption>
+            <ColGroup widths={PARTNER_COL_PCT} />
             <thead>
               <tr>
                 <th scope="col">후보명</th><th scope="col">유형</th><th scope="col">지역</th>
@@ -273,8 +280,9 @@ export default function PartnershipPage() {
       <section className="market-section" aria-label="JV 조건">
         <h2 className="text-[0.92rem] font-semibold mb-2">JV 조건 ({data?.terms.length ?? 0}건)</h2>
         <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-          <table className="data-table">
+          <table className="data-table table-fixed-pct tmin-64">
             <caption className="sr-only">JV 조건 목록</caption>
+            <ColGroup widths={JV_TERM_COL_PCT} />
             <thead>
               <tr>
                 <th scope="col">파트너</th><th scope="col">지분 구조</th><th scope="col">거버넌스</th>

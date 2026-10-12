@@ -4,7 +4,10 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
-import { PageState, useToast } from "../../../../components/ui.tsx";
+import { ColGroup, PageState, useToast } from "../../../../components/ui.tsx";
+
+// 부지 비교 8열 — 부지명·지역에 여유, 점수 열은 균등하게 좁게.
+const SITE_COL_PCT = [16, 14, 11, 11, 11, 13, 12, 12] as const;
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
 
@@ -58,8 +61,9 @@ function SitesView() {
           <PageState state="empty" emptyText="등록된 부지가 없습니다." />
         ) : (
           <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table" aria-label="부지 비교">
+            <table className="data-table table-fixed-pct tmin-56" aria-label="부지 비교">
               <caption className="sr-only">부지 비교</caption>
+              <ColGroup widths={SITE_COL_PCT} />
               <thead><tr><th>부지</th><th>지역</th><th className="col-num">인프라</th><th className="col-num">물류</th><th className="col-num">노동력</th><th className="col-num">인허가(일)</th><th className="col-num">총점</th><th>순위</th></tr></thead>
               <tbody>
                 {rows.map((r) => (

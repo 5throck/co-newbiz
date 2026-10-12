@@ -10,6 +10,11 @@ import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteProject } from "../lib/project-write-access.ts";
 import { useConfirm } from "./crud.tsx";
+import { ColGroup } from "./ui.tsx";
+
+// waiver 목록 — 규정·조항/사유/요청·승인이 긴 텍스트라 고정 비율 유지 (작업 열은 canAct일 때만).
+const WAIVER_COL_PCT = [22, 12, 26, 20, 10, 10] as const;
+const WAIVER_RO_COL_PCT = [24, 13, 29, 22, 12] as const;
 
 interface WaiverRow {
   id: string;
@@ -186,8 +191,9 @@ export function WaiverPanel({ projectId, prefill, onRequested, targetId }: { pro
         <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">등록된 waiver가 없습니다.</p>
       ) : (
         <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-          <table className="data-table">
+          <table className="data-table table-fixed-pct tmin-56">
             <caption className="sr-only">프로젝트 waiver 목록 — 실효 상태는 만료일 기준으로 파생</caption>
+            <ColGroup widths={canAct ? WAIVER_COL_PCT : WAIVER_RO_COL_PCT} />
             <thead>
               <tr>
                 <th className="col-label">규정·조항</th><th>상태</th><th className="col-text">사유</th><th>요청·승인</th><th className="col-num">만료</th>{canAct && <th><span className="sr-only">작업</span></th>}

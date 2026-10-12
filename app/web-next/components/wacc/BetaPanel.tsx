@@ -8,12 +8,16 @@
 import { useMemo, useState } from "react";
 import type { EChartsOption } from "echarts";
 import { EChart } from "../EChart.tsx";
+import { ColGroup } from "../ui.tsx";
 import {
   medianBetaUnlevered,
   parseSeriesInput,
   scatterPoints,
   type BetaRegressionResult,
 } from "../../../../db/lib/beta-regression.ts";
+
+// 동종사 베타 6열 — 동종사명·출처가 텍스트 입력 셀이라 table-scroll 안에서 고정 비율 유지.
+const PEER_BETA_COL_PCT = [24, 14, 10, 18, 24, 10] as const;
 
 export interface PeerRow {
   name: string;
@@ -166,8 +170,9 @@ export function BetaPanel({
       </p>
 
       {betaTab === "peer" ? (
-        <div className="overflow-x-auto">
-          <table className="w-full text-[length:var(--fs-body)]">
+        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+          <table className="w-full text-[length:var(--fs-body)] table-fixed-pct tmin-48">
+            <ColGroup widths={PEER_BETA_COL_PCT} />
             <thead>
               <tr className="text-left text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] border-b border-[color:var(--border-bright)]">
                 <th className="py-1.5 px-1.5">동종사</th>

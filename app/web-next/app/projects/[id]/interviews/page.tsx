@@ -4,7 +4,10 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
-import { PageState, useToast } from "../../../../components/ui.tsx";
+import { ColGroup, PageState, useToast } from "../../../../components/ui.tsx";
+
+// 인터뷰 6열 — 응답 요지·후속 확인 텍스트에 여유, 증적 참조는 좁게.
+const INTERVIEW_COL_PCT = [14, 14, 28, 16, 18, 10] as const;
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
 
@@ -57,8 +60,9 @@ function InterviewsView() {
           <PageState state="empty" emptyText="기록된 인터뷰가 없습니다." />
         ) : (
           <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table" aria-label="인터뷰">
+            <table className="data-table table-fixed-pct tmin-56" aria-label="인터뷰">
               <caption className="sr-only">인터뷰</caption>
+              <ColGroup widths={INTERVIEW_COL_PCT} />
               <thead><tr><th>대상</th><th>주제</th><th>응답 요지</th><th>엇갈림</th><th>후속 확인</th><th>증적</th></tr></thead>
               <tbody>{rows.map((r) => (
                 <tr key={r.id}>
