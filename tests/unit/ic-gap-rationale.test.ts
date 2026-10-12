@@ -129,7 +129,7 @@ beforeAll(async () => {
   // S8 artifact: one case + one persisted simulation percentile.
   db.run(
     "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, inputs_json) VALUES (?,?,?,?,?,?,?,?)",
-    ["bc-ic1", projectId, "greenfield_cost", "IC 패키지 케이스", 5, ANALYST, NOW, "{}"],
+    ["bc-ic1", projectId, "greenfield_cost", "투자심의 자료 케이스", 5, ANALYST, NOW, "{}"],
   );
   // S11 charter baseline JSON exists from promotion (ADR-0104); the human
   // CONFIRMATION act is exercised through the confirm endpoint in describe (e).

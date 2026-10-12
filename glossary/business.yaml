@@ -1,4 +1,4 @@
-version: 1.1.0
+version: 1.1.1
 last_updated: 2026-10-13
 terms:
   Green Field:
@@ -145,3 +145,14 @@ terms:
     related: [Project]
     used_in: [strategic-fit-screening]
     owner: market-intelligence-agent
+
+  Investment Committee Package:
+    ko: 투자심의 자료
+    en: IC package
+    definition_ko: S10에서 설계한 투자 구조와 자금 조달 계획, 채택된 Business Case, DD 발견사항, RAG 제안을 한 묶음으로 정리해 S11 투자심의위원회(IC)에 올리는 자료.
+    why_it_matters_ko: 심의 자료는 판단의 근거를 모은 것이지 결재가 아니다 — RAG 등급은 제안일 뿐이며 승인과 투자 결정은 사람이 내린다(경계 #2).
+    category: business
+    aliases: [IC 자료, IC package]
+    related: [Stage Gate]
+    used_in: [stage-gate-governance]
+    owner: process-governance-manager

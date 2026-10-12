@@ -37,7 +37,7 @@ export const STAGE_ARTIFACT_LABELS: readonly StageArtifactLabel[] = [
   { key: "stage:S9:1", stageId: "S9", label: "S9 DD 체크리스트 판정" },
   { key: "stage:S10:1", stageId: "S10", label: "S10 투자구조 가설" },
   { key: "stage:S10:2", stageId: "S10", label: "S10 자금조달 계획" },
-  { key: "stage:S11:1", stageId: "S11", label: "S11 IC 패키지" },
+  { key: "stage:S11:1", stageId: "S11", label: "S11 투자심의 자료" },
   { key: "stage:S11:2", stageId: "S11", label: "S11 추진계획" },
   { key: "stage:S11:3", stageId: "S11", label: "S11 사람 최종 승인" },
   { key: "stage:S11:4", stageId: "S11", label: "S11 설립 실행 기록" },

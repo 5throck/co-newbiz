@@ -109,7 +109,7 @@ function HeatmapView() {
               ))}
             </ul>
           )}
-          <p className="note" style={{ marginBottom: 0 }}>스냅샷은 IC 패키지·분기 브리핑에 첨부 가능 — 완화 판단은 사람 (경계 #2)</p>
+          <p className="note" style={{ marginBottom: 0 }}>스냅샷은 투자심의 자료·분기 브리핑에 첨부 가능 — 완화 판단은 사람 (경계 #2)</p>
         </section>
       </div>
     </main>

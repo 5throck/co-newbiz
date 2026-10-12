@@ -21,7 +21,7 @@ import { estStepColPct } from "./constants.ts";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import { ExecutionBaselinePanel } from "./ExecutionBaselinePanel.tsx";
 
-// S11 투자심사·실행 — IC 패키지 열람 + Entity/Group IC 진행 기록 + 설립 실행
+// S11 투자심사·실행 — 투자심의 자료 열람 + Entity/Group IC 진행 기록 + 설립 실행
 // 5단계 진행 화면 (ADR-0100 §3). 경계 #2: RAG 등급은 'AI 추천'으로만 표시되고
 // (승인 도장 없음), 진행 GO/HOLD/KILL 기록과 설립 단계 완료 기록은 사람의
 // 행위다. 이 화면은 패키지를 읽어오는 GET만 자동화하고, 쓰기는 명시적 P4
@@ -110,7 +110,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
   const load = useCallback((): Promise<unknown> => {
     const pkgP = api.get<IcPackage>(`/api/projects/${encodeURIComponent(projectId)}/ic-package`)
       .then((r) => setPkg(r.data))
-      .catch((e) => setError(e instanceof Error ? e.message : "IC 패키지를 불러오지 못했습니다."));
+      .catch((e) => setError(e instanceof Error ? e.message : "투자심의 자료를 불러오지 못했습니다."));
     const estP = api.get<EstablishmentView>(`/api/projects/${encodeURIComponent(projectId)}/establishment`)
       .then((r) => setEst(r.data))
       .catch(() => { /* the IC package already carries establishment progress */ });
@@ -191,7 +191,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
       <GateDecisionJump gate={entityGo ? "group_ic" : "entity_ic"} />
       {/* One review block for both IC gates (the panels below do not repeat it). */}
       <ReviewBuckets entityType="project" entityId={projectId} gates={["entity_ic", "group_ic"]} artifacts={stageArtifactTabs("S11")} />
-      <StageFrame stageId="S11" heading="S11 투자심사·실행 — IC 패키지 · Entity/Group IC · 설립 실행">
+      <StageFrame stageId="S11" heading="S11 투자심사·실행 — 투자심의 자료 · Entity/Group IC · 설립 실행">
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
           Entity IC와 Group IC 승인이 모두 기록되고, 내부 추진·합작 프로젝트는 설립 5단계 완료 기록이
           존재해야 S11이 완료됩니다.
@@ -209,10 +209,10 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
         {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
         {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {notice}</p>}
 
-        {/* ── IC 패키지 요약 ─────────────────────────────────────────── */}
-        <section className="market-section sizing-step" aria-label="IC 패키지 요약">
+        {/* ── 투자심의 자료 요약 ─────────────────────────────────────────── */}
+        <section className="market-section sizing-step" aria-label="투자심의 자료 요약">
           <h3 className="sizing-step-title text-[0.95rem]">
-            <span className="sizing-step-badge">📦</span> IC 패키지 — Business Case · DD · RAG 제안
+            <span className="sizing-step-badge">📦</span> 투자심의 자료 — Business Case · DD · RAG 제안
           </h3>
 
           <h4 className="text-[length:var(--fs-body)] mt-2 mb-1">채택 Business Case (S8)</h4>

@@ -133,7 +133,7 @@ beforeAll(async () => {
   // S8 artifact: one case + one persisted simulation percentile.
   db.run(
     "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, inputs_json) VALUES (?,?,?,?,?,?,?,?)",
-    ["bc-ic1", projectId, "greenfield_cost", "IC 패키지 케이스", 5, ANALYST, NOW, "{}"],
+    ["bc-ic1", projectId, "greenfield_cost", "투자심의 자료 케이스", 5, ANALYST, NOW, "{}"],
   );
   // S11 charter baseline JSON exists from promotion (ADR-0104); the human
   // CONFIRMATION act is exercised through the confirm endpoint in describe (e).
@@ -342,7 +342,7 @@ describe("(e) S11 completion — both gates go AND establishment 5/5", () => {
   test("one gate go is not enough", async () => {
     const res = await req(`/api/projects/${projectId}/gate-decisions`, {
       method: "POST", headers: { cookie: analystCookie },
-      body: JSON.stringify({ gate: "entity_ic", decision: "go", rationale: "IC 패키지 검토 후 인적 결재" }),
+      body: JSON.stringify({ gate: "entity_ic", decision: "go", rationale: "투자심의 자료 검토 후 인적 결재" }),
     });
     expect(res.status).toBe(201);
 
