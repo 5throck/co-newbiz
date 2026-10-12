@@ -7,7 +7,7 @@ import { getDb } from "../../../../../../../db/client.ts";
 import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { badRequest, fail, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { route } from "../../../../../lib/route.ts";
 
 const STATUSES = ["pending", "in_progress", "done", "halted", "escalated"] as const;
@@ -89,8 +89,11 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
 
   const now = new Date().toISOString();
   const existing = db
-    .query("SELECT id FROM entity_establishment_step WHERE opportunity_id = ? AND step_no = ? AND checklist_item IS ?")
-    .get(id, stepNo, body?.checklist_item?.trim() || null) as { id: string } | undefined;
+    .query("SELECT id, status FROM entity_establishment_step WHERE opportunity_id = ? AND step_no = ? AND checklist_item IS ?")
+    .get(id, stepNo, body?.checklist_item?.trim() || null) as { id: string; status: string } | undefined;
+  // ADR-0165: a done step is immutable through this legacy projection; the
+  // reopen action exists on the project route only.
+  if (existing?.status === "done") return fail(409, "reopen_required", "완료된 단계는 먼저 재개해야 변경할 수 있습니다.");
   let rowId: string;
   if (existing) {
     rowId = existing.id;

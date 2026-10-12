@@ -14,6 +14,7 @@ export interface GlossaryTerm {
   related?: string[];
   used_in?: string[];
   owner?: string;
+  source?: string;
 }
 
 let cache: GlossaryTerm[] | null = null;

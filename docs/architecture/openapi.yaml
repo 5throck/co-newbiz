@@ -5914,7 +5914,7 @@ paths:
   /api/projects/{id}/establishment:
     get:
       operationId: getProjectEstablishment
-      summary: S10 establishment steps (project-keyed projection of the opportunity ledger, 0070) — steps, 5-step progress (ADR-0100).
+      summary: "S11 establishment steps (project-keyed projection of the opportunity ledger, 0070) — steps (assignee_user_id, assignee_name, assignee_active, last_recorded_by, reopen_count), members (active project members for the assignee picker), history (latest 20 events), 5-step progress (ADR-0100, ADR-0165)."
       tags:
         - Analysis
       parameters:
@@ -5934,7 +5934,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     put:
       operationId: putProjectEstablishmentStep
-      summary: Upsert one establishment step (analyst+, human owner; step 5 sequence-enforced; origin internal|joint) — ADR-0085/0100.
+      summary: "Change the status of one establishment step (ADR-0165). Body: step_no 1-5, status in_progress|done|halted|escalated (pending rejected), origin (must equal the project origin, internal|joint), optional evidence_url (http/https), note, assignee_user_id. done requires evidence_url or note (400 evidence_required) and is human-only over MCP; a done step is changed only via POST .../reopen (409 reopen_required). Step 5 is sequence-enforced (400 sequence_violation). Errors also: 400 not_applicable, 400 assignee_not_member. Audit target <projectId>#step<n>."
       tags:
         - Analysis
       parameters:
@@ -5954,6 +5954,56 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /api/projects/{id}/establishment/assignee:
+    put:
+      operationId: putProjectEstablishmentAssignee
+      summary: "Set or clear (null) the person responsible for one establishment step (ADR-0165). Human-only, analyst+. The assignee must be an active project member (400 assignee_not_member); allowed on a done step; creates a pending row when the step has none. Audit entity_establishment.assign."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/projects/{id}/establishment/reopen:
+    post:
+      operationId: postProjectEstablishmentReopen
+      summary: "Reopen a done establishment step (done -> in_progress) with a mandatory reason of 10-2000 characters (ADR-0165). Human-only, analyst+. Row evidence is cleared and snapshotted in the history event. 409 not_done; 409 dependent_step_done when reopening steps 1-4 while step 5 is done unless cascade_step5 is true. Gate decisions are never revoked. Audit entity_establishment.reopen / reopen_cascade."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /api/projects/{id}/dd:
     get:

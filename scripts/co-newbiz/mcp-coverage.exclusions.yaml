@@ -152,6 +152,26 @@ exclusions:
     kind: route
     route: "POST /api/opportunities/{}/promote"
     reason: Promotion to a project is a human act.
+  - id: establishment-complete
+    kind: body_action
+    route: "PUT /api/projects/{}/establishment"
+    field: status
+    value: done
+    reason: Completing an entity-establishment step is a human act with recorded evidence (ADR-0165, boundary #2); agents may record in_progress, halted and escalated only.
+  - id: establishment-complete-opportunity
+    kind: body_action
+    route: "PUT /api/opportunities/{}/establishment"
+    field: status
+    value: done
+    reason: Same human-only completion boundary on the legacy opportunity projection (ADR-0165).
+  - id: establishment-assignee
+    kind: route
+    route: "PUT /api/projects/{}/establishment/assignee"
+    reason: Assigning the person responsible for an establishment step is an accountability act (ADR-0165, boundary #1/#2).
+  - id: establishment-reopen
+    kind: route
+    route: "POST /api/projects/{}/establishment/reopen"
+    reason: Reopening a completed establishment step is an audited human act with a mandatory reason (ADR-0165, boundary #2).
   - id: proposal-confirm
     kind: route
     route: "POST /api/proposals/{}/confirm"

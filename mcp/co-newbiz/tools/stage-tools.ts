@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.0.1
 /**
  * Stage tools S1-S12 — ADR-0154 §4, design §5 (Wave M M-2).
  *
@@ -194,8 +194,10 @@ const SPECS: readonly RouteToolSpec[] = [
     activities: ["investment-structuring"], description: "Record a regional incentive for the investment structure." },
   { name: "run_rag_recompute", kind: "generate", method: "POST", path: "/api/projects/{projectId}/rag/recompute", body: "optional",
     activities: ["risk-review"], description: "Recompute the AI-PROPOSED RAG grade (idempotent; capped by data confidence; never a decision)." },
-  { name: "record_establishment", kind: "write", method: "PUT", path: "/api/projects/{projectId}/establishment", body: "required", bodyHint: BODY,
-    activities: ["entity-establishment-execution"], artifacts: ["stage:S11:4"], description: "Record an entity-establishment step (preparation, registration, permits, staffing, completion)." },
+  { name: "record_establishment", kind: "write", method: "PUT", path: "/api/projects/{projectId}/establishment", body: "required",
+    blockBody: { field: "status", values: ["done"] },
+    activities: ["entity-establishment-execution"], artifacts: ["stage:S11:4"], bodyHint: "{ step_no: 1-5, status: in_progress | halted | escalated, origin: internal | joint, note?, evidence_url? }",
+    description: "Record an entity-establishment step status (in_progress / halted / escalated) with a note. Completion (done), assignment and reopen are human-only: tell the user to do it in the web UI." },
   { name: "record_pmi_key_talent", kind: "write", method: "POST", path: "/api/projects/{projectId}/pmi/key-talent", body: "required", bodyHint: BODY,
     description: "PMI planning draft: a key-talent retention entry (status: active | departed_regretted | departed_planned). (PMI kickoff itself is not exposed.)" },
   { name: "record_pmi_synergy_certification", kind: "write", method: "POST", path: "/api/projects/{projectId}/pmi/synergy-certifications", body: "required", bodyHint: BODY,

@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 // InProcessRestPort — ADR-0154 §1, design §3.1.
 //
 // Runs the existing Next.js route handlers directly (no network hop) as the
@@ -166,6 +166,13 @@ export const HUMAN_ONLY_ROUTES: readonly HumanOnlyRule[] = [
   { method: "PATCH", pattern: "/api/projects/:id/waivers/:waiverId" },
   { method: "PUT", pattern: "/api/projects/:id/dd-checklist/tailor/:itemId/review" },
   { method: "POST", pattern: "/api/opportunities/:id/promote" },
+  // ADR-0165: completing an establishment step, assigning a person and
+  // reopening a done step are human acts; agents may still record
+  // in_progress / halted / escalated.
+  { method: "PUT", pattern: "/api/projects/:id/establishment", bodyField: { field: "status", value: "done" } },
+  { method: "PUT", pattern: "/api/opportunities/:id/establishment", bodyField: { field: "status", value: "done" } },
+  { method: "PUT", pattern: "/api/projects/:id/establishment/assignee" },
+  { method: "POST", pattern: "/api/projects/:id/establishment/reopen" },
 ];
 
 export function isHumanOnly(method: string, pathname: string, body: unknown): boolean {

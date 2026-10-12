@@ -241,3 +241,8 @@ cover + hero max-width 34rem 제한으로 텍스트 길이·패널 높이와 무
 - 목록은 회사를 하나의 묶음(rowSpan)으로 표시하고 기회가 행마다 나열된다. 연결 기회
   클릭이 해당 분석 리포트의 진입점(회사 셀은 분석 1건일 때만 클릭 가능). DART 고유번호
   컬럼 제거, "구분"(계열사/그룹/legacy) 컬럼 신설.
+
+### As-built 2026-10-13 - S11 establishment table and merged committee decision (ADR-0165)
+
+- Establishment table (`EstablishmentPanel.tsx`, view model `lib/establishment-view.ts`): columns step, status, assignee, last recorded, updated, actions (read-only viewers see five columns). The primary button is "change status" (hidden for done steps); the row menu holds assign and, for done steps, reopen. Brownfield/unclassified origins show an info note (ADR-0047) instead of the table. Server error codes (`evidence_required`, `reopen_required`, `assignee_not_member`, `dependent_step_done`) map to Korean text; `dependent_step_done` opens a second confirmation and resends with `cascade_step5`.
+- Decision section: one `GateDecisionPanel` with `gates=[entity_ic, group_ic]` and `sequence`. Step indicator (pending/GO/HOLD/KILL per committee), target committee shown above the form and defaulted to the current turn (`lib/gate-sequence-view.ts`), group committee opens only after the entity committee GO, history grouped per committee. Anchor: `#gate-decision-entity_ic-group_ic`; `focusGateDecision(gate)` matches either gate through `data-gate-form~=`.
