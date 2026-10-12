@@ -4,7 +4,7 @@ title: "Technical Due Diligence Checklist"
 scope: shared
 enforceability: mixed
 owner_agent: technical-dd-agent
-version: "1.0.0"
+version: "1.0.1"
 effective_from: "2026-08-20"
 gate: DD
 
@@ -14,7 +14,7 @@ items:
     mandatory: true
     waiver_eligible: true
   - id: tdd-02
-    text: "실사 증적 확보 (사진·계측·로그 — 증적 없는 관찰은 IC 심의에서 효력 없음)"
+    text: "실사 증적 확보 (사진·계측·로그 — 증적 없는 관찰은 투자심의에서 효력 없음)"
     mandatory: true
     waiver_eligible: true
   - id: tdd-03

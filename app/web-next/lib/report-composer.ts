@@ -57,7 +57,7 @@ export function composeProjectReport(db: Database, projectId: string, projectNo:
       lines.push("- 관점 비교: 과거 기반 변형 없음 (대상 회사 연결 + DART 동기화 필요)");
     }
   } else {
-    lines.push("- 채택된 사업 케이스가 없습니다 — Entity IC 심사 전 S8 채택이 필요합니다.");
+    lines.push("- 채택된 사업 케이스가 없습니다 — 법인 투자심의위원회 심사 전 S8 채택이 필요합니다.");
   }
   lines.push("");
 

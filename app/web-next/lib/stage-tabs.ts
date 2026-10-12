@@ -71,7 +71,7 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
   {
     stage: "S11", name: "투자심사·실행",
     tabs: [
-      { seg: "/ic-review", label: "IC 심의" },
+      { seg: "/ic-review", label: "투자심의" },
       { seg: "/reports", label: "보고서" },
     ],
     more: [

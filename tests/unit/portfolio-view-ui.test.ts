@@ -40,7 +40,7 @@ describe("portfolio-view overlap UI (design 2026-10-11)", () => {
   });
 
   test("proposal-only Group IC framing line per group", () => {
-    expect(src).toMatch(/판단은 Group IC가 합니다/);
+    expect(src).toMatch(/판단은 그룹 투자심의위원회가 합니다/);
     expect(src).toMatch(/제안/);
   });
 

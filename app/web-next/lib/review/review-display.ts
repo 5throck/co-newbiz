@@ -24,8 +24,8 @@ export const GATE_DISPLAY: Record<string, string> = {
   target_screening: "Target Screening",
   fs: "FS",
   dd: "DD",
-  entity_ic: "Entity IC",
-  group_ic: "Group IC",
+  entity_ic: "법인 심의",
+  group_ic: "그룹 심의",
   transition: "S12 전환",
 };
 export const gateDisplayName = (id: string): string => GATE_DISPLAY[id] ?? id;

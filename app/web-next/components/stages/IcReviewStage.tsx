@@ -21,7 +21,7 @@ import { estStepColPct } from "./constants.ts";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import { ExecutionBaselinePanel } from "./ExecutionBaselinePanel.tsx";
 
-// S11 투자심사·실행 — 투자심의 자료 열람 + Entity/Group IC 진행 기록 + 설립 실행
+// S11 투자심사·실행 — 투자심의 자료 열람 + 법인·그룹 투자심의위원회 진행 기록 + 설립 실행
 // 5단계 진행 화면 (ADR-0100 §3). 경계 #2: RAG 등급은 'AI 추천'으로만 표시되고
 // (승인 도장 없음), 진행 GO/HOLD/KILL 기록과 설립 단계 완료 기록은 사람의
 // 행위다. 이 화면은 패키지를 읽어오는 GET만 자동화하고, 쓰기는 명시적 P4
@@ -191,9 +191,9 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
       <GateDecisionJump gate={entityGo ? "group_ic" : "entity_ic"} />
       {/* One review block for both IC gates (the panels below do not repeat it). */}
       <ReviewBuckets entityType="project" entityId={projectId} gates={["entity_ic", "group_ic"]} artifacts={stageArtifactTabs("S11")} />
-      <StageFrame stageId="S11" heading="S11 투자심사·실행 — 투자심의 자료 · Entity/Group IC · 설립 실행">
+      <StageFrame stageId="S11" heading="S11 투자심사·실행 — 투자심의 자료 · 법인·그룹 투자심의위원회 · 설립 실행">
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-          Entity IC와 Group IC 승인이 모두 기록되고, 내부 추진·합작 프로젝트는 설립 5단계 완료 기록이
+          법인 투자심의위원회와 그룹 투자심의위원회 승인이 모두 기록되고, 내부 추진·합작 프로젝트는 설립 5단계 완료 기록이
           존재해야 S11이 완료됩니다.
           <Link href={`/projects/${projectId}/charter`} className="ml-2 underline">프로젝트 추진계획(차터) 보기 →</Link>
           <span className={`status-chip ${bothGatesGo ? "status-green" : "status-amber"} ml-2`}>
@@ -275,7 +275,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
             </ul>
           )}
 
-          <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">RAG 종합 등급</h4>
+          <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">종합 등급</h4>
           {pkg?.rag.grade ? (
             <p className="text-[length:var(--fs-caption)]">
               <span className={`status-chip ${RAG_META[pkg.rag.grade]?.cls ?? "status-not-started"}`}>
@@ -476,7 +476,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
             killHint={null}
             showReview={false}
             goGaps={pkg?.gates.go_gaps}
-            nextStage={{ label: "Group IC 결정 기록", href: "#gate-decision-group_ic" }}
+            nextStage={{ label: "그룹 투자심의위원회 결정 기록", href: "#gate-decision-group_ic" }}
           />
         </div>
         <div className="mt-3">

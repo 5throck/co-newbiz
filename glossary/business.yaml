@@ -1,4 +1,4 @@
-version: 1.1.1
+version: 1.1.2
 last_updated: 2026-10-13
 terms:
   Green Field:
@@ -46,7 +46,7 @@ terms:
   Stage Gate:
     ko: 스테이지 게이트
     en: Stage Gate
-    definition_ko: Screening → Pre-FS → FS → DD → Entity IC → Group IC 순으로 진행되는 신사업 검토 단계.
+    definition_ko: Screening → Pre-FS → FS → DD → 법인 투자심의위원회 → 그룹 투자심의위원회 순으로 진행되는 신사업 검토 단계.
     why_it_matters_ko: 각 게이트마다 필수 산출물과 통과 조건이 다르다. 게이트를 건너뛰면 시스템이 다음 단계 진입을 차단한다.
     category: business
     aliases: [게이트]
@@ -65,10 +65,11 @@ terms:
     owner: process-governance-manager
 
   Entity IC:
-    ko: 각사 투자심의위원회
+    ko: 법인 투자심의위원회
     en: Entity Investment Committee
+    aliases: [Entity IC, Entity-IC, 법인 심의, IC 심의]
     definition_ko: 개별 계열사 단위에서 진행되는 투자 승인 심의.
-    why_it_matters_ko: Group IC 진입의 시스템 강제 선행 조건이다. Entity IC 승인 없이 그룹 절차에 들어갈 수 없다.
+    why_it_matters_ko: 그룹 투자심의위원회 진입의 시스템 강제 선행 조건이다. 법인 투자심의위원회 승인 없이 그룹 절차에 들어갈 수 없다.
     category: business
     related: [Group IC, Stage Gate]
     used_in: [two-tier-approval-chain]
@@ -77,8 +78,9 @@ terms:
   Group IC:
     ko: 그룹 투자심의위원회
     en: Group Investment Committee
+    aliases: [Group IC, Group-IC, 그룹 IC, 그룹 심의]
     definition_ko: 계열사 개별 승인과 별개로 그룹 차원에서 진행되는 심의로, 포트폴리오 정합성·자본 배분 우선순위를 본다.
-    why_it_matters_ko: 각사 기준 전부 Green인 안건이 여러 개 올라와도 자본은 하나다. Group IC는 승인/부결이 아니라 순위 결정인 경우가 많다.
+    why_it_matters_ko: 각사 기준 전부 Green인 안건이 여러 개 올라와도 자본은 하나다. 그룹 투자심의위원회는 승인/부결이 아니라 순위 결정인 경우가 많다.
     category: business
     related: [Entity IC, Group Agenda]
     used_in: [group-level-review, portfolio-fit-assessment]
@@ -117,7 +119,7 @@ terms:
   Group Agenda:
     ko: 그룹 안건 비교
     en: Group Agenda
-    definition_ko: 동일 심의 사이클에서 그룹 IC에 올라온 복수 안건을 우선순위로 비교하는 뷰.
+    definition_ko: 동일 심의 사이클에서 그룹 투자심의위원회에 올라온 복수 안건을 우선순위로 비교하는 뷰.
     why_it_matters_ko: 개별 안건의 승인/부결이 아니라 한정된 자본을 두고 경쟁하는 안건들의 순위를 매기는 게 실제 목적이다.
     category: business
     related: [Group IC]

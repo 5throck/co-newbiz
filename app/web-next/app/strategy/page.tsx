@@ -20,7 +20,7 @@ const MODULES_COL_PCT = [14, 34, 12, 20, 20] as const;
 const MODULES = [
   {
     name: "스테이지 진행 오케스트레이션",
-    desc: "Screening → Pre-FS → FS → DD → Entity IC → Group IC 6단계 진행과 Kill Criteria 강제 모델. 타 신규사업 평가 프로세스에 직접 이식 가능.",
+    desc: "Screening → Pre-FS → FS → DD → 법인 투자심의위원회 → 그룹 투자심의위원회 6단계 진행과 Kill Criteria 강제 모델. 타 신규사업 평가 프로세스에 직접 이식 가능.",
     market: "High",
     license: "Platform Core (자체 개발)",
     pricingNote: "SaaS 라이선스 또는 온프레미 임베디드 형태로 외부 계열사/PEF에 제공",

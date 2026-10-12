@@ -62,7 +62,7 @@ export async function recordTransition(
   await form.waitFor({ state: "visible", timeout: 30_000 });
   await form.scrollIntoViewIfNeeded();
   await form.locator("select").selectOption(decision);
-  await form.getByPlaceholder("IC 심의 근거").fill(rationale);
+  await form.getByPlaceholder("투자심의 근거").fill(rationale);
   if (extra.learning) await form.getByPlaceholder("플레이북으로 회수할 학습 내용").fill(extra.learning);
   if (extra.record) await form.locator("input.sizing-new-input").last().fill(extra.record);
   await form.locator('button[type="submit"]').click();

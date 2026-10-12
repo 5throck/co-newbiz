@@ -1,7 +1,7 @@
 "use client";
 
 // 포트폴리오 전체 뷰 (ADR-0122 #4) — 검토/안건 간 중복 노출(같은 산업)과
-// 집중도를 그룹 관점에서 감시한다. 개별 판단은 Group IC가 한다 (경계 #2).
+// 집중도를 그룹 관점에서 감시한다. 개별 판단은 그룹 투자심의위원회가 한다 (경계 #2).
 // 중복 감지는 GET /api/portfolio/overlap (design
 // 2026-10-11-portfolio-view-overlap §4)가 서버에서 수행한다 — 키는
 // md_industry.id이며, name_prefix 계열은 별도 하위 등급으로만 표시된다.
@@ -102,7 +102,7 @@ function PortfolioView() {
   return (
     <main>
       <h1>포트폴리오 전체 뷰</h1>
-      <p className="objective">검토/안건 간 중복 노출과 집중도를 그룹 관점에서 감시합니다 (group-review-agent) — 개별 판단은 Group IC가 합니다.</p>
+      <p className="objective">검토/안건 간 중복 노출과 집중도를 그룹 관점에서 감시합니다 (group-review-agent) — 개별 판단은 그룹 투자심의위원회가 합니다.</p>
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}
       <div className="summary-cards mb-4">
         <div className="summary-card glass text-left"><span className="summary-value mono-num">{opps ?? 0}</span><span className="text-label">활성 기회</span></div>
@@ -168,7 +168,7 @@ function PortfolioView() {
                     ))}
                   </ul>
                   <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] m-0">
-                    이 그룹은 통합 시너지 검토 또는 시기 조정을 <strong>제안</strong>합니다 — 판단은 Group IC가 합니다.
+                    이 그룹은 통합 시너지 검토 또는 시기 조정을 <strong>제안</strong>합니다 — 판단은 그룹 투자심의위원회가 합니다.
                   </p>
                 </article>
               );

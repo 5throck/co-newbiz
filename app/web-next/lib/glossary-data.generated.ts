@@ -45,10 +45,46 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "owner": "brownfield-agent"
   },
   {
+    "key": "Investment Vehicle",
+    "ko": "투자 주체",
+    "en": "Investment Vehicle",
+    "definition_ko": "투자가 실행되는 주체이자 통로(직접 투자, SPC, 지주회사, 사내 분사, 합작법인 등). S10에서 4축(세무 구조·책임 분리·재무 레버리지·엑시트 구조) 검토와 함께 정한다(ADR-0045).",
+    "why_it_matters_ko": "투자 주체의 선택이 세금 비용, 책임 분리, 차입 여력, 엑시트 선택지를 함께 결정하며, 계약 체결 뒤에는 적은 비용으로 바꾸기 어렵다. 과거 음차어 '비히클' 대신 '투자 주체'를 쓴다.",
+    "category": "business",
+    "related": [
+      "Brown Field",
+      "Establishment Entity Form",
+      "Stage Gate"
+    ],
+    "used_in": [
+      "investment-vehicle-structuring",
+      "brownfield-feasibility",
+      "jv-structuring"
+    ],
+    "owner": "brownfield-agent"
+  },
+  {
+    "key": "Establishment Entity Form",
+    "ko": "설립 법인 형태",
+    "en": "Establishment Entity Form",
+    "definition_ko": "그린필드 신규 설립 시 사업을 담을 법인의 형태(단독 법인, 합작법인, 지점·사업장 등). S10에서 그린필드 경로의 투자 주체 자리에 쓰는 표현이다.",
+    "why_it_matters_ko": "법인 형태에 따라 인허가 주체, 세무 처리, 책임 범위, 자금 조달 방식이 달라지며 설립 뒤 변경은 비용이 크다. 그린필드에서는 '투자 주체' 대신 이 표현을 쓴다.",
+    "category": "business",
+    "related": [
+      "Investment Vehicle",
+      "Green Field"
+    ],
+    "used_in": [
+      "greenfield-feasibility",
+      "investment-vehicle-structuring"
+    ],
+    "owner": "greenfield-agent"
+  },
+  {
     "key": "Stage Gate",
     "ko": "스테이지 게이트",
     "en": "Stage Gate",
-    "definition_ko": "Screening → Pre-FS → FS → DD → Entity IC → Group IC 순으로 진행되는 신사업 검토 단계.",
+    "definition_ko": "Screening → Pre-FS → FS → DD → 법인 투자심의위원회 → 그룹 투자심의위원회 순으로 진행되는 신사업 검토 단계.",
     "why_it_matters_ko": "각 게이트마다 필수 산출물과 통과 조건이 다르다. 게이트를 건너뛰면 시스템이 다음 단계 진입을 차단한다.",
     "category": "business",
     "aliases": [
@@ -82,10 +118,16 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   },
   {
     "key": "Entity IC",
-    "ko": "각사 투자심의위원회",
+    "ko": "법인 투자심의위원회",
     "en": "Entity Investment Committee",
+    "aliases": [
+      "Entity IC",
+      "Entity-IC",
+      "법인 심의",
+      "IC 심의"
+    ],
     "definition_ko": "개별 계열사 단위에서 진행되는 투자 승인 심의.",
-    "why_it_matters_ko": "Group IC 진입의 시스템 강제 선행 조건이다. Entity IC 승인 없이 그룹 절차에 들어갈 수 없다.",
+    "why_it_matters_ko": "그룹 투자심의위원회 진입의 시스템 강제 선행 조건이다. 법인 투자심의위원회 승인 없이 그룹 절차에 들어갈 수 없다.",
     "category": "business",
     "related": [
       "Group IC",
@@ -100,8 +142,14 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "key": "Group IC",
     "ko": "그룹 투자심의위원회",
     "en": "Group Investment Committee",
+    "aliases": [
+      "Group IC",
+      "Group-IC",
+      "그룹 IC",
+      "그룹 심의"
+    ],
     "definition_ko": "계열사 개별 승인과 별개로 그룹 차원에서 진행되는 심의로, 포트폴리오 정합성·자본 배분 우선순위를 본다.",
-    "why_it_matters_ko": "각사 기준 전부 Green인 안건이 여러 개 올라와도 자본은 하나다. Group IC는 승인/부결이 아니라 순위 결정인 경우가 많다.",
+    "why_it_matters_ko": "각사 기준 전부 Green인 안건이 여러 개 올라와도 자본은 하나다. 그룹 투자심의위원회는 승인/부결이 아니라 순위 결정인 경우가 많다.",
     "category": "business",
     "related": [
       "Entity IC",
@@ -165,7 +213,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "key": "Group Agenda",
     "ko": "그룹 안건 비교",
     "en": "Group Agenda",
-    "definition_ko": "동일 심의 사이클에서 그룹 IC에 올라온 복수 안건을 우선순위로 비교하는 뷰.",
+    "definition_ko": "동일 심의 사이클에서 그룹 투자심의위원회에 올라온 복수 안건을 우선순위로 비교하는 뷰.",
     "why_it_matters_ko": "개별 안건의 승인/부결이 아니라 한정된 자본을 두고 경쟁하는 안건들의 순위를 매기는 게 실제 목적이다.",
     "category": "business",
     "related": [
@@ -216,11 +264,30 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "owner": "market-intelligence-agent"
   },
   {
+    "key": "Investment Committee Package",
+    "ko": "투자심의 자료",
+    "en": "IC package",
+    "definition_ko": "S10에서 설계한 투자 구조와 자금 조달 계획, 채택된 Business Case, DD 발견사항, RAG 제안을 한 묶음으로 정리해 S11 투자심의위원회(IC)에 올리는 자료.",
+    "why_it_matters_ko": "심의 자료는 판단의 근거를 모은 것이지 결재가 아니다 — RAG 등급은 제안일 뿐이며 승인과 투자 결정은 사람이 내린다(경계",
+    "category": "business",
+    "aliases": [
+      "IC 자료",
+      "IC package"
+    ],
+    "related": [
+      "Stage Gate"
+    ],
+    "used_in": [
+      "stage-gate-governance"
+    ],
+    "owner": "process-governance-manager"
+  },
+  {
     "key": "WACC",
     "ko": "가중평균자본비용",
     "en": "Weighted Average Cost of Capital",
     "definition_ko": "부채와 자본의 조달비용을 가중평균한 할인율.",
-    "why_it_matters_ko": "이 시스템에서는 직접 입력(user)과 CAPM 구성요소 입력(무위험이자율=live, ERP·타겟 D/E=user, 베타=derived) 두 모드를 지원하며, 산출물에 어느 값이 어느 종류인지 명시된다.",
+    "why_it_matters_ko": "직접 입력(user)과 CAPM 구성요소 입력(ADR-0115) 두 모드를 지원한다. CAPM 모드는 시장 통용 수치(AlphaSpread, 한국은행 ECOS 등)를 출처·기준일과 함께 인용(live)하거나, 인용값이 없으면 산식(Rf + β×ERP, 신용등급 가산금리)으로 유도하며 베타는 시장 대비 변동성 추정(회귀 R²·연율화 변동성)을 동반한다. 구성요소는 wacc.* 가정 키로 저장되고 산식 분해(항목·산식·대입·결과)가 산출물에 함께 실린다.",
     "category": "financial",
     "related": [
       "WACC Input Session",
@@ -441,6 +508,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
       "proxy-industry-chain",
       "unit-conversion-calibration"
     ],
+    "source": "OECD 조선작업부회(WP6)",
     "owner": "quant-methodologist"
   },
   {
@@ -1023,7 +1091,8 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "category": "technical",
     "aliases": [
       "RAG",
-      "Red-Amber-Green"
+      "Red-Amber-Green",
+      "RAG 종합 등급"
     ],
     "related": [
       "Reliability Grade",
@@ -1039,7 +1108,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "ko": "체인 신뢰도 등급",
     "en": "Chain Reliability Grade",
     "definition_ko": "프록시 체인의 각 홉 오차를 종합한 A/B/C 등급.",
-    "why_it_matters_ko": "B등급이면 종합 RAG가 최대 Amber로 캡되고, C등급이면 \"판단 보류\"로 표기된다. 2홉 프록시로 추정한 시장에 재무만 보고 Green을 줄 수 없다.",
+    "why_it_matters_ko": "B등급이면 종합 등급이 최대 Amber로 캡되고, C등급이면 \"판단 보류\"로 표기된다. 2홉 프록시로 추정한 시장에 재무만 보고 Green을 줄 수 없다.",
     "category": "technical",
     "related": [
       "Proxy Chain",
@@ -1070,7 +1139,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "ko": "프로젝트 규정 버전 고정",
     "en": "Project Policy Pin",
     "definition_ko": "프로젝트를 착수 시점의 규정 버전에 고정하는 메커니즘.",
-    "why_it_matters_ko": "이게 없으면 규정이 바뀐 날 아침 어제 Green이던 프로젝트가 이유 없이 Red가 된다. Group IC도 원칙적으로 이 pin된 버전으로 심의한다.",
+    "why_it_matters_ko": "이게 없으면 규정이 바뀐 날 아침 어제 Green이던 프로젝트가 이유 없이 Red가 된다. 그룹 투자심의위원회도 원칙적으로 이 pin된 버전으로 심의한다.",
     "category": "technical",
     "related": [
       "Policy Change Pipeline"

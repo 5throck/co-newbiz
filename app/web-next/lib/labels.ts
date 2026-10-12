@@ -1,6 +1,6 @@
 // Glossary-backed label map (R2-C 8): the one place that turns machine keys (gate ids, decisions,
 // stages, enums, record keys, English error text) into the Korean wording shown to people.
-// Terms follow glossary/*.yaml `ko` (Pre-FS = 예비타당성 검토, Entity IC = 각사 투자심의위원회,
+// Terms follow glossary/*.yaml `ko` (Pre-FS = 예비타당성 검토, Entity IC = 법인 투자심의위원회,
 // Group IC = 그룹 투자심의위원회, Green/Brown Field = 그린필드/브라운필드); WACC/FS/DD wording follows the
 // existing labels. Client-safe: NO imports (consumed by client components).
 //
@@ -44,8 +44,8 @@ export const GATE_LABEL: Record<string, string> = {
   target_screening: "대상 선정",
   fs: "타당성 분석(FS)",
   dd: "실사(DD)",
-  entity_ic: "각사 투자심의위원회(Entity IC)", // glossary Entity IC.ko
-  group_ic: "그룹 투자심의위원회(Group IC)", // glossary Group IC.ko
+  entity_ic: "법인 투자심의위원회", // glossary Entity IC.ko
+  group_ic: "그룹 투자심의위원회", // glossary Group IC.ko
   transition: "S12 전환", // lib/review/review-display.ts GATE_DISPLAY
 };
 

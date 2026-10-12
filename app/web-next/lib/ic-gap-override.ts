@@ -26,7 +26,7 @@ export function icGoGapItems(projectId: string, actor?: string): string[] {
   if (actor) {
     try { recomputeRag(db, projectId, "ic_package", { actor }); } catch { /* the read below reports not graded */ }
   }
-  if (!readRagView(db, projectId).overall?.grade) gaps.push("RAG 종합 등급 미산정");
+  if (!readRagView(db, projectId).overall?.grade) gaps.push("종합 등급 미산정");
   const origin = (db.query("SELECT origin FROM md_project WHERE id = ?").get(projectId) as { origin: string | null } | undefined)?.origin;
   if (origin === "internal" || origin === "joint") {
     const p = establishmentProgress(projectId);

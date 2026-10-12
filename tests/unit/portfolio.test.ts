@@ -331,7 +331,7 @@ describe("(b) transition-decision POST — the recorder pattern", () => {
   test("happy path: 201, decided_by pinned to the human role, recorded_by = session user, audit row", async () => {
     const res = await req(`/api/projects/${projectId}/transition-decision`, {
       method: "POST", headers: { cookie: analystCookie },
-      body: JSON.stringify({ decision: "next_tranche_released", rationale: "2분기 연속 목표 달성 — IC 심의 통과", tranche_condition: "차기 트랜치는 MRR 2분기 연속 목표 달성 시 방출한다" }),
+      body: JSON.stringify({ decision: "next_tranche_released", rationale: "2분기 연속 목표 달성 — 투자심의 통과", tranche_condition: "차기 트랜치는 MRR 2분기 연속 목표 달성 시 방출한다" }),
     });
     expect(res.status).toBe(201);
     const row = (await res.json()).data as { decided_by: string; recorded_by: string; review_cycle: string; run_id: string; tranche_condition: string | null };
@@ -397,7 +397,7 @@ describe("(b) transition-decision POST — the recorder pattern", () => {
     ] as const) {
       const res = await req(`/api/projects/${projectId}/transition-decision`, {
         method: "POST", headers: { cookie: analystCookie },
-        body: JSON.stringify({ decision, rationale: "부속 기록 포함 — IC 심의 기록", [column]: value }),
+        body: JSON.stringify({ decision, rationale: "부속 기록 포함 — 투자심의 기록", [column]: value }),
       });
       expect(res.status).toBe(201);
       const row = (await res.json()).data as Record<string, string | null>;

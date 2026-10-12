@@ -252,7 +252,7 @@ export function EvalTab({ ctx, selected }: { ctx: RouteDecisionStageState; selec
                 함께 제공되는 정보 — 해당 근거가 아직 없을 때(예: S1 미완료, 필요 역량 수준 미작성)는 그 신호가 중립·약한 가중치로 처리됩니다.
               </p>
               <ul className="sizing-note-list mb-2">
-                <li><b>기저율</b> — 과거 트랙별 결정 건수와 그중 Entity IC를 통과한 건수를 함께 보여줍니다.</li>
+                <li><b>기저율</b> — 과거 트랙별 결정 건수와 그중 법인 투자심의위원회를 통과한 건수를 함께 보여줍니다.</li>
                 <li><b>재점검 트리거</b> — 추천과 실제 데이터가 모순될 때(예: Brownfield 추천인데 쇼트리스트가 비어 있음) 경고합니다.</li>
               </ul>
               <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">

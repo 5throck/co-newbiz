@@ -3,7 +3,7 @@
 // WaiverPanel — S9 dd-waiver-review 활동의 표준 UI (skills/waiver-management).
 // 요청(pending) → 승인(active) / 기각(rejected) / 철회(revoked), 만료는 날짜가
 // 권위(ADR-0036) — 읽기 시점에 파생되어 'expired'로 표시된다(컬럼 재작성 없음).
-// 경계 #2: 승인 권한 라우팅(규정 계층→Group IC, 절차→PGM, 체크리스트→도메인 리드)은
+// 경계 #2: 승인 권한 라우팅(규정 계층→그룹 투자심의위원회, 절차→PGM, 체크리스트→도메인 리드)은
 // 프로세스 규율이며, 이 패널은 인간 판정을 기록한다.
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api.ts";
@@ -106,7 +106,7 @@ export function WaiverRequestForm({ projectId, docs, prefill, targetId, onDone, 
         <textarea className="sizing-new-input mt-1 w-full" rows={2} value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder="왜 이 조항을 면제해야 하는가" />
       </label>
       <label className="text-[length:var(--fs-caption)] block mt-2">
-        승인 역할 (규정 계층→Group IC · 절차→process-governance-manager · 체크리스트→도메인 리드)
+        승인 역할 (규정 계층→그룹 투자심의위원회 · 절차→process-governance-manager · 체크리스트→도메인 리드)
         <input className="sizing-new-input mt-1 w-full" value={form.approverRole} onChange={(e) => setForm((f) => ({ ...f, approverRole: e.target.value }))} />
       </label>
       <div className="flex flex-wrap items-center justify-end gap-2 mt-2">
