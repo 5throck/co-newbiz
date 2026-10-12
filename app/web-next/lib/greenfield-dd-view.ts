@@ -325,7 +325,7 @@ export function tabCounts(d: WsDomainLike): { judged: number; judgeable: number;
 export function notCountedNotice(d: Pick<WsDomainLike, "counted" | "counted_reason">): { text: string } | null {
   // The backend counted_reason is English; the Korean sentence is derived from counted:false and the raw string is never rendered.
   if (d.counted !== false) return null;
-  return { text: "이 탭은 완료 집계에 포함되지 않습니다(2026-10-01 이전에 만든 프로젝트). 판정은 그대로 기록할 수 있습니다." }; // INTERIM-WORDING
+  return { text: "참고용 탭입니다. 이 프로젝트는 2026-10-01 이전에 만들어져 이 탭의 판정은 S9 완료 건수와 게이트 판정에 반영되지 않으며, 판정 자체는 그대로 기록됩니다." }; // INTERIM-WORDING
 }
 
 /** Where the single "Judged X / Y" line lives: the scope panel for RBD / IV with an active workspace scope, otherwise the stage header. */

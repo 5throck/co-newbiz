@@ -20,6 +20,7 @@ const db = getDb(TEST_DB_PATH);
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
+const { upsertKrxListing } = await import("../../db/repositories/krx-listing.repository.ts");
 
 const NOW = new Date().toISOString();
 const INDEX_SERIES = "krx:index:KOSPI:close";
@@ -48,8 +49,8 @@ function addObs(seriesId: string, date: string, value: number) {
     [seriesId, periodFor(date), 1, value, unitId, sourceId, `h-${seriesId}-${date}`, NOW],
   );
 }
-async function get() {
-  const res = await nextRequest(`/api/projects/${projectId}/wacc/beta-series`, { headers: { cookie } });
+async function get(query = "") {
+  const res = await nextRequest(`/api/projects/${projectId}/wacc/beta-series${query}`, { headers: { cookie } });
   expect(res.status).toBe(200);
   return (await res.json()).data;
 }
@@ -119,5 +120,53 @@ describe("GET /api/projects/:id/wacc/beta-series collection diagnostics", () => 
     expect(data.collection.hint_code).toBe("ok");
     expect(data.collection.aligned.count).toBe(80);
     expect(data.rows[0]).toEqual({ date: dateOf(0), price: 70000, index: 3000 });
+  });
+});
+
+describe("index choice (listing market default, ?index override)", () => {
+  const KOSDAQ_SERIES = "krx:index:KOSDAQ:close";
+
+  test("old rows without a stored market -> KOSPI default as before", async () => {
+    const data = await get();
+    expect(data.listing_market).toBe("unknown");
+    expect(data.default_index).toBe("KOSPI");
+    expect(data.collection).toMatchObject({ index_series_id: INDEX_SERIES, index_market: "KOSPI", listing_market: "unknown", index_fallback: false, hint_code: "ok" });
+    expect(data.index_options).toEqual([
+      { series_id: INDEX_SERIES, label: "KOSPI", count: 100, selected: true },
+      { series_id: KOSDAQ_SERIES, label: "KOSDAQ", count: 0, selected: false },
+    ]);
+  });
+
+  test("KOSDAQ-listed but KOSDAQ index empty -> falls back to KOSPI with index_fallback", async () => {
+    expect(await upsertKrxListing(db, sourceId, { company_id: companyId, short_code: "108490", market: "KOSDAQ", name_ko: "테스트전자", resolved_at: NOW })).toBe(true);
+    // idempotent
+    expect(await upsertKrxListing(db, sourceId, { company_id: companyId, short_code: "108490", market: "KOSDAQ", name_ko: "테스트전자", resolved_at: NOW })).toBe(false);
+    const data = await get();
+    expect(data.listing_market).toBe("KOSDAQ");
+    expect(data.default_index).toBe("KOSPI");
+    expect(data.collection).toMatchObject({ index_market: "KOSPI", index_fallback: true, hint_code: "index_fallback", status: "ready" });
+    expect(data.rows.length).toBe(80);
+  });
+
+  test("default follows the listing market once its index has data", async () => {
+    for (let i = 0; i < 100; i++) addObs(KOSDAQ_SERIES, dateOf(i), 800 + i);
+    const data = await get();
+    expect(data.default_index).toBe("KOSDAQ");
+    expect(data.collection).toMatchObject({ index_series_id: KOSDAQ_SERIES, index_market: "KOSDAQ", listing_market: "KOSDAQ", index_fallback: false, hint_code: "ok" });
+    expect(data.rows[0]).toEqual({ date: dateOf(0), price: 70000, index: 800 });
+    expect(data.index_options.find((o: { label: string }) => o.label === "KOSDAQ").selected).toBe(true);
+  });
+
+  test("explicit ?index=KOSPI pairs with KOSPI; default_index stays KOSDAQ", async () => {
+    const data = await get("?index=KOSPI");
+    expect(data.default_index).toBe("KOSDAQ");
+    expect(data.collection).toMatchObject({ index_series_id: INDEX_SERIES, index_market: "KOSPI", index_fallback: false });
+    expect(data.rows[0]).toEqual({ date: dateOf(0), price: 70000, index: 3000 });
+  });
+
+  test("invalid ?index -> 400 invalid_request", async () => {
+    const res = await nextRequest(`/api/projects/${projectId}/wacc/beta-series?index=NASDAQ`, { headers: { cookie } });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("invalid_request");
   });
 });

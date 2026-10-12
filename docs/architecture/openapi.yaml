@@ -6766,8 +6766,8 @@ paths:
   /api/projects/{id}/wacc/beta-series:
     get:
       operationId: getProjectWaccBetaSeries
-      summary: "Collected KRX beta inputs for the regression panel — subject-company daily closes aligned by date with the KOSPI index. Read-only; collection runs through scripts/co-newbiz/beta-series.ts."
-      description: "Additive diagnostics: data.collection = {subject_company_id, subject_company_name, stock_series_id, index_series_id, price/index/aligned: {count, first_date, last_date}, source_registered, status: ready|insufficient|no_index|no_stock|none, min_rows: 63, hint_code: run_collection|ticker_unresolved|insufficient_overlap|ok, runbook_command (plain text, never executed by the API)}. Existing fields (stock_series_id, price_count, index_count, aligned_count, rows) are unchanged."
+      summary: "Collected KRX beta inputs for the regression panel — subject-company daily closes aligned by date with a market index (default: the stock's listing-market index; KOSPI or KOSDAQ selectable). Read-only; collection runs through scripts/co-newbiz/beta-series.ts."
+      description: "Additive diagnostics: data.collection = {subject_company_id, subject_company_name, stock_series_id, index_series_id, price/index/aligned: {count, first_date, last_date}, source_registered, status: ready|insufficient|no_index|no_stock|none, min_rows: 63, hint_code: run_collection|ticker_unresolved|insufficient_overlap|ok|index_fallback, runbook_command (plain text, never executed by the API), index_market: KOSPI|KOSDAQ (selected), listing_market: KOSPI|KOSDAQ|KONEX|unknown, index_fallback: boolean}. Index choice: data.listing_market, data.default_index (listing-market index when its series has data, else KOSPI; if the default index is empty and the other has data the API falls back and sets index_fallback / hint_code index_fallback), data.index_options = [{series_id, label: KOSPI|KOSDAQ, count, selected}]. rows align against the SELECTED index. Existing fields (stock_series_id, price_count, index_count, aligned_count, rows) are unchanged."
       tags:
         - Analysis
       parameters:
@@ -6776,6 +6776,13 @@ paths:
           required: true
           schema:
             type: string
+        - name: index
+          in: query
+          required: false
+          description: "Market index to pair with the stock; omit for the listing-market default. Any other value returns 400 invalid_request."
+          schema:
+            type: string
+            enum: [KOSPI, KOSDAQ]
       responses:
         '200':
           $ref: '#/components/responses/Ok'

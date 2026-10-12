@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * beta-series.ts — register and collect KRX beta inputs (index + subject/target
  * daily closes) for one brownfield project (WACC beta regression, issue #2 of
@@ -21,15 +21,24 @@
  * reported). A resolved code is cached in db/data/krx-stock-code-cache.json
  * keyed by md_company.id. Pass --ticker to pin a code explicitly.
  *
+ * Listing market: the resolved market (KOSPI/KOSDAQ) is also persisted to the
+ * DB raw layer (raw_payload id `krx:stock-master:<md_company.id>`, see
+ * db/repositories/krx-listing.repository.ts) so the web beta-series route can
+ * default to the listing-market index. `--backfill-market` writes ONLY that
+ * metadata from the local cache for already-collected companies — no KRX calls,
+ * no KRX_API_KEY needed, idempotent.
+ *
  * Scheduling: there is no host scheduler running locally — run this manually
  * (monthly, or more often; ensure_fresh makes reruns cache-hit), or wire it
  * into the host cron when one exists. See docs/runbooks/beta-series-collection.md.
  *
  * Usage:
  *   bun scripts/co-newbiz/beta-series.ts --project <md_project.id> [--from YYYY-MM] [--to YYYY-MM] [--ticker <companyName=code>]... [--budget N]
+ *   bun scripts/co-newbiz/beta-series.ts --project <md_project.id> --backfill-market
  *
  * Authorization note: writes ONLY market data (md_source/md_unit/md_period/
- * fact_market_observation) to the production DB — nothing else.
+ * fact_market_observation, plus the raw_payload stock-master record) to the
+ * production DB — nothing else.
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -47,6 +56,7 @@ import {
   resetKrxRunState,
   resolveKrxStockMaster,
 } from "./source-adapters.ts";
+import { normalizeKrxMarket, upsertKrxListing } from "../../db/repositories/krx-listing.repository.ts";
 
 const CACHE_PATH = resolve(import.meta.dir, "../../db/data/krx-stock-code-cache.json");
 const CACHE_VERSION = 1;
@@ -117,11 +127,12 @@ async function main(): Promise<void> {
     }
   }
 
+  const backfillOnly = args.includes("--backfill-market");
   const budgetIdx = args.indexOf("--budget");
   const budget = budgetIdx >= 0 ? Number(args[budgetIdx + 1]) : undefined;
   resetKrxRunState({ budget: budget && budget > 0 ? budget : undefined });
   loadPipelineKeys();
-  if (!process.env.KRX_API_KEY) {
+  if (!backfillOnly && !process.env.KRX_API_KEY) {
     console.error("beta-series: KRX_API_KEY is not set (.env) — nothing can be collected.");
     process.exit(1);
   }
@@ -151,6 +162,11 @@ async function main(): Promise<void> {
   if (companies.size === 0) {
     console.error("beta-series: no subject/shortlisted company found for the project — nothing to register.");
     process.exit(1);
+  }
+
+  if (backfillOnly) {
+    await backfillListingMarkets(db, [...companies.values()]);
+    return;
   }
 
   // md_source registration (krx, grade A — official exchange data).
@@ -266,6 +282,14 @@ async function main(): Promise<void> {
       console.error(`${company.nameKo}: 단축코드 not resolved — pass --ticker ${company.nameKo}=<6-digit code> to pin it.`);
       continue;
     }
+    if (market) {
+      const wrote = await upsertKrxListing(db, sourceId, {
+        company_id: company.id, short_code: shortCode, market: market === "kosdaq" ? "KOSDAQ" : "KOSPI",
+        name_ko: cache.codes[company.id]?.nameKo ?? company.nameKo,
+        resolved_at: cache.codes[company.id]?.resolvedAt ?? new Date().toISOString(),
+      });
+      if (wrote) console.log(`${company.nameKo}: listing market ${market.toUpperCase()} recorded (raw_payload)`);
+    }
     const series = krxStockSeries(company.id, shortCode, company.nameKo, market ?? "kospi");
     registerKrxSeries(series);
     console.log(`collecting ${series.seriesId} (${series.title})…`);
@@ -282,6 +306,34 @@ async function main(): Promise<void> {
     console.error(`\nbeta-series: 0 observations collected. Most likely cause: ${diagnoseZero(stats)}`);
     process.exit(1);
   }
+}
+
+/**
+ * One-time, idempotent: persist the listing market of already-collected
+ * companies from the local stock-code cache. No KRX calls.
+ */
+async function backfillListingMarkets(db: ReturnType<typeof getDb>, companies: Array<{ id: string; nameKo: string }>): Promise<void> {
+  const src = db.query("SELECT id FROM md_source WHERE code = 'krx'").get() as { id: string } | undefined;
+  if (!src) {
+    console.error("beta-series --backfill-market: md_source 'krx' is not registered — run a normal collection first.");
+    process.exit(1);
+  }
+  const cache = loadCache();
+  let written = 0;
+  for (const company of companies) {
+    const cached = cache.codes[company.id];
+    const market = cached ? normalizeKrxMarket(cached.market) : null;
+    if (!cached || !market) {
+      console.log(`${company.nameKo}: no cached short code/market — skipped (run a normal collection).`);
+      continue;
+    }
+    const wrote = await upsertKrxListing(db, src.id, {
+      company_id: company.id, short_code: cached.shortCode, market, name_ko: cached.nameKo, resolved_at: cached.resolvedAt,
+    });
+    if (wrote) written += 1;
+    console.log(`${company.nameKo}: ${cached.shortCode} ${market} — ${wrote ? "recorded" : "already recorded"}`);
+  }
+  console.log(`beta-series --backfill-market done: ${written} record(s) written; 0 KRX calls.`);
 }
 
 /** Explain a 0-row run from the observed KRX responses. */

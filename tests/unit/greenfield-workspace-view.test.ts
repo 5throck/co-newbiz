@@ -121,6 +121,11 @@ describe("per-tab count and the not-counted notice (all seven tabs stay judgeabl
     expect(n).not.toBeNull();
     expect(JSON.stringify(n)).not.toContain("Recorded for reference"); // no English counted_reason leaks
     expect(/[가-힣]/.test(n!.text)).toBe(true);
+    expect(n!.text).toContain("참고용"); // states the reason (created before 2026-10-01) and the consequence (not counted in S9 completion or gate), and that the judgement is still recorded
+    expect(n!.text).toContain("2026-10-01 이전");
+    expect(n!.text).toContain("완료 건수");
+    expect(n!.text).toContain("그대로 기록");
+    expect(n!.text.split(/[.]\s/).length).toBeLessThanOrEqual(2);
     expect(splitItems(d.items).judgeable).toHaveLength(1); // still judgeable
     expect(notCountedNotice(dom("market", "x", [], { counted: true }))).toBeNull();
     expect(notCountedNotice(dom("extra", "x", []))).toBeNull(); // extras carry no flag

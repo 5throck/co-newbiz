@@ -24,6 +24,31 @@ bun scripts/co-newbiz/beta-series.ts --project <id> --from 2025-10 --to 2026-10
 bun scripts/co-newbiz/beta-series.ts --project <id> --ticker 회사명=058050   # pin an unresolved short code
 ```
 
+## Index choice (listing market)
+
+The beta regression pairs the stock with the index of its **listing market**
+by default: a KOSDAQ-listed company (e.g. 로보티즈 108490, 레인보우로보틱스
+277810) is regressed against the KOSDAQ index, a KOSPI-listed one against
+KOSPI. The other index stays selectable in the panel ("시장 지수" select next
+to "수집 데이터 불러오기") and through `GET .../wacc/beta-series?index=KOSPI|KOSDAQ`.
+
+- The collector records the resolved short code and market in the DB raw
+  layer (`raw_payload`, id `krx:stock-master:<md_company.id>`); the web route
+  reads it from there (the local `krx-stock-code-cache.json` is not visible to
+  the web app).
+- Unknown market (collected before this record existed) -> KOSPI default, as
+  before.
+- If the default index has no collected rows but the other one does, the API
+  falls back to it and reports `hint_code: index_fallback`; it never pairs
+  with an empty series silently.
+
+Backfill for companies collected before v1.2.0 (one-time, idempotent, no KRX
+calls, no API key needed — reads the local cache only):
+
+```bash
+bun scripts/co-newbiz/beta-series.ts --project <md_project.id> --backfill-market
+```
+
 ## Prerequisite: KRX service approval
 
 The KRX Data Marketplace key must have the six services approved

@@ -305,7 +305,7 @@ export const GF_SUB_TRACK_CLASS_LABEL: Record<string, string> = {
   unknown: "알 수 없는 세부 트랙", // INTERIM-WORDING Q1
 };
 
-/** Establishment vehicle wording for greenfield routes (stored enum values unchanged). */
+/** Establishment legal-entity form wording (UI: '설립 법인 형태') for greenfield routes (stored enum values unchanged). */
 export const GF_VEHICLE_LABEL: Record<string, string> = {
   direct: "사내 직접 추진(사업부 내 조직)", // INTERIM-WORDING Q1
   spc: "SPC/SPV(목적법인)",

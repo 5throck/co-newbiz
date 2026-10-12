@@ -196,7 +196,7 @@ cover + hero max-width 34rem 제한으로 텍스트 길이·패널 높이와 무
 
 ## 투자구조 설계 (S10, ADR-0106 as-built)
 
-- `/projects/[id]/deal-structure` — ProjectSubNav "투자구조" 탭. StageFrame S10 프레임 안에 두 섹션: (1) 투자구조 가설 카드(비히클 칩: direct/SPC/holdco/내부 스핀오프/JV, 자산·주식·지분·수표 믹스, 4축 노트 표, 근거, 아티팩트 참조 입력 + 4축 검토 완료 버튼), (2) 자금조달 sources & uses 표(조달/사용 합계·차액·균형 배지, 행 추가/삭제).
+- `/projects/[id]/deal-structure` — ProjectSubNav "투자구조" 탭. StageFrame S10 프레임 안에 두 섹션: (1) 투자구조 가설 카드(투자 주체 칩: direct/SPC/holdco/내부 스핀오프/JV, 자산·주식·지분·수표 믹스, 4축 노트 표, 근거, 아티팩트 참조 입력 + 4축 검토 완료 버튼), (2) 자금조달 sources & uses 표(조달/사용 합계·차액·균형 배지, 행 추가/삭제).
 - API: `GET/POST /api/projects/{id}/deal-structure` (action: hypothesize | complete_four_axis | add_financing_entry | remove_financing_entry). 4축 완료는 deal_structure_review 아티팩트 참조 필수, 재완료 불가.
 - S10 완료 술어: 최신 가설 4축 완료 AND sources == uses > 0 (최신 가설 미완료 시 재블록).
 - IC 패키지(S11)에 deal_structure 섹션 포함(최신 가설 + 균형 상태).

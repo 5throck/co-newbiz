@@ -16,7 +16,7 @@ const KO: Record<string, string> = {
   "chk-brownfield-feasibility-checklist:bf-09": "하방 시나리오(+200bp)에서 재무약정 위반 여부를 시험했다",
   "chk-brownfield-feasibility-checklist:bf-10": "PMI 시너지 가정을 가치평가 에이전트의 거래 모델과 대조했다(독자적으로 낙관하지 않음)",
   "chk-brownfield-feasibility-checklist:bf-11": "공동행위 선행 금지(gun-jumping) 준수를 확인했다 - 신고 의무가 있는 모든 관할에서 승인 전 통합 활동이 없다",
-  "chk-brownfield-feasibility-checklist:bf-12": "투자 비히클 구조를 ADR-0045 4대 축(절세 구조, 책임 격리, 재무 레버리지, 엑싯 구조)으로 검토했다 - 인수 방식(지분/구조)만이 아니다",
+  "chk-brownfield-feasibility-checklist:bf-12": "투자 주체 구조화를 ADR-0045 4대 축(절세 구조, 책임 격리, 재무 레버리지, 엑싯 구조)으로 검토했다 - 인수 방식(지분/구조)만이 아니다",
   // chk-ma-special-topics-checklist
   "chk-ma-special-topics-checklist:ma-01": "관련 시장(제품·지역)을 정의하고 HHI와 HHI 변화량을 계산했다 - 대상 기업끼리의 직접 합병뿐 아니라 공동 소유·공동 통제 결합(예: 경쟁사 한 곳을 이미 통제하는 재무적 투자자가 다른 경쟁사를 인수)도 포함한다",
   "chk-ma-special-topics-checklist:ma-02": "해당되는 모든 관할의 기업결합 신고 요건을 확인했다(주 시장만이 아닌 다관할 신고 점검)",

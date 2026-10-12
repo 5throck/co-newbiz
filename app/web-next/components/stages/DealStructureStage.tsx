@@ -22,7 +22,7 @@ import { CapexTrancheTable } from "./CapexTrancheTable.tsx";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 
-// S10 투자구조 설계 (flow.spec v2.2.0) — 비히클(direct/SPC/holdco/내부 스핀오프/JV)
+// S10 투자구조 설계 (flow.spec v2.2.0) — 투자 주체(direct/SPC/holdco/내부 스핀오프/JV)
 // 결정과 ADR-0045 4대 축(절세 구조·책임 격리·재무 레버리지·엑싯 구조) 검토,
 // 그리고 자금조달 sources & uses 균형을 다룬다. 4축 검토 완료는 근거 아티팩트
 // 참조가 필수인 별도 행위이고, 완료 술어는 "최신 가설 완료 + 조달=사용>0"이다.
@@ -237,9 +237,10 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
         disabled={!canAct}
         disabledReason="투자구조 가설 기록은 analyst 권한이 필요합니다."
       />
-      <StageFrame stageId="S10" heading={isGf ? `S10 ${GF_S10_STAGE_LABEL} — 설립 비히클·4축 검토·자금조달·집행 단계` : "S10 투자구조 설계 — 비히클·4축 검토·자금조달"}>
+      {/* INTERIM-WORDING: "투자 주체"/"설립 법인 형태" replace the transliterated "vehicle" term */}
+      <StageFrame stageId="S10" heading={isGf ? `S10 ${GF_S10_STAGE_LABEL} — 설립 법인 형태·4축 검토·자금조달·집행 단계` : "S10 투자구조 설계 — 투자 주체·4축 검토·자금조달"}>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
-          비히클(SPC 포함)과 절세 구조·책임 격리·재무 레버리지·엑싯 구조 4대 축을 검토하고,
+          {isGf ? "설립 법인 형태(SPC 포함)" : "투자 주체(SPC 포함)"}와 절세 구조·책임 격리·재무 레버리지·엑싯 구조 4대 축을 검토하고,
           자금조달 sources &amp; uses를 균형시킵니다. 이 산출물이 S11 IC 패키지의 입력입니다.
         </p>
 
@@ -269,7 +270,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
             {!reco && !recoLoading && !recoError && (
               <div className="flex flex-wrap items-center gap-2 mb-0">
                 <button type="button" className="btn-ghost" onClick={() => void generateReco()}>▶ AI 추천 생성</button>
-                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">비히클·지분·수단과 4축 노트·구조 근거 초안을 작성해 가설 등록을 돕습니다.</span>
+                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{isGf ? "설립 법인 형태" : "투자 주체"}·지분·수단과 4축 노트·구조 근거 초안을 작성해 가설 등록을 돕습니다.</span>
               </div>
             )}
             {recoLoading && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">채택 BC·DD 발견사항·WACC를 근거로 초안을 작성하는 중...</p>}
@@ -365,7 +366,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
             <details className="mt-2" ref={formRef} open={formOpen} onToggle={(e) => setFormOpen((e.currentTarget as HTMLDetailsElement).open)}>
               <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">투자구조 가설 입력란 {formOpen ? "접기" : "펼치기"}</summary>
               <div className="flex flex-wrap gap-2 mt-2 text-[length:var(--fs-caption)]">
-                <label>비히클
+                <label>{isGf ? "설립 법인 형태" : "투자 주체"}
                   <select className="sizing-new-input ml-1" value={newHyp.vehicle} onChange={(e) => setNewHyp({ ...newHyp, vehicle: e.target.value })}>
                     <option value="">—</option>
                     {Object.entries(vehicleLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}

@@ -12,7 +12,7 @@ import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness, canWriteProject } from "../lib/project-write-access.ts";
 import { GATE_LABEL, type GateMetaId } from "../lib/stage-meta.ts";
-import { BUCKET_TITLE, bucketCounts, citationLabel, gateDisplayName, localizeItem, localizeNotPerformedReason, reviewOriginText } from "../lib/review/review-display.ts";
+import { BUCKET_TITLE, ai2ndStatusMessage, bucketCounts, citationLabel, gateDisplayName, localizeItem, localizeNotPerformedReason, reviewOriginText } from "../lib/review/review-display.ts";
 import { TabNav } from "./TabNav.tsx";
 import { PrimaryAction } from "./ui.tsx";
 
@@ -185,11 +185,7 @@ export function ReviewBuckets({
     try {
       const r = await api.post<ReviewView>(`${base}/ai-2nd`, activeParam);
       setViews((v) => ({ ...v, [active]: r.data }));
-      setStatus(
-        r.data.ai_2nd && !r.data.ai_2nd.performed
-          ? "AI 2차 검토는 수행되지 않았습니다. 사유가 아래에 표시됩니다."
-          : "AI 2차 검토 결과가 갱신되었습니다.",
-      );
+      setStatus(ai2ndStatusMessage(r.data.ai_2nd));
       setError(null);
     } catch (e) {
       setStatus("");
@@ -325,8 +321,9 @@ export function ReviewBuckets({
               })}
             </div>
             <details className="review-dev">
-              <summary>개발자 세부정보</summary>
-              <p className="review-dev-note">내부 식별자와 원문(영문) 그대로의 검토 기록입니다. 검토 결과의 의미는 위 본문과 같습니다.</p>
+              <summary>원문 기록 (개발자용)</summary>
+              {/* INTERIM-WORDING */}
+              <p className="review-dev-note">검토 결과의 영문 원문·내부 식별자·검토 기록 해시입니다. 결과를 추적하거나 번역과 대조할 때만 필요하며, 일반 사용에는 열지 않아도 됩니다.</p>
               <ul>
                 {stages.flatMap((s) =>
                   BUCKETS.flatMap((b) =>

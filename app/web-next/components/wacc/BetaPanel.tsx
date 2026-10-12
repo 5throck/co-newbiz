@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { EChartsOption } from "echarts";
 import { EChart } from "../EChart.tsx";
 import { ColGroup } from "../ui.tsx";
+import { TabNav } from "../TabNav.tsx";
 import {
   medianBetaUnlevered,
   parseSeriesInput,
@@ -16,13 +17,21 @@ import {
   type BetaRegressionResult,
 } from "../../../../db/lib/beta-regression.ts";
 import {
-  formatSeriesStat,
+  betaSeriesUrl,
+  defaultSourceMode,
+  runDisabledReason,
+  seriesRange,
+  type BetaSourceMode,
+  indexOptionLabel,
+  indexPairingNote,
   parseBetaSeriesResponse,
   shouldFillRows,
   showsRunbook,
   statusMessage,
   statusTone,
   type BetaCollection,
+  type BetaIndexMarket,
+  type BetaIndexOption,
 } from "../../lib/beta-collection-view.ts";
 
 // 동종사 베타 6열 — 동종사명·출처가 텍스트 입력 셀이라 table-scroll 안에서 고정 비율 유지.
@@ -131,18 +140,28 @@ export function BetaPanel({
       return 0;
     }
   }, [regressionText]);
+  // Regression needs at least 2 parseable rows.
+  const canRunRegression = collectedRowCount >= 2;
+  const [sourceChoice, setSourceChoice] = useState<BetaSourceMode | null>(null);
+  const [loadedInfo, setLoadedInfo] = useState<{ count: number; first: string; last: string } | null>(null);
   const [insufficientRows, setInsufficientRows] = useState(false);
   const [collection, setCollection] = useState<BetaCollection | null>(null);
+  const sourceMode: BetaSourceMode = sourceChoice ?? defaultSourceMode(collection?.status);
   const [copied, setCopied] = useState(false);
+  // 지수 선택 — null이면 API 기본값(종목 상장시장 지수). 사용자가 고르면 ?index= 로 전달.
+  const [indexChoice, setIndexChoice] = useState<BetaIndexMarket | null>(null);
+  const [indexOptions, setIndexOptions] = useState<BetaIndexOption[]>([]);
+  const [defaultIndex, setDefaultIndex] = useState<BetaIndexMarket | null>(null);
   // fill=false is the read-only status probe on mount; the textarea stays untouched.
-  const fetchCollected = async (fill: boolean) => {
+  const fetchCollected = async (fill: boolean, index: BetaIndexMarket | null = indexChoice) => {
     if (fill) {
       setLoading(true);
       setLoadError(null);
       setInsufficientRows(false);
+      setLoadedInfo(null);
     }
     try {
-      const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/wacc/beta-series`);
+      const res = await fetch(betaSeriesUrl(projectId, index));
       const body: unknown = await res.json().catch(() => null);
       const parsed = parseBetaSeriesResponse(res.ok, body);
       if (!parsed.ok) {
@@ -151,6 +170,8 @@ export function BetaPanel({
       }
       const c = parsed.collection;
       setCollection(c);
+      if (parsed.indexOptions.length > 0) setIndexOptions(parsed.indexOptions);
+      if (index === null && parsed.defaultIndex) setDefaultIndex(parsed.defaultIndex);
       if (!fill) return;
       // Do not fill the textarea when nothing usable was collected.
       if (c && !shouldFillRows(c.status)) return;
@@ -158,6 +179,10 @@ export function BetaPanel({
       const csv = rows.map((r) => `${r.date},${r.price},${r.index}`).join("\n");
       onRegressionText(csv);
       setInsufficientRows(rows.length < 63);
+      if (rows.length > 0) {
+        const dates = rows.map((r) => r.date).sort();
+        setLoadedInfo({ count: rows.length, first: dates[0], last: dates[dates.length - 1] });
+      }
     } catch {
       if (fill) setLoadError("수집 데이터를 불러오지 못했습니다.");
     } finally {
@@ -235,7 +260,7 @@ export function BetaPanel({
             </tbody>
           </table>
           <div className="flex items-center gap-3 mt-2">
-            <button type="button" className="ghost-button" onClick={() => onPeers([...peers, { name: "", beta: "", de: "", source: "" }])}>+ 행 추가</button>
+            <button type="button" className="btn-ghost btn-sm" onClick={() => onPeers([...peers, { name: "", beta: "", de: "", source: "" }])}>+ 행 추가</button>
             <span className="text-[length:var(--fs-caption)]">
               중앙값 βU: <b className="tabular-nums">{peerMedian != null ? num(peerMedian) : "—"}</b>
             </span>
@@ -243,43 +268,121 @@ export function BetaPanel({
         </div>
       ) : (
         <div>
-          <div className="flex flex-wrap gap-3 items-start">
-            <textarea className="form-input font-mono text-[length:var(--fs-caption)] flex-1 min-w-[280px]" rows={5} value={regressionText}
-              placeholder={"date,price,index\n2026-09-10,68400,3421.8\n2026-09-09,67900,3405.2\n…"}
-              onChange={(e) => onRegressionText(e.target.value)} />
-            <button type="button" className="ghost-button" onClick={onRunRegression}>↻ 회귀 실행</button>
-            <button type="button" className="ghost-button" disabled={loading} onClick={() => void loadCollectedSeries()}>
-              {loading ? "불러오는 중…" : "수집 데이터 불러오기"}
-            </button>
-          </div>
-          <div aria-live="polite" className="mt-2">
-            {collection && (
-              <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)] text-[length:var(--fs-caption)]">
-                <p className={`font-semibold ${statusTone(collection.status) === "ok" ? "text-[color:var(--accent)]" : statusTone(collection.status) === "warn" ? "text-[color:var(--warning,var(--warning-fg,var(--muted-fg)))]" : "text-[color:var(--red-fg,var(--danger))]"}`}>
-                  {statusMessage(collection)}
-                </p>
-                <ul className="mt-1 text-[color:var(--muted-fg)] tabular-nums">
-                  <li>{formatSeriesStat(`종목${collection.subject_company_name ? ` (${collection.subject_company_name})` : ""}`, collection.price)}</li>
-                  <li>{formatSeriesStat("KOSPI 지수", collection.index)}</li>
-                  <li>정렬된 거래일 {collection.aligned.count}일 / 최소 {collection.min_rows}일</li>
-                </ul>
-                {showsRunbook(collection.status) && (
-                  <div className="flex flex-wrap items-center gap-2 mt-2">
-                    <code className="font-mono select-all rounded border border-[color:var(--border-subtle)] px-1.5 py-0.5">{collection.runbook_command}</code>
-                    <button type="button" className="ghost-button" onClick={() => void copyRunbook(collection.runbook_command)}>
-                      {copied ? "복사됨" : "명령 복사"}
-                    </button>
-                  </div>
+          {/* Step 1 card: source switch (collected | paste) -> data + status. Step 2 card: compute. Tab order follows DOM order. */}
+          <section className="card" aria-labelledby="beta-step1-title">
+            <h4 id="beta-step1-title" className="font-semibold mb-2">1. 데이터 가져오기 {/* INTERIM-WORDING */}</h4>
+            <TabNav
+              label="데이터 입력 방식"
+              tabs={[{ key: "collected", label: "수집 데이터 사용" }, { key: "paste", label: "직접 붙여넣기" }]}
+              active={sourceMode}
+              onSelect={(k) => setSourceChoice(k as BetaSourceMode)}
+              className="mb-3"
+            />
+            {sourceMode === "collected" ? (
+              <div role="tabpanel" aria-label="수집 데이터 사용">
+                <div className="flex flex-wrap items-center gap-3">
+                  {indexOptions.length > 0 && (
+                    <label className="flex items-center gap-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                      <span>시장 지수</span> {/* INTERIM-WORDING */}
+                      <select
+                        className="form-input !h-[33px] !py-0"
+                        value={indexChoice ?? defaultIndex ?? "KOSPI"}
+                        onChange={(e) => {
+                          const next = e.target.value as BetaIndexMarket;
+                          const choice = next === defaultIndex ? null : next;
+                          setIndexChoice(choice);
+                          void fetchCollected(false, choice);
+                        }}
+                      >
+                        {indexOptions.map((o) => (
+                          <option key={o.label} value={o.label}>
+                            {indexOptionLabel(o.label, collection?.listing_market)}
+                            {o.count === 0 ? " — 수집 없음" : "" /* INTERIM-WORDING */}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  <button type="button" className="btn-ghost btn-sm" disabled={loading} aria-busy={loading} aria-label="수집 데이터 불러오기" onClick={() => void loadCollectedSeries()}>
+                    {loading ? "불러오는 중…" : "수집 데이터 불러오기"}
+                  </button>
+                </div>
+                <div aria-live="polite" className="mt-3">
+                  {loadedInfo && (
+                    <p className="text-[length:var(--fs-caption)] font-semibold text-[color:var(--accent)] mb-2">
+                      ✓ {loadedInfo.count}일 불러옴 ({loadedInfo.first} ~ {loadedInfo.last}) {/* INTERIM-WORDING */}
+                    </p>
+                  )}
+                  {collection && (
+                    <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)] text-[length:var(--fs-caption)]">
+                      <p className={`font-semibold ${statusTone(collection.status) === "ok" ? "text-[color:var(--accent)]" : statusTone(collection.status) === "warn" ? "text-[color:var(--warning,var(--warning-fg,var(--muted-fg)))]" : "text-[color:var(--red-fg,var(--danger))]"}`}>
+                        {statusTone(collection.status) === "ok" ? "✓" : statusTone(collection.status) === "warn" ? "⚠" : "✕"} {statusMessage(collection)}
+                      </p>
+                      <dl className="mt-1 grid gap-x-3 gap-y-0.5 grid-cols-[max-content_1fr] text-[color:var(--muted-fg)] tabular-nums">
+                        <dt>{`종목${collection.subject_company_name ? ` (${collection.subject_company_name})` : ""}`}</dt>
+                        <dd>{seriesRange(collection.price)}</dd>
+                        <dt>{`${collection.index_market ?? "KOSPI"} 지수`}</dt>
+                        <dd>{seriesRange(collection.index)}</dd>
+                        <dt>짝지은 지수</dt> {/* INTERIM-WORDING */}
+                        <dd>{indexPairingNote(collection, indexChoice !== null)}</dd>
+                        <dt>정렬</dt> {/* INTERIM-WORDING */}
+                        <dd>거래일 {collection.aligned.count}일 / 최소 {collection.min_rows}일 {collection.aligned.count >= collection.min_rows ? "✓" : "⚠ 부족"}</dd>
+                      </dl>
+                      {showsRunbook(collection.status) && (
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                          <code className="font-mono select-all rounded border border-[color:var(--border-subtle)] px-1.5 py-0.5">{collection.runbook_command}</code>
+                          <button type="button" className="btn-ghost btn-sm" onClick={() => void copyRunbook(collection.runbook_command)}>
+                            {copied ? "복사됨" : "명령 복사"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {collectedRowCount > 0 && (
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">불러온 원시 행 보기 ({collectedRowCount}행)</summary> {/* INTERIM-WORDING */}
+                    <pre className="font-mono text-[length:var(--fs-caption)] max-h-48 overflow-auto mt-1 p-2 rounded border border-[color:var(--border-subtle)]" tabIndex={0} aria-label="불러온 원시 행 (읽기 전용)">{regressionText}</pre>
+                  </details>
                 )}
               </div>
+            ) : (
+              <div role="tabpanel" aria-label="직접 붙여넣기">
+                <textarea className="form-input font-mono text-[length:var(--fs-caption)] w-full" rows={5} value={regressionText}
+                  aria-label="시계열 데이터 (date, price, index)" aria-describedby="beta-paste-hint"
+                  placeholder="date,price,index 형식으로 붙여넣기 (CSV/TSV)" /* INTERIM-WORDING */
+                  onChange={(e) => onRegressionText(e.target.value)} />
+                <p id="beta-paste-hint" className="mt-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">한 줄에 날짜, 종가, 지수값 순서로 입력합니다. {/* INTERIM-WORDING */}</p>
+              </div>
             )}
-          </div>
-          {loadError && <p role="alert" className="text-[color:var(--red-fg,var(--danger))] text-[length:var(--fs-caption)] mt-2">✕ {loadError}</p>}
-          {insufficientRows && collectedRowCount < 63 && (
-            <p role="status" className="text-[color:var(--warning,var(--warning-fg,var(--muted-fg)))] text-[length:var(--fs-caption)] mt-2">
-              시계열 회귀에는 최소 약 3개월(거래일 63개) 데이터가 필요합니다 — 현재 {collectedRowCount}건
-            </p>
-          )}
+            {loadError && <p role="alert" className="text-[color:var(--red-fg,var(--danger))] text-[length:var(--fs-caption)] mt-2">✕ {loadError}</p>}
+            {insufficientRows && collectedRowCount < 63 && (
+              <p role="status" className="text-[color:var(--warning,var(--warning-fg,var(--muted-fg)))] text-[length:var(--fs-caption)] mt-2">
+                시계열 회귀에는 최소 약 3개월(거래일 63개) 데이터가 필요합니다 — 현재 {collectedRowCount}건
+              </p>
+            )}
+          </section>
+
+          <section className="card mt-3" aria-labelledby="beta-step2-title">
+            <h4 id="beta-step2-title" className="font-semibold mb-2">2. 계산 {/* INTERIM-WORDING */}</h4>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                className="btn-ghost btn-sm font-bold text-[color:var(--accent)] border-[color:var(--primary-border)]"
+                disabled={!canRunRegression}
+                aria-describedby={canRunRegression ? undefined : "beta-regression-disabled-reason"}
+                aria-label="회귀 실행"
+                onClick={onRunRegression}
+              >
+                ↻ 회귀 실행
+              </button>
+              {!canRunRegression && (
+                <span id="beta-regression-disabled-reason" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                  {runDisabledReason(collectedRowCount, collection?.status)}
+                </span>
+              )}
+            </div>
+          </section>
           {regressionError && <p role="alert" className="text-[color:var(--red-fg,var(--danger))] text-[length:var(--fs-caption)] mt-2">✕ {regressionError}</p>}
           {regression && (
             <>
