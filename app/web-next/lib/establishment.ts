@@ -122,10 +122,31 @@ export function listEstablishmentSteps(projectId: string): EstablishmentStepRow[
     assignee_active: r.assignee_user_id ? isActiveMember(projectId, r.assignee_user_id) : false,
     keyed_by,
   });
-  return [
+  const all = [
     ...direct.map((r) => enrich(r, "project")),
     ...fallback.filter((r) => !seen.has(r.id)).map((r) => enrich(r, "backlink")),
-  ].sort((a, b) => a.step_no - b.step_no || a.id.localeCompare(b.id));
+  ];
+  // One row per step_no: a stray duplicate (e.g. an empty pending row) is hidden
+  // behind the most advanced row, chosen deterministically.
+  const byStep = new Map<number, EstablishmentStepRow>();
+  for (const r of all) {
+    const cur = byStep.get(r.step_no);
+    if (!cur || compareStepRows(r, cur) < 0) byStep.set(r.step_no, r);
+  }
+  return [...byStep.values()].sort((a, b) => a.step_no - b.step_no);
+}
+
+const STATUS_RANK: Record<string, number> = { done: 0, in_progress: 1, halted: 1, escalated: 1, pending: 2 };
+
+/** Negative when `a` is the better representative of a step than `b`:
+ * most advanced status, then has an assignee, then oldest id. */
+function compareStepRows(
+  a: { status: string; assignee_user_id: string | null; id: string },
+  b: { status: string; assignee_user_id: string | null; id: string },
+): number {
+  return (STATUS_RANK[a.status] ?? 3) - (STATUS_RANK[b.status] ?? 3)
+    || Number(!!b.assignee_user_id) - Number(!!a.assignee_user_id)
+    || a.id.localeCompare(b.id);
 }
 
 export interface EstablishmentMember {
@@ -250,23 +271,37 @@ function originApplies(projectId: string, stated?: string | null): boolean {
 }
 
 function locateRow(db: Database, project: ProjectKeyRow, stepNo: number, itemKey: string | null): LocatedRow | undefined {
-  const direct = db
-    .query(
-      `SELECT id, status, evidence_url, assignee_user_id FROM entity_establishment_step
-       WHERE project_id = ? AND step_no = ? AND checklist_item IS ?`,
-    )
-    .get(project.id, stepNo, itemKey) as Omit<LocatedRow, "legacy"> | undefined;
-  if (direct) return { ...direct, legacy: false };
+  // itemKey given: exact checklist_item match. itemKey null (assign / plain status
+  // change): ANY row of the step, whatever its checklist_item, so a row created by
+  // the seeding flow (checklist_item set) is never shadowed by a duplicate.
+  const itemClause = itemKey === null ? "" : "AND checklist_item IS ?";
+  const itemArgs = itemKey === null ? [] : [itemKey];
+  const pick = (rows: Array<Omit<LocatedRow, "legacy">>, legacy: boolean): LocatedRow | undefined => {
+    const best = [...rows].sort(compareStepRows)[0];
+    return best ? { ...best, legacy } : undefined;
+  };
+  const direct = pick(
+    db
+      .query(
+        `SELECT id, status, evidence_url, assignee_user_id FROM entity_establishment_step
+         WHERE project_id = ? AND step_no = ? ${itemClause}`,
+      )
+      .all(project.id, stepNo, ...itemArgs) as Array<Omit<LocatedRow, "legacy">>,
+    false,
+  );
+  if (direct) return direct;
   if (!project.source_opportunity_id) return undefined;
   // ADOPT, never duplicate: a legacy backlink row (project_id NULL, pre-backfill)
   // is the same ledger row — the caller promotes it onto the project key.
-  const legacy = db
-    .query(
-      `SELECT id, status, evidence_url, assignee_user_id FROM entity_establishment_step
-       WHERE project_id IS NULL AND opportunity_id = ? AND step_no = ? AND checklist_item IS ?`,
-    )
-    .get(project.source_opportunity_id, stepNo, itemKey) as Omit<LocatedRow, "legacy"> | undefined;
-  return legacy ? { ...legacy, legacy: true } : undefined;
+  return pick(
+    db
+      .query(
+        `SELECT id, status, evidence_url, assignee_user_id FROM entity_establishment_step
+         WHERE project_id IS NULL AND opportunity_id = ? AND step_no = ? ${itemClause}`,
+      )
+      .all(project.source_opportunity_id, stepNo, ...itemArgs) as Array<Omit<LocatedRow, "legacy">>,
+    true,
+  );
 }
 
 function adopt(db: Database, row: LocatedRow, projectId: string): void {

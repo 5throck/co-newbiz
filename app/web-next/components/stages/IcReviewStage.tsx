@@ -20,6 +20,7 @@ import { EstablishmentPanel } from "./EstablishmentPanel.tsx";
 import { establishmentApplies, type EventView, type MemberView, type StepRowView } from "../../lib/establishment-view.ts";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import { ExecutionBaselinePanel } from "./ExecutionBaselinePanel.tsx";
+import { fmtNpvKrwM } from "../../lib/npv-format.ts";
 
 // S11 투자심사·실행 — 투자심의 자료 열람 + 법인·그룹 투자심의위원회 진행 기록 + 설립 실행
 // 5단계 진행 화면 (ADR-0100 §3). 경계 #2: RAG 등급은 'AI 추천'으로만 표시되고
@@ -183,7 +184,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
                     <tr key={`${s.scenario}-${s.percentile}-${i}`}>
                       <td>{s.scenario}</td>
                       <td className="tabular-nums">{s.percentile}</td>
-                      <td className="mono-num">{s.npv_krw_m}</td>
+                      <td className="mono-num">{fmtNpvKrwM(s.npv_krw_m)}</td>
                       <td className="mono-num">{s.irr != null ? (s.irr * 100).toFixed(1) + "%" : "—"}</td>
                     </tr>
                   ))}

@@ -6,6 +6,7 @@
 // 탭 상태는 독립 페이지에서 URL ?tab= 동기, embedded(deals 탭) 모드에서는 내부 상태로
 // 유지한다 — router로 프로젝트 페이지를 건드리지 않는다.
 
+import { fmtNpvKrwM } from "@/lib/npv-format";
 import Link from "next/link";
 import { ColGroup, DevRef } from "../ui.tsx";
 
@@ -656,8 +657,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                     {isSelected && <span className="status-chip status-green ml-1">선정됨</span>}
                   </td>
                   <td className="num">{t.rank ?? "—"}</td>
-                  <td className="num mono-num">{t.baseP05 !== null ? fmt(t.baseP05) : "—"}</td>
-                  <td className="num mono-num">{t.baseP50 !== null ? fmt(t.baseP50) : "—"}</td>
+                  <td className="num mono-num">{t.baseP05 !== null ? fmtNpvKrwM(t.baseP05) : "—"}</td>
+                  <td className="num mono-num">{t.baseP50 !== null ? fmtNpvKrwM(t.baseP50) : "—"}</td>
                   <td className="num mono-num">{t.irr != null ? `${(t.irr * 100).toFixed(1)}%` : "—"}</td>
                   <td className="num">{t.caseCount}</td>
                   <td><span className="status-chip status-not-started whitespace-nowrap">{ENGINE_LABEL[t.engine ?? ""] ?? "엔진 미기록"}</span></td>
@@ -667,7 +668,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                         <span className="mono-num">{t.xcheckDivergence >= 0 ? "+" : "−"}{Math.abs(t.xcheckDivergence * 100).toFixed(1)}%</span>
                         {t.xcheckFadeNpv != null && t.baseP50 != null && (
                           <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] block">
-                            차이 {t.xcheckFadeNpv - t.baseP50 >= 0 ? "+" : "−"}{fmt(Math.abs(t.xcheckFadeNpv - t.baseP50))} (페이드 NPV {fmt(t.xcheckFadeNpv)})
+                            차이 {t.xcheckFadeNpv - t.baseP50 >= 0 ? "+" : "−"}{fmtNpvKrwM(Math.abs(t.xcheckFadeNpv - t.baseP50))} (페이드 NPV {fmtNpvKrwM(t.xcheckFadeNpv)})
                           </span>
                         )}
                       </>
@@ -947,20 +948,20 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                         </td>
                         {(["p05", "p50", "p95"] as const).map((p) => {
                           const sim = c.simulations.find((x) => x.percentile === p);
-                          return <td key={p} className="num mono-num">{sim ? fmt(sim.npv_krw_m) : "—"}</td>;
+                          return <td key={p} className="num mono-num">{sim ? fmtNpvKrwM(sim.npv_krw_m) : "—"}</td>;
                         })}
                         <td className="num mono-num">{irrV != null ? `${(irrV * 100).toFixed(1)}%` : "—"}</td>
                         <td className="num">
                           {deltaP50 === null ? "—" : (
                             <span className={deltaP50 >= 0 ? "text-[color:var(--success)] font-bold" : "text-[color:var(--red-fg)] font-bold"}>
-                              {deltaP50 >= 0 ? "+" : ""}{fmt(deltaP50)}{deltaPct !== null ? ` (${deltaPct >= 0 ? "+" : ""}${(deltaPct * 100).toFixed(1)}%)` : ""}
+                              {deltaP50 >= 0 ? "+" : ""}{fmtNpvKrwM(deltaP50)}{deltaPct !== null ? ` (${deltaPct >= 0 ? "+" : ""}${(deltaPct * 100).toFixed(1)}%)` : ""}
                             </span>
                           )}
                         </td>
                         <td className="num mono-num">
                           {note.xcheck_fade_npv ? (
                             <span title={`페이드 DCF 교차검증 — 명시적 ${note.xcheck_horizon ?? "?"}년 창구, 성장률 → ${(Number(note.xcheck_terminal_growth ?? "0") * 100).toFixed(1)}% 선형 수렴, 동일 배수 처분 · IRR ${note.xcheck_fade_irr && note.xcheck_fade_irr !== "null" ? `${(Number(note.xcheck_fade_irr) * 100).toFixed(1)}%` : "—"}`}>
-                              {fmt(Number(note.xcheck_fade_npv))}
+                              {fmtNpvKrwM(Number(note.xcheck_fade_npv))}
                             </span>
                           ) : "—"}
                         </td>

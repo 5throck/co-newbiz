@@ -7,6 +7,7 @@
 // 기반) 값 차이의 원인(성장률 가정 + 인수가 레버리지)을 함께 공개한다.
 // 모든 금액은 백만 원(KRW-M)으로 저장·계산된다(migration 0134 단위 계약).
 
+import { fmtNpvEok } from "@/lib/npv-format";
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { KRW_MILLIONS_UNIT } from "../../lib/format.ts";
@@ -138,7 +139,7 @@ export function ValuationMethodology({
               <td>같은 케이스를 페이드 DCF(장기창구, 성장률 → 말기 성장률 수렴, 동일 배수 처분)로 재평가</td>
               <td className="num mono-num">
                 {n.xcheck === "fade-dcf"
-                  ? `${n.xcheck_horizon}년 · → ${xTerminal != null ? pct1(xTerminal) : "—"} · NPV ${xNpv != null ? 억(xNpv) : "—"}`
+                  ? `${n.xcheck_horizon}년 · → ${xTerminal != null ? pct1(xTerminal) : "—"} · NPV ${xNpv != null ? fmtNpvEok(xNpv) : "—"}`
                   : "— (인수 가격 케이스에만)"}
               </td>
             </tr>
@@ -154,7 +155,7 @@ export function ValuationMethodology({
             (시장 {pct1(gMf)} vs 과거 {pct1(gHist)}). {horizon}년 복리면 최종년 매출이{" "}
             {terminalMultipleMf ? terminalMultipleMf.toFixed(2) : "—"}배 vs {terminalMultipleHist ? terminalMultipleHist.toFixed(2) : "—"}배로 벌어지고,
             기업가치는 마지막 해 매출에 비례하며(처분가치) 인수가는 고정이라
-            <b> 성장률 차이가 NPV에서 몇 배로 증폭</b>됩니다 — 현재 p50 {억(mf.npv_krw_m)} vs {억(hist.npv_krw_m)}.
+            <b> 성장률 차이가 NPV에서 몇 배로 증폭</b>됩니다 — 현재 p50 {fmtNpvEok(mf.npv_krw_m)} vs {fmtNpvEok(hist.npv_krw_m)}.
             차이가 크다는 것은 곧 <b>성장 가정의 불확실성이 크다</b>는 신호입니다(ADR-0117): 로보티즈가 시장 성장률을 따라갈 수 있는가가
             이 딜 가치의 절반 이상을 결정합니다.
           </p>
