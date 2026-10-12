@@ -193,7 +193,6 @@ export function EstablishmentPanel({ projectId, canAct, est, fallbackSteps, gate
               const events = history.filter((h) => h.step_no === n);
               const menu = [
                 { key: "assign", label: "담당자 지정", onSelect: () => openFor(n, "assign"), disabled: busy },
-                ...(isDone ? [{ key: "reopen", label: "완료 취소(재개)", onSelect: () => openFor(n, "reopen"), danger: true, disabled: busy, separatorBefore: true }] : []),
               ];
               return (
                 <Fragment key={n}>
@@ -235,7 +234,19 @@ export function EstablishmentPanel({ projectId, canAct, est, fallbackSteps, gate
                       <td>
                         <div className="flex items-center gap-1">
                           {isDone ? (
-                            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">완료됨</span>
+                            <>
+                              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">완료됨</span>
+                              <button
+                                type="button"
+                                className="btn-ghost btn-sm"
+                                disabled={busy}
+                                aria-expanded={open?.step === n && open.kind === "reopen"}
+                                aria-controls={`est-step-${n}`}
+                                onClick={() => openFor(n, "reopen")}
+                              >
+                                완료 취소(재개)
+                              </button>
+                            </>
                           ) : (
                             <button
                               type="button"
@@ -249,7 +260,7 @@ export function EstablishmentPanel({ projectId, canAct, est, fallbackSteps, gate
                               {open?.step === n && open.kind === "status" ? "닫기" : "상태 변경"}
                             </button>
                           )}
-                          <RowMenu label={`${n}단계 더보기`} items={menu} />
+                          <RowMenu label={`${n}단계 더보기 (담당자 지정)`} items={menu} />
                         </div>
                       </td>
                     )}
@@ -313,6 +324,9 @@ export function EstablishmentPanel({ projectId, canAct, est, fallbackSteps, gate
           </tbody>
         </table>
       </div>
+      {writable && [1, 2, 3, 4, 5].every((n) => rowOf(n)?.status === "done") && (
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2">모든 단계가 완료되었습니다. 상태를 바꾸려면 먼저 '완료 취소(재개)'로 되돌리세요.</p>
+      )}
       {confirmDialog}
     </section>
   );
