@@ -57,7 +57,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     .all(id) as Array<{ criterion_id: string; action: string; outcome: string }>;
   const caseLines = cases.slice(0, 8).map((c) => {
     const sims = c.simulations?.slice(0, 3) ?? [];
-    const npv = sims.map((s) => `${s.percentile ?? "?"}: ${s.npv_krw_m ?? "?"}`).join(", ");
+    const npv = sims.map((s) => `${s.percentile ?? "?"}: ${s.npv_krw_m != null ? Math.round(s.npv_krw_m) : "?"}`).join(", ");
     return `- ${c.name} (${c.kind}${c.scenario ? `, ${c.scenario}` : ""}${c.variant ? `, ${c.variant}` : ""})${c.recommended ? " [결정론 RECOMMENDED]" : ""}${c.adopted ? " [채택됨]" : ""}${npv ? ` NPV ${npv}` : ""}`;
   });
   const manifest = ["Business Case 6종(variant·시나리오·NPV/IRR)", "킬크라이어리아 상태", "채택 현황"];

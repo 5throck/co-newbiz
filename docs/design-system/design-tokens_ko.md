@@ -39,7 +39,7 @@ counterpart: design-tokens.md
 | `--primary` (+ `--primary-h/s/l` 채널, `--primary-dim/-bg/-border`) | 브랜드·강조색 — HSL 채널 위에 정의되어 투명도 변형을 동적으로 파생 |
 | `--accent`, `--accent-fg` | 사용자가 상호작용하는 요소의 강조색(링크, 현재 선택된 탭 등). `--accent-fg`는 강조 배경 **위에** 쓰는 전경색 — 라이트 테마 `#ffffff` — 로, 강조 배경을 채운 버튼이 4.5:1 대비를 유지하게 합니다 |
 | `--success`, `--warning`, `--danger` (+ `-bg` 변형) | 승인·주의·위험 신호의 상태색 |
-| `--green-bg/-fg/-border`, `--amber-*`, `--red-*` | RAG 등급 칩 색(라이트·다크 튜닝 쌍) |
+| `--green-bg/-fg/-border`, `--amber-*`, `--red-*` | 등급 칩 색(라이트·다크 튜닝 쌍) |
 | `--input-bg`, `--hover-bg`, `--sidebar-bg` | 테마 범위 상호작용 표면(하드코딩된 흰색·검정 없음) |
 
 화면을 만들 때 색은 반드시 이 토큰으로만 지정하며, 코드에 직접 `#0000FF` 같은 색상 값을 써넣지

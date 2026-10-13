@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
+import { fmtNpvInteger } from "../../../../lib/npv-format.ts";
 import { PageState, useToast } from "../../../../components/ui.tsx";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
@@ -66,7 +67,7 @@ function IncentivesView() {
                     <td className="font-semibold">{r.program_name ?? "—"}</td>
                     <td>{r.grantor ?? "—"}</td>
                     <td><span className={`status-chip ${r.direction === "granted" ? "status-green" : "status-amber"}`}>{r.direction === "granted" ? "확정" : "수혜 예정"}</span></td>
-                    <td className="col-num tabular-nums">{r.npv_value != null ? `${r.npv_value}억` : "—"}</td>
+                    <td className="col-num tabular-nums">{r.npv_value != null ? `${fmtNpvInteger(r.npv_value)}억` : "—"}</td>
                     <td className="text-[length:var(--fs-caption)]">{r.clawback_rule ?? "—"}</td>
                   </tr>
                 ))}

@@ -4,7 +4,7 @@ title: "Legal Due Diligence Checklist (Brown Field DD)"
 scope: shared
 enforceability: mixed
 owner_agent: legal-counsel
-version: "1.1.0"
+version: "1.1.1"
 effective_from: "2026-08-22"
 gate: DD
 
@@ -96,7 +96,7 @@ items:
     mandatory: true
     waiver_eligible: true
   - id: ldd-21
-    text: "발견사항 대장(RAG 등급) 작성 — red=구조적/시정 필요, amber=보증·면책, green=수용 → SPA 보호·밸류에이션 조정(dd-to-valuation-bridge) 투입"
+    text: "발견사항 대장(등급: 녹·황·적) 작성 — red=구조적/시정 필요, amber=보증·면책, green=수용 → SPA 보호·밸류에이션 조정(dd-to-valuation-bridge) 투입"
     mandatory: true
     waiver_eligible: true
   - id: ldd-22

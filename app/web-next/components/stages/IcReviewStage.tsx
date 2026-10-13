@@ -23,7 +23,7 @@ import { ExecutionBaselinePanel } from "./ExecutionBaselinePanel.tsx";
 import { fmtNpvKrwM } from "../../lib/npv-format.ts";
 
 // S11 투자심사·실행 — 투자심의 자료 열람 + 법인·그룹 투자심의위원회 진행 기록 + 설립 실행
-// 5단계 진행 화면 (ADR-0100 §3). 경계 #2: RAG 등급은 'AI 추천'으로만 표시되고
+// 5단계 진행 화면 (ADR-0100 §3). 경계 #2: 종합 등급은 'AI 추천'으로만 표시되고
 // (승인 도장 없음), 진행 GO/HOLD/KILL 기록과 설립 단계 완료 기록은 사람의
 // 행위다. 이 화면은 패키지를 읽어오는 GET만 자동화하고, 쓰기는 명시적 P4
 // 확인(useConfirm)을 거친 analyst+ 행위다.
