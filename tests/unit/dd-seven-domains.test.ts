@@ -104,8 +104,8 @@ describe("pre-cutoff greenfield in the workspace scope (ADR-0160 addendum 2026-1
     const { db, projectId } = demo();
     const opp = (db.query("SELECT source_opportunity_id o FROM md_project WHERE id = ?").get(projectId) as { o: string }).o;
     db.run("UPDATE route_decision SET track = 'greenfield', sub_track = NULL WHERE opportunity_id = ? AND is_current = 1", [opp]);
-    db.run("UPDATE md_project SET created_at = '2026-09-01T00:00:00.000Z' WHERE id = ?", [projectId]);
-    db.run("UPDATE project_policy_pin SET pinned_at = '2026-09-01T00:00:00.000Z' WHERE project_id = ?", [projectId]);
+    db.run("UPDATE md_project SET created_at = '2026-06-01T00:00:00.000Z' WHERE id = ?", [projectId]);
+    db.run("UPDATE project_policy_pin SET pinned_at = '2026-06-01T00:00:00.000Z' WHERE project_id = ?", [projectId]);
     db.run("DELETE FROM project_checklist_item_state WHERE project_id = ? AND checklist_id IN (?,?,?,?)", [projectId, ...NEW.map((d) => DD_WORKSPACE_CHECKLISTS[d]!)]);
     // Not in scope yet: byte-identical to the grandfathered path.
     expect(listDdWorkspace(projectId).domains.find((d) => d.domain === "hr")!.counted).toBe(false);

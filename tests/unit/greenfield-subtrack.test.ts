@@ -41,7 +41,7 @@ const { subTrackChecklistIds, ddCompletionSummary } = await import("../../app/we
 const { SUB_TRACK_DD_CHECKLISTS, scopedSubTrackDdChecklists } = await import("../../app/web-next/lib/library.ts");
 
 const NOW = new Date().toISOString();
-const OLD = "2026-09-01T00:00:00.000Z";
+const OLD = "2026-06-01T00:00:00.000Z"; // before GF_SUBTRACK_PREDICATE_DATE / GF_WORKSPACE_SCOPE_DATE (2026-07-01)
 /** Fixed post-cut-off creation stamp (GF_SUBTRACK_PREDICATE_DATE) — never wall-clock dependent. */
 const NEW = "2026-10-20T00:00:00.000Z";
 const A1 = "gf_analyst1";

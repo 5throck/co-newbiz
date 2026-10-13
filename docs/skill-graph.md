@@ -334,6 +334,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20261012-01` | decision | `root/decision-record`, `root/policy-and-procedure-governance` | — | — |
 | `dec:DEC-20261012-02` | decision | `root/decision-record`, `root/policy-and-procedure-governance` | — | — |
 | `dec:DEC-20261013-03` | decision | `root/antitrust-screening`, `root/decision-record`, `root/policy-and-procedure-governance` | — | — |
+| `dec:DEC-20261013-04` | decision | `root/decision-record`, `root/policy-and-procedure-governance` | — | — |
 | `doc:AGENTS.md` | doc | `root/agent-lifecycle-manager`, `root/skill-lifecycle-manager` | — | — |
 | `doc:CODEX.md` | doc | `root/meeting-facilitation` | — | — |
 | `doc:procedures/README.md` | doc | `root/antitrust-screening`, `root/brownfield-feasibility`, `root/regional-incentive-sourcing`, `root/site-infrastructure-assessment` | — | — |

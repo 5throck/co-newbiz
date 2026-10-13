@@ -658,14 +658,16 @@ export function subTrackChecklistIds(projectId: string): string[] {
   if (gf) return gf.extra_checklists;
   // ADR-0162 (user decision 2026-10-12): a recorded brownfield opt-in attaches the sub-track extras.
   const bfInfo = brownfieldRouteInfo(projectId, db);
-  if (bfInfo?.scope_key && bfInfo.opted_in) return scopedSubTrackDdChecklists(bfInfo.scope_key);
+  // DEC-20261013-03 / DEC-20261013-04: the scoped path is "opt-in OR past
+  // BF_WORKSPACE_SCOPE_DATE"; since the cut-off moved to 2026-07-01 (before
+  // WAVE_F_PREDICATE_DATE), an in-scope-by-date project gets the same scoped extras
+  // as an opted-in one, ahead of the WAVE_F grandfathering below.
+  if (bfInfo?.scope_key && (bfInfo.opted_in || bfInfo.by_date)) return scopedSubTrackDdChecklists(bfInfo.scope_key);
   if ((pin.at ?? proj.created_at ?? "") < WAVE_F_PREDICATE_DATE) return [];
   const route = db
     .query("SELECT track, sub_track FROM route_decision WHERE opportunity_id = ? AND is_current = 1")
     .get(proj.source_opportunity_id) as { track: string; sub_track: string | null } | undefined;
   if (route?.track !== "brownfield" || !route.sub_track) return [];
-  // DEC-20261013-03: an in-scope (by date) non-baseline project gets the scoped extras.
-  if (bfInfo?.scope_key && bfInfo.by_date) return scopedSubTrackDdChecklists(bfInfo.scope_key);
   return SUB_TRACK_DD_CHECKLISTS[route.sub_track] ?? [];
 }
 

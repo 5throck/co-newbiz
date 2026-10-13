@@ -37,8 +37,8 @@ const { getChecklistItems, getBrownfieldWorkspaceOverlay, SUB_TRACK_DD_CHECKLIST
 const { DdTargetError } = await import("../../app/web-next/lib/dd-target.ts");
 
 const NOW = new Date().toISOString();
-const OLD = "2026-09-03T00:00:00.000Z"; // before 2026-10-01, WAVE_F and the BF cut-off
-const MID = "2026-10-09T00:00:00.000Z"; // after 2026-10-01 and WAVE_F, before a later BF cut-off
+const OLD = "2026-06-03T00:00:00.000Z"; // before 2026-10-01, WAVE_F and the BF cut-off (2026-07-01)
+const MID = "2026-10-09T00:00:00.000Z"; // after 2026-10-01 and WAVE_F (and after the BF cut-off 2026-07-01: in scope by date)
 const NEW = "2026-10-20T00:00:00.000Z";
 const A1 = "bfws_analyst1";
 const AGENT = [...AGENT_KEYS][0];
@@ -179,7 +179,7 @@ describe("(b) unchanged paths", () => {
     expect(bf.brownfieldNaRequiresReason(p, L, db)).toBe(false);
   });
   test("grandfathered and null sub-track: identical to the no-overlay path", () => {
-    for (const p of [seedProject("brownfield", "strategic_investment", MID), seedProject("brownfield", null)]) {
+    for (const p of [seedProject("brownfield", "strategic_investment", OLD), seedProject("brownfield", null)]) {
       judge(p, L, "ldd-14", "pass");
       const withOv = JSON.stringify([tailor.listDdWorkspace(p), tailor.ddCompletionSummary(p)]);
       bf.setBrownfieldOverlayForTest(null);
