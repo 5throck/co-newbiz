@@ -13,7 +13,7 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
 
   const universeModalFocus = useModalFocus(() => { if (!savingUniverse) closeUniverseEditor(); });
 
-  // Long List 테이블의 재무·기술 평가 배지·잠정 순위는 서버가 계산해 target
+  // 후보 전체 목록 테이블의 재무·기술 평가 배지·잠정 순위는 서버가 계산해 target
   // row에 붙여주는 eval_summary를 그대로 쓴다(targets GET, ADR-0139) — 항목별
   // 편집 UI(evalItems)만 행을 펼칠 때 lazy 로드한다(loadEvalItems).
 
@@ -124,7 +124,7 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.opportunity.id]);
 
-  // ── B: Long List 웹검색 후보 제안 생성 (on-demand, ADR-0118) ──
+  // ── B: 후보 전체 목록 웹검색 후보 제안 생성 (on-demand, ADR-0118) ──
   async function generateWebProposals() {
     if (!selected || webBusy) return;
     setWebBusy(true); setError(null);

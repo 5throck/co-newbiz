@@ -104,7 +104,7 @@ export function CompetitorRegistryBlock({ companyId, payloadCompetitors }: {
       )}
       {canAct && <div className="flex flex-wrap items-center gap-2">
         <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="sizing-new-input" style={{ width: "12rem" }} placeholder="경쟁사명 *" aria-label="경쟁사명" />
-        <input value={form.dart_corp_code} onChange={(e) => setForm({ ...form, dart_corp_code: e.target.value })} className="sizing-new-input" style={{ width: "9rem" }} placeholder="DART 고유번호 (선택)" aria-label="경쟁사 DART 고유번호" />
+        <input value={form.dart_corp_code} onChange={(e) => setForm({ ...form, dart_corp_code: e.target.value })} className="sizing-new-input" style={{ width: "9rem" }} placeholder="전자공시 고유번호 (선택)" aria-label="경쟁사 전자공시 고유번호" />
         <input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} className="sizing-new-input" style={{ flex: "1 1 10rem" }} placeholder="경쟁 관계 (선택)" aria-label="경쟁 관계" />
         <button type="button" className="btn-ghost btn-sm" disabled={busy || !form.name.trim()} onClick={() => void post(`/api/companies/${encodeURIComponent(companyId)}/competitors`, { name: form.name, dart_corp_code: form.dart_corp_code || null, note: form.note || null, discovery_source: "manual" }).then((ok) => { if (ok) setForm({ name: "", dart_corp_code: "", note: "" }); })}>등록</button>
       </div>}

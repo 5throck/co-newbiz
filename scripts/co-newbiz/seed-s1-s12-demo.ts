@@ -70,6 +70,49 @@ function json(value: unknown): string {
   return JSON.stringify(value);
 }
 
+/** Demo S3 provenance: a completed synergy analysis linked to the opportunity so
+ *  the S3 list agrees with the confirmed score on the opportunity (without it the
+ *  list says "no synergy analysis" while S2/S4 show a confirmed score — D-15). */
+function seedSynergyAnalysis(db: ReturnType<typeof getDb>, id: string, oppId: string, oppName: string, score: number, now: string, actor: string): void {
+  db.run(
+    `INSERT OR IGNORE INTO synergy_analysis
+     (id, company_id, status, current_step, created_by, created_at, completed_at, opportunity_id)
+     VALUES (?, 'md-synergy-registry-sentinel', 'completed', 3, ?, ?, ?, ?)`,
+    [id, actor, now, now, oppId],
+  );
+  db.run(
+    `INSERT OR IGNORE INTO synergy_version (id, analysis_id, version_no, payload, changelog, created_by, created_at)
+     VALUES (?, ?, 1, ?, 'S1-S12 demo synergy baseline', ?, ?)`,
+    [
+      `${id}-v1`, id,
+      json({
+        company: { name: oppName, dartCorpCode: null },
+        acquirer: null,
+        dartFinancials: { available: false },
+        researchSources: [],
+        financialStrengths: [],
+        financialWeaknesses: [],
+        businessAssessment: "데모 시드 — 실제 분석이 아닙니다.",
+        marketLinkage: { marketSummaries: [], synergyAreas: [] },
+        shortList: [],
+        stepSummaries: [],
+        opportunity: { id: oppId, name: oppName },
+        synergyScore: score,
+        synergyRationale: "demo seed",
+      }),
+      actor, now,
+    ],
+  );
+}
+
+/** Demo operating policy so the timeline page shows SLA targets (an unset policy renders "정책 미설정"). */
+function seedStageSla(db: ReturnType<typeof getDb>, now: string, actor: string): void {
+  const targets: Array<[string, number]> = [["S1", 14], ["S2", 7], ["S3", 14], ["S4", 7], ["S5", 14], ["S6", 21], ["S7", 14], ["S8", 21], ["S9", 45], ["S10", 14], ["S11", 60], ["S12", 90]];
+  for (const [stage, days] of targets) {
+    db.run("INSERT OR IGNORE INTO stage_sla (stage_id, target_days, updated_by, updated_at) VALUES (?, ?, ?, ?)", [stage, days, actor, now]);
+  }
+}
+
 export interface SeedOptions {
   /** Default true: also write the human gate decisions and the S12 transition
    *  decision. The E2E harness passes false so those human acts are performed
@@ -100,7 +143,7 @@ const DEMO_MATRIX: SizingMatrix = {
   chainGrade: { grade: "B", statisticalHops: 0, note: "demo seed: no statistical hop, llm-estimate source cap" },
   chainDirection: { position: "midstream", note: "demo seed", relatedIndustries: [{ relation: "전방", name: "데모 수요 산업" }] },
   qualitative: { opportunityFactors: ["데모 기회 요인"], riskFactors: ["데모 위험 요인"] },
-  consistency: { bottomUpCagr: 0.12, topDownCagr: 0.13, tolerance: "demo seed" },
+  consistency: { bottomUpCagr: 13, topDownCagr: 13, tolerance: "demo seed" }, // percent, like the pipeline (market-sizing-pipeline stores *100)
   crossValidation: [],
   limitations: ["데모 시드 데이터 — 실제 시장 분석이 아닙니다."],
   competitive: {
@@ -165,7 +208,7 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
         "S1-S12 데모 Brownfield 기회",
         "S1-S12 데모 산업",
         "핵심 부품/서비스 밸류체인 노드",
-        120000,
+        1200000, // 백만원 = 1.2조원 ≈ $0.9B (matches the S1 anchor at ~1,350 KRW/USD)
         0.13,
         82,
         88,
@@ -208,6 +251,8 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
       ],
     );
     db.run("UPDATE opportunity SET project_id = ?, promoted_at = COALESCE(promoted_at, ?) WHERE id = ?", [DEMO.projectId, now, DEMO.oppId]);
+    seedSynergyAnalysis(db, "demo-s1-s12-synergy", DEMO.oppId, "S1-S12 데모 Brownfield 기회", 88, now, actor);
+    seedStageSla(db, now, actor);
 
     db.run(
       `INSERT OR IGNORE INTO route_decision
@@ -483,11 +528,11 @@ const GF_MATRIX: SizingMatrix = {
     { code: "ROW", label: "기타 지역 (데모)", weight: 30, mix: { demo_gf_core: 65, demo_gf_service: 35 }, adjustment: "demo seed" },
   ],
   baseline2026: { KR: { demo_gf_core: 0.35, demo_gf_service: 0.15 }, ROW: { demo_gf_core: 0.15, demo_gf_service: 0.05 } },
-  cagrBase: { KR: { demo_gf_core: 0.12, demo_gf_service: 0.09 }, ROW: { demo_gf_core: 0.1, demo_gf_service: 0.07 } },
+  cagrBase: { KR: { demo_gf_core: 0.2, demo_gf_service: 0.16 }, ROW: { demo_gf_core: 0.18, demo_gf_service: 0.14 } },
   chainGrade: { grade: "B", statisticalHops: 0, note: "demo seed: no statistical hop, llm-estimate source cap" },
   chainDirection: { position: "upstream", note: "demo seed", relatedIndustries: [{ relation: "후방", name: "데모 소재 산업" }] },
   qualitative: { opportunityFactors: ["데모 기회 요인 — 신규 수요"], riskFactors: ["데모 위험 요인 — 진입 지연"] },
-  consistency: { bottomUpCagr: 0.1, topDownCagr: 0.11, tolerance: "demo seed" },
+  consistency: { bottomUpCagr: 18, topDownCagr: 17, tolerance: "demo seed" }, // percent; >=15 reads as high growth in the route advisory
   crossValidation: [],
   limitations: ["데모 시드 데이터 — 실제 시장 분석이 아닙니다."],
   competitive: {
@@ -535,7 +580,7 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
        (id, project_id, name, market_scope, value_chain_node, market_size_krw_m, growth_rate,
         attractiveness_score, synergy_score, status, rationale, decided_by, decided_at, created_by, created_at,
         capability_gap_json, synergy_score_confirmed_at, synergy_score_confirmed_by, industry_id)
-       VALUES (?, ?, ?, ?, ?, 200000, 0.11, 75, 79, 'selected', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, 1080000, 0.18, 75, 55, 'selected', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         GF.oppId, null, "S1-S12 데모 Greenfield 기회", "S1-S12 데모 신설 산업", "직접 진출 밸류체인 노드 (신설)",
         "시장 성장·자체 역량 조합에서 직접 진출 기회가 명확함", actor, now, actor, now,
@@ -561,6 +606,8 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
       ],
     );
     db.run("UPDATE opportunity SET project_id = ?, promoted_at = COALESCE(promoted_at, ?) WHERE id = ?", [GF.projectId, now, GF.oppId]);
+    seedSynergyAnalysis(db, "demo-gf-synergy", GF.oppId, "S1-S12 데모 Greenfield 기회", 55, now, actor);
+    seedStageSla(db, now, actor);
 
     db.run(
       `INSERT OR IGNORE INTO route_decision

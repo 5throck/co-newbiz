@@ -175,7 +175,7 @@ export function CommitteePanel({
     setBusy(true); setError(null); setNotice(null);
     try {
       const r = await api.post<{ status: string; round?: number }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions/${encodeURIComponent(transcript.sessionId)}/advance`, {});
-      setNotice(r.data.status === "synthesized" ? "의장 종합이 완료되었습니다 — PROPOSAL을 확인하세요." : `라운드 ${r.data.round ?? ""}가 시작되었습니다.`);
+      setNotice(r.data.status === "synthesized" ? "의장 종합이 완료되었습니다 — 제안을 확인하세요." : `라운드 ${r.data.round ?? ""}가 시작되었습니다.`);
       loadTranscript(transcript.sessionId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "세션 진행 실패");
@@ -211,7 +211,7 @@ export function CommitteePanel({
       await api.post(`/api/opportunities/${encodeURIComponent(opportunityId)}/gate-decisions`, {
         gate: transcript.evaluation.gate,
         decision: form.decision,
-        rationale: form.rationale.trim() || `위원회 심의(${committeeKey}) PROPOSAL ${transcript.evaluation.recommendation.toUpperCase()} 인용`,
+        rationale: form.rationale.trim() || `위원회 심의(${committeeKey}) 제안 ${transcript.evaluation.recommendation} 인용`,
         gate_evaluation_id: transcript.evaluation.gateEvaluationId,
         ...(form.decision === "hold" ? { missing_artifacts: form.missing.split(/[\n,]/).map((s) => s.trim()).filter(Boolean) } : {}),
       });
@@ -254,7 +254,7 @@ export function CommitteePanel({
         <span className="sizing-step-badge">⚖️</span> {committeeLabel} — 위원회 심의
       </h3>
       <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
-        에이전트 위원회는 심의하여 <strong>제안(PROPOSED)</strong>만 남깁니다. GO·HOLD·KILL 기록은 검토자의 클릭으로만 이루어집니다 (경계 #2).
+        에이전트 위원회는 심의하여 <strong>제안</strong>만 남깁니다. 진행·보류·중단 기록은 검토자의 클릭으로만 이루어집니다 (경계 #2).
       </p>
 
       {canAct && (
@@ -324,7 +324,7 @@ export function CommitteePanel({
                     <span className="text-[color:var(--muted-fg)]">{s.meta.decision_mode} · {s.meta.gate}</span>
                   </span>
                   <span className="flex items-center gap-1">
-                    <span className={`status-chip ${s.meta.synthesized ? "status-green" : "status-in-progress"}`}>{s.meta.synthesized ? "PROPOSED" : "진행 중"}</span>
+                    <span className={`status-chip ${s.meta.synthesized ? "status-green" : "status-in-progress"}`}>{s.meta.synthesized ? "제안됨" : "진행 중"}</span>
                     <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{expanded ? "▲" : "▼"}</span>
                   </span>
                 </button>
@@ -335,7 +335,7 @@ export function CommitteePanel({
       )}
 
       {/* 좌석별 포지션 표는 제거했다(사용자 리포트, 2026-09-16 — 큰 의미 없음).
-          심의 결과의 본질은 의장 종합(PROPOSAL)과 소수 의견(dissent) 원문이고,
+          심의 결과의 본질은 의장 종합(제안)과 소수 의견 원문이고,
           좌석별 입장은 "입장 원문(라운드별)"에 감사 기록으로 보존된다. */}
       {/* 심의 결과 — 펼친(또는 새로 소집된) 세션만 표시한다. */}
       {transcript && expandedSessionId === transcript.sessionId && (
@@ -351,11 +351,11 @@ export function CommitteePanel({
             <div className="grid gap-3 md:grid-cols-2 mb-3">
               <div className="card">
                 <h4 className="text-[length:var(--fs-body)] font-semibold mb-1">
-                  의장 종합 (PROPOSAL){" "}
+                  의장 종합 (제안){" "}
                   <span className={`status-chip ${transcript.evaluation.recommendation === "go" ? "status-green" : transcript.evaluation.recommendation === "hold" ? "status-amber" : "status-red"}`}>
                     {REC_LABEL[transcript.evaluation.recommendation] ?? transcript.evaluation.recommendation}
                   </span>
-                  {dissents.length > 0 && <span className="status-chip status-red ml-1">veto 이견 반영</span>}
+                  {dissents.length > 0 && <span className="status-chip status-red ml-1">거부권 이견 반영</span>}
                 </h4>
                 <p className="text-[length:var(--fs-caption)] mb-1">
                   {committeeLabel} — {REC_LABEL[transcript.evaluation.recommendation] ?? transcript.evaluation.recommendation} 제안
@@ -366,7 +366,7 @@ export function CommitteePanel({
                 </p>
               </div>
               <div className="card">
-                <h4 className="text-[length:var(--fs-body)] font-semibold mb-1">소수 의견 (dissent — 원문 보존)</h4>
+                <h4 className="text-[length:var(--fs-body)] font-semibold mb-1">소수 의견 (원문 보존)</h4>
                 {dissents.length === 0 ? (
                   <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] m-0">이견 없음</p>
                 ) : (
@@ -574,7 +574,7 @@ function MinutesModal({
 
         {transcript.evaluation && (
           <>
-            <h3 className="text-[length:var(--fs-caption)] font-semibold mb-1">의장 종합 (PROPOSED)</h3>
+            <h3 className="text-[length:var(--fs-caption)] font-semibold mb-1">의장 종합 (제안)</h3>
             <p className="text-[length:var(--fs-caption)] mb-2">
               <span className={`status-chip ${transcript.evaluation.recommendation === "go" ? "status-green" : transcript.evaluation.recommendation === "hold" ? "status-amber" : "status-red"}`}>
                 {REC_LABEL[transcript.evaluation.recommendation] ?? transcript.evaluation.recommendation}
@@ -583,7 +583,7 @@ function MinutesModal({
             </p>
             {dissents.length > 0 && (
               <>
-                <h3 className="text-[length:var(--fs-caption)] font-semibold text-[color:var(--red-fg)] mb-1">소수 의견 (dissent — 원문 보존)</h3>
+                <h3 className="text-[length:var(--fs-caption)] font-semibold text-[color:var(--red-fg)] mb-1">소수 의견 (원문 보존)</h3>
                 {dissents.map((d) => (
                   <p key={d.member_key} className="whitespace-pre-wrap text-[length:var(--fs-caption)] mb-2 pl-2 border-l-2" style={{ borderColor: "var(--red-fg)" }}>
                     &quot;{stripMeta(d.position_md)}&quot; — {d.member_key}

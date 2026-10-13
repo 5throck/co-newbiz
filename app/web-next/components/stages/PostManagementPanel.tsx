@@ -203,15 +203,15 @@ export function PostManagementPanel({ projectId }: { projectId: string }) {
 
       {partner && (
         <div className="mt-3" data-testid="pm-partnership">
-          <h4 className="text-[length:var(--fs-body)] mb-1">파트너십 모니터링 — JV·제휴 조건과 성과 (읽기 전용)</h4>
+          <h4 className="text-[length:var(--fs-body)] mb-1">전략 제휴 모니터링 — JV·제휴 조건과 성과 (읽기 전용)</h4>
           <p className="text-[length:var(--fs-caption)] mb-1">
             기록된 JV 조건 {partner.jv_terms.toLocaleString("ko-KR")}건
             {partner.review_cycle && <span className="status-chip status-not-started ml-2">리뷰 주기 {partner.review_cycle}</span>}
           </p>
           {partner.measures.length > 0 ? (
             <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-              <table className="data-table table-fixed-pct tmin-32" aria-label="파트너십 측정">
-                <caption className="sr-only">최신 주기의 파트너십 측정</caption>
+              <table className="data-table table-fixed-pct tmin-32" aria-label="전략 제휴 측정">
+                <caption className="sr-only">최신 주기의 전략 제휴 측정</caption>
                 <ColGroup widths={PARTNER_MEASURE_COL_PCT} />
                 <thead><tr><th scope="col">구분</th><th scope="col">측정</th><th scope="col">상태</th></tr></thead>
                 <tbody>
@@ -229,7 +229,7 @@ export function PostManagementPanel({ projectId }: { projectId: string }) {
               </table>
             </div>
           ) : (
-            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">아직 기록된 파트너십 측정이 없습니다.</p>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">아직 기록된 전략 제휴 측정이 없습니다.</p>
           )}
         </div>
       )}

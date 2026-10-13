@@ -129,7 +129,7 @@ function DebtView() {
           <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
             <table className="data-table" aria-label="커버넌트 시나리오">
               <caption className="sr-only">커버넌트 시나리오 계산</caption>
-              <thead><tr><th>차입</th><th className="col-num">연간 상환액</th><th className="col-num">DSCR</th><th>임계값</th><th>판정</th></tr></thead>
+              <thead><tr><th>차입</th><th className="col-num">연간 상환액</th><th className="col-num">부채상환비율</th><th>임계값</th><th>판정</th></tr></thead>
               <tbody>{rows.map((r) => {
                 const rate = (stress ? r.rate + 2 : r.rate) / 100;
                 const n = remainingYears(r.maturity);
@@ -142,7 +142,7 @@ function DebtView() {
                     <td className="font-semibold">{r.lender ?? "차입"}</td>
                     <td className="col-num tabular-nums">{ds}억</td>
                     <td className="col-num tabular-nums font-semibold">{dscr ?? "—"}</td>
-                    <td className="text-[length:var(--fs-caption)]">{th ? `DSCR ≥ ${th.value}` : "임계값 미등록"}</td>
+                    <td className="text-[length:var(--fs-caption)]">{th ? `부채상환비율 ≥ ${th.value}` : "임계값 미등록"}</td>
                     <td>{pass == null ? <span className="status-chip status-gray">판정 불가</span> : pass ? <span className="status-chip status-green">충족</span> : <span className="status-chip status-red">위반</span>}</td>
                   </tr>
                 );
@@ -150,10 +150,10 @@ function DebtView() {
             </table>
           </div>
         ) : (
-          <p className="note" style={{ margin: 0 }}>시나리오 현금흐름을 입력하면 각 차입의 연간 상환액(연금공식)과 DSCR을 계산해 임계값과 대조합니다.</p>
+          <p className="note" style={{ margin: 0 }}>시나리오 현금흐름을 입력하면 각 차입의 연간 상환액(연금공식)과 부채상환비율을 계산해 임계값과 대조합니다.</p>
         )}
         <p className="note" style={{ margin: "6px 0 0" }}>
-          커버넌트 판정 결과는 참고용 시나리오이며 공식 테스트는 시뮬레이션 실행(covenant_test)으로 확정됩니다 — 시뮬레이션 연계는 백로그.
+          재무약정 판정 결과는 참고용 시나리오이며 공식 테스트는 재무약정 시험(시뮬레이션 실행)으로 확정됩니다 — 시뮬레이션 연계는 백로그.
         </p>
       </section>
 

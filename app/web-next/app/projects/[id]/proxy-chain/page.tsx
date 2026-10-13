@@ -159,7 +159,7 @@ export default function ProxyChainPage() {
       {canAct && (
         <>
         <div className="mt-2">
-          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">산업 검색 — md_industry 등록 산업에서 선택</span>
+          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">산업 검색 — 마스터 데이터에 등록된 산업에서 선택</span>
           <div className="grid gap-2 md:grid-cols-[1fr_auto] mt-1">
             <input className="sizing-new-input" value={industryQuery} onChange={(e) => setIndustryQuery(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void searchIndustries(); } }}
@@ -182,7 +182,7 @@ export default function ProxyChainPage() {
             </div>
           )
         )}
-        <label className="grid gap-1 mt-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">바인딩 근거 (rationale) — 필수
+        <label className="grid gap-1 mt-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">바인딩 근거 — 필수
           <input className="sizing-new-input" value={bindRationale} onChange={(e) => setBindRationale(e.target.value)} placeholder="예: S6 유니버스 정의 — 수요 전파 검증용" />
         </label>
         </>
@@ -203,7 +203,7 @@ export default function ProxyChainPage() {
           <tbody>
             {view.links.map((l) => (
               <tr key={l.id}>
-                <td><span className="status-chip status-not-started">{l.direction}</span></td>
+                <td><span className="status-chip status-not-started">{l.direction === "downstream" ? "하류 전파" : l.direction === "upstream" ? "상류 전파" : l.direction}</span></td>
                 <td>{l.from_industry_ko} → {l.to_industry_ko}</td>
                 <td className="num mono-num">{fmt(l.elasticity)}</td>
                 <td className="num mono-num">{l.r2 != null ? `${fmt(l.r2)} (상관 ${fmt(l.correlation)})` : "—"}</td>
@@ -227,8 +227,8 @@ export default function ProxyChainPage() {
             <div>
               <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">방향</span>
               <div className="flex gap-3 text-[length:var(--fs-caption)]">
-                <label><input type="radio" checked={form.direction === "downstream"} onChange={() => setForm({ ...form, direction: "downstream" })} /> downstream (하류 전파)</label>
-                <label><input type="radio" checked={form.direction === "upstream"} onChange={() => setForm({ ...form, direction: "upstream" })} /> upstream (상류 전파)</label>
+                <label><input type="radio" checked={form.direction === "downstream"} onChange={() => setForm({ ...form, direction: "downstream" })} /> 하류 전파</label>
+                <label><input type="radio" checked={form.direction === "upstream"} onChange={() => setForm({ ...form, direction: "upstream" })} /> 상류 전파</label>
               </div>
             </div>
             <div className="grid gap-2 md:grid-cols-2">
@@ -258,10 +258,10 @@ export default function ProxyChainPage() {
 
     {/* ③ 보정된 proxy link */}
     <section className="market-section sizing-step mt-3">
-      <h3 className="sizing-step-title">보정된 proxy link <span className="status-chip status-amber">회귀 산출 — 수동 입력 불가</span></h3>
+      <h3 className="sizing-step-title">보정된 전달 링크 <span className="status-chip status-amber">회귀 산출 — 수동 입력 불가</span></h3>
       {!view || view.proxyLinks.length === 0 ? (
         <div>
-          <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">매칭 proxy link가 없습니다 — 산업 바인딩·링크 등록 후 <b>통계 보정 실행</b>으로 산출합니다.</p>
+          <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">산출된 전달 링크가 없습니다 — 산업 바인딩·링크 등록 후 <b>통계 보정 실행</b>으로 산출합니다.</p>
           <div className="callout-warn mt-2"><b>데이터 의존 안내</b> — 통계 보정에는 바인딩 산업의 <b>관측 시계열</b>이 필요합니다. 시계열 수집 파이프라인(KOSIS·ECOS 어댑터)이 활성화되면 실행이 가능합니다.</div>
         </div>
       ) : (

@@ -12,6 +12,8 @@ import type { OpportunityRow } from "./types.ts";
 export function DecisionTab({ ctx, selected }: { ctx: RouteDecisionStageState; selected: OpportunityRow }) {
   const { tab, decisions, saveDecision, canAct, track, setTrack, setIntent, setSubTrack, subTrack, subs, overrideBlocked, intent, stagingHint, rationale, setRationale, alternatives, setAlternatives, draftSaving, performSaveDraft, saving, canSubmit, draftSavedAt, totalScore, allScored, setTab, historyYear, historyMonth, historyOpen, setHistoryOpen, setHistoryYear, setHistoryMonth, sessions } = ctx;
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // D-22: when a decision is already on record, show what was recorded above the (empty) form.
+  const recorded = decisions.find((d) => d.is_current === 1) ?? decisions[0] ?? null;
   return (
     <>{tab === "decision" && (
         <div className="card">
@@ -33,6 +35,26 @@ export function DecisionTab({ ctx, selected }: { ctx: RouteDecisionStageState; s
               { label: "발굴 근거", value: selected.rationale ?? "—" },
             ]}
           />
+
+          {recorded && (
+            <ParamTable
+              caption="기록된 결정"
+              labelHeader="기록된 결정"
+              valueAlign="start"
+              rows={[
+                { label: "트랙", value: recorded.track === "brownfield" ? "Brownfield" : "Greenfield" },
+                { label: "라우트", value: recorded.sub_track ? (recorded.track === "brownfield" ? BF_SUB[recorded.sub_track] ?? recorded.sub_track : GF_SUB[recorded.sub_track] ?? recorded.sub_track) : "—" },
+                { label: "결정 근거", value: recorded.rationale || "—" },
+                { label: "검토한 대안", value: recorded.alternatives_considered || "—" },
+                { label: "결정자/일시", value: `${recorded.decided_by} · ${recorded.decided_at.slice(0, 10)}` },
+              ]}
+            />
+          )}
+          {recorded && (
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
+              아래 양식은 새 결정(또는 초안)을 입력하는 용도입니다. 위 내용이 현재 기록된 결정입니다.
+            </p>
+          )}
 
           <form id="route-form" onSubmit={saveDecision}>
           <fieldset disabled={!canAct} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
@@ -64,12 +86,12 @@ export function DecisionTab({ ctx, selected }: { ctx: RouteDecisionStageState; s
             </div>
             {overrideBlocked && (
               <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">
-                사전배제: 통제 필요도=高 + 역량접근 의도에서는 파트너십·R&BD·CVC 라우트를 선택할 수 없습니다 (합산 점수와 무관).
+                사전배제: 통제 필요도가 높고 + 역량접근 의도에서는 전략 제휴·R&BD·CVC 라우트를 선택할 수 없습니다 (합산 점수와 무관).
               </p>
             )}
             {stagingHint && (
               <p className="text-[length:var(--fs-caption)] text-[color:var(--accent)] mb-2">
-                스테이징 권고: 시장 불확실성이 高이고 통제 필요도가 中 이하 — 소수지분/공동개발 + 사전 협약된 step-up(call option / ROFR / 전환 트리거)을 권고합니다.
+                스테이징 권고: 시장 불확실성이 높고 통제 필요도가 중간 이하 — 소수지분/공동개발 + 사전 협약된 step-up(call option / ROFR / 전환 트리거)을 권고합니다.
               </p>
             )}
             <label className="text-[length:var(--fs-caption)] block mb-2">

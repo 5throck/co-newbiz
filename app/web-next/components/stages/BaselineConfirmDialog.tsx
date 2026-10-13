@@ -41,7 +41,7 @@ export function BaselineConfirmDialog({ findings, busy, onCancel, onConfirm }: {
       >
         <div className="modal-head"><h2 style={{ fontSize: "0.95rem" }}>실행 기준선 확인</h2></div>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2 mb-0">
-          현재 capex 트랜치와 입력한 기준선을 프로젝트 리드가 확인한 것으로 기록합니다. 확인 근거와 확인한 사람이 남으며, 이후 항목을 새로 기록하거나 트랜치가 바뀌면 다시 확정해야 합니다. 에이전트는 대신 확인할 수 없습니다. {/* INTERIM-WORDING */}
+          현재 설비투자 트랜치와 입력한 기준선을 프로젝트 리드가 확인한 것으로 기록합니다. 확인 근거와 확인한 사람이 남으며, 이후 항목을 새로 기록하거나 트랜치가 바뀌면 다시 확정해야 합니다. 에이전트는 대신 확인할 수 없습니다. {/* INTERIM-WORDING */}
         </p>
         {findings.length > 0 && (
           <div className="mt-3" data-testid="gx-ack-list">

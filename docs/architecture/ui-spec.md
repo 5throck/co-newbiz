@@ -260,3 +260,19 @@ Every checklist item row in the S9 DD workspace and the checklist library shows 
 ### As-built 2026-10-13 - S4 decision history row detail
 
 The "진출방식 결정 이력" table (`DecisionTab.tsx`) stays compact (cell-truncate on rationale and alternatives, plus a last "상세" column, `DECISION_COL_PCT` now 8 columns). Each row has a "더보기"/"접기" button (`aria-expanded`, `aria-controls`) that opens a full-width detail row: full rationale and alternatives (`white-space: pre-wrap`, wrapped, never truncated), score evidence list, staging recommendation and full timestamp. Empty alternatives read "기록된 대안 없음". Content comes from `lib/route-decision-history-view.ts` (`buildDecisionDetail`). One row is open at a time.
+
+## As-built 2026-10-13 — User-manual wording sweep (UI strings only)
+
+- Track-aware stage rail and tabs: StageFrame fetches the carrier's track from
+  the process API and renders the other track's stages with the existing
+  skipped/not-applicable state (W3-09/W1-12); stage screens for the other
+  track show an explanatory notice with a jump link instead of the stage body
+  (D-03/W2-02). Status derivation is untouched (backend-owned).
+- "원본 기회 보기" links: promoted-project cards, the project header and the
+  project stage tabs resolve the source opportunity from
+  `source_opportunity_id` / `GET /api/projects/:id/process` and link to its
+  S4 screen (W1-04/D-18).
+- Enum values stay raw in data and API; all user-visible tokens go through
+  label maps (`lib/labels.ts`, UI-local maps for scenario/percentile in
+  `IcReviewStage`). Agreement: partnership term is 전략 제휴 (glossary 1.3.0);
+  no "RAG" wording on decision surfaces.

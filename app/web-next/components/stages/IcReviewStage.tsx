@@ -29,6 +29,9 @@ import { fmtNpvKrwM } from "../../lib/npv-format.ts";
 // 확인(useConfirm)을 거친 analyst+ 행위다.
 
 interface SimRow { scenario: string; percentile: string; npv_krw_m: number; irr: number | null; note: string | null }
+// UI 표시용 라벨(식별자/enum 값은 그대로 유지)
+const SCENARIO_UI: Record<string, string> = { base: "기본", upside: "상승", downside: "하락" };
+const PCTL_UI: Record<string, string> = { p05: "하위 5%", p50: "중앙값", p95: "상위 5%" };
 interface AdoptedCase { id: string; name: string; kind: string; scenario: string | null; archived_at?: string | null; simulations: SimRow[] }
 interface IcPackage {
   project: { id: string; project_no: string };
@@ -74,7 +77,9 @@ const RAG_META: Record<string, { icon: string; cls: string }> = {
 
 // 데이터 신뢰도 등급(green/amber/red)의 한글 라벨 — 원문 등급은 개발자 세부정보 성격으로 괄호에 병기한다.
 const CAP_LABEL: Record<string, string> = { green: "높음", amber: "중간", red: "낮음" };
-const capLabel = (cap: string) => (CAP_LABEL[cap] ? `${CAP_LABEL[cap]} (${cap})` : cap);
+const capLabel = (cap: string) => CAP_LABEL[cap] ?? cap;
+// 종합 등급 표시명 — 원문(green/amber/red)은 화면에 노출하지 않는다.
+const RAG_LABEL: Record<string, string> = { green: "녹색(양호)", amber: "황색(주의)", red: "적색(위험)" };
 
 export function IcReviewStage({ projectId }: { projectId: string }) {
   const { me } = useAuth();
@@ -143,7 +148,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
           존재해야 S11이 완료됩니다.
           <Link href={`/projects/${projectId}/charter`} className="ml-2 underline">프로젝트 추진계획(차터) 보기 →</Link>
           <span className={`status-chip ${bothGatesGo ? "status-green" : "status-amber"} ml-2`}>
-            {bothGatesGo ? "● 투자심의위원회 2/2 GO" : "○ 투자심의위원회 미승인"}
+            {bothGatesGo ? "● 투자심의위원회 2/2 진행" : "○ 투자심의위원회 미승인"}
           </span>
           {estApplies && (
             <span className={`status-chip ${estComplete ? "status-green" : "status-amber"} ml-1`}>
@@ -158,10 +163,10 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
         {/* ── 투자심의 자료 요약 ─────────────────────────────────────────── */}
         <section className="market-section sizing-step" aria-label="투자심의 자료 요약">
           <h3 className="sizing-step-title text-[0.95rem]">
-            <span className="sizing-step-badge">📦</span> 투자심의 자료 — Business Case · DD · RAG 제안
+            <span className="sizing-step-badge">📦</span> 투자심의 자료 — 사업성 · 실사 · 종합 등급 제안
           </h3>
 
-          <h4 className="text-[length:var(--fs-body)] mt-2 mb-1">채택 Business Case (S8)</h4>
+          <h4 className="text-[length:var(--fs-body)] mt-2 mb-1">채택 사업성 케이스 (S8)</h4>
           {pkg?.business_case.adopted ? (
             <>
               <p className="text-[length:var(--fs-caption)]">
@@ -187,8 +192,8 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
                 <tbody>
                   {pkg.business_case.adopted.simulations.map((s, i) => (
                     <tr key={`${s.scenario}-${s.percentile}-${i}`}>
-                      <td>{s.scenario}</td>
-                      <td className="tabular-nums">{s.percentile}</td>
+                      <td>{SCENARIO_UI[s.scenario] ?? s.scenario}</td>
+                      <td className="tabular-nums">{PCTL_UI[s.percentile] ?? s.percentile}</td>
                       <td className="mono-num">{fmtNpvKrwM(s.npv_krw_m)}</td>
                       <td className="mono-num">{s.irr != null ? (s.irr * 100).toFixed(1) + "%" : "—"}</td>
                     </tr>
@@ -230,9 +235,9 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
           {pkg?.rag.grade ? (
             <p className="text-[length:var(--fs-caption)]">
               <span className={`status-chip ${RAG_META[pkg.rag.grade]?.cls ?? "status-not-started"}`}>
-                {RAG_META[pkg.rag.grade]?.icon ?? "?"} {pkg.rag.grade.toUpperCase()}
+                {RAG_META[pkg.rag.grade]?.icon ?? "?"} {RAG_LABEL[pkg.rag.grade] ?? pkg.rag.grade}
               </span>
-              <span className="status-chip status-amber ml-2" title="경계 #2 — 이 등급은 AI 분석이 제안한 값이며, IC 승인 기록이 아닙니다">
+              <span className="status-chip status-amber ml-2" title="이 등급은 AI 분석이 제안한 값이며, IC 승인 기록이 아닙니다">
                 ⚠ AI 추천 (승인 아님)
               </span>
               {pkg.rag.confidence_cap && (
@@ -248,8 +253,8 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
             // Incomplete assessment: NO overall grade and NO color — "not graded"
             // is a distinct outcome, never a default Amber.
             <p className="text-[length:var(--fs-caption)]">
-              <span className="status-chip status-not-started">○ 미산정 (not graded)</span>
-              <span className="status-chip status-amber ml-2" title="경계 #2 — 이 평가는 AI 분석이 제안한 값이며, IC 승인 기록이 아닙니다">
+              <span className="status-chip status-not-started">○ 미산정</span>
+              <span className="status-chip status-amber ml-2" title="이 평가는 AI 분석이 제안한 값이며, IC 승인 기록이 아닙니다">
                 ⚠ AI 추천 (승인 아님)
               </span>
               {pkg?.rag.confidence_cap && (
@@ -260,7 +265,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
               <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
                 {pkg?.rag.missing_dimensions?.length
                   ? `종합 등급을 낼 수 없습니다 — 미평가 차원: ${ragDimensionsLabel(pkg.rag.missing_dimensions)}. 여섯 차원이 모두 평가되어야 종합 등급이 산정됩니다 (빨강 신호는 예외로 즉시 표시).`
-                  : "RAG 평가 기록이 없습니다 — 입력이 채워지면 자동 제안됩니다."}
+                  : "종합 등급 평가 기록이 없습니다 — 입력이 채워지면 자동 제안됩니다."}
               </span>
             </p>
           )}
@@ -269,7 +274,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
             if (overrides.length === 0) return null;
             return (
               <>
-                <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">누락 산출물 예외 근거 (GO 기록 시 작성)</h4>
+                <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">누락 산출물 예외 근거 (진행 기록 시 작성)</h4>
                 <ul className="sizing-note-list" aria-label="누락 산출물 예외 근거">
                   {overrides.map((h) => (
                     <li key={h.id}>

@@ -6,6 +6,7 @@ import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
+import { evaluateProcess } from "../../../../../lib/process-flow.ts";
 
 function day(a: string, b: string): number | null {
   const d = (new Date(a).getTime() - new Date(b).getTime()) / (24 * 3600 * 1000);
@@ -32,6 +33,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return r?.d ?? null;
   };
   const m: Record<string, string | null> = {
+    S1: opp ? milestone(
+      `SELECT MAX(a.completed_at) AS d FROM market_sizing_analysis a
+         JOIN opportunity o ON o.industry_id = a.industry_id
+        WHERE o.id = ? AND a.status = 'completed'`, opp) : null,
     S2: opp ? milestone("SELECT MIN(created_at) AS d FROM opportunity WHERE id = ?", opp) : null,
     S3: opp ? milestone("SELECT MAX(completed_at) AS d FROM synergy_analysis WHERE opportunity_id = ? AND status = 'completed'", opp) : null,
     S4: opp ? milestone("SELECT MIN(decided_at) AS d FROM route_decision WHERE opportunity_id = ?", opp) : null,
@@ -48,6 +53,18 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const sla = db.query("SELECT stage_id, target_days FROM stage_sla").all() as Array<{ stage_id: string; target_days: number }>;
   const slaMap = new Map(sla.map((r) => [r.stage_id, r.target_days]));
 
+  // Stage status comes from the SAME engine as the stage rail (/process):
+  // S1-S7 from the source opportunity, S8-S12 from the project. Never derived
+  // from milestone presence (a missing timestamp is not "in progress").
+  const stageStatus = new Map<string, string>();
+  const projEval = evaluateProcess({ type: "project", id });
+  for (const st of projEval.stages) stageStatus.set(st.id, st.status);
+  if (opp) {
+    for (const st of evaluateProcess({ type: "opportunity", id: opp }).stages) {
+      if (st.sequence <= 7) stageStatus.set(st.id, st.status);
+    }
+  }
+
   const order = ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10", "S11", "S12"];
   const stages: Array<Record<string, unknown>> = [];
   let last: string | null = project.created_at;
@@ -62,8 +79,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       stage_id: sid, milestone_at: done, elapsed_days: elapsed,
       sla_target_days: target, sla_breach: breach,
       sla_set: slaMap.has(sid),
-      // 진행 중 단계(S11이 목표 미달성) — 실시간 경과는 생성 시점 기준 근사.
-      in_progress: done === null && last !== null,
+      status: stageStatus.get(sid) ?? null,
+      not_applicable: stageStatus.get(sid) === "skipped",
+      in_progress: stageStatus.get(sid) === "current",
     });
     if (done) last = done;
   }

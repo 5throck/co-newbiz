@@ -4,7 +4,7 @@
 import { useChartTheme } from "../../../lib/echarts-theme.ts";
 import { EChart } from "../../EChart.tsx";
 import { type SizingMatrix, segmentsOf, regionTotal, global2026, projection2030, bandFor } from "../../../lib/market-sizing.ts";
-import { SEGMENT_COLORS, r3 } from "./marketFormat.ts";
+import { SEGMENT_COLORS, r3, fmtBillions } from "./marketFormat.ts";
 import type { DriverSensitivity } from "./types.ts";
 
 /* ── 단계별 차트 ── */
@@ -54,7 +54,7 @@ export function AnchorChart({ matrix }: { matrix: SizingMatrix }) {
         barMaxWidth: 24,
         markLine: {
           symbol: "none",
-          data: [{ xAxis: matrix.anchor.total, label: { formatter: `앵커 $${Math.round(matrix.anchor.total).toLocaleString()}B`, color: ct.muted }, lineStyle: { color: ct.color[3], type: "dashed" as const, width: 2 } }],
+          data: [{ xAxis: matrix.anchor.total, label: { formatter: `앵커 $${fmtBillions(matrix.anchor.total)}B`, color: ct.muted }, lineStyle: { color: ct.color[3], type: "dashed" as const, width: 2 } }],
         },
       },
     ],
@@ -132,7 +132,7 @@ export function RegionTable({ matrix }: { matrix: SizingMatrix }) {
                 {segs.map((seg) => (
                   <td key={seg.code} className="tabular-nums">{Math.round(((g[seg.code] ?? 0) / g.total) * 1000) / 10}%</td>
                 ))}
-                <td className="tabular-nums font-semibold">{g.total.toFixed(2)} (앵커 ${Math.round(matrix.anchor.total).toLocaleString()})</td>
+                <td className="tabular-nums font-semibold">{g.total.toFixed(2)} (앵커 ${fmtBillions(matrix.anchor.total)})</td>
               </>
             );
           })()}

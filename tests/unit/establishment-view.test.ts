@@ -42,7 +42,7 @@ describe("establishment-view", () => {
     expect(establishmentApplies("joint")).toBe(true);
     expect(establishmentApplies("acquisition")).toBe(false);
     expect(establishmentApplies(null)).toBe(false);
-    expect(notApplicableNote("acquisition")).toContain("ADR-0047");
+    expect(notApplicableNote("acquisition")).toContain("PMI 킥오프");
     expect(notApplicableNote("acquisition")).toContain("PMI 킥오프");
   });
   test("assignee view marks revoked members with text and unassigned rows", () => {

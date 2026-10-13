@@ -504,7 +504,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                   ),
                   source: <span className="status-chip status-info">{view.wacc.source}</span>,
                 },
-                { label: "요구수익률(Hurdle IRR)", value: pct(view.hurdle_irr?.value) },
+                { label: "목표 수익률", value: pct(view.hurdle_irr?.value) },
                 {
                   label: "WACC 적용 주체",
                   value: view.subject.subject === "promoter" ? "투자주체 (promoter)" : view.subject.subject === "target" ? "대상기업 (target)" : "신설법인 (project_newco)",
@@ -523,7 +523,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                     }]
                   : []),
                 { label: "실행 번호", value: view.wacc.run_id ?? "—" },
-                { label: "As of", value: view.wacc.as_of ?? "—" },
+                { label: "기준일", value: view.wacc.as_of ?? "—" },
               ]}
             />
           )}
@@ -654,7 +654,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
             <form className="sizing-step grid gap-3 mt-0 rounded-tl-none" style={{ maxWidth: 460 }} onSubmit={submitDirect}>
               <h3 className="sizing-step-title">직접 입력{selectedTarget ? " — 개별 대상" : ""}</h3>
               <label className="grid gap-1 text-sm">WACC (비율)<input className="form-input" value={directWacc} onChange={(e) => setDirectWacc(e.target.value)} placeholder="0.095" /></label>
-              <label className="grid gap-1 text-sm">요구수익률(Hurdle IRR, 선택)<input className="form-input" value={directHurdle} onChange={(e) => setDirectHurdle(e.target.value)} placeholder="0.15" /></label>
+              <label className="grid gap-1 text-sm">목표 수익률(선택)<input className="form-input" value={directHurdle} onChange={(e) => setDirectHurdle(e.target.value)} placeholder="0.15" /></label>
               <label className="grid gap-1 text-sm">근거/승인 메모<textarea className="form-input" value={directRationale} onChange={(e) => setDirectRationale(e.target.value)} placeholder="Treasury 확인, IC 가이드라인 등" /></label>
               {selectedTarget ? (
                 <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
@@ -851,7 +851,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                 <label className="grid gap-1 text-sm">WACC (비율) — CAPM 계산값이 미리 채워짐
                   <input className="form-input" value={waccFinal} placeholder={computedWacc != null ? computedWacc.toFixed(4) : "0.095"} onChange={(e) => { setWaccFinal(e.target.value); setWaccTouched(true); }} />
                 </label>
-                <label className="grid gap-1 text-sm">요구수익률(Hurdle IRR, 선택)
+                <label className="grid gap-1 text-sm">목표 수익률(선택)
                   <input className="form-input" value={hurdle} placeholder="0.15" onChange={(e) => setHurdle(e.target.value)} />
                 </label>
               </div>

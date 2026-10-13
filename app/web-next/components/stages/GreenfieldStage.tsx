@@ -189,7 +189,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
           summary={
             <span className="flex items-center gap-1">
               <span className="status-chip status-not-started" title="P4 실행형: 평가 구성요소 진행 — S11 설립실행과 동일 상태 어휘">
-                {selected.opportunity.assessed_at ? "done" : "in_progress"} · {[entryStrategy !== "", gapRows.length > 0, bcLines.length > 0].filter(Boolean).length}/3 구성요소
+                {selected.opportunity.assessed_at ? "완료" : "진행 중"} · {[entryStrategy !== "", gapRows.length > 0, bcLines.length > 0].filter(Boolean).length}/3 구성요소
               </span>
               {selected.opportunity.assessed_at && <span className="status-chip status-green">평가 기록 v1+</span>}
             </span>
@@ -204,13 +204,13 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
         <form id="greenfield-eval-form" onSubmit={save} className="sizing-new-form">
           <fieldset disabled={!canAct} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           {/* 1. 진출전략 */}
-          <h3 className="text-[length:var(--fs-body)] mb-2">1️⃣ 진출전략 (Build / Partner / Hire / Invest 결정)</h3>
+          <h3 className="text-[length:var(--fs-body)] mb-2">1️⃣ 진출전략 (직접 구축 / 전략 제휴 / 인력 영입 / 지분 투자 중 선택)</h3>
           <textarea
             aria-label="진출전략"
             value={entryStrategy}
             onChange={(e) => setEntryStrategy(e.target.value)}
             rows={3}
-            placeholder="예: 코어 역량(제조)은 Build, 물류 운영은 Partner십(3PL), 부족 인력은 Hire — 역량 격차 해소 방식과 근거"
+            placeholder="예: 핵심 역량(제조)은 직접 구축, 물류 운영은 전략 제휴(외부 물류 업체), 부족 인력은 영입 — 역량 격차 해소 방식과 근거"
             className="sizing-new-input mb-2"
             style={{ width: "100%" }}
           />
@@ -348,11 +348,11 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
 
       <GateDecisionPanel opportunityId={selected.opportunity.id} gates={["pre_fs"]} />
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-        ↓ 위 Pre-FS 게이트가 <b>GO</b>로 기록되어야 아래 프로젝트 추진이 가능합니다 — 승인 기록은 판단, 추진은 그 판단을 전제로 한 장부상 전환입니다.
+        ↓ 위 예비타당성 검토 게이트가 <b>진행</b>으로 기록되어야 아래 프로젝트 추진이 가능합니다 — 승인 기록은 판단, 추진은 그 판단을 전제로 한 장부상 전환입니다.
       </p>
       <PromotionPanel
         opportunityId={selected.opportunity.id}
-        heading={`${selected.opportunity.name} — 프로젝트로 추진 (Pre-FS 승인 이후, S5 → S8)`}
+        heading={`${selected.opportunity.name} — 프로젝트로 추진 (예비타당성 검토 승인 이후, S5 → S8)`}
       />
     </>
   );

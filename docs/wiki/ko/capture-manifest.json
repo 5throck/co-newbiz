@@ -1,0 +1,836 @@
+{
+ "generated_for": "docs/wiki/ko — run: bun run manual:capture",
+ "viewport": {
+  "width": 1440,
+  "height": 900
+ },
+ "captures": [
+  {
+   "id": "common-01-login",
+   "file": "common-01-login.png",
+   "url": "/login",
+   "as": "anon",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "01-시작하기.md",
+   "caption": "로그인 화면"
+  },
+  {
+   "id": "common-02-password-change",
+   "file": "common-02-password-change.png",
+   "url": "/password-change",
+   "as": "password-change",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "01-시작하기.md",
+   "caption": "첫 로그인 후 비밀번호 변경 화면"
+  },
+  {
+   "id": "common-03-onboarding",
+   "file": "common-03-onboarding.png",
+   "url": "/onboarding",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "01-시작하기.md",
+   "caption": "온보딩 안내 화면"
+  },
+  {
+   "id": "common-04-home",
+   "file": "common-04-home.png",
+   "url": "/",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "01-시작하기.md",
+   "caption": "홈(대시보드)"
+  },
+  {
+   "id": "common-05-deals",
+   "file": "common-05-deals.png",
+   "url": "/deals",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "01-시작하기.md",
+   "caption": "안건 목록과 검색"
+  },
+  {
+   "id": "common-06-deal-overview",
+   "file": "common-06-deal-overview.png",
+   "url": "/deals/{bfOpp}",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "02-화면-구성.md",
+   "caption": "안건 개요와 탭 막대(브라운필드 데모)"
+  },
+  {
+   "id": "common-07-inbox",
+   "file": "common-07-inbox.png",
+   "url": "/inbox",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "02-화면-구성.md",
+   "caption": "받은 편지함"
+  },
+  {
+   "id": "common-08-proposal-confirm",
+   "file": "common-08-proposal-confirm.png",
+   "url": "/proposals/none/confirm",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "50-게이트와-투자심의.md",
+   "caption": "사람 확인 화면",
+   "skip": "열려 있는 제안이 시드에 없음(읽기 전용 원칙상 만들 수 없음)"
+  },
+  {
+   "id": "common-09-settings",
+   "file": "common-09-settings.png",
+   "url": "/settings",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "02-화면-구성.md",
+   "caption": "설정"
+  },
+  {
+   "id": "common-10-connected-apps",
+   "file": "common-10-connected-apps.png",
+   "url": "/settings/connected-apps",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "02-화면-구성.md",
+   "caption": "연결된 앱"
+  },
+  {
+   "id": "common-11-glossary",
+   "file": "common-11-glossary.png",
+   "url": "/glossary",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "02-화면-구성.md",
+   "caption": "용어집 조회"
+  },
+  {
+   "id": "s1-01-industry-list",
+   "file": "s1-01-industry-list.png",
+   "url": "/deals/{bfOpp}/s1",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "20-공통-S1-시장분석.md",
+   "caption": "S1 분석 대상 산업 표"
+  },
+  {
+   "id": "s1-02-report-overview",
+   "file": "s1-02-report-overview.png",
+   "url": "/deals/{bfOpp}/s1",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "steps": [
+    {
+     "click": "text=S1-S12 데모 산업"
+    }
+   ],
+   "page": "20-공통-S1-시장분석.md",
+   "caption": "S1 시장분석 리포트 개요 탭"
+  },
+  {
+   "id": "s1-03-competition",
+   "file": "s1-03-competition.png",
+   "url": "/deals/{bfOpp}/s1",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "steps": [
+    {
+     "click": "text=S1-S12 데모 산업"
+    },
+    {
+     "click": "role=tab[name=/경쟁 구조/]"
+    }
+   ],
+   "page": "20-공통-S1-시장분석.md",
+   "caption": "경쟁 구조 탭"
+  },
+  {
+   "id": "s1-04-market-workspace",
+   "file": "s1-04-market-workspace.png",
+   "url": "/market",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "20-공통-S1-시장분석.md",
+   "caption": "시장분석 작업 공간"
+  },
+  {
+   "id": "s2-01-funnel",
+   "file": "s2-01-funnel.png",
+   "url": "/deals/{bfOpp}/s2",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "21-공통-S2-기회-발굴.md",
+   "caption": "S2 기회 퍼널"
+  },
+  {
+   "id": "s2-02-opportunity-list",
+   "file": "s2-02-opportunity-list.png",
+   "url": "/opportunities",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "21-공통-S2-기회-발굴.md",
+   "caption": "기회 목록"
+  },
+  {
+   "id": "s2-03-opportunity-detail",
+   "file": "s2-03-opportunity-detail.png",
+   "url": "/opportunities/{bfOpp}",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "21-공통-S2-기회-발굴.md",
+   "caption": "기회 상세와 요인"
+  },
+  {
+   "id": "s3-01-synergy-list",
+   "file": "s3-01-synergy-list.png",
+   "url": "/deals/{bfOpp}/s3",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "22-공통-S3-시너지-전략적-적합성.md",
+   "caption": "S3 시너지 분석"
+  },
+  {
+   "id": "s3-02-our-company",
+   "file": "s3-02-our-company.png",
+   "url": "/our-company",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "22-공통-S3-시너지-전략적-적합성.md",
+   "caption": "우리 회사(자회사) 프로필"
+  },
+  {
+   "id": "s4-01-route-advisory",
+   "file": "s4-01-route-advisory.png",
+   "url": "/deals/{bfOpp}/s4",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "23-공통-S4-진출방식-결정.md",
+   "caption": "S4 진출방식 자문"
+  },
+  {
+   "id": "s4-02-evaluation-basis",
+   "file": "s4-02-evaluation-basis.png",
+   "url": "/deals/{bfOpp}/s4",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "steps": [
+    {
+     "click": "role=tab[name=/평가 근거/]"
+    }
+   ],
+   "fullPage": true,
+   "page": "23-공통-S4-진출방식-결정.md",
+   "caption": "S4 평가 근거"
+  },
+  {
+   "id": "s4-03-decision-recorded",
+   "file": "s4-03-decision-recorded.png",
+   "url": "/deals/{bfOpp}/s4",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "steps": [
+    {
+     "click": "role=tab[name=/^결정$/]"
+    }
+   ],
+   "fullPage": true,
+   "page": "23-공통-S4-진출방식-결정.md",
+   "caption": "S4 결정 기록됨(결정 탭)"
+  },
+  {
+   "id": "s4-04-gf-decision",
+   "file": "s4-04-gf-decision.png",
+   "url": "/deals/{gfOpp}/s4",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "steps": [
+    {
+     "click": "role=tab[name=/^결정$/]"
+    }
+   ],
+   "fullPage": true,
+   "page": "23-공통-S4-진출방식-결정.md",
+   "caption": "그린필드 안건의 S4 결정"
+  },
+  {
+   "id": "s8-01-business-case",
+   "file": "s8-01-business-case.png",
+   "url": "/projects/{bfProj}/business-case",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "40-공통-S8-사업성-분석.md",
+   "caption": "사업성 분석(브라운필드)"
+  },
+  {
+   "id": "s9-01-dd",
+   "file": "s9-01-dd.png",
+   "url": "/projects/{bfProj}/dd",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "41-공통-S9-실사-검증.md",
+   "caption": "실사 점검표"
+  },
+  {
+   "id": "s11-01-ic-review",
+   "file": "s11-01-ic-review.png",
+   "url": "/projects/{bfProj}/ic-review",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "43-공통-S11-투자심사-실행.md",
+   "caption": "투자심사 검토 묶음"
+  },
+  {
+   "id": "s12-01-portfolio",
+   "file": "s12-01-portfolio.png",
+   "url": "/projects/{bfProj}/portfolio",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "44-공통-S12-사후-관리.md",
+   "caption": "사후 관리"
+  },
+  {
+   "id": "common-12-stage-rail",
+   "file": "common-12-stage-rail.png",
+   "url": "/projects/{bfProj}/process",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "02-화면-구성.md",
+   "caption": "프로젝트 단계 띠"
+  },
+  {
+   "id": "common-13-projects",
+   "file": "common-13-projects.png",
+   "url": "/projects",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "02-화면-구성.md",
+   "caption": "프로젝트 목록"
+  },
+  {
+   "id": "s5-01-capability-gap",
+   "file": "s5-01-capability-gap.png",
+   "url": "/deals/{gfOpp}/s5",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "21-그린필드-S5-자체-진출.md",
+   "caption": "S5 역량 격차"
+  },
+  {
+   "id": "s5-02-scope-panel",
+   "file": "s5-02-scope-panel.png",
+   "url": "/deals/{gfOpp}/s5",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "steps": [
+    {
+     "scrollTo": "text=필요 역량 (S3) 확인"
+    }
+   ],
+   "page": "21-그린필드-S5-자체-진출.md",
+   "caption": "S5 범위 패널"
+  },
+  {
+   "id": "s5-03-recommendation",
+   "file": "s5-03-recommendation.png",
+   "url": "/deals/{gfOpp}/s5",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "fullPage": true,
+   "page": "21-그린필드-S5-자체-진출.md",
+   "caption": "S5 진출전략 권고"
+  },
+  {
+   "id": "gf-01-sites",
+   "file": "gf-01-sites.png",
+   "url": "/projects/{gfProj}/sites",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "22-그린필드-부지-인허가-인센티브.md",
+   "caption": "부지 검토"
+  },
+  {
+   "id": "gf-02-permits",
+   "file": "gf-02-permits.png",
+   "url": "/projects/{gfProj}/permits",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "22-그린필드-부지-인허가-인센티브.md",
+   "caption": "인허가 경로"
+  },
+  {
+   "id": "gf-03-incentives",
+   "file": "gf-03-incentives.png",
+   "url": "/projects/{gfProj}/incentives",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "22-그린필드-부지-인허가-인센티브.md",
+   "caption": "인센티브"
+  },
+  {
+   "id": "gf-04-partnership",
+   "file": "gf-04-partnership.png",
+   "url": "/projects/{gfProj}/partnership",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "22-그린필드-부지-인허가-인센티브.md",
+   "caption": "지역 협력"
+  },
+  {
+   "id": "s8-gf-01-business-case",
+   "file": "s8-gf-01-business-case.png",
+   "url": "/projects/{gfProj}/business-case",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "40-공통-S8-사업성-분석.md",
+   "caption": "사업성 분석(그린필드, 단일 범위)"
+  },
+  {
+   "id": "s9-gf-01-dd",
+   "file": "s9-gf-01-dd.png",
+   "url": "/projects/{gfProj}/dd",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "41-공통-S9-실사-검증.md",
+   "caption": "그린필드 실사"
+  },
+  {
+   "id": "s10-gf-01-execution-baseline",
+   "file": "s10-gf-01-execution-baseline.png",
+   "url": "/projects/{gfProj}/deal-structure",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "42-공통-S10-투자구조-설계.md",
+   "caption": "실행 기준선"
+  },
+  {
+   "id": "s10-gf-02-capex-tranches",
+   "file": "s10-gf-02-capex-tranches.png",
+   "url": "/projects/{gfProj}/deal-structure",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "steps": [
+    {
+     "click": "role=tab[name=/capex 집행 단계/]"
+    }
+   ],
+   "page": "42-공통-S10-투자구조-설계.md",
+   "caption": "투자 분할 집행"
+  },
+  {
+   "id": "s10-gf-03-baseline-confirm-dialog",
+   "file": "s10-gf-03-baseline-confirm-dialog.png",
+   "url": "/projects/{gfProj}/deal-structure",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "42-공통-S10-투자구조-설계.md",
+   "caption": "기준선 확정 대화상자(열기만 함)",
+   "skip": "데모 시드에 기준선이 이미 확정되어 있어 확정 대화상자를 열 수 없음"
+  },
+  {
+   "id": "s11-gf-01-establishment",
+   "file": "s11-gf-01-establishment.png",
+   "url": "/projects/{gfProj}/ic-review",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "43-공통-S11-투자심사-실행.md",
+   "caption": "설립 실행 5단계"
+  },
+  {
+   "id": "s12-gf-01-baseline-variance",
+   "file": "s12-gf-01-baseline-variance.png",
+   "url": "/projects/{gfProj}/portfolio",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "44-공통-S12-사후-관리.md",
+   "caption": "기준선 대비 차이"
+  },
+  {
+   "id": "gf-05-process",
+   "file": "gf-05-process.png",
+   "url": "/projects/{gfProj}/process",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "10-그린필드-여정.md",
+   "caption": "그린필드 단계 띠(S6·S7 미적용)"
+  },
+  {
+   "id": "gf-06-s6-not-applicable",
+   "file": "gf-06-s6-not-applicable.png",
+   "url": "/deals/{gfOpp}/s6",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "10-그린필드-여정.md",
+   "caption": "그린필드 안건의 S6 화면"
+  },
+  {
+   "id": "s6-01-universe-criteria",
+   "file": "s6-01-universe-criteria.png",
+   "url": "/deals/{bfOpp}/s6",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "31-브라운필드-S6-대상-후보-발굴.md",
+   "caption": "S6 후보군 기준"
+  },
+  {
+   "id": "s6-02-long-list",
+   "file": "s6-02-long-list.png",
+   "url": "/deals/{bfOpp}/s6",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "fullPage": true,
+   "page": "31-브라운필드-S6-대상-후보-발굴.md",
+   "caption": "S6 긴 목록"
+  },
+  {
+   "id": "s6-03-candidate-dialog",
+   "file": "s6-03-candidate-dialog.png",
+   "url": "/deals/{bfOpp}/s6",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "31-브라운필드-S6-대상-후보-발굴.md",
+   "caption": "후보 추가 대화상자(열기만 함)",
+   "skip": "대화상자 열기 버튼 라벨이 쓰기 가드와 겹쳐 안전하게 열 수 없음; 매니페스트 작성 후 개별 확인 필요"
+  },
+  {
+   "id": "s7-01-screening",
+   "file": "s7-01-screening.png",
+   "url": "/deals/{bfOpp}/s7",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "32-브라운필드-S7-대상-선정.md",
+   "caption": "S7 스크리닝"
+  },
+  {
+   "id": "s7-02-short-list",
+   "file": "s7-02-short-list.png",
+   "url": "/deals/{bfOpp}/s7",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "fullPage": true,
+   "page": "32-브라운필드-S7-대상-선정.md",
+   "caption": "S7 짧은 목록"
+  },
+  {
+   "id": "s7-03-target-selection",
+   "file": "s7-03-target-selection.png",
+   "url": "/deals/{bfOpp}/s7",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "32-브라운필드-S7-대상-선정.md",
+   "caption": "S7 대상 선정"
+  },
+  {
+   "id": "bf-01-target-detail",
+   "file": "bf-01-target-detail.png",
+   "url": "/brownfield/targets/{bfTarget}",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "33-브라운필드-대상-상세.md",
+   "caption": "대상 상세"
+  },
+  {
+   "id": "bf-02-companies",
+   "file": "bf-02-companies.png",
+   "url": "/companies",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "33-브라운필드-대상-상세.md",
+   "caption": "회사 목록"
+  },
+  {
+   "id": "bf-03-company-detail",
+   "file": "bf-03-company-detail.png",
+   "url": "/companies/{bfCompany}",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "33-브라운필드-대상-상세.md",
+   "caption": "회사 상세"
+  },
+  {
+   "id": "s8-bf-01-target-compare",
+   "file": "s8-bf-01-target-compare.png",
+   "url": "/projects/{bfProj}/business-case",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "fullPage": true,
+   "page": "40-공통-S8-사업성-분석.md",
+   "caption": "대상별 비교"
+  },
+  {
+   "id": "s9-bf-01-validators",
+   "file": "s9-bf-01-validators.png",
+   "url": "/projects/{bfProj}/dd",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "fullPage": true,
+   "page": "41-공통-S9-실사-검증.md",
+   "caption": "M&A 검증 순서"
+  },
+  {
+   "id": "bf-04-customer-coc",
+   "file": "bf-04-customer-coc.png",
+   "url": "/projects/{bfProj}/customer-coc",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "41-공통-S9-실사-검증.md",
+   "caption": "고객 지배권 변경 조항"
+  },
+  {
+   "id": "bf-05-comp-parity",
+   "file": "bf-05-comp-parity.png",
+   "url": "/projects/{bfProj}/comp-parity",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "41-공통-S9-실사-검증.md",
+   "caption": "보상 균등화"
+  },
+  {
+   "id": "bf-06-interviews",
+   "file": "bf-06-interviews.png",
+   "url": "/projects/{bfProj}/interviews",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "41-공통-S9-실사-검증.md",
+   "caption": "인터뷰"
+  },
+  {
+   "id": "s10-bf-01-deal-structure",
+   "file": "s10-bf-01-deal-structure.png",
+   "url": "/projects/{bfProj}/deal-structure",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "42-공통-S10-투자구조-설계.md",
+   "caption": "거래 구조"
+  },
+  {
+   "id": "s10-bf-02-debt",
+   "file": "s10-bf-02-debt.png",
+   "url": "/projects/{bfProj}/debt",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "42-공통-S10-투자구조-설계.md",
+   "caption": "부채·우발채무"
+  },
+  {
+   "id": "s11-bf-01-closing",
+   "file": "s11-bf-01-closing.png",
+   "url": "/projects/{bfProj}/ic-review",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "fullPage": true,
+   "page": "43-공통-S11-투자심사-실행.md",
+   "caption": "브라운필드 투자심사"
+  },
+  {
+   "id": "s12-bf-01-pmi",
+   "file": "s12-bf-01-pmi.png",
+   "url": "/projects/{bfProj}/pmi",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "44-공통-S12-사후-관리.md",
+   "caption": "인수 후 통합"
+  },
+  {
+   "id": "proj-wacc",
+   "file": "proj-wacc.png",
+   "url": "/projects/{bfProj}/wacc",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "02-화면-구성.md",
+   "caption": "프로젝트 wacc 화면"
+  },
+  {
+   "id": "proj-financial-analysis",
+   "file": "proj-financial-analysis.png",
+   "url": "/projects/{bfProj}/financial-analysis",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "02-화면-구성.md",
+   "caption": "프로젝트 financial-analysis 화면"
+  },
+  {
+   "id": "proj-proxy-chain",
+   "file": "proj-proxy-chain.png",
+   "url": "/projects/{bfProj}/proxy-chain",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "02-화면-구성.md",
+   "caption": "프로젝트 proxy-chain 화면"
+  },
+  {
+   "id": "proj-risk-heatmap",
+   "file": "proj-risk-heatmap.png",
+   "url": "/projects/{bfProj}/risk-heatmap",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "02-화면-구성.md",
+   "caption": "프로젝트 risk-heatmap 화면"
+  },
+  {
+   "id": "proj-timeline",
+   "file": "proj-timeline.png",
+   "url": "/projects/{bfProj}/timeline",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "02-화면-구성.md",
+   "caption": "프로젝트 timeline 화면"
+  },
+  {
+   "id": "proj-reports",
+   "file": "proj-reports.png",
+   "url": "/projects/{bfProj}/reports",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "02-화면-구성.md",
+   "caption": "프로젝트 reports 화면"
+  },
+  {
+   "id": "proj-share",
+   "file": "proj-share.png",
+   "url": "/projects/{bfProj}/share",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "02-화면-구성.md",
+   "caption": "프로젝트 share 화면"
+  },
+  {
+   "id": "proj-agent-runs",
+   "file": "proj-agent-runs.png",
+   "url": "/projects/{bfProj}/agent-runs",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "02-화면-구성.md",
+   "caption": "프로젝트 agent-runs 화면"
+  },
+  {
+   "id": "proj-backtest",
+   "file": "proj-backtest.png",
+   "url": "/projects/{bfProj}/backtest",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "02-화면-구성.md",
+   "caption": "프로젝트 backtest 화면"
+  },
+  {
+   "id": "proj-portfolio",
+   "file": "proj-portfolio.png",
+   "url": "/projects/{bfProj}/portfolio",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "02-화면-구성.md",
+   "caption": "프로젝트 portfolio 화면"
+  },
+  {
+   "id": "proj-charter",
+   "file": "proj-charter.png",
+   "url": "/projects/{bfProj}/charter",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "02-화면-구성.md",
+   "caption": "프로젝트 charter 화면"
+  },
+  {
+   "id": "proj-ic-review",
+   "file": "proj-ic-review.png",
+   "url": "/projects/{bfProj}/ic-review",
+   "as": "analyst",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "43-공통-S11-투자심사-실행.md",
+   "caption": "프로젝트 투자심사 화면"
+  },
+  {
+   "id": "admin-admin",
+   "file": "admin-admin.png",
+   "url": "/admin",
+   "as": "admin",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "70-관리자-화면.md",
+   "caption": "관리자 첫 화면"
+  },
+  {
+   "id": "admin-users",
+   "file": "admin-users.png",
+   "url": "/admin/users",
+   "as": "admin",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "blur": [
+    "td:first-child"
+   ],
+   "page": "70-관리자-화면.md",
+   "caption": "사용자 관리"
+  },
+  {
+   "id": "admin-master-data",
+   "file": "admin-master-data.png",
+   "url": "/admin/master-data",
+   "as": "admin",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "70-관리자-화면.md",
+   "caption": "기준 정보"
+  },
+  {
+   "id": "admin-data-sources",
+   "file": "admin-data-sources.png",
+   "url": "/admin/data-sources",
+   "as": "admin",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "70-관리자-화면.md",
+   "caption": "데이터 출처"
+  },
+  {
+   "id": "admin-schedule",
+   "file": "admin-schedule.png",
+   "url": "/admin/schedule",
+   "as": "admin",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "70-관리자-화면.md",
+   "caption": "예약 작업"
+  },
+  {
+   "id": "admin-system-mode",
+   "file": "admin-system-mode.png",
+   "url": "/admin/system-mode",
+   "as": "admin",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "70-관리자-화면.md",
+   "caption": "시스템 모드"
+  },
+  {
+   "id": "admin-audit",
+   "file": "admin-audit.png",
+   "url": "/admin/audit",
+   "as": "admin",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "70-관리자-화면.md",
+   "caption": "감사 기록"
+  },
+  {
+   "id": "admin-notifications",
+   "file": "admin-notifications.png",
+   "url": "/admin/notifications",
+   "as": "admin",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "70-관리자-화면.md",
+   "caption": "알림"
+  },
+  {
+   "id": "admin-adr",
+   "file": "admin-adr.png",
+   "url": "/admin/adr",
+   "as": "admin",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "70-관리자-화면.md",
+   "caption": "설계 결정 기록"
+  },
+  {
+   "id": "admin-governance",
+   "file": "admin-governance.png",
+   "url": "/admin/governance",
+   "as": "admin",
+   "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "page": "70-관리자-화면.md",
+   "caption": "거버넌스"
+  }
+ ]
+}

@@ -73,8 +73,11 @@ export function computeTrackAdvisory(db: Database, opportunityId: string): Track
         s1HasCompetitive = true;
         const players = comp.players ?? [];
         const leaders = players.filter((p) => p.tier === "leader").length;
-        const concentrated = /독점|과점|독과점|寡占/.test(comp.structure) || (players.length >= 2 && leaders / players.length >= 0.5);
         const fragmented = /분산|파편화|경쟁이 치열/.test(comp.structure);
+        // The recorded structure text outranks the leader-ratio heuristic: a
+        // structure that says "분산" must not be read as concentrated just
+        // because one of two listed players is tiered "leader" (user-manual W1-07).
+        const concentrated = /독점|과점|독과점|寡占/.test(comp.structure) || (!fragmented && players.length >= 2 && leaders / players.length >= 0.5);
         if (concentrated) {
           signals.push({
             key: "competitive_structure", label: `경쟁 구조 집중 (플레이어 ${players.length}건)`,

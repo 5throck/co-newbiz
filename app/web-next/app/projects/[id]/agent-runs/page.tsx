@@ -78,12 +78,12 @@ function AgentRunsView() {
         )}
         <p className="note" style={{ marginBottom: 0 }}>일치율은 학습 신호일 뿐 진행 처리에 사용되지 않습니다 — 판단은 사람이 유지합니다.</p>
       </section>
-      <section className="market-section" aria-label="PROPOSAL 기록">
-        <h2 className="text-[0.9rem] mb-2">위원회 PROPOSAL 기록</h2>
+      <section className="market-section" aria-label="제안 기록">
+        <h2 className="text-[0.9rem] mb-2">위원회 제안 기록</h2>
         {data === null ? <PageState state="loading" /> : data.proposals.length === 0 ? (
           <PageState state="empty" emptyText="기록된 위원회 제안이 없습니다." />
         ) : (
-          <table className="data-table" aria-label="PROPOSAL">
+          <table className="data-table" aria-label="제안">
             <thead><tr><th>시각</th><th>진행</th><th>권고 (제안)</th></tr></thead>
             <tbody>{data.proposals.map((p) => (
               <tr key={p.id}>

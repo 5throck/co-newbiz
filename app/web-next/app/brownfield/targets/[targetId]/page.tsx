@@ -93,7 +93,7 @@ export function TargetDetailView() {
                 {STATUS_LABEL[t.status]}{t.status === "shortlisted" && t.rank ? ` #${t.rank}` : ""}
               </span>
             </div>
-            <ListBackButton href={`/brownfield?opportunity=${encodeURIComponent(opportunity.id)}`} label="Long List 목록으로" />
+            <ListBackButton href={`/brownfield?opportunity=${encodeURIComponent(opportunity.id)}`} label="후보 전체 목록 목록으로" />
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className={`status-chip ${scoreChip(scores.financial.score)}`} title="재무 평가 100점 가중 점수">재무 {scores.financial.score ?? "—"}</span>
@@ -109,10 +109,10 @@ export function TargetDetailView() {
                 type="button"
                 className="btn-premium btn-sm"
                 disabled={busy || !evalComplete}
-                title={evalComplete ? "Short List로 승격" : "재무·기술 평가를 모두 판정한 뒤 승격할 수 있습니다"}
+                title={evalComplete ? "최종 후보 목록으로 승격" : "재무·기술 평가를 모두 판정한 뒤 승격할 수 있습니다"}
                 onClick={() => void shortlist()}
               >
-                Short List 승격
+                최종 후보 목록 승격
               </button>
             )}
             {canAct && t.status !== "excluded" && (
@@ -128,7 +128,7 @@ export function TargetDetailView() {
                 <button type="button" className="btn-ghost btn-sm whitespace-nowrap" disabled={busy || !excludeReason.trim()} onClick={() => void exclude()}>제외</button>
               </span>
             )}
-            {t.status === "shortlisted" && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">Short List 승격 완료 — 순위 조정은 목록 화면에서</span>}
+            {t.status === "shortlisted" && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">최종 후보 목록 승격 완료 — 순위 조정은 목록 화면에서</span>}
           </div>
         </div>
       </section>
@@ -190,7 +190,7 @@ export function TargetDetailView() {
 
         {/* ── 사전 검토 근거(읽기 전용 참고 탭) — 위원회 추천 검토·등록·
             재분석에서 수집된 정보의 저장소(사용자 결정, 2026-09-16). 판정
-            기록은 /brownfield Short List "사전 검토" 섹션에서 하고, 여기서는
+            기록은 /brownfield 최종 후보 목록 "사전 검토" 섹션에서 하고, 여기서는
             확정된 판정·항목별 근거·수집 타임라인을 나중에 참고할 수 있게
             보여준다. 수집된 근거가 없으면 탭 자체가 숨는다. ── */}
         <TargetPrecheckTab ctx={ctx} screening_summary={screening_summary} savedVerdicts={savedVerdicts} checklist={checklist} itemEvidence={itemEvidence} evidence={evidence} />

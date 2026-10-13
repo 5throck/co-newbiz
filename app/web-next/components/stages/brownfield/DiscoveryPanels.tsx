@@ -16,7 +16,7 @@ export function WebDiscoveryPanel({ ctx }: { ctx: BrownfieldStageState }) {
             <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
               실시간 웹 검색으로 근거를 찾고, 그 근거에 등장하는 회사만 후보로 제안합니다 (근거 없는
               회사명은 만들지 않습니다). 검색을 쓸 수 없으면 AI 자체 지식 기반 미검증 제안으로 대체됩니다.
-              등록은 항목별 "Long List에 등록" 클릭으로만 이뤄집니다.
+              등록은 항목별 "후보 전체 목록에 등록" 클릭으로만 이뤄집니다.
             </p>
             {webBusy && webProposals === null ? (
               <p className="my-4 text-center text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">웹 검색·제안 생성 중...</p>
@@ -59,7 +59,7 @@ export function WebDiscoveryPanel({ ctx }: { ctx: BrownfieldStageState }) {
                           disabled={webBusy}
                           onClick={() => void acceptProposal(s.company_name, s.dart_corp_code ?? null, "web_proposal", `웹 검색 제안 — ${s.rationale.slice(0, 80)} (출처: ${s.sources[0]?.url ?? "없음"})`)}
                         >
-                          Long List에 등록
+                          후보 전체 목록에 등록
                         </button>
                         <button
                           type="button"

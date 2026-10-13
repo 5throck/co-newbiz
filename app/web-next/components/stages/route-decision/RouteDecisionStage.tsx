@@ -52,7 +52,7 @@ export function RouteDecisionStage(props0: { opportunityId: string; rationalePar
     ? "진출방식 결정은 analyst 권한이 필요합니다."
     : saving
       ? "확정 중입니다."
-      : "의사결정 탭에서 채점·근거·대안을 모두 채우면 제안할 수 있습니다.";
+      : "결정 탭에서 채점·근거·대안을 모두 채우면 제안할 수 있습니다.";
   return (
     <>
       {tab === "decision" ? (

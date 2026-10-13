@@ -24,7 +24,7 @@ export function UniverseSection({ ctx }: { ctx: BrownfieldStageState }) {
             ) : (
               <>
                 <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                  아직 정의되지 않았습니다 — S6 완료기준입니다. 후보 등록 전에 후보 자격 기준(Long List 범위)과 최소 커버리지를 확정하세요. Long List를 Short List로 좁히는 실제 평가는 S7의 재무·기술 평가에서 이뤄집니다.
+                  아직 정의되지 않았습니다 — S6 완료기준입니다. 후보 등록 전에 후보 자격 기준(후보 전체 목록 범위)과 최소 커버리지를 확정하세요. 후보 전체 목록을 최종 후보 목록으로 좁히는 실제 평가는 S7의 재무·기술 평가에서 이뤄집니다.
                 </p>
                 {canAct && <button type="button" className="btn-ghost btn-sm" onClick={openUniverseEditor}>목표 시장 정의 시작</button>}
               </>
@@ -36,7 +36,7 @@ export function UniverseSection({ ctx }: { ctx: BrownfieldStageState }) {
             두 방식을 한 카드에 모은다(mockup baseline-v5.html S6/S7 card② 차용).
             목표 시장 정의 옆에 좌/우로 배치한다(사용자 요청, 2026-09-15). ── */}
         <section aria-label="후보 발굴" className="market-section mb-0 flex flex-col">
-          <SectionToolbar title="후보 발굴 — Long List 채우기" />
+          <SectionToolbar title="후보 발굴 — 후보 전체 목록 채우기" />
           <div className="sizing-grade-card flex-1">
             {!canAct && <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">후보 발굴·등록은 분석가 권한이 필요합니다.</p>}
             {canAct && (<>
@@ -60,15 +60,15 @@ export function UniverseSection({ ctx }: { ctx: BrownfieldStageState }) {
               </button>
             </div>
 
-            {/* 등록 폼 + DART 검색 통합(사용자 요청, 2026-09-15) — 회사명을 입력하고
-                "DART 검색"으로 찾은 결과를 클릭하면 회사명·고유번호가 폼에 채워진다.
-                DART에 없는(비상장 등) 회사는 그대로 직접 입력해 등록할 수 있다.
-                dart_corp_code가 채워진 채 등록되면 상세 화면의 DART 정보(재무
+            {/* 등록 폼 + 전자공시 검색 통합(사용자 요청, 2026-09-15) — 회사명을 입력하고
+                "전자공시 검색"으로 찾은 결과를 클릭하면 회사명·고유번호가 폼에 채워진다.
+                전자공시에 없는(비상장 등) 회사는 그대로 직접 입력해 등록할 수 있다.
+                dart_corp_code가 채워진 채 등록되면 상세 화면의 전자공시 정보(재무
                 facts·공시)가 바로 활성화된다. */}
             <form onSubmit={addTarget} className="sizing-new-form mb-2">
               <div className="flex flex-wrap items-end gap-2">
                 <label className="text-[length:var(--fs-caption)]" style={{ flex: "1 1 14rem" }}>
-                  <span className="block mb-1">후보 회사명 * (Long List)</span>
+                  <span className="block mb-1">후보 회사명 * (후보 전체 목록)</span>
                   <input
                     value={newTarget.company_name}
                     onChange={(e) => { setNewTarget({ ...newTarget, company_name: e.target.value }); setDartResults(null); }}
@@ -78,7 +78,7 @@ export function UniverseSection({ ctx }: { ctx: BrownfieldStageState }) {
                   />
                 </label>
                 <label className="text-[length:var(--fs-caption)]" style={{ flex: "1 1 11rem" }}>
-                  <span className="block mb-1">DART 고유번호 (선택, 8자리)</span>
+                  <span className="block mb-1">전자공시 고유번호 (선택, 8자리)</span>
                   <input value={newTarget.dart_corp_code} onChange={(e) => setNewTarget({ ...newTarget, dart_corp_code: e.target.value })} placeholder="검색 결과 선택 또는 직접 입력" className="sizing-new-input sizing-new-input-sm w-full" />
                 </label>
                 <button
@@ -87,13 +87,13 @@ export function UniverseSection({ ctx }: { ctx: BrownfieldStageState }) {
                   disabled={dartBusy || !newTarget.company_name.trim()}
                   onClick={() => void searchDartCompanies(newTarget.company_name)}
                 >
-                  {dartBusy ? "검색 중..." : "DART 검색"}
+                  {dartBusy ? "검색 중..." : "전자공시 검색"}
                 </button>
                 <button type="submit" className="btn-premium btn-sm shrink-0" disabled={busy || !newTarget.company_name.trim()}>후보 등록</button>
               </div>
               {dartError && <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{dartError}</p>}
               {dartResults !== null && dartResults.length === 0 && !dartError && (
-                <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">DART 검색 결과가 없습니다 — 비상장 등 미등록 회사라면 위 필드에 직접 입력해 등록하세요.</p>
+                <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">전자공시 검색 결과가 없습니다 — 비상장 등 미등록 회사라면 위 필드에 직접 입력해 등록하세요.</p>
               )}
               {dartResults !== null && dartResults.length > 0 && (
                 <ul className="sizing-note-list mt-1">
@@ -102,9 +102,9 @@ export function UniverseSection({ ctx }: { ctx: BrownfieldStageState }) {
                       <code className="dd-item-id">{r.corp_code}</code>
                       <span className="flex-1 min-w-[12rem] text-[length:var(--fs-caption)]">{r.corp_name}</span>
                       {r.source === "web" ? (
-                        <span className="status-chip status-amber" title="DART 직접 조회 실패 시 웹 검색으로 수집된 미검증 후보">웹 수집</span>
+                        <span className="status-chip status-amber" title="전자공시 직접 조회 실패 시 웹 검색으로 수집된 미검증 후보">웹 수집</span>
                       ) : (
-                        <span className="status-chip status-green" title={r.source === "local" ? "기업 마스터" : "DART 기업목록 조회"}>검증</span>
+                        <span className="status-chip status-green" title={r.source === "local" ? "기업 마스터" : "전자공시 기업목록 조회"}>검증</span>
                       )}
                       <button
                         type="button"

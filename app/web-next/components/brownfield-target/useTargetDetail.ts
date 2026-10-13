@@ -22,7 +22,7 @@ export function useTargetDetail() {
   const [excludeReason, setExcludeReason] = useState("");
   // 프로파일 탭 — 그룹/계열사 프로파일과 유사한 구조(library-tabs 패턴).
   // "사전 검토 근거"는 읽기 전용 참고 탭 — 수집된 근거가 있을 때만 탭 목록에
-  // 나타난다. 판정 기록은 /brownfield Short List "사전 검토" 섹션에서 한다.
+  // 나타난다. 판정 기록은 /brownfield 최종 후보 목록 "사전 검토" 섹션에서 한다.
   const [profileTab, setProfileTab] = useState<"overview" | "aiprofile" | "financials" | "disclosures" | "precheck" | "eval" | "sources">("overview");
   // AI 분석 — 그룹/계열사 화면과 동일한 LLM 프로파일 파이프라인 재사용(일반화, 2026-09-15).
   const [companyProfile, setCompanyProfile] = useState<CompanyProfileResp | null | undefined>(undefined);

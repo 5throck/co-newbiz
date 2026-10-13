@@ -96,7 +96,8 @@ describe("source-reading checks", () => {
     expect(src).toContain('tab === "goals" && <GoalsPanel');
     expect(src).toContain("<GoalsBanner");
     expect(src).toContain("<GoalAttainmentTable");
-    expect(src).toContain("<NoGoalsCallout");
+    // W1-19/W2-07: NoGoalsCallout is no longer rendered here — GoalsBanner already shows the 목표 미설정 state once.
+    expect(src).not.toContain("<NoGoalsCallout");
     expect(src).toContain(GOALS_ACK_REQUIRED_CODE);
     expect(src).toContain("goals_ack");
     expect(src).toContain("shouldRedirectTargetsTab");
@@ -164,5 +165,15 @@ describe("S8 scenario row actions (RowMenu)", () => {
     expect(src).toContain("편집 대상:");
     expect(src).toContain("라인 편집기가 아래에 열렸습니다");
     expect(src).toContain('.row-menu-trigger`)?.focus()');
+  });
+});
+
+describe("S8 median-gap hint (cross-check signal, not a bug)", () => {
+  const src = readFileSync(join(import.meta.dir, "../../app/web-next/components/stages/BusinessCaseStage.tsx"), "utf8");
+  test("large median gap shows growth-assumption explanation and links to the 설명 tab", () => {
+    expect(src).toContain("P50_GAP_WARN_RATIO");
+    expect(src).toContain('data-testid="p50-gap-hint"');
+    expect(src).toContain("성장 가정 차이가 지배적");
+    expect(src).toContain('onClick={() => setTab("overview")}');
   });
 });

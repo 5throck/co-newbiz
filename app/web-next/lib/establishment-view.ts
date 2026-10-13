@@ -65,7 +65,7 @@ export function originLabel(origin: string | null | undefined): string {
 
 /** Info note replacing the empty table for brownfield / unclassified projects. */
 export function notApplicableNote(origin: string | null | undefined): string {
-  return `이 프로젝트의 추진 방식(${originLabel(origin)})에는 설립 실행 5단계가 적용되지 않습니다 (ADR-0047). 인수·지분 투자 프로젝트는 PMI 킥오프에서 통합 계획을 기록합니다.`;
+  return `이 프로젝트의 추진 방식(${originLabel(origin)})에는 설립 실행 5단계가 적용되지 않습니다. 인수·지분 투자 프로젝트는 PMI 킥오프에서 통합 계획을 기록합니다.`;
 }
 
 export const ESTABLISHMENT_CAPTION =

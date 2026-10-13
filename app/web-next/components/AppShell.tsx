@@ -315,6 +315,7 @@ function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar, inboxCount = 0 }
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-current={active ? "page" : undefined}
                   className={`side-nav-link ${active ? "side-nav-link-active" : ""}`}
                 >
                   {ADMIN_ICON_BY_HREF[item.href] ?? CHILD_ICON}

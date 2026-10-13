@@ -49,6 +49,8 @@ interface OpportunityRow {
   synergy_score: number | null;
   status: "identified" | "assessed" | "selected" | "dropped";
   project_id: string | null;
+  /** 1 when an S4 route decision is recorded (waiting label must not say S4 대기 then). */
+  route_decided?: number | boolean | null;
 }
 
 type Track = "greenfield" | "brownfield";
@@ -69,6 +71,8 @@ type Card = {
   track: Track | null;
   meta: string;
   href: string;
+  /** Promoted projects: the opportunity they came from (S1-S4 live there). */
+  sourceHref?: string;
 };
 type PausedInfo = { reason: string; link: string | null };
 
@@ -121,6 +125,8 @@ function DealsBoard() {
     if (o.status === "selected") return "S4";
     return "—";
   };
+  const waitingLabelFor = (o: OpportunityRow): string =>
+    o.project_id ? "프로젝트 승격됨" : o.route_decided ? "S4 결정 기록됨 · 승격 대기" : "S4 대기";
   const stageNum = (s: string) => (s.startsWith("S") ? Number(s.slice(1)) : 99);
 
   // 검토/안건(기회) 단위 HOLD — /deals의 "HOLD" 필터와 같은 출처
@@ -151,7 +157,7 @@ function DealsBoard() {
         const stage = stageOf(o);
         const holdGates = opportunityHolds.get(o.id) ?? [];
         const hold = holdGates.length > 0;
-        const chips = buildCardChips(stage, holdGates, o.status === "selected" ? "S4 대기" : undefined);
+        const chips = buildCardChips(stage, holdGates, o.status === "selected" ? waitingLabelFor(o) : undefined);
         return {
           kind: "opportunity", id: o.id, name: o.name, queryText: o.name, stage,
           // "대기"(자연스러운 다음 단계 대기)와 "HOLD"(게이트에서 명시적으로
@@ -165,6 +171,8 @@ function DealsBoard() {
           href: opportunityStatusHref(o.id, o.status),
         };
       });
+    const oppByProject = new Map<string, string>();
+    for (const o of opps ?? []) if (o.project_id) oppByProject.set(o.project_id, o.id);
     const projectCards: Card[] = (data?.projects ?? []).map((p): Card => {
       const stage = p.currentStage ?? "S8";
       const holdGates = Object.entries(p.gates).filter(([, v]) => v === "hold").map(([g]) => g);
@@ -178,6 +186,7 @@ function DealsBoard() {
         hold, track,
         meta: p.projectNo,
         href: projectStageHref(p.projectId, stage),
+        sourceHref: oppByProject.has(p.projectId) ? `/deals/${encodeURIComponent(oppByProject.get(p.projectId)!)}/s4` : undefined,
       };
     });
     return [...oppCards, ...projectCards];
@@ -283,7 +292,8 @@ function DealsBoard() {
                     {colCards.map((c) => {
                       const p = paused[c.id];
                       return (
-                        <Link key={c.id} href={c.href} className="funnel-card" style={{ color: "inherit", textDecoration: "none" }}>
+                        <div key={c.id}>
+                        <Link href={c.href} className="funnel-card" style={{ color: "inherit", textDecoration: "none" }}>
                           <span className="funnel-card-name font-semibold">{c.name}</span>
                           <span className="funnel-card-meta">
                             <span className={`status-chip ${stageTone[c.tone]}`}>{c.stageLabel}</span>
@@ -304,6 +314,10 @@ function DealsBoard() {
                             </span>
                           )}
                         </Link>
+                        {c.sourceHref && (
+                          <Link href={c.sourceHref} className="btn-ghost btn-sm">원본 기회 보기</Link>
+                        )}
+                        </div>
                       );
                     })}
                     {colCards.length === 0 && <p className="funnel-empty">해당 단계의 검토/안건이 없습니다</p>}

@@ -132,7 +132,7 @@ export function ValuationMethodology({
             <tr>
               <td>⑦ 분포 산출</td>
               <td>시드 기반 몬테카를로 — 동일 시드로 재현 가능 (ADR-0052 §D.4)</td>
-              <td className="num mono-num">{iterations != null ? iterations.toLocaleString() + "회" : "—"} → p05/p50/p95·IRR</td>
+              <td className="num mono-num">{iterations != null ? iterations.toLocaleString() + "회" : "—"} → 하위 5%/중앙값/상위 5%·IRR</td>
             </tr>
             <tr>
               <td>⑧ 구조 교차검증</td>
@@ -155,7 +155,7 @@ export function ValuationMethodology({
             (시장 {pct1(gMf)} vs 과거 {pct1(gHist)}). {horizon}년 복리면 최종년 매출이{" "}
             {terminalMultipleMf ? terminalMultipleMf.toFixed(2) : "—"}배 vs {terminalMultipleHist ? terminalMultipleHist.toFixed(2) : "—"}배로 벌어지고,
             기업가치는 마지막 해 매출에 비례하며(처분가치) 인수가는 고정이라
-            <b> 성장률 차이가 NPV에서 몇 배로 증폭</b>됩니다 — 현재 p50 {fmtNpvEok(mf.npv_krw_m)} vs {fmtNpvEok(hist.npv_krw_m)}.
+            <b> 성장률 차이가 NPV에서 몇 배로 증폭</b>됩니다 — 현재 중앙값 {fmtNpvEok(mf.npv_krw_m)} vs {fmtNpvEok(hist.npv_krw_m)}.
             차이가 크다는 것은 곧 <b>성장 가정의 불확실성이 크다</b>는 신호입니다(ADR-0117): 로보티즈가 시장 성장률을 따라갈 수 있는가가
             이 딜 가치의 절반 이상을 결정합니다.
           </p>

@@ -22,9 +22,9 @@ export interface EvalDraftItem {
 }
 export interface EvalDraftResp { source: string; years: string[]; latest_sync_at: string | null; drafts: EvalDraftItem[]; note: string }
 export interface EvalCategoryScore { score: number | null; scoredWeight: number; totalWeight: number; excludedWeight: number }
-// 사전 검토(chk-target-screening) 근거 — 위원회 추천 검토·등록·재분석에서
+// 사전 검토(대상 사전 검토 체크리스트) 근거 — 위원회 추천 검토·등록·재분석에서
 // 수집된 "나중에 참고할" 정보(사용자 결정, 2026-09-16). 이 화면은 읽기 전용
-// 저장소다 — 판정 기록은 /brownfield Short List "사전 검토" 섹션에서 한다.
+// 저장소다 — 판정 기록은 /brownfield 최종 후보 목록 "사전 검토" 섹션에서 한다.
 export interface ScreeningItem { id: string; text: string; mandatory: boolean; waiver_eligible: boolean }
 export interface ScreeningSummary { assessed: number; total: number; knockOutsPassed: boolean; anyKnockOutFail: boolean; mandatoryOpen: string[] }
 export interface ScreeningItemEvidence { verdict?: string; rationale?: string; source_url?: string | null; kind?: string }
