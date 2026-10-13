@@ -53,7 +53,7 @@ S11 and S12 apply to both tracks but their execution and monitoring content assu
 
 ## Addendum 2026-10-12 — implementation Row 1 (procedures, checklists, flow.spec)
 
-Status stays **Proposed**. Row 1 of the design task split is implemented in the working tree; the human final review has not happened. Decision record: `docs/decisions/DEC-20261012-02.md`.
+Status at time of writing: Proposed. Accepted 2026-10-13 by the human decider (chat instruction), covering this addendum. Row 1 of the design task split was implemented in the working tree; at the time the human final review had not yet happened. Decision record: `docs/decisions/DEC-20261012-02.md`.
 
 - New `procedures/_shared/greenfield-execution-baseline/` v1.0.0 (Q1/Q4/Q5): applies when `project.case_type = greenfield`. The routing-var registry has no separate `project.track` var; `case_type` carries the track. It has six steps, and step 6 is the human confirmation by the new human role `execution-baseline-confirmer`. Step 1 reads `capex_tranche` and the S10 conditions and never writes tranche status. Seven output types were added to `procedures/_output-types.yaml`. `skill_key` was first omitted on every step; the follow-up (user decision 2026-10-12) restored it on all six steps and added `greenfield-execution-baseline` to `metadata.procedure_keys` of the six named skills (financing-plan-review, certification-roadmap, talent-pipeline-planning, greenfield-feasibility, incentive-clawback-assessment, stage-gate-governance), satisfying the skill-graph bidirectional contract.
 - `portfolio-venture-monitoring` v1.2.0 (Q5/Q7): `any_of(origin in {internal, hybrid, joint}, case_type eq greenfield)`; documents the greenfield measure keys, the greenfield transition mapping and the default venture_class.
@@ -65,7 +65,7 @@ Status stays **Proposed**. Row 1 of the design task split is implemented in the 
 
 ## Addendum 2026-10-12 — implementation Row 2 (backend)
 
-Status stays **Proposed**. Row 2 is implemented in the working tree; the human final review and the Row 4 cross review are still pending. No migration was added (`db/migrations/` untouched).
+Status at time of writing: Proposed. Accepted 2026-10-13 by the human decider (chat instruction), covering this addendum. Row 2 was implemented in the working tree; at the time the human final review and the Row 4 cross review were recorded as open (the Row 4 cross review is not confirmed closed in the acceptance instruction). No migration was added (`db/migrations/` untouched).
 
 - `app/web-next/lib/greenfield-execution.ts` (new): track resolution by `case_type` (live `project_case_classification`) and route/`md_project.track`, never `origin` (Q5). A missing or conflicting track is `needs_classification` and is not applied to either track (design §5.1.5).
 - `GET/POST /api/projects/:id/execution-baseline` (new). GET reconciles live `capex_tranche` rows against the S8 adopted case capex lines (KRW_M over the case horizon). Any difference is a finding (O2), as are a non-KRW tranche, a missing case or capex line, and a missing S10 structure. GET also lists the source permits, certifications and incentives, and the ADR-0159 goals (reference only). POST is human-only (cookie, CSRF, analyst+, MNPI insider check). `record_entries` stores validated entries: permit and certification milestones as separate lists, an aggregate-only hiring plan, KPI targets and incentive obligations. `confirm` needs a rationale of at most 2000 characters. Both write append-only `process_run` rows (stage `s11_execution_baseline`, the `s11_pmi_kickoff` pattern) with audit before/after. The baseline never writes `capex_tranche`; release stays the two-person route.
@@ -77,7 +77,7 @@ Status stays **Proposed**. Row 2 is implemented in the working tree; the human f
 
 ## Addendum 2026-10-12 — Row 2 review fixes (risk-officer + security-engineer)
 
-Status stays **Proposed**. The recommended option was implemented for each review item. No migration was added.
+Status at time of writing: Proposed. Accepted 2026-10-13 by the human decider (chat instruction), covering this addendum. The recommended option was implemented for each review item. No migration was added.
 
 - **R1 (F1):** IC GO dates are no longer evidence of an already completed S11. Only a `policy_migration` entry whose server-computed `completed_stages` lists S11 exempts an unconfirmed baseline (`recommended`). A project that completes S11 after the rule needs a confirmed baseline. A DSE4PW-like fixture (greenfield existing_business_rbd, GOs dated 2026-09-04, S11 not complete) evaluates to `blocking`.
 - **R2 (F2/S1, F6):** `lib/project-track.ts` is the one resolver for S11, S12 and PMI (`pmiApplicability` now uses it; `pmiKickoffApplies` and the m_and_a success path are unchanged). A `case_type` vs route conflict blocks S11 with an explicit blocker (`classification_conflict`). No signal at all never blocks; a warning is shown on the execution-baseline surface, and brownfield process output is unchanged. The `pmi/kickoff` POST error path for a non-applicable track changed from 400 `not_applicable` to 403 `not_applicable_track`.
