@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.4.0
+// @version 1.5.0
 /**
  * Checklist Validator — co-newbiz
  *
@@ -47,6 +47,13 @@
  *   - reviewer (named person) and verified_on (YYYY-MM-DD) are REQUIRED when the
  *     status is counsel-reviewed or confirmed (confirmed without both is rejected)
  *   - reviewer / verified_on on a draft-AI item are rejected (a review claim needs a status)
+ *
+ * Legal sign-off (optional, informational — docs/governance/legal-signoff-protocol.md):
+ *   - when legal-signoff/<checklist>@<version>.yaml files exist: item_id must exist in the
+ *     named checklist, verdict must be confirm | revise | hold, signer name and qualification,
+ *     approver and a YYYY-MM-DD date must be present
+ *   - a checklist item with review_status counsel-reviewed | confirmed needs a matching signed
+ *     entry with verdict confirm whose signer equals 'reviewer' and date equals 'verified_on'
  *
  * What is a WARN:
  *   - legal_basis entries pointing at repo paths that do not exist
@@ -103,6 +110,54 @@ export function validateReviewFields(file: string, item: ItemShape, label: strin
   }
   if (typeof item.reviewer !== "string" || item.reviewer.trim().length === 0) err(`'reviewer' (named person) is required when review_status is ${String(status)}`);
   if (typeof item.verified_on !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(item.verified_on)) err(`'verified_on' (YYYY-MM-DD) is required when review_status is ${String(status)}`);
+  return issues;
+}
+
+export const SIGNOFF_VERDICTS = ["confirm", "revise", "hold"] as const;
+export const SIGNER_PLACEHOLDER = "to be designated by the human decider";
+
+export interface SignoffInput { file: string; doc: unknown }
+export interface ChecklistSummary { items: Map<string, { review_status?: unknown; reviewer?: unknown; verified_on?: unknown }> }
+
+/** Validates legal-signoff files against the checklists they name and the review-status claims in those checklists. */
+export function validateSignoffs(signoffs: SignoffInput[], checklists: Map<string, ChecklistSummary>): Issue[] {
+  const issues: Issue[] = [];
+  const signed = new Map<string, { signer: string; date: string }>();
+  const isStr = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
+  for (const { file, doc } of signoffs) {
+    const err = (item: string, message: string) => issues.push({ file, item, message, severity: "error" });
+    if (typeof doc !== "object" || doc === null) { err("(root)", "Sign-off root is not a mapping"); continue; }
+    const d = doc as Record<string, unknown>;
+    const stem = isStr(d.checklist) ? d.checklist : "";
+    const cl = checklists.get(stem);
+    if (!cl) { err("(checklist)", `'checklist' must name an existing checklists/*.yaml stem (got '${stem}')`); continue; }
+    if (!isStr(d.checklist_version)) err("(meta)", "'checklist_version' is required");
+    const signer = (d.signer ?? {}) as Record<string, unknown>;
+    const approver = (d.approver ?? {}) as Record<string, unknown>;
+    if (!isStr(signer.name) || signer.name === SIGNER_PLACEHOLDER) err("(signer)", "'signer.name' must be a named lawyer");
+    if (!isStr(signer.qualification)) err("(signer)", "'signer.qualification' is required");
+    if (!isStr(approver.name)) err("(approver)", "'approver.name' (human approver) is required");
+    if (!Array.isArray(d.items) || d.items.length === 0) { err("(items)", "'items' must be a non-empty array"); continue; }
+    for (const raw of d.items as unknown[]) {
+      const e = (raw ?? {}) as Record<string, unknown>;
+      const id = isStr(e.item_id) ? e.item_id : "(no item_id)";
+      if (!isStr(e.item_id) || !cl.items.has(e.item_id)) err(id, `item_id does not exist in checklist '${stem}'`);
+      if (!(SIGNOFF_VERDICTS as readonly unknown[]).includes(e.verdict)) err(id, `'verdict' must be one of ${SIGNOFF_VERDICTS.join(" | ")}`);
+      const auth = (e.authority ?? {}) as Record<string, unknown>;
+      if (!isStr(auth.law) || !isStr(auth.article)) err(id, "'authority' needs law and article (and MST where a statute)");
+      if (typeof e.signed_on !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(e.signed_on)) err(id, "'signed_on' (YYYY-MM-DD) is required");
+      else if (e.verdict === "confirm" && isStr(signer.name)) signed.set(`${stem}:${id}`, { signer: signer.name, date: e.signed_on });
+    }
+  }
+  for (const [stem, cl] of checklists) {
+    for (const [id, item] of cl.items) {
+      if (item.review_status !== "counsel-reviewed" && item.review_status !== "confirmed") continue;
+      const hit = signed.get(`${stem}:${id}`);
+      const file = `${stem}.yaml`;
+      if (!hit) issues.push({ file, item: id, message: `review_status ${String(item.review_status)} needs a matching confirm entry in legal-signoff/`, severity: "error" });
+      else if (item.reviewer !== hit.signer || item.verified_on !== hit.date) issues.push({ file, item: id, message: "reviewer / verified_on must equal the sign-off signer name / signed_on date", severity: "error" });
+    }
+  }
   return issues;
 }
 
@@ -544,6 +599,7 @@ async function main() {
 
   const allIssues: Issue[] = [];
   let totalItems = 0;
+  const summaries = new Map<string, ChecklistSummary>();
 
   for (const file of files) {
     const raw = await readFile(join(CHECKLIST_DIR, file), "utf-8");
@@ -574,6 +630,8 @@ async function main() {
     }
 
     const seenIds = new Set<string>();
+    const summary: ChecklistSummary = { items: new Map() };
+    summaries.set(file.replace(/\.yaml$/, ""), summary);
     for (const entry of root.items) {
       totalItems++;
       if (typeof entry !== "object" || entry === null) {
@@ -581,6 +639,8 @@ async function main() {
         continue;
       }
       allIssues.push(...validateItem(file, entry as ItemShape, seenIds));
+      const it = entry as ItemShape & { id?: unknown };
+      if (typeof it.id === "string") summary.items.set(it.id, it);
     }
 
     const basis = root.legal_basis;
@@ -620,6 +680,20 @@ async function main() {
       }
     }
   }
+
+  // Legal sign-offs (optional directory).
+  const signoffDir = join(REPO_ROOT, "legal-signoff");
+  const signoffs: SignoffInput[] = [];
+  if (existsSync(signoffDir)) {
+    for (const f of (await readdir(signoffDir)).filter((x) => x.endsWith(".yaml") && !x.startsWith("_"))) {
+      try {
+        signoffs.push({ file: `legal-signoff/${f}`, doc: yaml.load(await readFile(join(signoffDir, f), "utf-8"), { schema: yaml.JSON_SCHEMA }) });
+      } catch (e) {
+        allIssues.push({ file: `legal-signoff/${f}`, item: "(parse)", message: `YAML parse error: ${(e as Error).message}`, severity: "error" });
+      }
+    }
+  }
+  allIssues.push(...validateSignoffs(signoffs, summaries));
 
   const errors = allIssues.filter((i) => i.severity === "error");
   const warnings = allIssues.filter((i) => i.severity === "warn");

@@ -46,3 +46,32 @@ describe("review status view helpers", () => {
     for (const i of items) expect(reviewStatusOf(i)).toBe("draft-AI");
   });
 });
+
+import { validateSignoffs } from "../../checklists/_validate.ts";
+
+describe("legal sign-off validator", () => {
+  const cls = (status?: Record<string, unknown>) => new Map([["x-checklist", { items: new Map([["x-01", status ?? {}], ["x-02", {}]]) }]]);
+  const good = {
+    checklist: "x-checklist", checklist_version: "1.0.0",
+    signer: { name: "Kim", qualification: "Attorney" }, approver: { name: "Park" },
+    items: [{ item_id: "x-01", authority: { law: "L", mst: "1", article: "1" }, verdict: "confirm", signed_on: "2026-10-13" }],
+  };
+  const run = (doc: unknown, c = cls()) => validateSignoffs([{ file: "s.yaml", doc }], c).map((i) => i.message);
+  test("valid file passes; no files and no claims pass", () => {
+    expect(run(good)).toEqual([]);
+    expect(validateSignoffs([], cls())).toEqual([]);
+  });
+  test("unknown item, bad verdict, missing signer/date rejected", () => {
+    expect(run({ ...good, items: [{ ...good.items[0], item_id: "x-99" }] }).length).toBe(1);
+    expect(run({ ...good, items: [{ ...good.items[0], verdict: "ok" }] }).length).toBe(1);
+    expect(run({ ...good, signer: { name: "to be designated by the human decider", qualification: "" } }).length).toBe(2);
+    expect(run({ ...good, items: [{ ...good.items[0], signed_on: "" }] }).length).toBe(1);
+  });
+  test("counsel-reviewed item needs matching confirm entry", () => {
+    const c = cls({ review_status: "counsel-reviewed", reviewer: "Kim", verified_on: "2026-10-13" });
+    expect(validateSignoffs([], c).length).toBe(1);
+    expect(run(good, c)).toEqual([]);
+    expect(run({ ...good, items: [{ ...good.items[0], verdict: "hold" }] }, c).length).toBe(1);
+    expect(run(good, cls({ review_status: "confirmed", reviewer: "Lee", verified_on: "2026-10-13" })).length).toBe(1);
+  });
+});

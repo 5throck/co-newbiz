@@ -60,3 +60,14 @@ Method: k-law skill. `lawSearch.do` (target=law, display=100, exact `법령명�
 **Needs counsel judgement** — ef-08 wording and whether any secondment structure is 근로자파견; whether IP/business contribution in ef-04 triggers 상법 제374조; ma-03 and overlay ma-03 scope beyond 제11조⑧; min-05 applicability for non-controlling stakes in 국가핵심기술/전략기술 holders; NDA upload determination (lr-07).
 
 법제처 국가법령정보 공동활용 자료 기준 / 법적 자문 아님
+
+## Addendum 2026-10-13: decree art. 18(3) verified
+
+The PM verified the Enforcement Decree of the Monopoly Regulation and Fair Trade Act (공정거래법 시행령, MST 284737, effective 2026-03-24) against the 법제처 Open API on 2026-10-13. Verbatim substance of art. 18:
+
+- (1) the party company (including affiliates) with total assets or revenue of 3천억원 or more (and (2) the counterparty 300억원 or more, or the reverse) is a filing subject;
+- (2) the other party company threshold is 300억원;
+- (3) where a foreign company is a party, the case is a filing subject only when each such foreign company's domestic sales are 300억원 or more;
+- (4) share acquisition of 20% or more (15% or more for listed companies).
+
+The earlier conflict between legal-counsel (truncated response, about 5.8k characters, art. 18(3) not accepted) and antitrust (successful re-query) is resolved: the truncation was an API response limitation, and a fresh query returned the full text. The "Could not verify" entry for 시행령 제18조③ above is superseded. Applied in `checklists/ma-special-topics-checklist.yaml` ma-02 (v1.4.3). Still decision support, not legal opinion; counsel sign-off remains pending.

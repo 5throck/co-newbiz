@@ -250,3 +250,7 @@ cover + hero max-width 34rem 제한으로 텍스트 길이·패널 높이와 무
 ### As-built 2026-10-13 - checklist item review status badge
 
 Every checklist item row in the S9 DD workspace and the checklist library shows a small `status-chip` badge (component `components/ReviewBadge.tsx`, logic in `lib/checklist-review-status.ts`): draft-AI (amber, "AI 작성·검토 전", tooltip and aria text "AI 작성 · 법령 원문 일부 확인 · 변호사 검토 전 — 확정 아님"), counsel-reviewed ("법무 검토됨(이름·일자)") and confirmed ("확정(이름·일자)"). A missing status reads as draft-AI. The badge pairs an icon and text with the tone, never color alone, and is informational: it does not gate. The S11 IC review screen (`IcReviewStage`) adds a one-line "could not verify" count of in-scope checklist items still draft-AI, fed by `dd.review_status` of the ic-package route.
+
+### As-built 2026-10-13 - S4 decision history row detail
+
+The "진출방식 결정 이력" table (`DecisionTab.tsx`) stays compact (cell-truncate on rationale and alternatives, plus a last "상세" column, `DECISION_COL_PCT` now 8 columns). Each row has a "더보기"/"접기" button (`aria-expanded`, `aria-controls`) that opens a full-width detail row: full rationale and alternatives (`white-space: pre-wrap`, wrapped, never truncated), score evidence list, staging recommendation and full timestamp. Empty alternatives read "기록된 대안 없음". Content comes from `lib/route-decision-history-view.ts` (`buildDecisionDetail`). One row is open at a time.
