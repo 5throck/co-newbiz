@@ -34,13 +34,16 @@ describe("library.generated.ts matches its source files", () => {
       expect(entry, `${id} has no LIBRARY_CONTENT entry`).toBeDefined();
       const doc = yaml.load(readFileSync(join(REPO, entry.file), "utf-8")) as {
         version: string;
-        items: Array<{ id: string; text: string; mandatory: boolean; waiver_eligible: boolean }>;
+        items: Array<{ id: string; text: string; mandatory: boolean; waiver_eligible: boolean; modes?: string[]; origins?: string[]; review_status?: string }>;
       };
       const items = doc.items.map((i) => ({
         id: i.id,
         text: i.text,
         mandatory: i.mandatory,
         waiver_eligible: i.waiver_eligible,
+        ...(i.modes !== undefined ? { modes: i.modes } : {}),
+        ...(i.origins !== undefined ? { origins: i.origins } : {}),
+        ...(i.review_status !== undefined ? { review_status: i.review_status } : {}),
       }));
       const summary = LIBRARY_DOCS.find((d) => d.id === id);
       const fresh =

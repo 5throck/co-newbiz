@@ -16,6 +16,7 @@ import { readRagView, recomputeRag } from "../../../../../../../db/lib/rag-servi
 import { authenticate } from "../../../../../lib/auth.ts";
 import { findAdoptedCase, latestAdoption, listBusinessCases, type BusinessCaseView } from "../../../../../lib/business-case.ts";
 import { establishmentProgress, listEstablishmentSteps, reopenedAfterGate } from "../../../../../lib/establishment.ts";
+import { icStandingRisks } from "../../../../../lib/establishment-mode-view.ts";
 import { icGoGapItems, parseRationale } from "../../../../../lib/ic-gap-override.ts";
 import { latestGateDecisions, latestRouteDecision, type GateId, type GateVerdict } from "../../../../../lib/process-flow.ts";
 import { latestPmiKickoff, pmiKickoffApplies } from "../../../../../lib/pmi-kickoff.ts";
@@ -159,6 +160,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         const sub = p?.source_opportunity_id ? (latestRouteDecision(p.source_opportunity_id)?.sub_track ?? null) : null;
         return { applies: pmiKickoffApplies(p?.track ?? null, sub), sub_track: sub, record: latestPmiKickoff(db, id) };
       })(),
+      // ADR-0167 (D8): standing risk lines tied to the establishment mode; informational, never a gate.
+      standing_risks: icStandingRisks(establishmentProgress(id).mode),
       establishment: (() => {
         const steps = listEstablishmentSteps(id);
         const progress = establishmentProgress(id);

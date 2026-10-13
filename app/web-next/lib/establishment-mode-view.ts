@@ -31,6 +31,22 @@ export const MODE_NOT_CHOSEN_NOTICE =
 export const BUSINESS_UNIT_NO_ISOLATION_NOTE =
   "신규 사업부 추진은 기존 법인 안에서 진행하므로 책임 격리가 되지 않습니다. 사업부에서 생기는 부채와 책임은 모두 기존 법인이 집니다. 투자심의위원회도 이 점을 확인합니다.";
 
+/** A standing risk line the IC package always shows for a mode (ADR-0167, D8). Informational — never gates. */
+export interface IcStandingRisk {
+  key: string;
+  text: string;
+}
+
+/**
+ * Standing risks the IC package carries for the project's establishment mode. business_unit
+ * adds "no liability isolation" (D8); the RAG input is NOT lowered by it. new_entity, an
+ * unchosen mode and any other value add nothing, so existing packages are unchanged.
+ */
+export function icStandingRisks(mode: string | null | undefined): IcStandingRisk[] {
+  if (mode === "business_unit") return [{ key: "no_liability_isolation", text: BUSINESS_UNIT_NO_ISOLATION_NOTE }];
+  return [];
+}
+
 export const MODE_CHANGE_WARNING =
   "설립 방식을 바꿔도 기존 방식으로 기록한 단계는 지워지지 않고 읽기 전용 이력으로 남습니다. 새 방식의 5단계는 대기 상태에서 다시 시작합니다.";
 

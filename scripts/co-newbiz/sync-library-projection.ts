@@ -54,6 +54,9 @@ for (const id of Object.keys(ITEMS)) {
     mandatory: i.mandatory,
     waiver_eligible: i.waiver_eligible,
     // Optional review status — emitted only when the source item declares it.
+    // Optional applicability tags (ADR-0167) — emitted only when declared.
+    ...(i.modes !== undefined ? { modes: i.modes } : {}),
+    ...(i.origins !== undefined ? { origins: i.origins } : {}),
     ...(i.review_status !== undefined ? { review_status: i.review_status } : {}),
     ...(i.reviewer !== undefined ? { reviewer: i.reviewer } : {}),
     ...(i.verified_on !== undefined ? { verified_on: i.verified_on instanceof Date ? i.verified_on.toISOString().slice(0, 10) : i.verified_on } : {}),

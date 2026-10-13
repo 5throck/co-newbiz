@@ -5,9 +5,9 @@ lang_reason: proper-noun
 
 # ADR-0167 — Green Field establishment mode: new legal entity vs new business unit (amends ADR-0047 A.5 and ADR-0100)
 
-- Status: Proposed — decided in chat 2026-10-14 by the human decider (all nine recommended answers approved); formal acceptance pending
+- Status: Accepted (2026-10-14) with notes
 - Date: 2026-10-14
-- Decider: Human decider (account techcross), chat 2026-10-14. Drafted by backend-engineer.
+- Decider: Human decider (chat instruction 2026-10-14). Drafted by backend-engineer.
 - Design-of-record: [docs/designs/2026-10-14-greenfield-business-unit-vs-new-entity-design.md](../designs/2026-10-14-greenfield-business-unit-vs-new-entity-design.md)
 - Amends: ADR-0047 section A.5 (S11 establishment applies when origin is internal or joint AND the mode is new_entity; the business-unit set applies when origin is internal AND the mode is business_unit), ADR-0100 (the S10 IC structure decision includes the establishment mode; S11 executes that mode's step set)
 - Related: ADR-0161 (greenfield execution baseline gx-* applies to both modes), ADR-0165 (assignee, evidence and reopen rules apply unchanged to both step sets), ADR-0166 (Green Field default origin internal), ADR-0014 (additive migration), ADR-0163 (stop-on-error migration runner), DEC-20261014-02
@@ -47,3 +47,13 @@ The decider stated on 2026-10-14 that a Green Field project does not have to cre
 - Business-unit Green Field projects can finish S11 truthfully; entity projects behave exactly as before.
 - Existing test fixtures that promote a Green Field project and set origin internal must also set the mode.
 - Rollback: the header SQL of 0142 (drops the added columns/table/seed); code rollback by reverting the PR together with the procedure YAML.
+
+## Acceptance record
+
+- Approver: the human decider (user, account techcross), chat instruction on 2026-10-14: "ADR-0167, ADR-0168 정식 승인". Recorded separately from ADR-0168 (DEC-20261014-05); this record is DEC-20261014-04.
+- Basis: chat approval after the implementation reports for slice 1 (migration 0142, mode API, S10/S11 UI; PR #535). Acceptance is by chat instruction; no per-item checklist was recorded. This record does not claim the approver read specific commits or ticked individual items.
+- Not verified by the AI: the S10 mode panel and the S11 table were verified by unit tests and the scenario run, not in a browser. The legal points in design section 13 are k-law verified for statutes only; permits, certifications, labor case law and each permit statute need counsel. Slice 2 (checklists ef-* tags and bu-* checklist, IC "no liability isolation" line, glossary) is in progress and is not part of what this acceptance verified.
+- Known deviations and limitations (owner: platform-lead):
+  1. D2 says Brown Field mode stays NULL, but the 0142 backfill is keyed on origin only, so Brown Field projects with origin internal/joint and recorded establishment steps become `new_entity` (harmless where steps exist). Exit: align the D2 text or note it in the data-alignment report.
+  2. The backend still returns an English parenthetical in the 409 `mode_not_chosen` message and the S11 blocker. The UI maps by error code and strips it on stage screens; PromotionPanel shows the raw text. Exit: a Korean backend message.
+  3. The business-unit form choice is stored as a prefix in the structure hypothesis free-text `liability_isolation_note` (no DB field). Exit: add a field if usage grows.

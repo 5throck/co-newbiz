@@ -1486,6 +1486,16 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20261014-04",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
+      "id": "dec:DEC-20261014-05",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "doc:AGENTS.md",
       "type": "doc",
       "layer": "L3"
@@ -4602,6 +4612,18 @@
     {
       "type": "cites_skill",
       "from": "dec:DEC-20261014-03",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261014-04",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261014-05",
       "to": "skill:root/decision-record",
       "source": "skills_used"
     },

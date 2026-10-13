@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-13T23:30:31.027Z
+**Generated**: 2026-10-13T23:49:55.840Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -189,7 +189,7 @@
 | agent-lifecycle-audit.ts | 1.7.0 | scripts/agent-lifecycle-audit.ts | N/A |
 | agent-list.ts | 1.1.0 | scripts/agent-list.ts | N/A |
 | agent-verify.ts | 1.0.2 | scripts/agent-verify.ts | N/A |
-| align-existing-projects.ts | 1.0.0 | scripts/co-newbiz/align-existing-projects.ts | bun:sqlite |
+| align-existing-projects.ts | 1.1.0 | scripts/co-newbiz/align-existing-projects.ts | bun:sqlite |
 | analyze-git-history.ts | 1.0.2 | scripts/analyze-git-history.ts | child_process |
 | apply-handbook-theme.test.ts | 1.0.1 | scripts/tests/apply-handbook-theme.test.ts | bun:test |
 | apply-handbook-theme.ts | 1.0.0 | scripts/handbook/apply-handbook-theme.ts | N/A |
@@ -301,7 +301,7 @@
 | scorecard-rollup.ts | 1.0.0 | scripts/co-newbiz/scorecard-rollup.ts | N/A |
 | seed-benchmark-cases.ts | 1.0.0 | scripts/co-newbiz/seed-benchmark-cases.ts | bun:sqlite |
 | seed-hydraulic-breaker-matrix.ts | 1.1.0 | scripts/co-newbiz/seed-hydraulic-breaker-matrix.ts | N/A |
-| seed-s1-s12-demo.ts | 1.8.2 | scripts/co-newbiz/seed-s1-s12-demo.ts | N/A |
+| seed-s1-s12-demo.ts | 1.8.3 | scripts/co-newbiz/seed-s1-s12-demo.ts | N/A |
 | setup-github-branch-protection.ts | 1.0.1 | scripts/setup-github-branch-protection.ts | bun |
 | shadow-compare.ts | 1.0.0 | scripts/co-newbiz/shadow-compare.ts | N/A |
 | simulate.ts | 1.0.0 | scripts/co-newbiz/simulate.ts | N/A |

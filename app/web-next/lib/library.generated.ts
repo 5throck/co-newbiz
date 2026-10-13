@@ -40,13 +40,25 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "lang": "en"
   },
   {
+    "id": "chk-business-unit-formation-checklist",
+    "category": "checklist",
+    "title": "Business Unit Formation Checklist (New Business Unit Inside the Existing Entity)",
+    "file": "checklists/business-unit-formation-checklist.yaml",
+    "gate": "Entity IC",
+    "enforceability": "mixed",
+    "version": "1.0.0",
+    "owner_agent": "legal-counsel",
+    "item_count": 9,
+    "lang": "en"
+  },
+  {
     "id": "chk-entity-formation-checklist",
     "category": "checklist",
     "title": "Entity Formation Checklist (Internal / Joint Origin Execution)",
     "file": "checklists/entity-formation-checklist.yaml",
     "gate": "Entity IC",
     "enforceability": "mixed",
-    "version": "1.2.3",
+    "version": "1.3.0",
     "owner_agent": "legal-counsel",
     "item_count": 22,
     "lang": "en"
@@ -1037,6 +1049,19 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "lang": "en",
     "content": "governance_doc_id: chk-deal-shape-presigning\nlayer: checklist\ntitle: \"Deal-Shape Pre-Signing Checklists (License-in / Co-development / Minority / JV)\"\nscope: shared\nenforceability: mixed\nowner_agent: legal-counsel\nversion: \"1.1.1\"\neffective_from: \"2026-08-23\"\ngate: P4   # enforced at the deal-shape chain's pre-signing gate (step 5 of shared-deal-shape-chain)\n\n# One checklist set per deal shape, from the design of record §A.2\n# (docs/designs/2026-08-23-track-coverage-extension-design.md) and its\n# research basis [rbd 3.1-3.4]. Full M&A deliberately has NO set here: that\n# outcome routes out to the brownfield chain unchanged, whose own gates\n# govern. JV formation mechanics are NOT duplicated here — they ride PR-10's\n# `entity-formation` JV addendum (ef-13..17); this checklist owns the\n# deal-shape decision's contract terms only.\n\nitems:\n  # ── License-in [rbd 3.1] ─────────────────────────────────────────────\n  - id: lic-01\n    text: \"허여 범위(grant scope)를 명시하고, 독점권은 당연시하지 않고 공익성 기준에 준하는 테스트로 정당화\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-02\n    text: \"실시 분야(field of use)와 지역은 당사가 실제로 활용할 수 있는 범위를 넘지 않을 것\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-03\n    text: \"전체 대가 구조 문서화 — 선급금, 마일스톤, 로열티, 최소 실시료 ('추후 협의'로 남기는 항목 없음)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-04\n    text: \"개발 목표 시점(development benchmarks)을 일자로 정하고 이에 대한 연차 보고 의무 부과\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-05\n    text: \"미실시에 따른 사장(死藏) 방지 해지 조항(NIH 방식) 포함 — 당사가 묵혀둘 수 있는 라이선스는 라이선서가 회수할 수 있는 라이선스임\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-06\n    text: \"당사가 만든 개량 발명에 대한 그랜트백(grantback) 조건을 명시\"\n    mandatory: false\n    waiver_eligible: true\n  - id: lic-07\n    text: \"라이선서의 로열티·컴플라이언스 회계에 대한 감사권\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-08\n    text: \"해당 시 정부 부대조건(Bayh-Dole 방식 개입권(march-in), 국내 생산 우선) 식별 및 독점권에 미치는 영향 평가\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lic-09\n    text: \"텀시트 전에 발명자 권리 승계(직무발명 승계(PIIA)) 권원 체인 검증 — 서명 후 발견되는 권원 하자는 라이선스 도입(license-in)의 전형적 실패 원인\"\n    mandatory: true\n    waiver_eligible: true\n\n  # ── Co-development [rbd 3.2] ────────────────────────────────────────\n  - id: cdv-01\n    text: \"당사자별 기존 IP(background IP)를 빠짐없이 정의 — 공동개발 분쟁의 1순위 원인은 '그건 우리 것인 줄 알았다'임\"\n    mandatory: true\n    waiver_eligible: true\n  - id: cdv-02\n    text: \"신규 IP(foreground IP) 귀속 원칙(공동 소유 / 분야별 / 발명자별)을 의도적으로 선택하고 선택 근거를 기록 — 기본값 적용 금지\"\n    mandatory: true\n    waiver_eligible: true\n  - id: cdv-03\n    text: \"의사결정 권한이 명시된 공동운영위원회(joint steering committee)와 단계별 교착 해소 절차(deadlock ladder: 어느 단계에서 누가 결정하는지)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: cdv-04\n    text: \"예산을 마일스톤별로 분할 집행하고, 당사자별 자금 미납 시 결과를 명시\"\n    mandatory: true\n    waiver_eligible: true\n  - id: cdv-05\n    text: \"공개 전 검토 기간 합의 (공개 전에 특허 가능한 성과 보호)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: cdv-06\n    text: \"엑시트·개입(step-in) 사유를 명시하고, 엑시트 시 데이터 인계와 재실시권(sublicense) 존속을 규정\"\n    mandatory: true\n    waiver_eligible: true\n\n  # ── Minority investment [rbd 3.3] ────────────────────────────────────\n  - id: min-01\n    text: \"NVCA 표준 권리 묶음을 열거하고 묶음 단위로 협상 — 이사 지명권, 정보요구권, 등록청구권, 우선매수권(ROFR)/공동매도권(co-sale), 경영권 서한(management rights letter), 지분비례 참여권(pro-rata)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: min-02\n    text: \"기술 접근권은 지분과 별도로 라이선스 — 지분이 곧 라이선스가 아니며, 라이선스가 곧 지분도 아님\"\n    mandatory: true\n    waiver_eligible: true\n  - id: min-03\n    text: \"모든 독점 기간에는 종료일(sunset) 설정 — 소수 지분을 통한 영구 독점은 비지배 가격으로 산 지배권임\"\n    mandatory: true\n    waiver_eligible: true\n  - id: min-04\n    text: \"지분 매집 제한(standstill) 및 정보 차단벽(information barrier) 조건 합의 (양측의 미공개 중요정보(MNPI) 취급 보호)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: min-05\n    text: \"지분 규모나 국적상 해당되는 경우 외국인투자 심사 평가 완료 (한국: 외국인투자 신고는 10% 이상 취득 또는 임원 파견·선임 시(외국인투자 촉진법 시행령 제2조), 국가안보 심사는 경영상 지배권을 실질적으로 취득하는 경우(같은 시행령 제5조), 국가핵심기술·전략기술 보유 대상은 산업기술의 유출방지 및 보호에 관한 법률 제11조의2, 국가첨단전략산업 경쟁력 강화 및 보호에 관한 특별조치법 제13조에 따라 별도 승인·신고; 2026-10-13 법제처 Open API 확인. 이사 옵서버·대량 민감 개인정보 기준은 한국 조문이 아니라 타국(예: 미국) 심사 참고 사항)\"\n    mandatory: true\n    waiver_eligible: true\n\n  # ── JV (origin=joint) [rbd 3.4] ─────────────────────────────────────\n  # Formation mechanics ride `entity-formation` ef-13..17 (PR-10) — the\n  # items below are the decision-side contract terms this chain owns.\n  - id: jvd-01\n    text: \"모회사 출자 약정 및 가치평가 (기술 출자는 독립 가치평가 — chk-partnership의 pt-07, 출자 당사자 제시 금액 그대로 수용 금지)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: jvd-02\n    text: \"이사회 구성, 유보 사항(reserved matters) 목록, 교착(deadlock) 조건을 텀시트 협상 전에 문서화 (chk-partnership pt-06 확장)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: jvd-03\n    text: \"합작(JV)으로 들어오고 나가는 IP 라이선스를 각각 문서화 — 범위, 기간, 합작(JV) 엑시트 시 처리\"\n    mandatory: true\n    waiver_eligible: true\n  - id: jvd-04\n    text: \"서명 시점에 엑시트 구조 설계: 풋/콜, 우선매수권(ROFR), 드래그/태그, 가치평가 방식(사용 시 감정인 2인 후 제3 감정인 절차 포함)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: jvd-05\n    text: \"합작(JV) 고유의 경쟁법 승인 평가 (합작(JV)은 모회사들이 집중시키지 않는 시장도 집중시킬 수 있음)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: jvd-06\n    text: \"청산 조건 합의 — 합작(JV) 해산 시 인력·IP·부채를 누가 가져가는지\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"ADR-0052 (track coverage extension, Section A.2)\"\n  - \"docs/designs/2026-08-23-track-coverage-extension-design.md §A.2\"\n  - \"docs/research/rbd-partnership-best-practice.md [rbd 3.1-3.4]\"\n  - \"ADR-0031 (partner-sourcing failure modeled as termination)\"\n"
   },
+  "chk-business-unit-formation-checklist": {
+    "id": "chk-business-unit-formation-checklist",
+    "category": "checklist",
+    "title": "Business Unit Formation Checklist (New Business Unit Inside the Existing Entity)",
+    "file": "checklists/business-unit-formation-checklist.yaml",
+    "gate": "Entity IC",
+    "enforceability": "mixed",
+    "version": "1.0.0",
+    "owner_agent": "legal-counsel",
+    "item_count": 9,
+    "lang": "en",
+    "content": "governance_doc_id: chk-business-unit-formation\nlayer: checklist\ntitle: \"Business Unit Formation Checklist (New Business Unit Inside the Existing Entity)\"\nscope: shared\nenforceability: mixed\nowner_agent: legal-counsel\nversion: \"1.0.0\"\neffective_from: \"2026-10-14\"\ngate: \"Entity IC\"\n\n# ADR-0167 (Green Field establishment mode). Applies at EXECUTION after Entity IC\n# approval when project.establishment_mode = business_unit (origin = internal\n# only). It mirrors the five business-unit steps of\n# procedures/_shared/business-unit-establishment-execution/schema.yaml:\n#   step 1 -> bu-01, bu-02    step 2 -> bu-03    step 3 -> bu-04, bu-05\n#   step 4 -> bu-06, bu-07    step 5 -> bu-08, bu-09\n# The entity-formation set (checklists/entity-formation-checklist.yaml ef-*) does\n# NOT apply in this mode; gx-01..gx-03 of that file apply to both modes.\n#\n# Legal wording comes from the design's section 13 (law.go.kr Open API, retrieved\n# 2026-10-14): Commercial Act MST 273629, VAT Act MST 276117, VAT Act Enforcement\n# Decree MST 283641, Labor Standards Act MST 285279. Statements the statute text\n# did not settle are marked \"확인 필요\" and stay with counsel, the certifying body\n# or the tax adviser. Every item is draft-AI until a named reviewer signs off\n# (legal-signoff protocol); none of this is legal advice.\n\nitems:\n  - id: bu-01\n    text: \"사업부 신설 결의 — 신규 사업이 현행 정관의 목적 범위 안인지 먼저 확인함(정관 문구를 읽는 일이며 법령이 답을 주지 않으므로 법률 자문으로 확인). 범위 밖이면 주주총회 특별결의로 정관을 변경하고(상법 제433조제1항·제434조) 본점 소재지에서 2주 내에 목적 변경등기를 함(상법 제317조제2항제1호·제4항, 제183조 — 주식회사에 제183조가 준용되는 연결은 확인 필요). 범위 안이면 업무집행으로서 이사회 결의로 정함(상법 제393조제1항). 다른 회사의 영업을 인수해 사업을 세우는 경우 상법 제374조제1항제3호의 주주총회 특별결의 해당 여부를 확인 필요. 지점 설치가 따르면 이사회 결의와 지점 등기를 확인함\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [business_unit]\n    review_status: draft-AI\n  - id: bu-02\n    text: \"사업부의 예산과 위임전결 기준표를 정하고 사업부 책임자를 지정함 — 호스트 법인(기본: 우리 회사), 신설 형태(독립 사업부 / 기존 사업부 내 팀 / 사내 독립 기업(CIC)), 독립 손익 관리 여부를 결의 문서에 적음\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [business_unit]\n    review_status: draft-AI\n  - id: bu-03\n    text: \"사업자등록 정리 — 새 사업장을 여는 경우 사업장별 신규 사업자등록(부가가치세법 제8조제1항, 사업 개시일부터 20일 이내); 사업자 단위 과세 사업자이면 종된 사업장 신설 정정신고(같은 법 시행령 제14조제1항제9호); 기존 사업장에서 업종만 추가하면 정정신고를 지체 없이 함(같은 법 제8조제8항, 시행령 제14조제1항제3호). 인허가 업종이면 허가증 사본을 첨부함(시행령 제11조제3항). 어느 경우에 해당하는지는 세무 자문으로 확인 필요. 변경이 필요 없으면 그 판단 근거를 기록함\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [business_unit]\n    review_status: draft-AI\n  - id: bu-04\n    text: \"인허가 명의 확인 — 필요한 인허가마다 근거 법령을 찾아 허가 명의(법인 / 사업장 / 시설)와, 사업장이나 업종을 더할 때 신규 발급인지 변경인지 개별로 확인함. 일반 규칙은 확인되지 않았으므로 허가별 확인 필요. 기존 법인 명의로는 받을 수 없는 허가가 하나라도 있으면 위험관리 책임자에게 올림(사업부 추진 경로가 성립하지 않을 수 있음)\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [business_unit]\n    review_status: draft-AI\n  - id: bu-05\n    text: \"인증 범위 확인 — 새 사업장이나 제품을 기존 인증에 넣는 것이 인증 범위 확대(scope extension)인지 신규 인증인지 인증기관 규정으로 확인함. 인증기관에 확인하고 추론하지 않음(근거 법령이 확인되지 않았으므로 확인 필요). 허가(영업하기 위한 것)와 인증(판매하기 위한 것)은 따로 관리함\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [business_unit]\n    review_status: draft-AI\n  - id: bu-06\n    text: \"인력 배치·조직 개편 — 사업부로 옮기는 전직·전보는 정당한 이유가 있어야 하고(근로기준법 제23조제1항) 협의 기록을 남김; 정당한 이유의 판단 기준은 판례를 확인하지 못했으므로 확인 필요. 근무지·근무시간·임금체계 등 취업규칙 사항이 바뀌면 근로자 과반수(또는 노동조합)의 의견을 듣고, 불이익한 변경이면 동의를 받으며(제94조제1항), 상시 10명 이상 사업장은 변경을 신고함(제93조). 어떤 변경이 불이익한지는 법률 자문으로 확인 필요. 조직도와 직무기술서를 갱신하고, 인력의 지식재산 양도 약정(PIIA)·업무상 저작물 귀속 약정 범위를 확인함\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [business_unit]\n    review_status: draft-AI\n  - id: bu-07\n    text: \"사업부 회계 구분과 내부 이전가격 — 사업부 손익을 따로 집계하는 회계 단위(독립 손익 관리를 택한 경우)와, 모회사 다른 부서와의 용역·자산 사용에 대한 내부 비용 배분 기준을 정함. 이 항목은 법령 근거를 확인하지 않았으므로 세무·회계 자문으로 확인 필요\"\n    mandatory: false\n    waiver_eligible: true\n    modes: [business_unit]\n    review_status: draft-AI\n  - id: bu-08\n    text: \"책임 분리 없음 확인 — 사업부는 별도 법인이 아니므로 사업부의 부채와 책임이 모두 기존 법인의 재무상태표에 남는다는 점을 투자심의 자료의 위험 항목에 올렸음. 사업부 추진이라는 이유로 위험 등급을 낮추지 않음\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [business_unit]\n    review_status: draft-AI\n  - id: bu-09\n    text: \"신설 기준선 확인 — 조직·예산·위임전결 기준선과 위 항목의 증빙(이사회 의사록 또는 주주총회 의사록과 등기부 등본, 사업자등록증, 허가별 확인 문서, 인증기관 회신, 전보 기록과 취업규칙 신고 서류)을 한 사람(법인 투자심의위원회 책임자 또는 위임받은 자)이 비어 있지 않은 근거와 함께 확인함; 에이전트의 확인은 인정하지 않음\"\n    mandatory: true\n    waiver_eligible: false   # a human confirmation is not waivable (mirrors gx-03; ADR-0165 completion rule)\n    modes: [business_unit]\n    review_status: draft-AI\n\nlegal_basis:\n  - \"ADR-0167 (Green Field establishment mode — new entity vs business unit)\"\n  - \"procedures/_shared/business-unit-establishment-execution/schema.yaml (execution procedure consuming this checklist)\"\n  - \"docs/designs/2026-10-14-greenfield-business-unit-vs-new-entity-design.md (design of record; section 13 legal verification)\"\n  - \"상법 MST 273629 (시행 2026-09-10) 제183조, 제289조, 제317조, 제374조, 제393조, 제433조, 제434조 — 법제처 Open API, verified_on 2026-10-14\"\n  - \"부가가치세법 MST 276117 (시행 2026-01-02) 제6조, 제8조; 시행령 MST 283641 (시행 2026-04-01) 제11조, 제14조 — 법제처 Open API, verified_on 2026-10-14\"\n  - \"근로기준법 MST 285279 (시행 2026-10-08) 제2조, 제23조, 제93조, 제94조 — 법제처 Open API, verified_on 2026-10-14\"\n"
+  },
   "chk-entity-formation-checklist": {
     "id": "chk-entity-formation-checklist",
     "category": "checklist",
@@ -1044,11 +1069,11 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "checklists/entity-formation-checklist.yaml",
     "gate": "Entity IC",
     "enforceability": "mixed",
-    "version": "1.2.3",
+    "version": "1.3.0",
     "owner_agent": "legal-counsel",
     "item_count": 22,
     "lang": "en",
-    "content": "governance_doc_id: chk-entity-formation\nlayer: checklist\ntitle: \"Entity Formation Checklist (Internal / Joint Origin Execution)\"\nscope: shared\nenforceability: mixed\nowner_agent: legal-counsel\nversion: \"1.2.3\"\neffective_from: \"2026-08-22\"\ngate: \"Entity IC\"\n\n# Applies at EXECUTION after Entity IC approval, for origin = internal or joint\n# (ADR-0047 four-value origin). Items ef-01..ef-12 are the standard formation\n# sequence; ef-13..ef-18 are the JV addendum — mandatory ONLY for joint-origin\n# entities (mark not-applicable for internal origin, mirroring brownfield-dd step 3's\n# conditional-applicability pattern). JV governance design cross-references the\n# jv-structuring skill rather than restating it.\n#\n# gx-01..gx-03 (v1.1.0, ADR-0161 Proposed) are a separate group: the greenfield\n# execution baseline (procedures/_shared/greenfield-execution-baseline), which\n# applies by case_type = greenfield regardless of origin and of whether a new\n# entity is formed. They replace, for greenfield at S11, the closing-specific\n# financing items fin-04..fin-08 (financing-plan-checklist S11 track scope).\n# Mark them not-applicable for brownfield projects. Retroactively (ADR-0161\n# Q2) they are recommended, not blocking, for a project that already\n# completed S11.\n\nitems:\n  - id: ef-01\n    text: \"설립 관할과 설립 법인 형태를 선정하고, 세무·규제 근거를 문서화해 승인받음\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-02\n    text: \"등기소에서 상호 사용 가능 여부를 확인하고 상표 사전 조사를 마침\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-03\n    text: \"주식 구조와 모회사·창업자별 배분을 확정하고, 최초 이사·임원을 정함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-04\n    text: \"설립을 주도하는 모회사의 내부 승인을 받음 — 설립, 출자·자금 지원, 지식재산 출연을 승인하는 이사회 또는 주주총회 결의 (한국: 지식재산·사업 출연이 영업의 중요한 일부 양도에 해당하면 상법 제374조제1항제1호에 따른 주주총회 특별결의가 필요함 — 해당 여부는 법률 자문으로 확인; 2026-10-13 법제처 Open API 확인)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-05\n    text: \"정관을 작성(필요 시 공증)하고 설립등기를 마치며, 본점 소재지와 (해당 관할에서 요구 시) 등록 대리인(registered agent)을 정하고, 자본금 납입을 마침\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-06\n    text: \"조직 문서를 체결함 — 내부 규정(bylaws), 발기인 결의(또는 발기인 서면 결정), 이사회 결의서(서면 동의), 이사 보상(indemnification) 계약\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-07\n    text: \"법인으로의 지식재산 이전 완료 — 설립 전 지식재산 일체(모회사의 기존 지식재산과 설립 주도팀의 성과물)를 서면으로 양도 또는 사용허락(라이선스)하고, 모든 임직원과 외주 인력이 지식재산 양도 약정(PIIA)에 서명함\"\n    mandatory: true\n    waiver_eligible: false   # title integrity is a completeness fact — a gap here is an unwaivable establishment blocker (kill criterion ip_assignment_chain_incomplete_at_establishment)\n  - id: ef-08\n    text: \"인력 이전 완료 — 신규 근로계약서와 PIIA에 서명함; 모회사에서 인력이 오는 경우 적용되는 동의 규칙에 따라 전출(겸직·사외 근무) 또는 전적 계약을 체결함 (한국: 영업양도 시 근로관계는 판례상 원칙적으로 양수인에게 승계되며(대법원 2020. 11. 5. 선고 2018두54705), 승계 배제 특약은 해고와 같이 정당한 이유가 필요함(근로기준법 제23조제1항). 영업양도가 아닌 인력 이동은 전적(근로자 개별 동의가 필요하다는 판례는 확인 필요)·전출로 처리하고, 전출이 모회사의 업(業)으로서 사용사업주 지휘·명령 아래 근로하는 형태이면 근로자파견(파견법 제2조제1호)으로 볼 위험이 있으므로 법률 자문으로 확인; 판례·조문은 2026-10-13 법제처 Open API 확인)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-09\n    text: \"그룹 내 계약을 체결함 — 그룹 내 용역 계약, 지식재산·브랜드 사용 계약, 공급·유통 계약, 비용 분담·이전가격 정책 문서화\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-10\n    text: \"법정 등록을 마침 — 세무 등록번호, 사업주(사용자) 등록, 영업 인허가, 업종별 허가; 국경 간 투자인 경우 외국인투자 신고\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-11\n    text: \"은행 계좌, 보험, 회계·감사 체계를 갖추고 법정 장부와 명부를 구비함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-12\n    text: \"지배구조 기본 틀을 갖춤 — 첫 이사회 의사록, 위임전결 기준표, 컴플라이언스 일정표, 위 모든 문서를 담은 자료실(data room)\"\n    mandatory: true\n    waiver_eligible: true\n  # JV addendum — joint-origin only (mandatory when origin = joint)\n  - id: ef-13\n    text: \"합작 설립(joint) 한정: 50:50 지분에서 동수 의석의 이사 5~9명으로 이사회를 구성하고, 교착 해소 설계(독립 의장, 결정투표권, 의장 윤번제 등)를 설립 시점에 합의함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-14\n    text: \"합작 설립 한정: 상호 동의가 필요한 주요 의결 사항 목록 — 범주별·기준액 기준으로 좁게 정함(전략·사업 범위, 연간 계획·예산, 대규모 투자·자금조달, 대표이사·재무책임자 선임, 중요 특수관계인 거래, 정관 변경, 지분 경제성, 해산)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-15\n    text: \"합작 설립 한정: 기한이 구속력을 갖는 교착 해소 단계 — 경영진 조정, 이사회 결정 메모, 주주 대표 협의, 냉각기간·현상 유지(standstill), 사실·가치평가 쟁점에 대한 전문가 결정, 조정(mediation), 최종 구제 수단\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-16\n    text: \"합작 설립 한정: 출구 조항을 합의함 — 사전 합의된 가치평가 산식에 따른 풋/콜 옵션, 우선매수권(ROFR)·우선협상권(ROFO), 동반매각참여권(tag)·동반매도청구권(drag), 종료 사유, 종결 절차\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-17\n    text: \"합작 설립 한정: 단일 창구 경영을 확인함 — 합작법인에 대한 지시는 이사회 결정과 대표이사를 통해서만 하고, 서면 위임전결 기준표(허용 편차 범위, 긴급 한도)를 둠\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-18\n    text: \"합작 설립 한정: 모회사들이 인접 시장에서 경쟁하는 경우 정보 차단 벽(firewall)·클린팀 절차를 수립함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-19\n    text: \"한국 참고(회사 분할을 설립 경로로 쓰는 경우에 한함): 분할(물적분할/인적분할)에는 분할계획서에 대한 주주총회 특별결의가 필요함(상법 제530조의3). 분할합병인 경우(상법 제530조의11 제2항)와 연대책임을 배제하는 단순분할인 경우(상법 제530조의9 제2항·제4항)에는 채권자 보호 절차가 필요함 — 알고 있는 채권자에 대한 개별 최고와 1개월 이상의 이의제출 기간을 둔 공고(두 경우 모두 상법 제527조의5 준용). 집행 근거로 쓰기 전에 국가법령정보센터의 최신 조문 원문으로 확인할 것(2026-10-13 법제처 Open API로 확인, 상법 MST 273629).\"\n    mandatory: false\n    waiver_eligible: true\n  # Greenfield execution baseline — case_type = greenfield only (ADR-0161)\n  - id: gx-01\n    text: \"신규 사업(Green Field) 한정: 자본지출(capex) 분할 집행 일정을 프로젝트의 capex_tranche 행과 S10 딜 구조 집행 조건에 연결하고 S8 채택안 capex와 대사함; 차이는 모두 발견 사항으로 기록하고 자동 수정하지 않음\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gx-02\n    text: \"신규 사업 한정: 램프업 핵심 성과 목표(첫 매출, 가동률, 손익분기 도달 월, S8 채택안 대비 매출·EBITDA)를 정하고, S8 사업 목표는 차단 효력이 없는 근거로 참조함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gx-03\n    text: \"신규 사업 한정: 실행 기준선을 한 사람(법인 투자심의위원회 책임자 또는 위임받은 자)이 비어 있지 않은 근거와 함께 확인함; 에이전트의 확인은 인정하지 않음\"\n    mandatory: true\n    waiver_eligible: false   # a human confirmation is not waivable (ADR-0161 Row 1 follow-up, user-approved 2026-10-12)\n\nlegal_basis:\n  - \"ADR-0051 (workflow gap closure — internal-origin entity-formation chain step)\"\n  - \"procedures/_shared/entity-establishment-execution/schema.yaml (execution procedure consuming this checklist)\"\n  - \"DLA Piper pre/post-incorporation checklists; Robinson+Cole employee IP assignment; Umbrex JV governance architecture; KLRI Commercial Act English text\"\n  - \"skills/jv-structuring (JV governance design — cross-referenced, not restated)\"\n  - \"procedures/_shared/greenfield-execution-baseline/schema.yaml (gx-01..gx-03 — ADR-0161)\"\n"
+    "content": "governance_doc_id: chk-entity-formation\nlayer: checklist\ntitle: \"Entity Formation Checklist (Internal / Joint Origin Execution)\"\nscope: shared\nenforceability: mixed\nowner_agent: legal-counsel\nversion: \"1.3.0\"\neffective_from: \"2026-08-22\"\ngate: \"Entity IC\"\n\n# Applies at EXECUTION after Entity IC approval, for origin = internal or joint\n# (ADR-0047 four-value origin). Items ef-01..ef-12 are the standard formation\n# sequence; ef-13..ef-18 are the JV addendum — mandatory ONLY for joint-origin\n# entities (mark not-applicable for internal origin, mirroring brownfield-dd step 3's\n# conditional-applicability pattern). JV governance design cross-references the\n# jv-structuring skill rather than restating it.\n#\n# Establishment mode tags (v1.3.0, ADR-0167): every item carries `modes`, the\n# Green Field establishment modes it applies to. ef-01..ef-19 are new_entity only\n# (a business unit forms no legal entity; the business-unit set is\n# checklists/business-unit-formation-checklist.yaml). ef-13..ef-18 additionally\n# carry `origins: [joint]` (JV addendum). ef-19 applies only when a company split\n# is the establishment route. gx-01..gx-03 apply to BOTH modes. A project with an\n# unknown/legacy mode is read as new_entity.\n#\n# gx-01..gx-03 (v1.1.0, ADR-0161 Proposed) are a separate group: the greenfield\n# execution baseline (procedures/_shared/greenfield-execution-baseline), which\n# applies by case_type = greenfield regardless of origin and of whether a new\n# entity is formed. They replace, for greenfield at S11, the closing-specific\n# financing items fin-04..fin-08 (financing-plan-checklist S11 track scope).\n# Mark them not-applicable for brownfield projects. Retroactively (ADR-0161\n# Q2) they are recommended, not blocking, for a project that already\n# completed S11.\n\nitems:\n  - id: ef-01\n    text: \"설립 관할과 설립 법인 형태를 선정하고, 세무·규제 근거를 문서화해 승인받음\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [new_entity]\n  - id: ef-02\n    text: \"등기소에서 상호 사용 가능 여부를 확인하고 상표 사전 조사를 마침\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [new_entity]\n  - id: ef-03\n    text: \"주식 구조와 모회사·창업자별 배분을 확정하고, 최초 이사·임원을 정함\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [new_entity]\n  - id: ef-04\n    text: \"설립을 주도하는 모회사의 내부 승인을 받음 — 설립, 출자·자금 지원, 지식재산 출연을 승인하는 이사회 또는 주주총회 결의 (한국: 지식재산·사업 출연이 영업의 중요한 일부 양도에 해당하면 상법 제374조제1항제1호에 따른 주주총회 특별결의가 필요함 — 해당 여부는 법률 자문으로 확인; 2026-10-13 법제처 Open API 확인)\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [new_entity]\n  - id: ef-05\n    text: \"정관을 작성(필요 시 공증)하고 설립등기를 마치며, 본점 소재지와 (해당 관할에서 요구 시) 등록 대리인(registered agent)을 정하고, 자본금 납입을 마침\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [new_entity]\n  - id: ef-06\n    text: \"조직 문서를 체결함 — 내부 규정(bylaws), 발기인 결의(또는 발기인 서면 결정), 이사회 결의서(서면 동의), 이사 보상(indemnification) 계약\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [new_entity]\n  - id: ef-07\n    text: \"법인으로의 지식재산 이전 완료 — 설립 전 지식재산 일체(모회사의 기존 지식재산과 설립 주도팀의 성과물)를 서면으로 양도 또는 사용허락(라이선스)하고, 모든 임직원과 외주 인력이 지식재산 양도 약정(PIIA)에 서명함\"\n    mandatory: true\n    waiver_eligible: false   # title integrity is a completeness fact — a gap here is an unwaivable establishment blocker (kill criterion ip_assignment_chain_incomplete_at_establishment)\n    modes: [new_entity]\n  - id: ef-08\n    text: \"인력 이전 완료 — 신규 근로계약서와 PIIA에 서명함; 모회사에서 인력이 오는 경우 적용되는 동의 규칙에 따라 전출(겸직·사외 근무) 또는 전적 계약을 체결함 (한국: 영업양도 시 근로관계는 판례상 원칙적으로 양수인에게 승계되며(대법원 2020. 11. 5. 선고 2018두54705), 승계 배제 특약은 해고와 같이 정당한 이유가 필요함(근로기준법 제23조제1항). 영업양도가 아닌 인력 이동은 전적(근로자 개별 동의가 필요하다는 판례는 확인 필요)·전출로 처리하고, 전출이 모회사의 업(業)으로서 사용사업주 지휘·명령 아래 근로하는 형태이면 근로자파견(파견법 제2조제1호)으로 볼 위험이 있으므로 법률 자문으로 확인; 판례·조문은 2026-10-13 법제처 Open API 확인)\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [new_entity]\n  - id: ef-09\n    text: \"그룹 내 계약을 체결함 — 그룹 내 용역 계약, 지식재산·브랜드 사용 계약, 공급·유통 계약, 비용 분담·이전가격 정책 문서화\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [new_entity]\n  - id: ef-10\n    text: \"법정 등록을 마침 — 세무 등록번호, 사업주(사용자) 등록, 영업 인허가, 업종별 허가; 국경 간 투자인 경우 외국인투자 신고\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [new_entity]\n  - id: ef-11\n    text: \"은행 계좌, 보험, 회계·감사 체계를 갖추고 법정 장부와 명부를 구비함\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [new_entity]\n  - id: ef-12\n    text: \"지배구조 기본 틀을 갖춤 — 첫 이사회 의사록, 위임전결 기준표, 컴플라이언스 일정표, 위 모든 문서를 담은 자료실(data room)\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [new_entity]\n  # JV addendum — joint-origin only (mandatory when origin = joint)\n  - id: ef-13\n    text: \"합작 설립(joint) 한정: 50:50 지분에서 동수 의석의 이사 5~9명으로 이사회를 구성하고, 교착 해소 설계(독립 의장, 결정투표권, 의장 윤번제 등)를 설립 시점에 합의함\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [new_entity]\n    origins: [joint]\n  - id: ef-14\n    text: \"합작 설립 한정: 상호 동의가 필요한 주요 의결 사항 목록 — 범주별·기준액 기준으로 좁게 정함(전략·사업 범위, 연간 계획·예산, 대규모 투자·자금조달, 대표이사·재무책임자 선임, 중요 특수관계인 거래, 정관 변경, 지분 경제성, 해산)\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [new_entity]\n    origins: [joint]\n  - id: ef-15\n    text: \"합작 설립 한정: 기한이 구속력을 갖는 교착 해소 단계 — 경영진 조정, 이사회 결정 메모, 주주 대표 협의, 냉각기간·현상 유지(standstill), 사실·가치평가 쟁점에 대한 전문가 결정, 조정(mediation), 최종 구제 수단\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [new_entity]\n    origins: [joint]\n  - id: ef-16\n    text: \"합작 설립 한정: 출구 조항을 합의함 — 사전 합의된 가치평가 산식에 따른 풋/콜 옵션, 우선매수권(ROFR)·우선협상권(ROFO), 동반매각참여권(tag)·동반매도청구권(drag), 종료 사유, 종결 절차\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [new_entity]\n    origins: [joint]\n  - id: ef-17\n    text: \"합작 설립 한정: 단일 창구 경영을 확인함 — 합작법인에 대한 지시는 이사회 결정과 대표이사를 통해서만 하고, 서면 위임전결 기준표(허용 편차 범위, 긴급 한도)를 둠\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [new_entity]\n    origins: [joint]\n  - id: ef-18\n    text: \"합작 설립 한정: 모회사들이 인접 시장에서 경쟁하는 경우 정보 차단 벽(firewall)·클린팀 절차를 수립함\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [new_entity]\n    origins: [joint]\n  - id: ef-19\n    text: \"한국 참고(회사 분할을 설립 경로로 쓰는 경우에 한함): 분할(물적분할/인적분할)에는 분할계획서에 대한 주주총회 특별결의가 필요함(상법 제530조의3). 분할합병인 경우(상법 제530조의11 제2항)와 연대책임을 배제하는 단순분할인 경우(상법 제530조의9 제2항·제4항)에는 채권자 보호 절차가 필요함 — 알고 있는 채권자에 대한 개별 최고와 1개월 이상의 이의제출 기간을 둔 공고(두 경우 모두 상법 제527조의5 준용). 집행 근거로 쓰기 전에 국가법령정보센터의 최신 조문 원문으로 확인할 것(2026-10-13 법제처 Open API로 확인, 상법 MST 273629).\"\n    mandatory: false\n    waiver_eligible: true\n    modes: [new_entity]\n  # Greenfield execution baseline — case_type = greenfield only (ADR-0161)\n  - id: gx-01\n    text: \"신규 사업(Green Field) 한정: 자본지출(capex) 분할 집행 일정을 프로젝트의 capex_tranche 행과 S10 딜 구조 집행 조건에 연결하고 S8 채택안 capex와 대사함; 차이는 모두 발견 사항으로 기록하고 자동 수정하지 않음\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [new_entity, business_unit]\n  - id: gx-02\n    text: \"신규 사업 한정: 램프업 핵심 성과 목표(첫 매출, 가동률, 손익분기 도달 월, S8 채택안 대비 매출·EBITDA)를 정하고, S8 사업 목표는 차단 효력이 없는 근거로 참조함\"\n    mandatory: true\n    waiver_eligible: true\n    modes: [new_entity, business_unit]\n  - id: gx-03\n    text: \"신규 사업 한정: 실행 기준선을 한 사람(법인 투자심의위원회 책임자 또는 위임받은 자)이 비어 있지 않은 근거와 함께 확인함; 에이전트의 확인은 인정하지 않음\"\n    mandatory: true\n    waiver_eligible: false   # a human confirmation is not waivable (ADR-0161 Row 1 follow-up, user-approved 2026-10-12)\n    modes: [new_entity, business_unit]\n\nlegal_basis:\n  - \"ADR-0051 (workflow gap closure — internal-origin entity-formation chain step)\"\n  - \"procedures/_shared/entity-establishment-execution/schema.yaml (execution procedure consuming this checklist)\"\n  - \"DLA Piper pre/post-incorporation checklists; Robinson+Cole employee IP assignment; Umbrex JV governance architecture; KLRI Commercial Act English text\"\n  - \"skills/jv-structuring (JV governance design — cross-referenced, not restated)\"\n  - \"procedures/_shared/greenfield-execution-baseline/schema.yaml (gx-01..gx-03 — ADR-0161)\"\n"
   },
   "chk-financial-dd-checklist": {
     "id": "chk-financial-dd-checklist",
@@ -2407,138 +2432,317 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
       "waiver_eligible": true
     }
   ],
+  "chk-business-unit-formation-checklist": [
+    {
+      "id": "bu-01",
+      "text": "사업부 신설 결의 — 신규 사업이 현행 정관의 목적 범위 안인지 먼저 확인함(정관 문구를 읽는 일이며 법령이 답을 주지 않으므로 법률 자문으로 확인). 범위 밖이면 주주총회 특별결의로 정관을 변경하고(상법 제433조제1항·제434조) 본점 소재지에서 2주 내에 목적 변경등기를 함(상법 제317조제2항제1호·제4항, 제183조 — 주식회사에 제183조가 준용되는 연결은 확인 필요). 범위 안이면 업무집행으로서 이사회 결의로 정함(상법 제393조제1항). 다른 회사의 영업을 인수해 사업을 세우는 경우 상법 제374조제1항제3호의 주주총회 특별결의 해당 여부를 확인 필요. 지점 설치가 따르면 이사회 결의와 지점 등기를 확인함",
+      "mandatory": true,
+      "waiver_eligible": true,
+      "modes": [
+        "business_unit"
+      ],
+      "review_status": "draft-AI"
+    },
+    {
+      "id": "bu-02",
+      "text": "사업부의 예산과 위임전결 기준표를 정하고 사업부 책임자를 지정함 — 호스트 법인(기본: 우리 회사), 신설 형태(독립 사업부 / 기존 사업부 내 팀 / 사내 독립 기업(CIC)), 독립 손익 관리 여부를 결의 문서에 적음",
+      "mandatory": true,
+      "waiver_eligible": true,
+      "modes": [
+        "business_unit"
+      ],
+      "review_status": "draft-AI"
+    },
+    {
+      "id": "bu-03",
+      "text": "사업자등록 정리 — 새 사업장을 여는 경우 사업장별 신규 사업자등록(부가가치세법 제8조제1항, 사업 개시일부터 20일 이내); 사업자 단위 과세 사업자이면 종된 사업장 신설 정정신고(같은 법 시행령 제14조제1항제9호); 기존 사업장에서 업종만 추가하면 정정신고를 지체 없이 함(같은 법 제8조제8항, 시행령 제14조제1항제3호). 인허가 업종이면 허가증 사본을 첨부함(시행령 제11조제3항). 어느 경우에 해당하는지는 세무 자문으로 확인 필요. 변경이 필요 없으면 그 판단 근거를 기록함",
+      "mandatory": true,
+      "waiver_eligible": true,
+      "modes": [
+        "business_unit"
+      ],
+      "review_status": "draft-AI"
+    },
+    {
+      "id": "bu-04",
+      "text": "인허가 명의 확인 — 필요한 인허가마다 근거 법령을 찾아 허가 명의(법인 / 사업장 / 시설)와, 사업장이나 업종을 더할 때 신규 발급인지 변경인지 개별로 확인함. 일반 규칙은 확인되지 않았으므로 허가별 확인 필요. 기존 법인 명의로는 받을 수 없는 허가가 하나라도 있으면 위험관리 책임자에게 올림(사업부 추진 경로가 성립하지 않을 수 있음)",
+      "mandatory": true,
+      "waiver_eligible": true,
+      "modes": [
+        "business_unit"
+      ],
+      "review_status": "draft-AI"
+    },
+    {
+      "id": "bu-05",
+      "text": "인증 범위 확인 — 새 사업장이나 제품을 기존 인증에 넣는 것이 인증 범위 확대(scope extension)인지 신규 인증인지 인증기관 규정으로 확인함. 인증기관에 확인하고 추론하지 않음(근거 법령이 확인되지 않았으므로 확인 필요). 허가(영업하기 위한 것)와 인증(판매하기 위한 것)은 따로 관리함",
+      "mandatory": true,
+      "waiver_eligible": true,
+      "modes": [
+        "business_unit"
+      ],
+      "review_status": "draft-AI"
+    },
+    {
+      "id": "bu-06",
+      "text": "인력 배치·조직 개편 — 사업부로 옮기는 전직·전보는 정당한 이유가 있어야 하고(근로기준법 제23조제1항) 협의 기록을 남김; 정당한 이유의 판단 기준은 판례를 확인하지 못했으므로 확인 필요. 근무지·근무시간·임금체계 등 취업규칙 사항이 바뀌면 근로자 과반수(또는 노동조합)의 의견을 듣고, 불이익한 변경이면 동의를 받으며(제94조제1항), 상시 10명 이상 사업장은 변경을 신고함(제93조). 어떤 변경이 불이익한지는 법률 자문으로 확인 필요. 조직도와 직무기술서를 갱신하고, 인력의 지식재산 양도 약정(PIIA)·업무상 저작물 귀속 약정 범위를 확인함",
+      "mandatory": true,
+      "waiver_eligible": true,
+      "modes": [
+        "business_unit"
+      ],
+      "review_status": "draft-AI"
+    },
+    {
+      "id": "bu-07",
+      "text": "사업부 회계 구분과 내부 이전가격 — 사업부 손익을 따로 집계하는 회계 단위(독립 손익 관리를 택한 경우)와, 모회사 다른 부서와의 용역·자산 사용에 대한 내부 비용 배분 기준을 정함. 이 항목은 법령 근거를 확인하지 않았으므로 세무·회계 자문으로 확인 필요",
+      "mandatory": false,
+      "waiver_eligible": true,
+      "modes": [
+        "business_unit"
+      ],
+      "review_status": "draft-AI"
+    },
+    {
+      "id": "bu-08",
+      "text": "책임 분리 없음 확인 — 사업부는 별도 법인이 아니므로 사업부의 부채와 책임이 모두 기존 법인의 재무상태표에 남는다는 점을 투자심의 자료의 위험 항목에 올렸음. 사업부 추진이라는 이유로 위험 등급을 낮추지 않음",
+      "mandatory": true,
+      "waiver_eligible": true,
+      "modes": [
+        "business_unit"
+      ],
+      "review_status": "draft-AI"
+    },
+    {
+      "id": "bu-09",
+      "text": "신설 기준선 확인 — 조직·예산·위임전결 기준선과 위 항목의 증빙(이사회 의사록 또는 주주총회 의사록과 등기부 등본, 사업자등록증, 허가별 확인 문서, 인증기관 회신, 전보 기록과 취업규칙 신고 서류)을 한 사람(법인 투자심의위원회 책임자 또는 위임받은 자)이 비어 있지 않은 근거와 함께 확인함; 에이전트의 확인은 인정하지 않음",
+      "mandatory": true,
+      "waiver_eligible": false,
+      "modes": [
+        "business_unit"
+      ],
+      "review_status": "draft-AI"
+    }
+  ],
   "chk-entity-formation-checklist": [
     {
       "id": "ef-01",
       "text": "설립 관할과 설립 법인 형태를 선정하고, 세무·규제 근거를 문서화해 승인받음",
       "mandatory": true,
-      "waiver_eligible": true
+      "waiver_eligible": true,
+      "modes": [
+        "new_entity"
+      ]
     },
     {
       "id": "ef-02",
       "text": "등기소에서 상호 사용 가능 여부를 확인하고 상표 사전 조사를 마침",
       "mandatory": true,
-      "waiver_eligible": true
+      "waiver_eligible": true,
+      "modes": [
+        "new_entity"
+      ]
     },
     {
       "id": "ef-03",
       "text": "주식 구조와 모회사·창업자별 배분을 확정하고, 최초 이사·임원을 정함",
       "mandatory": true,
-      "waiver_eligible": true
+      "waiver_eligible": true,
+      "modes": [
+        "new_entity"
+      ]
     },
     {
       "id": "ef-04",
       "text": "설립을 주도하는 모회사의 내부 승인을 받음 — 설립, 출자·자금 지원, 지식재산 출연을 승인하는 이사회 또는 주주총회 결의 (한국: 지식재산·사업 출연이 영업의 중요한 일부 양도에 해당하면 상법 제374조제1항제1호에 따른 주주총회 특별결의가 필요함 — 해당 여부는 법률 자문으로 확인; 2026-10-13 법제처 Open API 확인)",
       "mandatory": true,
-      "waiver_eligible": true
+      "waiver_eligible": true,
+      "modes": [
+        "new_entity"
+      ]
     },
     {
       "id": "ef-05",
       "text": "정관을 작성(필요 시 공증)하고 설립등기를 마치며, 본점 소재지와 (해당 관할에서 요구 시) 등록 대리인(registered agent)을 정하고, 자본금 납입을 마침",
       "mandatory": true,
-      "waiver_eligible": true
+      "waiver_eligible": true,
+      "modes": [
+        "new_entity"
+      ]
     },
     {
       "id": "ef-06",
       "text": "조직 문서를 체결함 — 내부 규정(bylaws), 발기인 결의(또는 발기인 서면 결정), 이사회 결의서(서면 동의), 이사 보상(indemnification) 계약",
       "mandatory": true,
-      "waiver_eligible": true
+      "waiver_eligible": true,
+      "modes": [
+        "new_entity"
+      ]
     },
     {
       "id": "ef-07",
       "text": "법인으로의 지식재산 이전 완료 — 설립 전 지식재산 일체(모회사의 기존 지식재산과 설립 주도팀의 성과물)를 서면으로 양도 또는 사용허락(라이선스)하고, 모든 임직원과 외주 인력이 지식재산 양도 약정(PIIA)에 서명함",
       "mandatory": true,
-      "waiver_eligible": false
+      "waiver_eligible": false,
+      "modes": [
+        "new_entity"
+      ]
     },
     {
       "id": "ef-08",
       "text": "인력 이전 완료 — 신규 근로계약서와 PIIA에 서명함; 모회사에서 인력이 오는 경우 적용되는 동의 규칙에 따라 전출(겸직·사외 근무) 또는 전적 계약을 체결함 (한국: 영업양도 시 근로관계는 판례상 원칙적으로 양수인에게 승계되며(대법원 2020. 11. 5. 선고 2018두54705), 승계 배제 특약은 해고와 같이 정당한 이유가 필요함(근로기준법 제23조제1항). 영업양도가 아닌 인력 이동은 전적(근로자 개별 동의가 필요하다는 판례는 확인 필요)·전출로 처리하고, 전출이 모회사의 업(業)으로서 사용사업주 지휘·명령 아래 근로하는 형태이면 근로자파견(파견법 제2조제1호)으로 볼 위험이 있으므로 법률 자문으로 확인; 판례·조문은 2026-10-13 법제처 Open API 확인)",
       "mandatory": true,
-      "waiver_eligible": true
+      "waiver_eligible": true,
+      "modes": [
+        "new_entity"
+      ]
     },
     {
       "id": "ef-09",
       "text": "그룹 내 계약을 체결함 — 그룹 내 용역 계약, 지식재산·브랜드 사용 계약, 공급·유통 계약, 비용 분담·이전가격 정책 문서화",
       "mandatory": true,
-      "waiver_eligible": true
+      "waiver_eligible": true,
+      "modes": [
+        "new_entity"
+      ]
     },
     {
       "id": "ef-10",
       "text": "법정 등록을 마침 — 세무 등록번호, 사업주(사용자) 등록, 영업 인허가, 업종별 허가; 국경 간 투자인 경우 외국인투자 신고",
       "mandatory": true,
-      "waiver_eligible": true
+      "waiver_eligible": true,
+      "modes": [
+        "new_entity"
+      ]
     },
     {
       "id": "ef-11",
       "text": "은행 계좌, 보험, 회계·감사 체계를 갖추고 법정 장부와 명부를 구비함",
       "mandatory": true,
-      "waiver_eligible": true
+      "waiver_eligible": true,
+      "modes": [
+        "new_entity"
+      ]
     },
     {
       "id": "ef-12",
       "text": "지배구조 기본 틀을 갖춤 — 첫 이사회 의사록, 위임전결 기준표, 컴플라이언스 일정표, 위 모든 문서를 담은 자료실(data room)",
       "mandatory": true,
-      "waiver_eligible": true
+      "waiver_eligible": true,
+      "modes": [
+        "new_entity"
+      ]
     },
     {
       "id": "ef-13",
       "text": "합작 설립(joint) 한정: 50:50 지분에서 동수 의석의 이사 5~9명으로 이사회를 구성하고, 교착 해소 설계(독립 의장, 결정투표권, 의장 윤번제 등)를 설립 시점에 합의함",
       "mandatory": true,
-      "waiver_eligible": true
+      "waiver_eligible": true,
+      "modes": [
+        "new_entity"
+      ],
+      "origins": [
+        "joint"
+      ]
     },
     {
       "id": "ef-14",
       "text": "합작 설립 한정: 상호 동의가 필요한 주요 의결 사항 목록 — 범주별·기준액 기준으로 좁게 정함(전략·사업 범위, 연간 계획·예산, 대규모 투자·자금조달, 대표이사·재무책임자 선임, 중요 특수관계인 거래, 정관 변경, 지분 경제성, 해산)",
       "mandatory": true,
-      "waiver_eligible": true
+      "waiver_eligible": true,
+      "modes": [
+        "new_entity"
+      ],
+      "origins": [
+        "joint"
+      ]
     },
     {
       "id": "ef-15",
       "text": "합작 설립 한정: 기한이 구속력을 갖는 교착 해소 단계 — 경영진 조정, 이사회 결정 메모, 주주 대표 협의, 냉각기간·현상 유지(standstill), 사실·가치평가 쟁점에 대한 전문가 결정, 조정(mediation), 최종 구제 수단",
       "mandatory": true,
-      "waiver_eligible": true
+      "waiver_eligible": true,
+      "modes": [
+        "new_entity"
+      ],
+      "origins": [
+        "joint"
+      ]
     },
     {
       "id": "ef-16",
       "text": "합작 설립 한정: 출구 조항을 합의함 — 사전 합의된 가치평가 산식에 따른 풋/콜 옵션, 우선매수권(ROFR)·우선협상권(ROFO), 동반매각참여권(tag)·동반매도청구권(drag), 종료 사유, 종결 절차",
       "mandatory": true,
-      "waiver_eligible": true
+      "waiver_eligible": true,
+      "modes": [
+        "new_entity"
+      ],
+      "origins": [
+        "joint"
+      ]
     },
     {
       "id": "ef-17",
       "text": "합작 설립 한정: 단일 창구 경영을 확인함 — 합작법인에 대한 지시는 이사회 결정과 대표이사를 통해서만 하고, 서면 위임전결 기준표(허용 편차 범위, 긴급 한도)를 둠",
       "mandatory": true,
-      "waiver_eligible": true
+      "waiver_eligible": true,
+      "modes": [
+        "new_entity"
+      ],
+      "origins": [
+        "joint"
+      ]
     },
     {
       "id": "ef-18",
       "text": "합작 설립 한정: 모회사들이 인접 시장에서 경쟁하는 경우 정보 차단 벽(firewall)·클린팀 절차를 수립함",
       "mandatory": true,
-      "waiver_eligible": true
+      "waiver_eligible": true,
+      "modes": [
+        "new_entity"
+      ],
+      "origins": [
+        "joint"
+      ]
     },
     {
       "id": "ef-19",
       "text": "한국 참고(회사 분할을 설립 경로로 쓰는 경우에 한함): 분할(물적분할/인적분할)에는 분할계획서에 대한 주주총회 특별결의가 필요함(상법 제530조의3). 분할합병인 경우(상법 제530조의11 제2항)와 연대책임을 배제하는 단순분할인 경우(상법 제530조의9 제2항·제4항)에는 채권자 보호 절차가 필요함 — 알고 있는 채권자에 대한 개별 최고와 1개월 이상의 이의제출 기간을 둔 공고(두 경우 모두 상법 제527조의5 준용). 집행 근거로 쓰기 전에 국가법령정보센터의 최신 조문 원문으로 확인할 것(2026-10-13 법제처 Open API로 확인, 상법 MST 273629).",
       "mandatory": false,
-      "waiver_eligible": true
+      "waiver_eligible": true,
+      "modes": [
+        "new_entity"
+      ]
     },
     {
       "id": "gx-01",
       "text": "신규 사업(Green Field) 한정: 자본지출(capex) 분할 집행 일정을 프로젝트의 capex_tranche 행과 S10 딜 구조 집행 조건에 연결하고 S8 채택안 capex와 대사함; 차이는 모두 발견 사항으로 기록하고 자동 수정하지 않음",
       "mandatory": true,
-      "waiver_eligible": true
+      "waiver_eligible": true,
+      "modes": [
+        "new_entity",
+        "business_unit"
+      ]
     },
     {
       "id": "gx-02",
       "text": "신규 사업 한정: 램프업 핵심 성과 목표(첫 매출, 가동률, 손익분기 도달 월, S8 채택안 대비 매출·EBITDA)를 정하고, S8 사업 목표는 차단 효력이 없는 근거로 참조함",
       "mandatory": true,
-      "waiver_eligible": true
+      "waiver_eligible": true,
+      "modes": [
+        "new_entity",
+        "business_unit"
+      ]
     },
     {
       "id": "gx-03",
       "text": "신규 사업 한정: 실행 기준선을 한 사람(법인 투자심의위원회 책임자 또는 위임받은 자)이 비어 있지 않은 근거와 함께 확인함; 에이전트의 확인은 인정하지 않음",
       "mandatory": true,
-      "waiver_eligible": false
+      "waiver_eligible": false,
+      "modes": [
+        "new_entity",
+        "business_unit"
+      ]
     }
   ],
   "chk-financial-dd-checklist": [

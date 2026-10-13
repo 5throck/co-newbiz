@@ -1210,6 +1210,7 @@ export function listDdWorkspace(projectId: string, opts: { targetId?: string | n
     "chk-deal-shape-presigning-checklist": "체결 전 딜 구조 점검", // INTERIM-WORDING
     "chk-rbd-technology-checklist": "R&BD 기술",
     "chk-entity-formation-checklist": "법인 설립 준비 (계획 검증)",
+    "chk-business-unit-formation-checklist": "사업부 신설 준비 (계획 검증)", // INTERIM-WORDING
   };
   const extra = subTrackChecklistIds(projectId).map((checklistId) => ({
     domain: checklistId,

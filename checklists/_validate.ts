@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.5.0
+// @version 1.6.0
 /**
  * Checklist Validator — co-newbiz
  *
@@ -41,6 +41,9 @@
  *     `readings` entry (R) on an unknown, excluded or binding item, or without
  *     a reading; declared
  *     extras_judgeable / total_judgeable differing from the recomputed values
+ *
+ * Applicability tags (optional per item, ADR-0167): `modes` (new_entity | business_unit) and
+ *   `origins` (internal | joint) must each be a non-empty array of unique known values.
  *
  * Review status (optional per item, informational — never gate-blocking):
  *   - review_status must be draft-AI | counsel-reviewed | confirmed (missing = draft-AI)
@@ -89,6 +92,26 @@ interface ItemShape {
   review_status?: unknown;
   reviewer?: unknown;
   verified_on?: unknown;
+  modes?: unknown;
+  origins?: unknown;
+}
+
+export const ESTABLISHMENT_MODES = ["new_entity", "business_unit"] as const;
+export const ITEM_ORIGINS = ["internal", "joint"] as const;
+
+/** Validates the optional `modes` / `origins` applicability tags of one item (ADR-0167). */
+export function validateApplicabilityTags(file: string, item: ItemShape, label: string): Issue[] {
+  const issues: Issue[] = [];
+  const check = (field: "modes" | "origins", allowed: readonly string[]) => {
+    const v = item[field];
+    if (v === undefined) return;
+    if (!Array.isArray(v) || v.length === 0 || v.some((x) => typeof x !== "string" || !allowed.includes(x)) || new Set(v).size !== v.length) {
+      issues.push({ file, item: label, message: `'${field}' must be a non-empty array of unique values from ${allowed.join(" | ")}`, severity: "error" });
+    }
+  };
+  check("modes", ESTABLISHMENT_MODES);
+  check("origins", ITEM_ORIGINS);
+  return issues;
 }
 
 export const REVIEW_STATUSES = ["draft-AI", "counsel-reviewed", "confirmed"] as const;
@@ -189,6 +212,8 @@ function validateItem(file: string, item: ItemShape, seenIds: Set<string>): Issu
   if (typeof item.mandatory !== "boolean") {
     issues.push({ file, item: label, message: "'mandatory' must be a boolean — the enforceability layer depends on it", severity: "error" });
   }
+
+  issues.push(...validateApplicabilityTags(file, item, label));
 
   if (item.waiver_eligible === undefined) {
     issues.push({

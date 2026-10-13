@@ -33,6 +33,10 @@ const AGREED_KO = [
   "현상 유지안",
   "투자 주체",
   "설립 법인 형태",
+  "설립 방식",
+  "신규 법인 설립",
+  "신규 사업부 추진",
+  "사업부 신설 형태",
   "투자심의 자료",
   "법인 투자심의위원회",
   "그룹 투자심의위원회",
@@ -60,4 +64,12 @@ test("previous display names remain as aliases", () => {
 test("generated UI projection contains the agreed terms", () => {
   const src = readFileSync(join(ROOT, "app/web-next/lib/glossary-data.generated.ts"), "utf8");
   for (const ko of AGREED_KO) expect(src).toContain(`"ko": "${ko}"`);
+});
+
+test("establishment mode terms carry their code values and the Korean wording as aliases (ADR-0167)", () => {
+  const terms = loadYamlTerms();
+  expect(terms["New Business Unit"].aliases).toEqual(expect.arrayContaining(["business_unit", "신규 사업부"]));
+  expect(terms["New Legal Entity Formation"].aliases).toContain("new_entity");
+  expect(terms["Establishment Mode"].ko).toBe("설립 방식");
+  expect(terms["Business Unit Form"].ko).toBe("사업부 신설 형태");
 });

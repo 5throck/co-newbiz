@@ -49,6 +49,10 @@ export interface ChecklistItemDef {
   text: string;
   mandatory: boolean;
   waiver_eligible: boolean;
+  /** Optional Green Field establishment modes the item applies to (ADR-0167); missing = all modes. */
+  modes?: Array<"new_entity" | "business_unit">;
+  /** Optional origins the item is limited to (ADR-0167; ef-13..ef-18 are joint-only). */
+  origins?: Array<"internal" | "joint">;
   /** Optional review status (missing = draft-AI); informational, never gate-blocking. */
   review_status?: "draft-AI" | "counsel-reviewed" | "confirmed";
   reviewer?: string;
