@@ -1,4 +1,4 @@
-// @version 1.8.0
+// @version 1.8.1
 // Idempotent S1→S12 demo chain seeds — BROWNFIELD (seedS1ToS12Demo) and
 // GREENFIELD (seedGreenfieldS1ToS12Demo), one full lifecycle per track.
 //
@@ -598,7 +598,7 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
       `INSERT OR IGNORE INTO md_project
        (id, project_no, created_at, current_stage_gate, company_id, origin, source_opportunity_id, track,
         project_name, charter_json, charter_confirmed_at, status, subject_company_rationale)
-       VALUES (?, 'DEMO-GF', ?, 'group_ic', ?, 'internal', ?, 'greenfield', ?, ?, ?, 'open', ?)`,
+       VALUES (?, 'DEMO-GF', ?, 'group_ic', ?, 'joint', ?, 'greenfield', ?, ?, ?, 'open', ?)`,
       [
         GF.projectId, now, GF.companyId, GF.oppId, "S1-S12 데모 Greenfield 프로젝트",
         json({ milestones: ["법인 설립", "설비 가동", "흑자 전환"], owner: actor, note: "S1-S12 greenfield demo charter baseline" }),
