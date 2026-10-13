@@ -69,6 +69,12 @@ Layout: host port **7749** → container 7749 (compose `7749:7749`; the dev serv
 
 §7 post-deployment checks apply unchanged: scheduled jobs stay registered at the **host OS scheduler** (launchd) per ADR-0019 — the container runs no in-process timers, and container replacement must not disturb the host scheduler registrations.
 
+### Runtime-stage rules for `next.config.ts`
+
+`next.config.ts` is loaded by `next start` at runtime and is not bundled into `.next`, so every local (relative) import it has, directly or transitively, must be copied explicitly in the `docker/Dockerfile` runtime stage. A missing copy crash-loops the container with `Cannot find module` (2026-10-13 incident: `./lib/dev-origins.ts`). `tests/unit/dockerfile-next-config-imports.test.ts` fails when a relative import has no matching `COPY`.
+
+Post-deploy rule: if the health check fails, run `docker logs co-newbiz-web` first, before any other diagnosis or rollback, to read the actual startup error.
+
 ### Operator cutover steps (2026-10-11 port swap)
 
 The Cloudflare tunnel (`cloudflared`, a docker container on the operator machine, configured outside this repository) targets host port 7749 for `https://newbiz.bizknights.org`. Until the swap, 7749 was the dev server; afterwards it is the production container. Run in order:

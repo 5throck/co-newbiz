@@ -72,6 +72,10 @@ COPY --from=build /repo/app/web-next/.next ./app/web-next/.next
 COPY --from=build /repo/app/web-next/public ./app/web-next/public
 COPY --from=build /repo/app/web-next/package.json ./app/web-next/package.json
 COPY --from=build /repo/app/web-next/next.config.ts ./app/web-next/next.config.ts
+# next.config.ts imports ./lib/dev-origins.ts at startup; every relative import
+# of next.config.ts must be copied here (guarded by
+# tests/unit/dockerfile-next-config-imports.test.ts).
+COPY --from=build /repo/app/web-next/lib/dev-origins.ts ./app/web-next/lib/dev-origins.ts
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh \
   && mkdir -p /repo/db/data /backups \
