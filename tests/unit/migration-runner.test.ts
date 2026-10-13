@@ -26,7 +26,7 @@ import { resetDb } from "../../db/client.ts";
 const DIR = join(import.meta.dirname, "..", "..", "db", "migrations");
 const files = readdirSync(DIR).filter((f) => f.endsWith(".sql")).sort();
 
-function applyAllLegacy(db, upto) {
+function applyAllLegacy(db: Database, upto?: string) {
   for (const f of files) {
     if (upto && f >= upto) break;
     db.run(readFileSync(join(DIR, f), "utf-8"));
@@ -86,11 +86,11 @@ describe("migration runner stop-on-error", () => {
     // and still applies the LAST statement — the defect.
     const legacyDb = mkdb();
     expect(() => legacyDb.run(sql)).not.toThrow();
-    expect(legacyDb.query("SELECT COUNT(*) c FROM m").get().c).toBe(1);
+    expect((legacyDb.query("SELECT COUNT(*) c FROM m").get() as { c: number }).c).toBe(1);
     // NEW behavior: throws at the violating statement; nothing applied after it.
     const newDb = mkdb();
     expect(() => { for (const s of splitSqlStatements(sql)) newDb.run(s); }).toThrow(/CHECK|constraint/i);
-    expect(newDb.query("SELECT COUNT(*) c FROM m").get().c).toBe(0);
+    expect((newDb.query("SELECT COUNT(*) c FROM m").get() as { c: number }).c).toBe(0);
   });
 
   test("a failing migration rolls back through db.transaction (all-or-nothing)", () => {
@@ -100,7 +100,7 @@ describe("migration runner stop-on-error", () => {
       for (const s of splitSqlStatements("INSERT INTO guard VALUES (20); INSERT INTO guard VALUES (5);")) db.run(s);
     });
     expect(() => tx()).toThrow(/CHECK|constraint/i);
-    expect(db.query("SELECT COUNT(*) c FROM guard").get().c).toBe(0); // first INSERT rolled back too
+    expect((db.query("SELECT COUNT(*) c FROM guard").get() as { c: number }).c).toBe(0); // first INSERT rolled back too
   });
 
   test("a valid multi-statement migration with triggers still applies", () => {
@@ -116,8 +116,8 @@ describe("migration runner stop-on-error", () => {
       "INSERT INTO t3 VALUES (5);",
     ].join("\n");
     for (const s of splitSqlStatements(sql)) db.run(s);
-    expect(db.query("SELECT COUNT(*) c FROM t3").get().c).toBe(1);
-    expect(db.query("SELECT COUNT(*) c FROM log").get().c).toBe(1); // trigger fired
+    expect((db.query("SELECT COUNT(*) c FROM t3").get() as { c: number }).c).toBe(1);
+    expect((db.query("SELECT COUNT(*) c FROM log").get() as { c: number }).c).toBe(1); // trigger fired
   });
 
   test("all migrations apply cleanly through the runner (temp file DB)", () => {
@@ -131,7 +131,7 @@ describe("migration runner stop-on-error", () => {
       expect(applied.length).toBe(files.length);
       resetDb();
       const db = new Database(dbPath, { readonly: true });
-      const triggers = db.query("SELECT COUNT(*) c FROM sqlite_master WHERE type = 'trigger'").get().c;
+      const triggers = (db.query("SELECT COUNT(*) c FROM sqlite_master WHERE type = 'trigger'").get() as { c: number }).c;
       expect(triggers).toBeGreaterThan(0);
       db.close();
     } finally {
@@ -142,10 +142,10 @@ describe("migration runner stop-on-error", () => {
 });
 
 describe("0132/0137 header assertions now abort", () => {
-  const mkMigrated = (upto) => {
+  const mkMigrated = (upto?: string) => {
     const db = new Database(":memory:");
     db.run("CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY, filename TEXT NOT NULL UNIQUE, applied_at TEXT NOT NULL)");
-    applyAllLegacy(db, files.find((f) => f.startsWith(upto))!);
+    applyAllLegacy(db, upto ? files.find((f) => f.startsWith(upto)) : undefined);
     return db;
   };
 
@@ -153,7 +153,7 @@ describe("0132/0137 header assertions now abort", () => {
   // violates. Under the OLD runner (multi-statement db.run) that violation
   // was SILENT and the migration "succeeded" with its safety assertion dead;
   // under the NEW runner it throws and aborts.
-  const sabotage = (sql) => sql.replace(/CHECK \(ok = 1\)/g, "CHECK (ok = 2)");
+  const sabotage = (sql: string) => sql.replace(/CHECK \(ok = 1\)/g, "CHECK (ok = 2)");
 
   test("0132 rebuild row-count guard actually aborts on violation", () => {
     const sql = sabotage(readFileSync(join(DIR, files.find((f) => f.startsWith("0132_"))!), "utf-8"));
@@ -178,7 +178,7 @@ describe("0132/0137 header assertions now abort", () => {
       expect(() => { for (const s of splitSqlStatements(sql)) db.run(s); }).not.toThrow();
     }
     // the widened CHECK accepts the seven ADR-0148 domains now
-    const ddl = db.query("SELECT sql FROM sqlite_master WHERE name = 'project_checklist_item_custom'").get().sql;
+    const ddl = (db.query("SELECT sql FROM sqlite_master WHERE name = 'project_checklist_item_custom'").get() as { sql: string }).sql;
     for (const d of ["commercial", "technical", "legal", "financial", "hr", "market", "financing"]) {
       expect(ddl).toContain("'" + d + "'");
     }

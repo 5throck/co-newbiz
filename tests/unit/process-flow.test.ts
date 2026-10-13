@@ -154,7 +154,7 @@ describe("process flow spec integrity (ADR-0074)", () => {
       "partnership-monitoring:partnership-agent:jv-lifecycle-governance",
     ]);
     // Activity-level applicableTracks is not supported (ADR-0160 follow-up, ADR-0161 §5.5).
-    for (const s of spec.stages) for (const a of s.activities) expect((a as Record<string, unknown>).applicableTracks).toBeUndefined();
+    for (const s of spec.stages) for (const a of s.activities) expect((a as unknown as Record<string, unknown>).applicableTracks).toBeUndefined();
   });
 
   test("applicable tracks are valid", () => {
@@ -236,13 +236,13 @@ describe("process flow spec integrity (ADR-0074)", () => {
     // key or out-of-vocabulary value would silently turn the ADR-0143
     // per-target contract into dead prose (review 2026-09-22, script-gap).
     const allowed = ["single", "shortlist"];
-    for (const stage of spec.stages as Array<Record<string, unknown>>) {
+    for (const stage of spec.stages as unknown as Array<Record<string, unknown>>) {
       if (!("subjectScope" in stage)) continue;
       const scope = stage.subjectScope as Record<string, unknown>;
       expect(Object.keys(scope).sort()).toEqual([...Object.keys(scope)].sort());
       for (const value of Object.values(scope)) expect(allowed).toContain(value);
     }
-    const s8 = (spec.stages as Array<Record<string, unknown>>).find((s) => s.id === "S8")!;
+    const s8 = (spec.stages as unknown as Array<Record<string, unknown>>).find((s) => s.id === "S8")!;
     expect(s8.subjectScope).toEqual({ greenfield: "single", brownfield: "shortlist" });
   });
 

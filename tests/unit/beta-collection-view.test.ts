@@ -93,7 +93,7 @@ describe("index choice helpers", () => {
     expect(betaSeriesUrl("p1", "KOSDAQ")).toBe("/api/projects/p1/wacc/beta-series?index=KOSDAQ");
   });
   test("parse exposes index options and default", () => {
-    const opts = [{ series_id: "krx:index:KOSDAQ:close", label: "KOSDAQ", count: 5, selected: true }];
+    const opts = [{ series_id: "krx:index:KOSDAQ:close", label: "KOSDAQ" as const, count: 5, selected: true }];
     const r = parseBetaSeriesResponse(true, { data: { collection: null, rows: [], index_options: opts, default_index: "KOSDAQ" }, meta: {}, error: null });
     expect(r.ok && r.indexOptions).toEqual(opts);
     expect(r.ok && r.defaultIndex).toBe("KOSDAQ");
