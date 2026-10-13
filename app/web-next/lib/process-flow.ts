@@ -14,7 +14,7 @@ import { AGENT_KEYS } from "./agent-registry.generated.ts";
 import { latestPmiKickoff, pmiKickoffApplies } from "./pmi-kickoff.ts";
 import { executionBaselineS11Check } from "./greenfield-execution.ts";
 import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
-import { establishmentProgress } from "./establishment.ts";
+import { establishmentProgress, reopenedAfterGate } from "./establishment.ts";
 import { isFreshReviewCycle } from "./portfolio.ts";
 
 export type StageId = "S1" | "S2" | "S3" | "S4" | "S5" | "S6" | "S7" | "S8" | "S9" | "S10" | "S11" | "S12";
@@ -116,6 +116,8 @@ export interface ProcessEvaluation {
   /** opportunity 전용 — 이미 프로젝트로 추진(승격)됐다면 그 project id. 승격
    * 후에는 팀 배정 등 세부 내용을 다시 노출하지 않고 이 값만으로 판단한다. */
   projectId: string | null;
+  /** project 전용 — 설립 실행 단계가 최근 유효한 dd/entity_ic/group_ic GO 이후 재개되었는지 (ADR-0165 addendum). opportunity에서는 생략. */
+  reopenedAfterGate?: boolean;
 }
 
 export function latestGateDecisions(entityType: "opportunity" | "project", entityId: string): Map<GateId, { decision: GateVerdict; missing: string[] | null; rationale: string }> {
@@ -979,6 +981,7 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
     terminated,
     stages,
     projectId,
+    ...(entity.type === "project" ? { reopenedAfterGate: reopenedAfterGate(entity.id).reopened_after_gate } : {}),
   };
 }
 

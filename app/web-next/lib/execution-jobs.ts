@@ -77,7 +77,11 @@ export function claimNextJob(db: Db, opts: { resourceClass?: ResourceClass; work
       );
       if (res.changes !== 1) return null; // 동시 선점 패배 — 이번 틱은 스킵
       return db.query("SELECT * FROM execution_job WHERE id = ?").get(next.id) as ExecutionJobRow;
-    })() as ExecutionJobRow | null;
+      // immediate: take the write lock up front so busy_timeout applies. A deferred
+      // SELECT→UPDATE upgrade fails instantly with SQLITE_BUSY when another worker commits
+      // in between, the catch below then returned null, and --loop workers exited with
+      // jobs still queued (flaky execution-jobs e2e).
+    }).immediate() as ExecutionJobRow | null;
     return claimed ?? null;
   } catch {
     return null; // 예: BUSY — busy_timeout 후에도 실패면 이번 틱 스킵(워커 루프가 재시도)

@@ -19,7 +19,14 @@
 // and an audited reopen. `done` rows are immutable through the status change;
 // only reopenEstablishmentStep returns them to in_progress. Every mutation
 // writes an entity_establishment_step_event row and an audit_log entry
-// (target "<projectId>#step<n>") in one transaction.
+// (target "<projectId>#step<n>@<via>") in one transaction.
+//
+// ADR-0165 addendum (migration 0141): every event row records `via` (how the
+// mutation arrived: ui cookie session / api bearer token / mcp in-process);
+// reopen and assignment notify the project lead(s) and the step's assignee
+// (never the actor) through the existing `notification` table, deduped per
+// recipient; `reopenedAfterGate` is the single server-side derivation of the
+// post-approval reopen warning (UI, IC package and process-flow consume it).
 import type { Database } from "bun:sqlite";
 import { getDb } from "../../../db/client.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
@@ -30,6 +37,10 @@ export type EstablishmentStatus = (typeof ESTABLISHMENT_STATUSES)[number];
 
 export const ESTABLISHMENT_ORIGINS = ["internal", "joint"] as const;
 export type EstablishmentOrigin = (typeof ESTABLISHMENT_ORIGINS)[number];
+
+/** How a mutation arrived (audit trail, ADR-0165 addendum). */
+export const CALL_PATHS = ["ui", "api", "mcp", "unknown"] as const;
+export type CallPath = (typeof CALL_PATHS)[number];
 
 export const ESTABLISHMENT_STEP_TITLES: Record<number, string> = {
   1: "설립준비(관할·주식구조·이사회 결의)",
@@ -182,6 +193,7 @@ export interface EstablishmentEventRow {
   actor_user_id: string;
   actor_name: string | null;
   audit_id: string | null;
+  via: CallPath;
   created_at: string;
 }
 
@@ -190,12 +202,67 @@ export function listEstablishmentEvents(projectId: string, limit = 20): Establis
   const rows = getDb()
     .query(
       `SELECT e.id, e.step_id, e.step_no, e.kind, e.from_status, e.to_status, e.from_assignee, e.to_assignee,
-              e.reason, e.evidence_url, e.actor_user_id, u.display_name AS actor_name, e.audit_id, e.created_at
+              e.reason, e.evidence_url, e.actor_user_id, u.display_name AS actor_name, e.audit_id, e.via, e.created_at
        FROM entity_establishment_step_event e LEFT JOIN app_user u ON u.user_id = e.actor_user_id
        WHERE e.project_id = ? ORDER BY e.created_at DESC, e.id DESC LIMIT ?`,
     )
     .all(projectId, limit) as EstablishmentEventRow[];
   return rows.map((r) => ({ ...r, actor_name: r.actor_name?.trim() || r.actor_user_id }));
+}
+
+/** Gates whose GO the reopen warning is measured against (ADR-0165 addendum). */
+export const REOPEN_WARNING_GATES = ["dd", "entity_ic", "group_ic"] as const;
+
+export interface ReopenedAfterGate {
+  /** True when a reopen event is newer than the latest valid GO of the dd / entity_ic / group_ic gate. */
+  reopened_after_gate: boolean;
+  /** Present only when reopened_after_gate is true. */
+  reopened_after_gate_detail: { steps: number[]; count: number; since: string } | null;
+}
+
+/** Timestamps arrive as ISO ("...T...Z") or SQLite ("YYYY-MM-DD HH:MM:SS", UTC). */
+function tsMs(ts: string): number {
+  const t = ts.includes("T") ? ts : ts.replace(" ", "T");
+  return Date.parse(/(Z|[+-]\d\d:?\d\d)$/.test(t) ? t : `${t}Z`);
+}
+
+/**
+ * The single derivation of the post-approval reopen warning. "Valid GO" = a
+ * gate's current verdict (latest decision that is not marked stale, ADR-0157)
+ * is GO; the reference time is the newest such GO among dd / entity_ic /
+ * group_ic. No valid GO -> false (nothing was approved that a reopen could
+ * undermine). A reopen never revokes a gate decision; this only flags it.
+ */
+export function reopenedAfterGate(projectId: string): ReopenedAfterGate {
+  const none: ReopenedAfterGate = { reopened_after_gate: false, reopened_after_gate_detail: null };
+  const db = getDb();
+  const gates = db
+    .query(
+      `SELECT decision, decided_at FROM (
+         SELECT g.gate, g.decision, g.decided_at,
+                ROW_NUMBER() OVER (PARTITION BY g.gate ORDER BY g.decided_at DESC, g.id DESC) AS rn
+         FROM gate_decision g
+         WHERE g.entity_type = 'project' AND g.entity_id = ? AND g.gate IN ('dd', 'entity_ic', 'group_ic')
+           AND NOT EXISTS (SELECT 1 FROM gate_decision_stale s WHERE s.decision_id = g.id)
+       ) WHERE rn = 1`,
+    )
+    .all(projectId) as Array<{ decision: string; decided_at: string }>;
+  const goTimes = gates.filter((g) => g.decision === "go").map((g) => tsMs(g.decided_at)).filter(Number.isFinite);
+  if (goTimes.length === 0) return none;
+  const lastGo = Math.max(...goTimes);
+  const reopens = db
+    .query("SELECT step_no, created_at FROM entity_establishment_step_event WHERE project_id = ? AND kind = 'reopen'")
+    .all(projectId) as Array<{ step_no: number; created_at: string }>;
+  const after = reopens.filter((e) => tsMs(e.created_at) > lastGo);
+  if (after.length === 0) return none;
+  return {
+    reopened_after_gate: true,
+    reopened_after_gate_detail: {
+      steps: [...new Set(after.map((e) => e.step_no))].sort((a, b) => a - b),
+      count: after.length,
+      since: new Date(lastGo).toISOString().slice(0, 10),
+    },
+  };
 }
 
 export interface EstablishmentProgress {
@@ -321,21 +388,88 @@ interface EventInput {
   evidenceUrl?: string | null;
   actor: string;
   auditId: string | null;
+  via: CallPath;
   now: string;
 }
 
-function insertEvent(db: Database, e: EventInput): void {
+function insertEvent(db: Database, e: EventInput): string {
+  const id = ulid();
   db.run(
     `INSERT INTO entity_establishment_step_event
        (id, step_id, project_id, step_no, kind, from_status, to_status, from_assignee, to_assignee,
-        reason, evidence_url, actor_user_id, audit_id, created_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-    [ulid(), e.stepId, e.projectId, e.stepNo, e.kind, e.fromStatus ?? null, e.toStatus ?? null,
-      e.fromAssignee ?? null, e.toAssignee ?? null, e.reason ?? null, e.evidenceUrl ?? null, e.actor, e.auditId, e.now],
+        reason, evidence_url, actor_user_id, audit_id, via, created_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [id, e.stepId, e.projectId, e.stepNo, e.kind, e.fromStatus ?? null, e.toStatus ?? null,
+      e.fromAssignee ?? null, e.toAssignee ?? null, e.reason ?? null, e.evidenceUrl ?? null, e.actor, e.auditId, e.via, e.now],
   );
+  return id;
 }
 
-const auditTarget = (projectId: string, stepNo: number) => `${projectId}#step${stepNo}`;
+/** audit_log has no detail column, so the call path rides in the target: "<projectId>#step<n>@<via>". */
+const auditTarget = (projectId: string, stepNo: number, via: CallPath) => `${projectId}#step${stepNo}@${via}`;
+
+const NOTIFY_MESSAGE_REASON_MAX = 80;
+const NOTIFY_PAYLOAD_REASON_MAX = 300;
+
+/**
+ * In-app notifications for an establishment mutation (caller owns the
+ * transaction). One row per recipient; the actor is never notified; the
+ * (user_id, dedupe_key) unique index makes a repeat a no-op.
+ */
+function notifyEstablishment(db: Database, n: {
+  kind: "reopened" | "assigned";
+  projectId: string;
+  stepNos: number[];
+  eventId: string;
+  actor: string;
+  /** Users to notify in addition to the leads (reopen: the reopened rows' assignees; assign: the new assignee). */
+  extraRecipients: Array<string | null>;
+  includeLeads: boolean;
+  reason?: string;
+  via: CallPath;
+  now: string;
+}): number {
+  const recipients = new Set<string>();
+  if (n.includeLeads) {
+    const leads = db
+      .query("SELECT user_id FROM project_member WHERE project_id = ? AND project_role = 'lead' AND revoked_at IS NULL")
+      .all(n.projectId) as Array<{ user_id: string }>;
+    for (const l of leads) recipients.add(l.user_id);
+  }
+  for (const u of n.extraRecipients) if (u && isActiveMember(n.projectId, u)) recipients.add(u);
+  recipients.delete(n.actor);
+  if (recipients.size === 0) return 0;
+
+  const actorName = userDisplayName(n.actor) ?? n.actor;
+  const stepsText = n.stepNos.map((no) => `${no}단계(${ESTABLISHMENT_STEP_TITLES[no] ?? ""})`).join(", ");
+  const reason = n.reason?.trim();
+  const message = n.kind === "reopened"
+    ? `설립 실행 ${stepsText}가 ${actorName}님에 의해 재개되었습니다${reason ? ` — ${reason.length > NOTIFY_MESSAGE_REASON_MAX ? `${reason.slice(0, NOTIFY_MESSAGE_REASON_MAX)}…` : reason}` : ""}`
+    : `설립 실행 ${stepsText}의 담당자로 지정되었습니다 (지정: ${actorName})`;
+  const payload = JSON.stringify({
+    message,
+    event_id: n.eventId,
+    step_nos: n.stepNos,
+    actor_user_id: n.actor,
+    actor_name: actorName,
+    ...(reason ? { reason: reason.slice(0, NOTIFY_PAYLOAD_REASON_MAX) } : {}),
+    via: n.via,
+    href: `/deals/${encodeURIComponent(n.projectId)}/s11`,
+  });
+  const triggerType = n.kind === "reopened" ? "establishment_step_reopened" : "establishment_step_assigned";
+  const severity = n.kind === "reopened" ? "warning" : "info";
+  let inserted = 0;
+  for (const userId of recipients) {
+    const r = db.run(
+      `INSERT OR IGNORE INTO notification
+         (id, user_id, project_id, trigger_type, severity, payload, channel, bundle, sent_at, dedupe_key)
+       VALUES (?,?,?,?,?,?,'in_app','immediate',?,?)`,
+      [ulid(), userId, n.projectId, triggerType, severity, payload, n.now, `establishment:${n.eventId}`],
+    );
+    inserted += r.changes;
+  }
+  return inserted;
+}
 
 function isHttpUrl(value: string): boolean {
   if (value.length > 2048) return false;
@@ -350,11 +484,13 @@ function isHttpUrl(value: string): boolean {
 /** Write the assignee on an existing row + `assign` event + audit (caller owns the transaction). */
 function applyAssign(
   db: Database, projectId: string, stepId: string, stepNo: number,
-  from: string | null, to: string | null, actor: string, now: string,
+  from: string | null, to: string | null, actor: string, via: CallPath, now: string,
 ): void {
   db.run("UPDATE entity_establishment_step SET assignee_user_id = ?, assigned_by = ?, assigned_at = ? WHERE id = ?", [to, actor, now, stepId]);
-  const auditId = appendAudit(db, { actor, action: "entity_establishment.assign", target: auditTarget(projectId, stepNo), now });
-  insertEvent(db, { stepId, projectId, stepNo, kind: "assign", fromAssignee: from, toAssignee: to, actor, auditId, now });
+  const auditId = appendAudit(db, { actor, action: "entity_establishment.assign", target: auditTarget(projectId, stepNo, via), now });
+  const eventId = insertEvent(db, { stepId, projectId, stepNo, kind: "assign", fromAssignee: from, toAssignee: to, actor, auditId, via, now });
+  // ADR-0165 addendum: the new assignee hears about it (clearing notifies nobody).
+  if (to) notifyEstablishment(db, { kind: "assigned", projectId, stepNos: [stepNo], eventId, actor, extraRecipients: [to], includeLeads: false, via, now });
 }
 
 /**
@@ -364,7 +500,7 @@ function applyAssign(
  * (reopen_required); step 5 `done` needs steps 1–4 done. Row update, event
  * and audit entries share one transaction.
  */
-export function changeEstablishmentStatus(projectId: string, input: UpsertInput, actor: string): UpsertResult {
+export function changeEstablishmentStatus(projectId: string, input: UpsertInput, actor: string, via: CallPath = "unknown"): UpsertResult {
   const db = getDb();
   const project = projectKeyRow(projectId);
   if (!project || !originApplies(projectId, input.origin)) return { ok: false, error: "not_applicable" };
@@ -413,17 +549,17 @@ export function changeEstablishmentStatus(projectId: string, input: UpsertInput,
         [rowId, project.source_opportunity_id, projectId, input.step_no, input.status, input.origin, itemKey, evidenceUrl, note, actor, now],
       );
     }
-    const auditId = appendAudit(db, { actor, action: "entity_establishment.update", target: auditTarget(projectId, input.step_no), now });
+    const auditId = appendAudit(db, { actor, action: "entity_establishment.update", target: auditTarget(projectId, input.step_no, via), now });
     insertEvent(db, {
       stepId: rowId, projectId, stepNo: input.step_no, kind: "status_change",
-      fromStatus, toStatus: input.status, evidenceUrl, actor, auditId, now,
+      fromStatus, toStatus: input.status, evidenceUrl, actor, auditId, via, now,
     });
     if (input.status === "done") {
-      appendAudit(db, { actor, action: "entity_establishment.complete", target: auditTarget(projectId, input.step_no), now });
+      appendAudit(db, { actor, action: "entity_establishment.complete", target: auditTarget(projectId, input.step_no, via), now });
     }
     let assignee = fromAssignee;
     if (input.assignee_user_id !== undefined && (input.assignee_user_id ?? null) !== fromAssignee) {
-      applyAssign(db, projectId, rowId, input.step_no, fromAssignee, input.assignee_user_id ?? null, actor, now);
+      applyAssign(db, projectId, rowId, input.step_no, fromAssignee, input.assignee_user_id ?? null, actor, via, now);
       assignee = input.assignee_user_id ?? null;
     }
     return {
@@ -439,7 +575,9 @@ export type AssignResult =
   | { ok: false; error: "not_applicable" | "assignee_not_member" | "no_origin_opportunity" };
 
 /** Set/change/clear the step's responsible person. Allowed on a `done` step; creates a `pending` row when none exists. */
-export function assignEstablishmentStep(projectId: string, stepNo: number, assignee: string | null, actor: string, statedOrigin?: string | null): AssignResult {
+export function assignEstablishmentStep(
+  projectId: string, stepNo: number, assignee: string | null, actor: string, statedOrigin?: string | null, via: CallPath = "unknown",
+): AssignResult {
   const db = getDb();
   const project = projectKeyRow(projectId);
   if (!project || !originApplies(projectId, statedOrigin)) return { ok: false, error: "not_applicable" };
@@ -453,7 +591,7 @@ export function assignEstablishmentStep(projectId: string, stepNo: number, assig
       if ((existing.assignee_user_id ?? null) === assignee) {
         return { ok: true, id: existing.id, step_no: stepNo, assignee_user_id: assignee, changed: false, updated_at: now };
       }
-      applyAssign(db, projectId, existing.id, stepNo, existing.assignee_user_id, assignee, actor, now);
+      applyAssign(db, projectId, existing.id, stepNo, existing.assignee_user_id, assignee, actor, via, now);
       return { ok: true, id: existing.id, step_no: stepNo, assignee_user_id: assignee, changed: true, updated_at: now };
     }
     const origin = (db.query("SELECT origin FROM md_project WHERE id = ?").get(projectId) as { origin: string }).origin;
@@ -465,7 +603,7 @@ export function assignEstablishmentStep(projectId: string, stepNo: number, assig
       [rowId, project.source_opportunity_id, projectId, stepNo, origin, actor, now],
     );
     if (assignee === null) return { ok: true, id: rowId, step_no: stepNo, assignee_user_id: null, changed: false, updated_at: now };
-    applyAssign(db, projectId, rowId, stepNo, null, assignee, actor, now);
+    applyAssign(db, projectId, rowId, stepNo, null, assignee, actor, via, now);
     return { ok: true, id: rowId, step_no: stepNo, assignee_user_id: assignee, changed: true, updated_at: now };
   })();
 }
@@ -493,7 +631,7 @@ function doneRowsForStep(db: Database, project: ProjectKeyRow, stepNo: number): 
  * decisions are never touched.
  */
 export function reopenEstablishmentStep(
-  projectId: string, stepNo: number, reason: string, actor: string, opts: { cascadeStep5?: boolean } = {},
+  projectId: string, stepNo: number, reason: string, actor: string, opts: { cascadeStep5?: boolean; via?: CallPath } = {},
 ): ReopenResult {
   const db = getDb();
   const project = projectKeyRow(projectId);
@@ -506,18 +644,22 @@ export function reopenEstablishmentStep(
   if (dependents.length > 0 && !opts.cascadeStep5) return { ok: false, error: "dependent_step_done", dependent_steps: [5] };
 
   const now = new Date().toISOString();
+  const via: CallPath = opts.via ?? "unknown";
   return db.transaction((): ReopenResult => {
+    const eventIds: string[] = [];
+    const assignees: Array<string | null> = [];
     const reopened: Array<{ id: string; step_no: number; cascade: boolean }> = [];
     const reopenOne = (row: LocatedRow, no: number, cascade: boolean) => {
       adopt(db, row, projectId);
       const auditId = appendAudit(db, {
         actor, action: cascade ? "entity_establishment.reopen_cascade" : "entity_establishment.reopen",
-        target: auditTarget(projectId, no), now,
+        target: auditTarget(projectId, no, via), now,
       });
-      insertEvent(db, {
+      eventIds.push(insertEvent(db, {
         stepId: row.id, projectId, stepNo: no, kind: "reopen", fromStatus: "done", toStatus: "in_progress",
-        reason: why, evidenceUrl: row.evidence_url, actor, auditId, now,
-      });
+        reason: why, evidenceUrl: row.evidence_url, actor, auditId, via, now,
+      }));
+      assignees.push(row.assignee_user_id);
       db.run(
         "UPDATE entity_establishment_step SET status = 'in_progress', evidence_url = NULL, owner = ?, updated_at = ? WHERE id = ?",
         [actor, now, row.id],
@@ -526,6 +668,12 @@ export function reopenEstablishmentStep(
     };
     for (const r of target) reopenOne(r, stepNo, false);
     for (const r of dependents) reopenOne(r, 5, true);
+    // ADR-0165 addendum: ONE notification per recipient per reopen action (a
+    // cascade is a single act), keyed by the first event so a repeat is a no-op.
+    notifyEstablishment(db, {
+      kind: "reopened", projectId, stepNos: [...new Set(reopened.map((r) => r.step_no))], eventId: eventIds[0],
+      actor, extraRecipients: assignees, includeLeads: true, reason: why, via, now,
+    });
     return { ok: true, reopened, updated_at: now };
   })();
 }

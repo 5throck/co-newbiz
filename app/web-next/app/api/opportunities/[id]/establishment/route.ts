@@ -6,7 +6,7 @@
 import { getDb } from "../../../../../../../db/client.ts";
 import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
-import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
+import { authenticate, humanOnlyDenied, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, fail, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { route } from "../../../../../lib/route.ts";
 
@@ -59,6 +59,12 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
     step_no?: number; status?: string; origin?: string;
     checklist_item?: string; evidence_url?: string; note?: string;
   } | null;
+  // ADR-0165 addendum: completing a step is human-only (boundary #2), enforced
+  // here as well as at the MCP in-process port.
+  if (body?.status === "done") {
+    const denied = humanOnlyDenied(ctx, "설립 실행 단계 완료 처리는 사람만 할 수 있습니다 (boundary #2).");
+    if (denied) return denied;
+  }
   const stepNo = Number(body?.step_no);
   if (!Number.isInteger(stepNo) || stepNo < 1 || stepNo > 5) return badRequest("invalid_request", "step_no는 1–5 사이 정수입니다.");
   const status = body?.status;

@@ -8,9 +8,10 @@
 // ADR-0165: PUT is a status change (in_progress | done | halted | escalated;
 // done needs evidence, a done row needs POST .../reopen first); assignee and
 // reopen live on sibling routes. `done` via an agent is refused by the
-// in-process guard (HUMAN_ONLY_ROUTES bodyField).
+// in-process guard (HUMAN_ONLY_ROUTES bodyField) AND by this route itself:
+// status=done from a bearer token / agent account is 403 human_only.
 import { getDb } from "../../../../../../../db/client.ts";
-import { authenticate } from "../../../../../lib/auth.ts";
+import { authenticate, callPathOf, humanOnlyDenied } from "../../../../../lib/auth.ts";
 import {
   ESTABLISHMENT_ORIGINS,
   listEstablishmentSteps,
@@ -18,6 +19,7 @@ import {
   changeEstablishmentStatus,
   listEstablishmentEvents,
   listEstablishmentMembers,
+  reopenedAfterGate,
 } from "../../../../../lib/establishment.ts";
 import { establishmentErrorResponse } from "../../../../../lib/establishment-http.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
@@ -43,6 +45,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       steps,
       members: listEstablishmentMembers(id),
       history: listEstablishmentEvents(id, 20),
+      ...reopenedAfterGate(id),
       complete: progress.complete,
       progress: `${progress.done}/5`,
     },
@@ -62,6 +65,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     step_no?: number; status?: string; origin?: string;
     checklist_item?: string; evidence_url?: string; note?: string; assignee_user_id?: string | null;
   } | null;
+  // Completing a step is a human act (boundary #2). Enforced here, not only at
+  // the MCP in-process port: a bearer token reaches this route directly.
+  if (body?.status === "done") {
+    const denied = humanOnlyDenied(ctx, "설립 실행 단계 완료 처리는 사람만 할 수 있습니다 (boundary #2) — 에이전트는 진행 중·중단·에스컬레이션만 기록합니다.");
+    if (denied) return denied;
+  }
   const stepNo = Number(body?.step_no);
   if (!Number.isInteger(stepNo) || stepNo < 1 || stepNo > 5) return badRequest("invalid_request", "step_no는 1–5 사이 정수입니다.");
   const status = body?.status;
@@ -93,6 +102,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       ...(hasAssignee ? { assignee_user_id: body?.assignee_user_id ?? null } : {}),
     },
     ctx.userId,
+    callPathOf(ctx),
   );
   if (!result.ok) return establishmentErrorResponse(result.error);
 

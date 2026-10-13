@@ -4,7 +4,7 @@
  * (ADR-0165, migration 0140). Covers the server-side rules (evidence for
  * done, pending rejected, done immutable via PUT, origin applicability),
  * assignee membership, the reopen reason / dependency / cascade rules, the
- * events + audit trail (one transaction, target "<projectId>#step<n>"), and
+ * events + audit trail (one transaction, target "<projectId>#step<n>@<via>"), and
  * the human-only agent boundary.
  */
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
@@ -69,7 +69,7 @@ const events = (stepNo: number, kind?: string) =>
     `SELECT * FROM entity_establishment_step_event WHERE project_id = ? AND step_no = ? ${kind ? "AND kind = ?" : ""} ORDER BY created_at, id`,
   ).all(...(kind ? [projectId, stepNo, kind] : [projectId, stepNo])) as Array<Record<string, any>>;
 const audits = (action: string, stepNo: number) =>
-  (db.query("SELECT COUNT(*) c FROM audit_log WHERE action = ? AND target = ?").get(action, `${projectId}#step${stepNo}`) as { c: number }).c;
+  (db.query("SELECT COUNT(*) c FROM audit_log WHERE action = ? AND target LIKE ?").get(action, `${projectId}#step${stepNo}@%`) as { c: number }).c;
 const stepRow = (stepNo: number) =>
   db.query("SELECT * FROM entity_establishment_step WHERE project_id = ? AND step_no = ?").get(projectId, stepNo) as Record<string, any>;
 

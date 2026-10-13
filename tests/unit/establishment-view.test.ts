@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import {
   assigneeView, buildStatusBody, defaultFormStatus, establishmentApplies, establishmentErrorText, evidenceRequired,
-  notApplicableNote, reopenWarning, safeEvidenceHref, toMs, validateReopenReason, validateStatusForm, type EventView,
+  notApplicableNote, eventSummary, reopenWarning, safeEvidenceHref, toMs, validateReopenReason, validateStatusForm, type EventView,
 } from "../../app/web-next/lib/establishment-view.ts";
 import { estStepColPct } from "../../app/web-next/components/stages/constants.ts";
 
@@ -59,13 +59,21 @@ describe("establishment-view", () => {
   test("timestamps parse in ISO and SQLite forms", () => {
     expect(toMs("2026-10-13 10:00:00")).toBe(toMs("2026-10-13T10:00:00Z"));
   });
-  test("reopen warning only when a reopen follows a GO decision", () => {
-    const gates = [{ decision: "go", decided_at: "2026-10-13T09:00:00.000Z" }];
-    expect(reopenWarning([ev({})], [])).toBeNull();
-    expect(reopenWarning([ev({ created_at: "2026-10-13T08:00:00.000Z" })], gates)).toBeNull();
-    const w = reopenWarning([ev({ step_no: 3 }), ev({ id: "e2", step_no: 1 }), ev({ id: "e3", kind: "assign" })], gates);
-    expect(w).toEqual({ steps: [1, 3], count: 2, since: "2026-10-13" });
-    expect(reopenWarning([ev({})], [{ decision: "hold", decided_at: "2026-10-13T09:00:00Z" }])).toBeNull();
+  test("reopen warning renders the server flag only (no client-side derivation)", () => {
+    expect(reopenWarning(null)).toBeNull();
+    expect(reopenWarning(undefined)).toBeNull();
+    expect(reopenWarning({})).toBeNull();
+    expect(reopenWarning({ reopened_after_gate: false, reopened_after_gate_detail: null })).toBeNull();
+    expect(reopenWarning({ reopened_after_gate: true, reopened_after_gate_detail: { steps: [1, 3], count: 2, since: "2026-10-13" } }))
+      .toEqual({ steps: [1, 3], count: 2, since: "2026-10-13" });
+    // history alone never produces a warning any more
+    expect(reopenWarning({ history: [ev({})] } as never)).toBeNull();
+  });
+  test("history rows show the call path; unknown adds nothing", () => {
+    expect(eventSummary(ev({ via: "mcp" }))).toBe("완료 취소(재개) · MCP");
+    expect(eventSummary(ev({ via: "ui" }))).toBe("완료 취소(재개) · 화면");
+    expect(eventSummary(ev({ via: "unknown" }))).toBe("완료 취소(재개)");
+    expect(eventSummary(ev({}))).toBe("완료 취소(재개)");
   });
   test("column presets sum to 100", () => {
     for (const n of [5, 6]) expect(estStepColPct(n).reduce((a, b) => a + b, 0)).toBeCloseTo(100, 5);
@@ -83,6 +91,12 @@ describe("establishment panel wiring (source checks)", () => {
     expect(panel).toContain("/reopen");
     expect(panel).toContain("cascade_step5");
     expect(panel).toContain("dependent_step_done");
+  });
+  test("both surfaces consume the server flag instead of deriving from history", () => {
+    expect(panel).toContain("reopenWarning(est ?? fallbackReopen)");
+    expect(panel).not.toContain("gateHistory");
+    expect(ic).toContain("fallbackReopen={pkg?.establishment}");
+    expect(ic).not.toContain("gateHistory");
   });
   test("IcReviewStage no longer PUTs establishment with the old body", () => {
     expect(ic).not.toContain("api.put");

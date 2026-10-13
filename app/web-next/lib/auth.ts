@@ -16,6 +16,7 @@ import { getDb } from "../../../db/client.ts";
 import { validateSession, type UserRole } from "../../../db/lib/accounts.ts";
 import { validateApiToken, type TokenScope } from "../../../db/lib/api-tokens.ts";
 import { forbidden, unauthorized } from "./envelope.ts";
+import { AGENT_KEYS } from "./agent-registry.generated.ts";
 import { currentPrincipal } from "./mcp/principal-context.ts";
 
 export const SESSION_COOKIE = "co_newbiz_session";
@@ -172,6 +173,28 @@ export function authenticate(request: Request): AuthResult {
   }
 
   return { ok: true, auth };
+}
+
+/**
+ * How this request reached the route, for audit trails (ADR-0165 addendum):
+ * 'mcp' = in-process call of an OAuth-delegated MCP client, 'ui' = cookie
+ * session (the web app), 'api' = bearer token on REST (personal API token,
+ * including the stdio MCP server's REST client).
+ */
+export function callPathOf(auth: AuthContext): "ui" | "api" | "mcp" {
+  if (currentPrincipal()) return "mcp";
+  return auth.via === "cookie" ? "ui" : "api";
+}
+
+/**
+ * Human-only mutation guard (boundary #2, same predicate the human-only routes
+ * inline): a cookie session of a non-agent account, never bearer, never the
+ * in-process MCP principal. Returns the 403 human_only response, or null when
+ * the caller is a human in the web app.
+ */
+export function humanOnlyDenied(auth: AuthContext, message: string): Response | null {
+  if (auth.via !== "cookie" || currentPrincipal() || AGENT_KEYS.has(auth.userId)) return forbidden("human_only", message);
+  return null;
 }
 
 export function requireAdmin(auth: AuthContext): Response | null {

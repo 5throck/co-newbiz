@@ -155,6 +155,17 @@ function proposalTitle(p: ProposalSrc): string {
   return `${p.kind.replaceAll("_", " ")} 제안 확인`;
 }
 
+/** Deep link carried in the notification payload (same-origin path only); else the generic project fallback. */
+function notificationHref(n: NotificationSrc): string {
+  try {
+    const parsed = JSON.parse(n.payload) as { href?: unknown };
+    if (typeof parsed.href === "string" && parsed.href.startsWith("/") && !parsed.href.startsWith("//")) return parsed.href;
+  } catch {
+    /* payload is free text */
+  }
+  return n.project_id ? `/projects/${encodeURIComponent(n.project_id)}/process` : "/deals";
+}
+
 function notificationSummary(n: NotificationSrc): string {
   try {
     const parsed = JSON.parse(n.payload) as { message?: unknown; title?: unknown };
@@ -234,7 +245,7 @@ export function buildInbox(src: InboxSources, nowMs: number = Date.now()): Inbox
       title: notificationSummary(n),
       ageDays: ageInDays(n.sent_at, nowMs),
       severity: n.severity === "urgent" ? "high" : n.severity === "warning" ? "medium" : "low",
-      href: n.project_id ? `/projects/${encodeURIComponent(n.project_id)}/process` : "/deals",
+      href: notificationHref(n),
       createdAt: n.sent_at,
     });
   }
