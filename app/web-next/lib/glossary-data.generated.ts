@@ -105,7 +105,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "ko": "예비타당성 검토",
     "en": "Preliminary Feasibility Study",
     "definition_ko": "본 타당성 검토(FS) 이전에 수행하는 약식 검토 단계.",
-    "why_it_matters_ko": "이 단계에서 이미 데이터 신뢰도·프록시 체인 등급이 산출되므로, Pre-FS의 RAG 등급이 낮으면 FS로 넘어가기 전에 데이터를 보강해야 한다.",
+    "why_it_matters_ko": "이 단계에서 이미 데이터 신뢰도·프록시 체인 등급이 산출되므로, Pre-FS의 종합 등급이 낮으면 FS로 넘어가기 전에 데이터를 보강해야 한다.",
     "category": "business",
     "related": [
       "Stage Gate"
@@ -268,7 +268,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "ko": "투자심의 자료",
     "en": "IC package",
     "definition_ko": "S10에서 설계한 투자 구조와 자금 조달 계획, 채택된 Business Case, DD 발견사항, RAG 제안을 한 묶음으로 정리해 S11 투자심의위원회(IC)에 올리는 자료.",
-    "why_it_matters_ko": "심의 자료는 판단의 근거를 모은 것이지 결재가 아니다 — RAG 등급은 제안일 뿐이며 승인과 투자 결정은 사람이 내린다(경계",
+    "why_it_matters_ko": "심의 자료는 판단의 근거를 모은 것이지 결재가 아니다 — 종합 등급은 제안일 뿐이며 승인과 투자 결정은 사람이 내린다(경계",
     "category": "business",
     "aliases": [
       "IC 자료",
@@ -1092,7 +1092,8 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "aliases": [
       "RAG",
       "Red-Amber-Green",
-      "RAG 종합 등급"
+      "RAG 종합 등급",
+      "RAG 등급"
     ],
     "related": [
       "Reliability Grade",

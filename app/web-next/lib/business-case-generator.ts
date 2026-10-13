@@ -36,6 +36,7 @@ import { historicalGrowthStats } from "./financial-commentary.ts";
 import { runActivityChain, type ActivitySpec, type CallAgent } from "./agent-orchestrator.ts";
 import { specAgentFor } from "./spec-activities.ts";
 import { runSimJob } from "./sim-engine.ts";
+import { fmtNpvInteger } from "./npv-format.ts";
 import { resolveDownsideOpexUplift } from "./target-costing.ts";
 
 // Per-step S8 agent assignment reads from process/flow.spec.yaml (SSOT,
@@ -1259,11 +1260,11 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       return [
         `### [밸류에이션] valuation-agent — 밸류에이션 모델 (${SCENARIO_LABEL[ctx.scenario]} · ${VARIANT_LABEL[variant]})`,
         "",
-        `확정 WACC ${(ctx.inputs.wacc.value * 100).toFixed(1)}%·회수기간 ${horizonOf(ctx.inputs)}년 기준 NPV ${(npv / 100).toFixed(1)} 억원,`,
+        `확정 WACC ${(ctx.inputs.wacc.value * 100).toFixed(1)}%·회수기간 ${horizonOf(ctx.inputs)}년 기준 NPV ${fmtNpvInteger(npv / 100)} 억원,`,
         `성장 ${(eff.growth * 100).toFixed(2)}% (${eff.growthSource}) · sigma ${pct1(eff.disp)} (${eff.dispSource}).`,
         `WACC 출처: ${ctx.inputs.wacc.source}${ctx.inputs.waccScope?.scope === "target" ? " · 대상별 세션" : ""}${ctx.inputs.wacc.run_id ? ` (run ${ctx.inputs.wacc.run_id})` : ""}.`,
         ...(exitEvRevenueOf(ctx.inputs) > 0 && ctx.inputs.revenueAnchor
-          ? [`인수 가격: 대상 매출 ${initInv.source.includes("사용자") ? "× 사용자 확정 배수" : "× 컴프 기본 배수"} = ${(initInv.value / 100).toFixed(1)} 억원 (${initInv.source}) — 회수 시점 동일 배수로 처분 가정.`]
+          ? [`인수 가격: 대상 매출 ${initInv.source.includes("사용자") ? "× 사용자 확정 배수" : "× 컴프 기본 배수"} = ${fmtNpvInteger(initInv.value / 100)} 억원 (${initInv.source}) — 회수 시점 동일 배수로 처분 가정.`]
           : []),
         `IRR ${((irr(flows) ?? 0) * 100).toFixed(1)}% (greenfield-fs step 3). 모델/라인 3건 영속화 (model ${modelId}).`,
       ].join("\n");
@@ -1317,8 +1318,8 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
         "",
         `시드 ${sim.seed}·${sim.iterations}회 몬테카를로 (ADR-0052 §D.4, 결정론적 재현 가능; 엔진 ${engineMeta.engine} · ${engineMeta.device}):`,
         `성장 ${(eff.growth * 100).toFixed(2)}% (${eff.growthSource}) · sigma ${pct1(eff.disp)} (${eff.dispSource}).`,
-        `NPV p05 ${(sim.p05 / 100).toFixed(1)} / p50 ${(sim.p50 / 100).toFixed(1)} / p95 ${(sim.p95 / 100).toFixed(1)} 억원,`,
-        `분산(표준편차) ${sim.std.toFixed(1)} — 지점 추정+서술 각주 금지, 분위수 영속화 완료 (valuation_simulation 3행).`,
+        `NPV p05 ${fmtNpvInteger(sim.p05 / 100)} / p50 ${fmtNpvInteger(sim.p50 / 100)} / p95 ${fmtNpvInteger(sim.p95 / 100)} 억원,`,
+        `분산(표준편차) ${fmtNpvInteger(sim.std)} 백만원 — 지점 추정+서술 각주 금지, 분위수 영속화 완료 (valuation_simulation 3행).`,
         ...(xcheck
           ? [
               `구조 교차검증 (페이드 DCF ${xcheck.horizon}년 — 성장 ${pct1(eff.growth)} → ${pct1(xcheck.terminalGrowth)} 선형 수렴, 동일 배수 처분): NPV ${(xcheck.npv / 100).toFixed(1)} 억원 · IRR ${xcheck.irr != null ? (xcheck.irr * 100).toFixed(1) : "—"}% — 기본 구조 p50 대비 ${xcheck.npv >= sim.p50 ? "+" : ""}${(((xcheck.npv - sim.p50) / Math.abs(sim.p50)) * 100).toFixed(1)}% (두 표준 구조의 일치/괴리가 성장-배수 가정의 일관성 신호).`,
@@ -1333,7 +1334,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
     return [
       `### [정량 방법론] quant-methodologist — 시나리오 리스크 평가 (${SCENARIO_LABEL[ctx.scenario]} · ${VARIANT_LABEL[variant]})`,
       "",
-      `하락 스트레스: p05 NPV ${(((ctx.sim?.result ?? runSeededSimulation(ctx.inputs, ctx.scenario, variant)).p05) / 100).toFixed(1)} 억원 기준,`,
+      `하락 스트레스: p05 NPV ${fmtNpvInteger(((ctx.sim?.result ?? runSeededSimulation(ctx.inputs, ctx.scenario, variant)).p05) / 100)} 억원 기준,`,
       ctx.scenario === "downside"
         ? "금리 충격 시 계약(커버넌트) 테스트 관점에서 p05가 0 이하로 내려가는 구간에 대한 완충 확인 필요."
         : "금리 충격 시 계약(커버넌트) 테스트 통과 여향 — 하락 시나리오의 p05 대비 완충 명시 권장.",

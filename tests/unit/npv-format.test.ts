@@ -24,3 +24,11 @@ describe("fmtNpvEok / fmtNpvInteger", () => {
     expect(fmtNpvInteger(12.6)).toBe("13");
   });
 });
+
+import { formatTargetValue } from "../../app/web-next/lib/business-targets-format.ts";
+describe("NPV whole-number display in shared formatters", () => {
+  test("goal/target krw_m values are whole 억원", () => {
+    expect(formatTargetValue(123456.7, "krw_m")).toBe("1,235억원");
+    expect(formatTargetValue(50000, "krw_m")).toBe("500억원");
+  });
+});

@@ -113,7 +113,7 @@ kill-criteria 레지스트리에 이제 런타임 소비자가 있다: `db/lib/k
 
 회의 M3의 액션 아이템 A-3: 위 밴드들을 라이브 게이팅에 신뢰하기 전에 5-10건의 과거 의사결정에 대해 보정 드라이런을 수행한다. 이것은 `docs/planning/transition-plan.md`에 따른 엔터티 온보딩이 보정에 충분한 과거 케이스를 만들어낼 때 실행된다 — Stage 3 후속으로 추적되며, 그때까지 밴드를 수동으로 사용하는 것을 막지 않는다(수동 적용은 보정 데이터셋이 존재하기 전에 인간이 모든 등급을 샌ity-체크할 수 있게 한다).
 
-**두 가지 다른 보정 경로, 하나가 아님** — `docs/pilots/pilot-004-sk-group-capital-rebalancing.md` 발견 F-1: 독점규제 스크리닝 인접 단계(RAG의 Regulatory/Permit 차원, `brownfield-dd`의 antitrust 단계)는 실제 공개 규제 결정에 대해 백테스트할 수 있다 — 파일럿 001-003이 정확히 이것을 했다. `group-investment-review`의 그룹 아젠다 랭킹 단계(단계 4: 허들 초과 IRR 스프레드 + RAG 등급 + 요청 자본)는 **할 수 없다** — 그 입력은 어떤 그룹도 그 세밀함으로 공개적으로, 영원히 공개하지 않는 내부 자본배분 수치다. 이 단계의 보정은 팀 자신의 내부 과거 케이스를 기다려야 한다; 다른 단계와 달리 공개 케이스 대체 경로가 존재하지 않는다.
+**두 가지 다른 보정 경로, 하나가 아님** — `docs/pilots/pilot-004-sk-group-capital-rebalancing.md` 발견 F-1: 독점규제 스크리닝 인접 단계(RAG의 Regulatory/Permit 차원, `brownfield-dd`의 antitrust 단계)는 실제 공개 규제 결정에 대해 백테스트할 수 있다 — 파일럿 001-003이 정확히 이것을 했다. `group-investment-review`의 그룹 아젠다 랭킹 단계(단계 4: 허들 초과 IRR 스프레드 + 등급 + 요청 자본)는 **할 수 없다** — 그 입력은 어떤 그룹도 그 세밀함으로 공개적으로, 영원히 공개하지 않는 내부 자본배분 수치다. 이 단계의 보정은 팀 자신의 내부 과거 케이스를 기다려야 한다; 다른 단계와 달리 공개 케이스 대체 경로가 존재하지 않는다.
 
 ## 7. 시드 데이터 형태 (Stage 4/5 선행 참조)
 
@@ -122,5 +122,5 @@ kill-criteria 레지스트리에 이제 런타임 소비자가 있다: `db/lib/k
 ## 8. 관련 문서
 
 - `docs/governance/process-map.md` — RAG 평가가 스테이지 게이트 플로우에서 차지하는 위치.
-- `docs/manuals/business-manual.md` §3 — 인간 리뷰어가 RAG 등급을 읽는 방법.
+- `docs/manuals/business-manual.md` §3 — 인간 리뷰어가 등급을 읽는 방법.
 - `memory/meeting-2026-08-20-m3-rag-criteria.md` — 출처 회의와 전체 논의.

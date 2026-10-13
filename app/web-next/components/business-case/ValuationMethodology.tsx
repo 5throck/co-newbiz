@@ -120,7 +120,7 @@ export function ValuationMethodology({
               <td>{isAcquisition ? "인수 기업가치 = 매출 앵커 × EV/Revenue 배수 (시나리오와 무관 — 가격은 한 번 협상)" : "초기투자 = year-1 매출 × 비율 (ADR-0106)"}</td>
               <td className="num mono-num">
                 {isAcquisition
-                  ? `${acqEv!.toFixed(2)}배 = ${억(revLine!.annual_amount_krw_m * acqEv!)}`
+                  ? `${acqEv!.toFixed(2)}배 = ${fmtNpvEok(revLine!.annual_amount_krw_m * acqEv!)}`
                   : params ? `매출의 ${(params.initialInvestmentRatio * 100).toFixed(0)}%` : "—"}
               </td>
             </tr>

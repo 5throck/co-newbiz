@@ -1,4 +1,4 @@
-// Guard: "Entity IC" / "Group IC" / "IC 심의" / "RAG 종합 등급" are not used in the field. User-visible strings in
+// Guard: "Entity IC" / "Group IC" / "IC 심의" / "RAG 종합 등급" / "RAG 등급" are not used in the field. User-visible strings in
 // app/web-next must use the Korean committee wording (glossary aliases keep the old forms resolvable).
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -8,7 +8,7 @@ import * as yaml from "js-yaml";
 const ROOT = join(import.meta.dir, "..", "..");
 const WEB = join(ROOT, "app", "web-next");
 const SKIP_DIRS = new Set(["node_modules", ".next", "tests", "e2e"]);
-const FORBIDDEN = /Entity[ -]IC|Group[ -]IC|그룹 IC|IC ?심의|RAG 종합 등급|종합 RAG/;
+const FORBIDDEN = /Entity[ -]IC|Group[ -]IC|그룹 IC|IC ?심의|RAG 종합 등급|RAG 등급|종합 RAG/;
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -47,6 +47,6 @@ describe("no Entity IC / Group IC term in visible strings", () => {
     expect(biz["Entity IC"].aliases).toEqual(expect.arrayContaining(["Entity IC", "IC 심의"]));
     expect(biz["Group IC"].aliases).toEqual(expect.arrayContaining(["Group IC", "그룹 IC"]));
     const tech = (yaml.load(readFileSync(join(ROOT, "glossary", "technical.yaml"), "utf-8")) as any).terms;
-    expect(tech["RAG Dimension"].aliases).toContain("RAG 종합 등급");
+    expect(tech["RAG Dimension"].aliases).toEqual(expect.arrayContaining(["RAG 종합 등급", "RAG 등급"]));
   });
 });

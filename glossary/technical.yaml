@@ -1,4 +1,4 @@
-version: 1.0.1
+version: 1.0.2
 last_updated: 2026-08-19
 terms:
   Run:
@@ -58,7 +58,7 @@ terms:
     definition_ko: 재무성·시장·데이터 신뢰도·규제인허가·기술실행·리스크 6개 차원과 종합 등급.
     why_it_matters_ko: 가중평균이 아니라 규칙 기반이며, 데이터 신뢰도가 종합 등급의 상한을 캡한다 — 이게 이 체계에서 가장 중요한 규칙이다.
     category: technical
-    aliases: [RAG, Red-Amber-Green, RAG 종합 등급]
+    aliases: [RAG, Red-Amber-Green, RAG 종합 등급, RAG 등급]
     related: [Reliability Grade, Hysteresis]
     used_in: [rag-scoring-framework]
     owner: process-governance-manager

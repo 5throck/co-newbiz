@@ -3,6 +3,8 @@
 // admin console and the fs evidence table can format values in the browser —
 // the server module owns the DB logic and re-exports from here.
 
+import { fmtNpvEok } from "./npv-format.ts";
+
 export type TargetDirection = "gte" | "lte"; // gte = 이상, lte = 이하
 
 export type TargetUnit = "krw_m" | "pct" | "years" | "none";
@@ -62,7 +64,7 @@ export function unitSpec(unit: TargetUnit): UnitSpec {
 /** Display formatting shared by the admin console and the fs evidence table.
  * Money targets are stored in KRW millions (ADR-0061) and shown in 억원. */
 export function formatTargetValue(value: number, unit: TargetUnit): string {
-  if (unit === "krw_m") return `${(value / 100).toLocaleString("ko-KR", { maximumFractionDigits: 1 })}억원`;
+  if (unit === "krw_m") return fmtNpvEok(value);
   if (unit === "pct") return `${(value * 100).toLocaleString("ko-KR", { maximumFractionDigits: 1 })}%`;
   if (unit === "none") return value.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
   return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}년`;

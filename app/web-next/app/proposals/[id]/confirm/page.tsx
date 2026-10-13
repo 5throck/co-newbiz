@@ -281,7 +281,7 @@ export default function ProposalConfirmPage() {
 
           {view?.rag && (
             <section aria-labelledby="rag-heading">
-              <h2 id="rag-heading">AI 추천 RAG 등급</h2>
+              <h2 id="rag-heading">AI 추천 종합 등급(녹·황·적)</h2>
               {view.rag.status === "graded" && view.rag.overall ? (
                 <p>
                   <span className={`status-chip ${RAG_CLASS[view.rag.overall.grade]}`}>{RAG_TEXT[view.rag.overall.grade]}</span>{" "}
