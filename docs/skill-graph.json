@@ -1421,6 +1421,11 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20261013-03",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "doc:AGENTS.md",
       "type": "doc",
       "layer": "L3"
@@ -4453,6 +4458,24 @@
     {
       "type": "cites_skill",
       "from": "dec:DEC-20261012-02",
+      "to": "skill:root/policy-and-procedure-governance",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261013-03",
+      "to": "skill:root/antitrust-screening",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261013-03",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261013-03",
       "to": "skill:root/policy-and-procedure-governance",
       "source": "skills_used"
     },

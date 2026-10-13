@@ -4,37 +4,37 @@ title: "Legal and Regulatory Screening Checklist"
 scope: shared
 enforceability: mixed
 owner_agent: legal-counsel
-version: "1.0.0"
+version: "1.1.0"
 effective_from: "2026-08-20"
 gate: Screening
 
 items:
   - id: lr-01
-    text: "Applicable permit pathway identified and mapped as a DAG with critical-path lead time (permit-pathway-mapping)"
+    text: "적용되는 인허가 경로를 파악해 임계 경로 소요 기간을 포함한 의존 관계 그래프(DAG)로 정리함 (permit-pathway-mapping)"
     mandatory: true
     waiver_eligible: true
   - id: lr-02
-    text: "Certification requirements identified separately from permits, with transferability-on-change-of-control assessed for Brown Field (design's permit/certification separation rule)"
+    text: "인증 요건을 인허가와 분리해 파악하고, 브라운필드(M&A)는 경영권 변경 시 인증 이전 가능성까지 평가함 (인허가·인증 분리 원칙)"
     mandatory: true
     waiver_eligible: true
   - id: lr-03
-    text: "Applicable region profile(s) confirmed present and validated (region-profiles/_validate.ts) for every jurisdiction the deal touches"
+    text: "딜이 닿는 모든 관할에 대해 해당 지역 프로필(region profile)이 있고 검증(region-profiles/_validate.ts)을 통과했음을 확인함"
     mandatory: true
     waiver_eligible: true
   - id: lr-04
-    text: "Foreign investment screening trigger checked against the region profile's mandatory_filing_triggers"
+    text: "외국인투자 심사 대상 여부를 지역 프로필의 필수 신고 요건(mandatory_filing_triggers)에 비추어 점검함"
     mandatory: true
     waiver_eligible: true
   - id: lr-05
-    text: "Sanctions and anti-corruption screening run against all counterparties, not just the primary target"
+    text: "제재·반부패 심사를 주 대상뿐 아니라 모든 거래 상대방에 대해 수행함"
     mandatory: true
     waiver_eligible: true
   - id: lr-06
-    text: "Data transfer mechanism confirmed for any cross-border data flow the deal requires"
+    text: "딜에 필요한 국경 간 데이터 흐름이 있으면 그 이전 수단(법적 근거)을 확인함"
     mandatory: false
     waiver_eligible: true
   - id: lr-07
-    text: "NDA/confidentiality review completed before any DD material is loaded into the system (design §4-9-1 rule: loading itself can be an NDA violation)"
+    text: "DD 자료를 시스템에 올리기 전에 비밀유지계약(NDA)·비밀유지 검토를 마침 (설계 §4-9-1 규칙: 자료를 올리는 행위 자체가 NDA 위반일 수 있음)"
     mandatory: true
     waiver_eligible: true
 

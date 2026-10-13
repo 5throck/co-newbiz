@@ -38,7 +38,7 @@ const { resolveRoutingVars, evaluateAppliesWhen } = await import("../../db/lib/a
 const { parsePredicate } = await import("../../db/lib/predicate.ts");
 const gf = await import("../../app/web-next/lib/greenfield-subtrack.ts");
 const { subTrackChecklistIds, ddCompletionSummary } = await import("../../app/web-next/lib/dd-checklist-tailor.ts");
-const { SUB_TRACK_DD_CHECKLISTS } = await import("../../app/web-next/lib/library.ts");
+const { SUB_TRACK_DD_CHECKLISTS, scopedSubTrackDdChecklists } = await import("../../app/web-next/lib/library.ts");
 
 const NOW = new Date().toISOString();
 const OLD = "2026-09-01T00:00:00.000Z";
@@ -300,7 +300,8 @@ describe("(c) S9 selection", () => {
   test("brownfield regression: same extras as SUB_TRACK_DD_CHECKLISTS, no greenfield scope", () => {
     for (const st of ["m_and_a", "jv", "partnership", "minority_investment", "rbd", "strategic_investment"]) {
       const p = seedProject("brownfield", st);
-      expect(subTrackChecklistIds(p)).toEqual(SUB_TRACK_DD_CHECKLISTS[st] ?? []);
+      // DEC-20261013-03: in-scope (by date) non-baseline brownfield projects get the scoped extras.
+      expect(subTrackChecklistIds(p)).toEqual(st === "m_and_a" ? SUB_TRACK_DD_CHECKLISTS[st] ?? [] : scopedSubTrackDdChecklists(st));
       expect(gf.greenfieldSelection(p, db)).toBeNull();
     }
     const old = seedProject("brownfield", "m_and_a", { old: true });

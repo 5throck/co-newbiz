@@ -33,7 +33,7 @@ const { AGENT_KEYS } = await import("../../app/web-next/lib/agent-registry.gener
 const { isHumanOnly } = await import("../../app/web-next/lib/mcp/in-process-port.ts");
 const bf = await import("../../app/web-next/lib/brownfield-subtrack.ts");
 const tailor = await import("../../app/web-next/lib/dd-checklist-tailor.ts");
-const { getChecklistItems, getBrownfieldWorkspaceOverlay, SUB_TRACK_DD_CHECKLISTS, DD_WORKSPACE_CHECKLISTS } = await import("../../app/web-next/lib/library.ts");
+const { getChecklistItems, getBrownfieldWorkspaceOverlay, SUB_TRACK_DD_CHECKLISTS, scopedSubTrackDdChecklists, DD_WORKSPACE_CHECKLISTS } = await import("../../app/web-next/lib/library.ts");
 const { DdTargetError } = await import("../../app/web-next/lib/dd-target.ts");
 
 const NOW = new Date().toISOString();
@@ -95,11 +95,11 @@ afterAll(() => {
 const EXPECTED: Record<string, [number, number]> = {
   m_and_a: [77, 102],
   jv: [75, 93],
-  strategic_investment: [71, 71],
-  minority_investment: [71, 87],
+  strategic_investment: [71, 76], // DEC-20261013-03: + ma-01..03, min-04, min-05
+  minority_investment: [71, 90], // DEC-20261013-03: + ma-01..03
   partnership: [52, 78],
   rbd: [77, 92],
-  corporate_venture: [71, 71],
+  corporate_venture: [71, 75], // DEC-20261013-03: + ma-01..03, min-05
 };
 
 describe("(a) counts per sub-track (design sections 5 and 7)", () => {
@@ -207,8 +207,8 @@ describe("(b) unchanged paths", () => {
         expect(bf.brownfieldAttachedExtras(p, st, db)).toEqual(tailor.subTrackChecklistIds(p));
         if (st !== "m_and_a" && at === OLD) {
           bf.optInBrownfieldWorkspaceScope({ projectId: p, migrationNote: "x", actor: A1 }, db);
-          expect(bf.brownfieldAttachedExtras(p, st, db)).toEqual(SUB_TRACK_DD_CHECKLISTS[st] ?? []);
-          expect(tailor.subTrackChecklistIds(p)).toEqual(SUB_TRACK_DD_CHECKLISTS[st] ?? []);
+          expect(bf.brownfieldAttachedExtras(p, st, db)).toEqual(scopedSubTrackDdChecklists(st));
+          expect(tailor.subTrackChecklistIds(p)).toEqual(scopedSubTrackDdChecklists(st));
         }
       }
     }
@@ -230,7 +230,8 @@ describe("(c) opt-in preview on a PRJ-QGB2W5-like fixture (strategic_investment,
     const pv = tailor.brownfieldOptInPreview(p)!;
     expect(pv.eligible).toBe(true);
     expect(pv.before).toMatchObject({ judged: 37, judgeable: 38 }); // three counted domains (created before 2026-10-01), no extras
-    expect(pv.after).toMatchObject({ judged: 35, judgeable: 36, workspace_judgeable: 36, excluded: 2 });
+    // DEC-20261013-03: the opt-in attaches ma-01..03 + min-04 + min-05 (5 unassessed extra items).
+    expect(pv.after).toMatchObject({ judged: 35, judgeable: 41, workspace_judgeable: 36, excluded: 2, unassessed: 5 });
     expect(pv.moves_to_previous_scope.map((m) => m.item_id).sort()).toEqual(["ldd-07", "ldd-14"]);
     expect(pv.fails_stay_unmet.map((m) => m.item_id)).toEqual(["ldd-14"]);
     expect(before.mandatoryUnmet).toBe(1);
@@ -239,13 +240,13 @@ describe("(c) opt-in preview on a PRJ-QGB2W5-like fixture (strategic_investment,
     const r = bf.optInBrownfieldWorkspaceScope({ projectId: p, migrationNote: "preview reviewed", actor: A1 }, db);
     expect(r.ok).toBe(true);
     expect(rowCount(p)).toBe(rowsBefore);
-    expect(tailor.ddCompletionSummary(p)).toMatchObject({ judged: 35, judgeable: 36, mandatoryUnmet: 1 });
+    expect(tailor.ddCompletionSummary(p)).toMatchObject({ judged: 35, judgeable: 41, mandatoryUnmet: 1 });
     const view = tailor.listDdWorkspace(p).brownfield_scope!.workspace_scope;
     expect(view.opted_in).toBe(true);
     expect(view.previous_scope.find((e) => e.item_id === "ldd-14")).toMatchObject({ status: "fail", stays_unmet: true, assessed_by: A1 });
     expect(tailor.brownfieldOptInPreview(p)!.eligible).toBe(false);
-    // extras attach rule untouched by the opt-in pin
-    expect(tailor.subTrackChecklistIds(p)).toEqual([]);
+    // DEC-20261013-03: the opt-in attaches the merger-control / FDI extras for SI
+    expect(tailor.subTrackChecklistIds(p)).toEqual(["chk-ma-special-topics-checklist", "chk-deal-shape-presigning-checklist"]);
     // re-judging the moved fail clears it (by a person, never silently)
     expect(tailor.upsertChecklistState(p, L, "ldd-14", "pass", A1)).not.toBeNull();
     expect(tailor.ddCompletionSummary(p).mandatoryUnmet).toBe(0);
@@ -359,11 +360,36 @@ describe("(f) fail-closed", () => {
     expect(bf.brownfieldItemScope(p, F, "fdd-01", db)).toMatchObject({ code: "X", judgeable: false });
     expect(tailor.brownfieldOptInPreview(p)!.extras_attached_by_opt_in).toEqual([]);
   });
-  test("opt-in on a grandfathered strategic_investment attaches nothing (no extras for SI)", () => {
+  test("opt-in on a grandfathered strategic_investment attaches only the merger-control / FDI items (DEC-20261013-03)", () => {
     const p = seedProject("brownfield", "strategic_investment", OLD);
-    expect(tailor.brownfieldOptInPreview(p)!.extras_attached_by_opt_in).toEqual([]);
+    expect(tailor.subTrackChecklistIds(p)).toEqual([]); // legacy unscoped: nothing attached
+    expect(tailor.brownfieldOptInPreview(p)!.extras_attached_by_opt_in).toEqual([
+      { checklist_id: "chk-ma-special-topics-checklist", judgeable: 3, excluded: 9 },
+      { checklist_id: "chk-deal-shape-presigning-checklist", judgeable: 2, excluded: 24 },
+    ]);
     expect(bf.optInBrownfieldWorkspaceScope({ projectId: p, migrationNote: "x", actor: A1 }, db).ok).toBe(true);
-    expect(tailor.subTrackChecklistIds(p)).toEqual([]);
+    expect(tailor.subTrackChecklistIds(p)).toEqual(["chk-ma-special-topics-checklist", "chk-deal-shape-presigning-checklist"]);
+    const ctx = bf.brownfieldScopeContext(p, db)!;
+    expect(["ma-01", "ma-02", "ma-03"].map((id) => ctx.items.get(`chk-ma-special-topics-checklist:${id}`)!.code)).toEqual(["R", "A", "R"]);
+    expect(ctx.items.get("chk-ma-special-topics-checklist:ma-01")!.reading).toBeTruthy();
+    expect(ctx.items.get("chk-ma-special-topics-checklist:ma-07")!.judgeable).toBe(false);
+    expect(ctx.items.get("chk-deal-shape-presigning-checklist:min-05")).toMatchObject({ code: "A", judgeable: true });
+    expect(ctx.items.get("chk-deal-shape-presigning-checklist:min-01")!.judgeable).toBe(false);
+  });
+  test("corporate_venture: ma-02 A, ma-01/03 and min-05 R; minority_investment: ma-02 A, min-05 A (DEC-20261013-03)", () => {
+    const cvc = seedProject("brownfield", "corporate_venture", OLD);
+    bf.optInBrownfieldWorkspaceScope({ projectId: cvc, migrationNote: "x", actor: A1 }, db);
+    const c = bf.brownfieldScopeContext(cvc, db)!;
+    expect(["chk-ma-special-topics-checklist:ma-01", "chk-ma-special-topics-checklist:ma-02", "chk-ma-special-topics-checklist:ma-03", "chk-deal-shape-presigning-checklist:min-05"].map((k) => c.items.get(k)!.code)).toEqual(["R", "A", "R", "R"]);
+    const mi = seedProject("brownfield", "minority_investment", OLD);
+    bf.optInBrownfieldWorkspaceScope({ projectId: mi, migrationNote: "x", actor: A1 }, db);
+    const m = bf.brownfieldScopeContext(mi, db)!;
+    expect(["ma-01", "ma-02", "ma-03"].map((id) => m.items.get(`chk-ma-special-topics-checklist:${id}`)!.code)).toEqual(["R", "A", "R"]);
+    expect(m.items.get("chk-deal-shape-presigning-checklist:min-05")!.code).toBe("A");
+  });
+  test("legacy (WAVE_F window, not in scope) minority_investment keeps the unscoped attach list", () => {
+    const p = seedProject("brownfield", "minority_investment", MID);
+    if (!bf.brownfieldScopeByDate(p, db)) expect(tailor.subTrackChecklistIds(p)).toEqual(SUB_TRACK_DD_CHECKLISTS.minority_investment);
   });
   test("review route is human-only (bearer / agent -> 403 human_only)", async () => {
     const p = seedProject("brownfield", "jv");
@@ -413,11 +439,11 @@ describe("(f) fail-closed", () => {
   });
 });
 
-describe("(g) overlay attached_to mirrors SUB_TRACK_DD_CHECKLISTS", () => {
+describe("(g) overlay attached_to mirrors the scoped attach list (SUB_TRACK_DD_CHECKLISTS + BF_SCOPED_EXTRA_ADDITIONS)", () => {
   test("every extra checklist and only those", () => {
     const raw = getBrownfieldWorkspaceOverlay() as any;
     const fromLib = new Map<string, string[]>();
-    for (const st of bf.BROWNFIELD_SUB_TRACKS) for (const c of SUB_TRACK_DD_CHECKLISTS[st] ?? []) fromLib.set(c, [...(fromLib.get(c) ?? []), st]);
+    for (const st of bf.BROWNFIELD_SUB_TRACKS) for (const c of st === "m_and_a" ? SUB_TRACK_DD_CHECKLISTS[st] ?? [] : scopedSubTrackDdChecklists(st)) fromLib.set(c, [...(fromLib.get(c) ?? []), st]);
     const fromOverlay = new Map(Object.entries(raw.extra_checklists).map(([c, b]: [string, any]) => [c, [...b.attached_to].sort()]));
     expect([...fromOverlay.keys()].sort()).toEqual([...fromLib.keys()].sort());
     for (const [c, sts] of fromLib) expect(fromOverlay.get(c)).toEqual([...sts].sort());

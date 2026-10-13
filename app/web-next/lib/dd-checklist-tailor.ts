@@ -31,7 +31,7 @@ import { appendAudit } from "../../../db/lib/access-control.ts";
 import { AGENT_KEYS } from "./agent-registry.generated.ts";
 import { runActivityChain, type ActivitySpec, type EntityRef } from "./agent-orchestrator.ts";
 import { specAgentFor } from "./spec-activities.ts";
-import { DD_WORKSPACE_CHECKLISTS, SUB_TRACK_DD_CHECKLISTS, getChecklistItems, type ChecklistItemDef } from "./library.ts";
+import { DD_WORKSPACE_CHECKLISTS, SUB_TRACK_DD_CHECKLISTS, scopedSubTrackDdChecklists, getChecklistItems, type ChecklistItemDef } from "./library.ts";
 import { WAVE_F_PREDICATE_DATE } from "./wave-f-date.ts";
 import { DD_DOMAIN_LABEL } from "./labels.ts";
 import {
@@ -658,12 +658,14 @@ export function subTrackChecklistIds(projectId: string): string[] {
   if (gf) return gf.extra_checklists;
   // ADR-0162 (user decision 2026-10-12): a recorded brownfield opt-in attaches the sub-track extras.
   const bfInfo = brownfieldRouteInfo(projectId, db);
-  if (bfInfo?.scope_key && bfInfo.opted_in) return SUB_TRACK_DD_CHECKLISTS[bfInfo.scope_key] ?? [];
+  if (bfInfo?.scope_key && bfInfo.opted_in) return scopedSubTrackDdChecklists(bfInfo.scope_key);
   if ((pin.at ?? proj.created_at ?? "") < WAVE_F_PREDICATE_DATE) return [];
   const route = db
     .query("SELECT track, sub_track FROM route_decision WHERE opportunity_id = ? AND is_current = 1")
     .get(proj.source_opportunity_id) as { track: string; sub_track: string | null } | undefined;
   if (route?.track !== "brownfield" || !route.sub_track) return [];
+  // DEC-20261013-03: an in-scope (by date) non-baseline project gets the scoped extras.
+  if (bfInfo?.scope_key && bfInfo.by_date) return scopedSubTrackDdChecklists(bfInfo.scope_key);
   return SUB_TRACK_DD_CHECKLISTS[route.sub_track] ?? [];
 }
 

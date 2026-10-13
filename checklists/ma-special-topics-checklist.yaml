@@ -4,7 +4,7 @@ title: "M&A Special Topics Checklist (Brown Field)"
 scope: shared
 enforceability: mixed
 owner_agent: brownfield-agent
-version: "1.4.0"
+version: "1.4.1"
 effective_from: "2026-08-20"
 gate: DD
 
@@ -23,7 +23,7 @@ items:
     mandatory: true
     waiver_eligible: true
   - id: ma-03
-    text: "건 점핑(gun-jumping) 금지를 인지함 — 승인 전 통합 조치를 하지 않음"
+    text: "승인 전 이행 금지(건 점핑, gun-jumping) 의무를 인지함 — 심사 결과 통지(승인) 전 주식 취득 완료·통합 조치를 하지 않음"
     mandatory: true
     waiver_eligible: true
   - id: ma-04

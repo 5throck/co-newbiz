@@ -56,10 +56,11 @@ describe("S9 sub-track checklists (B1)", () => {
   test.each([
     ["jv", ["chk-partnership-checklist", "chk-deal-shape-presigning-checklist"]],
     ["partnership", ["chk-partnership-checklist", "chk-deal-shape-presigning-checklist"]],
-    ["minority_investment", ["chk-partnership-checklist", "chk-deal-shape-presigning-checklist"]],
+    // DEC-20261013-03: in-scope (by date) projects also get the merger-control / FDI extras
+    ["minority_investment", ["chk-partnership-checklist", "chk-deal-shape-presigning-checklist", "chk-ma-special-topics-checklist"]],
     ["rbd", ["chk-rbd-technology-checklist"]],
-    ["strategic_investment", []],
-    ["corporate_venture", []],
+    ["strategic_investment", ["chk-ma-special-topics-checklist", "chk-deal-shape-presigning-checklist"]],
+    ["corporate_venture", ["chk-ma-special-topics-checklist", "chk-deal-shape-presigning-checklist"]],
   ])("sub_track %s gets its own checklist set", (sub, expected) => {
     const { db, projectId } = demo();
     setSub(db, sub);
