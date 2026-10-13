@@ -427,8 +427,8 @@ describe("POST /api/opportunities/[id]/promote — role boundary", () => {
 });
 
 describe("promoteOpportunity origin derivation", () => {
-  test("ADR-0166: Green Field defaults to joint, an explicit internal is respected, and the S11 establishment rule applies", async () => {
-    const promoteGf = (origin?: "internal") => {
+  test("ADR-0166: Green Field defaults to internal, an explicit joint is respected, and the S11 establishment rule applies", async () => {
+    const promoteGf = (origin?: "joint") => {
       const oppId = insertOpportunity();
       insertRouteDecision(oppId, "greenfield");
       completeS5(oppId);
@@ -438,8 +438,8 @@ describe("promoteOpportunity origin derivation", () => {
     };
     const originOf = (id: string) => (db.query("SELECT origin FROM md_project WHERE id = ?").get(id) as { origin: string | null }).origin;
     const defaultId = promoteGf();
-    expect(originOf(defaultId)).toBe("joint");
-    expect(originOf(promoteGf("internal"))).toBe("internal");
+    expect(originOf(defaultId)).toBe("internal");
+    expect(originOf(promoteGf("joint"))).toBe("joint");
     const { evaluateProcess } = await import("../../app/web-next/lib/process-flow.ts");
     const ev = evaluateProcess({ type: "project", id: defaultId });
     expect(JSON.stringify(ev)).toContain("설립 실행");

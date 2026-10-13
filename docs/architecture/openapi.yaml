@@ -3032,7 +3032,7 @@ paths:
   /api/opportunities/{id}/promote:
     post:
       operationId: promoteOpportunityToProject
-      summary: Promote the opportunity to a project (S8+ carrier). Analyst+; preconditions per ADR-0095 (greenfield S5 / brownfield S7 Short List). Optional body origin (internal|external|hybrid|joint) wins; when omitted Green Field defaults to joint and Brown Field derives it from the route sub_track (ADR-0166).
+      summary: Promote the opportunity to a project (S8+ carrier). Analyst+; preconditions per ADR-0095 (greenfield S5 / brownfield S7 Short List). Optional body origin (internal|external|hybrid|joint) wins; when omitted Green Field defaults to internal and Brown Field derives it from the route sub_track (ADR-0166).
       tags:
         - Reference
       parameters:

@@ -99,10 +99,11 @@ describe("origin derivation at promotion (B4)", () => {
     expect(deriveOriginFromSubTrack("brownfield", "strategic_investment")).toBe("external");
     expect(deriveOriginFromSubTrack("brownfield", "minority_investment")).toBe("hybrid");
     expect(deriveOriginFromSubTrack("brownfield", "partnership")).toBeNull();
-    // ADR-0166: Green Field defaults to joint for every sub-track (and none).
+    // ADR-0166: Green Field defaults to internal for every sub-track (and none); explicit joint is respected.
     for (const sub of ["jv", "intra_venture", "existing_business_rbd", "corporate_venture", "unknown_sub", null]) {
-      expect(deriveOriginFromSubTrack("greenfield", sub)).toBe("joint");
+      expect(deriveOriginFromSubTrack("greenfield", sub)).toBe("internal");
     }
+    expect(deriveOriginFromSubTrack("greenfield", "jv")).toBe("internal");
     expect(deriveOriginFromSubTrack(null, "jv")).toBeNull();
     expect(deriveOriginFromSubTrack("brownfield", null)).toBeNull();
   });

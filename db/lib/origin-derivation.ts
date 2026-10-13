@@ -3,14 +3,14 @@
  * route sub_track. JV -> joint, CVC -> internal (both trigger the establishment
  * record), M&A / strategic -> external, minority -> hybrid. Brownfield partnership /
  * R&BD stay null. ADR-0166 (human decision, chat 2026-10-14): every Green Field
- * project defaults to joint regardless of sub_track; internal stays selectable
- * through the explicit origin. A supplied origin wins.
+ * project defaults to internal regardless of sub_track; joint stays selectable
+ * through the explicit origin (genuine joint venture). A supplied origin wins.
  */
 export function deriveOriginFromSubTrack(
   track: "greenfield" | "brownfield" | null,
   subTrack: string | null,
 ): "internal" | "external" | "hybrid" | "joint" | null {
-  if (track === "greenfield") return "joint";
+  if (track === "greenfield") return "internal";
   if (track !== "brownfield" || !subTrack) return null;
   switch (subTrack) {
     case "jv": return "joint";
