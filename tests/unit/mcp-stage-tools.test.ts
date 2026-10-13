@@ -111,10 +111,10 @@ describe("registry shape", () => {
     }
   });
 
-  test("all six decision kinds plus the two deprecated aliases are propose tools that only POST /api/proposals", () => {
+  test("all six decision kinds, the establishment-mode proposal plus the two deprecated aliases are propose tools that only POST /api/proposals", () => {
     const propose = REGISTRY.filter((t) => t.kind === "propose").map((t) => t.name).sort();
     expect(propose).toEqual([
-      "create_route_decision", "propose_approval", "propose_case_adoption", "propose_gate_decision",
+      "create_route_decision", "propose_approval", "propose_case_adoption", "propose_establishment_mode", "propose_gate_decision",
       "propose_route_decision", "propose_target_selection", "propose_transition_decision", "record_gate_decision",
     ]);
     for (const name of propose) {

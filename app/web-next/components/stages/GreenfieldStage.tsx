@@ -22,6 +22,7 @@ import { ColGroup } from "../ui.tsx";
 import { GateDecisionPanel } from "../GateDecisionPanel.tsx";
 import { PromotionPanel } from "../PromotionPanel.tsx";
 import { PrimaryAction } from "../ui.tsx";
+import { LevelSelect } from "./LevelSelect.tsx";
 import {
   HELD_STATUS_CHIP, HELD_STATUS_LABEL, RESOLUTION_LABEL,
   type CapabilityGapRow, type GapResolution,
@@ -62,7 +63,7 @@ const CURRENCY_LABEL: Record<BcLine["currency"], string> = { KRW: "원화", USD:
 
 // 필요 역량 확인 표 — 열 비율(2026-10-11-table-column-sizing-system batch 2):
 // 역량명·비고가 본문, 칩·인풋 열은 균등 분할.
-const GAP_COL_PCT = [28, 18, 18, 18, 18] as const;
+const GAP_COL_PCT = [22, 14, 14, 14, 16, 20] as const;
 
 export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: string; onSaved?: () => void }) {
   const { me } = useAuth();
@@ -233,6 +234,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   <tr>
                     <th scope="col">필요 역량 (S3)</th>
                     <th scope="col">보유 판정 (S3)</th>
+                    <th scope="col">필요 수준</th>
                     <th scope="col">보유 수준</th>
                     <th scope="col">해소 방식</th>
                     <th scope="col">비고</th>
@@ -249,7 +251,8 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                         <span className={`status-chip ${HELD_STATUS_CHIP[g.held.status]}`}>{HELD_STATUS_LABEL[g.held.status]}</span>
                         {g.held.holders.length > 0 && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{g.held.holders.join(", ")}</span>}
                       </td>
-                      <td><input aria-label={`${g.capability} 보유 수준`} placeholder="보유 수준" value={g.currentLevel} onChange={(e) => setGapField(i, { currentLevel: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "8rem" }} /></td>
+                      <td><LevelSelect ariaLabel={`${g.capability} 필요 수준`} value={g.requiredLevel} onChange={(v) => setGapField(i, { requiredLevel: v })} /></td>
+                      <td><LevelSelect ariaLabel={`${g.capability} 보유 수준`} value={g.currentLevel} onChange={(v) => setGapField(i, { currentLevel: v })} /></td>
                       <td>
                         <select aria-label={`${g.capability} 해소 방식`} value={g.resolution ?? ""} onChange={(e) => setGapField(i, { resolution: (e.target.value || null) as GapResolution | null })} className="sizing-new-input sizing-new-input-sm">
                           <option value="">미정</option>

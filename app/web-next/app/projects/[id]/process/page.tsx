@@ -11,7 +11,7 @@ import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { PageHeader } from "../../../../components/layout.tsx";
 import { api } from "../../../../lib/api.ts";
 import { dealStageHref } from "../../../../lib/deal-links.ts";
-import { DECISION_LABEL, GATE_LABEL, RECORD_KEY_LABEL, STAGE_STATUS_LABEL, labelText, resolveLabel, trackLabel, trackLabelParts } from "../../../../lib/labels.ts";
+import { DECISION_LABEL, GATE_LABEL, RECORD_KEY_LABEL, STAGE_STATUS_LABEL, labelText, localizeRequirement, resolveLabel, trackLabel, trackLabelParts } from "../../../../lib/labels.ts";
 import { RawKey } from "../../../../components/RawKey.tsx";
 
 interface StageView {
@@ -158,7 +158,7 @@ export default function ProjectProcessPage() {
         <section aria-label="현재 차단 요건" className="market-section">
           <h2 className="text-[0.92rem] font-semibold mb-1">현재 차단 요건</h2>
           <ul className="sizing-note-list text-[length:var(--fs-body)]">
-            {data.blockers.map((b, i) => <li key={i}>{b}</li>)}
+            {data.blockers.map((b, i) => <li key={i}>{localizeRequirement(b)}</li>)}
           </ul>
         </section>
       )}

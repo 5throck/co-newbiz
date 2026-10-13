@@ -833,6 +833,16 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0167",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0168",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent:root/antitrust-agent",
       "type": "agent",
       "layer": "L3",
@@ -1462,6 +1472,16 @@
     },
     {
       "id": "dec:DEC-20261014-01",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
+      "id": "dec:DEC-20261014-02",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
+      "id": "dec:DEC-20261014-03",
       "type": "decision",
       "layer": "L3"
     },
@@ -2445,7 +2465,7 @@
       "name": "k-law",
       "scope": "root",
       "capability": "k-law",
-      "content_hash": "3f8c022afa668f06",
+      "content_hash": "c6df980437488a7f",
       "version": "1.0.3",
       "mirrors": [
         "skills/k-law/SKILL.md",
@@ -2589,7 +2609,7 @@
       "name": "org-readiness-assessment",
       "scope": "root",
       "capability": "org-readiness-assessment",
-      "content_hash": "9bb4783de284ea0b",
+      "content_hash": "b4966834bf93b218",
       "version": "1.1.0",
       "mirrors": [
         "skills/org-readiness-assessment/SKILL.md",
@@ -2661,7 +2681,7 @@
       "name": "permit-pathway-mapping",
       "scope": "root",
       "capability": "permit-pathway-mapping",
-      "content_hash": "39c2a9c9a4b61518",
+      "content_hash": "94630f48ef83d58d",
       "version": "1.1.0",
       "mirrors": [
         "skills/permit-pathway-mapping/SKILL.md",
@@ -3061,7 +3081,7 @@
       "name": "stage-gate-governance",
       "scope": "root",
       "capability": "stage-gate-governance",
-      "content_hash": "64fbac2af7da062b",
+      "content_hash": "405fa29772c57097",
       "version": "1.4.1",
       "mirrors": [
         "skills/stage-gate-governance/SKILL.md",
@@ -4570,6 +4590,18 @@
     {
       "type": "cites_skill",
       "from": "dec:DEC-20261014-01",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261014-02",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261014-03",
       "to": "skill:root/decision-record",
       "source": "skills_used"
     },

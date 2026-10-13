@@ -21,6 +21,11 @@ import { balanceView, buildHypothesisPayload, hypothesisFieldVisibility, type Tr
 import { CapexTrancheTable } from "./CapexTrancheTable.tsx";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
+import { EstablishmentModePanel } from "./EstablishmentModePanel.tsx";
+import {
+  BUSINESS_UNIT_FORMS, BUSINESS_UNIT_FORM_LABEL, BUSINESS_UNIT_NO_ISOLATION_NOTE, withBusinessUnitForm,
+  type BusinessUnitForm, type ModeState,
+} from "../../lib/establishment-mode-view.ts";
 
 // S10 투자구조 설계 (flow.spec v2.2.0) — 투자 주체(direct/SPC/holdco/내부 스핀오프/JV)
 // 결정과 ADR-0045 4대 축(절세 구조·책임 격리·재무 레버리지·엑싯 구조) 검토,
@@ -120,6 +125,10 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
   const [isGf, setIsGf] = useState(false);
   const [tranches, setTranches] = useState<TrancheView[]>([]);
   const [reco, setReco] = useState<DealStructureReco | null>(null);
+  // ADR-0167: the chosen establishment mode decides which structure section is shown.
+  const [modeState, setModeState] = useState<ModeState | null>(null);
+  const [buForm, setBuForm] = useState<BusinessUnitForm | "">("");
+  const isBu = isGf && modeState?.active_mode === "business_unit";
   const [recoLoading, setRecoLoading] = useState(false);
   const [recoError, setRecoError] = useState<string | null>(null);
 
@@ -145,7 +154,10 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
   /** Records the drafted structure hypothesis (the form's own submit; the header primary opens and focuses the form). */
   function saveStructure() {
     if (!newHyp.rationale.trim()) { setError("근거(rationale)는 필수입니다."); return; }
-    void post(buildHypothesisPayload(isGf, newHyp), "투자구조 가설을 기록했습니다.");
+    // 사업부 신설 형태 has no DB field: it is recorded as a labelled prefix in the free-text 책임 격리 note, and no 설립 법인 형태 is sent.
+    const form = isBu ? { ...newHyp, vehicle: "", liability_isolation_note: withBusinessUnitForm(newHyp.liability_isolation_note, buForm) } : newHyp;
+    void post(buildHypothesisPayload(isGf, form), "투자구조 가설을 기록했습니다.");
+    setBuForm("");
     setFormOpen(false);
     setNewHyp({ vehicle: "", asset_or_stock: "", stake_type: "", instrument_mix: "", tax_structure_note: "", liability_isolation_note: "", financing_leverage_note: "", exit_structure_note: "", rationale: "" });
   }
@@ -238,13 +250,15 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
         disabledReason="투자구조 가설 기록은 analyst 권한이 필요합니다."
       />
       {/* INTERIM-WORDING: "투자 주체"/"설립 법인 형태" replace the transliterated "vehicle" term */}
-      <StageFrame stageId="S10" heading={isGf ? `S10 ${GF_S10_STAGE_LABEL} — 설립 법인 형태·4축 검토·자금조달·집행 단계` : "S10 투자구조 설계 — 투자 주체·4축 검토·자금조달"}>
+      <StageFrame stageId="S10" heading={isGf ? `S10 ${GF_S10_STAGE_LABEL} — ${isBu ? "사업부 신설 형태" : "설립 법인 형태"}·4축 검토·자금조달·집행 단계` : "S10 투자구조 설계 — 투자 주체·4축 검토·자금조달"}>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
-          {isGf ? "설립 법인 형태(SPC 포함)" : "투자 주체(SPC 포함)"}와 절세 구조·책임 격리·재무 레버리지·엑싯 구조 4대 축을 검토하고,
+          {isGf ? (isBu ? "사업부 신설 형태" : "설립 법인 형태(SPC 포함)") : "투자 주체(SPC 포함)"}와 절세 구조·책임 격리·재무 레버리지·엑싯 구조 4대 축을 검토하고,
           자금조달 sources &amp; uses를 균형시킵니다. 이 산출물이 S11 투자심의 자료의 입력입니다.
         </p>
 
         {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">{error}</p>}
+
+        {isGf && <EstablishmentModePanel projectId={projectId} canAct={canAct} onState={setModeState} />}
 
         <TabNav
           className="mb-3"
@@ -366,12 +380,21 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
             <details className="mt-2" ref={formRef} open={formOpen} onToggle={(e) => setFormOpen((e.currentTarget as HTMLDetailsElement).open)}>
               <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">투자구조 가설 입력란 {formOpen ? "접기" : "펼치기"}</summary>
               <div className="flex flex-wrap gap-2 mt-2 text-[length:var(--fs-caption)]">
+                {isBu ? (
+                <label>사업부 신설 형태
+                  <select className="sizing-new-input ml-1" value={buForm} onChange={(e) => setBuForm(e.target.value as BusinessUnitForm | "")}>
+                    <option value="">—</option>
+                    {BUSINESS_UNIT_FORMS.map((k) => <option key={k} value={k}>{BUSINESS_UNIT_FORM_LABEL[k]}</option>)}
+                  </select>
+                </label>
+                ) : (
                 <label>{isGf ? "설립 법인 형태" : "투자 주체"}
                   <select className="sizing-new-input ml-1" value={newHyp.vehicle} onChange={(e) => setNewHyp({ ...newHyp, vehicle: e.target.value })}>
                     <option value="">—</option>
                     {Object.entries(vehicleLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </label>
+                )}
                 {vis.assetOrStock && (
                 <label>자산/주식
                   <select className="sizing-new-input ml-1" value={newHyp.asset_or_stock} onChange={(e) => setNewHyp({ ...newHyp, asset_or_stock: e.target.value })}>
@@ -399,6 +422,11 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                 </label>
                 )}
               </div>
+              {isBu && (
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
+                  사업부 신설 형태는 별도 항목으로 저장되지 않고, 아래 '책임 격리' 칸의 맨 앞에 '사업부 신설 형태: …'로 함께 기록됩니다. {BUSINESS_UNIT_NO_ISOLATION_NOTE}
+                </p>
+              )}
               {isGf && (
                 <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
                   설립 구조에서는 자산/주식 인수 형태와 지급 수단 구성을 쓰지 않습니다. 자금 조달 구성은 '자금조달 계획' 탭의 조달 항목으로, 집행 단계는 '설비투자 집행 단계' 탭으로 기록합니다.

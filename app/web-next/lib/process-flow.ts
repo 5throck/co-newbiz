@@ -660,11 +660,9 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
     // 설립 실행 기록은 project_id 키로 직접 조회한다 (0070 백필, ADR-0100 §5);
     // 백필 이전 행만 source_opportunity_id 백링크로 대체 조회한다.
     if (project.origin === "internal" || project.origin === "joint") {
-      const done = establishmentProgress(project.id).done;
-      if (done < 5) {
-        blockers.push(`설립 실행 미완료 (${done}/5단계)`);
-        missing.push("설립 실행 기록(5단계 완료)");
-      }
+      const est = establishmentS11Check(project.id);
+      blockers.push(...est.blockers);
+      missing.push(...est.missing);
     }
     // ADR-0161 (Q2 retroactive): greenfield execution baseline confirmation —
     // blocking while S11 is not yet completed; recommended (never reopening the
@@ -792,6 +790,26 @@ interface OpportunityRow {
   project_id: string | null;
   industry_id: string | null;
   created_at: string | null;
+}
+
+/**
+ * S11 establishment completion check (ADR-0167), for origin internal/joint
+ * projects only: the step set follows the project's establishment mode. A Green
+ * Field project that has not chosen a mode is blocked with its own reason
+ * ("establishment mode not chosen") instead of silently assuming new_entity.
+ */
+export function establishmentS11Check(projectId: string): { blockers: string[]; missing: string[] } {
+  const progress = establishmentProgress(projectId);
+  if (progress.mode === null) {
+    return {
+      blockers: ["설립 방식 미선택 (establishment mode not chosen) — S10에서 사람이 신규 법인 설립 또는 신규 사업부 추진을 선택해야 합니다"],
+      missing: ["설립 방식 선택 (신규 법인 설립 / 신규 사업부 추진)"],
+    };
+  }
+  if (progress.done >= 5) return { blockers: [], missing: [] };
+  return progress.mode === "business_unit"
+    ? { blockers: [`사업부 신설 실행 미완료 (${progress.done}/5단계)`], missing: ["사업부 신설 실행 기록(5단계 완료)"] }
+    : { blockers: [`설립 실행 미완료 (${progress.done}/5단계)`], missing: ["설립 실행 기록(5단계 완료)"] };
 }
 
 export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {

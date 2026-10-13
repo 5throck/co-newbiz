@@ -27,6 +27,15 @@
 // (never the actor) through the existing `notification` table, deduped per
 // recipient; `reopenedAfterGate` is the single server-side derivation of the
 // post-approval reopen warning (UI, IC package and process-flow consume it).
+//
+// ADR-0167 (migration 0142): Green Field establishment mode. A project runs
+// either the new_entity step set (the five entity-formation steps above) or the
+// business_unit step set (new business unit inside the existing legal entity),
+// decided at S10 by a human (setEstablishmentMode). Step rows, events, progress,
+// sequence and reopen rules are all scoped to the project's ACTIVE mode; rows of
+// a previous mode stay as read-only history (listEstablishmentHistory). New Green
+// Field projects have NO default: until a human chooses, writes fail with
+// mode_not_chosen and the S11 completion check says so.
 import type { Database } from "bun:sqlite";
 import { getDb } from "../../../db/client.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
@@ -42,16 +51,46 @@ export type EstablishmentOrigin = (typeof ESTABLISHMENT_ORIGINS)[number];
 export const CALL_PATHS = ["ui", "api", "mcp", "unknown"] as const;
 export type CallPath = (typeof CALL_PATHS)[number];
 
-export const ESTABLISHMENT_STEP_TITLES: Record<number, string> = {
-  1: "설립준비(관할·주식구조·이사회 결의)",
-  2: "법인등기·정관·사업자등록",
-  3: "인허가 이전/재발급 분류",
-  4: "인력이전(신 근로계약+PIIA)",
-  5: "완료확인(IP양도체인·거버넌스 베이스라인)",
+/** ADR-0167 — which step set a Green Field project executes at S11. */
+export const ESTABLISHMENT_MODES = ["new_entity", "business_unit"] as const;
+export type EstablishmentMode = (typeof ESTABLISHMENT_MODES)[number];
+
+/** Korean display labels (D1). */
+export const ESTABLISHMENT_MODE_LABELS: Record<EstablishmentMode, string> = {
+  new_entity: "신규 법인 설립",
+  business_unit: "신규 사업부 추진",
 };
+
+export const ESTABLISHMENT_STEP_COUNT = 5;
+
+export const ESTABLISHMENT_STEP_TITLES_BY_MODE: Record<EstablishmentMode, Record<number, string>> = {
+  new_entity: {
+    1: "설립준비(관할·주식구조·이사회 결의)",
+    2: "법인등기·정관·사업자등록",
+    3: "인허가 이전/재발급 분류",
+    4: "인력이전(신 근로계약+PIIA)",
+    5: "완료확인(IP양도체인·거버넌스 베이스라인)",
+  },
+  business_unit: {
+    1: "사업부 신설 결의",
+    2: "사업자등록 사업장·업종 추가/변경",
+    3: "인허가 명의 확인",
+    4: "인력 배치·조직 개편",
+    5: "완료 확인(조직·예산·권한 기준선)",
+  },
+};
+
+/** Step titles of a mode (new_entity when omitted — the pre-ADR-0167 behaviour). */
+export function stepTitles(mode: EstablishmentMode = "new_entity"): Record<number, string> {
+  return ESTABLISHMENT_STEP_TITLES_BY_MODE[mode];
+}
+
+/** @deprecated kept for old call sites — the new_entity titles. Use stepTitles(mode). */
+export const ESTABLISHMENT_STEP_TITLES: Record<number, string> = ESTABLISHMENT_STEP_TITLES_BY_MODE.new_entity;
 
 export interface EstablishmentStepRow {
   id: string;
+  mode: EstablishmentMode;
   step_no: number;
   status: EstablishmentStatus;
   origin: EstablishmentOrigin;
@@ -76,15 +115,37 @@ export interface EstablishmentStepRow {
 interface ProjectKeyRow {
   id: string;
   source_opportunity_id: string | null;
+  origin: string | null;
+  track: string | null;
+  establishment_mode: string | null;
 }
 
 function projectKeyRow(projectId: string): ProjectKeyRow | undefined {
   return getDb()
-    .query("SELECT id, source_opportunity_id FROM md_project WHERE id = ?")
+    .query("SELECT id, source_opportunity_id, origin, track, establishment_mode FROM md_project WHERE id = ?")
     .get(projectId) as ProjectKeyRow | undefined;
 }
 
-const STEP_COLS = `id, step_no, status, origin, checklist_item, evidence_url, note, owner,
+/**
+ * The step set a project executes now (ADR-0167). An explicit mode wins. With
+ * none: a Green Field project has NOT chosen yet (null — no silent default);
+ * every other project (Brown Field, unclassified track, pre-0142 rows) keeps the
+ * new_entity behaviour it always had.
+ */
+function activeModeOf(p: ProjectKeyRow): EstablishmentMode | null {
+  if (p.establishment_mode && (ESTABLISHMENT_MODES as readonly string[]).includes(p.establishment_mode)) {
+    return p.establishment_mode as EstablishmentMode;
+  }
+  return p.track === "greenfield" ? null : "new_entity";
+}
+
+/** Active establishment mode of a project; null = Green Field project that has not chosen yet (or unknown project). */
+export function activeEstablishmentMode(projectId: string): EstablishmentMode | null {
+  const p = projectKeyRow(projectId);
+  return p ? activeModeOf(p) : null;
+}
+
+const STEP_COLS = `id, mode, step_no, status, origin, checklist_item, evidence_url, note, owner,
   assignee_user_id, assigned_by, assigned_at, updated_at,
   (SELECT COUNT(*) FROM entity_establishment_step_event e
      WHERE e.step_id = entity_establishment_step.id AND e.kind = 'reopen') AS reopen_count`;
@@ -108,23 +169,25 @@ function isActiveMember(projectId: string, userId: string): boolean {
 /** All establishment steps visible for a project — project_id-keyed rows
  * plus, as fallback, un-backfilled rows reached through the opportunity
  * backlink (ADR-0100 §1). Sorted by step_no. */
-export function listEstablishmentSteps(projectId: string): EstablishmentStepRow[] {
+export function listEstablishmentSteps(projectId: string, modeOverride?: EstablishmentMode): EstablishmentStepRow[] {
   const project = projectKeyRow(projectId);
   if (!project) return [];
+  const mode = modeOverride ?? activeModeOf(project);
+  if (!mode) return [];
   const db = getDb();
   const direct = db
-    .query(`SELECT ${STEP_COLS} FROM entity_establishment_step WHERE project_id = ? ORDER BY step_no, id`)
-    .all(projectId) as RawStepRow[];
+    .query(`SELECT ${STEP_COLS} FROM entity_establishment_step WHERE project_id = ? AND mode = ? ORDER BY step_no, id`)
+    .all(projectId, mode) as RawStepRow[];
   const seen = new Set(direct.map((r) => r.id));
   let fallback: RawStepRow[] = [];
   if (project.source_opportunity_id) {
     fallback = db
       .query(
         `SELECT ${STEP_COLS} FROM entity_establishment_step
-         WHERE project_id IS NULL AND opportunity_id = ?
+         WHERE project_id IS NULL AND opportunity_id = ? AND mode = ?
          ORDER BY step_no, id`,
       )
-      .all(project.source_opportunity_id) as RawStepRow[];
+      .all(project.source_opportunity_id, mode) as RawStepRow[];
   }
   const enrich = (r: RawStepRow, keyed_by: "project" | "backlink"): EstablishmentStepRow => ({
     ...r,
@@ -145,6 +208,15 @@ export function listEstablishmentSteps(projectId: string): EstablishmentStepRow[
     if (!cur || compareStepRows(r, cur) < 0) byStep.set(r.step_no, r);
   }
   return [...byStep.values()].sort((a, b) => a.step_no - b.step_no);
+}
+
+/** Rows of every mode OTHER than the active one — read-only history after an audited mode change (ADR-0167). */
+export function listEstablishmentHistory(projectId: string): EstablishmentStepRow[] {
+  const project = projectKeyRow(projectId);
+  if (!project) return [];
+  const mode = activeModeOf(project);
+  const others = ESTABLISHMENT_MODES.filter((m) => m !== mode);
+  return others.flatMap((m) => listEstablishmentSteps(projectId, m));
 }
 
 const STATUS_RANK: Record<string, number> = { done: 0, in_progress: 1, halted: 1, escalated: 1, pending: 2 };
@@ -181,6 +253,7 @@ export function listEstablishmentMembers(projectId: string): EstablishmentMember
 
 export interface EstablishmentEventRow {
   id: string;
+  mode: EstablishmentMode;
   step_id: string;
   step_no: number;
   kind: "status_change" | "assign" | "reopen";
@@ -201,7 +274,7 @@ export interface EstablishmentEventRow {
 export function listEstablishmentEvents(projectId: string, limit = 20): EstablishmentEventRow[] {
   const rows = getDb()
     .query(
-      `SELECT e.id, e.step_id, e.step_no, e.kind, e.from_status, e.to_status, e.from_assignee, e.to_assignee,
+      `SELECT e.id, e.mode, e.step_id, e.step_no, e.kind, e.from_status, e.to_status, e.from_assignee, e.to_assignee,
               e.reason, e.evidence_url, e.actor_user_id, u.display_name AS actor_name, e.audit_id, e.via, e.created_at
        FROM entity_establishment_step_event e LEFT JOIN app_user u ON u.user_id = e.actor_user_id
        WHERE e.project_id = ? ORDER BY e.created_at DESC, e.id DESC LIMIT ?`,
@@ -269,6 +342,8 @@ export interface EstablishmentProgress {
   done: number;
   total: 5;
   complete: boolean;
+  /** Mode the count belongs to; null = a Green Field project that has not chosen one (never complete). */
+  mode: EstablishmentMode | null;
 }
 
 /** Distinct completed step numbers for the project — the S11 predicate input
@@ -276,18 +351,20 @@ export interface EstablishmentProgress {
  * count cannot drift between surfaces. */
 export function establishmentProgress(projectId: string): EstablishmentProgress {
   const project = projectKeyRow(projectId);
-  if (!project) return { done: 0, total: 5, complete: false };
+  if (!project) return { done: 0, total: 5, complete: false, mode: null };
+  const mode = activeModeOf(project);
+  if (!mode) return { done: 0, total: 5, complete: false, mode: null };
   const db = getDb();
   const rows = db
     .query(
       `SELECT DISTINCT step_no FROM entity_establishment_step
-       WHERE status = 'done' AND (
+       WHERE status = 'done' AND mode = ? AND (
          project_id = ?
          OR (project_id IS NULL AND opportunity_id = ?)
        )`,
     )
-    .all(projectId, project.source_opportunity_id ?? "") as Array<{ step_no: number }>;
-  return { done: rows.length, total: 5, complete: rows.length >= 5 };
+    .all(mode, projectId, project.source_opportunity_id ?? "") as Array<{ step_no: number }>;
+  return { done: rows.length, total: 5, complete: rows.length >= 5, mode };
 }
 
 export type EstablishmentError =
@@ -301,7 +378,9 @@ export type EstablishmentError =
   | "assignee_not_member"
   | "not_done"
   | "dependent_step_done"
-  | "invalid_reason";
+  | "invalid_reason"
+  | "mode_not_chosen"
+  | "mode_mismatch";
 
 export type UpsertResult =
   | { ok: true; id: string; step_no: number; status: EstablishmentStatus; title: string; step_done: boolean; updated_at: string; assignee_user_id: string | null }
@@ -316,6 +395,8 @@ export interface UpsertInput {
   note?: string | null;
   /** undefined = leave unchanged; null = clear; string = assign (active member required). */
   assignee_user_id?: string | null;
+  /** Optional statement of the mode the caller believes is active; a mismatch is refused (mode_mismatch). It can never SET the mode. */
+  mode?: EstablishmentMode | null;
 }
 
 export const REOPEN_REASON_MIN = 10;
@@ -337,7 +418,7 @@ function originApplies(projectId: string, stated?: string | null): boolean {
   return stated == null || stated === o;
 }
 
-function locateRow(db: Database, project: ProjectKeyRow, stepNo: number, itemKey: string | null): LocatedRow | undefined {
+function locateRow(db: Database, project: ProjectKeyRow, mode: EstablishmentMode, stepNo: number, itemKey: string | null): LocatedRow | undefined {
   // itemKey given: exact checklist_item match. itemKey null (assign / plain status
   // change): ANY row of the step, whatever its checklist_item, so a row created by
   // the seeding flow (checklist_item set) is never shadowed by a duplicate.
@@ -351,9 +432,9 @@ function locateRow(db: Database, project: ProjectKeyRow, stepNo: number, itemKey
     db
       .query(
         `SELECT id, status, evidence_url, assignee_user_id FROM entity_establishment_step
-         WHERE project_id = ? AND step_no = ? ${itemClause}`,
+         WHERE project_id = ? AND mode = ? AND step_no = ? ${itemClause}`,
       )
-      .all(project.id, stepNo, ...itemArgs) as Array<Omit<LocatedRow, "legacy">>,
+      .all(project.id, mode, stepNo, ...itemArgs) as Array<Omit<LocatedRow, "legacy">>,
     false,
   );
   if (direct) return direct;
@@ -364,9 +445,9 @@ function locateRow(db: Database, project: ProjectKeyRow, stepNo: number, itemKey
     db
       .query(
         `SELECT id, status, evidence_url, assignee_user_id FROM entity_establishment_step
-         WHERE project_id IS NULL AND opportunity_id = ? AND step_no = ? ${itemClause}`,
+         WHERE project_id IS NULL AND opportunity_id = ? AND mode = ? AND step_no = ? ${itemClause}`,
       )
-      .all(project.source_opportunity_id, stepNo, ...itemArgs) as Array<Omit<LocatedRow, "legacy">>,
+      .all(project.source_opportunity_id, mode, stepNo, ...itemArgs) as Array<Omit<LocatedRow, "legacy">>,
     true,
   );
 }
@@ -376,6 +457,7 @@ function adopt(db: Database, row: LocatedRow, projectId: string): void {
 }
 
 interface EventInput {
+  mode: EstablishmentMode;
   stepId: string;
   projectId: string;
   stepNo: number;
@@ -397,10 +479,10 @@ function insertEvent(db: Database, e: EventInput): string {
   db.run(
     `INSERT INTO entity_establishment_step_event
        (id, step_id, project_id, step_no, kind, from_status, to_status, from_assignee, to_assignee,
-        reason, evidence_url, actor_user_id, audit_id, via, created_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        reason, evidence_url, actor_user_id, audit_id, via, created_at, mode)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [id, e.stepId, e.projectId, e.stepNo, e.kind, e.fromStatus ?? null, e.toStatus ?? null,
-      e.fromAssignee ?? null, e.toAssignee ?? null, e.reason ?? null, e.evidenceUrl ?? null, e.actor, e.auditId, e.via, e.now],
+      e.fromAssignee ?? null, e.toAssignee ?? null, e.reason ?? null, e.evidenceUrl ?? null, e.actor, e.auditId, e.via, e.now, e.mode],
   );
   return id;
 }
@@ -418,6 +500,7 @@ const NOTIFY_PAYLOAD_REASON_MAX = 300;
  */
 function notifyEstablishment(db: Database, n: {
   kind: "reopened" | "assigned";
+  mode: EstablishmentMode;
   projectId: string;
   stepNos: number[];
   eventId: string;
@@ -441,7 +524,7 @@ function notifyEstablishment(db: Database, n: {
   if (recipients.size === 0) return 0;
 
   const actorName = userDisplayName(n.actor) ?? n.actor;
-  const stepsText = n.stepNos.map((no) => `${no}단계(${ESTABLISHMENT_STEP_TITLES[no] ?? ""})`).join(", ");
+  const stepsText = n.stepNos.map((no) => `${no}단계(${stepTitles(n.mode)[no] ?? ""})`).join(", ");
   const reason = n.reason?.trim();
   const message = n.kind === "reopened"
     ? `설립 실행 ${stepsText}가 ${actorName}님에 의해 재개되었습니다${reason ? ` — ${reason.length > NOTIFY_MESSAGE_REASON_MAX ? `${reason.slice(0, NOTIFY_MESSAGE_REASON_MAX)}…` : reason}` : ""}`
@@ -450,6 +533,7 @@ function notifyEstablishment(db: Database, n: {
     message,
     event_id: n.eventId,
     step_nos: n.stepNos,
+    mode: n.mode,
     actor_user_id: n.actor,
     actor_name: actorName,
     ...(reason ? { reason: reason.slice(0, NOTIFY_PAYLOAD_REASON_MAX) } : {}),
@@ -483,14 +567,14 @@ function isHttpUrl(value: string): boolean {
 
 /** Write the assignee on an existing row + `assign` event + audit (caller owns the transaction). */
 function applyAssign(
-  db: Database, projectId: string, stepId: string, stepNo: number,
+  db: Database, projectId: string, mode: EstablishmentMode, stepId: string, stepNo: number,
   from: string | null, to: string | null, actor: string, via: CallPath, now: string,
 ): void {
   db.run("UPDATE entity_establishment_step SET assignee_user_id = ?, assigned_by = ?, assigned_at = ? WHERE id = ?", [to, actor, now, stepId]);
   const auditId = appendAudit(db, { actor, action: "entity_establishment.assign", target: auditTarget(projectId, stepNo, via), now });
-  const eventId = insertEvent(db, { stepId, projectId, stepNo, kind: "assign", fromAssignee: from, toAssignee: to, actor, auditId, via, now });
+  const eventId = insertEvent(db, { mode, stepId, projectId, stepNo, kind: "assign", fromAssignee: from, toAssignee: to, actor, auditId, via, now });
   // ADR-0165 addendum: the new assignee hears about it (clearing notifies nobody).
-  if (to) notifyEstablishment(db, { kind: "assigned", projectId, stepNos: [stepNo], eventId, actor, extraRecipients: [to], includeLeads: false, via, now });
+  if (to) notifyEstablishment(db, { kind: "assigned", mode, projectId, stepNos: [stepNo], eventId, actor, extraRecipients: [to], includeLeads: false, via, now });
 }
 
 /**
@@ -504,6 +588,9 @@ export function changeEstablishmentStatus(projectId: string, input: UpsertInput,
   const db = getDb();
   const project = projectKeyRow(projectId);
   if (!project || !originApplies(projectId, input.origin)) return { ok: false, error: "not_applicable" };
+  const mode = activeModeOf(project);
+  if (!mode) return { ok: false, error: "mode_not_chosen" };
+  if (input.mode && input.mode !== mode) return { ok: false, error: "mode_mismatch" };
   if (input.status === "pending" || !ESTABLISHMENT_STATUSES.includes(input.status)) return { ok: false, error: "invalid_status" };
 
   const itemKey = input.checklist_item?.trim() || null;
@@ -512,14 +599,14 @@ export function changeEstablishmentStatus(projectId: string, input: UpsertInput,
   if (evidenceUrl && !isHttpUrl(evidenceUrl)) return { ok: false, error: "invalid_evidence_url" };
   if (input.status === "done" && !evidenceUrl && !note) return { ok: false, error: "evidence_required" };
 
-  const existing = locateRow(db, project, input.step_no, itemKey);
+  const existing = locateRow(db, project, mode, input.step_no, itemKey);
   if (existing?.status === "done") return { ok: false, error: "reopen_required" };
 
   if (input.assignee_user_id && !isActiveMember(projectId, input.assignee_user_id)) {
     return { ok: false, error: "assignee_not_member" };
   }
   // 순서 강제 — 완료확인(5)은 선행 4단계가 모두 done일 때만 완료할 수 있다.
-  if (input.step_no === 5 && input.status === "done" && establishmentPriorDone(projectId) < 4) {
+  if (input.step_no === 5 && input.status === "done" && establishmentPriorDone(projectId, mode) < 4) {
     return { ok: false, error: "sequence_violation" };
   }
   if (!existing && !project.source_opportunity_id) return { ok: false, error: "no_origin_opportunity" };
@@ -544,14 +631,14 @@ export function changeEstablishmentStatus(projectId: string, input: UpsertInput,
       fromAssignee = null;
       db.run(
         `INSERT INTO entity_establishment_step
-           (id, opportunity_id, project_id, step_no, status, origin, checklist_item, evidence_url, note, owner, updated_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-        [rowId, project.source_opportunity_id, projectId, input.step_no, input.status, input.origin, itemKey, evidenceUrl, note, actor, now],
+           (id, opportunity_id, project_id, step_no, status, origin, checklist_item, evidence_url, note, owner, updated_at, mode)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [rowId, project.source_opportunity_id, projectId, input.step_no, input.status, input.origin, itemKey, evidenceUrl, note, actor, now, mode],
       );
     }
     const auditId = appendAudit(db, { actor, action: "entity_establishment.update", target: auditTarget(projectId, input.step_no, via), now });
     insertEvent(db, {
-      stepId: rowId, projectId, stepNo: input.step_no, kind: "status_change",
+      mode, stepId: rowId, projectId, stepNo: input.step_no, kind: "status_change",
       fromStatus, toStatus: input.status, evidenceUrl, actor, auditId, via, now,
     });
     if (input.status === "done") {
@@ -559,12 +646,12 @@ export function changeEstablishmentStatus(projectId: string, input: UpsertInput,
     }
     let assignee = fromAssignee;
     if (input.assignee_user_id !== undefined && (input.assignee_user_id ?? null) !== fromAssignee) {
-      applyAssign(db, projectId, rowId, input.step_no, fromAssignee, input.assignee_user_id ?? null, actor, via, now);
+      applyAssign(db, projectId, mode, rowId, input.step_no, fromAssignee, input.assignee_user_id ?? null, actor, via, now);
       assignee = input.assignee_user_id ?? null;
     }
     return {
       ok: true, id: rowId, step_no: input.step_no, status: input.status,
-      title: ESTABLISHMENT_STEP_TITLES[input.step_no], step_done: input.status === "done", updated_at: now,
+      title: stepTitles(mode)[input.step_no], step_done: input.status === "done", updated_at: now,
       assignee_user_id: assignee,
     };
   })();
@@ -572,7 +659,7 @@ export function changeEstablishmentStatus(projectId: string, input: UpsertInput,
 
 export type AssignResult =
   | { ok: true; id: string; step_no: number; assignee_user_id: string | null; changed: boolean; updated_at: string }
-  | { ok: false; error: "not_applicable" | "assignee_not_member" | "no_origin_opportunity" };
+  | { ok: false; error: "not_applicable" | "assignee_not_member" | "no_origin_opportunity" | "mode_not_chosen" };
 
 /** Set/change/clear the step's responsible person. Allowed on a `done` step; creates a `pending` row when none exists. */
 export function assignEstablishmentStep(
@@ -581,8 +668,10 @@ export function assignEstablishmentStep(
   const db = getDb();
   const project = projectKeyRow(projectId);
   if (!project || !originApplies(projectId, statedOrigin)) return { ok: false, error: "not_applicable" };
+  const mode = activeModeOf(project);
+  if (!mode) return { ok: false, error: "mode_not_chosen" };
   if (assignee && !isActiveMember(projectId, assignee)) return { ok: false, error: "assignee_not_member" };
-  const existing = locateRow(db, project, stepNo, null);
+  const existing = locateRow(db, project, mode, stepNo, null);
   if (!existing && !project.source_opportunity_id) return { ok: false, error: "no_origin_opportunity" };
   const now = new Date().toISOString();
   return db.transaction((): AssignResult => {
@@ -591,35 +680,35 @@ export function assignEstablishmentStep(
       if ((existing.assignee_user_id ?? null) === assignee) {
         return { ok: true, id: existing.id, step_no: stepNo, assignee_user_id: assignee, changed: false, updated_at: now };
       }
-      applyAssign(db, projectId, existing.id, stepNo, existing.assignee_user_id, assignee, actor, via, now);
+      applyAssign(db, projectId, mode, existing.id, stepNo, existing.assignee_user_id, assignee, actor, via, now);
       return { ok: true, id: existing.id, step_no: stepNo, assignee_user_id: assignee, changed: true, updated_at: now };
     }
     const origin = (db.query("SELECT origin FROM md_project WHERE id = ?").get(projectId) as { origin: string }).origin;
     const rowId = ulid();
     db.run(
       `INSERT INTO entity_establishment_step
-         (id, opportunity_id, project_id, step_no, status, origin, checklist_item, evidence_url, note, owner, updated_at)
-       VALUES (?,?,?,?,'pending',?,NULL,NULL,NULL,?,?)`,
-      [rowId, project.source_opportunity_id, projectId, stepNo, origin, actor, now],
+         (id, opportunity_id, project_id, step_no, status, origin, checklist_item, evidence_url, note, owner, updated_at, mode)
+       VALUES (?,?,?,?,'pending',?,NULL,NULL,NULL,?,?,?)`,
+      [rowId, project.source_opportunity_id, projectId, stepNo, origin, actor, now, mode],
     );
     if (assignee === null) return { ok: true, id: rowId, step_no: stepNo, assignee_user_id: null, changed: false, updated_at: now };
-    applyAssign(db, projectId, rowId, stepNo, null, assignee, actor, via, now);
+    applyAssign(db, projectId, mode, rowId, stepNo, null, assignee, actor, via, now);
     return { ok: true, id: rowId, step_no: stepNo, assignee_user_id: assignee, changed: true, updated_at: now };
   })();
 }
 
 export type ReopenResult =
   | { ok: true; reopened: Array<{ id: string; step_no: number; cascade: boolean }>; updated_at: string }
-  | { ok: false; error: "not_applicable" | "invalid_reason" | "not_done" | "dependent_step_done"; dependent_steps?: number[] };
+  | { ok: false; error: "not_applicable" | "invalid_reason" | "not_done" | "dependent_step_done" | "mode_not_chosen"; dependent_steps?: number[] };
 
-function doneRowsForStep(db: Database, project: ProjectKeyRow, stepNo: number): LocatedRow[] {
+function doneRowsForStep(db: Database, project: ProjectKeyRow, mode: EstablishmentMode, stepNo: number): LocatedRow[] {
   const rows = db
     .query(
       `SELECT id, status, evidence_url, assignee_user_id, project_id FROM entity_establishment_step
-       WHERE status = 'done' AND step_no = ? AND (project_id = ? OR (project_id IS NULL AND opportunity_id = ?))
+       WHERE status = 'done' AND mode = ? AND step_no = ? AND (project_id = ? OR (project_id IS NULL AND opportunity_id = ?))
        ORDER BY id`,
     )
-    .all(stepNo, project.id, project.source_opportunity_id ?? "") as Array<Omit<LocatedRow, "legacy"> & { project_id: string | null }>;
+    .all(mode, stepNo, project.id, project.source_opportunity_id ?? "") as Array<Omit<LocatedRow, "legacy"> & { project_id: string | null }>;
   return rows.map(({ project_id, ...r }) => ({ ...r, legacy: project_id === null }));
 }
 
@@ -636,11 +725,13 @@ export function reopenEstablishmentStep(
   const db = getDb();
   const project = projectKeyRow(projectId);
   if (!project || !originApplies(projectId)) return { ok: false, error: "not_applicable" };
+  const mode = activeModeOf(project);
+  if (!mode) return { ok: false, error: "mode_not_chosen" };
   const why = reason.trim();
   if (why.length < REOPEN_REASON_MIN || why.length > REOPEN_REASON_MAX) return { ok: false, error: "invalid_reason" };
-  const target = doneRowsForStep(db, project, stepNo);
+  const target = doneRowsForStep(db, project, mode, stepNo);
   if (target.length === 0) return { ok: false, error: "not_done" };
-  const dependents = stepNo < 5 ? doneRowsForStep(db, project, 5) : [];
+  const dependents = stepNo < 5 ? doneRowsForStep(db, project, mode, 5) : [];
   if (dependents.length > 0 && !opts.cascadeStep5) return { ok: false, error: "dependent_step_done", dependent_steps: [5] };
 
   const now = new Date().toISOString();
@@ -656,7 +747,7 @@ export function reopenEstablishmentStep(
         target: auditTarget(projectId, no, via), now,
       });
       eventIds.push(insertEvent(db, {
-        stepId: row.id, projectId, stepNo: no, kind: "reopen", fromStatus: "done", toStatus: "in_progress",
+        mode, stepId: row.id, projectId, stepNo: no, kind: "reopen", fromStatus: "done", toStatus: "in_progress",
         reason: why, evidenceUrl: row.evidence_url, actor, auditId, via, now,
       }));
       assignees.push(row.assignee_user_id);
@@ -671,7 +762,7 @@ export function reopenEstablishmentStep(
     // ADR-0165 addendum: ONE notification per recipient per reopen action (a
     // cascade is a single act), keyed by the first event so a repeat is a no-op.
     notifyEstablishment(db, {
-      kind: "reopened", projectId, stepNos: [...new Set(reopened.map((r) => r.step_no))], eventId: eventIds[0],
+      kind: "reopened", mode, projectId, stepNos: [...new Set(reopened.map((r) => r.step_no))], eventId: eventIds[0],
       actor, extraRecipients: assignees, includeLeads: true, reason: why, via, now,
     });
     return { ok: true, reopened, updated_at: now };
@@ -679,17 +770,182 @@ export function reopenEstablishmentStep(
 }
 
 /** Done count across steps 1–4, project-keyed rows plus the backlink fallback. */
-function establishmentPriorDone(projectId: string): number {
+function establishmentPriorDone(projectId: string, mode: EstablishmentMode): number {
   const project = projectKeyRow(projectId);
   if (!project) return 0;
   const row = getDb()
     .query(
       `SELECT COUNT(DISTINCT step_no) AS c FROM entity_establishment_step
-       WHERE status = 'done' AND step_no < 5 AND (
+       WHERE status = 'done' AND mode = ? AND step_no < 5 AND (
          project_id = ?
          OR (project_id IS NULL AND opportunity_id = ?)
        )`,
     )
-    .get(projectId, project.source_opportunity_id ?? "") as { c: number };
+    .get(mode, projectId, project.source_opportunity_id ?? "") as { c: number };
   return row.c;
+}
+
+// ── Establishment mode (ADR-0167) ──────────────────────────────────────────
+
+export type EstablishmentModeError =
+  | "not_applicable"
+  | "invalid_mode"
+  | "mode_not_allowed"
+  | "reason_required"
+  | "invalid_reason";
+
+export interface EstablishmentModeEventRow {
+  id: string;
+  kind: "set" | "change";
+  from_mode: EstablishmentMode | null;
+  to_mode: EstablishmentMode;
+  reason: string | null;
+  actor_user_id: string;
+  actor_name: string | null;
+  via: CallPath;
+  created_at: string;
+}
+
+export interface EstablishmentModeState {
+  /** The stored column; null = not chosen (Green Field) or not applicable. */
+  mode: EstablishmentMode | null;
+  /** Mode the S11 step set follows now (null = a Green Field project that has not chosen). */
+  active_mode: EstablishmentMode | null;
+  mode_label: string | null;
+  /** Non-binding hint (S5 promotion); never takes effect without a human choice. */
+  suggested: EstablishmentMode | null;
+  /** Modes a human may choose now (business_unit needs origin internal and a Green Field track). */
+  allowed_modes: EstablishmentMode[];
+  /** True when the mode applies at all (origin internal or joint). */
+  applicable: boolean;
+  /** True once any step of the current mode left `pending` — a later change keeps those rows as history. */
+  steps_started: boolean;
+  history: EstablishmentModeEventRow[];
+  /** True when a mode change is newer than the latest valid dd / entity_ic / group_ic GO (warning only). */
+  changed_after_gate: boolean;
+}
+
+function allowedModes(p: ProjectKeyRow): EstablishmentMode[] {
+  if (p.origin !== "internal" && p.origin !== "joint") return [];
+  return p.origin === "internal" && p.track === "greenfield" ? ["new_entity", "business_unit"] : ["new_entity"];
+}
+
+/** Validate a mode (and optionally its non-binding use as a hint) against the project's origin/track. */
+export function modeAllowedFor(origin: string | null, track: string | null, mode: string): mode is EstablishmentMode {
+  if (!(ESTABLISHMENT_MODES as readonly string[]).includes(mode)) return false;
+  return allowedModes({ id: "", source_opportunity_id: null, origin, track, establishment_mode: null }).includes(mode as EstablishmentMode);
+}
+
+function stepsStarted(db: Database, projectId: string, mode: EstablishmentMode | null): boolean {
+  if (!mode) return false;
+  return !!db
+    .query("SELECT 1 FROM entity_establishment_step WHERE project_id = ? AND mode = ? AND status <> 'pending' LIMIT 1")
+    .get(projectId, mode);
+}
+
+/** A mode change newer than the latest valid GO of the dd / entity_ic / group_ic gates (same reference time as reopenedAfterGate). */
+function modeChangedAfterGate(projectId: string): boolean {
+  const db = getDb();
+  const gates = db
+    .query(
+      `SELECT decision, decided_at FROM (
+         SELECT g.gate, g.decision, g.decided_at,
+                ROW_NUMBER() OVER (PARTITION BY g.gate ORDER BY g.decided_at DESC, g.id DESC) AS rn
+         FROM gate_decision g
+         WHERE g.entity_type = 'project' AND g.entity_id = ? AND g.gate IN ('dd', 'entity_ic', 'group_ic')
+           AND NOT EXISTS (SELECT 1 FROM gate_decision_stale s WHERE s.decision_id = g.id)
+       ) WHERE rn = 1`,
+    )
+    .all(projectId) as Array<{ decision: string; decided_at: string }>;
+  const goTimes = gates.filter((g) => g.decision === "go").map((g) => tsMs(g.decided_at)).filter(Number.isFinite);
+  if (goTimes.length === 0) return false;
+  const lastGo = Math.max(...goTimes);
+  const changes = db
+    .query("SELECT created_at FROM establishment_mode_event WHERE project_id = ? AND kind = 'change'")
+    .all(projectId) as Array<{ created_at: string }>;
+  return changes.some((c) => tsMs(c.created_at) > lastGo);
+}
+
+export function getEstablishmentModeState(projectId: string): EstablishmentModeState | null {
+  const p = projectKeyRow(projectId);
+  if (!p) return null;
+  const db = getDb();
+  const sug = db.query("SELECT establishment_mode_suggested AS s FROM md_project WHERE id = ?").get(projectId) as { s: string | null } | null;
+  const history = (db
+    .query(
+      `SELECT e.id, e.kind, e.from_mode, e.to_mode, e.reason, e.actor_user_id, u.display_name AS actor_name, e.via, e.created_at
+       FROM establishment_mode_event e LEFT JOIN app_user u ON u.user_id = e.actor_user_id
+       WHERE e.project_id = ? ORDER BY e.created_at DESC, e.id DESC LIMIT 20`,
+    )
+    .all(projectId) as EstablishmentModeEventRow[]).map((r) => ({ ...r, actor_name: r.actor_name?.trim() || r.actor_user_id }));
+  const active = activeModeOf(p);
+  const stored = (ESTABLISHMENT_MODES as readonly string[]).includes(p.establishment_mode ?? "") ? (p.establishment_mode as EstablishmentMode) : null;
+  return {
+    mode: stored,
+    active_mode: active,
+    mode_label: active ? ESTABLISHMENT_MODE_LABELS[active] : null,
+    suggested: (ESTABLISHMENT_MODES as readonly string[]).includes(sug?.s ?? "") ? (sug!.s as EstablishmentMode) : null,
+    allowed_modes: allowedModes(p),
+    applicable: p.origin === "internal" || p.origin === "joint",
+    steps_started: stepsStarted(db, projectId, active),
+    history,
+    changed_after_gate: modeChangedAfterGate(projectId),
+  };
+}
+
+export type SetModeResult =
+  | { ok: true; mode: EstablishmentMode; previous_mode: EstablishmentMode | null; changed: boolean; kind: "set" | "change" | null; updated_at: string }
+  | { ok: false; error: EstablishmentModeError };
+
+/**
+ * Record the establishment mode (ADR-0167) — a human act at S10; the route
+ * enforces human-only, this function enforces the data rules:
+ *  - origin must be internal/joint; business_unit needs origin internal AND a
+ *    Green Field track (D2); an unknown value is invalid_mode;
+ *  - the first choice (no stored mode) needs no reason;
+ *  - changing an already stored mode needs a reason of >= 10 chars (D5). Rows
+ *    of the old mode stay untouched as read-only history; the new mode's steps
+ *    start empty (pending).
+ * Row update, audit entry and mode event share one transaction.
+ */
+export function setEstablishmentMode(
+  projectId: string, mode: string, reason: string | null | undefined, actor: string, via: CallPath = "unknown",
+): SetModeResult {
+  const db = getDb();
+  const project = projectKeyRow(projectId);
+  if (!project || (project.origin !== "internal" && project.origin !== "joint")) return { ok: false, error: "not_applicable" };
+  if (!(ESTABLISHMENT_MODES as readonly string[]).includes(mode)) return { ok: false, error: "invalid_mode" };
+  if (!modeAllowedFor(project.origin, project.track, mode)) return { ok: false, error: "mode_not_allowed" };
+  const next = mode as EstablishmentMode;
+  const previous = (ESTABLISHMENT_MODES as readonly string[]).includes(project.establishment_mode ?? "")
+    ? (project.establishment_mode as EstablishmentMode)
+    : null;
+  const now = new Date().toISOString();
+  if (previous === next) return { ok: true, mode: next, previous_mode: previous, changed: false, kind: null, updated_at: now };
+  const why = reason?.trim() ?? "";
+  if (previous !== null) {
+    if (why.length === 0) return { ok: false, error: "reason_required" };
+    if (why.length < REOPEN_REASON_MIN || why.length > REOPEN_REASON_MAX) return { ok: false, error: "invalid_reason" };
+  } else if (why.length > REOPEN_REASON_MAX) {
+    return { ok: false, error: "invalid_reason" };
+  }
+  const kind = previous === null ? "set" : "change";
+  return db.transaction((): SetModeResult => {
+    db.run("UPDATE md_project SET establishment_mode = ? WHERE id = ?", [next, projectId]);
+    const auditId = appendAudit(db, {
+      actor, action: kind === "set" ? "establishment_mode.set" : "establishment_mode.change",
+      target: `${projectId}#mode@${via}`, now,
+    });
+    db.run(
+      `INSERT INTO establishment_mode_event (id, project_id, kind, from_mode, to_mode, reason, actor_user_id, audit_id, via, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      [ulid(), projectId, kind, previous, next, why || null, actor, auditId, via, now],
+    );
+    return { ok: true, mode: next, previous_mode: previous, changed: true, kind, updated_at: now };
+  })();
+}
+
+/** Store the non-binding S5 hint (never takes effect; setEstablishmentMode is the only binding write). Caller validates via modeAllowedFor. */
+export function storeSuggestedMode(db: Database, projectId: string, mode: EstablishmentMode | null): void {
+  db.run("UPDATE md_project SET establishment_mode_suggested = ? WHERE id = ?", [mode, projectId]);
 }

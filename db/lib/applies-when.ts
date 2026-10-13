@@ -71,6 +71,8 @@ export const ROUTING_VAR_KEYS = {
   subTrack: "project.sub_track",
   /** 0136 (ADR-0160 addendum) — asserted var, live AND reviewed only. */
   siteRequired: "project.site_required",
+  /** 0142 (ADR-0167) — column var off md_project.establishment_mode; NULL = not chosen => missing. */
+  establishmentMode: "project.establishment_mode",
 } as const;
 
 /**
@@ -117,6 +119,9 @@ const SQL_CURRENT_ROUTE =
 const SQL_LIVE_REVIEWED_SITE =
   "SELECT value_kind, value_text FROM dimension_input WHERE project_id = ? AND var_key = 'project.site_required' AND superseded_by IS NULL AND reviewed_by IS NOT NULL";
 
+/** Family (a'') — establishment mode (0142). NULL column => the var stays missing (UNASSESSED). */
+const SQL_ESTABLISHMENT_MODE = "SELECT establishment_mode FROM md_project WHERE id = ?";
+
 interface ClassificationRow {
   case_type: string;
   origin: string;
@@ -161,6 +166,11 @@ export function resolveRoutingVars(projectId: string, db: Database = getDb()): V
   const site = db.query(SQL_LIVE_REVIEWED_SITE).get(projectId) as FactRow | undefined;
   if (site && site.value_kind === "bool" && (site.value_text === "true" || site.value_text === "false")) {
     snapshots[ROUTING_VAR_KEYS.siteRequired] = { status: "present", value: site.value_text === "true" };
+  }
+
+  const mode = db.query(SQL_ESTABLISHMENT_MODE).get(projectId) as { establishment_mode: string | null } | undefined;
+  if (mode?.establishment_mode) {
+    snapshots[ROUTING_VAR_KEYS.establishmentMode] = { status: "present", value: mode.establishment_mode };
   }
 
   return (varKey: string) => snapshots[varKey];

@@ -25,6 +25,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { StageTabs } from "../StageTabs.tsx";
+import { CapabilityAttainabilityPanel } from "./CapabilityAttainabilityPanel.tsx";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { GateDecisionJump, GateDecisionPanel } from "../GateDecisionPanel.tsx";
@@ -778,6 +779,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
       {tab === "overview" && (
       <>
+      <CapabilityAttainabilityPanel projectId={projectId} />
       {/* 두 관점의 의미 */}
       <section className="market-section sizing-step mb-3" aria-label="두 관점의 의미">
         <h3 className="sizing-step-title">두 관점의 의미</h3>
@@ -874,6 +876,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       )}
 
       {/* 시나리오별 이중 관점 비교 — brownfield는 유효 대상 필터의 케이스만 */}
+      {tab === "scenarios" && <CapabilityAttainabilityPanel projectId={projectId} compact onOpen={() => setTab("overview")} />}
       {tab === "scenarios" && (
       <>
       {targets.length > 1 && (

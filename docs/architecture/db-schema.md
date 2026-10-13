@@ -166,6 +166,7 @@ Scenario inputs ride run-versioning as exact `drv.rate_bp` / `drv.fx_pct` / `drv
 | `job_run` | Scheduled batch execution record | `id`, `job_key`, `started_at`, `finished_at`, `status`, `error` |
 | `schedule_job` | OS-scheduler-registered job definition | `id`, `job_key`, `cron_expr`, `enabled` |
 | `watch` / `watch_rule` | User monitoring subscription | `watch.id`, `watch.project_id`, `watch.user_id`; `watch_rule.watch_id`, `watch_rule.trigger_type`, `watch_rule.threshold`, `watch_rule.cooldown_hours`, `watch_rule.adr_ref` (migration 0036 — linked ADR reference; the admin console hard-blocks threshold edits without one, ui-spec §5) |
+| `establishment_mode_event` | Append-only history of Green Field establishment mode decisions (ADR-0167, migration 0142) | `id`, `project_id`, `kind` (`set` \| `change`), `from_mode`, `to_mode`, `reason` (>= 10 chars on a change), `actor_user_id`, `audit_id`, `via`, `created_at` |
 | `notification` | Delivered/pending alert | `id`, `user_id`, `project_id`, `trigger_type` (adds `establishment_step_reopened` / `establishment_step_assigned` in migration 0141), `payload`, `channel`, `sent_at`, `read_at` (0077), `dedupe_key` (0141, partial UNIQUE with `user_id`) |
 
 ## 10.1 Application Tables from Recent Migrations (0089-0092)

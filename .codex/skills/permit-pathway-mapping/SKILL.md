@@ -25,6 +25,7 @@ metadata:
 
   procedure_keys:
     - brownfield-pre-fs
+    - business-unit-establishment-execution
     - greenfield-pre-fs
 relates_to:
   - skill: certification-roadmap

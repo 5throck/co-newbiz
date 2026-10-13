@@ -8,7 +8,7 @@ import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
-import { normalizeGapRows, parseGapRegister, type CapabilityGapRow } from "../../../../../lib/capability-gap.ts";
+import { carryOverAttainability, normalizeGapRows, parseGapRegister, type CapabilityGapRow } from "../../../../../lib/capability-gap.ts";
 
 const now = () => new Date().toISOString();
 
@@ -69,10 +69,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { rows?: unknown } | null;
   if (!body || !Array.isArray(body.rows)) return badRequest("invalid_request", "rows(필요 역량 수준 행 배열)는 필수입니다.");
-  const rows = normalizeGapRows(body.rows);
-  if (rows.length === 0) return badRequest("invalid_request", "저장할 유효한 행이 없습니다 — capability는 필수입니다.");
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();
+  // S8 판정(attainability, ADR-0168)은 저장돼 있던 값을 id로 이어 붙인다 — 클라이언트가
+  // 보낸 판정·확정 필드는 신뢰하지 않는다(확정은 사람 전용 경로).
+  const storedJson = (db.query("SELECT capability_gap_json AS j FROM opportunity WHERE id = ?").get(id) as { j: string | null }).j;
+  const rows = carryOverAttainability(normalizeGapRows(body.rows), storedJson);
+  if (rows.length === 0) return badRequest("invalid_request", "저장할 유효한 행이 없습니다 — capability는 필수입니다.");
   const at = now();
   db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [JSON.stringify({ rows, updatedAt: at }), id]);
   appendAudit(db, { actor: auth.auth.userId, action: "capability_gap.save", target: `${id}:${rows.length}rows`, now: at });

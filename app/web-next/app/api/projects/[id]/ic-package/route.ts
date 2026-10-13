@@ -162,7 +162,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       establishment: (() => {
         const steps = listEstablishmentSteps(id);
         const progress = establishmentProgress(id);
-        return { steps, done: progress.done, total: 5, complete: progress.complete, progress: `${progress.done}/5`, ...reopenedAfterGate(id) };
+        return { mode: progress.mode, steps, done: progress.done, total: 5, complete: progress.complete, progress: `${progress.done}/5`, ...reopenedAfterGate(id) };
       })(),
     },
     200,

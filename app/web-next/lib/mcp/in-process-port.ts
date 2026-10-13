@@ -173,6 +173,10 @@ export const HUMAN_ONLY_ROUTES: readonly HumanOnlyRule[] = [
   { method: "PUT", pattern: "/api/opportunities/:id/establishment", bodyField: { field: "status", value: "done" } },
   { method: "PUT", pattern: "/api/projects/:id/establishment/assignee" },
   { method: "POST", pattern: "/api/projects/:id/establishment/reopen" },
+  // ADR-0167: choosing/changing the Green Field establishment mode (new entity
+  // vs business unit) is part of the S10 structure decision; agents only propose.
+  { method: "PUT", pattern: "/api/projects/:id/establishment-mode" },
+  { method: "POST", pattern: "/api/projects/:id/capability-attainability/confirm" },
 ];
 
 export function isHumanOnly(method: string, pathname: string, body: unknown): boolean {

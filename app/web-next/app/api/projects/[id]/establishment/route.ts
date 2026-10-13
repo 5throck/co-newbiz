@@ -14,8 +14,13 @@ import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate, callPathOf, humanOnlyDenied } from "../../../../../lib/auth.ts";
 import {
   ESTABLISHMENT_ORIGINS,
+  ESTABLISHMENT_MODES,
+  ESTABLISHMENT_STEP_COUNT,
+  getEstablishmentModeState,
+  listEstablishmentHistory,
   listEstablishmentSteps,
   establishmentProgress,
+  stepTitles,
   changeEstablishmentStatus,
   listEstablishmentEvents,
   listEstablishmentMembers,
@@ -39,15 +44,27 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     ?.origin ?? null;
   const steps = listEstablishmentSteps(id);
   const progress = establishmentProgress(id);
+  const modeState = getEstablishmentModeState(id);
+  const mode = progress.mode;
   return ok(
     {
       project: { id: project.id, project_no: project.project_no, origin },
+      // ADR-0167: the active mode drives the step set. mode null = a Green Field
+      // project that has not chosen yet (steps is empty; writes fail mode_not_chosen).
+      mode,
+      mode_label: modeState?.mode_label ?? null,
+      mode_suggested: modeState?.suggested ?? null,
+      allowed_modes: modeState?.allowed_modes ?? [],
+      mode_changed_after_gate: modeState?.changed_after_gate ?? false,
+      step_titles: mode ? stepTitles(mode) : null,
+      all_step_titles: Object.fromEntries(ESTABLISHMENT_MODES.map((m) => [m, stepTitles(m)])),
       steps,
+      history_steps: listEstablishmentHistory(id),
       members: listEstablishmentMembers(id),
       history: listEstablishmentEvents(id, 20),
       ...reopenedAfterGate(id),
       complete: progress.complete,
-      progress: `${progress.done}/5`,
+      progress: `${progress.done}/${ESTABLISHMENT_STEP_COUNT}`,
     },
     200,
     { count: steps.length },
@@ -64,6 +81,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const body = (await request.json().catch(() => null)) as {
     step_no?: number; status?: string; origin?: string;
     checklist_item?: string; evidence_url?: string; note?: string; assignee_user_id?: string | null;
+    /** ADR-0167 — optional statement of the active mode; it can never SET it (409 mode_mismatch). */
+    mode?: string;
   } | null;
   // Completing a step is a human act (boundary #2). Enforced here, not only at
   // the MCP in-process port: a bearer token reaches this route directly.
@@ -85,6 +104,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (body?.[f] != null && typeof body[f] !== "string") return badRequest("invalid_request", `${f}는 문자열이어야 합니다.`);
   }
   if ((body?.note?.length ?? 0) > 2000) return badRequest("invalid_request", "note는 2000자 이하입니다.");
+  if (body?.mode != null && !(ESTABLISHMENT_MODES as readonly string[]).includes(body.mode)) {
+    return badRequest("invalid_request", `mode는 ${ESTABLISHMENT_MODES.join(" | ")} 중 하나입니다 (ADR-0167).`);
+  }
   const hasAssignee = !!body && Object.prototype.hasOwnProperty.call(body, "assignee_user_id");
   if (hasAssignee && body?.assignee_user_id != null && typeof body.assignee_user_id !== "string") {
     return badRequest("invalid_request", "assignee_user_id는 문자열 또는 null입니다.");
@@ -99,6 +121,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       checklist_item: body?.checklist_item ?? null,
       evidence_url: body?.evidence_url ?? null,
       note: body?.note ?? null,
+      mode: (body?.mode as (typeof ESTABLISHMENT_MODES)[number] | undefined) ?? null,
       ...(hasAssignee ? { assignee_user_id: body?.assignee_user_id ?? null } : {}),
     },
     ctx.userId,

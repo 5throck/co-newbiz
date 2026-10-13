@@ -179,6 +179,7 @@ cover + hero max-width 34rem 제한으로 텍스트 길이·패널 높이와 무
 - 프로젝트 하위 화면(/projects/[id]/business-case·dd·ic-review·portfolio·process·charter)은 전역 메뉴 대신 `ProjectSubNav` 상호 링크로 연동된다(상세 화면은 /projects 목록에서 진입).
 - 전역 파이프라인 대시보드는 `/pipeline`(모든 프로젝트의 S8~S12 단계·게이트 스냅샷 + HOLD 에이징).
 - 탐색 섹션 순서는 flow.spec 단계 순서를 따른다: 대시보드 → 시장분석(S1) → 기회 발굴(S2) → 시너지 정합성(S3) → 진출방식 결정(S4) → 역량 평가·진출전략(S5, greenfield) → 대상 후보 발굴(S6~S7, brownfield) → 프로젝트(S8~S12) → 프로젝트 파이프라인.
+- S8 `필요 역량 달성 가능성` panel (ADR-0168): shown at the top of the S8 `overview` tab (full table) and as a compact count + banner strip in `scenarios`. Per S3 register row: required/current level (shared 5-step select `없음/기초/실무/숙련/선도`, legacy free text kept as a caption), resolution route, closing cost (KRW million), months to attain, attainability `높음/중간/낮음/미판정` (text chip, not colour-only) with rationale/evidence, and a human-only "판정 확정" button. A warning banner shows when any row is `미판정` or `낮음` or the register is empty/unevaluated. The S5 capability table uses the same 5-step select for required and current level.
 
 ## As-built 2026-09-02 — 시너지 정합성 하위 메뉴
 
@@ -276,3 +277,10 @@ The "진출방식 결정 이력" table (`DecisionTab.tsx`) stays compact (cell-t
   label maps (`lib/labels.ts`, UI-local maps for scenario/percentile in
   `IcReviewStage`). Agreement: partnership term is 전략 제휴 (glossary 1.3.0);
   no "RAG" wording on decision surfaces.
+
+### As-built 2026-10-14 - establishment mode in S10 and S11 (ADR-0167)
+
+- S10 Green Field structure view: `EstablishmentModePanel.tsx` (above the tabs) shows the `설립 방식` choice as two radio cards, `신규 법인 설립` and `신규 사업부 추진`. No default; the confirm button and the change form are human actions in the user's own session. `신규 사업부 추진` is disabled with a reason unless `allowed_modes` from `GET /api/projects/:id/establishment-mode` lists it (origin internal). Changing a stored mode requires a reason of 10 to 2000 characters, warns that old-mode steps stay as read-only history, and the mode history list sits in a collapsed details block. The non-binding S5 suggestion is shown as a note only.
+- Structure form: `new_entity` keeps `설립 법인 형태`. `business_unit` replaces it with `사업부 신설 형태` (독립 사업부 / 기존 사업부 내 팀 / 사내 독립 기업(CIC)). There is no database field for it, so the label is stored as a prefix in the existing free-text 책임 격리 note; no legal-entity form is sent. The no-liability-isolation notice is shown with the form.
+- S11 `EstablishmentPanel.tsx`: the section title and step names follow the active mode (`step_titles` from `GET /api/projects/:id/establishment`; no hard-coded table in the render path). With no mode chosen the panel shows the notice and a link to S10 and no table actions. `history_steps` (previous mode, non-pending rows) render as a collapsed read-only list, not a table. `IcReviewStage` shows a mode badge next to the progress chip.
+- View model and Korean error text: `lib/establishment-mode-view.ts` (`modeErrorText`, `validateModeChange`, `modeOptions`, `withBusinessUnitForm`).

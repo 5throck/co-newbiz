@@ -5914,7 +5914,7 @@ paths:
   /api/projects/{id}/establishment:
     get:
       operationId: getProjectEstablishment
-      summary: "S11 establishment steps (project-keyed projection of the opportunity ledger, 0070) — steps (assignee_user_id, assignee_name, assignee_active, last_recorded_by, reopen_count), members (active project members for the assignee picker), history (latest 20 events; each event carries via = ui|api|mcp|unknown), reopened_after_gate (boolean, server-derived: a reopen is newer than the latest valid GO of the dd, entity_ic or group_ic gate) with reopened_after_gate_detail ({steps, count, since} or null), 5-step progress (ADR-0100, ADR-0165 addendum)."
+      summary: "S11 establishment steps (project-keyed projection of the opportunity ledger, 0070) — steps (assignee_user_id, assignee_name, assignee_active, last_recorded_by, reopen_count), members (active project members for the assignee picker), history (latest 20 events; each event carries via = ui|api|mcp|unknown), reopened_after_gate (boolean, server-derived: a reopen is newer than the latest valid GO of the dd, entity_ic or group_ic gate) with reopened_after_gate_detail ({steps, count, since} or null), 5-step progress (ADR-0100, ADR-0165 addendum). ADR-0167 adds mode (new_entity | business_unit | null when a Green Field project has not chosen), mode_label, mode_suggested, allowed_modes, mode_changed_after_gate, step_titles (active mode), all_step_titles (both modes), and history_steps (read-only rows of a previous mode); steps are the ACTIVE mode's rows only."
       tags:
         - Analysis
       parameters:
@@ -5935,6 +5935,120 @@ paths:
     put:
       operationId: putProjectEstablishmentStep
       summary: "Change the status of one establishment step (ADR-0165). Body: step_no 1-5, status in_progress|done|halted|escalated (pending rejected), origin (must equal the project origin, internal|joint), optional evidence_url (http/https), note, assignee_user_id. done requires evidence_url or note (400 evidence_required) and is human-only: 403 human_only for a bearer token, an OAuth-delegated MCP call or an agent account (cookie session of a person only); a done step is changed only via POST .../reopen (409 reopen_required). Step 5 is sequence-enforced (400 sequence_violation). Errors also: 400 not_applicable, 400 assignee_not_member. Audit target <projectId>#step<n>@<via> (via = ui|api|mcp); the history event stores via too."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/projects/{id}/capability-attainability:
+    get:
+      operationId: getProjectCapabilityAttainability
+      summary: "S8 required-capability attainability view (ADR-0168): the source opportunity's S3 register rows with 5-step levels, resolution route, closing cost (KRW million), months to attain, human attainability grade (high | medium | low | null = unjudged), rationale, evidence, confirmation, plus a summary with counts and the warning banner state. Rows without a judgement read as unjudged."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      operationId: putProjectCapabilityAttainability
+      summary: "Save attainability drafts as a per-row patch. Body {rows: [{id, requiredLevel?, currentLevel?, resolution?, closingCostKrwM?, monthsToAttain?, grade?, rationale?, evidence?}]}. analyst+ member; any caller may draft, none may confirm. 400 invalid_request | unknown_row | invalid_level | invalid_cost | rationale_required (high/low need a rationale) | no_source_opportunity. A changed row loses its confirmation. Audit capability_attainability.save, target <projectId>#capability@<via>."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/projects/{id}/capability-attainability/confirm:
+    post:
+      operationId: postProjectCapabilityAttainabilityConfirm
+      summary: "Confirm judged attainability rows (ADR-0168). Human-only (403 human_only for bearer / MCP / agent callers), analyst+. Body {row_ids?} (default all judged, unconfirmed rows). 409 nothing_to_confirm; 400 unknown_row. Audit capability_attainability.confirm."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/projects/{id}/establishment-mode:
+    get:
+      operationId: getProjectEstablishmentMode
+      summary: "Green Field establishment mode state (ADR-0167): mode (stored; null = not chosen), active_mode, mode_label, suggested (non-binding hint), allowed_modes (business_unit needs origin internal on a Green Field project), applicable, steps_started, changed_after_gate, history (latest 20 mode events)."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      operationId: putProjectEstablishmentMode
+      summary: "Choose or change the Green Field establishment mode (ADR-0167). Body {mode: new_entity | business_unit, reason?}. Human-only (403 human_only for bearer / MCP / agent callers; agents use the propose_establishment_mode proposal), analyst+. 400 not_applicable (origin not internal/joint), 400 invalid_request (bad mode or reason), 400 mode_not_allowed (business_unit needs origin internal on a Green Field project), 400 reason_required (changing a stored mode needs a reason of 10-2000 chars). Changing keeps the old mode's step rows as read-only history; the new mode starts at pending. Audit establishment_mode.set / .change, target <projectId>#mode@<via>; an establishment_mode_event row is written."
       tags:
         - Analysis
       parameters:

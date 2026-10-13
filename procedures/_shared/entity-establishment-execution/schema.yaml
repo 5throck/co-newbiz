@@ -3,7 +3,7 @@ procedure_id: shared-entity-establishment-execution
 title: "Entity Establishment Execution"
 scope: shared
 level: entity
-version: "1.1.1"
+version: "1.2.0"
 status: active
 applicability: conditional
 # origin in {internal, joint} (ADR-0047 origin axis) — post-approval execution
@@ -20,6 +20,14 @@ applies_when:
   of:
     - { op: "in", var: "project.origin", values: ["internal", "joint"] }
     - { op: "none_of", of: [{ op: "is_null", var: "project.origin" }] }
+    # ADR-0167: the entity-formation step set applies to the new_entity mode
+    # only. A NULL mode (legacy / Brown Field / not yet chosen) keeps the
+    # pre-0142 behaviour: this procedure applies. The business_unit mode has
+    # its own sibling procedure (business-unit-establishment-execution).
+    - op: "any_of"
+      of:
+        - { op: "in", var: "project.establishment_mode", values: ["new_entity"] }
+        - { op: "is_null", var: "project.establishment_mode" }
 workflow_type: core
 gate: "Entity IC"
 
@@ -109,10 +117,11 @@ kill_criteria:
 legal_basis:
   - "Group New Business Review Policy §2.3"
   - "ADR-0047 (origin classification axis — internal/joint ventures need an establishment path acquisition steps cannot provide)"
+  - "ADR-0167 (Green Field establishment mode — this procedure applies when project.establishment_mode is new_entity or unset; business_unit uses procedures/_shared/business-unit-establishment-execution)"
   - "ADR-0051 (workflow gap closure — internal-origin chain step)"
   - "checklists/entity-formation-checklist.yaml (chk-entity-formation)"
   - "Korean Commercial Act arts. 530-3, 530-9(2)/(4), 530-11(2) and 527-5 (company split — special resolution + creditor-protection procedure; verified 2026-10-13 via the Ministry of Government Legislation Open API, law MST 273629; confirm against the current KLRI text before enforcement use)"
   - "docs/research/venture-governance-best-practice.md Area B.3/B.4 (formation + JV governance synthesis)"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-08-23"
+last_reviewed: "2026-10-14"

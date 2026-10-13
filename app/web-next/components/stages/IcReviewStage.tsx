@@ -16,6 +16,7 @@ import { StageFrame } from "../StageFrame.tsx";
 import { GateDecisionJump, GateDecisionPanel } from "../GateDecisionPanel.tsx";
 import { useToast } from "../ui.tsx";
 import { useConfirm } from "../crud.tsx";
+import { modeBadgeText, type HistoryStepView } from "../../lib/establishment-mode-view.ts";
 import { EstablishmentPanel } from "./EstablishmentPanel.tsx";
 import { establishmentApplies, type EventView, type MemberView, type StepRowView } from "../../lib/establishment-view.ts";
 import { canWriteProject } from "../../lib/project-write-access.ts";
@@ -53,6 +54,8 @@ interface IcPackage {
   establishment: {
     steps: Array<{ id: string; step_no: number; status: string; origin: string; owner: string; updated_at: string; note: string | null; evidence_url: string | null; keyed_by: string }>;
     done: number; total: number; complete: boolean; progress: string;
+    /** ADR-0167 — active mode; null = a Green Field project that has not chosen one. */
+    mode?: string | null;
     reopened_after_gate?: boolean;
     reopened_after_gate_detail?: { steps: number[]; count: number; since: string } | null;
   };
@@ -65,6 +68,10 @@ interface EstablishmentView {
   history: EventView[];
   complete: boolean;
   progress: string;
+  mode?: string | null;
+  step_titles?: Record<string, string> | null;
+  all_step_titles?: Record<string, Record<string, string>>;
+  history_steps?: HistoryStepView[];
   reopened_after_gate?: boolean;
   reopened_after_gate_detail?: { steps: number[]; count: number; since: string } | null;
 }
@@ -135,6 +142,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
   const estComplete = pkg?.establishment.complete ?? false;
   const origin = est?.project.origin;
   const estApplies = establishmentApplies(origin);
+  const estMode = est ? est.mode : pkg?.establishment.mode;
 
   return (
 <>
@@ -144,15 +152,20 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
       <ReviewBuckets entityType="project" entityId={projectId} gates={["entity_ic", "group_ic"]} artifacts={stageArtifactTabs("S11")} />
       <StageFrame stageId="S11" heading="S11 투자심사·실행 — 투자심의 자료 · 법인·그룹 투자심의위원회 · 설립 실행">
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-          법인 투자심의위원회와 그룹 투자심의위원회 승인이 모두 기록되고, 내부 추진·합작 프로젝트는 설립 5단계 완료 기록이
-          존재해야 S11이 완료됩니다.
+          법인 투자심의위원회와 그룹 투자심의위원회 승인이 모두 기록되고, 내부 추진·합작 프로젝트는 S10에서 확정한 설립 방식
+          (신규 법인 설립 또는 신규 사업부 추진)의 5단계 완료 기록이 존재해야 S11이 완료됩니다.
           <Link href={`/projects/${projectId}/charter`} className="ml-2 underline">프로젝트 추진계획(차터) 보기 →</Link>
           <span className={`status-chip ${bothGatesGo ? "status-green" : "status-amber"} ml-2`}>
             {bothGatesGo ? "● 투자심의위원회 2/2 진행" : "○ 투자심의위원회 미승인"}
           </span>
           {estApplies && (
             <span className={`status-chip ${estComplete ? "status-green" : "status-amber"} ml-1`}>
-              {estComplete ? `● 설립 실행 완료 (${pkg?.establishment.progress ?? "—"})` : `◐ 설립 실행 ${pkg?.establishment.progress ?? "—"} (내부 추진·합작 적용)`}
+              {estComplete ? `● 설립 실행 완료 (${pkg?.establishment.progress ?? "—"})` : `◐ 설립 실행 ${pkg?.establishment.progress ?? "—"}`}
+            </span>
+          )}
+          {estApplies && (
+            <span className={`status-chip ${estMode ? "status-not-started" : "status-amber"} ml-1`}>
+              {estMode ? "" : "○ "}{modeBadgeText(estMode)}
             </span>
           )}
         </p>
