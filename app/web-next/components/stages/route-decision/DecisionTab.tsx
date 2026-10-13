@@ -1,6 +1,8 @@
 "use client";
 
 // Split from components/stages/RouteDecisionStage.tsx (Wave U-3 decomposition); behavior unchanged.
+import { Fragment, useState } from "react";
+import { buildDecisionDetail } from "../../../lib/route-decision-history-view.ts";
 import { SectionToolbar } from "../../layout.tsx";
 import { ColGroup, ParamTable } from "../../ui.tsx";
 import { DECISION_COL_PCT, OVERRIDDEN_SUBS, BF_SUB, GF_SUB } from "./constants.ts";
@@ -9,6 +11,7 @@ import type { OpportunityRow } from "./types.ts";
 
 export function DecisionTab({ ctx, selected }: { ctx: RouteDecisionStageState; selected: OpportunityRow }) {
   const { tab, decisions, saveDecision, canAct, track, setTrack, setIntent, setSubTrack, subTrack, subs, overrideBlocked, intent, stagingHint, rationale, setRationale, alternatives, setAlternatives, draftSaving, performSaveDraft, saving, canSubmit, draftSavedAt, totalScore, allScored, setTab, historyYear, historyMonth, historyOpen, setHistoryOpen, setHistoryYear, setHistoryMonth, sessions } = ctx;
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   return (
     <>{tab === "decision" && (
         <div className="card">
@@ -160,34 +163,92 @@ export function DecisionTab({ ctx, selected }: { ctx: RouteDecisionStageState; s
                         <thead>
                           <tr>
                             <th scope="col">트랙</th><th scope="col">라우트</th><th scope="col">의도</th>
-                            <th scope="col">채점</th><th scope="col">근거</th><th scope="col">대안</th><th scope="col">결정자/일시</th>
+                            <th scope="col">채점</th><th scope="col">근거</th><th scope="col">대안</th><th scope="col">결정자/일시</th><th scope="col">상세</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {filtered.map((d) => (
-                            <tr key={d.id}>
-                              <td>
-                                <span className={`status-chip ${d.track === "brownfield" ? "status-amber" : "status-green"}`}>
-                                  {d.track === "brownfield" ? "Brownfield" : "Greenfield"}
-                                </span>
-                              </td>
-                              <td className="text-[length:var(--fs-caption)]">{d.sub_track ? (d.track === "brownfield" ? BF_SUB[d.sub_track] ?? d.sub_track : GF_SUB[d.sub_track] ?? d.sub_track) : "—"}</td>
-                              <td className="text-[length:var(--fs-caption)]">{d.intent ? (d.intent === "integration" ? "통합" : "역량접근") : "—"}</td>
-                              <td className="text-[length:var(--fs-caption)]">
-                                {d.total_score !== null ? (
-                                  <span title={(d.scores ?? []).map((s) => `${s.criterion}: ${s.score} — ${s.evidence_note}`).join("\n")}>
-                                    <strong className="tabular-nums">{d.total_score}</strong>/3.0
-                                  </span>
-                                ) : "—"}
-                                {d.staging_recommended && (
-                                  <span className="block text-[length:var(--fs-caption)] text-[color:var(--accent)]" title={d.staging_recommended}>step-up 권고</span>
+                          {filtered.map((d) => {
+                            const open = expandedId === d.id;
+                            const detail = buildDecisionDetail(d);
+                            const panelId = `decision-detail-${d.id}`;
+                            return (
+                              <Fragment key={d.id}>
+                                <tr>
+                                  <td>
+                                    <span className={`status-chip ${d.track === "brownfield" ? "status-amber" : "status-green"}`}>
+                                      {d.track === "brownfield" ? "Brownfield" : "Greenfield"}
+                                    </span>
+                                  </td>
+                                  <td className="text-[length:var(--fs-caption)]">{d.sub_track ? (d.track === "brownfield" ? BF_SUB[d.sub_track] ?? d.sub_track : GF_SUB[d.sub_track] ?? d.sub_track) : "—"}</td>
+                                  <td className="text-[length:var(--fs-caption)]">{d.intent ? (d.intent === "integration" ? "통합" : "역량접근") : "—"}</td>
+                                  <td className="text-[length:var(--fs-caption)]">
+                                    {d.total_score !== null ? (
+                                      <span title={(d.scores ?? []).map((s) => `${s.criterion}: ${s.score} — ${s.evidence_note}`).join("\n")}>
+                                        <strong className="tabular-nums">{d.total_score}</strong>/3.0
+                                      </span>
+                                    ) : "—"}
+                                    {d.staging_recommended && (
+                                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--accent)]">step-up 권고</span>
+                                    )}
+                                  </td>
+                                  <td className="cell-truncate text-[length:var(--fs-caption)]" title={detail.rationale}>{d.rationale}</td>
+                                  <td className={`cell-truncate text-[length:var(--fs-caption)] ${detail.alternativesRecorded ? "" : "text-[color:var(--muted-fg)]"}`} title={detail.alternativesRecorded ? detail.alternatives : undefined}>{detail.alternatives}</td>
+                                  <td className="text-[length:var(--fs-caption)] tabular-nums">{d.decided_by} · {d.decided_at.slice(0, 10)}</td>
+                                  <td>
+                                    <button
+                                      type="button"
+                                      className="btn-ghost btn-sm"
+                                      aria-expanded={open}
+                                      aria-controls={panelId}
+                                      onClick={() => setExpandedId(open ? null : d.id)}
+                                    >
+                                      {open ? "접기" : "더보기"}
+                                    </button>
+                                  </td>
+                                </tr>
+                                {open && (
+                                  <tr>
+                                    <td colSpan={8} id={panelId}>
+                                      <dl className="text-[length:var(--fs-caption)] space-y-2 m-0">
+                                        <div>
+                                          <dt className="font-semibold">근거 (전문)</dt>
+                                          <dd className="m-0" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{detail.rationale}</dd>
+                                        </div>
+                                        <div>
+                                          <dt className="font-semibold">검토한 대안 (전문)</dt>
+                                          <dd className={`m-0 ${detail.alternativesRecorded ? "" : "text-[color:var(--muted-fg)]"}`} style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{detail.alternatives}</dd>
+                                        </div>
+                                        {detail.scores.length > 0 && (
+                                          <div>
+                                            <dt className="font-semibold">채점 근거{detail.totalScore !== null ? ` (합산 ${detail.totalScore} / 3.0)` : ""}</dt>
+                                            <dd className="m-0">
+                                              <ul className="m-0 pl-4 list-disc">
+                                                {detail.scores.map((s) => (
+                                                  <li key={s.criterion} style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                                                    <span className="font-medium">{s.criterion}</span> · <span className="tabular-nums">{s.score}</span> — {s.evidenceNote}
+                                                  </li>
+                                                ))}
+                                              </ul>
+                                            </dd>
+                                          </div>
+                                        )}
+                                        {detail.staging && (
+                                          <div>
+                                            <dt className="font-semibold">스테이징 권고 (step-up)</dt>
+                                            <dd className="m-0" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{detail.staging}</dd>
+                                          </div>
+                                        )}
+                                        <div>
+                                          <dt className="font-semibold">결정자 / 일시</dt>
+                                          <dd className="m-0 tabular-nums">{detail.decidedBy} · {detail.decidedAtFull}</dd>
+                                        </div>
+                                      </dl>
+                                    </td>
+                                  </tr>
                                 )}
-                              </td>
-                              <td className="cell-truncate text-[length:var(--fs-caption)]">{d.rationale}</td>
-                              <td className="cell-truncate text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{d.alternatives_considered ?? "—"}</td>
-                              <td className="text-[length:var(--fs-caption)] tabular-nums">{d.decided_by} · {d.decided_at.slice(0, 10)}</td>
-                            </tr>
-                          ))}
+                              </Fragment>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

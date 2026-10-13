@@ -1,0 +1,18 @@
+# Copy to legal-signoff/<checklist>@<version>.yaml (checklist = checklists/<stem>.yaml stem).
+# Protocol: docs/governance/legal-signoff-protocol.md
+checklist: ma-special-topics-checklist
+checklist_version: "1.4.3"
+signer:
+  name: "to be designated by the human decider"   # a real file needs a named lawyer
+  qualification: ""                                # e.g. bar admission, firm
+approver:
+  name: ""                                         # human approver (not the signer)
+items:
+  - item_id: ma-02
+    authority:
+      law: ""            # law name
+      mst: ""            # MST number of the verified version
+      article: ""        # article, paragraph, item
+    verdict: confirm     # confirm | revise | hold
+    signed_on: "YYYY-MM-DD"
+    note: ""

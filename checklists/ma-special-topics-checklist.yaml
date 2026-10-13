@@ -4,7 +4,7 @@ title: "M&A Special Topics Checklist (Brown Field)"
 scope: shared
 enforceability: mixed
 owner_agent: brownfield-agent
-version: "1.4.2"
+version: "1.4.3"
 effective_from: "2026-08-20"
 gate: DD
 
@@ -19,7 +19,7 @@ items:
     mandatory: true
     waiver_eligible: true
   - id: ma-02
-    text: "주된 시장뿐 아니라 해당되는 모든 관할에서 기업결합 신고(merger-control filing) 요건을 확인함 (복수 관할 신고 점검) (한국: 공정거래법 제11조 및 시행령 제18·19조 — 당사회사 자산·매출 3천억원 이상과 상대회사 300억원 이상, 주식 20%(상장법인 15%) 이상 취득 또는 최다출자자 지위, 소규모피취득 거래금액 6천억원 기준; 2026-10-13 법제처 Open API 확인)"
+    text: "주된 시장뿐 아니라 해당되는 모든 관할에서 기업결합 신고(merger-control filing) 요건을 확인함 (복수 관할 신고 점검) (한국: 공정거래법 제11조 및 시행령 제18·19조 — 당사회사 자산·매출 3천억원 이상과 상대회사 300억원 이상, 주식 20%(상장법인 15%) 이상 취득 또는 최다출자자 지위, 소규모피취득 거래금액 6천억원 기준; 외국회사가 당사회사인 경우 그 외국회사 각각의 국내 매출액이 300억원 이상일 때만 신고대상(시행령 제18조제3항) — verified 2026-10-13 via 법제처 Open API (공정거래법 시행령 MST 284737, 시행 2026-03-24))"
     mandatory: true
     waiver_eligible: true
   - id: ma-03
