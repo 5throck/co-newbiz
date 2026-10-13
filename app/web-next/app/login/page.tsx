@@ -57,7 +57,7 @@ export default function LoginPage() {
       </div>
       <div className="login-hero" aria-hidden="true">
         <p className="login-hero-title">신규사업 검토 AI 플랫폼</p>
-        <p className="login-hero-sub">시장분석 → 기회발굴 → 시너지 → 트랙결정 → 사업성·밸류에이션 → 실사 → 투자심사</p>
+        <p className="login-hero-sub">시장분석 → 기회 발굴 → 시너지 → 진출방식 결정 → 사업성·밸류에이션 → 실사 → 투자심의</p>
       </div>
       <div className="login-panel">
         <form onSubmit={onSubmit} className="login-form" aria-labelledby="login-heading">

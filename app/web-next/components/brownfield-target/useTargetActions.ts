@@ -26,7 +26,7 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
   }
 
   // ── 재무·기술 평가 자동 초안(ADR-0140/0141) ── 초안 생성은 저장이 아니다:
-  // 서버가 DART facts(재무) 또는 공시·프로파일·웹 근거(기술)로 계산한 제안을
+  // 서버가 전자공시 재무 정보(재무) 또는 공시·프로파일·웹 근거(기술)로 계산한 제안을
   // 클라이언트 상태에만 싣는다. 사람이 select를 바꾸거나 "초안 저장"을 누를
   // 때 기존 판정 저장 경로로 확정된다(경계 #2). 기술 근거로 확인 안 된 항목은
   // 제안 없이 "확인 안됨" 사유가 내려온다 — 날조된 판정이 아니라 명시적 미확인.
@@ -136,7 +136,7 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
       await api.post(`/api/brownfield/${encodeURIComponent(oppId)}/targets/${encodeURIComponent(targetId)}/shortlist`, {});
       loadDetail();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Short List 승격 실패");
+      setError(err instanceof Error ? err.message : "최종 후보 목록 승격 실패");
     } finally {
       setBusy(false);
     }

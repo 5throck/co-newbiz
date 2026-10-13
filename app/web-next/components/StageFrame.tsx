@@ -18,6 +18,7 @@ import { GATE_LABEL, STAGE_META, type StageMetaId, type TrackId } from "../lib/s
 import { STAGE_HANDOFF } from "../lib/stage-handoff.ts";
 import { PrimarySlot } from "./ui.tsx";
 import { useDealContext } from "../lib/use-deal-context.ts";
+import { api } from "../lib/api.ts";
 
 /** 단계 → 담당 화면 라우트. 캐리어(deal = 기회 id)가 있으면 /deals/{id}/sN 탭으로,
     없으면 플랫 라우트(캐리어 리다이렉트 스텁 — 2026-10-02 route-cleanup design
@@ -65,6 +66,33 @@ function useStageLinks(): (id: StageMetaId) => StageLink {
     const pid = deal.ctx.projectId;
     return pid ? { href: STAGE_HREF[id](routeId, pid), reason: null } : { href: null, reason: NOT_PROMOTED_REASON };
   };
+}
+
+// Track of the current carrier (opportunity or project), cached per id. Lets the stage rail show
+// "미적용" for the other track's stages on every screen, not only on the track-fixed ones.
+const carrierTrackCache = new Map<string, TrackId | null>();
+
+function useCarrierTrack(enabled: boolean): TrackId | null {
+  const params = useParams<{ id?: string }>();
+  const routeId = params?.id;
+  const underProjects = (usePathname() ?? "").startsWith("/projects/");
+  const key = routeId ? `${underProjects ? "p" : "o"}:${routeId}` : null;
+  const [track, setTrack] = useState<TrackId | null>(key ? carrierTrackCache.get(key) ?? null : null);
+  useEffect(() => {
+    if (!enabled || !key || !routeId) return;
+    if (carrierTrackCache.has(key)) { setTrack(carrierTrackCache.get(key) ?? null); return; }
+    let live = true;
+    const base = underProjects ? "projects" : "opportunities";
+    api.get<{ track: string | null }>(`/api/${base}/${encodeURIComponent(routeId)}/process`)
+      .then((r) => {
+        const t = r.data.track === "greenfield" || r.data.track === "brownfield" ? r.data.track : null;
+        carrierTrackCache.set(key, t);
+        if (live) setTrack(t);
+      })
+      .catch(() => { /* unknown track: keep every stage applicable */ });
+    return () => { live = false; };
+  }, [enabled, key, routeId, underProjects]);
+  return track;
 }
 
 /** 가이던스 스트립이 붙는 프로젝트 전용 단계 — 기회 단계(S1~S7)는 별도 화면이 담당한다. */
@@ -223,6 +251,8 @@ export function StageRail({
   sticky?: boolean;
 }) {
   const linkFor = useStageLinks();
+  const carrierTrack = useCarrierTrack(track === undefined);
+  track = track ?? carrierTrack ?? undefined;
   const listRef = useRef<HTMLDivElement>(null);
   const cur = STAGE_META.find((s) => s.id === current[0])!;
 

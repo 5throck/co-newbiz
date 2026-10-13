@@ -147,7 +147,7 @@ export type BfOptInPreview = OptInPreviewLike & {
 };
 
 const BF_EXTRA_LABEL: Record<string, string> = {
-  "chk-partnership-checklist": "파트너십 체크리스트", // INTERIM-WORDING
+  "chk-partnership-checklist": "전략 제휴 체크리스트", // glossary Partnership.ko
   "chk-deal-shape-presigning-checklist": "딜 형태 사전 점검", // INTERIM-WORDING
   "chk-rbd-technology-checklist": "R&BD 기술 체크리스트", // INTERIM-WORDING
   "chk-entity-formation-checklist": "법인 설립 준비 체크리스트", // INTERIM-WORDING

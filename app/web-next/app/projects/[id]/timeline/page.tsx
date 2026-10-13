@@ -9,7 +9,7 @@ import { PageState } from "../../../../components/ui.tsx";
 // 프로세스 타임라인·SLA (ADR-0122 #1) — 단계별 마일스톤 산출일과 SLA 정책
 // 목표를 대비해 경과·위반을 표시한다. 경과는 계산값(저장 안 함), SLA는 운영
 // 정책 테이블(stage_sla)에서 온다.
-interface StageRow { stage_id: string; milestone_at: string | null; elapsed_days: number | null; sla_target_days: number | null; sla_breach: boolean | null; sla_set: boolean; in_progress: boolean }
+interface StageRow { stage_id: string; milestone_at: string | null; elapsed_days: number | null; sla_target_days: number | null; sla_breach: boolean | null; sla_set: boolean; in_progress: boolean; status?: string | null; not_applicable?: boolean }
 
 function TimelineView() {
   const { id } = useParams<{ id: string }>();
@@ -38,7 +38,7 @@ function TimelineView() {
             <tbody>{stages.map((s) => (
               <tr key={s.stage_id} className={s.sla_breach ? "row-selected" : undefined}>
                 <td className="font-semibold">{s.stage_id}</td>
-                <td className="tabular-nums">{s.sla_set ? `${s.sla_target_days}일` : <span className="note">정책 미설정</span>}</td>
+                <td className="tabular-nums">{s.not_applicable ? "—" : s.sla_set ? `${s.sla_target_days}일` : <span className="note">정책 미설정</span>}</td>
                 <td>
                   <div style={{ position: "relative", height: 12, background: "var(--bg)", borderRadius: 6 }}>
                     <div style={{ position: "absolute", left: 0, top: 0, bottom: 0,
@@ -48,9 +48,9 @@ function TimelineView() {
                   </div>
                 </td>
                 <td className="col-num tabular-nums">{s.elapsed_days != null ? `${s.elapsed_days}일${s.sla_set ? ` / ${s.sla_target_days}일` : ""}` : "—"}</td>
-                <td>{s.sla_breach ? <span className="status-chip status-red">SLA 초과</span>
+                <td>{s.not_applicable ? <span className="chip gray">미적용</span> : s.sla_breach ? <span className="status-chip status-red">SLA 초과</span>
                   : s.in_progress ? <span className="status-chip status-amber">진행 중</span>
-                  : s.elapsed_days != null ? <span className="status-chip status-green">완료</span>
+                  : s.status === "complete" || s.elapsed_days != null ? <span className="status-chip status-green">완료</span>
                   : <span className="chip gray">대기</span>}</td>
               </tr>
             ))}</tbody>

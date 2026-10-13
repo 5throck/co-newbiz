@@ -240,6 +240,7 @@ const MESSAGE_RULES: Array<[RegExp, string]> = [
   [/LLM provider is not configured[^.]*\.?/i, "AI 모델이 연결되어 있지 않아 이 기능을 실행할 수 없습니다. 관리자에게 AI 모델 설정을 요청하거나, 값을 직접 입력하세요."],
   [/Administrator role required\.?/i, "관리자 권한이 필요합니다."],
   [/Request failed\.?/i, "요청을 처리하지 못했습니다. 잠시 후 다시 시도하세요."],
+  [/Failed to fetch\.?/i, "서버에 연결하지 못했습니다. 네트워크 상태를 확인하고 잠시 후 다시 시도하세요."],
 ];
 
 export function localizeMessage(message: string): string {
@@ -260,7 +261,11 @@ export function localizeRequirement(text: string): string {
     .replace(/\((screening|pre_fs|target_screening|fs|dd|entity_ic|group_ic)(?=\s)/g, (_m, g: string) => `(${GATE_LABEL[g] ?? g}`)
     .replace(/origin\s*∈\s*\{\s*internal\s*,\s*joint\s*\}/g, "내부 추진·합작 프로젝트에 한함")
     .replace(/gate_decision\(kill\)/g, "게이트 중단(KILL) 결정")
-    .replace(/missing_artifacts/g, "미완료 산출물 목록");
+    .replace(/missing_artifacts/g, "미완료 산출물 목록")
+    // S12 전환 결정 요건 문장의 raw 식별자 → 한국어 (사람이 읽는 용도)
+    .replace(/어휘 5종:\s*next_tranche_released\s*\/\s*held_evidence_incomplete\s*\/\s*graduate_to_core\s*\/\s*reduce_or_divest\s*\/\s*kill_with_learning_captured/g, "어휘 5종")
+    .replace(/decided_by=venture-portfolio-ic/g, "결정자는 사람(벤처 포트폴리오 심의역)")
+    .replace(/venture_transition_decision 원장/g, "S12 전환 결정 원장");
 }
 
 /** Shown beside every action a read-only viewer cannot use. */
@@ -380,7 +385,7 @@ export const GREENFIELD_TRANSITION_HELP: Record<string, string> = {
 export const POST_MANAGEMENT_ITEM_LABEL: Record<string, string> = {
   portfolio_venture_monitoring: "포트폴리오 벤처 모니터링 (신규 사업 가동·성과 추적 포함)",
   integration_monitoring: "통합 모니터링 (인수 후 시너지·핵심인력)",
-  partnership_monitoring: "파트너십 모니터링 (JV·제휴 조건·성과)",
+  partnership_monitoring: "전략 제휴 모니터링 (JV·제휴 조건·성과)",
 }; // INTERIM-WORDING ADR-0161
 
 /** API error codes of the PMI write routes and the ADR-0161 routes -> Korean explanation. */

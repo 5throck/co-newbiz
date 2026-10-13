@@ -31,8 +31,8 @@ export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> 
     }
   }
 
-  // ── 사전 검토(chk-target-screening) — Short List 후보의 최종 점검을 섹션
-  // 카드에서 바로 기록한다(사용자 결정, 2026-09-16: 상세 화면·Long List의
+  // ── 사전 검토(대상 사전 검토 체크리스트) — 최종 후보 목록 후보의 최종 점검을 섹션
+  // 카드에서 바로 기록한다(사용자 결정, 2026-09-16: 상세 화면·후보 전체 목록의
   // 사전 검토 표면은 제거, 이 곳이 유일한 기록 지점). 저장은 기존
   // screening_json 병합 라우트 재사용 — 사람이 저장한 판정은 초안이 덮지 않는다.
   // 수집 근거(사유·출처·구분)는 evidence로 함께 보내 후보 참고 저장소에 적립.
@@ -61,7 +61,7 @@ export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> 
     }
   }
 
-  // 미판정 항목의 판정 제안 1건 수집 — 기확보 정보(DART 재무 facts·프로파일·
+  // 미판정 항목의 판정 제안 1건 수집 — 기확보 정보(전자공시 재무 정보·프로파일·
   // 공시)를 재검색하지 않고 활용하고, 부족한 정보만 서버가 웹검색한다. 결과는
   // 누적기(acc)에 병합되고 화면 상태에도 반영된다. 사람이 확정(저장)한 항목은
   // 건드리지 않고, 그 외 항목은 재실행 시 새 제안으로 갱신한다 — 이미 제안된
@@ -88,7 +88,7 @@ export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> 
 
   // ── 위원회 추천 검토 — 위원회 소집(CommitteePanel beforeConvene 훅)의 선행
   // 단계로 실행된다(사용자 결정, 2026-09-16: 사전 검토 제안 생성과 위원회 소집을
-  // 하나의 흐름으로 통합 — 별도 버튼은 역할 중복). Short List 후보 전체의
+  // 하나의 흐름으로 통합 — 별도 버튼은 역할 중복). 최종 후보 목록 후보 전체의
   // 기확보 정보(재무·프로파일·공시)를 활용하고 부족한 정보만 검색해 판정 제안을
   // 만든 뒤, 그 제안을 포함한 심의 brief를 반환한다. 후보가 하나도 성공하지
   // 못하면 예외를 던져 소집을 막고 패널에 에러를 표시한다 — 부분 성공이면
@@ -129,13 +129,13 @@ export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> 
       loadDetail(selected.opportunity.id);
       onSaved?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Short List 승격 실패");
+      setError(err instanceof Error ? err.message : "최종 후보 목록 승격 실패");
     } finally {
       setBusy(false);
     }
   }
 
-  // Short List 순위 조정 — 이웃 행과 rank를 교환한다(사람이 확정하는 순위).
+  // 최종 후보 목록 순위 조정 — 이웃 행과 rank를 교환한다(사람이 확정하는 순위).
   async function rerank(targetId: string, direction: "up" | "down") {
     if (!selected) return;
     setBusy(true); setError(null);
@@ -155,8 +155,8 @@ export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> 
   const checklistItems = selected?.checklist ?? [];
   const part1Count = checklistItems.filter((it) => KNOCKOUT_IDS.has(it.id)).length;
   const part2Count = checklistItems.length - part1Count;
-  // Long List(심사 중) 구간만 재무·기술 평가 종합 점수로 잠정 정렬한다 —
-  // Short List 승격 후 순위(rank)는 사람이 손으로 조정하는 영역이라 건드리지
+  // 후보 전체 목록(심사 중) 구간만 재무·기술 평가 종합 점수로 잠정 정렬한다 —
+  // 최종 후보 목록 승격 후 순위(rank)는 사람이 손으로 조정하는 영역이라 건드리지
   // 않는다(status가 다르면 비교 없이 0을 반환해 안정 정렬로 원래 그룹 순서를
   // 보존한다).
   const displayedTargets = targets
@@ -166,17 +166,17 @@ export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> 
       return (b.eval_summary?.combined ?? -1) - (a.eval_summary?.combined ?? -1);
     });
   // 평가 기반 잠정 순위 — 제외를 뺀 전 후보(pending + shortlisted) 대상.
-  // Short List로 승격해도 순위가 사라지지 않는다(사용자 리포트, 2026-09-16 —
+  // 최종 후보 목록으로 승격해도 순위가 사라지지 않는다(사용자 리포트, 2026-09-16 —
   // 승격·제외 시 잠정 순위가 "—"로 사라지는 문제). 승격이 같은 점수 기준이므로
-  // 순위 모집단도 같게 유지한다. Short List의 표시 순위(rank)는 별개(사람 조정).
+  // 순위 모집단도 같게 유지한다. 최종 후보 목록의 표시 순위(rank)는 별개(사람 조정).
   const evalRank = new Map(targets.filter((t) => t.status !== "excluded" && t.eval_summary?.combined != null)
     .slice()
     .sort((a, b) => (b.eval_summary?.combined ?? -1) - (a.eval_summary?.combined ?? -1))
     .map((t, i) => [t.id, i + 1]));
   const shortlistOrder = shortlistedTargets.map((t) => t.id);
-  // Short List 후보 중 사전 검토(chk-target-screening)가 미완료인 후보 수 —
+  // 최종 후보 목록 후보 중 사전 검토(대상 사전 검토 체크리스트)가 미완료인 후보 수 —
   // 위원회 최종 검토 전 판정 기록 권장 신호(사용자 결정, 2026-09-16: 체크리스트는
-  // Short List 후보의 "문제 없는지" 최종 점검 도구).
+  // 최종 후보 목록 후보의 "문제 없는지" 최종 점검 도구).
   const precheckIncomplete = shortlistedTargets.filter((t) => {
     const s = t.screening_summary;
     return !s || s.anyKnockOutFail || s.assessed < s.total || s.mandatoryOpen.length > 0;

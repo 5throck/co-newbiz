@@ -1,8 +1,8 @@
 "use client";
 
 // S11 신규 사업(greenfield) 실행 기준선 패널 (ADR-0161 Row 3, procedure greenfield-execution-baseline).
-// 경계 #2: 기준선 기록과 확인은 사람의 행위다 — 에이전트는 초안만 제안한다. 이 패널은 capex 트랜치를
-// 읽기만 한다(집행은 S10 capex 집행 단계 탭의 두 사람 절차). 트랜치 합계는 S8 채택 케이스 capex와
+// 경계 #2: 기준선 기록과 확인은 사람의 행위다 — 에이전트는 초안만 제안한다. 이 패널은 설비투자 트랜치를
+// 읽기만 한다(집행은 S10 설비투자 집행 단계 탭의 두 사람 절차). 트랜치 합계는 S8 채택 케이스 설비투자와
 // 정확히 일치할 때만 일치로 표시하고, 차이는 항상 '확인 필요' 항목이다 (자동 통과 없음).
 // 이 화면에는 이미 IC 결정 패널의 주요 행동(primary)이 있으므로 확인 버튼은 ghost 로 둔다 (화면당 primary 1개).
 // 확정은 프로젝트 리드만 할 수 있다(서버 403 lead_required) — 리드가 아니면 확인 폼을 그리지 않는다.
@@ -351,7 +351,7 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
     <section className="market-section sizing-step mt-3" aria-label="신규 사업 실행 기준선" data-testid="gx-baseline">
       <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">📋</span> 신규 사업 실행 기준선 — 트랜치 · 인허가/인증 · 인력/조직 계획 · 가동 KPI · 인센티브 의무</h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-        S10에서 정한 투자 조건과 S8 채택 케이스를 기준으로 실행 계획을 한곳에 고정합니다. 기록과 확인은 사람이 하며, 이 패널은 capex 트랜치를 바꾸지 않습니다.
+        S10에서 정한 투자 조건과 S8 채택 케이스를 기준으로 실행 계획을 한곳에 고정합니다. 기록과 확인은 사람이 하며, 이 패널은 설비투자 트랜치를 바꾸지 않습니다. 섹션 순서(트랜치 → 인허가/인증 → 인력/조직 계획 → 가동 KPI → 인센티브 의무)대로 위에서 아래로 기록하면 됩니다.
       </p>
       <p className="sr-only" role="status" aria-live="polite">{announce}</p>
 
@@ -386,12 +386,12 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
 
       {/* 1. 트랜치 대조 */}
       <div className="mt-3" data-testid="gx-tranches">
-        <h4 className="text-[length:var(--fs-body)] mb-1">capex 트랜치 대조 — S10 집행 조건과 S8 채택 케이스</h4>
+        <h4 className="text-[length:var(--fs-body)] mb-1">설비투자 트랜치 대조 — S10 집행 조건과 S8 채택 케이스</h4>
         {rec && (
           <>
             <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-              <table className="data-table table-fixed-pct tmin-48" aria-label="capex 트랜치 대조">
-                <caption className="sr-only">S10에서 기록한 capex 트랜치의 금액, 통화, 집행 조건, 상태</caption>
+              <table className="data-table table-fixed-pct tmin-48" aria-label="설비투자 트랜치 대조">
+                <caption className="sr-only">S10에서 기록한 설비투자 트랜치의 금액, 통화, 집행 조건, 상태</caption>
                 <ColGroup widths={TRANCHE_RECON_COL_PCT} />
                 <thead>
                   <tr><th scope="col">번호</th><th scope="col">금액</th><th scope="col">통화</th><th scope="col">집행 조건</th><th scope="col">상태</th></tr>
@@ -416,7 +416,7 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
             </div>
             <p className="text-[length:var(--fs-caption)] mt-1">
               트랜치 합계(보류 행 제외) <span className="tabular-nums">{fmtMoney(rec.tranche_total, rec.tranche_currencies.length === 1 ? rec.tranche_currencies[0] : "KRW")}</span>
-              {rec.case.capex_total_krw_m !== null && <> · S8 채택 케이스 capex <span className="tabular-nums">{fmtMoney(rec.case.capex_total_krw_m)}</span> 백만 KRW</>}
+              {rec.case.capex_total_krw_m !== null && <> · S8 채택 케이스 설비투자 <span className="tabular-nums">{fmtMoney(rec.case.capex_total_krw_m)}</span> 백만 KRW</>}
             </p>
             {verdict && (
               <p className="text-[length:var(--fs-caption)] mt-1">
@@ -428,7 +428,7 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
         )}
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
           트랜치 집행은 두 사람이 하는 절차입니다 (요청자와 승인자가 달라야 함). 여기서는 집행하지 않습니다.{" "}
-          <Link href={`/projects/${encodeURIComponent(projectId)}/deal-structure?tab=capex`} className="underline">S10 capex 집행 단계 탭에서 집행 →</Link>
+          <Link href={`/projects/${encodeURIComponent(projectId)}/deal-structure?tab=capex`} className="underline">S10 설비투자 집행 단계 탭에서 집행 →</Link>
         </p>
       </div>
 

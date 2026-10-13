@@ -1202,11 +1202,11 @@ export function listDdWorkspace(projectId: string, opts: { targetId?: string | n
   });
 
   // Wave F-8 (audit B1): sub-track-specific checklists appended as extra tabs.
-  // INTERIM-WORDING: Korean tab titles (no glossary term exists for partnership / pre-signing).
+  // INTERIM-WORDING: Korean tab titles (no glossary term exists for pre-signing).
   const SUB_TRACK_TITLES: Record<string, string> = {
-    "chk-brownfield-feasibility-checklist": "M&A 6대 검증(브라운필드 타당성)", // INTERIM-WORDING
+    "chk-brownfield-feasibility-checklist": "M&A 6대 검증 체크리스트", // same wording as lib/brownfield-dd-view.ts
     "chk-ma-special-topics-checklist": "M&A 특수 주제",
-    "chk-partnership-checklist": "파트너십 점검", // INTERIM-WORDING
+    "chk-partnership-checklist": "전략 제휴 점검", // glossary Partnership.ko
     "chk-deal-shape-presigning-checklist": "체결 전 딜 구조 점검", // INTERIM-WORDING
     "chk-rbd-technology-checklist": "R&BD 기술",
     "chk-entity-formation-checklist": "법인 설립 준비 (계획 검증)",

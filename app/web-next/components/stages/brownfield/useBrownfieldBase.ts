@@ -14,7 +14,7 @@ export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: s
   const canAct = canWriteBusiness(me?.role);
   const [selected, setSelected] = useState<OppDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // 사전 검토(chk-target-screening) 인라인 판정 — Short List 카드에서 바로 기록.
+  // 사전 검토(대상 사전 검토 체크리스트) 인라인 판정 — 최종 후보 목록 카드에서 바로 기록.
   // targetId → (itemId → 판정값 + 수집 근거). 근거는 저장 시 함께 보내 후보
   // 상세의 참고 저장소(screening_evidence_json, 0108)에 적립된다.
   const [precheckDraft, setPrecheckDraft] = useState<Record<string, Record<string, PrecheckDraftItem>>>({});
@@ -28,7 +28,7 @@ export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: s
   // null = 데이터 따름, 사용자가 토글하면 그 선택이 우선한다.
   const [precheckOpen, setPrecheckOpen] = useState<boolean | null>(null);
   const [newTarget, setNewTarget] = useState({ company_name: "", dart_corp_code: "" });
-  // S6 목표 시장 정의 — 완료기준(definition + 최소 Long List 커버리지).
+  // S6 목표 시장 정의 — 완료기준(definition + 최소 후보 전체 목록 커버리지).
   // 보기/수정 분리: 평소엔 저장된 값을 읽기 전용 카드로 보여주고, "수정" 클릭
   // 시 모달에서 편집한다 — 모달을 취소하면 어떤 값도 반영되지 않는다.
   const [universeDraft, setUniverseDraft] = useState({ definition: "", min_long_list: "5" });
@@ -50,7 +50,7 @@ export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: s
   // 동일하게 적용한다(초기 포커스·Tab 트랩·ESC 닫기·포커스 복원).
   const webModalFocus = useModalFocus(() => { if (!webBusy) setDiscoveryPanel(null); });
   const [proposals, setProposals] = useState<Suggestion[] | null>(null);
-  // B — Long List 웹검색 후보 제안 (ADR-0118: 제안만, 등록은 사람 클릭)
+  // B — 후보 전체 목록 웹검색 후보 제안 (ADR-0118: 제안만, 등록은 사람 클릭)
   const [webProposals, setWebProposals] = useState<WebSuggestion[] | null>(null);
   const [webBusy, setWebBusy] = useState(false);
   const [webNote, setWebNote] = useState<string | null>(null);
@@ -63,7 +63,7 @@ export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: s
   const [evalItems, setEvalItems] = useState<Record<string, EvalItem[]>>({});
   // targetId → 카테고리별 100점 가중 점수(서버 계산, computeEvalScore).
   const [evalScores, setEvalScores] = useState<Record<string, Record<EvalItem["category"], EvalCategoryScore>>>({});
-  // DART 재무 참고 패널 — company_id(Long List 등록 시점부터 존재) 기준.
+  // DART 재무 참고 패널 — company_id(후보 전체 목록 등록 시점부터 존재) 기준.
   const [financials, setFinancials] = useState<Record<string, FinancialsResp | null>>({});
 
   const loadProposals = useCallback(() => {
@@ -85,7 +85,7 @@ export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: s
       setDartResults(r.data.results);
       if (r.data.error) setDartError(r.data.error);
     } catch (err) {
-      setDartError(err instanceof Error ? err.message : "DART 검색 실패");
+      setDartError(err instanceof Error ? err.message : "전자공시 검색 실패");
     } finally {
       setDartBusy(false);
     }

@@ -25,7 +25,7 @@ export default function ReportsPage() {
   const canAct = canWriteProject(me?.role);
   const [view, setView] = useState<ReportsView | null>(null);
   const [title, setTitle] = useState("투자 검토 보고서");
-  const [content, setContent] = useState("# 투자 검토 보고서\n\n## Executive summary\n\n");
+  const [content, setContent] = useState("# 투자 검토 보고서\n\n## 요약\n\n");
   const [formats, setFormats] = useState<Format[]>(["docx", "pdf"]);
   const [busy, setBusy] = useState(false);
   const [composing, setComposing] = useState(false);

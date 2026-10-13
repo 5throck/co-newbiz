@@ -24,7 +24,7 @@ import { canWriteProject } from "../../lib/project-write-access.ts";
 
 // S10 투자구조 설계 (flow.spec v2.2.0) — 투자 주체(direct/SPC/holdco/내부 스핀오프/JV)
 // 결정과 ADR-0045 4대 축(절세 구조·책임 격리·재무 레버리지·엑싯 구조) 검토,
-// 그리고 자금조달 sources & uses 균형을 다룬다. 4축 검토 완료는 근거 아티팩트
+// 그리고 자금조달 자금 조달·사용 균형을 다룬다. 4축 검토 완료는 근거 아티팩트
 // 참조가 필수인 별도 행위이고, 완료 술어는 "최신 가설 완료 + 조달=사용>0"이다.
 
 interface HypothesisRow {
@@ -135,7 +135,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
         if (gf) {
           api.get<{ tranches: TrancheView[] }>(`/api/projects/${encodeURIComponent(projectId)}/capex-tranches`)
             .then((t) => setTranches(t.data.tranches))
-            .catch((e) => setError(e instanceof Error ? e.message : "capex 트랜치를 불러오지 못했습니다."));
+            .catch((e) => setError(e instanceof Error ? e.message : "설비투자 트랜치를 불러오지 못했습니다."));
         }
       })
       .catch(() => setIsGf(false));
@@ -255,7 +255,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
             ...(canAct ? [{ key: "reco", label: "AI 추천" }] : []),
             { key: "hypotheses", label: "투자구조 가설", count: data?.hypotheses.length },
             { key: "financing", label: "자금조달 계획" },
-            ...(isGf ? [{ key: "capex", label: "capex 집행 단계", count: tranches.length }] : []),
+            ...(isGf ? [{ key: "capex", label: "설비투자 집행 단계", count: tranches.length }] : []),
           ]}
         />
 
@@ -401,7 +401,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
               </div>
               {isGf && (
                 <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
-                  설립 구조에서는 자산/주식 인수 형태와 지급 수단 구성을 쓰지 않습니다. 자금 조달 구성은 '자금조달 계획' 탭의 조달 항목으로, 집행 단계는 'capex 집행 단계' 탭으로 기록합니다.
+                  설립 구조에서는 자산/주식 인수 형태와 지급 수단 구성을 쓰지 않습니다. 자금 조달 구성은 '자금조달 계획' 탭의 조달 항목으로, 집행 단계는 '설비투자 집행 단계' 탭으로 기록합니다.
                 </p>
               )}
               <div className="grid grid-1 gap-1 mt-2 text-[length:var(--fs-caption)]">
@@ -433,7 +433,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
 
         {tab === "financing" && (
         <section className="market-section sizing-step" aria-label="자금조달 계획">
-          <h3 className="sizing-step-title text-[0.9rem]">자금조달 계획 (sources &amp; uses)</h3>
+          <h3 className="sizing-step-title text-[0.9rem]">자금조달 계획 (자금 조달·사용)</h3>
           {totals && (
             <p className="text-[length:var(--fs-caption)] mb-1">
               조달 <span className="mono-num">{fmt(totals.sources)}</span> · 사용 <span className="mono-num">{fmt(totals.uses)}</span> · 차액{" "}
@@ -450,7 +450,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
             </p>
           )}
           <table className="data-table" aria-label="자금조달 항목">
-            <caption className="sr-only">sources &amp; uses 항목</caption>
+            <caption className="sr-only">자금 조달·사용 항목</caption>
             <thead>
               <tr><th scope="col">구분</th><th scope="col">항목</th><th scope="col" className="mono-num">금액 (백만 KRW)</th><th scope="col">비고</th><th scope="col"></th></tr>
             </thead>

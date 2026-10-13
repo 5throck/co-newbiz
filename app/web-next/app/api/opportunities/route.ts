@@ -29,7 +29,8 @@ export async function GET(request: Request) {
     .query(
       `SELECT id, project_id, name, market_scope, industry_id, value_chain_node, market_size_krw_m,
               growth_rate, attractiveness_score, synergy_score, synergy_rationale, synergy_score_confirmed_at, status, rationale,
-              decided_by, decided_at, created_by, created_at, deleted_at
+              decided_by, decided_at, created_by, created_at, deleted_at,
+              EXISTS (SELECT 1 FROM route_decision rd WHERE rd.opportunity_id = opportunity.id) AS route_decided
        FROM opportunity
        WHERE (deleted_at IS NULL OR (? = 1 AND project_id IS NOT NULL))
          AND (? IS NULL OR status = ?)

@@ -31,7 +31,7 @@ export function TargetAiProfileTab({ ctx, t }: { ctx: TargetDetailViewState; t: 
                 </div>
 
                 {companyProfile.status === "in_progress" ? (
-                  <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">DART·웹 리서치·AI 분석 진행 중 — 완료되면 자동으로 갱신됩니다.</p>
+                  <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">전자공시·웹 리서치·AI 분석 진행 중 — 완료되면 자동으로 갱신됩니다.</p>
                 ) : companyProfile.status === "failed" ? (
                   <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">분석 실패 — {companyProfile.error ?? "사유 없음"}</p>
                 ) : companyProfile.status === "not_started" || !companyProfile.profile ? (

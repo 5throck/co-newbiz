@@ -1,6 +1,6 @@
 "use client";
 
-import { fmtNpvInteger } from "@/lib/npv-format";
+import { fmtNpvEok } from "@/lib/npv-format";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
@@ -30,7 +30,7 @@ function BacktestView() {
     <main>
       <StageTabs projectId={id} />
       <h1>예측-실적 백테스트 <span className="chip gray">조직 집계</span></h1>
-      <p className="objective">S8의 예측(NPV p50)과 S12 실적을 자동 대조해 추정 정확도를 증명합니다 — 증거 부족은 가공하지 않고 표시합니다.</p>
+      <p className="objective">S8의 예측(NPV 중앙값)과 S12 실적을 자동 대조해 추정 정확도를 증명합니다 — 증거 부족은 가공하지 않고 표시합니다.</p>
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}
       <section className="market-section" aria-label="백테스트">
         {outliers.length > 0 && (
@@ -43,12 +43,12 @@ function BacktestView() {
             <table className="data-table table-fixed-pct tmin-40" aria-label="백테스트">
               <caption className="sr-only">예측-실적 백테스트</caption>
               <ColGroup widths={BACKTEST_COL_PCT} />
-              <thead><tr><th>프로젝트</th><th className="col-num">NPV 예측 (p50)</th><th className="col-num">실적 환산</th><th className="col-num">괴리</th><th>판정</th></tr></thead>
+              <thead><tr><th>프로젝트</th><th className="col-num">NPV 예측 (중앙값)</th><th className="col-num">실적 환산</th><th className="col-num">괴리</th><th>판정</th></tr></thead>
               <tbody>{rows.map((r) => (
                 <tr key={r.project_id} className={r.project_id === id ? "row-selected" : undefined}>
                   <td className="font-semibold cell-truncate">{r.name} <span className="note">{r.project_id === id ? "· 이 검토/안건" : ""}</span></td>
-                  <td className="col-num tabular-nums">{fmtNpvInteger(r.forecast_npv_krw_m)}억</td>
-                  <td className="col-num tabular-nums">{r.actual_npv_krw_m != null ? `${fmtNpvInteger(r.actual_npv_krw_m)}억` : "—"}</td>
+                  <td className="col-num tabular-nums">{fmtNpvEok(r.forecast_npv_krw_m)}</td>
+                  <td className="col-num tabular-nums">{r.actual_npv_krw_m != null ? fmtNpvEok(r.actual_npv_krw_m) : "—"}</td>
                   <td className="col-num tabular-nums">{r.deviation_pct != null ? `${r.deviation_pct > 0 ? "+" : ""}${r.deviation_pct}%` : "—"}</td>
                   <td>{r.status === "within_band" ? <span className="status-chip status-green">예측권 내</span> : r.status === "outlier" ? <span className="status-chip status-red">아웃라이어</span> : <span className="status-chip status-gray">증거 부족</span>}</td>
                 </tr>

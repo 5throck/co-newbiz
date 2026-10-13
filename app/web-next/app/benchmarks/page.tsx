@@ -26,7 +26,7 @@ const TYPE_LABELS: Record<string, string> = {
   brownfield: "브라운필드(M&A)",
   "license-in": "라이선스",
   jv: "합작(JV)",
-  partnership: "파트너십",
+  partnership: "전략 제휴",
 };
 
 const nf = new Intl.NumberFormat("ko-KR");

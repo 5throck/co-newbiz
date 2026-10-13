@@ -14,6 +14,10 @@ import { ColGroup, DevRef } from "../ui.tsx";
 const CASE_COMPARE_COL_PCT = [12, 7, 9, 9, 7, 7, 9, 13, 13, 8, 6] as const;
 // 시나리오 케이스 10열 — 관점·성장률·sigma 출처와 수치 열.
 const SCENARIO_CASE_COL_PCT = [11, 14, 9, 9, 9, 9, 6, 12, 11, 10] as const;
+// 중앙값 차이(시장 기반 대비)가 이 비율을 넘으면 설명 문구를 덧붙인다 — 계산 버그가
+// 아니라 설계된 교차검증 신호(공통 배수, 성장 가정 차이가 지배)임을 사용자에게 알리기 위함.
+// XCHECK_DIVERGENCE_WARN_RATIO(lib/business-case-generator.ts)와 같은 0.5 기준.
+const P50_GAP_WARN_RATIO = 0.5;
 import TargetSelector from "../TargetSelector.tsx";
 import { KRW_MILLIONS_UNIT, formatKrwMillionsPlain } from "../../lib/format.ts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -37,7 +41,7 @@ import { canWriteProject, isReadOnlyAdmin } from "../../lib/project-write-access
 import { countLegacyUnassignedModels } from "../../lib/business-case-legacy.ts";
 import { GoalPromptDialog, GoalsBanner, GoalsPanel, type GoalsData } from "../business-case/GoalsPanel.tsx";
 import { GOALS_ACK_REQUIRED_CODE, goalsAckErrorText, goalsLoadErrorText, resolveS8Tab, shouldRedirectTargetsTab, type CaseAttainmentEntry } from "../../lib/business-goals-view.ts";
-import { GoalAttainmentTable, NoGoalsCallout } from "../business-case/GoalAttainment.tsx";
+import { GoalAttainmentTable } from "../business-case/GoalAttainment.tsx";
 
 // S8 사업성 분석 — 이중 관점 밸류에이션 비교 (ADR-0117; approved mockup
 // docs/designs/mockups/2026-09-11-dual-view-valuation-ui-mockup_ko.html).
@@ -574,14 +578,14 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       {/* ── ADR-0143 대상 비교·선정 (brownfield) — 권고 ≠ 선정, 선정은 사람 ── */}
       {tab === "targets" && targets.length === 0 && (
         <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)] mb-3" role="note">
-          대상 축이 없는 프로젝트(greenfield)입니다 — 대상 비교·선정은 brownfield(Short List) 프로젝트에만 적용됩니다. 시나리오 비교 탭을 이용하세요.
+          대상 축이 없는 프로젝트(greenfield)입니다 — 대상 비교·선정은 brownfield(최종 후보 목록) 프로젝트에만 적용됩니다. 시나리오 비교 탭을 이용하세요.
         </p>
       )}
       {tab === "targets" && targets.length > 0 && (
-      <section className="market-section sizing-step mb-3" aria-label="Short List 대상 비교·선정">
-        <h3 className="sizing-step-title">Short List 대상 비교·선정 <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">(Short List 대상 전체)</span><DevRef refs="flow.spec S8 subjectScope: shortlist · ADR-0143" /></h3>
+      <section className="market-section sizing-step mb-3" aria-label="최종 후보 목록 대상 비교·선정">
+        <h3 className="sizing-step-title">최종 후보 목록 대상 비교·선정 <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">(최종 후보 목록 대상 전체)</span><DevRef refs="flow.spec S8 subjectScope: shortlist · ADR-0143" /></h3>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-          각 대상의 최신 gate-primary(시장 기반) 기본 시나리오 결과를 비교합니다. ★ 권고안는 권고일 뿐이며, 선정은 근거를 남기는 사람의 기록입니다. 선정 후 채택은 선정된 대상의 케이스로 제한됩니다.
+          각 대상의 최신 게이트 기준(시장 기반) 기본 시나리오 결과를 비교합니다. ★ 권고안는 권고일 뿐이며, 선정은 근거를 남기는 사람의 기록입니다. 선정 후 채택은 선정된 대상의 케이스로 제한됩니다.
         </p>
         {selectedTargetName && (
           <p className="text-[length:var(--fs-caption)] mb-2">
@@ -635,14 +639,14 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             <tr>
               <th scope="col">대상</th>
               <th scope="col" className="num">S7 순위</th>
-              <th scope="col" className="num">Base NPV p05<UnitNote /></th>
-              <th scope="col" className="num">Base NPV p50<UnitNote /></th>
+              <th scope="col" className="num">기본 NPV 하위 5%<UnitNote /></th>
+              <th scope="col" className="num">기본 NPV 중앙값<UnitNote /></th>
               <th scope="col" className="num">IRR <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">(%)</span></th>
               <th scope="col" className="num">케이스</th>
               <th scope="col">계산 엔진</th>
-              <th scope="col" title="페이드 DCF(성장률이 선형 수렴하는 대안 구조) NPV가 기본 구조 p50과 얼마나 벌어지는지 — 표시 전용이며 순위에 반영되지 않습니다.">구조 교차검증<span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">(페이드 DCF vs p50)</span></th>
+              <th scope="col" title="페이드 DCF(성장률이 선형 수렴하는 대안 구조) NPV가 기본 구조 중앙값과 얼마나 벌어지는지 — 표시 전용이며 순위에 반영되지 않습니다.">구조 교차검증<span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">(페이드 DCF 대 중앙값)</span></th>
               <th scope="col" title="생성기가 진입(acq_ev)과 처분(exit_ev)에 같은 배수를 적용하므로 진입 전용 배수가 아닌 가정치입니다. 사람이 확정한 프로젝트 밴드가 있을 때만 범위 내/밖을 표시하며, 글로벌 2–6배는 이 영역의 근거가 없는 참고값입니다. 가격 적정성 판단이 아니며 표시 전용으로 순위에 반영되지 않습니다.">가정 EV/매출 배수 (진입=처분)</th>
-              <th scope="col" title="이 대상의 케이스가 어떤 매출 기준으로 평가되었는가 — 회사 실적 앵커(DART 연매출)와 시장 포획 폴백(시장규모 × 포획률)이 섞이면 p05 순위 비교가 부적합합니다.">평가 기준</th>
+              <th scope="col" title="이 대상의 케이스가 어떤 매출 기준으로 평가되었는가 — 회사 실적 앵커(DART 연매출)와 시장 포획 폴백(시장규모 × 포획률)이 섞이면 하위 5% 기준 순위 비교가 부적합합니다.">평가 기준</th>
               <th scope="col" className="min-w-[calc(var(--space-8)*3)]"><span className="sr-only">작업</span></th>
             </tr>
           </thead>
@@ -653,7 +657,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                 <tr key={t.targetId}>
                   <td>
                     <b>{t.companyName}</b>
-                    {t.recommended && <span className="status-chip status-green ml-1" title="정량 방법론 권고 — 최악 분위수(p05) 생존 관점 (시장 기반)">★ 권고안</span>}
+                    {t.recommended && <span className="status-chip status-green ml-1" title="정량 방법론 권고 — 최악 분위수(하위 5%) 생존 관점 (시장 기반)">★ 권고안</span>}
                     {isSelected && <span className="status-chip status-green ml-1">선정됨</span>}
                   </td>
                   <td className="num">{t.rank ?? "—"}</td>
@@ -883,7 +887,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           />
         </div>
       )}
-      {goalsLoaded && goalCount === 0 && <NoGoalsCallout onOpenGoals={() => setTab("goals")} />}
+      {/* W1-19/W2-07: GoalsBanner already shows the 목표 미설정 state above — no second callout here. */}
       {SCENARIOS.map((s) => {
         const cases = byScenario.get(s) ?? [];
         const newestMf = cases.find((c) => c.variant === "market_forward");
@@ -892,7 +896,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           <section key={s} className="market-section sizing-step mt-3" aria-label={`${SCEN_LABEL[s]} 이중 관점 비교`}>
             <h3 className="sizing-step-title">
               {SCEN_LABEL[s]}
-              {newestMf?.recommended && <span className="status-chip status-green ml-1" title="정량 방법론 권고 — 최악 분위수(p05) 생존 관점 (시장 기반)">★ 권고안</span>}
+              {newestMf?.recommended && <span className="status-chip status-green ml-1" title="정량 방법론 권고 — 최악 분위수(하위 5%) 생존 관점 (시장 기반)">★ 권고안</span>}
               {newestMf?.adopted && <span className="status-chip status-green ml-1">채택됨 (fs 진행 입력)</span>}
             </h3>
             {cases.length === 0 ? (
@@ -907,12 +911,12 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                     <th scope="col">관점</th>
                     <th scope="col">성장률 <span className="text-[color:var(--muted-fg)]">(출처)</span></th>
                     <th scope="col">변동성 sigma <span className="text-[color:var(--muted-fg)]">(출처)</span></th>
-                    <th scope="col" className="num">NPV p05<UnitNote /></th>
-                    <th scope="col" className="num">NPV p50<UnitNote /></th>
-                    <th scope="col" className="num">NPV p95<UnitNote /></th>
+                    <th scope="col" className="num">NPV 하위 5%<UnitNote /></th>
+                    <th scope="col" className="num">NPV 중앙값<UnitNote /></th>
+                    <th scope="col" className="num">NPV 상위 5%<UnitNote /></th>
                     <th scope="col" className="num">IRR <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">(%)</span></th>
-                    <th scope="col" className="num">p50 차이<span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">({KRW_MILLIONS_UNIT}, 시장 기반 대비 %)</span></th>
-                    <th scope="col" className="num" title="이중 구조 교차검증 — 같은 케이스를 고전 장기창구 DCF로 재평가: 명시적 창구(기본 10년) 안에서 성장률이 말기 성장률(기본 3%)로 선형 수렴하고 마지막 해에 동일 배수로 처분한 결정론적 NPV. 기본 구조(5년 홀드+exit)와 크게 어긋나면 성장-배수 가정이 불일치한다는 신호.">페이드 DCF p50<UnitNote /></th>
+                    <th scope="col" className="num">중앙값 차이<span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">({KRW_MILLIONS_UNIT}, 시장 기반 대비 %)</span></th>
+                    <th scope="col" className="num" title="이중 구조 교차검증 — 같은 케이스를 고전 장기창구 DCF로 재평가: 명시적 창구(기본 10년) 안에서 성장률이 말기 성장률(기본 3%)로 선형 수렴하고 마지막 해에 동일 배수로 처분한 결정론적 NPV. 기본 구조(5년 홀드+exit)와 크게 어긋나면 성장-배수 가정이 불일치한다는 신호.">페이드 DCF 중앙값<UnitNote /></th>
                     <th scope="col"><span className="sr-only">작업</span></th>
                   </tr>
                 </thead>
@@ -923,6 +927,14 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                     const irrV = p50?.irr ?? null;
                     const deltaP50 = c.variant === "historical" && newestMfP50 !== null && p50 ? p50.npv_krw_m - newestMfP50 : null;
                     const deltaPct = deltaP50 !== null && newestMfP50 ? deltaP50 / newestMfP50 : null;
+                    // 큰 중앙값 차이는 계산 버그가 아니라 설계된 교차검증 신호다 — 공통 exit 배수 아래에서
+                    // 성장 가정 차이(시장 기반 대비)가 값 격차를 지배한다. 설명 탭(ValuationMethodology)으로 안내.
+                    const mfNote = c.variant === "historical"
+                      ? parseNote(cases.find((m) => m.variant === "market_forward")?.simulations.find((x) => x.percentile === "p50")?.note)
+                      : null;
+                    const growthGapPp = mfNote?.growth && note.growth
+                      ? (Number(note.growth) - Number(mfNote.growth)) * 100
+                      : null;
                     return (
                       <tr key={c.id}>
                         <td>
@@ -955,6 +967,12 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                           {deltaP50 === null ? "—" : (
                             <span className={deltaP50 >= 0 ? "text-[color:var(--success)] font-bold" : "text-[color:var(--red-fg)] font-bold"}>
                               {deltaP50 >= 0 ? "+" : ""}{fmtNpvKrwM(deltaP50)}{deltaPct !== null ? ` (${deltaPct >= 0 ? "+" : ""}${(deltaPct * 100).toFixed(1)}%)` : ""}
+                            </span>
+                          )}
+                          {c.variant === "historical" && deltaPct !== null && Math.abs(deltaPct) > P50_GAP_WARN_RATIO && (
+                            <span role="note" data-testid="p50-gap-hint" className="mt-1 block w-fit max-w-full whitespace-normal [overflow-wrap:anywhere] text-[length:var(--fs-caption)] font-normal text-[color:var(--muted-fg)]">
+                              성장 가정 차이가 지배적{growthGapPp !== null ? ` (시장 기반 대비 성장률 ${growthGapPp >= 0 ? "+" : ""}${growthGapPp.toFixed(1)}%p)` : ""} — 같은 배수를 공유하므로 이는 성장 가정과 배수 가정의 불일치 신호입니다.{" "}
+                              <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("overview")}>설명 탭 참조 →</button>
                             </span>
                           )}
                         </td>

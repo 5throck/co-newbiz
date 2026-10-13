@@ -17,7 +17,7 @@ import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
-import { RECORD_KEY_LABEL, TRANSITION_DECISION_LABEL, resolveLabel } from "../../lib/labels.ts";
+import { RECORD_KEY_LABEL, TRANSITION_DECISION_LABEL, VENTURE_CLASS_LABEL, resolveLabel } from "../../lib/labels.ts";
 import { RawKey } from "../RawKey.tsx";
 import { ClosureModal } from "../ClosureModal.tsx";
 import { useRouter } from "next/navigation";
@@ -251,7 +251,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
               <tbody>
                 {rollup!.class_rollup.map((c) => (
                   <tr key={c.venture_class}>
-                    <td>{c.venture_class}</td>
+                    <td>{VENTURE_CLASS_LABEL[c.venture_class] ?? c.venture_class}</td>
                     <td className="tabular-nums">{c.ventures}</td>
                     <td className="tabular-nums">{c.measures}</td>
                     <td className="tabular-nums">{c.on_target}</td>
@@ -277,7 +277,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
                       return (
                         <tr key={r.id}>
                           <td>{r.measure_key}</td>
-                          <td>{r.venture_class}</td>
+                          <td>{VENTURE_CLASS_LABEL[r.venture_class] ?? r.venture_class}</td>
                           <td>{r.target_value ?? "—"}</td>
                           <td>{r.actual_value ?? "—"}</td>
                           <td><span className={`status-chip ${meta.cls}`}>{meta.icon} {meta.label}</span></td>
@@ -337,7 +337,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
                 )}
                 {reco.brief.rationale_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">전환 근거 초안:</span> {reco.brief.rationale_draft}</p>}
                 {reco.brief.learning_capture_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">학습 정리 초안:</span> {reco.brief.learning_capture_draft}</p>}
-                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">이 제안이 본 산출물: {reco.manifest.join(" · ")}</p>
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">이 제안의 근거 산출물: {reco.manifest.join(" · ")}</p>
                 <button
                   type="button"
                   className="btn-ghost btn-sm"

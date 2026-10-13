@@ -173,6 +173,9 @@ export function EstablishmentPanel({ projectId, canAct, est, fallbackSteps, fall
       <h3 className="sizing-step-title text-[0.95rem]">
         <span className="sizing-step-badge">🏗</span> 설립 실행 — 5단계 (내부 추진·합작 프로젝트)
       </h3>
+      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
+        내부 추진·합작 프로젝트(새 법인을 직접 세우거나 합작으로 세우는 방식)에만 적용되는 5단계 설립 절차입니다. 인수·지분 투자 프로젝트는 대신 PMI 킥오프에서 통합 계획을 기록합니다.
+      </p>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{ESTABLISHMENT_CAPTION}</p>
       {warning && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg,var(--accent))] mb-2">⚠ {reopenWarningText(warning)}</p>}
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}

@@ -45,6 +45,91 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "owner": "brownfield-agent"
   },
   {
+    "key": "Checklist Review Status",
+    "ko": "체크리스트 항목 검토 상태",
+    "en": "Checklist Review Status",
+    "definition_ko": "체크리스트 항목마다 붙는 세 단계 표시. 'AI 작성·검토 전'(draft-AI, 표시가 없으면 기본값), '법무 검토됨'(counsel-reviewed, 검토자 이름·일자 필수), '확정'(confirmed, 검토자 이름·일자 필수).",
+    "why_it_matters_ko": "AI가 쓰고 AI가 검토한 항목은 1차 검토일 뿐 확정이 아니다. 화면에 상태를 드러내 사람이 어느 항목을 더 확인해야 하는지 알게 한다. 참고용 표시이며 게이트 통과를 막지 않는다.",
+    "category": "business",
+    "aliases": [
+      "항목 검토 상태"
+    ],
+    "related": [
+      "Draft AI Status",
+      "Counsel Reviewed Status",
+      "Confirmed Status",
+      "Stage Gate"
+    ],
+    "used_in": [
+      "legal-due-diligence"
+    ],
+    "owner": "glossary-curator"
+  },
+  {
+    "key": "Draft AI Status",
+    "ko": "AI 작성·검토 전",
+    "en": "Draft AI Status",
+    "definition_ko": "체크리스트 항목의 기본 상태. AI가 쓰거나 AI만 검토했고 사람이 아직 확인하지 않았다는 표시(draft-AI). 표시가 없으면 이 상태로 본다.",
+    "why_it_matters_ko": "이 상태의 항목은 사람이 더 확인해야 할 대상이다. AI 검토는 1차 검토일 뿐이며 확정으로 읽으면 안 된다.",
+    "category": "business",
+    "aliases": [
+      "draft-AI",
+      "AI 작성",
+      "검토 전"
+    ],
+    "related": [
+      "Checklist Review Status",
+      "Counsel Reviewed Status",
+      "Confirmed Status"
+    ],
+    "used_in": [
+      "legal-due-diligence"
+    ],
+    "owner": "glossary-curator"
+  },
+  {
+    "key": "Counsel Reviewed Status",
+    "ko": "법무 검토됨",
+    "en": "Counsel Reviewed Status",
+    "definition_ko": "법무 담당자가 항목을 검토했다는 표시(counsel-reviewed). 검토자 이름과 검토 일자를 반드시 함께 남긴다.",
+    "why_it_matters_ko": "법령·계약 관련 항목은 법무 검토를 거쳐야 AI 초안 단계를 벗어난다. 검토자와 일자가 없으면 책임 소재를 추적할 수 없다.",
+    "category": "business",
+    "aliases": [
+      "counsel-reviewed",
+      "법무 검토"
+    ],
+    "related": [
+      "Checklist Review Status",
+      "Draft AI Status",
+      "Confirmed Status"
+    ],
+    "used_in": [
+      "legal-due-diligence"
+    ],
+    "owner": "glossary-curator"
+  },
+  {
+    "key": "Confirmed Status",
+    "ko": "확정",
+    "en": "Confirmed Status",
+    "definition_ko": "담당자가 항목 내용을 최종 확인했다는 표시(confirmed). 검토자 이름과 확인 일자를 반드시 함께 남긴다.",
+    "why_it_matters_ko": "세 단계 가운데 가장 높은 확인 수준이다. 그래도 참고용 표시이며, 게이트 통과와 투자 결정은 사람이 내린다.",
+    "category": "business",
+    "aliases": [
+      "confirmed",
+      "확정됨"
+    ],
+    "related": [
+      "Checklist Review Status",
+      "Draft AI Status",
+      "Counsel Reviewed Status"
+    ],
+    "used_in": [
+      "legal-due-diligence"
+    ],
+    "owner": "glossary-curator"
+  },
+  {
     "key": "Investment Vehicle",
     "ko": "투자 주체",
     "en": "Investment Vehicle",
@@ -82,13 +167,14 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   },
   {
     "key": "Stage Gate",
-    "ko": "스테이지 게이트",
+    "ko": "게이트",
     "en": "Stage Gate",
     "definition_ko": "Screening → Pre-FS → FS → DD → 법인 투자심의위원회 → 그룹 투자심의위원회 순으로 진행되는 신사업 검토 단계.",
     "why_it_matters_ko": "각 게이트마다 필수 산출물과 통과 조건이 다르다. 게이트를 건너뛰면 시스템이 다음 단계 진입을 차단한다.",
     "category": "business",
     "aliases": [
-      "게이트"
+      "스테이지 게이트",
+      "게이트 심사"
     ],
     "related": [
       "Entity IC",
@@ -168,6 +254,10 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "definition_ko": "사전에 정의된 조건 충족 시 검토를 자동으로 중단시키는 규칙(예 — 필수 인증 미취득, covenant 위반).",
     "why_it_matters_ko": "중단 기준 없는 검토는 표류하고 \"검토\"가 \"정당화\"로 변질된다. 낙관편향을 구조적으로 차단하는 장치다.",
     "category": "business",
+    "aliases": [
+      "중단 조건",
+      "Kill Criteria 제안"
+    ],
     "related": [
       "Red Team",
       "Stage Gate"
@@ -180,11 +270,16 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   },
   {
     "key": "Waiver",
-    "ko": "예외 승인",
+    "ko": "면제 요청",
     "en": "Waiver",
     "definition_ko": "필수 산출물·체크리스트 미충족 상태에서 게이트를 통과시키는 명시적 예외.",
     "why_it_matters_ko": "예외 경로가 없으면 현장이 음성적으로 우회한다. 반드시 만료일이 있어야 하며, 같은 조항에 반복되면 규정 개정 신호다.",
     "category": "business",
+    "aliases": [
+      "예외 승인",
+      "면제",
+      "면제 승인"
+    ],
     "related": [
       "Kill Criteria",
       "Interpretation Registry"
@@ -279,6 +374,131 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     ],
     "used_in": [
       "stage-gate-governance"
+    ],
+    "owner": "process-governance-manager"
+  },
+  {
+    "key": "New Business",
+    "ko": "신규 사업",
+    "en": "New Business",
+    "definition_ko": "지금 하지 않는 분야에 새로 진출하는 사업. 부지·설비를 새로 짓는 그린필드와 기존 기업을 인수하는 브라운필드 두 경로로 추진한다.",
+    "why_it_matters_ko": "이 시스템이 검토하는 대상 자체를 가리키는 말이다. 화면과 문서에서 같은 표현을 써야 같은 안건을 서로 다르게 읽는 일이 없다.",
+    "category": "business",
+    "aliases": [
+      "새로 세우는 사업"
+    ],
+    "related": [
+      "Green Field",
+      "Brown Field"
+    ],
+    "used_in": [
+      "stage-gate-governance"
+    ],
+    "owner": "process-governance-manager"
+  },
+  {
+    "key": "Workforce and Organization Plan",
+    "ko": "인력/조직 계획",
+    "en": "Workforce and Organization Plan",
+    "definition_ko": "신규 사업을 운영할 인력 규모, 필요한 직무, 조직 구성을 정리한 계획. 그린필드는 채용과 조직 신설, 브라운필드는 인수 뒤 인력 통합을 다룬다.",
+    "why_it_matters_ko": "인력이 갖춰지지 않으면 설비와 인허가가 준비돼도 가동이 늦어진다. 슬래시를 넣어 '인력/조직 계획'으로 한 덩어리로 쓴다.",
+    "category": "business",
+    "aliases": [
+      "인력 조직 계획",
+      "인력·조직 계획"
+    ],
+    "related": [
+      "Green Field",
+      "Brown Field"
+    ],
+    "used_in": [
+      "talent-pipeline-planning",
+      "pmi-planning"
+    ],
+    "owner": "process-governance-manager"
+  },
+  {
+    "key": "Priority Investment Area",
+    "ko": "중점 투자 분야",
+    "en": "Priority Investment Area",
+    "definition_ko": "그룹이나 회사가 투자 자원을 우선 배분하겠다고 정한 사업 분야.",
+    "why_it_matters_ko": "안건이 중점 투자 분야에 맞는지가 전략 적합성 판단의 출발점이다. 분야에서 벗어난 안건은 더 강한 근거가 있어야 한다.",
+    "category": "business",
+    "aliases": [
+      "중점 분야",
+      "전략 투자 분야"
+    ],
+    "related": [
+      "Group IC",
+      "Group Agenda"
+    ],
+    "used_in": [
+      "strategic-fit-screening",
+      "portfolio-fit-assessment"
+    ],
+    "owner": "group-review-agent"
+  },
+  {
+    "key": "Status Quo Option",
+    "ko": "현상 유지안",
+    "en": "Status Quo Option",
+    "definition_ko": "새 사업에 진출하지 않고 지금 상태를 이어 가는 선택지. 다른 안과 비교하는 기준선이 된다.",
+    "why_it_matters_ko": "투자안이 좋아 보여도 아무것도 하지 않는 경우보다 나은지 비교해야 한다. 현상 유지안이 빠지면 검토가 정당화로 흐르기 쉽다.",
+    "category": "business",
+    "aliases": [
+      "현상 유지",
+      "아무것도 하지 않는 안",
+      "Do Nothing"
+    ],
+    "related": [
+      "Kill Criteria",
+      "Stage Gate"
+    ],
+    "used_in": [
+      "stage-gate-governance"
+    ],
+    "owner": "process-governance-manager"
+  },
+  {
+    "key": "Partnership",
+    "ko": "전략 제휴",
+    "en": "Partnership",
+    "definition_ko": "지분 인수나 신규 설립 없이 다른 기업과 협력해 사업에 진출하는 방식(합작, 기술 제휴, 공급·판매 제휴 등). 화면에서는 '전략 제휴'로 표기한다.",
+    "why_it_matters_ko": "자산을 적게 들이는 대신 통제력이 낮다. 통제 필요도가 높은 안건에서는 선택할 수 없는 경로가 있다. 이전 표기 '파트너십'은 별칭으로만 남긴다.",
+    "category": "business",
+    "aliases": [
+      "파트너십",
+      "제휴",
+      "파트너십 모니터링"
+    ],
+    "related": [
+      "Green Field",
+      "Brown Field"
+    ],
+    "used_in": [
+      "partner-sourcing-strategy",
+      "jv-structuring"
+    ],
+    "owner": "partnership-agent"
+  },
+  {
+    "key": "Overall Grade",
+    "ko": "종합 등급",
+    "en": "Overall Grade",
+    "definition_ko": "6개 판정 차원을 규칙에 따라 합쳐 나온 안건 전체의 신호등 등급(Green·Amber·Red). 시스템이 제안하는 값이다.",
+    "why_it_matters_ko": "데이터 신뢰도가 이 등급의 상한을 정한다. 제안일 뿐이며 승인과 투자 결정은 사람이 내린다.",
+    "category": "business",
+    "aliases": [
+      "종합 판정",
+      "제안 등급"
+    ],
+    "related": [
+      "RAG Dimension",
+      "Reliability Grade",
+      "Stage Gate"
+    ],
+    "used_in": [
+      "rag-scoring-framework"
     ],
     "owner": "process-governance-manager"
   },

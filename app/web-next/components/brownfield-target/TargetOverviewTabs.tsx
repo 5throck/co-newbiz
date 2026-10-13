@@ -25,7 +25,7 @@ export function TargetOverviewEditTab({ ctx, t }: { ctx: TargetDetailViewState; 
                   />
                 </label>
                 <label className="text-[length:var(--fs-caption)]">
-                  <span className="block mb-1">DART 고유번호 (8자리)</span>
+                  <span className="block mb-1">전자공시 고유번호 (8자리)</span>
                   <input
                     value={editDraft.dart_corp_code}
                     onChange={(e) => setEditDraft((prev) => ({ ...prev, dart_corp_code: e.target.value }))}
@@ -47,7 +47,7 @@ export function TargetOverviewEditTab({ ctx, t }: { ctx: TargetDetailViewState; 
                 </button>
               </div>
               <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                DART 고유번호를 바꾸면 회사 마스터가 재연결되어 재무 facts·공시가 새 회사 기준으로 갱신됩니다.
+                전자공시 고유번호를 바꾸면 회사 마스터가 재연결되어 재무 facts·공시가 새 회사 기준으로 갱신됩니다.
               </p>
             </form>
           </div>

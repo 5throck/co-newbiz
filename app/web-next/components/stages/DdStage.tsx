@@ -345,7 +345,7 @@ export function DdStage({ projectId }: { projectId: string }) {
           <div className="mb-3 flex flex-wrap items-center gap-2" data-testid="dd-subject-header">
             {targets.length === 0 ? (
               <p className="text-[length:var(--fs-body)]">
-                <strong>실사 대상:</strong> 지정된 대상 회사가 없습니다 — Green Field이거나 Short List 대상이 없는 프로젝트라 프로젝트 기준으로 실사합니다.
+                <strong>실사 대상:</strong> 지정된 대상 회사가 없습니다 — Green Field이거나 최종 후보 목록 대상이 없는 프로젝트라 프로젝트 기준으로 실사합니다.
               </p>
             ) : !selectedTarget ? (
               <p className="text-[length:var(--fs-body)]">
@@ -560,6 +560,11 @@ export function DdStage({ projectId }: { projectId: string }) {
               {notCounted && (
                 <p role="note" className="status-chip status-amber block mt-2" data-testid="dd-not-counted">
                   <span aria-hidden="true">ⓘ </span>{notCounted.text}
+                </p>
+              )}
+              {domain.domain === "hr" && ws && (
+                <p role="note" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2" data-testid="dd-hr-tab-hint">
+                  ⓘ 인력/조직 계획 탭은 본래 기존 사업 인수(Brown Field) 실사의 항목으로, 인수 후 조직·핵심인력 계획을 검증합니다. 신규 사업 프로젝트에서는 인력 계획의 검증 상태를 보여 주는 참고 탭이며, 프로젝트가 작업 공간 범위에 들어온 경우에만 완료 건수와 게이트 판정에 반영됩니다.
                 </p>
               )}
             </div>

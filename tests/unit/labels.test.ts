@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import * as yaml from "js-yaml";
 import {
+  localizeRequirement,
   BF_SUB, DART_CORP_CODE_LABEL, DECISION_MODE_LABEL, GATE_LABEL, GF_SUB, GLOSSARY_CATEGORY_LABEL, INTENT_LABEL, ORIGIN_LABEL,
   RAG_DIMENSION_LABEL, RAG_DIMENSION_ORDER, RECORD_KEY_LABEL, STAGE_STATUS_LABEL, SUB_TRACK_LABEL, TRACK_LABEL,
   TRANSITION_DECISION_LABEL, FINDING_CATEGORY_LABEL, UNCLASSIFIED_LABEL, dedupTermNames, gateLabel, glossaryCategoryLabel,
@@ -45,6 +46,21 @@ describe("label maps", () => {
 
   test("localizeMessage uses the transition map", () => {
     expect(localizeMessage("The latest S12 transition decision must be 'reduce_or_divest'.")).toContain(TRANSITION_DECISION_LABEL.reduce_or_divest!);
+  });
+
+  test("localizeMessage translates raw system errors to Korean (D-21)", () => {
+    expect(localizeMessage("Failed to fetch")).not.toMatch(/Failed/);
+    expect(localizeMessage("Request failed.")).not.toMatch(/Request failed/);
+  });
+
+  test("localizeRequirement renders S12 spec sentences without raw identifiers (W3-09 family)", () => {
+    const out = localizeRequirement(
+      "사람 전환 결정 기록(어휘 5종: next_tranche_released / held_evidence_incomplete / graduate_to_core / reduce_or_divest / kill_with_learning_captured, decided_by=venture-portfolio-ic, rationale 필수 — venture_transition_decision 원장)",
+    );
+    expect(out).not.toContain("next_tranche_released");
+    expect(out).not.toContain("decided_by=");
+    expect(out).not.toContain("venture_transition_decision");
+    expect(out).toContain("어휘 5종");
   });
 });
 

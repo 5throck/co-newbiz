@@ -12,7 +12,7 @@ export interface TargetRow {
   company_id: string | null;
   screening_summary?: { assessed: number; total: number; knockOutsPassed: boolean; anyKnockOutFail: boolean; mandatoryOpen: string[] };
   // 재무·기술 평가(ADR-0139) 기반 랭킹 점수 — 서버가 계산해 붙여준다.
-  // 위원회 심의(t-01~09)와 역할을 분리한다(사용자 요청, 2026-09-15).
+  // 위원회 심의(9개 항목)와 역할을 분리한다(사용자 요청, 2026-09-15).
   eval_summary?: { financial: { score: number | null }; technical: { score: number | null }; combined: number | null; complete?: boolean };
 }
 // 재무 참고 패널 — GET /api/companies/[companyId]/financials 응답의 필요한 부분만.
@@ -76,7 +76,7 @@ export interface ScreeningDraftResponse {
 // 사전 검토 인라인 판정 1건 — 판정값과 수집 근거(사유·출처·구분)를 함께 보관.
 // 저장 시 evidence로 함께 보내 후보 상세 참고 저장소에 적립된다.
 export interface PrecheckDraftItem { verdict: string; rationale?: string; source_url?: string | null; kind?: string }
-// S7 재무·기술 평가 (ADR-0139) — chk-target-screening과 병행하는 별도 레이어.
+// S7 재무·기술 평가 (ADR-0139) — 대상 사전 검토 체크리스트과 병행하는 별도 레이어.
 // 항목별 weight(가중치)로 카테고리(재무/기술)마다 별도 100점 점수를 낸다 —
 // 두 영역을 합치지 않는다(사용자 요구, 2026-09-15).
 export interface EvalItem {

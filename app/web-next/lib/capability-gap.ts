@@ -38,13 +38,13 @@ export const HELD_STATUS_LABEL: Record<GapHeldStatus, string> = {
   unevaluated: "미판정",
 };
 
-// S4 브라운필드 sub_track 라벨(RouteDecisionStage.tsx의 partnership: "파트너십")과
+// S4 브라운필드 sub_track 라벨(labels.ts BF_SUB.partnership: "전략 제휴")과
 // 표현을 통일한다(ADR-0136) — build/hire/invest는 S4에 대응 개념이 없어 그대로 둔다.
 export const RESOLUTION_LABEL: Record<GapResolution, string> = {
-  build: "구축",
-  partner: "파트너십",
+  build: "직접 구축",
+  partner: "전략 제휴",
   hire: "영입",
-  invest: "투자",
+  invest: "지분 투자",
 };
 
 export const HELD_STATUS_CHIP: Record<GapHeldStatus, string> = {

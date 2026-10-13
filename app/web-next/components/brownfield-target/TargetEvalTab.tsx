@@ -33,10 +33,10 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                         type="button"
                         className="btn-ghost btn-sm"
                         disabled={draftBusy || pendingFinancial.length === 0}
-                        title="DART 재무 facts를 루브릭으로 계산해 미판정 항목의 판정 초안을 만듭니다 — 저장 전까지 화면 표시일 뿐입니다"
+                        title="전자공시 재무 정보를 루브릭으로 계산해 미판정 항목의 판정 초안을 만듭니다 — 저장 전까지 화면 표시일 뿐입니다"
                         onClick={() => void generateEvalDraft("financial")}
                       >
-                        {draftBusy && draftCategory === "financial" ? "계산 중..." : "재무 판정 초안 (DART)"}
+                        {draftBusy && draftCategory === "financial" ? "계산 중..." : "재무 판정 초안 (전자공시)"}
                       </button>
                       {evalDraft && draftCategory === "financial" && (
                         <>
@@ -63,7 +63,7 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                       </button>
                       {draftCategory !== "technical" && (
                         <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] flex-1 min-w-[16rem]">
-                          {draftNote ?? "DART facts로 미판정 항목의 판정 초안을 만듭니다 — 확인·수정 후 저장하며 확정은 항상 사람이 합니다 (경계 #2)."}
+                          {draftNote ?? "전자공시 재무 정보로 미판정 항목의 판정 초안을 만듭니다 — 확인·수정 후 저장하며 확정은 항상 사람이 합니다 (경계 #2)."}
                         </span>
                       )}
                     </div>
@@ -74,7 +74,7 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                         type="button"
                         className="btn-ghost btn-sm"
                         disabled={draftBusy || pendingTechnical.length === 0}
-                        title="최근 3년 DART 공시·회사 AI 프로파일·항목별 웹 검색을 근거로 판정 초안을 만듭니다 — 근거로 확인 안 되는 항목은 '확인 안됨'으로 표시됩니다"
+                        title="최근 3년 전자공시·회사 AI 프로파일·항목별 웹 검색을 근거로 판정 초안을 만듭니다 — 근거로 확인 안 되는 항목은 '확인 안됨'으로 표시됩니다"
                         onClick={() => void generateEvalDraft("technical")}
                       >
                         {draftBusy && draftCategory === "technical" ? "근거 수집 중..." : "기술 판정 초안 (공시·프로파일·웹)"}

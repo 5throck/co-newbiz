@@ -204,7 +204,7 @@ describe("components (source reading)", () => {
     expect(bfOptInExtrasLines(base)).toEqual([]);
     expect(bfOptInExtrasLines({ ...base, extras_attached_by_opt_in: [] })).toEqual([]);
     const lines = bfOptInExtrasLines({ ...base, extras_attached_by_opt_in: [{ checklist_id: "chk-partnership-checklist", judgeable: 7, excluded: 1 }, { checklist_id: "chk-deal-shape-presigning-checklist", judgeable: 5, excluded: 3 }] });
-    expect(lines[0]).toContain("파트너십 체크리스트(판정 대상 7건, 제외 1건)");
+    expect(lines[0]).toContain("전략 제휴 체크리스트(판정 대상 7건, 제외 1건)");
     expect(lines[0]).toContain("딜 형태 사전 점검(판정 대상 5건, 제외 3건)");
     expect(lines[1]).toContain("판정 X / Y");
     expect(bfExtraChecklistLabel("chk-x")).toBe("chk-x");

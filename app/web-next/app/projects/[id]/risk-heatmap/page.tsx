@@ -80,7 +80,7 @@ function HeatmapView() {
                 return (
                   <div key={idx} style={{ minHeight: 74, border: "1px solid var(--border)", borderRadius: 8, position: "relative", background: "var(--surface)" }}>
                     <span className="note" style={{ position: "absolute", right: 5, bottom: 3, fontSize: "var(--fs-caption)" }}>
-                      {["영향 低", "영향 中", "영향 高"][impact - 1]}
+                      {["영향 낮음", "영향 중간", "영향 높음"][impact - 1]}
                     </span>
                     {cellItems.map((it, i) => (
                       <span key={it.key} title={it.label}
@@ -103,7 +103,7 @@ function HeatmapView() {
             <ul className="sizing-note-list">
               {items.map((it) => (
                 <li key={it.key}>
-                  <span className="status-chip" style={{ background: color(it.severity), color: "var(--surface)", marginRight: 6 }}>{it.severity === "high" ? "高" : it.severity === "mid" ? "中" : "低"}</span>
+                  <span className="status-chip" style={{ background: color(it.severity), color: "var(--surface)", marginRight: 6 }}>{it.severity === "high" ? "높음" : it.severity === "mid" ? "중간" : "낮음"}</span>
                   {it.label}
                 </li>
               ))}

@@ -36,6 +36,41 @@ interface ProcessView {
   stages: Array<{ id: string; status: string }>;
 }
 
+// D-03/D-18: S5 is Green Field only, S6/S7 are Brown Field only. Opening the other track's stage
+// shows a plain notice with a link to the stage that applies instead of the working screen.
+function TrackGate({ carrierId, stageLabel, only, otherStage, children }: {
+  carrierId: string; stageLabel: string; only: "greenfield" | "brownfield"; otherStage: "s5" | "s6"; children: React.ReactNode;
+}) {
+  const [track, setTrack] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    let alive = true;
+    api.get<{ track: string | null }>(`/api/opportunities/${encodeURIComponent(carrierId)}/process`)
+      .catch(() => api.get<{ track: string | null }>(`/api/projects/${encodeURIComponent(carrierId)}/process`))
+      .then((r) => { if (alive) setTrack(r.data.track ?? null); })
+      .catch(() => { if (alive) setTrack(null); });
+    return () => { alive = false; };
+  }, [carrierId]);
+  if (track === undefined) return <PageState state="loading" />;
+  if (track && track !== only) {
+    const thisName = track === "greenfield" ? "Green Field" : "Brown Field";
+    return (
+      <div className="card" role="note">
+        <h2>{stageLabel}</h2>
+        <p>
+          {only === "brownfield" ? "Green Field에는 적용되지 않는 단계입니다." : "Brown Field에는 적용되지 않는 단계입니다."}
+          {" "}이 검토/안건의 트랙은 {thisName}입니다.
+        </p>
+        <p>
+          <Link className="control-chip status-green" href={`/deals/${carrierId}/${otherStage}`}>
+            {otherStage === "s5" ? "S5 자체 진출로 이동" : "S6 대상 발굴로 이동"}
+          </Link>
+        </p>
+      </div>
+    );
+  }
+  return <>{children}</>;
+}
+
 function StageTab() {
   const params = useParams<{ id: string; stage: string }>();
   const searchParams = useSearchParams();
@@ -132,26 +167,30 @@ function StageTab() {
         <DealBreadcrumb dealId={params.id} stageId="S5" />
         <StageFrame stageId="S5" track="greenfield">
           Greenfield 경로 — 자체 역량으로 진입할 수 있는지 평가합니다. 진출전략을
-          Build / Partner / Hire / Invest 중 결정하고, 필요 역량(S3에서 이미 정의·판정된
+          직접 구축 / 전략 제휴 / 인력 영입 / 지분 투자 중 결정하고, 필요 역량(S3에서 이미 정의·판정된
           내용)을 확인한 뒤 투자비 검토 요건을 정리합니다.
         </StageFrame>
-        <GreenfieldStage opportunityId={params.id} />
+        <TrackGate carrierId={params.id} stageLabel="S5 자체 진출" only="greenfield" otherStage="s6">
+          <GreenfieldStage opportunityId={params.id} />
+        </TrackGate>
       </main>
     );
   }
 
   // S6/S7 대상발굴·선정 — Wave 2 Phase B 통합. Brownfield 트랙 캐리어의
-  // 목표 시장 → Long List → 사전 검토 → Short List → 게이트·승격 화면.
+  // 목표 시장 → 후보 전체 목록 → 사전 검토 → 최종 후보 목록 → 게이트·승격 화면.
   if (stageId === "S6" || stageId === "S7") {
     return (
       <main>
         <DealBreadcrumb dealId={params.id} stageId={stageId as "S6" | "S7"} />
         <StageFrame stageId={["S6", "S7"]} track="brownfield" heading="S6/S7 대상발굴·선정">
           Brownfield 경로 — 진출방식이 Brownfield로 결정된 기회의
-          대상 후보를 발굴하고(S6 Long List), <code>chk-target-screening</code> 체크리스트로 스크리닝해
-          Short List로 좁힙니다(S7). CDD/TDD는 Short List 확정 후 S9에서 수행합니다.
+          대상 후보를 발굴하고(S6 후보 전체 목록), <code>대상 사전 검토 체크리스트</code> 체크리스트로 스크리닝해
+          최종 후보 목록으로 좁힙니다(S7). CDD/TDD는 최종 후보 목록 확정 후 S9에서 수행합니다.
         </StageFrame>
-        <BrownfieldStage opportunityId={params.id} />
+        <TrackGate carrierId={params.id} stageLabel={`${stageId} 대상발굴·선정`} only="brownfield" otherStage="s5">
+          <BrownfieldStage opportunityId={params.id} />
+        </TrackGate>
       </main>
     );
   }

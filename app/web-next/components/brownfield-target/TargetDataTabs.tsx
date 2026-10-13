@@ -35,12 +35,12 @@ export function TargetFinancialsTab({ ctx }: { ctx: TargetDetailViewState }) {
               };
               return (
                 <div className="card mb-3">
-                  <h4 className="text-[0.9rem] mb-2">DART 재무 현황 ({companyProfile.profile.dartFinancials!.year}년)</h4>
-                  <EChart option={chartOption} height={300} ariaLabel="DART 재무 현황 — 계정별 연도 비교" />
-                  <p className="mt-1 mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">단위: 억원 · 출처: DART 사업보고서</p>
+                  <h4 className="text-[0.9rem] mb-2">전자공시 재무 현황 ({companyProfile.profile.dartFinancials!.year}년)</h4>
+                  <EChart option={chartOption} height={300} ariaLabel="전자공시 재무 현황 — 계정별 연도 비교" />
+                  <p className="mt-1 mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">단위: 억원 · 출처: 전자공시(전자공시) 사업보고서</p>
                   <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-                    <table className="data-table report-table" aria-label="DART 재무 요약 (계정 × 연도)">
-                      <caption className="sr-only">DART 재무 요약 (계정 × 연도)</caption>
+                    <table className="data-table report-table" aria-label="전자공시 재무 요약 (계정 × 연도)">
+                      <caption className="sr-only">전자공시 재무 요약 (계정 × 연도)</caption>
                       <thead>
                         <tr><th scope="col" className="col-label">계정</th>{years.map((y) => <th key={y} scope="col" className="col-num">{y}</th>)}</tr>
                       </thead>
@@ -77,7 +77,7 @@ export function TargetDisclosuresTab({ ctx }: { ctx: TargetDetailViewState }) {
           <div className="card mt-3">
             {!dartCode || !companyId ? (
               <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                DART 고유번호가 없어 공시를 조회할 수 없습니다 — 등록 시 8자리 고유번호를 입력하면 연결됩니다.
+                전자공시 고유번호가 없어 공시를 조회할 수 없습니다 — 등록 시 8자리 고유번호를 입력하면 연결됩니다.
               </p>
             ) : (
               <>

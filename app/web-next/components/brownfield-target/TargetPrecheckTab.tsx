@@ -12,7 +12,7 @@ export function TargetPrecheckTab({ ctx, screening_summary, savedVerdicts, check
           <div className="mt-3">
             <div className="card mb-3">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                <h4 className="text-[0.9rem] mb-0">사전 검토 — chk-target-screening (t-01~t-09)</h4>
+                <h4 className="text-[0.9rem] mb-0">사전 검토 — 대상 사전 검토 체크리스트(9개 항목)</h4>
                 <span
                   className={`status-chip ${screening_summary.anyKnockOutFail ? "status-red" : screening_summary.assessed === 0 ? "status-not-started" : screening_summary.assessed < screening_summary.total || screening_summary.mandatoryOpen.length > 0 ? "status-amber" : "status-green"}`}
                   title={`확정 판정 ${screening_summary.assessed}/${screening_summary.total}${screening_summary.mandatoryOpen.length ? ` · 미판정 필수: ${screening_summary.mandatoryOpen.join(", ")}` : ""}`}
@@ -29,7 +29,7 @@ export function TargetPrecheckTab({ ctx, screening_summary, savedVerdicts, check
                     <span className={`status-chip ${reco.cls}`}>{reco.label}</span>
                   </p>
                 ) : (
-                  <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">아직 확정된 판정이 없습니다 — Short List 승격 후 /brownfield 화면의 "사전 검토" 섹션에서 판정합니다.</p>
+                  <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">아직 확정된 판정이 없습니다 — 최종 후보 목록 승격 후 /brownfield 화면의 "사전 검토" 섹션에서 판정합니다.</p>
                 );
               })()}
               <ul className="sizing-note-list mb-1">

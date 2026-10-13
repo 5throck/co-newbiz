@@ -257,7 +257,7 @@ export function PromotionPanel({
               style={{ width: "100%" }}
             />
             <span className="block mt-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              위 Pre-FS 게이트의 GO 근거(사업 판단)와는 별개입니다 — 이 프로젝트는 추진 즉시 접근이
+              위 예비타당성 검토 게이트의 진행 근거(사업 판단)와는 별개입니다 — 이 프로젝트는 추진 즉시 접근이
               차단된 상태로 시작되며(need-to-know 원칙), 여기 적은 내용은 &ldquo;왜 본인이 이 데이터를
               봐야 하는가&rdquo;를 기록하는 접근 권한 부여 근거입니다. 아래에서 추가하는 팀원에게도
               동일한 근거가 적용됩니다.

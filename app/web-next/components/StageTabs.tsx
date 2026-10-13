@@ -56,6 +56,22 @@ function useProjectPmiApplies(projectId: string, enabled: boolean): boolean | nu
   return applies;
 }
 
+// Source opportunity of a project (S1-S4 live on the opportunity, not on /projects/{id}). Cached per project.
+const sourceOppCache = new Map<string, string | null>();
+
+function useSourceOpportunity(projectId: string): string | null {
+  const [oppId, setOppId] = useState<string | null>(sourceOppCache.get(projectId) ?? null);
+  useEffect(() => {
+    if (sourceOppCache.has(projectId)) { setOppId(sourceOppCache.get(projectId) ?? null); return; }
+    let live = true;
+    api.get<{ opportunity: { id: string } | null }>(`/api/projects/${encodeURIComponent(projectId)}/process`)
+      .then((r) => { const id = r.data.opportunity?.id ?? null; sourceOppCache.set(projectId, id); if (live) setOppId(id); })
+      .catch(() => { /* no link when the source cannot be resolved */ });
+    return () => { live = false; };
+  }, [projectId]);
+  return oppId;
+}
+
 function StageTabsInner({ projectId }: { projectId: string }) {
   const pathname = usePathname();
   const tabParam = useSearchParams().get("tab");
@@ -68,6 +84,7 @@ function StageTabsInner({ projectId }: { projectId: string }) {
     ? (stageTabGroupsFor({ pmiApplies: false }).find((g) => g.stage === baseGroup.stage) ?? baseGroup)
     : baseGroup;
   const group: StageTabGroup | null = pmiGroup ? groupForTrack(pmiGroup, track) : null;
+  const sourceOppId = useSourceOpportunity(projectId);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreBtn = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -164,6 +181,12 @@ function StageTabsInner({ projectId }: { projectId: string }) {
     {/* The screen's Primary Action (design §5) sits at the top right, beside the stage tabs. */}
     <PrimarySlot />
     </div>
+    {sourceOppId && (
+      <p className="mb-2 text-[length:var(--fs-caption)]">
+        <Link href={`/deals/${encodeURIComponent(sourceOppId)}/s4`} className="text-[color:var(--accent)] font-bold">원본 기회 보기</Link>
+        <span className="text-[color:var(--muted-fg)]"> — S1~S4(시장분석·기회·시너지·진출방식) 화면으로 이동합니다.</span>
+      </p>
+    )}
     </>
   );
 }

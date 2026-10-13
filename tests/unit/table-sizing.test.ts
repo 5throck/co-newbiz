@@ -93,7 +93,7 @@ const AUDITED_TABLES: Array<{ file: string; match: string }> = [
   { file: "components/stages/EstablishmentPanel.tsx", match: "설립 실행 단계 현황" },
   { file: "app/projects/[id]/backtest/page.tsx", match: "백테스트" },
   { file: "app/projects/[id]/charter/page.tsx", match: "KPI 사전 확정" },
-  { file: "components/stages/brownfield/LonglistSection.tsx", match: "Long List" },
+  { file: "components/stages/brownfield/LonglistSection.tsx", match: "후보 전체 목록" },
   { file: "app/strategy/page.tsx", match: "w-full border-collapse" },
 ];
 
@@ -265,7 +265,7 @@ describe("table column sizing guard", () => {
       { file: "app/projects/[id]/charter/page.tsx", label: "KPI 사전 확정", tmin: "tmin-32", expect: [] },
       { file: "app/strategy/page.tsx", label: "w-full border-collapse", tmin: "tmin-56", expect: ["cell-clamp-3"] },
       { file: "components/stages/EstablishmentPanel.tsx", label: "설립 실행 단계 현황", tmin: "tmin-48", expect: [] },
-      { file: "components/stages/brownfield/LonglistSection.tsx", label: "Long List", tmin: "tmin-56", expect: ["cell-truncate"] },
+      { file: "components/stages/brownfield/LonglistSection.tsx", label: "후보 전체 목록", tmin: "tmin-56", expect: ["cell-truncate"] },
       { file: "app/projects/[id]/proxy-chain/page.tsx", label: "tmin-64", tmin: "tmin-64", expect: [] },
       { file: "app/projects/[id]/proxy-chain/page.tsx", label: "tmin-56", tmin: "tmin-56", expect: [] },
       { file: "app/projects/[id]/share/page.tsx", label: "공유 링크", tmin: "tmin-48", expect: ["cell-truncate"] },
