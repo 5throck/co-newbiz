@@ -1068,7 +1068,7 @@
       "name": "i18n-specialist",
       "scope": "root",
       "capability": "i18n-specialist",
-      "content_hash": "51ec9fbc38b827a5",
+      "content_hash": "62770284cab0f1f7",
       "version": "1.1.0",
       "mirrors": [
         "agents/i18n-specialist.md"

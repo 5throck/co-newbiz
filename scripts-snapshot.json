@@ -1,5 +1,5 @@
 {
-  "created": "2026-10-11",
+  "created": "2026-10-12",
   "variant": "co-newbiz",
   "l1_source": "templates/common/scripts",
   "scripts": {
@@ -76,7 +76,7 @@
       "status": "active"
     },
     "dev-sync.ts": {
-      "version": "1.26.0",
+      "version": "1.27.0",
       "status": "active"
     },
     "dispatch-parallel.ts": {
@@ -179,6 +179,10 @@
       "version": "1.3.0",
       "status": "active"
     },
+    "helpers/substitute-placeholders.ts": {
+      "version": "1.3.0",
+      "status": "active"
+    },
     "helpers/template-utils.ts": {
       "version": "1.3.0",
       "status": "active"
@@ -189,6 +193,10 @@
     },
     "helpers/mirror-hygiene.ts": {
       "version": "1.0.0",
+      "status": "active"
+    },
+    "helpers/local-patch-scan.ts": {
+      "version": "1.0.1",
       "status": "active"
     },
     "hooks/gateguard-fact-force.ts": {
@@ -259,6 +267,10 @@
       "version": "1.0.0",
       "status": "active"
     },
+    "lib/managed-block-merge.ts": {
+      "version": "1.4.0",
+      "status": "active"
+    },
     "lib/managed-block-parity.ts": {
       "version": "1.2.0",
       "status": "active"
@@ -308,7 +320,7 @@
       "status": "active"
     },
     "helpers/commit-message.ts": {
-      "version": "1.0.0",
+      "version": "1.1.0",
       "status": "active"
     },
     "helpers/ignored-tooling.ts": {
@@ -316,6 +328,10 @@
       "status": "active"
     },
     "lib/model-literal-patterns.ts": {
+      "version": "1.0.0",
+      "status": "active"
+    },
+    "lib/env-sample.ts": {
       "version": "1.0.0",
       "status": "active"
     },
@@ -504,7 +520,7 @@
       "status": "active"
     },
     "upgrade-project.ts": {
-      "version": "1.70.0",
+      "version": "1.70.2",
       "status": "active"
     },
     "validate-agents.ts": {

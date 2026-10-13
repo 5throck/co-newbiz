@@ -1,22 +1,15 @@
 {
-  "timestamp": "2026-10-11T17:44:23.606Z",
+  "timestamp": "2026-10-12T23:49:26.060Z",
   "files": [
-    "AGENTS.md",
     "CLAUDE.md",
-    "docs/workspace-schema.json",
     "scripts/SCRIPTS.md",
-    "scripts/audit.ts",
     "scripts/dev-sync.ts",
-    "scripts/lib/self-managed-tools.ts",
-    "scripts/lifecycle-sync-audit.ts",
-    "scripts/skill-lifecycle-audit.ts",
-    "scripts/validate-templates.ts",
-    "scripts/verify-platform-lifecycle.ts",
-    "template-version.txt",
-    ".github/workflows/delete-merged-branches.yml",
     "scripts/helpers/commit-message.ts",
-    "scripts/helpers/ignored-tooling.ts",
-    "scripts/lib/model-literal-patterns.ts",
-    "scripts/upgrade-project.ts"
+    "scripts/upgrade-project.ts",
+    "template-version.txt",
+    "scripts/helpers/local-patch-scan.ts",
+    "scripts/helpers/substitute-placeholders.ts",
+    "scripts/lib/env-sample.ts",
+    "scripts/lib/managed-block-merge.ts"
   ]
 }
