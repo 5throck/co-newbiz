@@ -427,6 +427,24 @@ describe("POST /api/opportunities/[id]/promote — role boundary", () => {
 });
 
 describe("promoteOpportunity origin derivation", () => {
+  test("ADR-0166: Green Field defaults to internal, an explicit joint is respected, and the S11 establishment rule applies", async () => {
+    const promoteGf = (origin?: "joint") => {
+      const oppId = insertOpportunity();
+      insertRouteDecision(oppId, "greenfield");
+      completeS5(oppId);
+      seedGates(oppId, "greenfield");
+      const r = promoteOpportunity(oppId, { promotedBy: U1, needToKnowBasis: "basis", origin });
+      return r.project.id;
+    };
+    const originOf = (id: string) => (db.query("SELECT origin FROM md_project WHERE id = ?").get(id) as { origin: string | null }).origin;
+    const defaultId = promoteGf();
+    expect(originOf(defaultId)).toBe("internal");
+    expect(originOf(promoteGf("joint"))).toBe("joint");
+    const { evaluateProcess } = await import("../../app/web-next/lib/process-flow.ts");
+    const ev = evaluateProcess({ type: "project", id: defaultId });
+    expect(JSON.stringify(ev)).toContain("설립 실행");
+  });
+
   test("Wave F-8 (B4): origin is derived from the route sub_track when not supplied; an explicit origin wins", () => {
     const promoteWith = (sub: string, origin?: "external") => {
       const oppId = insertOpportunity();

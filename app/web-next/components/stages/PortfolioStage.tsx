@@ -302,7 +302,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
           )}
         </section>
 
-        {/* ── ADR-0161: 적용되는 사후 관리 항목 · 신규 사업 가동 지표 · 통합/파트너십 모니터링 (읽기 전용) ── */}
+        {/* ── ADR-0161: 적용되는 사후 관리 항목 · 신규 사업 가동 지표 · 통합/전략 제휴 모니터링 (읽기 전용) ── */}
         <PostManagementPanel projectId={projectId} />
 
         {/* ── LLM 모니터링 브리프 (결정 지원) — ADR-0118: 초안은 LLM, 전환 결정은 사람 ── */}

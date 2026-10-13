@@ -2,7 +2,7 @@
 
 // S12 사후 관리 패널 (ADR-0161 Row 3). 읽기 전용: 어떤 S12 항목이 이 프로젝트에 적용되는지(모두 권장,
 // S12에는 게이트가 없어 차단하지 않음), 신규 사업(greenfield)의 가동 지표를 S8 사업 목표에 비춘
-// '참고 증적'으로, 외부 brownfield의 통합·파트너십 모니터링 읽기 보기를 보여 준다. 판정은 사람의 몫이며
+// '참고 증적'으로, 외부 brownfield의 통합·전략 제휴 모니터링 읽기 보기를 보여 준다. 판정은 사람의 몫이며
 // 이 패널은 어떤 값도 기록하지 않는다 (전환 결정 기록은 PortfolioStage 의 기존 폼).
 
 import { useCallback, useEffect, useRef, useState } from "react";

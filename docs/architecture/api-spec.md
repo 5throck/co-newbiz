@@ -194,3 +194,4 @@ Landing state: `ok()` carries provenance fields into `meta` via `envelope.ts`'s 
 
 
 > ADR-0161 review R7: `/api/opportunities/:id/committee-sessions/:sessionId[/minutes|/advance|/positions]` bind `sessionId` to the path opportunity, to a committee run (stage not an `s<N>_*` ledger and `meta_json.committee_key` present) and, when the opportunity was promoted, to project visibility; anything else is 404. PMI writes and the S11/S12 surfaces share one track resolver; `pmi/kickoff` POST for a non-applicable track changed from 400 `not_applicable` to 403 `not_applicable_track`.
+> ADR-0166 (Proposed): `POST /api/opportunities/:id/promote` default `origin` for a Green Field opportunity is `internal` for every sub-track; an explicit body `origin` (e.g. `joint`) still wins. Brown Field derivation from the route sub_track is unchanged; existing NULL-origin rows are not backfilled.
