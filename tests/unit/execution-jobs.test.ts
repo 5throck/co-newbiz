@@ -151,11 +151,12 @@ describe("e2e — two concurrent worker processes on one DB", () => {
       Bun.spawn(["bun", workerPath, "--loop", "--class", "numeric", "--handlers", handlersPath], { cwd: PROJECT_ROOT, env, stdout: "pipe", stderr: "pipe" })
     );
     const exits = await Promise.all(procs.map((p) => p.exited));
+    const diag = await Promise.all(procs.map(async (p) => `${await new Response(p.stdout).text()}${await new Response(p.stderr).text()}`));
     const rows = db
       .query("SELECT status, attempt, result_json FROM execution_job WHERE kind = 'test.echo' ORDER BY created_at")
       .all() as Array<{ status: string; attempt: number; result_json: string | null }>;
     expect(rows).toHaveLength(4);
-    expect(rows.every((r) => r.status === "succeeded")).toBe(true);
+    expect(rows.every((r) => r.status === "succeeded"), JSON.stringify({ rows, exits, diag })).toBe(true);
     expect(rows.every((r) => r.attempt === 1)).toBe(true); // 이중 선점 없음
     expect(JSON.parse(rows[0].result_json!)).toEqual({ echoed: "v1" });
     // 워커 종료 코드: 큐를 다 비웠으므로 0 (실패 없음)

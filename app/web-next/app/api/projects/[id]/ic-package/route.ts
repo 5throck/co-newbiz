@@ -15,7 +15,7 @@ import { getDb } from "../../../../../../../db/client.ts";
 import { readRagView, recomputeRag } from "../../../../../../../db/lib/rag-service.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { findAdoptedCase, latestAdoption, listBusinessCases, type BusinessCaseView } from "../../../../../lib/business-case.ts";
-import { establishmentProgress, listEstablishmentSteps } from "../../../../../lib/establishment.ts";
+import { establishmentProgress, listEstablishmentSteps, reopenedAfterGate } from "../../../../../lib/establishment.ts";
 import { icGoGapItems, parseRationale } from "../../../../../lib/ic-gap-override.ts";
 import { latestGateDecisions, latestRouteDecision, type GateId, type GateVerdict } from "../../../../../lib/process-flow.ts";
 import { latestPmiKickoff, pmiKickoffApplies } from "../../../../../lib/pmi-kickoff.ts";
@@ -162,7 +162,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       establishment: (() => {
         const steps = listEstablishmentSteps(id);
         const progress = establishmentProgress(id);
-        return { steps, done: progress.done, total: 5, complete: progress.complete, progress: `${progress.done}/5` };
+        return { steps, done: progress.done, total: 5, complete: progress.complete, progress: `${progress.done}/5`, ...reopenedAfterGate(id) };
       })(),
     },
     200,

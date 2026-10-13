@@ -50,6 +50,8 @@ interface IcPackage {
   establishment: {
     steps: Array<{ id: string; step_no: number; status: string; origin: string; owner: string; updated_at: string; note: string | null; evidence_url: string | null; keyed_by: string }>;
     done: number; total: number; complete: boolean; progress: string;
+    reopened_after_gate?: boolean;
+    reopened_after_gate_detail?: { steps: number[]; count: number; since: string } | null;
   };
 }
 
@@ -60,6 +62,8 @@ interface EstablishmentView {
   history: EventView[];
   complete: boolean;
   progress: string;
+  reopened_after_gate?: boolean;
+  reopened_after_gate_detail?: { steps: number[]; count: number; since: string } | null;
 }
 
 const RAG_META: Record<string, { icon: string; cls: string }> = {
@@ -286,7 +290,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
           canAct={canAct}
           est={est}
           fallbackSteps={pkg?.establishment.steps ?? []}
-          gateHistory={pkg?.gates.history ?? []}
+          fallbackReopen={pkg?.establishment}
           onChanged={load}
         />
 

@@ -13,7 +13,7 @@ import {
   assigneeView, buildStatusBody, CASCADE_CONFIRM_TITLE, CHANGEABLE_STATUSES, defaultFormStatus, establishmentApplies,
   establishmentErrorText, ESTABLISHMENT_CAPTION, eventSummary, evidenceRequired, notApplicableNote, reopenWarning,
   reopenWarningText, safeEvidenceHref, STATUS_LABEL, validateReopenReason, validateStatusForm,
-  type EventView, type MemberView, type StepRowView,
+  type EventView, type MemberView, type ReopenedAfterGateSrc, type StepRowView,
 } from "../../lib/establishment-view.ts";
 
 const STEP_TITLES: Record<number, string> = {
@@ -40,16 +40,19 @@ export interface EstablishmentData {
   steps: StepRowView[];
   members?: MemberView[];
   history?: EventView[];
+  reopened_after_gate?: boolean;
+  reopened_after_gate_detail?: ReopenedAfterGateSrc["reopened_after_gate_detail"];
 }
 
 type OpenForm = { step: number; kind: "status" | "assign" | "reopen" } | null;
 
-export function EstablishmentPanel({ projectId, canAct, est, fallbackSteps, gateHistory, onChanged }: {
+export function EstablishmentPanel({ projectId, canAct, est, fallbackSteps, fallbackReopen, onChanged }: {
   projectId: string;
   canAct: boolean;
   est: EstablishmentData | null;
   fallbackSteps: StepRowView[];
-  gateHistory: ReadonlyArray<{ decision: string; decided_at: string }>;
+  /** Server flag from the IC package, used until/unless the establishment read loads. */
+  fallbackReopen?: ReopenedAfterGateSrc;
   onChanged: () => Promise<unknown>;
 }) {
   const { confirm, confirmDialog } = useConfirm();
@@ -68,7 +71,7 @@ export function EstablishmentPanel({ projectId, canAct, est, fallbackSteps, gate
   const history = est?.history ?? [];
   const base = `/api/projects/${encodeURIComponent(projectId)}/establishment`;
   const colCount = writable ? 6 : 5;
-  const warning = reopenWarning(history, gateHistory);
+  const warning = reopenWarning(est ?? fallbackReopen);
 
   const rowOf = (n: number): StepRowView | undefined => est?.steps.find((s) => s.step_no === n) ?? fallbackSteps.find((s) => s.step_no === n);
 

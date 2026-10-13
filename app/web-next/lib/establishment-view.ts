@@ -37,6 +37,8 @@ export interface EventView {
   evidence_url: string | null;
   actor_name: string | null;
   actor_user_id: string;
+  /** How the mutation arrived (ADR-0165 addendum); absent on older payloads. */
+  via?: "ui" | "api" | "mcp" | "unknown";
   created_at: string;
 }
 
@@ -142,26 +144,33 @@ export function toMs(ts: string): number {
   return Date.parse(/(Z|[+-]\d\d:?\d\d)$/.test(t) ? t : `${t}Z`);
 }
 
+export const VIA_LABEL: Record<string, string> = { ui: "화면", api: "API", mcp: "MCP" };
+
+/** Call-path suffix for the history row; empty for old rows (unknown) so no noise is added. */
+export function viaSuffix(via: string | undefined): string {
+  return via && VIA_LABEL[via] ? ` · ${VIA_LABEL[via]}` : "";
+}
+
 export function eventSummary(e: EventView): string {
-  if (e.kind === "reopen") return "완료 취소(재개)";
-  if (e.kind === "assign") return "담당자 지정";
-  return `상태 변경${e.to_status ? ` → ${STATUS_LABEL[e.to_status] ?? e.to_status}` : ""}`;
+  const base = e.kind === "reopen" ? "완료 취소(재개)"
+    : e.kind === "assign" ? "담당자 지정"
+    : `상태 변경${e.to_status ? ` → ${STATUS_LABEL[e.to_status] ?? e.to_status}` : ""}`;
+  return `${base}${viaSuffix(e.via)}`;
 }
 
 export interface ReopenWarning { steps: number[]; count: number; since: string }
 
-/** Reopen events recorded after the latest GO gate decision (gate decisions are never revoked by a reopen). */
-export function reopenWarning(
-  events: readonly EventView[],
-  gateHistory: ReadonlyArray<{ decision: string; decided_at: string }>,
-): ReopenWarning | null {
-  const goTimes = gateHistory.filter((g) => g.decision === "go").map((g) => toMs(g.decided_at)).filter(Number.isFinite);
-  if (goTimes.length === 0) return null;
-  const lastGo = Math.max(...goTimes);
-  const after = events.filter((e) => e.kind === "reopen" && toMs(e.created_at) > lastGo);
-  if (after.length === 0) return null;
-  const steps = [...new Set(after.map((e) => e.step_no))].sort((a, b) => a - b);
-  return { steps, count: after.length, since: new Date(lastGo).toISOString().slice(0, 10) };
+/** Server-derived post-approval reopen flag (ADR-0165 addendum): GET /establishment and the IC package carry it. */
+export interface ReopenedAfterGateSrc {
+  reopened_after_gate?: boolean;
+  reopened_after_gate_detail?: { steps: number[]; count: number; since: string } | null;
+}
+
+/** The warning is computed on the server (lib/establishment.ts reopenedAfterGate); the UI only renders it. */
+export function reopenWarning(src: ReopenedAfterGateSrc | null | undefined): ReopenWarning | null {
+  if (!src?.reopened_after_gate) return null;
+  const d = src.reopened_after_gate_detail;
+  return { steps: d?.steps ?? [], count: d?.count ?? 0, since: d?.since ?? "" };
 }
 
 export function reopenWarningText(w: ReopenWarning): string {

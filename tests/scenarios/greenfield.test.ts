@@ -42,18 +42,18 @@ describe("greenfield S1 to S12", () => {
 
   test("S11 establishment 5 steps are recorded, then Entity IC and Group IC GO", async () => {
     await visit(s.page, app, `/projects/${P}/ic-review`);
-    // R2-B: each step has its own "증적과 함께 완료" action (owner = the person who records it).
+    // ADR-0165: each step has its own "상태 변경" action; the status form records `done` with evidence.
     for (let step = 1; step <= 5; step++) {
-      // The UI clears its busy flag before the post-PUT reload lands, so the just-recorded
-      // step's button can briefly still read "증적과 함께 완료". Wait for that step to show
-      // "완료됨" (state, not a sleep), then target this step's own button by aria-controls.
+      // The UI clears its busy flag before the post-PUT reload lands, so wait for the previous
+      // step to show "완료됨" (state, not a sleep), then target this step's own button.
       if (step > 1) {
-        await s.page.locator(`button[aria-controls="est-step-${step - 1}"]`).filter({ hasText: "완료됨" }).waitFor({ state: "visible", timeout: 30_000 });
+        await s.page.locator(`button[aria-controls="est-step-${step - 1}"]`).filter({ hasText: "완료 취소(재개)" }).waitFor({ state: "visible", timeout: 30_000 });
       }
-      const action = s.page.locator(`button[aria-controls="est-step-${step}"]`).filter({ hasText: "증적과 함께 완료" });
+      const action = s.page.locator(`button[aria-controls="est-step-${step}"]`).filter({ hasText: "상태 변경" });
       await action.waitFor({ state: "visible", timeout: 30_000 });
       await action.click();
-      const form = s.page.locator(`form[aria-label="설립 실행 ${step}단계 기록"]`);
+      const form = s.page.locator(`form[aria-label="설립 실행 ${step}단계 상태 변경"]`);
+      await form.locator("select").selectOption("done");
       await form.locator('input[placeholder="data room 링크"]').fill(`https://dataroom.example/e2e/step-${step}`);
       await form.locator('button[type="submit"]').click();
       const put = s.page.waitForResponse((r) => /establishment$/.test(new URL(r.url()).pathname) && r.request().method() === "PUT");
@@ -93,8 +93,9 @@ describe("greenfield S1 to S12", () => {
     const confirmRes = await confirmPost;
     if (confirmRes.status() >= 300) throw new Error(`execution-baseline POST ${confirmRes.status()}: ${await confirmRes.text()}`);
     await see(s.page, "● 확정됨");
-    await recordGate(s.page, app, `/projects/${P}/ic-review`, null, "go", "Entity IC: 설립 실행과 투자 구조를 승인", { panelIndex: 0 });
-    await recordGate(s.page, app, `/projects/${P}/ic-review`, null, "go", "Group IC: 그룹 자본배분에 부합", { panelIndex: 1 });
+    // ADR-0165: one sequenced decision panel; the form targets the current committee turn (entity_ic, then group_ic).
+    await recordGate(s.page, app, `/projects/${P}/ic-review`, null, "go", "Entity IC: 설립 실행과 투자 구조를 승인");
+    await recordGate(s.page, app, `/projects/${P}/ic-review`, null, "go", "Group IC: 그룹 자본배분에 부합");
     await visit(s.page, app, `/projects/${P}/process`);
     await see(s.page, /현재 S12/);
   }, 150_000);
