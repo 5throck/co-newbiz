@@ -65,7 +65,7 @@ describe("brownfield workspace scope overlay (real file)", () => {
 
   test("header", () => {
     const d = fresh();
-    expect([d.governance_doc_id, d.version, d.status, d.track, d.baseline_sub_track]).toEqual(["ovl-brownfield-workspace-scope", "1.2.2", "proposed", "brownfield", "m_and_a"]);
+    expect([d.governance_doc_id, d.version, d.status, d.track, d.baseline_sub_track]).toEqual(["ovl-brownfield-workspace-scope", "1.2.3", "proposed", "brownfield", "m_and_a"]);
     expect(d.decision_record).toBe("DEC-20261013-03");
     expect(Object.keys(d.sub_track_keys)).toEqual(ST);
     expect(Object.keys(d.codes)).toEqual(["A", "R", "X", "N"]);
