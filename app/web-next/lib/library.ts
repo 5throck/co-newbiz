@@ -49,6 +49,10 @@ export interface ChecklistItemDef {
   text: string;
   mandatory: boolean;
   waiver_eligible: boolean;
+  /** Optional review status (missing = draft-AI); informational, never gate-blocking. */
+  review_status?: "draft-AI" | "counsel-reviewed" | "confirmed";
+  reviewer?: string;
+  verified_on?: string;
 }
 
 export function getChecklistItems(checklistDocId: string): ChecklistItemDef[] | null {

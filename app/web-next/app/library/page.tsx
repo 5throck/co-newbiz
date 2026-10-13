@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { marked } from "marked";
 import { api } from "../../lib/api.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
+import { ReviewBadgeChip } from "../../components/ReviewBadge.tsx";
+import type { ReviewStatus } from "../../lib/checklist-review-status.ts";
 
 // 문서 허브 — 정책집·절차서·체크리스트·매뉴얼·참고문서·템플릿·디자인·DD 실사
 // 문서 전체를 저장소 원본에서 실시간으로 읽어 열람하는 단일 화면(ADR-0108).
@@ -34,6 +36,7 @@ interface DocContent {
   version?: string;
   enforceability?: string;
   owner_agent?: string;
+  review_items?: Array<{ id: string; review_status?: ReviewStatus; reviewer?: string; verified_on?: string }>;
 }
 
 // ── 문서 열람 탭 ─────────────────────────────────────────────────────────
@@ -119,6 +122,16 @@ function DocViewer({ docs, allDocs }: { docs: DocSummary[]; allDocs: DocSummary[
               )}
               <code className="library-doc-path">{detail.file}</code>
             </div>
+            {detail.review_items && detail.review_items.length > 0 && (
+              <ul className="flex flex-wrap gap-x-3 gap-y-1 mb-3 text-[length:var(--fs-caption)]" aria-label="항목별 검토 상태">
+                {detail.review_items.map((i) => (
+                  <li key={i.id}>
+                    <span className="tabular-nums">{i.id}</span>
+                    <ReviewBadgeChip item={i} />
+                  </li>
+                ))}
+              </ul>
+            )}
             <MarkdownView text={detail.content} />
           </>
         )}

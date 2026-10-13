@@ -29,6 +29,8 @@ import { ColGroup, useToast } from "../ui.tsx";
 import { GF_DD_STEP_LABEL } from "../../lib/labels.ts";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
+import { ReviewBadgeChip } from "../ReviewBadge.tsx";
+import type { ReviewStatus } from "../../lib/checklist-review-status.ts";
 import TargetSelector, { type AnalysisTarget } from "../TargetSelector.tsx";
 
 // S9 실사·검증 — 표준 DD 체크리스트 판정 + 산업 맞춤 제안 승인 화면 (ADR-0099 §4).
@@ -60,6 +62,9 @@ interface StdItem {
   text: string;
   mandatory: boolean;
   waiver_eligible: boolean;
+  review_status?: ReviewStatus;
+  reviewer?: string;
+  verified_on?: string;
   state: ItemState | null;
 }
 interface CustomItem {
@@ -590,6 +595,7 @@ export function DdStage({ projectId }: { projectId: string }) {
                         <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] tabular-nums mr-1">{item.id}</span>
                         <span title={ko.translated ? item.text : undefined}>{ko.text}</span>
                         {item.state?.waiver_id && <span className="status-chip status-amber ml-1" title={`waiver ${item.state.waiver_id}`}>⚖ waiver</span>}
+                        <ReviewBadgeChip item={item} />
                         {item.scope && <ScopeNote sc={item.scope} brownfield={!!bf} />}
                       </td>
                       <td data-label="필수">{item.mandatory ? "필수" : "선택"}</td>

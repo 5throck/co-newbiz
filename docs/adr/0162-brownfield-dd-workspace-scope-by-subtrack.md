@@ -19,12 +19,12 @@ All seven brownfield sub-tracks see the same 77 items of the seven ADR-0148 S9 w
 4. Binding items (fin-09; bf-01..03 in extras) are never N or X; since the risk-officer review 2026-10-12 a binding workspace item must be A in every column (fin-09 moved R -> A for jv, strategic_investment, minority_investment, partnership and corporate_venture; A/R per column: jv 57/18, strategic_investment 56/15, minority_investment 56/15, partnership 22/30, corporate_venture 56/15; judgeable counts unchanged; user decision pending).
 5. Extra checklists are scoped by section through the overlay: deal-shape jvd for jv, min for minority_investment, lic+cdv for partnership; pt-06 N outside jv. Which extras a sub-track has is unchanged; a recorded opt-in attaches them even before WAVE_F (implementation addendum).
 6. Judgeable counts (workspace + extras): m_and_a 102 (unchanged), jv 93, strategic_investment 71, minority_investment 87, partnership 78, rbd 92 (unchanged), corporate_venture 71 (overlay 1.1.0 after the 2026-10-12 legal-counsel review, DEC-20261012-01; previously 67 / 82 / 77 / 67); null sub-track unchanged.
-7. Cut-off `BF_WORKSPACE_SCOPE_DATE` with the ADR-0160 human opt-in (audited, previewed); nothing deleted; a recorded fail on a newly N/X mandatory item stays unmet until re-judged. PRJ-QGB2W5 (strategic_investment, 37 rows) and PRJ-T7T81A (partnership, 0 S9 rows) are grandfathered by default.
+7. Cut-off `BF_WORKSPACE_SCOPE_DATE` with the ADR-0160 human opt-in (audited, previewed); nothing deleted; a recorded fail on a newly N/X mandatory item stays unmet until re-judged. PRJ-QGB2W5 (strategic_investment, 37 rows) and PRJ-T7T81A are grandfathered by default. PRJ-T7T81A was on partnership when this ADR was written; the human decider re-recorded its route as strategic_investment on 2026-10-12 21:03 and confirmed that decision on 2026-10-13 (earlier route decisions are superseded history); its opt-in applies to strategic_investment.
 8. Every overlay row needs a human approval record; unapproved rows load as A (fail closed).
 
 ## Policy impact (in-flight projects)
 
-No project changes on deploy. PRJ-QGB2W5 and PRJ-T7T81A keep their current scope until opted in; the demo m_and_a project is unaffected by construction.
+No project changes on deploy. PRJ-QGB2W5 and PRJ-T7T81A keep their current scope until opted in (PRJ-T7T81A was on partnership when this ADR was written; the human decider re-recorded its route as strategic_investment on 2026-10-12 21:03 and confirmed that decision on 2026-10-13, earlier route decisions are superseded history, and its opt-in applies to strategic_investment); the demo m_and_a project is unaffected by construction.
 
 ## Consequences
 
@@ -53,3 +53,7 @@ User decision 2026-10-13 (DEC-20261013-03) closes risk-officer finding 1 of DEC-
 ## Addendum (2026-10-13, b): cut-off applied retroactively from 2026-07-01
 
 Decision of the human decider (user account techcross, chat, 2026-10-13; DEC-20261013-04): `BF_WORKSPACE_SCOPE_DATE` is set to `2026-07-01` (it was a 2026-10-12 placeholder), so non-baseline brownfield projects whose earliest pin or creation is on or after 2026-07-01 are on the scoped path without an opt-in. Because the new cut-off precedes `WAVE_F_PREDICATE_DATE` (2026-10-08, unchanged), the by-date scoped path is now checked ahead of the WAVE_F grandfathering in `subTrackChecklistIds()` and `brownfieldAttachedExtras()`, so an in-scope-by-date project gets the same scoped extras (including the DEC-20261013-03 merger-control and FDI items) as an opted-in one. `m_and_a`, a null or unknown sub-track and projects before 2026-07-01 keep the previous path. Dev-copy impact: PRJ-QGB2W5 (strategic_investment) moves to the scoped view, 36 workspace plus 5 extra judgeable items (41), 5 unassessed; S9 stays incomplete (it already had 8 pending).
+
+## Addendum (2026-10-13, c): a recorded dd gate decision pins the pre-scope view
+
+Proposed fix approved by the human decider in chat 2026-10-13 (DEC-20261013-05). Same problem and rule as ADR-0160 addendum (f): `brownfieldScopeByDate()` returns false for a project that has a valid (non-stale, ADR-0157) recorded dd gate decision of any verdict, using the shared helper `hasValidDdGateDecision()`. Because `brownfieldRouteInfo().by_date` is derived from it, `brownfieldAttachedExtras()` and `subTrackChecklistIds()` fall through to the earlier WAVE_F rule for such a project, so its S9 view and the later gates' prerequisites stay as at approval time. An opt-in recorded by a person stays valid; a stale marker releases the pin.

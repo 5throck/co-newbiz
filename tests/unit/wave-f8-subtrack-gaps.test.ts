@@ -64,6 +64,8 @@ describe("S9 sub-track checklists (B1)", () => {
   ])("sub_track %s gets its own checklist set", (sub, expected) => {
     const { db, projectId } = demo();
     setSub(db, sub);
+    // DEC-20261013-05: a recorded dd decision pins the pre-scope view; model a project not yet gated.
+    db.run("DELETE FROM gate_decision WHERE entity_type = 'project' AND gate = 'dd'");
     expect(subTrackChecklistIds(projectId)).toEqual(expected);
     const view = listDdWorkspace(projectId);
     expect(view.domains.map((d) => d.checklistId)).toEqual(expect.arrayContaining(expected));

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.3.0
+// @version 1.4.0
 /**
  * Checklist Validator — co-newbiz
  *
@@ -42,6 +42,12 @@
  *     a reading; declared
  *     extras_judgeable / total_judgeable differing from the recomputed values
  *
+ * Review status (optional per item, informational — never gate-blocking):
+ *   - review_status must be draft-AI | counsel-reviewed | confirmed (missing = draft-AI)
+ *   - reviewer (named person) and verified_on (YYYY-MM-DD) are REQUIRED when the
+ *     status is counsel-reviewed or confirmed (confirmed without both is rejected)
+ *   - reviewer / verified_on on a draft-AI item are rejected (a review claim needs a status)
+ *
  * What is a WARN:
  *   - legal_basis entries pointing at repo paths that do not exist
  *
@@ -73,6 +79,31 @@ interface ItemShape {
   text?: unknown;
   mandatory?: unknown;
   waiver_eligible?: unknown;
+  review_status?: unknown;
+  reviewer?: unknown;
+  verified_on?: unknown;
+}
+
+export const REVIEW_STATUSES = ["draft-AI", "counsel-reviewed", "confirmed"] as const;
+
+/** Validates the optional review-status fields of one checklist item. */
+export function validateReviewFields(file: string, item: ItemShape, label: string): Issue[] {
+  const issues: Issue[] = [];
+  const err = (message: string) => issues.push({ file, item: label, message, severity: "error" });
+  const has = (v: unknown) => v !== undefined && v !== null;
+  if (!has(item.review_status) && !has(item.reviewer) && !has(item.verified_on)) return issues;
+  const status = has(item.review_status) ? item.review_status : "draft-AI";
+  if (!(REVIEW_STATUSES as readonly unknown[]).includes(status)) {
+    err(`'review_status' must be one of ${REVIEW_STATUSES.join(" | ")}`);
+    return issues;
+  }
+  if (status === "draft-AI") {
+    if (has(item.reviewer) || has(item.verified_on)) err("'reviewer' / 'verified_on' given on a draft-AI item — set review_status to counsel-reviewed or confirmed");
+    return issues;
+  }
+  if (typeof item.reviewer !== "string" || item.reviewer.trim().length === 0) err(`'reviewer' (named person) is required when review_status is ${String(status)}`);
+  if (typeof item.verified_on !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(item.verified_on)) err(`'verified_on' (YYYY-MM-DD) is required when review_status is ${String(status)}`);
+  return issues;
 }
 
 /** Repo-relative doc references in legal_basis are checked for existence; free-text citations ("Meeting M5") are not. */
@@ -121,6 +152,8 @@ function validateItem(file: string, item: ItemShape, seenIds: Set<string>): Issu
       severity: "error",
     });
   }
+
+  issues.push(...validateReviewFields(file, item, label));
 
   return issues;
 }

@@ -21,7 +21,7 @@ import { appendAudit } from "../../../db/lib/access-control.ts";
 import { SUB_TRACK_NONE } from "../../../db/lib/applies-when.ts";
 import { DD_WORKSPACE_CHECKLISTS, SUB_TRACK_DD_CHECKLISTS, scopedSubTrackDdChecklists, getBrownfieldWorkspaceOverlay, getChecklistItems, type ChecklistItemDef } from "./library.ts";
 import { BF_WORKSPACE_SCOPE_DATE, WAVE_F_PREDICATE_DATE } from "./wave-f-date.ts";
-import { currentRoute, previousScopeEntries, type PreviousScopeEntry, type ReplacementPointer, type WorkspaceItemScope } from "./greenfield-subtrack.ts";
+import { currentRoute, hasValidDdGateDecision, previousScopeEntries, type PreviousScopeEntry, type ReplacementPointer, type WorkspaceItemScope } from "./greenfield-subtrack.ts";
 
 export const BROWNFIELD_SUB_TRACKS = [
   "m_and_a",
@@ -178,7 +178,9 @@ function earliestPinOrCreation(projectId: string, db: Database): string | null {
 /** True when the project is past BF_WORKSPACE_SCOPE_DATE by its earliest pin / creation. */
 export function brownfieldScopeByDate(projectId: string, db: Database = getDb()): boolean {
   const at = earliestPinOrCreation(projectId, db);
-  return at !== null && at >= BF_WORKSPACE_SCOPE_DATE;
+  if (at === null || at < BF_WORKSPACE_SCOPE_DATE) return false;
+  // DEC-20261013-05: a project with a valid recorded dd gate decision keeps the view it was decided on.
+  return !hasValidDdGateDecision(projectId, db);
 }
 
 /**

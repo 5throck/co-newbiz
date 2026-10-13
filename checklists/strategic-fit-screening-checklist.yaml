@@ -4,7 +4,7 @@ title: "Strategic Fit Screening Checklist"
 scope: shared
 enforceability: mixed
 owner_agent: process-governance-manager
-version: "1.1.0"
+version: "1.1.1"
 effective_from: "2026-08-22"
 gate: Screening
 
@@ -28,7 +28,7 @@ items:
     mandatory: true
     waiver_eligible: true
   - id: sf-02
-    text: "포트폴리오·투자 중점 영역(hunt zone) 적합성 — 사전에 선언된 투자 논제 영역 안에 있거나, 스크리닝이 끝나기 전에 포트폴리오 책임자의 예외 승인이 기록됨"
+    text: "포트폴리오·중점 투자 분야(hunt zone) 적합성 — 사전에 선언된 투자 논제 영역 안에 있거나, 스크리닝이 끝나기 전에 포트폴리오 책임자의 예외 승인이 기록됨"
     mandatory: true
     waiver_eligible: true
   - id: sf-03
@@ -69,7 +69,7 @@ items:
     mandatory: true
     waiver_eligible: true
   - id: sf-12
-    text: "선택지 규율 — 제안이 목표 달성을 위한 둘 이상의 경로 중 하나이며, 비교용으로 최소 대응(do-minimum)·현상 유지 기준안이 기록됨"
+    text: "선택지 규율 — 제안이 목표 달성을 위한 둘 이상의 경로 중 하나이며, 비교용으로 현상 유지안(do-minimum)이 기록됨"
     mandatory: true
     waiver_eligible: true
 

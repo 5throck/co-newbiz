@@ -79,6 +79,25 @@ export function isGreenfieldSubTrack(v: string | null): v is GreenfieldSubTrack 
   return v !== null && (GREENFIELD_SUB_TRACKS as readonly string[]).includes(v);
 }
 
+/**
+ * ADR-0160 addendum (f) / ADR-0162 addendum (c) (DEC-20261013-05): a project with a
+ * recorded, non-stale dd gate decision (any verdict: go, hold or kill) is pinned to the
+ * view it was decided on. The by-date S9 scope never applies to it, so a retroactive
+ * cut-off cannot add unassessed extras to a gate the project already passed. An explicit
+ * opt-in recorded by a person stays valid; a gate_decision_stale marker (ADR-0157)
+ * releases the pin. Shared by both tracks — keep the rule only here.
+ */
+export function hasValidDdGateDecision(projectId: string, db: Database = getDb()): boolean {
+  return !!db
+    .query(
+      `SELECT 1 FROM gate_decision g
+       WHERE g.entity_type = 'project' AND g.entity_id = ? AND g.gate = 'dd'
+         AND NOT EXISTS (SELECT 1 FROM gate_decision_stale s WHERE s.decision_id = g.id)
+       LIMIT 1`,
+    )
+    .get(projectId);
+}
+
 /** Live opt-in pin: a human re-pinned greenfield-dd to the sub-track version. */
 export function hasSubTrackOptIn(projectId: string, db: Database = getDb()): boolean {
   return !!db
@@ -95,8 +114,10 @@ export function subTrackSelectionActive(projectId: string, db: Database = getDb(
   const proj = db.query("SELECT created_at FROM md_project WHERE id = ?").get(projectId) as { created_at: string | null } | undefined;
   if (!proj) return false;
   const pin = db.query("SELECT MIN(pinned_at) AS at FROM project_policy_pin WHERE project_id = ?").get(projectId) as { at: string | null };
-  if ((pin.at ?? proj.created_at ?? "") >= GF_SUBTRACK_PREDICATE_DATE) return true;
-  return hasSubTrackOptIn(projectId, db);
+  if (hasSubTrackOptIn(projectId, db)) return true;
+  // DEC-20261013-05: the by-date selection does not reach a project whose dd gate was already decided.
+  if (hasValidDdGateDecision(projectId, db)) return false;
+  return (pin.at ?? proj.created_at ?? "") >= GF_SUBTRACK_PREDICATE_DATE;
 }
 
 /** Resolved site applicability: reviewed assertion, else the sub-track default (none for existing_business_rbd). */
@@ -495,7 +516,8 @@ function earliestPinOrCreation(projectId: string, db: Database): string | null {
 /** True when the project is past the workspace cut-off by its earliest pin / creation (no opt-in needed). */
 export function workspaceScopeByDate(projectId: string, db: Database = getDb()): boolean {
   const at = earliestPinOrCreation(projectId, db);
-  return at !== null && at >= GF_WORKSPACE_SCOPE_DATE;
+  if (at === null || at < GF_WORKSPACE_SCOPE_DATE) return false;
+  return !hasValidDdGateDecision(projectId, db);
 }
 
 /**

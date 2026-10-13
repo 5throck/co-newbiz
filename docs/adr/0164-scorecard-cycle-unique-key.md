@@ -1,7 +1,12 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0164 — venture_scorecard's unique key gains review_cycle (repeat quarters share one run)
 
-- Status: Proposed
-- Decider: Human reviewer (pending)
+- Status: Accepted (2026-10-13)
+- Decider: Human decider (chat instruction 2026-10-13)
 - Date: 2026-10-12
 - Design-of-record: none (fixes a known S12 operational limitation of ADR-0059 §2's storage, not a change to the design)
 - Related: ADR-0059 (venture_scorecard storage, migration 0024), ADR-0071 / migration 0033 (PK NOT NULL rebuild of the same table), ADR-0061 (money units — unchanged; scorecard values remain TEXT measures, no currency columns touched), ADR-0163 (per-statement migration execution makes this rebuild's row-count assert load-bearing), ADR-0005 (run lineage)
@@ -22,6 +27,15 @@
 - A greenfield venture's full quarterly history can accumulate on one run; `greenfieldRampUpView` and `effectiveVentureClass` already resolve the latest cycle by `MAX(review_cycle)` / `ORDER BY review_cycle DESC`, so latest-value reads stay correct with multi-cycle runs — now proven by test.
 - The per-project row count grows ~4x over a year of quarterly cycles; both existing indexes lead with `project_id` / `review_cycle` so the rollup and latest-cycle reads stay index-covered patterns.
 - 0024 is not edited (applied migrations are immutable); the migration chain applies 0139 after it on every fresh database.
+
+## Acceptance record
+
+- Approver: the human decider (user, account techcross), chat instruction on 2026-10-13: "ADR-0164·0165 승인해". Recorded separately from ADR-0165 (DEC-20261013-06).
+- Basis: chat approval after the readiness review of the 2026-10-13 residual-items meeting (`memory/meeting-2026-10-13-residual-items.md`). Platform-lead readiness check, 2026-10-13: implemented as written; `migration-0139`, `greenfield-scorecard-route` and `venture-scorecard` tests pass.
+- Acceptance is by chat instruction; no per-item checklist was recorded. This record does not claim the approver read specific commits or ticked individual items.
+- Not verified by the AI: the openapi 409 description wording, byte-for-byte behavioral parity of the brownfield/JV writers, and the rollback SQL on a real database.
+- Rollback note: the 0139 rollback in the migration header is tested on fixtures only; the operational rollback is a restore from the pre-migration backup (ADR-0014).
+- Related decision (cross-reference only): gate-passed projects keep their view (pin); this is covered by the ADR-0160 and ADR-0162 addenda and DEC-20261013-05, and is not decided here.
 
 ## Verification
 
