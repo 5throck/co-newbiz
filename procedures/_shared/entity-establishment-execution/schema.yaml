@@ -3,7 +3,7 @@ procedure_id: shared-entity-establishment-execution
 title: "Entity Establishment Execution"
 scope: shared
 level: entity
-version: "1.1.0"
+version: "1.1.1"
 status: active
 applicability: conditional
 # origin in {internal, joint} (ADR-0047 origin axis) — post-approval execution
@@ -52,10 +52,14 @@ steps:
       foreign-investment filings), banking/insurance/audit opened, statutory
       books established — per chk-entity-formation formation-and-legal-wiring
       items. Where a company split (물적분할/인적분할) is the route: Commercial
-      Act art. 527-2 shareholders' special resolution and art. 527-5
-      creditor-protection procedure (individual notice + public notice,
-      >=1-month objection window) — verify against the current KLRI statute
-      text before enforcement use.
+      Act art. 530-3 shareholders' special resolution approving the split
+      plan or split-merger contract, and the creditor-protection procedure
+      (individual notice + public notice, >=1-month objection window):
+      art. 530-11(2) for a split-merger and art. 530-9(2)/(4) for a simple
+      split that excludes joint liability, both applying art. 527-5 mutatis
+      mutandis. Verify against the current KLRI statute text before
+      enforcement use (verified 2026-10-13 via the Ministry of Government
+      Legislation Open API, law MST 273629).
   - id: 3
     gate: "Entity IC"
     agent_key: legal-counsel
@@ -107,7 +111,7 @@ legal_basis:
   - "ADR-0047 (origin classification axis — internal/joint ventures need an establishment path acquisition steps cannot provide)"
   - "ADR-0051 (workflow gap closure — internal-origin chain step)"
   - "checklists/entity-formation-checklist.yaml (chk-entity-formation)"
-  - "Korean Commercial Act arts. 527-2/527-5 (company split — special resolution + creditor-protection procedure; verify against current KLRI text before enforcement use)"
+  - "Korean Commercial Act arts. 530-3, 530-9(2)/(4), 530-11(2) and 527-5 (company split — special resolution + creditor-protection procedure; verified 2026-10-13 via the Ministry of Government Legislation Open API, law MST 273629; confirm against the current KLRI text before enforcement use)"
   - "docs/research/venture-governance-best-practice.md Area B.3/B.4 (formation + JV governance synthesis)"
 
 owner_agent: process-governance-manager

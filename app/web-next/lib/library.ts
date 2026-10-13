@@ -101,3 +101,21 @@ export const SUB_TRACK_DD_CHECKLISTS: Record<string, string[]> = {
   rbd: ["chk-rbd-technology-checklist"],
   existing_business_rbd: ["chk-rbd-technology-checklist"],
 };
+
+/**
+ * ADR-0162 addendum (DEC-20261013-03): extra checklists attached ONLY on the
+ * scoped brownfield path (opt-in or past BF_WORKSPACE_SCOPE_DATE), so the
+ * overlay can scope them down to the merger-control / foreign-investment items
+ * (ma-01..03, min-05). Legacy unscoped projects keep SUB_TRACK_DD_CHECKLISTS
+ * unchanged (no retroactive attachment of unscoped M&A items).
+ */
+export const BF_SCOPED_EXTRA_ADDITIONS: Record<string, string[]> = {
+  strategic_investment: ["chk-ma-special-topics-checklist", "chk-deal-shape-presigning-checklist"],
+  minority_investment: ["chk-ma-special-topics-checklist"],
+  corporate_venture: ["chk-ma-special-topics-checklist", "chk-deal-shape-presigning-checklist"],
+};
+
+/** Extras attached to a brownfield sub-track on the scoped (overlay) path. */
+export function scopedSubTrackDdChecklists(subTrack: string): string[] {
+  return [...(SUB_TRACK_DD_CHECKLISTS[subTrack] ?? []), ...(BF_SCOPED_EXTRA_ADDITIONS[subTrack] ?? [])];
+}

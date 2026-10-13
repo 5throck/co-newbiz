@@ -8,14 +8,21 @@
 # policies/procedures lifecycle row (impact analysis, policy pin, ADR).
 # Validated by checklists/_validate.ts (coverage, codes, C rejected, baseline all A,
 # binding-item guard, replacement targets attached, approval records, counts).
+# 1.2.2: corporate_venture ma-02 is A; strategic_investment also keeps min-04 (R).
+# 1.2.0 (DEC-20261013-03, ADR-0162 addendum 2026-10-13): merger-control and
+# foreign-investment-screening items ma-01..03 and min-05 attach to
+# strategic_investment, minority_investment and corporate_venture on the scoped
+# path only (BF_SCOPED_EXTRA_ADDITIONS, app/web-next/lib/library.ts); every
+# other item of those extras is excluded. Extra items may carry an R reading
+# (`readings`) to state the filing-trigger condition; binding items cannot.
 governance_doc_id: ovl-brownfield-workspace-scope
 layer: checklist-overlay
 title: Brownfield S9 workspace scope by sub-track (deal shape)
 owner_agent: process-governance-manager
 maintainer: process-governance-manager
-version: 1.1.0
+version: 1.2.2
 status: proposed
-decision_record: DEC-20261012-01
+decision_record: DEC-20261013-03
 track: brownfield
 procedure_id: shared-brownfield-dd
 baseline_sub_track: m_and_a
@@ -61,16 +68,16 @@ expected_counts:
     X: 0
     'N': 6
     judgeable: 71
-    extras_judgeable: 0
-    total_judgeable: 71
+    extras_judgeable: 5
+    total_judgeable: 76
   minority_investment:
     A: 56
     R: 15
     X: 0
     'N': 6
     judgeable: 71
-    extras_judgeable: 16
-    total_judgeable: 87
+    extras_judgeable: 19
+    total_judgeable: 90
   partnership:
     A: 22
     R: 30
@@ -93,8 +100,8 @@ expected_counts:
     X: 0
     'N': 6
     judgeable: 71
-    extras_judgeable: 0
-    total_judgeable: 71
+    extras_judgeable: 4
+    total_judgeable: 75
 extra_checklists:
   chk-brownfield-feasibility-checklist:
     attached_to:
@@ -110,14 +117,81 @@ extra_checklists:
   chk-ma-special-topics-checklist:
     attached_to:
       - m_and_a
+      - strategic_investment
+      - minority_investment
+      - corporate_venture
     sub_tracks:
       m_and_a:
         excluded: []
+      strategic_investment:
+        excluded:
+          - ids:
+              - ma-04
+              - ma-05
+              - ma-06
+              - ma-07
+              - ma-08
+              - ma-09
+              - ma-10
+              - ma-11
+              - ma-12
+            na_reason: '이 사안은 경영권 인수(M&A)에 해당하는 항목입니다. 이 거래 형태에는 기업결합 신고 관련 항목(ma-01~03)만 적용하며, 외국인투자 심사는 거래 형태 점검표의 min-05에서 다룹니다.'
+        readings:
+          - ids:
+              - ma-01
+            reading: '신고 요건(ma-02)이 성립하거나 같은 시장·앞뒤 단계에서 사업이 겹칠 때 관련시장 획정과 HHI를 산정합니다. 공동 소유 효과(투자자가 이미 경쟁사 지분을 가진 경우)를 포함합니다. 신고 요건이 없고 겹침도 없으면 그 근거를 기록하고 판정합니다. 신고 의무와 무관하게, 투자 대상이 경쟁사이면 경쟁상 민감한 정보 교환은 부당한 공동행위 위험이 있으므로 정보 차단 조치를 기록합니다.'
+          - ids:
+              - ma-03
+            reading: '승인 전 이행 금지가 적용되는 사전 신고 의무가 있는 관할이 하나라도 있으면, 승인 전에 주식 취득 완료(대금 지급·명의 이전), 이사 지명권·거부권 행사, 경쟁상 민감한 정보 교환, 통합 조치를 하지 않음을 확인합니다. 신고 의무가 없거나 사후 신고 대상이라는 ma-02 판정이 있으면 그 근거를 인용해 판정합니다. 신고 의무와 무관하게, 투자 대상이 경쟁사이면 경쟁상 민감한 정보 교환은 부당한 공동행위 위험이 있으므로 정보 차단 조치를 기록합니다.'
+      minority_investment:
+        excluded:
+          - ids:
+              - ma-04
+              - ma-05
+              - ma-06
+              - ma-07
+              - ma-08
+              - ma-09
+              - ma-10
+              - ma-11
+              - ma-12
+            na_reason: '이 사안은 경영권 인수(M&A)에 해당하는 항목입니다. 이 거래 형태에는 기업결합 신고 관련 항목(ma-01~03)만 적용하며, 외국인투자 심사는 거래 형태 점검표의 min-05에서 다룹니다.'
+        readings:
+          - ids:
+              - ma-01
+            reading: '신고 요건(ma-02)이 성립하거나 같은 시장·앞뒤 단계에서 사업이 겹칠 때 관련시장 획정과 HHI를 산정합니다. 공동 소유 효과(투자자가 이미 경쟁사 지분을 가진 경우)를 포함합니다. 신고 요건이 없고 겹침도 없으면 그 근거를 기록하고 판정합니다. 신고 의무와 무관하게, 투자 대상이 경쟁사이면 경쟁상 민감한 정보 교환은 부당한 공동행위 위험이 있으므로 정보 차단 조치를 기록합니다.'
+          - ids:
+              - ma-03
+            reading: '승인 전 이행 금지가 적용되는 사전 신고 의무가 있는 관할이 하나라도 있으면, 승인 전에 주식 취득 완료(대금 지급·명의 이전), 이사 지명권·거부권 행사, 경쟁상 민감한 정보 교환, 통합 조치를 하지 않음을 확인합니다. 신고 의무가 없거나 사후 신고 대상이라는 ma-02 판정이 있으면 그 근거를 인용해 판정합니다. 신고 의무와 무관하게, 투자 대상이 경쟁사이면 경쟁상 민감한 정보 교환은 부당한 공동행위 위험이 있으므로 정보 차단 조치를 기록합니다.'
+      corporate_venture:
+        excluded:
+          - ids:
+              - ma-04
+              - ma-05
+              - ma-06
+              - ma-07
+              - ma-08
+              - ma-09
+              - ma-10
+              - ma-11
+              - ma-12
+            na_reason: '이 사안은 경영권 인수(M&A)에 해당하는 항목입니다. 이 거래 형태에는 기업결합 신고 관련 항목(ma-01~03)만 적용하며, 외국인투자 심사는 거래 형태 점검표의 min-05에서 다룹니다.'
+        readings:
+          - ids:
+              - ma-01
+            reading: '신고 요건(ma-02)이 성립하거나 투자 대상이 모회사 사업과 같은 시장·앞뒤 단계에서 겹칠 때만 관련시장 획정과 HHI를 산정합니다. 그 밖에는 겹침이 없다는 근거를 기록하고 판정합니다. 신고 의무와 무관하게, 투자 대상이 경쟁사이면 경쟁상 민감한 정보 교환은 부당한 공동행위 위험이 있으므로 정보 차단 조치를 기록합니다.'
+          - ids:
+              - ma-03
+            reading: '승인 전 이행 금지가 적용되는 사전 신고 의무가 있는 관할이 있을 때만, 승인 전 주식 취득 완료·권리 행사·경쟁상 민감한 정보 교환을 하지 않음을 확인합니다. 신고 의무가 없거나 사후 신고 대상이라는 ma-02 판정이 있으면 그 근거를 인용해 판정합니다. 신고 의무와 무관하게, 투자 대상이 경쟁사이면 경쟁상 민감한 정보 교환은 부당한 공동행위 위험이 있으므로 정보 차단 조치를 기록합니다.'
     approval:
       status: approved
       approved_by: user
       approved_at: '2026-10-12'
       note: approved in chat with the design
+    approval_2026_10_13:
+      approved_by: user
+      approved_at: '2026-10-13'
+      note: 'user decision 2026-10-13 (DEC-20261013-03): attach merger-control and FDI items to these sub-tracks'
   chk-rbd-technology-checklist:
     attached_to:
       - rbd
@@ -157,6 +231,8 @@ extra_checklists:
       - jv
       - partnership
       - minority_investment
+      - strategic_investment
+      - corporate_venture
     sub_tracks:
       jv:
         excluded:
@@ -240,11 +316,100 @@ extra_checklists:
               - jvd-05
               - jvd-06
             na_reason: '이 구간(합작법인(JV))은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 전략적 제휴(지분 없는 계약 제휴)입니다.'
+      strategic_investment:
+        excluded:
+          - section: lic
+            ids:
+              - lic-01
+              - lic-02
+              - lic-03
+              - lic-04
+              - lic-05
+              - lic-06
+              - lic-07
+              - lic-08
+              - lic-09
+            na_reason: '이 구간(라이선스 도입)은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 전략적 투자입니다.'
+          - section: cdv
+            ids:
+              - cdv-01
+              - cdv-02
+              - cdv-03
+              - cdv-04
+              - cdv-05
+              - cdv-06
+            na_reason: '이 구간(공동 개발)은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 전략적 투자입니다.'
+          - section: min
+            ids:
+              - min-01
+              - min-02
+              - min-03
+            na_reason: '소수 지분 투자의 권리 조건 항목 중 min-04(지분 동결·정보 차단)와 min-05(외국인투자 심사)만 이 거래 형태에 적용합니다. 나머지는 붙이지 않습니다.'
+          - section: jvd
+            ids:
+              - jvd-01
+              - jvd-02
+              - jvd-03
+              - jvd-04
+              - jvd-05
+              - jvd-06
+            na_reason: '이 구간(합작법인(JV))은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 전략적 투자입니다.'
+        readings:
+          - ids:
+              - min-04
+            reading: '투자 대상이 경쟁사이거나 경쟁 관계(사업 겹침)가 있을 때 적용합니다. 소수 지분을 경쟁사에 투자할 때 경쟁상 민감한 정보 교환을 막는 주된 통제 수단이 정보 차단 조치입니다. 해당하지 않으면 그 근거를 기록하고 판정합니다.'
+      corporate_venture:
+        excluded:
+          - section: lic
+            ids:
+              - lic-01
+              - lic-02
+              - lic-03
+              - lic-04
+              - lic-05
+              - lic-06
+              - lic-07
+              - lic-08
+              - lic-09
+            na_reason: '이 구간(라이선스 도입)은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 기업주도형 벤처캐피탈(CVC)입니다.'
+          - section: cdv
+            ids:
+              - cdv-01
+              - cdv-02
+              - cdv-03
+              - cdv-04
+              - cdv-05
+              - cdv-06
+            na_reason: '이 구간(공동 개발)은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 기업주도형 벤처캐피탈(CVC)입니다.'
+          - section: min
+            ids:
+              - min-01
+              - min-02
+              - min-03
+              - min-04
+            na_reason: '소수 지분 투자의 권리 조건 항목은 이 거래 형태에 붙이지 않습니다. 이 거래 형태에는 외국인투자 심사 항목(min-05)만 적용합니다.'
+          - section: jvd
+            ids:
+              - jvd-01
+              - jvd-02
+              - jvd-03
+              - jvd-04
+              - jvd-05
+              - jvd-06
+            na_reason: '이 구간(합작법인(JV))은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 기업주도형 벤처캐피탈(CVC)입니다.'
+        readings:
+          - ids:
+              - min-05
+            reading: '투자자 국적(외국 모회사·외국 출자자 포함)과 투자 대상 분야로 관할별로 판단합니다. 관할에 따라 소액·비지배 투자라도 국가핵심기술·첨단기술, 방위산업, 중요 기반 시설, 대량 민감 개인정보 분야이거나, 이사(관할에 따라 옵서버 포함) 지명권, 비공개 기술 정보 접근권, 주요 의사결정 참여권을 얻으면 심사 대상이 될 수 있습니다. 해외 대상에 투자하는 경우 해외 투자 규제(아웃바운드)도 확인합니다. 해당하지 않으면 그 근거를 기록하고 판정합니다.'
     approval:
       status: approved
       approved_by: user
       approved_at: '2026-10-12'
       note: approved in chat with the design
+    approval_2026_10_13:
+      approved_by: user
+      approved_at: '2026-10-13'
+      note: 'user decision 2026-10-13 (DEC-20261013-03): attach merger-control and FDI items to these sub-tracks'
 checklists:
   chk-commercial-dd-checklist:
     domain: commercial

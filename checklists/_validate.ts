@@ -37,7 +37,9 @@
  *     (m_and_a) cell that is not A, or a baseline exclusion in
  *     extra_checklists; an X target not in an extra checklist attached to that
  *     sub-track (or excluded there); an extra_checklists exclusion of an
- *     unknown or binding item (bf-01..03 etc.), or without na_reason; declared
+ *     unknown or binding item (bf-01..03 etc.), or without na_reason; an extra
+ *     `readings` entry (R) on an unknown, excluded or binding item, or without
+ *     a reading; declared
  *     extras_judgeable / total_judgeable differing from the recomputed values
  *
  * What is a WARN:
@@ -431,7 +433,23 @@ function validateExtraChecklists(file: string, root: Record<string, unknown>, su
           excluded.add(id);
         }
       }
-      if (st === baseline && excluded.size > 0) err(where, `Baseline sub-track '${baseline}' extras must stay unscoped (byte-identical baseline)`);
+      // Optional R readings on attached, not-excluded extra items (ADR-0162 addendum 2026-10-13).
+      if (cell.readings !== undefined && !Array.isArray(cell.readings)) err(where, "'readings' must be an array");
+      const read = new Set<string>();
+      for (const r of (Array.isArray(cell.readings) ? cell.readings : []) as Record<string, unknown>[]) {
+        if (!nonEmpty(r?.reading)) err(where, "Extra-item R reading requires a non-empty 'reading'");
+        const ids = Array.isArray(r?.ids) ? (r.ids as unknown[]).map(String) : [];
+        if (ids.length === 0) err(where, "Extra-item reading requires a non-empty 'ids' list");
+        for (const id of ids) {
+          const f = facts.get(id);
+          if (!f) err(where, `Read item '${id}' does not exist in checklist '${cid}'`);
+          else if (f.mandatory && !f.waiver_eligible) err(where, `Binding item '${id}' (mandatory, waiver_eligible: false) given an R reading — binding items must be A`);
+          if (excluded.has(id)) err(where, `Item '${id}' is both excluded and given a reading`);
+          if (read.has(id)) err(where, `Item '${id}' given a reading twice`);
+          read.add(id);
+        }
+      }
+      if (st === baseline && (excluded.size > 0 || read.size > 0)) err(where, `Baseline sub-track '${baseline}' extras must stay unscoped (byte-identical baseline)`);
       extras[st] += [...facts.keys()].filter((id) => !excluded.has(id)).length;
     }
   }

@@ -12,13 +12,14 @@
 // m_and_a is the baseline (every row A, extras unchanged): it never enters the
 // scoped path, so its selection, payload and counts stay byte-identical. A null
 // or unknown sub-track never enters it either. Which extra checklists attach is
-// unchanged (SUB_TRACK_DD_CHECKLISTS + the WAVE_F_PREDICATE_DATE rule).
+// unchanged (SUB_TRACK_DD_CHECKLISTS + the WAVE_F_PREDICATE_DATE rule), except that the
+// scoped path adds BF_SCOPED_EXTRA_ADDITIONS (DEC-20261013-03: ma-01..03, min-05).
 import type { Database } from "bun:sqlite";
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
 import { SUB_TRACK_NONE } from "../../../db/lib/applies-when.ts";
-import { DD_WORKSPACE_CHECKLISTS, SUB_TRACK_DD_CHECKLISTS, getBrownfieldWorkspaceOverlay, getChecklistItems, type ChecklistItemDef } from "./library.ts";
+import { DD_WORKSPACE_CHECKLISTS, SUB_TRACK_DD_CHECKLISTS, scopedSubTrackDdChecklists, getBrownfieldWorkspaceOverlay, getChecklistItems, type ChecklistItemDef } from "./library.ts";
 import { BF_WORKSPACE_SCOPE_DATE, WAVE_F_PREDICATE_DATE } from "./wave-f-date.ts";
 import { currentRoute, previousScopeEntries, type PreviousScopeEntry, type ReplacementPointer, type WorkspaceItemScope } from "./greenfield-subtrack.ts";
 
@@ -64,6 +65,8 @@ interface BfExtra {
   approved: boolean;
   /** Per sub-track: excluded item id -> { section, reason }. */
   excluded: Partial<Record<BrownfieldSubTrack, Map<string, { section: string | null; na_reason: string | null }>>>;
+  /** Per sub-track: item id -> R reading (ADR-0162 addendum 2026-10-13). */
+  readings: Partial<Record<BrownfieldSubTrack, Map<string, string>>>;
 }
 export interface BrownfieldOverlay {
   governance_doc_id: string;
@@ -114,7 +117,15 @@ export function parseBrownfieldOverlay(raw: unknown): BrownfieldOverlay | null {
   for (const [checklistId, block] of Object.entries(obj(doc.extra_checklists))) {
     const b = obj(block);
     const excluded: BfExtra["excluded"] = {};
+    const readings: BfExtra["readings"] = {};
     for (const key of BROWNFIELD_SUB_TRACKS) {
+      const rm = new Map<string, string>();
+      for (const g of arr(obj(obj(b.sub_tracks)[key]).readings)) {
+        const go = obj(g);
+        const reading = str(go.reading);
+        if (reading) for (const itemId of arr(go.ids)) if (typeof itemId === "string") rm.set(itemId, reading);
+      }
+      readings[key] = rm;
       const m = new Map<string, { section: string | null; na_reason: string | null }>();
       for (const g of arr(obj(obj(b.sub_tracks)[key]).excluded)) {
         const go = obj(g);
@@ -126,6 +137,7 @@ export function parseBrownfieldOverlay(raw: unknown): BrownfieldOverlay | null {
       attached_to: arr(b.attached_to).filter((x): x is string => typeof x === "string"),
       approved: isApproved(obj(b.approval)),
       excluded,
+      readings,
     });
   }
   return { governance_doc_id: id, version, rows, extras };
@@ -178,13 +190,16 @@ export function brownfieldAttachedExtras(projectId: string, subTrack: string | n
   if (!subTrack) return [];
   // User decision 2026-10-12: a recorded opt-in (non-baseline sub-track) attaches the
   // sub-track extras, scoped by the overlay, even before WAVE_F_PREDICATE_DATE.
-  if (subTrack !== BF_BASELINE_SUB_TRACK && isBrownfieldSubTrack(subTrack) && hasBrownfieldScopeOptIn(projectId, db)) return SUB_TRACK_DD_CHECKLISTS[subTrack] ?? [];
+  // DEC-20261013-03: the scoped path (opt-in or past BF_WORKSPACE_SCOPE_DATE) also attaches
+  // BF_SCOPED_EXTRA_ADDITIONS (merger-control / FDI items), scoped down by the overlay.
+  if (subTrack !== BF_BASELINE_SUB_TRACK && isBrownfieldSubTrack(subTrack) && hasBrownfieldScopeOptIn(projectId, db)) return scopedSubTrackDdChecklists(subTrack);
   const proj = db.query("SELECT created_at FROM md_project WHERE id = ?").get(projectId) as { created_at: string | null } | undefined;
   if (!proj) return [];
   const pin = db
     .query("SELECT MIN(pinned_at) AS at FROM project_policy_pin WHERE project_id = ? AND policy_doc_id != ?")
     .get(projectId, BF_WS_POLICY_DOC_ID) as { at: string | null };
   if ((pin.at ?? proj.created_at ?? "") < WAVE_F_PREDICATE_DATE) return [];
+  if (subTrack !== BF_BASELINE_SUB_TRACK && isBrownfieldSubTrack(subTrack) && brownfieldScopeByDate(projectId, db)) return scopedSubTrackDdChecklists(subTrack);
   return SUB_TRACK_DD_CHECKLISTS[subTrack] ?? [];
 }
 
@@ -274,6 +289,11 @@ function resolveExtraItem(ov: BrownfieldOverlay, key: BrownfieldScopeKey, checkl
   const def = items.find((i) => i.id === itemId);
   // Binding items (mandatory, not waivable — bf-01..03) can never be excluded, whatever the file says.
   if (!hit || (def?.mandatory && !def.waiver_eligible)) {
+    // R reading on an extra item (never on a binding item, whatever the file says).
+    const reading = def?.mandatory && !def.waiver_eligible ? undefined : ex.readings[key]?.get(itemId);
+    if (!hit && reading) {
+      return { checklist_id: checklistId, item_id: itemId, overlay_code: "R", code: "R", judgeable: true, reading, reason: null, note: null, replaced_by: [], fallback: null, rule: "overlay", steps: [] };
+    }
     return { checklist_id: checklistId, item_id: itemId, overlay_code: "A", code: "A", judgeable: true, reading: null, reason: null, note: null, replaced_by: [], fallback: null, rule: "overlay", steps: [] };
   }
   return {
@@ -297,7 +317,7 @@ export interface BrownfieldScopeContext {
 function buildContext(projectId: string, key: BrownfieldScopeKey, ov: BrownfieldOverlay, optedIn: boolean, db: Database, assumeOptIn = false): BrownfieldScopeContext {
   const states = stateMap(projectId, db);
   // Preview of a not-yet-recorded opt-in: the opt-in attaches the sub-track extras.
-  const extras = assumeOptIn ? (SUB_TRACK_DD_CHECKLISTS[key] ?? []) : brownfieldAttachedExtras(projectId, key, db);
+  const extras = assumeOptIn ? scopedSubTrackDdChecklists(key) : brownfieldAttachedExtras(projectId, key, db);
   const s9Set = new Set([...WORKSPACE_IDS, ...extras]);
   const items = new Map<string, WorkspaceItemScope>();
   for (const c of WORKSPACE_IDS) for (const i of getChecklistItems(c) ?? []) items.set(`${c}:${i.id}`, resolveWorkspaceItem(ov, key, c, i.id, s9Set, states));
@@ -375,7 +395,7 @@ export function brownfieldScopeCounts(subTrack: BrownfieldSubTrack, ov: Brownfie
     }
   }
   out.workspace_judgeable = out.A + out.R;
-  for (const c of SUB_TRACK_DD_CHECKLISTS[subTrack] ?? []) {
+  for (const c of subTrack === BF_BASELINE_SUB_TRACK ? SUB_TRACK_DD_CHECKLISTS[subTrack] ?? [] : scopedSubTrackDdChecklists(subTrack)) {
     const defs = getChecklistItems(c) ?? [];
     for (const i of defs) {
       if (subTrack === BF_BASELINE_SUB_TRACK || !ov) { out.extras_judgeable += 1; continue; }

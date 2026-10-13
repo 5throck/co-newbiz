@@ -46,7 +46,7 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "file": "checklists/entity-formation-checklist.yaml",
     "gate": "Entity IC",
     "enforceability": "mixed",
-    "version": "1.1.0",
+    "version": "1.2.2",
     "owner_agent": "legal-counsel",
     "item_count": 22,
     "lang": "en"
@@ -82,7 +82,7 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "file": "checklists/greenfield-feasibility-checklist.yaml",
     "gate": "Screening/Pre-FS",
     "enforceability": "mixed",
-    "version": "1.0.0",
+    "version": "1.1.1",
     "owner_agent": "greenfield-agent",
     "item_count": 12,
     "lang": "en"
@@ -118,7 +118,7 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "file": "checklists/legal-regulatory-checklist.yaml",
     "gate": "Screening",
     "enforceability": "mixed",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "owner_agent": "legal-counsel",
     "item_count": 7,
     "lang": "en"
@@ -130,7 +130,7 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "file": "checklists/ma-special-topics-checklist.yaml",
     "gate": "DD",
     "enforceability": "mixed",
-    "version": "1.4.0",
+    "version": "1.4.1",
     "owner_agent": "brownfield-agent",
     "item_count": 12,
     "lang": "en"
@@ -178,7 +178,7 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "file": "checklists/site-selection-checklist.yaml",
     "gate": "Pre-FS",
     "enforceability": "mixed",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "owner_agent": "greenfield-agent",
     "item_count": 9,
     "lang": "en"
@@ -190,7 +190,7 @@ export const LIBRARY_DOCS: LibraryDocSummary[] = [
     "file": "checklists/strategic-fit-screening-checklist.yaml",
     "gate": "Screening",
     "enforceability": "mixed",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "owner_agent": "process-governance-manager",
     "item_count": 12,
     "lang": "en"
@@ -1044,11 +1044,11 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "checklists/entity-formation-checklist.yaml",
     "gate": "Entity IC",
     "enforceability": "mixed",
-    "version": "1.1.0",
+    "version": "1.2.2",
     "owner_agent": "legal-counsel",
     "item_count": 22,
     "lang": "en",
-    "content": "governance_doc_id: chk-entity-formation\nlayer: checklist\ntitle: \"Entity Formation Checklist (Internal / Joint Origin Execution)\"\nscope: shared\nenforceability: mixed\nowner_agent: legal-counsel\nversion: \"1.1.0\"\neffective_from: \"2026-08-22\"\ngate: \"Entity IC\"\n\n# Applies at EXECUTION after Entity IC approval, for origin = internal or joint\n# (ADR-0047 four-value origin). Items ef-01..ef-12 are the standard formation\n# sequence; ef-13..ef-18 are the JV addendum — mandatory ONLY for joint-origin\n# entities (mark not-applicable for internal origin, mirroring brownfield-dd step 3's\n# conditional-applicability pattern). JV governance design cross-references the\n# jv-structuring skill rather than restating it.\n#\n# gx-01..gx-03 (v1.1.0, ADR-0161 Proposed) are a separate group: the greenfield\n# execution baseline (procedures/_shared/greenfield-execution-baseline), which\n# applies by case_type = greenfield regardless of origin and of whether a new\n# entity is formed. They replace, for greenfield at S11, the closing-specific\n# financing items fin-04..fin-08 (financing-plan-checklist S11 track scope).\n# Mark them not-applicable for brownfield projects. Retroactively (ADR-0161\n# Q2) they are recommended, not blocking, for a project that already\n# completed S11.\n\nitems:\n  - id: ef-01\n    text: \"Jurisdiction and entity type selected with the tax/regulatory rationale documented and approved\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-02\n    text: \"Name availability cleared with the registry and preliminary trademark clearance completed\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-03\n    text: \"Share structure and parent/founder allocations fixed; initial directors and officers identified\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-04\n    text: \"Originating parent's internal approvals obtained — board/GM resolution authorizing formation, funding, and IP contribution\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-05\n    text: \"Charter/articles filed, registered address and agent appointed, registered capital paid in\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-06\n    text: \"Organizational documents executed — bylaws, incorporator action, board consents, director indemnification agreements\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-07\n    text: \"IP assignment into the entity complete — all pre-formation IP (parent background IP and originating team's work) assigned or licensed in writing; every employee and contractor signs a PIIA agreement\"\n    mandatory: true\n    waiver_eligible: false   # title integrity is a completeness fact — a gap here is an unwaivable establishment blocker (kill criterion ip_assignment_chain_incomplete_at_establishment)\n  - id: ef-08\n    text: \"People transfer executed — new employment agreements + PIIAs signed; where staff come from the parent, a secondment or transfer agreement per applicable consent rules (Korea: business-transfer succession is judicial doctrine — 영업양도 — individual consent is the safe path; verify with counsel)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-09\n    text: \"Intra-group agreements executed — intra-group services agreement, IP/brand license, supply or distribution agreements, cost-sharing/transfer-pricing policy documented\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-10\n    text: \"Statutory registrations completed — tax IDs, employer registrations, business licenses, sector permits; foreign-investment filings where cross-border\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-11\n    text: \"Banking, insurance, and accounting/audit arrangements opened; statutory books and registers established\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-12\n    text: \"Governance baseline set — first board minutes, delegated-authority matrix, compliance calendar, and a data room containing all of the above\"\n    mandatory: true\n    waiver_eligible: true\n  # JV addendum — joint-origin only (mandatory when origin = joint)\n  - id: ef-13\n    text: \"Joint-origin only: board of 5-9 members with equal seats in a 50/50 and deadlock design (independent chair, casting vote, or rotating chair) agreed at formation\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-14\n    text: \"Joint-origin only: reserved-matters list requiring mutual consent — narrow, category-based, threshold-driven (strategy/scope, annual plan/budget, major capex/financing, CEO/CFO appointment, material related-party transactions, constitutional changes, ownership economics, dissolution)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-15\n    text: \"Joint-origin only: deadlock ladder with binding deadlines — management reconciliation, board decision memo, shareholder principals, cooling-off/standstill, expert determination for defined factual/valuation issues, mediation, final remedy\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-16\n    text: \"Joint-origin only: exit clauses agreed — put/call with pre-agreed valuation formula, ROFR/ROFO and tag/drag rights, termination events, completion mechanics\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-17\n    text: \"Joint-origin only: one-voice management confirmed — direction to the venture only via board decisions and the CEO, with a written delegated-authority matrix (variance bands, emergency limits)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-18\n    text: \"Joint-origin only: firewall/clean-team protocols established where the parents compete in adjacent markets\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-19\n    text: \"Korea note (only where a company split is the formation route): a split (물적분할/인적분할) requires a shareholders' special resolution and the creditor-protection procedure — individual notice to known creditors plus public notice with an objection window of at least one month (Commercial Act arts. 527-2/527-5). Verify against the current KLRI statute text before enforcement use.\"\n    mandatory: false\n    waiver_eligible: true\n  # Greenfield execution baseline — case_type = greenfield only (ADR-0161)\n  - id: gx-01\n    text: \"Greenfield only: capex tranche schedule bound to the project's capex_tranche rows and the S10 deal-structure release conditions, reconciled against the S8 adopted case capex; every gap recorded as a finding, none auto-fixed\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gx-02\n    text: \"Greenfield only: ramp-up KPI targets (first revenue, utilisation, BEP month, revenue and EBITDA vs the S8 adopted case) set, with the S8 project business goals referenced as non-blocking evidence\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gx-03\n    text: \"Greenfield only: execution baseline confirmed by one person (Entity IC owner or delegate) with a non-empty rationale; no agent confirmation\"\n    mandatory: true\n    waiver_eligible: false   # a human confirmation is not waivable (ADR-0161 Row 1 follow-up, user-approved 2026-10-12)\n\nlegal_basis:\n  - \"ADR-0051 (workflow gap closure — internal-origin entity-formation chain step)\"\n  - \"procedures/_shared/entity-establishment-execution/schema.yaml (execution procedure consuming this checklist)\"\n  - \"DLA Piper pre/post-incorporation checklists; Robinson+Cole employee IP assignment; Umbrex JV governance architecture; KLRI Commercial Act English text\"\n  - \"skills/jv-structuring (JV governance design — cross-referenced, not restated)\"\n  - \"procedures/_shared/greenfield-execution-baseline/schema.yaml (gx-01..gx-03 — ADR-0161)\"\n"
+    "content": "governance_doc_id: chk-entity-formation\nlayer: checklist\ntitle: \"Entity Formation Checklist (Internal / Joint Origin Execution)\"\nscope: shared\nenforceability: mixed\nowner_agent: legal-counsel\nversion: \"1.2.2\"\neffective_from: \"2026-08-22\"\ngate: \"Entity IC\"\n\n# Applies at EXECUTION after Entity IC approval, for origin = internal or joint\n# (ADR-0047 four-value origin). Items ef-01..ef-12 are the standard formation\n# sequence; ef-13..ef-18 are the JV addendum — mandatory ONLY for joint-origin\n# entities (mark not-applicable for internal origin, mirroring brownfield-dd step 3's\n# conditional-applicability pattern). JV governance design cross-references the\n# jv-structuring skill rather than restating it.\n#\n# gx-01..gx-03 (v1.1.0, ADR-0161 Proposed) are a separate group: the greenfield\n# execution baseline (procedures/_shared/greenfield-execution-baseline), which\n# applies by case_type = greenfield regardless of origin and of whether a new\n# entity is formed. They replace, for greenfield at S11, the closing-specific\n# financing items fin-04..fin-08 (financing-plan-checklist S11 track scope).\n# Mark them not-applicable for brownfield projects. Retroactively (ADR-0161\n# Q2) they are recommended, not blocking, for a project that already\n# completed S11.\n\nitems:\n  - id: ef-01\n    text: \"설립 관할과 설립 법인 형태를 선정하고, 세무·규제 근거를 문서화해 승인받음\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-02\n    text: \"등기소에서 상호 사용 가능 여부를 확인하고 상표 사전 조사를 마침\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-03\n    text: \"주식 구조와 모회사·창업자별 배분을 확정하고, 최초 이사·임원을 정함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-04\n    text: \"설립을 주도하는 모회사의 내부 승인을 받음 — 설립, 출자·자금 지원, 지식재산 출연을 승인하는 이사회 또는 주주총회 결의\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-05\n    text: \"정관을 작성(필요 시 공증)하고 설립등기를 마치며, 본점 소재지와 (해당 관할에서 요구 시) 등록 대리인(registered agent)을 정하고, 자본금 납입을 마침\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-06\n    text: \"조직 문서를 체결함 — 내부 규정(bylaws), 발기인 결의(또는 발기인 서면 결정), 이사회 결의서(서면 동의), 이사 보상(indemnification) 계약\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-07\n    text: \"법인으로의 지식재산 이전 완료 — 설립 전 지식재산 일체(모회사의 기존 지식재산과 설립 주도팀의 성과물)를 서면으로 양도 또는 사용허락(라이선스)하고, 모든 임직원과 외주 인력이 지식재산 양도 약정(PIIA)에 서명함\"\n    mandatory: true\n    waiver_eligible: false   # title integrity is a completeness fact — a gap here is an unwaivable establishment blocker (kill criterion ip_assignment_chain_incomplete_at_establishment)\n  - id: ef-08\n    text: \"인력 이전 완료 — 신규 근로계약서와 PIIA에 서명함; 모회사에서 인력이 오는 경우 적용되는 동의 규칙에 따라 전출(겸직·사외 근무) 또는 전적 계약을 체결함 (한국: 영업양도에 따른 근로관계 승계는 판례 법리 — 영업양도 — 개별 동의를 받는 것이 안전한 경로이며, 법률 자문으로 확인)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-09\n    text: \"그룹 내 계약을 체결함 — 그룹 내 용역 계약, 지식재산·브랜드 사용 계약, 공급·유통 계약, 비용 분담·이전가격 정책 문서화\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-10\n    text: \"법정 등록을 마침 — 세무 등록번호, 사업주(사용자) 등록, 영업 인허가, 업종별 허가; 국경 간 투자인 경우 외국인투자 신고\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-11\n    text: \"은행 계좌, 보험, 회계·감사 체계를 갖추고 법정 장부와 명부를 구비함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-12\n    text: \"지배구조 기본 틀을 갖춤 — 첫 이사회 의사록, 위임전결 기준표, 컴플라이언스 일정표, 위 모든 문서를 담은 자료실(data room)\"\n    mandatory: true\n    waiver_eligible: true\n  # JV addendum — joint-origin only (mandatory when origin = joint)\n  - id: ef-13\n    text: \"합작 설립(joint) 한정: 50:50 지분에서 동수 의석의 이사 5~9명으로 이사회를 구성하고, 교착 해소 설계(독립 의장, 결정투표권, 의장 윤번제 등)를 설립 시점에 합의함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-14\n    text: \"합작 설립 한정: 상호 동의가 필요한 주요 의결 사항 목록 — 범주별·기준액 기준으로 좁게 정함(전략·사업 범위, 연간 계획·예산, 대규모 투자·자금조달, 대표이사·재무책임자 선임, 중요 특수관계인 거래, 정관 변경, 지분 경제성, 해산)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-15\n    text: \"합작 설립 한정: 기한이 구속력을 갖는 교착 해소 단계 — 경영진 조정, 이사회 결정 메모, 주주 대표 협의, 냉각기간·현상 유지(standstill), 사실·가치평가 쟁점에 대한 전문가 결정, 조정(mediation), 최종 구제 수단\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-16\n    text: \"합작 설립 한정: 출구 조항을 합의함 — 사전 합의된 가치평가 산식에 따른 풋/콜 옵션, 우선매수권(ROFR)·우선협상권(ROFO), 동반매각참여권(tag)·동반매도청구권(drag), 종료 사유, 종결 절차\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-17\n    text: \"합작 설립 한정: 단일 창구 경영을 확인함 — 합작법인에 대한 지시는 이사회 결정과 대표이사를 통해서만 하고, 서면 위임전결 기준표(허용 편차 범위, 긴급 한도)를 둠\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-18\n    text: \"합작 설립 한정: 모회사들이 인접 시장에서 경쟁하는 경우 정보 차단 벽(firewall)·클린팀 절차를 수립함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ef-19\n    text: \"한국 참고(회사 분할을 설립 경로로 쓰는 경우에 한함): 분할(물적분할/인적분할)에는 분할계획서에 대한 주주총회 특별결의가 필요함(상법 제530조의3). 분할합병인 경우(상법 제530조의11 제2항)와 연대책임을 배제하는 단순분할인 경우(상법 제530조의9 제2항·제4항)에는 채권자 보호 절차가 필요함 — 알고 있는 채권자에 대한 개별 최고와 1개월 이상의 이의제출 기간을 둔 공고(두 경우 모두 상법 제527조의5 준용). 집행 근거로 쓰기 전에 국가법령정보센터의 최신 조문 원문으로 확인할 것(2026-10-13 법제처 Open API로 확인, 상법 MST 273629).\"\n    mandatory: false\n    waiver_eligible: true\n  # Greenfield execution baseline — case_type = greenfield only (ADR-0161)\n  - id: gx-01\n    text: \"신규 사업(Green Field) 한정: 자본지출(capex) 분할 집행 일정을 프로젝트의 capex_tranche 행과 S10 딜 구조 집행 조건에 연결하고 S8 채택안 capex와 대사함; 차이는 모두 발견 사항으로 기록하고 자동 수정하지 않음\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gx-02\n    text: \"신규 사업 한정: 램프업 핵심 성과 목표(첫 매출, 가동률, 손익분기 도달 월, S8 채택안 대비 매출·EBITDA)를 정하고, S8 사업 목표는 차단 효력이 없는 근거로 참조함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gx-03\n    text: \"신규 사업 한정: 실행 기준선을 한 사람(법인 투자심의위원회 책임자 또는 위임받은 자)이 비어 있지 않은 근거와 함께 확인함; 에이전트의 확인은 인정하지 않음\"\n    mandatory: true\n    waiver_eligible: false   # a human confirmation is not waivable (ADR-0161 Row 1 follow-up, user-approved 2026-10-12)\n\nlegal_basis:\n  - \"ADR-0051 (workflow gap closure — internal-origin entity-formation chain step)\"\n  - \"procedures/_shared/entity-establishment-execution/schema.yaml (execution procedure consuming this checklist)\"\n  - \"DLA Piper pre/post-incorporation checklists; Robinson+Cole employee IP assignment; Umbrex JV governance architecture; KLRI Commercial Act English text\"\n  - \"skills/jv-structuring (JV governance design — cross-referenced, not restated)\"\n  - \"procedures/_shared/greenfield-execution-baseline/schema.yaml (gx-01..gx-03 — ADR-0161)\"\n"
   },
   "chk-financial-dd-checklist": {
     "id": "chk-financial-dd-checklist",
@@ -1083,11 +1083,11 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "checklists/greenfield-feasibility-checklist.yaml",
     "gate": "Screening/Pre-FS",
     "enforceability": "mixed",
-    "version": "1.0.0",
+    "version": "1.1.1",
     "owner_agent": "greenfield-agent",
     "item_count": 12,
     "lang": "en",
-    "content": "governance_doc_id: chk-greenfield-feasibility\nlayer: checklist\ntitle: \"Green Field Feasibility Checklist\"\nscope: shared\nenforceability: mixed\nowner_agent: greenfield-agent\nversion: \"1.0.0\"\neffective_from: \"2026-08-20\"\ngate: Screening/Pre-FS\n\n# Item-level enforceability, per design's rule that a checklist's overall\n# enforceability is \"mixed\" precisely because individual items differ\n# (design section 6.1). Do not mark the whole checklist mandatory or\n# recommended in one shot.\nitems:\n  - id: gf-01\n    text: \"All candidate sites screened against mandatory infrastructure minimums (wastewater capacity checked before power)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gf-02\n    text: \"Sites failing infrastructure minimums excluded from scoring, not merely penalized\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gf-03\n    text: \"Regional incentive NPV computed for each surviving candidate (discounted at deal WACC, net of expected clawback risk)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gf-04\n    text: \"Permit critical path (DAG-derived, not single-permit lead time) computed for each surviving candidate\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gf-05\n    text: \"Partner dependency (if any) confirmed or site marked conditional\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gf-06\n    text: \"Talent pipeline assessment completed (local university/vocational partnerships, regional labor-pool competition)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gf-07\n    text: \"Community partnership assessment completed (local supplier development, resident acceptance history)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gf-08\n    text: \"Ramp-up curve reflects certification lead time — no revenue modeled before mandatory certifications are obtained\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gf-09\n    text: \"Competitor capacity-expansion plans reviewed for pricing-assumption risk\"\n    mandatory: false\n    waiver_eligible: true\n  - id: gf-10\n    text: \"Real options / staged-investment structure considered as an alternative to a single lump-sum capex commitment\"\n    mandatory: false\n    waiver_eligible: true\n  - id: gf-11\n    text: \"Investment vehicle structuring reviewed against all four ADR-0045 axes (tax structure, liability isolation, financing leverage, exit structure) — direct parent incorporation vs. a local holding subsidiary, not assumed by default\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gf-12\n    text: \"WACC 적용 주체(promoter/target/project_newco)가 확정되고 근거가 기록되었다 — 트랙 기본값(greenfield=promoter)을 벗어나면 재레버링 근거가 세션에 기록된다\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"Group New Business Review Policy §4.1\"\n  - \"procedures/_shared/greenfield-screening/schema.yaml\"\n  - \"Meeting M1, M6\"\n  - \"ADR-0045 (investment vehicle structuring as a mandatory deal-structure-hypothesis axis)\"\n"
+    "content": "governance_doc_id: chk-greenfield-feasibility\nlayer: checklist\ntitle: \"Green Field Feasibility Checklist\"\nscope: shared\nenforceability: mixed\nowner_agent: greenfield-agent\nversion: \"1.1.1\"\neffective_from: \"2026-08-20\"\ngate: Screening/Pre-FS\n\n# Item-level enforceability, per design's rule that a checklist's overall\n# enforceability is \"mixed\" precisely because individual items differ\n# (design section 6.1). Do not mark the whole checklist mandatory or\n# recommended in one shot.\nitems:\n  - id: gf-01\n    text: \"모든 후보지를 필수 인프라 최소 기준에 비추어 선별함(전력보다 폐수 처리 용량을 먼저 점검)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gf-02\n    text: \"인프라 최소 기준에 미달한 후보지는 감점에 그치지 않고 점수화 대상에서 제외함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gf-03\n    text: \"남은 후보지마다 지역 인센티브 NPV를 산출함(딜 WACC로 할인하고 환수 위험 기대치를 차감)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gf-04\n    text: \"남은 후보지마다 인허가 임계 경로를 산출함(단일 인허가 소요 기간이 아닌, 의존 관계 그래프(DAG)에서 도출)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gf-05\n    text: \"파트너 의존성(있는 경우)을 확인하거나 해당 후보지를 조건부로 표시함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gf-06\n    text: \"인력 확보 가능성 평가를 마침(지역 대학·직업교육 기관 협력, 지역 노동시장 내 인력 경쟁)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gf-07\n    text: \"지역사회 협력 평가를 마침(지역 협력업체 육성, 주민 수용 이력)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gf-08\n    text: \"램프업 곡선에 인증 소요 기간을 반영함 — 필수 인증을 받기 전에는 매출을 잡지 않음\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gf-09\n    text: \"경쟁사 증설 계획을 검토해 가격 가정의 위험을 점검함\"\n    mandatory: false\n    waiver_eligible: true\n  - id: gf-10\n    text: \"단일 일시 투자 확약의 대안으로 실물옵션·단계별 투자 구조를 검토함\"\n    mandatory: false\n    waiver_eligible: true\n  - id: gf-11\n    text: \"설립 법인 형태 구조화(지주회사·SPV 포함)를 ADR-0045의 네 축(세무 구조, 책임 격리, 자금조달 레버리지, 엑시트 구조) 모두에 비추어 검토함 — 모회사 직접 설립과 현지 지주 자회사 설립을 기본값으로 정해 두지 않음\"\n    mandatory: true\n    waiver_eligible: true\n  - id: gf-12\n    text: \"WACC 적용 주체(promoter/target/project_newco)가 확정되고 근거가 기록되었다 — 트랙 기본값(greenfield=promoter)을 벗어나면 재레버링 근거가 세션에 기록된다\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"Group New Business Review Policy §4.1\"\n  - \"procedures/_shared/greenfield-screening/schema.yaml\"\n  - \"Meeting M1, M6\"\n  - \"ADR-0045 (investment vehicle structuring as a mandatory deal-structure-hypothesis axis)\"\n"
   },
   "chk-hr-dd-checklist": {
     "id": "chk-hr-dd-checklist",
@@ -1122,11 +1122,11 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "checklists/legal-regulatory-checklist.yaml",
     "gate": "Screening",
     "enforceability": "mixed",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "owner_agent": "legal-counsel",
     "item_count": 7,
     "lang": "en",
-    "content": "governance_doc_id: chk-legal-regulatory\nlayer: checklist\ntitle: \"Legal and Regulatory Screening Checklist\"\nscope: shared\nenforceability: mixed\nowner_agent: legal-counsel\nversion: \"1.0.0\"\neffective_from: \"2026-08-20\"\ngate: Screening\n\nitems:\n  - id: lr-01\n    text: \"Applicable permit pathway identified and mapped as a DAG with critical-path lead time (permit-pathway-mapping)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lr-02\n    text: \"Certification requirements identified separately from permits, with transferability-on-change-of-control assessed for Brown Field (design's permit/certification separation rule)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lr-03\n    text: \"Applicable region profile(s) confirmed present and validated (region-profiles/_validate.ts) for every jurisdiction the deal touches\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lr-04\n    text: \"Foreign investment screening trigger checked against the region profile's mandatory_filing_triggers\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lr-05\n    text: \"Sanctions and anti-corruption screening run against all counterparties, not just the primary target\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lr-06\n    text: \"Data transfer mechanism confirmed for any cross-border data flow the deal requires\"\n    mandatory: false\n    waiver_eligible: true\n  - id: lr-07\n    text: \"NDA/confidentiality review completed before any DD material is loaded into the system (design §4-9-1 rule: loading itself can be an NDA violation)\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"region-profiles/_schema.yaml mandatory review axes (design v1.0 section 2-6)\"\n  - \"policies/group/neb-policy.md — permit and certification separation rule\"\n"
+    "content": "governance_doc_id: chk-legal-regulatory\nlayer: checklist\ntitle: \"Legal and Regulatory Screening Checklist\"\nscope: shared\nenforceability: mixed\nowner_agent: legal-counsel\nversion: \"1.1.0\"\neffective_from: \"2026-08-20\"\ngate: Screening\n\nitems:\n  - id: lr-01\n    text: \"적용되는 인허가 경로를 파악해 임계 경로 소요 기간을 포함한 의존 관계 그래프(DAG)로 정리함 (permit-pathway-mapping)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lr-02\n    text: \"인증 요건을 인허가와 분리해 파악하고, 브라운필드(M&A)는 경영권 변경 시 인증 이전 가능성까지 평가함 (인허가·인증 분리 원칙)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lr-03\n    text: \"딜이 닿는 모든 관할에 대해 해당 지역 프로필(region profile)이 있고 검증(region-profiles/_validate.ts)을 통과했음을 확인함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lr-04\n    text: \"외국인투자 심사 대상 여부를 지역 프로필의 필수 신고 요건(mandatory_filing_triggers)에 비추어 점검함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lr-05\n    text: \"제재·반부패 심사를 주 대상뿐 아니라 모든 거래 상대방에 대해 수행함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: lr-06\n    text: \"딜에 필요한 국경 간 데이터 흐름이 있으면 그 이전 수단(법적 근거)을 확인함\"\n    mandatory: false\n    waiver_eligible: true\n  - id: lr-07\n    text: \"DD 자료를 시스템에 올리기 전에 비밀유지계약(NDA)·비밀유지 검토를 마침 (설계 §4-9-1 규칙: 자료를 올리는 행위 자체가 NDA 위반일 수 있음)\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"region-profiles/_schema.yaml mandatory review axes (design v1.0 section 2-6)\"\n  - \"policies/group/neb-policy.md — permit and certification separation rule\"\n"
   },
   "chk-ma-special-topics-checklist": {
     "id": "chk-ma-special-topics-checklist",
@@ -1135,11 +1135,11 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "checklists/ma-special-topics-checklist.yaml",
     "gate": "DD",
     "enforceability": "mixed",
-    "version": "1.4.0",
+    "version": "1.4.1",
     "owner_agent": "brownfield-agent",
     "item_count": 12,
     "lang": "en",
-    "content": "governance_doc_id: chk-ma-special-topics\nlayer: checklist\ntitle: \"M&A Special Topics Checklist (Brown Field)\"\nscope: shared\nenforceability: mixed\nowner_agent: brownfield-agent\nversion: \"1.4.0\"\neffective_from: \"2026-08-20\"\ngate: DD\n\n# Evaluation order per meeting M5: (1) antitrust + HR integration, (2) customer\n# retention + incentive, (3) certification transferability last — a non-transferable\n# certification can strip the acquisition premium and must not be computed against\n# a valuation that already assumed it. This checklist's item order follows that.\n\nitems:\n  - id: ma-01\n    text: \"관련시장(제품·지역)을 획정하고 HHI 및 HHI 증분(HHI-delta)을 산정함 — 대상 회사 간 직접 결합뿐 아니라 공동 소유·공동 지배 결합(예: 이미 경쟁사 한 곳을 지배하는 재무적 투자자가 다른 경쟁사를 인수하는 경우)도 포함 (파일럿 010 발견사항 F-2)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-02\n    text: \"주된 시장뿐 아니라 해당되는 모든 관할에서 기업결합 신고(merger-control filing) 요건을 확인함 (복수 관할 신고 점검)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-03\n    text: \"건 점핑(gun-jumping) 금지를 인지함 — 승인 전 통합 조치를 하지 않음\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-04\n    text: \"경영진 보상 패키지(지배권 변경 촉발 조건(CoC triggers), 황금낙하산(golden parachute) 지급 추정액, 가속 베스팅(accelerated vesting))를 management_package에 기록함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-05\n    text: \"핵심 인력 유지에 경업금지(non-compete) 약정을 활용하기 전에 해당 관할별 집행 가능성을 확인함\"\n    mandatory: false\n    waiver_eligible: true\n  - id: ma-06\n    text: \"직무군·직급 수준의 임직원 보상 벤치마크(comp_benchmark)를 완료하고, 양방향 모두에 상향 편향(upward-bias) 평준화 비용을 산정함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-07\n    text: \"고객 및 공급사 계약, 부채 재무약정 등 확약사항(covenants), 경영진 보상 전반에서 지배권 변경(change-of-control) 조항을 검토함 — 거래 후 계속 공급사로 남는 매도인은 고객 계약과 같은 위험 범주이며 별도 범주가 아님 (파일럿 002 발견사항 F-2)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-08\n    text: \"인수 후 이탈에 대비해 고객·공급사 집중도와 경쟁 중첩 위험을 평가함 — 고객 측 계약만이 아니라 거래 종결 후에도 대상 회사와 거래 관계를 유지하는 매도인을 포함; 딜 자체가 집중도를 바꿀 수 있으므로 종결 전후 모두 측정; cdd-08을 수행하는 경우 매출 반복성도 종결 전후 모두 측정\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-09\n    text: \"이전·구조조정을 검토할 경우 인센티브 목록(신청 예정분과 수혜분 모두)의 환수(clawback) 노출을 검토함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-10\n    text: \"우발채무(소송, 환경, 미적립 연금, 보증·리콜)를 몬테카를로(Monte Carlo) 연계를 위해 확률·금액 분포와 함께 입력함 — 서술로만 남긴 항목 금지\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-11\n    text: \"+200bp 금리 충격에서 재무약정 등 확약사항(covenants) 위반 시나리오를 검증하고, 채무증권의 지배권 변경 기한이익상실(CoC acceleration) 조항을 식별함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-12\n    text: \"지배권 변경 시 인증 승계 가능성은 맨 마지막에, 실제 인증기관의 규정에 비추어 확인함 — 추론 금지 (설계의 명시 규칙: 여기서는 추론 불허)\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"docs/ma-special-topics.md (forward reference — Stage 4 documentation)\"\n  - \"memory/meeting-2026-08-20-m5-ma-model-linkage.md\"\n  - \"ADR-0026 (contingent liability modeling), ADR-0027 (compensation upward bias)\"\n"
+    "content": "governance_doc_id: chk-ma-special-topics\nlayer: checklist\ntitle: \"M&A Special Topics Checklist (Brown Field)\"\nscope: shared\nenforceability: mixed\nowner_agent: brownfield-agent\nversion: \"1.4.1\"\neffective_from: \"2026-08-20\"\ngate: DD\n\n# Evaluation order per meeting M5: (1) antitrust + HR integration, (2) customer\n# retention + incentive, (3) certification transferability last — a non-transferable\n# certification can strip the acquisition premium and must not be computed against\n# a valuation that already assumed it. This checklist's item order follows that.\n\nitems:\n  - id: ma-01\n    text: \"관련시장(제품·지역)을 획정하고 HHI 및 HHI 증분(HHI-delta)을 산정함 — 대상 회사 간 직접 결합뿐 아니라 공동 소유·공동 지배 결합(예: 이미 경쟁사 한 곳을 지배하는 재무적 투자자가 다른 경쟁사를 인수하는 경우)도 포함 (파일럿 010 발견사항 F-2)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-02\n    text: \"주된 시장뿐 아니라 해당되는 모든 관할에서 기업결합 신고(merger-control filing) 요건을 확인함 (복수 관할 신고 점검)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-03\n    text: \"승인 전 이행 금지(건 점핑, gun-jumping) 의무를 인지함 — 심사 결과 통지(승인) 전 주식 취득 완료·통합 조치를 하지 않음\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-04\n    text: \"경영진 보상 패키지(지배권 변경 촉발 조건(CoC triggers), 황금낙하산(golden parachute) 지급 추정액, 가속 베스팅(accelerated vesting))를 management_package에 기록함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-05\n    text: \"핵심 인력 유지에 경업금지(non-compete) 약정을 활용하기 전에 해당 관할별 집행 가능성을 확인함\"\n    mandatory: false\n    waiver_eligible: true\n  - id: ma-06\n    text: \"직무군·직급 수준의 임직원 보상 벤치마크(comp_benchmark)를 완료하고, 양방향 모두에 상향 편향(upward-bias) 평준화 비용을 산정함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-07\n    text: \"고객 및 공급사 계약, 부채 재무약정 등 확약사항(covenants), 경영진 보상 전반에서 지배권 변경(change-of-control) 조항을 검토함 — 거래 후 계속 공급사로 남는 매도인은 고객 계약과 같은 위험 범주이며 별도 범주가 아님 (파일럿 002 발견사항 F-2)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-08\n    text: \"인수 후 이탈에 대비해 고객·공급사 집중도와 경쟁 중첩 위험을 평가함 — 고객 측 계약만이 아니라 거래 종결 후에도 대상 회사와 거래 관계를 유지하는 매도인을 포함; 딜 자체가 집중도를 바꿀 수 있으므로 종결 전후 모두 측정; cdd-08을 수행하는 경우 매출 반복성도 종결 전후 모두 측정\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-09\n    text: \"이전·구조조정을 검토할 경우 인센티브 목록(신청 예정분과 수혜분 모두)의 환수(clawback) 노출을 검토함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-10\n    text: \"우발채무(소송, 환경, 미적립 연금, 보증·리콜)를 몬테카를로(Monte Carlo) 연계를 위해 확률·금액 분포와 함께 입력함 — 서술로만 남긴 항목 금지\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-11\n    text: \"+200bp 금리 충격에서 재무약정 등 확약사항(covenants) 위반 시나리오를 검증하고, 채무증권의 지배권 변경 기한이익상실(CoC acceleration) 조항을 식별함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ma-12\n    text: \"지배권 변경 시 인증 승계 가능성은 맨 마지막에, 실제 인증기관의 규정에 비추어 확인함 — 추론 금지 (설계의 명시 규칙: 여기서는 추론 불허)\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"docs/ma-special-topics.md (forward reference — Stage 4 documentation)\"\n  - \"memory/meeting-2026-08-20-m5-ma-model-linkage.md\"\n  - \"ADR-0026 (contingent liability modeling), ADR-0027 (compensation upward bias)\"\n"
   },
   "chk-market-dd-checklist": {
     "id": "chk-market-dd-checklist",
@@ -1187,11 +1187,11 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "checklists/site-selection-checklist.yaml",
     "gate": "Pre-FS",
     "enforceability": "mixed",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "owner_agent": "greenfield-agent",
     "item_count": 9,
     "lang": "en",
-    "content": "governance_doc_id: chk-site-selection\nlayer: checklist\ntitle: \"Site Selection Checklist (Green Field)\"\nscope: shared\nenforceability: mixed\nowner_agent: greenfield-agent\nversion: \"1.1.0\"\neffective_from: \"2026-08-20\"\ngate: Pre-FS\n\nitems:\n  - id: ss-01\n    text: \"Wastewater/effluent treatment capacity confirmed for every candidate site — checked before power, since its absence blocks expansion outright\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ss-02\n    text: \"Power supply capacity, connection lead time, and outage history obtained per candidate site\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ss-03\n    text: \"Industrial water supply capacity and quality confirmed\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ss-04\n    text: \"Road/logistics access assessed for heavy-vehicle entry and port/rail proximity\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ss-05\n    text: \"Regional incentive package identified and converted to NPV, on the same comparison table as infrastructure capex and logistics cost — not listed separately\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ss-06\n    text: \"Incentive application/construction deadlines checked against the permit critical path — a missed deadline forfeits the incentive\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ss-07\n    text: \"Talent pipeline assessed (local institutions, available labor pool, competing employers)\"\n    mandatory: false\n    waiver_eligible: true\n  - id: ss-08\n    text: \"Community acceptance history reviewed (prior disputes, environmental conflict history) AND inter-regional resource disputes (e.g. upstream water-rights objections from a different jurisdiction than the site itself) — legally compliant sites still stall on either (pilot 005 finding F-2)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ss-09\n    text: \"site_candidate scoring completed with a documented weighting rationale, not an unweighted list\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"docs/greenfield-site-guide.md (forward reference — Stage 4 documentation)\"\n  - \"design v1.0 section 4-7 (infrastructure, talent, regional incentive sourcing, community partnership)\"\n"
+    "content": "governance_doc_id: chk-site-selection\nlayer: checklist\ntitle: \"Site Selection Checklist (Green Field)\"\nscope: shared\nenforceability: mixed\nowner_agent: greenfield-agent\nversion: \"1.2.0\"\neffective_from: \"2026-08-20\"\ngate: Pre-FS\n\nitems:\n  - id: ss-01\n    text: \"후보지마다 폐수·방류수 처리 용량을 확인함 — 부족하면 증설이 곧바로 막히므로 전력보다 먼저 점검\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ss-02\n    text: \"후보지별 전력 공급 용량, 연결(인입) 소요 기간, 정전 이력을 확보함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ss-03\n    text: \"공업용수 공급 용량과 수질을 확인함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ss-04\n    text: \"대형 차량 진입 가능 여부와 항만·철도 인접성 등 도로·물류 접근성을 평가함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ss-05\n    text: \"지역 인센티브 패키지를 파악해 순현재가치(NPV)로 환산하고, 인프라 투자비·물류비와 같은 비교표에 넣음 — 따로 나열하지 않음\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ss-06\n    text: \"인센티브 신청·착공 기한을 인허가 임계 경로(critical path)와 대조함 — 기한을 놓치면 인센티브를 잃음\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ss-07\n    text: \"인력 확보 가능성을 평가함(지역 교육기관, 가용 노동력, 경쟁 고용주)\"\n    mandatory: false\n    waiver_eligible: true\n  - id: ss-08\n    text: \"지역사회 수용 이력(과거 분쟁, 환경 갈등 이력)과 지역 간 자원 분쟁(예: 부지와 다른 관할에서 제기하는 상류 수리권 이의)을 함께 검토함 — 법령을 지키는 부지라도 둘 중 어느 쪽으로든 지연될 수 있음 (파일럿 005 발견 사항 F-2)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: ss-09\n    text: \"후보지(site_candidate) 점수화를 마치고 가중치 근거를 문서로 남김 — 가중치 없는 단순 나열은 불가\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"docs/greenfield-site-guide.md (forward reference — Stage 4 documentation)\"\n  - \"design v1.0 section 4-7 (infrastructure, talent, regional incentive sourcing, community partnership)\"\n"
   },
   "chk-strategic-fit-screening-checklist": {
     "id": "chk-strategic-fit-screening-checklist",
@@ -1200,11 +1200,11 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "checklists/strategic-fit-screening-checklist.yaml",
     "gate": "Screening",
     "enforceability": "mixed",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "owner_agent": "process-governance-manager",
     "item_count": 12,
     "lang": "en",
-    "content": "governance_doc_id: chk-strategic-fit\nlayer: checklist\ntitle: \"Strategic Fit Screening Checklist\"\nscope: shared\nenforceability: mixed\nowner_agent: process-governance-manager\nversion: \"1.0.0\"\neffective_from: \"2026-08-22\"\ngate: Screening\n\n# Two-part structure per Cooper Gate 1 / HM Treasury Green Book SOC practice:\n# Part 1 (sf-01..sf-05) = must-meet knock-outs (Pass/Fail — any Fail terminates or\n# recycles, no further analysis). Part 2 (sf-06..sf-12) = should-meet rated criteria,\n# scored 0-10 weighted on a visible scorecard. Evidence allowed at this gate: desk\n# research and the sponsor's own knowledge only — no commissioned analysis.\n#\n# THRESHOLDS ARE ADOPTED POLICY (DEC-20260909-03, 2026-09-09): the scoring weights\n# and advance thresholds cited in item texts (e.g. >=60/100 advance, 45-59\n# Hold/Recycle, <45 Kill, from Cooper Gate 1 and Green Book SOC practice) are\n# activated policy per ADR-0051 open question (b)'s resolution. Condition: a\n# recalibration review is mandatory after the first 5 scorecard-bearing runs with\n# confirmed outcomes (see the DEC record).\n\nitems:\n  # Part 1 — must-meet knock-outs (any Fail = reject at screen)\n  - id: sf-01\n    text: \"Strategic alignment cited by name — the opportunity advances at least one named objective of the current corporate/business-unit strategy, quoted or referenced by identifier (not 'aligns with strategy' in the abstract)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: sf-02\n    text: \"Portfolio/hunt-zone fit — the opportunity falls within a pre-declared investment thesis area (hunt zone), or carries an explicit exception approval from the portfolio owner recorded before the screen concludes\"\n    mandatory: true\n    waiver_eligible: true\n  - id: sf-03\n    text: \"No disqualifying constraint — no known fatal safety, environmental, regulatory, sanctions, or reputational barrier\"\n    mandatory: true\n    waiver_eligible: false   # a safety/regulatory showstopper is a completeness fact, not a judgment call\n  - id: sf-04\n    text: \"Strategic intent category declared (core-enhancement / adjacent-expansion / transformational bet) and that category's risk tolerance acknowledged by the sponsor\"\n    mandatory: true\n    waiver_eligible: true\n  - id: sf-05\n    text: \"Named executive sponsor — one named executive owns the opportunity through the next gate and controls the seed budget\"\n    mandatory: true\n    waiver_eligible: true\n  # Part 2 — should-meet rated criteria (0-10, weighted; scored and recorded)\n  - id: sf-06\n    text: \"Preliminary market attractiveness scored and recorded, with the scorecard total meeting the advance threshold set for the declared intent category (desk research only at this gate)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: sf-07\n    text: \"Right-to-win hypothesis scored and recorded — at least one articulable advantage the company brings (asset, capability, channel, brand, data, license) that a generic entrant lacks\"\n    mandatory: true\n    waiver_eligible: true\n  - id: sf-08\n    text: \"Synergy thesis scored and recorded — identifiable synergies with existing operations (channels, plants, technology, customer base) beyond standalone value\"\n    mandatory: true\n    waiver_eligible: true\n  - id: sf-09\n    text: \"Capability-fit gap statement scored and recorded — required vs. current capabilities assessed, every material gap named with a plausible source (build / partner / buy)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: sf-10\n    text: \"Preliminary feasibility scored and recorded — no known insurmountable technical or operational obstacle, and rough time-to-market acceptable for the declared intent category\"\n    mandatory: true\n    waiver_eligible: true\n  - id: sf-11\n    text: \"Reward-vs-risk scale scored and recorded — preliminary size of the prize is material relative to effort and risk, per the category's thresholds\"\n    mandatory: true\n    waiver_eligible: true\n  - id: sf-12\n    text: \"Options discipline — the proposal is one of at least two routes to the stated objective, with a do-minimum/status-quo baseline recorded for comparison\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"ADR-0051 (workflow gap closure — strategic fit at first screen)\"\n  - \"procedures/_shared/brownfield-screening/schema.yaml step 2, procedures/_shared/greenfield-screening/schema.yaml step 1\"\n  - \"Cooper Stage-Gate Gate 1 (Idea Screen) knock-out + scorecard design — Stage-Gate Institute\"\n  - \"HM Treasury Green Book Five Case Model — Strategic Outline Case (strategic filter precedes full appraisal)\"\n"
+    "content": "governance_doc_id: chk-strategic-fit\nlayer: checklist\ntitle: \"Strategic Fit Screening Checklist\"\nscope: shared\nenforceability: mixed\nowner_agent: process-governance-manager\nversion: \"1.1.0\"\neffective_from: \"2026-08-22\"\ngate: Screening\n\n# Two-part structure per Cooper Gate 1 / HM Treasury Green Book SOC practice:\n# Part 1 (sf-01..sf-05) = must-meet knock-outs (Pass/Fail — any Fail terminates or\n# recycles, no further analysis). Part 2 (sf-06..sf-12) = should-meet rated criteria,\n# scored 0-10 weighted on a visible scorecard. Evidence allowed at this gate: desk\n# research and the sponsor's own knowledge only — no commissioned analysis.\n#\n# THRESHOLDS ARE ADOPTED POLICY (DEC-20260909-03, 2026-09-09): the scoring weights\n# and advance thresholds cited in item texts (e.g. >=60/100 advance, 45-59\n# Hold/Recycle, <45 Kill, from Cooper Gate 1 and Green Book SOC practice) are\n# activated policy per ADR-0051 open question (b)'s resolution. Condition: a\n# recalibration review is mandatory after the first 5 scorecard-bearing runs with\n# confirmed outcomes (see the DEC record).\n\nitems:\n  # Part 1 — must-meet knock-outs (any Fail = reject at screen)\n  - id: sf-01\n    text: \"전략 부합성을 명칭으로 인용함 — 현행 전사·사업부 전략의 명명된 목표 하나 이상을 식별자로 인용하거나 참조해, 그 목표를 이 기회가 진전시킴을 보임('전략에 부합한다'는 추상적 서술은 불가)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: sf-02\n    text: \"포트폴리오·투자 중점 영역(hunt zone) 적합성 — 사전에 선언된 투자 논제 영역 안에 있거나, 스크리닝이 끝나기 전에 포트폴리오 책임자의 예외 승인이 기록됨\"\n    mandatory: true\n    waiver_eligible: true\n  - id: sf-03\n    text: \"결격 사유 없음 — 알려진 치명적 안전·환경·규제·제재·평판 장벽이 없음\"\n    mandatory: true\n    waiver_eligible: false   # a safety/regulatory showstopper is a completeness fact, not a judgment call\n  - id: sf-04\n    text: \"전략적 의도 범주(핵심 강화 / 인접 확장 / 변혁적 도전)를 선언하고, 해당 범주의 위험 감수 수준을 후원 임원이 인지했음을 확인함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: sf-05\n    text: \"지명된 경영진 후원자 — 임원 1인이 다음 게이트까지 이 기회를 책임지고 초기 예산을 통제함\"\n    mandatory: true\n    waiver_eligible: true\n  # Part 2 — should-meet rated criteria (0-10, weighted; scored and recorded)\n  - id: sf-06\n    text: \"예비 시장 매력도를 점수화해 기록하고, 점수 합계가 선언된 의도 범주에 정한 통과 기준을 충족함(이 게이트에서는 문헌·자료 조사만 허용)\"\n    mandatory: true\n    waiver_eligible: true\n  - id: sf-07\n    text: \"승리 근거(right-to-win) 가설을 점수화해 기록함 — 일반 신규 진입자에게 없는, 당사가 가진 구체적 우위(자산, 역량, 채널, 브랜드, 데이터, 라이선스)를 하나 이상 설명할 수 있음\"\n    mandatory: true\n    waiver_eligible: true\n  - id: sf-08\n    text: \"시너지 논거를 점수화해 기록함 — 기존 사업(채널, 공장, 기술, 고객 기반)과의 시너지 중 단독 가치를 넘는 것이 식별됨\"\n    mandatory: true\n    waiver_eligible: true\n  - id: sf-09\n    text: \"역량 적합성 격차 서술을 점수화해 기록함 — 필요 역량과 현재 역량을 평가하고, 중대한 격차마다 확보 방안 후보(자체 구축 / 제휴 / 인수)를 명시함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: sf-10\n    text: \"예비 실현 가능성을 점수화해 기록함 — 넘을 수 없는 기술·운영상 장애물이 알려져 있지 않고, 대략의 시장 출시 소요 기간이 선언된 의도 범주에 비추어 수용 가능함\"\n    mandatory: true\n    waiver_eligible: true\n  - id: sf-11\n    text: \"보상 대비 위험 규모를 점수화해 기록함 — 예비 기회 규모(size of the prize)가 해당 범주의 기준에 비추어 투입 노력과 위험 대비 의미 있는 수준임\"\n    mandatory: true\n    waiver_eligible: true\n  - id: sf-12\n    text: \"선택지 규율 — 제안이 목표 달성을 위한 둘 이상의 경로 중 하나이며, 비교용으로 최소 대응(do-minimum)·현상 유지 기준안이 기록됨\"\n    mandatory: true\n    waiver_eligible: true\n\nlegal_basis:\n  - \"ADR-0051 (workflow gap closure — strategic fit at first screen)\"\n  - \"procedures/_shared/brownfield-screening/schema.yaml step 2, procedures/_shared/greenfield-screening/schema.yaml step 1\"\n  - \"Cooper Stage-Gate Gate 1 (Idea Screen) knock-out + scorecard design — Stage-Gate Institute\"\n  - \"HM Treasury Green Book Five Case Model — Strategic Outline Case (strategic filter precedes full appraisal)\"\n"
   },
   "chk-target-screening-checklist": {
     "id": "chk-target-screening-checklist",
@@ -1479,7 +1479,7 @@ export const LIBRARY_CONTENT: Record<string, LibraryDocContent> = {
     "file": "procedures/_shared/entity-establishment-execution/schema.yaml",
     "gate": "S11",
     "lang": "ko",
-    "content": "schema_version: \"1.0\"\nprocedure_id: shared-entity-establishment-execution\ntitle: \"Entity Establishment Execution\"\nscope: shared\nlevel: entity\nversion: \"1.1.0\"\nstatus: active\napplicability: conditional\n# origin in {internal, joint} (ADR-0047 origin axis) — post-approval execution\n# after Entity IC. The is_null guard is THE deliberate fail-closed exception\n# direction: everywhere else an unassessed routing var APPLIES the step, but\n# firing entity formation for an UNCLASSIFIED project is wrong in the other\n# direction — with no live classification row the predicate evaluates FALSE\n# (skip), and the companion kill criterion\n# origin_classification_missing_at_entity_ic_exit (action: halt) blocks Entity\n# IC exit until the classification exists, so this skip is never silent.\n# Evaluated by db/lib/applies-when.ts (PR-5a).\napplies_when:\n  op: \"all_of\"\n  of:\n    - { op: \"in\", var: \"project.origin\", values: [\"internal\", \"joint\"] }\n    - { op: \"none_of\", of: [{ op: \"is_null\", var: \"project.origin\" }] }\nworkflow_type: core\ngate: \"Entity IC\"\n\n# Execution-phase procedure (after entity_ic_decision = approved), NOT a review\n# gate: no RAG grade is produced here. It exists because an internal or joint\n# venture needs formation, IP-assignment, and people-transfer steps that no\n# acquisition-shaped procedure provides (ADR-0051 gap: internal origin absent).\n\nsteps:\n  - id: 1\n    gate: \"Entity IC\"\n    agent_key: legal-counsel\n    skill_key: legal-due-diligence\n    output_type: formation_readiness_check\n    description: >\n      Formation readiness per `checklists/entity-formation-checklist.yaml`\n      pre-incorporation items (ef-01..ef-04) — jurisdiction/entity type with\n      documented tax/regulatory rationale, name and trademark clearance,\n      share structure and directors/officers, parent board/GM resolutions\n      authorizing formation, funding, and IP contribution. Nothing files\n      until the readiness check confirms every pre-incorporation item.\n  - id: 2\n    gate: \"Entity IC\"\n    agent_key: legal-counsel\n    skill_key: k-law\n    output_type: statutory_filing_record\n    description: >\n      Charter filed, registered capital paid in, organizational documents\n      executed, statutory registrations (tax, employer, licenses,\n      foreign-investment filings), banking/insurance/audit opened, statutory\n      books established — per chk-entity-formation formation-and-legal-wiring\n      items. Where a company split (물적분할/인적분할) is the route: Commercial\n      Act art. 527-2 shareholders' special resolution and art. 527-5\n      creditor-protection procedure (individual notice + public notice,\n      >=1-month objection window) — verify against the current KLRI statute\n      text before enforcement use.\n  - id: 3\n    gate: \"Entity IC\"\n    agent_key: legal-counsel\n    skill_key: certification-transferability\n    output_type: certification_transferability_check\n    description: >\n      Permits and certifications for the NEW entity classified as\n      transfer / consent-required / re-issue — a permit lets you operate, a\n      certification lets you sell (boundary #5); the classification feeds the\n      compliance calendar. Confirms against the issuing body's own rules;\n      inference disallowed.\n  - id: 4\n    gate: \"Entity IC\"\n    agent_key: hr-integration-agent\n    skill_key: org-readiness-assessment\n    output_type: people_transfer_record\n    description: >\n      People transfer into the entity — new employment agreements + PIIA per\n      employee/contractor, secondment or transfer per applicable consent\n      rules. Korea: employment succession on business transfer (영업양도) is\n      judicial doctrine (Supreme Court 2000다8448 line), not statute — the\n      individual-consent path is the safe practice; verify with counsel\n      before enforcement use.\n  - id: 5\n    gate: \"Entity IC\"\n    agent_key: process-governance-manager\n    skill_key: stage-gate-governance\n    output_type: gate_pass_record\n    description: >\n      Completion confirm — every chk-entity-formation item evidenced in the\n      entity data room, IP assignment chain closed (parent background IP +\n      team work, written assignment/license), governance baseline set (first\n      board minutes, delegated-authority matrix, compliance calendar). For\n      joint origin additionally verify the JV addendum items (ef-13.. :\n      board 5-9 with deadlock design, reserved matters, deadlock ladder,\n      exit clauses, one-voice management, firewall where parents compete) —\n      cross-ref the `jv-structuring` skill, which owns the how.\n\nkill_criteria:\n  - condition: ip_assignment_chain_incomplete_at_establishment\n    action: halt   # no waiver — title integrity is a completeness fact, not a judgment call\n  - condition: employment_transfer_without_consent_determination\n    action: escalate_to_risk_officer\n  - condition: origin_classification_missing_at_entity_ic_exit\n    action: halt   # conditional procedure cannot route without the origin axis (ADR-0047); with PR-5a routing live, an unclassified project skips the procedure (is_null guard) and halts HERE — never a silent skip\n\nlegal_basis:\n  - \"Group New Business Review Policy §2.3\"\n  - \"ADR-0047 (origin classification axis — internal/joint ventures need an establishment path acquisition steps cannot provide)\"\n  - \"ADR-0051 (workflow gap closure — internal-origin chain step)\"\n  - \"checklists/entity-formation-checklist.yaml (chk-entity-formation)\"\n  - \"Korean Commercial Act arts. 527-2/527-5 (company split — special resolution + creditor-protection procedure; verify against current KLRI text before enforcement use)\"\n  - \"docs/research/venture-governance-best-practice.md Area B.3/B.4 (formation + JV governance synthesis)\"\n\nowner_agent: process-governance-manager\nlast_reviewed: \"2026-08-23\"\n"
+    "content": "schema_version: \"1.0\"\nprocedure_id: shared-entity-establishment-execution\ntitle: \"Entity Establishment Execution\"\nscope: shared\nlevel: entity\nversion: \"1.1.1\"\nstatus: active\napplicability: conditional\n# origin in {internal, joint} (ADR-0047 origin axis) — post-approval execution\n# after Entity IC. The is_null guard is THE deliberate fail-closed exception\n# direction: everywhere else an unassessed routing var APPLIES the step, but\n# firing entity formation for an UNCLASSIFIED project is wrong in the other\n# direction — with no live classification row the predicate evaluates FALSE\n# (skip), and the companion kill criterion\n# origin_classification_missing_at_entity_ic_exit (action: halt) blocks Entity\n# IC exit until the classification exists, so this skip is never silent.\n# Evaluated by db/lib/applies-when.ts (PR-5a).\napplies_when:\n  op: \"all_of\"\n  of:\n    - { op: \"in\", var: \"project.origin\", values: [\"internal\", \"joint\"] }\n    - { op: \"none_of\", of: [{ op: \"is_null\", var: \"project.origin\" }] }\nworkflow_type: core\ngate: \"Entity IC\"\n\n# Execution-phase procedure (after entity_ic_decision = approved), NOT a review\n# gate: no RAG grade is produced here. It exists because an internal or joint\n# venture needs formation, IP-assignment, and people-transfer steps that no\n# acquisition-shaped procedure provides (ADR-0051 gap: internal origin absent).\n\nsteps:\n  - id: 1\n    gate: \"Entity IC\"\n    agent_key: legal-counsel\n    skill_key: legal-due-diligence\n    output_type: formation_readiness_check\n    description: >\n      Formation readiness per `checklists/entity-formation-checklist.yaml`\n      pre-incorporation items (ef-01..ef-04) — jurisdiction/entity type with\n      documented tax/regulatory rationale, name and trademark clearance,\n      share structure and directors/officers, parent board/GM resolutions\n      authorizing formation, funding, and IP contribution. Nothing files\n      until the readiness check confirms every pre-incorporation item.\n  - id: 2\n    gate: \"Entity IC\"\n    agent_key: legal-counsel\n    skill_key: k-law\n    output_type: statutory_filing_record\n    description: >\n      Charter filed, registered capital paid in, organizational documents\n      executed, statutory registrations (tax, employer, licenses,\n      foreign-investment filings), banking/insurance/audit opened, statutory\n      books established — per chk-entity-formation formation-and-legal-wiring\n      items. Where a company split (물적분할/인적분할) is the route: Commercial\n      Act art. 530-3 shareholders' special resolution approving the split\n      plan or split-merger contract, and the creditor-protection procedure\n      (individual notice + public notice, >=1-month objection window):\n      art. 530-11(2) for a split-merger and art. 530-9(2)/(4) for a simple\n      split that excludes joint liability, both applying art. 527-5 mutatis\n      mutandis. Verify against the current KLRI statute text before\n      enforcement use (verified 2026-10-13 via the Ministry of Government\n      Legislation Open API, law MST 273629).\n  - id: 3\n    gate: \"Entity IC\"\n    agent_key: legal-counsel\n    skill_key: certification-transferability\n    output_type: certification_transferability_check\n    description: >\n      Permits and certifications for the NEW entity classified as\n      transfer / consent-required / re-issue — a permit lets you operate, a\n      certification lets you sell (boundary #5); the classification feeds the\n      compliance calendar. Confirms against the issuing body's own rules;\n      inference disallowed.\n  - id: 4\n    gate: \"Entity IC\"\n    agent_key: hr-integration-agent\n    skill_key: org-readiness-assessment\n    output_type: people_transfer_record\n    description: >\n      People transfer into the entity — new employment agreements + PIIA per\n      employee/contractor, secondment or transfer per applicable consent\n      rules. Korea: employment succession on business transfer (영업양도) is\n      judicial doctrine (Supreme Court 2000다8448 line), not statute — the\n      individual-consent path is the safe practice; verify with counsel\n      before enforcement use.\n  - id: 5\n    gate: \"Entity IC\"\n    agent_key: process-governance-manager\n    skill_key: stage-gate-governance\n    output_type: gate_pass_record\n    description: >\n      Completion confirm — every chk-entity-formation item evidenced in the\n      entity data room, IP assignment chain closed (parent background IP +\n      team work, written assignment/license), governance baseline set (first\n      board minutes, delegated-authority matrix, compliance calendar). For\n      joint origin additionally verify the JV addendum items (ef-13.. :\n      board 5-9 with deadlock design, reserved matters, deadlock ladder,\n      exit clauses, one-voice management, firewall where parents compete) —\n      cross-ref the `jv-structuring` skill, which owns the how.\n\nkill_criteria:\n  - condition: ip_assignment_chain_incomplete_at_establishment\n    action: halt   # no waiver — title integrity is a completeness fact, not a judgment call\n  - condition: employment_transfer_without_consent_determination\n    action: escalate_to_risk_officer\n  - condition: origin_classification_missing_at_entity_ic_exit\n    action: halt   # conditional procedure cannot route without the origin axis (ADR-0047); with PR-5a routing live, an unclassified project skips the procedure (is_null guard) and halts HERE — never a silent skip\n\nlegal_basis:\n  - \"Group New Business Review Policy §2.3\"\n  - \"ADR-0047 (origin classification axis — internal/joint ventures need an establishment path acquisition steps cannot provide)\"\n  - \"ADR-0051 (workflow gap closure — internal-origin chain step)\"\n  - \"checklists/entity-formation-checklist.yaml (chk-entity-formation)\"\n  - \"Korean Commercial Act arts. 530-3, 530-9(2)/(4), 530-11(2) and 527-5 (company split — special resolution + creditor-protection procedure; verified 2026-10-13 via the Ministry of Government Legislation Open API, law MST 273629; confirm against the current KLRI text before enforcement use)\"\n  - \"docs/research/venture-governance-best-practice.md Area B.3/B.4 (formation + JV governance synthesis)\"\n\nowner_agent: process-governance-manager\nlast_reviewed: \"2026-08-23\"\n"
   },
   "proc-jv-lifecycle-governance": {
     "id": "proc-jv-lifecycle-governance",
@@ -2410,133 +2410,133 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
   "chk-entity-formation-checklist": [
     {
       "id": "ef-01",
-      "text": "Jurisdiction and entity type selected with the tax/regulatory rationale documented and approved",
+      "text": "설립 관할과 설립 법인 형태를 선정하고, 세무·규제 근거를 문서화해 승인받음",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ef-02",
-      "text": "Name availability cleared with the registry and preliminary trademark clearance completed",
+      "text": "등기소에서 상호 사용 가능 여부를 확인하고 상표 사전 조사를 마침",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ef-03",
-      "text": "Share structure and parent/founder allocations fixed; initial directors and officers identified",
+      "text": "주식 구조와 모회사·창업자별 배분을 확정하고, 최초 이사·임원을 정함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ef-04",
-      "text": "Originating parent's internal approvals obtained — board/GM resolution authorizing formation, funding, and IP contribution",
+      "text": "설립을 주도하는 모회사의 내부 승인을 받음 — 설립, 출자·자금 지원, 지식재산 출연을 승인하는 이사회 또는 주주총회 결의",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ef-05",
-      "text": "Charter/articles filed, registered address and agent appointed, registered capital paid in",
+      "text": "정관을 작성(필요 시 공증)하고 설립등기를 마치며, 본점 소재지와 (해당 관할에서 요구 시) 등록 대리인(registered agent)을 정하고, 자본금 납입을 마침",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ef-06",
-      "text": "Organizational documents executed — bylaws, incorporator action, board consents, director indemnification agreements",
+      "text": "조직 문서를 체결함 — 내부 규정(bylaws), 발기인 결의(또는 발기인 서면 결정), 이사회 결의서(서면 동의), 이사 보상(indemnification) 계약",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ef-07",
-      "text": "IP assignment into the entity complete — all pre-formation IP (parent background IP and originating team's work) assigned or licensed in writing; every employee and contractor signs a PIIA agreement",
+      "text": "법인으로의 지식재산 이전 완료 — 설립 전 지식재산 일체(모회사의 기존 지식재산과 설립 주도팀의 성과물)를 서면으로 양도 또는 사용허락(라이선스)하고, 모든 임직원과 외주 인력이 지식재산 양도 약정(PIIA)에 서명함",
       "mandatory": true,
       "waiver_eligible": false
     },
     {
       "id": "ef-08",
-      "text": "People transfer executed — new employment agreements + PIIAs signed; where staff come from the parent, a secondment or transfer agreement per applicable consent rules (Korea: business-transfer succession is judicial doctrine — 영업양도 — individual consent is the safe path; verify with counsel)",
+      "text": "인력 이전 완료 — 신규 근로계약서와 PIIA에 서명함; 모회사에서 인력이 오는 경우 적용되는 동의 규칙에 따라 전출(겸직·사외 근무) 또는 전적 계약을 체결함 (한국: 영업양도에 따른 근로관계 승계는 판례 법리 — 영업양도 — 개별 동의를 받는 것이 안전한 경로이며, 법률 자문으로 확인)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ef-09",
-      "text": "Intra-group agreements executed — intra-group services agreement, IP/brand license, supply or distribution agreements, cost-sharing/transfer-pricing policy documented",
+      "text": "그룹 내 계약을 체결함 — 그룹 내 용역 계약, 지식재산·브랜드 사용 계약, 공급·유통 계약, 비용 분담·이전가격 정책 문서화",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ef-10",
-      "text": "Statutory registrations completed — tax IDs, employer registrations, business licenses, sector permits; foreign-investment filings where cross-border",
+      "text": "법정 등록을 마침 — 세무 등록번호, 사업주(사용자) 등록, 영업 인허가, 업종별 허가; 국경 간 투자인 경우 외국인투자 신고",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ef-11",
-      "text": "Banking, insurance, and accounting/audit arrangements opened; statutory books and registers established",
+      "text": "은행 계좌, 보험, 회계·감사 체계를 갖추고 법정 장부와 명부를 구비함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ef-12",
-      "text": "Governance baseline set — first board minutes, delegated-authority matrix, compliance calendar, and a data room containing all of the above",
+      "text": "지배구조 기본 틀을 갖춤 — 첫 이사회 의사록, 위임전결 기준표, 컴플라이언스 일정표, 위 모든 문서를 담은 자료실(data room)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ef-13",
-      "text": "Joint-origin only: board of 5-9 members with equal seats in a 50/50 and deadlock design (independent chair, casting vote, or rotating chair) agreed at formation",
+      "text": "합작 설립(joint) 한정: 50:50 지분에서 동수 의석의 이사 5~9명으로 이사회를 구성하고, 교착 해소 설계(독립 의장, 결정투표권, 의장 윤번제 등)를 설립 시점에 합의함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ef-14",
-      "text": "Joint-origin only: reserved-matters list requiring mutual consent — narrow, category-based, threshold-driven (strategy/scope, annual plan/budget, major capex/financing, CEO/CFO appointment, material related-party transactions, constitutional changes, ownership economics, dissolution)",
+      "text": "합작 설립 한정: 상호 동의가 필요한 주요 의결 사항 목록 — 범주별·기준액 기준으로 좁게 정함(전략·사업 범위, 연간 계획·예산, 대규모 투자·자금조달, 대표이사·재무책임자 선임, 중요 특수관계인 거래, 정관 변경, 지분 경제성, 해산)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ef-15",
-      "text": "Joint-origin only: deadlock ladder with binding deadlines — management reconciliation, board decision memo, shareholder principals, cooling-off/standstill, expert determination for defined factual/valuation issues, mediation, final remedy",
+      "text": "합작 설립 한정: 기한이 구속력을 갖는 교착 해소 단계 — 경영진 조정, 이사회 결정 메모, 주주 대표 협의, 냉각기간·현상 유지(standstill), 사실·가치평가 쟁점에 대한 전문가 결정, 조정(mediation), 최종 구제 수단",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ef-16",
-      "text": "Joint-origin only: exit clauses agreed — put/call with pre-agreed valuation formula, ROFR/ROFO and tag/drag rights, termination events, completion mechanics",
+      "text": "합작 설립 한정: 출구 조항을 합의함 — 사전 합의된 가치평가 산식에 따른 풋/콜 옵션, 우선매수권(ROFR)·우선협상권(ROFO), 동반매각참여권(tag)·동반매도청구권(drag), 종료 사유, 종결 절차",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ef-17",
-      "text": "Joint-origin only: one-voice management confirmed — direction to the venture only via board decisions and the CEO, with a written delegated-authority matrix (variance bands, emergency limits)",
+      "text": "합작 설립 한정: 단일 창구 경영을 확인함 — 합작법인에 대한 지시는 이사회 결정과 대표이사를 통해서만 하고, 서면 위임전결 기준표(허용 편차 범위, 긴급 한도)를 둠",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ef-18",
-      "text": "Joint-origin only: firewall/clean-team protocols established where the parents compete in adjacent markets",
+      "text": "합작 설립 한정: 모회사들이 인접 시장에서 경쟁하는 경우 정보 차단 벽(firewall)·클린팀 절차를 수립함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ef-19",
-      "text": "Korea note (only where a company split is the formation route): a split (물적분할/인적분할) requires a shareholders' special resolution and the creditor-protection procedure — individual notice to known creditors plus public notice with an objection window of at least one month (Commercial Act arts. 527-2/527-5). Verify against the current KLRI statute text before enforcement use.",
+      "text": "한국 참고(회사 분할을 설립 경로로 쓰는 경우에 한함): 분할(물적분할/인적분할)에는 분할계획서에 대한 주주총회 특별결의가 필요함(상법 제530조의3). 분할합병인 경우(상법 제530조의11 제2항)와 연대책임을 배제하는 단순분할인 경우(상법 제530조의9 제2항·제4항)에는 채권자 보호 절차가 필요함 — 알고 있는 채권자에 대한 개별 최고와 1개월 이상의 이의제출 기간을 둔 공고(두 경우 모두 상법 제527조의5 준용). 집행 근거로 쓰기 전에 국가법령정보센터의 최신 조문 원문으로 확인할 것(2026-10-13 법제처 Open API로 확인, 상법 MST 273629).",
       "mandatory": false,
       "waiver_eligible": true
     },
     {
       "id": "gx-01",
-      "text": "Greenfield only: capex tranche schedule bound to the project's capex_tranche rows and the S10 deal-structure release conditions, reconciled against the S8 adopted case capex; every gap recorded as a finding, none auto-fixed",
+      "text": "신규 사업(Green Field) 한정: 자본지출(capex) 분할 집행 일정을 프로젝트의 capex_tranche 행과 S10 딜 구조 집행 조건에 연결하고 S8 채택안 capex와 대사함; 차이는 모두 발견 사항으로 기록하고 자동 수정하지 않음",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "gx-02",
-      "text": "Greenfield only: ramp-up KPI targets (first revenue, utilisation, BEP month, revenue and EBITDA vs the S8 adopted case) set, with the S8 project business goals referenced as non-blocking evidence",
+      "text": "신규 사업 한정: 램프업 핵심 성과 목표(첫 매출, 가동률, 손익분기 도달 월, S8 채택안 대비 매출·EBITDA)를 정하고, S8 사업 목표는 차단 효력이 없는 근거로 참조함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "gx-03",
-      "text": "Greenfield only: execution baseline confirmed by one person (Entity IC owner or delegate) with a non-empty rationale; no agent confirmation",
+      "text": "신규 사업 한정: 실행 기준선을 한 사람(법인 투자심의위원회 책임자 또는 위임받은 자)이 비어 있지 않은 근거와 함께 확인함; 에이전트의 확인은 인정하지 않음",
       "mandatory": true,
       "waiver_eligible": false
     }
@@ -2650,67 +2650,67 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
   "chk-greenfield-feasibility-checklist": [
     {
       "id": "gf-01",
-      "text": "All candidate sites screened against mandatory infrastructure minimums (wastewater capacity checked before power)",
+      "text": "모든 후보지를 필수 인프라 최소 기준에 비추어 선별함(전력보다 폐수 처리 용량을 먼저 점검)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "gf-02",
-      "text": "Sites failing infrastructure minimums excluded from scoring, not merely penalized",
+      "text": "인프라 최소 기준에 미달한 후보지는 감점에 그치지 않고 점수화 대상에서 제외함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "gf-03",
-      "text": "Regional incentive NPV computed for each surviving candidate (discounted at deal WACC, net of expected clawback risk)",
+      "text": "남은 후보지마다 지역 인센티브 NPV를 산출함(딜 WACC로 할인하고 환수 위험 기대치를 차감)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "gf-04",
-      "text": "Permit critical path (DAG-derived, not single-permit lead time) computed for each surviving candidate",
+      "text": "남은 후보지마다 인허가 임계 경로를 산출함(단일 인허가 소요 기간이 아닌, 의존 관계 그래프(DAG)에서 도출)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "gf-05",
-      "text": "Partner dependency (if any) confirmed or site marked conditional",
+      "text": "파트너 의존성(있는 경우)을 확인하거나 해당 후보지를 조건부로 표시함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "gf-06",
-      "text": "Talent pipeline assessment completed (local university/vocational partnerships, regional labor-pool competition)",
+      "text": "인력 확보 가능성 평가를 마침(지역 대학·직업교육 기관 협력, 지역 노동시장 내 인력 경쟁)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "gf-07",
-      "text": "Community partnership assessment completed (local supplier development, resident acceptance history)",
+      "text": "지역사회 협력 평가를 마침(지역 협력업체 육성, 주민 수용 이력)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "gf-08",
-      "text": "Ramp-up curve reflects certification lead time — no revenue modeled before mandatory certifications are obtained",
+      "text": "램프업 곡선에 인증 소요 기간을 반영함 — 필수 인증을 받기 전에는 매출을 잡지 않음",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "gf-09",
-      "text": "Competitor capacity-expansion plans reviewed for pricing-assumption risk",
+      "text": "경쟁사 증설 계획을 검토해 가격 가정의 위험을 점검함",
       "mandatory": false,
       "waiver_eligible": true
     },
     {
       "id": "gf-10",
-      "text": "Real options / staged-investment structure considered as an alternative to a single lump-sum capex commitment",
+      "text": "단일 일시 투자 확약의 대안으로 실물옵션·단계별 투자 구조를 검토함",
       "mandatory": false,
       "waiver_eligible": true
     },
     {
       "id": "gf-11",
-      "text": "Investment vehicle structuring reviewed against all four ADR-0045 axes (tax structure, liability isolation, financing leverage, exit structure) — direct parent incorporation vs. a local holding subsidiary, not assumed by default",
+      "text": "설립 법인 형태 구조화(지주회사·SPV 포함)를 ADR-0045의 네 축(세무 구조, 책임 격리, 자금조달 레버리지, 엑시트 구조) 모두에 비추어 검토함 — 모회사 직접 설립과 현지 지주 자회사 설립을 기본값으로 정해 두지 않음",
       "mandatory": true,
       "waiver_eligible": true
     },
@@ -2926,43 +2926,43 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
   "chk-legal-regulatory-checklist": [
     {
       "id": "lr-01",
-      "text": "Applicable permit pathway identified and mapped as a DAG with critical-path lead time (permit-pathway-mapping)",
+      "text": "적용되는 인허가 경로를 파악해 임계 경로 소요 기간을 포함한 의존 관계 그래프(DAG)로 정리함 (permit-pathway-mapping)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "lr-02",
-      "text": "Certification requirements identified separately from permits, with transferability-on-change-of-control assessed for Brown Field (design's permit/certification separation rule)",
+      "text": "인증 요건을 인허가와 분리해 파악하고, 브라운필드(M&A)는 경영권 변경 시 인증 이전 가능성까지 평가함 (인허가·인증 분리 원칙)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "lr-03",
-      "text": "Applicable region profile(s) confirmed present and validated (region-profiles/_validate.ts) for every jurisdiction the deal touches",
+      "text": "딜이 닿는 모든 관할에 대해 해당 지역 프로필(region profile)이 있고 검증(region-profiles/_validate.ts)을 통과했음을 확인함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "lr-04",
-      "text": "Foreign investment screening trigger checked against the region profile's mandatory_filing_triggers",
+      "text": "외국인투자 심사 대상 여부를 지역 프로필의 필수 신고 요건(mandatory_filing_triggers)에 비추어 점검함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "lr-05",
-      "text": "Sanctions and anti-corruption screening run against all counterparties, not just the primary target",
+      "text": "제재·반부패 심사를 주 대상뿐 아니라 모든 거래 상대방에 대해 수행함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "lr-06",
-      "text": "Data transfer mechanism confirmed for any cross-border data flow the deal requires",
+      "text": "딜에 필요한 국경 간 데이터 흐름이 있으면 그 이전 수단(법적 근거)을 확인함",
       "mandatory": false,
       "waiver_eligible": true
     },
     {
       "id": "lr-07",
-      "text": "NDA/confidentiality review completed before any DD material is loaded into the system (design §4-9-1 rule: loading itself can be an NDA violation)",
+      "text": "DD 자료를 시스템에 올리기 전에 비밀유지계약(NDA)·비밀유지 검토를 마침 (설계 §4-9-1 규칙: 자료를 올리는 행위 자체가 NDA 위반일 수 있음)",
       "mandatory": true,
       "waiver_eligible": true
     }
@@ -2982,7 +2982,7 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
     },
     {
       "id": "ma-03",
-      "text": "건 점핑(gun-jumping) 금지를 인지함 — 승인 전 통합 조치를 하지 않음",
+      "text": "승인 전 이행 금지(건 점핑, gun-jumping) 의무를 인지함 — 심사 결과 통지(승인) 전 주식 취득 완료·통합 조치를 하지 않음",
       "mandatory": true,
       "waiver_eligible": true
     },
@@ -3278,55 +3278,55 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
   "chk-site-selection-checklist": [
     {
       "id": "ss-01",
-      "text": "Wastewater/effluent treatment capacity confirmed for every candidate site — checked before power, since its absence blocks expansion outright",
+      "text": "후보지마다 폐수·방류수 처리 용량을 확인함 — 부족하면 증설이 곧바로 막히므로 전력보다 먼저 점검",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ss-02",
-      "text": "Power supply capacity, connection lead time, and outage history obtained per candidate site",
+      "text": "후보지별 전력 공급 용량, 연결(인입) 소요 기간, 정전 이력을 확보함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ss-03",
-      "text": "Industrial water supply capacity and quality confirmed",
+      "text": "공업용수 공급 용량과 수질을 확인함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ss-04",
-      "text": "Road/logistics access assessed for heavy-vehicle entry and port/rail proximity",
+      "text": "대형 차량 진입 가능 여부와 항만·철도 인접성 등 도로·물류 접근성을 평가함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ss-05",
-      "text": "Regional incentive package identified and converted to NPV, on the same comparison table as infrastructure capex and logistics cost — not listed separately",
+      "text": "지역 인센티브 패키지를 파악해 순현재가치(NPV)로 환산하고, 인프라 투자비·물류비와 같은 비교표에 넣음 — 따로 나열하지 않음",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ss-06",
-      "text": "Incentive application/construction deadlines checked against the permit critical path — a missed deadline forfeits the incentive",
+      "text": "인센티브 신청·착공 기한을 인허가 임계 경로(critical path)와 대조함 — 기한을 놓치면 인센티브를 잃음",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ss-07",
-      "text": "Talent pipeline assessed (local institutions, available labor pool, competing employers)",
+      "text": "인력 확보 가능성을 평가함(지역 교육기관, 가용 노동력, 경쟁 고용주)",
       "mandatory": false,
       "waiver_eligible": true
     },
     {
       "id": "ss-08",
-      "text": "Community acceptance history reviewed (prior disputes, environmental conflict history) AND inter-regional resource disputes (e.g. upstream water-rights objections from a different jurisdiction than the site itself) — legally compliant sites still stall on either (pilot 005 finding F-2)",
+      "text": "지역사회 수용 이력(과거 분쟁, 환경 갈등 이력)과 지역 간 자원 분쟁(예: 부지와 다른 관할에서 제기하는 상류 수리권 이의)을 함께 검토함 — 법령을 지키는 부지라도 둘 중 어느 쪽으로든 지연될 수 있음 (파일럿 005 발견 사항 F-2)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "ss-09",
-      "text": "site_candidate scoring completed with a documented weighting rationale, not an unweighted list",
+      "text": "후보지(site_candidate) 점수화를 마치고 가중치 근거를 문서로 남김 — 가중치 없는 단순 나열은 불가",
       "mandatory": true,
       "waiver_eligible": true
     }
@@ -3334,73 +3334,73 @@ export const LIBRARY_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
   "chk-strategic-fit-screening-checklist": [
     {
       "id": "sf-01",
-      "text": "Strategic alignment cited by name — the opportunity advances at least one named objective of the current corporate/business-unit strategy, quoted or referenced by identifier (not 'aligns with strategy' in the abstract)",
+      "text": "전략 부합성을 명칭으로 인용함 — 현행 전사·사업부 전략의 명명된 목표 하나 이상을 식별자로 인용하거나 참조해, 그 목표를 이 기회가 진전시킴을 보임('전략에 부합한다'는 추상적 서술은 불가)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "sf-02",
-      "text": "Portfolio/hunt-zone fit — the opportunity falls within a pre-declared investment thesis area (hunt zone), or carries an explicit exception approval from the portfolio owner recorded before the screen concludes",
+      "text": "포트폴리오·투자 중점 영역(hunt zone) 적합성 — 사전에 선언된 투자 논제 영역 안에 있거나, 스크리닝이 끝나기 전에 포트폴리오 책임자의 예외 승인이 기록됨",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "sf-03",
-      "text": "No disqualifying constraint — no known fatal safety, environmental, regulatory, sanctions, or reputational barrier",
+      "text": "결격 사유 없음 — 알려진 치명적 안전·환경·규제·제재·평판 장벽이 없음",
       "mandatory": true,
       "waiver_eligible": false
     },
     {
       "id": "sf-04",
-      "text": "Strategic intent category declared (core-enhancement / adjacent-expansion / transformational bet) and that category's risk tolerance acknowledged by the sponsor",
+      "text": "전략적 의도 범주(핵심 강화 / 인접 확장 / 변혁적 도전)를 선언하고, 해당 범주의 위험 감수 수준을 후원 임원이 인지했음을 확인함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "sf-05",
-      "text": "Named executive sponsor — one named executive owns the opportunity through the next gate and controls the seed budget",
+      "text": "지명된 경영진 후원자 — 임원 1인이 다음 게이트까지 이 기회를 책임지고 초기 예산을 통제함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "sf-06",
-      "text": "Preliminary market attractiveness scored and recorded, with the scorecard total meeting the advance threshold set for the declared intent category (desk research only at this gate)",
+      "text": "예비 시장 매력도를 점수화해 기록하고, 점수 합계가 선언된 의도 범주에 정한 통과 기준을 충족함(이 게이트에서는 문헌·자료 조사만 허용)",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "sf-07",
-      "text": "Right-to-win hypothesis scored and recorded — at least one articulable advantage the company brings (asset, capability, channel, brand, data, license) that a generic entrant lacks",
+      "text": "승리 근거(right-to-win) 가설을 점수화해 기록함 — 일반 신규 진입자에게 없는, 당사가 가진 구체적 우위(자산, 역량, 채널, 브랜드, 데이터, 라이선스)를 하나 이상 설명할 수 있음",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "sf-08",
-      "text": "Synergy thesis scored and recorded — identifiable synergies with existing operations (channels, plants, technology, customer base) beyond standalone value",
+      "text": "시너지 논거를 점수화해 기록함 — 기존 사업(채널, 공장, 기술, 고객 기반)과의 시너지 중 단독 가치를 넘는 것이 식별됨",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "sf-09",
-      "text": "Capability-fit gap statement scored and recorded — required vs. current capabilities assessed, every material gap named with a plausible source (build / partner / buy)",
+      "text": "역량 적합성 격차 서술을 점수화해 기록함 — 필요 역량과 현재 역량을 평가하고, 중대한 격차마다 확보 방안 후보(자체 구축 / 제휴 / 인수)를 명시함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "sf-10",
-      "text": "Preliminary feasibility scored and recorded — no known insurmountable technical or operational obstacle, and rough time-to-market acceptable for the declared intent category",
+      "text": "예비 실현 가능성을 점수화해 기록함 — 넘을 수 없는 기술·운영상 장애물이 알려져 있지 않고, 대략의 시장 출시 소요 기간이 선언된 의도 범주에 비추어 수용 가능함",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "sf-11",
-      "text": "Reward-vs-risk scale scored and recorded — preliminary size of the prize is material relative to effort and risk, per the category's thresholds",
+      "text": "보상 대비 위험 규모를 점수화해 기록함 — 예비 기회 규모(size of the prize)가 해당 범주의 기준에 비추어 투입 노력과 위험 대비 의미 있는 수준임",
       "mandatory": true,
       "waiver_eligible": true
     },
     {
       "id": "sf-12",
-      "text": "Options discipline — the proposal is one of at least two routes to the stated objective, with a do-minimum/status-quo baseline recorded for comparison",
+      "text": "선택지 규율 — 제안이 목표 달성을 위한 둘 이상의 경로 중 하나이며, 비교용으로 최소 대응(do-minimum)·현상 유지 기준안이 기록됨",
       "mandatory": true,
       "waiver_eligible": true
     }
@@ -5731,9 +5731,9 @@ export const LIBRARY_BROWNFIELD_WORKSPACE_OVERLAY: unknown = {
   "title": "Brownfield S9 workspace scope by sub-track (deal shape)",
   "owner_agent": "process-governance-manager",
   "maintainer": "process-governance-manager",
-  "version": "1.1.0",
+  "version": "1.2.2",
   "status": "proposed",
-  "decision_record": "DEC-20261012-01",
+  "decision_record": "DEC-20261013-03",
   "track": "brownfield",
   "procedure_id": "shared-brownfield-dd",
   "baseline_sub_track": "m_and_a",
@@ -5784,8 +5784,8 @@ export const LIBRARY_BROWNFIELD_WORKSPACE_OVERLAY: unknown = {
       "X": 0,
       "N": 6,
       "judgeable": 71,
-      "extras_judgeable": 0,
-      "total_judgeable": 71
+      "extras_judgeable": 5,
+      "total_judgeable": 76
     },
     "minority_investment": {
       "A": 56,
@@ -5793,8 +5793,8 @@ export const LIBRARY_BROWNFIELD_WORKSPACE_OVERLAY: unknown = {
       "X": 0,
       "N": 6,
       "judgeable": 71,
-      "extras_judgeable": 16,
-      "total_judgeable": 87
+      "extras_judgeable": 19,
+      "total_judgeable": 90
     },
     "partnership": {
       "A": 22,
@@ -5820,8 +5820,8 @@ export const LIBRARY_BROWNFIELD_WORKSPACE_OVERLAY: unknown = {
       "X": 0,
       "N": 6,
       "judgeable": 71,
-      "extras_judgeable": 0,
-      "total_judgeable": 71
+      "extras_judgeable": 4,
+      "total_judgeable": 75
     }
   },
   "extra_checklists": {
@@ -5843,11 +5843,110 @@ export const LIBRARY_BROWNFIELD_WORKSPACE_OVERLAY: unknown = {
     },
     "chk-ma-special-topics-checklist": {
       "attached_to": [
-        "m_and_a"
+        "m_and_a",
+        "strategic_investment",
+        "minority_investment",
+        "corporate_venture"
       ],
       "sub_tracks": {
         "m_and_a": {
           "excluded": []
+        },
+        "strategic_investment": {
+          "excluded": [
+            {
+              "ids": [
+                "ma-04",
+                "ma-05",
+                "ma-06",
+                "ma-07",
+                "ma-08",
+                "ma-09",
+                "ma-10",
+                "ma-11",
+                "ma-12"
+              ],
+              "na_reason": "이 사안은 경영권 인수(M&A)에 해당하는 항목입니다. 이 거래 형태에는 기업결합 신고 관련 항목(ma-01~03)만 적용하며, 외국인투자 심사는 거래 형태 점검표의 min-05에서 다룹니다."
+            }
+          ],
+          "readings": [
+            {
+              "ids": [
+                "ma-01"
+              ],
+              "reading": "신고 요건(ma-02)이 성립하거나 같은 시장·앞뒤 단계에서 사업이 겹칠 때 관련시장 획정과 HHI를 산정합니다. 공동 소유 효과(투자자가 이미 경쟁사 지분을 가진 경우)를 포함합니다. 신고 요건이 없고 겹침도 없으면 그 근거를 기록하고 판정합니다. 신고 의무와 무관하게, 투자 대상이 경쟁사이면 경쟁상 민감한 정보 교환은 부당한 공동행위 위험이 있으므로 정보 차단 조치를 기록합니다."
+            },
+            {
+              "ids": [
+                "ma-03"
+              ],
+              "reading": "승인 전 이행 금지가 적용되는 사전 신고 의무가 있는 관할이 하나라도 있으면, 승인 전에 주식 취득 완료(대금 지급·명의 이전), 이사 지명권·거부권 행사, 경쟁상 민감한 정보 교환, 통합 조치를 하지 않음을 확인합니다. 신고 의무가 없거나 사후 신고 대상이라는 ma-02 판정이 있으면 그 근거를 인용해 판정합니다. 신고 의무와 무관하게, 투자 대상이 경쟁사이면 경쟁상 민감한 정보 교환은 부당한 공동행위 위험이 있으므로 정보 차단 조치를 기록합니다."
+            }
+          ]
+        },
+        "minority_investment": {
+          "excluded": [
+            {
+              "ids": [
+                "ma-04",
+                "ma-05",
+                "ma-06",
+                "ma-07",
+                "ma-08",
+                "ma-09",
+                "ma-10",
+                "ma-11",
+                "ma-12"
+              ],
+              "na_reason": "이 사안은 경영권 인수(M&A)에 해당하는 항목입니다. 이 거래 형태에는 기업결합 신고 관련 항목(ma-01~03)만 적용하며, 외국인투자 심사는 거래 형태 점검표의 min-05에서 다룹니다."
+            }
+          ],
+          "readings": [
+            {
+              "ids": [
+                "ma-01"
+              ],
+              "reading": "신고 요건(ma-02)이 성립하거나 같은 시장·앞뒤 단계에서 사업이 겹칠 때 관련시장 획정과 HHI를 산정합니다. 공동 소유 효과(투자자가 이미 경쟁사 지분을 가진 경우)를 포함합니다. 신고 요건이 없고 겹침도 없으면 그 근거를 기록하고 판정합니다. 신고 의무와 무관하게, 투자 대상이 경쟁사이면 경쟁상 민감한 정보 교환은 부당한 공동행위 위험이 있으므로 정보 차단 조치를 기록합니다."
+            },
+            {
+              "ids": [
+                "ma-03"
+              ],
+              "reading": "승인 전 이행 금지가 적용되는 사전 신고 의무가 있는 관할이 하나라도 있으면, 승인 전에 주식 취득 완료(대금 지급·명의 이전), 이사 지명권·거부권 행사, 경쟁상 민감한 정보 교환, 통합 조치를 하지 않음을 확인합니다. 신고 의무가 없거나 사후 신고 대상이라는 ma-02 판정이 있으면 그 근거를 인용해 판정합니다. 신고 의무와 무관하게, 투자 대상이 경쟁사이면 경쟁상 민감한 정보 교환은 부당한 공동행위 위험이 있으므로 정보 차단 조치를 기록합니다."
+            }
+          ]
+        },
+        "corporate_venture": {
+          "excluded": [
+            {
+              "ids": [
+                "ma-04",
+                "ma-05",
+                "ma-06",
+                "ma-07",
+                "ma-08",
+                "ma-09",
+                "ma-10",
+                "ma-11",
+                "ma-12"
+              ],
+              "na_reason": "이 사안은 경영권 인수(M&A)에 해당하는 항목입니다. 이 거래 형태에는 기업결합 신고 관련 항목(ma-01~03)만 적용하며, 외국인투자 심사는 거래 형태 점검표의 min-05에서 다룹니다."
+            }
+          ],
+          "readings": [
+            {
+              "ids": [
+                "ma-01"
+              ],
+              "reading": "신고 요건(ma-02)이 성립하거나 투자 대상이 모회사 사업과 같은 시장·앞뒤 단계에서 겹칠 때만 관련시장 획정과 HHI를 산정합니다. 그 밖에는 겹침이 없다는 근거를 기록하고 판정합니다. 신고 의무와 무관하게, 투자 대상이 경쟁사이면 경쟁상 민감한 정보 교환은 부당한 공동행위 위험이 있으므로 정보 차단 조치를 기록합니다."
+            },
+            {
+              "ids": [
+                "ma-03"
+              ],
+              "reading": "승인 전 이행 금지가 적용되는 사전 신고 의무가 있는 관할이 있을 때만, 승인 전 주식 취득 완료·권리 행사·경쟁상 민감한 정보 교환을 하지 않음을 확인합니다. 신고 의무가 없거나 사후 신고 대상이라는 ma-02 판정이 있으면 그 근거를 인용해 판정합니다. 신고 의무와 무관하게, 투자 대상이 경쟁사이면 경쟁상 민감한 정보 교환은 부당한 공동행위 위험이 있으므로 정보 차단 조치를 기록합니다."
+            }
+          ]
         }
       },
       "approval": {
@@ -5855,6 +5954,11 @@ export const LIBRARY_BROWNFIELD_WORKSPACE_OVERLAY: unknown = {
         "approved_by": "user",
         "approved_at": "2026-10-12",
         "note": "approved in chat with the design"
+      },
+      "approval_2026_10_13": {
+        "approved_by": "user",
+        "approved_at": "2026-10-13",
+        "note": "user decision 2026-10-13 (DEC-20261013-03): attach merger-control and FDI items to these sub-tracks"
       }
     },
     "chk-rbd-technology-checklist": {
@@ -5915,7 +6019,9 @@ export const LIBRARY_BROWNFIELD_WORKSPACE_OVERLAY: unknown = {
       "attached_to": [
         "jv",
         "partnership",
-        "minority_investment"
+        "minority_investment",
+        "strategic_investment",
+        "corporate_venture"
       ],
       "sub_tracks": {
         "jv": {
@@ -6029,6 +6135,127 @@ export const LIBRARY_BROWNFIELD_WORKSPACE_OVERLAY: unknown = {
               "na_reason": "이 구간(합작법인(JV))은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 전략적 제휴(지분 없는 계약 제휴)입니다."
             }
           ]
+        },
+        "strategic_investment": {
+          "excluded": [
+            {
+              "section": "lic",
+              "ids": [
+                "lic-01",
+                "lic-02",
+                "lic-03",
+                "lic-04",
+                "lic-05",
+                "lic-06",
+                "lic-07",
+                "lic-08",
+                "lic-09"
+              ],
+              "na_reason": "이 구간(라이선스 도입)은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 전략적 투자입니다."
+            },
+            {
+              "section": "cdv",
+              "ids": [
+                "cdv-01",
+                "cdv-02",
+                "cdv-03",
+                "cdv-04",
+                "cdv-05",
+                "cdv-06"
+              ],
+              "na_reason": "이 구간(공동 개발)은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 전략적 투자입니다."
+            },
+            {
+              "section": "min",
+              "ids": [
+                "min-01",
+                "min-02",
+                "min-03"
+              ],
+              "na_reason": "소수 지분 투자의 권리 조건 항목 중 min-04(지분 동결·정보 차단)와 min-05(외국인투자 심사)만 이 거래 형태에 적용합니다. 나머지는 붙이지 않습니다."
+            },
+            {
+              "section": "jvd",
+              "ids": [
+                "jvd-01",
+                "jvd-02",
+                "jvd-03",
+                "jvd-04",
+                "jvd-05",
+                "jvd-06"
+              ],
+              "na_reason": "이 구간(합작법인(JV))은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 전략적 투자입니다."
+            }
+          ],
+          "readings": [
+            {
+              "ids": [
+                "min-04"
+              ],
+              "reading": "투자 대상이 경쟁사이거나 경쟁 관계(사업 겹침)가 있을 때 적용합니다. 소수 지분을 경쟁사에 투자할 때 경쟁상 민감한 정보 교환을 막는 주된 통제 수단이 정보 차단 조치입니다. 해당하지 않으면 그 근거를 기록하고 판정합니다."
+            }
+          ]
+        },
+        "corporate_venture": {
+          "excluded": [
+            {
+              "section": "lic",
+              "ids": [
+                "lic-01",
+                "lic-02",
+                "lic-03",
+                "lic-04",
+                "lic-05",
+                "lic-06",
+                "lic-07",
+                "lic-08",
+                "lic-09"
+              ],
+              "na_reason": "이 구간(라이선스 도입)은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 기업주도형 벤처캐피탈(CVC)입니다."
+            },
+            {
+              "section": "cdv",
+              "ids": [
+                "cdv-01",
+                "cdv-02",
+                "cdv-03",
+                "cdv-04",
+                "cdv-05",
+                "cdv-06"
+              ],
+              "na_reason": "이 구간(공동 개발)은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 기업주도형 벤처캐피탈(CVC)입니다."
+            },
+            {
+              "section": "min",
+              "ids": [
+                "min-01",
+                "min-02",
+                "min-03",
+                "min-04"
+              ],
+              "na_reason": "소수 지분 투자의 권리 조건 항목은 이 거래 형태에 붙이지 않습니다. 이 거래 형태에는 외국인투자 심사 항목(min-05)만 적용합니다."
+            },
+            {
+              "section": "jvd",
+              "ids": [
+                "jvd-01",
+                "jvd-02",
+                "jvd-03",
+                "jvd-04",
+                "jvd-05",
+                "jvd-06"
+              ],
+              "na_reason": "이 구간(합작법인(JV))은 다른 거래 형태에 속합니다. 이 프로젝트의 거래 형태는 기업주도형 벤처캐피탈(CVC)입니다."
+            }
+          ],
+          "readings": [
+            {
+              "ids": [
+                "min-05"
+              ],
+              "reading": "투자자 국적(외국 모회사·외국 출자자 포함)과 투자 대상 분야로 관할별로 판단합니다. 관할에 따라 소액·비지배 투자라도 국가핵심기술·첨단기술, 방위산업, 중요 기반 시설, 대량 민감 개인정보 분야이거나, 이사(관할에 따라 옵서버 포함) 지명권, 비공개 기술 정보 접근권, 주요 의사결정 참여권을 얻으면 심사 대상이 될 수 있습니다. 해외 대상에 투자하는 경우 해외 투자 규제(아웃바운드)도 확인합니다. 해당하지 않으면 그 근거를 기록하고 판정합니다."
+            }
+          ]
         }
       },
       "approval": {
@@ -6036,6 +6263,11 @@ export const LIBRARY_BROWNFIELD_WORKSPACE_OVERLAY: unknown = {
         "approved_by": "user",
         "approved_at": "2026-10-12",
         "note": "approved in chat with the design"
+      },
+      "approval_2026_10_13": {
+        "approved_by": "user",
+        "approved_at": "2026-10-13",
+        "note": "user decision 2026-10-13 (DEC-20261013-03): attach merger-control and FDI items to these sub-tracks"
       }
     }
   },

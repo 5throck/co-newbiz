@@ -4,45 +4,45 @@ title: "Site Selection Checklist (Green Field)"
 scope: shared
 enforceability: mixed
 owner_agent: greenfield-agent
-version: "1.1.0"
+version: "1.2.0"
 effective_from: "2026-08-20"
 gate: Pre-FS
 
 items:
   - id: ss-01
-    text: "Wastewater/effluent treatment capacity confirmed for every candidate site — checked before power, since its absence blocks expansion outright"
+    text: "후보지마다 폐수·방류수 처리 용량을 확인함 — 부족하면 증설이 곧바로 막히므로 전력보다 먼저 점검"
     mandatory: true
     waiver_eligible: true
   - id: ss-02
-    text: "Power supply capacity, connection lead time, and outage history obtained per candidate site"
+    text: "후보지별 전력 공급 용량, 연결(인입) 소요 기간, 정전 이력을 확보함"
     mandatory: true
     waiver_eligible: true
   - id: ss-03
-    text: "Industrial water supply capacity and quality confirmed"
+    text: "공업용수 공급 용량과 수질을 확인함"
     mandatory: true
     waiver_eligible: true
   - id: ss-04
-    text: "Road/logistics access assessed for heavy-vehicle entry and port/rail proximity"
+    text: "대형 차량 진입 가능 여부와 항만·철도 인접성 등 도로·물류 접근성을 평가함"
     mandatory: true
     waiver_eligible: true
   - id: ss-05
-    text: "Regional incentive package identified and converted to NPV, on the same comparison table as infrastructure capex and logistics cost — not listed separately"
+    text: "지역 인센티브 패키지를 파악해 순현재가치(NPV)로 환산하고, 인프라 투자비·물류비와 같은 비교표에 넣음 — 따로 나열하지 않음"
     mandatory: true
     waiver_eligible: true
   - id: ss-06
-    text: "Incentive application/construction deadlines checked against the permit critical path — a missed deadline forfeits the incentive"
+    text: "인센티브 신청·착공 기한을 인허가 임계 경로(critical path)와 대조함 — 기한을 놓치면 인센티브를 잃음"
     mandatory: true
     waiver_eligible: true
   - id: ss-07
-    text: "Talent pipeline assessed (local institutions, available labor pool, competing employers)"
+    text: "인력 확보 가능성을 평가함(지역 교육기관, 가용 노동력, 경쟁 고용주)"
     mandatory: false
     waiver_eligible: true
   - id: ss-08
-    text: "Community acceptance history reviewed (prior disputes, environmental conflict history) AND inter-regional resource disputes (e.g. upstream water-rights objections from a different jurisdiction than the site itself) — legally compliant sites still stall on either (pilot 005 finding F-2)"
+    text: "지역사회 수용 이력(과거 분쟁, 환경 갈등 이력)과 지역 간 자원 분쟁(예: 부지와 다른 관할에서 제기하는 상류 수리권 이의)을 함께 검토함 — 법령을 지키는 부지라도 둘 중 어느 쪽으로든 지연될 수 있음 (파일럿 005 발견 사항 F-2)"
     mandatory: true
     waiver_eligible: true
   - id: ss-09
-    text: "site_candidate scoring completed with a documented weighting rationale, not an unweighted list"
+    text: "후보지(site_candidate) 점수화를 마치고 가중치 근거를 문서로 남김 — 가중치 없는 단순 나열은 불가"
     mandatory: true
     waiver_eligible: true
 

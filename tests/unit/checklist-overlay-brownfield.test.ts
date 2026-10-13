@@ -65,8 +65,8 @@ describe("brownfield workspace scope overlay (real file)", () => {
 
   test("header", () => {
     const d = fresh();
-    expect([d.governance_doc_id, d.version, d.status, d.track, d.baseline_sub_track]).toEqual(["ovl-brownfield-workspace-scope", "1.1.0", "proposed", "brownfield", "m_and_a"]);
-    expect(d.decision_record).toBe("DEC-20261012-01");
+    expect([d.governance_doc_id, d.version, d.status, d.track, d.baseline_sub_track]).toEqual(["ovl-brownfield-workspace-scope", "1.2.2", "proposed", "brownfield", "m_and_a"]);
+    expect(d.decision_record).toBe("DEC-20261013-03");
     expect(Object.keys(d.sub_track_keys)).toEqual(ST);
     expect(Object.keys(d.codes)).toEqual(["A", "R", "X", "N"]);
     expect(d.steps).toBeUndefined();
@@ -96,7 +96,7 @@ describe("brownfield workspace scope overlay (real file)", () => {
 
   test("Y (workspace + extras) equals design section 7", () => {
     const d = fresh();
-    const y: Record<string, number> = { m_and_a: 102, jv: 93, strategic_investment: 71, minority_investment: 87, partnership: 78, rbd: 92, corporate_venture: 71 };
+    const y: Record<string, number> = { m_and_a: 102, jv: 93, strategic_investment: 76, minority_investment: 90, partnership: 78, rbd: 92, corporate_venture: 75 };
     for (const st of ST) {
       const c = counts(d, st);
       const extras = Object.values(keptExtras(d, st)).reduce((n, ids) => n + ids.length, 0);
@@ -130,8 +130,43 @@ describe("brownfield workspace scope overlay (real file)", () => {
     expect(keptExtras(d, "partnership")[ds].length).toBe(15);
     expect(keptExtras(d, "partnership")[pt]).not.toContain("pt-06");
     expect(keptExtras(d, "rbd")["chk-rbd-technology-checklist"].length).toBe(15);
-    expect(keptExtras(d, "strategic_investment")).toEqual({});
-    expect(keptExtras(d, "corporate_venture")).toEqual({});
+    // DEC-20261013-03: merger-control / FDI items only
+    const ma = "chk-ma-special-topics-checklist";
+    for (const st of ["strategic_investment", "corporate_venture"]) expect(keptExtras(d, st)).toEqual({ [ma]: ["ma-01", "ma-02", "ma-03"], [ds]: st === "strategic_investment" ? ["min-04", "min-05"] : ["min-05"] });
+    expect(keptExtras(d, "minority_investment")[ma]).toEqual(["ma-01", "ma-02", "ma-03"]);
+  });
+
+  test("extra R readings per sub-track (DEC-20261013-03)", () => {
+    const d = fresh();
+    const readIds = (cid: string, st: string) => (d.extra_checklists[cid].sub_tracks[st].readings ?? []).flatMap((r: any) => r.ids).sort();
+    const ma = "chk-ma-special-topics-checklist";
+    const ds = "chk-deal-shape-presigning-checklist";
+    expect(readIds(ma, "strategic_investment")).toEqual(["ma-01", "ma-03"]);
+    expect(readIds(ma, "minority_investment")).toEqual(["ma-01", "ma-03"]);
+    expect(readIds(ma, "corporate_venture")).toEqual(["ma-01", "ma-03"]);
+    expect(readIds(ds, "corporate_venture")).toEqual(["min-05"]);
+    expect(readIds(ds, "strategic_investment")).toEqual(["min-04"]);
+    expect(readIds(ds, "minority_investment")).toEqual([]);
+  });
+
+  test("validator rejects bad extra readings", () => {
+    const ma = "chk-ma-special-topics-checklist";
+    let d = fresh();
+    d.extra_checklists[ma].sub_tracks.corporate_venture.readings[0].reading = "";
+    expectError(d, "non-empty 'reading'");
+    d = fresh();
+    d.extra_checklists[ma].sub_tracks.corporate_venture.readings[0].ids = ["ma-07"];
+    expectError(d, "both excluded and given a reading");
+    d = fresh();
+    d.extra_checklists[ma].sub_tracks.corporate_venture.readings[0].ids = ["ma-99"];
+    expectError(d, "does not exist");
+    d = fresh();
+    d.extra_checklists[ma].sub_tracks.m_and_a.readings = [{ ids: ["ma-01"], reading: "x" }];
+    expectError(d, "byte-identical baseline");
+    d = fresh();
+    const bfc = "chk-brownfield-feasibility-checklist";
+    d.extra_checklists[bfc].sub_tracks.m_and_a.readings = [{ ids: ["bf-01"], reading: "x" }];
+    expectError(d, "binding items must be A");
   });
 
   test("every row and extra block carries the chat approval record (no invented reviewer)", () => {
@@ -141,6 +176,8 @@ describe("brownfield workspace scope overlay (real file)", () => {
     for (const b of Object.values(d.checklists) as any[])
       for (const r of b.items) expect(r.approval).toEqual(r.id === "fin-09" ? { ...rec, note: riskNote } : rec);
     for (const b of Object.values(d.extra_checklists) as any[]) expect(b.approval).toEqual(rec);
+    const rec13 = { approved_by: "user", approved_at: "2026-10-13", note: "user decision 2026-10-13 (DEC-20261013-03): attach merger-control and FDI items to these sub-tracks" };
+    for (const cid of ["chk-ma-special-topics-checklist", "chk-deal-shape-presigning-checklist"]) expect(d.extra_checklists[cid].approval_2026_10_13).toEqual(rec13);
   });
 
   test("user-facing text is Korean", () => {

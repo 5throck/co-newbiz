@@ -4,7 +4,7 @@ title: "Entity Formation Checklist (Internal / Joint Origin Execution)"
 scope: shared
 enforceability: mixed
 owner_agent: legal-counsel
-version: "1.1.0"
+version: "1.2.2"
 effective_from: "2026-08-22"
 gate: "Entity IC"
 
@@ -26,93 +26,93 @@ gate: "Entity IC"
 
 items:
   - id: ef-01
-    text: "Jurisdiction and entity type selected with the tax/regulatory rationale documented and approved"
+    text: "설립 관할과 설립 법인 형태를 선정하고, 세무·규제 근거를 문서화해 승인받음"
     mandatory: true
     waiver_eligible: true
   - id: ef-02
-    text: "Name availability cleared with the registry and preliminary trademark clearance completed"
+    text: "등기소에서 상호 사용 가능 여부를 확인하고 상표 사전 조사를 마침"
     mandatory: true
     waiver_eligible: true
   - id: ef-03
-    text: "Share structure and parent/founder allocations fixed; initial directors and officers identified"
+    text: "주식 구조와 모회사·창업자별 배분을 확정하고, 최초 이사·임원을 정함"
     mandatory: true
     waiver_eligible: true
   - id: ef-04
-    text: "Originating parent's internal approvals obtained — board/GM resolution authorizing formation, funding, and IP contribution"
+    text: "설립을 주도하는 모회사의 내부 승인을 받음 — 설립, 출자·자금 지원, 지식재산 출연을 승인하는 이사회 또는 주주총회 결의"
     mandatory: true
     waiver_eligible: true
   - id: ef-05
-    text: "Charter/articles filed, registered address and agent appointed, registered capital paid in"
+    text: "정관을 작성(필요 시 공증)하고 설립등기를 마치며, 본점 소재지와 (해당 관할에서 요구 시) 등록 대리인(registered agent)을 정하고, 자본금 납입을 마침"
     mandatory: true
     waiver_eligible: true
   - id: ef-06
-    text: "Organizational documents executed — bylaws, incorporator action, board consents, director indemnification agreements"
+    text: "조직 문서를 체결함 — 내부 규정(bylaws), 발기인 결의(또는 발기인 서면 결정), 이사회 결의서(서면 동의), 이사 보상(indemnification) 계약"
     mandatory: true
     waiver_eligible: true
   - id: ef-07
-    text: "IP assignment into the entity complete — all pre-formation IP (parent background IP and originating team's work) assigned or licensed in writing; every employee and contractor signs a PIIA agreement"
+    text: "법인으로의 지식재산 이전 완료 — 설립 전 지식재산 일체(모회사의 기존 지식재산과 설립 주도팀의 성과물)를 서면으로 양도 또는 사용허락(라이선스)하고, 모든 임직원과 외주 인력이 지식재산 양도 약정(PIIA)에 서명함"
     mandatory: true
     waiver_eligible: false   # title integrity is a completeness fact — a gap here is an unwaivable establishment blocker (kill criterion ip_assignment_chain_incomplete_at_establishment)
   - id: ef-08
-    text: "People transfer executed — new employment agreements + PIIAs signed; where staff come from the parent, a secondment or transfer agreement per applicable consent rules (Korea: business-transfer succession is judicial doctrine — 영업양도 — individual consent is the safe path; verify with counsel)"
+    text: "인력 이전 완료 — 신규 근로계약서와 PIIA에 서명함; 모회사에서 인력이 오는 경우 적용되는 동의 규칙에 따라 전출(겸직·사외 근무) 또는 전적 계약을 체결함 (한국: 영업양도에 따른 근로관계 승계는 판례 법리 — 영업양도 — 개별 동의를 받는 것이 안전한 경로이며, 법률 자문으로 확인)"
     mandatory: true
     waiver_eligible: true
   - id: ef-09
-    text: "Intra-group agreements executed — intra-group services agreement, IP/brand license, supply or distribution agreements, cost-sharing/transfer-pricing policy documented"
+    text: "그룹 내 계약을 체결함 — 그룹 내 용역 계약, 지식재산·브랜드 사용 계약, 공급·유통 계약, 비용 분담·이전가격 정책 문서화"
     mandatory: true
     waiver_eligible: true
   - id: ef-10
-    text: "Statutory registrations completed — tax IDs, employer registrations, business licenses, sector permits; foreign-investment filings where cross-border"
+    text: "법정 등록을 마침 — 세무 등록번호, 사업주(사용자) 등록, 영업 인허가, 업종별 허가; 국경 간 투자인 경우 외국인투자 신고"
     mandatory: true
     waiver_eligible: true
   - id: ef-11
-    text: "Banking, insurance, and accounting/audit arrangements opened; statutory books and registers established"
+    text: "은행 계좌, 보험, 회계·감사 체계를 갖추고 법정 장부와 명부를 구비함"
     mandatory: true
     waiver_eligible: true
   - id: ef-12
-    text: "Governance baseline set — first board minutes, delegated-authority matrix, compliance calendar, and a data room containing all of the above"
+    text: "지배구조 기본 틀을 갖춤 — 첫 이사회 의사록, 위임전결 기준표, 컴플라이언스 일정표, 위 모든 문서를 담은 자료실(data room)"
     mandatory: true
     waiver_eligible: true
   # JV addendum — joint-origin only (mandatory when origin = joint)
   - id: ef-13
-    text: "Joint-origin only: board of 5-9 members with equal seats in a 50/50 and deadlock design (independent chair, casting vote, or rotating chair) agreed at formation"
+    text: "합작 설립(joint) 한정: 50:50 지분에서 동수 의석의 이사 5~9명으로 이사회를 구성하고, 교착 해소 설계(독립 의장, 결정투표권, 의장 윤번제 등)를 설립 시점에 합의함"
     mandatory: true
     waiver_eligible: true
   - id: ef-14
-    text: "Joint-origin only: reserved-matters list requiring mutual consent — narrow, category-based, threshold-driven (strategy/scope, annual plan/budget, major capex/financing, CEO/CFO appointment, material related-party transactions, constitutional changes, ownership economics, dissolution)"
+    text: "합작 설립 한정: 상호 동의가 필요한 주요 의결 사항 목록 — 범주별·기준액 기준으로 좁게 정함(전략·사업 범위, 연간 계획·예산, 대규모 투자·자금조달, 대표이사·재무책임자 선임, 중요 특수관계인 거래, 정관 변경, 지분 경제성, 해산)"
     mandatory: true
     waiver_eligible: true
   - id: ef-15
-    text: "Joint-origin only: deadlock ladder with binding deadlines — management reconciliation, board decision memo, shareholder principals, cooling-off/standstill, expert determination for defined factual/valuation issues, mediation, final remedy"
+    text: "합작 설립 한정: 기한이 구속력을 갖는 교착 해소 단계 — 경영진 조정, 이사회 결정 메모, 주주 대표 협의, 냉각기간·현상 유지(standstill), 사실·가치평가 쟁점에 대한 전문가 결정, 조정(mediation), 최종 구제 수단"
     mandatory: true
     waiver_eligible: true
   - id: ef-16
-    text: "Joint-origin only: exit clauses agreed — put/call with pre-agreed valuation formula, ROFR/ROFO and tag/drag rights, termination events, completion mechanics"
+    text: "합작 설립 한정: 출구 조항을 합의함 — 사전 합의된 가치평가 산식에 따른 풋/콜 옵션, 우선매수권(ROFR)·우선협상권(ROFO), 동반매각참여권(tag)·동반매도청구권(drag), 종료 사유, 종결 절차"
     mandatory: true
     waiver_eligible: true
   - id: ef-17
-    text: "Joint-origin only: one-voice management confirmed — direction to the venture only via board decisions and the CEO, with a written delegated-authority matrix (variance bands, emergency limits)"
+    text: "합작 설립 한정: 단일 창구 경영을 확인함 — 합작법인에 대한 지시는 이사회 결정과 대표이사를 통해서만 하고, 서면 위임전결 기준표(허용 편차 범위, 긴급 한도)를 둠"
     mandatory: true
     waiver_eligible: true
   - id: ef-18
-    text: "Joint-origin only: firewall/clean-team protocols established where the parents compete in adjacent markets"
+    text: "합작 설립 한정: 모회사들이 인접 시장에서 경쟁하는 경우 정보 차단 벽(firewall)·클린팀 절차를 수립함"
     mandatory: true
     waiver_eligible: true
   - id: ef-19
-    text: "Korea note (only where a company split is the formation route): a split (물적분할/인적분할) requires a shareholders' special resolution and the creditor-protection procedure — individual notice to known creditors plus public notice with an objection window of at least one month (Commercial Act arts. 527-2/527-5). Verify against the current KLRI statute text before enforcement use."
+    text: "한국 참고(회사 분할을 설립 경로로 쓰는 경우에 한함): 분할(물적분할/인적분할)에는 분할계획서에 대한 주주총회 특별결의가 필요함(상법 제530조의3). 분할합병인 경우(상법 제530조의11 제2항)와 연대책임을 배제하는 단순분할인 경우(상법 제530조의9 제2항·제4항)에는 채권자 보호 절차가 필요함 — 알고 있는 채권자에 대한 개별 최고와 1개월 이상의 이의제출 기간을 둔 공고(두 경우 모두 상법 제527조의5 준용). 집행 근거로 쓰기 전에 국가법령정보센터의 최신 조문 원문으로 확인할 것(2026-10-13 법제처 Open API로 확인, 상법 MST 273629)."
     mandatory: false
     waiver_eligible: true
   # Greenfield execution baseline — case_type = greenfield only (ADR-0161)
   - id: gx-01
-    text: "Greenfield only: capex tranche schedule bound to the project's capex_tranche rows and the S10 deal-structure release conditions, reconciled against the S8 adopted case capex; every gap recorded as a finding, none auto-fixed"
+    text: "신규 사업(Green Field) 한정: 자본지출(capex) 분할 집행 일정을 프로젝트의 capex_tranche 행과 S10 딜 구조 집행 조건에 연결하고 S8 채택안 capex와 대사함; 차이는 모두 발견 사항으로 기록하고 자동 수정하지 않음"
     mandatory: true
     waiver_eligible: true
   - id: gx-02
-    text: "Greenfield only: ramp-up KPI targets (first revenue, utilisation, BEP month, revenue and EBITDA vs the S8 adopted case) set, with the S8 project business goals referenced as non-blocking evidence"
+    text: "신규 사업 한정: 램프업 핵심 성과 목표(첫 매출, 가동률, 손익분기 도달 월, S8 채택안 대비 매출·EBITDA)를 정하고, S8 사업 목표는 차단 효력이 없는 근거로 참조함"
     mandatory: true
     waiver_eligible: true
   - id: gx-03
-    text: "Greenfield only: execution baseline confirmed by one person (Entity IC owner or delegate) with a non-empty rationale; no agent confirmation"
+    text: "신규 사업 한정: 실행 기준선을 한 사람(법인 투자심의위원회 책임자 또는 위임받은 자)이 비어 있지 않은 근거와 함께 확인함; 에이전트의 확인은 인정하지 않음"
     mandatory: true
     waiver_eligible: false   # a human confirmation is not waivable (ADR-0161 Row 1 follow-up, user-approved 2026-10-12)
 

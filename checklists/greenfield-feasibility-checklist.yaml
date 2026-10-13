@@ -4,7 +4,7 @@ title: "Green Field Feasibility Checklist"
 scope: shared
 enforceability: mixed
 owner_agent: greenfield-agent
-version: "1.0.0"
+version: "1.1.1"
 effective_from: "2026-08-20"
 gate: Screening/Pre-FS
 
@@ -14,47 +14,47 @@ gate: Screening/Pre-FS
 # recommended in one shot.
 items:
   - id: gf-01
-    text: "All candidate sites screened against mandatory infrastructure minimums (wastewater capacity checked before power)"
+    text: "모든 후보지를 필수 인프라 최소 기준에 비추어 선별함(전력보다 폐수 처리 용량을 먼저 점검)"
     mandatory: true
     waiver_eligible: true
   - id: gf-02
-    text: "Sites failing infrastructure minimums excluded from scoring, not merely penalized"
+    text: "인프라 최소 기준에 미달한 후보지는 감점에 그치지 않고 점수화 대상에서 제외함"
     mandatory: true
     waiver_eligible: true
   - id: gf-03
-    text: "Regional incentive NPV computed for each surviving candidate (discounted at deal WACC, net of expected clawback risk)"
+    text: "남은 후보지마다 지역 인센티브 NPV를 산출함(딜 WACC로 할인하고 환수 위험 기대치를 차감)"
     mandatory: true
     waiver_eligible: true
   - id: gf-04
-    text: "Permit critical path (DAG-derived, not single-permit lead time) computed for each surviving candidate"
+    text: "남은 후보지마다 인허가 임계 경로를 산출함(단일 인허가 소요 기간이 아닌, 의존 관계 그래프(DAG)에서 도출)"
     mandatory: true
     waiver_eligible: true
   - id: gf-05
-    text: "Partner dependency (if any) confirmed or site marked conditional"
+    text: "파트너 의존성(있는 경우)을 확인하거나 해당 후보지를 조건부로 표시함"
     mandatory: true
     waiver_eligible: true
   - id: gf-06
-    text: "Talent pipeline assessment completed (local university/vocational partnerships, regional labor-pool competition)"
+    text: "인력 확보 가능성 평가를 마침(지역 대학·직업교육 기관 협력, 지역 노동시장 내 인력 경쟁)"
     mandatory: true
     waiver_eligible: true
   - id: gf-07
-    text: "Community partnership assessment completed (local supplier development, resident acceptance history)"
+    text: "지역사회 협력 평가를 마침(지역 협력업체 육성, 주민 수용 이력)"
     mandatory: true
     waiver_eligible: true
   - id: gf-08
-    text: "Ramp-up curve reflects certification lead time — no revenue modeled before mandatory certifications are obtained"
+    text: "램프업 곡선에 인증 소요 기간을 반영함 — 필수 인증을 받기 전에는 매출을 잡지 않음"
     mandatory: true
     waiver_eligible: true
   - id: gf-09
-    text: "Competitor capacity-expansion plans reviewed for pricing-assumption risk"
+    text: "경쟁사 증설 계획을 검토해 가격 가정의 위험을 점검함"
     mandatory: false
     waiver_eligible: true
   - id: gf-10
-    text: "Real options / staged-investment structure considered as an alternative to a single lump-sum capex commitment"
+    text: "단일 일시 투자 확약의 대안으로 실물옵션·단계별 투자 구조를 검토함"
     mandatory: false
     waiver_eligible: true
   - id: gf-11
-    text: "Investment vehicle structuring reviewed against all four ADR-0045 axes (tax structure, liability isolation, financing leverage, exit structure) — direct parent incorporation vs. a local holding subsidiary, not assumed by default"
+    text: "설립 법인 형태 구조화(지주회사·SPV 포함)를 ADR-0045의 네 축(세무 구조, 책임 격리, 자금조달 레버리지, 엑시트 구조) 모두에 비추어 검토함 — 모회사 직접 설립과 현지 지주 자회사 설립을 기본값으로 정해 두지 않음"
     mandatory: true
     waiver_eligible: true
   - id: gf-12
