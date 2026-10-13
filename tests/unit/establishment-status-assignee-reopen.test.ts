@@ -101,7 +101,7 @@ beforeAll(async () => {
     db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", oppId, gate, "go", "t", LEAD, NOW]);
   }
   projectId = promoteOpportunity(oppId, { promotedBy: LEAD, needToKnowBasis: "est test" }).project.id;
-  db.run("UPDATE md_project SET origin = 'internal' WHERE id = ?", [projectId]);
+  db.run("UPDATE md_project SET origin = 'internal', establishment_mode = 'new_entity' WHERE id = ?", [projectId]);
   for (const u of [MEMBER, REVOKED]) {
     grantProjectMembership(db, { projectId, userId: u, projectRole: "member", grantedBy: LEAD, needToKnowBasis: "est test", now: NOW });
   }
@@ -178,7 +178,7 @@ describe("status change rules (server-side)", () => {
       expect((await assign({ step_no: 2, assignee_user_id: MEMBER })).status).toBe(400);
       expect((await reopen({ step_no: 1, reason: "충분히 긴 사유입니다" })).status).toBe(400);
     } finally {
-      db.run("UPDATE md_project SET origin = 'internal' WHERE id = ?", [projectId]);
+      db.run("UPDATE md_project SET origin = 'internal', establishment_mode = 'new_entity' WHERE id = ?", [projectId]);
     }
   });
 

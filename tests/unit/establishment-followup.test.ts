@@ -111,7 +111,7 @@ beforeAll(async () => {
     db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", oppId, gate, "go", "t", LEAD, NOW]);
   }
   projectId = promoteOpportunity(oppId, { promotedBy: LEAD, needToKnowBasis: "followup test" }).project.id;
-  db.run("UPDATE md_project SET origin = 'internal' WHERE id = ?", [projectId]);
+  db.run("UPDATE md_project SET origin = 'internal', establishment_mode = 'new_entity' WHERE id = ?", [projectId]);
   for (const u of [ACTOR, ASSIGNEE, GONE, AGENT]) {
     grantProjectMembership(db, { projectId, userId: u, projectRole: "member", grantedBy: LEAD, needToKnowBasis: "followup test", now: NOW });
   }

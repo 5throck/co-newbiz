@@ -172,6 +172,14 @@ exclusions:
     kind: route
     route: "POST /api/projects/{}/establishment/reopen"
     reason: Reopening a completed establishment step is an audited human act with a mandatory reason (ADR-0165, boundary #2).
+  - id: establishment-mode
+    kind: route
+    route: "PUT /api/projects/{}/establishment-mode"
+    reason: Choosing or changing the Green Field establishment mode (new entity vs business unit) is part of the S10 structure decision, a human act (ADR-0167, boundary #2); agents propose it through propose_establishment_mode and a person confirms.
+  - id: capability-attainability-confirm
+    kind: route
+    route: "POST /api/projects/{}/capability-attainability/confirm"
+    reason: Confirming a required-capability attainability judgement is a human act (ADR-0168, boundary #2); agents may only save drafts through the PUT, never confirm.
   - id: proposal-confirm
     kind: route
     route: "POST /api/proposals/{}/confirm"

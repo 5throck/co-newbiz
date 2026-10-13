@@ -83,7 +83,7 @@ function seedDeal(db: Db, track: Track, dbPath: string): Ids {
   db.run("UPDATE md_project SET current_stage_gate = NULL WHERE id = ?", [projectId]);
 
   if (track === "greenfield") {
-    db.run("UPDATE md_project SET track = 'greenfield', origin = 'internal', project_name = 'Parity Green Field' WHERE id = ?", [projectId]);
+    db.run("UPDATE md_project SET track = 'greenfield', origin = 'internal', establishment_mode = 'new_entity', project_name = 'Parity Green Field' WHERE id = ?", [projectId]);
     db.run("UPDATE route_decision SET track = 'greenfield', sub_track = NULL, rationale = ? WHERE opportunity_id = ?", ["No suitable target: build on our own.", oppId]);
     db.run("UPDATE business_case_model SET target_id = NULL WHERE project_id = ?", [projectId]);
     db.run("DELETE FROM process_run WHERE stage IN ('s8_target_select', 's11_pmi_kickoff') AND project_id = ?", [projectId]);

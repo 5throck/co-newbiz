@@ -1,0 +1,101 @@
+schema_version: "1.0"
+procedure_id: shared-business-unit-establishment-execution
+title: "Business Unit Establishment Execution"
+scope: shared
+level: entity
+version: "1.0.0"
+status: active
+applicability: conditional
+# ADR-0167: a Green Field project that runs the new business as a new business
+# unit inside the existing legal entity (project.establishment_mode =
+# business_unit) executes THIS 5-step set instead of the entity-formation set
+# (entity-establishment-execution). business_unit is allowed only with origin
+# internal (D2), so the predicate reads both vars. The is_null guard on the
+# mode is the same deliberate fail-closed exception direction as the sibling
+# procedure: an unchosen mode must evaluate FALSE (skip), never apply by
+# default — the S11 completion check reports "establishment mode not chosen"
+# for that state, so the skip is never silent.
+applies_when:
+  op: "all_of"
+  of:
+    - { op: "in", var: "project.origin", values: ["internal"] }
+    - { op: "none_of", of: [{ op: "is_null", var: "project.origin" }] }
+    - { op: "in", var: "project.establishment_mode", values: ["business_unit"] }
+    - { op: "none_of", of: [{ op: "is_null", var: "project.establishment_mode" }] }
+workflow_type: core
+gate: "Entity IC"
+
+# Execution-phase procedure (after entity_ic_decision = approved), NOT a review
+# gate: no RAG grade is produced here. Mode and step set are recorded in
+# entity_establishment_step (mode = 'business_unit'); step numbers 1-5 mirror
+# the sibling procedure so the "5/5" progress and the sequence rule (step 5
+# only after steps 1-4) are identical. Completion of any step is a human act
+# with evidence (ADR-0165, boundary #2).
+
+steps:
+  - id: 1
+    gate: "Entity IC"
+    agent_key: process-governance-manager
+    skill_key: stage-gate-governance
+    output_type: formation_readiness_check
+    description: >
+      Business unit establishment resolution (사업부 신설 결의) — board or
+      management-committee resolution creating the unit, with budget and
+      delegation-of-authority (DoA) assignment. Whether the articles of
+      incorporation need a business-purpose amendment (special shareholders'
+      resolution) is a counsel item, not inferred here.
+  - id: 2
+    gate: "Entity IC"
+    agent_key: legal-counsel
+    skill_key: k-law
+    output_type: statutory_filing_record
+    description: >
+      Business registration update — add a place of business or change the
+      business type/category, or record that no change is needed. Confirm the
+      requirement with counsel or the tax adviser; do not infer from the
+      parent's existing registration.
+  - id: 3
+    gate: "Entity IC"
+    agent_key: legal-counsel
+    skill_key: permit-pathway-mapping
+    output_type: certification_transferability_check
+    description: >
+      Permit and certification holder check — classify each required permit as
+      held / newly obtainable under the existing entity's name / not possible
+      under the existing name (escalate), and keep certifications separate from
+      permits (a permit lets you operate, a certification lets you sell;
+      boundary #5). A new site or product on an existing certificate is a scope
+      extension confirmed with the certifying body — inference is disallowed.
+  - id: 4
+    gate: "Entity IC"
+    agent_key: hr-integration-agent
+    skill_key: org-readiness-assessment
+    output_type: people_transfer_record
+    description: >
+      Staffing and organization — internal transfers, org chart, job-description
+      changes, and PIIA / work-for-hire coverage. Labour consultation duties
+      under the rules of employment are confirmed with counsel before
+      enforcement use.
+  - id: 5
+    gate: "Entity IC"
+    agent_key: process-governance-manager
+    skill_key: stage-gate-governance
+    output_type: gate_pass_record
+    description: >
+      Completion confirm (완료 확인) — the organization, budget and
+      delegation-of-authority baselines are confirmed by a human with
+      evidence. Requires steps 1-4 done. No liability isolation exists in this
+      mode: liabilities stay on the parent entity's balance sheet.
+
+kill_criteria:
+  - condition: permit_not_possible_under_existing_entity_name
+    action: escalate_to_risk_officer   # a required permit cannot be held by the existing entity — the business-unit route may not be viable
+
+legal_basis:
+  - "Group New Business Review Policy §2.3"
+  - "ADR-0167 (Green Field establishment mode — business_unit step set; amends ADR-0047 A.5 and ADR-0100)"
+  - "ADR-0165 (establishment step assignee, evidence and reopen rules apply unchanged)"
+  - "docs/designs/2026-10-14-greenfield-business-unit-vs-new-entity-design.md (design of record; articles-of-incorporation purpose amendment, VAT registration change and labour consultation need counsel confirmation)"
+
+owner_agent: process-governance-manager
+last_reviewed: "2026-10-14"

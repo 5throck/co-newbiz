@@ -207,6 +207,24 @@ const PROPOSE: RegistryTool[] = [
     args: z.object({ projectId: requiredString, subject: requiredString, details: z.record(z.string(), z.unknown()).optional(), rationale: requiredString, evidence_refs: evidenceRefs }),
     handler: (ctx, a) => createProposal(ctx.port, "approval", a.projectId, { subject: a.subject, ...(a.details ?? {}) }, a.rationale, a.evidence_refs),
   }),
+  defineTool({
+    name: "propose_establishment_mode",
+    description: `Propose the Green Field establishment mode (S10, ADR-0167): new_entity (신규 법인 설립) or business_unit (신규 사업부 추진, only for an internal-origin Green Field project). Agents never set the mode: a person confirms the proposal in the web app, and only that confirmation records it. Provide a rationale. ${PROPOSE_NOTE}`,
+    scope: "propose", kind: "propose", stageActivities: ["entity-establishment-execution"],
+    stageArtifacts: ["stage:S10:1"], routes: ["POST /api/proposals"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectId: projectIdProp,
+        mode: { type: "string", enum: ["new_entity", "business_unit"] },
+        rationale: { type: "string" },
+        evidence_refs: evidenceProp,
+      },
+      required: ["projectId", "mode", "rationale"],
+    },
+    args: z.object({ projectId: requiredString, mode: requiredString, rationale: requiredString, evidence_refs: evidenceRefs }),
+    handler: (ctx, a) => createProposal(ctx.port, "approval", a.projectId, { subject: "establishment_mode", mode: a.mode }, a.rationale, a.evidence_refs),
+  }),
   // Deprecated aliases (design §6.4): same proposal behavior on BOTH transports.
   defineTool({
     name: "record_gate_decision",

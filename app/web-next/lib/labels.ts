@@ -255,6 +255,8 @@ export function localizeMessage(message: string): string {
 /** Stage requirement text coming from the process spec: keep the meaning, drop set notation. */
 export function localizeRequirement(text: string): string {
   return text
+    // ADR-0167: the backend blocker carries an English parenthetical next to the Korean wording
+    .replace(/\s*\(establishment mode not chosen(?:,\s*ADR-0167)?\)/gi, "")
     // raw enum token glued to Korean text, e.g. "기회 선택(selected)" -> "기회 선택"
     .replace(/(?<=[가-힣])\s*\([a-z]+(?:_[a-z]+)*\)/g, "")
     // lower-case gate id opening a parenthetical, e.g. "(fs 진행 입력)" -> "(FS 진행 입력)"

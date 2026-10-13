@@ -24,7 +24,9 @@ describe("greenfield S1 to S12", () => {
     await visit(s.page, app, `/projects/${P}/process`);
     await see(s.page, "트랙: 그린필드(신규 설립)");
     await see(s.page, /현재 S11/);
-    await see(s.page, "미적용");
+    // The not-applicable marker exists twice: in the collapsed compact list (hidden) and in the visible stage rail
+    // (PR #533 TrackGate). Target the visible rail marker instead of the first text match.
+    await s.page.locator(".stage-stepper .stage-step-state").filter({ hasText: "미적용" }).first().waitFor({ state: "visible", timeout: 20_000 });
     axe.push(await axeScan(s.page, "process (stage rail)"));
   }, 60_000);
 
@@ -40,8 +42,19 @@ describe("greenfield S1 to S12", () => {
     await recordGate(s.page, app, `/projects/${P}/dd`, null, "go", "실현가능성 DD 전 항목 충족");
   }, 90_000);
 
+  test("S10 shows the recorded establishment mode with the change action (ADR-0167)", async () => {
+    await visit(s.page, app, `/projects/${P}/deal-structure`);
+    const panel = s.page.locator('section[aria-label="설립 방식"]');
+    await panel.waitFor({ state: "visible", timeout: 30_000 });
+    await panel.getByText("● 신규 법인 설립").waitFor({ state: "visible", timeout: 20_000 });
+    await panel.getByRole("button", { name: "방식 변경" }).waitFor({ state: "visible", timeout: 20_000 });
+  }, 60_000);
+
   test("S11 establishment 5 steps are recorded, then Entity IC and Group IC GO", async () => {
     await visit(s.page, app, `/projects/${P}/ic-review`);
+    // ADR-0167: the seeded project carries a human-chosen mode (new_entity, as the S10 choice would record it),
+    // so the S11 table is titled by that mode and offers the step actions.
+    await see(s.page, "설립 실행 — 5단계 (신규 법인 설립)");
     // ADR-0165: each step has its own "상태 변경" action; the status form records `done` with evidence.
     for (let step = 1; step <= 5; step++) {
       // The UI clears its busy flag before the post-PUT reload lands, so wait for the previous

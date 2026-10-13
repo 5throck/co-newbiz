@@ -86,8 +86,8 @@ export async function seedGreenfieldDeal(dbPath: string, analystId: string): Pro
       ],
     );
     db.run(
-      `INSERT INTO md_project (id, project_no, created_at, current_stage_gate, company_id, origin, source_opportunity_id, track, project_name, charter_json, charter_confirmed_at, status, subject_company_rationale)
-       VALUES (?, 'E2E-GF', ?, 'fs', ?, 'internal', ?, 'greenfield', ?, ?, ?, 'open', ?)`,
+      `INSERT INTO md_project (id, project_no, created_at, current_stage_gate, company_id, origin, establishment_mode, source_opportunity_id, track, project_name, charter_json, charter_confirmed_at, status, subject_company_rationale)
+       VALUES (?, 'E2E-GF', ?, 'fs', ?, 'internal', 'new_entity', ?, 'greenfield', ?, ?, ?, 'open', ?)`,
       [projectId, now, companyId, oppId, "E2E 신설 법인 프로젝트", json({ milestones: ["설립", "가동"], owner: actor }), now, "자체 역량으로 신설 진출"],
     );
     db.run("UPDATE opportunity SET project_id = ?, promoted_at = ? WHERE id = ?", [projectId, now, oppId]);

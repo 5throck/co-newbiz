@@ -32,6 +32,7 @@ metadata:
     - legal search
     - Korea law
   procedure_keys:
+    - business-unit-establishment-execution
     - entity-establishment-execution
 ---
 # Skill: k-law

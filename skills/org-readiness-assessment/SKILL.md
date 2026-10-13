@@ -25,6 +25,7 @@ metadata:
 
   procedure_keys:
     - brownfield-dd
+    - business-unit-establishment-execution
     - entity-establishment-execution
     - greenfield-dd
 relates_to:

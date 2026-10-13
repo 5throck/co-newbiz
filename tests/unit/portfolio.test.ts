@@ -170,8 +170,8 @@ beforeAll(async () => {
   // S11 applies establishment to origin∈{internal,joint} (ADR-0047) — pin it
   // and complete the 5 steps + both IC gates so the process's current stage
   // IS S12 (blockers only surface for the current stage).
-  db.run("UPDATE md_project SET origin = 'internal' WHERE id = ?", [projectId]);
-  db.run("UPDATE md_project SET origin = 'internal' WHERE id = ?", [project2Id]);
+  db.run("UPDATE md_project SET origin = 'internal', establishment_mode = 'new_entity' WHERE id = ?", [projectId]);
+  db.run("UPDATE md_project SET origin = 'internal', establishment_mode = 'new_entity' WHERE id = ?", [project2Id]);
 
   // S8 (case + simulation) and S9 (judged checklist item) artifacts.
   db.run(

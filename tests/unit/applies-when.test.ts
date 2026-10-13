@@ -308,6 +308,9 @@ describe("PR-5a acceptance matrix (spec §7)", () => {
 
 describe("PR-5a acceptance matrix rows 10-11 (pure)", () => {
   const SEEDED = seededVarKeys(readFileSync(join(PROJECT_ROOT, "db/migrations/0014_routing_vars.sql"), "utf-8"));
+  // ADR-0167: the establishment procedure predicate also reads project.establishment_mode (seeded by 0142).
+  for (const k of seededVarKeys(readFileSync(join(PROJECT_ROOT, "db/migrations/0142_establishment_mode.sql"), "utf-8"))) SEEDED.add(k);
+  const CORE_KEYS = [...SEEDED].filter((k) => k !== "project.establishment_mode");
 
   test("row 10 — free-text applies_when is an ERROR in the validator pass", () => {
     const issues = checkAppliesWhen("x.yaml", "procedure-level", "origin = 'internal' (cell 9/10)", SEEDED);
@@ -332,7 +335,7 @@ describe("PR-5a acceptance matrix rows 10-11 (pure)", () => {
   });
 
   test("row 10 — the seed reader: real migration yields the four routing keys; INSERT-less SQL yields nothing", () => {
-    expect([...SEEDED].sort()).toEqual([
+    expect(CORE_KEYS.sort()).toEqual([
       "project.case_type",
       "project.origin",
       "project.technology_track",

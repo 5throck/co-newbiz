@@ -280,6 +280,8 @@ describe("shape: four new tables + md_project.current_stage_gate", () => {
       // 0114 (design 2026-09-18-s8-business-case-evaluation): WACC subject
       // decision columns appended (nullable; NULL = track default).
       "wacc_subject", "wacc_subject_rationale", "wacc_subject_decided_by", "wacc_subject_decided_at", "closure_type",
+      // 0142 (ADR-0167): Green Field establishment mode + non-binding hint appended.
+      "establishment_mode", "establishment_mode_suggested",
     ]);
   });
 

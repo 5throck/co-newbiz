@@ -30,7 +30,8 @@ export function icGoGapItems(projectId: string, actor?: string): string[] {
   const origin = (db.query("SELECT origin FROM md_project WHERE id = ?").get(projectId) as { origin: string | null } | undefined)?.origin;
   if (origin === "internal" || origin === "joint") {
     const p = establishmentProgress(projectId);
-    if (!p.complete) gaps.push(`설립 실행 ${p.done}/5 — 대기 ${p.total - p.done}단계`);
+    if (p.mode === null) gaps.push("설립 방식 미선택 (신규 법인 설립 / 신규 사업부 추진)");
+    else if (!p.complete) gaps.push(`${p.mode === "business_unit" ? "사업부 신설 실행" : "설립 실행"} ${p.done}/5 — 대기 ${p.total - p.done}단계`);
   }
   return gaps;
 }

@@ -7,6 +7,7 @@
 import { getDb } from "../../../../../../../db/client.ts";
 import { promoteOpportunity, PromotionError } from "../../../../../../../db/repositories/project.repository.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
+import { ESTABLISHMENT_MODES, storeSuggestedMode, type EstablishmentMode } from "../../../../../lib/establishment.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -29,6 +30,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const body = (await request.json().catch(() => null)) as {
     needToKnowBasis?: string;
     origin?: string;
+    /** ADR-0167 — optional NON-BINDING hint; the mode only takes effect when a human chooses it at S10. */
+    establishment_mode_suggested?: string;
     /** ADR-0104 — override the auto-built charter name (charter is auto-built from S1~S7 artifacts). */
     project_name?: string;
     members?: Array<{ userId?: string; projectRole?: string }>;
@@ -38,6 +41,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const origin = body?.origin;
   if (origin && !["internal", "external", "hybrid", "joint"].includes(origin)) {
     return badRequest("invalid_request", "origin은 internal | external | hybrid | joint 중 하나입니다 (ADR-0013).");
+  }
+  const hint = body?.establishment_mode_suggested;
+  if (hint != null && !(ESTABLISHMENT_MODES as readonly string[]).includes(hint)) {
+    return badRequest("invalid_request", `establishment_mode_suggested는 ${ESTABLISHMENT_MODES.join(" | ")} 중 하나입니다 (ADR-0167).`);
   }
   const members: Array<{ userId: string; projectRole: "lead" | "member" }> = [];
   for (const m of body?.members ?? []) {
@@ -67,6 +74,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   });
   const charterJson = JSON.stringify({ versions: [{ ...built.charter, purpose: built.charter.purpose }] });
   const projectName = body?.project_name?.trim() || built.name;
+  if (hint) {
+    // A hint only makes sense for a Green Field project; business_unit additionally needs origin internal (D2).
+    const effectiveOrigin = origin ?? (route?.track === "greenfield" ? "internal" : undefined);
+    if (route?.track !== "greenfield" || (hint === "business_unit" && effectiveOrigin !== "internal") || (hint === "new_entity" && effectiveOrigin !== "internal" && effectiveOrigin !== "joint")) {
+      return badRequest("mode_not_allowed", "설립 방식 제안은 그린필드 프로젝트에만 적용되며, 신규 사업부 추진은 origin이 internal일 때만 가능합니다 (ADR-0167).");
+    }
+  }
 
   try {
     const result = promoteOpportunity(id, {
@@ -77,8 +91,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       charterJson,
       members,
     });
+    if (hint) storeSuggestedMode(db, result.project.id, hint as EstablishmentMode);
     return ok(
       {
+        establishment_mode_suggested: hint ?? null,
         project_id: result.project.id,
         project_no: result.project.project_no,
         track: result.project.track,

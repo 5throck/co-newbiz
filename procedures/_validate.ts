@@ -89,7 +89,7 @@ const PROJECT_ROOT = resolve(ROOT, "..");
 const SKILLS_DIR = join(PROJECT_ROOT, "skills");
 const ROUTING_VARS_MIGRATION = join(PROJECT_ROOT, "db", "migrations", "0014_routing_vars.sql");
 /** ADR-0160 addendum: the routing-var seeds added by 0136 (project.sub_track, project.site_required). */
-const ROUTING_VARS_MIGRATIONS = [ROUTING_VARS_MIGRATION, join(PROJECT_ROOT, "db", "migrations", "0136_greenfield_subtrack_vars.sql")];
+const ROUTING_VARS_MIGRATIONS = [ROUTING_VARS_MIGRATION, join(PROJECT_ROOT, "db", "migrations", "0136_greenfield_subtrack_vars.sql"), join(PROJECT_ROOT, "db", "migrations", "0142_establishment_mode.sql")];
 const HUMAN_ROLES_FILE = join(ROOT, "_human-roles.yaml");
 const OUTPUT_TYPES_FILE = join(ROOT, "_output-types.yaml");
 const COMMITTEES_FILE = join(ROOT, "_committees.yaml");

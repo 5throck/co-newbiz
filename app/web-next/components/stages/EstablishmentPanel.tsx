@@ -4,11 +4,16 @@
 // 경계 #2: 완료·재개·담당자 지정은 사람의 행위이며 모든 변경은 P4 확인을 거친다.
 // 규칙(증적 필수·재개 선행·구성원 검증)의 권위는 서버이고, 이 화면은 일찍 거절하고 메시지를 옮길 뿐이다.
 
+import Link from "next/link";
 import { Fragment, useState } from "react";
 import { api, ApiError } from "../../lib/api.ts";
 import { ColGroup, useToast } from "../ui.tsx";
 import { RowMenu, useConfirm } from "../crud.tsx";
 import { estStepColPct } from "./constants.ts";
+import {
+  isModeValue, MODE_NOT_CHOSEN_NOTICE, modeLabel, S11_INTRO, s11Title, titleFor, visibleHistorySteps,
+  type HistoryStepView,
+} from "../../lib/establishment-mode-view.ts";
 import {
   assigneeView, buildStatusBody, CASCADE_CONFIRM_TITLE, CHANGEABLE_STATUSES, defaultFormStatus, establishmentApplies,
   establishmentErrorText, ESTABLISHMENT_CAPTION, eventSummary, evidenceRequired, notApplicableNote, reopenWarning,
@@ -24,6 +29,8 @@ const STEP_TITLES: Record<number, string> = {
   5: "완료확인(IP양도체인·거버넌스 베이스라인)",
 };
 
+const MODE_NEW_ENTITY_TITLES = STEP_TITLES;
+
 // P5: 상태는 색+아이콘+텍스트의 조합 — 색 단독으로 상태를 전달하지 않는다.
 const STEP_STATUS_META: Record<string, { icon: string; cls: string }> = {
   pending: { icon: "○", cls: "status-not-started" },
@@ -37,6 +44,11 @@ const labelOf = (status: string | undefined) => STATUS_LABEL[status ?? "pending"
 
 export interface EstablishmentData {
   project: { origin: string | null };
+  /** ADR-0167: active mode (null = a Green Field project that has not chosen one). */
+  mode?: string | null;
+  step_titles?: Record<string, string> | null;
+  all_step_titles?: Record<string, Record<string, string>>;
+  history_steps?: HistoryStepView[];
   steps: StepRowView[];
   members?: MemberView[];
   history?: EventView[];
@@ -72,6 +84,9 @@ export function EstablishmentPanel({ projectId, canAct, est, fallbackSteps, fall
   const base = `/api/projects/${encodeURIComponent(projectId)}/establishment`;
   const colCount = writable ? 6 : 5;
   const warning = reopenWarning(est ?? fallbackReopen);
+  const mode = est ? (isModeValue(est.mode) ? est.mode : null) : "new_entity";
+  const titleOf = (n: number) => est?.step_titles?.[String(n)] ?? MODE_NEW_ENTITY_TITLES[n];
+  const historySteps = visibleHistorySteps(est?.history_steps);
 
   const rowOf = (n: number): StepRowView | undefined => est?.steps.find((s) => s.step_no === n) ?? fallbackSteps.find((s) => s.step_no === n);
 
@@ -159,6 +174,19 @@ export function EstablishmentPanel({ projectId, canAct, est, fallbackSteps, fall
     });
   }
 
+  if (est && applies && mode === null) {
+    return (
+      <section className="market-section sizing-step mt-3" aria-label="설립 실행 5단계">
+        <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">🏗</span> 설립 실행 — 5단계</h3>
+        <p role="note" className="status-chip status-amber" style={{ whiteSpace: "normal" }}>ⓘ {MODE_NOT_CHOSEN_NOTICE}</p>
+        <p className="text-[length:var(--fs-caption)] mt-2">
+          <Link href={`/projects/${encodeURIComponent(projectId)}/deal-structure`} className="underline">S10 투자구조 설계에서 설립 방식 정하기 →</Link>
+        </p>
+        <HistoryBlock steps={historySteps} titles={est.all_step_titles} />
+      </section>
+    );
+  }
+
   if (est && !applies) {
     return (
       <section className="market-section sizing-step mt-3" aria-label="설립 실행 5단계">
@@ -171,10 +199,10 @@ export function EstablishmentPanel({ projectId, canAct, est, fallbackSteps, fall
   return (
     <section className="market-section sizing-step mt-3" aria-label="설립 실행 5단계">
       <h3 className="sizing-step-title text-[0.95rem]">
-        <span className="sizing-step-badge">🏗</span> 설립 실행 — 5단계 (내부 추진·합작 프로젝트)
+        <span className="sizing-step-badge">🏗</span> {s11Title(mode)}
       </h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
-        내부 추진·합작 프로젝트(새 법인을 직접 세우거나 합작으로 세우는 방식)에만 적용되는 5단계 설립 절차입니다. 인수·지분 투자 프로젝트는 대신 PMI 킥오프에서 통합 계획을 기록합니다.
+        {S11_INTRO[mode ?? "new_entity"]}
       </p>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{ESTABLISHMENT_CAPTION}</p>
       {warning && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg,var(--accent))] mb-2">⚠ {reopenWarningText(warning)}</p>}
@@ -204,7 +232,7 @@ export function EstablishmentPanel({ projectId, canAct, est, fallbackSteps, fall
                 <Fragment key={n}>
                   <tr>
                     <td>
-                      <span className="tabular-nums mr-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{n}</span>{STEP_TITLES[n]}
+                      <span className="tabular-nums mr-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{n}</span>{titleOf(n)}
                       {events.length > 0 && (
                         <details className="mt-1">
                           <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">이력 보기 ({events.length}건)</summary>
@@ -333,7 +361,30 @@ export function EstablishmentPanel({ projectId, canAct, est, fallbackSteps, fall
       {writable && [1, 2, 3, 4, 5].every((n) => rowOf(n)?.status === "done") && (
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2">모든 단계가 완료되었습니다. 상태를 바꾸려면 먼저 '완료 취소(재개)'로 되돌리세요.</p>
       )}
+      <HistoryBlock steps={historySteps} titles={est?.all_step_titles} />
       {confirmDialog}
     </section>
+  );
+}
+
+/** Rows recorded under a previous establishment mode: read-only history (ADR-0167), collapsed by default. */
+function HistoryBlock({ steps, titles }: { steps: HistoryStepView[]; titles?: Record<string, Record<string, string>> }) {
+  if (steps.length === 0) return null;
+  return (
+    <details className="mt-3">
+      <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">이전 설립 방식의 단계 기록 — 읽기 전용 ({steps.length}건)</summary>
+      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">설립 방식을 바꾸기 전에 기록한 단계입니다. 수정할 수 없고 이력으로만 남습니다.</p>
+      <ul className="sizing-note-list" aria-label="이전 설립 방식의 단계 기록">
+        {steps.map((r) => (
+          <li key={r.id} className="text-[length:var(--fs-caption)]">
+            <strong>{modeLabel(r.mode)}</strong> · {r.step_no}단계 {titleFor(titles, r.mode, r.step_no)} · {metaOf(r.status).icon} {labelOf(r.status)}
+            <span className="tabular-nums"> · {r.updated_at.slice(0, 10)}</span>
+            {r.last_recorded_by && <> · {r.last_recorded_by}</>}
+            {r.evidence_url && <span className="block text-[color:var(--muted-fg)]">증적: {r.evidence_url}</span>}
+            {r.note && <span className="block text-[color:var(--muted-fg)]">비고: {r.note}</span>}
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }

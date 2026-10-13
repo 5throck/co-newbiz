@@ -124,7 +124,7 @@ beforeAll(async () => {
   projectId = promoteOpportunity(sourceOppId, { promotedBy: ANALYST, needToKnowBasis: "S11 test promoter" }).project.id;
   seedS10Complete(projectId);
   // S11 establishment applies to origin∈{internal,joint} (ADR-0047) — pin it.
-  db.run("UPDATE md_project SET origin = 'internal' WHERE id = ?", [projectId]);
+  db.run("UPDATE md_project SET origin = 'internal', establishment_mode = 'new_entity' WHERE id = ?", [projectId]);
 
   // S8 artifact: one case + one persisted simulation percentile.
   db.run(
