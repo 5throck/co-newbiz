@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * @version 1.2.0
+ * @version 1.3.0
  */
 // sync-library-projection.ts — refreshes app/web-next/lib/library.generated.ts from
 // its source files. SSOT is the source documents (checklists/, procedures/, docs/);
@@ -53,6 +53,10 @@ for (const id of Object.keys(ITEMS)) {
     text: i.text,
     mandatory: i.mandatory,
     waiver_eligible: i.waiver_eligible,
+    // Optional review status — emitted only when the source item declares it.
+    ...(i.review_status !== undefined ? { review_status: i.review_status } : {}),
+    ...(i.reviewer !== undefined ? { reviewer: i.reviewer } : {}),
+    ...(i.verified_on !== undefined ? { verified_on: i.verified_on instanceof Date ? i.verified_on.toISOString().slice(0, 10) : i.verified_on } : {}),
   }));
   ITEMS[id] = items;
   entry.version = doc.version;

@@ -1,4 +1,4 @@
-version: 1.1.3
+version: 1.2.0
 last_updated: 2026-10-13
 terms:
   Green Field:
@@ -22,6 +22,17 @@ terms:
     related: [Green Field, Change of Control]
     used_in: [brownfield-feasibility]
     owner: brownfield-agent
+
+  Checklist Review Status:
+    ko: 체크리스트 항목 검토 상태
+    en: Checklist Review Status
+    definition_ko: 체크리스트 항목마다 붙는 세 단계 표시. 'AI 작성·검토 전'(draft-AI, 표시가 없으면 기본값), '법무 검토됨'(counsel-reviewed, 검토자 이름·일자 필수), '확정'(confirmed, 검토자 이름·일자 필수).
+    why_it_matters_ko: AI가 쓰고 AI가 검토한 항목은 1차 검토일 뿐 확정이 아니다. 화면에 상태를 드러내 사람이 어느 항목을 더 확인해야 하는지 알게 한다. 참고용 표시이며 게이트 통과를 막지 않는다.
+    category: business
+    aliases: [draft-AI, AI 작성·검토 전, counsel-reviewed, 법무 검토됨, 항목 검토 상태]
+    related: [Stage Gate]
+    used_in: [legal-due-diligence]
+    owner: glossary-curator
 
   Investment Vehicle:
     ko: 투자 주체

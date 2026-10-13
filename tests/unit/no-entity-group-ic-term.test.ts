@@ -1,4 +1,4 @@
-// Guard: "Entity IC" / "Group IC" / "IC 심의" / "RAG 종합 등급" / "RAG 등급" are not used in the field. User-visible strings in
+// Guard (also forbids the old terms 투자 중점 영역 / 최소 대응): "Entity IC" / "Group IC" / "IC 심의" / "RAG 종합 등급" / "RAG 등급" are not used in the field. User-visible strings in
 // app/web-next must use the Korean committee wording (glossary aliases keep the old forms resolvable).
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -8,7 +8,7 @@ import * as yaml from "js-yaml";
 const ROOT = join(import.meta.dir, "..", "..");
 const WEB = join(ROOT, "app", "web-next");
 const SKIP_DIRS = new Set(["node_modules", ".next", "tests", "e2e"]);
-const FORBIDDEN = /Entity[ -]IC|Group[ -]IC|그룹 IC|IC ?심의|RAG 종합 등급|RAG 등급|종합 RAG/;
+const FORBIDDEN = /Entity[ -]IC|Group[ -]IC|그룹 IC|IC ?심의|RAG 종합 등급|RAG 등급|종합 RAG|투자 중점 영역|최소 대응/;
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -38,6 +38,13 @@ describe("no Entity IC / Group IC term in visible strings", () => {
       });
     }
     expect(hits).toEqual([]);
+  });
+
+  test("checklist item text uses the decided terms (중점 투자 분야, 현상 유지안)", () => {
+    const dir = join(ROOT, "checklists");
+    for (const f of readdirSync(dir).filter((n) => n.endsWith(".yaml"))) {
+      expect(readFileSync(join(dir, f), "utf-8")).not.toMatch(/투자 중점 영역|최소 대응/);
+    }
   });
 
   test("glossary keeps the old forms as aliases of the Korean term", () => {

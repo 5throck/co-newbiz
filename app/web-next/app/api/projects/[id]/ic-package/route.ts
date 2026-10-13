@@ -20,7 +20,8 @@ import { icGoGapItems, parseRationale } from "../../../../../lib/ic-gap-override
 import { latestGateDecisions, latestRouteDecision, type GateId, type GateVerdict } from "../../../../../lib/process-flow.ts";
 import { latestPmiKickoff, pmiKickoffApplies } from "../../../../../lib/pmi-kickoff.ts";
 import { notFound, ok } from "../../../../../lib/envelope.ts";
-import { ddCompletionSummary, type DdCompletionSummary, type FindingRow } from "../../../../../lib/dd-checklist-tailor.ts";
+import { ddCompletionSummary, listDdWorkspace, type DdCompletionSummary, type FindingRow } from "../../../../../lib/dd-checklist-tailor.ts";
+import { draftAiSummary } from "../../../../../lib/checklist-review-status.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { getHypotheses } from "../../../../../../../db/repositories/deal-structure-hypothesis.repository.ts";
 import { financingTotals, listFinancingEntries } from "../../../../../../../db/repositories/financing-plan.repository.ts";
@@ -112,7 +113,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
               })),
           }
         : { adopted: null, adoption, note: "채택(adopt)된 Business Case가 없습니다 — 법인 투자심의위원회 심사 전 S8 채택이 필요합니다." },
-      dd: { completion, findings, finding_count: findings.length },
+      // Informational only (never gates): in-scope checklist items still draft-AI, shown in the IC "could not verify" area.
+      dd: { completion, findings, finding_count: findings.length, review_status: draftAiSummary(listDdWorkspace(id)) },
       rag: {
         status: rag.status,
         grade: overall?.grade ?? null, // null = not graded (never a default color)

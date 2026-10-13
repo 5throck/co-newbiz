@@ -37,6 +37,7 @@ interface IcPackage {
     completion: { total: number; pending: number; unassessed: number; mandatoryUnmet: number };
     findings: Array<{ id: string; category: string; description: string; value_impact: number | null; evidence_ref: string | null }>;
     finding_count: number;
+    review_status?: { in_scope: number; draft_ai: number };
   };
   rag: { status: "graded" | "not_graded"; grade: string | null; isProposal: true; rationale: string | null; assessed_at: string | null; missing_dimensions: string[]; confidence_cap: string | null; confidence_note: string | null };
   pmi_kickoff: { applies: boolean; sub_track: string | null; record: { id: string; recordedBy: string; recordedAt: string; owner: string; planNote: string } | null };
@@ -205,6 +206,11 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
                 : "판정 기록 없음"}
             </span>
           </p>
+          {pkg?.dd.review_status && (
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title="AI 작성 · 법령 원문 일부 확인 · 변호사 검토 전 — 확정 아님">
+              확인하지 못한 영역: 범위 안 체크리스트 항목 {pkg.dd.review_status.in_scope}건 중 {pkg.dd.review_status.draft_ai}건이 아직 AI 작성·검토 전입니다 (참고 표시이며 게이트를 막지 않습니다).
+            </p>
+          )}
           {(pkg?.dd.findings.length ?? 0) > 0 && (
             <ul className="sizing-note-list mt-1">
               {pkg!.dd.findings.map((f) => (

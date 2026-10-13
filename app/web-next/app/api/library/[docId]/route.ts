@@ -2,7 +2,7 @@
 // lib/library.ts (chk-*, man-*, pol-*), never raw paths, so there is no
 // client-controlled path component reaching the filesystem.
 import { authenticate } from "../../../../lib/auth.ts";
-import { getLibraryDoc } from "../../../../lib/library.ts";
+import { getChecklistItems, getLibraryDoc } from "../../../../lib/library.ts";
 import { notFound, ok } from "../../../../lib/envelope.ts";
 
 export async function GET(
@@ -14,5 +14,8 @@ export async function GET(
   const { docId } = await params;
   const doc = getLibraryDoc(docId);
   if (!doc) return notFound(`No library document with id ${docId}.`);
-  return ok(doc, 200);
+  // Checklists carry the per-item review status next to the raw content (informational).
+  const items = doc.category === "checklist" ? getChecklistItems(docId) : null;
+  const review_items = items?.map((i) => ({ id: i.id, review_status: i.review_status, reviewer: i.reviewer, verified_on: i.verified_on }));
+  return ok(review_items ? { ...doc, review_items } : doc, 200);
 }
