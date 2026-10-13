@@ -184,7 +184,8 @@ export function brownfieldScopeByDate(projectId: string, db: Database = getDb())
 /**
  * Extra checklists attached to a brownfield project — the same rule as
  * dd-checklist-tailor.subTrackChecklistIds' brownfield branch (unchanged by this
- * design; a unit test keeps the two equal): none before WAVE_F_PREDICATE_DATE.
+ * design; a unit test keeps the two equal): none before WAVE_F_PREDICATE_DATE unless
+ * the project is on the scoped path (opt-in or past BF_WORKSPACE_SCOPE_DATE).
  */
 export function brownfieldAttachedExtras(projectId: string, subTrack: string | null, db: Database = getDb()): string[] {
   if (!subTrack) return [];
@@ -192,14 +193,21 @@ export function brownfieldAttachedExtras(projectId: string, subTrack: string | n
   // sub-track extras, scoped by the overlay, even before WAVE_F_PREDICATE_DATE.
   // DEC-20261013-03: the scoped path (opt-in or past BF_WORKSPACE_SCOPE_DATE) also attaches
   // BF_SCOPED_EXTRA_ADDITIONS (merger-control / FDI items), scoped down by the overlay.
-  if (subTrack !== BF_BASELINE_SUB_TRACK && isBrownfieldSubTrack(subTrack) && hasBrownfieldScopeOptIn(projectId, db)) return scopedSubTrackDdChecklists(subTrack);
+  // DEC-20261013-04: in scope by date (cut-off 2026-07-01, before WAVE_F_PREDICATE_DATE)
+  // is the same scoped path as an opt-in, so it is checked ahead of the WAVE_F rule.
+  if (
+    subTrack !== BF_BASELINE_SUB_TRACK &&
+    isBrownfieldSubTrack(subTrack) &&
+    (hasBrownfieldScopeOptIn(projectId, db) || brownfieldScopeByDate(projectId, db))
+  ) {
+    return scopedSubTrackDdChecklists(subTrack);
+  }
   const proj = db.query("SELECT created_at FROM md_project WHERE id = ?").get(projectId) as { created_at: string | null } | undefined;
   if (!proj) return [];
   const pin = db
     .query("SELECT MIN(pinned_at) AS at FROM project_policy_pin WHERE project_id = ? AND policy_doc_id != ?")
     .get(projectId, BF_WS_POLICY_DOC_ID) as { at: string | null };
   if ((pin.at ?? proj.created_at ?? "") < WAVE_F_PREDICATE_DATE) return [];
-  if (subTrack !== BF_BASELINE_SUB_TRACK && isBrownfieldSubTrack(subTrack) && brownfieldScopeByDate(projectId, db)) return scopedSubTrackDdChecklists(subTrack);
   return SUB_TRACK_DD_CHECKLISTS[subTrack] ?? [];
 }
 
