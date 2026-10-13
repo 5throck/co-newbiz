@@ -4,7 +4,7 @@ title: "Entity Formation Checklist (Internal / Joint Origin Execution)"
 scope: shared
 enforceability: mixed
 owner_agent: legal-counsel
-version: "1.2.2"
+version: "1.2.3"
 effective_from: "2026-08-22"
 gate: "Entity IC"
 
@@ -38,7 +38,7 @@ items:
     mandatory: true
     waiver_eligible: true
   - id: ef-04
-    text: "설립을 주도하는 모회사의 내부 승인을 받음 — 설립, 출자·자금 지원, 지식재산 출연을 승인하는 이사회 또는 주주총회 결의"
+    text: "설립을 주도하는 모회사의 내부 승인을 받음 — 설립, 출자·자금 지원, 지식재산 출연을 승인하는 이사회 또는 주주총회 결의 (한국: 지식재산·사업 출연이 영업의 중요한 일부 양도에 해당하면 상법 제374조제1항제1호에 따른 주주총회 특별결의가 필요함 — 해당 여부는 법률 자문으로 확인; 2026-10-13 법제처 Open API 확인)"
     mandatory: true
     waiver_eligible: true
   - id: ef-05
@@ -54,7 +54,7 @@ items:
     mandatory: true
     waiver_eligible: false   # title integrity is a completeness fact — a gap here is an unwaivable establishment blocker (kill criterion ip_assignment_chain_incomplete_at_establishment)
   - id: ef-08
-    text: "인력 이전 완료 — 신규 근로계약서와 PIIA에 서명함; 모회사에서 인력이 오는 경우 적용되는 동의 규칙에 따라 전출(겸직·사외 근무) 또는 전적 계약을 체결함 (한국: 영업양도에 따른 근로관계 승계는 판례 법리 — 영업양도 — 개별 동의를 받는 것이 안전한 경로이며, 법률 자문으로 확인)"
+    text: "인력 이전 완료 — 신규 근로계약서와 PIIA에 서명함; 모회사에서 인력이 오는 경우 적용되는 동의 규칙에 따라 전출(겸직·사외 근무) 또는 전적 계약을 체결함 (한국: 영업양도 시 근로관계는 판례상 원칙적으로 양수인에게 승계되며(대법원 2020. 11. 5. 선고 2018두54705), 승계 배제 특약은 해고와 같이 정당한 이유가 필요함(근로기준법 제23조제1항). 영업양도가 아닌 인력 이동은 전적(근로자 개별 동의가 필요하다는 판례는 확인 필요)·전출로 처리하고, 전출이 모회사의 업(業)으로서 사용사업주 지휘·명령 아래 근로하는 형태이면 근로자파견(파견법 제2조제1호)으로 볼 위험이 있으므로 법률 자문으로 확인; 판례·조문은 2026-10-13 법제처 Open API 확인)"
     mandatory: true
     waiver_eligible: true
   - id: ef-09
