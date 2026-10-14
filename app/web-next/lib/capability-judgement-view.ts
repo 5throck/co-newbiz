@@ -20,20 +20,19 @@ export function buildJudgementDetail(d: SummaryDraft): string {
   return [head, monthsLabel(d), gradeLabel(d)].filter(Boolean).join(" · ");
 }
 
-export type JudgementFilter = "todo" | "confirmed" | "all";
+export type JudgementFilter = "todo" | "all";
 export interface FilterRow { id: string; stale: boolean; grade: string | null; confirmed_at: string | null }
 
 export const isTodo = (r: FilterRow, dirty: ReadonlySet<string>) => r.stale || !r.grade || dirty.has(r.id);
-export const isConfirmed = (r: FilterRow) => !!r.confirmed_at && !r.stale;
 
 export function filterCounts(rows: FilterRow[], dirty: ReadonlySet<string>) {
-  return { todo: rows.filter((r) => isTodo(r, dirty)).length, confirmed: rows.filter(isConfirmed).length, all: rows.length };
+  return { todo: rows.filter((r) => isTodo(r, dirty)).length, all: rows.length };
 }
 
 export const defaultFilter = (todoCount: number): JudgementFilter => (todoCount > 0 ? "todo" : "all");
 
 export function filterRows<T extends FilterRow>(rows: T[], f: JudgementFilter, dirty: ReadonlySet<string>): T[] {
-  return f === "todo" ? rows.filter((r) => isTodo(r, dirty)) : f === "confirmed" ? rows.filter(isConfirmed) : rows;
+  return f === "todo" ? rows.filter((r) => isTodo(r, dirty)) : rows;
 }
 
 /** Id of the neighbour of `id` in `ids` (dir +1 next, -1 previous); null at either end or when absent. */

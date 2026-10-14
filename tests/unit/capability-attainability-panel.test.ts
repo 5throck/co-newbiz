@@ -56,9 +56,9 @@ describe("summary table structure", () => {
     expect(src).toContain('role="tab"');
     expect(src).toContain("aria-selected={filter === f}");
     expect(src).toContain("{FILTER_LABEL[f]} ({counts[f]})");
-    expect(src).toContain('{ todo: "처리할 것", confirmed: "확정", all: "전체" }');
+    expect(src).toContain('{ todo: "처리할 것", all: "전체" }');
     expect(src).toContain("defaultFilter(counts.todo)");
-    expect(src).toContain("처리할 항목이 없습니다");
+    expect(src).toContain("처리할 판정이 없습니다");
     expect(src).toContain('data-testid="filter-empty"');
   });
   test("removed-capabilities list and summary strip kept; no previous layout experiments", () => {
@@ -191,11 +191,10 @@ describe("pure view helpers", () => {
     { id: "d", stale: false, grade: "low", confirmed_at: null },
   ];
   test("filter counts, default and rows", () => {
-    expect(filterCounts(rows, new Set())).toEqual({ todo: 2, confirmed: 1, all: 4 });
-    expect(filterCounts(rows, new Set(["d"]))).toEqual({ todo: 3, confirmed: 1, all: 4 });
-    expect(filterCounts(rows, new Set(["c"]))).toEqual({ todo: 3, confirmed: 1, all: 4 });
+    expect(filterCounts(rows, new Set())).toEqual({ todo: 2, all: 4 });
+    expect(filterCounts(rows, new Set(["d"]))).toEqual({ todo: 3, all: 4 });
+    expect(filterCounts(rows, new Set(["c"]))).toEqual({ todo: 3, all: 4 });
     expect(filterRows(rows, "todo", new Set()).map((r) => r.id)).toEqual(["a", "b"]);
-    expect(filterRows(rows, "confirmed", new Set()).map((r) => r.id)).toEqual(["c"]);
     expect(filterRows(rows, "all", new Set()).length).toBe(4);
     expect(defaultFilter(2)).toBe("todo");
     expect(defaultFilter(0)).toBe("all");
