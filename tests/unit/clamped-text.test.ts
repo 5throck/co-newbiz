@@ -20,11 +20,13 @@ test("ClampedText clamps to 2 lines with an accessible toggle above 80 chars", (
 
 test("S3, S5 and S8 required-note cells use ClampedText", () => {
   const s3 = read("components/stages/synergy/SynergyLinkageTab.tsx");
-  const s5 = read("components/stages/GreenfieldStage.tsx");
-  const s8 = read("components/stages/CapabilityAttainabilityPanel.tsx");
+  // ADR-0171: S5 and S8 render the required note through the one shared judgement table.
+  const s5 = read("components/stages/CapabilityJudgementTable.tsx");
+  const s8 = s5;
   expect(s3).toContain("<ClampedText text={r.requiredNote}");
-  expect(s3).toContain("max-w-[22rem]");
-  expect(s5).toContain("<ClampedText text={g.requiredNote}");
+  // The table is fixed-layout (ColGroup percentages), so the first column cannot widen the table.
+  expect(s3).toContain("table-fixed-pct");
+  expect(s5).toContain("<ClampedText text={r.required_note}");
   expect(s8).toContain("<ClampedText text={r.required_note}");
   expect(s3).not.toContain("` — ${r.requiredNote}`");
 });

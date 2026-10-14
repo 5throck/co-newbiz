@@ -3,7 +3,7 @@
 // Split from components/stages/RouteDecisionStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import Link from "next/link";
 import { ColGroup } from "../../ui.tsx";
-import { gapSourceLabel } from "../../../lib/capability-gap.ts";
+import { HELD_STATUS_CHIP, HELD_STATUS_LABEL, NECESSITY_LABEL, NECESSITY_UNSET_LABEL, gapSourceLabel, type GapHeldStatus, type GapNecessity } from "../../../lib/capability-gap.ts";
 import { CAPABILITY_REG_COL_PCT, SCORE_LABEL } from "./constants.ts";
 import type { RouteDecisionStageState } from "./useRouteDecision.ts";
 import type { OpportunityRow } from "./types.ts";
@@ -58,13 +58,20 @@ export function EvalTab({ ctx, selected }: { ctx: RouteDecisionStageState; selec
                     <div className="flex flex-wrap items-center gap-2 mb-2">
                       <h4 className="text-[length:var(--fs-body)] m-0">필요 역량 수준</h4>
                       <span className="status-chip status-not-started">필요 역량 <strong className="ml-1">{advisory.capabilityGap.total}건</strong></span>
-                      <span className="status-chip status-green">업계 리딩·평균 <strong className="ml-1">{advisory.capabilityGap.met}건</strong></span>
+                      <span className="status-chip status-green">업계 리딩·평균 <strong className="ml-1">{advisory.capabilityGap.leading + advisory.capabilityGap.average}건</strong></span>
                       <span className="status-chip status-amber">부분 보유 <strong className="ml-1">{advisory.capabilityGap.partial}건</strong></span>
-                      <span className="status-chip status-not-started">미보유 <strong className="ml-1">{advisory.capabilityGap.unmet}건</strong></span>
+                      <span className="status-chip status-not-started">미보유 <strong className="ml-1">{advisory.capabilityGap.none}건</strong></span>
                       {advisory.capabilityGap.coveragePct !== null && (
                         <span className="status-chip status-not-started">보유율 <strong className="ml-1">{advisory.capabilityGap.coveragePct}%</strong></span>
                       )}
                     </div>
+                    {(advisory.capabilityGap.largeGapRows?.length ?? 0) > 0 && (
+                      <p className="text-[length:var(--fs-caption)] mb-0">
+                        <span className="status-chip status-red"><span aria-hidden="true">▲</span> 큰 격차 주의</span>{" "}
+                        {advisory.capabilityGap.largeGapRows!.map((r) => r.capability).join(", ")}
+                        <span className="text-[color:var(--muted-fg)]"> — 필수 역량 중 부분 보유·미보유 (참고 신호이며 점수·승인을 막지 않음)</span>
+                      </p>
+                    )}
                     {advisory.capabilityGap.unmetRows.length > 0 && (
                       <p className="text-[length:var(--fs-caption)] mb-0">
                         미보유: {advisory.capabilityGap.unmetRows.map((r) => r.capability).join(", ")}
@@ -88,7 +95,7 @@ export function EvalTab({ ctx, selected }: { ctx: RouteDecisionStageState; selec
                             <ColGroup widths={CAPABILITY_REG_COL_PCT} />
                             <thead>
                               <tr>
-                                <th scope="col">필요 역량</th><th scope="col">보유 판정</th>
+                                <th scope="col">필요 역량</th><th scope="col">필요도</th><th scope="col">보유 판정</th>
                                 <th scope="col">보유 주체·근거</th><th scope="col">해소 힌트</th>
                               </tr>
                             </thead>
@@ -101,10 +108,18 @@ export function EvalTab({ ctx, selected }: { ctx: RouteDecisionStageState; selec
                                       {gapSourceLabel(r.source, false)}
                                     </span>
                                   </td>
+                                  <td className="text-[length:var(--fs-caption)]">
+                                    {r.necessity ? NECESSITY_LABEL[r.necessity as Exclude<GapNecessity, "">] ?? NECESSITY_UNSET_LABEL : <span className="text-[color:var(--muted-fg)]">{NECESSITY_UNSET_LABEL}</span>}
+                                  </td>
                                   <td>
-                                    <span className={`status-chip ${r.held.status === "leading" || r.held.status === "average" ? "status-green" : r.held.status === "partial" ? "status-amber" : r.held.status === "none" ? "status-red" : "status-not-started"}`}>
-                                      {r.held.status === "leading" ? "업계 리딩" : r.held.status === "average" ? "업계 평균" : r.held.status === "partial" ? "부분 보유" : r.held.status === "none" ? "미보유" : "미판정"}
+                                    <span className={`status-chip ${HELD_STATUS_CHIP[r.held.status as GapHeldStatus] ?? "status-not-started"}`}>
+                                      {HELD_STATUS_LABEL[r.held.status as GapHeldStatus] ?? HELD_STATUS_LABEL.unevaluated}
                                     </span>
+                                    {(r.cautions ?? []).map((c) => (
+                                      <span key={c.key} className={`status-chip mt-1 ${c.tone === "red" ? "status-red" : c.tone === "amber" ? "status-amber" : "status-not-started"}`}>
+                                        <span aria-hidden="true">{c.tone === "red" ? "▲" : c.tone === "amber" ? "!" : "·"}</span> {c.label}
+                                      </span>
+                                    ))}
                                   </td>
                                   <td className="text-[length:var(--fs-caption)]">
                                     {r.held.status !== "unevaluated" && (r.held.holders.length > 0 || r.held.evidence) ? (
@@ -170,7 +185,7 @@ export function EvalTab({ ctx, selected }: { ctx: RouteDecisionStageState; selec
                         직접 인용한다(2026-09-15 사용자 요구). */}
                     {["capability_criticality", "integration_capacity", "speed_to_capability"].includes(c.key) && advisory?.capabilityGap && (
                       <span className="block text-[length:var(--fs-caption)] mt-0.5" style={{ color: "var(--accent)" }}>
-                        역량 참고: {advisory.capabilityGap.total}건 중 리딩·평균 {advisory.capabilityGap.met}·부분 {advisory.capabilityGap.partial}·미보유 {advisory.capabilityGap.unmet}
+                        역량 참고: {advisory.capabilityGap.total}건 중 리딩·평균 {advisory.capabilityGap.leading + advisory.capabilityGap.average}·부분 {advisory.capabilityGap.partial}·미보유 {advisory.capabilityGap.none}
                         {advisory.capabilityGap.coveragePct !== null ? ` (보유율 ${advisory.capabilityGap.coveragePct}%)` : ""}
                         {advisory.capabilityGap.unmetRows.length > 0 ? ` · 미보유: ${advisory.capabilityGap.unmetRows.slice(0, 2).map((r) => r.capability).join(", ")}${advisory.capabilityGap.unmetRows.length > 2 ? " 외" : ""}` : ""}
                       </span>

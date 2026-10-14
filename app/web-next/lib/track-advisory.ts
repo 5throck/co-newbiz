@@ -4,7 +4,7 @@
 // not replaced. Also surfaces base rates from past route decisions (B2) and
 // re-review triggers (B3).
 import type { Database } from "bun:sqlite";
-import { parseGapRegister, summarizeGap } from "./capability-gap.ts";
+import { gapCautions, parseGapRegister, summarizeGap } from "./capability-gap.ts";
 
 export interface AdvisorySignal {
   key: string;
@@ -162,6 +162,12 @@ export function computeTrackAdvisory(db: Database, opportunityId: string): Track
           leans: "neutral", weight: 1,
           note: "행은 있으나 보유 판정이 없습니다 — S3 시너지 화면 연계 시너지 탭에서 판정하세요",
         });
+      }
+      // ADR-0172 §6: caution only — a 필수 capability that is 부분 보유/미보유 is named, the vote is unchanged.
+      const largeGaps = gapReg.rows.filter((r) => gapCautions(r).some((c) => c.key === "large_gap")).map((r) => r.capability);
+      if (largeGaps.length > 0) {
+        const last = signals[signals.length - 1];
+        last.note += ` · 큰 격차 주의(필수 역량): ${largeGaps.slice(0, 3).join(", ")}${largeGaps.length > 3 ? " 외" : ""}`;
       }
     } else {
       signals.push({

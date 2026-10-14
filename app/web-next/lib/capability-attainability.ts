@@ -1,5 +1,5 @@
-// S8 필요 역량 달성 가능성 (ADR-0168, 설계 2026-10-14) — S3 레지스터
-// (opportunity.capability_gap_json)에 행별 판정을 얹는 순수 로직과 저장 헬퍼.
+// 필요 역량 달성 가능성 판정 (ADR-0168; edit surface moved to S5 by ADR-0171, 2026-10-14) — S3 레지스터
+// (opportunity.capability_gap_json)에 행별 판정을 얹는 순수 로직과 저장 헬퍼. S8은 읽기 전용 요약.
 // 판정자는 사람이다(AI는 초안만, 슬라이스 3). 수치는 사업성 모델에 자동 반영하지 않는다.
 import type { Database } from "bun:sqlite";
 import { appendAudit } from "../../../db/lib/access-control.ts";
@@ -8,6 +8,7 @@ import {
   carryOverAttainability,
   normalizeAttainability,
   parseGapRegister,
+  NARRATIVE_CAP,
   parseRemovedCapabilities,
   summarizeGap,
   type AttainabilityGrade,
@@ -96,6 +97,10 @@ export interface AttainabilityRowView {
   necessity: CapabilityGapRow["necessity"];
   necessity_scope_note: string;
   resolution: GapResolution | null;
+  /** 기대 수준 (ADR-0172 D6): narrative, judgement-owned (S5). */
+  expected_level: string;
+  /** S5 free-text 비고 (not S3-hashed, not a judgement field). */
+  note: string;
   closing_cost_krw_m: number | null;
   months_to_attain: number | null;
   grade: AttainabilityGrade | null;
@@ -136,6 +141,8 @@ export function rowView(r: CapabilityGapRow): AttainabilityRowView {
     necessity: r.necessity,
     necessity_scope_note: r.necessityScopeNote,
     resolution: r.resolution,
+    expected_level: a?.expectedLevel ?? "",
+    note: r.note,
     closing_cost_krw_m: a?.closingCostKrwM ?? null,
     months_to_attain: a?.monthsToAttain ?? null,
     grade: g,
@@ -180,6 +187,8 @@ export interface AttainabilityPatch {
    */
   s3Hash?: unknown;
   resolution?: unknown;
+  /** 기대 수준 narrative (<= NARRATIVE_CAP). */
+  expectedLevel?: unknown;
   closingCostKrwM?: unknown;
   monthsToAttain?: unknown;
   grade?: unknown;
@@ -192,12 +201,14 @@ export type AttainabilityError =
   | { code: "unknown_row"; message: string }
   | { code: "invalid_level"; message: string }
   | { code: "invalid_cost"; message: string }
+  | { code: "text_too_long"; message: string }
+  | { code: "expected_level_required"; message: string }
   | { code: "rationale_required"; message: string }
   | { code: "nothing_to_confirm"; message: string }
   | { code: "s3_owned_field"; message: string }
   | { code: "stale_requires_rejudge"; message: string };
 
-/** S3-owned fields (ADR-0170 D2): S8 may not write them; edit in S3 (levels also in S5). */
+/** S3-owned fields (ADR-0170 D2, ADR-0172 D4): the judgement writers (S5) may not write them; edit in S3. */
 export const S3_OWNED_PATCH_FIELDS = ["capability", "requiredNote", "necessity", "necessityScopeNote", "held", "requiredLevel", "currentLevel", "source", "note"] as const;
 
 const RESOLUTIONS = ["build", "partner", "hire", "invest"];
@@ -223,7 +234,7 @@ export function applyAttainabilityPatches(
     if (!id || !base) return { ok: false, error: { code: "unknown_row", message: `레지스터에 없는 행입니다: ${id || "(id 없음)"}` } };
     const owned = S3_OWNED_PATCH_FIELDS.find((f) => f in raw);
     if (owned) {
-      return { ok: false, error: { code: "s3_owned_field", message: `${owned}은(는) S3가 소유한 항목이라 S8에서 바꿀 수 없습니다 — S3(필요 수준·보유 수준은 S5)에서 수정하세요.` } };
+      return { ok: false, error: { code: "s3_owned_field", message: `${owned}은(는) S3가 소유한 항목이라 판정 화면(S5)에서 바꿀 수 없습니다 — S3에서 수정하세요.` } };
     }
     if ("s3Hash" in raw && raw.s3Hash !== null && typeof raw.s3Hash !== "string") {
       return { ok: false, error: { code: "invalid_request", message: "s3Hash는 문자열입니다." } };
@@ -237,6 +248,13 @@ export function applyAttainabilityPatches(
     }
     const prevA: CapabilityAttainability = base.attainability ?? normalizeAttainability({})!;
     const a: CapabilityAttainability = { ...prevA };
+    if ("expectedLevel" in raw) {
+      if (raw.expectedLevel !== null && typeof raw.expectedLevel !== "string") return { ok: false, error: { code: "invalid_request", message: "expectedLevel은 문자열입니다." } };
+      const v = typeof raw.expectedLevel === "string" ? raw.expectedLevel.trim() : "";
+      if (v.length > NARRATIVE_CAP) return { ok: false, error: { code: "text_too_long", message: `${base.capability}: 기대 수준은 ${NARRATIVE_CAP}자 이내여야 합니다.` } };
+      if (v) a.expectedLevel = v;
+      else delete a.expectedLevel;
+    }
     if ("closingCostKrwM" in raw) {
       const n = numOrNull(raw.closingCostKrwM);
       if (n === "bad") return { ok: false, error: { code: "invalid_cost", message: "해소 비용(백만원)은 0 이상의 숫자여야 합니다." } };
@@ -281,7 +299,7 @@ export function applyAttainabilityPatches(
       if (seen === current) a.s3Snapshot = s3SnapshotOf(next);
       delete a.staleSince;
     }
-    const hasContent = a.grade !== null || a.closingCostKrwM !== null || a.monthsToAttain !== null || a.rationale !== "" || a.evidence.length > 0 || (a.history?.length ?? 0) > 0;
+    const hasContent = !!a.expectedLevel || a.grade !== null || a.closingCostKrwM !== null || a.monthsToAttain !== null || a.rationale !== "" || a.evidence.length > 0 || (a.history?.length ?? 0) > 0;
     if (hasContent) next = { ...next, attainability: a };
     else {
       const { attainability: _x, ...rest } = next;
@@ -311,6 +329,16 @@ export function confirmAttainability(
   if (explicitStale.length > 0) {
     return { ok: false, error: { code: "stale_requires_rejudge", message: `S3 내용이 바뀐 행은 재판정(저장) 후에 확정할 수 있습니다: ${explicitStale.map((r) => r.capability).join(", ")}` } };
   }
+  // ADR-0172 OD-7: a judgement with a 해소 방식 needs a 기대 수준 to be confirmed (record completeness, not a gate block).
+  const missingExpected = rows.filter((r) => {
+    if (rowIds && !rowIds.includes(r.id)) return false;
+    const a = r.attainability;
+    if (!a || a.grade === null || a.confirmedAt || isStale(r)) return false;
+    return !!r.resolution && !(a.expectedLevel ?? "").trim();
+  });
+  if (missingExpected.length > 0) {
+    return { ok: false, error: { code: "expected_level_required", message: `해소 방식을 정한 행은 기대 수준을 입력해야 확정할 수 있습니다: ${missingExpected.map((r) => r.capability).join(", ")}` } };
+  }
   const confirmed: string[] = [];
   const next = rows.map((r) => {
     const a = r.attainability;
@@ -330,6 +358,16 @@ export function confirmAttainability(
 
 export function sourceOpportunityOf(db: Database, projectId: string): string | null {
   return (db.query("SELECT source_opportunity_id AS id FROM md_project WHERE id = ?").get(projectId) as { id: string | null } | null)?.id ?? null;
+}
+
+/**
+ * Stage that owns the judgement edit surface (ADR-0171): S5 for Green Field, S7 per target for
+ * Brown Field. Brown Field's S7 surface ships in slice 2b; until then the S8 bridge keeps the old
+ * project routes writable for Brown Field only (Green Field gets 410 moved).
+ */
+export function editStageOf(db: Database, projectId: string): { track: string | null; editAt: "S5" | "S7" } {
+  const track = (db.query("SELECT track FROM md_project WHERE id = ?").get(projectId) as { track: string | null } | null)?.track ?? null;
+  return { track, editAt: track === "brownfield" ? "S7" : "S5" };
 }
 
 export function readRegister(db: Database, opportunityId: string) {
@@ -353,7 +391,7 @@ export function writeRegister(
 }
 
 /**
- * Save drafts: read the CURRENT register, merge ONLY S8-owned fields (resolution and
+ * Save drafts: read the CURRENT register, merge ONLY judgement-owned fields (resolution, expectedLevel and
  * attainability.*) onto it and write, all in one transaction. S3-owned values always come
  * from the stored register, never from the client, so an S3 edit made after the S8 page
  * loaded survives (no lost update).

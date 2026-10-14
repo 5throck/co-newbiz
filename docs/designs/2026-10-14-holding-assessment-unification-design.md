@@ -171,7 +171,7 @@ Every surface above adopts the order of section 4.
 
 ## 12. AI drafts
 
-- **Holding draft** (`capability-gap/llm-draft`): proposes `보유 판정` (new keys), `보유 수준` narrative and `근거` from group/affiliate profiles; never `필요도` or `필요 수준`. `leading` only with explicit comparative evidence; otherwise `average` with "업계 대비 근거 없음", or `unevaluated`. Output key order per section 4. Validator rejects legacy keys. Draft only; a person confirms.
+- **Holding draft** (`capability-gap/llm-draft`): proposes `보유 판정` (new keys), `보유 수준` narrative and `근거` from group/affiliate profiles; `필요도` and `필요 수준` only as empty-field drafts (see Amendment 2026-10-14 below). `leading` only with explicit comparative evidence; otherwise `average` with "업계 대비 근거 없음", or `unevaluated`. Output key order per section 4. Validator rejects legacy keys. Draft only; a person confirms.
 - **Attainability draft** (S5/S7): may propose `기대 수준` narrative and a grade, and optionally a one-sentence comparison of `기대 수준` against `필요 수준` (OD-8). Proposal only.
 
 ## 13. API and OpenAPI
@@ -239,3 +239,7 @@ None. All fields are JSON; existing narrative text is valid as is; held keys are
 - Live data (how many rows hold `met`, narrative length distribution) was not inspected; no database access.
 - Whether S5 `capability_gaps_json` (migration 0056) still carries its own level text was not confirmed.
 - Outputs are decision support, not investment advice.
+
+## Amendment 2026-10-14 - AI drafts of necessity, required level and holding status
+
+The holding draft route previously never proposed `필요도` or `필요 수준`. The decider reversed this on 2026-10-14 and split the AI into two actions: the requirement proposal (extra rows plus empty `필요도`/`필요 수준`, no holding fields) and a holding check (`보유 판정`/`보유 수준`/`보유 주체·근거` from profiles plus bounded external web search with required citations, per-row re-check applied only by a human). Common rules: drafts for empty fields only, short basis per field, "AI 초안" chip until edited or saved, no database write by the routes, unsupported values stay empty or `미판정`, web text untrusted, search failure degrades to profile-only. `필요 수준`/`보유 수준` are edited inline in the table (the modal remains for `보유 주체·근거`). Humans decide; saving is the human act. See ADR-0172, Amendment 2026-10-14.

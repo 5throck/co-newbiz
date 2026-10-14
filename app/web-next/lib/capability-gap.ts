@@ -55,6 +55,11 @@ export interface CapabilityAttainability {
   grade: AttainabilityGrade | null;
   rationale: string;
   evidence: string[];
+  /**
+   * 기대 수준 (ADR-0172 D6, ADR-0171): narrative of the state expected once the 해소 방식 is
+   * done (cap NARRATIVE_CAP). Judgement-owned (S5), NOT part of the S3 row hash. Absent = 미입력.
+   */
+  expectedLevel?: string;
   draftedBy: AttainabilityDrafter | null;
   confirmedBy: string | null;
   confirmedAt: string | null;
@@ -86,6 +91,8 @@ export interface AttainabilityHistoryEntry {
   rationale: string;
   evidence: string[];
   resolution: GapResolution | null;
+  /** 기대 수준 of the superseded judgement (absent on older entries). */
+  expectedLevel?: string;
   confirmedBy: string | null;
   confirmedAt: string | null;
   basisHash: string;
@@ -107,36 +114,6 @@ export interface RemovedCapability {
 
 export const HISTORY_CAP = 5;
 export const REMOVED_CAP = 30;
-
-// 공용 5단계 수준 척도(ADR-0168) — 필요 수준·보유 수준이 같은 척도를 쓴다.
-// 저장값은 한글 라벨 그대로(requiredLevel/currentLevel 문자열 컬럼 유지, 마이그레이션 없음).
-export const LEVEL_SCALE = [
-  { step: 1, label: "없음", meaning: "보유 역량 없음" },
-  { step: 2, label: "기초", meaning: "외부 도움이 있어야 수행 가능" },
-  { step: 3, label: "실무", meaning: "혼자서 보통 품질로 수행 가능" },
-  { step: 4, label: "숙련", meaning: "규모에서도 안정적인 품질" },
-  { step: 5, label: "선도", meaning: "업계 선도, 경쟁 우위의 원천" },
-] as const;
-export const LEVEL_LABELS: string[] = LEVEL_SCALE.map((l) => l.label);
-
-/** 척도 라벨이면 단계(1~5), 아니면 null(미판정 또는 레거시 자유 텍스트). */
-export function levelStep(text: string | null | undefined): number | null {
-  const t = (text ?? "").trim();
-  return LEVEL_SCALE.find((l) => l.label === t)?.step ?? null;
-}
-
-/** 비어 있지 않지만 척도에 없는 값 — 삭제하지 않고 레거시 메모로 보여 준다. */
-export function isLegacyLevelText(text: string | null | undefined): boolean {
-  const t = (text ?? "").trim();
-  return t !== "" && levelStep(t) === null;
-}
-
-/** 갭 = 필요 - 보유(0~4). 둘 중 하나라도 척도 밖이면 null. */
-export function levelGap(required: string | null | undefined, current: string | null | undefined): number | null {
-  const r = levelStep(required);
-  const c = levelStep(current);
-  return r === null || c === null ? null : Math.max(0, r - c);
-}
 
 export const ATTAINABILITY_GRADE_LABEL: Record<AttainabilityGrade, string> = { high: "높음", medium: "중간", low: "낮음" };
 export const ATTAINABILITY_UNJUDGED_LABEL = "미판정";
@@ -196,6 +173,14 @@ export const HELD_STATUS_CHIP: Record<GapHeldStatus, string> = {
   partial: "status-amber",
   none: "status-red",
   unevaluated: "status-not-started",
+};
+
+/** Muted suggestion text for 기대 수준 per 해소 방식 (ADR-0172 OD-10). A hint only: never compared, never enforced. */
+export const RESOLUTION_EXPECTED_LEVEL_HINT: Record<GapResolution, string> = {
+  build: "직접 구축을 마친 뒤 우리가 스스로 수행할 수 있는 수준 (인력·설비·절차 확보 기준)",
+  hire: "영입한 인력이 수행할 수 있는 수준과 정착 조건 (핵심 인력 확보 기준)",
+  partner: "제휴사를 통해 접근할 수 있는 수준과 의존 범위 (계약 조건 기준)",
+  invest: "투자 대상이 보유한 수준 중 우리가 확보하는 범위 (지분·권리 기준)",
 };
 
 const RESOLUTIONS: GapResolution[] = ["build", "partner", "hire", "invest"];
@@ -295,6 +280,7 @@ export function normalizeAttainability(raw: unknown): CapabilityAttainability | 
   const confirmedAt = str(a.confirmedAt, 40) || null;
   const basisHash = str(a.basisHash, 40);
   const staleSince = str(a.staleSince, 40);
+  const expectedLevel = str(a.expectedLevel, NARRATIVE_CAP);
   const s3Snapshot = normalizeS3Snapshot(a.s3Snapshot);
   const history = Array.isArray(a.history)
     ? (a.history as unknown[]).map(normalizeHistoryEntry).filter((x): x is AttainabilityHistoryEntry => x !== null).slice(-HISTORY_CAP)
@@ -305,6 +291,7 @@ export function normalizeAttainability(raw: unknown): CapabilityAttainability | 
     grade,
     rationale: str(a.rationale, 600),
     evidence: strArr(a.evidence, 8, 300),
+    ...(expectedLevel ? { expectedLevel } : {}),
     draftedBy: drafter,
     // 확정자와 확정일은 함께 있을 때만 유효하다.
     confirmedBy: confirmedBy && confirmedAt ? confirmedBy : null,
@@ -343,6 +330,7 @@ function normalizeHistoryEntry(raw: unknown): AttainabilityHistoryEntry | null {
     rationale: str(h.rationale, 600),
     evidence: strArr(h.evidence, 8, 300),
     resolution: RESOLUTIONS.includes(h.resolution as GapResolution) ? (h.resolution as GapResolution) : null,
+    ...(str(h.expectedLevel, NARRATIVE_CAP) ? { expectedLevel: str(h.expectedLevel, NARRATIVE_CAP) } : {}),
     confirmedBy: confirmedBy && confirmedAt ? confirmedBy : null,
     confirmedAt: confirmedBy && confirmedAt ? confirmedAt : null,
     basisHash: str(h.basisHash, 40),

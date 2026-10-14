@@ -6,7 +6,7 @@
 // staged commitment). KPIs declared here are the pre-commit the S12 venture
 // scorecard evaluates against (C2).
 import type { Database } from "bun:sqlite";
-import { parseGapRegister, RESOLUTION_LABEL } from "./capability-gap.ts";
+import { HELD_STATUS_LABEL, NECESSITY_LABEL, NECESSITY_UNSET_LABEL, parseGapRegister, RESOLUTION_LABEL, type GapNecessity } from "./capability-gap.ts";
 
 export interface CharterKpi {
   key: string;
@@ -60,10 +60,15 @@ export function buildProjectCharter(
     // Source of truth is the S3/S5 register (opportunity.capability_gap_json, ADR-0136); rows already met are not gaps.
     const reg = db.query("SELECT capability_gap_json FROM opportunity WHERE id = ?")
       .get(opts.opportunityId) as { capability_gap_json: string | null } | undefined;
-    const gaps = parseGapRegister(reg?.capability_gap_json).rows.filter((r) => r.capability && r.held.status !== "leading" && r.held.status !== "average");
+    // ADR-0172 display order: 필요도, 보유 판정, then the resolution. 필수 gaps come first (stable sort).
+    const NECESSITY_RANK: Record<GapNecessity, number> = { essential: 0, partial_essential: 1, "": 2, optional: 3 };
+    const gaps = parseGapRegister(reg?.capability_gap_json).rows
+      .filter((r) => r.capability && r.held.status !== "leading" && r.held.status !== "average")
+      .sort((a, b) => NECESSITY_RANK[a.necessity] - NECESSITY_RANK[b.necessity]);
     for (const g of gaps.slice(0, 3)) {
       const target = g.resolution ? RESOLUTION_LABEL[g.resolution] : clamp(g.note, 120);
-      kpis.push({ key: `gap:${g.capability.slice(0, 24)}`, label: `역량 해소 — ${g.capability}`, target: target || "해소 방안 확인" });
+      const necessity = g.necessity ? NECESSITY_LABEL[g.necessity] : NECESSITY_UNSET_LABEL;
+      kpis.push({ key: `gap:${g.capability.slice(0, 24)}`, label: `역량 해소 — ${g.capability} (필요도 ${necessity}, 보유 판정 ${HELD_STATUS_LABEL[g.held.status]})`, target: target || "해소 방안 확인" });
     }
     kpis.push({ key: "entry_revenue", label: "진출 매출 기준선 설정", target: "첫 분기 채널별 매출 기록" });
   } else if (opts.track === "brownfield") {

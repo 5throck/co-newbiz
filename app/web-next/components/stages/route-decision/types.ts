@@ -22,10 +22,13 @@ export interface AdvisoryResponse {
     coveragePct: number | null;
     essentialCoveragePct?: number | null;
     unmetRows: Array<{ capability: string; resolution: string | null }>;
+    /** 필수 rows that are 부분 보유/미보유 (큰 격차 주의). */
+    largeGapRows?: Array<{ capability: string; resolution: string | null }>;
     // S3에서 확정한 필요 역량 수준 전체 행 (역량 관련 5기준 채점 근거)
     rows?: Array<{
       capability: string;
       necessity?: string;
+      cautions?: Array<{ key: string; label: string; tone: "red" | "amber" | "neutral" }>;
       source: string;
       held: { status: string; holders: string[]; evidence: string };
       resolution: string | null;

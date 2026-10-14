@@ -9,15 +9,30 @@ import type { SynergyPayload } from "./types.ts";
 import { ColGroup } from "../../ui.tsx";
 import { ClampedText } from "../ClampedText.tsx";
 import { CapabilityHeldDialog, HeldSummary } from "../CapabilityHeldDialog.tsx";
-import { CapabilityNarrativeDialog, NarrativeCell, type NarrativeField } from "../CapabilityNarrativeDialog.tsx";
+import { NarrativeInput } from "../CapabilityNarrativeDialog.tsx";
+import { HoldingRecheckDialog, SourceLinks } from "./HoldingRecheckDialog.tsx";
 
 // 시너지 영역 6열 — 근거·기회·위험이 긴 문단 열.
+// 필요 역량 수준 8열 — 필요 역량·서술 열이 넓고 선택 열은 좁게.
+const GAP_COL_PCT = [19, 10, 19, 10, 19, 12, 7, 4] as const;
+
+/** AI 초안 표식 — 아이콘+글자(색만으로 구분하지 않음), 근거는 툴팁과 짧은 본문으로. */
+function DraftChip({ basis, sources }: { basis?: string; sources?: Array<{ title: string; url: string }> }) {
+  return (
+    <span className="block mt-1">
+      <span className="status-chip status-in-progress" title={basis ? `근거: ${basis}` : undefined}><span aria-hidden="true">✦</span> AI 초안</span>
+      {basis && <ClampedText text={`근거: ${basis}`} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" />}
+      <SourceLinks sources={sources} />
+    </span>
+  );
+}
+
 const SYNERGY_AREA_COL_PCT = [14, 10, 30, 20, 16, 10] as const;
 
 export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: SynergyPayload }) {
-  const { tab, canCurate, showLinkageForm, setShowLinkageForm, linkageForm, setLinkageForm, linkageError, setLinkageError, linkageSaving, addLinkageItem, opportunityId, gapRows, gapBusy, draftGap, saveGap, gap, gapNote, gapError, updateGapHeld, updateGapRow, setGapRows, newGapCap, setNewGapCap, addGapRow } = ctx;
+  const { tab, canCurate, showLinkageForm, setShowLinkageForm, linkageForm, setLinkageForm, linkageError, setLinkageError, linkageSaving, addLinkageItem, opportunityId, gapRows, gapBusy, draftGap, saveGap, gapNote, gapDrafts, gapDirty, holdBusy, checkHolding, recheck, setRecheck, recheckRow, applyRecheck, gapError, updateGapHeld, updateGapRow, setGapRows, newGapCap, setNewGapCap, addGapRow } = ctx;
+  const proposePrimary = !gapDirty && gapRows.length === 0;
   const [heldEditing, setHeldEditing] = useState<string | null>(null);
-  const [narrativeEditing, setNarrativeEditing] = useState<{ id: string; field: "requiredLevel" | "currentLevel" } | null>(null);
   return (
     <>{tab === "linkage" && (
             <div className="text-[0.88rem]">
@@ -89,59 +104,71 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                     title="필요 역량 수준"
                     icon=""
                     count={gapRows.length}
-                    actions={
+                    summary={gapDirty ? <span className="status-chip status-amber" role="status"><span aria-hidden="true">●</span> 저장 전 변경 있음</span> : undefined}
+                    actions={canCurate ? (
                       <span className="flex items-center gap-1">
-                        {canCurate && (
-                          <button type="button" className="btn-ghost btn-sm" disabled={gapBusy || gapRows.length === 0} title="시너지 영역 근거로 필요 역량을 추가로 제안하고 프로필 근거로 보유 판정 초안을 생성 (제안 전용 — 저장은 사람)" onClick={() => void draftGap()}>
-                            {gapBusy ? "제안 생성 중..." : "필요 역량 추가 제안"}
-                          </button>
-                        )}
-                        {canCurate && (
-                          <button type="button" className="btn-ghost btn-sm" disabled={gapBusy || gapRows.length === 0} onClick={() => void saveGap()}>
-                            {gapBusy ? "저장 중..." : "저장"}
-                          </button>
-                        )}
+                        <button type="button" className={proposePrimary ? "btn-primary btn-sm" : "btn-ghost btn-sm"} disabled={gapBusy || holdBusy} title="시너지 영역 근거로 추가 필요 역량과 빈 칸의 필요도·필요 수준을 초안으로 제안합니다 (제안 전용 — 저장은 사람)" onClick={() => void draftGap()}>
+                          {gapBusy ? "처리 중..." : "필요 역량 추가 제안"}
+                        </button>
+                        <button type="button" className="btn-ghost btn-sm" disabled={gapBusy || holdBusy || gapRows.length === 0} aria-busy={holdBusy} title="그룹/계열사 회사 정보(프로필)와 외부 웹 검색으로 보유 판정·보유 수준·근거를 초안으로 확인합니다 — 출처 인용 필수, 제안 전용" onClick={() => void checkHolding()}>
+                          {holdBusy ? "확인 중..." : "보유 판정 확인 (AI)"}
+                        </button>
+                        <button type="button" className={gapDirty ? "btn-primary btn-sm" : "btn-ghost btn-sm"} disabled={gapBusy || holdBusy || gapRows.length === 0 || !gapDirty} onClick={() => void saveGap()}>
+                          {gapBusy ? "처리 중..." : "저장"}
+                        </button>
                       </span>
-                    }
+                    ) : undefined}
                   />
                   <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-                    시너지 분석(신규·재분석) 시 위 시너지 영역에서 필요 역량이 자동 도출·병합됩니다.{" "}
-                    {gap?.internalAssessmentNote ?? "내부(자사 단독) 역량 평가는 추후 보강 예정 — 현재 보유 판정 근거는 그룹/계열사 프로필 기준입니다."}
-                    {gap && !gap.stored && gapRows.length > 0 ? " — 아직 저장되지 않은 시드 초안입니다." : ""}
-                    {" "}필요 내용·필요도·필요 수준·보유 판정·보유 수준·보유 주체/근거는 여기(S3)에서 정의하며(경고 칩은 의사결정 보조용이며 저장·게이트를 막지 않습니다), S8 필요 역량 달성 가능성 화면에는 읽기 전용으로 표시됩니다.
+                    &quot;필요 역량 추가 제안&quot;은 필요도·필요 수준을, &quot;보유 판정 확인&quot;은 보유 판정·보유 수준·근거(프로필+외부 검색, 출처 표기)를 빈 칸에만 초안으로 채웁니다. 검토·수정 후 저장하세요 — 경고 칩은 보조용이며 S8에는 읽기 전용으로 표시됩니다.
                   </p>
+                  {holdBusy && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">그룹/계열사 프로필과 외부 검색으로 보유 판정을 확인하는 중입니다 (최대 약 1분)...</p>}
                   {gapNote && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--green-fg)] mb-2">{gapNote}</p>}
                   {gapError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{gapError}</p>}
                   {gapRows.length === 0 ? (
                     <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)] mb-0">
-                      필요 역량 행이 없습니다 — 분석(재분석)을 실행하면 시너지 영역에서 자동 도출되고, 아래 입력이나 &quot;필요 역량 추가 제안&quot;으로도 추가할 수 있습니다. 비즈니스 모델 검토에 필요 역량(requiredCapabilities)이 있으면 이 섹션에서 시드됩니다.
+                      필요 역량 행이 없습니다 — 재분석하면 시너지 영역에서 자동 도출되고, 아래 입력이나 &quot;필요 역량 추가 제안&quot;으로도 추가할 수 있습니다.
                     </p>
                   ) : (
                     <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-                      {/* 쓰기 권한이 없으면 레지스터의 셀렉트를 비활성화한다 — 기록값은 그대로
-                          보이고(표시 유지, 편집만 차단), 보유 주체·근거는 `보기` 버튼으로 연다. */}
-                      <table className="data-table" aria-label="필요 역량 수준 레지스터">
+                      {/* 쓰기 권한이 없으면 셀렉트를 비활성화한다 — 기록값은 그대로 보이고(표시 유지,
+                          편집만 차단), 보유 주체·근거는 `보기` 버튼으로 연다. */}
+                      <table className="data-table table-fixed-pct tmin-80" aria-label="필요 역량 수준 레지스터">
                         <caption className="sr-only">필요 역량 수준 레지스터 — 보유 판정은 그룹/계열사 프로필 기준</caption>
+                        <ColGroup widths={GAP_COL_PCT} />
                         <thead>
                           <tr>
                             <th scope="col">필요 역량</th><th scope="col">필요도</th><th scope="col">필요 수준</th><th scope="col">보유 판정</th>
-                            <th scope="col">보유 수준</th><th scope="col">보유 주체·근거</th><th scope="col">해소 힌트</th><th scope="col"></th>
+                            <th scope="col">보유 수준</th><th scope="col">보유 주체·근거</th><th scope="col">해소 힌트</th><th scope="col"><span className="sr-only">작업</span></th>
                           </tr>
                         </thead>
                         <tbody>
-                          {gapRows.map((r, idx) => (
+                          {gapRows.map((r, idx) => {
+                            const mark = gapDrafts[r.id];
+                            const cautions = gapCautions(r).filter((c) => c.key !== "unevaluated");
+                            return (
                             <tr key={r.id}>
-                              <td className="cell-primary max-w-[22rem] break-words">
+                              <td className="cell-primary">
                                 <span className="font-semibold text-[length:var(--fs-caption)]">{r.capability}</span>
                                 <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                                   {gapSourceLabel(r.source, true)}
                                 </span>
                                 {r.requiredNote && <ClampedText text={r.requiredNote} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" />}
+                                {(cautions.length > 0 || r.held.reassessHint) && (
+                                  <span className="flex flex-wrap gap-1 mt-1">
+                                    {r.held.reassessHint && <span className="status-chip status-amber"><span aria-hidden="true">!</span> 재판정 권장</span>}
+                                    {cautions.map((c) => (
+                                      <span key={c.key} className={`status-chip ${c.tone === "red" ? "status-red" : c.tone === "amber" ? "status-amber" : "status-not-started"}`}>
+                                        <span aria-hidden="true">{c.tone === "red" ? "▲" : c.tone === "amber" ? "!" : "·"}</span> {c.label}
+                                      </span>
+                                    ))}
+                                  </span>
+                                )}
                               </td>
                               <td>
                                 <select aria-label={`${r.capability} 필요도`} value={r.necessity} disabled={!canCurate}
                                   onChange={(e) => updateGapRow(idx, { necessity: e.target.value as GapNecessity, ...(e.target.value === "partial_essential" ? {} : { necessityScopeNote: "" }) })}
-                                  className="sizing-new-input sizing-new-input-sm">
+                                  className="sizing-new-input sizing-new-input-sm w-full">
                                   <option value="">{NECESSITY_UNSET_LABEL}</option>
                                   {(Object.keys(NECESSITY_LABEL) as Array<Exclude<GapNecessity, "">>).map((k) => (
                                     <option key={k} value={k}>{NECESSITY_LABEL[k]}</option>
@@ -152,38 +179,39 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                                     onChange={(e) => updateGapRow(idx, { necessityScopeNote: e.target.value })}
                                     className="sizing-new-input sizing-new-input-sm mt-1 w-full" />
                                 )}
+                                {mark?.fields.includes("necessity") && <DraftChip basis={mark.basis.necessity} />}
                               </td>
                               <td className="text-[length:var(--fs-caption)]">
-                                <NarrativeCell capability={r.capability} field="필요 수준" value={r.requiredLevel} readOnly={!canCurate} onOpen={() => setNarrativeEditing({ id: r.id, field: "requiredLevel" })} />
+                                <NarrativeInput capability={r.capability} field="필요 수준" value={r.requiredLevel} readOnly={!canCurate} onChange={(v) => updateGapRow(idx, { requiredLevel: v })} />
+                                {mark?.fields.includes("requiredLevel") && <DraftChip basis={mark.basis.requiredLevel} />}
                               </td>
                               <td>
                                 <select aria-label={`${r.capability} 보유 판정`} value={r.held.status} disabled={!canCurate}
                                   onChange={(e) => updateGapHeld(idx, { status: e.target.value as GapHeldStatus, legacyStatus: undefined, reassessHint: undefined })}
-                                  className={`sizing-new-input sizing-new-input-sm ${HELD_STATUS_CHIP[r.held.status]}`}>
+                                  className={`sizing-new-input sizing-new-input-sm w-full ${HELD_STATUS_CHIP[r.held.status]}`}>
                                   {(Object.keys(HELD_STATUS_LABEL) as GapHeldStatus[]).map((s) => (
                                     <option key={s} value={s}>{HELD_STATUS_LABEL[s]}</option>
                                   ))}
                                 </select>
-                                {r.held.reassessHint && <span className="status-chip status-amber mt-1"><span aria-hidden="true">!</span> 재판정 권장</span>}
-                                {gapCautions(r).filter((c) => c.key !== "unevaluated").map((c) => (
-                                  <span key={c.key} className={`status-chip mt-1 ${c.tone === "red" ? "status-red" : c.tone === "amber" ? "status-amber" : "status-not-started"}`}>
-                                    <span aria-hidden="true">{c.tone === "red" ? "▲" : c.tone === "amber" ? "!" : "·"}</span> {c.label}
-                                  </span>
-                                ))}
+                                {mark?.fields.includes("heldStatus") && <DraftChip basis={mark.basis.held} sources={mark.sources} />}
                               </td>
                               <td className="text-[length:var(--fs-caption)]">
-                                <NarrativeCell capability={r.capability} field="보유 수준" value={r.currentLevel} readOnly={!canCurate} onOpen={() => setNarrativeEditing({ id: r.id, field: "currentLevel" })} />
+                                <NarrativeInput capability={r.capability} field="보유 수준" value={r.currentLevel} readOnly={!canCurate} onChange={(v) => updateGapRow(idx, { currentLevel: v })} />
+                                {mark?.fields.includes("currentLevel") && <DraftChip basis={mark.basis.currentLevel} sources={mark.sources} />}
                               </td>
                               <td className="text-[length:var(--fs-caption)]">
                                 <HeldSummary holders={r.held.holders} evidence={r.held.evidence} />
                                 <button type="button" className="btn-ghost btn-sm mt-1" aria-label={`${r.capability} 보유 주체·근거 ${canCurate ? "입력" : "보기"}`} onClick={() => setHeldEditing(r.id)}>
                                   {canCurate ? (r.held.holders.length > 0 || r.held.evidence.trim() ? "수정" : "입력") : "보기"}
                                 </button>
+                                {canCurate && (
+                                  <button type="button" className="btn-ghost btn-sm mt-1 ml-1" aria-label={`${r.capability} 보유 판정 다시 확인`} disabled={gapBusy || holdBusy || recheck?.busy} onClick={() => void recheckRow(r.id)}>다시 확인</button>
+                                )}
                               </td>
                               <td>
                                 <select aria-label={`${r.capability} 해소 힌트`} value={r.resolution ?? ""} disabled={!canCurate}
                                   onChange={(e) => updateGapRow(idx, { resolution: (e.target.value || null) as GapResolution | null })}
-                                  className="sizing-new-input sizing-new-input-sm">
+                                  className="sizing-new-input sizing-new-input-sm w-full">
                                   <option value="">—</option>
                                   {(Object.keys(RESOLUTION_LABEL) as GapResolution[]).map((k) => (
                                     <option key={k} value={k}>{RESOLUTION_LABEL[k]}</option>
@@ -191,20 +219,18 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                                 </select>
                               </td>
                               <td>
-                                <button type="button" className="btn-danger btn-sm" aria-label={`${r.capability} 행 삭제`} disabled={!canCurate}
-                                  onClick={() => setGapRows((prev) => prev.filter((_, i) => i !== idx))}>삭제</button>
+                                <button type="button" className="btn-ghost btn-sm" aria-label={`${r.capability} 행 삭제`} title="행 삭제" disabled={!canCurate}
+                                  onClick={() => setGapRows((prev) => prev.filter((_, i) => i !== idx))}><span aria-hidden="true">✕</span></button>
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
-                      {narrativeEditing && (() => {
-                        const row = gapRows.find((x) => x.id === narrativeEditing.id);
+                      {recheck && (() => {
+                        const row = gapRows.find((x) => x.id === recheck.id);
                         if (!row) return null;
-                        const field: NarrativeField = narrativeEditing.field === "requiredLevel" ? "필요 수준" : "보유 수준";
-                        return <CapabilityNarrativeDialog capability={row.capability} field={field} value={row[narrativeEditing.field]} readOnly={!canCurate}
-                          onSave={(v) => { updateGapRow(gapRows.findIndex((x) => x.id === row.id), { [narrativeEditing.field]: v }); setNarrativeEditing(null); }}
-                          onClose={() => setNarrativeEditing(null)} />;
+                        return <HoldingRecheckDialog capability={row.capability} busy={recheck.busy} proposal={recheck.proposal} note={recheck.note} onApply={applyRecheck} onClose={() => setRecheck(null)} />;
                       })()}
                       {heldEditing && (() => {
                         const row = gapRows.find((x) => x.id === heldEditing);
