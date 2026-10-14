@@ -444,7 +444,7 @@ describe("S5 UI structure", () => {
     const sec = stage.indexOf("3️⃣ 투자비 검토 요건");
     expect(sec).toBeGreaterThan(0);
     expect(stage.indexOf("<CapabilityCostBlock", sec)).toBeGreaterThan(sec);
-    expect(stage.indexOf("<CapabilityCostBlock")).toBeLessThan(stage.indexOf("bcLines.map"));
+    expect(stage.indexOf("<CapabilityCostBlock")).toBeLessThan(stage.indexOf("unifiedRows.map"));
     expect(stage).toContain("selectionPayload(capLines, capSel)");
     expect(stage).toContain("onRowsChange={setAttRows}");
   });
@@ -490,5 +490,41 @@ describe("S5 UI structure", () => {
     expect(html).toContain("S11 기준선");
     // read-only: no amount input in the block
     expect(html).not.toContain('type="number"');
+  });
+});
+
+describe("unified investment item list", () => {
+  const view = cl.deriveCapabilityCostLines([src({ id: "k1" }), src({ id: "k2", capability: "인증", closing_cost_krw_m: 500, confirmed_at: null })], [
+    { source: "capability", capabilityKey: "k1", reflected: true, category: "capex", amount: 3000, amountUnit: "krw_m", basisHash: "x" },
+  ]);
+  const manual = [{ line: "설비", category: "capex", amount: 100, amountUnit: "krw_m", currency: "KRW", period: "lumpsum" }];
+  test("reflected capability lines follow manual lines with name, note and footer sum equal to investmentTotals", () => {
+    const capLines = cl.applySelection(view, {});
+    const states = cl.lineSaveStates(capLines, [{ source: "capability", capabilityKey: "k1", reflected: true, category: "capex" }], {});
+    const rows = cl.unifiedInvestmentRows(manual, capLines, {}, states);
+    expect(rows.map((r) => r.kind)).toEqual(["manual", "capability"]);
+    const cap = rows[1] as Extract<(typeof rows)[number], { kind: "capability" }>;
+    expect(cap.name).toBe("정밀 가공 (역량 해소)");
+    expect(cap.note).toBe("S5 판정에서 연동 · 해소 방식 직접 구축 · 기간 12개월");
+    expect(cap.saveState).toBe("saved");
+    const totals = cl.investmentTotals(view, new Set(capLines.filter((l) => l.reflected).map((l) => l.capabilityKey)), manual);
+    expect(cl.unifiedFooter(rows, totals).text).toBe(`항목 2건 · 합계 ${cl.formatKrwM(totals.grandKrwM)}`);
+    expect(totals.grandKrwM).toBe(3100);
+  });
+  test("unchecked saved line stays listed as pending removal and is not counted; unreflected lines are absent", () => {
+    const sel = { k1: { reflected: false } };
+    const rows = cl.unifiedInvestmentRows([], cl.applySelection(view, sel), sel);
+    expect(rows).toHaveLength(1);
+    expect((rows[0] as { pendingRemoval: boolean }).pendingRemoval).toBe(true);
+    expect(cl.unifiedFooter(rows, { grandKrwM: 0 }).count).toBe(0);
+  });
+  test("stale reflected line keeps the rejudge flag", () => {
+    const v = cl.deriveCapabilityCostLines([src({ id: "k1", stale: true, confirmed_at: null })], [{ source: "capability", capabilityKey: "k1", reflected: true, basisHash: "x" }]);
+    const rows = cl.unifiedInvestmentRows([], cl.applySelection(v, {}), {});
+    expect((rows[0] as { needsRejudge: boolean }).needsRejudge).toBe(true);
+  });
+  test("GreenfieldStage renders the unified list with chips, actions and footer; counter counts reflected lines", () => {
+    const stage = readFileSync(join(WEB, "components/stages/GreenfieldStage.tsx"), "utf8");
+    for (const s of ["unifiedInvestmentRows", "역량 해소 연동", "판정 보기", "반영 해제", "저장 전", "재판정 필요", "invest-item-footer", "반영된 항목은 아래 투자비 항목 목록에 포함됩니다", "reflectedLines.length > 0"]) expect(stage).toContain(s);
   });
 });

@@ -486,3 +486,56 @@ export function reflectionBody(manual: Array<{ line: string }>, capLines: Capabi
 export function reflectionSummary(totals: Pick<InvestmentTotals, "reflectedCount" | "reflectedKrwM" | "grandKrwM">): string {
   return `${totals.reflectedCount}건 반영, 반영 합계 ${formatKrwM(totals.reflectedKrwM)} — 투자비 전체 합계 ${formatKrwM(totals.grandKrwM)}`;
 }
+
+// ── Unified investment item list (one list: manual lines, then reflected capability lines) ──
+
+export type UnifiedRow =
+  | { kind: "manual"; manualIndex: number }
+  | {
+      kind: "capability";
+      capabilityKey: string;
+      name: string;
+      category: CostCategory;
+      krwM: number;
+      note: string;
+      saveState: LineSaveState;
+      /** Saved-reflected but unchecked on the page: shown until the reflect button saves the removal. */
+      pendingRemoval: boolean;
+      needsRejudge: boolean;
+    };
+
+/**
+ * Rows of the single investment item list: manual lines in held order (index kept for editing), then every
+ * reflected capability line (page state) plus saved-reflected lines the person just unchecked. Unreflected
+ * lines stay in the read-only block only. Pure; the save payload is built elsewhere and is unchanged.
+ */
+export function unifiedInvestmentRows(
+  manualLines: ReadonlyArray<unknown>,
+  capLines: CapabilityCostLine[],
+  capSel: Readonly<Record<string, CostSelection>>,
+  states: Readonly<Record<string, LineSaveState>> = {},
+): UnifiedRow[] {
+  const rows: UnifiedRow[] = manualLines.map((_, i) => ({ kind: "manual" as const, manualIndex: i }));
+  for (const l of capLines) {
+    const pendingRemoval = !l.reflected && l.persisted && capSel[l.capabilityKey]?.reflected === false;
+    if (!l.reflected && !pendingRemoval) continue;
+    rows.push({
+      kind: "capability",
+      capabilityKey: l.capabilityKey,
+      name: `${l.name} (역량 해소)`,
+      category: l.category,
+      krwM: l.costKrwM,
+      note: `S5 판정에서 연동 · 해소 방식 ${l.resolutionLabel} · 기간 ${l.monthsToAttain !== null ? `${l.monthsToAttain}개월` : "미입력"}`,
+      saveState: states[l.capabilityKey] ?? null,
+      pendingRemoval,
+      needsRejudge: l.needsRejudge,
+    });
+  }
+  return rows;
+}
+
+/** Footer of the unified list: the count of listed items (pending removals excluded) and the sum, which is investmentTotals.grandKrwM. */
+export function unifiedFooter(rows: UnifiedRow[], totals: Pick<InvestmentTotals, "grandKrwM">): { count: number; text: string } {
+  const count = rows.filter((r) => r.kind === "manual" || !r.pendingRemoval).length;
+  return { count, text: `항목 ${count}건 · 합계 ${formatKrwM(totals.grandKrwM)}` };
+}

@@ -1,4 +1,6 @@
 # Changelog
+- **[2026-10-15]**: docs: ADR-0174 total investment definition, S5 investment summary and S8 hand-off design (Proposed)
+- **[2026-10-15]**: fix(web): **S5 investment item list is now one unified list (decider bug report).** Reflected and saved capability cost lines appear in the investment items list after the manual lines, with a capability-link chip, save-state and rejudge chips, a judgement link, an unreflect action and an item count and sum footer; the header component counter counts a capability-only list as filled. Totals logic and the save payload are unchanged.
 - **[2026-10-15]**: docs: ADR-0173 accepted (capability cost and milestone linkage); acceptance recorded in DEC-20261015-01; README index rows updated.
 - **[2026-10-15]**: fix(web): **S5/S8 capability judgement table: summary drops months, columns rebalanced (decider feedback).** The judgement summary now shows only the resolution and the attainability grade (months and the expected level stay in the tooltip and the dialog); all six columns are sized from their content with rem minimums so chips never wrap mid-label, the capability name column is the widest, and the confirmation column shows a status chip with a muted name and date line.
 - **[2026-10-15]**: docs: ADR-0173 capability cost and milestone linkage design (Proposed)
