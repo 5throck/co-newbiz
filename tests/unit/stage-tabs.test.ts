@@ -49,7 +49,9 @@ describe("stage tabs", () => {
   test("active tab: ?tab= match wins, else the plain page entry", () => {
     const s8 = groupForSegment("/business-case")!;
     const all = [...s8.tabs, ...s8.more];
-    expect(all[activeTabIndex(s8, "/business-case", "target-costing")].label).toBe("타겟코스팅");
+    // Moved keys highlight the financial primary tab; their own entry is in the financial sub-tab row.
+    for (const k of ["overview", "params", "target-costing"]) expect(all[activeTabIndex(s8, "/business-case", k)].label).toBe("재무적 타당성");
+    expect(all[activeTabIndex(s8, "/business-case", "decision")].label).toBe("결정");
     // ADR-0169: the default analysis view (no or unknown ?tab=) highlights 재무적 타당성.
     expect(all[activeTabIndex(s8, "/business-case", null)].label).toBe("재무적 타당성");
     expect(all[activeTabIndex(s8, "/business-case", "bogus")].label).toBe("재무적 타당성");
@@ -61,7 +63,6 @@ describe("stage tabs", () => {
     expect(all[activeTabIndex(s8, "/business-case", "capability")].label).toBe("기술적 타당성");
     expect(all[activeTabIndex(s8, "/business-case", "targets")].label).toBe("대상 비교·선정");
     expect(all[activeTabIndex(s8, "/business-case", "decision")].label).toBe("결정");
-    expect(all[activeTabIndex(s8, "/business-case", "overview")].label).toBe("설명·생성·권고");
     expect(tabHref("p1", { seg: "/business-case", query: "target-costing", label: "x" })).toBe("/projects/p1/business-case?tab=target-costing");
   });
 
@@ -73,7 +74,17 @@ describe("stage tabs", () => {
     expect(sub("/business-case", "scenarios")).toBe("시나리오 비교");
     expect(sub("/wacc", null)).toBe("WACC");
     expect(sub("/financial-analysis", null)).toBe("재무분석");
-    for (const t of ["goals", "technical", "targets", "decision", "overview", "params"]) expect(activeSubtabIndex(s8, "/business-case", t)).toBe(-1);
+    expect(sub("/business-case", "overview")).toBe("설명·생성·권고");
+    expect(sub("/business-case", "params")).toBe("파라미터·스냅샷");
+    expect(sub("/business-case", "target-costing")).toBe("타겟코스팅");
+    for (const t of ["goals", "technical", "targets", "decision"]) expect(activeSubtabIndex(s8, "/business-case", t)).toBe(-1);
+  });
+
+  test("S8 sub-tab and more-menu membership; deep links stay reachable", () => {
+    const s8 = groupForSegment("/business-case")!;
+    expect(s8.subtabs!.map((t) => t.query ?? t.seg)).toEqual(["scenarios", "/wacc", "/financial-analysis", "overview", "params", "target-costing"]);
+    expect(s8.more.map((t) => t.query ?? (t.seg || "summary"))).toEqual(["summary", "/risk-heatmap"]);
+    expect(allDefs(s8).some((t) => t.query === "overview")).toBe(true);
   });
 
   test("greenfield drops the targets tab; unknown ?tab=targets lands on the financial lens", () => {

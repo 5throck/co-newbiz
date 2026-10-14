@@ -42,21 +42,21 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
     tabs: [
       { seg: "/business-case", query: "goals", label: "사업 목표" }, // INTERIM-WORDING (ADR-0159)
       { seg: "/business-case", query: "technical", label: "기술적 타당성", aliases: ["capability"], lens: "technical" },
-      { seg: "/business-case", query: "financial", label: "재무적 타당성", aliases: ["scenarios"], extraSegs: ["/wacc", "/financial-analysis"], isDefault: true, lens: "financial" },
+      { seg: "/business-case", query: "financial", label: "재무적 타당성", aliases: ["scenarios", "overview", "params", "target-costing"], extraSegs: ["/wacc", "/financial-analysis"], isDefault: true, lens: "financial" },
       { seg: "/business-case", query: "targets", label: "대상 비교·선정" },
       { seg: "/business-case", query: "decision", label: "결정" },
     ],
     more: [
       { seg: "", label: "요약" },
-      { seg: "/business-case", query: "overview", label: "설명·생성·권고" },
-      { seg: "/business-case", query: "params", label: "파라미터·스냅샷" },
-      { seg: "/business-case", query: "target-costing", label: "타겟코스팅" },
       { seg: "/risk-heatmap", label: "리스크 히트맵" },
     ],
     subtabs: [
       { seg: "/business-case", query: "scenarios", label: "시나리오 비교", isDefault: true },
       { seg: "/wacc", label: "WACC" },
       { seg: "/financial-analysis", label: "재무분석" },
+      { seg: "/business-case", query: "overview", label: "설명·생성·권고" },
+      { seg: "/business-case", query: "params", label: "파라미터·스냅샷" },
+      { seg: "/business-case", query: "target-costing", label: "타겟코스팅" },
     ],
   },
   {

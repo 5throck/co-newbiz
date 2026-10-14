@@ -244,10 +244,11 @@ describe("S8 tab aliases (deep-link compatibility)", () => {
   test("parts and primary highlight", () => {
     expect(view.partOfS8Tab("goals")).toBe("goals");
     expect(view.partOfS8Tab("technical")).toBe("technical");
-    for (const k of ["scenarios", "wacc", "financial-analysis"] as const) { expect(view.partOfS8Tab(k)).toBe("financial"); expect(view.primaryKeyOfS8Tab(k)).toBe("financial"); }
+    for (const k of ["scenarios", "wacc", "financial-analysis", "overview", "params", "target-costing"] as const) { expect(view.partOfS8Tab(k)).toBe("financial"); expect(view.primaryKeyOfS8Tab(k)).toBe("financial"); }
     expect(view.partOfS8Tab("targets")).toBeNull();
     expect(view.primaryKeyOfS8Tab("targets")).toBe("targets");
-    expect(view.primaryKeyOfS8Tab("overview")).toBeNull();
+    expect(view.partOfS8Tab("decision")).toBeNull();
+    expect(view.primaryKeyOfS8Tab("decision")).toBe("decision");
     expect(view.S8_PART_VIEW.technical.purpose).toBe("실현할 수 있는가");
     expect(view.S8_PRIMARY_TAB_ORDER.length).toBeLessThanOrEqual(5);
   });
