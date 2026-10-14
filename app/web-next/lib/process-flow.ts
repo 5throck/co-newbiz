@@ -802,7 +802,7 @@ export function establishmentS11Check(projectId: string): { blockers: string[]; 
   const progress = establishmentProgress(projectId);
   if (progress.mode === null) {
     return {
-      blockers: ["설립 방식 미선택 (establishment mode not chosen) — S10에서 사람이 신규 법인 설립 또는 신규 사업부 추진을 선택해야 합니다"],
+      blockers: ["설립 방식이 아직 정해지지 않았습니다. S10에서 설립 방식을 확정해야 합니다."],
       missing: ["설립 방식 선택 (신규 법인 설립 / 신규 사업부 추진)"],
     };
   }

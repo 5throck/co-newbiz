@@ -6,6 +6,7 @@
 // staged commitment). KPIs declared here are the pre-commit the S12 venture
 // scorecard evaluates against (C2).
 import type { Database } from "bun:sqlite";
+import { parseGapRegister, RESOLUTION_LABEL } from "./capability-gap.ts";
 
 export interface CharterKpi {
   key: string;
@@ -53,13 +54,16 @@ export function buildProjectCharter(
   const kpis: CharterKpi[] = [];
   if (opts.track === "greenfield") {
     const gf = db
-      .query("SELECT entry_strategy, capability_gaps_json FROM greenfield_assessment WHERE opportunity_id = ? ORDER BY updated_at DESC LIMIT 1")
-      .get(opts.opportunityId) as { entry_strategy: string | null; capability_gaps_json: string | null } | undefined;
+      .query("SELECT entry_strategy FROM greenfield_assessment WHERE opportunity_id = ? ORDER BY updated_at DESC LIMIT 1")
+      .get(opts.opportunityId) as { entry_strategy: string | null } | undefined;
     entryScope = clamp(gf?.entry_strategy, 600) || "진출전략 미기록";
-    let gaps: Array<{ capability?: string; resolution?: string }> = [];
-    try { gaps = gf?.capability_gaps_json ? JSON.parse(gf.capability_gaps_json) : []; } catch { /* unparseable */ }
+    // Source of truth is the S3/S5 register (opportunity.capability_gap_json, ADR-0136); rows already met are not gaps.
+    const reg = db.query("SELECT capability_gap_json FROM opportunity WHERE id = ?")
+      .get(opts.opportunityId) as { capability_gap_json: string | null } | undefined;
+    const gaps = parseGapRegister(reg?.capability_gap_json).rows.filter((r) => r.capability && r.held.status !== "met");
     for (const g of gaps.slice(0, 3)) {
-      if (g.capability) kpis.push({ key: `gap:${g.capability.slice(0, 24)}`, label: `역량 해소 — ${g.capability}`, target: clamp(g.resolution, 120) || "해소 방안 확인" });
+      const target = g.resolution ? RESOLUTION_LABEL[g.resolution] : clamp(g.note, 120);
+      kpis.push({ key: `gap:${g.capability.slice(0, 24)}`, label: `역량 해소 — ${g.capability}`, target: target || "해소 방안 확인" });
     }
     kpis.push({ key: "entry_revenue", label: "진출 매출 기준선 설정", target: "첫 분기 채널별 매출 기록" });
   } else if (opts.track === "brownfield") {

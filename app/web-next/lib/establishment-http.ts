@@ -34,15 +34,15 @@ export function establishmentErrorResponse(error: EstablishmentError | Establish
         { status: 409 },
       );
     case "mode_not_chosen":
-      return fail(409, "mode_not_chosen", "설립 방식(신규 법인 설립 / 신규 사업부 추진)이 아직 선택되지 않았습니다 — S10에서 사람이 먼저 선택해야 합니다 (establishment mode not chosen, ADR-0167).");
+      return fail(409, "mode_not_chosen", "설립 방식이 아직 정해지지 않았습니다. S10에서 설립 방식을 확정해야 합니다.");
     case "mode_mismatch":
-      return fail(409, "mode_mismatch", "요청한 설립 방식이 이 프로젝트의 현재 설립 방식과 다릅니다. 설립 방식은 이 경로로 바꿀 수 없습니다 (ADR-0167).");
+      return fail(409, "mode_mismatch", "요청한 설립 방식이 이 프로젝트의 현재 설립 방식과 다릅니다. 설립 방식은 이 경로로 바꿀 수 없습니다.");
     case "invalid_mode":
-      return badRequest("invalid_request", "mode는 new_entity | business_unit 중 하나입니다 (ADR-0167).");
+      return badRequest("invalid_request", "mode는 new_entity | business_unit 중 하나입니다.");
     case "mode_not_allowed":
-      return badRequest("mode_not_allowed", "신규 사업부 추진(business_unit)은 origin이 internal인 그린필드 프로젝트에서만 선택할 수 있습니다 (ADR-0167 D2).");
+      return badRequest("mode_not_allowed", "신규 사업부 추진(business_unit)은 origin이 internal인 그린필드 프로젝트에서만 선택할 수 있습니다.");
     case "reason_required":
-      return badRequest("reason_required", "이미 선택된 설립 방식을 바꾸려면 사유(10자 이상)가 필요합니다. 기존 방식의 단계 기록은 이력으로 남습니다 (ADR-0167 D5).");
+      return badRequest("reason_required", "이미 선택된 설립 방식을 바꾸려면 사유(10자 이상)가 필요합니다. 기존 방식의 단계 기록은 이력으로 남습니다.");
     default:
       return badRequest("invalid_request", "이 프로젝트에는 설립 실행 기록의 근원 기회(origin opportunity) 연결이 없어 새 단계를 생성할 수 없습니다.");
   }
