@@ -29,8 +29,8 @@ import { CapabilityCostBlock } from "./CapabilityCostBlock.tsx";
 import { EntryStrategySection } from "./EntryStrategySection.tsx";
 import { parseEntryStrategy, serializeEntryStrategy, type EntryFormState, type EntryModes } from "../../lib/greenfield-entry-strategy.ts";
 import {
-  AMOUNT_UNIT_KRW_M, amountUnitLabel, applySelection, deriveCapabilityCostLines, findDuplicateWarnings, formatKrwM, hasUnsavedReflection, investmentTotals, isCapabilityEntry, isFxUnit, lineSaveStates, manualLineIssues, manualLineKrwM, normalizeLegacyLine, reflectionBody, reflectionSummary, sanityLineOversize, sanityTotalOversize, selectionPayload, unifiedFooter, unifiedInvestmentRows,
-  type AmountUnit, type CapabilityCostView, type CostCategory, type CostSelection, type DuplicateWarning, type ManualCostLine, type MilestoneCandidateView,
+  AMOUNT_UNIT_KRW_M, amountUnitLabel, applySelection, buildInvestmentSummary, DEFAULT_HORIZON_YEARS, deriveCapabilityCostLines, findDuplicateWarnings, formatKrwM, hasUnsavedReflection, investmentTotals, isCapabilityEntry, isFxUnit, isPlanMetaEntry, lineSaveStates, manualLineIssues, manualLineKrwM, MAX_HORIZON_YEAR_LIMIT, MIN_HORIZON_YEARS, normalizeLegacyLine, planMetaOf, reflectionBody, reflectionSummary, sanityLineOversize, sanityTotalOversize, selectionPayload, unifiedFooter, unifiedInvestmentRows, validateLineYears,
+  type AmountUnit, type CapabilityCostView, type CostCategory, type CostSelection, type DuplicateWarning, type ManualCostLine, type MilestoneCandidateView, type PlanMetaEntry,
 } from "../../lib/capability-cost-lines.ts";
 import type { AttainabilityRowView } from "../../lib/capability-attainability.ts";
 
@@ -103,6 +103,9 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   // ADR-0173 slice 1: stored capability entries stay out of the manual list; the person's unsaved choices overlay the derived lines.
   const [storedCapEntries, setStoredCapEntries] = useState<unknown[]>([]);
   const [capSel, setCapSel] = useState<Record<string, CostSelection>>({});
+  // ADR-0174 slice 1: 검토 기간 (plan_meta horizonYears, default 5) and per-capability spend-year overrides.
+  const [horizon, setHorizon] = useState(DEFAULT_HORIZON_YEARS);
+  const [capStartYear, setCapStartYear] = useState<Record<string, number>>({});
   const [attRows, setAttRows] = useState<AttainabilityRowView[] | null>(null);
   // ADR-0118 — S5 투자비 검토 요건 LLM 추천(제안). 저장은 사람의 행위다.
   const [reco, setReco] = useState<InvestmentReco | null>(null);
@@ -122,11 +125,15 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
         }
         if (scope !== "strategy") {
           const all = r.data.assessment?.business_case_lines ?? [];
+          // The plan_meta entry carries the 검토 기간; it never joins the unified line list.
+          const meta = planMetaOf(all);
+          setHorizon(meta ? meta.horizonYears : DEFAULT_HORIZON_YEARS);
           // Legacy manual lines are shown as-entered: the unit is unknown, so nothing is converted
           // and the row keeps a "단위 확인 필요" chip until a person picks a unit.
-          setBcLines((all.filter((l) => !isCapabilityEntry(l)) as Array<Record<string, unknown>>).map(normalizeLegacyLine));
+          setBcLines((all.filter((l) => !isCapabilityEntry(l) && !isPlanMetaEntry(l)) as Array<Record<string, unknown>>).map(normalizeLegacyLine));
           setStoredCapEntries(all.filter((l) => isCapabilityEntry(l)));
           setCapSel({});
+          setCapStartYear({});
         }
         if (scope === "all") setRationale(r.data.assessment?.rationale ?? "");
         setError(null);
@@ -174,9 +181,37 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     [attRows, storedCapEntries, selected],
   );
   const capLines = useMemo(() => applySelection(costView, capSel), [costView, capSel]);
+  // Spend-year overrides overlay the derived startYear (override ?? judgement-derived default).
+  const capLinesEff = useMemo(
+    () => capLines.map((l) => {
+      const y = capStartYear[l.capabilityKey];
+      return Number.isInteger(y) && y >= 1 ? { ...l, startYear: y } : l;
+    }),
+    [capLines, capStartYear],
+  );
   const reflectedLines = capLines.filter((l) => l.reflected);
   const invTotals = investmentTotals(costView, new Set(reflectedLines.map((l) => l.capabilityKey)), bcLines);
   const dupWarnings = findDuplicateWarnings(reflectedLines, bcLines);
+  const reflectedKeySet = useMemo(() => new Set(reflectedLines.map((l) => l.capabilityKey)), [reflectedLines]);
+  // ADR-0174 slice 1 — 투자비 요약 recomputed from the page state (read-only, decision support).
+  const summary = useMemo(
+    () => buildInvestmentSummary(bcLines, capLinesEff, horizon, reflectedKeySet),
+    [bcLines, capLinesEff, horizon, reflectedKeySet],
+  );
+  // Per-line timing errors (Korean messages from validateLineYears); any error blocks save.
+  const yearErrors = useMemo(() => {
+    const errs: Record<string, string> = {};
+    bcLines.forEach((l, i) => {
+      const e = validateLineYears(l, horizon);
+      if (e) errs[`m${i}`] = e;
+    });
+    for (const [key, y] of Object.entries(capStartYear)) {
+      const e = validateLineYears({ startYear: y }, horizon);
+      if (e) errs[`c${key}`] = e;
+    }
+    return errs;
+  }, [bcLines, capStartYear, horizon]);
+  const hasYearErrors = Object.keys(yearErrors).length > 0;
   const lineStates = useMemo(() => lineSaveStates(capLines, storedCapEntries, capSel), [capLines, storedCapEntries, capSel]);
   const reflectDirty = hasUnsavedReflection(lineStates);
   const savedReflected = useMemo(() => {
@@ -194,6 +229,14 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   );
 
   const setBc = (i: number, patch: Partial<BcLine>) => setBcLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+
+  // plan_meta entry prepended to every business_case_lines payload (ADR-0174 slice 1); horizon clamped client-side.
+  const metaEntry = (): PlanMetaEntry => ({ source: "plan_meta", horizonYears: Math.min(MAX_HORIZON_YEAR_LIMIT, Math.max(MIN_HORIZON_YEARS, Math.floor(horizon) || DEFAULT_HORIZON_YEARS)) });
+  // Capability entries carry the person's choices plus any spend-year override (startYear).
+  const capEntriesWithYears = () => selectionPayload(capLines, capSel).map((e) => {
+    const y = capStartYear[e.capabilityKey];
+    return Number.isInteger(y) && y >= 1 ? { ...e, startYear: y as number } : e;
+  });
 
   async function saveGaps() {
     if (!selected || savingGaps) return;
@@ -218,7 +261,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
         entry_strategy: serializeEntryStrategy(entryModes, entryStrategy) || undefined,
         alternatives_considered: alternatives || undefined,
         // Capability entries carry only the person's choices; the server rebuilds amount, name and hash from the live judgement.
-        business_case_lines: [...bcLines.filter((l) => l.line.trim()), ...selectionPayload(capLines, capSel)],
+        business_case_lines: [metaEntry(), ...bcLines.filter((l) => l.line.trim()), ...capEntriesWithYears()],
         rationale: rationale || undefined,
       });
       entryDirty.current = false; setEntryIsDirty(false); setEntryReset((n) => n + 1);
@@ -258,7 +301,8 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     if (!selected || costSaving) return;
     setCostSaving(true); setCostError(null); setCostNote(null);
     try {
-      await api.post(`/api/greenfield/${selected.opportunity.id}`, reflectionBody(bcLines, capLines, capSel));
+      const body = reflectionBody(bcLines, capLines, capSel);
+      await api.post(`/api/greenfield/${selected.opportunity.id}`, { business_case_lines: [metaEntry(), ...body.business_case_lines.map((l) => (isCapabilityEntry(l) && capStartYear[(l as { capabilityKey: string }).capabilityKey] !== undefined ? { ...l, startYear: capStartYear[(l as { capabilityKey: string }).capabilityKey] } : l))] });
       await loadDetail(selected.opportunity.id, "cost");
       setCostNote("__pending__");
       onSaved?.();
@@ -356,6 +400,23 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
 
           {/* 3. 투자비 검토 요건 */}
           <h3 className="text-[length:var(--fs-body)] mb-1">3️⃣ 투자비 검토 요건 (S8 사업성 분석 입력)</h3>
+          <div className="flex items-center gap-2 mb-2">
+            <label htmlFor="s5-horizon" className="text-[length:var(--fs-caption)]">검토 기간(년)</label>
+            <input
+              id="s5-horizon"
+              aria-label="검토 기간(년)"
+              type="number"
+              min={MIN_HORIZON_YEARS}
+              max={MAX_HORIZON_YEAR_LIMIT}
+              value={horizon}
+              disabled={!canAct}
+              onChange={(e) => { const v = Number(e.target.value); if (Number.isInteger(v) && v >= MIN_HORIZON_YEARS && v <= MAX_HORIZON_YEAR_LIMIT) setHorizon(v); }}
+              onBlur={(e) => { const v = Math.floor(Number(e.target.value) || DEFAULT_HORIZON_YEARS); setHorizon(Math.min(MAX_HORIZON_YEAR_LIMIT, Math.max(MIN_HORIZON_YEARS, v))); }}
+              className="sizing-new-input sizing-new-input-sm"
+              style={{ width: "4.5rem" }}
+            />
+            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">S8 사업계획 기간의 초기값이 됩니다</span>
+          </div>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-unit-note">금액 단위는 항목마다 선택합니다 (기본 백만원) — 단위·분류·주기가 확인된 항목만 합계에 포함됩니다.</p>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-xref">반영된 항목은 아래 투자비 항목 목록에 포함됩니다.</p>
           <CapabilityCostBlock
@@ -377,6 +438,9 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
           <ul className="list-none p-0 m-0 mb-1" aria-label="투자비 항목 목록" data-testid="invest-item-list">
           {unifiedRows.map((row) => {
             if (row.kind === "capability") {
+              const capLine = capLinesEff.find((c) => c.capabilityKey === row.capabilityKey);
+              const capStart = capLine?.startYear ?? 1;
+              const capYearErr = yearErrors[`c${row.capabilityKey}`];
               return (
                 <li key={`c${row.capabilityKey}`} className="flex flex-wrap items-center gap-1 mb-1" data-testid={`invest-cap-row-${row.capabilityKey}`}>
                   <input aria-label="항목명" value={row.name} readOnly className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 12rem" }} />
@@ -386,6 +450,22 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   <input aria-label="금액(백만원)" value={row.krwM} readOnly className="sizing-new-input sizing-new-input-sm" style={{ width: "6rem" }} />
                   <span className="text-[length:var(--fs-caption)]">원화</span>
                   <span className="text-[length:var(--fs-caption)]">{PERIOD_LABEL.lumpsum}</span>
+                  <label className="text-[length:var(--fs-caption)] flex items-center gap-0.5">
+                    집행 연차
+                    <input
+                      aria-label={`${row.name} 집행 연차`}
+                      type="number"
+                      min={1}
+                      max={horizon}
+                      value={capStart}
+                      disabled={!canAct}
+                      onChange={(e) => { const raw = e.target.value; const v = Number(raw); setCapStartYear((p) => ({ ...p, [row.capabilityKey]: raw === "" || !Number.isFinite(v) ? Number.NaN : v })); }}
+                      onBlur={(e) => { const v = Math.floor(Number(e.target.value) || 1); setCapStartYear((p) => ({ ...p, [row.capabilityKey]: Math.min(horizon, Math.max(1, v)) })); }}
+                      className="sizing-new-input sizing-new-input-sm"
+                      style={{ width: "3.5rem" }}
+                    />
+                  </label>
+                  {capYearErr && <span role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">{capYearErr}</span>}
                   <input aria-label="비고" value={row.note} readOnly className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 10rem" }} />
                   <span className="status-chip status-not-started"><span aria-hidden="true">⛓</span> 역량 해소 연동</span>
                   {row.saveState === "saved" && !row.pendingRemoval && <span className="status-chip status-green"><span aria-hidden="true">✓</span> 반영됨 · 저장됨</span>}
@@ -428,9 +508,44 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   <option value="" disabled>선택</option>
                   {(Object.keys(PERIOD_LABEL) as BcPeriod[]).map((p) => <option key={p} value={p}>{PERIOD_LABEL[p]}</option>)}
                 </select>
+                <label className="text-[length:var(--fs-caption)] flex items-center gap-0.5">
+                  시작
+                  <input
+                    aria-label={`${l.line || "항목"} 시작 연차`}
+                    type="number"
+                    min={1}
+                    max={horizon}
+                    value={l.startYear ?? ""}
+                    disabled={!canAct}
+                    placeholder="Y1"
+                    onChange={(e) => { const raw = e.target.value; const v = Number(raw); setBc(i, { startYear: raw === "" ? undefined : v }); }}
+                    onBlur={(e) => { const v = Math.floor(Number(e.target.value) || 1); setBc(i, { startYear: Math.min(horizon, Math.max(1, v)) }); }}
+                    className="sizing-new-input sizing-new-input-sm"
+                    style={{ width: "3.5rem" }}
+                  />
+                </label>
+                {l.period !== "lumpsum" && (
+                  <label className="text-[length:var(--fs-caption)] flex items-center gap-0.5">
+                    종료
+                    <input
+                      aria-label={`${l.line || "항목"} 종료 연차`}
+                      type="number"
+                      min={1}
+                      max={horizon}
+                      value={l.endYear ?? ""}
+                      disabled={!canAct}
+                      placeholder={`Y${horizon}`}
+                      onChange={(e) => { const raw = e.target.value; const v = Number(raw); setBc(i, { endYear: raw === "" ? undefined : v }); }}
+                      onBlur={(e) => { const v = Math.floor(Number(e.target.value) || horizon); setBc(i, { endYear: Math.min(horizon, Math.max(1, v)) }); }}
+                      className="sizing-new-input sizing-new-input-sm"
+                      style={{ width: "3.5rem" }}
+                    />
+                  </label>
+                )}
                 <input aria-label="비고" placeholder="비고" value={l.note ?? ""} onChange={(e) => setBc(i, { note: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 10rem" }} />
                 {canAct && <button type="button" className="btn-ghost btn-sm" aria-label="항목 삭제" onClick={() => setBcLines((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>}
                 {oversize && canAct && <button type="button" className="btn-ghost btn-sm" data-testid={`invest-sanity-${i}`} onClick={() => setSanityDismissed((prev) => new Set(prev).add(i))}>닫기</button>}
+                {yearErrors[`m${i}`] && <span role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)]" data-testid={`invest-year-error-${i}`}>{yearErrors[`m${i}`]}</span>}
               </div>
               </li>
             );
@@ -448,6 +563,93 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
           )}
           {canAct && <button type="button" className="btn-ghost btn-sm mb-3" onClick={() => setBcLines((prev) => [...prev, { line: "", category: undefined, amount: 0, amountUnit: AMOUNT_UNIT_KRW_M, amountUnitConfirmed: true, period: undefined, currency: "KRW" }])}>＋ 항목 추가</button>}
 
+          {/* ── 투자비 요약 (ADR-0174 slice 1) — read-only, decision support ── */}
+          <div className="sizing-grade-card mb-3" data-testid="invest-summary">
+            <h4 className="text-[length:var(--fs-caption)] mb-2">투자비 요약</h4>
+            <div className="summary-cards mb-2">
+              <div className="summary-card glass" data-testid="invest-summary-annual">
+                <span className="summary-value mono-num">{summary.annualRecurringKrwM.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</span>
+                <span className="text-label">연간(반복) 투자비 (백만원/년)</span>
+              </div>
+              <div className="summary-card glass" data-testid="invest-summary-lumpsum">
+                <span className="summary-value mono-num">{summary.lumpsumKrwM.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</span>
+                <span className="text-label">일시 투자비 (백만원)</span>
+              </div>
+              <div className="summary-card glass" data-testid="invest-summary-total">
+                <span className="summary-value mono-num">{summary.totalKrwM.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</span>
+                <span className="text-label">총 투자비 (검토 기간 {summary.horizon}년, 백만원)</span>
+              </div>
+            </div>
+            <p className="text-[length:var(--fs-caption)] mb-1" data-testid="invest-summary-capex-subtotal">
+              설비 투자 소계 (capex, 백만원): <span className="mono-num">{summary.capexSubtotalKrwM.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</span>
+            </p>
+            <div className="overflow-x-auto mb-2">
+              <table className="sizing-table" data-testid="invest-summary-by-category">
+                <thead>
+                  <tr><th scope="col">분류</th><th scope="col">연간</th><th scope="col">일시</th><th scope="col">기간총액</th></tr>
+                </thead>
+                <tbody>
+                  {summary.byCategory.map((r) => (
+                    <tr key={r.category}>
+                      <td>{CATEGORY_LABEL[r.category]}</td>
+                      <td className="mono-num">{r.annualKrwM.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</td>
+                      <td className="mono-num">{r.lumpsumKrwM.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</td>
+                      <td className="mono-num">{r.totalKrwM.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <td>합계</td>
+                    <td className="mono-num">{summary.annualRecurringKrwM.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</td>
+                    <td className="mono-num">{summary.lumpsumKrwM.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</td>
+                    <td className="mono-num">{summary.totalKrwM.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="overflow-x-auto mb-2">
+              <table className="sizing-table" data-testid="invest-summary-schedule">
+                <caption className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] text-left">연도별 투자 계획 (백만원)</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">구분</th>
+                    {summary.schedule.map((s) => <th scope="col" key={s.year}>Y{s.year}</th>)}
+                    <th scope="col">합계</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(["labor", "opex", "capex"] as const).map((c) => (
+                    <tr key={c}>
+                      <td>{CATEGORY_LABEL[c]}</td>
+                      {summary.schedule.map((s) => <td className="mono-num" key={s.year}>{s[c].toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</td>)}
+                      <td className="mono-num">{summary.schedule.reduce((a, s) => a + s[c], 0).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <td>투자비 합계</td>
+                    {summary.schedule.map((s) => <td className="mono-num" key={s.year}>{s.investmentTotal.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</td>)}
+                    <td className="mono-num">{summary.totalKrwM.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</td>
+                  </tr>
+                  <tr>
+                    <td>매출</td>
+                    {summary.schedule.map((s) => <td className="mono-num" key={s.year}>{s.revenue.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</td>)}
+                    <td className="mono-num">{summary.schedule.reduce((a, s) => a + s.revenue, 0).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</td>
+                  </tr>
+                  <tr>
+                    <td>정부 R&D</td>
+                    {summary.schedule.map((s) => <td className="mono-num" key={s.year}>{s.govRnd.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</td>)}
+                    <td className="mono-num">{summary.schedule.reduce((a, s) => a + s.govRnd, 0).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">매출·정부 R&D 행은 투자비 제외 — 유입 참고용입니다.</p>
+            <ul className="list-none p-0 m-0" data-testid="invest-summary-flags">
+              {summary.excludedNonKrw > 0 && <li className="text-[length:var(--fs-caption)]">외화 항목 {summary.excludedNonKrw}건은 합계에서 제외 (환율 미반영)</li>}
+              {summary.excludedNeedsConfirm > 0 && <li className="text-[length:var(--fs-caption)]">확인 필요 항목 {summary.excludedNeedsConfirm}건은 합계에서 제외</li>}
+              {summary.endYearExceedsHorizon > 0 && <li className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))]">종료 연차가 검토 기간을 넘는 항목 {summary.endYearExceedsHorizon}건 — 검토 기간 안에서 집계됨</li>}
+              {summary.capabilitySpendFromMilestone > 0 && <li className="text-[length:var(--fs-caption)]">판정 기간에서 산정한 집행 연차 {summary.capabilitySpendFromMilestone}건</li>}
+            </ul>
+          </div>
           {/* ── LLM 투자비 항목 추천 — ADR-0118: 제안은 LLM, 저장은 사람 ── */}
           <div className="sizing-grade-card mb-3">
             <h4 className="text-[length:var(--fs-caption)] mb-2">
@@ -495,7 +697,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
 
           <input aria-label="평가 근거" placeholder="평가 근거 (S1 시장분석·S3 적합성 판단 인용, 선택)" value={rationale} onChange={(e) => setRationale(e.target.value)} className="sizing-new-input mb-3" style={{ width: "100%" }} />
 
-          {canAct && <button type="submit" className="btn-ghost" disabled={busy}>저장</button>}
+          {canAct && <button type="submit" className="btn-ghost" disabled={busy || hasYearErrors} title={hasYearErrors ? "연차 입력을 확인하세요" : undefined}>저장</button>}
           </fieldset>
         </form>
       </section>

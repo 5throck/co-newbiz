@@ -46,6 +46,8 @@ interface ResolvedParams {
   opexRatio: number; opexSource: string;
   capexRatio: number; capexSource: string;
   initialInvestmentRatio: number; initialInvestmentSource: string;
+  investmentBasis: "ratio" | "s5_plan" | "s5_plan_full"; investmentBasisSource: string;
+  s5PlanHorizonYears: number | null;
   acquisitionEvRevenue: number | null; acquisitionEvRevenueSource: string;
   acquisitionEvRevenueBand?: ConfirmedBand | null;
   fadeHorizonYears: number; fadeHorizonSource: string;
@@ -94,6 +96,13 @@ const driverValue = (d: DriverSpec): string => {
   if (d.dist === "triangular") return `T(${d.low}, ${d.expected}, ${d.high})`;
   return Array.isArray(d.value) ? d.value.map((x) => x.toFixed(2)).join(" → ") : String(d.value);
 };
+// ADR-0174 — 투자비 기준 라벨 (비율 추정 0 / S5 투자 계획 1 / S5 투자 계획(전체) 2)
+const INVESTMENT_BASIS_LABELS: Record<string, string> = {
+  ratio: "비율 추정",
+  s5_plan: "S5 투자 계획",
+  s5_plan_full: "S5 투자 계획 (전체)",
+};
+
 const DRIVER_LABELS: Record<string, string> = {
   revenue_y1: "1차년도 매출",
   ramp_up: "가동률 램프업",
@@ -222,7 +231,8 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
         {!resolved ? (
           <p>불러오는 중...</p>
         ) : (
-          <ParamTable
+          <>
+            <ParamTable
             caption="현재 시뮬레이션 파라미터"
             rows={[
               ...(([
@@ -231,6 +241,7 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
                 ["설비투자 비율", resolved.capexRatio, resolved.capexSource],
                 ["초기투자 비율 (year-1 매출 대비)", resolved.initialInvestmentRatio, resolved.initialInvestmentSource],
               ] as Array<[string, number, string]>).map(([label, v, source]): ParamRow => ({ label, value: (v * 100).toFixed(1), unit: "%", source: <SourceChip source={source} /> }))),
+              { label: "투자비 기준 (ADR-0174)", value: INVESTMENT_BASIS_LABELS[resolved.investmentBasis] ?? resolved.investmentBasis, unit: "", source: <SourceChip source={resolved.investmentBasisSource} /> },
               { label: "가동률 램프업", value: resolved.rampUp.map((v) => v.toFixed(2)).join(" → "), unit: "비율", source: <SourceChip source={resolved.rampSource} /> },
               { label: "인수 EV/Revenue 배수 (브라운필드)", value: resolved.acquisitionEvRevenue != null ? resolved.acquisitionEvRevenue.toFixed(2) : "3.0 — 미확정 시 컴프 기본값 (글로벌 로보틱스 M&A 2–6×)", unit: resolved.acquisitionEvRevenue != null ? "배" : "", source: <SourceChip source={resolved.acquisitionEvRevenueSource} /> },
               { label: "교차검증 창구 (페이드 DCF)", value: String(resolved.fadeHorizonYears), unit: "년", source: <SourceChip source={resolved.fadeHorizonSource} /> },
@@ -241,6 +252,12 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
               { label: "반복 수", value: resolved.iterations.toLocaleString(), unit: "회", source: <SourceChip source={resolved.iterationsSource} /> },
             ]}
           />
+            {resolved.s5PlanHorizonYears != null && resolved.s5PlanHorizonYears !== resolved.horizonYears && (
+              <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-2">
+                ⚠ S5 검토 기간({resolved.s5PlanHorizonYears}년)과 사업계획 기간({resolved.horizonYears}년)이 다릅니다
+              </p>
+            )}
+          </>
         )}
       </section>
 
@@ -253,6 +270,14 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
             <label className="grid gap-1 text-sm">운영비 비율 (예: 0.6)<input className="form-input" value={form.opex_ratio ?? ""} onChange={(e) => setForm({ ...form, opex_ratio: e.target.value })} placeholder="0.6" /></label>
             <label className="grid gap-1 text-sm">설비투자 비율 (예: 0.1)<input className="form-input" value={form.capex_ratio ?? ""} onChange={(e) => setForm({ ...form, capex_ratio: e.target.value })} placeholder="0.1" /></label>
             <label className="grid gap-1 text-sm">초기투자 비율 (예: 0.5)<input className="form-input" value={form.initial_investment_ratio ?? ""} onChange={(e) => setForm({ ...form, initial_investment_ratio: e.target.value })} placeholder="0.5" /></label>
+            <label className="grid gap-1 text-sm">투자비 기준 (ADR-0174)
+              <select className="form-input" value={form.investment_basis ?? ""} onChange={(e) => setForm({ ...form, investment_basis: e.target.value })}>
+                <option value="">— 미변경 —</option>
+                <option value="0">비율 추정 (0)</option>
+                <option value="1">S5 투자 계획 (1)</option>
+                <option value="2">S5 투자 계획 (전체) (2)</option>
+              </select>
+            </label>
             <label className="grid gap-1 text-sm">인수 EV/매출 배수 (예: 3.0 — 확정 시 인수가·처분가 모두 이 배수)<input className="form-input" value={form.acquisition_ev_revenue ?? ""} onChange={(e) => setForm({ ...form, acquisition_ev_revenue: e.target.value })} placeholder="3.0" /></label>
             <label className="grid gap-1 text-sm">교차검증 창구 (페이드 DCF 연수, 예: 10)<input className="form-input" value={form.fade_horizon_years ?? ""} onChange={(e) => setForm({ ...form, fade_horizon_years: e.target.value })} placeholder="10" /></label>
             <label className="grid gap-1 text-sm">말기 성장률 (비율, 예: 0.03)<input className="form-input" value={form.growth_terminal ?? ""} onChange={(e) => setForm({ ...form, growth_terminal: e.target.value })} placeholder="0.03" /></label>

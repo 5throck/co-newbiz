@@ -25,6 +25,8 @@ interface ResolvedParams {
   opexRatio: number; opexSource: string;
   capexRatio: number; capexSource: string;
   initialInvestmentRatio: number; initialInvestmentSource: string;
+  investmentBasis: "ratio" | "s5_plan" | "s5_plan_full";
+  s5PlanHorizonYears: number | null;
   acquisitionEvRevenue: number | null; acquisitionEvRevenueSource: string;
   rampUp: number[]; rampSource: string;
   horizonYears: number; horizonSource: string;
@@ -73,6 +75,10 @@ export function ValuationMethodology({
   const xNpv = noteNumber(n.xcheck_fade_npv);
   const iterations = noteNumber(n.iterations) ?? params?.iterations ?? null;
   const horizon = params?.horizonYears ?? (noteNumber(n.horizon) || 5);
+  // ADR-0174 — 투자비 기준이 S5 투자 계획이면 year-0 투자와 연도별 capex가 S5
+  // 스케줄로 대체됩니다 (OD-3: 계획 Y1 집행액은 year-0 유출로 계상).
+  const s5Basis = params?.investmentBasis != null && params.investmentBasis !== "ratio";
+  const horizonMismatch = params?.s5PlanHorizonYears != null && params.s5PlanHorizonYears !== horizon;
 
   // 두 관점 차이의 원인 수치 — 같은 앵커·인수가·마진에서 성장률만 다르다.
   const gMf = noteNumber(n.growth);
@@ -113,18 +119,34 @@ export function ValuationMethodology({
             </tr>
             <tr>
               <td>④ 손익 구조</td>
-              <td>FCF = 매출 × (1 − 운영비율 − 설비투자율) × 가동률(램프업)</td>
+              <td>
+                {s5Basis
+                  ? "FCF = (매출 − 운영비) × 가동률 − S5 계획 연도별 투자비 — 계획이 있는 연도는 매출×설비투자율을 대체합니다"
+                  : "FCF = 매출 × (1 − 운영비율 − 설비투자율) × 가동률(램프업)"}
+              </td>
               <td className="num mono-num">
-                운영비 {params ? pct1(params.opexRatio) : "—"} · 설비투자 {params ? pct1(params.capexRatio) : "—"} · 가동률 {params ? params.rampUp.map((v) => v.toFixed(1)).join("→") : "—"}
+                {s5Basis
+                  ? `S5 투자 계획 스케줄 적용${params?.investmentBasis === "s5_plan_full" ? " · 인건비/운영비도 계획값 사용 (전체)" : " · 인건비/운영비는 비율 (교차검증용)"}` + (params ? ` · 가동률 ${params.rampUp.map((v) => v.toFixed(1)).join("→")}` : "")
+                  : <>
+                    운영비 {params ? pct1(params.opexRatio) : "—"} · 설비투자 {params ? pct1(params.capexRatio) : "—"} · 가동률 {params ? params.rampUp.map((v) => v.toFixed(1)).join("→") : "—"}
+                  </>}
               </td>
             </tr>
             <tr>
               <td>⑤ year-0 투자</td>
-              <td>{isAcquisition ? "인수 기업가치 = 매출 앵커 × EV/Revenue 배수 (시나리오와 무관 — 가격은 한 번 협상)" : "초기투자 = year-1 매출 × 비율 (ADR-0106)"}</td>
+              <td>
+                {isAcquisition
+                  ? "인수 기업가치 = 매출 앵커 × EV/Revenue 배수 (시나리오와 무관 — 가격은 한 번 협상)"
+                  : s5Basis
+                    ? "초기투자 = S5 투자 계획 1차년도(Y1) 집행액 — 계획 Y1 지출은 year-0 유출로 계상 (OD-3)"
+                    : "초기투자 = year-1 매출 × 비율 (ADR-0106)"}
+              </td>
               <td className="num mono-num">
                 {isAcquisition
                   ? `${acqEv!.toFixed(2)}배 = ${fmtNpvEok(revLine!.annual_amount_krw_m * acqEv!)}`
-                  : params ? `매출의 ${(params.initialInvestmentRatio * 100).toFixed(0)}%` : "—"}
+                  : s5Basis
+                    ? "S5 계획 Y1 집행액 (year-0)"
+                    : params ? `매출의 ${(params.initialInvestmentRatio * 100).toFixed(0)}%` : "—"}
               </td>
             </tr>
             <tr>
@@ -148,6 +170,12 @@ export function ValuationMethodology({
             </tr>
           </tbody>
         </table></div>
+      )}
+
+      {horizonMismatch && (
+        <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-2">
+          ⚠ S5 검토 기간({params?.s5PlanHorizonYears}년)과 사업계획 기간({horizon}년)이 다릅니다
+        </p>
       )}
 
       {!greenfield && marketCase && historicalCase && mf && hist && gMf != null && gHist != null && (

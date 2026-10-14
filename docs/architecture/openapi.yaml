@@ -4577,7 +4577,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       operationId: recordProjectBusinessCaseParams
-      summary: Record a user batch of bc.* parameters on a fresh run (analyst+; rationale required).
+      summary: Record a user batch of bc.* parameters on a fresh run (analyst+; rationale required). Includes investment_basis (0=비율 추정 ratio, 1=S5 투자 계획, 2=S5 투자 계획(전체); ADR-0174) — when not ratio the generator replaces the year-0 ratio investment and capex_ratio with the S5 capex schedule (Y1 spend counted in year 0) and bypasses the python sim engine.
       tags:
         - Analysis
       parameters:

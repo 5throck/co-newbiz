@@ -141,15 +141,17 @@ export function trancheReconciliation(projectId: string, db: Database = getDb())
   } else {
     const model = db.query("SELECT horizon_years FROM business_case_model WHERE id = ?").get(modelId) as { horizon_years: number } | null;
     const capex = db
-      .query("SELECT annual_amount_krw_m, start_year, growth_rate, unit FROM business_case_line WHERE model_id = ? AND category = 'capex'")
-      .all(modelId) as Array<{ annual_amount_krw_m: number; start_year: number; growth_rate: number; unit: string | null }>;
+      .query("SELECT annual_amount_krw_m, start_year, end_year, growth_rate, unit FROM business_case_line WHERE model_id = ? AND category = 'capex'")
+      .all(modelId) as Array<{ annual_amount_krw_m: number; start_year: number; end_year: number | null; growth_rate: number; unit: string | null }>;
     lines = capex.length;
     const horizon = model?.horizon_years ?? 0;
     let total = 0;
     for (const l of capex) {
       // R5: a null unit is NOT assumed to be KRW_M — it is a finding like any other unit.
       if (l.unit !== "KRW_M") unitIssue = true;
-      for (let y = Math.max(1, l.start_year); y <= horizon; y++) total += l.annual_amount_krw_m * Math.pow(1 + l.growth_rate, y - l.start_year);
+      // end_year (ADR-0174 slice 2) clamps the spending window: NULL = run through the horizon.
+      const lastYear = Math.min(l.end_year ?? horizon, horizon);
+      for (let y = Math.max(1, l.start_year); y <= lastYear; y++) total += l.annual_amount_krw_m * Math.pow(1 + l.growth_rate, y - l.start_year);
     }
     if (lines === 0) findings.push({ code: "case_capex_missing", message: "S8 채택 케이스에 capex 행이 없습니다 — 트랜치 합계와 대조할 수 없습니다." });
     else if (unitIssue) findings.push({ code: "case_unit_not_comparable", message: "S8 채택 케이스 capex 행 단위가 KRW_M(백만 원)으로 명시되어 있지 않습니다 (미기재 포함) — 단위 변환·추정 없이 대조하지 않습니다." });

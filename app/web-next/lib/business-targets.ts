@@ -229,9 +229,11 @@ export function countGoalsBySource(entries: Array<{ source: TargetSource }>): Re
 /** Final-year amount of a business-case line: `annual_amount_krw_m` is the
  * amount AT the line's start year and compounds at `growth_rate`, matching the
  * S8 page rendering ("y{start_year}, 성장 {growth_rate}%"). Lines starting
- * beyond the horizon contribute nothing. */
-export function finalYearLineAmount(line: { annual_amount_krw_m: number; start_year: number; growth_rate: number }, horizonYears: number): number {
+ * beyond the horizon contribute nothing. A line whose `end_year` has passed
+ * before the final year contributes 0 (its spending window has expired). */
+export function finalYearLineAmount(line: { annual_amount_krw_m: number; start_year: number; growth_rate: number; end_year?: number | null }, horizonYears: number): number {
   if (line.start_year > horizonYears) return 0;
+  if (line.end_year != null && line.end_year < horizonYears) return 0;
   const exponent = Math.max(0, horizonYears - line.start_year);
   return line.annual_amount_krw_m * Math.pow(1 + line.growth_rate, exponent);
 }
