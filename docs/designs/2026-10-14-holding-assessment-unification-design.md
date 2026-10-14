@@ -1,5 +1,5 @@
 ---
-title: Holding assessment unification (one held scale relative to the industry, plus a separate required-level scale)
+title: Holding assessment unification (simple held category, narrative levels, separate need category)
 status: proposed
 date: 2026-10-14
 owner: platform-lead
@@ -11,303 +11,231 @@ lang_reason: source-material
 
 Korean appears only as UI labels in backticks. All prose is English. Paths are relative to `app/web-next/` unless stated.
 
-- Decider: human decider, chat 2026-10-14 (binding decisions D1-D3 below). Drafted by platform-lead.
+- Decider: human decider, chat 2026-10-14 (binding decisions D1-D8 below). Drafted by platform-lead.
 - ADR: [ADR-0172](../adr/0172-holding-assessment-unification.md) (Proposed).
 - Builds on: [ADR-0136](../adr/0136-unify-capability-gap-register.md), [ADR-0168](../adr/0168-s8-capability-attainability.md), [ADR-0170](../adr/0170-s3-s8-capability-linkage.md) (including its 2026-10-14 correction), [ADR-0171](../adr/0171-capability-check-at-s5-s7.md) (Proposed).
 - Related designs: [S3-S8 capability linkage](2026-10-14-s3-s8-capability-linkage-design.md), [capability check at S5/S7](2026-10-14-capability-check-at-s5-s7-design.md), [S8 capability attainability](2026-10-14-s8-capability-attainability-design.md).
 
-Items marked **Recommendation** are proposals for the decider to confirm. Everything else restates a binding decision or describes current code.
+Items marked **Recommendation** are proposals for the decider to confirm. Revision note: an earlier draft of this design proposed 5-step and 3-step level scales with a legacy "out-of-scale" treatment; the decider rejected that on 2026-10-14 and it is removed.
 
 ## 1. Problem statement
 
-A required-capability row (`CapabilityGapRow`, `lib/capability-gap.ts`, stored in `opportunity.capability_gap_json`) carries two overlapping notions of "how much do we have":
-
-- `held.status` (`보유 판정`): `met` / `partial` / `unmet` / `unevaluated`, labelled `충족` / `부분 충족` / `미보유` / `미판정`, S3-owned.
-- `currentLevel` (`보유 수준`): free text, expected to be one of the 5-step `LEVEL_SCALE` labels `없음` / `기초` / `실무` / `숙련` / `선도`, S5-owned (ADR-0136; ADR-0170 correction).
-
-Users read these as the same question answered twice, with two vocabularies that can contradict each other (for example `충족` with `기초`). `requiredLevel` (`필요 수준`) shares the same 5-step scale, which mixes "how essential is it" with "how good must we be". The `충족률` coverage figure is derived only from `held.status`, and the S5 level pair feeds `levelGap` in S8 (`lib/capability-attainability.ts`).
+A required-capability row (`CapabilityGapRow`, `lib/capability-gap.ts`, stored in `opportunity.capability_gap_json`) carries `held.status` (`충족` / `부분 충족` / `미보유` / `미판정`) plus `requiredLevel` and `currentLevel`. The level fields were meant as qualitative narrative but ADR-0168 put a 5-step dropdown (`LevelSelect`, `LEVEL_SCALE`: `없음`..`선도`) on them in S5/S8. Real data is narrative (for example a required level describing an in-house EU certification capability, and a held level describing export experience that relies on importing dealers for certification), so the dropdown hides it behind a legacy option. `충족` also does not say whether the group is average or above the industry, and nothing records how essential a capability is.
 
 ## 2. Binding decisions (decider, chat 2026-10-14)
 
-- **D1 One held field.** `보유 판정` and `보유 수준` are the same thing. They are unified into one field named `보유 판정` with ordered values `업계 리딩` / `업계 평균` / `부분 보유` / `미보유`, plus unset `미판정`. The meaning is relative to the industry. The 5-step `보유 수준` (`currentLevel`) is removed from UI, API and the row hash.
-- **D2 Separate required level.** `필요 수준` (`requiredLevel`) stays a separate field with values `필수` / `부분 필수` / `선택` (plus unset). It expresses how essential the capability is.
-- **D3 Decision support only.** No gate block and no grade cap is introduced. Humans confirm every judgement; AI output is a draft.
-- **D4 `필요 수준` is S3-owned** (follow-up decision, chat 2026-10-14). Defined and edited only in S3, next to `보유 판정` in the S3 required-capability table (compact), read-only in S5/S7/S8, and included in row hash v2.
-- **D5 `기대 수준` added** (follow-up decision, chat 2026-10-14). A per-judgement field, stored with the S5 judgement (Green Field) or the S7 per-target judgement (Brown Field, ADR-0171), not in S3. Same scale as `보유 판정` minus `미보유`: `업계 리딩` / `업계 평균` / `부분 보유` / `미판정`. Entered together with `해소 방식`, cost, months, `달성 가능성` grade and rationale. Section 6A.
+- **D1 `보유 판정` is a simple category**, relative to the industry: `업계 리딩` / `업계 평균` / `부분 보유` / `미보유` / `미판정`.
+- **D2 `필요 수준` and `보유 수준` are qualitative narrative text** (the state that must be reached; the current state). The 5-step scale is retired from the UI. Existing `requiredLevel` / `currentLevel` text is the real data: no migration, no legacy treatment.
+- **D3 New `필요도`** item: `필수` / `부분 필수` / `선택` (+ unset), placed right after `필요 역량`.
+- **D4 Ownership.** S3 owns `필요 역량`, `필요도`, `필요 수준`, `보유 판정`, `보유 수준`, `보유 주체·근거`. S5/S7/S8 read them.
+- **D5 Narrative entry** via a modal with a two-line preview and an `입력` / `수정` / `보기` button, same pattern as `보유 주체·근거` (shared dialog component).
+- **D6 `기대 수준`** is a narrative judgement field: S5 (Green Field) and S7 (Brown Field, per target). S8 read-only.
+- **D7 No automatic comparison between narrative fields.** The only computed caution is `필요도` x `보유 판정` plus empty narrative on `필수` rows.
+- **D8 Decision support only.** No gate block, no grade cap; humans confirm; AI output is a draft.
 
-## 3. Target model
+## 3. Field model
 
-### 3.1 Held scale (`held.status`)
+### 3.1 S3-owned fields
 
-**Recommendation** for stored keys (English keys, Korean labels, ordered):
+| Field | Key | Type | Notes |
+|---|---|---|---|
+| `필요 역량` | `capability`, `requiredNote` | text | unchanged |
+| `필요도` | `necessity` | `essential` / `partial_essential` / `optional` / `""` | new; `""` shown as `미정` |
+| `필수 범위` | `necessityScopeNote` | text, 120 | **Recommendation**, optional, only when `partial_essential` |
+| `필요 수준` | `requiredLevel` | narrative text | existing field, meaning restored |
+| `보유 판정` | `held.status` | `leading` / `average` / `partial` / `none` / `unevaluated` | new keys |
+| `보유 수준` | `currentLevel` | narrative text | existing field, meaning restored |
+| `보유 주체·근거` | `held.holders`, `held.evidence` | list, text | unchanged (`보유 수준` = what we hold now; `근거` = source of the judgement) |
 
-| Order | Key | Label | Meaning | Chip |
-|---|---|---|---|---|
-| 4 | `leading` | `업계 리딩` | Group/affiliates are above the industry norm; a source of advantage | `status-green` |
-| 3 | `average` | `업계 평균` | On par with the industry norm | `status-green` |
-| 2 | `partial` | `부분 보유` | Some of the capability exists (part of scope, one affiliate, pilot scale) | `status-amber` |
-| 1 | `none` | `미보유` | Not held | `status-red` |
-| - | `unevaluated` | `미판정` | Not yet judged | `status-not-started` |
+**Recommendation** for the key name `necessity` (OD-1). The `필요도` key and `필수 범위` are new optional JSON fields; absent reads as `""`.
 
-`GapHeldStatus` becomes `"leading" | "average" | "partial" | "none" | "unevaluated"`. A shared `HELD_ORDER` gives the ordinal (4..1, `unevaluated` = null) so no consumer hard-codes the order. Chip colour is never the only cue (label always shown, Onyx 3.0 rule).
+### 3.2 `보유 판정` keys and compatible read
 
-### 3.2 Backward-compatible reader (no mass rewrite)
+| Order | Key | Label | Chip |
+|---|---|---|---|
+| 4 | `leading` | `업계 리딩` | `status-green` |
+| 3 | `average` | `업계 평균` | `status-green` |
+| 2 | `partial` | `부분 보유` | `status-amber` |
+| 1 | `none` | `미보유` | `status-red` |
+| - | `unevaluated` | `미판정` | `status-not-started` |
 
-`normalizeGapRows` maps legacy stored keys on read:
+`normalizeGapRows` maps legacy keys on read: `met` -> `average` with `held.legacyStatus = "met"` and a `재판정 권장` hint (because `충족` does not say average vs above); `unmet` -> `none`; `partial` and `unevaluated` unchanged; anything else -> `unevaluated`. Keys are rewritten only when a person saves the row (lazy); no batch rewrite. Labels always accompany chip colour.
 
-| Stored | Read as | Flag |
-|---|---|---|
-| `met` | `average` | `held.legacyStatus = "met"` and a `재판정 권장` hint, because `충족` does not say whether the group is average or above |
-| `partial` | `partial` | none (key unchanged) |
-| `unmet` | `none` | `held.legacyStatus = "unmet"`, no hint (meaning is identical) |
-| `unevaluated` | `unevaluated` | none |
-| anything else | `unevaluated` | existing behaviour |
+### 3.3 Narrative caps
 
-`legacyStatus` is an optional, read-only field kept in JSON until a person saves that row's held status, at which point it is dropped. The hint only shows when `legacyStatus === "met"`. **Recommendation:** write-back happens only on a normal human save of the register (lazy migration); no batch rewrite.
+`normalizeGapRows` caps `requiredLevel` and `currentLevel` at 120 characters today. **Recommendation:** raise both to 400, and use 400 for `expectedLevel`; existing values are below the old cap so nothing is truncated. Empty shows the single `미입력` marker; long previews use `ClampedText` (two lines).
 
-### 3.3 Required level (`requiredLevel`)
+## 4. Display order (section 5A in the earlier draft)
 
-**Recommendation** for keys: `essential` (`필수`), `partial_essential` (`부분 필수`), `optional` (`선택`), `""` (unset, shown as `미정`). The field stays a string in JSON.
+Canonical order everywhere: `필요 역량` -> `필요도` -> `필요 수준` -> `보유 판정` -> `보유 수준` -> `보유 주체·근거` -> [S5/S7] `해소 방식` -> `기대 수준` -> `비용` -> `기간` -> `달성 가능성` -> `근거·증빙`. This keeps the decider's earlier rule (`필요 수준` before `보유 판정`); placing `보유 수준` right after `보유 판정` is a **Recommendation** to confirm (OD-2).
 
-Legacy text in `requiredLevel` (5-step labels or free text written by S5 or the earlier S8 panel) is **never dropped**. On read, a value outside the new key set is moved into `legacy.requiredLevel` and the live field becomes `""`; the UI shows it as `기존 입력(척도 밖)` with the original text, read-only, beside the new selector. Saving a new value does not erase `legacy`.
-
-**Recommendation:** an optional one-line `requiredScopeNote` (`필수 범위`, max 120 chars) is offered only when `requiredLevel = partial_essential`, to say which part is essential. Optional, never required for completion.
-
-### 3.4 Legacy `currentLevel`
-
-`currentLevel` stops being written, edited or hashed. Stored values are preserved untouched under `legacy.currentLevel` (same read-time move as above) and shown read-only as `기존 보유 수준(참고)` in the row's detail/evidence dialog only, so a reviewer can use it when re-judging `보유 판정`. It is never silently dropped and never mapped automatically to the new held scale (a 5-step skill grade does not translate to an industry-relative position). The restore script `scripts/co-newbiz/restore-capability-levels.ts` keeps working because it writes the raw JSON fields; after this ADR, values it restores land in `legacy` on next read.
-
-### 3.5 Ownership
-
-Decided (D4): `필요 수준` is part of the requirement definition and is **S3-owned**. S3 input UI: one compact select column `필요 수준` placed directly beside `보유 판정` in the S3 required-capability table (`SynergyLinkageTab.tsx`); the optional `필수 범위` line, if adopted, appears under the select only when `부분 필수` is chosen, clamped like the required note. S5, S7 and S8 show both fields read-only with edit links to S3. `보유 판정` stays S3-owned as today. This removes S5 as an editor of either level. Under ADR-0171, S5/S7 own the attainability judgement, including `기대 수준` (section 6A).
-
-## 4. Scoring and gap flags
-
-### 4.1 Coverage (`충족률` replacement)
-
-`summarizeGap` returns counts per new key and a weighted coverage. **Recommendation:** weights `leading` 1, `average` 1, `partial` 0.5, `none` 0; `unevaluated` excluded from the denominator (as today). Rows read from legacy `met` count as `average` (1), so existing coverage numbers do not move. **Recommendation:** rename the label from `충족률` to `보유율` to match the new vocabulary; keep the API property `coveragePct` unchanged.
-
-**Recommendation:** add `essentialCoveragePct` (same weights, rows with `requiredLevel = essential` only) so advisory text can say "essential capabilities covered N%". `optional` rows still count in the overall figure.
-
-### 4.2 Gap-flag matrix (decision-support caution only)
-
-`gapFlag(requiredLevel, heldStatus)` returns one of `large_gap` / `gap` / `check` / `met` / `low_impact` / `unjudged`. It never blocks a gate, never caps a grade, and is labelled as a caution.
-
-| `필요 수준` \ `보유 판정` | `업계 리딩` | `업계 평균` | `부분 보유` | `미보유` | `미판정` |
-|---|---|---|---|---|---|
-| `필수` | met | met | **large gap** | **large gap** | unjudged |
-| `부분 필수` | met | met | check | gap | unjudged |
-| `선택` | low impact | low impact | low impact | low impact | unjudged |
-| unset / `기존 입력(척도 밖)` | no flag | no flag | no flag | no flag | unjudged |
-
-This matrix is an open decision (OD-3). Labels: `큰 격차 주의`, `격차`, `확인 필요`, `충족`, `영향 낮음`. This is the **current gap** (required vs held today). Section 6A adds the **residual gap** (required vs expected after resolution).
-
-## 5. Row hash v2 (ADR-0170)
-
-Current v1 (`lib/capability-linkage.ts`, `ROW_HASH_VERSION = "v1"`) hashes `capability`, `requiredNote`, `heldStatus`, `holders`, `heldEvidence`, `requiredLevel`, `currentLevel`.
-
-v2 hashes: `capability`, `requiredNote`, `requiredLevel` (new keys only; legacy text excluded), `requiredScopeNote` (if adopted), `heldStatus` (normalized new key), `holders`, `heldEvidence`. `currentLevel` is removed. Prefix `v2:`.
-
-**Problem:** every stamped `basisHash` is `v1:...`, so a naive switch marks every judgement stale. **Recommendation: recompute-on-read compatibility.** When the stored `basisHash` starts with `v1:`, the stale check recomputes the v1 hash of the *current* row using the stored raw (pre-normalization) values, exactly as v1 did. If it matches, the judgement is not stale and the server re-stamps `v2:` on the next write of that row (lazy). If it does not match, it was stale under v1 anyway. This keeps both functions in code until a later cleanup slice; no batch stamping is needed. Alternative: a one-time audited stamping script that writes `v2:` for every v1 match (OD-4).
-
-The legacy-key read mapping (`met` -> `average`) is not itself a change: v1 recomputation uses the raw stored key, and v2 is only stamped from the normalized row. A person changing `met` to `leading` is a real change and invalidates, as intended. `S3Snapshot` drops `currentLevel` and gains `requiredLevel` new-key semantics; old snapshots keep their fields and the diff renderer shows `currentLevel` only as historical.
-
-## 6. Interaction with ADR-0171
-
-- Placement follows 6A.2a: S5 owns resolution and `기대 수준`; S7 owns the target's `보유 판정` and `기대 수준` with `해소 방식` fixed to `인수 통합`; column order follows 5A.
-- S5 (Green Field) and S7 (Brown Field, per target) attainability inputs read the unified `held.status` and the S3-owned `requiredLevel`. The S5 5-step `LevelSelect` columns (`필요 수준`, `보유 수준` in `GreenfieldStage.tsx`) are removed; S5 shows both fields read-only with an S3 link.
-- `lib/capability-attainability.ts` replaces `levelGap`/`levelStep` (`required_step`, `current_step`) with `gapFlag` and the held ordinal. The S8 read-only summary and technical lens T1 read the same.
-- If ADR-0171 is not accepted, this design still applies to the current S8 panel the same way.
-
-## 5A. Display order (decided, chat 2026-10-14)
-
-Evaluation order everywhere is `필요 수준` first, then `보유 판정`. Canonical order per surface:
-
-| Surface | Column / field order |
+| Surface | Order |
 |---|---|
-| S3 required-capability table | `필요 역량` - `필요 수준` - `보유 판정` - `보유 주체·근거` - `해소 힌트` - action |
-| S5 (GF) table | read-only `필요 역량` - `필요 수준` - `보유 판정`, then inputs `해소 방식` - `기대 수준` - `비용` - `기간` - `달성 가능성` - `근거·증빙` |
-| S7 (BF, per target) table | read-only `필요 역량` - `필요 수준` - `보유 판정` (group, S3), then inputs `대상 보유 판정` - `해소 방식` (fixed `인수 통합`) - `기대 수준` - `비용` - `기간` - `달성 가능성` - `근거·증빙` |
-| S8 read-only summary | same as S5 or S7, all read-only |
-| S4 evaluation tab (`EvalTab`) | capability, `필요 수준`, `보유 판정`, flag |
-| Gate-brief capability line | `역량(필요 수준 / 보유 판정 → 기대 수준, 해소 방식, 개월)` |
-| Charter text | capability, `필요 수준`, `보유 판정`, resolution |
-| API / OpenAPI schemas, MCP read views | `capability`, `requiredNote`, `requiredLevel`, `requiredScopeNote`, `held`, then judgement fields `resolution`, `expectedLevel`, `closingCostKrwM`, `monthsToAttain`, `grade`, `rationale`, `evidence` |
-| AI draft output (holding draft, attainability draft) | same key order as the API |
-| Wiki tables | same as the surface they describe |
+| S3 table | `필요 역량` - `필요도` - `필요 수준` - `보유 판정` - `보유 수준` - `보유 주체·근거` - `해소 힌트` - action |
+| S5 (GF) | read-only S3 columns, then inputs `해소 방식` - `기대 수준` - `비용` - `기간` - `달성 가능성` - `근거·증빙` |
+| S7 (BF, per target) | read-only S3 columns, then inputs `대상 보유 판정` - `대상 보유 수준` - `해소 방식` (fixed `인수 통합`) - `기대 수준` - `비용` - `기간` - `달성 가능성` - `근거·증빙` |
+| S8 summary | as S5 or S7, all read-only |
+| S4 `EvalTab` | capability, `필요도`, `보유 판정`, caution |
+| Gate-brief line | `역량(필요도, 보유 판정; 해소 방식, 개월, 달성 가능성)` with narrative excerpts only when short |
+| Charter text | capability, `필요도`, `보유 판정`, resolution |
+| API / OpenAPI / MCP read views | `capability`, `requiredNote`, `necessity`, `necessityScopeNote`, `requiredLevel`, `held.status`, `currentLevel`, `held.holders`, `held.evidence`, then `resolution`, `expectedLevel`, `closingCostKrwM`, `monthsToAttain`, `grade`, `rationale`, `evidence` |
+| AI draft outputs | same key order as the API |
+| Wiki tables | same as the surface described |
 
-A shared constant (`CAPABILITY_COLUMN_ORDER` in `lib/capability-gap.ts`) carries the order so surfaces do not hard-code it.
+A shared `CAPABILITY_COLUMN_ORDER` constant in `lib/capability-gap.ts` carries the order.
 
-## 6A. `기대 수준` (expected holding level after resolution)
+The S3 table must stay compact: `필요도` and `보유 판정` are narrow selects; `필요 수준` and `보유 수준` are two-line previews with a modal button.
 
-### 6A.1 Semantics
+## 5. Narrative modal
 
-`기대 수준` is the industry-relative level the group expects to hold **once the chosen `해소 방식` is complete, within the stated `달성 기간` (months)**. It is a target, not a fact. It sits in the judgement, next to `해소 방식`, cost, months, `달성 가능성` grade and rationale. Proposed key `expectedLevel` with values `leading` / `average` / `partial` / `unevaluated` (`미판정`); `none` is not offered because a resolution that ends with nothing held is expressed by a low `달성 가능성` grade, not by an expected level.
+One shared dialog component (generalising the existing `보유 주체·근거` modal) with: field title, the row's `필요 역량` as context, a textarea with a live counter (cap 400), and read-only mode (`보기`) for S5/S7/S8. Button text: `입력` when empty, `수정` when filled in S3, `보기` where read-only. Keyboard accessible, focus returns to the button, Onyx 3.0 tokens.
 
-Three levels per row then read: `필요 수준` (S3, how essential), `보유 판정` (S3, current), `기대 수준` (S5/S7, target).
+## 6. Decision-support caution
 
-### 6A.2 Storage and ownership
+`necessityFlag(necessity, held.status)` -> caution only; never blocks, never caps a grade.
 
-- Green Field: on the judgement object of the S3 register row (`attainability.expectedLevel`), edited at S5 per ADR-0171.
-- Brown Field: on the per-target judgement JSON (`brownfield_target_capability_judgement`, ADR-0171), meaning the expected level **for that target after PMI and key-talent retention**. A target that already holds the capability at `업계 평균` may still be expected to reach only `부분 보유` if retention is weak; the rationale should say so.
+| `필요도` \ `보유 판정` | `업계 리딩` | `업계 평균` | `부분 보유` | `미보유` | `미판정` |
+|---|---|---|---|---|---|
+| `필수` | none | none | `큰 격차 주의` | `큰 격차 주의` | `미판정` |
+| `부분 필수` | none | none | `확인 필요` | `격차` | `미판정` |
+| `선택` | `영향 낮음` | `영향 낮음` | `영향 낮음` | `영향 낮음` | `미판정` |
+| `미정` | none | none | none | none | `미판정` |
 
-### 6A.2a Stage placement (recommendation awaiting decider's final confirmation)
+Additional caution: a `필수` row with empty `필요 수준` shows `필요 수준 미기술`; empty `보유 수준` with a judged `보유 판정` shows `보유 수준 미기술`. There is no level-difference computation; `기대 수준` vs `필요 수준` is a human reading, optionally with an AI-drafted comparison sentence (proposal only, OD-8). The matrix is OD-3.
+
+## 7. Coverage (`보유율`)
+
+`summarizeGap` returns counts per new key and `coveragePct` with weights `leading` 1, `average` 1, `partial` 0.5, `none` 0, `unevaluated` excluded. Legacy `met` counts as `average`, so existing numbers do not move. Label changes from `충족률` to `보유율`; API property `coveragePct` unchanged. **Recommendation:** add `essentialCoveragePct` over `필수` rows (OD-5).
+
+## 8. Row hash v2 (ADR-0170)
+
+v1 (`lib/capability-linkage.ts`) hashes `capability`, `requiredNote`, `heldStatus`, `holders`, `heldEvidence`, `requiredLevel`, `currentLevel`.
+
+v2 hashes, in display order: `capability`, `requiredNote`, `necessity`, `necessityScopeNote` (if adopted), `requiredLevel` (text), `heldStatus` (normalized key), `currentLevel` (text), `holders`, `heldEvidence`. Prefix `v2:`. All are S3-owned now.
+
+v1 compatibility: when a stored `basisHash` starts with `v1:`, the stale check recomputes v1 over the current raw row. Match = not stale, and the server re-stamps `v2:` on the next write of that judgement (lazy). Because the legacy key mapping is read-only and v1 uses the raw stored key, untouched rows do not go stale; setting `필요도` on a row for the first time is a real change and invalidates its judgement (OD-4 asks whether first-time `필요도` entry should be exempt; recommendation: no exemption, it is a definition change). `S3Snapshot` gains `necessity`; the diff renderer shows text fields as before/after excerpts.
+
+## 9. Stage placement and ADR-0171 interaction
 
 | Stage | Owns |
 |---|---|
-| S3 | `필요 수준`, `보유 판정` (group/affiliates) |
-| S5 (Green Field) | `해소 방식`, `기대 수준`, cost, months, `달성 가능성` grade, rationale |
-| S7 (Brown Field, per shortlisted target) | the **target's** `보유 판정` (`targetHeldStatus`, the per-target technical criterion evaluation expressed on the same 4-level scale as S3 so the two are comparable), `기대 수준` (after acquisition, integration and key-talent retention), cost, months, grade, rationale; `해소 방식` fixed to `인수 통합` (shown, not selectable; other complements go in the note) |
+| S3 | `필요 역량`, `필요도`, `필요 수준`, `보유 판정`, `보유 수준`, `보유 주체·근거` |
+| S5 (Green Field) | `해소 방식`, `기대 수준` (state expected once the resolution is done), `비용`, `기간`, `달성 가능성` (`높음` / `중간` / `낮음`), `근거·증빙` |
+| S7 (Brown Field, shortlisted targets) | target's `보유 판정` (same 4-level scale, `targetHeldStatus`), target's `보유 수준` narrative (`targetCurrentLevel`), `기대 수준` after acquisition, integration and key-talent retention, cost, months, grade, rationale; `해소 방식` fixed to `인수 통합` (shown, not selectable; other complements in the note) - **Recommendation** (OD-6) |
 | S8 | read-only |
 
-UI text and glossary explain the two meanings separately: S5 `기대 수준` = level after our own resolution completes; S7 `기대 수준` = level the group holds through this target after integration. `targetHeldStatus` is part of the S7 judgement (not hashed in S3) and is invalidated with it.
-- The judgement fields formerly called S8-owned in ADR-0170 become S5/S7-owned under ADR-0171; `expectedLevel` joins that set. The S8 route keeps rejecting S3-owned fields and also rejects `expectedLevel` (read-only in S8).
+- Storage per ADR-0171: GF judgement on the S3 register row (`attainability.*`), BF per-target in `brownfield_target_capability_judgement`. `expectedLevel`, `targetHeldStatus`, `targetCurrentLevel` are judgement fields, not hashed in S3, and are moved to history when an S3 change invalidates the judgement.
+- UI text and glossary explain S5 `기대 수준` (after our own resolution) and S7 `기대 수준` (what the group holds through this target after integration) separately.
+- S5 `GreenfieldStage.tsx` loses its own `필요 수준` / `보유 수준` inputs and shows them read-only from S3. ADR-0136's "S5 fills the levels" is superseded; ADR-0168's 5-step scale is superseded; ADR-0170's correction (levels are S5-owned) is reversed (levels are S3-owned narrative).
+- S8 attainability route keeps rejecting S3-owned fields (now including `necessity`) and rejects `expectedLevel`/`target*` (read-only in S8).
+- **`기대 수준` mandatory?** **Recommendation (OD-7):** optional in drafts; required (non-empty) to confirm a judgement that has a `해소 방식`, 400 `expected_level_required`. Record completeness only, not a gate block.
 
-### 6A.3 Guidance by `해소 방식` (suggestion only)
+## 10. Retirement of the 5-step scale
 
-**Recommendation (OD-10):** show a hint next to the select, never restrict the options. Applies to S5; in S7 `해소 방식` is fixed (OD-13), so the hint compares `기대 수준` with `대상 보유 판정` instead.
+| Item | Action |
+|---|---|
+| `components/stages/LevelSelect.tsx` | delete (only importer `GreenfieldStage.tsx`) |
+| `LEVEL_SCALE`, `LEVEL_LABELS`, `levelStep`, `isLegacyLevelText`, `levelGap` in `lib/capability-gap.ts` | remove after `capability-attainability.ts` stops using them |
+| `required_step` / `current_step` in `lib/capability-attainability.ts` | remove; pass narrative text instead |
+| S8 `S5 수준` caption, gate-brief `S5 수준 x/y` | remove |
+| `scripts/co-newbiz/restore-capability-levels.ts` | keep; it restores text fields, which are again the real data |
 
-| `해소 방식` | Typical reachable `기대 수준` within the plan period | Hint text basis |
-|---|---|---|
-| `직접 구축` (build) | `부분 보유` to `업계 평균` | Organic build is slow; `업계 리딩` needs strong evidence |
-| `영입` (hire) | `업계 평균` | Key hires bring proven practice; scale takes time |
-| `전략 제휴` (partner) | `업계 평균` to `업계 리딩` (via partner) | Access, not ownership; depends on the agreement |
-| `지분 투자` (invest: acquire/licence) | `업계 평균` to `업계 리딩` | Fastest path to an existing leader; Brown Field PMI risk applies |
-| none chosen | no hint | |
+## 11. Consumers to update
 
-If the selected `기대 수준` is above the hint for that resolution, the UI shows `근거 확인 권장` (caution only) and the rationale field is highlighted. The hint text is configuration in `lib/capability-gap.ts`, not a rule.
+| File | Change |
+|---|---|
+| `lib/capability-gap.ts` | new held keys, compat reader, `necessity`, caps 400, `necessityFlag`, weights, column order, retire 5-step helpers |
+| `lib/capability-linkage.ts` | hash v2, v1 recompute, snapshot `necessity` |
+| `lib/capability-attainability.ts` | drop level steps; use `necessityFlag`, held ordinal, narrative text |
+| `lib/gate-brief.ts` | new labels, `큰 격차 주의` list, order per section 4, drop `S5 수준` |
+| `lib/track-advisory.ts` | `보유율` label; caution when any `필수` row is `큰 격차 주의` |
+| `lib/project-charter.ts` | gaps = rows with a caution, ordered per section 4 |
+| `lib/synergy-pipeline.ts`, `components/stages/synergy/useSynergyResult.ts` | seed `necessity: ""` |
+| `app/api/opportunities/[id]/capability-gap/route.ts` | accept new keys and `necessity`; legacy held keys accepted and mapped for one release, then 400 `invalid_held_status` |
+| `app/api/opportunities/[id]/capability-gap/llm-draft/route.ts` | section 12 |
+| `app/api/opportunities/[id]/route-advisory/route.ts` | counts per new key, `essentialCoveragePct`, `largeGapRows`; `unmet`/`unmetRows` kept as deprecated aliases one release |
+| `app/api/brownfield/[oppId]/targets/[targetId]/screening-draft/route.ts` | prompt uses `필요도`, `필요 수준` text, new held label |
+| `app/api/brownfield/[oppId]/target-proposals/web-search/route.ts` | filter rows not `leading`/`average` |
+| `app/api/projects/[id]/capability-attainability/route.ts` | reject `necessity`, `expectedLevel`, `target*` |
+| `components/stages/synergy/SynergyLinkageTab.tsx` | S3 columns per section 4, `필요도` select, narrative modals, held select |
+| `components/stages/GreenfieldStage.tsx` | remove level inputs; read-only S3 columns; `기대 수준` modal |
+| `components/stages/CapabilityAttainabilityPanel.tsx` | read-only order, new labels, caution |
+| `components/stages/route-decision/EvalTab.tsx` | shared label/chip maps, `보유율`, `큰 격차 주의`, order |
+| `components/stages/brownfield/useBrownfieldUniverse.tsx` | `미보유 N건 · 부분 보유 N건` |
+| S7 target judgement surface (ADR-0171 slice 2) | target held/current/expected inputs, fixed `인수 통합` |
+| `scripts/bootstrap-stages.ts`, `scripts/co-newbiz/backfill-capability-gap.ts` | write new keys |
+| `docs/architecture/openapi.yaml` | section 13 |
+| tests (`capability-gap`, `capability-linkage`, `capability-attainability`, `technical-lens`, `project-promotion`, `restore-capability-levels`) | section 14 |
 
-### 6A.4 Gap logic
+Every surface above adopts the order of section 4.
 
-- **Current gap:** `gapFlag(requiredLevel, held.status)` (section 4.2), shown in S3 and S4.
-- **Residual gap:** `residualGapFlag(requiredLevel, expectedLevel)` uses the same matrix with `expectedLevel` in place of the held status. When the residual flag is `large_gap` or `gap`, the row shows `기대 수준이 필요 수준에 못 미침` (decision-support caution). `미판정` gives `unjudged`.
-- **Uplift check:** if `expectedLevel` ordinal is below `held.status` ordinal, show `기대 수준이 현재 보유보다 낮음` (likely input error or deliberate divestment; caution only).
+## 12. AI drafts
 
-### 6A.5 Downstream use
+- **Holding draft** (`capability-gap/llm-draft`): proposes `보유 판정` (new keys), `보유 수준` narrative and `근거` from group/affiliate profiles; never `필요도` or `필요 수준`. `leading` only with explicit comparative evidence; otherwise `average` with "업계 대비 근거 없음", or `unevaluated`. Output key order per section 4. Validator rejects legacy keys. Draft only; a person confirms.
+- **Attainability draft** (S5/S7): may propose `기대 수준` narrative and a grade, and optionally a one-sentence comparison of `기대 수준` against `필요 수준` (OD-8). Proposal only.
 
-- **`달성 가능성` grade suggestion.** The AI draft (proposal only) considers the uplift from `held.status` to `expectedLevel`, the resolution hint fit (6A.3), cost and months: a large uplift beyond the hint pushes the suggested grade down. A person confirms the grade.
-- **Capability-adjusted scenario (ADR-0168 slice).** Reads confirmed, non-stale judgements only. Rows with a residual gap on `필수` remain as a scenario risk (delay or cost uplift) even when the grade is high; rows with no residual gap contribute only their cost and months.
-- **Gate brief.** The capability line quotes, per row, `필요 / 보유 → 기대 (해소 방식, 개월)`, and counts rows with `기대 수준이 필요 수준에 못 미침`.
-- **S8 read-only summary and technical lens T1.** Show the residual flag next to the grade.
+## 13. API and OpenAPI
 
-### 6A.6 Staleness
+- Capability-gap PUT: `necessity` enum, `necessityScopeNote`, narrative caps 400, new held keys (legacy accepted one release). Errors `invalid_necessity`, `invalid_held_status`, `text_too_long`.
+- Responses include `held.legacyStatus` when present.
+- Route-advisory adds `leading`, `average`, `none`, `essentialCoveragePct`, `largeGapRows`.
+- S5/S7 judgement routes (ADR-0171) accept `expectedLevel` (and S7 `targetHeldStatus`, `targetCurrentLevel`); confirm rule per OD-7.
+- `openapi.yaml` schemas list fields in section 4 order; `tests/unit/openapi.test.ts` passes.
 
-`expectedLevel` is a judgement field. An S3 change to any hashed field (including `필요 수준` and `보유 판정`) invalidates the judgement as in ADR-0170/0171: confirmation cleared, prior values including `expectedLevel` moved to history. `expectedLevel` is not in the S3 row hash (it is not S3-owned). `AttainabilityHistoryEntry` gains `expectedLevel`.
+## 14. Tests
 
-### 6A.7 Is `기대 수준` mandatory?
+- Compat reader (`met`/`unmet`/unknown), `legacyStatus` set and cleared on save.
+- Narrative caps 400; existing 120-char values untouched; empty -> `미입력`.
+- `necessityFlag` full matrix and `미기술` cautions; no level arithmetic remains (`levelGap` removed).
+- `summarizeGap` weights, `essentialCoveragePct`, legacy `met` keeps coverage.
+- Hash v2 field set; v1 recompute not-stale for untouched rows, stale for changed; lazy re-stamp; first `필요도` entry invalidates.
+- Routes: S8 rejects S3-owned and S5/S7-owned fields; `expected_level_required` at confirm; S7 `해소 방식` fixed.
+- Display order: source-structure tests per surface (S3 table, S5, S7, S8 summary, `EvalTab`) assert the section 4 order; unit tests for gate-brief and charter strings and API/AI key order.
+- Modal: open/close, focus return, read-only mode; `design:lint` passes.
 
-**Recommendation (OD-11):** optional while drafting; when `해소 방식` is set, confirmation of the judgement requires a `기대 수준` other than `미판정` (a confirm-time validation, 400 `expected_level_required`), mirroring how `rationale_required` works for high/low grades. This is a completeness rule for the judgement record only, not a gate block.
+## 15. Wiki and glossary
 
-### 6A.8 API, tests, docs
+- Wiki `docs/wiki/ko/22-*S3*` (new columns, modals), `23-*S4*` (`보유율`, cautions), `40-*S5*` (step 4 no longer edits `보유 수준`; inputs are `해소 방식` and `기대 수준`), `51-*S7*` (target fields, fixed `인수 통합`), S8 pages (read-only order).
+- Glossary (`glossary/business.yaml`, none exist today): `필요도`, `필요 수준`, `보유 판정`, `보유 수준`, `기대 수준` (with separate S5 and S7 meanings). Re-run glossary lint and check the four tooling integrations.
 
-- S5 (GF) and S7 (BF per target) judgement save routes from ADR-0171 accept `expectedLevel` (`leading|average|partial|unevaluated`; else 400 `invalid_expected_level`) and enforce 6A.7 at confirm. Responses include `expectedLevel`, `residualGapFlag`, and `resolutionHint`. OpenAPI updated for those operations.
-- Tests: residual matrix, uplift-below-current caution, hint-exceeded caution, confirm-time rule, invalidation moves `expectedLevel` into history, S8 rejects `expectedLevel`.
-- Wiki: S5 and S7 pages describe the three levels; glossary entry `기대 수준` added with `보유 판정` and `필요 수준`.
+## 16. Migration
 
-## 7. Consumers to update (found by search; complete for `lib/`, `app/api/`, `components/`, `scripts/`, `tests/`)
+None. All fields are JSON; existing narrative text is valid as is; held keys are read-mapped; hashes re-stamp lazily. No data is deleted.
 
-| File | Today | Change |
-|---|---|---|
-| `lib/capability-gap.ts` | `GapHeldStatus`, labels, chips, `LEVEL_SCALE`, `levelStep`, `levelGap`, `normalizeGapRows`, `summarizeGap`, `RemovedCapability`, `S3Snapshot` | New scale, `HELD_ORDER`, compat reader, `REQUIRED_LEVEL_*`, `gapFlag`, weights; `LEVEL_SCALE` kept only for legacy display |
-| `lib/capability-linkage.ts` | v1 hash with `currentLevel`, snapshot, diff labels | v2 hash, v1 recompute, snapshot/diff update |
-| `lib/capability-attainability.ts` | `levelGap`, `required_step`/`current_step`, held counts | Held ordinal, `gapFlag`, new count keys |
-| `lib/gate-brief.ts` | `충족·부분·미보유` counts, `미보유` list, `S5 수준` | New labels, `큰 격차 주의` list, drop S5 level text |
-| `lib/track-advisory.ts` | `역량 충족률` thresholds 70/40 | Label `보유율`; optionally prefer `essentialCoveragePct` (OD-6) |
-| `lib/project-charter.ts` | gaps = rows not `met` | Gaps = rows with flag `large_gap` / `gap` / `check`, or not `leading`/`average` when `requiredLevel` unset |
-| `lib/synergy-pipeline.ts`, `components/stages/synergy/useSynergyResult.ts` | seed `requiredLevel: ""`, `currentLevel: ""` | Stop writing `currentLevel` |
-| `app/api/opportunities/[id]/capability-gap/route.ts` | seeds `currentLevel` | Accept new keys, `requiredLevel` new keys, reject `currentLevel` writes (400 `retired_field`) |
-| `app/api/opportunities/[id]/capability-gap/llm-draft/route.ts` | prompt and validator use `met|partial|unmet|unevaluated` | New scale and industry-relative wording (section 8) |
-| `app/api/opportunities/[id]/route-advisory/route.ts` | `unmet`, `coveragePct`, `unmetRows` | Add `none`/`leading`/`average` counts, `essentialCoveragePct`, `largeGapRows`; keep `unmet` as deprecated alias of `none` for one release |
-| `app/api/brownfield/[oppId]/targets/[targetId]/screening-draft/route.ts` | prompt uses `요구 수준` text and held label | Use `필요 수준` label and new held label |
-| `app/api/brownfield/[oppId]/target-proposals/web-search/route.ts` | filters rows not `met` | Filter rows not `leading`/`average` |
-| `app/api/projects/[id]/capability-attainability/route.ts` | rejects S3-owned fields incl. `currentLevel` | Keep rejecting; error lists `requiredLevel` as S3-owned, `currentLevel` as retired |
-| `components/stages/synergy/SynergyLinkageTab.tsx` | S3 held select | New 5-option held select, `필요 수준` select, optional `필수 범위`, legacy hints |
-| `components/stages/GreenfieldStage.tsx` | `LevelSelect` x2 | Remove; read-only fields plus S3 link |
-| `components/stages/LevelSelect.tsx` | 5-step select | Delete after slice 2 (no other importer found) |
-| `components/stages/CapabilityAttainabilityPanel.tsx` | held chip, S5 level caption | New labels, drop level caption, show `gapFlag` |
-| `components/stages/route-decision/EvalTab.tsx` | hard-coded `met`/`충족` chips, `미충족`, `충족률` | Use shared label/chip maps, `미보유`, `보유율`, `큰 격차 주의` |
-| `components/stages/brownfield/useBrownfieldUniverse.tsx` | `미보유 N건 · 부분충족 N건` | `미보유 N건 · 부분 보유 N건` |
-| `scripts/bootstrap-stages.ts`, `scripts/co-newbiz/backfill-capability-gap.ts` | write old keys | Write new keys |
-| `scripts/co-newbiz/restore-capability-levels.ts` | restores levels | Unchanged; document that restored values surface as legacy |
-| `docs/architecture/openapi.yaml` | `s3_owned_field` list includes `currentLevel` | Section 9 |
-| `tests/unit/capability-gap.test.ts`, `capability-linkage.test.ts`, `capability-attainability.test.ts`, `technical-lens.test.ts`, `project-promotion.test.ts`, `restore-capability-levels.test.ts` | old keys | Section 11 |
+## 17. Risks
 
-Every surface in this table also adopts the display order of section 5A (S3 table, S5/S7/S8 tables, `EvalTab`, gate brief, charter, OpenAPI schemas, LLM draft outputs, wiki tables).
+- `met` read as `average` may hide a leading capability; mitigated by `재판정 권장`.
+- First `필요도` entry invalidates confirmed judgements on that row (by design); communicate in release notes.
+- Narrative quality varies; `미기술` cautions only catch empty text.
+- v1 compatibility code must stay correct until cleanup.
+- Overlap with ADR-0171 slices in the same files; sequence the slices.
 
-MCP tools `draft_capability_gap` and `record_capability_list` were not traced; they likely pass through the same routes (see section 15).
+## 18. Slices
 
-## 8. AI holding-assessment draft
+1. **S3 UI and model.** `필요도`, narrative modals (shared dialog), `보유 판정` scale with compat reader, caps, column order, hash v2, capability-gap route, tests.
+2. **S5/S7 and consumers.** S5/S7 read-only S3 columns, `기대 수준` (S5) and target fields (S7), consumers in section 11, retire the 5-step UI and helpers, OpenAPI. Depends on ADR-0171 slices 1-2.
+3. **AI and docs.** Holding draft and attainability draft, wiki, glossary.
 
-`capability-gap/llm-draft` asks for `leading|average|partial|none|unevaluated`, defines each value relative to the industry, and requires `evidence` to name the profile fact used. Because group/affiliate profiles rarely contain industry benchmarks, the prompt instructs: choose `leading` only with explicit comparative evidence; when the profile shows the capability exists but gives no comparison, use `average` and say "업계 대비 근거 없음" in evidence; when unsure, `unevaluated`. Output remains a draft (`draftedBy: ai`); a person confirms. The validator rejects legacy keys from the model (they are read-compat only, not write-compat). Optional: the draft may also propose `requiredLevel` (**Recommendation:** no, keep it human-only in slice 3; OD-7).
-
-## 9. API and OpenAPI
-
-- Capability-gap PUT accepts `held.status` in the new set; for one release it also accepts legacy keys and maps them (logged), then rejects with 400 `invalid_held_status`.
-- `requiredLevel` accepts `essential|partial_essential|optional|""`; other values 400 `invalid_required_level`. `currentLevel` in a body returns 400 `retired_field`.
-- Responses include `held.legacyStatus` and `legacy.{requiredLevel,currentLevel}` when present.
-- Route-advisory response gains `capabilityGap.{leading,average,none,essentialCoveragePct,largeGapRows}`; `unmet`/`unmetRows` stay as deprecated aliases for one release.
-- `openapi.yaml`: update the capability-gap, route-advisory and capability-attainability operation summaries/schemas; `tests/unit/openapi.test.ts` must pass.
-
-## 10. Migration
-
-No schema change: all fields live in JSON columns (`capability_gap_json`, and the ADR-0171 BF judgement JSON if adopted). No migration script in the recommended path (lazy read-mapping plus lazy hash re-stamp). Data is never deleted. Optional later: an audited, dry-run-by-default script that rewrites legacy keys and stamps v2 hashes, run only with decider approval.
-
-## 11. Tests
-
-- Compat reader: each legacy key maps as in 3.2; `legacyStatus` set and cleared on save; unknown keys -> `unevaluated`.
-- Legacy level text moves to `legacy.*` and is preserved through a save round-trip.
-- `summarizeGap` weights and `essentialCoveragePct`; legacy `met` keeps the same coverage number.
-- `gapFlag` full matrix (all 4x5 cells plus unset).
-- Hash: v2 excludes `currentLevel`; v1 recompute path says not-stale for an untouched legacy row and stale for a changed one; re-stamp to `v2:` on write.
-- Routes: `retired_field`, `invalid_required_level`, legacy-key acceptance window; attainability route still rejects S3-owned fields.
-- LLM draft validator rejects legacy keys and `leading` without evidence text.
-- UI: labels never colour-only; `design:lint` passes.
-- Display order (5A): source-structure tests per surface (S3 table, S5, S7, S8 summary, `EvalTab`) assert `필요 수준` precedes `보유 판정` and the full column order; unit tests assert the gate-brief and charter strings and the LLM draft/API key order.
-- S7: `해소 방식` rendered fixed as `인수 통합`; `targetHeldStatus` validation and invalidation.
-
-## 12. Wiki and glossary
-
-- Wiki `docs/wiki/ko/22-공통-S3-*.md` (new held options, `필요 수준`, `필수 범위`, legacy hints), `23-공통-S4-*.md` (`보유율`, `큰 격차 주의`), `40-그린필드-S5-*.md` (remove `보유 수준` instruction at step 4; fields read-only from S3), `51-브라운필드-S7-*.md` (read-only fields per ADR-0171), `30/41/52-*S8-*.md` (summary labels).
-- Glossary: no entry for `보유 판정`, `보유 수준` or `필요 수준` was found in `glossary/*.yaml`. **Recommendation:** add `보유 판정` and `필요 수준` to `glossary/business.yaml` with `보유 수준` as a retired alias pointing to `보유 판정`; re-run glossary lint and check the four tooling integrations.
-
-## 13. Risks
-
-- **Silent upgrade of `met`.** Mapping `met` to `average` could understate a leading capability or overstate a weak one. Mitigated by the `재판정 권장` hint and by counting both at weight 1.
-- **Loss of granularity.** Four industry-relative levels are coarser than five skill steps. Mitigated by keeping legacy level text visible.
-- **Hash compatibility code** must stay correct until cleanup; a bug would mass-invalidate judgements. Covered by tests on real fixtures.
-- **Ownership move of `필요 수준` to S3** changes who can edit it; S5 users lose an input they had. Confirm with decider (OD-2).
-- **Profiles lack industry benchmarks**, so AI drafts will cluster on `average`. Stated in the prompt and UI caveat.
-- Parallel work: ADR-0171 slices touch the same files; sequence slices to avoid conflicts.
-
-## 14. Slices
-
-1. **Scale and S3 input.** New types/labels/order, compat reader, legacy preservation, `gapFlag`, weights, S3 input UI (`SynergyLinkageTab`), capability-gap route validation, hash v2 with v1 recompute, tests.
-2. **Consumers, removal and `기대 수준`.** S4 route advisory and track advisory, `EvalTab`, gate brief, charter, BF universe hint, screening-draft and web-search routes, S5/S7/S8 read-only display, attainability lib; remove `currentLevel` UI and `LevelSelect`; display order (5A) on every surface; S5 resolution + `expectedLevel`; S7 `targetHeldStatus` + `expectedLevel` with fixed `인수 통합`; resolution hints, residual flag, confirm rule and history; OpenAPI. Depends on ADR-0171 slices 1-2 for the S5/S7 surfaces.
-3. **AI draft and docs.** LLM holding-assessment draft, `달성 가능성` draft using `기대 수준`, capability-adjusted scenario and gate-brief residual line, wiki pages, glossary entries (`보유 판정`, `필요 수준`, `기대 수준`).
-
-## 15. Open decisions (with recommendations)
+## 19. Open decisions (with recommendations)
 
 | ID | Question | Recommendation |
 |---|---|---|
-| OD-1 | Stored keys for the held scale | `leading` / `average` / `partial` / `none` / `unevaluated`, legacy `met`->`average` (with `재판정 권장`), `unmet`->`none` |
-| OD-2 | Is `필요 수준` S3-owned? | Decided (D4): S3-owned, read-only in S5/S7/S8, in hash v2 |
-| OD-3 | Gap-flag matrix | As in 4.2; caution only |
-| OD-4 | v1 hash handling | Recompute-on-read with lazy v2 re-stamp; no batch script |
-| OD-5 | Coverage weights and label | `leading` 1, `average` 1, `partial` 0.5, `none` 0; label `보유율` |
-| OD-6 | S4 track-advisory signal basis | Keep overall `coveragePct` thresholds (70/40) and add a separate caution when any `필수` row is `large_gap` |
-| OD-7 | Should AI propose `필요 수준`? | No, human-only for now |
-| OD-8 | `필수 범위` note for `부분 필수` | Yes, optional one line |
-| OD-9 | Legacy `requiredLevel`/`currentLevel` | Preserve read-only under `legacy`, shown as `기존 입력(척도 밖)` / `기존 보유 수준(참고)`; never auto-mapped |
-| OD-10 | `기대 수준` guidance by `해소 방식` | Table 6A.3 as hints only; `근거 확인 권장` when exceeded; no restriction |
-| OD-11 | Is `기대 수준` mandatory when `해소 방식` is set? | Optional in drafts; required (not `미판정`) to confirm a judgement that has a `해소 방식` |
-| OD-13 | S7 `해소 방식`: fixed or selectable? | Fixed `인수 통합` (shown, not selectable); other complements in the note |
-| OD-14 | Stage placement (6A.2a) | As in 6A.2a; awaiting decider's final confirmation |
-| OD-12 | Brown Field `기대 수준` meaning | Per target, after PMI and key-talent retention; rationale should cite retention assumptions |
+| OD-1 | Stored keys | `necessity`: `essential` / `partial_essential` / `optional`; held: `leading` / `average` / `partial` / `none` / `unevaluated` with `met`->`average` (`재판정 권장`), `unmet`->`none` |
+| OD-2 | `보유 수준` position | Right after `보유 판정` |
+| OD-3 | Caution matrix | As in section 6 |
+| OD-4 | Does first `필요도` entry invalidate judgements? | Yes |
+| OD-5 | Coverage | Weights 1/1/0.5/0, label `보유율`, plus `essentialCoveragePct` |
+| OD-6 | S7 `해소 방식` fixed or selectable | Fixed `인수 통합` |
+| OD-7 | `기대 수준` mandatory when `해소 방식` set | Required at confirm, optional in drafts |
+| OD-8 | AI comparison sentence `기대 수준` vs `필요 수준` | Yes, proposal only, in the attainability draft |
+| OD-9 | Narrative cap | 400 characters for `필요 수준`, `보유 수준`, `기대 수준` |
+| OD-10 | `필수 범위` note for `부분 필수` | Yes, optional, 120 characters |
+| OD-11 | v1 hash handling | Recompute on read, lazy re-stamp; no batch script |
 
-## 16. Not verified
+## 20. Not verified
 
-- MCP tool handlers (`draft_capability_gap`, `record_capability_list`, `get_route_advisory`) and the analysis-engine CLI were not traced for held-status literals.
-- `SynergyLinkageTab.tsx` and `CapabilityAttainabilityPanel.tsx` were not read line by line (they have uncommitted edits from other work).
-- The actual distribution of stored `held.status` and level text in the live database was not inspected (no database access by design), so the share of rows that will show `재판정 권장` or `기존 입력(척도 밖)` is unknown.
-- Whether S5 `capability_gaps_json` (migration 0056) still carries level fields independent of the S3 register was not confirmed.
+- MCP tool handlers (`draft_capability_gap`, `record_capability_list`, `get_route_advisory`) and the analysis-engine CLI were not traced.
+- `SynergyLinkageTab.tsx`, `CapabilityAttainabilityPanel.tsx` and `GreenfieldStage.tsx` were not read line by line; the shared modal's current component name was not confirmed.
+- Live data (how many rows hold `met`, narrative length distribution) was not inspected; no database access.
+- Whether S5 `capability_gaps_json` (migration 0056) still carries its own level text was not confirmed.
 - Outputs are decision support, not investment advice.
