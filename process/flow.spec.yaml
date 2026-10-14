@@ -583,7 +583,7 @@ stages:
       - S9 DD 발견사항(dd_finding value_impact 포함)
       - WACC·hurdle 입력값
     outputs:
-      - 투자구조 가설(4축 검토 완료 — deal_structure_review 아티팩트 참조)
+      - 투자구조 가설(4축 검토 완료 — deal_structure_review 아티팩트 참조; 그린필드는 설립 구조 결정(신규 법인 설립 또는 신규 사업부 추진) 포함)
       - 자금조달 계획(sources & uses 균형·자금 확정성 증빙)
     entryCriteria:
       - S9 완료
@@ -614,7 +614,7 @@ stages:
 
   - id: S11
     name: 투자심사·실행
-    objective: "투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 투자심의 자료로 묶어 법인·그룹 투자심의위원회 심사를 통과하고, 승인되면 트랙에 맞는 실행에 들어간다(인수 종결, 법인 설립, greenfield 실행 기준선 확정)"
+    objective: "투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 투자심의 자료로 묶어 법인·그룹 투자심의위원회 심사를 통과하고, 승인되면 트랙에 맞는 실행에 들어간다(인수 종결, 설립 또는 사업부 신설 실행, greenfield 실행 기준선 확정)"
     inputs:
       - 투자심의 자료(사업계획·DD·RAG·검토)
       - 투자 구조안(S10 투자구조 설계의 산출물 — 투자 주체·4축 검토·자금조달 계획)
@@ -691,7 +691,7 @@ stages:
       - 투자심의 자료
       - 추진계획(차터) 기준선 — 목적·트랙 근거·진출 범위·KPI 선커밋
       - 사람 최종 승인(reviewer 기록)
-      - 설립 실행 기록(설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint})
+      - 설립 실행 기록(신규 법인 설립 — 설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint} / 신규 사업부 추진 — 신설 결의·사업자등록 정리·인허가 명의 확인·인력 배치·완료 확인 — chk-business-unit-formation 증적, origin=internal)
     completionCriteria:
       - 법인 투자심의위원회와 그룹 투자심의위원회 승인이 모두 기록되었다
       - 추진계획(차터) 기준선이 확정되고 append-only 변경 이력이 시작되었다
@@ -712,7 +712,7 @@ stages:
       - 실행 기준선 대비 차이(greenfield)
       - "포트폴리오 전환 결정(어휘 5종: next_tranche_released / held_evidence_incomplete / graduate_to_core / reduce_or_divest / kill_with_learning_captured)"
     entryCriteria:
-      - S11 완료 (IC 승인, internal/joint는 설립 실행 완료 포함)
+      - S11 완료 (IC 승인, internal/joint는 설립 또는 사업부 신설 실행 완료 포함)
     activities:
       - id: portfolio-monitoring
         agent: group-review-agent

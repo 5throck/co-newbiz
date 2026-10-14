@@ -501,7 +501,7 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
   {
     "id": "S11",
     "name": "투자심사·실행",
-    "objective": "투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 투자심의 자료로 묶어 법인·그룹 투자심의위원회 심사를 통과하고, 승인되면 트랙에 맞는 실행에 들어간다(인수 종결, 법인 설립, greenfield 실행 기준선 확정)",
+    "objective": "투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 투자심의 자료로 묶어 법인·그룹 투자심의위원회 심사를 통과하고, 승인되면 트랙에 맞는 실행에 들어간다(인수 종결, 설립 또는 사업부 신설 실행, greenfield 실행 기준선 확정)",
     "applicableTracks": [
       "greenfield",
       "brownfield"
@@ -576,7 +576,7 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
       "투자심의 자료",
       "추진계획(차터) 기준선 — 목적·트랙 근거·진출 범위·KPI 선커밋",
       "사람 최종 승인(reviewer 기록)",
-      "설립 실행 기록(설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint})"
+      "설립 실행 기록(신규 법인 설립 — 설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint} / 신규 사업부 추진 — 신설 결의·사업자등록 정리·인허가 명의 확인·인력 배치·완료 확인 — chk-business-unit-formation 증적, origin=internal)"
     ],
     "completionCriteria": [
       "법인 투자심의위원회와 그룹 투자심의위원회 승인이 모두 기록되었다",

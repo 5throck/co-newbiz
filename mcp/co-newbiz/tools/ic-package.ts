@@ -40,6 +40,8 @@ export interface IcPackageEnvelope {
     latest: Array<{ gate: string; decision: "go" | "hold" | "kill" | null; rationale: string | null; missing_artifacts: string[] | null }>;
     history: Array<Record<string, unknown>>;
   };
+  /** ADR-0167 — standing risk lines for the establishment mode (informational). */
+  standing_risks?: Array<{ key: string; text: string }>;
   establishment: { steps: Array<Record<string, unknown>>; done: number; total: number; complete: boolean; progress: string };
 }
 

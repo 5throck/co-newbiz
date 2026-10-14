@@ -39,10 +39,36 @@ export const GF_SUB_TRACK_DD_CHECKLISTS: Record<GreenfieldSubTrack, string[]> = 
   intra_venture: ["chk-rbd-technology-checklist", "chk-entity-formation-checklist"],
 };
 
-/** Item scope for greenfield extras: entity-formation is read as plan evidence (ef-01/03/07 only). */
+/** The S9 plan-evidence checklist that replaces entity-formation for a business_unit project (ADR-0167). */
+export const BU_FORMATION_CHECKLIST = "chk-business-unit-formation-checklist";
+export const ENTITY_FORMATION_CHECKLIST = "chk-entity-formation-checklist";
+
+/**
+ * Item scope for greenfield extras: entity-formation is read as plan evidence (ef-01/03/07 only);
+ * the business-unit set is read as plan evidence for the resolution (bu-01), permit holder (bu-04)
+ * and certification scope (bu-05) checks (ADR-0167).
+ */
 export const GF_CHECKLIST_ITEM_SCOPE: Record<string, readonly string[]> = {
   "chk-entity-formation-checklist": ["ef-01", "ef-03", "ef-07"],
+  "chk-business-unit-formation-checklist": ["bu-01", "bu-04", "bu-05"],
 };
+
+/**
+ * Extra S9 checklists of a sub-track for the project's establishment mode (ADR-0167). Mode
+ * business_unit swaps the entity-formation checklist for the business-unit one; every other
+ * value, including null (legacy / not chosen yet), keeps the new_entity set byte-identically.
+ */
+export function extraChecklistsForMode(cls: GreenfieldSubTrack, mode: string | null): string[] {
+  const base = GF_SUB_TRACK_DD_CHECKLISTS[cls];
+  if (mode !== "business_unit") return [...base];
+  return base.map((c) => (c === ENTITY_FORMATION_CHECKLIST ? BU_FORMATION_CHECKLIST : c));
+}
+
+/** Recorded establishment mode of a project (null = legacy / not chosen / unknown project). */
+export function projectEstablishmentMode(projectId: string, db: Database = getDb()): string | null {
+  const row = db.query("SELECT establishment_mode FROM md_project WHERE id = ?").get(projectId) as { establishment_mode: string | null } | undefined;
+  return row?.establishment_mode ?? null;
+}
 
 /** The site-visit checklist whose `na` needs a reason when the sub-track rule takes the site out of scope. */
 export const GF_SITE_CHECKLISTS = ["chk-technical-dd-checklist"];
@@ -194,7 +220,7 @@ export function greenfieldSelection(projectId: string, db: Database = getDb()): 
   if ((cls === "existing_business_rbd" || cls === "intra_venture") && site.basis === "unconfirmed") {
     warnings.push("기존사업 R&BD·사내벤처 세부 트랙은 부지 필요 여부의 기본값이 없습니다 — 사람이 확인하기 전까지 부지 단계가 적용됩니다.");
   }
-  const extra = GF_SUB_TRACK_DD_CHECKLISTS[cls];
+  const extra = extraChecklistsForMode(cls, projectEstablishmentMode(projectId, db));
   const excluded = [2, ...(site.site_steps_apply ? [] : [1, 3]), ...(cls === "intra_venture" ? [] : [8])].sort((a, b) => a - b);
   return {
     track: "greenfield",
@@ -852,12 +878,13 @@ export function hypotheticalWorkspaceScope(projectId: string, db: Database = get
 function previewSelection(projectId: string, sel: GreenfieldSelection, db: Database): GreenfieldSelection {
   const cls = sel.sub_track_class as GreenfieldSubTrack;
   const site = siteScope(projectId, cls, db);
+  const extra = extraChecklistsForMode(cls, projectEstablishmentMode(projectId, db));
   return {
     ...sel,
     selection_active: true,
-    extra_checklists: [...GF_SUB_TRACK_DD_CHECKLISTS[cls]],
+    extra_checklists: [...extra],
     site,
-    na_reason_checklists: [...GF_SUB_TRACK_DD_CHECKLISTS[cls], ...(site.site_steps_apply ? [] : GF_SITE_CHECKLISTS)],
+    na_reason_checklists: [...extra, ...(site.site_steps_apply ? [] : GF_SITE_CHECKLISTS)],
   };
 }
 

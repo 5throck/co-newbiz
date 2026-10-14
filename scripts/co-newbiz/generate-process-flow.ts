@@ -201,7 +201,10 @@ itself (process-flow.ts:394–399, 463–472); any \`kill\` terminates the entit
   (both human gates). For origin ∈ {internal, joint}, establishment execution is
   tracked as **project-keyed** 5 steps (setup → registration/permit
   classification → personnel transfer → completion check; \`chk-entity-formation\`
-  evidence); the opportunity-keyed ADR-0057 pattern is deprecated.
+  evidence). For a Green Field project the step set follows the establishment
+  mode (ADR-0167): \`new_entity\` keeps those five steps, \`business_unit\`
+  (origin internal only) runs resolution → registration update → permit holder
+  check → staffing → completion check with \`chk-business-unit-formation\` evidence; the opportunity-keyed ADR-0057 pattern is deprecated.
 - **S12 — scorecard and transitions (ADR-0101)**: the portfolio scorecard view
   reads \`venture_scorecard\` per project; kill/graduate outcomes are recorded in
   a human transition-decision ledger using the venture-portfolio-ic vocabulary

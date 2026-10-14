@@ -509,7 +509,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 ## S11 — 투자심사·실행
 
-**목표**: 투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 투자심의 자료로 묶어 법인·그룹 투자심의위원회 심사를 통과하고, 승인되면 트랙에 맞는 실행에 들어간다(인수 종결, 법인 설립, greenfield 실행 기준선 확정)
+**목표**: 투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 투자심의 자료로 묶어 법인·그룹 투자심의위원회 심사를 통과하고, 승인되면 트랙에 맞는 실행에 들어간다(인수 종결, 설립 또는 사업부 신설 실행, greenfield 실행 기준선 확정)
 
 **입력**
 - 투자심의 자료(사업계획·DD·RAG·검토)
@@ -530,7 +530,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 투자심의 자료
 - 추진계획(차터) 기준선 — 목적·트랙 근거·진출 범위·KPI 선커밋
 - 사람 최종 승인(reviewer 기록)
-- 설립 실행 기록(설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint})
+- 설립 실행 기록(신규 법인 설립 — 설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint} / 신규 사업부 추진 — 신설 결의·사업자등록 정리·인허가 명의 확인·인력 배치·완료 확인 — chk-business-unit-formation 증적, origin=internal)
 
 **완료 기준**
 - 법인 투자심의위원회와 그룹 투자심의위원회 승인이 모두 기록되었다
@@ -682,7 +682,10 @@ itself (process-flow.ts:394–399, 463–472); any `kill` terminates the entity.
   (both human gates). For origin ∈ {internal, joint}, establishment execution is
   tracked as **project-keyed** 5 steps (setup → registration/permit
   classification → personnel transfer → completion check; `chk-entity-formation`
-  evidence); the opportunity-keyed ADR-0057 pattern is deprecated.
+  evidence). For a Green Field project the step set follows the establishment
+  mode (ADR-0167): `new_entity` keeps those five steps, `business_unit`
+  (origin internal only) runs resolution → registration update → permit holder
+  check → staffing → completion check with `chk-business-unit-formation` evidence; the opportunity-keyed ADR-0057 pattern is deprecated.
 - **S12 — scorecard and transitions (ADR-0101)**: the portfolio scorecard view
   reads `venture_scorecard` per project; kill/graduate outcomes are recorded in
   a human transition-decision ledger using the venture-portfolio-ic vocabulary

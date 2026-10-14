@@ -1,5 +1,5 @@
-version: 1.3.0
-last_updated: 2026-10-13
+version: 1.4.0
+last_updated: 2026-10-14
 terms:
   Green Field:
     ko: 그린필드
@@ -85,6 +85,49 @@ terms:
     category: business
     related: [Investment Vehicle, Green Field]
     used_in: [greenfield-feasibility, investment-vehicle-structuring]
+    owner: greenfield-agent
+
+  Establishment Mode:
+    ko: 설립 방식
+    en: Establishment Mode
+    definition_ko: 그린필드 사업을 어떤 법적 틀로 추진할지 정하는 프로젝트 단위 선택. '신규 법인 설립'과 '신규 사업부 추진' 두 가지가 있다. 사람이 S10에서 확정하며, 에이전트는 제안만 할 수 있다.
+    why_it_matters_ko: 설립 방식에 따라 S11 실행 5단계와 점검 목록이 달라지고, 책임 격리 여부가 갈린다. 선택한 이유를 남겨 투자심의위원회가 근거를 볼 수 있게 한다. 투자 주체를 정하는 '추진 주체(origin)'와는 다른 축이다.
+    category: business
+    aliases: [new_entity/business_unit, establishment_mode]
+    related: [Green Field, Establishment Entity Form, New Legal Entity Formation, New Business Unit]
+    used_in: [greenfield-feasibility]
+    owner: greenfield-agent
+
+  New Legal Entity Formation:
+    ko: 신규 법인 설립
+    en: New Legal Entity Formation
+    definition_ko: 그린필드 사업을 담을 새 법인을 세워 추진하는 설립 방식(내부 코드 new_entity). S11에서 설립 준비·법인등기·인허가 분류·인력 이전·완료 확인의 5단계를 실행한다.
+    why_it_matters_ko: 새 법인은 책임을 모회사와 나눌 수 있지만 설립·운영 부담이 따른다. 합작 추진이면 반드시 이 방식이다.
+    category: business
+    aliases: [new_entity]
+    related: [Establishment Mode, Establishment Entity Form, New Business Unit]
+    used_in: [greenfield-feasibility]
+    owner: greenfield-agent
+
+  New Business Unit:
+    ko: 신규 사업부 추진
+    en: New Business Unit
+    definition_ko: 새 법인을 세우지 않고 기존 법인 안의 사업부로 신사업을 추진하는 설립 방식(내부 코드 business_unit). 우리 회사가 단독으로 추진할 때만 고를 수 있다. S11에서 사업부 신설 결의·사업자등록 정리·인허가 명의 확인·인력 배치·완료 확인의 5단계를 실행한다.
+    why_it_matters_ko: 법인 설립 절차는 줄지만 책임이 격리되지 않아 사업부의 부채와 책임이 모두 기존 법인에 남는다. 투자심의 자료에 이 점이 항상 표시된다.
+    category: business
+    aliases: [business_unit, 신규 사업부]
+    related: [Establishment Mode, New Legal Entity Formation, Business Unit Form]
+    used_in: [greenfield-feasibility]
+    owner: greenfield-agent
+
+  Business Unit Form:
+    ko: 사업부 신설 형태
+    en: Business Unit Form
+    definition_ko: 신규 사업부 추진을 택했을 때 사업부를 만드는 모양(독립 사업부, 기존 사업부 내 팀, 사내 독립 기업(CIC)). 법인 형태 대신 S10에서 정한다.
+    why_it_matters_ko: 형태에 따라 손익을 따로 관리할지, 위임전결을 어디까지 줄지가 달라진다. 어느 쪽이든 별도 법인이 아니어서 책임 격리는 없다.
+    category: business
+    related: [New Business Unit, Establishment Mode, Establishment Entity Form]
+    used_in: [greenfield-feasibility]
     owner: greenfield-agent
 
   Stage Gate:

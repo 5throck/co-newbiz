@@ -1,0 +1,89 @@
+governance_doc_id: chk-business-unit-formation
+layer: checklist
+title: "Business Unit Formation Checklist (New Business Unit Inside the Existing Entity)"
+scope: shared
+enforceability: mixed
+owner_agent: legal-counsel
+version: "1.0.0"
+effective_from: "2026-10-14"
+gate: "Entity IC"
+
+# ADR-0167 (Green Field establishment mode). Applies at EXECUTION after Entity IC
+# approval when project.establishment_mode = business_unit (origin = internal
+# only). It mirrors the five business-unit steps of
+# procedures/_shared/business-unit-establishment-execution/schema.yaml:
+#   step 1 -> bu-01, bu-02    step 2 -> bu-03    step 3 -> bu-04, bu-05
+#   step 4 -> bu-06, bu-07    step 5 -> bu-08, bu-09
+# The entity-formation set (checklists/entity-formation-checklist.yaml ef-*) does
+# NOT apply in this mode; gx-01..gx-03 of that file apply to both modes.
+#
+# Legal wording comes from the design's section 13 (law.go.kr Open API, retrieved
+# 2026-10-14): Commercial Act MST 273629, VAT Act MST 276117, VAT Act Enforcement
+# Decree MST 283641, Labor Standards Act MST 285279. Statements the statute text
+# did not settle are marked "확인 필요" and stay with counsel, the certifying body
+# or the tax adviser. Every item is draft-AI until a named reviewer signs off
+# (legal-signoff protocol); none of this is legal advice.
+
+items:
+  - id: bu-01
+    text: "사업부 신설 결의 — 신규 사업이 현행 정관의 목적 범위 안인지 먼저 확인함(정관 문구를 읽는 일이며 법령이 답을 주지 않으므로 법률 자문으로 확인). 범위 밖이면 주주총회 특별결의로 정관을 변경하고(상법 제433조제1항·제434조) 본점 소재지에서 2주 내에 목적 변경등기를 함(상법 제317조제2항제1호·제4항, 제183조 — 주식회사에 제183조가 준용되는 연결은 확인 필요). 범위 안이면 업무집행으로서 이사회 결의로 정함(상법 제393조제1항). 다른 회사의 영업을 인수해 사업을 세우는 경우 상법 제374조제1항제3호의 주주총회 특별결의 해당 여부를 확인 필요. 지점 설치가 따르면 이사회 결의와 지점 등기를 확인함"
+    mandatory: true
+    waiver_eligible: true
+    modes: [business_unit]
+    review_status: draft-AI
+  - id: bu-02
+    text: "사업부의 예산과 위임전결 기준표를 정하고 사업부 책임자를 지정함 — 호스트 법인(기본: 우리 회사), 신설 형태(독립 사업부 / 기존 사업부 내 팀 / 사내 독립 기업(CIC)), 독립 손익 관리 여부를 결의 문서에 적음"
+    mandatory: true
+    waiver_eligible: true
+    modes: [business_unit]
+    review_status: draft-AI
+  - id: bu-03
+    text: "사업자등록 정리 — 새 사업장을 여는 경우 사업장별 신규 사업자등록(부가가치세법 제8조제1항, 사업 개시일부터 20일 이내); 사업자 단위 과세 사업자이면 종된 사업장 신설 정정신고(같은 법 시행령 제14조제1항제9호); 기존 사업장에서 업종만 추가하면 정정신고를 지체 없이 함(같은 법 제8조제8항, 시행령 제14조제1항제3호). 인허가 업종이면 허가증 사본을 첨부함(시행령 제11조제3항). 어느 경우에 해당하는지는 세무 자문으로 확인 필요. 변경이 필요 없으면 그 판단 근거를 기록함"
+    mandatory: true
+    waiver_eligible: true
+    modes: [business_unit]
+    review_status: draft-AI
+  - id: bu-04
+    text: "인허가 명의 확인 — 필요한 인허가마다 근거 법령을 찾아 허가 명의(법인 / 사업장 / 시설)와, 사업장이나 업종을 더할 때 신규 발급인지 변경인지 개별로 확인함. 일반 규칙은 확인되지 않았으므로 허가별 확인 필요. 기존 법인 명의로는 받을 수 없는 허가가 하나라도 있으면 위험관리 책임자에게 올림(사업부 추진 경로가 성립하지 않을 수 있음)"
+    mandatory: true
+    waiver_eligible: true
+    modes: [business_unit]
+    review_status: draft-AI
+  - id: bu-05
+    text: "인증 범위 확인 — 새 사업장이나 제품을 기존 인증에 넣는 것이 인증 범위 확대(scope extension)인지 신규 인증인지 인증기관 규정으로 확인함. 인증기관에 확인하고 추론하지 않음(근거 법령이 확인되지 않았으므로 확인 필요). 허가(영업하기 위한 것)와 인증(판매하기 위한 것)은 따로 관리함"
+    mandatory: true
+    waiver_eligible: true
+    modes: [business_unit]
+    review_status: draft-AI
+  - id: bu-06
+    text: "인력 배치·조직 개편 — 사업부로 옮기는 전직·전보는 정당한 이유가 있어야 하고(근로기준법 제23조제1항) 협의 기록을 남김; 정당한 이유의 판단 기준은 판례를 확인하지 못했으므로 확인 필요. 근무지·근무시간·임금체계 등 취업규칙 사항이 바뀌면 근로자 과반수(또는 노동조합)의 의견을 듣고, 불이익한 변경이면 동의를 받으며(제94조제1항), 상시 10명 이상 사업장은 변경을 신고함(제93조). 어떤 변경이 불이익한지는 법률 자문으로 확인 필요. 조직도와 직무기술서를 갱신하고, 인력의 지식재산 양도 약정(PIIA)·업무상 저작물 귀속 약정 범위를 확인함"
+    mandatory: true
+    waiver_eligible: true
+    modes: [business_unit]
+    review_status: draft-AI
+  - id: bu-07
+    text: "사업부 회계 구분과 내부 이전가격 — 사업부 손익을 따로 집계하는 회계 단위(독립 손익 관리를 택한 경우)와, 모회사 다른 부서와의 용역·자산 사용에 대한 내부 비용 배분 기준을 정함. 이 항목은 법령 근거를 확인하지 않았으므로 세무·회계 자문으로 확인 필요"
+    mandatory: false
+    waiver_eligible: true
+    modes: [business_unit]
+    review_status: draft-AI
+  - id: bu-08
+    text: "책임 분리 없음 확인 — 사업부는 별도 법인이 아니므로 사업부의 부채와 책임이 모두 기존 법인의 재무상태표에 남는다는 점을 투자심의 자료의 위험 항목에 올렸음. 사업부 추진이라는 이유로 위험 등급을 낮추지 않음"
+    mandatory: true
+    waiver_eligible: true
+    modes: [business_unit]
+    review_status: draft-AI
+  - id: bu-09
+    text: "신설 기준선 확인 — 조직·예산·위임전결 기준선과 위 항목의 증빙(이사회 의사록 또는 주주총회 의사록과 등기부 등본, 사업자등록증, 허가별 확인 문서, 인증기관 회신, 전보 기록과 취업규칙 신고 서류)을 한 사람(법인 투자심의위원회 책임자 또는 위임받은 자)이 비어 있지 않은 근거와 함께 확인함; 에이전트의 확인은 인정하지 않음"
+    mandatory: true
+    waiver_eligible: false   # a human confirmation is not waivable (mirrors gx-03; ADR-0165 completion rule)
+    modes: [business_unit]
+    review_status: draft-AI
+
+legal_basis:
+  - "ADR-0167 (Green Field establishment mode — new entity vs business unit)"
+  - "procedures/_shared/business-unit-establishment-execution/schema.yaml (execution procedure consuming this checklist)"
+  - "docs/designs/2026-10-14-greenfield-business-unit-vs-new-entity-design.md (design of record; section 13 legal verification)"
+  - "상법 MST 273629 (시행 2026-09-10) 제183조, 제289조, 제317조, 제374조, 제393조, 제433조, 제434조 — 법제처 Open API, verified_on 2026-10-14"
+  - "부가가치세법 MST 276117 (시행 2026-01-02) 제6조, 제8조; 시행령 MST 283641 (시행 2026-04-01) 제11조, 제14조 — 법제처 Open API, verified_on 2026-10-14"
+  - "근로기준법 MST 285279 (시행 2026-10-08) 제2조, 제23조, 제93조, 제94조 — 법제처 Open API, verified_on 2026-10-14"

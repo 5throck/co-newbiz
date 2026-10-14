@@ -236,6 +236,8 @@ export const PLAN_READINESS_KEY = "plan_readiness";
 const EXTRA_TAB_KEY: Record<string, string> = {
   "chk-rbd-technology-checklist": "rbd_technology",
   "chk-entity-formation-checklist": "entity_formation",
+  // ADR-0167: a business_unit project reads the business-unit set in the same overlay tab slot.
+  "chk-business-unit-formation-checklist": "entity_formation",
 };
 
 export function workspaceView(scope: GfScope | null | undefined): WsView | null {
@@ -249,6 +251,8 @@ export function tabKeyOf(domain: Pick<WsDomainLike, "domain" | "checklistId">): 
 
 /** Tab title: the overlay's interim greenfield label while the workspace scope is active, otherwise the shared Korean label. */
 export function tabLabel(scope: GfScope | null | undefined, d: Pick<WsDomainLike, "domain" | "checklistId" | "title">): string {
+  // The overlay's entity_formation label says "법인"; a business-unit project keeps its own title.
+  if (d.checklistId === "chk-business-unit-formation-checklist") return d.title;
   const ws = workspaceView(scope);
   const fromOverlay = ws?.tab_labels[tabKeyOf(d)]?.ko;
   return fromOverlay || DD_DOMAIN_LABEL[d.domain] || d.title;

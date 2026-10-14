@@ -51,6 +51,8 @@ interface IcPackage {
     /** Artifacts an IC GO would be missing right now (empty = none). */
     go_gaps?: string[];
   };
+  /** ADR-0167 — standing risk lines for the establishment mode (informational). */
+  standing_risks?: Array<{ key: string; text: string }>;
   establishment: {
     steps: Array<{ id: string; step_no: number; status: string; origin: string; owner: string; updated_at: string; note: string | null; evidence_url: string | null; keyed_by: string }>;
     done: number; total: number; complete: boolean; progress: string;
@@ -220,6 +222,19 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
             </p>
           )}
 
+          {(pkg?.standing_risks?.length ?? 0) > 0 && (
+            <>
+              <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">상시 위험</h4>
+              <ul className="sizing-note-list" aria-label="상시 위험">
+                {pkg!.standing_risks!.map((r) => (
+                  <li key={r.key}>
+                    <span className="status-chip status-amber">주의</span> {r.text}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">참고 표시이며 게이트를 막지 않고 종합 등급을 자동으로 바꾸지 않습니다.</p>
+            </>
+          )}
           <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">DD 요약 (S9)</h4>
           <p className="text-[length:var(--fs-caption)]">
             <span className={`status-chip ${pkg && pkg.dd.completion.total > 0 && pkg.dd.completion.pending === 0 && pkg.dd.completion.unassessed === 0 && pkg.dd.completion.mandatoryUnmet === 0 ? "status-green" : "status-amber"}`}>

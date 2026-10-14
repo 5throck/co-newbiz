@@ -3,7 +3,7 @@ import { Database } from "bun:sqlite";
 import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { applyPlan, assertSafePath, buildPlan, isLiveDbPath } from "../../scripts/co-newbiz/align-existing-projects.ts";
+import { applyApproved, applyPlan, assertSafePath, buildApprovedPlan, buildPlan, isLiveDbPath } from "../../scripts/co-newbiz/align-existing-projects.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -107,3 +107,65 @@ describe("align-existing-projects", () => {
     expect(() => assertSafePath("/tmp/copy.sqlite", { apply: false, liveAck: false })).not.toThrow();
   });
 });
+
+function makeApprovedDb(): string {
+  const dir = mkdtempSync(join(tmpdir(), "align-appr-"));
+  dirs.push(dir);
+  const path = join(dir, "a.sqlite");
+  const db = new Database(path);
+  db.run("CREATE TABLE md_project (id TEXT PRIMARY KEY, project_no TEXT, track TEXT, origin TEXT, source_opportunity_id TEXT, deleted_at TEXT)");
+  db.run("CREATE TABLE entity_establishment_step (id TEXT PRIMARY KEY, opportunity_id TEXT, project_id TEXT, step_no INTEGER, status TEXT, note TEXT, evidence_url TEXT)");
+  db.run("CREATE TABLE entity_establishment_step_event (id TEXT PRIMARY KEY, step_id TEXT REFERENCES entity_establishment_step(id), kind TEXT)");
+  db.run("CREATE TABLE project_policy_pin (id TEXT PRIMARY KEY, project_id TEXT, policy_doc_id TEXT, pinned_version TEXT, pinned_at TEXT, pinned_by TEXT, superseded_by TEXT)");
+  db.run("CREATE UNIQUE INDEX live ON project_policy_pin(project_id, policy_doc_id) WHERE superseded_by IS NULL");
+  db.run("CREATE TABLE audit_log (id TEXT PRIMARY KEY, actor_user_id TEXT, action TEXT, target TEXT, created_at TEXT)");
+  db.run("INSERT INTO md_project VALUES ('d','PRJ-DSE4PW','greenfield','internal','od',NULL),('t','PRJ-T7T81A','brownfield','external','ot',NULL),('m','DEMO-S1-S12','brownfield','acquisition','om',NULL)");
+  db.run("INSERT INTO entity_establishment_step VALUES ('keep','od','d',1,'done','n','u'),('dup','od','d',1,'pending',NULL,NULL)");
+  db.run("INSERT INTO entity_establishment_step_event VALUES ('e1','dup','assign'),('e2','keep','assign')");
+  db.run("INSERT INTO project_policy_pin VALUES ('k1','d','ovl-greenfield-workspace-scope','1.0.0','x','h',NULL),('k2','t','ovl-brownfield-workspace-scope','1.0.0','x','h',NULL)");
+  db.close();
+  return path;
+}
+
+describe("align-existing-projects approved decisions", () => {
+  test("dry-run plans three items and changes nothing", () => {
+    const path = makeApprovedDb();
+    const db = new Database(path, { readonly: true });
+    const { items } = buildApprovedPlan(db);
+    db.close();
+    expect(items.map((i) => i.item).sort()).toEqual(["duplicate_step_cleanup", "origin_acquisition_external", "policy_repin", "policy_repin"]);
+  });
+
+  test("apply executes, audits, re-points events, supersedes pins, and is idempotent", () => {
+    const path = makeApprovedDb();
+    const r = applyApproved(path, "2026-10-14T00:00:00.000Z");
+    expect(r.results.filter((x) => x.status === "applied")).toHaveLength(4);
+    const db = new Database(path, { readonly: true });
+    expect((db.query("SELECT COUNT(*) c FROM entity_establishment_step").get() as any).c).toBe(1);
+    expect((db.query("SELECT COUNT(*) c FROM entity_establishment_step_event WHERE step_id='keep'").get() as any).c).toBe(2);
+    expect((db.query("SELECT origin FROM md_project WHERE id='m'").get() as any).origin).toBe("external");
+    const live = db.query("SELECT policy_doc_id, pinned_version FROM project_policy_pin WHERE superseded_by IS NULL ORDER BY 1").all() as any[];
+    expect(live.map((l) => l.pinned_version)).not.toContain("1.0.0");
+    expect((db.query("SELECT COUNT(*) c FROM audit_log WHERE action LIKE 'data_alignment.approved.%' AND actor_user_id='system:data-alignment'").get() as any).c).toBe(4);
+    db.close();
+    const r2 = applyApproved(path, "2026-10-14T00:01:00.000Z");
+    expect(r2.results.every((x) => x.status === "skipped")).toBe(true);
+    expect(r2.backup).toBeNull();
+  });
+
+  test("guards refuse when preconditions differ", () => {
+    const path = makeApprovedDb();
+    const w = new Database(path);
+    w.run("UPDATE entity_establishment_step SET note = 'work done' WHERE id = 'dup'");
+    w.run("UPDATE project_policy_pin SET pinned_version = '0.9.0' WHERE id = 'k2'");
+    w.run("UPDATE md_project SET origin = 'internal' WHERE id = 'm'");
+    w.close();
+    const r = applyApproved(path);
+    expect(r.results.filter((x) => x.status === "applied").map((x) => x.item)).toEqual(["policy_repin"]);
+    const db = new Database(path, { readonly: true });
+    expect((db.query("SELECT COUNT(*) c FROM entity_establishment_step").get() as any).c).toBe(2);
+    expect((db.query("SELECT origin FROM md_project WHERE id='m'").get() as any).origin).toBe("internal");
+    db.close();
+  });
+});
+

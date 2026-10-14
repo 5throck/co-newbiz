@@ -1,4 +1,4 @@
-// @version 1.8.2
+// @version 1.8.3
 // Idempotent S1→S12 demo chain seeds — BROWNFIELD (seedS1ToS12Demo) and
 // GREENFIELD (seedGreenfieldS1ToS12Demo), one full lifecycle per track.
 //
@@ -238,7 +238,7 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
       `INSERT OR IGNORE INTO md_project
        (id, project_no, created_at, current_stage_gate, company_id, origin, source_opportunity_id, track,
         project_name, charter_json, charter_confirmed_at, status, subject_company_rationale)
-       VALUES (?, 'DEMO-S1-S12', ?, 'group_ic', ?, 'acquisition', ?, 'brownfield', ?, ?, ?, 'open', ?)`,
+       VALUES (?, 'DEMO-S1-S12', ?, 'group_ic', ?, 'external', ?, 'brownfield', ?, ?, ?, 'open', ?)`,
       [
         DEMO.projectId,
         now,

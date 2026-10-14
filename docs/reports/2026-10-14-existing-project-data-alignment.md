@@ -82,3 +82,46 @@ All paths relative to `Projects/co-newbiz`.
    The script takes its own `VACUUM INTO` backup beside the DB, verifies row counts and integrity, and exits non-zero on any mismatch. Without both flags it refuses the live path, including for a dry-run; dry-run the live data via a copy (step 1).
 
 Not run: step 3. The live dev DB is unchanged.
+
+## 5. Approved decisions (human decider, chat 2026-10-14)
+
+The recommended answers for H1, H2, H4 were approved. Script v1.1.0 adds a separate mode `--apply-approved-decisions`, which executes only these items, each behind a precondition guard that makes it skip safely when the data differs:
+
+| Item | Action | Guard |
+|---|---|---|
+| `duplicate_step_cleanup` (H1) | PRJ-DSE4PW: delete the pending duplicate of establishment step 1 and re-point its events to the done row | Exactly two rows for step 1 of that project, one done and one pending; the pending row has no note and no evidence URL |
+| `policy_repin` x2 (H2) | PRJ-DSE4PW `ovl-greenfield-workspace-scope` 1.0.0 to the current version (1.1.0); PRJ-T7T81A `ovl-brownfield-workspace-scope` 1.0.0 to current (1.2.3) | The live pin is exactly 1.0.0 and differs from the current overlay version. Same insert/supersede sequence as the opt-in code; a `policy_pin_migrated` audit row carries the note "aligned 2026-10-14 by approved data alignment" |
+| `origin_acquisition_external` (H4) | DEMO-S1-S12 origin `acquisition` to `external` | Origin is currently exactly `acquisition`. `seed-s1-s12-demo.ts` 1.8.3 now seeds `external` |
+
+Each applied item writes one `audit_log` row, actor `system:data-alignment`, action `data_alignment.approved.<item>`. One transaction, the same `VACUUM INTO` backup, post-checks, idempotent (a second run reports every item as skipped).
+
+Deliberately NOT applied: `wacc_subject` (H3, the valuation-agent must confirm first), business goals for DEMO (H5, accept the fallback), PRJ-QG5WDY (H6, stays deleted), the S10 mode choice for Green Field without steps (H7, a person chooses). ADR-0167 D2 versus the 0142 backfill discrepancy (Brown Field internal origin becomes `new_entity` by the migration) is unchanged and noted for the ADR owner.
+
+Rehearsed on a `/tmp` copy of the dev DB (migration 0142 applied): dry-run listed four WOULD lines; apply changed step rows 11 to 10, pins 3 to 5 (two superseded), DEMO origin to `external`, integrity ok; the second run skipped all four.
+
+### Operator commands for the live dev DB
+
+Run in your own terminal, from `Projects/co-newbiz`, with the app stopped or idle.
+
+a) Copy and rehearse:
+```
+cp db/data/co-newbiz.sqlite /tmp/live-rehearsal.sqlite
+bun db/migrate.ts --db-path /tmp/live-rehearsal.sqlite
+bun scripts/co-newbiz/align-existing-projects.ts --db /tmp/live-rehearsal.sqlite --apply-approved-decisions
+bun scripts/co-newbiz/align-existing-projects.ts --db /tmp/live-rehearsal.sqlite --apply-approved-decisions --apply
+bun scripts/co-newbiz/align-existing-projects.ts --db /tmp/live-rehearsal.sqlite --apply-approved-decisions --apply   # must report all SKIPPED
+```
+b) Live apply (migrations 0142 already applied through the normal path; take `bun scripts/co-newbiz/backup.ts` first):
+```
+bun scripts/co-newbiz/align-existing-projects.ts --db db/data/co-newbiz.sqlite --apply-approved-decisions --apply --i-know-this-is-a-live-db
+```
+c) Verify afterwards (read-only):
+```
+sqlite3 -readonly db/data/co-newbiz.sqlite "
+select count(*) from entity_establishment_step s join md_project p on p.id=s.project_id where p.project_no='PRJ-DSE4PW' and s.step_no=1;  -- expect 1
+select p.project_no, pp.policy_doc_id, pp.pinned_version from project_policy_pin pp join md_project p on p.id=pp.project_id where pp.superseded_by is null and pp.policy_doc_id like 'ovl-%';  -- expect 1.1.0 and 1.2.3
+select origin from md_project where project_no='DEMO-S1-S12';  -- expect external
+select action, target from audit_log where actor_user_id='system:data-alignment' order by created_at;
+pragma integrity_check; pragma foreign_key_check;"
+```
+Rollback: restore the `*.align-backup-*.sqlite` file written beside the DB.
