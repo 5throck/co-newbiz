@@ -104,7 +104,7 @@ const DRIVER_LABELS: Record<string, string> = {
   exit_ev_revenue: "처분 EV/매출 배수 (회수 시점)",
 };
 
-export function ParamsPanel({ projectId }: { projectId: string }) {
+export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; onOpenTargets?: () => void }) {
   const [resolved, setResolved] = useState<ResolvedParams | null>(null);
   const [cases, setCases] = useState<CaseSummary[]>([]);
   const [form, setForm] = useState<Record<string, string>>({});
@@ -123,9 +123,6 @@ export function ParamsPanel({ projectId }: { projectId: string }) {
   const [bandErr, setBandErr] = useState<string | null>(null);
   const [bandBusy, setBandBusy] = useState(false);
   const bandCheck = validateBand(bandMin, bandMax, bandRationale, bandSource);
-  const bandOptimism = Number.isFinite(bandCheck.max) && bandCheck.max > EV_BAND_OPTIMISM_FLAG_FACTOR * EV_BAND_REF.max;
-
-  const bandSpread = Number.isFinite(bandCheck.min) && Number.isFinite(bandCheck.max) && bandCheck.min > 0 && bandCheck.max / bandCheck.min > EV_BAND_SPREAD_FLAG_RATIO;
 
   async function submitBand(e: React.FormEvent) {
     e.preventDefault();
@@ -186,7 +183,7 @@ export function ParamsPanel({ projectId }: { projectId: string }) {
         `/api/projects/${encodeURIComponent(projectId)}/business-case/params`,
         { params, rationale },
       );
-      setMessage(`저장 완료 — ${res.data.written.length}개 키 (run ${res.data.run_id}). 시나리오 비교 탭에서 재생성하면 새 파라미터가 반영됩니다.`);
+      setMessage(`저장 완료 — ${res.data.written.length}개 키 (run ${res.data.run_id}). 설명·생성·권고 탭에서 재생성하면 새 파라미터가 반영됩니다.`);
       setForm({});
       setRamp(["", "", "", "", ""]);
       setRationale("");
@@ -281,7 +278,7 @@ export function ParamsPanel({ projectId }: { projectId: string }) {
           </div>
           <label className="grid gap-1 text-sm">근거 (필수)<textarea className="form-input" value={rationale} onChange={(e) => setRationale(e.target.value)} placeholder="시장 조사 결과 포획률 상향 — 출처/근거를 기재하세요" /></label>
           <button className="btn-ghost justify-self-start" type="submit">파라미터 확정</button>
-          <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">확정된 값은 사용자 등급(user) 가정으로 기록됩니다. 시나리오 비교 탭의 재생성을 실행하면 새 파라미터로 다시 시뮬레이션됩니다.</p>
+          <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">확정된 값은 사용자 등급(user) 가정으로 기록됩니다. 설명·생성·권고 탭의 재생성을 실행하면 새 파라미터로 다시 시뮬레이션됩니다.</p>
         </form>
       </section>
 
@@ -289,20 +286,13 @@ export function ParamsPanel({ projectId }: { projectId: string }) {
       <section className="market-section sizing-step mt-3" aria-label="EV/매출 밴드 확정">
         <h3 className="sizing-step-title">EV/매출 밴드 확정 <span className="status-chip status-info">사람 전용 — 에이전트는 설정할 수 없습니다</span></h3>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-          참고(글로벌 로보틱스·자동화 M&amp;A): {EV_BAND_REF.min}–{EV_BAND_REF.max}× — 이 영역의 근거 없음, 참고용. 확정한 밴드만 대상 비교의 범위 내/밖 표시 기준이 되며 순위·밸류에이션에는 영향이 없습니다.
+          확정한 밴드만 대상 비교의 범위 내/밖 표시 기준이 되며 순위·밸류에이션에는 영향이 없습니다.{" "}
+          {onOpenTargets ? (
+            <button type="button" className="text-[color:var(--accent)] font-bold" onClick={onOpenTargets}>밴드 상태는 대상 비교·선정 탭 →</button>
+          ) : (
+            <span>밴드 상태는 대상 비교·선정 탭.</span>
+          )}
         </p>
-        {resolved?.acquisitionEvRevenueBand ? (
-          <p className="text-[length:var(--fs-caption)] mb-2" role="status">
-            <span className="status-chip status-green mr-1"><span aria-hidden="true">✓</span> 현재 확정 밴드</span>
-            <b className="mono-num">{resolved.acquisitionEvRevenueBand.min}–{resolved.acquisitionEvRevenueBand.max}×</b> — 근거: {resolved.acquisitionEvRevenueBand.rationale} · 출처: {resolved.acquisitionEvRevenueBand.source}{" "}
-            <span className="text-[color:var(--muted-fg)]">(확정: {resolved.acquisitionEvRevenueBand.confirmedBy}, {resolved.acquisitionEvRevenueBand.confirmedAt})</span>
-          </p>
-        ) : (
-          <p className="text-[length:var(--fs-caption)] mb-2" role="status">
-            <span className="status-chip status-not-started mr-1"><span aria-hidden="true">ⓘ</span> 밴드 미확정</span>
-            아직 확정된 밴드가 없어 대상 비교에서 범위 내/밖 판정을 표시하지 않습니다.
-          </p>
-        )}
         {!canAct ? (
           <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
             <span className="status-chip status-not-started mr-1">읽기 전용</span>
@@ -320,16 +310,6 @@ export function ParamsPanel({ projectId }: { projectId: string }) {
                 {bandTouched && bandCheck.errs.max && <span id="evband-max-err" role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {bandCheck.errs.max}</span>}
               </label>
             </div>
-            {bandOptimism && (
-              <p className="status-chip status-amber" role="status">
-                <span aria-hidden="true">⚠</span> 상한 {bandCheck.max}×가 글로벌 참고 상한({EV_BAND_REF.max}×)의 {EV_BAND_OPTIMISM_FLAG_FACTOR}배({EV_BAND_REF.max * EV_BAND_OPTIMISM_FLAG_FACTOR}×)를 넘습니다 — 낙관 편향 여부를 점검하세요. (경고일 뿐 저장은 가능합니다)
-              </p>
-            )}
-            {bandSpread && (
-              <p className="status-chip status-amber" role="status">
-                <span aria-hidden="true">⚠</span> 밴드 폭이 넓습니다 (상한/하한 {(bandCheck.max / bandCheck.min).toFixed(1)}배 &gt; {EV_BAND_SPREAD_FLAG_RATIO}배) — 너무 느슨한 밴드가 아닌지 점검하세요. (경고일 뿐 저장은 가능합니다)
-              </p>
-            )}
             <label className="grid gap-1 text-sm" htmlFor="evband-rationale">근거 (필수, 10자 이상)
               <textarea id="evband-rationale" className="form-input" value={bandRationale} onChange={(e) => setBandRationale(e.target.value)} aria-invalid={bandTouched && !!bandCheck.errs.rationale} aria-describedby={bandTouched && bandCheck.errs.rationale ? "evband-rationale-err" : undefined} placeholder="이 밴드를 선택한 이유를 기재하세요" />
               {bandTouched && bandCheck.errs.rationale && <span id="evband-rationale-err" role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {bandCheck.errs.rationale}</span>}
@@ -350,7 +330,7 @@ export function ParamsPanel({ projectId }: { projectId: string }) {
         <h3 className="sizing-step-title">실행 스냅샷 <span className="status-chip status-info">최근 생성 모델의 실행 계약</span></h3>
         {!snapshot ? (
           <p className="text-sm text-[color:var(--muted-fg)]">
-            아직 저장된 실행 스냅샷이 없습니다{snapshotCases.length > 0 ? " (이 모델의 스냅샷은 구버전 형식입니다 — 재생성하면 기록됩니다)" : ""}. 시나리오 비교 탭에서 생성을 실행하면 이곳에 해당 결과의 파라미터가 기록됩니다.
+            아직 저장된 실행 스냅샷이 없습니다{snapshotCases.length > 0 ? " (이 모델의 스냅샷은 구버전 형식입니다 — 재생성하면 기록됩니다)" : ""}. 설명·생성·권고 탭에서 생성을 실행하면 이곳에 해당 결과의 파라미터가 기록됩니다.
           </p>
         ) : (
           <>

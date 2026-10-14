@@ -182,7 +182,7 @@ export function TargetCostingPanel({ projectId }: { projectId: string }) {
             )}
             {latest.thresholdExceeded && (
               <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2">
-                하락(downside) 시나리오 생성 시 opex 드라이버에 이 격차가 반영됩니다 — 시나리오 비교 탭에서 재생성하세요.
+                하락(downside) 시나리오 생성 시 opex 드라이버에 이 격차가 반영됩니다 — 설명·생성·권고 탭에서 재생성하세요.
               </p>
             )}
           </>

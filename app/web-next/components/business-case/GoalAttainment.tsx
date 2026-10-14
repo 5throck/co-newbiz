@@ -17,17 +17,6 @@ export function AttainmentStatus({ status }: { status: CaseAttainmentEntry["stat
   );
 }
 
-/** Shown once above the comparison when no goal applies at all. Never blocks. */
-export function NoGoalsCallout({ onOpenGoals }: { onOpenGoals: () => void }) {
-  return (
-    <div className="legacy-model-notice mt-3" role="note">
-      <span className="status-chip status-not-started"><span aria-hidden="true">–</span> 목표 미설정</span>
-      <p className="legacy-model-notice-text">목표와 비교하려면 먼저 사업 목표를 설정하세요. 설정하지 않아도 시나리오 비교는 계속됩니다.</p>
-      <button type="button" className="btn-ghost btn-sm" onClick={onOpenGoals}>사업 목표로 이동</button>
-    </div>
-  );
-}
-
 export function GoalAttainmentTable({
   cases,
   attainment,

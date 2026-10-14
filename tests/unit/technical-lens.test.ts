@@ -248,7 +248,6 @@ describe("S8 tab aliases (deep-link compatibility)", () => {
     expect(view.partOfS8Tab("targets")).toBeNull();
     expect(view.primaryKeyOfS8Tab("targets")).toBe("targets");
     expect(view.primaryKeyOfS8Tab("overview")).toBeNull();
-    expect(view.financialSubtabKeys(true)).toEqual(["scenarios", "wacc", "financial-analysis"]);
     expect(view.S8_PART_VIEW.technical.purpose).toBe("실현할 수 있는가");
     expect(view.S8_PRIMARY_TAB_ORDER.length).toBeLessThanOrEqual(5);
   });

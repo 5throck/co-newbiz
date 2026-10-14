@@ -180,3 +180,31 @@ describe("S8 median-gap hint (cross-check signal, not a bug)", () => {
     expect(src).toContain('onClick={() => setTab("overview")}');
   });
 });
+
+describe("S8 IA cleanup (2026-10-14): one home per fact", () => {
+  const src = readFileSync(join(import.meta.dir, "../../app/web-next/components/stages/BusinessCaseStage.tsx"), "utf8");
+  test("attainment table renders once, in the goals tab (per-case columns kept)", () => {
+    expect(src).toContain("attainmentCases");
+    expect(src).toMatch(/tab === "goals" && \(\s*\n\s*<GoalAttainmentTable/);
+    expect(src).not.toContain("tab === \"scenarios\" && <GoalAttainmentTable");
+    expect(src).toContain("목표 달성 판정은 사업 목표 탭");
+  });
+  test("TargetCheckPanel is decision-tab only, above GateDecisionPanel", () => {
+    expect(src.match(/<TargetCheckPanel/g)).toHaveLength(1);
+    expect(src).toMatch(/tab === "decision" && \(\s*\n\s*<div className="mt-4">\s*\n\s*<TargetCheckPanel/);
+    expect(src).toMatch(/<TargetCheckPanel[^>]*\/>\s*\n\s*<GateDecisionPanel/s);
+  });
+  test("single generate entry (overview), decision jump hidden on decision, no global recalc row", () => {
+    expect(src).not.toContain("밸류에이션 재계산 (재생성)");
+    expect(src).toContain("이중 관점 자동 생성");
+    expect(src).not.toContain("결정 기록은 위쪽");
+    expect(src).toContain("결정 기록은 '결정' 탭에서 합니다.");
+    expect(src).toMatch(/tab !== "decision" && <GateDecisionJump/);
+    expect(src).not.toContain("s8-analysis-tabs-note");
+  });
+  test("capability content lives in the technical tab; scenarios keep only a pointer", () => {
+    expect(src).not.toContain("<CapabilityAttainabilityPanel");
+    expect(src).toContain("필요 역량 달성 가능성 판정은");
+    expect(src).toContain('onClick={() => setTab("technical")}>기술적 타당성 탭 →</button>');
+  });
+});
