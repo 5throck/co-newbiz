@@ -15,7 +15,7 @@ import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import { ColGroup } from "../ui.tsx";
-import { CapabilityHeldDialog, evidencePreview, holdersPreview } from "./CapabilityHeldDialog.tsx";
+import { CapabilityHeldDialog, HeldSummary } from "./CapabilityHeldDialog.tsx";
 import { ATTAINABILITY_GRADE_LABEL, HELD_STATUS_CHIP, HELD_STATUS_LABEL, RESOLUTION_LABEL, type GapResolution } from "../../lib/capability-gap.ts";
 import type { AttainabilityRowView, AttainabilitySummary } from "../../lib/capability-attainability.ts";
 import type { RemovedCapability } from "../../lib/capability-gap.ts";
@@ -237,8 +237,7 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
                     </td>
                     <td className="text-[length:var(--fs-caption)]">
                       <span className={`status-chip ${HELD_STATUS_CHIP[r.held_status]}`}>{HELD_STATUS_LABEL[r.held_status]}</span>
-                      <span className="block mt-1"><span className="text-[color:var(--muted-fg)]">주체</span> {holdersPreview(r.held_holders)}</span>
-                      <span className="block"><span className="text-[color:var(--muted-fg)]">근거</span> {evidencePreview(r.held_evidence)}</span>
+                      <HeldSummary className="mt-1" holders={r.held_holders} evidence={r.held_evidence} />
                       <button type="button" className="btn-ghost btn-sm mt-1" aria-label={`${r.capability} S3 보유 판정 보기`} onClick={() => setHeldViewing(r.id)}>보기</button>
                       <a href={s3Href} className="block text-[color:var(--accent)] underline" aria-label={`${r.capability} 보유 판정은 S3에서 수정`}>S3에서 수정</a>
                     </td>

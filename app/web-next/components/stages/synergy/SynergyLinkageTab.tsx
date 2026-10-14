@@ -8,7 +8,7 @@ import type { SynergyResultState } from "./useSynergyResult.ts";
 import type { SynergyPayload } from "./types.ts";
 import { ColGroup } from "../../ui.tsx";
 import { ClampedText } from "../ClampedText.tsx";
-import { CapabilityHeldDialog, evidencePreview, holdersPreview } from "../CapabilityHeldDialog.tsx";
+import { CapabilityHeldDialog, HeldSummary } from "../CapabilityHeldDialog.tsx";
 
 // 시너지 영역 6열 — 근거·기회·위험이 긴 문단 열.
 const SYNERGY_AREA_COL_PCT = [14, 10, 30, 20, 16, 10] as const;
@@ -146,8 +146,7 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                                 </select>
                               </td>
                               <td className="text-[length:var(--fs-caption)]">
-                                <span className="block"><span className="text-[color:var(--muted-fg)]">주체</span> {holdersPreview(r.held.holders)}</span>
-                                <span className="block"><span className="text-[color:var(--muted-fg)]">근거</span> {evidencePreview(r.held.evidence)}</span>
+                                <HeldSummary holders={r.held.holders} evidence={r.held.evidence} />
                                 <button type="button" className="btn-ghost btn-sm mt-1" aria-label={`${r.capability} 보유 주체·근거 ${canCurate ? "입력" : "보기"}`} onClick={() => setHeldEditing(r.id)}>
                                   {canCurate ? (r.held.holders.length > 0 || r.held.evidence.trim() ? "수정" : "입력") : "보기"}
                                 </button>

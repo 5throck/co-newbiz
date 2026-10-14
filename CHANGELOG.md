@@ -1,4 +1,5 @@
 # Changelog
+- **[2026-10-14]**: fix(web): **Capability held-by/evidence preview shows one muted "not entered" marker when both are empty (S3 table, S8 summary); a single filled field shows only its labelled value.**
 - **[2026-10-14]**: docs: ADR-0172 holding assessment unification design (Proposed)
 - **[2026-10-14]**: fix(web): **Required-capability notes are clamped to two lines (decider feedback).** The long required note under the capability name (S3 table, S5 capability table) and in the S8 required-content column now shows two lines with a keyboard-accessible show-more/collapse toggle (`aria-expanded`, only when the note exceeds 80 characters) through one shared `ClampedText` component; the capability name stays fully visible, the source label has its own line, and the S3 first column is width-capped. The row origin line no longer says "S3 source" inside S3 itself: one shared helper gives origin wording (derived from S2 sketch / S1 factors / synergy area, or entered manually), naming S3 only outside the S3 screen. No data or API change.
 - **[2026-10-14]**: docs: ADR-0171 capability check at S5/S7 design (Proposed)

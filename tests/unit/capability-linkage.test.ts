@@ -311,6 +311,29 @@ describe("routes", () => {
   });
 });
 
+describe("held summary preview", () => {
+  test("empty: no parts (single muted 미입력 rendered); filled: labelled parts only", async () => {
+    const { heldSummaryParts, holdersPreview, evidencePreview } = await import("../../app/web-next/components/stages/CapabilityHeldDialog.tsx");
+    expect(heldSummaryParts([], "  ")).toEqual([]);
+    expect(heldSummaryParts(["A사"], "")).toEqual([{ label: "주체", text: "A사" }]);
+    expect(heldSummaryParts([], "인증 보유")).toEqual([{ label: "근거", text: "인증 보유" }]);
+    expect(heldSummaryParts(["A", "B"], "x").map((p) => p.label)).toEqual(["주체", "근거"]);
+    expect(holdersPreview([])).toBe("");
+    expect(evidencePreview("")).toBe("");
+  });
+  test("previews use HeldSummary with no per-field 미입력", () => {
+    const root = join(PROJECT_ROOT, "app/web-next/components/stages");
+    for (const f of ["synergy/SynergyLinkageTab.tsx", "CapabilityAttainabilityPanel.tsx"]) {
+      const src = readFileSync(join(root, f), "utf8");
+      expect(src).toContain("<HeldSummary");
+      expect(src).not.toContain("holdersPreview(");
+      expect(src).not.toContain("evidencePreview(");
+    }
+    const dlg = readFileSync(join(root, "CapabilityHeldDialog.tsx"), "utf8");
+    expect(dlg).not.toContain('? "미입력"');
+  });
+});
+
 describe("UI source checks", () => {
   const read = (p: string) => readFileSync(join(PROJECT_ROOT, "app/web-next", p), "utf8");
   test("S3 register table has no 5-step level columns; keeps 보유 판정, holders/evidence button, 해소 힌트", () => {

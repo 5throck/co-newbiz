@@ -13,13 +13,38 @@ export const HOLDERS_MAX = 6;
 export const HOLDER_LEN = 120;
 export const EVIDENCE_MAX = 400;
 
-/** Compact preview texts for the table cells. */
+/** Compact preview texts for the table cells; "" when empty (never a per-field placeholder). */
 export function holdersPreview(holders: string[]): string {
-  return holders.length === 0 ? "미입력" : holders.join(", ");
+  return holders.join(", ");
 }
 export function evidencePreview(evidence: string, len = 40): string {
   const t = evidence.trim();
-  return t === "" ? "미입력" : t.length > len ? `${t.slice(0, len)}…` : t;
+  return t.length > len ? `${t.slice(0, len)}…` : t;
+}
+
+/** Preview parts: only the filled fields, labelled; empty list means nothing is entered. */
+export function heldSummaryParts(holders: string[], evidence: string): { label: "주체" | "근거"; text: string }[] {
+  const parts: { label: "주체" | "근거"; text: string }[] = [];
+  const h = holdersPreview(holders);
+  const e = evidencePreview(evidence);
+  if (h !== "") parts.push({ label: "주체", text: h });
+  if (e !== "") parts.push({ label: "근거", text: e });
+  return parts;
+}
+
+/** Table-cell summary: one muted "미입력" when both are empty, else only the filled, labelled parts. */
+export function HeldSummary({ holders, evidence, className = "" }: { holders: string[]; evidence: string; className?: string }) {
+  const parts = heldSummaryParts(holders, evidence);
+  if (parts.length === 0) return <span className={`block text-[color:var(--muted-fg)] ${className}`}>미입력</span>;
+  return (
+    <>
+      {parts.map((p, i) => (
+        <span key={p.label} className={`block ${i === 0 ? className : ""}`}>
+          <span className="text-[color:var(--muted-fg)]">{p.label}</span> {p.text}
+        </span>
+      ))}
+    </>
+  );
 }
 
 export function CapabilityHeldDialog({ capability, holders, evidence, readOnly, unevaluated, onSave, onClose }: {
