@@ -69,7 +69,7 @@ export function NarrativeCell({ capability, field, value, readOnly, onOpen }: {
 
 /**
  * Inline narrative field for the S3 table (필요 수준 / 보유 수준; decider 2026-10-14 — edited directly
- * in the table, no 입력/수정 button). Two rows, vertical resize with auto-grow, maxLength
+ * in the table, no 입력/수정 button). Four rows (min 5.75rem), vertical resize with auto-grow, maxLength
  * NARRATIVE_CAP, counter shown on focus or near the cap. Read-only users see the clamped text.
  */
 export function NarrativeInput({ capability, field, value, readOnly, onChange }: {
@@ -85,10 +85,10 @@ export function NarrativeInput({ capability, field, value, readOnly, onChange }:
     <>
       <textarea
         aria-label={`${capability} ${field}`} aria-describedby={focused || near ? counterId : undefined}
-        placeholder={field} rows={2} maxLength={NARRATIVE_CAP} value={value}
-        className="sizing-new-input sizing-new-input-sm w-full" style={{ resize: "vertical", minHeight: "3.2rem", maxHeight: "12rem" }}
+        placeholder={field} rows={4} maxLength={NARRATIVE_CAP} value={value}
+        className="sizing-new-input sizing-new-input-sm w-full" style={{ resize: "vertical", minHeight: "5.75rem", maxHeight: "15rem" }}
         onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-        onChange={(e) => { onChange(e.target.value); e.target.style.height = "auto"; e.target.style.height = `${Math.min(e.target.scrollHeight + 2, 192)}px`; }}
+        onChange={(e) => { onChange(e.target.value); e.target.style.height = "auto"; e.target.style.height = `${Math.min(e.target.scrollHeight + 2, 240)}px`; }}
       />
       {(focused || near) && <span id={counterId} className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" aria-live="polite">{value.length} / {NARRATIVE_CAP}자</span>}
     </>

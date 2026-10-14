@@ -6,10 +6,16 @@ import { api, ApiError } from "../../../lib/api.ts";
 import type { useOurCompanyBase } from "./useOurCompanyBase.ts";
 import type { useOurCompetitors } from "./useOurCompetitors.ts";
 import type { GroupRow, GroupDetail, Profile } from "./types.ts";
+import { evidenceBody, evidenceFromProfile, type EvidenceDraft } from "./profile-evidence.ts";
 
 export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & ReturnType<typeof useOurCompetitors>) {
   const { urlSync, router, setLocalMember, setOpenMember, profiles, openMember, setSynergyLink, searchParams, localMember, setGroups, setError, setSelectedGroup, selectedGroup, setProfiles, groupName, busy, setBusy, setGroupName, setShowGroupForm, memberForm, dartSearching, setDartSearching, setDartResults, groupNameDraft, setEditGroupName, confirm, setMemberForm, setShowMemberForm, setEditMember, editMember, savingMember, setSavingMember, savingRole, setSavingRole, setUploadingMember, setUploadedNames, setProfileTab, setS1Requests } = prev;
  const [loadingGroupId, setLoadingGroupId] = useState<string | null>(null);
+ // 분석가 제공 근거 입력(주소·메모) — 멤버별 초안. 없으면 마지막 저장 버전의 입력을 재사용한다.
+ const [evidenceDrafts, setEvidenceDrafts] = useState<Record<string, EvidenceDraft>>({});
+ const [profileVersions, setProfileVersions] = useState<Record<string, Array<{ version_no: number; source_ref: string | null; created_by: string; created_at: string }>>>({});
+ const [editBusy, setEditBusy] = useState(false);
+ const setEvidenceDraft = (memberId: string, draft: EvidenceDraft) => setEvidenceDrafts((p) => ({ ...p, [memberId]: draft }));
  // 리포트 차트 테마 — 훅은 최상위에서 1회만 호출
 
   // 시너지 정합성과 동일한 선택→상세 흐름: ?member=<id> 가 상태의 유일한 원본
@@ -259,7 +265,8 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
     setError(null);
     // 분석 시작은 멱등적(재호출 시 파이프라인 재실행)이므로, dev 재컴파일 창의
     // 빈 응답(invalid_response)에 한해 1회 재시도한다 — 그 외 에러는 그대로 보고.
-    const start = () => api.post(`/api/our-company/members/${memberId}/analyze`, {});
+    const body = evidenceBody(evidenceDrafts[memberId] ?? evidenceFromProfile(profiles[memberId]));
+    const start = () => api.post(`/api/our-company/members/${memberId}/analyze`, body);
     try {
       await start();
     } catch (err) {
@@ -281,11 +288,39 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
   async function loadProfile(memberId: string) {
     setProfiles((prev) => ({ ...prev, [memberId]: "loading" }));
     try {
-      const r = await api.get<{ profile: Profile | null; versions?: unknown; status: string }>(`/api/our-company/members/${memberId}/profile`);
+      const r = await api.get<{ profile: Profile | null; versions?: Array<{ version_no: number; source_ref: string | null; created_by: string; created_at: string }>; status: string }>(`/api/our-company/members/${memberId}/profile`);
+      if (r.data.versions) setProfileVersions((prev) => ({ ...prev, [memberId]: r.data.versions! }));
       if (r.data.profile) setProfiles((prev) => ({ ...prev, [memberId]: r.data.profile! }));
       else setProfiles((prev) => { const n = { ...prev }; delete n[memberId]; return n; });
     } catch { /* 프로파일 없음 */ }
   }
+
+  // 분석가 편집(출처 추가·필드 수정) — 사람이 직접 하는 변경이며 새 버전으로 저장된다(ADR-0172 개정 4).
+  // 로딩 상태로 되돌리지 않고 최신 버전을 다시 읽는다.
+  async function runProfileEdit(memberId: string, call: () => Promise<unknown>): Promise<boolean> {
+    setEditBusy(true);
+    setError(null);
+    try {
+      await call();
+      const r = await api.get<{ profile: Profile | null; versions?: Array<{ version_no: number; source_ref: string | null; created_by: string; created_at: string }> }>(`/api/our-company/members/${memberId}/profile`);
+      if (r.data.profile) setProfiles((prev) => ({ ...prev, [memberId]: r.data.profile! }));
+      if (r.data.versions) setProfileVersions((prev) => ({ ...prev, [memberId]: r.data.versions! }));
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "프로파일 수정 실패");
+      return false;
+    } finally {
+      setEditBusy(false);
+    }
+  }
+  const addManualSource = (memberId: string, input: { url: string; title: string; excerpt: string }) =>
+    runProfileEdit(memberId, () => api.post(`/api/our-company/members/${memberId}/profile/sources`, input));
+  const updateManualSource = (memberId: string, sourceId: string, input: { url: string; title: string; excerpt: string }) =>
+    runProfileEdit(memberId, () => api.patch(`/api/our-company/members/${memberId}/profile/sources/${sourceId}`, input));
+  const removeManualSource = (memberId: string, sourceId: string) =>
+    runProfileEdit(memberId, () => api.delete(`/api/our-company/members/${memberId}/profile/sources/${sourceId}`));
+  const saveFieldOverrides = (memberId: string, input: Record<string, unknown>) =>
+    runProfileEdit(memberId, () => api.post(`/api/our-company/members/${memberId}/profile/overrides`, input));
 
   // 산업 연계 탭 — S1 시장분석이 없는 산업에 신규 분석을 요청한다(8단계 파이프라인,
   // analyst+ 권한). 완료 여부·세부 결과는 /market 리포트에서 확인한다.
@@ -302,7 +337,7 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
       setS1Requests((prev) => { const n = { ...prev }; delete n[industry]; return n; });
     }
   }
-  return { loadingGroupId, createGroup, backToList, loadGroup, saveGroupName, removeGroup, addMember, searchMemberDart, saveMemberEdit, openDetail, updateMemberRole, analyzeMember, startMemberEdit, uploadMemberFile, removeMember, requestS1Analysis };
+  return { loadingGroupId, evidenceDrafts, setEvidenceDraft, profileVersions, editBusy, addManualSource, updateManualSource, removeManualSource, saveFieldOverrides, createGroup, backToList, loadGroup, saveGroupName, removeGroup, addMember, searchMemberDart, saveMemberEdit, openDetail, updateMemberRole, analyzeMember, startMemberEdit, uploadMemberFile, removeMember, requestS1Analysis };
 }
 
 export type OurCompanyStageState = ReturnType<typeof useOurCompanyBase> & ReturnType<typeof useOurCompetitors> & ReturnType<typeof useOurGroups>;

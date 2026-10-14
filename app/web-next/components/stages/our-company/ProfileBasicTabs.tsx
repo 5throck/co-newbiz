@@ -4,6 +4,7 @@
 import Link from "next/link";
 import type { OurCompanyStageState } from "./useOurGroups.ts";
 import type { Profile } from "./types.ts";
+import { AnalystEditedChip, ProfileFieldEditor, ProfileProvidedSources, isEditedItem } from "./ProfileEvidence.tsx";
 
 export function ProfileOverviewTab({ ctx, profile }: { ctx: OurCompanyStageState; profile: Profile }) {
   const { profileTab } = ctx;
@@ -19,12 +20,13 @@ export function ProfileOverviewTab({ ctx, profile }: { ctx: OurCompanyStageState
                     <p className="mt-2 mb-0 text-[length:var(--fs-body)]">{profile.ragCapRecommendation.rationale}</p>
                   </div>
                 )}
-                <h3 className="sizing-step-title text-[0.95rem]">종합 평가</h3>
+                <ProfileFieldEditor key={profile.companyName + (profile.analystEditLog?.length ?? 0)} ctx={ctx} memberId={ctx.openMember!} profile={profile} />
+                <h3 className="sizing-step-title text-[0.95rem]">종합 평가 {profile.analystEdited?.businessAssessment && <AnalystEditedChip />}</h3>
                 <p className="mb-3">{profile.businessAssessment || "—"}</p>
                 <h3 className="sizing-step-title text-[0.95rem]">산업 노출</h3>
                 {profile.industryExposure && profile.industryExposure.length > 0 ? (
                   <div className="flex flex-wrap gap-1 mb-3">
-                    {profile.industryExposure.map((x) => <span key={x} className="status-chip status-in-progress">{x}</span>)}
+                    {profile.industryExposure.map((x) => <span key={x} className="status-chip status-in-progress">{x}{isEditedItem(profile, "industryExposure", x) && <AnalystEditedChip />}</span>)}
                   </div>
                 ) : (
                   <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)] mb-3">산업 노출 정보 없음</p>
@@ -52,11 +54,11 @@ export function ProfileSwotTab({ ctx, profile }: { ctx: OurCompanyStageState; pr
                 <div className="chart-pair">
                   <div className="chart-half sizing-grade-card report-bullet-card">
                     <h4>💪 강점</h4>
-                    <ul className="report-bullet-list">{(profile.strengths ?? []).map((x, i) => <li key={i}>{x}</li>)}</ul>
+                    <ul className="report-bullet-list">{(profile.strengths ?? []).map((x, i) => <li key={i}>{x}{isEditedItem(profile, "strengths", x) && <AnalystEditedChip />}</li>)}</ul>
                   </div>
                   <div className="chart-half sizing-grade-card report-bullet-card">
                     <h4>🩹 약점</h4>
-                    <ul className="report-bullet-list">{(profile.weaknesses ?? []).map((x, i) => <li key={i}>{x}</li>)}</ul>
+                    <ul className="report-bullet-list">{(profile.weaknesses ?? []).map((x, i) => <li key={i}>{x}{isEditedItem(profile, "weaknesses", x) && <AnalystEditedChip />}</li>)}</ul>
                   </div>
                   {profile.swot && (
                     <>
@@ -171,10 +173,11 @@ export function ProfileSourcesTab({ ctx, profile }: { ctx: OurCompanyStageState;
   return (
     <>{profileTab === "sources" && (
               <div className="text-[0.88rem]">
-                {(profile.researchSources ?? []).length > 0 ? (
+                <ProfileProvidedSources ctx={ctx} memberId={ctx.openMember!} profile={profile} />
+                {(profile.researchSources ?? []).filter((s) => !s.provided).length > 0 ? (
                   <ul className="sizing-note-list mb-3">
-                    {profile.researchSources!.map((s, i) => (
-                      <li key={i}><a href={s.url} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">{s.title}</a><span className="text-[color:var(--muted-fg)]"> — {s.snippet}</span></li>
+                    {profile.researchSources!.filter((s) => !s.provided).map((s, i) => (
+                      <li key={i}><a href={s.url} target="_blank" rel="noopener noreferrer" className="text-[color:var(--accent)] underline">{s.title}</a><span className="text-[color:var(--muted-fg)]"> — {s.snippet}</span></li>
                     ))}
                   </ul>
                 ) : (

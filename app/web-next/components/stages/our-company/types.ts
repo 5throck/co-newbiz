@@ -14,8 +14,17 @@ export interface Profile {
   businessAssessment?: string;
   industryExposure?: string[];
   degraded?: string | null;
-  researchSources?: Array<{ title: string; url: string; snippet?: string }>;
-  dataSources?: { dart: boolean; dartYear: string | null; creditReport: string | null; webResearchCount: number };
+  researchSources?: Array<{ title: string; url: string; snippet?: string; provided?: boolean }>;
+  dataSources?: {
+    dart: boolean; dartYear: string | null; creditReport: string | null; webResearchCount: number;
+    userSourceCount?: number;
+    userSources?: Array<{ url: string; title?: string; fetched: boolean; charCount: number; status: "ok" | "thin" | "failed"; reason?: string; provided?: boolean; manual?: boolean; id?: string; addedBy?: string; addedAt?: string; excerpt?: string; removed?: boolean }>;
+    analystNote?: boolean;
+  };
+  /** Analyst's free-text company note stored with the version (ADR-0172 amendment 4). */
+  userNote?: string;
+  analystEdited?: { industryExposure: string[]; strengths: string[]; weaknesses: string[]; businessAssessment: boolean };
+  analystEditLog?: Array<{ fields: string[]; reason: string; source?: string; editedBy: string; editedAt: string }>;
   // ── ADR-0093 확장 (schemaVersion 2) — 구 v1 payload에는 없는 optional 필드 ──
   financialAnalysis?: {
     available: boolean;
