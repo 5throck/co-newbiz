@@ -110,6 +110,7 @@ export interface AttainabilityRowView {
   confirmed_by: string | null;
   confirmed_at: string | null;
   // S3-owned held judgement, read-only here (ADR-0170 / decider 2026-10-14)
+  required_note: string;
   held_holders: string[];
   held_evidence: string;
   // ADR-0170 linkage (read-only)
@@ -149,6 +150,7 @@ export function rowView(r: CapabilityGapRow): AttainabilityRowView {
     drafted_by: a?.draftedBy ?? null,
     confirmed_by: stale ? null : a?.confirmedBy ?? null,
     confirmed_at: stale ? null : a?.confirmedAt ?? null,
+    required_note: r.requiredNote ?? "",
     held_holders: r.held.holders,
     held_evidence: r.held.evidence,
     stale,
@@ -227,7 +229,7 @@ export function applyAttainabilityPatches(
     if (!id || !base) return { ok: false, error: { code: "unknown_row", message: `레지스터에 없는 행입니다: ${id || "(id 없음)"}` } };
     const owned = S3_OWNED_PATCH_FIELDS.find((f) => f in raw);
     if (owned) {
-      return { ok: false, error: { code: "s3_owned_field", message: `${owned}은(는) S3가 소유한 항목이라 S8에서 바꿀 수 없습니다 — S3(필요 수준·보유 수준은 S5도)에서 수정하세요.` } };
+      return { ok: false, error: { code: "s3_owned_field", message: `${owned}은(는) S3가 소유한 항목이라 S8에서 바꿀 수 없습니다 — S3(필요 수준·보유 수준은 S5)에서 수정하세요.` } };
     }
     if ("s3Hash" in raw && raw.s3Hash !== null && typeof raw.s3Hash !== "string") {
       return { ok: false, error: { code: "invalid_request", message: "s3Hash는 문자열입니다." } };

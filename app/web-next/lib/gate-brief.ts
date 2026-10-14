@@ -9,7 +9,7 @@ import { getDb } from "../../../db/client.ts";
 import { readRagView } from "../../../db/lib/rag-service.ts";
 import { getCurrentRouteDecision } from "../../../db/repositories/route-decision.repository.ts";
 import { listBusinessCases, latestAdoption } from "./business-case.ts";
-import { parseGapRegister, summarizeGap } from "./capability-gap.ts";
+import { HELD_STATUS_LABEL, parseGapRegister, summarizeGap } from "./capability-gap.ts";
 import { buildS8LensSummary } from "./s8-lens-summary.ts";
 import { technicalLensBriefLine } from "./s8-lens-status.ts";
 import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
@@ -167,7 +167,7 @@ function s5Summary(db: Database, oppId: string): string {
   const register = parseGapRegister(oppRow?.capability_gap_json ?? null);
   const gaps = register.rows.length > 0
     ? `역량 격차 ${register.rows.length}건: ` + register.rows.slice(0, 6).map((r) =>
-        `${r.capability}(필요 ${r.requiredLevel || "?"}/보유 ${r.currentLevel || "?"}, ${r.resolution ?? "미정"})`,
+        `${r.capability}(${r.requiredNote ? `필요 ${r.requiredNote.slice(0, 40)}, ` : ""}보유 ${HELD_STATUS_LABEL[r.held.status]}${r.requiredLevel || r.currentLevel ? `, S5 수준 ${r.requiredLevel || "?"}/${r.currentLevel || "?"}` : ""}, ${r.resolution ?? "미정"})`,
       ).join(", ")
     : "";
   if (!row && !gaps) return "S5 역량 평가: 없음";

@@ -35,7 +35,7 @@ interface Draft {
   cost: string; months: string; grade: string; rationale: string;
 }
 
-const COL_PCT = [23, 7, 7, 9, 9, 9, 12, 16, 8] as const;
+const COL_PCT = [16, 18, 18, 8, 8, 8, 10, 10, 4] as const;
 const RESOLUTIONS: GapResolution[] = ["build", "partner", "hire", "invest"];
 const GRADE_OPTIONS = [
   { value: "", text: "미판정" }, { value: "high", text: "높음" },
@@ -180,8 +180,8 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
     <section className="market-section sizing-step mb-3" aria-label="필요 역량 달성 가능성">
       <h3 className="sizing-step-title">필요 역량 달성 가능성</h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-        S3 필요 역량 레지스터의 필요 수준을 확보할 수 있는지 사람이 판정합니다. AI는 초안만 제안하며, 여기 입력한 비용·기간은 사업성 수치에 자동 반영되지 않습니다.
-        필요 수준·보유 수준·보유 판정은 S3에서 정의한 값이며 여기서는 읽기 전용입니다{view.opportunity_id ? <> — <a href={s3Href} className="text-[color:var(--accent)] underline">S3에서 수정</a></> : ""}.
+        S3 필요 역량 레지스터의 필요 내용을 확보할 수 있는지 사람이 판정합니다. AI는 초안만 제안하며, 여기 입력한 비용·기간은 사업성 수치에 자동 반영되지 않습니다.
+        필요 내용·보유 판정·보유 주체·근거는 S3에서 정의한 값이며 여기서는 읽기 전용입니다{view.opportunity_id ? <> — <a href={s3Href} className="text-[color:var(--accent)] underline">S3에서 수정</a></> : ""}.
         S3 내용이 바뀐 행은 재판정이 필요하며, 이전 판정은 이력으로 남습니다.
       </p>
       <SummaryStrip s={view.summary} />
@@ -195,7 +195,7 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
             <ColGroup widths={COL_PCT} />
             <thead>
               <tr>
-                <th scope="col">필요 역량</th><th scope="col">필요 수준</th><th scope="col">보유 수준</th><th scope="col">해소 방식</th>
+                <th scope="col">필요 역량</th><th scope="col">필요 내용 (S3)</th><th scope="col">보유 판정 (S3)</th><th scope="col">해소 방식</th>
                 <th scope="col">해소 비용(백만원)</th><th scope="col">달성 기간(개월)</th><th scope="col">달성 가능성</th>
                 <th scope="col">근거·증빙</th><th scope="col">확정</th>
               </tr>
@@ -207,13 +207,9 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
                   <tr key={r.id}>
                     <td className="text-[length:var(--fs-caption)]">
                       <span className="font-semibold">{r.capability}</span>
-                      <span className={`status-chip ${HELD_STATUS_CHIP[r.held_status]} block`}>{HELD_STATUS_LABEL[r.held_status]}</span>
-                      {r.level_gap !== null && <span className="block text-[color:var(--muted-fg)]">수준 차이 {r.level_gap}단계</span>}
-                      <span className="block mt-1">
-                        <span className="text-[color:var(--muted-fg)]">S3 보유 판정</span> {holdersPreview(r.held_holders)}
-                        <span className="block text-[color:var(--muted-fg)]">근거 {evidencePreview(r.held_evidence)}</span>
-                        <button type="button" className="btn-ghost btn-sm mt-1" aria-label={`${r.capability} S3 보유 판정 보기`} onClick={() => setHeldViewing(r.id)}>보기</button>
-                      </span>
+                      {(r.required_level.trim() !== "" || r.current_level.trim() !== "") && (
+                        <span className="block text-[color:var(--muted-fg)]">S5 수준: 필요 {levelText(r.required_level)} / 보유 {levelText(r.current_level)}</span>
+                      )}
                       {r.stale && (
                         <div className="mt-1" role="status">
                           <span className="status-chip status-amber"><span aria-hidden="true">!</span> S3 변경 — 재판정 필요</span>
@@ -234,8 +230,17 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
                         </span>
                       )}
                     </td>
-                    <td className="text-[length:var(--fs-caption)]">{levelText(r.required_level)}<a href={s3Href} className="block text-[color:var(--accent)] underline" aria-label={`${r.capability} 필요 수준은 S3에서 수정`}>S3에서 수정</a></td>
-                    <td className="text-[length:var(--fs-caption)]">{levelText(r.current_level)}<a href={s3Href} className="block text-[color:var(--accent)] underline" aria-label={`${r.capability} 보유 수준은 S3에서 수정`}>S3에서 수정</a></td>
+                    <td className="text-[length:var(--fs-caption)]">
+                      <span className="block whitespace-pre-wrap break-words">{r.required_note.trim() ? r.required_note : <span className="text-[color:var(--muted-fg)]">미입력</span>}</span>
+                      <a href={s3Href} className="block text-[color:var(--accent)] underline" aria-label={`${r.capability} 필요 내용은 S3에서 수정`}>S3에서 수정</a>
+                    </td>
+                    <td className="text-[length:var(--fs-caption)]">
+                      <span className={`status-chip ${HELD_STATUS_CHIP[r.held_status]}`}>{HELD_STATUS_LABEL[r.held_status]}</span>
+                      <span className="block mt-1"><span className="text-[color:var(--muted-fg)]">주체</span> {holdersPreview(r.held_holders)}</span>
+                      <span className="block"><span className="text-[color:var(--muted-fg)]">근거</span> {evidencePreview(r.held_evidence)}</span>
+                      <button type="button" className="btn-ghost btn-sm mt-1" aria-label={`${r.capability} S3 보유 판정 보기`} onClick={() => setHeldViewing(r.id)}>보기</button>
+                      <a href={s3Href} className="block text-[color:var(--accent)] underline" aria-label={`${r.capability} 보유 판정은 S3에서 수정`}>S3에서 수정</a>
+                    </td>
                     <td>
                       <select aria-label={`${r.capability} 해소 방식`} value={d.resolution} disabled={!canAct} onChange={(e) => set(r.id, { resolution: e.target.value })} className="sizing-new-input sizing-new-input-sm">
                         <option value="">미정</option>
