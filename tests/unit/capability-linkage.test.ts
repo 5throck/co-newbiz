@@ -327,48 +327,57 @@ describe("routes", () => {
   });
 });
 
-describe("held summary preview", () => {
-  test("empty: no parts (single muted 미입력 rendered); filled: labelled parts only", async () => {
-    const { heldSummaryParts, holdersPreview, evidencePreview } = await import("../../app/web-next/components/stages/CapabilityHeldDialog.tsx");
-    expect(heldSummaryParts([], "  ")).toEqual([]);
-    expect(heldSummaryParts(["A사"], "")).toEqual([{ label: "주체", text: "A사" }]);
-    expect(heldSummaryParts([], "인증 보유")).toEqual([{ label: "근거", text: "인증 보유" }]);
-    expect(heldSummaryParts(["A", "B"], "x").map((p) => p.label)).toEqual(["주체", "근거"]);
-    expect(holdersPreview([])).toBe("");
+describe("보유 근거 cell: button only", () => {
+  test("evidence preview helper and legacy-holders caption", async () => {
+    const { evidencePreview, legacyHoldersCaption } = await import("../../app/web-next/components/stages/CapabilityHeldDialog.tsx");
     expect(evidencePreview("")).toBe("");
+    expect(evidencePreview("x".repeat(70), 60)).toBe(`${"x".repeat(60)}…`);
+    expect(legacyHoldersCaption([])).toBe("");
+    expect(legacyHoldersCaption(undefined)).toBe("");
+    expect(legacyHoldersCaption(["A사", " B사 "])).toBe("기존 보유 주체: A사, B사");
   });
-  test("previews use HeldSummary with no per-field 미입력", () => {
+  test("S3 and S5/S8 cells use HeldEvidenceButton, with no preview text or 미입력 marker", () => {
     const root = join(PROJECT_ROOT, "app/web-next/components/stages");
     for (const f of ["synergy/SynergyLinkageTab.tsx", "CapabilityJudgementTable.tsx"]) {
       const src = readFileSync(join(root, f), "utf8");
-      expect(src).toContain("<HeldSummary");
+      expect(src).toContain("<HeldEvidenceButton");
+      expect(src).not.toContain("HeldSummary");
       expect(src).not.toContain("holdersPreview(");
-      expect(src).not.toContain("evidencePreview(");
     }
     const dlg = readFileSync(join(root, "CapabilityHeldDialog.tsx"), "utf8");
-    expect(dlg).not.toContain('? "미입력"');
+    const btn = dlg.slice(dlg.indexOf("export function HeldEvidenceButton"), dlg.indexOf("export function CapabilityHeldDialog"));
+    expect(btn).not.toContain("미입력");
+    // state-aware label, check icon with text, tooltip, aria state, legacy caption
+    for (const k of ['readOnly ? "보기" : filled ? "수정" : "입력"', "✓", "title={filled ? evidencePreview(evidence, 60) : undefined}", '(입력됨)', "보유 근거 ${readOnly", "legacy-holders-caption"]) expect(btn).toContain(k);
+  });
+  test("dialog: single evidence textarea, no holders editor", () => {
+    const dlg = readFileSync(join(PROJECT_ROOT, "app/web-next/components/stages/CapabilityHeldDialog.tsx"), "utf8");
+    expect(dlg.match(/<textarea/g)?.length).toBe(1);
+    for (const k of ["EVIDENCE_MAX = 400", "rows={8}", "${capability} 보유 근거", "readOnly ?"]) expect(dlg).toContain(k);
+    expect(dlg).not.toContain("HOLDERS_MAX");
+    expect(dlg).not.toContain("holderText");
   });
 });
 
 describe("UI source checks", () => {
   const read = (p: string) => readFileSync(join(PROJECT_ROOT, "app/web-next", p), "utf8");
-  test("S3 register table has no 5-step level columns; keeps 보유 판정, holders/evidence button, 해소 힌트", () => {
+  test("S3 register table has no 5-step level columns; keeps 보유 판정, 보유 근거 button, no 해소 힌트", () => {
     const src = read("components/stages/synergy/SynergyLinkageTab.tsx");
     // ADR-0172: the narrative 필요 수준 / 보유 수준 columns are back (modal-based, no 5-step select).
     expect(src).not.toContain("LevelSelect");
     expect(src).toContain('<th scope="col">필요 역량</th><th scope="col">필요도</th><th scope="col">필요 수준</th><th scope="col">보유 판정</th>');
-    expect(src).toContain('<th scope="col">보유 수준</th><th scope="col">보유 주체·근거</th><th scope="col">해소 힌트</th>');
+    expect(src).toContain('<th scope="col">보유 수준</th><th scope="col">보유 근거</th>');
+    expect(src).not.toContain("해소 힌트");
+    expect(src).not.toContain("GapResolution");
     expect(src).toContain("${r.capability} 보유 판정");
-    expect(src).toContain("${r.capability} 해소 힌트");
-    expect(src).toContain("보유 주체·근거 ${canCurate");
-    expect(src).not.toContain("보유 주체`}");
+    expect(src).not.toContain("보유 주체");
     expect(src).not.toContain('placeholder="근거(프로필 인용)"');
     expect(src).toContain("읽기 전용으로 표시됩니다");
     expect(src).not.toContain("<fieldset");
   });
   test("held dialog: portal, dialog role, focus trap, caps, counter, read-only mode", () => {
     const src = read("components/stages/CapabilityHeldDialog.tsx");
-    for (const k of ['role="dialog"', 'aria-modal="true"', "useModalFocus(onClose)", "createPortal", "HOLDERS_MAX = 6", "HOLDER_LEN = 120", "EVIDENCE_MAX = 400", "rows={8}", "readOnly ?"]) expect(src).toContain(k);
+    for (const k of ['role="dialog"', 'aria-modal="true"', "useModalFocus(onClose)", "createPortal", "EVIDENCE_MAX = 400", "rows={8}", "readOnly ?"]) expect(src).toContain(k);
   });
   test("S8 panel is a read-only summary: shared table, no inputs or save/confirm of its own, S5 link", () => {
     const src = read("components/stages/CapabilityAttainabilityPanel.tsx");
@@ -386,7 +395,8 @@ describe("UI source checks", () => {
     const tbl = read("components/stages/CapabilityJudgementTable.tsx");
     expect(tbl).toContain("S3 변경 — 재판정 필요");
     expect(tbl).toContain("삭제된 역량 (판정 이력)");
-    expect(tbl).toContain("보유 주체·근거 보기");
+    expect(tbl).not.toContain("보유 주체");
+    expect(tbl).toContain("<HeldEvidenceButton");
     expect(tbl).toContain("재판정 필요 {s.stale}");
     expect(tbl).not.toContain("LevelSelect");
   });

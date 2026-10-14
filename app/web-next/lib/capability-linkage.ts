@@ -82,6 +82,8 @@ const sortedHolders = (row: CapabilityGapRow) => [...(row.held?.holders ?? [])].
  * holders sorted): capability, requiredNote, necessity (+ scope note), requiredLevel text,
  * held status, currentLevel text, holders, evidence. Excludes id, source, note, resolution,
  * attainability and register-level keys. Empty and missing are treated alike.
+ * ADR-0172 amendment 2026-10-14 (2): holders are no longer editable (legacy, read-only) but stay in the
+ * hash unchanged — values do not move, so no judgement goes stale and the version is not bumped.
  */
 export function capabilityRowHash(row: CapabilityGapRow): string {
   const canonical = JSON.stringify({

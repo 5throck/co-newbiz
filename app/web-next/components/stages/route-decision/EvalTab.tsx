@@ -96,7 +96,7 @@ export function EvalTab({ ctx, selected }: { ctx: RouteDecisionStageState; selec
                             <thead>
                               <tr>
                                 <th scope="col">필요 역량</th><th scope="col">필요도</th><th scope="col">보유 판정</th>
-                                <th scope="col">보유 주체·근거</th><th scope="col">해소 힌트</th>
+                                <th scope="col">보유 근거</th><th scope="col">해소 방식</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -124,8 +124,8 @@ export function EvalTab({ ctx, selected }: { ctx: RouteDecisionStageState; selec
                                   <td className="text-[length:var(--fs-caption)]">
                                     {r.held.status !== "unevaluated" && (r.held.holders.length > 0 || r.held.evidence) ? (
                                       <>
-                                        {r.held.holders.length > 0 && <span className="block">{r.held.holders.join(", ")}</span>}
-                                        {r.held.evidence && <span className="block text-[color:var(--muted-fg)]">{r.held.evidence}</span>}
+                                        {r.held.evidence && <span className="block">{r.held.evidence}</span>}
+                                        {r.held.holders.length > 0 && <span className="block text-[color:var(--muted-fg)]">기존 보유 주체: {r.held.holders.join(", ")}</span>}
                                       </>
                                     ) : "—"}
                                   </td>

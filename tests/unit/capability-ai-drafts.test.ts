@@ -51,10 +51,10 @@ describe("web text is untrusted", () => {
 
 describe("cited held draft normalizer", () => {
   const raw = (over: Record<string, unknown> = {}) => ({ held: { status: "average", currentLevel: "양산 가능", holders: ["A사"], evidence: "상위권 설비" }, sources: [1], basis: { held: "A사 실적 기사", currentLevel: "기사 1", heldSource: "web" }, ...over });
-  test("web citation required; evidence carries the URL; holders limited to scoped companies", () => {
+  test("web citation required; evidence carries the URL; no holders are produced", () => {
     const c = dr.normalizeCitedHeldDraft(raw({ held: { status: "average", currentLevel: "x", holders: ["A사", "엉뚱한사"], evidence: "e" } }), ctx);
     expect(c?.status).toBe("average");
-    expect(c?.holders).toEqual(["A사"]);
+    expect(c).not.toHaveProperty("holders");
     expect(c?.evidence).toContain("https://example.com/a");
     expect(c?.web).toEqual([{ title: "A사 정밀가공 실적", url: "https://example.com/a" }]);
   });
@@ -66,11 +66,14 @@ describe("cited held draft normalizer", () => {
     expect(dr.normalizeCitedHeldDraft(raw({ held: { status: "unevaluated" } }), ctx)).toBeNull();
     expect(dr.normalizeCitedHeldDraft(raw({ held: { status: "great" } }), ctx)).toBeNull();
   });
-  test("profile support needs a scoped holder AND heldSource profile", () => {
+  test("profile support needs heldSource profile and provided profiles (or a cited source)", () => {
     const p = dr.normalizeCitedHeldDraft(raw({ sources: [], basis: { held: "프로필 강점", heldSource: "profile" } }), ctx);
     expect(p?.origins).toEqual(["profile"]);
     expect(p?.evidence).toContain("그룹/계열사 프로필");
-    expect(dr.normalizeCitedHeldDraft(raw({ sources: [], held: { status: "average", holders: [], evidence: "e" }, basis: { held: "b", heldSource: "profile" } }), ctx)).toBeNull();
+    expect(dr.normalizeCitedHeldDraft(raw({ sources: [], held: { status: "average", evidence: "e" }, basis: { held: "b", heldSource: "profile" } }), ctx)?.origins).toEqual(["profile"]);
+    // no profile provided and no cited source: unsupported
+    expect(dr.normalizeCitedHeldDraft(raw({ sources: [], basis: { held: "b", heldSource: "profile" } }), { ...ctx, profileNames: [] })).toBeNull();
+    expect(dr.normalizeCitedHeldDraft(raw({ sources: [], basis: { held: "b", heldSource: "web" } }), ctx)).toBeNull();
   });
   test("leading without comparative evidence is downgraded to average", () => {
     expect(dr.normalizeCitedHeldDraft(raw({ held: { status: "leading", holders: ["A사"], evidence: "" } }), ctx)?.status).toBe("average");
@@ -116,7 +119,7 @@ describe("held apply: fill-empty-only", () => {
   test("never overwrites human values", () => {
     const human = row({ currentLevel: "사람 서술", held: { status: "none", holders: ["B"], evidence: "사람 근거" } });
     const r = dr.applyHeldDraft(human, cited, null);
-    expect(r.row.held).toMatchObject({ status: "none", holders: ["B"], evidence: "사람 근거" });
+    expect(r.row.held).toMatchObject({ status: "none", holders: ["B"], evidence: "사람 근거" }); // legacy holders untouched
     expect(r.row.currentLevel).toBe("사람 서술");
     expect(r.mark).toBeNull();
   });
@@ -187,7 +190,10 @@ describe("routes (no LLM configured)", () => {
     const d = ((await res.json()) as any).data;
     expect(d.source).toBe("synthesis");
     expect(d.rows[0]).toMatchObject({ necessity: "", requiredLevel: "", currentLevel: "" });
-    expect(d.note).toContain("비워 둡니다");
+    expect(d.note).toContain("누락 2건 중 0건");
+    expect(d.note).toContain("필요도 1·필요 수준 1");
+    expect(d.note).not.toContain("변경 없음");
+    expect(d.missing).toEqual({ before: 2, after: 2, necessity: 1, requiredLevel: 1 });
     expect(d.drafts).toEqual({});
     expect(before()).toBeNull();
   });
@@ -203,7 +209,9 @@ describe("routes (no LLM configured)", () => {
     expect(d.rows.map((r: any) => r.capability)).toEqual(["정밀 가공 노하우", "해외 영업망"]);
     expect(d.rows.every((r: any) => r.source === "synergy_area" && r.necessity === "" && r.requiredLevel === "" && r.held.status === "unevaluated")).toBe(true);
     expect(d.note).toContain("LLM 미구성");
-    expect(d.note).toContain("비워 뒀으니");
+    expect(d.note).toContain("누락 4건 중 0건");
+    expect(d.note).toContain("직접 입력하세요");
+    expect(d.missing).toMatchObject({ before: 4, after: 4 });
     // a second click with those rows present adds nothing (case/space-insensitive dedupe)
     const again = await req(`/api/opportunities/${opp2}/capability-gap/llm-draft`, { method: "POST", headers: { cookie }, body: JSON.stringify({ rows: d.rows }) });
     expect(((await again.json()) as any).data.rows).toHaveLength(2);
@@ -228,11 +236,26 @@ describe("routes (no LLM configured)", () => {
     expect(d.note).toContain("LLM");
     expect(before()).toBeNull();
   });
-  test("holding-check returns an empty-scope note when every row is complete; unknown rowId is 400", async () => {
-    const full = { id: "a", capability: "A", source: "manual", currentLevel: "x", held: { status: "average", holders: ["A"], evidence: "e" } };
+  test("holding-check returns an empty-scope note when every row is complete; no single-row mode", async () => {
+    const full = { id: "a", capability: "A", source: "manual", currentLevel: "x", held: { status: "average", evidence: "e" } };
     const d = ((await (await post("holding-check", { rows: [full] })).json()) as any).data;
     expect(d.note).toContain("확인할 행이 없습니다");
-    expect((await post("holding-check", { rows: [full], rowId: "zzz" })).status).toBe(400);
+    expect(d.note).not.toContain("다시 확인");
+    expect(d).not.toHaveProperty("proposals");
+    // rowId is ignored: a complete row is still out of scope, nothing is proposed for it
+    const withRowId = ((await (await post("holding-check", { rows: [full], rowId: "a" })).json()) as any).data;
+    expect(withRowId.note).toContain("확인할 행이 없습니다");
+    expect(withRowId).not.toHaveProperty("proposals");
+  });
+  test("holding-check route and prompt never ask for holders", () => {
+    const src = readFileSync(join(ROOT, "app/web-next/app/api/opportunities/[id]/capability-gap/holding-check/route.ts"), "utf8");
+    expect(src).not.toContain("body.rowId");
+    expect(src).not.toContain("single");
+    expect(src).not.toContain("proposals");
+    const p = hc.buildHoldingPrompt({ oppName: "o", marketScope: null, rows: [row()], profileLines: [], search: { sources: [], perRow: {}, queries: 0, failureNote: null, skippedRows: 0 } });
+    expect(p).not.toContain('"holders"');
+    expect(p).toContain("보유 근거");
+    expect(p).toContain("profile");
   });
 });
 
@@ -240,30 +263,36 @@ describe("UI source structure", () => {
   const read = (p: string) => readFileSync(join(ROOT, "app/web-next", p), "utf8");
   test("two AI actions, single primary rule, inline narrative inputs, recheck apply/cancel", () => {
     const src = read("components/stages/synergy/SynergyLinkageTab.tsx");
-    for (const k of ["필요 역량 추가 제안", "보유 판정 확인 (AI)", "void checkHolding()", "void draftGap()", "다시 확인", "recheckRow", "applyRecheck", "저장 전 변경", "AI 초안", "SourceLinks"]) expect(src).toContain(k);
+    for (const k of ["필요 역량 제안 (AI)", "보유 판정 확인 (AI)", "void checkHolding()", "void draftGap()", "저장 전 변경", "AI 초안", "SourceLinks"]) expect(src).toContain(k);
+    for (const k of ["다시 확인", "recheckRow", "applyRecheck", "HoldingRecheckDialog"]) expect(src).not.toContain(k);
     expect(src).toContain('proposePrimary = !gapDirty && gapRows.length === 0');
     expect((src.match(/btn-primary btn-sm/g) ?? []).length).toBe(2); // propose (rows empty) / save (dirty), mutually exclusive
     expect(src).not.toContain("NarrativeCell");
     expect(src).not.toContain("setNarrativeEditing");
     expect(src).toContain('<NarrativeInput capability={r.capability} field="필요 수준"');
     expect(src).toContain('<NarrativeInput capability={r.capability} field="보유 수준"');
-    const heads = ["필요 역량", "필요도", "필요 수준", "보유 판정", "보유 수준", "보유 주체·근거", "해소 힌트"].map((h) => src.indexOf(`<th scope="col">${h}</th>`));
+    const heads = ["필요 역량", "필요도", "필요 수준", "보유 판정", "보유 수준", "보유 근거"].map((h) => src.indexOf(`<th scope="col">${h}</th>`));
+    expect(heads.every((i) => i >= 0)).toBe(true);
     expect([...heads].sort((a, b) => a - b)).toEqual(heads);
+    expect(src).not.toContain("해소 힌트");
     expect(src).toContain("table-fixed-pct tmin-80");
   });
   test("inline narrative field: textarea, maxLength cap, counter, labels, placeholder", () => {
     const src = read("components/stages/CapabilityNarrativeDialog.tsx");
     for (const k of ["export function NarrativeInput", "<textarea", "maxLength={NARRATIVE_CAP}", "aria-label={`${capability} ${field}`}", "placeholder={field}", "rows={2}", "자</span>"]) expect(src).toContain(k);
   });
-  test("recheck dialog: portal, dialog role, apply/cancel, https-only source links", () => {
-    const src = read("components/stages/synergy/HoldingRecheckDialog.tsx");
-    for (const k of ['role="dialog"', "createPortal", "useModalFocus", "적용", "취소", "rel=\"noopener noreferrer\"", "https?:"]) expect(src).toContain(k);
+  test("per-row recheck is gone: dialog file removed, hook has no recheck state", () => {
+    expect(existsSync(join(ROOT, "app/web-next/components/stages/synergy/HoldingRecheckDialog.tsx"))).toBe(false);
+    const src = read("components/stages/synergy/SourceLinks.tsx");
+    for (const k of ["rel=\"noopener noreferrer\"", "https?:"]) expect(src).toContain(k);
+    const hook = read("components/stages/synergy/useSynergyResult.ts");
+    for (const k of ["recheck", "applyRecheck", "recheckRow"]) expect(hook).not.toContain(k);
   });
   test("hook: held edits clear the draft chip; apply is the only overwrite path", () => {
     const src = read("components/stages/synergy/useSynergyResult.ts");
     expect(src).toContain('clearDraftMarks(gapRows[idx]?.id, ["heldStatus"])');
-    expect(src).toContain("function applyRecheck");
     expect(src).toContain("/capability-gap/holding-check");
+    expect(src).toContain("resolution: _s5Owned"); // S3 save omits the S5-owned resolution
   });
   test("MCP/OpenAPI describe both routes; holding-check is in the in-process port", () => {
     const mcp = readFileSync(join(ROOT, "mcp/co-newbiz/tools/stage-tools.ts"), "utf8");
@@ -271,5 +300,82 @@ describe("UI source structure", () => {
     expect(mcp).toContain("untrusted");
     expect(readFileSync(join(ROOT, "docs/architecture/openapi.yaml"), "utf8")).toContain("operationId: checkCapabilityHolding");
     expect(read("lib/mcp/in-process-port.ts")).toContain("capability-gap/holding-check");
+  });
+});
+
+describe("missing 필요도 / 필요 수준 detection", () => {
+  test("counts: unset 필요도 and empty 필요 수준 on every row; whitespace counts as empty", () => {
+    const rows = [
+      row({ id: "a", necessity: "", requiredLevel: "" }),
+      row({ id: "b", necessity: "essential", requiredLevel: "  " }),
+      row({ id: "c", necessity: "optional", requiredLevel: "있음" }),
+      row({ id: "d", necessity: "", requiredLevel: "있음" }),
+    ];
+    expect(dr.countMissingRequirement(rows)).toEqual({ necessity: 2, requiredLevel: 2, total: 4, rows: 3 });
+    expect(dr.missingRequirementCells(rows[2])).toEqual({ necessity: false, requiredLevel: false });
+    expect(dr.countMissingRequirement([])).toEqual({ necessity: 0, requiredLevel: 0, total: 0, rows: 0 });
+  });
+  test("a proposed new row arrives with necessity AND requiredLevel when the inputs support both", () => {
+    const base = row({ id: "n", capability: "신규 역량", necessity: "", requiredLevel: "" });
+    const draft = dr.normalizeNecessityDraft({ necessity: "essential", requiredLevel: "양산 라인을 독립 운영", basis: { necessity: "영역 X 인용", requiredLevel: "요구 메모 인용" } });
+    const out = dr.applyNecessityDraft(base, draft);
+    expect(out.row).toMatchObject({ necessity: "essential", requiredLevel: "양산 라인을 독립 운영" });
+    expect(out.mark?.fields).toEqual(["necessity", "requiredLevel"]);
+    expect(dr.countMissingRequirement([out.row]).total).toBe(0);
+    // unsupported value (no basis) stays missing and is still counted
+    const half = dr.applyNecessityDraft(base, dr.normalizeNecessityDraft({ necessity: "essential", requiredLevel: "x", basis: { necessity: "b" } }));
+    expect(half.row.necessity).toBe("essential");
+    expect(half.row.requiredLevel).toBe("");
+    expect(dr.countMissingRequirement([half.row])).toMatchObject({ necessity: 0, requiredLevel: 1 });
+  });
+  test("fill-empty-only: human values survive a draft", () => {
+    const human = row({ necessity: "optional", requiredLevel: "사람 값" });
+    const out = dr.applyNecessityDraft(human, dr.normalizeNecessityDraft({ necessity: "essential", requiredLevel: "AI 값", basis: { necessity: "b", requiredLevel: "b" } }));
+    expect(out.row).toMatchObject({ necessity: "optional", requiredLevel: "사람 값" });
+    expect(out.mark).toBeNull();
+  });
+  test("note reports filled and remaining; never a bare no-change while cells are missing", () => {
+    const after = dr.countMissingRequirement([row({ necessity: "essential", requiredLevel: "" })]);
+    const n = dr.missingReport(3, after, "근거가 없어");
+    expect(n).toContain("누락 3건 중 2건을 채웠고");
+    expect(n).toContain("1건(필요도 0·필요 수준 1)");
+    expect(n).toContain("근거가 없어");
+    expect(n).toContain("누락");
+    expect(dr.missingReport(2, dr.countMissingRequirement([]), "x")).toBe("누락 2건을 모두 채웠습니다(초안).");
+    expect(dr.missingReport(0, dr.countMissingRequirement([]), "x")).toBe("누락된 필요도·필요 수준이 없습니다.");
+    // zero filled, still missing: the note says so instead of "no changes"
+    const none = dr.missingReport(2, dr.countMissingRequirement([row(), row()]), "LLM이 구성되지 않아");
+    expect(none).toContain("누락 2건 중 0건을 채웠고");
+    expect(none).not.toContain("변경 없음");
+  });
+  test("route with missing cells never answers without a missing report (no LLM)", async () => {
+    const NOW = new Date().toISOString();
+    const o = ulid();
+    db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)", [o, "누락 기회", "산업", "selected", "test", NOW]);
+    await createUser(db, { userId: "miss-analyst", role: "analyst", password: "pw-miss-12345", createdBy: "test", now: NOW });
+    approveUser(db, { userId: "miss-analyst", approvedBy: "test", now: NOW });
+    db.run("UPDATE app_user SET must_change_password = 0");
+    const login = await nextRequest("/api/auth/login", { method: "POST", body: JSON.stringify({ userId: "miss-analyst", password: "pw-miss-12345" }) });
+    const cookie = (login.headers.getSetCookie()[0] ?? "").split(";")[0];
+    const rows = [{ id: "a", capability: "A", source: "manual", necessity: "essential" }, { id: "b", capability: "B", source: "manual", necessity: "optional", requiredLevel: "있음" }];
+    const res = await nextRequest(`/api/opportunities/${o}/capability-gap/llm-draft`, { method: "POST", headers: { cookie }, body: JSON.stringify({ rows }) });
+    const d = ((await res.json()) as any).data;
+    expect(d.rows).toHaveLength(2);
+    expect(d.note).toContain("누락 1건 중 0건을 채웠고");
+    expect(d.note).toContain("필요 수준 1");
+    expect(d.missing).toEqual({ before: 1, after: 1, necessity: 0, requiredLevel: 1 });
+  });
+  test("UI: header chip hidden at 0, per-cell 누락 marker with icon + text, request prompt requires missing rows", () => {
+    const tab = readFileSync(join(ROOT, "app/web-next/components/stages/synergy/SynergyLinkageTab.tsx"), "utf8");
+    expect(tab).toContain("missing.total > 0 &&");
+    expect(tab).toContain("필요도·필요 수준 누락 {missing.total}건");
+    expect(tab).toContain('<span aria-hidden="true">!</span> 누락');
+    expect(tab).toContain("{miss.necessity && <MissingMark />}");
+    expect(tab).toContain("{miss.requiredLevel && <MissingMark />}");
+    const route = readFileSync(join(ROOT, "app/web-next/app/api/opportunities/[id]/capability-gap/llm-draft/route.ts"), "utf8");
+    expect(route).toContain("runRequirementDraft");
+    const lib = readFileSync(join(ROOT, "app/web-next/lib/capability-requirement-draft.ts"), "utf8");
+    expect(lib).toContain("제안할 칸");
+    expect(lib).toContain("necessity와 requiredLevel을 반드시 함께");
   });
 });
