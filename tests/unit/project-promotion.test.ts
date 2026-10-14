@@ -205,9 +205,9 @@ describe("promoteOpportunity (ADR-0095)", () => {
     insertRouteDecision(oppId, "greenfield");
     completeS5(oppId);
     setS5InvestmentLines(oppId, [
-      { line: "생산설비 투자", category: "capex", amount: 12, note: "초기 라인 구축" },
-      { line: "초기 인건비", category: "labor", amount: 3 },
-      { line: "무효 항목(카테고리 불량)", category: "bogus", amount: 1 },
+      { line: "생산설비 투자", category: "capex", amount: 1200, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "lumpsum", note: "초기 라인 구축" },
+      { line: "초기 인건비", category: "labor", amount: 300, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly" },
+      { line: "무효 항목(카테고리 불량)", category: "bogus", amount: 1, amountUnit: "krw_m", amountUnitConfirmed: true },
     ]);
     seedGates(oppId, "greenfield");
 
@@ -225,7 +225,7 @@ describe("promoteOpportunity (ADR-0095)", () => {
     expect(lines).toHaveLength(2);
     const capex = lines.find((l) => l.category === "capex")!;
     expect(capex.name).toBe("생산설비 투자");
-    expect(capex.annual_amount_krw_m).toBe(1200); // 12억원 × 100 = 1200 (백만원)
+    expect(capex.annual_amount_krw_m).toBe(1200); // confirmed 백만원 lump sum
     const labor = lines.find((l) => l.category === "labor")!;
     expect(labor.annual_amount_krw_m).toBe(300);
     expect(labor.note).toBe("S5에서 이관됨 — 검증 필요");
@@ -247,12 +247,13 @@ describe("promoteOpportunity (ADR-0095)", () => {
     const oppId = insertOpportunity();
     insertRouteDecision(oppId, "greenfield");
     completeS5(oppId);
+    const conf = { amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW" };
     setS5InvestmentLines(oppId, [
-      { line: "정부 R&D 지원금", category: "gov_rnd", amount: 5, note: "국책과제" },
-      { line: "월간 임차료", category: "opex", amount: 1, period: "monthly" },
-      { line: "분기 라이선스", category: "opex", amount: 2, period: "quarterly" },
-      { line: "장비 일시불 구매", category: "capex", amount: 10, period: "lumpsum" },
-      { line: "해외 컨설팅", category: "opex", amount: 1, currency: "USD" },
+      { line: "정부 R&D 지원금", category: "gov_rnd", amount: 500, note: "국책과제", period: "lumpsum", ...conf },
+      { line: "월간 임차료", category: "opex", amount: 100, period: "monthly", ...conf },
+      { line: "분기 라이선스", category: "opex", amount: 200, period: "quarterly", ...conf },
+      { line: "장비 일시불 구매", category: "capex", amount: 1000, period: "lumpsum", ...conf },
+      { line: "단위 미확인 항목", category: "opex", amount: 5 }, // legacy unit-less — not copied, audited
     ]);
     seedGates(oppId, "greenfield");
 
@@ -261,24 +262,23 @@ describe("promoteOpportunity (ADR-0095)", () => {
     const lines = db
       .query("SELECT name, category, annual_amount_krw_m, note FROM business_case_line WHERE model_id = ? ORDER BY name")
       .all(model.id) as Array<Record<string, unknown>>;
-    expect(lines).toHaveLength(5);
+    expect(lines).toHaveLength(4);
 
     const govRnd = lines.find((l) => l.name === "정부 R&D 지원금")!;
     expect(govRnd.category).toBe("gov_rnd");
-    expect(govRnd.annual_amount_krw_m).toBe(500); // 5억 × 100
+    expect(govRnd.annual_amount_krw_m).toBe(500);
 
     const monthly = lines.find((l) => l.name === "월간 임차료")!;
-    expect(monthly.annual_amount_krw_m).toBe(1200); // 1억 × 12 × 100
+    expect(monthly.annual_amount_krw_m).toBe(1200); // 100 백만원 × 12
 
     const quarterly = lines.find((l) => l.name === "분기 라이선스")!;
-    expect(quarterly.annual_amount_krw_m).toBe(800); // 2억 × 4 × 100
+    expect(quarterly.annual_amount_krw_m).toBe(800); // 200 백만원 × 4
 
     const lumpsum = lines.find((l) => l.name === "장비 일시불 구매")!;
-    expect(lumpsum.annual_amount_krw_m).toBe(1000); // 10억 × 100, not multiplied
+    expect(lumpsum.annual_amount_krw_m).toBe(1000); // lump sum, not multiplied
     expect(lumpsum.note).toContain("일시불 총액");
 
-    const fx = lines.find((l) => l.name === "해외 컨설팅")!;
-    expect(fx.note).toContain("원문 통화: USD");
+    expect((db.query("SELECT count(*) c FROM audit_log WHERE action = 'greenfield_cost.promotion_skipped' AND target LIKE ?").get(`${oppId}%unit_unconfirmed%`) as { c: number }).c).toBe(1);
   });
 
   test("double promotion is rejected, not idempotent", () => {

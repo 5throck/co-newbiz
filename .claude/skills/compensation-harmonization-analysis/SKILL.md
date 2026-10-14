@@ -3,7 +3,7 @@ name: compensation-harmonization-analysis
 scope: co-newbiz
 description: >
   Benchmarks employee compensation at job-family/grade level (`comp_benchmark`,
-  k>=3 aggregate only — never individual rows) and models post-integration
+  k>=5 aggregate only — never individual rows) and models post-integration
   harmonization with an explicit upward bias in BOTH comparison directions
   (ADR-0027): whichever side is higher sets the floor for that job family/
   grade, because Korean labor law generally prevents lowering compensation
@@ -58,9 +58,9 @@ rule: "never modeled as a savings line."
 ## Execution Steps
 
 1. **Benchmark compensation at job-family/grade level** on both sides,
-   aggregate only (`comp_benchmark`, k≥3 headcount per row — the schema
-   itself rejects a smaller aggregate, since a 1-2 person row re-identifies
-   individuals even without a name column)
+   aggregate only (`comp_benchmark`, k≥5 headcount per row per
+   `neb-policy` boundary 6 — a small-cell row re-identifies individuals
+   even without a name column)
 2. **Compare job-family-by-job-family, grade-by-grade** — not a single
    company-wide average, which would hide harmonization cost in
    over-represented families

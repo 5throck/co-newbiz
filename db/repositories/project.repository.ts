@@ -30,7 +30,7 @@ import { deriveOriginFromSubTrack } from "../lib/origin-derivation.ts";
 import { getDb } from "../client.ts";
 // ADR-0173: pure helpers shared with the S5 route (no db access inside).
 import { parseGapRegister } from "../../app/web-next/lib/capability-gap.ts";
-import { lineAmountKrwM, sourceRowOf, splitForPromotion } from "../../app/web-next/lib/capability-cost-lines.ts";
+import { manualLineKrwM, sourceRowOf, splitForPromotion } from "../../app/web-next/lib/capability-cost-lines.ts";
 import { ulid } from "../lib/ulid.ts";
 import { appendAudit, grantProjectMembership, logDataAccess } from "../lib/access-control.ts";
 import { getCurrentRouteDecision } from "./route-decision.repository.ts";
@@ -313,7 +313,8 @@ export function promoteOpportunity(
       } catch { /* malformed — treat as none, don't block promotion over it */ }
       const validCategories = new Set(["labor", "opex", "capex", "revenue", "gov_rnd"]);
       // ADR-0173: skip unreflected capability entries; reflected ones become exact 백만원 lump sums
-      // recomputed from the live judgement (never 억 and back). Manual lines behave as before.
+      // recomputed from the live judgement (never 억 and back). Manual lines are copied only when their
+      // unit is confirmed and the currency is KRW — unconfirmed-unit/non-KRW lines are audited, never copied.
       const gapJson = (db.query("SELECT capability_gap_json AS j FROM opportunity WHERE id = ?").get(opportunityId) as { j: string | null } | undefined)?.j;
       const split = splitForPromotion(Array.isArray(lines) ? lines : [], parseGapRegister(gapJson).rows.map(sourceRowOf));
       lines = (split.manual as typeof lines).filter((l) => l?.line?.trim() && validCategories.has(l.category));
@@ -326,11 +327,10 @@ export function promoteOpportunity(
         const PERIOD_MULTIPLIER: Record<string, number> = { monthly: 12, quarterly: 4, yearly: 1, lumpsum: 1 };
         for (const l of lines) {
           const periodMult = PERIOD_MULTIPLIER[l.period ?? "yearly"] ?? 1;
-          // amountUnit "krw_m" lines are already 백만원; legacy lines (no marker) hold 억 and keep the ×100 conversion.
-          const annualAmount = lineAmountKrwM(l) * periodMult;
+          // Canonical 백만원 from the confirmed unit; splitForPromotion already excluded unconfirmed/non-KRW lines.
+          const annualAmount = (manualLineKrwM(l) ?? 0) * periodMult;
           const flags: string[] = [];
           if (l.period === "lumpsum") flags.push("일시불 총액 — 연반복 아님");
-          if (l.currency && l.currency !== "KRW") flags.push(`원문 통화: ${l.currency} — 환율 미반영, S8에서 환산 필요`);
           const note = [...flags, l.note?.trim() || "S5에서 이관됨 — 검증 필요"].join(". ");
           db.run(
             `INSERT INTO business_case_line (id, model_id, category, name, annual_amount_krw_m, start_year, growth_rate, note, created_by, created_at)
@@ -347,6 +347,9 @@ export function promoteOpportunity(
         }
         if (split.skipped.length > 0) {
           appendAudit(db, { actor: opts.promotedBy, action: "capability_cost.promotion_skipped", target: `${opportunityId}:${split.skipped.join(",")}`, now });
+        }
+        for (const s of split.skippedManual) {
+          appendAudit(db, { actor: opts.promotedBy, action: "greenfield_cost.promotion_skipped", target: `${opportunityId}:${s.reason}:${s.line.slice(0, 80)}`, now });
         }
       }
     }

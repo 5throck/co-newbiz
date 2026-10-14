@@ -29,19 +29,12 @@ import { CapabilityCostBlock } from "./CapabilityCostBlock.tsx";
 import { EntryStrategySection } from "./EntryStrategySection.tsx";
 import { parseEntryStrategy, serializeEntryStrategy, type EntryFormState, type EntryModes } from "../../lib/greenfield-entry-strategy.ts";
 import {
-  AMOUNT_UNIT_KRW_M, applySelection, deriveCapabilityCostLines, findDuplicateWarnings, formatKrwM, hasUnsavedReflection, investmentTotals, isCapabilityEntry, lineAmountKrwM, lineSaveStates, reflectionBody, reflectionSummary, selectionPayload, unifiedFooter, unifiedInvestmentRows,
-  type CapabilityCostView, type CostCategory, type CostSelection, type DuplicateWarning, type MilestoneCandidateView,
+  AMOUNT_UNIT_KRW_M, amountUnitLabel, applySelection, deriveCapabilityCostLines, findDuplicateWarnings, formatKrwM, hasUnsavedReflection, investmentTotals, isCapabilityEntry, isFxUnit, lineSaveStates, manualLineIssues, manualLineKrwM, normalizeLegacyLine, reflectionBody, reflectionSummary, sanityLineOversize, sanityTotalOversize, selectionPayload, unifiedFooter, unifiedInvestmentRows,
+  type AmountUnit, type CapabilityCostView, type CostCategory, type CostSelection, type DuplicateWarning, type ManualCostLine, type MilestoneCandidateView,
 } from "../../lib/capability-cost-lines.ts";
 import type { AttainabilityRowView } from "../../lib/capability-attainability.ts";
 
-interface BcLine {
-  line: string; category: "labor" | "opex" | "capex" | "revenue" | "gov_rnd"; amount: number; note?: string;
-  period: "monthly" | "quarterly" | "yearly" | "lumpsum"; currency: "KRW" | "USD" | "EUR" | "JPY" | "CNY";
-  /** Amounts are 백만원 ("krw_m"); legacy lines without the marker held 억 and are converted on load. */
-  amountUnit?: "krw_m";
-  /** ADR-0173: capability keys whose double-count warning the person dismissed for this manual line. */
-  dupDismissed?: string[];
-}
+type BcLine = ManualCostLine;
 interface Assessment {
   id: string; entry_strategy: string | null; alternatives_considered: string | null;
   rationale: string | null; updated_at: string;
@@ -71,10 +64,13 @@ interface InvestmentReco {
   };
 }
 
-// ADR-0137 — S8 business_case_line.category와 동일 어휘(승격 시 그대로 이관).
-const CATEGORY_LABEL: Record<BcLine["category"], string> = { labor: "인건비", opex: "운영비", capex: "설비투자", revenue: "수익", gov_rnd: "정부 R&D" };
-const PERIOD_LABEL: Record<BcLine["period"], string> = { monthly: "월", quarterly: "분기", yearly: "년", lumpsum: "일시불(총액)" };
-const CURRENCY_LABEL: Record<BcLine["currency"], string> = { KRW: "원화", USD: "달러", EUR: "유로", JPY: "엔화", CNY: "위안" };
+// ADR-0137 — S8 business_case_line.category/period/currency 어휘(승격 시 그대로 이관).
+type BcCategory = NonNullable<BcLine["category"]>;
+type BcCurrency = NonNullable<BcLine["currency"]>;
+type BcPeriod = NonNullable<BcLine["period"]>;
+const CATEGORY_LABEL: Record<BcCategory, string> = { labor: "인건비", opex: "운영비", capex: "설비투자", revenue: "수익", gov_rnd: "정부 R&D" };
+const PERIOD_LABEL: Record<BcPeriod, string> = { monthly: "월", quarterly: "분기", yearly: "년", lumpsum: "일시불(총액)" };
+const CURRENCY_LABEL: Record<BcCurrency, string> = { KRW: "원화", USD: "달러", EUR: "유로", JPY: "엔화", CNY: "위안" };
 
 export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: string; onSaved?: () => void }) {
   const { me } = useAuth();
@@ -100,6 +96,9 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   const [costNote, setCostNote] = useState<string | null>(null);
   const [costError, setCostError] = useState<string | null>(null);
   const [bcLines, setBcLines] = useState<BcLine[]>([]);
+  // Per-row dismissals of the "금액이 매우 큽니다" sanity chip (decision support only).
+  const [sanityDismissed, setSanityDismissed] = useState<Set<number>>(new Set());
+  const [totalSanityDismissed, setTotalSanityDismissed] = useState(false);
   const [rationale, setRationale] = useState("");
   // ADR-0173 slice 1: stored capability entries stay out of the manual list; the person's unsaved choices overlay the derived lines.
   const [storedCapEntries, setStoredCapEntries] = useState<unknown[]>([]);
@@ -123,8 +122,9 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
         }
         if (scope !== "strategy") {
           const all = r.data.assessment?.business_case_lines ?? [];
-          // Legacy manual lines (no amountUnit) hold 억: shown and re-saved in 백만원, value-preserving.
-          setBcLines((all.filter((l) => !isCapabilityEntry(l)) as BcLine[]).map((l) => ({ ...l, amount: lineAmountKrwM(l), amountUnit: AMOUNT_UNIT_KRW_M })));
+          // Legacy manual lines are shown as-entered: the unit is unknown, so nothing is converted
+          // and the row keeps a "단위 확인 필요" chip until a person picks a unit.
+          setBcLines((all.filter((l) => !isCapabilityEntry(l)) as Array<Record<string, unknown>>).map(normalizeLegacyLine));
           setStoredCapEntries(all.filter((l) => isCapabilityEntry(l)));
           setCapSel({});
         }
@@ -142,6 +142,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
 
   useEffect(() => {
     setSelected(null); setGapRows([]); setReco(null); setRecoError(null);
+    setSanityDismissed(new Set()); setTotalSanityDismissed(false);
     entryDirty.current = false; setEntryReset((n) => n + 1);
     setEntryIsDirty(false); setEntryNote(null); setEntryError(null); setCostNote(null); setCostError(null);
     void loadDetail(opportunityId);
@@ -163,8 +164,8 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
 
   // 추천 항목 추가 — 기존 목록을 덮어쓰지 않고 뒤에 이어붙인다. 금액은 사람이
   // 입력한다(LLM은 금액을 지어내지 않음, 경계 #2).
-  function addRecoItem(item: { line: string; category: "labor" | "opex" | "capex" | "revenue" | "gov_rnd"; note: string }) {
-    setBcLines((prev) => [...prev, { line: item.line, category: item.category, amount: 0, amountUnit: AMOUNT_UNIT_KRW_M, note: item.note, period: "yearly", currency: "KRW" }]);
+  function addRecoItem(item: { line: string; category: BcCategory; note: string }) {
+    setBcLines((prev) => [...prev, { line: item.line, category: item.category, amount: 0, amountUnit: AMOUNT_UNIT_KRW_M, amountUnitConfirmed: true, note: item.note, currency: "KRW" }]);
   }
 
   // Live judgements (saved) drive the derived lines; before the editor loads, the server's derivation is shown.
@@ -355,7 +356,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
 
           {/* 3. 투자비 검토 요건 */}
           <h3 className="text-[length:var(--fs-body)] mb-1">3️⃣ 투자비 검토 요건 (S8 사업성 분석 입력)</h3>
-          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-unit-note">단위: 백만원(KRW)</p>
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-unit-note">금액 단위는 항목마다 선택합니다 (기본 백만원) — 단위·분류·주기가 확인된 항목만 합계에 포함됩니다.</p>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-xref">반영된 항목은 아래 투자비 항목 목록에 포함됩니다.</p>
           <CapabilityCostBlock
             lines={capLines}
@@ -397,29 +398,55 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
             }
             const i = row.manualIndex;
             const l = bcLines[i];
+            const issues = manualLineIssues(l);
+            const canonical = manualLineKrwM(l);
+            const unitSel = l.amountUnit;
+            const unitLabel = unitSel ? amountUnitLabel(unitSel, l.currency ?? "KRW") : null;
+            const confirmChip = issues.length > 0;
+            const chipText = issues.includes("unit") ? "단위 확인 필요" : "확인 필요";
+            const issueText = issues.length === 0 ? null : `확인 필요: ${issues.map((iss) => ({ category: "분류", period: "주기", currency: "통화", unit: "단위" }[iss])).join("·")}`;
+            const oversize = sanityLineOversize(canonical) && !sanityDismissed.has(i);
             return (
-              <li key={`m${i}`} className="list-none">
+              <li key={`m${i}`} className="list-none" data-testid={`invest-manual-row-${i}`}>
+                {confirmChip && <span className="status-chip status-amber" title={issueText ?? undefined} data-testid={`invest-confirm-chip-${i}`}><span aria-hidden="true">!</span> {chipText}</span>}
               <div className="flex flex-wrap items-center gap-1 mb-1">
                 <input aria-label="항목명" placeholder="항목명 (예: 설비 투자, 연매출)" value={l.line} onChange={(e) => setBc(i, { line: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 12rem" }} />
-                <select aria-label="분류" value={l.category} onChange={(e) => setBc(i, { category: e.target.value as BcLine["category"] })} className="sizing-new-input sizing-new-input-sm">
-                  {(Object.keys(CATEGORY_LABEL) as BcLine["category"][]).map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
+                <select aria-label="분류" value={l.category ?? ""} onChange={(e) => setBc(i, { category: e.target.value as BcCategory })} className="sizing-new-input sizing-new-input-sm">
+                  <option value="" disabled>선택</option>
+                  {(Object.keys(CATEGORY_LABEL) as BcCategory[]).map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
                 </select>
-                <input aria-label={l.currency === "KRW" ? "금액(백만원)" : `금액(백만 ${CURRENCY_LABEL[l.currency]})`} type="number" placeholder={l.currency === "KRW" ? "금액(백만원)" : `금액(백만 ${CURRENCY_LABEL[l.currency]})`} value={l.amount || ""} onChange={(e) => setBc(i, { amount: Number(e.target.value) })} className="sizing-new-input sizing-new-input-sm" style={{ width: "6rem" }} />
-                <select aria-label="기준 통화" value={l.currency} onChange={(e) => setBc(i, { currency: e.target.value as BcLine["currency"] })} className="sizing-new-input sizing-new-input-sm">
-                  {(Object.keys(CURRENCY_LABEL) as BcLine["currency"][]).map((c) => <option key={c} value={c}>{CURRENCY_LABEL[c]}</option>)}
+                <input aria-label="금액" type="number" placeholder="금액" value={l.amount || ""} onChange={(e) => setBc(i, { amount: Number(e.target.value) })} className="sizing-new-input sizing-new-input-sm" style={{ width: "7rem" }} />
+                <select aria-label="금액 단위" value={l.amountUnit ?? ""} onChange={(e) => { const u = e.target.value as AmountUnit; setBc(i, { amountUnit: u, amountUnitConfirmed: true }); }} className="sizing-new-input sizing-new-input-sm">
+                  <option value="" disabled>선택</option>
+                  {((l.currency === "KRW" ? ["krw", "krw_k", "krw_m", "krw_eok"] : ["fx_m", "fx_eok"]) as AmountUnit[]).map((u) => <option key={u} value={u}>{amountUnitLabel(u, l.currency ?? "KRW")}</option>)}
                 </select>
-                <select aria-label="금액 기준 (반복 주기 또는 일시불)" value={l.period} onChange={(e) => setBc(i, { period: e.target.value as BcLine["period"] })} className="sizing-new-input sizing-new-input-sm">
-                  {(Object.keys(PERIOD_LABEL) as BcLine["period"][]).map((p) => <option key={p} value={p}>{PERIOD_LABEL[p]}</option>)}
+                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid={`invest-unit-text-${i}`}>{canonical !== null ? `= ${formatKrwM(canonical)}` : unitSel && isFxUnit(l.amountUnit) ? `= ${l.amount.toLocaleString("ko-KR")} ${unitLabel} (환율 미반영 — 합계 제외)` : "단위를 고르면 금액이 계산됩니다"}</span>
+                <select aria-label="기준 통화" value={l.currency ?? "KRW"} onChange={(e) => { const c = e.target.value as BcCurrency; setBc(i, { currency: c, amountUnit: c === "KRW" ? "krw_m" : "fx_m" }); }} className="sizing-new-input sizing-new-input-sm">
+                  {(Object.keys(CURRENCY_LABEL) as BcCurrency[]).map((c) => <option key={c} value={c}>{CURRENCY_LABEL[c]}</option>)}
+                </select>
+                <select aria-label="금액 기준 (반복 주기 또는 일시불)" value={l.period ?? ""} onChange={(e) => setBc(i, { period: e.target.value as BcPeriod })} className="sizing-new-input sizing-new-input-sm">
+                  <option value="" disabled>선택</option>
+                  {(Object.keys(PERIOD_LABEL) as BcPeriod[]).map((p) => <option key={p} value={p}>{PERIOD_LABEL[p]}</option>)}
                 </select>
                 <input aria-label="비고" placeholder="비고" value={l.note ?? ""} onChange={(e) => setBc(i, { note: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 10rem" }} />
-                {canAct && <button type="button" className="btn-ghost btn-sm" onClick={() => setBcLines((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>}
+                {canAct && <button type="button" className="btn-ghost btn-sm" aria-label="항목 삭제" onClick={() => setBcLines((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>}
+                {oversize && canAct && <button type="button" className="btn-ghost btn-sm" data-testid={`invest-sanity-${i}`} onClick={() => setSanityDismissed((prev) => new Set(prev).add(i))}>닫기</button>}
               </div>
               </li>
             );
           })}
           </ul>
           <p className="text-[length:var(--fs-caption)] mb-2" role="status" data-testid="invest-item-footer">{footer.text}</p>
-          {canAct && <button type="button" className="btn-ghost btn-sm mb-3" onClick={() => setBcLines((prev) => [...prev, { line: "", category: "opex", amount: 0, amountUnit: AMOUNT_UNIT_KRW_M, period: "yearly", currency: "KRW" }])}>＋ 항목 추가</button>}
+          {invTotals.manualExcludedNeedsConfirm > 0 && (
+            <p className="text-[length:var(--fs-caption)] mb-2" role="status" data-testid="invest-excluded-note">확인 필요 {invTotals.manualExcludedNeedsConfirm}건은 합계에서 제외됨</p>
+          )}
+          {sanityTotalOversize(invTotals.grandKrwM) && !totalSanityDismissed && (
+            <div className="flex items-center gap-1 mb-2" data-testid="invest-total-sanity">
+              <span className="status-chip status-amber"><span aria-hidden="true">!</span> 금액이 매우 큽니다 — 단위를 확인하세요</span>
+              {canAct && <button type="button" className="btn-ghost btn-sm" onClick={() => setTotalSanityDismissed(true)}>닫기</button>}
+            </div>
+          )}
+          {canAct && <button type="button" className="btn-ghost btn-sm mb-3" onClick={() => setBcLines((prev) => [...prev, { line: "", category: undefined, amount: 0, amountUnit: AMOUNT_UNIT_KRW_M, amountUnitConfirmed: true, period: undefined, currency: "KRW" }])}>＋ 항목 추가</button>}
 
           {/* ── LLM 투자비 항목 추천 — ADR-0118: 제안은 LLM, 저장은 사람 ── */}
           <div className="sizing-grade-card mb-3">

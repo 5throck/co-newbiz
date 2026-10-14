@@ -279,6 +279,10 @@ The total is about 10 working days. Slices 1-3 already give the decider the two-
 7. Does `결정` become a primary tab? **Yes.** It is the shared end point of both lenses.
 8. Who drafts with AI? **Existing agents (technical-dd, ip, certification) through PM. No new skill.**
 
+## 13.1 Decided 2026-10-15
+
+Decider decision (chat 2026-10-15): once the S7 per-target capability judgement is implemented (ADR-0171 Brown Field slices), S8 keeps its current structure (option A). The technical-feasibility tab stays the read-only capability summary (S5 or selected-target S7 judgement, per ADR-0171) plus the technical lens T2-T5 inputs (TRL, verification, permits/certifications — lens slices 4-8, not yet implemented) plus the capability-adjusted scenario pointer. S8 does not become finance-only, and T2-T5 do not move to S9 — S9 remains the paired verification for Brown Field (§15). After S7 lands, if the capability summary table feels sparse, it may be compressed into a single summary-strip line (future refinement, not now).
+
 ## 15. Brown Field: paired S8 technical lens and S9 technical verification
 
 ### 15.1 Existing S9 Brown Field DD structure (facts)

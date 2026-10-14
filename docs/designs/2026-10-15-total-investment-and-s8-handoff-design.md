@@ -12,7 +12,7 @@ lang_reason: source-material
 Korean appears only as UI labels in backticks. All prose is English. Paths are relative to `app/web-next/` unless stated.
 
 - Decider: human decider, chat 2026-10-15 feedback (F1-F3 below). Drafted by platform-lead.
-- ADR: [ADR-0174](../adr/0174-total-investment-and-s8-handoff.md) (Proposed).
+- ADR: [ADR-0174](../adr/0174-total-investment-and-s8-handoff.md) (Accepted 2026-10-15).
 - Builds on: [ADR-0173](../adr/0173-capability-cost-and-milestone-linkage.md) and its [design](2026-10-15-capability-cost-and-milestone-linkage-design.md); absorbs its slice 2 (S8 re-import).
 
 ## 1. Problem statement
@@ -138,14 +138,16 @@ Audit events: `investment_plan.horizon_set`, `investment_plan.timing_set`, `inve
 3. Re-import action (ADR-0173 slice 2).
 4. S10 tranche reconciliation against the explicit capex schedule per year; S12 investment variance (planned vs actual by year).
 
-## 11. Open decisions (recommendations)
+## 11. Open decisions (resolved 2026-10-15)
 
-- OD-1 Does 총 투자비 include labor and opex? Recommend yes, with `capex 소계` shown separately; S8 investment uses capex only.
-- OD-2 Horizon source of truth: recommend S5 `검토 기간` seeds, S8 `bc.horizon_years` governs after promotion, mismatch shown.
-- OD-3 Y1 spend timing in S8: recommend Y1 spend = year 0 (matches today's year-0 investment); alternative is year 1.
-- OD-4 Default basis for new projects: recommend `ratio` until a person switches, to keep results stable.
-- OD-5 Depreciation, tax, financing: recommend out of scope; separate ADR if DSCR is required.
-- OD-6 Capability spend year: recommend `ceil(months/12)` default, editable; alternative is Y1 always.
+Resolved: the human decider directed in chat on 2026-10-15 that S5 cost items (investment, labor, operating costs) must be reflected in the S8 business-case analysis, adopting the recommendation in every row below (DEC-20261015-02). No per-item checklist was reviewed.
+
+- OD-1 Resolved as recommended: 총 투자비 includes labor and opex, with `capex 소계` shown separately; S8 investment uses capex only.
+- OD-2 Resolved as recommended: S5 `검토 기간` seeds the horizon, S8 `bc.horizon_years` governs after promotion, mismatch shown.
+- OD-3 Resolved as recommended: Y1 spend = year 0 (matches today's year-0 investment), stated on screen.
+- OD-4 Resolved as recommended: default basis `ratio` until a person switches, to keep results stable.
+- OD-5 Resolved as recommended: depreciation, tax, financing out of scope; a separate ADR if DSCR is required.
+- OD-6 Resolved as recommended: capability spend year defaults to `ceil(months/12)`, editable.
 
 ## 12. Not verified
 

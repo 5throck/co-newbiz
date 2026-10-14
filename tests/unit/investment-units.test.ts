@@ -1,8 +1,10 @@
 // @version 1.0.0
 /**
- * ADR-0173 amendment 2026-10-15: investment amounts are 백만원 everywhere (amountUnit "krw_m"); legacy lines without the
- * marker hold 억 and are converted value-preserving. Also the explicit reflection action (saved/unsaved diff, summary,
- * partial payload) and the strategy-only save. Pure helpers + source-structure checks; no network, no real LLM.
+ * Unit-confirm trust model for S5 investment lines (ADR-0173 amendment 2026-10-15): every manual line
+ * carries amountUnit (krw|krw_k|krw_m|krw_eok|fx_m|fx_eok) and amountUnitConfirmed — true only after a
+ * person picked the unit in the UI. Legacy/old-shape lines are normalized WITHOUT conversion, stay
+ * unconfirmed, and are excluded from totals and promotion until confirmed. Pure helpers + source-structure
+ * checks; no network, no real LLM.
  */
 import { test, expect, describe } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -22,30 +24,69 @@ describe("unit conversion without drift", () => {
     expect(cl.eokToKrwM(0.0001)).toBe(0.01);
     expect(cl.eokToKrwM(Number.NaN)).toBe(0);
   });
-  test("a line without amountUnit is 억, with krw_m it is 백만원; non-KRW converts the same way", () => {
+  test("KRW-family units convert exactly; fx units and unknown units do not convert", () => {
+    // 5,200,000원 -> 5.2백만원
+    expect(cl.manualLineKrwM({ amount: 5_200_000, amountUnit: "krw", currency: "KRW" })).toBe(5.2);
+    // 0.35억 -> 35백만원 (legacy 억 stamp handled by lineAmountKrwM)
     expect(cl.lineAmountKrwM({ amount: 0.35 })).toBe(35);
-    expect(cl.lineAmountKrwM({ amount: 35, amountUnit: "krw_m" })).toBe(35);
-    expect(cl.lineAmountKrwM({ amount: "2" })).toBe(200);
-    expect(cl.lineAmountKrwM({})).toBe(0);
-    expect(cl.formatKrwM(1250)).toBe("1,250백만원");
-    expect(cl.formatKrwM(1234.5)).toBe("1,234.5백만원");
+    expect(cl.manualLineKrwM({ amount: 35, amountUnit: "krw_m", currency: "KRW" })).toBe(35);
+    // 2,500천원 -> 2.5백만원
+    expect(cl.manualLineKrwM({ amount: 2500, amountUnit: "krw_k", currency: "KRW" })).toBe(2.5);
+    // 1.2억 -> 120백만원
+    expect(cl.manualLineKrwM({ amount: 1.2, amountUnit: "krw_eok", currency: "KRW" })).toBe(120);
+    // no fx conversion, ever (boundary: no fabricated rates)
+    expect(cl.manualLineKrwM({ amount: 1.2, amountUnit: "fx_m", currency: "USD" })).toBeNull();
+    expect(cl.manualLineKrwM({ amount: 1.2, amountUnit: "fx_eok", currency: "EUR" })).toBeNull();
+    // unknown unit
+    expect(cl.manualLineKrwM({ amount: 1.2, amountUnit: "yard", currency: "KRW" })).toBeNull();
+    // stored canonical wins
+    expect(cl.manualLineKrwM({ amount: 1, amountUnit: "krw_m", currency: "KRW", amountKrwM: 42.555 })).toBe(42.56);
   });
 });
 
-describe("server normalization writes the unit marker", () => {
+describe("legacy detection and normalization without conversion", () => {
+  test("the demo revenue line is legacy: category revenue, no unit stamp trusted, growth kept read-only", () => {
+    const m = cl.normalizeLegacyLine({ line: "유럽 브레이커", kind: "revenue", amount: 5_200_000, growth_rate: 0.12, amountUnit: "krw_m" });
+    expect(m.category).toBe("revenue");
+    expect(m.amount).toBe(5_200_000); // untouched — no silent unit migration
+    expect(m.amountUnit).toBeUndefined(); // the old krw_m stamp came from the previous silent conversion
+    expect(m.amountUnitConfirmed).toBe(false);
+    expect(m.currency).toBe("KRW"); // missing currency defaults to KRW
+    expect(m.period).toBeUndefined(); // stays unset; yearly is only a UI suggestion (growth_rate present)
+    expect(m.growthRate).toBe(0.12);
+    expect(cl.manualLineIssues(m)).toEqual(["period", "unit"]);
+    expect(cl.manualLineNeedsConfirm(m)).toBe(true);
+    expect(cl.manualLineIsLegacy({ line: "x", kind: "cost" })).toBe(true);
+  });
+  test("an old-shape cost line never defaults to labor; a confirmed krw_m line stays confirmed", () => {
+    const cost = cl.normalizeLegacyLine({ line: "설비", kind: "cost", amount: 12, amountUnit: "krw_m" });
+    expect(cost.category).toBeUndefined();
+    expect(cost.amountUnit).toBeUndefined();
+    expect(cost.amountUnitConfirmed).toBe(false);
+    const fresh = cl.normalizeLegacyLine({ line: "임대료", category: "opex", amount: 10, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "monthly" });
+    expect(fresh.amountUnitConfirmed).toBe(true);
+    expect(cl.manualLineIssues(fresh)).toEqual([]);
+  });
+});
+
+describe("server normalization: no silent conversion, unknown units rejected", () => {
   const rows = [{ id: "k1", capability: "가공", resolution: "build", closing_cost_krw_m: 3000, months_to_attain: 12, grade: "medium", confirmed_at: "t", stale: false, required_level: "", current_level: "", necessity: "essential", held_status: "none" }] as any;
   const norm = (incoming: unknown) => cl.normalizeBusinessCaseLines(incoming, rows, null, { userId: "u", at: "t" });
-  test("legacy manual lines are rewritten value-preserving; krw_m lines are untouched; foreign currency also x100", () => {
+  test("legacy manual lines keep their raw amount and stay unconfirmed; complete confirmed lines gain amountKrwM", () => {
     const r = norm([
       { line: "a", category: "opex", amount: 0.35, currency: "KRW", period: "yearly" },
-      { line: "b", category: "opex", amount: 35, amountUnit: "krw_m", currency: "KRW", period: "yearly" },
-      { line: "c", category: "capex", amount: 1.2, currency: "USD", period: "lumpsum" },
+      { line: "b", category: "opex", amount: 35, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly" },
+      { line: "c", category: "capex", amount: 1.2, currency: "USD", period: "lumpsum", amountUnit: "fx_m", amountUnitConfirmed: true },
     ]);
-    expect(r.ok && r.lines).toEqual([
-      { line: "a", category: "opex", amount: 35, amountUnit: "krw_m", currency: "KRW", period: "yearly" },
-      { line: "b", category: "opex", amount: 35, amountUnit: "krw_m", currency: "KRW", period: "yearly" },
-      { line: "c", category: "capex", amount: 120, amountUnit: "krw_m", currency: "USD", period: "lumpsum" },
-    ]);
+    expect(r.ok).toBe(true);
+    const [a, b, c] = (r as { ok: true; lines: any[] }).lines;
+    expect(a).toMatchObject({ line: "a", amount: 0.35, amountUnit: undefined, amountUnitConfirmed: false, amountKrwM: null });
+    expect(b).toMatchObject({ line: "b", amount: 35, amountUnit: "krw_m", amountUnitConfirmed: true, amountKrwM: 35 });
+    expect(c).toMatchObject({ line: "c", amount: 1.2, amountUnit: "fx_m", amountUnitConfirmed: true, amountKrwM: null }); // fx: no conversion
+  });
+  test("unknown units are rejected with invalid_amount_unit", () => {
+    const bad = norm([{ line: "x", category: "opex", amount: 1, amountUnit: "billion", currency: "KRW", period: "yearly" }]);
+    expect(bad.ok === false && bad.error.code).toBe("invalid_amount_unit");
   });
   test("capability amount is compared in 백만원; a unit-less client amount is read as 억", () => {
     expect(norm([{ source: "capability", capabilityKey: "k1", reflected: true, amount: 3000, amountUnit: "krw_m" }]).ok).toBe(true);
@@ -54,16 +95,48 @@ describe("server normalization writes the unit marker", () => {
     expect(bad.ok === false && bad.error.code).toBe("amount_mismatch");
     expect(bad.ok === false && bad.error.message).toContain("백만원");
     const stored = norm([{ source: "capability", capabilityKey: "k1", reflected: true }]);
-    expect(stored.ok && stored.lines[0]).toMatchObject({ amount: 3000, amountUnit: "krw_m", costKrwM: 3000 });
+    expect(stored.ok && stored.lines[0]).toMatchObject({ amount: 3000, amountUnit: "krw_m", amountUnitConfirmed: true, costKrwM: 3000 });
   });
-  test("totals are 백만원; legacy manual amounts count as 억 x100; promotion keeps the legacy x100 and krw_m is not multiplied", () => {
+});
+
+describe("totals: confirmed lines only, 일시불/연간 split, exclusion counters", () => {
+  test("unconfirmed and non-KRW lines are excluded and counted; lumpsum vs recurring split is exact", () => {
+    const rows = [{ id: "k1", capability: "가공", resolution: "build", closing_cost_krw_m: 3000, months_to_attain: 12, grade: "medium", confirmed_at: "t", stale: false, required_level: "", current_level: "", necessity: "essential", held_status: "none" }] as any;
     const view = cl.deriveCapabilityCostLines(rows.map((r: any) => ({ ...r })), []);
-    const t = cl.investmentTotals(view, new Set(["k1"]), [{ category: "opex", amount: 5, currency: "KRW", period: "lumpsum" }, { category: "opex", amount: 100, amountUnit: "krw_m", currency: "KRW", period: "monthly" }]);
-    expect(t).toMatchObject({ reflectedKrwM: 3000, manualKrwM: 1700, grandKrwM: 4700, capabilityKrwM: 3000 });
-    const repo = read("db/repositories/project.repository.ts");
-    expect(repo).toContain("lineAmountKrwM(l) * periodMult");
-    expect(cl.lineAmountKrwM({ amount: 12 }) * 1).toBe(1200); // legacy 12억 -> 1200
-    expect(cl.lineAmountKrwM({ amount: 100, amountUnit: "krw_m" }) * 12).toBe(1200); // 100 백만원 monthly -> 1200 annual
+    const conf = { amountUnit: "krw_m" as const, amountUnitConfirmed: true };
+    const t = cl.investmentTotals(view, new Set(["k1"]), [
+      { category: "opex", amount: 100, currency: "KRW", period: "monthly", ...conf }, // 1,200 annual
+      { category: "capex", amount: 26, currency: "KRW", period: "lumpsum", amountUnit: "krw_eok", amountUnitConfirmed: true }, // 26억 = 2,600백만원
+      { category: "opex", amount: 5, currency: "KRW", period: "yearly" }, // unconfirmed — excluded
+      { category: "capex", amount: 9_900_000, currency: "KRW", period: "yearly", amountUnit: "krw", amountUnitConfirmed: true }, // 9.9
+      { category: "capex", amount: 100, currency: "USD", period: "lumpsum", amountUnit: "fx_m", amountUnitConfirmed: true }, // fx — excluded
+    ]);
+    expect(t).toMatchObject({
+      reflectedKrwM: 3000, manualKrwM: 3_809.9, grandKrwM: 6_809.9,
+      manualLumpsumKrwM: 2_600, manualRecurringKrwM: 1_209.9,
+      manualExcludedNeedsConfirm: 1, manualExcludedNonKrw: 1,
+    });
+    // sanity chips (decision support, never a cap)
+    expect(cl.sanityLineOversize(100_001)).toBe(true);
+    expect(cl.sanityLineOversize(100_000)).toBe(false);
+    expect(cl.sanityLineOversize(null)).toBe(false);
+    expect(cl.sanityTotalOversize(1_000_001)).toBe(true);
+    expect(cl.sanityTotalOversize(1_000_000)).toBe(false);
+  });
+});
+
+describe("promotion: unconfirmed and non-KRW manual lines are skipped with reasons", () => {
+  test("splitForPromotion lists skippedManual with unit_unconfirmed / currency_non_krw", () => {
+    const s = cl.splitForPromotion([
+      { line: "확인됨", category: "opex", amount: 10, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly" },
+      { line: "단위 미확인", category: "opex", amount: 5, currency: "KRW", period: "yearly" },
+      { line: "외화 항목", category: "capex", amount: 2, amountUnit: "fx_m", amountUnitConfirmed: true, currency: "USD", period: "lumpsum" },
+    ], []);
+    expect(s.manual).toHaveLength(1);
+    expect(s.skippedManual).toEqual([
+      { line: "단위 미확인", reason: "unit_unconfirmed" },
+      { line: "외화 항목", reason: "currency_non_krw" },
+    ]);
   });
 });
 
@@ -92,7 +165,7 @@ describe("reflection action helpers", () => {
     const body = cl.reflectionBody([{ line: "임대", category: "opex", amount: 10, amountUnit: "krw_m" } as any, { line: "  " } as any], lines, {});
     expect(Object.keys(body)).toEqual(["business_case_lines"]);
     expect(body.business_case_lines[0]).toMatchObject({ line: "임대" });
-    expect(body.business_case_lines).toContainEqual({ source: "capability", capabilityKey: "k1", reflected: true, category: "capex", amount: 3000, amountUnit: "krw_m" });
+    expect(body.business_case_lines).toContainEqual({ source: "capability", capabilityKey: "k1", reflected: true, category: "capex", amount: 3000, amountUnit: "krw_m", amountUnitConfirmed: true });
     expect(body.business_case_lines).toHaveLength(3);
   });
   test("summary message", () => {
@@ -108,8 +181,22 @@ describe("source structure", () => {
     for (const k of ["선택한 비용을 투자비에 반영", "저장하지 않은 변경", "반영됨 · 저장됨", "저장 전", "저장 전 변경 있음", "S8 사업성 분석 입력: 프로젝트 승격 시 반영된", "투자비 입력으로 복사됩니다",
       "이미 승격된 프로젝트 — S5의 변경은 S8에 자동 전달되지 않습니다 (재가져오기는 이후 단계)", "금액 (단위: 백만원)", "formatKrwM", "aria-describedby"]) expect(block).toContain(k);
     expect(block).not.toMatch(/\.toFixed\(2\)\}억|억<\/b>/);
-    for (const k of ["단위: 백만원(KRW)", "금액(백만원)", "금액(백만 ", "reflectionBody(bcLines, capLines, capSel)", "amount_mismatch", "setAttRows(null)", "promoted_at"]) expect(page).toContain(k);
+    for (const k of ["금액(백만원)", "reflectionBody(bcLines, capLines, capSel)", "amount_mismatch", "setAttRows(null)", "promoted_at"]) expect(page).toContain(k);
     expect(page).not.toContain("금액(억)");
+  });
+  test("unit-confirm UI: unit select beside the amount, placeholder, chips, unit text, excluded note, sanity guard", () => {
+    for (const k of [
+      'aria-label="금액 단위"', '<option value="" disabled>선택</option>', "invest-confirm-chip-", "invest-unit-text-", "단위 확인 필요",
+      "invest-excluded-note", "합계에서 제외됨", "invest-total-sanity", "금액이 매우 큽니다 — 단위를 확인하세요",
+      "normalizeLegacyLine", "manualLineIssues", "manualLineKrwM", "sanityLineOversize", "sanityTotalOversize",
+      "amountUnitConfirmed: true", "amountUnitLabel", "isFxUnit", "환율 미반영 — 합계 제외",
+    ]) expect(page).toContain(k);
+  });
+  test("the promotion copy uses the canonical 백만원 and audits skipped manual lines", () => {
+    const repo = read("db/repositories/project.repository.ts");
+    expect(repo).toContain("(manualLineKrwM(l) ?? 0) * periodMult");
+    expect(repo).toContain("greenfield_cost.promotion_skipped");
+    expect(repo).not.toContain("lineAmountKrwM(l) * periodMult");
   });
   test("the reflection POST is partial and reloads only the cost part; the strategy save posts only strategy fields", () => {
     const refl = page.slice(page.indexOf("async function reflectCosts"), page.indexOf("if (!selected) {\n    return ("));
@@ -126,10 +213,10 @@ describe("source structure", () => {
   test("strategy section save UI", () => {
     for (const k of ["진출전략 저장", "저장하지 않은 변경", "btn-primary", "btn-ghost", "저장 결과 닫기", "entry-save-error", "저장할 변경이 없습니다"]) expect(sec).toContain(k);
   });
-  test("docs mention the unit and the new routes", () => {
+  test("docs mention the unit model and the new rejection code", () => {
     expect(read("docs/architecture/api-spec.md")).toContain("amountUnit");
-    expect(read("docs/architecture/openapi.yaml")).toContain("amountUnit");
-    expect(read("docs/architecture/ui-spec.md")).toContain("선택한 비용을 투자비에 반영");
+    expect(read("docs/architecture/openapi.yaml")).toContain("amountUnitConfirmed");
+    expect(read("docs/architecture/ui-spec.md")).toContain("단위 확인 필요");
     expect(read("docs/adr/0173-capability-cost-and-milestone-linkage.md")).toContain("OD-5 display unit changed");
   });
 });

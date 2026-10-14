@@ -61,6 +61,120 @@ export const lineAmountKrwM = (l: { amount?: unknown; amountUnit?: unknown }): n
 /** "1,250백만원" (up to 2 decimals, thousands separators). */
 export const formatKrwM = (krwM: number): string => `${(Math.round(krwM * 100) / 100).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}백만원`;
 
+// ── Manual line units (amountUnitConfirmed model, decider 2026-10-15) ────────
+// A stored/posted manual line is CONFIRMED only when a human explicitly picked its unit in the UI
+// (`amountUnitConfirmed: true`). Legacy lines (missing category/period/currency or carrying the
+// old `kind`/`growth_rate` shape) are NEVER auto-converted: their original amount unit is unknown,
+// so the earlier silent 억→백만원 stamp cannot be trusted. Unconfirmed lines are excluded from the
+// totals and from the promotion copy until a person picks a unit and saves.
+
+export type KrwAmountUnit = "krw" | "krw_k" | "krw_m" | "krw_eok";
+export type FxAmountUnit = "fx_m" | "fx_eok";
+export type AmountUnit = KrwAmountUnit | FxAmountUnit;
+/** Full unit vocabulary the route accepts; anything else is rejected (no silent fallback). */
+export const AMOUNT_UNITS: readonly AmountUnit[] = ["krw", "krw_k", "krw_m", "krw_eok", "fx_m", "fx_eok"];
+const KRW_UNIT_TO_KRW_M: Record<KrwAmountUnit, number> = { krw: 1e-6, krw_k: 1e-3, krw_m: 1, krw_eok: 100 };
+const isKrwUnit = (u: unknown): u is KrwAmountUnit => typeof u === "string" && u in KRW_UNIT_TO_KRW_M;
+export const isFxUnit = (u: unknown): u is FxAmountUnit => u === "fx_m" || u === "fx_eok";
+export const isKnownAmountUnit = (u: unknown): u is AmountUnit => isKrwUnit(u) || isFxUnit(u);
+/** UI label of a unit; the fx labels need the line currency (e.g. "백만 USD"). */
+export const amountUnitLabel = (u: AmountUnit, currency = "USD"): string => {
+  if (isKrwUnit(u)) return ({ krw: "원", krw_k: "천원", krw_m: "백만원", krw_eok: "억원" })[u];
+  return u === "fx_m" ? `백만 ${currency}` : `억 ${currency}`;
+};
+
+/** Manual line shape as the UI holds it and the route stores it. Optional = unset, shown as "선택". */
+export interface ManualCostLine {
+  line: string;
+  category?: "labor" | "opex" | "capex" | "revenue" | "gov_rnd";
+  amount: number;
+  amountUnit?: AmountUnit;
+  /** True only after a human picked the unit in the UI and saved; never inferred. */
+  amountUnitConfirmed?: boolean;
+  /** Server-computed canonical 백만원 (0.01 rounding); null while unconfirmed or non-KRW. */
+  amountKrwM?: number | null;
+  currency?: "KRW" | "USD" | "EUR" | "JPY" | "CNY";
+  period?: "monthly" | "quarterly" | "yearly" | "lumpsum";
+  note?: string;
+  dupDismissed?: string[];
+  /** Legacy info only (old shape): annual growth rate, kept read-only, never applied. */
+  growthRate?: number;
+}
+
+const MANUAL_CATEGORIES: readonly string[] = ["labor", "opex", "capex", "revenue", "gov_rnd"];
+const MANUAL_CURRENCIES: readonly string[] = ["KRW", "USD", "EUR", "JPY", "CNY"];
+const MANUAL_PERIODS: readonly string[] = ["monthly", "quarterly", "yearly", "lumpsum"];
+
+/** Old demo/LLM shape that predates categories: `kind` (revenue/cost) and `growth_rate`. */
+export const manualLineIsOldShape = (l: Record<string, unknown>): boolean => "kind" in l || "growth_rate" in l;
+/** A line is legacy when it lacks category/period/currency or carries the old shape. */
+export const manualLineIsLegacy = (l: Record<string, unknown>): boolean =>
+  manualLineIsOldShape(l) || l.category === undefined || l.period === undefined || l.currency === undefined;
+
+/**
+ * Map a stored manual line to the current shape mapping ONLY what is certain. The amount is never
+ * converted: a legacy amount's unit is unknown, so `amountUnit` is left unset for old-shape lines
+ * (their earlier `krw_m` stamp came from the previous silent conversion and is dropped) and the
+ * line stays unconfirmed until a human picks a unit. `kind:"revenue"` maps to category revenue;
+ * `kind:"cost"` maps to nothing (category is a human choice, never defaulted to labor).
+ * Missing currency is KRW; a missing period stays unset (yearly is only suggested in the UI when
+ * `growth_rate` is present); `growth_rate` is kept as read-only info.
+ */
+export function normalizeLegacyLine(raw: Record<string, unknown>): ManualCostLine {
+  const old = manualLineIsOldShape(raw);
+  const kind = typeof raw.kind === "string" ? raw.kind : undefined;
+  const category = typeof raw.category === "string" && MANUAL_CATEGORIES.includes(raw.category) ? (raw.category as ManualCostLine["category"]) : kind === "revenue" ? ("revenue" as const) : undefined;
+  const currency = typeof raw.currency === "string" && MANUAL_CURRENCIES.includes(raw.currency) ? (raw.currency as ManualCostLine["currency"]) : ("KRW" as const);
+  const period = typeof raw.period === "string" && MANUAL_PERIODS.includes(raw.period) ? (raw.period as ManualCostLine["period"]) : undefined;
+  const unit = raw.amountUnit;
+  const amountUnit = !old && isKnownAmountUnit(unit) ? unit : undefined;
+  return {
+    line: String(raw.line ?? ""),
+    category,
+    amount: typeof raw.amount === "number" && Number.isFinite(raw.amount) ? raw.amount : Number(raw.amount) || 0,
+    amountUnit,
+    amountUnitConfirmed: !old && amountUnit !== undefined && raw.amountUnitConfirmed === true,
+    amountKrwM: typeof raw.amountKrwM === "number" && Number.isFinite(raw.amountKrwM) ? raw.amountKrwM : null,
+    currency,
+    period,
+    note: typeof raw.note === "string" ? raw.note : undefined,
+    dupDismissed: Array.isArray(raw.dupDismissed) ? (raw.dupDismissed as string[]) : undefined,
+    growthRate: typeof raw.growth_rate === "number" ? raw.growth_rate : typeof raw.growthRate === "number" ? raw.growthRate : undefined,
+  };
+}
+
+export type ManualLineIssue = "category" | "period" | "currency" | "unit";
+/** What a row is missing before it may enter the totals: unset fields or an unconfirmed unit. */
+export function manualLineIssues(l: ManualCostLine): ManualLineIssue[] {
+  const out: ManualLineIssue[] = [];
+  if (!l.category) out.push("category");
+  if (!l.period) out.push("period");
+  if (!l.currency) out.push("currency");
+  if (!l.amountUnitConfirmed || !isKnownAmountUnit(l.amountUnit)) out.push("unit");
+  return out;
+}
+export const manualLineNeedsConfirm = (l: ManualCostLine): boolean => manualLineIssues(l).length > 0;
+
+/**
+ * Canonical 백만원 for a manual line; null when the unit is unknown/unconfirmed or the currency is
+ * not KRW (no FX in this feature). The server-stored `amountKrwM` wins when present.
+ */
+export function manualLineKrwM(l: { amount?: unknown; amountUnit?: unknown; amountKrwM?: unknown; currency?: unknown }): number | null {
+  if (typeof l.amountKrwM === "number" && Number.isFinite(l.amountKrwM)) return Math.round(l.amountKrwM * 100) / 100;
+  if (l.currency !== undefined && l.currency !== "KRW") return null;
+  if (!isKrwUnit(l.amountUnit)) return null;
+  const n = typeof l.amount === "number" && Number.isFinite(l.amount) ? l.amount : Number(l.amount) || 0;
+  return Math.round(n * KRW_UNIT_TO_KRW_M[l.amountUnit] * 100) / 100;
+}
+
+// ── Sanity guard (decision support only, never a cap) ────────────────────────
+/** A single line over this many 백만원 (1,000억) gets a "금액이 매우 큽니다" chip. */
+export const SANITY_LINE_KRW_M = 100_000;
+/** A grand total over this many 백만원 (1조) gets the same dismissible chip. */
+export const SANITY_TOTAL_KRW_M = 1_000_000;
+export const sanityLineOversize = (krwM: number | null): boolean => krwM !== null && krwM > SANITY_LINE_KRW_M;
+export const sanityTotalOversize = (krwM: number): boolean => krwM > SANITY_TOTAL_KRW_M;
+
 // ── Category mapping (design 4.3, OD-2) ─────────────────────────────────────
 
 export function suggestCategory(resolution: GapResolution | null): { category: CostCategory; alternative: CostCategory | null; hint: string | null } {
@@ -88,6 +202,8 @@ export interface StoredCapabilityEntry {
   /** 백만원 (amountUnit "krw_m"); legacy entries without the marker hold 억. */
   amount: number;
   amountUnit?: typeof AMOUNT_UNIT_KRW_M;
+  /** Capability amounts follow the judgement, so they are always confirmed. */
+  amountUnitConfirmed?: true;
   currency: "KRW";
   period: "lumpsum";
   note: string;
@@ -261,23 +377,36 @@ export interface InvestmentTotals {
   capabilityEok: number;
   reflectedEok: number;
   manualEok: number;
+  /** 일시불 합계와 연간(반복 환산) 합계 — manualKrwM = lumpsum + recurring. */
+  manualLumpsumKrwM: number;
+  manualRecurringKrwM: number;
   /** Non-KRW manual lines are left out of the totals (no FX in this feature). */
   manualExcludedNonKrw: number;
+  /** Manual lines missing category/period/currency/unit are left out until a person confirms them. */
+  manualExcludedNeedsConfirm: number;
   grandEok: number;
   reflectedCount: number;
   needsRejudgeCount: number;
 }
 
 /** Manual cost lines count lump sums as entered and recurring lines annualised; revenue and 정부 R&D are not 투자비. */
-export function investmentTotals(view: CapabilityCostView, reflectedKeys: ReadonlySet<string>, manual: Array<{ category?: string; amount?: number; amountUnit?: string; currency?: string; period?: string }>): InvestmentTotals {
+export function investmentTotals(view: CapabilityCostView, reflectedKeys: ReadonlySet<string>, manual: Array<{ category?: string; amount?: number; amountUnit?: string; amountUnitConfirmed?: boolean; amountKrwM?: number | null; currency?: string; period?: string }>): InvestmentTotals {
   const reflected = view.lines.filter((l) => reflectedKeys.has(l.capabilityKey));
   const reflectedKrwM = reflected.reduce((s, l) => s + l.costKrwM, 0);
   let manualKrwM = 0;
+  let lumpsumKrwM = 0;
+  let recurringKrwM = 0;
   let excluded = 0;
+  let excludedNeedsConfirm = 0;
   for (const m of manual) {
     if (m.category === "revenue" || m.category === "gov_rnd") continue;
+    if (manualLineNeedsConfirm(m as ManualCostLine)) { excludedNeedsConfirm += 1; continue; }
     if (m.currency && m.currency !== "KRW") { excluded += 1; continue; }
-    manualKrwM += lineAmountKrwM(m) * (ANNUAL[m.period ?? "yearly"] ?? 1);
+    const krwM = manualLineKrwM(m);
+    if (krwM === null) { excludedNeedsConfirm += 1; continue; }
+    const annual = krwM * (ANNUAL[m.period ?? "yearly"] ?? 1);
+    manualKrwM += annual;
+    if (m.period === "lumpsum") lumpsumKrwM += annual; else recurringKrwM += annual;
   }
   const round2 = (n: number) => Math.round(n * 100) / 100;
   return {
@@ -288,7 +417,10 @@ export function investmentTotals(view: CapabilityCostView, reflectedKeys: Readon
     capabilityEok: eokOf(view.totals.capabilityKrwM),
     reflectedEok: eokOf(reflectedKrwM),
     manualEok: round2(manualKrwM / 100),
+    manualLumpsumKrwM: round2(lumpsumKrwM),
+    manualRecurringKrwM: round2(recurringKrwM),
     manualExcludedNonKrw: excluded,
+    manualExcludedNeedsConfirm: excludedNeedsConfirm,
     grandEok: round2((reflectedKrwM + manualKrwM) / 100),
     reflectedCount: reflected.length,
     needsRejudgeCount: reflected.filter((l) => l.needsRejudge).length,
@@ -297,7 +429,7 @@ export function investmentTotals(view: CapabilityCostView, reflectedKeys: Readon
 
 // ── Save-time validation (server) ───────────────────────────────────────────
 
-export type CostLineError = { code: "invalid_request" | "unknown_capability" | "invalid_category" | "amount_mismatch" | "not_reflectable" | "no_cost"; message: string };
+export type CostLineError = { code: "invalid_request" | "unknown_capability" | "invalid_category" | "amount_mismatch" | "not_reflectable" | "no_cost" | "invalid_amount_unit"; message: string };
 
 const AMOUNT_EPS = 1e-6;
 
@@ -323,10 +455,17 @@ export function normalizeBusinessCaseLines(
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { ok: false, error: { code: "invalid_request", message: "business_case_lines의 각 항목은 객체여야 합니다." } };
     if (!isCapabilityEntry(raw)) {
       // A manual line must not smuggle the capability markers.
-      const { source: _s, capabilityKey: _k, reflected: _r, basisHash: _b, reflectedBy: _rb, reflectedAt: _ra, ...manual } = raw as Record<string, unknown>;
-      // Unit migration without a schema change: a line without the marker holds 억 and is rewritten value-preserving in 백만원.
-      if ("amount" in manual || manual.amountUnit !== undefined) out.push({ ...manual, amount: lineAmountKrwM(manual), amountUnit: AMOUNT_UNIT_KRW_M });
-      else out.push(manual);
+      const { source: _s, capabilityKey: _k, reflected: _r, basisHash: _b, reflectedBy: _rb, reflectedAt: _ra, ...rest } = raw as Record<string, unknown>;
+      if (!("amount" in rest) && rest.amountUnit === undefined && !("amountKrwM" in rest)) { out.push(rest); continue; }
+      // Unknown units are rejected outright; there is no silent fallback unit.
+      if (typeof rest.amountUnit === "string" && !AMOUNT_UNITS.includes(rest.amountUnit as AmountUnit)) {
+        return { ok: false, error: { code: "invalid_amount_unit", message: `알 수 없는 금액 단위입니다: ${rest.amountUnit}` } };
+      }
+      // No silent unit migration: the line keeps the amount and unit the person chose; the server
+      // computes the canonical 백만원 only when the line is complete and its unit is confirmed.
+      const m = normalizeLegacyLine(rest);
+      const confirmed = !manualLineNeedsConfirm(m);
+      out.push({ ...m, amountUnitConfirmed: confirmed, amountKrwM: confirmed ? manualLineKrwM(m) : null });
       continue;
     }
     const key = raw.capabilityKey;
@@ -355,6 +494,7 @@ export function normalizeBusinessCaseLines(
       category,
       amount: live,
       amountUnit: AMOUNT_UNIT_KRW_M,
+      amountUnitConfirmed: true,
       currency: "KRW",
       period: "lumpsum",
       note: `S5 역량 해소 비용 연동 (${row.resolution ? RESOLUTION_LABEL[row.resolution] : "해소 방식 미정"})`,
@@ -386,13 +526,20 @@ export interface PromotionCapabilityLine { category: CostCategory; name: string;
  * skipped, reflected capability entries come back as exact 백만원 lump sums recomputed from the live
  * judgement (a deleted/zero-cost capability is skipped and listed), everything else is a manual line.
  */
-export function splitForPromotion(lines: unknown[], rows: CostSourceRow[]): { manual: unknown[]; capability: PromotionCapabilityLine[]; skipped: string[] } {
+export function splitForPromotion(lines: unknown[], rows: CostSourceRow[]): { manual: unknown[]; capability: PromotionCapabilityLine[]; skipped: string[]; skippedManual: Array<{ line: string; reason: "unit_unconfirmed" | "currency_non_krw" }> } {
   const byId = new Map(rows.map((r) => [r.id, r]));
   const manual: unknown[] = [];
   const capability: PromotionCapabilityLine[] = [];
   const skipped: string[] = [];
+  const skippedManual: Array<{ line: string; reason: "unit_unconfirmed" | "currency_non_krw" }> = [];
   for (const l of lines) {
-    if (!isCapabilityEntry(l)) { manual.push(l); continue; }
+    if (!isCapabilityEntry(l)) {
+      const m = l as ManualCostLine;
+      if (manualLineNeedsConfirm(m)) { skippedManual.push({ line: String(m.line ?? ""), reason: "unit_unconfirmed" }); continue; }
+      if (m.currency && m.currency !== "KRW") { skippedManual.push({ line: String(m.line ?? ""), reason: "currency_non_krw" }); continue; }
+      manual.push(l);
+      continue;
+    }
     if (l.reflected !== true) continue;
     const row = byId.get(l.capabilityKey);
     const cost = row?.closing_cost_krw_m ?? null;
@@ -402,7 +549,7 @@ export function splitForPromotion(lines: unknown[], rows: CostSourceRow[]): { ma
     if (row.stale || (!!l.basisHash && l.basisHash !== costBasisHash(row))) flags.push("역량 판정 재판정 필요 — 금액 검증 필요");
     capability.push({ category, name: `${row.capability} 역량 해소`, krwM: cost, note: flags.join(". ") });
   }
-  return { manual, capability, skipped };
+  return { manual, capability, skipped, skippedManual };
 }
 
 // ── Milestone candidate ─────────────────────────────────────────────────────
@@ -450,10 +597,10 @@ export function applySelection(view: CapabilityCostView, sel: Readonly<Record<st
 }
 
 /** Payload entries for the saved capability lines: reflected ones, plus explicit un-checks of default/previously stored rows. */
-export function selectionPayload(lines: CapabilityCostLine[], sel: Readonly<Record<string, CostSelection>>): Array<{ source: "capability"; capabilityKey: string; reflected: boolean; category: CostCategory; amount: number; amountUnit: typeof AMOUNT_UNIT_KRW_M }> {
+export function selectionPayload(lines: CapabilityCostLine[], sel: Readonly<Record<string, CostSelection>>): Array<{ source: "capability"; capabilityKey: string; reflected: boolean; category: CostCategory; amount: number; amountUnit: typeof AMOUNT_UNIT_KRW_M; amountUnitConfirmed: true }> {
   return lines
     .filter((l) => l.reflected || l.persisted || sel[l.capabilityKey]?.reflected === false)
-    .map((l) => ({ source: "capability" as const, capabilityKey: l.capabilityKey, reflected: l.reflected, category: l.category, amount: l.costKrwM, amountUnit: AMOUNT_UNIT_KRW_M }));
+    .map((l) => ({ source: "capability" as const, capabilityKey: l.capabilityKey, reflected: l.reflected, category: l.category, amount: l.costKrwM, amountUnit: AMOUNT_UNIT_KRW_M, amountUnitConfirmed: true as const }));
 }
 
 // ── S5 reflection action (explicit save of the capability selections) ────────
