@@ -396,6 +396,24 @@ describe("buildProjectCharter (ADR-0104) display name", () => {
     // The deal shape itself stays recorded in the charter.
     expect(charter.subTrack).toBe("existing_business_rbd");
   });
+
+  test("greenfield charter KPIs reflect the S3/S5 capability register, not the dead S5 column", () => {
+    const oppId = insertOpportunity();
+    insertRouteDecision(oppId, "greenfield");
+    const row = (capability: string, status: string, resolution: string | null) => ({
+      id: ulid(), capability, source: "manual", requiredNote: "", held: { status, holders: [], evidence: "" },
+      resolution, note: "", requiredLevel: "", currentLevel: "",
+    });
+    db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [
+      JSON.stringify({ rows: [row("정밀 가공", "unmet", "partner"), row("품질 인증", "met", "build"), row("영업망", "partial", "hire")], updatedAt: NOW }),
+      oppId,
+    ]);
+    const { charter } = buildProjectCharter(db, { opportunityId: oppId, track: "greenfield", builtBy: U1, now: NOW });
+    const gapKpis = charter.kpis.filter((k) => k.key.startsWith("gap:"));
+    expect(gapKpis.map((k) => k.label)).toEqual(["역량 해소 — 정밀 가공", "역량 해소 — 영업망"]);
+    expect(gapKpis[0].target).toBe("전략 제휴");
+    expect(gapKpis[1].target).toBe("영입");
+  });
 });
 
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");

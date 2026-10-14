@@ -237,7 +237,7 @@ describe("S8 tab aliases (deep-link compatibility)", () => {
     expect(r("technical")).toBe("technical");
     expect(r("technical#T2")).toBe("technical");
     expect(r("capability")).toBe("technical");
-    for (const k of ["overview", "params", "target-costing", "decision"]) expect(r(k)).toBe(k);
+    for (const k of ["overview", "params", "target-costing", "decision"] as const) expect(r(k)).toBe(k);
     expect(r("targets", false)).toBe("targets");
     expect(r("targets", true)).toBe("scenarios");
   });

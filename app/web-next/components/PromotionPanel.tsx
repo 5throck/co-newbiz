@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { api, ApiError } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { useConfirm } from "./crud.tsx";
+import { localizeRequirement } from "../lib/labels.ts";
 
 interface ProcessStageLite {
   id: string;
@@ -236,7 +237,7 @@ export function PromotionPanel({
           {proc.blockers.length > 0 && (
             <ul className="sizing-note-list m-0">
               {proc.blockers.map((b, i) => (
-                <li key={i}>{b}</li>
+                <li key={i}>{localizeRequirement(b)}</li>
               ))}
             </ul>
           )}

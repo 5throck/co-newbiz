@@ -106,10 +106,10 @@ describe("step titles per mode", () => {
 });
 
 describe("no default: a Green Field project must choose at S10", () => {
-  test("S11 check says 'establishment mode not chosen'; steps are empty; writes 409 mode_not_chosen", async () => {
+  test("S11 check says the mode is not yet decided; steps are empty; writes 409 mode_not_chosen", async () => {
     expect(est.activeEstablishmentMode(projectId)).toBeNull();
     const check = establishmentS11Check(projectId);
-    expect(check.blockers.join("\n")).toContain("establishment mode not chosen");
+    expect(check.blockers.join("\n")).toContain("설립 방식이 아직 정해지지 않았습니다");
     expect(check.missing[0]).toContain("설립 방식");
     expect(est.establishmentProgress(projectId)).toMatchObject({ done: 0, complete: false, mode: null });
 
