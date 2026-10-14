@@ -23,7 +23,6 @@ import { ColGroup } from "../ui.tsx";
 import { GateDecisionPanel } from "../GateDecisionPanel.tsx";
 import { PromotionPanel } from "../PromotionPanel.tsx";
 import { PrimaryAction } from "../ui.tsx";
-import { LevelSelect } from "./LevelSelect.tsx";
 import {
   HELD_STATUS_CHIP, HELD_STATUS_LABEL, RESOLUTION_LABEL,
   type CapabilityGapRow, type GapResolution,
@@ -235,8 +234,8 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   <tr>
                     <th scope="col">필요 역량 (S3)</th>
                     <th scope="col">보유 판정 (S3)</th>
-                    <th scope="col">필요 수준</th>
-                    <th scope="col">보유 수준</th>
+                    <th scope="col">필요 수준 (S3)</th>
+                    <th scope="col">보유 수준 (S3)</th>
                     <th scope="col">해소 방식</th>
                     <th scope="col">비고</th>
                   </tr>
@@ -252,8 +251,8 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                         <span className={`status-chip ${HELD_STATUS_CHIP[g.held.status]}`}>{HELD_STATUS_LABEL[g.held.status]}</span>
                         {g.held.holders.length > 0 && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{g.held.holders.join(", ")}</span>}
                       </td>
-                      <td><LevelSelect ariaLabel={`${g.capability} 필요 수준`} value={g.requiredLevel} onChange={(v) => setGapField(i, { requiredLevel: v })} /></td>
-                      <td><LevelSelect ariaLabel={`${g.capability} 보유 수준`} value={g.currentLevel} onChange={(v) => setGapField(i, { currentLevel: v })} /></td>
+                      <td className="text-[length:var(--fs-caption)]">{g.requiredLevel.trim() ? <ClampedText text={g.requiredLevel} /> : <span className="block text-[color:var(--muted-fg)]">미입력</span>}</td>
+                      <td className="text-[length:var(--fs-caption)]">{g.currentLevel.trim() ? <ClampedText text={g.currentLevel} /> : <span className="block text-[color:var(--muted-fg)]">미입력</span>}</td>
                       <td>
                         <select aria-label={`${g.capability} 해소 방식`} value={g.resolution ?? ""} onChange={(e) => setGapField(i, { resolution: (e.target.value || null) as GapResolution | null })} className="sizing-new-input sizing-new-input-sm">
                           <option value="">미정</option>

@@ -5,12 +5,12 @@ lang_reason: proper-noun
 
 # ADR-0171 - Required-capability check at S5 (Green Field) and S7 per target (Brown Field)
 
-- Status: Proposed
+- Status: Accepted (2026-10-14)
 - Date: 2026-10-14
-- Decider: Human decider (chat 2026-10-14 decisions; formal acceptance pending). Drafted by platform-lead.
+- Decider: Human decider (chat approval 2026-10-14, "ADR-0171 / 0172 승인"). Drafted by platform-lead.
 - Design-of-record: [docs/designs/2026-10-14-capability-check-at-s5-s7-design.md](../designs/2026-10-14-capability-check-at-s5-s7-design.md)
 - Related: ADR-0168 (partly superseded), ADR-0169 (T1 source amended), ADR-0170 (Decisions 4-6 partly superseded), ADR-0136 (amended), ADR-0143 (amended)
-- Slices: 3 (1 Green Field S5 edit surface + S8 read-only summary, 2 Brown Field S7 per-target judgements + criteria reconcile + detection, 3 S8 scenario/lens/gate-brief + wiki/glossary). None implemented by this ADR.
+- Slices: 3 (1 Green Field S5 edit surface + S8 read-only summary, 2 Brown Field S7 per-target judgements + criteria reconcile + detection, 3 S8 scenario/lens/gate-brief + wiki/glossary). None implemented by this ADR; implementation begins after acceptance.
 
 ## Context
 
@@ -36,4 +36,11 @@ The attainability judgement for required capabilities is edited on S8 (ADR-0168)
 
 ## Honest limits
 
-Proposed, not accepted. Open decisions OD-1..OD-6 are listed in the design with recommendations. The S5 completeness and S7 readiness code paths were not traced in detail. Judgements remain decision support, not investment advice.
+Accepted by chat; open decisions OD-1..OD-6 are resolved as recommended in the design. The S5 completeness and S7 readiness code paths were not traced in detail. Judgements remain decision support, not investment advice.
+
+## Acceptance record
+
+- Approver: the human decider (user, account techcross), chat 2026-10-14: "ADR-0171 / 0172 승인". Recorded in DEC-20261014-08.
+- Basis: chat approval of the ADR as written, including the design's recommended resolutions of OD-1..OD-6. Acceptance is by chat instruction; the decider did not review a per-item checklist, and this record does not claim the approver read specific items.
+- Scope: acceptance covers the decision. Nothing of slices 1-3 is implemented; implementation begins after acceptance.
+- Known limitations (owner: platform-lead): the S5 completeness and S7 readiness code paths were not traced in detail.

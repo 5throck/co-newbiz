@@ -3137,7 +3137,7 @@ paths:
   /api/opportunities/{id}/capability-gap:
     get:
       operationId: getCapabilityGap
-      summary: S3 capability-gap register (flow.spec v2.4.0) — market requirements vs group/affiliate held capabilities; returns in-memory seed rows from the S2 sketch when nothing is stored.
+      summary: S3 capability-gap register (flow.spec v2.4.0, ADR-0172) — rows in order capability, requiredNote, necessity (essential|partial_essential|optional|empty), necessityScopeNote, requiredLevel (narrative), held.status (leading|average|partial|none|unevaluated; legacy met/unmet are read-mapped, held.legacyStatus/reassessHint), currentLevel (narrative), held.holders, held.evidence; returns in-memory seed rows from the S2 sketch when nothing is stored.
       tags:
         - Analysis
       parameters:
@@ -3155,7 +3155,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     put:
       operationId: saveCapabilityGap
-      summary: Save the capability-gap register (analyst+; human action, audited capability_gap.save).
+      summary: Save the capability-gap register (analyst+; human action, audited capability_gap.save). Accepts necessity, necessityScopeNote (alias necessityNote, max 120), narrative requiredLevel/currentLevel (max 400) and the new held keys; legacy keys are rewritten only by this save.
       tags:
         - Analysis
       parameters:
@@ -3176,7 +3176,7 @@ paths:
   /api/opportunities/{id}/capability-gap/llm-draft:
     post:
       operationId: draftCapabilityGap
-      summary: LLM draft of held-status per capability row from group/affiliate profile evidence — proposal only; saving stays a human action (boundary #2).
+      summary: LLM draft of held status (leading|average|partial|none|unevaluated; leading needs comparative evidence), current-level narrative and evidence per capability row from group/affiliate profile evidence — never necessity or required level; proposal only; saving stays a human action (boundary #2).
       tags:
         - Analysis
       parameters:

@@ -46,7 +46,7 @@ describe("sha256 and row hash", () => {
     const a = mkRow({ held: { status: "met", holders: ["B사", "A사"], evidence: " 근거 " }, requiredNote: " n " });
     const b = mkRow({ held: { status: "met", holders: ["A사", "B사"], evidence: "근거" }, requiredNote: "n" });
     expect(lk.capabilityRowHash(a)).toBe(lk.capabilityRowHash(b));
-    expect(lk.capabilityRowHash(a)).toMatch(/^v1:[0-9a-f]{16}$/);
+    expect(lk.capabilityRowHash(a)).toMatch(/^v2:[0-9a-f]{16}$/);
     expect(lk.capabilityRowHash(mkRow({ requiredLevel: "" }))).toBe(lk.capabilityRowHash(mkRow({ requiredLevel: undefined })));
   });
   test("changes on every S3-owned field, not on source/note/resolution/attainability/id", () => {
@@ -294,14 +294,14 @@ describe("routes", () => {
     expect(c.requiredLevel).toBe("숙련");
     expect(c.currentLevel).toBe("숙련");
     expect(c.held).toEqual(afterS3.held);
-    expect(c.held.status).toBe("met");
+    expect(c.held.status).toBe("average");
     expect(c.resolution).toBe("partner");
     expect(c.attainability?.rationale).toBe("물류 위탁 가능(수정)");
     // judged on a basis that is no longer current: stale, unconfirmed, must be re-judged
     expect(lk.isStale(c)).toBe(true);
     expect(c.attainability?.confirmedAt).toBeNull();
     const view = (await get()).rows.find((x: any) => x.id === "c");
-    expect(view).toMatchObject({ stale: true, confirmed_at: null, required_level: "숙련", held_status: "met" });
+    expect(view).toMatchObject({ stale: true, confirmed_at: null, required_level: "숙련", held_status: "average" });
     expect((await confirm({ row_ids: ["c"] })).status).toBe(400);
   });
 
@@ -338,11 +338,10 @@ describe("UI source checks", () => {
   const read = (p: string) => readFileSync(join(PROJECT_ROOT, "app/web-next", p), "utf8");
   test("S3 register table has no 5-step level columns; keeps 보유 판정, holders/evidence button, 해소 힌트", () => {
     const src = read("components/stages/synergy/SynergyLinkageTab.tsx");
-    expect(src).not.toContain('<th scope="col">필요 수준</th>');
-    expect(src).not.toContain('<th scope="col">보유 수준</th>');
+    // ADR-0172: the narrative 필요 수준 / 보유 수준 columns are back (modal-based, no 5-step select).
     expect(src).not.toContain("LevelSelect");
-    expect(src).toContain('<th scope="col">필요 역량</th><th scope="col">보유 판정</th>');
-    expect(src).toContain('<th scope="col">보유 주체·근거</th><th scope="col">해소 힌트</th>');
+    expect(src).toContain('<th scope="col">필요 역량</th><th scope="col">필요도</th><th scope="col">필요 수준</th><th scope="col">보유 판정</th>');
+    expect(src).toContain('<th scope="col">보유 수준</th><th scope="col">보유 주체·근거</th><th scope="col">해소 힌트</th>');
     expect(src).toContain("${r.capability} 보유 판정");
     expect(src).toContain("${r.capability} 해소 힌트");
     expect(src).toContain("보유 주체·근거 ${canCurate");

@@ -8,7 +8,7 @@ import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.t
 import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { completeOrFallback, isLlmConfigured } from "../../../../../../lib/llm.ts";
 import { route } from "../../../../../../lib/route.ts";
-import { normalizeGapRows, type CapabilityGapRow } from "../../../../../../lib/capability-gap.ts";
+import { normalizeGapRows, normalizeHeldDraft, type CapabilityGapRow } from "../../../../../../lib/capability-gap.ts";
 import { promptAgent, systemMessage } from "../../../../../../lib/prompts.ts";
 
 interface MemberLite { id: string; company_name: string; group_id: string }
@@ -98,7 +98,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       synergyAreasText ? `\n[S3 연계 시너지 영역 — 선별(Short List) 우선]\n${synergyAreasText}` : "",
       `\n[판정 대상 필요 역량 행]\n${rowsText}`,
       `\n[그룹/계열사 보유 근거 — 프로필 최신 버전]\n${profileLines.join("\n")}`,
-      "\n주의: 보유 판정은 위 그룹/계열사 프로필 근거로만 한다. 근거가 없으면 status를 unevaluated로 두고 holders를 비운다." +
+      "\n주의: 보유 판정은 위 그룹/계열사 프로필 근거로만 한다. 근거가 없으면 status를 unevaluated로 두고 holders를 비운다. 판정은 업계 대비 기준이며 leading(업계 리딩)은 업계 비교 근거가 있을 때만 쓴다." +
         (synergyAreasText ? " 새 행 추가는 위 시너지 영역을 채우는 데 실제로 필요한 역량만, 영역명을 requiredNote에 인용해 제안한다." : ""),
     ].filter(Boolean).join("\n");
 
@@ -112,12 +112,12 @@ export const POST = route(async (request: Request, { params }: { params: Promise
           {
             role: "user" as const,
             content:
-              "각 필요 역량 행을 그룹/계열사 보유 근거와 대조해 보유 상태 초안을 판정하세요. status는 met|partial|unmet|unevaluated, holders는 보유 근거가 있는 회사명(제공된 이름 그대로), evidence는 근거 문장입니다." +
+              "각 필요 역량 행을 그룹/계열사 보유 근거와 대조해 보유 상태 초안을 판정하세요. status는 leading(업계 리딩, 업계 비교 근거 필수)|average(업계 평균)|partial(부분 보유)|none(미보유)|unevaluated(미판정), currentLevel은 현재 보유 수준의 서술(400자 이내), holders는 보유 근거가 있는 회사명(제공된 이름 그대로), evidence는 근거 문장입니다. 필요도와 필요 수준은 제안하지 않습니다." +
               (synergyAreasText
                 ? "\n또한 시너지 영역 근거를 보고 이 영역을 채우는 데 필요한데 아래 행 목록에 없는 역량이 있으면 newRows로 추가 제안하세요(최대 5개, requiredNote에 영역명 인용). 이미 목록에 있는 역량은 중복 제안하지 않습니다."
                 : "") +
               "\n" +
-              'JSON: {"rows":[{"id":"원본 행 id 그대로","held":{"status":"met|partial|unmet|unevaluated","holders":["회사명"],"evidence":"프로필 근거 요약"}}]' +
+              'JSON: {"rows":[{"id":"원본 행 id 그대로","held":{"status":"leading|average|partial|none|unevaluated","currentLevel":"보유 수준 서술","holders":["회사명"],"evidence":"프로필 근거 요약"}}]' +
               (synergyAreasText ? ',"newRows":[{"capability":"역량명","requiredNote":"시너지 영역 X에서 도출 — 사유"}]' : "") +
               "}\n\n" +
               context,
@@ -138,18 +138,13 @@ export const POST = route(async (request: Request, { params }: { params: Promise
           rows = current.map((r) => {
             const draft = byId.get(r.id);
             if (!draft) return r;
-            const heldRaw = (draft.held ?? {}) as Record<string, unknown>;
-            const status = String(heldRaw.status ?? "").trim();
-            const holders = Array.isArray(heldRaw.holders) ? heldRaw.holders.map((x) => String(x ?? "").trim().slice(0, 120)).filter(Boolean).slice(0, 6) : [];
-            const evidence = String(heldRaw.evidence ?? "").trim().slice(0, 400);
-            if (!["met", "partial", "unmet", "unevaluated"].includes(status)) return r;
+            const d = normalizeHeldDraft({ ...((draft.held ?? {}) as Record<string, unknown>), currentLevel: (draft.held as Record<string, unknown> | undefined)?.currentLevel ?? draft.currentLevel });
+            if (!d) return r;
             return {
               ...r,
-              held: {
-                status: status as CapabilityGapRow["held"]["status"],
-                holders: status === "unevaluated" ? [] : holders,
-                evidence: status === "unevaluated" ? "" : evidence,
-              },
+              held: { status: d.status, holders: d.holders, evidence: d.evidence },
+              // 보유 수준 서술만 제안한다 — 이미 사람이 쓴 값은 덮어쓰지 않고, 필요도·필요 수준은 건드리지 않는다.
+              currentLevel: r.currentLevel || d.currentLevel,
               note: r.note || "LLM 보유 판정 초안 — 사람이 확인해 확정하세요.",
             };
           });
@@ -168,6 +163,8 @@ export const POST = route(async (request: Request, { params }: { params: Promise
               held: { status: "unevaluated" as const, holders: [], evidence: "" },
               resolution: null,
               note: "LLM 시너지 영역 도출 초안 — 사람이 확인해 확정하세요.",
+              necessity: "" as const,
+              necessityScopeNote: "",
               requiredLevel: "",
               currentLevel: "",
             }));

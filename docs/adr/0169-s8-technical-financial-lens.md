@@ -5,9 +5,9 @@ lang_reason: proper-noun
 
 # ADR-0169 - S8 two-lens view (기술적 타당성 / 재무적 타당성) and Brown Field S9 pairing
 
-- Status: Proposed (decided in chat 2026-10-14, formal acceptance pending)
+- Status: Accepted (2026-10-14)
 - Date: 2026-10-14
-- Decider: Human decider (chat instructions 2026-10-14: the lens design and, in a follow-up, the three-part layout refinement). Drafted by backend-engineer.
+- Decider: Human decider (chat instructions 2026-10-14: the lens design, the three-part layout refinement, and the acceptance "ADR-0169 승인"). Drafted by backend-engineer.
 - Design-of-record: [docs/designs/2026-10-14-s8-technical-financial-lens-design.md](../designs/2026-10-14-s8-technical-financial-lens-design.md)
 - Related: ADR-0168 (S8 capability attainability — T1 is derived from its register rows and its panel moves under the new 기술적 타당성 tab), ADR-0069 (route handlers), ADR-0159 (project business goals — the goals status source)
 - Slices: 1-3 of 8 implemented here. Slices 4-8 (T2-T5 judgement UI and human-only confirm routes, Brown Field per-target subjects and comparison columns, S9 pairing with the dd-gate blocker, wiki/E2E) are separate and not decided as code here.
@@ -36,12 +36,14 @@ S8 (사업성 검토) presents only financial figures. Two questions are mixed i
 
 ## Honest limits
 
-Decision by chat instruction; formal acceptance is pending (this record is Proposed). The lens statuses aggregate human judgements and existing model outputs; they are decision support, not investment advice. T2-T5 have no input UI yet — the items show `미판정` with a 다음 릴리스 notice.
+Decision by chat instruction; accepted in chat on 2026-10-14 (see the acceptance record). The lens statuses aggregate human judgements and existing model outputs; they are decision support, not investment advice. T2-T5 have no input UI yet — the items show `미판정` with a 다음 릴리스 notice.
 
 ## Acceptance record
 
-- Approver: the human decider (user, account techcross), chat instructions on 2026-10-14 approving the two-lens design and the three-part layout refinement. A formal acceptance record (following the DEC-20261014-03/05 pattern) is pending until the human reviews the implementation report.
-- Scope: chat approval covers the decision; slices 4-8 do not exist.
+- Approver: the human decider (user, account techcross), chat 2026-10-14: "ADR-0169 승인". Earlier chat instructions the same day approved the two-lens design and the three-part layout refinement. Recorded in DEC-20261014-06.
+- Basis: chat approval of the ADR as written, including the design's recommended resolutions of its open decisions (design sections 13 and 15.8), which are marked resolved as recommended. Acceptance is by chat instruction; there was no per-item checklist, and this record does not claim the approver read specific items or commits.
+- Scope: acceptance covers the decision. Slices 1-3 are implemented (PRs merged earlier); slices 4-8 (T2-T5 judgement UI and human-only confirm routes, Brown Field per-target subjects and comparison columns, S9 pairing with the dd-gate blocker, wiki/E2E) are not implemented.
+- Partly superseded: ADR-0171/0172 partly supersede this ADR (the T1 reading source and the capability input location).
 - Known deviations and limitations (owner: platform-lead):
   1. T6 has no stored item; it renders from the placeholder only. Exit: the S9-pairing slice.
   2. The summary strip is not browser-verified; unit tests cover the view-model and route authorisation only.

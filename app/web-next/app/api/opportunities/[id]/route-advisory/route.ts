@@ -73,18 +73,24 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
     ? {
         total: gapSummary.total,
         evaluated: gapSummary.evaluated,
-        met: gapSummary.met,
+        leading: gapSummary.leading,
+        average: gapSummary.average,
         partial: gapSummary.partial,
-        unmet: gapSummary.unmet,
+        none: gapSummary.none,
+        // Deprecated aliases kept for one release (ADR-0172): met = leading + average, unmet = none.
+        met: gapSummary.leading + gapSummary.average,
+        unmet: gapSummary.none,
         coveragePct: gapSummary.coveragePct,
+        essentialCoveragePct: gapSummary.essentialCoveragePct,
         unmetRows: gapReg.rows
-          .filter((r: CapabilityGapRow) => r.held.status === "unmet")
+          .filter((r: CapabilityGapRow) => r.held.status === "none")
           .map((r) => ({ capability: r.capability, resolution: r.resolution })),
         // S4 평가 근거 탭 (2026-09-15 사용자 요구) — S3에서 확정한 필요 역량
         // 수준 전체 행을 그대로 노출해 역량 관련 5기준(역량 결정성·통합
         // 역량·역량확보 속도) 채점의 근거로 쓰게 한다.
         rows: gapReg.rows.map((r: CapabilityGapRow) => ({
           capability: r.capability,
+          necessity: r.necessity,
           source: r.source,
           held: { status: r.held.status, holders: r.held.holders, evidence: r.held.evidence },
           resolution: r.resolution,

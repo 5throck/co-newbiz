@@ -139,21 +139,21 @@ export function computeTrackAdvisory(db: Database, opportunityId: string): Track
       if (s.coveragePct !== null) {
         if (s.coveragePct >= 70) {
           signals.push({
-            key: "capability_coverage", label: `역량 충족률 ${s.coveragePct}% (평정 ${s.evaluated}/${s.total})`,
+            key: "capability_coverage", label: `역량 보유율 ${s.coveragePct}% (평정 ${s.evaluated}/${s.total})`,
             leans: "greenfield", weight: 2,
             note: `요구 역량 대부분을 그룹/계열사가 보유 — 자체 진출 여지 (${basis})`,
           });
         } else if (s.coveragePct <= 40) {
           signals.push({
-            key: "capability_coverage", label: `역량 충족률 ${s.coveragePct}% (평정 ${s.evaluated}/${s.total})`,
+            key: "capability_coverage", label: `역량 보유율 ${s.coveragePct}% (평정 ${s.evaluated}/${s.total})`,
             leans: "brownfield", weight: 2,
             note: `필요 역량 상당수가 미보유 — 보유자와의 결합이 유리 (${basis})`,
           });
         } else {
           signals.push({
-            key: "capability_coverage", label: `역량 충족률 ${s.coveragePct}% (평정 ${s.evaluated}/${s.total})`,
+            key: "capability_coverage", label: `역량 보유율 ${s.coveragePct}% (평정 ${s.evaluated}/${s.total})`,
             leans: "neutral", weight: 1,
-            note: `중간 충족률 — 시장·경쟁·시너지 신호와 함께 판단하세요 (${basis})`,
+            note: `중간 보유율 — 시장·경쟁·시너지 신호와 함께 판단하세요 (${basis})`,
           });
         }
       } else {

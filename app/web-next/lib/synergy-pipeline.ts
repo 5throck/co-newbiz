@@ -531,6 +531,8 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
           capability: r.capability,
           source: "synergy_area" as const,
           requiredNote: r.requiredNote,
+          necessity: "" as const,
+          necessityScopeNote: "",
           held: { status: "unevaluated" as const, holders: [] as string[], evidence: "" },
           resolution: null,
           note: "LLM 시너지 영역 도출 초안 — 사람이 확인해 확정하세요.",

@@ -9,6 +9,9 @@
 // register write, stale judgements are moved to history, never deleted.
 import {
   HISTORY_CAP,
+  NARRATIVE_CAP,
+  NECESSITY_LABEL,
+  NECESSITY_UNSET_LABEL,
   REMOVED_CAP,
   HELD_STATUS_LABEL,
   parseGapRegister,
@@ -20,7 +23,7 @@ import {
   type S3Snapshot,
 } from "./capability-gap.ts";
 
-export const ROW_HASH_VERSION = "v1";
+export const ROW_HASH_VERSION = "v2";
 
 // ── Pure SHA-256 (hex) ───────────────────────────────────────────────────────
 
@@ -72,22 +75,56 @@ export function sha256Hex(input: string): string {
 
 const t = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 
+const sortedHolders = (row: CapabilityGapRow) => [...(row.held?.holders ?? [])].map(t).filter(Boolean).sort();
+
 /**
- * Versioned hash of the S3-owned fields (canonical JSON, fixed key order, trimmed,
- * holders sorted). Excludes id, source, note, resolution, attainability and the
- * register-level keys. Empty and missing are treated alike.
+ * v2 hash (ADR-0172) of the S3-owned fields (canonical JSON, fixed key order, trimmed,
+ * holders sorted): capability, requiredNote, necessity (+ scope note), requiredLevel text,
+ * held status, currentLevel text, holders, evidence. Excludes id, source, note, resolution,
+ * attainability and register-level keys. Empty and missing are treated alike.
  */
 export function capabilityRowHash(row: CapabilityGapRow): string {
   const canonical = JSON.stringify({
     capability: t(row.capability),
     requiredNote: t(row.requiredNote),
+    necessity: t(row.necessity),
+    necessityScopeNote: t(row.necessityScopeNote),
+    requiredLevel: t(row.requiredLevel),
     heldStatus: row.held?.status ?? "unevaluated",
-    holders: [...(row.held?.holders ?? [])].map(t).filter(Boolean).sort(),
+    currentLevel: t(row.currentLevel),
+    holders: sortedHolders(row),
+    heldEvidence: t(row.held?.evidence),
+  });
+  return `v2:${sha256Hex(canonical).slice(0, 16)}`;
+}
+
+/**
+ * v1 recomputation (pre-ADR-0172): same fields without necessity, and the held key as
+ * originally stored (a legacy met/unmet marker wins over its read-mapped key).
+ */
+export function capabilityRowHashV1(row: CapabilityGapRow): string {
+  const canonical = JSON.stringify({
+    capability: t(row.capability),
+    requiredNote: t(row.requiredNote),
+    heldStatus: row.held?.legacyStatus ?? row.held?.status ?? "unevaluated",
+    holders: sortedHolders(row),
     heldEvidence: t(row.held?.evidence),
     requiredLevel: t(row.requiredLevel),
     currentLevel: t(row.currentLevel),
   });
-  return `${ROW_HASH_VERSION}:${sha256Hex(canonical).slice(0, 16)}`;
+  return `v1:${sha256Hex(canonical).slice(0, 16)}`;
+}
+
+/**
+ * Does a stored basis stamp still describe this row? v2 stamps compare against the v2 hash.
+ * v1 stamps compare against the v1 recomputation, so untouched rows do not go stale; a row
+ * that has since gained 필요도 (which v1 could not contain) counts as changed (OD-4).
+ */
+export function basisMatches(basisHash: string, row: CapabilityGapRow): boolean {
+  if (basisHash.startsWith("v1:")) {
+    return basisHash === capabilityRowHashV1(row) && !t(row.necessity) && !t(row.necessityScopeNote);
+  }
+  return basisHash === capabilityRowHash(row);
 }
 
 export function s3SnapshotOf(row: CapabilityGapRow): S3Snapshot {
@@ -95,8 +132,9 @@ export function s3SnapshotOf(row: CapabilityGapRow): S3Snapshot {
     capability: t(row.capability).slice(0, 200),
     requiredNote: t(row.requiredNote).slice(0, 300),
     heldStatus: row.held?.status ?? "unevaluated",
-    requiredLevel: t(row.requiredLevel).slice(0, 120),
-    currentLevel: t(row.currentLevel).slice(0, 120),
+    requiredLevel: t(row.requiredLevel).slice(0, NARRATIVE_CAP),
+    currentLevel: t(row.currentLevel).slice(0, NARRATIVE_CAP),
+    ...(t(row.necessity) ? { necessity: row.necessity } : {}),
   };
 }
 
@@ -108,7 +146,7 @@ export function s3SnapshotOf(row: CapabilityGapRow): S3Snapshot {
 export function isStale(row: CapabilityGapRow): boolean {
   const a = row.attainability;
   if (!a || !a.basisHash) return false;
-  return a.basisHash !== capabilityRowHash(row);
+  return !basisMatches(a.basisHash, row);
 }
 
 export interface S3Change { field: string; label: string; before: string; after: string }
@@ -125,6 +163,7 @@ export function s3Changes(row: CapabilityGapRow): S3Change[] {
   const out: S3Change[] = [];
   if (old.capability !== cur.capability) out.push({ field: "capability", label: "필요 역량", before: old.capability, after: cur.capability });
   if (old.requiredNote !== cur.requiredNote) out.push({ field: "requiredNote", label: "요구 설명", before: old.requiredNote || "없음", after: cur.requiredNote || "없음" });
+  if ((old.necessity ?? "") !== (cur.necessity ?? "")) out.push({ field: "necessity", label: "필요도", before: old.necessity ? NECESSITY_LABEL[old.necessity] : NECESSITY_UNSET_LABEL, after: cur.necessity ? NECESSITY_LABEL[cur.necessity] : NECESSITY_UNSET_LABEL });
   if (old.heldStatus !== cur.heldStatus) out.push({ field: "heldStatus", label: "보유 판정", before: HELD_STATUS_LABEL[old.heldStatus], after: HELD_STATUS_LABEL[cur.heldStatus] });
   if (old.requiredLevel !== cur.requiredLevel) out.push({ field: "requiredLevel", label: "필요 수준", before: levelText(old.requiredLevel), after: levelText(cur.requiredLevel) });
   if (old.currentLevel !== cur.currentLevel) out.push({ field: "currentLevel", label: "보유 수준", before: levelText(old.currentLevel), after: levelText(cur.currentLevel) });
@@ -175,9 +214,11 @@ export function applyRegisterLinkage(rows: CapabilityGapRow[], storedJson: strin
   const out = rows.map((r) => {
     const a = r.attainability;
     if (!a || !a.basisHash) return r;
-    if (a.basisHash === capabilityRowHash(r)) {
-      if (!a.staleSince) return r;
-      const { staleSince: _drop, ...rest } = a;
+    if (basisMatches(a.basisHash, r)) {
+      // Lazy v1 -> v2 re-stamp: the row is unchanged, so only the stamp format moves.
+      const restamped = a.basisHash.startsWith("v1:") ? { ...a, basisHash: capabilityRowHash(r), s3Snapshot: s3SnapshotOf(r) } : a;
+      if (!restamped.staleSince) return restamped === a ? r : { ...r, attainability: restamped };
+      const { staleSince: _drop, ...rest } = restamped;
       return { ...r, attainability: rest };
     }
     if (a.staleSince) return r; // already materialised

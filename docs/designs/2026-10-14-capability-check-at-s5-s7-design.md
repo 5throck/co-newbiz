@@ -152,12 +152,12 @@ Update `docs/wiki/ko/40-그린필드-S5-자체-진출.md` (new check section), `
 
 ## 15. Open decisions (with recommendations)
 
-- **OD-1 Storage for BF judgements.** Recommend Option C (new table), ADR-0171 covering the schema change.
-- **OD-2 Retire marker for criteria.** Recommend adding `retired_at` / `retired_by` columns to `brownfield_eval_criterion` in the same migration, over a JSON flag.
-- **OD-3 Gate effect.** Recommend warning only at S5 completeness and S7 readiness (no hard block), consistent with ADR-0168/0170.
-- **OD-4 Old S8 write routes.** Recommend 410 with `editAt` for one release, then removal.
-- **OD-5 Pointers in older ADRs.** Recommend no edit to ADR-0168/0169/0170 bodies; the README index rows note "partly superseded by ADR-0171" at acceptance.
-- **OD-6 Selected target before S7 check.** If a target is selected without confirmed judgements, recommend allowing it with a gate-brief warning, not a block.
+- **OD-1 Storage for BF judgements. (resolved: ADR-0171 approval, 2026-10-14, as recommended)** Recommend Option C (new table), ADR-0171 covering the schema change.
+- **OD-2 Retire marker for criteria. (resolved: ADR-0171 approval, 2026-10-14, as recommended)** Recommend adding `retired_at` / `retired_by` columns to `brownfield_eval_criterion` in the same migration, over a JSON flag.
+- **OD-3 Gate effect. (resolved: ADR-0171 approval, 2026-10-14, as recommended)** Recommend warning only at S5 completeness and S7 readiness (no hard block), consistent with ADR-0168/0170.
+- **OD-4 Old S8 write routes. (resolved: ADR-0171 approval, 2026-10-14, as recommended)** Recommend 410 with `editAt` for one release, then removal.
+- **OD-5 Pointers in older ADRs. (resolved: ADR-0171 approval, 2026-10-14, as recommended)** Recommend no edit to ADR-0168/0169/0170 bodies; the README index rows note "partly superseded by ADR-0171" at acceptance.
+- **OD-6 Selected target before S7 check. (resolved: ADR-0171 approval, 2026-10-14, as recommended)** If a target is selected without confirmed judgements, recommend allowing it with a gate-brief warning, not a block.
 
 ## 16. Not verified
 

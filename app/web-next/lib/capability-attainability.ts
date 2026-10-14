@@ -5,10 +5,7 @@ import type { Database } from "bun:sqlite";
 import { appendAudit } from "../../../db/lib/access-control.ts";
 import {
   ATTAINABILITY_GRADE_LABEL,
-  LEVEL_LABELS,
   carryOverAttainability,
-  levelGap,
-  levelStep,
   normalizeAttainability,
   parseGapRegister,
   parseRemovedCapabilities,
@@ -35,7 +32,7 @@ export function gradeOfRow(row: CapabilityGapRow): AttainabilityGrade | null {
 export interface AttainabilitySummary {
   total: number;
   /** 보유 판정(S3) 건수: 충족/부분/미보유/미판정. */
-  held: { met: number; partial: number; unmet: number; unevaluated: number };
+  held: { leading: number; average: number; partial: number; none: number; unevaluated: number };
   /** 달성 가능성 판정 건수. */
   grades: { high: number; medium: number; low: number; unjudged: number };
   /** 사람이 확정한 판정 수 / 판정은 있으나 확정 전인 수. */
@@ -79,7 +76,7 @@ export function attainabilitySummary(rows: CapabilityGapRow[]): AttainabilitySum
   }
   return {
     total: rows.length,
-    held: { met: gap.met, partial: gap.partial, unmet: gap.unmet, unevaluated: gap.unevaluated },
+    held: { leading: gap.leading, average: gap.average, partial: gap.partial, none: gap.none, unevaluated: gap.unevaluated },
     grades,
     confirmed,
     awaitingConfirmation: awaiting,
@@ -96,9 +93,8 @@ export interface AttainabilityRowView {
   held_status: CapabilityGapRow["held"]["status"];
   required_level: string;
   current_level: string;
-  required_step: number | null;
-  current_step: number | null;
-  level_gap: number | null;
+  necessity: CapabilityGapRow["necessity"];
+  necessity_scope_note: string;
   resolution: GapResolution | null;
   closing_cost_krw_m: number | null;
   months_to_attain: number | null;
@@ -137,9 +133,8 @@ export function rowView(r: CapabilityGapRow): AttainabilityRowView {
     held_status: r.held.status,
     required_level: r.requiredLevel,
     current_level: r.currentLevel,
-    required_step: levelStep(r.requiredLevel),
-    current_step: levelStep(r.currentLevel),
-    level_gap: levelGap(r.requiredLevel, r.currentLevel),
+    necessity: r.necessity,
+    necessity_scope_note: r.necessityScopeNote,
     resolution: r.resolution,
     closing_cost_krw_m: a?.closingCostKrwM ?? null,
     months_to_attain: a?.monthsToAttain ?? null,
@@ -168,7 +163,6 @@ export function buildAttainabilityView(opportunityId: string | null, rows: Capab
     opportunity_id: opportunityId,
     stored: updatedAt !== null,
     updated_at: updatedAt,
-    scale: LEVEL_LABELS,
     rows: rows.map(rowView),
     summary: attainabilitySummary(rows),
     removed_capabilities: removed,
@@ -204,7 +198,7 @@ export type AttainabilityError =
   | { code: "stale_requires_rejudge"; message: string };
 
 /** S3-owned fields (ADR-0170 D2): S8 may not write them; edit in S3 (levels also in S5). */
-export const S3_OWNED_PATCH_FIELDS = ["capability", "requiredNote", "held", "requiredLevel", "currentLevel", "source", "note"] as const;
+export const S3_OWNED_PATCH_FIELDS = ["capability", "requiredNote", "necessity", "necessityScopeNote", "held", "requiredLevel", "currentLevel", "source", "note"] as const;
 
 const RESOLUTIONS = ["build", "partner", "hire", "invest"];
 const GRADE_KEYS = ["high", "medium", "low"];
@@ -325,7 +319,7 @@ export function confirmAttainability(
     if (isStale(r)) return r;
     confirmed.push(r.id);
     // Legacy judgements get their basis stamped on confirmation.
-    return { ...r, attainability: { ...a, confirmedBy: userId, confirmedAt: at, basisHash: a.basisHash ?? capabilityRowHash(r), s3Snapshot: a.s3Snapshot ?? s3SnapshotOf(r) } };
+    return { ...r, attainability: { ...a, confirmedBy: userId, confirmedAt: at, basisHash: a.basisHash && !a.basisHash.startsWith("v1:") ? a.basisHash : capabilityRowHash(r), s3Snapshot: a.basisHash && !a.basisHash.startsWith("v1:") ? a.s3Snapshot ?? s3SnapshotOf(r) : s3SnapshotOf(r) } };
   });
   if (confirmed.length === 0 && staleTargets.length > 0) {
     return { ok: false, error: { code: "stale_requires_rejudge", message: "S3 내용이 바뀐 행은 재판정(저장) 후에 확정할 수 있습니다." } };

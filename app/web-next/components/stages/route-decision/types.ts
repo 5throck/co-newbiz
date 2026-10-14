@@ -16,12 +16,16 @@ export interface AdvisoryResponse {
     competitive: { structure: string; players: Array<{ name: string; tier: string; note: string }> } | null;
   } | null;
   capabilityGap: {
-    total: number; evaluated: number; met: number; partial: number; unmet: number;
+    total: number; evaluated: number; leading: number; average: number; partial: number; none: number;
+    /** Deprecated aliases (met = leading + average, unmet = none), kept for one release. */
+    met: number; unmet: number;
     coveragePct: number | null;
+    essentialCoveragePct?: number | null;
     unmetRows: Array<{ capability: string; resolution: string | null }>;
     // S3에서 확정한 필요 역량 수준 전체 행 (역량 관련 5기준 채점 근거)
     rows?: Array<{
       capability: string;
+      necessity?: string;
       source: string;
       held: { status: string; holders: string[]; evidence: string };
       resolution: string | null;

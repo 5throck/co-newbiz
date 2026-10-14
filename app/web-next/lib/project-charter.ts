@@ -60,7 +60,7 @@ export function buildProjectCharter(
     // Source of truth is the S3/S5 register (opportunity.capability_gap_json, ADR-0136); rows already met are not gaps.
     const reg = db.query("SELECT capability_gap_json FROM opportunity WHERE id = ?")
       .get(opts.opportunityId) as { capability_gap_json: string | null } | undefined;
-    const gaps = parseGapRegister(reg?.capability_gap_json).rows.filter((r) => r.capability && r.held.status !== "met");
+    const gaps = parseGapRegister(reg?.capability_gap_json).rows.filter((r) => r.capability && r.held.status !== "leading" && r.held.status !== "average");
     for (const g of gaps.slice(0, 3)) {
       const target = g.resolution ? RESOLUTION_LABEL[g.resolution] : clamp(g.note, 120);
       kpis.push({ key: `gap:${g.capability.slice(0, 24)}`, label: `역량 해소 — ${g.capability}`, target: target || "해소 방안 확인" });

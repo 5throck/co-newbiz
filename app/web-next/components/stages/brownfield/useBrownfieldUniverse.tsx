@@ -57,7 +57,7 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
       api.get<{ rows: CapabilityGapRow[] }>(`/api/opportunities/${encodeURIComponent(selected.opportunity.id)}/capability-gap`)
         .then((r) => {
           const s = summarizeGap(r.data.rows);
-          setGapHint({ unmet: s.unmet, partial: s.partial });
+          setGapHint({ unmet: s.none, partial: s.partial });
         })
         .catch(() => setGapHint(null));
     }
