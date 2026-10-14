@@ -5,9 +5,6 @@ import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
   MAX_PRIMARY_TABS,
-  activeSubtabIndex,
-  allDefs,
-  groupForTrack,
   STAGE_TAB_GROUPS,
   activeTabIndex,
   groupForSegment,
@@ -26,7 +23,7 @@ describe("stage tabs", () => {
   });
 
   test("every project sub-page route is reachable from some stage tab (no orphans)", () => {
-    const reachable = new Set(STAGE_TAB_GROUPS.flatMap((g) => allDefs(g).map((t) => t.seg)));
+    const reachable = new Set(STAGE_TAB_GROUPS.flatMap((g) => [...g.tabs, ...g.more].map((t) => t.seg)));
     const pages = readdirSync(PROJECT_DIR).filter((e) => statSync(join(PROJECT_DIR, e)).isDirectory());
     const orphans = pages.filter((p) => !reachable.has(`/${p}`));
     expect(orphans).toEqual([]);
@@ -50,35 +47,11 @@ describe("stage tabs", () => {
     const s8 = groupForSegment("/business-case")!;
     const all = [...s8.tabs, ...s8.more];
     expect(all[activeTabIndex(s8, "/business-case", "target-costing")].label).toBe("타겟코스팅");
-    // ADR-0169: the default analysis view (no or unknown ?tab=) highlights 재무적 타당성.
-    expect(all[activeTabIndex(s8, "/business-case", null)].label).toBe("재무적 타당성");
-    expect(all[activeTabIndex(s8, "/business-case", "bogus")].label).toBe("재무적 타당성");
-    expect(all[activeTabIndex(s8, "/business-case", "scenarios")].label).toBe("재무적 타당성");
-    expect(all[activeTabIndex(s8, "/wacc", null)].label).toBe("재무적 타당성");
-    expect(all[activeTabIndex(s8, "/financial-analysis", null)].label).toBe("재무적 타당성");
-    expect(all[activeTabIndex(s8, "/business-case", "goals")].label).toBe("사업 목표");
-    expect(all[activeTabIndex(s8, "/business-case", "technical")].label).toBe("기술적 타당성");
-    expect(all[activeTabIndex(s8, "/business-case", "capability")].label).toBe("기술적 타당성");
+    // R2-E: the default analysis view (no ?tab=) highlights the 시나리오 비교 stage tab.
+    expect(all[activeTabIndex(s8, "/business-case", null)].label).toBe("시나리오 비교");
     expect(all[activeTabIndex(s8, "/business-case", "targets")].label).toBe("대상 비교·선정");
     expect(all[activeTabIndex(s8, "/business-case", "decision")].label).toBe("결정");
     expect(all[activeTabIndex(s8, "/business-case", "overview")].label).toBe("설명·생성·권고");
     expect(tabHref("p1", { seg: "/business-case", query: "target-costing", label: "x" })).toBe("/projects/p1/business-case?tab=target-costing");
-  });
-
-  test("financial sub-tab row shows only under the financial lens (ADR-0169)", () => {
-    const s8 = groupForSegment("/business-case")!;
-    expect(s8.tabs.length).toBeLessThanOrEqual(MAX_PRIMARY_TABS);
-    const sub = (seg: string, tab: string | null) => s8.subtabs![activeSubtabIndex(s8, seg, tab)]?.label;
-    expect(sub("/business-case", null)).toBe("시나리오 비교");
-    expect(sub("/business-case", "scenarios")).toBe("시나리오 비교");
-    expect(sub("/wacc", null)).toBe("WACC");
-    expect(sub("/financial-analysis", null)).toBe("재무분석");
-    for (const t of ["goals", "technical", "targets", "decision", "overview", "params"]) expect(activeSubtabIndex(s8, "/business-case", t)).toBe(-1);
-  });
-
-  test("greenfield drops the targets tab; unknown ?tab=targets lands on the financial lens", () => {
-    const gf = groupForTrack(groupForSegment("/business-case")!, "greenfield");
-    expect(gf.tabs.map((t) => t.label)).toEqual(["사업 목표", "기술적 타당성", "재무적 타당성", "결정"]);
-    expect([...gf.tabs, ...gf.more][activeTabIndex(gf, "/business-case", "targets")].label).toBe("재무적 타당성");
   });
 });

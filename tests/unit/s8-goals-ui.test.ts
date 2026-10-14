@@ -22,12 +22,10 @@ const WEB = join(import.meta.dirname, "../../app/web-next");
 const read = (p: string) => readFileSync(join(WEB, p), "utf8");
 
 describe("S8 tab order and greenfield redirect", () => {
-  test("stage tab row: goals, technical, financial, targets, decision; financial sub-tab row (ADR-0169)", () => {
+  test("stage tab row: goals, scenarios, targets, wacc, financial analysis", () => {
     const s8 = STAGE_TAB_GROUPS.find((g) => g.stage === "S8")!;
-    expect(s8.tabs.map((t) => t.query ?? t.seg)).toEqual(["goals", "technical", "financial", "targets", "decision"]);
-    expect(s8.subtabs!.map((t) => t.query ?? t.seg)).toEqual(["scenarios", "/wacc", "/financial-analysis"]);
-    expect(primaryTabKeys(false)).toEqual(["goals", "technical", "financial", "targets", "decision"]);
-    expect(primaryTabKeys(true)).toEqual(["goals", "technical", "financial", "decision"]);
+    expect(s8.tabs.map((t) => t.query ?? t.seg)).toEqual(["goals", "/business-case", "targets", "/wacc", "/financial-analysis"]);
+    expect(primaryTabKeys(false)).toEqual(["goals", "scenarios", "targets", "wacc", "financial-analysis"]);
   });
   test("greenfield hides the targets tab in both tab models", () => {
     const s8 = STAGE_TAB_GROUPS.find((g) => g.stage === "S8")!;
@@ -36,9 +34,9 @@ describe("S8 tab order and greenfield redirect", () => {
     expect([...groupForTrack(s8, "brownfield").tabs].some((t) => t.query === "targets")).toBe(true);
     expect([...groupForTrack(s8, null).tabs].some((t) => t.query === "targets")).toBe(true);
     expect(primaryTabKeys(true)).not.toContain("targets");
-    // ?tab=targets on greenfield falls back to the financial lens (default tab)
+    // ?tab=targets on greenfield highlights the plain scenarios entry
     const all = [...gf.tabs, ...gf.more];
-    expect(all[activeTabIndex(gf, "/business-case", "targets")].label).toBe("재무적 타당성");
+    expect(all[activeTabIndex(gf, "/business-case", "targets")].label).toBe("시나리오 비교");
   });
   test("redirect rule", () => {
     expect(shouldRedirectTargetsTab("targets", true)).toBe(true);
@@ -48,7 +46,6 @@ describe("S8 tab order and greenfield redirect", () => {
     expect(resolveS8Tab("targets", { greenfield: false })).toBe("targets");
     expect(resolveS8Tab("goals", { greenfield: true })).toBe("goals");
     expect(resolveS8Tab(null, { greenfield: false })).toBe("scenarios");
-    expect(resolveS8Tab(undefined, { greenfield: true })).toBe("scenarios");
     expect(resolveS8Tab("bogus", { greenfield: false })).toBe("scenarios");
   });
 });
