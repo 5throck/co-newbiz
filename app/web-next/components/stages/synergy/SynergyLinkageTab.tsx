@@ -3,11 +3,12 @@
 // Split from components/stages/SynergyStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import { useState } from "react";
 import { SectionToolbar } from "../../layout.tsx";
-import { type GapHeldStatus, HELD_STATUS_CHIP, HELD_STATUS_LABEL, type GapResolution, RESOLUTION_LABEL, summarizeGap } from "../../../lib/capability-gap.ts";
+import { type GapHeldStatus, HELD_STATUS_CHIP, HELD_STATUS_LABEL, type GapResolution, RESOLUTION_LABEL, summarizeGap, gapSourceLabel } from "../../../lib/capability-gap.ts";
 import type { SynergyResultState } from "./useSynergyResult.ts";
 import type { SynergyPayload } from "./types.ts";
 import { ColGroup } from "../../ui.tsx";
-import { CapabilityHeldDialog, evidencePreview, holdersPreview } from "../CapabilityHeldDialog.tsx";
+import { ClampedText } from "../ClampedText.tsx";
+import { CapabilityHeldDialog, HeldSummary } from "../CapabilityHeldDialog.tsx";
 
 // 시너지 영역 6열 — 근거·기회·위험이 긴 문단 열.
 const SYNERGY_AREA_COL_PCT = [14, 10, 30, 20, 16, 10] as const;
@@ -128,11 +129,12 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                         <tbody>
                           {gapRows.map((r, idx) => (
                             <tr key={r.id}>
-                              <td className="cell-primary">
+                              <td className="cell-primary max-w-[22rem] break-words">
                                 <span className="font-semibold text-[length:var(--fs-caption)]">{r.capability}</span>
                                 <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                                  출처: {r.source === "s2_sketch" ? "S2 스케치" : r.source === "s1_factors" ? "S1 요인" : r.source === "synergy_area" ? "S3 시너지 영역" : "수동"}{r.requiredNote ? ` — ${r.requiredNote}` : ""}
+                                  {gapSourceLabel(r.source, true)}
                                 </span>
+                                {r.requiredNote && <ClampedText text={r.requiredNote} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" />}
                               </td>
                               <td>
                                 <select aria-label={`${r.capability} 보유 판정`} value={r.held.status} disabled={!canCurate}
@@ -144,8 +146,7 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                                 </select>
                               </td>
                               <td className="text-[length:var(--fs-caption)]">
-                                <span className="block"><span className="text-[color:var(--muted-fg)]">주체</span> {holdersPreview(r.held.holders)}</span>
-                                <span className="block"><span className="text-[color:var(--muted-fg)]">근거</span> {evidencePreview(r.held.evidence)}</span>
+                                <HeldSummary holders={r.held.holders} evidence={r.held.evidence} />
                                 <button type="button" className="btn-ghost btn-sm mt-1" aria-label={`${r.capability} 보유 주체·근거 ${canCurate ? "입력" : "보기"}`} onClick={() => setHeldEditing(r.id)}>
                                   {canCurate ? (r.held.holders.length > 0 || r.held.evidence.trim() ? "수정" : "입력") : "보기"}
                                 </button>

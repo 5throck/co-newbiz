@@ -155,6 +155,16 @@ export const HELD_STATUS_CHIP: Record<GapHeldStatus, string> = {
 
 const HELD_STATUSES: GapHeldStatus[] = ["met", "partial", "unmet", "unevaluated"];
 const RESOLUTIONS: GapResolution[] = ["build", "partner", "hire", "invest"];
+/** Origin line for a register row. Inside the S3 screen the label never names S3 itself. */
+export function gapSourceLabel(source: string, inS3: boolean): string {
+  switch (source) {
+    case "s2_sketch": return "S2 스케치에서 도출";
+    case "s1_factors": return "S1 요인에서 도출";
+    case "synergy_area": return inS3 ? "시너지 영역에서 도출" : "S3 시너지 영역에서 도출";
+    default: return "직접 입력";
+  }
+}
+
 const SOURCES: GapSource[] = ["s2_sketch", "s1_factors", "synergy_area", "manual"];
 
 const str = (v: unknown, cap: number): string => (typeof v === "string" ? v.trim().slice(0, cap) : "");
