@@ -3629,7 +3629,13 @@ paths:
   /api/our-company/members/{memberId}/analyze:
     post:
       operationId: analyzeMember
-      summary: Run the company-profile pipeline (versioned).
+      summary: Run the company-profile pipeline (versioned). Optional analyst-supplied evidence.
+      description: |
+        Optional JSON body `{ sourceUrls?: string[] (max 8, http/https, ports 80/443), companyNote?: string (max 2000 chars) }`.
+        URLs are fetched server-side with an SSRF guard (private/loopback/link-local/metadata ranges blocked, DNS re-checked on every redirect hop,
+        max 3 redirects, 10 s, 1.5 MB, text content types only) and treated as untrusted data. The URLs, per-URL fetch status and the note are
+        PERSISTED in the profile version payload (dataSources.userSources, dataSources.analystNote, userNote); fetched bodies are not stored or logged.
+        400 `invalid_source_urls` (lists the bad entries), `too_many_source_urls`, `company_note_too_long`. The audit entry records the URL count only.
       tags:
         - Analysis
       responses:
@@ -3647,6 +3653,60 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/our-company/members/{memberId}/profile/sources:
+    post:
+      operationId: addMemberProfileSource
+      summary: Add a hand-entered source (optional URL, title, pasted excerpt up to 4000 chars) to the latest profile.
+      description: Creates a new profile version (source_ref analyst_source); the profile text is not changed. Max 8 provided sources. Same permission as starting a profile job.
+      tags:
+        - Analysis
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '400':
+          description: Validation error.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Member or profile not found.
+  /api/our-company/members/{memberId}/profile/sources/{sourceId}:
+    patch:
+      operationId: updateMemberProfileSource
+      summary: Edit a hand-entered source (403 for pipeline-collected sources).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '403':
+          description: Not a hand-entered source.
+    delete:
+      operationId: removeMemberProfileSource
+      summary: Remove a hand-entered source (soft removal keeps the [Un] numbering; ledger items it confirmed return to needs_judgement).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '403':
+          description: Not a hand-entered source.
+  /api/our-company/members/{memberId}/profile/overrides:
+    post:
+      operationId: overrideMemberProfileFields
+      summary: Analyst edit of industry exposure, strengths, weaknesses and business assessment.
+      description: |
+        Body `{ industryExposure?: string[<=12 x 100], strengths?: string[<=8 x 300], weaknesses?: string[<=8 x 300], businessAssessment?: string(<=1500), reason: string(1..300, required), citeSource?: "U<n>"|"N" }`. No HTML.
+        Creates a NEW version (source_ref analyst_edit, created_by the caller); edited items become `confirmed` in the verification ledger with the reason as evidence.
+        The no-search-evidence `degraded` flag clears only when a provided source or note exists. Audit entry under the calling user (field names only).
+      tags:
+        - Analysis
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '400':
+          description: Validation error (reason missing, HTML, caps, no changes).
         '401':
           $ref: '#/components/responses/Unauthorized'
   /api/our-company/members/{memberId}/competitor-proposals:

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ListBackButton } from "../../ListBackButton.tsx";
 import { ProfileReport } from "./ProfileReport.tsx";
 import { ProfileChips } from "./ProfileChips.tsx";
+import { ProfileEvidencePanel } from "./ProfileEvidence.tsx";
 import type { OurCompanyStageState } from "./useOurGroups.ts";
 
 export function ProfileSection({ ctx }: { ctx: OurCompanyStageState }) {
@@ -41,6 +42,7 @@ export function ProfileSection({ ctx }: { ctx: OurCompanyStageState }) {
               </>
             }
           />
+          {canAct && profiles[openMember] !== "loading" && <ProfileEvidencePanel ctx={ctx} memberId={openMember} profile={profiles[openMember]} />}
           {profiles[openMember] === "loading" && <p className="text-[length:var(--fs-body)]" role="status">분석 중입니다 — 완료되면 자동으로 표시됩니다.</p>}
           <ProfileReport ctx={ctx} openMember={openMember} />
         </section>

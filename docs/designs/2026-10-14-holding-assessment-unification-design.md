@@ -258,3 +258,4 @@ The holding draft route previously never proposed `필요도` or `필요 수준`
 - Holding check diagnosis: rows a person already judged are kept (counted), dropped rows carry a specific reason, a judged status needs a profile basis or a cited source (never fabricated), and missing search configuration or missing profiles are named in the note.
 - Unsaved AI drafts no longer vanish on a refetch: the screen state merges server rows with unsaved drafts, shows `저장하지 않은 AI 초안 N건` and offers `AI 초안 버리기`.
 - Not verified by the AI: nothing exercised in a browser; no live data inspected.
+- Profile evidence (ADR-0172 amendment 4, 2026-10-15): the holding check reads a profile corrected or generated with analyst-provided evidence as verified for the cited or edited items (ledger `confirmed`); uncited text stays unverified.

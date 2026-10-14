@@ -5,6 +5,7 @@
  * lines the LLM may cite as `profile` / `dart`; the opportunity's own S1/S2/S3 context is passed separately and is
  * NEVER evidence that the group holds a capability.
  */
+import { hasUsableAnalystEvidence } from "./profile-analyst-sources.ts";
 import type { CompanyProfilePayload } from "./company-profile-pipeline.ts";
 
 const FIELD_CAP = 320;
@@ -44,14 +45,16 @@ function fieldState(ledger: LedgerEntry[], keys: string[], researched: boolean):
 /** Labelled evidence lines of a profile, one per non-empty textual field, capped per field and per company. */
 export function profileEvidence(companyName: string, p: CompanyProfilePayload | null): ProfileEvidence {
   if (!p) return { lines: [], citable: false, researched: false };
-  const researched = (p.dataSources?.webResearchCount ?? 0) > 0 || (p.researchSources?.length ?? 0) > 0;
+  // Analyst-provided URLs count only when they carry a readable body; a note counts as analyst evidence (ADR-0172 amendment 4).
+  const userBacked = hasUsableAnalystEvidence(p);
+  const researched = (p.dataSources?.webResearchCount ?? 0) > 0 || (p.researchSources ?? []).some((x) => !x.provided) || userBacked;
   const ledger = (p.verificationLedger ?? []) as LedgerEntry[];
   const itemKeys = (prefix: string, v: unknown, n: number): string[] => (Array.isArray(v) ? v.slice(0, n).filter((x): x is string => typeof x === "string").map((x) => `${prefix}: ${x.slice(0, 60)}`) : []);
   const fields: Array<[string, string, string[]]> = [
-    ["사업 평가", clip(p.businessAssessment, 500), []],
+    ["사업 평가", clip(p.businessAssessment, 500), ["사업 평가"]],
     ["강점", list(p.strengths, 6), itemKeys("강점", p.strengths, 6)],
     ["약점", list(p.weaknesses, 5), itemKeys("약점", p.weaknesses, 5)],
-    ["산업 노출", list(p.industryExposure, 8), []],
+    ["산업 노출", list(p.industryExposure, 8), itemKeys("산업 노출", p.industryExposure, 8)],
     ["SWOT 기회", list(p.swot?.opportunities, 4), []],
     ["SWOT 위협", list(p.swot?.threats, 4), []],
     ["경쟁 포지셔닝", clip(p.competitive?.positioning), ["경쟁 포지셔닝 서술"]],

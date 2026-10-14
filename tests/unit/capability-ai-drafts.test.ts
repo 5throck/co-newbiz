@@ -279,7 +279,7 @@ describe("UI source structure", () => {
   });
   test("inline narrative field: textarea, maxLength cap, counter, labels, placeholder", () => {
     const src = read("components/stages/CapabilityNarrativeDialog.tsx");
-    for (const k of ["export function NarrativeInput", "<textarea", "maxLength={NARRATIVE_CAP}", "aria-label={`${capability} ${field}`}", "placeholder={field}", "rows={2}", "자</span>"]) expect(src).toContain(k);
+    for (const k of ["export function NarrativeInput", "<textarea", "maxLength={NARRATIVE_CAP}", "aria-label={`${capability} ${field}`}", "placeholder={field}", "rows={4}", "minHeight: \"5.75rem\"", "maxHeight: \"15rem\"", "자</span>"]) expect(src).toContain(k);
   });
   test("per-row recheck is gone: dialog file removed, hook has no recheck state", () => {
     expect(existsSync(join(ROOT, "app/web-next/components/stages/synergy/HoldingRecheckDialog.tsx"))).toBe(false);

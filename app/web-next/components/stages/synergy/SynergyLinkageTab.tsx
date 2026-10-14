@@ -15,7 +15,7 @@ import { SourceLinks } from "./SourceLinks.tsx";
 
 // 시너지 영역 6열 — 근거·기회·위험이 긴 문단 열.
 // 필요 역량 수준 8열 — 필요 역량·서술 열이 넓고 선택 열은 좁게.
-const GAP_COL_PCT = [20, 11, 21, 11, 21, 12, 4] as const;
+const GAP_COL_PCT = [23, 8, 24, 9, 23, 9, 4] as const;
 
 /** 누락 표식 — 아이콘+글자. 제안 후에도 값이 없는 칸에 남아 사람이 입력할 곳을 보여 준다. */
 function MissingMark() {
@@ -172,7 +172,7 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                             const miss = missingRequirementCells(r);
                             return (
                             <tr key={r.id}>
-                              <td className="cell-primary">
+                              <td className="cell-primary align-top">
                                 <span className="font-semibold text-[length:var(--fs-caption)]">{r.capability}</span>
                                 <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                                   {gapSourceLabel(r.source, true)}
@@ -189,10 +189,10 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                                   </span>
                                 )}
                               </td>
-                              <td>
+                              <td className="align-top">
                                 <select aria-label={`${r.capability} 필요도`} value={r.necessity} disabled={!canCurate}
                                   onChange={(e) => updateGapRow(idx, { necessity: e.target.value as GapNecessity, ...(e.target.value === "partial_essential" ? {} : { necessityScopeNote: "" }) })}
-                                  className="sizing-new-input sizing-new-input-sm w-full">
+                                  className="sizing-new-input sizing-new-input-sm w-auto max-w-full">
                                   <option value="">{NECESSITY_UNSET_LABEL}</option>
                                   {(Object.keys(NECESSITY_LABEL) as Array<Exclude<GapNecessity, "">>).map((k) => (
                                     <option key={k} value={k}>{NECESSITY_LABEL[k]}</option>
@@ -206,15 +206,15 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                                 {miss.necessity && <MissingMark />}
                                 {mark?.fields.includes("necessity") && <DraftChip basis={mark.basis.necessity} />}
                               </td>
-                              <td className="text-[length:var(--fs-caption)]">
+                              <td className="align-top text-[length:var(--fs-caption)]">
                                 <NarrativeInput capability={r.capability} field="필요 수준" value={r.requiredLevel} readOnly={!canCurate} onChange={(v) => updateGapRow(idx, { requiredLevel: v })} />
                                 {miss.requiredLevel && <MissingMark />}
                                 {mark?.fields.includes("requiredLevel") && <DraftChip basis={mark.basis.requiredLevel} />}
                               </td>
-                              <td>
+                              <td className="align-top">
                                 <select aria-label={`${r.capability} 보유 판정`} aria-describedby={r.held.status === "unevaluated" && holdReasons[r.id] ? `hold-reason-${r.id}` : undefined} title={r.held.status === "unevaluated" && holdReasons[r.id] ? `미판정 사유: ${holdReasons[r.id]}` : undefined} value={r.held.status} disabled={!canCurate}
                                   onChange={(e) => updateGapHeld(idx, { status: e.target.value as GapHeldStatus, legacyStatus: undefined, reassessHint: undefined })}
-                                  className={`sizing-new-input sizing-new-input-sm w-full ${HELD_STATUS_CHIP[r.held.status]}`}>
+                                  className={`sizing-new-input sizing-new-input-sm w-auto max-w-full ${HELD_STATUS_CHIP[r.held.status]}`}>
                                   {(Object.keys(HELD_STATUS_LABEL) as GapHeldStatus[]).map((s) => (
                                     <option key={s} value={s}>{HELD_STATUS_LABEL[s]}</option>
                                   ))}
@@ -226,11 +226,11 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                                   </span>
                                 )}
                               </td>
-                              <td className="text-[length:var(--fs-caption)]">
+                              <td className="align-top text-[length:var(--fs-caption)]">
                                 <NarrativeInput capability={r.capability} field="보유 수준" value={r.currentLevel} readOnly={!canCurate} onChange={(v) => updateGapRow(idx, { currentLevel: v })} />
                                 {mark?.fields.includes("currentLevel") && <DraftChip basis={mark.basis.currentLevel} sources={mark.sources} />}
                               </td>
-                              <td className="text-[length:var(--fs-caption)]">
+                              <td className="align-top text-[length:var(--fs-caption)]">
                                 <HeldEvidenceButton capability={r.capability} evidence={r.held.evidence} legacyHolders={r.held.holders} readOnly={!canCurate} onOpen={() => setHeldEditing(r.id)} />
                               </td>
                               <td>

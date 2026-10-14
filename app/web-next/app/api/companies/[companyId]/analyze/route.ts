@@ -2,6 +2,8 @@
 // (일반화된 company-profile-pipeline, 2026-09-15). 재분석 시 버전+1로 누적.
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../lib/envelope.ts";
+import { parseProfileEvidenceBody } from "../../../../../lib/profile-evidence-input.ts";
+import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { getDb } from "../../../../../../../db/client.ts";
 import { resolveCompanySubject, startCompanyProfilePipeline } from "../../../../../lib/company-profile-pipeline.ts";
 import { insertTargetEvidence, targetIdsForCompany } from "../../../../../lib/brownfield-targets.ts";
@@ -18,7 +20,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
   if (!company) return notFound();
 
   // 파이프라인은 in-process 비동기 실행 — 완료된 버전은 목록/상세에서 폴링·재조회.
-  startCompanyProfilePipeline(db, resolveCompanySubject(db, companyId), ctx.userId);
+  const evidence = await parseProfileEvidenceBody(request);
+  if (!evidence.ok) return evidence.response;
+  appendAudit(db, { actor: ctx.userId, action: `profile.analyze urls=${evidence.sourceUrls.length} note=${evidence.companyNote ? 1 : 0}`, target: `company:${companyId}`, now: new Date().toISOString() });
+  startCompanyProfilePipeline(db, resolveCompanySubject(db, companyId), ctx.userId, { sourceUrls: evidence.sourceUrls, companyNote: evidence.companyNote });
   // 재분석 시점 근거 — 이 회사에 연결된 brownfield 후보 전체의 타임라인에
   // 적립한다(사용자 결정, 2026-09-16: 등록·재분석 시 정보를 구조적으로 보존).
   // 분석 결과 본체는 company_profile_version(append-only)에 저장되고 후보 상세
