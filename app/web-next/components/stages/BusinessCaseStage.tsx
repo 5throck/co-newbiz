@@ -32,6 +32,7 @@ import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { GateDecisionJump, GateDecisionPanel } from "../GateDecisionPanel.tsx";
 import { TargetCheckPanel } from "../TargetCheckPanel.tsx";
+import { AiJudgementSupport } from "../AiJudgementSupport.tsx";
 import { StageFrame } from "../StageFrame.tsx";
 import { TabNav } from "../TabNav.tsx";
 import { WaccPanel } from "../wacc/WaccPanel.tsx";
@@ -222,36 +223,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   const [targetFilter, setTargetFilter] = useState<string | null>(null);
   const [selecting, setSelecting] = useState<{ targetId: string; name: string } | null>(null);
   const [selectionRationale, setSelectionRationale] = useState("");
-  // ADR-0118 — S8 채택 권고(제안). 채택은 사람의 행위다.
-  interface AdoptionReco {
-    source: "llm" | "synthesis";
-    provider: string | null;
-    note: string | null;
-    manifest: string[];
-    recommendation: {
-      recommended_model_id: string | null;
-      rationale_draft: string;
-      what_would_change: string | null;
-      key_evidence: string[];
-      cautions: string[];
-    };
-  }
-  const [reco, setReco] = useState<AdoptionReco | null>(null);
-  const [recoLoading, setRecoLoading] = useState(false);
-  const [recoError, setRecoError] = useState<string | null>(null);
-
-  async function generateAdoptionReco() {
-    if (recoLoading) return;
-    setRecoLoading(true); setRecoError(null);
-    try {
-      const r = await api.post<AdoptionReco>(`/api/projects/${encodeURIComponent(projectId)}/business-case/adoption-recommendation`, {});
-      setReco(r.data);
-    } catch (err) {
-      setRecoError(err instanceof Error ? err.message : "권고 생성 실패");
-    } finally {
-      setRecoLoading(false);
-    }
-  }
+  const [rationalePrefill, setRationalePrefill] = useState<{ text: string; nonce: number } | null>(null);
 
   // ADR-0143 — 대상 선정은 인간의 판단이며 근거 기록이 필수다 (경계 #2,
   // ADR-0053). 선정 시 md_project.company_id가 확정되고, 이후 채택은 선정된
@@ -893,41 +865,12 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         </details>
       )}
 
-      {/* ── LLM 채택 권고 (결정 지원) — ADR-0118: 제안은 LLM, 채택은 사람 ── */}
+      {/* AI 채택 권고 lives in the decision tab's "AI 판단 지원" (one section for both AI proposals). */}
       {canAct && (
-        <section className="market-section sizing-step mt-3" aria-label="AI 추천 채택 권고">
-          <h3 className="sizing-step-title text-[0.9rem]">🤖 AI 추천 채택 권고</h3>
-          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-            채택 권고 (결정 탭의 게이트 판단과 별개) — 채택은 사람이 합니다: 이 화면의 케이스들과 킬 크라이테리아 상태에서 만든 제안이며, ★ 권고안(결정론)과도 별개 제안입니다.
-          </p>
-          {recoError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
-          {!reco && !recoLoading && !recoError && (
-            <div className="flex flex-wrap items-center gap-2 mb-0">
-              <button type="button" className="btn-ghost" onClick={() => void generateAdoptionReco()}>▶ 채택 권고 생성</button>
-              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">권고 케이스와 근거, "무엇이 바뀌면 뒤집히는가" 초안을 작성합니다.</span>
-            </div>
-          )}
-          {recoLoading && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">케이스 수치와 킬 크라이테리아를 근거로 초안을 작성하는 중...</p>}
-          {reco && (
-            <>
-              <p className="mb-1 flex flex-wrap items-center gap-1">
-                <span className={`status-chip ${reco.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
-                  {reco.source === "llm" ? `LLM 제안${reco.provider ? ` · ${reco.provider}` : ""}` : "결정론 폴백"}
-                </span>
-                {reco.recommendation.recommended_model_id && (
-                  <span className="status-chip status-green">권고: {(data?.cases ?? []).find((c) => c.id === reco.recommendation.recommended_model_id)?.name ?? reco.recommendation.recommended_model_id}</span>
-                )}
-              </p>
-              {reco.note && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{reco.note}</p>}
-              {reco.recommendation.rationale_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">채택 근거 초안:</span> {reco.recommendation.rationale_draft}</p>}
-              {reco.recommendation.what_would_change && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">권고가 뒤집히는 조건:</span> {reco.recommendation.what_would_change}</p>}
-              {reco.recommendation.cautions.length > 0 && (
-                <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mb-1">⚠ {reco.recommendation.cautions.join(" / ")}</p>
-              )}
-              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">이 제안이 본 산출물: {reco.manifest.join(" · ")}</p>
-            </>
-          )}
-        </section>
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-3" role="note">
+          AI 채택 권고는 결정 탭의 AI 판단 지원에서 확인합니다.{" "}
+          <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("decision")}>결정 탭 →</button>
+        </p>
       )}
       </>
       )}
@@ -1135,11 +1078,20 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         <div className="mt-4">
           <S8LensStrip projectId={projectId} />
           <TargetCheckPanel projectId={projectId} />
+          <AiJudgementSupport
+            projectId={projectId}
+            gate="fs"
+            cases={data?.cases ?? []}
+            canAct={canAct}
+            onApplyRationale={(text) => setRationalePrefill((p) => ({ text, nonce: (p?.nonce ?? 0) + 1 }))}
+          />
           <GateDecisionPanel
             opportunityId={projectId}
             gates={["fs"]}
             entityType="project"
             showReview={false}
+            hideBrief
+            rationalePrefill={rationalePrefill}
             nextStage={{ label: "S9 실사·검증", href: `/projects/${projectId}/dd` }}
           />
         </div>

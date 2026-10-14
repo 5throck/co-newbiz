@@ -8,7 +8,7 @@
 // 사용법: bun run scripts/co-newbiz/backfill-capability-gap.ts [--dry-run]
 import { getDb } from "../../db/client.ts";
 import { ulid } from "../../db/lib/ulid.ts";
-import { serializeGapRegister } from "../../app/web-next/lib/technical-lens.ts";
+import { persistGapRegister } from "../../app/web-next/lib/capability-register-write.ts";
 import { normalizeGapRows, parseGapRegister, type CapabilityGapRow } from "../../app/web-next/lib/capability-gap.ts";
 
 interface LegacyGapRow {
@@ -92,10 +92,7 @@ for (const row of rows) {
     const normalized = normalizeGapRows(register.rows);
     if (!dryRun) {
       const at = new Date().toISOString();
-      db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [
-        serializeGapRegister(normalized, at, opp.capability_gap_json),
-        row.opportunity_id,
-      ]);
+      persistGapRegister(db, row.opportunity_id, normalized, at, "backfill-capability-gap");
     }
   }
 }

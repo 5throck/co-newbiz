@@ -210,7 +210,7 @@ function s8Summary(projectId: string): string {
 function technicalLensLine(db: Database, projectId: string): string {
   try {
     const t = buildS8LensSummary(db, projectId).technical;
-    return technicalLensBriefLine({ status: t.status, judged: t.judged, total: t.total, cautionItems: t.items.filter((i) => i.status === "caution").map((i) => i.label) });
+    return technicalLensBriefLine({ status: t.status, judged: t.judged, total: t.total, cautionItems: t.items.filter((i) => i.status === "caution").map((i) => i.label), staleCount: t.staleCount });
   } catch {
     return "기술적 타당성: 요약 실패 — 참고 정보이며 승인 조건이 아닙니다";
   }

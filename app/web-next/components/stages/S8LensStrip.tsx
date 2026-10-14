@@ -33,6 +33,7 @@ export function S8LensStrip({ projectId }: { projectId: string }) {
             {strip.technical.cautionCount > 0 ? ` · 주의 ${strip.technical.cautionCount}` : ""}
             {strip.technical.worstItem ? ` · ${strip.technical.worstItem}` : ""}
             {strip.technical.mismatchCount > 0 ? ` · 실사와 다름 ${strip.technical.mismatchCount}` : ""}
+            {strip.technical.staleCount > 0 ? ` · 재판정 필요 ${strip.technical.staleCount}` : ""}
           </p>
         </article>
         <article className="grid gap-1" aria-label="재무적 타당성 요약">

@@ -11,13 +11,17 @@ import {
   levelStep,
   normalizeAttainability,
   parseGapRegister,
+  parseRemovedCapabilities,
   summarizeGap,
   type AttainabilityGrade,
+  type AttainabilityHistoryEntry,
   type CapabilityAttainability,
   type CapabilityGapRow,
   type GapResolution,
+  type RemovedCapability,
 } from "./capability-gap.ts";
-import { serializeGapRegister } from "./technical-lens.ts";
+import { capabilityRowHash, isStale, s3Changes, s3SnapshotOf, type S3Change } from "./capability-linkage.ts";
+import { persistGapRegister } from "./capability-register-write.ts";
 
 export const ATTAINABILITY_BANNER_TEXT =
   "필요 역량 달성 가능성이 확인되지 않은 항목이 있습니다 — 이 분석은 필요 역량을 확보할 수 있다는 전제를 둡니다.";
@@ -37,8 +41,10 @@ export interface AttainabilitySummary {
   /** 사람이 확정한 판정 수 / 판정은 있으나 확정 전인 수. */
   confirmed: number;
   awaitingConfirmation: number;
+  /** Rows whose S3 content changed after the judgement (ADR-0170); counted as unjudged. */
+  stale: number;
   banner: boolean;
-  bannerReasons: Array<"empty" | "unevaluated" | "unjudged" | "low">;
+  bannerReasons: Array<"empty" | "unevaluated" | "unjudged" | "low" | "stale">;
   bannerText: string | null;
 }
 
@@ -47,7 +53,14 @@ export function attainabilitySummary(rows: CapabilityGapRow[]): AttainabilitySum
   const grades = { high: 0, medium: 0, low: 0, unjudged: 0 };
   let confirmed = 0;
   let awaiting = 0;
+  let stale = 0;
   for (const r of rows) {
+    if (isStale(r)) {
+      // ADR-0170: an S3 change after the judgement makes it unjudged until a person re-judges.
+      stale += 1;
+      grades.unjudged += 1;
+      continue;
+    }
     const g = gradeOfRow(r);
     if (g) grades[g] += 1;
     else grades.unjudged += 1;
@@ -60,7 +73,8 @@ export function attainabilitySummary(rows: CapabilityGapRow[]): AttainabilitySum
   if (rows.length === 0) reasons.push("empty");
   else {
     if (gap.evaluated === 0) reasons.push("unevaluated");
-    if (grades.unjudged > 0) reasons.push("unjudged");
+    if (grades.unjudged - stale > 0) reasons.push("unjudged");
+    if (stale > 0) reasons.push("stale");
     if (grades.low > 0) reasons.push("low");
   }
   return {
@@ -69,6 +83,7 @@ export function attainabilitySummary(rows: CapabilityGapRow[]): AttainabilitySum
     grades,
     confirmed,
     awaitingConfirmation: awaiting,
+    stale,
     banner: reasons.length > 0,
     bannerReasons: reasons,
     bannerText: reasons.length === 0 ? null : rows.length === 0 || reasons.includes("empty") || reasons.includes("unevaluated") ? ATTAINABILITY_EMPTY_BANNER_TEXT : ATTAINABILITY_BANNER_TEXT,
@@ -94,10 +109,26 @@ export interface AttainabilityRowView {
   drafted_by: "human" | "ai" | null;
   confirmed_by: string | null;
   confirmed_at: string | null;
+  // S3-owned held judgement, read-only here (ADR-0170 / decider 2026-10-14)
+  held_holders: string[];
+  held_evidence: string;
+  // ADR-0170 linkage (read-only)
+  stale: boolean;
+  stale_since: string | null;
+  basis_hash: string | null;
+  /** Current S3 row hash (send back as `s3Hash` when saving, so a concurrent S3 edit is detected). */
+  s3_hash: string;
+  /** What changed in S3 since the judgement (old to new). */
+  s3_changes: S3Change[];
+  /** Latest superseded judgement, or null. */
+  prior: AttainabilityHistoryEntry | null;
+  history_count: number;
 }
 
 export function rowView(r: CapabilityGapRow): AttainabilityRowView {
   const a = r.attainability;
+  const stale = isStale(r);
+  // A stale judgement keeps its prior values visible (pre-filled) but is neither confirmed nor counted as a grade.
   const g = a?.grade ?? null;
   return {
     id: r.id,
@@ -116,12 +147,21 @@ export function rowView(r: CapabilityGapRow): AttainabilityRowView {
     rationale: a?.rationale ?? "",
     evidence: a?.evidence ?? [],
     drafted_by: a?.draftedBy ?? null,
-    confirmed_by: a?.confirmedBy ?? null,
-    confirmed_at: a?.confirmedAt ?? null,
+    confirmed_by: stale ? null : a?.confirmedBy ?? null,
+    confirmed_at: stale ? null : a?.confirmedAt ?? null,
+    held_holders: r.held.holders,
+    held_evidence: r.held.evidence,
+    stale,
+    stale_since: stale ? a?.staleSince ?? null : null,
+    basis_hash: a?.basisHash ?? null,
+    s3_hash: capabilityRowHash(r),
+    s3_changes: stale ? s3Changes(r) : [],
+    prior: a?.history?.[a.history.length - 1] ?? null,
+    history_count: a?.history?.length ?? 0,
   };
 }
 
-export function buildAttainabilityView(opportunityId: string | null, rows: CapabilityGapRow[], updatedAt: string | null) {
+export function buildAttainabilityView(opportunityId: string | null, rows: CapabilityGapRow[], updatedAt: string | null, removed: RemovedCapability[] = []) {
   return {
     opportunity_id: opportunityId,
     stored: updatedAt !== null,
@@ -129,6 +169,7 @@ export function buildAttainabilityView(opportunityId: string | null, rows: Capab
     scale: LEVEL_LABELS,
     rows: rows.map(rowView),
     summary: attainabilitySummary(rows),
+    removed_capabilities: removed,
   };
 }
 
@@ -136,8 +177,12 @@ export function buildAttainabilityView(opportunityId: string | null, rows: Capab
 
 export interface AttainabilityPatch {
   id: string;
-  requiredLevel?: unknown;
-  currentLevel?: unknown;
+  /**
+   * Concurrency token, NOT an S3 value: the S3 row hash the client's page was showing
+   * (AttainabilityRowView.s3_hash). If S3 changed since, the judgement is stamped on the
+   * hash the person actually saw, so the row stays stale and must be re-judged.
+   */
+  s3Hash?: unknown;
   resolution?: unknown;
   closingCostKrwM?: unknown;
   monthsToAttain?: unknown;
@@ -152,18 +197,15 @@ export type AttainabilityError =
   | { code: "invalid_level"; message: string }
   | { code: "invalid_cost"; message: string }
   | { code: "rationale_required"; message: string }
-  | { code: "nothing_to_confirm"; message: string };
+  | { code: "nothing_to_confirm"; message: string }
+  | { code: "s3_owned_field"; message: string }
+  | { code: "stale_requires_rejudge"; message: string };
+
+/** S3-owned fields (ADR-0170 D2): S8 may not write them; edit in S3 (levels also in S5). */
+export const S3_OWNED_PATCH_FIELDS = ["capability", "requiredNote", "held", "requiredLevel", "currentLevel", "source", "note"] as const;
 
 const RESOLUTIONS = ["build", "partner", "hire", "invest"];
 const GRADE_KEYS = ["high", "medium", "low"];
-
-function levelValue(next: unknown, prev: string, label: string): { ok: true; value: string } | { ok: false; error: AttainabilityError } {
-  if (typeof next !== "string") return { ok: false, error: { code: "invalid_level", message: `${label}은 ${LEVEL_LABELS.join("/")} 중 하나(또는 빈 값)여야 합니다.` } };
-  const t = next.trim();
-  // 척도 밖 레거시 텍스트는 그대로 두는 경우에만 허용한다(삭제·덮어쓰기는 척도 값으로만).
-  if (t === "" || LEVEL_LABELS.includes(t) || t === prev) return { ok: true, value: t };
-  return { ok: false, error: { code: "invalid_level", message: `${label}은 ${LEVEL_LABELS.join("/")} 중 하나(또는 빈 값)여야 합니다.` } };
-}
 
 const numOrNull = (v: unknown): number | null | "bad" => {
   if (v === null || v === "") return null;
@@ -183,17 +225,14 @@ export function applyAttainabilityPatches(
     const id = typeof raw?.id === "string" ? raw.id : "";
     const base = out.get(id) ?? byId.get(id);
     if (!id || !base) return { ok: false, error: { code: "unknown_row", message: `레지스터에 없는 행입니다: ${id || "(id 없음)"}` } };
+    const owned = S3_OWNED_PATCH_FIELDS.find((f) => f in raw);
+    if (owned) {
+      return { ok: false, error: { code: "s3_owned_field", message: `${owned}은(는) S3가 소유한 항목이라 S8에서 바꿀 수 없습니다 — S3(필요 수준·보유 수준은 S5도)에서 수정하세요.` } };
+    }
+    if ("s3Hash" in raw && raw.s3Hash !== null && typeof raw.s3Hash !== "string") {
+      return { ok: false, error: { code: "invalid_request", message: "s3Hash는 문자열입니다." } };
+    }
     let next: CapabilityGapRow = { ...base };
-    if ("requiredLevel" in raw) {
-      const v = levelValue(raw.requiredLevel, base.requiredLevel, "필요 수준");
-      if (!v.ok) return v;
-      next.requiredLevel = v.value;
-    }
-    if ("currentLevel" in raw) {
-      const v = levelValue(raw.currentLevel, base.currentLevel, "보유 수준");
-      if (!v.ok) return v;
-      next.currentLevel = v.value;
-    }
     if ("resolution" in raw) {
       if (raw.resolution !== null && raw.resolution !== "" && !RESOLUTIONS.includes(raw.resolution as string)) {
         return { ok: false, error: { code: "invalid_request", message: "resolution은 build | partner | hire | invest 또는 null입니다." } };
@@ -229,15 +268,24 @@ export function applyAttainabilityPatches(
     if ((a.grade === "high" || a.grade === "low") && !a.rationale) {
       return { ok: false, error: { code: "rationale_required", message: `${base.capability}: 달성 가능성 '높음'·'낮음'은 판정 근거가 필요합니다.` } };
     }
+    // A fresh save on a stale row IS the re-judgement, even if the values stay the same.
     const changed =
       JSON.stringify({ ...prevA, confirmedBy: null, confirmedAt: null, draftedBy: null }) !== JSON.stringify({ ...a, confirmedBy: null, confirmedAt: null, draftedBy: null }) ||
-      next.requiredLevel !== base.requiredLevel || next.currentLevel !== base.currentLevel || next.resolution !== base.resolution;
+      next.resolution !== base.resolution || isStale(base);
     if (changed) {
       a.draftedBy = actor.human ? "human" : "ai";
       a.confirmedBy = null;
       a.confirmedAt = null;
+      // Server-side stamp of the S3 basis this judgement is made on (a client-sent basisHash is never read).
+      const current = capabilityRowHash(next);
+      const seen = typeof raw.s3Hash === "string" && raw.s3Hash.trim() !== "" ? raw.s3Hash.trim().slice(0, 40) : current;
+      a.basisHash = seen;
+      // The snapshot describes the basis; when the page was outdated we do not know those
+      // values, so the previously stored snapshot (if any) is kept rather than the new S3 values.
+      if (seen === current) a.s3Snapshot = s3SnapshotOf(next);
+      delete a.staleSince;
     }
-    const hasContent = a.grade !== null || a.closingCostKrwM !== null || a.monthsToAttain !== null || a.rationale !== "" || a.evidence.length > 0;
+    const hasContent = a.grade !== null || a.closingCostKrwM !== null || a.monthsToAttain !== null || a.rationale !== "" || a.evidence.length > 0 || (a.history?.length ?? 0) > 0;
     if (hasContent) next = { ...next, attainability: a };
     else {
       const { attainability: _x, ...rest } = next;
@@ -261,14 +309,25 @@ export function confirmAttainability(
     const bad = rowIds.find((x) => !known.has(x));
     if (bad !== undefined) return { ok: false, error: { code: "unknown_row", message: `레지스터에 없는 행입니다: ${bad}` } };
   }
+  // ADR-0170: a judgement made on an outdated S3 basis cannot be confirmed; it needs a fresh save first.
+  const staleTargets = rows.filter((r) => isStale(r) && (!rowIds || rowIds.includes(r.id)));
+  const explicitStale = rowIds ? staleTargets : [];
+  if (explicitStale.length > 0) {
+    return { ok: false, error: { code: "stale_requires_rejudge", message: `S3 내용이 바뀐 행은 재판정(저장) 후에 확정할 수 있습니다: ${explicitStale.map((r) => r.capability).join(", ")}` } };
+  }
   const confirmed: string[] = [];
   const next = rows.map((r) => {
     const a = r.attainability;
     if (!a || a.grade === null || a.confirmedAt) return r;
     if (rowIds && !rowIds.includes(r.id)) return r;
+    if (isStale(r)) return r;
     confirmed.push(r.id);
-    return { ...r, attainability: { ...a, confirmedBy: userId, confirmedAt: at } };
+    // Legacy judgements get their basis stamped on confirmation.
+    return { ...r, attainability: { ...a, confirmedBy: userId, confirmedAt: at, basisHash: a.basisHash ?? capabilityRowHash(r), s3Snapshot: a.s3Snapshot ?? s3SnapshotOf(r) } };
   });
+  if (confirmed.length === 0 && staleTargets.length > 0) {
+    return { ok: false, error: { code: "stale_requires_rejudge", message: "S3 내용이 바뀐 행은 재판정(저장) 후에 확정할 수 있습니다." } };
+  }
   if (confirmed.length === 0) return { ok: false, error: { code: "nothing_to_confirm", message: "확정할 판정이 없습니다 — 달성 가능성을 판정한 행만 확정할 수 있습니다." } };
   return { ok: true, rows: next, confirmedIds: confirmed };
 }
@@ -280,7 +339,7 @@ export function sourceOpportunityOf(db: Database, projectId: string): string | n
 export function readRegister(db: Database, opportunityId: string) {
   const row = db.query("SELECT capability_gap_json AS j FROM opportunity WHERE id = ?").get(opportunityId) as { j: string | null } | null;
   if (!row) return null;
-  return { json: row.j, ...parseGapRegister(row.j) };
+  return { json: row.j, ...parseGapRegister(row.j), removed: parseRemovedCapabilities(row.j) };
 }
 
 export function writeRegister(
@@ -288,11 +347,54 @@ export function writeRegister(
   opportunityId: string,
   rows: CapabilityGapRow[],
   audit: { actor: string; action: string; target: string; at: string },
-): void {
-  db.transaction(() => {
-    const storedJson = (db.query("SELECT capability_gap_json AS j FROM opportunity WHERE id = ?").get(opportunityId) as { j: string | null } | null)?.j ?? null;
-    db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [serializeGapRegister(rows, audit.at, storedJson), opportunityId]);
+): { rows: CapabilityGapRow[]; removed: RemovedCapability[] } {
+  return db.transaction(() => {
+    // ADR-0170: the shared wrapper also materialises any pending S3-change invalidation.
+    const w = persistGapRegister(db, opportunityId, rows, audit.at, audit.actor);
     appendAudit(db, { actor: audit.actor, action: audit.action, target: audit.target, now: audit.at });
+    return { rows: w.rows, removed: w.removed };
+  })();
+}
+
+/**
+ * Save drafts: read the CURRENT register, merge ONLY S8-owned fields (resolution and
+ * attainability.*) onto it and write, all in one transaction. S3-owned values always come
+ * from the stored register, never from the client, so an S3 edit made after the S8 page
+ * loaded survives (no lost update).
+ */
+export function saveAttainability(
+  db: Database,
+  opportunityId: string,
+  patches: unknown,
+  actor: { userId: string; human: boolean },
+  audit: { action: string; target: string; at: string },
+): { ok: true; rows: CapabilityGapRow[]; removed: RemovedCapability[]; changedIds: string[]; updatedAt: string | null } | { ok: false; error: AttainabilityError } {
+  return db.transaction(() => {
+    const reg = readRegister(db, opportunityId);
+    if (!reg) return { ok: false as const, error: { code: "invalid_request" as const, message: "원 기회를 찾을 수 없습니다." } };
+    const res = applyAttainabilityPatches(reg.rows, patches, actor);
+    if (!res.ok) return res;
+    if (res.changedIds.length === 0) return { ok: true as const, rows: reg.rows, removed: reg.removed, changedIds: [], updatedAt: reg.updatedAt };
+    const w = writeRegister(db, opportunityId, res.rows, { actor: actor.userId, ...audit });
+    return { ok: true as const, rows: w.rows, removed: w.removed, changedIds: res.changedIds, updatedAt: audit.at };
+  })();
+}
+
+/** Confirm (human-only route): same read-merge-write discipline as saveAttainability. */
+export function confirmAndWrite(
+  db: Database,
+  opportunityId: string,
+  rowIds: string[] | null,
+  userId: string,
+  audit: { action: string; target: string; at: string },
+): { ok: true; rows: CapabilityGapRow[]; removed: RemovedCapability[]; confirmedIds: string[] } | { ok: false; error: AttainabilityError } {
+  return db.transaction(() => {
+    const reg = readRegister(db, opportunityId);
+    if (!reg) return { ok: false as const, error: { code: "invalid_request" as const, message: "원 기회를 찾을 수 없습니다." } };
+    const res = confirmAttainability(reg.rows, rowIds, userId, audit.at);
+    if (!res.ok) return res;
+    const w = writeRegister(db, opportunityId, res.rows, { actor: userId, ...audit });
+    return { ok: true as const, rows: w.rows, removed: w.removed, confirmedIds: res.confirmedIds };
   })();
 }
 

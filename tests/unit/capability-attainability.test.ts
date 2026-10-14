@@ -139,15 +139,17 @@ describe("routes", () => {
     let r = await put([{ id: "r1", grade: "low" }]);
     expect(r.status).toBe(400);
     expect(((await r.json()) as any).error.code).toBe("rationale_required");
-    r = await put([{ id: "r1", requiredLevel: "대단함" }]);
-    expect(((await r.json()) as any).error.code).toBe("invalid_level");
+    // S3-owned fields (levels included) are rejected, not silently dropped (ADR-0170 D2)
+    r = await put([{ id: "r1", requiredLevel: "숙련" }]);
+    expect(r.status).toBe(400);
+    expect(((await r.json()) as any).error.code).toBe("s3_owned_field");
     r = await put([{ id: "r1", closingCostKrwM: -1 }]);
     expect(((await r.json()) as any).error.code).toBe("invalid_cost");
     r = await put([{ id: "nope", grade: "medium" }]);
     expect(((await r.json()) as any).error.code).toBe("unknown_row");
     expect((await put([{ id: "r1", grade: "medium" }], viewerCookie)).status).toBe(403);
-    // a medium grade needs no rationale; a legacy level may stay unchanged
-    r = await put([{ id: "r2", grade: "medium", currentLevel: "실무" }]);
+    // a medium grade needs no rationale
+    r = await put([{ id: "r2", grade: "medium" }]);
     expect(r.status).toBe(200);
   });
 

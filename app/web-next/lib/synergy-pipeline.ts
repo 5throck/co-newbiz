@@ -12,7 +12,7 @@ import type { Database } from "bun:sqlite";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { completeOrFallback, isLlmConfigured } from "./llm.ts";
 import { parseGapRegister } from "./capability-gap.ts";
-import { serializeGapRegister } from "./technical-lens.ts";
+import { persistGapRegister } from "./capability-register-write.ts";
 import { isWebResearchConfigured, researchSources, type WebSource } from "./web-research.ts";
 import { fetchFinancials, findCorpCode, isDartConfigured, type DartFinancials } from "./dart-client.ts";
 import { systemMessage, promptAgent, type PromptKey } from "./prompts.ts";
@@ -534,12 +534,11 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
           held: { status: "unevaluated" as const, holders: [] as string[], evidence: "" },
           resolution: null,
           note: "LLM 시너지 영역 도출 초안 — 사람이 확인해 확정하세요.",
+          requiredLevel: "",
+          currentLevel: "",
         }));
       if (additions.length > 0) {
-        db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [
-          serializeGapRegister([...existing.rows, ...additions], now(), storedGapJson),
-          oppRow.id,
-        ]);
+        persistGapRegister(db, oppRow.id, [...existing.rows, ...additions], now(), "synergy-pipeline");
       }
     }
     db.run(

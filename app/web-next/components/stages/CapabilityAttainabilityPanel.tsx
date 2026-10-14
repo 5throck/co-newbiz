@@ -15,19 +15,23 @@ import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import { ColGroup } from "../ui.tsx";
-import { LevelSelect } from "./LevelSelect.tsx";
-import { HELD_STATUS_CHIP, HELD_STATUS_LABEL, RESOLUTION_LABEL, type GapResolution } from "../../lib/capability-gap.ts";
+import { CapabilityHeldDialog, evidencePreview, holdersPreview } from "./CapabilityHeldDialog.tsx";
+import { ATTAINABILITY_GRADE_LABEL, HELD_STATUS_CHIP, HELD_STATUS_LABEL, RESOLUTION_LABEL, type GapResolution } from "../../lib/capability-gap.ts";
 import type { AttainabilityRowView, AttainabilitySummary } from "../../lib/capability-attainability.ts";
+import type { RemovedCapability } from "../../lib/capability-gap.ts";
 
 interface View {
   opportunity_id: string | null;
   stored: boolean;
   rows: AttainabilityRowView[];
   summary: AttainabilitySummary;
+  removed_capabilities?: RemovedCapability[];
 }
 
+// ADR-0170: required/current level, held judgement, holders and evidence are S3-owned and
+// read-only here; the draft carries only what S8 owns (resolution + attainability).
 interface Draft {
-  requiredLevel: string; currentLevel: string; resolution: string;
+  resolution: string;
   cost: string; months: string; grade: string; rationale: string;
 }
 
@@ -39,12 +43,13 @@ const GRADE_OPTIONS = [
 ] as const;
 
 const toDraft = (r: AttainabilityRowView): Draft => ({
-  requiredLevel: r.required_level, currentLevel: r.current_level, resolution: r.resolution ?? "",
+  resolution: r.resolution ?? "",
   cost: r.closing_cost_krw_m === null ? "" : String(r.closing_cost_krw_m),
   months: r.months_to_attain === null ? "" : String(r.months_to_attain),
   grade: r.grade ?? "", rationale: r.rationale,
 });
 
+const levelText = (v: string) => (v.trim() === "" ? "미정" : v);
 const RATIONALE_MAX = 600; // mirrors the server cap in lib/capability-attainability.ts
 const PREVIEW_LEN = 60;
 
@@ -87,6 +92,7 @@ function SummaryStrip({ s }: { s: AttainabilitySummary }) {
         <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
           달성 가능성 — 높음 {s.grades.high} · 중간 {s.grades.medium} · 낮음 {s.grades.low} · 미판정 {s.grades.unjudged} (사람 확정 {s.confirmed}건)
         </span>
+        {s.stale > 0 && <span className="status-chip status-amber"><span aria-hidden="true">!</span> 재판정 필요 {s.stale}</span>}
       </div>
       {s.banner && s.bannerText && <div className="legacy-model-notice mb-2" role="alert"><p className="legacy-model-notice-text">{s.bannerText}</p></div>}
     </>
@@ -102,6 +108,7 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
+  const [heldViewing, setHeldViewing] = useState<string | null>(null);
   const base = `/api/projects/${encodeURIComponent(projectId)}/capability-attainability`;
 
   const apply = useCallback((v: View) => {
@@ -127,8 +134,10 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
     try {
       const rows = [...dirty].map((id) => {
         const d = drafts[id];
+        // Only S8-owned fields go out, plus the S3 hash this page was showing so the server
+        // can tell if S3 changed meanwhile (S3 values themselves are never sent).
         return {
-          id, requiredLevel: d.requiredLevel, currentLevel: d.currentLevel, resolution: d.resolution || null,
+          id, s3Hash: view.rows.find((x) => x.id === id)?.s3_hash, resolution: d.resolution || null,
           closingCostKrwM: d.cost.trim() === "" ? null : Number(d.cost), monthsToAttain: d.months.trim() === "" ? null : Number(d.months),
           grade: d.grade || null, rationale: d.rationale,
         };
@@ -154,6 +163,7 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
   if (error && !view) return <section className="market-section sizing-step mb-3" aria-label="필요 역량 달성 가능성"><p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">{error}</p></section>;
   if (!view) return <section className="market-section sizing-step mb-3" aria-label="필요 역량 달성 가능성"><p className="text-[color:var(--muted-fg)]">불러오는 중…</p></section>;
 
+  const s3Href = `/deals/${encodeURIComponent(view.opportunity_id ?? "")}/s3`;
   if (compact) {
     return (
       <section className="market-section sizing-step mb-3" aria-label="필요 역량 달성 가능성 요약">
@@ -165,11 +175,14 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
   }
 
   const awaiting = view.summary.awaitingConfirmation;
+  const removed = view.removed_capabilities ?? [];
   return (
     <section className="market-section sizing-step mb-3" aria-label="필요 역량 달성 가능성">
       <h3 className="sizing-step-title">필요 역량 달성 가능성</h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
         S3 필요 역량 레지스터의 필요 수준을 확보할 수 있는지 사람이 판정합니다. AI는 초안만 제안하며, 여기 입력한 비용·기간은 사업성 수치에 자동 반영되지 않습니다.
+        필요 수준·보유 수준·보유 판정은 S3에서 정의한 값이며 여기서는 읽기 전용입니다{view.opportunity_id ? <> — <a href={s3Href} className="text-[color:var(--accent)] underline">S3에서 수정</a></> : ""}.
+        S3 내용이 바뀐 행은 재판정이 필요하며, 이전 판정은 이력으로 남습니다.
       </p>
       <SummaryStrip s={view.summary} />
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">{error}</p>}
@@ -196,9 +209,33 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
                       <span className="font-semibold">{r.capability}</span>
                       <span className={`status-chip ${HELD_STATUS_CHIP[r.held_status]} block`}>{HELD_STATUS_LABEL[r.held_status]}</span>
                       {r.level_gap !== null && <span className="block text-[color:var(--muted-fg)]">수준 차이 {r.level_gap}단계</span>}
+                      <span className="block mt-1">
+                        <span className="text-[color:var(--muted-fg)]">S3 보유 판정</span> {holdersPreview(r.held_holders)}
+                        <span className="block text-[color:var(--muted-fg)]">근거 {evidencePreview(r.held_evidence)}</span>
+                        <button type="button" className="btn-ghost btn-sm mt-1" aria-label={`${r.capability} S3 보유 판정 보기`} onClick={() => setHeldViewing(r.id)}>보기</button>
+                      </span>
+                      {r.stale && (
+                        <div className="mt-1" role="status">
+                          <span className="status-chip status-amber"><span aria-hidden="true">!</span> S3 변경 — 재판정 필요</span>
+                          {r.s3_changes.length > 0 ? (
+                            <ul className="m-0 pl-4 text-[color:var(--muted-fg)]">
+                              {r.s3_changes.map((c) => <li key={c.field}>{c.label}: {c.before} → {c.after}</li>)}
+                            </ul>
+                          ) : <span className="block text-[color:var(--muted-fg)]">변경 내용: S3 항목이 바뀌었습니다(상세 비교 없음).</span>}
+                          <span className="block text-[color:var(--muted-fg)]">
+                            이전 판정 {r.grade_label}{r.rationale ? ` — ${r.rationale.length > PREVIEW_LEN ? `${r.rationale.slice(0, PREVIEW_LEN)}…` : r.rationale}` : ""} (아래 값에 그대로 채워 두었습니다)
+                          </span>
+                          {canAct && <button type="button" className="btn-ghost btn-sm mt-1" aria-label={`${r.capability} 이전 판정으로 재판정`} onClick={() => set(r.id, {})}>이전 판정 그대로 재판정</button>}
+                        </div>
+                      )}
+                      {!r.stale && r.prior && (
+                        <span className="block text-[color:var(--muted-fg)]">
+                          이전 판정: {r.prior.grade ? ATTAINABILITY_GRADE_LABEL[r.prior.grade] : "미판정"}{r.prior.confirmedBy ? ` (확정 ${r.prior.confirmedBy}, ${(r.prior.confirmedAt ?? "").slice(0, 10)})` : ""} · {r.prior.invalidatedAt.slice(0, 10)} S3 변경으로 무효화
+                        </span>
+                      )}
                     </td>
-                    <td><LevelSelect ariaLabel={`${r.capability} 필요 수준`} value={d.requiredLevel} disabled={!canAct} onChange={(v) => set(r.id, { requiredLevel: v })} /></td>
-                    <td><LevelSelect ariaLabel={`${r.capability} 보유 수준`} value={d.currentLevel} disabled={!canAct} onChange={(v) => set(r.id, { currentLevel: v })} /></td>
+                    <td className="text-[length:var(--fs-caption)]">{levelText(r.required_level)}<a href={s3Href} className="block text-[color:var(--accent)] underline" aria-label={`${r.capability} 필요 수준은 S3에서 수정`}>S3에서 수정</a></td>
+                    <td className="text-[length:var(--fs-caption)]">{levelText(r.current_level)}<a href={s3Href} className="block text-[color:var(--accent)] underline" aria-label={`${r.capability} 보유 수준은 S3에서 수정`}>S3에서 수정</a></td>
                     <td>
                       <select aria-label={`${r.capability} 해소 방식`} value={d.resolution} disabled={!canAct} onChange={(e) => set(r.id, { resolution: e.target.value })} className="sizing-new-input sizing-new-input-sm">
                         <option value="">미정</option>
@@ -252,6 +289,23 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
         return <RationaleDialog capability={row.capability} initial={(drafts[row.id] ?? toDraft(row)).rationale} readOnly={!canAct}
           onSave={(t) => { set(row.id, { rationale: t }); setEditing(null); }} onClose={() => setEditing(null)} />;
       })()}
+      {heldViewing && (() => {
+        const row = view.rows.find((x) => x.id === heldViewing);
+        if (!row) return null;
+        return <CapabilityHeldDialog capability={row.capability} holders={row.held_holders} evidence={row.held_evidence} readOnly onClose={() => setHeldViewing(null)} />;
+      })()}
+      {removed.length > 0 && (
+        <details className="mb-2">
+          <summary className="cursor-pointer text-[length:var(--fs-caption)]">삭제된 역량 (판정 이력) {removed.length}건</summary>
+          <ul className="m-0 pl-4 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+            {removed.map((x, i) => (
+              <li key={`${x.rowId}-${i}`}>
+                {x.capability} — 필요 {levelText(x.requiredLevel)} / 보유 {levelText(x.currentLevel)}, 마지막 판정 {x.attainability?.grade ? ATTAINABILITY_GRADE_LABEL[x.attainability.grade] : "미판정"}{x.attainability?.confirmedBy ? ` (확정 ${x.attainability.confirmedBy})` : ""} · {x.removedAt.slice(0, 10)} S3에서 삭제({x.removedBy})
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       {canAct && view.rows.length > 0 && (
         <div className="flex gap-2">
           <button type="button" className="btn-ghost btn-sm" disabled={busy || dirty.size === 0} onClick={() => void save()}>초안 저장</button>

@@ -6,9 +6,9 @@
 import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
+import { persistGapRegister } from "../../../../../lib/capability-register-write.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
-import { serializeGapRegister } from "../../../../../lib/technical-lens.ts";
 import { carryOverAttainability, normalizeGapRows, parseGapRegister, type CapabilityGapRow } from "../../../../../lib/capability-gap.ts";
 
 const now = () => new Date().toISOString();
@@ -75,11 +75,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   // S8 판정(attainability, ADR-0168)은 저장돼 있던 값을 id로 이어 붙인다 — 클라이언트가
   // 보낸 판정·확정 필드는 신뢰하지 않는다(확정은 사람 전용 경로).
   const storedJson = (db.query("SELECT capability_gap_json AS j FROM opportunity WHERE id = ?").get(id) as { j: string | null }).j;
-  const rows = carryOverAttainability(normalizeGapRows(body.rows), storedJson);
-  if (rows.length === 0) return badRequest("invalid_request", "저장할 유효한 행이 없습니다 — capability는 필수입니다.");
+  const carried = carryOverAttainability(normalizeGapRows(body.rows), storedJson);
+  if (carried.length === 0) return badRequest("invalid_request", "저장할 유효한 행이 없습니다 — capability는 필수입니다.");
   const at = now();
-  db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [serializeGapRegister(rows, at, storedJson), id]);
-  appendAudit(db, { actor: auth.auth.userId, action: "capability_gap.save", target: `${id}:${rows.length}rows`, now: at });
+  // ADR-0170: S3 changes invalidate the S8 judgements of changed rows (history, not deletion);
+  // rows deleted here are archived. Events are audited under the calling user.
+  const rows = db.transaction(() => {
+    const written = persistGapRegister(db, id, carried, at, auth.auth.userId);
+    appendAudit(db, { actor: auth.auth.userId, action: "capability_gap.save", target: `${id}:${written.rows.length}rows`, now: at });
+    return written.rows;
+  })();
   // GET과 동일한 소비 형태로 반환한다 — 클라이언트가 저장 직후 상태를 그대로 반영.
   return ok({
     rows,

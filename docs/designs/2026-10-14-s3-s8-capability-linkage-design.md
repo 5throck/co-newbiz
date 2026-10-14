@@ -1,6 +1,6 @@
 ---
 title: S3-S8 required-capability linkage (single source, stale judgements, S8 read-only levels)
-status: proposal
+status: accepted
 date: 2026-10-14
 owner: platform-lead
 lang: ko
@@ -12,7 +12,7 @@ lang_reason: source-material
 Korean appears only as UI labels in backticks. All prose is English.
 
 - Decider: human decider, chat 2026-10-14 (binding decisions D1-D3 below). Drafted by platform-lead.
-- ADR: [ADR-0170](../adr/0170-s3-s8-capability-linkage.md) (Proposed).
+- ADR: [ADR-0170](../adr/0170-s3-s8-capability-linkage.md) (Accepted 2026-10-14).
 - Builds on: ADR-0168 (S8 attainability, register JSON extension), ADR-0169 (technical lens, `serializeGapRegister` single write path), ADR-0136 (S5 fills levels on the S3 register), ADR-0143 (Brown Field per-target judgements).
 
 ## 1. Problem statement
@@ -149,8 +149,8 @@ Invalidation is attributed to the user whose S3 write caused it (not to a system
 
 ## 9. Open decisions (recommendations)
 
-1. **OD-1 (awaiting the decider) - Brown Field detection basis.** Recommendation: S3 row hash plus the target's evaluation state for the seeded criterion (`status`, `note`, `evidence_ref`; not `assessed_by/at`); invalidate only that target's judgement for that row.
-2. **OD-2 - `resolution` on S3/S5 screens.** Recommendation: read-only there from slice 2, edited only in S8 (D2); until slice 2 ships, S3 edits of `resolution` are allowed but excluded from the hash.
-3. **OD-3 - `note` in the hash.** Recommendation: exclude (free memo, not a requirement fact); the decider's list does not name it.
-4. **OD-4 - Legacy judgements without `basisHash`.** Recommendation: one-off idempotent stamp with the current hash at deploy (audited as `capability_attainability.basis_stamp` under the operator who runs it), so existing confirmations survive; alternative is to treat all as stale.
-5. **OD-5 - History depth.** Recommendation: 5 entries per row (each with an `s3Snapshot`, see R4), 30 removed capabilities per register.
+1. **OD-1 (resolved: confirmed by the decider's approval of ADR-0170, 2026-10-14) - Brown Field detection basis.** Recommendation: S3 row hash plus the target's evaluation state for the seeded criterion (`status`, `note`, `evidence_ref`; not `assessed_by/at`); invalidate only that target's judgement for that row.
+2. **OD-2 (resolved: ADR-0170 approval, 2026-10-14) - `resolution` on S3/S5 screens.** Recommendation: read-only there from slice 2, edited only in S8 (D2); until slice 2 ships, S3 edits of `resolution` are allowed but excluded from the hash.
+3. **OD-3 (resolved: ADR-0170 approval, 2026-10-14) - `note` in the hash.** Recommendation: exclude (free memo, not a requirement fact); the decider's list does not name it.
+4. **OD-4 (resolved: ADR-0170 approval, 2026-10-14) - Legacy judgements without `basisHash`.** Recommendation: one-off idempotent stamp with the current hash at deploy (audited as `capability_attainability.basis_stamp` under the operator who runs it), so existing confirmations survive; alternative is to treat all as stale.
+5. **OD-5 (resolved: ADR-0170 approval, 2026-10-14) - History depth.** Recommendation: 5 entries per row (each with an `s3Snapshot`, see R4), 30 removed capabilities per register.
