@@ -3137,7 +3137,7 @@ paths:
   /api/opportunities/{id}/capability-attainability:
     get:
       operationId: getOpportunityCapabilityAttainability
-      summary: "S5 (Green Field) required-capability judgement view (ADR-0171 / ADR-0172): same row view as the project summary, keyed by the opportunity. Rows are in the canonical order capability, necessity, required_level, held_status, current_level, held_holders / held_evidence, then resolution, expected_level, closing_cost_krw_m, months_to_attain, grade, rationale, evidence, confirmation."
+      summary: "S5 (Green Field) required-capability judgement view (ADR-0171 / ADR-0172): same row view as the project summary, keyed by the opportunity. Rows are in the canonical order capability, necessity, required_level, held_status, current_level, held_holders (legacy, read-only) / held_evidence, then resolution, expected_level, closing_cost_krw_m, months_to_attain, grade, rationale, evidence, confirmation."
       tags:
         - Analysis
       parameters:
@@ -3246,7 +3246,7 @@ paths:
   /api/opportunities/{id}/capability-gap/llm-draft:
     post:
       operationId: draftCapabilityGap
-      summary: Requirement-side draft (amendment 2026-10-14) - proposes extra capability rows from synergy areas and fills EMPTY necessity (essential|partial_essential|optional, scope note only with partial_essential) and required-level narrative (max 400 chars) with a short basis each; response adds drafts {rowId -> filled fields + basis}. Does not touch holding fields (see holding-check). Optional body {rows} uses the unsaved on-screen rows as the base. Never overwrites a human value; nothing is written to the database; proposal only, saving stays a human action (boundary #2).
+      summary: Requirement-side draft (amendment 2026-10-14) - proposes extra capability rows from synergy areas and fills EMPTY necessity (essential|partial_essential|optional, scope note only with partial_essential) and required-level narrative (max 400 chars) with a short basis each; response adds drafts {rowId -> filled fields + basis}. Does not touch holding fields (see holding-check). Optional body {rows} uses the unsaved on-screen rows as the base. Missing 필요도 / 필요 수준 (unset necessity, empty required level, on every row) are always detected and proposed (rows with missing cells go to the LLM in batches of 6 (bounded parallelism, one stricter retry per failed batch, each item validated on its own, truncated or fenced or prose-wrapped JSON salvaged) and new rows come from a separate small call with necessity and requiredLevel together); the response adds a missing object with before, after, necessity and requiredLevel counts and a note that reports how many missing cells were filled, how many remain missing and why, and the failure category (truncated, invalid JSON, empty, call failed, timeout) without the raw response. Never overwrites a human value; nothing is written to the database; proposal only, saving stays a human action (boundary #2).
       tags:
         - Analysis
       parameters:
@@ -3267,7 +3267,7 @@ paths:
   /api/opportunities/{id}/capability-gap/holding-check:
     post:
       operationId: checkCapabilityHolding
-      summary: Holding-side draft (amendment 2026-10-14) - proposes holding status (leading|average|partial|none|unevaluated; leading needs comparative evidence), holding-level narrative and holders/evidence from group/affiliate profiles plus bounded external web search (max 12 rows, 2 queries per row, overall timeout; web text is untrusted data). Citations are required (profile or valid source numbers); unsupported rows stay unevaluated with a reason. Optional body {rows, rowId, webSearch:false}; default scope is unjudged rows or rows with empty holding level/evidence and fills EMPTY fields only; with rowId the single-row proposal is returned in proposals[rowId] for a human to apply. Search gate is the same as the S6 web-search proposal (analyst role; lib/web-research.ts config, DDG fallback switch WEB_SEARCH_DDG_ENABLED). Nothing is written to the database; proposal only (boundary #2).
+      summary: Holding-side draft (amendment 2026-10-14) - proposes holding status (leading|average|partial|none|unevaluated; leading needs comparative evidence), holding-level narrative and holding evidence (no holders) from group/affiliate profiles plus bounded external web search (max 12 rows, 2 queries per row, overall timeout; web text is untrusted data). Citations are required (profile or valid source numbers); unsupported rows stay unevaluated with a reason. Optional body {rows, webSearch:false}; default scope is unjudged rows or rows with empty holding level/evidence and fills EMPTY fields only (no single-row mode). Search gate is the same as the S6 web-search proposal (analyst role; lib/web-research.ts config, DDG fallback switch WEB_SEARCH_DDG_ENABLED). Nothing is written to the database; proposal only (boundary #2).
       tags:
         - Analysis
       parameters:
@@ -6049,7 +6049,7 @@ paths:
   /api/projects/{id}/capability-attainability:
     get:
       operationId: getProjectCapabilityAttainability
-      summary: "S8 required-capability attainability READ-ONLY summary (ADR-0168, edit surface moved to S5/S7 by ADR-0171). Per row of the source opportunity's S3 register, in the ADR-0172 order: capability, necessity (essential | partial_essential | optional | empty), necessity_scope_note, required_level (narrative), held_status (leading | average | partial | none | unevaluated), current_level (narrative), held_holders, held_evidence, then resolution, expected_level (narrative, <= 400), closing_cost_krw_m, months_to_attain, grade (high | medium | low | null = unjudged), rationale, evidence, confirmation. Also stale, stale_since, basis_hash, s3_hash, s3_changes, prior, history_count and note; summary with counts and the warning banner state (stale rows count as unjudged); removed_capabilities lists judgements of rows deleted in S3. Top level adds edit_at (S5 for Green Field, S7 for Brown Field) and track."
+      summary: "S8 required-capability attainability READ-ONLY summary (ADR-0168, edit surface moved to S5/S7 by ADR-0171). Per row of the source opportunity's S3 register, in the ADR-0172 order: capability, necessity (essential | partial_essential | optional | empty), necessity_scope_note, required_level (narrative), held_status (leading | average | partial | none | unevaluated), current_level (narrative), held_holders (legacy, read-only), held_evidence, then resolution, expected_level (narrative, <= 400), closing_cost_krw_m, months_to_attain, grade (high | medium | low | null = unjudged), rationale, evidence, confirmation. Also stale, stale_since, basis_hash, s3_hash, s3_changes, prior, history_count and note; summary with counts and the warning banner state (stale rows count as unjudged); removed_capabilities lists judgements of rows deleted in S3. Top level adds edit_at (S5 for Green Field, S7 for Brown Field) and track."
       tags:
         - Analysis
       parameters:

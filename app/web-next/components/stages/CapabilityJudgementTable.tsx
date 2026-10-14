@@ -2,7 +2,7 @@
 
 // Shared required-capability judgement table (ADR-0171 / ADR-0172). One component renders the
 // canonical column order for both surfaces:
-//   필요 역량 → 필요도 → 필요 수준 → 보유 판정 → 보유 수준 → 보유 주체·근거
+//   필요 역량 → 필요도 → 필요 수준 → 보유 판정 → 보유 수준 → 보유 근거
 //   → 해소 방식 → 기대 수준 → 비용 → 기간 → 달성 가능성 → 근거·증빙 → 확정
 // The S3-owned columns are always read-only here. The judgement columns (해소 방식 .. 근거·증빙)
 // are inputs only when `editable` (S5); the S8 summary renders the same table read-only.
@@ -13,7 +13,7 @@ import { createPortal } from "react-dom";
 import { useModalFocus } from "../../lib/use-modal-focus.ts";
 import { ColGroup } from "../ui.tsx";
 import { ClampedText } from "./ClampedText.tsx";
-import { CapabilityHeldDialog, HeldSummary } from "./CapabilityHeldDialog.tsx";
+import { CapabilityHeldDialog, HeldEvidenceButton } from "./CapabilityHeldDialog.tsx";
 import { CapabilityNarrativeDialog, NarrativeCell, type NarrativeField } from "./CapabilityNarrativeDialog.tsx";
 import {
   ATTAINABILITY_GRADE_LABEL, HELD_STATUS_CHIP, HELD_STATUS_LABEL, NARRATIVE_CAP, NECESSITY_LABEL, NECESSITY_UNSET_LABEL,
@@ -163,7 +163,7 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
           <thead>
             <tr>
               <th scope="col">필요 역량</th><th scope="col">필요도</th><th scope="col">필요 수준</th><th scope="col">보유 판정</th>
-              <th scope="col">보유 수준</th><th scope="col">보유 주체·근거</th>
+              <th scope="col">보유 수준</th><th scope="col">보유 근거</th>
               <th scope="col">해소 방식</th><th scope="col">기대 수준</th><th scope="col">비용(백만원)</th><th scope="col">기간(개월)</th>
               <th scope="col">달성 가능성</th><th scope="col">근거·증빙</th><th scope="col">확정</th>
               {note && <th scope="col">비고</th>}
@@ -222,8 +222,7 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
                     <NarrativeCell capability={r.capability} field="보유 수준" value={r.current_level} readOnly onOpen={() => setNarrative({ id: r.id, field: "보유 수준" })} />
                   </td>
                   <td className="text-[length:var(--fs-caption)]">
-                    <HeldSummary holders={r.held_holders} evidence={r.held_evidence} />
-                    <button type="button" className="btn-ghost btn-sm mt-1" aria-label={`${r.capability} 보유 주체·근거 보기`} onClick={() => setHeldViewing(r.id)}>보기</button>
+                    <HeldEvidenceButton capability={r.capability} evidence={r.held_evidence} legacyHolders={r.held_holders} readOnly onOpen={() => setHeldViewing(r.id)} />
                   </td>
                   <td className="text-[length:var(--fs-caption)]">
                     {canEdit ? (
@@ -309,7 +308,7 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
       {heldViewing && (() => {
         const row = rows.find((x) => x.id === heldViewing);
         if (!row) return null;
-        return <CapabilityHeldDialog capability={row.capability} holders={row.held_holders} evidence={row.held_evidence} readOnly unevaluated={row.held_status === "unevaluated"} onClose={() => setHeldViewing(null)} />;
+        return <CapabilityHeldDialog capability={row.capability} evidence={row.held_evidence} legacyHolders={row.held_holders} readOnly onClose={() => setHeldViewing(null)} />;
       })()}
     </>
   );

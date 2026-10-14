@@ -17,26 +17,50 @@ export interface NecessityDraft {
   basis: { necessity: string; requiredLevel: string };
 }
 
-const KEYS: Array<Exclude<GapNecessity, "">> = ["essential", "partial_essential", "optional"];
 const text = (v: unknown, max: number): string => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
+/** Key synonyms models actually emit (snake/camel/Korean). First non-empty wins. */
+const pick = (r: Record<string, unknown>, ...names: string[]): unknown => {
+  for (const n of names) if (r[n] !== undefined && r[n] !== null && r[n] !== "") return r[n];
+  return undefined;
+};
+
+/** Row id of a raw LLM item (`id` | `rowId` | `row_id`). */
+export function draftItemId(raw: unknown): string {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return "";
+  return String(pick(raw as Record<string, unknown>, "id", "rowId", "row_id", "rowID") ?? "").trim();
+}
+
+/** Korean / spaced / cased labels -> necessity key; "" when unknown. */
+export function parseNecessityValue(v: unknown): GapNecessity {
+  const t = String(v ?? "").trim().toLowerCase().replace(/[\s_\-]+/g, "");
+  if (!t) return "";
+  if (["essential", "필수", "필수역량", "필수적"].includes(t)) return "essential";
+  if (["partialessential", "partial", "부분필수", "부분적필수", "일부필수"].includes(t)) return "partial_essential";
+  if (["optional", "선택", "선택사항", "선택적", "있으면좋음"].includes(t)) return "optional";
+  return "";
+}
+
 /**
- * Normalizes one raw LLM entry. Valid keys only; a value without a basis is dropped (unsupported);
- * the scope note exists only with partial_essential, and partial_essential without a scope is
- * dropped (the scope is the whole point). Returns null when nothing usable remains.
+ * Normalizes one raw LLM entry. Valid keys only (Korean labels and key synonyms are accepted); a value
+ * without a basis is dropped (unsupported); the scope note exists only with partial_essential, and
+ * partial_essential without a scope is dropped (the scope is the whole point). Returns null when nothing
+ * usable remains. Per item: one bad item never affects the others.
  */
 export function normalizeNecessityDraft(raw: unknown): NecessityDraft | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const r = raw as Record<string, unknown>;
-  const basisRaw = (r.basis && typeof r.basis === "object" ? r.basis : {}) as Record<string, unknown>;
-  let necessity: GapNecessity = KEYS.includes(String(r.necessity ?? "").trim() as Exclude<GapNecessity, "">) ? (String(r.necessity).trim() as GapNecessity) : "";
-  let scope = necessity === "partial_essential" ? text(r.necessityScopeNote, NECESSITY_NOTE_CAP) : "";
-  const necBasis = text(basisRaw.necessity, DRAFT_BASIS_CAP);
+  const basisField = pick(r, "basis", "근거");
+  const basisObj = (basisField && typeof basisField === "object" && !Array.isArray(basisField) ? basisField : {}) as Record<string, unknown>;
+  const basisStr = typeof basisField === "string" ? text(basisField, DRAFT_BASIS_CAP) : "";
+  let necessity: GapNecessity = parseNecessityValue(pick(r, "necessity", "필요도"));
+  let scope = necessity === "partial_essential" ? text(pick(r, "necessityScopeNote", "necessity_scope_note", "scopeNote", "필수범위", "필수 범위"), NECESSITY_NOTE_CAP) : "";
+  const necBasis = text(pick(basisObj, "necessity", "필요도") ?? pick(r, "necessityBasis", "necessity_basis"), DRAFT_BASIS_CAP) || basisStr;
   if (necessity && !necBasis) necessity = "";
   if (necessity === "partial_essential" && !scope) necessity = "";
   if (necessity !== "partial_essential") scope = "";
-  let requiredLevel = text(r.requiredLevel, NARRATIVE_CAP);
-  const levelBasis = text(basisRaw.requiredLevel, DRAFT_BASIS_CAP);
+  let requiredLevel = text(pick(r, "requiredLevel", "required_level", "필요 수준", "필요수준"), NARRATIVE_CAP);
+  const levelBasis = text(pick(basisObj, "requiredLevel", "required_level", "필요 수준", "필요수준") ?? pick(r, "requiredLevelBasis", "required_level_basis"), DRAFT_BASIS_CAP) || basisStr;
   if (requiredLevel && !levelBasis) requiredLevel = "";
   if (!necessity && !requiredLevel) return null;
   return { necessity, necessityScopeNote: scope, requiredLevel, basis: { necessity: necessity ? necBasis : "", requiredLevel: requiredLevel ? levelBasis : "" } };
@@ -71,6 +95,38 @@ export function applyNecessityDraft(row: CapabilityGapRow, draft: NecessityDraft
   return fields.length > 0 ? { row: next, mark: { fields, basis } } : { row, mark: null };
 }
 
+// ── Missing 필요도 / 필요 수준 detection (ADR-0172 amendment 2026-10-14 (2)) ──
+
+export interface MissingCounts { necessity: number; requiredLevel: number; total: number; rows: number }
+
+/** Which requirement cells of a row are empty: unset 필요도 and an empty 필요 수준 (on every row) are missing. */
+export function missingRequirementCells(row: Pick<CapabilityGapRow, "necessity" | "requiredLevel">): { necessity: boolean; requiredLevel: boolean } {
+  return { necessity: !row.necessity, requiredLevel: !String(row.requiredLevel ?? "").trim() };
+}
+
+export function countMissingRequirement(rows: Array<Pick<CapabilityGapRow, "necessity" | "requiredLevel">>): MissingCounts {
+  let necessity = 0, requiredLevel = 0, withMissing = 0;
+  for (const r of rows) {
+    const m = missingRequirementCells(r);
+    if (m.necessity) necessity++;
+    if (m.requiredLevel) requiredLevel++;
+    if (m.necessity || m.requiredLevel) withMissing++;
+  }
+  return { necessity, requiredLevel, total: necessity + requiredLevel, rows: withMissing };
+}
+
+/**
+ * Note sentence for the requirement proposal: always reports how many missing cells were filled and how
+ * many remain missing (with the reason), so the answer is never a bare "no changes" while cells are empty.
+ * `startMissing` counts every missing cell before the call, including both cells of each proposed new row.
+ */
+export function missingReport(startMissing: number, after: MissingCounts, reason: string): string {
+  const filled = Math.max(0, startMissing - after.total);
+  if (startMissing === 0 && after.total === 0) return "누락된 필요도·필요 수준이 없습니다.";
+  if (after.total === 0) return `누락 ${filled}건을 모두 채웠습니다(초안).`;
+  return `누락 ${startMissing}건 중 ${filled}건을 채웠고, ${after.total}건(필요도 ${after.necessity}·필요 수준 ${after.requiredLevel})은 ${reason} 비워 뒀습니다 — 해당 칸에 "누락" 표시가 남으니 직접 입력하세요.`;
+}
+
 /**
  * Client merge of a draft response onto the CURRENT local rows (which may hold unsaved human edits):
  * new rows are appended; existing rows keep every local value, and only empty 필요도 / 필요 수준 /
@@ -85,7 +141,7 @@ export function mergeDraftResponse(local: CapabilityGapRow[], response: Capabili
     if (!l.necessity && s.necessity) { out.necessity = s.necessity; out.necessityScopeNote = s.necessityScopeNote; }
     if (!l.requiredLevel.trim()) out.requiredLevel = s.requiredLevel;
     if (!l.currentLevel.trim()) out.currentLevel = s.currentLevel;
-    const unjudged = l.held.status === "unevaluated" && l.held.holders.length === 0 && !l.held.evidence.trim();
+    const unjudged = l.held.status === "unevaluated" && !l.held.evidence.trim();
     if (unjudged) out.held = s.held;
     if (!l.note && s.note) out.note = s.note;
     return out;
@@ -100,6 +156,75 @@ export function mergeDraftResponse(local: CapabilityGapRow[], response: Capabili
     seen.add(r.id); names.add(norm(r.capability)); added.push(r);
   }
   return [...merged, ...added];
+}
+
+// ── Unsaved AI drafts survive refetches (decider report 2026-10-14: "잠깐 나타났다가 사라졌다") ──
+//
+// Root cause: useSynergyResult.loadGap() did `setGapRows(server.rows); setGapDrafts({})` and its effect also ran
+// `setGapNote(null)` whenever loadGap re-ran, so ANY refetch (a late first load, the opportunity id resolving
+// after the detail payload arrives, the parent re-fetching) replaced the draft rows, the AI chips and the result
+// note with the stored register. Drafts only live in local state until a person saves, so they vanished.
+// A refetch must MERGE: rows a person (or the AI) changed locally are kept, untouched rows take the server value.
+
+const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * Merge a freshly loaded register into the local rows without losing unsaved work.
+ * `base` = the previously loaded server rows. A local row equal to its base row is untouched (takes the server
+ * version); a differing one carries unsaved edits or AI drafts (kept). Rows added locally (not in base) are kept;
+ * rows deleted locally (in base, absent locally) stay deleted; rows that are new on the server are appended.
+ */
+export function mergeServerRows(local: CapabilityGapRow[], base: CapabilityGapRow[], server: CapabilityGapRow[]): CapabilityGapRow[] {
+  if (local.length === 0 && base.length === 0) return server;
+  const baseById = new Map(base.map((r) => [r.id, r]));
+  const serverById = new Map(server.map((r) => [r.id, r]));
+  const localIds = new Set(local.map((r) => r.id));
+  const out: CapabilityGapRow[] = [];
+  for (const l of local) {
+    const b = baseById.get(l.id);
+    const sv = serverById.get(l.id);
+    if (!b) { out.push(l); continue; } // added locally (manual or AI), not saved yet
+    if (same(l, b)) { if (sv) out.push(sv); continue; } // untouched: follow the server (dropped if deleted there)
+    out.push(l); // unsaved edits / AI drafts win
+  }
+  for (const sv of server) if (!localIds.has(sv.id) && !baseById.has(sv.id)) out.push(sv);
+  return out;
+}
+
+/** Number of unsaved AI-drafted cells (scope notes ride along with their 필요도 and are not counted). */
+export function countDraftFields(drafts: Record<string, DraftMark>): number {
+  return Object.values(drafts).reduce((n, m) => n + m.fields.filter((f) => f !== "necessityScopeNote").length, 0);
+}
+
+/** Drop marks for rows that no longer exist (after a merge or delete); marks never outlive their row. */
+export function pruneDrafts(drafts: Record<string, DraftMark>, rows: CapabilityGapRow[]): Record<string, DraftMark> {
+  const ids = new Set(rows.map((r) => r.id));
+  return Object.fromEntries(Object.entries(drafts).filter(([id]) => ids.has(id)));
+}
+
+/**
+ * Discard unsaved AI drafts: marked cells go back to the stored (base) values, rows the AI added are removed.
+ * Marks exist only while a cell is untouched since the AI filled it, so a person's edits are never reverted.
+ */
+export function discardAiDrafts(rows: CapabilityGapRow[], drafts: Record<string, DraftMark>, base: CapabilityGapRow[]): CapabilityGapRow[] {
+  const baseById = new Map(base.map((r) => [r.id, r]));
+  const out: CapabilityGapRow[] = [];
+  for (const r of rows) {
+    const m = drafts[r.id];
+    if (!m) { out.push(r); continue; }
+    const b = baseById.get(r.id);
+    if (!b) continue; // proposed row that was never saved
+    const next = { ...r, held: { ...r.held } };
+    for (const f of m.fields) {
+      if (f === "necessity") next.necessity = b.necessity;
+      else if (f === "necessityScopeNote") next.necessityScopeNote = b.necessityScopeNote;
+      else if (f === "requiredLevel") next.requiredLevel = b.requiredLevel;
+      else if (f === "currentLevel") next.currentLevel = b.currentLevel;
+      else if (f === "heldStatus") next.held = { ...next.held, status: b.held.status, evidence: b.held.evidence };
+    }
+    out.push(next);
+  }
+  return out;
 }
 
 // ── Held status / current level draft with citations (amendment 2026-10-14, external search) ──
@@ -149,7 +274,6 @@ export interface CitedHeldCtx {
 }
 export interface CitedHeld {
   status: GapHeldStatus;
-  holders: string[];
   evidence: string;
   currentLevel: string;
   basis: { held: string; currentLevel: string };
@@ -157,57 +281,74 @@ export interface CitedHeld {
   origins: Array<"profile" | "web">;
 }
 
+export type HeldDropReason = "no_item" | "unevaluated" | "no_basis" | "no_citation";
+export const HELD_DROP_LABEL: Record<HeldDropReason, string> = {
+  no_item: "LLM이 이 행에 답하지 않음", unevaluated: "LLM이 미판정으로 답함", no_basis: "판단 이유(basis) 없음", no_citation: "인용할 프로필·출처 없음",
+};
+
+/** Source numbers an LLM may write as 1, "1", "[1]" or "출처 1" — anything with a clean integer is accepted. */
+function sourceNumber(v: unknown): number {
+  if (typeof v === "number") return Math.floor(v);
+  if (typeof v === "string") { const m = v.match(/\d+/); return m ? parseInt(m[0], 10) : -1; }
+  return -1;
+}
+
 /**
  * Held-status draft that MUST carry its citations: a judged status survives only when it is backed
- * by a valid web source number (one the row was given) or by the provided profiles (a scoped
- * company named as holder AND basis.heldSource includes "profile"), and has a basis sentence.
- * Anything unsupported is dropped (the row stays 미판정). Holders are limited to scoped companies;
- * evidence gets the citations appended so the saved text keeps them.
+ * by a valid web source number (one the row was given) or by the provided profiles (basis.heldSource
+ * includes "profile", or the basis/evidence names a provided profile company), and has a basis sentence.
+ * Anything unsupported is dropped (the row stays 미판정) with a specific reason, so the caller can say why.
+ * No holders are proposed (ADR-0172 amendment 2026-10-14 (2)); evidence gets the citations appended.
  */
-export function normalizeCitedHeldDraft(raw: unknown, ctx: CitedHeldCtx): CitedHeld | null {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+export function judgeCitedHeldDraft(raw: unknown, ctx: CitedHeldCtx): { cited: CitedHeld | null; reason: HeldDropReason | null } {
+  const drop = (reason: HeldDropReason) => ({ cited: null, reason });
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return drop("no_item");
   const r = raw as Record<string, unknown>;
   const heldRaw = (r.held && typeof r.held === "object" ? r.held : {}) as Record<string, unknown>;
-  const d = normalizeHeldDraft({ ...heldRaw, currentLevel: heldRaw.currentLevel ?? r.currentLevel });
-  if (!d || d.status === "unevaluated") return null;
-  const basisRaw = (r.basis && typeof r.basis === "object" ? r.basis : {}) as Record<string, unknown>;
-  const basisHeld = text(basisRaw.held, DRAFT_BASIS_CAP);
-  if (!basisHeld) return null;
-  const names = new Map(ctx.profileNames.map((n) => [n.toLowerCase(), n]));
-  const holders = d.holders.map((h) => names.get(h.toLowerCase())).filter((h): h is string => Boolean(h));
+  const d = normalizeHeldDraft({ ...heldRaw, currentLevel: heldRaw.currentLevel ?? r.currentLevel, evidence: heldRaw.evidence ?? r.evidence, status: heldRaw.status ?? r.status });
+  if (!d || d.status === "unevaluated") return drop("unevaluated");
+  const basisField = r.basis;
+  const basisRaw = (basisField && typeof basisField === "object" && !Array.isArray(basisField) ? basisField : {}) as Record<string, unknown>;
+  const basisHeld = text(basisRaw.held ?? (typeof basisField === "string" ? basisField : undefined) ?? heldRaw.basis, DRAFT_BASIS_CAP);
+  if (!basisHeld) return drop("no_basis");
   const srcRaw = Array.isArray(r.sources) ? r.sources : Array.isArray(heldRaw.sources) ? heldRaw.sources : [];
-  const idx = [...new Set((srcRaw as unknown[]).map((v) => (typeof v === "number" ? Math.floor(v) : -1)).filter((v) => ctx.allowedSources.includes(v) && v >= 1 && v <= ctx.sources.length))].slice(0, 2);
+  const idx = [...new Set((srcRaw as unknown[]).map(sourceNumber).filter((v) => ctx.allowedSources.includes(v) && v >= 1 && v <= ctx.sources.length))].slice(0, 2);
   const heldSource = String(basisRaw.heldSource ?? r.heldSource ?? "").toLowerCase();
-  const profileOk = heldSource.includes("profile") && holders.length > 0;
-  if (idx.length === 0 && !profileOk) return null;
+  const mentioned = `${basisHeld} ${d.evidence}`.toLowerCase();
+  const profileOk = ctx.profileNames.length > 0 && (heldSource.includes("profile") || (heldSource === "" && ctx.profileNames.some((n) => n.trim() && mentioned.includes(n.trim().toLowerCase()))));
+  if (idx.length === 0 && !profileOk) return drop("no_citation");
   const web = idx.map((i) => ({ title: ctx.sources[i - 1].title, url: ctx.sources[i - 1].url }));
   const origins: CitedHeld["origins"] = [...(profileOk ? ["profile" as const] : []), ...(web.length > 0 ? ["web" as const] : [])];
   const cite = `출처: ${[...(profileOk ? ["그룹/계열사 프로필"] : []), ...web.map((w) => w.url)].join(", ")}`;
   let evidence = d.evidence;
   // `leading` needs comparative evidence text; a bare citation is not enough.
-  if (d.status === "leading" && !evidence) return { ...toCited(d, "average", holders, "", cite, basisHeld, basisRaw, web, origins) };
+  if (d.status === "leading" && !evidence) return { cited: toCited(d, "average", "", cite, basisHeld, basisRaw, web, origins), reason: null };
   evidence = `${evidence.slice(0, Math.max(0, 400 - cite.length - 2))}${evidence ? " " : ""}${cite}`.slice(0, 400);
-  return toCited(d, d.status, holders, evidence, cite, basisHeld, basisRaw, web, origins);
+  return { cited: toCited(d, d.status, evidence, cite, basisHeld, basisRaw, web, origins), reason: null };
 }
 
-function toCited(d: { currentLevel: string }, status: GapHeldStatus, holders: string[], evidence: string, cite: string, basisHeld: string, basisRaw: Record<string, unknown>, web: DraftSource[], origins: CitedHeld["origins"]): CitedHeld {
+export function normalizeCitedHeldDraft(raw: unknown, ctx: CitedHeldCtx): CitedHeld | null {
+  return judgeCitedHeldDraft(raw, ctx).cited;
+}
+
+function toCited(d: { currentLevel: string }, status: GapHeldStatus, evidence: string, cite: string, basisHeld: string, basisRaw: Record<string, unknown>, web: DraftSource[], origins: CitedHeld["origins"]): CitedHeld {
   const ev = evidence || cite.slice(0, 400);
   return {
-    status, holders, evidence: ev, currentLevel: d.currentLevel.slice(0, NARRATIVE_CAP),
+    status, evidence: ev, currentLevel: d.currentLevel.slice(0, NARRATIVE_CAP),
     basis: { held: basisHeld, currentLevel: text(basisRaw.currentLevel, DRAFT_BASIS_CAP) || basisHeld },
     web, origins,
   };
 }
 
-/** Fill-empty-only for 보유 판정 (+holders/evidence) and 보유 수준; merges into an existing mark. */
+/** Fill-empty-only for 보유 판정 (+evidence) and 보유 수준; merges into an existing mark. */
 export function applyHeldDraft(row: CapabilityGapRow, cited: CitedHeld | null, prior: DraftMark | null): { row: CapabilityGapRow; mark: DraftMark | null } {
   if (!cited) return { row, mark: prior };
   const next = { ...row, held: { ...row.held } };
   const fields: NecessityDraftField[] = [...(prior?.fields ?? [])];
   const basis: DraftMark["basis"] = { ...(prior?.basis ?? {}) };
-  const unjudged = row.held.status === "unevaluated" && row.held.holders.length === 0 && !row.held.evidence.trim();
+  const unjudged = row.held.status === "unevaluated" && !row.held.evidence.trim();
   if (unjudged) {
-    next.held = { status: cited.status, holders: cited.holders, evidence: cited.evidence };
+    next.held = { ...row.held, status: cited.status, evidence: cited.evidence };
     fields.push("heldStatus");
     basis.held = cited.basis.held;
   }

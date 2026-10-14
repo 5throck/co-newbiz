@@ -1,92 +1,84 @@
 "use client";
 
-// Held-by / evidence dialog for one S3 required-capability row (decider 2026-10-14).
-// Edit mode (S3): holders as one entry per line + a large evidence textarea; 저장
-// hands the values to the caller, which updates the draft row (page-level save
-// persists). Read-only mode (S8, or a viewer in S3): the full lists, no inputs.
+// 보유 근거 dialog for one S3 required-capability row (ADR-0172 amendment 2026-10-14 (2)).
+// Edit mode (S3): a single evidence textarea; 저장 hands the value to the caller, which updates the draft
+// row (page-level save persists). The table cell shows only the HeldEvidenceButton. Read-only mode (S5/S8, or a viewer in S3): the text, no inputs.
+// 보유 주체 is no longer editable: legacy stored holders are shown only as a read-only caption.
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { useModalFocus } from "../../lib/use-modal-focus.ts";
 
-// Mirror the normalizeGapRows caps in lib/capability-gap.ts.
-export const HOLDERS_MAX = 6;
-export const HOLDER_LEN = 120;
+// Mirrors the normalizeGapRows cap in lib/capability-gap.ts.
 export const EVIDENCE_MAX = 400;
 
-/** Compact preview texts for the table cells; "" when empty (never a per-field placeholder). */
-export function holdersPreview(holders: string[]): string {
-  return holders.join(", ");
-}
+/** Preview text (used for the button tooltip); "" when empty. */
 export function evidencePreview(evidence: string, len = 40): string {
   const t = evidence.trim();
   return t.length > len ? `${t.slice(0, len)}…` : t;
 }
 
-/** Preview parts: only the filled fields, labelled; empty list means nothing is entered. */
-export function heldSummaryParts(holders: string[], evidence: string): { label: "주체" | "근거"; text: string }[] {
-  const parts: { label: "주체" | "근거"; text: string }[] = [];
-  const h = holdersPreview(holders);
-  const e = evidencePreview(evidence);
-  if (h !== "") parts.push({ label: "주체", text: h });
-  if (e !== "") parts.push({ label: "근거", text: e });
-  return parts;
+/** Read-only caption for rows that still carry legacy holders; "" when there are none. */
+export function legacyHoldersCaption(holders: string[] | undefined): string {
+  const h = (holders ?? []).map((x) => x.trim()).filter(Boolean);
+  return h.length === 0 ? "" : `기존 보유 주체: ${h.join(", ")}`;
 }
 
-/** Table-cell summary: one muted "미입력" when both are empty, else only the filled, labelled parts. */
-export function HeldSummary({ holders, evidence, className = "" }: { holders: string[]; evidence: string; className?: string }) {
-  const parts = heldSummaryParts(holders, evidence);
-  if (parts.length === 0) return <span className={`block text-[color:var(--muted-fg)] ${className}`}>미입력</span>;
+/**
+ * Table-cell control for 보유 근거: ONLY the button (no preview text, no "미입력" marker) plus the small
+ * legacy-holders caption when the row still carries legacy holders. Label: `입력` when empty, `수정` when
+ * filled (editors), `보기` for read-only viewers; a filled row adds a check icon next to the label (icon +
+ * text, never colour alone) and a title showing the first ~60 characters of the evidence.
+ */
+export function HeldEvidenceButton({ capability, evidence, legacyHolders, readOnly, onOpen, disabled, className = "" }: {
+  capability: string; evidence: string; legacyHolders?: string[]; readOnly: boolean; onOpen: () => void; disabled?: boolean; className?: string;
+}) {
+  const filled = evidence.trim() !== "";
+  const caption = legacyHoldersCaption(legacyHolders);
+  const label = readOnly ? "보기" : filled ? "수정" : "입력";
   return (
     <>
-      {parts.map((p, i) => (
-        <span key={p.label} className={`block ${i === 0 ? className : ""}`}>
-          <span className="text-[color:var(--muted-fg)]">{p.label}</span> {p.text}
-        </span>
-      ))}
+      <button type="button" className={`btn-ghost btn-sm ${className}`} disabled={disabled}
+        aria-label={`${capability} 보유 근거 ${readOnly ? "보기" : "입력"}${filled ? " (입력됨)" : ""}`}
+        title={filled ? evidencePreview(evidence, 60) : undefined} onClick={onOpen}>
+        {filled && <span aria-hidden="true" className="text-[color:var(--muted-fg)] mr-1">✓</span>}{label}
+      </button>
+      {caption && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="legacy-holders-caption">{caption}</span>}
     </>
   );
 }
 
-export function CapabilityHeldDialog({ capability, holders, evidence, readOnly, unevaluated, onSave, onClose }: {
-  capability: string; holders: string[]; evidence: string; readOnly: boolean; unevaluated?: boolean;
-  onSave?: (v: { holders: string[]; evidence: string }) => void; onClose: () => void;
+export function CapabilityHeldDialog({ capability, evidence, legacyHolders, readOnly, onSave, onClose }: {
+  capability: string; evidence: string; legacyHolders?: string[]; readOnly: boolean;
+  onSave?: (v: { evidence: string }) => void; onClose: () => void;
 }) {
   const [mounted, setMounted] = useState(false);
-  const [holderText, setHolderText] = useState(holders.join("\n"));
   const [text, setText] = useState(evidence);
-  const holderId = useId();
   const evidenceId = useId();
   useEffect(() => setMounted(true), []);
   const { panelRef, onKeyDown } = useModalFocus(onClose);
   if (!mounted) return null;
-  const title = `${capability} 보유 주체·근거`;
-  const parsed = holderText.split("\n").map((x) => x.trim().slice(0, HOLDER_LEN)).filter(Boolean);
-  const tooMany = parsed.length > HOLDERS_MAX;
+  const title = `${capability} 보유 근거`;
+  const caption = legacyHoldersCaption(legacyHolders);
   return createPortal(
     <div className="modal-backdrop" onClick={onClose} role="presentation" onKeyDown={onKeyDown}>
       <div ref={panelRef} className="modal-panel" role="dialog" aria-modal="true" aria-label={title} style={{ maxWidth: "36rem", width: "100%" }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-head"><h2 style={{ fontSize: "0.95rem" }}>{title}</h2></div>
         {readOnly ? (
           <>
-            <h3 className="text-[length:var(--fs-caption)] font-semibold mt-2 mb-1">보유 주체</h3>
-            {holders.length === 0 ? <p className="text-[color:var(--muted-fg)] m-0">미입력</p> : <ul className="m-0 pl-4">{holders.map((h, i) => <li key={i}>{h}</li>)}</ul>}
-            <h3 className="text-[length:var(--fs-caption)] font-semibold mt-3 mb-1">근거</h3>
+            <h3 className="text-[length:var(--fs-caption)] font-semibold mt-2 mb-1">근거</h3>
             <p className="m-0" style={{ whiteSpace: "pre-wrap" }}>{evidence.trim() === "" ? <span className="text-[color:var(--muted-fg)]">미입력</span> : evidence}</p>
           </>
         ) : (
           <>
-            <label className="block text-[length:var(--fs-caption)] font-semibold mt-2 mb-1" htmlFor={holderId}>보유 주체 (한 줄에 하나, 최대 {HOLDERS_MAX}개 · 항목당 {HOLDER_LEN}자)</label>
-            <textarea id={holderId} className="sizing-new-input w-full" rows={4} autoFocus value={holderText} onChange={(e) => setHolderText(e.target.value)} />
-            {unevaluated && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">보유 판정이 미판정이면 보유 주체는 저장되지 않습니다 — 먼저 보유 판정을 선택하세요.</p>}
-            {tooMany && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-1">보유 주체는 최대 {HOLDERS_MAX}개까지 저장됩니다 — 초과분은 제외됩니다.</p>}
-            <label className="block text-[length:var(--fs-caption)] font-semibold mt-3 mb-1" htmlFor={evidenceId}>근거 (프로필 인용)</label>
-            <textarea id={evidenceId} className="sizing-new-input w-full" rows={8} maxLength={EVIDENCE_MAX} value={text} onChange={(e) => setText(e.target.value)} />
+            <label className="block text-[length:var(--fs-caption)] font-semibold mt-2 mb-1" htmlFor={evidenceId}>근거 (프로필 인용, 보유 주체가 있으면 함께 적습니다)</label>
+            <textarea id={evidenceId} className="sizing-new-input w-full" rows={8} maxLength={EVIDENCE_MAX} autoFocus value={text} onChange={(e) => setText(e.target.value)} />
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" aria-live="polite">{text.length} / {EVIDENCE_MAX}자</p>
           </>
         )}
+        {caption && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2 mb-0">{caption}</p>}
         <div className="flex justify-end gap-2 mt-4">
           <button type="button" className="btn-ghost btn-sm" onClick={onClose}>{readOnly ? "닫기" : "취소"}</button>
-          {!readOnly && onSave && <button type="button" className="btn-ghost btn-sm" onClick={() => onSave({ holders: parsed.slice(0, HOLDERS_MAX), evidence: text })}>저장</button>}
+          {!readOnly && onSave && <button type="button" className="btn-ghost btn-sm" onClick={() => onSave({ evidence: text })}>저장</button>}
         </div>
       </div>
     </div>,

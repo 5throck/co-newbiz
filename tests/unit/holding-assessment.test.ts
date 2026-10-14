@@ -72,7 +72,7 @@ describe("necessity and narrative caps", () => {
     expect(norm().requiredLevel).toBe("");
   });
   test("column order constant", () => {
-    expect([...cg.CAPABILITY_COLUMN_ORDER]).toEqual(["capability", "necessity", "requiredLevel", "heldStatus", "currentLevel", "holders"]);
+    expect([...cg.CAPABILITY_COLUMN_ORDER]).toEqual(["capability", "necessity", "requiredLevel", "heldStatus", "currentLevel", "evidence"]);
   });
 });
 
@@ -114,9 +114,10 @@ describe("caution matrix (decision support only)", () => {
 describe("AI held-draft normalizer", () => {
   test("new scale + 보유 수준 narrative; leading needs comparative evidence; legacy keys mapped; garbage rejected", () => {
     expect(cg.normalizeHeldDraft({ status: "leading", evidence: "업계 1위 근거", holders: ["A"], currentLevel: "상세" })).toMatchObject({ status: "leading", currentLevel: "상세" });
+    expect(cg.normalizeHeldDraft({ status: "leading", evidence: "e", holders: ["A"] })).not.toHaveProperty("holders");
     expect(cg.normalizeHeldDraft({ status: "leading", evidence: "" })?.status).toBe("average");
     expect(cg.normalizeHeldDraft({ status: "met", evidence: "e" })?.status).toBe("average");
-    expect(cg.normalizeHeldDraft({ status: "unevaluated", holders: ["A"], currentLevel: "x" })).toMatchObject({ holders: [], currentLevel: "", evidence: "" });
+    expect(cg.normalizeHeldDraft({ status: "unevaluated", holders: ["A"], currentLevel: "x" })).toMatchObject({ currentLevel: "", evidence: "" });
     expect(cg.normalizeHeldDraft({ status: "great" })).toBeNull();
     expect(cg.normalizeHeldDraft({ status: "none", currentLevel: "x".repeat(900) })?.currentLevel).toHaveLength(400);
   });
@@ -124,8 +125,12 @@ describe("AI held-draft normalizer", () => {
     const src = readFileSync(join(PROJECT_ROOT, "app/web-next/app/api/opportunities/[id]/capability-gap/llm-draft/route.ts"), "utf8");
     expect(src).not.toContain("normalizeHeldDraft");
     expect(src).not.toContain("loadLatestProfile");
-    expect(src).toContain("normalizeNecessityDraft");
-    expect(src).toContain("applyNecessityDraft");
+    const lib = readFileSync(join(PROJECT_ROOT, "app/web-next/lib/capability-requirement-draft.ts"), "utf8");
+    expect(src).toContain("runRequirementDraft"); // the route delegates to the fill-empty-only orchestration
+    expect(lib).toContain("normalizeNecessityDraft");
+    expect(lib).toContain("applyNecessityDraft");
+    expect(lib).not.toContain("normalizeHeldDraft");
+    expect(lib).not.toMatch(/\b(INSERT|UPDATE|DELETE)\b\s/);
     expect(src).not.toMatch(/necessity:\s*d\./);
     expect(src).not.toMatch(/requiredLevel:\s*d\./);
     expect(src).not.toMatch(/\b(INSERT|UPDATE|DELETE)\b\s/);
@@ -242,12 +247,14 @@ describe("S3 table and modals (source structure)", () => {
   const read = (p: string) => readFileSync(join(PROJECT_ROOT, "app/web-next", p), "utf8");
   test("canonical column order and per-field controls", () => {
     const src = read("components/stages/synergy/SynergyLinkageTab.tsx");
-    const heads = ["필요 역량", "필요도", "필요 수준", "보유 판정", "보유 수준", "보유 주체·근거", "해소 힌트"].map((h) => src.indexOf(`<th scope="col">${h}</th>`));
+    const heads = ["필요 역량", "필요도", "필요 수준", "보유 판정", "보유 수준", "보유 근거"].map((h) => src.indexOf(`<th scope="col">${h}</th>`));
     expect(heads.every((i) => i >= 0)).toBe(true);
     expect([...heads].sort((a, b) => a - b)).toEqual(heads);
     for (const k of ["${r.capability} 필요도", "${r.capability} 필수 범위", "${r.capability} 보유 판정", "재판정 권장", "gapCautions(r)", 'field="필요 수준"', 'field="보유 수준"', "readOnly={!canCurate}"]) expect(src).toContain(k);
     expect(src).toContain("NECESSITY_NOTE_CAP");
     expect(src).not.toContain("LevelSelect");
+    expect(src).not.toContain("해소 힌트");
+    expect(src).not.toContain("보유 주체");
   });
   test("narrative dialog: portal, dialog role, focus trap, 400 counter, read-only mode, 입력/수정/보기 labels", () => {
     const src = read("components/stages/CapabilityNarrativeDialog.tsx");
@@ -264,7 +271,7 @@ describe("S3 table and modals (source structure)", () => {
     expect(stage).toContain("CapabilityJudgementEditor");
     expect(stage).toContain("/capability-attainability`");
     const tbl = read("components/stages/CapabilityJudgementTable.tsx");
-    const heads = ["필요 역량", "필요도", "필요 수준", "보유 판정", "보유 수준", "보유 주체·근거", "해소 방식", "기대 수준", "비용(백만원)", "기간(개월)", "달성 가능성", "근거·증빙", "확정"].map((h) => tbl.indexOf(`<th scope="col">${h}</th>`));
+    const heads = ["필요 역량", "필요도", "필요 수준", "보유 판정", "보유 수준", "보유 근거", "해소 방식", "기대 수준", "비용(백만원)", "기간(개월)", "달성 가능성", "근거·증빙", "확정"].map((h) => tbl.indexOf(`<th scope="col">${h}</th>`));
     expect(heads.every((i) => i >= 0)).toBe(true);
     expect([...heads].sort((a, b) => a - b)).toEqual(heads);
     // S3 narrative columns are read-only (보기), the 기대 수준 cell is editable only when `canEdit`

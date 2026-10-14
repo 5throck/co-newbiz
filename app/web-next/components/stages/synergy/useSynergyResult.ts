@@ -5,10 +5,10 @@ import { useChartTheme } from "../../../lib/echarts-theme.ts";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../../lib/project-write-access.ts";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { api } from "../../../lib/api.ts";
 import { type CapabilityGapRow } from "../../../lib/capability-gap.ts";
-import { mergeDraftResponse, type CitedHeld, type DraftMark } from "../../../lib/capability-gap-necessity-draft.ts";
+import { discardAiDrafts, mergeDraftResponse, mergeServerRows, pruneDrafts, type DraftMark } from "../../../lib/capability-gap-necessity-draft.ts";
 import type { GapGetResponse, SynergyAnalysis } from "./types.ts";
 import type { TabKey } from "./synergyFormat.ts";
 
@@ -111,17 +111,35 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
   const [newGapCap, setNewGapCap] = useState("");
   // AI 초안 표식 — 행 id별로 아직 사람이 손대지 않은 초안 필드와 그 근거. 편집·저장 시 해당 필드부터 해제된다.
   const [gapDrafts, setGapDrafts] = useState<Record<string, DraftMark>>({});
-  // 보유 판정 확인(AI) — 일괄은 holdBusy, "다시 확인"은 한 행씩(recheck). 제안은 사람이 "적용"해야 반영된다.
+  // 보유 판정 확인(AI) — 일괄(빈 칸만 초안으로 채움). 값을 갱신하려면 사람이 직접 수정한다.
   const [holdBusy, setHoldBusy] = useState(false);
-  const [recheck, setRecheck] = useState<{ id: string; busy: boolean; proposal: (CitedHeld & { reason?: string }) | { status: "unevaluated"; reason: string } | null; note: string } | null>(null);
 
+  // The last register loaded from the server — the base for "unsaved" comparisons and for merging refetches.
+  const gapBaseRef = useRef<CapabilityGapRow[]>([]);
+  const gapLoadedFor = useRef<string | null>(null);
+  // A refetch MERGES with unsaved edits and AI drafts (never overwrites them): see mergeServerRows.
   const loadGap = useCallback(() => {
     if (!opportunityId) return;
     api.get<GapGetResponse>(`/api/opportunities/${encodeURIComponent(opportunityId)}/capability-gap`)
-      .then((r) => { setGap(r.data); setGapRows(r.data.rows); setGapDrafts({}); })
-      .catch(() => setGap(null));
+      .then((r) => {
+        const base = gapBaseRef.current;
+        gapBaseRef.current = r.data.rows;
+        setGap(r.data);
+        setGapRows((prev) => mergeServerRows(prev, base, r.data.rows));
+      })
+      .catch(() => { /* keep what is on screen (including unsaved drafts) */ });
   }, [opportunityId]);
-  useEffect(() => { loadGap(); setGapError(null); setGapNote(null); }, [loadGap]);
+  useEffect(() => {
+    // Only a DIFFERENT opportunity resets the screen state; the same id re-resolving keeps rows, chips and the note.
+    if (opportunityId && gapLoadedFor.current !== null && gapLoadedFor.current !== opportunityId) {
+      gapBaseRef.current = []; setGapRows([]); setGapDrafts({}); setGapError(null); setGapNote(null);
+    }
+    if (opportunityId) gapLoadedFor.current = opportunityId;
+    loadGap();
+  }, [loadGap, opportunityId]);
+
+  // Marks never outlive their row (after a merge or a delete).
+  useEffect(() => { setGapDrafts((d) => (Object.keys(d).length === 0 ? d : pruneDrafts(d, gapRows))); }, [gapRows]);
 
   const gapDirty = gapRows.length > 0 && (!gap?.stored || JSON.stringify(gapRows) !== JSON.stringify(gap.rows));
 
@@ -146,7 +164,7 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
   async function persistGap(): Promise<boolean> {
     if (!opportunityId || gapRows.length === 0) return false;
     try {
-      const res = await api.put<GapGetResponse>(`/api/opportunities/${encodeURIComponent(opportunityId)}/capability-gap`, { rows: gapRows });
+      const res = await api.put<GapGetResponse>(`/api/opportunities/${encodeURIComponent(opportunityId)}/capability-gap`, { rows: gapRows.map(({ resolution: _s5Owned, ...r }) => r) });
       setGap((prev) => ({
         opportunity: prev?.opportunity ?? { id: opportunityId, name: p?.opportunity?.name ?? "" },
         rows: res.data.rows,
@@ -155,6 +173,7 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
         internalAssessmentPending: true,
         internalAssessmentNote: res.data.internalAssessmentNote,
       }));
+      gapBaseRef.current = res.data.rows;
       setGapRows(res.data.rows);
       setGapDrafts({});
       return true;
@@ -162,6 +181,12 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
       setGapError(err instanceof Error ? err.message : "필요 역량 수준 저장 실패");
       return false;
     }
+  }
+  /** 저장하지 않은 AI 초안을 버린다 — 표시된 칸만 저장된 값으로 되돌리고, AI가 추가한 미저장 행은 제거한다. */
+  function discardDrafts() {
+    setGapRows((prev) => discardAiDrafts(prev, gapDrafts, gapBaseRef.current));
+    setGapDrafts({});
+    setGapNote(null);
   }
   async function saveGap() {
     if (!opportunityId || gapBusy || gapRows.length === 0) return;
@@ -179,7 +204,7 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
         if (!b) return true;
         if (f === "requiredLevel") return !b.requiredLevel.trim();
         if (f === "currentLevel") return !b.currentLevel.trim();
-        if (f === "heldStatus") return b.held.status === "unevaluated" && b.held.holders.length === 0 && !b.held.evidence.trim();
+        if (f === "heldStatus") return b.held.status === "unevaluated" && !b.held.evidence.trim();
         return !b.necessity;
       });
       if (fields.length > 0) marks[id] = { ...m, fields };
@@ -205,26 +230,6 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
     } catch (err) { setGapError(err instanceof Error ? err.message : "보유 판정 확인 실패"); }
     finally { setHoldBusy(false); }
   }
-  async function recheckRow(id: string) {
-    if (!opportunityId || recheck?.busy) return;
-    setRecheck({ id, busy: true, proposal: null, note: "" }); setGapError(null);
-    try {
-      const res = await api.post<{ proposals: Record<string, NonNullable<NonNullable<typeof recheck>["proposal"]>>; note: string }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/capability-gap/holding-check`, { rows: gapRows, rowId: id });
-      setRecheck({ id, busy: false, proposal: res.data.proposals[id] ?? null, note: res.data.note });
-    } catch (err) {
-      setRecheck(null);
-      setGapError(err instanceof Error ? err.message : "다시 확인 실패");
-    }
-  }
-  /** 사람이 "적용"을 눌렀을 때만 반영한다 — 이 경로만 기존 값을 바꿀 수 있다. */
-  function applyRecheck() {
-    if (!recheck || recheck.busy || !recheck.proposal || recheck.proposal.status === "unevaluated" || !("evidence" in recheck.proposal)) { setRecheck(null); return; }
-    const p = recheck.proposal;
-    setGapRows((prev) => prev.map((r) => (r.id === recheck.id ? { ...r, held: { status: p.status, holders: p.holders, evidence: p.evidence }, currentLevel: p.currentLevel || r.currentLevel } : r)));
-    setGapDrafts((prev) => ({ ...prev, [recheck.id]: { fields: ["heldStatus", ...(p.currentLevel ? ["currentLevel" as const] : [])], basis: { held: p.basis.held, currentLevel: p.basis.currentLevel }, sources: p.web } }));
-    setRecheck(null);
-  }
-
   async function draftGap() {
     if (!opportunityId || gapBusy) return;
     setGapBusy(true); setGapError(null);
@@ -314,7 +319,7 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
       setAdvancing(false);
     }
   }, [opportunityId, advancing, p?.synergyRationale, router]);
-  return { analysis, analysisDate, latest, synState, onBack, canCurate, inProgress, onRerun, p, tab, onTab, opportunityId, advanceToRouteDecision, advanceError, confirmError, currentScore, currentRationale, confirmForm, setConfirmForm, confirmSaving, confirmSynergyScore, retractSynergyScore, showLinkageForm, setShowLinkageForm, linkageForm, setLinkageForm, linkageError, setLinkageError, linkageSaving, addLinkageItem, gapRows, gapBusy, draftGap, saveGap, gap, gapNote, gapDrafts, gapDirty, holdBusy, checkHolding, recheck, setRecheck, recheckRow, applyRecheck, gapError, updateGapHeld, updateGapRow, setGapRows, newGapCap, setNewGapCap, addGapRow, editingArea, editForm, setEditForm, editSaving, setEditingArea, saveShortlistItem, editError, showShortlistForm, setShowShortlistForm, shortlistForm, setShortlistForm };
+  return { discardDrafts, dismissGapNote: () => setGapNote(null), analysis, analysisDate, latest, synState, onBack, canCurate, inProgress, onRerun, p, tab, onTab, opportunityId, advanceToRouteDecision, advanceError, confirmError, currentScore, currentRationale, confirmForm, setConfirmForm, confirmSaving, confirmSynergyScore, retractSynergyScore, showLinkageForm, setShowLinkageForm, linkageForm, setLinkageForm, linkageError, setLinkageError, linkageSaving, addLinkageItem, gapRows, gapBusy, draftGap, saveGap, gap, gapNote, gapDrafts, gapDirty, holdBusy, checkHolding, gapError, updateGapHeld, updateGapRow, setGapRows, newGapCap, setNewGapCap, addGapRow, editingArea, editForm, setEditForm, editSaving, setEditingArea, saveShortlistItem, editError, showShortlistForm, setShowShortlistForm, shortlistForm, setShortlistForm };
 }
 
 export type SynergyResultState = ReturnType<typeof useSynergyResult>;

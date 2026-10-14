@@ -144,8 +144,28 @@ const NECESSITIES: Array<Exclude<GapNecessity, "">> = ["essential", "partial_ess
 
 /** Canonical display order for the S3-owned columns (ADR-0172). */
 export const CAPABILITY_COLUMN_ORDER = [
-  "capability", "necessity", "requiredLevel", "heldStatus", "currentLevel", "holders",
+  "capability", "necessity", "requiredLevel", "heldStatus", "currentLevel", "evidence",
 ] as const;
+
+/**
+ * ADR-0172 amendment 2026-10-14 (2): S3 no longer edits `resolution` (S5-owned) or `held.holders`
+ * (legacy, read-only). When a client row omits them, carry the stored values over by row id so an S3 save
+ * can never wipe S5's 해소 방식 or the legacy 보유 주체. Operates on RAW rows, before normalization.
+ */
+export function preserveStoredOwnedFields(rawRows: unknown[], storedRows: CapabilityGapRow[]): unknown[] {
+  const byId = new Map(storedRows.map((r) => [r.id, r]));
+  return rawRows.map((raw) => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+    const row = { ...(raw as Record<string, unknown>) };
+    const prev = typeof row.id === "string" ? byId.get(row.id) : undefined;
+    if (!prev) return row;
+    if (!("resolution" in row)) row.resolution = prev.resolution;
+    const held = row.held && typeof row.held === "object" && !Array.isArray(row.held) ? { ...(row.held as Record<string, unknown>) } : {};
+    if (!("holders" in held)) held.holders = prev.held.holders;
+    row.held = held;
+    return row;
+  });
+}
 
 /** Legacy stored key -> current key. Anything unknown reads as unevaluated. */
 export function mapLegacyHeldStatus(raw: unknown): { status: GapHeldStatus; legacy: LegacyHeldStatus | null } {
@@ -246,7 +266,7 @@ export function normalizeGapRows(raw: unknown): CapabilityGapRow[] {
 const finiteNonNeg = (v: unknown, max: number): number | null =>
   typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.min(v, max) : null;
 
-export interface HeldDraft { status: GapHeldStatus; holders: string[]; evidence: string; currentLevel: string }
+export interface HeldDraft { status: GapHeldStatus; evidence: string; currentLevel: string }
 
 /**
  * AI draft normalizer (ADR-0172): proposes 보유 판정 on the new scale + 보유 수준 narrative +
@@ -264,7 +284,6 @@ export function normalizeHeldDraft(raw: unknown): HeldDraft | null {
   if (status === "leading" && evidence === "") status = "average";
   return {
     status,
-    holders: status === "unevaluated" ? [] : strArr(h.holders, 6, 120),
     evidence,
     currentLevel: status === "unevaluated" ? "" : str(h.currentLevel, NARRATIVE_CAP),
   };

@@ -134,6 +134,8 @@ interface ProviderReply {
   text: string;
   /** Anthropic forced-tool input, already an object. */
   toolInput?: unknown;
+  /** Provider finish/stop reason (e.g. "length" / "max_tokens" = truncated output). */
+  finishReason?: string;
   usage: LlmUsage | null;
 }
 
@@ -171,7 +173,7 @@ async function runProvider(cfg: ProviderConfig, spec: CallSpec): Promise<Provide
       if (!text.trim() && toolInput === undefined) {
         throw new Error("LLM returned an empty response (reasoning tokens may have exhausted max_tokens).");
       }
-      return { text, toolInput, usage };
+      return { text, toolInput, usage, finishReason: extractFinishReason(json) };
     } catch (err) {
       lastError = err;
     }
@@ -182,6 +184,8 @@ async function runProvider(cfg: ProviderConfig, spec: CallSpec): Promise<Provide
 export interface CompleteDetailed {
   text: string;
   usage: LlmUsage;
+  /** Provider finish/stop reason when reported; "length" / "max_tokens" means the output was cut off. */
+  finishReason?: string;
 }
 
 /** Like complete() but also returns usage (provider-reported, or flagged estimate). */
@@ -199,7 +203,7 @@ export async function completeDetailed(
     // 직접 호출 지점도 ADR-0128 런 장부에 남는다 — completeOrFallback 경로의 기록과 중복되지 않도록
     // 성공/실패 로그는 이곳(complete)에서만 담당한다.
     logAgentCall(opts.agent, { source: "llm", provider: cfg.provider, model }, true, null, Date.now() - started, usage);
-    return { text: reply.text, usage };
+    return { text: reply.text, usage, finishReason: reply.finishReason };
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     logAgentCall(opts.agent, { source: "llm", provider: cfg.provider, model }, false, reason, Date.now() - started, null);
@@ -534,6 +538,14 @@ function extractText(provider: string, json: Record<string, unknown>): string {
   const content = json.content as Array<{ text?: string }> | undefined;
   if (Array.isArray(content)) return content.map((c) => c.text ?? "").join("");
   return "";
+}
+
+function extractFinishReason(json: Record<string, unknown>): string | undefined {
+  const choices = json.choices as Array<{ finish_reason?: string }> | undefined;
+  if (typeof choices?.[0]?.finish_reason === "string") return choices[0].finish_reason;
+  if (typeof json.stop_reason === "string") return json.stop_reason;
+  const candidates = json.candidates as Array<{ finishReason?: string }> | undefined;
+  return typeof candidates?.[0]?.finishReason === "string" ? candidates[0].finishReason : undefined;
 }
 
 function extractToolInput(json: Record<string, unknown>): unknown {

@@ -100,7 +100,7 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro }: {
     <div aria-label="필요 역량 달성 가능성 판정">
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
         {intro ?? "S3에서 정의한 필요 역량을 확보할 수 있는지 사람이 판정합니다. AI는 초안만 제안하며, 여기 입력한 비용·기간은 사업성 수치에 자동 반영되지 않습니다."}{" "}
-        필요도·필요 수준·보유 판정·보유 수준·보유 주체·근거는 S3에서 정의한 값이며 여기서는 읽기 전용입니다 — <a href={s3Href} className="text-[color:var(--accent)] underline">S3에서 수정</a>.
+        필요도·필요 수준·보유 판정·보유 수준·보유 근거는 S3에서 정의한 값이며 여기서는 읽기 전용입니다 — <a href={s3Href} className="text-[color:var(--accent)] underline">S3에서 수정</a>.
         S3 내용이 바뀐 행은 재판정이 필요하며, 이전 판정은 이력으로 남습니다.
       </p>
       <SummaryStrip s={view.summary} />

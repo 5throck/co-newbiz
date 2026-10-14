@@ -8,7 +8,7 @@
 // Greenfield는 Target Company가 없음 — "우리 스스로 진입 가능한가, 무엇을
 // 구축해야 하는가"를 평가한다: 진출전략(Build/Partner/Hire/Invest 결정) →
 // 필요 역량 확인 → 투자비 검토 요건 (greenfield-capability-assessment 절차, B-7).
-// ADR-0136 / ADR-0172: 필요 역량 정의(필요도·필요 수준·보유 판정·보유 수준·보유 주체·근거)는
+// ADR-0136 / ADR-0172: 필요 역량 정의(필요도·필요 수준·보유 판정·보유 수준·보유 근거)는
 //   S3 역량 갭 레지스터(opportunity.capability_gap_json)가 유일한 출처다. S5는 그것을
 //   읽기 전용으로 보여준다. ADR-0171: S5가 달성 가능성 판정의 편집 화면이다 — 해소 방식,
 //   기대 수준, 비용, 기간, 달성 가능성, 근거·증빙과 사람의 확정(CapabilityJudgementEditor)
