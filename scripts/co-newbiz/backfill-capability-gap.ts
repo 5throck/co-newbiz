@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 // ADR-0136 1회성 백필 — greenfield_assessment.capability_gaps_json에 있던 필요
 // 역량 행을 opportunity.capability_gap_json(S3 레지스터)으로 병합한다. S3에
 // capability 텍스트(대소문자 무시, trim)로 이미 있는 행이면 requiredLevel/
@@ -8,6 +8,7 @@
 // 사용법: bun run scripts/co-newbiz/backfill-capability-gap.ts [--dry-run]
 import { getDb } from "../../db/client.ts";
 import { ulid } from "../../db/lib/ulid.ts";
+import { serializeGapRegister } from "../../app/web-next/lib/technical-lens.ts";
 import { normalizeGapRows, parseGapRegister, type CapabilityGapRow } from "../../app/web-next/lib/capability-gap.ts";
 
 interface LegacyGapRow {
@@ -92,7 +93,7 @@ for (const row of rows) {
     if (!dryRun) {
       const at = new Date().toISOString();
       db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [
-        JSON.stringify({ rows: normalized, updatedAt: at }),
+        serializeGapRegister(normalized, at, opp.capability_gap_json),
         row.opportunity_id,
       ]);
     }

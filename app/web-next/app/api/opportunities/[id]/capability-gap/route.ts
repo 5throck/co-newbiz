@@ -8,6 +8,7 @@ import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { serializeGapRegister } from "../../../../../lib/technical-lens.ts";
 import { carryOverAttainability, normalizeGapRows, parseGapRegister, type CapabilityGapRow } from "../../../../../lib/capability-gap.ts";
 
 const now = () => new Date().toISOString();
@@ -77,7 +78,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const rows = carryOverAttainability(normalizeGapRows(body.rows), storedJson);
   if (rows.length === 0) return badRequest("invalid_request", "저장할 유효한 행이 없습니다 — capability는 필수입니다.");
   const at = now();
-  db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [JSON.stringify({ rows, updatedAt: at }), id]);
+  db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [serializeGapRegister(rows, at, storedJson), id]);
   appendAudit(db, { actor: auth.auth.userId, action: "capability_gap.save", target: `${id}:${rows.length}rows`, now: at });
   // GET과 동일한 소비 형태로 반환한다 — 클라이언트가 저장 직후 상태를 그대로 반영.
   return ok({

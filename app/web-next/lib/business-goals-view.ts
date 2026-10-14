@@ -25,12 +25,33 @@ export interface CaseAttainmentEntry {
 
 // ── S8 tab model ─────────────────────────────────────────────────────────
 
-/** Tab keys that live inside the business-case page (?tab=). */
-export const S8_TAB_KEYS = ["goals", "scenarios", "targets", "wacc", "financial-analysis", "overview", "params", "target-costing", "decision"] as const;
+/** Tab keys that live inside the business-case page (?tab=). `technical` and `financial`
+ * are the two lens tabs (ADR-0169); the former five analysis tabs are financial sub-tabs. */
+export const S8_TAB_KEYS = ["technical", "financial", "goals", "scenarios", "targets", "wacc", "financial-analysis", "overview", "params", "target-costing", "decision"] as const;
 export type S8TabKey = (typeof S8_TAB_KEYS)[number];
 
 /** Stage-level tab order (INTERIM-WORDING labels live in lib/stage-tabs.ts). */
-export const S8_PRIMARY_TAB_ORDER: readonly S8TabKey[] = ["goals", "scenarios", "targets", "wacc", "financial-analysis"];
+export const S8_PRIMARY_TAB_ORDER: readonly S8TabKey[] = ["goals", "technical", "financial", "targets", "decision"];
+
+/** Sub-tabs inside the financial part: financial content only (goals and targets are primary tabs). */
+export const S8_FINANCIAL_SUBTABS: readonly S8TabKey[] = ["scenarios", "wacc", "financial-analysis"];
+
+/** Alias ?tab= values that land on an existing tab key. */
+export const S8_TAB_ALIASES: Readonly<Record<string, S8TabKey>> = {
+  capability: "technical", // 역량 달성 가능성 lives in the technical lens
+  financial: "scenarios", // umbrella lens link lands on its default sub-tab
+};
+
+/** The three major parts of the S8 screen: what to achieve, can it be realised, does it pay. */
+export type S8Part = "goals" | "technical" | "financial";
+export type S8Lens = Exclude<S8Part, "goals">;
+
+/** One-line purpose shown under each part heading (INTERIM-WORDING). */
+export const S8_PART_VIEW: Record<S8Part, { title: string; purpose: string }> = {
+  goals: { title: "사업 목표", purpose: "무엇을 달성하려는가" },
+  technical: { title: "기술적 타당성", purpose: "실현할 수 있는가" },
+  financial: { title: "재무적 타당성", purpose: "돈이 되는가" },
+};
 
 export function isGreenfieldTrack(track: string | null | undefined): boolean {
   return track === "greenfield";
@@ -41,10 +62,36 @@ export function primaryTabKeys(greenfield: boolean): S8TabKey[] {
   return S8_PRIMARY_TAB_ORDER.filter((k) => !(greenfield && k === "targets"));
 }
 
-/** Resolve the ?tab= value to a tab key. Old greenfield deep links to the
- * hidden targets tab land on scenarios; unknown values fall back to scenarios. */
+export function financialSubtabKeys(greenfield: boolean): S8TabKey[] {
+  return S8_FINANCIAL_SUBTABS.filter((k) => !(greenfield && k === "targets"));
+}
+
+/** Which of the three parts a tab key belongs to (null = target comparison, decision and the more-menu tabs). */
+export function partOfS8Tab(key: S8TabKey): S8Part | null {
+  if (key === "goals" || key === "technical") return key;
+  if (S8_FINANCIAL_SUBTABS.includes(key)) return "financial";
+  return null;
+}
+
+/** The primary tab that is highlighted for a tab key (null = a more-menu tab). */
+export function primaryKeyOfS8Tab(key: S8TabKey): S8TabKey | null {
+  if (key === "goals" || key === "technical" || key === "targets" || key === "decision") return key;
+  if (partOfS8Tab(key) === "financial") return "financial";
+  return null;
+}
+
+/** Resolve the ?tab= value to a tab key. Old keys keep working (goals stays goals; scenarios/wacc/
+ * financial-analysis resolve into the financial part with the right sub-tab; overview/params/
+ * target-costing/decision are unchanged), aliases map to their lens
+ * (`capability` -> technical, `financial` -> scenarios, the financial default sub-tab), a `#item` suffix is ignored, old
+ * greenfield deep links to the hidden targets tab land on scenarios, and unknown values
+ * fall back to scenarios (the financial lens default). */
 export function resolveS8Tab(tabParam: string | null | undefined, opts: { greenfield: boolean }): S8TabKey {
-  const known = (S8_TAB_KEYS as readonly string[]).includes(tabParam ?? "") ? (tabParam as S8TabKey) : "scenarios";
+  const raw = (tabParam ?? "").split("#")[0];
+  const aliased = S8_TAB_ALIASES[raw];
+  if (aliased) return aliased;
+  const known = (S8_TAB_KEYS as readonly string[]).includes(raw) ? (raw as S8TabKey) : "scenarios";
+  if (known === "financial") return "scenarios";
   if (known === "targets" && opts.greenfield) return "scenarios";
   return known;
 }
