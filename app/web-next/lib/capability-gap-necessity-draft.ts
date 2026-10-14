@@ -300,6 +300,12 @@ export interface CitedHeldCtx {
   profileNames: string[];
   /** Companies whose stored DART/financial facts were provided as "[공시·재무 근거]" (disclosure-class evidence). */
   disclosureNames?: string[];
+  /**
+   * Subset of profileNames whose profile has at least one citable (verified or research-backed) line. When given,
+   * a profile basis counts only for these; an unverified-only profile cannot justify a judged status.
+   * Omitted = every profile in profileNames counts (back-compat).
+   */
+  verifiedProfileNames?: string[];
 }
 export interface CitedHeld {
   status: GapHeldStatus;
@@ -310,9 +316,10 @@ export interface CitedHeld {
   origins: Array<"profile" | "dart" | "web">;
 }
 
-export type HeldDropReason = "no_item" | "unevaluated" | "no_basis" | "no_citation";
+export type HeldDropReason = "no_item" | "unevaluated" | "no_basis" | "no_citation" | "unverified_profile";
 export const HELD_DROP_LABEL: Record<HeldDropReason, string> = {
   no_item: "LLM이 이 행에 답하지 않음", unevaluated: "LLM이 미판정으로 답함", no_basis: "판단 이유(basis) 없음", no_citation: "인용할 프로필·출처 없음",
+  unverified_profile: "프로필 근거가 미검증(LLM 추정)",
 };
 
 /** Source numbers an LLM may write as 1, "1", "[1]" or "출처 1" — anything with a clean integer is accepted. */
@@ -344,10 +351,15 @@ export function judgeCitedHeldDraft(raw: unknown, ctx: CitedHeldCtx): { cited: C
   const idx = [...new Set((srcRaw as unknown[]).map(sourceNumber).filter((v) => ctx.allowedSources.includes(v) && v >= 1 && v <= ctx.sources.length))].slice(0, 2);
   const heldSource = String(basisRaw.heldSource ?? r.heldSource ?? "").toLowerCase();
   const mentioned = `${basisHeld} ${d.evidence}`.toLowerCase();
-  const profileOk = ctx.profileNames.length > 0 && (heldSource.includes("profile") || heldSource.includes("both") || (heldSource === "" && ctx.profileNames.some((n) => n.trim() && mentioned.includes(n.trim().toLowerCase()))));
+  const mentions = (names: string[]) => names.some((n) => n.trim() && mentioned.includes(n.trim().toLowerCase()));
+  const verifiedNames = ctx.verifiedProfileNames ?? ctx.profileNames;
+  const claimedByKey = heldSource.includes("profile") || heldSource.includes("both");
+  const profileClaimed = ctx.profileNames.length > 0 && (claimedByKey || (heldSource === "" && mentions(ctx.profileNames)));
+  // An unverified profile claim (LLM guess generated without research) is not a holding basis.
+  const profileOk = verifiedNames.length > 0 && ctx.profileNames.length > 0 && (claimedByKey || (heldSource === "" && mentions(verifiedNames)));
   const disclosureNames = ctx.disclosureNames ?? [];
   const dartOk = disclosureNames.length > 0 && heldSource.includes("dart");
-  if (idx.length === 0 && !profileOk && !dartOk) return drop("no_citation");
+  if (idx.length === 0 && !profileOk && !dartOk) return drop(profileClaimed ? "unverified_profile" : "no_citation");
   const web = idx.map((i) => ({ title: ctx.sources[i - 1].title, url: ctx.sources[i - 1].url }));
   const origins: CitedHeld["origins"] = [...(profileOk ? ["profile" as const] : []), ...(dartOk ? ["dart" as const] : []), ...(web.length > 0 ? ["web" as const] : [])];
   const cite = `출처: ${[...(profileOk ? ["그룹/계열사 프로필"] : []), ...(dartOk ? ["공시·재무"] : []), ...web.map((w) => w.url)].join(", ")}`;

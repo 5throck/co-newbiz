@@ -3,6 +3,7 @@
 // Split from app/brownfield/targets/[targetId]/page.tsx (Wave U-3 decomposition); behavior unchanged.
 import { renderWithCitations } from "./renderWithCitations.tsx";
 import { CompetitorRegistryBlock } from "./CompetitorRegistryBlock.tsx";
+import { DegradedChip } from "../stages/our-company/ProfileChips.tsx";
 import type { TargetDetailViewState } from "./useTargetActions.ts";
 import type { TargetDetail } from "./types.ts";
 
@@ -27,7 +28,7 @@ export function TargetAiProfileTab({ ctx, t }: { ctx: TargetDetailViewState; t: 
                   {(companyProfile.profile?.dataSources?.webResearchCount ?? 0) > 0 && (
                     <span className="status-chip status-in-progress">외부 리서치 {companyProfile.profile!.dataSources.webResearchCount}건</span>
                   )}
-                  {companyProfile.profile?.degraded && <span className="status-chip status-amber" title={companyProfile.profile.degraded}>부분 분석(폴백) — 재분석 권장</span>}
+                  {companyProfile.profile?.degraded && <DegradedChip degraded={companyProfile.profile.degraded} showHint />}
                 </div>
 
                 {companyProfile.status === "in_progress" ? (

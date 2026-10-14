@@ -36,7 +36,7 @@ function DraftChip({ basis, sources }: { basis?: string; sources?: Array<{ title
 const SYNERGY_AREA_COL_PCT = [14, 10, 30, 20, 16, 10] as const;
 
 export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: SynergyPayload }) {
-  const { tab, canCurate, showLinkageForm, setShowLinkageForm, linkageForm, setLinkageForm, linkageError, setLinkageError, linkageSaving, addLinkageItem, opportunityId, gapRows, gapBusy, discardDrafts, dismissGapNote, draftGap, saveGap, gapNote, gapDrafts, gapDirty, holdBusy, checkHolding, gapError, updateGapHeld, updateGapRow, setGapRows, newGapCap, setNewGapCap, addGapRow } = ctx;
+  const { tab, canCurate, showLinkageForm, setShowLinkageForm, linkageForm, setLinkageForm, linkageError, setLinkageError, linkageSaving, addLinkageItem, opportunityId, gapRows, gapBusy, discardDrafts, dismissGapNote, draftGap, saveGap, gapNote, gapDrafts, gapDirty, holdBusy, checkHolding, includeGroup, setIncludeGroup, holdReasons, gapError, updateGapHeld, updateGapRow, setGapRows, newGapCap, setNewGapCap, addGapRow } = ctx;
   const proposePrimary = !gapDirty && gapRows.length === 0;
   const missing = countMissingRequirement(gapRows);
   const draftCount = countDraftFields(gapDrafts);
@@ -127,6 +127,10 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                         <button type="button" className="btn-ghost btn-sm" disabled={gapBusy || holdBusy || gapRows.length === 0} aria-busy={holdBusy} title="그룹/계열사 회사 정보(프로필)와 외부 웹 검색으로 보유 판정·보유 수준·근거를 초안으로 확인합니다 — 출처 인용 필수, 제안 전용" onClick={() => void checkHolding()}>
                           {holdBusy ? "확인 중..." : "보유 판정 확인 (AI)"}
                         </button>
+                        <label className="flex items-center gap-1 text-[length:var(--fs-caption)]" title="판정 대상 회사·그룹과 같은 그룹의 다른 계열사(최대 8곳) 프로필·공시도 근거로 씁니다 — 근거가 된 회사명은 보유 근거에 적히고, 보유 판정은 선택한 범위 기준입니다">
+                          <input type="checkbox" checked={includeGroup} disabled={gapBusy || holdBusy} onChange={(e) => setIncludeGroup(e.target.checked)} />
+                          그룹 내 다른 계열사 프로필도 참고
+                        </label>
                         {draftCount > 0 && <button type="button" className="btn-ghost btn-sm" disabled={gapBusy || holdBusy} onClick={discardDrafts} title="저장하지 않은 AI 초안을 버리고 저장된 값으로 되돌립니다">AI 초안 버리기</button>}
                         <button type="button" className={gapDirty ? "btn-primary btn-sm" : "btn-ghost btn-sm"} disabled={gapBusy || holdBusy || gapRows.length === 0 || !gapDirty} onClick={() => void saveGap()}>
                           {gapBusy ? "처리 중..." : "저장"}
@@ -208,7 +212,7 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                                 {mark?.fields.includes("requiredLevel") && <DraftChip basis={mark.basis.requiredLevel} />}
                               </td>
                               <td>
-                                <select aria-label={`${r.capability} 보유 판정`} value={r.held.status} disabled={!canCurate}
+                                <select aria-label={`${r.capability} 보유 판정`} aria-describedby={r.held.status === "unevaluated" && holdReasons[r.id] ? `hold-reason-${r.id}` : undefined} title={r.held.status === "unevaluated" && holdReasons[r.id] ? `미판정 사유: ${holdReasons[r.id]}` : undefined} value={r.held.status} disabled={!canCurate}
                                   onChange={(e) => updateGapHeld(idx, { status: e.target.value as GapHeldStatus, legacyStatus: undefined, reassessHint: undefined })}
                                   className={`sizing-new-input sizing-new-input-sm w-full ${HELD_STATUS_CHIP[r.held.status]}`}>
                                   {(Object.keys(HELD_STATUS_LABEL) as GapHeldStatus[]).map((s) => (
@@ -216,6 +220,11 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                                   ))}
                                 </select>
                                 {mark?.fields.includes("heldStatus") && <DraftChip basis={mark.basis.held} sources={mark.sources} />}
+                                {r.held.status === "unevaluated" && holdReasons[r.id] && (
+                                  <span id={`hold-reason-${r.id}`} className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title={`미판정 사유: ${holdReasons[r.id]}`}>
+                                    <span aria-hidden="true">· </span>미판정 사유: {holdReasons[r.id]}
+                                  </span>
+                                )}
                               </td>
                               <td className="text-[length:var(--fs-caption)]">
                                 <NarrativeInput capability={r.capability} field="보유 수준" value={r.currentLevel} readOnly={!canCurate} onChange={(v) => updateGapRow(idx, { currentLevel: v })} />

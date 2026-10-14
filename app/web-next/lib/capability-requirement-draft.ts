@@ -9,12 +9,12 @@
  * Every item is validated on its own, so one bad item never discards the others. Fill-empty-only: human values
  * are never overwritten. Proposal only — nothing is written here.
  */
-import { ulid } from "../../../db/lib/ulid.ts";
 import type { LlmMessage } from "./llm.ts";
 import type { CapabilityGapRow } from "./capability-gap.ts";
 import {
   applyNecessityDraft, draftItemId, missingRequirementCells, normalizeNecessityDraft, type DraftMark,
 } from "./capability-gap-necessity-draft.ts";
+import { isRequirementSourceKind, newGapRowFromSource, type RequirementSourceKind } from "./capability-requirement-sources.ts";
 import { chunk, FAILURE_LABEL, runJsonBatches, STRICT_JSON_REMINDER, type FailureCategory, type LlmCall } from "./llm-json.ts";
 
 export const BATCH_ROWS = 6;
@@ -32,6 +32,15 @@ export interface RequirementDraftContext {
   oppName: string;
   marketScope: string | null;
   synergyAreasText: string;
+  /** Labelled S2-sketch / S1-factor blocks (heading + text) used when synergy areas are missing or in addition to them. */
+  extraSourcesText?: string;
+  /** Source kinds that have content (priority order); a proposed new row's `source` must be one of them. */
+  sourceKinds?: RequirementSourceKind[];
+}
+
+/** All evidence blocks as one labelled text (synergy areas first). */
+function sourcesBlock(ctx: RequirementDraftContext): string {
+  return [ctx.synergyAreasText ? `[S3 연계 시너지 영역 — 선별 우선]\n${ctx.synergyAreasText}` : "", ctx.extraSourcesText ?? ""].filter(Boolean).join("\n\n");
 }
 
 function systemOf(system: LlmMessage): LlmMessage[] { return [system]; }
@@ -52,7 +61,7 @@ export function buildMissingBatchMessages(system: LlmMessage, ctx: RequirementDr
         `아래 필요 역량 행의 비어 있는 칸(제안할 칸)만 초안으로 제안하세요. 이미 값이 있는 칸은 제안하지 않습니다. 보유 판정·보유 수준·보유 근거는 다루지 않습니다. ${NECESSITY_PROMPT} ${JSON_ONLY}\n` +
         'JSON: {"rows":[{"id":"원본 행 id 그대로","necessity":"essential|partial_essential|optional","necessityScopeNote":"부분 필수일 때만","requiredLevel":"필요 수준","basis":{"necessity":"왜","requiredLevel":"왜"}}]}\n\n' +
         `기회명: ${ctx.oppName} / 시장: ${ctx.marketScope ?? "미정"}\n` +
-        (ctx.synergyAreasText ? `\n[S3 연계 시너지 영역]\n${ctx.synergyAreasText}\n` : "") +
+        (sourcesBlock(ctx) ? `\n${sourcesBlock(ctx)}\n` : "") +
         `\n[필요 역량 행]\n${rowsText}` + (retry ? STRICT_JSON_REMINDER : ""),
     },
   ];
@@ -65,9 +74,9 @@ export function buildNewRowsMessages(system: LlmMessage, ctx: RequirementDraftCo
     {
       role: "user",
       content:
-        `시너지 영역을 채우는 데 필요한데 아래 기존 목록에 없는 역량을 newRows로 제안하세요(최대 ${MAX_NEW_ROWS}개, requiredNote에 영역명 인용, 기존 역량 중복 금지). 각 새 행은 necessity와 requiredLevel을 반드시 함께 채웁니다(근거가 뒷받침하지 않는 칸만 비움). ${NECESSITY_PROMPT} ${JSON_ONLY}\n` +
-        'JSON: {"newRows":[{"capability":"역량명","requiredNote":"시너지 영역 X에서 도출 — 사유","necessity":"essential|partial_essential|optional","necessityScopeNote":"","requiredLevel":"필요 수준","basis":{"necessity":"왜","requiredLevel":"왜"}}]}\n\n' +
-        `기회명: ${ctx.oppName} / 시장: ${ctx.marketScope ?? "미정"}\n\n[S3 연계 시너지 영역 — 선별 우선]\n${ctx.synergyAreasText}\n\n[기존 필요 역량]\n${names}` + (retry ? STRICT_JSON_REMINDER : ""),
+        `아래 근거 블록(시너지 영역·S2 스케치·S1 요인)을 채우는 데 필요한데 아래 기존 목록에 없는 역량을 newRows로 제안하세요(최대 ${MAX_NEW_ROWS}개, requiredNote에 근거 블록의 영역명·항목을 인용, 기존 역량 중복 금지). 각 새 행에 source(${(ctx.sourceKinds ?? ["synergy_area"]).join("|")} 중 근거가 된 블록)를 적습니다. 각 새 행은 necessity와 requiredLevel을 반드시 함께 채웁니다(근거가 뒷받침하지 않는 칸만 비움). ${NECESSITY_PROMPT} ${JSON_ONLY}\n` +
+        'JSON: {"newRows":[{"capability":"역량명","source":"${(ctx.sourceKinds ?? ["synergy_area"])[0]}","requiredNote":"시너지 영역 X에서 도출 — 사유","necessity":"essential|partial_essential|optional","necessityScopeNote":"","requiredLevel":"필요 수준","basis":{"necessity":"왜","requiredLevel":"왜"}}]}\n\n' +
+        `기회명: ${ctx.oppName} / 시장: ${ctx.marketScope ?? "미정"}\n\n${sourcesBlock(ctx)}\n\n[기존 필요 역량]\n${names}` + (retry ? STRICT_JSON_REMINDER : ""),
     },
   ];
 }
@@ -134,7 +143,8 @@ export async function runRequirementDraft(opts: {
   }
 
   let proposedNew = 0;
-  if (ctx.synergyAreasText) {
+  if (ctx.synergyAreasText || ctx.extraSourcesText) {
+    const kinds = ctx.sourceKinds && ctx.sourceKinds.length > 0 ? ctx.sourceKinds : (["synergy_area"] as RequirementSourceKind[]);
     const [res] = await runJsonBatches({
       call, batches: [[{ id: "__new" }]], arrayKeys: ["newRows"], label: "capability-gap/llm-draft:new-rows",
       buildMessages: (_b, retry) => buildNewRowsMessages(system, ctx, rows, retry),
@@ -151,13 +161,8 @@ export async function runRequirementDraft(opts: {
         const capability = String(n?.capability ?? "").trim().slice(0, 200);
         if (!capability || existing.has(normName(capability))) continue;
         existing.add(normName(capability));
-        const base: CapabilityGapRow = {
-          id: `gap-synarea-${ulid()}`, capability, source: "synergy_area",
-          requiredNote: String(n?.requiredNote ?? "").trim().slice(0, 300),
-          held: { status: "unevaluated", holders: [], evidence: "" }, resolution: null,
-          note: "LLM 시너지 영역 도출 초안 — 사람이 확인해 확정하세요.",
-          necessity: "", necessityScopeNote: "", requiredLevel: "", currentLevel: "",
-        };
+        const source: RequirementSourceKind = isRequirementSourceKind(n?.source) && kinds.includes(n.source) ? n.source : kinds[0];
+        const base = newGapRowFromSource(source, capability, String(n?.requiredNote ?? ""), `LLM ${source === "synergy_area" ? "시너지 영역" : source === "s2_sketch" ? "S2 스케치" : "S1 요인"} 도출 초안 — 사람이 확인해 확정하세요.`);
         const nd = applyNecessityDraft(base, normalizeNecessityDraft(n));
         if (nd.mark) drafts[base.id] = nd.mark;
         added.push(nd.row);

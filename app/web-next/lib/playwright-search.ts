@@ -15,6 +15,12 @@ export function setPlaywrightSearchOverrideForTests(sources: WebSource[] | null)
   testOverride = sources;
 }
 
+export function hasPlaywrightOverrideForTests(): boolean {
+  return testOverride !== null;
+}
+
+export type PlaywrightStatus = "ok" | "empty" | "unavailable" | "blocked";
+
 function findChromeBinary(): string | null {
   if (process.env.CHROME_PATH?.trim()) return process.env.CHROME_PATH.trim();
   // Do not probe the filesystem here: under Next/Turbopack, broad fs probes in
@@ -67,9 +73,15 @@ export function parseDuckDuckGoHtml(html: string, limit: number): WebSource[] {
  * 검색 엔진은 DuckDuckGo HTML 엔드포인트 — 스크래핑 차단이 가장 온화하고
  * 결과 마크업이 안정적이다. 브라우저는 배치당 1회 기동 후 정리한다. */
 export async function playwrightSearch(queries: string[], limit = 10): Promise<WebSource[]> {
-  if (testOverride) return testOverride.slice(0, limit);
+  return (await playwrightSearchDetailed(queries, limit)).sources;
+}
+
+/** Same search with an outcome status for the web-research provider chain:
+ * unavailable = no Chrome / playwright-core / launch failure, blocked = DDG bot-challenge page, empty = no results. */
+export async function playwrightSearchDetailed(queries: string[], limit = 10): Promise<{ sources: WebSource[]; status: PlaywrightStatus }> {
+  if (testOverride) return { sources: testOverride.slice(0, limit), status: testOverride.length > 0 ? "ok" : "empty" };
   const chromeBinary = findChromeBinary();
-  if (!chromeBinary || queries.length === 0) return [];
+  if (!chromeBinary || queries.length === 0) return { sources: [], status: "unavailable" };
   let chromium: typeof import("playwright-core").chromium;
   try {
     // Keep the optional Playwright fallback outside Turbopack's static module
@@ -80,11 +92,12 @@ export async function playwrightSearch(queries: string[], limit = 10): Promise<W
     ({ chromium } = await dynamicImport<typeof import("playwright-core")>("playwright-core"));
   } catch {
     console.error("playwright-search: playwright-core not installed — skipping headless fallback");
-    return [];
+    return { sources: [], status: "unavailable" };
   }
   let browser: import("playwright-core").Browser | null = null;
   const merged: WebSource[] = [];
   const seen = new Set<string>();
+  let challenged = false;
   try {
     browser = await chromium.launch({
       headless: true,
@@ -101,6 +114,7 @@ export async function playwrightSearch(queries: string[], limit = 10): Promise<W
       try {
         await page.goto(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`, { timeout: 20_000, waitUntil: "domcontentloaded" });
         const html = await page.content();
+        if (!/result__a/.test(html) && /anomaly|challenge|captcha|unusual traffic/i.test(html)) challenged = true;
         for (const s of parseDuckDuckGoHtml(html, limit)) {
           if (seen.has(s.url)) continue;
           seen.add(s.url);
@@ -115,9 +129,9 @@ export async function playwrightSearch(queries: string[], limit = 10): Promise<W
     await context.close();
   } catch (err) {
     console.error("playwright-search launch failed:", err instanceof Error ? err.message : err);
-    return merged;
+    return { sources: merged, status: merged.length > 0 ? "ok" : "unavailable" };
   } finally {
     await browser?.close().catch(() => {});
   }
-  return merged;
+  return { sources: merged, status: merged.length > 0 ? "ok" : challenged ? "blocked" : "empty" };
 }
