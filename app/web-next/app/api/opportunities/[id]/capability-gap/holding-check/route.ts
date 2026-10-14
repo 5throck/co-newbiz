@@ -15,9 +15,11 @@ import { promptAgent, systemMessage } from "../../../../../../lib/prompts.ts";
 import { SEARCH_ROW_CAP, type DraftMark } from "../../../../../../lib/capability-gap-necessity-draft.ts";
 import type { LlmCall } from "../../../../../../lib/llm-json.ts";
 import { runHoldingCheck } from "../../../../../../lib/capability-holding-run.ts";
+import { disclosureEvidenceLines, loadDisclosureItems, opportunityContextLines, profileEvidenceLines } from "../../../../../../lib/capability-holding-context.ts";
+import { SEARCH_KEY_ACTION } from "../../../../../../lib/web-research.ts";
 import { gatherHoldingSources, needsHoldingCheck, type HoldingCounts } from "../../../../../../lib/capability-holding-check.ts";
 
-interface MemberLite { id: string; company_name: string; group_id: string }
+interface MemberLite { id: string; company_name: string; group_id: string; dart_corp_code?: string | null }
 
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
     const auth = authenticate(request);
@@ -43,7 +45,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     }
 
     // 그룹/계열사 범위 — 이 기회의 최신 시너지 분석 대상을 우선, 없으면 레지스트리 전체.
-    const allMembers = db.query("SELECT id, company_name, group_id FROM company_group_member").all() as MemberLite[];
+    const allMembers = db.query("SELECT id, company_name, group_id, dart_corp_code FROM company_group_member").all() as MemberLite[];
     const syn = db
       .query("SELECT target_type, member_id, group_id FROM synergy_analysis WHERE opportunity_id = ? ORDER BY created_at DESC LIMIT 1")
       .get(id) as { target_type: string; member_id: string | null; group_id: string | null } | undefined;
@@ -55,19 +57,34 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     const { loadLatestProfile } = await import("../../../../../../lib/company-profile-pipeline.ts");
     const profileLines: string[] = [];
     const profileNames: string[] = [];
+    const disclosureLines: string[] = [];
+    const disclosureNames: string[] = [];
     for (const m of scoped.slice(0, 10)) {
       const prof = loadLatestProfile(db, { kind: "member", id: m.id });
       if (!prof) continue;
       profileNames.push(m.company_name);
-      const strengths = (prof.strengths ?? []).slice(0, 5).join(" / ");
-      const exposures = (prof.industryExposure ?? []).slice(0, 6).join(" / ");
-      profileLines.push(`- ${m.company_name}: 강점 — ${strengths || "기록 없음"} · 산업 노출 — ${exposures || "기록 없음"}`);
+      const lines = profileEvidenceLines(m.company_name, prof);
+      profileLines.push(...(lines.length > 0 ? lines : [`- ${m.company_name} · 프로필 본문 기록 없음`]));
+      const disclosure = disclosureEvidenceLines(m.company_name, loadDisclosureItems(db, m.dart_corp_code ?? prof.dartCorpCode ?? null, prof));
+      if (disclosure.length > 0) { disclosureNames.push(m.company_name); disclosureLines.push(...disclosure); }
     }
+    // The opportunity's own S2/S3 context (background only, never evidence of holding).
+    let synergyAreasText = "";
+    try {
+      const synVersion = db
+        .query(`SELECT v.payload FROM synergy_version v JOIN synergy_analysis sa ON sa.id = v.analysis_id WHERE sa.opportunity_id = ? AND sa.status = 'completed' ORDER BY v.version_no DESC LIMIT 1`)
+        .get(id) as { payload: string } | undefined;
+      if (synVersion) {
+        const p = JSON.parse(synVersion.payload) as { marketLinkage?: { synergyAreas?: Array<{ area?: string; opportunity?: string; risk?: string }> } };
+        synergyAreasText = (p.marketLinkage?.synergyAreas ?? []).filter((a) => a.area).slice(0, 8).map((a) => `${a.area} — 기회: ${a.opportunity ?? "—"} · 위험: ${a.risk ?? "—"}`).join("\n");
+      }
+    } catch { /* malformed synergy payload — context only */ }
+    const contextLines = opportunityContextLines(opp.market_scope, synergyAreasText);
 
     const profileScope = profileNames.length > 0 ? `사용한 프로필 ${profileNames.length}곳(${profileNames.slice(0, 3).join(", ")}${profileNames.length > 3 ? " 외" : ""})` : `프로필이 있는 회사 0곳(등록 회사 ${scoped.length}곳 중)`;
     const search = await gatherHoldingSources(targets, profileNames.length > 0 ? profileNames : scoped.map((m) => m.company_name), opp.market_scope, body.webSearch !== false);
-    if (profileLines.length === 0 && search.sources.length === 0) {
-      return badRequest("no_evidence", `근거가 없습니다 — ${profileScope}이고 외부 검색 결과도 없습니다. 그룹/계열사 분석(our-company)으로 프로필을 만들거나 웹 검색(TAVILY_API_KEY 또는 WEB_SEARCH_DDG_ENABLED)을 설정하세요.` + (search.failureNote ? ` (${search.failureNote})` : ""));
+    if (profileLines.length === 0 && disclosureLines.length === 0 && search.sources.length === 0) {
+      return badRequest("no_evidence", `근거가 없습니다 — ${profileScope}이고 공시·재무 자료와 외부 검색 결과도 없습니다. 그룹/계열사 분석(our-company)으로 프로필을 만들거나 웹 검색(TAVILY_API_KEY, BRAVE_SEARCH_API_KEY, SERPER_API_KEY 또는 WEB_SEARCH_DDG_ENABLED)을 설정하세요.` + (search.failureNote ? ` ${search.failureNote}` : ` 조치: ${SEARCH_KEY_ACTION}`));
     }
 
     const call: LlmCall = async (messages, maxTokens) => {
@@ -79,7 +96,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       }
     };
     const { rows, drafts, source, note, counts } = isLlmConfigured()
-      ? await runHoldingCheck({ system: systemMessage("s3.capability_gap_draft"), oppName: opp.name, marketScope: opp.market_scope, current, targets, profileLines, profileNames, search, profileScope, scopeNote, webEnabled: body.webSearch !== false, call })
-      : { rows: current, drafts: {} as Record<string, DraftMark>, source: "synthesis" as const, counts: { proposed: 0, insufficient: 0, profile: 0, web: 0 } as HoldingCounts, note: "LLM 미구성 — 결정론 폴백은 보유 판정·보유 수준을 만들지 않습니다. 사람이 프로필을 확인해 판정하세요." };
-    return ok({ rows, drafts, source, note, counts, search: { queries: search.queries, sources: search.sources.length, failureNote: search.failureNote, rowCap: SEARCH_ROW_CAP } }, 200);
+      ? await runHoldingCheck({ system: systemMessage("s3.capability_gap_draft"), oppName: opp.name, marketScope: opp.market_scope, current, targets, profileLines, profileNames, disclosureLines, disclosureNames, contextLines, search, profileScope, scopeNote, webEnabled: body.webSearch !== false, call })
+      : { rows: current, drafts: {} as Record<string, DraftMark>, source: "synthesis" as const, counts: { proposed: 0, insufficient: 0, profile: 0, disclosure: 0, web: 0 } as HoldingCounts, note: "LLM 미구성 — 결정론 폴백은 보유 판정·보유 수준을 만들지 않습니다. 사람이 프로필을 확인해 판정하세요." };
+    return ok({ rows, drafts, source, note, counts, search: { queries: search.queries, sources: search.sources.length, failureNote: search.failureNote, rowCap: SEARCH_ROW_CAP, providers: search.providers ?? [], rowsNotSearched: search.rowsNotSearched ?? 0 } }, 200);
 });

@@ -31,6 +31,11 @@ export async function runHoldingCheck(opts: {
   targets: CapabilityGapRow[];
   profileLines: string[];
   profileNames: string[];
+  /** Lines of the "[공시·재무 근거]" block and the names of the companies they belong to. */
+  disclosureLines?: string[];
+  disclosureNames?: string[];
+  /** The opportunity's S1/S2/S3 context (background only). */
+  contextLines?: string[];
   search: HoldingSearchResult;
   profileScope: string;
   scopeNote: string;
@@ -39,14 +44,14 @@ export async function runHoldingCheck(opts: {
   log?: (line: string) => void;
 }): Promise<HoldingRunResult> {
   const { targets, search, profileNames } = opts;
-  const counts: HoldingCounts = { proposed: 0, insufficient: 0, profile: 0, web: 0, kept: 0, reasons: {} };
+  const counts: HoldingCounts = { proposed: 0, insufficient: 0, profile: 0, disclosure: 0, web: 0, kept: 0, reasons: {} };
   const drafts: Record<string, DraftMark> = {};
   const rows = opts.current.map((r) => ({ ...r, held: { ...r.held } }));
   const results = await runJsonBatches({
     call: opts.call, batches: chunk(targets, HOLDING_BATCH_ROWS), arrayKeys: ["rows"], label: "capability-gap/holding-check",
     buildMessages: (batch, retry) => [
       opts.system,
-      { role: "user" as const, content: buildHoldingPrompt({ oppName: opts.oppName, marketScope: opts.marketScope, rows: batch, profileLines: opts.profileLines, search }) + (retry ? STRICT_JSON_REMINDER : "") },
+      { role: "user" as const, content: buildHoldingPrompt({ oppName: opts.oppName, marketScope: opts.marketScope, rows: batch, profileLines: opts.profileLines, disclosureLines: opts.disclosureLines, contextLines: opts.contextLines, search }) + (retry ? STRICT_JSON_REMINDER : "") },
     ],
     itemRowId: draftItemId, rowId: (r) => r.id, maxTokens: 2800, concurrency: 2, log: opts.log,
   });
@@ -59,13 +64,14 @@ export async function runHoldingCheck(opts: {
     return { rows, drafts, counts, source: "synthesis", note: `LLM 응답을 쓸 수 없어 행은 변경되지 않았습니다(사유: ${labels()}). 다시 시도하세요.` };
   }
   for (const t of targets) {
-    const { cited, reason } = judgeCitedHeldDraft(byId.get(t.id), { allowedSources: search.perRow[t.id] ?? [], sources: search.sources, profileNames });
+    const { cited, reason } = judgeCitedHeldDraft(byId.get(t.id), { allowedSources: search.perRow[t.id] ?? [], sources: search.sources, profileNames, disclosureNames: opts.disclosureNames ?? [] });
     if (!cited) { counts.insufficient++; if (reason) counts.reasons![reason] = (counts.reasons![reason] ?? 0) + 1; continue; }
     const idx = rows.findIndex((r) => r.id === t.id);
     const ap = applyHeldDraft(rows[idx], cited, null);
     if (!ap.mark) { counts.kept!++; continue; } // a person already filled these cells; nothing to apply
     counts.proposed++;
     if (cited.origins.includes("profile")) counts.profile++;
+    if (cited.origins.includes("dart")) counts.disclosure!++;
     counts.web += cited.web.length;
     rows[idx] = ap.row;
     drafts[t.id] = ap.mark;

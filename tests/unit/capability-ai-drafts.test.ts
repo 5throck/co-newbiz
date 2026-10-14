@@ -154,13 +154,13 @@ describe("search orchestration", () => {
     wr.setWebResearchOverrideForTests({ configured: true, sources: [] });
     const r = await hc.gatherHoldingSources([row()], ["A사"], null, true);
     expect(r.sources).toHaveLength(0);
-    expect(r.failureNote).toContain("프로필 근거만");
+    expect(r.failureNote).toContain("프로필·공시 근거만");
     wr.setWebResearchOverrideForTests(null);
   });
   test("result note reports counts and sources", () => {
     const n = hc.holdingNote({ counts: { proposed: 3, insufficient: 2, profile: 1, web: 4 }, search: { sources: [], perRow: {}, queries: 6, failureNote: null, skippedRows: 0 }, webEnabled: true, targeted: 5 });
     expect(n).toContain("3개 행 제안, 2개 근거 부족으로 미판정");
-    expect(n).toContain("프로필 1건 / 웹 4건");
+    expect(n).toContain("프로필 1건 / 공시 0건 / 웹 4건");
   });
 });
 
