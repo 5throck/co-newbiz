@@ -8,9 +8,9 @@ const resLabel = (d: SummaryDraft) => (d.resolution ? RESOLUTION_LABEL[d.resolut
 const gradeLabel = (d: SummaryDraft) => (d.grade ? ATTAINABILITY_GRADE_LABEL[d.grade as keyof typeof ATTAINABILITY_GRADE_LABEL] ?? "" : "");
 const monthsLabel = (d: SummaryDraft) => (d.months.trim() !== "" ? `${d.months.trim()}개월` : "");
 
-/** Short table sentence: "인수 통합 · 높음 · 12개월" (해소 방식 · 달성 가능성 · optional months); "" when empty. */
+/** Short table sentence: "인수 통합 · 높음" (해소 방식 · 달성 가능성; months only in the detail); "" when empty. */
 export function buildJudgementSummary(d: SummaryDraft): string {
-  return [resLabel(d), gradeLabel(d), monthsLabel(d)].filter(Boolean).join(" · ");
+  return [resLabel(d), gradeLabel(d)].filter(Boolean).join(" · ");
 }
 
 /** Full detail for the tooltip: "인수 통합 → <기대 수준 전체> · 12개월 · 높음". */

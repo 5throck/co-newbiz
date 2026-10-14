@@ -11,6 +11,7 @@ import { completeOrFallback, isLlmConfigured } from "../../../../../lib/llm.ts";
 import { route } from "../../../../../lib/route.ts";
 import { promptAgent, systemMessage } from "../../../../../lib/prompts.ts";
 import { parseGapRegister, RESOLUTION_LABEL, type GapResolution } from "../../../../../lib/capability-gap.ts";
+import { entryStrategyText } from "../../../../../lib/greenfield-entry-strategy.ts";
 
 interface RecoPayload {
   investment_items: Array<{ line: string; category: "labor" | "opex" | "capex" | "revenue" | "gov_rnd"; note: string }> | null;
@@ -101,7 +102,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     `\n[S4 트랙 결정]\n${s4 ? `트랙: ${s4.track}${s4.sub_track ? ` / 라우트: ${s4.sub_track}` : ""}` : "없음"}`,
     `\n[S1 시장 정의]\n${s1}`,
     `\n[S3 필요 역량·해소 방식]\n${s3}`,
-    `\n[S5 진출전략]\n${assessment?.entry_strategy?.trim() || "아직 작성되지 않음"}`,
+    `\n[S5 진출전략]\n${entryStrategyText(assessment?.entry_strategy) || "아직 작성되지 않음"}`,
   ].join("\n");
 
   let payload: RecoPayload;

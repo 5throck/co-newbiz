@@ -13,11 +13,11 @@
 //   읽기 전용으로 보여준다. ADR-0171: S5가 달성 가능성 판정의 편집 화면이다 — 해소 방식,
 //   기대 수준, 비용, 기간, 달성 가능성, 근거·증빙과 사람의 확정(CapabilityJudgementEditor)
 //   및 자유 서술 비고.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { CapabilityJudgementEditor } from "./CapabilityJudgementEditor.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
-import { api } from "../../lib/api.ts";
+import { api, ApiError } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { SectionToolbar } from "../layout.tsx";
@@ -25,17 +25,35 @@ import { GateDecisionPanel } from "../GateDecisionPanel.tsx";
 import { PromotionPanel } from "../PromotionPanel.tsx";
 import { PrimaryAction } from "../ui.tsx";
 import type { CapabilityGapRow } from "../../lib/capability-gap.ts";
+import { CapabilityCostBlock } from "./CapabilityCostBlock.tsx";
+import { EntryStrategySection } from "./EntryStrategySection.tsx";
+import { parseEntryStrategy, serializeEntryStrategy, type EntryFormState, type EntryModes } from "../../lib/greenfield-entry-strategy.ts";
+import {
+  AMOUNT_UNIT_KRW_M, applySelection, deriveCapabilityCostLines, findDuplicateWarnings, formatKrwM, hasUnsavedReflection, investmentTotals, isCapabilityEntry, lineAmountKrwM, lineSaveStates, reflectionBody, reflectionSummary, selectionPayload,
+  type CapabilityCostView, type CostCategory, type CostSelection, type DuplicateWarning, type MilestoneCandidateView,
+} from "../../lib/capability-cost-lines.ts";
+import type { AttainabilityRowView } from "../../lib/capability-attainability.ts";
 
 interface BcLine {
   line: string; category: "labor" | "opex" | "capex" | "revenue" | "gov_rnd"; amount: number; note?: string;
   period: "monthly" | "quarterly" | "yearly" | "lumpsum"; currency: "KRW" | "USD" | "EUR" | "JPY" | "CNY";
+  /** Amounts are 백만원 ("krw_m"); legacy lines without the marker held 억 and are converted on load. */
+  amountUnit?: "krw_m";
+  /** ADR-0173: capability keys whose double-count warning the person dismissed for this manual line. */
+  dupDismissed?: string[];
 }
 interface Assessment {
   id: string; entry_strategy: string | null; alternatives_considered: string | null;
   rationale: string | null; updated_at: string;
-  business_case_lines: BcLine[] | null;
+  /** Manual lines plus stored capability entries (source: "capability", ADR-0173). */
+  business_case_lines: Array<BcLine | Record<string, unknown>> | null;
 }
-interface OppDetail { opportunity: { id: string; name: string; assessed_at?: string | null }; assessment: Assessment | null }
+interface OppDetail {
+  opportunity: { id: string; name: string; assessed_at?: string | null; promoted_at?: string | null; project_id?: string | null };
+  assessment: Assessment | null;
+  capability_cost_lines?: CapabilityCostView;
+  milestone_candidates?: MilestoneCandidateView[];
+}
 interface GapGetResponse {
   opportunity: { id: string; name: string };
   rows: CapabilityGapRow[];
@@ -69,21 +87,48 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   const [savingGaps, setSavingGaps] = useState(false);
   const [entryStrategy, setEntryStrategy] = useState("");
   const [alternatives, setAlternatives] = useState("");
+  // ADR-0171 amendment (2): selected modes (+ main) live beside the rationale text (entryStrategy); unsaved text survives refetches.
+  const [entryModes, setEntryModes] = useState<EntryModes>({ modes: [], main: null });
+  const entryDirty = useRef(false);
+  const [entryReset, setEntryReset] = useState(0);
+  // Own save of the strategy fields and own "reflect capability costs" action (partial POSTs).
+  const [entryIsDirty, setEntryIsDirty] = useState(false);
+  const [entrySaving, setEntrySaving] = useState(false);
+  const [entryNote, setEntryNote] = useState<string | null>(null);
+  const [entryError, setEntryError] = useState<string | null>(null);
+  const [costSaving, setCostSaving] = useState(false);
+  const [costNote, setCostNote] = useState<string | null>(null);
+  const [costError, setCostError] = useState<string | null>(null);
   const [bcLines, setBcLines] = useState<BcLine[]>([]);
   const [rationale, setRationale] = useState("");
+  // ADR-0173 slice 1: stored capability entries stay out of the manual list; the person's unsaved choices overlay the derived lines.
+  const [storedCapEntries, setStoredCapEntries] = useState<unknown[]>([]);
+  const [capSel, setCapSel] = useState<Record<string, CostSelection>>({});
+  const [attRows, setAttRows] = useState<AttainabilityRowView[] | null>(null);
   // ADR-0118 — S5 투자비 검토 요건 LLM 추천(제안). 저장은 사람의 행위다.
   const [reco, setReco] = useState<InvestmentReco | null>(null);
   const [recoLoading, setRecoLoading] = useState(false);
   const [recoError, setRecoError] = useState<string | null>(null);
 
-  const loadDetail = useCallback((oppId: string) => {
-    api.get<OppDetail>(`/api/greenfield/${encodeURIComponent(oppId)}`)
+  // scope: "all" (page load / whole save), "strategy" (own strategy save) or "cost" (own reflection save): a partial scope never touches the other parts' unsaved state.
+  const loadDetail = useCallback((oppId: string, scope: "all" | "strategy" | "cost" = "all") => {
+    return api.get<OppDetail>(`/api/greenfield/${encodeURIComponent(oppId)}`)
       .then((r) => {
         setSelected(r.data);
-        setEntryStrategy(r.data.assessment?.entry_strategy ?? "");
-        setAlternatives(r.data.assessment?.alternatives_considered ?? "");
-        setBcLines(r.data.assessment?.business_case_lines ?? []);
-        setRationale(r.data.assessment?.rationale ?? "");
+        if (scope !== "cost" && !entryDirty.current) {
+          const parsed = parseEntryStrategy(r.data.assessment?.entry_strategy);
+          setEntryModes({ modes: parsed.modes, main: parsed.main });
+          setEntryStrategy(parsed.rationale);
+          setAlternatives(r.data.assessment?.alternatives_considered ?? "");
+        }
+        if (scope !== "strategy") {
+          const all = r.data.assessment?.business_case_lines ?? [];
+          // Legacy manual lines (no amountUnit) hold 억: shown and re-saved in 백만원, value-preserving.
+          setBcLines((all.filter((l) => !isCapabilityEntry(l)) as BcLine[]).map((l) => ({ ...l, amount: lineAmountKrwM(l), amountUnit: AMOUNT_UNIT_KRW_M })));
+          setStoredCapEntries(all.filter((l) => isCapabilityEntry(l)));
+          setCapSel({});
+        }
+        if (scope === "all") setRationale(r.data.assessment?.rationale ?? "");
         setError(null);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "평가 불러오기 실패"));
@@ -97,7 +142,9 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
 
   useEffect(() => {
     setSelected(null); setGapRows([]); setReco(null); setRecoError(null);
-    loadDetail(opportunityId);
+    entryDirty.current = false; setEntryReset((n) => n + 1);
+    setEntryIsDirty(false); setEntryNote(null); setEntryError(null); setCostNote(null); setCostError(null);
+    void loadDetail(opportunityId);
     loadGaps(opportunityId);
   }, [opportunityId, loadDetail, loadGaps]);
 
@@ -117,8 +164,31 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   // 추천 항목 추가 — 기존 목록을 덮어쓰지 않고 뒤에 이어붙인다. 금액은 사람이
   // 입력한다(LLM은 금액을 지어내지 않음, 경계 #2).
   function addRecoItem(item: { line: string; category: "labor" | "opex" | "capex" | "revenue" | "gov_rnd"; note: string }) {
-    setBcLines((prev) => [...prev, { line: item.line, category: item.category, amount: 0, note: item.note, period: "yearly", currency: "KRW" }]);
+    setBcLines((prev) => [...prev, { line: item.line, category: item.category, amount: 0, amountUnit: AMOUNT_UNIT_KRW_M, note: item.note, period: "yearly", currency: "KRW" }]);
   }
+
+  // Live judgements (saved) drive the derived lines; before the editor loads, the server's derivation is shown.
+  const costView = useMemo<CapabilityCostView>(
+    () => (attRows ? deriveCapabilityCostLines(attRows, storedCapEntries) : selected?.capability_cost_lines ?? { lines: [], orphans: [], totals: { capabilityKrwM: 0, reflectedKrwM: 0, reflectedCount: 0, needsRejudgeCount: 0 } }),
+    [attRows, storedCapEntries, selected],
+  );
+  const capLines = useMemo(() => applySelection(costView, capSel), [costView, capSel]);
+  const reflectedLines = capLines.filter((l) => l.reflected);
+  const invTotals = investmentTotals(costView, new Set(reflectedLines.map((l) => l.capabilityKey)), bcLines);
+  const dupWarnings = findDuplicateWarnings(reflectedLines, bcLines);
+  const lineStates = useMemo(() => lineSaveStates(capLines, storedCapEntries, capSel), [capLines, storedCapEntries, capSel]);
+  const reflectDirty = hasUnsavedReflection(lineStates);
+  const savedReflected = useMemo(() => {
+    const saved = capLines.filter((l) => lineStates[l.capabilityKey] === "saved");
+    return { count: saved.length, krwM: saved.reduce((n, l) => n + l.costKrwM, 0) };
+  }, [capLines, lineStates]);
+  // Shown right after a successful reflection (totals reflect the page state, which equals the saved state then).
+  const reflectedNote = reflectionSummary(invTotals);
+  const dismissDup = (w: DuplicateWarning) => setBcLines((prev) => prev.map((l, i) => (i === w.manualIndex ? { ...l, dupDismissed: [...(l.dupDismissed ?? []), w.capabilityKey] } : l)));
+  const candidates = useMemo(
+    () => (attRows ? attRows.flatMap((r) => (r.milestone_candidate ? [r.milestone_candidate] : [])) : selected?.milestone_candidates ?? []),
+    [attRows, selected],
+  );
 
   const setBc = (i: number, patch: Partial<BcLine>) => setBcLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
 
@@ -142,17 +212,63 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     setBusy(true); setError(null);
     try {
       await api.post(`/api/greenfield/${selected.opportunity.id}`, {
-        entry_strategy: entryStrategy || undefined,
+        entry_strategy: serializeEntryStrategy(entryModes, entryStrategy) || undefined,
         alternatives_considered: alternatives || undefined,
-        business_case_lines: bcLines.filter((l) => l.line.trim()),
+        // Capability entries carry only the person's choices; the server rebuilds amount, name and hash from the live judgement.
+        business_case_lines: [...bcLines.filter((l) => l.line.trim()), ...selectionPayload(capLines, capSel)],
         rationale: rationale || undefined,
       });
-      loadDetail(selected.opportunity.id);
+      entryDirty.current = false; setEntryIsDirty(false); setEntryReset((n) => n + 1);
+      void loadDetail(selected.opportunity.id);
       onSaved?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "저장 실패");
     } finally {
       setBusy(false);
+    }
+  }
+
+  const hhmm = () => new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
+
+  // 진출전략 저장 — ONLY the strategy fields; omitted fields (business_case_lines, rationale) keep their stored values.
+  async function saveStrategy() {
+    if (!selected || entrySaving || !entryIsDirty) return;
+    setEntrySaving(true); setEntryError(null);
+    try {
+      await api.post(`/api/greenfield/${selected.opportunity.id}`, {
+        entry_strategy: serializeEntryStrategy(entryModes, entryStrategy) || undefined,
+        alternatives_considered: alternatives || undefined,
+      });
+      entryDirty.current = false; setEntryIsDirty(false); setEntryReset((n) => n + 1);
+      await loadDetail(selected.opportunity.id, "strategy");
+      setEntryNote(`저장됨 · ${hhmm()}`);
+      onSaved?.();
+    } catch (err) {
+      setEntryError(err instanceof Error ? err.message : "진출전략 저장 실패");
+    } finally {
+      setEntrySaving(false);
+    }
+  }
+
+  // 선택한 비용을 투자비에 반영 — POSTs ONLY business_case_lines; reloads so every line shows its saved state.
+  async function reflectCosts() {
+    if (!selected || costSaving) return;
+    setCostSaving(true); setCostError(null); setCostNote(null);
+    try {
+      await api.post(`/api/greenfield/${selected.opportunity.id}`, reflectionBody(bcLines, capLines, capSel));
+      await loadDetail(selected.opportunity.id, "cost");
+      setCostNote("__pending__");
+      onSaved?.();
+    } catch (err) {
+      if (err instanceof ApiError && err.code === "amount_mismatch") {
+        setAttRows(null);
+        await loadDetail(selected.opportunity.id, "cost");
+        setCostError(`${err.message} 최신 판정으로 다시 불러왔습니다 — 금액을 확인한 뒤 다시 반영하세요.`);
+      } else {
+        setCostError(err instanceof Error ? err.message : "투자비 반영 실패");
+      }
+    } finally {
+      setCostSaving(false);
     }
   }
 
@@ -181,7 +297,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
           summary={
             <span className="flex items-center gap-1">
               <span className="status-chip status-not-started" title="P4 실행형: 평가 구성요소 진행 — S11 설립실행과 동일 상태 어휘">
-                {selected.opportunity.assessed_at ? "완료" : "진행 중"} · {[entryStrategy !== "", gapRows.length > 0, bcLines.length > 0].filter(Boolean).length}/3 구성요소
+                {selected.opportunity.assessed_at ? "완료" : "진행 중"} · {[entryStrategy !== "" || entryModes.modes.length > 0, gapRows.length > 0, bcLines.length > 0].filter(Boolean).length}/3 구성요소
               </span>
               {selected.opportunity.assessed_at && <span className="status-chip status-green">평가 기록 v1+</span>}
             </span>
@@ -190,24 +306,21 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
         <PrimaryAction
           form="greenfield-eval-form"
           label="타당성 검토 실행"
-          disabled={!canAct || busy || entryStrategy.trim() === ""}
-          disabledReason={!canAct ? "평가 기록은 analyst 권한이 필요합니다." : busy ? "저장 중입니다." : "진출전략을 입력하면 실행할 수 있습니다."}
+          disabled={!canAct || busy || (entryStrategy.trim() === "" && entryModes.modes.length === 0)}
+          disabledReason={!canAct ? "평가 기록은 analyst 권한이 필요합니다." : busy ? "저장 중입니다." : "진출 방식을 선택하거나 선택 근거를 입력하면 실행할 수 있습니다."}
         />
         <form id="greenfield-eval-form" onSubmit={save} className="sizing-new-form">
           <fieldset disabled={!canAct} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           {/* 1. 진출전략 */}
-          <h3 className="text-[length:var(--fs-body)] mb-2">1️⃣ 진출전략 (직접 구축 / 전략 제휴 / 인력 영입 / 지분 투자 중 선택)</h3>
-          <textarea
-            aria-label="진출전략"
-            value={entryStrategy}
-            onChange={(e) => setEntryStrategy(e.target.value)}
-            rows={3}
-            placeholder="예: 핵심 역량(제조)은 직접 구축, 물류 운영은 전략 제휴(외부 물류 업체), 부족 인력은 영입 — 역량 격차 해소 방식과 근거"
-            className="sizing-new-input mb-2"
-            style={{ width: "100%" }}
+          <EntryStrategySection
+            opportunityId={selected.opportunity.id}
+            value={{ modes: entryModes, rationale: entryStrategy, alternatives }}
+            onChange={(v: EntryFormState) => { entryDirty.current = true; setEntryIsDirty(true); setEntryModes(v.modes); setEntryStrategy(v.rationale); setAlternatives(v.alternatives); }}
+            canAct={canAct}
+            rows={(attRows ?? gapRows.map((r) => ({ capability: r.capability, resolution: r.resolution }))).map((r) => ({ capability: r.capability, resolution: r.resolution }))}
+            resetKey={entryReset}
+            save={{ dirty: entryIsDirty, saving: entrySaving, onSave: () => void saveStrategy(), note: entryNote, error: entryError, onDismissNote: () => setEntryNote(null) }}
           />
-          {/* 긴 대안 검토 텍스트를 위해 textarea — 단일행 input은 저장된 값이 클리핑됐다(2026-09-20 리뷰) */}
-          <textarea aria-label="검토한 대안" placeholder="검토한 대안 (선택)" value={alternatives} onChange={(e) => setAlternatives(e.target.value)} rows={2} className="sizing-new-input mb-3" style={{ width: "100%" }} />
 
           {/* 2. 필요 역량 — S3 정의 읽기 전용 + S5 달성 가능성 판정 편집 (ADR-0171) */}
           <h3 className="text-[length:var(--fs-body)] mb-2">2️⃣ 필요 역량 (S3) 확인 · 달성 가능성 판정</h3>
@@ -233,19 +346,37 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 s3Href={`/deals/${encodeURIComponent(selected.opportunity.id)}/s3`}
                 gap={{ opportunityId: selected.opportunity.id, rows: gapRows, setRows: setGapRows }}
                 aiDraft
+                onRowsChange={setAttRows}
               />
             </div>
           )}
 
           {/* 3. 투자비 검토 요건 */}
-          <h3 className="text-[length:var(--fs-body)] mb-2">3️⃣ 투자비 검토 요건 (S8 사업성 분석 입력)</h3>
+          <h3 className="text-[length:var(--fs-body)] mb-1">3️⃣ 투자비 검토 요건 (S8 사업성 분석 입력)</h3>
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-unit-note">단위: 백만원(KRW)</p>
+          <CapabilityCostBlock
+            lines={capLines}
+            orphans={costView.orphans}
+            totals={invTotals}
+            warnings={dupWarnings}
+            candidates={candidates}
+            canAct={canAct}
+            onToggle={(key, reflected) => setCapSel((p) => ({ ...p, [key]: { ...p[key], reflected } }))}
+            onCategory={(key, category: CostCategory) => setCapSel((p) => ({ ...p, [key]: { ...p[key], category } }))}
+            onDismiss={dismissDup}
+            reflection={{
+              states: lineStates, dirty: reflectDirty, saving: costSaving, onReflect: () => void reflectCosts(),
+              note: costNote === "__pending__" ? reflectedNote : costNote, error: costError, onDismissNote: () => setCostNote(null),
+              saved: savedReflected, promoted: !!(selected.opportunity.promoted_at || selected.opportunity.project_id),
+            }}
+          />
           {bcLines.map((l, i) => (
             <div key={i} className="flex flex-wrap items-center gap-1 mb-1">
               <input aria-label="항목명" placeholder="항목명 (예: 설비 투자, 연매출)" value={l.line} onChange={(e) => setBc(i, { line: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 12rem" }} />
               <select aria-label="분류" value={l.category} onChange={(e) => setBc(i, { category: e.target.value as BcLine["category"] })} className="sizing-new-input sizing-new-input-sm">
                 {(Object.keys(CATEGORY_LABEL) as BcLine["category"][]).map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
               </select>
-              <input aria-label="금액 (억 단위, 아래 통화 기준)" type="number" placeholder="금액(억)" value={l.amount || ""} onChange={(e) => setBc(i, { amount: Number(e.target.value) })} className="sizing-new-input sizing-new-input-sm" style={{ width: "6rem" }} />
+              <input aria-label={l.currency === "KRW" ? "금액(백만원)" : `금액(백만 ${CURRENCY_LABEL[l.currency]})`} type="number" placeholder={l.currency === "KRW" ? "금액(백만원)" : `금액(백만 ${CURRENCY_LABEL[l.currency]})`} value={l.amount || ""} onChange={(e) => setBc(i, { amount: Number(e.target.value) })} className="sizing-new-input sizing-new-input-sm" style={{ width: "6rem" }} />
               <select aria-label="기준 통화" value={l.currency} onChange={(e) => setBc(i, { currency: e.target.value as BcLine["currency"] })} className="sizing-new-input sizing-new-input-sm">
                 {(Object.keys(CURRENCY_LABEL) as BcLine["currency"][]).map((c) => <option key={c} value={c}>{CURRENCY_LABEL[c]}</option>)}
               </select>
@@ -256,7 +387,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
               {canAct && <button type="button" className="btn-ghost btn-sm" onClick={() => setBcLines((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>}
             </div>
           ))}
-          {canAct && <button type="button" className="btn-ghost btn-sm mb-3" onClick={() => setBcLines((prev) => [...prev, { line: "", category: "opex", amount: 0, period: "yearly", currency: "KRW" }])}>＋ 항목 추가</button>}
+          {canAct && <button type="button" className="btn-ghost btn-sm mb-3" onClick={() => setBcLines((prev) => [...prev, { line: "", category: "opex", amount: 0, amountUnit: AMOUNT_UNIT_KRW_M, period: "yearly", currency: "KRW" }])}>＋ 항목 추가</button>}
 
           {/* ── LLM 투자비 항목 추천 — ADR-0118: 제안은 LLM, 저장은 사람 ── */}
           <div className="sizing-grade-card mb-3">

@@ -106,7 +106,12 @@ export function RemovedCapabilities({ removed }: { removed: RemovedCapability[] 
 }
 
 
-const COL_PCT = [34, 9, 10, 24, 12, 11] as const;
+// Column widths sized from real content (16px rem) at a ~1200px table (1280px viewport):
+// 필요 역량 wraps (widest, remainder); 필요도 chip "! 부분 필수"; 보유 판정 chip "! 업계 리딩";
+// 판정 요약 one line "인력 영입 · 중간" (ellipsis + tooltip); 확정 chip "! 재판정 필요" + "<name> · MM-DD";
+// 작업 link "S5에서 판정" (must not wrap). Index 0 (name) has no minimum. Below ~960px tmin scrolls horizontally.
+const COL_PCT = [39, 9, 10, 16, 15, 11] as const;
+export const COL_MIN_REM = [0, 6.5, 6.5, 8, 8, 7] as const;
 const FILTER_LABEL: Record<JudgementFilter, string> = { todo: "처리할 것", all: "전체" };
 const EMPTY_DIRTY: ReadonlySet<string> = new Set();
 
@@ -161,7 +166,7 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
             <ColGroup widths={COL_PCT} />
             <thead>
               <tr>
-                <th scope="col">필요 역량</th><th scope="col">필요도</th><th scope="col">보유 판정</th><th scope="col">판정 요약</th><th scope="col">확정</th><th scope="col">작업</th>
+                <th scope="col">필요 역량</th><th scope="col" style={{ minWidth: "6.5rem" }}>필요도</th><th scope="col" style={{ minWidth: "6.5rem" }}>보유 판정</th><th scope="col" style={{ minWidth: "8rem" }}>판정 요약</th><th scope="col" style={{ minWidth: "8rem" }}>확정</th><th scope="col" style={{ minWidth: "7rem" }}>작업</th>
               </tr>
             </thead>
             <tbody>
@@ -201,8 +206,9 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
                       )}
                     </td>
                     <td className="text-[length:var(--fs-caption)]">
-                      {r.confirmed_at ? <>확정<span className="block text-[color:var(--muted-fg)]">{r.confirmed_by} · {r.confirmed_at.slice(0, 10)}</span></>
-                        : r.stale ? "재판정 필요" : r.grade ? "확정 전" : "—"}
+                      {r.confirmed_at ? <><span className="status-chip status-green"><span aria-hidden="true">✓</span> 확정</span><span className="block break-words text-[color:var(--muted-fg)]">{r.confirmed_by} · {r.confirmed_at.slice(5, 10)}</span></>
+                        : r.stale ? <span className="status-chip status-amber"><span aria-hidden="true">!</span> 재판정 필요</span>
+                        : r.grade ? <span className="status-chip status-not-started"><span aria-hidden="true">○</span> 확정 전</span> : "—"}
                     </td>
                     <td className="text-[length:var(--fs-caption)]">
                       {canEdit

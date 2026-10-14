@@ -49,6 +49,7 @@ export const ROUTE_TABLE: readonly RouteEntry[] = [
   { pattern: "/api/glossary/:term", load: () => import("../../app/api/glossary/[term]/route.ts") },
   { pattern: "/api/greenfield/:oppId", load: () => import("../../app/api/greenfield/[oppId]/route.ts") },
   { pattern: "/api/greenfield/:oppId/recommendation", load: () => import("../../app/api/greenfield/[oppId]/recommendation/route.ts") },
+  { pattern: "/api/greenfield/:oppId/entry-strategy-draft", load: () => import("../../app/api/greenfield/[oppId]/entry-strategy-draft/route.ts") },
   { pattern: "/api/interpretations", load: () => import("../../app/api/interpretations/route.ts") },
   { pattern: "/api/market-overview/analyses", load: () => import("../../app/api/market-overview/analyses/route.ts") },
   { pattern: "/api/market-overview/analyses/:id", load: () => import("../../app/api/market-overview/analyses/[id]/route.ts") },

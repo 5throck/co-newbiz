@@ -23,7 +23,7 @@ export interface GapWiring {
   setRows: Dispatch<SetStateAction<CapabilityGapRow[]>>;
 }
 
-export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraft = false }: {
+export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraft = false, onRowsChange }: {
   /** Base URL of the judgement routes: GET/PUT here, POST `${endpoint}/confirm`. */
   endpoint: string;
   s3Href: string;
@@ -31,6 +31,8 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
   intro?: string;
   /** S5 only (ADR-0171 amendment 2026-10-15): show "판정 제안 (AI)"; proposals fill empty draft fields, a person saves and confirms. */
   aiDraft?: boolean;
+  /** ADR-0173: called with the SAVED server rows whenever the view (re)loads, so S5 can derive capability cost lines. */
+  onRowsChange?: (rows: AttainabilityViewData["rows"]) => void;
 }) {
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
@@ -45,6 +47,7 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
   const [aiBusy, setAiBusy] = useState(false);
   const [aiNote, setAiNote] = useState<string | null>(null);
   const setGapRows = gap?.setRows;
+  useEffect(() => { if (view) onRowsChange?.(view.rows); }, [view, onRowsChange]);
   // Latest committed state for the async AI merge and the refetch guard (a refetch never wipes unsaved drafts).
   const draftsRef = useRef(drafts); draftsRef.current = drafts;
   const dirtyRef = useRef(dirty); dirtyRef.current = dirty;

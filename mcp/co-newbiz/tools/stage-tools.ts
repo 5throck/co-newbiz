@@ -105,6 +105,8 @@ const SPECS: readonly RouteToolSpec[] = [
     description: "Save the capability-gap resolutions, entry strategy (Build/Partner/Hire/Invest), and investment lines." },
   { name: "generate_entry_strategy_recommendation", kind: "generate", method: "POST", path: "/api/greenfield/{opportunityId}/recommendation", body: "optional",
     activities: ["entry-strategy", "business-case-lines"], description: "Recommend investment-review items and entry strategy (amounts stay human inputs)." },
+  { name: "draft_entry_strategy", kind: "generate", method: "POST", path: "/api/greenfield/{opportunityId}/entry-strategy-draft", body: "optional",
+    activities: ["entry-strategy"], description: "S5 entry-strategy proposal (nothing is saved, nothing is decided): proposes the entry modes (build|partner|hire|invest, exactly one main) with a reason each, a rationale (max 600) and the considered-but-rejected alternatives (max 600), from stored S3 register, S4 decision record, opportunity context and company profile/disclosure data plus the LLM; no web search. A person fills only empty fields on the page and saves (record_greenfield_assessment). Without a configured LLM: 200 with an empty proposal." },
 
   // ── S6 target universe and long list (brownfield) ────────────────────
   { name: "draft_universe_criteria", kind: "generate", method: "POST", path: "/api/brownfield/{opportunityId}/universe-criteria-draft", body: "optional",

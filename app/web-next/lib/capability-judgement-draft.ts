@@ -13,6 +13,7 @@ import {
 import { isStale } from "./capability-linkage.ts";
 import { JUDGEMENT_FIELD_LABEL, JUDGEMENT_ROW_CAP, type JudgementField, type JudgementProposal } from "./capability-judgement-ai-merge.ts";
 export { JUDGEMENT_FIELD_LABEL, JUDGEMENT_ROW_CAP, mergeJudgementProposals, type AiMarks, type JudgementField, type JudgementProposal, type PageJudgementDraft } from "./capability-judgement-ai-merge.ts";
+import { entryStrategyText } from "./greenfield-entry-strategy.ts";
 import { chunk, FAILURE_LABEL, runJsonBatches, STRICT_JSON_REMINDER, type FailureCategory, type LlmCall } from "./llm-json.ts";
 
 export const JUDGEMENT_BATCH_ROWS = 4;
@@ -339,7 +340,7 @@ export async function runJudgementDraft(opts: {
 /** Compact S5 strategy text for the prompt: entry strategy + rationale as stored (may be empty). */
 export function strategyText(row: { entry_strategy?: string | null; alternatives_considered?: string | null } | null | undefined): string {
   if (!row) return "";
-  return [row.entry_strategy ? `진출 전략: ${clip(row.entry_strategy, 300)}` : "", row.alternatives_considered ? `검토 대안: ${clip(row.alternatives_considered, 200)}` : ""].filter(Boolean).join(" / ");
+  return [row.entry_strategy ? `진출 전략: ${clip(entryStrategyText(row.entry_strategy), 300)}` : "", row.alternatives_considered ? `검토 대안: ${clip(row.alternatives_considered, 200)}` : ""].filter(Boolean).join(" / ");
 }
 
 // ── stored evidence (no network) ────────────────────────────────────────────

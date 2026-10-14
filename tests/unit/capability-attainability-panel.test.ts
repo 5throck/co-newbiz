@@ -19,14 +19,18 @@ describe("summary table structure", () => {
     expect(src.match(/<tr key=\{r\.id\}>/g)?.length).toBe(1);
     expect(src.match(/<tbody>/g)?.length).toBe(1);
     const head = src.slice(src.indexOf("<thead>"), src.indexOf("</thead>"));
-    expect(head.match(/<th scope="col">/g)?.length).toBe(6);
+    expect(head.match(/<th scope="col"/g)?.length).toBe(6);
     for (const t of ["필요 역량", "필요도", "보유 판정", "판정 요약", "확정", "작업"]) expect(head).toContain(`>${t}</th>`);
-    expect([...head.matchAll(/>([^<]+)<\/th>/g)].map((m) => m[1])).toEqual(["필요 역량", "필요도", "보유 판정", "판정 요약", "확정", "작업"]);
+    expect([...head.matchAll(/>([^<>]+)<\/th>/g)].map((m) => m[1])).toEqual(["필요 역량", "필요도", "보유 판정", "판정 요약", "확정", "작업"]);
     for (const k of ["<input", "<select", "<textarea", "NarrativeCell", "HeldEvidenceButton", "colSpan", "rowSpan", "aria-expanded", "cap-sticky"]) expect(src).not.toContain(k);
     const pct = src.match(/COL_PCT = \[([^\]]*)\]/)![1].split(",").map(Number);
     expect(pct.length).toBe(6);
     expect(pct.reduce((a, b) => a + b, 0)).toBe(100);
-    expect(pct).toEqual([34, 9, 10, 24, 12, 11]);
+    expect(pct).toEqual([39, 9, 10, 16, 15, 11]);
+    const mins = src.match(/COL_MIN_REM = \[([^\]]*)\]/)![1].split(",").map(Number);
+    expect(mins.length).toBe(6);
+    pct.forEach((p, i) => expect((p / 100) * 1200).toBeGreaterThanOrEqual(mins[i] * 16)); // each column fits its content at a 1200px table
+    mins.slice(1).forEach((m) => expect(src).toContain(`minWidth: "${m}rem"`));
     expect(pct[0]).toBe(Math.max(...pct)); // 필요 역량 is the widest column
     expect(pct[3]).toBeLessThan(pct[0]); // 판정 요약 is narrower than the name column
     expect(src).toContain("table-fixed-pct tmin-48");
@@ -174,10 +178,10 @@ describe("pure view helpers", () => {
   const d = (o: Partial<{ resolution: string; expectedLevel: string; months: string; grade: string }>) => ({ resolution: "", expectedLevel: "", months: "", grade: "", ...o });
   test("judgement summary sentence is short: 해소 방식 · 달성 가능성 (+ months); detail keeps the expected level", () => {
     expect(buildJudgementSummary(d({}))).toBe("");
-    expect(buildJudgementSummary(d({ resolution: "partner", expectedLevel: "업계 평균", months: "12", grade: "high" }))).toBe("전략 제휴 · 높음 · 12개월");
+    expect(buildJudgementSummary(d({ resolution: "partner", expectedLevel: "업계 평균", months: "12", grade: "high" }))).toBe("전략 제휴 · 높음");
     expect(buildJudgementSummary(d({ resolution: "partner", grade: "high" }))).toBe("전략 제휴 · 높음");
     expect(buildJudgementSummary(d({ grade: "low" }))).toBe("낮음");
-    expect(buildJudgementSummary(d({ months: "6" }))).toBe("6개월");
+    expect(buildJudgementSummary(d({ months: "6" }))).toBe("");
     expect(buildJudgementSummary(d({ resolution: "build" }))).toBe("직접 구축");
     expect(buildJudgementSummary(d({ expectedLevel: "긴 기대 수준" }))).toBe(""); // expected level never appears in the sentence
     expect(buildJudgementDetail(d({ resolution: "partner", expectedLevel: "업계 평균", months: "12", grade: "high" }))).toBe("전략 제휴 → 업계 평균 · 12개월 · 높음");

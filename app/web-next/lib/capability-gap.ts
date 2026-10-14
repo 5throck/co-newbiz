@@ -72,6 +72,18 @@ export interface CapabilityAttainability {
   staleSince?: string;
   /** Superseded judgements (newest last, capped). */
   history?: AttainabilityHistoryEntry[];
+  /** ADR-0173 slice 1: server-derived post-management milestone candidate (present only while monthsToAttain > 0). */
+  milestoneCandidate?: MilestoneCandidate;
+}
+
+/** ADR-0173 slice 1: a candidate only; no milestone is created or tracked in this slice. */
+export interface MilestoneCandidate {
+  name: string;
+  months: number;
+  resolution: GapResolution | null;
+  rowId: string;
+  /** Hash of the judgement inputs the candidate was derived from (lib/capability-cost-lines.ts). */
+  derivedFromHash: string;
 }
 
 export interface S3Snapshot {
@@ -301,6 +313,7 @@ export function normalizeAttainability(raw: unknown): CapabilityAttainability | 
   const staleSince = str(a.staleSince, 40);
   const expectedLevel = str(a.expectedLevel, NARRATIVE_CAP);
   const s3Snapshot = normalizeS3Snapshot(a.s3Snapshot);
+  const milestoneCandidate = normalizeMilestoneCandidate(a.milestoneCandidate);
   const history = Array.isArray(a.history)
     ? (a.history as unknown[]).map(normalizeHistoryEntry).filter((x): x is AttainabilityHistoryEntry => x !== null).slice(-HISTORY_CAP)
     : [];
@@ -319,7 +332,19 @@ export function normalizeAttainability(raw: unknown): CapabilityAttainability | 
     ...(s3Snapshot ? { s3Snapshot } : {}),
     ...(staleSince ? { staleSince } : {}),
     ...(history.length > 0 ? { history } : {}),
+    ...(milestoneCandidate ? { milestoneCandidate } : {}),
   };
+}
+
+function normalizeMilestoneCandidate(raw: unknown): MilestoneCandidate | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const m = raw as Record<string, unknown>;
+  const months = finiteNonNeg(m.months, 1200);
+  const name = str(m.name, 200);
+  const rowId = str(m.rowId, 40);
+  if (!months || !name || !rowId) return undefined;
+  const resolution = m.resolution === "build" || m.resolution === "partner" || m.resolution === "hire" || m.resolution === "invest" ? m.resolution : null;
+  return { name, months, resolution, rowId, derivedFromHash: str(m.derivedFromHash, 40) };
 }
 
 function normalizeS3Snapshot(raw: unknown): S3Snapshot | undefined {

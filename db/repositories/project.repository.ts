@@ -28,6 +28,9 @@
 
 import { deriveOriginFromSubTrack } from "../lib/origin-derivation.ts";
 import { getDb } from "../client.ts";
+// ADR-0173: pure helpers shared with the S5 route (no db access inside).
+import { parseGapRegister } from "../../app/web-next/lib/capability-gap.ts";
+import { lineAmountKrwM, sourceRowOf, splitForPromotion } from "../../app/web-next/lib/capability-cost-lines.ts";
 import { ulid } from "../lib/ulid.ts";
 import { appendAudit, grantProjectMembership, logDataAccess } from "../lib/access-control.ts";
 import { getCurrentRouteDecision } from "./route-decision.repository.ts";
@@ -296,21 +299,25 @@ export function promoteOpportunity(
 
     // Greenfield: copy S5's "투자비 검토 요건" (business_case_lines_json) into
     // a real business_case_model/business_case_line so S8 doesn't start blank
-    // (ADR-0137, ADR-0138). One model, one line per S5 entry; amounts are 억원
-    // in S5's UI, annual_amount_krw_m is 백만원, hence ×100. period(월/분기/년)
+    // (ADR-0137, ADR-0138). One model, one line per S5 entry; amounts are 백만원
+    // (amountUnit "krw_m"; legacy lines without it are 억원 and ×100), annual_amount_krw_m is 백만원. period(월/분기/년)
     // is normalized into that same annual figure; lumpsum과 비KRW 통화는
     // 변환하지 않고 note 플래그로만 남긴다(경계 #2 — 위조하지 않는다).
     if (track === "greenfield") {
       const assessment = db
         .query("SELECT business_case_lines_json FROM greenfield_assessment WHERE opportunity_id = ? ORDER BY updated_at DESC LIMIT 1")
         .get(opportunityId) as { business_case_lines_json: string | null } | undefined;
-      let lines: Array<{ line: string; category: string; amount: number; note?: string; period?: string; currency?: string }> = [];
+      let lines: Array<{ line: string; category: string; amount: number; amountUnit?: string; note?: string; period?: string; currency?: string }> = [];
       try {
         lines = assessment?.business_case_lines_json ? JSON.parse(assessment.business_case_lines_json) : [];
       } catch { /* malformed — treat as none, don't block promotion over it */ }
       const validCategories = new Set(["labor", "opex", "capex", "revenue", "gov_rnd"]);
-      lines = lines.filter((l) => l?.line?.trim() && validCategories.has(l.category));
-      if (lines.length > 0) {
+      // ADR-0173: skip unreflected capability entries; reflected ones become exact 백만원 lump sums
+      // recomputed from the live judgement (never 억 and back). Manual lines behave as before.
+      const gapJson = (db.query("SELECT capability_gap_json AS j FROM opportunity WHERE id = ?").get(opportunityId) as { j: string | null } | undefined)?.j;
+      const split = splitForPromotion(Array.isArray(lines) ? lines : [], parseGapRegister(gapJson).rows.map(sourceRowOf));
+      lines = (split.manual as typeof lines).filter((l) => l?.line?.trim() && validCategories.has(l.category));
+      if (lines.length > 0 || split.capability.length > 0) {
         const modelId = ulid();
         db.run(
           "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at) VALUES (?,?,?,?,?,?,?)",
@@ -319,7 +326,8 @@ export function promoteOpportunity(
         const PERIOD_MULTIPLIER: Record<string, number> = { monthly: 12, quarterly: 4, yearly: 1, lumpsum: 1 };
         for (const l of lines) {
           const periodMult = PERIOD_MULTIPLIER[l.period ?? "yearly"] ?? 1;
-          const annualAmount = (l.amount || 0) * periodMult * 100;
+          // amountUnit "krw_m" lines are already 백만원; legacy lines (no marker) hold 억 and keep the ×100 conversion.
+          const annualAmount = lineAmountKrwM(l) * periodMult;
           const flags: string[] = [];
           if (l.period === "lumpsum") flags.push("일시불 총액 — 연반복 아님");
           if (l.currency && l.currency !== "KRW") flags.push(`원문 통화: ${l.currency} — 환율 미반영, S8에서 환산 필요`);
@@ -329,6 +337,16 @@ export function promoteOpportunity(
              VALUES (?,?,?,?,?,?,?,?,?,?)`,
             [ulid(), modelId, l.category, l.line.trim(), annualAmount, 1, 0, note, opts.promotedBy, now],
           );
+        }
+        for (const c of split.capability) {
+          db.run(
+            `INSERT INTO business_case_line (id, model_id, category, name, annual_amount_krw_m, start_year, growth_rate, note, created_by, created_at)
+             VALUES (?,?,?,?,?,?,?,?,?,?)`,
+            [ulid(), modelId, c.category, c.name, c.krwM, 1, 0, c.note, opts.promotedBy, now],
+          );
+        }
+        if (split.skipped.length > 0) {
+          appendAudit(db, { actor: opts.promotedBy, action: "capability_cost.promotion_skipped", target: `${opportunityId}:${split.skipped.join(",")}`, now });
         }
       }
     }

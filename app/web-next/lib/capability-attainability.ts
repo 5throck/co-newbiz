@@ -20,6 +20,7 @@ import {
 } from "./capability-gap.ts";
 import { capabilityRowHash, isStale, s3Changes, s3SnapshotOf, type S3Change } from "./capability-linkage.ts";
 import { persistGapRegister } from "./capability-register-write.ts";
+import { milestoneCandidateOf, milestoneCandidateView, type MilestoneCandidateView } from "./capability-cost-lines.ts";
 
 export const ATTAINABILITY_BANNER_TEXT =
   "필요 역량 달성 가능성이 확인되지 않은 항목이 있습니다 — 이 분석은 필요 역량을 확보할 수 있다는 전제를 둡니다.";
@@ -125,6 +126,8 @@ export interface AttainabilityRowView {
   /** Latest superseded judgement, or null. */
   prior: AttainabilityHistoryEntry | null;
   history_count: number;
+  /** ADR-0173 slice 1: post-management milestone candidate (server-derived; null without a period). */
+  milestone_candidate: MilestoneCandidateView | null;
 }
 
 export function rowView(r: CapabilityGapRow): AttainabilityRowView {
@@ -162,6 +165,7 @@ export function rowView(r: CapabilityGapRow): AttainabilityRowView {
     s3_changes: stale ? s3Changes(r) : [],
     prior: a?.history?.[a.history.length - 1] ?? null,
     history_count: a?.history?.length ?? 0,
+    milestone_candidate: milestoneCandidateView(r),
   };
 }
 
@@ -299,6 +303,10 @@ export function applyAttainabilityPatches(
       if (seen === current) a.s3Snapshot = s3SnapshotOf(next);
       delete a.staleSince;
     }
+    // ADR-0173: the milestone candidate follows the judgement and is derived here, never taken from the client.
+    const candidate = milestoneCandidateOf({ ...next, attainability: a });
+    if (candidate) a.milestoneCandidate = candidate;
+    else delete a.milestoneCandidate;
     const hasContent = !!a.expectedLevel || a.grade !== null || a.closingCostKrwM !== null || a.monthsToAttain !== null || a.rationale !== "" || a.evidence.length > 0 || (a.history?.length ?? 0) > 0;
     if (hasContent) next = { ...next, attainability: a };
     else {

@@ -34,6 +34,9 @@ call_sites:
   - file: app/web-next/app/api/opportunities/[id]/capability-attainability/ai-draft/route.ts
     sites: 1
     exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
+  - file: app/web-next/app/api/greenfield/[oppId]/entry-strategy-draft/route.ts
+    sites: 1
+    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
   - file: app/web-next/app/api/opportunities/[id]/gate-brief/route.ts
     sites: 1
     exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
