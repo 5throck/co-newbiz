@@ -81,6 +81,7 @@ describe("establishment-mode-view (ADR-0167)", () => {
     const blocker = "설립 방식 미선택 (establishment mode not chosen) — S10에서 사람이 신규 법인 설립 또는 신규 사업부 추진을 선택해야 합니다";
     expect(localizeRequirement(blocker)).not.toMatch(/establishment mode/i);
     expect(localizeRequirement(blocker)).toContain("설립 방식 미선택");
+    expect(localizeRequirement("설립 방식이 아직 정해지지 않았습니다. S10에서 설립 방식을 확정해야 합니다.")).toContain("정해지지 않았습니다");
     expect(localizeRequirement("설립 방식 (establishment mode not chosen, ADR-0167)")).not.toMatch(/establishment/i);
     for (const f of [
       "app/web-next/lib/establishment-mode-view.ts",
