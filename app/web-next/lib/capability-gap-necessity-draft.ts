@@ -254,14 +254,41 @@ export function sanitizeWebSources(raw: unknown, max = 40): WebSnippet[] {
   return out;
 }
 
-/** At most 2 queries per row: the first scoped company's position, then the industry level. */
+const KEYWORD_CAP = 24;
+const SUFFIX_RE = /(역량|체계|능력|관리|운영|구축|수준|보유|확보)\s*$/;
+
+/** Short search keyword from a capability name: parentheticals and trailing 역량/체계/능력/관리/운영/구축-style suffixes dropped, capped at ~24 chars. */
+export function distillCapabilityKeyword(capability: string): string {
+  let k = capability.replace(/[(（\[][^)）\]]*[)）\]]/g, " ").replace(/\s+/g, " ").trim();
+  for (let n = 0; n < 4; n++) {
+    const next = k.replace(SUFFIX_RE, "").trim();
+    // A suffix glued to a very short stem ("품질관리") is part of the term itself, not a generic suffix.
+    if (next === k || !next || (next.length < 3 && !/\s(역량|체계|능력|관리|운영|구축|수준|보유|확보)\s*$/.test(k))) break;
+    k = next;
+  }
+  if (!k) k = capability.trim();
+  if (k.length > KEYWORD_CAP) {
+    const cut = k.slice(0, KEYWORD_CAP);
+    const sp = cut.lastIndexOf(" ");
+    k = (sp >= 8 ? cut.slice(0, sp) : cut).trim();
+  }
+  return k;
+}
+
+/**
+ * Short, clean queries: (1) first scoped company + distilled keyword, (2) keyword + market scope for the
+ * industry-level comparison (no company name), (3) an English variant only when the capability has Latin tokens.
+ */
 export function buildHeldQueries(capability: string, companyNames: string[], marketScope: string | null): string[] {
-  const cap = capability.trim().slice(0, 60);
-  if (!cap) return [];
+  const kw = distillCapabilityKeyword(capability);
+  if (!kw) return [];
   const q: string[] = [];
-  if (companyNames[0]) q.push(`${companyNames[0]} ${cap} 업계 수준 실적`);
-  q.push(`${cap}${marketScope ? ` ${marketScope.slice(0, 30)}` : ""} 업계 수준 주요 기업`);
-  return q.slice(0, SEARCH_QUERIES_PER_ROW);
+  if (companyNames[0]) q.push(`${companyNames[0].trim()} ${kw}`);
+  const scope = marketScope?.replace(/\s+/g, " ").trim().slice(0, 20);
+  q.push(scope ? `${kw} ${scope} 업계 주요 기업` : `${kw} 업계 주요 기업`);
+  const latin = [...new Set(capability.match(/[A-Za-z][A-Za-z0-9+\-]{1,}/g) ?? [])].slice(0, 4);
+  if (latin.length > 0) q.push(`${latin.join(" ")} industry leading companies`);
+  return q.slice(0, latin.length > 0 ? 3 : SEARCH_QUERIES_PER_ROW);
 }
 
 export interface CitedHeldCtx {
@@ -271,6 +298,8 @@ export interface CitedHeldCtx {
   sources: WebSnippet[];
   /** Names of the scoped group/affiliate companies whose profiles were provided. */
   profileNames: string[];
+  /** Companies whose stored DART/financial facts were provided as "[공시·재무 근거]" (disclosure-class evidence). */
+  disclosureNames?: string[];
 }
 export interface CitedHeld {
   status: GapHeldStatus;
@@ -278,7 +307,7 @@ export interface CitedHeld {
   currentLevel: string;
   basis: { held: string; currentLevel: string };
   web: DraftSource[];
-  origins: Array<"profile" | "web">;
+  origins: Array<"profile" | "dart" | "web">;
 }
 
 export type HeldDropReason = "no_item" | "unevaluated" | "no_basis" | "no_citation";
@@ -315,11 +344,13 @@ export function judgeCitedHeldDraft(raw: unknown, ctx: CitedHeldCtx): { cited: C
   const idx = [...new Set((srcRaw as unknown[]).map(sourceNumber).filter((v) => ctx.allowedSources.includes(v) && v >= 1 && v <= ctx.sources.length))].slice(0, 2);
   const heldSource = String(basisRaw.heldSource ?? r.heldSource ?? "").toLowerCase();
   const mentioned = `${basisHeld} ${d.evidence}`.toLowerCase();
-  const profileOk = ctx.profileNames.length > 0 && (heldSource.includes("profile") || (heldSource === "" && ctx.profileNames.some((n) => n.trim() && mentioned.includes(n.trim().toLowerCase()))));
-  if (idx.length === 0 && !profileOk) return drop("no_citation");
+  const profileOk = ctx.profileNames.length > 0 && (heldSource.includes("profile") || heldSource.includes("both") || (heldSource === "" && ctx.profileNames.some((n) => n.trim() && mentioned.includes(n.trim().toLowerCase()))));
+  const disclosureNames = ctx.disclosureNames ?? [];
+  const dartOk = disclosureNames.length > 0 && heldSource.includes("dart");
+  if (idx.length === 0 && !profileOk && !dartOk) return drop("no_citation");
   const web = idx.map((i) => ({ title: ctx.sources[i - 1].title, url: ctx.sources[i - 1].url }));
-  const origins: CitedHeld["origins"] = [...(profileOk ? ["profile" as const] : []), ...(web.length > 0 ? ["web" as const] : [])];
-  const cite = `출처: ${[...(profileOk ? ["그룹/계열사 프로필"] : []), ...web.map((w) => w.url)].join(", ")}`;
+  const origins: CitedHeld["origins"] = [...(profileOk ? ["profile" as const] : []), ...(dartOk ? ["dart" as const] : []), ...(web.length > 0 ? ["web" as const] : [])];
+  const cite = `출처: ${[...(profileOk ? ["그룹/계열사 프로필"] : []), ...(dartOk ? ["공시·재무"] : []), ...web.map((w) => w.url)].join(", ")}`;
   let evidence = d.evidence;
   // `leading` needs comparative evidence text; a bare citation is not enough.
   if (d.status === "leading" && !evidence) return { cited: toCited(d, "average", "", cite, basisHeld, basisRaw, web, origins), reason: null };
