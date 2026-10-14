@@ -16,6 +16,7 @@ export interface S8LensSummary {
   brownfield: boolean;
   technical: TechnicalLensSummary;
   financial: FinancialLensSummary;
+  goals: { goal_count: number; met: number; missed: number };
   strip: S8LensStripView;
 }
 
@@ -36,6 +37,7 @@ export function buildS8LensSummary(db: Database, projectId: string): S8LensSumma
   const technical = summarizeTechnicalLens(rows, lens, { subject, brownfield });
 
   let financial: FinancialLensSummary;
+  const goals = { goal_count: 0, met: 0, missed: 0, hasCase: false };
   try {
     const list = listBusinessCases(projectId);
     const adopted = findAdoptedCase(list);
@@ -46,13 +48,17 @@ export function buildS8LensSummary(db: Database, projectId: string): S8LensSumma
     const downside = adopted ? list.cases.find((c) => sameAxis(c, "downside")) : undefined;
     let missed = 0;
     let goalCount = 0;
+    let met = 0;
     if (adopted) {
       try {
         const resolved = resolveProjectTargets(projectId).resolved;
         goalCount = resolved.length;
-        missed = evaluateTargetsForCase(resolved, adopted).filter((e) => e.status === "missed").length;
+        const entries = evaluateTargetsForCase(resolved, adopted);
+        missed = entries.filter((e) => e.status === "missed").length;
+        met = entries.filter((e) => e.status === "met").length;
       } catch { /* goals unavailable: no goal signal */ }
     }
+    Object.assign(goals, { goal_count: goalCount, met, missed, hasCase: !!adopted });
     financial = financialLensStatus({
       hasAdoptedCase: !!adopted,
       baseIrr: p50(baseCase).irr,
@@ -71,6 +77,7 @@ export function buildS8LensSummary(db: Database, projectId: string): S8LensSumma
     brownfield,
     technical,
     financial,
-    strip: buildLensStripView(technical, financial),
+    goals: { goal_count: goals.goal_count, met: goals.met, missed: goals.missed },
+    strip: buildLensStripView(technical, financial, { goalCount: goals.goal_count, met: goals.met, hasCase: goals.hasCase }),
   };
 }

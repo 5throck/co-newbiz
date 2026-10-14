@@ -67,7 +67,16 @@ export function lensCard(status: LensStatus): LensCardView {
   return { status, ...LENS_VIEW[status] };
 }
 
+export interface GoalsStatusInput { goalCount: number; met: number; hasCase: boolean }
+/** Short goals line for the strip ("목표 N개 중 달성 M개"). Reference only. */
+export function goalsStatusText(g: GoalsStatusInput): string {
+  if (g.goalCount === 0) return "목표 미설정";
+  if (!g.hasCase) return `목표 ${g.goalCount}개 — 채택 케이스 없음`;
+  return `목표 ${g.goalCount}개 중 달성 ${g.met}개`;
+}
+
 export interface S8LensStripView {
+  goalsText: string;
   technical: LensCardView & { judged: number; total: number; cautionCount: number; worstItem: string | null; mismatchCount: number };
   financial: LensCardView & { reasons: string[] };
   /** Shown only for a technical 주의; warning, never a cap. */
@@ -79,8 +88,10 @@ export interface S8LensStripView {
 export function buildLensStripView(
   technical: { status: LensStatus; judged: number; total: number; cautionCount: number; worstItem: string | null; mismatchCount?: number },
   financial: { status: LensStatus; reasons: string[] },
+  goals: GoalsStatusInput = { goalCount: 0, met: 0, hasCase: false },
 ): S8LensStripView {
   return {
+    goalsText: goalsStatusText(goals),
     technical: { ...lensCard(technical.status), judged: technical.judged, total: technical.total, cautionCount: technical.cautionCount, worstItem: technical.worstItem, mismatchCount: technical.mismatchCount ?? 0 },
     financial: { ...lensCard(financial.status), reasons: financial.reasons },
     warning: technical.cautionCount > 0 ? TECHNICAL_CAUTION_WARNING : null,
