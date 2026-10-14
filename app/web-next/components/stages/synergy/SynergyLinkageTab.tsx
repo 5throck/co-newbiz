@@ -3,10 +3,11 @@
 // Split from components/stages/SynergyStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import { useState } from "react";
 import { SectionToolbar } from "../../layout.tsx";
-import { type GapHeldStatus, HELD_STATUS_CHIP, HELD_STATUS_LABEL, type GapResolution, RESOLUTION_LABEL, summarizeGap } from "../../../lib/capability-gap.ts";
+import { type GapHeldStatus, HELD_STATUS_CHIP, HELD_STATUS_LABEL, type GapResolution, RESOLUTION_LABEL, summarizeGap, gapSourceLabel } from "../../../lib/capability-gap.ts";
 import type { SynergyResultState } from "./useSynergyResult.ts";
 import type { SynergyPayload } from "./types.ts";
 import { ColGroup } from "../../ui.tsx";
+import { ClampedText } from "../ClampedText.tsx";
 import { CapabilityHeldDialog, evidencePreview, holdersPreview } from "../CapabilityHeldDialog.tsx";
 
 // 시너지 영역 6열 — 근거·기회·위험이 긴 문단 열.
@@ -128,11 +129,12 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                         <tbody>
                           {gapRows.map((r, idx) => (
                             <tr key={r.id}>
-                              <td className="cell-primary">
+                              <td className="cell-primary max-w-[22rem] break-words">
                                 <span className="font-semibold text-[length:var(--fs-caption)]">{r.capability}</span>
                                 <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                                  출처: {r.source === "s2_sketch" ? "S2 스케치" : r.source === "s1_factors" ? "S1 요인" : r.source === "synergy_area" ? "S3 시너지 영역" : "수동"}{r.requiredNote ? ` — ${r.requiredNote}` : ""}
+                                  {gapSourceLabel(r.source, true)}
                                 </span>
+                                {r.requiredNote && <ClampedText text={r.requiredNote} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" />}
                               </td>
                               <td>
                                 <select aria-label={`${r.capability} 보유 판정`} value={r.held.status} disabled={!canCurate}

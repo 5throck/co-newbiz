@@ -13,6 +13,7 @@
 //   보여주고 보유 수준·해소 방식·비고만 확장 편집한다.
 import { useCallback, useEffect, useState } from "react";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
+import { ClampedText } from "./ClampedText.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
@@ -245,7 +246,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                     <tr key={g.id}>
                       <td className="text-[length:var(--fs-caption)]">
                         <span className="font-semibold">{g.capability}</span>
-                        {g.requiredNote && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{g.requiredNote}</span>}
+                        {g.requiredNote && <ClampedText text={g.requiredNote} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" />}
                       </td>
                       <td>
                         <span className={`status-chip ${HELD_STATUS_CHIP[g.held.status]}`}>{HELD_STATUS_LABEL[g.held.status]}</span>

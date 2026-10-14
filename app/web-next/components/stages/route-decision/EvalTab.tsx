@@ -3,6 +3,7 @@
 // Split from components/stages/RouteDecisionStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import Link from "next/link";
 import { ColGroup } from "../../ui.tsx";
+import { gapSourceLabel } from "../../../lib/capability-gap.ts";
 import { CAPABILITY_REG_COL_PCT, SCORE_LABEL } from "./constants.ts";
 import type { RouteDecisionStageState } from "./useRouteDecision.ts";
 import type { OpportunityRow } from "./types.ts";
@@ -97,7 +98,7 @@ export function EvalTab({ ctx, selected }: { ctx: RouteDecisionStageState; selec
                                   <td className="cell-primary">
                                     <span className="font-semibold text-[length:var(--fs-caption)]">{r.capability}</span>
                                     <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                                      출처: {r.source === "s2_sketch" ? "S2 스케치" : r.source === "s1_factors" ? "S1 요인" : r.source === "synergy_area" ? "S3 시너지 영역" : "수동"}
+                                      {gapSourceLabel(r.source, false)}
                                     </span>
                                   </td>
                                   <td>
