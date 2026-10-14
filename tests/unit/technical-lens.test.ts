@@ -227,9 +227,9 @@ describe("summary route and gate brief (existing project: no backfill, 미판정
 describe("S8 tab aliases (deep-link compatibility)", () => {
   const r = (t: string | null | undefined, greenfield = false) => view.resolveS8Tab(t, { greenfield });
   test("alias table", () => {
-    expect(r(null)).toBe("scenarios");
-    expect(r("bogus")).toBe("scenarios");
-    expect(r("financial")).toBe("scenarios");
+    expect(r(null)).toBe("overview");
+    expect(r("bogus")).toBe("overview");
+    expect(r("financial")).toBe("overview");
     expect(r("scenarios")).toBe("scenarios");
     expect(r("wacc")).toBe("wacc");
     expect(r("financial-analysis")).toBe("financial-analysis");
@@ -239,7 +239,7 @@ describe("S8 tab aliases (deep-link compatibility)", () => {
     expect(r("capability")).toBe("technical");
     for (const k of ["overview", "params", "target-costing", "decision"] as const) expect(r(k)).toBe(k);
     expect(r("targets", false)).toBe("targets");
-    expect(r("targets", true)).toBe("scenarios");
+    expect(r("targets", true)).toBe("overview");
   });
   test("parts and primary highlight", () => {
     expect(view.partOfS8Tab("goals")).toBe("goals");

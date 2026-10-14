@@ -51,10 +51,10 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
       { seg: "/risk-heatmap", label: "리스크 히트맵" },
     ],
     subtabs: [
-      { seg: "/business-case", query: "scenarios", label: "시나리오 비교", isDefault: true },
+      { seg: "/business-case", query: "overview", label: "설명·생성·권고", isDefault: true },
+      { seg: "/business-case", query: "scenarios", label: "시나리오 비교" },
       { seg: "/wacc", label: "WACC" },
       { seg: "/financial-analysis", label: "재무분석" },
-      { seg: "/business-case", query: "overview", label: "설명·생성·권고" },
       { seg: "/business-case", query: "params", label: "파라미터·스냅샷" },
       { seg: "/business-case", query: "target-costing", label: "타겟코스팅" },
     ],

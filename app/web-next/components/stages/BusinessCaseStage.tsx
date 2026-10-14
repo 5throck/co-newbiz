@@ -181,9 +181,9 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlSync = !embedded;
-  const [localTab, setLocalTab] = useState("scenarios");
+  const [localTab, setLocalTab] = useState("overview");
   const tabParam = urlSync ? searchParams.get("tab") : localTab;
-  // Greenfield (no target axis) hides the target compare/select tab; old deep links land on scenarios (ADR-0159).
+  // Greenfield (no target axis) hides the target compare/select tab; old deep links land on overview (ADR-0159).
   const [greenfield, setGreenfield] = useState(false);
   const tab = resolveS8Tab(tabParam, { greenfield });
   const setTab = (key: string) => {
@@ -197,7 +197,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
     else if (tabParam === "financial-analysis") router.replace(`/projects/${projectId}/financial-analysis`);
   }, [urlSync, tabParam, projectId, router]);
   useEffect(() => {
-    if (urlSync && shouldRedirectTargetsTab(tabParam, greenfield)) router.replace(`/projects/${projectId}/business-case?tab=scenarios`, { scroll: false });
+    if (urlSync && shouldRedirectTargetsTab(tabParam, greenfield)) router.replace(`/projects/${projectId}/business-case?tab=overview`, { scroll: false });
   }, [urlSync, tabParam, greenfield, projectId, router]);
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
@@ -480,9 +480,13 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       <StageTabs projectId={projectId} />
       {/* The jump chip is the 결정 tab's shortcut — hidden when already there (IA cleanup 2026-10-14). */}
       {tab !== "decision" && <GateDecisionJump gate="fs" beforeJump={() => setTab("decision")} />}
-      <StageFrame stageId="S8" heading="S8 사업성 분석 — 이중 관점 밸류에이션 비교">
+      <StageFrame stageId="S8" heading={greenfield ? "S8 사업성 분석 — 시장 기반 밸류에이션" : "S8 사업성 분석 — 이중 관점 밸류에이션 비교"}>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
-        같은 시나리오를 <b>시장 기반(진행 판정 1차)</b>과 <b>과거 기반(비교 근거)</b> 두 관점으로 각각 평가해 나란히 비교합니다.
+        {greenfield ? (
+          <>시나리오마다 <b>시장 기반(진행 판정 1차)</b> 관점으로 평가합니다. 성장은 시장 규모와 포획률에서 오며, 대상 회사가 없어 과거 실적과의 비교는 없습니다.</>
+        ) : (
+          <>같은 시나리오를 <b>시장 기반(진행 판정 1차)</b>과 <b>과거 기반(비교 근거)</b> 두 관점으로 각각 평가해 나란히 비교합니다.</>
+        )}
         <span className="ml-2 status-chip status-not-started">엔진 권고 ≠ 채택 — 채택은 사람의 행위입니다</span>
       </p>
 
@@ -556,7 +560,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         className="mb-3"
         label="S8 사업성 분석 화면"
         active={primaryKeyOfS8Tab(tab) ?? tab}
-        onSelect={(k) => setTab(k === "financial" ? "scenarios" : k)}
+        onSelect={(k) => setTab(k === "financial" ? "overview" : k)}
         tabs={[
           { key: "goals", label: "사업 목표" }, // INTERIM-WORDING
           { key: "technical", label: "기술적 타당성" }, // INTERIM-WORDING
@@ -572,10 +576,10 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           active={tab}
           onSelect={setTab}
           tabs={[
+            { key: "overview", label: "설명·생성·권고" },
             { key: "scenarios", label: "시나리오 비교" },
             { key: "wacc", label: "WACC" },
             { key: "financial-analysis", label: "재무분석" },
-            { key: "overview", label: "설명·생성·권고" },
             { key: "params", label: "파라미터·스냅샷" },
             { key: "target-costing", label: "타겟코스팅" },
           ]}
@@ -806,43 +810,67 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
       {tab === "overview" && (
       <>
-      {/* 두 관점의 의미 */}
-      <section className="market-section sizing-step mb-3" aria-label="두 관점의 의미">
-        <h3 className="sizing-step-title">두 관점의 의미</h3>
+      {/* 두 관점의 의미 — greenfield has no target company, so only the market-based perspective exists */}
+      {greenfield ? (
+      <section className="market-section sizing-step mb-3" aria-label="평가 관점의 의미">
+        <h3 className="sizing-step-title">평가 관점의 의미</h3>
         <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table">
           <thead><tr><th scope="col">관점</th><th scope="col">성장률 근거</th><th scope="col">변동성(sigma) 근거</th><th scope="col">쓰임</th></tr></thead>
           <tbody>
             <tr>
               <td><span className="status-chip status-green">market_forward · 1차</span> 시장 기반</td>
               <td>시장 성장률 (opportunity)</td>
-              <td>미래 변동성 프로파일 — 과거 매출 변동성 + WACC 자산 변동성 블렌딩</td>
+              <td>미래 변동성 프로파일 — 시장 기반 변동성과 WACC 자산 변동성 블렌딩</td>
               <td>S8 완료·킬 크라이테리아·권고안 판정</td>
-            </tr>
-            <tr>
-              <td><span className="status-chip status-amber">historical · 비교</span> 과거 기반</td>
-              <td>대상 회사 매출 CAGR (DART)</td>
-              <td>과거 매출 증감률 표준편차</td>
-              <td>&quot;과거 실적이 지속되면&quot; 관점의 비교 근거</td>
             </tr>
           </tbody>
         </table></div>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
-          <b className="text-[color:var(--warning)]">진행 판정(채택 요건·킬 크라이테리아·권고안)은 시장 기반 값을 사용합니다.</b>{" "}
-          과거 기반은 비교용이며, 둘의 차이가 클수록 성장 가정의 불확실성이 크다는 신호입니다.
+          과거 기반 비교는 대상 회사가 있는 Brown Field에만 적용됩니다.
         </p>
       </section>
+      ) : (
+      <>
+      {/* 두 관점의 의미 */}
+        <section className="market-section sizing-step mb-3" aria-label="두 관점의 의미">
+          <h3 className="sizing-step-title">두 관점의 의미</h3>
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table">
+            <thead><tr><th scope="col">관점</th><th scope="col">성장률 근거</th><th scope="col">변동성(sigma) 근거</th><th scope="col">쓰임</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><span className="status-chip status-green">market_forward · 1차</span> 시장 기반</td>
+                <td>시장 성장률 (opportunity)</td>
+                <td>미래 변동성 프로파일 — 과거 매출 변동성 + WACC 자산 변동성 블렌딩</td>
+                <td>S8 완료·킬 크라이테리아·권고안 판정</td>
+              </tr>
+              <tr>
+                <td><span className="status-chip status-amber">historical · 비교</span> 과거 기반</td>
+                <td>대상 회사 매출 CAGR (DART)</td>
+                <td>과거 매출 증감률 표준편차</td>
+                <td>&quot;과거 실적이 지속되면&quot; 관점의 비교 근거</td>
+              </tr>
+            </tbody>
+          </table></div>
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
+            <b className="text-[color:var(--warning)]">진행 판정(채택 요건·킬 크라이테리아·권고안)은 시장 기반 값을 사용합니다.</b>{" "}
+            과거 기반은 비교용이며, 둘의 차이가 클수록 성장 가정의 불확실성이 크다는 신호입니다.
+          </p>
+        </section>
+      </>
+      )}
 
       {/* 기업가치 계산 방법 — 계산 사슬 공개 (사용자 요청 2026-10-10) */}
       <ValuationMethodology
         projectId={projectId}
         marketCase={(byScenario.get("base") ?? []).find((c) => c.variant === "market_forward") ?? null}
         historicalCase={(byScenario.get("base") ?? []).find((c) => c.variant === "historical") ?? null}
+        greenfield={greenfield}
       />
 
       {canAct && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void generate()}>
-            {busy ? "생성 중..." : "이중 관점 자동 생성 (시장 기반 + 과거 기반 × 3 시나리오)"}
+            {busy ? "생성 중..." : greenfield ? "자동 생성 (시장 기반 × 3 시나리오)" : "이중 관점 자동 생성 (시장 기반 + 과거 기반 × 3 시나리오)"}
           </button>
           <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
             {busy ? "계산 중입니다 - 완료되면 결과가 갱신됩니다." : "결정 기록은 '결정' 탭에서 합니다."}
@@ -933,7 +961,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         const newestMf = cases.find((c) => c.variant === "market_forward");
         const newestMfP50 = newestMf?.simulations.find((x) => x.percentile === "p50")?.npv_krw_m ?? null;
         return (
-          <section key={s} className="market-section sizing-step mt-3" aria-label={`${SCEN_LABEL[s]} 이중 관점 비교`}>
+          <section key={s} className="market-section sizing-step mt-3" aria-label={greenfield ? `${SCEN_LABEL[s]} 시장 기반 평가` : `${SCEN_LABEL[s]} 이중 관점 비교`}>
             <h3 className="sizing-step-title">
               {SCEN_LABEL[s]}
               {newestMf?.recommended && <span className="status-chip status-green ml-1" title="정량 방법론 권고 — 최악 분위수(하위 5%) 생존 관점 (시장 기반)">★ 권고안</span>}
@@ -1047,7 +1075,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                       </tr>
                     );
                   })}
-                  {!hasHistorical && (
+                  {!hasHistorical && !greenfield && (
                     <tr>
                       <td colSpan={10} className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
                         과거 기반 관점 N/A — 대상 회사 연결 + DART 동기화 후 재생성하면 추가됩니다.{" "}
@@ -1069,7 +1097,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               </details>
             )}
             <p className="text-[length:var(--fs-caption)] text-[var(--muted-fg)] mt-1">
-              계산 사슬과 두 관점 차이: <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("overview")}>설명: 개요 탭 →</button>
+              {greenfield ? "계산 사슬" : "계산 사슬과 두 관점 차이"}: <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("overview")}>설명: 개요 탭 →</button>
             </p>
           </section>
         );

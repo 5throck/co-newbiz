@@ -54,7 +54,10 @@ export function composeProjectReport(db: Database, projectId: string, projectNo:
         lines.push(`- 관점 비교: ${sibling.variant === "historical" ? "과거 기반" : "시장 기반"} p50 ${num(sP50)} — 채택 관점 대비 ${diff >= 0 ? "+" : ""}${num(diff)} (${((diff / Math.abs(aP50)) * 100).toFixed(1)}%)`);
       }
     } else {
-      lines.push("- 관점 비교: 과거 기반 변형 없음 (대상 회사 연결 + DART 동기화 필요)");
+      // No target company (Green Field) means no past-based variant by design — do not ask for DART sync.
+      lines.push(adopted.target_id === null
+        ? "- 관점 비교: 시장 기반 단일 관점 (대상 회사 미연결 — 과거 기반 비교 없음)"
+        : "- 관점 비교: 과거 기반 변형 없음 (대상 회사 연결 + DART 동기화 필요)");
     }
   } else {
     lines.push("- 채택된 사업 케이스가 없습니다 — 법인 투자심의위원회 심사 전 S8 채택이 필요합니다.");
