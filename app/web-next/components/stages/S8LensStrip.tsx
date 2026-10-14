@@ -44,7 +44,9 @@ export function S8LensStrip({ projectId }: { projectId: string }) {
         </article>
       </div>
       <p className="text-[length:var(--fs-caption)] mt-1">사업 목표: {strip.goalsText}</p>
-      {strip.warning && <p role="note" className="text-[length:var(--fs-caption)] mt-1"><span className="status-chip status-amber"><span aria-hidden="true">!</span> 주의</span> {strip.warning}</p>}
+      {/* TECHNICAL_CAUTION_WARNING is intentionally not rendered: the technical chip line
+          above already carries "주의 N" — IA cleanup 2026-10-14 (one home per fact).
+          The field stays in the view model for the gate-brief consumers and tests. */}
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
         {strip.caption}
         {" "}

@@ -62,10 +62,6 @@ export function primaryTabKeys(greenfield: boolean): S8TabKey[] {
   return S8_PRIMARY_TAB_ORDER.filter((k) => !(greenfield && k === "targets"));
 }
 
-export function financialSubtabKeys(greenfield: boolean): S8TabKey[] {
-  return S8_FINANCIAL_SUBTABS.filter((k) => !(greenfield && k === "targets"));
-}
-
 /** Which of the three parts a tab key belongs to (null = target comparison, decision and the more-menu tabs). */
 export function partOfS8Tab(key: S8TabKey): S8Part | null {
   if (key === "goals" || key === "technical") return key;

@@ -25,7 +25,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { StageTabs } from "../StageTabs.tsx";
-import { CapabilityAttainabilityPanel } from "./CapabilityAttainabilityPanel.tsx";
 import { S8LensStrip } from "./S8LensStrip.tsx";
 import { S8PartHeader } from "./S8PartHeader.tsx";
 import { TechnicalLensPanel } from "./TechnicalLensPanel.tsx";
@@ -303,12 +302,19 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         `/api/projects/${encodeURIComponent(projectId)}/business-case/generate`,
         regenerate ? { regenerate: true } : {},
       );
-      if (r.data.alreadyRun) {
-        setError("이미 생성된 실행이 있습니다 — 새로 생성하려면 '대상별 재생성'을 사용하세요.");
-        return;
+      // IA cleanup 2026-10-14: ONE generate entry. The first press keeps the
+      // already-run guard; when it reports an existing run, the SAME press
+      // escalates to `regenerate: true` so a second entry point is not needed.
+      let runId = r.data.runId;
+      if (!regenerate && r.data.alreadyRun) {
+        const again = await api.post<{ runId: string }>(
+          `/api/projects/${encodeURIComponent(projectId)}/business-case/generate`,
+          { regenerate: true },
+        );
+        runId = again.data.runId;
       }
       const status = await api.get<{ runId: string; status: string; activities: ActivityRow[] }>(
-        `/api/projects/${encodeURIComponent(projectId)}/business-case/generate/${encodeURIComponent(r.data.runId)}`,
+        `/api/projects/${encodeURIComponent(projectId)}/business-case/generate/${encodeURIComponent(runId)}`,
       );
       setRun({ runId: status.data.runId, status: status.data.status, activities: status.data.activities });
       load();
@@ -449,8 +455,14 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
     return map;
   }, [data, targets.length, effectiveTargetFilter]);
 
+  // One attainment table in the goals tab: every filtered case (all scenarios) as a column,
+  // header "시나리오 · 관점" so the per-case columns stay readable outside the scenario layout.
+  const attainmentCases = useMemo(
+    () => SCENARIOS.flatMap((s) => (byScenario.get(s) ?? []).map((c) => ({ id: c.id, header: `${SCEN_LABEL[s]} · ${VARIANT_LABEL[c.variant]}` }))),
+    [byScenario],
+  );
+
   // Goal counts: the goals endpoint is authoritative; the cases payload is the fallback.
-  const goalsLoaded = goalsData !== null || data?.goal_count !== undefined;
   const goalCount = goalsData
     ? goalsData.goal_count_by_source.project + goalsData.goal_count_by_source.affiliate + goalsData.goal_count_by_source.group
     : data?.goal_count ?? 0;
@@ -466,7 +478,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   return (
 <>
       <StageTabs projectId={projectId} />
-      <GateDecisionJump gate="fs" beforeJump={() => setTab("decision")} />
+      {/* The jump chip is the 결정 tab's shortcut — hidden when already there (IA cleanup 2026-10-14). */}
+      {tab !== "decision" && <GateDecisionJump gate="fs" beforeJump={() => setTab("decision")} />}
       <StageFrame stageId="S8" heading="S8 사업성 분석 — 이중 관점 밸류에이션 비교">
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
         같은 시나리오를 <b>시장 기반(진행 판정 1차)</b>과 <b>과거 기반(비교 근거)</b> 두 관점으로 각각 평가해 나란히 비교합니다.
@@ -532,25 +545,11 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       {/* Content first: the compact, non-dismissible review strip sits above the analysis tabs and expands on demand. */}
       <ReviewBuckets entityType="project" entityId={projectId} gates={["fs"]} artifacts={stageArtifactTabs("S8")} />
 
-      {canAct && tab !== "decision" && (
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void generate(true)}>
-            {busy ? "계산 중..." : "밸류에이션 재계산 (재생성)"}
-          </button>
-          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-            {busy ? "계산 중입니다 - 완료되면 결과가 갱신됩니다." : "결정 기록은 위쪽 '결정 기록 (사람)' 또는 '결정' 탭에서 합니다."}
-          </span>
-        </div>
-      )}
-
       {/* R2-E IA decision (2026-10-09): ONE tab row per surface. The project page keeps
           only the stage-level tabs (StageTabs); the analysis sub-tabs live there as
-          ?tab= entries. The embedded deal tab has no StageTabs row, so it keeps this TabNav. */}
-      {!embedded && (
-        <p className="sr-only" id="s8-analysis-tabs-note">
-          S8 분석 탭(사업 목표·기술적 타당성·재무적 타당성[시나리오 비교·WACC·재무분석]·대상 비교·선정·결정·더보기)은 위 단계 탭 행에서 선택합니다.
-        </p>
-      )}
+          ?tab= entries. The embedded deal tab has no StageTabs row, so it keeps this TabNav.
+          IA cleanup 2026-10-14: the global regeneration row and its sr-only tab note
+          were removed — generation has ONE entry, the overview tab. */}
       {embedded && (
       <>
       <S8LensStrip projectId={projectId} />
@@ -592,7 +591,16 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       {tab === "technical" && <><S8PartHeader part="technical" /><TechnicalLensPanel projectId={projectId} /></>}
       {(tab === "scenarios" || tab === "wacc" || tab === "financial-analysis") && <S8PartHeader part="financial" />}
       {tab === "goals" && <GoalsPanel projectId={projectId} data={goalsData} canAct={canAct} onChanged={onGoalsChanged} loadError={goalsLoadError} />}
-      {tab === "params" && <ParamsPanel projectId={projectId} />}
+      {/* IA cleanup 2026-10-14: ONE attainment table (was one per scenario section),
+          in its single home — the goals tab. Per-case columns are kept. */}
+      {tab === "goals" && (
+        <GoalAttainmentTable
+          cases={attainmentCases}
+          attainment={data?.goal_attainment}
+          goalCount={goalCount}
+        />
+      )}
+      {tab === "params" && <ParamsPanel projectId={projectId} onOpenTargets={() => setTab("targets")} />}
       {tab === "target-costing" && <TargetCostingPanel projectId={projectId} />}
       {tab === "wacc" && <WaccPanel projectId={projectId} />}
       {tab === "financial-analysis" && <FinancialAnalysisPanel projectId={projectId} />}
@@ -834,10 +842,13 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       />
 
       {canAct && (
-        <div className="mb-3">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void generate()}>
             {busy ? "생성 중..." : "이중 관점 자동 생성 (시장 기반 + 과거 기반 × 3 시나리오)"}
           </button>
+          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+            {busy ? "계산 중입니다 - 완료되면 결과가 갱신됩니다." : "결정 기록은 '결정' 탭에서 합니다."}
+          </span>
         </div>
       )}
 
@@ -861,7 +872,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         <section className="market-section sizing-step mt-3" aria-label="AI 추천 채택 권고">
           <h3 className="sizing-step-title text-[0.9rem]">🤖 AI 추천 채택 권고</h3>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-            원칙 (경계 #2): 채택은 사람이 합니다 — 이 화면의 케이스들과 킬 크라이테리아 상태에서 만든 제안이며, ★ 권고안(결정론)와 별개 제안입니다.
+            채택 권고 (결정 탭의 게이트 판단과 별개) — 채택은 사람이 합니다: 이 화면의 케이스들과 킬 크라이테리아 상태에서 만든 제안이며, ★ 권고안(결정론)과도 별개 제안입니다.
           </p>
           {recoError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
           {!reco && !recoLoading && !recoError && (
@@ -895,8 +906,16 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       </>
       )}
 
-      {/* 시나리오별 이중 관점 비교 — brownfield는 유효 대상 필터의 케이스만 */}
-      {tab === "scenarios" && <CapabilityAttainabilityPanel projectId={projectId} compact onOpen={() => setTab("technical")} />}
+      {/* 시나리오별 이중 관점 비교 — brownfield는 유효 대상 필터의 케이스만.
+          IA cleanup 2026-10-14: capability content lives in the technical tab —
+          this is only a pointer (each fact gets ONE home). */}
+      {tab === "scenarios" && (
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-3" role="note">
+          <span className="status-chip status-not-started mr-1"><span aria-hidden="true">ⓘ</span> 역량</span>
+          필요 역량 달성 가능성 판정은{" "}
+          <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("technical")}>기술적 타당성 탭 →</button>
+        </p>
+      )}
       {tab === "scenarios" && (
       <>
       {targets.length > 1 && (
@@ -994,8 +1013,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                           )}
                           {c.variant === "historical" && deltaPct !== null && Math.abs(deltaPct) > P50_GAP_WARN_RATIO && (
                             <span role="note" data-testid="p50-gap-hint" className="mt-1 block w-fit max-w-full whitespace-normal [overflow-wrap:anywhere] text-[length:var(--fs-caption)] font-normal text-[color:var(--muted-fg)]">
-                              성장 가정 차이가 지배적{growthGapPp !== null ? ` (시장 기반 대비 성장률 ${growthGapPp >= 0 ? "+" : ""}${growthGapPp.toFixed(1)}%p)` : ""} — 같은 배수를 공유하므로 이는 성장 가정과 배수 가정의 불일치 신호입니다.{" "}
-                              <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("overview")}>설명 탭 참조 →</button>
+                              성장 가정 차이가 지배적{growthGapPp !== null ? ` (시장 기반 대비 성장률 ${growthGapPp >= 0 ? "+" : ""}${growthGapPp.toFixed(1)}%p)` : ""}{" "}
+                              <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("overview")}>설명: 개요 탭 →</button>
                             </span>
                           )}
                         </td>
@@ -1041,19 +1060,18 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                 </tbody>
               </table></div>
             )}
-            <GoalAttainmentTable
-              cases={cases.map((c) => ({ id: c.id, header: VARIANT_LABEL[c.variant] ?? c.variant }))}
-              attainment={data?.goal_attainment}
-              goalCount={goalCount}
-            />
+            {/* IA cleanup 2026-10-14: the attainment table lives once, in the goals tab. */}
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2">
+              <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("goals")}>목표 달성 판정은 사업 목표 탭 →</button>
+            </p>
             {(cases[0]?.simulations?.[0]?.note) && (
               <details className="raw-key-details mt-1" title="재현 근거 (동일 시드로 재계산해도 같은 결과)">
                 <summary>계산 파라미터(원문)</summary> {/* INTERIM-WORDING */}
                 <code lang="en" className="block mono-num text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] whitespace-pre-wrap [overflow-wrap:anywhere] select-all">{cases[0].simulations[0].note}</code>
               </details>
             )}
-            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
-              계산 사슬(매출 앵커 → 성장·변동성 → 마진 → 인수가 → 할인·처분 → 몬테카를로)과 두 관점 차이의 원인은 <b>설명·생성·권고</b> 탭의 <b>기업가치 계산 방법</b>을 참고하세요.
+            <p className="text-[length:var(--fs-caption)] text-[var(--muted-fg)] mt-1">
+              계산 사슬과 두 관점 차이: <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("overview")}>설명: 개요 탭 →</button>
             </p>
           </section>
         );
@@ -1086,9 +1104,10 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         </section>
       )}
 
-      <TargetCheckPanel projectId={projectId} />
+      {/* ── 결정 탭: fs 게이트 진행 근거(대상 점검) → 게이트 결정 — IA cleanup 2026-10-14 ── */}
       {tab === "decision" && (
         <div className="mt-4">
+          <TargetCheckPanel projectId={projectId} />
           <GateDecisionPanel
             opportunityId={projectId}
             gates={["fs"]}
