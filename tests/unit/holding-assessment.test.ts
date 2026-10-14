@@ -271,19 +271,15 @@ describe("S3 table and modals (source structure)", () => {
     expect(stage).toContain("CapabilityJudgementEditor");
     expect(stage).toContain("/capability-attainability`");
     const tbl = read("components/stages/CapabilityJudgementTable.tsx");
-    const heads = ["필요 역량", "필요도", "필요 수준", "보유 판정", "보유 수준", "보유 근거", "해소 방식", "기대 수준", "비용(백만원)", "기간(개월)", "달성 가능성", "근거·증빙", "확정"].map((h) => tbl.indexOf(`<th scope="col">${h}</th>`));
-    expect(heads.every((i) => i >= 0)).toBe(true);
-    expect([...heads].sort((a, b) => a - b)).toEqual(heads);
-    // S3 narrative columns are read-only (보기), the 기대 수준 cell is editable only when `canEdit`
-    expect(tbl).toContain('field="필요 수준" value={r.required_level} readOnly');
-    expect(tbl).toContain('field="보유 수준" value={r.current_level} readOnly');
-    expect(tbl).toContain('field="기대 수준" value={d.expectedLevel} readOnly={!canEdit}');
-    // judgement inputs: 해소 방식 select, cost, months, grade select; hint text only (OD-10)
-    for (const k of ["${r.capability} 해소 방식", "${r.capability} 해소 비용(백만원)", "${r.capability} 달성 기간(개월)", "${r.capability} 달성 가능성", "RESOLUTION_EXPECTED_LEVEL_HINT", "근거·증빙 ${canEdit"]) expect(tbl).toContain(k);
+    const dlg = read("components/stages/CapabilityJudgementDialog.tsx");
+    // the table is a one-line summary (no inputs); the S3 block precedes the S5 inputs in the dialog
+    expect(tbl).not.toContain("<input");
+    expect(dlg.indexOf('aria-label="S3 정의 (읽기 전용)"')).toBeLessThan(dlg.indexOf('aria-label="S5 판정 (입력)"'));
+    for (const k of ["RESOLUTION_EXPECTED_LEVEL_HINT", "해소 방식", "기대 수준", "비용(백만원)", "기간(개월)", "달성 가능성", "근거·증빙"]) expect(dlg).toContain(k);
     // no S3-owned value is ever part of the draft that is sent
     const ed = read("components/stages/CapabilityJudgementEditor.tsx");
     expect(ed).toContain("judgementPatch(");
-    const patchSrc = tbl.slice(tbl.indexOf("export const judgementPatch"), tbl.indexOf("const RESOLUTIONS"));
+    const patchSrc = tbl.slice(tbl.indexOf("export const judgementPatch"), tbl.indexOf("const levelText"));
     for (const f of ["requiredLevel", "currentLevel", "necessity", "capability", "held"]) expect(patchSrc).not.toContain(`${f}:`);
     expect(patchSrc).toContain("expectedLevel: d.expectedLevel");
   });

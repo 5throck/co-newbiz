@@ -336,9 +336,14 @@ describe("보유 근거 cell: button only", () => {
     expect(legacyHoldersCaption(undefined)).toBe("");
     expect(legacyHoldersCaption(["A사", " B사 "])).toBe("기존 보유 주체: A사, B사");
   });
-  test("S3 and S5/S8 cells use HeldEvidenceButton, with no preview text or 미입력 marker", () => {
+  test("S3 cells use HeldEvidenceButton; S5/S8 have none, with no preview text or 미입력 marker", () => {
     const root = join(PROJECT_ROOT, "app/web-next/components/stages");
-    for (const f of ["synergy/SynergyLinkageTab.tsx", "CapabilityJudgementTable.tsx"]) {
+    // S5/S8 only reference S3: the evidence text is shown directly (ClampedText), no 보기 button/dialog.
+    const ref = readFileSync(join(root, "CapabilityJudgementTable.tsx"), "utf8");
+    expect(ref).not.toContain("<HeldEvidenceButton");
+    expect(ref).not.toContain("<CapabilityHeldDialog");
+    expect(ref).not.toContain("HeldEvidenceButton");
+    for (const f of ["synergy/SynergyLinkageTab.tsx"]) {
       const src = readFileSync(join(root, f), "utf8");
       expect(src).toContain("<HeldEvidenceButton");
       expect(src).not.toContain("HeldSummary");
@@ -396,7 +401,6 @@ describe("UI source checks", () => {
     expect(tbl).toContain("S3 변경 — 재판정 필요");
     expect(tbl).toContain("삭제된 역량 (판정 이력)");
     expect(tbl).not.toContain("보유 주체");
-    expect(tbl).toContain("<HeldEvidenceButton");
     expect(tbl).toContain("재판정 필요 {s.stale}");
     expect(tbl).not.toContain("LevelSelect");
   });
