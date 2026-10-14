@@ -17,11 +17,14 @@ describe("CapabilityAttainabilityPanel structure", () => {
     expect(src).not.toContain("증빙 (한 줄에 하나)");
     expect(src).not.toMatch(/evidence:\s*e\.target\.value/);
   });
-  test("segmented grade control with aria-pressed chips and text labels", () => {
-    expect(src).toContain("FilterChip");
-    expect(src).toContain('role="group"');
-    for (const t of ["높음", "중간", "낮음", "미판정"]) expect(src).toContain(`text: "${t}"`);
-    expect(src).not.toContain('<option value="high">');
+  test("grade control is a select with four options, no FilterChip group", () => {
+    expect(src).not.toContain("FilterChip");
+    expect(src).not.toContain('role="group"');
+    expect(src).toContain("`${r.capability} 달성 가능성`");
+    expect(src).toContain("<select");
+    expect(src).toContain('{ value: "", text: "미판정" }');
+    for (const [v, t] of [["high", "높음"], ["medium", "중간"], ["low", "낮음"]]) expect(src).toContain(`{ value: "${v}", text: "${t}" }`);
+    expect(src).toContain("GRADE_OPTIONS.map");
   });
   test("save payload omits evidence; legacy evidence shown read-only", () => {
     const save = src.slice(src.indexOf("async function save"), src.indexOf("async function confirm"));

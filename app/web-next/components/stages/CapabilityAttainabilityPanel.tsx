@@ -12,7 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
-import { ColGroup, FilterChip } from "../ui.tsx";
+import { ColGroup } from "../ui.tsx";
 import { LevelSelect } from "./LevelSelect.tsx";
 import { HELD_STATUS_CHIP, HELD_STATUS_LABEL, RESOLUTION_LABEL, type GapResolution } from "../../lib/capability-gap.ts";
 import type { AttainabilityRowView, AttainabilitySummary } from "../../lib/capability-attainability.ts";
@@ -29,12 +29,12 @@ interface Draft {
   cost: string; months: string; grade: string; rationale: string;
 }
 
-const COL_PCT = [13, 7, 7, 8, 8, 7, 24, 18, 8] as const;
+const COL_PCT = [13, 7, 7, 8, 8, 7, 14, 28, 8] as const;
 const RESOLUTIONS: GapResolution[] = ["build", "partner", "hire", "invest"];
 const GRADE_CHIP: Record<string, string> = { high: "status-green", medium: "status-amber", low: "status-red", "": "status-not-started" };
 const GRADE_OPTIONS = [
-  { value: "high", text: "높음", icon: "▲" }, { value: "medium", text: "중간", icon: "■" },
-  { value: "low", text: "낮음", icon: "▼" }, { value: "", text: "미판정", icon: "○" },
+  { value: "", text: "미판정" }, { value: "high", text: "높음" },
+  { value: "medium", text: "중간" }, { value: "low", text: "낮음" },
 ] as const;
 const GRADE_TEXT: Record<string, string> = { high: "높음", medium: "중간", low: "낮음", "": "미판정" };
 
@@ -176,13 +176,9 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
                     <td><input type="number" min={0} aria-label={`${r.capability} 해소 비용(백만원)`} value={d.cost} disabled={!canAct} onChange={(e) => set(r.id, { cost: e.target.value })} className="sizing-new-input sizing-new-input-sm" /></td>
                     <td><input type="number" min={0} aria-label={`${r.capability} 달성 기간(개월)`} value={d.months} disabled={!canAct} onChange={(e) => set(r.id, { months: e.target.value })} className="sizing-new-input sizing-new-input-sm" /></td>
                     <td>
-                      <div role="group" aria-label={`${r.capability} 달성 가능성`} className="flex flex-wrap gap-1 mb-1">
-                        {GRADE_OPTIONS.map((g) => (
-                          <FilterChip key={g.value} selected={d.grade === g.value} disabled={!canAct} aria-label={`${r.capability} 달성 가능성 ${g.text}`} onClick={() => set(r.id, { grade: g.value })}>
-                            <span aria-hidden="true">{g.icon}</span> {g.text}
-                          </FilterChip>
-                        ))}
-                      </div>
+                      <select aria-label={`${r.capability} 달성 가능성`} value={d.grade} disabled={!canAct} onChange={(e) => set(r.id, { grade: e.target.value })} className="sizing-new-input sizing-new-input-sm mb-1">
+                        {GRADE_OPTIONS.map((g) => <option key={g.value} value={g.value}>{g.text}</option>)}
+                      </select>
                       <div className="flex flex-wrap items-center gap-1 text-[length:var(--fs-caption)]">
                         <span className={`status-chip ${GRADE_CHIP[d.grade]}`}>{GRADE_TEXT[d.grade]}</span>
                         {r.drafted_by && <span className="text-[color:var(--muted-fg)]">{r.drafted_by === "ai" ? "AI 초안" : "사람 입력"}</span>}
