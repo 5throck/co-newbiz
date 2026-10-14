@@ -198,14 +198,15 @@ describe("security-model §7 item 5 — comp_benchmark aggregate floor (FR-SEC-0
       [id, headcount],
     );
 
-  test("headcount 1 and 2 rows are rejected by the k=3 CHECK — individual granularity cannot be stored", () => {
+  test("headcount 1..4 rows are rejected by the k=5 CHECK — individual granularity cannot be stored", () => {
     expect(() => insertComp("K1", 1)).toThrow(/CHECK/);
     expect(() => insertComp("K2", 2)).toThrow(/CHECK/);
+    expect(() => insertComp("K4", 4)).toThrow(/CHECK/);
   });
 
-  test("a k=3 aggregate row is accepted", () => {
-    insertComp("K3", 3);
-    expect((db.query("SELECT headcount FROM comp_benchmark WHERE id = 'K3'").get() as { headcount: number }).headcount).toBe(3);
+  test("a k=5 aggregate row is accepted (floor raised 3 -> 5, migration 0143 / ADR-0174)", () => {
+    insertComp("K5", 5);
+    expect((db.query("SELECT headcount FROM comp_benchmark WHERE id = 'K5'").get() as { headcount: number }).headcount).toBe(5);
   });
 
   test("v_comp_anonymized exposes no payroll-median columns", () => {

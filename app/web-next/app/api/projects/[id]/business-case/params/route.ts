@@ -8,7 +8,13 @@ import { getDb } from "../../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
-import { recordBusinessCaseParams, resolveBusinessCaseParams } from "../../../../../../lib/business-case-generator.ts";
+import {
+  INVESTMENT_BASIS_CODES,
+  investmentBasisOfCode,
+  recordBusinessCaseParams,
+  resolveBusinessCaseParams,
+  type InvestmentBasis,
+} from "../../../../../../lib/business-case-generator.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
@@ -54,6 +60,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       growth_terminal: num("growth_terminal"),
       growth_override: num("growth_override"),
       sigma_override: num("sigma_override"),
+      // ADR-0174: 투자비 기준 — numeric code 0/1/2 (team-lead spec) or the
+      // string name; stored as a numeric code in the bc.* assumption value
+      // column (REAL NOT NULL).
+      investment_basis: (() => {
+        const v = raw["investment_basis"];
+        if (v === undefined || v === null || v === "") return undefined;
+        if (typeof v === "number") {
+          if (!Number.isInteger(v) || v < 0 || v > 2) throw new Error("investment_basis는 0, 1, 2 중 하나의 정수여야 합니다.");
+          return investmentBasisOfCode(v);
+        }
+        if (typeof v === "string" && v in INVESTMENT_BASIS_CODES) return v as InvestmentBasis;
+        throw new Error("investment_basis는 0|1|2 또는 ratio|s5_plan|s5_plan_full 이어야 합니다.");
+      })(),
       horizon_years: num("horizon_years"),
       iterations: num("iterations"),
       ramp_up: Array.isArray(raw.ramp_up)

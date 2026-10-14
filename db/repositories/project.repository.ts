@@ -307,7 +307,7 @@ export function promoteOpportunity(
       const assessment = db
         .query("SELECT business_case_lines_json FROM greenfield_assessment WHERE opportunity_id = ? ORDER BY updated_at DESC LIMIT 1")
         .get(opportunityId) as { business_case_lines_json: string | null } | undefined;
-      let lines: Array<{ line: string; category: string; amount: number; amountUnit?: string; note?: string; period?: string; currency?: string }> = [];
+      let lines: Array<{ line: string; category: string; amount: number; amountUnit?: string; note?: string; period?: string; currency?: string; startYear?: number; endYear?: number }> = [];
       try {
         lines = assessment?.business_case_lines_json ? JSON.parse(assessment.business_case_lines_json) : [];
       } catch { /* malformed — treat as none, don't block promotion over it */ }
@@ -322,27 +322,31 @@ export function promoteOpportunity(
         const modelId = ulid();
         db.run(
           "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at) VALUES (?,?,?,?,?,?,?)",
-          [modelId, row.id, "greenfield_cost", "S5 투자비 검토 요건 (자동 이관)", 5, opts.promotedBy, now],
+          [modelId, row.id, "greenfield_cost", "S5 투자비 검토 요건 (자동 이관)", split.horizon, opts.promotedBy, now],
         );
         const PERIOD_MULTIPLIER: Record<string, number> = { monthly: 12, quarterly: 4, yearly: 1, lumpsum: 1 };
         for (const l of lines) {
           const periodMult = PERIOD_MULTIPLIER[l.period ?? "yearly"] ?? 1;
           // Canonical 백만원 from the confirmed unit; splitForPromotion already excluded unconfirmed/non-KRW lines.
           const annualAmount = (manualLineKrwM(l) ?? 0) * periodMult;
+          const startYear = l.startYear ?? 1;
+          // A lump sum spends in its start year only (ADR-0174 slice 2); a recurring
+          // line without an explicit end year runs through the model horizon.
+          const endYear = l.period === "lumpsum" ? startYear : l.endYear ?? null;
           const flags: string[] = [];
           if (l.period === "lumpsum") flags.push("일시불 총액 — 연반복 아님");
           const note = [...flags, l.note?.trim() || "S5에서 이관됨 — 검증 필요"].join(". ");
           db.run(
-            `INSERT INTO business_case_line (id, model_id, category, name, annual_amount_krw_m, start_year, growth_rate, note, created_by, created_at)
-             VALUES (?,?,?,?,?,?,?,?,?,?)`,
-            [ulid(), modelId, l.category, l.line.trim(), annualAmount, 1, 0, note, opts.promotedBy, now],
+            `INSERT INTO business_case_line (id, model_id, category, name, annual_amount_krw_m, unit, start_year, end_year, growth_rate, note, created_by, created_at)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [ulid(), modelId, l.category, l.line.trim(), annualAmount, "KRW_M", startYear, endYear, 0, note, opts.promotedBy, now],
           );
         }
         for (const c of split.capability) {
           db.run(
-            `INSERT INTO business_case_line (id, model_id, category, name, annual_amount_krw_m, start_year, growth_rate, note, created_by, created_at)
-             VALUES (?,?,?,?,?,?,?,?,?,?)`,
-            [ulid(), modelId, c.category, c.name, c.krwM, 1, 0, c.note, opts.promotedBy, now],
+            `INSERT INTO business_case_line (id, model_id, category, name, annual_amount_krw_m, unit, start_year, end_year, growth_rate, note, created_by, created_at)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [ulid(), modelId, c.category, c.name, c.krwM, "KRW_M", c.startYear, c.startYear, 0, c.note, opts.promotedBy, now],
           );
         }
         if (split.skipped.length > 0) {

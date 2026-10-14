@@ -47,6 +47,10 @@ ADR-0173 decides how capability closing costs enter the S5 lines. This decision 
 - Scope: acceptance covers the decision only. No slice is implemented; slice 1 starts after the in-flight S5 unit fix.
 - Not verified by the AI: nothing of this ADR is implemented or browser-verified.
 
+## Implementation note
+
+Slices 1-2 implemented (2026-10-15): S5 `투자비 요약` panel with per-line timing and `plan_meta` horizon (no schema change); migration `0143` (`business_case_line.end_year` nullable + `comp_benchmark` cohort CHECK 3→5 rebuild); promotion copy carries `start_year`/`end_year`/`unit='KRW_M'` and the plan horizon; `bc.investment_basis` (`비율 추정`/`S5 투자 계획`/`S5 투자 계획(전체)`, numeric-encoded 0/1/2 as a `bc.*` user assumption) switches the generator between the unchanged ratio path and the explicit S5 capex schedule (Y1 spend counted in year 0; the python sim-engine path is bypassed for `s5_plan` — engine parity unverified). Slices 3 (re-import) and 4 (S10/S12 alignment) are not implemented.
+
 ## Honest limits
 
 Accepted 2026-10-15; open decisions OD-1..OD-6 resolved per the design's recommendations (see Acceptance record). Not exercised in a browser; S12 investment tracking was only traced through `business-targets.ts`; whether a `greenfield_cost` model can be adopted in `s8_case_adopt` today was not confirmed. See design section 14.

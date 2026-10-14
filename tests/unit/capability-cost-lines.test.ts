@@ -235,6 +235,38 @@ describe("promotion split", () => {
     expect(s.capability[0].note).not.toContain("재판정");
     expect(s.capability[1].note).toContain("재판정 필요");
   });
+  test("horizon from plan_meta (7) or default 5; capability startYear = override else OD-6 default", () => {
+    const rows = [src({ months_to_attain: 30 })]; // ceil(30/12) = 3 — the OD-6 default
+    const withMeta = cl.splitForPromotion([
+      { source: "plan_meta", horizonYears: 7 },
+      { source: "capability", capabilityKey: "k1", reflected: true, category: "capex", basisHash: cl.costBasisHash(rows[0]) },
+    ], rows);
+    expect(withMeta.horizon).toBe(7);
+    expect(withMeta.manual).toHaveLength(0); // the meta entry never becomes a manual line
+    expect(withMeta.capability[0].startYear).toBe(3);
+    const overridden = cl.splitForPromotion([
+      { source: "capability", capabilityKey: "k1", reflected: true, category: "capex", basisHash: cl.costBasisHash(rows[0]), startYear: 5 },
+    ], rows);
+    expect(overridden.horizon).toBe(5); // no meta -> default
+    expect(overridden.capability[0].startYear).toBe(5);
+    const unknownMonths = cl.splitForPromotion(
+      [{ source: "capability", capabilityKey: "k1", reflected: true, category: "capex", basisHash: cl.costBasisHash(rows[0]) }],
+      [src({ months_to_attain: null })],
+    );
+    expect(unknownMonths.capability[0].startYear).toBe(1);
+  });
+  test("manual lines keep their spending window; lumpsum endYear = startYear; invalid meta horizon falls back to 5", () => {
+    const s = cl.splitForPromotion([
+      { source: "plan_meta", horizonYears: 99 }, // out of bounds -> ignored by readers
+      { line: "반복", category: "opex", amount: 1, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly", startYear: 2, endYear: 4 },
+      { line: "일시", category: "capex", amount: 5, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "lumpsum", startYear: 3 },
+    ], []);
+    expect(s.horizon).toBe(5);
+    const [recurring, lump] = s.manual as Array<{ line: string; startYear?: number; endYear?: number }>;
+    expect(recurring).toMatchObject({ line: "반복", startYear: 2, endYear: 4 });
+    expect(lump).toMatchObject({ line: "일시", startYear: 3 });
+    expect(lump.endYear).toBeUndefined(); // unset — the promotion insert derives end_year = start_year for lump sums
+  });
 });
 
 // ── DB-backed: routes, persistence, promotion, milestones ───────────────────

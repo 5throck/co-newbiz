@@ -358,21 +358,33 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
   const capexRatio = capexRatioOf(inputs);
 
   const npvs: number[] = [];
+  // ADR-0174 — under an s5_plan basis the explicit plan replaces BOTH the
+  // year-0 ratio investment and the per-year capex_ratio outflow (design §6.2:
+  // using both would double count). The ratio path below stays bit-identical.
+  const s5 = s5PlanOf(inputs);
   const initialInvestment = initialInvestmentOf(inputs, year1Revenue).value;
   const exitMult = exitEvRevenueOf(inputs);
   const discount = (v: number, year: number) => v / Math.pow(1 + inputs.wacc.value, year);
   const ramp = rampUpOf(inputs);
   for (let it = 0; it < iterationsOf(inputs); it++) {
     let revenue = year1Revenue;
-    let npv = -initialInvestment; // year-0 인수/설립 투자
+    let npv = s5 ? -s5.plan.capexByYear[0] : -initialInvestment; // year-0 인수/설립 투자 (s5_plan: 계획 Y1 집행액, OD-3)
     for (let year = 1; year <= horizon; year++) {
       if (year > 1) {
         const [z1] = normalPair(rng);
         revenue *= 1 + anchorGrowth + disp * z1;
       }
-      const fcf = revenue * (1 - opexRatio) - revenue * capexRatio;
       const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
-      npv += discount(fcf * utilization, year);
+      let flow: number;
+      if (s5) {
+        const opex = opexOfYear(inputs, s5, year, revenue);
+        const capex = capexOfYear(inputs, s5, year, revenue);
+        flow = (revenue - opex) * utilization - capex;
+      } else {
+        const fcf = revenue * (1 - opexRatio) - revenue * capexRatio;
+        flow = fcf * utilization;
+      }
+      npv += discount(flow, year);
     }
     // Exit value — the business is sold at the entry multiple on the final
     // year's drawn revenue (matches the engine: raw revenue, no ramp).
@@ -383,16 +395,24 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
   const mean = npvs.reduce((a, b) => a + b, 0) / npvs.length;
   const variance = npvs.reduce((a, b) => a + (b - mean) * (b - mean), 0) / npvs.length;
   const q = (p: number) => npvs[Math.min(npvs.length - 1, Math.max(0, Math.floor(p * npvs.length)))];
-  // Deterministic path — same BEP/payback definition as the engine.
-  const detFlows: number[] = [-initialInvestmentOf(inputs, year1Revenue).value];
+  // Deterministic path — same BEP/payback definition as the engine. Under
+  // s5_plan the year-0 outflow is plan Y1 capex (OD-3) and the plan's later
+  // years' capex (and gov_rnd under full) ride inside the flows.
+  const detInitial = s5 ? s5.plan.capexByYear[0] : initialInvestmentOf(inputs, year1Revenue).value;
+  const detFlows: number[] = [-detInitial];
   let detRevenue = year1Revenue;
   for (let year = 1; year <= horizon; year++) {
     if (year > 1) detRevenue *= 1 + anchorGrowth;
     const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
-    detFlows.push(detRevenue * (1 - opexRatio - capexRatio) * utilization);
+    if (s5) {
+      const opex = opexOfYear(inputs, s5, year, detRevenue);
+      detFlows.push((detRevenue - opex) * utilization - capexOfYear(inputs, s5, year, detRevenue));
+    } else {
+      detFlows.push(detRevenue * (1 - opexRatio - capexRatio) * utilization);
+    }
   }
   if (exitMult > 0) detFlows[detFlows.length - 1] += detRevenue * exitMult; // 처분가치는 마지막 연도 플로우와 함께 실현
-  return { seed, iterations: iterationsOf(inputs), p05: q(0.05), p50: q(0.5), p95: q(0.95), mean, std: Math.sqrt(variance), bepYear: discountedPaybackYear(initialInvestmentOf(inputs, year1Revenue).value, detFlows.slice(1), inputs.wacc.value), bepVolume: null };
+  return { seed, iterations: iterationsOf(inputs), p05: q(0.05), p50: q(0.5), p95: q(0.95), mean, std: Math.sqrt(variance), bepYear: discountedPaybackYear(detInitial, detFlows.slice(1), inputs.wacc.value), bepVolume: null };
 }
 
 // ── Case inputs (anchored to the promoting opportunity's market facts) ─────
@@ -440,8 +460,12 @@ export interface CaseInputs {
    *  the cash flows. Optional for hand-built contexts: defaults to promoter. */
   waccSubject?: WaccSubjectResolution;
   /** Target-costing downside wiring (REQ-W2-3) — present only when the
-   *  latest target_costing_analysis breaches the +10% gap threshold. */
+   *  latest target_costing_analysis breaches the +10% gap_threshold. */
   targetCostWiring?: { uplift: number; gapRatio: number };
+  /** ADR-0174 — the project's explicit S5 investment plan (latest
+   *  `greenfield_cost` model). Consulted only when a human set an
+   *  `s5_plan` basis; the ratio path never reads it. */
+  s5Plan?: S5InvestmentPlan | null;
 }
 
 /** Default sales-plan curve (design REQ-W1-2) — utilization by year. */
@@ -579,6 +603,14 @@ export interface BusinessCaseParams {
   capexSource: string;
   initialInvestmentRatio: number;
   initialInvestmentSource: string;
+  /** ADR-0174 — human-chosen 투자비 기준 (OD-4: default `ratio` keeps every
+   *  existing case's results unchanged). */
+  investmentBasis: InvestmentBasis;
+  investmentBasisSource: string;
+  /** ADR-0174 OD-2 — the latest `greenfield_cost` model's horizon (null when
+   *  the project has none). Resolution output only: the S8 UI shows it beside
+   *  bc.horizon_years and warns on mismatch, never auto-reconciles. */
+  s5PlanHorizonYears: number | null;
   /** 인수 EV/Revenue 배수 (user 확정 없으면 null → 컴프 기본값). */
   acquisitionEvRevenue: number | null;
   acquisitionEvRevenueSource: string;
@@ -640,6 +672,7 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
   const opex = ratio("bc.opex_ratio", OPEX_RATIO);
   const capex = ratio("bc.capex_ratio", CAPEX_RATIO);
   const initInv = ratio("bc.initial_investment_ratio", INITIAL_INVESTMENT_RATIO);
+  const basisCode = scalar("bc.investment_basis");
   const acqEv = scalar("bc.acquisition_ev_revenue");
   const fadeH = ratio("bc.fade_horizon_years", FADE_HORIZON_YEARS);
   const gTerminal = scalar("bc.growth_terminal");
@@ -647,6 +680,11 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
   const sigmaOv = scalar("bc.sigma_override");
   const horizon = ratio("bc.horizon_years", HORIZON_YEARS);
   const iterations = ratio("bc.iterations", MC_ITERATIONS);
+  const s5Model = db.query(
+    `SELECT horizon_years FROM business_case_model
+     WHERE project_id = ? AND kind = 'greenfield_cost' AND target_id IS NULL AND archived_at IS NULL
+     ORDER BY created_at DESC, id DESC LIMIT 1`,
+  ).get(projectId) as { horizon_years: number } | undefined;
   return {
     captureRate: capture && Number.isFinite(capture.value) && capture.value > 0 ? capture.value : CAPTURE_RATE,
     captureSource: capture && Number.isFinite(capture.value) && capture.value > 0 ? "사용자 확정 (bc.capture_rate)" : "기본값",
@@ -658,6 +696,8 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
     capexSource: capex.source,
     initialInvestmentRatio: initInv.value,
     initialInvestmentSource: initInv.source,
+    investmentBasis: investmentBasisOfCode(basisCode),
+    investmentBasisSource: basisCode != null ? "사용자 확정 (bc.investment_basis)" : "기본값 (비율 추정, ADR-0174 OD-4)",
     acquisitionEvRevenue: acqEv !== null && acqEv >= 0 ? acqEv : null,
     acquisitionEvRevenueSource: acqEv !== null && acqEv >= 0 ? "사용자 확정 (bc.acquisition_ev_revenue)" : "기본값",
     acquisitionEvRevenueBand: resolveConfirmedEvBand(db, projectId),
@@ -675,6 +715,7 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
     horizonSource: horizon.source,
     iterations: Math.min(Math.max(Math.round(iterations.value), 1), 10_000_000),
     iterationsSource: iterations.source,
+    s5PlanHorizonYears: s5Model ? Math.min(Math.max(Math.round(s5Model.horizon_years), 1), 50) : null,
   };
 }
 
@@ -690,14 +731,16 @@ export async function recordBusinessCaseParams(
       ramp_up?: number[];
       opex_ratio?: number;
       capex_ratio?: number;
-    initial_investment_ratio?: number;
-    acquisition_ev_revenue?: number;
-    fade_horizon_years?: number;
-    growth_terminal?: number;
-    growth_override?: number;
+      initial_investment_ratio?: number;
+      acquisition_ev_revenue?: number;
+      fade_horizon_years?: number;
+      growth_terminal?: number;
+      growth_override?: number;
       sigma_override?: number;
       horizon_years?: number;
       iterations?: number;
+      /** ADR-0174 — 투자비 기준. Stored as the numeric basis code. */
+      investment_basis?: InvestmentBasis;
     };
     rationale: string;
     actor: string;
@@ -724,6 +767,9 @@ export async function recordBusinessCaseParams(
     }
     p.ramp_up.forEach((v, i) => put(`bc.ramp_up.y${i + 1}`, v));
   }
+  if (p.investment_basis !== undefined) {
+    put("bc.investment_basis", INVESTMENT_BASIS_CODES[p.investment_basis]);
+  }
   for (const [key, value] of [
     ["bc.opex_ratio", p.opex_ratio],
     ["bc.capex_ratio", p.capex_ratio],
@@ -746,7 +792,8 @@ export async function recordBusinessCaseParams(
 }
 
 /** Deterministic defaults for hand-built contexts without bcParams. */
-function resolveBusinessCaseParamsDefaults(): BusinessCaseParams {
+/** Default parameter set — exported for the ADR-0174 s5_plan tests. */
+export function resolveBusinessCaseParamsDefaults(): BusinessCaseParams {
   return {
     captureRate: CAPTURE_RATE,
     captureSource: "기본값",
@@ -758,6 +805,9 @@ function resolveBusinessCaseParamsDefaults(): BusinessCaseParams {
     capexSource: "기본값",
     initialInvestmentRatio: INITIAL_INVESTMENT_RATIO,
     initialInvestmentSource: "기본값",
+    investmentBasis: "ratio",
+    investmentBasisSource: "기본값 (비율 추정, ADR-0174 OD-4)",
+    s5PlanHorizonYears: null,
     acquisitionEvRevenue: null,
     acquisitionEvRevenueSource: "기본값",
     acquisitionEvRevenueBand: null,
@@ -876,8 +926,139 @@ function capexRatioOf(inputs: CaseInputs): number {
   return inputs.bcParams?.capexRatio ?? CAPEX_RATIO;
 }
 
+// ── ADR-0174 slice 2 — S5 investment-plan basis (투자비 기준) ────────────────
+// A human-chosen basis per project: `ratio` (today's behaviour, the default —
+// results stay stable, OD-4) or `s5_plan`, where an explicit capex schedule
+// built from the latest `greenfield_cost` model REPLACES both the year-0
+// ratio investment and `capex_ratio × revenue` (using both would double
+// count). `s5_plan_full` additionally replaces the opex ratio where the plan
+// has labor/opex lines and books `gov_rnd` as an inflow in its year.
+
+export type InvestmentBasis = "ratio" | "s5_plan" | "s5_plan_full";
+
+/** assumption.value is REAL NOT NULL, so the basis rides as a numeric code:
+ *  0 = 비율 추정 (default), 1 = S5 투자 계획, 2 = S5 투자 계획 (opex 포함). */
+export const INVESTMENT_BASIS_CODES: Record<InvestmentBasis, number> = { ratio: 0, s5_plan: 1, s5_plan_full: 2 };
+
+export function investmentBasisOfCode(value: number | null | undefined): InvestmentBasis {
+  if (value === INVESTMENT_BASIS_CODES.s5_plan) return "s5_plan";
+  if (value === INVESTMENT_BASIS_CODES.s5_plan_full) return "s5_plan_full";
+  return "ratio";
+}
+
+export interface S5InvestmentPlan {
+  /** The latest non-archived `greenfield_cost` model the vectors come from. */
+  modelId: string;
+  /** The model's own horizon (OD-2: after promotion S8's bc.horizon_years
+   *  governs — years beyond the plan horizon fall back to the ratio path). */
+  horizonYears: number;
+  /** Index 0 = plan year 1 … H-1 = plan year H, KRW_M, growth-compounded
+   *  (promotion writes growth_rate 0 — compounding is a no-op there). */
+  capexByYear: number[];
+  laborOpexByYear: number[];
+  govRndByYear: number[];
+  /** True where any labor/opex line covers the plan year — only such years
+   *  switch the opex term under `s5_plan_full` (design §6.2). */
+  opexCovered: boolean[];
+  /** Lines excluded from the vectors: non-KRW_M unit (no FX in S8 either) or
+   *  start beyond the model horizon. Surfaced in the run provenance. */
+  skippedLines: number;
+  /** FNV-1a over the serialized vectors — run provenance (design §6.2) so a
+   *  later plan edit is detectable against a recorded run. */
+  lineHash: string;
+}
+
+/** The explicit investment plan of a project, read from the latest
+ *  `greenfield_cost` model (written at S5 promotion, ADR-0174 §6.1). Null
+ *  when the project has none — every consumer then falls back to the ratio
+ *  path, never to zero. */
+export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (...args: unknown[]) => unknown; all: (...args: unknown[]) => unknown[] } }, projectId: string): S5InvestmentPlan | null {
+  const model = db
+    .query(
+      `SELECT id, horizon_years FROM business_case_model
+       WHERE project_id = ? AND kind = 'greenfield_cost' AND target_id IS NULL AND archived_at IS NULL
+       ORDER BY created_at DESC, id DESC LIMIT 1`,
+    )
+    .get(projectId) as { id: string; horizon_years: number } | undefined;
+  if (!model) return null;
+  const horizon = Math.min(Math.max(Math.round(model.horizon_years), 1), 50);
+  const lines = db
+    .query("SELECT category, annual_amount_krw_m, start_year, end_year, growth_rate, unit FROM business_case_line WHERE model_id = ?")
+    .all(model.id) as Array<{ category: string; annual_amount_krw_m: number; start_year: number; end_year: number | null; growth_rate: number; unit: string | null }>;
+  const capexByYear = new Array<number>(horizon).fill(0);
+  const laborOpexByYear = new Array<number>(horizon).fill(0);
+  const govRndByYear = new Array<number>(horizon).fill(0);
+  const opexCovered = new Array<boolean>(horizon).fill(false);
+  let skippedLines = 0;
+  for (const l of lines) {
+    // R (§5): a NULL/non-KRW_M unit is never assumed convertible — the line
+    // is skipped and counted, matching S10's `case_unit_not_comparable` stance.
+    if (l.unit !== "KRW_M" || l.start_year > horizon) {
+      skippedLines += 1;
+      continue;
+    }
+    const end = Math.min(l.end_year ?? horizon, horizon);
+    const isCapex = l.category === "capex";
+    const isGovRnd = l.category === "gov_rnd";
+    const amounts = isCapex ? capexByYear : isGovRnd ? govRndByYear : laborOpexByYear;
+    for (let y = Math.max(1, l.start_year); y <= end; y++) {
+      amounts[y - 1] += l.annual_amount_krw_m * Math.pow(1 + l.growth_rate, y - l.start_year);
+      if (!isCapex && !isGovRnd) opexCovered[y - 1] = true;
+    }
+  }
+  const lineHash = scenarioSeed(model.id, JSON.stringify({ c: capexByYear, o: laborOpexByYear, g: govRndByYear })).toString(16);
+  return { modelId: model.id, horizonYears: horizon, capexByYear, laborOpexByYear, govRndByYear, opexCovered, skippedLines, lineHash };
+}
+
+/** The plan in force for a case — only when a human chose an s5_plan basis
+ *  AND a plan exists; otherwise null (the ratio path runs unchanged). */
+function s5PlanOf(inputs: CaseInputs): { plan: S5InvestmentPlan; full: boolean } | null {
+  const basis = inputs.bcParams?.investmentBasis ?? "ratio";
+  if (basis === "ratio") return null;
+  const plan = inputs.s5Plan ?? null;
+  if (!plan) return null;
+  return { plan, full: basis === "s5_plan_full" };
+}
+
+/** Plan capex landing at cashflow index `year` (index 0 = the year-0 outflow
+ *  per OD-3: plan year 1 spend is treated as year 0, matching today's year-0
+ *  convention — so in-loop index `year` carries plan year `year + 1`). Years
+ *  beyond the plan horizon fall back to the ratio path (labelled in the
+ *  provenance), never to silent zero. */
+function capexOfYear(inputs: CaseInputs, s5: { plan: S5InvestmentPlan } | null, year: number, revenue: number): number {
+  if (!s5) return revenue * capexRatioOf(inputs);
+  // The plan REPLACES the ratio (team-lead slice-2 spec): a year without a
+  // plan entry has capex 0 — the schedule substitutes, never supplements.
+  return year < s5.plan.capexByYear.length ? s5.plan.capexByYear[year] : 0;
+}
+
+/** Opex for cashflow year `year` (1-based). Under `s5_plan_full` the explicit
+ *  labor/opex lines replace the ratio only in years a line covers. */
+function opexOfYear(inputs: CaseInputs, s5: { plan: S5InvestmentPlan; full: boolean } | null, year: number, revenue: number): number {
+  if (!s5) return revenue * opexRatioOf(inputs);
+  if (!s5.full) return revenue * opexRatioOf(inputs);
+  const i = year - 1;
+  return i < s5.plan.opexCovered.length && s5.plan.opexCovered[i] ? s5.plan.laborOpexByYear[i] : revenue * opexRatioOf(inputs);
+}
+
 function initialInvestmentRatioOf(inputs: CaseInputs): number {
   return inputs.bcParams?.initialInvestmentRatio ?? INITIAL_INVESTMENT_RATIO;
+}
+
+/** Opex cross-check under a non-full s5 basis (team-lead spec): the plan's
+ *  explicit labor/opex run-rate vs the ratio opex on the year-1 revenue, summed
+ *  in absolute KRW_M across plan-covered years. Provenance/display only — it
+ *  never enters the cash flows. */
+function s5OpexCrossCheckVariance(inputs: CaseInputs): number | null {
+  const s5 = s5PlanOf(inputs);
+  if (!s5) return null;
+  const y1 = year1RevenueOf(inputs, SCENARIO_DELTA.base.growth).value;
+  const ratioOpex = y1 * opexRatioOf(inputs);
+  let variance = 0;
+  for (let i = 0; i < s5.plan.laborOpexByYear.length; i++) {
+    variance += Math.abs(s5.plan.laborOpexByYear[i] - ratioOpex);
+  }
+  return variance;
 }
 
 function horizonOf(inputs: CaseInputs): number {
@@ -942,6 +1123,9 @@ export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "g
     bcParams: resolveBusinessCaseParams(getDb(), projectId),
     waccSubject: resolveProjectWaccSubject(getDb(), projectId),
     targetCostWiring: resolveDownsideOpexUplift(getDb(), projectId) ?? undefined,
+    // ADR-0174: resolve once per project run — a null plan (no greenfield_cost
+    // model yet) keeps every consumer on the ratio path via s5PlanOf().
+    s5Plan: resolveS5InvestmentPlan(getDb(), projectId),
   };
 }
 
@@ -1043,19 +1227,27 @@ export function listShortlistSubjects(db: ReturnType<typeof getDb>, opportunityI
   }));
 }
 
-function deterministicCashflows(inputs: CaseInputs, scenario: Scenario, variant: CaseVariant = "market_forward"): number[] {
+/** Deterministic (mid-point) cash-flow vector — exported for the ADR-0174
+ *  golden/no-double-count tests (tests/unit/business-case-s5-plan.test.ts). */
+export function deterministicCashflows(inputs: CaseInputs, scenario: Scenario, variant: CaseVariant = "market_forward"): number[] {
   const delta = SCENARIO_DELTA[scenario];
   const eff = effGrowthDisp(inputs, scenario, variant);
   const year1Revenue = year1RevenueOf(inputs, delta.growth).value;
   const exitMult = exitEvRevenueOf(inputs);
-  const initialInvestment = initialInvestmentOf(inputs, year1Revenue).value;
+  const s5 = s5PlanOf(inputs);
+  const initialInvestment = s5 ? s5.plan.capexByYear[0] : initialInvestmentOf(inputs, year1Revenue).value;
   let revenue = year1Revenue;
   const ramp = rampUpOf(inputs);
-  const flows: number[] = [-initialInvestment]; // year-0 인수/설립 투자
+  const flows: number[] = [-initialInvestment]; // year-0 투자 (s5_plan: 계획 Y1 집행액, OD-3)
   for (let year = 1; year <= horizonOf(inputs); year++) {
     if (year > 1) revenue *= 1 + eff.growth;
     const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
-    flows.push(revenue * (1 - opexRatioOf(inputs, scenario) - capexRatioOf(inputs)) * utilization);
+    if (s5) {
+      const opex = opexOfYear(inputs, s5, year, revenue);
+      flows.push((revenue - opex) * utilization - capexOfYear(inputs, s5, year, revenue));
+    } else {
+      flows.push(revenue * (1 - opexRatioOf(inputs, scenario) - capexRatioOf(inputs)) * utilization);
+    }
   }
   if (exitMult > 0) flows[flows.length - 1] += revenue * exitMult; // 처분가치는 마지막 연도 플로우와 함께 실현
   return flows;
@@ -1089,7 +1281,10 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
   const bc = inputs.bcParams ?? resolveBusinessCaseParamsDefaults();
   const opexRatio = opexRatioOf(inputs, scenario);
   const y1 = year1RevenueOf(inputs, delta.growth);
-  const initInv = initialInvestmentOf(inputs, y1.value);
+  const s5 = s5PlanOf(inputs);
+  const initInv = s5
+    ? { value: s5.plan.capexByYear[0], source: `S5 투자 계획 Y1 집행액 — greenfield_cost model ${s5.plan.modelId} (OD-3: 계획 1년차 지출을 year-0으로 반영)` }
+    : initialInvestmentOf(inputs, y1.value);
   const exitMult = exitEvRevenueOf(inputs);
   // ADR-0143: brownfield per-target cases carry the target in the subject
   // key (job_id + seed_policy base, the persisted snapshot contract) AND in
@@ -1128,7 +1323,12 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
               ? `${bc.opexSource} × 타겟코스팅 격차 반영 (+${Math.round((inputs.targetCostWiring.uplift - 1) * 100)}%, REQ-W2-3)`
               : bc.opexSource,
           },
-          capex_ratio: { dist: "constant", value: bc.capexRatio, unit: "ratio", source: bc.capexSource },
+          capex_ratio: {
+            dist: "constant",
+            value: s5 ? 0 : bc.capexRatio, // s5_plan: 스케줄이 대체 — 비율과 스케줄의 이중 계상은 이중계산 (design §6.2)
+            unit: "ratio",
+            source: s5 ? `S5 투자 계획 스케줄로 대체 (model ${s5.plan.modelId})` : bc.capexSource,
+          },
           initial_investment: { dist: "constant", value: initInv.value, unit: "KRW_M", source: initInv.source },
           ...(exitMult > 0
             ? { exit_ev_revenue: { dist: "constant", value: exitMult, unit: "multiple", source: `회수 시점 처분 — 진입 배수와 동일 ${exitMult.toFixed(2)}× (멀티플 확대 없음)` } }
@@ -1242,11 +1442,16 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
         [modelId, ctx.inputs.projectId, "valuation", `S8 자동 생성 — ${subjectLabel}${ctx.scenario} — ${VARIANT_LABEL[variant]}`, horizonOf(ctx.inputs), "business-case-generator", nowIso(), variant, ctx.target?.id ?? null],
       );
       const y1 = year1RevenueOf(ctx.inputs, delta.growth);
-      const initInv = initialInvestmentOf(ctx.inputs, y1.value);
+      const s5 = s5PlanOf(ctx.inputs);
+      const initInv = s5
+        ? { value: s5.plan.capexByYear[0], source: `S5 투자 계획 Y1 집행액 — model ${s5.plan.modelId} (OD-3: 계획 1년차 지출을 year-0으로 반영)` }
+        : initialInvestmentOf(ctx.inputs, y1.value);
       const lines: Array<[string, "revenue" | "opex" | "capex", string, number]> = [
         ["revenue", "revenue", ctx.inputs.revenueAnchor ? `시나리오 매출 (대상 회사 연매출 앵커 — ${ctx.inputs.revenueAnchor.source})` : "시나리오 매출 (year-1 앵커)", y1.value],
         ["opex", "opex", `운영비 (매출의 ${Math.round(opexRatioOf(ctx.inputs) * 100)}%)`, y1.value * opexRatioOf(ctx.inputs)],
-        ["capex", "capex", `설비 투자 (year-1, 매출의 ${Math.round(capexRatioOf(ctx.inputs) * 100)}%)`, y1.value * capexRatioOf(ctx.inputs)],
+        s5
+          ? ["capex", "capex", `설비 투자 (S5 투자 계획 Y1 집행액 — model ${s5.plan.modelId})`, s5.plan.capexByYear[0]]
+          : ["capex", "capex", `설비 투자 (year-1, 매출의 ${Math.round(capexRatioOf(ctx.inputs) * 100)}%)`, y1.value * capexRatioOf(ctx.inputs)],
       ];
       for (const [category, _kind, name, amount] of lines) {
         db.run(
@@ -1278,7 +1483,12 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       // job-spec is built once and stored on the model — the snapshot IS the
       // execution contract (REQ-W5-1).
       const jobSpec = buildS8JobSpec(ctx.inputs, ctx.scenario, variant);
-      const engineRun = await runEngineSimulation(jobSpec, ctx.inputs, ctx.scenario, variant);
+      const s5Provenance = s5PlanOf(ctx.inputs);
+      // ADR-0174 — the Python engine cannot express a per-year capex schedule
+      // (design §12 lists engine support as unverified/out of slice 2), so an
+      // s5_plan case runs on the seeded TS fallback; the note stamps both the
+      // basis and WHY the engine was bypassed.
+      const engineRun = s5Provenance ? null : await runEngineSimulation(jobSpec, ctx.inputs, ctx.scenario, variant);
       const sim: SimulationResult = engineRun?.result ?? runSeededSimulation(ctx.inputs, ctx.scenario, variant);
       const engineMeta: SimEngineMeta = engineRun?.meta ?? { engine: "inline-ts", device: "cpu", precision: "float64" };
       ctx.sim = { result: sim, engine: engineMeta, bepYear: sim.bepYear };
@@ -1300,10 +1510,20 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       const xcheckFragment = xcheck
         ? `; xcheck=fade-dcf; xcheck_horizon=${xcheck.horizon}; xcheck_terminal_growth=${xcheck.terminalGrowth.toFixed(4)}; xcheck_fade_npv=${xcheck.npv.toFixed(2)}; xcheck_fade_irr=${xcheck.irr != null ? xcheck.irr.toFixed(4) : "null"}`
         : "";
+      // Team-lead slice-2 spec fragment names: basis / s5_model / s5_line_hash /
+      // s5_opex_variance (appended only under an s5 basis — ratio notes stay
+      // byte-identical).
+      const s5OpexVariance = s5Provenance && !s5Provenance.full ? s5OpexCrossCheckVariance(ctx.inputs) : null;
+      const basis = ctx.inputs.bcParams?.investmentBasis ?? "ratio";
+      const basisFragment = s5Provenance
+        ? `; basis=${basis}; s5_model=${s5Provenance.plan.modelId}; s5_line_hash=${s5Provenance.plan.lineHash}; s5_skipped=${s5Provenance.plan.skippedLines}${s5Provenance.full ? "; s5_full=1" : ""}${s5OpexVariance != null ? `; s5_opex_variance=${s5OpexVariance.toFixed(2)}` : ""}`
+        : basis === "ratio"
+          ? "; basis=ratio"
+          : "; basis=ratio; s5_plan_fallback=1 (greenfield_cost 모델 없음 — 비율 경로로 대체)";
       const anchorFragment = ctx.inputs.revenueAnchor
         ? `revenue_anchor=${ctx.inputs.revenueAnchor.source}${acqFragment}${xcheckFragment}`
         : `capture_rate=${bc.captureRate}; capture_source=${bc.captureSource}`;
-      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}; wacc_scope=${ctx.inputs.waccScope?.scope ?? "project"}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; wacc_subject=${waccSubject}; ${anchorFragment}; ramp_source=${bc.rampSource}; ${provenance}${tcFragment}; engine=${engineMeta.engine}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}`;
+      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}; wacc_scope=${ctx.inputs.waccScope?.scope ?? "project"}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; wacc_subject=${waccSubject}; ${anchorFragment}; ramp_source=${bc.rampSource}; ${provenance}${tcFragment}${basisFragment}; engine=${engineMeta.engine}${s5Provenance ? " (S8 엔진 우회 — 연도별 capex 스케줄 미지원, ADR-0174)" : ""}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}`;
       db.run(`UPDATE business_case_model SET inputs_json = ? WHERE id = ?`, [JSON.stringify(jobSpec), modelId]);
       for (const pct of ["p05", "p50", "p95"] as const) {
         const isP50 = pct === "p50";
