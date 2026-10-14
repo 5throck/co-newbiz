@@ -11,11 +11,29 @@ describe("CapabilityAttainabilityPanel structure", () => {
     expect(src).toContain("<tr key={r.id}>");
     expect(src.match(/<th scope="col">/g)?.length).toBe(9);
   });
-  test("one 근거·증빙 textarea bound to rationale, no evidence textarea", () => {
+  test("근거·증빙 cell is a preview plus a modal button; one textarea lives in the dialog", () => {
     expect(src.match(/<textarea/g)?.length).toBe(1);
-    expect(src).toContain("근거·증빙");
-    expect(src).not.toContain("증빙 (한 줄에 하나)");
+    const cell = src.slice(src.indexOf("const txt = d.rationale"), src.indexOf("기존 증빙"));
+    expect(cell).not.toContain("<textarea");
+    expect(cell).toContain("미입력");
+    expect(cell).toContain("근거 필수");
+    expect(cell).toContain("PREVIEW_LEN");
+    expect(cell).toContain("근거·증빙 ${canAct");
     expect(src).not.toMatch(/evidence:\s*e\.target\.value/);
+  });
+  test("modal dialog: aria, focus trap, counter, cap, save writes the draft", () => {
+    const dlg = src.slice(src.indexOf("function RationaleDialog"), src.indexOf("function SummaryStrip"));
+    expect(dlg).toContain('role="dialog"');
+    expect(dlg).toContain('aria-modal="true"');
+    expect(dlg).toContain("useModalFocus(onClose)");
+    expect(dlg).toContain("modal-panel");
+    expect(dlg).toContain("rows={10}");
+    expect(dlg).toContain("autoFocus");
+    expect(dlg).toContain("maxLength={RATIONALE_MAX}");
+    expect(dlg).toContain("RATIONALE_MAX}자");
+    expect(src).toContain("const RATIONALE_MAX = 600");
+    expect(src).toContain("set(row.id, { rationale: t })");
+    expect(src).toContain('readOnly={!canAct}');
   });
   test("grade control is a select with four options, no FilterChip group", () => {
     expect(src).not.toContain("FilterChip");
