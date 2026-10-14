@@ -10,7 +10,7 @@ export interface PromptEntry {
   system: string;
 }
 
-export type PromptKey = "s2.discover" | "s1.sizing_ask_json" | "s1.sizing_summarize" | "s1.ksic_classify" | "market.related_candidates" | "s3.opportunity_factors" | "company_profile.qualitative" | "company_profile.competitive" | "company_profile.crosscheck" | "s4.synergy_fa" | "s4.synergy_synergy" | "s4.synergy_ic" | "s3.attractiveness_recommendation" | "s3.capability_gap_draft" | "opportunity.gate_brief" | "project.gate_brief" | "s4.route_recommendation" | "opportunity.sketch" | "s5.greenfield_recommendation" | "s6.universe_criteria_draft" | "s6.target_proposal_web_search" | "s7.screening_draft" | "s8.business_case_prose" | "s8.business_case_adoption" | "s8.deal_structure_recommendation" | "s9.dd_tailor" | "s11.monitoring_brief" | "pm.query_classify" | "committee.position" | "company_profile.competitor_web_search" | "s8.price_evidence";
+export type PromptKey = "s2.discover" | "s1.sizing_ask_json" | "s1.sizing_summarize" | "s1.ksic_classify" | "market.related_candidates" | "s3.opportunity_factors" | "company_profile.qualitative" | "company_profile.competitive" | "company_profile.crosscheck" | "s4.synergy_fa" | "s4.synergy_synergy" | "s4.synergy_ic" | "s3.attractiveness_recommendation" | "s3.capability_gap_draft" | "s5.capability_judgement_draft" | "opportunity.gate_brief" | "project.gate_brief" | "s4.route_recommendation" | "opportunity.sketch" | "s5.greenfield_recommendation" | "s6.universe_criteria_draft" | "s6.target_proposal_web_search" | "s7.screening_draft" | "s8.business_case_prose" | "s8.business_case_adoption" | "s8.deal_structure_recommendation" | "s9.dd_tailor" | "s11.monitoring_brief" | "pm.query_classify" | "committee.position" | "company_profile.competitor_web_search" | "s8.price_evidence";
 
 export const PROMPTS: Record<PromptKey, PromptEntry> = {
   "s2.discover": {
@@ -96,6 +96,12 @@ export const PROMPTS: Record<PromptKey, PromptEntry> = {
     agent: "risk-officer",
     purpose: "S3 필요 역량 수준 필요도·필요 수준·보유 판정 초안",
     system: "당신은 신규사업 심의 보좌 분석가입니다. 최종 필요도·필요 수준·보유 판정은 사람이 확정하며 당신 산출물은 제안입니다. 제공된 시너지 영역·요구 메모·프로필·공시 근거 밖의 판단을 하지 말고, 확인 불가능하면 보유 판정은 unevaluated로, 필요도·필요 수준은 비워 두세요. 이미 값이 있는 칸은 건드리지 않습니다. JSON만 반환합니다.",
+  },
+  "s5.capability_judgement_draft": {
+    key: "s5.capability_judgement_draft",
+    agent: "greenfield-agent",
+    purpose: "S5 필요 역량 달성 가능성 판정 입력 제안 (해소 방식·기대 수준·비용·기간·달성 가능성·근거)",
+    system: "당신은 그린필드 신규사업 기획자를 보좌하는 분석가입니다. 해소 방식·기대 수준·비용·기간·달성 가능성의 확정은 사람이 하며 당신 산출물은 제안일 뿐입니다. 확정이나 승인을 제안하지 마세요. 제공된 S3 정의(필요도·필요 수준·보유 판정·보유 수준·보유 근거), 기회 맥락, 프로필·공시 근거 안에서만 판단하세요. 보유 판정·보유 수준에서 필요도·필요 수준으로 가는 공백을 메우는 경로를 제안합니다. 해소 방식(build·partner·hire·invest)은 한 줄 사유와 함께, 기대 수준은 해소 뒤 도달하는 구체적 상태를 필요 수준과 같은 문체로 씁니다. 비용(백만원)과 기간(개월)은 입력이 뒷받침하는 합리적 규모가 있을 때만 추정치로 제시하고 basis.estimate에 가정을 적으며, 아니면 null로 두세요. 숫자를 지어내지 마세요. 달성 가능성(high·medium·low)은 사유와 함께 제시하고 high·low는 rationale이 반드시 필요합니다. rationale은 S3 항목·프로필·공시 사실을 인용하고 핵심 가정을 밝힙니다. 미검증 프로필 주장은 맥락일 뿐 사실로 인용하지 않습니다. 근거가 없는 칸은 null로 두고 unfilled에 사유를 적습니다. 개인정보(이름·연락처·주민번호 등)는 쓰지 마세요. JSON만 반환합니다.",
   },
   "opportunity.gate_brief": {
     key: "opportunity.gate_brief",

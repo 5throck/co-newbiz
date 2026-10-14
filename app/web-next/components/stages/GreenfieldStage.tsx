@@ -232,6 +232,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 endpoint={`/api/opportunities/${encodeURIComponent(selected.opportunity.id)}/capability-attainability`}
                 s3Href={`/deals/${encodeURIComponent(selected.opportunity.id)}/s3`}
                 gap={{ opportunityId: selected.opportunity.id, rows: gapRows, setRows: setGapRows }}
+                aiDraft
               />
             </div>
           )}

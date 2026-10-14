@@ -12,7 +12,8 @@ import {
 } from "../../lib/capability-gap.ts";
 import type { AttainabilityRowView } from "../../lib/capability-attainability.ts";
 import { legacyHoldersCaption } from "./CapabilityHeldDialog.tsx";
-import type { JudgementDraft } from "./CapabilityJudgementTable.tsx";
+import type { AiWiring, JudgementDraft } from "./CapabilityJudgementTable.tsx";
+import { JUDGEMENT_FIELD_LABEL, mergeJudgementProposals, type JudgementField, type JudgementProposal } from "../../lib/capability-judgement-ai-merge.ts";
 
 export type DialogNav = "close" | "next" | "prev";
 
@@ -25,7 +26,17 @@ export const RATIONALE_MAX = 600; // mirrors the server cap in lib/capability-at
 const PREVIEW_LEN = 60;
 const levelText = (v: string) => (v.trim() === "" ? <span className="text-[color:var(--muted-fg)]">—</span> : v);
 
-export function CapabilityJudgementDialog({ row, draft, note, s3Href, hasPrev, hasNext, onApply, onRejudge, onClose }: {
+const AI_CHIP_TEXT = "AI 초안";
+function AiChip({ field, fields }: { field: JudgementField; fields: JudgementField[] }) {
+  if (!fields.includes(field)) return null;
+  return <span className="status-chip status-not-started ml-2 font-normal" data-testid={`ai-chip-${field}`}><span aria-hidden="true">✦</span> {AI_CHIP_TEXT}</span>;
+}
+function BasisLine({ field, fields, text }: { field: JudgementField; fields: JudgementField[]; text: string | undefined }) {
+  if (!fields.includes(field) || !text) return null;
+  return <p className="m-0 mt-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid={`ai-basis-${field}`}>AI 근거: {text}</p>;
+}
+
+export function CapabilityJudgementDialog({ row, draft, note, s3Href, hasPrev, hasNext, onApply, onAiFields, onRejudge, onClose, ai, aiFields: initialAiFields = [] }: {
   row: AttainabilityRowView;
   draft: JudgementDraft;
   /** Current S5 비고 (saved through the S3 register route); omitted when the page does not show it. */
@@ -34,22 +45,56 @@ export function CapabilityJudgementDialog({ row, draft, note, s3Href, hasPrev, h
   hasPrev: boolean;
   hasNext: boolean;
   onApply: (d: JudgementDraft, note: string | undefined, nav: DialogNav) => void;
+  /** Called AFTER onApply with the fields that are still AI drafts, so the page can re-mark them. */
+  onAiFields?: (fields: JudgementField[], basis?: JudgementProposal["basis"]) => void;
+  /** S5 only: AI proposal wiring and the fields already marked as AI drafts on this row. */
+  ai?: AiWiring;
+  aiFields?: JudgementField[];
   onRejudge: () => void;
   onClose: () => void;
 }) {
   const [mounted, setMounted] = useState(false);
   const [d, setD] = useState<JudgementDraft>(draft);
   const [noteVal, setNoteVal] = useState(note ?? "");
+  const [aiFields, setAiFields] = useState<JudgementField[]>(initialAiFields);
+  const [aiBasis, setAiBasis] = useState<JudgementProposal["basis"] | undefined>(ai?.basis[row.id]);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiMsg, setAiMsg] = useState<string | null>(null);
   const uid = useId();
   useEffect(() => setMounted(true), []);
   const { panelRef, onKeyDown } = useModalFocus(onClose);
   if (!mounted) return null;
-  const patch = (p: Partial<JudgementDraft>) => setD((x) => ({ ...x, ...p }));
+  // A human edit of a field clears its AI draft marker (the value is now the person's).
+  const patch = (p: Partial<JudgementDraft>) => {
+    setD((x) => ({ ...x, ...p }));
+    setAiFields((f) => f.filter((k) => !(k in p)));
+  };
+  async function proposeThis() {
+    if (!ai || aiBusy) return;
+    setAiBusy(true); setAiMsg(null);
+    try {
+      const res = await ai.fetchProposals([row.id]);
+      const p = res.drafts[row.id];
+      if (!p) { setAiMsg(`제안하지 못했습니다${res.unfilled[row.id] ? ` — ${res.unfilled[row.id]}` : ""}. ${res.note}`); return; }
+      const m = mergeJudgementProposals({ [row.id]: d }, { [row.id]: p });
+      const filled = m.marks[row.id] ?? [];
+      setD(m.drafts[row.id]);
+      setAiFields((f) => [...new Set([...f, ...filled])]);
+      setAiBasis((b) => ({ ...(b ?? { resolution: "", expectedLevel: "", cost: "", months: "", grade: "" }), ...Object.fromEntries(Object.entries(p.basis).filter(([k, v]) => v && (k === "estimate" || (filled as string[]).includes(k)))) }));
+      const empties = res.unfilled[row.id];
+      setAiMsg(filled.length === 0 ? `채울 빈 칸이 없거나 제안할 근거가 부족합니다${empties ? ` — ${empties}` : ""}.` : `${filled.map((f) => JUDGEMENT_FIELD_LABEL[f]).join(", ")} 칸을 AI 초안으로 채웠습니다${empties ? ` · 비운 칸: ${empties}` : ""} — 검토·수정한 뒤 적용하세요.`);
+    } catch (e) {
+      setAiMsg(e instanceof Error ? e.message : "AI 제안을 불러오지 못했습니다.");
+    } finally { setAiBusy(false); }
+  }
   const resolution = (d.resolution || null) as GapResolution | null;
   const title = `${row.capability} 판정`;
   const needsExpected = !!resolution && d.expectedLevel.trim() === "";
   const needsRationale = (d.grade === "high" || d.grade === "low") && d.rationale.trim() === "";
-  const apply = (nav: DialogNav) => onApply(d, note === undefined ? undefined : noteVal, nav);
+  const apply = (nav: DialogNav) => {
+    onApply(d, note === undefined ? undefined : noteVal, nav);
+    if (aiFields.length > 0) onAiFields?.(aiFields, aiBasis);
+  };
   const holders = legacyHoldersCaption(row.held_holders);
   const s3Rows: Array<[string, React.ReactNode]> = [
     ["필요도", row.necessity ? NECESSITY_LABEL[row.necessity] : <span className="text-[color:var(--muted-fg)]">{NECESSITY_UNSET_LABEL}</span>],
@@ -91,40 +136,56 @@ export function CapabilityJudgementDialog({ row, draft, note, s3Href, hasPrev, h
         </section>
 
         <section aria-label="S5 판정 (입력)" className="mt-3 grid gap-2" style={{ borderLeft: "2px solid var(--accent)", paddingLeft: "0.6rem" }}>
-          <h3 className="text-[length:var(--fs-caption)] font-semibold m-0">S5 판정 (입력)</h3>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-[length:var(--fs-caption)] font-semibold m-0">S5 판정 (입력)</h3>
+            {ai && (
+              <button type="button" className="btn-ghost btn-sm" disabled={aiBusy || ai.busy} onClick={() => void proposeThis()} title="AI가 이 역량의 빈 칸만 초안으로 제안합니다 — 제안일 뿐이며 저장·확정은 사람이 합니다.">
+                {aiBusy ? "제안 중…" : "이 역량 AI 제안"}
+              </button>
+            )}
+          </div>
+          {aiMsg && <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" role="status" data-testid="ai-dialog-msg">{aiMsg}</p>}
           <div>
-            <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-res`}>해소 방식</label>
+            <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-res`}>해소 방식<AiChip field="resolution" fields={aiFields} /></label>
             <select id={`${uid}-res`} value={d.resolution} onChange={(e) => patch({ resolution: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "auto" }}>
               <option value="">미정</option>
               {RESOLUTIONS.map((x) => <option key={x} value={x}>{RESOLUTION_LABEL[x]}</option>)}
             </select>
+            <BasisLine field="resolution" fields={aiFields} text={aiBasis?.resolution} />
             {resolution && <p className="m-0 mt-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="expected-level-hint">작성 안내: {RESOLUTION_EXPECTED_LEVEL_HINT[resolution]}</p>}
           </div>
           <div>
-            <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-exp`}>기대 수준</label>
+            <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-exp`}>기대 수준<AiChip field="expectedLevel" fields={aiFields} /></label>
             <textarea id={`${uid}-exp`} className="sizing-new-input w-full" rows={4} maxLength={NARRATIVE_CAP} value={d.expectedLevel} onChange={(e) => patch({ expectedLevel: e.target.value })} />
             <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" aria-live="polite">{d.expectedLevel.length} / {NARRATIVE_CAP}자{needsExpected ? " — 확정하려면 기대 수준이 필요합니다." : ""}</p>
+            <BasisLine field="expectedLevel" fields={aiFields} text={aiBasis?.expectedLevel} />
           </div>
           <div className="flex flex-wrap gap-3">
             <div>
-              <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-cost`}>비용(백만원)</label>
+              <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-cost`}>비용(백만원)<AiChip field="cost" fields={aiFields} /></label>
               <input id={`${uid}-cost`} type="number" min={0} value={d.cost} onChange={(e) => patch({ cost: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "8rem" }} />
             </div>
             <div>
-              <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-mon`}>기간(개월)</label>
+              <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-mon`}>기간(개월)<AiChip field="months" fields={aiFields} /></label>
               <input id={`${uid}-mon`} type="number" min={0} value={d.months} onChange={(e) => patch({ months: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "8rem" }} />
             </div>
           </div>
+          {(aiFields.includes("cost") || aiFields.includes("months")) && (
+            <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="ai-basis-estimate">
+              AI 추정치입니다{aiBasis?.estimate ? ` — 가정: ${aiBasis.estimate}` : ""}{aiFields.includes("cost") && aiBasis?.cost ? ` · 비용 근거: ${aiBasis.cost}` : ""}{aiFields.includes("months") && aiBasis?.months ? ` · 기간 근거: ${aiBasis.months}` : ""}
+            </p>
+          )}
           <div>
-            <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-grade`}>달성 가능성</label>
+            <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-grade`}>달성 가능성<AiChip field="grade" fields={aiFields} /></label>
             <select id={`${uid}-grade`} value={d.grade} onChange={(e) => patch({ grade: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "auto" }}>
               {GRADE_OPTIONS.map((g) => <option key={g.value} value={g.value}>{g.text}</option>)}
             </select>
             {row.drafted_by === "ai" && <span className="ml-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">AI 초안</span>}
+            <BasisLine field="grade" fields={aiFields} text={aiBasis?.grade} />
           </div>
           <div>
             <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-rat`}>
-              근거·증빙{(d.grade === "high" || d.grade === "low") && <span className="text-[color:var(--red-fg)]"> (필수 ✕ 높음·낮음은 근거 필요)</span>}
+              근거·증빙{(d.grade === "high" || d.grade === "low") && <span className="text-[color:var(--red-fg)]"> (필수 ✕ 높음·낮음은 근거 필요)</span>}<AiChip field="rationale" fields={aiFields} />
             </label>
             <textarea id={`${uid}-rat`} className="sizing-new-input w-full" rows={6} maxLength={RATIONALE_MAX} value={d.rationale} onChange={(e) => patch({ rationale: e.target.value })} />
             <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" aria-live="polite">{d.rationale.length} / {RATIONALE_MAX}자{needsRationale ? " — 근거를 입력하세요." : ""}</p>

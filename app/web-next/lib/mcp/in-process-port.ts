@@ -63,6 +63,7 @@ export const ROUTE_TABLE: readonly RouteEntry[] = [
   { pattern: "/api/opportunities/:id/capability-gap", load: () => import("../../app/api/opportunities/[id]/capability-gap/route.ts") },
   { pattern: "/api/opportunities/:id/capability-gap/llm-draft", load: () => import("../../app/api/opportunities/[id]/capability-gap/llm-draft/route.ts") },
   { pattern: "/api/opportunities/:id/capability-gap/holding-check", load: () => import("../../app/api/opportunities/[id]/capability-gap/holding-check/route.ts") },
+  { pattern: "/api/opportunities/:id/capability-attainability/ai-draft", load: () => import("../../app/api/opportunities/[id]/capability-attainability/ai-draft/route.ts") },
   { pattern: "/api/opportunities/:id/committee-sessions", load: () => import("../../app/api/opportunities/[id]/committee-sessions/route.ts") },
   { pattern: "/api/opportunities/:id/committee-sessions/:sessionId", load: () => import("../../app/api/opportunities/[id]/committee-sessions/[sessionId]/route.ts") },
   { pattern: "/api/opportunities/:id/factors", load: () => import("../../app/api/opportunities/[id]/factors/route.ts") },
