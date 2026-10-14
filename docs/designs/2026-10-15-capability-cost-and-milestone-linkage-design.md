@@ -185,9 +185,11 @@ Glossary entries: `역량 해소 비용`, `투자비에 반영`, `마일스톤 �
 
 A dedicated `capability_milestone` table is not needed for slices 1-5; if S12 status history outgrows the baseline JSON, propose it then with an ADR (schema-change trigger).
 
-## 13. Open decisions (recommendations)
+## 13. Open decisions (resolved 2026-10-15)
 
-| ID | Question | Recommendation |
+Resolved: the human decider approved ADR-0173 in chat on 2026-10-15 ("ADR-0173 승인"), adopting the recommendation in every row below (DEC-20261015-01). No per-item checklist was reviewed.
+
+| ID | Question | Resolution (as recommended) |
 |---|---|---|
 | OD-1 | Default reflection rule | Confirmed + non-stale + cost > 0 pre-checked; drafts/stale shown `참고(미반영)` and not checkable until confirmed. |
 | OD-2 | Category mapping | Table 4.3; editable per line; `build` defaults to `capex`. |

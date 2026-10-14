@@ -14,6 +14,7 @@ import {
   gapCautions, parseGapRegister, summarizeGap, type CapabilityGapRow,
 } from "./capability-gap.ts";
 import { attainabilitySummary } from "./capability-attainability.ts";
+import { entryStrategyText } from "./greenfield-entry-strategy.ts";
 import { isStale } from "./capability-linkage.ts";
 import { buildS8LensSummary } from "./s8-lens-summary.ts";
 import { technicalLensBriefLine } from "./s8-lens-status.ts";
@@ -198,7 +199,7 @@ function s5Summary(db: Database, oppId: string): string {
     gaps,
     largeGaps.length > 0 ? `큰 격차 주의: ${largeGaps.join(" / ")}` : "",
     check,
-    row?.entry_strategy ? `진출전략: ${row.entry_strategy.slice(0, 300)}` : "",
+    row?.entry_strategy ? `진출전략: ${entryStrategyText(row.entry_strategy).slice(0, 300)}` : "",
     row?.rationale ? `평가 근거: ${row.rationale.slice(0, 200)}` : "",
   ].filter(Boolean).join("\n") || "S5 역량 평가: 요약 없음";
 }

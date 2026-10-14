@@ -6,6 +6,7 @@
 // staged commitment). KPIs declared here are the pre-commit the S12 venture
 // scorecard evaluates against (C2).
 import type { Database } from "bun:sqlite";
+import { entryStrategyText } from "./greenfield-entry-strategy.ts";
 import { HELD_STATUS_LABEL, NECESSITY_LABEL, NECESSITY_UNSET_LABEL, parseGapRegister, RESOLUTION_LABEL, type GapNecessity } from "./capability-gap.ts";
 
 export interface CharterKpi {
@@ -56,7 +57,7 @@ export function buildProjectCharter(
     const gf = db
       .query("SELECT entry_strategy FROM greenfield_assessment WHERE opportunity_id = ? ORDER BY updated_at DESC LIMIT 1")
       .get(opts.opportunityId) as { entry_strategy: string | null } | undefined;
-    entryScope = clamp(gf?.entry_strategy, 600) || "진출전략 미기록";
+    entryScope = clamp(entryStrategyText(gf?.entry_strategy), 600) || "진출전략 미기록";
     // Source of truth is the S3/S5 register (opportunity.capability_gap_json, ADR-0136); rows already met are not gaps.
     const reg = db.query("SELECT capability_gap_json FROM opportunity WHERE id = ?")
       .get(opts.opportunityId) as { capability_gap_json: string | null } | undefined;

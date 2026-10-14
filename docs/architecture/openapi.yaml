@@ -3137,7 +3137,7 @@ paths:
   /api/opportunities/{id}/capability-attainability:
     get:
       operationId: getOpportunityCapabilityAttainability
-      summary: "S5 (Green Field) required-capability judgement view (ADR-0171 / ADR-0172): same row view as the project summary, keyed by the opportunity. Rows are in the canonical order capability, necessity, required_level, held_status, current_level, held_holders (legacy, read-only) / held_evidence, then resolution, expected_level, closing_cost_krw_m, months_to_attain, grade, rationale, evidence, confirmation."
+      summary: "S5 (Green Field) required-capability judgement view (ADR-0171 / ADR-0172): same row view as the project summary, keyed by the opportunity. Each row also carries milestone_candidate (ADR-0173 slice 1: { name, months, resolution, rowId, derivedFromHash, stale, outdated, stored } or null without a period; server-derived, never client-supplied). Rows are in the canonical order capability, necessity, required_level, held_status, current_level, held_holders (legacy, read-only) / held_evidence, then resolution, expected_level, closing_cost_krw_m, months_to_attain, grade, rationale, evidence, confirmation."
       tags:
         - Analysis
       parameters:
@@ -4271,9 +4271,15 @@ paths:
   /api/greenfield/{oppId}:
     get:
       operationId: getGreenfieldAssessment
-      summary: Greenfield capability assessment state.
+      summary: Greenfield capability assessment state, plus derived capability_cost_lines and milestone_candidates (ADR-0173).
       tags:
         - Analysis
+      parameters:
+        - name: oppId
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         '200':
           $ref: '#/components/responses/Ok'
@@ -4281,12 +4287,25 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     post:
       operationId: saveGreenfieldAssessment
-      summary: Save capability gaps / entry strategy / business-case lines.
+      summary: Save entry strategy / alternatives / business-case lines (ADR-0173 capability entries are rebuilt server-side).
+      description: >-
+        business_case_lines is the stored array. Entries with source "capability" carry capabilityKey,
+        reflected and category; the server recomputes line, amount (millions of KRW divided by 100,
+        currency KRW, period lumpsum), basisHash and reflectedBy/At from the live judgement and
+        rejects a client amount that differs (400 amount_mismatch). Other 400 codes: unknown_capability,
+        no_cost, invalid_category, not_reflectable, invalid_request.
       tags:
         - Analysis
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GreenfieldAssessmentSave'
       responses:
         '200':
           $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -4301,6 +4320,28 @@ paths:
           $ref: '#/components/responses/Ok'
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /api/greenfield/{oppId}/entry-strategy-draft:
+    post:
+      operationId: draftGreenfieldEntryStrategy
+      summary: "S5 entry-strategy proposal (ADR-0171 amendment 2026-10-15 (2)). Response {proposal: {modes: [{mode: build|partner|hire|invest, main, reason}] (exactly one main), rationale (max 600), alternatives (max 600), basis, cautions, confidence?} | null, source: llm|synthesis, note}. Evidence: stored S3 register, S4 final decision record, opportunity context, company profile/disclosure; no web search. Nothing is written to the database and nothing is decided; the page fills only empty parts and a person saves (POST /api/greenfield/{oppId}). Permission: analyst+; not human-only. Without a configured LLM: 200 with proposal null and a note. 403 viewer, 404."
+      tags:
+        - Analysis
+      parameters:
+        - name: oppId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /api/projects:
     get:
@@ -6132,7 +6173,7 @@ paths:
   /api/projects/{id}/capability-attainability:
     get:
       operationId: getProjectCapabilityAttainability
-      summary: "S8 required-capability attainability READ-ONLY summary (ADR-0168, edit surface moved to S5/S7 by ADR-0171). Per row of the source opportunity's S3 register, in the ADR-0172 order: capability, necessity (essential | partial_essential | optional | empty), necessity_scope_note, required_level (narrative), held_status (leading | average | partial | none | unevaluated), current_level (narrative), held_holders (legacy, read-only), held_evidence, then resolution, expected_level (narrative, <= 400), closing_cost_krw_m, months_to_attain, grade (high | medium | low | null = unjudged), rationale, evidence, confirmation. Also stale, stale_since, basis_hash, s3_hash, s3_changes, prior, history_count and note; summary with counts and the warning banner state (stale rows count as unjudged); removed_capabilities lists judgements of rows deleted in S3. Top level adds edit_at (S5 for Green Field, S7 for Brown Field) and track."
+      summary: "S8 required-capability attainability READ-ONLY summary (ADR-0168, edit surface moved to S5/S7 by ADR-0171; rows also carry milestone_candidate, ADR-0173). Per row of the source opportunity's S3 register, in the ADR-0172 order: capability, necessity (essential | partial_essential | optional | empty), necessity_scope_note, required_level (narrative), held_status (leading | average | partial | none | unevaluated), current_level (narrative), held_holders (legacy, read-only), held_evidence, then resolution, expected_level (narrative, <= 400), closing_cost_krw_m, months_to_attain, grade (high | medium | low | null = unjudged), rationale, evidence, confirmation. Also stale, stale_since, basis_hash, s3_hash, s3_changes, prior, history_count and note; summary with counts and the warning banner state (stale rows count as unjudged); removed_capabilities lists judgements of rows deleted in S3. Top level adds edit_at (S5 for Green Field, S7 for Brown Field) and track."
       tags:
         - Analysis
       parameters:
@@ -7406,6 +7447,56 @@ components:
           schema:
             $ref: '#/components/schemas/Envelope'
   schemas:
+    GreenfieldAssessmentSave:
+      type: object
+      description: S5 save body (ADR-0173 slice 1). Omitted keys keep the stored value.
+      properties:
+        entry_strategy:
+          type: string
+        alternatives_considered:
+          type: string
+        rationale:
+          type: string
+        business_case_lines:
+          type: array
+          items:
+            type: object
+            required:
+              - category
+            properties:
+              line:
+                type: string
+              category:
+                type: string
+                enum: [labor, opex, capex, revenue, gov_rnd]
+              amount:
+                type: number
+                description: Millions of the line currency (amountUnit krw_m). For source capability the server recomputes it from the live judgement (exact millions of KRW) and rejects a different value (400 amount_mismatch, compared in millions). A line posted without amountUnit is legacy (eok, 100 million) and is converted value-preserving (x100, rounded to 0.01) and stored with amountUnit krw_m.
+              amountUnit:
+                type: string
+                enum: [krw_m]
+                description: Written on every stored line from 2026-10-15; absent means legacy eok.
+              currency:
+                type: string
+                enum: [KRW, USD, EUR, JPY, CNY]
+              period:
+                type: string
+                enum: [monthly, quarterly, yearly, lumpsum]
+              note:
+                type: string
+              dupDismissed:
+                type: array
+                items:
+                  type: string
+              source:
+                type: string
+                enum: [capability]
+              capabilityKey:
+                type: string
+                description: S3 register row id (source capability only).
+              reflected:
+                type: boolean
+                description: Human per-line choice (source capability only).
     Envelope:
       type: object
       description: Every response, success and error alike (api-spec.md §9).

@@ -4,6 +4,24 @@ import { appendAudit } from "../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../db/lib/ulid.ts";
 import { authenticate, requireBusinessActor } from "../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../lib/envelope.ts";
+import { readRegister } from "../../../../lib/capability-attainability.ts";
+import { normalizeStoredEntryStrategy } from "../../../../lib/greenfield-entry-strategy.ts";
+import { deriveCapabilityCostLines, milestoneCandidateView, normalizeBusinessCaseLines, sourceRowOf } from "../../../../lib/capability-cost-lines.ts";
+
+/** One stored investment line (S5 "투자비 검토 요건"). Capability entries add the ADR-0173 markers. */
+interface PostedLine {
+  line: string;
+  category: "labor" | "opex" | "capex" | "revenue" | "gov_rnd";
+  /** 억 (KRW) unless `currency` says otherwise; the server recomputes it for `source: "capability"` entries. */
+  amount: number;
+  currency?: "KRW" | "USD" | "EUR" | "JPY" | "CNY";
+  period?: "monthly" | "quarterly" | "yearly" | "lumpsum";
+  note?: string;
+  dupDismissed?: string[];
+  source?: "capability";
+  capabilityKey?: string;
+  reflected?: boolean;
+}
 
 const now = () => new Date().toISOString();
 
@@ -14,17 +32,23 @@ export async function GET(request: Request, { params }: { params: Promise<{ oppI
   if (denied) return denied;
   const { oppId } = await params;
   const db = getDb();
-  const opp = db.query("SELECT id, name FROM opportunity WHERE id = ?").get(oppId) as { id: string; name: string } | null;
+  const opp = db.query("SELECT id, name, promoted_at, project_id FROM opportunity WHERE id = ?").get(oppId) as { id: string; name: string; promoted_at: string | null; project_id: string | null } | null;
   if (!opp) return notFound();
   const assessment = db
     .query("SELECT * FROM greenfield_assessment WHERE opportunity_id = ? ORDER BY updated_at DESC LIMIT 1")
     .get(oppId) as Record<string, unknown> | undefined;
   const parse = (v: unknown) => { try { return v ? JSON.parse(v as string) : null; } catch { return null; } };
+  const lines = assessment ? parse(assessment.business_case_lines_json) : null;
+  // ADR-0173 slice 1: derived on read from the live judgements; unreflected lines are never stored.
+  const reg = readRegister(db, oppId);
+  const costView = deriveCapabilityCostLines((reg?.rows ?? []).map(sourceRowOf), lines);
   return ok({
     opportunity: opp,
     assessment: assessment
-      ? { ...assessment, capability_gaps: parse(assessment.capability_gaps_json), business_case_lines: parse(assessment.business_case_lines_json) }
+      ? { ...assessment, capability_gaps: parse(assessment.capability_gaps_json), business_case_lines: lines }
       : null,
+    capability_cost_lines: costView,
+    milestone_candidates: (reg?.rows ?? []).flatMap((r) => { const m = milestoneCandidateView(r); return m ? [m] : []; }),
   }, 200);
 }
 
@@ -40,13 +64,26 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   const body = (await request.json().catch(() => null)) as {
     entry_strategy?: string;
     alternatives_considered?: string;
-    business_case_lines?: Array<{ line: string; kind: "cost" | "revenue"; amount: number; note?: string }>;
+    business_case_lines?: PostedLine[];
     rationale?: string;
   } | null;
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(oppId)) return notFound();
+  // ADR-0171 amendment (2): modes header + rationale share this column; canonical form on write (legacy text only trimmed).
+  const entryStrategy = typeof body?.entry_strategy === "string" ? normalizeStoredEntryStrategy(body.entry_strategy) || null : null;
   const ts = now();
-  const existing = db.query("SELECT id FROM greenfield_assessment WHERE opportunity_id = ? LIMIT 1").get(oppId) as { id: string } | undefined;
+  const existing = db.query("SELECT id, business_case_lines_json FROM greenfield_assessment WHERE opportunity_id = ? LIMIT 1").get(oppId) as { id: string; business_case_lines_json: string | null } | undefined;
+  // ADR-0173: capability entries are rebuilt from the live judgement; a client amount that differs is rejected.
+  let storedLines: unknown[] | null = null;
+  let lineEvents: Array<{ action: string; target: string }> = [];
+  if (body?.business_case_lines !== undefined && body.business_case_lines !== null) {
+    let previous: unknown = null;
+    try { previous = existing?.business_case_lines_json ? JSON.parse(existing.business_case_lines_json) : null; } catch { previous = null; }
+    const norm = normalizeBusinessCaseLines(body.business_case_lines, (readRegister(db, oppId)?.rows ?? []).map(sourceRowOf), previous, { userId: ctx.userId, at: ts });
+    if (!norm.ok) return badRequest(norm.error.code, norm.error.message);
+    storedLines = norm.lines;
+    lineEvents = norm.events;
+  }
   const id = existing?.id ?? ulid();
   if (existing) {
     db.run(
@@ -57,9 +94,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
          rationale = COALESCE(?, rationale),
          updated_at = ? WHERE id = ?`,
       [
-        body?.entry_strategy?.trim() || null,
+        entryStrategy,
         body?.alternatives_considered?.trim() || null,
-        body?.business_case_lines ? JSON.stringify(body.business_case_lines) : null,
+        storedLines ? JSON.stringify(storedLines) : null,
         body?.rationale?.trim() || null,
         ts, id,
       ],
@@ -70,14 +107,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
        VALUES (?,?,?,?,?,?,?,?,?)`,
       [
         id, oppId,
-        body?.entry_strategy?.trim() || null,
+        entryStrategy,
         body?.alternatives_considered?.trim() || null,
-        body?.business_case_lines ? JSON.stringify(body.business_case_lines) : null,
+        storedLines ? JSON.stringify(storedLines) : null,
         body?.rationale?.trim() || null,
         ctx.userId, ts, ts,
       ],
     );
   }
   appendAudit(db, { actor: ctx.userId, action: "greenfield_assessment.save", target: `${oppId}:${existing ? "update" : "create"}`, now: ts });
+  for (const ev of lineEvents) appendAudit(db, { actor: ctx.userId, action: ev.action, target: `${oppId}#${ev.target}`, now: ts });
   return ok({ id, updated_at: ts }, 200);
 }
