@@ -7,7 +7,6 @@ import { type GapHeldStatus, HELD_STATUS_CHIP, HELD_STATUS_LABEL, type GapResolu
 import type { SynergyResultState } from "./useSynergyResult.ts";
 import type { SynergyPayload } from "./types.ts";
 import { ColGroup } from "../../ui.tsx";
-import { LevelSelect } from "../LevelSelect.tsx";
 import { CapabilityHeldDialog, evidencePreview, holdersPreview } from "../CapabilityHeldDialog.tsx";
 
 // 시너지 영역 6열 — 근거·기회·위험이 긴 문단 열.
@@ -106,7 +105,7 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                     시너지 분석(신규·재분석) 시 위 시너지 영역에서 필요 역량이 자동 도출·병합됩니다.{" "}
                     {gap?.internalAssessmentNote ?? "내부(자사 단독) 역량 평가는 추후 보강 예정 — 현재 보유 판정 근거는 그룹/계열사 프로필 기준입니다."}
                     {gap && !gap.stored && gapRows.length > 0 ? " — 아직 저장되지 않은 시드 초안입니다." : ""}
-                    {" "}필요 수준·보유 수준은 여기(S3)에서 정의하며, S8 필요 역량 달성 가능성 화면에는 읽기 전용으로 표시됩니다.
+                    {" "}필요 내용·보유 판정·보유 주체/근거는 여기(S3)에서 정의하며, S8 필요 역량 달성 가능성 화면에는 읽기 전용으로 표시됩니다.
                   </p>
                   {gapNote && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--green-fg)] mb-2">{gapNote}</p>}
                   {gapError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{gapError}</p>}
@@ -123,7 +122,6 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                         <thead>
                           <tr>
                             <th scope="col">필요 역량</th><th scope="col">보유 판정</th>
-                            <th scope="col">필요 수준</th><th scope="col">보유 수준</th>
                             <th scope="col">보유 주체·근거</th><th scope="col">해소 힌트</th><th scope="col"></th>
                           </tr>
                         </thead>
@@ -145,8 +143,6 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                                   ))}
                                 </select>
                               </td>
-                              <td><LevelSelect ariaLabel={`${r.capability} 필요 수준`} value={r.requiredLevel} disabled={!canCurate} onChange={(v) => updateGapRow(idx, { requiredLevel: v })} /></td>
-                              <td><LevelSelect ariaLabel={`${r.capability} 보유 수준`} value={r.currentLevel} disabled={!canCurate} onChange={(v) => updateGapRow(idx, { currentLevel: v })} /></td>
                               <td className="text-[length:var(--fs-caption)]">
                                 <span className="block"><span className="text-[color:var(--muted-fg)]">주체</span> {holdersPreview(r.held.holders)}</span>
                                 <span className="block"><span className="text-[color:var(--muted-fg)]">근거</span> {evidencePreview(r.held.evidence)}</span>

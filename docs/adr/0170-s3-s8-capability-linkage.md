@@ -43,3 +43,8 @@ Accepted by chat instruction. The Brown Field basis (Decision 5) and the legacy-
 - Basis: chat approval of the ADR as written, including the design's recommended resolutions of OD-1..OD-5. Acceptance is by chat instruction; no per-item checklist was recorded. This record does not claim the approver read specific items.
 - Scope: acceptance covers the decision. Nothing of slices 1-4 is implemented.
 - Known limitations (owner: platform-lead): the Brown Field criteria are seeded once, so rows added later need seeding before per-target detection works (slice 3); the legacy stamp (OD-4) is a one-off audited script still to be written.
+
+
+## Correction 2026-10-14
+
+The 5-step levels (`requiredLevel` / `currentLevel`, `LevelSelect`) are S5-owned (ADR-0136) and are not an S3 input; slice 1 wrongly added level columns to the S3 table and surfaced them in S8. S3-owned definitions are `capability`, `requiredNote` (required content), and `held.status` / `held.holders` / `held.evidence`. The S3 table is restored to its original columns (required capability, held judgement, holders/evidence with the modal button, resolution hint) and S8 reflects the S3 definitions read-only (required note and held judgement). The slice 1 row hash fields are unchanged (levels stay in the hash as S5-owned inputs), and the S8 route still rejects S3-owned fields and the levels.

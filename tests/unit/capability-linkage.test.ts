@@ -313,12 +313,15 @@ describe("routes", () => {
 
 describe("UI source checks", () => {
   const read = (p: string) => readFileSync(join(PROJECT_ROOT, "app/web-next", p), "utf8");
-  test("S3 register table has editable 필요 수준 / 보유 수준 columns and a held dialog (no inline holders/evidence inputs)", () => {
+  test("S3 register table has no 5-step level columns; keeps 보유 판정, holders/evidence button, 해소 힌트", () => {
     const src = read("components/stages/synergy/SynergyLinkageTab.tsx");
-    expect(src).toContain('<th scope="col">필요 수준</th><th scope="col">보유 수준</th>');
-    expect(src).toContain("LevelSelect");
-    expect(src).toContain("${r.capability} 필요 수준");
-    expect(src).toContain("${r.capability} 보유 수준");
+    expect(src).not.toContain('<th scope="col">필요 수준</th>');
+    expect(src).not.toContain('<th scope="col">보유 수준</th>');
+    expect(src).not.toContain("LevelSelect");
+    expect(src).toContain('<th scope="col">필요 역량</th><th scope="col">보유 판정</th>');
+    expect(src).toContain('<th scope="col">보유 주체·근거</th><th scope="col">해소 힌트</th>');
+    expect(src).toContain("${r.capability} 보유 판정");
+    expect(src).toContain("${r.capability} 해소 힌트");
     expect(src).toContain("보유 주체·근거 ${canCurate");
     expect(src).not.toContain("보유 주체`}");
     expect(src).not.toContain('placeholder="근거(프로필 인용)"');
@@ -329,14 +332,17 @@ describe("UI source checks", () => {
     const src = read("components/stages/CapabilityHeldDialog.tsx");
     for (const k of ['role="dialog"', 'aria-modal="true"', "useModalFocus(onClose)", "createPortal", "HOLDERS_MAX = 6", "HOLDER_LEN = 120", "EVIDENCE_MAX = 400", "rows={8}", "readOnly ?"]) expect(src).toContain(k);
   });
-  test("S8 panel: levels are read-only text from S3 with a link, stale marker, no LevelSelect", () => {
+  test("S8 panel: shows S3 필요 내용 and 보유 판정 read-only, stale marker, no LevelSelect", () => {
     const src = read("components/stages/CapabilityAttainabilityPanel.tsx");
     expect(src).not.toContain("LevelSelect");
     expect(src).not.toMatch(/requiredLevel:\s*d\./);
     expect(src).not.toMatch(/currentLevel:\s*d\./);
-    expect(src).toContain("levelText(r.required_level)");
-    expect(src).toContain("levelText(r.current_level)");
-    expect(src).toContain('const levelText = (v: string) => (v.trim() === "" ? "미정" : v);');
+    expect(src).toContain("필요 내용 (S3)");
+    expect(src).toContain("보유 판정 (S3)");
+    expect(src).toContain("r.required_note");
+    expect(src).toContain("HELD_STATUS_LABEL[r.held_status]");
+    expect(src).not.toContain("수준 차이");
+    expect(src).not.toContain("<th scope=\"col\">필요 수준</th>");
     expect(src).toContain("/s3`");
     expect(src).toContain("S3 변경 — 재판정 필요");
     expect(src).toContain("삭제된 역량 (판정 이력)");

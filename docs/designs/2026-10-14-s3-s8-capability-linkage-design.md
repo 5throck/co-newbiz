@@ -154,3 +154,8 @@ Invalidation is attributed to the user whose S3 write caused it (not to a system
 3. **OD-3 (resolved: ADR-0170 approval, 2026-10-14) - `note` in the hash.** Recommendation: exclude (free memo, not a requirement fact); the decider's list does not name it.
 4. **OD-4 (resolved: ADR-0170 approval, 2026-10-14) - Legacy judgements without `basisHash`.** Recommendation: one-off idempotent stamp with the current hash at deploy (audited as `capability_attainability.basis_stamp` under the operator who runs it), so existing confirmations survive; alternative is to treat all as stale.
 5. **OD-5 (resolved: ADR-0170 approval, 2026-10-14) - History depth.** Recommendation: 5 entries per row (each with an `s3Snapshot`, see R4), 30 removed capabilities per register.
+
+
+## Correction 2026-10-14
+
+The 5-step levels (`requiredLevel` / `currentLevel`, `LevelSelect`) are S5-owned (ADR-0136) and are not an S3 input; slice 1 wrongly added level columns to the S3 table and surfaced them in S8. S3-owned definitions are `capability`, `requiredNote` (required content), and `held.status` / `held.holders` / `held.evidence`. The S3 table is restored to its original columns (required capability, held judgement, holders/evidence with the modal button, resolution hint) and S8 reflects the S3 definitions read-only (required note and held judgement). The slice 1 row hash fields are unchanged (levels stay in the hash as S5-owned inputs), and the S8 route still rejects S3-owned fields and the levels.
