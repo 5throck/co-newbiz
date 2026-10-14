@@ -208,13 +208,23 @@ describe("S8 IA cleanup (2026-10-14): one home per fact", () => {
     expect(g).not.toContain("프로젝트 목표 설정");
     // chip row and editor render above the table; chips only in empty state or after pressing the add button
     expect(g.indexOf("<form ref={editorRef}")).toBeLessThan(g.indexOf('aria-label="적용 중인 사업 목표"'));
-    expect(g.indexOf("추가할 지표를 고르세요")).toBeLessThan(g.indexOf('aria-label="적용 중인 사업 목표"'));
-    expect(g).toContain("(resolved.length === 0 || picking)");
+    expect(g.indexOf("시작 지표를 고르세요")).toBeLessThan(g.indexOf('aria-label="적용 중인 사업 목표"'));
+    expect(g).toContain("resolved.length === 0 && (");
+    expect(g).not.toContain("picking");
     expect(g).toContain("scrollIntoView");
     const a = read("components/business-case/GoalAttainment.tsx");
     expect(a).toContain("시나리오별 달성 여부");
     expect(a).toContain("attainment-legend");
     expect(a).toContain("목표를 추가하면 시나리오별 달성 여부가 표시됩니다");
+  });
+  test("add button opens the editor directly; select lists all presets, taken ones disabled; chips only when empty", () => {
+    const g = read("components/business-case/GoalsPanel.tsx");
+    expect(g).toContain("startCreate(firstFreePreset?.key ?? CUSTOM)");
+    expect(g).toContain("disabled={takenKeys.has(p.key)}");
+    expect(g).toContain('" (설정됨)"');
+    expect(g).toContain("presets.map((p) => <option");
+    expect(g).toContain("canAct && data && !editor && resolved.length === 0 && (");
+    expect(g).toContain('querySelector<HTMLElement>("select, input, textarea")?.focus()');
   });
   test("moved tabs sit in the financial sub-tab row, not the primary row", () => {
     expect(src).toMatch(/label="재무적 타당성 하위 화면"[\s\S]*?key: "target-costing"/);

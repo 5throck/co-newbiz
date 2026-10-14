@@ -169,7 +169,6 @@ export function GoalsPanel({ projectId, data, canAct, onChanged, loadError }: { 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const [picking, setPicking] = useState(false);
   const [history, setHistory] = useState<GoalRow[] | null>(null);
   const errId = useId();
   const editorRef = useRef<HTMLFormElement>(null);
@@ -271,6 +270,7 @@ export function GoalsPanel({ projectId, data, canAct, onChanged, loadError }: { 
   const labelOf = (r: ResolvedGoal): string => r.label ?? presetOf(r.metric_key)?.label ?? r.metric_key;
   const projectGoalFor = (r: ResolvedGoal): GoalRow | undefined => (r.source === "project" ? activeById.get(`${r.metric_key}\u0000${r.label ?? ""}`) : undefined);
   const takenKeys = new Set((data?.goals ?? []).filter((g) => !g.superseded_at && !g.retired_at && g.metric_key !== CUSTOM).map((g) => g.metric_key));
+  const firstFreePreset = presets.find((p) => !takenKeys.has(p.key));
   const starters = STARTER_METRIC_KEYS.map((k) => presetOf(k)).filter((p): p is MetricPreset => !!p && !takenKeys.has(p.key));
 
   return (
@@ -281,7 +281,7 @@ export function GoalsPanel({ projectId, data, canAct, onChanged, loadError }: { 
         actions={
           <>
             {canAct && data && resolved.length > 0 && !editor && (
-              <button type="button" className="btn-premium btn-sm" aria-expanded={picking} onClick={() => setPicking((v) => !v)}>+ 목표 추가</button> /* INTERIM-WORDING */
+              <button type="button" className="btn-premium btn-sm" onClick={() => startCreate(firstFreePreset?.key ?? CUSTOM)}>+ 목표 추가</button> /* INTERIM-WORDING */
             )}
             <button type="button" className="btn-ghost btn-sm" aria-pressed={showHistory} onClick={() => setShowHistory((v) => !v)}>
               {showHistory ? "이력 숨기기" : "이력 보기"}
@@ -306,14 +306,14 @@ export function GoalsPanel({ projectId, data, canAct, onChanged, loadError }: { 
       {!canAct && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2"><span className="status-chip status-not-started mr-1">읽기 전용</span>보기 권한만 있어 목표를 수정할 수 없습니다.</p>}
       {error && <p id={errId} role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2"><span aria-hidden="true">✕</span> {error}</p>}
 
-      {canAct && data && !editor && (resolved.length === 0 || picking) && (
+      {canAct && data && !editor && resolved.length === 0 && (
         <div className="mb-3">
-          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{resolved.length === 0 ? "시작 지표를 고르세요" : "추가할 지표를 고르세요"}</p> {/* INTERIM-WORDING */}
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">시작 지표를 고르세요</p> {/* INTERIM-WORDING */}
           <div className="flex flex-wrap items-center gap-2">
             {starters.map((p) => (
-              <button key={p.key} type="button" className="btn-ghost btn-sm" onClick={() => { setPicking(false); startCreate(p.key); }}>+ {p.label}</button>
+              <button key={p.key} type="button" className="btn-ghost btn-sm" onClick={() => startCreate(p.key)}>+ {p.label}</button>
             ))}
-            <button type="button" className="btn-ghost btn-sm" onClick={() => { setPicking(false); startCreate(CUSTOM); }}>+ 사용자 지정 지표</button>
+            <button type="button" className="btn-ghost btn-sm" onClick={() => startCreate(CUSTOM)}>+ 사용자 지정 지표</button>
           </div>
         </div>
       )}
@@ -335,7 +335,7 @@ export function GoalsPanel({ projectId, data, canAct, onChanged, loadError }: { 
                     setEditor({ ...editor, metricKey: e.target.value, direction: p?.direction ?? editor.direction, value: "" });
                   }}
                 >
-                  {presets.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+                  {presets.map((p) => <option key={p.key} value={p.key} disabled={takenKeys.has(p.key)}>{p.label}{takenKeys.has(p.key) ? " (설정됨)" : ""}</option>)} {/* INTERIM-WORDING */}
                   <option value={CUSTOM}>사용자 지정</option>
                 </select>
               </label>
