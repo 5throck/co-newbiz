@@ -5,12 +5,14 @@
 // months to attain and a HUMAN attainability judgement (높음/중간/낮음; 미판정 until
 // someone judges). Saving a draft is open to analyst+ members; confirming is a
 // human-only act (cookie session). Numbers are NOT pushed into the case model —
+// Evidence is no longer edited here (one 근거·증빙 field = rationale); the save payload omits
+// the `evidence` key so stored lines are never wiped, and they show read-only.
 // the banner states that the figures assume the capabilities can be secured.
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
-import { ColGroup } from "../ui.tsx";
+import { ColGroup, FilterChip } from "../ui.tsx";
 import { LevelSelect } from "./LevelSelect.tsx";
 import { HELD_STATUS_CHIP, HELD_STATUS_LABEL, RESOLUTION_LABEL, type GapResolution } from "../../lib/capability-gap.ts";
 import type { AttainabilityRowView, AttainabilitySummary } from "../../lib/capability-attainability.ts";
@@ -24,19 +26,23 @@ interface View {
 
 interface Draft {
   requiredLevel: string; currentLevel: string; resolution: string;
-  cost: string; months: string; grade: string; rationale: string; evidence: string;
+  cost: string; months: string; grade: string; rationale: string;
 }
 
-const COL_PCT = [16, 8, 8, 9, 8, 7, 10, 22, 12] as const;
+const COL_PCT = [13, 7, 7, 8, 8, 7, 24, 18, 8] as const;
 const RESOLUTIONS: GapResolution[] = ["build", "partner", "hire", "invest"];
 const GRADE_CHIP: Record<string, string> = { high: "status-green", medium: "status-amber", low: "status-red", "": "status-not-started" };
+const GRADE_OPTIONS = [
+  { value: "high", text: "높음", icon: "▲" }, { value: "medium", text: "중간", icon: "■" },
+  { value: "low", text: "낮음", icon: "▼" }, { value: "", text: "미판정", icon: "○" },
+] as const;
 const GRADE_TEXT: Record<string, string> = { high: "높음", medium: "중간", low: "낮음", "": "미판정" };
 
 const toDraft = (r: AttainabilityRowView): Draft => ({
   requiredLevel: r.required_level, currentLevel: r.current_level, resolution: r.resolution ?? "",
   cost: r.closing_cost_krw_m === null ? "" : String(r.closing_cost_krw_m),
   months: r.months_to_attain === null ? "" : String(r.months_to_attain),
-  grade: r.grade ?? "", rationale: r.rationale, evidence: r.evidence.join("\n"),
+  grade: r.grade ?? "", rationale: r.rationale,
 });
 
 function SummaryStrip({ s }: { s: AttainabilitySummary }) {
@@ -92,7 +98,7 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
         return {
           id, requiredLevel: d.requiredLevel, currentLevel: d.currentLevel, resolution: d.resolution || null,
           closingCostKrwM: d.cost.trim() === "" ? null : Number(d.cost), monthsToAttain: d.months.trim() === "" ? null : Number(d.months),
-          grade: d.grade || null, rationale: d.rationale, evidence: d.evidence.split("\n").map((x) => x.trim()).filter(Boolean),
+          grade: d.grade || null, rationale: d.rationale,
         };
       });
       const res = await api.put<View>(base, { rows });
@@ -170,16 +176,26 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
                     <td><input type="number" min={0} aria-label={`${r.capability} 해소 비용(백만원)`} value={d.cost} disabled={!canAct} onChange={(e) => set(r.id, { cost: e.target.value })} className="sizing-new-input sizing-new-input-sm" /></td>
                     <td><input type="number" min={0} aria-label={`${r.capability} 달성 기간(개월)`} value={d.months} disabled={!canAct} onChange={(e) => set(r.id, { months: e.target.value })} className="sizing-new-input sizing-new-input-sm" /></td>
                     <td>
-                      <select aria-label={`${r.capability} 달성 가능성`} value={d.grade} disabled={!canAct} onChange={(e) => set(r.id, { grade: e.target.value })} className="sizing-new-input sizing-new-input-sm">
-                        <option value="">미판정</option>
-                        <option value="high">높음</option><option value="medium">중간</option><option value="low">낮음</option>
-                      </select>
-                      <span className={`status-chip ${GRADE_CHIP[d.grade]}`}>{GRADE_TEXT[d.grade]}</span>
-                      {r.drafted_by && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{r.drafted_by === "ai" ? "AI 초안" : "사람 입력"}</span>}
+                      <div role="group" aria-label={`${r.capability} 달성 가능성`} className="flex flex-wrap gap-1 mb-1">
+                        {GRADE_OPTIONS.map((g) => (
+                          <FilterChip key={g.value} selected={d.grade === g.value} disabled={!canAct} aria-label={`${r.capability} 달성 가능성 ${g.text}`} onClick={() => set(r.id, { grade: g.value })}>
+                            <span aria-hidden="true">{g.icon}</span> {g.text}
+                          </FilterChip>
+                        ))}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1 text-[length:var(--fs-caption)]">
+                        <span className={`status-chip ${GRADE_CHIP[d.grade]}`}>{GRADE_TEXT[d.grade]}</span>
+                        {r.drafted_by && <span className="text-[color:var(--muted-fg)]">{r.drafted_by === "ai" ? "AI 초안" : "사람 입력"}</span>}
+                      </div>
                     </td>
                     <td>
-                      <textarea aria-label={`${r.capability} 판정 근거`} placeholder="근거 (높음·낮음은 필수)" value={d.rationale} disabled={!canAct} onChange={(e) => set(r.id, { rationale: e.target.value })} className="sizing-new-input sizing-new-input-sm" rows={2} />
-                      <textarea aria-label={`${r.capability} 증빙 (한 줄에 하나)`} placeholder="증빙 (한 줄에 하나)" value={d.evidence} disabled={!canAct} onChange={(e) => set(r.id, { evidence: e.target.value })} className="sizing-new-input sizing-new-input-sm" rows={2} />
+                      <textarea aria-label={`${r.capability} 근거·증빙`} placeholder="근거·증빙 (높음·낮음은 근거 필수)" value={d.rationale} disabled={!canAct} onChange={(e) => set(r.id, { rationale: e.target.value })} className="sizing-new-input sizing-new-input-sm" rows={3} />
+                      {r.evidence.length > 0 && (
+                        <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
+                          기존 증빙
+                          <ul className="m-0 pl-4">{r.evidence.map((x, i) => <li key={i}>{x}</li>)}</ul>
+                        </div>
+                      )}
                     </td>
                     <td className="text-[length:var(--fs-caption)]">
                       {r.confirmed_at ? <>확정<span className="block text-[color:var(--muted-fg)]">{r.confirmed_by} · {r.confirmed_at.slice(0, 10)}</span></> : r.grade ? "확정 전" : "—"}
