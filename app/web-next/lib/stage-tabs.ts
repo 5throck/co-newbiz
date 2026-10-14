@@ -13,6 +13,14 @@ export interface StageTabDef {
   label: string;
   /** Optional ?tab= value for tabs that live inside one page (e.g. business-case). */
   query?: string;
+  /** Extra ?tab= values that highlight this tab (old deep links, aliases). */
+  aliases?: string[];
+  /** Extra path segments whose pages belong under this tab (e.g. /wacc under the financial lens). */
+  extraSegs?: string[];
+  /** Highlighted for its own seg when no other entry matches (unknown or missing ?tab=). */
+  isDefault?: boolean;
+  /** S8 lens the tab belongs to (ADR-0169); the financial lens owns a sub-tab row. */
+  lens?: "technical" | "financial";
 }
 
 export interface StageTabGroup {
@@ -20,6 +28,8 @@ export interface StageTabGroup {
   name: string;
   tabs: StageTabDef[];
   more: StageTabDef[];
+  /** Second row shown while a tab with `lens: "financial"` is active (S8 only). */
+  subtabs?: StageTabDef[];
 }
 
 export const MAX_PRIMARY_TABS = 5;
@@ -27,20 +37,26 @@ export const MAX_PRIMARY_TABS = 5;
 export const STAGE_TAB_GROUPS: StageTabGroup[] = [
   {
     stage: "S8", name: "사업성 분석",
+    // ADR-0169: three parts (사업 목표 / 기술적 타당성 / 재무적 타당성); WACC, 재무분석 and the
+    // scenario comparison are the financial sub-tab row. INTERIM-WORDING: labels are provisional.
     tabs: [
       { seg: "/business-case", query: "goals", label: "사업 목표" }, // INTERIM-WORDING (ADR-0159)
-      { seg: "/business-case", label: "시나리오 비교" },
+      { seg: "/business-case", query: "technical", label: "기술적 타당성", aliases: ["capability"], lens: "technical" },
+      { seg: "/business-case", query: "financial", label: "재무적 타당성", aliases: ["scenarios"], extraSegs: ["/wacc", "/financial-analysis"], isDefault: true, lens: "financial" },
       { seg: "/business-case", query: "targets", label: "대상 비교·선정" },
-      { seg: "/wacc", label: "WACC" },
-      { seg: "/financial-analysis", label: "재무분석" },
+      { seg: "/business-case", query: "decision", label: "결정" },
     ],
     more: [
       { seg: "", label: "요약" },
       { seg: "/business-case", query: "overview", label: "설명·생성·권고" },
       { seg: "/business-case", query: "params", label: "파라미터·스냅샷" },
       { seg: "/business-case", query: "target-costing", label: "타겟코스팅" },
-      { seg: "/business-case", query: "decision", label: "결정" },
       { seg: "/risk-heatmap", label: "리스크 히트맵" },
+    ],
+    subtabs: [
+      { seg: "/business-case", query: "scenarios", label: "시나리오 비교", isDefault: true },
+      { seg: "/wacc", label: "WACC" },
+      { seg: "/financial-analysis", label: "재무분석" },
     ],
   },
   {
@@ -104,16 +120,39 @@ export function projectSegment(pathname: string): string | null {
 /** The stage group that owns a path segment; the overview belongs to S8. */
 export function groupForSegment(seg: string): StageTabGroup | null {
   return (
-    STAGE_TAB_GROUPS.find((g) => [...g.tabs, ...g.more].some((t) => t.seg === seg)) ?? null
+    STAGE_TAB_GROUPS.find((g) => allDefs(g).some((t) => t.seg === seg || t.extraSegs?.includes(seg))) ?? null
   );
+}
+
+/** Every destination a group exposes: primary tabs, more-menu and the sub-tab row. */
+export function allDefs(group: StageTabGroup): StageTabDef[] {
+  return [...group.tabs, ...group.more, ...(group.subtabs ?? [])];
+}
+
+function matchIndex(defs: StageTabDef[], seg: string, tabParam: string | null): number {
+  const param = tabParam === null ? null : tabParam.split("#")[0];
+  const exact = defs.findIndex((t) => t.seg === seg && t.query !== undefined && param !== null && (t.query === param || (t.aliases?.includes(param) ?? false)));
+  if (exact >= 0) return exact;
+  const extra = defs.findIndex((t) => t.extraSegs?.includes(seg));
+  if (extra >= 0) return extra;
+  const plain = defs.findIndex((t) => t.seg === seg && t.query === undefined);
+  if (plain >= 0) return plain;
+  return defs.findIndex((t) => t.seg === seg && t.isDefault);
 }
 
 /** Index into [...tabs, ...more] of the active entry (tab-query match wins). */
 export function activeTabIndex(group: StageTabGroup, seg: string, tabParam: string | null): number {
-  const all = [...group.tabs, ...group.more];
-  const exactQuery = all.findIndex((t) => t.seg === seg && t.query !== undefined && t.query === tabParam);
-  if (exactQuery >= 0) return exactQuery;
-  return all.findIndex((t) => t.seg === seg && t.query === undefined);
+  return matchIndex([...group.tabs, ...group.more], seg, tabParam);
+}
+
+/** Index into group.subtabs of the active sub-tab, or -1 when the sub-row is not shown
+ * (the active primary tab is not a financial-lens tab, or the group has no sub-row). */
+export function activeSubtabIndex(group: StageTabGroup, seg: string, tabParam: string | null): number {
+  if (!group.subtabs || group.subtabs.length === 0) return -1;
+  const primary = activeTabIndex(group, seg, tabParam);
+  const def = primary >= 0 ? [...group.tabs, ...group.more][primary] : undefined;
+  if (def?.lens !== "financial") return -1;
+  return matchIndex(group.subtabs, seg, tabParam);
 }
 
 export function tabHref(projectId: string, t: StageTabDef): string {
@@ -125,7 +164,7 @@ export function tabHref(projectId: string, t: StageTabDef): string {
 export function groupForTrack(group: StageTabGroup, track: string | null | undefined): StageTabGroup {
   if (track !== "greenfield") return group;
   const keep = (t: StageTabDef) => !(t.seg === "/business-case" && t.query === "targets");
-  return { ...group, tabs: group.tabs.filter(keep), more: group.more.filter(keep) };
+  return { ...group, tabs: group.tabs.filter(keep), more: group.more.filter(keep), ...(group.subtabs ? { subtabs: group.subtabs.filter(keep) } : {}) };
 }
 
 /**

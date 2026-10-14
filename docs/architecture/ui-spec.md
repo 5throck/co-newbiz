@@ -179,7 +179,14 @@ cover + hero max-width 34rem 제한으로 텍스트 길이·패널 높이와 무
 - 프로젝트 하위 화면(/projects/[id]/business-case·dd·ic-review·portfolio·process·charter)은 전역 메뉴 대신 `ProjectSubNav` 상호 링크로 연동된다(상세 화면은 /projects 목록에서 진입).
 - 전역 파이프라인 대시보드는 `/pipeline`(모든 프로젝트의 S8~S12 단계·게이트 스냅샷 + HOLD 에이징).
 - 탐색 섹션 순서는 flow.spec 단계 순서를 따른다: 대시보드 → 시장분석(S1) → 기회 발굴(S2) → 시너지 정합성(S3) → 진출방식 결정(S4) → 역량 평가·진출전략(S5, greenfield) → 대상 후보 발굴(S6~S7, brownfield) → 프로젝트(S8~S12) → 프로젝트 파이프라인.
-- S8 `필요 역량 달성 가능성` panel (ADR-0168): shown at the top of the S8 `overview` tab (full table) and as a compact count + banner strip in `scenarios`. Per S3 register row: required/current level (shared 5-step select `없음/기초/실무/숙련/선도`, legacy free text kept as a caption), resolution route, closing cost (KRW million), months to attain, attainability `높음/중간/낮음/미판정` (text chip, not colour-only) with rationale/evidence, and a human-only "판정 확정" button. A warning banner shows when any row is `미판정` or `낮음` or the register is empty/unevaluated. The S5 capability table uses the same 5-step select for required and current level.
+- S8 `필요 역량 달성 가능성` panel (ADR-0168, placement amended by ADR-0169): the full table lives at the bottom of the S8 `기술적 타당성` tab (T1 anchor `#capability-attainability`), and a compact link opens it from the 시나리오 sub-tab. Per S3 register row: required/current level (shared 5-step select `없음/기초/실무/숙련/선도`, legacy free text kept as a caption), resolution route, closing cost (KRW million), months to attain, attainability `높음/중간/낮음/미판정` (text chip, not colour-only) with rationale/evidence, and a human-only "판정 확정" button. A warning banner shows when any row is `미판정` or `낮음` or the register is empty/unevaluated. The S5 capability table uses the same 5-step select for required and current level.
+
+## As-built 2026-10-14 — S8 two-lens three-part layout (ADR-0169)
+
+- The S8 screen is organised into three major parts with one-line purposes (`S8PartHeader`): `사업 목표` (무엇을 달성하려는가, `?tab=goals`), `기술적 타당성` (실현할 수 있는가, `?tab=technical`), `재무적 타당성` (돈이 되는가, `?tab=financial` → default 시나리오); Brown Field adds `대상 비교·선정` (`?tab=targets`) and `결정` closes the row — 5 primary tabs BF / 4 GF, within the 5-tab limit. The 재무적 타당성 sub-tab row holds only financial content: 시나리오 / WACC (`?tab=financial/wacc`) / 재무 분석 (`?tab=financial/financial-analysis`). No content is duplicated across parts.
+- The 기술적 타당성 tab lists six lens items T1..T6 (`충족/주의/미판정` chips, icon + text): T1 derives read-only from the capability register (clicking it jumps to the panel anchor), T2-T5 and T6 show `미판정` placeholders with a 다음 릴리스 notice (no input UI yet).
+- A summary strip (`S8LensStrip`, fed by `GET /api/projects/:id/s8-lens-summary`) renders on top of every S8 page: both lens cards side by side, a goals line (목표 N개 중 달성 M개), a technical warning when any item is `주의`, and the caption 판단 보조 — 최종 판단과 게이트 승인은 사람이 합니다 (warning only, never a grade cap).
+- Deep-link compatibility (`resolveS8Tab`): `?tab=capability` → 기술적 타당성, `?tab=financial` → 시나리오, `#anchor` fragments stripped, unknown values and Green Field `targets` fall back to 시나리오.
 
 ## As-built 2026-09-02 — 시너지 정합성 하위 메뉴
 

@@ -1,0 +1,257 @@
+// S8 technical lens (ADR-0169, design 2026-10-14-s8-technical-financial-lens).
+// Pure, client-safe: types, tolerant parser, register serializer and the
+// status/summary view model. The lens lives in a `technicalLens` key of the S3
+// register JSON (opportunity.capability_gap_json, no migration). Every writer of
+// that column must go through serializeGapRegister so the key is carried over
+// verbatim; a save from S3/S5 can neither drop nor forge it.
+// Judgement is human (AI drafts only). The lens is decision support: it never
+// caps a grade and never blocks a gate.
+import type { CapabilityGapRow } from "./capability-gap.ts";
+
+export const TECH_ITEM_KEYS = ["T1", "T2", "T3", "T4", "T5"] as const;
+export type TechItemKey = (typeof TECH_ITEM_KEYS)[number];
+
+/** UI labels of the six displayed items (T6 = S9 link; Brown Field pairs instead). */
+export const TECH_ITEM_LABELS: Record<TechItemKey | "T6", string> = {
+  T1: "역량 달성 가능성",
+  T2: "기술 성숙도(TRL)",
+  T3: "핵심 인력·설비·시설",
+  T4: "지식재산·라이선스",
+  T5: "인허가·인증 확보 가능성",
+  T6: "S9 기술 실사 연결",
+};
+export const TECH_ITEM_LABEL_T6_BROWNFIELD = "S9 기술 실사 짝 검증";
+
+export type LensItemStatus = "met" | "caution" | null;
+/** Status shown on the lens chips and the summary strip. */
+export type LensStatus = "met" | "caution" | "undetermined";
+export const LENS_STATUS_LABEL: Record<LensStatus, string> = { met: "충족", caution: "주의", undetermined: "미판정" };
+
+export type DraftedBy = "human" | "ai" | null;
+
+export interface TechnicalLensItem {
+  status: LensItemStatus;
+  rationale: string;
+  evidence: string[];
+  draftedBy: DraftedBy;
+  confirmedBy: string | null;
+  confirmedAt: string | null;
+  /** Item-specific payload (TRL, resources, ...): validated by the slice that owns the form. */
+  detail: Record<string, unknown>;
+}
+
+export type VerificationResult = "verified" | "different" | "unverifiable" | null;
+/** S9 pairing row (Brown Field). Reserved here; written by the S9 route in a later slice. */
+export interface TechnicalVerificationRow {
+  s8Ref: string;
+  s8RevisionAt: string | null;
+  result: VerificationResult;
+  observed: string;
+  evidence: string[];
+  checklistRefs: string[];
+  verifiedBy: string | null;
+  verifiedAt: string | null;
+  draftedBy: DraftedBy;
+}
+
+export interface TechnicalLensSubject {
+  items: Partial<Record<TechItemKey, TechnicalLensItem>>;
+  /** Reserved for the S9 pairing; only the S9 route writes it. */
+  verification: Partial<Record<TechItemKey, TechnicalVerificationRow>>;
+}
+
+export interface TechnicalLens {
+  version: 1;
+  subjects: Record<string, TechnicalLensSubject>;
+  updatedAt: string | null;
+}
+
+const SUBJECT_RE = /^(project|target:[A-Za-z0-9_-]{1,64})$/;
+export function isValidSubject(s: unknown): s is string {
+  return typeof s === "string" && SUBJECT_RE.test(s);
+}
+export const PROJECT_SUBJECT = "project";
+export function targetSubject(targetId: string): string {
+  return `target:${targetId}`;
+}
+
+const isRec = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+const str = (v: unknown, max: number): string => (typeof v === "string" ? v.trim().slice(0, max) : "");
+const strOrNull = (v: unknown, max: number): string | null => { const s = str(v, max); return s || null; };
+const strList = (v: unknown, n: number, max: number): string[] =>
+  Array.isArray(v) ? v.map((x) => str(x, max)).filter(Boolean).slice(0, n) : [];
+const drafted = (v: unknown): DraftedBy => (v === "human" || v === "ai" ? v : null);
+
+function plainDetail(v: unknown): Record<string, unknown> {
+  if (!isRec(v)) return {};
+  try {
+    const s = JSON.stringify(v);
+    return s.length <= 20_000 ? (JSON.parse(s) as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function normalizeLensItem(raw: unknown): TechnicalLensItem | null {
+  if (!isRec(raw)) return null;
+  const status: LensItemStatus = raw.status === "met" || raw.status === "caution" ? raw.status : null;
+  const confirmedBy = strOrNull(raw.confirmedBy, 120);
+  const confirmedAt = strOrNull(raw.confirmedAt, 40);
+  const both = confirmedBy && confirmedAt;
+  return {
+    status,
+    rationale: str(raw.rationale, 4000),
+    evidence: strList(raw.evidence, 20, 500),
+    draftedBy: drafted(raw.draftedBy),
+    // A confirmation needs both fields and a status to confirm.
+    confirmedBy: both && status ? confirmedBy : null,
+    confirmedAt: both && status ? confirmedAt : null,
+    detail: plainDetail(raw.detail),
+  };
+}
+
+export function normalizeVerificationRow(raw: unknown): TechnicalVerificationRow | null {
+  if (!isRec(raw)) return null;
+  const s8Ref = str(raw.s8Ref, 200);
+  if (!s8Ref) return null;
+  const result: VerificationResult = raw.result === "verified" || raw.result === "different" || raw.result === "unverifiable" ? raw.result : null;
+  return {
+    s8Ref,
+    s8RevisionAt: strOrNull(raw.s8RevisionAt, 40),
+    result,
+    observed: str(raw.observed, 4000),
+    evidence: strList(raw.evidence, 20, 500),
+    checklistRefs: strList(raw.checklistRefs, 20, 200),
+    verifiedBy: strOrNull(raw.verifiedBy, 120),
+    verifiedAt: strOrNull(raw.verifiedAt, 40),
+    draftedBy: drafted(raw.draftedBy),
+  };
+}
+
+export function emptyTechnicalLens(): TechnicalLens {
+  return { version: 1, subjects: {}, updatedAt: null };
+}
+
+/** Tolerant parse of a `technicalLens` value (already-parsed JSON). Unknown subjects/keys are dropped. */
+export function normalizeTechnicalLens(raw: unknown): TechnicalLens {
+  if (!isRec(raw) || !isRec(raw.subjects)) return emptyTechnicalLens();
+  const subjects: Record<string, TechnicalLensSubject> = {};
+  for (const [subject, sv] of Object.entries(raw.subjects)) {
+    if (!isValidSubject(subject) || !isRec(sv)) continue;
+    const items: TechnicalLensSubject["items"] = {};
+    const verification: TechnicalLensSubject["verification"] = {};
+    const rawItems = isRec(sv.items) ? sv.items : {};
+    const rawVer = isRec(sv.verification) ? sv.verification : {};
+    for (const k of TECH_ITEM_KEYS) {
+      const it = normalizeLensItem(rawItems[k]);
+      if (it) items[k] = it;
+      const vr = normalizeVerificationRow(rawVer[k]);
+      if (vr) verification[k] = vr;
+    }
+    subjects[subject] = { items, verification };
+  }
+  return { version: 1, subjects, updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : null };
+}
+
+/** The raw `technicalLens` value of a stored register JSON (verbatim), or undefined. */
+export function extractTechnicalLensRaw(storedJson: string | null | undefined): unknown {
+  if (!storedJson) return undefined;
+  try {
+    const raw = JSON.parse(storedJson) as { technicalLens?: unknown };
+    return raw && typeof raw === "object" ? raw.technicalLens : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function parseTechnicalLens(storedJson: string | null | undefined): TechnicalLens {
+  return normalizeTechnicalLens(extractTechnicalLensRaw(storedJson));
+}
+
+/**
+ * The ONLY way to produce the `capability_gap_json` text. Carries the stored
+ * `technicalLens` over verbatim (same idea as carryOverAttainability for rows), so
+ * an S3/S5/synergy/backfill rewrite of the rows cannot drop or forge it.
+ * Pass `lens` only from the technical-lens routes; every other writer omits it.
+ */
+export function serializeGapRegister(
+  rows: readonly unknown[],
+  updatedAt: string,
+  storedJson: string | null | undefined,
+  lens?: TechnicalLens,
+): string {
+  const carried = lens ?? extractTechnicalLensRaw(storedJson);
+  const out: Record<string, unknown> = { rows, updatedAt };
+  if (carried !== undefined) out.technicalLens = carried;
+  return JSON.stringify(out);
+}
+
+// ── Summary view model ────────────────────────────────────────────────────
+
+export interface LensItemView {
+  key: TechItemKey | "T6";
+  label: string;
+  status: LensStatus;
+  /** T1 is derived from the ADR-0168 rows; T6 has no input in this release. */
+  derived: boolean;
+  /** Human-confirmed judgement present (T1: all rows confirmed). */
+  judged: boolean;
+  note: string;
+}
+
+export interface TechnicalLensSummary {
+  status: LensStatus;
+  total: number;
+  judged: number;
+  cautionCount: number;
+  worstItem: string | null;
+  items: LensItemView[];
+  /** Brown Field S9 mismatch count (verification result `different`). */
+  mismatchCount: number;
+}
+
+/** T1 from the S3 register rows: 충족 if all rows are human-confirmed and none low; 주의 if any low; else 미판정. */
+export function deriveT1(rows: CapabilityGapRow[]): { status: LensStatus; judged: boolean; note: string } {
+  if (rows.length === 0) return { status: "undetermined", judged: false, note: "S3 필요 역량 레지스터가 비어 있습니다." };
+  const low = rows.filter((r) => r.attainability?.grade === "low").length;
+  if (low > 0) return { status: "caution", judged: rows.every((r) => !!r.attainability?.confirmedAt), note: `달성 가능성 '낮음' ${low}건` };
+  const confirmed = rows.filter((r) => r.attainability?.grade && r.attainability.confirmedAt).length;
+  if (confirmed === rows.length) return { status: "met", judged: true, note: `${rows.length}건 모두 사람이 확정` };
+  return { status: "undetermined", judged: false, note: `사람이 확정한 판정 ${confirmed}/${rows.length}건` };
+}
+
+function storedStatus(it: TechnicalLensItem | undefined): { status: LensStatus; judged: boolean } {
+  // Only a human-confirmed status counts as a judgement.
+  if (!it || !it.status || !it.confirmedAt) return { status: "undetermined", judged: false };
+  return { status: it.status, judged: true };
+}
+
+export function summarizeTechnicalLens(
+  rows: CapabilityGapRow[],
+  lens: TechnicalLens | null | undefined,
+  opts: { subject?: string; brownfield?: boolean } = {},
+): TechnicalLensSummary {
+  const subject = lens?.subjects[opts.subject ?? PROJECT_SUBJECT];
+  const t1 = deriveT1(rows);
+  const items: LensItemView[] = [
+    { key: "T1", label: TECH_ITEM_LABELS.T1, status: t1.status, derived: true, judged: t1.judged, note: t1.note },
+  ];
+  for (const k of ["T2", "T3", "T4", "T5"] as const) {
+    const s = storedStatus(subject?.items[k]);
+    items.push({ key: k, label: TECH_ITEM_LABELS[k], status: s.status, derived: false, judged: s.judged, note: s.judged ? "" : "다음 릴리스에서 입력 기능이 열립니다." });
+  }
+  items.push({
+    key: "T6",
+    label: opts.brownfield ? TECH_ITEM_LABEL_T6_BROWNFIELD : TECH_ITEM_LABELS.T6,
+    status: "undetermined",
+    derived: true,
+    judged: false,
+    note: "다음 릴리스에서 입력 기능이 열립니다.",
+  });
+  const judged = items.filter((i) => i.judged).length;
+  const cautions = items.filter((i) => i.status === "caution");
+  const status: LensStatus = items.some((i) => !i.judged) ? "undetermined" : cautions.length > 0 ? "caution" : "met";
+  let mismatchCount = 0;
+  for (const v of Object.values(subject?.verification ?? {})) if (v?.result === "different") mismatchCount += 1;
+  return { status, total: items.length, judged, cautionCount: cautions.length, worstItem: cautions[0]?.label ?? null, items, mismatchCount };
+}

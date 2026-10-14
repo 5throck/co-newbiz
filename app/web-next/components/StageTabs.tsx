@@ -10,6 +10,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import {
+  activeSubtabIndex,
   activeTabIndex,
   groupForSegment,
   groupForTrack,
@@ -21,6 +22,8 @@ import {
 import { StageRail } from "./StageFrame.tsx";
 import { PrimarySlot } from "./ui.tsx";
 import { api } from "../lib/api.ts";
+import { S8LensStrip } from "./stages/S8LensStrip.tsx";
+import { S8PartHeader } from "./stages/S8PartHeader.tsx";
 
 // Track per project, cached for the session: only S8 needs it (greenfield hides the target tab).
 const trackCache = new Map<string, string | null>();
@@ -94,6 +97,8 @@ function StageTabsInner({ projectId }: { projectId: string }) {
   if (!group || seg === null) return null;
   const activeIdx = activeTabIndex(group, seg, tabParam);
   const primaryCount = group.tabs.length;
+  const subIdx = activeSubtabIndex(group, seg, tabParam);
+  const subtabs = group.subtabs ?? [];
   const moreActive = activeIdx >= primaryCount;
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
@@ -181,6 +186,26 @@ function StageTabsInner({ projectId }: { projectId: string }) {
     {/* The screen's Primary Action (design §5) sits at the top right, beside the stage tabs. */}
     <PrimarySlot />
     </div>
+    {subIdx >= 0 && (
+      <nav aria-label="재무적 타당성 하위 화면" className="stage-tabs-wrap">
+        <div className="stage-tabs-list" role="tablist" aria-label="재무적 타당성 · 하위 탭">
+          {subtabs.map((t, i) => (
+            <Link
+              key={`${t.seg}|${t.query ?? ""}`}
+              href={tabHref(projectId, t)}
+              role="tab"
+              aria-selected={i === subIdx}
+              aria-current={i === subIdx ? "page" : undefined}
+              className={`stage-tab${i === subIdx ? " stage-tab-active" : ""}`}
+            >
+              {t.label}
+            </Link>
+          ))}
+        </div>
+      </nav>
+    )}
+    {group.stage === "S8" && <S8LensStrip projectId={projectId} />}
+    {group.stage === "S8" && (seg === "/wacc" || seg === "/financial-analysis") && <S8PartHeader part="financial" />}
     {sourceOppId && (
       <p className="mb-2 text-[length:var(--fs-caption)]">
         <Link href={`/deals/${encodeURIComponent(sourceOppId)}/s4`} className="text-[color:var(--accent)] font-bold">원본 기회 보기</Link>

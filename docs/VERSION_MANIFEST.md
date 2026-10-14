@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-14T01:18:00.827Z
+**Generated**: 2026-10-14T01:22:29.309Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -198,7 +198,7 @@
 | audit-variant.ts | 1.0.0 | scripts/co-newbiz/audit-variant.ts | N/A |
 | audit.ts | 2.53.0 | scripts/audit.ts | bun |
 | backfill-brownfield-financial-criteria.ts | 1.0.0 | scripts/co-newbiz/backfill-brownfield-financial-criteria.ts | N/A |
-| backfill-capability-gap.ts | 1.0.0 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
+| backfill-capability-gap.ts | 1.1.0 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
 | backfill-hyd-brk-report.ts | 1.1.0 | scripts/co-newbiz/backfill-hyd-brk-report.ts | N/A |
 | backup.ts | 1.0.1 | scripts/co-newbiz/backup.ts | N/A |
 | beta-series.ts | 1.2.0 | scripts/co-newbiz/beta-series.ts | N/A |

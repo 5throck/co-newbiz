@@ -6025,6 +6025,26 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
+  /api/projects/{id}/s8-lens-summary:
+    get:
+      operationId: getProjectS8LensSummary
+      summary: "S8 two-lens summary (ADR-0169): read-only decision support with 충족/주의/미판정 status for the 기술적 타당성 lens (six items T1..T6 per subject, T1 derived from the ADR-0168 attainability register; mismatchCount counts Brown Field S9 verification rows with result different) and the 재무적 타당성 lens (base IRR vs hurdle, missed goals, downside NPV p50), plus a goals count line and the strip view-model. Warning only: never a grade cap or a gate block. Financial lookups degrade to 미판정 on failure. Outsiders and admin get 404."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/projects/{id}/establishment-mode:
     get:
       operationId: getProjectEstablishmentMode

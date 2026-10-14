@@ -26,6 +26,9 @@ import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { StageTabs } from "../StageTabs.tsx";
 import { CapabilityAttainabilityPanel } from "./CapabilityAttainabilityPanel.tsx";
+import { S8LensStrip } from "./S8LensStrip.tsx";
+import { S8PartHeader } from "./S8PartHeader.tsx";
+import { TechnicalLensPanel } from "./TechnicalLensPanel.tsx";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { GateDecisionJump, GateDecisionPanel } from "../GateDecisionPanel.tsx";
@@ -41,7 +44,7 @@ import { RowMenu, useConfirm } from "../crud.tsx";
 import { canWriteProject, isReadOnlyAdmin } from "../../lib/project-write-access.ts";
 import { countLegacyUnassignedModels } from "../../lib/business-case-legacy.ts";
 import { GoalPromptDialog, GoalsBanner, GoalsPanel, type GoalsData } from "../business-case/GoalsPanel.tsx";
-import { GOALS_ACK_REQUIRED_CODE, goalsAckErrorText, goalsLoadErrorText, resolveS8Tab, shouldRedirectTargetsTab, type CaseAttainmentEntry } from "../../lib/business-goals-view.ts";
+import { GOALS_ACK_REQUIRED_CODE, goalsAckErrorText, goalsLoadErrorText, partOfS8Tab, primaryKeyOfS8Tab, resolveS8Tab, shouldRedirectTargetsTab, type CaseAttainmentEntry } from "../../lib/business-goals-view.ts";
 import { GoalAttainmentTable } from "../business-case/GoalAttainment.tsx";
 
 // S8 사업성 분석 — 이중 관점 밸류에이션 비교 (ADR-0117; approved mockup
@@ -545,31 +548,49 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           ?tab= entries. The embedded deal tab has no StageTabs row, so it keeps this TabNav. */}
       {!embedded && (
         <p className="sr-only" id="s8-analysis-tabs-note">
-          S8 분석 탭(사업 목표·시나리오 비교·대상 비교·선정·WACC·재무분석·더보기)은 위 단계 탭 행에서 선택합니다.
+          S8 분석 탭(사업 목표·기술적 타당성·재무적 타당성[시나리오 비교·WACC·재무분석]·대상 비교·선정·결정·더보기)은 위 단계 탭 행에서 선택합니다.
         </p>
       )}
       {embedded && (
+      <>
+      <S8LensStrip projectId={projectId} />
       <TabNav
         className="mb-3"
         label="S8 사업성 분석 화면"
-        active={tab}
-        onSelect={setTab}
+        active={primaryKeyOfS8Tab(tab) ?? tab}
+        onSelect={(k) => setTab(k === "financial" ? "scenarios" : k)}
         tabs={[
           { key: "goals", label: "사업 목표" }, // INTERIM-WORDING
-          { key: "scenarios", label: "시나리오 비교" },
+          { key: "technical", label: "기술적 타당성" }, // INTERIM-WORDING
+          { key: "financial", label: "재무적 타당성" }, // INTERIM-WORDING
           ...(targets.length > 0 ? [{ key: "targets", label: "대상 비교·선정" }] : []),
           { key: "overview", label: "설명·생성·권고" },
           { key: "params", label: "파라미터·스냅샷" },
           { key: "target-costing", label: "타겟코스팅" },
-          { key: "wacc", label: "WACC" },
-          { key: "financial-analysis", label: "재무분석" },
           { key: "decision", label: "결정" },
         ]}
       />
+      {partOfS8Tab(tab) === "financial" && (
+        <TabNav
+          className="mb-3"
+          label="재무적 타당성 하위 화면"
+          active={tab}
+          onSelect={setTab}
+          tabs={[
+            { key: "scenarios", label: "시나리오 비교" },
+            { key: "wacc", label: "WACC" },
+            { key: "financial-analysis", label: "재무분석" },
+          ]}
+        />
+      )}
+      </>
       )}
       <GoalsBanner data={goalsData} loadError={goalsLoadError} onOpenGoals={() => setTab("goals")} hideAction={tab === "goals"} />
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">{error}</p>}
 
+      {tab === "goals" && <S8PartHeader part="goals" />}
+      {tab === "technical" && <><S8PartHeader part="technical" /><TechnicalLensPanel projectId={projectId} /></>}
+      {(tab === "scenarios" || tab === "wacc" || tab === "financial-analysis") && <S8PartHeader part="financial" />}
       {tab === "goals" && <GoalsPanel projectId={projectId} data={goalsData} canAct={canAct} onChanged={onGoalsChanged} loadError={goalsLoadError} />}
       {tab === "params" && <ParamsPanel projectId={projectId} />}
       {tab === "target-costing" && <TargetCostingPanel projectId={projectId} />}
@@ -779,7 +800,6 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
       {tab === "overview" && (
       <>
-      <CapabilityAttainabilityPanel projectId={projectId} />
       {/* 두 관점의 의미 */}
       <section className="market-section sizing-step mb-3" aria-label="두 관점의 의미">
         <h3 className="sizing-step-title">두 관점의 의미</h3>
@@ -876,7 +896,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       )}
 
       {/* 시나리오별 이중 관점 비교 — brownfield는 유효 대상 필터의 케이스만 */}
-      {tab === "scenarios" && <CapabilityAttainabilityPanel projectId={projectId} compact onOpen={() => setTab("overview")} />}
+      {tab === "scenarios" && <CapabilityAttainabilityPanel projectId={projectId} compact onOpen={() => setTab("technical")} />}
       {tab === "scenarios" && (
       <>
       {targets.length > 1 && (

@@ -17,6 +17,7 @@ import {
   type CapabilityGapRow,
   type GapResolution,
 } from "./capability-gap.ts";
+import { serializeGapRegister } from "./technical-lens.ts";
 
 export const ATTAINABILITY_BANNER_TEXT =
   "필요 역량 달성 가능성이 확인되지 않은 항목이 있습니다 — 이 분석은 필요 역량을 확보할 수 있다는 전제를 둡니다.";
@@ -289,7 +290,8 @@ export function writeRegister(
   audit: { actor: string; action: string; target: string; at: string },
 ): void {
   db.transaction(() => {
-    db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [JSON.stringify({ rows, updatedAt: audit.at }), opportunityId]);
+    const storedJson = (db.query("SELECT capability_gap_json AS j FROM opportunity WHERE id = ?").get(opportunityId) as { j: string | null } | null)?.j ?? null;
+    db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [serializeGapRegister(rows, audit.at, storedJson), opportunityId]);
     appendAudit(db, { actor: audit.actor, action: audit.action, target: audit.target, now: audit.at });
   })();
 }

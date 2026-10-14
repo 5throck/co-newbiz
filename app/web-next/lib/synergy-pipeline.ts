@@ -12,6 +12,7 @@ import type { Database } from "bun:sqlite";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { completeOrFallback, isLlmConfigured } from "./llm.ts";
 import { parseGapRegister } from "./capability-gap.ts";
+import { serializeGapRegister } from "./technical-lens.ts";
 import { isWebResearchConfigured, researchSources, type WebSource } from "./web-research.ts";
 import { fetchFinancials, findCorpCode, isDartConfigured, type DartFinancials } from "./dart-client.ts";
 import { systemMessage, promptAgent, type PromptKey } from "./prompts.ts";
@@ -520,9 +521,8 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     // 시너지 영역에서 도출한 필요 역량 제안 병합 — 기존 행 보존, 중복 역량명
     // 제외, 미판정 행으로만 추가. 사람이 화면에서 확인·판정한다(경계 #2).
     if (oppRow && derivedGapRows.length > 0) {
-      const existing = parseGapRegister(
-        (db.query("SELECT capability_gap_json FROM opportunity WHERE id = ?").get(oppRow.id) as { capability_gap_json: string | null } | undefined)?.capability_gap_json,
-      );
+      const storedGapJson = (db.query("SELECT capability_gap_json FROM opportunity WHERE id = ?").get(oppRow.id) as { capability_gap_json: string | null } | undefined)?.capability_gap_json ?? null;
+      const existing = parseGapRegister(storedGapJson);
       const caps = new Set(existing.rows.map((r) => r.capability.toLowerCase()));
       const additions = derivedGapRows
         .filter((r) => !caps.has(r.capability.toLowerCase()))
@@ -537,7 +537,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
         }));
       if (additions.length > 0) {
         db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [
-          JSON.stringify({ rows: [...existing.rows, ...additions], updatedAt: now() }),
+          serializeGapRegister([...existing.rows, ...additions], now(), storedGapJson),
           oppRow.id,
         ]);
       }
