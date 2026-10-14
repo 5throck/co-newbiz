@@ -6,16 +6,16 @@ import { join } from "node:path";
 
 const read = (p: string) => readFileSync(join(import.meta.dirname, "../../app/web-next", p), "utf8");
 
-test("ClampedText clamps to 2 lines with an accessible toggle above 80 chars", () => {
+test("ClampedText clamps to 2 lines with title tooltip and focusable element, no toggle", () => {
   const s = read("components/stages/ClampedText.tsx");
-  expect(s).toContain("CLAMP_THRESHOLD = 80");
   expect(s).toContain("line-clamp-2");
-  expect(s).toContain("aria-expanded={open}");
-  expect(s).toContain("aria-controls");
-  expect(s).toContain("더보기");
-  expect(s).toContain("접기");
-  expect(s).toContain("text.length > CLAMP_THRESHOLD");
-  expect(s).toContain('type="button"');
+  expect(s).toContain("title={text}");
+  expect(s).toContain("tabIndex={0}");
+  expect(s).not.toContain("aria-hidden");
+  expect(s).not.toContain("CLAMP_THRESHOLD");
+  expect(s).not.toContain("aria-expanded");
+  expect(s).not.toContain("<button");
+  expect(s).not.toContain("useState");
 });
 
 test("S3, S5 and S8 required-note cells use ClampedText", () => {
