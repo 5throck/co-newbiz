@@ -171,6 +171,7 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
     setGapRows((prev) => [
       ...prev,
       { id: `gap-manual-${Date.now().toString(36)}`, capability, source: "manual", requiredNote: "",
+        necessity: "", necessityScopeNote: "",
         held: { status: "unevaluated", holders: [], evidence: "" }, resolution: null, note: "",
         requiredLevel: "", currentLevel: "" },
     ]);

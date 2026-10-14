@@ -218,7 +218,7 @@ None. All fields are JSON; existing narrative text is valid as is; held keys are
 
 ## 19. Open decisions (with recommendations)
 
-| ID | Question | Recommendation |
+| ID | Question | Resolution (ADR-0172 approval, 2026-10-14, as recommended) |
 |---|---|---|
 | OD-1 | Stored keys | `necessity`: `essential` / `partial_essential` / `optional`; held: `leading` / `average` / `partial` / `none` / `unevaluated` with `met`->`average` (`재판정 권장`), `unmet`->`none` |
 | OD-2 | `보유 수준` position | Right after `보유 판정` |

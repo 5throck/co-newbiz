@@ -58,29 +58,29 @@ export function EvalTab({ ctx, selected }: { ctx: RouteDecisionStageState; selec
                     <div className="flex flex-wrap items-center gap-2 mb-2">
                       <h4 className="text-[length:var(--fs-body)] m-0">필요 역량 수준</h4>
                       <span className="status-chip status-not-started">필요 역량 <strong className="ml-1">{advisory.capabilityGap.total}건</strong></span>
-                      <span className="status-chip status-green">충족 <strong className="ml-1">{advisory.capabilityGap.met}건</strong></span>
-                      <span className="status-chip status-amber">부분 충족 <strong className="ml-1">{advisory.capabilityGap.partial}건</strong></span>
-                      <span className="status-chip status-not-started">미충족 <strong className="ml-1">{advisory.capabilityGap.unmet}건</strong></span>
+                      <span className="status-chip status-green">업계 리딩·평균 <strong className="ml-1">{advisory.capabilityGap.met}건</strong></span>
+                      <span className="status-chip status-amber">부분 보유 <strong className="ml-1">{advisory.capabilityGap.partial}건</strong></span>
+                      <span className="status-chip status-not-started">미보유 <strong className="ml-1">{advisory.capabilityGap.unmet}건</strong></span>
                       {advisory.capabilityGap.coveragePct !== null && (
-                        <span className="status-chip status-not-started">충족률 <strong className="ml-1">{advisory.capabilityGap.coveragePct}%</strong></span>
+                        <span className="status-chip status-not-started">보유율 <strong className="ml-1">{advisory.capabilityGap.coveragePct}%</strong></span>
                       )}
                     </div>
                     {advisory.capabilityGap.unmetRows.length > 0 && (
                       <p className="text-[length:var(--fs-caption)] mb-0">
-                        미충족: {advisory.capabilityGap.unmetRows.map((r) => r.capability).join(", ")}
+                        미보유: {advisory.capabilityGap.unmetRows.map((r) => r.capability).join(", ")}
                         <span className="text-[color:var(--muted-fg)]"> — 그룹/계열사 프로필 기준, 내부(자사 단독) 역량 평가는 추후 보강</span>
                       </p>
                     )}
                     {/* S3에서 확정한 필요 역량 수준 전체 행 — 역량 관련 5기준
                         (역량 결정성·통합 역량·역량확보 속도) 채점의 직접 근거
                         (2026-09-15 사용자 요구). 행이 많아 접힘 스캐폴드로 제공 —
-                        기본 닫힘, 요약(요약: 충족 X·부분 Y·미보유 Z·미판정 W)만
+                        기본 닫힘, 요약(요약: 리딩·평균 X·부분 Y·미보유 Z·미판정 W)만
                         표시하고 열면 전체 레지스터가 나온다. 읽기 전용. */}
                     {advisory.capabilityGap.rows && advisory.capabilityGap.rows.length > 0 && (
                       <details className="mt-2">
                         <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">
                           필요 역량 수준 상세 ({advisory.capabilityGap.rows.length}건
-                          {advisory.capabilityGap.coveragePct !== null ? ` · 충족률 ${advisory.capabilityGap.coveragePct}%` : ""}) 보기
+                          {advisory.capabilityGap.coveragePct !== null ? ` · 보유율 ${advisory.capabilityGap.coveragePct}%` : ""}) 보기
                         </summary>
                         <div className="table-scroll mt-2">
                           <table className="data-table mb-0 table-fixed-pct tmin-56" aria-label="필요 역량 수준 레지스터 (S3 연계)">
@@ -102,8 +102,8 @@ export function EvalTab({ ctx, selected }: { ctx: RouteDecisionStageState; selec
                                     </span>
                                   </td>
                                   <td>
-                                    <span className={`status-chip ${r.held.status === "met" ? "status-green" : r.held.status === "partial" ? "status-amber" : r.held.status === "unmet" ? "status-red" : "status-not-started"}`}>
-                                      {r.held.status === "met" ? "충족" : r.held.status === "partial" ? "부분 충족" : r.held.status === "unmet" ? "미보유" : "미판정"}
+                                    <span className={`status-chip ${r.held.status === "leading" || r.held.status === "average" ? "status-green" : r.held.status === "partial" ? "status-amber" : r.held.status === "none" ? "status-red" : "status-not-started"}`}>
+                                      {r.held.status === "leading" ? "업계 리딩" : r.held.status === "average" ? "업계 평균" : r.held.status === "partial" ? "부분 보유" : r.held.status === "none" ? "미보유" : "미판정"}
                                     </span>
                                   </td>
                                   <td className="text-[length:var(--fs-caption)]">
@@ -170,8 +170,8 @@ export function EvalTab({ ctx, selected }: { ctx: RouteDecisionStageState; selec
                         직접 인용한다(2026-09-15 사용자 요구). */}
                     {["capability_criticality", "integration_capacity", "speed_to_capability"].includes(c.key) && advisory?.capabilityGap && (
                       <span className="block text-[length:var(--fs-caption)] mt-0.5" style={{ color: "var(--accent)" }}>
-                        역량 참고: {advisory.capabilityGap.total}건 중 충족 {advisory.capabilityGap.met}·부분 {advisory.capabilityGap.partial}·미보유 {advisory.capabilityGap.unmet}
-                        {advisory.capabilityGap.coveragePct !== null ? ` (충족률 ${advisory.capabilityGap.coveragePct}%)` : ""}
+                        역량 참고: {advisory.capabilityGap.total}건 중 리딩·평균 {advisory.capabilityGap.met}·부분 {advisory.capabilityGap.partial}·미보유 {advisory.capabilityGap.unmet}
+                        {advisory.capabilityGap.coveragePct !== null ? ` (보유율 ${advisory.capabilityGap.coveragePct}%)` : ""}
                         {advisory.capabilityGap.unmetRows.length > 0 ? ` · 미보유: ${advisory.capabilityGap.unmetRows.slice(0, 2).map((r) => r.capability).join(", ")}${advisory.capabilityGap.unmetRows.length > 2 ? " 외" : ""}` : ""}
                       </span>
                     )}
@@ -244,9 +244,9 @@ export function EvalTab({ ctx, selected }: { ctx: RouteDecisionStageState; selec
                   <tr><td className="cell-primary">시너지 확정 (S3)</td><td>사람이 확정한 점수 60 이상</td><td>Brownfield</td><td>2</td></tr>
                   <tr><td className="cell-primary">시너지 확정 (S3)</td><td>사람이 확정한 점수 60 미만</td><td>중립</td><td>2</td></tr>
                   <tr><td className="cell-primary">시너지 권고 (S3)</td><td>사람 확정 전 권고값</td><td>중립</td><td>1</td></tr>
-                  <tr><td className="cell-primary">역량 충족률 (S3 필요 역량 수준)</td><td>보유 역량 70% 이상</td><td>Greenfield</td><td>2</td></tr>
-                  <tr><td className="cell-primary">역량 충족률 (S3 필요 역량 수준)</td><td>보유 역량 40% 이하</td><td>Brownfield</td><td>2</td></tr>
-                  <tr><td className="cell-primary">역량 충족률 (S3 필요 역량 수준)</td><td>40~70% (중간)</td><td>중립</td><td>1</td></tr>
+                  <tr><td className="cell-primary">역량 보유율 (S3 필요 역량 수준)</td><td>보유 역량 70% 이상</td><td>Greenfield</td><td>2</td></tr>
+                  <tr><td className="cell-primary">역량 보유율 (S3 필요 역량 수준)</td><td>보유 역량 40% 이하</td><td>Brownfield</td><td>2</td></tr>
+                  <tr><td className="cell-primary">역량 보유율 (S3 필요 역량 수준)</td><td>40~70% (중간)</td><td>중립</td><td>1</td></tr>
                 </tbody>
               </table>
               <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-3 mb-1">

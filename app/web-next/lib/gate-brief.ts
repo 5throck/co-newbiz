@@ -87,9 +87,9 @@ function s3GapSummary(db: Database, oppId: string): string {
   const reg = parseGapRegister(row?.capability_gap_json ?? null);
   if (reg.rows.length === 0) return "S3 필요 역량 수준: 미작성 (S3 시너지 화면 연계 시너지 탭에서 필요 역량과 보유 판정을 기록하세요)";
   const s = summarizeGap(reg.rows);
-  const unmet = reg.rows.filter((r) => r.held.status === "unmet").map((r) => r.capability).slice(0, 5);
+  const unmet = reg.rows.filter((r) => r.held.status === "none").map((r) => r.capability).slice(0, 5);
   return [
-    `필요 역량 ${s.total}건 — 충족 ${s.met}·부분 ${s.partial}·미보유 ${s.unmet}·미판정 ${s.unevaluated}${s.coveragePct !== null ? ` (충족률 ${s.coveragePct}%)` : ""}`,
+    `필요 역량 ${s.total}건 — 업계 리딩 ${s.leading}·업계 평균 ${s.average}·부분 보유 ${s.partial}·미보유 ${s.none}·미판정 ${s.unevaluated}${s.coveragePct !== null ? ` (보유율 ${s.coveragePct}%)` : ""}`,
     unmet.length > 0 ? `미보유: ${unmet.join(" / ")}` : "",
     "근거: 그룹/계열사 프로필 기준 — 내부(자사 단독) 역량 평가는 후속 보강",
   ].filter(Boolean).join("\n");

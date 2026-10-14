@@ -197,7 +197,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   // S3 필요 역량(capability_gap_json) — 미보유/부분 충족 역량을 우선 반영해
   // "결정된 기회가 실제로 필요로 하는 역량"을 갖춘 후보를 찾도록 한다.
   const requiredCapabilities = parseGapRegister(opp.capability_gap_json).rows
-    .filter((r) => r.held.status !== "met")
+    .filter((r) => r.held.status !== "leading" && r.held.status !== "average")
     .map((r) => r.capability);
   const existingNames = (
     db.query("SELECT company_name FROM brownfield_target WHERE opportunity_id = ?").all(oppId) as Array<{ company_name: string }>

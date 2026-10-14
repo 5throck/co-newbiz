@@ -86,9 +86,10 @@ function SummaryStrip({ s }: { s: AttainabilitySummary }) {
   return (
     <>
       <div className="flex flex-wrap gap-2 mb-2" aria-label="필요 역량 요약">
-        <span className="status-chip status-green">{HELD_STATUS_LABEL.met} {s.held.met}</span>
-        <span className="status-chip status-amber">부분 {s.held.partial}</span>
-        <span className="status-chip status-red">{HELD_STATUS_LABEL.unmet} {s.held.unmet}</span>
+        <span className="status-chip status-green">{HELD_STATUS_LABEL.leading} {s.held.leading}</span>
+        <span className="status-chip status-green">{HELD_STATUS_LABEL.average} {s.held.average}</span>
+        <span className="status-chip status-amber">{HELD_STATUS_LABEL.partial} {s.held.partial}</span>
+        <span className="status-chip status-red">{HELD_STATUS_LABEL.none} {s.held.none}</span>
         <span className="status-chip status-not-started">{HELD_STATUS_LABEL.unevaluated} {s.held.unevaluated}</span>
         <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
           달성 가능성 — 높음 {s.grades.high} · 중간 {s.grades.medium} · 낮음 {s.grades.low} · 미판정 {s.grades.unjudged} (사람 확정 {s.confirmed}건)
@@ -209,7 +210,7 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
                     <td className="text-[length:var(--fs-caption)]">
                       <span className="font-semibold">{r.capability}</span>
                       {(r.required_level.trim() !== "" || r.current_level.trim() !== "") && (
-                        <span className="block text-[color:var(--muted-fg)]">S5 수준: 필요 {levelText(r.required_level)} / 보유 {levelText(r.current_level)}</span>
+                        <div className="text-[color:var(--muted-fg)]">필요 수준: <ClampedText text={levelText(r.required_level)} />보유 수준: <ClampedText text={levelText(r.current_level)} /></div>
                       )}
                       {r.stale && (
                         <div className="mt-1" role="status">

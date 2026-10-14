@@ -45,6 +45,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       capability: c,
       source: "s2_sketch" as const,
       requiredNote: "S2 비즈니스 모델 스케치 requiredCapabilities에서 도출",
+      necessity: "" as const,
+      necessityScopeNote: "",
       held: { status: "unevaluated" as const, holders: [], evidence: "" },
       resolution: null,
       note: "",

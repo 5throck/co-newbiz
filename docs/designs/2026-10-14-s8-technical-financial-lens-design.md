@@ -268,7 +268,7 @@ The total is about 10 working days. Slices 1-3 already give the decider the two-
 - **Opportunity-scoped storage for project data**: S8 is project-carried (ADR-0095), but the register lives on the source opportunity. This is the same choice as ADR-0168. Projects without `source_opportunity_id` return 409 `no_source_opportunity` (BF already requires it, `process-flow.ts:435-439`).
 - **S8 vs S9 TRL basis confusion** (core technology vs production process). Mitigation: the `basis` field is mandatory and shown next to S9 values.
 
-## 13. Open decisions (recommended answers)
+## 13. Open decisions (resolved as recommended, ADR-0169 accepted 2026-10-14)
 
 1. Primary tabs: lens tabs plus `대상 비교·선정` (BF) plus `결정`, with the current five tabs as financial sub-tabs? **Yes.**
 2. Storage: `technicalLens` key in the S3 register JSON (no migration) or a new column? **JSON key, no migration.** The column is the fallback.
@@ -391,7 +391,7 @@ Green Field has no target. The S9 technical DD covers the new site or plant (fea
 
 - **ADR.** Fold the pairing into ADR-0169 if it is still unwritten. Otherwise write ADR-0170. Triggers: the dd completion criterion change, the JSON contract, and MCP scope.
 - **New slice 6b, S9 pairing** (after the lens slices 1-5, before slice 6): verification JSON, the S9 section, two-way chips, mismatch warnings in the strip, table, and gate brief, the S9 predicate blocker, and tests. **About 3 days.** Wiki 42/53 is added to slice 7 (+0.5 d). The new total is about 13.5 days.
-- **Open decisions (recommended answers):**
+- **Open decisions (resolved as recommended, ADR-0169 accepted 2026-10-14):**
   1. Storage as a JSON sibling key, not checklist rows? **Yes.**
   2. Make T2 and T5 mandatory before dd completion for the selected target only? **Yes.** Everything else warns.
   3. Does `unverifiable` on a mandatory item require a waiver? **Yes, using the existing waiver flow.**

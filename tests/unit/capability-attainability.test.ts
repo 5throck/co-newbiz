@@ -108,13 +108,13 @@ describe("normalizeGapRows round-trips attainability", () => {
 });
 
 describe("summary view model", () => {
-  const mk = (grade: any, status: any = "met") => ({ id: ulid(), capability: "c", source: "manual", requiredNote: "", held: { status, holders: [], evidence: "" }, resolution: null, note: "", requiredLevel: "", currentLevel: "", ...(grade ? { attainability: { closingCostKrwM: null, monthsToAttain: null, grade, rationale: "r", evidence: [], draftedBy: "human", confirmedBy: null, confirmedAt: null } } : {}) }) as any;
+  const mk = (grade: any, status: any = "average") => ({ id: ulid(), capability: "c", source: "manual", requiredNote: "", held: { status, holders: [], evidence: "" }, resolution: null, note: "", requiredLevel: "", currentLevel: "", ...(grade ? { attainability: { closingCostKrwM: null, monthsToAttain: null, grade, rationale: "r", evidence: [], draftedBy: "human", confirmedBy: null, confirmedAt: null } } : {}) }) as any;
   test("empty register and unjudged rows warn; all judged medium/high does not", () => {
     expect(att.attainabilitySummary([]).banner).toBe(true);
     expect(att.attainabilitySummary([]).bannerText).toBe(att.ATTAINABILITY_EMPTY_BANNER_TEXT);
-    const s = att.attainabilitySummary([mk("high"), mk(null, "unmet"), mk("low", "partial")]);
+    const s = att.attainabilitySummary([mk("high"), mk(null, "none"), mk("low", "partial")]);
     expect(s.grades).toEqual({ high: 1, medium: 0, low: 1, unjudged: 1 });
-    expect(s.held).toEqual({ met: 1, partial: 1, unmet: 1, unevaluated: 0 });
+    expect(s.held).toEqual({ leading: 0, average: 1, partial: 1, none: 1, unevaluated: 0 });
     expect(s.bannerReasons).toEqual(["unjudged", "low"]);
     expect(s.bannerText).toBe(att.ATTAINABILITY_BANNER_TEXT);
     expect(att.attainabilitySummary([mk("high"), mk("medium")]).banner).toBe(false);
@@ -131,8 +131,9 @@ describe("routes", () => {
     expect(v.summary.banner).toBe(true);
     expect(v.rows[0].grade_label).toBe("미판정");
     expect(v.rows[0].current_level).toBe("자체 경험 약간"); // legacy text kept
-    expect(v.rows[0].required_step).toBe(4);
-    expect(v.rows[0].current_step).toBeNull();
+    expect(v.rows[0].required_level).toBe("숙련"); // narrative text, no scale logic
+    expect(v.rows[0]).not.toHaveProperty("required_step");
+    expect(v.rows[0].necessity).toBe("");
   });
 
   test("validation: rationale required for 높음/낮음, scale values, cost >= 0, unknown row", async () => {

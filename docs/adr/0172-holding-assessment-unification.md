@@ -5,12 +5,12 @@ lang_reason: proper-noun
 
 # ADR-0172 - Holding assessment unification (`보유 판정` category, narrative levels, `필요도`)
 
-- Status: Proposed
+- Status: Accepted (2026-10-14)
 - Date: 2026-10-14
-- Decider: Human decider (chat 2026-10-14 decisions; formal acceptance pending). Drafted by platform-lead.
+- Decider: Human decider (chat approval 2026-10-14, "ADR-0171 / 0172 승인"). Drafted by platform-lead.
 - Design-of-record: [docs/designs/2026-10-14-holding-assessment-unification-design.md](../designs/2026-10-14-holding-assessment-unification-design.md)
 - Related: ADR-0136 (S5-fills-levels superseded), ADR-0168 (5-step scale superseded), ADR-0170 (row hash v2; correction on level ownership reversed), ADR-0171 (S5/S7 judgement fields)
-- Slices: 3 (1 S3 model and UI + hash v2, 2 S5/S7 read-only + `기대 수준` + consumers + 5-step retirement, 3 AI drafts + wiki/glossary). None implemented by this ADR.
+- Slices: 3 (1 S3 model and UI + hash v2, 2 S5/S7 read-only + `기대 수준` + consumers + 5-step retirement, 3 AI drafts + wiki/glossary). None implemented by this ADR; implementation begins after acceptance (slice 1 starts now).
 
 ## Context
 
@@ -35,4 +35,11 @@ Required-capability rows carry `held.status` (`충족` / `부분 충족` / `미�
 
 ## Honest limits
 
-Proposed, not accepted. Open decisions OD-1..OD-11 are in the design. MCP tool handlers and live data distribution were not inspected. Outputs are decision support, not investment advice.
+Accepted by chat; open decisions OD-1..OD-11 are resolved as recommended in the design. MCP tool handlers and live data distribution were not inspected. Outputs are decision support, not investment advice.
+
+## Acceptance record
+
+- Approver: the human decider (user, account techcross), chat 2026-10-14: "ADR-0171 / 0172 승인". Recorded in DEC-20261014-09.
+- Basis: chat approval of the ADR as written, including the design's recommended resolutions of OD-1..OD-11. Acceptance is by chat instruction; the decider did not review a per-item checklist, and this record does not claim the approver read specific items.
+- Scope: acceptance covers the decision. Nothing of slices 1-3 is implemented yet; implementation begins after acceptance, with slice 1 starting now.
+- Known limitations (owner: platform-lead): MCP tool handlers and live data distribution were not inspected.
