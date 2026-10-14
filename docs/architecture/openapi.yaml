@@ -3178,6 +3178,29 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/opportunities/{id}/capability-attainability/ai-draft:
+    post:
+      operationId: draftCapabilityJudgement
+      summary: "S5 judgement proposal (ADR-0171 amendment 2026-10-15). Proposes, per required-capability row, the resolution (build|partner|hire|invest), the expected level (max 400), cost (KRW million), months to attain, attainability grade (high|medium|low) and a rationale (max 600), each with a basis; cost and months are ESTIMATES only when defensible (basis.estimate states the assumption), otherwise null. Body {rowIds?: string[] (default rows that are stale, unjudged or lack a resolution or expected level; at most 12 rows per call), includeEvidence?: boolean (default true; false skips company profile and disclosure lines)}. Response {drafts: {rowId: {resolution, expectedLevel, costKrwM, monthsToAttain, grade, rationale, basis, confidence?}}, source: llm|synthesis, note, counts {rows, proposed, fieldsFilled, fieldsUnfilled, kept, failedRows}, unfilled: {rowId: reason}}. Fills EMPTY fields only (stored non-empty values are never proposed again; stale rows keep their prior values and get proposals for empty fields); high or low grade without a rationale is downgraded to unjudged with a reason; values without a basis are dropped. Batches of 4 rows per LLM call with one stricter retry, per-item validation and an overall deadline; the note reports partial success and failure categories. Offline: stored S3 definition, opportunity context, S5 entry strategy text and company profile/disclosure data plus the LLM; no web search. Nothing is written to the database and nothing is confirmed; a person edits and saves (PUT) and confirms (human-only POST confirm). Permission: analyst+ (same as PUT); not human-only because it only proposes. Without a configured LLM: 200 synthesis with an empty drafts map. 400 no_rows | unknown_row | invalid_request, 404."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/opportunities/{id}/capability-attainability/confirm:
     post:
       operationId: postOpportunityCapabilityAttainabilityConfirm

@@ -38,6 +38,10 @@ The attainability judgement for required capabilities is edited on S8 (ADR-0168)
 
 Accepted by chat; open decisions OD-1..OD-6 are resolved as recommended in the design. The S5 completeness and S7 readiness code paths were not traced in detail. Judgements remain decision support, not investment advice.
 
+## Amendment 2026-10-15: AI judgement proposal at S5
+
+Decider request (chat 2026-10-15): the S5 judgement UI gets an AI proposal for the judgement inputs. New proposal-only route `POST /api/opportunities/{id}/capability-attainability/ai-draft` proposes 해소 방식, 기대 수준 (<=400), cost (KRW million), months, attainability grade and a rationale (<=600) with a basis per field, from stored data only (S3 definition, opportunity context, S5 entry strategy text, company profile and disclosure lines with verification labels) plus the LLM; no web search. It writes nothing to the database and confirms nothing: drafts land in the page state, the person edits and saves, and confirmation stays the human-only route (boundary #1/#2; agents inherit the caller's permission, analyst+ as for PUT). Numbers are estimates only when defensible and carry the assumption (`basis.estimate`); otherwise null with a reason. A `high`/`low` grade needs a rationale. Fill-empty-only on the server and again in the page merge. MCP gets the draft-only tool `draft_capability_judgement`; there is still no confirm tool. No schema change, so no new ADR trigger; S8 stays read-only.
+
 ## Acceptance record
 
 - Approver: the human decider (user, account techcross), chat 2026-10-14: "ADR-0171 / 0172 승인". Recorded in DEC-20261014-08.

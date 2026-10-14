@@ -14,6 +14,7 @@ import {
   type RemovedCapability,
 } from "../../lib/capability-gap.ts";
 import type { AttainabilityRowView, AttainabilitySummary } from "../../lib/capability-attainability.ts";
+import { JUDGEMENT_FIELD_LABEL, type AiMarks, type JudgementField, type JudgementProposal } from "../../lib/capability-judgement-ai-merge.ts";
 import { buildJudgementDetail, buildJudgementSummary, defaultFilter, filterCounts, filterRows, neighborId, type JudgementFilter } from "../../lib/capability-judgement-view.ts";
 
 export interface AttainabilityViewData {
@@ -25,6 +26,25 @@ export interface AttainabilityViewData {
   /** Stage that owns the edit surface (read-only summary route). */
   edit_at?: "S5" | "S7";
   track?: string | null;
+}
+
+/** Response of POST .../capability-attainability/ai-draft (proposal only; nothing is stored). */
+export interface AiDraftResponse {
+  drafts: Record<string, JudgementProposal>;
+  unfilled: Record<string, string>;
+  source: "llm" | "synthesis";
+  note: string;
+  counts: { rows: number; proposed: number; fieldsFilled: number; fieldsUnfilled: number; kept: number; failedRows: number };
+}
+
+/** AI proposal wiring from the S5 editor (absent on S8 / viewers: no AI button anywhere). */
+export interface AiWiring {
+  marks: AiMarks;
+  basis: Record<string, JudgementProposal["basis"]>;
+  busy: boolean;
+  fetchProposals: (rowIds: string[]) => Promise<AiDraftResponse>;
+  /** Record which fields of a row came from the AI (and their basis) after the dialog applied them. */
+  markFields: (rowId: string, fields: JudgementField[], basis?: JudgementProposal["basis"]) => void;
 }
 
 /** Judgement-owned fields only; S3 values are never part of a draft. */
@@ -90,7 +110,7 @@ const COL_PCT = [34, 9, 10, 24, 12, 11] as const;
 const FILTER_LABEL: Record<JudgementFilter, string> = { todo: "처리할 것", confirmed: "확정", all: "전체" };
 const EMPTY_DIRTY: ReadonlySet<string> = new Set();
 
-export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href, note, dirty = EMPTY_DIRTY, judgeHref }: {
+export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href, note, dirty = EMPTY_DIRTY, judgeHref, ai }: {
   rows: AttainabilityRowView[];
   drafts: Record<string, JudgementDraft>;
   /** True only on the S5 edit surface; S8 and viewers get no inputs and no dialog. */
@@ -103,6 +123,8 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
   dirty?: ReadonlySet<string>;
   /** S8: where the judgement is made (S5); renders the per-row "S5에서 판정" link. */
   judgeHref?: string | null;
+  /** S5 only: AI judgement proposals (drafts in page state; a person edits, saves and confirms). */
+  ai?: AiWiring;
 }) {
   const canEdit = editable && !!onSet;
   const counts = filterCounts(rows, dirty);
@@ -172,7 +194,11 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
                     </td>
                     <td className="text-[length:var(--fs-caption)]" data-testid="judgement-summary">
                       {sentence ? <ClampedText text={sentence} title={buildJudgementDetail(draftOf(r))} lines={1} /> : <span className="text-[color:var(--muted-fg)]">미판정</span>}
-                      {dirty.has(r.id) && <span className="block text-[color:var(--muted-fg)]">저장 전</span>}
+                      {dirty.has(r.id) && (
+                        <span className="block text-[color:var(--muted-fg)]">
+                          저장 전{ai?.marks[r.id]?.length ? <> · <span className="status-chip status-not-started" data-testid="ai-draft-chip" title={`AI 초안(저장 전): ${ai.marks[r.id].map((f) => JUDGEMENT_FIELD_LABEL[f]).join(", ")} — 사람이 검토·수정한 뒤 저장하세요.`}><span aria-hidden="true">✦</span> AI 초안</span></> : null}
+                        </span>
+                      )}
                     </td>
                     <td className="text-[length:var(--fs-caption)]">
                       {r.confirmed_at ? <>확정<span className="block text-[color:var(--muted-fg)]">{r.confirmed_by} · {r.confirmed_at.slice(0, 10)}</span></>
@@ -193,7 +219,7 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
       {editing && (
         <CapabilityJudgementDialog key={editing.id} row={editing} draft={draftOf(editing)} note={note ? note.value(editing.id) : undefined} s3Href={s3Href}
           hasPrev={neighborId(shownIds, editing.id, -1) !== null} hasNext={neighborId(shownIds, editing.id, 1) !== null}
-          onApply={(d, n, nav) => apply(editing, d, n, nav)} onRejudge={() => onSet?.(editing.id, {})} onClose={() => setEditingId(null)} />
+          ai={ai} aiFields={ai?.marks[editing.id] ?? []} onAiFields={(f, b) => ai?.markFields(editing.id, f, b)} onApply={(d, n, nav) => apply(editing, d, n, nav)} onRejudge={() => onSet?.(editing.id, {})} onClose={() => setEditingId(null)} />
       )}
     </>
   );
