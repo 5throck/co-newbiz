@@ -120,11 +120,70 @@ describe("AI held-draft normalizer", () => {
     expect(cg.normalizeHeldDraft({ status: "great" })).toBeNull();
     expect(cg.normalizeHeldDraft({ status: "none", currentLevel: "x".repeat(900) })?.currentLevel).toHaveLength(400);
   });
-  test("the draft route never writes necessity or requiredLevel", () => {
+  test("the requirement draft route drafts necessity/requiredLevel only through the fill-empty-only helpers, never holding fields, never the DB", () => {
     const src = readFileSync(join(PROJECT_ROOT, "app/web-next/app/api/opportunities/[id]/capability-gap/llm-draft/route.ts"), "utf8");
-    expect(src).toContain("normalizeHeldDraft");
+    expect(src).not.toContain("normalizeHeldDraft");
+    expect(src).not.toContain("loadLatestProfile");
+    expect(src).toContain("normalizeNecessityDraft");
+    expect(src).toContain("applyNecessityDraft");
     expect(src).not.toMatch(/necessity:\s*d\./);
     expect(src).not.toMatch(/requiredLevel:\s*d\./);
+    expect(src).not.toMatch(/\b(INSERT|UPDATE|DELETE)\b\s/);
+  });
+});
+
+describe("necessity / required-level draft (amendment 2026-10-14)", () => {
+  const nd = () => import("../../app/web-next/lib/capability-gap-necessity-draft.ts");
+  test("normalizer: valid keys, basis required, scope only with partial_essential, caps", async () => {
+    const { normalizeNecessityDraft: n } = await nd();
+    const ok = n({ necessity: "essential", requiredLevel: "가".repeat(900), basis: { necessity: "영역 A", requiredLevel: "프로필" } });
+    expect(ok?.necessity).toBe("essential");
+    expect(ok?.requiredLevel).toHaveLength(400);
+    expect(ok?.necessityScopeNote).toBe("");
+    expect(n({ necessity: "essential", necessityScopeNote: "범위", basis: { necessity: "x" } })?.necessityScopeNote).toBe("");
+    expect(n({ necessity: "partial_essential", necessityScopeNote: "동남아 한정", basis: { necessity: "x" } })).toMatchObject({ necessity: "partial_essential", necessityScopeNote: "동남아 한정" });
+    expect(n({ necessity: "partial_essential", basis: { necessity: "x" } })).toBeNull();
+    expect(n({ necessity: "must", basis: { necessity: "x" } })).toBeNull();
+    expect(n({ necessity: "optional" })).toBeNull();
+    expect(n({ necessity: "optional", requiredLevel: "수준", basis: { necessity: "b" } })).toMatchObject({ necessity: "optional", requiredLevel: "" });
+    expect(n("x")).toBeNull();
+  });
+  test("apply: fills empty fields only and never overwrites human values", async () => {
+    const { normalizeNecessityDraft: n, applyNecessityDraft: a } = await nd();
+    const d = n({ necessity: "essential", requiredLevel: "초안 수준", basis: { necessity: "b1", requiredLevel: "b2" } });
+    const empty = a(row(), d);
+    expect(empty.row).toMatchObject({ necessity: "essential", requiredLevel: "초안 수준" });
+    expect(empty.mark?.fields).toEqual(["necessity", "requiredLevel"]);
+    const human = a(row({ necessity: "optional", requiredLevel: "사람 입력" }), d);
+    expect(human.row).toMatchObject({ necessity: "optional", requiredLevel: "사람 입력" });
+    expect(human.mark).toBeNull();
+    const half = a(row({ requiredLevel: "사람 입력" }), d);
+    expect(half.row).toMatchObject({ necessity: "essential", requiredLevel: "사람 입력" });
+    expect(half.mark?.fields).toEqual(["necessity"]);
+  });
+  test("client merge: local edits win, empty cells filled, new rows appended", async () => {
+    const { mergeDraftResponse: m } = await nd();
+    const local = [row({ id: "a", necessity: "optional" }), row({ id: "b" })];
+    const resp = [row({ id: "a", necessity: "essential", requiredLevel: "R" }), row({ id: "b", necessity: "essential", requiredLevel: "R2" }), row({ id: "c", capability: "신규" })];
+    const out = m(local, resp);
+    expect(out.map((r: any) => r.id)).toEqual(["a", "b", "c"]);
+    expect(out[0]).toMatchObject({ necessity: "optional", requiredLevel: "R" });
+    expect(out[1]).toMatchObject({ necessity: "essential", requiredLevel: "R2" });
+  });
+  test("S3 UI: single primary action, draft chip, canonical order kept, ColGroup", () => {
+    const src = readFileSync(join(PROJECT_ROOT, "app/web-next/components/stages/synergy/SynergyLinkageTab.tsx"), "utf8");
+    expect(src).toContain("AI 초안");
+    expect(src).toContain("저장 전 변경");
+    expect(src).toContain("<ColGroup widths={GAP_COL_PCT}");
+    expect(src).toContain("proposePrimary");
+    expect(src).toContain("gapDirty ? \"btn-primary btn-sm\"");
+    expect(src).toContain("proposePrimary ? \"btn-primary btn-sm\"");
+  });
+  test("route/MCP/OpenAPI text no longer says necessity is never drafted", () => {
+    const oa = readFileSync(join(PROJECT_ROOT, "docs/architecture/openapi.yaml"), "utf8");
+    expect(oa).not.toContain("never necessity or required level");
+    const mcp = readFileSync(join(PROJECT_ROOT, "mcp/co-newbiz/tools/stage-tools.ts"), "utf8");
+    expect(mcp).toContain("fills EMPTY necessity");
   });
 });
 
@@ -199,10 +258,31 @@ describe("S3 table and modals (source structure)", () => {
     const { narrativeButtonLabel } = await import("../../app/web-next/components/stages/CapabilityNarrativeDialog.tsx");
     expect([narrativeButtonLabel("", false), narrativeButtonLabel("x", false), narrativeButtonLabel("x", true), narrativeButtonLabel("", true)]).toEqual(["입력", "수정", "보기", "보기"]);
   });
-  test("S5 shows the S3 narrative read-only (no LevelSelect import)", () => {
-    const src = read("components/stages/GreenfieldStage.tsx");
-    expect(src).not.toContain("LevelSelect");
-    expect(src).toContain("필요 수준 (S3)");
+  test("S5 hosts the judgement editor; S3 columns are read-only, canonical order, no 5-step select", () => {
+    const stage = read("components/stages/GreenfieldStage.tsx");
+    expect(stage).not.toContain("LevelSelect");
+    expect(stage).toContain("CapabilityJudgementEditor");
+    expect(stage).toContain("/capability-attainability`");
+    const tbl = read("components/stages/CapabilityJudgementTable.tsx");
+    const heads = ["필요 역량", "필요도", "필요 수준", "보유 판정", "보유 수준", "보유 주체·근거", "해소 방식", "기대 수준", "비용(백만원)", "기간(개월)", "달성 가능성", "근거·증빙", "확정"].map((h) => tbl.indexOf(`<th scope="col">${h}</th>`));
+    expect(heads.every((i) => i >= 0)).toBe(true);
+    expect([...heads].sort((a, b) => a - b)).toEqual(heads);
+    // S3 narrative columns are read-only (보기), the 기대 수준 cell is editable only when `canEdit`
+    expect(tbl).toContain('field="필요 수준" value={r.required_level} readOnly');
+    expect(tbl).toContain('field="보유 수준" value={r.current_level} readOnly');
+    expect(tbl).toContain('field="기대 수준" value={d.expectedLevel} readOnly={!canEdit}');
+    // judgement inputs: 해소 방식 select, cost, months, grade select; hint text only (OD-10)
+    for (const k of ["${r.capability} 해소 방식", "${r.capability} 해소 비용(백만원)", "${r.capability} 달성 기간(개월)", "${r.capability} 달성 가능성", "RESOLUTION_EXPECTED_LEVEL_HINT", "근거·증빙 ${canEdit"]) expect(tbl).toContain(k);
+    // no S3-owned value is ever part of the draft that is sent
+    const ed = read("components/stages/CapabilityJudgementEditor.tsx");
+    expect(ed).toContain("judgementPatch(");
+    const patchSrc = tbl.slice(tbl.indexOf("export const judgementPatch"), tbl.indexOf("const RESOLUTIONS"));
+    for (const f of ["requiredLevel", "currentLevel", "necessity", "capability", "held"]) expect(patchSrc).not.toContain(`${f}:`);
+    expect(patchSrc).toContain("expectedLevel: d.expectedLevel");
+  });
+  test("hint text per 해소 방식 covers every route and expected-level cap is 400", () => {
+    expect(Object.keys(cg.RESOLUTION_EXPECTED_LEVEL_HINT).sort()).toEqual(["build", "hire", "invest", "partner"]);
+    expect(cg.NARRATIVE_CAP).toBe(400);
   });
 });
 

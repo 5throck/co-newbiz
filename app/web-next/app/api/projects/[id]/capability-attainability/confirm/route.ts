@@ -1,5 +1,6 @@
 // POST /api/projects/[id]/capability-attainability/confirm — HUMAN-ONLY (ADR-0168,
-// boundary #2). A person confirms the attainability judgements they (or an agent
+// boundary #2). Green Field: 410 moved (editAt S5, ADR-0171; use the opportunity confirm route);
+// Brown Field keeps this legacy path until the S7 per-target surface ships (slice 2b). A person confirms the attainability judgements they (or an agent
 // draft) recorded: sets confirmedBy/confirmedAt on judged rows. Cookie session of
 // a non-agent account only; bearer / OAuth-delegated MCP / agent callers get 403
 // human_only (also in HUMAN_ONLY_ROUTES). Body: { row_ids?: string[] } (default:
@@ -7,9 +8,9 @@
 // capability_attainability.confirm, target "<projectId>#capability@<via>".
 import { getDb } from "../../../../../../../../db/client.ts";
 import { authenticate, callPathOf, humanOnlyDenied, requireBusinessActor } from "../../../../../../lib/auth.ts";
-import { badRequest, fail, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { badRequest, fail, moved, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
-import { buildAttainabilityView, confirmAndWrite, readRegister, sourceOpportunityOf } from "../../../../../../lib/capability-attainability.ts";
+import { buildAttainabilityView, confirmAndWrite, editStageOf, readRegister, sourceOpportunityOf } from "../../../../../../lib/capability-attainability.ts";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
@@ -20,6 +21,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   { const d = requireBusinessActor(ctx, "write", { viewerMessage: "달성 가능성 확정은 analyst 역할 이상이어야 합니다." }); if (d) return d; }
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
+  if (editStageOf(getDb(), id).editAt === "S5") return moved("필요 역량 달성 가능성의 확정은 S5로 옮겨졌습니다 — S5에서 확정하세요 (POST /api/opportunities/{id}/capability-attainability/confirm).", "S5");
   const body = (await request.json().catch(() => ({}))) as { row_ids?: unknown } | null;
   if (body?.row_ids != null && (!Array.isArray(body.row_ids) || body.row_ids.some((x) => typeof x !== "string"))) return badRequest("invalid_request", "row_ids는 문자열 배열입니다.");
   const db = getDb();

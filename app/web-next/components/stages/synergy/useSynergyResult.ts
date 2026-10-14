@@ -8,6 +8,7 @@ import { canWriteBusiness } from "../../../lib/project-write-access.ts";
 import { useState, useCallback, useEffect } from "react";
 import { api } from "../../../lib/api.ts";
 import { type CapabilityGapRow } from "../../../lib/capability-gap.ts";
+import { mergeDraftResponse, type CitedHeld, type DraftMark } from "../../../lib/capability-gap-necessity-draft.ts";
 import type { GapGetResponse, SynergyAnalysis } from "./types.ts";
 import type { TabKey } from "./synergyFormat.ts";
 
@@ -108,19 +109,38 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
   const [gapNote, setGapNote] = useState<string | null>(null);
   const [gapError, setGapError] = useState<string | null>(null);
   const [newGapCap, setNewGapCap] = useState("");
+  // AI 초안 표식 — 행 id별로 아직 사람이 손대지 않은 초안 필드와 그 근거. 편집·저장 시 해당 필드부터 해제된다.
+  const [gapDrafts, setGapDrafts] = useState<Record<string, DraftMark>>({});
+  // 보유 판정 확인(AI) — 일괄은 holdBusy, "다시 확인"은 한 행씩(recheck). 제안은 사람이 "적용"해야 반영된다.
+  const [holdBusy, setHoldBusy] = useState(false);
+  const [recheck, setRecheck] = useState<{ id: string; busy: boolean; proposal: (CitedHeld & { reason?: string }) | { status: "unevaluated"; reason: string } | null; note: string } | null>(null);
 
   const loadGap = useCallback(() => {
     if (!opportunityId) return;
     api.get<GapGetResponse>(`/api/opportunities/${encodeURIComponent(opportunityId)}/capability-gap`)
-      .then((r) => { setGap(r.data); setGapRows(r.data.rows); })
+      .then((r) => { setGap(r.data); setGapRows(r.data.rows); setGapDrafts({}); })
       .catch(() => setGap(null));
   }, [opportunityId]);
   useEffect(() => { loadGap(); setGapError(null); setGapNote(null); }, [loadGap]);
 
+  const gapDirty = gapRows.length > 0 && (!gap?.stored || JSON.stringify(gapRows) !== JSON.stringify(gap.rows));
+
   function updateGapRow(idx: number, patch: Partial<CapabilityGapRow>) {
     setGapRows((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+    clearDraftMarks(gapRows[idx]?.id, Object.keys(patch));
+  }
+  function clearDraftMarks(id: string | undefined, keys: string[]) {
+    if (!id) return;
+    setGapDrafts((prev) => {
+      const m = prev[id];
+      if (!m) return prev;
+      const fields = m.fields.filter((f) => !keys.includes(f) && !(f === "necessityScopeNote" && keys.includes("necessity")));
+      const { [id]: _drop, ...rest } = prev;
+      return fields.length > 0 ? { ...rest, [id]: { ...m, fields } } : rest;
+    });
   }
   function updateGapHeld(idx: number, patch: Partial<CapabilityGapRow["held"]>) {
+    clearDraftMarks(gapRows[idx]?.id, ["heldStatus"]);
     setGapRows((prev) => prev.map((r, i) => (i === idx ? { ...r, held: { ...r.held, ...patch } } : r)));
   }
   async function persistGap(): Promise<boolean> {
@@ -136,6 +156,7 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
         internalAssessmentNote: res.data.internalAssessmentNote,
       }));
       setGapRows(res.data.rows);
+      setGapDrafts({});
       return true;
     } catch (err) {
       setGapError(err instanceof Error ? err.message : "필요 역량 수준 저장 실패");
@@ -149,18 +170,71 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
     if (okSaved) setGapNote("필요 역량 수준 레지스터를 저장했습니다 — S4 화면·게이트 브리프에 반영됩니다.");
     setGapBusy(false);
   }
+  // 표식은 실제로 빈 칸이 채워진 필드에만 단다(사람 값이 있던 칸은 제외).
+  function addDraftMarks(drafts: Record<string, DraftMark> | undefined, before: Map<string, CapabilityGapRow>) {
+    const marks: Record<string, DraftMark> = {};
+    for (const [id, m] of Object.entries(drafts ?? {})) {
+      const b = before.get(id);
+      const fields = m.fields.filter((f) => {
+        if (!b) return true;
+        if (f === "requiredLevel") return !b.requiredLevel.trim();
+        if (f === "currentLevel") return !b.currentLevel.trim();
+        if (f === "heldStatus") return b.held.status === "unevaluated" && b.held.holders.length === 0 && !b.held.evidence.trim();
+        return !b.necessity;
+      });
+      if (fields.length > 0) marks[id] = { ...m, fields };
+    }
+    setGapDrafts((prev) => {
+      const next = { ...prev };
+      for (const [id, m] of Object.entries(marks)) {
+        const old = next[id];
+        next[id] = old ? { fields: [...new Set([...old.fields, ...m.fields])], basis: { ...old.basis, ...m.basis }, sources: m.sources ?? old.sources } : m;
+      }
+      return next;
+    });
+  }
+  async function checkHolding() {
+    if (!opportunityId || holdBusy || gapBusy || gapRows.length === 0) return;
+    setHoldBusy(true); setGapError(null); setGapNote(null);
+    try {
+      const res = await api.post<{ rows: CapabilityGapRow[]; note: string; drafts?: Record<string, DraftMark> }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/capability-gap/holding-check`, { rows: gapRows });
+      const before = new Map(gapRows.map((r) => [r.id, r]));
+      setGapRows((prev) => mergeDraftResponse(prev, res.data.rows));
+      addDraftMarks(res.data.drafts, before);
+      setGapNote(res.data.note);
+    } catch (err) { setGapError(err instanceof Error ? err.message : "보유 판정 확인 실패"); }
+    finally { setHoldBusy(false); }
+  }
+  async function recheckRow(id: string) {
+    if (!opportunityId || recheck?.busy) return;
+    setRecheck({ id, busy: true, proposal: null, note: "" }); setGapError(null);
+    try {
+      const res = await api.post<{ proposals: Record<string, NonNullable<NonNullable<typeof recheck>["proposal"]>>; note: string }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/capability-gap/holding-check`, { rows: gapRows, rowId: id });
+      setRecheck({ id, busy: false, proposal: res.data.proposals[id] ?? null, note: res.data.note });
+    } catch (err) {
+      setRecheck(null);
+      setGapError(err instanceof Error ? err.message : "다시 확인 실패");
+    }
+  }
+  /** 사람이 "적용"을 눌렀을 때만 반영한다 — 이 경로만 기존 값을 바꿀 수 있다. */
+  function applyRecheck() {
+    if (!recheck || recheck.busy || !recheck.proposal || recheck.proposal.status === "unevaluated" || !("evidence" in recheck.proposal)) { setRecheck(null); return; }
+    const p = recheck.proposal;
+    setGapRows((prev) => prev.map((r) => (r.id === recheck.id ? { ...r, held: { status: p.status, holders: p.holders, evidence: p.evidence }, currentLevel: p.currentLevel || r.currentLevel } : r)));
+    setGapDrafts((prev) => ({ ...prev, [recheck.id]: { fields: ["heldStatus", ...(p.currentLevel ? ["currentLevel" as const] : [])], basis: { held: p.basis.held, currentLevel: p.basis.currentLevel }, sources: p.web } }));
+    setRecheck(null);
+  }
+
   async function draftGap() {
     if (!opportunityId || gapBusy) return;
-    if (gapRows.length === 0) { setGapError("먼저 필요 역량 행을 추가하세요."); return; }
     setGapBusy(true); setGapError(null);
     try {
-      // 초안 엔드포인트는 저장된 레지스터를 읽는다 — 화면에만 있는 행(미저장
-      // 시드·수동 추가)으로 누르면 "행이 없다"는 400이 나므로, 미저장 상태면
-      // 먼저 현재 행을 저장한 뒤 초안을 요청한다(행 추가 자체는 사람의 입력이며
-      // 보유 판정 기록과는 무게가 다르다).
-      if (!gap?.stored) await persistGap();
-      const res = await api.post<{ rows: CapabilityGapRow[]; source: string; note: string }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/capability-gap/llm-draft`, {});
-      setGapRows(res.data.rows);
+      // 화면의 현재 행(저장 전 편집 포함)을 그대로 보낸다 — 서버는 DB에 쓰지 않고 초안만
+      // 돌려주며, 응답은 빈 칸에만 병합한다(사람이 입력한 값은 덮어쓰지 않음).
+      const res = await api.post<{ rows: CapabilityGapRow[]; source: string; note: string; drafts?: Record<string, DraftMark> }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/capability-gap/llm-draft`, { rows: gapRows });
+      const before = new Map(gapRows.map((r) => [r.id, r]));
+      setGapRows((prev) => mergeDraftResponse(prev, res.data.rows));
+      addDraftMarks(res.data.drafts, before);
       setGapNote(res.data.note);
     } catch (err) { setGapError(err instanceof Error ? err.message : "LLM 초안 생성 실패"); }
     finally { setGapBusy(false); }
@@ -240,7 +314,7 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
       setAdvancing(false);
     }
   }, [opportunityId, advancing, p?.synergyRationale, router]);
-  return { analysis, analysisDate, latest, synState, onBack, canCurate, inProgress, onRerun, p, tab, onTab, opportunityId, advanceToRouteDecision, advanceError, confirmError, currentScore, currentRationale, confirmForm, setConfirmForm, confirmSaving, confirmSynergyScore, retractSynergyScore, showLinkageForm, setShowLinkageForm, linkageForm, setLinkageForm, linkageError, setLinkageError, linkageSaving, addLinkageItem, gapRows, gapBusy, draftGap, saveGap, gap, gapNote, gapError, updateGapHeld, updateGapRow, setGapRows, newGapCap, setNewGapCap, addGapRow, editingArea, editForm, setEditForm, editSaving, setEditingArea, saveShortlistItem, editError, showShortlistForm, setShowShortlistForm, shortlistForm, setShortlistForm };
+  return { analysis, analysisDate, latest, synState, onBack, canCurate, inProgress, onRerun, p, tab, onTab, opportunityId, advanceToRouteDecision, advanceError, confirmError, currentScore, currentRationale, confirmForm, setConfirmForm, confirmSaving, confirmSynergyScore, retractSynergyScore, showLinkageForm, setShowLinkageForm, linkageForm, setLinkageForm, linkageError, setLinkageError, linkageSaving, addLinkageItem, gapRows, gapBusy, draftGap, saveGap, gap, gapNote, gapDrafts, gapDirty, holdBusy, checkHolding, recheck, setRecheck, recheckRow, applyRecheck, gapError, updateGapHeld, updateGapRow, setGapRows, newGapCap, setNewGapCap, addGapRow, editingArea, editForm, setEditForm, editSaving, setEditingArea, saveShortlistItem, editError, showShortlistForm, setShowShortlistForm, shortlistForm, setShortlistForm };
 }
 
 export type SynergyResultState = ReturnType<typeof useSynergyResult>;

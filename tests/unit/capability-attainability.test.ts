@@ -1,9 +1,10 @@
 // @version 1.0.0
 /**
- * S8 required-capability attainability (ADR-0168, slices 1-2): the 5-step level
- * scale and legacy text, the shared row parser round-trip (attainability must
- * survive S3 save, S5 save and re-read), the summary/banner view model, and the
- * GET/PUT/confirm route contract (validation, human-only confirm, audit).
+ * Required-capability attainability (ADR-0168; edit surface moved to S5 by ADR-0171 and the
+ * 5-step scale retired by ADR-0172): narrative levels, the shared row parser round-trip
+ * (attainability and 기대 수준 must survive S3 save, S5 save and re-read), the summary/banner view
+ * model, the S5 opportunity PUT/confirm contract (validation, expected_level_required, human-only
+ * confirm, audit with surface), and the S8 project routes (GET read-only summary, writes 410 moved).
  */
 import { test, expect, beforeAll, describe } from "bun:test";
 import { existsSync, rmSync } from "node:fs";
@@ -42,10 +43,11 @@ let viewerCookie = "";
 let projectId = "";
 let oppId = "";
 const json = JSON.stringify;
-const url = () => `/api/projects/${projectId}/capability-attainability`;
+const url = () => `/api/projects/${projectId}/capability-attainability`; // S8 read-only summary
+const oppUrl = () => `/api/opportunities/${oppId}/capability-attainability`; // S5 edit surface
 const get = async () => ((await (await req(url(), { headers: { cookie: leadCookie } })).json()) as { data: any }).data;
-const put = (rows: unknown[], cookie = leadCookie) => req(url(), { method: "PUT", headers: { cookie }, body: json({ rows }) });
-const post = (body: unknown, cookie = leadCookie) => req(`${url()}/confirm`, { method: "POST", headers: { cookie }, body: json(body) });
+const put = (rows: unknown[], cookie = leadCookie) => req(oppUrl(), { method: "PUT", headers: { cookie }, body: json({ rows }) });
+const post = (body: unknown, cookie = leadCookie) => req(`${oppUrl()}/confirm`, { method: "POST", headers: { cookie }, body: json(body) });
 const storedRows = () => cg.parseGapRegister((db.query("SELECT capability_gap_json j FROM opportunity WHERE id = ?").get(oppId) as { j: string }).j).rows;
 
 beforeAll(async () => {
@@ -76,20 +78,22 @@ beforeAll(async () => {
   projectId = promoteOpportunity(oppId, { promotedBy: LEAD, needToKnowBasis: "att test" }).project.id;
 });
 
-describe("5-step level scale", () => {
-  test("labels, order, parse; legacy text maps to null without being deleted", () => {
-    expect(cg.LEVEL_LABELS).toEqual(["없음", "기초", "실무", "숙련", "선도"]);
-    expect(cg.levelStep("숙련")).toBe(4);
-    expect(cg.levelStep(" 실무 ")).toBe(3);
-    expect(cg.levelStep("약간 있음")).toBeNull();
-    expect(cg.isLegacyLevelText("약간 있음")).toBe(true);
-    expect(cg.isLegacyLevelText("")).toBe(false);
-    expect(cg.isLegacyLevelText("선도")).toBe(false);
-    expect(cg.levelGap("숙련", "기초")).toBe(2);
-    expect(cg.levelGap("기초", "숙련")).toBe(0);
-    expect(cg.levelGap("숙련", "약간")).toBeNull();
-    // the parser keeps legacy text verbatim
+describe("narrative levels (5-step scale retired)", () => {
+  test("the scale helpers are gone; level text is kept verbatim up to the narrative cap", () => {
+    for (const k of ["LEVEL_SCALE", "LEVEL_LABELS", "levelStep", "isLegacyLevelText", "levelGap"]) expect(k in cg).toBe(false);
     expect(cg.normalizeGapRows([{ capability: "x", requiredLevel: "높은 수준", currentLevel: "" }])[0].requiredLevel).toBe("높은 수준");
+    expect(cg.normalizeGapRows([{ capability: "x", requiredLevel: "가".repeat(450) }])[0].requiredLevel).toHaveLength(cg.NARRATIVE_CAP);
+  });
+});
+
+describe("expectedLevel (기대 수준) storage", () => {
+  test("normalize keeps it, caps at 400, omits it when empty, round-trips through history", () => {
+    const [r] = cg.normalizeGapRows([{ capability: "c", attainability: { grade: "high", rationale: "r", expectedLevel: `  ${"나".repeat(450)} ` } }]);
+    expect(r.attainability?.expectedLevel).toHaveLength(400);
+    const [e] = cg.normalizeGapRows([{ capability: "c", attainability: { grade: "high", rationale: "r", expectedLevel: "   " } }]);
+    expect(e.attainability).not.toHaveProperty("expectedLevel");
+    const hist = cg.normalizeAttainability({ history: [{ invalidatedAt: NOW, expectedLevel: "이전 기대 수준", reason: "s3_changed" }] });
+    expect(hist?.history?.[0].expectedLevel).toBe("이전 기대 수준");
   });
 });
 
@@ -162,7 +166,7 @@ describe("routes", () => {
     expect(saved.rows.find((x: any) => x.id === "r1")).toMatchObject({ grade: "low", closing_cost_krw_m: 800, months_to_attain: 12, drafted_by: "human", confirmed_at: null, resolution: "hire" });
     const audit = db.query("SELECT action, actor_user_id a, target FROM audit_log WHERE action = 'capability_attainability.save' ORDER BY created_at DESC LIMIT 1").get() as any;
     expect(audit.a).toBe(LEAD);
-    expect(audit.target).toBe(`${projectId}#capability@ui`);
+    expect(audit.target).toBe(`${oppId}#capability@ui:surface=S5`);
 
     // S3 / S5 share this save path: the client echoes the GET rows (with attainability) back
     const s3 = await req(`/api/opportunities/${oppId}/capability-gap`, { headers: { cookie: leadCookie } });
@@ -184,18 +188,29 @@ describe("routes", () => {
     expect(storedRows().find((x) => x.id === "r1")!.attainability?.confirmedBy).toBeNull();
   });
 
-  test("confirm: human-only (port refuses), viewer 403, sets confirmedBy/At, edit clears it, nothing_to_confirm 409", async () => {
-    expect(isHumanOnly("POST", `${url()}/confirm`, {})).toBe(true);
+  test("confirm: human-only (port refuses), viewer 403, expected_level_required, sets confirmedBy/At, edit clears it, nothing_to_confirm 409", async () => {
+    expect(isHumanOnly("POST", `${oppUrl()}/confirm`, {})).toBe(true);
+    expect(isHumanOnly("POST", `${url()}/confirm`, {})).toBe(true); // legacy project route stays refused too
     const port = new InProcessRestPort({ userId: LEAD, role: "analyst", scopes: ["read", "write", "propose"], mustChangePassword: false, tokenId: "t", clientId: "c" });
+    expect((await port.post(`${oppUrl()}/confirm`, {})).error?.code).toBe("human_only");
     expect((await port.post(`${url()}/confirm`, {})).error?.code).toBe("human_only");
     expect((await post({}, viewerCookie)).status).toBe(403);
+    // r1 has a resolution (hire) but no 기대 수준 yet: OD-7 blocks the confirm with a 400 (not a gate block)
+    const blocked = await post({});
+    expect(blocked.status).toBe(400);
+    const err = ((await blocked.json()) as any).error;
+    expect(err.code).toBe("expected_level_required");
+    expect(err.message).toContain("정밀 가공");
+    expect(storedRows().find((x) => x.id === "r1")!.attainability?.confirmedAt).toBeNull();
+    // the same save also proves a 기대 수준 draft can be saved without a gate
+    expect((await put([{ id: "r1", expectedLevel: "영입한 인력이 자체 수행 가능한 수준" }])).status).toBe(200);
     const ok = await post({});
     expect(ok.status).toBe(200);
     const data = ((await ok.json()) as any).data;
     expect(data.confirmed).toBe(2); // r1 (low) and r2 (medium) were judged
-    expect(data.rows.find((x: any) => x.id === "r1")).toMatchObject({ confirmed_by: LEAD });
+    expect(data.rows.find((x: any) => x.id === "r1")).toMatchObject({ confirmed_by: LEAD, expected_level: "영입한 인력이 자체 수행 가능한 수준" });
     const audit = db.query("SELECT target FROM audit_log WHERE action = 'capability_attainability.confirm'").get() as any;
-    expect(audit.target).toBe(`${projectId}#capability@ui`);
+    expect(audit.target).toBe(`${oppId}#capability@ui:surface=S5`);
     expect((await post({})).status).toBe(409);
     // editing a judged row clears its confirmation
     await put([{ id: "r1", rationale: "수정된 근거" }]);
@@ -203,5 +218,100 @@ describe("routes", () => {
     expect(v.rows.find((x: any) => x.id === "r1").confirmed_at).toBeNull();
     expect(v.rows.find((x: any) => x.id === "r2").confirmed_at).not.toBeNull();
     expect(v.summary.confirmed).toBe(1);
+  });
+
+  test("expectedLevel: round trip, 400 cap rejected, clearing removes it, not part of the S3 hash", async () => {
+    const lk = await import("../../app/web-next/lib/capability-linkage.ts");
+    const before = lk.capabilityRowHash(storedRows().find((x) => x.id === "r2")!);
+    let r = await put([{ id: "r2", expectedLevel: "가".repeat(401) }]);
+    expect(r.status).toBe(400);
+    expect(((await r.json()) as any).error.code).toBe("text_too_long");
+    r = await put([{ id: "r2", expectedLevel: 5 }]);
+    expect(((await r.json()) as any).error.code).toBe("invalid_request");
+    r = await put([{ id: "r2", expectedLevel: "  ".concat("나".repeat(400)) }]);
+    expect(r.status).toBe(200);
+    expect(storedRows().find((x) => x.id === "r2")!.attainability?.expectedLevel).toHaveLength(400);
+    expect(lk.capabilityRowHash(storedRows().find((x) => x.id === "r2")!)).toBe(before); // judgement-owned, not hashed
+    expect(lk.isStale(storedRows().find((x) => x.id === "r2")!)).toBe(false);
+    expect((await get()).rows.find((x: any) => x.id === "r2").expected_level).toHaveLength(400);
+    r = await put([{ id: "r2", expectedLevel: "" }]);
+    expect(storedRows().find((x) => x.id === "r2")!.attainability).not.toHaveProperty("expectedLevel");
+  });
+
+  test("S5 never writes S3-owned fields: every one is rejected and the stored S3 values are untouched", async () => {
+    const before = JSON.stringify(storedRows().map((x) => ({ capability: x.capability, requiredNote: x.requiredNote, necessity: x.necessity, requiredLevel: x.requiredLevel, held: x.held, currentLevel: x.currentLevel, note: x.note })));
+    for (const patch of [{ capability: "x" }, { requiredNote: "x" }, { necessity: "essential" }, { necessityScopeNote: "x" }, { held: { status: "leading" } }, { requiredLevel: "x" }, { currentLevel: "x" }, { source: "manual" }, { note: "x" }]) {
+      const r = await put([{ id: "r2", grade: "medium", ...patch }]);
+      expect(r.status).toBe(400);
+      expect(((await r.json()) as any).error.code).toBe("s3_owned_field");
+    }
+    expect(JSON.stringify(storedRows().map((x) => ({ capability: x.capability, requiredNote: x.requiredNote, necessity: x.necessity, requiredLevel: x.requiredLevel, held: x.held, currentLevel: x.currentLevel, note: x.note })))).toBe(before);
+  });
+});
+
+describe("S8 project routes after the move (ADR-0171)", () => {
+  test("GET stays: read-only summary with expected_level and edit_at S5", async () => {
+    const v = await get();
+    expect(v.edit_at).toBe("S5");
+    expect(v.track).toBe("greenfield");
+    expect(v.rows[0]).toHaveProperty("expected_level");
+    expect(v.rows[0]).toHaveProperty("note");
+    expect(v.opportunity_id).toBe(oppId);
+  });
+
+  test("Green Field PUT and confirm return 410 moved with editAt S5 and write nothing", async () => {
+    const snapshot = (db.query("SELECT capability_gap_json j FROM opportunity WHERE id = ?").get(oppId) as { j: string }).j;
+    const res = await req(url(), { method: "PUT", headers: { cookie: leadCookie }, body: json({ rows: [{ id: "r2", grade: "high", rationale: "x" }] }) });
+    expect(res.status).toBe(410);
+    const body = (await res.json()) as any;
+    expect(body.error).toMatchObject({ code: "moved", editAt: "S5" });
+    const c = await req(`${url()}/confirm`, { method: "POST", headers: { cookie: leadCookie }, body: json({}) });
+    expect(c.status).toBe(410);
+    expect(((await c.json()) as any).error).toMatchObject({ code: "moved", editAt: "S5" });
+    expect((db.query("SELECT capability_gap_json j FROM opportunity WHERE id = ?").get(oppId) as { j: string }).j).toBe(snapshot);
+    // the human-only guard still comes first for non-human callers
+    const port = new InProcessRestPort({ userId: LEAD, role: "analyst", scopes: ["read", "write", "propose"], mustChangePassword: false, tokenId: "t", clientId: "c" });
+    expect((await port.post(`${url()}/confirm`, {})).error?.code).toBe("human_only");
+  });
+
+  test("a Brown Field project keeps the legacy write path until the S7 surface ships (slice 2b)", async () => {
+    db.run("UPDATE md_project SET track = 'brownfield' WHERE id = ?", [projectId]);
+    try {
+      expect((await get()).edit_at).toBe("S7");
+      const res = await req(url(), { method: "PUT", headers: { cookie: leadCookie }, body: json({ rows: [{ id: "r2", grade: "medium" }] }) });
+      expect(res.status).toBe(200);
+    } finally {
+      db.run("UPDATE md_project SET track = 'greenfield' WHERE id = ?", [projectId]);
+    }
+  });
+});
+
+describe("consumers read the ADR-0172 order", () => {
+  test("pre_fs gate brief carries the capability line: 필요도, 보유 판정; 해소 방식, 기대 수준, 개월, 달성 가능성 + the S5 check counts", async () => {
+    const { buildGateContext, capabilityBriefLine } = await import("../../app/web-next/lib/gate-brief.ts");
+    const [row] = cg.normalizeGapRows([{ id: "z", capability: "정밀 가공", necessity: "essential", held: { status: "none" }, resolution: "hire", attainability: { grade: "low", rationale: "r", monthsToAttain: 12, expectedLevel: "영입 인력이 자체 수행", confirmedBy: LEAD, confirmedAt: NOW } }]);
+    const line = capabilityBriefLine(row);
+    expect(line).toBe("정밀 가공(필요도 필수, 보유 판정 미보유; 영입, 기대 수준 영입 인력이 자체 수행, 12개월, 달성 가능성 낮음(확정))");
+    expect(line.indexOf("필요도")).toBeLessThan(line.indexOf("보유 판정"));
+    expect(line.indexOf("보유 판정")).toBeLessThan(line.indexOf("달성 가능성"));
+    expect(line).not.toContain("S5 수준");
+    const ctx = buildGateContext(db, "opportunity", oppId, "pre_fs");
+    expect(ctx).toContain("필요 역량 점검(S5):");
+    expect(ctx).toContain("참고 정보이며 승인 조건이 아닙니다");
+    expect(ctx).not.toContain("S5 수준");
+  });
+
+  test("route advisory exposes largeGapRows for 필수 rows that are 부분 보유/미보유 and keeps the deprecated aliases", async () => {
+    db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [
+      json({ rows: storedRows().map((x) => (x.id === "r1" ? { ...x, necessity: "essential" } : x)), updatedAt: NOW }), oppId,
+    ]);
+    const res = await req(`/api/opportunities/${oppId}/route-advisory`, { headers: { cookie: leadCookie } });
+    expect(res.status).toBe(200);
+    const g = ((await res.json()) as any).data.capabilityGap;
+    expect(g.largeGapRows.map((r: any) => r.capability)).toEqual(["정밀 가공"]);
+    expect(g.rows[0]).toMatchObject({ capability: "정밀 가공", necessity: "essential" });
+    expect(g.rows[0].cautions.map((c: any) => c.label)).toContain("큰 격차 주의");
+    expect(g.unmet).toBe(g.none);
+    expect(g.met).toBe(g.leading + g.average);
   });
 });

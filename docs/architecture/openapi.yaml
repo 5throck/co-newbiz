@@ -3134,6 +3134,76 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/opportunities/{id}/capability-attainability:
+    get:
+      operationId: getOpportunityCapabilityAttainability
+      summary: "S5 (Green Field) required-capability judgement view (ADR-0171 / ADR-0172): same row view as the project summary, keyed by the opportunity. Rows are in the canonical order capability, necessity, required_level, held_status, current_level, held_holders / held_evidence, then resolution, expected_level, closing_cost_krw_m, months_to_attain, grade, rationale, evidence, confirmation."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      operationId: putOpportunityCapabilityAttainability
+      summary: "Save S5 judgement drafts as a per-row patch. Body {rows: [{id, s3Hash?, resolution?, expectedLevel?, closingCostKrwM?, monthsToAttain?, grade?, rationale?, evidence?}]} (judgement-owned fields only, merged onto the live register in one transaction; expectedLevel is a narrative of at most 400 characters and is not part of the S3 row hash). analyst+; any caller may draft, none may confirm. 400 invalid_request | unknown_row | s3_owned_field (capability, requiredNote, necessity, necessityScopeNote, held, requiredLevel, currentLevel, source, note belong to S3 / the register route) | invalid_cost | text_too_long (expectedLevel > 400) | rationale_required (high/low need a rationale). A changed row (or any save of a stale row) loses its confirmation and is stamped with the S3 basis hash (ADR-0170). Audit capability_attainability.save, target <opportunityId>#capability@<via>:surface=S5."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/opportunities/{id}/capability-attainability/confirm:
+    post:
+      operationId: postOpportunityCapabilityAttainabilityConfirm
+      summary: "Confirm judged S5 attainability rows (ADR-0168 D1, ADR-0171). Human-only (403 human_only for bearer / MCP / agent callers), analyst+. Body {row_ids?} (default all judged, unconfirmed rows). 409 nothing_to_confirm; 400 unknown_row | stale_requires_rejudge (S3 content changed after the judgement; re-save first) | expected_level_required (a row with a resolution needs an expectedLevel to be confirmed; record completeness, not a gate block, ADR-0172 OD-7). Audit capability_attainability.confirm, target <opportunityId>#capability@<via>:surface=S5."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
   /api/opportunities/{id}/capability-gap:
     get:
       operationId: getCapabilityGap
@@ -3176,7 +3246,28 @@ paths:
   /api/opportunities/{id}/capability-gap/llm-draft:
     post:
       operationId: draftCapabilityGap
-      summary: LLM draft of held status (leading|average|partial|none|unevaluated; leading needs comparative evidence), current-level narrative and evidence per capability row from group/affiliate profile evidence — never necessity or required level; proposal only; saving stays a human action (boundary #2).
+      summary: Requirement-side draft (amendment 2026-10-14) - proposes extra capability rows from synergy areas and fills EMPTY necessity (essential|partial_essential|optional, scope note only with partial_essential) and required-level narrative (max 400 chars) with a short basis each; response adds drafts {rowId -> filled fields + basis}. Does not touch holding fields (see holding-check). Optional body {rows} uses the unsaved on-screen rows as the base. Never overwrites a human value; nothing is written to the database; proposal only, saving stays a human action (boundary #2).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/opportunities/{id}/capability-gap/holding-check:
+    post:
+      operationId: checkCapabilityHolding
+      summary: Holding-side draft (amendment 2026-10-14) - proposes holding status (leading|average|partial|none|unevaluated; leading needs comparative evidence), holding-level narrative and holders/evidence from group/affiliate profiles plus bounded external web search (max 12 rows, 2 queries per row, overall timeout; web text is untrusted data). Citations are required (profile or valid source numbers); unsupported rows stay unevaluated with a reason. Optional body {rows, rowId, webSearch:false}; default scope is unjudged rows or rows with empty holding level/evidence and fills EMPTY fields only; with rowId the single-row proposal is returned in proposals[rowId] for a human to apply. Search gate is the same as the S6 web-search proposal (analyst role; lib/web-research.ts config, DDG fallback switch WEB_SEARCH_DDG_ENABLED). Nothing is written to the database; proposal only (boundary #2).
       tags:
         - Analysis
       parameters:
@@ -5958,7 +6049,7 @@ paths:
   /api/projects/{id}/capability-attainability:
     get:
       operationId: getProjectCapabilityAttainability
-      summary: "S8 required-capability attainability view (ADR-0168): the source opportunity's S3 register rows with 5-step levels, resolution route, closing cost (KRW million), months to attain, human attainability grade (high | medium | low | null = unjudged), rationale, evidence, confirmation, plus a summary with counts and the warning banner state. Rows without a judgement read as unjudged. ADR-0170: each row also carries read-only S3-owned held_holders / held_evidence, stale, stale_since, basis_hash, s3_hash, s3_changes, prior and history_count; summary.stale counts rows whose S3 content changed after the judgement (counted as unjudged); removed_capabilities lists judgements of rows deleted in S3."
+      summary: "S8 required-capability attainability READ-ONLY summary (ADR-0168, edit surface moved to S5/S7 by ADR-0171). Per row of the source opportunity's S3 register, in the ADR-0172 order: capability, necessity (essential | partial_essential | optional | empty), necessity_scope_note, required_level (narrative), held_status (leading | average | partial | none | unevaluated), current_level (narrative), held_holders, held_evidence, then resolution, expected_level (narrative, <= 400), closing_cost_krw_m, months_to_attain, grade (high | medium | low | null = unjudged), rationale, evidence, confirmation. Also stale, stale_since, basis_hash, s3_hash, s3_changes, prior, history_count and note; summary with counts and the warning banner state (stale rows count as unjudged); removed_capabilities lists judgements of rows deleted in S3. Top level adds edit_at (S5 for Green Field, S7 for Brown Field) and track."
       tags:
         - Analysis
       parameters:
@@ -5978,7 +6069,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     put:
       operationId: putProjectCapabilityAttainability
-      summary: "Save attainability drafts as a per-row patch. Body {rows: [{id, s3Hash?, resolution?, closingCostKrwM?, monthsToAttain?, grade?, rationale?, evidence?}]} (S8-owned fields only, merged onto the live register in one transaction). analyst+ member; any caller may draft, none may confirm. 400 invalid_request | unknown_row | s3_owned_field (capability, requiredNote, held, requiredLevel, currentLevel, source, note belong to S3) | invalid_cost | rationale_required (high/low need a rationale) | no_source_opportunity. A changed row (or any save of a stale row) loses its confirmation and is stamped with the S3 basis hash (ADR-0170). Audit capability_attainability.save, target <projectId>#capability@<via>."
+      summary: "Deprecated (ADR-0171, OD-4): Green Field projects get 410 moved with error.editAt = S5 for one release; use PUT /api/opportunities/{id}/capability-attainability. Brown Field projects keep the previous behaviour (same body and guards as the opportunity route) only until the S7 per-target surface ships. Audit capability_attainability.save, target <projectId>#capability@<via>."
       tags:
         - Analysis
       parameters:
@@ -5998,11 +6089,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '410':
+          $ref: '#/components/responses/Gone'
 
   /api/projects/{id}/capability-attainability/confirm:
     post:
       operationId: postProjectCapabilityAttainabilityConfirm
-      summary: "Confirm judged attainability rows (ADR-0168). Human-only (403 human_only for bearer / MCP / agent callers), analyst+. Body {row_ids?} (default all judged, unconfirmed rows). 409 nothing_to_confirm; 400 unknown_row | stale_requires_rejudge (S3 content changed after the judgement; re-save first). Audit capability_attainability.confirm."
+      summary: "Deprecated (ADR-0171, OD-4): Green Field projects get 410 moved with error.editAt = S5 (checked after the human-only guard: bearer / MCP / agent callers still get 403 human_only); use POST /api/opportunities/{id}/capability-attainability/confirm. Brown Field projects keep the previous confirm behaviour only until the S7 per-target surface ships."
       tags:
         - Analysis
       parameters:
@@ -6024,6 +6117,8 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '410':
+          $ref: '#/components/responses/Gone'
 
   /api/projects/{id}/s8-lens-summary:
     get:
@@ -7205,6 +7300,12 @@ components:
             $ref: '#/components/schemas/Envelope'
     Conflict:
       description: Supersession/conflict rejection.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+    Gone:
+      description: The edit surface moved (410 moved) — error.editAt names the stage that owns it now.
       content:
         application/json:
           schema:

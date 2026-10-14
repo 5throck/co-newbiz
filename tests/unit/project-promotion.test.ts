@@ -410,7 +410,8 @@ describe("buildProjectCharter (ADR-0104) display name", () => {
     ]);
     const { charter } = buildProjectCharter(db, { opportunityId: oppId, track: "greenfield", builtBy: U1, now: NOW });
     const gapKpis = charter.kpis.filter((k) => k.key.startsWith("gap:"));
-    expect(gapKpis.map((k) => k.label)).toEqual(["역량 해소 — 정밀 가공", "역량 해소 — 영업망"]);
+    // ADR-0172 order: 필요도, 보유 판정, then the resolution as the target
+    expect(gapKpis.map((k) => k.label)).toEqual(["역량 해소 — 정밀 가공 (필요도 미정, 보유 판정 미보유)", "역량 해소 — 영업망 (필요도 미정, 보유 판정 부분 보유)"]);
     expect(gapKpis[0].target).toBe("전략 제휴");
     expect(gapKpis[1].target).toBe("영입");
   });

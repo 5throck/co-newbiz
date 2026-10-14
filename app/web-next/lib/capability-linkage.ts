@@ -191,6 +191,7 @@ function historyEntryOf(row: CapabilityGapRow, a: CapabilityAttainability, at: s
     rationale: a.rationale,
     evidence: a.evidence,
     resolution: row.resolution,
+    ...(a.expectedLevel ? { expectedLevel: a.expectedLevel } : {}),
     confirmedBy: a.confirmedBy,
     confirmedAt: a.confirmedAt,
     basisHash: a.basisHash ?? "",

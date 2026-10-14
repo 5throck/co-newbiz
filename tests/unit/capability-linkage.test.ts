@@ -102,6 +102,20 @@ describe("stale and register linkage (pure)", () => {
     expect(row.attainability.history).toHaveLength(5);
     expect(trimmedTotal).toBe(2);
   });
+  test("an S3 change invalidates the judgement INCLUDING 기대 수준: confirmation cleared, prior text moved to history, pre-fill kept (ADR-0172)", () => {
+    const base = judged({ resolution: "hire" });
+    const row = { ...base, attainability: { ...base.attainability, expectedLevel: "영입 인력이 자체 수행 가능" } };
+    // 기대 수준 is judgement-owned: editing it never changes the S3 hash, so it never stales a row on its own
+    expect(lk.isStale({ ...row, attainability: { ...row.attainability, expectedLevel: "다른 기대 수준" } })).toBe(false);
+    const edited = { ...row, requiredLevel: "선도" };
+    const res = lk.applyRegisterLinkage([edited], json({ rows: [row], updatedAt: NOW }), "2026-03-01T00:00:00Z", "u2");
+    expect(res.invalidated).toEqual(["r"]);
+    const a = res.rows[0].attainability!;
+    expect(a.confirmedBy).toBeNull();
+    expect(a.staleSince).toBe("2026-03-01T00:00:00Z");
+    expect(a.expectedLevel).toBe("영입 인력이 자체 수행 가능"); // pre-filled for the re-judgement
+    expect(a.history?.[0].expectedLevel).toBe("영입 인력이 자체 수행 가능"); // and kept in history
+  });
   test("rows deleted in S3 are archived (cap 30); same-state rewrite archives nothing", () => {
     const stored = json({ rows: [judged({ id: "keep" }), judged({ id: "gone" })], updatedAt: NOW });
     const keepOnly = [judged({ id: "keep" })];
@@ -137,8 +151,10 @@ describe("routes", () => {
   let oppId = "";
   const url = () => `/api/projects/${projectId}/capability-attainability`;
   const get = async () => ((await (await req(url(), { headers: { cookie: leadCookie } })).json()) as { data: any }).data;
-  const put = (rows: unknown[]) => req(url(), { method: "PUT", headers: { cookie: leadCookie }, body: json({ rows }) });
-  const confirm = (body: unknown = {}) => req(`${url()}/confirm`, { method: "POST", headers: { cookie: leadCookie }, body: json(body) });
+  // ADR-0171: the writable judgement routes are the opportunity-scoped S5 routes; the project route is the S8 read-only summary.
+  const oppUrl = () => `/api/opportunities/${oppId}/capability-attainability`;
+  const put = (rows: unknown[]) => req(oppUrl(), { method: "PUT", headers: { cookie: leadCookie }, body: json({ rows }) });
+  const confirm = (body: unknown = {}) => req(`${oppUrl()}/confirm`, { method: "POST", headers: { cookie: leadCookie }, body: json(body) });
   const s3Put = (rows: unknown[]) => req(`/api/opportunities/${oppId}/capability-gap`, { method: "PUT", headers: { cookie: leadCookie }, body: json({ rows }) });
   const s3Rows = async () => ((await (await req(`/api/opportunities/${oppId}/capability-gap`, { headers: { cookie: leadCookie } })).json()) as any).data.rows as any[];
   const stored = () => cg.parseGapRegister((db.query("SELECT capability_gap_json j FROM opportunity WHERE id = ?").get(oppId) as { j: string }).j).rows;
@@ -164,7 +180,7 @@ describe("routes", () => {
     projectId = promoteOpportunity(oppId, { promotedBy: LEAD, needToKnowBasis: "lk" }).project.id;
   });
 
-  test("S8 PUT rejects every S3-owned field with 400 s3_owned_field", async () => {
+  test("S5 PUT rejects every S3-owned field with 400 s3_owned_field", async () => {
     for (const patch of [{ capability: "x" }, { requiredNote: "x" }, { held: { status: "met" } }, { requiredLevel: "숙련" }, { currentLevel: "실무" }]) {
       const r = await put([{ id: "a", ...patch }]);
       expect(r.status).toBe(400);
@@ -323,7 +339,7 @@ describe("held summary preview", () => {
   });
   test("previews use HeldSummary with no per-field 미입력", () => {
     const root = join(PROJECT_ROOT, "app/web-next/components/stages");
-    for (const f of ["synergy/SynergyLinkageTab.tsx", "CapabilityAttainabilityPanel.tsx"]) {
+    for (const f of ["synergy/SynergyLinkageTab.tsx", "CapabilityJudgementTable.tsx"]) {
       const src = readFileSync(join(root, f), "utf8");
       expect(src).toContain("<HeldSummary");
       expect(src).not.toContain("holdersPreview(");
@@ -354,22 +370,25 @@ describe("UI source checks", () => {
     const src = read("components/stages/CapabilityHeldDialog.tsx");
     for (const k of ['role="dialog"', 'aria-modal="true"', "useModalFocus(onClose)", "createPortal", "HOLDERS_MAX = 6", "HOLDER_LEN = 120", "EVIDENCE_MAX = 400", "rows={8}", "readOnly ?"]) expect(src).toContain(k);
   });
-  test("S8 panel: shows S3 필요 내용 and 보유 판정 read-only, stale marker, no LevelSelect", () => {
+  test("S8 panel is a read-only summary: shared table, no inputs or save/confirm of its own, S5 link", () => {
     const src = read("components/stages/CapabilityAttainabilityPanel.tsx");
     expect(src).not.toContain("LevelSelect");
-    expect(src).not.toMatch(/requiredLevel:\s*d\./);
-    expect(src).not.toMatch(/currentLevel:\s*d\./);
-    expect(src).toContain("필요 내용 (S3)");
-    expect(src).toContain("보유 판정 (S3)");
-    expect(src).toContain("r.required_note");
-    expect(src).toContain("HELD_STATUS_LABEL[r.held_status]");
-    expect(src).not.toContain("수준 차이");
-    expect(src).not.toContain("<th scope=\"col\">필요 수준</th>");
+    expect(src).not.toContain("<input");
+    expect(src).not.toContain("<select");
+    expect(src).not.toContain("초안 저장");
+    expect(src).not.toContain("판정 확정");
+    expect(src).not.toContain("api.put");
+    expect(src).not.toContain("api.post");
+    expect(src).toContain("editable={false}");
+    expect(src).toContain("S5에서 판정");
+    expect(src).toContain("/s5`");
     expect(src).toContain("/s3`");
-    expect(src).toContain("S3 변경 — 재판정 필요");
-    expect(src).toContain("삭제된 역량 (판정 이력)");
-    expect(src).toContain("S3 보유 판정 보기");
-    expect(src).toContain("재판정 필요 {s.stale}");
+    const tbl = read("components/stages/CapabilityJudgementTable.tsx");
+    expect(tbl).toContain("S3 변경 — 재판정 필요");
+    expect(tbl).toContain("삭제된 역량 (판정 이력)");
+    expect(tbl).toContain("보유 주체·근거 보기");
+    expect(tbl).toContain("재판정 필요 {s.stale}");
+    expect(tbl).not.toContain("LevelSelect");
   });
 });
 

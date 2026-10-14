@@ -21,4 +21,4 @@ export const DECISION_COL_PCT = [9, 9, 7, 9, 21, 21, 16, 8] as const;
 // 경쟁 구조 — 주요 기업 (CompetitiveTab, S4) — 티어 칩은 좁게, 비고에 나머지.
 export const S4_COMPETITIVE_COL_PCT = [24, 16, 60] as const;
 // 필요 역량 수준 레지스터 (EvalTab, S3 연계) — 역량명·보유 주체·근거가 본문.
-export const CAPABILITY_REG_COL_PCT = [30, 16, 32, 22] as const;
+export const CAPABILITY_REG_COL_PCT = [24, 10, 22, 28, 16] as const;

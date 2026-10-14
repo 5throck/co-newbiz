@@ -180,6 +180,10 @@ exclusions:
     kind: route
     route: "POST /api/projects/{}/capability-attainability/confirm"
     reason: Confirming a required-capability attainability judgement is a human act (ADR-0168, boundary #2); agents may only save drafts through the PUT, never confirm.
+  - id: capability-attainability-confirm-s5
+    kind: route
+    route: "POST /api/opportunities/{}/capability-attainability/confirm"
+    reason: The S5 edit surface of the same judgement (ADR-0171); confirming is a human act (ADR-0168, boundary #2), agents only save drafts through the PUT.
   - id: proposal-confirm
     kind: route
     route: "POST /api/proposals/{}/confirm"

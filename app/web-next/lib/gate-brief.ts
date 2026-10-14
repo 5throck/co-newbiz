@@ -9,7 +9,12 @@ import { getDb } from "../../../db/client.ts";
 import { readRagView } from "../../../db/lib/rag-service.ts";
 import { getCurrentRouteDecision } from "../../../db/repositories/route-decision.repository.ts";
 import { listBusinessCases, latestAdoption } from "./business-case.ts";
-import { HELD_STATUS_LABEL, parseGapRegister, summarizeGap } from "./capability-gap.ts";
+import {
+  ATTAINABILITY_GRADE_LABEL, HELD_STATUS_LABEL, NECESSITY_LABEL, NECESSITY_UNSET_LABEL, RESOLUTION_LABEL,
+  gapCautions, parseGapRegister, summarizeGap, type CapabilityGapRow,
+} from "./capability-gap.ts";
+import { attainabilitySummary } from "./capability-attainability.ts";
+import { isStale } from "./capability-linkage.ts";
 import { buildS8LensSummary } from "./s8-lens-summary.ts";
 import { technicalLensBriefLine } from "./s8-lens-status.ts";
 import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
@@ -157,6 +162,20 @@ function s4Summary(db: Database, oppId: string): string {
   ].filter(Boolean).join("\n");
 }
 
+/**
+ * One capability row in the ADR-0172 order: 필요도, 보유 판정; 해소 방식, 기대 수준 (only when
+ * short), 개월, 달성 가능성. Narrative text is never compared; this is a plain readout.
+ */
+export function capabilityBriefLine(r: CapabilityGapRow): string {
+  const a = r.attainability;
+  const stale = isStale(r);
+  const necessity = r.necessity ? NECESSITY_LABEL[r.necessity] : NECESSITY_UNSET_LABEL;
+  const expected = a?.expectedLevel && a.expectedLevel.length <= 40 ? `기대 수준 ${a.expectedLevel}` : "";
+  const grade = stale ? "재판정 필요" : a?.grade ? `달성 가능성 ${ATTAINABILITY_GRADE_LABEL[a.grade]}${a.confirmedAt ? "(확정)" : "(확정 전)"}` : "달성 가능성 미판정";
+  const judgement = [r.resolution ? RESOLUTION_LABEL[r.resolution] : "해소 방식 미정", expected, a?.monthsToAttain != null ? `${a.monthsToAttain}개월` : "", grade].filter(Boolean).join(", ");
+  return `${r.capability}(필요도 ${necessity}, 보유 판정 ${HELD_STATUS_LABEL[r.held.status]}; ${judgement})`;
+}
+
 function s5Summary(db: Database, oppId: string): string {
   const row = db
     .query("SELECT entry_strategy, alternatives_considered, rationale FROM greenfield_assessment WHERE opportunity_id = ? ORDER BY updated_at DESC, id DESC LIMIT 1")
@@ -166,13 +185,19 @@ function s5Summary(db: Database, oppId: string): string {
   const oppRow = db.query("SELECT capability_gap_json FROM opportunity WHERE id = ?").get(oppId) as { capability_gap_json: string | null } | undefined;
   const register = parseGapRegister(oppRow?.capability_gap_json ?? null);
   const gaps = register.rows.length > 0
-    ? `역량 격차 ${register.rows.length}건: ` + register.rows.slice(0, 6).map((r) =>
-        `${r.capability}(${r.requiredNote ? `필요 ${r.requiredNote.slice(0, 40)}, ` : ""}보유 ${HELD_STATUS_LABEL[r.held.status]}${r.requiredLevel || r.currentLevel ? `, S5 수준 ${r.requiredLevel || "?"}/${r.currentLevel || "?"}` : ""}, ${r.resolution ?? "미정"})`,
-      ).join(", ")
+    ? `역량 격차 ${register.rows.length}건: ` + register.rows.slice(0, 6).map(capabilityBriefLine).join(", ")
     : "";
+  // ADR-0171: the pre_fs brief carries the S5 capability-check line (warning-only, never a gate condition).
+  const largeGaps = register.rows.filter((r) => gapCautions(r).some((c) => c.key === "large_gap")).map((r) => r.capability).slice(0, 5);
+  const check = register.rows.length > 0 ? (() => {
+    const s = attainabilitySummary(register.rows);
+    return `필요 역량 점검(S5): 확정 ${s.confirmed} · 확정 전 ${s.awaitingConfirmation} · 재판정 필요 ${s.stale} · 미판정 ${s.grades.unjudged - s.stale}건 — 참고 정보이며 승인 조건이 아닙니다`;
+  })() : "";
   if (!row && !gaps) return "S5 역량 평가: 없음";
   return [
     gaps,
+    largeGaps.length > 0 ? `큰 격차 주의: ${largeGaps.join(" / ")}` : "",
+    check,
     row?.entry_strategy ? `진출전략: ${row.entry_strategy.slice(0, 300)}` : "",
     row?.rationale ? `평가 근거: ${row.rationale.slice(0, 200)}` : "",
   ].filter(Boolean).join("\n") || "S5 역량 평가: 요약 없음";

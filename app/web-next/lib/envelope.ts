@@ -6,11 +6,13 @@
 
 import { NextResponse } from "next/server";
 
-export type EnvelopeStatus = 200 | 201 | 202 | 400 | 401 | 403 | 404 | 409 | 422 | 423 | 429 | 500 | 503;
+export type EnvelopeStatus = 200 | 201 | 202 | 400 | 401 | 403 | 404 | 409 | 410 | 422 | 423 | 429 | 500 | 503;
 
 export interface ErrorBody {
   code: string;
   message: string;
+  /** Present on 410 "moved" responses: the stage that now owns the edit surface. */
+  editAt?: string;
 }
 
 export function ok<T>(data: T, status: EnvelopeStatus = 200, meta: Record<string, unknown> = {}) {
@@ -37,6 +39,14 @@ export function fail(status: EnvelopeStatus, code: string, message: string) {
   return NextResponse.json(
     { data: null, meta: { as_of: new Date().toISOString() }, error: { code, message } satisfies ErrorBody },
     { status },
+  );
+}
+
+/** 410 for an edit surface that moved (ADR-0171): the body names the stage that owns it now. */
+export function moved(message: string, editAt: string) {
+  return NextResponse.json(
+    { data: null, meta: { as_of: new Date().toISOString() }, error: { code: "moved", message, editAt } satisfies ErrorBody },
+    { status: 410 },
   );
 }
 

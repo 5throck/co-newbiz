@@ -1,19 +1,17 @@
-// GET/PUT /api/projects/[id]/capability-attainability — S8 required-capability
-// attainability (ADR-0168). Reads/writes the SOURCE opportunity's S3 register
-// rows (opportunity.capability_gap_json, no migration): per row the 5-step
-// required/current level, resolution route, closing cost (KRW million), months
-// to attain, and a human attainability judgement (높음/중간/낮음; null = 미판정).
-// PUT saves a draft (analyst+ member, any caller; agents may only draft) and
-// clears the row's confirmation when its content changed. S3-owned fields
-// (capability, requiredNote, held.*, requiredLevel, currentLevel) are rejected
-// with 400 s3_owned_field (ADR-0170); a save stamps attainability.basisHash. Confirming is a
-// separate human-only route (POST .../confirm). Audit: capability_attainability.save,
-// target "<projectId>#capability@<via>".
+// GET/PUT /api/projects/[id]/capability-attainability — S8 view of the required-capability
+// attainability judgement (ADR-0168; edit surface moved to S5/S7 by ADR-0171). GET stays and is the
+// read-only summary of the SOURCE opportunity's S3 register rows (opportunity.capability_gap_json):
+// the S3 definition plus the S5 judgement (resolution, expected_level, cost, months, grade, ...),
+// with `edit_at` ("S5" Green Field, "S7" Brown Field) so the UI can link to the edit surface.
+// PUT (and POST .../confirm) return 410 { code: "moved", editAt: "S5" } for Green Field for one
+// release (OD-4); the writable routes are PUT/POST /api/opportunities/[id]/capability-attainability.
+// Brown Field keeps this legacy write path (same body and guards) only until the S7 per-target
+// surface ships (slice 2b).
 import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate, callPathOf, humanOnlyDenied, requireBusinessActor } from "../../../../../lib/auth.ts";
-import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
+import { badRequest, moved, notFound, ok } from "../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
-import { buildAttainabilityView, readRegister, saveAttainability, sourceOpportunityOf } from "../../../../../lib/capability-attainability.ts";
+import { buildAttainabilityView, editStageOf, readRegister, saveAttainability, sourceOpportunityOf } from "../../../../../lib/capability-attainability.ts";
 
 function load(projectId: string) {
   const db = getDb();
@@ -28,9 +26,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   { const denied = requireBusinessActor(auth.auth, "read"); if (denied) return denied; }
   const { id } = await params;
   if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
-  const { oppId, reg } = load(id);
-  if (!oppId || !reg) return ok(buildAttainabilityView(null, [], null), 200);
-  return ok(buildAttainabilityView(oppId, reg.rows, reg.json === null ? null : reg.updatedAt ?? "", reg.removed), 200);
+  const { db, oppId, reg } = load(id);
+  const stage = editStageOf(db, id);
+  if (!oppId || !reg) return ok({ ...buildAttainabilityView(null, [], null), edit_at: stage.editAt, track: stage.track }, 200);
+  return ok({ ...buildAttainabilityView(oppId, reg.rows, reg.json === null ? null : reg.updatedAt ?? "", reg.removed), edit_at: stage.editAt, track: stage.track }, 200);
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -40,6 +39,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "필요 역량 달성 가능성 저장은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
+  if (editStageOf(getDb(), id).editAt === "S5") return moved("필요 역량 달성 가능성의 판정은 S5로 옮겨졌습니다 — S5에서 수정하세요 (PUT /api/opportunities/{id}/capability-attainability).", "S5");
   const body = (await request.json().catch(() => null)) as { rows?: unknown } | null;
   if (!body) return badRequest("invalid_request", "요청 본문이 올바르지 않습니다.");
   const { db, oppId, reg } = load(id);

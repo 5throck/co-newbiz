@@ -8,25 +8,23 @@
 // Greenfield는 Target Company가 없음 — "우리 스스로 진입 가능한가, 무엇을
 // 구축해야 하는가"를 평가한다: 진출전략(Build/Partner/Hire/Invest 결정) →
 // 필요 역량 확인 → 투자비 검토 요건 (greenfield-capability-assessment 절차, B-7).
-// ADR-0136: 필요 역량 정의·보유 판정은 S3 역량 갭 레지스터(opportunity.
-//   capability_gap_json)가 유일한 출처다. S5는 그 레지스터를 읽기 전용으로
-//   보여주고 보유 수준·해소 방식·비고만 확장 편집한다.
+// ADR-0136 / ADR-0172: 필요 역량 정의(필요도·필요 수준·보유 판정·보유 수준·보유 주체·근거)는
+//   S3 역량 갭 레지스터(opportunity.capability_gap_json)가 유일한 출처다. S5는 그것을
+//   읽기 전용으로 보여준다. ADR-0171: S5가 달성 가능성 판정의 편집 화면이다 — 해소 방식,
+//   기대 수준, 비용, 기간, 달성 가능성, 근거·증빙과 사람의 확정(CapabilityJudgementEditor)
+//   및 자유 서술 비고.
 import { useCallback, useEffect, useState } from "react";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
-import { ClampedText } from "./ClampedText.tsx";
+import { CapabilityJudgementEditor } from "./CapabilityJudgementEditor.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { SectionToolbar } from "../layout.tsx";
-import { ColGroup } from "../ui.tsx";
 import { GateDecisionPanel } from "../GateDecisionPanel.tsx";
 import { PromotionPanel } from "../PromotionPanel.tsx";
 import { PrimaryAction } from "../ui.tsx";
-import {
-  HELD_STATUS_CHIP, HELD_STATUS_LABEL, RESOLUTION_LABEL,
-  type CapabilityGapRow, type GapResolution,
-} from "../../lib/capability-gap.ts";
+import type { CapabilityGapRow } from "../../lib/capability-gap.ts";
 
 interface BcLine {
   line: string; category: "labor" | "opex" | "capex" | "revenue" | "gov_rnd"; amount: number; note?: string;
@@ -55,15 +53,10 @@ interface InvestmentReco {
   };
 }
 
-const RESOLUTIONS = Object.keys(RESOLUTION_LABEL) as GapResolution[];
 // ADR-0137 — S8 business_case_line.category와 동일 어휘(승격 시 그대로 이관).
 const CATEGORY_LABEL: Record<BcLine["category"], string> = { labor: "인건비", opex: "운영비", capex: "설비투자", revenue: "수익", gov_rnd: "정부 R&D" };
 const PERIOD_LABEL: Record<BcLine["period"], string> = { monthly: "월", quarterly: "분기", yearly: "년", lumpsum: "일시불(총액)" };
 const CURRENCY_LABEL: Record<BcLine["currency"], string> = { KRW: "원화", USD: "달러", EUR: "유로", JPY: "엔화", CNY: "위안" };
-
-// 필요 역량 확인 표 — 열 비율(2026-10-11-table-column-sizing-system batch 2):
-// 역량명·비고가 본문, 칩·인풋 열은 균등 분할.
-const GAP_COL_PCT = [22, 14, 14, 14, 16, 20] as const;
 
 export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: string; onSaved?: () => void }) {
   const { me } = useAuth();
@@ -127,8 +120,6 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     setBcLines((prev) => [...prev, { line: item.line, category: item.category, amount: 0, note: item.note, period: "yearly", currency: "KRW" }]);
   }
 
-  const setGapField = (i: number, patch: Partial<CapabilityGapRow>) =>
-    setGapRows((prev) => prev.map((g, idx) => (idx === i ? { ...g, ...patch } : g)));
   const setBc = (i: number, patch: Partial<BcLine>) => setBcLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
 
   async function saveGaps() {
@@ -218,62 +209,31 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
           {/* 긴 대안 검토 텍스트를 위해 textarea — 단일행 input은 저장된 값이 클리핑됐다(2026-09-20 리뷰) */}
           <textarea aria-label="검토한 대안" placeholder="검토한 대안 (선택)" value={alternatives} onChange={(e) => setAlternatives(e.target.value)} rows={2} className="sizing-new-input mb-3" style={{ width: "100%" }} />
 
-          {/* 2. 필요 역량 — S3 레지스터 읽기 전용 + S5 보유 수준·해소방식 편집 */}
-          <h3 className="text-[length:var(--fs-body)] mb-2">2️⃣ 필요 역량 (S3) 확인</h3>
+          {/* 2. 필요 역량 — S3 정의 읽기 전용 + S5 달성 가능성 판정 편집 (ADR-0171) */}
+          <h3 className="text-[length:var(--fs-body)] mb-2">2️⃣ 필요 역량 (S3) 확인 · 달성 가능성 판정</h3>
           {gapRows.length === 0 ? (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
               아직 S3에 필요 역량이 정의되지 않았습니다 — <a href={`/synergy?opportunity=${encodeURIComponent(selected.opportunity.id)}`} className="text-[color:var(--accent)] underline">시너지·전략적 적합성(S3)</a>에서 먼저 정의·판정하세요.
             </p>
+          ) : !gapStored ? (
+            <div className="mb-3">
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
+                S2 스케치에서 가져온 필요 역량이 아직 S3 레지스터에 저장되지 않았습니다 — 저장한 뒤 달성 가능성을 판정할 수 있습니다.
+              </p>
+              {canAct && (
+                <button type="button" className="btn-ghost btn-sm" disabled={savingGaps} onClick={() => void saveGaps()}>
+                  {savingGaps ? "저장 중..." : "S3 레지스터에 저장"}
+                </button>
+              )}
+            </div>
           ) : (
-            <>
-              <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-              <table className="data-table mb-2 table-fixed-pct tmin-56" aria-label="필요 역량 확인">
-                <caption className="sr-only">필요 역량 확인</caption>
-                <ColGroup widths={GAP_COL_PCT} />
-                <thead>
-                  <tr>
-                    <th scope="col">필요 역량 (S3)</th>
-                    <th scope="col">보유 판정 (S3)</th>
-                    <th scope="col">필요 수준 (S3)</th>
-                    <th scope="col">보유 수준 (S3)</th>
-                    <th scope="col">해소 방식</th>
-                    <th scope="col">비고</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {gapRows.map((g, i) => (
-                    <tr key={g.id}>
-                      <td className="text-[length:var(--fs-caption)]">
-                        <span className="font-semibold">{g.capability}</span>
-                        {g.requiredNote && <ClampedText text={g.requiredNote} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" />}
-                      </td>
-                      <td>
-                        <span className={`status-chip ${HELD_STATUS_CHIP[g.held.status]}`}>{HELD_STATUS_LABEL[g.held.status]}</span>
-                        {g.held.holders.length > 0 && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{g.held.holders.join(", ")}</span>}
-                      </td>
-                      <td className="text-[length:var(--fs-caption)]">{g.requiredLevel.trim() ? <ClampedText text={g.requiredLevel} /> : <span className="block text-[color:var(--muted-fg)]">미입력</span>}</td>
-                      <td className="text-[length:var(--fs-caption)]">{g.currentLevel.trim() ? <ClampedText text={g.currentLevel} /> : <span className="block text-[color:var(--muted-fg)]">미입력</span>}</td>
-                      <td>
-                        <select aria-label={`${g.capability} 해소 방식`} value={g.resolution ?? ""} onChange={(e) => setGapField(i, { resolution: (e.target.value || null) as GapResolution | null })} className="sizing-new-input sizing-new-input-sm">
-                          <option value="">미정</option>
-                          {RESOLUTIONS.map((r) => <option key={r} value={r}>{RESOLUTION_LABEL[r]}</option>)}
-                        </select>
-                      </td>
-                      <td><input aria-label={`${g.capability} 비고`} placeholder="비고" value={g.note} onChange={(e) => setGapField(i, { note: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "10rem" }} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              </div>
-              <div className="flex items-center gap-2 mb-3">
-                {canAct && (
-                  <button type="button" className="btn-ghost btn-sm" disabled={savingGaps} onClick={() => void saveGaps()}>
-                    {savingGaps ? "저장 중..." : "필요 역량 확인 저장"}
-                  </button>
-                )}
-                {gapStored && <span className="status-chip status-green">S3 레지스터에 저장됨</span>}
-              </div>
-            </>
+            <div className="mb-3">
+              <CapabilityJudgementEditor
+                endpoint={`/api/opportunities/${encodeURIComponent(selected.opportunity.id)}/capability-attainability`}
+                s3Href={`/deals/${encodeURIComponent(selected.opportunity.id)}/s3`}
+                gap={{ opportunityId: selected.opportunity.id, rows: gapRows, setRows: setGapRows }}
+              />
+            </div>
           )}
 
           {/* 3. 투자비 검토 요건 */}

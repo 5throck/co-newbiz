@@ -8,7 +8,7 @@
 // source the advisory signals read.
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { computeTrackAdvisory } from "../../../../../lib/track-advisory.ts";
-import { parseGapRegister, summarizeGap, type CapabilityGapRow } from "../../../../../lib/capability-gap.ts";
+import { gapCautions, parseGapRegister, summarizeGap, type CapabilityGapRow } from "../../../../../lib/capability-gap.ts";
 import { notFound, ok } from "../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../db/client.ts";
 import { route } from "../../../../../lib/route.ts";
@@ -85,6 +85,10 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
         unmetRows: gapReg.rows
           .filter((r: CapabilityGapRow) => r.held.status === "none")
           .map((r) => ({ capability: r.capability, resolution: r.resolution })),
+        // ADR-0172 §6: 필수 rows that are 부분 보유/미보유 ("큰 격차 주의"). Caution only, never a gate.
+        largeGapRows: gapReg.rows
+          .filter((r: CapabilityGapRow) => gapCautions(r).some((c) => c.key === "large_gap"))
+          .map((r) => ({ capability: r.capability, resolution: r.resolution })),
         // S4 평가 근거 탭 (2026-09-15 사용자 요구) — S3에서 확정한 필요 역량
         // 수준 전체 행을 그대로 노출해 역량 관련 5기준(역량 결정성·통합
         // 역량·역량확보 속도) 채점의 근거로 쓰게 한다.
@@ -92,6 +96,7 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
           capability: r.capability,
           necessity: r.necessity,
           source: r.source,
+          cautions: gapCautions(r).filter((c) => c.key !== "unevaluated").map((c) => ({ key: c.key, label: c.label, tone: c.tone })),
           held: { status: r.held.status, holders: r.held.holders, evidence: r.held.evidence },
           resolution: r.resolution,
         })),
