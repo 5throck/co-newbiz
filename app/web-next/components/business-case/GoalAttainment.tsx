@@ -26,20 +26,27 @@ export function GoalAttainmentTable({
   attainment: Record<string, CaseAttainmentEntry[]> | undefined;
   goalCount: number;
 }) {
-  if (cases.length === 0) return null;
   if (goalCount === 0) {
     return (
-      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2" role="note">
-        <AttainmentStatus status={null} /> 적용된 사업 목표가 없어 목표 달성도를 표시하지 않습니다.
-      </p>
+      <section className="mt-4" aria-label="시나리오별 달성 여부">
+        <h3 className="sizing-step-title text-[0.9rem]">시나리오별 달성 여부</h3> {/* INTERIM-WORDING */}
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" role="note">
+          <AttainmentStatus status={null} /> 목표를 추가하면 시나리오별 달성 여부가 표시됩니다. {/* INTERIM-WORDING */}
+        </p>
+      </section>
     );
   }
+  if (cases.length === 0) return null;
   // Rows come from the first case that has entries (every case is evaluated against the same goals).
   const rowsSource = cases.map((c) => attainment?.[c.id]).find((e) => e && e.length > 0) ?? [];
   if (rowsSource.length === 0) return null;
   return (
-    <div className="mt-2">
-      <p className="text-[length:var(--fs-caption)] font-semibold mb-1">목표 달성도 <span className="text-[color:var(--muted-fg)] font-normal">(참고 근거 — 판단은 사람이 합니다)</span></p>
+    <section className="mt-4" aria-label="시나리오별 달성 여부">
+      <h3 className="sizing-step-title text-[0.9rem]">시나리오별 달성 여부</h3> {/* INTERIM-WORDING */}
+      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
+        참고 근거이며 판단은 사람이 합니다. {/* INTERIM-WORDING */}
+        <span data-testid="attainment-legend"> {(["met", "missed", "indeterminate", "manual"] as const).map((k) => `${attainmentView(k).icon} ${attainmentView(k).label}`).join(" · ")}</span>
+      </p>
       <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
         <table className="data-table" aria-label="목표 달성도">
           <thead>
@@ -82,6 +89,6 @@ export function GoalAttainmentTable({
           return `${c.header}: 충족 ${sum.met} · 미달 ${sum.missed} · 판정불가 ${sum.indeterminate} · 수동 확인 ${sum.manual}`;
         }).join("  |  ")}
       </p>
-    </div>
+    </section>
   );
 }

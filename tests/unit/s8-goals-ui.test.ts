@@ -25,7 +25,7 @@ describe("S8 tab order and greenfield redirect", () => {
   test("stage tab row: goals, technical, financial, targets, decision; financial sub-tab row (ADR-0169)", () => {
     const s8 = STAGE_TAB_GROUPS.find((g) => g.stage === "S8")!;
     expect(s8.tabs.map((t) => t.query ?? t.seg)).toEqual(["goals", "technical", "financial", "targets", "decision"]);
-    expect(s8.subtabs!.map((t) => t.query ?? t.seg)).toEqual(["scenarios", "/wacc", "/financial-analysis"]);
+    expect(s8.subtabs!.map((t) => t.query ?? t.seg)).toEqual(["scenarios", "/wacc", "/financial-analysis", "overview", "params", "target-costing"]);
     expect(primaryTabKeys(false)).toEqual(["goals", "technical", "financial", "targets", "decision"]);
     expect(primaryTabKeys(true)).toEqual(["goals", "technical", "financial", "decision"]);
   });
@@ -94,10 +94,15 @@ describe("attainment mapping", () => {
 });
 
 describe("source-reading checks", () => {
-  test("BusinessCaseStage wires goals tab, banner, attainment, ack dialog", () => {
+  test("BusinessCaseStage wires goals tab, attainment, ack dialog", () => {
     const src = read("components/stages/BusinessCaseStage.tsx");
     expect(src).toContain('tab === "goals" && <GoalsPanel');
-    expect(src).toContain("<GoalsBanner");
+    // IA 2026-10-14: goal setting/status lives only in the goals tab -- no banner on any other tab.
+    expect(src).not.toContain("<GoalsBanner");
+    expect(src).not.toContain("S8GoalsBannerLoader");
+    expect(read("components/business-case/GoalsPanel.tsx")).not.toContain("export function GoalsBanner");
+    expect(read("app/projects/[id]/wacc/page.tsx")).not.toContain("GoalsBanner");
+    expect(read("app/projects/[id]/financial-analysis/page.tsx")).not.toContain("GoalsBanner");
     expect(src).toContain("<GoalAttainmentTable");
     // W1-19/W2-07: NoGoalsCallout is no longer rendered here — GoalsBanner already shows the 목표 미설정 state once.
     expect(src).not.toContain("<NoGoalsCallout");
@@ -189,9 +194,36 @@ describe("S8 IA cleanup (2026-10-14): one home per fact", () => {
     expect(src).not.toContain("tab === \"scenarios\" && <GoalAttainmentTable");
     expect(src).toContain("목표 달성 판정은 사업 목표 탭");
   });
+  test("S8LensStrip renders only on the decision tab (one site, above TargetCheckPanel)", () => {
+    expect(src.match(/<S8LensStrip/g)).toHaveLength(1);
+    expect(src).toMatch(/tab === "decision" && \(\s*\n\s*<div className="mt-4">\s*\n\s*<S8LensStrip[^>]*\/>\s*\n\s*<TargetCheckPanel/);
+    expect(read("components/StageTabs.tsx")).not.toContain("S8LensStrip");
+  });
+  test("goals tab layout: one primary add action, status line, sections, editor above the table", () => {
+    const g = read("components/business-case/GoalsPanel.tsx");
+    expect(g).toContain("+ 목표 추가");
+    expect(g).toContain("goalsBannerState");
+    expect(g).toContain("적용 중인 목표");
+    expect(g).toContain("프로젝트 목표로 지정");
+    expect(g).not.toContain("프로젝트 목표 설정");
+    // chip row and editor render above the table; chips only in empty state or after pressing the add button
+    expect(g.indexOf("<form ref={editorRef}")).toBeLessThan(g.indexOf('aria-label="적용 중인 사업 목표"'));
+    expect(g.indexOf("추가할 지표를 고르세요")).toBeLessThan(g.indexOf('aria-label="적용 중인 사업 목표"'));
+    expect(g).toContain("(resolved.length === 0 || picking)");
+    expect(g).toContain("scrollIntoView");
+    const a = read("components/business-case/GoalAttainment.tsx");
+    expect(a).toContain("시나리오별 달성 여부");
+    expect(a).toContain("attainment-legend");
+    expect(a).toContain("목표를 추가하면 시나리오별 달성 여부가 표시됩니다");
+  });
+  test("moved tabs sit in the financial sub-tab row, not the primary row", () => {
+    expect(src).toMatch(/label="재무적 타당성 하위 화면"[\s\S]*?key: "target-costing"/);
+    const primary = src.slice(src.indexOf('label="S8 사업성 분석 화면"'), src.indexOf('label="재무적 타당성 하위 화면"'));
+    for (const k of ["overview", "params", "target-costing"]) expect(primary).not.toContain(`key: "${k}"`);
+  });
   test("TargetCheckPanel is decision-tab only, above GateDecisionPanel", () => {
     expect(src.match(/<TargetCheckPanel/g)).toHaveLength(1);
-    expect(src).toMatch(/tab === "decision" && \(\s*\n\s*<div className="mt-4">\s*\n\s*<TargetCheckPanel/);
+    expect(src).toMatch(/tab === "decision" && \(\s*\n\s*<div className="mt-4">\s*\n\s*<S8LensStrip[^>]*\/>\s*\n\s*<TargetCheckPanel/);
     expect(src).toMatch(/<TargetCheckPanel[^>]*\/>\s*\n\s*<GateDecisionPanel/s);
   });
   test("single generate entry (overview), decision jump hidden on decision, no global recalc row", () => {

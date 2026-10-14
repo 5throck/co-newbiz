@@ -6,7 +6,6 @@
 // business-case/page.tsx (?tab=financial-analysis).
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
-import { S8GoalsBannerLoader } from "../../../../components/business-case/GoalsPanel.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { FinancialAnalysisPanel } from "../../../../components/FinancialAnalysisPanel.tsx";
 
@@ -15,7 +14,6 @@ export default function FinancialAnalysisBridgePage() {
   return (
     <main className="market-page">
       <StageTabs projectId={projectId} />
-      <S8GoalsBannerLoader projectId={projectId} />
       <StageFrame stageId="S8" heading="재무분석 — 대상 회사 연결">
         <FinancialAnalysisPanel projectId={projectId} />
       </StageFrame>

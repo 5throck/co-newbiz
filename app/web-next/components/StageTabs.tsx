@@ -22,7 +22,6 @@ import {
 import { StageRail } from "./StageFrame.tsx";
 import { PrimarySlot } from "./ui.tsx";
 import { api } from "../lib/api.ts";
-import { S8LensStrip } from "./stages/S8LensStrip.tsx";
 import { S8PartHeader } from "./stages/S8PartHeader.tsx";
 
 // Track per project, cached for the session: only S8 needs it (greenfield hides the target tab).
@@ -204,7 +203,6 @@ function StageTabsInner({ projectId }: { projectId: string }) {
         </div>
       </nav>
     )}
-    {group.stage === "S8" && <S8LensStrip projectId={projectId} />}
     {group.stage === "S8" && (seg === "/wacc" || seg === "/financial-analysis") && <S8PartHeader part="financial" />}
     {sourceOppId && (
       <p className="mb-2 text-[length:var(--fs-caption)]">

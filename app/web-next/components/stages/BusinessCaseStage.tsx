@@ -42,7 +42,7 @@ import { FinancialAnalysisPanel } from "../FinancialAnalysisPanel.tsx";
 import { RowMenu, useConfirm } from "../crud.tsx";
 import { canWriteProject, isReadOnlyAdmin } from "../../lib/project-write-access.ts";
 import { countLegacyUnassignedModels } from "../../lib/business-case-legacy.ts";
-import { GoalPromptDialog, GoalsBanner, GoalsPanel, type GoalsData } from "../business-case/GoalsPanel.tsx";
+import { GoalPromptDialog, GoalsPanel, type GoalsData } from "../business-case/GoalsPanel.tsx";
 import { GOALS_ACK_REQUIRED_CODE, goalsAckErrorText, goalsLoadErrorText, partOfS8Tab, primaryKeyOfS8Tab, resolveS8Tab, shouldRedirectTargetsTab, type CaseAttainmentEntry } from "../../lib/business-goals-view.ts";
 import { GoalAttainmentTable } from "../business-case/GoalAttainment.tsx";
 
@@ -552,7 +552,6 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           were removed — generation has ONE entry, the overview tab. */}
       {embedded && (
       <>
-      <S8LensStrip projectId={projectId} />
       <TabNav
         className="mb-3"
         label="S8 사업성 분석 화면"
@@ -563,9 +562,6 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           { key: "technical", label: "기술적 타당성" }, // INTERIM-WORDING
           { key: "financial", label: "재무적 타당성" }, // INTERIM-WORDING
           ...(targets.length > 0 ? [{ key: "targets", label: "대상 비교·선정" }] : []),
-          { key: "overview", label: "설명·생성·권고" },
-          { key: "params", label: "파라미터·스냅샷" },
-          { key: "target-costing", label: "타겟코스팅" },
           { key: "decision", label: "결정" },
         ]}
       />
@@ -579,17 +575,19 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             { key: "scenarios", label: "시나리오 비교" },
             { key: "wacc", label: "WACC" },
             { key: "financial-analysis", label: "재무분석" },
+            { key: "overview", label: "설명·생성·권고" },
+            { key: "params", label: "파라미터·스냅샷" },
+            { key: "target-costing", label: "타겟코스팅" },
           ]}
         />
       )}
       </>
       )}
-      <GoalsBanner data={goalsData} loadError={goalsLoadError} onOpenGoals={() => setTab("goals")} hideAction={tab === "goals"} />
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">{error}</p>}
 
       {tab === "goals" && <S8PartHeader part="goals" />}
       {tab === "technical" && <><S8PartHeader part="technical" /><TechnicalLensPanel projectId={projectId} /></>}
-      {(tab === "scenarios" || tab === "wacc" || tab === "financial-analysis") && <S8PartHeader part="financial" />}
+      {partOfS8Tab(tab) === "financial" && <S8PartHeader part="financial" />}
       {tab === "goals" && <GoalsPanel projectId={projectId} data={goalsData} canAct={canAct} onChanged={onGoalsChanged} loadError={goalsLoadError} />}
       {/* IA cleanup 2026-10-14: ONE attainment table (was one per scenario section),
           in its single home — the goals tab. Per-case columns are kept. */}
@@ -929,7 +927,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           />
         </div>
       )}
-      {/* W1-19/W2-07: GoalsBanner already shows the 목표 미설정 state above — no second callout here. */}
+      {/* W1-19/W2-07: the goals tab owns the 목표 미설정 state — no callout here. */}
       {SCENARIOS.map((s) => {
         const cases = byScenario.get(s) ?? [];
         const newestMf = cases.find((c) => c.variant === "market_forward");
@@ -1107,6 +1105,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       {/* ── 결정 탭: fs 게이트 진행 근거(대상 점검) → 게이트 결정 — IA cleanup 2026-10-14 ── */}
       {tab === "decision" && (
         <div className="mt-4">
+          <S8LensStrip projectId={projectId} />
           <TargetCheckPanel projectId={projectId} />
           <GateDecisionPanel
             opportunityId={projectId}

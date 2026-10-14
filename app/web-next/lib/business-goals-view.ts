@@ -33,8 +33,8 @@ export type S8TabKey = (typeof S8_TAB_KEYS)[number];
 /** Stage-level tab order (INTERIM-WORDING labels live in lib/stage-tabs.ts). */
 export const S8_PRIMARY_TAB_ORDER: readonly S8TabKey[] = ["goals", "technical", "financial", "targets", "decision"];
 
-/** Sub-tabs inside the financial part: financial content only (goals and targets are primary tabs). */
-export const S8_FINANCIAL_SUBTABS: readonly S8TabKey[] = ["scenarios", "wacc", "financial-analysis"];
+/** Sub-tabs inside the financial part (goals and targets are primary tabs; the more-menu holds only 요약 and the risk heatmap). */
+export const S8_FINANCIAL_SUBTABS: readonly S8TabKey[] = ["scenarios", "wacc", "financial-analysis", "overview", "params", "target-costing"];
 
 /** Alias ?tab= values that land on an existing tab key. */
 export const S8_TAB_ALIASES: Readonly<Record<string, S8TabKey>> = {
@@ -62,14 +62,14 @@ export function primaryTabKeys(greenfield: boolean): S8TabKey[] {
   return S8_PRIMARY_TAB_ORDER.filter((k) => !(greenfield && k === "targets"));
 }
 
-/** Which of the three parts a tab key belongs to (null = target comparison, decision and the more-menu tabs). */
+/** Which of the three parts a tab key belongs to (null = target comparison and decision). */
 export function partOfS8Tab(key: S8TabKey): S8Part | null {
   if (key === "goals" || key === "technical") return key;
   if (S8_FINANCIAL_SUBTABS.includes(key)) return "financial";
   return null;
 }
 
-/** The primary tab that is highlighted for a tab key (null = a more-menu tab). */
+/** The primary tab that is highlighted for a tab key (null = not a primary tab). */
 export function primaryKeyOfS8Tab(key: S8TabKey): S8TabKey | null {
   if (key === "goals" || key === "technical" || key === "targets" || key === "decision") return key;
   if (partOfS8Tab(key) === "financial") return "financial";

@@ -7,7 +7,6 @@
 // standalone so old links keep working.
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
-import { S8GoalsBannerLoader } from "../../../../components/business-case/GoalsPanel.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { WaccPanel } from "../../../../components/wacc/WaccPanel.tsx";
 
@@ -16,7 +15,6 @@ export default function ProjectWaccPage() {
   return (
     <main className="market-page">
       <StageTabs projectId={projectId} />
-      <S8GoalsBannerLoader projectId={projectId} />
       <StageFrame stageId="S8" heading="WACC 입력 세션 — 타당성 분석(FS) 진행 할인율 확정">
         <WaccPanel projectId={projectId} />
       </StageFrame>

@@ -8,7 +8,6 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
 import { api } from "../../lib/api.ts";
 import { useModalFocus } from "../../lib/use-modal-focus.ts";
 import { SectionToolbar } from "../layout.tsx";
@@ -84,38 +83,6 @@ export function shadowedText(shadowed: ResolvedGoal["shadowed"], unit: TargetUni
   if (shadowed.length === 0) return null;
   const parts = shadowed.map((s) => `${SOURCE_VIEW[s.source].label} 기준 ${formatTargetValue(s.target_value, unit)}`);
   return `${parts.join(" · ")}보다 우선 적용`; // INTERIM-WORDING
-}
-
-// ── State banner (all S8 tabs) ───────────────────────────────────────────
-
-export function GoalsBanner({ data, onOpenGoals, hideAction, loadError }: { data: GoalsData | null; onOpenGoals: () => void; hideAction: boolean; loadError?: string | null }) {
-  if (!data && loadError) {
-    return (
-      <div className="legacy-model-notice" role="alert" aria-label="사업 목표 상태">
-        <span className="status-chip status-amber"><span aria-hidden="true">⚠</span> 목표 불러오기 실패</span>
-        <p className="legacy-model-notice-text">{loadError}</p>
-      </div>
-    );
-  }
-  if (!data) return null;
-  const state = goalsBannerState(data.goal_count_by_source, data.standards_resolvable);
-  const text = bannerText(state);
-  const none = state.kind === "none";
-  return (
-    <div className="legacy-model-notice" role="status" aria-label="사업 목표 상태">
-      <span className={`status-chip ${none ? "status-amber" : "status-green"}`}>
-        <span aria-hidden="true">{none ? "⚠" : "✓"}</span> {none ? "목표 미설정" : "목표 적용"}
-      </span>
-      <p className="legacy-model-notice-text">
-        {text.message} <span className="text-[color:var(--muted-fg)]">{text.standardsNote}</span>
-      </p>
-      {!hideAction && (
-        <button type="button" className={none ? "btn-premium btn-sm" : "btn-ghost btn-sm"} onClick={onOpenGoals}>
-          {text.actionLabel}
-        </button>
-      )}
-    </div>
-  );
 }
 
 // ── Prompt dialog (reason / acknowledgement) ─────────────────────────────
@@ -202,6 +169,7 @@ export function GoalsPanel({ projectId, data, canAct, onChanged, loadError }: { 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [picking, setPicking] = useState(false);
   const [history, setHistory] = useState<GoalRow[] | null>(null);
   const errId = useId();
   const editorRef = useRef<HTMLFormElement>(null);
@@ -218,7 +186,11 @@ export function GoalsPanel({ projectId, data, canAct, onChanged, loadError }: { 
     api.get<GoalsData>(`${base}?history=1`).then((r) => setHistory(r.data.goals)).catch((e) => setError(e instanceof Error ? e.message : "이력을 불러오지 못했습니다.")); // INTERIM-WORDING
   }, [base]);
   useEffect(() => { if (showHistory) loadHistory(); }, [showHistory, loadHistory, data]);
-  useEffect(() => { if (editor) editorRef.current?.querySelector<HTMLElement>("select, input, textarea")?.focus(); }, [editor?.mode]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!editor) return;
+    editorRef.current?.scrollIntoView?.({ block: "nearest" });
+    editorRef.current?.querySelector<HTMLElement>("select, input, textarea")?.focus();
+  }, [editor?.mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const presetOf = (key: string): MetricPreset | undefined => presets.find((p) => p.key === key);
   const editorUnit = (e: Editor): TargetUnit => (e.mode === "create" ? presetOf(e.metricKey)?.unit ?? "none" : e.goal.unit);
@@ -295,6 +267,7 @@ export function GoalsPanel({ projectId, data, canAct, onChanged, loadError }: { 
   }
 
   const resolved = data?.resolved ?? [];
+  const banner = goalsBannerState(data?.goal_count_by_source, data?.standards_resolvable ?? false);
   const labelOf = (r: ResolvedGoal): string => r.label ?? presetOf(r.metric_key)?.label ?? r.metric_key;
   const projectGoalFor = (r: ResolvedGoal): GoalRow | undefined => (r.source === "project" ? activeById.get(`${r.metric_key}\u0000${r.label ?? ""}`) : undefined);
   const takenKeys = new Set((data?.goals ?? []).filter((g) => !g.superseded_at && !g.retired_at && g.metric_key !== CUSTOM).map((g) => g.metric_key));
@@ -306,109 +279,47 @@ export function GoalsPanel({ projectId, data, canAct, onChanged, loadError }: { 
         title="사업 목표" // INTERIM-WORDING
         count={resolved.length || undefined}
         actions={
-          <button type="button" className="btn-ghost btn-sm" aria-pressed={showHistory} onClick={() => setShowHistory((v) => !v)}>
-            {showHistory ? "이력 숨기기" : "이력 보기"}
-          </button>
+          <>
+            {canAct && data && resolved.length > 0 && !editor && (
+              <button type="button" className="btn-premium btn-sm" aria-expanded={picking} onClick={() => setPicking((v) => !v)}>+ 목표 추가</button> /* INTERIM-WORDING */
+            )}
+            <button type="button" className="btn-ghost btn-sm" aria-pressed={showHistory} onClick={() => setShowHistory((v) => !v)}>
+              {showHistory ? "이력 숨기기" : "이력 보기"}
+            </button>
+          </>
         }
       />
+      {data && (
+        <div className="legacy-model-notice" role="status" aria-label="사업 목표 상태">
+          <span className={`status-chip ${banner.kind === "none" ? "status-amber" : "status-green"}`}>
+            <span aria-hidden="true">{banner.kind === "none" ? "⚠" : "✓"}</span> {banner.kind === "none" ? "목표 미설정" : "목표 적용"}
+          </span>
+          <p className="legacy-model-notice-text">
+            {bannerText(banner).message} <span className="text-[color:var(--muted-fg)]">{bannerText(banner).standardsNote}</span>
+          </p>
+        </div>
+      )}
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-        시나리오를 비교하기 전에 이 프로젝트가 달성해야 할 목표를 정합니다. 목표는 참고 근거이며 미달이어도 게이트가 자동으로 막히지 않고, 채택 판단은 사람이 합니다.
+        목표는 시나리오 비교의 참고 근거이며, 미달이어도 게이트는 자동으로 막히지 않습니다. {/* INTERIM-WORDING */}
       </p>
 
       {!canAct && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2"><span className="status-chip status-not-started mr-1">읽기 전용</span>보기 권한만 있어 목표를 수정할 수 없습니다.</p>}
       {error && <p id={errId} role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2"><span aria-hidden="true">✕</span> {error}</p>}
 
-      {data === null && loadError ? (
-        <p role="alert" className="text-[length:var(--fs-body)] text-[color:var(--red-fg)]"><span aria-hidden="true">✕</span> {loadError}</p>
-      ) : data === null ? (
-        <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">불러오는 중...</p>
-      ) : resolved.length === 0 ? (
-        <div className="mb-3" role="note">
-          <p className="text-[length:var(--fs-body)] mb-1"><b>아직 설정된 목표가 없습니다.</b></p>
-          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-            {canAct ? "아래 지표 중 하나로 시작하세요. 값과 근거를 입력해야 저장됩니다." : "분석가가 목표를 설정하면 여기에 표시됩니다."}
-          </p>
-        </div>
-      ) : (
-        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-          <table className="data-table" aria-label="적용 중인 사업 목표">
-            <thead>
-              <tr>
-                <th scope="col" style={{ minWidth: "11rem" }}>지표</th>
-                <th scope="col" style={{ minWidth: "9rem" }}>목표</th>
-                <th scope="col" style={{ minWidth: "8rem" }}>출처</th>
-                <th scope="col" style={{ minWidth: "14rem" }}>근거</th>
-                {canAct && <th scope="col"><span className="sr-only">작업</span></th>}
-              </tr>
-            </thead>
-            <tbody>
-              {resolved.map((r) => {
-                const g = projectGoalFor(r);
-                const note = shadowedText(r.shadowed, r.unit);
-                return (
-                  <tr key={`${r.metric_key}:${r.label ?? ""}`}>
-                    <td><strong>{labelOf(r)}</strong>{r.metric_key === CUSTOM && <span className="section-meta"> · 사용자 지정</span>}</td>
-                    <td className="mono-num">
-                      <span aria-hidden="true">{formatDirectionSymbol(r.direction)}</span>
-                      <span className="sr-only">{formatDirectionLabel(r.direction)}</span> {formatTargetValue(r.target_value, r.unit)}
-                    </td>
-                    <td>
-                      <SourceBadge source={r.source} />
-                      {r.source_name && <span className="section-meta" style={{ display: "block" }}>{r.source_name}</span>}
-                      {note && <span className="section-meta" style={{ display: "block" }}>{note}</span>}
-                    </td>
-                    <td>
-                      {g ? (
-                        <details>
-                          <summary className="cursor-pointer">{g.rationale.length > 40 ? `${g.rationale.slice(0, 40)}…` : g.rationale}</summary>
-                          <p className="mt-1 mb-0">{g.rationale}</p>
-                          {g.source_note && <p className="section-meta mb-0">출처 메모: {g.source_note}</p>}
-                          <p className="section-meta mb-0">{g.created_by} · {g.created_at.slice(0, 10)}</p>
-                        </details>
-                      ) : (
-                        <span className="section-meta">상위 기준(관리자 마스터 데이터)</span>
-                      )}
-                    </td>
-                    {canAct && (
-                      <td>
-                        <div className="flex flex-wrap gap-1">
-                          {g ? (
-                            <>
-                              <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => startSupersede(g)} aria-label={`수정 — ${labelOf(r)}`}>수정</button>
-                              <button type="button" className="btn-danger btn-sm" disabled={busy} onClick={() => setRetiring(g)} aria-label={`폐기 — ${labelOf(r)}`}>폐기</button>
-                            </>
-                          ) : (
-                            r.metric_key !== CUSTOM && (
-                              <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => startCreate(r.metric_key, r.direction, r.target_value)} aria-label={`프로젝트 목표 설정 — ${labelOf(r)}`}>
-                                프로젝트 목표 설정
-                              </button>
-                            )
-                          )}
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {canAct && data && !editor && (
-        <div className="mt-3">
-          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{resolved.length === 0 ? "시작 지표" : "지표 추가"}</p>
+      {canAct && data && !editor && (resolved.length === 0 || picking) && (
+        <div className="mb-3">
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{resolved.length === 0 ? "시작 지표를 고르세요" : "추가할 지표를 고르세요"}</p> {/* INTERIM-WORDING */}
           <div className="flex flex-wrap items-center gap-2">
             {starters.map((p) => (
-              <button key={p.key} type="button" className="btn-ghost btn-sm" onClick={() => startCreate(p.key)}>+ {p.label}</button>
+              <button key={p.key} type="button" className="btn-ghost btn-sm" onClick={() => { setPicking(false); startCreate(p.key); }}>+ {p.label}</button>
             ))}
-            <button type="button" className="btn-ghost btn-sm" onClick={() => startCreate(CUSTOM)}>+ 사용자 지정 지표</button>
+            <button type="button" className="btn-ghost btn-sm" onClick={() => { setPicking(false); startCreate(CUSTOM); }}>+ 사용자 지정 지표</button>
           </div>
         </div>
       )}
 
       {canAct && editor && (
-        <form ref={editorRef} onSubmit={save} className="sizing-new-form mt-3" aria-label={editor.mode === "create" ? "목표 추가" : "목표 수정"} aria-describedby={error ? errId : undefined}>
+        <form ref={editorRef} onSubmit={save} className="sizing-new-form mb-3" aria-label={editor.mode === "create" ? "목표 추가" : "목표 수정"} aria-describedby={error ? errId : undefined}>
           <h3 className="sizing-step-title text-[0.9rem]">{editor.mode === "create" ? "목표 추가" : `목표 수정 — ${editor.goal.label ?? presetOf(editor.goal.metric_key)?.label ?? editor.goal.metric_key}`}</h3>
           {editor.mode === "supersede" && (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" role="note">새 버전이 만들어지며 이전 값은 이력에 남습니다.</p>
@@ -466,6 +377,89 @@ export function GoalsPanel({ projectId, data, canAct, onChanged, loadError }: { 
         </form>
       )}
 
+      {data === null && loadError ? (
+        <p role="alert" className="text-[length:var(--fs-body)] text-[color:var(--red-fg)]"><span aria-hidden="true">✕</span> {loadError}</p>
+      ) : data === null ? (
+        <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">불러오는 중...</p>
+      ) : resolved.length === 0 ? (
+        <div className="mb-3" role="note">
+          <p className="text-[length:var(--fs-body)] mb-1"><b>아직 설정된 목표가 없습니다.</b></p>
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
+            {canAct ? "아래 지표 중 하나로 시작하세요. 값과 근거를 입력해야 저장됩니다." : "분석가가 목표를 설정하면 여기에 표시됩니다."}
+          </p>
+        </div>
+      ) : (
+        <div>
+        <h3 className="sizing-step-title text-[0.9rem]">적용 중인 목표</h3> {/* INTERIM-WORDING */}
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
+          계열사·그룹 행은 상위에서 내려온 기준이며, 프로젝트 목표로 지정하면 이 프로젝트에서는 그 값이 우선합니다. {/* INTERIM-WORDING */}
+        </p>
+        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+          <table className="data-table" aria-label="적용 중인 사업 목표">
+            <thead>
+              <tr>
+                <th scope="col" style={{ minWidth: "11rem" }}>지표</th>
+                <th scope="col" style={{ minWidth: "9rem" }}>목표 값</th>
+                <th scope="col" style={{ minWidth: "8rem" }}>적용 단계</th>
+                <th scope="col" style={{ minWidth: "14rem" }}>근거</th>
+                {canAct && <th scope="col"><span className="sr-only">작업</span></th>}
+              </tr>
+            </thead>
+            <tbody>
+              {resolved.map((r) => {
+                const g = projectGoalFor(r);
+                const note = shadowedText(r.shadowed, r.unit);
+                return (
+                  <tr key={`${r.metric_key}:${r.label ?? ""}`}>
+                    <td><strong>{labelOf(r)}</strong>{r.metric_key === CUSTOM && <span className="section-meta"> · 사용자 지정</span>}</td>
+                    <td className="mono-num">
+                      <span aria-hidden="true">{formatDirectionSymbol(r.direction)}</span>
+                      <span className="sr-only">{formatDirectionLabel(r.direction)}</span> {formatTargetValue(r.target_value, r.unit)}
+                    </td>
+                    <td>
+                      <SourceBadge source={r.source} />
+                      {r.source_name && <span className="section-meta" style={{ display: "block" }}>{r.source_name}</span>}
+                      {note && <span className="section-meta" style={{ display: "block" }}>{note}</span>}
+                    </td>
+                    <td>
+                      {g ? (
+                        <details>
+                          <summary className="cursor-pointer">{g.rationale.length > 40 ? `${g.rationale.slice(0, 40)}…` : g.rationale}</summary>
+                          <p className="mt-1 mb-0">{g.rationale}</p>
+                          {g.source_note && <p className="section-meta mb-0">출처 메모: {g.source_note}</p>}
+                          <p className="section-meta mb-0">{g.created_by} · {g.created_at.slice(0, 10)}</p>
+                        </details>
+                      ) : (
+                        <span className="section-meta">상위 기준(관리자 마스터 데이터)</span>
+                      )}
+                    </td>
+                    {canAct && (
+                      <td>
+                        <div className="flex flex-wrap gap-1">
+                          {g ? (
+                            <>
+                              <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => startSupersede(g)} aria-label={`수정 — ${labelOf(r)}`}>수정</button>
+                              <button type="button" className="btn-danger btn-sm" disabled={busy} onClick={() => setRetiring(g)} aria-label={`폐기 — ${labelOf(r)}`}>폐기</button>
+                            </>
+                          ) : (
+                            r.metric_key !== CUSTOM && (
+                              <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => startCreate(r.metric_key, r.direction, r.target_value)} aria-label={`프로젝트 목표로 지정 — ${labelOf(r)}`}>
+                                프로젝트 목표로 지정
+                              </button>
+                            )
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        </div>
+      )}
+
       {showHistory && (
         <div className="mt-3">
           <h3 className="sizing-step-title text-[0.9rem]">변경 이력</h3>
@@ -521,19 +515,4 @@ function goalErrorText(err: unknown): string {
   if (code === "goal_not_active") return "이미 교체되었거나 폐기된 목표입니다 — 새로고침하세요."; // INTERIM-WORDING
   if (code === "role_required") return "목표 설정은 분석가 이상 역할이 필요합니다."; // INTERIM-WORDING
   return err instanceof Error ? err.message : "목표를 저장하지 못했습니다."; // INTERIM-WORDING
-}
-
-/** Self-fetching banner for S8 tabs that live on their own page (WACC, 재무분석). */
-export function S8GoalsBannerLoader({ projectId }: { projectId: string }) {
-  const router = useRouter();
-  const [data, setData] = useState<GoalsData | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  useEffect(() => {
-    let live = true;
-    api.get<GoalsData>(`/api/projects/${encodeURIComponent(projectId)}/business-goals`)
-      .then((r) => { if (live) { setData(r.data); setLoadError(null); } })
-      .catch((e) => { if (live) setLoadError(goalsLoadErrorText(e, "사업 목표를 불러오지 못했습니다.")); }); // INTERIM-WORDING
-    return () => { live = false; };
-  }, [projectId]);
-  return <GoalsBanner data={data} loadError={loadError} hideAction={false} onOpenGoals={() => router.push(`/projects/${encodeURIComponent(projectId)}/business-case?tab=goals`)} />;
 }
