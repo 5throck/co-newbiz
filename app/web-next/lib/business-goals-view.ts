@@ -34,12 +34,12 @@ export type S8TabKey = (typeof S8_TAB_KEYS)[number];
 export const S8_PRIMARY_TAB_ORDER: readonly S8TabKey[] = ["goals", "technical", "financial", "targets", "decision"];
 
 /** Sub-tabs inside the financial part (goals and targets are primary tabs; the more-menu holds only 요약 and the risk heatmap). */
-export const S8_FINANCIAL_SUBTABS: readonly S8TabKey[] = ["scenarios", "wacc", "financial-analysis", "overview", "params", "target-costing"];
+export const S8_FINANCIAL_SUBTABS: readonly S8TabKey[] = ["overview", "scenarios", "wacc", "financial-analysis", "params", "target-costing"];
 
 /** Alias ?tab= values that land on an existing tab key. */
 export const S8_TAB_ALIASES: Readonly<Record<string, S8TabKey>> = {
   capability: "technical", // 역량 달성 가능성 lives in the technical lens
-  financial: "scenarios", // umbrella lens link lands on its default sub-tab
+  financial: "overview", // umbrella lens link lands on its default sub-tab
 };
 
 /** The three major parts of the S8 screen: what to achieve, can it be realised, does it pay. */
@@ -79,16 +79,16 @@ export function primaryKeyOfS8Tab(key: S8TabKey): S8TabKey | null {
 /** Resolve the ?tab= value to a tab key. Old keys keep working (goals stays goals; scenarios/wacc/
  * financial-analysis resolve into the financial part with the right sub-tab; overview/params/
  * target-costing/decision are unchanged), aliases map to their lens
- * (`capability` -> technical, `financial` -> scenarios, the financial default sub-tab), a `#item` suffix is ignored, old
- * greenfield deep links to the hidden targets tab land on scenarios, and unknown values
- * fall back to scenarios (the financial lens default). */
+ * (`capability` -> technical, `financial` -> overview, the financial default sub-tab), a `#item` suffix is ignored, old
+ * greenfield deep links to the hidden targets tab land on overview, and unknown values
+ * fall back to overview (the financial lens default). */
 export function resolveS8Tab(tabParam: string | null | undefined, opts: { greenfield: boolean }): S8TabKey {
   const raw = (tabParam ?? "").split("#")[0];
   const aliased = S8_TAB_ALIASES[raw];
   if (aliased) return aliased;
-  const known = (S8_TAB_KEYS as readonly string[]).includes(raw) ? (raw as S8TabKey) : "scenarios";
-  if (known === "financial") return "scenarios";
-  if (known === "targets" && opts.greenfield) return "scenarios";
+  const known = (S8_TAB_KEYS as readonly string[]).includes(raw) ? (raw as S8TabKey) : "overview";
+  if (known === "financial") return "overview";
+  if (known === "targets" && opts.greenfield) return "overview";
   return known;
 }
 

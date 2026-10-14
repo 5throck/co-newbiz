@@ -25,7 +25,7 @@ describe("S8 tab order and greenfield redirect", () => {
   test("stage tab row: goals, technical, financial, targets, decision; financial sub-tab row (ADR-0169)", () => {
     const s8 = STAGE_TAB_GROUPS.find((g) => g.stage === "S8")!;
     expect(s8.tabs.map((t) => t.query ?? t.seg)).toEqual(["goals", "technical", "financial", "targets", "decision"]);
-    expect(s8.subtabs!.map((t) => t.query ?? t.seg)).toEqual(["scenarios", "/wacc", "/financial-analysis", "overview", "params", "target-costing"]);
+    expect(s8.subtabs!.map((t) => t.query ?? t.seg)).toEqual(["overview", "scenarios", "/wacc", "/financial-analysis", "params", "target-costing"]);
     expect(primaryTabKeys(false)).toEqual(["goals", "technical", "financial", "targets", "decision"]);
     expect(primaryTabKeys(true)).toEqual(["goals", "technical", "financial", "decision"]);
   });
@@ -44,12 +44,12 @@ describe("S8 tab order and greenfield redirect", () => {
     expect(shouldRedirectTargetsTab("targets", true)).toBe(true);
     expect(shouldRedirectTargetsTab("targets", false)).toBe(false);
     expect(shouldRedirectTargetsTab("goals", true)).toBe(false);
-    expect(resolveS8Tab("targets", { greenfield: true })).toBe("scenarios");
+    expect(resolveS8Tab("targets", { greenfield: true })).toBe("overview");
     expect(resolveS8Tab("targets", { greenfield: false })).toBe("targets");
     expect(resolveS8Tab("goals", { greenfield: true })).toBe("goals");
-    expect(resolveS8Tab(null, { greenfield: false })).toBe("scenarios");
-    expect(resolveS8Tab(undefined, { greenfield: true })).toBe("scenarios");
-    expect(resolveS8Tab("bogus", { greenfield: false })).toBe("scenarios");
+    expect(resolveS8Tab(null, { greenfield: false })).toBe("overview");
+    expect(resolveS8Tab(undefined, { greenfield: true })).toBe("overview");
+    expect(resolveS8Tab("bogus", { greenfield: false })).toBe("overview");
   });
 });
 
@@ -248,5 +248,30 @@ describe("S8 IA cleanup (2026-10-14): one home per fact", () => {
     expect(src).not.toContain("<CapabilityAttainabilityPanel");
     expect(src).toContain("필요 역량 달성 가능성 판정은");
     expect(src).toContain('onClick={() => setTab("technical")}>기술적 타당성 탭 →</button>');
+  });
+});
+
+describe("S8 greenfield single-perspective wording", () => {
+  const stage = read("components/stages/BusinessCaseStage.tsx");
+  const method = read("components/business-case/ValuationMethodology.tsx");
+  test("greenfield branches replace the dual-perspective wording", () => {
+    expect(stage).toContain("S8 사업성 분석 — 시장 기반 밸류에이션");
+    expect(stage).toContain("자동 생성 (시장 기반 × 3 시나리오)");
+    expect(stage).toContain("평가 관점의 의미");
+    expect(stage).toContain("과거 기반 비교는 대상 회사가 있는 Brown Field에만 적용됩니다.");
+    expect(stage).toContain("{!hasHistorical && !greenfield && (");
+    expect(stage).toContain("greenfield={greenfield}");
+  });
+  test("Brown Field keeps the dual-perspective wording", () => {
+    expect(stage).toContain("S8 사업성 분석 — 이중 관점 밸류에이션 비교");
+    expect(stage).toContain("이중 관점 자동 생성 (시장 기반 + 과거 기반 × 3 시나리오)");
+    expect(stage).toContain("두 관점의 의미");
+  });
+  test("ValuationMethodology hides the two-perspective explanation for greenfield", () => {
+    expect(method).toContain("greenfield?: boolean");
+    expect(method).toContain("{!greenfield && marketCase && historicalCase");
+  });
+  test("report composer does not ask for DART sync when no target company is linked", () => {
+    expect(read("lib/report-composer.ts")).toContain("시장 기반 단일 관점");
   });
 });

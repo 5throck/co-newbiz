@@ -70,7 +70,7 @@ describe("stage tabs", () => {
     const s8 = groupForSegment("/business-case")!;
     expect(s8.tabs.length).toBeLessThanOrEqual(MAX_PRIMARY_TABS);
     const sub = (seg: string, tab: string | null) => s8.subtabs![activeSubtabIndex(s8, seg, tab)]?.label;
-    expect(sub("/business-case", null)).toBe("시나리오 비교");
+    expect(sub("/business-case", null)).toBe("설명·생성·권고");
     expect(sub("/business-case", "scenarios")).toBe("시나리오 비교");
     expect(sub("/wacc", null)).toBe("WACC");
     expect(sub("/financial-analysis", null)).toBe("재무분석");
@@ -82,7 +82,7 @@ describe("stage tabs", () => {
 
   test("S8 sub-tab and more-menu membership; deep links stay reachable", () => {
     const s8 = groupForSegment("/business-case")!;
-    expect(s8.subtabs!.map((t) => t.query ?? t.seg)).toEqual(["scenarios", "/wacc", "/financial-analysis", "overview", "params", "target-costing"]);
+    expect(s8.subtabs!.map((t) => t.query ?? t.seg)).toEqual(["overview", "scenarios", "/wacc", "/financial-analysis", "params", "target-costing"]);
     expect(s8.more.map((t) => t.query ?? (t.seg || "summary"))).toEqual(["summary", "/risk-heatmap"]);
     expect(allDefs(s8).some((t) => t.query === "overview")).toBe(true);
   });

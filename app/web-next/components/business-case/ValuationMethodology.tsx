@@ -40,10 +40,13 @@ export function ValuationMethodology({
   projectId,
   marketCase,
   historicalCase,
+  greenfield = false,
 }: {
   projectId: string;
   marketCase: MethodCase | null;
   historicalCase: MethodCase | null;
+  /** Green Field has no target company, so no past-based perspective exists. */
+  greenfield?: boolean;
 }) {
   const [params, setParams] = useState<ResolvedParams | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -98,9 +101,9 @@ export function ValuationMethodology({
             </tr>
             <tr>
               <td>② 성장 가정</td>
-              <td>시장 기반 = 시장 성장률 / 과거 기반 = 대상 회사 자체 CAGR (DART) — 두 관점의 유일한 차이</td>
+              <td>{greenfield ? "시장 성장률 (시장 규모 × 포획률 기반) — 대상 회사가 없어 과거 실적 비교는 없음" : "시장 기반 = 시장 성장률 / 과거 기반 = 대상 회사 자체 CAGR (DART) — 두 관점의 유일한 차이"}</td>
               <td className="num mono-num">
-                {gMf != null ? `시장 ${pct1(gMf)}` : "—"} · {gHist != null ? `과거 ${pct1(gHist)}` : "—"}
+                {gMf != null ? `시장 ${pct1(gMf)}` : "—"}{greenfield ? "" : ` · ${gHist != null ? `과거 ${pct1(gHist)}` : "—"}`}
               </td>
             </tr>
             <tr>
@@ -147,7 +150,7 @@ export function ValuationMethodology({
         </table></div>
       )}
 
-      {marketCase && historicalCase && mf && hist && gMf != null && gHist != null && (
+      {!greenfield && marketCase && historicalCase && mf && hist && gMf != null && gHist != null && (
         <div className="mt-2 p-3 border border-[color:var(--border)] rounded-[length:var(--radius)]" aria-label="두 관점 값 차이의 원인">
           <p className="text-[length:var(--fs-body)] font-semibold mb-1">두 관점의 값이 왜 다른가?</p>
           <p className="text-[length:var(--fs-caption)] mb-2">
