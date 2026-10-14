@@ -26,6 +26,13 @@ describe("CapabilityAttainabilityPanel structure", () => {
     for (const [v, t] of [["high", "높음"], ["medium", "중간"], ["low", "낮음"]]) expect(src).toContain(`{ value: "${v}", text: "${t}" }`);
     expect(src).toContain("GRADE_OPTIONS.map");
   });
+  test("no redundant grade chip or human-input marker; AI draft marker kept", () => {
+    expect(src).not.toContain("GRADE_CHIP");
+    expect(src).not.toContain("GRADE_TEXT");
+    expect(src).not.toContain("사람 입력");
+    expect(src).toContain('r.drafted_by === "ai"');
+    expect(src).toContain("AI 초안");
+  });
   test("save payload omits evidence; legacy evidence shown read-only", () => {
     const save = src.slice(src.indexOf("async function save"), src.indexOf("async function confirm"));
     expect(save).not.toContain("evidence");

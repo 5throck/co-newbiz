@@ -29,14 +29,12 @@ interface Draft {
   cost: string; months: string; grade: string; rationale: string;
 }
 
-const COL_PCT = [13, 7, 7, 8, 8, 7, 14, 28, 8] as const;
+const COL_PCT = [13, 7, 7, 8, 8, 7, 11, 31, 8] as const;
 const RESOLUTIONS: GapResolution[] = ["build", "partner", "hire", "invest"];
-const GRADE_CHIP: Record<string, string> = { high: "status-green", medium: "status-amber", low: "status-red", "": "status-not-started" };
 const GRADE_OPTIONS = [
   { value: "", text: "미판정" }, { value: "high", text: "높음" },
   { value: "medium", text: "중간" }, { value: "low", text: "낮음" },
 ] as const;
-const GRADE_TEXT: Record<string, string> = { high: "높음", medium: "중간", low: "낮음", "": "미판정" };
 
 const toDraft = (r: AttainabilityRowView): Draft => ({
   requiredLevel: r.required_level, currentLevel: r.current_level, resolution: r.resolution ?? "",
@@ -179,10 +177,7 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
                       <select aria-label={`${r.capability} 달성 가능성`} value={d.grade} disabled={!canAct} onChange={(e) => set(r.id, { grade: e.target.value })} className="sizing-new-input sizing-new-input-sm mb-1">
                         {GRADE_OPTIONS.map((g) => <option key={g.value} value={g.value}>{g.text}</option>)}
                       </select>
-                      <div className="flex flex-wrap items-center gap-1 text-[length:var(--fs-caption)]">
-                        <span className={`status-chip ${GRADE_CHIP[d.grade]}`}>{GRADE_TEXT[d.grade]}</span>
-                        {r.drafted_by && <span className="text-[color:var(--muted-fg)]">{r.drafted_by === "ai" ? "AI 초안" : "사람 입력"}</span>}
-                      </div>
+                      {r.drafted_by === "ai" && <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">AI 초안</div>}
                     </td>
                     <td>
                       <textarea aria-label={`${r.capability} 근거·증빙`} placeholder="근거·증빙 (높음·낮음은 근거 필수)" value={d.rationale} disabled={!canAct} onChange={(e) => set(r.id, { rationale: e.target.value })} className="sizing-new-input sizing-new-input-sm" rows={3} />
