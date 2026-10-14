@@ -23,7 +23,7 @@ import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { SectionToolbar } from "../layout.tsx";
 import { GateDecisionPanel } from "../GateDecisionPanel.tsx";
 import { PromotionPanel } from "../PromotionPanel.tsx";
-import { PrimaryAction } from "../ui.tsx";
+import { ColGroup, PrimaryAction } from "../ui.tsx";
 import type { CapabilityGapRow } from "../../lib/capability-gap.ts";
 import { CapabilityCostBlock } from "./CapabilityCostBlock.tsx";
 import { EntryStrategySection } from "./EntryStrategySection.tsx";
@@ -71,6 +71,8 @@ type BcPeriod = NonNullable<BcLine["period"]>;
 const CATEGORY_LABEL: Record<BcCategory, string> = { labor: "인건비", opex: "운영비", capex: "설비투자", revenue: "수익", gov_rnd: "정부 R&D" };
 const PERIOD_LABEL: Record<BcPeriod, string> = { monthly: "월", quarterly: "분기", yearly: "년", lumpsum: "일시불(총액)" };
 const CURRENCY_LABEL: Record<BcCurrency, string> = { KRW: "원화", USD: "달러", EUR: "유로", JPY: "엔화", CNY: "위안" };
+// Unified investment item table: 10 shared columns (Onyx table-fixed-pct system).
+const INVEST_ITEM_COL_PCT = [16, 12, 9, 9, 7, 7, 8, 10, 14, 8] as const;
 
 export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: string; onSaved?: () => void }) {
   const { me } = useAuth();
@@ -95,7 +97,13 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   const [costSaving, setCostSaving] = useState(false);
   const [costNote, setCostNote] = useState<string | null>(null);
   const [costError, setCostError] = useState<string | null>(null);
+  // 투자비 항목 저장 — the section's own explicit save (lines + capability selections only).
+  const [linesSaving, setLinesSaving] = useState(false);
+  const [linesNote, setLinesNote] = useState<string | null>(null);
+  const [linesError, setLinesError] = useState<string | null>(null);
   const [bcLines, setBcLines] = useState<BcLine[]>([]);
+  // Last saved manual lines (as loaded) — per-row "✓ 저장됨 / 저장 전" chips and section dirty tracking.
+  const [savedManualLines, setSavedManualLines] = useState<BcLine[]>([]);
   // Per-row dismissals of the "금액이 매우 큽니다" sanity chip (decision support only).
   const [sanityDismissed, setSanityDismissed] = useState<Set<number>>(new Set());
   const [totalSanityDismissed, setTotalSanityDismissed] = useState(false);
@@ -130,7 +138,9 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
           setHorizon(meta ? meta.horizonYears : DEFAULT_HORIZON_YEARS);
           // Legacy manual lines are shown as-entered: the unit is unknown, so nothing is converted
           // and the row keeps a "단위 확인 필요" chip until a person picks a unit.
-          setBcLines((all.filter((l) => !isCapabilityEntry(l) && !isPlanMetaEntry(l)) as Array<Record<string, unknown>>).map(normalizeLegacyLine));
+          const manual = (all.filter((l) => !isCapabilityEntry(l) && !isPlanMetaEntry(l)) as Array<Record<string, unknown>>).map(normalizeLegacyLine);
+          setBcLines(manual);
+          setSavedManualLines(manual);
           setStoredCapEntries(all.filter((l) => isCapabilityEntry(l)));
           setCapSel({});
           setCapStartYear({});
@@ -152,6 +162,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     setSanityDismissed(new Set()); setTotalSanityDismissed(false);
     entryDirty.current = false; setEntryReset((n) => n + 1);
     setEntryIsDirty(false); setEntryNote(null); setEntryError(null); setCostNote(null); setCostError(null);
+    setLinesSaving(false); setLinesNote(null); setLinesError(null); setSavedManualLines([]);
     void loadDetail(opportunityId);
     loadGaps(opportunityId);
   }, [opportunityId, loadDetail, loadGaps]);
@@ -214,6 +225,14 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   const hasYearErrors = Object.keys(yearErrors).length > 0;
   const lineStates = useMemo(() => lineSaveStates(capLines, storedCapEntries, capSel), [capLines, storedCapEntries, capSel]);
   const reflectDirty = hasUnsavedReflection(lineStates);
+  // 투자비 항목 저장 dirty tracking: any manual line differs from the last saved snapshot, or any capability selection is unsaved.
+  const manualDirty = useMemo(() => JSON.stringify(bcLines) !== JSON.stringify(savedManualLines), [bcLines, savedManualLines]);
+  // Per-row: saved when the line at the same index still equals the last saved snapshot.
+  const manualRowDirty = useCallback((i: number): boolean => {
+    const s = savedManualLines[i];
+    return !s || JSON.stringify(s) !== JSON.stringify(bcLines[i]);
+  }, [bcLines, savedManualLines]);
+  const investDirty = manualDirty || reflectDirty;
   const savedReflected = useMemo(() => {
     const saved = capLines.filter((l) => lineStates[l.capabilityKey] === "saved");
     return { count: saved.length, krwM: saved.reduce((n, l) => n + l.costKrwM, 0) };
@@ -319,6 +338,33 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     }
   }
 
+  // 투자비 항목 저장 — lines-only partial POST: manual lines as held + capability selections
+  // (selectionPayload). 다른 평가 필드는 보내지 않으므로 라우트가 저장값을 그대로 유지한다.
+  async function saveInvestmentLines() {
+    if (!selected || linesSaving || !investDirty) return;
+    setLinesSaving(true); setLinesError(null); setLinesNote(null);
+    try {
+      const body = reflectionBody(bcLines, capLines, capSel);
+      await api.post(`/api/greenfield/${selected.opportunity.id}`, {
+        business_case_lines: [metaEntry(), ...body.business_case_lines.map((l) => (isCapabilityEntry(l) && capStartYear[(l as { capabilityKey: string }).capabilityKey] !== undefined ? { ...l, startYear: capStartYear[(l as { capabilityKey: string }).capabilityKey] } : l))],
+      });
+      const savedCount = body.business_case_lines.length;
+      await loadDetail(selected.opportunity.id, "cost");
+      setLinesNote(`${savedCount}건 저장 · 합계 ${formatKrwM(invTotals.grandKrwM)}`);
+      onSaved?.();
+    } catch (err) {
+      if (err instanceof ApiError && err.code === "amount_mismatch") {
+        setAttRows(null);
+        await loadDetail(selected.opportunity.id, "cost");
+        setLinesError(`${err.message} 최신 판정으로 다시 불러왔습니다 — 금액을 확인한 뒤 다시 저장하세요.`);
+      } else {
+        setLinesError(err instanceof Error ? err.message : "투자비 항목 저장 실패");
+      }
+    } finally {
+      setLinesSaving(false);
+    }
+  }
+
   if (!selected) {
     return (
       <>
@@ -400,6 +446,32 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
 
           {/* 3. 투자비 검토 요건 */}
           <h3 className="text-[length:var(--fs-body)] mb-1">3️⃣ 투자비 검토 요건 (S8 사업성 분석 입력)</h3>
+          {canAct && (
+            <div className="flex flex-wrap items-center gap-2 mb-2" data-testid="invest-item-save-actions">
+              <button
+                type="button"
+                className={investDirty && !hasYearErrors ? "btn-primary btn-sm" : "btn-ghost btn-sm"}
+                disabled={linesSaving || !investDirty || hasYearErrors}
+                title={hasYearErrors ? "연차 입력을 확인하세요" : undefined}
+                aria-describedby="invest-item-save-hint"
+                onClick={() => void saveInvestmentLines()}
+              >
+                {linesSaving ? "저장 중…" : "투자비 항목 저장"}
+              </button>
+              {investDirty
+                ? <span className="status-chip status-amber" role="status" data-testid="invest-item-dirty-chip"><span aria-hidden="true">!</span> 저장하지 않은 변경</span>
+                : <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="invest-item-clean-hint">저장할 변경 없음</span>}
+              {hasYearErrors && <span role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">연차 입력을 확인하세요</span>}
+              <span id="invest-item-save-hint" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="invest-item-save-hint">항목 변경 후 투자비 항목 저장을 누르세요</span>
+            </div>
+          )}
+          {linesNote && (
+            <div className="legacy-model-notice mb-2 flex items-start justify-between gap-2" role="status" data-testid="invest-item-note">
+              <p className="legacy-model-notice-text">{linesNote}</p>
+              <button type="button" className="btn-ghost btn-sm" aria-label="저장 결과 닫기" onClick={() => setLinesNote(null)}>닫기</button>
+            </div>
+          )}
+          {linesError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2" data-testid="invest-item-error">{linesError}</p>}
           <div className="flex items-center gap-2 mb-2">
             <label htmlFor="s5-horizon" className="text-[length:var(--fs-caption)]">검토 기간(년)</label>
             <input
@@ -435,45 +507,77 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
               saved: savedReflected, promoted: !!(selected.opportunity.promoted_at || selected.opportunity.project_id),
             }}
           />
-          <ul className="list-none p-0 m-0 mb-1" aria-label="투자비 항목 목록" data-testid="invest-item-list">
+          <div className="table-scroll mb-1">
+          <table className="data-table table-fixed-pct tmin-56" aria-label="투자비 항목 목록" data-testid="invest-item-list">
+            <ColGroup widths={INVEST_ITEM_COL_PCT} />
+            <thead>
+              <tr>
+                <th scope="col">항목명</th>
+                <th scope="col">출처</th>
+                <th scope="col">분류</th>
+                <th scope="col">금액(백만원)</th>
+                <th scope="col">단위</th>
+                <th scope="col">통화</th>
+                <th scope="col">주기</th>
+                <th scope="col">시작·종료 연차</th>
+                <th scope="col">비고</th>
+                <th scope="col">작업</th>
+              </tr>
+            </thead>
+            <tbody>
           {unifiedRows.map((row) => {
             if (row.kind === "capability") {
               const capLine = capLinesEff.find((c) => c.capabilityKey === row.capabilityKey);
               const capStart = capLine?.startYear ?? 1;
               const capYearErr = yearErrors[`c${row.capabilityKey}`];
               return (
-                <li key={`c${row.capabilityKey}`} className="flex flex-wrap items-center gap-1 mb-1" data-testid={`invest-cap-row-${row.capabilityKey}`}>
-                  <input aria-label="항목명" value={row.name} readOnly className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 12rem" }} />
-                  <select aria-label={`${row.name} 분류`} value={row.category} disabled={!canAct} onChange={(e) => setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], category: e.target.value as CostCategory } }))} className="sizing-new-input sizing-new-input-sm">
-                    {(["labor", "opex", "capex"] as CostCategory[]).map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
-                  </select>
-                  <input aria-label="금액(백만원)" value={row.krwM} readOnly className="sizing-new-input sizing-new-input-sm" style={{ width: "6rem" }} />
-                  <span className="text-[length:var(--fs-caption)]">원화</span>
-                  <span className="text-[length:var(--fs-caption)]">{PERIOD_LABEL.lumpsum}</span>
-                  <label className="text-[length:var(--fs-caption)] flex items-center gap-0.5">
-                    집행 연차
-                    <input
-                      aria-label={`${row.name} 집행 연차`}
-                      type="number"
-                      min={1}
-                      max={horizon}
-                      value={capStart}
-                      disabled={!canAct}
-                      onChange={(e) => { const raw = e.target.value; const v = Number(raw); setCapStartYear((p) => ({ ...p, [row.capabilityKey]: raw === "" || !Number.isFinite(v) ? Number.NaN : v })); }}
-                      onBlur={(e) => { const v = Math.floor(Number(e.target.value) || 1); setCapStartYear((p) => ({ ...p, [row.capabilityKey]: Math.min(horizon, Math.max(1, v)) })); }}
-                      className="sizing-new-input sizing-new-input-sm"
-                      style={{ width: "3.5rem" }}
-                    />
-                  </label>
-                  {capYearErr && <span role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">{capYearErr}</span>}
-                  <input aria-label="비고" value={row.note} readOnly className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 10rem" }} />
-                  <span className="status-chip status-not-started"><span aria-hidden="true">⛓</span> 역량 해소 연동</span>
-                  {row.saveState === "saved" && !row.pendingRemoval && <span className="status-chip status-green"><span aria-hidden="true">✓</span> 반영됨 · 저장됨</span>}
-                  {(row.saveState === "unsaved" || row.pendingRemoval) && <span className="status-chip status-amber"><span aria-hidden="true">!</span> 저장 전{row.pendingRemoval ? " · 반영 해제" : ""}</span>}
-                  {row.needsRejudge && <span className="status-chip status-amber">재판정 필요</span>}
-                  <a href="#cap-judgement-section" className="text-[length:var(--fs-caption)] text-[color:var(--accent)] underline">판정 보기</a>
-                  {canAct && !row.pendingRemoval && <button type="button" className="btn-ghost btn-sm" aria-label={`${row.name} 반영 해제`} onClick={() => setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], reflected: false } }))}>반영 해제</button>}
-                </li>
+                <tr key={`c${row.capabilityKey}`} data-testid={`invest-cap-row-${row.capabilityKey}`}>
+                  <td>
+                    <input aria-label="항목명" value={row.name} readOnly className="sizing-new-input sizing-new-input-sm" style={{ width: "100%" }} />
+                  </td>
+                  <td>
+                    <span className="status-chip status-not-started"><span aria-hidden="true">⛓</span> 역량 해소 연동</span>
+                    {row.saveState === "saved" && !row.pendingRemoval && <><br /><span className="status-chip status-green"><span aria-hidden="true">✓</span> 반영됨 · 저장됨</span></>}
+                    {(row.saveState === "unsaved" || row.pendingRemoval) && <><br /><span className="status-chip status-amber"><span aria-hidden="true">!</span> 저장 전{row.pendingRemoval ? " · 반영 해제" : ""}</span></>}
+                    {row.needsRejudge && <><br /><span className="status-chip status-amber">재판정 필요</span></>}
+                  </td>
+                  <td>
+                    <select aria-label={`${row.name} 분류`} value={row.category} disabled={!canAct} onChange={(e) => setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], category: e.target.value as CostCategory } }))} className="sizing-new-input sizing-new-input-sm">
+                      {(["labor", "opex", "capex"] as CostCategory[]).map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
+                    </select>
+                  </td>
+                  <td>
+                    <input aria-label="금액(백만원)" value={row.krwM} readOnly className="sizing-new-input sizing-new-input-sm" style={{ width: "6rem" }} />
+                  </td>
+                  <td><span className="text-[length:var(--fs-caption)]">백만원</span></td>
+                  <td><span className="text-[length:var(--fs-caption)]">원화</span></td>
+                  <td><span className="text-[length:var(--fs-caption)]">{PERIOD_LABEL.lumpsum}</span></td>
+                  <td>
+                    <label className="text-[length:var(--fs-caption)] flex items-center gap-0.5">
+                      집행 연차
+                      <input
+                        aria-label={`${row.name} 집행 연차`}
+                        type="number"
+                        min={1}
+                        max={horizon}
+                        value={capStart}
+                        disabled={!canAct}
+                        onChange={(e) => { const raw = e.target.value; const v = Number(raw); setCapStartYear((p) => ({ ...p, [row.capabilityKey]: raw === "" || !Number.isFinite(v) ? Number.NaN : v })); }}
+                        onBlur={(e) => { const v = Math.floor(Number(e.target.value) || 1); setCapStartYear((p) => ({ ...p, [row.capabilityKey]: Math.min(horizon, Math.max(1, v)) })); }}
+                        className="sizing-new-input sizing-new-input-sm"
+                        style={{ width: "3.5rem" }}
+                      />
+                    </label>
+                    {capYearErr && <span role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">{capYearErr}</span>}
+                  </td>
+                  <td>
+                    <input aria-label="비고" value={row.note} readOnly className="sizing-new-input sizing-new-input-sm" style={{ width: "100%" }} />
+                  </td>
+                  <td>
+                    <a href="#cap-judgement-section" className="text-[length:var(--fs-caption)] text-[color:var(--accent)] underline">판정 보기</a>
+                    {canAct && !row.pendingRemoval && <button type="button" className="btn-ghost btn-sm" aria-label={`${row.name} 반영 해제`} onClick={() => setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], reflected: false } }))}>반영 해제</button>}
+                  </td>
+                </tr>
               );
             }
             const i = row.manualIndex;
@@ -487,70 +591,94 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
             const issueText = issues.length === 0 ? null : `확인 필요: ${issues.map((iss) => ({ category: "분류", period: "주기", currency: "통화", unit: "단위" }[iss])).join("·")}`;
             const oversize = sanityLineOversize(canonical) && !sanityDismissed.has(i);
             return (
-              <li key={`m${i}`} className="list-none" data-testid={`invest-manual-row-${i}`}>
-                {confirmChip && <span className="status-chip status-amber" title={issueText ?? undefined} data-testid={`invest-confirm-chip-${i}`}><span aria-hidden="true">!</span> {chipText}</span>}
-              <div className="flex flex-wrap items-center gap-1 mb-1">
-                <input aria-label="항목명" placeholder="항목명 (예: 설비 투자, 연매출)" value={l.line} onChange={(e) => setBc(i, { line: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 12rem" }} />
-                <select aria-label="분류" value={l.category ?? ""} onChange={(e) => setBc(i, { category: e.target.value as BcCategory })} className="sizing-new-input sizing-new-input-sm">
-                  <option value="" disabled>선택</option>
-                  {(Object.keys(CATEGORY_LABEL) as BcCategory[]).map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
-                </select>
-                <input aria-label="금액" type="number" placeholder="금액" value={l.amount || ""} onChange={(e) => setBc(i, { amount: Number(e.target.value) })} className="sizing-new-input sizing-new-input-sm" style={{ width: "7rem" }} />
-                <select aria-label="금액 단위" value={l.amountUnit ?? ""} onChange={(e) => { const u = e.target.value as AmountUnit; setBc(i, { amountUnit: u, amountUnitConfirmed: true }); }} className="sizing-new-input sizing-new-input-sm">
-                  <option value="" disabled>선택</option>
-                  {((l.currency === "KRW" ? ["krw", "krw_k", "krw_m", "krw_eok"] : ["fx_m", "fx_eok"]) as AmountUnit[]).map((u) => <option key={u} value={u}>{amountUnitLabel(u, l.currency ?? "KRW")}</option>)}
-                </select>
-                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid={`invest-unit-text-${i}`}>{canonical !== null ? `= ${formatKrwM(canonical)}` : unitSel && isFxUnit(l.amountUnit) ? `= ${l.amount.toLocaleString("ko-KR")} ${unitLabel} (환율 미반영 — 합계 제외)` : "단위를 고르면 금액이 계산됩니다"}</span>
-                <select aria-label="기준 통화" value={l.currency ?? "KRW"} onChange={(e) => { const c = e.target.value as BcCurrency; setBc(i, { currency: c, amountUnit: c === "KRW" ? "krw_m" : "fx_m" }); }} className="sizing-new-input sizing-new-input-sm">
-                  {(Object.keys(CURRENCY_LABEL) as BcCurrency[]).map((c) => <option key={c} value={c}>{CURRENCY_LABEL[c]}</option>)}
-                </select>
-                <select aria-label="금액 기준 (반복 주기 또는 일시불)" value={l.period ?? ""} onChange={(e) => setBc(i, { period: e.target.value as BcPeriod })} className="sizing-new-input sizing-new-input-sm">
-                  <option value="" disabled>선택</option>
-                  {(Object.keys(PERIOD_LABEL) as BcPeriod[]).map((p) => <option key={p} value={p}>{PERIOD_LABEL[p]}</option>)}
-                </select>
-                <label className="text-[length:var(--fs-caption)] flex items-center gap-0.5">
-                  시작
-                  <input
-                    aria-label={`${l.line || "항목"} 시작 연차`}
-                    type="number"
-                    min={1}
-                    max={horizon}
-                    value={l.startYear ?? ""}
-                    disabled={!canAct}
-                    placeholder="Y1"
-                    onChange={(e) => { const raw = e.target.value; const v = Number(raw); setBc(i, { startYear: raw === "" ? undefined : v }); }}
-                    onBlur={(e) => { const v = Math.floor(Number(e.target.value) || 1); setBc(i, { startYear: Math.min(horizon, Math.max(1, v)) }); }}
-                    className="sizing-new-input sizing-new-input-sm"
-                    style={{ width: "3.5rem" }}
-                  />
-                </label>
-                {l.period !== "lumpsum" && (
+              <tr key={`m${i}`} data-testid={`invest-manual-row-${i}`}>
+                <td>
+                  <input aria-label="항목명" placeholder="항목명 (예: 설비 투자, 연매출)" value={l.line} onChange={(e) => setBc(i, { line: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "100%" }} />
+                </td>
+                <td>
+                  <span className="status-chip status-not-started">수동</span>
+                  {manualRowDirty(i)
+                    ? <><br /><span className="status-chip status-amber"><span aria-hidden="true">!</span> 저장 전</span></>
+                    : <><br /><span className="status-chip status-green"><span aria-hidden="true">✓</span> 저장됨</span></>}
+                  {confirmChip && <><br /><span className="status-chip status-amber" title={issueText ?? undefined} data-testid={`invest-confirm-chip-${i}`}><span aria-hidden="true">!</span> {chipText}</span></>}
+                  {oversize && canAct && <><br /><button type="button" className="btn-ghost btn-sm" data-testid={`invest-sanity-${i}`} onClick={() => setSanityDismissed((prev) => new Set(prev).add(i))}>닫기</button></>}
+                  {yearErrors[`m${i}`] && <><br /><span role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)]" data-testid={`invest-year-error-${i}`}>{yearErrors[`m${i}`]}</span></>}
+                </td>
+                <td>
+                  <select aria-label="분류" value={l.category ?? ""} onChange={(e) => setBc(i, { category: e.target.value as BcCategory })} className="sizing-new-input sizing-new-input-sm">
+                    <option value="" disabled>선택</option>
+                    {(Object.keys(CATEGORY_LABEL) as BcCategory[]).map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
+                  </select>
+                </td>
+                <td>
+                  <input aria-label="금액" type="number" placeholder="금액" value={l.amount || ""} onChange={(e) => setBc(i, { amount: Number(e.target.value) })} className="sizing-new-input sizing-new-input-sm" style={{ width: "7rem" }} />
+                  <br /><span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid={`invest-unit-text-${i}`}>{canonical !== null ? `= ${formatKrwM(canonical)}` : unitSel && isFxUnit(l.amountUnit) ? `= ${l.amount.toLocaleString("ko-KR")} ${unitLabel} (환율 미반영 — 합계 제외)` : "단위를 고르면 금액이 계산됩니다"}</span>
+                </td>
+                <td>
+                  <select aria-label="금액 단위" value={l.amountUnit ?? ""} onChange={(e) => { const u = e.target.value as AmountUnit; setBc(i, { amountUnit: u, amountUnitConfirmed: true }); }} className="sizing-new-input sizing-new-input-sm">
+                    <option value="" disabled>선택</option>
+                    {((l.currency === "KRW" ? ["krw", "krw_k", "krw_m", "krw_eok"] : ["fx_m", "fx_eok"]) as AmountUnit[]).map((u) => <option key={u} value={u}>{amountUnitLabel(u, l.currency ?? "KRW")}</option>)}
+                  </select>
+                </td>
+                <td>
+                  <select aria-label="기준 통화" value={l.currency ?? "KRW"} onChange={(e) => { const c = e.target.value as BcCurrency; setBc(i, { currency: c, amountUnit: c === "KRW" ? "krw_m" : "fx_m" }); }} className="sizing-new-input sizing-new-input-sm">
+                    {(Object.keys(CURRENCY_LABEL) as BcCurrency[]).map((c) => <option key={c} value={c}>{CURRENCY_LABEL[c]}</option>)}
+                  </select>
+                </td>
+                <td>
+                  <select aria-label="금액 기준 (반복 주기 또는 일시불)" value={l.period ?? ""} onChange={(e) => setBc(i, { period: e.target.value as BcPeriod })} className="sizing-new-input sizing-new-input-sm">
+                    <option value="" disabled>선택</option>
+                    {(Object.keys(PERIOD_LABEL) as BcPeriod[]).map((p) => <option key={p} value={p}>{PERIOD_LABEL[p]}</option>)}
+                  </select>
+                </td>
+                <td>
                   <label className="text-[length:var(--fs-caption)] flex items-center gap-0.5">
-                    종료
+                    시작
                     <input
-                      aria-label={`${l.line || "항목"} 종료 연차`}
+                      aria-label={`${l.line || "항목"} 시작 연차`}
                       type="number"
                       min={1}
                       max={horizon}
-                      value={l.endYear ?? ""}
+                      value={l.startYear ?? ""}
                       disabled={!canAct}
-                      placeholder={`Y${horizon}`}
-                      onChange={(e) => { const raw = e.target.value; const v = Number(raw); setBc(i, { endYear: raw === "" ? undefined : v }); }}
-                      onBlur={(e) => { const v = Math.floor(Number(e.target.value) || horizon); setBc(i, { endYear: Math.min(horizon, Math.max(1, v)) }); }}
+                      placeholder="Y1"
+                      onChange={(e) => { const raw = e.target.value; const v = Number(raw); setBc(i, { startYear: raw === "" ? undefined : v }); }}
+                      onBlur={(e) => { const v = Math.floor(Number(e.target.value) || 1); setBc(i, { startYear: Math.min(horizon, Math.max(1, v)) }); }}
                       className="sizing-new-input sizing-new-input-sm"
                       style={{ width: "3.5rem" }}
                     />
                   </label>
-                )}
-                <input aria-label="비고" placeholder="비고" value={l.note ?? ""} onChange={(e) => setBc(i, { note: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 10rem" }} />
-                {canAct && <button type="button" className="btn-ghost btn-sm" aria-label="항목 삭제" onClick={() => setBcLines((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>}
-                {oversize && canAct && <button type="button" className="btn-ghost btn-sm" data-testid={`invest-sanity-${i}`} onClick={() => setSanityDismissed((prev) => new Set(prev).add(i))}>닫기</button>}
-                {yearErrors[`m${i}`] && <span role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)]" data-testid={`invest-year-error-${i}`}>{yearErrors[`m${i}`]}</span>}
-              </div>
-              </li>
+                  {l.period !== "lumpsum" && (
+                    <label className="text-[length:var(--fs-caption)] flex items-center gap-0.5">
+                      종료
+                      <input
+                        aria-label={`${l.line || "항목"} 종료 연차`}
+                        type="number"
+                        min={1}
+                        max={horizon}
+                        value={l.endYear ?? ""}
+                        disabled={!canAct}
+                        placeholder={`Y${horizon}`}
+                        onChange={(e) => { const raw = e.target.value; const v = Number(raw); setBc(i, { endYear: raw === "" ? undefined : v }); }}
+                        onBlur={(e) => { const v = Math.floor(Number(e.target.value) || horizon); setBc(i, { endYear: Math.min(horizon, Math.max(1, v)) }); }}
+                        className="sizing-new-input sizing-new-input-sm"
+                        style={{ width: "3.5rem" }}
+                      />
+                    </label>
+                  )}
+                </td>
+                <td>
+                  <input aria-label="비고" placeholder="비고" value={l.note ?? ""} onChange={(e) => setBc(i, { note: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "100%" }} />
+                </td>
+                <td>
+                  {canAct && <button type="button" className="btn-ghost btn-sm" aria-label="항목 삭제" onClick={() => setBcLines((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>}
+                </td>
+              </tr>
             );
           })}
-          </ul>
+            </tbody>
+          </table>
+          </div>
           <p className="text-[length:var(--fs-caption)] mb-2" role="status" data-testid="invest-item-footer">{footer.text}</p>
           {invTotals.manualExcludedNeedsConfirm > 0 && (
             <p className="text-[length:var(--fs-caption)] mb-2" role="status" data-testid="invest-excluded-note">확인 필요 {invTotals.manualExcludedNeedsConfirm}건은 합계에서 제외됨</p>
