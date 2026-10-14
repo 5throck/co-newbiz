@@ -50,9 +50,28 @@ function scanTables(): TableInfo[] {
       const line = src.slice(0, start).split("\n").length;
       // Heuristic: a .table-scroll element opens within 15 lines above (or on) the <table> line.
       const above = lines.slice(Math.max(0, line - 16), line).join("\n");
-      const firstTr = block.match(/<tr\b[\s\S]*?<\/tr>/)?.[0] ?? "";
-      const headerCellsMax = (firstTr.match(/<th\b/g) ?? []).length;
-      const conditional = (firstTr.match(/&&\s*<th\b/g) ?? []).length;
+      // Header width = widest <thead> row, counting colSpan (a numeric expression such as
+      // `note ? 2 : 3` contributes its min to headerCells and its max to headerCellsMax); `&& <th` cells are optional.
+      const headRows = block.match(/<thead[\s\S]*?<\/thead>/)?.[0].match(/<tr\b[\s\S]*?<\/tr>/g) ?? [];
+      let headerCellsMax = 0;
+      let lo = 0;
+      if (headRows.length === 0) {
+        const firstTr = block.match(/<tr\b[\s\S]*?<\/tr>/)?.[0] ?? "";
+        headerCellsMax = (firstTr.match(/<th\b/g) ?? []).length;
+        lo = headerCellsMax - (firstTr.match(/&&\s*<th\b/g) ?? []).length;
+      }
+      for (const tr of headRows) {
+        let rowLo = 0;
+        let rowHi = 0;
+        for (const m of tr.matchAll(/(&&\s*)?<th\b((?:[^>]|=>)*)>/g)) {
+          const expr = m[2].match(/colSpan=\{([^}]*)\}/)?.[1];
+          const nums = expr ? (expr.match(/\d+/g) ?? ["1"]).map(Number) : [1];
+          rowHi += Math.max(...nums);
+          if (!m[1]) rowLo += Math.min(...nums);
+        }
+        headerCellsMax = Math.max(headerCellsMax, rowHi);
+        lo = Math.max(lo, rowLo);
+      }
       tables.push({
         key: `${file}#${ordinal}`,
         file,
@@ -60,7 +79,7 @@ function scanTables(): TableInfo[] {
         className: classNameOf(openTag),
         block,
         scrollWrapped: /table-scroll/.test(above),
-        headerCells: headerCellsMax - conditional,
+        headerCells: lo,
         headerCellsMax,
       });
     }
@@ -228,7 +247,7 @@ describe("table column sizing guard", () => {
       { file: "components/stages/route-decision/DecisionTab.tsx", label: "진출방식 결정 이력", tmin: "tmin-64", expect: ["table-fixed-pct", "cell-truncate"] },
       { file: "components/stages/route-decision/CompetitiveTab.tsx", label: "경쟁 구조 — 주요 기업", tmin: "tmin-40", expect: ["table-fixed-pct", "cell-truncate"] },
       { file: "components/stages/route-decision/EvalTab.tsx", label: "필요 역량 수준 레지스터", tmin: "tmin-56", expect: ["table-fixed-pct"] },
-      { file: "components/stages/CapabilityJudgementTable.tsx", label: "필요 역량 달성 가능성 표", tmin: "tmin-80", expect: ["table-fixed-pct"] },
+      { file: "components/stages/CapabilityJudgementTable.tsx", label: "필요 역량 달성 가능성 표", tmin: "tmin-48", expect: ["table-fixed-pct"] },
       { file: "components/stages/market/SizingMarketTabs.tsx", label: "경쟁 구조 — 주요 기업", tmin: "tmin-80", expect: ["table-fixed-pct", "cell-truncate"] },
       { file: "app/agents/page.tsx", label: "에이전트 로스터", tmin: "tmin-40", expect: ["table-fixed-pct"] },
       { file: "app/agents/page.tsx", label: "체인 단계별 실행 기록", tmin: "tmin-48", expect: ["table-fixed-pct", "cell-truncate"] },

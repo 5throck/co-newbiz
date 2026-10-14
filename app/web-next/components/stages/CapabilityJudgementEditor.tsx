@@ -96,31 +96,33 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro }: {
 
   const awaiting = view.summary.awaitingConfirmation;
   const noteMap = gap ? new Map(gap.rows.map((g) => [g.id, g.note])) : null;
+  const unsaved = dirty.size > 0 || notesDirty;
   return (
     <div aria-label="필요 역량 달성 가능성 판정">
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-        {intro ?? "S3에서 정의한 필요 역량을 확보할 수 있는지 사람이 판정합니다. AI는 초안만 제안하며, 여기 입력한 비용·기간은 사업성 수치에 자동 반영되지 않습니다."}{" "}
-        필요도·필요 수준·보유 판정·보유 수준·보유 근거는 S3에서 정의한 값이며 여기서는 읽기 전용입니다 — <a href={s3Href} className="text-[color:var(--accent)] underline">S3에서 수정</a>.
-        S3 내용이 바뀐 행은 재판정이 필요하며, 이전 판정은 이력으로 남습니다.
+        {intro ?? "S3에서 정의한 필요 역량을 확보할 수 있는지 사람이 판정합니다 — 행의 판정 버튼에서 입력하고, AI 초안은 제안일 뿐입니다."}{" "}
+        <a href={s3Href} className="text-[color:var(--accent)] underline">S3에서 수정</a>
       </p>
       <SummaryStrip s={view.summary} />
+      <div className="flex flex-wrap items-center justify-end gap-2 mb-2">
+        {canAct && view.rows.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2" data-testid="judgement-actions">
+            {unsaved && <span className="status-chip status-amber" role="status"><span aria-hidden="true">!</span> 저장하지 않은 변경</span>}
+            <button type="button" className={unsaved ? "btn-primary btn-sm" : "btn-ghost btn-sm"} disabled={busy || !unsaved} onClick={() => void save()}>초안 저장</button>
+            <button type="button" className="btn-ghost btn-sm" disabled={busy || unsaved || awaiting === 0} title={unsaved ? "저장 후 확정할 수 있습니다." : undefined} onClick={() => void confirm()}>
+              판정 확정{awaiting > 0 ? ` (${awaiting}건)` : ""}
+            </button>
+          </div>
+        )}
+      </div>
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">{error}</p>}
       {view.rows.length === 0 ? (
         <p className="text-[color:var(--muted-fg)]">S3 필요 역량 레지스터에 행이 없습니다. S3에서 필요 역량을 먼저 정리하세요.</p>
       ) : (
-        <CapabilityJudgementTable rows={view.rows} drafts={drafts} editable={canAct} onSet={set} s3Href={s3Href}
+        <CapabilityJudgementTable rows={view.rows} drafts={drafts} editable={canAct} onSet={set} s3Href={s3Href} dirty={dirty}
           note={noteMap ? { value: (id) => noteMap.get(id) ?? "", onChange: (id, v) => { gap!.setRows((prev) => prev.map((g) => (g.id === id ? { ...g, note: v } : g))); setNotesDirty(true); } } : undefined} />
       )}
       <RemovedCapabilities removed={view.removed_capabilities ?? []} />
-      {canAct && view.rows.length > 0 && (
-        <div className="flex gap-2">
-          <button type="button" className="btn-ghost btn-sm" disabled={busy || (dirty.size === 0 && !notesDirty)} onClick={() => void save()}>초안 저장</button>
-          <button type="button" className="btn-ghost btn-sm" disabled={busy || dirty.size > 0 || notesDirty || awaiting === 0} onClick={() => void confirm()}>
-            판정 확정{awaiting > 0 ? ` (${awaiting}건)` : ""}
-          </button>
-          {(dirty.size > 0 || notesDirty) && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] self-center">저장하지 않은 변경이 있습니다 — 저장 후 확정할 수 있습니다.</span>}
-        </div>
-      )}
     </div>
   );
 }

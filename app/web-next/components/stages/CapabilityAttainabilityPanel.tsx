@@ -61,15 +61,14 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
     <section className="market-section sizing-step mb-3" aria-label="필요 역량 달성 가능성">
       <h3 className="sizing-step-title">필요 역량 달성 가능성</h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-        읽기 전용 요약입니다. 필요 역량의 정의는 S3에서, 해소 방식·기대 수준·비용·기간·달성 가능성의 판정과 확정은 S5에서 합니다.
-        여기 표시된 비용·기간은 사업성 수치에 자동 반영되지 않으며, S3 내용이 바뀐 행은 S5에서 재판정이 필요합니다.
+        읽기 전용 요약입니다 — 정의는 S3에서, 해소 방식·기대 수준·비용·기간·달성 가능성의 판정과 확정은 S5에서 합니다.
         {editHref && <> <a href={editHref} className="text-[color:var(--accent)] underline font-semibold">S5에서 판정</a></>}
       </p>
       <SummaryStrip s={view.summary} />
       {view.rows.length === 0 ? (
         <p className="text-[color:var(--muted-fg)]">S3 필요 역량 레지스터에 행이 없습니다. S3에서 필요 역량을 먼저 정리하세요.</p>
       ) : (
-        <CapabilityJudgementTable rows={view.rows} drafts={drafts} editable={false} s3Href={s3Href} />
+        <CapabilityJudgementTable rows={view.rows} drafts={drafts} editable={false} s3Href={s3Href} judgeHref={editHref} />
       )}
       <RemovedCapabilities removed={view.removed_capabilities ?? []} />
     </section>

@@ -9,7 +9,7 @@ const read = (p: string) => readFileSync(join(import.meta.dirname, "../../app/we
 test("ClampedText clamps to 2 lines with title tooltip and focusable element, no toggle", () => {
   const s = read("components/stages/ClampedText.tsx");
   expect(s).toContain("line-clamp-2");
-  expect(s).toContain("title={text}");
+  expect(s).toContain("title={title ?? text}");
   expect(s).toContain("tabIndex={0}");
   expect(s).not.toContain("aria-hidden");
   expect(s).not.toContain("CLAMP_THRESHOLD");
@@ -26,8 +26,9 @@ test("S3, S5 and S8 required-note cells use ClampedText", () => {
   expect(s3).toContain("<ClampedText text={r.requiredNote}");
   // The table is fixed-layout (ColGroup percentages), so the first column cannot widen the table.
   expect(s3).toContain("table-fixed-pct");
-  expect(s5).toContain("<ClampedText text={r.required_note}");
-  expect(s8).toContain("<ClampedText text={r.required_note}");
+  // S5/S8 summary table: the one-sentence 판정 요약 is one clamped line.
+  expect(s5).toContain("<ClampedText text={sentence} title={buildJudgementDetail(draftOf(r))} lines={1} />");
+  expect(s8).toContain("<ClampedText text={sentence} title={buildJudgementDetail(draftOf(r))} lines={1} />");
   expect(s3).not.toContain("` — ${r.requiredNote}`");
 });
 
