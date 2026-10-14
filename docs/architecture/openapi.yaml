@@ -5958,7 +5958,7 @@ paths:
   /api/projects/{id}/capability-attainability:
     get:
       operationId: getProjectCapabilityAttainability
-      summary: "S8 required-capability attainability view (ADR-0168): the source opportunity's S3 register rows with 5-step levels, resolution route, closing cost (KRW million), months to attain, human attainability grade (high | medium | low | null = unjudged), rationale, evidence, confirmation, plus a summary with counts and the warning banner state. Rows without a judgement read as unjudged."
+      summary: "S8 required-capability attainability view (ADR-0168): the source opportunity's S3 register rows with 5-step levels, resolution route, closing cost (KRW million), months to attain, human attainability grade (high | medium | low | null = unjudged), rationale, evidence, confirmation, plus a summary with counts and the warning banner state. Rows without a judgement read as unjudged. ADR-0170: each row also carries read-only S3-owned held_holders / held_evidence, stale, stale_since, basis_hash, s3_hash, s3_changes, prior and history_count; summary.stale counts rows whose S3 content changed after the judgement (counted as unjudged); removed_capabilities lists judgements of rows deleted in S3."
       tags:
         - Analysis
       parameters:
@@ -5978,7 +5978,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     put:
       operationId: putProjectCapabilityAttainability
-      summary: "Save attainability drafts as a per-row patch. Body {rows: [{id, requiredLevel?, currentLevel?, resolution?, closingCostKrwM?, monthsToAttain?, grade?, rationale?, evidence?}]}. analyst+ member; any caller may draft, none may confirm. 400 invalid_request | unknown_row | invalid_level | invalid_cost | rationale_required (high/low need a rationale) | no_source_opportunity. A changed row loses its confirmation. Audit capability_attainability.save, target <projectId>#capability@<via>."
+      summary: "Save attainability drafts as a per-row patch. Body {rows: [{id, s3Hash?, resolution?, closingCostKrwM?, monthsToAttain?, grade?, rationale?, evidence?}]} (S8-owned fields only, merged onto the live register in one transaction). analyst+ member; any caller may draft, none may confirm. 400 invalid_request | unknown_row | s3_owned_field (capability, requiredNote, held, requiredLevel, currentLevel, source, note belong to S3) | invalid_cost | rationale_required (high/low need a rationale) | no_source_opportunity. A changed row (or any save of a stale row) loses its confirmation and is stamped with the S3 basis hash (ADR-0170). Audit capability_attainability.save, target <projectId>#capability@<via>."
       tags:
         - Analysis
       parameters:
@@ -6002,7 +6002,7 @@ paths:
   /api/projects/{id}/capability-attainability/confirm:
     post:
       operationId: postProjectCapabilityAttainabilityConfirm
-      summary: "Confirm judged attainability rows (ADR-0168). Human-only (403 human_only for bearer / MCP / agent callers), analyst+. Body {row_ids?} (default all judged, unconfirmed rows). 409 nothing_to_confirm; 400 unknown_row. Audit capability_attainability.confirm."
+      summary: "Confirm judged attainability rows (ADR-0168). Human-only (403 human_only for bearer / MCP / agent callers), analyst+. Body {row_ids?} (default all judged, unconfirmed rows). 409 nothing_to_confirm; 400 unknown_row | stale_requires_rejudge (S3 content changed after the judgement; re-save first). Audit capability_attainability.confirm."
       tags:
         - Analysis
       parameters:

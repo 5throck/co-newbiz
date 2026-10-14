@@ -77,7 +77,7 @@ export function goalsStatusText(g: GoalsStatusInput): string {
 
 export interface S8LensStripView {
   goalsText: string;
-  technical: LensCardView & { judged: number; total: number; cautionCount: number; worstItem: string | null; mismatchCount: number };
+  technical: LensCardView & { judged: number; total: number; cautionCount: number; worstItem: string | null; mismatchCount: number; staleCount: number };
   financial: LensCardView & { reasons: string[] };
   /** Shown only for a technical 주의; warning, never a cap. */
   warning: string | null;
@@ -86,13 +86,13 @@ export interface S8LensStripView {
 }
 
 export function buildLensStripView(
-  technical: { status: LensStatus; judged: number; total: number; cautionCount: number; worstItem: string | null; mismatchCount?: number },
+  technical: { status: LensStatus; judged: number; total: number; cautionCount: number; worstItem: string | null; mismatchCount?: number; staleCount?: number },
   financial: { status: LensStatus; reasons: string[] },
   goals: GoalsStatusInput = { goalCount: 0, met: 0, hasCase: false },
 ): S8LensStripView {
   return {
     goalsText: goalsStatusText(goals),
-    technical: { ...lensCard(technical.status), judged: technical.judged, total: technical.total, cautionCount: technical.cautionCount, worstItem: technical.worstItem, mismatchCount: technical.mismatchCount ?? 0 },
+    technical: { ...lensCard(technical.status), judged: technical.judged, total: technical.total, cautionCount: technical.cautionCount, worstItem: technical.worstItem, mismatchCount: technical.mismatchCount ?? 0, staleCount: technical.staleCount ?? 0 },
     financial: { ...lensCard(financial.status), reasons: financial.reasons },
     warning: technical.cautionCount > 0 ? TECHNICAL_CAUTION_WARNING : null,
     caption: LENS_STRIP_CAPTION,
@@ -101,7 +101,8 @@ export function buildLensStripView(
 }
 
 /** One informational gate-brief line (fs gate); never a block. */
-export function technicalLensBriefLine(t: { status: LensStatus; judged: number; total: number; cautionItems: string[] }): string {
+export function technicalLensBriefLine(t: { status: LensStatus; judged: number; total: number; cautionItems: string[]; staleCount?: number }): string {
   const items = t.cautionItems.length > 0 ? `, 주의 항목 ${t.cautionItems.join("·")}` : "";
-  return `기술적 타당성: ${LENS_STATUS_LABEL[t.status]} (판정 ${t.judged}/${t.total}${items}) — 참고 정보이며 승인 조건이 아닙니다`;
+  const stale = (t.staleCount ?? 0) > 0 ? `, 재판정 필요 ${t.staleCount}건` : "";
+  return `기술적 타당성: ${LENS_STATUS_LABEL[t.status]} (판정 ${t.judged}/${t.total}${items}${stale}) — 참고 정보이며 승인 조건이 아닙니다`;
 }

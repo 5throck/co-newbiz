@@ -7,6 +7,7 @@
 // Judgement is human (AI drafts only). The lens is decision support: it never
 // caps a grade and never blocks a gate.
 import type { CapabilityGapRow } from "./capability-gap.ts";
+import { isStale } from "./capability-linkage.ts";
 
 export const TECH_ITEM_KEYS = ["T1", "T2", "T3", "T4", "T5"] as const;
 export type TechItemKey = (typeof TECH_ITEM_KEYS)[number];
@@ -179,11 +180,26 @@ export function serializeGapRegister(
   updatedAt: string,
   storedJson: string | null | undefined,
   lens?: TechnicalLens,
+  removedCapabilities?: readonly unknown[],
 ): string {
   const carried = lens ?? extractTechnicalLensRaw(storedJson);
+  // ADR-0170: the archive of judgements whose S3 row was deleted is carried the same
+  // way; only the register-write wrapper (capability-register-write.ts) passes a new list.
+  const removed = removedCapabilities ?? extractRegisterKeyRaw(storedJson, "removedCapabilities");
   const out: Record<string, unknown> = { rows, updatedAt };
   if (carried !== undefined) out.technicalLens = carried;
+  if (removed !== undefined && !(Array.isArray(removed) && removed.length === 0)) out.removedCapabilities = removed;
   return JSON.stringify(out);
+}
+
+function extractRegisterKeyRaw(storedJson: string | null | undefined, key: string): unknown {
+  if (!storedJson) return undefined;
+  try {
+    const raw = JSON.parse(storedJson) as Record<string, unknown>;
+    return raw && typeof raw === "object" ? raw[key] : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 // ── Summary view model ────────────────────────────────────────────────────
@@ -208,16 +224,27 @@ export interface TechnicalLensSummary {
   items: LensItemView[];
   /** Brown Field S9 mismatch count (verification result `different`). */
   mismatchCount: number;
+  /** Required-capability rows whose S3 content changed after the judgement (ADR-0170). */
+  staleCount: number;
 }
 
 /** T1 from the S3 register rows: 충족 if all rows are human-confirmed and none low; 주의 if any low; else 미판정. */
 export function deriveT1(rows: CapabilityGapRow[]): { status: LensStatus; judged: boolean; note: string } {
   if (rows.length === 0) return { status: "undetermined", judged: false, note: "S3 필요 역량 레지스터가 비어 있습니다." };
-  const low = rows.filter((r) => r.attainability?.grade === "low").length;
-  if (low > 0) return { status: "caution", judged: rows.every((r) => !!r.attainability?.confirmedAt), note: `달성 가능성 '낮음' ${low}건` };
-  const confirmed = rows.filter((r) => r.attainability?.grade && r.attainability.confirmedAt).length;
-  if (confirmed === rows.length) return { status: "met", judged: true, note: `${rows.length}건 모두 사람이 확정` };
-  return { status: "undetermined", judged: false, note: `사람이 확정한 판정 ${confirmed}/${rows.length}건` };
+  // ADR-0170: a row whose S3 content changed after the judgement counts as unjudged.
+  const stale = rows.filter((r) => isStale(r)).length;
+  const fresh = rows.filter((r) => !isStale(r));
+  const staleNote = stale > 0 ? ` (재판정 필요 ${stale}건)` : "";
+  const low = fresh.filter((r) => r.attainability?.grade === "low").length;
+  if (low > 0) return { status: "caution", judged: stale === 0 && fresh.every((r) => !!r.attainability?.confirmedAt), note: `달성 가능성 '낮음' ${low}건${staleNote}` };
+  const confirmed = fresh.filter((r) => r.attainability?.grade && r.attainability.confirmedAt).length;
+  if (stale === 0 && confirmed === rows.length) return { status: "met", judged: true, note: `${rows.length}건 모두 사람이 확정` };
+  return { status: "undetermined", judged: false, note: `사람이 확정한 판정 ${confirmed}/${rows.length}건${staleNote}` };
+}
+
+/** Rows needing re-judgement after an S3 change (ADR-0170). */
+export function staleRowCount(rows: CapabilityGapRow[]): number {
+  return rows.filter((r) => isStale(r)).length;
 }
 
 function storedStatus(it: TechnicalLensItem | undefined): { status: LensStatus; judged: boolean } {
@@ -253,5 +280,5 @@ export function summarizeTechnicalLens(
   const status: LensStatus = items.some((i) => !i.judged) ? "undetermined" : cautions.length > 0 ? "caution" : "met";
   let mismatchCount = 0;
   for (const v of Object.values(subject?.verification ?? {})) if (v?.result === "different") mismatchCount += 1;
-  return { status, total: items.length, judged, cautionCount: cautions.length, worstItem: cautions[0]?.label ?? null, items, mismatchCount };
+  return { status, total: items.length, judged, cautionCount: cautions.length, worstItem: cautions[0]?.label ?? null, items, mismatchCount, staleCount: staleRowCount(rows) };
 }

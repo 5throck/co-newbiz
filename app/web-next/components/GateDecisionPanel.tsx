@@ -93,7 +93,52 @@ function GapDialog({ gateLabel, gaps, onCancel, onSubmit }: { gateLabel: string;
   );
 }
 
-export function GateDecisionPanel({ opportunityId, gates, killHint, entityType = "opportunity", showReview = true, nextStage, goGaps, onRecorded, sequence = false }: {
+export interface GateBriefData {
+  source: "llm" | "synthesis";
+  provider: string | null;
+  note: string | null;
+  manifest: string[];
+  gate: string;
+  brief: { recommendation: "go" | "hold" | "kill" | null; confidence: string | null; rationale_draft: string; key_evidence: string[]; cautions: string[] };
+}
+
+/** ADR-0118 gate brief content (proposal only). Shared by the standalone brief and the S8 "AI 판단 지원" section. */
+export function GateBriefBody({ briefData, currentGate, onApply }: { briefData: GateBriefData; currentGate: string; onApply: (text: string) => void }) {
+  return (
+    <>
+      {briefData.gate !== currentGate && (
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mt-1 mb-0">브리프는 {briefData.gate} 기준입니다 — 진행을 바꾸면 재생성하세요.</p>
+      )}
+      <p className="mt-2 mb-1 flex flex-wrap items-center gap-1">
+        <span className={`status-chip ${briefData.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
+          {briefData.source === "llm" ? `LLM 제안${briefData.provider ? ` · ${briefData.provider}` : ""}` : "결정론 폴백"}
+        </span>
+        {briefData.brief.recommendation && (
+          <span className={`status-chip ${briefData.brief.recommendation === "go" ? "status-green" : briefData.brief.recommendation === "hold" ? "status-amber" : "status-red"}`}>
+            권고 {briefData.brief.recommendation.toUpperCase()}
+          </span>
+        )}
+        {briefData.brief.confidence && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">확신도 {briefData.brief.confidence}</span>}
+      </p>
+      {briefData.note && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{briefData.note}</p>}
+      {briefData.brief.rationale_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">근거 초안:</span> {briefData.brief.rationale_draft}</p>}
+      {briefData.brief.key_evidence.length > 0 && (
+        <ul className="sizing-note-list mb-1">
+          {briefData.brief.key_evidence.map((e, i) => <li key={i}>{e}</li>)}
+        </ul>
+      )}
+      {briefData.brief.cautions.length > 0 && (
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mb-1">⚠ {briefData.brief.cautions.join(" / ")}</p>
+      )}
+      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">이 제안이 본 산출물: {briefData.manifest.join(" · ")}</p>
+      <button type="button" className="btn-ghost btn-sm" onClick={() => onApply(briefData.brief.rationale_draft)} disabled={!briefData.brief.rationale_draft}>
+        근거에 반영
+      </button>
+    </>
+  );
+}
+
+export function GateDecisionPanel({ opportunityId, gates, killHint, entityType = "opportunity", showReview = true, nextStage, goGaps, onRecorded, sequence = false, hideBrief = false, rationalePrefill = null }: {
   opportunityId: string;
   gates: GateMetaId[];
   killHint?: string | null;
@@ -107,6 +152,10 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   onRecorded?: (decision: "go" | "hold" | "kill", gate: GateMetaId) => void;
   /** Multi-gate only: gates are ordered committees. Shows a step indicator, defaults the form to the current turn, and opens a later gate only after the earlier ones are GO. */
   sequence?: boolean;
+  /** The parent renders the AI brief itself (S8 "AI 판단 지원"): hide the standalone brief block. */
+  hideBrief?: boolean;
+  /** Parent-driven rationale prefill (proposal only; the person still records). A new nonce applies the text. */
+  rationalePrefill?: { text: string; nonce: number } | null;
 }) {
   const { me } = useAuth();
   const { toast } = useToast();
@@ -132,14 +181,6 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   });
   // ADR-0118 — LLM 진행 브리프(제안). 권고·근거 초안만 제공하며 결정 select는
   // 건드리지 않는다. "근거에 반영"은 rationale 프리필일 뿐, 기록은 사람이다.
-  interface GateBriefData {
-    source: "llm" | "synthesis";
-    provider: string | null;
-    note: string | null;
-    manifest: string[];
-    gate: string;
-    brief: { recommendation: "go" | "hold" | "kill" | null; confidence: string | null; rationale_draft: string; key_evidence: string[]; cautions: string[] };
-  }
   const [briefData, setBriefData] = useState<GateBriefData | null>(null);
   const [briefLoading, setBriefLoading] = useState(false);
   const [briefError, setBriefError] = useState<string | null>(null);
@@ -163,6 +204,13 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   }, [seq, latest, turn]);
 
   useEffect(() => { setBriefData(null); setBriefError(null); }, [opportunityId, entityType]);
+
+  const applyBriefRationale = (text: string) => setForm((f) => ({ ...f, rationale: text || f.rationale }));
+  const prefillNonce = rationalePrefill?.nonce;
+  useEffect(() => {
+    if (rationalePrefill && rationalePrefill.text) applyBriefRationale(rationalePrefill.text);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefillNonce]);
 
   async function generateBrief() {
     if (briefLoading) return;
@@ -322,7 +370,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
       {showReview && <ReviewBuckets entityType={entityType} entityId={opportunityId} gates={gates} variant="expanded" />}
 
       {/* ADR-0118 — LLM 진행 브리프(제안): 권고·근거 초안 제공, 기록은 사람 */}
-      {canRecord && (
+      {canRecord && !hideBrief && (
         <div className="mt-3 border border-[color:var(--border)] rounded-lg px-3 py-2" aria-label="AI 진행 브리프">
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" className="btn-ghost btn-sm" disabled={briefLoading} onClick={() => void generateBrief()}>
@@ -333,43 +381,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
             </span>
           </div>
           {briefError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-1 mb-0">{briefError}</p>}
-          {briefData && (
-            <>
-              {briefData.gate !== form.gate && (
-                <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mt-1 mb-0">브리프는 {briefData.gate} 기준입니다 — 진행을 바꾸면 재생성하세요.</p>
-              )}
-              <p className="mt-2 mb-1 flex flex-wrap items-center gap-1">
-                <span className={`status-chip ${briefData.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
-                  {briefData.source === "llm" ? `LLM 제안${briefData.provider ? ` · ${briefData.provider}` : ""}` : "결정론 폴백"}
-                </span>
-                {briefData.brief.recommendation && (
-                  <span className={`status-chip ${briefData.brief.recommendation === "go" ? "status-green" : briefData.brief.recommendation === "hold" ? "status-amber" : "status-red"}`}>
-                    권고 {briefData.brief.recommendation.toUpperCase()}
-                  </span>
-                )}
-                {briefData.brief.confidence && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">확신도 {briefData.brief.confidence}</span>}
-              </p>
-              {briefData.note && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{briefData.note}</p>}
-              {briefData.brief.rationale_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">근거 초안:</span> {briefData.brief.rationale_draft}</p>}
-              {briefData.brief.key_evidence.length > 0 && (
-                <ul className="sizing-note-list mb-1">
-                  {briefData.brief.key_evidence.map((e, i) => <li key={i}>{e}</li>)}
-                </ul>
-              )}
-              {briefData.brief.cautions.length > 0 && (
-                <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mb-1">⚠ {briefData.brief.cautions.join(" / ")}</p>
-              )}
-              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">이 제안이 본 산출물: {briefData.manifest.join(" · ")}</p>
-              <button
-                type="button"
-                className="btn-ghost btn-sm"
-                onClick={() => setForm((f) => ({ ...f, rationale: briefData.brief.rationale_draft || f.rationale }))}
-                disabled={!briefData.brief.rationale_draft}
-              >
-                근거에 반영
-              </button>
-            </>
-          )}
+          {briefData && <GateBriefBody briefData={briefData} currentGate={form.gate} onApply={applyBriefRationale} />}
           {!briefData && !briefLoading && !briefError && (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">AI가 진행 산출물을 근거로 권고와 근거 초안을 작성해 줍니다 — 기록은 사람의 몫입니다.</p>
           )}

@@ -43,7 +43,53 @@ export interface CapabilityAttainability {
   draftedBy: AttainabilityDrafter | null;
   confirmedBy: string | null;
   confirmedAt: string | null;
+  // ADR-0170: S3-S8 linkage. All optional; legacy judgements carry none of them.
+  /** Versioned hash of the S3-owned fields the judgement was based on (server-stamped). */
+  basisHash?: string;
+  /** The S3-owned values at judgement time (what changed = diff against the current row). */
+  s3Snapshot?: S3Snapshot;
+  /** Set when an S3 change invalidated the judgement (confirmation cleared, prior values kept). */
+  staleSince?: string;
+  /** Superseded judgements (newest last, capped). */
+  history?: AttainabilityHistoryEntry[];
 }
+
+export interface S3Snapshot {
+  capability: string;
+  requiredNote: string;
+  heldStatus: GapHeldStatus;
+  requiredLevel: string;
+  currentLevel: string;
+}
+
+export interface AttainabilityHistoryEntry {
+  grade: AttainabilityGrade | null;
+  closingCostKrwM: number | null;
+  monthsToAttain: number | null;
+  rationale: string;
+  evidence: string[];
+  resolution: GapResolution | null;
+  confirmedBy: string | null;
+  confirmedAt: string | null;
+  basisHash: string;
+  invalidatedAt: string;
+  reason: "s3_changed";
+  s3Snapshot: S3Snapshot | null;
+}
+
+/** A judgement whose S3 row was deleted (register-level `removedCapabilities`, read-only history). */
+export interface RemovedCapability {
+  rowId: string;
+  capability: string;
+  requiredLevel: string;
+  currentLevel: string;
+  attainability: CapabilityAttainability | null;
+  removedAt: string;
+  removedBy: string;
+}
+
+export const HISTORY_CAP = 5;
+export const REMOVED_CAP = 30;
 
 // 공용 5단계 수준 척도(ADR-0168) — 필요 수준·보유 수준이 같은 척도를 쓴다.
 // 저장값은 한글 라벨 그대로(requiredLevel/currentLevel 문자열 컬럼 유지, 마이그레이션 없음).
@@ -159,6 +205,12 @@ export function normalizeAttainability(raw: unknown): CapabilityAttainability | 
   const drafter = a.draftedBy === "human" || a.draftedBy === "ai" ? a.draftedBy : null;
   const confirmedBy = str(a.confirmedBy, 80) || null;
   const confirmedAt = str(a.confirmedAt, 40) || null;
+  const basisHash = str(a.basisHash, 40);
+  const staleSince = str(a.staleSince, 40);
+  const s3Snapshot = normalizeS3Snapshot(a.s3Snapshot);
+  const history = Array.isArray(a.history)
+    ? (a.history as unknown[]).map(normalizeHistoryEntry).filter((x): x is AttainabilityHistoryEntry => x !== null).slice(-HISTORY_CAP)
+    : [];
   return {
     closingCostKrwM: finiteNonNeg(a.closingCostKrwM, 1e9),
     monthsToAttain: finiteNonNeg(a.monthsToAttain, 1200),
@@ -169,7 +221,78 @@ export function normalizeAttainability(raw: unknown): CapabilityAttainability | 
     // 확정자와 확정일은 함께 있을 때만 유효하다.
     confirmedBy: confirmedBy && confirmedAt ? confirmedBy : null,
     confirmedAt: confirmedBy && confirmedAt ? confirmedAt : null,
+    ...(basisHash ? { basisHash } : {}),
+    ...(s3Snapshot ? { s3Snapshot } : {}),
+    ...(staleSince ? { staleSince } : {}),
+    ...(history.length > 0 ? { history } : {}),
   };
+}
+
+function normalizeS3Snapshot(raw: unknown): S3Snapshot | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const s = raw as Record<string, unknown>;
+  return {
+    capability: str(s.capability, 200),
+    requiredNote: str(s.requiredNote, 300),
+    heldStatus: HELD_STATUSES.includes(s.heldStatus as GapHeldStatus) ? (s.heldStatus as GapHeldStatus) : "unevaluated",
+    requiredLevel: str(s.requiredLevel, 120),
+    currentLevel: str(s.currentLevel, 120),
+  };
+}
+
+function normalizeHistoryEntry(raw: unknown): AttainabilityHistoryEntry | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const h = raw as Record<string, unknown>;
+  const invalidatedAt = str(h.invalidatedAt, 40);
+  if (!invalidatedAt) return null;
+  const confirmedBy = str(h.confirmedBy, 80) || null;
+  const confirmedAt = str(h.confirmedAt, 40) || null;
+  return {
+    grade: GRADES.includes(h.grade as AttainabilityGrade) ? (h.grade as AttainabilityGrade) : null,
+    closingCostKrwM: finiteNonNeg(h.closingCostKrwM, 1e9),
+    monthsToAttain: finiteNonNeg(h.monthsToAttain, 1200),
+    rationale: str(h.rationale, 600),
+    evidence: strArr(h.evidence, 8, 300),
+    resolution: RESOLUTIONS.includes(h.resolution as GapResolution) ? (h.resolution as GapResolution) : null,
+    confirmedBy: confirmedBy && confirmedAt ? confirmedBy : null,
+    confirmedAt: confirmedBy && confirmedAt ? confirmedAt : null,
+    basisHash: str(h.basisHash, 40),
+    invalidatedAt,
+    reason: "s3_changed",
+    s3Snapshot: normalizeS3Snapshot(h.s3Snapshot) ?? null,
+  };
+}
+
+/** Register-level `removedCapabilities` of a stored register JSON (normalized, capped), or []. */
+export function parseRemovedCapabilities(json: string | null | undefined): RemovedCapability[] {
+  if (!json) return [];
+  try {
+    const raw = (JSON.parse(json) as { removedCapabilities?: unknown }).removedCapabilities;
+    return normalizeRemovedCapabilities(raw);
+  } catch {
+    return [];
+  }
+}
+
+export function normalizeRemovedCapabilities(raw: unknown): RemovedCapability[] {
+  if (!Array.isArray(raw)) return [];
+  const out: RemovedCapability[] = [];
+  for (const item of raw as Array<Record<string, unknown>>) {
+    if (!item || typeof item !== "object") continue;
+    const rowId = str(item.rowId, 40);
+    const removedAt = str(item.removedAt, 40);
+    if (!rowId || !removedAt) continue;
+    out.push({
+      rowId,
+      capability: str(item.capability, 200),
+      requiredLevel: str(item.requiredLevel, 120),
+      currentLevel: str(item.currentLevel, 120),
+      attainability: normalizeAttainability(item.attainability) ?? null,
+      removedAt,
+      removedBy: str(item.removedBy, 80),
+    });
+  }
+  return out.slice(-REMOVED_CAP);
 }
 
 /**

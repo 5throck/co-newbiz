@@ -9,7 +9,7 @@ import { getDb } from "../../../../../../../../db/client.ts";
 import { authenticate, callPathOf, humanOnlyDenied, requireBusinessActor } from "../../../../../../lib/auth.ts";
 import { badRequest, fail, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
-import { buildAttainabilityView, confirmAttainability, readRegister, sourceOpportunityOf, writeRegister } from "../../../../../../lib/capability-attainability.ts";
+import { buildAttainabilityView, confirmAndWrite, readRegister, sourceOpportunityOf } from "../../../../../../lib/capability-attainability.ts";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
@@ -26,9 +26,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const oppId = sourceOpportunityOf(db, id);
   const reg = oppId ? readRegister(db, oppId) : null;
   if (!oppId || !reg) return badRequest("no_source_opportunity", "원 기회(S3 역량 레지스터)가 없는 프로젝트입니다.");
-  const res = confirmAttainability(reg.rows, (body?.row_ids as string[] | undefined) ?? null, ctx.userId, new Date().toISOString());
-  if (!res.ok) return res.error.code === "nothing_to_confirm" ? fail(409, res.error.code, res.error.message) : badRequest(res.error.code, res.error.message);
   const at = new Date().toISOString();
-  writeRegister(db, oppId, res.rows, { actor: ctx.userId, action: "capability_attainability.confirm", target: `${id}#capability@${callPathOf(ctx)}`, at });
-  return ok({ ...buildAttainabilityView(oppId, res.rows, at), confirmed: res.confirmedIds.length }, 200);
+  const res = confirmAndWrite(db, oppId, (body?.row_ids as string[] | undefined) ?? null, ctx.userId, { action: "capability_attainability.confirm", target: `${id}#capability@${callPathOf(ctx)}`, at });
+  if (!res.ok) return res.error.code === "nothing_to_confirm" ? fail(409, res.error.code, res.error.message) : badRequest(res.error.code, res.error.message);
+  return ok({ ...buildAttainabilityView(oppId, res.rows, at, res.removed), confirmed: res.confirmedIds.length }, 200);
 }

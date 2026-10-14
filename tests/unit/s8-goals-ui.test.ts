@@ -234,7 +234,7 @@ describe("S8 IA cleanup (2026-10-14): one home per fact", () => {
   test("TargetCheckPanel is decision-tab only, above GateDecisionPanel", () => {
     expect(src.match(/<TargetCheckPanel/g)).toHaveLength(1);
     expect(src).toMatch(/tab === "decision" && \(\s*\n\s*<div className="mt-4">\s*\n\s*<S8LensStrip[^>]*\/>\s*\n\s*<TargetCheckPanel/);
-    expect(src).toMatch(/<TargetCheckPanel[^>]*\/>\s*\n\s*<GateDecisionPanel/s);
+    expect(src).toMatch(/<TargetCheckPanel[^>]*\/>\s*\n\s*<AiJudgementSupport[\s\S]*?<GateDecisionPanel/);
   });
   test("single generate entry (overview), decision jump hidden on decision, no global recalc row", () => {
     expect(src).not.toContain("밸류에이션 재계산 (재생성)");
@@ -273,5 +273,37 @@ describe("S8 greenfield single-perspective wording", () => {
   });
   test("report composer does not ask for DART sync when no target company is linked", () => {
     expect(read("lib/report-composer.ts")).toContain("시장 기반 단일 관점");
+  });
+});
+
+describe("S8 decision tab: one AI judgement support section (ADR-0118)", () => {
+  const stage = read("components/stages/BusinessCaseStage.tsx");
+  const section = read("components/AiJudgementSupport.tsx");
+  const panel = read("components/GateDecisionPanel.tsx");
+
+  test("decision tab renders one AiJudgementSupport above GateDecisionPanel, which hides its own brief", () => {
+    expect(stage.match(/<AiJudgementSupport/g)?.length).toBe(1);
+    const dec = stage.slice(stage.indexOf('tab === "decision" && ('));
+    expect(dec.indexOf("<AiJudgementSupport")).toBeLessThan(dec.indexOf("<GateDecisionPanel"));
+    expect(dec).toContain("hideBrief");
+    expect(dec).toContain("rationalePrefill");
+  });
+  test("section has two ordered blocks and a single generate button", () => {
+    expect(section.indexOf('aria-label="채택할 케이스"')).toBeGreaterThan(0);
+    expect(section.indexOf('aria-label="채택할 케이스"')).toBeLessThan(section.indexOf('aria-label="게이트 판단"'));
+    expect(section.match(/AI 판단 지원 생성/g)?.length).toBe(1);
+    expect(section.match(/<button/g)?.length).toBe(1);
+    expect(section).toContain("adoption-recommendation");
+    expect(section).toContain("/gate-brief");
+  });
+  test("overview keeps only a pointer; the old reco section is gone", () => {
+    expect(stage).not.toContain("AI 추천 채택 권고\"");
+    expect(stage).not.toContain("generateAdoptionReco");
+    expect(stage).toContain("AI 채택 권고는 결정 탭의 AI 판단 지원에서 확인합니다");
+  });
+  test("GateDecisionPanel still offers the standalone brief for other gates", () => {
+    expect(panel).toContain("AI 브리프 생성");
+    expect(panel).toContain("canRecord && !hideBrief");
+    expect(panel).toContain("export function GateBriefBody");
   });
 });

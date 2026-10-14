@@ -1,17 +1,21 @@
 "use client";
 
 // Split from components/stages/SynergyStage.tsx (Wave U-3 decomposition); behavior unchanged.
+import { useState } from "react";
 import { SectionToolbar } from "../../layout.tsx";
 import { type GapHeldStatus, HELD_STATUS_CHIP, HELD_STATUS_LABEL, type GapResolution, RESOLUTION_LABEL, summarizeGap } from "../../../lib/capability-gap.ts";
 import type { SynergyResultState } from "./useSynergyResult.ts";
 import type { SynergyPayload } from "./types.ts";
 import { ColGroup } from "../../ui.tsx";
+import { LevelSelect } from "../LevelSelect.tsx";
+import { CapabilityHeldDialog, evidencePreview, holdersPreview } from "../CapabilityHeldDialog.tsx";
 
 // 시너지 영역 6열 — 근거·기회·위험이 긴 문단 열.
 const SYNERGY_AREA_COL_PCT = [14, 10, 30, 20, 16, 10] as const;
 
 export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: SynergyPayload }) {
   const { tab, canCurate, showLinkageForm, setShowLinkageForm, linkageForm, setLinkageForm, linkageError, setLinkageError, linkageSaving, addLinkageItem, opportunityId, gapRows, gapBusy, draftGap, saveGap, gap, gapNote, gapError, updateGapHeld, updateGapRow, setGapRows, newGapCap, setNewGapCap, addGapRow } = ctx;
+  const [heldEditing, setHeldEditing] = useState<string | null>(null);
   return (
     <>{tab === "linkage" && (
             <div className="text-[0.88rem]">
@@ -102,6 +106,7 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                     시너지 분석(신규·재분석) 시 위 시너지 영역에서 필요 역량이 자동 도출·병합됩니다.{" "}
                     {gap?.internalAssessmentNote ?? "내부(자사 단독) 역량 평가는 추후 보강 예정 — 현재 보유 판정 근거는 그룹/계열사 프로필 기준입니다."}
                     {gap && !gap.stored && gapRows.length > 0 ? " — 아직 저장되지 않은 시드 초안입니다." : ""}
+                    {" "}필요 수준·보유 수준은 여기(S3)에서 정의하며, S8 필요 역량 달성 가능성 화면에는 읽기 전용으로 표시됩니다.
                   </p>
                   {gapNote && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--green-fg)] mb-2">{gapNote}</p>}
                   {gapError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{gapError}</p>}
@@ -111,14 +116,14 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                     </p>
                   ) : (
                     <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-                      {/* 쓰기 권한이 없으면 레지스터의 셀렉트·입력란을 비활성화한다 —
-                          기록값은 그대로 보인다(표시 유지, 편집만 차단). */}
-                      <fieldset disabled={!canCurate} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+                      {/* 쓰기 권한이 없으면 레지스터의 셀렉트를 비활성화한다 — 기록값은 그대로
+                          보이고(표시 유지, 편집만 차단), 보유 주체·근거는 `보기` 버튼으로 연다. */}
                       <table className="data-table" aria-label="필요 역량 수준 레지스터">
                         <caption className="sr-only">필요 역량 수준 레지스터 — 보유 판정은 그룹/계열사 프로필 기준</caption>
                         <thead>
                           <tr>
                             <th scope="col">필요 역량</th><th scope="col">보유 판정</th>
+                            <th scope="col">필요 수준</th><th scope="col">보유 수준</th>
                             <th scope="col">보유 주체·근거</th><th scope="col">해소 힌트</th><th scope="col"></th>
                           </tr>
                         </thead>
@@ -132,7 +137,7 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                                 </span>
                               </td>
                               <td>
-                                <select aria-label={`${r.capability} 보유 판정`} value={r.held.status}
+                                <select aria-label={`${r.capability} 보유 판정`} value={r.held.status} disabled={!canCurate}
                                   onChange={(e) => updateGapHeld(idx, { status: e.target.value as GapHeldStatus })}
                                   className={`sizing-new-input sizing-new-input-sm ${HELD_STATUS_CHIP[r.held.status]}`}>
                                   {(Object.keys(HELD_STATUS_LABEL) as GapHeldStatus[]).map((s) => (
@@ -140,22 +145,17 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                                   ))}
                                 </select>
                               </td>
-                              <td>
-                                {r.held.status !== "unevaluated" ? (
-                                  <>
-                                    <input aria-label={`${r.capability} 보유 주체`} placeholder="보유 회사(쉼표 구분)" value={r.held.holders.join(", ")}
-                                      onChange={(e) => updateGapHeld(idx, { holders: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) })}
-                                      className="sizing-new-input sizing-new-input-sm mb-1" style={{ width: "100%" }} />
-                                    <input aria-label={`${r.capability} 보유 근거`} placeholder="근거(프로필 인용)" value={r.held.evidence}
-                                      onChange={(e) => updateGapHeld(idx, { evidence: e.target.value })}
-                                      className="sizing-new-input sizing-new-input-sm" style={{ width: "100%" }} />
-                                  </>
-                                ) : (
-                                  <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">미판정</span>
-                                )}
+                              <td><LevelSelect ariaLabel={`${r.capability} 필요 수준`} value={r.requiredLevel} disabled={!canCurate} onChange={(v) => updateGapRow(idx, { requiredLevel: v })} /></td>
+                              <td><LevelSelect ariaLabel={`${r.capability} 보유 수준`} value={r.currentLevel} disabled={!canCurate} onChange={(v) => updateGapRow(idx, { currentLevel: v })} /></td>
+                              <td className="text-[length:var(--fs-caption)]">
+                                <span className="block"><span className="text-[color:var(--muted-fg)]">주체</span> {holdersPreview(r.held.holders)}</span>
+                                <span className="block"><span className="text-[color:var(--muted-fg)]">근거</span> {evidencePreview(r.held.evidence)}</span>
+                                <button type="button" className="btn-ghost btn-sm mt-1" aria-label={`${r.capability} 보유 주체·근거 ${canCurate ? "입력" : "보기"}`} onClick={() => setHeldEditing(r.id)}>
+                                  {canCurate ? (r.held.holders.length > 0 || r.held.evidence.trim() ? "수정" : "입력") : "보기"}
+                                </button>
                               </td>
                               <td>
-                                <select aria-label={`${r.capability} 해소 힌트`} value={r.resolution ?? ""}
+                                <select aria-label={`${r.capability} 해소 힌트`} value={r.resolution ?? ""} disabled={!canCurate}
                                   onChange={(e) => updateGapRow(idx, { resolution: (e.target.value || null) as GapResolution | null })}
                                   className="sizing-new-input sizing-new-input-sm">
                                   <option value="">—</option>
@@ -165,14 +165,20 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                                 </select>
                               </td>
                               <td>
-                                <button type="button" className="btn-danger btn-sm" aria-label={`${r.capability} 행 삭제`}
+                                <button type="button" className="btn-danger btn-sm" aria-label={`${r.capability} 행 삭제`} disabled={!canCurate}
                                   onClick={() => setGapRows((prev) => prev.filter((_, i) => i !== idx))}>삭제</button>
                               </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
-                      </fieldset>
+                      {heldEditing && (() => {
+                        const row = gapRows.find((x) => x.id === heldEditing);
+                        if (!row) return null;
+                        return <CapabilityHeldDialog capability={row.capability} holders={row.held.holders} evidence={row.held.evidence} readOnly={!canCurate} unevaluated={row.held.status === "unevaluated"}
+                          onSave={(v) => { updateGapHeld(gapRows.findIndex((x) => x.id === row.id), { holders: v.holders, evidence: v.evidence }); setHeldEditing(null); }}
+                          onClose={() => setHeldEditing(null)} />;
+                      })()}
                     </div>
                   )}
                   {(() => {
