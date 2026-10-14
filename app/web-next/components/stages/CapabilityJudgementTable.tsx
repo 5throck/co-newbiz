@@ -2,7 +2,7 @@
 
 // Shared required-capability summary table (ADR-0171 / ADR-0172) for S5 and the S8 read-only summary:
 // ONE line per capability (no inputs, no narrative columns): 필요 역량 (+ one chip line) | 필요도 | 보유 판정 |
-// 판정 요약 (one sentence from the S5 judgement) | 확정 | 작업. Filter tabs (처리할 것 / 확정 / 전체) sit above.
+// 판정 요약 (one sentence from the S5 judgement) | 확정 | 작업. Filter tabs (처리할 것 / 전체) sit above.
 // On S5 the 판정 button opens CapabilityJudgementDialog, which writes to the page draft state; S8 has no
 // dialog, only an "S5에서 판정" link. AI output is never a decision: confirming is a separate human act.
 import { useState } from "react";
@@ -107,7 +107,7 @@ export function RemovedCapabilities({ removed }: { removed: RemovedCapability[] 
 
 
 const COL_PCT = [34, 9, 10, 24, 12, 11] as const;
-const FILTER_LABEL: Record<JudgementFilter, string> = { todo: "처리할 것", confirmed: "확정", all: "전체" };
+const FILTER_LABEL: Record<JudgementFilter, string> = { todo: "처리할 것", all: "전체" };
 const EMPTY_DIRTY: ReadonlySet<string> = new Set();
 
 export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href, note, dirty = EMPTY_DIRTY, judgeHref, ai }: {
@@ -144,7 +144,7 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
   return (
     <>
       <div role="tablist" aria-label="필요 역량 보기 필터" className="flex flex-wrap gap-1 mb-2">
-        {(["todo", "confirmed", "all"] as const).map((f) => (
+        {(["todo", "all"] as const).map((f) => (
           <button key={f} type="button" role="tab" aria-selected={filter === f} className={filter === f ? "btn-primary btn-sm" : "btn-ghost btn-sm"} onClick={() => setFilter(f)}>
             {FILTER_LABEL[f]} ({counts[f]})
           </button>
@@ -152,7 +152,7 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
       </div>
       {shown.length === 0 ? (
         <p className="text-[color:var(--muted-fg)] mb-2" data-testid="filter-empty">
-          {filter === "todo" ? "처리할 항목이 없습니다 — 모든 필요 역량이 판정·확정되었습니다." : "해당하는 필요 역량이 없습니다."}
+          {filter === "todo" ? "처리할 판정이 없습니다 — 전체에서 확인하세요" : "해당하는 필요 역량이 없습니다."}
         </p>
       ) : (
         <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
