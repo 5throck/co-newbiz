@@ -113,6 +113,9 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
   const [gapDrafts, setGapDrafts] = useState<Record<string, DraftMark>>({});
   // 보유 판정 확인(AI) — 일괄(빈 칸만 초안으로 채움). 값을 갱신하려면 사람이 직접 수정한다.
   const [holdBusy, setHoldBusy] = useState(false);
+  // 같은 그룹의 다른 계열사 프로필도 근거에 포함(기본 끔) / 마지막 확인에서 미판정으로 남은 행의 사유(저장하지 않는 임시 상태).
+  const [includeGroup, setIncludeGroup] = useState(false);
+  const [holdReasons, setHoldReasons] = useState<Record<string, string>>({});
 
   // The last register loaded from the server — the base for "unsaved" comparisons and for merging refetches.
   const gapBaseRef = useRef<CapabilityGapRow[]>([]);
@@ -222,7 +225,8 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
     if (!opportunityId || holdBusy || gapBusy || gapRows.length === 0) return;
     setHoldBusy(true); setGapError(null); setGapNote(null);
     try {
-      const res = await api.post<{ rows: CapabilityGapRow[]; note: string; drafts?: Record<string, DraftMark> }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/capability-gap/holding-check`, { rows: gapRows });
+      const res = await api.post<{ rows: CapabilityGapRow[]; note: string; drafts?: Record<string, DraftMark>; unevaluatedReasons?: Record<string, string> }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/capability-gap/holding-check`, { rows: gapRows, includeGroupMembers: includeGroup });
+      setHoldReasons(res.data.unevaluatedReasons ?? {});
       const before = new Map(gapRows.map((r) => [r.id, r]));
       setGapRows((prev) => mergeDraftResponse(prev, res.data.rows));
       addDraftMarks(res.data.drafts, before);
@@ -319,7 +323,7 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
       setAdvancing(false);
     }
   }, [opportunityId, advancing, p?.synergyRationale, router]);
-  return { discardDrafts, dismissGapNote: () => setGapNote(null), analysis, analysisDate, latest, synState, onBack, canCurate, inProgress, onRerun, p, tab, onTab, opportunityId, advanceToRouteDecision, advanceError, confirmError, currentScore, currentRationale, confirmForm, setConfirmForm, confirmSaving, confirmSynergyScore, retractSynergyScore, showLinkageForm, setShowLinkageForm, linkageForm, setLinkageForm, linkageError, setLinkageError, linkageSaving, addLinkageItem, gapRows, gapBusy, draftGap, saveGap, gap, gapNote, gapDrafts, gapDirty, holdBusy, checkHolding, gapError, updateGapHeld, updateGapRow, setGapRows, newGapCap, setNewGapCap, addGapRow, editingArea, editForm, setEditForm, editSaving, setEditingArea, saveShortlistItem, editError, showShortlistForm, setShowShortlistForm, shortlistForm, setShortlistForm };
+  return { discardDrafts, dismissGapNote: () => setGapNote(null), analysis, analysisDate, latest, synState, onBack, canCurate, inProgress, onRerun, p, tab, onTab, opportunityId, advanceToRouteDecision, advanceError, confirmError, currentScore, currentRationale, confirmForm, setConfirmForm, confirmSaving, confirmSynergyScore, retractSynergyScore, showLinkageForm, setShowLinkageForm, linkageForm, setLinkageForm, linkageError, setLinkageError, linkageSaving, addLinkageItem, gapRows, gapBusy, draftGap, saveGap, gap, gapNote, gapDrafts, gapDirty, holdBusy, checkHolding, includeGroup, setIncludeGroup, holdReasons, gapError, updateGapHeld, updateGapRow, setGapRows, newGapCap, setNewGapCap, addGapRow, editingArea, editForm, setEditForm, editSaving, setEditingArea, saveShortlistItem, editError, showShortlistForm, setShowShortlistForm, shortlistForm, setShortlistForm };
 }
 
 export type SynergyResultState = ReturnType<typeof useSynergyResult>;

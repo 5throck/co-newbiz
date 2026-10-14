@@ -19,6 +19,7 @@ export interface WebSource {
 }
 
 import { loadRootEnvPipelineKeys } from "./llm.ts";
+import { hasPlaywrightOverrideForTests, playwrightSearchDetailed } from "./playwright-search.ts";
 
 // 테스트 시임 — 실제 검색 키가 설정된 환경에서도 회귀 테스트를 단일하게
 // (네트워크 호출 없이) 만든다. dd-checklist-tailor의 executor factory와 같은
@@ -43,8 +44,8 @@ export function isWebResearchConfigured(): boolean {
 
 // ── Per-provider diagnostics and circuit breaker (2026-10-14) ──
 
-export type ProviderName = "tavily" | "brave" | "serper" | "ddg";
-export type ProviderStatus = "ok" | "empty" | "quota_exceeded" | "blocked" | "http_error" | "no_key" | "disabled";
+export type ProviderName = "tavily" | "brave" | "serper" | "ddg" | "playwright";
+export type ProviderStatus = "ok" | "empty" | "quota_exceeded" | "blocked" | "http_error" | "no_key" | "disabled" | "unavailable";
 export interface ProviderDiag {
   name: ProviderName;
   status: ProviderStatus;
@@ -53,7 +54,7 @@ export interface ProviderDiag {
   circuitOpen?: boolean;
 }
 
-const PROVIDER_LABEL: Record<ProviderName, string> = { tavily: "Tavily", brave: "Brave Search", serper: "Serper", ddg: "DuckDuckGo" };
+const PROVIDER_LABEL: Record<ProviderName, string> = { tavily: "Tavily", brave: "Brave Search", serper: "Serper", ddg: "DuckDuckGo", playwright: "Playwright" };
 const CIRCUIT_MS = 10 * 60 * 1000;
 const circuits = new Map<ProviderName, { until: number; status: ProviderStatus; http?: number }>();
 let nowFn: () => number = () => Date.now();
@@ -80,7 +81,7 @@ function openCircuit(name: ProviderName, status: ProviderStatus, http?: number):
 
 /** A provider that is configured but currently cannot serve (as opposed to simply having no key or finding nothing). */
 export function isProviderFailure(s: ProviderStatus): boolean {
-  return s === "quota_exceeded" || s === "blocked" || s === "http_error";
+  return s === "quota_exceeded" || s === "blocked" || s === "http_error" || s === "unavailable";
 }
 
 export function providerCauseLabel(d: ProviderDiag): string {
@@ -88,6 +89,7 @@ export function providerCauseLabel(d: ProviderDiag): string {
   if (d.status === "quota_exceeded") return `${n} 쿼터 초과${d.http ? `(${d.http})` : ""}`;
   if (d.status === "blocked") return `${n} 봇 차단`;
   if (d.status === "http_error") return `${n} 오류${d.http ? `(HTTP ${d.http})` : ""}`;
+  if (d.status === "unavailable") return `${n} 실행 불가(Chrome 없음 또는 기동 실패)`;
   return n;
 }
 
@@ -101,7 +103,7 @@ export function allProvidersUnavailable(providers: ProviderDiag[]): boolean {
 }
 export const SEARCH_KEY_ACTION = "Tavily 한도 확인 또는 다른 검색 키 설정(BRAVE_SEARCH_API_KEY, SERPER_API_KEY)";
 
-const STATUS_RANK: Record<ProviderStatus, number> = { ok: 0, empty: 1, no_key: 2, disabled: 2, http_error: 3, blocked: 4, quota_exceeded: 5 };
+const STATUS_RANK: Record<ProviderStatus, number> = { ok: 0, empty: 1, no_key: 2, disabled: 2, http_error: 3, unavailable: 3, blocked: 4, quota_exceeded: 5 };
 /** Merge diagnostics from several calls: ok wins, otherwise the most severe failure is kept. */
 export function mergeProviderDiags(into: ProviderDiag[], more: ProviderDiag[]): ProviderDiag[] {
   for (const d of more) {
@@ -120,6 +122,8 @@ export interface SearchProvider {
   /** "no_key" / "disabled" when it cannot run at all, otherwise null. */
   unavailable(): "no_key" | "disabled" | null;
   search(query: string, maxResults: number): Promise<ProviderOutcome>;
+  /** Optional batch form: one browser session for several queries (Playwright). Used instead of per-query search(). */
+  searchMany?(queries: string[], maxResults: number): Promise<ProviderOutcome>;
 }
 
 const failFor = (status: number): ProviderStatus => (status === 432 || status === 429 || status === 402 ? "quota_exceeded" : "http_error");
@@ -180,9 +184,31 @@ const ddgProvider: SearchProvider = {
   search: (query, maxResults) => ddgSearchDetailed(query, { maxResults }),
 };
 
-/** Chain order: Tavily → Brave → Serper → DuckDuckGo. */
-function providerChain(): SearchProvider[] {
-  return providerOverride ?? [tavilyProvider, braveProvider, serperProvider, ddgProvider];
+/** Playwright opt-out: WEB_SEARCH_PLAYWRIGHT_ENABLED=false|0|off. Default on, except under test unless the override is set. */
+export function isPlaywrightProviderEnabled(): boolean {
+  const v = process.env.WEB_SEARCH_PLAYWRIGHT_ENABLED;
+  if (v && ["false", "0", "off"].includes(v.trim().toLowerCase())) return false;
+  if (process.env.NODE_ENV === "test" && !hasPlaywrightOverrideForTests()) return false;
+  return true;
+}
+
+// Headless Chrome is heavy: never run two browsers at once (the holding check calls the chain per row).
+let playwrightQueue: Promise<unknown> = Promise.resolve();
+const playwrightProvider: SearchProvider = {
+  name: "playwright",
+  unavailable: () => (isPlaywrightProviderEnabled() ? null : "disabled"),
+  search: (query, maxResults) => playwrightProvider.searchMany!([query], maxResults),
+  searchMany(queries, maxResults) {
+    const run = playwrightQueue.then(() => playwrightSearchDetailed(queries, maxResults));
+    playwrightQueue = run.catch(() => undefined);
+    return run;
+  },
+};
+
+/** Chain order: Tavily → Brave → Serper → DuckDuckGo, then (opt-in per call) Playwright headless. */
+function providerChain(withPlaywright: boolean): SearchProvider[] {
+  const base = providerOverride ?? [tavilyProvider, braveProvider, serperProvider, ddgProvider];
+  return withPlaywright && !base.some((p) => p.name === "playwright") ? [...base, playwrightProvider] : base;
 }
 
 interface TavilyDetailedResult {
@@ -342,7 +368,7 @@ interface ResearchSourcesDetailed {
 }
 
 /** Run every query through one provider; the first quota/blocked answer stops the remaining queries. */
-async function runProvider(p: SearchProvider, queries: string[]): Promise<{ sources: WebSource[]; diag: ProviderDiag }> {
+async function runProvider(p: SearchProvider, queries: string[], maxQueries?: number): Promise<{ sources: WebSource[]; diag: ProviderDiag }> {
   const sources: WebSource[] = [];
   let worst = "empty" as ProviderStatus;
   let http: number | undefined;
@@ -352,14 +378,16 @@ async function runProvider(p: SearchProvider, queries: string[]): Promise<{ sour
     if (o.status === "ok") anyOk = true;
     else if (STATUS_RANK[o.status] > STATUS_RANK[worst]) { worst = o.status; http = o.http; }
   };
-  const results: ProviderOutcome[] = [];
-  for (const q of queries) {
-    const o = await p.search(q, 4);
-    results.push(o);
-    note(o);
-    if (o.status === "quota_exceeded" || o.status === "blocked") break;
+  if (p.searchMany) {
+    note(await p.searchMany(queries.slice(0, maxQueries ?? queries.length), 8));
+  } else {
+    for (const q of queries) {
+      const o = await p.search(q, 4);
+      note(o);
+      if (o.status === "quota_exceeded" || o.status === "blocked") break;
+    }
   }
-  const hardFail = worst === "quota_exceeded" || worst === "blocked";
+  const hardFail = worst === "quota_exceeded" || worst === "blocked" || worst === "unavailable";
   if (hardFail) openCircuit(p.name, worst, http);
   const status: ProviderStatus = anyOk ? "ok" : worst;
   return { sources, diag: { name: p.name, status, ...(http !== undefined ? { http } : {}) } };
@@ -369,13 +397,23 @@ async function runProvider(p: SearchProvider, queries: string[]): Promise<{ sour
  * dedupe해 `limit`개로 합친다. 앞 제공자가 결과를 못 냈거나 쿼터 초과면 다음으로 넘어간다.
  * 쿼터 초과·봇 차단은 10분간 해당 제공자를 건너뛴다(회로 차단). 결과의 providers에 제공자별
  * 상태가 담겨, 호출자가 "결과 0건"과 "검색 불가"를 구분할 수 있다. */
-export async function researchSourcesDetailed(queries: string[], limit = 10): Promise<ResearchSourcesDetailed> {
+export interface ResearchOptions {
+  /** Append the Playwright headless provider after the others (only tried when they returned nothing). Default false. */
+  playwright?: boolean;
+  /** Epoch ms after which Playwright is not started (the caller's own deadline). */
+  deadlineAt?: number;
+  /** Cap on queries sent to Playwright per call (a browser session is slow). Default 1. */
+  playwrightQueries?: number;
+}
+const PLAYWRIGHT_MIN_REMAINING_MS = 8_000;
+
+export async function researchSourcesDetailed(queries: string[], limit = 10, opts: ResearchOptions = {}): Promise<ResearchSourcesDetailed> {
   if (testOverride) return { sources: testOverride.sources.slice(0, limit), quotaExceeded: false, providers: [] };
   const seen = new Set<string>();
   const merged: WebSource[] = [];
   const providers: ProviderDiag[] = [];
   let quotaExceeded = false;
-  for (const p of providerChain()) {
+  for (const p of providerChain(opts.playwright === true)) {
     const off = p.unavailable();
     if (off) { providers.push({ name: p.name, status: off }); continue; }
     if (isProviderCircuitOpen(p.name)) {
@@ -384,9 +422,13 @@ export async function researchSourcesDetailed(queries: string[], limit = 10): Pr
       if (c.status === "quota_exceeded") quotaExceeded = true;
       continue;
     }
-    if (merged.length > 0 && !quotaExceeded) { continue; }
+    if (p.name === "playwright") {
+      // Last resort: only when nothing was found and there is time left for a browser session.
+      if (merged.length > 0) continue;
+      if (opts.deadlineAt !== undefined && opts.deadlineAt - nowFn() < PLAYWRIGHT_MIN_REMAINING_MS) continue;
+    } else if (merged.length > 0 && !quotaExceeded) { continue; }
     if (p.name === "ddg") console.info(`[web-research] ddg fallback engaged — ${queries.length} query(ies), quotaExceeded=${quotaExceeded}`);
-    const r = await runProvider(p, queries);
+    const r = await runProvider(p, queries, p.name === "playwright" ? (opts.playwrightQueries ?? 1) : undefined);
     providers.push(r.diag);
     if (r.diag.status === "quota_exceeded") quotaExceeded = true;
     for (const s of r.sources) {

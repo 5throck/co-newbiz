@@ -12,7 +12,8 @@ import { resolveEffectiveCagr } from "./market-calibration.ts";
 import { getDb } from "../../../db/client.ts";
 import { resolveCorpCode, validateCorpCode, fetchFinancials, isDartConfigured, type DartFinancials } from "../lib/dart-client.ts";
 import { completeOrFallback, isLlmConfigured } from "./llm.ts";
-import { isWebResearchConfigured, researchSources, type WebSource } from "./web-research.ts";
+import { isWebResearchConfigured, providerFailureCauses, researchSourcesDetailed, type ProviderDiag, type WebSource } from "./web-research.ts";
+import { noResearchDegradedReason } from "./profile-degraded.ts";
 import { deriveFinancialAnalysis } from "./company-financials.ts";
 import { crossCheckCompetitive, deriveCompetitiveSectionGrade, mapVerdictToLedger, type CompetitiveCrossCheck } from "./company-profile-crosscheck.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
@@ -200,19 +201,24 @@ export async function runCompanyProfilePipeline(db: Db, subject: ProfileSubject,
 
   // ── Step 2: 외부 리서치 (애널리스트 리포트·산업 동향·경쟁사) ──
   let research: WebSource[] = [];
+  let researchProviders: ProviderDiag[] = [];
   if (isWebResearchConfigured()) {
-    research = await researchSources([
+    const detailed = await researchSourcesDetailed([
       `${company} 애널리스트 리포트 리서치`,
       `${company} analyst report competitive position`,
       ...(subject.groupName ? [`${subject.groupName} 그룹 산업 동향`] : []),
       `${company} 사업 부문 경쟁력 실적`,
       `${company} 경쟁사 비교 주요 경쟁자`,
     ], 12);
+    research = detailed.sources;
+    researchProviders = detailed.providers;
   }
+  // 검색 근거 0건 — 정성 항목(강점·약점·평가·SWOT·경쟁사)은 LLM 추정이다. 아래 degraded로 표시하고 검색 제공자 진단을 남긴다.
+  const noResearchReason = research.length === 0 ? noResearchDegradedReason(providerFailureCauses(researchProviders), isWebResearchConfigured()) : null;
   const researchContext = research.length
     ? research.map((s, i) => `[${i + 1}] ${s.title} (${s.url})\n${s.snippet}`).join("\n\n")
     : "(웹 리서치 미구성 — LLM 지식 기반)";
-  await summarize(2, "외부 리서치 입수", `출처 ${research.length}건 (애널리스트 리포트·산업 동향·실적).`);
+  await summarize(2, "외부 리서치 입수", research.length > 0 ? `출처 ${research.length}건 (애널리스트 리포트·산업 동향·실적).` : `출처 0건 — ${noResearchReason}.`);
 
   // ── Step 3: LLM 강점/약점/기회/위협(SWOT)/사업 평가 ──
   const qualJson = await completeOrFallback(
@@ -263,9 +269,12 @@ export async function runCompanyProfilePipeline(db: Db, subject: ProfileSubject,
     weaknesses = [`(평가 실패 — 재분석을 실행하세요)`];
     if (!businessAssessment) businessAssessment = "LLM 평가 실패 — 재분석 시 재생성됩니다.";
   }
+  // LLM 실패(llmDegraded)와 검색 근거 없음(noResearchReason)은 구분한다: 이전 정상 버전 보호(ADR-0132)·RAG 문구는 LLM 실패만 따른다.
+  const llmDegraded = degraded;
+  degraded = degraded ?? noResearchReason;
   await summarize(3, "강점/약점·기회/위협(SWOT)·사업 평가",
-    degraded
-      ? `폴백 저장 — ${degraded}`
+    llmDegraded
+      ? `폴백 저장 — ${llmDegraded}`
       : `강점 ${strengths.length}개·약점 ${weaknesses.length}개·기회 ${opportunities.length}개·위협 ${threats.length}개 도출 (출처 ${research.length}건 기반).`);
 
   // ── Step 4: 경쟁 포지셔닝 (LLM — 실패해도 버전 저장을 막지 않는다) ──
@@ -414,11 +423,11 @@ export async function runCompanyProfilePipeline(db: Db, subject: ProfileSubject,
   ];
 
   // RAG 상한 — 데이터 신뢰도가 전체 등급을 캡핑 (경계 #4). 분석가 서명 없이 green 불가.
-  const ragCapRecommendation: CompanyProfilePayload["ragCapRecommendation"] = degraded
-    ? { grade: "red", rationale: `폴백 저장 — ${degraded}. 재분석 후 재평가.` }
+  const ragCapRecommendation: CompanyProfilePayload["ragCapRecommendation"] = llmDegraded
+    ? { grade: "red", rationale: `폴백 저장 — ${llmDegraded}. 재분석 후 재평가.` }
     : !dart.found && research.length === 0
       ? { grade: "red", rationale: "DART·웹 리서치 모두 미입수 — 근거 없는 LLM 지식만 사용됨. 재분석 필요." }
-      : { grade: "amber", rationale: "DART 공시 기반 + LLM/웹 리서치 혼합 — 분석가 확정 전까지 상한 Amber." };
+      : { grade: "amber", rationale: noResearchReason ? "DART 공시 기반 + 정성 항목은 검색 근거 없는 AI 추정(미검증) — 분석가 확정 전까지 상한 Amber." : "DART 공시 기반 + LLM/웹 리서치 혼합 — 분석가 확정 전까지 상한 Amber." };
 
   await summarize(6, "결정론 합성 — 재무 분석·산업 연계·신뢰도",
     `재무 비율·추세 ${financialAnalysis.available ? `${financialAnalysis.years.length}개년` : "미산출(데이터 부족)"}, 산업 연계 ${industryLinkage.filter((l) => l.matrixFound).length}/${industryLinkage.length}건 매칭, RAG 상한 ${ragCapRecommendation.grade.toUpperCase()}.`);
@@ -454,8 +463,8 @@ export async function runCompanyProfilePipeline(db: Db, subject: ProfileSubject,
   // ADR-0132 — 이전 버전이 정상(degraded=null)이었는데 이번 재분석이 LLM
   // 미구성이 아닌 실제 호출 실패로 저하됐다면, 저하된 버전을 새로 쌓지 않고
   // 이전 버전을 그대로 유지한다(ADR-0131과 동일 원칙).
-  if (priorVersion !== undefined && priorDegraded === null && degraded && isLlmConfigured()) {
-    throw new Error(`LLM 호출 실패 — 이전 프로파일을 유지합니다 (${degraded}). 잠시 후 다시 시도하세요.`);
+  if (priorVersion !== undefined && priorDegraded === null && llmDegraded && isLlmConfigured()) {
+    throw new Error(`LLM 호출 실패 — 이전 프로파일을 유지합니다 (${llmDegraded}). 잠시 후 다시 시도하세요.`);
   }
   const nextVersionNo =
     ((db.query(`SELECT MAX(version_no) m FROM company_profile_version WHERE ${subjectColumn} = ?`).get(subject.id) as { m: number | null }).m ?? 0) + 1;
