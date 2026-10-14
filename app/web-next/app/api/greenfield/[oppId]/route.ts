@@ -11,9 +11,15 @@ import { deriveCapabilityCostLines, milestoneCandidateView, normalizeBusinessCas
 /** One stored investment line (S5 "투자비 검토 요건"). Capability entries add the ADR-0173 markers. */
 interface PostedLine {
   line: string;
-  category: "labor" | "opex" | "capex" | "revenue" | "gov_rnd";
-  /** 억 (KRW) unless `currency` says otherwise; the server recomputes it for `source: "capability"` entries. */
+  category?: "labor" | "opex" | "capex" | "revenue" | "gov_rnd";
+  /** Raw amount in the line's own unit (`amountUnit`). The server recomputes `amountKrwM` when the unit is confirmed. */
   amount: number;
+  /** "krw" | "krw_k" | "krw_m" | "krw_eok" | "fx_m" | "fx_eok"; unknown values are rejected with invalid_amount_unit. */
+  amountUnit?: string;
+  /** Trust flag: true only after a person picked the unit in the UI. Legacy/old-shape lines are normalized to unconfirmed. */
+  amountUnitConfirmed?: boolean;
+  /** Canonical 백만원 value; recomputed server-side from amount + amountUnit, never taken from the client. */
+  amountKrwM?: number | null;
   currency?: "KRW" | "USD" | "EUR" | "JPY" | "CNY";
   period?: "monthly" | "quarterly" | "yearly" | "lumpsum";
   note?: string;

@@ -28,7 +28,7 @@ function CompView() {
     <main>
       <StageTabs projectId={id} />
       <h1>경영진 보상·임금 형평</h1>
-      <p className="objective">경영진 보상 구조와 인수사-피인수사 임금 형평을 분석합니다 — 집계 전용(3인 미만 억제), 개인 노출 없음.</p>
+      <p className="objective">경영진 보상 구조와 인수사-피인수사 임금 형평을 분석합니다 — 집계 전용(5인 미만 억제), 개인 노출 없음.</p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       <div className="grid2e">
         <section className="market-section" aria-label="경영진 보상 패키지">

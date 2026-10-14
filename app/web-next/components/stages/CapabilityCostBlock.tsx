@@ -120,7 +120,7 @@ export function CapabilityCostBlock({ lines, orphans, totals, warnings, candidat
           {r?.dirty && <span className="text-[color:var(--muted-fg)]" data-testid="reflect-totals-note"> · 저장 전 변경 있음 (저장된 반영 {r.saved.count}건, {formatKrwM(r.saved.krwM)})</span>}
         </p>
         <p className="text-[length:var(--fs-caption)] mb-1" role="status">
-          수동 입력 합계 <b>{formatKrwM(totals.manualKrwM)}</b> (원화, 일시불은 그대로·반복 항목은 연 환산, 수익·정부 R&amp;D 제외{totals.manualExcludedNonKrw > 0 ? `, 외화 ${totals.manualExcludedNonKrw}건 제외` : ""})
+          수동 입력 합계 <b>{formatKrwM(totals.manualKrwM)}</b> (원화, 일시불 {formatKrwM(totals.manualLumpsumKrwM)} · 연간(반복) {formatKrwM(totals.manualRecurringKrwM)}, 수익·정부 R&amp;D 제외{totals.manualExcludedNonKrw > 0 ? `, 외화 ${totals.manualExcludedNonKrw}건 제외` : ""}{totals.manualExcludedNeedsConfirm > 0 ? `, 확인 필요 ${totals.manualExcludedNeedsConfirm}건 제외` : ""})
           {" · "}투자비 검토 합계 <b>{formatKrwM(totals.grandKrwM)}</b>
         </p>
         {r && (r.promoted ? (

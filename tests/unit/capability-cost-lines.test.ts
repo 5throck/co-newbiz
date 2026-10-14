@@ -152,16 +152,23 @@ describe("double-count heuristics (OD-6)", () => {
 });
 
 describe("totals", () => {
-  test("capability, reflected, manual (annualised, KRW only, revenue and gov_rnd excluded) and grand total", () => {
+  test("capability, reflected, manual (annualised, confirmed units only, revenue and gov_rnd excluded) and grand total", () => {
     const view = cl.deriveCapabilityCostLines([src(), src({ id: "k2", capability: "채용", closing_cost_krw_m: 1234, confirmed_at: null })], []);
+    const conf = { amountUnit: "krw_m" as const, amountUnitConfirmed: true };
     const t = cl.investmentTotals(view, new Set(["k1"]), [
-      { category: "capex", amount: 5, currency: "KRW", period: "lumpsum" },
-      { category: "opex", amount: 1, currency: "KRW", period: "monthly" },
-      { category: "revenue", amount: 99, currency: "KRW", period: "yearly" },
-      { category: "gov_rnd", amount: 7, currency: "KRW", period: "yearly" },
-      { category: "capex", amount: 100, currency: "USD", period: "lumpsum" },
+      { category: "capex", amount: 500, currency: "KRW", period: "lumpsum", ...conf },
+      { category: "opex", amount: 100, currency: "KRW", period: "monthly", ...conf },
+      { category: "revenue", amount: 99, currency: "KRW", period: "yearly", ...conf },
+      { category: "gov_rnd", amount: 7, currency: "KRW", period: "yearly", ...conf },
+      { category: "capex", amount: 100, currency: "USD", period: "lumpsum", ...conf },
+      { category: "opex", amount: 5, currency: "KRW", period: "yearly" }, // unconfirmed unit — excluded
     ]);
-    expect(t).toMatchObject({ capabilityEok: 42.34, reflectedEok: 30, manualEok: 17, manualExcludedNonKrw: 1, grandEok: 47, reflectedCount: 1 });
+    expect(t).toMatchObject({
+      capabilityKrwM: 4234, reflectedKrwM: 3000, manualKrwM: 1700, grandKrwM: 4700,
+      manualLumpsumKrwM: 500, manualRecurringKrwM: 1200,
+      manualExcludedNonKrw: 1, manualExcludedNeedsConfirm: 1,
+      capabilityEok: 42.34, reflectedEok: 30, manualEok: 17, grandEok: 47, reflectedCount: 1,
+    });
   });
 });
 
@@ -199,9 +206,11 @@ describe("server-side normalisation of posted lines", () => {
     const re = norm([{ source: "capability", capabilityKey: "k1", reflected: true }]);
     expect(re.ok && re.events.map((e) => e.action)).toEqual(["capability_cost.reflect"]);
   });
-  test("manual lines pass through, capability markers on them are stripped, dismissals are audited", () => {
+  test("manual lines pass through without silent conversion; unknown units are rejected; dismissals are audited", () => {
     const r = norm([{ line: "임대료", category: "opex", amount: 2, period: "yearly", currency: "KRW", reflected: true, basisHash: "x", dupDismissed: ["k1"] }]);
-    expect(r.ok && r.lines[0]).toEqual({ line: "임대료", category: "opex", amount: 200, amountUnit: "krw_m", period: "yearly", currency: "KRW", dupDismissed: ["k1"] });
+    expect(r.ok && r.lines[0]).toEqual({ line: "임대료", category: "opex", amount: 2, amountUnit: undefined, amountUnitConfirmed: false, amountKrwM: null, period: "yearly", currency: "KRW", dupDismissed: ["k1"] });
+    const bad = norm([{ line: "x", category: "opex", amount: 1, amountUnit: "yard", currency: "KRW", period: "yearly" }]);
+    expect(bad.ok === false && bad.error.code).toBe("invalid_amount_unit");
     expect(r.ok && r.events.map((e) => e.action)).toEqual(["capability_cost.dup_dismissed"]);
     expect((norm("x") as any).error.code).toBe("invalid_request");
   });
@@ -211,13 +220,15 @@ describe("promotion split", () => {
   test("reflected:false skipped, reflected become exact 백만원, orphans skipped, stale flagged, manual untouched", () => {
     const rows = [src({ closing_cost_krw_m: 333 }), src({ id: "k2", capability: "채용", resolution: "hire", closing_cost_krw_m: 800, stale: true, confirmed_at: null })];
     const s = cl.splitForPromotion([
-      { line: "수동", category: "opex", amount: 1 },
+      { line: "수동", category: "opex", amount: 1, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly" },
+      { line: "미확인", category: "opex", amount: 1 }, // legacy unit-less: skipped as unit_unconfirmed
       { source: "capability", capabilityKey: "k1", reflected: true, category: "capex", basisHash: cl.costBasisHash(rows[0]) },
       { source: "capability", capabilityKey: "k2", reflected: true, category: "labor", basisHash: "old" },
       { source: "capability", capabilityKey: "k3", reflected: true, category: "capex" },
       { source: "capability", capabilityKey: "k1x", reflected: false, category: "capex" },
     ], rows);
     expect(s.manual).toHaveLength(1);
+    expect(s.skippedManual).toEqual([{ line: "미확인", reason: "unit_unconfirmed" }]);
     expect(s.skipped).toEqual(["k3"]);
     expect(s.capability[0]).toMatchObject({ krwM: 333, category: "capex", name: "정밀 가공 역량 해소" });
     expect(s.capability[0].note).toContain("역량 해소 비용");
@@ -296,13 +307,13 @@ describe("routes: derived view, save, tamper rejection, round trip", () => {
 
   test("save reflects r1; the stored entry is server-built; amount, hash, user are stamped", async () => {
     const res = await postGf({ business_case_lines: [
-      { line: "초기 인건비", category: "labor", amount: 3, currency: "KRW", period: "yearly" },
+      { line: "초기 인건비", category: "labor", amount: 3, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly" },
       { source: "capability", capabilityKey: "r1", reflected: true, category: "capex", line: "임의 이름", amount: 30 },
     ] });
     expect(res.status).toBe(200);
     const lines = storedLines();
     expect(lines).toHaveLength(2);
-    expect(lines[0]).toEqual({ line: "초기 인건비", category: "labor", amount: 300, amountUnit: "krw_m", currency: "KRW", period: "yearly" });
+    expect(lines[0]).toEqual({ line: "초기 인건비", category: "labor", amount: 3, amountUnit: "krw_m", amountUnitConfirmed: true, amountKrwM: 3, currency: "KRW", period: "yearly" });
     expect(lines[1]).toMatchObject({ line: "정밀 가공 역량 해소", source: "capability", capabilityKey: "r1", reflected: true, amount: 3000, amountUnit: "krw_m", currency: "KRW", period: "lumpsum", costKrwM: 3000, reflectedBy: LEAD });
     expect(lines[1].basisHash).toMatch(/^c1:/);
     const audit = db.query("SELECT action FROM audit_log WHERE action LIKE 'capability_cost.%' ORDER BY created_at").all() as Array<{ action: string }>;
@@ -367,8 +378,9 @@ describe("promotion copy", () => {
     }));
     db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [json({ rows, updatedAt: NOW }), id]);
     db.run("UPDATE greenfield_assessment SET business_case_lines_json = ? WHERE opportunity_id = ?", [json([
-      { line: "생산설비", category: "capex", amount: 12, currency: "KRW", period: "lumpsum" },
-      { line: "라이선스", category: "opex", amount: 2, currency: "KRW", period: "monthly" },
+      { line: "생산설비", category: "capex", amount: 1200, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "lumpsum" },
+      { line: "라이선스", category: "opex", amount: 200, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "monthly" },
+      { line: "단위 미확인 항목", category: "opex", amount: 5, currency: "KRW", period: "yearly" }, // legacy — not copied
       { line: "정밀 가공 역량 해소", source: "capability", capabilityKey: "r1", reflected: true, category: "capex", amount: 3.33, currency: "KRW", period: "lumpsum" },
       { line: "품질 인증 역량 해소", source: "capability", capabilityKey: "r2", reflected: false, category: "opex", amount: 8, currency: "KRW", period: "lumpsum" },
       { line: "삭제된", source: "capability", capabilityKey: "gone", reflected: true, category: "opex", amount: 9, currency: "KRW", period: "lumpsum" },
@@ -384,6 +396,7 @@ describe("promotion copy", () => {
     expect(by["정밀 가공 역량 해소"].note).toContain("역량 해소 비용");
     expect(by["정밀 가공 역량 해소"].note).toContain("일시불 총액");
     expect((db.query("SELECT count(*) c FROM audit_log WHERE action = 'capability_cost.promotion_skipped'").get() as { c: number }).c).toBe(1);
+    expect((db.query("SELECT count(*) c FROM audit_log WHERE action = 'greenfield_cost.promotion_skipped' AND target LIKE '%unit_unconfirmed%'").get() as { c: number }).c).toBe(1);
   });
 
   test("a model is still created when only reflected capability lines exist", () => {
@@ -462,7 +475,7 @@ describe("S5 UI structure", () => {
     const { CapabilityCostBlock } = await import("../../app/web-next/components/stages/CapabilityCostBlock.tsx");
     const view = cl.deriveCapabilityCostLines([src(), src({ id: "k2", capability: "채용", resolution: "hire", closing_cost_krw_m: 1234, confirmed_at: null })], []);
     const lines = cl.applySelection(view, {});
-    const totals = cl.investmentTotals(view, new Set(["k1"]), [{ category: "capex", amount: 5, currency: "KRW", period: "lumpsum" }]);
+    const totals = cl.investmentTotals(view, new Set(["k1"]), [{ category: "capex", amount: 5, currency: "KRW", period: "lumpsum" }]); // unconfirmed unit: excluded
     const warnings = cl.findDuplicateWarnings(lines.filter((l) => l.reflected), [{ line: "정밀 가공 설비" }]);
     const html = renderToStaticMarkup(createElement(CapabilityCostBlock, {
       lines, orphans: [], totals, warnings, canAct: true,
@@ -482,7 +495,8 @@ describe("S5 UI structure", () => {
     expect(input("정밀 가공")).toContain("checked");
     expect(html).toContain("확정");
     expect(html).toContain("투자비 검토 합계");
-    expect(html).toContain("3,500백만원");
+    expect(html).toContain("3,000백만원"); // grand = capability only; the unconfirmed manual line is excluded
+    expect(html).toContain("확인 필요 1건 제외");
     expect(html).toContain("중복 가능성");
     expect(html).toContain("수동 항목 유지");
     expect(html).toContain("마일스톤 후보 (사후관리 연동 예정)");
@@ -497,7 +511,7 @@ describe("unified investment item list", () => {
   const view = cl.deriveCapabilityCostLines([src({ id: "k1" }), src({ id: "k2", capability: "인증", closing_cost_krw_m: 500, confirmed_at: null })], [
     { source: "capability", capabilityKey: "k1", reflected: true, category: "capex", amount: 3000, amountUnit: "krw_m", basisHash: "x" },
   ]);
-  const manual = [{ line: "설비", category: "capex", amount: 100, amountUnit: "krw_m", currency: "KRW", period: "lumpsum" }];
+  const manual = [{ line: "설비", category: "capex", amount: 100, amountUnit: "krw_m", amountUnitConfirmed: true, amountKrwM: 100, currency: "KRW", period: "lumpsum" }];
   test("reflected capability lines follow manual lines with name, note and footer sum equal to investmentTotals", () => {
     const capLines = cl.applySelection(view, {});
     const states = cl.lineSaveStates(capLines, [{ source: "capability", capabilityKey: "k1", reflected: true, category: "capex" }], {});

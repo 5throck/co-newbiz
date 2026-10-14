@@ -7461,8 +7461,6 @@ components:
           type: array
           items:
             type: object
-            required:
-              - category
             properties:
               line:
                 type: string
@@ -7471,11 +7469,17 @@ components:
                 enum: [labor, opex, capex, revenue, gov_rnd]
               amount:
                 type: number
-                description: Millions of the line currency (amountUnit krw_m). For source capability the server recomputes it from the live judgement (exact millions of KRW) and rejects a different value (400 amount_mismatch, compared in millions). A line posted without amountUnit is legacy (eok, 100 million) and is converted value-preserving (x100, rounded to 0.01) and stored with amountUnit krw_m.
+                description: Raw amount in the line's own unit (amountUnit). For source capability the server recomputes it from the live judgement (exact millions of KRW) and rejects a different value (400 amount_mismatch, compared in millions). Manual lines are never converted on write — an unknown-unit (legacy) line keeps its raw amount and stays unconfirmed.
               amountUnit:
                 type: string
-                enum: [krw_m]
-                description: Written on every stored line from 2026-10-15; absent means legacy eok.
+                enum: [krw, krw_k, krw_m, krw_eok, fx_m, fx_eok]
+                description: The unit the person picked for this line. Legacy/old-shape lines lose any previously stamped unit (it came from the earlier silent conversion) and are stored unconfirmed. Unknown values are rejected with 400 invalid_amount_unit.
+              amountUnitConfirmed:
+                type: boolean
+                description: Trust flag — true only after a person picked the unit in the UI. Unconfirmed (or non-KRW) lines are excluded from totals and from the S8 promotion copy (audited as greenfield_cost.promotion_skipped with reason unit_unconfirmed / currency_non_krw).
+              amountKrwM:
+                type: number
+                description: Canonical 백만원 value; computed server-side from amount + amountUnit when the line is complete and confirmed (null otherwise). Consumed by totals and promotion; never taken from the client.
               currency:
                 type: string
                 enum: [KRW, USD, EUR, JPY, CNY]

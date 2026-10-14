@@ -5,9 +5,9 @@ lang_reason: proper-noun
 
 # ADR-0174 - Total investment definition, S5 investment summary and S8 hand-off (`투자비 요약`, `총 투자비`)
 
-- Status: Proposed
+- Status: Accepted (2026-10-15)
 - Date: 2026-10-15
-- Decider: Human decider (chat 2026-10-15 feedback: annual vs total investment not visible in S5; total investment must be organised for S8). Drafted by platform-lead.
+- Decider: Human decider (chat 2026-10-15 feedback: annual vs total investment not visible in S5; total investment must be organised for S8; acceptance: "S5에서 입력된 투자비, 인건비, 운영비 등 각종 비용 항목은 S8의 사업성 분석 시 반영될 수 있도록 해야 한다"). Drafted by platform-lead.
 - Design-of-record: [docs/designs/2026-10-15-total-investment-and-s8-handoff-design.md](../designs/2026-10-15-total-investment-and-s8-handoff-design.md)
 - Related: ADR-0173 (capability cost lines; its slice 2 re-import is absorbed here as slice 3), ADR-0137/0138 (S5 lines copied at promotion; `gov_rnd`), ADR-0106 (initial investment ratio), ADR-0114 (capex outside the margin), ADR-0101 (S11/S12 post-management)
 - Slices: 4 (1 S5 summary panel + definitions + storage, 2 promotion copy + S8 consumption, 3 re-import, 4 S10/S12 alignment). None implemented by this ADR.
@@ -40,6 +40,13 @@ ADR-0173 decides how capability closing costs enter the S5 lines. This decision 
 - S10 tranche reconciliation and S12 targets compare against a correct capex total once `end_year` is honoured.
 - Legacy S5 lines read as Y1 start, recurring every year in horizon; legacy model lines have NULL `end_year` and behave as today.
 
+## Acceptance record
+
+- Approver: the human decider (user, account techcross), chat 2026-10-15: "S5에서 입력된 투자비, 인건비, 운영비 등 각종 비용 항목은 S8의 사업성 분석 시 반영될 수 있도록 해야 한다". Recorded in DEC-20261015-02.
+- Basis: chat approval of the decision as written. Acceptance is by chat instruction; the decider did not review a per-item checklist, and this record does not claim the approver read specific items. The direction approves the core of this ADR (S5 cost items must reach the S8 business-case analysis) and the design's recommended resolutions of OD-1..OD-6.
+- Scope: acceptance covers the decision only. No slice is implemented; slice 1 starts after the in-flight S5 unit fix.
+- Not verified by the AI: nothing of this ADR is implemented or browser-verified.
+
 ## Honest limits
 
-Not exercised in a browser; S12 investment tracking was only traced through `business-targets.ts`; whether a `greenfield_cost` model can be adopted in `s8_case_adopt` today was not confirmed. See design section 14.
+Accepted 2026-10-15; open decisions OD-1..OD-6 resolved per the design's recommendations (see Acceptance record). Not exercised in a browser; S12 investment tracking was only traced through `business-targets.ts`; whether a `greenfield_cost` model can be adopted in `s8_case_adopt` today was not confirmed. See design section 14.

@@ -50,6 +50,10 @@ Storage without a migration: `greenfield_assessment` has no free JSON column (`b
 
 New proposal-only route `POST /api/greenfield/{oppId}/entry-strategy-draft` (analyst+, writes nothing, not human-only) and MCP draft tool `draft_entry_strategy`: from stored S3 register (필요도, 필요 수준, 보유 판정, 보유 수준; 필수 gaps first), the S4 final decision record, opportunity context and company profile/disclosure evidence (unverified claims are context only) the LLM proposes `{modes[{mode, main, reason}], rationale, alternatives, basis, cautions}`; no web search. The page fills only empty parts as unsaved drafts with AI chips and an `AI 근거` line, a dismissible note and `AI 초안 버리기`; drafts survive refetches; a person saves. Without an LLM: 200 with an empty proposal and a note. Prompt key `s5.entry_strategy_draft`. Gate approval and the investment decision remain human (boundary #2).
 
+## Amendment 2026-10-15 (3): S8 keeps the read-only capability summary
+
+Decider decision (chat 2026-10-15): once the S7 per-target judgements are implemented, S8 keeps its current structure — the technical-feasibility tab retains the read-only capability summary (Decision 3) alongside the technical lens T2-T5 inputs and the capability-adjusted scenario pointer; S8 does not become finance-only and T2-T5 do not move to S9 (S9 stays the paired Brown Field verification). If the summary table feels sparse, it may later be compressed into a single summary-strip line (future refinement).
+
 ## Acceptance record
 
 - Approver: the human decider (user, account techcross), chat 2026-10-14: "ADR-0171 / 0172 승인". Recorded in DEC-20261014-08.

@@ -873,6 +873,11 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0175",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent:root/antitrust-agent",
       "type": "agent",
       "layer": "L3",
@@ -1551,6 +1556,11 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20261015-02",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "doc:AGENTS.md",
       "type": "doc",
       "layer": "L3"
@@ -1846,7 +1856,7 @@
       "name": "compensation-harmonization-analysis",
       "scope": "root",
       "capability": "compensation-harmonization-analysis",
-      "content_hash": "4311ba7c2cc43976",
+      "content_hash": "162464aaa59e0f92",
       "version": "1.0.0",
       "mirrors": [
         "skills/compensation-harmonization-analysis/SKILL.md",
@@ -4709,6 +4719,12 @@
     {
       "type": "cites_skill",
       "from": "dec:DEC-20261015-01",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261015-02",
       "to": "skill:root/decision-record",
       "source": "skills_used"
     },
