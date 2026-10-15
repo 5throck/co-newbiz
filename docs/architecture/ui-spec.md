@@ -460,3 +460,4 @@ The "진출방식 결정 이력" table (`DecisionTab.tsx`) stays compact (cell-t
 - Not exercised in a browser: covered by type-check, unit tests (`tests/unit/s8-capability-readonly-slice3.test.ts`) and design lint only.
 
 - 2026-10-15 S8 fix: a Green Field project shows and generates only the market-based (`market_forward`) cases. The historical (`과거 기반`) variant is Brown Field comparison evidence; the generator ignores the project's linked company for it (the link stays valid for the financial-analysis tab and WACC), and the read model hides stored `historical` rows for greenfield (the adopted model stays visible). Stored rows are not deleted or archived.
+- 2026-10-15 S8 overview tab: the auto-generate action (button + caption + generation run log) moved from the bottom of the tab to the top, before the perspective table, and the button is the tab's single primary action (`btn-premium`).
