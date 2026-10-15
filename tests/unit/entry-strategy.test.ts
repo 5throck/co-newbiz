@@ -51,7 +51,10 @@ describe("parser / serializer", () => {
     expect(es.parseEntryStrategy("[진출방식] build,x,build*").modes).toEqual(["build"]);
   });
   test("exactly one main: single is automatic, removing the main reassigns, an invalid main falls back to the first", () => {
-    expect(E(["invest"], null)).toEqual({ modes: ["invest"], main: "invest" });
+    expect(E(["invest"], null)).toEqual({ modes: [], main: null });
+    expect(E(["partner"], null)).toEqual({ modes: ["partner"], main: "partner" });
+    expect(es.parseEntryStrategy("[\uc9c4\ucd9c\ubc29\uc2dd] invest*\n\ubcf8\ubb38")).toEqual({ modes: [], main: null, rationale: "\ubcf8\ubb38" });
+    expect(es.parseEntryStrategy("[\uc9c4\ucd9c\ubc29\uc2dd] invest*,build").modes).toEqual(["build"]);
     expect(E(["hire", "build"], "invest")).toEqual({ modes: ["build", "hire"], main: "build" });
     let m = es.toggleMode({ modes: [], main: null }, "partner");
     expect(m).toEqual({ modes: ["partner"], main: "partner" });
@@ -239,18 +242,20 @@ describe("registration and UI structure", () => {
     expect(tools).toContain('name: "draft_entry_strategy"');
     expect(tools).toContain("/api/greenfield/{opportunityId}/entry-strategy-draft");
   });
-  test("section: four options, main marker, exactly two textareas, caps, AI chips, no 'choose among' heading", () => {
+  test("section: three options, main marker, exactly two textareas, caps, AI chips, no 'choose among' heading", () => {
     const sec = read("app/web-next/components/stages/EntryStrategySection.tsx");
     expect(sec.match(/<textarea/g)).toHaveLength(2);
     for (const k of ["ENTRY_MODES.map", 'type="checkbox"', 'type="radio"', "주된 방식", "선택 근거", "검토했으나 선택하지 않은 대안과 사유", "ENTRY_RATIONALE_CAP", "ENTRY_ALTERNATIVES_CAP", "rows={3}", "rows={2}",
       "진출전략 제안 (AI)", "저장하지 않은 AI 초안", "AI 초안 버리기", "AI 제안 결과 닫기", "AI 근거:", "역량별 해소 방식(아래 판정)은 역량마다 다른 층위이며 여기서 고른 진출전략과 다르면 주의가 표시됩니다", "cautionText(mismatches)", "/entry-strategy-draft", 'aria-hidden="true">✦']) expect(sec).toContain(k);
-    expect(sec).toContain("1️⃣ 진출전략</h3>");
+    expect(sec).toContain(">\uc9c4\ucd9c\uc804\ub7b5</h3>");
+    expect(sec).not.toMatch(/[0-9]\uFE0F\u20E3/);
     expect(sec).not.toContain("중 선택");
     expect(sec).toContain("canAct &&");
     expect(es.ENTRY_RATIONALE_CAP).toBe(600);
     expect(es.ENTRY_ALTERNATIVES_CAP).toBe(600);
     for (const m of es.ENTRY_MODES) expect(es.ENTRY_MODE_LABEL[m].length).toBeGreaterThan(0);
-    expect(Object.values(es.ENTRY_MODE_LABEL)).toEqual(["직접 구축", "전략 제휴", "인력 영입", "지분 투자"]);
+    expect(Object.values(es.ENTRY_MODE_LABEL)).toEqual(["\uc9c1\uc811 \uad6c\ucd95", "\uc804\ub7b5 \uc81c\ud734", "\uc778\ub825 \uc601\uc785"]);
+    expect(es.ENTRY_MODES).not.toContain("invest");
   });
   test("page: old textareas replaced by the section, save serializes modes, refetch keeps unsaved edits", () => {
     const page = read("app/web-next/components/stages/GreenfieldStage.tsx");

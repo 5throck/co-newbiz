@@ -123,7 +123,7 @@ export function buildEntryPrompt(i: EntryPromptInput): string {
     ...(i.contextLines ?? []),
   ].filter(Boolean).join("\n");
   return [
-    "S5 진출전략(직접 구축 build / 전략 제휴 partner / 인력 영입 hire / 지분 투자 invest, 복수 선택 가능·주된 방식 1개)을 제안하세요. 제안일 뿐이며 결정·승인은 하지 않습니다.",
+    "S5 진출전략(직접 구축 build / 전략 제휴 partner / 인력 영입 hire, 복수 선택 가능·주된 방식 1개)을 제안하세요. 제안일 뿐이며 결정·승인은 하지 않습니다.",
     "[기회 맥락]\n" + ctx,
     "[S3 필요 역량 레지스터 — [핵심 격차]는 필수 역량 중 부분 보유·미보유·미판정]\n" + (i.capabilityLines.length ? i.capabilityLines.join("\n") : "(없음)"),
     i.routeLines?.length ? "[S4 결정 기록]\n" + i.routeLines.join("\n") : "[S4 결정 기록] 저장된 내용 없음",
@@ -131,7 +131,7 @@ export function buildEntryPrompt(i: EntryPromptInput): string {
     i.disclosureLines?.length ? "[공시·재무 근거]\n" + i.disclosureLines.join("\n") : "",
     [
       "규칙:",
-      "- modes: build|partner|hire|invest 중 근거가 뒷받침하는 것만, 각각 reason 한 줄. 정확히 하나만 main=true.",
+      "- modes: build|partner|hire 중 근거가(지분 투자·인수는 그린필드 방식이 아니므로 제안하지 않음) 뒷받침하는 것만, 각각 reason 한 줄. 정확히 하나만 main=true.",
       "- rationale(600자 이내): 선택한 방식이 S3 격차를 어떻게 해소하는지 격차·사실을 인용하고 핵심 가정을 한 문장으로 밝힙니다.",
       "- alternatives(600자 이내): 검토했으나 선택하지 않은 방식과 사유.",
       "- basis: {modes, rationale, alternatives, assumption} 각 한 줄 근거(어떤 자료에서 왔는지).",
