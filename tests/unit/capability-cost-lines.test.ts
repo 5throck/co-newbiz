@@ -164,11 +164,41 @@ describe("totals", () => {
       { category: "opex", amount: 5, currency: "KRW", period: "yearly" }, // unconfirmed unit — excluded
     ]);
     expect(t).toMatchObject({
-      capabilityKrwM: 4234, reflectedKrwM: 3000, manualKrwM: 1700, grandKrwM: 4700,
-      manualLumpsumKrwM: 500, manualRecurringKrwM: 1200,
+      capabilityKrwM: 4234, reflectedKrwM: 3000, manualKrwM: 6500, grandKrwM: 9500,
+      manualLumpsumKrwM: 500, manualRecurringKrwM: 6000,
       manualExcludedNonKrw: 1, manualExcludedNeedsConfirm: 1,
-      capabilityEok: 42.34, reflectedEok: 30, manualEok: 17, grandEok: 47, reflectedCount: 1,
+      capabilityEok: 42.34, reflectedEok: 30, manualEok: 65, grandEok: 95, reflectedCount: 1,
     });
+  });
+});
+
+describe("recurring cadence counts for every active year (monthly x12 x years)", () => {
+  const view = { lines: [], orphans: [], totals: { capabilityKrwM: 0, reflectedKrwM: 0, reflectedCount: 0, needsRejudgeCount: 0 } } as any;
+  const ln = (o: Record<string, unknown>) => ({ line: "x", category: "opex", amount: 10, amountUnit: "krw_m", amountUnitConfirmed: true, amountKrwM: 10, currency: "KRW", ...o }) as any;
+  test("monthly opex over 3 years = 36 x A in totals, summary schedule, total and chart data", () => {
+    const lines = [ln({ period: "monthly", startYear: 1, endYear: 3 })];
+    const t = cl.investmentTotals(view, new Set(), lines, null, 3);
+    expect(t.manualRecurringKrwM).toBe(360);
+    expect(t.grandKrwM).toBe(360);
+    const s = cl.buildInvestmentSummary(lines, [], 3, new Set());
+    expect(s.schedule.map((r: any) => r.opex)).toEqual([120, 120, 120]);
+    expect(s.totalKrwM).toBe(360);
+    expect(s.totalKrwM).toBe(t.grandKrwM);
+    expect(cl.buildInvestmentChartData(s).totalKrwM).toBe(360);
+  });
+  test("start/end window and horizon clamp apply to totals the same way as the summary", () => {
+    const lines = [ln({ period: "monthly", startYear: 2, endYear: 9 })];
+    const t = cl.investmentTotals(view, new Set(), lines, null, 3);
+    expect(t.manualKrwM).toBe(240);
+    expect(cl.buildInvestmentSummary(lines, [], 3, new Set()).totalKrwM).toBe(240);
+  });
+  test("one-off is unchanged and annual counts once per active year", () => {
+    const lines = [ln({ period: "lumpsum", startYear: 2 }), ln({ period: "yearly", startYear: 1, endYear: 3 }), ln({ period: "quarterly" })];
+    const t = cl.investmentTotals(view, new Set(), lines, null, 3);
+    expect(t.manualLumpsumKrwM).toBe(10);
+    expect(t.manualRecurringKrwM).toBe(30 + 120);
+    expect(t.grandKrwM).toBe(160);
+    expect(cl.buildInvestmentSummary(lines, [], 3, new Set()).totalKrwM).toBe(160);
   });
 });
 
@@ -485,11 +515,12 @@ describe("milestone candidates", () => {
 describe("S5 UI structure", () => {
   const stage = readFileSync(join(WEB, "components/stages/GreenfieldStage.tsx"), "utf8");
   const block = readFileSync(join(WEB, "components/stages/CapabilityCostBlock.tsx"), "utf8");
-  test("the derived block sits above the manual lines inside the investment tab and the payload carries only the person's choices", () => {
-    const sec = stage.indexOf("투자비 검토 요건 (S8 사업성 분석 입력)");
+  test("the derived block sits below the unified item table (decider: summary, table, then capability costs) inside the investment tab and the payload carries only the person's choices", () => {
+    const sec = stage.indexOf("투자비 항목 (S8 사업성 분석 입력)");
     expect(sec).toBeGreaterThan(0);
+    expect(stage.indexOf("data-testid=\"invest-summary\"")).toBeLessThan(sec);
     expect(stage.indexOf("<CapabilityCostBlock", sec)).toBeGreaterThan(sec);
-    expect(stage.indexOf("<CapabilityCostBlock")).toBeLessThan(stage.indexOf("unifiedRows.map"));
+    expect(stage.indexOf("<CapabilityCostBlock")).toBeGreaterThan(stage.indexOf("unifiedRows.map"));
     expect(stage).toContain("selectionPayload(capLines, capSel)");
     expect(stage).toContain("onRowsChange={setAttRows}");
   });
@@ -571,7 +602,7 @@ describe("unified investment item list", () => {
   });
   test("GreenfieldStage renders the unified list with chips, actions and footer; counter counts reflected lines", () => {
     const stage = readFileSync(join(WEB, "components/stages/GreenfieldStage.tsx"), "utf8");
-    for (const s of ["unifiedInvestmentRows", "역량 해소 연동", "판정 보기", "반영 해제", "저장 전", "재판정 필요", "invest-item-footer", "반영된 항목은 아래 투자비 항목 목록에 포함됩니다", "reflectedLines.length > 0"]) expect(stage).toContain(s);
+    for (const s of ["unifiedInvestmentRows", "역량 해소 연동", "판정 보기", "반영 해제", "저장 전", "재판정 필요", "invest-item-footer", "역량 해소 비용에서 반영한 항목은 이 목록에 포함됩니다", "reflectedLines.length > 0"]) expect(stage).toContain(s);
   });
 });
 

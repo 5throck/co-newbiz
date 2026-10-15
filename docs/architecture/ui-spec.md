@@ -381,3 +381,9 @@ The "진출방식 결정 이력" table (`DecisionTab.tsx`) stays compact (cell-t
 - Nothing here was exercised in a browser.
 
 - S5 investment item table column widths (decider 2026-10-15, `table-fixed-pct tmin-80`, ColGroup percent of >=80rem): 항목명 18 / 출처 10 / 분류 10 / 금액 10 (right-aligned numeric input) / 단위 9 / 통화 7 / 주기 7 / 시작·종료 연차 13 (two compact number inputs side by side, no wrap) / 비고 10 / 작업 6 (nowrap).
+
+## As-built 2026-10-15 - S5 investment tab order and monthly/recurring cadence fix
+
+- `투자비` tab order (decider): `출처 요약`, then the `투자비 요약` panel (now holding the `검토 기간(년)` input and the charts/tiles/tables), then directly under it `투자비 항목` (save bar, unit note, the unified item table, footer), then `역량 해소 비용`, then `투자비 항목 추천` last.
+- `투자비 요약` tidy: the separate `설비 투자 소계` line is removed (the 설비투자 row of the by-category table already carries it); the by-category table is captioned `분류 (백만원)` and every number uses one shared 백만원 format; the duplicated summary comment is gone. The `연도별 투자 계획 (백만원)` table and its inflow rows are unchanged in content.
+- Cadence bug: `investmentTotals` (the `투자비 검토 합계`, item-list footer and save-result sum) annualised a recurring line once and ignored its 시작/종료 연차, so a monthly line of A over three years showed 12A while the summary, yearly table and charts showed 36A. It now multiplies the cadence-annualised amount (monthly x12, quarterly x4, yearly x1) by the active years inside the review horizon via shared `recurringActiveYears`; lump sums count once (not counted when they start after the horizon). Stored amount semantics are unchanged; the S8 promotion (`project.repository.ts`) already applies the cadence multiplier with start/end years and needed no change. The totals line label reads `반복(검토 기간)`. Not exercised in a browser.
