@@ -276,8 +276,7 @@ export function GoalsPanel({ projectId, data, canAct, onChanged, loadError }: { 
   return (
     <section className="market-section" aria-label="사업 목표">
       <SectionToolbar
-        title="사업 목표" // INTERIM-WORDING
-        count={resolved.length || undefined}
+        filters={resolved.length > 0 ? <span className="section-meta" aria-label="적용 목표 수">{resolved.length}건 적용</span> : undefined}
         actions={
           <>
             {canAct && data && resolved.length > 0 && !editor && (
