@@ -62,6 +62,10 @@ exclusions:
     kind: route
     route: "POST /api/projects/{}/business-case/legacy-cleanup"
     reason: Legacy model cleanup (delete or archive pre-ADR-0143 models) is a human-only click (ADR-0158).
+  - id: s5-investment-reimport
+    kind: route
+    route: "POST /api/projects/{}/business-case/s5-reimport"
+    reason: Re-importing the S5 investment plan into S8 (archives the previous greenfield_cost model) is a human-only click (ADR-0174, boundary #2).
   - id: ev-band-confirmation
     kind: route
     route: "POST /api/projects/{}/business-case/ev-band"

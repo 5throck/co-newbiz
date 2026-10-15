@@ -12,6 +12,7 @@ import { api } from "../../lib/api.ts";
 import { ParamTable, type ParamRow } from "../ui.tsx";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
+import { useConfirm } from "../crud.tsx";
 
 // Mirrors EV_BAND_OPTIMISM_FLAG_FACTOR / EV_BAND_MAX_SANE / EV_BAND_SPREAD_FLAG_RATIO / ACQUISITION_EV_REVENUE_BAND in
 // lib/business-case-generator.ts (DB-bound module, not bundleable here); drift is caught by
@@ -112,6 +113,18 @@ const driverValue = (d: DriverSpec): string => {
   return Array.isArray(d.value) ? d.value.map((x) => x.toFixed(2)).join(" → ") : String(d.value);
 };
 // ADR-0174 — 투자비 기준 라벨 (비율 추정 0 / S5 투자 계획 1 / S5 투자 계획(전체) 2)
+interface S5ReimportPreview {
+  importable: number; manual_lines: number; capability_lines: number;
+  skipped: Array<{ line: string; reason: string }>;
+  will_archive: Array<{ id: string; name: string; created_at: string }>;
+}
+const S5_SKIP_REASON: Record<string, string> = {
+  unit_unconfirmed: "단위 미확정",
+  currency_non_krw: "KRW 외 통화",
+  invalid_line: "이름·분류 누락",
+  capability_unreflected_or_unpriced: "미반영 또는 비용 미산정 역량",
+};
+
 const INVESTMENT_BASIS_LABELS: Record<string, string> = {
   ratio: "비율 추정",
   s5_plan: "S5 투자 계획",
@@ -131,6 +144,11 @@ const DRIVER_LABELS: Record<string, string> = {
 export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; onOpenTargets?: () => void }) {
   const [resolved, setResolved] = useState<ResolvedParams | null>(null);
   const [s5Sim, setS5Sim] = useState<S5SimStatusView | null>(null);
+  const [track, setTrack] = useState<string | null>(null);
+  const [reimportBusy, setReimportBusy] = useState(false);
+  const [reimportMsg, setReimportMsg] = useState<string | null>(null);
+  const [reimportErr, setReimportErr] = useState<string | null>(null);
+  const { confirm, confirmDialog } = useConfirm();
   const [cases, setCases] = useState<CaseSummary[]>([]);
   const [form, setForm] = useState<Record<string, string>>({});
   const [ramp, setRamp] = useState<string[]>(["", "", "", "", ""]);
@@ -170,11 +188,48 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
     }
   }
 
+  // ADR-0174 follow-up: human-triggered re-import of the S5 investment plan (preview -> confirm -> POST).
+  async function startS5Reimport() {
+    setReimportMsg(null); setReimportErr(null); setReimportBusy(true);
+    const base = `/api/projects/${encodeURIComponent(projectId)}/business-case/s5-reimport`;
+    try {
+      const pv = (await api.get<S5ReimportPreview>(base)).data;
+      const skipped = pv.skipped.length > 0 ? ` 가져오지 않는 항목 ${pv.skipped.length}건: ${pv.skipped.map((k) => `${k.line} (${S5_SKIP_REASON[k.reason] ?? k.reason})`).join(", ")}.` : " 가져오지 않는 항목은 없습니다.";
+      const archive = pv.will_archive.length > 0 ? ` 보관(삭제 아님)되는 기존 투자비 모델: ${pv.will_archive.map((m) => m.name).join(", ")}.` : " 보관할 기존 투자비 모델은 없습니다.";
+      confirm(
+        "S5 투자 계획 다시 가져오기",
+        () => {
+          void (async () => {
+            setReimportBusy(true);
+            try {
+              const r = (await api.post<{ imported: number; archived_model_ids: string[] }>(base, {})).data;
+              setReimportMsg(`S5 투자 계획 ${r.imported}건을 가져왔고 기존 모델 ${r.archived_model_ids.length}건을 보관했습니다. 사례는 \`자동 생성\`을 다시 실행해야 반영됩니다.`);
+              load();
+            } catch (e) {
+              setReimportErr(e instanceof Error ? e.message : "S5 투자 계획 가져오기에 실패했습니다.");
+            } finally {
+              setReimportBusy(false);
+            }
+          })();
+        },
+        {
+          body: `가져올 항목 ${pv.importable}건 (직접 입력 ${pv.manual_lines}건, 역량 해소 비용 ${pv.capability_lines}건).${skipped}${archive} 이미 생성된 사례는 다시 계산되지 않으며 \`자동 생성\`을 다시 실행해야 반영됩니다. 투자비 기준이 \`S5 투자 계획\`이어야 이 계획이 사용됩니다 (기준은 바뀌지 않습니다). 의사결정 지원용이며 게이트·등급에는 영향이 없습니다.`,
+          confirmLabel: "가져오기",
+        },
+      );
+    } catch (e) {
+      setReimportErr(e instanceof Error ? e.message : "가져올 수 있는 S5 투자 계획을 확인하지 못했습니다.");
+    } finally {
+      setReimportBusy(false);
+    }
+  }
+
   const load = useCallback(async () => {
     try {
       const params = await api.get<{ params: ResolvedParams; s5_sim?: S5SimStatusView | null }>(`/api/projects/${encodeURIComponent(projectId)}/business-case/params`);
       setResolved(params.data.params);
       setS5Sim(params.data.s5_sim ?? null);
+      setTrack((params.data as { track?: string | null }).track ?? null);
       const casesRes = await api.get<{ cases: CaseSummary[] }>(`/api/projects/${encodeURIComponent(projectId)}/business-case`);
       setCases(casesRes.data.cases);
     } catch (e) {
@@ -239,6 +294,7 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
 
   return (
     <>
+      {confirmDialog}
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
       {message && <p className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {message}</p>}
 
@@ -269,6 +325,16 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
               { label: "반복 수", value: resolved.iterations.toLocaleString(), unit: "회", source: <SourceChip source={resolved.iterationsSource} /> },
             ]}
           />
+            {track === "greenfield" && canAct && (
+              <div className="mt-2" data-testid="s8-s5-reimport-area">
+                <button type="button" className="btn-ghost" data-testid="s8-s5-reimport-button" disabled={reimportBusy} onClick={() => void startS5Reimport()}>
+                  S5 투자 계획 다시 가져오기
+                </button>
+                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] ml-2">최신 S5 투자비 검토 요건을 새 모델로 가져옵니다 (사람 전용, 참고용).</span>
+                {reimportMsg && <p role="status" data-testid="s8-s5-reimport-result" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mt-1">✓ {reimportMsg}</p>}
+                {reimportErr && <p role="alert" data-testid="s8-s5-reimport-error" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-1">✕ {reimportErr}</p>}
+              </div>
+            )}
             {s5Sim && s5Sim.state !== "not_applicable" && (
               <p role="status" className="text-[length:var(--fs-caption)] mt-2">
                 <span className={`status-chip ${s5Sim.state === "stale" ? "status-amber" : s5Sim.state === "in_effect" ? "status-green" : "status-gray"}`}>

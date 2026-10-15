@@ -5366,6 +5366,52 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/projects/{id}/business-case/s5-reimport:
+    get:
+      operationId: previewS5InvestmentReimport
+      summary: Preview a human-triggered re-import of the S5 investment plan into S8 — counts, skipped lines with reasons, and the greenfield_cost models that would be archived (ADR-0174; analyst+, Green Field only, 409 when nothing is importable).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    post:
+      operationId: reimportS5InvestmentPlan
+      summary: Human-only re-import of the S5 investment plan as a new greenfield_cost model; previous active models are archived (never deleted) in the same transaction and a business_case.s5_reimport audit row is written. Existing cases are not recalculated and the investment basis is never changed (ADR-0174; agents rejected).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
   /api/projects/{id}/business-case/adoption-recommendation:
     post:
       operationId: recommendBusinessCaseAdoption

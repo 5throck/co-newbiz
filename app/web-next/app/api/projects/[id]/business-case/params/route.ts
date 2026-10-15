@@ -27,7 +27,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   // Informational only - never blocks generation, a gate or a grade.
   let s5Sim = null;
   try { s5Sim = s5SimStatusForProject(getDb(), id); } catch { /* migration pending: omit */ }
-  return ok({ params: resolved, s5_sim: s5Sim }, 200);
+  const track = (getDb().query("SELECT track FROM md_project WHERE id = ?").get(id) as { track: string | null } | undefined)?.track ?? null;
+  return ok({ params: resolved, s5_sim: s5Sim, track }, 200);
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
