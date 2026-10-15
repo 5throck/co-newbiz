@@ -27,6 +27,8 @@ import { PromotionPanel } from "../PromotionPanel.tsx";
 import { ColGroup, PrimaryAction } from "../ui.tsx";
 import type { CapabilityGapRow } from "../../lib/capability-gap.ts";
 import { CapabilityCostBlock } from "./CapabilityCostBlock.tsx";
+import { StaffingPlanSection } from "./StaffingPlanSection.tsx";
+import { emptyStaffingPlan, findStaffingDuplicateWarnings, fitPlanToHorizon, isStaffingPlanEntry, normalizeStaffingPlanEntry, staffingPlanOf, type StaffingDuplicateWarning, type StaffingPlanEntry } from "../../lib/staffing-plan.ts";
 import { EntryStrategySection } from "./EntryStrategySection.tsx";
 import { parseEntryStrategy, serializeEntryStrategy, type EntryFormState, type EntryModes } from "../../lib/greenfield-entry-strategy.ts";
 import {
@@ -47,6 +49,8 @@ interface OppDetail {
   assessment: Assessment | null;
   capability_cost_lines?: CapabilityCostView;
   milestone_candidates?: MilestoneCandidateView[];
+  /** ADR-0175: true for read-only callers — the plan arrives with salary/가산율 values removed. */
+  staffing_plan_masked?: boolean;
 }
 interface GapGetResponse {
   opportunity: { id: string; name: string };
@@ -115,6 +119,9 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   // ADR-0174 slice 1: 검토 기간 (plan_meta horizonYears, default 5) and per-capability spend-year overrides.
   const [horizon, setHorizon] = useState(DEFAULT_HORIZON_YEARS);
   const [capStartYear, setCapStartYear] = useState<Record<string, number>>({});
+  // ADR-0175 slice 1: 인력 운영 계획 draft + last saved snapshot (JSON) for dirty tracking.
+  const [staffPlan, setStaffPlan] = useState<StaffingPlanEntry>(() => emptyStaffingPlan(DEFAULT_HORIZON_YEARS));
+  const [savedStaffJson, setSavedStaffJson] = useState<string>("");
   const [attRows, setAttRows] = useState<AttainabilityRowView[] | null>(null);
   // ADR-0173 amendment 2026-10-15: the judgement editor exposes patchDraft so the investment table's 분류 select writes back into the row's judgement draft (marks dirty; saved via the S5 judgement PUT).
   const judgeApiRef = useRef<{ patchDraft: (id: string, p: Partial<JudgementDraft>) => void } | null>(null);
@@ -141,7 +148,11 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
           setHorizon(meta ? meta.horizonYears : DEFAULT_HORIZON_YEARS);
           // Legacy manual lines are shown as-entered: the unit is unknown, so nothing is converted
           // and the row keeps a "단위 확인 필요" chip until a person picks a unit.
-          const manual = (all.filter((l) => !isCapabilityEntry(l) && !isPlanMetaEntry(l)) as Array<Record<string, unknown>>).map(normalizeLegacyLine);
+          const storedStaff = staffingPlanOf(all);
+          const fitted = fitPlanToHorizon(storedStaff ?? emptyStaffingPlan(meta ? meta.horizonYears : DEFAULT_HORIZON_YEARS), meta ? meta.horizonYears : DEFAULT_HORIZON_YEARS);
+          setStaffPlan(fitted);
+          setSavedStaffJson(JSON.stringify(fitted));
+          const manual = (all.filter((l) => !isCapabilityEntry(l) && !isPlanMetaEntry(l) && !isStaffingPlanEntry(l)) as Array<Record<string, unknown>>).map(normalizeLegacyLine);
           setBcLines(manual);
           setSavedManualLines(manual);
           setStoredCapEntries(all.filter((l) => isCapabilityEntry(l)));
@@ -204,13 +215,16 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     [capLines, capStartYear],
   );
   const reflectedLines = capLines.filter((l) => l.reflected);
-  const invTotals = investmentTotals(costView, new Set(reflectedLines.map((l) => l.capabilityKey)), bcLines);
+  // The plan is fitted to the live horizon before costing, so a horizon change never silently drops or pads on the server.
+  const staffEff = useMemo(() => fitPlanToHorizon(staffPlan, horizon), [staffPlan, horizon]);
+  const staffActive = staffEff.rows.length > 0 ? staffEff : null;
+  const invTotals = investmentTotals(costView, new Set(reflectedLines.map((l) => l.capabilityKey)), bcLines, staffActive, horizon);
   const dupWarnings = findDuplicateWarnings(reflectedLines, bcLines);
   const reflectedKeySet = useMemo(() => new Set(reflectedLines.map((l) => l.capabilityKey)), [reflectedLines]);
   // ADR-0174 slice 1 — 투자비 요약 recomputed from the page state (read-only, decision support).
   const summary = useMemo(
-    () => buildInvestmentSummary(bcLines, capLinesEff, horizon, reflectedKeySet),
-    [bcLines, capLinesEff, horizon, reflectedKeySet],
+    () => buildInvestmentSummary(bcLines, capLinesEff, horizon, reflectedKeySet, staffActive),
+    [bcLines, capLinesEff, horizon, reflectedKeySet, staffActive],
   );
   // Per-line timing errors (Korean messages from validateLineYears); any error blocks save.
   const yearErrors = useMemo(() => {
@@ -235,7 +249,12 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     const s = savedManualLines[i];
     return !s || JSON.stringify(s) !== JSON.stringify(bcLines[i]);
   }, [bcLines, savedManualLines]);
-  const investDirty = manualDirty || reflectDirty;
+  const staffDirty = useMemo(() => JSON.stringify(staffEff) !== savedStaffJson, [staffEff, savedStaffJson]);
+  // Client-side validation mirrors the route so the precise message shows before the POST.
+  const staffError = useMemo(() => { const v = normalizeStaffingPlanEntry(staffEff, horizon); return v.ok ? null : v.message; }, [staffEff, horizon]);
+  const staffWarnings = useMemo(() => findStaffingDuplicateWarnings(staffEff.rows, bcLines), [staffEff, bcLines]);
+  const dismissStaffDup = (w: StaffingDuplicateWarning) => setBcLines((prev) => prev.map((l, i) => (i === w.manualIndex ? { ...l, dupDismissed: [...(l.dupDismissed ?? []), `staffing:${w.rowId}`] } : l)));
+  const investDirty = manualDirty || reflectDirty || staffDirty;
   const savedReflected = useMemo(() => {
     const saved = capLines.filter((l) => lineStates[l.capabilityKey] === "saved");
     return { count: saved.length, krwM: saved.reduce((n, l) => n + l.costKrwM, 0) };
@@ -255,6 +274,8 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   // plan_meta entry prepended to every business_case_lines payload (ADR-0174 slice 1); horizon clamped client-side.
   const metaEntry = (): PlanMetaEntry => ({ source: "plan_meta", horizonYears: Math.min(MAX_HORIZON_YEAR_LIMIT, Math.max(MIN_HORIZON_YEARS, Math.floor(horizon) || DEFAULT_HORIZON_YEARS)) });
   // Capability entries carry the person's choices plus any spend-year override (startYear).
+  // The staffing_plan entry rides the investment-lines save ONLY when it changed; otherwise the route keeps the stored plan.
+  const staffingPayload = (): unknown[] => (staffDirty ? [staffEff] : []);
   const capEntriesWithYears = () => selectionPayload(capLines, capSel).map((e) => {
     const y = capStartYear[e.capabilityKey];
     return Number.isInteger(y) && y >= 1 ? { ...e, startYear: y as number } : e;
@@ -344,12 +365,12 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   // 투자비 항목 저장 — lines-only partial POST: manual lines as held + capability selections
   // (selectionPayload). 다른 평가 필드는 보내지 않으므로 라우트가 저장값을 그대로 유지한다.
   async function saveInvestmentLines() {
-    if (!selected || linesSaving || !investDirty) return;
+    if (!selected || linesSaving || !investDirty || staffError) return;
     setLinesSaving(true); setLinesError(null); setLinesNote(null);
     try {
       const body = reflectionBody(bcLines, capLines, capSel);
       await api.post(`/api/greenfield/${selected.opportunity.id}`, {
-        business_case_lines: [metaEntry(), ...body.business_case_lines.map((l) => (isCapabilityEntry(l) && capStartYear[(l as { capabilityKey: string }).capabilityKey] !== undefined ? { ...l, startYear: capStartYear[(l as { capabilityKey: string }).capabilityKey] } : l))],
+        business_case_lines: [metaEntry(), ...staffingPayload(), ...body.business_case_lines.map((l) => (isCapabilityEntry(l) && capStartYear[(l as { capabilityKey: string }).capabilityKey] !== undefined ? { ...l, startYear: capStartYear[(l as { capabilityKey: string }).capabilityKey] } : l))],
       });
       const savedCount = body.business_case_lines.length;
       await loadDetail(selected.opportunity.id, "cost");
@@ -455,8 +476,8 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
               <button
                 type="button"
                 className={investDirty && !hasYearErrors ? "btn-primary btn-sm" : "btn-ghost btn-sm"}
-                disabled={linesSaving || !investDirty || hasYearErrors}
-                title={hasYearErrors ? "연차 입력을 확인하세요" : undefined}
+                disabled={linesSaving || !investDirty || hasYearErrors || !!staffError}
+                title={hasYearErrors ? "연차 입력을 확인하세요" : staffError ?? undefined}
                 aria-describedby="invest-item-save-hint"
                 onClick={() => void saveInvestmentLines()}
               >
@@ -510,6 +531,16 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
               note: costNote === "__pending__" ? reflectedNote : costNote, error: costError, onDismissNote: () => setCostNote(null),
               saved: savedReflected, promoted: !!(selected.opportunity.promoted_at || selected.opportunity.project_id),
             }}
+          />
+          <StaffingPlanSection
+            plan={staffEff}
+            horizon={horizon}
+            canAct={canAct}
+            masked={selected.staffing_plan_masked === true}
+            error={staffDirty ? staffError : null}
+            warnings={staffWarnings}
+            onChange={setStaffPlan}
+            onDismiss={dismissStaffDup}
           />
           <div className="table-scroll mb-1">
           <table className="data-table table-fixed-pct tmin-56" aria-label="투자비 항목 목록" data-testid="invest-item-list">

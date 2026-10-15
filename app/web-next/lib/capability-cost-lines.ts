@@ -4,6 +4,8 @@
 // server recomputes every capability amount from the live judgement, nothing is a gate or a cap.
 import { JUDGEMENT_CATEGORIES, RESOLUTION_LABEL, type CapabilityGapRow, type GapResolution, type JudgementCategory, type MilestoneCandidate } from "./capability-gap.ts";
 import { isStale, sha256Hex } from "./capability-linkage.ts";
+import { findStaffingDuplicateWarnings, isStaffingPlanEntry, normalizeStaffingPlanEntry, staffingPlanAuditHash, staffingPlanChanged, staffingPlanOf, staffingPlanView, staffingSummaryVector, type StaffingPlanEntry, type StaffingDuplicateWarning, type StaffingPlanView } from "./staffing-plan.ts";
+export { findStaffingDuplicateWarnings, isStaffingPlanEntry, staffingPlanOf, type StaffingDuplicateWarning, type StaffingPlanEntry, type StaffingPlanView };
 
 export type CostCategory = JudgementCategory;
 /** Categories a capability line may carry (cost side of the S8 vocabulary). */
@@ -484,10 +486,16 @@ export interface InvestmentTotals {
   grandEok: number;
   reflectedCount: number;
   needsRejudgeCount: number;
+  /** ADR-0175: 인력 운영 계획 인건비 합계 (검토 기간 총액 + 채용 일회비, 백만원) — already inside grandKrwM, never also a manual line. */
+  staffingKrwM: number;
+  /** 인력 운영 계획 행 중 급여/가산율 미입력으로 인건비에서 제외된 행 수. */
+  staffingNeedConfirmCount: number;
 }
 
 /** Manual cost lines count lump sums as entered and recurring lines annualised; revenue and 정부 R&D are not 투자비. */
-export function investmentTotals(view: CapabilityCostView, reflectedKeys: ReadonlySet<string>, manual: Array<{ category?: string; amount?: number; amountUnit?: string; amountUnitConfirmed?: boolean; amountKrwM?: number | null; currency?: string; period?: string }>): InvestmentTotals {
+export function investmentTotals(view: CapabilityCostView, reflectedKeys: ReadonlySet<string>, manual: Array<{ category?: string; amount?: number; amountUnit?: string; amountUnitConfirmed?: boolean; amountKrwM?: number | null; currency?: string; period?: string }>, staffing: StaffingPlanEntry | null = null, horizon: number = DEFAULT_HORIZON_YEARS): InvestmentTotals {
+  const staffView = staffing ? staffingPlanView(staffing, horizon) : null;
+  const staffingKrwM = staffView ? staffView.totalKrwM + staffView.recruitingTotalKrwM : 0;
   const reflected = view.lines.filter((l) => reflectedKeys.has(l.capabilityKey));
   const reflectedKrwM = reflected.reduce((s, l) => s + l.costKrwM, 0);
   let manualKrwM = 0;
@@ -510,7 +518,7 @@ export function investmentTotals(view: CapabilityCostView, reflectedKeys: Readon
     capabilityKrwM: round2(view.totals.capabilityKrwM),
     reflectedKrwM: round2(reflectedKrwM),
     manualKrwM: round2(manualKrwM),
-    grandKrwM: round2(reflectedKrwM + manualKrwM),
+    grandKrwM: round2(reflectedKrwM + manualKrwM + staffingKrwM),
     capabilityEok: eokOf(view.totals.capabilityKrwM),
     reflectedEok: eokOf(reflectedKrwM),
     manualEok: round2(manualKrwM / 100),
@@ -518,9 +526,11 @@ export function investmentTotals(view: CapabilityCostView, reflectedKeys: Readon
     manualRecurringKrwM: round2(recurringKrwM),
     manualExcludedNonKrw: excluded,
     manualExcludedNeedsConfirm: excludedNeedsConfirm,
-    grandEok: round2((reflectedKrwM + manualKrwM) / 100),
+    grandEok: round2((reflectedKrwM + manualKrwM + staffingKrwM) / 100),
     reflectedCount: reflected.length,
     needsRejudgeCount: reflected.filter((l) => l.needsRejudge).length,
+    staffingKrwM: round2(staffingKrwM),
+    staffingNeedConfirmCount: staffView ? staffView.needConfirmCount : 0,
   };
 }
 
@@ -559,6 +569,9 @@ export interface InvestmentSummary {
   endYearExceedsHorizon: number;
   /** Capability lines whose spend year came from the milestone months (판정 기간에서 산정). */
   capabilitySpendFromMilestone: number;
+  /** ADR-0175: 인건비 category's 인력 운영 계획 연동분 (총액 + 채용 일회비, 백만원); 0 without a plan. */
+  staffingLaborKrwM: number;
+  staffingNeedConfirmCount: number;
 }
 
 /**
@@ -567,7 +580,7 @@ export interface InvestmentSummary {
  * excluded and counted. Legacy defaults: no startYear = Y1, recurring without endYear runs
  * through the horizon, missing plan_meta = 5 years.
  */
-export function buildInvestmentSummary(manual: SummaryLine[], capLines: CapabilityCostLine[], horizon: number, reflectedKeys: ReadonlySet<string>): InvestmentSummary {
+export function buildInvestmentSummary(manual: SummaryLine[], capLines: CapabilityCostLine[], horizon: number, reflectedKeys: ReadonlySet<string>, staffing: StaffingPlanEntry | null = null): InvestmentSummary {
   const H = Math.max(1, Math.floor(horizon));
   const round2 = (n: number) => Math.round(n * 100) / 100;
   const cats: Array<"labor" | "opex" | "capex"> = ["labor", "opex", "capex"];
@@ -614,6 +627,20 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
     lumpByCat[c.category] += c.costKrwM;
     if (c.startYear === c.defaultStartYear && c.monthsToAttain !== null && c.monthsToAttain > 0) capabilitySpendFromMilestone += 1;
   }
+  // ADR-0175: the 인력 운영 계획 vector feeds the 인건비 category per year (derived, read-only,
+  // never a manual line). Recurring run-rate = the last in-window year's cost; recruiting one-offs are lump sums.
+  let staffingLaborKrwM = 0;
+  let staffingNeedConfirmCount = 0;
+  if (staffing) {
+    const view = staffingPlanView(staffing, H);
+    const vec = staffingSummaryVector(staffing, H);
+    for (let i = 0; i < H; i++) yearCat.labor[i] += vec.annualByYear[i] + vec.recruitingByYear[i];
+    const recruiting = vec.recruitingByYear.reduce((a, n) => a + n, 0);
+    lumpByCat.labor += recruiting;
+    annualByCat.labor += vec.annualByYear[Math.min(staffing.endYear, H) - 1] ?? 0;
+    staffingLaborKrwM = view.totalKrwM + recruiting;
+    staffingNeedConfirmCount = view.needConfirmCount;
+  }
   const totalByCat: Record<"labor" | "opex" | "capex", number> = { labor: yearCat.labor.reduce((s, n) => s + n, 0), opex: yearCat.opex.reduce((s, n) => s + n, 0), capex: yearCat.capex.reduce((s, n) => s + n, 0) };
   const byCategory = cats.map((c) => ({ category: c, annualKrwM: round2(annualByCat[c]), lumpsumKrwM: round2(lumpByCat[c]), totalKrwM: round2(totalByCat[c]) }));
   const schedule = Array.from({ length: H }, (_, i) => {
@@ -632,6 +659,8 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
     excludedNeedsConfirm,
     endYearExceedsHorizon,
     capabilitySpendFromMilestone,
+    staffingLaborKrwM: round2(staffingLaborKrwM),
+    staffingNeedConfirmCount,
   };
 }
 
@@ -666,6 +695,20 @@ export function normalizeBusinessCaseLines(
       // Exactly one valid meta entry is kept; additional/invalid ones are dropped silently (the
       // client writes the horizon, so an invalid one arriving here means a stale tab raced a save).
       if (planMetaEntryIsValid(raw) && !out.some(isPlanMetaEntry)) out.push(raw);
+      continue;
+    }
+    if (isStaffingPlanEntry(raw)) {
+      // ADR-0175 slice 1: exactly one validated staffing_plan entry is kept. An invalid entry is a
+      // hard 400 — a person typed these rows, so silent drops would hide their input. The stamp
+      // (updatedAt/updatedBy) is always refreshed to the calling actor; the audit event fires only
+      // when the plan body actually changed (hash without salary values).
+      const v = normalizeStaffingPlanEntry(raw, horizon);
+      if (!v.ok) return { ok: false, error: { code: "invalid_request", message: v.message } };
+      const prevPlan = staffingPlanOf(previous);
+      if (!out.some(isStaffingPlanEntry)) {
+        out.push({ ...v.entry, updatedAt: actor.at, updatedBy: actor.userId });
+        if (staffingPlanChanged(prevPlan, v.entry)) events.push({ action: "staffing_plan.updated", target: staffingPlanAuditHash(v.entry) });
+      }
       continue;
     }
     if (!isCapabilityEntry(raw)) {
@@ -732,6 +775,12 @@ export function normalizeBusinessCaseLines(
     else if (!reflected && wasReflected) events.push({ action: "capability_cost.unreflect", target });
     else if (reflected && wasReflected && typeof before?.amount === "number" && Math.abs(lineAmountKrwM(before) - live) > 1e-6) events.push({ action: "capability_cost.amount_followed", target: `${key}:${lineAmountKrwM(before)}->${live}` });
   }
+  // ADR-0175 slice 1: a lines-only POST that does not carry the staffing plan (e.g. the reflection
+  // save) keeps the stored plan — delete is an explicit empty-rows save, never an omission.
+  if (!out.some(isStaffingPlanEntry)) {
+    const prev = staffingPlanOf(previous);
+    if (prev) out.push(prev);
+  }
   // Newly dismissed duplicate warnings.
   const dismissed = (xs: unknown) => new Set((Array.isArray(xs) ? xs : []).flatMap((x) => (x && typeof x === "object" && Array.isArray((x as { dupDismissed?: unknown }).dupDismissed) ? ((x as { dupDismissed: string[] }).dupDismissed.map((k) => `${(x as { line?: string }).line ?? ""}|${k}`)) : [])));
   const before = dismissed(previous);
@@ -757,7 +806,7 @@ export function splitForPromotion(lines: unknown[], rows: CostSourceRow[]): { ma
   const skippedManual: Array<{ line: string; reason: "unit_unconfirmed" | "currency_non_krw" }> = [];
   const horizon = planMetaOf(lines)?.horizonYears ?? DEFAULT_HORIZON_YEARS;
   for (const l of lines) {
-    if (isPlanMetaEntry(l)) continue;
+    if (isPlanMetaEntry(l) || isStaffingPlanEntry(l)) continue; // staffing hand-off to S8 is ADR-0175 slice 2
     if (!isCapabilityEntry(l)) {
       const m = l as ManualCostLine;
       if (manualLineNeedsConfirm(m)) { skippedManual.push({ line: String(m.line ?? ""), reason: "unit_unconfirmed" }); continue; }

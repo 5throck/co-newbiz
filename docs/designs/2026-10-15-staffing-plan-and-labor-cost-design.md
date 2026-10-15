@@ -1,6 +1,6 @@
 ---
 title: Staffing plan (인력 운영 계획) at S5 and derived labor cost
-status: proposed
+status: accepted
 date: 2026-10-15
 owner: platform-lead
 lang: ko
@@ -146,7 +146,9 @@ Inside section 3️⃣ `투자비 검토 요건`, a collapsible subsection `인�
 3. **S10/S9/S12 reuse** (S10 import action into `hiring_plan`, S9 hr-tab reference block, S12 chain verification through the existing baseline).
 4. **AI proposal** (`인력 운영 계획 제안 (AI)` route + draft UI, fill-empty-only, no-salary-without-source).
 
-## 12. Open decisions (recommendations)
+## 12. Open decisions (resolved 2026-10-15)
+
+Resolved by the human decider's chat acceptance of the ADR (2026-10-15, "ADR-0175 / ADR-0176 승인"); each is resolved as recommended below. The decider did not review a per-item checklist.
 
 - **OD-1 Headcount granularity at S5**: recommend by-year (`headcountByYear`) with optional `hireStartQuarter`; quarterly ramp entered at S10 import. Alternative: quarter-by-quarter at S5 (heavier grid, duplicates S10's job).
 - **OD-2 On-cost default**: recommend no numeric default at all (empty, flagged, excluded from cost until entered). A remembered statutory rate must not be hard-coded; HR/counsel confirm any rate. Alternative: an editable region-profile default — rejected until a sourced dataset exists.

@@ -4271,7 +4271,7 @@ paths:
   /api/greenfield/{oppId}:
     get:
       operationId: getGreenfieldAssessment
-      summary: Greenfield capability assessment state, plus derived capability_cost_lines and milestone_candidates (ADR-0173).
+      summary: Greenfield capability assessment state, plus derived capability_cost_lines and milestone_candidates (ADR-0173) and staffing_plan_view / staffing_plan_masked (ADR-0175 slice 1; a viewer gets salary, increase, on-cost and salary-source values removed from the staffing_plan entry).
       tags:
         - Analysis
       parameters:
@@ -4293,7 +4293,12 @@ paths:
         reflected and category; the server recomputes line, amount (millions of KRW divided by 100,
         currency KRW, period lumpsum), basisHash and reflectedBy/At from the live judgement and
         rejects a client amount that differs (400 amount_mismatch). Other 400 codes: unknown_capability,
-        no_cost, invalid_category, not_reflectable, invalid_request.
+        no_cost, invalid_category, not_reflectable, invalid_request. ADR-0175 slice 1: one optional entry
+        {source: "staffing_plan", rows[{id, roleFamily, grade, headcountByYear[], avgAnnualBaseSalaryKrwM|null,
+        salaryIncreaseRatePct, onCostRatePct|null, hireStartQuarter?, recruitingOneOffKrwM, salarySource?}], startYear,
+        endYear, attritionBackfillPct} is validated against the plan_meta horizon (invalid rows reject the whole save
+        with 400 invalid_request and a precise message); a lines-only POST that omits it keeps the stored plan;
+        audit staffing_plan.updated carries a hash without salary values.
       tags:
         - Analysis
       requestBody:
