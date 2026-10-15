@@ -3,36 +3,51 @@ lang: ko
 lang_reason: proper-noun
 ---
 
-# ADR-0178 - S8 valuation method: S5 plan lines as P&L items, per-item volatility, separate pre-launch investment
+# ADR-0178 - S8 valuation method: S5 plan lines as P&L items, per-item volatility, separate pre-launch investment, pinned S5 reference
 
-- Status: Proposed
+- Status: Accepted (2026-10-15)
 - Date: 2026-10-15
-- Decider: Human decider (chat 2026-10-15: recommended option chosen on all three questions — split volatility by item, S5 plan lines as P&L items, separate pre-launch year-0 investment). Drafted by platform-lead. Acceptance pending.
+- Decider: Human decider (chat 2026-10-15, three rounds: round 1 chose the recommended option on all three questions; round 2 decided per-line pre-launch marking, ramp-inclusive cost lines with utilization on revenue only, and cost uncertainty sourced from the confirmed S5 investment simulation run; round 3 decided Green Field S5-S8 linkage option B — S5 single source, S8 pinned reference). Drafted by platform-lead.
+- Accepted by: the human decider in chat 2026-10-15: "승인 + OPEN-1~3 추천안" (see Acceptance record; DEC-20261015-06).
 - Design-of-record: [docs/designs/2026-10-15-s8-valuation-method-pnl-volatility-prelaunch-design.md](../designs/2026-10-15-s8-valuation-method-pnl-volatility-prelaunch-design.md)
-- Related: ADR-0174 (`bc.investment_basis`, promotion copy, `s5_line_hash`), ADR-0175 (staffing plan, human-sourced salary), ADR-0176 (S5 investment simulation, per-draw pairing, `s5_sim`, `재평가 필요`), ADR-0170 (staleness), ADR-0052 §D.4 (seeded reproducibility)
-- Slices: 5 (1 golden tests + pre-launch flag, 2 `s5_pnl` basis, 3 split volatility, 4 comparison/brief labelling, 5 optional Brown Field). None implemented by this ADR.
+- Related: ADR-0174, ADR-0175, ADR-0176, ADR-0170, ADR-0052 §D.4
+- Slices: 0 pinned reference + stale + re-pin (migration), 1 pre-launch flag, 2 `s5_pnl` basis, 3 split volatility from the pinned S5 run + revenue sigma confirmation, 4 labelling in comparison/IC/gate brief/reports, 5 optional Brown Field. None implemented by this ADR.
 
 ## Context (verified in code)
 
-`runSeededSimulation` draws only revenue growth with one sigma (clamped 2%-25%, from DART historical vol and/or WACC asset vol). Cost is a ratio of revenue (`opex_ratio` default 0.6, `capex_ratio`), and S5 plan lines only partially substitute under `s5_plan` / `s5_plan_full`. Year 0 is a ratio of year-1 revenue, the Brown Field acquisition EV, or (under `s5_plan`) the plan's Year-1 capex, which conflates pre-launch outlay with launch-year capex. S5 line timing (`startYear >= 1`) cannot express "before launch".
+`runSeededSimulation` draws only revenue growth with one sigma (clamped 2%-25%). Cost is a ratio of revenue; S5 plan lines only partially substitute under `s5_plan` / `s5_plan_full`. S8 consumes only the S5 run's capability/manual factors; staffing factors are not consumed because the staffing plan is not promoted. Year 0 conflates pre-launch outlay with launch-year capex; S5 line timing (`startYear >= 1`) cannot express "before launch" (the `business_case_line.start_year` column itself has no CHECK). The S5 plan reaches S8 only as a row copy (`greenfield_cost` model written by `writeS5CostModel` at promotion and by the PR #590 re-import), read by `resolveS5InvestmentPlan`, `resolveBusinessCaseParams`, `buildS8JobSpec` and `defaultExecutor`; the copy can drift from S5 silently.
 
 ## Decision
 
-1. **Opt-in, bit-identical by default.** New behavior is reachable only through a new basis `bc.investment_basis = 3` (`s5_pnl`) and a new `bc.vol_mode = 1` (`split`). Golden tests freeze today's ratio, `s5_plan`, `s5_plan_full`, S5-sim-paired and Brown Field outputs before any engine change.
-2. **Pre-launch flag** is `startYear: 0` on S5 line JSON (capex and manual lump-sum lines only). No new field, no `plan_meta` list, no column; legacy lines cannot carry 0, so their hashes and results are unchanged. A migration is added in Slice 1 only if the post-promotion line table constrains start year (to be verified).
-3. **`s5_pnl` P&L**: per year, revenue (drawn, utilization-ramped) minus plan opex (labor/staffing + opex + gov_rnd) minus plan capex active that year; year 0 = sum of pre-launch lines; per-year ratio fallback only for years the plan does not cover, each labelled. Refused for projects without an S5 plan and for Brown Field.
-4. **Split volatility**: revenue keeps the existing draw; cost uses the already-generated second Box-Muller normal (rng stream unchanged); investment is not re-drawn at S8 but taken from the confirmed S5 run via per-draw pairing, now including year 0. Shocks are treated as independent — an explicit, flagged simplifying assumption. Python engine stays bypassed on these paths; the deterministic BEP/payback path uses noise-free plan flows with year 0 = pre-launch.
-5. **Provenance**: run notes add `vol_mode`, per-item sigma, and `prelaunch_krw_m`; `s5_line_hash` already covers the flag, so flag changes raise `재평가 필요`.
-6. **Human ownership**: sigma values are proposals with sources until a person confirms them; the pre-launch flag is set per line by a person; no default prices, salaries or lines. Outputs are decision support — no gate block, no RAG grade effect, adoption stays human; data confidence still caps the RAG grade.
-7. **Brown Field** is out of Slices 1-4.
+1. **Linkage (option B).** For Green Field, S5 is the single source. On the new path S8 stores only a pin in a new append-only table `s5_plan_pin` (`plan_hash` = hash of `loadInvestmentVectorsInput`, `input_snapshot_json` = that input as pinned, pinned S5 run id and input hash, actor, time, supersede chain) and computes against the pinned snapshot through the shared modules; the live S5 source is read only for the stale hash and for the next re-pin. No live read. A changed S5 source or a newer confirmed run raises `재평가 필요`; a person (analyst or above, human only, audited) presses `최신 S5로 갱신` to re-pin, which absorbs the PR #590 re-import button. Re-pinning never alters existing cases, simulations or adopted results. Projects without a pin keep the copy path bit-identically; the promotion copy is kept. Migration in Slice 0, carried by this ADR.
+2. **Opt-in, bit-identical by default.** `bc.s5_source = 1` (pinned), `bc.investment_basis = 3` (`s5_pnl`), `bc.vol_mode = 1` (`split`); the latter two require the pinned path. Golden tests and a copy-vs-pin parity test come first (Slice 0).
+3. **Pre-launch** = `startYear: 0` on S5 line JSON, capex and manual lump-sum lines only; included in `plan_hash`.
+4. **`s5_pnl` P&L**: utilization scales revenue only; flow_t = revenue_t x util_t - plan opex_t - plan capex_t; year 0 = undiscounted sum of pre-launch lines (0 with a warning if none); ramped-revenue ratio fallback for uncovered years. Refused without a plan and for Brown Field. Pre-tax cash proxy; terminal-value vs plan-margin mismatch flagged.
+5. **Volatility (`split`)**: revenue keeps today's draw; person-confirmed revenue sigma 0-50% with source note, truncation at 0 recorded. All plan cost lines (labor/staffing, opex, gov_rnd where perturbed, capex incl. year 0) take uncertainty from the pinned confirmed S5 run, recomputed per draw from seed at the pinned source. No S8 cost sigma; fallback years carry none and say so.
+6. **Independence** of revenue and S5-run draws is an explicit simplification; correlation out of scope.
+7. **Deterministic path** uses noise-free pinned plan flows; no payback call when pre-launch = 0. Python engine bypassed on new paths.
+8. **Human ownership**: no default prices, salaries, lines or sigmas; decision support only — no gate block, no RAG grade effect, adoption stays human; data confidence caps the RAG grade.
+9. **Brown Field** out of Slices 0-4 (S7 per-target structure unchanged; no pin rows).
 
 ## Consequences
 
-- Plan-based projects can show operating leverage and a real pre-launch outlay; cross-basis comparisons need labels (Slice 4).
-- The independence assumption and utilization-on-revenue-only rule need valuation-agent / quant-methodologist review before Slice 3 ships.
-- Cost sigma will often be unconfirmed for Green Field projects; split mode then runs with cost sigma 0, shown.
-- Pre-launch flags reach S8 only through promotion or the in-flight S5 re-import action.
+- S8 can no longer drift silently from S5 on the pinned path; staleness is explicit and re-pinning is a recorded human act.
+- Two paths (copy and pin) coexist until a later decision; consumers move to the pinned read in Slice 0 (generator) and Slice 4 (IC package, gate brief, report composer text only). The S10 carry reads the adopted case and is unaffected.
+- The pin stores a snapshot of the S5 input so the pinned version stays re-readable after S5 is edited (OPEN-1); new Green Field projects stay on the copy path by default until Slices 0-1 have run on real projects (OPEN-2).
+- Cost dispersion is understated in fallback years and for categories the S5 run does not perturb.
 
 ## Open decisions
 
-OD-1..OD-8 in design §14 (pre-launch capture, eligible categories, empty pre-launch, correlation, Brown Field scope, no-plan handling, utilization rule, sigma bounds).
+None. OPEN-1..3 resolved at acceptance as recommended (design §14).
+
+## Acceptance record
+
+- Approver: the human decider (user, account techcross), chat 2026-10-15, answering "approve ADR-0178 (S5 single source + pinned reference, P&L, volatility, pre-launch investment) as summarised, and confirm OPEN-1..3 as recommended?" with "승인 + OPEN-1~3 추천안". Recorded in [DEC-20261015-06](../decisions/DEC-20261015-06.md).
+- Basis: chat approval of the decision as summarised in the final amendment, including OPEN-1..3 as recommended — OPEN-1 store the pinned S5 input snapshot JSON in `s5_plan_pin` in the Slice 0 migration; OPEN-2 keep the copy path as the default for Green Field projects promoted after Slice 0 until Slices 0-1 have run on real projects; OPEN-3 re-pin by a human with analyst role or above only — plus the earlier round answers: per-line pre-launch marking (`startYear: 0`); S5 cost lines entered with utilization already reflected, so utilization scales revenue only; cost uncertainty from the confirmed S5 simulation run; S5 as single source with a pinned S8 reference. Acceptance is by chat instruction; the approver did not review a per-item checklist, and this record does not claim the approver read specific items.
+- Schema change: acceptance covers the new `s5_plan_pin` table (incl. the snapshot column); the migration is part of Slice 0.
+- Implementation status: not implemented. Slice 0 starts next.
+- Not verified by the AI: nothing of this ADR is implemented or browser-verified. Open verifications for implementation: whether assumption edits already invalidate cases; whether the S5 run perturbs gov_rnd; whether the S10 carry's adopted model can be the promotion copy; the PR #590 re-import route/button behavior (only symbol names and callers were read); the dev DB was not queried.
+
+## Honest limits
+
+Approved in chat as summarised, not item by item. Nothing implemented. The design's valuation simplifications stand: independence of revenue and S5-run draws, pre-tax cash proxy, undiscounted year 0, terminal multiple vs plan margin flagged only, no cost uncertainty in ratio-fallback years, python engine parity unaddressed. Copy and pin paths coexist until a later decision. Brown Field is out of scope.
