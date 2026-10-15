@@ -1,6 +1,6 @@
 "use client";
 
-// S5 "진출전략" (ADR-0171 amendment 2026-10-15 (2)): three selectable entry modes (multi-select, exactly one main),
+// S5 "진출전략" (ADR-0171 amendment 2026-10-15 (2)): four selectable entry modes (multi-select, exactly one main),
 // ONE rationale textarea and ONE optional textarea for considered-but-rejected alternatives, a muted caution when a
 // capability's 해소 방식 is not among the selected modes (decision support, never a gate), and the secondary action
 // "진출전략 제안 (AI)" that fills EMPTY parts only as unsaved drafts. GreenfieldStage owns the values and the save;
