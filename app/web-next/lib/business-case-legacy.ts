@@ -28,3 +28,13 @@ export function countLegacyUnassignedModels(cases: readonly LegacyCaseProbe[], t
   if (!isShortlistScoped(targets)) return 0;
   return cases.filter((c) => c.target_id === null && !c.archived_at).length;
 }
+
+/**
+ * The historical (past-based) variant is Brown Field comparison evidence only:
+ * a Green Field has no target company, so only market_forward models are shown.
+ * Stored historical rows are neither deleted nor archived here (a person decides);
+ * the adopted model always stays visible so the adoption audit trail resolves.
+ */
+export function hideHistoricalForGreenfield<T extends { variant: string; adopted?: boolean }>(cases: readonly T[], greenfield: boolean): T[] {
+  return greenfield ? cases.filter((c) => c.variant !== "historical" || c.adopted === true) : [...cases];
+}

@@ -100,6 +100,11 @@ beforeAll(async () => {
     );
   }
   db.run("UPDATE md_project SET company_id = ?, subject_company_rationale = ? WHERE id = ?", [companyId, "dual-view test", projectId]);
+  // The historical variant is Brown Field comparison evidence only; a greenfield
+  // project never gets it (see business-case-greenfield-no-historical.test.ts).
+  // This file exercises the variant machinery, so the fixture project carries
+  // no track (project-level compat path).
+  db.run("UPDATE md_project SET track = NULL WHERE id = ?", [projectId]);
 });
 
 afterAll(async () => {
