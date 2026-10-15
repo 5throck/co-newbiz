@@ -3882,3 +3882,5 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
 .invest-summary-table tr.invest-inflow-row td { color: var(--muted-fg); }
 .invest-sticky-first th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
 .invest-sticky-first tr.invest-total-row th:first-child { background: var(--surface-2); }
+/* Sub-category label indent inside the sticky first column (category rows stay flush). */
+.invest-sticky-first th.invest-sub-row-label { padding-inline-start: 1.5rem; font-weight: 400; }

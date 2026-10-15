@@ -144,9 +144,6 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   // ADR-0173 slice 1: stored capability entries stay out of the manual list; the person's unsaved choices overlay the derived lines.
   const [storedCapEntries, setStoredCapEntries] = useState<unknown[]>([]);
   const [capSel, setCapSel] = useState<Record<string, CostSelection>>({});
-  // ADR-0177: rows whose 세부 과목 was cleared by a category change (row key -> cleared label), shown as a chip.
-  const [subCleared, setSubCleared] = useState<Map<string, string>>(new Map());
-  const noteSubCleared = (rowKey: string, sub: SubCategoryKey) => setSubCleared((p) => new Map(p).set(rowKey, SUB_CATEGORY_LABEL[sub]));
   // ADR-0174 slice 1: 검토 기간 (plan_meta horizonYears, default 5) and per-capability spend-year overrides.
   const [horizon, setHorizon] = useState(DEFAULT_HORIZON_YEARS);
   const [capStartYear, setCapStartYear] = useState<Record<string, number>>({});
@@ -731,20 +728,19 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                     {row.needsRejudge && <span className="status-chip status-amber">재판정 필요</span>}
                   </div></td>
                   <td>
-                    <select aria-label={`${row.name} 분류`} value={row.category} disabled={!canAct} onChange={(e) => { const cat = e.target.value as CostCategory; if (row.subCategory && !validSubCategory(cat, row.subCategory)) noteSubCleared(`c${row.capabilityKey}`, row.subCategory); setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], category: cat } })); judgeApiRef.current?.patchDraft(row.capabilityKey, { category: cat }); }} className="sizing-new-input sizing-new-input-sm invest-ctl">
+                    <select aria-label={`${row.name} 분류`} value={row.category} disabled={!canAct} onChange={(e) => { const cat = e.target.value as CostCategory; setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], category: cat } })); judgeApiRef.current?.patchDraft(row.capabilityKey, { category: cat }); }} className="sizing-new-input sizing-new-input-sm invest-ctl">
                       {(["labor", "opex", "capex"] as CostCategory[]).map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
                     </select>
                   </td>
                   <td>
                     {/* ADR-0177: the judgement does not own a 세부 과목 yet, so the capability row's pick is editable here and stored on the entry. */}
-                    <select aria-label={`${row.name} 세부 과목`} value={row.subCategory ?? ""} disabled={!canAct} onChange={(e) => { const v = e.target.value; setSubCleared((p) => { const n = new Map(p); n.delete(`c${row.capabilityKey}`); return n; }); setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], subCategory: v ? (v as SubCategoryKey) : null } })); }} className="sizing-new-input sizing-new-input-sm invest-ctl" data-testid={`invest-cap-sub-${row.capabilityKey}`}>
+                    <select aria-label={`${row.name} 세부 과목`} value={row.subCategory ?? ""} disabled={!canAct} onChange={(e) => { const v = e.target.value; setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], subCategory: v ? (v as SubCategoryKey) : null } })); }} className="sizing-new-input sizing-new-input-sm invest-ctl" data-testid={`invest-cap-sub-${row.capabilityKey}`}>
                       <SubCategoryOptions category={row.category} />
                     </select>
                     <div className="invest-cell-chips">
                       {!row.subCategory && row.suggestedSubCategory && (canAct
                         ? <button type="button" className="btn-ghost btn-sm" data-testid={`invest-cap-sub-suggest-${row.capabilityKey}`} onClick={() => setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], subCategory: row.suggestedSubCategory } }))}>제안: {SUB_CATEGORY_LABEL[row.suggestedSubCategory]} 적용</button>
                         : <span className="status-chip status-not-started">제안: {SUB_CATEGORY_LABEL[row.suggestedSubCategory]}</span>)}
-                      {subCleared.get(`c${row.capabilityKey}`) && <span className="status-chip status-amber" role="status"><span aria-hidden="true">!</span> 세부 과목 해제됨: {subCleared.get(`c${row.capabilityKey}`)}</span>}
                     </div>
                   </td>
                   <td>
@@ -811,7 +807,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   </div>
                 </td>
                 <td>
-                  <select aria-label="분류" value={l.category ?? ""} onChange={(e) => { const cat = e.target.value as BcCategory; if (l.subCategory && !validSubCategory(cat, l.subCategory)) { noteSubCleared(`m${i}`, l.subCategory); setBc(i, { category: cat, subCategory: undefined }); } else setBc(i, { category: cat }); }} className={`sizing-new-input sizing-new-input-sm invest-ctl${l.amountUnit && l.amountUnitConfirmed ? "" : " invest-ctl-unset"}`} data-unit-unset={l.amountUnit && l.amountUnitConfirmed ? undefined : "true"}>
+                  <select aria-label="분류" value={l.category ?? ""} onChange={(e) => { const cat = e.target.value as BcCategory; if (l.subCategory && !validSubCategory(cat, l.subCategory)) { setBc(i, { category: cat, subCategory: undefined }); } else setBc(i, { category: cat }); }} className={`sizing-new-input sizing-new-input-sm invest-ctl${l.amountUnit && l.amountUnitConfirmed ? "" : " invest-ctl-unset"}`} data-unit-unset={l.amountUnit && l.amountUnitConfirmed ? undefined : "true"}>
                     <option value="" disabled>선택</option>
                     {(Object.keys(CATEGORY_LABEL) as BcCategory[]).map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
                   </select>
@@ -827,7 +823,6 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                         data-testid={`invest-manual-sub-${i}`}
                         onChange={(e) => {
                           const v = e.target.value;
-                          setSubCleared((p) => { const n = new Map(p); n.delete(`m${i}`); return n; });
                           if (!v) { setBc(i, { subCategory: undefined, legacySubCategory: undefined }); return; }
                           const d = subCategoryDef(v);
                           if (!d) return;
@@ -840,8 +835,6 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                       </select>
                     )}
                   <div className="invest-cell-chips">
-                    {l.legacySubCategory && <span className="status-chip status-amber" title="알 수 없는 세부 과목 — 다음 저장 때 지워집니다"><span aria-hidden="true">!</span> 이전 세부 과목 {l.legacySubCategory} · 저장 시 삭제</span>}
-                    {subCleared.get(`m${i}`) && <span className="status-chip status-amber" role="status"><span aria-hidden="true">!</span> 세부 과목 해제됨: {subCleared.get(`m${i}`)}</span>}
                     {l.subCategory && subCategoryDef(l.subCategory)?.hint && <span className="status-chip status-not-started">{subCategoryDef(l.subCategory)?.hint}</span>}
                   </div>
                 </td>
@@ -997,12 +990,26 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   </tr>
                 </thead>
                 <tbody>
-                  {(["labor", "opex", "capex"] as const).map((c) => (
-                    <tr key={c}>
-                      <th scope="row">{CATEGORY_LABEL[c]}</th>
-                      {summary.schedule.map((s) => <td className="col-num mono-num" key={s.year}>{fmtM(s[c])}</td>)}
-                      <td className="col-num mono-num">{fmtM(schedTotals.rowTotals[c])}</td>
-                    </tr>
+                  {summary.bySubCategory.map((g) => (
+                    <Fragment key={g.category}>
+                      <tr className="invest-total-row" data-testid={`invest-summary-cat-${g.category}`}>
+                        <th scope="row">{CATEGORY_LABEL[g.category]}</th>
+                        {summary.schedule.map((s) => <td className="col-num mono-num" key={s.year}>{fmtM(s[g.category])}</td>)}
+                        <td className="col-num mono-num">{fmtM(schedTotals.rowTotals[g.category])}</td>
+                      </tr>
+                      {g.rows.map((r) => (
+                        <tr key={`${g.category}:${r.key ?? "none"}`} data-testid={`invest-summary-sub-${g.category}-${r.key ?? "none"}`}>
+                          <th scope="row" className="invest-sub-row-label">
+                            {r.key === null ? `세부 과목 ${r.label}` : r.label}
+                            {r.s5PlanExcluded && <span className="status-chip status-amber ml-1">s5_plan 기준 NPV 제외</span>}
+                            {r.hint && <span className="status-chip status-not-started ml-1">{r.hint}</span>}
+                            {g.category === "labor" && staffActive && (r.key === STAFFING_SUB_CATEGORY.salary || r.key === STAFFING_SUB_CATEGORY.recruiting) && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] ml-1">인력 운영 계획 연동분 포함</span>}
+                          </th>
+                          {r.yearly.map((v, idx) => <td className="col-num mono-num" key={idx}>{fmtM(v)}</td>)}
+                          <td className="col-num mono-num">{fmtM(r.totalKrwM)}</td>
+                        </tr>
+                      ))}
+                    </Fragment>
                   ))}
                   <tr className="invest-total-row" data-testid="invest-summary-year-total">
                     <th scope="row">합계 (투자비, 매출·정부 R&D 제외)</th>
@@ -1023,41 +1030,6 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
               </table>
             </div>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">매출·정부 R&D 행은 투자비 제외 — 유입 참고용입니다.</p>
-            {/* ADR-0177 slice 1 — 세부 과목별 소계 (horizon totals, cadence-annualised); rows reconcile to each category incl. 미지정. */}
-            <div className="table-scroll mb-2">
-              <table className="data-table invest-summary-table" data-testid="invest-summary-subcategory">
-                <caption className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] text-left">세부 과목별 소계 (검토 기간 {summary.horizon}년 합계, 단위: 백만원)</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">분류 · 세부 과목</th>
-                    <th scope="col" className="col-num">소계</th>
-                    <th scope="col">참고</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {summary.bySubCategory.filter((g) => g.totalKrwM !== 0).map((g) => (
-                    <Fragment key={g.category}>
-                      <tr className="invest-total-row">
-                        <th scope="row">{CATEGORY_LABEL[g.category]}</th>
-                        <td className="col-num mono-num">{fmtM(g.totalKrwM)}</td>
-                        <td>{g.category === "capex" ? "s5_plan 기준 S8 투자로 집계" : ""}</td>
-                      </tr>
-                      {g.rows.map((r) => (
-                        <tr key={`${g.category}:${r.key ?? "none"}`}>
-                          <th scope="row" className="pl-4">{r.key === null ? `세부 과목 ${r.label}` : r.label}</th>
-                          <td className="col-num mono-num">{fmtM(r.totalKrwM)}</td>
-                          <td className="text-[length:var(--fs-caption)]">
-                            {r.s5PlanExcluded && <span className="status-chip status-amber mr-1">s5_plan 기준 NPV 제외</span>}
-                            {r.hint && <span className="status-chip status-not-started mr-1">{r.hint}</span>}
-                            {g.category === "labor" && staffActive && (r.key === STAFFING_SUB_CATEGORY.salary || r.key === STAFFING_SUB_CATEGORY.recruiting) && <span className="text-[color:var(--muted-fg)]">인력 운영 계획 연동분 포함</span>}
-                          </td>
-                        </tr>
-                      ))}
-                    </Fragment>
-                  ))}
-                </tbody>
-              </table>
-            </div>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-subcategory-s8-note">{SUB_CATEGORY_S8_NOTE}</p>
             <ul className="list-none p-0 m-0" data-testid="invest-summary-flags">
               {summary.excludedNonKrw > 0 && <li className="text-[length:var(--fs-caption)]">외화 항목 {summary.excludedNonKrw}건은 합계에서 제외 (환율 미반영)</li>}
