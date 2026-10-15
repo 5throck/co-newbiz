@@ -66,6 +66,10 @@ exclusions:
     kind: route
     route: "POST /api/projects/{}/business-case/s5-reimport"
     reason: Re-importing the S5 investment plan into S8 (archives the previous greenfield_cost model) is a human-only click (ADR-0174, boundary #2).
+  - id: s5-plan-pin
+    kind: route
+    route: "POST /api/projects/{}/business-case/s5-pin"
+    reason: Pinning or re-pinning the S5 investment plan reference for S8 (supersedes the current pin, refreshes the compat copy) is a human-only click (ADR-0178, boundary #2); agents may only read the pin state.
   - id: ev-band-confirmation
     kind: route
     route: "POST /api/projects/{}/business-case/ev-band"

@@ -16,6 +16,8 @@ import {
   type InvestmentBasis,
 } from "../../../../../../lib/business-case-generator.ts";
 import { s5SimStatusForProject } from "../../../../../../lib/investment-simulation-s8.ts";
+import { getCurrentS5PlanPin, s5PinStatusForProject } from "../../../../../../lib/s5-plan-pin-s8.ts";
+import { currentPrincipal } from "../../../../../../lib/mcp/principal-context.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
@@ -28,7 +30,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   let s5Sim = null;
   try { s5Sim = s5SimStatusForProject(getDb(), id); } catch { /* migration pending: omit */ }
   const track = (getDb().query("SELECT track FROM md_project WHERE id = ?").get(id) as { track: string | null } | undefined)?.track ?? null;
-  return ok({ params: resolved, s5_sim: s5Sim, track }, 200);
+  // ADR-0178 slice 0: S5 pin state (copy path vs pinned reference, stale rules). Green Field only;
+  // informational - never blocks generation, a gate or a grade.
+  let s5Pin = null;
+  if (track === "greenfield") {
+    try { s5Pin = s5PinStatusForProject(getDb(), id); } catch { /* migration pending: omit */ }
+  }
+  return ok({ params: resolved, s5_sim: s5Sim, s5_pin: s5Pin, track }, 200);
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -46,6 +54,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const raw = body?.params ?? {};
   if (Object.keys(raw).some((k) => k.replace(/^bc\./, "").startsWith("acquisition_ev_revenue_band"))) {
     return badRequest("invalid_request", "EV/Revenue 밴드는 사람 전용 경로(business-case/ev-band)로만 확정할 수 있습니다 (use the human-only ev-band route).");
+  }
+  // ADR-0178: switching a project to the pinned S5 reference is a person's opt-in - never an agent's.
+  if (raw["s5_source"] !== undefined && raw["s5_source"] !== null && raw["s5_source"] !== "" && currentPrincipal()) {
+    return forbidden("human_only", "S5 고정 참조 사용 전환은 사람만 확정할 수 있습니다 (boundary #2).");
   }
   const num = (key: string): number | undefined => {
     const v = raw[key];
@@ -78,6 +90,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }
         if (typeof v === "string" && v in INVESTMENT_BASIS_CODES) return v as InvestmentBasis;
         throw new Error("investment_basis는 0|1|2 또는 ratio|s5_plan|s5_plan_full 이어야 합니다.");
+      })(),
+      // ADR-0178: 0 = promotion copy (default), 1 = pinned S5 reference. Green Field with a pin only.
+      s5_source: (() => {
+        const v = raw["s5_source"];
+        if (v === undefined || v === null || v === "") return undefined;
+        const n = Number(v);
+        if (n !== 0 && n !== 1) throw new Error("s5_source는 0(복사본) 또는 1(고정 참조)이어야 합니다.");
+        if (n === 1) {
+          const proj = getDb().query("SELECT track FROM md_project WHERE id = ?").get(id) as { track: string | null } | undefined;
+          if (proj?.track !== "greenfield") throw new Error("S5 고정 참조는 Green Field 프로젝트에서만 사용할 수 있습니다.");
+          if (!getCurrentS5PlanPin(getDb(), id)) throw new Error("고정된 S5 참조가 없습니다 — 먼저 S5 고정 참조를 만드세요.");
+        }
+        return n as 0 | 1;
       })(),
       horizon_years: num("horizon_years"),
       iterations: num("iterations"),
