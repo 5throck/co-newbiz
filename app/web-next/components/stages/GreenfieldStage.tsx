@@ -36,7 +36,7 @@ import { emptyStaffingPlan, findStaffingDuplicateWarnings, fitPlanToHorizon, isS
 import { EntryStrategySection } from "./EntryStrategySection.tsx";
 import { parseEntryStrategy, serializeEntryStrategy, type EntryFormState, type EntryModes } from "../../lib/greenfield-entry-strategy.ts";
 import {
-  AMOUNT_UNIT_KRW_M, amountUnitLabel, applySelection, buildInvestmentSummary, DEFAULT_HORIZON_YEARS, deriveCapabilityCostLines, findDuplicateWarnings, formatKrwM, hasUnsavedReflection, investmentTotals, isCapabilityEntry, isFxUnit, isPlanMetaEntry, lineSaveStates, manualLineIssues, manualLineKrwM, MAX_HORIZON_YEAR_LIMIT, MIN_HORIZON_YEARS, normalizeLegacyLine, planMetaOf, reflectionBody, reflectionSummary, sanityLineOversize, sanityTotalOversize, selectionPayload, unifiedFooter, unifiedInvestmentRows, validateLineYears, capabilityEndYearOf,
+  AMOUNT_UNIT_KRW_M, amountUnitLabel, applySelection, buildInvestmentSummary, DEFAULT_HORIZON_YEARS, deriveCapabilityCostLines, findDuplicateWarnings, formatKrwM, hasUnsavedReflection, confirmUnitOnAmountEdit, investmentTotals, isCapabilityEntry, isPlanMetaEntry, lineSaveStates, manualLineIssues, manualLineKrwM, MAX_HORIZON_YEAR_LIMIT, MIN_HORIZON_YEARS, normalizeLegacyLine, planMetaOf, reflectionBody, reflectionSummary, sanityLineOversize, sanityTotalOversize, selectionPayload, unifiedFooter, unifiedInvestmentRows, validateLineYears, capabilityEndYearOf,
   type AmountUnit, type CapabilityCostView, type CostCategory, type CostSelection, type DuplicateWarning, type ManualCostLine, type MilestoneCandidateView, type PlanMetaEntry,
 } from "../../lib/capability-cost-lines.ts";
 import type { AttainabilityRowView } from "../../lib/capability-attainability.ts";
@@ -81,7 +81,7 @@ const CATEGORY_LABEL: Record<BcCategory, string> = { labor: "인건비", opex: "
 const PERIOD_LABEL: Record<BcPeriod, string> = { monthly: "월", quarterly: "분기", yearly: "년", lumpsum: "일시불(총액)" };
 const CURRENCY_LABEL: Record<BcCurrency, string> = { KRW: "원화", USD: "달러", EUR: "유로", JPY: "엔화", CNY: "위안" };
 // Unified investment item table: 10 shared columns (Onyx table-fixed-pct system).
-const INVEST_ITEM_COL_PCT = [16, 12, 9, 9, 7, 7, 8, 10, 14, 8] as const;
+const INVEST_ITEM_COL_PCT = [18, 10, 10, 10, 9, 7, 7, 13, 10, 6] as const;
 
 export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: string; onSaved?: () => void }) {
   const { me } = useAuth();
@@ -177,7 +177,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
           const meta = planMetaOf(all);
           setHorizon(meta ? meta.horizonYears : DEFAULT_HORIZON_YEARS);
           // Legacy manual lines are shown as-entered: the unit is unknown, so nothing is converted
-          // and the row keeps a "단위 확인 필요" chip until a person picks a unit.
+          // and the unit select shows its placeholder and the row is excluded from totals until a person picks a unit.
           const storedStaff = staffingPlanOf(all);
           const fitted = fitPlanToHorizon(storedStaff ?? emptyStaffingPlan(meta ? meta.horizonYears : DEFAULT_HORIZON_YEARS), meta ? meta.horizonYears : DEFAULT_HORIZON_YEARS);
           setStaffPlan(fitted);
@@ -299,7 +299,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     [attRows, selected],
   );
 
-  const setBc = (i: number, patch: Partial<BcLine>) => setBcLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+  const setBc = (i: number, patch: Partial<BcLine>) => setBcLines((prev) => prev.map((l, idx) => (idx === i ? ((m) => ("amount" in patch ? confirmUnitOnAmountEdit(m) : m))({ ...l, ...patch }) : l)));
 
   // plan_meta entry prepended to every business_case_lines payload (ADR-0174 slice 1); horizon clamped client-side.
   const metaEntry = (): PlanMetaEntry => ({ source: "plan_meta", horizonYears: Math.min(MAX_HORIZON_YEAR_LIMIT, Math.max(MIN_HORIZON_YEARS, Math.floor(horizon) || DEFAULT_HORIZON_YEARS)) });
@@ -696,7 +696,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
             }}
           />
           <div className="table-scroll mb-1">
-          <table className="data-table table-fixed-pct tmin-56" aria-label="투자비 항목 목록" data-testid="invest-item-list">
+          <table className="data-table table-fixed-pct tmin-80" aria-label="투자비 항목 목록" data-testid="invest-item-list">
             <ColGroup widths={INVEST_ITEM_COL_PCT} />
             <thead>
               <tr>
@@ -753,7 +753,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                         onChange={(e) => { const raw = e.target.value; const v = Number(raw); setCapStartYear((p) => ({ ...p, [row.capabilityKey]: raw === "" || !Number.isFinite(v) ? Number.NaN : v })); }}
                         onBlur={(e) => { const v = Math.floor(Number(e.target.value) || 1); setCapStartYear((p) => ({ ...p, [row.capabilityKey]: Math.min(horizon, Math.max(1, v)) })); }}
                         className="sizing-new-input sizing-new-input-sm"
-                        style={{ width: "3.5rem" }}
+                        style={{ width: "3.25rem" }}
                       />
                     </label>
                     <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid={`invest-cap-end-year-${row.capabilityKey}`}>~{capabilityEndYearOf(capStart, capLine?.monthsToAttain ?? null)}연차</span>
@@ -773,11 +773,9 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
             const l = bcLines[i];
             const issues = manualLineIssues(l);
             const canonical = manualLineKrwM(l);
-            const unitSel = l.amountUnit;
-            const unitLabel = unitSel ? amountUnitLabel(unitSel, l.currency ?? "KRW") : null;
-            const confirmChip = issues.length > 0;
-            const chipText = issues.includes("unit") ? "단위 확인 필요" : "확인 필요";
-            const issueText = issues.length === 0 ? null : `확인 필요: ${issues.map((iss) => ({ category: "분류", period: "주기", currency: "통화", unit: "단위" }[iss])).join("·")}`;
+            const fieldIssues = issues.filter((iss) => iss !== "unit");
+            const confirmChip = fieldIssues.length > 0;
+            const issueText = fieldIssues.length === 0 ? null : `확인 필요: ${fieldIssues.map((iss) => ({ category: "분류", period: "주기", currency: "통화", unit: "단위" }[iss])).join("·")}`;
             const oversize = sanityLineOversize(canonical) && !sanityDismissed.has(i);
             return (
               <tr key={`m${i}`} data-testid={`invest-manual-row-${i}`}>
@@ -789,7 +787,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   {manualRowDirty(i)
                     ? <><br /><span className="status-chip status-amber"><span aria-hidden="true">!</span> 저장 전</span></>
                     : <><br /><span className="status-chip status-green"><span aria-hidden="true">✓</span> 저장됨</span></>}
-                  {confirmChip && <><br /><span className="status-chip status-amber" title={issueText ?? undefined} data-testid={`invest-confirm-chip-${i}`}><span aria-hidden="true">!</span> {chipText}</span></>}
+                  {confirmChip && <><br /><span className="status-chip status-amber" title={issueText ?? undefined} data-testid={`invest-confirm-chip-${i}`}><span aria-hidden="true">!</span> 확인 필요</span></>}
                   {oversize && canAct && <><br /><button type="button" className="btn-ghost btn-sm" data-testid={`invest-sanity-${i}`} onClick={() => setSanityDismissed((prev) => new Set(prev).add(i))}>닫기</button></>}
                   {yearErrors[`m${i}`] && <><br /><span role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)]" data-testid={`invest-year-error-${i}`}>{yearErrors[`m${i}`]}</span></>}
                 </td>
@@ -800,8 +798,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   </select>
                 </td>
                 <td>
-                  <input aria-label="금액" type="number" placeholder="금액" value={l.amount || ""} onChange={(e) => setBc(i, { amount: Number(e.target.value) })} className="sizing-new-input sizing-new-input-sm" style={{ width: "7rem" }} />
-                  <br /><span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid={`invest-unit-text-${i}`}>{canonical !== null ? `= ${formatKrwM(canonical)}` : unitSel && isFxUnit(l.amountUnit) ? `= ${l.amount.toLocaleString("ko-KR")} ${unitLabel} (환율 미반영 — 합계 제외)` : "단위를 고르면 금액이 계산됩니다"}</span>
+                  <input aria-label="금액" type="number" placeholder="금액" value={l.amount || ""} onChange={(e) => setBc(i, { amount: Number(e.target.value) })} className="sizing-new-input sizing-new-input-sm" style={{ width: "100%", textAlign: "right" }} />
                 </td>
                 <td>
                   <select aria-label="금액 단위" value={l.amountUnit ?? ""} onChange={(e) => { const u = e.target.value as AmountUnit; setBc(i, { amountUnit: u, amountUnitConfirmed: true }); }} className="sizing-new-input sizing-new-input-sm">
@@ -820,7 +817,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                     {(Object.keys(PERIOD_LABEL) as BcPeriod[]).map((p) => <option key={p} value={p}>{PERIOD_LABEL[p]}</option>)}
                   </select>
                 </td>
-                <td>
+                <td><div className="flex items-center gap-1 whitespace-nowrap">
                   <label className="text-[length:var(--fs-caption)] flex items-center gap-0.5">
                     시작
                     <input
@@ -834,7 +831,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                       onChange={(e) => { const raw = e.target.value; const v = Number(raw); setBc(i, { startYear: raw === "" ? undefined : v }); }}
                       onBlur={(e) => { const v = Math.floor(Number(e.target.value) || 1); setBc(i, { startYear: Math.min(horizon, Math.max(1, v)) }); }}
                       className="sizing-new-input sizing-new-input-sm"
-                      style={{ width: "3.5rem" }}
+                      style={{ width: "3.25rem" }}
                     />
                   </label>
                   {l.period !== "lumpsum" && (
@@ -851,16 +848,16 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                         onChange={(e) => { const raw = e.target.value; const v = Number(raw); setBc(i, { endYear: raw === "" ? undefined : v }); }}
                         onBlur={(e) => { const v = Math.floor(Number(e.target.value) || horizon); setBc(i, { endYear: Math.min(horizon, Math.max(1, v)) }); }}
                         className="sizing-new-input sizing-new-input-sm"
-                        style={{ width: "3.5rem" }}
+                        style={{ width: "3.25rem" }}
                       />
                     </label>
                   )}
-                </td>
+                </div></td>
                 <td>
                   <input aria-label="비고" placeholder="비고" value={l.note ?? ""} onChange={(e) => setBc(i, { note: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "100%" }} />
                 </td>
-                <td>
-                  {canAct && <button type="button" className="btn-ghost btn-sm" aria-label="항목 삭제" onClick={() => setBcLines((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>}
+                <td className="whitespace-nowrap">
+                  {canAct && <button type="button" className="btn-ghost btn-sm whitespace-nowrap" aria-label="항목 삭제" onClick={() => setBcLines((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>}
                 </td>
               </tr>
             );

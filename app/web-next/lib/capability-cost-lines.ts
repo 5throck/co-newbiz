@@ -217,6 +217,11 @@ export function manualLineIssues(l: ManualCostLine): ManualLineIssue[] {
   if (!l.amountUnitConfirmed || !isKnownAmountUnit(l.amountUnit)) out.push("unit");
   return out;
 }
+/** Implicit unit confirmation: typing an amount in a row whose unit is already shown confirms that unit. Legacy rows (no unit shown) stay unconfirmed. */
+export function confirmUnitOnAmountEdit<T extends { amount: number; amountUnit?: string; amountUnitConfirmed?: boolean }>(l: T): T {
+  if (l.amountUnitConfirmed || !l.amount || !isKnownAmountUnit(l.amountUnit)) return l;
+  return { ...l, amountUnitConfirmed: true };
+}
 export const manualLineNeedsConfirm = (l: ManualCostLine): boolean => manualLineIssues(l).length > 0;
 
 /**
