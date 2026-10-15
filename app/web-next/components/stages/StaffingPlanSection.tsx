@@ -1,7 +1,7 @@
 "use client";
 
 // ADR-0175 slice 1 — S5 인력 운영 계획 (collapsible, above the investment item list). Controlled by
-// GreenfieldStage; saved through the existing "투자비 항목 저장". Decision support only: every rate is
+// GreenfieldStage; saved through the "인건비 항목 저장" button, which also saves the whole investment list. Decision support only: every rate is
 // an editable assumption, rows without salary or 가산율 are excluded from cost with a flag.
 // AI proposal is a later slice (see lib/staffing-plan.ts seam comment).
 import { useMemo, useState } from "react";

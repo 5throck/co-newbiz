@@ -221,7 +221,12 @@ describe("routes: partial saves, masking, audit", () => {
     const audit = db.query("SELECT actor_user_id AS actor, action, target FROM audit_log WHERE action = 'staffing_plan.updated'").all() as Array<{ actor: string; target: string }>;
     expect(audit).toHaveLength(1);
     expect(audit[0].actor).toBe(LEAD);
-    for (const v of ["777", "33", "내부 추정"]) expect(audit[0].target).not.toContain(v);
+    // The target is "<opportunity ulid>#<hash>": strip those random id/hash parts so a salary or rate value
+    // can never match by chance inside a random id (the earlier check flaked on "33" inside a ULID).
+    const detail = audit[0].target.split("#").slice(1).join("#").replace(/[0-9a-f]{8,}/gi, "");
+    for (const v of ["777", "33", "내부 추정"]) expect(detail).not.toContain(v);
+    expect(audit[0].target).not.toContain("내부 추정");
+    expect(audit[0].target).not.toContain("777");
   });
 
   test("lines-only POST without the plan keeps it; unchanged plan re-save writes no second audit event", async () => {
@@ -277,6 +282,7 @@ describe("S5 UI structure (source)", () => {
     expect(stage).toContain("staffingPayload()");
     expect(stage).toContain("!isStaffingPlanEntry(l)");
     expect(stage).toContain("투자비 항목 저장");
+    expect(stage).toContain("인건비 항목 저장");
   });
   test("grid, + 행 추가, delete, canAct gating and the masked cell", () => {
     for (const s of ["인력 운영 계획", "+ 행 추가", "평균 연봉(백만원)", "가산율(%)", "채용 일회비", "확인 필요", "연평균 인원", "staffing-masked-cell", "열람 권한 없음", "aria-expanded"]) expect(sec).toContain(s);

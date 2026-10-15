@@ -95,10 +95,10 @@ describe("GreenfieldStage tab structure (source)", () => {
     expect(cap).toContain("S3 레지스터에 저장");
     const staff = slice('panel("staffing"', 'panel("investment"');
     expect(staff).toContain("<StaffingPlanSection");
-    expect(staff).toContain("투자비 탭의 '투자비 항목 저장'으로 저장됩니다");
-    expect(staff).toContain("{linesSaveButton}");
+    expect(staff).toContain("이 버튼은 인력 운영 계획과 함께 투자비 항목 전체를 저장합니다");
+    expect(staff).toContain('{linesSaveButton("인건비 항목 저장")}');
     const inv = slice('panel("investment"', 'panel("simulation"');
-    for (const s of ["invest-source-summary", "s5-horizon", "<CapabilityCostBlock", 'data-testid="invest-item-list"', 'data-testid="invest-summary"', "투자비 항목 추천", "{linesSaveButton}"]) expect(inv).toContain(s);
+    for (const s of ["invest-source-summary", "s5-horizon", "<CapabilityCostBlock", 'data-testid="invest-item-list"', 'data-testid="invest-summary"', "투자비 항목 추천", '{linesSaveButton("투자비 항목 저장")}']) expect(inv).toContain(s);
     expect(inv).not.toContain("<StaffingPlanSection");
     const sim = slice('panel("simulation"', 'panel("review"');
     expect(sim).toContain("구현 예정 (ADR-0176)");
