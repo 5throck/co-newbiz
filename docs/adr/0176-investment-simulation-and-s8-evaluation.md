@@ -38,7 +38,7 @@ The S5 `투자비 요약` (ADR-0174 slice 1, shipped) and the S8 `s5_plan` capex
 - Approver: the human decider (user, account techcross), chat 2026-10-15: "ADR-0175 / ADR-0176 승인". Recorded in DEC-20261015-04.
 - Basis: chat approval of the decision as written, including the design's recommended resolutions of OD-1..OD-7 (500 draws default, clamp 100-5000; p05/p50/p95; dedicated `investment_simulation_run` table; no simulation required before gate confirm, absence surfaced only; triangular FX inactive until foreign lines enter KRW totals; on-cost uncertainty only after a human-entered rate; half-year ramp as a discrete shift with triangular weights). Acceptance is by chat instruction; the decider did not review a per-item checklist, and this record does not claim the approver read specific items.
 - Schema change: acceptance covers the new `investment_simulation_run` table; the migration is part of its slice implementation later.
-- Implementation status: not implemented; slice 1 starts next.
+- Implementation status: slice 1 shipped (PRs #580/#581). Slice 2 (seeded draws, tornado sensitivity, exceed probability, `investment_simulation_run` migration 0144, run/fetch route, S5 simulation-tab surface) implemented 2026-10-15 and covered by unit tests, not browser-verified. Slices 3-4 (S8 consumption, `재평가 필요`, evaluation block, gate brief) not started.
 - Not verified by the AI: nothing of this ADR is implemented or browser-verified.
 
 ## Honest limits

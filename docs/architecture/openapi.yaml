@@ -4348,6 +4348,46 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/greenfield/{oppId}/investment-simulation:
+    get:
+      operationId: getGreenfieldInvestmentSimulation
+      summary: "Latest stored S5 investment simulation run (ADR-0176 slice 2). Response {run: {id, input_hash, seed, draw_count, horizon_years, envelope_krw_m, assumptions, results, status, created_by, created_at} | null, stale}. results holds per-year and per-category p05/p50/p95, the horizon-total distribution, the tornado sensitivity ranking and the exceed probability when an envelope was set; per-draw vectors are never stored. stale = the saved plan or ranges no longer hash to the run. A viewer receives the staffing category band withheld. Decision support only: no gate or grade effect. 404 unknown opportunity."
+      tags:
+        - Analysis
+      parameters:
+        - name: oppId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: runGreenfieldInvestmentSimulation
+      summary: "Run and save the seeded S5 investment simulation over the SAVED plan (ADR-0176 slice 2). Body {envelope_krw_m?: number > 0 (백만원), draws?: number (clamped 100..5000, default 500)}; unknown keys, a non-positive/non-finite envelope or a non-numeric draws value are 400 (never silently dropped). 409 no_investment_plan when nothing is saved. Supersedes the previous current run, audited as investment_simulation.run. Permission: analyst+; 403 viewer, 404. Output is a proposal; no gate block, no grade effect."
+      tags:
+        - Analysis
+      parameters:
+        - name: oppId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/projects:
     get:
       operationId: listProjects

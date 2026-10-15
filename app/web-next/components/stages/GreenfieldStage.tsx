@@ -33,6 +33,7 @@ import type { CapabilityGapRow } from "../../lib/capability-gap.ts";
 import { CapabilityCostBlock } from "./CapabilityCostBlock.tsx";
 import { StaffingPlanSection } from "./StaffingPlanSection.tsx";
 import { emptyStaffingPlan, findStaffingDuplicateWarnings, fitPlanToHorizon, isStaffingPlanEntry, normalizeStaffingPlanEntry, staffingPlanOf, type StaffingDuplicateWarning, type StaffingPlanEntry } from "../../lib/staffing-plan.ts";
+import type { SimulationResults, TornadoKey } from "../../lib/investment-simulation.ts";
 import { buildInvestmentVectors, effectiveAssumptions, SALARY_RANGE, SALARY_INCREASE_RANGE_PP, ON_COST_RANGE_PP, RAMP_SHIFT_HALF_YEARS, CAPABILITY_RANGE, MANUAL_LINE_RANGE } from "../../lib/investment-vectors.ts";
 import { EntryStrategySection } from "./EntryStrategySection.tsx";
 import { parseEntryStrategy, serializeEntryStrategy, type EntryFormState, type EntryModes } from "../../lib/greenfield-entry-strategy.ts";
@@ -84,6 +85,10 @@ const CATEGORY_LABEL: Record<BcCategory, string> = { labor: "인건비", opex: "
 const fmtM = (n: number): string => n.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
 /** ADR-0176 slice 1: band labels (최저/기준/최고). */
 const BAND_LABEL: Record<"low" | "mode" | "high", string> = { low: "최저", mode: "기준", high: "최고" };
+/** ADR-0176 slice 2: stored run as returned by /api/greenfield/[oppId]/investment-simulation. */
+interface InvestSimRun { id: string; input_hash: string; seed: number; draw_count: number; envelope_krw_m: number | null; created_by: string; created_at: string; results: Omit<SimulationResults, "byCategory"> & { byCategory: { capability: SimulationResults["byCategory"]["capability"]; manual: SimulationResults["byCategory"]["manual"]; staffing: SimulationResults["byCategory"]["staffing"] | null } } }
+const TORNADO_LABEL: Record<TornadoKey, string> = { salary: "급여", salaryIncrease: "급여 인상률", onCost: "가산율", ramp: "투입 시점", capability: "역량 비용", manualLines: "일반 항목", fx: "환율 (미적용)" };
+const SIM_CATEGORY_LABEL = { capability: "역량 해소", manual: "투자비 항목", staffing: "인력" } as const;
 const SIM_PARAM_LABELS: Record<SimOverrideKey, string> = {
   salaryRange: "급여 ± (%)",
   salaryIncreaseRangePp: "인상률 ± (%p)",
@@ -170,6 +175,13 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   // ADR-0176: decider-entered simulation assumption-range overrides (plan_meta.simOverrides) + last saved snapshot for dirty tracking.
   const [simOv, setSimOv] = useState<SimOverrides>({});
   const [savedSimOvJson, setSavedSimOvJson] = useState<string>("{}");
+  // ADR-0176 slice 2: latest stored probabilistic run (server-side, saved plan only) + run controls.
+  const [simRun, setSimRun] = useState<InvestSimRun | null>(null);
+  const [simStale, setSimStale] = useState(false);
+  const [simEnvelope, setSimEnvelope] = useState("");
+  const [simDraws, setSimDraws] = useState("");
+  const [simRunning, setSimRunning] = useState(false);
+  const [simRunError, setSimRunError] = useState<string | null>(null);
   // ADR-0175 slice 1: 인력 운영 계획 draft + last saved snapshot (JSON) for dirty tracking.
   const [staffPlan, setStaffPlan] = useState<StaffingPlanEntry>(() => emptyStaffingPlan(DEFAULT_HORIZON_YEARS));
   const [savedStaffJson, setSavedStaffJson] = useState<string>("");
@@ -251,6 +263,18 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
       .then((r) => { setGapRows(r.data.rows); setGapStored(r.data.stored); })
       .catch((e) => setError(e instanceof Error ? e.message : "필요 역량 불러오기 실패"));
   }, []);
+
+  // ADR-0176 slice 2: latest stored run (read-only fetch; a failed fetch just shows "no run").
+  const loadSimRun = useCallback((oppId: string) => {
+    return api.get<{ run: InvestSimRun | null; stale: boolean }>(`/api/greenfield/${encodeURIComponent(oppId)}/investment-simulation`)
+      .then((r) => { setSimRun(r.data.run); setSimStale(r.data.stale); })
+      .catch(() => { setSimRun(null); setSimStale(false); });
+  }, []);
+
+  useEffect(() => {
+    setSimRun(null); setSimStale(false); setSimRunError(null); setSimEnvelope(""); setSimDraws("");
+    void loadSimRun(opportunityId);
+  }, [opportunityId, loadSimRun]);
 
   useEffect(() => {
     setSelected(null); setGapRows([]); setReco(null); setRecoError(null); setJudgeDirty(false);
@@ -348,6 +372,27 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   const savedSimOvClean = useMemo(() => JSON.stringify(simOverridesOf(savedSimOvJson ? JSON.parse(savedSimOvJson) : {})), [savedSimOvJson]);
   const simOvDirty = useMemo(() => JSON.stringify(simOverridesOf(simOv)) !== savedSimOvClean, [simOv, savedSimOvClean]);
   const simOvError = useMemo(() => validateSimOverrides(simOv), [simOv]);
+  // ADR-0176 slice 2: person-entered envelope/draws are validated client-side (the route hard-400s the same way).
+  const simEnvNum = simEnvelope.trim() === "" ? null : Number(simEnvelope);
+  const simDrawsNum = simDraws.trim() === "" ? null : Number(simDraws);
+  const simInputError = simEnvNum !== null && (!Number.isFinite(simEnvNum) || simEnvNum <= 0)
+    ? "예산 상한은 0보다 큰 숫자(백만원)여야 합니다."
+    : simDrawsNum !== null && !Number.isFinite(simDrawsNum) ? "추출 횟수는 숫자여야 합니다 (100~5,000으로 보정됩니다)." : null;
+  const runSimulation = useCallback(async () => {
+    if (!selected || simRunning || simInputError) return;
+    setSimRunning(true); setSimRunError(null);
+    try {
+      const body: Record<string, number> = {};
+      if (simEnvNum !== null) body.envelope_krw_m = simEnvNum;
+      if (simDrawsNum !== null) body.draws = simDrawsNum;
+      const r = await api.post<{ run: InvestSimRun; stale: boolean }>(`/api/greenfield/${encodeURIComponent(selected.opportunity.id)}/investment-simulation`, body);
+      setSimRun(r.data.run); setSimStale(r.data.stale);
+    } catch (e) {
+      setSimRunError(e instanceof Error ? e.message : "투자 시뮬레이션 실행 실패");
+    } finally {
+      setSimRunning(false);
+    }
+  }, [selected, simRunning, simInputError, simEnvNum, simDrawsNum]);
   const investDirty = manualDirty || reflectDirty || staffDirty || simOvDirty;
   const savedReflected = useMemo(() => {
     const saved = capLines.filter((l) => lineStates[l.capabilityKey] === "saved");
@@ -1155,6 +1200,92 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   </tbody>
                 </table>
               </div>
+              <section className="mt-3" data-testid="invest-sim-run-section" aria-labelledby="invest-sim-run-title">
+                <h4 id="invest-sim-run-title" className="text-[length:var(--fs-body)] mb-1">확률 시뮬레이션 (시드 고정 몬테카를로)</h4>
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-sim-run-basis">
+                  저장된 투자 계획과 저장된 가정 범위로 삼각분포(최저·입력값·최고)를 추출합니다 (기본 500회, 100~5,000). 급여·인상률·가산율은 입력된 값의 범위 이동만 하며 값을 만들지 않습니다. 환율은 미적용입니다. 같은 입력은 항상 같은 결과를 냅니다. 저장하지 않은 변경은 반영되지 않습니다.
+                </p>
+                <div className="flex flex-wrap gap-2 items-end mb-2" data-testid="invest-sim-run-controls">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[length:var(--fs-caption)]">예산 상한 (백만원, 선택)</span>
+                    <input type="number" min={0} step="any" className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-num" style={{ width: "9rem" }} value={simEnvelope} disabled={!canAct} onChange={(e) => setSimEnvelope(e.target.value)} data-testid="invest-sim-envelope-input" />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[length:var(--fs-caption)]">추출 횟수 (선택)</span>
+                    <input type="number" min={100} max={5000} step={1} placeholder="500" className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-num" style={{ width: "7.5rem" }} value={simDraws} disabled={!canAct} onChange={(e) => setSimDraws(e.target.value)} data-testid="invest-sim-draws-input" />
+                  </label>
+                  <button type="button" className="btn-primary btn-sm" disabled={!canAct || simRunning || !!simInputError} onClick={() => void runSimulation()} data-testid="invest-sim-run-button">{simRunning ? "실행 중…" : "시뮬레이션 실행·저장"}</button>
+                </div>
+                {simInputError && <div className="invest-item-error" role="alert" data-testid="invest-sim-input-error">{simInputError}</div>}
+                {simRunError && <div className="invest-item-error" role="alert" data-testid="invest-sim-run-error">{simRunError}</div>}
+                <p className="text-[length:var(--fs-caption)] mb-2" aria-live="polite" data-testid="invest-sim-status">
+                  {simRun
+                    ? <>최근 실행: {new Date(simRun.created_at).toLocaleString("ko-KR")} · {simRun.created_by} · {simRun.draw_count}회 · 시드 {simRun.seed}{" "}
+                      {simStale
+                        ? <span className="status-chip status-amber" data-testid="invest-sim-stale"><span aria-hidden="true">!</span> 계획 또는 가정 범위가 바뀌었습니다 — 다시 실행하세요</span>
+                        : <span className="status-chip status-green" data-testid="invest-sim-fresh"><span aria-hidden="true">✓</span> 현재 계획과 일치</span>}</>
+                    : "저장된 실행이 없습니다 — 실행하면 결과가 저장되고 이전 실행은 이력으로 남습니다."}
+                </p>
+                {simRun && (() => {
+                  const r = simRun.results;
+                  const tmax = Math.max(1e-9, ...r.tornado.map((t) => t.swingKrwM));
+                  return (
+                    <>
+                      <div className="summary-cards mb-2" data-testid="invest-sim-envelope">
+                        {([["p05", "p05 (하위 5%)"], ["p50", "p50 (중앙)"], ["p95", "p95 (상위 5%)"]] as const).map(([k, label]) => (
+                          <div className="summary-card glass" key={k} data-testid={`invest-sim-band-${k}`}>
+                            <span className="summary-value mono-num">{fmtM(r.total[k])}</span>
+                            <span className="text-label">총 투자비 {label} (백만원)</span>
+                            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">기준(결정론) {fmtM(r.mode.grandKrwM)}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="sizing-grade-card mb-2" data-testid="invest-sim-exceed">
+                        {r.exceed
+                          ? <span>예산 상한 {fmtM(r.exceed.envelopeKrwM)} 백만원 초과 확률 <strong className="mono-num">{(r.exceed.probability * 100).toFixed(1)}%</strong> ({r.exceed.exceedCount}/{r.draws}회) — 참고용 추정이며 게이트·등급에 영향을 주지 않습니다.</span>
+                          : <span className="text-[color:var(--muted-fg)]">예산 상한이 설정되지 않았습니다 — 상한을 입력해 다시 실행하면 초과 확률이 계산됩니다.</span>}
+                      </div>
+                      <div className="table-scroll mb-2">
+                        <table className="data-table invest-summary-table invest-sticky-first" data-testid="invest-sim-year-table">
+                          <caption className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] text-left">연도별·분류별 p05 / p50 / p95 (단위: 백만원)</caption>
+                          <thead>
+                            <tr>
+                              <th scope="col">구분</th>
+                              {Array.from({ length: r.horizon }, (_, i) => <th scope="col" className="col-num" key={i}>Y{i + 1}</th>)}
+                              <th scope="col" className="col-num">합계</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {([["total", "합계", r.totalByYear, r.total], ...(Object.keys(SIM_CATEGORY_LABEL) as Array<keyof typeof SIM_CATEGORY_LABEL>).map((c) => [c, SIM_CATEGORY_LABEL[c], r.byCategory[c]?.byYear ?? null, r.byCategory[c]?.total ?? null] as const)] as Array<readonly [string, string, Array<{ p05: number; p50: number; p95: number }> | null, { p05: number; p50: number; p95: number } | null]>).map(([key, label, byYear, tot]) => (
+                              <tr key={key} data-testid={`invest-sim-year-row-${key}`}>
+                                <th scope="row">{label}</th>
+                                {byYear && tot
+                                  ? <>{byYear.map((b, i) => <td className="col-num mono-num" key={i}>{fmtM(b.p50)} <span className="text-[color:var(--muted-fg)]">({fmtM(b.p05)}~{fmtM(b.p95)})</span></td>)}<td className="col-num mono-num">{fmtM(tot.p50)} <span className="text-[color:var(--muted-fg)]">({fmtM(tot.p05)}~{fmtM(tot.p95)})</span></td></>
+                                  : <td className="col-num" colSpan={r.horizon + 1}>권한상 표시하지 않음</td>}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="mb-2" data-testid="invest-sim-tornado">
+                        <div className="text-label mb-1">민감도 순위 (가정 하나씩 최저↔최고, 나머지는 기준값 · 총 투자비 변동폭, 백만원)</div>
+                        <ol className="list-none p-0 m-0">
+                          {r.tornado.map((t) => (
+                            <li key={t.key} className="flex items-center gap-2 mb-1" data-testid={`invest-sim-tornado-${t.key}`}>
+                              <span style={{ width: "9rem" }}>{TORNADO_LABEL[t.key]}</span>
+                              <span aria-hidden="true" style={{ display: "inline-block", height: "0.75rem", width: `${Math.round((t.swingKrwM / tmax) * 12 * 100) / 100}rem`, background: "var(--chart-1)", opacity: t.active ? 1 : 0.3 }} />
+                              <span className="mono-num">{t.active ? `${fmtM(t.swingKrwM)} (${(t.share * 100).toFixed(0)}%)` : "영향 없음"}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    </>
+                  );
+                })()}
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="invest-sim-note">
+                  결정 지원용 시뮬레이션 출력입니다 — 사람이 확정한 가정에서 나온 제안이며 게이트 차단·등급 변경·승인 트리거가 아닙니다. 실행은 감사 기록(investment_simulation.run)에 남습니다.
+                </p>
+              </section>
               <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="invest-simulation-note">
                 결정 지원용 참고 자료입니다 — 게이트 판정·등급에 영향을 주지 않습니다. 급여는 입력된 기준값의 범위 이동만 하며 임의 급여를 만들지 않습니다.
               </p>

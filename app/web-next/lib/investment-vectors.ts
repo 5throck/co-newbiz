@@ -117,12 +117,12 @@ function bandOf(capability: number[], manual: number[], staffing: number[]): Inv
 }
 
 /** Triangular DELAY shift (low band): weight w of each year's cost moves to the next year. */
-function shiftDelayHalf(v: number[], w = RAMP_SHIFT_HALF_YEARS): number[] {
+export function shiftDelayHalf(v: number[], w = RAMP_SHIFT_HALF_YEARS): number[] {
   return v.map((n, i) => round2((1 - w) * n + (i > 0 ? w * v[i - 1] : 0)));
 }
 
 /** Triangular ADVANCE shift (high band): weight w of the next year's cost is pulled into this year. */
-function shiftAdvanceHalf(v: number[], w = RAMP_SHIFT_HALF_YEARS): number[] {
+export function shiftAdvanceHalf(v: number[], w = RAMP_SHIFT_HALF_YEARS): number[] {
   return v.map((n, i) => round2((1 - w) * n + w * (v[i + 1] ?? 0)));
 }
 
@@ -188,33 +188,35 @@ const capabilityBand = (mode: number[], range: number): { low: number[]; high: n
 /** Manual band: ± the effective manual-line range on the mode vector. */
 const manualBand = (mode: number[], range: number): { low: number[]; high: number[] } => ({ low: scaled(mode, 1 - range), high: scaled(mode, 1 + range) });
 
+/** Staffing annual vector under drawn factors — the SAME annual-cost formula (rowAnnualCostKrwM)
+ *  the mode uses; a row without a salary or on-cost rate stays uncosted (nothing is fabricated),
+ *  and the increase/on-cost pp shifts apply only where a rate exists. No ramp shift, no recruiting. */
+export function staffingAnnualVectorWithFactors(staffing: StaffingPlanEntry, H: number, salaryFactor: number, dIncreasePp: number, dOnCostPp: number): number[] {
+  const vec = Array<number>(H).fill(0);
+  for (const r of staffing.rows) {
+    const perturbed: StaffingRow = {
+      ...r,
+      avgAnnualBaseSalaryKrwM: r.avgAnnualBaseSalaryKrwM === null ? null : r.avgAnnualBaseSalaryKrwM * salaryFactor,
+      salaryIncreaseRatePct: hasIncreaseRate(r) ? Math.max(0, r.salaryIncreaseRatePct + dIncreasePp) : r.salaryIncreaseRatePct,
+      onCostRatePct: r.onCostRatePct === null ? null : Math.max(0, r.onCostRatePct + dOnCostPp),
+    };
+    for (let y = 1; y <= H; y++) {
+      const c = rowAnnualCostKrwM(perturbed, staffing, H, y);
+      if (c !== null) vec[y - 1] += c;
+    }
+  }
+  return vec.map(round2);
+}
+
 /**
- * Staffing band. Salary/increase/on-cost move together (all rows, all years) through the SAME
- * annual-cost formula (rowAnnualCostKrwM) the mode uses; a row without a salary or on-cost rate
- * stays uncosted in every band (nothing is fabricated), and the increase/on-cost pp shifts apply
- * only where a rate exists. The ramp moves as a triangular half-year shift: delayed for low,
+ * Staffing band. Salary/increase/on-cost move together (all rows, all years) through
+ * staffingAnnualVectorWithFactors; the ramp moves as a triangular half-year shift: delayed for low,
  * advanced for high. Recruiting one-offs are person-entered lumps with no defined range — unperturbed.
  */
 function staffingBand(staffing: StaffingPlanEntry, H: number, salaryRange: number, increasePp: number, onCostPp: number, w: number): { low: number[]; high: number[] } {
-  const build = (salaryF: number, dIncreasePp: number, dOnCostPp: number): number[] => {
-    const vec = Array<number>(H).fill(0);
-    for (const r of staffing.rows) {
-      const perturbed: StaffingRow = {
-        ...r,
-        avgAnnualBaseSalaryKrwM: r.avgAnnualBaseSalaryKrwM === null ? null : r.avgAnnualBaseSalaryKrwM * salaryF,
-        salaryIncreaseRatePct: hasIncreaseRate(r) ? Math.max(0, r.salaryIncreaseRatePct + dIncreasePp) : r.salaryIncreaseRatePct,
-        onCostRatePct: r.onCostRatePct === null ? null : Math.max(0, r.onCostRatePct + dOnCostPp),
-      };
-      for (let y = 1; y <= H; y++) {
-        const c = rowAnnualCostKrwM(perturbed, staffing, H, y);
-        if (c !== null) vec[y - 1] += c;
-      }
-    }
-    return vec.map(round2);
-  };
   const recruiting = staffingSummaryVector(staffing, H).recruitingByYear;
-  const low = shiftDelayHalf(build(1 - salaryRange, -increasePp, -onCostPp), w).map((v, i) => round2(v + recruiting[i]));
-  const high = shiftAdvanceHalf(build(1 + salaryRange, increasePp, onCostPp), w).map((v, i) => round2(v + recruiting[i]));
+  const low = shiftDelayHalf(staffingAnnualVectorWithFactors(staffing, H, 1 - salaryRange, -increasePp, -onCostPp), w).map((v, i) => round2(v + recruiting[i]));
+  const high = shiftAdvanceHalf(staffingAnnualVectorWithFactors(staffing, H, 1 + salaryRange, increasePp, onCostPp), w).map((v, i) => round2(v + recruiting[i]));
   return { low, high };
 }
 
