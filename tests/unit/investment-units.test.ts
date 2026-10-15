@@ -209,7 +209,9 @@ describe("source structure", () => {
     expect(page).not.toContain("unitPending");
   });
   test("the promotion copy uses the canonical 백만원 and audits skipped manual lines", () => {
-    const repo = read("db/repositories/project.repository.ts");
+    // The copy moved into the shared promotion / re-import module (ADR-0174 follow-up).
+    const repo = read("db/repositories/s5-cost-import.ts");
+    expect(read("db/repositories/project.repository.ts")).toContain("writeS5CostModel(");
     expect(repo).toContain("(manualLineKrwM(l) ?? 0) * periodMult");
     expect(repo).toContain("greenfield_cost.promotion_skipped");
     expect(repo).not.toContain("lineAmountKrwM(l) * periodMult");
