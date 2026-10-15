@@ -454,17 +454,18 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   const panel = (key: GfTabKey, children: React.ReactNode) => (
     <div role="tabpanel" id={`gf-panel-${key}`} aria-labelledby={`gf-tab-${key}`} hidden={tab !== key} aria-hidden={tab !== key} data-testid={`gf-panel-${key}`}>{children}</div>
   );
-  // One handler/state for 투자비 항목 저장; rendered in the investment tab and again in the staffing tab header.
-  const linesSaveButton = (
+  // One handler/state for both placements (투자비 tab and 인력 운영 계획 tab); the label names the scope per placement.
+  const linesSaveButton = (label: string) => (
     <button
       type="button"
       className={investDirty && !hasYearErrors ? "btn-primary btn-sm" : "btn-ghost btn-sm"}
       disabled={linesSaving || !investDirty || hasYearErrors || !!staffError}
       title={hasYearErrors ? "연차 입력을 확인하세요" : staffError ?? undefined}
       aria-describedby="invest-item-save-hint"
+      aria-label={label}
       onClick={() => void saveInvestmentLines()}
     >
-      {linesSaving ? "저장 중…" : "투자비 항목 저장"}
+      {linesSaving ? "저장 중…" : label}
     </button>
   );
 
@@ -553,10 +554,10 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
           {panel("staffing", (
             <>
               <h3 className="text-[length:var(--fs-body)] mb-1">인력 운영 계획 (ADR-0175)</h3>
-              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="staffing-save-note-text">인력 운영 계획은 투자비 탭의 '투자비 항목 저장'으로 저장됩니다</p>
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="staffing-save-note-text">이 버튼은 인력 운영 계획과 함께 투자비 항목 전체를 저장합니다</p>
               {canAct && (
                 <div className="flex flex-wrap items-center gap-2 mb-2" data-testid="staffing-save-actions">
-                  {linesSaveButton}
+                  {linesSaveButton("인건비 항목 저장")}
                   {investDirty
                     ? <span className="status-chip status-amber" role="status"><span aria-hidden="true">!</span> 저장하지 않은 변경</span>
                     : <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">저장할 변경 없음</span>}
@@ -591,7 +592,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
               <h3 className="text-[length:var(--fs-body)] mb-1">투자비 검토 요건 (S8 사업성 분석 입력)</h3>
           {canAct && (
             <div className="flex flex-wrap items-center gap-2 mb-2" data-testid="invest-item-save-actions">
-              {linesSaveButton}
+              {linesSaveButton("투자비 항목 저장")}
               {investDirty
                 ? <span className="status-chip status-amber" role="status" data-testid="invest-item-dirty-chip"><span aria-hidden="true">!</span> 저장하지 않은 변경</span>
                 : <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="invest-item-clean-hint">저장할 변경 없음</span>}

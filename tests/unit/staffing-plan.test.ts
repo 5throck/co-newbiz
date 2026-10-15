@@ -277,6 +277,7 @@ describe("S5 UI structure (source)", () => {
     expect(stage).toContain("staffingPayload()");
     expect(stage).toContain("!isStaffingPlanEntry(l)");
     expect(stage).toContain("투자비 항목 저장");
+    expect(stage).toContain("인건비 항목 저장");
   });
   test("grid, + 행 추가, delete, canAct gating and the masked cell", () => {
     for (const s of ["인력 운영 계획", "+ 행 추가", "평균 연봉(백만원)", "가산율(%)", "채용 일회비", "확인 필요", "연평균 인원", "staffing-masked-cell", "열람 권한 없음", "aria-expanded"]) expect(sec).toContain(s);
