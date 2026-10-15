@@ -4489,7 +4489,7 @@ paths:
   /api/greenfield/{oppId}/investment-simulation:
     get:
       operationId: getGreenfieldInvestmentSimulation
-      summary: "Latest stored S5 investment simulation run (ADR-0176 slice 2). Response {run: {id, input_hash, seed, draw_count, horizon_years, envelope_krw_m, assumptions, results, status, created_by, created_at} | null, stale}. results holds per-year and per-category p05/p50/p95, the horizon-total distribution, the tornado sensitivity ranking and the exceed probability when an envelope was set; per-draw vectors are never stored. stale = the saved plan or ranges no longer hash to the run. A viewer receives the staffing category band withheld. Decision support only: no gate or grade effect. 404 unknown opportunity."
+      summary: "Latest stored S5 investment simulation run (ADR-0176 slice 2). Response {run: {id, input_hash, seed, draw_count, horizon_years, envelope_krw_m, assumptions, results, status, created_by, created_at} | null, stale}. results holds per-year and per-category p05/p50/p95, the horizon-total distribution, the tornado sensitivity ranking and the exceed probability when an envelope was set; per-draw vectors are never stored. stale = the saved plan or ranges no longer hash to the run. A viewer receives the staffing category band withheld. The run also carries confirmed_by/confirmed_at/confirm_audit_id (ADR-0176 slice 3; null = not confirmed, so S8 does not consume it). Decision support only: no gate or grade effect. 404 unknown opportunity."
       tags:
         - Analysis
       parameters:
@@ -4525,6 +4525,32 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /api/greenfield/{oppId}/investment-simulation/confirm:
+    post:
+      operationId: confirmGreenfieldInvestmentSimulation
+      summary: "Human-only confirmation of an S5 investment simulation run so S8 may consume it (ADR-0176 slice 3, Decision 5/7). Body {run_id: string} (unknown keys 400). Cookie session of a non-agent account only: a bearer token or the in-process MCP principal gets 403 human_only; viewer and admin 403. 409 stale_run when the saved plan or ranges no longer hash to the run; 409 already_confirmed; 404 unknown opportunity or run. Audited as investment_simulation.confirmed (actor, seed, draws, input_hash). S8 s5_plan cases consume only the latest confirmed run; a missing or unconfirmed run is surfaced (s5_sim=none), never blocking. No gate block, no grade effect."
+      tags:
+        - Analysis
+      parameters:
+        - name: oppId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /api/projects:
     get:
@@ -4742,7 +4768,7 @@ paths:
   /api/projects/{id}/business-case/params:
     get:
       operationId: getProjectBusinessCaseParams
-      summary: Resolve the live bc.* simulation parameter set with provenance (user > derived > default). Includes the read-only acquisitionEvRevenueBand (nullable, human-confirmed). The business-case list/comparison response carries evRevenueBand and per-target acqEvBandSource; acqEvRevenueInBand is null unless a band is confirmed.
+      summary: "Resolve the live bc.* simulation parameter set with provenance (user > derived > default). Includes the read-only acquisitionEvRevenueBand (nullable, human-confirmed). The business-case list/comparison response carries evRevenueBand and per-target acqEvBandSource; acqEvRevenueInBand is null unless a band is confirmed. Also returns s5_sim (ADR-0176 slice 3): {state: not_applicable|none|in_effect|stale, stale, reason, used, latest, label} - whether the latest s5_plan case consumed the latest confirmed S5 investment simulation run (s5_sim=<input_hash> in its note) or whether it is stale (the label is the re-evaluation-required flag; hash compare only, never auto-recompute, never blocks a gate or grade)."
       tags:
         - Analysis
       parameters:

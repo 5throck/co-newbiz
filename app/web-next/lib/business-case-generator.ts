@@ -38,6 +38,7 @@ import { specAgentFor } from "./spec-activities.ts";
 import { runSimJob } from "./sim-engine.ts";
 import { fmtNpvInteger } from "./npv-format.ts";
 import { resolveDownsideOpexUplift } from "./target-costing.ts";
+import { resolveS5SimConsumption, type S5SimConsumption } from "./investment-simulation-s8.ts";
 
 // Per-step S8 agent assignment reads from process/flow.spec.yaml (SSOT,
 // ADR-0074) — each execution step maps to the spec activity that owns its
@@ -366,9 +367,14 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
   const exitMult = exitEvRevenueOf(inputs);
   const discount = (v: number, year: number) => v / Math.pow(1 + inputs.wacc.value, year);
   const ramp = rampUpOf(inputs);
+  // ADR-0176 slice 3: per-draw pairing with the confirmed S5 run - iteration `it` uses S5 draw
+  // `it % drawCount`. The factors are precomputed, so the revenue rng stream is untouched.
+  const sim5 = s5 ? inputs.s5Sim ?? null : null;
   for (let it = 0; it < iterationsOf(inputs); it++) {
     let revenue = year1Revenue;
-    let npv = s5 ? -s5.plan.capexByYear[0] : -initialInvestment; // year-0 인수/설립 투자 (s5_plan: 계획 Y1 집행액, OD-3)
+    const capF = sim5 ? sim5.capFactors[it % sim5.drawCount] : 1;
+    const manF = sim5 ? sim5.manFactors[it % sim5.drawCount] : 1;
+    let npv = s5 ? -(sim5 ? drawnCapex(s5.plan, 0, capF, manF) : s5.plan.capexByYear[0]) : -initialInvestment; // year-0 인수/설립 투자 (s5_plan: 계획 Y1 집행액, OD-3)
     for (let year = 1; year <= horizon; year++) {
       if (year > 1) {
         const [z1] = normalPair(rng);
@@ -377,8 +383,9 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
       const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
       let flow: number;
       if (s5) {
-        const opex = opexOfYear(inputs, s5, year, revenue);
-        const capex = capexOfYear(inputs, s5, year, revenue);
+        let opex = opexOfYear(inputs, s5, year, revenue);
+        if (sim5 && s5.full && year - 1 < s5.plan.opexCovered.length && s5.plan.opexCovered[year - 1]) opex = drawnLaborOpex(s5.plan, year - 1, capF, manF);
+        const capex = sim5 ? drawnCapex(s5.plan, year, capF, manF) : capexOfYear(inputs, s5, year, revenue);
         flow = (revenue - opex) * utilization - capex;
       } else {
         const fcf = revenue * (1 - opexRatio) - revenue * capexRatio;
@@ -466,6 +473,10 @@ export interface CaseInputs {
    *  `greenfield_cost` model). Consulted only when a human set an
    *  `s5_plan` basis; the ratio path never reads it. */
   s5Plan?: S5InvestmentPlan | null;
+  /** ADR-0176 slice 3 - the latest CONFIRMED S5 investment simulation run's per-draw group
+   *  factors. Consulted only under an s5_plan basis with a plan; absent = today's single-point
+   *  plan (bit-identical), recorded as `s5_sim=none`. */
+  s5Sim?: S5SimConsumption | null;
 }
 
 /** Default sales-plan curve (design REQ-W1-2) — utilization by year. */
@@ -963,6 +974,11 @@ export interface S5InvestmentPlan {
   /** Lines excluded from the vectors: non-KRW_M unit (no FX in S8 either) or
    *  start beyond the model horizon. Surfaced in the run provenance. */
   skippedLines: number;
+  /** ADR-0176 slice 3 - the part of `capexByYear` / `laborOpexByYear` that comes from S5 capability
+   *  lines (promotion note `역량 해소 비용`); the remainder is manual lines. Lets a paired S5 draw
+   *  scale each group by its own factor. Not part of `lineHash`. Absent in hand-built fixtures. */
+  capexCapabilityByYear?: number[];
+  laborOpexCapabilityByYear?: number[];
   /** FNV-1a over the serialized vectors — run provenance (design §6.2) so a
    *  later plan edit is detectable against a recorded run. */
   lineHash: string;
@@ -972,6 +988,9 @@ export interface S5InvestmentPlan {
  *  `greenfield_cost` model (written at S5 promotion, ADR-0174 §6.1). Null
  *  when the project has none — every consumer then falls back to the ratio
  *  path, never to zero. */
+/** Promotion stamps every capability-sourced line with this note flag (splitForPromotion). */
+const CAPABILITY_LINE_NOTE_MARK = "역량 해소 비용";
+
 export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (...args: unknown[]) => unknown; all: (...args: unknown[]) => unknown[] } }, projectId: string): S5InvestmentPlan | null {
   const model = db
     .query(
@@ -983,12 +1002,14 @@ export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (..
   if (!model) return null;
   const horizon = Math.min(Math.max(Math.round(model.horizon_years), 1), 50);
   const lines = db
-    .query("SELECT category, annual_amount_krw_m, start_year, end_year, growth_rate, unit FROM business_case_line WHERE model_id = ?")
-    .all(model.id) as Array<{ category: string; annual_amount_krw_m: number; start_year: number; end_year: number | null; growth_rate: number; unit: string | null }>;
+    .query("SELECT category, annual_amount_krw_m, start_year, end_year, growth_rate, unit, note FROM business_case_line WHERE model_id = ?")
+    .all(model.id) as Array<{ category: string; annual_amount_krw_m: number; start_year: number; end_year: number | null; growth_rate: number; unit: string | null; note?: string | null }>;
   const capexByYear = new Array<number>(horizon).fill(0);
   const laborOpexByYear = new Array<number>(horizon).fill(0);
   const govRndByYear = new Array<number>(horizon).fill(0);
   const opexCovered = new Array<boolean>(horizon).fill(false);
+  const capexCapabilityByYear = new Array<number>(horizon).fill(0);
+  const laborOpexCapabilityByYear = new Array<number>(horizon).fill(0);
   let skippedLines = 0;
   for (const l of lines) {
     // R (§5): a NULL/non-KRW_M unit is never assumed convertible — the line
@@ -1000,14 +1021,18 @@ export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (..
     const end = Math.min(l.end_year ?? horizon, horizon);
     const isCapex = l.category === "capex";
     const isGovRnd = l.category === "gov_rnd";
+    const fromCapability = (l.note ?? "").includes(CAPABILITY_LINE_NOTE_MARK);
     const amounts = isCapex ? capexByYear : isGovRnd ? govRndByYear : laborOpexByYear;
     for (let y = Math.max(1, l.start_year); y <= end; y++) {
-      amounts[y - 1] += l.annual_amount_krw_m * Math.pow(1 + l.growth_rate, y - l.start_year);
+      const amount = l.annual_amount_krw_m * Math.pow(1 + l.growth_rate, y - l.start_year);
+      amounts[y - 1] += amount;
+      if (fromCapability && isCapex) capexCapabilityByYear[y - 1] += amount;
+      else if (fromCapability && !isGovRnd) laborOpexCapabilityByYear[y - 1] += amount;
       if (!isCapex && !isGovRnd) opexCovered[y - 1] = true;
     }
   }
   const lineHash = scenarioSeed(model.id, JSON.stringify({ c: capexByYear, o: laborOpexByYear, g: govRndByYear })).toString(16);
-  return { modelId: model.id, horizonYears: horizon, capexByYear, laborOpexByYear, govRndByYear, opexCovered, skippedLines, lineHash };
+  return { modelId: model.id, horizonYears: horizon, capexByYear, laborOpexByYear, govRndByYear, opexCovered, skippedLines, lineHash, capexCapabilityByYear, laborOpexCapabilityByYear };
 }
 
 /** The plan in force for a case — only when a human chose an s5_plan basis
@@ -1018,6 +1043,19 @@ function s5PlanOf(inputs: CaseInputs): { plan: S5InvestmentPlan; full: boolean }
   const plan = inputs.s5Plan ?? null;
   if (!plan) return null;
   return { plan, full: basis === "s5_plan_full" };
+}
+
+/** ADR-0176 slice 3 - capex / opex of the s5 plan under one paired S5 draw: capability-sourced lines
+ *  scale by the draw's capability factor, manual lines by its manual-line factor. Factors of 1 give
+ *  the single-point plan exactly. */
+function drawnCapex(plan: S5InvestmentPlan, index: number, capF: number, manF: number): number {
+  if (index >= plan.capexByYear.length) return 0;
+  const cap = plan.capexCapabilityByYear?.[index] ?? 0;
+  return cap * capF + (plan.capexByYear[index] - cap) * manF;
+}
+function drawnLaborOpex(plan: S5InvestmentPlan, index: number, capF: number, manF: number): number {
+  const cap = plan.laborOpexCapabilityByYear?.[index] ?? 0;
+  return cap * capF + (plan.laborOpexByYear[index] - cap) * manF;
 }
 
 /** Plan capex landing at cashflow index `year` (index 0 = the year-0 outflow
@@ -1105,27 +1143,32 @@ export function effGrowthDisp(
 export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "growthModel" | "targetId"> {
   const row = getDb()
     .query(
-      `SELECT o.market_size_krw_m, o.growth_rate
+      `SELECT o.market_size_krw_m, o.growth_rate, p.source_opportunity_id
        FROM md_project p LEFT JOIN opportunity o ON o.id = p.source_opportunity_id
        WHERE p.id = ?`,
     )
-    .get(projectId) as { market_size_krw_m: number | null; growth_rate: number | null } | undefined;
+    .get(projectId) as { market_size_krw_m: number | null; growth_rate: number | null; source_opportunity_id: string | null } | undefined;
   // Deterministic fallbacks when the promoting opportunity carries no market
   // facts (brownfield promotion path): documented, never random. growth_rate
   // is stored as a RATIO (evidence_var unit 'ratio', migration 0017; seeds
   // store 0.06) and is used as-is — no percent conversion.
+  const bcParams = resolveBusinessCaseParams(getDb(), projectId);
+  const s5Plan = resolveS5InvestmentPlan(getDb(), projectId);
   return {
     projectId,
     marketSizeKrwM: row?.market_size_krw_m ?? 50000,
     anchorGrowth: row?.growth_rate ?? 0.05,
     wacc: resolveProjectWacc(getDb(), projectId),
     waccScope: { scope: "project" },
-    bcParams: resolveBusinessCaseParams(getDb(), projectId),
+    bcParams,
     waccSubject: resolveProjectWaccSubject(getDb(), projectId),
     targetCostWiring: resolveDownsideOpexUplift(getDb(), projectId) ?? undefined,
     // ADR-0174: resolve once per project run — a null plan (no greenfield_cost
     // model yet) keeps every consumer on the ratio path via s5PlanOf().
-    s5Plan: resolveS5InvestmentPlan(getDb(), projectId),
+    s5Plan,
+    // ADR-0176 slice 3: the latest CONFIRMED S5 simulation run, only under an s5_plan basis with a
+    // plan. None -> today's single-point plan (note `s5_sim=none`); never blocking.
+    s5Sim: bcParams.investmentBasis !== "ratio" && s5Plan ? resolveS5SimConsumption(getDb(), row?.source_opportunity_id) : null,
   };
 }
 
@@ -1516,7 +1559,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       const s5OpexVariance = s5Provenance && !s5Provenance.full ? s5OpexCrossCheckVariance(ctx.inputs) : null;
       const basis = ctx.inputs.bcParams?.investmentBasis ?? "ratio";
       const basisFragment = s5Provenance
-        ? `; basis=${basis}; s5_model=${s5Provenance.plan.modelId}; s5_line_hash=${s5Provenance.plan.lineHash}; s5_skipped=${s5Provenance.plan.skippedLines}${s5Provenance.full ? "; s5_full=1" : ""}${s5OpexVariance != null ? `; s5_opex_variance=${s5OpexVariance.toFixed(2)}` : ""}`
+        ? `; basis=${basis}; s5_model=${s5Provenance.plan.modelId}; s5_line_hash=${s5Provenance.plan.lineHash}; s5_skipped=${s5Provenance.plan.skippedLines}${s5Provenance.full ? "; s5_full=1" : ""}; s5_sim=${ctx.inputs.s5Sim?.inputHash ?? "none"}${s5OpexVariance != null ? `; s5_opex_variance=${s5OpexVariance.toFixed(2)}` : ""}`
         : basis === "ratio"
           ? "; basis=ratio"
           : "; basis=ratio; s5_plan_fallback=1 (greenfield_cost 모델 없음 — 비율 경로로 대체)";

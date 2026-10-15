@@ -107,7 +107,8 @@ export interface SimulationInput extends InvestmentVectorsInput {
   envelopeKrwM?: number | null;
 }
 
-interface Factors { salary: number; inc: number; onc: number; ramp: number; cap: number; man: number }
+export interface DrawFactors { salary: number; inc: number; onc: number; ramp: number; cap: number; man: number }
+type Factors = DrawFactors;
 const NEUTRAL: Factors = { salary: 1, inc: 0, onc: 0, ramp: 0, cap: 1, man: 1 };
 
 const scaled = (v: number[], f: number): number[] => v.map((n) => round2(n * f));
@@ -118,6 +119,31 @@ export function simulationInputHash(input: InvestmentVectorsInput, seed: number,
   const eff = effectiveAssumptions(input.overrides);
   const payload = { h: v.horizon, c: v.mode.capabilityByYear, m: v.mode.manualByYear, s: input.staffing, eff, seed, draws };
   return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+}
+
+/**
+ * The per-draw factor stream (ADR-0176 slice 3): draw index d is the same at S5 and S8. Fixed draw
+ * order, 7 rng values per draw (FX is drawn to keep the stream stable but never applied). The ranges
+ * are the effective ones (a stored run carries them in its assumptions), so a draw is reproducible
+ * from (seed, draws, ranges) alone - per-draw vectors are never stored.
+ */
+export function drawInvestmentFactors(seed: number, draws: number, eff: ReturnType<typeof effectiveAssumptions>): DrawFactors[] {
+  const rng = mulberry32(seed);
+  const w = Math.min(Math.max(eff.rampShiftHalfYears, 0), 1);
+  const out: DrawFactors[] = [];
+  for (let d = 0; d < draws; d++) {
+    const f: DrawFactors = {
+      salary: triangular(rng, 1 - eff.salaryRange, 1, 1 + eff.salaryRange),
+      inc: triangular(rng, -eff.salaryIncreaseRangePp, 0, eff.salaryIncreaseRangePp),
+      onc: triangular(rng, -eff.onCostRangePp, 0, eff.onCostRangePp),
+      ramp: triangular(rng, -w, 0, w),
+      cap: triangular(rng, 1 - eff.capabilityRange, 1, 1 + eff.capabilityRange),
+      man: triangular(rng, 1 - eff.manualLineRange, 1, 1 + eff.manualLineRange),
+    };
+    triangular(rng, 1 - FX_RANGE, 1, 1 + FX_RANGE); // FX: drawn to keep the stream stable, never applied (inert)
+    out.push(f);
+  }
+  return out;
 }
 
 export function simulateInvestment(input: SimulationInput): SimulationResults {
@@ -148,22 +174,13 @@ export function simulateInvestment(input: SimulationInput): SimulationResults {
   };
   const sumOf = (v: number[]): number => v.reduce((a, n) => a + n, 0);
 
-  const rng = mulberry32(input.seed);
+  const factors = drawInvestmentFactors(input.seed, draws, eff);
   const totals: number[] = [];
   const years = (): number[][] => Array.from({ length: H }, () => []);
   const yTotal = years(), yCap = years(), yMan = years(), yStaff = years();
   const cTotal: number[] = [], cCap: number[] = [], cMan: number[] = [], cStaff: number[] = [];
   for (let d = 0; d < draws; d++) {
-    // Fixed draw order (7 values per draw) so draw index d is reproducible at S5 and, later, S8.
-    const f: Factors = {
-      salary: triangular(rng, 1 - eff.salaryRange, 1, 1 + eff.salaryRange),
-      inc: triangular(rng, -eff.salaryIncreaseRangePp, 0, eff.salaryIncreaseRangePp),
-      onc: triangular(rng, -eff.onCostRangePp, 0, eff.onCostRangePp),
-      ramp: triangular(rng, -w, 0, w),
-      cap: triangular(rng, 1 - eff.capabilityRange, 1, 1 + eff.capabilityRange),
-      man: triangular(rng, 1 - eff.manualLineRange, 1, 1 + eff.manualLineRange),
-    };
-    triangular(rng, 1 - FX_RANGE, 1, 1 + FX_RANGE); // FX: drawn to keep the stream stable, never applied (inert)
+    const f = factors[d];
     const v = vectorsFor(f);
     for (let i = 0; i < H; i++) { yTotal[i].push(v.total[i]); yCap[i].push(v.cap[i]); yMan[i].push(v.man[i]); yStaff[i].push(v.staff[i]); }
     const t = sumOf(v.total);

@@ -40,6 +40,21 @@ function SourceChip({ source }: { source: string }) {
   return <span className="status-chip status-info">{source}</span>;
 }
 
+/** ADR-0176 slice 3 - S5 investment-simulation consumption of the latest s5_plan case (informational). */
+interface S5SimStatusView {
+  state: "not_applicable" | "none" | "in_effect" | "stale";
+  stale: boolean;
+  reason: string | null;
+  label: string;
+}
+
+const S5_SIM_STALE_REASON: Record<string, string> = {
+  run_confirmed_after_generation: "사례 생성 후 S5 투자 시뮬레이션이 확정되었습니다",
+  run_changed: "확정된 S5 시뮬레이션 실행이 사례 생성 이후 바뀌었습니다",
+  s5_lines_changed: "S5 투자 계획 또는 가정 범위가 확정 실행 이후 바뀌었습니다",
+  run_missing: "사례가 참조한 S5 시뮬레이션 확정 실행을 찾을 수 없습니다",
+};
+
 interface ResolvedParams {
   captureRate: number; captureSource: string;
   rampUp: number[]; rampSource: string;
@@ -115,6 +130,7 @@ const DRIVER_LABELS: Record<string, string> = {
 
 export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; onOpenTargets?: () => void }) {
   const [resolved, setResolved] = useState<ResolvedParams | null>(null);
+  const [s5Sim, setS5Sim] = useState<S5SimStatusView | null>(null);
   const [cases, setCases] = useState<CaseSummary[]>([]);
   const [form, setForm] = useState<Record<string, string>>({});
   const [ramp, setRamp] = useState<string[]>(["", "", "", "", ""]);
@@ -156,8 +172,9 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
 
   const load = useCallback(async () => {
     try {
-      const params = await api.get<{ params: ResolvedParams }>(`/api/projects/${encodeURIComponent(projectId)}/business-case/params`);
+      const params = await api.get<{ params: ResolvedParams; s5_sim?: S5SimStatusView | null }>(`/api/projects/${encodeURIComponent(projectId)}/business-case/params`);
       setResolved(params.data.params);
+      setS5Sim(params.data.s5_sim ?? null);
       const casesRes = await api.get<{ cases: CaseSummary[] }>(`/api/projects/${encodeURIComponent(projectId)}/business-case`);
       setCases(casesRes.data.cases);
     } catch (e) {
@@ -252,6 +269,15 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
               { label: "반복 수", value: resolved.iterations.toLocaleString(), unit: "회", source: <SourceChip source={resolved.iterationsSource} /> },
             ]}
           />
+            {s5Sim && s5Sim.state !== "not_applicable" && (
+              <p role="status" className="text-[length:var(--fs-caption)] mt-2">
+                <span className={`status-chip ${s5Sim.state === "stale" ? "status-amber" : s5Sim.state === "in_effect" ? "status-green" : "status-gray"}`}>
+                  {s5Sim.state === "stale" && <span aria-hidden="true">⏱ </span>}{s5Sim.label}
+                </span>
+                {s5Sim.state === "stale" && <> {S5_SIM_STALE_REASON[s5Sim.reason ?? ""] ?? ""} — 사례를 다시 생성하면 해소됩니다 (자동 재계산 없음, 참고 표시이며 게이트·등급에 영향 없음).</>}
+                {s5Sim.state === "none" && <> 확정된 S5 투자 시뮬레이션이 없어 단일 지점 투자 계획으로 계산되었습니다 (차단 아님).</>}
+              </p>
+            )}
             {resolved.s5PlanHorizonYears != null && resolved.s5PlanHorizonYears !== resolved.horizonYears && (
               <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-2">
                 ⚠ S5 검토 기간({resolved.s5PlanHorizonYears}년)과 사업계획 기간({resolved.horizonYears}년)이 다릅니다
