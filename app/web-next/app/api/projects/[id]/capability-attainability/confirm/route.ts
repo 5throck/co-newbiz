@@ -1,16 +1,16 @@
 // POST /api/projects/[id]/capability-attainability/confirm — HUMAN-ONLY (ADR-0168,
 // boundary #2). Green Field: 410 moved (editAt S5, ADR-0171; use the opportunity confirm route);
-// Brown Field keeps this legacy path until the S7 per-target surface ships (slice 2b). A person confirms the attainability judgements they (or an agent
+// Brown Field: 410 moved (editAt S7, ADR-0171 slice 2; use POST /api/brownfield/targets/{targetId}/capability-judgements/confirm). A person confirms the attainability judgements they (or an agent
 // draft) recorded: sets confirmedBy/confirmedAt on judged rows. Cookie session of
 // a non-agent account only; bearer / OAuth-delegated MCP / agent callers get 403
 // human_only (also in HUMAN_ONLY_ROUTES). Body: { row_ids?: string[] } (default:
 // every judged, unconfirmed row). analyst+ member. Audit
 // capability_attainability.confirm, target "<projectId>#capability@<via>".
 import { getDb } from "../../../../../../../../db/client.ts";
-import { authenticate, callPathOf, humanOnlyDenied, requireBusinessActor } from "../../../../../../lib/auth.ts";
-import { badRequest, fail, moved, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { authenticate, humanOnlyDenied, requireBusinessActor } from "../../../../../../lib/auth.ts";
+import { moved, notFound } from "../../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
-import { buildAttainabilityView, confirmAndWrite, editStageOf, readRegister, sourceOpportunityOf } from "../../../../../../lib/capability-attainability.ts";
+import { editStageOf } from "../../../../../../lib/capability-attainability.ts";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
@@ -22,14 +22,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   if (editStageOf(getDb(), id).editAt === "S5") return moved("필요 역량 달성 가능성의 확정은 S5로 옮겨졌습니다 — S5에서 확정하세요 (POST /api/opportunities/{id}/capability-attainability/confirm).", "S5");
-  const body = (await request.json().catch(() => ({}))) as { row_ids?: unknown } | null;
-  if (body?.row_ids != null && (!Array.isArray(body.row_ids) || body.row_ids.some((x) => typeof x !== "string"))) return badRequest("invalid_request", "row_ids는 문자열 배열입니다.");
-  const db = getDb();
-  const oppId = sourceOpportunityOf(db, id);
-  const reg = oppId ? readRegister(db, oppId) : null;
-  if (!oppId || !reg) return badRequest("no_source_opportunity", "원 기회(S3 역량 레지스터)가 없는 프로젝트입니다.");
-  const at = new Date().toISOString();
-  const res = confirmAndWrite(db, oppId, (body?.row_ids as string[] | undefined) ?? null, ctx.userId, { action: "capability_attainability.confirm", target: `${id}#capability@${callPathOf(ctx)}`, at });
-  if (!res.ok) return res.error.code === "nothing_to_confirm" ? fail(409, res.error.code, res.error.message) : badRequest(res.error.code, res.error.message);
-  return ok({ ...buildAttainabilityView(oppId, res.rows, at, res.removed), confirmed: res.confirmedIds.length }, 200);
+  return moved("필요 역량 달성 가능성의 확정은 S7 대상별 점검으로 옮겨졌습니다 — S7에서 확정하세요 (POST /api/brownfield/targets/{targetId}/capability-judgements/confirm).", "S7");
 }

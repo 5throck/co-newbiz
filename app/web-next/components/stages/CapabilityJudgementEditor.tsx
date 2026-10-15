@@ -1,8 +1,8 @@
 "use client";
 
-// Required-capability judgement edit surface (ADR-0171 / ADR-0172). Mounted on S5 (Green Field);
-// the S8 summary reuses it only as a temporary Brown Field bridge until the S7 per-target
-// surface ships (slice 2b). Saves drafts (analyst+; AI may only draft) and confirms through a
+// Required-capability judgement edit surface (ADR-0171 / ADR-0172). Mounted on S5 (Green Field) and,
+// per shortlisted target, on S7 (Brown Field; components/brownfield-target/TargetCapabilityCheck.tsx
+// with `endpoint` = /api/brownfield/targets/{id}/capability-judgements). Saves drafts (analyst+; AI may only draft) and confirms through a
 // human-only route. Numbers are NOT pushed into the case model; S3-owned values are never sent.
 // Optional `gap` wiring lets S5 keep saving its free-text 비고 through the S3 register route
 // (which also carries 해소 방식, so a judgement save refreshes those rows locally).
@@ -23,7 +23,7 @@ export interface GapWiring {
   setRows: Dispatch<SetStateAction<CapabilityGapRow[]>>;
 }
 
-export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraft = false, onRowsChange, onEditorApi, onDirtyChange }: {
+export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraft = false, onRowsChange, onEditorApi, onDirtyChange, refreshKey }: {
   /** Base URL of the judgement routes: GET/PUT here, POST `${endpoint}/confirm`. */
   endpoint: string;
   s3Href: string;
@@ -37,6 +37,8 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
   onEditorApi?: (api: { patchDraft: (id: string, p: Partial<JudgementDraft>) => void }) => void;
   /** Presentation only: reports whether the editor holds unsaved judgement drafts or notes (page-level unsaved indicator). */
   onDirtyChange?: (dirty: boolean) => void;
+  /** Change it to refetch the view (e.g. after the S7 criterion verdict or the criteria reconcile changed); unsaved drafts are kept. */
+  refreshKey?: string | number;
 }) {
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
@@ -72,7 +74,7 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
     let alive = true;
     api.get<AttainabilityViewData>(endpoint).then((res) => { if (alive) apply(res.data, dirtyRef.current.size === 0); }).catch((e) => { if (alive) setError(e instanceof Error ? e.message : "달성 가능성을 불러오지 못했습니다."); });
     return () => { alive = false; };
-  }, [endpoint, apply]);
+  }, [endpoint, apply, refreshKey]);
 
   const set = (id: string, patch: Partial<JudgementDraft>) => {
     // A human edit of an AI-drafted field clears its AI marker (only fields whose value actually changed).

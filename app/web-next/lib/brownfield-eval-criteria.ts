@@ -6,6 +6,7 @@
 import type { Database } from "bun:sqlite";
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
+import { appendAudit } from "../../../db/lib/access-control.ts";
 import { parseGapRegister } from "./capability-gap.ts";
 import { isFinancialDataRef, parseRubric, sanitizeRubricInput, type FinancialDataRef } from "./brownfield-financial-rubric.ts";
 
@@ -30,6 +31,9 @@ export interface EvalCriterion {
   weight: number;
   /** 재무 빌트인 항목의 판정 루브릭 임계값(ADR-0140) — NULL이면 코드 기본값. */
   rubric_json: string | null;
+  /** ADR-0171: set when the seeded criterion's S3 row was removed (marker, never deleted). */
+  retired_at?: string | null;
+  retired_reason?: string | null;
   created_by: string;
   created_at: string;
 }
@@ -86,7 +90,7 @@ function now(): string {
  * ADR-0140) 이미 카탈로그가 있는 기존 오퍼튜니티에 새 항목만 시딩된다. */
 export function listOrSeedCriteria(opportunityId: string, seededBy: string, db: Database = getDb()): EvalCriterion[] {
   const existing = db
-    .query("SELECT * FROM brownfield_eval_criterion WHERE opportunity_id = ? AND deleted_at IS NULL ORDER BY category, created_at")
+    .query("SELECT * FROM brownfield_eval_criterion WHERE opportunity_id = ? AND deleted_at IS NULL AND retired_at IS NULL ORDER BY category, created_at")
     .all(opportunityId) as unknown as EvalCriterion[];
 
   const existingFinancialRefs = new Set(existing.filter((c) => c.category === "financial").map((c) => c.data_ref));
@@ -101,7 +105,10 @@ export function listOrSeedCriteria(opportunityId: string, seededBy: string, db: 
     }));
   }
 
-  const hasTechnicalSeeded = existing.some((c) => c.category === "technical" && c.source === "seeded");
+  // Retired seeded criteria count too: a first seed must never re-run once criteria existed (ADR-0171 D6).
+  const hasTechnicalSeeded = !!db
+    .query("SELECT 1 AS x FROM brownfield_eval_criterion WHERE opportunity_id = ? AND category = 'technical' AND source = 'seeded' LIMIT 1")
+    .get(opportunityId);
   if (!hasTechnicalSeeded) {
     const opp = db.query("SELECT capability_gap_json FROM opportunity WHERE id = ?").get(opportunityId) as { capability_gap_json: string | null } | undefined;
     const register = parseGapRegister(opp?.capability_gap_json ?? null);
@@ -306,4 +313,85 @@ export function upsertEvalState(targetId: string, criterionId: string, opts: { s
     [id, targetId, criterionId, opts.status, opts.note, opts.evidence_ref, opts.assessedBy, at],
   );
   return { id, brownfield_target_id: targetId, criterion_id: criterionId, status: opts.status, note: opts.note, evidence_ref: opts.evidence_ref, assessed_by: opts.assessedBy, assessed_at: at };
+}
+
+// ── Criteria reconcile (ADR-0171 D6) ─────────────────────────────────────────
+// Seeding used to run once, so S3 rows added later never reached S7 and removed rows
+// lingered. Reconcile compares the S3 register with the seeded technical criteria:
+// missing rows are seeded, removed rows are retired (marker; evaluation records and
+// judgements stay), renamed rows get the new label. Weights and verdicts are person-entered
+// and are never touched. Detection is read-only; reconcile is an explicit analyst+ action.
+
+export interface ReconcilePlan {
+  /** S3 rows without a (non-retired) seeded criterion. */
+  missing: Array<{ rowId: string; capability: string }>;
+  /** Seeded criteria whose S3 row no longer exists. */
+  retire: Array<{ criterionId: string; label: string; seedRef: string; assessedTargets: number }>;
+  /** Seeded criteria whose label no longer matches the S3 capability name. */
+  relabel: Array<{ criterionId: string; from: string; to: string }>;
+  /** Retired criteria whose S3 row exists again. */
+  reinstate: Array<{ criterionId: string; label: string }>;
+  /** True when nothing needs reconciling. */
+  inSync: boolean;
+}
+
+export function detectCriteriaReconcile(opportunityId: string, db: Database = getDb()): ReconcilePlan {
+  const opp = db.query("SELECT capability_gap_json FROM opportunity WHERE id = ?").get(opportunityId) as { capability_gap_json: string | null } | undefined;
+  const rows = parseGapRegister(opp?.capability_gap_json ?? null).rows;
+  const seeded = db
+    .query("SELECT * FROM brownfield_eval_criterion WHERE opportunity_id = ? AND category = 'technical' AND source = 'seeded' AND deleted_at IS NULL")
+    .all(opportunityId) as unknown as EvalCriterion[];
+  const rowById = new Map(rows.map((r) => [r.id, r]));
+  const bySeed = new Map(seeded.filter((c) => c.seed_ref).map((c) => [c.seed_ref as string, c]));
+  const plan: ReconcilePlan = { missing: [], retire: [], relabel: [], reinstate: [], inSync: true };
+  for (const r of rows) {
+    const c = bySeed.get(r.id);
+    if (!c) plan.missing.push({ rowId: r.id, capability: r.capability });
+    else if (c.retired_at) plan.reinstate.push({ criterionId: c.id, label: c.label });
+    else if (c.label !== r.capability) plan.relabel.push({ criterionId: c.id, from: c.label, to: r.capability });
+  }
+  for (const c of seeded) {
+    if (c.retired_at || !c.seed_ref || rowById.has(c.seed_ref)) continue;
+    const assessed = (db.query("SELECT COUNT(*) AS c FROM brownfield_target_eval_state WHERE criterion_id = ? AND status != 'pending'").get(c.id) as { c: number }).c;
+    plan.retire.push({ criterionId: c.id, label: c.label, seedRef: c.seed_ref, assessedTargets: assessed });
+  }
+  plan.inSync = plan.missing.length + plan.retire.length + plan.relabel.length + plan.reinstate.length === 0;
+  return plan;
+}
+
+export interface ReconcileResult { added: number; retired: number; relabeled: number; reinstated: number }
+
+/** Apply the reconcile plan in one transaction. Idempotent: a second run changes nothing. */
+export function reconcileCriteria(opportunityId: string, actor: string, db: Database = getDb(), at: string = now()): ReconcileResult {
+  return db.transaction((): ReconcileResult => {
+    const opp = db.query("SELECT capability_gap_json FROM opportunity WHERE id = ?").get(opportunityId) as { capability_gap_json: string | null } | undefined;
+    const rows = parseGapRegister(opp?.capability_gap_json ?? null).rows;
+    const rowById = new Map(rows.map((r) => [r.id, r]));
+    const plan = detectCriteriaReconcile(opportunityId, db);
+    for (const m of plan.missing) {
+      const r = rowById.get(m.rowId)!;
+      insertCriterion(db, {
+        opportunity_id: opportunityId, category: "technical", source: "seeded",
+        label: r.capability, description: `S3 필요 역량 평가 기준. ${r.requiredNote || ""}`.trim(),
+        data_ref: null, seed_ref: r.id, is_mandatory: 1, is_deletable: 0, weight: DEFAULT_WEIGHT, rubric_json: null, created_by: actor,
+      });
+    }
+    for (const x of plan.retire) {
+      db.run("UPDATE brownfield_eval_criterion SET retired_at = ?, retired_reason = ? WHERE id = ?", [at, "s3_row_removed", x.criterionId]);
+    }
+    for (const x of plan.relabel) {
+      db.run("UPDATE brownfield_eval_criterion SET label = ? WHERE id = ?", [x.to, x.criterionId]);
+    }
+    for (const x of plan.reinstate) {
+      db.run("UPDATE brownfield_eval_criterion SET retired_at = NULL, retired_reason = NULL WHERE id = ?", [x.criterionId]);
+    }
+    const result: ReconcileResult = { added: plan.missing.length, retired: plan.retire.length, relabeled: plan.relabel.length, reinstated: plan.reinstate.length };
+    if (!plan.inSync) {
+      appendAudit(db, {
+        actor, action: "brownfield_eval_criteria.reconcile", now: at,
+        target: `${opportunityId}#criteria-reconcile:surface=S7:added=${result.added},retired=${result.retired},relabeled=${result.relabeled},reinstated=${result.reinstated}`,
+      });
+    }
+    return result;
+  })();
 }

@@ -4,6 +4,7 @@ import { getDb } from "../../../../../../../../../../db/client.ts";
 import { authenticate, requireBusinessActor } from "../../../../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../../../../lib/envelope.ts";
 import { upsertEvalState } from "../../../../../../../../lib/brownfield-eval-criteria.ts";
+import { invalidateTargetJudgements } from "../../../../../../../../lib/brownfield-capability-judgement.ts";
 
 const STATUSES = new Set(["pending", "pass", "partial", "fail", "na", "waived"]);
 
@@ -16,7 +17,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ oppI
   const db = getDb();
   const target = db.query("SELECT id FROM brownfield_target WHERE id = ? AND opportunity_id = ?").get(targetId, oppId) as { id: string } | undefined;
   if (!target) return notFound();
-  const criterion = db.query("SELECT id FROM brownfield_eval_criterion WHERE id = ? AND opportunity_id = ? AND deleted_at IS NULL").get(criterionId, oppId) as { id: string } | undefined;
+  const criterion = db.query("SELECT id FROM brownfield_eval_criterion WHERE id = ? AND opportunity_id = ? AND deleted_at IS NULL AND retired_at IS NULL").get(criterionId, oppId) as { id: string } | undefined;
   if (!criterion) return notFound();
   const body = (await request.json().catch(() => null)) as { status?: string; note?: string; evidence_ref?: string } | null;
   if (!body?.status || !STATUSES.has(body.status)) {
@@ -28,5 +29,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ oppI
     evidence_ref: body.evidence_ref?.trim() || null,
     assessedBy: auth.auth.userId,
   });
+  // ADR-0171: a changed verdict on a seeded criterion invalidates only THIS target's capability
+  // judgement for that row (history kept, confirmation cleared), under the calling user.
+  db.transaction(() => { invalidateTargetJudgements(db, targetId, auth.auth.userId, state.assessed_at); })();
   return ok(state, 200);
 }

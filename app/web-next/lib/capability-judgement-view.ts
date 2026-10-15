@@ -41,3 +41,11 @@ export function neighborId(ids: string[], id: string, dir: 1 | -1): string | nul
   if (i < 0) return null;
   return ids[i + dir] ?? null;
 }
+
+/** Green Field: S3 changed. Brown Field S7 (ADR-0171): S3 and/or the target's evaluation state changed. */
+export const staleChipText = (r: { stale_reasons?: Array<"s3" | "eval"> }): string => {
+  const x = r.stale_reasons ?? [];
+  if (x.length > 0 && !x.includes("s3")) return "S7 평가 변경 — 재판정 필요";
+  return x.includes("s3") && x.includes("eval") ? "S3·S7 평가 변경 — 재판정 필요" : "S3 변경 — 재판정 필요";
+};
+

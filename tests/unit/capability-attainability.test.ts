@@ -288,12 +288,18 @@ describe("S8 project routes after the move (ADR-0171)", () => {
     expect((await port.post(`${url()}/confirm`, {})).error?.code).toBe("human_only");
   });
 
-  test("a Brown Field project keeps the legacy write path until the S7 surface ships (slice 2b)", async () => {
+  test("a Brown Field project: S8 PUT and confirm return 410 moved with editAt S7 (ADR-0171 slice 2) and write nothing", async () => {
     db.run("UPDATE md_project SET track = 'brownfield' WHERE id = ?", [projectId]);
     try {
       expect((await get()).edit_at).toBe("S7");
+      const snapshot = (db.query("SELECT capability_gap_json j FROM opportunity WHERE id = ?").get(oppId) as { j: string }).j;
       const res = await req(url(), { method: "PUT", headers: { cookie: leadCookie }, body: json({ rows: [{ id: "r2", grade: "medium" }] }) });
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(410);
+      expect(((await res.json()) as any).error).toMatchObject({ code: "moved", editAt: "S7" });
+      const c = await req(`${url()}/confirm`, { method: "POST", headers: { cookie: leadCookie }, body: json({}) });
+      expect(c.status).toBe(410);
+      expect(((await c.json()) as any).error).toMatchObject({ code: "moved", editAt: "S7" });
+      expect((db.query("SELECT capability_gap_json j FROM opportunity WHERE id = ?").get(oppId) as { j: string }).j).toBe(snapshot);
     } finally {
       db.run("UPDATE md_project SET track = 'greenfield' WHERE id = ?", [projectId]);
     }

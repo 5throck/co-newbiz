@@ -12,6 +12,7 @@ import {
 } from "../../lib/capability-gap.ts";
 import type { AttainabilityRowView } from "../../lib/capability-attainability.ts";
 import { CATEGORY_LABEL, capabilityDefaultStartYear, capabilityEndYearOf, suggestCategory } from "../../lib/capability-cost-lines.ts";
+import { staleChipText } from "../../lib/capability-judgement-view.ts";
 import { legacyHoldersCaption } from "./CapabilityHeldDialog.tsx";
 import type { AiWiring, JudgementDraft } from "./CapabilityJudgementTable.tsx";
 import { JUDGEMENT_FIELD_LABEL, mergeJudgementProposals, type JudgementField, type JudgementProposal } from "../../lib/capability-judgement-ai-merge.ts";
@@ -122,10 +123,10 @@ export function CapabilityJudgementDialog({ row, draft, note, s3Href, hasPrev, h
           {holders && <p className="m-0 mt-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="legacy-holders-caption">{holders}</p>}
           {row.stale && (
             <div className="mt-2 text-[length:var(--fs-caption)]" role="status" data-testid="stale-history">
-              <span className="status-chip status-amber"><span aria-hidden="true">!</span> S3 변경 — 재판정 필요</span>
+              <span className="status-chip status-amber"><span aria-hidden="true">!</span> {row.stale_reasons?.length ? staleChipText(row) : "S3 변경 — 재판정 필요"}</span>
               {row.s3_changes.length > 0 ? (
                 <ul className="m-0 pl-4 text-[color:var(--muted-fg)]">{row.s3_changes.map((c) => <li key={c.field}>{c.label}: {c.before} → {c.after}</li>)}</ul>
-              ) : <span className="block text-[color:var(--muted-fg)]">변경 내용: S3 항목이 바뀌었습니다(상세 비교 없음).</span>}
+              ) : <span className="block text-[color:var(--muted-fg)]">{(row.stale_reasons ?? []).length > 0 && !(row.stale_reasons ?? []).includes("s3") ? "변경 내용: 이 대상의 S7 기술 평가 판정·노트가 바뀌었습니다." : "변경 내용: S3 항목이 바뀌었습니다(상세 비교 없음)."}</span>}
               <span className="block text-[color:var(--muted-fg)]">
                 이전 판정 {row.grade_label}{row.rationale ? ` — ${row.rationale.length > PREVIEW_LEN ? `${row.rationale.slice(0, PREVIEW_LEN)}…` : row.rationale}` : ""} (아래 값에 그대로 채워 두었습니다)
               </span>

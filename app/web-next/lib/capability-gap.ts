@@ -121,7 +121,8 @@ export interface AttainabilityHistoryEntry {
   confirmedAt: string | null;
   basisHash: string;
   invalidatedAt: string;
-  reason: "s3_changed";
+  /** `eval_changed` (ADR-0171, Brown Field S7): the target's evaluation state for the seeded criterion changed. */
+  reason: "s3_changed" | "eval_changed";
   s3Snapshot: S3Snapshot | null;
 }
 
@@ -394,7 +395,7 @@ function normalizeHistoryEntry(raw: unknown): AttainabilityHistoryEntry | null {
     confirmedAt: confirmedBy && confirmedAt ? confirmedAt : null,
     basisHash: str(h.basisHash, 40),
     invalidatedAt,
-    reason: "s3_changed",
+    reason: h.reason === "eval_changed" ? "eval_changed" : "s3_changed",
     s3Snapshot: normalizeS3Snapshot(h.s3Snapshot) ?? null,
   };
 }

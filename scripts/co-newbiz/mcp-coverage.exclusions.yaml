@@ -184,6 +184,10 @@ exclusions:
     kind: route
     route: "POST /api/opportunities/{}/capability-attainability/confirm"
     reason: The S5 edit surface of the same judgement (ADR-0171); confirming is a human act (ADR-0168, boundary #2), agents only save drafts through the PUT.
+  - id: capability-judgement-confirm-s7
+    kind: route
+    route: "POST /api/brownfield/targets/{}/capability-judgements/confirm"
+    reason: The S7 per-target edit surface of the same judgement (ADR-0171 slice 2); confirming is a human act (ADR-0168, boundary #2), agents only save drafts through the PUT.
   - id: proposal-confirm
     kind: route
     route: "POST /api/proposals/{}/confirm"
