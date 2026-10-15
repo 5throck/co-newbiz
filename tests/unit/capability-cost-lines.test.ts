@@ -515,10 +515,10 @@ describe("milestone candidates", () => {
 describe("S5 UI structure", () => {
   const stage = readFileSync(join(WEB, "components/stages/GreenfieldStage.tsx"), "utf8");
   const block = readFileSync(join(WEB, "components/stages/CapabilityCostBlock.tsx"), "utf8");
-  test("the derived block sits below the unified item table (decider: summary, table, then capability costs) inside the investment tab and the payload carries only the person's choices", () => {
+  test("the derived block sits below the unified item table (decider: AI reco, table, capability costs, summary last) inside the investment tab and the payload carries only the person's choices", () => {
     const sec = stage.indexOf("투자비 항목 (S8 사업성 분석 입력)");
     expect(sec).toBeGreaterThan(0);
-    expect(stage.indexOf("data-testid=\"invest-summary\"")).toBeLessThan(sec);
+    expect(stage.indexOf("data-testid=\"invest-summary\"")).toBeGreaterThan(stage.indexOf("<CapabilityCostBlock"));
     expect(stage.indexOf("<CapabilityCostBlock", sec)).toBeGreaterThan(sec);
     expect(stage.indexOf("<CapabilityCostBlock")).toBeGreaterThan(stage.indexOf("unifiedRows.map"));
     expect(stage).toContain("selectionPayload(capLines, capSel)");

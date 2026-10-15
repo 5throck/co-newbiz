@@ -25,11 +25,11 @@ export function InvestmentSummaryCharts({ summary }: { summary: InvestmentSummar
   const axisBase = { axisLabel: { color: ct.muted }, nameTextStyle: { color: ct.muted } };
   const yearOption = {
     aria: { enabled: true, decal: { show: true } },
-    grid: { left: 64, right: 16, top: 40, bottom: 28 },
-    legend: { top: 0, textStyle: { color: ct.muted } },
+    grid: { left: 8, right: 24, top: 48, bottom: 28, containLabel: true },
+    legend: { top: 0, type: "scroll" as const, textStyle: { color: ct.muted } },
     tooltip: { trigger: "axis" as const, valueFormatter: (v: unknown) => `${fmt(Number(v))} ${UNIT}` },
-    xAxis: { type: "category" as const, data: d.years, ...axisBase },
-    yAxis: { type: "value" as const, name: UNIT, ...axisBase, splitLine: { lineStyle: { color: ct.split } } },
+    xAxis: { type: "category" as const, data: d.years, name: "연차", nameLocation: "middle" as const, nameGap: 24, ...axisBase },
+    yAxis: { type: "value" as const, name: `금액 (${UNIT})`, axisLabel: { color: ct.muted, formatter: (v: number) => fmt(v) }, nameTextStyle: { color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
     series: [
       ...cats.map((c) => ({ name: c.name, type: "bar" as const, stack: "invest", data: [...c.data], itemStyle: { color: c.color }, barMaxWidth: 40 })),
       { name: "누적 투자비", type: "line" as const, data: d.cumulative, symbol: "circle", symbolSize: 7, itemStyle: { color: ct.text }, lineStyle: { color: ct.text, width: 2 }, label: { show: true, color: ct.text, position: "top" as const, formatter: (p: { value?: unknown }) => fmt(Number(p.value)) } },
@@ -39,9 +39,9 @@ export function InvestmentSummaryCharts({ summary }: { summary: InvestmentSummar
   };
   const compOption = {
     aria: { enabled: true, decal: { show: true } },
-    grid: { left: 72, right: 150, top: 8, bottom: 28 },
+    grid: { left: 8, right: 120, top: 8, bottom: 28, containLabel: true },
     tooltip: { trigger: "item" as const, formatter: (p: { name?: string; dataIndex?: number }) => { const c = d.composition[p.dataIndex ?? 0]; return `${p.name}: ${fmt(c.totalKrwM)} ${UNIT} (${c.percent}%)`; } },
-    xAxis: { type: "value" as const, name: UNIT, ...axisBase, splitLine: { lineStyle: { color: ct.split } } },
+    xAxis: { type: "value" as const, name: UNIT, nameLocation: "middle" as const, nameGap: 24, ...axisBase, axisLabel: { color: ct.muted, formatter: (v: number) => fmt(v) }, splitLine: { lineStyle: { color: ct.split } } },
     yAxis: { type: "category" as const, data: d.composition.map((c) => c.label), inverse: true, ...axisBase },
     series: [{
       type: "bar" as const,
@@ -63,23 +63,23 @@ export function InvestmentSummaryCharts({ summary }: { summary: InvestmentSummar
       {d.excludedNeedsConfirm > 0 && <p className="text-[length:var(--fs-caption)] mb-1" data-testid="invest-chart-excluded">확인 필요 {d.excludedNeedsConfirm}건은 그래프에서 제외됨</p>}
       <details className="mb-1" data-testid="invest-chart-table">
         <summary className="text-[length:var(--fs-caption)] cursor-pointer">데이터 표 보기</summary>
-        <div className="overflow-x-auto">
-          <table className="sizing-table">
+        <div className="table-scroll">
+          <table className="data-table invest-summary-table">
             <caption className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] text-left">그래프 데이터 (단위: {UNIT})</caption>
             <thead>
-              <tr><th scope="col">연차</th>{cats.map((c) => <th scope="col" key={c.key}><span aria-hidden="true">{CAT_ICON[c.key]}</span> {c.name}</th>)}<th scope="col">누적 투자비</th><th scope="col">매출 (투자비 제외)</th><th scope="col">정부 R&D (투자비 제외)</th></tr>
+              <tr><th scope="col">연차</th>{cats.map((c) => <th scope="col" className="col-num" key={c.key}><span aria-hidden="true">{CAT_ICON[c.key]}</span> {c.name}</th>)}<th scope="col" className="col-num">누적 투자비</th><th scope="col" className="col-num">매출 (투자비 제외)</th><th scope="col" className="col-num">정부 R&D (투자비 제외)</th></tr>
             </thead>
             <tbody>
               {d.years.map((y, i) => (
                 <tr key={y}>
                   <th scope="row">{y}</th>
-                  {cats.map((c) => <td className="mono-num" key={c.key}>{fmt(c.data[i])}</td>)}
-                  <td className="mono-num">{fmt(d.cumulative[i])}</td>
-                  <td className="mono-num">{fmt(d.revenue[i])}</td>
-                  <td className="mono-num">{fmt(d.govRnd[i])}</td>
+                  {cats.map((c) => <td className="col-num mono-num" key={c.key}>{fmt(c.data[i])}</td>)}
+                  <td className="col-num mono-num">{fmt(d.cumulative[i])}</td>
+                  <td className="col-num mono-num">{fmt(d.revenue[i])}</td>
+                  <td className="col-num mono-num">{fmt(d.govRnd[i])}</td>
                 </tr>
               ))}
-              <tr><th scope="row">구성비</th>{d.composition.map((c) => <td className="mono-num" key={c.category}>{fmt(c.totalKrwM)} ({c.percent}%)</td>)}<td colSpan={3} /></tr>
+              <tr><th scope="row">구성비</th>{d.composition.map((c) => <td className="col-num mono-num" key={c.category}>{fmt(c.totalKrwM)} ({c.percent}%)</td>)}<td colSpan={3} /></tr>
             </tbody>
           </table>
         </div>

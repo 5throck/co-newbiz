@@ -36,7 +36,7 @@ import { emptyStaffingPlan, findStaffingDuplicateWarnings, fitPlanToHorizon, isS
 import { EntryStrategySection } from "./EntryStrategySection.tsx";
 import { parseEntryStrategy, serializeEntryStrategy, type EntryFormState, type EntryModes } from "../../lib/greenfield-entry-strategy.ts";
 import {
-  AMOUNT_UNIT_KRW_M, amountUnitLabel, applySelection, buildInvestmentSummary, DEFAULT_HORIZON_YEARS, deriveCapabilityCostLines, findDuplicateWarnings, formatKrwM, hasUnsavedReflection, confirmUnitOnAmountEdit, investmentTotals, isCapabilityEntry, isPlanMetaEntry, lineSaveStates, manualLineIssues, manualLineKrwM, MAX_HORIZON_YEAR_LIMIT, MIN_HORIZON_YEARS, normalizeLegacyLine, planMetaOf, reflectionBody, reflectionSummary, sanityLineOversize, sanityTotalOversize, selectionPayload, unifiedFooter, unifiedInvestmentRows, validateLineYears, capabilityEndYearOf,
+  AMOUNT_UNIT_KRW_M, amountUnitLabel, applySelection, buildInvestmentSummary, DEFAULT_HORIZON_YEARS, deriveCapabilityCostLines, findDuplicateWarnings, formatKrwM, hasUnsavedReflection, confirmUnitOnAmountEdit, investmentTotals, isCapabilityEntry, manualLineAmounts, isPlanMetaEntry, lineSaveStates, manualLineIssues, manualLineKrwM, MAX_HORIZON_YEAR_LIMIT, MIN_HORIZON_YEARS, normalizeLegacyLine, planMetaOf, reflectionBody, reflectionSummary, sanityLineOversize, sanityTotalOversize, selectionPayload, unifiedFooter, unifiedInvestmentRows, validateLineYears, capabilityEndYearOf,
   type AmountUnit, type CapabilityCostView, type CostCategory, type CostSelection, type DuplicateWarning, type ManualCostLine, type MilestoneCandidateView, type PlanMetaEntry,
 } from "../../lib/capability-cost-lines.ts";
 import type { AttainabilityRowView } from "../../lib/capability-attainability.ts";
@@ -595,110 +595,75 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   </button>
                 ))}
               </div>
-          {/* ── 투자비 요약 (ADR-0174 slice 1) — read-only, decision support ── */}
-          <div className="sizing-grade-card mb-3" data-testid="invest-summary">
-            <h4 className="text-[length:var(--fs-caption)] mb-2">투자비 요약</h4>
-            <div className="flex items-center gap-2 mb-2">
+          {/* ── LLM 투자비 항목 추천 — ADR-0118: 제안은 LLM, 저장은 사람 ── */}
+          <div className="sizing-grade-card mb-3" data-testid="invest-reco">
+            <h4 className="text-[length:var(--fs-caption)] mb-2 flex items-center justify-between gap-2">
+              <span>투자비 항목 추천 <span className="status-chip status-amber">제안 · AI</span></span>
+              {!reco && (
+                <button type="button" className="btn-ghost btn-sm" aria-expanded={recoOpen} aria-controls="invest-reco-body" data-testid="invest-reco-toggle" onClick={() => setRecoOpen((v) => !v)}>{recoOpen ? "접기" : "열기"}</button>
+              )}
+            </h4>
+            <div id="invest-reco-body" hidden={!reco && !recoOpen}>
+            <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+              진출전략·필요 역량 해소 방식을 근거로 검토할 만한 인건비/운영비/설비투자/수익 항목명을 제안합니다.
+              금액은 제안하지 않습니다 — 항목을 추가한 뒤 금액은 사람이 입력합니다 (경계 #2).
+            </p>
+            {recoError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
+            {canAct && !reco && !recoLoading && (
+              <button type="button" className="btn-ghost btn-sm" onClick={() => void generateReco()}>▶ 항목 추천 생성</button>
+            )}
+            {recoLoading && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">진출전략·S3 해소 방식을 근거로 항목을 제안하는 중...</p>}
+            {reco && (
+              <>
+                <p className="mb-1 text-[length:var(--fs-caption)]">
+                  <span className={`status-chip mr-1 ${reco.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
+                    {reco.source === "llm" ? `LLM 제안${reco.provider ? ` · ${reco.provider}` : ""}` : "결정론 폴백"}
+                  </span>
+                </p>
+                {reco.note && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{reco.note}</p>}
+                {reco.recommendation.investment_items ? (
+                  <ul className="sizing-note-list mb-2">
+                    {reco.recommendation.investment_items.map((item, i) => (
+                      <li key={i} className="flex items-center justify-between gap-2 mb-1">
+                        <span>
+                          <span className="font-semibold">{item.line}</span>
+                          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"> ({CATEGORY_LABEL[item.category]}) — {item.note}</span>
+                        </span>
+                        {canAct && <button type="button" className="btn-ghost btn-sm shrink-0" onClick={() => addRecoItem(item)}>추가</button>}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">제안된 항목이 없습니다.</p>
+                )}
+                {reco.recommendation.cautions.length > 0 && (
+                  <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mb-2">{reco.recommendation.cautions.join(" / ")}</p>
+                )}
+                {canAct && <button type="button" className="btn-ghost btn-sm" disabled={recoLoading} onClick={() => void generateReco()}>{recoLoading ? "재생성 중..." : "재생성"}</button>}
+              </>
+            )}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+            <h3 className="text-[length:var(--fs-body)] m-0">투자비 항목 (S8 사업성 분석 입력)</h3>
+            <div className="flex items-center gap-2" data-testid="invest-horizon">
               <label htmlFor="s5-horizon" className="text-[length:var(--fs-caption)]">검토 기간(년)</label>
               <input
                 id="s5-horizon"
-                aria-label="검토 기간(년)"
                 type="number"
                 min={MIN_HORIZON_YEARS}
                 max={MAX_HORIZON_YEAR_LIMIT}
                 value={horizon}
                 disabled={!canAct}
+                aria-describedby="s5-horizon-hint"
                 onChange={(e) => { const v = Number(e.target.value); if (Number.isInteger(v) && v >= MIN_HORIZON_YEARS && v <= MAX_HORIZON_YEAR_LIMIT) setHorizon(v); }}
                 onBlur={(e) => { const v = Math.floor(Number(e.target.value) || DEFAULT_HORIZON_YEARS); setHorizon(Math.min(MAX_HORIZON_YEAR_LIMIT, Math.max(MIN_HORIZON_YEARS, v))); }}
                 className="sizing-new-input sizing-new-input-sm"
                 style={{ width: "4.5rem" }}
               />
-              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">S8 사업계획 기간의 초기값이 됩니다</span>
+              <span id="s5-horizon-hint" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">연차 입력 범위·요약 집계 기간 · S8 사업계획 기간의 초기값</span>
             </div>
-            {/* Charts mount only while this tab is active (hidden panels give ECharts a 0-width container); every other panel stays mounted. */}
-            {investTabActive && <InvestmentSummaryCharts summary={summary} />}
-            <div className="summary-cards mb-2">
-              <div className="summary-card glass" data-testid="invest-summary-annual">
-                <span className="summary-value mono-num">{fmtM(summary.annualRecurringKrwM)}</span>
-                <span className="text-label">연간(반복) 투자비 (백만원/년)</span>
-              </div>
-              <div className="summary-card glass" data-testid="invest-summary-lumpsum">
-                <span className="summary-value mono-num">{fmtM(summary.lumpsumKrwM)}</span>
-                <span className="text-label">일시 투자비 (백만원)</span>
-              </div>
-              <div className="summary-card glass" data-testid="invest-summary-total">
-                <span className="summary-value mono-num">{fmtM(summary.totalKrwM)}</span>
-                <span className="text-label">총 투자비 (검토 기간 {summary.horizon}년, 백만원)</span>
-              </div>
-            </div>
-            <div className="overflow-x-auto mb-2">
-              <table className="sizing-table" data-testid="invest-summary-by-category" aria-label="분류별 투자비 (백만원)">
-                <thead>
-                  <tr><th scope="col">분류 (백만원)</th><th scope="col">연간</th><th scope="col">일시</th><th scope="col">기간총액</th></tr>
-                </thead>
-                <tbody>
-                  {summary.byCategory.map((r) => (
-                    <tr key={r.category}>
-                      <td>{CATEGORY_LABEL[r.category]}</td>
-                      <td className="mono-num">{fmtM(r.annualKrwM)}</td>
-                      <td className="mono-num">{fmtM(r.lumpsumKrwM)}</td>
-                      <td className="mono-num">{fmtM(r.totalKrwM)}</td>
-                    </tr>
-                  ))}
-                  <tr>
-                    <td>합계</td>
-                    <td className="mono-num">{fmtM(summary.annualRecurringKrwM)}</td>
-                    <td className="mono-num">{fmtM(summary.lumpsumKrwM)}</td>
-                    <td className="mono-num">{fmtM(summary.totalKrwM)}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div className="overflow-x-auto mb-2">
-              <table className="sizing-table" data-testid="invest-summary-schedule">
-                <caption className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] text-left">연도별 투자 계획 (백만원)</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">구분</th>
-                    {summary.schedule.map((s) => <th scope="col" key={s.year}>Y{s.year}</th>)}
-                    <th scope="col">합계</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(["labor", "opex", "capex"] as const).map((c) => (
-                    <tr key={c}>
-                      <td>{CATEGORY_LABEL[c]}</td>
-                      {summary.schedule.map((s) => <td className="mono-num" key={s.year}>{fmtM(s[c])}</td>)}
-                      <td className="mono-num">{fmtM(summary.schedule.reduce((a, s) => a + s[c], 0))}</td>
-                    </tr>
-                  ))}
-                  <tr>
-                    <td>투자비 합계</td>
-                    {summary.schedule.map((s) => <td className="mono-num" key={s.year}>{fmtM(s.investmentTotal)}</td>)}
-                    <td className="mono-num">{fmtM(summary.totalKrwM)}</td>
-                  </tr>
-                  <tr>
-                    <td>매출</td>
-                    {summary.schedule.map((s) => <td className="mono-num" key={s.year}>{fmtM(s.revenue)}</td>)}
-                    <td className="mono-num">{fmtM(summary.schedule.reduce((a, s) => a + s.revenue, 0))}</td>
-                  </tr>
-                  <tr>
-                    <td>정부 R&D</td>
-                    {summary.schedule.map((s) => <td className="mono-num" key={s.year}>{fmtM(s.govRnd)}</td>)}
-                    <td className="mono-num">{fmtM(summary.schedule.reduce((a, s) => a + s.govRnd, 0))}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">매출·정부 R&D 행은 투자비 제외 — 유입 참고용입니다.</p>
-            <ul className="list-none p-0 m-0" data-testid="invest-summary-flags">
-              {summary.excludedNonKrw > 0 && <li className="text-[length:var(--fs-caption)]">외화 항목 {summary.excludedNonKrw}건은 합계에서 제외 (환율 미반영)</li>}
-              {summary.excludedNeedsConfirm > 0 && <li className="text-[length:var(--fs-caption)]">확인 필요 항목 {summary.excludedNeedsConfirm}건은 합계에서 제외</li>}
-              {summary.endYearExceedsHorizon > 0 && <li className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))]">종료 연차가 검토 기간을 넘는 항목 {summary.endYearExceedsHorizon}건 — 검토 기간 안에서 집계됨</li>}
-              {summary.capabilitySpendFromMilestone > 0 && <li className="text-[length:var(--fs-caption)]">판정 기간에서 산정한 집행 연차 {summary.capabilitySpendFromMilestone}건</li>}
-            </ul>
           </div>
-              <h3 className="text-[length:var(--fs-body)] mb-1">투자비 항목 (S8 사업성 분석 입력)</h3>
           {canAct && (
             <div className="flex flex-wrap items-center gap-2 mb-2" data-testid="invest-item-save-actions">
               {linesSaveButton("투자비 항목 저장")}
@@ -726,7 +691,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 <th scope="col">항목명</th>
                 <th scope="col">출처</th>
                 <th scope="col">분류</th>
-                <th scope="col">금액(백만원)</th>
+                <th scope="col">금액 (연 환산·기간 총액, 백만원)</th>
                 <th scope="col">단위</th>
                 <th scope="col">통화</th>
                 <th scope="col">주기</th>
@@ -822,6 +787,15 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 </td>
                 <td>
                   <input aria-label="금액" type="number" placeholder="금액" value={l.amount || ""} onChange={(e) => setBc(i, { amount: Number(e.target.value) })} className="sizing-new-input sizing-new-input-sm" style={{ width: "100%", textAlign: "right" }} />
+                  {(() => {
+                    const amt = issues.length === 0 && (l.currency ?? "KRW") === "KRW" ? manualLineAmounts(l, horizon) : null;
+                    if (!amt) return null;
+                    return (
+                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mono-num text-right whitespace-nowrap" data-testid={`invest-row-annualised-${i}`}>
+                        {amt.annualKrwM !== null && <>연 {fmtM(amt.annualKrwM)} · </>}기간 {fmtM(amt.totalKrwM)}
+                      </span>
+                    );
+                  })()}
                 </td>
                 <td>
                   <select aria-label="금액 단위" value={l.amountUnit ?? ""} onChange={(e) => { const u = e.target.value as AmountUnit; setBc(i, { amountUnit: u, amountUnitConfirmed: true }); }} className="sizing-new-input sizing-new-input-sm">
@@ -915,55 +889,96 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
               saved: savedReflected, promoted: !!(selected.opportunity.promoted_at || selected.opportunity.project_id),
             }}
           />
-          {/* ── LLM 투자비 항목 추천 — ADR-0118: 제안은 LLM, 저장은 사람 ── */}
-          <div className="sizing-grade-card mb-3" data-testid="invest-reco">
-            <h4 className="text-[length:var(--fs-caption)] mb-2 flex items-center justify-between gap-2">
-              <span>투자비 항목 추천 <span className="status-chip status-amber">제안 · AI</span></span>
-              {!reco && (
-                <button type="button" className="btn-ghost btn-sm" aria-expanded={recoOpen} aria-controls="invest-reco-body" data-testid="invest-reco-toggle" onClick={() => setRecoOpen((v) => !v)}>{recoOpen ? "접기" : "열기"}</button>
-              )}
-            </h4>
-            <div id="invest-reco-body" hidden={!reco && !recoOpen}>
-            <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              진출전략·필요 역량 해소 방식을 근거로 검토할 만한 인건비/운영비/설비투자/수익 항목명을 제안합니다.
-              금액은 제안하지 않습니다 — 항목을 추가한 뒤 금액은 사람이 입력합니다 (경계 #2).
+          {/* ── 투자비 요약 (ADR-0174 slice 1) — read-only, decision support; last block of the tab ── */}
+          <section className="sizing-grade-card mb-3" data-testid="invest-summary" aria-labelledby="invest-summary-title">
+            <h4 id="invest-summary-title" className="text-[length:var(--fs-body)] mb-1">투자비 요약</h4>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-summary-basis">
+              검토 기간 {summary.horizon}년 · 단위 백만원 · 월·분기 주기 금액은 연 환산(월 x12, 분기 x4)해 활성 연차마다 집계합니다.
             </p>
-            {recoError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
-            {canAct && !reco && !recoLoading && (
-              <button type="button" className="btn-ghost btn-sm" onClick={() => void generateReco()}>▶ 항목 추천 생성</button>
-            )}
-            {recoLoading && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">진출전략·S3 해소 방식을 근거로 항목을 제안하는 중...</p>}
-            {reco && (
-              <>
-                <p className="mb-1 text-[length:var(--fs-caption)]">
-                  <span className={`status-chip mr-1 ${reco.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
-                    {reco.source === "llm" ? `LLM 제안${reco.provider ? ` · ${reco.provider}` : ""}` : "결정론 폴백"}
-                  </span>
-                </p>
-                {reco.note && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{reco.note}</p>}
-                {reco.recommendation.investment_items ? (
-                  <ul className="sizing-note-list mb-2">
-                    {reco.recommendation.investment_items.map((item, i) => (
-                      <li key={i} className="flex items-center justify-between gap-2 mb-1">
-                        <span>
-                          <span className="font-semibold">{item.line}</span>
-                          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"> ({CATEGORY_LABEL[item.category]}) — {item.note}</span>
-                        </span>
-                        {canAct && <button type="button" className="btn-ghost btn-sm shrink-0" onClick={() => addRecoItem(item)}>추가</button>}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">제안된 항목이 없습니다.</p>
-                )}
-                {reco.recommendation.cautions.length > 0 && (
-                  <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mb-2">{reco.recommendation.cautions.join(" / ")}</p>
-                )}
-                {canAct && <button type="button" className="btn-ghost btn-sm" disabled={recoLoading} onClick={() => void generateReco()}>{recoLoading ? "재생성 중..." : "재생성"}</button>}
-              </>
-            )}
+            <div className="summary-cards mb-2">
+              <div className="summary-card glass" data-testid="invest-summary-annual">
+                <span className="summary-value mono-num">{fmtM(summary.annualRecurringKrwM)}</span>
+                <span className="text-label">연간(반복) 투자비 (백만원/년)</span>
+              </div>
+              <div className="summary-card glass" data-testid="invest-summary-lumpsum">
+                <span className="summary-value mono-num">{fmtM(summary.lumpsumKrwM)}</span>
+                <span className="text-label">일시 투자비 (백만원)</span>
+              </div>
+              <div className="summary-card glass" data-testid="invest-summary-total">
+                <span className="summary-value mono-num">{fmtM(summary.totalKrwM)}</span>
+                <span className="text-label">총 투자비 (검토 기간 {summary.horizon}년, 백만원)</span>
+              </div>
             </div>
-          </div>
+            {/* Charts mount only while this tab is active (hidden panels give ECharts a 0-width container); every other panel stays mounted. */}
+            {investTabActive && <InvestmentSummaryCharts summary={summary} />}
+            <div className="table-scroll mb-2">
+              <table className="data-table invest-summary-table invest-sticky-first" data-testid="invest-summary-schedule">
+                <caption className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] text-left">연도별 투자 계획 (단위: 백만원, 월·분기 금액은 연 환산)</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">구분</th>
+                    {summary.schedule.map((s) => <th scope="col" className="col-num" key={s.year}>Y{s.year}</th>)}
+                    <th scope="col" className="col-num">합계</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(["labor", "opex", "capex"] as const).map((c) => (
+                    <tr key={c}>
+                      <th scope="row">{CATEGORY_LABEL[c]}</th>
+                      {summary.schedule.map((s) => <td className="col-num mono-num" key={s.year}>{fmtM(s[c])}</td>)}
+                      <td className="col-num mono-num">{fmtM(summary.schedule.reduce((a, s) => a + s[c], 0))}</td>
+                    </tr>
+                  ))}
+                  <tr className="invest-total-row">
+                    <th scope="row">투자비 합계</th>
+                    {summary.schedule.map((s) => <td className="col-num mono-num" key={s.year}>{fmtM(s.investmentTotal)}</td>)}
+                    <td className="col-num mono-num">{fmtM(summary.totalKrwM)}</td>
+                  </tr>
+                  <tr className="invest-inflow-row">
+                    <th scope="row">매출 (투자비 제외)</th>
+                    {summary.schedule.map((s) => <td className="col-num mono-num" key={s.year}>{fmtM(s.revenue)}</td>)}
+                    <td className="col-num mono-num">{fmtM(summary.schedule.reduce((a, s) => a + s.revenue, 0))}</td>
+                  </tr>
+                  <tr className="invest-inflow-row">
+                    <th scope="row">정부 R&D (투자비 제외)</th>
+                    {summary.schedule.map((s) => <td className="col-num mono-num" key={s.year}>{fmtM(s.govRnd)}</td>)}
+                    <td className="col-num mono-num">{fmtM(summary.schedule.reduce((a, s) => a + s.govRnd, 0))}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="table-scroll mb-2">
+              <table className="data-table invest-summary-table" data-testid="invest-summary-by-category">
+                <caption className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] text-left">분류별 투자비 (단위: 백만원)</caption>
+                <thead>
+                  <tr><th scope="col">분류</th><th scope="col" className="col-num">연간 (백만원/년)</th><th scope="col" className="col-num">일시</th><th scope="col" className="col-num">기간 총액</th></tr>
+                </thead>
+                <tbody>
+                  {summary.byCategory.map((r) => (
+                    <tr key={r.category}>
+                      <th scope="row">{CATEGORY_LABEL[r.category]}</th>
+                      <td className="col-num mono-num">{fmtM(r.annualKrwM)}</td>
+                      <td className="col-num mono-num">{fmtM(r.lumpsumKrwM)}</td>
+                      <td className="col-num mono-num">{fmtM(r.totalKrwM)}</td>
+                    </tr>
+                  ))}
+                  <tr className="invest-total-row">
+                    <th scope="row">합계</th>
+                    <td className="col-num mono-num">{fmtM(summary.annualRecurringKrwM)}</td>
+                    <td className="col-num mono-num">{fmtM(summary.lumpsumKrwM)}</td>
+                    <td className="col-num mono-num">{fmtM(summary.totalKrwM)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">매출·정부 R&D 행은 투자비 제외 — 유입 참고용입니다.</p>
+            <ul className="list-none p-0 m-0" data-testid="invest-summary-flags">
+              {summary.excludedNonKrw > 0 && <li className="text-[length:var(--fs-caption)]">외화 항목 {summary.excludedNonKrw}건은 합계에서 제외 (환율 미반영)</li>}
+              {summary.excludedNeedsConfirm > 0 && <li className="text-[length:var(--fs-caption)]">확인 필요 항목 {summary.excludedNeedsConfirm}건은 합계에서 제외</li>}
+              {summary.endYearExceedsHorizon > 0 && <li className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))]">종료 연차가 검토 기간을 넘는 항목 {summary.endYearExceedsHorizon}건 — 검토 기간 안에서 집계됨</li>}
+              {summary.capabilitySpendFromMilestone > 0 && <li className="text-[length:var(--fs-caption)]">판정 기간에서 산정한 집행 연차 {summary.capabilitySpendFromMilestone}건</li>}
+            </ul>
+          </section>
             </>
           ))}
 
