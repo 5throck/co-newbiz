@@ -6,7 +6,8 @@ import { authenticate, requireBusinessActor } from "../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../lib/envelope.ts";
 import { readRegister } from "../../../../lib/capability-attainability.ts";
 import { normalizeStoredEntryStrategy } from "../../../../lib/greenfield-entry-strategy.ts";
-import { deriveCapabilityCostLines, milestoneCandidateView, normalizeBusinessCaseLines, sourceRowOf } from "../../../../lib/capability-cost-lines.ts";
+import { deriveCapabilityCostLines, milestoneCandidateView, normalizeBusinessCaseLines, planMetaOf, sourceRowOf, DEFAULT_HORIZON_YEARS } from "../../../../lib/capability-cost-lines.ts";
+import { maskStaffingPlanInLines, staffingPlanOf, staffingPlanView } from "../../../../lib/staffing-plan.ts";
 
 /** One stored investment line (S5 "투자비 검토 요건"). Capability entries add the ADR-0173 markers. */
 interface PostedLine {
@@ -48,11 +49,18 @@ export async function GET(request: Request, { params }: { params: Promise<{ oppI
   // ADR-0173 slice 1: derived on read from the live judgements; unreflected lines are never stored.
   const reg = readRegister(db, oppId);
   const costView = deriveCapabilityCostLines((reg?.rows ?? []).map(sourceRowOf), lines);
+  // ADR-0175 slice 1: the derived labor view is computed from the UNMASKED plan; a read-only
+  // (viewer) caller gets the plan with salary/on-cost values removed (the strip still shows).
+  const plan = staffingPlanOf(lines);
+  const horizon = planMetaOf(lines)?.horizonYears ?? DEFAULT_HORIZON_YEARS;
+  const masked = auth.auth.role === "viewer";
   return ok({
     opportunity: opp,
     assessment: assessment
-      ? { ...assessment, capability_gaps: parse(assessment.capability_gaps_json), business_case_lines: lines }
+      ? { ...assessment, ...(masked && lines ? { business_case_lines_json: JSON.stringify(maskStaffingPlanInLines(lines)) } : {}), capability_gaps: parse(assessment.capability_gaps_json), business_case_lines: masked ? maskStaffingPlanInLines(lines) : lines }
       : null,
+    staffing_plan_view: plan ? staffingPlanView(plan, horizon) : null,
+    staffing_plan_masked: masked,
     capability_cost_lines: costView,
     milestone_candidates: (reg?.rows ?? []).flatMap((r) => { const m = milestoneCandidateView(r); return m ? [m] : []; }),
   }, 200);

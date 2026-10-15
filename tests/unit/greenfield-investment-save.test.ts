@@ -178,7 +178,7 @@ describe("save button wiring: lines-only payload, dirty tracking, success note",
   test("dirty tracking: manual snapshot comparison plus reflectDirty feeds investDirty", () => {
     const s = stage();
     expect(s).toContain("const manualDirty = useMemo(() => JSON.stringify(bcLines) !== JSON.stringify(savedManualLines)");
-    expect(s).toContain("const investDirty = manualDirty || reflectDirty;");
+    expect(s).toContain("const investDirty = manualDirty || reflectDirty || staffDirty;"); // ADR-0175 slice 1 adds the staffing plan
     expect(s).toContain("const manualRowDirty = useCallback");
     expect(s).toContain("setSavedManualLines(manual);");
   });

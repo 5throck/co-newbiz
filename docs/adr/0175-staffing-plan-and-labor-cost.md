@@ -5,18 +5,19 @@ lang_reason: proper-noun
 
 # ADR-0175 - Staffing plan (`인력 운영 계획`) at S5 and derived labor cost
 
-- Status: Proposed
+- Status: Accepted (2026-10-15)
 - Date: 2026-10-15
 - Decider: Human decider (chat 2026-10-15 feedback: labor cost over the investment/plan period must be reflected in the total investment, and a proper labor-cost estimate needs a staffing plan — headcount by grade/job family, average salary; today S5 has only free manual lines such as `팀 운영비 90000 월`). Drafted by platform-lead.
 - Design-of-record: [docs/designs/2026-10-15-staffing-plan-and-labor-cost-design.md](../designs/2026-10-15-staffing-plan-and-labor-cost-design.md)
 - Related: ADR-0174 (Accepted 2026-10-15: total investment, horizon, per-line timing — this is a companion designed to build on it), ADR-0173 (derived lines, double-count warning pattern), ADR-0039 (aggregate-first compensation principle), ADR-0027 (compensation upward-bias, Brown Field), ADR-0101 (S11/S12)
+- Accepted by: the human decider in chat 2026-10-15: "ADR-0175 / ADR-0176 승인" (see Acceptance record).
 - Slices: 4 (1 staffing model + S5 grid + derived labor lines, 2 S8 hand-off with ADR-0174, 3 S10/S9/S12 reuse, 4 AI proposal). None implemented by this ADR.
 
 ## Context (verified in code)
 
 S5 investment labor lines are free manual entries with no headcount, grade or salary basis. The S10 execution baseline already requires an aggregate-only hiring plan (`HiringRow { role_family, quarter, headcount }`, extra keys rejected with `개인 단위 행 금지`), the S9 hr tab `인력/조직 계획` judges `hdd-01` (핵심 인력 지도), and S12 tracks `headcount_vs_plan` — but nothing upstream produces that plan. No salary or wage reference dataset exists in the repository; every salary figure must be analyst-sourced. `greenfield_assessment` has no free column for a new plan.
 
-## Decision (proposed)
+## Decision
 
 1. **Staffing plan model.** S5 gains an `인력 운영 계획`: rows by 직무군 × 직급 with headcount per year (`headcountByYear`), 평균 연봉 (백만원, aggregate average — never an individual figure), 연 인상률, 가산율 (복리후생·4대보험·퇴직급여 — editable assumption with helper text for HR/counsel confirmation; the system asserts no statutory rate), optional 채용 시작 분기, recruiting/onboarding one-off cost, optional attrition-backfill rate (default 0), start/end year inside the ADR-0174 horizon. Derived outputs: annual labor cost Y1..YN, total labor cost over the horizon, headcount by year and 연평균 인원. Rows without salary or on-cost are excluded from cost with a flag, never silently costed at zero.
 2. **Derived labor lines.** Read-only lines with `source: "staffing"`, category 인건비, in the unified S5 investment list; the `투자비 요약` (ADR-0174) reads the per-year staffing vector for labor so headcount ramp and salary growth are not flattened. Manual-labor-line overlap raises a dismissible duplicate warning (ADR-0173 pattern).
@@ -31,6 +32,13 @@ S5 investment labor lines are free manual entries with no headcount, grade or sa
 - The 총 투자비 labor figure becomes traceable to headcount, grade and salary assumptions instead of a free-text guess, and the S10 hiring baseline can be imported rather than re-derived.
 - No migration; legacy assessments without a plan entry behave as today.
 - Decision support only: no gate block, no grade cap; the sensitive content is aggregate assumptions, gated as above.
+
+## Acceptance record
+
+- Approver: the human decider (user, account techcross), chat 2026-10-15: "ADR-0175 / ADR-0176 승인". Recorded in DEC-20261015-03.
+- Basis: chat approval of the decision as written, including the design's recommended resolutions of OD-1..OD-7 (by-year headcount at S5 with quarterly at S10 import; no on-cost default until HR/counsel confirm; `staffing_plan` meta entry in `business_case_lines_json`; promotion provenance copied into S8 model meta; salary masking by `canWriteBusiness` now; attrition stored with default 0; warning-only dismissible duplicate guard). Acceptance is by chat instruction; the decider did not review a per-item checklist, and this record does not claim the approver read specific items.
+- Implementation status: slice 1 in progress; slices 2-4 not implemented.
+- Not verified by the AI: nothing of this ADR is browser-verified.
 
 ## Honest limits
 
