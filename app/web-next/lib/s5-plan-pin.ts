@@ -114,6 +114,14 @@ export interface AggregatedPlan {
   capexCapabilityByYear: number[];
   laborOpexCapabilityByYear: number[];
   skippedLines: number;
+  /**
+   * ADR-0178 slice 1: 시작 전 (start_year 0) lines. They are EXCLUDED from the Y1..YN vectors above
+   * (never moved into year 1, never dropped silently): their sum and count are reported here and
+   * surfaced in the run note until the `s5_pnl` basis (slice 2) consumes them as year 0.
+   * Present only when at least one such line exists.
+   */
+  preLaunchKrwM?: number;
+  preLaunchLines?: number;
 }
 
 /**
@@ -131,7 +139,14 @@ export function aggregatePlanLines(horizonRaw: number, lines: ReadonlyArray<Plan
   const capexCapabilityByYear = new Array<number>(horizon).fill(0);
   const laborOpexCapabilityByYear = new Array<number>(horizon).fill(0);
   let skippedLines = 0;
+  let preLaunchKrwM = 0;
+  let preLaunchLines = 0;
   for (const l of lines) {
+    if (l.unit === "KRW_M" && l.start_year === 0) {
+      preLaunchKrwM += l.annual_amount_krw_m;
+      preLaunchLines += 1;
+      continue;
+    }
     // R (section 5): a NULL/non-KRW_M unit is never assumed convertible - the line
     // is skipped and counted, matching S10's `case_unit_not_comparable` stance.
     if (l.unit !== "KRW_M" || l.start_year > horizon) {
@@ -151,7 +166,7 @@ export function aggregatePlanLines(horizonRaw: number, lines: ReadonlyArray<Plan
       if (!isCapex && !isGovRnd) opexCovered[y - 1] = true;
     }
   }
-  return { horizonYears: horizon, capexByYear, laborOpexByYear, govRndByYear, opexCovered, capexCapabilityByYear, laborOpexCapabilityByYear, skippedLines };
+  return { horizonYears: horizon, capexByYear, laborOpexByYear, govRndByYear, opexCovered, capexCapabilityByYear, laborOpexCapabilityByYear, skippedLines, ...(preLaunchLines > 0 ? { preLaunchKrwM, preLaunchLines } : {}) };
 }
 
 /**

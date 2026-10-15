@@ -1011,6 +1011,11 @@ export interface S5InvestmentPlan {
    *  scale each group by its own factor. Not part of `lineHash`. Absent in hand-built fixtures. */
   capexCapabilityByYear?: number[];
   laborOpexCapabilityByYear?: number[];
+  /** ADR-0178 slice 1 - 시작 전 (start_year 0) lines of the plan: EXCLUDED from the per-year vectors above
+   *  (not in year 1, not dropped silently), counted here and flagged in the run note until the s5_pnl
+   *  basis (slice 2) consumes them as year 0. Present only when such a line exists. */
+  preLaunchKrwM?: number;
+  preLaunchLines?: number;
   /** FNV-1a over the serialized vectors — run provenance (design §6.2) so a
    *  later plan edit is detectable against a recorded run. */
   lineHash: string;
@@ -1032,8 +1037,8 @@ export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (..
     if (pinLines.length === 0) return null; // nothing importable in the pinned version: ratio path, like the copy
     const agg = aggregatePlanLines(pinHorizon, pinLines);
     const modelId = `pin:${active.pin.id}`;
-    const lineHash = scenarioSeed(modelId, JSON.stringify({ c: agg.capexByYear, o: agg.laborOpexByYear, g: agg.govRndByYear })).toString(16);
-    return { modelId, horizonYears: agg.horizonYears, capexByYear: agg.capexByYear, laborOpexByYear: agg.laborOpexByYear, govRndByYear: agg.govRndByYear, opexCovered: agg.opexCovered, skippedLines: agg.skippedLines, lineHash, capexCapabilityByYear: agg.capexCapabilityByYear, laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear, pinId: active.pin.id, planHash: active.pin.plan_hash };
+    const lineHash = scenarioSeed(modelId, JSON.stringify({ c: agg.capexByYear, o: agg.laborOpexByYear, g: agg.govRndByYear, ...(agg.preLaunchLines ? { p: agg.preLaunchKrwM } : {}) })).toString(16);
+    return { modelId, horizonYears: agg.horizonYears, capexByYear: agg.capexByYear, laborOpexByYear: agg.laborOpexByYear, govRndByYear: agg.govRndByYear, opexCovered: agg.opexCovered, skippedLines: agg.skippedLines, lineHash, capexCapabilityByYear: agg.capexCapabilityByYear, laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear, ...(agg.preLaunchLines ? { preLaunchKrwM: agg.preLaunchKrwM, preLaunchLines: agg.preLaunchLines } : {}), pinId: active.pin.id, planHash: active.pin.plan_hash };
   }
   const model = db
     .query(
@@ -1047,8 +1052,8 @@ export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (..
     .query("SELECT category, annual_amount_krw_m, start_year, end_year, growth_rate, unit, note FROM business_case_line WHERE model_id = ?")
     .all(model.id) as Array<{ category: string; annual_amount_krw_m: number; start_year: number; end_year: number | null; growth_rate: number; unit: string | null; note?: string | null }>;
   const agg = aggregatePlanLines(model.horizon_years, lines);
-  const lineHash = scenarioSeed(model.id, JSON.stringify({ c: agg.capexByYear, o: agg.laborOpexByYear, g: agg.govRndByYear })).toString(16);
-  return { modelId: model.id, horizonYears: agg.horizonYears, capexByYear: agg.capexByYear, laborOpexByYear: agg.laborOpexByYear, govRndByYear: agg.govRndByYear, opexCovered: agg.opexCovered, skippedLines: agg.skippedLines, lineHash, capexCapabilityByYear: agg.capexCapabilityByYear, laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear };
+  const lineHash = scenarioSeed(model.id, JSON.stringify({ c: agg.capexByYear, o: agg.laborOpexByYear, g: agg.govRndByYear, ...(agg.preLaunchLines ? { p: agg.preLaunchKrwM } : {}) })).toString(16);
+  return { modelId: model.id, horizonYears: agg.horizonYears, capexByYear: agg.capexByYear, laborOpexByYear: agg.laborOpexByYear, govRndByYear: agg.govRndByYear, opexCovered: agg.opexCovered, skippedLines: agg.skippedLines, lineHash, capexCapabilityByYear: agg.capexCapabilityByYear, laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear, ...(agg.preLaunchLines ? { preLaunchKrwM: agg.preLaunchKrwM, preLaunchLines: agg.preLaunchLines } : {}) };
 }
 
 /** The plan in force for a case — only when a human chose an s5_plan basis
@@ -1578,7 +1583,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       const s5OpexVariance = s5Provenance && !s5Provenance.full ? s5OpexCrossCheckVariance(ctx.inputs) : null;
       const basis = ctx.inputs.bcParams?.investmentBasis ?? "ratio";
       const basisFragment = s5Provenance
-        ? `; basis=${basis}; s5_model=${s5Provenance.plan.modelId}; s5_line_hash=${s5Provenance.plan.lineHash}; s5_skipped=${s5Provenance.plan.skippedLines}${s5Provenance.full ? "; s5_full=1" : ""}; s5_sim=${ctx.inputs.s5Sim?.inputHash ?? "none"}${s5OpexVariance != null ? `; s5_opex_variance=${s5OpexVariance.toFixed(2)}` : ""}${s5Provenance.plan.pinId ? `; s5_pin=${s5Provenance.plan.pinId}; plan_hash=${s5Provenance.plan.planHash}` : ""}`
+        ? `; basis=${basis}; s5_model=${s5Provenance.plan.modelId}; s5_line_hash=${s5Provenance.plan.lineHash}; s5_skipped=${s5Provenance.plan.skippedLines}${s5Provenance.plan.preLaunchLines ? `; prelaunch_krw_m=${(s5Provenance.plan.preLaunchKrwM ?? 0).toFixed(2)}; prelaunch_lines=${s5Provenance.plan.preLaunchLines}; prelaunch_flag=year-0 은 s5_pnl 기준에서만 반영됨 (현재 기준에서는 연도별 투자에 넣지 않음)` : ""}${s5Provenance.full ? "; s5_full=1" : ""}; s5_sim=${ctx.inputs.s5Sim?.inputHash ?? "none"}${s5OpexVariance != null ? `; s5_opex_variance=${s5OpexVariance.toFixed(2)}` : ""}${s5Provenance.plan.pinId ? `; s5_pin=${s5Provenance.plan.pinId}; plan_hash=${s5Provenance.plan.planHash}` : ""}`
         : basis === "ratio"
           ? "; basis=ratio"
           : "; basis=ratio; s5_plan_fallback=1 (greenfield_cost 모델 없음 — 비율 경로로 대체)";

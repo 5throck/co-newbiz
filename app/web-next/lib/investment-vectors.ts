@@ -4,7 +4,7 @@
 // helpers are reused; nothing is recomputed differently), so mode === the stored totals.
 // Bands are DETERMINISTIC extremes of human-confirmed assumption ranges — no sampling, no
 // draws, no probabilities (those are slice 2). Decision support only; never a gate or a cap.
-import { manualLineKrwM, manualLineNeedsConfirm, manualLineYearVector, type CapabilityCostLine, type SimOverrides } from "./capability-cost-lines.ts";
+import { manualLineKrwM, manualLineNeedsConfirm, manualLineYearVector, preLaunchAmountOf, type CapabilityCostLine, type SimOverrides } from "./capability-cost-lines.ts";
 import { rowAnnualCostKrwM, staffingSummaryVector, type StaffingPlanEntry, type StaffingRow } from "./staffing-plan.ts";
 
 /** Loose manual-line shape (same subset the S5 summary accepts). */
@@ -76,6 +76,12 @@ export interface InvestmentBandVector {
   /** Staffing-derived labor (annual + recruiting one-offs) per year and its horizon total. */
   staffingByYear: number[];
   staffingKrwM: number;
+  /**
+   * ADR-0178 slice 1: 시작 전 (year-0) investment, 백만원. Present ONLY when a person marked a capex
+   * lump sum `startYear: 0`. It is NOT in totalByYear (Y1..H) but IS in manualKrwM and grandKrwM, so
+   * grandKrwM = sum(totalByYear) + preLaunchKrwM. Absent for every legacy plan (bit-identical).
+   */
+  preLaunchKrwM?: number;
 }
 
 export interface InvestmentVectorsResult {
@@ -101,18 +107,19 @@ export interface InvestmentVectorsInput {
 const sum = (v: number[]): number => round2(v.reduce((a, n) => a + n, 0));
 
 /** Band vector from its three per-year source vectors (each already rounded per year). */
-function bandOf(capability: number[], manual: number[], staffing: number[]): InvestmentBandVector {
+function bandOf(capability: number[], manual: number[], staffing: number[], pre = 0): InvestmentBandVector {
   const H = capability.length;
   const totalByYear = Array.from({ length: H }, (_, i) => round2(capability[i] + manual[i] + staffing[i]));
   return {
     totalByYear,
-    grandKrwM: sum(totalByYear),
+    grandKrwM: pre > 0 ? round2(sum(totalByYear) + pre) : sum(totalByYear),
     capabilityByYear: capability,
     capabilityKrwM: sum(capability),
     manualByYear: manual,
-    manualKrwM: sum(manual),
+    manualKrwM: pre > 0 ? round2(sum(manual) + pre) : sum(manual),
     staffingByYear: staffing,
     staffingKrwM: sum(staffing),
+    ...(pre > 0 ? { preLaunchKrwM: round2(pre) } : {}),
   };
 }
 
@@ -237,11 +244,14 @@ export function buildInvestmentVectors(input: InvestmentVectorsInput): Investmen
   const staffB = input.staffing
     ? staffingBand(input.staffing, H, eff(ov.salaryRange, SALARY_RANGE), eff(ov.salaryIncreaseRangePp, SALARY_INCREASE_RANGE_PP), eff(ov.onCostRangePp, ON_COST_RANGE_PP), eff(ov.rampShiftHalfYears, RAMP_SHIFT_HALF_YEARS))
     : { low: modeStaffing, high: modeStaffing };
+  // ADR-0178 slice 1: pre-launch capex lump sums carry the manual-line range like any manual line.
+  const pre = round2(preLaunchAmountOf(input.manual));
+  const manR = eff(ov.manualLineRange, MANUAL_LINE_RANGE);
   return {
     horizon: H,
-    low: bandOf(capB.low, manB.low, staffB.low),
-    mode: bandOf(modeCapability, modeManual, modeStaffing),
-    high: bandOf(capB.high, manB.high, staffB.high),
+    low: bandOf(capB.low, manB.low, staffB.low, round2(pre * (1 - manR))),
+    mode: bandOf(modeCapability, modeManual, modeStaffing, pre),
+    high: bandOf(capB.high, manB.high, staffB.high, round2(pre * (1 + manR))),
     assumptions: INVESTMENT_ASSUMPTIONS,
   };
 }
