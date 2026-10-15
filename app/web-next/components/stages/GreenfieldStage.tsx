@@ -33,12 +33,13 @@ import type { CapabilityGapRow } from "../../lib/capability-gap.ts";
 import { CapabilityCostBlock } from "./CapabilityCostBlock.tsx";
 import { StaffingPlanSection } from "./StaffingPlanSection.tsx";
 import { emptyStaffingPlan, findStaffingDuplicateWarnings, fitPlanToHorizon, isStaffingPlanEntry, normalizeStaffingPlanEntry, staffingPlanOf, type StaffingDuplicateWarning, type StaffingPlanEntry } from "../../lib/staffing-plan.ts";
-import { buildInvestmentVectors, INVESTMENT_ASSUMPTIONS } from "../../lib/investment-vectors.ts";
+import { buildInvestmentVectors, effectiveAssumptions, SALARY_RANGE, SALARY_INCREASE_RANGE_PP, ON_COST_RANGE_PP, RAMP_SHIFT_HALF_YEARS, CAPABILITY_RANGE, MANUAL_LINE_RANGE } from "../../lib/investment-vectors.ts";
 import { EntryStrategySection } from "./EntryStrategySection.tsx";
 import { parseEntryStrategy, serializeEntryStrategy, type EntryFormState, type EntryModes } from "../../lib/greenfield-entry-strategy.ts";
 import {
   AMOUNT_UNIT_KRW_M, amountUnitLabel, scheduleTotals, SUB_CATEGORY_LABEL, SUB_CATEGORY_PARENT, SUB_CATEGORY_S8_NOTE, STAFFING_SUB_CATEGORY, subCategoriesOf, subCategoryDef, validSubCategory, type SubCategoryKey, applySelection, buildInvestmentSummary, DEFAULT_HORIZON_YEARS, deriveCapabilityCostLines, findDuplicateWarnings, formatKrwM, hasUnsavedReflection, confirmUnitOnAmountEdit, unitOnCurrencyChange, investmentTotals, isCapabilityEntry, manualLineAmounts, isPlanMetaEntry, lineSaveStates, manualLineIssues, manualLineKrwM, MAX_HORIZON_YEAR_LIMIT, MIN_HORIZON_YEARS, normalizeLegacyLine, planMetaOf, reflectionBody, reflectionSummary, sanityLineOversize, sanityTotalOversize, selectionPayload, unifiedFooter, unifiedInvestmentRows, validateLineYears, capabilityEndYearOf,
-  type AmountUnit, type CapabilityCostView, type CostCategory, type CostSelection, type DuplicateWarning, type ManualCostLine, type MilestoneCandidateView, type PlanMetaEntry,
+  SIM_OVERRIDE_KEYS, simOverridesOf, validateSimOverrides,
+  type AmountUnit, type CapabilityCostView, type CostCategory, type CostSelection, type DuplicateWarning, type ManualCostLine, type MilestoneCandidateView, type PlanMetaEntry, type SimOverrideKey, type SimOverrides,
 } from "../../lib/capability-cost-lines.ts";
 import type { AttainabilityRowView } from "../../lib/capability-attainability.ts";
 
@@ -83,6 +84,22 @@ const CATEGORY_LABEL: Record<BcCategory, string> = { labor: "인건비", opex: "
 const fmtM = (n: number): string => n.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
 /** ADR-0176 slice 1: band labels (최저/기준/최고). */
 const BAND_LABEL: Record<"low" | "mode" | "high", string> = { low: "최저", mode: "기준", high: "최고" };
+const SIM_PARAM_LABELS: Record<SimOverrideKey, string> = {
+  salaryRange: "급여 ± (%)",
+  salaryIncreaseRangePp: "인상률 ± (%p)",
+  onCostRangePp: "가산율 ± (%p)",
+  rampShiftHalfYears: "투입 시점 ± (반기)",
+  capabilityRange: "역량 ± (%)",
+  manualLineRange: "일반 항목 ± (%)",
+};
+const SIM_PARAM_DEFAULTS: Record<SimOverrideKey, number> = {
+  salaryRange: SALARY_RANGE,
+  salaryIncreaseRangePp: SALARY_INCREASE_RANGE_PP,
+  onCostRangePp: ON_COST_RANGE_PP,
+  rampShiftHalfYears: RAMP_SHIFT_HALF_YEARS,
+  capabilityRange: CAPABILITY_RANGE,
+  manualLineRange: MANUAL_LINE_RANGE,
+};
 const PERIOD_LABEL: Record<BcPeriod, string> = { monthly: "월", quarterly: "분기", yearly: "년", lumpsum: "일시불(총액)" };
 const CURRENCY_LABEL: Record<BcCurrency, string> = { KRW: "원화", USD: "달러", EUR: "유로", JPY: "엔화", CNY: "위안" };
 // Unified investment item table: 11 shared columns (Onyx table-fixed-pct system); 세부 과목 after 분류 (ADR-0177).
@@ -150,6 +167,9 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   // ADR-0174 slice 1: 검토 기간 (plan_meta horizonYears, default 5) and per-capability spend-year overrides.
   const [horizon, setHorizon] = useState(DEFAULT_HORIZON_YEARS);
   const [capStartYear, setCapStartYear] = useState<Record<string, number>>({});
+  // ADR-0176: decider-entered simulation assumption-range overrides (plan_meta.simOverrides) + last saved snapshot for dirty tracking.
+  const [simOv, setSimOv] = useState<SimOverrides>({});
+  const [savedSimOvJson, setSavedSimOvJson] = useState<string>("{}");
   // ADR-0175 slice 1: 인력 운영 계획 draft + last saved snapshot (JSON) for dirty tracking.
   const [staffPlan, setStaffPlan] = useState<StaffingPlanEntry>(() => emptyStaffingPlan(DEFAULT_HORIZON_YEARS));
   const [savedStaffJson, setSavedStaffJson] = useState<string>("");
@@ -203,6 +223,10 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
           // The plan_meta entry carries the 검토 기간; it never joins the unified line list.
           const meta = planMetaOf(all);
           setHorizon(meta ? meta.horizonYears : DEFAULT_HORIZON_YEARS);
+          // ADR-0176: restore the decider's simulation assumption overrides (undefined = ADR defaults).
+          const simOvStored = simOverridesOf(meta);
+          setSimOv(simOvStored ?? {});
+          setSavedSimOvJson(JSON.stringify(simOvStored ?? {}));
           // Legacy manual lines are shown as-entered: the unit is unknown, so nothing is converted
           // and the unit select shows its placeholder and the row is excluded from totals until a person picks a unit.
           const storedStaff = staffingPlanOf(all);
@@ -288,9 +312,10 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   const schedTotals = useMemo(() => scheduleTotals(summary), [summary]);
   // ADR-0176 slice 1 — deterministic low/mode/high bands over the same inputs as the summary.
   const vectors = useMemo(
-    () => buildInvestmentVectors({ manual: bcLines, capLines: capLinesEff, horizon, reflectedKeys: reflectedKeySet, staffing: staffActive }),
-    [bcLines, capLinesEff, horizon, reflectedKeySet, staffActive],
+    () => buildInvestmentVectors({ manual: bcLines, capLines: capLinesEff, horizon, reflectedKeys: reflectedKeySet, staffing: staffActive, overrides: simOv }),
+    [bcLines, capLinesEff, horizon, reflectedKeySet, staffActive, simOv],
   );
+  const effA = effectiveAssumptions(simOv);
   // Per-line timing errors (Korean messages from validateLineYears); any error blocks save.
   const yearErrors = useMemo(() => {
     const errs: Record<string, string> = {};
@@ -319,7 +344,11 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   const staffError = useMemo(() => { const v = normalizeStaffingPlanEntry(staffEff, horizon); return v.ok ? null : v.message; }, [staffEff, horizon]);
   const staffWarnings = useMemo(() => findStaffingDuplicateWarnings(staffEff.rows, bcLines), [staffEff, bcLines]);
   const dismissStaffDup = (w: StaffingDuplicateWarning) => setBcLines((prev) => prev.map((l, i) => (i === w.manualIndex ? { ...l, dupDismissed: [...(l.dupDismissed ?? []), `staffing:${w.rowId}`] } : l)));
-  const investDirty = manualDirty || reflectDirty || staffDirty;
+  // ADR-0176: simulation assumption overrides dirty state + client validation (mirrors the route's hard-400).
+  const savedSimOvClean = useMemo(() => JSON.stringify(simOverridesOf(savedSimOvJson ? JSON.parse(savedSimOvJson) : {})), [savedSimOvJson]);
+  const simOvDirty = useMemo(() => JSON.stringify(simOverridesOf(simOv)) !== savedSimOvClean, [simOv, savedSimOvClean]);
+  const simOvError = useMemo(() => validateSimOverrides(simOv), [simOv]);
+  const investDirty = manualDirty || reflectDirty || staffDirty || simOvDirty;
   const savedReflected = useMemo(() => {
     const saved = capLines.filter((l) => lineStates[l.capabilityKey] === "saved");
     return { count: saved.length, krwM: saved.reduce((n, l) => n + l.costKrwM, 0) };
@@ -337,7 +366,14 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   const setBc = (i: number, patch: Partial<BcLine>) => setBcLines((prev) => prev.map((l, idx) => (idx === i ? ((m) => ("amount" in patch ? confirmUnitOnAmountEdit(m) : m))({ ...l, ...patch }) : l)));
 
   // plan_meta entry prepended to every business_case_lines payload (ADR-0174 slice 1); horizon clamped client-side.
-  const metaEntry = (): PlanMetaEntry => ({ source: "plan_meta", horizonYears: Math.min(MAX_HORIZON_YEAR_LIMIT, Math.max(MIN_HORIZON_YEARS, Math.floor(horizon) || DEFAULT_HORIZON_YEARS)) });
+  const metaEntry = (): PlanMetaEntry => {
+    const ov = simOverridesOf(simOv);
+    const entry: PlanMetaEntry = { source: "plan_meta", horizonYears: Math.min(MAX_HORIZON_YEAR_LIMIT, Math.max(MIN_HORIZON_YEARS, Math.floor(horizon) || DEFAULT_HORIZON_YEARS)) };
+    // ADR-0176: decider-entered simulation overrides ride the plan_meta entry (absent = ADR defaults);
+    // never auto-derived, never overwritten by AI.
+    if (ov && Object.keys(ov).length > 0) entry.simOverrides = ov;
+    return entry;
+  };
   // Capability entries carry the person's choices plus any spend-year override (startYear).
   // The staffing_plan entry rides the investment-lines save ONLY when it changed; otherwise the route keeps the stored plan.
   const staffingPayload = (): unknown[] => (staffDirty ? [staffEff] : []);
@@ -430,7 +466,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   // 투자비 항목 저장 — lines-only partial POST: manual lines as held + capability selections
   // (selectionPayload). 다른 평가 필드는 보내지 않으므로 라우트가 저장값을 그대로 유지한다.
   async function saveInvestmentLines() {
-    if (!selected || linesSaving || !investDirty || staffError) return;
+    if (!selected || linesSaving || !investDirty || staffError || simOvError) return;
     setLinesSaving(true); setLinesError(null); setLinesNote(null);
     try {
       const body = reflectionBody(bcLines, capLines, capSel);
@@ -1054,8 +1090,37 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
             <section className="sizing-grade-card mb-3" data-testid="invest-simulation" aria-labelledby="invest-simulation-title">
               <h3 id="invest-simulation-title" className="text-[length:var(--fs-body)] mb-1">투자 시뮬레이션 (결정론적 밴드)</h3>
               <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-simulation-basis">
-                검토 기간 {vectors.horizon}년 · 단위 백만원 · 사람이 확정한 가정 범위(급여 {`±`}10%, 인상률·가산율 {`±`}2%p, 역량 비용 {`±`}30%, 일반 항목 {`±`}20%, 투입 시점 {`±`}반기)의 최저/최고 조합입니다 — 추출·무작위 없음. 환율 범위는 정의만 되고 미적용(외화 항목 제외).
+                검토 기간 {vectors.horizon}년 · 단위 백만원 · 사람이 확정한 가정 범위(급여 {`±`}{(effA.salaryRange * 100).toFixed(0)}%, 인상률·가산율 {`±`}{effA.salaryIncreaseRangePp}%p, 역량 비용 {`±`}{(effA.capabilityRange * 100).toFixed(0)}%, 일반 항목 {`±`}{(effA.manualLineRange * 100).toFixed(0)}%, 투입 시점 {`±`}{effA.rampShiftHalfYears}반기)의 최저/최고 조합입니다 — 추출·무작위 없음. 환율 범위는 정의만 되고 미적용(외화 항목 제외).
               </p>
+              <div className="invest-item-error" role="alert" data-testid="invest-sim-param-error">{simOvError}</div>
+              <div className="flex flex-wrap gap-2 items-end mb-2" data-testid="invest-sim-params">
+                {SIM_OVERRIDE_KEYS.map((k) => (
+                  <label key={k} className="flex flex-col gap-1">
+                    <span className="text-[length:var(--fs-caption)]">{SIM_PARAM_LABELS[k]}</span>
+                    <input
+                      type="number" min={0} step="any"
+                      className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-num"
+                      style={{ width: "7.5rem" }}
+                      value={simOv[k] ?? ""}
+                      placeholder={String(SIM_PARAM_DEFAULTS[k])}
+                      disabled={!canAct}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        setSimOv((prev) => {
+                          const next = { ...prev };
+                          if (raw === "") { delete next[k]; return next; }
+                          const n = Number(raw);
+                          if (!Number.isFinite(n)) return prev;
+                          next[k] = n;
+                          return next;
+                        });
+                      }}
+                      data-testid={`invest-sim-param-${k}`}
+                    />
+                  </label>
+                ))}
+                <button type="button" className="btn-ghost btn-sm" disabled={!canAct} onClick={() => setSimOv({})} data-testid="invest-sim-param-reset">기본값으로 되돌리기</button>
+              </div>
               <div className="summary-cards mb-2">
                 {([
                   ["low", "최저", "status-not-started"],
