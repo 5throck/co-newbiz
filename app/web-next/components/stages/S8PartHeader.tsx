@@ -7,7 +7,7 @@ export function S8PartHeader({ part }: { part: S8Part }) {
   return (
     <header className="mb-3" aria-label={`${v.title} 영역`}>
       <div className="section-toolbar"><span className="section-title"><h2>{v.title}</h2></span></div>
-      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{v.title}: {v.purpose}</p>
+      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{v.purpose}</p>
     </header>
   );
 }

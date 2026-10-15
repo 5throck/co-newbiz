@@ -36,10 +36,12 @@ export function SectionToolbar({
   return (
     <div className="section-toolbar">
       <span className="section-title">
-        <h2>
-          {icon ? `${icon} ` : ""}
-          {title}
-        </h2>
+        {(title || icon) && (
+          <h2>
+            {icon ? `${icon} ` : ""}
+            {title}
+          </h2>
+        )}
         {count !== undefined && <span className="section-meta">{count}건</span>}
       </span>
       {filters && <span className="toolbar-filters">{filters}</span>}
