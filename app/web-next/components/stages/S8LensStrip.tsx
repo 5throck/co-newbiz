@@ -5,6 +5,7 @@
 // alone). Decision support only: no grade cap, no gate block; a person decides.
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
+import { S8InvestUncertaintyBlock } from "./S8InvestUncertaintyBlock.tsx";
 import type { S8LensSummary } from "../../lib/s8-lens-summary.ts";
 
 export function S8LensStrip({ projectId }: { projectId: string }) {
@@ -44,6 +45,7 @@ export function S8LensStrip({ projectId }: { projectId: string }) {
           </p>
         </article>
       </div>
+      {data.invest_uncertainty && <S8InvestUncertaintyBlock view={data.invest_uncertainty} />}
       <p className="text-[length:var(--fs-caption)] mt-1">사업 목표: {strip.goalsText}</p>
       {/* TECHNICAL_CAUTION_WARNING is intentionally not rendered: the technical chip line
           above already carries "주의 N" — IA cleanup 2026-10-14 (one home per fact).

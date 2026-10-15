@@ -9,6 +9,7 @@ import { visibleProject } from "../../../../../../lib/project-visibility.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { completeOrFallback, isLlmConfigured } from "../../../../../../lib/llm.ts";
+import { buildInvestUncertainty, investUncertaintyBriefText } from "../../../../../../lib/investment-uncertainty-s8.ts";
 import { route } from "../../../../../../lib/route.ts";
 import { promptAgent, systemMessage } from "../../../../../../lib/prompts.ts";
 
@@ -60,7 +61,10 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     const npv = sims.map((s) => `${s.percentile ?? "?"}: ${s.npv_krw_m != null ? Math.round(s.npv_krw_m) : "?"}`).join(", ");
     return `- ${c.name} (${c.kind}${c.scenario ? `, ${c.scenario}` : ""}${c.variant ? `, ${c.variant}` : ""})${c.recommended ? " [결정론 RECOMMENDED]" : ""}${c.adopted ? " [채택됨]" : ""}${npv ? ` NPV ${npv}` : ""}`;
   });
-  const manifest = ["Business Case 6종(variant·시나리오·NPV/IRR)", "킬크라이어리아 상태", "채택 현황"];
+  const manifest = ["Business Case 6종(variant·시나리오·NPV/IRR)", "킬크라이어리아 상태", "채택 현황", "투자 불확실성(S5 시뮬레이션 산출물, 참고)"];
+
+  let investLine: string;
+  try { investLine = investUncertaintyBriefText(buildInvestUncertainty(db, id)); } catch { investLine = "투자 불확실성: 요약 실패"; }
 
   let payload: RecoPayload;
   let source: "llm" | "synthesis" = "synthesis";
@@ -75,7 +79,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
           role: "user" as const,
           content:
             "어떤 case를 채택할지 권고하세요. recommended_model_id는 아래 나열된 case의 id 그대로여야 합니다.\n" +
-            `JSON: {"recommended_model_id":"case id","rationale_draft":"채택 근거 초안 3~5문장(수치 인용)","what_would_change":"무엇이 바뀌면 권고가 뒤집히는가","key_evidence":["..."],"cautions":["..."]}\n\n${[...caseLines, `\n[킬크라이어리아]\n${kills.length > 0 ? kills.map((k) => `- ${k.criterion_id}: ${k.action} → ${k.outcome}`).join("\n") : "없음"}`, `\n[채택 현황]\n${adoptionRow ? `${adoptionRow.modelId} (채택자 ${adoptionRow.adoptedBy})` : "미채택"}`].join("\n")}`,
+            `JSON: {"recommended_model_id":"case id","rationale_draft":"채택 근거 초안 3~5문장(수치 인용)","what_would_change":"무엇이 바뀌면 권고가 뒤집히는가","key_evidence":["..."],"cautions":["..."]}\n\n${[...caseLines, `\n[킬크라이어리아]\n${kills.length > 0 ? kills.map((k) => `- ${k.criterion_id}: ${k.action} → ${k.outcome}`).join("\n") : "없음"}`, `\n[투자 불확실성(S5 시뮬레이션 산출물, 참고)]\n${investLine}`, `\n[채택 현황]\n${adoptionRow ? `${adoptionRow.modelId} (채택자 ${adoptionRow.adoptedBy})` : "미채택"}`].join("\n")}`,
         },
       ],
       () => "",
