@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { TabNav } from "../TabNav.tsx";
+import { InvestmentSummaryCharts } from "./InvestmentSummaryCharts.tsx";
 import { aggregateDirty, buildCompletionChecklist, buildSourceSummary, dirtyIndicatorText, filledComponentCount, GF_TAB_KEYS, GF_TAB_LABELS, parseGfTab, tabMarker, type GfTabKey } from "../../lib/greenfield-tabs.ts";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { CapabilityJudgementEditor } from "./CapabilityJudgementEditor.tsx";
@@ -131,12 +132,15 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   // ADR-0118 — S5 투자비 검토 요건 LLM 추천(제안). 저장은 사람의 행위다.
   const [reco, setReco] = useState<InvestmentReco | null>(null);
   const [recoLoading, setRecoLoading] = useState(false);
+  const [recoOpen, setRecoOpen] = useState(false);
   const [recoError, setRecoError] = useState<string | null>(null);
   // S5 tabs (presentation only): URL ?tab= keeps the active tab; every panel stays mounted so switching never drops unsaved edits.
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tab = parseGfTab(searchParams.get("tab"));
+  // Only the chart body (not the panel) is gated on the active tab: ECharts needs a visible, non-zero-width container.
+  const investTabActive = tab === "investment";
   const setTab = useCallback((key: string) => {
     const sp = new URLSearchParams(searchParams.toString());
     sp.set("tab", key);
@@ -589,6 +593,55 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   </button>
                 ))}
               </div>
+          {/* ── LLM 투자비 항목 추천 — ADR-0118: 제안은 LLM, 저장은 사람 ── */}
+          <div className="sizing-grade-card mb-3" data-testid="invest-reco">
+            <h4 className="text-[length:var(--fs-caption)] mb-2 flex items-center justify-between gap-2">
+              <span>투자비 항목 추천 <span className="status-chip status-amber">제안 · AI</span></span>
+              {!reco && (
+                <button type="button" className="btn-ghost btn-sm" aria-expanded={recoOpen} aria-controls="invest-reco-body" data-testid="invest-reco-toggle" onClick={() => setRecoOpen((v) => !v)}>{recoOpen ? "접기" : "열기"}</button>
+              )}
+            </h4>
+            <div id="invest-reco-body" hidden={!reco && !recoOpen}>
+            <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+              진출전략·필요 역량 해소 방식을 근거로 검토할 만한 인건비/운영비/설비투자/수익 항목명을 제안합니다.
+              금액은 제안하지 않습니다 — 항목을 추가한 뒤 금액은 사람이 입력합니다 (경계 #2).
+            </p>
+            {recoError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
+            {canAct && !reco && !recoLoading && (
+              <button type="button" className="btn-ghost btn-sm" onClick={() => void generateReco()}>▶ 항목 추천 생성</button>
+            )}
+            {recoLoading && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">진출전략·S3 해소 방식을 근거로 항목을 제안하는 중...</p>}
+            {reco && (
+              <>
+                <p className="mb-1 text-[length:var(--fs-caption)]">
+                  <span className={`status-chip mr-1 ${reco.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
+                    {reco.source === "llm" ? `LLM 제안${reco.provider ? ` · ${reco.provider}` : ""}` : "결정론 폴백"}
+                  </span>
+                </p>
+                {reco.note && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{reco.note}</p>}
+                {reco.recommendation.investment_items ? (
+                  <ul className="sizing-note-list mb-2">
+                    {reco.recommendation.investment_items.map((item, i) => (
+                      <li key={i} className="flex items-center justify-between gap-2 mb-1">
+                        <span>
+                          <span className="font-semibold">{item.line}</span>
+                          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"> ({CATEGORY_LABEL[item.category]}) — {item.note}</span>
+                        </span>
+                        {canAct && <button type="button" className="btn-ghost btn-sm shrink-0" onClick={() => addRecoItem(item)}>추가</button>}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">제안된 항목이 없습니다.</p>
+                )}
+                {reco.recommendation.cautions.length > 0 && (
+                  <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mb-2">{reco.recommendation.cautions.join(" / ")}</p>
+                )}
+                {canAct && <button type="button" className="btn-ghost btn-sm" disabled={recoLoading} onClick={() => void generateReco()}>{recoLoading ? "재생성 중..." : "재생성"}</button>}
+              </>
+            )}
+            </div>
+          </div>
               <h3 className="text-[length:var(--fs-body)] mb-1">투자비 검토 요건 (S8 사업성 분석 입력)</h3>
           {canAct && (
             <div className="flex flex-wrap items-center gap-2 mb-2" data-testid="invest-item-save-actions">
@@ -830,6 +883,8 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
           {/* ── 투자비 요약 (ADR-0174 slice 1) — read-only, decision support ── */}
           <div className="sizing-grade-card mb-3" data-testid="invest-summary">
             <h4 className="text-[length:var(--fs-caption)] mb-2">투자비 요약</h4>
+            {/* Charts mount only while this tab is active (hidden panels give ECharts a 0-width container); every other panel stays mounted. */}
+            {investTabActive && <InvestmentSummaryCharts summary={summary} />}
             <div className="summary-cards mb-2">
               <div className="summary-card glass" data-testid="invest-summary-annual">
                 <span className="summary-value mono-num">{summary.annualRecurringKrwM.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</span>
@@ -913,50 +968,6 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
               {summary.endYearExceedsHorizon > 0 && <li className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))]">종료 연차가 검토 기간을 넘는 항목 {summary.endYearExceedsHorizon}건 — 검토 기간 안에서 집계됨</li>}
               {summary.capabilitySpendFromMilestone > 0 && <li className="text-[length:var(--fs-caption)]">판정 기간에서 산정한 집행 연차 {summary.capabilitySpendFromMilestone}건</li>}
             </ul>
-          </div>
-          {/* ── LLM 투자비 항목 추천 — ADR-0118: 제안은 LLM, 저장은 사람 ── */}
-          <div className="sizing-grade-card mb-3">
-            <h4 className="text-[length:var(--fs-caption)] mb-2">
-              투자비 항목 추천 <span className="status-chip status-amber">제안 · AI</span>
-            </h4>
-            <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              진출전략·필요 역량 해소 방식을 근거로 검토할 만한 인건비/운영비/설비투자/수익 항목명을 제안합니다.
-              금액은 제안하지 않습니다 — 항목을 추가한 뒤 금액은 사람이 입력합니다 (경계 #2).
-            </p>
-            {recoError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
-            {canAct && !reco && !recoLoading && (
-              <button type="button" className="btn-ghost btn-sm" onClick={() => void generateReco()}>▶ 항목 추천 생성</button>
-            )}
-            {recoLoading && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">진출전략·S3 해소 방식을 근거로 항목을 제안하는 중...</p>}
-            {reco && (
-              <>
-                <p className="mb-1 text-[length:var(--fs-caption)]">
-                  <span className={`status-chip mr-1 ${reco.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
-                    {reco.source === "llm" ? `LLM 제안${reco.provider ? ` · ${reco.provider}` : ""}` : "결정론 폴백"}
-                  </span>
-                </p>
-                {reco.note && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{reco.note}</p>}
-                {reco.recommendation.investment_items ? (
-                  <ul className="sizing-note-list mb-2">
-                    {reco.recommendation.investment_items.map((item, i) => (
-                      <li key={i} className="flex items-center justify-between gap-2 mb-1">
-                        <span>
-                          <span className="font-semibold">{item.line}</span>
-                          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"> ({CATEGORY_LABEL[item.category]}) — {item.note}</span>
-                        </span>
-                        {canAct && <button type="button" className="btn-ghost btn-sm shrink-0" onClick={() => addRecoItem(item)}>추가</button>}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">제안된 항목이 없습니다.</p>
-                )}
-                {reco.recommendation.cautions.length > 0 && (
-                  <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mb-2">{reco.recommendation.cautions.join(" / ")}</p>
-                )}
-                {canAct && <button type="button" className="btn-ghost btn-sm" disabled={recoLoading} onClick={() => void generateReco()}>{recoLoading ? "재생성 중..." : "재생성"}</button>}
-              </>
-            )}
           </div>
             </>
           ))}

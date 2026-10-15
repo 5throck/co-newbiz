@@ -665,6 +665,53 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
 }
 
 
+export interface InvestmentChartData {
+  /** Axis labels "Y1".."YN". */
+  years: string[];
+  /** Per-year stacks (백만원); labor already includes the staffing-derived labour. */
+  stacks: { labor: number[]; opex: number[]; capex: number[] };
+  /** Inflow series, never stacked into 투자비 (백만원). */
+  revenue: number[];
+  govRnd: number[];
+  /** Running total of the per-year 투자비 (백만원). */
+  cumulative: number[];
+  composition: Array<{ category: "labor" | "opex" | "capex"; label: string; totalKrwM: number; percent: number }>;
+  totalKrwM: number;
+  staffingLaborKrwM: number;
+  excludedNeedsConfirm: number;
+  /** False when there is nothing to plot (no investment and no inflow). */
+  hasData: boolean;
+}
+
+/** Pure chart-data builder over the 투자비 요약 (same numbers as the tables; no new derivation). */
+export function buildInvestmentChartData(summary: InvestmentSummary): InvestmentChartData {
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const sched = summary.schedule;
+  let run = 0;
+  const cumulative = sched.map((s) => { run += s.investmentTotal; return round2(run); });
+  const total = summary.byCategory.reduce((a, r) => a + r.totalKrwM, 0);
+  const composition = summary.byCategory.map((r) => ({
+    category: r.category,
+    label: CATEGORY_LABEL[r.category],
+    totalKrwM: r.totalKrwM,
+    percent: total > 0 ? Math.round((r.totalKrwM / total) * 1000) / 10 : 0,
+  }));
+  const inflow = sched.some((s) => s.revenue !== 0 || s.govRnd !== 0);
+  return {
+    years: sched.map((s) => `Y${s.year}`),
+    stacks: { labor: sched.map((s) => s.labor), opex: sched.map((s) => s.opex), capex: sched.map((s) => s.capex) },
+    revenue: sched.map((s) => s.revenue),
+    govRnd: sched.map((s) => s.govRnd),
+    cumulative,
+    composition,
+    totalKrwM: summary.totalKrwM,
+    staffingLaborKrwM: summary.staffingLaborKrwM,
+    excludedNeedsConfirm: summary.excludedNeedsConfirm,
+    hasData: total > 0 || inflow,
+  };
+}
+
+
 export type CostLineError = { code: "invalid_request" | "unknown_capability" | "invalid_category" | "amount_mismatch" | "not_reflectable" | "no_cost" | "invalid_amount_unit"; message: string };
 
 const AMOUNT_EPS = 1e-6;
