@@ -135,11 +135,18 @@ export function resolveGrowthModel(db: ReturnType<typeof getDb>, projectId: stri
   // ADR-0143: opts.companyId가 주어지면(대상별 분석) 그 회사의 series로,
   // null이면 historical를 만들지 않는다. 미지정이면 기존대로
   // md_project.company_id (greenfield/project-level 호환).
+  // Greenfield: the historical variant is Brown Field comparison evidence only,
+  // so a linked company (financial-analysis tab / WACC subject) is not used here.
+  const proj = opts
+    ? undefined
+    : (db.query("SELECT company_id, track FROM md_project WHERE id = ?").get(projectId) as { company_id: string | null; track: string | null } | undefined);
   const p = opts
     ? opts.companyId
       ? { company_id: opts.companyId }
       : undefined
-    : (db.query("SELECT company_id FROM md_project WHERE id = ?").get(projectId) as { company_id: string | null } | undefined);
+    : proj?.track === "greenfield"
+      ? undefined
+      : proj;
   if (p?.company_id) {
     try {
       const facts = getCompanyFinancialFacts(db, p.company_id);

@@ -42,7 +42,7 @@ import { ValuationMethodology } from "../business-case/ValuationMethodology.tsx"
 import { FinancialAnalysisPanel } from "../FinancialAnalysisPanel.tsx";
 import { RowMenu, useConfirm } from "../crud.tsx";
 import { canWriteProject, isReadOnlyAdmin } from "../../lib/project-write-access.ts";
-import { countLegacyUnassignedModels } from "../../lib/business-case-legacy.ts";
+import { countLegacyUnassignedModels, hideHistoricalForGreenfield } from "../../lib/business-case-legacy.ts";
 import { GoalPromptDialog, GoalsPanel, type GoalsData } from "../business-case/GoalsPanel.tsx";
 import { GOALS_ACK_REQUIRED_CODE, goalsAckErrorText, goalsLoadErrorText, partOfS8Tab, primaryKeyOfS8Tab, resolveS8Tab, shouldRedirectTargetsTab, type CaseAttainmentEntry } from "../../lib/business-goals-view.ts";
 import { GoalAttainmentTable } from "../business-case/GoalAttainment.tsx";
@@ -248,7 +248,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
   const load = useCallback(() => {
     api.get<CasesResponse>(`/api/projects/${encodeURIComponent(projectId)}/business-case`)
-      .then((r) => { setData(r.data); setGreenfield(r.data.targets.length === 0); setEscalatedCagrPct(r.data.escalated_cagr_pct ?? null); })
+      .then((r) => { setData({ ...r.data, cases: hideHistoricalForGreenfield(r.data.cases, r.data.targets.length === 0) }); setGreenfield(r.data.targets.length === 0); setEscalatedCagrPct(r.data.escalated_cagr_pct ?? null); })
       .catch((e) => setError(e instanceof Error ? e.message : "사업성 분석 데이터를 불러오지 못했습니다."));
   }, [projectId]);
 

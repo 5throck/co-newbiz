@@ -10,6 +10,7 @@
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
+import { hideHistoricalForGreenfield } from "./business-case-legacy.ts";
 import { SCENARIOS, recommendedFromDb, recommendTargetsFromDb, enginesMixedAcrossTargets, methodsMixedAcrossTargets, resolveConfirmedEvBand, evRevenueBandPayload, type EvRevenueBandPayload, type Scenario, type TargetComparisonRow } from "./business-case-generator.ts";
 import { evaluateTargets, resolveProjectTargets } from "./business-targets.ts";
 import { resolveOrCreateCompany } from "./brownfield-targets.ts";
@@ -232,7 +233,9 @@ export function listBusinessCases(projectId: string): {
       simulations: modelSims,
     };
   });
-  return { cases: cases.filter((c) => c.archived_at === null), archived: cases.filter((c) => c.archived_at !== null), recommendedScenario: recommended, adoption, targetSelection, targets, enginesMixed: enginesMixedAcrossTargets(targets), methodsMixed: methodsMixedAcrossTargets(targets), evRevenueBand: evRevenueBandPayload(resolveConfirmedEvBand(db, projectId)) };
+  const isGreenfield = (db.query("SELECT track FROM md_project WHERE id = ?").get(projectId) as { track: string | null } | undefined)?.track === "greenfield";
+  const visible = hideHistoricalForGreenfield(cases, isGreenfield);
+  return { cases: visible.filter((c) => c.archived_at === null), archived: visible.filter((c) => c.archived_at !== null), recommendedScenario: recommended, adoption, targetSelection, targets, enginesMixed: enginesMixedAcrossTargets(targets), methodsMixed: methodsMixedAcrossTargets(targets), evRevenueBand: evRevenueBandPayload(resolveConfirmedEvBand(db, projectId)) };
 }
 
 /** The adopted case for history views (adoption / IC package / report): looks in
