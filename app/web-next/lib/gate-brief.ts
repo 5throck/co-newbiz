@@ -17,6 +17,7 @@ import { attainabilitySummary } from "./capability-attainability.ts";
 import { entryStrategyText } from "./greenfield-entry-strategy.ts";
 import { isStale } from "./capability-linkage.ts";
 import { buildS8LensSummary } from "./s8-lens-summary.ts";
+import { buildInvestUncertainty, investUncertaintyBriefText } from "./investment-uncertainty-s8.ts";
 import { technicalLensBriefLine } from "./s8-lens-status.ts";
 import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
 import { gateRecommendation } from "./opportunity-screening.ts";
@@ -45,7 +46,7 @@ const MANIFESTS: Record<string, string[]> = {
     "S5 역량 격차·진출전략 또는 BF 쇼트리스트",
   ],
   target_screening: ["S4 트랙 결정·라우트", "S6 Target Universe·Long List", "S7 대상 선정 판정"],
-  fs: ["S4 트랙 결정", "S8 채택 Business Case·밸류에이션 요약", "S8 기술적 타당성 요약(참고)"],
+  fs: ["S4 트랙 결정", "S8 채택 Business Case·밸류에이션 요약", "S8 기술적 타당성 요약(참고)", "S8 투자 불확실성(S5 시뮬레이션 산출물, 참고)"],
   dd: ["S8 채택 BC 요약", "체크리스트 판정 집계", "DD 발견사항(dd_finding)", "waiver 연결"],
   entity_ic: ["채택 BC 요약", "DD 완료 요약", "RAG 제안(승인 아님)", "검토/안건구조 가설(S10)", "선행 의사결정(fs·dd)"],
   group_ic: ["채택 BC 요약", "DD 완료 요약", "RAG 제안(승인 아님)", "검토/안건구조 가설(S10)", "선행 의사결정(entity_ic·dd)"],
@@ -232,6 +233,15 @@ function s8Summary(projectId: string): string {
   }
 }
 
+/** ADR-0176 slice 4: investment-uncertainty simulation output as labeled decision support. Never a gate condition. */
+export function investUncertaintyLine(db: Database, projectId: string): string {
+  try {
+    return investUncertaintyBriefText(buildInvestUncertainty(db, projectId));
+  } catch {
+    return "투자 불확실성: 요약 실패 - 참고 정보이며 승인 조건이 아닙니다";
+  }
+}
+
 /** One informational line: the S8 technical lens status (ADR-0169). Never a gate condition. */
 function technicalLensLine(db: Database, projectId: string): string {
   try {
@@ -319,7 +329,7 @@ export function buildGateContext(db: Database, entityType: GateBriefEntity, enti
   if (!project) return "프로젝트를 찾을 수 없습니다.";
   const base = `프로젝트: ${project.project_name}`;
   if (gate === "fs") {
-    return [base, `\n[S8 Business Case]\n${s8Summary(entityId)}`, `\n[S8 기술적 타당성(참고)]\n${technicalLensLine(db, entityId)}`].join("\n");
+    return [base, `\n[S8 Business Case]\n${s8Summary(entityId)}`, `\n[S8 기술적 타당성(참고)]\n${technicalLensLine(db, entityId)}`, `\n[S8 투자 불확실성(S5 시뮬레이션 산출물, 참고)]\n${investUncertaintyLine(db, entityId)}`].join("\n");
   }
   if (gate === "dd") {
     return [base, `\n[S8 채택 BC 요약]\n${s8Summary(entityId)}`, `\n[S9 DD]\n${ddSummary(db, entityId)}`].join("\n");
@@ -371,7 +381,7 @@ export function synthesisGateBrief(db: Database, entityType: GateBriefEntity, en
     }
   } else if (entityType === "project") {
     evidence.push(s8Summary(entityId));
-    if (gate === "fs") evidence.push(technicalLensLine(db, entityId));
+    if (gate === "fs") { evidence.push(technicalLensLine(db, entityId)); evidence.push(investUncertaintyLine(db, entityId)); }
     if (gate === "dd" || gate === "entity_ic" || gate === "group_ic") evidence.push(ddSummary(db, entityId));
     if (gate === "entity_ic" || gate === "group_ic") {
       evidence.push(ragSummary(db, entityId));

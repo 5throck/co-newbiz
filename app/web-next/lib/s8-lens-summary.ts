@@ -8,6 +8,7 @@ import { evaluateTargetsForCase, resolveProjectTargets } from "./business-target
 import { parseGapRegister } from "./capability-gap.ts";
 import { sourceOpportunityOf } from "./capability-attainability.ts";
 import { buildLensStripView, financialLensStatus, type FinancialLensSummary, type S8LensStripView } from "./s8-lens-status.ts";
+import { buildInvestUncertainty, type InvestUncertaintyView } from "./investment-uncertainty-s8.ts";
 import { PROJECT_SUBJECT, parseTechnicalLens, summarizeTechnicalLens, targetSubject, type TechnicalLensSummary } from "./technical-lens.ts";
 
 export interface S8LensSummary {
@@ -18,6 +19,8 @@ export interface S8LensSummary {
   financial: FinancialLensSummary;
   goals: { goal_count: number; met: number; missed: number };
   strip: S8LensStripView;
+  /** ADR-0176 slice 4: latest confirmed S5 simulation output (read-only, informational). */
+  invest_uncertainty: InvestUncertaintyView;
 }
 
 function p50(c: BusinessCaseView | undefined): { npv: number | null; irr: number | null } {
@@ -79,5 +82,6 @@ export function buildS8LensSummary(db: Database, projectId: string): S8LensSumma
     financial,
     goals: { goal_count: goals.goal_count, met: goals.met, missed: goals.missed },
     strip: buildLensStripView(technical, financial, { goalCount: goals.goal_count, met: goals.met, hasCase: goals.hasCase }),
+    invest_uncertainty: buildInvestUncertainty(db, projectId),
   };
 }
