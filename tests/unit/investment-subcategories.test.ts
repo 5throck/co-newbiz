@@ -190,6 +190,56 @@ describe("summary sub-category subtotals", () => {
   });
 });
 
+describe("sub-category rows inside the yearly table", () => {
+  const staffing = { source: "staffing_plan", rows: [{ id: "s1", roleFamily: "prod", grade: "g", headcountByYear: [1, 1, 1], avgAnnualBaseSalaryKrwM: 50, salaryIncreaseRatePct: 0, onCostRatePct: 20, recruitingOneOffKrwM: 10 }], startYear: 1, endYear: 3, attritionBackfillPct: 0 } as never;
+  const manual = [
+    krw({ category: "capex", subCategory: "machinery", amount: 1000, startYear: 2 }),
+    krw({ category: "capex", amount: 200 }),
+    krw({ category: "opex", subCategory: "rent_utility", amount: 1, period: "monthly", startYear: 1, endYear: 3 }),
+    krw({ category: "opex", subCategory: "product_cert", amount: 50 }),
+    krw({ category: "revenue", amount: 999, period: "yearly" }),
+  ];
+  const view = cl.deriveCapabilityCostLines([capRow()], [{ source: "capability", capabilityKey: "r1", reflected: true, category: "capex", subCategory: "it_software" }]);
+  const summary = cl.buildInvestmentSummary(manual, view.lines, 3, new Set(["r1"]), staffing);
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  test("per year, sub-category cells sum exactly to the category schedule value", () => {
+    for (const g of summary.bySubCategory) {
+      summary.schedule.forEach((s, i) => {
+        expect(r2(g.rows.reduce((a, r) => a + r.yearly[i], 0))).toBe(s[g.category as "labor" | "opex" | "capex"]);
+      });
+      for (const r of g.rows) expect(r.totalKrwM).toBe(r2(r.yearly.reduce((a, n) => a + n, 0)));
+    }
+  });
+  test("category rows add up to the grand total per year and overall", () => {
+    const t = cl.scheduleTotals(summary);
+    summary.schedule.forEach((s, i) => expect(r2(summary.bySubCategory.reduce((a, g) => a + g.rows.reduce((b, r) => b + r.yearly[i], 0), 0))).toBe(t.yearTotals[i]));
+    expect(t.grandKrwM).toBe(summary.totalKrwM);
+  });
+  test("cadence and timing: machinery starts Y2, rent monthly x12 each year, staffing split by year", () => {
+    const cap = summary.bySubCategory.find((g) => g.category === "capex")!.rows;
+    expect(cap.find((r) => r.key === "machinery")!.yearly).toEqual([0, 1000, 0]);
+    expect(summary.bySubCategory.find((g) => g.category === "opex")!.rows.find((r) => r.key === "rent_utility")!.yearly).toEqual([12, 12, 12]);
+    expect(summary.bySubCategory.find((g) => g.category === "labor")!.rows.find((r) => r.key === "recruiting_training")!.totalKrwM).toBe(10);
+  });
+  test("unassigned row present only when needed, zero rows hidden", () => {
+    expect(summary.bySubCategory.find((g) => g.category === "capex")!.rows.some((r) => r.key === null)).toBe(true);
+    const opex = summary.bySubCategory.find((g) => g.category === "opex")!.rows;
+    expect(opex.some((r) => r.key === null)).toBe(false);
+    for (const g of summary.bySubCategory) for (const r of g.rows) expect(r.yearly.some((v) => v !== 0)).toBe(true);
+  });
+  test("UI: sub-category rows live in the yearly table; the separate subtotal table is gone", () => {
+    const src = readFileSync(join(ROOT, "app/web-next/components/stages/GreenfieldStage.tsx"), "utf8");
+    expect(src).not.toContain("invest-summary-subcategory");
+    expect(src).not.toContain("\uC138\uBD80 \uACFC\uBAA9\uBCC4 \uC18C\uACC4");
+    expect(src).toContain("invest-summary-sub-");
+    expect(src).toContain('className="invest-sub-row-label"');
+    expect(src).not.toContain("noteSubCleared");
+    const css = readFileSync(join(ROOT, "app/web-next/app/styles.css"), "utf8");
+    expect(css).toMatch(/\.invest-sticky-first th\.invest-sub-row-label\s*\{[^}]*padding-inline-start:\s*1\.5rem/);
+    expect(src).toContain("invest-subcategory-s8-note");
+  });
+});
+
 describe("yearly totals (task A)", () => {
   const manual = [
     krw({ category: "capex", amount: 500, startYear: 2 }),

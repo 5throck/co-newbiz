@@ -757,7 +757,7 @@ export interface SummaryLine {
 }
 
 /** ADR-0177: one 세부 과목 subtotal (horizon total, cadence-annualised); key null = 미지정. */
-export interface InvestmentSubCategoryRow { key: SubCategoryKey | null; label: string; totalKrwM: number; /** Opex one-off left out of the NPV under s5_plan (design §2.1). */ s5PlanExcluded: boolean; hint?: string }
+export interface InvestmentSubCategoryRow { key: SubCategoryKey | null; label: string; totalKrwM: number; /** Y1..YN values (백만원); sums per year to the category's schedule value. */ yearly: number[]; /** Opex one-off left out of the NPV under s5_plan (design §2.1). */ s5PlanExcluded: boolean; hint?: string }
 export interface InvestmentSubCategoryGroup { category: "labor" | "opex" | "capex"; totalKrwM: number; rows: InvestmentSubCategoryRow[] }
 
 export interface InvestmentSummaryCategoryRow { category: "labor" | "opex" | "capex"; annualKrwM: number; lumpsumKrwM: number; totalKrwM: number }
@@ -805,10 +805,12 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
   let excludedNeedsConfirm = 0;
   let endYearExceedsHorizon = 0;
   // 세부 과목 subtotals per category ("" = 미지정), horizon totals in 백만원.
-  const subTotals: Record<"labor" | "opex" | "capex", Map<string, number>> = { labor: new Map(), opex: new Map(), capex: new Map() };
-  const addSub = (cat: "labor" | "opex" | "capex", sub: unknown, v: number) => {
+  const subTotals: Record<"labor" | "opex" | "capex", Map<string, number[]>> = { labor: new Map(), opex: new Map(), capex: new Map() };
+  const addSub = (cat: "labor" | "opex" | "capex", sub: unknown, vec: number[]) => {
     const k = validSubCategory(cat, sub) ? sub : "";
-    subTotals[cat].set(k, (subTotals[cat].get(k) ?? 0) + v);
+    const cur = subTotals[cat].get(k) ?? Array(H).fill(0);
+    for (let i = 0; i < H; i++) cur[i] += vec[i] ?? 0;
+    subTotals[cat].set(k, cur);
   };
   for (const m of manual) {
     const v = manualLineKrwM(m as ManualCostLine);
@@ -826,7 +828,7 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
     const cat = m.category as "labor" | "opex" | "capex";
     const vec = manualLineYearVector(m, H);
     for (let i = 0; i < H; i++) yearCat[cat][i] += vec[i];
-    addSub(cat, m.subCategory, vec.reduce((a, n) => a + n, 0));
+    addSub(cat, m.subCategory, vec);
     if (isLumpsum(m.period)) lumpByCat[cat] += vec.reduce((a, n) => a + n, 0);
     else annualByCat[cat] += v * cadenceMultiplier(m.period);
   }
@@ -836,7 +838,7 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
     const y = Math.max(1, Math.min(c.startYear, H));
     yearCat[c.category][y - 1] += c.costKrwM;
     lumpByCat[c.category] += c.costKrwM;
-    addSub(c.category, c.subCategory, c.costKrwM);
+    addSub(c.category, c.subCategory, Array.from({ length: H }, (_, i) => (i === y - 1 ? c.costKrwM : 0)));
     if (c.startYear === c.defaultStartYear && c.monthsToAttain !== null && c.monthsToAttain > 0) capabilitySpendFromMilestone += 1;
   }
   // ADR-0175: the 인력 운영 계획 vector feeds the 인건비 category per year (derived, read-only,
@@ -850,8 +852,8 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
     const recruiting = vec.recruitingByYear.reduce((a, n) => a + n, 0);
     lumpByCat.labor += recruiting;
     // ADR-0177 defaults (fixed, read-only): plan salaries -> 직접 인건비, recruiting one-off -> 채용·교육비.
-    addSub("labor", STAFFING_SUB_CATEGORY.salary, vec.annualByYear.reduce((a, n) => a + n, 0));
-    addSub("labor", STAFFING_SUB_CATEGORY.recruiting, recruiting);
+    addSub("labor", STAFFING_SUB_CATEGORY.salary, vec.annualByYear);
+    addSub("labor", STAFFING_SUB_CATEGORY.recruiting, vec.recruitingByYear);
     annualByCat.labor += vec.annualByYear[Math.min(staffing.endYear, H) - 1] ?? 0;
     staffingLaborKrwM = view.totalKrwM + recruiting;
     staffingNeedConfirmCount = view.needConfirmCount;
@@ -876,28 +878,33 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
     capabilitySpendFromMilestone,
     staffingLaborKrwM: round2(staffingLaborKrwM),
     staffingNeedConfirmCount,
-    bySubCategory: cats.map((c) => subCategoryGroupOf(c, subTotals[c], totalByCat[c])),
+    bySubCategory: cats.map((c) => subCategoryGroupOf(c, subTotals[c], schedule.map((r) => r[c]), totalByCat[c])),
   };
 }
 
-/** Rows of one category: vocabulary order, non-zero sub-categories only, then 미지정 (when non-zero); rows sum exactly to the category total. */
-function subCategoryGroupOf(cat: "labor" | "opex" | "capex", totals: Map<string, number>, categoryTotal: number): InvestmentSubCategoryGroup {
+/** Rows of one category: vocabulary order, rows with any non-zero year only, then 미지정; each year sums exactly to the category's schedule value. */
+function subCategoryGroupOf(cat: "labor" | "opex" | "capex", vecs: Map<string, number[]>, catYearly: number[], categoryTotal: number): InvestmentSubCategoryGroup {
   const round2 = (n: number) => Math.round(n * 100) / 100;
-  const total = round2(categoryTotal);
+  const H = catYearly.length;
   const rows: InvestmentSubCategoryRow[] = [];
-  for (const d of subCategoriesOf(cat)) {
-    const v = round2(totals.get(d.key) ?? 0);
-    if (v !== 0) rows.push({ key: d.key, label: d.label, totalKrwM: v, s5PlanExcluded: S5_PLAN_EXCLUDED_ONE_OFF.has(d.key), ...(d.hint ? { hint: d.hint } : {}) });
+  const push = (key: SubCategoryKey | null, label: string, vec: number[] | undefined, extra: Partial<InvestmentSubCategoryRow>) => {
+    const yearly = Array.from({ length: H }, (_, i) => round2(vec?.[i] ?? 0));
+    if (yearly.every((v) => v === 0)) return;
+    rows.push({ key, label, totalKrwM: 0, yearly, s5PlanExcluded: false, ...extra });
+  };
+  for (const d of subCategoriesOf(cat)) push(d.key, d.label, vecs.get(d.key), { s5PlanExcluded: S5_PLAN_EXCLUDED_ONE_OFF.has(d.key), ...(d.hint ? { hint: d.hint } : {}) });
+  push(null, UNASSIGNED_SUB_LABEL, vecs.get(""), {});
+  // Per-cell 0.01 rounding can leave a cent of drift against the category's year value; fold it into that year's largest row.
+  if (rows.length > 0) {
+    for (let i = 0; i < H; i++) {
+      const drift = round2(catYearly[i] - rows.reduce((a, r) => a + r.yearly[i], 0));
+      if (drift === 0) continue;
+      const big = rows.reduce((m, r) => (Math.abs(r.yearly[i]) > Math.abs(m.yearly[i]) ? r : m), rows[0]);
+      big.yearly[i] = round2(big.yearly[i] + drift);
+    }
   }
-  const unassigned = round2(totals.get("") ?? 0);
-  if (unassigned !== 0) rows.push({ key: null, label: UNASSIGNED_SUB_LABEL, totalKrwM: unassigned, s5PlanExcluded: false });
-  // Per-row 0.01 rounding can leave a cent of drift against the category total; fold it into the largest row.
-  const drift = round2(total - rows.reduce((a, r) => a + r.totalKrwM, 0));
-  if (drift !== 0 && rows.length > 0) {
-    const big = rows.reduce((m, r) => (Math.abs(r.totalKrwM) > Math.abs(m.totalKrwM) ? r : m), rows[0]);
-    big.totalKrwM = round2(big.totalKrwM + drift);
-  }
-  return { category: cat, totalKrwM: total, rows };
+  for (const r of rows) r.totalKrwM = round2(r.yearly.reduce((a, n) => a + n, 0));
+  return { category: cat, totalKrwM: round2(categoryTotal), rows };
 }
 
 /** Task: per-year 투자비 합계 and per-row horizon totals of the 연도별 투자 계획 table (inflow rows reported separately, never in the total). */
