@@ -100,8 +100,10 @@ describe("GreenfieldStage tab structure (source)", () => {
     const inv = slice('panel("investment"', 'panel("simulation"');
     for (const s of ["invest-source-summary", "s5-horizon", "<CapabilityCostBlock", 'data-testid="invest-item-list"', 'data-testid="invest-summary"', "투자비 항목 추천", '{linesSaveButton("투자비 항목 저장")}']) expect(inv).toContain(s);
     expect(inv).not.toContain("<StaffingPlanSection");
+    expect(inv).not.toContain("invest-summary-by-category");
+    expect(inv).not.toContain("분류별 투자비 (단위");
     // Order (decider): 출처 요약, 투자비 항목 추천 (AI) at the top, the item table (+ save bar, 검토 기간 in its header),
-    // then 역량 해소 비용, then 투자비 요약 (tiles, charts, yearly and by-category tables) last.
+    // then 역량 해소 비용, then 투자비 요약 (tiles, charts, yearly table) last; no by-category table.
     const at = (needle: string) => inv.indexOf(needle);
     expect(at('data-testid="invest-source-summary"')).toBeLessThan(at('data-testid="invest-reco"'));
     expect(at('data-testid="invest-reco"')).toBeLessThan(at("투자비 항목 (S8 사업성 분석 입력)"));

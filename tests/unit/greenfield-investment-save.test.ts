@@ -112,7 +112,7 @@ describe("UI structure: one grid, shared columns, chips in-row, own save button"
     const table = s.slice(s.indexOf('data-testid="invest-item-list"'));
     const scope = s.slice(s.indexOf('data-testid="invest-item-list"'), s.indexOf('data-testid="invest-item-footer"'));
     void table;
-    expect(s).toContain('<table className="data-table table-fixed-pct tmin-80" aria-label="투자비 항목 목록" data-testid="invest-item-list">');
+    expect(s).toContain('<table className="data-table table-fixed-pct tmin-80 invest-item-table" aria-label="투자비 항목 목록" data-testid="invest-item-list">');
     expect(s).toContain('<ColGroup widths={INVEST_ITEM_COL_PCT} />');
     expect(s).toContain('<div className="table-scroll mb-1">');
     for (const h of ["항목명", "출처", "분류", "금액 (연 환산·기간 총액, 백만원)", "단위", "통화", "주기", "시작·종료 연차", "비고", "작업"]) {
@@ -128,9 +128,9 @@ describe("UI structure: one grid, shared columns, chips in-row, own save button"
   });
   test("capability row: read-only slots, editable 분류/집행 연차, chips, 판정 보기 and 반영 해제 in 작업", () => {
     const scope = stage().slice(stage().indexOf('data-testid="invest-item-list"'), stage().indexOf('data-testid="invest-item-footer"'));
-    expect(scope).toContain("백만원</span></td>");
-    expect(scope).toContain("원화</span></td>");
-    expect(scope).toContain("{PERIOD_LABEL.lumpsum}</span></td>");
+    expect(scope).toContain('<option value="krw_m">백만원</option>');
+    expect(scope).toContain("{CURRENCY_LABEL.KRW}</option>");
+    expect(scope).toContain("{PERIOD_LABEL.lumpsum}</option>");
     expect(scope).toContain("판정 보기</a>");
     expect(scope).toContain("반영 해제</button>");
     expect(scope).toContain("재판정 필요</span>");
@@ -143,8 +143,8 @@ describe("UI structure: one grid, shared columns, chips in-row, own save button"
     }
     expect(scope).toContain('data-testid={`invest-confirm-chip-${i}`}');
     expect(scope).toContain("수동</span>");
-    expect(scope).toContain("저장 전</span></>");
-    expect(scope).toContain("저장됨</span></>");
+    expect(scope).toContain("저장 전</span>");
+    expect(scope).toContain("저장됨</span>");
     expect(scope).not.toContain("invest-unit-text-");
     expect(scope).not.toContain("단위 확인 필요");
     expect(scope).not.toContain("invest-unit-marker-");
