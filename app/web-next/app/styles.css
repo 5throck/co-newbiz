@@ -3859,3 +3859,15 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
   .deal-overview-hold-inline { display: none; }
   .deal-overview-hold-aside { display: block; }
 }
+
+/* 투자비 요약 tables (S5 투자비 tab): right-aligned tabular numbers, emphasised totals row,
+   muted inflow rows, and a sticky row-header column inside .table-scroll on narrow widths. */
+.invest-summary-table { width: max-content; min-width: 100%; margin: 0; }
+.invest-summary-table th[scope="row"] { font-weight: 600; white-space: nowrap; }
+.invest-summary-table .col-num { font-variant-numeric: tabular-nums; }
+.invest-summary-table tr.invest-total-row th,
+.invest-summary-table tr.invest-total-row td { font-weight: 700; border-top: 2px solid var(--border); background: var(--surface-2); }
+.invest-summary-table tr.invest-inflow-row th,
+.invest-summary-table tr.invest-inflow-row td { color: var(--muted-fg); }
+.invest-sticky-first th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
+.invest-sticky-first tr.invest-total-row th:first-child { background: var(--surface-2); }

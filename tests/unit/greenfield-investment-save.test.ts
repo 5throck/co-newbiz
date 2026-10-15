@@ -115,7 +115,7 @@ describe("UI structure: one grid, shared columns, chips in-row, own save button"
     expect(s).toContain('<table className="data-table table-fixed-pct tmin-80" aria-label="투자비 항목 목록" data-testid="invest-item-list">');
     expect(s).toContain('<ColGroup widths={INVEST_ITEM_COL_PCT} />');
     expect(s).toContain('<div className="table-scroll mb-1">');
-    for (const h of ["항목명", "출처", "분류", "금액(백만원)", "단위", "통화", "주기", "시작·종료 연차", "비고", "작업"]) {
+    for (const h of ["항목명", "출처", "분류", "금액 (연 환산·기간 총액, 백만원)", "단위", "통화", "주기", "시작·종료 연차", "비고", "작업"]) {
       expect(scope).toContain(`<th scope="col">${h}</th>`);
     }
     // Both row kinds share the same <tr>/<td> grid.

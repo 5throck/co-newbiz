@@ -39,8 +39,10 @@ describe("unit conversion without drift", () => {
     expect(cl.manualLineKrwM({ amount: 1.2, amountUnit: "fx_eok", currency: "EUR" })).toBeNull();
     // unknown unit
     expect(cl.manualLineKrwM({ amount: 1.2, amountUnit: "yard", currency: "KRW" })).toBeNull();
-    // stored canonical wins
-    expect(cl.manualLineKrwM({ amount: 1, amountUnit: "krw_m", currency: "KRW", amountKrwM: 42.555 })).toBe(42.56);
+    // live amount + unit win over a stale stored canonical (edited after the last save)
+    expect(cl.manualLineKrwM({ amount: 1, amountUnit: "krw_m", currency: "KRW", amountKrwM: 42.555 })).toBe(1);
+    // stored canonical is the fallback when no KRW unit is present
+    expect(cl.manualLineKrwM({ amount: 1, currency: "KRW", amountKrwM: 42.555 })).toBe(42.56);
   });
 });
 

@@ -167,6 +167,26 @@ const MANUAL_CATEGORIES: readonly string[] = ["labor", "opex", "capex", "revenue
 const MANUAL_CURRENCIES: readonly string[] = ["KRW", "USD", "EUR", "JPY", "CNY"];
 const MANUAL_PERIODS: readonly string[] = ["monthly", "quarterly", "yearly", "lumpsum"];
 
+// Cadence aliases seen in stored/LLM/legacy lines (Korean and English variants). Anything not
+// listed stays unset (needs a human pick) rather than being guessed.
+const PERIOD_ALIASES: Record<string, NonNullable<ManualCostLine["period"]>> = {
+  monthly: "monthly", month: "monthly", months: "monthly", per_month: "monthly", mo: "monthly", "월": "monthly", "매월": "monthly", "월간": "monthly", "월별": "monthly",
+  quarterly: "quarterly", quarter: "quarterly", per_quarter: "quarterly", "분기": "quarterly", "분기별": "quarterly",
+  yearly: "yearly", year: "yearly", annual: "yearly", annually: "yearly", per_year: "yearly", "년": "yearly", "연": "yearly", "연간": "yearly", "매년": "yearly",
+  lumpsum: "lumpsum", lump_sum: "lumpsum", "lump-sum": "lumpsum", once: "lumpsum", one_off: "lumpsum", oneoff: "lumpsum", "one-off": "lumpsum", "일시": "lumpsum", "일시불": "lumpsum", "일시불(총액)": "lumpsum",
+};
+
+/** Canonical cadence for any stored variant ("월", "Monthly", "month", ...); undefined when unknown. */
+export function normalizePeriod(v: unknown): ManualCostLine["period"] {
+  if (typeof v !== "string") return undefined;
+  const k = v.trim().toLowerCase().replace(/\s+/g, "_");
+  return PERIOD_ALIASES[k] ?? (MANUAL_PERIODS.includes(k) ? (k as ManualCostLine["period"]) : undefined);
+}
+
+/** Cadence read from the current field or legacy field names (cadence/periodicity/frequency). */
+const rawPeriodOf = (raw: Record<string, unknown>): ManualCostLine["period"] =>
+  normalizePeriod(raw.period) ?? normalizePeriod(raw.cadence) ?? normalizePeriod(raw.periodicity) ?? normalizePeriod(raw.frequency);
+
 /** Old demo/LLM shape that predates categories: `kind` (revenue/cost) and `growth_rate`. */
 export const manualLineIsOldShape = (l: Record<string, unknown>): boolean => "kind" in l || "growth_rate" in l;
 /** A line is legacy when it lacks category/period/currency or carries the old shape. */
@@ -187,7 +207,7 @@ export function normalizeLegacyLine(raw: Record<string, unknown>): ManualCostLin
   const kind = typeof raw.kind === "string" ? raw.kind : undefined;
   const category = typeof raw.category === "string" && MANUAL_CATEGORIES.includes(raw.category) ? (raw.category as ManualCostLine["category"]) : kind === "revenue" ? ("revenue" as const) : undefined;
   const currency = typeof raw.currency === "string" && MANUAL_CURRENCIES.includes(raw.currency) ? (raw.currency as ManualCostLine["currency"]) : ("KRW" as const);
-  const period = typeof raw.period === "string" && MANUAL_PERIODS.includes(raw.period) ? (raw.period as ManualCostLine["period"]) : undefined;
+  const period = rawPeriodOf(raw);
   const unit = raw.amountUnit;
   const amountUnit = !old && isKnownAmountUnit(unit) ? unit : undefined;
   return {
@@ -229,11 +249,15 @@ export const manualLineNeedsConfirm = (l: ManualCostLine): boolean => manualLine
  * not KRW (no FX in this feature). The server-stored `amountKrwM` wins when present.
  */
 export function manualLineKrwM(l: { amount?: unknown; amountUnit?: unknown; amountKrwM?: unknown; currency?: unknown }): number | null {
-  if (typeof l.amountKrwM === "number" && Number.isFinite(l.amountKrwM)) return Math.round(l.amountKrwM * 100) / 100;
   if (l.currency !== undefined && l.currency !== "KRW") return null;
-  if (!isKrwUnit(l.amountUnit)) return null;
-  const n = typeof l.amount === "number" && Number.isFinite(l.amount) ? l.amount : Number(l.amount) || 0;
-  return Math.round(n * KRW_UNIT_TO_KRW_M[l.amountUnit] * 100) / 100;
+  // Derive from the live amount + unit first: a stored amountKrwM goes stale the moment the person
+  // edits the amount or unit (and the server used to echo the stale value back on save).
+  if (isKrwUnit(l.amountUnit)) {
+    const n = typeof l.amount === "number" && Number.isFinite(l.amount) ? l.amount : Number(l.amount) || 0;
+    return Math.round(n * KRW_UNIT_TO_KRW_M[l.amountUnit] * 100) / 100;
+  }
+  if (typeof l.amountKrwM === "number" && Number.isFinite(l.amountKrwM)) return Math.round(l.amountKrwM * 100) / 100;
+  return null;
 }
 
 // ── Sanity guard (decision support only, never a cap) ────────────────────────
@@ -471,6 +495,35 @@ export function findDuplicateWarnings(reflectedLines: Array<Pick<CapabilityCostL
 
 const ANNUAL: Record<string, number> = { monthly: 12, quarterly: 4, yearly: 1, lumpsum: 1 };
 
+/** Payments per year for a cadence (monthly 12, quarterly 4, yearly/lumpsum/unset 1); accepts any alias. */
+export const cadenceMultiplier = (period: unknown): number => ANNUAL[normalizePeriod(period) ?? "yearly"] ?? 1;
+export const isLumpsum = (period: unknown): boolean => normalizePeriod(period) === "lumpsum";
+
+/**
+ * Single source of the per-year amount of a confirmed KRW manual line (백만원): recurring lines are
+ * annualised (per-period amount x cadence) on every active year Y{start}..Y{end}; a lump sum lands
+ * once on its start year. Every table, tile, chart and the item-row readout goes through this.
+ */
+export function manualLineYearVector(l: { amount?: unknown; amountUnit?: unknown; amountKrwM?: unknown; currency?: unknown; period?: unknown; startYear?: number; endYear?: number }, horizon: number): number[] {
+  const H = Math.max(1, Math.floor(horizon));
+  const out: number[] = Array(H).fill(0);
+  const v = manualLineKrwM(l);
+  if (v === null) return out;
+  const start = Math.max(1, l.startYear ?? 1);
+  if (isLumpsum(l.period)) { if (start <= H) out[start - 1] += v; return out; }
+  const annual = v * cadenceMultiplier(l.period);
+  for (let y = start; y <= Math.min(l.endYear ?? H, H); y++) out[y - 1] += annual;
+  return out;
+}
+
+/** Row readout: annualised run-rate (null for lump sums) and the horizon total of a manual line, 백만원. */
+export function manualLineAmounts(l: Parameters<typeof manualLineYearVector>[0], horizon: number): { annualKrwM: number | null; totalKrwM: number } | null {
+  const v = manualLineKrwM(l);
+  if (v === null) return null;
+  const total = manualLineYearVector(l, horizon).reduce((a, n) => a + n, 0);
+  return { annualKrwM: isLumpsum(l.period) ? null : Math.round(v * cadenceMultiplier(l.period) * 100) / 100, totalKrwM: Math.round(total * 100) / 100 };
+}
+
 /** Whole years a recurring line is active inside the review horizon (start defaults Y1, end defaults the horizon). */
 export function recurringActiveYears(startYear: number | undefined, endYear: number | undefined, horizon: number): number {
   const H = Math.max(1, Math.floor(horizon));
@@ -522,17 +575,11 @@ export function investmentTotals(view: CapabilityCostView, reflectedKeys: Readon
     if (m.currency && m.currency !== "KRW") { excluded += 1; continue; }
     const krwM = manualLineKrwM(m);
     if (krwM === null) { excludedNeedsConfirm += 1; continue; }
-    if (m.period === "lumpsum") {
-      // Same window rule as the summary: a lump sum starting after the horizon is not counted.
-      if (Math.max(1, m.startYear ?? 1) > horizon) continue;
-      manualKrwM += krwM;
-      lumpsumKrwM += krwM;
-    } else {
-      // Recurring: annualised by cadence (monthly x12, quarterly x4) and counted for every active year in the horizon.
-      const total = krwM * (ANNUAL[m.period ?? "yearly"] ?? 1) * recurringActiveYears(m.startYear, m.endYear, horizon);
-      manualKrwM += total;
-      recurringKrwM += total;
-    }
+    // Same per-year vector as the summary/charts (annualised by cadence over the active years).
+    const total = manualLineYearVector(m, horizon).reduce((a, n) => a + n, 0);
+    manualKrwM += total;
+    if (isLumpsum(m.period)) lumpsumKrwM += total;
+    else recurringKrwM += total;
   }
   const round2 = (n: number) => Math.round(n * 100) / 100;
   return {
@@ -616,10 +663,8 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
     const v = manualLineKrwM(m as ManualCostLine);
     if (m.category === "revenue" || m.category === "gov_rnd") {
       if (v === null) continue;
-      const annual = v * (ANNUAL[m.period ?? "yearly"] ?? 1);
-      const start = Math.max(1, m.startYear ?? 1);
-      const end = m.period === "lumpsum" ? start : Math.min(m.endYear ?? H, H);
-      for (let y = start; y <= Math.min(end, H); y++) inflow[m.category === "revenue" ? "revenue" : "gov_rnd"][y - 1] += annual;
+      const vec = manualLineYearVector(m, H);
+      for (let i = 0; i < H; i++) inflow[m.category === "revenue" ? "revenue" : "gov_rnd"][i] += vec[i];
       continue;
     }
     if (manualLineNeedsConfirm(m as ManualCostLine)) { excludedNeedsConfirm += 1; continue; }
@@ -628,17 +673,10 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
     if (m.endYear !== undefined && m.endYear > H) endYearExceedsHorizon += 1;
     if (m.category !== "labor" && m.category !== "opex" && m.category !== "capex") continue;
     const cat = m.category as "labor" | "opex" | "capex";
-    if (m.period === "lumpsum") {
-      lumpByCat[cat] += v;
-      const y = Math.max(1, m.startYear ?? 1);
-      if (y <= H) yearCat[cat][y - 1] += v;
-    } else {
-      const annual = v * (ANNUAL[m.period ?? "yearly"] ?? 1);
-      annualByCat[cat] += annual;
-      const start = Math.max(1, m.startYear ?? 1);
-      const end = Math.min(m.endYear ?? H, H);
-      for (let y = start; y <= end; y++) yearCat[cat][y - 1] += annual;
-    }
+    const vec = manualLineYearVector(m, H);
+    for (let i = 0; i < H; i++) yearCat[cat][i] += vec[i];
+    if (isLumpsum(m.period)) lumpByCat[cat] += vec.reduce((a, n) => a + n, 0);
+    else annualByCat[cat] += v * cadenceMultiplier(m.period);
   }
   let capabilitySpendFromMilestone = 0;
   for (const c of capLines) {
