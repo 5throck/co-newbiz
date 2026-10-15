@@ -4,7 +4,7 @@
 // helpers are reused; nothing is recomputed differently), so mode === the stored totals.
 // Bands are DETERMINISTIC extremes of human-confirmed assumption ranges — no sampling, no
 // draws, no probabilities (those are slice 2). Decision support only; never a gate or a cap.
-import { manualLineKrwM, manualLineNeedsConfirm, manualLineYearVector, type CapabilityCostLine } from "./capability-cost-lines.ts";
+import { manualLineKrwM, manualLineNeedsConfirm, manualLineYearVector, type CapabilityCostLine, type SimOverrides } from "./capability-cost-lines.ts";
 import { rowAnnualCostKrwM, staffingSummaryVector, type StaffingPlanEntry, type StaffingRow } from "./staffing-plan.ts";
 
 /** Loose manual-line shape (same subset the S5 summary accepts). */
@@ -92,6 +92,8 @@ export interface InvestmentVectorsInput {
   horizon: number;
   reflectedKeys: ReadonlySet<string>;
   staffing: StaffingPlanEntry | null;
+  /** ADR-0176: decider-entered assumption-range overrides; undefined keys fall back to the constants. */
+  overrides?: SimOverrides | null;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -114,14 +116,14 @@ function bandOf(capability: number[], manual: number[], staffing: number[]): Inv
   };
 }
 
-/** Triangular half-year DELAY (low band): half of each year's cost lands in that year, half in the next. */
-function shiftDelayHalf(v: number[]): number[] {
-  return v.map((n, i) => round2(0.5 * n + (i > 0 ? 0.5 * v[i - 1] : 0)));
+/** Triangular DELAY shift (low band): weight w of each year's cost moves to the next year. */
+function shiftDelayHalf(v: number[], w = RAMP_SHIFT_HALF_YEARS): number[] {
+  return v.map((n, i) => round2((1 - w) * n + (i > 0 ? w * v[i - 1] : 0)));
 }
 
-/** Triangular half-year ADVANCE (high band): half of the next year's cost is pulled into this year. */
-function shiftAdvanceHalf(v: number[]): number[] {
-  return v.map((n, i) => round2(0.5 * n + 0.5 * (v[i + 1] ?? 0)));
+/** Triangular ADVANCE shift (high band): weight w of the next year's cost is pulled into this year. */
+function shiftAdvanceHalf(v: number[], w = RAMP_SHIFT_HALF_YEARS): number[] {
+  return v.map((n, i) => round2((1 - w) * n + w * (v[i + 1] ?? 0)));
 }
 
 /** Scale a vector by a factor, rounded per year. */
@@ -129,6 +131,20 @@ const scaled = (v: number[], f: number): number[] => v.map((n) => round2(n * f))
 
 /** Does this staffing row carry a salary-increase rate at all (an entered, non-zero rate)? */
 const hasIncreaseRate = (r: StaffingRow): boolean => r.salaryIncreaseRatePct > 0;
+
+/** Effective assumption values for the UI (override when valid, else the ADR constant). */
+export function effectiveAssumptions(overrides?: SimOverrides | null): { salaryRange: number; salaryIncreaseRangePp: number; onCostRangePp: number; rampShiftHalfYears: number; capabilityRange: number; manualLineRange: number } {
+  const ov = overrides ?? {};
+  const eff = (v: number | undefined, d: number): number => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : d);
+  return {
+    salaryRange: eff(ov.salaryRange, SALARY_RANGE),
+    salaryIncreaseRangePp: eff(ov.salaryIncreaseRangePp, SALARY_INCREASE_RANGE_PP),
+    onCostRangePp: eff(ov.onCostRangePp, ON_COST_RANGE_PP),
+    rampShiftHalfYears: eff(ov.rampShiftHalfYears, RAMP_SHIFT_HALF_YEARS),
+    capabilityRange: eff(ov.capabilityRange, CAPABILITY_RANGE),
+    manualLineRange: eff(ov.manualLineRange, MANUAL_LINE_RANGE),
+  };
+}
 
 // ── Mode (behaviour-preserving) ──────────────────────────────────────────────
 
@@ -166,11 +182,11 @@ function modeStaffingVector(staffing: StaffingPlanEntry, H: number): number[] {
 
 // ── Bands ────────────────────────────────────────────────────────────────────
 
-/** Capability band: +-CAPABILITY_RANGE on the mode vector (same years, same lines). */
-const capabilityBand = (mode: number[]): { low: number[]; high: number[] } => ({ low: scaled(mode, 1 - CAPABILITY_RANGE), high: scaled(mode, 1 + CAPABILITY_RANGE) });
+/** Capability band: ± the effective capability range on the mode vector (same years, same lines). */
+const capabilityBand = (mode: number[], range: number): { low: number[]; high: number[] } => ({ low: scaled(mode, 1 - range), high: scaled(mode, 1 + range) });
 
-/** Manual band: +-MANUAL_LINE_RANGE on the mode vector. */
-const manualBand = (mode: number[]): { low: number[]; high: number[] } => ({ low: scaled(mode, 1 - MANUAL_LINE_RANGE), high: scaled(mode, 1 + MANUAL_LINE_RANGE) });
+/** Manual band: ± the effective manual-line range on the mode vector. */
+const manualBand = (mode: number[], range: number): { low: number[]; high: number[] } => ({ low: scaled(mode, 1 - range), high: scaled(mode, 1 + range) });
 
 /**
  * Staffing band. Salary/increase/on-cost move together (all rows, all years) through the SAME
@@ -179,7 +195,7 @@ const manualBand = (mode: number[]): { low: number[]; high: number[] } => ({ low
  * only where a rate exists. The ramp moves as a triangular half-year shift: delayed for low,
  * advanced for high. Recruiting one-offs are person-entered lumps with no defined range — unperturbed.
  */
-function staffingBand(staffing: StaffingPlanEntry, H: number): { low: number[]; high: number[] } {
+function staffingBand(staffing: StaffingPlanEntry, H: number, salaryRange: number, increasePp: number, onCostPp: number, w: number): { low: number[]; high: number[] } {
   const build = (salaryF: number, dIncreasePp: number, dOnCostPp: number): number[] => {
     const vec = Array<number>(H).fill(0);
     for (const r of staffing.rows) {
@@ -197,8 +213,8 @@ function staffingBand(staffing: StaffingPlanEntry, H: number): { low: number[]; 
     return vec.map(round2);
   };
   const recruiting = staffingSummaryVector(staffing, H).recruitingByYear;
-  const low = shiftDelayHalf(build(1 - SALARY_RANGE, -SALARY_INCREASE_RANGE_PP, -ON_COST_RANGE_PP)).map((v, i) => round2(v + recruiting[i]));
-  const high = shiftAdvanceHalf(build(1 + SALARY_RANGE, SALARY_INCREASE_RANGE_PP, ON_COST_RANGE_PP)).map((v, i) => round2(v + recruiting[i]));
+  const low = shiftDelayHalf(build(1 - salaryRange, -increasePp, -onCostPp), w).map((v, i) => round2(v + recruiting[i]));
+  const high = shiftAdvanceHalf(build(1 + salaryRange, increasePp, onCostPp), w).map((v, i) => round2(v + recruiting[i]));
   return { low, high };
 }
 
@@ -212,9 +228,13 @@ export function buildInvestmentVectors(input: InvestmentVectorsInput): Investmen
   const modeCapability = modeCapabilityVector(input.capLines, H, input.reflectedKeys);
   const modeManual = modeManualVector(input.manual, H);
   const modeStaffing = input.staffing ? modeStaffingVector(input.staffing, H) : Array<number>(H).fill(0);
-  const capB = capabilityBand(modeCapability);
-  const manB = manualBand(modeManual);
-  const staffB = input.staffing ? staffingBand(input.staffing, H) : { low: modeStaffing, high: modeStaffing };
+  const ov = input.overrides ?? {};
+  const eff = (v: number | undefined, d: number): number => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : d);
+  const capB = capabilityBand(modeCapability, eff(ov.capabilityRange, CAPABILITY_RANGE));
+  const manB = manualBand(modeManual, eff(ov.manualLineRange, MANUAL_LINE_RANGE));
+  const staffB = input.staffing
+    ? staffingBand(input.staffing, H, eff(ov.salaryRange, SALARY_RANGE), eff(ov.salaryIncreaseRangePp, SALARY_INCREASE_RANGE_PP), eff(ov.onCostRangePp, ON_COST_RANGE_PP), eff(ov.rampShiftHalfYears, RAMP_SHIFT_HALF_YEARS))
+    : { low: modeStaffing, high: modeStaffing };
   return {
     horizon: H,
     low: bandOf(capB.low, manB.low, staffB.low),

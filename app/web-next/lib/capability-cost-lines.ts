@@ -136,7 +136,58 @@ export const MIN_HORIZON_YEARS = 1;
 export const MAX_HORIZON_YEAR_LIMIT = 15;
 export const PLAN_META_SOURCE = "plan_meta" as const;
 /** The one meta entry in business_case_lines_json carrying the S5 검토 기간. */
-export interface PlanMetaEntry { source: typeof PLAN_META_SOURCE; horizonYears: number }
+export interface PlanMetaEntry {
+  source: typeof PLAN_META_SOURCE;
+  horizonYears: number;
+  /** ADR-0176: decider-entered simulation assumption-range overrides (absent = ADR defaults). */
+  simOverrides?: SimOverrides;
+}
+
+// ── Simulation assumption overrides (ADR-0176) ───────────────────────────────
+
+/**
+ * Decider-entered assumption-range overrides for the S5 투자 시뮬레이션 bands. Every key is
+ * optional (absent = the ADR-0176 default constant); values widen OR narrow the band. These are
+ * person-entered values — never auto-derived, never written by AI.
+ */
+export interface SimOverrides {
+  salaryRange?: number;
+  salaryIncreaseRangePp?: number;
+  onCostRangePp?: number;
+  rampShiftHalfYears?: number;
+  capabilityRange?: number;
+  manualLineRange?: number;
+}
+export const SIM_OVERRIDE_KEYS = ["salaryRange", "salaryIncreaseRangePp", "onCostRangePp", "rampShiftHalfYears", "capabilityRange", "manualLineRange"] as const;
+export type SimOverrideKey = (typeof SIM_OVERRIDE_KEYS)[number];
+const isSimOverridesShape = (x: unknown): x is Record<string, unknown> =>
+  !!x && typeof x === "object" && !Array.isArray(x) && Object.keys(x as object).every((k) => (SIM_OVERRIDE_KEYS as readonly string[]).includes(k));
+/** Client/route validation: every present key must be a finite number >= 0 (no upper clamp — permissive by design). */
+export function validateSimOverrides(x: unknown): string | null {
+  if (x === undefined || x === null) return null;
+  if (!isSimOverridesShape(x)) return "시뮬레이션 가정 범위 형식이 올바르지 않습니다 (알 수 없는 항목).";
+  for (const k of SIM_OVERRIDE_KEYS) {
+    const v = x[k];
+    if (v === undefined) continue;
+    if (typeof v !== "number" || !Number.isFinite(v) || v < 0) return `시뮬레이션 가정 범위(${k})는 0 이상의 숫자여야 합니다.`;
+  }
+  return null;
+}
+/** Clean copy: only the known keys that hold a valid number >= 0; undefined when nothing survives. */
+export function simOverridesOf(x: unknown): SimOverrides | undefined {
+  if (!x || typeof x !== "object" || Array.isArray(x)) return undefined;
+  const src = x as Record<string, unknown>;
+  const out: Record<string, number> = {};
+  let any = false;
+  for (const k of SIM_OVERRIDE_KEYS) {
+    const v = src[k];
+    if (typeof v === "number" && Number.isFinite(v) && v >= 0) {
+      out[k] = v;
+      any = true;
+    }
+  }
+  return any ? (out as SimOverrides) : undefined;
+}
 export const isPlanMetaEntry = (x: unknown): x is PlanMetaEntry =>
   !!x && typeof x === "object" && (x as { source?: unknown }).source === PLAN_META_SOURCE;
 /** Valid meta entry: integer horizon within bounds. Malformed entries are ignored by readers. */
@@ -996,6 +1047,10 @@ export function normalizeBusinessCaseLines(
   for (const raw of incoming) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { ok: false, error: { code: "invalid_request", message: "business_case_lines의 각 항목은 객체여야 합니다." } };
     if (isPlanMetaEntry(raw)) {
+      // ADR-0176: an invalid simOverrides object is a hard 400 — a person typed these values,
+      // so silent drops would hide their input (same reasoning as the staffing plan rows).
+      const ovErr = validateSimOverrides((raw as PlanMetaEntry).simOverrides);
+      if (ovErr) return { ok: false, error: { code: "invalid_request", message: ovErr } };
       // Exactly one valid meta entry is kept; additional/invalid ones are dropped silently (the
       // client writes the horizon, so an invalid one arriving here means a stale tab raced a save).
       if (planMetaEntryIsValid(raw) && !out.some(isPlanMetaEntry)) out.push(raw);

@@ -12,8 +12,9 @@ import {
   MANUAL_LINE_RANGE,
   FX_RANGE,
   RAMP_SHIFT_HALF_YEARS,
+  effectiveAssumptions,
 } from "../../app/web-next/lib/investment-vectors.ts";
-import { buildInvestmentSummary, scheduleTotals, type CapabilityCostLine } from "../../app/web-next/lib/capability-cost-lines.ts";
+import { buildInvestmentSummary, scheduleTotals, normalizeBusinessCaseLines, validateSimOverrides, simOverridesOf, type CapabilityCostLine } from "../../app/web-next/lib/capability-cost-lines.ts";
 import { STAFFING_PLAN_SOURCE, type StaffingPlanEntry, type StaffingRow } from "../../app/web-next/lib/staffing-plan.ts";
 
 const BAND_KEYS = ["\ucd5c\uc800", "\uae30\uc900", "\ucd5c\uace0"]; // choi-jeo / gi-jun / choi-go
@@ -202,7 +203,7 @@ describe("investment vectors: no fabrication guards", () => {
     const modeY1 = 80; // 1 head * 80, no increase (rate 0 kept), on-cost 0 as entered
     expect(r.mode.staffingKrwM).toBeCloseTo(modeY1, 2);
     // H=1 triangular shift halves the year: band Y1 = 0.5 * band annual.
-    // An entered 0 on-cost IS a human-entered rate, so the range applies — but the pp shift is
+    // An entered 0 on-cost IS a human-entered rate, so the range applies -- but the pp shift is
     // clamped at 0 (a rate never goes negative), so low keeps the 0 rate while high adds 2pp;
     // the increase rate of 0 has no pp shift (only rows with a non-zero rate are shifted).
     expect(r.low.staffingKrwM).toBeCloseTo(0.5 * modeY1 * (1 - SALARY_RANGE), 2);
@@ -236,5 +237,70 @@ describe("investment vectors: assumption constants (human-confirmed ranges)", ()
     expect(INVESTMENT_ASSUMPTIONS.fx.active).toBe(false);
     expect(INVESTMENT_ASSUMPTIONS.salary.appliesTo).toContain("analyst");
     expect(BAND_KEYS.length).toBe(3);
+  });
+});
+
+// -- Decider-entered assumption overrides (ADR-0176 follow-up) ----------------
+
+describe("investment vectors: assumption overrides", () => {
+  it("explicit default overrides equal the no-override call", () => {
+    const r = buildInvestmentVectors({ ...baseInput, overrides: { salaryRange: SALARY_RANGE, salaryIncreaseRangePp: SALARY_INCREASE_RANGE_PP, onCostRangePp: ON_COST_RANGE_PP, rampShiftHalfYears: RAMP_SHIFT_HALF_YEARS, capabilityRange: CAPABILITY_RANGE, manualLineRange: MANUAL_LINE_RANGE } });
+    const r0 = buildInvestmentVectors(baseInput);
+    expect(r.low).toEqual(r0.low);
+    expect(r.high).toEqual(r0.high);
+    expect(r.mode).toEqual(r0.mode);
+  });
+
+  it("all-zero overrides make perturbable parts degenerate (low == mode == high)", () => {
+    const r = buildInvestmentVectors({ ...baseInput, overrides: { salaryRange: 0, salaryIncreaseRangePp: 0, onCostRangePp: 0, rampShiftHalfYears: 0, capabilityRange: 0, manualLineRange: 0 } });
+    for (const k of ["capabilityByYear", "manualByYear"] as const) {
+      expect(r.low[k]).toEqual(r.mode[k]);
+      expect(r.high[k]).toEqual(r.mode[k]);
+    }
+    // staffing: no salary/on-cost/ramp perturbation (recruiting lumps always unperturbed)
+    expect(r.low.staffingByYear).toEqual(r.mode.staffingByYear);
+    expect(r.high.staffingByYear).toEqual(r.mode.staffingByYear);
+    expect(r.low.grandKrwM).toBe(r.mode.grandKrwM);
+    expect(r.high.grandKrwM).toBe(r.mode.grandKrwM);
+  });
+
+  it("capability override widens the band to the given range", () => {
+    const r = buildInvestmentVectors({ ...baseInput, overrides: { capabilityRange: 0.5 } });
+    expect(r.high.capabilityKrwM).toBeCloseTo(800 * 1.5, 2);
+    expect(r.low.capabilityKrwM).toBeCloseTo(800 * 0.5, 2);
+  });
+
+  it("effectiveAssumptions falls back per-key; invalid values fall back too", () => {
+    expect(effectiveAssumptions(undefined).capabilityRange).toBe(CAPABILITY_RANGE);
+    expect(effectiveAssumptions({ capabilityRange: 0.5 }).capabilityRange).toBe(0.5);
+    expect(effectiveAssumptions({ capabilityRange: -1 }).capabilityRange).toBe(CAPABILITY_RANGE);
+    expect(effectiveAssumptions({ capabilityRange: Number.NaN }).capabilityRange).toBe(CAPABILITY_RANGE);
+  });
+
+  it("validateSimOverrides rejects negative, non-number, unknown-key payloads", () => {
+    expect(validateSimOverrides(null)).toBeNull();
+    expect(validateSimOverrides(undefined)).toBeNull();
+    expect(validateSimOverrides({})).toBeNull();
+    expect(validateSimOverrides({ capabilityRange: 0.5 })).toBeNull();
+    expect(validateSimOverrides({ capabilityRange: -0.1 })).not.toBeNull();
+    expect(validateSimOverrides({ salaryRange: "x" })).not.toBeNull();
+    expect(validateSimOverrides({ bogus: 1 })).not.toBeNull();
+  });
+
+  it("simOverridesOf keeps only valid known keys; empty when nothing survives", () => {
+    expect(simOverridesOf({ capabilityRange: 0.5, bogus: 3 })).toEqual({ capabilityRange: 0.5 });
+    expect(simOverridesOf({ capabilityRange: -1, salaryRange: 0.2 })).toEqual({ salaryRange: 0.2 });
+    expect(simOverridesOf({})).toBeUndefined();
+  });
+
+  it("invalid overrides are a hard 400 at the route (person-entered input, never silently dropped)", () => {
+    const lines = [{ source: "plan_meta", horizonYears: 5, simOverrides: { capabilityRange: -1 } }];
+    const rows = [];
+    const norm = normalizeBusinessCaseLines(lines, rows, [], "test-user");
+    expect(norm.ok).toBe(false);
+    if (!norm.ok) {
+      expect(norm.error.code).toBe("invalid_request");
+      expect(norm.error.message).toContain("capabilityRange"); // ASCII key name; Korean text lives in the lib
+    }
   });
 });
