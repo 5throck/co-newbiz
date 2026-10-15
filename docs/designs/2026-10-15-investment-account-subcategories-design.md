@@ -1,6 +1,6 @@
 ---
 title: Investment account sub-categories and quantity x unit-price helper
-status: proposed
+status: accepted
 date: 2026-10-15
 owner: platform-lead
 lang: ko
@@ -47,8 +47,7 @@ One constant `SUB_CATEGORIES` in a new pure module `lib/investment-subcategories
 | `rnd_development` | `연구개발비` | capex | yearly | capitalised development |
 | `tech_license` | `라이선스·기술 도입` | capex | lumpsum | running royalties: use opex `outsourcing` with a note |
 | `patent_filing` | `특허 출원·등록` | capex | lumpsum | helper-eligible |
-| `patent_maintenance` | `특허 유지·연차료` | capex | yearly | helper-eligible; see OD-2 |
-| `fto_search` | `FTO·선행기술 조사` | capex | lumpsum | helper-eligible; see OD-2 |
+| `fto_search` | `FTO·선행기술 조사` | capex | lumpsum | helper-eligible |
 | `trademark_design` | `상표·디자인 등록` | capex | lumpsum | helper-eligible |
 | `cert_equipment` | `인증·인허가 설비` | capex | lumpsum | test rigs, facilities required by a permit or certification |
 | `rent_utility` | `임차·유틸리티` | opex | monthly | |
@@ -59,10 +58,13 @@ One constant `SUB_CATEGORIES` in a new pure module `lib/investment-subcategories
 | `product_cert` | `제품 인증 (CE/KC/ISO 등)` | opex | lumpsum | helper-eligible |
 | `business_permit` | `사업 인허가` | opex | lumpsum | helper-eligible |
 | `cert_maintenance` | `인증 유지·갱신·감사` | opex | yearly | helper-eligible, renewal period |
+| `patent_maintenance` | `특허 유지·연차료` | opex | yearly | helper-eligible, renewal period; recurs yearly (OD-2, approved) |
 | `opening_working_capital` | `초기 운전자본` | opex | lumpsum | see OD-3 |
 | `direct_labor` | `직접 인건비` | labor | yearly | staffing plan default |
 | `recruiting_training` | `채용·교육비` | labor | lumpsum | staffing recruiting one-off |
 | `management_labor` | `임원·관리 인건비` | labor | yearly | |
+
+Counts per parent: capex 9, opex 10, labor 3 (22 keys in total; revenue and gov_rnd none).
 
 `revenue` and `gov_rnd` get no sub-categories in this ADR (no request; their S8 meaning is single-purpose). Grouping "개발·무형" from the PM draft is a display group (`optgroup`) inside capex, not a separate level: two levels only.
 
@@ -70,12 +72,12 @@ Rules: `subCategory` is optional; when set, its parent must equal the line's `ca
 
 ### 2.1 S8 consequence (explicit)
 
-Under `s5_plan` only top-level `capex` feeds the S8 investment vector. Therefore patent, licence, FTO, trademark and development costs (parent capex) count as investment, while `product_cert`, `business_permit`, `cert_maintenance` and `opening_working_capital` (parent opex) are cross-check only unless the case uses `s5_plan_full`. Under `s5_plan_full` they replace the opex ratio in covered years.
+Under `s5_plan` only top-level `capex` feeds the S8 investment vector. Therefore patent filing, licence, FTO, trademark and development costs (parent capex) count as investment, while `product_cert`, `business_permit`, `cert_maintenance`, `patent_maintenance` and `opening_working_capital` (parent opex) are cross-check only unless the case uses `s5_plan_full`. Patent maintenance and annual fees therefore become cross-check under `s5_plan` and are counted only under `s5_plan_full`. Under `s5_plan_full` they replace the opex ratio in covered years.
 
 Assessment and recommendation:
 
 - Certification and permit acquisition is usually expensed and, for a new business, small next to capex; leaving it in opex is accounting-faithful. The real risk is that under `s5_plan` a one-off certification cost disappears from the NPV because the opex ratio ignores it. Recommendation (OD-1): keep the parent as opex (do not reclassify to capex to force it into NPV), and add a visible S8 provenance line `s5_plan 기준에서 제외된 S5 일회성 운영비 합계` listing one-off opex sub-categories that the basis ignores, so the reviewer chooses `s5_plan_full` knowingly. No calculation change.
-- Patent maintenance fees are recurring and economically opex-like; placing them under capex makes `s5_plan` treat them as investment each year. Recommendation (OD-2): move `patent_maintenance` to opex (as `특허 유지·연차료` under opex) and keep filing, FTO and trademark registration under capex. Alternative: keep the decider draft as is and accept the overstatement. Flagged for the decider since it changes the draft list.
+- Patent maintenance fees are recurring and economically opex-like. Resolved (OD-2, explicitly approved by the decider 2026-10-15): `patent_maintenance` sits under opex (`특허 유지·연차료`); filing, FTO and trademark registration stay under capex. Because `s5_plan` counts only capex, maintenance fees are cross-check there and counted only under `s5_plan_full`. Default recurrence is yearly (`everyYears` 1 unless the person sets another period).
 - `초기 운전자본` under opex is not accounting-correct (working capital is neither expense nor capex) and under `s5_plan_full` it would be read as an operating cost in its year. Recommendation (OD-3): accept for now as a lump-sum opex line with a fixed chip `운전자본 — S8에서 비용 처리됨, 회수 미반영`, and defer a proper working-capital treatment (outflow plus terminal recovery) to an S8 ADR. Do not route it to capex.
 
 ## 3. Quantity x unit-price helper (b)
@@ -156,17 +158,19 @@ Proposal-only, same pattern as the judgement draft: an `AI 제안` action on man
 3. Promotion carry (note tag, per-occurrence expansion), S8 provenance line for basis-excluded one-off opex, report-composer text, S10 read-only tags, AI sub-category proposal.
 4. Separate ADR: permit/certification cost columns and S5 links.
 
-## 11. Open decisions
+## 11. Open decisions (resolved 2026-10-15)
 
-| ID | Question | Recommendation |
+The decider approved ADR-0177 in chat on 2026-10-15 and explicitly approved OD-2; OD-1 and OD-3..OD-7 are accepted as recommended. No per-item checklist was reviewed beyond OD-2.
+
+| ID | Question | Resolution |
 |---|---|---|
-| OD-1 | Certification/permit costs under opex are excluded from NPV under `s5_plan` | Keep opex; add an S8 provenance line showing the excluded one-off opex total |
-| OD-2 | `특허 유지·연차료` parent | Move to opex; keep filing/FTO/trademark under capex |
-| OD-3 | `초기 운전자본` under opex | Accept for now with a chip; proper treatment in a later S8 ADR |
-| OD-4 | Sub-category in the capability cost basis hash | Exclude (stay on c2) |
-| OD-5 | Separate simulation ranges for count and unit price | Defer; reuse manual-line ±20% |
-| OD-6 | Promotion carry | Note tag, no column |
-| OD-7 | Sub-categories for `revenue` / `gov_rnd` | None now |
+| OD-1 | Certification/permit costs under opex are excluded from NPV under `s5_plan` | Accepted as recommended: keep opex; S8 run record gains a line showing the one-off opex total that `s5_plan` leaves out |
+| OD-2 | `특허 유지·연차료` parent | Explicit decider decision: move to opex (recurs yearly); filing/FTO/trademark stay under capex |
+| OD-3 | `초기 운전자본` under opex | Accepted as recommended: opex with a warning chip; proper treatment in a later S8 ADR |
+| OD-4 | Sub-category in the capability cost basis hash | Accepted as recommended: excluded (stay on c2) |
+| OD-5 | Separate simulation ranges for count and unit price | Accepted as recommended: deferred; reuse manual-line +-20% |
+| OD-6 | Promotion carry | Accepted as recommended: note tag, no column |
+| OD-7 | Sub-categories for `revenue` / `gov_rnd` | Accepted as recommended: none now |
 
 ## 12. Could not verify
 

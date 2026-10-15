@@ -186,11 +186,25 @@ describe("source structure", () => {
   });
   test("unit-confirm UI: unit select beside the amount, placeholder, chips, unit text, excluded note, sanity guard", () => {
     for (const k of [
-      'aria-label="금액 단위"', '<option value="" disabled>선택</option>', "invest-confirm-chip-", "invest-unit-text-", "단위 확인 필요",
+      'aria-label="금액 단위"', '<option value="" disabled>선택</option>', "invest-confirm-chip-", "confirmUnitOnAmountEdit",
       "invest-excluded-note", "합계에서 제외됨", "invest-total-sanity", "금액이 매우 큽니다 — 단위를 확인하세요",
       "normalizeLegacyLine", "manualLineIssues", "manualLineKrwM", "sanityLineOversize", "sanityTotalOversize",
-      "amountUnitConfirmed: true", "amountUnitLabel", "isFxUnit", "환율 미반영 — 합계 제외",
+      "amountUnitConfirmed: true", "amountUnitLabel",
     ]) expect(page).toContain(k);
+    for (const k of ["invest-unit-text-", "단위 확인 필요", "단위를 고르면 금액이 계산됩니다", "환율 미반영 — 합계 제외"]) expect(page).not.toContain(k);
+    expect(page).not.toMatch(/`= \$\{formatKrwM/);
+  });
+  test("implicit unit confirmation on amount edit; legacy rows stay excluded with the single note", () => {
+    const fresh = { line: "a", amount: 0, amountUnit: "krw_m" as const, amountUnitConfirmed: false };
+    expect(cl.confirmUnitOnAmountEdit({ ...fresh, amount: 9 }).amountUnitConfirmed).toBe(true);
+    expect(cl.confirmUnitOnAmountEdit(fresh).amountUnitConfirmed).toBe(false);
+    const legacy = cl.normalizeLegacyLine({ line: "old", amount: 9, kind: "cost", amountUnit: "krw_m" });
+    expect(legacy.amountUnit).toBeUndefined();
+    expect(cl.confirmUnitOnAmountEdit(legacy).amountUnitConfirmed).toBe(false);
+    expect(cl.manualLineIssues(legacy)).toContain("unit");
+    expect(page).toContain("invest-excluded-note");
+    expect(page).not.toContain("invest-unit-marker-");
+    expect(page).not.toContain("unitPending");
   });
   test("the promotion copy uses the canonical 백만원 and audits skipped manual lines", () => {
     const repo = read("db/repositories/project.repository.ts");
@@ -216,7 +230,7 @@ describe("source structure", () => {
   test("docs mention the unit model and the new rejection code", () => {
     expect(read("docs/architecture/api-spec.md")).toContain("amountUnit");
     expect(read("docs/architecture/openapi.yaml")).toContain("amountUnitConfirmed");
-    expect(read("docs/architecture/ui-spec.md")).toContain("단위 확인 필요");
+    expect(read("docs/architecture/ui-spec.md")).toContain("confirmUnitOnAmountEdit");
     expect(read("docs/adr/0173-capability-cost-and-milestone-linkage.md")).toContain("OD-5 display unit changed");
   });
 });
