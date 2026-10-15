@@ -131,7 +131,7 @@ export function CapabilityCostBlock({ lines, orphans, totals, warnings, candidat
       {warnings.map((w) => (
         <div key={`${w.capabilityKey}:${w.manualIndex}`} role="alert" className="flex flex-wrap items-center gap-2 mb-2 text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))]">
           <span>
-            중복 가능성: 수동 항목 &quot;{w.manualLine}&quot;이(가) 반영된 역량 해소 비용 &quot;{w.capabilityName}&quot;과(와) 같은 항목일 수 있습니다 — 합계에 두 번 들어갈 수 있으니 확인하세요.
+            중복 가능성: 수동 항목 &quot;{w.manualLine}&quot;이(가) 반영된 역량 해소 비용 &quot;{w.capabilityName}&quot;과(와) {w.reason === "sub_category" ? "세부 과목이 같아 " : ""}같은 항목일 수 있습니다 — 합계에 두 번 들어갈 수 있으니 확인하세요.
           </span>
           {canAct && <button type="button" className="btn-ghost btn-sm" onClick={() => onDismiss(w)}>수동 항목 유지</button>}
         </div>

@@ -12,9 +12,11 @@ import { route } from "../../../../../lib/route.ts";
 import { promptAgent, systemMessage } from "../../../../../lib/prompts.ts";
 import { parseGapRegister, RESOLUTION_LABEL, type GapResolution } from "../../../../../lib/capability-gap.ts";
 import { entryStrategyText } from "../../../../../lib/greenfield-entry-strategy.ts";
+import { SUB_CATEGORIES, validSubCategory, type SubCategoryKey } from "../../../../../lib/capability-cost-lines.ts";
 
 interface RecoPayload {
-  investment_items: Array<{ line: string; category: "labor" | "opex" | "capex" | "revenue" | "gov_rnd"; note: string }> | null;
+  /** sub_category (ADR-0177 slice 1): optional 세부 과목 proposal, kept only when valid under the category; never a price. */
+  investment_items: Array<{ line: string; category: "labor" | "opex" | "capex" | "revenue" | "gov_rnd"; note: string; sub_category?: SubCategoryKey }> | null;
   key_evidence: string[];
   cautions: string[];
 }
@@ -33,10 +35,14 @@ function normalize(raw: Record<string, unknown>): RecoPayload {
       if (!line || rows.length >= 20) continue;
       const category = String(item?.category ?? "opex").trim().toLowerCase();
       const CATEGORIES = new Set(["labor", "opex", "capex", "revenue", "gov_rnd"]);
+      const cat = (CATEGORIES.has(category) ? category : "opex") as "labor" | "opex" | "capex" | "revenue" | "gov_rnd";
+      const sub = String(item?.sub_category ?? "").trim().toLowerCase();
       rows.push({
         line,
-        category: (CATEGORIES.has(category) ? category : "opex") as "labor" | "opex" | "capex" | "revenue" | "gov_rnd",
+        category: cat,
         note: String(item?.note ?? "").trim().slice(0, 300) || "검증 필요 — 금액은 사람이 산정",
+        // A sub-category that does not fit the category is dropped, never re-parented.
+        ...(validSubCategory(cat, sub) ? { sub_category: sub } : {}),
       });
     }
   }
@@ -120,7 +126,8 @@ export const POST = route(async (request: Request, { params }: { params: Promise
             "해소 방식(구축→설비 투자, 영입→인건비, 파트너십/투자→운영비·지분 투자금 등)과 진출전략을 근거로 " +
             "고려해야 할 항목명과 분류(category: labor=인건비 | opex=운영비 | capex=설비투자 | revenue=수익 | gov_rnd=정부 R&D 지원금)와 근거만 " +
             "제시하고, 구체적 금액은 절대 지어내지 마세요(금액은 사람이 입력).\n" +
-            `JSON: {"investment_items":[{"line":"항목명(예: 생산설비 투자, 초기 인건비)","category":"labor|opex|capex|revenue|gov_rnd","note":"이 항목이 필요한 근거"}],"key_evidence":["..."],"cautions":["..."]}\n\n${context}`,
+            `가능하면 sub_category(세부 과목)도 아래 키 중 category와 맞는 것 하나로 제안하세요(선택, revenue/gov_rnd는 비움; 단가·금액은 제안 금지): ${SUB_CATEGORIES.map((d) => `${d.key}=${d.label}(${d.parent})`).join(", ")}\n` +
+            `JSON: {"investment_items":[{"line":"항목명(예: 생산설비 투자, 초기 인건비)","category":"labor|opex|capex|revenue|gov_rnd","sub_category":"선택","note":"이 항목이 필요한 근거"}],"key_evidence":["..."],"cautions":["..."]}\n\n${context}`,
         },
       ],
       () => "",

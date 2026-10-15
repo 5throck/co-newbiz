@@ -12,9 +12,9 @@ const tbody = src.slice(start, src.indexOf("</tbody>", start));
 const capRow = tbody.slice(tbody.indexOf("invest-cap-row-"), tbody.indexOf("invest-manual-row-"));
 const manualRow = tbody.slice(tbody.indexOf("invest-manual-row-"));
 
-test("one table, one colgroup, ten header columns", () => {
+test("one table, one colgroup, eleven header columns (ADR-0177 adds the sub-category column)", () => {
   expect(src.match(/<ColGroup widths=\{INVEST_ITEM_COL_PCT\}/g)?.length).toBe(1);
-  expect(src).toContain("INVEST_ITEM_COL_PCT = [18, 10, 10, 10, 9, 7, 7, 13, 10, 6]");
+  expect(src).toContain("INVEST_ITEM_COL_PCT = [15, 9, 8, 11, 10, 8, 7, 7, 12, 7, 6]");
   expect(src).toContain("invest-item-table");
   expect(css).toContain(".invest-item-table td");
 });
@@ -27,7 +27,7 @@ test("both row kinds use the same shared control and cell classes", () => {
     expect(row).toContain("invest-year-field");
     expect(row).toContain("invest-action-cell");
     expect(row).toContain("invest-cell-chips");
-    expect(row.match(/<td/g)?.length).toBe(10);
+    expect(row.match(/<td/g)?.length).toBe(11);
     expect(row).not.toMatch(/style=\{\{ width/);
   }
   expect(capRow).toContain("invest-ctl-ro");
@@ -35,8 +35,9 @@ test("both row kinds use the same shared control and cell classes", () => {
 });
 
 test("read-only capability cells keep select and input boxes (no bare spans for unit/currency/period)", () => {
-  expect(capRow.match(/<select/g)?.length).toBe(4);
-  expect(manualRow.match(/<select/g)?.length).toBe(4);
+  expect(capRow.match(/<select/g)?.length).toBe(5);
+  // Manual rows render one of two sub-category selects (disabled for revenue/gov_rnd), so the source holds 6.
+  expect(manualRow.match(/<select/g)?.length).toBe(6);
   expect(css).toMatch(/\.invest-ctl \{[^}]*height: 2rem/);
   expect(css).toMatch(/\.invest-ctl-num \{[^}]*text-align: right/);
 });

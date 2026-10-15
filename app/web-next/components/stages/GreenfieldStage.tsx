@@ -13,7 +13,7 @@
 //   읽기 전용으로 보여준다. ADR-0171: S5가 달성 가능성 판정의 편집 화면이다 — 해소 방식,
 //   기대 수준, 비용, 기간, 달성 가능성, 근거·증빙과 사람의 확정(CapabilityJudgementEditor)
 //   및 자유 서술 비고.
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { TabNav } from "../TabNav.tsx";
 import { InvestmentSummaryCharts } from "./InvestmentSummaryCharts.tsx";
@@ -36,7 +36,7 @@ import { emptyStaffingPlan, findStaffingDuplicateWarnings, fitPlanToHorizon, isS
 import { EntryStrategySection } from "./EntryStrategySection.tsx";
 import { parseEntryStrategy, serializeEntryStrategy, type EntryFormState, type EntryModes } from "../../lib/greenfield-entry-strategy.ts";
 import {
-  AMOUNT_UNIT_KRW_M, amountUnitLabel, applySelection, buildInvestmentSummary, DEFAULT_HORIZON_YEARS, deriveCapabilityCostLines, findDuplicateWarnings, formatKrwM, hasUnsavedReflection, confirmUnitOnAmountEdit, unitOnCurrencyChange, investmentTotals, isCapabilityEntry, manualLineAmounts, isPlanMetaEntry, lineSaveStates, manualLineIssues, manualLineKrwM, MAX_HORIZON_YEAR_LIMIT, MIN_HORIZON_YEARS, normalizeLegacyLine, planMetaOf, reflectionBody, reflectionSummary, sanityLineOversize, sanityTotalOversize, selectionPayload, unifiedFooter, unifiedInvestmentRows, validateLineYears, capabilityEndYearOf,
+  AMOUNT_UNIT_KRW_M, amountUnitLabel, scheduleTotals, SUB_CATEGORY_LABEL, SUB_CATEGORY_PARENT, SUB_CATEGORY_S8_NOTE, STAFFING_SUB_CATEGORY, subCategoriesOf, subCategoryDef, validSubCategory, type SubCategoryKey, applySelection, buildInvestmentSummary, DEFAULT_HORIZON_YEARS, deriveCapabilityCostLines, findDuplicateWarnings, formatKrwM, hasUnsavedReflection, confirmUnitOnAmountEdit, unitOnCurrencyChange, investmentTotals, isCapabilityEntry, manualLineAmounts, isPlanMetaEntry, lineSaveStates, manualLineIssues, manualLineKrwM, MAX_HORIZON_YEAR_LIMIT, MIN_HORIZON_YEARS, normalizeLegacyLine, planMetaOf, reflectionBody, reflectionSummary, sanityLineOversize, sanityTotalOversize, selectionPayload, unifiedFooter, unifiedInvestmentRows, validateLineYears, capabilityEndYearOf,
   type AmountUnit, type CapabilityCostView, type CostCategory, type CostSelection, type DuplicateWarning, type ManualCostLine, type MilestoneCandidateView, type PlanMetaEntry,
 } from "../../lib/capability-cost-lines.ts";
 import type { AttainabilityRowView } from "../../lib/capability-attainability.ts";
@@ -67,7 +67,7 @@ interface InvestmentReco {
   note: string | null;
   manifest: string[];
   recommendation: {
-    investment_items: Array<{ line: string; category: "labor" | "opex" | "capex" | "revenue" | "gov_rnd"; note: string }> | null;
+    investment_items: Array<{ line: string; category: "labor" | "opex" | "capex" | "revenue" | "gov_rnd"; note: string; sub_category?: SubCategoryKey }> | null;
     key_evidence: string[];
     cautions: string[];
   };
@@ -82,8 +82,30 @@ const CATEGORY_LABEL: Record<BcCategory, string> = { labor: "인건비", opex: "
 const fmtM = (n: number): string => n.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
 const PERIOD_LABEL: Record<BcPeriod, string> = { monthly: "월", quarterly: "분기", yearly: "년", lumpsum: "일시불(총액)" };
 const CURRENCY_LABEL: Record<BcCurrency, string> = { KRW: "원화", USD: "달러", EUR: "유로", JPY: "엔화", CNY: "위안" };
-// Unified investment item table: 10 shared columns (Onyx table-fixed-pct system).
-const INVEST_ITEM_COL_PCT = [18, 10, 10, 10, 9, 7, 7, 13, 10, 6] as const;
+// Unified investment item table: 11 shared columns (Onyx table-fixed-pct system); 세부 과목 after 분류 (ADR-0177).
+const INVEST_ITEM_COL_PCT = [15, 9, 8, 11, 10, 8, 7, 7, 12, 7, 6] as const;
+
+/** 세부 과목 options for a category; with no category every key is offered, grouped by parent (picking one sets the parent). */
+function SubCategoryOptions({ category }: { category: string | undefined }) {
+  const parents = category ? [category] : ["capex", "opex", "labor"];
+  return (
+    <>
+      <option value="">선택 안 함</option>
+      {parents.map((p) => {
+        const defs = subCategoriesOf(p);
+        const plain = defs.filter((d) => !d.group);
+        const groups = [...new Set(defs.filter((d) => d.group).map((d) => d.group as string))];
+        const prefix = category ? "" : `${CATEGORY_LABEL[p as BcCategory]} · `;
+        return (
+          <optgroup key={p} label={CATEGORY_LABEL[p as BcCategory]}>
+            {plain.map((d) => <option key={d.key} value={d.key}>{prefix}{d.label}</option>)}
+            {groups.flatMap((g) => defs.filter((d) => d.group === g).map((d) => <option key={d.key} value={d.key}>{prefix}{g} · {d.label}</option>))}
+          </optgroup>
+        );
+      })}
+    </>
+  );
+}
 
 export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: string; onSaved?: () => void }) {
   const { me } = useAuth();
@@ -122,6 +144,9 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   // ADR-0173 slice 1: stored capability entries stay out of the manual list; the person's unsaved choices overlay the derived lines.
   const [storedCapEntries, setStoredCapEntries] = useState<unknown[]>([]);
   const [capSel, setCapSel] = useState<Record<string, CostSelection>>({});
+  // ADR-0177: rows whose 세부 과목 was cleared by a category change (row key -> cleared label), shown as a chip.
+  const [subCleared, setSubCleared] = useState<Map<string, string>>(new Map());
+  const noteSubCleared = (rowKey: string, sub: SubCategoryKey) => setSubCleared((p) => new Map(p).set(rowKey, SUB_CATEGORY_LABEL[sub]));
   // ADR-0174 slice 1: 검토 기간 (plan_meta horizonYears, default 5) and per-capability spend-year overrides.
   const [horizon, setHorizon] = useState(DEFAULT_HORIZON_YEARS);
   const [capStartYear, setCapStartYear] = useState<Record<string, number>>({});
@@ -228,8 +253,10 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
 
   // 추천 항목 추가 — 기존 목록을 덮어쓰지 않고 뒤에 이어붙인다. 금액은 사람이
   // 입력한다(LLM은 금액을 지어내지 않음, 경계 #2).
-  function addRecoItem(item: { line: string; category: BcCategory; note: string }) {
-    setBcLines((prev) => [...prev, { line: item.line, category: item.category, amount: 0, amountUnit: AMOUNT_UNIT_KRW_M, amountUnitConfirmed: true, note: item.note, currency: "KRW" }]);
+  function addRecoItem(item: { line: string; category: BcCategory; note: string; sub_category?: SubCategoryKey }) {
+    // ADR-0177: an AI-proposed 세부 과목 is carried only when it fits the category; amounts stay with the person.
+    const sub = validSubCategory(item.category, item.sub_category) ? item.sub_category : undefined;
+    setBcLines((prev) => [...prev, { line: item.line, category: item.category, amount: 0, amountUnit: AMOUNT_UNIT_KRW_M, amountUnitConfirmed: true, note: item.note, currency: "KRW", ...(sub ? { subCategory: sub } : {}) }]);
   }
 
   // Live judgements (saved) drive the derived lines; before the editor loads, the server's derivation is shown.
@@ -258,6 +285,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     () => buildInvestmentSummary(bcLines, capLinesEff, horizon, reflectedKeySet, staffActive),
     [bcLines, capLinesEff, horizon, reflectedKeySet, staffActive],
   );
+  const schedTotals = useMemo(() => scheduleTotals(summary), [summary]);
   // Per-line timing errors (Korean messages from validateLineYears); any error blocks save.
   const yearErrors = useMemo(() => {
     const errs: Record<string, string> = {};
@@ -627,7 +655,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                       <li key={i} className="flex items-center justify-between gap-2 mb-1">
                         <span>
                           <span className="font-semibold">{item.line}</span>
-                          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"> ({CATEGORY_LABEL[item.category]}) — {item.note}</span>
+                          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"> ({CATEGORY_LABEL[item.category]}{item.sub_category && validSubCategory(item.category, item.sub_category) ? ` · AI 제안 세부 과목: ${SUB_CATEGORY_LABEL[item.sub_category]}` : ""}) — {item.note}</span>
                         </span>
                         {canAct && <button type="button" className="btn-ghost btn-sm shrink-0" onClick={() => addRecoItem(item)}>추가</button>}
                       </li>
@@ -675,6 +703,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 <th scope="col">항목명</th>
                 <th scope="col">출처</th>
                 <th scope="col">분류</th>
+                <th scope="col">세부 과목</th>
                 <th scope="col">금액 (연 환산·기간 총액, 백만원)</th>
                 <th scope="col">단위</th>
                 <th scope="col">통화</th>
@@ -702,9 +731,21 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                     {row.needsRejudge && <span className="status-chip status-amber">재판정 필요</span>}
                   </div></td>
                   <td>
-                    <select aria-label={`${row.name} 분류`} value={row.category} disabled={!canAct} onChange={(e) => { const cat = e.target.value as CostCategory; setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], category: cat } })); judgeApiRef.current?.patchDraft(row.capabilityKey, { category: cat }); }} className="sizing-new-input sizing-new-input-sm invest-ctl">
+                    <select aria-label={`${row.name} 분류`} value={row.category} disabled={!canAct} onChange={(e) => { const cat = e.target.value as CostCategory; if (row.subCategory && !validSubCategory(cat, row.subCategory)) noteSubCleared(`c${row.capabilityKey}`, row.subCategory); setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], category: cat } })); judgeApiRef.current?.patchDraft(row.capabilityKey, { category: cat }); }} className="sizing-new-input sizing-new-input-sm invest-ctl">
                       {(["labor", "opex", "capex"] as CostCategory[]).map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
                     </select>
+                  </td>
+                  <td>
+                    {/* ADR-0177: the judgement does not own a 세부 과목 yet, so the capability row's pick is editable here and stored on the entry. */}
+                    <select aria-label={`${row.name} 세부 과목`} value={row.subCategory ?? ""} disabled={!canAct} onChange={(e) => { const v = e.target.value; setSubCleared((p) => { const n = new Map(p); n.delete(`c${row.capabilityKey}`); return n; }); setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], subCategory: v ? (v as SubCategoryKey) : null } })); }} className="sizing-new-input sizing-new-input-sm invest-ctl" data-testid={`invest-cap-sub-${row.capabilityKey}`}>
+                      <SubCategoryOptions category={row.category} />
+                    </select>
+                    <div className="invest-cell-chips">
+                      {!row.subCategory && row.suggestedSubCategory && (canAct
+                        ? <button type="button" className="btn-ghost btn-sm" data-testid={`invest-cap-sub-suggest-${row.capabilityKey}`} onClick={() => setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], subCategory: row.suggestedSubCategory } }))}>제안: {SUB_CATEGORY_LABEL[row.suggestedSubCategory]} 적용</button>
+                        : <span className="status-chip status-not-started">제안: {SUB_CATEGORY_LABEL[row.suggestedSubCategory]}</span>)}
+                      {subCleared.get(`c${row.capabilityKey}`) && <span className="status-chip status-amber" role="status"><span aria-hidden="true">!</span> 세부 과목 해제됨: {subCleared.get(`c${row.capabilityKey}`)}</span>}
+                    </div>
                   </td>
                   <td>
                     <input aria-label="금액(백만원)" value={row.krwM} readOnly className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-num invest-ctl-ro" />
@@ -770,10 +811,39 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   </div>
                 </td>
                 <td>
-                  <select aria-label="분류" value={l.category ?? ""} onChange={(e) => setBc(i, { category: e.target.value as BcCategory })} className={`sizing-new-input sizing-new-input-sm invest-ctl${l.amountUnit && l.amountUnitConfirmed ? "" : " invest-ctl-unset"}`} data-unit-unset={l.amountUnit && l.amountUnitConfirmed ? undefined : "true"}>
+                  <select aria-label="분류" value={l.category ?? ""} onChange={(e) => { const cat = e.target.value as BcCategory; if (l.subCategory && !validSubCategory(cat, l.subCategory)) { noteSubCleared(`m${i}`, l.subCategory); setBc(i, { category: cat, subCategory: undefined }); } else setBc(i, { category: cat }); }} className={`sizing-new-input sizing-new-input-sm invest-ctl${l.amountUnit && l.amountUnitConfirmed ? "" : " invest-ctl-unset"}`} data-unit-unset={l.amountUnit && l.amountUnitConfirmed ? undefined : "true"}>
                     <option value="" disabled>선택</option>
                     {(Object.keys(CATEGORY_LABEL) as BcCategory[]).map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
                   </select>
+                </td>
+                <td>
+                  {l.category === "revenue" || l.category === "gov_rnd"
+                    ? <select aria-label={`${l.line || "항목"} 세부 과목`} value="" disabled className="sizing-new-input sizing-new-input-sm invest-ctl"><option value="">—</option></select>
+                    : (
+                      <select
+                        aria-label={`${l.line || "항목"} 세부 과목`}
+                        value={l.subCategory ?? ""}
+                        disabled={!canAct}
+                        data-testid={`invest-manual-sub-${i}`}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setSubCleared((p) => { const n = new Map(p); n.delete(`m${i}`); return n; });
+                          if (!v) { setBc(i, { subCategory: undefined, legacySubCategory: undefined }); return; }
+                          const d = subCategoryDef(v);
+                          if (!d) return;
+                          // Parent auto-derived on a row with no category; the default period is a suggestion for a row with none set.
+                          setBc(i, { subCategory: d.key, legacySubCategory: undefined, ...(l.category ? {} : { category: SUB_CATEGORY_PARENT[d.key] }), ...(l.period ? {} : { period: d.defaultPeriod }) });
+                        }}
+                        className="sizing-new-input sizing-new-input-sm invest-ctl"
+                      >
+                        <SubCategoryOptions category={l.category} />
+                      </select>
+                    )}
+                  <div className="invest-cell-chips">
+                    {l.legacySubCategory && <span className="status-chip status-amber" title="알 수 없는 세부 과목 — 다음 저장 때 지워집니다"><span aria-hidden="true">!</span> 이전 세부 과목 {l.legacySubCategory} · 저장 시 삭제</span>}
+                    {subCleared.get(`m${i}`) && <span className="status-chip status-amber" role="status"><span aria-hidden="true">!</span> 세부 과목 해제됨: {subCleared.get(`m${i}`)}</span>}
+                    {l.subCategory && subCategoryDef(l.subCategory)?.hint && <span className="status-chip status-not-started">{subCategoryDef(l.subCategory)?.hint}</span>}
+                  </div>
                 </td>
                 <td>
                   <input aria-label="금액" type="number" placeholder="금액" value={l.amount || ""} onChange={(e) => setBc(i, { amount: Number(e.target.value) })} className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-num" />
@@ -931,28 +1001,64 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                     <tr key={c}>
                       <th scope="row">{CATEGORY_LABEL[c]}</th>
                       {summary.schedule.map((s) => <td className="col-num mono-num" key={s.year}>{fmtM(s[c])}</td>)}
-                      <td className="col-num mono-num">{fmtM(summary.schedule.reduce((a, s) => a + s[c], 0))}</td>
+                      <td className="col-num mono-num">{fmtM(schedTotals.rowTotals[c])}</td>
                     </tr>
                   ))}
-                  <tr className="invest-total-row">
-                    <th scope="row">투자비 합계</th>
-                    {summary.schedule.map((s) => <td className="col-num mono-num" key={s.year}>{fmtM(s.investmentTotal)}</td>)}
-                    <td className="col-num mono-num">{fmtM(summary.totalKrwM)}</td>
+                  <tr className="invest-total-row" data-testid="invest-summary-year-total">
+                    <th scope="row">합계 (투자비, 매출·정부 R&D 제외)</th>
+                    {schedTotals.yearTotals.map((v, idx) => <td className="col-num mono-num" key={idx}>{fmtM(v)}</td>)}
+                    <td className="col-num mono-num">{fmtM(schedTotals.grandKrwM)}</td>
                   </tr>
                   <tr className="invest-inflow-row">
-                    <th scope="row">매출 (투자비 제외)</th>
+                    <th scope="row">매출 (유입 참고 · 합계 제외)</th>
                     {summary.schedule.map((s) => <td className="col-num mono-num" key={s.year}>{fmtM(s.revenue)}</td>)}
-                    <td className="col-num mono-num">{fmtM(summary.schedule.reduce((a, s) => a + s.revenue, 0))}</td>
+                    <td className="col-num mono-num">{fmtM(schedTotals.inflow.revenue)}</td>
                   </tr>
                   <tr className="invest-inflow-row">
-                    <th scope="row">정부 R&D (투자비 제외)</th>
+                    <th scope="row">정부 R&D (유입 참고 · 합계 제외)</th>
                     {summary.schedule.map((s) => <td className="col-num mono-num" key={s.year}>{fmtM(s.govRnd)}</td>)}
-                    <td className="col-num mono-num">{fmtM(summary.schedule.reduce((a, s) => a + s.govRnd, 0))}</td>
+                    <td className="col-num mono-num">{fmtM(schedTotals.inflow.govRnd)}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">매출·정부 R&D 행은 투자비 제외 — 유입 참고용입니다.</p>
+            {/* ADR-0177 slice 1 — 세부 과목별 소계 (horizon totals, cadence-annualised); rows reconcile to each category incl. 미지정. */}
+            <div className="table-scroll mb-2">
+              <table className="data-table invest-summary-table" data-testid="invest-summary-subcategory">
+                <caption className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] text-left">세부 과목별 소계 (검토 기간 {summary.horizon}년 합계, 단위: 백만원)</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">분류 · 세부 과목</th>
+                    <th scope="col" className="col-num">소계</th>
+                    <th scope="col">참고</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {summary.bySubCategory.filter((g) => g.totalKrwM !== 0).map((g) => (
+                    <Fragment key={g.category}>
+                      <tr className="invest-total-row">
+                        <th scope="row">{CATEGORY_LABEL[g.category]}</th>
+                        <td className="col-num mono-num">{fmtM(g.totalKrwM)}</td>
+                        <td>{g.category === "capex" ? "s5_plan 기준 S8 투자로 집계" : ""}</td>
+                      </tr>
+                      {g.rows.map((r) => (
+                        <tr key={`${g.category}:${r.key ?? "none"}`}>
+                          <th scope="row" className="pl-4">{r.key === null ? `세부 과목 ${r.label}` : r.label}</th>
+                          <td className="col-num mono-num">{fmtM(r.totalKrwM)}</td>
+                          <td className="text-[length:var(--fs-caption)]">
+                            {r.s5PlanExcluded && <span className="status-chip status-amber mr-1">s5_plan 기준 NPV 제외</span>}
+                            {r.hint && <span className="status-chip status-not-started mr-1">{r.hint}</span>}
+                            {g.category === "labor" && staffActive && (r.key === STAFFING_SUB_CATEGORY.salary || r.key === STAFFING_SUB_CATEGORY.recruiting) && <span className="text-[color:var(--muted-fg)]">인력 운영 계획 연동분 포함</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-subcategory-s8-note">{SUB_CATEGORY_S8_NOTE}</p>
             <ul className="list-none p-0 m-0" data-testid="invest-summary-flags">
               {summary.excludedNonKrw > 0 && <li className="text-[length:var(--fs-caption)]">외화 항목 {summary.excludedNonKrw}건은 합계에서 제외 (환율 미반영)</li>}
               {summary.excludedNeedsConfirm > 0 && <li className="text-[length:var(--fs-caption)]">확인 필요 항목 {summary.excludedNeedsConfirm}건은 합계에서 제외</li>}
