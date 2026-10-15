@@ -16,6 +16,14 @@ export type LegacyHeldStatus = "met" | "unmet";
 export type GapResolution = "build" | "partner" | "hire" | "invest";
 export type GapSource = "s2_sketch" | "s1_factors" | "synergy_area" | "manual";
 
+/**
+ * ADR-0173 amendment 2026-10-15 (decider): 분류 (labor|opex|capex) is a FIRST-CLASS judgement
+ * field owned by S5 — selected in the judgement dialog (default preselect from the 해소 방식)
+ * and NOT part of the S3 row hash, like every other judgement-owned field.
+ */
+export type JudgementCategory = "labor" | "opex" | "capex";
+export const JUDGEMENT_CATEGORIES: readonly JudgementCategory[] = ["labor", "opex", "capex"];
+
 export interface CapabilityGapRow {
   id: string;
   capability: string;
@@ -60,6 +68,8 @@ export interface CapabilityAttainability {
    * done (cap NARRATIVE_CAP). Judgement-owned (S5), NOT part of the S3 row hash. Absent = 미입력.
    */
   expectedLevel?: string;
+  /** 분류 (ADR-0173 amendment 2026-10-15): judgement-owned; absent = 미입력 (투자비 항목은 해소 방식으로 추정). */
+  category?: JudgementCategory;
   draftedBy: AttainabilityDrafter | null;
   confirmedBy: string | null;
   confirmedAt: string | null;
@@ -105,6 +115,8 @@ export interface AttainabilityHistoryEntry {
   resolution: GapResolution | null;
   /** 기대 수준 of the superseded judgement (absent on older entries). */
   expectedLevel?: string;
+  /** 분류 of the superseded judgement (absent on older entries). */
+  category?: JudgementCategory;
   confirmedBy: string | null;
   confirmedAt: string | null;
   basisHash: string;
@@ -312,6 +324,7 @@ export function normalizeAttainability(raw: unknown): CapabilityAttainability | 
   const basisHash = str(a.basisHash, 40);
   const staleSince = str(a.staleSince, 40);
   const expectedLevel = str(a.expectedLevel, NARRATIVE_CAP);
+  const category = JUDGEMENT_CATEGORIES.includes(a.category as JudgementCategory) ? (a.category as JudgementCategory) : undefined;
   const s3Snapshot = normalizeS3Snapshot(a.s3Snapshot);
   const milestoneCandidate = normalizeMilestoneCandidate(a.milestoneCandidate);
   const history = Array.isArray(a.history)
@@ -324,6 +337,7 @@ export function normalizeAttainability(raw: unknown): CapabilityAttainability | 
     rationale: str(a.rationale, 600),
     evidence: strArr(a.evidence, 8, 300),
     ...(expectedLevel ? { expectedLevel } : {}),
+    ...(category ? { category } : {}),
     draftedBy: drafter,
     // 확정자와 확정일은 함께 있을 때만 유효하다.
     confirmedBy: confirmedBy && confirmedAt ? confirmedBy : null,
@@ -375,6 +389,7 @@ function normalizeHistoryEntry(raw: unknown): AttainabilityHistoryEntry | null {
     evidence: strArr(h.evidence, 8, 300),
     resolution: RESOLUTIONS.includes(h.resolution as GapResolution) ? (h.resolution as GapResolution) : null,
     ...(str(h.expectedLevel, NARRATIVE_CAP) ? { expectedLevel: str(h.expectedLevel, NARRATIVE_CAP) } : {}),
+    ...(JUDGEMENT_CATEGORIES.includes(h.category as JudgementCategory) ? { category: h.category as JudgementCategory } : {}),
     confirmedBy: confirmedBy && confirmedAt ? confirmedBy : null,
     confirmedAt: confirmedBy && confirmedAt ? confirmedAt : null,
     basisHash: str(h.basisHash, 40),

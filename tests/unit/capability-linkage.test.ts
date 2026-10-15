@@ -195,7 +195,7 @@ describe("routes", () => {
     let v = await get();
     expect(v.rows.find((x: any) => x.id === "b")).toMatchObject({ stale: false, basis_hash: null, confirmed_by: "old" });
     expect(v.summary.stale).toBe(0);
-    const res = await put([{ id: "a", grade: "medium", rationale: "내부 인력으로 가능", closingCostKrwM: 100, monthsToAttain: 6, basisHash: "forged" }]);
+    const res = await put([{ id: "a", grade: "medium", rationale: "내부 인력으로 가능", closingCostKrwM: 100, monthsToAttain: 6, category: "capex", basisHash: "forged" }]);
     expect(res.status).toBe(200);
     const a = stored().find((x) => x.id === "a")!;
     expect(a.attainability?.basisHash).toBe(lk.capabilityRowHash(a));

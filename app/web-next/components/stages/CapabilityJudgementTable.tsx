@@ -55,6 +55,7 @@ export interface JudgementDraft {
   months: string;
   grade: string;
   rationale: string;
+  category: string;
 }
 
 export const toJudgementDraft = (r: AttainabilityRowView): JudgementDraft => ({
@@ -64,6 +65,7 @@ export const toJudgementDraft = (r: AttainabilityRowView): JudgementDraft => ({
   months: r.months_to_attain === null ? "" : String(r.months_to_attain),
   grade: r.grade ?? "",
   rationale: r.rationale,
+  category: r.category ?? "",
 });
 
 /** Server patch body for one dirty row: judgement-owned fields plus the S3 hash the page showed. */
@@ -71,6 +73,7 @@ export const judgementPatch = (id: string, d: JudgementDraft, s3Hash: string | u
   id, s3Hash, resolution: d.resolution || null, expectedLevel: d.expectedLevel,
   closingCostKrwM: d.cost.trim() === "" ? null : Number(d.cost), monthsToAttain: d.months.trim() === "" ? null : Number(d.months),
   grade: d.grade || null, rationale: d.rationale,
+  category: d.category || null,
 });
 
 

@@ -93,7 +93,7 @@ describe("targets and fill-empty-only", () => {
     expect(s.proposal!.grade).toBe("medium"); // medium needs no rationale; the stored row also keeps its own
   });
   test("client merge never overwrites a non-empty field and only marks what it filled", () => {
-    const cur = { a: { resolution: "build", expectedLevel: "", cost: "", months: "6", grade: "", rationale: "" } };
+    const cur = { a: { resolution: "build", expectedLevel: "", cost: "", months: "6", grade: "", rationale: "", category: "" } };
     const p = jd.normalizeJudgementProposal(GOOD("a")).proposal!;
     const m = jd.mergeJudgementProposals(cur, { a: p });
     expect(m.drafts.a.resolution).toBe("build");
@@ -105,12 +105,36 @@ describe("targets and fill-empty-only", () => {
     expect(jd.mergeJudgementProposals(m.drafts, { a: p }).applied).toBe(0);
   });
   test("stale rows: prior values stay, only empty fields get proposals", () => {
-    const cur = { s: { resolution: "invest", expectedLevel: "이전 기대", cost: "", months: "", grade: "low", rationale: "이전 근거" } };
+    const cur = { s: { resolution: "invest", expectedLevel: "이전 기대", cost: "", months: "", grade: "low", rationale: "이전 근거", category: "" } };
     const m = jd.mergeJudgementProposals(cur, { s: jd.normalizeJudgementProposal(GOOD("s")).proposal! });
     expect(m.drafts.s).toMatchObject({ resolution: "invest", expectedLevel: "이전 기대", grade: "low", rationale: "이전 근거", cost: "800", months: "12" });
   });
+  test("category (분류): parsed with English tokens and Korean labels, needs its own basis, filled empty-only", () => {
+    const basis = () => ({ ...GOOD("a").basis, category: "설비 견적 기반" });
+    const ok = jd.normalizeJudgementProposal(GOOD("a", { category: "설비투자", basis: basis() })).proposal!;
+    expect(ok.category).toBe("capex");
+    expect(ok.basis.category).toBe("설비 견적 기반");
+    expect(jd.normalizeJudgementProposal(GOOD("a", { category: "labor", basis: basis() })).proposal!.category).toBe("labor");
+    expect(jd.normalizeJudgementProposal(GOOD("a", { category: "운영비", basis: basis() })).proposal!.category).toBe("opex");
+    // an invalid value and a basis-less value are both declined with a reason
+    const bad = jd.normalizeJudgementProposal(GOOD("a", { category: "tv" }));
+    expect(bad.proposal!.category).toBeNull();
+    expect(bad.unfilled.category).toContain("올바르지 않음");
+    const noBasis = jd.normalizeJudgementProposal(GOOD("a", { category: "labor" }));
+    expect(noBasis.proposal!.category).toBeNull();
+    expect(noBasis.unfilled.category).toContain("근거");
+    // the client merge fills only an empty category and marks it
+    const pc = jd.normalizeJudgementProposal(GOOD("a", { category: "labor", basis: basis() })).proposal!;
+    const m = jd.mergeJudgementProposals({ b: { resolution: "", expectedLevel: "", cost: "", months: "", grade: "", rationale: "", category: "" } }, { b: pc });
+    expect(m.drafts.b.category).toBe("labor");
+    expect(m.marks.b).toContain("category");
+    // the server strips a category the stored row already holds (fill-empty-only)
+    const held = jd.emptyOnly(row("a", { attainability: { ...cg.normalizeAttainability({})!, category: "opex" } }), pc);
+    expect(held.kept).toContain("category");
+    expect(held.proposal!.category).toBeNull();
+  });
   test("a high grade is not merged without a rationale", () => {
-    const m = jd.mergeJudgementProposals({ a: { resolution: "", expectedLevel: "", cost: "", months: "", grade: "", rationale: "" } }, { a: { resolution: null, expectedLevel: "", costKrwM: null, monthsToAttain: null, grade: "high", rationale: "" } });
+    const m = jd.mergeJudgementProposals({ a: { resolution: "", expectedLevel: "", cost: "", months: "", grade: "", rationale: "", category: "" } }, { a: { resolution: null, expectedLevel: "", costKrwM: null, monthsToAttain: null, grade: "high", rationale: "" } });
     expect(m.drafts.a.grade).toBe("");
   });
 });

@@ -11,6 +11,7 @@ import {
   RESOLUTION_EXPECTED_LEVEL_HINT, RESOLUTION_LABEL, type GapResolution,
 } from "../../lib/capability-gap.ts";
 import type { AttainabilityRowView } from "../../lib/capability-attainability.ts";
+import { CATEGORY_LABEL, capabilityDefaultStartYear, capabilityEndYearOf, suggestCategory } from "../../lib/capability-cost-lines.ts";
 import { legacyHoldersCaption } from "./CapabilityHeldDialog.tsx";
 import type { AiWiring, JudgementDraft } from "./CapabilityJudgementTable.tsx";
 import { JUDGEMENT_FIELD_LABEL, mergeJudgementProposals, type JudgementField, type JudgementProposal } from "../../lib/capability-judgement-ai-merge.ts";
@@ -80,7 +81,7 @@ export function CapabilityJudgementDialog({ row, draft, note, s3Href, hasPrev, h
       const filled = m.marks[row.id] ?? [];
       setD(m.drafts[row.id]);
       setAiFields((f) => [...new Set([...f, ...filled])]);
-      setAiBasis((b) => ({ ...(b ?? { resolution: "", expectedLevel: "", cost: "", months: "", grade: "" }), ...Object.fromEntries(Object.entries(p.basis).filter(([k, v]) => v && (k === "estimate" || (filled as string[]).includes(k)))) }));
+      setAiBasis((b) => ({ ...(b ?? { resolution: "", expectedLevel: "", cost: "", months: "", grade: "", category: "" }), ...Object.fromEntries(Object.entries(p.basis).filter(([k, v]) => v && (k === "estimate" || (filled as string[]).includes(k)))) }));
       const empties = res.unfilled[row.id];
       setAiMsg(filled.length === 0 ? `채울 빈 칸이 없거나 제안할 근거가 부족합니다${empties ? ` — ${empties}` : ""}.` : `${filled.map((f) => JUDGEMENT_FIELD_LABEL[f]).join(", ")} 칸을 AI 초안으로 채웠습니다${empties ? ` · 비운 칸: ${empties}` : ""} — 검토·수정한 뒤 적용하세요.`);
     } catch (e) {
@@ -91,6 +92,9 @@ export function CapabilityJudgementDialog({ row, draft, note, s3Href, hasPrev, h
   const title = `${row.capability} 판정`;
   const needsExpected = !!resolution && d.expectedLevel.trim() === "";
   const needsRationale = (d.grade === "high" || d.grade === "low") && d.rationale.trim() === "";
+  const spendMonths = d.months.trim() === "" ? null : Number(d.months);
+  const spendStart = capabilityDefaultStartYear(spendMonths);
+  const needsCategory = Number(d.cost) > 0 && !d.category;
   const apply = (nav: DialogNav) => {
     onApply(d, note === undefined ? undefined : noteVal, nav);
     if (aiFields.length > 0) onAiFields?.(aiFields, aiBasis);
@@ -160,16 +164,34 @@ export function CapabilityJudgementDialog({ row, draft, note, s3Href, hasPrev, h
             <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" aria-live="polite">{d.expectedLevel.length} / {NARRATIVE_CAP}자{needsExpected ? " — 확정하려면 기대 수준이 필요합니다." : ""}</p>
             <BasisLine field="expectedLevel" fields={aiFields} text={aiBasis?.expectedLevel} />
           </div>
-          <div className="flex flex-wrap gap-3">
-            <div>
-              <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-cost`}>비용(백만원)<AiChip field="cost" fields={aiFields} /></label>
-              <input id={`${uid}-cost`} type="number" min={0} value={d.cost} onChange={(e) => patch({ cost: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "8rem" }} />
+          <fieldset className="m-0 p-2 grid gap-2" style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
+            <legend className="text-[length:var(--fs-caption)] font-semibold px-1">연동 투자비 항목</legend>
+            <div className="flex flex-wrap gap-3">
+              <div>
+                <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-cat`}>분류<AiChip field="category" fields={aiFields} /></label>
+                <select id={`${uid}-cat`} value={d.category} onChange={(e) => patch({ category: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "auto" }} data-testid="judge-category">
+                  <option value="">미정</option>
+                  {(["labor", "opex", "capex"] as const).map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
+                </select>
+                {needsCategory && <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--red-fg)]" aria-live="polite" data-testid="judge-category-required">확정하려면 분류가 필요합니다.</p>}
+                <BasisLine field="category" fields={aiFields} text={aiBasis?.category} />
+              </div>
+              <div>
+                <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-cost`}>금액(백만원)<AiChip field="cost" fields={aiFields} /></label>
+                <input id={`${uid}-cost`} type="number" min={0} value={d.cost} onChange={(e) => patch({ cost: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "8rem" }} />
+              </div>
+              <div>
+                <span className="block text-[length:var(--fs-caption)] font-semibold mb-1">시작 연차</span>
+                <span className="text-[length:var(--fs-caption)]" data-testid="judge-start-year">{spendStart}연차</span>
+                <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">투자비 항목에서 집행 연차를 조정할 수 있습니다.</p>
+              </div>
+              <div>
+                <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-mon`}>기간(개월)<AiChip field="months" fields={aiFields} /></label>
+                <input id={`${uid}-mon`} type="number" min={0} value={d.months} onChange={(e) => patch({ months: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "8rem" }} />
+                <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" aria-live="polite">종료 연차: {capabilityEndYearOf(spendStart, spendMonths)}연차</p>
+              </div>
             </div>
-            <div>
-              <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-mon`}>기간(개월)<AiChip field="months" fields={aiFields} /></label>
-              <input id={`${uid}-mon`} type="number" min={0} value={d.months} onChange={(e) => patch({ months: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "8rem" }} />
-            </div>
-          </div>
+          </fieldset>
           {(aiFields.includes("cost") || aiFields.includes("months")) && (
             <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="ai-basis-estimate">
               AI 추정치입니다{aiBasis?.estimate ? ` — 가정: ${aiBasis.estimate}` : ""}{aiFields.includes("cost") && aiBasis?.cost ? ` · 비용 근거: ${aiBasis.cost}` : ""}{aiFields.includes("months") && aiBasis?.months ? ` · 기간 근거: ${aiBasis.months}` : ""}

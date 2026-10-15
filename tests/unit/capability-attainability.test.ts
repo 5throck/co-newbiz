@@ -203,7 +203,7 @@ describe("routes", () => {
     expect(err.message).toContain("정밀 가공");
     expect(storedRows().find((x) => x.id === "r1")!.attainability?.confirmedAt).toBeNull();
     // the same save also proves a 기대 수준 draft can be saved without a gate
-    expect((await put([{ id: "r1", expectedLevel: "영입한 인력이 자체 수행 가능한 수준" }])).status).toBe(200);
+    expect((await put([{ id: "r1", expectedLevel: "영입한 인력이 자체 수행 가능한 수준", category: "capex" }])).status).toBe(200);
     const ok = await post({});
     expect(ok.status).toBe(200);
     const data = ((await ok.json()) as any).data;
@@ -218,6 +218,20 @@ describe("routes", () => {
     expect(v.rows.find((x: any) => x.id === "r1").confirmed_at).toBeNull();
     expect(v.rows.find((x: any) => x.id === "r2").confirmed_at).not.toBeNull();
     expect(v.summary.confirmed).toBe(1);
+  });
+
+  test("category: judgement-owned round trip; a confirmed row with 비용 > 0 and no 분류 is blocked with category_required", async () => {
+    // r2 has no 해소 비용; give it one — the edit also clears its confirmation
+    expect((await put([{ id: "r2", closingCostKrwM: 500, rationale: "설비 견적 기반" }])).status).toBe(200);
+    const blocked = await post({});
+    expect(blocked.status).toBe(400);
+    const err = ((await blocked.json()) as any).error;
+    expect(err.code).toBe("category_required");
+    expect(err.message).toContain("품질 인증");
+    expect(storedRows().find((x) => x.id === "r2")!.attainability?.confirmedAt).toBeNull();
+    expect((await put([{ id: "r2", category: "opex" }])).status).toBe(200);
+    expect(storedRows().find((x) => x.id === "r2")!.attainability?.category).toBe("opex");
+    expect((await post({})).status).toBe(200);
   });
 
   test("expectedLevel: round trip, 400 cap rejected, clearing removes it, not part of the S3 hash", async () => {

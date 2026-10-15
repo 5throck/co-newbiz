@@ -4,11 +4,9 @@
 // GreenfieldStage owns the state. Amounts follow the judgement; the person only decides whether
 // a line is reflected and which category it carries. Decision support, never a gate.
 import {
-  CAPABILITY_BLOCK_TITLE, MILESTONE_BLOCK_TITLE, MILESTONE_START_NOTE, formatKrwM,
+  CAPABILITY_BLOCK_TITLE, CATEGORY_LABEL, MILESTONE_BLOCK_TITLE, MILESTONE_START_NOTE, formatKrwM,
   type CapabilityCostLine, type LineSaveState, type CostCategory, type DuplicateWarning, type InvestmentTotals, type MilestoneCandidateView, type OrphanCapabilityEntry,
 } from "../../lib/capability-cost-lines.ts";
-
-const CATEGORY_LABEL: Record<CostCategory, string> = { labor: "인건비", opex: "운영비", capex: "설비투자" };
 
 export interface ReflectionUi {
   states: Record<string, LineSaveState>;

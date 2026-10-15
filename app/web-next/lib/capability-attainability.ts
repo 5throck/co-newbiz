@@ -11,11 +11,13 @@ import {
   NARRATIVE_CAP,
   parseRemovedCapabilities,
   summarizeGap,
+  JUDGEMENT_CATEGORIES,
   type AttainabilityGrade,
   type AttainabilityHistoryEntry,
   type CapabilityAttainability,
   type CapabilityGapRow,
   type GapResolution,
+  type JudgementCategory,
   type RemovedCapability,
 } from "./capability-gap.ts";
 import { capabilityRowHash, isStale, s3Changes, s3SnapshotOf, type S3Change } from "./capability-linkage.ts";
@@ -100,6 +102,8 @@ export interface AttainabilityRowView {
   resolution: GapResolution | null;
   /** 기대 수준 (ADR-0172 D6): narrative, judgement-owned (S5). */
   expected_level: string;
+  /** 분류 (ADR-0173 amendment 2026-10-15): judgement-owned; null = 미입력. */
+  category: JudgementCategory | null;
   /** S5 free-text 비고 (not S3-hashed, not a judgement field). */
   note: string;
   closing_cost_krw_m: number | null;
@@ -145,6 +149,7 @@ export function rowView(r: CapabilityGapRow): AttainabilityRowView {
     necessity_scope_note: r.necessityScopeNote,
     resolution: r.resolution,
     expected_level: a?.expectedLevel ?? "",
+    category: a?.category ?? null,
     note: r.note,
     closing_cost_krw_m: a?.closingCostKrwM ?? null,
     months_to_attain: a?.monthsToAttain ?? null,
@@ -193,6 +198,8 @@ export interface AttainabilityPatch {
   resolution?: unknown;
   /** 기대 수준 narrative (<= NARRATIVE_CAP). */
   expectedLevel?: unknown;
+  /** 분류 (ADR-0173 amendment 2026-10-15): labor|opex|capex; null/"" = unset. */
+  category?: unknown;
   closingCostKrwM?: unknown;
   monthsToAttain?: unknown;
   grade?: unknown;
@@ -207,6 +214,7 @@ export type AttainabilityError =
   | { code: "invalid_cost"; message: string }
   | { code: "text_too_long"; message: string }
   | { code: "expected_level_required"; message: string }
+  | { code: "category_required"; message: string }
   | { code: "rationale_required"; message: string }
   | { code: "nothing_to_confirm"; message: string }
   | { code: "s3_owned_field"; message: string }
@@ -259,6 +267,14 @@ export function applyAttainabilityPatches(
       if (v) a.expectedLevel = v;
       else delete a.expectedLevel;
     }
+    if ("category" in raw) {
+      if (raw.category !== null && raw.category !== "" && !JUDGEMENT_CATEGORIES.includes(raw.category as JudgementCategory)) {
+        return { ok: false, error: { code: "invalid_request", message: "category는 labor | opex | capex 또는 null(미입력)입니다." } };
+      }
+      const cat = raw.category ? (raw.category as JudgementCategory) : undefined;
+      if (cat) a.category = cat;
+      else delete a.category;
+    }
     if ("closingCostKrwM" in raw) {
       const n = numOrNull(raw.closingCostKrwM);
       if (n === "bad") return { ok: false, error: { code: "invalid_cost", message: "해소 비용(백만원)은 0 이상의 숫자여야 합니다." } };
@@ -307,7 +323,7 @@ export function applyAttainabilityPatches(
     const candidate = milestoneCandidateOf({ ...next, attainability: a });
     if (candidate) a.milestoneCandidate = candidate;
     else delete a.milestoneCandidate;
-    const hasContent = !!a.expectedLevel || a.grade !== null || a.closingCostKrwM !== null || a.monthsToAttain !== null || a.rationale !== "" || a.evidence.length > 0 || (a.history?.length ?? 0) > 0;
+    const hasContent = !!a.expectedLevel || a.grade !== null || a.closingCostKrwM !== null || a.monthsToAttain !== null || a.rationale !== "" || a.evidence.length > 0 || !!a.category || (a.history?.length ?? 0) > 0;
     if (hasContent) next = { ...next, attainability: a };
     else {
       const { attainability: _x, ...rest } = next;
@@ -346,6 +362,18 @@ export function confirmAttainability(
   });
   if (missingExpected.length > 0) {
     return { ok: false, error: { code: "expected_level_required", message: `해소 방식을 정한 행은 기대 수준을 입력해야 확정할 수 있습니다: ${missingExpected.map((r) => r.capability).join(", ")}` } };
+  }
+  // ADR-0173 amendment 2026-10-15 (decider): a judgement with a 해소 비용 needs a 분류 to be
+  // confirmed (record completeness, same style as 기대 수준) — the derived investment line's
+  // category is an input, not a guess.
+  const missingCategory = rows.filter((r) => {
+    if (rowIds && !rowIds.includes(r.id)) return false;
+    const a = r.attainability;
+    if (!a || a.grade === null || a.confirmedAt || isStale(r)) return false;
+    return (a.closingCostKrwM ?? 0) > 0 && !a.category;
+  });
+  if (missingCategory.length > 0) {
+    return { ok: false, error: { code: "category_required", message: `해소 비용이 있는 행은 분류(인건비·운영비·설비투자)를 입력해야 확정할 수 있습니다: ${missingCategory.map((r) => r.capability).join(", ")}` } };
   }
   const confirmed: string[] = [];
   const next = rows.map((r) => {

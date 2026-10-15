@@ -8,7 +8,7 @@
 import type { LlmMessage } from "./llm.ts";
 import {
   HELD_STATUS_LABEL, NARRATIVE_CAP, NECESSITY_LABEL, RESOLUTION_EXPECTED_LEVEL_HINT, RESOLUTION_LABEL,
-  type AttainabilityGrade, type CapabilityGapRow, type GapResolution,
+  type AttainabilityGrade, type CapabilityGapRow, type GapResolution, type JudgementCategory,
 } from "./capability-gap.ts";
 import { isStale } from "./capability-linkage.ts";
 import { JUDGEMENT_FIELD_LABEL, JUDGEMENT_ROW_CAP, type JudgementField, type JudgementProposal } from "./capability-judgement-ai-merge.ts";
@@ -62,6 +62,15 @@ function parseGrade(v: unknown): AttainabilityGrade | null {
   return ({ 높음: "high", 중간: "medium", 낮음: "low" } as Record<string, AttainabilityGrade>)[t] ?? null;
 }
 
+const CATEGORY_BY_LABEL: Record<string, JudgementCategory> = {
+  labor: "labor", opex: "opex", capex: "capex", "인건비": "labor", "운영비": "opex", "설비투자": "capex",
+};
+
+function parseCategory(v: unknown): JudgementCategory | null {
+  const t = String(v ?? "").trim().toLowerCase().replace(/[\s_\-]+/g, "");
+  return CATEGORY_BY_LABEL[t] ?? null;
+}
+
 function parseNumber(v: unknown): number | null {
   if (typeof v === "number") return Number.isFinite(v) ? v : null;
   if (typeof v === "string" && /^\s*\d+(\.\d+)?\s*$/.test(v)) return Number(v);
@@ -113,6 +122,16 @@ export function normalizeJudgementProposal(raw: unknown): NormalizedProposal {
     else months = Math.round(n * 10) / 10;
   }
 
+  let category: JudgementCategory | null = null;
+  const categoryRaw = pick(r, "category", "분류");
+  const categoryBasis = basisOf("category", "분류");
+  if (categoryRaw !== undefined) {
+    const c = parseCategory(categoryRaw);
+    if (!c) unfilled.category = "분류 값이 올바르지 않음 (labor|opex|capex 또는 인건비|운영비|설비투자)";
+    else if (!categoryBasis) unfilled.category = "분류의 근거가 없음";
+    else category = c;
+  }
+
   const rationale = multiline(pick(r, "rationale", "근거·증빙", "근거증빙", "증빙"), RATIONALE_CAP);
   let grade = parseGrade(pick(r, "grade", "달성 가능성", "달성가능성"));
   const gradeBasis = basisOf("grade", "달성 가능성");
@@ -120,22 +139,22 @@ export function normalizeJudgementProposal(raw: unknown): NormalizedProposal {
   if (grade && !gradeBasis && !rationale) { grade = null; unfilled.grade = "달성 가능성의 근거가 없음"; }
   if ((grade === "high" || grade === "low") && !rationale) { grade = null; unfilled.grade = "높음·낮음은 근거·증빙이 필요해 미판정으로 둠"; }
 
-  for (const f of ["resolution", "expectedLevel", "cost", "months", "grade"] as const) {
-    const v = f === "resolution" ? resolution : f === "expectedLevel" ? expectedLevel : f === "cost" ? cost : f === "months" ? months : grade;
+  for (const f of ["resolution", "expectedLevel", "cost", "months", "grade", "category"] as const) {
+    const v = f === "resolution" ? resolution : f === "expectedLevel" ? expectedLevel : f === "cost" ? cost : f === "months" ? months : f === "grade" ? grade : category;
     if (v === null || v === "") unfilled[f] = unfilled[f] ?? why(f, "근거 부족");
   }
 
   const conf = String(r.confidence ?? "").toLowerCase();
   const proposal: JudgementProposal = {
-    resolution, expectedLevel, costKrwM: cost, monthsToAttain: months, grade, rationale,
+    resolution, expectedLevel, costKrwM: cost, monthsToAttain: months, grade, rationale, category,
     basis: {
       resolution: resolution ? resBasis : "", expectedLevel: expectedLevel ? expBasis : "", cost: cost !== null ? costBasis : "",
-      months: months !== null ? monthsBasis : "", grade: grade ? gradeBasis || rationale.slice(0, BASIS_CAP) : "",
+      months: months !== null ? monthsBasis : "", grade: grade ? gradeBasis || rationale.slice(0, BASIS_CAP) : "", category: category ? categoryBasis : "",
       ...(cost !== null || months !== null ? { estimate } : {}),
     },
     ...(conf === "low" || conf === "medium" || conf === "high" ? { confidence: conf as "low" | "medium" | "high" } : {}),
   };
-  const any = resolution || expectedLevel || cost !== null || months !== null || grade || rationale;
+  const any = resolution || expectedLevel || cost !== null || months !== null || grade || rationale || category;
   return { proposal: any ? proposal : null, unfilled };
 }
 
@@ -165,11 +184,12 @@ export function emptyOnly(row: CapabilityGapRow, p: JudgementProposal): { propos
   if (a?.closingCostKrwM != null && next.costKrwM !== null) { next.costKrwM = null; next.basis.cost = ""; kept.push("cost"); }
   if (a?.monthsToAttain != null && next.monthsToAttain !== null) { next.monthsToAttain = null; next.basis.months = ""; kept.push("months"); }
   if (a?.grade && next.grade) { next.grade = null; next.basis.grade = ""; kept.push("grade"); }
+  if (a?.category && next.category) { next.category = null; next.basis.category = ""; kept.push("category"); }
   if ((a?.rationale ?? "").trim() && next.rationale) { next.rationale = ""; kept.push("rationale"); }
   // A high/low grade proposed together with a rationale the stored row already has stays valid; only drop when no rationale remains anywhere.
   if ((next.grade === "high" || next.grade === "low") && !next.rationale && !(a?.rationale ?? "").trim()) { next.grade = null; next.basis.grade = ""; }
   if (next.basis.cost === "" && next.basis.months === "") delete next.basis.estimate;
-  const any = next.resolution || next.expectedLevel || next.costKrwM !== null || next.monthsToAttain !== null || next.grade || next.rationale;
+  const any = next.resolution || next.expectedLevel || next.costKrwM !== null || next.monthsToAttain !== null || next.grade || next.rationale || next.category;
   return { proposal: any ? next : null, kept };
 }
 
@@ -185,6 +205,7 @@ function rowBlock(r: CapabilityGapRow): string {
     a?.closingCostKrwM != null ? `비용=${a.closingCostKrwM}백만원` : "",
     a?.monthsToAttain != null ? `기간=${a.monthsToAttain}개월` : "",
     a?.grade ? `달성 가능성=${a.grade}` : "",
+    a?.category ? `분류=${a.category}` : "",
     a?.rationale ? `근거="${clip(a.rationale, 200)}"` : "",
   ].filter(Boolean).join(", ");
   const stale = isStale(r) ? " [S3가 바뀌어 재판정 필요 — 이전 값은 참고용]" : "";
@@ -230,9 +251,10 @@ export function buildJudgementPrompt(i: JudgementPromptInput): string {
       "- expectedLevel: 해소 뒤 도달하는 구체적 상태(필요 수준과 같은 문체, 400자 이내), basis.expectedLevel에 근거. 필요 수준과 비교해 충족 여부를 한 문장으로 밝히세요.",
       "- costKrwM(백만원)·monthsToAttain(개월): 입력이 뒷받침하는 합리적 규모일 때만 추정치. basis.cost·basis.months에 근거, basis.estimate에 가정을 적습니다. 아니면 null. 숫자를 지어내지 마세요.",
       "- grade: high|medium|low 또는 null, basis.grade에 사유. high·low는 rationale 필수.",
+      "- category: labor|opex|capex 또는 null, basis.category에 한 줄 사유. 해소 방식이 정해진 행은 그에 맞는 분류(자체 구축=설비투자, 채용=인건비, 파트너십=운영비, 투자=설비투자)를 제안하고, 근거가 없으면 null.",
       "- rationale(600자 이내): S3 항목·프로필·공시 사실을 인용하고 핵심 가정을 한 문장으로 밝힙니다. 개인정보는 쓰지 않습니다.",
       "- 근거가 없는 칸은 null로 두고 unfilled에 {필드: 사유}를 적습니다.",
-      "출력(JSON만): {\"rows\":[{\"id\":\"…\",\"resolution\":null,\"expectedLevel\":\"\",\"costKrwM\":null,\"monthsToAttain\":null,\"grade\":null,\"rationale\":\"\",\"basis\":{\"resolution\":\"\",\"expectedLevel\":\"\",\"cost\":\"\",\"months\":\"\",\"grade\":\"\",\"estimate\":\"\"},\"confidence\":\"low|medium|high\",\"unfilled\":{}}]}",
+      "출력(JSON만): {\"rows\":[{\"id\":\"…\",\"resolution\":null,\"expectedLevel\":\"\",\"costKrwM\":null,\"monthsToAttain\":null,\"grade\":null,\"rationale\":\"\",\"category\":null,\"basis\":{\"resolution\":\"\",\"expectedLevel\":\"\",\"cost\":\"\",\"months\":\"\",\"grade\":\"\",\"category\":\"\",\"estimate\":\"\"},\"confidence\":\"low|medium|high\",\"unfilled\":{}}]}",
     ].join("\n"),
   ].filter(Boolean).join("\n\n");
 }
@@ -249,10 +271,10 @@ export interface JudgementRunResult {
 }
 
 const NO_WEB_NOTE = "외부 웹 검색은 쓰지 않았습니다(저장된 자료와 LLM만 사용).";
-const FIELD_KEYS: JudgementField[] = ["resolution", "expectedLevel", "cost", "months", "grade", "rationale"];
+const FIELD_KEYS: JudgementField[] = ["resolution", "expectedLevel", "cost", "months", "grade", "rationale", "category"];
 
 function filledFields(p: JudgementProposal): JudgementField[] {
-  return FIELD_KEYS.filter((f) => (f === "resolution" ? p.resolution : f === "expectedLevel" ? p.expectedLevel : f === "cost" ? p.costKrwM !== null : f === "months" ? p.monthsToAttain !== null : f === "grade" ? p.grade : p.rationale));
+  return FIELD_KEYS.filter((f) => (f === "resolution" ? p.resolution : f === "expectedLevel" ? p.expectedLevel : f === "cost" ? p.costKrwM !== null : f === "months" ? p.monthsToAttain !== null : f === "grade" ? p.grade : f === "category" ? p.category : p.rationale));
 }
 
 /** True when the stored row already has a value for this field. */
@@ -264,6 +286,7 @@ export function rowHolds(row: CapabilityGapRow, f: JudgementField): boolean {
     case "cost": return a?.closingCostKrwM != null;
     case "months": return a?.monthsToAttain != null;
     case "grade": return !!a?.grade;
+    case "category": return !!a?.category;
     case "rationale": return !!(a?.rationale ?? "").trim();
   }
 }

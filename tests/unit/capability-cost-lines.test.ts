@@ -323,7 +323,7 @@ beforeAll(async () => {
 describe("routes: derived view, save, tamper rejection, round trip", () => {
   test("judgements: r1 confirmed (3000), r2 draft (1234), r3 no cost; GET derives the lines without storing anything", async () => {
     const res = await putAtt([
-      { id: "r1", resolution: "build", expectedLevel: "자체 라인 가동", closingCostKrwM: 3000, monthsToAttain: 12, grade: "medium" },
+      { id: "r1", resolution: "build", expectedLevel: "자체 라인 가동", closingCostKrwM: 3000, monthsToAttain: 12, grade: "medium", category: "capex" },
       { id: "r3", resolution: "hire", expectedLevel: "팀 구성", monthsToAttain: 6, grade: "medium" },
     ]);
     expect(res.status).toBe(200);
@@ -347,7 +347,7 @@ describe("routes: derived view, save, tamper rejection, round trip", () => {
     expect(lines).toHaveLength(2);
     expect(lines[0]).toEqual({ line: "초기 인건비", category: "labor", amount: 3, amountUnit: "krw_m", amountUnitConfirmed: true, amountKrwM: 3, currency: "KRW", period: "yearly" });
     expect(lines[1]).toMatchObject({ line: "정밀 가공 역량 해소", source: "capability", capabilityKey: "r1", reflected: true, amount: 3000, amountUnit: "krw_m", currency: "KRW", period: "lumpsum", costKrwM: 3000, reflectedBy: LEAD });
-    expect(lines[1].basisHash).toMatch(/^c1:/);
+    expect(lines[1].basisHash).toMatch(/^c2:/);
     const audit = db.query("SELECT action FROM audit_log WHERE action LIKE 'capability_cost.%' ORDER BY created_at").all() as Array<{ action: string }>;
     expect(audit.map((a) => a.action)).toContain("capability_cost.reflect");
     const d = await getGf();
@@ -572,5 +572,45 @@ describe("unified investment item list", () => {
   test("GreenfieldStage renders the unified list with chips, actions and footer; counter counts reflected lines", () => {
     const stage = readFileSync(join(WEB, "components/stages/GreenfieldStage.tsx"), "utf8");
     for (const s of ["unifiedInvestmentRows", "역량 해소 연동", "판정 보기", "반영 해제", "저장 전", "재판정 필요", "invest-item-footer", "반영된 항목은 아래 투자비 항목 목록에 포함됩니다", "reflectedLines.length > 0"]) expect(stage).toContain(s);
+  });
+});
+
+
+describe("judgement-owned category and spend years (ADR-0173 amendment 2026-10-15)", () => {
+  test("category precedence: judgement > stored overlay > 해소 방식 suggestion; the hint shows only when the judgement is silent", () => {
+    const judged = cl.deriveCapabilityCostLines([src({ category: "labor" })], [{ source: "capability", capabilityKey: "k1", reflected: true, category: "opex", amount: 30 }]).lines[0];
+    expect(judged).toMatchObject({ category: "labor", judgementCategory: "labor", categoryHint: null });
+    const fromOverlay = cl.deriveCapabilityCostLines([src()], [{ source: "capability", capabilityKey: "k1", reflected: true, category: "opex", amount: 30 }]).lines[0];
+    // the stored overlay answers the category for now, but the hint stays until the judgement itself carries one
+    expect(fromOverlay).toMatchObject({ category: "opex", judgementCategory: null });
+    expect(fromOverlay.categoryHint).toContain("분류 미입력");
+    const guessed = cl.deriveCapabilityCostLines([src()], []).lines[0];
+    expect(guessed).toMatchObject({ category: "capex", judgementCategory: null });
+    expect(guessed.categoryHint).toContain("분류 미입력");
+    const noResolution = cl.deriveCapabilityCostLines([src({ resolution: null })], []).lines[0];
+    expect(noResolution.categoryHint).toContain("확인 필요");
+  });
+  test("endYear: a 12-month spend starting Y1 ends Y1; 18 months ends Y2; unset months end the start year", () => {
+    expect(cl.capabilityEndYearOf(1, 12)).toBe(1);
+    expect(cl.capabilityEndYearOf(1, 18)).toBe(2);
+    expect(cl.capabilityEndYearOf(2, 36)).toBe(4);
+    expect(cl.capabilityEndYearOf(1, null)).toBe(1);
+    expect(cl.capabilityEndYearOf(1, 0)).toBe(1);
+    // derive: 18개월 defaults to start year 2, so the spend ends year 3
+    expect(cl.deriveCapabilityCostLines([src({ months_to_attain: 18 })], []).lines[0]).toMatchObject({ defaultStartYear: 2, endYear: 3 });
+  });
+  test("basis hash: c2 covers the category; a legacy c1 hash of the same basis still matches (no false 재판정 필요)", () => {
+    const row = src({ category: "labor" });
+    const c2 = cl.costBasisHash(row);
+    expect(c2.startsWith("c2:")).toBe(true);
+    expect(cl.basisHashMatches(c2, row)).toBe(true);
+    expect(cl.basisHashMatches(c2, src({ category: "opex" }))).toBe(false);
+    // a legacy hash, recomputed the pre-amendment way, still matches the same basis
+    const legacy = `c1:${new Bun.CryptoHasher("sha256").update(JSON.stringify({ cost: row.closing_cost_krw_m, months: row.months_to_attain, resolution: row.resolution, grade: row.grade, confirmed: row.confirmed_at !== null })).digest("hex").slice(0, 16)}`;
+    expect(cl.basisHashMatches(legacy, row)).toBe(true);
+    const kept = cl.deriveCapabilityCostLines([row], [{ source: "capability", capabilityKey: "k1", reflected: true, category: "labor", amount: 30, basisHash: legacy }]).lines[0];
+    expect(kept.needsRejudge).toBe(false);
+    const flagged = cl.deriveCapabilityCostLines([row], [{ source: "capability", capabilityKey: "k1", reflected: true, category: "labor", amount: 30, basisHash: "c1:stale" }]).lines[0];
+    expect(flagged.needsRejudge).toBe(true);
   });
 });
