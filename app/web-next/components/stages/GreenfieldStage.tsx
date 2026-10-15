@@ -86,7 +86,7 @@ const fmtM = (n: number): string => n.toLocaleString("ko-KR", { maximumFractionD
 /** ADR-0176 slice 1: band labels (최저/기준/최고). */
 const BAND_LABEL: Record<"low" | "mode" | "high", string> = { low: "최저", mode: "기준", high: "최고" };
 /** ADR-0176 slice 2: stored run as returned by /api/greenfield/[oppId]/investment-simulation. */
-interface InvestSimRun { id: string; input_hash: string; seed: number; draw_count: number; envelope_krw_m: number | null; created_by: string; created_at: string; results: Omit<SimulationResults, "byCategory"> & { byCategory: { capability: SimulationResults["byCategory"]["capability"]; manual: SimulationResults["byCategory"]["manual"]; staffing: SimulationResults["byCategory"]["staffing"] | null } } }
+interface InvestSimRun { id: string; input_hash: string; seed: number; draw_count: number; envelope_krw_m: number | null; created_by: string; created_at: string; confirmed_by?: string | null; confirmed_at?: string | null; results: Omit<SimulationResults, "byCategory"> & { byCategory: { capability: SimulationResults["byCategory"]["capability"]; manual: SimulationResults["byCategory"]["manual"]; staffing: SimulationResults["byCategory"]["staffing"] | null } } }
 const TORNADO_LABEL: Record<TornadoKey, string> = { salary: "급여", salaryIncrease: "급여 인상률", onCost: "가산율", ramp: "투입 시점", capability: "역량 비용", manualLines: "일반 항목", fx: "환율 (미적용)" };
 const SIM_CATEGORY_LABEL = { capability: "역량 해소", manual: "투자비 항목", staffing: "인력" } as const;
 const SIM_PARAM_LABELS: Record<SimOverrideKey, string> = {
@@ -182,6 +182,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   const [simDraws, setSimDraws] = useState("");
   const [simRunning, setSimRunning] = useState(false);
   const [simRunError, setSimRunError] = useState<string | null>(null);
+  const [simConfirming, setSimConfirming] = useState(false);
   // ADR-0175 slice 1: 인력 운영 계획 draft + last saved snapshot (JSON) for dirty tracking.
   const [staffPlan, setStaffPlan] = useState<StaffingPlanEntry>(() => emptyStaffingPlan(DEFAULT_HORIZON_YEARS));
   const [savedStaffJson, setSavedStaffJson] = useState<string>("");
@@ -378,6 +379,19 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   const simInputError = simEnvNum !== null && (!Number.isFinite(simEnvNum) || simEnvNum <= 0)
     ? "예산 상한은 0보다 큰 숫자(백만원)여야 합니다."
     : simDrawsNum !== null && !Number.isFinite(simDrawsNum) ? "추출 횟수는 숫자여야 합니다 (100~5,000으로 보정됩니다)." : null;
+  // ADR-0176 slice 3: a person confirms the run so S8 may consume it (human-only route; the server re-checks).
+  const confirmSimulation = useCallback(async () => {
+    if (!selected || !simRun || simConfirming) return;
+    setSimConfirming(true); setSimRunError(null);
+    try {
+      const r = await api.post<{ run: InvestSimRun; stale: boolean }>(`/api/greenfield/${encodeURIComponent(selected.opportunity.id)}/investment-simulation/confirm`, { run_id: simRun.id });
+      setSimRun(r.data.run); setSimStale(r.data.stale);
+    } catch (e) {
+      setSimRunError(e instanceof Error ? e.message : "투자 시뮬레이션 확정 실패");
+    } finally {
+      setSimConfirming(false);
+    }
+  }, [selected, simRun, simConfirming]);
   const runSimulation = useCallback(async () => {
     if (!selected || simRunning || simInputError) return;
     setSimRunning(true); setSimRunError(null);
@@ -1226,6 +1240,14 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                         : <span className="status-chip status-green" data-testid="invest-sim-fresh"><span aria-hidden="true">✓</span> 현재 계획과 일치</span>}</>
                     : "저장된 실행이 없습니다 — 실행하면 결과가 저장되고 이전 실행은 이력으로 남습니다."}
                 </p>
+                {simRun && (
+                  <p className="text-[length:var(--fs-caption)] mb-2" data-testid="invest-sim-confirm">
+                    {simRun.confirmed_at
+                      ? <span className="status-chip status-green" data-testid="invest-sim-confirmed"><span aria-hidden="true">✓</span> 확정됨 — {simRun.confirmed_by}, {new Date(simRun.confirmed_at).toLocaleString("ko-KR")} (S8 s5_plan 사례가 이 실행을 반영합니다)</span>
+                      : <><span className="status-chip status-gray" data-testid="invest-sim-unconfirmed">미확정 — S8은 이 실행을 사용하지 않습니다</span>{" "}
+                        <button type="button" className="btn-ghost btn-sm" disabled={!canAct || simConfirming || simStale} title={simStale ? "계획 또는 가정 범위가 바뀌었습니다 — 다시 실행한 뒤 확정하세요" : "사람만 확정할 수 있습니다 (에이전트 불가)"} onClick={() => void confirmSimulation()} data-testid="invest-sim-confirm-button">{simConfirming ? "확정 중…" : "가정 확정"}</button></>}
+                  </p>
+                )}
                 {simRun && (() => {
                   const r = simRun.results;
                   const tmax = Math.max(1e-9, ...r.tornado.map((t) => t.swingKrwM));

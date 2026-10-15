@@ -15,6 +15,7 @@ import {
   resolveBusinessCaseParams,
   type InvestmentBasis,
 } from "../../../../../../lib/business-case-generator.ts";
+import { s5SimStatusForProject } from "../../../../../../lib/investment-simulation-s8.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
@@ -22,7 +23,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
   if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const resolved = resolveBusinessCaseParams(getDb(), id);
-  return ok({ params: resolved }, 200);
+  // ADR-0176 slice 3: S5 investment-simulation consumption / staleness of the latest s5_plan case.
+  // Informational only - never blocks generation, a gate or a grade.
+  let s5Sim = null;
+  try { s5Sim = s5SimStatusForProject(getDb(), id); } catch { /* migration pending: omit */ }
+  return ok({ params: resolved, s5_sim: s5Sim }, 200);
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {

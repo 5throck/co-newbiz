@@ -184,6 +184,8 @@ export const HUMAN_ONLY_ROUTES: readonly HumanOnlyRule[] = [
   { method: "POST", pattern: "/api/opportunities/:id/capability-attainability/confirm" },
   // ADR-0171 slice 2: the Brown Field S7 per-target judgement; confirm stays human-only.
   { method: "POST", pattern: "/api/brownfield/targets/:targetId/capability-judgements/confirm" },
+  // ADR-0176 slice 3: confirming an S5 investment simulation run (what S8 may consume) is a human act.
+  { method: "POST", pattern: "/api/greenfield/:oppId/investment-simulation/confirm" },
 ];
 
 export function isHumanOnly(method: string, pathname: string, body: unknown): boolean {

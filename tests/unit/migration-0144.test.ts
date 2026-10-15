@@ -17,6 +17,8 @@ const DIR = join(import.meta.dirname, "..", "..", "db", "migrations");
 const files = readdirSync(DIR).filter((f) => f.endsWith(".sql")).sort();
 const TARGET = files.find((f) => f.startsWith("0144_"))!;
 const SQL = readFileSync(join(DIR, TARGET), "utf-8");
+// Repository selects the slice-3 confirmation columns (migration 0146), so a fresh db applies it too.
+const SQL_0146 = readFileSync(join(DIR, files.find((f) => f.startsWith("0146_"))!), "utf-8");
 const NOW = "2026-10-15T00:00:00Z";
 
 const runSql = (db: Database, sql: string) => { for (const s of splitSqlStatements(sql)) db.run(s); };
@@ -34,6 +36,7 @@ function fresh(): Database {
   db.run("PRAGMA foreign_keys = ON");
   applyBefore(db);
   db.transaction(() => runSql(db, SQL))();
+  db.transaction(() => runSql(db, SQL_0146))();
   db.run("INSERT INTO opportunity (id, name, created_by, created_at) VALUES ('o1','opp','u',?)", [NOW]);
   db.run("INSERT INTO opportunity (id, name, created_by, created_at) VALUES ('o2','opp2','u',?)", [NOW]);
   return db;
@@ -52,7 +55,7 @@ describe("migration 0144 investment_simulation_run", () => {
     expect(TARGET).toBe("0144_investment_simulation_run.sql");
     const db = fresh();
     const cols = (db.query("PRAGMA table_info(investment_simulation_run)").all() as Array<{ name: string }>).map((c) => c.name);
-    expect(cols).toEqual(["id", "opportunity_id", "input_hash", "seed", "draw_count", "horizon_years", "envelope_krw_m", "assumptions_json", "results_json", "status", "superseded_by", "created_by", "created_at", "audit_id"]);
+    expect(cols).toEqual(["id", "opportunity_id", "input_hash", "seed", "draw_count", "horizon_years", "envelope_krw_m", "assumptions_json", "results_json", "status", "superseded_by", "created_by", "created_at", "audit_id", "confirmed_by", "confirmed_at", "confirm_audit_id"]); // last three: migration 0146 (slice 3)
     // No per-draw storage column of any kind.
     expect(cols.some((c) => /draw_?vectors|per_draw/i.test(c))).toBe(false);
   });

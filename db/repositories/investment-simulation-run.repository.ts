@@ -25,6 +25,10 @@ export interface InvestmentSimulationRunRow {
   created_by: string;
   created_at: string;
   audit_id: string | null;
+  /** ADR-0176 slice 3 (migration 0146): the person who confirmed the run; null = not confirmed. */
+  confirmed_by: string | null;
+  confirmed_at: string | null;
+  confirm_audit_id: string | null;
 }
 
 export interface NewInvestmentSimulationRun {
@@ -40,7 +44,7 @@ export interface NewInvestmentSimulationRun {
   now: string;
 }
 
-const COLUMNS = "id, opportunity_id, input_hash, seed, draw_count, horizon_years, envelope_krw_m, assumptions_json, results_json, status, superseded_by, created_by, created_at, audit_id";
+const COLUMNS = "id, opportunity_id, input_hash, seed, draw_count, horizon_years, envelope_krw_m, assumptions_json, results_json, status, superseded_by, created_by, created_at, audit_id, confirmed_by, confirmed_at, confirm_audit_id";
 
 function hydrate(r: Record<string, unknown>): InvestmentSimulationRunRow {
   const { assumptions_json, results_json, ...rest } = r;
@@ -67,4 +71,45 @@ export function insertInvestmentSimulationRun(run: NewInvestmentSimulationRun, d
   });
   tx();
   return getLatestInvestmentSimulationRun(run.opportunityId, db)!;
+}
+
+/** Run by id within an opportunity, or null. */
+export function getInvestmentSimulationRun(opportunityId: string, runId: string, db: Database = getDb()): InvestmentSimulationRunRow | null {
+  const row = db.query(`SELECT ${COLUMNS} FROM investment_simulation_run WHERE opportunity_id = ? AND id = ?`).get(opportunityId, runId) as Record<string, unknown> | null;
+  return row ? hydrate(row) : null;
+}
+
+/**
+ * The most recent CONFIRMED run of an opportunity (superseded runs included: an unconfirmed re-run
+ * does not revoke an earlier confirmation), or null. This is the only run S8 may consume.
+ */
+export function getLatestConfirmedInvestmentSimulationRun(opportunityId: string, db: Database = getDb()): InvestmentSimulationRunRow | null {
+  const row = db
+    .query(`SELECT ${COLUMNS} FROM investment_simulation_run WHERE opportunity_id = ? AND confirmed_at IS NOT NULL ORDER BY confirmed_at DESC, id DESC LIMIT 1`)
+    .get(opportunityId) as Record<string, unknown> | null;
+  return row ? hydrate(row) : null;
+}
+
+export type ConfirmResult = { ok: true; run: InvestmentSimulationRunRow } | { ok: false; reason: "not_found" | "already_confirmed" };
+
+/**
+ * Record a person's confirmation of a run and append the audited `investment_simulation.confirmed`
+ * row (actor, seed, draw count and input_hash) in one transaction. The caller MUST have passed the
+ * human-only guard - this function does not know who is calling.
+ */
+export function confirmInvestmentSimulationRun(opportunityId: string, runId: string, actor: string, now: string, db: Database = getDb()): ConfirmResult {
+  const tx = db.transaction((): ConfirmResult => {
+    const run = getInvestmentSimulationRun(opportunityId, runId, db);
+    if (!run) return { ok: false, reason: "not_found" };
+    if (run.confirmed_at) return { ok: false, reason: "already_confirmed" };
+    const auditId = appendAudit(db, {
+      actor,
+      action: "investment_simulation.confirmed",
+      target: `${opportunityId}#${runId}:seed=${run.seed};draws=${run.draw_count};hash=${run.input_hash}`,
+      now,
+    });
+    db.run("UPDATE investment_simulation_run SET confirmed_by = ?, confirmed_at = ?, confirm_audit_id = ? WHERE id = ? AND confirmed_at IS NULL", [actor, now, auditId, runId]);
+    return { ok: true, run: getInvestmentSimulationRun(opportunityId, runId, db)! };
+  });
+  return tx();
 }
