@@ -39,6 +39,8 @@ import { runSimJob } from "./sim-engine.ts";
 import { fmtNpvInteger } from "./npv-format.ts";
 import { resolveDownsideOpexUplift } from "./target-costing.ts";
 import { resolveS5SimConsumption, type S5SimConsumption } from "./investment-simulation-s8.ts";
+import { aggregatePlanLines, pinPlanLinesOf } from "./s5-plan-pin.ts";
+import { getCurrentS5PlanPin, resolveActivePin, resolvePinnedS5SimConsumption } from "./s5-plan-pin-s8.ts";
 
 // Per-step S8 agent assignment reads from process/flow.spec.yaml (SSOT,
 // ADR-0074) — each execution step maps to the spec activity that owns its
@@ -625,6 +627,13 @@ export interface BusinessCaseParams {
    *  existing case's results unchanged). */
   investmentBasis: InvestmentBasis;
   investmentBasisSource: string;
+  /** ADR-0178 slice 0 - where the S5 plan comes from: the promotion copy (default) or the
+   *  project's pinned S5 reference. `pinned` only when a person set `bc.s5_source = 1`. Resolution
+   *  output; the plan itself is resolved by resolveS5InvestmentPlan. */
+  s5Source?: "copy" | "pinned";
+  s5SourceSource?: string;
+  /** ADR-0178 slice 0 - the pin id in force on the pinned path (null on the copy path). */
+  s5PinId?: string | null;
   /** ADR-0174 OD-2 — the latest `greenfield_cost` model's horizon (null when
    *  the project has none). Resolution output only: the S8 UI shows it beside
    *  bc.horizon_years and warns on mismatch, never auto-reconciles. */
@@ -703,6 +712,10 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
      WHERE project_id = ? AND kind = 'greenfield_cost' AND target_id IS NULL AND archived_at IS NULL
      ORDER BY created_at DESC, id DESC LIMIT 1`,
   ).get(projectId) as { horizon_years: number } | undefined;
+  // ADR-0178 slice 0: under the person's opt-in with a current pin, the pin's snapshot is the plan
+  // (its presence counts as plan presence and its horizon replaces the copy's).
+  const activePin = resolveActivePin(db, projectId);
+  const pinnedHorizon = activePin ? activePin.input.horizon : null;
   return {
     captureRate: capture && Number.isFinite(capture.value) && capture.value > 0 ? capture.value : CAPTURE_RATE,
     captureSource: capture && Number.isFinite(capture.value) && capture.value > 0 ? "사용자 확정 (bc.capture_rate)" : "기본값",
@@ -733,7 +746,10 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
     horizonSource: horizon.source,
     iterations: Math.min(Math.max(Math.round(iterations.value), 1), 10_000_000),
     iterationsSource: iterations.source,
-    s5PlanHorizonYears: s5Model ? Math.min(Math.max(Math.round(s5Model.horizon_years), 1), 50) : null,
+    s5PlanHorizonYears: pinnedHorizon !== null ? Math.min(Math.max(Math.round(pinnedHorizon), 1), 50) : s5Model ? Math.min(Math.max(Math.round(s5Model.horizon_years), 1), 50) : null,
+    s5Source: activePin ? "pinned" : "copy",
+    s5SourceSource: activePin ? "사용자 확정 (bc.s5_source)" : "기본값 (복사본, ADR-0178)",
+    s5PinId: activePin ? activePin.pin.id : null,
   };
 }
 
@@ -759,6 +775,8 @@ export async function recordBusinessCaseParams(
       iterations?: number;
       /** ADR-0174 — 투자비 기준. Stored as the numeric basis code. */
       investment_basis?: InvestmentBasis;
+      /** ADR-0178 slice 0 - 0 = promotion copy (default), 1 = pinned S5 reference. A person's opt-in only. */
+      s5_source?: 0 | 1;
     };
     rationale: string;
     actor: string;
@@ -787,6 +805,10 @@ export async function recordBusinessCaseParams(
   }
   if (p.investment_basis !== undefined) {
     put("bc.investment_basis", INVESTMENT_BASIS_CODES[p.investment_basis]);
+  }
+  if (p.s5_source !== undefined) {
+    if (p.s5_source !== 0 && p.s5_source !== 1) throw new Error("s5_source must be 0 (copy) or 1 (pinned)");
+    put("bc.s5_source", p.s5_source);
   }
   for (const [key, value] of [
     ["bc.opex_ratio", p.opex_ratio],
@@ -826,6 +848,9 @@ export function resolveBusinessCaseParamsDefaults(): BusinessCaseParams {
     investmentBasis: "ratio",
     investmentBasisSource: "기본값 (비율 추정, ADR-0174 OD-4)",
     s5PlanHorizonYears: null,
+    s5Source: "copy",
+    s5SourceSource: "기본값 (복사본, ADR-0178)",
+    s5PinId: null,
     acquisitionEvRevenue: null,
     acquisitionEvRevenueSource: "기본값",
     acquisitionEvRevenueBand: null,
@@ -989,16 +1014,27 @@ export interface S5InvestmentPlan {
   /** FNV-1a over the serialized vectors — run provenance (design §6.2) so a
    *  later plan edit is detectable against a recorded run. */
   lineHash: string;
+  /** ADR-0178 slice 0 - set only when the plan was computed from a pinned S5 snapshot. */
+  pinId?: string;
+  planHash?: string;
 }
 
 /** The explicit investment plan of a project, read from the latest
  *  `greenfield_cost` model (written at S5 promotion, ADR-0174 §6.1). Null
  *  when the project has none — every consumer then falls back to the ratio
  *  path, never to zero. */
-/** Promotion stamps every capability-sourced line with this note flag (splitForPromotion). */
-const CAPABILITY_LINE_NOTE_MARK = "역량 해소 비용";
-
 export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (...args: unknown[]) => unknown; all: (...args: unknown[]) => unknown[] } }, projectId: string): S5InvestmentPlan | null {
+  // ADR-0178 slice 0: the pinned path (a person's opt-in AND a current pin) computes from the
+  // pinned snapshot through the same aggregation; without it the copy path below is unchanged.
+  const active = resolveActivePin(db, projectId);
+  if (active) {
+    const { horizon: pinHorizon, lines: pinLines } = pinPlanLinesOf(active.input);
+    if (pinLines.length === 0) return null; // nothing importable in the pinned version: ratio path, like the copy
+    const agg = aggregatePlanLines(pinHorizon, pinLines);
+    const modelId = `pin:${active.pin.id}`;
+    const lineHash = scenarioSeed(modelId, JSON.stringify({ c: agg.capexByYear, o: agg.laborOpexByYear, g: agg.govRndByYear })).toString(16);
+    return { modelId, horizonYears: agg.horizonYears, capexByYear: agg.capexByYear, laborOpexByYear: agg.laborOpexByYear, govRndByYear: agg.govRndByYear, opexCovered: agg.opexCovered, skippedLines: agg.skippedLines, lineHash, capexCapabilityByYear: agg.capexCapabilityByYear, laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear, pinId: active.pin.id, planHash: active.pin.plan_hash };
+  }
   const model = db
     .query(
       `SELECT id, horizon_years FROM business_case_model
@@ -1007,39 +1043,12 @@ export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (..
     )
     .get(projectId) as { id: string; horizon_years: number } | undefined;
   if (!model) return null;
-  const horizon = Math.min(Math.max(Math.round(model.horizon_years), 1), 50);
   const lines = db
     .query("SELECT category, annual_amount_krw_m, start_year, end_year, growth_rate, unit, note FROM business_case_line WHERE model_id = ?")
     .all(model.id) as Array<{ category: string; annual_amount_krw_m: number; start_year: number; end_year: number | null; growth_rate: number; unit: string | null; note?: string | null }>;
-  const capexByYear = new Array<number>(horizon).fill(0);
-  const laborOpexByYear = new Array<number>(horizon).fill(0);
-  const govRndByYear = new Array<number>(horizon).fill(0);
-  const opexCovered = new Array<boolean>(horizon).fill(false);
-  const capexCapabilityByYear = new Array<number>(horizon).fill(0);
-  const laborOpexCapabilityByYear = new Array<number>(horizon).fill(0);
-  let skippedLines = 0;
-  for (const l of lines) {
-    // R (§5): a NULL/non-KRW_M unit is never assumed convertible — the line
-    // is skipped and counted, matching S10's `case_unit_not_comparable` stance.
-    if (l.unit !== "KRW_M" || l.start_year > horizon) {
-      skippedLines += 1;
-      continue;
-    }
-    const end = Math.min(l.end_year ?? horizon, horizon);
-    const isCapex = l.category === "capex";
-    const isGovRnd = l.category === "gov_rnd";
-    const fromCapability = (l.note ?? "").includes(CAPABILITY_LINE_NOTE_MARK);
-    const amounts = isCapex ? capexByYear : isGovRnd ? govRndByYear : laborOpexByYear;
-    for (let y = Math.max(1, l.start_year); y <= end; y++) {
-      const amount = l.annual_amount_krw_m * Math.pow(1 + l.growth_rate, y - l.start_year);
-      amounts[y - 1] += amount;
-      if (fromCapability && isCapex) capexCapabilityByYear[y - 1] += amount;
-      else if (fromCapability && !isGovRnd) laborOpexCapabilityByYear[y - 1] += amount;
-      if (!isCapex && !isGovRnd) opexCovered[y - 1] = true;
-    }
-  }
-  const lineHash = scenarioSeed(model.id, JSON.stringify({ c: capexByYear, o: laborOpexByYear, g: govRndByYear })).toString(16);
-  return { modelId: model.id, horizonYears: horizon, capexByYear, laborOpexByYear, govRndByYear, opexCovered, skippedLines, lineHash, capexCapabilityByYear, laborOpexCapabilityByYear };
+  const agg = aggregatePlanLines(model.horizon_years, lines);
+  const lineHash = scenarioSeed(model.id, JSON.stringify({ c: agg.capexByYear, o: agg.laborOpexByYear, g: agg.govRndByYear })).toString(16);
+  return { modelId: model.id, horizonYears: agg.horizonYears, capexByYear: agg.capexByYear, laborOpexByYear: agg.laborOpexByYear, govRndByYear: agg.govRndByYear, opexCovered: agg.opexCovered, skippedLines: agg.skippedLines, lineHash, capexCapabilityByYear: agg.capexCapabilityByYear, laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear };
 }
 
 /** The plan in force for a case — only when a human chose an s5_plan basis
@@ -1175,7 +1184,10 @@ export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "g
     s5Plan,
     // ADR-0176 slice 3: the latest CONFIRMED S5 simulation run, only under an s5_plan basis with a
     // plan. None -> today's single-point plan (note `s5_sim=none`); never blocking.
-    s5Sim: bcParams.investmentBasis !== "ratio" && s5Plan ? resolveS5SimConsumption(getDb(), row?.source_opportunity_id) : null,
+    // ADR-0178 slice 0: on the pinned path the run is the one the pin names, not "the latest confirmed".
+    s5Sim: bcParams.investmentBasis !== "ratio" && s5Plan
+      ? s5Plan.pinId ? resolvePinnedS5SimConsumption(getDb(), getCurrentS5PlanPin(getDb(), projectId)!) : resolveS5SimConsumption(getDb(), row?.source_opportunity_id)
+      : null,
   };
 }
 
@@ -1333,7 +1345,7 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
   const y1 = year1RevenueOf(inputs, delta.growth);
   const s5 = s5PlanOf(inputs);
   const initInv = s5
-    ? { value: s5.plan.capexByYear[0], source: `S5 투자 계획 Y1 집행액 — greenfield_cost model ${s5.plan.modelId} (OD-3: 계획 1년차 지출을 year-0으로 반영)` }
+    ? { value: s5.plan.capexByYear[0], source: `S5 투자 계획 Y1 집행액 — ${s5.plan.pinId ? `S5 고정 참조 ${s5.plan.pinId}` : `greenfield_cost model ${s5.plan.modelId}`} (OD-3: 계획 1년차 지출을 year-0으로 반영)` }
     : initialInvestmentOf(inputs, y1.value);
   const exitMult = exitEvRevenueOf(inputs);
   // ADR-0143: brownfield per-target cases carry the target in the subject
@@ -1377,7 +1389,7 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
             dist: "constant",
             value: s5 ? 0 : bc.capexRatio, // s5_plan: 스케줄이 대체 — 비율과 스케줄의 이중 계상은 이중계산 (design §6.2)
             unit: "ratio",
-            source: s5 ? `S5 투자 계획 스케줄로 대체 (model ${s5.plan.modelId})` : bc.capexSource,
+            source: s5 ? `S5 투자 계획 스케줄로 대체 (${s5.plan.pinId ? `S5 고정 참조 ${s5.plan.pinId}` : `model ${s5.plan.modelId}`})` : bc.capexSource,
           },
           initial_investment: { dist: "constant", value: initInv.value, unit: "KRW_M", source: initInv.source },
           ...(exitMult > 0
@@ -1566,7 +1578,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       const s5OpexVariance = s5Provenance && !s5Provenance.full ? s5OpexCrossCheckVariance(ctx.inputs) : null;
       const basis = ctx.inputs.bcParams?.investmentBasis ?? "ratio";
       const basisFragment = s5Provenance
-        ? `; basis=${basis}; s5_model=${s5Provenance.plan.modelId}; s5_line_hash=${s5Provenance.plan.lineHash}; s5_skipped=${s5Provenance.plan.skippedLines}${s5Provenance.full ? "; s5_full=1" : ""}; s5_sim=${ctx.inputs.s5Sim?.inputHash ?? "none"}${s5OpexVariance != null ? `; s5_opex_variance=${s5OpexVariance.toFixed(2)}` : ""}`
+        ? `; basis=${basis}; s5_model=${s5Provenance.plan.modelId}; s5_line_hash=${s5Provenance.plan.lineHash}; s5_skipped=${s5Provenance.plan.skippedLines}${s5Provenance.full ? "; s5_full=1" : ""}; s5_sim=${ctx.inputs.s5Sim?.inputHash ?? "none"}${s5OpexVariance != null ? `; s5_opex_variance=${s5OpexVariance.toFixed(2)}` : ""}${s5Provenance.plan.pinId ? `; s5_pin=${s5Provenance.plan.pinId}; plan_hash=${s5Provenance.plan.planHash}` : ""}`
         : basis === "ratio"
           ? "; basis=ratio"
           : "; basis=ratio; s5_plan_fallback=1 (greenfield_cost 모델 없음 — 비율 경로로 대체)";

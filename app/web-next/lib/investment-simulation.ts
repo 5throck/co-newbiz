@@ -115,10 +115,18 @@ const scaled = (v: number[], f: number): number[] => v.map((n) => round2(n * f))
 
 /** Hash of everything that determines the draws (envelope excluded: it only reads the distribution). */
 export function simulationInputHash(input: InvestmentVectorsInput, seed: number, draws: number): string {
+  const payload = { ...investmentInputPayload(input), seed, draws };
+  return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+}
+
+/**
+ * The seed/draw-free part of the simulation input hash (ADR-0178: one definition shared by the S5
+ * simulation input hash and the S5 plan pin hash). Key order is part of the hash - do not reorder.
+ */
+export function investmentInputPayload(input: InvestmentVectorsInput) {
   const v = buildInvestmentVectors(input);
   const eff = effectiveAssumptions(input.overrides);
-  const payload = { h: v.horizon, c: v.mode.capabilityByYear, m: v.mode.manualByYear, s: input.staffing, eff, seed, draws };
-  return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+  return { h: v.horizon, c: v.mode.capabilityByYear, m: v.mode.manualByYear, s: input.staffing, eff };
 }
 
 /**

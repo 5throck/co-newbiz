@@ -5412,6 +5412,52 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
+  /api/projects/{id}/business-case/s5-pin:
+    get:
+      operationId: getS5PlanPin
+      summary: S5 plan pin status (copy path vs pinned reference, stale rules) and the re-pin preview — pinned versus current S5 totals and confirmed run (ADR-0178 slice 0; human-only, analyst+, Green Field only; 409 not_greenfield / no_s5_plan).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    post:
+      operationId: pinS5Plan
+      summary: Human-only. Creates the initial S5 plan pin, or re-pins (supersedes the current pin, inserts the next, refreshes the compat copy through the S5 re-import, audit s5_plan_pin.repinned — one transaction). Existing cases, simulations and adopted results are not touched; bc.s5_source and the investment basis are never changed. A re-pin with an unchanged source and confirmed run writes nothing (written=false). Agents rejected (ADR-0178 slice 0).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
   /api/projects/{id}/business-case/adoption-recommendation:
     post:
       operationId: recommendBusinessCaseAdoption

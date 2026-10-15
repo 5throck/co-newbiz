@@ -30,6 +30,7 @@ import { deriveOriginFromSubTrack } from "../lib/origin-derivation.ts";
 import { getDb } from "../client.ts";
 // ADR-0173: pure helpers shared with the S5 route (no db access inside).
 import { writeS5CostModel } from "./s5-cost-import.ts";
+import { createS5PlanPin } from "./s5-plan-pin.ts";
 import { ulid } from "../lib/ulid.ts";
 import { appendAudit, grantProjectMembership, logDataAccess } from "../lib/access-control.ts";
 import { getCurrentRouteDecision } from "./route-decision.repository.ts";
@@ -303,7 +304,11 @@ export function promoteOpportunity(
     // is normalized into that same annual figure; lumpsum과 비KRW 통화는
     // 변환하지 않고 note 플래그로만 남긴다(경계 #2 — 위조하지 않는다).
     if (track === "greenfield") {
-      writeS5CostModel(db, { projectId: row.id, opportunityId, actor: opts.promotedBy, now, modelName: "S5 투자비 검토 요건 (자동 이관)", auditSkips: true });
+      const copy = writeS5CostModel(db, { projectId: row.id, opportunityId, actor: opts.promotedBy, now, modelName: "S5 투자비 검토 요건 (자동 이관)", auditSkips: true });
+      // ADR-0178 slice 0 (OPEN-2): the copy above stays the default path. When the S5 source was
+      // importable, also write the INITIAL pin row (reason=initial). It changes nothing in S8 until a
+      // person sets bc.s5_source = 1 on the project - promotion never opts a project in.
+      if (copy.modelId) createS5PlanPin(db, { projectId: row.id, actor: opts.promotedBy, now });
     }
 
     db.run("UPDATE opportunity SET project_id = ?, promoted_at = ? WHERE id = ?", [row.id, now, opportunityId]);
