@@ -782,6 +782,33 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
       {tab === "overview" && (
       <>
+      {/* Primary action of the tab sits first (decider feedback 2026-10-15) */}
+      {canAct && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <button type="button" className="btn-premium btn-sm" disabled={busy} onClick={() => void generate()}>
+            {busy ? "생성 중..." : greenfield ? "자동 생성 (시장 기반 × 3 시나리오)" : "이중 관점 자동 생성 (시장 기반 + 과거 기반 × 3 시나리오)"}
+          </button>
+          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+            {busy ? "계산 중입니다 - 완료되면 결과가 갱신됩니다." : "결정 기록은 '결정' 탭에서 합니다."}
+          </span>
+        </div>
+      )}
+
+      {run && (
+        <details className="mb-3" open>
+          <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">생성 실행 로그 ({run.runId} — {run.status})</summary>
+          <ul className="sizing-note-list mt-1">
+            {run.activities.map((a) => (
+              <li key={a.activityId}>
+                <span className={`status-chip ${a.status === "done" ? "status-green" : a.status === "failed" ? "status-red" : "status-not-started"}`}>{a.status}</span>{" "}
+                <strong>{a.activityId}</strong> <span className="text-[color:var(--muted-fg)]">({a.agentKey})</span>
+                {a.outputMd && <pre className="text-[length:var(--fs-caption)] whitespace-pre-wrap mt-1">{a.outputMd}</pre>}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
       {/* 두 관점의 의미 — greenfield has no target company, so only the market-based perspective exists */}
       {greenfield ? (
       <section className="market-section sizing-step mb-3" aria-label="평가 관점의 의미">
@@ -838,32 +865,6 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         historicalCase={(byScenario.get("base") ?? []).find((c) => c.variant === "historical") ?? null}
         greenfield={greenfield}
       />
-
-      {canAct && (
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void generate()}>
-            {busy ? "생성 중..." : greenfield ? "자동 생성 (시장 기반 × 3 시나리오)" : "이중 관점 자동 생성 (시장 기반 + 과거 기반 × 3 시나리오)"}
-          </button>
-          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-            {busy ? "계산 중입니다 - 완료되면 결과가 갱신됩니다." : "결정 기록은 '결정' 탭에서 합니다."}
-          </span>
-        </div>
-      )}
-
-      {run && (
-        <details className="mb-3" open>
-          <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">생성 실행 로그 ({run.runId} — {run.status})</summary>
-          <ul className="sizing-note-list mt-1">
-            {run.activities.map((a) => (
-              <li key={a.activityId}>
-                <span className={`status-chip ${a.status === "done" ? "status-green" : a.status === "failed" ? "status-red" : "status-not-started"}`}>{a.status}</span>{" "}
-                <strong>{a.activityId}</strong> <span className="text-[color:var(--muted-fg)]">({a.agentKey})</span>
-                {a.outputMd && <pre className="text-[length:var(--fs-caption)] whitespace-pre-wrap mt-1">{a.outputMd}</pre>}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
 
       {/* AI 채택 권고 lives in the decision tab's "AI 판단 지원" (one section for both AI proposals). */}
       {canAct && (
