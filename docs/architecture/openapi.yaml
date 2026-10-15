@@ -4317,7 +4317,7 @@ paths:
   /api/greenfield/{oppId}/recommendation:
     post:
       operationId: recommendGreenfieldStrategy
-      summary: Draft an LLM capability-gap / Build-Partner-Hire-Invest strategy recommendation (S5 decision support, ADR-0118). Proposal only — the assessment is saved by a human. Deterministic fallback never fabricates capability rows.
+      summary: Draft an LLM capability-gap / Build-Partner-Hire-Invest strategy recommendation (S5 decision support, ADR-0118). Proposal only — the assessment is saved by a human. Deterministic fallback never fabricates capability rows. Each investment_items entry is {line, category, note, sub_category?}; sub_category (ADR-0177 slice 1) is kept only when it is a valid key under the item's category and is never a price or amount.
       tags:
         - Analysis
       responses:
@@ -7497,6 +7497,10 @@ components:
                 type: array
                 items:
                   type: string
+              subCategory:
+                type: string
+                enum: [land_building, machinery, it_software, rnd_development, tech_license, patent_filing, fto_search, trademark_design, cert_equipment, rent_utility, materials, outsourcing, marketing_sales, insurance_tax_legal, product_cert, business_permit, cert_maintenance, patent_maintenance, opening_working_capital, direct_labor, recruiting_training, management_labor]
+                description: "ADR-0177 slice 1 optional account sub-category (manual and capability lines). Its parent must equal category (capex 9 keys, opex 10, labor 3; none for revenue/gov_rnd) else 400 subcategory_parent_mismatch; an unknown key is 400 invalid_sub_category; a line without category takes the parent. Never changes an S8 calculation path. On read an unknown or mismatched stored key is returned as read-only legacySubCategory and dropped on the next save."
               source:
                 type: string
                 enum: [capability]

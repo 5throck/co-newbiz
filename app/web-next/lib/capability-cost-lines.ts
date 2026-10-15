@@ -16,6 +16,86 @@ export const CAPABILITY_BLOCK_TITLE = "역량 해소 비용 (S5 판정에서 연
 export const MILESTONE_BLOCK_TITLE = "마일스톤 후보 (사후관리 연동 예정)";
 export const MILESTONE_START_NOTE = "착수일은 S11 기준선을 확정할 때 정해집니다.";
 
+// ── Account sub-categories (ADR-0177 slice 1, design §2) ────────────────────
+// Single source of the 세부 과목 vocabulary: 22 keys (capex 9, opex 10, labor 3; none under
+// revenue/gov_rnd). Keys are stable ASCII; labels may be renamed without a data change. A
+// sub-category never changes an S8 calculation path (only the top-level category does). Changes
+// to this list require an ADR-0177 amendment. No unit prices or amounts live here.
+
+export type SubCategoryKey =
+  | "land_building" | "machinery" | "it_software" | "rnd_development" | "tech_license" | "patent_filing" | "fto_search" | "trademark_design" | "cert_equipment"
+  | "rent_utility" | "materials" | "outsourcing" | "marketing_sales" | "insurance_tax_legal" | "product_cert" | "business_permit" | "cert_maintenance" | "patent_maintenance" | "opening_working_capital"
+  | "direct_labor" | "recruiting_training" | "management_labor";
+
+export interface SubCategoryDef {
+  key: SubCategoryKey;
+  label: string;
+  parent: CostCategory;
+  /** UI suggestion for a NEW row only; never overwrites a period a person set. */
+  defaultPeriod: "monthly" | "yearly" | "lumpsum";
+  /** Display group (optgroup) inside the parent; not a third level. */
+  group?: string;
+  /** Short treatment note shown as a hint (S8 or accounting caveat). */
+  hint?: string;
+}
+
+const DEV_INTANGIBLE = "개발·무형";
+export const SUB_CATEGORIES: readonly SubCategoryDef[] = [
+  { key: "land_building", label: "토지·건물", parent: "capex", defaultPeriod: "lumpsum" },
+  { key: "machinery", label: "기계·설비", parent: "capex", defaultPeriod: "lumpsum" },
+  { key: "it_software", label: "정보시스템·소프트웨어", parent: "capex", defaultPeriod: "lumpsum", hint: "SaaS 구독은 운영비 외주·용역" },
+  { key: "rnd_development", label: "연구개발비", parent: "capex", defaultPeriod: "yearly", group: DEV_INTANGIBLE },
+  { key: "tech_license", label: "라이선스·기술 도입", parent: "capex", defaultPeriod: "lumpsum", group: DEV_INTANGIBLE, hint: "경상 로열티는 운영비 외주·용역" },
+  { key: "patent_filing", label: "특허 출원·등록", parent: "capex", defaultPeriod: "lumpsum", group: DEV_INTANGIBLE },
+  { key: "fto_search", label: "FTO·선행기술 조사", parent: "capex", defaultPeriod: "lumpsum", group: DEV_INTANGIBLE },
+  { key: "trademark_design", label: "상표·디자인 등록", parent: "capex", defaultPeriod: "lumpsum", group: DEV_INTANGIBLE },
+  { key: "cert_equipment", label: "인증·인허가 설비", parent: "capex", defaultPeriod: "lumpsum" },
+  { key: "rent_utility", label: "임차·유틸리티", parent: "opex", defaultPeriod: "monthly" },
+  { key: "materials", label: "재료·소모품", parent: "opex", defaultPeriod: "yearly" },
+  { key: "outsourcing", label: "외주·용역", parent: "opex", defaultPeriod: "yearly" },
+  { key: "marketing_sales", label: "마케팅·영업", parent: "opex", defaultPeriod: "yearly" },
+  { key: "insurance_tax_legal", label: "보험·세무·법무", parent: "opex", defaultPeriod: "yearly" },
+  { key: "product_cert", label: "제품 인증 (CE/KC/ISO 등)", parent: "opex", defaultPeriod: "lumpsum" },
+  { key: "business_permit", label: "사업 인허가", parent: "opex", defaultPeriod: "lumpsum" },
+  { key: "cert_maintenance", label: "인증 유지·갱신·감사", parent: "opex", defaultPeriod: "yearly" },
+  { key: "patent_maintenance", label: "특허 유지·연차료", parent: "opex", defaultPeriod: "yearly" },
+  { key: "opening_working_capital", label: "초기 운전자본", parent: "opex", defaultPeriod: "lumpsum", hint: "운전자본 — S8에서 비용 처리됨, 회수 미반영" },
+  { key: "direct_labor", label: "직접 인건비", parent: "labor", defaultPeriod: "yearly" },
+  { key: "recruiting_training", label: "채용·교육비", parent: "labor", defaultPeriod: "lumpsum" },
+  { key: "management_labor", label: "임원·관리 인건비", parent: "labor", defaultPeriod: "yearly" },
+];
+
+const SUB_BY_KEY: ReadonlyMap<string, SubCategoryDef> = new Map(SUB_CATEGORIES.map((d) => [d.key, d]));
+export const SUB_CATEGORY_LABEL = Object.fromEntries(SUB_CATEGORIES.map((d) => [d.key, d.label])) as Record<SubCategoryKey, string>;
+export const SUB_CATEGORY_PARENT = Object.fromEntries(SUB_CATEGORIES.map((d) => [d.key, d.parent])) as Record<SubCategoryKey, CostCategory>;
+/** Label of the per-category row for lines without a sub-category. */
+export const UNASSIGNED_SUB_LABEL = "미지정";
+/** Opex one-off sub-categories that the S8 `s5_plan` basis leaves out of the NPV (design §2.1). */
+export const S5_PLAN_EXCLUDED_ONE_OFF: ReadonlySet<SubCategoryKey> = new Set<SubCategoryKey>(["product_cert", "business_permit", "opening_working_capital"]);
+/** Design §2.1 rule shown under the summary. */
+export const SUB_CATEGORY_S8_NOTE = "세부 과목은 S8 계산 경로를 바꾸지 않습니다 — s5_plan 기준에서는 설비투자(capex) 하위 과목만 투자로 집계되고, 운영비 하위 과목(인증·인허가·특허 유지 포함)은 s5_plan_full에서만 반영됩니다.";
+
+export const isSubCategoryKey = (v: unknown): v is SubCategoryKey => typeof v === "string" && SUB_BY_KEY.has(v);
+export const subCategoryDef = (key: unknown): SubCategoryDef | undefined => (typeof key === "string" ? SUB_BY_KEY.get(key) : undefined);
+/** Sub-categories offered for a category (none for revenue/gov_rnd/unset). */
+export const subCategoriesOf = (category: unknown): SubCategoryDef[] => SUB_CATEGORIES.filter((d) => d.parent === category);
+/** True when `sub` is a known key whose parent equals `category`. revenue/gov_rnd never have one. */
+export function validSubCategory(category: unknown, sub: unknown): sub is SubCategoryKey {
+  const d = subCategoryDef(sub);
+  return !!d && d.parent === category;
+}
+
+/** Suggested sub-category for a capability judgement (design §5): resolution first, else the category's common default; null when no category. */
+export function suggestSubCategory(resolution: GapResolution | null, category: CostCategory | null | undefined): SubCategoryKey | null {
+  const byResolution: Partial<Record<GapResolution, SubCategoryKey>> = { build: "machinery", hire: "direct_labor", partner: "outsourcing", invest: "machinery" };
+  const fallback: Record<CostCategory, SubCategoryKey> = { capex: "machinery", opex: "outsourcing", labor: "direct_labor" };
+  const r = resolution ? byResolution[resolution] : undefined;
+  if (!category) return r ?? null;
+  return r && SUB_CATEGORY_PARENT[r] === category ? r : fallback[category];
+}
+/** ADR-0175 staffing defaults (fixed, read-only, no storage): derived salary lines and the recruiting one-off. */
+export const STAFFING_SUB_CATEGORY = { salary: "direct_labor", recruiting: "recruiting_training" } as const satisfies Record<string, SubCategoryKey>;
+
 /** The judgement fields this feature reads (a subset of AttainabilityRowView, so server and client share it). */
 export interface CostSourceRow {
   id: string;
@@ -161,6 +241,10 @@ export interface ManualCostLine {
   dupDismissed?: string[];
   /** Legacy info only (old shape): annual growth rate, kept read-only, never applied. */
   growthRate?: number;
+  /** ADR-0177 slice 1: optional 세부 과목; its parent must equal `category`. Unset = 미지정. */
+  subCategory?: SubCategoryKey;
+  /** Read-only: an unknown/mismatched stored sub-category, shown once and dropped on the next save. */
+  legacySubCategory?: string;
 }
 
 const MANUAL_CATEGORIES: readonly string[] = ["labor", "opex", "capex", "revenue", "gov_rnd"];
@@ -229,7 +313,30 @@ export function normalizeLegacyLine(raw: Record<string, unknown>): ManualCostLin
     note: typeof raw.note === "string" ? raw.note : undefined,
     dupDismissed: Array.isArray(raw.dupDismissed) ? (raw.dupDismissed as string[]) : undefined,
     growthRate: typeof raw.growth_rate === "number" ? raw.growth_rate : typeof raw.growthRate === "number" ? raw.growthRate : undefined,
+    ...subCategoryFieldsOf(category, raw.subCategory),
   };
+}
+
+/** Known + parent-matching key -> `subCategory`; any other non-empty string -> `legacySubCategory` (display only). */
+function subCategoryFieldsOf(category: unknown, raw: unknown): Pick<ManualCostLine, "subCategory" | "legacySubCategory"> {
+  if (raw === undefined || raw === null || raw === "") return {};
+  if (validSubCategory(category, raw)) return { subCategory: raw };
+  return typeof raw === "string" ? { legacySubCategory: raw } : {};
+}
+
+/**
+ * Route-side check of a posted `subCategory` (ADR-0177): null when acceptable. An unknown key is
+ * `invalid_sub_category`; a key under another parent (or any key on revenue/gov_rnd) is
+ * `subcategory_parent_mismatch`. A line with no category takes the sub-category's parent.
+ */
+export function checkSubCategory(category: unknown, sub: unknown, label: string): CostLineError | null {
+  if (sub === undefined || sub === null || sub === "") return null;
+  const d = subCategoryDef(sub);
+  if (!d) return { code: "invalid_sub_category", message: `${label}: 알 수 없는 세부 과목입니다: ${String(sub)}` };
+  if (category !== undefined && category !== null && category !== "" && d.parent !== category) {
+    return { code: "subcategory_parent_mismatch", message: `${label}: 세부 과목 '${d.label}'은(는) ${CATEGORY_LABEL[d.parent]} 하위 과목입니다 — 분류와 맞지 않습니다.` };
+  }
+  return null;
 }
 
 export type ManualLineIssue = "category" | "period" | "currency" | "unit";
@@ -332,6 +439,8 @@ export interface StoredCapabilityEntry {
   period: "lumpsum";
   /** Human spend-year override (ADR-0174 slice 1); unset = derived from the judgement months (OD-6). */
   startYear?: number;
+  /** ADR-0177 slice 1: person-picked 세부 과목 (parent = category). Unset = 미지정. */
+  subCategory?: SubCategoryKey;
   note: string;
   source: "capability";
   capabilityKey: string;
@@ -382,6 +491,10 @@ export interface CapabilityCostLine {
   needsRejudge: boolean;
   /** The category the S5 judgement carries, or null when unset (then `category` falls back to stored/suggested). */
   judgementCategory: JudgementCategory | null;
+  /** ADR-0177: person-picked 세부 과목 stored on the entry (dropped when it no longer fits `category`); null = 미지정. */
+  subCategory: SubCategoryKey | null;
+  /** 제안 only (design §5): from the resolution and category; never applied automatically. */
+  suggestedSubCategory: SubCategoryKey | null;
   /** Reflected amount differs from the live one (the amount follows the judgement). */
   amountChanged: boolean;
   previousAmountEok: number | null;
@@ -419,7 +532,10 @@ export function deriveCapabilityCostLines(rows: CostSourceRow[], stored: unknown
     const category = judgementCategory ?? (e && CAPABILITY_COST_CATEGORIES.includes(e.category as CostCategory) ? (e.category as CostCategory) : sug.category);
     const defaultStartYear = capabilityDefaultStartYear(r.months_to_attain);
     const startYear = isValidYearValue(e?.startYear) ? e.startYear : defaultStartYear;
+    const subCategory = validSubCategory(category, e?.subCategory) ? (e!.subCategory as SubCategoryKey) : null;
     lines.push({
+      subCategory,
+      suggestedSubCategory: suggestSubCategory(r.resolution, category),
       capabilityKey: r.id,
       name: r.capability,
       line: `${r.capability} 역량 해소`,
@@ -491,17 +607,23 @@ export function isLikelyDuplicate(capabilityName: string, manual: { line?: strin
   return cap.length >= 2 && note.includes(cap);
 }
 
-export interface ManualLineLike { line: string; note?: string; dupDismissed?: string[]; source?: unknown }
-export interface DuplicateWarning { capabilityKey: string; capabilityName: string; manualIndex: number; manualLine: string }
+export interface ManualLineLike { line: string; note?: string; dupDismissed?: string[]; source?: unknown; subCategory?: unknown }
+export interface DuplicateWarning { capabilityKey: string; capabilityName: string; manualIndex: number; manualLine: string; /** ADR-0177: "sub_category" when it fired on the same 세부 과목; absent for the name rule. */ reason?: "sub_category" }
 
-/** Warning only, never a block. A manual line can dismiss it per capability (`dupDismissed`). */
-export function findDuplicateWarnings(reflectedLines: Array<Pick<CapabilityCostLine, "capabilityKey" | "name">>, manual: ManualLineLike[]): DuplicateWarning[] {
+/**
+ * Warning only, never a block. A manual line can dismiss it per capability (`dupDismissed`).
+ * ADR-0177 slice 1: the guard also compares 세부 과목 — a manual line carrying the same sub-category
+ * as a reflected capability line warns even when the names differ.
+ */
+export function findDuplicateWarnings(reflectedLines: Array<Pick<CapabilityCostLine, "capabilityKey" | "name"> & { subCategory?: SubCategoryKey | null }>, manual: ManualLineLike[]): DuplicateWarning[] {
   const out: DuplicateWarning[] = [];
   manual.forEach((m, i) => {
     if (m?.source === "capability" || !m?.line?.trim()) return;
     for (const c of reflectedLines) {
       if (m.dupDismissed?.includes(c.capabilityKey)) continue;
-      if (isLikelyDuplicate(c.name, m)) out.push({ capabilityKey: c.capabilityKey, capabilityName: c.name, manualIndex: i, manualLine: m.line.trim() });
+      const reason: "name" | "sub_category" | null = isLikelyDuplicate(c.name, m) ? "name" : c.subCategory && isSubCategoryKey(m.subCategory) && m.subCategory === c.subCategory ? "sub_category" : null;
+      // `reason` is set only for the sub-category match, so name-based warnings keep their pre-ADR-0177 shape.
+      if (reason) out.push({ capabilityKey: c.capabilityKey, capabilityName: c.name, manualIndex: i, manualLine: m.line.trim(), ...(reason === "sub_category" ? { reason } : {}) });
     }
   });
   return out;
@@ -631,7 +753,12 @@ export interface SummaryLine {
   period?: string;
   startYear?: number;
   endYear?: number;
+  subCategory?: string;
 }
+
+/** ADR-0177: one 세부 과목 subtotal (horizon total, cadence-annualised); key null = 미지정. */
+export interface InvestmentSubCategoryRow { key: SubCategoryKey | null; label: string; totalKrwM: number; /** Opex one-off left out of the NPV under s5_plan (design §2.1). */ s5PlanExcluded: boolean; hint?: string }
+export interface InvestmentSubCategoryGroup { category: "labor" | "opex" | "capex"; totalKrwM: number; rows: InvestmentSubCategoryRow[] }
 
 export interface InvestmentSummaryCategoryRow { category: "labor" | "opex" | "capex"; annualKrwM: number; lumpsumKrwM: number; totalKrwM: number }
 
@@ -656,6 +783,8 @@ export interface InvestmentSummary {
   /** ADR-0175: 인건비 category's 인력 운영 계획 연동분 (총액 + 채용 일회비, 백만원); 0 without a plan. */
   staffingLaborKrwM: number;
   staffingNeedConfirmCount: number;
+  /** ADR-0177 slice 1: per-category 세부 과목 subtotals; rows (incl. 미지정) reconcile exactly to byCategory. */
+  bySubCategory: InvestmentSubCategoryGroup[];
 }
 
 /**
@@ -675,6 +804,12 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
   let excludedNonKrw = 0;
   let excludedNeedsConfirm = 0;
   let endYearExceedsHorizon = 0;
+  // 세부 과목 subtotals per category ("" = 미지정), horizon totals in 백만원.
+  const subTotals: Record<"labor" | "opex" | "capex", Map<string, number>> = { labor: new Map(), opex: new Map(), capex: new Map() };
+  const addSub = (cat: "labor" | "opex" | "capex", sub: unknown, v: number) => {
+    const k = validSubCategory(cat, sub) ? sub : "";
+    subTotals[cat].set(k, (subTotals[cat].get(k) ?? 0) + v);
+  };
   for (const m of manual) {
     const v = manualLineKrwM(m as ManualCostLine);
     if (m.category === "revenue" || m.category === "gov_rnd") {
@@ -691,6 +826,7 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
     const cat = m.category as "labor" | "opex" | "capex";
     const vec = manualLineYearVector(m, H);
     for (let i = 0; i < H; i++) yearCat[cat][i] += vec[i];
+    addSub(cat, m.subCategory, vec.reduce((a, n) => a + n, 0));
     if (isLumpsum(m.period)) lumpByCat[cat] += vec.reduce((a, n) => a + n, 0);
     else annualByCat[cat] += v * cadenceMultiplier(m.period);
   }
@@ -700,6 +836,7 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
     const y = Math.max(1, Math.min(c.startYear, H));
     yearCat[c.category][y - 1] += c.costKrwM;
     lumpByCat[c.category] += c.costKrwM;
+    addSub(c.category, c.subCategory, c.costKrwM);
     if (c.startYear === c.defaultStartYear && c.monthsToAttain !== null && c.monthsToAttain > 0) capabilitySpendFromMilestone += 1;
   }
   // ADR-0175: the 인력 운영 계획 vector feeds the 인건비 category per year (derived, read-only,
@@ -712,6 +849,9 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
     for (let i = 0; i < H; i++) yearCat.labor[i] += vec.annualByYear[i] + vec.recruitingByYear[i];
     const recruiting = vec.recruitingByYear.reduce((a, n) => a + n, 0);
     lumpByCat.labor += recruiting;
+    // ADR-0177 defaults (fixed, read-only): plan salaries -> 직접 인건비, recruiting one-off -> 채용·교육비.
+    addSub("labor", STAFFING_SUB_CATEGORY.salary, vec.annualByYear.reduce((a, n) => a + n, 0));
+    addSub("labor", STAFFING_SUB_CATEGORY.recruiting, recruiting);
     annualByCat.labor += vec.annualByYear[Math.min(staffing.endYear, H) - 1] ?? 0;
     staffingLaborKrwM = view.totalKrwM + recruiting;
     staffingNeedConfirmCount = view.needConfirmCount;
@@ -736,6 +876,41 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
     capabilitySpendFromMilestone,
     staffingLaborKrwM: round2(staffingLaborKrwM),
     staffingNeedConfirmCount,
+    bySubCategory: cats.map((c) => subCategoryGroupOf(c, subTotals[c], totalByCat[c])),
+  };
+}
+
+/** Rows of one category: vocabulary order, non-zero sub-categories only, then 미지정 (when non-zero); rows sum exactly to the category total. */
+function subCategoryGroupOf(cat: "labor" | "opex" | "capex", totals: Map<string, number>, categoryTotal: number): InvestmentSubCategoryGroup {
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const total = round2(categoryTotal);
+  const rows: InvestmentSubCategoryRow[] = [];
+  for (const d of subCategoriesOf(cat)) {
+    const v = round2(totals.get(d.key) ?? 0);
+    if (v !== 0) rows.push({ key: d.key, label: d.label, totalKrwM: v, s5PlanExcluded: S5_PLAN_EXCLUDED_ONE_OFF.has(d.key), ...(d.hint ? { hint: d.hint } : {}) });
+  }
+  const unassigned = round2(totals.get("") ?? 0);
+  if (unassigned !== 0) rows.push({ key: null, label: UNASSIGNED_SUB_LABEL, totalKrwM: unassigned, s5PlanExcluded: false });
+  // Per-row 0.01 rounding can leave a cent of drift against the category total; fold it into the largest row.
+  const drift = round2(total - rows.reduce((a, r) => a + r.totalKrwM, 0));
+  if (drift !== 0 && rows.length > 0) {
+    const big = rows.reduce((m, r) => (Math.abs(r.totalKrwM) > Math.abs(m.totalKrwM) ? r : m), rows[0]);
+    big.totalKrwM = round2(big.totalKrwM + drift);
+  }
+  return { category: cat, totalKrwM: total, rows };
+}
+
+/** Task: per-year 투자비 합계 and per-row horizon totals of the 연도별 투자 계획 table (inflow rows reported separately, never in the total). */
+export interface ScheduleTotals { yearTotals: number[]; rowTotals: { labor: number; opex: number; capex: number }; grandKrwM: number; inflow: { revenue: number; govRnd: number } }
+export function scheduleTotals(summary: Pick<InvestmentSummary, "schedule">): ScheduleTotals {
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const s = summary.schedule;
+  const sum = (f: (r: InvestmentSummary["schedule"][number]) => number) => round2(s.reduce((a, r) => a + f(r), 0));
+  return {
+    yearTotals: s.map((r) => round2(r.labor + r.opex + r.capex)),
+    rowTotals: { labor: sum((r) => r.labor), opex: sum((r) => r.opex), capex: sum((r) => r.capex) },
+    grandKrwM: sum((r) => r.labor + r.opex + r.capex),
+    inflow: { revenue: sum((r) => r.revenue), govRnd: sum((r) => r.govRnd) },
   };
 }
 
@@ -787,7 +962,7 @@ export function buildInvestmentChartData(summary: InvestmentSummary): Investment
 }
 
 
-export type CostLineError = { code: "invalid_request" | "unknown_capability" | "invalid_category" | "amount_mismatch" | "not_reflectable" | "no_cost" | "invalid_amount_unit"; message: string };
+export type CostLineError = { code: "invalid_request" | "unknown_capability" | "invalid_category" | "amount_mismatch" | "not_reflectable" | "no_cost" | "invalid_amount_unit" | "invalid_sub_category" | "subcategory_parent_mismatch"; message: string };
 
 const AMOUNT_EPS = 1e-6;
 
@@ -835,7 +1010,13 @@ export function normalizeBusinessCaseLines(
     }
     if (!isCapabilityEntry(raw)) {
       // A manual line must not smuggle the capability markers.
-      const { source: _s, capabilityKey: _k, reflected: _r, basisHash: _b, reflectedBy: _rb, reflectedAt: _ra, ...rest } = raw as Record<string, unknown>;
+      const { source: _s, capabilityKey: _k, reflected: _r, basisHash: _b, reflectedBy: _rb, reflectedAt: _ra, legacySubCategory: _ls, ...rest } = raw as Record<string, unknown>;
+      // ADR-0177: a posted sub-category must be a known key under the line's category (400 otherwise);
+      // a line without a category takes the sub-category's parent. legacySubCategory is never stored.
+      const subErr = checkSubCategory(rest.category, rest.subCategory, String(rest.line ?? "") || "항목");
+      if (subErr) return { ok: false, error: subErr };
+      if (rest.subCategory === null || rest.subCategory === "") delete rest.subCategory;
+      if (rest.subCategory !== undefined && (rest.category === undefined || rest.category === null || rest.category === "")) rest.category = SUB_CATEGORY_PARENT[rest.subCategory as SubCategoryKey];
       if (!("amount" in rest) && rest.amountUnit === undefined && !("amountKrwM" in rest)) { out.push(rest); continue; }
       // Unknown units are rejected outright; there is no silent fallback unit.
       if (typeof rest.amountUnit === "string" && !AMOUNT_UNITS.includes(rest.amountUnit as AmountUnit)) {
@@ -871,6 +1052,10 @@ export function normalizeBusinessCaseLines(
     if (reflected && !wasReflected && (row.confirmed_at === null || row.stale)) {
       return { ok: false, error: { code: "not_reflectable", message: `${row.capability}: 확정되지 않았거나 재판정이 필요한 판정은 투자비에 반영할 수 없습니다.` } };
     }
+    const rawSub = (raw as { subCategory?: unknown }).subCategory;
+    const capSubErr = checkSubCategory(category, rawSub, row.capability);
+    if (capSubErr) return { ok: false, error: capSubErr };
+    const subCategory = isSubCategoryKey(rawSub) ? rawSub : undefined;
     const startYear = isValidYearValue((raw as { startYear?: unknown }).startYear) ? (raw as { startYear: number }).startYear : undefined;
     if (startYear !== undefined && (startYear < 1 || startYear > horizon)) {
       return { ok: false, error: { code: "invalid_request", message: `${row.capability}: 집행 연차는 1..${horizon}년이어야 합니다.` } };
@@ -885,6 +1070,7 @@ export function normalizeBusinessCaseLines(
       period: "lumpsum",
       note: `S5 역량 해소 비용 연동 (${row.resolution ? RESOLUTION_LABEL[row.resolution] : "해소 방식 미정"})`,
       ...(startYear !== undefined ? { startYear } : {}),
+      ...(subCategory !== undefined ? { subCategory } : {}),
       source: "capability",
       capabilityKey: key,
       reflected,
@@ -980,7 +1166,7 @@ export function milestoneCandidateView(row: CapabilityGapRow): MilestoneCandidat
 
 // ── Client selection overlay ────────────────────────────────────────────────
 
-export interface CostSelection { reflected?: boolean; category?: CostCategory }
+export interface CostSelection { reflected?: boolean; category?: CostCategory; /** ADR-0177: null = explicitly cleared. */ subCategory?: SubCategoryKey | null }
 
 /** Overlay the person's unsaved checkbox/category choices on the derived lines. */
 export function applySelection(view: CapabilityCostView, sel: Readonly<Record<string, CostSelection>>): CapabilityCostLine[] {
@@ -988,15 +1174,19 @@ export function applySelection(view: CapabilityCostView, sel: Readonly<Record<st
     const s = sel[l.capabilityKey];
     if (!s) return l;
     const reflected = s.reflected ?? l.reflected;
-    return { ...l, reflected, category: s.category ?? l.category, needsRejudge: reflected && (l.stale || l.needsRejudge) };
+    const category = s.category ?? l.category;
+    const pickedSub = s.subCategory !== undefined ? s.subCategory : l.subCategory;
+    // A category change drops a sub-category that no longer fits (the UI shows a chip for it).
+    const subCategory = pickedSub && validSubCategory(category, pickedSub) ? pickedSub : null;
+    return { ...l, reflected, category, subCategory, suggestedSubCategory: suggestSubCategory(l.resolution, category), needsRejudge: reflected && (l.stale || l.needsRejudge) };
   });
 }
 
 /** Payload entries for the saved capability lines: reflected ones, plus explicit un-checks of default/previously stored rows. */
-export function selectionPayload(lines: CapabilityCostLine[], sel: Readonly<Record<string, CostSelection>>): Array<{ source: "capability"; capabilityKey: string; reflected: boolean; category: CostCategory; amount: number; amountUnit: typeof AMOUNT_UNIT_KRW_M; amountUnitConfirmed: true }> {
+export function selectionPayload(lines: CapabilityCostLine[], sel: Readonly<Record<string, CostSelection>>): Array<{ source: "capability"; capabilityKey: string; reflected: boolean; category: CostCategory; amount: number; amountUnit: typeof AMOUNT_UNIT_KRW_M; amountUnitConfirmed: true; subCategory?: SubCategoryKey }> {
   return lines
     .filter((l) => l.reflected || l.persisted || sel[l.capabilityKey]?.reflected === false)
-    .map((l) => ({ source: "capability" as const, capabilityKey: l.capabilityKey, reflected: l.reflected, category: l.category, amount: l.costKrwM, amountUnit: AMOUNT_UNIT_KRW_M, amountUnitConfirmed: true as const }));
+    .map((l) => ({ source: "capability" as const, capabilityKey: l.capabilityKey, reflected: l.reflected, category: l.category, amount: l.costKrwM, amountUnit: AMOUNT_UNIT_KRW_M, amountUnitConfirmed: true as const, ...(l.subCategory ? { subCategory: l.subCategory } : {}) }));
 }
 
 // ── S5 reflection action (explicit save of the capability selections) ────────
@@ -1012,8 +1202,10 @@ export function lineSaveStates(lines: CapabilityCostLine[], stored: unknown, sel
     const savedReflected = e?.reflected === true;
     const savedCategory = e && CAPABILITY_COST_CATEGORIES.includes(e.category as CostCategory) ? (e.category as CostCategory) : l.suggestedCategory;
     const touched = !!sel[l.capabilityKey];
-    if (l.reflected && savedReflected && l.category === savedCategory) out[l.capabilityKey] = "saved";
-    else if (l.reflected !== savedReflected || (l.reflected && l.category !== savedCategory) || (touched && !e && l.reflected)) out[l.capabilityKey] = "unsaved";
+    const savedSub = e && validSubCategory(savedCategory, e.subCategory) ? e.subCategory : null;
+    const subChanged = (l.subCategory ?? null) !== (savedSub ?? null);
+    if (l.reflected && savedReflected && l.category === savedCategory && !subChanged) out[l.capabilityKey] = "saved";
+    else if (l.reflected !== savedReflected || (l.reflected && (l.category !== savedCategory || subChanged)) || (touched && !e && l.reflected)) out[l.capabilityKey] = "unsaved";
     else out[l.capabilityKey] = null;
   }
   return out;
@@ -1039,6 +1231,8 @@ export type UnifiedRow =
       capabilityKey: string;
       name: string;
       category: CostCategory;
+      subCategory: SubCategoryKey | null;
+      suggestedSubCategory: SubCategoryKey | null;
       krwM: number;
       note: string;
       saveState: LineSaveState;
@@ -1067,6 +1261,8 @@ export function unifiedInvestmentRows(
       capabilityKey: l.capabilityKey,
       name: `${l.name} (역량 해소)`,
       category: l.category,
+      subCategory: l.subCategory,
+      suggestedSubCategory: l.suggestedSubCategory,
       krwM: l.costKrwM,
       note: `S5 판정에서 연동 · 해소 방식 ${l.resolutionLabel} · 기간 ${l.monthsToAttain !== null ? `${l.monthsToAttain}개월` : "미입력"}`,
       saveState: states[l.capabilityKey] ?? null,

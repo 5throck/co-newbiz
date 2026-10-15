@@ -332,14 +332,25 @@ export const STAFFING_DUP_PREFIX = "staffing:";
 
 export interface StaffingDuplicateWarning { rowId: string; rowLabel: string; manualIndex: number; manualLine: string }
 
-/** Manual 인건비 lines overlapping a staffing role family warn (이중 계상 확인); dismissal rides the manual line's dupDismissed as "staffing:<rowId>". */
-export function findStaffingDuplicateWarnings(rows: StaffingRow[], manual: Array<{ line?: string; note?: string; dupDismissed?: string[]; source?: unknown; category?: unknown }>): StaffingDuplicateWarning[] {
+/** Role families that read as management/executive (ADR-0177 duplicate guard for `management_labor`). */
+const MANAGEMENT_ROLE = /임원|경영|관리|대표|본부장|executive|management|manager|director|officer|ceo|cfo|cto|coo/i;
+export const isManagementRoleFamily = (roleFamily: string): boolean => MANAGEMENT_ROLE.test(roleFamily);
+
+/**
+ * Manual 인건비 lines overlapping a staffing role family warn (이중 계상 확인); dismissal rides the manual line's dupDismissed as "staffing:<rowId>".
+ * ADR-0177 slice 1 also compares the 세부 과목 (keys from the SSOT in capability-cost-lines.ts, kept literal here to avoid an import cycle):
+ * a manual `direct_labor` line warns against every staffing row (the plan already books 직접 인건비); a manual
+ * `management_labor` line warns only against management/executive role families; other or unset sub-categories keep the name rule.
+ */
+export function findStaffingDuplicateWarnings(rows: StaffingRow[], manual: Array<{ line?: string; note?: string; dupDismissed?: string[]; source?: unknown; category?: unknown; subCategory?: unknown }>): StaffingDuplicateWarning[] {
   const out: StaffingDuplicateWarning[] = [];
   manual.forEach((m, i) => {
     if (!m || m.source === "capability" || !m?.line?.trim() || m.category !== "labor") return;
     for (const r of rows) {
       if (m.dupDismissed?.includes(`${STAFFING_DUP_PREFIX}${r.id}`)) continue;
-      if (isLikelyStaffingDuplicate(r.roleFamily, m)) out.push({ rowId: r.id, rowLabel: `${r.roleFamily} · ${r.grade}`, manualIndex: i, manualLine: m.line.trim() });
+      const bySub = m.subCategory === "direct_labor" || (m.subCategory === "management_labor" && isManagementRoleFamily(r.roleFamily));
+      const byName = m.subCategory === "management_labor" ? isManagementRoleFamily(r.roleFamily) && isLikelyStaffingDuplicate(r.roleFamily, m) : isLikelyStaffingDuplicate(r.roleFamily, m);
+      if (bySub || byName) out.push({ rowId: r.id, rowLabel: `${r.roleFamily} · ${r.grade}`, manualIndex: i, manualLine: m.line.trim() });
     }
   });
   return out;
