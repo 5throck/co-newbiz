@@ -485,8 +485,8 @@ describe("milestone candidates", () => {
 describe("S5 UI structure", () => {
   const stage = readFileSync(join(WEB, "components/stages/GreenfieldStage.tsx"), "utf8");
   const block = readFileSync(join(WEB, "components/stages/CapabilityCostBlock.tsx"), "utf8");
-  test("the derived block sits above the manual lines inside section 3 and the payload carries only the person's choices", () => {
-    const sec = stage.indexOf("3️⃣ 투자비 검토 요건");
+  test("the derived block sits above the manual lines inside the investment tab and the payload carries only the person's choices", () => {
+    const sec = stage.indexOf("투자비 검토 요건 (S8 사업성 분석 입력)");
     expect(sec).toBeGreaterThan(0);
     expect(stage.indexOf("<CapabilityCostBlock", sec)).toBeGreaterThan(sec);
     expect(stage.indexOf("<CapabilityCostBlock")).toBeLessThan(stage.indexOf("unifiedRows.map"));

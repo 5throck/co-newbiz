@@ -23,7 +23,7 @@ export interface GapWiring {
   setRows: Dispatch<SetStateAction<CapabilityGapRow[]>>;
 }
 
-export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraft = false, onRowsChange, onEditorApi }: {
+export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraft = false, onRowsChange, onEditorApi, onDirtyChange }: {
   /** Base URL of the judgement routes: GET/PUT here, POST `${endpoint}/confirm`. */
   endpoint: string;
   s3Href: string;
@@ -35,6 +35,8 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
   onRowsChange?: (rows: AttainabilityViewData["rows"]) => void;
   /** ADR-0173 amendment 2026-10-15: exposes patchDraft so the investment table's 분류 select can write the category into the row's judgement draft (marks it dirty; saved through the existing S5 judgement PUT). */
   onEditorApi?: (api: { patchDraft: (id: string, p: Partial<JudgementDraft>) => void }) => void;
+  /** Presentation only: reports whether the editor holds unsaved judgement drafts or notes (page-level unsaved indicator). */
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
@@ -88,6 +90,8 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
   };
   // ADR-0173 amendment 2026-10-15: hand the patch API to the parent each render (set is recreated per render).
   useEffect(() => { onEditorApi?.({ patchDraft: set }); });
+  const unsavedNow = dirty.size > 0 || notesDirty;
+  useEffect(() => { onDirtyChange?.(unsavedNow); }, [unsavedNow, onDirtyChange]);
 
   const fetchProposals = useCallback(async (rowIds: string[]): Promise<AiDraftResponse> => {
     const res = await api.post<AiDraftResponse>(`${endpoint}/ai-draft`, { rowIds });

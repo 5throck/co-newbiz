@@ -9,6 +9,12 @@ export interface TabNavItem {
   key: string;
   label: string;
   count?: number;
+  /** Optional DOM id of the tab button (pairs with the panel's aria-labelledby). */
+  id?: string;
+  /** Optional id of the controlled panel (aria-controls). */
+  panelId?: string;
+  /** Optional status marker rendered after the label (icon + text, never colour-only). */
+  marker?: React.ReactNode;
 }
 
 export function TabNav({
@@ -40,6 +46,8 @@ export function TabNav({
       {tabs.map((t, i) => (
         <button
           key={t.key}
+          id={t.id}
+          aria-controls={t.panelId}
           type="button"
           className="tab-nav-item"
           role="tab"
@@ -50,6 +58,7 @@ export function TabNav({
         >
           {t.label}
           {typeof t.count === "number" && <span className="library-tab-count">{t.count}</span>}
+          {t.marker}
         </button>
       ))}
     </div>
