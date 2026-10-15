@@ -132,6 +132,8 @@ export interface AttainabilityRowView {
   history_count: number;
   /** ADR-0173 slice 1: post-management milestone candidate (server-derived; null without a period). */
   milestone_candidate: MilestoneCandidateView | null;
+  /** Brown Field S7 only (ADR-0171): which half of the basis moved. Absent on Green Field rows. */
+  stale_reasons?: Array<"s3" | "eval">;
 }
 
 export function rowView(r: CapabilityGapRow): AttainabilityRowView {
@@ -398,8 +400,8 @@ export function sourceOpportunityOf(db: Database, projectId: string): string | n
 
 /**
  * Stage that owns the judgement edit surface (ADR-0171): S5 for Green Field, S7 per target for
- * Brown Field. Brown Field's S7 surface ships in slice 2b; until then the S8 bridge keeps the old
- * project routes writable for Brown Field only (Green Field gets 410 moved).
+ * Brown Field (lib/brownfield-capability-judgement.ts). The S8 project routes are read-only for
+ * both tracks: PUT/confirm return 410 moved with this `editAt`.
  */
 export function editStageOf(db: Database, projectId: string): { track: string | null; editAt: "S5" | "S7" } {
   const track = (db.query("SELECT track FROM md_project WHERE id = ?").get(projectId) as { track: string | null } | null)?.track ?? null;

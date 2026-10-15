@@ -4164,6 +4164,144 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/brownfield/targets/{targetId}/capability-judgements:
+    get:
+      operationId: getBrownfieldTargetCapabilityJudgements
+      summary: "Brown Field S7 per-target required-capability judgement view (ADR-0171 slice 2). Same row view as the S5 route (capability, necessity, held_status, then resolution, expected_level, closing_cost_krw_m, months_to_attain, grade, rationale, evidence, confirmation, stale, stale_since, s3_changes, prior, history_count) plus per row stale_reasons (s3 | eval), criterion_id, criterion_status and reconciled; s3_hash is a composite concurrency token \"<S3 row hash>|<target evaluation-state hash>\" to send back unchanged. Top level adds target_id, company_name, summary, removed_capabilities (judgements of rows deleted in S3, kept as history), reconcile (criteria reconcile detection) and surface = S7. Only shortlisted targets are in scope: 409 target_not_in_scope otherwise; 404 unknown target."
+      tags:
+        - Analysis
+      parameters:
+        - name: targetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    put:
+      operationId: putBrownfieldTargetCapabilityJudgements
+      summary: "Save S7 judgement drafts for one target as a per-row patch (same body, validation and error codes as PUT /api/opportunities/{id}/capability-attainability; judgement-owned fields only). Both staleness bases (S3 row hash and the target's evaluation state for the seeded criterion) are stamped server-side; pending invalidations are materialised first (history kept, confirmation cleared). 400 criteria_not_reconciled when the row has no seeded S7 criterion yet (reconcile first). analyst+; any caller may draft, none may confirm. Audit capability_attainability.save, target <opportunityId>#capability@<via>:surface=S7:target_id=<targetId>."
+      tags:
+        - Analysis
+      parameters:
+        - name: targetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/brownfield/targets/{targetId}/capability-judgements/confirm:
+    post:
+      operationId: postBrownfieldTargetCapabilityJudgementsConfirm
+      summary: "Confirm judged S7 rows of one target (ADR-0168 D1, ADR-0171 slice 2). Human-only (403 human_only for bearer / MCP / agent callers), analyst+. Body {row_ids?} (default all judged, unconfirmed, current rows). 409 nothing_to_confirm | target_not_in_scope; 400 unknown_row | stale_requires_rejudge | expected_level_required | category_required. Audit capability_attainability.confirm, target <opportunityId>#capability@<via>:surface=S7:target_id=<targetId>."
+      tags:
+        - Analysis
+      parameters:
+        - name: targetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/brownfield/{oppId}/eval-criteria/reconcile:
+    get:
+      operationId: getBrownfieldEvalCriteriaReconcile
+      summary: "Read-only detection (ADR-0171 D6): S3 register rows without a seeded technical criterion (missing), seeded criteria whose S3 row was removed (retire), renamed rows (relabel) and retired criteria whose row returned (reinstate); inSync is true when there is nothing to do."
+      tags:
+        - Analysis
+      parameters:
+        - name: oppId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: postBrownfieldEvalCriteriaReconcile
+      summary: "Apply the reconcile (analyst+, idempotent, one transaction): seed missing rows, retire removed rows with a marker (retired_at / retired_reason; evaluation records, weights and capability judgements are kept, never deleted), relabel renamed rows, reinstate returned rows, then materialise pending judgement invalidations of the shortlisted targets under the calling user. Returns {added, retired, relabeled, reinstated, invalidated, plan}. Audit brownfield_eval_criteria.reconcile, target <opportunityId>#criteria-reconcile:surface=S7:added=..,retired=.."
+      tags:
+        - Analysis
+      parameters:
+        - name: oppId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/brownfield/{oppId}/capability-readiness:
+    get:
+      operationId: getBrownfieldCapabilityReadiness
+      summary: "S7 target_screening readiness for the required-capability check (ADR-0171 D7), WARNING ONLY: per shortlisted target total / confirmed / unconfirmed / stale / unjudged / unreconciled counts, the reconcile detection and an advisory warning text. It never caps a grade or blocks a gate or a promotion."
+      tags:
+        - Analysis
+      parameters:
+        - name: oppId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/brownfield/{oppId}/eval-criteria:
     get:
       operationId: listBrownfieldEvalCriteria
@@ -6238,7 +6376,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     put:
       operationId: putProjectCapabilityAttainability
-      summary: "Deprecated (ADR-0171, OD-4): Green Field projects get 410 moved with error.editAt = S5 for one release; use PUT /api/opportunities/{id}/capability-attainability. Brown Field projects keep the previous behaviour (same body and guards as the opportunity route) only until the S7 per-target surface ships. Audit capability_attainability.save, target <projectId>#capability@<via>."
+      summary: "Deprecated (ADR-0171, OD-4): Green Field projects get 410 moved with error.editAt = S5 for one release; use PUT /api/opportunities/{id}/capability-attainability. Brown Field projects get 410 moved with error.editAt = S7 too (ADR-0171 slice 2); use PUT /api/brownfield/targets/{targetId}/capability-judgements. GET for Brown Field returns the SELECTED target's S7 judgements read-only (plus selected_target and edit_href)."
       tags:
         - Analysis
       parameters:

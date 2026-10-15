@@ -5,9 +5,10 @@ import { isFinancialDataRef, parseRubric, rubricFields } from "../../lib/brownfi
 import { EVAL_CATEGORY_LABEL, VERDICT_KO, EVAL_VERDICTS } from "./constants.ts";
 import type { TargetDetailViewState } from "./useTargetActions.ts";
 import type { EvalItem, EvalCategoryScore } from "./types.ts";
+import { TargetCapabilityCheck } from "./TargetCapabilityCheck.tsx";
 
 export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinancial, proposedCount, pendingTechnical }: { ctx: TargetDetailViewState; evalItems: EvalItem[]; scores: Record<"financial" | "technical", EvalCategoryScore> & { combined: number | null; }; scoreChip: (score: number | null) => string; pendingFinancial: EvalItem[]; proposedCount: number; pendingTechnical: EvalItem[] }) {
-  const { profileTab, canAct, draftBusy, draftCategory, evalDraft, busy, setEvalDraft, setDraftCategory, setDraftNote, rubricOpen, setRubricOpen, draftNote, evalBusy, rubricBusy, newCriterionLabel, setNewCriterionLabel, generateEvalDraft, saveDraftVerdicts, setEvalWeight, setEvalVerdict, removeEvalCriterion, saveRubric, addEvalCriterion } = ctx;
+  const { detail, loadDetail, profileTab, canAct, draftBusy, draftCategory, evalDraft, busy, setEvalDraft, setDraftCategory, setDraftNote, rubricOpen, setRubricOpen, draftNote, evalBusy, rubricBusy, newCriterionLabel, setNewCriterionLabel, generateEvalDraft, saveDraftVerdicts, setEvalWeight, setEvalVerdict, removeEvalCriterion, saveRubric, addEvalCriterion } = ctx;
   return (
     <>{profileTab === "eval" && (
           <div className="mt-3">
@@ -221,6 +222,16 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                         );
                       })}
                     </ul>
+                  )}
+                  {cat === "technical" && detail && (
+                    <TargetCapabilityCheck
+                      targetId={detail.target.id}
+                      oppId={detail.opportunity.id}
+                      status={detail.target.status}
+                      reconcile={detail.reconcile}
+                      refreshKey={items.map((it) => `${it.id}:${it.state?.status ?? "pending"}:${it.state?.note ?? ""}`).join("|")}
+                      onChanged={loadDetail}
+                    />
                   )}
                   {canAct && (<div className="flex items-center gap-1">
                     <input

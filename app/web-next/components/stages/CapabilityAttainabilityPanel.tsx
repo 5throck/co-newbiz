@@ -6,11 +6,10 @@
 // 해소 방식, 기대 수준, 비용, 기간, 달성 가능성, 확정) with a link to the edit surface. It has
 // no inputs and no save/confirm buttons; the technical lens T1 and the banner read the same data.
 //
-// Brown Field bridge: until the S7 per-target surface ships (slice 2b) a Brown Field project keeps
-// the previous editable behaviour through the shared editor, so judgements stay writable there.
+// Brown Field (ADR-0171 slice 2): the rows are the SELECTED target's S7 judgements (read-only); the
+// edit link points at that target's `필요 역량 점검` on the target detail page.
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
-import { CapabilityJudgementEditor } from "./CapabilityJudgementEditor.tsx";
 import {
   CapabilityJudgementTable, RemovedCapabilities, SummaryStrip, toJudgementDraft,
   type AttainabilityViewData,
@@ -33,7 +32,7 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
   const oppId = view.opportunity_id;
   const s3Href = `/deals/${encodeURIComponent(oppId ?? "")}/s3`;
   const editAt = view.edit_at ?? "S5";
-  const editHref = oppId ? (editAt === "S5" ? `/deals/${encodeURIComponent(oppId)}/s5` : `/deals/${encodeURIComponent(oppId)}/s7`) : null;
+  const editHref = view.edit_href !== undefined ? view.edit_href : oppId ? (editAt === "S5" ? `/deals/${encodeURIComponent(oppId)}/s5` : `/deals/${encodeURIComponent(oppId)}/s7`) : null;
 
   if (compact) {
     return (
@@ -45,30 +44,22 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
     );
   }
 
-  // Temporary Brown Field bridge (see header): editable through the legacy project routes.
-  if (editAt === "S7") {
-    return (
-      <section className="market-section sizing-step mb-3" aria-label="필요 역량 달성 가능성">
-        <h3 className="sizing-step-title">필요 역량 달성 가능성</h3>
-        <CapabilityJudgementEditor endpoint={base} s3Href={s3Href}
-          intro="Brown Field는 대상별 판정을 S7에서 하도록 옮기는 중입니다 — S7 판정 화면이 제공되기 전까지는 여기서 판정합니다. 이 판정은 사람이 확정하며 사업성 수치에 자동 반영되지 않습니다." />
-      </section>
-    );
-  }
-
   const drafts = Object.fromEntries(view.rows.map((r) => [r.id, toJudgementDraft(r)]));
   return (
     <section className="market-section sizing-step mb-3" aria-label="필요 역량 달성 가능성">
       <h3 className="sizing-step-title">필요 역량 달성 가능성</h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-        읽기 전용 요약입니다 — 정의는 S3에서, 해소 방식·기대 수준·비용·기간·달성 가능성의 판정과 확정은 S5에서 합니다.
-        {editHref && <> <a href={editHref} className="text-[color:var(--accent)] underline font-semibold">S5에서 판정</a></>}
+        {editAt === "S7"
+          ? <>읽기 전용 요약입니다 — 정의는 S3에서, 해소 방식·기대 수준·비용·기간·달성 가능성의 판정과 확정은 S7 대상별 필요 역량 점검에서 합니다{view.selected_target ? ` (선정 대상: ${view.selected_target.company_name})` : " — 선정된 대상이 없어 아직 판정이 없습니다"}.
+            {editHref && <> <a href={editHref} className="text-[color:var(--accent)] underline font-semibold">S7에서 판정</a></>}</>
+          : <>읽기 전용 요약입니다 — 정의는 S3에서, 해소 방식·기대 수준·비용·기간·달성 가능성의 판정과 확정은 S5에서 합니다.
+            {editHref && <> <a href={editHref} className="text-[color:var(--accent)] underline font-semibold">S5에서 판정</a></>}</>}
       </p>
       <SummaryStrip s={view.summary} />
       {view.rows.length === 0 ? (
         <p className="text-[color:var(--muted-fg)]">S3 필요 역량 레지스터에 행이 없습니다. S3에서 필요 역량을 먼저 정리하세요.</p>
       ) : (
-        <CapabilityJudgementTable rows={view.rows} drafts={drafts} editable={false} s3Href={s3Href} judgeHref={editHref} />
+        <CapabilityJudgementTable rows={view.rows} drafts={drafts} editable={false} s3Href={s3Href} judgeHref={editHref} judgeLabel={editAt === "S7" ? "S7에서 판정" : "S5에서 판정"} />
       )}
       <RemovedCapabilities removed={view.removed_capabilities ?? []} />
     </section>

@@ -15,7 +15,7 @@ import {
 } from "../../lib/capability-gap.ts";
 import type { AttainabilityRowView, AttainabilitySummary } from "../../lib/capability-attainability.ts";
 import { JUDGEMENT_FIELD_LABEL, type AiMarks, type JudgementField, type JudgementProposal } from "../../lib/capability-judgement-ai-merge.ts";
-import { buildJudgementDetail, buildJudgementSummary, defaultFilter, filterCounts, filterRows, neighborId, type JudgementFilter } from "../../lib/capability-judgement-view.ts";
+import { staleChipText, buildJudgementDetail, buildJudgementSummary, defaultFilter, filterCounts, filterRows, neighborId, type JudgementFilter } from "../../lib/capability-judgement-view.ts";
 
 export interface AttainabilityViewData {
   opportunity_id: string | null;
@@ -26,6 +26,9 @@ export interface AttainabilityViewData {
   /** Stage that owns the edit surface (read-only summary route). */
   edit_at?: "S5" | "S7";
   track?: string | null;
+  /** Brown Field S8 summary: the selected target (null = none selected) and the link to its S7 check. */
+  selected_target?: { id: string; company_name: string } | null;
+  edit_href?: string | null;
 }
 
 /** Response of POST .../capability-attainability/ai-draft (proposal only; nothing is stored). */
@@ -118,7 +121,7 @@ export const COL_MIN_REM = [0, 6.5, 6.5, 8, 8, 7] as const;
 const FILTER_LABEL: Record<JudgementFilter, string> = { todo: "처리할 것", all: "전체" };
 const EMPTY_DIRTY: ReadonlySet<string> = new Set();
 
-export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href, note, dirty = EMPTY_DIRTY, judgeHref, ai }: {
+export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href, note, dirty = EMPTY_DIRTY, judgeHref, judgeLabel = "S5에서 판정", ai }: {
   rows: AttainabilityRowView[];
   drafts: Record<string, JudgementDraft>;
   /** True only on the S5 edit surface; S8 and viewers get no inputs and no dialog. */
@@ -131,6 +134,8 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
   dirty?: ReadonlySet<string>;
   /** S8: where the judgement is made (S5); renders the per-row "S5에서 판정" link. */
   judgeHref?: string | null;
+  /** Link text of the per-row read-only link (S5 or S7). */
+  judgeLabel?: string;
   /** S5 only: AI judgement proposals (drafts in page state; a person edits, saves and confirms). */
   ai?: AiWiring;
 }) {
@@ -183,7 +188,7 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
                       <span className="font-semibold">{r.capability}</span>
                       {(r.stale || cautions.length > 0) && (
                         <div className="flex flex-wrap gap-1 mt-1" data-testid="capability-chips">
-                          {r.stale && <span className="status-chip status-amber"><span aria-hidden="true">!</span> S3 변경 — 재판정 필요</span>}
+                          {r.stale && <span className="status-chip status-amber"><span aria-hidden="true">!</span> {r.stale_reasons?.length ? staleChipText(r) : "S3 변경 — 재판정 필요"}</span>}
                           {cautions.map((c) => (
                             <span key={c.key} className={`status-chip ${c.tone === "red" ? "status-red" : c.tone === "amber" ? "status-amber" : "status-not-started"}`}>
                               <span aria-hidden="true">{c.tone === "red" ? "▲" : c.tone === "amber" ? "!" : "·"}</span> {c.label}
@@ -216,7 +221,7 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
                     <td className="text-[length:var(--fs-caption)]">
                       {canEdit
                         ? <button type="button" className="btn-ghost btn-sm" aria-label={`${r.capability} 판정`} onClick={() => setEditingId(r.id)}>판정</button>
-                        : judgeHref ? <a href={judgeHref} className="text-[color:var(--accent)] underline" aria-label={`${r.capability} S5에서 판정`}>S5에서 판정</a> : null}
+                        : judgeHref ? <a href={judgeHref} className="text-[color:var(--accent)] underline" aria-label={`${r.capability} ${judgeLabel}`}>{judgeLabel}</a> : null}
                     </td>
                   </tr>
                 );

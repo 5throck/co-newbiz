@@ -8,7 +8,7 @@ import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { fail, badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
 import { resolveOrCreateCompany, screeningItems, screeningSummary, type TargetRow } from "../../../../../lib/brownfield-targets.ts";
-import { combinedEvalScore, computeEvalScore, targetEvalStates } from "../../../../../lib/brownfield-eval-criteria.ts";
+import { combinedEvalScore, computeEvalScore, detectCriteriaReconcile, targetEvalStates } from "../../../../../lib/brownfield-eval-criteria.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ targetId: string }> }) {
   const auth = authenticate(request);
@@ -52,6 +52,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ targ
       checklist: screeningItems(),
       screening_summary: screeningSummary(target as unknown as TargetRow),
       evidence,
+      // ADR-0171 D6: S3 rows added/removed/renamed since the technical criteria were seeded.
+      reconcile: detectCriteriaReconcile(oppId, db),
     },
     200,
   );
@@ -115,6 +117,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ t
   }
   db.transaction(() => {
     db.run("DELETE FROM brownfield_target_eval_state WHERE brownfield_target_id = ?", [targetId]);
+    db.run("DELETE FROM brownfield_target_capability_judgement WHERE brownfield_target_id = ?", [targetId]);
     db.run("DELETE FROM brownfield_target WHERE id = ?", [targetId]);
   })();
   appendAudit(db, { actor: auth.auth.userId, action: "brownfield_target.delete", target: `${existing.company_name}:${targetId}`, now: now() });

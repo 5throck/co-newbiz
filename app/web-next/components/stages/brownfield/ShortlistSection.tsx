@@ -6,6 +6,7 @@ import { normalizeVerdict, precheckRecommendation, KNOCKOUT_IDS, SCREENING_VERDI
 import { CommitteePanel } from "../../CommitteePanel.tsx";
 import { GateDecisionPanel } from "../../GateDecisionPanel.tsx";
 import { PromotionPanel } from "../../PromotionPanel.tsx";
+import { CapabilityReadinessNotice } from "./CapabilityReadinessNotice.tsx";
 import { ColGroup } from "../../ui.tsx";
 import { SECTION_IDS, shortlistColPct } from "./constants.ts";
 import { buildEvalBriefMd } from "./evalBrief.ts";
@@ -221,6 +222,9 @@ export function ShortlistSection({ ctx }: { ctx: BrownfieldStageState }) {
               />
             </section>
           )}
+
+          {/* ADR-0171 D7: warning-only required-capability check per shortlisted target (no grade cap, no gate block). */}
+          <CapabilityReadinessNotice opportunityId={selected.opportunity.id} />
 
           <GateDecisionPanel
             opportunityId={selected.opportunity.id}

@@ -32,6 +32,14 @@ export interface EvidenceRow {
   id: string; kind: string; title: string; detail: string | null;
   source_url: string | null; source_kind: string | null; created_by: string | null; created_at: string;
 }
+// ADR-0171 D6: S3 rows vs the seeded technical criteria (read-only detection; reconcile is an explicit action).
+export interface ReconcilePlan {
+  missing: Array<{ rowId: string; capability: string }>;
+  retire: Array<{ criterionId: string; label: string; seedRef: string; assessedTargets: number }>;
+  relabel: Array<{ criterionId: string; from: string; to: string }>;
+  reinstate: Array<{ criterionId: string; label: string }>;
+  inSync: boolean;
+}
 export interface DetailResponse {
   target: TargetDetail;
   opportunity: { id: string; name: string; market_scope: string | null };
@@ -40,6 +48,7 @@ export interface DetailResponse {
   checklist: ScreeningItem[];
   screening_summary: ScreeningSummary;
   evidence: EvidenceRow[];
+  reconcile?: ReconcilePlan;
 }
 export interface FinancialsResp {
   latest_sync_at: string | null;
