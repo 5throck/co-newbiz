@@ -1,6 +1,6 @@
 "use client";
 
-// S5 "1️⃣ 진출전략" (ADR-0171 amendment 2026-10-15 (2)): four selectable entry modes (multi-select, exactly one main),
+// S5 "진출전략" (ADR-0171 amendment 2026-10-15 (2)): three selectable entry modes (multi-select, exactly one main),
 // ONE rationale textarea and ONE optional textarea for considered-but-rejected alternatives, a muted caution when a
 // capability's 해소 방식 is not among the selected modes (decision support, never a gate), and the secondary action
 // "진출전략 제안 (AI)" that fills EMPTY parts only as unsaved drafts. GreenfieldStage owns the values and the save;
@@ -106,7 +106,7 @@ export function EntryStrategySection({ opportunityId, value, onChange, canAct, r
   return (
     <div className="mb-3" data-testid="entry-strategy-section">
       <div className="flex flex-wrap items-center gap-2 mb-1">
-        <h3 className="text-[length:var(--fs-body)] mb-0">1️⃣ 진출전략</h3>
+        <h3 className="text-[length:var(--fs-body)] mb-0">진출전략</h3>
         {marks.length > 0 && (
           <span className="flex items-center gap-1" data-testid="entry-ai-unsaved">
             <span className="status-chip status-not-started" role="status"><span aria-hidden="true">✦</span> 저장하지 않은 AI 초안 {marks.length}건</span>

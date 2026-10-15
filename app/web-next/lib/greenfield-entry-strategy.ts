@@ -1,20 +1,20 @@
 // @version 1.0.0
 /**
- * S5 entry strategy (ADR-0171 amendment 2026-10-15 (2)): the selectable modes (build|partner|hire|invest, several allowed,
+ * S5 entry strategy (ADR-0171 amendment 2026-10-15 (2)): the selectable modes (build|partner|hire, several allowed,
  * exactly one main) and the free rationale share ONE stored text column (greenfield_assessment.entry_strategy) so no schema
  * change is needed. Encoding: an optional first line "[진출방식] build*,partner" (a "*" marks the main mode) followed by the
- * rationale. Legacy plain text (no header) reads as rationale-only with no modes. Pure and client-safe (no server imports).
+ * rationale. A stored legacy "invest" token (equity investment is a Brown Field route, not Green Field) is silently dropped on read
+ * and therefore on the next save. Legacy plain text (no header) reads as rationale-only with no modes. Pure and client-safe (no server imports).
  */
 import type { GapResolution } from "./capability-gap.ts";
 
-export type EntryMode = GapResolution;
-export const ENTRY_MODES: EntryMode[] = ["build", "partner", "hire", "invest"];
-export const ENTRY_MODE_LABEL: Record<EntryMode, string> = { build: "직접 구축", partner: "전략 제휴", hire: "인력 영입", invest: "지분 투자" };
+export type EntryMode = Exclude<GapResolution, "invest">;
+export const ENTRY_MODES: EntryMode[] = ["build", "partner", "hire"];
+export const ENTRY_MODE_LABEL: Record<EntryMode, string> = { build: "직접 구축", partner: "전략 제휴", hire: "인력 영입" };
 export const ENTRY_MODE_HINT: Record<EntryMode, string> = {
   build: "자체 투자와 인력으로 직접 만든다",
   partner: "외부 파트너와 제휴·합작으로 확보한다",
   hire: "필요 인력·조직을 채용·영입해 갖춘다",
-  invest: "지분 투자·인수로 역량을 들여온다",
 };
 export const ENTRY_RATIONALE_CAP = 600;
 export const ENTRY_ALTERNATIVES_CAP = 600;
@@ -53,8 +53,8 @@ export function parseEntryStrategy(raw: string | null | undefined): ParsedEntryS
   const tokens = head.split(",").map((t) => t.trim()).filter(Boolean);
   const main = tokens.find((t) => t.endsWith("*"))?.slice(0, -1) ?? null;
   const m = normalizeModes(tokens.map((t) => t.replace(/\*$/, "")), main);
-  // A header that names no valid mode is not a header: keep the whole text as the rationale.
-  if (m.modes.length === 0) return { modes: [], main: null, rationale: text.trim() };
+  // A header naming no valid mode (e.g. only a legacy "invest") carries no selection: drop the header line, keep the rationale.
+  if (m.modes.length === 0) return { modes: [], main: null, rationale };
   return { ...m, rationale };
 }
 
@@ -85,12 +85,12 @@ export function entryStrategyText(raw: string | null | undefined): string {
 
 // ── caution: judgement 해소 방식 outside the selected modes ───────────────────
 
-export interface CautionRow { capability: string; resolution: EntryMode | null }
+export interface CautionRow { capability: string; resolution: GapResolution | null }
 
 /** Capabilities whose 해소 방식 is not among the selected modes (empty when no mode is selected). Decision support only. */
 export function strategyMismatches(e: EntryModes, rows: readonly CautionRow[]): string[] {
   if (e.modes.length === 0) return [];
-  return rows.filter((r) => r.resolution && !e.modes.includes(r.resolution)).map((r) => r.capability.trim() || "(이름 없음)");
+  return rows.filter((r) => r.resolution && !(e.modes as string[]).includes(r.resolution)).map((r) => r.capability.trim() || "(이름 없음)");
 }
 
 export function cautionText(names: readonly string[], max = 3): string {
