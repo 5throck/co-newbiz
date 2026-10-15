@@ -206,9 +206,27 @@ export function planMetaOf(lines: unknown): PlanMetaEntry | null {
  * A lump sum spends in startYear only (endYear is meaningless for it).
  */
 export const isValidYearValue = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 1;
-/** 1 <= startYear <= endYear <= horizon (message names the rule for the 400). */
-export function validateLineYears(l: { startYear?: unknown; endYear?: unknown }, horizon: number): string | null {
+
+/**
+ * ADR-0178 slice 1: `startYear: 0` marks a pre-launch (year-0, `시작 전`) investment. A person marks
+ * each line; nothing is inferred from the category. Only a capex-category lump-sum line without an
+ * end year is eligible (OD-2); every other line keeps the Y1.. rule and a 0 is rejected, never dropped.
+ */
+export const PRE_LAUNCH_START_YEAR = 0;
+export const PRE_LAUNCH_LABEL = "시작 전";
+export const isPreLaunchLine = (l: { startYear?: unknown }): boolean => l.startYear === PRE_LAUNCH_START_YEAR;
+export const preLaunchEligible = (l: { category?: unknown; period?: unknown }): boolean => l.category === "capex" && isLumpsum(l.period);
+export const PRE_LAUNCH_INELIGIBLE_MESSAGE = "시작 전 투자(0년차)는 설비투자(capex) 분류의 일시불 항목에만 지정할 수 있습니다 — 분류·주기를 확인하거나 시작 연차를 1 이상으로 바꾸세요.";
+/** Integer >= 0: the values a stored/posted manual startYear may carry through normalisation (0 is checked by validateLineYears). */
+export const isStartYearValue = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0;
+/** 1 <= startYear <= endYear <= horizon (message names the rule for the 400); startYear 0 only for eligible pre-launch lines. */
+export function validateLineYears(l: { startYear?: unknown; endYear?: unknown; category?: unknown; period?: unknown }, horizon: number): string | null {
   if (l.startYear === undefined && l.endYear === undefined) return null;
+  if (l.startYear === PRE_LAUNCH_START_YEAR) {
+    if (!preLaunchEligible(l)) return PRE_LAUNCH_INELIGIBLE_MESSAGE;
+    if (l.endYear !== undefined && l.endYear !== null) return "시작 전 투자 항목에는 종료 연차를 둘 수 없습니다.";
+    return null;
+  }
   if (l.startYear !== undefined && !isValidYearValue(l.startYear)) return "시작 연차는 1 이상의 정수여야 합니다.";
   if (l.endYear !== undefined && !isValidYearValue(l.endYear)) return "종료 연차는 1 이상의 정수여야 합니다.";
   const s = (l.startYear as number | undefined) ?? 1;
@@ -359,7 +377,7 @@ export function normalizeLegacyLine(raw: Record<string, unknown>): ManualCostLin
     amountKrwM: typeof raw.amountKrwM === "number" && Number.isFinite(raw.amountKrwM) ? raw.amountKrwM : null,
     currency,
     period,
-    startYear: isValidYearValue(raw.startYear) ? raw.startYear : undefined,
+    startYear: isStartYearValue(raw.startYear) ? raw.startYear : undefined,
     endYear: isValidYearValue(raw.endYear) ? raw.endYear : undefined,
     note: typeof raw.note === "string" ? raw.note : undefined,
     dupDismissed: Array.isArray(raw.dupDismissed) ? (raw.dupDismissed as string[]) : undefined,
@@ -693,11 +711,13 @@ export const isLumpsum = (period: unknown): boolean => normalizePeriod(period) =
  * annualised (per-period amount x cadence) on every active year Y{start}..Y{end}; a lump sum lands
  * once on its start year. Every table, tile, chart and the item-row readout goes through this.
  */
-export function manualLineYearVector(l: { amount?: unknown; amountUnit?: unknown; amountKrwM?: unknown; currency?: unknown; period?: unknown; startYear?: number; endYear?: number }, horizon: number): number[] {
+export function manualLineYearVector(l: { category?: unknown; amount?: unknown; amountUnit?: unknown; amountKrwM?: unknown; currency?: unknown; period?: unknown; startYear?: number; endYear?: number }, horizon: number): number[] {
   const H = Math.max(1, Math.floor(horizon));
   const out: number[] = Array(H).fill(0);
   const v = manualLineKrwM(l);
   if (v === null) return out;
+  // ADR-0178: a pre-launch (year-0) line is not part of Y1..YN - never moved into Y1; see preLaunchAmountOf.
+  if (isPreLaunchLine(l)) return out;
   const start = Math.max(1, l.startYear ?? 1);
   if (isLumpsum(l.period)) { if (start <= H) out[start - 1] += v; return out; }
   const annual = v * cadenceMultiplier(l.period);
@@ -705,11 +725,29 @@ export function manualLineYearVector(l: { amount?: unknown; amountUnit?: unknown
   return out;
 }
 
+/**
+ * ADR-0178 slice 1: the year-0 (`시작 전`) amount of confirmed KRW pre-launch lines (백만원). Counts only
+ * eligible lines (capex lump sum, startYear 0) that the Y1.. totals would count otherwise (confirmed
+ * unit, KRW). Zero when no line is marked - callers add it, so legacy results are unchanged.
+ */
+export function preLaunchAmountOf(lines: ReadonlyArray<{ category?: unknown; amount?: unknown; amountUnit?: unknown; amountKrwM?: unknown; currency?: unknown; period?: unknown; startYear?: unknown; endYear?: unknown; amountUnitConfirmed?: unknown }>): number {
+  let sum = 0;
+  for (const l of lines) {
+    if (!isPreLaunchLine(l) || !preLaunchEligible(l)) continue;
+    if (l.currency && l.currency !== "KRW") continue;
+    if (manualLineNeedsConfirm(l as ManualCostLine)) continue;
+    const v = manualLineKrwM(l);
+    if (v === null) continue;
+    sum += v;
+  }
+  return sum;
+}
+
 /** Row readout: annualised run-rate (null for lump sums) and the horizon total of a manual line, 백만원. */
 export function manualLineAmounts(l: Parameters<typeof manualLineYearVector>[0], horizon: number): { annualKrwM: number | null; totalKrwM: number } | null {
   const v = manualLineKrwM(l);
   if (v === null) return null;
-  const total = manualLineYearVector(l, horizon).reduce((a, n) => a + n, 0);
+  const total = manualLineYearVector(l, horizon).reduce((a, n) => a + n, 0) + (isPreLaunchLine(l) && preLaunchEligible(l) ? v : 0);
   return { annualKrwM: isLumpsum(l.period) ? null : Math.round(v * cadenceMultiplier(l.period) * 100) / 100, totalKrwM: Math.round(total * 100) / 100 };
 }
 
@@ -743,6 +781,8 @@ export interface InvestmentTotals {
   needsRejudgeCount: number;
   /** ADR-0175: 인력 운영 계획 인건비 합계 (검토 기간 총액 + 채용 일회비, 백만원) — already inside grandKrwM, never also a manual line. */
   staffingKrwM: number;
+  /** ADR-0178 slice 1: 시작 전(year-0) 일시불 설비투자 (백만원), already inside manualKrwM/lumpsum/grand; present only when a line is marked. */
+  manualPreLaunchKrwM?: number;
   /** 인력 운영 계획 행 중 급여/가산율 미입력으로 인건비에서 제외된 행 수. */
   staffingNeedConfirmCount: number;
 }
@@ -758,6 +798,7 @@ export function investmentTotals(view: CapabilityCostView, reflectedKeys: Readon
   let recurringKrwM = 0;
   let excluded = 0;
   let excludedNeedsConfirm = 0;
+  const preLaunch = preLaunchAmountOf(manual);
   for (const m of manual) {
     if (m.category === "revenue" || m.category === "gov_rnd") continue;
     if (manualLineNeedsConfirm(m as ManualCostLine)) { excludedNeedsConfirm += 1; continue; }
@@ -765,7 +806,7 @@ export function investmentTotals(view: CapabilityCostView, reflectedKeys: Readon
     const krwM = manualLineKrwM(m);
     if (krwM === null) { excludedNeedsConfirm += 1; continue; }
     // Same per-year vector as the summary/charts (annualised by cadence over the active years).
-    const total = manualLineYearVector(m, horizon).reduce((a, n) => a + n, 0);
+    const total = manualLineYearVector(m, horizon).reduce((a, n) => a + n, 0) + preLaunchAmountOf([m]);
     manualKrwM += total;
     if (isLumpsum(m.period)) lumpsumKrwM += total;
     else recurringKrwM += total;
@@ -783,6 +824,7 @@ export function investmentTotals(view: CapabilityCostView, reflectedKeys: Readon
     manualRecurringKrwM: round2(recurringKrwM),
     manualExcludedNonKrw: excluded,
     manualExcludedNeedsConfirm: excludedNeedsConfirm,
+    ...(preLaunch > 0 ? { manualPreLaunchKrwM: round2(preLaunch) } : {}),
     grandEok: round2((reflectedKrwM + manualKrwM + staffingKrwM) / 100),
     reflectedCount: reflected.length,
     needsRejudgeCount: reflected.filter((l) => l.needsRejudge).length,
@@ -808,7 +850,7 @@ export interface SummaryLine {
 }
 
 /** ADR-0177: one 세부 과목 subtotal (horizon total, cadence-annualised); key null = 미지정. */
-export interface InvestmentSubCategoryRow { key: SubCategoryKey | null; label: string; totalKrwM: number; /** Y1..YN values (백만원); sums per year to the category's schedule value. */ yearly: number[]; /** Opex one-off left out of the NPV under s5_plan (design §2.1). */ s5PlanExcluded: boolean; hint?: string }
+export interface InvestmentSubCategoryRow { key: SubCategoryKey | null; label: string; totalKrwM: number; /** ADR-0178 slice 1: the 시작 전 part of totalKrwM (only when > 0). */ preLaunchKrwM?: number; /** Y1..YN values (백만원); sums per year to the category's schedule value. */ yearly: number[]; /** Opex one-off left out of the NPV under s5_plan (design §2.1). */ s5PlanExcluded: boolean; hint?: string }
 export interface InvestmentSubCategoryGroup { category: "labor" | "opex" | "capex"; totalKrwM: number; rows: InvestmentSubCategoryRow[] }
 
 export interface InvestmentSummaryCategoryRow { category: "labor" | "opex" | "capex"; annualKrwM: number; lumpsumKrwM: number; totalKrwM: number }
@@ -836,6 +878,8 @@ export interface InvestmentSummary {
   staffingNeedConfirmCount: number;
   /** ADR-0177 slice 1: per-category 세부 과목 subtotals; rows (incl. 미지정) reconcile exactly to byCategory. */
   bySubCategory: InvestmentSubCategoryGroup[];
+  /** ADR-0178 slice 1: 시작 전(year-0) 일시불 설비투자 (백만원); inside totalKrwM/lumpsumKrwM/capexSubtotalKrwM/byCategory but NOT in schedule (Y1..YN). Present only when a line is marked. */
+  preLaunchKrwM?: number;
 }
 
 /**
@@ -857,6 +901,9 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
   let endYearExceedsHorizon = 0;
   // 세부 과목 subtotals per category ("" = 미지정), horizon totals in 백만원.
   const subTotals: Record<"labor" | "opex" | "capex", Map<string, number[]>> = { labor: new Map(), opex: new Map(), capex: new Map() };
+  // ADR-0178 slice 1: 시작 전 (year-0) capex lump sums, kept outside the Y1..YN schedule.
+  let preLaunch = 0;
+  const subPre = new Map<string, number>();
   const addSub = (cat: "labor" | "opex" | "capex", sub: unknown, vec: number[]) => {
     const k = validSubCategory(cat, sub) ? sub : "";
     const cur = subTotals[cat].get(k) ?? Array(H).fill(0);
@@ -880,7 +927,13 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
     const vec = manualLineYearVector(m, H);
     for (let i = 0; i < H; i++) yearCat[cat][i] += vec[i];
     addSub(cat, m.subCategory, vec);
-    if (isLumpsum(m.period)) lumpByCat[cat] += vec.reduce((a, n) => a + n, 0);
+    const pre = preLaunchAmountOf([m]);
+    if (pre > 0) {
+      preLaunch += pre;
+      const k = validSubCategory(cat, m.subCategory) ? m.subCategory : "";
+      subPre.set(k, (subPre.get(k) ?? 0) + pre);
+    }
+    if (isLumpsum(m.period)) lumpByCat[cat] += vec.reduce((a, n) => a + n, 0) + pre;
     else annualByCat[cat] += v * cadenceMultiplier(m.period);
   }
   let capabilitySpendFromMilestone = 0;
@@ -909,7 +962,7 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
     staffingLaborKrwM = view.totalKrwM + recruiting;
     staffingNeedConfirmCount = view.needConfirmCount;
   }
-  const totalByCat: Record<"labor" | "opex" | "capex", number> = { labor: yearCat.labor.reduce((s, n) => s + n, 0), opex: yearCat.opex.reduce((s, n) => s + n, 0), capex: yearCat.capex.reduce((s, n) => s + n, 0) };
+  const totalByCat: Record<"labor" | "opex" | "capex", number> = { labor: yearCat.labor.reduce((s, n) => s + n, 0), opex: yearCat.opex.reduce((s, n) => s + n, 0), capex: yearCat.capex.reduce((s, n) => s + n, 0) + preLaunch };
   const byCategory = cats.map((c) => ({ category: c, annualKrwM: round2(annualByCat[c]), lumpsumKrwM: round2(lumpByCat[c]), totalKrwM: round2(totalByCat[c]) }));
   const schedule = Array.from({ length: H }, (_, i) => {
     const catSum = cats.reduce((s, c) => s + yearCat[c][i], 0);
@@ -929,22 +982,24 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
     capabilitySpendFromMilestone,
     staffingLaborKrwM: round2(staffingLaborKrwM),
     staffingNeedConfirmCount,
-    bySubCategory: cats.map((c) => subCategoryGroupOf(c, subTotals[c], schedule.map((r) => r[c]), totalByCat[c])),
+    bySubCategory: cats.map((c) => subCategoryGroupOf(c, subTotals[c], schedule.map((r) => r[c]), totalByCat[c], c === "capex" ? subPre : undefined)),
+    ...(preLaunch > 0 ? { preLaunchKrwM: round2(preLaunch) } : {}),
   };
 }
 
 /** Rows of one category: vocabulary order, rows with any non-zero year only, then 미지정; each year sums exactly to the category's schedule value. */
-function subCategoryGroupOf(cat: "labor" | "opex" | "capex", vecs: Map<string, number[]>, catYearly: number[], categoryTotal: number): InvestmentSubCategoryGroup {
+function subCategoryGroupOf(cat: "labor" | "opex" | "capex", vecs: Map<string, number[]>, catYearly: number[], categoryTotal: number, pre?: Map<string, number>): InvestmentSubCategoryGroup {
   const round2 = (n: number) => Math.round(n * 100) / 100;
   const H = catYearly.length;
   const rows: InvestmentSubCategoryRow[] = [];
-  const push = (key: SubCategoryKey | null, label: string, vec: number[] | undefined, extra: Partial<InvestmentSubCategoryRow>) => {
+  const push = (key: SubCategoryKey | null, label: string, vec: number[] | undefined, extra: Partial<InvestmentSubCategoryRow>, preKey: string) => {
     const yearly = Array.from({ length: H }, (_, i) => round2(vec?.[i] ?? 0));
-    if (yearly.every((v) => v === 0)) return;
-    rows.push({ key, label, totalKrwM: 0, yearly, s5PlanExcluded: false, ...extra });
+    const p = round2(pre?.get(preKey) ?? 0);
+    if (yearly.every((v) => v === 0) && !(p > 0)) return;
+    rows.push({ key, label, totalKrwM: 0, yearly, s5PlanExcluded: false, ...(p > 0 ? { preLaunchKrwM: p } : {}), ...extra });
   };
-  for (const d of subCategoriesOf(cat)) push(d.key, d.label, vecs.get(d.key), { s5PlanExcluded: S5_PLAN_EXCLUDED_ONE_OFF.has(d.key), ...(d.hint ? { hint: d.hint } : {}) });
-  push(null, UNASSIGNED_SUB_LABEL, vecs.get(""), {});
+  for (const d of subCategoriesOf(cat)) push(d.key, d.label, vecs.get(d.key), { s5PlanExcluded: S5_PLAN_EXCLUDED_ONE_OFF.has(d.key), ...(d.hint ? { hint: d.hint } : {}) }, d.key);
+  push(null, UNASSIGNED_SUB_LABEL, vecs.get(""), {}, "");
   // Per-cell 0.01 rounding can leave a cent of drift against the category's year value; fold it into that year's largest row.
   if (rows.length > 0) {
     for (let i = 0; i < H; i++) {
@@ -954,21 +1009,23 @@ function subCategoryGroupOf(cat: "labor" | "opex" | "capex", vecs: Map<string, n
       big.yearly[i] = round2(big.yearly[i] + drift);
     }
   }
-  for (const r of rows) r.totalKrwM = round2(r.yearly.reduce((a, n) => a + n, 0));
+  for (const r of rows) r.totalKrwM = round2(r.yearly.reduce((a, n) => a + n, 0) + (r.preLaunchKrwM ?? 0));
   return { category: cat, totalKrwM: round2(categoryTotal), rows };
 }
 
 /** Task: per-year 투자비 합계 and per-row horizon totals of the 연도별 투자 계획 table (inflow rows reported separately, never in the total). */
-export interface ScheduleTotals { yearTotals: number[]; rowTotals: { labor: number; opex: number; capex: number }; grandKrwM: number; inflow: { revenue: number; govRnd: number } }
-export function scheduleTotals(summary: Pick<InvestmentSummary, "schedule">): ScheduleTotals {
+export interface ScheduleTotals { yearTotals: number[]; rowTotals: { labor: number; opex: number; capex: number }; grandKrwM: number; inflow: { revenue: number; govRnd: number }; /** ADR-0178 slice 1: 시작 전 part, already inside rowTotals.capex and grandKrwM (only when > 0). */ preLaunchKrwM?: number }
+export function scheduleTotals(summary: Pick<InvestmentSummary, "schedule" | "preLaunchKrwM">): ScheduleTotals {
   const round2 = (n: number) => Math.round(n * 100) / 100;
   const s = summary.schedule;
   const sum = (f: (r: InvestmentSummary["schedule"][number]) => number) => round2(s.reduce((a, r) => a + f(r), 0));
+  const pre = summary.preLaunchKrwM ?? 0;
   return {
     yearTotals: s.map((r) => round2(r.labor + r.opex + r.capex)),
-    rowTotals: { labor: sum((r) => r.labor), opex: sum((r) => r.opex), capex: sum((r) => r.capex) },
-    grandKrwM: sum((r) => r.labor + r.opex + r.capex),
+    rowTotals: { labor: sum((r) => r.labor), opex: sum((r) => r.opex), capex: round2(sum((r) => r.capex) + pre) },
+    grandKrwM: round2(sum((r) => r.labor + r.opex + r.capex) + pre),
     inflow: { revenue: sum((r) => r.revenue), govRnd: sum((r) => r.govRnd) },
+    ...(pre > 0 ? { preLaunchKrwM: round2(pre) } : {}),
   };
 }
 
@@ -995,7 +1052,7 @@ export interface InvestmentChartData {
 export function buildInvestmentChartData(summary: InvestmentSummary): InvestmentChartData {
   const round2 = (n: number) => Math.round(n * 100) / 100;
   const sched = summary.schedule;
-  let run = 0;
+  let run = summary.preLaunchKrwM ?? 0; // ADR-0178: 시작 전 투자 precedes Y1 in the running total
   const cumulative = sched.map((s) => { run += s.investmentTotal; return round2(run); });
   const total = summary.byCategory.reduce((a, r) => a + r.totalKrwM, 0);
   const composition = summary.byCategory.map((r) => ({
@@ -1118,6 +1175,9 @@ export function normalizeBusinessCaseLines(
     const capSubErr = checkSubCategory(category, rawSub, row.capability);
     if (capSubErr) return { ok: false, error: capSubErr };
     const subCategory = isSubCategoryKey(rawSub) ? rawSub : undefined;
+    if ((raw as { startYear?: unknown }).startYear === PRE_LAUNCH_START_YEAR) {
+      return { ok: false, error: { code: "invalid_request", message: `${row.capability}: 역량 해소 비용은 시작 전 투자(0년차)로 지정할 수 없습니다 — 집행 연차는 1..${horizon}년이어야 합니다.` } };
+    }
     const startYear = isValidYearValue((raw as { startYear?: unknown }).startYear) ? (raw as { startYear: number }).startYear : undefined;
     if (startYear !== undefined && (startYear < 1 || startYear > horizon)) {
       return { ok: false, error: { code: "invalid_request", message: `${row.capability}: 집행 연차는 1..${horizon}년이어야 합니다.` } };

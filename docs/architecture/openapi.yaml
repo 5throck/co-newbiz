@@ -4436,7 +4436,10 @@ paths:
         salaryIncreaseRatePct, onCostRatePct|null, hireStartQuarter?, recruitingOneOffKrwM, salarySource?}], startYear,
         endYear, attritionBackfillPct} is validated against the plan_meta horizon (invalid rows reject the whole save
         with 400 invalid_request and a precise message); a lines-only POST that omits it keeps the stored plan;
-        audit staffing_plan.updated carries a hash without salary values.
+        audit staffing_plan.updated carries a hash without salary values. ADR-0178 slice 1: a manual line may carry
+        startYear 0 (pre-launch, year-0) ONLY when category is capex, period is lumpsum and endYear is absent; any other
+        line with startYear 0 (other category, non-lumpsum period, an endYear, or a capability entry) is rejected with
+        400 invalid_request and a Korean message, never dropped or coerced to 1. No other response field changes.
       tags:
         - Analysis
       requestBody:

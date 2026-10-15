@@ -86,9 +86,11 @@ export interface SimulationResults {
   draws: number;
   seed: number;
   /** Deterministic mode (the stored S5 totals) for reference next to the bands. */
-  mode: { grandKrwM: number; totalByYear: number[] };
+  mode: { grandKrwM: number; totalByYear: number[]; /** ADR-0178 slice 1: present only with a 시작 전 line. */ preLaunchKrwM?: number };
   total: SimBand & { mean: number; min: number; max: number; histogram: { edges: number[]; counts: number[] } };
   totalByYear: SimBand[];
+  /** ADR-0178 slice 1: p05/p50/p95 of the 시작 전 amount (inside `total`, not in totalByYear); only with a 시작 전 line. */
+  preLaunch?: SimBand;
   byCategory: {
     capability: { total: SimBand; byYear: SimBand[] };
     manual: { total: SimBand; byYear: SimBand[] };
@@ -126,7 +128,9 @@ export function simulationInputHash(input: InvestmentVectorsInput, seed: number,
 export function investmentInputPayload(input: InvestmentVectorsInput) {
   const v = buildInvestmentVectors(input);
   const eff = effectiveAssumptions(input.overrides);
-  return { h: v.horizon, c: v.mode.capabilityByYear, m: v.mode.manualByYear, s: input.staffing, eff };
+  // ADR-0178 slice 1: `p` joins the payload ONLY when a pre-launch line exists, so every legacy hash is unchanged.
+  const p = v.mode.preLaunchKrwM;
+  return { h: v.horizon, c: v.mode.capabilityByYear, m: v.mode.manualByYear, s: input.staffing, eff, ...(p !== undefined ? { p } : {}) };
 }
 
 /**
@@ -163,11 +167,13 @@ export function simulateInvestment(input: SimulationInput): SimulationResults {
   const eff = effectiveAssumptions(input.overrides);
   const modeCap = base.mode.capabilityByYear;
   const modeMan = base.mode.manualByYear;
+  // ADR-0178 slice 1: 시작 전 (year-0) capex lump sum; scaled by the manual-line factor like any manual line.
+  const modePre = base.mode.preLaunchKrwM ?? 0;
   const staffing = input.staffing;
   const recruiting = staffing ? staffingSummaryVector(staffing, H).recruitingByYear : Array<number>(H).fill(0);
   const w = Math.min(Math.max(eff.rampShiftHalfYears, 0), 1);
 
-  const vectorsFor = (f: Factors): { cap: number[]; man: number[]; staff: number[]; total: number[] } => {
+  const vectorsFor = (f: Factors): { cap: number[]; man: number[]; staff: number[]; total: number[]; pre: number } => {
     const cap = scaled(modeCap, f.cap);
     const man = scaled(modeMan, f.man);
     let staff = Array<number>(H).fill(0);
@@ -178,21 +184,22 @@ export function simulateInvestment(input: SimulationInput): SimulationResults {
       staff = annual.map((v, i) => round2(v + recruiting[i]));
     }
     const total = cap.map((c, i) => round2(c + man[i] + staff[i]));
-    return { cap, man, staff, total };
+    return { cap, man, staff, total, pre: modePre > 0 ? round2(modePre * f.man) : 0 };
   };
   const sumOf = (v: number[]): number => v.reduce((a, n) => a + n, 0);
+  const totalOf = (v: { total: number[]; pre: number }): number => sumOf(v.total) + v.pre;
 
   const factors = drawInvestmentFactors(input.seed, draws, eff);
   const totals: number[] = [];
   const years = (): number[][] => Array.from({ length: H }, () => []);
   const yTotal = years(), yCap = years(), yMan = years(), yStaff = years();
-  const cTotal: number[] = [], cCap: number[] = [], cMan: number[] = [], cStaff: number[] = [];
+  const cTotal: number[] = [], cCap: number[] = [], cMan: number[] = [], cStaff: number[] = [], cPre: number[] = [];
   for (let d = 0; d < draws; d++) {
     const f = factors[d];
     const v = vectorsFor(f);
     for (let i = 0; i < H; i++) { yTotal[i].push(v.total[i]); yCap[i].push(v.cap[i]); yMan[i].push(v.man[i]); yStaff[i].push(v.staff[i]); }
-    const t = sumOf(v.total);
-    totals.push(t); cCap.push(sumOf(v.cap)); cMan.push(sumOf(v.man)); cStaff.push(sumOf(v.staff));
+    const t = totalOf(v);
+    totals.push(t); cCap.push(sumOf(v.cap)); cMan.push(sumOf(v.man) + v.pre); cStaff.push(sumOf(v.staff)); if (modePre > 0) cPre.push(v.pre);
   }
 
   const sortedTotals = [...totals].sort((a, b) => a - b);
@@ -204,7 +211,7 @@ export function simulateInvestment(input: SimulationInput): SimulationResults {
   const edges = Array.from({ length: HISTOGRAM_BINS + 1 }, (_, i) => round2(min + (span * i) / HISTOGRAM_BINS));
 
   // Analytic tornado: each variable at its min/max, every other variable at its mode.
-  const modeTotal = sumOf(vectorsFor(NEUTRAL).total);
+  const modeTotal = totalOf(vectorsFor(NEUTRAL));
   const tornadoDefs: Array<{ key: TornadoKey; lo: Partial<Factors>; hi: Partial<Factors>; applicable: boolean }> = [
     { key: "salary", lo: { salary: 1 - eff.salaryRange }, hi: { salary: 1 + eff.salaryRange }, applicable: true },
     { key: "salaryIncrease", lo: { inc: -eff.salaryIncreaseRangePp }, hi: { inc: eff.salaryIncreaseRangePp }, applicable: true },
@@ -215,8 +222,8 @@ export function simulateInvestment(input: SimulationInput): SimulationResults {
     { key: "fx", lo: {}, hi: {}, applicable: false },
   ];
   const raw = tornadoDefs.map((t) => {
-    const a = t.applicable ? sumOf(vectorsFor({ ...NEUTRAL, ...t.lo }).total) : modeTotal;
-    const b = t.applicable ? sumOf(vectorsFor({ ...NEUTRAL, ...t.hi }).total) : modeTotal;
+    const a = t.applicable ? totalOf(vectorsFor({ ...NEUTRAL, ...t.lo })) : modeTotal;
+    const b = t.applicable ? totalOf(vectorsFor({ ...NEUTRAL, ...t.hi })) : modeTotal;
     return { key: t.key, lowKrwM: round2(Math.min(a, b)), highKrwM: round2(Math.max(a, b)), swingKrwM: round2(Math.abs(a - b)) };
   });
   const swingSum = raw.reduce((a, r) => a + r.swingKrwM, 0);
@@ -232,7 +239,7 @@ export function simulateInvestment(input: SimulationInput): SimulationResults {
     horizon: H,
     draws,
     seed: input.seed >>> 0,
-    mode: { grandKrwM: base.mode.grandKrwM, totalByYear: base.mode.totalByYear },
+    mode: { grandKrwM: base.mode.grandKrwM, totalByYear: base.mode.totalByYear, ...(modePre > 0 ? { preLaunchKrwM: modePre } : {}) },
     total: { ...bandOf(totals), mean: round2(totals.reduce((a, n) => a + n, 0) / totals.length), min: round2(min), max: round2(max), histogram: { edges, counts } },
     totalByYear: yTotal.map(bandOf),
     byCategory: {
@@ -240,6 +247,7 @@ export function simulateInvestment(input: SimulationInput): SimulationResults {
       manual: { total: bandOf(cMan), byYear: yMan.map(bandOf) },
       staffing: { total: bandOf(cStaff), byYear: yStaff.map(bandOf) },
     },
+    ...(modePre > 0 ? { preLaunch: bandOf(cPre) } : {}),
     tornado,
     exceed: env === null ? null : { envelopeKrwM: env, probability: round4(exceedCount / draws), exceedCount },
     assumptions: {

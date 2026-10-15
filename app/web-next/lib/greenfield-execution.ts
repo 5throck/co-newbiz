@@ -150,6 +150,8 @@ export function trancheReconciliation(projectId: string, db: Database = getDb())
       // R5: a null unit is NOT assumed to be KRW_M — it is a finding like any other unit.
       if (l.unit !== "KRW_M") unitIssue = true;
       // end_year (ADR-0174 slice 2) clamps the spending window: NULL = run through the horizon.
+      // ADR-0178 slice 1: a 시작 전 (start_year 0) capex line is a single year-0 outlay - counted once, never dropped.
+      if (l.start_year === 0) { total += l.annual_amount_krw_m; continue; }
       const lastYear = Math.min(l.end_year ?? horizon, horizon);
       for (let y = Math.max(1, l.start_year); y <= lastYear; y++) total += l.annual_amount_krw_m * Math.pow(1 + l.growth_rate, y - l.start_year);
     }

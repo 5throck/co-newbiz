@@ -33,7 +33,7 @@ export interface S5PlanSummary {
   totals: { capex: number; labor_opex: number; gov_rnd: number; staffing: number };
   /** Per-year plan vectors, index 0 = year 1. */
   by_year: { capex: number[]; labor_opex: number[]; gov_rnd: number[]; staffing: number[] };
-  /** Slice 1 introduces startYear 0; until then there is no pre-launch amount. */
+  /** ADR-0178 slice 1: 시작 전 (startYear 0) amount; excluded from by_year/totals vectors, 0 when no line is marked. */
   pre_launch_total: number;
 }
 
@@ -50,7 +50,7 @@ function summarize(input: InvestmentVectorsInput, hash: string | null, runId: st
     horizon: agg.horizonYears,
     totals: { capex: sum(agg.capexByYear), labor_opex: sum(agg.laborOpexByYear), gov_rnd: sum(agg.govRndByYear), staffing: sum(staffing) },
     by_year: { capex: agg.capexByYear.map(round2), labor_opex: agg.laborOpexByYear.map(round2), gov_rnd: agg.govRndByYear.map(round2), staffing },
-    pre_launch_total: 0,
+    pre_launch_total: round2(agg.preLaunchKrwM ?? 0),
   };
 }
 

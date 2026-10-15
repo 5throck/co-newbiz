@@ -335,6 +335,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     [bcLines, capLinesEff, horizon, reflectedKeySet, staffActive],
   );
   const schedTotals = useMemo(() => scheduleTotals(summary), [summary]);
+  const hasPreLaunch = (summary.preLaunchKrwM ?? 0) > 0;
   // ADR-0176 slice 1 — deterministic low/mode/high bands over the same inputs as the summary.
   const vectors = useMemo(
     () => buildInvestmentVectors({ manual: bcLines, capLines: capLinesEff, horizon, reflectedKeys: reflectedKeySet, staffing: staffActive, overrides: simOv }),
@@ -971,6 +972,21 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   </select>
                 </td>
                 <td><div className="invest-year-cell">
+                  {(l.startYear === 0 || (l.category === "capex" && l.period === "lumpsum")) && (
+                    <label className="invest-year-field" data-testid={`invest-prelaunch-toggle-${i}`}>
+                      <input
+                        type="checkbox"
+                        aria-label={`${l.line || "항목"} 시작 전 투자 (year-0)`}
+                        checked={l.startYear === 0}
+                        disabled={!canAct}
+                        onChange={(e) => setBc(i, e.target.checked ? { startYear: 0, endYear: undefined } : { startYear: undefined })}
+                      />
+                      시작 전 투자 (year-0)
+                    </label>
+                  )}
+                  {l.startYear === 0 ? (
+                    <span className="status-chip status-amber" data-testid={`invest-prelaunch-chip-${i}`}>시작 전 (year-0)</span>
+                  ) : (
                   <label className="invest-year-field">
                     시작
                     <input
@@ -986,7 +1002,8 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                       className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-num"
                     />
                   </label>
-                  {l.period !== "lumpsum" && (
+                  )}
+                  {l.startYear !== 0 && l.period !== "lumpsum" && (
                     <label className="invest-year-field">
                       종료
                       <input
@@ -1079,7 +1096,18 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 <span className="summary-value mono-num">{fmtM(summary.totalKrwM)}</span>
                 <span className="text-label">총 투자비 (검토 기간 {summary.horizon}년, 백만원)</span>
               </div>
+              {hasPreLaunch && (
+                <div className="summary-card glass" data-testid="invest-prelaunch-tile">
+                  <span className="summary-value mono-num">{fmtM(summary.preLaunchKrwM ?? 0)}</span>
+                  <span className="text-label">시작 전 투자 (year-0, 백만원) — 총 투자비에 포함</span>
+                </div>
+              )}
             </div>
+            {hasPreLaunch && (
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" role="note" data-testid="invest-prelaunch-note">
+                시작 전 투자는 사람이 항목별로 지정한 설비투자 일시불입니다 (분류만으로 추정하지 않음). Y1~ 열에는 넣지 않고 별도 열에 표시하며, 검토 기간 합계에는 포함됩니다. S8의 s5_plan 기준에서는 아직 반영되지 않고 s5_pnl 기준에서만 year-0로 쓰입니다 (참고용, 판단은 사람이 합니다).
+              </p>
+            )}
             {/* Charts mount only while this tab is active (hidden panels give ECharts a 0-width container); every other panel stays mounted. */}
             {investTabActive && <InvestmentSummaryCharts summary={summary} />}
             <div className="table-scroll mb-2">
@@ -1088,6 +1116,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 <thead>
                   <tr>
                     <th scope="col">구분</th>
+                    {hasPreLaunch && <th scope="col" className="col-num" data-testid="invest-prelaunch-col">시작 전</th>}
                     {summary.schedule.map((s) => <th scope="col" className="col-num" key={s.year}>Y{s.year}</th>)}
                     <th scope="col" className="col-num">합계</th>
                   </tr>
@@ -1097,6 +1126,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                     <Fragment key={g.category}>
                       <tr className="invest-total-row" data-testid={`invest-summary-cat-${g.category}`}>
                         <th scope="row">{CATEGORY_LABEL[g.category]}</th>
+                        {hasPreLaunch && <td className="col-num mono-num" data-testid={`invest-prelaunch-cell-${g.category}`}>{fmtM(g.category === "capex" ? summary.preLaunchKrwM ?? 0 : 0)}</td>}
                         {summary.schedule.map((s) => <td className="col-num mono-num" key={s.year}>{fmtM(s[g.category])}</td>)}
                         <td className="col-num mono-num">{fmtM(schedTotals.rowTotals[g.category])}</td>
                       </tr>
@@ -1108,6 +1138,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                             {r.hint && <span className="status-chip status-not-started ml-1">{r.hint}</span>}
                             {g.category === "labor" && staffActive && (r.key === STAFFING_SUB_CATEGORY.salary || r.key === STAFFING_SUB_CATEGORY.recruiting) && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] ml-1">인력 운영 계획 연동분 포함</span>}
                           </th>
+                          {hasPreLaunch && <td className="col-num mono-num">{fmtM(r.preLaunchKrwM ?? 0)}</td>}
                           {r.yearly.map((v, idx) => <td className="col-num mono-num" key={idx}>{fmtM(v)}</td>)}
                           <td className="col-num mono-num">{fmtM(r.totalKrwM)}</td>
                         </tr>
@@ -1116,16 +1147,19 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   ))}
                   <tr className="invest-total-row" data-testid="invest-summary-year-total">
                     <th scope="row">합계 (투자비, 매출·정부 R&D 제외)</th>
+                    {hasPreLaunch && <td className="col-num mono-num" data-testid="invest-prelaunch-total">{fmtM(summary.preLaunchKrwM ?? 0)}</td>}
                     {schedTotals.yearTotals.map((v, idx) => <td className="col-num mono-num" key={idx}>{fmtM(v)}</td>)}
                     <td className="col-num mono-num">{fmtM(schedTotals.grandKrwM)}</td>
                   </tr>
                   <tr className="invest-inflow-row">
                     <th scope="row">매출 (유입 참고 · 합계 제외)</th>
+                    {hasPreLaunch && <td className="col-num mono-num">{fmtM(0)}</td>}
                     {summary.schedule.map((s) => <td className="col-num mono-num" key={s.year}>{fmtM(s.revenue)}</td>)}
                     <td className="col-num mono-num">{fmtM(schedTotals.inflow.revenue)}</td>
                   </tr>
                   <tr className="invest-inflow-row">
                     <th scope="row">정부 R&D (유입 참고 · 합계 제외)</th>
+                    {hasPreLaunch && <td className="col-num mono-num">{fmtM(0)}</td>}
                     {summary.schedule.map((s) => <td className="col-num mono-num" key={s.year}>{fmtM(s.govRnd)}</td>)}
                     <td className="col-num mono-num">{fmtM(schedTotals.inflow.govRnd)}</td>
                   </tr>
@@ -1189,7 +1223,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   <div className="summary-card glass" data-testid={`invest-simulation-${k}`} key={k}>
                     <span className="summary-value mono-num">{fmtM(vectors[k].grandKrwM)}</span>
                     <span className="text-label">{label} 총 투자비 (백만원) <span className={`status-chip ${chip}`} aria-hidden="true">{label}</span></span>
-                    <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">역량 {fmtM(vectors[k].capabilityKrwM)} · 항목 {fmtM(vectors[k].manualKrwM)} · 인력 {fmtM(vectors[k].staffingKrwM)}</span>
+                    <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">역량 {fmtM(vectors[k].capabilityKrwM)} · 항목 {fmtM(vectors[k].manualKrwM)}{vectors[k].preLaunchKrwM !== undefined && <> (시작 전 {fmtM(vectors[k].preLaunchKrwM ?? 0)} 포함)</>} · 인력 {fmtM(vectors[k].staffingKrwM)}</span>
                   </div>
                 ))}
               </div>
@@ -1199,6 +1233,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   <thead>
                     <tr>
                       <th scope="col">구분</th>
+                      {vectors.mode.preLaunchKrwM !== undefined && <th scope="col" className="col-num" data-testid="invest-prelaunch-sim-col">시작 전</th>}
                       {Array.from({ length: vectors.horizon }, (_, i) => <th scope="col" className="col-num" key={i}>Y{i + 1}</th>)}
                       <th scope="col" className="col-num">합계</th>
                     </tr>
@@ -1207,6 +1242,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                     {(["low", "mode", "high"] as const).map((k) => (
                       <tr key={k} data-testid={`invest-simulation-row-${k}`}>
                         <th scope="row">{BAND_LABEL[k]}</th>
+                        {vectors.mode.preLaunchKrwM !== undefined && <td className="col-num mono-num">{fmtM(vectors[k].preLaunchKrwM ?? 0)}</td>}
                         {vectors[k].totalByYear.map((v, i) => <td className="col-num mono-num" key={i}>{fmtM(v)}</td>)}
                         <td className="col-num mono-num">{fmtM(vectors[k].grandKrwM)}</td>
                       </tr>
@@ -1262,6 +1298,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                           </div>
                         ))}
                       </div>
+                      {r.preLaunch && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-prelaunch-sim-note">시작 전 투자 p05 {fmtM(r.preLaunch.p05)} · p50 {fmtM(r.preLaunch.p50)} · p95 {fmtM(r.preLaunch.p95)} (백만원) — 총 투자비 합계에 포함, 연도별 표에는 들어가지 않습니다.</p>}
                       <div className="sizing-grade-card mb-2" data-testid="invest-sim-exceed">
                         {r.exceed
                           ? <span>예산 상한 {fmtM(r.exceed.envelopeKrwM)} 백만원 초과 확률 <strong className="mono-num">{(r.exceed.probability * 100).toFixed(1)}%</strong> ({r.exceed.exceedCount}/{r.draws}회) — 참고용 추정이며 게이트·등급에 영향을 주지 않습니다.</span>
