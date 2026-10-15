@@ -1,5 +1,5 @@
 // POST /api/greenfield/[oppId]/entry-strategy-draft — S5 "진출전략 제안 (AI)" (ADR-0171 amendment 2026-10-15 (2)).
-// PROPOSES the entry-strategy modes (build|partner|hire, one main), the rationale and the considered-but-rejected
+// PROPOSES the entry-strategy modes (build|partner|hire|invest, one main), the rationale and the considered-but-rejected
 // alternatives. Proposal only: NOTHING is written to the database and nothing is decided (boundary #1/#2); the page fills
 // only EMPTY fields as drafts and a person saves. Same permission as saving the assessment (analyst+). Offline: stored S3
 // register, S4 decision record, opportunity context and company profile/disclosure data plus the LLM — no web search.
