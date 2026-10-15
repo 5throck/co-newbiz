@@ -6,6 +6,7 @@ import { resolveProjectHurdleIrr } from "../../../db/lib/wacc.ts";
 import { findAdoptedCase, latestTargetSelection, listBusinessCases, type BusinessCaseView } from "./business-case.ts";
 import { evaluateTargetsForCase, resolveProjectTargets } from "./business-targets.ts";
 import { parseGapRegister } from "./capability-gap.ts";
+import { targetJudgementRows, targetScope } from "./brownfield-capability-judgement.ts";
 import { sourceOpportunityOf } from "./capability-attainability.ts";
 import { buildLensStripView, financialLensStatus, type FinancialLensSummary, type S8LensStripView } from "./s8-lens-status.ts";
 import { buildInvestUncertainty, type InvestUncertaintyView } from "./investment-uncertainty-s8.ts";
@@ -33,10 +34,19 @@ export function buildS8LensSummary(db: Database, projectId: string): S8LensSumma
   const brownfield = proj?.track === "brownfield";
   const oppId = sourceOpportunityOf(db, projectId);
   const row = oppId ? (db.query("SELECT capability_gap_json AS j FROM opportunity WHERE id = ?").get(oppId) as { j: string | null } | null) : null;
-  const rows = parseGapRegister(row?.j ?? null).rows;
+  const s3Rows = parseGapRegister(row?.j ?? null).rows;
   const lens = parseTechnicalLens(row?.j ?? null);
   const selected = brownfield ? latestTargetSelection(projectId)?.targetId ?? null : null;
   const subject = selected ? targetSubject(selected) : PROJECT_SUBJECT;
+  // ADR-0171 slice 3: T1 reads the S5 judgement (Green Field) or the selected target's S7
+  // judgements (Brown Field). The S3 register row's own GF judgement is ignored for Brown Field.
+  let rows = s3Rows;
+  if (brownfield) {
+    const scope = selected ? targetScope(db, selected) : null;
+    rows = scope?.ok
+      ? targetJudgementRows(db, scope.target)
+      : s3Rows.map(({ attainability: _a, resolution: _r, ...r }) => ({ ...r, resolution: null }));
+  }
   const technical = summarizeTechnicalLens(rows, lens, { subject, brownfield });
 
   let financial: FinancialLensSummary;
