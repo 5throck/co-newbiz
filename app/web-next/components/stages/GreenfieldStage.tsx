@@ -664,23 +664,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
               <span id="s5-horizon-hint" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">연차 입력 범위·요약 집계 기간 · S8 사업계획 기간의 초기값</span>
             </div>
           </div>
-          {canAct && (
-            <div className="flex flex-wrap items-center gap-2 mb-2" data-testid="invest-item-save-actions">
-              {linesSaveButton("투자비 항목 저장")}
-              {investDirty
-                ? <span className="status-chip status-amber" role="status" data-testid="invest-item-dirty-chip"><span aria-hidden="true">!</span> 저장하지 않은 변경</span>
-                : <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="invest-item-clean-hint">저장할 변경 없음</span>}
-              {hasYearErrors && <span role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">연차 입력을 확인하세요</span>}
-              <span id="invest-item-save-hint" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="invest-item-save-hint">항목 변경 후 투자비 항목 저장을 누르세요</span>
-            </div>
-          )}
-          {linesNote && (
-            <div className="legacy-model-notice mb-2 flex items-start justify-between gap-2" role="status" data-testid="invest-item-note">
-              <p className="legacy-model-notice-text">{linesNote}</p>
-              <button type="button" className="btn-ghost btn-sm" aria-label="저장 결과 닫기" onClick={() => setLinesNote(null)}>닫기</button>
-            </div>
-          )}
-          {linesError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2" data-testid="invest-item-error">{linesError}</p>}
+          {canAct && <button type="button" className="btn-ghost btn-sm mb-2" onClick={() => setBcLines((prev) => [...prev, { line: "", category: undefined, amount: 0, amountUnit: AMOUNT_UNIT_KRW_M, amountUnitConfirmed: true, period: undefined, currency: "KRW" }])}>＋ 항목 추가</button>}
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-unit-note">금액 단위는 항목마다 선택합니다 (기본 백만원) — 단위·분류·주기가 확인된 항목만 합계에 포함됩니다.</p>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-xref">역량 해소 비용에서 반영한 항목은 이 목록에 포함됩니다 (아래 역량 해소 비용에서 선택).</p>
           <div className="table-scroll mb-1">
@@ -877,7 +861,23 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
               {canAct && <button type="button" className="btn-ghost btn-sm" onClick={() => setTotalSanityDismissed(true)}>닫기</button>}
             </div>
           )}
-          {canAct && <button type="button" className="btn-ghost btn-sm mb-3" onClick={() => setBcLines((prev) => [...prev, { line: "", category: undefined, amount: 0, amountUnit: AMOUNT_UNIT_KRW_M, amountUnitConfirmed: true, period: undefined, currency: "KRW" }])}>＋ 항목 추가</button>}
+          {canAct && (
+            <div className="flex flex-wrap items-center gap-2 mb-2" data-testid="invest-item-save-actions">
+              {linesSaveButton("투자비 항목 저장")}
+              {investDirty
+                ? <span className="status-chip status-amber" role="status" data-testid="invest-item-dirty-chip"><span aria-hidden="true">!</span> 저장하지 않은 변경</span>
+                : <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="invest-item-clean-hint">저장할 변경 없음</span>}
+              {hasYearErrors && <span role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">연차 입력을 확인하세요</span>}
+              <span id="invest-item-save-hint" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="invest-item-save-hint">항목 변경 후 투자비 항목 저장을 누르세요</span>
+            </div>
+          )}
+          {linesNote && (
+            <div className="legacy-model-notice mb-2 flex items-start justify-between gap-2" role="status" data-testid="invest-item-note">
+              <p className="legacy-model-notice-text">{linesNote}</p>
+              <button type="button" className="btn-ghost btn-sm" aria-label="저장 결과 닫기" onClick={() => setLinesNote(null)}>닫기</button>
+            </div>
+          )}
+          {linesError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2" data-testid="invest-item-error">{linesError}</p>}
           <CapabilityCostBlock
             lines={capLines}
             orphans={costView.orphans}

@@ -107,9 +107,15 @@ describe("GreenfieldStage tab structure (source)", () => {
     const at = (needle: string) => inv.indexOf(needle);
     expect(at('data-testid="invest-source-summary"')).toBeLessThan(at('data-testid="invest-reco"'));
     expect(at('data-testid="invest-reco"')).toBeLessThan(at("투자비 항목 (S8 사업성 분석 입력)"));
-    expect(at("투자비 항목 (S8 사업성 분석 입력)")).toBeLessThan(at('data-testid="invest-item-save-actions"'));
-    expect(at('data-testid="invest-item-save-actions"')).toBeLessThan(at('data-testid="invest-item-list"'));
-    expect(at('data-testid="invest-item-list"')).toBeLessThan(at("<CapabilityCostBlock"));
+    // Decider 2026-10-15: add-item control directly under the heading (above the table); save area below the table, footer and notes.
+    expect(at("s5-horizon")).toBeLessThan(at("\uFF0B \uD56D\uBAA9 \uCD94\uAC00"));
+    expect(at("\uFF0B \uD56D\uBAA9 \uCD94\uAC00")).toBeLessThan(at('data-testid="invest-item-list"'));
+    expect(at('data-testid="invest-item-list"')).toBeLessThan(at('data-testid="invest-item-footer"'));
+    expect(at('data-testid="invest-item-footer"')).toBeLessThan(at('data-testid="invest-excluded-note"'));
+    expect(at('data-testid="invest-excluded-note"')).toBeLessThan(at('data-testid="invest-item-save-actions"'));
+    expect(at('data-testid="invest-item-save-actions"')).toBeLessThan(at('data-testid="invest-item-note"'));
+    expect(at('data-testid="invest-item-note"')).toBeLessThan(at('data-testid="invest-item-error"'));
+    expect(at('data-testid="invest-item-error"')).toBeLessThan(at("<CapabilityCostBlock"));
     expect(at("<CapabilityCostBlock")).toBeLessThan(at('data-testid="invest-summary"'));
     expect(at('data-testid="invest-summary"')).toBeLessThan(at('data-testid="invest-summary-schedule"'));
     expect(at("s5-horizon")).toBeLessThan(at('data-testid="invest-item-list"'));
