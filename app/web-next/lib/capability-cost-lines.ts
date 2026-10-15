@@ -2,12 +2,14 @@
 // milestone candidates. Pure and client-safe (no db, no node:crypto) so the S5 screen and the
 // route share one derivation. Decision support only: reflection is a per-line human choice, the
 // server recomputes every capability amount from the live judgement, nothing is a gate or a cap.
-import { RESOLUTION_LABEL, type CapabilityGapRow, type GapResolution, type MilestoneCandidate } from "./capability-gap.ts";
+import { JUDGEMENT_CATEGORIES, RESOLUTION_LABEL, type CapabilityGapRow, type GapResolution, type JudgementCategory, type MilestoneCandidate } from "./capability-gap.ts";
 import { isStale, sha256Hex } from "./capability-linkage.ts";
 
-export type CostCategory = "labor" | "opex" | "capex";
+export type CostCategory = JudgementCategory;
 /** Categories a capability line may carry (cost side of the S8 vocabulary). */
-export const CAPABILITY_COST_CATEGORIES: readonly CostCategory[] = ["labor", "opex", "capex"];
+export const CAPABILITY_COST_CATEGORIES: readonly CostCategory[] = JUDGEMENT_CATEGORIES;
+/** UI label of a 분류 (labor/opex/capex). */
+export const CATEGORY_LABEL: Record<CostCategory, string> = { labor: "인건비", opex: "운영비", capex: "설비투자" };
 export const CAPABILITY_BLOCK_TITLE = "역량 해소 비용 (S5 판정에서 연동)";
 export const MILESTONE_BLOCK_TITLE = "마일스톤 후보 (사후관리 연동 예정)";
 export const MILESTONE_START_NOTE = "착수일은 S11 기준선을 확정할 때 정해집니다.";
@@ -17,6 +19,8 @@ export interface CostSourceRow {
   id: string;
   capability: string;
   resolution: GapResolution | null;
+  /** 분류 (ADR-0173 amendment 2026-10-15): the judgement's own category; null = 미입력. */
+  category: JudgementCategory | null;
   closing_cost_krw_m: number | null;
   months_to_attain: number | null;
   grade: string | null;
@@ -32,6 +36,7 @@ export const sourceRowOf = (r: CapabilityGapRow): CostSourceRow => {
     id: r.id,
     capability: r.capability,
     resolution: r.resolution,
+    category: a?.category ?? null,
     closing_cost_krw_m: a?.closingCostKrwM ?? null,
     months_to_attain: a?.monthsToAttain ?? null,
     grade: a?.grade ?? null,
@@ -87,6 +92,10 @@ export const activeYearsOf = (startYear: number | undefined, endYear: number | n
 /** Capability default spend year from the judgement months (OD-6): ceil(months/12), minimum 1; Y1 when months unknown. */
 export const capabilityDefaultStartYear = (monthsToAttain: number | null): number =>
   monthsToAttain !== null && monthsToAttain > 0 ? Math.max(1, Math.ceil(monthsToAttain / 12)) : 1;
+
+/** Read-only end-year display (ADR-0173 amendment 2026-10-15): start + ceil(months/12) − 1; a 12-month spend starting Y1 ends Y1. */
+export const capabilityEndYearOf = (startYear: number, monthsToAttain: number | null): number =>
+  monthsToAttain !== null && monthsToAttain > 0 ? startYear + Math.ceil(monthsToAttain / 12) - 1 : startYear;
 
 // ── Units ───────────────────────────────────────────────────────────────────
 
@@ -242,9 +251,24 @@ export function suggestCategory(resolution: GapResolution | null): { category: C
 
 // ── Basis hash (staleness of a reflected amount) ────────────────────────────
 
-/** Hash of what the amount depends on: cost, months, resolution, grade and the effective confirmation. */
-export function costBasisHash(r: CostSourceRow): string {
+/** Legacy hash (pre-ADR-0173 amendment 2026-10-15): cost, months, resolution, grade, effective confirmation — no category. */
+function costBasisHashC1(r: CostSourceRow): string {
   return `c1:${sha256Hex(JSON.stringify({ cost: r.closing_cost_krw_m, months: r.months_to_attain, resolution: r.resolution, grade: r.grade, confirmed: r.confirmed_at !== null })).slice(0, 16)}`;
+}
+
+/** Current hash (c2): adds the judgement-owned category to the c1 inputs. */
+export function costBasisHash(r: CostSourceRow): string {
+  return `c2:${sha256Hex(JSON.stringify({ cost: r.closing_cost_krw_m, months: r.months_to_attain, resolution: r.resolution, grade: r.grade, confirmed: r.confirmed_at !== null, category: r.category ?? null })).slice(0, 16)}`;
+}
+
+/**
+ * Does a stored basis stamp still describe this row? c2 stamps compare against the c2 hash;
+ * c1 stamps compare against the legacy no-category recomputation, so existing reflected rows
+ * do not flip to 재판정 필요 just because the category field was introduced.
+ */
+export function basisHashMatches(stored: string, r: CostSourceRow): boolean {
+  if (stored.startsWith("c1:")) return stored === costBasisHashC1(r);
+  return stored === costBasisHash(r);
 }
 
 // ── Stored entries ──────────────────────────────────────────────────────────
@@ -295,6 +319,8 @@ export interface CapabilityCostLine {
   defaultStartYear: number;
   /** Effective spend year: a stored/selected human override, else the default. */
   startYear: number;
+  /** Read-only end-year display: start + ceil(months/12) − 1 (ADR-0173 amendment 2026-10-15). */
+  endYear: number;
   /** 반영 가능 = confirmed and not stale; 참고(미반영) otherwise. */
   state: "reflectable" | "reference";
   stateLabel: string;
@@ -307,6 +333,8 @@ export interface CapabilityCostLine {
   stale: boolean;
   /** Reflected but the judgement is stale or changed since reflect time (OD-7): stays reflected, flagged. */
   needsRejudge: boolean;
+  /** The category the S5 judgement carries, or null when unset (then `category` falls back to stored/suggested). */
+  judgementCategory: JudgementCategory | null;
   /** Reflected amount differs from the live one (the amount follows the judgement). */
   amountChanged: boolean;
   previousAmountEok: number | null;
@@ -340,7 +368,8 @@ export function deriveCapabilityCostLines(rows: CostSourceRow[], stored: unknown
     const reflected = e ? e.reflected === true : reflectable;
     const hash = costBasisHash(r);
     const storedAmount = typeof e?.amount === "number" ? lineAmountKrwM(e) : null;
-    const category = e && CAPABILITY_COST_CATEGORIES.includes(e.category as CostCategory) ? (e.category as CostCategory) : sug.category;
+    const judgementCategory = r.category ?? null;
+    const category = judgementCategory ?? (e && CAPABILITY_COST_CATEGORIES.includes(e.category as CostCategory) ? (e.category as CostCategory) : sug.category);
     const defaultStartYear = capabilityDefaultStartYear(r.months_to_attain);
     const startYear = isValidYearValue(e?.startYear) ? e.startYear : defaultStartYear;
     lines.push({
@@ -353,18 +382,23 @@ export function deriveCapabilityCostLines(rows: CostSourceRow[], stored: unknown
       amountEok: eokOf(cost),
       suggestedCategory: sug.category,
       alternativeCategory: sug.alternative,
-      categoryHint: sug.hint,
+      /** Judgement owns the category now; the suggestion's hint only applies while it is unset. */
+      categoryHint: judgementCategory ? null : r.resolution ? "분류 미입력 — 해소 방식 추정" : sug.hint,
       category,
+      /** The category the S5 judgement itself carries (ADR-0173 amendment 2026-10-15). */
+      judgementCategory,
       monthsToAttain: r.months_to_attain,
       defaultStartYear,
       startYear,
+      /** End year display: start + ceil(months / 12) − 1 (a 12-month spend starting Y1 ends Y1). */
+      endYear: capabilityEndYearOf(startYear, r.months_to_attain),
       state: reflectable ? "reflectable" : "reference",
       stateLabel: reflectable ? "반영 가능" : "참고(미반영)",
       disabledReason: reflectable || (e?.reflected === true) ? null : r.stale ? "S3 내용이 바뀌어 재판정이 필요합니다 — 재판정·확정 후 반영할 수 있습니다." : "사람이 확정한 판정만 반영할 수 있습니다 — 판정을 확정하세요.",
       reflected,
       persisted: !!e,
       stale: r.stale,
-      needsRejudge: reflected && (r.stale || (!!e && e.reflected === true && !!e.basisHash && e.basisHash !== hash)),
+      needsRejudge: reflected && (r.stale || (!!e && e.reflected === true && !!e.basisHash && !basisHashMatches(e.basisHash, r))),
       amountChanged: !!e && e.reflected === true && storedAmount !== null && Math.abs(storedAmount - cost) > 1e-6,
       previousAmountEok: storedAmount !== null ? eokOf(storedAmount) : null,
       previousAmountKrwM: storedAmount,
@@ -657,7 +691,7 @@ export function normalizeBusinessCaseLines(
     seen.add(key);
     const cost = row.closing_cost_krw_m;
     if (cost === null || !(cost > 0)) return { ok: false, error: { code: "no_cost", message: `${row.capability}: 해소 비용이 0보다 커야 투자비에 담을 수 있습니다.` } };
-    const category = raw.category ?? suggestCategory(row.resolution).category;
+    const category = raw.category ?? row.category ?? suggestCategory(row.resolution).category;
     if (!CAPABILITY_COST_CATEGORIES.includes(category as CostCategory)) return { ok: false, error: { code: "invalid_category", message: `${row.capability}: 분류는 인건비·운영비·설비투자 중 하나여야 합니다.` } };
     // The amount is stored and compared in 백만원; a client without the unit marker (legacy) sent 억.
     const live = cost;
@@ -735,9 +769,9 @@ export function splitForPromotion(lines: unknown[], rows: CostSourceRow[]): { ma
     const row = byId.get(l.capabilityKey);
     const cost = row?.closing_cost_krw_m ?? null;
     if (!row || cost === null || !(cost > 0)) { skipped.push(l.capabilityKey); continue; }
-    const category = CAPABILITY_COST_CATEGORIES.includes(l.category as CostCategory) ? (l.category as CostCategory) : suggestCategory(row.resolution).category;
+    const category = row.category ?? (CAPABILITY_COST_CATEGORIES.includes(l.category as CostCategory) ? (l.category as CostCategory) : suggestCategory(row.resolution).category);
     const flags = ["역량 해소 비용", `S5 연동 (판정 ${row.id})`, "일시불 총액"];
-    if (row.stale || (!!l.basisHash && l.basisHash !== costBasisHash(row))) flags.push("역량 판정 재판정 필요 — 금액 검증 필요");
+    if (row.stale || (!!l.basisHash && !basisHashMatches(l.basisHash, row))) flags.push("역량 판정 재판정 필요 — 금액 검증 필요");
     capability.push({ category, name: `${row.capability} 역량 해소`, krwM: cost, note: flags.join(". "), startYear: isValidYearValue(l.startYear) ? l.startYear : capabilityDefaultStartYear(row.months_to_attain) });
   }
   return { manual, capability, skipped, skippedManual, horizon };

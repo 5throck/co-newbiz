@@ -3,14 +3,14 @@
  * ADR-0171 amendment 2026-10-15: client-safe types and the pure fill-empty-only merge for the S5 "판정 제안 (AI)" drafts.
  * No server imports, so the S5 page bundle can use it. The server side lives in capability-judgement-draft.ts.
  */
-import type { AttainabilityGrade, GapResolution } from "./capability-gap.ts";
+import type { AttainabilityGrade, GapResolution, JudgementCategory } from "./capability-gap.ts";
 
 /** Max rows per AI proposal call (server cap; the page sends at most this many ids). */
 export const JUDGEMENT_ROW_CAP = 12;
 
-export type JudgementField = "resolution" | "expectedLevel" | "cost" | "months" | "grade" | "rationale";
+export type JudgementField = "resolution" | "expectedLevel" | "cost" | "months" | "grade" | "rationale" | "category";
 export const JUDGEMENT_FIELD_LABEL: Record<JudgementField, string> = {
-  resolution: "해소 방식", expectedLevel: "기대 수준", cost: "비용", months: "기간", grade: "달성 가능성", rationale: "근거·증빙",
+  resolution: "해소 방식", expectedLevel: "기대 수준", cost: "비용", months: "기간", grade: "달성 가능성", rationale: "근거·증빙", category: "분류",
 };
 
 export interface JudgementProposal {
@@ -20,12 +20,13 @@ export interface JudgementProposal {
   monthsToAttain: number | null;
   grade: AttainabilityGrade | null;
   rationale: string;
-  basis: { resolution: string; expectedLevel: string; cost: string; months: string; grade: string; estimate?: string };
+  category: JudgementCategory | null;
+  basis: { resolution: string; expectedLevel: string; cost: string; months: string; grade: string; category: string; estimate?: string };
   confidence?: "low" | "medium" | "high";
 }
 
 /** Page draft state shape (mirrors JudgementDraft in CapabilityJudgementTable.tsx; strings only). */
-export interface PageJudgementDraft { resolution: string; expectedLevel: string; cost: string; months: string; grade: string; rationale: string }
+export interface PageJudgementDraft { resolution: string; expectedLevel: string; cost: string; months: string; grade: string; rationale: string; category: string }
 export type AiMarks = Record<string, JudgementField[]>;
 
 /**
@@ -35,7 +36,7 @@ export type AiMarks = Record<string, JudgementField[]>;
  */
 export function mergeJudgementProposals(
   current: Record<string, PageJudgementDraft>,
-  proposals: Record<string, Pick<JudgementProposal, "resolution" | "expectedLevel" | "costKrwM" | "monthsToAttain" | "grade" | "rationale">>,
+  proposals: Record<string, Pick<JudgementProposal, "resolution" | "expectedLevel" | "costKrwM" | "monthsToAttain" | "grade" | "rationale" | "category">>,
 ): { drafts: Record<string, PageJudgementDraft>; marks: AiMarks; applied: number } {
   const drafts = { ...current };
   const marks: AiMarks = {};
@@ -46,6 +47,7 @@ export function mergeJudgementProposals(
     const d = { ...base };
     const m: JudgementField[] = [];
     if (!d.resolution.trim() && p.resolution) { d.resolution = p.resolution; m.push("resolution"); }
+    if (!d.category.trim() && p.category) { d.category = p.category; m.push("category"); }
     if (!d.expectedLevel.trim() && p.expectedLevel) { d.expectedLevel = p.expectedLevel; m.push("expectedLevel"); }
     if (!d.cost.trim() && p.costKrwM !== null) { d.cost = String(p.costKrwM); m.push("cost"); }
     if (!d.months.trim() && p.monthsToAttain !== null) { d.months = String(p.monthsToAttain); m.push("months"); }

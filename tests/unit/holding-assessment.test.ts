@@ -275,7 +275,7 @@ describe("S3 table and modals (source structure)", () => {
     // the table is a one-line summary (no inputs); the S3 block precedes the S5 inputs in the dialog
     expect(tbl).not.toContain("<input");
     expect(dlg.indexOf('aria-label="S3 정의 (읽기 전용)"')).toBeLessThan(dlg.indexOf('aria-label="S5 판정 (입력)"'));
-    for (const k of ["RESOLUTION_EXPECTED_LEVEL_HINT", "해소 방식", "기대 수준", "비용(백만원)", "기간(개월)", "달성 가능성", "근거·증빙"]) expect(dlg).toContain(k);
+    for (const k of ["RESOLUTION_EXPECTED_LEVEL_HINT", "해소 방식", "기대 수준", "금액(백만원)", "기간(개월)", "달성 가능성", "근거·증빙"]) expect(dlg).toContain(k);
     // no S3-owned value is ever part of the draft that is sent
     const ed = read("components/stages/CapabilityJudgementEditor.tsx");
     expect(ed).toContain("judgementPatch(");

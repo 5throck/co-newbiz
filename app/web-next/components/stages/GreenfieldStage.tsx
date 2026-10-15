@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { CapabilityJudgementEditor } from "./CapabilityJudgementEditor.tsx";
+import type { JudgementDraft } from "./CapabilityJudgementTable.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { api, ApiError } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
@@ -29,7 +30,7 @@ import { CapabilityCostBlock } from "./CapabilityCostBlock.tsx";
 import { EntryStrategySection } from "./EntryStrategySection.tsx";
 import { parseEntryStrategy, serializeEntryStrategy, type EntryFormState, type EntryModes } from "../../lib/greenfield-entry-strategy.ts";
 import {
-  AMOUNT_UNIT_KRW_M, amountUnitLabel, applySelection, buildInvestmentSummary, DEFAULT_HORIZON_YEARS, deriveCapabilityCostLines, findDuplicateWarnings, formatKrwM, hasUnsavedReflection, investmentTotals, isCapabilityEntry, isFxUnit, isPlanMetaEntry, lineSaveStates, manualLineIssues, manualLineKrwM, MAX_HORIZON_YEAR_LIMIT, MIN_HORIZON_YEARS, normalizeLegacyLine, planMetaOf, reflectionBody, reflectionSummary, sanityLineOversize, sanityTotalOversize, selectionPayload, unifiedFooter, unifiedInvestmentRows, validateLineYears,
+  AMOUNT_UNIT_KRW_M, amountUnitLabel, applySelection, buildInvestmentSummary, DEFAULT_HORIZON_YEARS, deriveCapabilityCostLines, findDuplicateWarnings, formatKrwM, hasUnsavedReflection, investmentTotals, isCapabilityEntry, isFxUnit, isPlanMetaEntry, lineSaveStates, manualLineIssues, manualLineKrwM, MAX_HORIZON_YEAR_LIMIT, MIN_HORIZON_YEARS, normalizeLegacyLine, planMetaOf, reflectionBody, reflectionSummary, sanityLineOversize, sanityTotalOversize, selectionPayload, unifiedFooter, unifiedInvestmentRows, validateLineYears, capabilityEndYearOf,
   type AmountUnit, type CapabilityCostView, type CostCategory, type CostSelection, type DuplicateWarning, type ManualCostLine, type MilestoneCandidateView, type PlanMetaEntry,
 } from "../../lib/capability-cost-lines.ts";
 import type { AttainabilityRowView } from "../../lib/capability-attainability.ts";
@@ -115,6 +116,8 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   const [horizon, setHorizon] = useState(DEFAULT_HORIZON_YEARS);
   const [capStartYear, setCapStartYear] = useState<Record<string, number>>({});
   const [attRows, setAttRows] = useState<AttainabilityRowView[] | null>(null);
+  // ADR-0173 amendment 2026-10-15: the judgement editor exposes patchDraft so the investment table's 분류 select writes back into the row's judgement draft (marks dirty; saved via the S5 judgement PUT).
+  const judgeApiRef = useRef<{ patchDraft: (id: string, p: Partial<JudgementDraft>) => void } | null>(null);
   // ADR-0118 — S5 투자비 검토 요건 LLM 추천(제안). 저장은 사람의 행위다.
   const [reco, setReco] = useState<InvestmentReco | null>(null);
   const [recoLoading, setRecoLoading] = useState(false);
@@ -440,6 +443,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 gap={{ opportunityId: selected.opportunity.id, rows: gapRows, setRows: setGapRows }}
                 aiDraft
                 onRowsChange={setAttRows}
+                onEditorApi={(api) => { judgeApiRef.current = api; }}
               />
             </div>
           )}
@@ -499,7 +503,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
             candidates={candidates}
             canAct={canAct}
             onToggle={(key, reflected) => setCapSel((p) => ({ ...p, [key]: { ...p[key], reflected } }))}
-            onCategory={(key, category: CostCategory) => setCapSel((p) => ({ ...p, [key]: { ...p[key], category } }))}
+            onCategory={(key, category: CostCategory) => { setCapSel((p) => ({ ...p, [key]: { ...p[key], category } })); judgeApiRef.current?.patchDraft(key, { category }); }}
             onDismiss={dismissDup}
             reflection={{
               states: lineStates, dirty: reflectDirty, saving: costSaving, onReflect: () => void reflectCosts(),
@@ -542,7 +546,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                     {row.needsRejudge && <><br /><span className="status-chip status-amber">재판정 필요</span></>}
                   </td>
                   <td>
-                    <select aria-label={`${row.name} 분류`} value={row.category} disabled={!canAct} onChange={(e) => setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], category: e.target.value as CostCategory } }))} className="sizing-new-input sizing-new-input-sm">
+                    <select aria-label={`${row.name} 분류`} value={row.category} disabled={!canAct} onChange={(e) => { const cat = e.target.value as CostCategory; setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], category: cat } })); judgeApiRef.current?.patchDraft(row.capabilityKey, { category: cat }); }} className="sizing-new-input sizing-new-input-sm">
                       {(["labor", "opex", "capex"] as CostCategory[]).map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
                     </select>
                   </td>
@@ -568,6 +572,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                         style={{ width: "3.5rem" }}
                       />
                     </label>
+                    <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid={`invest-cap-end-year-${row.capabilityKey}`}>~{capabilityEndYearOf(capStart, capLine?.monthsToAttain ?? null)}연차</span>
                     {capYearErr && <span role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">{capYearErr}</span>}
                   </td>
                   <td>

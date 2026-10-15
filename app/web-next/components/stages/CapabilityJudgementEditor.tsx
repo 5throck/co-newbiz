@@ -23,7 +23,7 @@ export interface GapWiring {
   setRows: Dispatch<SetStateAction<CapabilityGapRow[]>>;
 }
 
-export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraft = false, onRowsChange }: {
+export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraft = false, onRowsChange, onEditorApi }: {
   /** Base URL of the judgement routes: GET/PUT here, POST `${endpoint}/confirm`. */
   endpoint: string;
   s3Href: string;
@@ -33,6 +33,8 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
   aiDraft?: boolean;
   /** ADR-0173: called with the SAVED server rows whenever the view (re)loads, so S5 can derive capability cost lines. */
   onRowsChange?: (rows: AttainabilityViewData["rows"]) => void;
+  /** ADR-0173 amendment 2026-10-15: exposes patchDraft so the investment table's 분류 select can write the category into the row's judgement draft (marks it dirty; saved through the existing S5 judgement PUT). */
+  onEditorApi?: (api: { patchDraft: (id: string, p: Partial<JudgementDraft>) => void }) => void;
 }) {
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
@@ -84,6 +86,8 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
     setDrafts((p) => ({ ...p, [id]: { ...p[id], ...patch } }));
     setDirty((p) => new Set(p).add(id));
   };
+  // ADR-0173 amendment 2026-10-15: hand the patch API to the parent each render (set is recreated per render).
+  useEffect(() => { onEditorApi?.({ patchDraft: set }); });
 
   const fetchProposals = useCallback(async (rowIds: string[]): Promise<AiDraftResponse> => {
     const res = await api.post<AiDraftResponse>(`${endpoint}/ai-draft`, { rowIds });
