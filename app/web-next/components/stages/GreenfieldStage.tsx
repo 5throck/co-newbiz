@@ -14,6 +14,9 @@
 //   기대 수준, 비용, 기간, 달성 가능성, 근거·증빙과 사람의 확정(CapabilityJudgementEditor)
 //   및 자유 서술 비고.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { TabNav } from "../TabNav.tsx";
+import { aggregateDirty, buildCompletionChecklist, buildSourceSummary, dirtyIndicatorText, filledComponentCount, GF_TAB_KEYS, GF_TAB_LABELS, parseGfTab, tabMarker, type GfTabKey } from "../../lib/greenfield-tabs.ts";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { CapabilityJudgementEditor } from "./CapabilityJudgementEditor.tsx";
 import type { JudgementDraft } from "./CapabilityJudgementTable.tsx";
@@ -129,6 +132,29 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   const [reco, setReco] = useState<InvestmentReco | null>(null);
   const [recoLoading, setRecoLoading] = useState(false);
   const [recoError, setRecoError] = useState<string | null>(null);
+  // S5 tabs (presentation only): URL ?tab= keeps the active tab; every panel stays mounted so switching never drops unsaved edits.
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tab = parseGfTab(searchParams.get("tab"));
+  const setTab = useCallback((key: string) => {
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.set("tab", key);
+    router.replace(`${pathname}?${sp.toString()}`, { scroll: false });
+  }, [router, pathname, searchParams]);
+  // "판정 보기" in the investment table hops to the capability tab, then scrolls once that panel is visible.
+  const pendingScroll = useRef<string | null>(null);
+  useEffect(() => {
+    if (pendingScroll.current && tab === "capability") {
+      document.getElementById(pendingScroll.current)?.scrollIntoView?.({ block: "start" });
+      pendingScroll.current = null;
+    }
+  }, [tab]);
+  const goToCapabilityJudgement = useCallback(() => { pendingScroll.current = "cap-judgement-section"; setTab("capability"); }, [setTab]);
+  // Judgement drafts / notes held inside CapabilityJudgementEditor (reported up for the page-level indicator).
+  const [judgeDirty, setJudgeDirty] = useState(false);
+  // Last saved 평가 근거, for the review tab's dirty state.
+  const [savedRationale, setSavedRationale] = useState("");
 
   // scope: "all" (page load / whole save), "strategy" (own strategy save) or "cost" (own reflection save): a partial scope never touches the other parts' unsaved state.
   const loadDetail = useCallback((oppId: string, scope: "all" | "strategy" | "cost" = "all") => {
@@ -159,7 +185,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
           setCapSel({});
           setCapStartYear({});
         }
-        if (scope === "all") setRationale(r.data.assessment?.rationale ?? "");
+        if (scope === "all") { setRationale(r.data.assessment?.rationale ?? ""); setSavedRationale(r.data.assessment?.rationale ?? ""); }
         setError(null);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "평가 불러오기 실패"));
@@ -172,7 +198,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   }, []);
 
   useEffect(() => {
-    setSelected(null); setGapRows([]); setReco(null); setRecoError(null);
+    setSelected(null); setGapRows([]); setReco(null); setRecoError(null); setJudgeDirty(false);
     setSanityDismissed(new Set()); setTotalSanityDismissed(false);
     entryDirty.current = false; setEntryReset((n) => n + 1);
     setEntryIsDirty(false); setEntryNote(null); setEntryError(null); setCostNote(null); setCostError(null);
@@ -402,6 +428,46 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     );
   }
 
+
+  const issueCounts = { cap: attRows ? attRows.filter((r) => r.stale || !r.grade).length : 0, staff: invTotals.staffingNeedConfirmCount, invest: invTotals.manualExcludedNeedsConfirm + invTotals.needsRejudgeCount };
+  const rationaleDirty = rationale !== savedRationale;
+  const dirtyAgg = aggregateDirty({ entry: entryIsDirty, capability: judgeDirty, staffing: staffDirty, investment: manualDirty || reflectDirty, review: rationaleDirty });
+  const dirtyText = dirtyIndicatorText(dirtyAgg);
+  const checklist = buildCompletionChecklist({
+    entry: { filled: entryStrategy !== "" || entryModes.modes.length > 0, dirty: entryIsDirty },
+    capability: { filled: gapRows.length > 0, dirty: judgeDirty, issues: issueCounts.cap },
+    staffing: { filled: staffEff.rows.length > 0, dirty: staffDirty, issues: issueCounts.staff },
+    investment: { filled: bcLines.length > 0 || reflectedLines.length > 0, dirty: manualDirty || reflectDirty, issues: issueCounts.invest },
+  });
+  const sourceChips = buildSourceSummary({ reflectedCapabilityCount: invTotals.reflectedCount, staffingKrwM: invTotals.staffingKrwM, manualCount: bcLines.filter((l) => l.line.trim()).length, needsConfirmCount: issueCounts.invest + issueCounts.staff });
+  const markerOf = (key: GfTabKey) => (key === "review" ? tabMarker(rationaleDirty ? { status: "dirty", issues: 0 } : null) : tabMarker(checklist.find((c) => c.key === key) ?? null));
+  const markerNode = (key: GfTabKey) => {
+    const m = markerOf(key);
+    if (m.kind === "none") return null;
+    return (
+      <span className={`status-chip ml-1 ${m.kind === "done" ? "status-green" : "status-amber"}`} data-testid={`gf-tab-marker-${key}`}>
+        <span aria-hidden="true">{m.kind === "done" ? "✓" : "!"}</span>{m.kind === "done" ? <span className="sr-only"> 완료</span> : <> {m.text}</>}
+      </span>
+    );
+  };
+  // All panels stay mounted (hidden when inactive): local drafts in child components survive tab switches.
+  const panel = (key: GfTabKey, children: React.ReactNode) => (
+    <div role="tabpanel" id={`gf-panel-${key}`} aria-labelledby={`gf-tab-${key}`} hidden={tab !== key} aria-hidden={tab !== key} data-testid={`gf-panel-${key}`}>{children}</div>
+  );
+  // One handler/state for 투자비 항목 저장; rendered in the investment tab and again in the staffing tab header.
+  const linesSaveButton = (
+    <button
+      type="button"
+      className={investDirty && !hasYearErrors ? "btn-primary btn-sm" : "btn-ghost btn-sm"}
+      disabled={linesSaving || !investDirty || hasYearErrors || !!staffError}
+      title={hasYearErrors ? "연차 입력을 확인하세요" : staffError ?? undefined}
+      aria-describedby="invest-item-save-hint"
+      onClick={() => void saveInvestmentLines()}
+    >
+      {linesSaving ? "저장 중…" : "투자비 항목 저장"}
+    </button>
+  );
+
   return (
     <>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
@@ -414,21 +480,28 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
           summary={
             <span className="flex items-center gap-1">
               <span className="status-chip status-not-started" title="P4 실행형: 평가 구성요소 진행 — S11 설립실행과 동일 상태 어휘">
-                {selected.opportunity.assessed_at ? "완료" : "진행 중"} · {[entryStrategy !== "" || entryModes.modes.length > 0, gapRows.length > 0, bcLines.length > 0 || reflectedLines.length > 0].filter(Boolean).length}/3 구성요소
+                {selected.opportunity.assessed_at ? "완료" : "진행 중"} · {filledComponentCount(checklist)}/4 구성요소
               </span>
               {selected.opportunity.assessed_at && <span className="status-chip status-green">평가 기록 v1+</span>}
             </span>
           }
         />
-        <PrimaryAction
-          form="greenfield-eval-form"
-          label="타당성 검토 실행"
-          disabled={!canAct || busy || (entryStrategy.trim() === "" && entryModes.modes.length === 0)}
-          disabledReason={!canAct ? "평가 기록은 analyst 권한이 필요합니다." : busy ? "저장 중입니다." : "진출 방식을 선택하거나 선택 근거를 입력하면 실행할 수 있습니다."}
+        {dirtyText && (
+          <p className="status-chip status-amber mb-2" role="status" data-testid="gf-dirty-indicator">
+            <span aria-hidden="true">!</span> {dirtyText} · {dirtyAgg.labels.join(", ")}
+          </p>
+        )}
+        <TabNav
+          label="자체 진출 단계별 탭"
+          active={tab}
+          onSelect={setTab}
+          tabs={GF_TAB_KEYS.map((k) => ({ key: k, label: GF_TAB_LABELS[k], id: `gf-tab-${k}`, panelId: `gf-panel-${k}`, marker: markerNode(k) }))}
         />
         <form id="greenfield-eval-form" onSubmit={save} className="sizing-new-form">
           <fieldset disabled={!canAct} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-          {/* 1. 진출전략 */}
+          {/* ① 진출전략 */}
+          {panel("entry", (
+            <>
           <EntryStrategySection
             opportunityId={selected.opportunity.id}
             value={{ modes: entryModes, rationale: entryStrategy, alternatives }}
@@ -438,9 +511,13 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
             resetKey={entryReset}
             save={{ dirty: entryIsDirty, saving: entrySaving, onSave: () => void saveStrategy(), note: entryNote, error: entryError, onDismissNote: () => setEntryNote(null) }}
           />
+            </>
+          ))}
 
-          {/* 2. 필요 역량 — S3 정의 읽기 전용 + S5 달성 가능성 판정 편집 (ADR-0171) */}
-          <h3 id="cap-judgement-section" className="text-[length:var(--fs-body)] mb-2">2️⃣ 필요 역량 (S3) 확인 · 달성 가능성 판정</h3>
+          {/* ② 필요 역량 — S3 정의 읽기 전용 + S5 달성 가능성 판정 편집 (ADR-0171) */}
+          {panel("capability", (
+            <>
+          <h3 id="cap-judgement-section" className="text-[length:var(--fs-body)] mb-2">필요 역량 (S3) 확인 · 달성 가능성 판정</h3>
           {gapRows.length === 0 ? (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
               아직 S3에 필요 역량이 정의되지 않았습니다 — <a href={`/synergy?opportunity=${encodeURIComponent(selected.opportunity.id)}`} className="text-[color:var(--accent)] underline">시너지·전략적 적합성(S3)</a>에서 먼저 정의·판정하세요.
@@ -465,24 +542,56 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 aiDraft
                 onRowsChange={setAttRows}
                 onEditorApi={(api) => { judgeApiRef.current = api; }}
+                onDirtyChange={setJudgeDirty}
               />
             </div>
           )}
+            </>
+          ))}
 
-          {/* 3. 투자비 검토 요건 */}
-          <h3 className="text-[length:var(--fs-body)] mb-1">3️⃣ 투자비 검토 요건 (S8 사업성 분석 입력)</h3>
+          {/* ③ 인력 운영 계획 (ADR-0175) — saved through the investment lines save */}
+          {panel("staffing", (
+            <>
+              <h3 className="text-[length:var(--fs-body)] mb-1">인력 운영 계획 (ADR-0175)</h3>
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="staffing-save-note-text">인력 운영 계획은 투자비 탭의 '투자비 항목 저장'으로 저장됩니다</p>
+              {canAct && (
+                <div className="flex flex-wrap items-center gap-2 mb-2" data-testid="staffing-save-actions">
+                  {linesSaveButton}
+                  {investDirty
+                    ? <span className="status-chip status-amber" role="status"><span aria-hidden="true">!</span> 저장하지 않은 변경</span>
+                    : <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">저장할 변경 없음</span>}
+                </div>
+              )}
+              {linesNote && <p className="legacy-model-notice-text mb-2" role="status" data-testid="staffing-save-feedback">{linesNote}</p>}
+              {linesError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{linesError}</p>}
+          <StaffingPlanSection
+            plan={staffEff}
+            horizon={horizon}
+            canAct={canAct}
+            masked={selected.staffing_plan_masked === true}
+            error={staffDirty ? staffError : null}
+            warnings={staffWarnings}
+            onChange={setStaffPlan}
+            onDismiss={dismissStaffDup}
+          />
+            </>
+          ))}
+
+          {/* ④ 투자비 검토 요건 */}
+          {panel("investment", (
+            <>
+              <div className="flex flex-wrap items-center gap-2 mb-2" data-testid="invest-source-summary" aria-label="투자비 출처 요약">
+                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">출처 요약</span>
+                {sourceChips.map((c) => (
+                  <button key={c.key} type="button" className={`status-chip ${c.key === "confirm" && issueCounts.invest + issueCounts.staff > 0 ? "status-amber" : "status-not-started"}`} title={`${GF_TAB_LABELS[c.tab]} 탭으로 이동`} data-testid={`invest-source-chip-${c.key}`} onClick={() => setTab(c.tab)}>
+                    <span aria-hidden="true">{c.icon}</span> {c.text}
+                  </button>
+                ))}
+              </div>
+              <h3 className="text-[length:var(--fs-body)] mb-1">투자비 검토 요건 (S8 사업성 분석 입력)</h3>
           {canAct && (
             <div className="flex flex-wrap items-center gap-2 mb-2" data-testid="invest-item-save-actions">
-              <button
-                type="button"
-                className={investDirty && !hasYearErrors ? "btn-primary btn-sm" : "btn-ghost btn-sm"}
-                disabled={linesSaving || !investDirty || hasYearErrors || !!staffError}
-                title={hasYearErrors ? "연차 입력을 확인하세요" : staffError ?? undefined}
-                aria-describedby="invest-item-save-hint"
-                onClick={() => void saveInvestmentLines()}
-              >
-                {linesSaving ? "저장 중…" : "투자비 항목 저장"}
-              </button>
+              {linesSaveButton}
               {investDirty
                 ? <span className="status-chip status-amber" role="status" data-testid="invest-item-dirty-chip"><span aria-hidden="true">!</span> 저장하지 않은 변경</span>
                 : <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="invest-item-clean-hint">저장할 변경 없음</span>}
@@ -531,16 +640,6 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
               note: costNote === "__pending__" ? reflectedNote : costNote, error: costError, onDismissNote: () => setCostNote(null),
               saved: savedReflected, promoted: !!(selected.opportunity.promoted_at || selected.opportunity.project_id),
             }}
-          />
-          <StaffingPlanSection
-            plan={staffEff}
-            horizon={horizon}
-            canAct={canAct}
-            masked={selected.staffing_plan_masked === true}
-            error={staffDirty ? staffError : null}
-            warnings={staffWarnings}
-            onChange={setStaffPlan}
-            onDismiss={dismissStaffDup}
           />
           <div className="table-scroll mb-1">
           <table className="data-table table-fixed-pct tmin-56" aria-label="투자비 항목 목록" data-testid="invest-item-list">
@@ -610,7 +709,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                     <input aria-label="비고" value={row.note} readOnly className="sizing-new-input sizing-new-input-sm" style={{ width: "100%" }} />
                   </td>
                   <td>
-                    <a href="#cap-judgement-section" className="text-[length:var(--fs-caption)] text-[color:var(--accent)] underline">판정 보기</a>
+                    <a href="#cap-judgement-section" onClick={(e) => { e.preventDefault(); goToCapabilityJudgement(); }} className="text-[length:var(--fs-caption)] text-[color:var(--accent)] underline">판정 보기</a>
                     {canAct && !row.pendingRemoval && <button type="button" className="btn-ghost btn-sm" aria-label={`${row.name} 반영 해제`} onClick={() => setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], reflected: false } }))}>반영 해제</button>}
                   </td>
                 </tr>
@@ -726,7 +825,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
             </div>
           )}
           {canAct && <button type="button" className="btn-ghost btn-sm mb-3" onClick={() => setBcLines((prev) => [...prev, { line: "", category: undefined, amount: 0, amountUnit: AMOUNT_UNIT_KRW_M, amountUnitConfirmed: true, period: undefined, currency: "KRW" }])}>＋ 항목 추가</button>}
-
+          {/* ── 투자비 요약 (ADR-0174 slice 1) — read-only, decision support ── */}
           {/* ── 투자비 요약 (ADR-0174 slice 1) — read-only, decision support ── */}
           <div className="sizing-grade-card mb-3" data-testid="invest-summary">
             <h4 className="text-[length:var(--fs-caption)] mb-2">투자비 요약</h4>
@@ -858,22 +957,64 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
               </>
             )}
           </div>
+            </>
+          ))}
 
-          <input aria-label="평가 근거" placeholder="평가 근거 (S1 시장분석·S3 적합성 판단 인용, 선택)" value={rationale} onChange={(e) => setRationale(e.target.value)} className="sizing-new-input mb-3" style={{ width: "100%" }} />
-
-          {canAct && <button type="submit" className="btn-ghost" disabled={busy || hasYearErrors} title={hasYearErrors ? "연차 입력을 확인하세요" : undefined}>저장</button>}
+          {/* ⑤ 투자 시뮬레이션 — ADR-0176 placeholder (Accepted, not implemented) */}
+          {panel("simulation", (
+            <div className="sizing-grade-card mb-3" data-testid="invest-simulation-placeholder">
+              <h3 className="text-[length:var(--fs-body)] mb-1">투자 시뮬레이션</h3>
+              <p className="mb-2">
+                <span className="status-chip status-not-started"><span aria-hidden="true">⏳</span> 구현 예정 (ADR-0176)</span>
+              </p>
+              <p className="text-[length:var(--fs-caption)] mb-2">
+                투자비 항목의 불확실성을 반영한 시뮬레이션 결과가 여기에 표시됩니다 — 총 투자비 범위(밴드), 항목별 영향도(토네이도), 예산 초과 확률.
+              </p>
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="invest-simulation-hint">
+                아직 실행할 수 없습니다 — 기능이 구현되면 투자비 탭의 저장된 항목을 입력으로 사용합니다. 표시되는 값이 없으며 임의 값은 제공하지 않습니다.
+              </p>
+            </div>
+          ))}
           </fieldset>
         </form>
-      </section>
 
-      <GateDecisionPanel opportunityId={selected.opportunity.id} gates={["pre_fs"]} />
-      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-        ↓ 위 예비타당성 검토 게이트가 <b>진행</b>으로 기록되어야 아래 프로젝트 추진이 가능합니다 — 승인 기록은 판단, 추진은 그 판단을 전제로 한 장부상 전환입니다.
-      </p>
-      <PromotionPanel
-        opportunityId={selected.opportunity.id}
-        heading={`${selected.opportunity.name} — 프로젝트로 추진 (예비타당성 검토 승인 이후, S5 → S8)`}
-      />
+        {/* ⑥ 검토/확정 — outside the form element (GateDecisionPanel owns its own forms); controls attach through form="greenfield-eval-form" */}
+        {panel("review", (
+          <>
+            <h3 className="text-[length:var(--fs-body)] mb-1">검토/확정</h3>
+            <ul className="list-none p-0 m-0 mb-3" aria-label="완료 점검" data-testid="gf-checklist">
+              {checklist.map((c) => (
+                <li key={c.key} className="flex flex-wrap items-center gap-2 mb-1" data-testid={`gf-checklist-${c.key}`}>
+                  <span className="font-semibold">{c.label}</span>
+                  <span className={`status-chip ${c.status === "filled" ? "status-green" : c.status === "empty" ? "status-not-started" : "status-amber"}`}>
+                    <span aria-hidden="true">{c.status === "filled" ? "✓" : c.status === "empty" ? "–" : "!"}</span> {c.statusText}
+                  </span>
+                  <button type="button" className="btn-ghost btn-sm" onClick={() => setTab(c.tab)}>{GF_TAB_LABELS[c.tab]} 탭으로 이동</button>
+                </li>
+              ))}
+            </ul>
+            <PrimaryAction
+              form="greenfield-eval-form"
+              label="타당성 검토 실행"
+              disabled={!canAct || busy || (entryStrategy.trim() === "" && entryModes.modes.length === 0)}
+              disabledReason={!canAct ? "평가 기록은 analyst 권한이 필요합니다." : busy ? "저장 중입니다." : "진출 방식을 선택하거나 선택 근거를 입력하면 실행할 수 있습니다."}
+            />
+            <fieldset disabled={!canAct} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+              <input form="greenfield-eval-form" aria-label="평가 근거" placeholder="평가 근거 (S1 시장분석·S3 적합성 판단 인용, 선택)" value={rationale} onChange={(e) => setRationale(e.target.value)} className="sizing-new-input mb-3" style={{ width: "100%" }} />
+              {canAct && <button type="submit" form="greenfield-eval-form" className="btn-ghost" disabled={busy || hasYearErrors} title={hasYearErrors ? "연차 입력을 확인하세요" : undefined}>저장</button>}
+            </fieldset>
+
+            <GateDecisionPanel opportunityId={selected.opportunity.id} gates={["pre_fs"]} />
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
+              ↓ 위 예비타당성 검토 게이트가 <b>진행</b>으로 기록되어야 아래 프로젝트 추진이 가능합니다 — 승인 기록은 판단, 추진은 그 판단을 전제로 한 장부상 전환입니다.
+            </p>
+            <PromotionPanel
+              opportunityId={selected.opportunity.id}
+              heading={`${selected.opportunity.name} — 프로젝트로 추진 (예비타당성 검토 승인 이후, S5 → S8)`}
+            />
+          </>
+        ))}
+      </section>
     </>
   );
 }
