@@ -100,6 +100,15 @@ describe("GreenfieldStage tab structure (source)", () => {
     const inv = slice('panel("investment"', 'panel("simulation"');
     for (const s of ["invest-source-summary", "s5-horizon", "<CapabilityCostBlock", 'data-testid="invest-item-list"', 'data-testid="invest-summary"', "투자비 항목 추천", '{linesSaveButton("투자비 항목 저장")}']) expect(inv).toContain(s);
     expect(inv).not.toContain("<StaffingPlanSection");
+    // 투자비 항목 추천 sits right after the 출처 요약 strip, before 검토 기간 and the item list (decider request).
+    const at = (needle: string) => inv.indexOf(needle);
+    expect(at('data-testid="invest-source-summary"')).toBeLessThan(at('data-testid="invest-reco"'));
+    expect(at('data-testid="invest-reco"')).toBeLessThan(at("투자비 검토 요건 (S8 사업성 분석 입력)"));
+    expect(at('data-testid="invest-reco"')).toBeLessThan(at("s5-horizon"));
+    expect(inv).toContain('aria-expanded={recoOpen}');
+    expect(inv.lastIndexOf("addRecoItem(item)")).toBeLessThan(at("s5-horizon"));
+    // Charts mount only while the investment tab is active.
+    expect(inv).toContain('{investTabActive && <InvestmentSummaryCharts summary={summary} />}');
     const sim = slice('panel("simulation"', 'panel("review"');
     expect(sim).toContain("구현 예정 (ADR-0176)");
     const rev = stage.slice(stage.indexOf('panel("review"'));
