@@ -471,6 +471,14 @@ export function findDuplicateWarnings(reflectedLines: Array<Pick<CapabilityCostL
 
 const ANNUAL: Record<string, number> = { monthly: 12, quarterly: 4, yearly: 1, lumpsum: 1 };
 
+/** Whole years a recurring line is active inside the review horizon (start defaults Y1, end defaults the horizon). */
+export function recurringActiveYears(startYear: number | undefined, endYear: number | undefined, horizon: number): number {
+  const H = Math.max(1, Math.floor(horizon));
+  const start = Math.max(1, startYear ?? 1);
+  const end = Math.min(endYear ?? H, H);
+  return Math.max(0, end - start + 1);
+}
+
 export interface InvestmentTotals {
   /** 백만원 (the displayed unit). */
   capabilityKrwM: number;
@@ -481,7 +489,7 @@ export interface InvestmentTotals {
   capabilityEok: number;
   reflectedEok: number;
   manualEok: number;
-  /** 일시불 합계와 연간(반복 환산) 합계 — manualKrwM = lumpsum + recurring. */
+  /** 일시불 합계와 반복 항목의 검토 기간 합계(연 환산 x 활성 연수) — manualKrwM = lumpsum + recurring. */
   manualLumpsumKrwM: number;
   manualRecurringKrwM: number;
   /** Non-KRW manual lines are left out of the totals (no FX in this feature). */
@@ -498,7 +506,7 @@ export interface InvestmentTotals {
 }
 
 /** Manual cost lines count lump sums as entered and recurring lines annualised; revenue and 정부 R&D are not 투자비. */
-export function investmentTotals(view: CapabilityCostView, reflectedKeys: ReadonlySet<string>, manual: Array<{ category?: string; amount?: number; amountUnit?: string; amountUnitConfirmed?: boolean; amountKrwM?: number | null; currency?: string; period?: string }>, staffing: StaffingPlanEntry | null = null, horizon: number = DEFAULT_HORIZON_YEARS): InvestmentTotals {
+export function investmentTotals(view: CapabilityCostView, reflectedKeys: ReadonlySet<string>, manual: Array<{ category?: string; amount?: number; amountUnit?: string; amountUnitConfirmed?: boolean; amountKrwM?: number | null; currency?: string; period?: string; startYear?: number; endYear?: number }>, staffing: StaffingPlanEntry | null = null, horizon: number = DEFAULT_HORIZON_YEARS): InvestmentTotals {
   const staffView = staffing ? staffingPlanView(staffing, horizon) : null;
   const staffingKrwM = staffView ? staffView.totalKrwM + staffView.recruitingTotalKrwM : 0;
   const reflected = view.lines.filter((l) => reflectedKeys.has(l.capabilityKey));
@@ -514,9 +522,17 @@ export function investmentTotals(view: CapabilityCostView, reflectedKeys: Readon
     if (m.currency && m.currency !== "KRW") { excluded += 1; continue; }
     const krwM = manualLineKrwM(m);
     if (krwM === null) { excludedNeedsConfirm += 1; continue; }
-    const annual = krwM * (ANNUAL[m.period ?? "yearly"] ?? 1);
-    manualKrwM += annual;
-    if (m.period === "lumpsum") lumpsumKrwM += annual; else recurringKrwM += annual;
+    if (m.period === "lumpsum") {
+      // Same window rule as the summary: a lump sum starting after the horizon is not counted.
+      if (Math.max(1, m.startYear ?? 1) > horizon) continue;
+      manualKrwM += krwM;
+      lumpsumKrwM += krwM;
+    } else {
+      // Recurring: annualised by cadence (monthly x12, quarterly x4) and counted for every active year in the horizon.
+      const total = krwM * (ANNUAL[m.period ?? "yearly"] ?? 1) * recurringActiveYears(m.startYear, m.endYear, horizon);
+      manualKrwM += total;
+      recurringKrwM += total;
+    }
   }
   const round2 = (n: number) => Math.round(n * 100) / 100;
   return {

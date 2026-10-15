@@ -100,13 +100,15 @@ describe("GreenfieldStage tab structure (source)", () => {
     const inv = slice('panel("investment"', 'panel("simulation"');
     for (const s of ["invest-source-summary", "s5-horizon", "<CapabilityCostBlock", 'data-testid="invest-item-list"', 'data-testid="invest-summary"', "투자비 항목 추천", '{linesSaveButton("투자비 항목 저장")}']) expect(inv).toContain(s);
     expect(inv).not.toContain("<StaffingPlanSection");
-    // 투자비 항목 추천 sits right after the 출처 요약 strip, before 검토 기간 and the item list (decider request).
+    // Order (decider): 출처 요약, 투자비 요약 (holds 검토 기간), directly the item table, then 역량 해소 비용, then 투자비 항목 추천 last.
     const at = (needle: string) => inv.indexOf(needle);
-    expect(at('data-testid="invest-source-summary"')).toBeLessThan(at('data-testid="invest-reco"'));
-    expect(at('data-testid="invest-reco"')).toBeLessThan(at("투자비 검토 요건 (S8 사업성 분석 입력)"));
-    expect(at('data-testid="invest-reco"')).toBeLessThan(at("s5-horizon"));
+    expect(at('data-testid="invest-source-summary"')).toBeLessThan(at('data-testid="invest-summary"'));
+    expect(at('data-testid="invest-summary"')).toBeLessThan(at("투자비 항목 (S8 사업성 분석 입력)"));
+    expect(at("투자비 항목 (S8 사업성 분석 입력)")).toBeLessThan(at('data-testid="invest-item-list"'));
+    expect(at('data-testid="invest-item-list"')).toBeLessThan(at("<CapabilityCostBlock"));
+    expect(at("<CapabilityCostBlock")).toBeLessThan(at('data-testid="invest-reco"'));
+    expect(at("s5-horizon")).toBeLessThan(at('data-testid="invest-item-list"'));
     expect(inv).toContain('aria-expanded={recoOpen}');
-    expect(inv.lastIndexOf("addRecoItem(item)")).toBeLessThan(at("s5-horizon"));
     // Charts mount only while the investment tab is active.
     expect(inv).toContain('{investTabActive && <InvestmentSummaryCharts summary={summary} />}');
     const sim = slice('panel("simulation"', 'panel("review"');

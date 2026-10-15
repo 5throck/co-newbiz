@@ -112,8 +112,8 @@ describe("totals: confirmed lines only, 일시불/연간 split, exclusion counte
       { category: "capex", amount: 100, currency: "USD", period: "lumpsum", amountUnit: "fx_m", amountUnitConfirmed: true }, // fx — excluded
     ]);
     expect(t).toMatchObject({
-      reflectedKrwM: 3000, manualKrwM: 3_809.9, grandKrwM: 6_809.9,
-      manualLumpsumKrwM: 2_600, manualRecurringKrwM: 1_209.9,
+      reflectedKrwM: 3000, manualKrwM: 8_649.5, grandKrwM: 11_649.5,
+      manualLumpsumKrwM: 2_600, manualRecurringKrwM: 6_049.5,
       manualExcludedNeedsConfirm: 1, manualExcludedNonKrw: 1,
     });
     // sanity chips (decision support, never a cap)
