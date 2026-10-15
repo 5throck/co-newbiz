@@ -123,7 +123,14 @@ describe("GreenfieldStage tab structure (source)", () => {
     // Charts mount only while the investment tab is active.
     expect(inv).toContain('{investTabActive && <InvestmentSummaryCharts summary={summary} />}');
     const sim = slice('panel("simulation"', 'panel("review"');
-    expect(sim).toContain("구현 예정 (ADR-0176)");
+    // ADR-0176 slice 1: the simulation tab is the deterministic band UI (no placeholder).
+    expect(sim).not.toContain("구현 예정 (ADR-0176)");
+    expect(sim).toContain('data-testid="invest-simulation"');
+    expect(sim).toContain('data-testid="invest-simulation-basis"');
+    expect(sim).toContain("data-testid={`invest-simulation-${k}`}");
+    expect(sim).toContain('data-testid="invest-simulation-schedule"');
+    expect(sim).toContain("data-testid={`invest-simulation-row-${k}`}");
+    expect(sim).toContain("{BAND_LABEL[k]}");
     const rev = stage.slice(stage.indexOf('panel("review"'));
     for (const s of ['aria-label="평가 근거"', "타당성 검토 실행", "gf-checklist", "<GateDecisionPanel", 'gates={["pre_fs"]}']) expect(rev).toContain(s);
   });

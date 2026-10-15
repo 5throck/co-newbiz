@@ -33,6 +33,7 @@ import type { CapabilityGapRow } from "../../lib/capability-gap.ts";
 import { CapabilityCostBlock } from "./CapabilityCostBlock.tsx";
 import { StaffingPlanSection } from "./StaffingPlanSection.tsx";
 import { emptyStaffingPlan, findStaffingDuplicateWarnings, fitPlanToHorizon, isStaffingPlanEntry, normalizeStaffingPlanEntry, staffingPlanOf, type StaffingDuplicateWarning, type StaffingPlanEntry } from "../../lib/staffing-plan.ts";
+import { buildInvestmentVectors, INVESTMENT_ASSUMPTIONS } from "../../lib/investment-vectors.ts";
 import { EntryStrategySection } from "./EntryStrategySection.tsx";
 import { parseEntryStrategy, serializeEntryStrategy, type EntryFormState, type EntryModes } from "../../lib/greenfield-entry-strategy.ts";
 import {
@@ -80,6 +81,8 @@ type BcPeriod = NonNullable<BcLine["period"]>;
 const CATEGORY_LABEL: Record<BcCategory, string> = { labor: "인건비", opex: "운영비", capex: "설비투자", revenue: "수익", gov_rnd: "정부 R&D" };
 /** 백만원 number format shared by the 투자비 요약 tiles and tables. */
 const fmtM = (n: number): string => n.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
+/** ADR-0176 slice 1: band labels (최저/기준/최고). */
+const BAND_LABEL: Record<"low" | "mode" | "high", string> = { low: "최저", mode: "기준", high: "최고" };
 const PERIOD_LABEL: Record<BcPeriod, string> = { monthly: "월", quarterly: "분기", yearly: "년", lumpsum: "일시불(총액)" };
 const CURRENCY_LABEL: Record<BcCurrency, string> = { KRW: "원화", USD: "달러", EUR: "유로", JPY: "엔화", CNY: "위안" };
 // Unified investment item table: 11 shared columns (Onyx table-fixed-pct system); 세부 과목 after 분류 (ADR-0177).
@@ -283,6 +286,11 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     [bcLines, capLinesEff, horizon, reflectedKeySet, staffActive],
   );
   const schedTotals = useMemo(() => scheduleTotals(summary), [summary]);
+  // ADR-0176 slice 1 — deterministic low/mode/high bands over the same inputs as the summary.
+  const vectors = useMemo(
+    () => buildInvestmentVectors({ manual: bcLines, capLines: capLinesEff, horizon, reflectedKeys: reflectedKeySet, staffing: staffActive }),
+    [bcLines, capLinesEff, horizon, reflectedKeySet, staffActive],
+  );
   // Per-line timing errors (Korean messages from validateLineYears); any error blocks save.
   const yearErrors = useMemo(() => {
     const errs: Record<string, string> = {};
@@ -1041,20 +1049,51 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
             </>
           ))}
 
-          {/* ⑤ 투자 시뮬레이션 — ADR-0176 placeholder (Accepted, not implemented) */}
+          {/* ⑤ 투자 시뮬레이션 — ADR-0176 slice 1: deterministic low/mode/high bands. */}
           {panel("simulation", (
-            <div className="sizing-grade-card mb-3" data-testid="invest-simulation-placeholder">
-              <h3 className="text-[length:var(--fs-body)] mb-1">투자 시뮬레이션</h3>
-              <p className="mb-2">
-                <span className="status-chip status-not-started"><span aria-hidden="true">⏳</span> 구현 예정 (ADR-0176)</span>
+            <section className="sizing-grade-card mb-3" data-testid="invest-simulation" aria-labelledby="invest-simulation-title">
+              <h3 id="invest-simulation-title" className="text-[length:var(--fs-body)] mb-1">투자 시뮬레이션 (결정론적 밴드)</h3>
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-simulation-basis">
+                검토 기간 {vectors.horizon}년 · 단위 백만원 · 사람이 확정한 가정 범위(급여 {`±`}10%, 인상률·가산율 {`±`}2%p, 역량 비용 {`±`}30%, 일반 항목 {`±`}20%, 투입 시점 {`±`}반기)의 최저/최고 조합입니다 — 추출·무작위 없음. 환율 범위는 정의만 되고 미적용(외화 항목 제외).
               </p>
-              <p className="text-[length:var(--fs-caption)] mb-2">
-                투자비 항목의 불확실성을 반영한 시뮬레이션 결과가 여기에 표시됩니다 — 총 투자비 범위(밴드), 항목별 영향도(토네이도), 예산 초과 확률.
+              <div className="summary-cards mb-2">
+                {([
+                  ["low", "최저", "status-not-started"],
+                  ["mode", "기준", "status-green"],
+                  ["high", "최고", "status-amber"],
+                ] as const).map(([k, label, chip]) => (
+                  <div className="summary-card glass" data-testid={`invest-simulation-${k}`} key={k}>
+                    <span className="summary-value mono-num">{fmtM(vectors[k].grandKrwM)}</span>
+                    <span className="text-label">{label} 총 투자비 (백만원) <span className={`status-chip ${chip}`} aria-hidden="true">{label}</span></span>
+                    <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">역량 {fmtM(vectors[k].capabilityKrwM)} · 항목 {fmtM(vectors[k].manualKrwM)} · 인력 {fmtM(vectors[k].staffingKrwM)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="table-scroll mb-2">
+                <table className="data-table invest-summary-table invest-sticky-first" data-testid="invest-simulation-schedule">
+                  <caption className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] text-left">연도별 밴드 (단위: 백만원)</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">구분</th>
+                      {Array.from({ length: vectors.horizon }, (_, i) => <th scope="col" className="col-num" key={i}>Y{i + 1}</th>)}
+                      <th scope="col" className="col-num">합계</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(["low", "mode", "high"] as const).map((k) => (
+                      <tr key={k} data-testid={`invest-simulation-row-${k}`}>
+                        <th scope="row">{BAND_LABEL[k]}</th>
+                        {vectors[k].totalByYear.map((v, i) => <td className="col-num mono-num" key={i}>{fmtM(v)}</td>)}
+                        <td className="col-num mono-num">{fmtM(vectors[k].grandKrwM)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="invest-simulation-note">
+                결정 지원용 참고 자료입니다 — 게이트 판정·등급에 영향을 주지 않습니다. 급여는 입력된 기준값의 범위 이동만 하며 임의 급여를 만들지 않습니다.
               </p>
-              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="invest-simulation-hint">
-                아직 실행할 수 없습니다 — 기능이 구현되면 투자비 탭의 저장된 항목을 입력으로 사용합니다. 표시되는 값이 없으며 임의 값은 제공하지 않습니다.
-              </p>
-            </div>
+            </section>
           ))}
           </fieldset>
         </form>
