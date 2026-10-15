@@ -209,13 +209,18 @@ export function normalizeLegacyLine(raw: Record<string, unknown>): ManualCostLin
   const currency = typeof raw.currency === "string" && MANUAL_CURRENCIES.includes(raw.currency) ? (raw.currency as ManualCostLine["currency"]) : ("KRW" as const);
   const period = rawPeriodOf(raw);
   const unit = raw.amountUnit;
-  const amountUnit = !old && isKnownAmountUnit(unit) ? unit : undefined;
+  // An unconfirmed stored unit is not shown as if it were chosen: a unit select that already
+  // displays it gives the person no way to confirm it (re-picking the same option fires no change),
+  // so the row would stay excluded from every total with nothing visibly wrong. Leaving the unit
+  // unset shows the "선택" placeholder until a person picks one; the amount is kept as entered.
+  const confirmedFlag = raw.amountUnitConfirmed === true;
+  const amountUnit = !old && confirmedFlag && isKnownAmountUnit(unit) ? unit : undefined;
   return {
     line: String(raw.line ?? ""),
     category,
     amount: typeof raw.amount === "number" && Number.isFinite(raw.amount) ? raw.amount : Number(raw.amount) || 0,
     amountUnit,
-    amountUnitConfirmed: !old && amountUnit !== undefined && raw.amountUnitConfirmed === true,
+    amountUnitConfirmed: amountUnit !== undefined,
     amountKrwM: typeof raw.amountKrwM === "number" && Number.isFinite(raw.amountKrwM) ? raw.amountKrwM : null,
     currency,
     period,
@@ -241,6 +246,17 @@ export function manualLineIssues(l: ManualCostLine): ManualLineIssue[] {
 export function confirmUnitOnAmountEdit<T extends { amount: number; amountUnit?: string; amountUnitConfirmed?: boolean }>(l: T): T {
   if (l.amountUnitConfirmed || !l.amount || !isKnownAmountUnit(l.amountUnit)) return l;
   return { ...l, amountUnitConfirmed: true };
+}
+/** Currency switch: a confirmed KRW 백만/억 unit maps to its FX counterpart (and stays confirmed); anything else is cleared so the person must pick. */
+export function unitOnCurrencyChange(prev: { amountUnit?: string; amountUnitConfirmed?: boolean }, next: string): { amountUnit: AmountUnit | undefined; amountUnitConfirmed: boolean } {
+  const wasConfirmed = prev.amountUnitConfirmed === true;
+  if (next !== "KRW" && wasConfirmed && (prev.amountUnit === "krw_m" || prev.amountUnit === "krw_eok")) {
+    return { amountUnit: prev.amountUnit === "krw_m" ? "fx_m" : "fx_eok", amountUnitConfirmed: true };
+  }
+  if (next === "KRW" && wasConfirmed && (prev.amountUnit === "fx_m" || prev.amountUnit === "fx_eok")) {
+    return { amountUnit: prev.amountUnit === "fx_m" ? "krw_m" : "krw_eok", amountUnitConfirmed: true };
+  }
+  return { amountUnit: undefined, amountUnitConfirmed: false };
 }
 export const manualLineNeedsConfirm = (l: ManualCostLine): boolean => manualLineIssues(l).length > 0;
 
@@ -1062,7 +1078,10 @@ export function unifiedInvestmentRows(
 }
 
 /** Footer of the unified list: the count of listed items (pending removals excluded) and the sum, which is investmentTotals.grandKrwM. */
-export function unifiedFooter(rows: UnifiedRow[], totals: Pick<InvestmentTotals, "grandKrwM">): { count: number; text: string } {
+export function unifiedFooter(rows: UnifiedRow[], totals: Pick<InvestmentTotals, "grandKrwM"> & Partial<Pick<InvestmentTotals, "manualExcludedNeedsConfirm">>): { count: number; text: string } {
   const count = rows.filter((r) => r.kind === "manual" || !r.pendingRemoval).length;
-  return { count, text: `항목 ${count}건 · 합계 ${formatKrwM(totals.grandKrwM)}` };
+  const excluded = totals.manualExcludedNeedsConfirm ?? 0;
+  // Listed-but-excluded rows are named in the footer so the sum never silently covers fewer rows than shown.
+  const suffix = excluded > 0 ? ` (확인 필요 ${excluded}건은 합계 제외 — 분류·주기·단위를 고르면 반영)` : "";
+  return { count, text: `항목 ${count}건 · 합계 ${formatKrwM(totals.grandKrwM)}${suffix}` };
 }

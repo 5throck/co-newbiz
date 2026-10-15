@@ -3040,6 +3040,17 @@ main li { overflow-wrap: anywhere; }
               0 0 20px hsla(var(--primary-h), var(--primary-s), var(--primary-l), 0.1);
 }
 .sizing-new-input-sm { padding: 0.3rem 0.45rem; font-size: var(--fs-caption); min-width: 5rem; }
+/* S5 unified investment table: one control box for manual and capability rows (same colgroup, same cell structure). */
+.invest-item-table td { vertical-align: top; padding-block: 0.35rem; }
+.invest-ctl { box-sizing: border-box; width: 100%; min-width: 0; height: 2rem; line-height: 1.2; }
+.invest-ctl-unset { border-color: var(--amber-border); }
+.invest-ctl-num { text-align: right; font-variant-numeric: tabular-nums; }
+.invest-ctl-ro, .invest-ctl-ro:disabled { background: var(--surface-2, var(--bg)); color: var(--muted-fg); border-style: dashed; cursor: default; opacity: 1; }
+.invest-year-cell { display: flex; align-items: center; gap: 0.25rem; white-space: nowrap; }
+.invest-year-field { display: flex; align-items: center; gap: 0.15rem; flex: 1 1 0; min-width: 0; font-size: var(--fs-caption); }
+.invest-year-field .invest-ctl { flex: 1 1 auto; }
+.invest-action-cell { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; min-height: 2rem; }
+.invest-cell-chips { display: flex; flex-direction: column; align-items: flex-start; gap: 0.2rem; min-height: 2rem; justify-content: center; }
 .btn-danger {
   background: color-mix(in srgb, var(--red-fg) 12%, var(--surface));
   border: 1px solid var(--red-border);

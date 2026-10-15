@@ -36,7 +36,7 @@ import { emptyStaffingPlan, findStaffingDuplicateWarnings, fitPlanToHorizon, isS
 import { EntryStrategySection } from "./EntryStrategySection.tsx";
 import { parseEntryStrategy, serializeEntryStrategy, type EntryFormState, type EntryModes } from "../../lib/greenfield-entry-strategy.ts";
 import {
-  AMOUNT_UNIT_KRW_M, amountUnitLabel, applySelection, buildInvestmentSummary, DEFAULT_HORIZON_YEARS, deriveCapabilityCostLines, findDuplicateWarnings, formatKrwM, hasUnsavedReflection, confirmUnitOnAmountEdit, investmentTotals, isCapabilityEntry, manualLineAmounts, isPlanMetaEntry, lineSaveStates, manualLineIssues, manualLineKrwM, MAX_HORIZON_YEAR_LIMIT, MIN_HORIZON_YEARS, normalizeLegacyLine, planMetaOf, reflectionBody, reflectionSummary, sanityLineOversize, sanityTotalOversize, selectionPayload, unifiedFooter, unifiedInvestmentRows, validateLineYears, capabilityEndYearOf,
+  AMOUNT_UNIT_KRW_M, amountUnitLabel, applySelection, buildInvestmentSummary, DEFAULT_HORIZON_YEARS, deriveCapabilityCostLines, findDuplicateWarnings, formatKrwM, hasUnsavedReflection, confirmUnitOnAmountEdit, unitOnCurrencyChange, investmentTotals, isCapabilityEntry, manualLineAmounts, isPlanMetaEntry, lineSaveStates, manualLineIssues, manualLineKrwM, MAX_HORIZON_YEAR_LIMIT, MIN_HORIZON_YEARS, normalizeLegacyLine, planMetaOf, reflectionBody, reflectionSummary, sanityLineOversize, sanityTotalOversize, selectionPayload, unifiedFooter, unifiedInvestmentRows, validateLineYears, capabilityEndYearOf,
   type AmountUnit, type CapabilityCostView, type CostCategory, type CostSelection, type DuplicateWarning, type ManualCostLine, type MilestoneCandidateView, type PlanMetaEntry,
 } from "../../lib/capability-cost-lines.ts";
 import type { AttainabilityRowView } from "../../lib/capability-attainability.ts";
@@ -684,7 +684,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-unit-note">금액 단위는 항목마다 선택합니다 (기본 백만원) — 단위·분류·주기가 확인된 항목만 합계에 포함됩니다.</p>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-xref">역량 해소 비용에서 반영한 항목은 이 목록에 포함됩니다 (아래 역량 해소 비용에서 선택).</p>
           <div className="table-scroll mb-1">
-          <table className="data-table table-fixed-pct tmin-80" aria-label="투자비 항목 목록" data-testid="invest-item-list">
+          <table className="data-table table-fixed-pct tmin-80 invest-item-table" aria-label="투자비 항목 목록" data-testid="invest-item-list">
             <ColGroup widths={INVEST_ITEM_COL_PCT} />
             <thead>
               <tr>
@@ -709,51 +709,55 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
               return (
                 <tr key={`c${row.capabilityKey}`} data-testid={`invest-cap-row-${row.capabilityKey}`}>
                   <td>
-                    <input aria-label="항목명" value={row.name} readOnly className="sizing-new-input sizing-new-input-sm" style={{ width: "100%" }} />
+                    <input aria-label="항목명" value={row.name} readOnly className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-ro" />
                   </td>
-                  <td>
+                  <td><div className="invest-cell-chips">
                     <span className="status-chip status-not-started"><span aria-hidden="true">⛓</span> 역량 해소 연동</span>
-                    {row.saveState === "saved" && !row.pendingRemoval && <><br /><span className="status-chip status-green"><span aria-hidden="true">✓</span> 반영됨 · 저장됨</span></>}
-                    {(row.saveState === "unsaved" || row.pendingRemoval) && <><br /><span className="status-chip status-amber"><span aria-hidden="true">!</span> 저장 전{row.pendingRemoval ? " · 반영 해제" : ""}</span></>}
-                    {row.needsRejudge && <><br /><span className="status-chip status-amber">재판정 필요</span></>}
-                  </td>
+                    {row.saveState === "saved" && !row.pendingRemoval && <span className="status-chip status-green"><span aria-hidden="true">✓</span> 반영됨 · 저장됨</span>}
+                    {(row.saveState === "unsaved" || row.pendingRemoval) && <span className="status-chip status-amber"><span aria-hidden="true">!</span> 저장 전{row.pendingRemoval ? " · 반영 해제" : ""}</span>}
+                    {row.needsRejudge && <span className="status-chip status-amber">재판정 필요</span>}
+                  </div></td>
                   <td>
-                    <select aria-label={`${row.name} 분류`} value={row.category} disabled={!canAct} onChange={(e) => { const cat = e.target.value as CostCategory; setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], category: cat } })); judgeApiRef.current?.patchDraft(row.capabilityKey, { category: cat }); }} className="sizing-new-input sizing-new-input-sm">
+                    <select aria-label={`${row.name} 분류`} value={row.category} disabled={!canAct} onChange={(e) => { const cat = e.target.value as CostCategory; setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], category: cat } })); judgeApiRef.current?.patchDraft(row.capabilityKey, { category: cat }); }} className="sizing-new-input sizing-new-input-sm invest-ctl">
                       {(["labor", "opex", "capex"] as CostCategory[]).map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
                     </select>
                   </td>
                   <td>
-                    <input aria-label="금액(백만원)" value={row.krwM} readOnly className="sizing-new-input sizing-new-input-sm" style={{ width: "6rem" }} />
+                    <input aria-label="금액(백만원)" value={row.krwM} readOnly className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-num invest-ctl-ro" />
                   </td>
-                  <td><span className="text-[length:var(--fs-caption)]">백만원</span></td>
-                  <td><span className="text-[length:var(--fs-caption)]">원화</span></td>
-                  <td><span className="text-[length:var(--fs-caption)]">{PERIOD_LABEL.lumpsum}</span></td>
+                  <td><select aria-label="금액 단위" value="krw_m" disabled className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-ro"><option value="krw_m">백만원</option></select></td>
+                  <td><select aria-label="기준 통화" value="KRW" disabled className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-ro"><option value="KRW">{CURRENCY_LABEL.KRW}</option></select></td>
+                  <td><select aria-label="금액 기준 (반복 주기 또는 일시불)" value="lumpsum" disabled className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-ro"><option value="lumpsum">{PERIOD_LABEL.lumpsum}</option></select></td>
                   <td>
-                    <label className="text-[length:var(--fs-caption)] flex items-center gap-0.5">
-                      집행 연차
-                      <input
-                        aria-label={`${row.name} 집행 연차`}
-                        type="number"
-                        min={1}
-                        max={horizon}
-                        value={capStart}
-                        disabled={!canAct}
-                        onChange={(e) => { const raw = e.target.value; const v = Number(raw); setCapStartYear((p) => ({ ...p, [row.capabilityKey]: raw === "" || !Number.isFinite(v) ? Number.NaN : v })); }}
-                        onBlur={(e) => { const v = Math.floor(Number(e.target.value) || 1); setCapStartYear((p) => ({ ...p, [row.capabilityKey]: Math.min(horizon, Math.max(1, v)) })); }}
-                        className="sizing-new-input sizing-new-input-sm"
-                        style={{ width: "3.25rem" }}
-                      />
-                    </label>
-                    <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid={`invest-cap-end-year-${row.capabilityKey}`}>~{capabilityEndYearOf(capStart, capLine?.monthsToAttain ?? null)}연차</span>
+                    <div className="invest-year-cell">
+                      <label className="invest-year-field">
+                        시작
+                        <input
+                          aria-label={`${row.name} 집행 연차`}
+                          type="number"
+                          min={1}
+                          max={horizon}
+                          value={capStart}
+                          disabled={!canAct}
+                          onChange={(e) => { const raw = e.target.value; const v = Number(raw); setCapStartYear((p) => ({ ...p, [row.capabilityKey]: raw === "" || !Number.isFinite(v) ? Number.NaN : v })); }}
+                          onBlur={(e) => { const v = Math.floor(Number(e.target.value) || 1); setCapStartYear((p) => ({ ...p, [row.capabilityKey]: Math.min(horizon, Math.max(1, v)) })); }}
+                          className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-num"
+                        />
+                      </label>
+                      <label className="invest-year-field">
+                        종료
+                        <input aria-label={`${row.name} 종료 연차`} data-testid={`invest-cap-end-year-${row.capabilityKey}`} value={capabilityEndYearOf(capStart, capLine?.monthsToAttain ?? null)} readOnly className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-num invest-ctl-ro" />
+                      </label>
+                    </div>
                     {capYearErr && <span role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">{capYearErr}</span>}
                   </td>
                   <td>
-                    <input aria-label="비고" value={row.note} readOnly className="sizing-new-input sizing-new-input-sm" style={{ width: "100%" }} />
+                    <input aria-label="비고" value={row.note} readOnly className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-ro" />
                   </td>
-                  <td>
+                  <td><div className="invest-action-cell">
                     <a href="#cap-judgement-section" onClick={(e) => { e.preventDefault(); goToCapabilityJudgement(); }} className="text-[length:var(--fs-caption)] text-[color:var(--accent)] underline">판정 보기</a>
                     {canAct && !row.pendingRemoval && <button type="button" className="btn-ghost btn-sm" aria-label={`${row.name} 반영 해제`} onClick={() => setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], reflected: false } }))}>반영 해제</button>}
-                  </td>
+                  </div></td>
                 </tr>
               );
             }
@@ -768,25 +772,27 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
             return (
               <tr key={`m${i}`} data-testid={`invest-manual-row-${i}`}>
                 <td>
-                  <input aria-label="항목명" placeholder="항목명 (예: 설비 투자, 연매출)" value={l.line} onChange={(e) => setBc(i, { line: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "100%" }} />
+                  <input aria-label="항목명" placeholder="항목명 (예: 설비 투자, 연매출)" value={l.line} onChange={(e) => setBc(i, { line: e.target.value })} className="sizing-new-input sizing-new-input-sm invest-ctl" />
                 </td>
                 <td>
+                  <div className="invest-cell-chips">
                   <span className="status-chip status-not-started">수동</span>
                   {manualRowDirty(i)
-                    ? <><br /><span className="status-chip status-amber"><span aria-hidden="true">!</span> 저장 전</span></>
-                    : <><br /><span className="status-chip status-green"><span aria-hidden="true">✓</span> 저장됨</span></>}
-                  {confirmChip && <><br /><span className="status-chip status-amber" title={issueText ?? undefined} data-testid={`invest-confirm-chip-${i}`}><span aria-hidden="true">!</span> 확인 필요</span></>}
-                  {oversize && canAct && <><br /><button type="button" className="btn-ghost btn-sm" data-testid={`invest-sanity-${i}`} onClick={() => setSanityDismissed((prev) => new Set(prev).add(i))}>닫기</button></>}
-                  {yearErrors[`m${i}`] && <><br /><span role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)]" data-testid={`invest-year-error-${i}`}>{yearErrors[`m${i}`]}</span></>}
+                    ? <span className="status-chip status-amber"><span aria-hidden="true">!</span> 저장 전</span>
+                    : <span className="status-chip status-green"><span aria-hidden="true">✓</span> 저장됨</span>}
+                  {confirmChip && <span className="status-chip status-amber" title={issueText ?? undefined} data-testid={`invest-confirm-chip-${i}`}><span aria-hidden="true">!</span> 확인 필요</span>}
+                  {oversize && canAct && <button type="button" className="btn-ghost btn-sm" data-testid={`invest-sanity-${i}`} onClick={() => setSanityDismissed((prev) => new Set(prev).add(i))}>닫기</button>}
+                  {yearErrors[`m${i}`] && <span role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)]" data-testid={`invest-year-error-${i}`}>{yearErrors[`m${i}`]}</span>}
+                  </div>
                 </td>
                 <td>
-                  <select aria-label="분류" value={l.category ?? ""} onChange={(e) => setBc(i, { category: e.target.value as BcCategory })} className="sizing-new-input sizing-new-input-sm">
+                  <select aria-label="분류" value={l.category ?? ""} onChange={(e) => setBc(i, { category: e.target.value as BcCategory })} className={`sizing-new-input sizing-new-input-sm invest-ctl${l.amountUnit && l.amountUnitConfirmed ? "" : " invest-ctl-unset"}`} data-unit-unset={l.amountUnit && l.amountUnitConfirmed ? undefined : "true"}>
                     <option value="" disabled>선택</option>
                     {(Object.keys(CATEGORY_LABEL) as BcCategory[]).map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
                   </select>
                 </td>
                 <td>
-                  <input aria-label="금액" type="number" placeholder="금액" value={l.amount || ""} onChange={(e) => setBc(i, { amount: Number(e.target.value) })} className="sizing-new-input sizing-new-input-sm" style={{ width: "100%", textAlign: "right" }} />
+                  <input aria-label="금액" type="number" placeholder="금액" value={l.amount || ""} onChange={(e) => setBc(i, { amount: Number(e.target.value) })} className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-num" />
                   {(() => {
                     const amt = issues.length === 0 && (l.currency ?? "KRW") === "KRW" ? manualLineAmounts(l, horizon) : null;
                     if (!amt) return null;
@@ -798,24 +804,24 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   })()}
                 </td>
                 <td>
-                  <select aria-label="금액 단위" value={l.amountUnit ?? ""} onChange={(e) => { const u = e.target.value as AmountUnit; setBc(i, { amountUnit: u, amountUnitConfirmed: true }); }} className="sizing-new-input sizing-new-input-sm">
+                  <select aria-label="금액 단위" value={l.amountUnit ?? ""} onChange={(e) => { const u = e.target.value as AmountUnit; setBc(i, { amountUnit: u, amountUnitConfirmed: true }); }} className="sizing-new-input sizing-new-input-sm invest-ctl">
                     <option value="" disabled>선택</option>
                     {((l.currency === "KRW" ? ["krw", "krw_k", "krw_m", "krw_eok"] : ["fx_m", "fx_eok"]) as AmountUnit[]).map((u) => <option key={u} value={u}>{amountUnitLabel(u, l.currency ?? "KRW")}</option>)}
                   </select>
                 </td>
                 <td>
-                  <select aria-label="기준 통화" value={l.currency ?? "KRW"} onChange={(e) => { const c = e.target.value as BcCurrency; setBc(i, { currency: c, amountUnit: c === "KRW" ? "krw_m" : "fx_m" }); }} className="sizing-new-input sizing-new-input-sm">
+                  <select aria-label="기준 통화" value={l.currency ?? "KRW"} onChange={(e) => { const c = e.target.value as BcCurrency; setBc(i, { currency: c, ...unitOnCurrencyChange(l, c) }); }} className="sizing-new-input sizing-new-input-sm invest-ctl">
                     {(Object.keys(CURRENCY_LABEL) as BcCurrency[]).map((c) => <option key={c} value={c}>{CURRENCY_LABEL[c]}</option>)}
                   </select>
                 </td>
                 <td>
-                  <select aria-label="금액 기준 (반복 주기 또는 일시불)" value={l.period ?? ""} onChange={(e) => setBc(i, { period: e.target.value as BcPeriod })} className="sizing-new-input sizing-new-input-sm">
+                  <select aria-label="금액 기준 (반복 주기 또는 일시불)" value={l.period ?? ""} onChange={(e) => setBc(i, { period: e.target.value as BcPeriod })} className="sizing-new-input sizing-new-input-sm invest-ctl">
                     <option value="" disabled>선택</option>
                     {(Object.keys(PERIOD_LABEL) as BcPeriod[]).map((p) => <option key={p} value={p}>{PERIOD_LABEL[p]}</option>)}
                   </select>
                 </td>
-                <td><div className="flex items-center gap-1 whitespace-nowrap">
-                  <label className="text-[length:var(--fs-caption)] flex items-center gap-0.5">
+                <td><div className="invest-year-cell">
+                  <label className="invest-year-field">
                     시작
                     <input
                       aria-label={`${l.line || "항목"} 시작 연차`}
@@ -827,12 +833,11 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                       placeholder="Y1"
                       onChange={(e) => { const raw = e.target.value; const v = Number(raw); setBc(i, { startYear: raw === "" ? undefined : v }); }}
                       onBlur={(e) => { const v = Math.floor(Number(e.target.value) || 1); setBc(i, { startYear: Math.min(horizon, Math.max(1, v)) }); }}
-                      className="sizing-new-input sizing-new-input-sm"
-                      style={{ width: "3.25rem" }}
+                      className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-num"
                     />
                   </label>
                   {l.period !== "lumpsum" && (
-                    <label className="text-[length:var(--fs-caption)] flex items-center gap-0.5">
+                    <label className="invest-year-field">
                       종료
                       <input
                         aria-label={`${l.line || "항목"} 종료 연차`}
@@ -844,18 +849,18 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                         placeholder={`Y${horizon}`}
                         onChange={(e) => { const raw = e.target.value; const v = Number(raw); setBc(i, { endYear: raw === "" ? undefined : v }); }}
                         onBlur={(e) => { const v = Math.floor(Number(e.target.value) || horizon); setBc(i, { endYear: Math.min(horizon, Math.max(1, v)) }); }}
-                        className="sizing-new-input sizing-new-input-sm"
-                        style={{ width: "3.25rem" }}
+                        className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-num"
                       />
                     </label>
                   )}
+                  {l.period === "lumpsum" && <span className="invest-year-field" aria-hidden="true" />}
                 </div></td>
                 <td>
-                  <input aria-label="비고" placeholder="비고" value={l.note ?? ""} onChange={(e) => setBc(i, { note: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "100%" }} />
+                  <input aria-label="비고" placeholder="비고" value={l.note ?? ""} onChange={(e) => setBc(i, { note: e.target.value })} className="sizing-new-input sizing-new-input-sm invest-ctl" />
                 </td>
-                <td className="whitespace-nowrap">
+                <td><div className="invest-action-cell">
                   {canAct && <button type="button" className="btn-ghost btn-sm whitespace-nowrap" aria-label="항목 삭제" onClick={() => setBcLines((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>}
-                </td>
+                </div></td>
               </tr>
             );
           })}
@@ -864,7 +869,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
           </div>
           <p className="text-[length:var(--fs-caption)] mb-2" role="status" data-testid="invest-item-footer">{footer.text}</p>
           {invTotals.manualExcludedNeedsConfirm > 0 && (
-            <p className="text-[length:var(--fs-caption)] mb-2" role="status" data-testid="invest-excluded-note">확인 필요 {invTotals.manualExcludedNeedsConfirm}건은 합계에서 제외됨</p>
+            <p className="text-[length:var(--fs-caption)] mb-2" role="status" data-testid="invest-excluded-note">확인 필요 {invTotals.manualExcludedNeedsConfirm}건은 합계에서 제외됨 — 분류·주기·단위를 고르면 반영</p>
           )}
           {sanityTotalOversize(invTotals.grandKrwM) && !totalSanityDismissed && (
             <div className="flex items-center gap-1 mb-2" data-testid="invest-total-sanity">
@@ -943,30 +948,6 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                     <th scope="row">정부 R&D (투자비 제외)</th>
                     {summary.schedule.map((s) => <td className="col-num mono-num" key={s.year}>{fmtM(s.govRnd)}</td>)}
                     <td className="col-num mono-num">{fmtM(summary.schedule.reduce((a, s) => a + s.govRnd, 0))}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div className="table-scroll mb-2">
-              <table className="data-table invest-summary-table" data-testid="invest-summary-by-category">
-                <caption className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] text-left">분류별 투자비 (단위: 백만원)</caption>
-                <thead>
-                  <tr><th scope="col">분류</th><th scope="col" className="col-num">연간 (백만원/년)</th><th scope="col" className="col-num">일시</th><th scope="col" className="col-num">기간 총액</th></tr>
-                </thead>
-                <tbody>
-                  {summary.byCategory.map((r) => (
-                    <tr key={r.category}>
-                      <th scope="row">{CATEGORY_LABEL[r.category]}</th>
-                      <td className="col-num mono-num">{fmtM(r.annualKrwM)}</td>
-                      <td className="col-num mono-num">{fmtM(r.lumpsumKrwM)}</td>
-                      <td className="col-num mono-num">{fmtM(r.totalKrwM)}</td>
-                    </tr>
-                  ))}
-                  <tr className="invest-total-row">
-                    <th scope="row">합계</th>
-                    <td className="col-num mono-num">{fmtM(summary.annualRecurringKrwM)}</td>
-                    <td className="col-num mono-num">{fmtM(summary.lumpsumKrwM)}</td>
-                    <td className="col-num mono-num">{fmtM(summary.totalKrwM)}</td>
                   </tr>
                 </tbody>
               </table>
