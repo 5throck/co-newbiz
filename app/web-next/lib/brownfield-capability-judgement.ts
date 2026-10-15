@@ -171,6 +171,11 @@ function pseudoRows(ctx: Ctx): CapabilityGapRow[] {
   });
 }
 
+/** Read-only: the selected target's judgements as GF-shaped rows (stale target/eval state is reflected). Used by S8 lens T1 and gate briefs. */
+export function targetJudgementRows(db: Database, target: TargetScope): CapabilityGapRow[] {
+  return pseudoRows(loadCtx(db, target));
+}
+
 // ── Invalidation (materialise history + audit under the calling user) ───────
 
 function historyEntry(row: CapabilityGapRow, a: CapabilityAttainability, resolution: GapResolution | null, at: string, reason: "s3_changed" | "eval_changed") {
@@ -412,6 +417,41 @@ export function confirmTargetJudgements(
     appendAudit(db, { actor: userId, action: audit.action, target: auditTarget(scope, audit.via), now: audit.at });
     return { ok: true as const, confirmedIds: res.confirmedIds };
   })();
+}
+
+// ── One-off legacy copy (ADR-0171 Consequences) ──────────────────────────────
+
+export interface LegacyCopyItem { rowId: string; capability: string; outcome: "copied" | "skip_existing" | "skip_no_criterion" }
+
+/**
+ * Copy legacy Brown Field judgements stored on the S3 register rows to ONE target as UNCONFIRMED
+ * rows. Never overwrites an existing target judgement; rows without a seeded S7 criterion are
+ * skipped (reconcile first). Confirmation is never copied (human-only). `apply=false` writes nothing.
+ * Idempotent: a second run finds every row as skip_existing.
+ */
+export function copyLegacyJudgementsToTarget(db: Database, scope: TargetScope, opts: { apply: boolean; actor: string; at: string }): LegacyCopyItem[] {
+  const run = (): LegacyCopyItem[] => {
+    const ctx = loadCtx(db, scope);
+    const out: LegacyCopyItem[] = [];
+    for (const r of ctx.s3Rows) {
+      if (!r.attainability && !r.resolution) continue;
+      if (ctx.stored.has(r.id)) { out.push({ rowId: r.id, capability: r.capability, outcome: "skip_existing" }); continue; }
+      const crit = ctx.criterionByRow.get(r.id);
+      if (!crit) { out.push({ rowId: r.id, capability: r.capability, outcome: "skip_no_criterion" }); continue; }
+      out.push({ rowId: r.id, capability: r.capability, outcome: "copied" });
+      if (!opts.apply) continue;
+      const a = normalizeAttainability(r.attainability ?? {})!;
+      const body = serialize({ resolution: r.resolution ?? null, attainability: { ...a, confirmedBy: null, confirmedAt: null } });
+      db.run(
+        `INSERT INTO brownfield_target_capability_judgement (id, brownfield_target_id, capability_row_id, criterion_id, judgement_json, eval_basis_hash, created_by, created_at, updated_by, updated_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?)`,
+        [ulid(), scope.id, r.id, crit.id, body, ctx.evalHashByRow.get(r.id) ?? evalStateHash(null), opts.actor, opts.at, opts.actor, opts.at],
+      );
+      appendAudit(db, { actor: opts.actor, action: "capability_attainability.legacy_copy", target: `${scope.opportunity_id}#capability@script:surface=${BF_SURFACE}:target_id=${scope.id}:row=${r.id}`, now: opts.at });
+    }
+    return out;
+  };
+  return opts.apply ? db.transaction(run)() : run();
 }
 
 // ── Readiness (warning-only) ─────────────────────────────────────────────────

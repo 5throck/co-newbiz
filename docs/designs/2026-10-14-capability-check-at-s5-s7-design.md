@@ -16,6 +16,21 @@ Korean appears only as UI labels in backticks. All prose is English. Paths are r
 - Builds on and partly supersedes: [ADR-0168](../adr/0168-s8-capability-attainability.md), [ADR-0169](../adr/0169-s8-technical-financial-lens.md), [ADR-0170](../adr/0170-s3-s8-capability-linkage.md) (including its 2026-10-14 correction), [ADR-0136](../adr/0136-unify-capability-gap-register.md), [ADR-0143](../adr/0143-s8-per-target-feasibility-target-axis.md).
 - Related designs: [S8 capability attainability](2026-10-14-s8-capability-attainability-design.md), [S3-S8 capability linkage](2026-10-14-s3-s8-capability-linkage-design.md), [S8 technical/financial lens](2026-10-14-s8-technical-financial-lens-design.md).
 
+## Implementation status (2026-10-15)
+
+Slices 1-3 are built; details are in the ADR-0171 amendments and the as-built sections of `docs/architecture/ui-spec.md`. The frontmatter `status` is unchanged.
+
+- **Slice 1 (Green Field).** S5 edit surface for the required-capability judgement, plus the S8 read-only summary.
+- **Slice 2 (Brown Field S7).** Per-target judgements for shortlisted and selected targets in table `brownfield_target_capability_judgement` (migration 0145; also `retired_at` / `retired_reason` on `brownfield_eval_criterion`). Two-hash staleness: the S3 row hash plus an `eval_basis_hash` over the target's verdict, note and evidence ref; either change invalidates only that target. Criteria reconcile replaces seed-once and detects drift. Readiness is warning-only.
+- **Slice 3 (S8 readers and tooling).** Lens T1 for Brown Field reads the selected target's S7 judgements (stale or unconfirmed counts as unjudged). The `target_screening` and `pre_fs` gate briefs carry a per-target capability-check line, labeled not an approval condition. S8 edit and confirm routes still answer 410 with `editAt`. Person-run script `scripts/co-newbiz/copy-legacy-bf-capability-judgements.ts` copies legacy register judgements to the selected target (dry-run by default, `--apply` to write). Glossary entries added.
+
+Not done or not verified:
+
+- Not browser-verified.
+- The copy script has not been run against any real database.
+- No separate capability-adjusted scenario artifact was found on S8 (section 8); it is unchanged, and the S5 investment simulation already reads the S5 judgements.
+- Wiki pages (section 12) were not updated.
+
 ## 1. Problem statement
 
 ADR-0168 put the required-capability attainability judgement (resolution, cost, months, grade, rationale, draft/confirm metadata) on S8. ADR-0170 made S3 the single definition source and added stale detection. The judgement itself still answers a question that belongs earlier in the flow:
