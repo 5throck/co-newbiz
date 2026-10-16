@@ -183,7 +183,7 @@ describe("bit-identity while no scope is set", () => {
 describe("source guard: flags never block generation", () => {
   const genSrc = readFileSync(join(PROJECT_ROOT, "app/web-next/lib/business-case-generator.ts"), "utf-8");
   test("the fragment is a pure string interpolation appended to the run note", () => {
-    expect(genSrc).toContain("const anchorScopeFragment = anchorScopeNoteFragment(ctx.inputs.targetScope);");
+    expect(genSrc).toContain("const anchorScopeFragment = anchorScopeNoteFragment(ctx.inputs.targetScope, ctx.inputs.anchorScope ?? null);");
     expect(genSrc).toContain("${anchorScopeFragment}");
   });
   test("no throw / early return wired to the slice-2 fragment", () => {

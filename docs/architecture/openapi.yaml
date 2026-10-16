@@ -2916,7 +2916,7 @@ paths:
   /api/opportunities/{id}/target-scope:
     get:
       operationId: getOpportunityTargetScope
-      summary: "The structured target scope of the promoting opportunity (ADR-0179 slice 1): {regions[], segments[], unit_basis, set_by, set_at} or null while no person has set one. NULL means scope unknown, never a silent OK. GET is open to anyone who can see the opportunity; agents may read."
+      summary: "The structured target scope of the promoting opportunity (ADR-0179 slice 1): {regions[], segments[], unit_basis, set_by, set_at} or null while no person has set one. NULL means scope unknown, never a silent OK. GET also returns the additive linked_sizing field (ADR-0179 amendment slice A): the linked S1 analysis/version reference or null while unlinked. GET is open to anyone who can see the opportunity; agents may read."
       tags:
         - Reference
       parameters:
@@ -2963,6 +2963,59 @@ paths:
                 unit_basis:
                   type: string
                   enum: [krw_m_year, units_year, usd_m_year]
+      responses:
+        '200':
+          $ref: '#/components/responses/OK'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/opportunities/{id}/sizing-link:
+    get:
+      operationId: getOpportunitySizingLink
+      summary: "The opportunity's S1 market-sizing link (ADR-0179 amendment slice A): {link: {analysis_id, version_id} | null, reference} where reference carries the pinned version_no, declared scope (extractSizingVersionScope), anchor_value_krw_m, confidence_grade and the S1 screen href; null while unlinked. GET is open to anyone who can see the opportunity; agents may read."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/OK'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      operationId: putOpportunitySizingLink
+      summary: "HUMAN-ONLY (boundary #2; in HUMAN_ONLY_ROUTES, agent principals get 403 human_only). A person (analyst+) pins or clears the S1 market-sizing link: {version_id} pins (the analysis id derives from the version row; an explicit analysis_id must match it) or {analysis_id: null, version_id: null} clears. Strict validation - a nonexistent version or a version outside the named analysis is 400 invalid_request, never silently dropped. Audit opportunity_sizing_link.write."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                analysis_id:
+                  type: [string, "null"]
+                version_id:
+                  type: [string, "null"]
       responses:
         '200':
           $ref: '#/components/responses/OK'

@@ -85,12 +85,28 @@ export function extractSizingVersionScope(payload: string | null | undefined): {
   };
 }
 
+/** The anchor side resolved from the opportunity's LINKED sizing version
+ *  (ADR-0179 amendment slice A): extractSizingVersionScope on the pinned
+ *  version's payload. Tolerant — no link, a missing version row or an
+ *  unparsable payload all yield null (→ `unknown`), never a throw. */
+export function resolveLinkedAnchorScope(db: Database, opportunityId: string): ScopeLike | null {
+  const row = db
+    .query("SELECT mv.payload AS payload FROM opportunity o LEFT JOIN market_sizing_version mv ON mv.id = o.sizing_version_id WHERE o.id = ?")
+    .get(opportunityId) as { payload: string | null } | undefined;
+  if (!row?.payload) return null;
+  try {
+    return extractSizingVersionScope(row.payload);
+  } catch {
+    return null;
+  }
+}
+
 /** Run-note fragment (design §5.2a) — appended ONLY when a person-set target
  *  scope exists, so notes with no scope stay byte-identical (bit-identity).
- *  The anchor side is null in today's data path: no sizing version is linked
- *  to the opportunity anchor (OPEN-3 follow-up), so a set target scope yields
- *  an honest `unknown`, never a fabricated ok. Never throws. */
-export function anchorScopeNoteFragment(targetScope: TargetScope | null | undefined, anchorScope: TargetScope | null = null): string {
+ *  The anchor side defaults to null: with no sizing version linked to the
+ *  opportunity (amendment slice A unlinked / legacy) a set target scope
+ *  yields an honest `unknown`, never a fabricated ok. Never throws. */
+export function anchorScopeNoteFragment(targetScope: TargetScope | null | undefined, anchorScope: ScopeLike | null = null): string {
   if (!targetScope) return "";
   const v = compareAnchorScope(anchorScope, targetScope);
   return `; anchor_scope=${v.status}; anchor_scope_reason=${v.reason}`;
@@ -106,12 +122,12 @@ export interface AnchorScopeFlag {
 }
 
 /** Live read-model truth (design §5.2b): recomputed from stored data on every
- *  read so the flag updates when a person sets the scope, without
- *  regenerating. Today's anchor side is always undeclared (no scoped sizing
- *  is linked — OPEN-3), so the flag is `unknown` until a person sets the
- *  target scope AND a scoped anchor lands; it stays visible as
- *  confidence-lowering evidence, never a block. Returns null when the project
- *  has no source opportunity at all. */
+ *  read so the flag updates when a person sets the scope or the link, without
+ *  regenerating. The anchor side is the opportunity's LINKED sizing version
+ *  (amendment slice A); unlinked it stays null and the flag is `unknown`
+ *  until a person sets the target scope AND a scoped anchor lands; it stays
+ *  visible as confidence-lowering evidence, never a block. Returns null when
+ *  the project has no source opportunity at all. */
 export function resolveAnchorScopeFlag(db: Database, projectId: string): AnchorScopeFlag | null {
   const row = db
     .query(
@@ -125,9 +141,11 @@ export function resolveAnchorScopeFlag(db: Database, projectId: string): AnchorS
   } catch {
     targetScope = null; // hand-written wrong-shape column: unknown, never a read failure
   }
-  // Anchor scope: no opportunity→sizing-version reference exists (OPEN-3);
-  // when it lands, extractSizingVersionScope(version.payload) feeds here.
-  const anchorScope = null;
+  // Anchor scope: the opportunity's LINKED sizing version (amendment slice A).
+  // Unlinked (or a deleted version row / unparsable payload) → null → honest
+  // `unknown`; linked, the pinned version's declared scope decides
+  // ok / mismatch. Bit-identical when unlinked.
+  const anchorScope = resolveLinkedAnchorScope(db, row.opp_id);
   const v = compareAnchorScope(anchorScope, targetScope);
   return {
     status: v.status,
