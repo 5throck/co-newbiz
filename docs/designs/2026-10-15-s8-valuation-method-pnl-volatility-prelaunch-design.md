@@ -119,7 +119,7 @@ The pin carries the S5 run reference: S8 consumes `pin.s5_sim_run_id`, not "the 
 
 ### 4A.9 Switching a project to the pinned path
 
-Opt-in per project by a person (`bc.s5_source = 1`, pinned), default 0 (copy). New projects may default to pinned only by a later decider choice. `s5_pnl` (§5) and `split` (§7) require the pinned path; the existing `s5_plan` / `s5_plan_full` bases run on whichever path is active (on the pinned path they read the same vectors from the source, so results equal the copy path when the copy is fresh — verified by a parity test in Slice 0).
+**Amended 2026-10-16 (ADR-0178 amendment; DEC-20261016-01): the pinned path is the DEFAULT, not opt-in.** For every Green Field project with an importable S5 plan — existing projects included — the pinned-reference read path and the unified S5-plan investment basis are the default from the next generation (`bc.s5_source` defaults to pinned; auto-switch, not new promotions only). The person retains `복사본으로 되돌리기` (explicit revert, audited `s5_plan_pin.disconnected`); a reverted project can be reconnected by pressing `S5와 연결하기` again. Existing cases, simulations and adopted results are never recalculated silently by the switch; regeneration reflects the new basis. Projects with no importable S5 plan stay on the ratio estimate. The original opt-in wording (`bc.s5_source = 1` chosen per project by a person, default 0, "new projects may default to pinned only by a later decider choice") is superseded by this amendment. The investment basis is now the single `S5 투자 계획` (stored `s5_plan_full` code; the capex-only variant is a legacy stored value moved to unified on the next connect — PR #594). `s5_pnl` (§5) and `split` (§7) still require the pinned path; on the pinned path the plan bases read the same vectors from the source, so results equal the copy path when the copy is fresh — verified by a parity test in Slice 0.
 
 ### 4A.10 Consumers of the copied `greenfield_cost` model (graft grep, 2026-10-15)
 
@@ -229,11 +229,13 @@ The revenue draw (S8 rng stream) and the S5-run draws (S5 seed) are independent 
 
 The re-import action merged in PR #590 is not redesigned; §4A.8 states how it is absorbed: unchanged until Slice 0, then the same button re-pins (and refreshes the compat copy) for pinned projects, and behaves as today for unpinned projects.
 
+Amended 2026-10-16: with the linkage default flipped (§4A.9), the connect/re-pin action is now the **default path** and the copy is the exception. A Green Field project with an importable S5 plan is connected (pinned + unified `S5 투자 계획` basis) by default from its next generation; `복사본으로 되돌리기` is the explicit, audited exception, and unpinned (copy-path) behavior survives only through that revert or for projects with no importable S5 plan.
+
 ## 12. Slices (reordered)
 
 | Slice | Scope | Behavior change | Migration |
 |---|---|---|---|
-| 0 | Golden tests freezing current outputs (all bases, compat path, BF); `s5_plan_pin` table with snapshot JSON; `plan_hash` = hash of `loadInvestmentVectorsInput`; pinned branch in `resolveS5InvestmentPlan` / `resolveBusinessCaseParams` / `buildS8JobSpec` / `defaultExecutor`; pinned run in `resolveS5SimConsumption`; stale rules §4A.4; `최신 S5로 갱신` re-pin (absorbs PR #590 button) with diff, audit, analyst+ human-only; `bc.s5_source` opt-in; promotion writes the initial pin; parity test copy-path vs pinned-path for `s5_plan` / `s5_plan_full` | None until a person sets `bc.s5_source = 1`; parity test guarantees equal results on a fresh copy | **Yes — `s5_plan_pin` incl. snapshot (this slice)** |
+| 0 | Golden tests freezing current outputs (all bases, compat path, BF); `s5_plan_pin` table with snapshot JSON; `plan_hash` = hash of `loadInvestmentVectorsInput`; pinned branch in `resolveS5InvestmentPlan` / `resolveBusinessCaseParams` / `buildS8JobSpec` / `defaultExecutor`; pinned run in `resolveS5SimConsumption`; stale rules §4A.4; `최신 S5로 갱신` re-pin (absorbs PR #590 button) with diff, audit, analyst+ human-only; `bc.s5_source` opt-in; promotion writes the initial pin; parity test copy-path vs pinned-path for `s5_plan` / `s5_plan_full` | None until a person sets `bc.s5_source = 1` (as shipped; superseded by the 2026-10-16 default flip — see below); parity test guarantees equal results on a fresh copy | **Yes — `s5_plan_pin` incl. snapshot (this slice)** |
 | 1 | `startYear: 0` pre-launch flag (validator, `preLaunchAmountOf`, S5 UI option/tile, Y0 in S5 vectors, simulation bands and `plan_hash`); copy and re-import accept 0 | None for S8; S5 summary/bands show Y0 only when a person marks a line | None (`start_year` has no CHECK) |
 | 2 | `s5_pnl` basis, GF only, pinned path required: plan lines as P&L, utilization on revenue only, ramped-revenue ratio fallback, year 0 = pre-launch, payback guard, pre-tax/terminal-margin/year-0 labels | Only for projects a person switches to `s5_pnl` | None |
 | 3 | `vol_mode = split`, pinned path required: shared `drawInvestmentVectorsPerDraw`; S8 recomputes per-year per-category draw vectors of the pinned run from seed at the pinned source (input-hash check), applied to all plan cost lines incl. staffing and Y0; fallback-year and no-run labels; revenue sigma human-confirmed path (0-50%, source note, truncation at 0 recorded); run-note fields | Only when a person sets split mode | None |
@@ -241,6 +243,8 @@ The re-import action merged in PR #590 is not redesigned; §4A.8 states how it i
 | 5 (optional) | Brown Field: acquisition EV + separate post-close pre-launch lines | Only on decider opt-in | TBD |
 
 Slice 0 must land before Slice 1 is used by S8 (Slice 1 alone is S5-only and safe). Each slice is independently shippable and behavior-preserving by default.
+
+Default flip (amendment 2026-10-16, before Slice 2): Slice 0's opt-in wording above is superseded — the pinned branch is the DEFAULT. Implementation consequence: the four generator consumers listed in §4A.10 (`resolveS5InvestmentPlan`, `resolveBusinessCaseParams`, `buildS8JobSpec`, `defaultExecutor`) take the pinned branch by default whenever a current pin exists, and the promotion copy keeps being written as the compat path plus the initial pin (revert via `복사본으로 되돌리기` returns a project to the copy branch).
 
 ## 13. Honest limits
 
@@ -279,7 +283,7 @@ Resolved at acceptance (chat 2026-10-15, "승인 + OPEN-1~3 추천안"):
 | ID | Decision |
 |---|---|
 | OPEN-1 | `s5_plan_pin` stores a snapshot JSON of the pinned S5 input (the `loadInvestmentVectorsInput` result) alongside `plan_hash`, in the Slice 0 migration; S8 computes against the snapshot, so the pinned version stays re-readable after S5 is edited |
-| OPEN-2 | Copy path stays the default for Green Field projects promoted after Slice 0 until Slices 0-1 have run on real projects; flipping the default is a later decision |
+| OPEN-2 | Copy path stays the default for Green Field projects promoted after Slice 0 until Slices 0-1 have run on real projects; flipping the default is a later decision — **amended 2026-10-16: reversed; the pinned path is the default for all Green Field projects with an importable S5 plan, existing included, from the next generation (ADR-0178 amendment, DEC-20261016-01)** |
 | OPEN-3 | Re-pin by a human with analyst role or above on the project; no agent/MCP path |
 
 Remaining open decisions: none.

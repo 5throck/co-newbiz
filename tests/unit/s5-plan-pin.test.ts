@@ -601,3 +601,51 @@ describe("verification (c): which model the S10 carry can read", () => {
     expect(outcome).toBe("adopted");
   });
 });
+
+// -- growth rate preservation (copy + pin parity) ------------------------------------------------
+describe("growth rate is preserved by the copy and the pin snapshot", () => {
+  test("S5 manual-line growthRate survives promotion, the pin snapshot, and the pinned plan vectors", async () => {
+    const LINES_G = [
+      ml("Grow", "capex", 100, "yearly", 1, 3),
+      { line: "GrowOpex", category: "opex", amount: 50, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly", startYear: 1, endYear: 3, growthRate: 0.05 },
+      { line: "BadGrowth", category: "labor", amount: 10, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly", startYear: 1, growthRate: -0.5 },
+      { line: "HugeGrowth", category: "labor", amount: 10, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly", startYear: 1, growthRate: 5 },
+      { line: "NanGrowth", category: "labor", amount: 10, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly", startYear: 1, growthRate: Number.NaN },
+    ];
+    const opp = makeOpp("greenfield", LINES_G, false);
+    const pid = promote(opp);
+    // copy path: the model's rows carry the S5 line's own rate (clamped to [0,1])
+    const copyModel = db.query("SELECT id FROM business_case_model WHERE project_id = ? AND kind = 'greenfield_cost' AND archived_at IS NULL").get(pid) as { id: string };
+    const growthOf = (mid: string) => db.query("SELECT name, growth_rate FROM business_case_line WHERE model_id = ? ORDER BY name").all(mid) as Array<{ name: string; growth_rate: number }>;
+    expect(growthOf(copyModel.id)).toEqual([
+      { name: "BadGrowth", growth_rate: 0 },     // negative -> 0, never fabricated
+      { name: "Grow", growth_rate: 0 },
+      { name: "GrowOpex", growth_rate: 0.05 },
+      { name: "HugeGrowth", growth_rate: 1 },    // > 1 -> clamped to 1
+      { name: "NanGrowth", growth_rate: 0 },
+    ]);
+    // pin snapshot path: pinPlanLinesOf preserves the same rate
+    const live = inputLib.loadInvestmentVectorsInput(db, opp)!;
+    const derived = pinLib.pinPlanLinesOf(live).lines;
+    expect(derived.find((l) => l.category === "opex")!.growth_rate).toBe(0.05);
+    expect(derived.filter((l) => l.category === "labor").map((l) => l.growth_rate).sort()).toEqual([0, 0, 1]); // invalid -> 0, huge -> clamped to 1
+    // parity through the S8 read: pinned vectors equal the copy's (both compound the growth)
+    const copy = gen.resolveS5InvestmentPlan(db, pid)!;
+    await optIn(pid);
+    const pinned = gen.resolveS5InvestmentPlan(db, pid)!;
+    expect(pinned.pinId).toBeDefined();
+    expect(planCmp(pinned)).toEqual(planCmp(copy));
+  });
+
+  test("growth changes the plan vectors (compounding is live, not a no-op)", async () => {
+    const mk = (growthRate: number) => [
+      { line: "L", category: "opex", amount: 100, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly", startYear: 1, endYear: 3, growthRate },
+    ];
+    const withGrowth = gen.resolveS5InvestmentPlan(db, promote(makeOpp("greenfield", mk(0.1))))!;
+    const without = gen.resolveS5InvestmentPlan(db, promote(makeOpp("greenfield", mk(undefined))))!;
+    // horizon is 5 (plan meta default): years past the line's end stay 0; floats to 6 dp
+    expect(withGrowth.laborOpexByYear.length).toBe(5);
+    withGrowth.laborOpexByYear.forEach((v, i) => expect(v).toBeCloseTo([100, 110, 121, 0, 0][i], 6));
+    without.laborOpexByYear.forEach((v, i) => expect(v).toBeCloseTo([100, 100, 100, 0, 0][i], 6));
+  });
+});

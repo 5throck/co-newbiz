@@ -97,6 +97,24 @@ describe("promotion parity", () => {
     const audits = db.query("SELECT action FROM audit_log WHERE action = 'greenfield_cost.promotion_skipped' AND target LIKE ?").all(`${(db.query("SELECT source_opportunity_id AS o FROM md_project WHERE id = ?").get(pid) as { o: string }).o}:%`);
     expect(audits.length).toBe(2);
   });
+
+  test("promotion copies the S5 line's own growth rate (validated, clamped to [0,1])", () => {
+    const LINES_G = [
+      { line: "Grow", category: "capex", amount: 100, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly", startYear: 1, endYear: 3, growthRate: 0.05 },
+      { line: "Neg", category: "labor", amount: 10, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly", startYear: 1, growthRate: -0.5 },
+      { line: "Huge", category: "labor", amount: 10, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly", startYear: 1, growthRate: 5 },
+      { line: "Text", category: "labor", amount: 10, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly", startYear: 1, growthRate: "0.1" },
+    ];
+    const pid = promote(makeOpp("greenfield", LINES_G));
+    const [m] = models(pid);
+    const growth = db.query("SELECT name, growth_rate FROM business_case_line WHERE model_id = ? ORDER BY name").all(m.id) as Array<{ name: string; growth_rate: number }>;
+    expect(growth).toEqual([
+      { name: "Grow", growth_rate: 0.05 },  // the S5 line's own rate, copied
+      { name: "Huge", growth_rate: 1 },     // > 1 clamped to 1
+      { name: "Neg", growth_rate: 0 },      // negative -> 0, never fabricated
+      { name: "Text", growth_rate: 0 },     // non-numeric -> 0
+    ]);
+  });
 });
 
 describe("reimport", () => {
