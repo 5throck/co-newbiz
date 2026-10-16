@@ -152,6 +152,8 @@ interface CasesResponse {
   engines_mixed?: boolean;
   methods_mixed?: boolean;
   escalated_cagr_pct: number | null;
+  /** 2026-10-16: source opportunity id — builds the S5 투자비 탭 deep link (read-only lines view). */
+  source_opportunity_id?: string | null;
   /** ADR-0159: per-case goal attainment keyed by case id (absent/empty = no goals). */
   goal_attainment?: Record<string, CaseAttainmentEntry[]>;
   goal_count?: number;
@@ -167,6 +169,8 @@ const SCENARIOS = ["base", "upside", "downside"] as const;
 const SCEN_LABEL: Record<string, string> = { base: "기본(Base)", upside: "상승(Upside)", downside: "하락(Downside)" };
 const ENGINE_LABEL: Record<string, string> = { "python-sim-engine": "Python 엔진", "ts-fallback": "TS 대체 엔진", mixed: "혼합" };
 const VARIANT_LABEL: Record<string, string> = { market_forward: "시장 기반", historical: "과거 기반" };
+// 라인 읽기 전용 표의 분류 표기 (라인 category는 5종 — labor/opex/capex/revenue/gov_rnd).
+const LINE_CATEGORY_LABEL: Record<string, string> = { labor: "인건비", opex: "운영비", capex: "설비투자", revenue: "매출", gov_rnd: "정부 R&D" };
 
 const fmt = formatKrwMillionsPlain;
 const UnitNote = () => <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">({KRW_MILLIONS_UNIT})</span>;
@@ -226,6 +230,17 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   const [editing, setEditing] = useState<{ modelId: string; text: string; label: string } | null>(null);
   const editorSectionRef = useRef<HTMLElement>(null);
   const editorTextRef = useRef<HTMLTextAreaElement>(null);
+  // ADR-0178 (decider decision 2026-10-16): Green Field 라인 읽기 전용 보기 — JSON 편집기 대신
+  // 라인 표 + S5 투자비 탭 안내. pin이 재평가 필요 상태면 S5 연결 블록의 `최신 S5로 갱신` 안내를 덧붙인다.
+  const [viewing, setViewing] = useState<{ modelId: string; label: string; lines: LineRow[] } | null>(null);
+  const [pinStale, setPinStale] = useState(false);
+  const viewingSectionRef = useRef<HTMLElement>(null);
+  const viewingModelId = viewing?.modelId ?? null;
+  useEffect(() => {
+    if (!viewingModelId) return;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    viewingSectionRef.current?.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+  }, [viewingModelId]);
   // ADR-0143 — brownfield 대상 축: 비교 탭의 선정 근거 입력과 시나리오
   // 매트릭스의 대상 필터. 기본 필터는 선정 대상(없으면 권고/1순위 대상).
   const [targetFilter, setTargetFilter] = useState<string | null>(null);
@@ -330,6 +345,20 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
     );
   }
 
+  // ADR-0178: Green Field는 라인을 편집하지 않는다 — 읽기 전용 보기 + S5 투자비 탭 안내.
+  // pin 재평가 필요 여부는 params GET의 s5_pin 상태로만 판단(표시 전용).
+  function startView(c: CaseView) {
+    const label = `${c.target_name ?? "대상 미지정"} · ${c.scenario ? `${SCEN_LABEL[c.scenario] ?? c.scenario} · ` : ""}${VARIANT_LABEL[c.variant] ?? c.variant}`;
+    setViewing({ modelId: c.id, label, lines: c.lines });
+    setPinStale(false);
+    api.get<{ s5_pin?: { pin: unknown; state: string } | null }>(`/api/projects/${encodeURIComponent(projectId)}/business-case/params`)
+      .then((r) => {
+        const pin = r.data.s5_pin ?? null;
+        setPinStale(!!pin?.pin && pin.state === "stale");
+      })
+    .catch(() => setPinStale(false));
+  }
+
   function startEdit(c: CaseView) {
     const label = `${c.target_name ?? "대상 미지정"} · ${c.scenario ? `${SCEN_LABEL[c.scenario] ?? c.scenario} · ` : ""}${VARIANT_LABEL[c.variant] ?? c.variant}`;
     setEditing({ modelId: c.id, text: JSON.stringify(c.lines.map(({ id: _id, ...l }) => l), null, 2), label });
@@ -420,6 +449,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
     return data?.target_selection?.targetId ?? targets[0]?.targetId ?? null;
   }, [targets, targetFilter, data?.target_selection?.targetId]);
   const evBand = data?.evRevenueBand;
+  const sourceOppId = data?.source_opportunity_id ?? null; // ADR-0178: S5 investment-tab deep link (Green Field only)
   const refBand = evBand?.reference ?? ACQ_BAND;
   const selectedTargetName = targets.find((t) => t.targetId === data?.target_selection?.targetId)?.companyName ?? null;
 
@@ -1033,7 +1063,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                                 <RowMenu
                                   label={`${rowCtx} 작업`}
                                   items={[
-                                    { key: "lines", label: "라인 편집", onSelect: () => startEdit(c) },
+                                    { key: "lines", label: greenfield ? "라인 보기" : "라인 편집", onSelect: () => (greenfield ? startView(c) : startEdit(c)) },
                                     { key: "delete", label: "삭제", danger: true, separatorBefore: true, disabled: busy, onSelect: () => remove(c) },
                                   ]}
                                 />
@@ -1083,6 +1113,70 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
       {data && data.cases.length === 0 && (
         <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">등록된 Business Case가 없습니다 — 자동 생성을 실행하거나 수동으로 추가하세요.</p>
+      )}
+
+      {/* ADR-0178: Green Field 라인 읽기 전용 보기 — S5 단일 원본 안내 + S5 투자비 탭 링크. */}
+      {viewing && (
+        <section
+          ref={viewingSectionRef}
+          className="market-section sizing-step mt-3 scroll-mt-20"
+          aria-label="투자 라인 (읽기 전용)"
+          data-testid="s8-lines-readonly"
+        >
+          <h3 className="sizing-step-title text-[0.9rem]">투자 라인 (읽기 전용)</h3>
+          <p className="text-[length:var(--fs-caption)] mb-1" data-testid="s8-lines-readonly-caption">
+            <span className="status-chip status-not-started mr-1">S5 단일 원본</span>{" "}
+            편집 대상: <b>{viewing.label}</b> —{" "}
+            {sourceOppId ? (
+              <Link href={`/deals/${encodeURIComponent(sourceOppId)}/s5?tab=investment`} className="text-[color:var(--accent)] font-bold">
+                S5 투자비 탭에서 관리
+              </Link>
+            ) : (
+              <span className="text-[color:var(--muted-fg)]">S5 투자비 탭에서 관리</span>
+            )}
+            .{" "}
+            <span className="text-[color:var(--muted-fg)]">S5가 단일 원본입니다 — 투자비 항목은 S5 투자비 탭에서 관리됩니다.</span>
+          </p>
+          {pinStale && (
+            <p
+              className="status-chip status-amber block mt-1 w-fit max-w-full whitespace-normal [overflow-wrap:anywhere]"
+              data-testid="s8-lines-readonly-stale"
+              role="note"
+            >
+              <span aria-hidden="true">⏱</span> 고정 참조가 재평가 필요 상태입니다 — S5 연결 블록의 `최신 S5로 갱신`으로 갱신 후 `자동 생성`을 다시 실행하세요.{" "}
+              <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("overview")}>S5 연결 블록으로 →</button>
+            </p>
+          )}
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+            <table className="data-table" data-testid="s8-lines-readonly-table">
+              <thead>
+                <tr>
+                  <th scope="col">분류</th>
+                  <th scope="col">항목명</th>
+                  <th scope="col" className="num">연간 금액 (백만원)</th>
+                  <th scope="col" className="num">시작 연도</th>
+                  <th scope="col" className="num">성장률</th>
+                  <th scope="col">비고</th>
+                </tr>
+              </thead>
+              <tbody>
+                {viewing.lines.map((l) => (
+                  <tr key={l.id} data-testid="s8-lines-readonly-row">
+                    <td>{LINE_CATEGORY_LABEL[l.category] ?? l.category}</td>
+                    <td>{l.name}</td>
+                    <td className="num mono-num">{fmt(l.annual_amount_krw_m)}</td>
+                    <td className="num">{l.start_year}</td>
+                    <td className="num">{l.growth_rate ? pct1(l.growth_rate) : "—"}</td>
+                    <td className="cell-clamp-3">{l.note ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" role="note">
+            S8에서는 이 라인을 편집할 수 없습니다 — 편집은 S5 투자비 탭에서, 계산 반영은 `자동 생성`으로 이루어집니다.
+          </p>
+        </section>
       )}
 
       {editing && (

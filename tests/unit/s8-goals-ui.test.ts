@@ -160,13 +160,14 @@ describe("S8 scenario row actions (RowMenu)", () => {
   test("keeps adopt as a visible button and moves lines/delete into RowMenu", () => {
     expect(src).toContain("<RowMenu");
     expect(src).toMatch(/key: "delete", label: "삭제", danger: true[^}]*onSelect: \(\) => remove\(c\)/);
-    expect(src).toMatch(/key: "lines", label: "라인 편집"[^}]*startEdit\(c\)/);
+    // ADR-0178 (2026-10-16): the lines action is conditional — Green Field opens the
+    // read-only view, Brown Field keeps the editor.
+    expect(src).toMatch(/key: "lines", label: greenfield \? "라인 보기" : "라인 편집"[^}]*startView\(c\) : startEdit\(c\)/);
     expect(src).toMatch(/aria-label=\{`\$\{rowCtx\} 채택`\}[^>]*onClick=\{\(\) => adopt\(/);
     expect(src).not.toMatch(/btn-danger btn-sm[^\n]*remove\(c\)/);
   });
-  test("lines action is labelled 라인 편집 and scrolls/focuses the editor, naming the row", () => {
-    expect(src).toContain('label: "라인 편집"');
-    expect(src).not.toContain('label: "라인 보기"');
+  test("lines action is labelled per track and scrolls/focuses the editor, naming the row", () => {
+    expect(src).toContain('label: greenfield ? "라인 보기" : "라인 편집"');
     expect(src).toMatch(/scrollIntoView\(\{ block: "start"/);
     expect(src).toContain("prefers-reduced-motion");
     expect(src).toContain("editorTextRef.current?.focus");
