@@ -26,7 +26,7 @@ interface ResolvedParams {
   opexRatio: number; opexSource: string;
   capexRatio: number; capexSource: string;
   initialInvestmentRatio: number; initialInvestmentSource: string;
-  investmentBasis: "ratio" | "s5_plan" | "s5_plan_full";
+  investmentBasis: "ratio" | "s5_plan" | "s5_plan_full" | "s5_pnl";
   s5PlanHorizonYears: number | null;
   acquisitionEvRevenue: number | null; acquisitionEvRevenueSource: string;
   rampUp: number[]; rampSource: string;
@@ -80,6 +80,11 @@ export function ValuationMethodology({
   // ADR-0174 — 투자비 기준이 S5 투자 계획이면 year-0 투자와 연도별 capex가 S5
   // 스케줄로 대체됩니다 (OD-3: 계획 Y1 집행액은 year-0 유출로 계상).
   const s5Basis = params?.investmentBasis != null && params.investmentBasis !== "ratio";
+  const pnlBasis = params?.investmentBasis === "s5_pnl";
+  // ADR-0178 slice 2 - s5_pnl honesty labels: pre-tax proxy + terminal-margin flag (flag only).
+  const preTaxNote = pnlBasis ? " · 세전 현금 근사 (세금 미반영)" : "";
+  const termFlag = pnlBasis ? " · 처분가치 배수와 계획 마진 불일치 가능" : "";
+  const preLaunchKrwM = noteNumber(n.prelaunch_krw_m);
   const horizonMismatch = params?.s5PlanHorizonYears != null && params.s5PlanHorizonYears !== horizon;
 
   // 두 관점 차이의 원인 수치 — 같은 앵커·인수가·마진에서 성장률만 다르다.
@@ -134,12 +139,16 @@ export function ValuationMethodology({
             <tr>
               <td>④ 손익 구조</td>
               <td>
-                {s5Basis
-                  ? "FCF = (매출 − 운영비) × 가동률 − S5 계획 연도별 투자비 — 계획이 있는 연도는 매출×설비투자율을 대체합니다"
-                  : "FCF = 매출 × (1 − 운영비율 − 설비투자율) × 가동률(램프업)"}
+                {pnlBasis
+                  ? "FCF = 매출 × 가동률 − S5 계획 운영비(인건비·운영비·정부R&D) − S5 계획 설비투자 — 가동률은 매출에만 적용; 계획 없는 연도는 가동률 반영 매출 × 비율로 대체"
+                  : s5Basis
+                    ? "FCF = (매출 − 운영비) × 가동률 − S5 계획 연도별 투자비 — 계획이 있는 연도는 매출×설비투자율을 대체합니다"
+                    : "FCF = 매출 × (1 − 운영비율 − 설비투자율) × 가동률(램프업)"}
               </td>
               <td className="num mono-num">
-                {s5Basis
+                {pnlBasis
+                  ? `S5 계획 손익 적용 (가동률은 매출에만)${n.pnl_fallback ? ` · 비율 대체 ${n.pnl_fallback} 연도` : ""}${preLaunchKrwM != null ? ` · 출시 전 투자 ${억(preLaunchKrwM)}` : ""}${preLaunchKrwM === 0 ? " (출시 전 투자 미지정)" : ""}`
+                  : s5Basis
                   ? `S5 투자 계획 스케줄 적용${params?.investmentBasis === "s5_plan_full" ? " · 인건비/운영비도 계획값 사용" : params?.investmentBasis === "s5_plan" ? " · 인건비/운영비는 비율 (예전 기준: 설비투자만)" : ""}` + (params ? ` · 가동률 ${params.rampUp.map((v) => v.toFixed(1)).join("→")}` : "")
                   : <>
                     운영비 {params ? pct1(params.opexRatio) : "—"} · 설비투자 {params ? pct1(params.capexRatio) : "—"} · 가동률 {params ? params.rampUp.map((v) => v.toFixed(1)).join("→") : "—"}
@@ -147,6 +156,9 @@ export function ValuationMethodology({
                 {s5Tag("opex")}
                 {s5Tag("capex")}
                 {s5Tag("ramp")}
+                {(preTaxNote || termFlag) && (
+                  <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{preTaxNote}{termFlag}</div>
+                )}
               </td>
             </tr>
             <tr>
@@ -154,16 +166,20 @@ export function ValuationMethodology({
               <td>
                 {isAcquisition
                   ? "인수 기업가치 = 매출 앵커 × EV/Revenue 배수 (시나리오와 무관 — 가격은 한 번 협상)"
-                  : s5Basis
-                    ? "초기투자 = S5 투자 계획 1차년도(Y1) 집행액 — 계획 Y1 지출은 year-0 유출로 계상 (OD-3)"
-                    : "초기투자 = year-1 매출 × 비율 (ADR-0106)"}
+                  : pnlBasis
+                    ? "초기투자 = 출시 전(start-year 0) 투자 합계 — year-0 무할인 계상 (OD-3); 0이면 회수기간은 해당 없음"
+                    : s5Basis
+                      ? "초기투자 = S5 투자 계획 1차년도(Y1) 집행액 — 계획 Y1 지출은 year-0 유출로 계상 (OD-3)"
+                      : "초기투자 = year-1 매출 × 비율 (ADR-0106)"}
               </td>
               <td className="num mono-num">
                 {isAcquisition
                   ? `${acqEv!.toFixed(2)}배 = ${fmtNpvEok(revLine!.annual_amount_krw_m * acqEv!)}`
-                  : s5Basis
-                    ? "S5 계획 Y1 집행액 (year-0)"
-                    : params ? `매출의 ${(params.initialInvestmentRatio * 100).toFixed(0)}%` : "—"}
+                  : pnlBasis
+                    ? (preLaunchKrwM != null ? `${억(preLaunchKrwM)} (year-0${preLaunchKrwM === 0 ? " — 출시 전 투자 미지정" : ""})` : "출시 전 투자 합계 (year-0)")
+                    : s5Basis
+                      ? "S5 계획 Y1 집행액 (year-0)"
+                      : params ? `매출의 ${(params.initialInvestmentRatio * 100).toFixed(0)}%` : "—"}
                 {s5Tag("initial")}
               </td>
             </tr>

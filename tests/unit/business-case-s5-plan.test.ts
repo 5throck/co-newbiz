@@ -67,10 +67,11 @@ function inputsFor(basis: BusinessCaseParams["investmentBasis"], withPlan: boole
 
 describe("investmentBasisOfCode", () => {
   test("numeric codes round-trip; anything else falls back to ratio", () => {
-    expect(INVESTMENT_BASIS_CODES).toEqual({ ratio: 0, s5_plan: 1, s5_plan_full: 2 });
+    expect(INVESTMENT_BASIS_CODES).toEqual({ ratio: 0, s5_plan: 1, s5_plan_full: 2, s5_pnl: 3 });
     expect(investmentBasisOfCode(0)).toBe("ratio");
     expect(investmentBasisOfCode(1)).toBe("s5_plan");
     expect(investmentBasisOfCode(2)).toEqual("s5_plan_full");
+    expect(investmentBasisOfCode(3)).toBe("s5_pnl");
     expect(investmentBasisOfCode(null)).toBe("ratio");
   });
 });
