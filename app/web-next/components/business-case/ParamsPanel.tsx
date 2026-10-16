@@ -69,6 +69,8 @@ interface ResolvedParams {
   sigmaOverride: number | null; sigmaOverrideSource: string;
   horizonYears: number; horizonSource: string;
   iterations: number; iterationsSource: string;
+  irrFlagThreshold?: number; irrFlagThresholdSource?: string;
+  irrCautionThreshold?: number; irrCautionThresholdSource?: string;
 }
 
 interface CaseSummary {
@@ -200,6 +202,9 @@ function CurrentParamsTable({ resolved, track, s5Pin, s5Run, s5PinCapexTotal }: 
       lines: [
         sigmaRow,
         { key: "iterations", label: "반복 수", value: resolved.iterations.toLocaleString(), numeric: true, unit: "회", source: <SourceChip source={resolved.iterationsSource} />, s5Key: "iterations" },
+        // ADR-0179 slice 1 — IRR ceiling guard thresholds. Person-settable display metadata.
+        { key: "irr_flag", label: "IRR 극단값 기준", value: resolved.irrFlagThreshold != null ? pct1(resolved.irrFlagThreshold) : "100.0%", numeric: true, unit: "/년", source: <SourceChip source={resolved.irrFlagThresholdSource ?? "기본값"} /> },
+        { key: "irr_caution", label: "IRR 주의 기준", value: resolved.irrCautionThreshold != null ? pct1(resolved.irrCautionThreshold) : "50.0%", numeric: true, unit: "/년", source: <SourceChip source={resolved.irrCautionThresholdSource ?? "기본값"} /> },
         { key: "horizon", label: "회수 기간", value: String(resolved.horizonYears), numeric: true, unit: "년", source: <SourceChip source={resolved.horizonSource} /> },
         ...(!gf ? [
           { key: "fade", label: "교차검증 창구 (페이드 DCF)", value: String(resolved.fadeHorizonYears), numeric: true, unit: "년", source: <SourceChip source={resolved.fadeHorizonSource} /> } as ParamLine,
@@ -436,6 +441,8 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
             <label className="grid gap-1 text-sm">변동성 오버라이드 (비율)<input className="form-input" value={form.sigma_override ?? ""} onChange={(e) => setForm({ ...form, sigma_override: e.target.value })} placeholder="0.03" /></label>
             <label className="grid gap-1 text-sm">회수 기간 (년)<input className="form-input" value={form.horizon_years ?? ""} onChange={(e) => setForm({ ...form, horizon_years: e.target.value })} placeholder="5" /></label>
             <label className="grid gap-1 text-sm">반복 수<input className="form-input" value={form.iterations ?? ""} onChange={(e) => setForm({ ...form, iterations: e.target.value })} placeholder="2000" /></label>
+            <label className="grid gap-1 text-sm">IRR 극단값 기준 (비율, 예: 1.0 = 100%/년)<input className="form-input" value={form.irr_flag_threshold ?? ""} onChange={(e) => setForm({ ...form, irr_flag_threshold: e.target.value })} placeholder="1.0" /></label>
+            <label className="grid gap-1 text-sm">IRR 주의 기준 (비율, 예: 0.5 = 50%/년)<input className="form-input" value={form.irr_caution_threshold ?? ""} onChange={(e) => setForm({ ...form, irr_caution_threshold: e.target.value })} placeholder="0.5" /></label>
           </div>
           <div>
             <p className="text-sm text-[color:var(--muted-fg)] mb-1">가동률 램프업 (연도별, 일부만 입력 가능 — 예: 0.4, 0.7)</p>

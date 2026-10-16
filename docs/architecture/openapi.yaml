@@ -2913,6 +2913,68 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/opportunities/{id}/target-scope:
+    get:
+      operationId: getOpportunityTargetScope
+      summary: "The structured target scope of the promoting opportunity (ADR-0179 slice 1): {regions[], segments[], unit_basis, set_by, set_at} or null while no person has set one. NULL means scope unknown, never a silent OK. GET is open to anyone who can see the opportunity; agents may read."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/OK'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      operationId: putOpportunityTargetScope
+      summary: "HUMAN-ONLY (boundary #2; in HUMAN_ONLY_ROUTES, agent principals get 403 human_only). A person (analyst+) records the target scope: regions from the fixed enum (kr|eu|us|cn|sea|worldwide; worldwide mutually exclusive), segments as free tags (trimmed, deduped, <=100 chars), unit_basis (krw_m_year|units_year|usd_m_year). set_by/set_at are stamped server-side; audit opportunity_target_scope.write. Invalid shapes are 400 invalid_request - never silently dropped. Display metadata for the ADR-0179 flags; generation arithmetic is untouched."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [regions, segments, unit_basis]
+              properties:
+                regions:
+                  type: array
+                  minItems: 1
+                  items: { type: string, enum: [kr, eu, us, cn, sea, worldwide] }
+                segments:
+                  type: array
+                  items: { type: string, maxLength: 100 }
+                unit_basis:
+                  type: string
+                  enum: [krw_m_year, units_year, usd_m_year]
+      responses:
+        '200':
+          $ref: '#/components/responses/OK'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/opportunities/{id}/establishment:
     get:
       operationId: getOpportunityEstablishment
@@ -4810,7 +4872,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       operationId: recordProjectBusinessCaseParams
-      summary: Record a user batch of bc.* parameters on a fresh run (analyst+; rationale required). Includes investment_basis (0=비율 추정 ratio, 1=S5 투자 계획 (legacy, capex-only), 2=S5 투자 계획 (unified - capex + labor/opex), 3=S5 계획 손익 s5_pnl (ADR-0178 slice 2 - Green Field + pinned path ONLY, human-only; agent principal 403, otherwise 400; year-0 = pre-launch total undiscounted, per-year plan P&L with utilization on revenue only, ratio substitution for plan-less years, bep_year NULL when pre-launch is 0); ADR-0174 — since 2026-10-16 the UI offers only 0 and 2; a stored 1 keeps capex-only behavior until re-set) — when not ratio the generator replaces the year-0 ratio investment and capex_ratio with the S5 capex schedule (Y1 spend counted in year 0) and bypasses the python sim engine.
+      summary: Record a user batch of bc.* parameters on a fresh run (analyst+; rationale required). Includes investment_basis (0=비율 추정 ratio, 1=S5 투자 계획 (legacy, capex-only), 2=S5 투자 계획 (unified - capex + labor/opex), 3=S5 계획 손익 s5_pnl (ADR-0178 slice 2 - Green Field + pinned path ONLY, human-only; agent principal 403, otherwise 400; year-0 = pre-launch total undiscounted, per-year plan P&L with utilization on revenue only, ratio substitution for plan-less years, bep_year NULL when pre-launch is 0); ADR-0174 — since 2026-10-16 the UI offers only 0 and 2; a stored 1 keeps capex-only behavior until re-set) — when not ratio the generator replaces the year-0 ratio investment and capex_ratio with the S5 capex schedule (Y1 spend counted in year 0) and bypasses the python sim engine. ADR-0179 slice 1 also accepts irr_flag_threshold (> 0) and irr_caution_threshold (>= 0, flag must stay strictly above caution; both validated before either is written) - the IRR ceiling review guard lines, stored as ratios and display metadata only.
       tags:
         - Analysis
       parameters:

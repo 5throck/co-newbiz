@@ -26,6 +26,8 @@
 // tests/unit/business-case.test.ts proves generation alone produces neither.
 
 import { noteNumber, parseSimNote } from "./sim-note.ts";
+import { irrGuardBand, IRR_CAUTION_THRESHOLD_DEFAULT, IRR_FLAG_THRESHOLD_DEFAULT } from "./irr-guard.ts";
+import { parseTargetScopeJson, type TargetScope } from "./target-scope.ts";
 import { resolveEffectiveCagr } from "./market-calibration.ts";
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
@@ -520,6 +522,10 @@ export interface CaseInputs {
    *  factors. Consulted only under an s5_plan basis with a plan; absent = today's single-point
    *  plan (bit-identical), recorded as `s5_sim=none`. */
   s5Sim?: S5SimConsumption | null;
+  /** ADR-0179 slice 1 — the promoting opportunity's person-set structured
+   *  target scope, passed through for provenance/display (slice 2 consumes
+   *  it against the market anchor). NULL/absent = legacy behavior. */
+  targetScope?: TargetScope | null;
 }
 
 /** Default sales-plan curve (design REQ-W1-2) — utilization by year. */
@@ -692,6 +698,13 @@ export interface BusinessCaseParams {
   horizonSource: string;
   iterations: number;
   iterationsSource: string;
+  /** ADR-0179 slice 1 — IRR ceiling review guard thresholds (ratios). Person-settable
+   *  project assumptions (bc.irr_flag_threshold / bc.irr_caution_threshold); the guard is
+   *  display metadata only — it never recomputes or blocks anything. */
+  irrFlagThreshold: number;
+  irrFlagThresholdSource: string;
+  irrCautionThreshold: number;
+  irrCautionThresholdSource: string;
 }
 
 /** Resolve bc.* user assumptions (design REQ-W6-1 vocabulary) — capture rate
@@ -741,6 +754,8 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
   const sigmaOv = scalar("bc.sigma_override");
   const horizon = ratio("bc.horizon_years", HORIZON_YEARS);
   const iterations = ratio("bc.iterations", MC_ITERATIONS);
+  const irrFlagT = ratio("bc.irr_flag_threshold", IRR_FLAG_THRESHOLD_DEFAULT);
+  const irrCautionT = ratio("bc.irr_caution_threshold", IRR_CAUTION_THRESHOLD_DEFAULT);
   const s5Model = db.query(
     `SELECT horizon_years FROM business_case_model
      WHERE project_id = ? AND kind = 'greenfield_cost' AND target_id IS NULL AND archived_at IS NULL
@@ -784,6 +799,10 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
     horizonSource: horizon.source,
     iterations: Math.min(Math.max(Math.round(iterations.value), 1), 10_000_000),
     iterationsSource: iterations.source,
+    irrFlagThreshold: irrFlagT.value,
+    irrFlagThresholdSource: irrFlagT.source,
+    irrCautionThreshold: irrCautionT.value,
+    irrCautionThresholdSource: irrCautionT.source,
     s5PlanHorizonYears: pinnedHorizon !== null ? Math.min(Math.max(Math.round(pinnedHorizon), 1), 50) : s5Model ? Math.min(Math.max(Math.round(s5Model.horizon_years), 1), 50) : null,
     s5Source: activePin ? "pinned" : "copy",
     s5SourceSource: activePin
@@ -813,6 +832,9 @@ export async function recordBusinessCaseParams(
       sigma_override?: number;
       horizon_years?: number;
       iterations?: number;
+      /** ADR-0179 slice 1 — IRR guard thresholds (ratios). flag > caution validated. */
+      irr_flag_threshold?: number;
+      irr_caution_threshold?: number;
       /** ADR-0174 — 투자비 기준. Stored as the numeric basis code. */
       investment_basis?: InvestmentBasis;
       /** ADR-0178 slice 0 - 0 = promotion copy (default), 1 = pinned S5 reference. A person's opt-in only. */
@@ -867,6 +889,21 @@ export async function recordBusinessCaseParams(
       put(key, value);
     }
   }
+  // ADR-0179 slice 1 — IRR guard thresholds. The flag threshold must stay
+  // strictly above the caution threshold (same ratio convention).
+  // Validate BOTH thresholds before writing either — a rejected request must
+  // not leave a half-updated pair behind (flag above caution, atomically).
+  if (p.irr_flag_threshold !== undefined && (!Number.isFinite(p.irr_flag_threshold) || p.irr_flag_threshold <= 0)) {
+    throw new Error("bc.irr_flag_threshold must be a positive number (ratio)");
+  }
+  if (p.irr_caution_threshold !== undefined && (!Number.isFinite(p.irr_caution_threshold) || p.irr_caution_threshold < 0)) {
+    throw new Error("bc.irr_caution_threshold must be a non-negative number (ratio)");
+  }
+  if (p.irr_flag_threshold !== undefined && p.irr_caution_threshold !== undefined && p.irr_flag_threshold <= p.irr_caution_threshold) {
+    throw new Error("bc.irr_flag_threshold must be greater than bc.irr_caution_threshold");
+  }
+  if (p.irr_flag_threshold !== undefined) put("bc.irr_flag_threshold", p.irr_flag_threshold);
+  if (p.irr_caution_threshold !== undefined) put("bc.irr_caution_threshold", p.irr_caution_threshold);
   if (written.length === 0) throw new Error("no parameters provided");
   return { written, run_id: run.run_id };
 }
@@ -906,6 +943,10 @@ export function resolveBusinessCaseParamsDefaults(): BusinessCaseParams {
     horizonSource: "기본값",
     iterations: MC_ITERATIONS,
     iterationsSource: "기본값",
+    irrFlagThreshold: IRR_FLAG_THRESHOLD_DEFAULT,
+    irrFlagThresholdSource: "기본값",
+    irrCautionThreshold: IRR_CAUTION_THRESHOLD_DEFAULT,
+    irrCautionThresholdSource: "기본값",
   };
 }
 
@@ -1261,11 +1302,11 @@ export function effGrowthDisp(
 export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "growthModel" | "targetId"> {
   const row = getDb()
     .query(
-      `SELECT o.market_size_krw_m, o.growth_rate, p.source_opportunity_id
+      `SELECT o.market_size_krw_m, o.growth_rate, o.target_scope_json, p.source_opportunity_id
        FROM md_project p LEFT JOIN opportunity o ON o.id = p.source_opportunity_id
        WHERE p.id = ?`,
     )
-    .get(projectId) as { market_size_krw_m: number | null; growth_rate: number | null; source_opportunity_id: string | null } | undefined;
+    .get(projectId) as { market_size_krw_m: number | null; growth_rate: number | null; target_scope_json: string | null; source_opportunity_id: string | null } | undefined;
   // Deterministic fallbacks when the promoting opportunity carries no market
   // facts (brownfield promotion path): documented, never random. growth_rate
   // is stored as a RATIO (evidence_var unit 'ratio', migration 0017; seeds
@@ -1290,6 +1331,18 @@ export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "g
     s5Sim: bcParams.investmentBasis !== "ratio" && bcParams.investmentBasis !== "s5_pnl" && s5Plan
       ? s5Plan.pinId ? resolvePinnedS5SimConsumption(getDb(), getCurrentS5PlanPin(getDb(), projectId)!) : resolveS5SimConsumption(getDb(), row?.source_opportunity_id)
       : null,
+    // ADR-0179 slice 1 — the person-set target scope passes through for later
+    // consumption; a NULL or unparsable column never blocks generation (parse
+    // failures degrade to null, the caller sees legacy behavior). The CHECK
+    // constraint should keep invalid JSON out, but generation must be robust
+    // to hand-written rows anyway — hence the defensive try/catch.
+    targetScope: (() => {
+      try {
+        return parseTargetScopeJson(row?.target_scope_json ?? null) ?? null;
+      } catch {
+        return null;
+      }
+    })(),
   };
 }
 
@@ -1678,6 +1731,13 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       const flows = deterministicCashflows(ctx.inputs, ctx.scenario, variant);
       const bc = ctx.inputs.bcParams ?? resolveBusinessCaseParamsDefaults();
       const bepFragment = sim.bepYear != null ? `; bep_year=${sim.bepYear.toFixed(2)}` : "";
+      // ADR-0179 slice 1 — IRR ceiling review guard. Display metadata only:
+      // the fragment is appended ONLY when the guard trips (band non-null) so
+      // legacy notes stay byte-identical, and it never blocks generation, a
+      // gate or a grade.
+      const irrValue = irr(flows);
+      const guardBand = irrGuardBand(irrValue, bc.irrFlagThreshold, bc.irrCautionThreshold);
+      const irrGuardFragment = guardBand ? `; irr_guard=${guardBand}` : "";
       const waccSubject = ctx.inputs.waccSubject?.subject ?? "promoter";
       const tcFragment = ctx.inputs.targetCostWiring
         ? `; tc_gap_ratio=${ctx.inputs.targetCostWiring.gapRatio.toFixed(4)}; tc_downside_opex_uplift=${(ctx.scenario === "downside" ? ctx.inputs.targetCostWiring.uplift : 1).toFixed(4)}`
@@ -1707,14 +1767,14 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       const anchorFragment = ctx.inputs.revenueAnchor
         ? `revenue_anchor=${ctx.inputs.revenueAnchor.source}${acqFragment}${xcheckFragment}`
         : `capture_rate=${bc.captureRate}; capture_source=${bc.captureSource}`;
-      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}; wacc_scope=${ctx.inputs.waccScope?.scope ?? "project"}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; wacc_subject=${waccSubject}; ${anchorFragment}; ramp_source=${bc.rampSource}; ${provenance}${tcFragment}${basisFragment}; engine=${engineMeta.engine}${s5Provenance ? " (S8 엔진 우회 — 연도별 capex 스케줄 미지원, ADR-0174)" : ""}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}`;
+      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}; wacc_scope=${ctx.inputs.waccScope?.scope ?? "project"}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; wacc_subject=${waccSubject}; ${anchorFragment}; ramp_source=${bc.rampSource}; ${provenance}${tcFragment}${basisFragment}; engine=${engineMeta.engine}${s5Provenance ? " (S8 엔진 우회 — 연도별 capex 스케줄 미지원, ADR-0174)" : ""}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}${irrGuardFragment}`;
       db.run(`UPDATE business_case_model SET inputs_json = ? WHERE id = ?`, [JSON.stringify(jobSpec), modelId]);
       for (const pct of ["p05", "p50", "p95"] as const) {
         const isP50 = pct === "p50";
         db.run(
           `INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, unit, irr, note, created_at, bep_year, bep_volume, payback_discounted_years)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-          [ulid(), ctx.inputs.projectId, modelId, ctx.scenario, pct, sim[pct], "KRW_M", isP50 ? irr(flows) : null, note, nowIso(), isP50 ? sim.bepYear : null, isP50 ? sim.bepVolume : null, isP50 ? sim.bepYear : null],
+          [ulid(), ctx.inputs.projectId, modelId, ctx.scenario, pct, sim[pct], "KRW_M", isP50 ? irrValue : null, note, nowIso(), isP50 ? sim.bepYear : null, isP50 ? sim.bepVolume : null, isP50 ? sim.bepYear : null],
         );
       }
       return [

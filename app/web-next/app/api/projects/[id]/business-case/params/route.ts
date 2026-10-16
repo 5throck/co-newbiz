@@ -127,6 +127,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       })(),
       horizon_years: num("horizon_years"),
       iterations: num("iterations"),
+      // ADR-0179 slice 1 — IRR ceiling guard thresholds (ratios). Person-settable
+      // display metadata; flag > caution is validated again in recordBusinessCaseParams.
+      irr_flag_threshold: num("irr_flag_threshold"),
+      irr_caution_threshold: num("irr_caution_threshold"),
       ramp_up: Array.isArray(raw.ramp_up)
         ? (raw.ramp_up as unknown[]).map((v) => {
             const n = Number(v);
