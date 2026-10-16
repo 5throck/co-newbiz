@@ -19,6 +19,7 @@ import { pinnedPlanCapexTotal } from "../../../../../lib/s5-plan-capex.ts";
 import { loadInvestmentVectorsInput } from "../../../../../lib/investment-simulation-input.ts";
 import { planS5Import } from "../../../../../../../db/repositories/s5-cost-import.ts";
 import { resolveAnchorScopeFlag } from "../../../../../lib/anchor-scope.ts";
+import { resolveRatioGuardFlag } from "../../../../../lib/share-guard.ts";
 
 import { badRequest, fail, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 
@@ -72,8 +73,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   // blocks generation, a gate or a grade.
   let anchorScope = null;
   try { anchorScope = resolveAnchorScopeFlag(getDb(), id); } catch { /* omit on read failure */ }
+  // ADR-0179 slice 3: Y1 revenue vs plan-investment ratio guard — additive
+  // display field recomputed live from the latest valuation model's stored
+  // snapshot. Display/evidence only; never blocks generation, a gate or a
+  // grade.
+  let plausibility: ReturnType<typeof resolveRatioGuardFlag> = null;
+  try { plausibility = resolveRatioGuardFlag(getDb(), id); } catch { /* omit on read failure */ }
   return ok(
-    { cases, archived, goal_attainment: goalAttainment, goal_count: goalsResolved.length, legacy_models: listLegacyModels(id), recommended_scenario: recommendedScenario, adoption, target_selection: targetSelection, targets, engines_mixed: enginesMixed, methods_mixed: methodsMixed, escalated_cagr_pct: eff?.source === "escalated" ? eff.cagrPct : null, s5_plan_capex_zero: s5PlanCapexZero, source_opportunity_id: trackRow?.source_opportunity_id ?? null, anchor_scope: anchorScope },
+    { cases, archived, goal_attainment: goalAttainment, goal_count: goalsResolved.length, legacy_models: listLegacyModels(id), recommended_scenario: recommendedScenario, adoption, target_selection: targetSelection, targets, engines_mixed: enginesMixed, methods_mixed: methodsMixed, escalated_cagr_pct: eff?.source === "escalated" ? eff.cagrPct : null, s5_plan_capex_zero: s5PlanCapexZero, source_opportunity_id: trackRow?.source_opportunity_id ?? null, anchor_scope: anchorScope, plausibility },
     200,
     { count: cases.length },
   );

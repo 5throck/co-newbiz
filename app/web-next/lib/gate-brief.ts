@@ -12,6 +12,7 @@ import { listBusinessCases, latestAdoption } from "./business-case.ts";
 import { irrGuardBand, IRR_GUARD_CHIP_LABEL } from "./irr-guard.ts";
 import { resolveAnchorScopeFlag, type AnchorScopeFlag } from "./anchor-scope.ts";
 import { resolveBusinessCaseParams } from "./business-case-generator.ts";
+import { SHARE_UN_SOURCED_LABEL, isShareUnsourced, resolveRatioGuardFlag } from "./share-guard.ts";
 import {
   ATTAINABILITY_GRADE_LABEL, HELD_STATUS_LABEL, NECESSITY_LABEL, NECESSITY_UNSET_LABEL, RESOLUTION_LABEL,
   gapCautions, parseGapRegister, summarizeGap, type CapabilityGapRow,
@@ -235,6 +236,7 @@ function bfSummary(db: Database, oppId: string): string {
 
 // Project-side summaries (import-based — the same data the IC package composes).
 function s8Summary(projectId: string): string {
+  const db = getDb();
   try {
     const { cases, adoption } = { cases: listBusinessCases(projectId).cases, adoption: latestAdoption(projectId) };
     if (cases.length === 0) return "S8 Business Case: 없음";
@@ -250,6 +252,19 @@ function s8Summary(projectId: string): string {
     let scopeFlag: AnchorScopeFlag | null = null;
     try { scopeFlag = resolveAnchorScopeFlag(getDb(), projectId); } catch { scopeFlag = null; }
     const scopeLine = scopeFlag && scopeFlag.status !== "ok" ? [`시장 범위: ${scopeFlag.label} — ${scopeFlag.reason} (참고 정보이며 승인 조건이 아닙니다)`] : [];
+    // ADR-0179 slice 3 - sourced-share and ratio-guard decision-support lines
+    // (design §6.1/§7.1 gate-brief surface). Reference evidence the human
+    // reviewer weighs; never a gate condition.
+    const trackRow = db.query("SELECT track FROM md_project WHERE id = ?").get(projectId) as { track: string | null } | undefined;
+    const gf = trackRow?.track === "greenfield";
+    const shareLine = gf && bc && isShareUnsourced(bc.captureSource)
+      ? [`시장점유율: ${SHARE_UN_SOURCED_LABEL} (${((bc.captureRate ?? 0) * 100).toFixed(1)}%) — 사람이 근거를 남긴 값이 아닙니다 (참고 정보이며 승인 조건이 아닙니다)`]
+      : [];
+    let ratioLine: string[] = [];
+    try {
+      const pg = resolveRatioGuardFlag(getDb(), projectId);
+      if (pg?.tripped) ratioLine = [`${pg.label} (매출/투자 ${pg.ratio?.toFixed(1)}배 > ${pg.threshold}배) — ${pg.diagnostic}`];
+    } catch { /* omit on read failure */ }
     const lines = cases.slice(0, 8).map((c) => {
       const p50 = c.simulations?.find((s) => s.percentile === "p50") ?? null;
       const band = irrGuardBand(p50?.irr, bc?.irrFlagThreshold, bc?.irrCautionThreshold);
@@ -259,6 +274,8 @@ function s8Summary(projectId: string): string {
     return [
       `채택: ${adoption ? `${adoption.adoptedBy} @ ${adoption.adoptedAt.slice(0, 10)}` : "없음"}`,
       ...scopeLine,
+      ...shareLine,
+      ...ratioLine,
       ...lines,
     ].join("\n");
   } catch (err) {

@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-10-17](2026-10-17.md) | feat(s8): ADR-0179 slice 3 unsourced share labelling and plausibility guard |
 | [2026-10-16](2026-10-16.md) | feat(s5): ADR-0178 slice 1 pre-launch (year-0) marking of S5 capex lines |
 | [2026-10-15](2026-10-15.md) | fix(s3): AI proposal without synergy analysis, holding check search chain and evidence quality, degraded profile flag |
 | [2026-10-14](2026-10-14.md) | feat(promotion): default Green Field project origin to internal (ADR-0166) |
@@ -11,7 +12,7 @@
 | [2026-10-12](2026-10-12.md) | chore: workspace sync |
 | [2026-10-11](2026-10-11.md) | chore: update |
 | [2026-10-10](2026-10-10.md) | fix(s8): consume per-target WACC in brownfield business-case valuation (ADR-0156 amendment 2) |
-| [2026-10-09](2026-10-09.md) | fix(web-next): guard incomplete sizing matrix and register graft surfaces |
+| 2026-10-09 | fix(web-next): guard incomplete sizing matrix and register graft surfaces |
 | 2026-10-08 | chore: upgrade template to 0.14.0 |
 | 2026-10-07 | chore: upgrade template to 0.13.1 |
 | 2026-10-05 | chore: upgrade template to 0.12.0 |

@@ -29,6 +29,7 @@ import { noteNumber, parseSimNote } from "./sim-note.ts";
 import { irrGuardBand, IRR_CAUTION_THRESHOLD_DEFAULT, IRR_FLAG_THRESHOLD_DEFAULT } from "./irr-guard.ts";
 import { parseTargetScopeJson, type TargetScope } from "./target-scope.ts";
 import { anchorScopeNoteFragment } from "./anchor-scope.ts";
+import { Y1_INVESTMENT_RATIO_THRESHOLD, ratioGuardTripped, shareUnsourcedNoteFragment } from "./share-guard.ts";
 import { resolveEffectiveCagr } from "./market-calibration.ts";
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
@@ -1748,6 +1749,18 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       // opportunity→sizing reference is the OPEN-3 follow-up — so a set
       // target scope yields an honest `unknown`, never a fabricated ok.
       const anchorScopeFragment = anchorScopeNoteFragment(ctx.inputs.targetScope);
+      // ADR-0179 slice 3 — sourced-market-share labelling (design §6.1) and the
+      // Y1-revenue/capex ratio plausibility guard (design §7.1). Display
+      // metadata only: fragments are appended ONLY when they fire (share: a
+      // market-anchored run on the bare-default capture rate; ratio: Y1 revenue
+      // above 20× the year-0 plan investment) so legacy notes stay
+      // byte-identical, and neither ever blocks generation, a gate or a grade.
+      const shareFragment = shareUnsourcedNoteFragment(ctx.inputs.revenueAnchor != null, bc.captureSource);
+      const y1Value = year1RevenueOf(ctx.inputs, delta.growth).value;
+      const planInvestment = flows[0] < 0 ? -flows[0] : 0; // flows[0] = -initial investment (year-0)
+      const ratioFragment = ratioGuardTripped(y1Value, planInvestment, Y1_INVESTMENT_RATIO_THRESHOLD)
+        ? `; ratio_guard=${(y1Value / planInvestment).toFixed(2)}`
+        : "";
       const waccSubject = ctx.inputs.waccSubject?.subject ?? "promoter";
       const tcFragment = ctx.inputs.targetCostWiring
         ? `; tc_gap_ratio=${ctx.inputs.targetCostWiring.gapRatio.toFixed(4)}; tc_downside_opex_uplift=${(ctx.scenario === "downside" ? ctx.inputs.targetCostWiring.uplift : 1).toFixed(4)}`
@@ -1777,7 +1790,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       const anchorFragment = ctx.inputs.revenueAnchor
         ? `revenue_anchor=${ctx.inputs.revenueAnchor.source}${acqFragment}${xcheckFragment}`
         : `capture_rate=${bc.captureRate}; capture_source=${bc.captureSource}`;
-      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}; wacc_scope=${ctx.inputs.waccScope?.scope ?? "project"}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; wacc_subject=${waccSubject}; ${anchorFragment}; ramp_source=${bc.rampSource}; ${provenance}${tcFragment}${basisFragment}; engine=${engineMeta.engine}${s5Provenance ? " (S8 엔진 우회 — 연도별 capex 스케줄 미지원, ADR-0174)" : ""}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}${irrGuardFragment}${anchorScopeFragment}`;
+      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}; wacc_scope=${ctx.inputs.waccScope?.scope ?? "project"}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; wacc_subject=${waccSubject}; ${anchorFragment}${shareFragment}${ratioFragment}; ramp_source=${bc.rampSource}; ${provenance}${tcFragment}${basisFragment}; engine=${engineMeta.engine}${s5Provenance ? " (S8 엔진 우회 — 연도별 capex 스케줄 미지원, ADR-0174)" : ""}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}${irrGuardFragment}${anchorScopeFragment}`;
       db.run(`UPDATE business_case_model SET inputs_json = ? WHERE id = ?`, [JSON.stringify(jobSpec), modelId]);
       for (const pct of ["p05", "p50", "p95"] as const) {
         const isP50 = pct === "p50";
