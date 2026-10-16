@@ -11,6 +11,13 @@ import { authenticate, callPathOf, humanOnlyDenied, requireBusinessActor } from 
 import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { normalizeTargetScopeInput, parseTargetScopeJson, type TargetScope } from "../../../../../lib/target-scope.ts";
+import { readSizingLink } from "../sizing-link/route.ts";
+// Additive field on GET (ADR-0179 amendment slice A): `linked_sizing` — the
+// same reference payload the sizing-link GET returns (analysis/version ids,
+// the pinned version's declared scope, anchor value, confidence grade, S1
+// href) so the target-scope editor can show the linked S1 analyses with
+// their source scopes as reference while choosing a scope. GET shape grows
+// additively; existing `scope` field is untouched.
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
@@ -20,7 +27,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const row = db.query("SELECT target_scope_json FROM opportunity WHERE id = ?").get(id) as { target_scope_json: string | null } | undefined;
   if (!row) return notFound();
   try {
-    return ok({ scope: parseTargetScopeJson(row.target_scope_json) }, 200);
+    const linked = readSizingLink(db, id);
+    return ok({ scope: parseTargetScopeJson(row.target_scope_json), linked_sizing: linked?.reference ?? null }, 200);
   } catch (err) {
     return badRequest("invalid_request", err instanceof Error ? err.message : "invalid target scope");
   }

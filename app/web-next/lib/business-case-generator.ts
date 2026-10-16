@@ -28,7 +28,7 @@
 import { noteNumber, parseSimNote } from "./sim-note.ts";
 import { irrGuardBand, IRR_CAUTION_THRESHOLD_DEFAULT, IRR_FLAG_THRESHOLD_DEFAULT } from "./irr-guard.ts";
 import { parseTargetScopeJson, type TargetScope } from "./target-scope.ts";
-import { anchorScopeNoteFragment } from "./anchor-scope.ts";
+import { anchorScopeNoteFragment, resolveLinkedAnchorScope } from "./anchor-scope.ts";
 import { Y1_INVESTMENT_RATIO_THRESHOLD, ratioGuardTripped, shareUnsourcedNoteFragment } from "./share-guard.ts";
 import { resolveEffectiveCagr } from "./market-calibration.ts";
 import { getDb } from "../../../db/client.ts";
@@ -528,6 +528,11 @@ export interface CaseInputs {
    *  target scope, passed through for provenance/display (slice 2 consumes
    *  it against the market anchor). NULL/absent = legacy behavior. */
   targetScope?: TargetScope | null;
+  /** ADR-0179 amendment slice A — the anchor side from the opportunity's
+   *  LINKED sizing version (design §12.1): the pinned version's declared
+   *  scope feeding extractSizingVersionScope. Unlinked = null (bit-identical
+   *  with the pre-amendment path; the fragment then says unknown). */
+  anchorScope?: { regions: readonly string[] } | null;
 }
 
 /** Default sales-plan curve (design REQ-W1-2) — utilization by year. */
@@ -1304,11 +1309,11 @@ export function effGrowthDisp(
 export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "growthModel" | "targetId"> {
   const row = getDb()
     .query(
-      `SELECT o.market_size_krw_m, o.growth_rate, o.target_scope_json, p.source_opportunity_id
+      `SELECT o.market_size_krw_m, o.growth_rate, o.target_scope_json, o.sizing_version_id, p.source_opportunity_id
        FROM md_project p LEFT JOIN opportunity o ON o.id = p.source_opportunity_id
        WHERE p.id = ?`,
     )
-    .get(projectId) as { market_size_krw_m: number | null; growth_rate: number | null; target_scope_json: string | null; source_opportunity_id: string | null } | undefined;
+    .get(projectId) as { market_size_krw_m: number | null; growth_rate: number | null; target_scope_json: string | null; sizing_version_id: string | null; source_opportunity_id: string | null } | undefined;
   // Deterministic fallbacks when the promoting opportunity carries no market
   // facts (brownfield promotion path): documented, never random. growth_rate
   // is stored as a RATIO (evidence_var unit 'ratio', migration 0017; seeds
@@ -1345,6 +1350,15 @@ export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "g
         return null;
       }
     })(),
+    // ADR-0179 amendment slice A — the anchor side from the LINKED sizing
+    // version's declared scope (design §12.1). Unlinked → null → the honest
+    // `unknown` (bit-identical with the pre-amendment path); linked, the
+    // pinned version's scope decides ok / mismatch in the run-note fragment
+    // and the read model. Tolerant: a deleted version row or unparsable
+    // payload degrades to null, never a generation failure.
+    anchorScope: row?.sizing_version_id
+      ? resolveLinkedAnchorScope(getDb(), row.source_opportunity_id ?? "")
+      : null,
   };
 }
 
@@ -1748,7 +1762,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       // from a linked market_sizing_version payload (OPEN-2) and the
       // opportunity→sizing reference is the OPEN-3 follow-up — so a set
       // target scope yields an honest `unknown`, never a fabricated ok.
-      const anchorScopeFragment = anchorScopeNoteFragment(ctx.inputs.targetScope);
+      const anchorScopeFragment = anchorScopeNoteFragment(ctx.inputs.targetScope, ctx.inputs.anchorScope ?? null);
       // ADR-0179 slice 3 — sourced-market-share labelling (design §6.1) and the
       // Y1-revenue/capex ratio plausibility guard (design §7.1). Display
       // metadata only: fragments are appended ONLY when they fire (share: a

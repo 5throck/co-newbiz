@@ -218,3 +218,7 @@ exclusions:
     route: "POST /api/proposals/{}/reject"
     inprocess: false
     reason: Only a human web session acts on a proposal.
+  - id: opportunity-sizing-link
+    kind: route
+    route: "PUT /api/opportunities/{}/sizing-link"
+    reason: The S1 market-sizing link (ADR-0179 amendment slice A) is a person's act on the opportunity (analyst+); agents may read it via GET but never write it (boundary #2).
