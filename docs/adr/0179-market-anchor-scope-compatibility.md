@@ -51,3 +51,38 @@ OPEN-1..8 in the design §10, each with a recommendation (region enum vs tags; p
 ## Honest limits
 
 Accepted but not implemented: no numbers change for any project until a person sets scope. Segment comparison is advisory text, not a predicate. Guard thresholds are heuristics that can both over-fire and miss. Whether the incident's numbers would trip the recommended thresholds is plausible from the incident figures but not re-simulated. The pipeline dependency is unresolved as of 2026-10-16.
+
+## Amendment (2026-10-17) — S1→S2 sizing derivation structure (OPEN-3 pulled forward)
+
+- Status: Accepted (2026-10-17). Decider: human decider (chat across 2026-10-16/17 — approved the scope-conversion chain direction ("응"), refined it to the factor-ratio rule and the strict S1→S2 one-way flow, then approved the amendment ("ADR-0179 승인")). Drafted by platform-lead. Recorded in [DEC-20261017-01](../decisions/DEC-20261017-01.md).
+- This amendment opens a structural addition the original ADR registered only as a follow-up: **OPEN-3 is pulled forward** — the opportunity gets an explicit link to its S1 market-sizing analysis/version, and S2 gains a derivation surface built on that link. The bare `market_size_krw_m` copy remains the legacy compat path as before; nothing here rewrites the slices 1-2 decisions above.
+
+### A. Sizing-link structure
+
+1. **Opportunity → S1 sizing link.** An opportunity carries an explicit reference to its S1 market-sizing analysis and pinned version (the pinned version is the anchor's source of truth). This is the OPEN-3 follow-up promoted into scope; once set, the linked version's declared scope is the anchor's scope by construction (as §5.1 anticipated).
+2. **S2 target-scope editor shows the linked S1 analyses as reference.** When choosing a target scope on S2, the editor lists the linked S1 analyses with their source scopes alongside — the person sees what geography/segment the upstream numbers actually cover before declaring a target scope. Reference display only; it does not set anything automatically.
+
+### B. S2 entry-market derivation (factor-ratio rule)
+
+3. **Derivation from the S1 result, ratio factors only.** An S2 entry-market sizing surface derives the entry-market size from the linked S1 result via **multiplicative RATIO factors only**, each in `0..1`, each with a **mandatory source per step**. Absolute amounts are never accepted or fabricated at any derivation step — a person who "knows" the regional number in absolute terms must instead supply the ratio and its source. Formally, `derived(t) = S1_anchor(t) × f_region × f_segment × ...` — the derivation composes with S1 growth (it inherits the S1 time series and stays valid on S1 re-basing: re-base S1, and the derived series follows without recomputation).
+4. **Direction is strictly S1→S2.** No reverse propagation into S1: an S2 derivation never edits, re-scales, or annotates the S1 analysis. Fix the upstream or add a scoped S1 analysis if the anchor itself is wrong.
+5. **Partial-overlap grading.** Each factor step is graded `exact` / `partial` / `none` on how precisely the factor's source scope matches the derivation step (e.g. a Europe-level share applied to a Western-Europe step is `partial`; an EMEA figure against a Western-Europe target is at best `partial`). Grading is recorded per step, surfaced, and never silently treated as `exact`.
+6. **Confidence and sourcing discipline.** Each factor step **lowers data confidence** (non-negotiable #4 — a chained derivation can never grade above its weakest step). Unsourced factors get the existing `근거 없는` label discipline (the `근거 없는 기본 점유율` treatment of §6.1 of the design). A `region-source-definition` caveat applies to region factors: publishers define regions differently post-2022 (e.g. whether Russia is inside "Europe"); UN M49 places Russia in Eastern Europe — the factor's source must state its regional definition, and the UI shows the caveat.
+7. **Europe Stage V draft is cross-check material only.** Sizing analysis `01M52FE1Y0J7RSSHED4K3C163B` (Europe Stage V draft, ~490M USD, confidence C) is **never the anchor**; it may be cited as a cross-check against a derived entry-market figure. Its cross-check against the pilot is exactly the failure this amendment prevents: the current 0.5% capture on the worldwide anchor implies an implausible ~27% year-1 segment share.
+8. **Time-varying shares are explicitly deferred.** Factors are scalar ratios over the S1 series in this amendment; share evolution over time is a registered follow-up, not in scope.
+9. **Human ownership unchanged.** The link, the factor set, and each factor's source are person-set (analyst+, human-only write); AI proposes in text only. Derivation outputs are decision support — no gate block, no automatic grade change; per non-negotiable #4 the confidence lowering is *input* to the human RAG judgement.
+
+### C. Amendment slices (not implemented; no commit by this amendment)
+
+| Slice | Scope | Migration |
+|---|---|---|
+| A | Opportunity ↔ S1 sizing analysis/version link (additive reference columns or equivalent; pinned version); S2 target-scope editor shows linked S1 analyses + source scopes as reference display | Yes — additive link storage |
+| B | S2 entry-market derivation surface: ratio-factor chain over the linked S1 series (`derived(t) = S1_anchor(t) × Πf`), per-step source mandatory, 0..1 validation, absolute-amount rejection, per-step `exact/partial/none` grading, per-step confidence lowering, `근거 없는` labelling, region-source-definition caveat, cross-check citation surface for draft analyses | None expected (lineage in payload; link storage from slice A) |
+
+Slice B depends on slice A. Both depend on the market-sizing pipeline being reachable for any *new* scoped analysis; the link and derivation mechanics themselves work on stored data.
+
+### D. Amendment acceptance record
+
+- Approver: the human decider (user, account techcross), chat across 2026-10-16/17: answered "응" approving the scope-conversion chain direction, refined it to the factor-ratio rule (ratio-only, source mandatory per step) and the strict S1→S2 one-way flow, then said "ADR-0179 승인". The S1 market-list navigation fix was approved separately in the same conversation and is **not** part of this amendment's scope.
+- Basis: chat approval of the direction as summarised across turns; not an item-by-item review of the written amendment. This record does not claim the approver read the amendment text.
+- Implementation status: NOTHING implemented by this amendment — acceptance covers the structure only. The decider's specific refinements (factor-ratio rule, one-way flow) are recorded as binding constraints on the slice designs.
