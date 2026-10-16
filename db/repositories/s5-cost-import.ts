@@ -9,10 +9,17 @@ import { manualLineKrwM, sourceRowOf, splitForPromotion } from "../../app/web-ne
 import { ulid } from "../lib/ulid.ts";
 import { appendAudit } from "../lib/access-control.ts";
 
-type S5Line = { line: string; category: string; amount: number; amountUnit?: string; note?: string; period?: string; currency?: string; startYear?: number; endYear?: number };
+type S5Line = { line: string; category: string; amount: number; amountUnit?: string; note?: string; period?: string; currency?: string; startYear?: number; endYear?: number; growthRate?: unknown };
 
 const VALID_CATEGORIES = new Set(["labor", "opex", "capex", "revenue", "gov_rnd"]);
 const PERIOD_MULTIPLIER: Record<string, number> = { monthly: 12, quarterly: 4, yearly: 1, lumpsum: 1 };
+
+/** Copy the S5 line's own growth rate, validated and clamped to [0,1] (ratio, like the other
+ *  rate fields). A missing, non-finite or negative rate copies as 0 — never fabricated. */
+function lineGrowthRate(v: unknown): number {
+  if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) return 0;
+  return Math.min(v, 1);
+}
 
 export type S5SkipReason = "unit_unconfirmed" | "currency_non_krw" | "invalid_line";
 
@@ -74,7 +81,7 @@ export function writeS5CostModel(
     db.run(
       `INSERT INTO business_case_line (id, model_id, category, name, annual_amount_krw_m, unit, start_year, end_year, growth_rate, note, created_by, created_at)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [ulid(), modelId, l.category, l.line.trim(), annualAmount, "KRW_M", startYear, endYear, 0, note, actor, now],
+      [ulid(), modelId, l.category, l.line.trim(), annualAmount, "KRW_M", startYear, endYear, lineGrowthRate(l.growthRate), note, actor, now],
     );
   }
   for (const c of split.capability) {
