@@ -33,6 +33,7 @@ import { S8PartHeader } from "./S8PartHeader.tsx";
 import { TechnicalLensPanel } from "./TechnicalLensPanel.tsx";
 import { api } from "../../lib/api.ts";
 import { irrGuardBand, IRR_GUARD_CHIP_LABEL, IRR_GUARD_DIAGNOSTIC } from "../../lib/irr-guard.ts";
+import type { RatioGuardFlag } from "../../lib/share-guard.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { GateDecisionJump, GateDecisionPanel } from "../GateDecisionPanel.tsx";
 import { TargetCheckPanel } from "../TargetCheckPanel.tsx";
@@ -155,9 +156,13 @@ interface CasesResponse {
   escalated_cagr_pct: number | null;
   /** 2026-10-16: source opportunity id — builds the S5 투자비 탭 deep link (read-only lines view). */
   source_opportunity_id?: string | null;
-  /** ADR-0159: per-case goal attainment keyed by case id (absent/empty = no goals). */
+  /** ADR-0159: per-case goal attainment keyed by case id (comment-only
+   *  interface additions; display/evidence only, never a block). */
   goal_attainment?: Record<string, CaseAttainmentEntry[]>;
   goal_count?: number;
+  /** ADR-0179 slice 3 — Y1 revenue vs plan-investment ratio guard (additive,
+   *  live, display only). */
+  plausibility?: RatioGuardFlag | null;
 }
 interface ActivityRow {
   activityId: string;
@@ -1138,6 +1143,18 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                   )}
                 </tbody>
               </table></div>
+            )}
+            {/* ADR-0179 slice 3 — Y1 revenue vs plan-investment ratio guard. Case-level
+                display warning recomputed live on read; says "check the anchor",
+                never "the case is wrong"; never blocks. Diagnostic pointer style
+                consistent with the IRR guard. */}
+            {data?.plausibility?.tripped && (
+              <div role="status" data-testid="ratio-guard-warning" className="mt-2 p-3 border border-[color:var(--border)] rounded-[length:var(--radius)]">
+                <span className="status-chip status-amber">
+                  {data.plausibility.label} (1차년도 매출 {fmtNpvKrwM(data.plausibility.y1_revenue_krw_m!)} / 투자 {fmtNpvKrwM(data.plausibility.investment_krw_m!)} = {data.plausibility.ratio?.toFixed(1)}배, 기준 {data.plausibility.threshold}배 초과)
+                </span>{" "}
+                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{data.plausibility.diagnostic}</span>
+              </div>
             )}
             {/* IA cleanup 2026-10-14: the attainment table lives once, in the goals tab. */}
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2">

@@ -14,6 +14,7 @@ import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import { s5ParamLinkage, type S5ParamKey } from "../../lib/s5-linkage-labels.ts";
 import { ANCHOR_SCOPE_CONFIDENCE_NOTE, type AnchorScopeFlag } from "../../lib/anchor-scope.ts";
+import { SHARE_UN_SOURCED_LABEL, captureSourceLabel, isShareUnsourced, shareUnsourcedLabel } from "../../lib/share-guard.ts";
 
 // Mirrors EV_BAND_OPTIMISM_FLAG_FACTOR / EV_BAND_MAX_SANE / EV_BAND_SPREAD_FLAG_RATIO / ACQUISITION_EV_REVENUE_BAND in
 // lib/business-case-generator.ts (DB-bound module, not bundleable here); drift is caught by
@@ -47,9 +48,9 @@ const SOURCE_CHIP: Record<SourceKind, { label: string; cls: string }> = {
 };
 const sourceKindOf = (source: string): SourceKind => (source.startsWith("사용자") ? "user" : "default");
 
-function SourceChip({ source, kind }: { source: string; kind?: SourceKind }) {
+function SourceChip({ source, kind, label }: { source: string; kind?: SourceKind; label?: string }) {
   const k = kind ?? sourceKindOf(source);
-  return <span className={`status-chip whitespace-nowrap ${SOURCE_CHIP[k].cls}`} title={source}>{SOURCE_CHIP[k].label}</span>;
+  return <span className={`status-chip whitespace-nowrap ${SOURCE_CHIP[k].cls}`} title={source}>{label ?? SOURCE_CHIP[k].label}</span>;
 }
 
 interface ResolvedParams {
@@ -182,12 +183,21 @@ function CurrentParamsTable({ resolved, track, s5Pin, s5Run, s5PinCapexTotal, an
     {
       title: "매출·시장",
       lines: [
-        { key: "capture", label: "1년차 시장점유율 (year-1 매출)", value: pct1(resolved.captureRate), numeric: true, unit: "%", source: <SourceChip source={resolved.captureSource} />, s5Key: "capture", note: anchorScope && anchorScope.status !== "ok" ? (
-          <span data-testid="params-anchor-scope-flag" title={`${anchorScope.reason} — ${ANCHOR_SCOPE_CONFIDENCE_NOTE}`}>
-            <span className="status-chip status-amber">{anchorScope.label}</span>{" "}
-            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{anchorScope.reason}</span>
-          </span>
-        ) : undefined },
+        { key: "capture", label: "1년차 시장점유율 (year-1 매출)", value: pct1(resolved.captureRate), numeric: true, unit: "%", source: <SourceChip source={resolved.captureSource} label={captureSourceLabel(resolved.captureSource, resolved.captureRate)} />, s5Key: "capture", note: (
+          <>
+            {isShareUnsourced(resolved.captureSource) && (
+              <span data-testid="params-share-unsourced-flag" className="status-chip status-amber" title={`${shareUnsourcedLabel(resolved.captureRate)} — 사람이 근거를 남긴 점유율이 아닙니다 (ADR-0179). 참고 정보이며 승인 조건이 아닙니다.`}>
+                {shareUnsourcedLabel(resolved.captureRate)}
+              </span>
+            )}{" "}
+            {anchorScope && anchorScope.status !== "ok" && (
+              <span data-testid="params-anchor-scope-flag" title={`${anchorScope.reason} — ${ANCHOR_SCOPE_CONFIDENCE_NOTE}`}>
+                <span className="status-chip status-amber">{anchorScope.label}</span>{" "}
+                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{anchorScope.reason}</span>
+              </span>
+            )}
+          </>
+        ) },
         growthRow,
         ...(!gf ? [{ key: "acq", label: "인수 EV/Revenue 배수 (브라운필드)", value: resolved.acquisitionEvRevenue != null ? resolved.acquisitionEvRevenue.toFixed(2) : "3.0 — 미확정 시 컴프 기본값 (글로벌 로보틱스 M&A 2–6×)", numeric: resolved.acquisitionEvRevenue != null, unit: resolved.acquisitionEvRevenue != null ? "배" : "", source: <SourceChip source={resolved.acquisitionEvRevenueSource} /> } as ParamLine] : []),
       ],

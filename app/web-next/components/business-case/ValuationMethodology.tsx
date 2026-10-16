@@ -10,6 +10,7 @@
 import { fmtNpvEok } from "@/lib/npv-format";
 import { irrGuardBand, IRR_GUARD_CHIP_LABEL, IRR_GUARD_DIAGNOSTIC } from "@/lib/irr-guard";
 import { ANCHOR_SCOPE_CONFIDENCE_NOTE, type AnchorScopeFlag } from "@/lib/anchor-scope";
+import { captureSourceLabel, isShareUnsourced } from "@/lib/share-guard";
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { KRW_MILLIONS_UNIT } from "../../lib/format.ts";
@@ -25,6 +26,7 @@ interface MethodCase {
 }
 
 interface ResolvedParams {
+  captureRate: number; captureSource: string;
   opexRatio: number; opexSource: string;
   capexRatio: number; capexSource: string;
   initialInvestmentRatio: number; initialInvestmentSource: string;
@@ -134,6 +136,13 @@ export function ValuationMethodology({
                       {anchorScope.label}
                     </span>{" "}
                     <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{anchorScope.reason}</span>
+                  </div>
+                )}
+                {params && isShareUnsourced(params.captureSource) && (
+                  <div className="mt-1">
+                    <span className="status-chip status-amber" data-testid="methodology-share-unsourced-flag" title={`${captureSourceLabel(params.captureSource, params.captureRate)} — 사람이 근거를 남긴 점유율이 아닙니다 (ADR-0179). 참고 정보이며 승인 조건이 아닙니다.`}>
+                      {captureSourceLabel(params.captureSource, params.captureRate)}
+                    </span>
                   </div>
                 )}
               </td>

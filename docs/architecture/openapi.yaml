@@ -4657,7 +4657,7 @@ paths:
   /api/projects/{id}/business-case:
     get:
       operationId: listProjectBusinessCases
-      summary: "S8 business cases for the project with the recommended scenario and adoption marker (ADR-0098). Additive field anchor_scope (ADR-0179 slice 2): {status: ok|mismatch|unknown, label, reason, has_target_scope, confidence_note} | null - live anchor scope-compatibility flag, recomputed on every read; display/evidence only, never a gate block or grade cap (boundary #4)."
+      summary: "S8 business cases for the project with the recommended scenario and adoption marker (ADR-0098). Additive field anchor_scope (ADR-0179 slice 2): {status: ok|mismatch|unknown, label, reason, has_target_scope, confidence_note} | null - live anchor scope-compatibility flag, recomputed on every read; display/evidence only, never a gate block or grade cap (boundary #4). Additive field plausibility (ADR-0179 slice 3, OPEN-7): {tripped, ratio|null, threshold, y1_revenue_krw_m|null, investment_krw_m|null, investment_source|null, label, diagnostic} | null - Y1 revenue vs plan-investment ratio guard recomputed live from the latest valuation model's stored snapshot; trips strictly above 20x; display/evidence only, never a gate block or grade cap."
       tags:
         - Analysis
       parameters:
