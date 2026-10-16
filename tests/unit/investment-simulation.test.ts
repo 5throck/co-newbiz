@@ -34,11 +34,11 @@ const baseInput = {
 const SEED = 20261015;
 
 describe("clamp, envelope, triangular, percentile primitives", () => {
-  it("clampDraws defaults to 500 and clamps to 100..5000", () => {
-    expect(DEFAULT_DRAWS).toBe(500);
-    expect(clampDraws(undefined)).toBe(500);
-    expect(clampDraws(null)).toBe(500);
-    expect(clampDraws(Number.NaN)).toBe(500);
+  it("clampDraws defaults to 2000 and clamps to 100..5000", () => {
+    expect(DEFAULT_DRAWS).toBe(2000);
+    expect(clampDraws(undefined)).toBe(2000);
+    expect(clampDraws(null)).toBe(2000);
+    expect(clampDraws(Number.NaN)).toBe(2000);
     expect(clampDraws(10)).toBe(MIN_DRAWS);
     expect(clampDraws(99999)).toBe(MAX_DRAWS);
     expect(clampDraws(750.4)).toBe(750);
@@ -89,11 +89,11 @@ describe("simulateInvestment", () => {
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
     const c = simulateInvestment({ ...baseInput, seed: SEED + 1 });
     expect(c.total.p50).not.toBe(a.total.p50);
-    expect(a.draws).toBe(500);
+    expect(a.draws).toBe(2000);
     expect(a.horizon).toBe(5);
     expect(a.totalByYear.length).toBe(5);
     expect(a.total.histogram.counts.length).toBe(HISTOGRAM_BINS);
-    expect(a.total.histogram.counts.reduce((x, y) => x + y, 0)).toBe(500);
+    expect(a.total.histogram.counts.reduce((x, y) => x + y, 0)).toBe(2000);
   });
 
   it("bands are ordered and sit inside the slice-1 deterministic low/high extremes around the mode", () => {
@@ -147,7 +147,7 @@ describe("simulateInvestment", () => {
     expect(hi.exceed).toEqual({ envelopeKrwM: 1e9, probability: 0, exceedCount: 0 });
     const lo = simulateInvestment({ ...baseInput, seed: SEED, envelopeKrwM: 1 });
     expect(lo.exceed!.probability).toBe(1);
-    expect(lo.exceed!.exceedCount).toBe(500);
+    expect(lo.exceed!.exceedCount).toBe(2000);
     const mid = simulateInvestment({ ...baseInput, seed: SEED, draws: 2000, envelopeKrwM: none.total.p50 });
     expect(mid.exceed!.probability).toBeGreaterThan(0.35);
     expect(mid.exceed!.probability).toBeLessThan(0.65);

@@ -47,4 +47,4 @@ Proposed 2026-10-15; the decider approved the layering (option B′) in chat, no
 
 ## Amendment 2026-10-16: default draw count
 
-Decided by the human decider in chat 2026-10-16: the S5 investment simulation default draw count changes from 500 to 2,000. The clamp (100..5,000) is unchanged, and existing stored runs keep their recorded draw count — this is a default only, never a rewrite of stored runs. Implementation status: **not implemented**. Decision 3 and the acceptance record above retain the historical "Default 500 draws" text; this amendment is the current position.
+Decided by the human decider in chat 2026-10-16: the S5 investment simulation default draw count changes from 500 to 2,000. The clamp (100..5,000) is unchanged, and existing stored runs keep their recorded draw count — this is a default only, never a rewrite of stored runs. Implementation status: **implemented** (2026-10-16: `DEFAULT_DRAWS = 2,000` in `lib/investment-simulation.ts`; clamp 100..5,000 unchanged; stored runs keep their recorded draw count). Decision 3 and the acceptance record above retain the historical "Default 500 draws" text; this amendment is the current position.

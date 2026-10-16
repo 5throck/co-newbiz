@@ -981,7 +981,10 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                     // 2026-10-16: IRR이 null인 이유가 "투자 플로우 없음"(S5 계획에 capex 0 →
                     // flows[0]=0 → 부호 변화 없음)일 때는 설명 칩으로 대체 — 빈 "—"은 원인을
                     // 숨긴다. 계산 변경 없음, 표시 전용.
-                    const irrNoFlowChip = irrV == null && (note.basis ?? "").startsWith("s5_plan") && data?.s5_plan_capex_zero === true;
+                    // 2026-10-16: s5_pnl (ADR-0178 slice 2) 도 동일한 무플로우 원인을 공유한다 — year-0
+                    // 투자도 계획 capex 에서 오므로 0이면 마찬가지로 부호 변화가 없다.
+                    const nb = note.basis ?? "";
+                    const irrNoFlowChip = irrV == null && (nb.startsWith("s5_plan") || nb === "s5_pnl") && data?.s5_plan_capex_zero === true;
                     const deltaP50 = c.variant === "historical" && newestMfP50 !== null && p50 ? p50.npv_krw_m - newestMfP50 : null;
                     const deltaPct = deltaP50 !== null && newestMfP50 ? deltaP50 / newestMfP50 : null;
                     // 큰 중앙값 차이는 계산 버그가 아니라 설계된 교차검증 신호다 — 공통 exit 배수 아래에서
