@@ -39,6 +39,7 @@ interface ParamsResponse {
   s5_pin?: PinView | null;
   s5_connect?: ConnectView | null;
   track?: string | null;
+  s5_pin_capex_total_krw_m?: number | null;
 }
 interface PlanSummary { totals: { capex: number; labor_opex: number; gov_rnd: number; staffing: number }; s5_sim_run_id: string | null }
 interface ConnectPreview {
@@ -93,6 +94,8 @@ export function S5ConnectBlock({ projectId, canAct, onChanged }: { projectId: st
   const conn = data.s5_connect ?? null;
   const hint = s5BasisHint(basis);
   const pinned = pin?.path === "pinned";
+  // 2026-10-16: the plan S8 uses carries no capex line at all — display-only warning.
+  const capexZero = pinned && data.s5_pin_capex_total_krw_m === 0;
   const stale = !!pin?.pin && pin.state === "stale";
   const next = "이미 생성된 사례는 다시 계산되지 않으며 `자동 생성`을 다시 실행해야 반영됩니다. 의사결정 지원용이며 게이트·등급에는 영향이 없습니다.";
 
@@ -225,6 +228,12 @@ export function S5ConnectBlock({ projectId, canAct, onChanged }: { projectId: st
             <span className={`status-chip ${stale ? "status-amber" : "status-green"}`}>{stale && <span aria-hidden="true">⏱ </span>}{stale ? "재평가 필요" : "최신"}</span>
             {stale && <> {pin.reasons.map((r) => PIN_STALE_REASON[r] ?? r).join(" · ")}.</>}
             {!pinned && <> (현재 사용 중이 아님 — 복사본 사용)</>}
+          </li>
+        )}
+        {capexZero && (
+          <li data-testid="s8-s5-connect-capex-warning" role="note">
+            <span className="status-chip status-amber"><span aria-hidden="true">⚠</span> 설비투자 없음</span>{" "}
+            S5 계획에 설비투자(capex) 줄이 없습니다 — 설비투자가 있다면 S5 투자비 탭에 입력하세요.
           </li>
         )}
         <li data-testid="s8-s5-connect-scope" className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{s5ScopeNote(basis)}</li>

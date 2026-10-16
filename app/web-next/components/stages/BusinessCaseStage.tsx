@@ -14,6 +14,9 @@ import { ColGroup, DevRef } from "../ui.tsx";
 const CASE_COMPARE_COL_PCT = [12, 7, 9, 9, 7, 7, 9, 13, 13, 8, 6] as const;
 // 시나리오 케이스 10열 — 관점·성장률·sigma 출처와 수치 열.
 const SCENARIO_CASE_COL_PCT = [11, 14, 9, 9, 9, 9, 6, 12, 11, 10] as const;
+// Green Field는 중앙값 차이·페이드 DCF(교차검증) 열이 없다 — 과거 기반이 없어 두 열이
+// 항상 "—"가 되는 정리(2026-10-16). 8열로 재분배해 콜그룹 합계 100을 유지한다.
+const SCENARIO_CASE_COL_PCT_GF = [11, 14, 9, 9, 9, 9, 6, 33] as const;
 // 중앙값 차이(시장 기반 대비)가 이 비율을 넘으면 설명 문구를 덧붙인다 — 계산 버그가
 // 아니라 설계된 교차검증 신호(공통 배수, 성장 가정 차이가 지배)임을 사용자에게 알리기 위함.
 // XCHECK_DIVERGENCE_WARN_RATIO(lib/business-case-generator.ts)와 같은 0.5 기준.
@@ -143,6 +146,8 @@ interface CasesResponse {
   adoption: { modelId: string; adoptedBy: string; adoptedAt: string } | null;
   target_selection: { targetId: string; rationale: string; selectedBy: string; selectedAt: string } | null;
   targets: TargetComparisonRow[];
+  /** 2026-10-16: the S5 plan in force carries no capex line at all (drives the IRR no-flow chip; Green Field only). */
+  s5_plan_capex_zero?: boolean;
   evRevenueBand?: EvRevenueBandPayload;
   engines_mixed?: boolean;
   methods_mixed?: boolean;
@@ -923,7 +928,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               </p>
             ) : (
               <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table table-fixed-pct tmin-56">
-                <ColGroup widths={SCENARIO_CASE_COL_PCT} />
+                <ColGroup widths={greenfield ? SCENARIO_CASE_COL_PCT_GF : SCENARIO_CASE_COL_PCT} />
                 <thead>
                   <tr>
                     <th scope="col">관점</th>
@@ -933,8 +938,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                     <th scope="col" className="num">NPV 중앙값<UnitNote /></th>
                     <th scope="col" className="num">NPV 상위 5%<UnitNote /></th>
                     <th scope="col" className="num">IRR <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">(%)</span></th>
-                    <th scope="col" className="num">중앙값 차이<span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">({KRW_MILLIONS_UNIT}, 시장 기반 대비 %)</span></th>
-                    <th scope="col" className="num" title="이중 구조 교차검증 — 같은 케이스를 고전 장기창구 DCF로 재평가: 명시적 창구(기본 10년) 안에서 성장률이 말기 성장률(기본 3%)로 선형 수렴하고 마지막 해에 동일 배수로 처분한 결정론적 NPV. 기본 구조(5년 홀드+exit)와 크게 어긋나면 성장-배수 가정이 불일치한다는 신호.">페이드 DCF 중앙값<UnitNote /></th>
+                    {!greenfield && <th scope="col" className="num">중앙값 차이<span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">({KRW_MILLIONS_UNIT}, 시장 기반 대비 %)</span></th>}
+                    {!greenfield && <th scope="col" className="num" title="이중 구조 교차검증 — 같은 케이스를 고전 장기창구 DCF로 재평가: 명시적 창구(기본 10년) 안에서 성장률이 말기 성장률(기본 3%)로 선형 수렴하고 마지막 해에 동일 배수로 처분한 결정론적 NPV. 기본 구조(5년 홀드+exit)와 크게 어긋나면 성장-배수 가정이 불일치한다는 신호.">페이드 DCF 중앙값<UnitNote /></th>}
                     <th scope="col"><span className="sr-only">작업</span></th>
                   </tr>
                 </thead>
@@ -943,6 +948,10 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                     const p50 = c.simulations.find((x) => x.percentile === "p50");
                     const note = parseNote(p50?.note);
                     const irrV = p50?.irr ?? null;
+                    // 2026-10-16: IRR이 null인 이유가 "투자 플로우 없음"(S5 계획에 capex 0 →
+                    // flows[0]=0 → 부호 변화 없음)일 때는 설명 칩으로 대체 — 빈 "—"은 원인을
+                    // 숨긴다. 계산 변경 없음, 표시 전용.
+                    const irrNoFlowChip = irrV == null && (note.basis ?? "").startsWith("s5_plan") && data?.s5_plan_capex_zero === true;
                     const deltaP50 = c.variant === "historical" && newestMfP50 !== null && p50 ? p50.npv_krw_m - newestMfP50 : null;
                     const deltaPct = deltaP50 !== null && newestMfP50 ? deltaP50 / newestMfP50 : null;
                     // 큰 중앙값 차이는 계산 버그가 아니라 설계된 교차검증 신호다 — 공통 exit 배수 아래에서
@@ -980,8 +989,18 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                           const sim = c.simulations.find((x) => x.percentile === p);
                           return <td key={p} className="num mono-num">{sim ? fmtNpvKrwM(sim.npv_krw_m) : "—"}</td>;
                         })}
-                        <td className="num mono-num">{irrV != null ? `${(irrV * 100).toFixed(1)}%` : "—"}</td>
-                        <td className="num">
+                        <td className="num" data-testid="scenario-irr-cell">
+                          {irrV != null ? `${(irrV * 100).toFixed(1)}%` : irrNoFlowChip ? (
+                            <span
+                              data-testid="irr-no-flow-chip"
+                              className="status-chip status-amber whitespace-normal [overflow-wrap:anywhere]"
+                              title="회수 기간(BEP) 0.0년도 같은 이유입니다. S5 투자비 탭에서 capex 줄을 입력하면 계산됩니다."
+                            >
+                              투자 플로우 없음 — S5 계획에 설비투자(capex) 줄이 없습니다
+                            </span>
+                          ) : "—"}
+                        </td>
+                        {!greenfield && <td className="num">
                           {deltaP50 === null ? "—" : (
                             <span className={deltaP50 >= 0 ? "text-[color:var(--success)] font-bold" : "text-[color:var(--red-fg)] font-bold"}>
                               {deltaP50 >= 0 ? "+" : ""}{fmtNpvKrwM(deltaP50)}{deltaPct !== null ? ` (${deltaPct >= 0 ? "+" : ""}${(deltaPct * 100).toFixed(1)}%)` : ""}
@@ -993,14 +1012,14 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                               <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("overview")}>설명: 개요 탭 →</button>
                             </span>
                           )}
-                        </td>
-                        <td className="num mono-num">
+                        </td>}
+                        {!greenfield && <td className="num mono-num">
                           {note.xcheck_fade_npv ? (
                             <span title={`페이드 DCF 교차검증 — 명시적 ${note.xcheck_horizon ?? "?"}년 창구, 성장률 → ${(Number(note.xcheck_terminal_growth ?? "0") * 100).toFixed(1)}% 선형 수렴, 동일 배수 처분 · IRR ${note.xcheck_fade_irr && note.xcheck_fade_irr !== "null" ? `${(Number(note.xcheck_fade_irr) * 100).toFixed(1)}%` : "—"}`}>
                               {fmtNpvKrwM(Number(note.xcheck_fade_npv))}
                             </span>
                           ) : "—"}
-                        </td>
+                        </td>}
                         <td className="align-middle">
                           {canAct && (() => {
                             const rowCtx = `${VARIANT_LABEL[c.variant] ?? c.variant} · ${SCEN_LABEL[c.scenario ?? s] ?? c.scenario ?? s}`;
@@ -1030,6 +1049,13 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                       <td colSpan={10} className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
                         과거 기반 관점 N/A — 대상 회사 연결 + DART 동기화 후 재생성하면 추가됩니다.{" "}
                         <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("financial-analysis")}>재무분석 탭에서 연결 →</button>
+                      </td>
+                    </tr>
+                  )}
+                  {!hasHistorical && greenfield && cases.length > 0 && (
+                    <tr>
+                      <td colSpan={8} className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
+                        과거 기반 관점은 Green Field에 해당 없습니다 — 대상 회사가 없어 시장 기반 관점만 평가합니다.
                       </td>
                     </tr>
                   )}
