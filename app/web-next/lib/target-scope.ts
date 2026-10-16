@@ -5,7 +5,12 @@
 // basis. Slice 1 only stores and displays it — comparison against the market
 // anchor is slice 2. Invalid JSON is a 400, never silently dropped.
 
-export const TARGET_SCOPE_REGIONS = ["kr", "eu", "us", "cn", "sea", "worldwide"] as const;
+// Region enum revised by the decider (chat 2026-10-16): eu->we (서유럽) and
+// us->na (북미) renames, sa/af/me/ru/ee added. The feature shipped hours
+// earlier and the dev DB held ZERO stored target_scope_json rows (checked
+// read-only 2026-10-16), so this is a clean enum swap — no us/eu
+// normalization path exists. worldwide stays mutually exclusive.
+export const TARGET_SCOPE_REGIONS = ["kr", "we", "ee", "ru", "na", "cn", "sea", "sa", "af", "me", "worldwide"] as const;
 export type TargetScopeRegion = (typeof TARGET_SCOPE_REGIONS)[number];
 
 export const TARGET_SCOPE_UNIT_BASES = ["krw_m_year", "units_year", "usd_m_year"] as const;
