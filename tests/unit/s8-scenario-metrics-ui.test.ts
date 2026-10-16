@@ -17,10 +17,17 @@ const CONNECT = read("components/business-case/S5ConnectBlock.tsx");
 const PARAMS = read("components/business-case/ParamsPanel.tsx");
 
 describe("IRR no-flow chip (scenario comparison)", () => {
-  test("chip condition: irr null + s5 basis + payload says plan capex zero", () => {
+  test("chip condition: irr null + s5 basis (s5_plan* or s5_pnl) + payload says plan capex zero", () => {
     expect(STAGE).toContain(
-      'const irrNoFlowChip = irrV == null && (note.basis ?? "").startsWith("s5_plan") && data?.s5_plan_capex_zero === true;',
+      'const irrNoFlowChip = irrV == null && (nb.startsWith("s5_plan") || nb === "s5_pnl") && data?.s5_plan_capex_zero === true;',
     );
+    expect(STAGE).toContain('const nb = note.basis ?? "";');
+  });
+  test("s5_pnl basis is covered (ADR-0178 slice 2) alongside s5_plan*", () => {
+    const cond = STAGE.indexOf("irrNoFlowChip = irrV == null");
+    const line = STAGE.slice(cond, STAGE.indexOf(";", cond));
+    expect(line).toContain('nb === "s5_pnl"');
+    expect(line).toContain('nb.startsWith("s5_plan")');
   });
   test("chip renders only in the null branch - a computed IRR is never replaced", () => {
     const irr = STAGE.indexOf('data-testid="scenario-irr-cell"');

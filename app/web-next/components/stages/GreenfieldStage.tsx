@@ -1253,7 +1253,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
               <section className="mt-3" data-testid="invest-sim-run-section" aria-labelledby="invest-sim-run-title">
                 <h4 id="invest-sim-run-title" className="text-[length:var(--fs-body)] mb-1">확률 시뮬레이션 (시드 고정 몬테카를로)</h4>
                 <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-sim-run-basis">
-                  저장된 투자 계획과 저장된 가정 범위로 삼각분포(최저·입력값·최고)를 추출합니다 (기본 500회, 100~5,000). 급여·인상률·가산율은 입력된 값의 범위 이동만 하며 값을 만들지 않습니다. 환율은 미적용입니다. 같은 입력은 항상 같은 결과를 냅니다. 저장하지 않은 변경은 반영되지 않습니다.
+                  저장된 투자 계획과 저장된 가정 범위로 삼각분포(최저·입력값·최고)를 추출합니다 (기본 2,000회, 100~5,000). 급여·인상률·가산율은 입력된 값의 범위 이동만 하며 값을 만들지 않습니다. 환율은 미적용입니다. 같은 입력은 항상 같은 결과를 냅니다. 저장하지 않은 변경은 반영되지 않습니다.
                 </p>
                 <div className="flex flex-wrap gap-2 items-end mb-2" data-testid="invest-sim-run-controls">
                   <label className="flex flex-col gap-1">
@@ -1262,7 +1262,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   </label>
                   <label className="flex flex-col gap-1">
                     <span className="text-[length:var(--fs-caption)]">추출 횟수 (선택)</span>
-                    <input type="number" min={100} max={5000} step={1} placeholder="500" className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-num" style={{ width: "7.5rem" }} value={simDraws} disabled={!canAct} onChange={(e) => setSimDraws(e.target.value)} data-testid="invest-sim-draws-input" />
+                    <input type="number" min={100} max={5000} step={1} placeholder="2000" className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-num" style={{ width: "7.5rem" }} value={simDraws} disabled={!canAct} onChange={(e) => setSimDraws(e.target.value)} data-testid="invest-sim-draws-input" />
                   </label>
                   <button type="button" className="btn-primary btn-sm" disabled={!canAct || simRunning || !!simInputError} onClick={() => void runSimulation()} data-testid="invest-sim-run-button">{simRunning ? "실행 중…" : "시뮬레이션 실행·저장"}</button>
                 </div>

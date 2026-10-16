@@ -10,14 +10,15 @@ import { buildInvestmentVectors, effectiveAssumptions, shiftAdvanceHalf, shiftDe
 import { staffingSummaryVector } from "./staffing-plan.ts";
 import { mulberry32 } from "./calibration-sweep.ts";
 
-export const DEFAULT_DRAWS = 500;
+// ADR-0176 Amendment 2026-10-16: default raised from 500 to 2,000 (clamp unchanged).
+export const DEFAULT_DRAWS = 2000;
 export const MIN_DRAWS = 100;
 export const MAX_DRAWS = 5000;
 export const HISTOGRAM_BINS = 20;
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
 
-/** Clamp a requested draw count to 100..5,000 (default 500 when absent or not a finite number). */
+/** Clamp a requested draw count to 100..5,000 (default 2,000 when absent or not a finite number). */
 export function clampDraws(n?: number | null): number {
   if (typeof n !== "number" || !Number.isFinite(n)) return DEFAULT_DRAWS;
   return Math.min(MAX_DRAWS, Math.max(MIN_DRAWS, Math.round(n)));
