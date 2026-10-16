@@ -1,4 +1,4 @@
-// @version 1.8.3
+// @version 1.8.4
 // Idempotent S1→S12 demo chain seeds — BROWNFIELD (seedS1ToS12Demo) and
 // GREENFIELD (seedGreenfieldS1ToS12Demo), one full lifecycle per track.
 //
@@ -32,7 +32,7 @@ const DEMO = {
       {
         case_id: "base:market_forward",
         drivers: {
-          revenue_y1: { dist: "constant", value: 15000, unit: "KRW_M", source: "시장규모 × 포획률 0.5%" },
+          revenue_y1: { dist: "constant", value: 15000, unit: "KRW_M", source: "시장규모 × 시장점유율 0.5%" },
           ramp_up: { dist: "constant", value: [0.4, 0.7, 0.9, 1.0, 1.0], source: "기본값" },
           revenue_growth: { dist: "normal", mean: 0.08, sigma: 0.05, unit: "ratio", source: "시장 성장률" },
           opex_ratio: { dist: "constant", value: 0.6, unit: "ratio", source: "기본값" },

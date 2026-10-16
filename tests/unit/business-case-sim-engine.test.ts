@@ -165,7 +165,7 @@ describe("S8 generation x sim-engine bridge", () => {
     const post = await req(`/api/projects/${projectId3}/business-case/params`, {
       method: "POST",
       headers: { cookie: analystCookie },
-      body: JSON.stringify({ params: { capture_rate: 0.01, ramp_up: [0.5, 0.8, 1.0] }, rationale: "시장 재조사 기반 포획률 상향 — 테스트 근거" }),
+      body: JSON.stringify({ params: { capture_rate: 0.01, ramp_up: [0.5, 0.8, 1.0] }, rationale: "시장 재조사 기반 시장점유율 상향 — 테스트 근거" }),
     });
     expect(post.status).toBe(201);
     const posted = (await post.json()).data as { written: string[] };

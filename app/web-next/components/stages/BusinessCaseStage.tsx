@@ -37,6 +37,7 @@ import { StageFrame } from "../StageFrame.tsx";
 import { TabNav } from "../TabNav.tsx";
 import { WaccPanel } from "../wacc/WaccPanel.tsx";
 import { ParamsPanel } from "../business-case/ParamsPanel.tsx";
+import { S5ConnectBlock } from "../business-case/S5ConnectBlock.tsx";
 import { TargetCostingPanel } from "../business-case/TargetCostingPanel.tsx";
 import { ValuationMethodology } from "../business-case/ValuationMethodology.tsx";
 import { FinancialAnalysisPanel } from "../FinancialAnalysisPanel.tsx";
@@ -183,6 +184,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   const searchParams = useSearchParams();
   const urlSync = !embedded;
   const [localTab, setLocalTab] = useState("overview");
+  // Bumped after an S5 connect / update / disconnect so the calculation-chain explanation reloads its parameters.
+  const [s5ConnectVersion, setS5ConnectVersion] = useState(0);
   const tabParam = urlSync ? searchParams.get("tab") : localTab;
   // Greenfield (no target axis) hides the target compare/select tab; old deep links land on overview (ADR-0159).
   const [greenfield, setGreenfield] = useState(false);
@@ -455,7 +458,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       <StageFrame stageId="S8" heading={greenfield ? "S8 사업성 분석 — 시장 기반 밸류에이션" : "S8 사업성 분석 — 이중 관점 밸류에이션 비교"}>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
         {greenfield ? (
-          <>시나리오마다 <b>시장 기반(진행 판정 1차)</b> 관점으로 평가합니다. 성장은 시장 규모와 포획률에서 오며, 대상 회사가 없어 과거 실적과의 비교는 없습니다.</>
+          <>시나리오마다 <b>시장 기반(진행 판정 1차)</b> 관점으로 평가합니다. 성장은 시장 규모와 시장점유율에서 오며, 대상 회사가 없어 과거 실적과의 비교는 없습니다.</>
         ) : (
           <>같은 시나리오를 <b>시장 기반(진행 판정 1차)</b>과 <b>과거 기반(비교 근거)</b> 두 관점으로 각각 평가해 나란히 비교합니다.</>
         )}
@@ -650,7 +653,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               <th scope="col">계산 엔진</th>
               <th scope="col" title="페이드 DCF(성장률이 선형 수렴하는 대안 구조) NPV가 기본 구조 중앙값과 얼마나 벌어지는지 — 표시 전용이며 순위에 반영되지 않습니다.">구조 교차검증<span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">(페이드 DCF 대 중앙값)</span></th>
               <th scope="col" title="생성기가 진입(acq_ev)과 처분(exit_ev)에 같은 배수를 적용하므로 진입 전용 배수가 아닌 가정치입니다. 사람이 확정한 프로젝트 밴드가 있을 때만 범위 내/밖을 표시하며, 글로벌 2–6배는 이 영역의 근거가 없는 참고값입니다. 가격 적정성 판단이 아니며 표시 전용으로 순위에 반영되지 않습니다.">가정 EV/매출 배수 (진입=처분)</th>
-              <th scope="col" title="이 대상의 케이스가 어떤 매출 기준으로 평가되었는가 — 회사 실적 앵커(DART 연매출)와 시장 포획 폴백(시장규모 × 포획률)이 섞이면 하위 5% 기준 순위 비교가 부적합합니다.">평가 기준</th>
+              <th scope="col" title="이 대상의 케이스가 어떤 매출 기준으로 평가되었는가 — 회사 실적 앵커(DART 연매출)와 시장 점유율 폴백(시장규모 × 시장점유율)이 섞이면 하위 5% 기준 순위 비교가 부적합합니다.">평가 기준</th>
               <th scope="col" className="min-w-[calc(var(--space-8)*3)]"><span className="sr-only">작업</span></th>
             </tr>
           </thead>
@@ -725,7 +728,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                       <span className="status-chip status-green whitespace-nowrap" title="대상 회사 최신 연매출(DART)을 매출 앵커로 평가 — 대상 간 비교 가능">실적 앵커 (DART)</span>
                     )}
                     {t.anchorMethod === "market_capture" && (
-                      <span className="status-chip status-amber whitespace-nowrap" title="회사 실적이 연결되지 않아 시장규모 × 포획률 폴백으로 평가 — 실적 앵커 대상과는 기준이 다릅니다. 재무분석 탭에서 회사 연결 후 재생성하세요.">시장 포획 폴백</span>
+                      <span className="status-chip status-amber whitespace-nowrap" title="회사 실적이 연결되지 않아 시장규모 × 시장점유율 폴백으로 평가 — 실적 앵커 대상과는 기준이 다릅니다. 재무분석 탭에서 회사 연결 후 재생성하세요.">시장 점유율 폴백</span>
                     )}
                     {!t.anchorMethod && <span className="status-chip status-not-started whitespace-nowrap">미평가</span>}
                   </td>
@@ -753,7 +756,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         {data?.methods_mixed && (
           <p className="text-[length:var(--fs-caption)] mt-1" role="alert">
             <span className="status-chip status-amber mr-1">⚠ 평가 기준 불일치</span>
-            비교 대상의 평가 기준이 섞여 있습니다 — 일부 대상이 <b>회사 실적 앵커</b>(DART 연매출)가 아닌 <b>시장 포획 폴백</b>(시장규모 × 포획률)으로 평가되어
+            비교 대상의 평가 기준이 섞여 있습니다 — 일부 대상이 <b>회사 실적 앵커</b>(DART 연매출)가 아닌 <b>시장 점유율 폴백</b>(시장규모 × 시장점유율)으로 평가되어
             p05 순위·★ 권고안 비교가 부적합합니다. 재무분석 탭에서 해당 대상의 회사를 연결한 뒤 재생성하세요.
           </p>
         )}
@@ -782,6 +785,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
       {tab === "overview" && (
       <>
+      {/* S5 connection status + human-only connect actions sit directly above the primary action (decider feedback 2026-10-16) */}
+      {greenfield && <S5ConnectBlock projectId={projectId} canAct={canAct} onChanged={() => setS5ConnectVersion((v) => v + 1)} />}
       {/* Primary action of the tab sits first (decider feedback 2026-10-15) */}
       {canAct && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -860,6 +865,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
       {/* 기업가치 계산 방법 — 계산 사슬 공개 (사용자 요청 2026-10-10) */}
       <ValuationMethodology
+        key={s5ConnectVersion}
         projectId={projectId}
         marketCase={(byScenario.get("base") ?? []).find((c) => c.variant === "market_forward") ?? null}
         historicalCase={(byScenario.get("base") ?? []).find((c) => c.variant === "historical") ?? null}

@@ -17,7 +17,7 @@ export const CAPABILITY_LINE_NOTE_MARK = "역량 해소 비용";
 const VALID_CATEGORIES = new Set(["labor", "opex", "capex", "revenue", "gov_rnd"]);
 const PERIOD_MULTIPLIER: Record<string, number> = { monthly: 12, quarterly: 4, yearly: 1, lumpsum: 1 };
 
-/** One plan line in the shape of a copied business_case_line row (KRW_M, growth 0). */
+/** One plan line in the shape of a copied business_case_line row (KRW_M, growth preserved from the S5 line). */
 export interface PinPlanLine {
   category: string;
   annual_amount_krw_m: number;
@@ -85,7 +85,10 @@ export function pinPlanLinesOf(input: InvestmentVectorsInput): { horizon: number
     const annual = (manualLineKrwM(m) ?? 0) * mult;
     const start = m.startYear ?? 1;
     const end = m.period === "lumpsum" ? start : m.endYear ?? null;
-    lines.push({ category: String(m.category), annual_amount_krw_m: annual, start_year: start, end_year: end, growth_rate: 0, unit: "KRW_M", note: null });
+    // Same validation as the copy path (writeS5CostModel.lineGrowthRate): the S5 line's own rate,
+    // clamped to [0,1]; missing/invalid stays 0 so both paths stay in parity.
+    const growth = typeof m.growthRate === "number" && Number.isFinite(m.growthRate) && m.growthRate > 0 ? Math.min(m.growthRate, 1) : 0;
+    lines.push({ category: String(m.category), annual_amount_krw_m: annual, start_year: start, end_year: end, growth_rate: growth, unit: "KRW_M", note: null });
   }
   for (const c of input.capLines) {
     if (!(c.reflected && c.persisted) || !(c.costKrwM > 0)) continue;

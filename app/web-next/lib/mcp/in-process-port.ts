@@ -145,6 +145,8 @@ export const HUMAN_ONLY_ROUTES: readonly HumanOnlyRule[] = [
   { method: "POST", pattern: "/api/projects/:id/business-case/legacy-cleanup" },
   { method: "POST", pattern: "/api/projects/:id/business-case/s5-reimport" },
   { method: "POST", pattern: "/api/projects/:id/business-case/s5-pin" },
+  { method: "POST", pattern: "/api/projects/:id/business-case/s5-connect" },
+  { method: "POST", pattern: "/api/projects/:id/business-case/s5-disconnect" },
   { method: "POST", pattern: "/api/projects/:id/business-case/ev-band" },
   { method: "POST", pattern: "/api/projects/:id/business-goals" },
   { method: "POST", pattern: "/api/projects/:id/greenfield-scope" },

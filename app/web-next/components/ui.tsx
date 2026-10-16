@@ -129,6 +129,8 @@ export interface ParamRow {
   value: ReactNode;
   unit?: string;
   source?: ReactNode;
+  /** Optional extra column (header set by ParamTable's extraHeader), e.g. the S8 `S5 연동` cell. */
+  extra?: ReactNode;
 }
 
 export function ParamTable({
@@ -136,8 +138,10 @@ export function ParamTable({
   caption,
   labelHeader = "항목",
   valueAlign = "end",
+  extraHeader = "비고",
 }: {
   rows: ParamRow[];
+  extraHeader?: string;
   caption?: string;
   labelHeader?: string;
   /** "end" for numbers (right-aligned, tabular); "start" for text facts. */
@@ -147,6 +151,7 @@ export function ParamTable({
   // plain fact tables (label + value) do not show empty columns.
   const hasUnit = rows.some((r) => r.unit);
   const hasSource = rows.some((r) => r.source);
+  const hasExtra = rows.some((r) => r.extra);
   const valueCls = `param-value${valueAlign === "start" ? " param-value-start" : ""}`;
   return (
     <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
@@ -158,6 +163,7 @@ export function ParamTable({
             <th scope="col" className={valueCls}>값</th>
             {hasUnit && <th scope="col" className="param-unit">단위</th>}
             {hasSource && <th scope="col" className="param-source">출처</th>}
+            {hasExtra && <th scope="col" className="param-source">{extraHeader}</th>}
           </tr>
         </thead>
         <tbody>
@@ -167,6 +173,7 @@ export function ParamTable({
               <td className={valueCls}>{r.value}</td>
               {hasUnit && <td className="param-unit">{r.unit ?? ""}</td>}
               {hasSource && <td className="param-source">{r.source}</td>}
+              {hasExtra && <td className="param-source">{r.extra}</td>}
             </tr>
           ))}
         </tbody>

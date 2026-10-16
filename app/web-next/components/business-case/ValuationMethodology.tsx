@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { KRW_MILLIONS_UNIT } from "../../lib/format.ts";
 import { noteNumber, parseSimNote } from "../../lib/sim-note.ts";
+import { s5ParamLinkage, type S5ParamKey } from "../../lib/s5-linkage-labels.ts";
 
 interface MethodCase {
   id: string;
@@ -51,11 +52,12 @@ export function ValuationMethodology({
   greenfield?: boolean;
 }) {
   const [params, setParams] = useState<ResolvedParams | null>(null);
+  const [s5Run, setS5Run] = useState<{ drawCount: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<{ params: ResolvedParams }>(`/api/projects/${encodeURIComponent(projectId)}/business-case/params`)
-      .then((r) => setParams(r.data.params))
+    api.get<{ params: ResolvedParams; s5_connect?: { run: { drawCount: number } | null } | null }>(`/api/projects/${encodeURIComponent(projectId)}/business-case/params`)
+      .then((r) => { setParams(r.data.params); setS5Run(r.data.s5_connect?.run ?? null); })
       .catch(() => setError("파라미터를 불러오지 못했습니다."));
   }, [projectId]);
 
@@ -86,6 +88,18 @@ export function ValuationMethodology({
   const terminalMultipleMf = gMf != null && horizon > 1 ? Math.pow(1 + gMf, horizon - 1) : null;
   const terminalMultipleHist = gHist != null && horizon > 1 ? Math.pow(1 + gHist, horizon - 1) : null;
 
+  // Green Field only: is this value an S5 amount or an assumption? Same wording as the `S5 연결` block;
+  // display only, describes only rules in force today.
+  const s5Tag = (key: S5ParamKey) => {
+    if (!greenfield || !params) return null;
+    const cell = s5ParamLinkage(key, { basis: params.investmentBasis, run: s5Run, s8Iterations: params.iterations });
+    return (
+      <div data-testid={`s8-method-s5-${key}`} className="text-[length:var(--fs-caption)]">
+        <span className={`status-chip whitespace-nowrap ${cell.kind === "s5" ? "status-green" : "status-amber"}`}>{cell.kind === "s5" ? "S5 값" : "가정값"}</span> {cell.detail}
+      </div>
+    );
+  };
+
   return (
     <section className="market-section sizing-step mb-3" aria-label="기업가치 계산 방법">
       <h3 className="sizing-step-title">기업가치 계산 방법 <span className="status-chip status-info">계산 사슬 공개</span></h3>
@@ -102,12 +116,12 @@ export function ValuationMethodology({
           <tbody>
             <tr>
               <td>① 매출 앵커</td>
-              <td>{isAcquisition ? "인수 대상 회사의 최신 연매출 — 두 관점(시장·과거 기반)이 같은 앵커에서 출발" : "시장규모 × 포획률로 산정한 year-1 매출"}</td>
+              <td>{isAcquisition ? "인수 대상 회사의 최신 연매출 — 두 관점(시장·과거 기반)이 같은 앵커에서 출발" : "시장규모 × 시장점유율로 산정한 year-1 매출"}</td>
               <td className="num mono-num">{revLine ? 억(revLine.annual_amount_krw_m) : "—"}{isAcquisition ? ` (${n.revenue_anchor ?? ""})` : ""}</td>
             </tr>
             <tr>
               <td>② 성장 가정</td>
-              <td>{greenfield ? "시장 성장률 (시장 규모 × 포획률 기반) — 대상 회사가 없어 과거 실적 비교는 없음" : "시장 기반 = 시장 성장률 / 과거 기반 = 대상 회사 자체 CAGR (DART) — 두 관점의 유일한 차이"}</td>
+              <td>{greenfield ? "시장 성장률 (시장 규모 × 시장점유율 기반) — 대상 회사가 없어 과거 실적 비교는 없음" : "시장 기반 = 시장 성장률 / 과거 기반 = 대상 회사 자체 CAGR (DART) — 두 관점의 유일한 차이"}</td>
               <td className="num mono-num">
                 {gMf != null ? `시장 ${pct1(gMf)}` : "—"}{greenfield ? "" : ` · ${gHist != null ? `과거 ${pct1(gHist)}` : "—"}`}
               </td>
@@ -115,7 +129,7 @@ export function ValuationMethodology({
             <tr>
               <td>③ 변동성(σ)</td>
               <td>연도별 매출 성장 노이즈의 표준편차 — 몬테카를로 분포의 폭</td>
-              <td className="num mono-num">{sigma != null ? pct1(sigma) : "—"} ({n.sigma_source ?? ""})</td>
+              <td className="num mono-num">{sigma != null ? pct1(sigma) : "—"} ({n.sigma_source ?? ""}){s5Tag("sigma")}</td>
             </tr>
             <tr>
               <td>④ 손익 구조</td>
@@ -126,10 +140,13 @@ export function ValuationMethodology({
               </td>
               <td className="num mono-num">
                 {s5Basis
-                  ? `S5 투자 계획 스케줄 적용${params?.investmentBasis === "s5_plan_full" ? " · 인건비/운영비도 계획값 사용 (전체)" : " · 인건비/운영비는 비율 (교차검증용)"}` + (params ? ` · 가동률 ${params.rampUp.map((v) => v.toFixed(1)).join("→")}` : "")
+                  ? `S5 투자 계획 스케줄 적용${params?.investmentBasis === "s5_plan_full" ? " · 인건비/운영비도 계획값 사용" : params?.investmentBasis === "s5_plan" ? " · 인건비/운영비는 비율 (예전 기준: 설비투자만)" : ""}` + (params ? ` · 가동률 ${params.rampUp.map((v) => v.toFixed(1)).join("→")}` : "")
                   : <>
                     운영비 {params ? pct1(params.opexRatio) : "—"} · 설비투자 {params ? pct1(params.capexRatio) : "—"} · 가동률 {params ? params.rampUp.map((v) => v.toFixed(1)).join("→") : "—"}
                   </>}
+                {s5Tag("opex")}
+                {s5Tag("capex")}
+                {s5Tag("ramp")}
               </td>
             </tr>
             <tr>
@@ -147,6 +164,7 @@ export function ValuationMethodology({
                   : s5Basis
                     ? "S5 계획 Y1 집행액 (year-0)"
                     : params ? `매출의 ${(params.initialInvestmentRatio * 100).toFixed(0)}%` : "—"}
+                {s5Tag("initial")}
               </td>
             </tr>
             <tr>

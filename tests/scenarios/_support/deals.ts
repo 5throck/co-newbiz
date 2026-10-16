@@ -115,7 +115,7 @@ export async function seedGreenfieldDeal(dbPath: string, analystId: string): Pro
     const inputs = {
       job_id: "s8:e2e-gf:base:market_forward", seed_policy: { base: "e2e-gf", hash: "fnv1a" }, device: "cpu", iterations: 2000, horizon_years: 5,
       discount_rate: { value: 0.09, subject: "target", source: "user" },
-      cases: [{ case_id: "base:market_forward", drivers: { revenue_y1: { dist: "constant", value: 9000, unit: "KRW_M", source: "시장규모 × 포획률" } } }],
+      cases: [{ case_id: "base:market_forward", drivers: { revenue_y1: { dist: "constant", value: 9000, unit: "KRW_M", source: "시장규모 × 시장점유율" } } }],
     };
     db.run(
       `INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, variant, target_id, inputs_json)

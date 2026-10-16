@@ -335,3 +335,14 @@ terms:
     related: [Capability Judgement Stale, Brown Field, Green Field]
     used_in: [brownfield-feasibility]
     owner: platform-lead
+
+  Market Share:
+    ko: 시장점유율
+    en: Market Share
+    definition_ko: 시장 규모 가운데 우리 사업이 차지하는 몫. S8 사업성 분석에서는 `1년차 시장점유율`(비율)에 시장 규모를 곱해 첫해 매출을 추정한다.
+    why_it_matters_ko: 직접 시장 데이터가 없는 신규 사업에서는 첫해 매출이 이 가정 하나에 크게 좌우된다. 사람이 확정한 값인지 기본값인지 출처를 함께 확인해야 한다.
+    category: business
+    aliases: [1년차 시장점유율]
+    related: [Green Field]
+    used_in: [greenfield-feasibility]
+    owner: valuation-agent

@@ -70,6 +70,14 @@ exclusions:
     kind: route
     route: "POST /api/projects/{}/business-case/s5-pin"
     reason: Pinning or re-pinning the S5 investment plan reference for S8 (supersedes the current pin, refreshes the compat copy) is a human-only click (ADR-0178, boundary #2); agents may only read the pin state.
+  - id: s5-plan-connect
+    kind: route
+    route: "POST /api/projects/{}/business-case/s5-connect"
+    reason: Connecting S8 to the S5 investment plan (pin + investment basis + pinned source in one step) is a human-only click (ADR-0178 follow-up, boundary #2); agents may only read the pin state.
+  - id: s5-plan-disconnect
+    kind: route
+    route: "POST /api/projects/{}/business-case/s5-disconnect"
+    reason: Returning S8 to the S5 copy (bc.s5_source = 0) is a human-only click (ADR-0178 follow-up, boundary #2).
   - id: ev-band-confirmation
     kind: route
     route: "POST /api/projects/{}/business-case/ev-band"
