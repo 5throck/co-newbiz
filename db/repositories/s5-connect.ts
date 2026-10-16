@@ -43,14 +43,14 @@ export interface S5ConnectPreview {
   pin: S5RepinPreview;
   /** True when a confirmed S5 simulation run exists (the pin would reference it). */
   confirmed_run_exists: boolean;
-  current: { investment_basis: "ratio" | "s5_plan" | "s5_plan_full"; s5_source: 0 | 1 };
+  current: { investment_basis: "ratio" | "s5_plan" | "s5_plan_full" | "s5_pnl"; s5_source: 0 | 1 };
   /** What the confirm will change. basis is null when the unified S5 basis is already in force. */
   will_set: { investment_basis: "s5_plan_full" | null; s5_source: 1 };
 }
 
-const BASIS_OF_CODE: Record<number, "ratio" | "s5_plan" | "s5_plan_full"> = { 0: "ratio", 1: "s5_plan", 2: "s5_plan_full" };
+const BASIS_OF_CODE: Record<number, "ratio" | "s5_plan" | "s5_plan_full" | "s5_pnl"> = { 0: "ratio", 1: "s5_plan", 2: "s5_plan_full", 3: "s5_pnl" };
 
-function currentBasis(db: Database, projectId: string): "ratio" | "s5_plan" | "s5_plan_full" {
+function currentBasis(db: Database, projectId: string): "ratio" | "s5_plan" | "s5_plan_full" | "s5_pnl" {
   const v = bcScalar(db, projectId, "bc.investment_basis");
   return v != null && BASIS_OF_CODE[v] ? BASIS_OF_CODE[v] : "ratio";
 }
@@ -70,7 +70,7 @@ export function previewS5Connect(db: Database, projectId: string): S5ConnectPrev
     import: previewS5Reimport(db, projectId),
     pin,
     confirmed_run_exists: pin.current.s5_sim_run_id != null,
-    current: { investment_basis: basis, s5_source: s5SourceOptedIn(db, projectId) ? 1 : 0 },
+    current: { investment_basis: basis as "ratio" | "s5_plan" | "s5_plan_full" | "s5_pnl", s5_source: s5SourceOptedIn(db, projectId) ? 1 : 0 },
     will_set: { investment_basis: basis === "s5_plan_full" ? null : "s5_plan_full", s5_source: 1 },
   };
 }
@@ -154,7 +154,7 @@ export interface S5AutoDefaultResult {
   pin_created: boolean;
   pin_id: string | null;
   basis_switched: boolean;
-  prior_basis: "ratio" | "s5_plan" | "s5_plan_full" | null;
+  prior_basis: "ratio" | "s5_plan" | "s5_plan_full" | "s5_pnl" | null;
 }
 
 /**
@@ -188,7 +188,9 @@ export function ensureDefaultS5Link(db: Database, projectId: string, actor: stri
     const hadPin = !!getCurrentS5PlanPin(db, projectId);
     if (!hadPin) createS5PlanPin(db, { projectId, actor, now }); // audited s5_plan_pin.pinned, reason initial
     const basis = currentBasis(db, projectId);
-    if (basis === "s5_plan_full") {
+    // ADR-0178 slice 2: a person-set `s5_pnl` basis is a deliberate choice too — the lazy default
+    // must never flip it back to the unified basis (only ratio / legacy s5_plan get auto-moved).
+    if (basis === "s5_plan_full" || basis === "s5_pnl") {
       return { applied: hadPin, pin_created: !hadPin, pin_id: getCurrentS5PlanPin(db, projectId)?.id ?? null, basis_switched: false, prior_basis: basis };
     }
     const runId = writeBc(db, projectId, actor, now, "S5 연결 기본 적용 (자동 생성, ADR-0178 개정)", [["bc.investment_basis", 2]]);

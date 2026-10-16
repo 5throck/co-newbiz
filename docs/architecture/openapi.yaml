@@ -4635,7 +4635,13 @@ paths:
           $ref: '#/components/responses/NotFound'
     put:
       operationId: updateProjectBusinessCase
-      summary: Update a business-case model; the lines array replaces the whole line set (analyst+).
+      summary: >-
+        Update a business-case model; the lines array replaces the whole line set (analyst+).
+        Green Field projects with an importable S5 plan reject line edits with 409
+        `greenfield_lines_readonly` (ADR-0178 decider decision 2026-10-16: S5 is the single
+        source of the investment plan; manage lines in the S5 investment tab and re-run
+        generation via the S8 S5-connect block). Green Field projects without an importable
+        S5 plan keep the manual editor.
       tags:
         - Analysis
       parameters:
@@ -4655,6 +4661,21 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          description: Green Field line edit refused (greenfield_lines_readonly).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        enum: [greenfield_lines_readonly]
+                      message:
+                        type: string
     delete:
       operationId: deleteProjectBusinessCase
       summary: Delete a business-case model and its lines/simulations (?model_id=) (analyst+).
@@ -4789,7 +4810,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       operationId: recordProjectBusinessCaseParams
-      summary: Record a user batch of bc.* parameters on a fresh run (analyst+; rationale required). Includes investment_basis (0=비율 추정 ratio, 1=S5 투자 계획 (legacy, capex-only), 2=S5 투자 계획 (unified - capex + labor/opex); ADR-0174 — since 2026-10-16 the UI offers only 0 and 2; a stored 1 keeps capex-only behavior until re-set) — when not ratio the generator replaces the year-0 ratio investment and capex_ratio with the S5 capex schedule (Y1 spend counted in year 0) and bypasses the python sim engine.
+      summary: Record a user batch of bc.* parameters on a fresh run (analyst+; rationale required). Includes investment_basis (0=비율 추정 ratio, 1=S5 투자 계획 (legacy, capex-only), 2=S5 투자 계획 (unified - capex + labor/opex), 3=S5 계획 손익 s5_pnl (ADR-0178 slice 2 - Green Field + pinned path ONLY, human-only; agent principal 403, otherwise 400; year-0 = pre-launch total undiscounted, per-year plan P&L with utilization on revenue only, ratio substitution for plan-less years, bep_year NULL when pre-launch is 0); ADR-0174 — since 2026-10-16 the UI offers only 0 and 2; a stored 1 keeps capex-only behavior until re-set) — when not ratio the generator replaces the year-0 ratio investment and capex_ratio with the S5 capex schedule (Y1 spend counted in year 0) and bypasses the python sim engine.
       tags:
         - Analysis
       parameters:

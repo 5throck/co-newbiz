@@ -389,12 +389,16 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
   const ramp = rampUpOf(inputs);
   // ADR-0176 slice 3: per-draw pairing with the confirmed S5 run - iteration `it` uses S5 draw
   // `it % drawCount`. The factors are precomputed, so the revenue rng stream is untouched.
-  const sim5 = s5 ? inputs.s5Sim ?? null : null;
+  const sim5 = s5 && !s5.pnl ? inputs.s5Sim ?? null : null;
   for (let it = 0; it < iterationsOf(inputs); it++) {
     let revenue = year1Revenue;
     const capF = sim5 ? sim5.capFactors[it % sim5.drawCount] : 1;
     const manF = sim5 ? sim5.manFactors[it % sim5.drawCount] : 1;
-    let npv = s5 ? -(sim5 ? drawnCapex(s5.plan, 0, capF, manF) : s5.plan.capexByYear[0]) : -initialInvestment; // year-0 인수/설립 투자 (s5_plan: 계획 Y1 집행액, OD-3)
+    let npv = s5?.pnl
+      ? -(s5.plan.preLaunchKrwM ?? 0)
+      : s5
+        ? -(sim5 ? drawnCapex(s5.plan, 0, capF, manF) : s5.plan.capexByYear[0])
+        : -initialInvestment; // year-0 (s5_pnl: 출시 전 투자, OD-3)
     for (let year = 1; year <= horizon; year++) {
       if (year > 1) {
         const [z1] = normalPair(rng);
@@ -402,7 +406,19 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
       }
       const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
       let flow: number;
-      if (s5) {
+      if (s5?.pnl) {
+        // ADR-0178 slice 2 - 가동률은 매출에만 (OD-7): flow = rev*util - plan opex - plan capex.
+        // 계획 미포함 연도는 가동률 반영 매출 x opexRatio로 대체 (labelled in note), capex는
+        // 계획 기간 외 가동률 반영 매출 x capexRatio. s5Sim pairing은 slice 3까지 없음.
+        const revUtil = revenue * utilization;
+        const i = year - 1;
+        const covered = (i < s5.plan.opexCovered.length && s5.plan.opexCovered[i]) || (i < s5.plan.govRndByYear.length && s5.plan.govRndByYear[i] > 0);
+        const opex = covered
+          ? s5.plan.laborOpexByYear[i] + s5.plan.govRndByYear[i]
+          : revUtil * opexRatio;
+        const capex = i < s5.plan.capexByYear.length ? s5.plan.capexByYear[i] : revUtil * capexRatio;
+        flow = revUtil - opex - capex;
+      } else if (s5) {
         let opex = opexOfYear(inputs, s5, year, revenue);
         if (sim5 && s5.full && year - 1 < s5.plan.opexCovered.length && s5.plan.opexCovered[year - 1]) opex = drawnLaborOpex(s5.plan, year - 1, capF, manF);
         const capex = sim5 ? drawnCapex(s5.plan, year, capF, manF) : capexOfYear(inputs, s5, year, revenue);
@@ -422,26 +438,33 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
   const mean = npvs.reduce((a, b) => a + b, 0) / npvs.length;
   const variance = npvs.reduce((a, b) => a + (b - mean) * (b - mean), 0) / npvs.length;
   const q = (p: number) => npvs[Math.min(npvs.length - 1, Math.max(0, Math.floor(p * npvs.length)))];
-  // Deterministic path — same BEP/payback definition as the engine. Under
-  // s5_plan the year-0 outflow is plan Y1 capex (OD-3) and the plan's later
-  // years' capex (and gov_rnd under full) ride inside the flows.
-  const detInitial = s5 ? s5.plan.capexByYear[0] : initialInvestmentOf(inputs, year1Revenue).value;
+  // Deterministic path - same BEP/payback definition as the engine. Under
+  // s5_pnl the year-0 outflow is the plan's pre-launch amount (OD-3) and the
+  // plan's per-year opex/capex ride inside the flows (utilization on revenue only).
+  const detInitial = s5?.pnl ? (s5.plan.preLaunchKrwM ?? 0) : s5 ? s5.plan.capexByYear[0] : initialInvestmentOf(inputs, year1Revenue).value;
   const detFlows: number[] = [-detInitial];
   let detRevenue = year1Revenue;
   for (let year = 1; year <= horizon; year++) {
     if (year > 1) detRevenue *= 1 + anchorGrowth;
     const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
-    if (s5) {
+    if (s5?.pnl) {
+      const i = year - 1;
+      const revUtil = detRevenue * utilization;
+      const covered = (i < s5.plan.opexCovered.length && s5.plan.opexCovered[i]) || (i < s5.plan.govRndByYear.length && s5.plan.govRndByYear[i] > 0);
+      const opex = covered ? s5.plan.laborOpexByYear[i] + s5.plan.govRndByYear[i] : revUtil * opexRatio;
+      const capex = i < s5.plan.capexByYear.length ? s5.plan.capexByYear[i] : revUtil * capexRatio;
+      detFlows.push(revUtil - opex - capex);
+    } else if (s5) {
       const opex = opexOfYear(inputs, s5, year, detRevenue);
       detFlows.push((detRevenue - opex) * utilization - capexOfYear(inputs, s5, year, detRevenue));
     } else {
       detFlows.push(detRevenue * (1 - opexRatio - capexRatio) * utilization);
     }
   }
-  if (exitMult > 0) detFlows[detFlows.length - 1] += detRevenue * exitMult; // 처분가치는 마지막 연도 플로우와 함께 실현
-  return { seed, iterations: iterationsOf(inputs), p05: q(0.05), p50: q(0.5), p95: q(0.95), mean, std: Math.sqrt(variance), bepYear: discountedPaybackYear(detInitial, detFlows.slice(1), inputs.wacc.value), bepVolume: null };
+  if (exitMult > 0) detFlows[detFlows.length - 1] += detRevenue * exitMult;
+  const bepYear = s5?.pnl && detInitial === 0 ? null : discountedPaybackYear(detInitial, detFlows.slice(1), inputs.wacc.value);
+  return { seed, iterations: iterationsOf(inputs), p05: q(0.05), p50: q(0.5), p95: q(0.95), mean, std: Math.sqrt(variance), bepYear, bepVolume: null };
 }
-
 // ── Case inputs (anchored to the promoting opportunity's market facts) ─────
 
 /** ADR-0156 소비 스코프 — 'project'(게이트 기준 수치) 또는 'target'(그 대상
@@ -994,15 +1017,17 @@ function capexRatioOf(inputs: CaseInputs): number {
 // count). `s5_plan_full` additionally replaces the opex ratio where the plan
 // has labor/opex lines and books `gov_rnd` as an inflow in its year.
 
-export type InvestmentBasis = "ratio" | "s5_plan" | "s5_plan_full";
+export type InvestmentBasis = "ratio" | "s5_plan" | "s5_plan_full" | "s5_pnl";
 
 /** assumption.value is REAL NOT NULL, so the basis rides as a numeric code:
- *  0 = 비율 추정 (default), 1 = S5 투자 계획, 2 = S5 투자 계획 (opex 포함). */
-export const INVESTMENT_BASIS_CODES: Record<InvestmentBasis, number> = { ratio: 0, s5_plan: 1, s5_plan_full: 2 };
+ *  0 = 비율 추정 (default), 1 = S5 투자 계획, 2 = S5 투자 계획 (opex 포함),
+ *  3 = S5 계획 손익 (ADR-0178 slice 2 — Green Field + pinned path only, settable by a person only). */
+export const INVESTMENT_BASIS_CODES: Record<InvestmentBasis, number> = { ratio: 0, s5_plan: 1, s5_plan_full: 2, s5_pnl: 3 };
 
 export function investmentBasisOfCode(value: number | null | undefined): InvestmentBasis {
   if (value === INVESTMENT_BASIS_CODES.s5_plan) return "s5_plan";
   if (value === INVESTMENT_BASIS_CODES.s5_plan_full) return "s5_plan_full";
+  if (value === INVESTMENT_BASIS_CODES.s5_pnl) return "s5_pnl";
   return "ratio";
 }
 
@@ -1076,12 +1101,12 @@ export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (..
 
 /** The plan in force for a case — only when a human chose an s5_plan basis
  *  AND a plan exists; otherwise null (the ratio path runs unchanged). */
-function s5PlanOf(inputs: CaseInputs): { plan: S5InvestmentPlan; full: boolean } | null {
+function s5PlanOf(inputs: CaseInputs): { plan: S5InvestmentPlan; full: boolean; pnl: boolean } | null {
   const basis = inputs.bcParams?.investmentBasis ?? "ratio";
   if (basis === "ratio") return null;
   const plan = inputs.s5Plan ?? null;
   if (!plan) return null;
-  return { plan, full: basis === "s5_plan_full" };
+  return { plan, full: basis === "s5_plan_full", pnl: basis === "s5_pnl" };
 }
 
 /** ADR-0176 slice 3 - capex / opex of the s5 plan under one paired S5 draw: capability-sourced lines
@@ -1116,6 +1141,60 @@ function opexOfYear(inputs: CaseInputs, s5: { plan: S5InvestmentPlan; full: bool
   if (!s5.full) return revenue * opexRatioOf(inputs);
   const i = year - 1;
   return i < s5.plan.opexCovered.length && s5.plan.opexCovered[i] ? s5.plan.laborOpexByYear[i] : revenue * opexRatioOf(inputs);
+}
+
+/** ADR-0178 slice 2 (s5_pnl) - per-year P&L terms of the plan (design §5).
+ * Covered year: a labor/opex OR gov_rnd line lands in it - opex is the plan
+ * laborOpex + govRnd, NOT scaled by utilization (OD-7). Uncovered year:
+ * opex falls back to ramped revenue x opexRatio (labelled). Capex beyond the
+ * plan horizon falls back to ramped revenue x capexRatio (labelled). Pure. */
+export interface S5PnlYear {
+  year: number;
+  opexKrwM: number;
+  capexKrwM: number;
+  opexFallback: boolean;
+  capexFallback: boolean;
+  opexFallbackLabel: string;
+  capexFallbackLabel: string;
+}
+
+export function s5PnlYearPlan(
+  plan: S5InvestmentPlan,
+  horizon: number,
+  revenueByYear: number[],
+  utilizationByYear: number[],
+  opexRatio: number,
+  capexRatio: number,
+): { years: S5PnlYear[]; fallbackYears: number; preLaunchKrwM: number } {
+  const preLaunchKrwM = plan.preLaunchKrwM ?? 0;
+  const years: S5PnlYear[] = [];
+  for (let year = 1; year <= horizon; year++) {
+    const i = year - 1;
+    const revUtil = (revenueByYear[i] ?? 0) * (utilizationByYear[i] ?? 1);
+    const covered = (i < plan.opexCovered.length && plan.opexCovered[i]) || (i < plan.govRndByYear.length && plan.govRndByYear[i] > 0);
+    const opexFallback = !covered;
+    const opexKrwM = opexFallback ? revUtil * opexRatio : plan.laborOpexByYear[i] + (i < plan.govRndByYear.length ? plan.govRndByYear[i] : 0);
+    const withinPlan = i < plan.capexByYear.length;
+    const capexKrwM = withinPlan ? plan.capexByYear[i] : revUtil * capexRatio;
+    const capexFallback = !withinPlan;
+    const opexFallbackLabel = opexFallback ? "비율 대체 (계획 미포함 연도)" : "S5 계획";
+    const capexFallbackLabel = capexFallback ? "비율 대체 (계획 기간 외)" : "S5 계획";
+    years.push({ year, opexKrwM, capexKrwM, opexFallback, capexFallback, opexFallbackLabel, capexFallbackLabel });
+  }
+  return { years, fallbackYears: years.filter((y) => y.opexFallback || y.capexFallback).length, preLaunchKrwM };
+}
+
+/** Note-provenance helper for the s5_pnl basis: fallback-year share over the
+ *  bc horizon and the pre-launch amount (always recorded, warned when 0). */
+export function s5PnlNoteInfo(inputs: CaseInputs, plan: S5InvestmentPlan): { fallbackYears: number; horizon: number; preLaunchKrwM: number } {
+  const bc = inputs.bcParams ?? resolveBusinessCaseParamsDefaults();
+  const horizon = bc.horizonYears;
+  let fallbackYears = 0;
+  for (let i = 0; i < horizon; i++) {
+    const opexCovered = (i < plan.opexCovered.length && plan.opexCovered[i]) || (i < plan.govRndByYear.length && plan.govRndByYear[i] > 0);
+    if (!opexCovered || i >= plan.capexByYear.length) fallbackYears += 1;
+  }
+  return { fallbackYears, horizon, preLaunchKrwM: plan.preLaunchKrwM ?? 0 };
 }
 
 function initialInvestmentRatioOf(inputs: CaseInputs): number {
@@ -1208,7 +1287,7 @@ export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "g
     // ADR-0176 slice 3: the latest CONFIRMED S5 simulation run, only under an s5_plan basis with a
     // plan. None -> today's single-point plan (note `s5_sim=none`); never blocking.
     // ADR-0178 slice 0: on the pinned path the run is the one the pin names, not "the latest confirmed".
-    s5Sim: bcParams.investmentBasis !== "ratio" && s5Plan
+    s5Sim: bcParams.investmentBasis !== "ratio" && bcParams.investmentBasis !== "s5_pnl" && s5Plan
       ? s5Plan.pinId ? resolvePinnedS5SimConsumption(getDb(), getCurrentS5PlanPin(getDb(), projectId)!) : resolveS5SimConsumption(getDb(), row?.source_opportunity_id)
       : null,
   };
@@ -1320,14 +1399,23 @@ export function deterministicCashflows(inputs: CaseInputs, scenario: Scenario, v
   const year1Revenue = year1RevenueOf(inputs, delta.growth).value;
   const exitMult = exitEvRevenueOf(inputs);
   const s5 = s5PlanOf(inputs);
-  const initialInvestment = s5 ? s5.plan.capexByYear[0] : initialInvestmentOf(inputs, year1Revenue).value;
+  const opexRatioD = opexRatioOf(inputs, scenario);
+  const capexRatioD = capexRatioOf(inputs);
+  const initialInvestment = s5?.pnl ? (s5.plan.preLaunchKrwM ?? 0) : s5 ? s5.plan.capexByYear[0] : initialInvestmentOf(inputs, year1Revenue).value;
   let revenue = year1Revenue;
   const ramp = rampUpOf(inputs);
   const flows: number[] = [-initialInvestment]; // year-0 투자 (s5_plan: 계획 Y1 집행액, OD-3)
   for (let year = 1; year <= horizonOf(inputs); year++) {
     if (year > 1) revenue *= 1 + eff.growth;
     const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
-    if (s5) {
+    if (s5?.pnl) {
+      const i = year - 1;
+      const revUtil = revenue * utilization;
+      const covered = (i < s5.plan.opexCovered.length && s5.plan.opexCovered[i]) || (i < s5.plan.govRndByYear.length && s5.plan.govRndByYear[i] > 0);
+      const opex = covered ? s5.plan.laborOpexByYear[i] + s5.plan.govRndByYear[i] : revUtil * opexRatioD;
+      const capex = i < s5.plan.capexByYear.length ? s5.plan.capexByYear[i] : revUtil * capexRatioD;
+      flows.push(revUtil - opex - capex);
+    } else if (s5) {
       const opex = opexOfYear(inputs, s5, year, revenue);
       flows.push((revenue - opex) * utilization - capexOfYear(inputs, s5, year, revenue));
     } else {
@@ -1367,9 +1455,11 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
   const opexRatio = opexRatioOf(inputs, scenario);
   const y1 = year1RevenueOf(inputs, delta.growth);
   const s5 = s5PlanOf(inputs);
-  const initInv = s5
-    ? { value: s5.plan.capexByYear[0], source: `S5 투자 계획 Y1 집행액 — ${s5.plan.pinId ? `S5 고정 참조 ${s5.plan.pinId}` : `greenfield_cost model ${s5.plan.modelId}`} (OD-3: 계획 1년차 지출을 year-0으로 반영)` }
-    : initialInvestmentOf(inputs, y1.value);
+  const initInv = s5?.pnl
+    ? { value: s5.plan.preLaunchKrwM ?? 0, source: `S5 계획 출시 전 투자 합계 — ${s5.plan.pinId ? `S5 고정 참조 ${s5.plan.pinId}` : `greenfield_cost model ${s5.plan.modelId}`} (year-0 무할인, OD-3)${(s5.plan.preLaunchKrwM ?? 0) === 0 ? " (출시 전 투자 미지정)" : ""}` }
+    : s5
+      ? { value: s5.plan.capexByYear[0], source: `S5 투자 계획 Y1 집행액 — ${s5.plan.pinId ? `S5 고정 참조 ${s5.plan.pinId}` : `greenfield_cost model ${s5.plan.modelId}`} (OD-3: 계획 1년차 지출을 year-0으로 반영)` }
+      : initialInvestmentOf(inputs, y1.value);
   const exitMult = exitEvRevenueOf(inputs);
   // ADR-0143: brownfield per-target cases carry the target in the subject
   // key (job_id + seed_policy base, the persisted snapshot contract) AND in
@@ -1410,9 +1500,13 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
           },
           capex_ratio: {
             dist: "constant",
-            value: s5 ? 0 : bc.capexRatio, // s5_plan: 스케줄이 대체 — 비율과 스케줄의 이중 계상은 이중계산 (design §6.2)
+            value: s5 ? 0 : bc.capexRatio, // s5: 스케줄이 대체 — 비율과 스케줄의 이중 계상은 이중계산 (design §6.2)
             unit: "ratio",
-            source: s5 ? `S5 투자 계획 스케줄로 대체 (${s5.plan.pinId ? `S5 고정 참조 ${s5.plan.pinId}` : `model ${s5.plan.modelId}`})` : bc.capexSource,
+            source: s5?.pnl
+              ? `계획 기간은 S5 스케줄, 계획 기간 외에는 가동률 반영 매출 x capex 비율로 대체 (${s5.plan.pinId ? `S5 고정 참조 ${s5.plan.pinId}` : `model ${s5.plan.modelId}`})`
+              : s5
+                ? `S5 투자 계획 스케줄로 대체 (${s5.plan.pinId ? `S5 고정 참조 ${s5.plan.pinId}` : `model ${s5.plan.modelId}`})`
+                : bc.capexSource,
           },
           initial_investment: { dist: "constant", value: initInv.value, unit: "KRW_M", source: initInv.source },
           ...(exitMult > 0
@@ -1528,14 +1622,18 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       );
       const y1 = year1RevenueOf(ctx.inputs, delta.growth);
       const s5 = s5PlanOf(ctx.inputs);
-      const initInv = s5
-        ? { value: s5.plan.capexByYear[0], source: `S5 투자 계획 Y1 집행액 — model ${s5.plan.modelId} (OD-3: 계획 1년차 지출을 year-0으로 반영)` }
-        : initialInvestmentOf(ctx.inputs, y1.value);
+      const initInv = s5?.pnl
+        ? { value: s5.plan.preLaunchKrwM ?? 0, source: `S5 계획 출시 전 투자 합계 — model ${s5.plan.modelId} (year-0 무할인, OD-3)${(s5.plan.preLaunchKrwM ?? 0) === 0 ? " (출시 전 투자 미지정)" : ""}` }
+        : s5
+          ? { value: s5.plan.capexByYear[0], source: `S5 투자 계획 Y1 집행액 — model ${s5.plan.modelId} (OD-3: 계획 1년차 지출을 year-0으로 반영)` }
+          : initialInvestmentOf(ctx.inputs, y1.value);
       const lines: Array<[string, "revenue" | "opex" | "capex", string, number]> = [
         ["revenue", "revenue", ctx.inputs.revenueAnchor ? `시나리오 매출 (대상 회사 연매출 앵커 — ${ctx.inputs.revenueAnchor.source})` : "시나리오 매출 (year-1 앵커)", y1.value],
         ["opex", "opex", `운영비 (매출의 ${Math.round(opexRatioOf(ctx.inputs) * 100)}%)`, y1.value * opexRatioOf(ctx.inputs)],
-        s5
-          ? ["capex", "capex", `설비 투자 (S5 투자 계획 Y1 집행액 — model ${s5.plan.modelId})`, s5.plan.capexByYear[0]]
+        s5?.pnl
+          ? ["capex", "capex", `설비 투자 (S5 계획 손익 — model ${s5.plan.modelId}; 계획 미포함 연도는 가동률 반영 매출 x 비율 대체)`, (s5.plan.capexByYear[0] ?? 0)]
+          : s5
+            ? ["capex", "capex", `설비 투자 (S5 투자 계획 Y1 집행액 — model ${s5.plan.modelId})`, s5.plan.capexByYear[0]]
           : ["capex", "capex", `설비 투자 (year-1, 매출의 ${Math.round(capexRatioOf(ctx.inputs) * 100)}%)`, y1.value * capexRatioOf(ctx.inputs)],
       ];
       for (const [category, _kind, name, amount] of lines) {
@@ -1598,10 +1696,11 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       // Team-lead slice-2 spec fragment names: basis / s5_model / s5_line_hash /
       // s5_opex_variance (appended only under an s5 basis — ratio notes stay
       // byte-identical).
-      const s5OpexVariance = s5Provenance && !s5Provenance.full ? s5OpexCrossCheckVariance(ctx.inputs) : null;
+      const s5OpexVariance = s5Provenance && !s5Provenance.full && !s5Provenance.pnl ? s5OpexCrossCheckVariance(ctx.inputs) : null;
       const basis = ctx.inputs.bcParams?.investmentBasis ?? "ratio";
+      const pnlInfo = s5Provenance?.pnl ? s5PnlNoteInfo(ctx.inputs, s5Provenance.plan) : null;
       const basisFragment = s5Provenance
-        ? `; basis=${basis}; s5_model=${s5Provenance.plan.modelId}; s5_line_hash=${s5Provenance.plan.lineHash}; s5_skipped=${s5Provenance.plan.skippedLines}${s5Provenance.plan.preLaunchLines ? `; prelaunch_krw_m=${(s5Provenance.plan.preLaunchKrwM ?? 0).toFixed(2)}; prelaunch_lines=${s5Provenance.plan.preLaunchLines}; prelaunch_flag=year-0 은 s5_pnl 기준에서만 반영됨 (현재 기준에서는 연도별 투자에 넣지 않음)` : ""}${s5Provenance.full ? "; s5_full=1" : ""}; s5_sim=${ctx.inputs.s5Sim?.inputHash ?? "none"}${s5OpexVariance != null ? `; s5_opex_variance=${s5OpexVariance.toFixed(2)}` : ""}${s5Provenance.plan.pinId ? `; s5_pin=${s5Provenance.plan.pinId}; plan_hash=${s5Provenance.plan.planHash}` : ""}`
+        ? `; basis=${basis}; s5_model=${s5Provenance.plan.modelId}; s5_line_hash=${s5Provenance.plan.lineHash}; s5_skipped=${s5Provenance.plan.skippedLines}${s5Provenance.plan.preLaunchLines ? `; prelaunch_krw_m=${(s5Provenance.plan.preLaunchKrwM ?? 0).toFixed(2)}; prelaunch_lines=${s5Provenance.plan.preLaunchLines}; prelaunch_flag=year-0 은 s5_pnl 기준에서만 반영됨 (현재 기준에서는 연도별 투자에 넣지 않음)` : ""}${s5Provenance.pnl ? `; prelaunch_krw_m=${(s5Provenance.plan.preLaunchKrwM ?? 0).toFixed(2)}${(s5Provenance.plan.preLaunchKrwM ?? 0) === 0 ? "; warning=출시 전 투자 미지정" : ""}; pnl_fallback=${pnlInfo?.fallbackYears ?? 0}/${pnlInfo?.horizon ?? 0}` : ""}${s5Provenance.full ? "; s5_full=1" : ""}; s5_sim=${ctx.inputs.s5Sim?.inputHash ?? "none"}${s5OpexVariance != null ? `; s5_opex_variance=${s5OpexVariance.toFixed(2)}` : ""}${s5Provenance.plan.pinId ? `; s5_pin=${s5Provenance.plan.pinId}; plan_hash=${s5Provenance.plan.planHash}` : ""}`
         : basis === "ratio"
           ? "; basis=ratio"
           : "; basis=ratio; s5_plan_fallback=1 (greenfield_cost 모델 없음 — 비율 경로로 대체)";

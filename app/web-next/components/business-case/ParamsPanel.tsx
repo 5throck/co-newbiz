@@ -57,7 +57,7 @@ interface ResolvedParams {
   opexRatio: number; opexSource: string;
   capexRatio: number; capexSource: string;
   initialInvestmentRatio: number; initialInvestmentSource: string;
-  investmentBasis: "ratio" | "s5_plan" | "s5_plan_full"; investmentBasisSource: string;
+  investmentBasis: "ratio" | "s5_plan" | "s5_plan_full" | "s5_pnl"; investmentBasisSource: string;
   s5PlanHorizonYears: number | null;
   /** ADR-0178 slice 0 - where the S5 plan comes from (copy default / pinned reference, opt-in). */
   s5Source?: "copy" | "pinned"; s5SourceSource?: string; s5PinId?: string | null;
@@ -125,6 +125,7 @@ const INVESTMENT_BASIS_LABELS: Record<string, string> = {
   ratio: "비율 추정",
   s5_plan: "S5 투자 계획 (예전: 설비투자만)",
   s5_plan_full: "S5 투자 계획",
+  s5_pnl: "S5 계획 손익 (s5_pnl)",
 };
 
 const DRIVER_LABELS: Record<string, string> = {
@@ -415,6 +416,7 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
                 <option value="">— 미변경 —</option>
                 <option value="0">비율 추정 (기본)</option>
                 <option value="2">S5 투자 계획</option>
+                <option value="3" disabled={!(track === "greenfield" && s5Pin?.path === "pinned")}>S5 계획 손익 (s5_pnl){track === "greenfield" && s5Pin?.path === "pinned" ? "" : " — Green Field + S5 고정 참조 연결 시에만 선택 가능"}</option>
                 {form.investment_basis === "1" && <option value="1" disabled>S5 투자 계획 (예전: 설비투자만)</option>}
               </select>
             </label>

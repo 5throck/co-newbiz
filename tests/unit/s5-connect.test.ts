@@ -304,7 +304,7 @@ describe("labels", () => {
     const full = labels.s5ScopeNote("s5_plan_full");
     expect(full).toContain("\uC2AC\uB77C\uC774\uC2A4 2");
     expect(full).toContain("\uC2AC\uB77C\uC774\uC2A4 3");
-    expect(full).toContain("\uC544\uC9C1 \uC801\uC6A9\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4");
+    expect(full).toContain("s5_pnl"); // slice 2 in force: the tail names the basis instead of "not yet applied"
     expect(full).toContain("\uC778\uAC74\uBE44\u00B7\uC6B4\uC601\uBE44 \uC904\uC5D0 \uB3C4\uB2EC");
     expect(full).not.toContain("(\uC804\uCCB4)");
     const legacy = labels.s5ScopeNote("s5_plan");

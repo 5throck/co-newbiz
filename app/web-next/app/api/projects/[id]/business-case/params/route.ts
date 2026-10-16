@@ -13,6 +13,7 @@ import {
   investmentBasisOfCode,
   recordBusinessCaseParams,
   resolveBusinessCaseParams,
+  resolveS5InvestmentPlan,
   type InvestmentBasis,
 } from "../../../../../../lib/business-case-generator.ts";
 import { s5SimStatusForProject } from "../../../../../../lib/investment-simulation-s8.ts";
@@ -66,6 +67,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (raw["s5_source"] !== undefined && raw["s5_source"] !== null && raw["s5_source"] !== "" && currentPrincipal()) {
     return forbidden("human_only", "S5 고정 참조 사용 전환은 사람만 확정할 수 있습니다 (boundary #2).");
   }
+  // ADR-0178 slice 2 (s5_pnl): switching to the plan P&L basis is a person's act too, and it is
+  // Green Field + pinned-path only (OD-5/OD-6). Checked before the other field validations.
+  if (raw["investment_basis"] !== undefined && raw["investment_basis"] !== null && raw["investment_basis"] !== "") {
+    const nb = typeof raw["investment_basis"] === "number" ? investmentBasisOfCode(raw["investment_basis"] as number) : String(raw["investment_basis"]);
+    if (nb === "s5_pnl") {
+      if (currentPrincipal()) return forbidden("human_only", "S5 계획 손익(s5_pnl) 기준 전환은 사람만 확정할 수 있습니다 (boundary #2).");
+      const proj = getDb().query("SELECT track FROM md_project WHERE id = ?").get(id) as { track: string | null } | undefined;
+      if (proj?.track !== "greenfield") return badRequest("invalid_request", "s5_pnl 기준은 Green Field 프로젝트에서만 사용할 수 있습니다 (OD-5).");
+      if (!getCurrentS5PlanPin(getDb(), id) || !resolveS5InvestmentPlan(getDb(), id)) {
+        return badRequest("invalid_request", "s5_pnl 기준은 S5 고정 참조(pinned path)가 있을 때만 사용할 수 있습니다 (OD-6).");
+      }
+    }
+  }
   const num = (key: string): number | undefined => {
     const v = raw[key];
     if (v === undefined || v === null || v === "") return undefined;
@@ -92,11 +106,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         const v = raw["investment_basis"];
         if (v === undefined || v === null || v === "") return undefined;
         if (typeof v === "number") {
-          if (!Number.isInteger(v) || v < 0 || v > 2) throw new Error("investment_basis는 0, 1, 2 중 하나의 정수여야 합니다.");
+          if (!Number.isInteger(v) || v < 0 || v > 3) throw new Error("investment_basis는 0, 1, 2, 3 중 하나의 정수여야 합니다.");
           return investmentBasisOfCode(v);
         }
         if (typeof v === "string" && v in INVESTMENT_BASIS_CODES) return v as InvestmentBasis;
-        throw new Error("investment_basis는 0|1|2 또는 ratio|s5_plan|s5_plan_full 이어야 합니다.");
+        throw new Error("investment_basis는 0|1|2|3 또는 ratio|s5_plan|s5_plan_full|s5_pnl 이어야 합니다.");
       })(),
       // ADR-0178: 0 = promotion copy (default), 1 = pinned S5 reference. Green Field with a pin only.
       s5_source: (() => {
