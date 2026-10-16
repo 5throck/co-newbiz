@@ -4657,7 +4657,7 @@ paths:
   /api/projects/{id}/business-case:
     get:
       operationId: listProjectBusinessCases
-      summary: S8 business cases for the project with the recommended scenario and adoption marker (ADR-0098).
+      summary: "S8 business cases for the project with the recommended scenario and adoption marker (ADR-0098). Additive field anchor_scope (ADR-0179 slice 2): {status: ok|mismatch|unknown, label, reason, has_target_scope, confidence_note} | null - live anchor scope-compatibility flag, recomputed on every read; display/evidence only, never a gate block or grade cap (boundary #4)."
       tags:
         - Analysis
       parameters:
@@ -4854,7 +4854,7 @@ paths:
   /api/projects/{id}/business-case/params:
     get:
       operationId: getProjectBusinessCaseParams
-      summary: "Resolve the live bc.* simulation parameter set with provenance (user > derived > default). Includes the read-only acquisitionEvRevenueBand (nullable, human-confirmed). The business-case list/comparison response carries evRevenueBand and per-target acqEvBandSource; acqEvRevenueInBand is null unless a band is confirmed. Also returns s5_sim (ADR-0176 slice 3): {state: not_applicable|none|in_effect|stale, stale, reason, used, latest, label} - whether the latest s5_plan case consumed the latest confirmed S5 investment simulation run (s5_sim=<input_hash> in its note) or whether it is stale (the label is the re-evaluation-required flag; hash compare only, never auto-recompute, never blocks a gate or grade)."
+      summary: "Resolve the live bc.* simulation parameter set with provenance (user > derived > default). Includes the read-only acquisitionEvRevenueBand (nullable, human-confirmed). The business-case list/comparison response carries evRevenueBand and per-target acqEvBandSource; acqEvRevenueInBand is null unless a band is confirmed. Also returns s5_sim (ADR-0176 slice 3): {state: not_applicable|none|in_effect|stale, stale, reason, used, latest, label} - whether the latest s5_plan case consumed the latest confirmed S5 investment simulation run (s5_sim=<input_hash> in its note) or whether it is stale (the label is the re-evaluation-required flag; hash compare only, never auto-recompute, never blocks a gate or grade). ADR-0179 slice 2 additive field anchor_scope: {status: ok|mismatch|unknown, label, reason, has_target_scope, confidence_note} | null (no source opportunity) - live scope-compatibility flag between the opportunity's declared target scope and the market anchor's declared scope, recomputed on every read; display/evidence only, never a gate block or grade cap (boundary #4); today always unknown because no scoped anchor is linked (OPEN-3)."
       tags:
         - Analysis
       parameters:

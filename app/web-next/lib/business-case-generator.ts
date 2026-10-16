@@ -28,6 +28,7 @@
 import { noteNumber, parseSimNote } from "./sim-note.ts";
 import { irrGuardBand, IRR_CAUTION_THRESHOLD_DEFAULT, IRR_FLAG_THRESHOLD_DEFAULT } from "./irr-guard.ts";
 import { parseTargetScopeJson, type TargetScope } from "./target-scope.ts";
+import { anchorScopeNoteFragment } from "./anchor-scope.ts";
 import { resolveEffectiveCagr } from "./market-calibration.ts";
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
@@ -1738,6 +1739,15 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       const irrValue = irr(flows);
       const guardBand = irrGuardBand(irrValue, bc.irrFlagThreshold, bc.irrCautionThreshold);
       const irrGuardFragment = guardBand ? `; irr_guard=${guardBand}` : "";
+      // ADR-0179 slice 2 — anchor scope compatibility (design §5). Display
+      // metadata only: the fragment is appended ONLY when a person-set target
+      // scope exists (notes stay byte-identical while no scope is set), and
+      // it never blocks generation, a gate or a grade. The anchor side is
+      // null in today's data path — the anchor's declared scope would come
+      // from a linked market_sizing_version payload (OPEN-2) and the
+      // opportunity→sizing reference is the OPEN-3 follow-up — so a set
+      // target scope yields an honest `unknown`, never a fabricated ok.
+      const anchorScopeFragment = anchorScopeNoteFragment(ctx.inputs.targetScope);
       const waccSubject = ctx.inputs.waccSubject?.subject ?? "promoter";
       const tcFragment = ctx.inputs.targetCostWiring
         ? `; tc_gap_ratio=${ctx.inputs.targetCostWiring.gapRatio.toFixed(4)}; tc_downside_opex_uplift=${(ctx.scenario === "downside" ? ctx.inputs.targetCostWiring.uplift : 1).toFixed(4)}`
@@ -1767,7 +1777,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       const anchorFragment = ctx.inputs.revenueAnchor
         ? `revenue_anchor=${ctx.inputs.revenueAnchor.source}${acqFragment}${xcheckFragment}`
         : `capture_rate=${bc.captureRate}; capture_source=${bc.captureSource}`;
-      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}; wacc_scope=${ctx.inputs.waccScope?.scope ?? "project"}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; wacc_subject=${waccSubject}; ${anchorFragment}; ramp_source=${bc.rampSource}; ${provenance}${tcFragment}${basisFragment}; engine=${engineMeta.engine}${s5Provenance ? " (S8 엔진 우회 — 연도별 capex 스케줄 미지원, ADR-0174)" : ""}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}${irrGuardFragment}`;
+      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}; wacc_scope=${ctx.inputs.waccScope?.scope ?? "project"}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; wacc_subject=${waccSubject}; ${anchorFragment}; ramp_source=${bc.rampSource}; ${provenance}${tcFragment}${basisFragment}; engine=${engineMeta.engine}${s5Provenance ? " (S8 엔진 우회 — 연도별 capex 스케줄 미지원, ADR-0174)" : ""}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}${irrGuardFragment}${anchorScopeFragment}`;
       db.run(`UPDATE business_case_model SET inputs_json = ? WHERE id = ?`, [JSON.stringify(jobSpec), modelId]);
       for (const pct of ["p05", "p50", "p95"] as const) {
         const isP50 = pct === "p50";

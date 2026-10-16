@@ -10,7 +10,7 @@ import { api } from "../lib/api.ts";
 import { TARGET_SCOPE_REGIONS, TARGET_SCOPE_UNIT_BASES, TARGET_SCOPE_UNIT_BASIS_LABEL, type TargetScope } from "../lib/target-scope.ts";
 
 const REGION_LABEL: Record<string, string> = {
-  kr: "국내 (KR)", eu: "유럽 (EU)", us: "미주 (US)", cn: "중국 (CN)", sea: "동남아 (SEA)", worldwide: "전 세계 (worldwide)",
+  kr: "국내 (KR)", we: "서유럽 (WE)", ee: "동유럽 (EE)", ru: "러시아 (RU)", na: "북미 (NA)", cn: "중국 (CN)", sea: "동남아 (SEA)", sa: "남미 (SA)", af: "아프리카 (AF)", me: "중동 (ME)", worldwide: "전 세계 (worldwide)",
 };
 
 export function TargetScopeEditor({ opportunityId, canAct }: { opportunityId: string; canAct: boolean }) {

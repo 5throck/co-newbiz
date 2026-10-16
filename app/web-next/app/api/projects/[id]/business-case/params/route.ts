@@ -19,6 +19,7 @@ import {
 import { s5SimStatusForProject } from "../../../../../../lib/investment-simulation-s8.ts";
 import { getCurrentS5PlanPin, s5PinStatusForProject } from "../../../../../../lib/s5-plan-pin-s8.ts";
 import { s5ConnectViewForProject } from "../../../../../../lib/s5-connect-status.ts";
+import { resolveAnchorScopeFlag } from "../../../../../../lib/anchor-scope.ts";
 import { pinnedPlanCapexTotal } from "../../../../../../lib/s5-plan-capex.ts";
 import { currentPrincipal } from "../../../../../../lib/mcp/principal-context.ts";
 
@@ -44,7 +45,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (track === "greenfield") {
     try { s5Connect = s5ConnectViewForProject(getDb(), id); } catch { /* migration pending: omit */ }
   }
-  return ok({ params: resolved, s5_sim: s5Sim, s5_pin: s5Pin, s5_connect: s5Connect, track, s5_pin_capex_total_krw_m: track === "greenfield" ? pinnedPlanCapexTotal(getDb(), id) : null }, 200);
+  // ADR-0179 slice 2: anchor scope-compatibility flag — the read model's live
+  // truth next to the anchor (generator notes hold what a run used; the two
+  // can legitimately disagree right after a scope fix, design §5.2). Additive
+  // display field; never blocks generation, a gate or a grade.
+  let anchorScope = null;
+  try { anchorScope = resolveAnchorScopeFlag(getDb(), id); } catch { /* omit on read failure */ }
+  return ok({ params: resolved, s5_sim: s5Sim, s5_pin: s5Pin, s5_connect: s5Connect, track, s5_pin_capex_total_krw_m: track === "greenfield" ? pinnedPlanCapexTotal(getDb(), id) : null, anchor_scope: anchorScope }, 200);
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {

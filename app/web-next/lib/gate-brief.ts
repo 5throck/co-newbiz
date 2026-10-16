@@ -10,6 +10,7 @@ import { readRagView } from "../../../db/lib/rag-service.ts";
 import { getCurrentRouteDecision } from "../../../db/repositories/route-decision.repository.ts";
 import { listBusinessCases, latestAdoption } from "./business-case.ts";
 import { irrGuardBand, IRR_GUARD_CHIP_LABEL } from "./irr-guard.ts";
+import { resolveAnchorScopeFlag, type AnchorScopeFlag } from "./anchor-scope.ts";
 import { resolveBusinessCaseParams } from "./business-case-generator.ts";
 import {
   ATTAINABILITY_GRADE_LABEL, HELD_STATUS_LABEL, NECESSITY_LABEL, NECESSITY_UNSET_LABEL, RESOLUTION_LABEL,
@@ -238,9 +239,17 @@ function s8Summary(projectId: string): string {
     const { cases, adoption } = { cases: listBusinessCases(projectId).cases, adoption: latestAdoption(projectId) };
     if (cases.length === 0) return "S8 Business Case: 없음";
     // ADR-0179 slice 1 - IRR ceiling guard markers per case (display metadata
-    // for the gate-brief text; never a gate condition).
+    // for the gate-brief so risk-officer's optimism-bias review sees it; never
+    // a gate condition).
     let bc = null;
     try { bc = resolveBusinessCaseParams(getDb(), projectId); } catch { bc = null; }
+    // ADR-0179 slice 2 - anchor scope-compatibility flag as one labeled
+    // decision-support line (design §5.2: gate-brief text surface). Non-ok
+    // flags are recorded as confidence-lowering evidence per non-negotiable
+    // #4; the wording says so and never blocks.
+    let scopeFlag: AnchorScopeFlag | null = null;
+    try { scopeFlag = resolveAnchorScopeFlag(getDb(), projectId); } catch { scopeFlag = null; }
+    const scopeLine = scopeFlag && scopeFlag.status !== "ok" ? [`시장 범위: ${scopeFlag.label} — ${scopeFlag.reason} (참고 정보이며 승인 조건이 아닙니다)`] : [];
     const lines = cases.slice(0, 8).map((c) => {
       const p50 = c.simulations?.find((s) => s.percentile === "p50") ?? null;
       const band = irrGuardBand(p50?.irr, bc?.irrFlagThreshold, bc?.irrCautionThreshold);
@@ -249,6 +258,7 @@ function s8Summary(projectId: string): string {
     });
     return [
       `채택: ${adoption ? `${adoption.adoptedBy} @ ${adoption.adoptedAt.slice(0, 10)}` : "없음"}`,
+      ...scopeLine,
       ...lines,
     ].join("\n");
   } catch (err) {

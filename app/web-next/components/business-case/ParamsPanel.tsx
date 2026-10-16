@@ -13,6 +13,7 @@ import { ColGroup, ParamTable } from "../ui.tsx";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import { s5ParamLinkage, type S5ParamKey } from "../../lib/s5-linkage-labels.ts";
+import { ANCHOR_SCOPE_CONFIDENCE_NOTE, type AnchorScopeFlag } from "../../lib/anchor-scope.ts";
 
 // Mirrors EV_BAND_OPTIMISM_FLAG_FACTOR / EV_BAND_MAX_SANE / EV_BAND_SPREAD_FLAG_RATIO / ACQUISITION_EV_REVENUE_BAND in
 // lib/business-case-generator.ts (DB-bound module, not bundleable here); drift is caught by
@@ -158,7 +159,7 @@ interface ParamLine {
   note?: React.ReactNode;
 }
 
-function CurrentParamsTable({ resolved, track, s5Pin, s5Run, s5PinCapexTotal }: { resolved: ResolvedParams; track: string | null; s5Pin: S5PinStatusView | null; s5Run: { id: string; drawCount: number } | null; s5PinCapexTotal: number | null }) {
+function CurrentParamsTable({ resolved, track, s5Pin, s5Run, s5PinCapexTotal, anchorScope }: { resolved: ResolvedParams; track: string | null; s5Pin: S5PinStatusView | null; s5Run: { id: string; drawCount: number } | null; s5PinCapexTotal: number | null; anchorScope: AnchorScopeFlag | null }) {
   const gf = track === "greenfield";
   const pct1 = (v: number) => (v * 100).toFixed(1);
   const s5Source = s5Pin?.path === "pinned" && s5Pin.pin
@@ -181,7 +182,12 @@ function CurrentParamsTable({ resolved, track, s5Pin, s5Run, s5PinCapexTotal }: 
     {
       title: "매출·시장",
       lines: [
-        { key: "capture", label: "1년차 시장점유율 (year-1 매출)", value: pct1(resolved.captureRate), numeric: true, unit: "%", source: <SourceChip source={resolved.captureSource} />, s5Key: "capture" },
+        { key: "capture", label: "1년차 시장점유율 (year-1 매출)", value: pct1(resolved.captureRate), numeric: true, unit: "%", source: <SourceChip source={resolved.captureSource} />, s5Key: "capture", note: anchorScope && anchorScope.status !== "ok" ? (
+          <span data-testid="params-anchor-scope-flag" title={`${anchorScope.reason} — ${ANCHOR_SCOPE_CONFIDENCE_NOTE}`}>
+            <span className="status-chip status-amber">{anchorScope.label}</span>{" "}
+            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{anchorScope.reason}</span>
+          </span>
+        ) : undefined },
         growthRow,
         ...(!gf ? [{ key: "acq", label: "인수 EV/Revenue 배수 (브라운필드)", value: resolved.acquisitionEvRevenue != null ? resolved.acquisitionEvRevenue.toFixed(2) : "3.0 — 미확정 시 컴프 기본값 (글로벌 로보틱스 M&A 2–6×)", numeric: resolved.acquisitionEvRevenue != null, unit: resolved.acquisitionEvRevenue != null ? "배" : "", source: <SourceChip source={resolved.acquisitionEvRevenueSource} /> } as ParamLine] : []),
       ],
@@ -267,6 +273,7 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
   const [resolved, setResolved] = useState<ResolvedParams | null>(null);
   const [s5Run, setS5Run] = useState<{ id: string; drawCount: number } | null>(null);
   const [s5Pin, setS5Pin] = useState<S5PinStatusView | null>(null);
+  const [anchorScope, setAnchorScope] = useState<AnchorScopeFlag | null>(null);
   const [track, setTrack] = useState<string | null>(null);
   const [paramsCapexTotal, setParamsCapexTotal] = useState<number | null>(null);
   const [cases, setCases] = useState<CaseSummary[]>([]);
@@ -310,10 +317,11 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
 
   const load = useCallback(async () => {
     try {
-      const params = await api.get<{ params: ResolvedParams; s5_connect?: { run: { id: string; drawCount: number } | null } | null; s5_pin?: S5PinStatusView | null }>(`/api/projects/${encodeURIComponent(projectId)}/business-case/params`);
+      const params = await api.get<{ params: ResolvedParams; s5_connect?: { run: { id: string; drawCount: number } | null } | null; s5_pin?: S5PinStatusView | null; anchor_scope?: AnchorScopeFlag | null }>(`/api/projects/${encodeURIComponent(projectId)}/business-case/params`);
       setResolved(params.data.params);
       setS5Run(params.data.s5_connect?.run ?? null);
       setS5Pin(params.data.s5_pin ?? null);
+      setAnchorScope(params.data.anchor_scope ?? null);
       setTrack((params.data as { track?: string | null }).track ?? null);
       setParamsCapexTotal((params.data as { s5_pin_capex_total_krw_m?: number | null }).s5_pin_capex_total_krw_m ?? null);
       const casesRes = await api.get<{ cases: CaseSummary[] }>(`/api/projects/${encodeURIComponent(projectId)}/business-case`);
@@ -390,7 +398,7 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
           <p>불러오는 중...</p>
         ) : (
           <>
-            <CurrentParamsTable resolved={resolved} track={track} s5Pin={s5Pin} s5Run={s5Run} s5PinCapexTotal={paramsCapexTotal} />
+            <CurrentParamsTable resolved={resolved} track={track} s5Pin={s5Pin} s5Run={s5Run} s5PinCapexTotal={paramsCapexTotal} anchorScope={anchorScope} />
             {track === "greenfield" && s5Pin?.path === "pinned" && paramsCapexTotal === 0 && (
               <p role="note" data-testid="s8-params-capex-warning" className="text-[length:var(--fs-caption)] mt-2">
                 <span className="status-chip status-amber"><span aria-hidden="true">⚠</span> 설비투자 없음</span>{" "}
