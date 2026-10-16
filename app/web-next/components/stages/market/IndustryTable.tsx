@@ -3,13 +3,15 @@
 // Split from components/stages/MarketAnalysisStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import type { MarketAnalysisStageState } from "./useMarketList.ts";
 import { ColGroup } from "../../ui.tsx";
+import type { FlatIndustryRow } from "./grouping.ts";
 
 // 분석 대상 산업 목록 6열 — 산업명·분석 상태가 가장 긴 텍스트 열.
 const INDUSTRY_COL_PCT = [26, 8, 10, 22, 12, 22] as const;
 import type { AnalysisInfo } from "./types.ts";
 
-export function IndustryTable({ ctx }: { ctx: MarketAnalysisStageState }) {
+export function IndustryTable({ ctx, rows }: { ctx: MarketAnalysisStageState; rows?: FlatIndustryRow[] }) {
   const { overview, editing, selectedIndustry, setEditing, canCurate, pinBusyId, togglePin, loadDetail, savingEdit, visibleIndustries, flatRows, saveEdit, deleteIndustry, STALE_DAYS, relDate, rerunAnalysis } = ctx;
+  const shown = rows ?? flatRows;
   return (
     <>{overview === null ? (
           <p>불러오는 중...</p>
@@ -17,6 +19,8 @@ export function IndustryTable({ ctx }: { ctx: MarketAnalysisStageState }) {
           <p className="text-[color:var(--muted-fg)] italic">등록된 산업이 없습니다. "신규 산업 분석"으로 시작하세요.</p>
         ) : visibleIndustries.length === 0 ? (
           <p className="text-[color:var(--muted-fg)] italic">검색·필터 조건에 맞는 산업이 없습니다.</p>
+        ) : shown.length === 0 ? (
+          null
         ) : (
           <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
           <table className="data-table list-table market-list-table table-fixed-pct tmin-64" aria-label="분석 대상 산업 목록">
@@ -36,7 +40,7 @@ export function IndustryTable({ ctx }: { ctx: MarketAnalysisStageState }) {
               </tr>
             </thead>
             <tbody>
-              {flatRows.map(({ ind, relation, childCount, expanded, onToggle }) => {
+              {shown.map(({ ind, relation, childCount, expanded, onToggle }) => {
                 const a = ind.analysis;
                 const inProgress = a?.status === "in_progress";
                 // 보호 모드 재분석 중엔 status가 여전히 'completed'라 inProgress로는

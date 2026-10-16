@@ -126,7 +126,32 @@ export function IndustryListSection({ ctx }: { ctx: MarketAnalysisStageState }) 
           </form>
         )}
 
-        <IndustryTable ctx={ctx} />
+        {/* ── 딜 컨텍스트 분할 (2026-10-16 결정자 승인 내비게이션 수정) ──
+            이 안건에 연결된 산업(grouping.splitGroups, 앵커 기준)이 최상단,
+            나머지는 "다른 검토의 산업 분석" 보조 영역으로 내려간다.
+            비딜(/market) 컨텍스트에서는 linkedIds가 null이라 단일 목록 그대로. */}
+        {ctx.linkedIds !== null ? (
+          <>
+            {ctx.linkedFlatRows.length > 0 ? (
+              <IndustryTable ctx={ctx} rows={ctx.linkedFlatRows} />
+            ) : (
+              <p className="text-[color:var(--muted-fg)] italic" role="note">
+                이 안건에 연결된 산업 분석이 없습니다 — 아래 목록에서 산업을 열어 "이 안건에 연결"로 연결하세요.
+              </p>
+            )}
+            {ctx.otherFlatRows.length > 0 && (
+              <div className="mt-4">
+                <div className="flex items-baseline gap-2 mb-2">
+                  <h3 className="text-[length:var(--fs-caption)] font-semibold text-[color:var(--muted-fg)] uppercase tracking-wide">다른 검토의 산업 분석</h3>
+                  <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">({ctx.otherFlatRows.length}건)</span>
+                </div>
+                <IndustryTable ctx={ctx} rows={ctx.otherFlatRows} />
+              </div>
+            )}
+          </>
+        ) : (
+          <IndustryTable ctx={ctx} />
+        )}
         {hasInProgress && (
           <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" role="status">
             분석이 진행 중입니다 — 완료되면 목록이 자동으로 갱신됩니다.
