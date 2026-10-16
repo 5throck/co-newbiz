@@ -334,6 +334,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0176` | adr | — | — | — |
 | `adr:0177` | adr | — | — | — |
 | `adr:0178` | adr | — | — | — |
+| `adr:0179` | adr | — | — | — |
 | `dec:DEC-20260908-01` | decision | `root/project-review` | — | — |
 | `dec:DEC-20260908-02` | decision | `root/waiver-management` | — | — |
 | `dec:DEC-20260909-01` | decision | — | — | — |
@@ -369,6 +370,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20261015-05` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261015-06` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261016-01` | decision | `root/decision-record` | — | — |
+| `dec:DEC-20261016-02` | decision | `root/decision-record` | — | — |
 | `doc:AGENTS.md` | doc | `root/agent-lifecycle-manager`, `root/skill-lifecycle-manager` | — | — |
 | `doc:CODEX.md` | doc | `root/meeting-facilitation` | — | — |
 | `doc:procedures/README.md` | doc | `root/antitrust-screening`, `root/brownfield-feasibility`, `root/regional-incentive-sourcing`, `root/site-infrastructure-assessment` | — | — |
@@ -541,7 +543,7 @@ None — every capability has a single content hash.
 
 | Type | Count | Nodes |
 |------|-------|-------|
-| adr | 171 | (expected until docs `references` edges are mined) |
+| adr | 172 | (expected until docs `references` edges are mined) |
 | agent | 18 | root/backend-engineer, root/data-architect, root/dba, root/design-system-agent, root/financing-agent, root/frontend-engineer, root/glossary-curator, root/industry-lead, root/infra-automation-engineer, root/ip-agent, root/ir-agent, root/platform-lead, root/region-lead, root/release-engineer, root/security-engineer, root/site-facility-agent, root/sre, root/ux-designer-agent |
 | decision | 4 | (expected until docs `references` edges are mined) |
 | skill | 17 | root/api-documentation, root/assumption-audit, root/explain-me, root/finishing-a-development-branch, root/forward-industry-research, root/gateguard, root/market-data-pipeline, root/platform-command-lifecycle-manager, root/platform-skill-lifecycle-manager, root/sample-driven-report-writing, root/source-command-commit-push-pr, root/standup-synthesizer, root/sync, root/target-costing-analysis, root/value-chain-driver-identification, root/value-chain-stage-financials, root/zod-contract-gate |
