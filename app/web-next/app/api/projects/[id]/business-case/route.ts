@@ -18,6 +18,7 @@ import { evaluateTargetsForCase, resolveProjectTargets } from "../../../../../li
 import { pinnedPlanCapexTotal } from "../../../../../lib/s5-plan-capex.ts";
 import { loadInvestmentVectorsInput } from "../../../../../lib/investment-simulation-input.ts";
 import { planS5Import } from "../../../../../../../db/repositories/s5-cost-import.ts";
+import { resolveAnchorScopeFlag } from "../../../../../lib/anchor-scope.ts";
 
 import { badRequest, fail, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 
@@ -66,8 +67,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     | { track: string | null; source_opportunity_id: string | null }
     | undefined;
   const s5PlanCapexZero = trackRow?.track === "greenfield" && pinnedPlanCapexTotal(getDb(), id) === 0;
+  // ADR-0179 slice 2: anchor scope-compatibility flag — additive display
+  // field (live truth; the generator note records what a run used). Never
+  // blocks generation, a gate or a grade.
+  let anchorScope = null;
+  try { anchorScope = resolveAnchorScopeFlag(getDb(), id); } catch { /* omit on read failure */ }
   return ok(
-    { cases, archived, goal_attainment: goalAttainment, goal_count: goalsResolved.length, legacy_models: listLegacyModels(id), recommended_scenario: recommendedScenario, adoption, target_selection: targetSelection, targets, engines_mixed: enginesMixed, methods_mixed: methodsMixed, escalated_cagr_pct: eff?.source === "escalated" ? eff.cagrPct : null, s5_plan_capex_zero: s5PlanCapexZero, source_opportunity_id: trackRow?.source_opportunity_id ?? null },
+    { cases, archived, goal_attainment: goalAttainment, goal_count: goalsResolved.length, legacy_models: listLegacyModels(id), recommended_scenario: recommendedScenario, adoption, target_selection: targetSelection, targets, engines_mixed: enginesMixed, methods_mixed: methodsMixed, escalated_cagr_pct: eff?.source === "escalated" ? eff.cagrPct : null, s5_plan_capex_zero: s5PlanCapexZero, source_opportunity_id: trackRow?.source_opportunity_id ?? null, anchor_scope: anchorScope },
     200,
     { count: cases.length },
   );

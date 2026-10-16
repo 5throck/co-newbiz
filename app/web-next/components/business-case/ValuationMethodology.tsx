@@ -9,6 +9,7 @@
 
 import { fmtNpvEok } from "@/lib/npv-format";
 import { irrGuardBand, IRR_GUARD_CHIP_LABEL, IRR_GUARD_DIAGNOSTIC } from "@/lib/irr-guard";
+import { ANCHOR_SCOPE_CONFIDENCE_NOTE, type AnchorScopeFlag } from "@/lib/anchor-scope";
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { KRW_MILLIONS_UNIT } from "../../lib/format.ts";
@@ -56,11 +57,12 @@ export function ValuationMethodology({
 }) {
   const [params, setParams] = useState<ResolvedParams | null>(null);
   const [s5Run, setS5Run] = useState<{ drawCount: number } | null>(null);
+  const [anchorScope, setAnchorScope] = useState<AnchorScopeFlag | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<{ params: ResolvedParams; s5_connect?: { run: { drawCount: number } | null } | null }>(`/api/projects/${encodeURIComponent(projectId)}/business-case/params`)
-      .then((r) => { setParams(r.data.params); setS5Run(r.data.s5_connect?.run ?? null); })
+    api.get<{ params: ResolvedParams; s5_connect?: { run: { drawCount: number } | null } | null; anchor_scope?: AnchorScopeFlag | null }>(`/api/projects/${encodeURIComponent(projectId)}/business-case/params`)
+      .then((r) => { setParams(r.data.params); setS5Run(r.data.s5_connect?.run ?? null); setAnchorScope(r.data.anchor_scope ?? null); })
       .catch(() => setError("파라미터를 불러오지 못했습니다."));
   }, [projectId]);
 
@@ -124,7 +126,17 @@ export function ValuationMethodology({
           <tbody>
             <tr>
               <td>① 매출 앵커</td>
-              <td>{isAcquisition ? "인수 대상 회사의 최신 연매출 — 두 관점(시장·과거 기반)이 같은 앵커에서 출발" : "시장규모 × 시장점유율로 산정한 year-1 매출"}</td>
+              <td>
+                {isAcquisition ? "인수 대상 회사의 최신 연매출 — 두 관점(시장·과거 기반)이 같은 앵커에서 출발" : "시장규모 × 시장점유율로 산정한 year-1 매출"}
+                {anchorScope && anchorScope.status !== "ok" && (
+                  <div className="mt-1">
+                    <span className="status-chip status-amber" data-testid="methodology-anchor-scope-flag" title={`${anchorScope.reason} — ${ANCHOR_SCOPE_CONFIDENCE_NOTE}`}>
+                      {anchorScope.label}
+                    </span>{" "}
+                    <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{anchorScope.reason}</span>
+                  </div>
+                )}
+              </td>
               <td className="num mono-num">{revLine ? 억(revLine.annual_amount_krw_m) : "—"}{isAcquisition ? ` (${n.revenue_anchor ?? ""})` : ""}</td>
             </tr>
             <tr>

@@ -68,7 +68,7 @@ const putScope = (id: string, body: unknown, headers: Record<string, string> = {
   nextRequest(`/api/opportunities/${id}/target-scope`, { method: "PUT", headers, body: json(body) });
 const getScope = (id: string, headers: Record<string, string> = { cookie }) =>
   nextRequest(`/api/opportunities/${id}/target-scope`, { method: "GET", headers });
-const VALID = { regions: ["kr", "eu"], segments: ["Stage V", "construction"], unit_basis: "units_year" };
+const VALID = { regions: ["kr", "we"], segments: ["Stage V", "construction"], unit_basis: "units_year" };
 
 beforeAll(async () => {
   await createUser(db, { userId: ANALYST, role: "analyst", password: "pw-scope-analyst-12", createdBy: "test", now: NOW });
@@ -123,8 +123,8 @@ describe("target-scope route", () => {
   test("parse/normalize unit behavior: dedupe, trim, worldwide exclusivity, invalid shapes", () => {
     expect(normalizeTargetScopeInput({ ...VALID, set_by: "x", set_at: "y" })).toEqual(VALID); // stamps ignored, server-set
     // regions are NOT trimmed (enum members must match exactly); segments are
-    expect(normalizeTargetScopeInput({ regions: ["kr", "eu"], segments: [" a ", "a", ""], unit_basis: "units_year" })).toEqual({
-      regions: ["kr", "eu"], segments: ["a"], unit_basis: "units_year",
+    expect(normalizeTargetScopeInput({ regions: ["kr", "we"], segments: [" a ", "a", ""], unit_basis: "units_year" })).toEqual({
+      regions: ["kr", "we"], segments: ["a"], unit_basis: "units_year",
     });
     expect(() => normalizeTargetScopeInput({ regions: ["kr", " kr "], segments: [], unit_basis: "units_year" })).toThrow();
     expect(() => normalizeTargetScopeInput({ regions: ["worldwide", "kr"], segments: [], unit_basis: "units_year" })).toThrow(TargetScopeValidationError);
@@ -140,6 +140,12 @@ describe("target-scope route", () => {
     expect(parseTargetScopeJson(json({ ...VALID, set_by: "u", set_at: NOW }))).toEqual({ ...VALID, set_by: "u", set_at: NOW });
     expect(() => parseTargetScopeJson("{\"regions\":[\"worldwide\",\"kr\"],\"segments\":[],\"unit_basis\":\"units_year\"}")).toThrow(TargetScopeValidationError);
     expect(TARGET_SCOPE_REGIONS).toContain("worldwide");
+    // Decider enum revision 2026-10-16: full list, renames replace the old
+    // codes (eu/us no longer accepted; strict 400, no silent normalization).
+    expect([...TARGET_SCOPE_REGIONS]).toEqual(["kr", "we", "ee", "ru", "na", "cn", "sea", "sa", "af", "me", "worldwide"]);
+    expect(() => normalizeTargetScopeInput({ regions: ["eu"], segments: [], unit_basis: "units_year" })).toThrow();
+    expect(() => normalizeTargetScopeInput({ regions: ["us"], segments: [], unit_basis: "units_year" })).toThrow();
+    expect(() => normalizeTargetScopeInput({ regions: ["kr", "we", "ee", "ru", "na", "cn", "sea", "sa", "af", "me"], segments: [], unit_basis: "units_year" })).not.toThrow();
   });
 
   test("GET before a person sets anything: scope null (not an error)", async () => {
