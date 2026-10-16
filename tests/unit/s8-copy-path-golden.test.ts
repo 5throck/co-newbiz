@@ -1,11 +1,14 @@
 // @version 1.0.0
 /**
  * ADR-0178 slice 0 - golden freeze of the S8 COPY path. The expected numbers below were captured on
- * the code BEFORE the pinned-reference change (git HEAD at PR #591) and must stay byte-equal: a
- * project without the `bc.s5_source = 1` opt-in (or without a pin) computes exactly as before.
- * Covers ratio, s5_plan, s5_plan_full, s5_plan with a confirmed S5 run, no plan (fallback), and a
- * Brown Field acquisition case. Uses only APIs that exist on the baseline, with fixed ids so the
- * seeds (derived from the project id) are stable. ASCII-only source.
+ * the code BEFORE the pinned-reference change (git HEAD at PR #591) and must stay byte-equal.
+ * Amendment 2026-10-16: the pinned reference is the DEFAULT, so the copy path here is constructed
+ * EXPLICITLY - the main fixture records `bc.s5_source = 0` (a person's revert), and the no-plan
+ * fixture has no importable S5 plan at all (no pin row is ever created for it). Under the amended
+ * default both still compute exactly as before. Covers ratio, s5_plan, s5_plan_full, s5_plan with
+ * a confirmed S5 run, no plan (fallback), and a Brown Field acquisition case. Uses only APIs that
+ * exist on the baseline, with fixed ids so the seeds (derived from the project id) are stable.
+ * ASCII-only source.
  */
 import { test, expect, describe, afterAll } from "bun:test";
 import { existsSync, rmSync } from "node:fs";
@@ -55,6 +58,10 @@ addLine("opex", "G", 120, 2, 2, MARK);
 async function setBasis(projectId: string, basis: "ratio" | "s5_plan" | "s5_plan_full") {
   await gen.recordBusinessCaseParams(db, { projectId, params: { investment_basis: basis }, rationale: "golden", actor: "u", now: NOW });
 }
+// Amendment 2026-10-16: pin the COPY path explicitly - a person's revert (`bc.s5_source = 0`)
+// survives the default and is never re-linked. Written once, before any case computation; it does
+// not touch a single number below.
+await gen.recordBusinessCaseParams(db, { projectId: GF, params: { s5_source: 0 }, rationale: "golden: explicit copy path", actor: "u", now: NOW });
 
 const r4 = (n: number | null) => (n === null ? null : Math.round(n * 1e6) / 1e6);
 function simOf(projectId: string, scenario: "base" | "downside" = "base") {

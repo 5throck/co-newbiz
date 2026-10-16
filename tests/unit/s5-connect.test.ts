@@ -232,7 +232,7 @@ describe("disconnect", () => {
 });
 
 describe("S5 simulation state in the connect view", () => {
-  test("none -> unconfirmed -> confirmed -> in_effect -> stale", () => {
+  test("none -> unconfirmed -> confirmed -> in_effect -> stale", async () => {
     const opp = makeOpp("greenfield", LINES);
     const pid = promote(opp);
     expect(status.s5ConnectViewForProject(db, pid).sim.state).toBe("none");
@@ -243,6 +243,11 @@ describe("S5 simulation state in the connect view", () => {
     expect(status.s5ConnectViewForProject(db, pid).sim.state).toBe("unconfirmed");
     expect(status.s5ConnectViewForProject(db, pid).sim.nextStep).toContain("`\uAC00\uC815 \uD655\uC815`");
     const run = confirmRunOf(opp);
+    // amended default: S8 draws from the PINNED run; the promotion pin predates any run, so the
+    // confirmed run is NOT what S8 draws from (the pin flags newer_confirmed_run instead)
+    expect(status.s5ConnectViewForProject(db, pid)).toMatchObject({ sim: { state: "confirmed" }, run: null });
+    expect(pinS8.s5PinStatusForProject(db, pid).reasons).toContain("newer_confirmed_run");
+    await nextRequest(url(pid), { method: "POST", headers: { cookie } }); // re-pin follows the confirmed run
     expect(status.s5ConnectViewForProject(db, pid)).toMatchObject({ sim: { state: "confirmed" }, run: { id: run.id, drawCount: 500 } });
     const modelId = (db.query("SELECT id FROM business_case_model WHERE project_id = ? LIMIT 1").get(pid) as { id: string }).id;
     const insNote = (note: string) => db.run("INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, irr, note, created_at) VALUES (?,?,?,?,?,?,?,?,?)", [ulid(), pid, modelId, "base", "p50", 1, 0.1, note, new Date().toISOString()]);
@@ -265,9 +270,9 @@ describe("labels", () => {
     expect(labels.s5LinkageOf("ratio", "pinned")).toBe("ratio");
     expect(labels.s5LinkageOf("s5_plan", "pinned")).toBe("pinned");
     expect(labels.s5LinkageOf("s5_plan", "copy")).toBe("copy");
-    expect(labels.s5SourceLine("pinned", { id: "01ABCDEFGHIJKLMNOP12345678", pinnedAt: "2026-10-16T01:00:00Z" }, ratios)).toBe("S5\uC640 \uC5F0\uACB0\uB428 (\uACE0\uC815 \uCC38\uC870 " + "01ABCDEFGHIJKLMNOP12345678".slice(-8) + ", 2026-10-16)");
+    expect(labels.s5SourceLine("pinned", { id: "01ABCDEFGHIJKLMNOP12345678", pinnedAt: "2026-10-16T01:00:00Z" }, ratios)).toBe("S5\uC640 \uC5F0\uACB0\uB428 (\uAE30\uBCF8 \u2014 \uACE0\uC815 \uCC38\uC870 " + "01ABCDEFGHIJKLMNOP12345678".slice(-8) + ", 2026-10-16)");
     const ratio = labels.s5SourceLine("ratio", null, ratios);
-    expect(ratio).toContain("S5\uC640 \uC5F0\uACB0 \uC548 \uB428 \u2014 \uBE44\uC728 \uCD94\uC815 \uC0AC\uC6A9 \uC911");
+    expect(ratio).toContain("S5\uC640 \uC5F0\uACB0 \uC548 \uB428 \u2014 S5\uC5D0 \uAC00\uC838\uC62C \uACC4\uD68D\uC774 \uC5C6\uC5B4 \uBE44\uC728 \uCD94\uC815\uC744 \uC0AC\uC6A9\uD569\uB2C8\uB2E4");
     expect(ratio).toContain("\uC6B4\uC601\uBE44 60%, \uC124\uBE44\uD22C\uC790 10%, year-0 = \uB9E4\uCD9C\uC758 50%");
     expect(labels.s5SourceLine("copy", null, ratios)).toContain("\uBCF5\uC0AC\uBCF8 \uC0AC\uC6A9 \uC911");
   });

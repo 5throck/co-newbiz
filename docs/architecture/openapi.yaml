@@ -5418,7 +5418,7 @@ paths:
   /api/projects/{id}/business-case/s5-pin:
     get:
       operationId: getS5PlanPin
-      summary: S5 plan pin status (copy path vs pinned reference, stale rules) and the re-pin preview — pinned versus current S5 totals and confirmed run (ADR-0178 slice 0; human-only, analyst+, Green Field only; 409 not_greenfield / no_s5_plan).
+      summary: S5 plan pin status (copy path vs pinned reference, stale rules) and the re-pin preview — pinned versus current S5 totals and confirmed run (ADR-0178 slice 0; human-only, analyst+, Green Field only; 409 not_greenfield / no_s5_plan). Amendment 2026-10-16 — the pinned reference is the DEFAULT (status.path is pinned whenever a current pin exists and bc.s5_source is not 0; status.reverted reports an explicit person revert).
       tags:
         - Analysis
       parameters:

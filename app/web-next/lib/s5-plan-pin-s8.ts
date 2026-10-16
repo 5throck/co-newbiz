@@ -1,8 +1,9 @@
 // ADR-0178 slice 0: read side of the S5 plan pin for S8 - which pin is in force, the pinned plan
 // and S5 simulation run it resolves to, and the stale state (rules of design section 4A.4).
-// Pure reads. A pin changes S8 computation only when a person set `bc.s5_source = 1`; without that
-// opt-in (or without a pin row) every consumer stays on the copy path, bit-identical. Stale state
-// is informational: it never blocks a gate, changes a grade or alters an adopted result.
+// Pure reads. Amendment 2026-10-16 (DEC-20261016-01): the pinned reference is the DEFAULT for
+// Green Field — a current pin applies unless a person explicitly reverted (`bc.s5_source = 0`
+// wins over everything; the latest user row decides). Stale state is informational: it never
+// blocks a gate, changes a grade or alters an adopted result.
 import { getInvestmentSimulationRun, getLatestConfirmedInvestmentSimulationRun } from "../../../db/repositories/investment-simulation-run.repository.ts";
 import { drawInvestmentFactors } from "./investment-simulation.ts";
 import { loadInvestmentVectorsInput } from "./investment-simulation-input.ts";
@@ -52,16 +53,30 @@ export function listS5PlanPins(db: LooseDb, projectId: string): S5PlanPinRow[] {
   }
 }
 
-/** `bc.s5_source = 1` (a person's opt-in), latest user row wins. Never set by promotion or any agent path. */
+/** `bc.s5_source = 1` (a person's explicit connect/re-opt-in), latest user row wins. Never set by promotion. */
 export function s5SourceOptedIn(db: LooseDb, projectId: string): boolean {
-  const row = db
+  const row = latestS5SourceRow(db, projectId);
+  return !!row && row.value === 1;
+}
+
+/**
+ * A person's explicit revert (`복사본으로 되돌리기`, `bc.s5_source = 0`), latest user row wins.
+ * Under the amended default this is the ONLY way a Green Field project with an importable plan
+ * stays on the copy path — the lazy default at generation never re-links a reverted project.
+ */
+export function s5SourceReverted(db: LooseDb, projectId: string): boolean {
+  const row = latestS5SourceRow(db, projectId);
+  return !!row && row.value === 0;
+}
+
+function latestS5SourceRow(db: LooseDb, projectId: string): { value: 0 | 1 } | undefined {
+  return db
     .query(
       `SELECT a.value FROM assumption a JOIN run r ON r.id = a.run_id
        WHERE r.project_id = ? AND a.assumption_key = 'bc.s5_source' AND a.kind = 'user'
        ORDER BY a.as_of DESC, r.created_at DESC, a.id DESC LIMIT 1`,
     )
-    .get(projectId) as { value: number } | undefined;
-  return !!row && row.value === 1;
+    .get(projectId) as { value: 0 | 1 } | undefined;
 }
 
 export interface ActiveS5Pin {
@@ -70,11 +85,13 @@ export interface ActiveS5Pin {
 }
 
 /**
- * The pin S8 computes against: only under the opt-in AND with a current pin whose snapshot parses.
- * Otherwise null -> the copy path (a corrupt snapshot is treated as "no pin", never half-read).
+ * The pin S8 computes against, under the AMENDED DEFAULT (ADR-0178 Amendment 2026-10-16): the
+ * latest user `bc.s5_source` row decides. 0 = a person reverted -> the copy path. Any other
+ * state (no row, or an explicit 1) with a current pin whose snapshot parses -> the PINNED path.
+ * A corrupt snapshot is treated as "no pin", never half-read.
  */
 export function resolveActivePin(db: LooseDb, projectId: string): ActiveS5Pin | null {
-  if (!s5SourceOptedIn(db, projectId)) return null;
+  if (s5SourceReverted(db, projectId)) return null;
   const pin = getCurrentS5PlanPin(db, projectId);
   if (!pin) return null;
   const input = parsePinSnapshot(pin.input_snapshot_json);
@@ -119,8 +136,10 @@ export type S5PinState = "not_applicable" | "in_effect" | "stale";
 export interface S5PinStatus {
   /** Which path S8 computes on right now. */
   path: "copy" | "pinned";
-  /** True when a person set bc.s5_source = 1. */
+  /** True when a person explicitly connected (bc.s5_source = 1). */
   optedIn: boolean;
+  /** True when a person explicitly reverted (bc.s5_source = 0); the copy path then persists across generations. */
+  reverted: boolean;
   pin: { id: string; planHash: string; pinnedAt: string; pinnedBy: string; reason: "initial" | "repin"; s5SimRunId: string | null } | null;
   /** `not_applicable` = no pin row. Otherwise `stale` when any rule fires. Computed even off the pinned path (display only). */
   state: S5PinState;
@@ -139,10 +158,12 @@ const LABEL: Record<S5PinState, string> = { not_applicable: "", in_effect: "S5 �
  */
 export function s5PinStatusForProject(db: Database, projectId: string): S5PinStatus {
   const optedIn = s5SourceOptedIn(db, projectId);
+  const reverted = s5SourceReverted(db, projectId);
   const pin = getCurrentS5PlanPin(db, projectId);
   const base = (state: S5PinState, reasons: S5PinStaleReason[], caseOn: string | null): S5PinStatus => ({
-    path: optedIn && pin ? "pinned" : "copy",
+    path: !reverted && pin ? "pinned" : "copy",
     optedIn,
+    reverted,
     pin: pin ? { id: pin.id, planHash: pin.plan_hash, pinnedAt: pin.pinned_at, pinnedBy: pin.pinned_by, reason: pin.reason, s5SimRunId: pin.s5_sim_run_id } : null,
     state,
     stale: state === "stale",

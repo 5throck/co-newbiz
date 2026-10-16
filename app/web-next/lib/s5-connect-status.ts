@@ -5,7 +5,7 @@
 import type { Database } from "bun:sqlite";
 import { getLatestConfirmedInvestmentSimulationRun, getLatestInvestmentSimulationRun } from "../../../db/repositories/investment-simulation-run.repository.ts";
 import { s5SimStatusForProject, type S5SimStaleReason } from "./investment-simulation-s8.ts";
-import { getCurrentS5PlanPin, s5SourceOptedIn } from "./s5-plan-pin-s8.ts";
+import { getCurrentS5PlanPin, s5SourceReverted } from "./s5-plan-pin-s8.ts";
 
 /** none = no run at S5; unconfirmed = a run exists, nobody confirmed it; confirmed = confirmed, no S8 case reflects it yet. */
 export type S5ConnectSimState = "none" | "unconfirmed" | "confirmed" | "in_effect" | "stale";
@@ -57,9 +57,10 @@ export function s5ConnectViewForProject(db: Database, projectId: string): S5Conn
   else if (status.state === "in_effect") state = "in_effect";
   else state = "confirmed";
 
-  // The run S8 draws from: the pinned run on the pinned path, otherwise the latest confirmed run.
+  // The run S8 draws from: the pinned run on the pinned path (the amended default — any pin not
+  // reverted), otherwise the latest confirmed run.
   let run: S5ConnectView["run"] = confirmed ? { id: confirmed.id, drawCount: confirmed.draw_count } : null;
-  if (opp && s5SourceOptedIn(db, projectId)) {
+  if (opp && !s5SourceReverted(db, projectId)) {
     const pin = getCurrentS5PlanPin(db, projectId);
     if (pin) {
       const pinnedRun = pin.s5_sim_run_id ? safeRun(db, opp, pin.s5_sim_run_id) : null;

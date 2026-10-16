@@ -1,7 +1,9 @@
 // ADR-0178 follow-up (decider feedback 2026-10-16): the wording of the S8 `S5 연결` status and of the
 // per-parameter `S5 연동` column. Pure and client-safe (no DB import); display only - these labels
-// never link, change or recompute a value. Only rules that are in force today are described:
-// the `s5_pnl` basis and the S5-run volatility arrive with ADR-0178 slices 2 and 3.
+// never link, change or recompute a value. Amendment 2026-10-16: `S5와 연결됨` is the DEFAULT for a
+// Green Field project with an importable plan; `복사본` now reads as a person's revert (or the
+// window before the first `자동 생성`). Only rules in force today are described: the `s5_pnl`
+// basis and the S5-run volatility arrive with ADR-0178 slices 2 and 3.
 
 export type InvestmentBasisKey = "ratio" | "s5_plan" | "s5_plan_full";
 /** pinned = 고정 참조로 연결, copy = 복사본(S5 계획 기준), ratio = 비율 추정(S5 금액 미사용). */
@@ -36,11 +38,11 @@ export interface PinLabelInput { id: string; pinnedAt: string }
 
 /** (a) investment source line of the status block. */
 export function s5SourceLine(link: S5Linkage, pin: PinLabelInput | null, ratios: RatioAssumptions): string {
-  if (link === "pinned" && pin) return `S5와 연결됨 (고정 참조 ${pin.id.slice(-8)}, ${pin.pinnedAt.slice(0, 10)})`;
+  if (link === "pinned" && pin) return `S5와 연결됨 (기본 — 고정 참조 ${pin.id.slice(-8)}, ${pin.pinnedAt.slice(0, 10)})`;
   if (link === "ratio") {
-    return `S5와 연결 안 됨 — 비율 추정 사용 중 (운영비 ${pct0(ratios.opexRatio)}, 설비투자 ${pct0(ratios.capexRatio)}, year-0 = 매출의 ${pct0(ratios.initialInvestmentRatio)}; S5 금액이 아닌 가정값)`;
+    return `S5와 연결 안 됨 — S5에 가져올 계획이 없어 비율 추정을 사용합니다 (운영비 ${pct0(ratios.opexRatio)}, 설비투자 ${pct0(ratios.capexRatio)}, year-0 = 매출의 ${pct0(ratios.initialInvestmentRatio)})`;
   }
-  return "복사본 사용 중 (승격 시점 또는 마지막 가져오기 시점의 S5 계획 복사본)";
+  return "복사본 사용 중 (사람이 복사본으로 되돌렸거나 아직 첫 `자동 생성` 전) — 승격 시점 또는 마지막 가져오기 시점의 S5 계획 복사본";
 }
 
 /** (e) what the simulation reaches in S8 today. */

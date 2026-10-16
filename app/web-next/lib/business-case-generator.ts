@@ -40,7 +40,7 @@ import { fmtNpvInteger } from "./npv-format.ts";
 import { resolveDownsideOpexUplift } from "./target-costing.ts";
 import { resolveS5SimConsumption, type S5SimConsumption } from "./investment-simulation-s8.ts";
 import { aggregatePlanLines, pinPlanLinesOf } from "./s5-plan-pin.ts";
-import { getCurrentS5PlanPin, resolveActivePin, resolvePinnedS5SimConsumption } from "./s5-plan-pin-s8.ts";
+import { getCurrentS5PlanPin, resolveActivePin, resolvePinnedS5SimConsumption, s5SourceOptedIn } from "./s5-plan-pin-s8.ts";
 
 // Per-step S8 agent assignment reads from process/flow.spec.yaml (SSOT,
 // ADR-0074) — each execution step maps to the spec activity that owns its
@@ -712,10 +712,14 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
      WHERE project_id = ? AND kind = 'greenfield_cost' AND target_id IS NULL AND archived_at IS NULL
      ORDER BY created_at DESC, id DESC LIMIT 1`,
   ).get(projectId) as { horizon_years: number } | undefined;
-  // ADR-0178 slice 0: under the person's opt-in with a current pin, the pin's snapshot is the plan
-  // (its presence counts as plan presence and its horizon replaces the copy's).
+  // ADR-0178 amendment: under the amended default, a current pin (unless a person reverted) is the
+  // plan — its presence counts as plan presence and its horizon replaces the copy's.
   const activePin = resolveActivePin(db, projectId);
   const pinnedHorizon = activePin ? activePin.input.horizon : null;
+  // ADR-0178 amendment: under the default, "pinned" is no longer proof of a person's explicit
+  // opt-in — distinguish the provenance label so the parameter table doesn't claim a user edit
+  // that never happened.
+  const s5OptedIn = s5SourceOptedIn(db, projectId);
   return {
     captureRate: capture && Number.isFinite(capture.value) && capture.value > 0 ? capture.value : CAPTURE_RATE,
     captureSource: capture && Number.isFinite(capture.value) && capture.value > 0 ? "사용자 확정 (bc.capture_rate)" : "기본값",
@@ -748,7 +752,9 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
     iterationsSource: iterations.source,
     s5PlanHorizonYears: pinnedHorizon !== null ? Math.min(Math.max(Math.round(pinnedHorizon), 1), 50) : s5Model ? Math.min(Math.max(Math.round(s5Model.horizon_years), 1), 50) : null,
     s5Source: activePin ? "pinned" : "copy",
-    s5SourceSource: activePin ? "사용자 확정 (bc.s5_source)" : "기본값 (복사본, ADR-0178)",
+    s5SourceSource: activePin
+      ? s5OptedIn ? "사용자 확정 (bc.s5_source)" : "기본 (S5와 연결됨, ADR-0178 개정)"
+      : "기본값 (복사본, ADR-0178)",
     s5PinId: activePin ? activePin.pin.id : null,
   };
 }
@@ -1030,7 +1036,7 @@ export interface S5InvestmentPlan {
  *  when the project has none — every consumer then falls back to the ratio
  *  path, never to zero. */
 export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (...args: unknown[]) => unknown; all: (...args: unknown[]) => unknown[] } }, projectId: string): S5InvestmentPlan | null {
-  // ADR-0178 slice 0: the pinned path (a person's opt-in AND a current pin) computes from the
+  // ADR-0178 amendment: the pinned path (a current pin unless a person reverted) computes from the
   // pinned snapshot through the same aggregation; without it the copy path below is unchanged.
   const active = resolveActivePin(db, projectId);
   if (active) {
@@ -1669,6 +1675,16 @@ export async function generateBusinessCases(
     .query("SELECT id, track, source_opportunity_id FROM md_project WHERE id = ?")
     .get(projectId) as { id: string; track: "greenfield" | "brownfield" | null; source_opportunity_id: string | null } | undefined;
   if (!project) throw new Error(`project '${projectId}' not found`);
+
+  // ADR-0178 Amendment 2026-10-16: the pinned reference + unified S5 basis are the DEFAULT for a
+  // Green Field project with an importable S5 plan, applied lazily at generation — the initial pin
+  // is created when none exists, the stored basis moves to `s5_plan_full` when it is not yet 2,
+  // both audited. A person's revert (`bc.s5_source = 0`) is never re-linked; existing cases are
+  // never recalculated (only regeneration reflects the new basis); Brown Field is untouched.
+  if (project.track === "greenfield" && project.source_opportunity_id) {
+    const { ensureDefaultS5Link } = await import("../../../db/repositories/s5-connect.ts");
+    ensureDefaultS5Link(db, projectId, opts.actor, new Date().toISOString());
+  }
 
   const subjects = project.track === "brownfield" ? listShortlistSubjects(db, project.source_opportunity_id ?? "") : [];
   // Promotion requires ≥1 shortlisted target (ADR-0095 precondition), so an

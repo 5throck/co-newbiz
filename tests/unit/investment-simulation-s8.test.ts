@@ -232,6 +232,10 @@ describe("S8 consumption, provenance and staleness", () => {
     expect(gen.caseInputsForProject(projectId).s5Sim ?? null).toBeNull();
     const r = await req(`/api/projects/${projectId}/business-case/params`, { method: "POST", headers: { cookie: leadCookie }, body: json({ params: { investment_basis: "s5_plan" }, rationale: "use S5 plan" }) });
     expect(r.status).toBeLessThan(300);
+    // amended default: S8 draws from the PINNED run, and the promotion pin predates the run —
+    // re-pin (human-only route) so the pin names the confirmed run, as a person would.
+    const repin = await req(`/api/projects/${projectId}/business-case/s5-pin`, { method: "POST", headers: { cookie: leadCookie } });
+    expect(repin.status).toBeLessThan(300);
     const inputs = gen.caseInputsForProject(projectId);
     expect(inputs.s5Plan).not.toBeNull();
     const confirmed = repo.getLatestConfirmedInvestmentSimulationRun(oppId, db)!;
