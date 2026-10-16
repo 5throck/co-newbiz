@@ -16,7 +16,10 @@ import { listLegacyModels } from "../../../../../lib/business-case-cleanup.ts";
 import { listBusinessCases } from "../../../../../lib/business-case.ts";
 import { evaluateTargetsForCase, resolveProjectTargets } from "../../../../../lib/business-targets.ts";
 import { pinnedPlanCapexTotal } from "../../../../../lib/s5-plan-capex.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { loadInvestmentVectorsInput } from "../../../../../lib/investment-simulation-input.ts";
+import { planS5Import } from "../../../../../../../db/repositories/s5-cost-import.ts";
+
+import { badRequest, fail, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 
 const KINDS = new Set(["greenfield_cost", "revenue", "valuation", "investment_return"]);
 const CATEGORIES = new Set(["labor", "opex", "capex", "revenue", "gov_rnd"]);
@@ -59,10 +62,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   // 2026-10-16 (ADR-0178 follow-up): does the plan S8 actually uses (the active pin) carry
   // any capex? Additive display-only flag — drives the IRR no-flow chip in the scenario
   // comparison; never recomputes a case or blocks a gate.
-  const trackRow = db.query("SELECT track FROM md_project WHERE id = ?").get(id) as { track: string | null } | undefined;
+  const trackRow = db.query("SELECT track, source_opportunity_id FROM md_project WHERE id = ?").get(id) as
+    | { track: string | null; source_opportunity_id: string | null }
+    | undefined;
   const s5PlanCapexZero = trackRow?.track === "greenfield" && pinnedPlanCapexTotal(getDb(), id) === 0;
   return ok(
-    { cases, archived, goal_attainment: goalAttainment, goal_count: goalsResolved.length, legacy_models: listLegacyModels(id), recommended_scenario: recommendedScenario, adoption, target_selection: targetSelection, targets, engines_mixed: enginesMixed, methods_mixed: methodsMixed, escalated_cagr_pct: eff?.source === "escalated" ? eff.cagrPct : null, s5_plan_capex_zero: s5PlanCapexZero },
+    { cases, archived, goal_attainment: goalAttainment, goal_count: goalsResolved.length, legacy_models: listLegacyModels(id), recommended_scenario: recommendedScenario, adoption, target_selection: targetSelection, targets, engines_mixed: enginesMixed, methods_mixed: methodsMixed, escalated_cagr_pct: eff?.source === "escalated" ? eff.cagrPct : null, s5_plan_capex_zero: s5PlanCapexZero, source_opportunity_id: trackRow?.source_opportunity_id ?? null },
     200,
     { count: cases.length },
   );
@@ -137,6 +142,31 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     | { id: string }
     | undefined;
   if (!model) return notFound();
+  // ADR-0178 (decider decision 2026-10-16): Green Field line edits are refused —
+  // S5 is the single source of the investment plan; S8 edits would diverge from
+  // it (dead-end on the pinned path, drift on the copy path). The carve-out is
+  // the SAME importability rule ensureDefaultS5Link / previewS5Connect apply:
+  // when the source opportunity has NO importable S5 plan (no confirmed-unit
+  // KRW lines and no loadable S5 input), generation can never auto-link and the
+  // manual editor keeps working for fully manual legacy projects. Brown Field
+  // is untouched. The start_year<1 coercion below stays for this carve-out only;
+  // S5 owns pre-launch (year-0) lines.
+  if (Array.isArray(body.lines)) {
+    const proj = db.query("SELECT track, source_opportunity_id FROM md_project WHERE id = ?").get(id) as
+      | { track: string | null; source_opportunity_id: string | null }
+      | undefined;
+    if (proj?.track === "greenfield") {
+      const oppId = proj.source_opportunity_id;
+      const importable = !!oppId && planS5Import(db, oppId).importable > 0 && !!loadInvestmentVectorsInput(db, oppId);
+      if (importable) {
+        return fail(
+          409,
+          "greenfield_lines_readonly",
+          "Green Field 케이스의 투자비 라인은 S5가 단일 원본입니다 — S5 투자비 탭에서 투자비 항목을 관리하고, S8의 S5 연결 블록에서 `최신 S5로 갱신` 후 `자동 생성`을 다시 실행하세요.",
+        );
+      }
+    }
+  }
   if (body.target_id !== undefined) {
     if (body.target_id === null) {
       db.run("UPDATE business_case_model SET target_id = NULL WHERE id = ?", [body.model_id]);
