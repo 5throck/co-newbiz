@@ -2936,7 +2936,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     put:
       operationId: putOpportunityTargetScope
-      summary: "HUMAN-ONLY (boundary #2; in HUMAN_ONLY_ROUTES, agent principals get 403 human_only). A person (analyst+) records the target scope: regions from the fixed enum (kr|eu|us|cn|sea|worldwide; worldwide mutually exclusive), segments as free tags (trimmed, deduped, <=100 chars), unit_basis (krw_m_year|units_year|usd_m_year). set_by/set_at are stamped server-side; audit opportunity_target_scope.write. Invalid shapes are 400 invalid_request - never silently dropped. Display metadata for the ADR-0179 flags; generation arithmetic is untouched."
+      summary: "HUMAN-ONLY (boundary #2; in HUMAN_ONLY_ROUTES, agent principals get 403 human_only). A person (analyst+) records the target scope: regions from the fixed enum (kr|we|ee|ru|na|cn|sea|sa|af|me|worldwide; worldwide mutually exclusive; 2026-10-16 decider revision - eu->we, us->na renames plus ee/ru/sa/af/me additions; zero stored rows so old codes are rejected 400), segments as free tags (trimmed, deduped, <=100 chars), unit_basis (krw_m_year|units_year|usd_m_year). set_by/set_at are stamped server-side; audit opportunity_target_scope.write. Invalid shapes are 400 invalid_request - never silently dropped. Display metadata for the ADR-0179 flags; generation arithmetic is untouched."
       tags:
         - Reference
       parameters:
@@ -2956,7 +2956,7 @@ paths:
                 regions:
                   type: array
                   minItems: 1
-                  items: { type: string, enum: [kr, eu, us, cn, sea, worldwide] }
+                  items: { type: string, enum: [kr, we, ee, ru, na, cn, sea, sa, af, me, worldwide] }
                 segments:
                   type: array
                   items: { type: string, maxLength: 100 }

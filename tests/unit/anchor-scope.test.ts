@@ -82,28 +82,28 @@ describe("compareAnchorScope", () => {
   const t = (regions: string[]) => ({ regions: regions as never, segments: [], unit_basis: "krw_m_year" as const, set_by: "u", set_at: NOW });
 
   test("ok: target regions subset of the declared anchor regions", () => {
-    const v = compareAnchorScope(t(["eu", "kr"]), t(["eu"]));
+    const v = compareAnchorScope(t(["we", "kr"]), t(["we"]));
     expect(v.status).toBe("ok");
     expect(v.reason.length).toBeGreaterThan(0);
   });
 
   test("mismatch: worldwide anchor vs regional target (coverage is not compatibility)", () => {
-    expect(compareAnchorScope(t(["worldwide"]), t(["eu"])).status).toBe("mismatch");
-    expect(compareAnchorScope(t(["worldwide"]), t(["eu"])).reason).toContain("worldwide");
+    expect(compareAnchorScope(t(["worldwide"]), t(["we"])).status).toBe("mismatch");
+    expect(compareAnchorScope(t(["worldwide"]), t(["we"])).reason).toContain("worldwide");
   });
 
   test("mismatch: disjoint declared regions", () => {
-    expect(compareAnchorScope(t(["us"]), t(["eu"])).status).toBe("mismatch");
+    expect(compareAnchorScope(t(["na"]), t(["we"])).status).toBe("mismatch");
   });
 
   test("unknown: NULL anchor (legacy unscoped) with a set target scope", () => {
-    const v = compareAnchorScope(null, t(["eu"]));
+    const v = compareAnchorScope(null, t(["we"]));
     expect(v.status).toBe("unknown");
     expect(v.reason).toContain("\ubbf8\uae30\uc7ac");
   });
 
   test("unknown: NULL target scope (legacy opportunity), whatever the anchor says", () => {
-    expect(compareAnchorScope(t(["eu"]), null).status).toBe("unknown");
+    expect(compareAnchorScope(t(["we"]), null).status).toBe("unknown");
     expect(compareAnchorScope(null, null).status).toBe("unknown");
   });
 
@@ -121,8 +121,8 @@ describe("compareAnchorScope", () => {
 // -- sizing-version payload scope extraction (OPEN-2) ---------------------------------------------
 describe("extractSizingVersionScope", () => {
   test("extracts a declared scope object", () => {
-    const payload = json({ industry_id: "i", scope: { regions: ["eu"], segments: ["Stage V"], unit_basis: "krw_m_year" } });
-    expect(extractSizingVersionScope(payload)).toEqual({ regions: ["eu"], segments: ["Stage V"], unit_basis: "krw_m_year" });
+    const payload = json({ industry_id: "i", scope: { regions: ["we"], segments: ["Stage V"], unit_basis: "krw_m_year" } });
+    expect(extractSizingVersionScope(payload)).toEqual({ regions: ["we"], segments: ["Stage V"], unit_basis: "krw_m_year" });
   });
 
   test("legacy payload without scope, invalid JSON, wrong shapes: null, never throws", () => {
@@ -145,14 +145,14 @@ describe("anchorScopeNoteFragment", () => {
   });
 
   test("status + reason when a person-set target scope exists (anchor undeclared today)", () => {
-    const f = anchorScopeNoteFragment(t(["eu"]));
+    const f = anchorScopeNoteFragment(t(["we"]));
     expect(f.startsWith("; ")).toBe(true);
     expect(f).toContain("; anchor_scope=unknown");
     expect(f).toContain("anchor_scope_reason=");
   });
 
   test("ok verdict also emits the provenance pair", () => {
-    const f = anchorScopeNoteFragment(t(["eu"]), t(["eu", "kr"]));
+    const f = anchorScopeNoteFragment(t(["we"]), t(["we", "kr"]));
     expect(f).toContain("; anchor_scope=ok;");
   });
 
@@ -170,10 +170,10 @@ describe("bit-identity while no scope is set", () => {
     const before = gen.caseInputsBaseForProject(pid);
     expect(before.targetScope).toBeNull();
     const { targetScope: _a, ...beforeRest } = before;
-    const res = await putScope(opp, { regions: ["eu"], segments: ["Stage V"], unit_basis: "krw_m_year" });
+    const res = await putScope(opp, { regions: ["we"], segments: ["Stage V"], unit_basis: "krw_m_year" });
     expect(res.status).toBe(200);
     const after = gen.caseInputsBaseForProject(pid);
-    expect(after.targetScope).toMatchObject({ regions: ["eu"] });
+    expect(after.targetScope).toMatchObject({ regions: ["we"] });
     const { targetScope: _b, ...afterRest } = after;
     expect(afterRest).toEqual(beforeRest);
   });
@@ -213,7 +213,7 @@ describe("read model: additive anchor_scope fields", () => {
     const pid = promote(opp);
     const before = await (await nextRequest(`/api/projects/${pid}/business-case/params`, { headers: { cookie } })).json();
     expect(before.data.anchor_scope).toMatchObject({ status: "unknown", has_target_scope: false });
-    expect((await putScope(opp, { regions: ["eu"], segments: [], unit_basis: "krw_m_year" })).status).toBe(200);
+    expect((await putScope(opp, { regions: ["we"], segments: [], unit_basis: "krw_m_year" })).status).toBe(200);
     const after = await (await nextRequest(`/api/projects/${pid}/business-case/params`, { headers: { cookie } })).json();
     expect(after.data.anchor_scope).toMatchObject({ status: "unknown", has_target_scope: true });
   });
