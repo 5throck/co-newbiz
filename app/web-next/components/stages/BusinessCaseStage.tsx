@@ -32,6 +32,7 @@ import { S8LensStrip } from "./S8LensStrip.tsx";
 import { S8PartHeader } from "./S8PartHeader.tsx";
 import { TechnicalLensPanel } from "./TechnicalLensPanel.tsx";
 import { api } from "../../lib/api.ts";
+import { irrGuardBand, IRR_GUARD_CHIP_LABEL, IRR_GUARD_DIAGNOSTIC } from "../../lib/irr-guard.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { GateDecisionJump, GateDecisionPanel } from "../GateDecisionPanel.tsx";
 import { TargetCheckPanel } from "../TargetCheckPanel.tsx";
@@ -234,6 +235,21 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   // 라인 표 + S5 투자비 탭 안내. pin이 재평가 필요 상태면 S5 연결 블록의 `최신 S5로 갱신` 안내를 덧붙인다.
   const [viewing, setViewing] = useState<{ modelId: string; label: string; lines: LineRow[] } | null>(null);
   const [pinStale, setPinStale] = useState(false);
+  // ADR-0179 slice 1 — IRR ceiling guard thresholds (person-settable bc.* params).
+  // Display metadata only: the chips annotate the scenario IRR cell, they never
+  // block generation, adoption, a gate or a grade.
+  const [irrThresholds, setIrrThresholds] = useState<{ flag: number; caution: number } | null>(null);
+  useEffect(() => {
+    api
+      .get<{ params: { irrFlagThreshold?: number; irrCautionThreshold?: number } }>(`/api/projects/${encodeURIComponent(projectId)}/business-case/params`)
+      .then((r) => {
+        const p = r.data.params;
+        if (p && Number.isFinite(p.irrFlagThreshold) && Number.isFinite(p.irrCautionThreshold)) {
+          setIrrThresholds({ flag: p.irrFlagThreshold!, caution: p.irrCautionThreshold! });
+        }
+      })
+      .catch(() => setIrrThresholds(null));
+  }, [projectId]);
   const viewingSectionRef = useRef<HTMLElement>(null);
   const viewingModelId = viewing?.modelId ?? null;
   useEffect(() => {
@@ -1023,16 +1039,44 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                           return <td key={p} className="num mono-num">{sim ? fmtNpvKrwM(sim.npv_krw_m) : "—"}</td>;
                         })}
                         <td className="num" data-testid="scenario-irr-cell">
-                          {irrV != null ? `${(irrV * 100).toFixed(1)}%` : irrNoFlowChip ? (
-                            <span
-                              data-testid="irr-no-flow-chip"
-                              className="status-chip status-amber whitespace-normal [overflow-wrap:anywhere]"
-                              title="회수 기간(BEP) 0.0년도 같은 이유입니다. S5 투자비 탭에서 capex 줄을 입력하면 계산됩니다."
-                            >
-                              투자 플로우 없음 — S5 계획에 설비투자(capex) 줄이 없습니다
-                            </span>
-                          ) : "—"}
+                          {(() => {
+                            const band = irrGuardBand(irrV, irrThresholds?.flag, irrThresholds?.caution);
+                            if (irrV != null) {
+                              return (
+                                <>
+                                  {(irrV * 100).toFixed(1)}%
+                                  {band && (
+                                    <>
+                                      <span
+                                        data-testid={`irr-guard-chip-${band}`}
+                                        className="status-chip status-amber mt-1 block w-fit max-w-full whitespace-normal [overflow-wrap:anywhere]"
+                                        title={IRR_GUARD_DIAGNOSTIC}
+                                      >
+                                        {IRR_GUARD_CHIP_LABEL[band]} (기준 {irrThresholds ? `${(irrThresholds[band === "extreme" ? "flag" : "caution"] * 100).toFixed(0)}%` : band === "extreme" ? "100%" : "50%"})
+                                      </span>
+                                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" data-testid="irr-guard-diagnostic">
+                                        {IRR_GUARD_DIAGNOSTIC}
+                                      </span>
+                                    </>
+                                  )}
+                                </>
+                              );
+                            }
+                            if (irrNoFlowChip) {
+                              return (
+                                <span
+                                  data-testid="irr-no-flow-chip"
+                                  className="status-chip status-amber whitespace-normal [overflow-wrap:anywhere]"
+                                  title="회수 기간(BEP) 0.0년도 같은 이유입니다. S5 투자비 탭에서 capex 줄을 입력하면 계산됩니다."
+                                >
+                                  투자 플로우 없음 — S5 계획에 설비투자(capex) 줄이 없습니다
+                                </span>
+                              );
+                            }
+                            return "—";
+                          })()}
                         </td>
+
                         {!greenfield && <td className="num">
                           {deltaP50 === null ? "—" : (
                             <span className={deltaP50 >= 0 ? "text-[color:var(--success)] font-bold" : "text-[color:var(--red-fg)] font-bold"}>

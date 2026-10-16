@@ -9,6 +9,8 @@ import { getDb } from "../../../db/client.ts";
 import { readRagView } from "../../../db/lib/rag-service.ts";
 import { getCurrentRouteDecision } from "../../../db/repositories/route-decision.repository.ts";
 import { listBusinessCases, latestAdoption } from "./business-case.ts";
+import { irrGuardBand, IRR_GUARD_CHIP_LABEL } from "./irr-guard.ts";
+import { resolveBusinessCaseParams } from "./business-case-generator.ts";
 import {
   ATTAINABILITY_GRADE_LABEL, HELD_STATUS_LABEL, NECESSITY_LABEL, NECESSITY_UNSET_LABEL, RESOLUTION_LABEL,
   gapCautions, parseGapRegister, summarizeGap, type CapabilityGapRow,
@@ -235,9 +237,16 @@ function s8Summary(projectId: string): string {
   try {
     const { cases, adoption } = { cases: listBusinessCases(projectId).cases, adoption: latestAdoption(projectId) };
     if (cases.length === 0) return "S8 Business Case: 없음";
-    const lines = cases.slice(0, 8).map((c) =>
-      `- ${c.name} (${c.kind}${c.scenario ? `, ${c.scenario}` : ""}${c.variant ? `, ${c.variant}` : ""})${c.adopted ? " [채택]" : ""}${c.recommended ? " [결정론 RECOMMENDED]" : ""}`,
-    );
+    // ADR-0179 slice 1 - IRR ceiling guard markers per case (display metadata
+    // for the gate-brief text; never a gate condition).
+    let bc = null;
+    try { bc = resolveBusinessCaseParams(getDb(), projectId); } catch { bc = null; }
+    const lines = cases.slice(0, 8).map((c) => {
+      const p50 = c.simulations?.find((s) => s.percentile === "p50") ?? null;
+      const band = irrGuardBand(p50?.irr, bc?.irrFlagThreshold, bc?.irrCautionThreshold);
+      const guard = band ? ` [IRR ${IRR_GUARD_CHIP_LABEL[band]}]` : "";
+      return `- ${c.name} (${c.kind}${c.scenario ? `, ${c.scenario}` : ""}${c.variant ? `, ${c.variant}` : ""})${c.adopted ? " [채택]" : ""}${c.recommended ? " [결정론 RECOMMENDED]" : ""}${guard}`;
+    });
     return [
       `채택: ${adoption ? `${adoption.adoptedBy} @ ${adoption.adoptedAt.slice(0, 10)}` : "없음"}`,
       ...lines,

@@ -204,6 +204,10 @@ exclusions:
     kind: route
     route: "POST /api/brownfield/targets/{}/capability-judgements/confirm"
     reason: The S7 per-target edit surface of the same judgement (ADR-0171 slice 2); confirming is a human act (ADR-0168, boundary #2), agents only save drafts through the PUT.
+  - id: opportunity-target-scope
+    kind: route
+    route: "PUT /api/opportunities/{}/target-scope"
+    reason: The structured target scope (ADR-0179 slice 1) is a person's input on the opportunity (analyst+); agents may read it via GET but never write it (boundary #2).
   - id: proposal-confirm
     kind: route
     route: "POST /api/proposals/{}/confirm"

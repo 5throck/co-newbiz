@@ -8,6 +8,7 @@
 // 모든 금액은 백만 원(KRW-M)으로 저장·계산된다(migration 0134 단위 계약).
 
 import { fmtNpvEok } from "@/lib/npv-format";
+import { irrGuardBand, IRR_GUARD_CHIP_LABEL, IRR_GUARD_DIAGNOSTIC } from "@/lib/irr-guard";
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { KRW_MILLIONS_UNIT } from "../../lib/format.ts";
@@ -34,6 +35,8 @@ interface ResolvedParams {
   iterations: number; iterationsSource: string;
   fadeHorizonYears: number; fadeHorizonSource: string;
   growthTerminal: number | null; growthTerminalSource: string;
+  irrFlagThreshold?: number; irrFlagThresholdSource?: string;
+  irrCautionThreshold?: number; irrCautionThresholdSource?: string;
 }
 
 const pct1 = (v: number) => `${(v * 100).toFixed(1)}%`;
@@ -205,6 +208,19 @@ export function ValuationMethodology({
           </tbody>
         </table></div>
       )}
+
+      {(() => {
+        const band = irrGuardBand(mf?.irr, params?.irrFlagThreshold, params?.irrCautionThreshold);
+        if (!band) return null;
+        return (
+          <div role="status" data-testid="methodology-irr-guard" className="mt-2 p-3 border border-[color:var(--border)] rounded-[length:var(--radius)]">
+            <span className="status-chip status-amber">
+              IRR {(mf!.irr! * 100).toFixed(1)}% — {IRR_GUARD_CHIP_LABEL[band]} (기준 {((band === "extreme" ? params?.irrFlagThreshold ?? 1.0 : params?.irrCautionThreshold ?? 0.5) * 100).toFixed(0)}%)
+            </span>{" "}
+            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{IRR_GUARD_DIAGNOSTIC}</span>
+          </div>
+        );
+      })()}
 
       {horizonMismatch && (
         <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-2">
