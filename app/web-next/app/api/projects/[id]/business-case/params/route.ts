@@ -18,6 +18,7 @@ import {
 import { s5SimStatusForProject } from "../../../../../../lib/investment-simulation-s8.ts";
 import { getCurrentS5PlanPin, s5PinStatusForProject } from "../../../../../../lib/s5-plan-pin-s8.ts";
 import { s5ConnectViewForProject } from "../../../../../../lib/s5-connect-status.ts";
+import { pinnedPlanCapexTotal } from "../../../../../../lib/s5-plan-capex.ts";
 import { currentPrincipal } from "../../../../../../lib/mcp/principal-context.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -42,7 +43,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (track === "greenfield") {
     try { s5Connect = s5ConnectViewForProject(getDb(), id); } catch { /* migration pending: omit */ }
   }
-  return ok({ params: resolved, s5_sim: s5Sim, s5_pin: s5Pin, s5_connect: s5Connect, track }, 200);
+  return ok({ params: resolved, s5_sim: s5Sim, s5_pin: s5Pin, s5_connect: s5Connect, track, s5_pin_capex_total_krw_m: track === "greenfield" ? pinnedPlanCapexTotal(getDb(), id) : null }, 200);
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {

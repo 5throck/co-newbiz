@@ -64,6 +64,8 @@ export interface S5LinkageContext {
   run: { drawCount: number } | null;
   /** S8 bc.iterations. */
   s8Iterations: number;
+  /** 2026-10-16: the active S5 plan carries no capex line at all (display-only warning). */
+  planCapexZero?: boolean;
 }
 
 /**
@@ -90,9 +92,17 @@ export function s5ParamLinkage(key: S5ParamKey, ctx: S5LinkageContext): S5Linkag
           ? assumedCell("예전 기준(설비투자만) — 다음 연결 또는 `자동 생성` 시 통합 기준에서 S5 계획 금액으로 대체")
           : assumedCell(PNL_REASON);
     case "capex":
-      return linked ? s5Cell("계획이 있는 연도의 설비투자; 없는 연도는 비율") : assumedCell(PNL_REASON);
+      return linked
+        ? (ctx.planCapexZero
+          ? s5Cell("계획이 있는 연도의 설비투자; 없는 연도는 비율 — 단, 계획에 설비투자 줄이 없습니다")
+          : s5Cell("계획이 있는 연도의 설비투자; 없는 연도는 비율"))
+        : assumedCell(PNL_REASON);
     case "initial":
-      return linked ? s5Cell("S5 계획 1차년도 집행액을 year-0로 계상") : assumedCell(PNL_REASON);
+      return linked
+        ? (ctx.planCapexZero
+          ? s5Cell("S5 계획 1차년도 집행액을 year-0로 계상 — 단, 계획에 설비투자 줄이 없어 0입니다")
+          : s5Cell("S5 계획 1차년도 집행액을 year-0로 계상"))
+        : assumedCell(PNL_REASON);
     case "sigma":
       return assumedCell("슬라이스 3에서 S5 시뮬레이션 반영");
     case "iterations": {

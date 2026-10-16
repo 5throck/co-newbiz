@@ -155,7 +155,7 @@ interface ParamLine {
   note?: React.ReactNode;
 }
 
-function CurrentParamsTable({ resolved, track, s5Pin, s5Run }: { resolved: ResolvedParams; track: string | null; s5Pin: S5PinStatusView | null; s5Run: { id: string; drawCount: number } | null }) {
+function CurrentParamsTable({ resolved, track, s5Pin, s5Run, s5PinCapexTotal }: { resolved: ResolvedParams; track: string | null; s5Pin: S5PinStatusView | null; s5Run: { id: string; drawCount: number } | null; s5PinCapexTotal: number | null }) {
   const gf = track === "greenfield";
   const pct1 = (v: number) => (v * 100).toFixed(1);
   const s5Source = s5Pin?.path === "pinned" && s5Pin.pin
@@ -228,7 +228,7 @@ function CurrentParamsTable({ resolved, track, s5Pin, s5Run }: { resolved: Resol
               <th scope="colgroup" colSpan={cols.length} className="text-left text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] bg-[color:var(--muted-bg)]">{g.title}</th>
             </tr>
             {g.lines.map((l) => {
-              const cell = gf && l.s5Key ? s5ParamLinkage(l.s5Key, { basis: resolved.investmentBasis, run: s5Run, s8Iterations: resolved.iterations }) : null;
+              const cell = gf && l.s5Key ? s5ParamLinkage(l.s5Key, { basis: resolved.investmentBasis, run: s5Run, s8Iterations: resolved.iterations, planCapexZero: gf && s5Pin?.path === "pinned" && s5PinCapexTotal === 0 }) : null;
               return (
                 <tr key={l.key} data-testid={`s8-param-${l.key}`}>
                   <th scope="row" className="text-left font-normal">{l.label}</th>
@@ -262,6 +262,7 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
   const [s5Run, setS5Run] = useState<{ id: string; drawCount: number } | null>(null);
   const [s5Pin, setS5Pin] = useState<S5PinStatusView | null>(null);
   const [track, setTrack] = useState<string | null>(null);
+  const [paramsCapexTotal, setParamsCapexTotal] = useState<number | null>(null);
   const [cases, setCases] = useState<CaseSummary[]>([]);
   const [form, setForm] = useState<Record<string, string>>({});
   const [ramp, setRamp] = useState<string[]>(["", "", "", "", ""]);
@@ -308,6 +309,7 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
       setS5Run(params.data.s5_connect?.run ?? null);
       setS5Pin(params.data.s5_pin ?? null);
       setTrack((params.data as { track?: string | null }).track ?? null);
+      setParamsCapexTotal((params.data as { s5_pin_capex_total_krw_m?: number | null }).s5_pin_capex_total_krw_m ?? null);
       const casesRes = await api.get<{ cases: CaseSummary[] }>(`/api/projects/${encodeURIComponent(projectId)}/business-case`);
       setCases(casesRes.data.cases);
     } catch (e) {
@@ -382,7 +384,14 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
           <p>불러오는 중...</p>
         ) : (
           <>
-            <CurrentParamsTable resolved={resolved} track={track} s5Pin={s5Pin} s5Run={s5Run} />
+            <CurrentParamsTable resolved={resolved} track={track} s5Pin={s5Pin} s5Run={s5Run} s5PinCapexTotal={paramsCapexTotal} />
+            {track === "greenfield" && s5Pin?.path === "pinned" && paramsCapexTotal === 0 && (
+              <p role="note" data-testid="s8-params-capex-warning" className="text-[length:var(--fs-caption)] mt-2">
+                <span className="status-chip status-amber"><span aria-hidden="true">⚠</span> 설비투자 없음</span>{" "}
+                S5 계획에 설비투자(capex) 줄이 없습니다 — 설비투자가 있다면 S5 투자비 탭에 입력하세요.
+              </p>
+              )}
+
             {resolved.s5PlanHorizonYears != null && resolved.s5PlanHorizonYears !== resolved.horizonYears && (
               <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-2">
                 ⚠ S5 검토 기간({resolved.s5PlanHorizonYears}년)과 사업계획 기간({resolved.horizonYears}년)이 다릅니다

@@ -15,6 +15,7 @@ import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { listLegacyModels } from "../../../../../lib/business-case-cleanup.ts";
 import { listBusinessCases } from "../../../../../lib/business-case.ts";
 import { evaluateTargetsForCase, resolveProjectTargets } from "../../../../../lib/business-targets.ts";
+import { pinnedPlanCapexTotal } from "../../../../../lib/s5-plan-capex.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 
 const KINDS = new Set(["greenfield_cost", "revenue", "valuation", "investment_return"]);
@@ -55,9 +56,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   let goalsResolved: ReturnType<typeof resolveProjectTargets>["resolved"] = [];
   try { goalsResolved = resolveProjectTargets(id).resolved; } catch { /* goals unavailable: attainment omitted */ }
   const goalAttainment: Record<string, ReturnType<typeof evaluateTargetsForCase>> = {};
-  if (goalsResolved.length > 0) for (const c of cases) goalAttainment[c.id] = evaluateTargetsForCase(goalsResolved, c);
+  // 2026-10-16 (ADR-0178 follow-up): does the plan S8 actually uses (the active pin) carry
+  // any capex? Additive display-only flag — drives the IRR no-flow chip in the scenario
+  // comparison; never recomputes a case or blocks a gate.
+  const trackRow = db.query("SELECT track FROM md_project WHERE id = ?").get(id) as { track: string | null } | undefined;
+  const s5PlanCapexZero = trackRow?.track === "greenfield" && pinnedPlanCapexTotal(getDb(), id) === 0;
   return ok(
-    { cases, archived, goal_attainment: goalAttainment, goal_count: goalsResolved.length, legacy_models: listLegacyModels(id), recommended_scenario: recommendedScenario, adoption, target_selection: targetSelection, targets, engines_mixed: enginesMixed, methods_mixed: methodsMixed, escalated_cagr_pct: eff?.source === "escalated" ? eff.cagrPct : null },
+    { cases, archived, goal_attainment: goalAttainment, goal_count: goalsResolved.length, legacy_models: listLegacyModels(id), recommended_scenario: recommendedScenario, adoption, target_selection: targetSelection, targets, engines_mixed: enginesMixed, methods_mixed: methodsMixed, escalated_cagr_pct: eff?.source === "escalated" ? eff.cagrPct : null, s5_plan_capex_zero: s5PlanCapexZero },
     200,
     { count: cases.length },
   );
