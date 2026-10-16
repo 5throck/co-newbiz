@@ -13,7 +13,7 @@ Korean appears only as UI labels/product terms in backticks. All prose is Englis
 
 - Status: Accepted (2026-10-16, decider chat "그렇게 해줘" — approved as summarised with the recommended open decisions; ADR-0179 Acceptance record). Drafted by platform-lead; not implemented.
 - Motivating incident (2026-10-16, verified by the team lead): Green Field opportunity `01M1MVCQ2T8R32JDNM1ZTP0668` (`유압식 브레이커 — 유럽 Stage V 시장 공략`) anchors S8 revenue on `opportunity.market_size_krw_m = 3,580,000` with `market_scope = '유압식 브레이커'` — a scope string with no region — and a bare-default capture rate 0.5%. Year-1 revenue lands near 17,900 KRW-M against a ~100 KRW-M capex plan, pushing IRR into the thousands of percent. The anchor's implicit scope (worldwide breaker market) does not match the opportunity's target scope (Europe, Stage V emissions tier). Nothing in the pipeline compares the two; the mismatch surfaces only late and indirectly, as an implausible IRR.
-- ADR: [ADR-0179](../adr/0179-market-anchor-scope-compatibility.md) (Accepted 2026-10-16, DEC-20261016-02).
+- ADR: [ADR-0179](../adr/0179-market-anchor-scope-compatibility.md) (Accepted 2026-10-16, DEC-20261016-02; **Amendment 2026-10-17** — S1→S2 sizing derivation structure, DEC-20261017-01 — see §12).
 - Builds on: ADR-0170 (`재평가 필요` staleness pattern), ADR-0176 (S5 simulation, visible degradation labels), ADR-0178 (pinned S5 reference; run-note provenance fields), the project non-negotiables (#4 data confidence caps the RAG grade; outputs are decision support, never gate blocks), and the proxy-chain discipline of the value-chain designs.
 
 ## 1. Problem statement
@@ -182,7 +182,7 @@ Slices 1-3 are independent of the sizing API being reachable (§6.4); Slice 4 ne
 |---|---|---|
 | OPEN-1 | Scope taxonomy: fixed region enum vs free tags | Hybrid as designed: fixed region enum (region-profiles list + `worldwide`) for regions — required for a deterministic compatibility predicate; free tags for segments (advisory text in the check). A segment enum is a later taxonomy project. |
 | OPEN-2 | Where the sizing scope lives: inside the version `payload` JSON vs a new additive column `market_sizing_version.scope_json` | Payload-only first (no migration, history free); add the column later only if payload extraction proves awkward for queries. |
-| OPEN-3 | Should the opportunity anchor eventually reference a sizing version (replacing the bare `market_size_krw_m` copy)? | Yes, long-term (kills the drift class); not in this design's slices. Register as a follow-up so the bare-anchor path is explicitly a legacy compat path. |
+| OPEN-3 | Should the opportunity anchor eventually reference a sizing version (replacing the bare `market_size_krw_m` copy)? | Yes — **pulled forward by the 2026-10-17 amendment** (§12): the opportunity↔S1 sizing link is now amendment slice A; the bare anchor stays an explicit legacy compat path. |
 | OPEN-4 | Migration of the pilot anchor (3,580,000, `01M1MVCQ2T8R32JDNM1ZTP0668`): person re-runs a segment-scoped sizing vs person edits the anchor | Recommended: person re-runs sizing scoped to Europe Stage V (Slice 4) once the pipeline is reachable; interim, the person either sets the target scope (making the mismatch explicit and visible) or edits the anchor to a sourced regional figure. The agent never edits the number. |
 | OPEN-5 | Where the compatibility check lives: generator only, read-model only, or both | Both: the generator note is the record of what a run used; the read-model flag is live truth. Generator-only would leave old cases silently unflagged after a scope fix; read-model-only would leave run notes incomplete. |
 | OPEN-6 | Bare-default share warning: run-note only vs also a case-level warning row | Both (recommended): note is the provenance record; the case-level row is what a reviewer actually sees first. Cost is a read-only derived row. |
@@ -198,3 +198,35 @@ Slices 1-3 are independent of the sizing API being reachable (§6.4); Slice 4 ne
 - No backfill: legacy opportunities and legacy sizing versions stay `unknown` until a person sets scope; the flags will be noisy at first — accepted, because silence is the failure mode this design fixes.
 - The anchor-consumption arithmetic (`caseInputsBaseForProject`, fallbacks, CAPTURE_RATE) is deliberately untouched; this design changes visibility, not numbers.
 - Whether the pilot's IRR magnitudes would have been caught by the guards at their recommended thresholds: plausible from the incident numbers (~180× ratio ≫ 20×) but not re-simulated — to verify at Slice 3 implementation against a seeded case.
+
+## 12. Amendment (2026-10-17) — S1→S2 sizing derivation structure
+
+Accepted 2026-10-17 (decider chat across 2026-10-16/17; DEC-20261017-01; ADR-0179 Amendment section). This amendment promotes the OPEN-3 follow-up into scope and adds an S2 derivation surface. Nothing here is implemented; the original slices 1-2 stand as accepted and implemented, slices 3-4 as accepted and pending.
+
+### 12.1 Sizing-link structure (OPEN-3 pulled forward)
+
+- **Opportunity → S1 sizing link.** The opportunity carries an explicit reference to its S1 market-sizing analysis with a pinned version; the pinned version's declared scope is then the anchor's scope by construction (§5.1 anticipated this). The bare `market_size_krw_m` copy remains a legacy compat path as designed.
+- **S2 target-scope editor reference display.** When choosing a target scope, the editor lists the linked S1 analyses with their source scopes — the person sees what the upstream numbers actually cover before declaring a target scope. Reference only; nothing is set automatically.
+
+### 12.2 S2 entry-market derivation (factor-ratio rule)
+
+- **Ratio factors only.** The S2 entry-market sizing derives the entry-market size from the linked S1 result via multiplicative ratio factors, each in `0..1`, each with a **mandatory source per step**. Absolute amounts are never accepted or fabricated at any step — a known absolute regional figure must be entered as a ratio plus source instead. `derived(t) = S1_anchor(t) × f_region × f_segment × ...`, composing with S1 growth and staying valid on S1 re-basing (re-base S1 and the derived series follows without recomputation).
+- **Strict one-way direction.** S1→S2 only; an S2 derivation never edits, re-scales or annotates the S1 analysis. Fix the upstream or add a scoped S1 analysis instead.
+- **Partial-overlap grading.** Each factor step is graded `exact` / `partial` / `none` on source-scope precision (e.g. an EMEA share applied to a Western-Europe step is at best `partial`); recorded and surfaced per step, never silently `exact`.
+- **Confidence and sourcing.** Each factor step lowers data confidence (non-negotiable #4 — the chain never grades above its weakest step). Unsourced factors get the `근거 없는` label discipline of §6.1. **Region-source-definition caveat**: publishers define regions differently post-2022 (Russia in or out of "Europe"); UN M49 places Russia in Eastern Europe — a region factor's source must state its regional definition and the UI shows the caveat.
+- **Cross-check material only.** Sizing analysis `01M52FE1Y0J7RSSHED4K3C163B` (Europe Stage V draft, ~490M USD, confidence C) is never the anchor; it may only cross-check a derived figure. Its cross-check against the pilot showed the current 0.5% capture on the worldwide anchor implies an implausible ~27% year-1 segment share — precisely the failure class this amendment prevents.
+- **Deferred.** Time-varying shares (factor evolution over time) are explicitly out of scope, registered as a follow-up.
+
+### 12.3 Amendment slices
+
+| Slice | Scope | Migration |
+|---|---|---|
+| A | Opportunity ↔ S1 sizing analysis/version link (additive; pinned version); S2 target-scope editor reference display of linked S1 analyses + source scopes | Yes — additive link storage |
+| B | S2 entry-market derivation surface: ratio-factor chain over the linked S1 series; per-step source mandatory; 0..1 validation; absolute-amount rejection; `exact/partial/none` grading; per-step confidence lowering; `근거 없는` labelling; region-source-definition caveat; cross-check citation surface | None expected (lineage in payload; link storage from slice A) |
+
+Slice B depends on slice A. New scoped analyses additionally need the sizing pipeline reachable (§6.4); link and derivation mechanics work on stored data.
+
+### 12.4 Amendment ownership and acceptance
+
+- Ownership: link storage and derivation surface platform-lead; ratio-factor and grading methodology quant-methodologist; confidence treatment per non-negotiable #4 confirmed with process-governance-manager; region-source-definition caveat content region-lead.
+- Accepted by the decider in chat across 2026-10-16/17: "응" on the chain direction, refined to the factor-ratio rule and strict one-way flow, then "ADR-0179 승인". The S1 market-list navigation fix was approved separately in the same conversation and is not part of this amendment. Basis: chat approval of the direction as summarised, not an item-by-item review; nothing implemented by this amendment.
