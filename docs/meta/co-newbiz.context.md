@@ -65,4 +65,14 @@ Full registry with per-skill status/owner/version: `skills/SKILLS.md`.
 
 For the full team-structure rationale, cross-validation matrix, and ADR index, see the design of record (link in `AGENTS.md` header) and `docs/adr/`.
 
+## Investment & Valuation SSOT (2026-10-16)
+
+Governing records and settled principles for the Green Field S5-S8 investment and valuation chain. Cross-references only — the ADRs are the authority; do not duplicate their content.
+
+- **Governance records**: ADR-0174 (`docs/adr/0174-total-investment-and-s8-handoff.md` — investment plan hand-off), ADR-0176 (`docs/adr/0176-investment-simulation-and-s8-evaluation.md` — S5 investment simulation + run storage), ADR-0178 (`docs/adr/0178-s8-valuation-pnl-volatility-prelaunch.md` — S8 valuation, S5 single source + pinned reference, `s5_pnl`).
+- **Green Field S5-S8 principle**: S5 is the single source of the investment plan; S8 reads it through a versioned pinned reference (`s5_plan_pin`) with `재평가 필요` staleness and human-only re-pin/revert. Direct S8 line edits must not diverge from S5 (editor scope under review 2026-10-16).
+- **Basis vocabulary**: `비율 추정` (fallback), `S5 투자 계획` (unified; the legacy capex-only value is labelled `예전`), `s5_pnl` (in implementation).
+- **Human-only acts** (decision-support boundary): investment-simulation 가정 확정 (`investment_simulation.confirmed`), 최신 S5로 갱신 (`s5_plan_pin.repinned`), 복사본으로 되돌리기 (disconnect).
+- **Known issues**: copy-path period alias (`월`) mis-annualization pending fix (the pinned path is correct); S5 default draws 2,000 decided 2026-10-16, pending implementation (ADR-0176 Amendment 2026-10-16); market-scope compatibility + IRR-ceiling guard accepted as ADR-0179 (`docs/adr/0179-market-anchor-scope-compatibility.md`), pending implementation.
+
 > **Status addendum (2026-08-24)**: kill-criteria registry stands at **29 declared / 18 executable** (ADR-0062–0065 extension rounds; disposition of record in `docs/decisions/2026-08-24-evidence-source-backlog-disposition.md`). MCP catalog grew to **37 live tools** (ADR-0063 Class C evidence surfaces in `tools/pmi.ts`). Money columns are **INTEGER KRW millions** (migration 0028, ADR-0061 executed). New write surfaces: `app/server/pmi.ts` (PMI/deal-shape/deadline/dimension-inputs) + `PmiEvidenceTab` SPA tab; mount-order note — new route modules must register BEFORE adminRoutes in `index.ts` (its flattened `use("*", requireAdmin)` catch-all). Next initiative: value-chain scenario simulation (`docs/designs/2026-08-24-value-chain-scenario-simulation-design_ko.md`).

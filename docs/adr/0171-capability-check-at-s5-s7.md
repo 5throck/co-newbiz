@@ -11,6 +11,7 @@ lang_reason: proper-noun
 - Design-of-record: [docs/designs/2026-10-14-capability-check-at-s5-s7-design.md](../designs/2026-10-14-capability-check-at-s5-s7-design.md)
 - Related: ADR-0168 (partly superseded), ADR-0169 (T1 source amended), ADR-0170 (Decisions 4-6 partly superseded), ADR-0136 (amended), ADR-0143 (amended)
 - Slices: 3 (1 Green Field S5 edit surface + S8 read-only summary, 2 Brown Field S7 per-target judgements + criteria reconcile + detection, 3 S8 scenario/lens/gate-brief + wiki/glossary). None implemented by this ADR; implementation begins after acceptance.
+- Implementation status (2026-10-16): slices 1-3 are implemented per Amendments (1)-(5), not browser-verified. The one-off legacy copy script (`scripts/co-newbiz/copy-legacy-bf-capability-judgements.ts`) has not been run against a real database.
 
 ## Context
 

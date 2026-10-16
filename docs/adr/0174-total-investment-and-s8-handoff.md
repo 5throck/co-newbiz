@@ -9,7 +9,7 @@ lang_reason: proper-noun
 - Date: 2026-10-15
 - Decider: Human decider (chat 2026-10-15 feedback: annual vs total investment not visible in S5; total investment must be organised for S8; acceptance: "S5에서 입력된 투자비, 인건비, 운영비 등 각종 비용 항목은 S8의 사업성 분석 시 반영될 수 있도록 해야 한다"). Drafted by platform-lead.
 - Design-of-record: [docs/designs/2026-10-15-total-investment-and-s8-handoff-design.md](../designs/2026-10-15-total-investment-and-s8-handoff-design.md)
-- Related: ADR-0173 (capability cost lines; its slice 2 re-import is absorbed here as slice 3), ADR-0137/0138 (S5 lines copied at promotion; `gov_rnd`), ADR-0106 (initial investment ratio), ADR-0114 (capex outside the margin), ADR-0101 (S11/S12 post-management)
+- Related: ADR-0173 (capability cost lines; its slice 2 re-import is absorbed here as slice 3), ADR-0137/0138 (S5 lines copied at promotion; `gov_rnd`), ADR-0106 (initial investment ratio), ADR-0114 (capex outside the margin), ADR-0101 (S11/S12 post-management); superseded-in-part by ADR-0178 Amendment 2026-10-16 (investment basis collapse — see note at Decision 6)
 - Slices: 4 (1 S5 summary panel + definitions + storage, 2 promotion copy + S8 consumption, 3 re-import, 4 S10/S12 alignment). None implemented by this ADR.
 
 ## Why a new ADR (not an ADR-0173 amendment)
@@ -30,7 +30,7 @@ ADR-0173 decides how capability closing costs enter the S5 lines. This decision 
 3. **Per-line timing.** Optional `startYear` (default 1) on every line and optional `endYear` on recurring lines (default horizon end). Capability lines default their spend year from the milestone months (`ceil(months / 12)`, minimum 1), editable.
 4. **S5 screen.** A read-only `투자비 요약` panel: annual, lump-sum and total figures by category, plus a Y1..YN schedule with a totals row, all in 백만원. The AI recommendation and judgement flows are unaffected.
 5. **Storage.** No S5 schema change: new optional fields on line objects plus one `source: "plan_meta"` entry in the same JSON array for the horizon. One additive migration for S8: nullable `business_case_line.end_year` (NULL = through horizon) so a lump sum is a one-year line. This DB schema change is the ADR trigger.
-6. **S8 hand-off.** Promotion writes one line per S5 line with `start_year`, `end_year` (= start for lump sums), `unit = 'KRW_M'`. S8 gains a human-chosen `투자비 기준` per project: `비율 추정` (today) or `S5 투자 계획` (explicit capex schedule replaces both the year-0 ratio investment and `capex_ratio x revenue`; opex stays ratio-driven unless a person opts in), so the two bases are never added together.
+6. **S8 hand-off.** (Superseded-in-part by ADR-0178 Amendment 2026-10-16, implemented in PR #594: the three-value basis list below was collapsed into one unified S5 basis — the stored `s5_plan_full` code 2; the capex-only code 1 is legacy, labelled, and migrated on next connect. Historical text preserved.) Promotion writes one line per S5 line with `start_year`, `end_year` (= start for lump sums), `unit = 'KRW_M'`. S8 gains a human-chosen `투자비 기준` per project: `비율 추정` (today) or `S5 투자 계획` (explicit capex schedule replaces both the year-0 ratio investment and `capex_ratio x revenue`; opex stays ratio-driven unless a person opts in), so the two bases are never added together.
 7. **Re-import** (absorbs ADR-0173 slice 2): a human `S5 투자비 다시 가져오기` action in S8 shows a diff and applies selected changes as a new model version; never background sync.
 8. **Boundaries.** Agents propose; choosing the investment basis, the horizon and re-import are human actions with audit events. Outputs remain decision support.
 
@@ -50,6 +50,8 @@ ADR-0173 decides how capability closing costs enter the S5 lines. This decision 
 ## Implementation note
 
 Slices 1-2 implemented (2026-10-15): S5 `투자비 요약` panel with per-line timing and `plan_meta` horizon (no schema change); migration `0143` (`business_case_line.end_year` nullable + `comp_benchmark` cohort CHECK 3→5 rebuild); promotion copy carries `start_year`/`end_year`/`unit='KRW_M'` and the plan horizon; `bc.investment_basis` (`비율 추정`/`S5 투자 계획`/`S5 투자 계획(전체)`, numeric-encoded 0/1/2 as a `bc.*` user assumption) switches the generator between the unchanged ratio path and the explicit S5 capex schedule (Y1 spend counted in year 0; the python sim-engine path is bypassed for `s5_plan` — engine parity unverified). Slices 3 (re-import) and 4 (S10/S12 alignment) are not implemented.
+
+Amendment note (2026-10-16): ADR-0178 Amendment 2026-10-16 (implemented in PR #594) collapsed the three-value investment basis above (`비율 추정` / `S5 투자 계획` / `S5 투자 계획(전체)`, codes 0/1/2) into one unified S5 basis — the stored `s5_plan_full` code 2. The capex-only code 1 is legacy: labelled as such and migrated on next connect. Historical text above is preserved as recorded.
 
 ## Honest limits
 
