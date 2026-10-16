@@ -17,6 +17,7 @@ import {
 } from "../../../../../../lib/business-case-generator.ts";
 import { s5SimStatusForProject } from "../../../../../../lib/investment-simulation-s8.ts";
 import { getCurrentS5PlanPin, s5PinStatusForProject } from "../../../../../../lib/s5-plan-pin-s8.ts";
+import { s5ConnectViewForProject } from "../../../../../../lib/s5-connect-status.ts";
 import { currentPrincipal } from "../../../../../../lib/mcp/principal-context.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -36,7 +37,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (track === "greenfield") {
     try { s5Pin = s5PinStatusForProject(getDb(), id); } catch { /* migration pending: omit */ }
   }
-  return ok({ params: resolved, s5_sim: s5Sim, s5_pin: s5Pin, track }, 200);
+  // S8 `S5 연결` block: S5 simulation run state + the run S8 draws from (Green Field only, informational).
+  let s5Connect = null;
+  if (track === "greenfield") {
+    try { s5Connect = s5ConnectViewForProject(getDb(), id); } catch { /* migration pending: omit */ }
+  }
+  return ok({ params: resolved, s5_sim: s5Sim, s5_pin: s5Pin, s5_connect: s5Connect, track }, 200);
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {

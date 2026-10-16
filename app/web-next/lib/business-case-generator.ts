@@ -886,7 +886,7 @@ function year1RevenueOf(inputs: CaseInputs, deltaGrowth: number): { value: numbe
   const bc = inputs.bcParams ?? resolveBusinessCaseParamsDefaults();
   return {
     value: inputs.marketSizeKrwM * bc.captureRate * deltaGrowth,
-    source: `시장규모 × 포획률 ${(bc.captureRate * 100).toFixed(1)}% (${bc.captureSource})`,
+    source: `시장규모 × 시장점유율 ${(bc.captureRate * 100).toFixed(1)}% (${bc.captureSource})`,
   };
 }
 
@@ -996,7 +996,8 @@ export interface S5InvestmentPlan {
    *  governs — years beyond the plan horizon fall back to the ratio path). */
   horizonYears: number;
   /** Index 0 = plan year 1 … H-1 = plan year H, KRW_M, growth-compounded
-   *  (promotion writes growth_rate 0 — compounding is a no-op there). */
+   *  (the copy and the pin snapshot both carry the S5 line's own growth rate now —
+   *  promotion/re-import used to write 0, so the compounding was a no-op there). */
   capexByYear: number[];
   laborOpexByYear: number[];
   govRndByYear: number[];

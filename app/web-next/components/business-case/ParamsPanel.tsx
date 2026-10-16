@@ -9,10 +9,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
-import { ParamTable, type ParamRow } from "../ui.tsx";
+import { ColGroup, ParamTable } from "../ui.tsx";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
-import { useConfirm } from "../crud.tsx";
+import { s5ParamLinkage, type S5ParamKey } from "../../lib/s5-linkage-labels.ts";
 
 // Mirrors EV_BAND_OPTIMISM_FLAG_FACTOR / EV_BAND_MAX_SANE / EV_BAND_SPREAD_FLAG_RATIO / ACQUISITION_EV_REVENUE_BAND in
 // lib/business-case-generator.ts (DB-bound module, not bundleable here); drift is caught by
@@ -37,24 +37,19 @@ function validateBand(minRaw: string, maxRaw: string, rationale: string, source:
   return { errs, min, max, valid: Object.keys(errs).length === 0 };
 }
 
-function SourceChip({ source }: { source: string }) {
-  return <span className="status-chip status-info">{source}</span>;
-}
-
-/** ADR-0176 slice 3 - S5 investment-simulation consumption of the latest s5_plan case (informational). */
-interface S5SimStatusView {
-  state: "not_applicable" | "none" | "in_effect" | "stale";
-  stale: boolean;
-  reason: string | null;
-  label: string;
-}
-
-const S5_SIM_STALE_REASON: Record<string, string> = {
-  run_confirmed_after_generation: "사례 생성 후 S5 투자 시뮬레이션이 확정되었습니다",
-  run_changed: "확정된 S5 시뮬레이션 실행이 사례 생성 이후 바뀌었습니다",
-  s5_lines_changed: "S5 투자 계획 또는 가정 범위가 확정 실행 이후 바뀌었습니다",
-  run_missing: "사례가 참조한 S5 시뮬레이션 확정 실행을 찾을 수 없습니다",
+/** user > derived > default made visible: three distinct chip tones, the raw source string stays as tooltip. */
+type SourceKind = "user" | "derived" | "default";
+const SOURCE_CHIP: Record<SourceKind, { label: string; cls: string }> = {
+  user: { label: "사용자 확정", cls: "status-green" },
+  derived: { label: "유도값", cls: "status-amber" },
+  default: { label: "기본값", cls: "status-not-started" },
 };
+const sourceKindOf = (source: string): SourceKind => (source.startsWith("사용자") ? "user" : "default");
+
+function SourceChip({ source, kind }: { source: string; kind?: SourceKind }) {
+  const k = kind ?? sourceKindOf(source);
+  return <span className={`status-chip whitespace-nowrap ${SOURCE_CHIP[k].cls}`} title={source}>{SOURCE_CHIP[k].label}</span>;
+}
 
 interface ResolvedParams {
   captureRate: number; captureSource: string;
@@ -114,13 +109,7 @@ const driverValue = (d: DriverSpec): string => {
   if (d.dist === "triangular") return `T(${d.low}, ${d.expected}, ${d.high})`;
   return Array.isArray(d.value) ? d.value.map((x) => x.toFixed(2)).join(" → ") : String(d.value);
 };
-// ADR-0174 — 투자비 기준 라벨 (비율 추정 0 / S5 투자 계획 1 / S5 투자 계획(전체) 2)
-interface S5ReimportPreview {
-  importable: number; manual_lines: number; capability_lines: number;
-  skipped: Array<{ line: string; reason: string }>;
-  will_archive: Array<{ id: string; name: string; created_at: string }>;
-}
-/** ADR-0178 slice 0 - S5 plan pin state (informational; never gates anything). */
+/** ADR-0178 slice 0 - S5 plan pin state (read-only source row; actions live in the 설명·생성·권고 tab). */
 interface S5PinStatusView {
   path: "copy" | "pinned";
   optedIn: boolean;
@@ -130,36 +119,11 @@ interface S5PinStatusView {
   reasons: string[];
   caseGeneratedOnPin: string | null;
 }
-interface S5PlanSummaryView {
-  plan_hash: string | null; s5_sim_run_id: string | null; horizon: number;
-  totals: { capex: number; labor_opex: number; gov_rnd: number; staffing: number };
-}
-interface S5RepinPreview {
-  has_pin: boolean;
-  pinned: S5PlanSummaryView | null;
-  current: S5PlanSummaryView;
-  changed: boolean;
-  changes: { plan: boolean; run: boolean };
-  copy_importable: number;
-}
-const S5_PIN_STALE_REASON: Record<string, string> = {
-  source_changed: "S5 투자 계획·인력 계획·가정 범위·역량 판정이 고정 시점 이후 바뀌었습니다",
-  newer_confirmed_run: "고정된 것보다 새로 확정된 S5 투자 시뮬레이션이 있습니다",
-  pinned_run_superseded: "고정된 S5 시뮬레이션 실행이 새 실행으로 대체되었습니다",
-  case_on_older_pin: "가장 최근 사례가 이전 고정 참조 기준으로 생성되었습니다",
-};
-const fmtKrwM = (n: number): string => `${Math.round(n).toLocaleString()}`;
-const S5_SKIP_REASON: Record<string, string> = {
-  unit_unconfirmed: "단위 미확정",
-  currency_non_krw: "KRW 외 통화",
-  invalid_line: "이름·분류 누락",
-  capability_unreflected_or_unpriced: "미반영 또는 비용 미산정 역량",
-};
 
 const INVESTMENT_BASIS_LABELS: Record<string, string> = {
   ratio: "비율 추정",
-  s5_plan: "S5 투자 계획",
-  s5_plan_full: "S5 투자 계획 (전체)",
+  s5_plan: "S5 투자 계획 (예전: 설비투자만)",
+  s5_plan_full: "S5 투자 계획",
 };
 
 const DRIVER_LABELS: Record<string, string> = {
@@ -172,15 +136,129 @@ const DRIVER_LABELS: Record<string, string> = {
   exit_ev_revenue: "처분 EV/매출 배수 (회수 시점)",
 };
 
+// Full-width parameter table (decider feedback 2026-10-16): fixed percentage columns, group header rows,
+// one source chip per row, one `S5 연동` chip + reason per row (Green Field). Text values are left-aligned,
+// numbers right-aligned. Display only - nothing here links or changes a value.
+const PARAM_COL_PCT = [24, 24, 6, 14, 32] as const;
+const PARAM_COL_PCT_NO_S5 = [30, 32, 8, 30] as const;
+
+interface ParamLine {
+  key: string;
+  label: string;
+  /** Numeric values right-align; text values left-align. */
+  value: React.ReactNode;
+  numeric?: boolean;
+  unit?: string;
+  source?: React.ReactNode;
+  s5Key?: S5ParamKey;
+  note?: React.ReactNode;
+}
+
+function CurrentParamsTable({ resolved, track, s5Pin, s5Run }: { resolved: ResolvedParams; track: string | null; s5Pin: S5PinStatusView | null; s5Run: { id: string; drawCount: number } | null }) {
+  const gf = track === "greenfield";
+  const pct1 = (v: number) => (v * 100).toFixed(1);
+  const s5Source = s5Pin?.path === "pinned" && s5Pin.pin
+    ? `S5 고정 참조 · ${s5Pin.pin.id.slice(-8)} (${s5Pin.pin.pinnedAt.slice(0, 10)} · ${s5Pin.pin.pinnedBy})${s5Pin.pin.s5SimRunId ? ` · 시뮬레이션 ${s5Pin.pin.s5SimRunId.slice(-8)}` : ""}${s5Pin.state === "stale" ? " · 재평가 필요" : ""}`
+    : `복사본 (기존 방식)${s5Pin?.pin ? ` — 고정 참조 ${s5Pin.pin.id.slice(-8)} 있음, 사용 전환 전` : ""}`;
+  // Green Field collapses the two override rows into the rows they override (growth, volatility).
+  const growthRow: ParamLine = gf
+    ? resolved.growthOverride != null
+      ? { key: "growth", label: "성장률", value: pct1(resolved.growthOverride), numeric: true, unit: "%", source: <SourceChip source={resolved.growthOverrideSource} kind="user" />, note: "사람 오버라이드" }
+      : { key: "growth", label: "성장률", value: "시장 성장률에서 유도", source: <SourceChip source="시장 성장률 (opportunity)" kind="derived" /> }
+    : { key: "growth", label: "성장률 오버라이드", value: resolved.growthOverride != null ? pct1(resolved.growthOverride) : "— (유도값 사용)", numeric: resolved.growthOverride != null, unit: resolved.growthOverride != null ? "%" : "", source: <SourceChip source={resolved.growthOverrideSource} /> };
+  const sigmaRow: ParamLine = gf
+    ? resolved.sigmaOverride != null
+      ? { key: "sigma", label: "변동성", value: pct1(resolved.sigmaOverride), numeric: true, unit: "%", source: <SourceChip source={resolved.sigmaOverrideSource} kind="user" />, note: "사람 오버라이드", s5Key: "sigma" }
+      : { key: "sigma", label: "변동성", value: "시장 기반 변동성 프로파일에서 유도", source: <SourceChip source="시장 기반 변동성 프로파일" kind="derived" />, s5Key: "sigma" }
+    : { key: "sigma", label: "변동성 오버라이드", value: resolved.sigmaOverride != null ? pct1(resolved.sigmaOverride) : "— (유도값 사용)", numeric: resolved.sigmaOverride != null, unit: resolved.sigmaOverride != null ? "%" : "", source: <SourceChip source={resolved.sigmaOverrideSource} /> };
+  const groups: Array<{ title: string; lines: ParamLine[] }> = [
+    {
+      title: "매출·시장",
+      lines: [
+        { key: "capture", label: "1년차 시장점유율 (year-1 매출)", value: pct1(resolved.captureRate), numeric: true, unit: "%", source: <SourceChip source={resolved.captureSource} />, s5Key: "capture" },
+        growthRow,
+        ...(!gf ? [{ key: "acq", label: "인수 EV/Revenue 배수 (브라운필드)", value: resolved.acquisitionEvRevenue != null ? resolved.acquisitionEvRevenue.toFixed(2) : "3.0 — 미확정 시 컴프 기본값 (글로벌 로보틱스 M&A 2–6×)", numeric: resolved.acquisitionEvRevenue != null, unit: resolved.acquisitionEvRevenue != null ? "배" : "", source: <SourceChip source={resolved.acquisitionEvRevenueSource} /> } as ParamLine] : []),
+      ],
+    },
+    {
+      title: "손익·투자",
+      lines: [
+        { key: "opex", label: "운영비 비율", value: pct1(resolved.opexRatio), numeric: true, unit: "%", source: <SourceChip source={resolved.opexSource} />, s5Key: "opex" },
+        { key: "capex", label: "설비투자 비율", value: pct1(resolved.capexRatio), numeric: true, unit: "%", source: <SourceChip source={resolved.capexSource} />, s5Key: "capex" },
+        { key: "initial", label: "초기투자 비율 (year-1 매출 대비)", value: pct1(resolved.initialInvestmentRatio), numeric: true, unit: "%", source: <SourceChip source={resolved.initialInvestmentSource} />, s5Key: "initial" },
+        { key: "basis", label: "투자비 기준 (ADR-0174)", value: INVESTMENT_BASIS_LABELS[resolved.investmentBasis] ?? resolved.investmentBasis, source: <SourceChip source={resolved.investmentBasisSource} /> },
+        ...(gf ? [{ key: "s5source", label: "S5 계획 출처 (ADR-0178)", value: s5Source, source: <SourceChip source={resolved.s5SourceSource ?? "기본값 (복사본, ADR-0178)"} /> } as ParamLine] : []),
+        { key: "ramp", label: "가동률 램프업", value: resolved.rampUp.map((v) => v.toFixed(2)).join(" → "), unit: "비율", source: <SourceChip source={resolved.rampSource} />, s5Key: "ramp" },
+      ],
+    },
+    {
+      title: "시뮬레이션·할인",
+      lines: [
+        sigmaRow,
+        { key: "iterations", label: "반복 수", value: resolved.iterations.toLocaleString(), numeric: true, unit: "회", source: <SourceChip source={resolved.iterationsSource} />, s5Key: "iterations" },
+        { key: "horizon", label: "회수 기간", value: String(resolved.horizonYears), numeric: true, unit: "년", source: <SourceChip source={resolved.horizonSource} /> },
+        ...(!gf ? [
+          { key: "fade", label: "교차검증 창구 (페이드 DCF)", value: String(resolved.fadeHorizonYears), numeric: true, unit: "년", source: <SourceChip source={resolved.fadeHorizonSource} /> } as ParamLine,
+          { key: "gterm", label: "말기 성장률 (페이드 DCF 수렴점)", value: resolved.growthTerminal != null ? pct1(resolved.growthTerminal) : "3.0 — 미확정 시 기본값", numeric: resolved.growthTerminal != null, unit: resolved.growthTerminal != null ? "%" : "", source: <SourceChip source={resolved.growthTerminalSource} /> } as ParamLine,
+        ] : []),
+      ],
+    },
+  ];
+  const cols = gf ? PARAM_COL_PCT : PARAM_COL_PCT_NO_S5;
+  return (
+    <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+      <table className="data-table table-fixed-pct tmin-64" data-testid="s8-params-table">
+        <caption className="sr-only">현재 시뮬레이션 파라미터</caption>
+        <ColGroup widths={gf ? PARAM_COL_PCT : PARAM_COL_PCT_NO_S5} />
+        <thead>
+          <tr>
+            <th scope="col">항목</th>
+            <th scope="col">값</th>
+            <th scope="col" className="whitespace-nowrap">단위</th>
+            <th scope="col" className="whitespace-nowrap">출처</th>
+            {gf && <th scope="col" className="whitespace-nowrap">S5 연동</th>}
+          </tr>
+        </thead>
+        {groups.map((g) => (
+          <tbody key={g.title}>
+            <tr>
+              <th scope="colgroup" colSpan={cols.length} className="text-left text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] bg-[color:var(--muted-bg)]">{g.title}</th>
+            </tr>
+            {g.lines.map((l) => {
+              const cell = gf && l.s5Key ? s5ParamLinkage(l.s5Key, { basis: resolved.investmentBasis, run: s5Run, s8Iterations: resolved.iterations }) : null;
+              return (
+                <tr key={l.key} data-testid={`s8-param-${l.key}`}>
+                  <th scope="row" className="text-left font-normal">{l.label}</th>
+                  <td className={l.numeric ? "col-num tabular-nums font-semibold" : "text-left"}>
+                    {l.value}{l.note && <> <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{l.note}</span></>}
+                  </td>
+                  <td className="whitespace-nowrap text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{l.unit ?? ""}</td>
+                  <td>{l.source}</td>
+                  {gf && (
+                    <td data-testid={l.s5Key ? `s8-s5-link-${l.s5Key}` : undefined}>
+                      {cell && (
+                        <>
+                          <span className={`status-chip whitespace-nowrap ${cell.kind === "s5" ? "status-green" : "status-amber"}`}>{cell.kind === "s5" ? "S5 값" : "가정값"}</span>
+                          <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">{cell.detail}</div>
+                        </>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        ))}
+      </table>
+    </div>
+  );
+}
+
 export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; onOpenTargets?: () => void }) {
   const [resolved, setResolved] = useState<ResolvedParams | null>(null);
-  const [s5Sim, setS5Sim] = useState<S5SimStatusView | null>(null);
+  const [s5Run, setS5Run] = useState<{ id: string; drawCount: number } | null>(null);
   const [s5Pin, setS5Pin] = useState<S5PinStatusView | null>(null);
   const [track, setTrack] = useState<string | null>(null);
-  const [reimportBusy, setReimportBusy] = useState(false);
-  const [reimportMsg, setReimportMsg] = useState<string | null>(null);
-  const [reimportErr, setReimportErr] = useState<string | null>(null);
-  const { confirm, confirmDialog } = useConfirm();
   const [cases, setCases] = useState<CaseSummary[]>([]);
   const [form, setForm] = useState<Record<string, string>>({});
   const [ramp, setRamp] = useState<string[]>(["", "", "", "", ""]);
@@ -220,90 +298,11 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
     }
   }
 
-  // ADR-0174 follow-up: human-triggered re-import of the S5 investment plan (preview -> confirm -> POST).
-  async function startS5Reimport() {
-    setReimportMsg(null); setReimportErr(null); setReimportBusy(true);
-    const base = `/api/projects/${encodeURIComponent(projectId)}/business-case/s5-reimport`;
-    try {
-      const pv = (await api.get<S5ReimportPreview>(base)).data;
-      const skipped = pv.skipped.length > 0 ? ` 가져오지 않는 항목 ${pv.skipped.length}건: ${pv.skipped.map((k) => `${k.line} (${S5_SKIP_REASON[k.reason] ?? k.reason})`).join(", ")}.` : " 가져오지 않는 항목은 없습니다.";
-      const archive = pv.will_archive.length > 0 ? ` 보관(삭제 아님)되는 기존 투자비 모델: ${pv.will_archive.map((m) => m.name).join(", ")}.` : " 보관할 기존 투자비 모델은 없습니다.";
-      confirm(
-        "S5 투자 계획 다시 가져오기",
-        () => {
-          void (async () => {
-            setReimportBusy(true);
-            try {
-              const r = (await api.post<{ imported: number; archived_model_ids: string[] }>(base, {})).data;
-              setReimportMsg(`S5 투자 계획 ${r.imported}건을 가져왔고 기존 모델 ${r.archived_model_ids.length}건을 보관했습니다. 사례는 \`자동 생성\`을 다시 실행해야 반영됩니다.`);
-              load();
-            } catch (e) {
-              setReimportErr(e instanceof Error ? e.message : "S5 투자 계획 가져오기에 실패했습니다.");
-            } finally {
-              setReimportBusy(false);
-            }
-          })();
-        },
-        {
-          body: `가져올 항목 ${pv.importable}건 (직접 입력 ${pv.manual_lines}건, 역량 해소 비용 ${pv.capability_lines}건).${skipped}${archive} 이미 생성된 사례는 다시 계산되지 않으며 \`자동 생성\`을 다시 실행해야 반영됩니다. 투자비 기준이 \`S5 투자 계획\`이어야 이 계획이 사용됩니다 (기준은 바뀌지 않습니다). 의사결정 지원용이며 게이트·등급에는 영향이 없습니다.`,
-          confirmLabel: "가져오기",
-        },
-      );
-    } catch (e) {
-      setReimportErr(e instanceof Error ? e.message : "가져올 수 있는 S5 투자 계획을 확인하지 못했습니다.");
-    } finally {
-      setReimportBusy(false);
-    }
-  }
-
-  // ADR-0178 slice 0: `최신 S5로 갱신` (re-pin) / first pin. Preview with the pinned-vs-current diff -> confirm -> POST.
-  // Human-only, analyst+, Green Field. Existing cases are not regenerated.
-  async function startS5Repin() {
-    setReimportMsg(null); setReimportErr(null); setReimportBusy(true);
-    const base = `/api/projects/${encodeURIComponent(projectId)}/business-case/s5-pin`;
-    try {
-      const pv = (await api.get<{ preview: S5RepinPreview }>(base)).data.preview;
-      const hasPin = pv.has_pin;
-      if (hasPin && !pv.changed) {
-        setReimportMsg("고정된 S5 참조가 이미 최신입니다 (변경 없음).");
-        return;
-      }
-      const d = (a: number | undefined, b: number): string => (a === undefined ? fmtKrwM(b) : `${fmtKrwM(a)} → ${fmtKrwM(b)}`);
-      const diff = `총액(백만원, 검토 기간 전체) — 설비투자 ${d(pv.pinned?.totals.capex, pv.current.totals.capex)}, 인건비·운영비 ${d(pv.pinned?.totals.labor_opex, pv.current.totals.labor_opex)}, 정부 R&D ${d(pv.pinned?.totals.gov_rnd, pv.current.totals.gov_rnd)}, 인력 계획 ${d(pv.pinned?.totals.staffing, pv.current.totals.staffing)}.`;
-      const run = pv.changes.run ? ` 확정된 S5 시뮬레이션 실행: ${pv.pinned?.s5_sim_run_id ?? "없음"} → ${pv.current.s5_sim_run_id ?? "없음"}.` : "";
-      confirm(
-        hasPin ? "최신 S5로 갱신" : "S5 고정 참조 만들기",
-        () => {
-          void (async () => {
-            setReimportBusy(true);
-            try {
-              const r = (await api.post<{ written: boolean; copy_refreshed: boolean }>(base, {})).data;
-              setReimportMsg(`${hasPin ? "S5 고정 참조를 최신으로 갱신했습니다" : "S5 고정 참조를 만들었습니다"}${r.copy_refreshed ? " (복사본도 함께 갱신)" : ""}. 이미 생성된 사례는 바뀌지 않으며 \`자동 생성\`을 다시 실행해야 새 참조로 계산됩니다.`);
-              load();
-            } catch (e) {
-              setReimportErr(e instanceof Error ? e.message : "S5 고정 참조 갱신에 실패했습니다.");
-            } finally {
-              setReimportBusy(false);
-            }
-          })();
-        },
-        {
-          body: `${diff}${run}${hasPin ? " 갱신하면 현재 고정 참조는 이전 기록으로 남고(삭제 아님) 새 참조가 만들어지며, 기존 투자비 복사본도 새 모델로 갱신됩니다(이전 모델은 보관)." : " 이후 S8은 이 시점의 S5 계획을 기준으로 계산할 수 있습니다."} 이미 생성된 사례·시뮬레이션·채택 결과는 바뀌지 않으며 \`자동 생성\`을 다시 실행해야 새 참조로 계산됩니다. 고정 참조 사용 여부(\`S5 계획 출처\`)와 투자비 기준은 바뀌지 않습니다. 의사결정 지원용이며 게이트·등급에는 영향이 없습니다.`,
-          confirmLabel: hasPin ? "갱신" : "고정",
-        },
-      );
-    } catch (e) {
-      setReimportErr(e instanceof Error ? e.message : "고정할 수 있는 S5 투자 계획을 확인하지 못했습니다.");
-    } finally {
-      setReimportBusy(false);
-    }
-  }
-
   const load = useCallback(async () => {
     try {
-      const params = await api.get<{ params: ResolvedParams; s5_sim?: S5SimStatusView | null; s5_pin?: S5PinStatusView | null }>(`/api/projects/${encodeURIComponent(projectId)}/business-case/params`);
+      const params = await api.get<{ params: ResolvedParams; s5_connect?: { run: { id: string; drawCount: number } | null } | null; s5_pin?: S5PinStatusView | null }>(`/api/projects/${encodeURIComponent(projectId)}/business-case/params`);
       setResolved(params.data.params);
-      setS5Sim(params.data.s5_sim ?? null);
+      setS5Run(params.data.s5_connect?.run ?? null);
       setS5Pin(params.data.s5_pin ?? null);
       setTrack((params.data as { track?: string | null }).track ?? null);
       const casesRes = await api.get<{ cases: CaseSummary[] }>(`/api/projects/${encodeURIComponent(projectId)}/business-case`);
@@ -370,7 +369,6 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
 
   return (
     <>
-      {confirmDialog}
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
       {message && <p className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {message}</p>}
 
@@ -381,77 +379,7 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
           <p>불러오는 중...</p>
         ) : (
           <>
-            <ParamTable
-            caption="현재 시뮬레이션 파라미터"
-            rows={[
-              ...(([
-                ["포획률 (year-1 매출)", resolved.captureRate, resolved.captureSource],
-                ["운영비 비율", resolved.opexRatio, resolved.opexSource],
-                ["설비투자 비율", resolved.capexRatio, resolved.capexSource],
-                ["초기투자 비율 (year-1 매출 대비)", resolved.initialInvestmentRatio, resolved.initialInvestmentSource],
-              ] as Array<[string, number, string]>).map(([label, v, source]): ParamRow => ({ label, value: (v * 100).toFixed(1), unit: "%", source: <SourceChip source={source} /> }))),
-              { label: "투자비 기준 (ADR-0174)", value: INVESTMENT_BASIS_LABELS[resolved.investmentBasis] ?? resolved.investmentBasis, unit: "", source: <SourceChip source={resolved.investmentBasisSource} /> },
-              ...(track === "greenfield"
-                ? [{
-                    label: "S5 계획 출처 (ADR-0178)",
-                    value: s5Pin?.path === "pinned" && s5Pin.pin
-                      ? `S5 고정 참조 · ${s5Pin.pin.id.slice(-8)} (${s5Pin.pin.pinnedAt.slice(0, 10)} · ${s5Pin.pin.pinnedBy})${s5Pin.pin.s5SimRunId ? ` · 시뮬레이션 ${s5Pin.pin.s5SimRunId.slice(-8)}` : ""}${s5Pin.state === "stale" ? " · 재평가 필요" : ""}`
-                      : `복사본 (기존 방식)${s5Pin?.pin ? ` — 고정 참조 ${s5Pin.pin.id.slice(-8)} 있음, 사용 전환 전` : ""}`,
-                    unit: "",
-                    source: <SourceChip source={resolved.s5SourceSource ?? "기본값 (복사본, ADR-0178)"} />,
-                  } as ParamRow]
-                : []),
-              { label: "가동률 램프업", value: resolved.rampUp.map((v) => v.toFixed(2)).join(" → "), unit: "비율", source: <SourceChip source={resolved.rampSource} /> },
-              { label: "인수 EV/Revenue 배수 (브라운필드)", value: resolved.acquisitionEvRevenue != null ? resolved.acquisitionEvRevenue.toFixed(2) : "3.0 — 미확정 시 컴프 기본값 (글로벌 로보틱스 M&A 2–6×)", unit: resolved.acquisitionEvRevenue != null ? "배" : "", source: <SourceChip source={resolved.acquisitionEvRevenueSource} /> },
-              { label: "교차검증 창구 (페이드 DCF)", value: String(resolved.fadeHorizonYears), unit: "년", source: <SourceChip source={resolved.fadeHorizonSource} /> },
-              { label: "말기 성장률 (페이드 DCF 수렴점)", value: resolved.growthTerminal != null ? (resolved.growthTerminal * 100).toFixed(1) : "3.0 — 미확정 시 기본값", unit: resolved.growthTerminal != null ? "%" : "", source: <SourceChip source={resolved.growthTerminalSource} /> },
-              { label: "성장률 오버라이드", value: resolved.growthOverride != null ? (resolved.growthOverride * 100).toFixed(1) : "— (유도값 사용)", unit: resolved.growthOverride != null ? "%" : "", source: <SourceChip source={resolved.growthOverrideSource} /> },
-              { label: "변동성 오버라이드", value: resolved.sigmaOverride != null ? (resolved.sigmaOverride * 100).toFixed(1) : "— (유도값 사용)", unit: resolved.sigmaOverride != null ? "%" : "", source: <SourceChip source={resolved.sigmaOverrideSource} /> },
-              { label: "회수 기간", value: String(resolved.horizonYears), unit: "년", source: <SourceChip source={resolved.horizonSource} /> },
-              { label: "반복 수", value: resolved.iterations.toLocaleString(), unit: "회", source: <SourceChip source={resolved.iterationsSource} /> },
-            ]}
-          />
-            {track === "greenfield" && canAct && (
-              <div className="mt-2" data-testid="s8-s5-reimport-area">
-                {s5Pin?.pin ? (
-                  <>
-                    <button type="button" className="btn-ghost" data-testid="s8-s5-repin-button" disabled={reimportBusy} onClick={() => void startS5Repin()}>
-                      최신 S5로 갱신
-                    </button>
-                    <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] ml-2">고정된 S5 참조를 최신 S5로 옮기고 투자비 복사본도 함께 갱신합니다 (사람 전용, 사례는 다시 계산되지 않음).</span>
-                  </>
-                ) : (
-                  <>
-                    <button type="button" className="btn-ghost" data-testid="s8-s5-reimport-button" disabled={reimportBusy} onClick={() => void startS5Reimport()}>
-                      S5 투자 계획 다시 가져오기
-                    </button>
-                    <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] ml-2">최신 S5 투자비 검토 요건을 새 모델로 가져옵니다 (사람 전용, 참고용).</span>
-                    <button type="button" className="btn-ghost ml-2" data-testid="s8-s5-pin-button" disabled={reimportBusy} onClick={() => void startS5Repin()}>
-                      S5 고정 참조 만들기
-                    </button>
-                  </>
-                )}
-                {reimportMsg && <p role="status" data-testid="s8-s5-reimport-result" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mt-1">✓ {reimportMsg}</p>}
-                {reimportErr && <p role="alert" data-testid="s8-s5-reimport-error" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-1">✕ {reimportErr}</p>}
-              </div>
-            )}
-            {track === "greenfield" && s5Pin && s5Pin.pin && (s5Pin.path === "pinned" || s5Pin.caseGeneratedOnPin) && s5Pin.state !== "not_applicable" && (
-              <p role="status" data-testid="s8-s5-pin-status" className="text-[length:var(--fs-caption)] mt-2">
-                <span className={`status-chip ${s5Pin.state === "stale" ? "status-amber" : "status-green"}`}>
-                  {s5Pin.state === "stale" && <span aria-hidden="true">⏱ </span>}{s5Pin.state === "stale" ? "재평가 필요" : "S5 고정 참조 최신"}
-                </span>
-                {s5Pin.state === "stale" && <> {s5Pin.reasons.map((r) => S5_PIN_STALE_REASON[r] ?? r).join(" · ")} — {canAct ? "`최신 S5로 갱신` 후 사례를 다시 생성하면 해소됩니다" : "사례를 다시 생성하면 해소됩니다"} (자동 재계산 없음, 기존 결과는 기록으로 유지, 참고 표시이며 게이트·등급에 영향 없음).</>}
-              </p>
-            )}
-            {s5Sim && s5Sim.state !== "not_applicable" && (
-              <p role="status" className="text-[length:var(--fs-caption)] mt-2">
-                <span className={`status-chip ${s5Sim.state === "stale" ? "status-amber" : s5Sim.state === "in_effect" ? "status-green" : "status-gray"}`}>
-                  {s5Sim.state === "stale" && <span aria-hidden="true">⏱ </span>}{s5Sim.label}
-                </span>
-                {s5Sim.state === "stale" && <> {S5_SIM_STALE_REASON[s5Sim.reason ?? ""] ?? ""} — 사례를 다시 생성하면 해소됩니다 (자동 재계산 없음, 참고 표시이며 게이트·등급에 영향 없음).</>}
-                {s5Sim.state === "none" && <> 확정된 S5 투자 시뮬레이션이 없어 단일 지점 투자 계획으로 계산되었습니다 (차단 아님).</>}
-              </p>
-            )}
+            <CurrentParamsTable resolved={resolved} track={track} s5Pin={s5Pin} s5Run={s5Run} />
             {resolved.s5PlanHorizonYears != null && resolved.s5PlanHorizonYears !== resolved.horizonYears && (
               <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-2">
                 ⚠ S5 검토 기간({resolved.s5PlanHorizonYears}년)과 사업계획 기간({resolved.horizonYears}년)이 다릅니다
@@ -466,24 +394,24 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
         <h3 className="sizing-step-title">파라미터 확정 <span className="status-chip status-info">kind=user — 저장 후 재생성 시 반영</span></h3>
         <form className="grid gap-3" onSubmit={submit} style={{ maxWidth: 560 }}>
           <div className="grid gap-2 md:grid-cols-2">
-            <label className="grid gap-1 text-sm">포획률 (비율, 예: 0.005)<input className="form-input" value={form.capture_rate ?? ""} onChange={(e) => setForm({ ...form, capture_rate: e.target.value })} placeholder="0.005" /></label>
+            <label className="grid gap-1 text-sm">1년차 시장점유율 (비율, 예: 0.005)<input className="form-input" value={form.capture_rate ?? ""} onChange={(e) => setForm({ ...form, capture_rate: e.target.value })} placeholder="0.005" /></label>
             <label className="grid gap-1 text-sm">운영비 비율 (예: 0.6)<input className="form-input" value={form.opex_ratio ?? ""} onChange={(e) => setForm({ ...form, opex_ratio: e.target.value })} placeholder="0.6" /></label>
             <label className="grid gap-1 text-sm">설비투자 비율 (예: 0.1)<input className="form-input" value={form.capex_ratio ?? ""} onChange={(e) => setForm({ ...form, capex_ratio: e.target.value })} placeholder="0.1" /></label>
             <label className="grid gap-1 text-sm">초기투자 비율 (예: 0.5)<input className="form-input" value={form.initial_investment_ratio ?? ""} onChange={(e) => setForm({ ...form, initial_investment_ratio: e.target.value })} placeholder="0.5" /></label>
             <label className="grid gap-1 text-sm">투자비 기준 (ADR-0174)
               <select className="form-input" value={form.investment_basis ?? ""} onChange={(e) => setForm({ ...form, investment_basis: e.target.value })}>
                 <option value="">— 미변경 —</option>
-                <option value="0">비율 추정 (0)</option>
-                <option value="1">S5 투자 계획 (1)</option>
-                <option value="2">S5 투자 계획 (전체) (2)</option>
+                <option value="0">비율 추정 (기본)</option>
+                <option value="2">S5 투자 계획</option>
+                {form.investment_basis === "1" && <option value="1" disabled>S5 투자 계획 (예전: 설비투자만)</option>}
               </select>
             </label>
             {track === "greenfield" && (
               <label className="grid gap-1 text-sm">S5 계획 출처 (ADR-0178)
                 <select className="form-input" value={form.s5_source ?? ""} onChange={(e) => setForm({ ...form, s5_source: e.target.value })}>
                   <option value="">— 미변경 —</option>
-                  <option value="0">복사본 (0, 기존 방식)</option>
-                  <option value="1" disabled={!s5Pin?.pin}>S5 고정 참조 (1){s5Pin?.pin ? "" : " — 고정 참조 없음"}</option>
+                  <option value="0">복사본 (기존 방식)</option>
+                  <option value="1" disabled={!s5Pin?.pin}>S5 고정 참조{s5Pin?.pin ? "" : " — 고정 참조 없음(먼저 연결하세요)"}</option>
                 </select>
               </label>
             )}
@@ -510,7 +438,7 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
               ))}
             </div>
           </div>
-          <label className="grid gap-1 text-sm">근거 (필수)<textarea className="form-input" value={rationale} onChange={(e) => setRationale(e.target.value)} placeholder="시장 조사 결과 포획률 상향 — 출처/근거를 기재하세요" /></label>
+          <label className="grid gap-1 text-sm">근거 (필수)<textarea className="form-input" value={rationale} onChange={(e) => setRationale(e.target.value)} placeholder="시장 조사 결과 시장점유율 상향 — 출처/근거를 기재하세요" /></label>
           <button className="btn-ghost justify-self-start" type="submit">파라미터 확정</button>
           <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">확정된 값은 사용자 등급(user) 가정으로 기록됩니다. 설명·생성·권고 탭의 재생성을 실행하면 새 파라미터로 다시 시뮬레이션됩니다.</p>
         </form>

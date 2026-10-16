@@ -4789,7 +4789,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       operationId: recordProjectBusinessCaseParams
-      summary: Record a user batch of bc.* parameters on a fresh run (analyst+; rationale required). Includes investment_basis (0=비율 추정 ratio, 1=S5 투자 계획, 2=S5 투자 계획(전체); ADR-0174) — when not ratio the generator replaces the year-0 ratio investment and capex_ratio with the S5 capex schedule (Y1 spend counted in year 0) and bypasses the python sim engine.
+      summary: Record a user batch of bc.* parameters on a fresh run (analyst+; rationale required). Includes investment_basis (0=비율 추정 ratio, 1=S5 투자 계획 (legacy, capex-only), 2=S5 투자 계획 (unified - capex + labor/opex); ADR-0174 — since 2026-10-16 the UI offers only 0 and 2; a stored 1 keeps capex-only behavior until re-set) — when not ratio the generator replaces the year-0 ratio investment and capex_ratio with the S5 capex schedule (Y1 spend counted in year 0) and bypasses the python sim engine.
       tags:
         - Analysis
       parameters:
@@ -5441,6 +5441,76 @@ paths:
     post:
       operationId: pinS5Plan
       summary: Human-only. Creates the initial S5 plan pin, or re-pins (supersedes the current pin, inserts the next, refreshes the compat copy through the S5 re-import, audit s5_plan_pin.repinned — one transaction). Existing cases, simulations and adopted results are not touched; bc.s5_source and the investment basis are never changed. A re-pin with an unchanged source and confirmed run writes nothing (written=false). Agents rejected (ADR-0178 slice 0).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/projects/{id}/business-case/s5-connect:
+    get:
+      operationId: getS5ConnectPreview
+      summary: Preview of `S5와 연결하기` (human-only, analyst+, Green Field only) - lines to import, skipped lines with reasons, pinned-vs-current totals, whether a confirmed S5 simulation run exists, and the basis / s5_source before and after. Writes nothing. 409 not_greenfield / no_importable_lines (ADR-0178 follow-up).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    post:
+      operationId: connectS5Plan
+      summary: Human-only. The single confirm of `S5와 연결하기`, one transaction - pin (or re-pin) the live S5 plan, set bc.investment_basis to the unified S5 basis (stored s5_plan_full code 2 - capex + labor/opex; legacy 0 and 1 both move to 2), set bc.s5_source = 1, audit s5_plan_pin.connected. Existing cases, simulations and adopted results are never recalculated. 409 no_importable_lines when S5 has nothing importable. Agents rejected (ADR-0178 follow-up).
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/projects/{id}/business-case/s5-disconnect:
+    post:
+      operationId: disconnectS5Plan
+      summary: Human-only. `복사본으로 되돌리기` - sets bc.s5_source = 0 (audit s5_plan_pin.disconnected); the pin history and the investment basis are kept. 409 not_connected when the project is not on the pinned path. Agents rejected (ADR-0178 follow-up).
       tags:
         - Analysis
       parameters:
