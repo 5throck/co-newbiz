@@ -67,6 +67,40 @@ export function listLegacyModels(projectId: string, db: Database = getDb()): Leg
   return rows.map((r) => ({ ...r, referenced: isModelReferenced(db, projectId, r.id) }));
 }
 
+/** Archive the previous generation round (called at the START of every
+ *  generateBusinessCases run): every active (non-archived) valuation model of
+ *  the project scoped to the subjects this run regenerates — greenfield:
+ *  target_id NULL; brownfield: the shortlisted target ids. Models a decision
+ *  record still names (adoption / gate / process_run, `isModelReferenced`)
+ *  are NEVER archived — they stay resolvable for the adoption / IC history
+ *  views; a run interrupted mid-way (a lone base model from a double press)
+ *  is just a previous round and is archived the same way. Per-model
+ *  `business_case.superseded_round` audit rows follow the cleanup pattern. */
+export function archiveSupersededRound(
+  projectId: string,
+  actor: string,
+  scope: { targetIds: readonly (string | null)[] },
+  db: Database = getDb(),
+): string[] {
+  const rows = db
+    .query("SELECT id, target_id FROM business_case_model WHERE project_id = ? AND kind = 'valuation' AND archived_at IS NULL")
+    .all(projectId) as Array<{ id: string; target_id: string | null }>;
+  const wanted = new Set(scope.targetIds);
+  const hasNull = wanted.has(null);
+  const stale = rows.filter((r) => (r.target_id === null ? hasNull : wanted.has(r.target_id)));
+  const archived: string[] = [];
+  const now = new Date().toISOString();
+  db.transaction(() => {
+    for (const m of stale) {
+      if (isModelReferenced(db, projectId, m.id)) continue; // adopted / gate-referenced: leave as-is
+      db.run("UPDATE business_case_model SET archived_at = ?, archived_by = ? WHERE id = ?", [now, actor, m.id]);
+      appendAudit(db, { actor, action: "business_case.superseded_round", target: `${projectId}:${m.id}`, now });
+      archived.push(m.id);
+    }
+  })();
+  return archived;
+}
+
 /** Delete unreferenced legacy models, archive referenced ones. `modelIds`
  *  omitted = every active legacy model; ids that are not legacy are ignored
  *  (never touches a per-target or already-archived model). */

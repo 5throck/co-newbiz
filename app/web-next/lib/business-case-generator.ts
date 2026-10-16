@@ -38,6 +38,7 @@ import { specAgentFor } from "./spec-activities.ts";
 import { runSimJob } from "./sim-engine.ts";
 import { fmtNpvInteger } from "./npv-format.ts";
 import { resolveDownsideOpexUplift } from "./target-costing.ts";
+import { archiveSupersededRound } from "./business-case-cleanup.ts";
 import { resolveS5SimConsumption, type S5SimConsumption } from "./investment-simulation-s8.ts";
 import { aggregatePlanLines, pinPlanLinesOf } from "./s5-plan-pin.ts";
 import { getCurrentS5PlanPin, resolveActivePin, resolvePinnedS5SimConsumption, s5SourceOptedIn } from "./s5-plan-pin-s8.ts";
@@ -310,7 +311,17 @@ export function irr(cashflows: number[]): number | null {
   let hi = 10;
   let fLo = npv(lo);
   let fHi = npv(hi);
-  if (fLo * fHi > 0) return null;
+  if (fLo * fHi > 0) {
+    // 표준 구간에서 부호 변화가 없으면 실제 IRR이 상한을 넘는 경우다 (예: S5
+    // 연동으로 year-0 유출이 작고 이후 플로우가 큰 케이스). 상한을 ×10씩
+    // 확장해 첫 부호 변화 지점을 찾고, 1e6(=100,000,000%)까지 닿지 않으면
+    // 실제 근이 없다는 뜻이므로 null을 돌려준다 — 값을 만들어내지 않는다.
+    while (fHi > 0 && hi < 1e6) {
+      hi *= 10;
+      fHi = npv(hi);
+    }
+    if (fLo * fHi > 0) return null;
+  }
   for (let i = 0; i < 200; i++) {
     const mid = (lo + hi) / 2;
     const fMid = npv(mid);
@@ -1694,6 +1705,13 @@ export async function generateBusinessCases(
   }
 
   const executor = getBusinessCaseExecutor();
+  // 이전 생성 회차 아카이브: 이번 실행이 다시 만들 subject 범위(그린필드는
+  // target_id NULL, 브라운필드는 같은 대상)의 미채택·미참조 모델을 실행 시작
+  // 시점에 아카이브한다 — 채택/게이트 기록이 가리키는 모델은 그대로 남겨
+  // 이력 조회가 계속 풀리도록 한다 (business-case-cleanup 참조 보호 재사용).
+  archiveSupersededRound(projectId, opts.actor, {
+    targetIds: subjects.length === 0 ? [null] : subjects.map((s) => s.id),
+  }, db);
   const activities: ActivitySpec[] = [];
   const buildForSubject = (inputs: CaseInputs, target?: { id: string; name: string }) => {
     // ADR-0117: each scenario runs in TWO variants — market_forward (gate
