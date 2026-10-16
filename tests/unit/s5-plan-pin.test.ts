@@ -3,6 +3,8 @@
  * ADR-0178 slice 0 - S5 plan pin (S5 single source, S8 pinned reference).
  * Migration 0147 schema, hash definition, pin lifecycle, pinned read path (parity with the copy),
  * stale rules, human-only re-pin route, params opt-in, promotion initial pin, Brown Field untouched.
+ * Amendment 2026-10-16 (DEC-20261016-01): the pinned reference is the DEFAULT - a lazy initial pin
+ * and the unified basis switch happen at generation, a person's revert keeps the copy forever.
  * Real route handlers + scratch SQLite; migration test on :memory:. ASCII-only source (Korean via
  * \u escapes).
  */
@@ -234,8 +236,8 @@ describe("plan_hash and the shared S5 input hash", () => {
 });
 
 // -- promotion, lifecycle, parity ----------------------------------------------------------------
-describe("promotion writes the initial pin but keeps the copy path", () => {
-  test("Green Field with an importable plan: copy model + one current pin (reason=initial); params stay on copy", () => {
+describe("promotion writes the initial pin; the amended default reads pinned", () => {
+  test("Green Field with an importable plan: copy model + one current pin (reason=initial); read path is PINNED by default", () => {
     const opp = makeOpp("greenfield", LINES);
     const pid = promote(opp);
     const rows = pinRows(pid);
@@ -243,12 +245,13 @@ describe("promotion writes the initial pin but keeps the copy path", () => {
     expect(rows[0]).toMatchObject({ reason: "initial", pinned_by: ANALYST, superseded_at: null, opportunity_id: opp, s5_sim_run_id: null });
     expect(rows[0].plan_hash).toBe(pinLib.s5PlanHashOf(inputLib.loadInvestmentVectorsInput(db, opp)!));
     const p = gen.resolveBusinessCaseParams(db, pid);
-    expect(p.s5Source).toBe("copy");
-    expect(p.s5PinId).toBeNull();
+    expect(p.s5Source).toBe("pinned");
+    expect(p.s5PinId).toBe(rows[0].id);
+    expect(p.s5SourceSource).toContain("기본"); // label says the amended default, not a person's opt-in
     const plan = gen.resolveS5InvestmentPlan(db, pid)!;
-    expect(plan.pinId).toBeUndefined();
-    expect(plan.modelId).not.toMatch(/^pin:/);
-    expect(db.query("SELECT COUNT(*) AS n FROM assumption WHERE assumption_key = 'bc.s5_source'").get()).toEqual({ n: 0 });
+    expect(plan.pinId).toBe(rows[0].id);
+    expect(plan.modelId).toBe(`pin:${rows[0].id}`);
+    expect(db.query("SELECT COUNT(*) AS n FROM assumption WHERE assumption_key = 'bc.s5_source' AND run_id IN (SELECT id FROM run WHERE project_id = ?)").get(pid)).toEqual({ n: 0 });
     expect((db.query("SELECT COUNT(*) AS n FROM audit_log WHERE action = 's5_plan_pin.pinned' AND target LIKE ?").get(`${pid}#%`) as { n: number }).n).toBe(1);
   });
 
@@ -263,14 +266,18 @@ describe("promotion writes the initial pin but keeps the copy path", () => {
 });
 
 describe("pinned read path", () => {
-  test("opt-in off with a pin: copy path, bit-identical (same plan object as without any pin)", async () => {
+  test("a person's revert: copy path, bit-identical to the pre-amendment copy, and it persists", async () => {
     const pid = promote(makeOpp("greenfield", LINES));
-    const before = JSON.stringify(gen.resolveS5InvestmentPlan(db, pid));
     expect(pinRows(pid).length).toBe(1);
-    expect(JSON.stringify(gen.resolveS5InvestmentPlan(db, pid))).toBe(before);
-    expect(gen.resolveS5InvestmentPlan(db, pid)!.pinId).toBeUndefined();
+    const pinned = gen.resolveS5InvestmentPlan(db, pid)!;
+    expect(pinned.pinId).toBeDefined();
     await optIn(pid, 0);
-    expect(gen.resolveS5InvestmentPlan(db, pid)!.pinId).toBeUndefined();
+    const copy = gen.resolveS5InvestmentPlan(db, pid)!;
+    expect(copy.pinId).toBeUndefined();
+    expect(copy.modelId).not.toMatch(/^pin:/);
+    // the revert only changes WHICH plan is read, not what it computes: same vectors
+    expect(planCmp(copy)).toEqual(planCmp(pinned));
+    expect(gen.resolveBusinessCaseParams(db, pid).s5Source).toBe("copy");
   });
 
   test("opt-in without a current pin falls back to the copy", async () => {
@@ -282,6 +289,7 @@ describe("pinned read path", () => {
 
   test("PARITY: pinned plan vectors equal the copy's for the same source (capability, monthly, lump sum, gov_rnd, skipped lines)", async () => {
     const pid = promote(makeOpp("greenfield", LINES));
+    await optIn(pid, 0); // capture the copy path (the default now reads pinned)
     const copy = gen.resolveS5InvestmentPlan(db, pid)!;
     expect(copy.capexCapabilityByYear!.some((v) => v > 0)).toBe(true); // the fixture really exercises the capability split
     expect(copy.govRndByYear.some((v) => v > 0)).toBe(true);
@@ -312,6 +320,7 @@ describe("pinned read path", () => {
     const pid = promote(opp); // the confirmed run is in force at pin time
     expect(pinRows(pid)[0]).toMatchObject({ s5_sim_run_id: run.id, s5_sim_input_hash: "h-run" });
     await setBasis(pid, "s5_plan");
+    await optIn(pid, 0); // capture the copy path (the default now reads pinned)
     const copyInputs = gen.caseInputsForProject(pid);
     await optIn(pid);
     const pinnedInputs = gen.caseInputsForProject(pid);
@@ -340,24 +349,55 @@ describe("pinned read path", () => {
     expect(after.pinId).not.toBe(before.pinId);
   });
 
-  test("generated cases carry s5_pin= and plan_hash= only on the pinned path", async () => {
+  test("generated cases carry s5_pin= on the pinned default and s5_line_hash= on a reverted copy path", async () => {
+    // reverted project: the copy path persists across generations
     const opp = makeOpp("greenfield", LINES);
     const pid = promote(opp);
+    await optIn(pid, 0);
     await setBasis(pid, "s5_plan");
     await gen.generateBusinessCases(pid, { actor: ANALYST });
     const notes = () => (db.query("SELECT DISTINCT note FROM valuation_simulation WHERE project_id = ?").all(pid) as Array<{ note: string }>).map((r) => r.note);
     expect(notes().every((n) => !n.includes("s5_pin=") && !n.includes("plan_hash="))).toBe(true);
     expect(notes().every((n) => n.includes("s5_line_hash="))).toBe(true);
-    await optIn(pid);
+    // existing cases are never recalculated: a second generation appends, never rewrites
+    const firstGen = db.query("SELECT id, note FROM valuation_simulation WHERE project_id = ? ORDER BY id").all(pid) as Array<{ id: string; note: string }>;
     await gen.generateBusinessCases(pid, { actor: ANALYST });
-    const pinId = pinRows(pid)[0].id as string;
-    const pinnedNotes = notes().filter((n) => n.includes("s5_pin="));
-    expect(pinnedNotes.length).toBeGreaterThan(0);
-    for (const n of pinnedNotes) {
-      expect(n).toContain(`s5_pin=${pinId}`);
-      expect(n).toContain(`plan_hash=${pinRows(pid)[0].plan_hash}`);
-      expect(n).toContain(`s5_model=pin:${pinId}`);
-    }
+    const all = db.query("SELECT id, note FROM valuation_simulation WHERE project_id = ? ORDER BY id").all(pid) as Array<{ id: string; note: string }>;
+    expect(json(all.slice(0, firstGen.length))).toBe(json(firstGen));
+    expect(notes().filter((n) => n.includes("s5_pin=")).length).toBe(0); // still copy: never re-linked
+    expect(db.query("SELECT COUNT(*) AS n FROM s5_plan_pin WHERE project_id = ?").get(pid)).toEqual({ n: 1 }); // promotion pin, never superseded
+  });
+
+  test("lazy default at generation: initial pin created, basis moved to the unified S5 basis, audited", async () => {
+    const opp = makeOpp("greenfield", LINES);
+    const pid = promote(opp);
+    await setBasis(pid, "s5_plan"); // legacy capex-only stored basis
+    await gen.generateBusinessCases(pid, { actor: ANALYST });
+    const rows = pinRows(pid);
+    expect(rows.length).toBe(1);
+    expect(rows[0]).toMatchObject({ reason: "initial", pinned_by: ANALYST }); // actor of the generation
+    const audits = db.query("SELECT action FROM audit_log WHERE target LIKE ?").all(`${pid}%`) as Array<{ action: string }>;
+    expect(audits.map((a) => a.action)).toContain("bc.investment_basis.auto_default");
+    expect(audits.map((a) => a.action)).toContain("s5_plan_pin.pinned");
+    expect((db.query("SELECT value FROM assumption WHERE assumption_key = 'bc.investment_basis' AND kind = 'user' ORDER BY as_of DESC, id DESC LIMIT 1").get(pid) as { value: number }).value).toBe(2);
+    const p = gen.resolveBusinessCaseParams(db, pid);
+    expect(p).toMatchObject({ s5Source: "pinned", investmentBasis: "s5_plan_full" });
+    // second generation: no new pin row, no new audit (already unified)
+    const before = pinRows(pid).length;
+    await gen.generateBusinessCases(pid, { actor: ANALYST });
+    expect(pinRows(pid).length).toBe(before);
+    expect((db.query("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'bc.investment_basis.auto_default' AND target LIKE ?").get(`${pid}%`) as { n: number }).n).toBe(1);
+  });
+
+  test("no importable plan: generation stays on the ratio basis and creates no pin; Brown Field untouched", async () => {
+    const noPlan = promote(makeOpp("greenfield", [{ line: "NoUnit", category: "opex", amount: 3 }]));
+    await gen.generateBusinessCases(noPlan, { actor: ANALYST });
+    expect(pinRows(noPlan).length).toBe(0);
+    expect(gen.resolveBusinessCaseParams(db, noPlan)).toMatchObject({ investmentBasis: "ratio", s5Source: "copy" });
+    const bf = promote(makeOpp("brownfield", null));
+    await gen.generateBusinessCases(bf, { actor: ANALYST });
+    expect(pinRows(bf).length).toBe(0);
+    expect(gen.resolveBusinessCaseParams(db, bf)).toMatchObject({ investmentBasis: "ratio", s5Source: "copy" });
   });
 });
 
@@ -366,7 +406,7 @@ describe("stale rules (design 4A.4)", () => {
   test("fresh pin is in effect; not applicable without a pin", async () => {
     const pid = promote(makeOpp("greenfield", LINES));
     const st = pinS8.s5PinStatusForProject(db, pid);
-    expect(st).toMatchObject({ state: "in_effect", stale: false, reasons: [], path: "copy", optedIn: false });
+    expect(st).toMatchObject({ state: "in_effect", stale: false, reasons: [], path: "pinned", optedIn: false, reverted: false });
     const none = promote(makeOpp("greenfield", null));
     expect(pinS8.s5PinStatusForProject(db, none)).toMatchObject({ state: "not_applicable", pin: null });
   });
@@ -577,7 +617,8 @@ describe("bc.s5_source opt-in (params route)", () => {
     const asAgent = await runAsPrincipal(principal, () => paramsRoute.POST(new Request("http://x/p", { method: "POST", headers: { cookie }, body: json({ params: { s5_source: 1 }, rationale: "t" }) }), { params: Promise.resolve({ id: pid }) }));
     expect(asAgent.status).toBe(403);
     expect((await asAgent.json()).error.code).toBe("human_only");
-    expect(gen.resolveBusinessCaseParams(db, pid).s5Source).toBe("copy");
+    // the refused write changed nothing: the pin from promotion stays in force (amended default)
+    expect(gen.resolveBusinessCaseParams(db, pid).s5Source).toBe("pinned");
     expect((await post(pid, { s5_source: 1 }, viewerCookie)).status).toBe(403);
     expect((await post(pid, { s5_source: 2 })).status).toBe(400);
     const noPin = promote(makeOpp("greenfield", [{ line: "NoUnit", category: "opex", amount: 3 }]));

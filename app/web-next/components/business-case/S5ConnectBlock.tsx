@@ -3,9 +3,11 @@
 // S5ConnectBlock - S8 `S5 연결` status + human-only actions at the top of the 설명·생성·권고 tab
 // (Green Field only; decider feedback 2026-10-16, ADR-0178 follow-up). Shows where the S8
 // investment numbers come from (S5 amounts vs ratio assumptions), the S5 simulation state and the
-// pin's stale state, and offers three person-triggered acts: connect, update to the latest S5,
-// return to the copy. Nothing runs automatically; existing cases are never recalculated - the
-// block always says that `자동 생성` has to be run again. Decision support only.
+// pin's stale state. Amendment 2026-10-16: the pinned reference is the DEFAULT - the block reads
+// `연결됨 (기본)`, and a person's revert keeps the copy (`복사본 (사람이 되돌림)`) with the connect
+// button still available for re-linking or refreshing to the latest S5. Nothing runs automatically
+// here; existing cases are never recalculated - the block always says that `자동 생성` has to be
+// run again. Decision support only.
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
@@ -22,6 +24,7 @@ import {
 interface PinView {
   path: "copy" | "pinned";
   optedIn: boolean;
+  reverted?: boolean;
   pin: { id: string; planHash: string; pinnedAt: string; pinnedBy: string; reason: "initial" | "repin"; s5SimRunId: string | null } | null;
   state: "not_applicable" | "in_effect" | "stale";
   stale: boolean;
@@ -198,7 +201,7 @@ export function S5ConnectBlock({ projectId, canAct, onChanged }: { projectId: st
         <li data-testid="s8-s5-connect-source">
           <b>투자비 출처</b>{" "}
           <span className={`status-chip ${link === "pinned" ? "status-green" : link === "ratio" ? "status-amber" : "status-gray"}`}>
-            {link === "pinned" ? "연결됨" : link === "ratio" ? "연결 안 됨" : "복사본"}
+            {link === "pinned" ? "연결됨 (기본)" : link === "ratio" ? "연결 안 됨" : pin?.reverted ? "복사본 (사람이 되돌림)" : "복사본"}
           </span>{" "}
           {s5SourceLine(link, pin?.pin ?? null, data.params)}
         </li>

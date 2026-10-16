@@ -6,7 +6,7 @@
 // altered - `자동 생성` must be run again. Callers own the guards (human-only, analyst+, visibility).
 import type { Database } from "bun:sqlite";
 import { loadInvestmentVectorsInput } from "../../app/web-next/lib/investment-simulation-input.ts";
-import { s5SourceOptedIn, getCurrentS5PlanPin } from "../../app/web-next/lib/s5-plan-pin-s8.ts";
+import { s5SourceOptedIn, s5SourceReverted, getCurrentS5PlanPin } from "../../app/web-next/lib/s5-plan-pin-s8.ts";
 import { appendAudit } from "../lib/access-control.ts";
 import { recordAssumption } from "../lib/assumption.ts";
 import { createRun } from "../lib/versioning.ts";
@@ -145,3 +145,54 @@ export function disconnectS5(db: Database, projectId: string, actor: string, now
 }
 
 export { S5PinError };
+
+// ── ADR-0178 Amendment 2026-10-16 (DEC-20261016-01): S5 linkage is the DEFAULT ───────────────
+
+export interface S5AutoDefaultResult {
+  /** False when nothing was written: Brown Field / no importable plan / a person's revert. */
+  applied: boolean;
+  pin_created: boolean;
+  pin_id: string | null;
+  basis_switched: boolean;
+  prior_basis: "ratio" | "s5_plan" | "s5_plan_full" | null;
+}
+
+/**
+ * The amended default, applied lazily at generation (자동 생성) for a Green Field project with an
+ * importable S5 plan: if no current pin exists, create the INITIAL pin (snapshot of the current
+ * S5 source); and when the stored investment basis is not yet the unified `S5 투자 계획` (code 2)
+ * — i.e. the ratio default or a legacy capex-only 1 — move it to 2 with an `auto_default` audit.
+ * Existing cases, simulations and adopted results are NEVER recalculated; regeneration reflects
+ * the new basis. A person's revert (`bc.s5_source = 0`) is never re-linked.
+ *
+ * Reading of the amendment followed here: a person-SET ratio (0) on a greenfield with an
+ * importable plan is ALSO moved to the unified basis — the decider overrode the basis when
+ * accepting the unified default, so the stored 0 survives only on projects without an importable
+ * plan or after a revert (which keeps the basis, so it is moved at the last switch before it).
+ *
+ * Own small transaction (createS5PlanPin nests its own — bun:sqlite allows it): the generation
+ * write path (runActivityChain) is not one transaction and input resolution is read-only, so
+ * there is no outer transaction to join; an independent atomic unit keeps pin + basis + audit
+ * consistent and a failure fails generation loudly instead of half-linking.
+ */
+export function ensureDefaultS5Link(db: Database, projectId: string, actor: string, now: string): S5AutoDefaultResult {
+  const none: S5AutoDefaultResult = { applied: false, pin_created: false, pin_id: null, basis_switched: false, prior_basis: null };
+  return db.transaction((): S5AutoDefaultResult => {
+    const opp = greenfieldOpportunity(db, projectId); // throws not_found / not_greenfield
+    // A person's revert wins over the default: never re-linked by the lazy path.
+    if (s5SourceReverted(db, projectId)) return none;
+    // Same importability rule as previewS5Connect: confirmed-unit KRW lines or reflected priced
+    // capability lines must exist, and the shared S5 input must be loadable.
+    if (planS5Import(db, opp).importable === 0) return none;
+    if (!loadInvestmentVectorsInput(db, opp)) return none;
+    const hadPin = !!getCurrentS5PlanPin(db, projectId);
+    if (!hadPin) createS5PlanPin(db, { projectId, actor, now }); // audited s5_plan_pin.pinned, reason initial
+    const basis = currentBasis(db, projectId);
+    if (basis === "s5_plan_full") {
+      return { applied: hadPin, pin_created: !hadPin, pin_id: getCurrentS5PlanPin(db, projectId)?.id ?? null, basis_switched: false, prior_basis: basis };
+    }
+    const runId = writeBc(db, projectId, actor, now, "S5 연결 기본 적용 (자동 생성, ADR-0178 개정)", [["bc.investment_basis", 2]]);
+    appendAudit(db, { actor, action: "bc.investment_basis.auto_default", target: `${projectId}#basis=${basis}->s5_plan_full;run=${runId}`, now });
+    return { applied: true, pin_created: !hadPin, pin_id: getCurrentS5PlanPin(db, projectId)?.id ?? null, basis_switched: true, prior_basis: basis };
+  })();
+}

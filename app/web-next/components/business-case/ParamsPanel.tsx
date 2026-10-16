@@ -113,6 +113,7 @@ const driverValue = (d: DriverSpec): string => {
 interface S5PinStatusView {
   path: "copy" | "pinned";
   optedIn: boolean;
+  reverted?: boolean;
   pin: { id: string; planHash: string; pinnedAt: string; pinnedBy: string; reason: "initial" | "repin"; s5SimRunId: string | null } | null;
   state: "not_applicable" | "in_effect" | "stale";
   stale: boolean;
@@ -158,8 +159,10 @@ function CurrentParamsTable({ resolved, track, s5Pin, s5Run }: { resolved: Resol
   const gf = track === "greenfield";
   const pct1 = (v: number) => (v * 100).toFixed(1);
   const s5Source = s5Pin?.path === "pinned" && s5Pin.pin
-    ? `S5 고정 참조 · ${s5Pin.pin.id.slice(-8)} (${s5Pin.pin.pinnedAt.slice(0, 10)} · ${s5Pin.pin.pinnedBy})${s5Pin.pin.s5SimRunId ? ` · 시뮬레이션 ${s5Pin.pin.s5SimRunId.slice(-8)}` : ""}${s5Pin.state === "stale" ? " · 재평가 필요" : ""}`
-    : `복사본 (기존 방식)${s5Pin?.pin ? ` — 고정 참조 ${s5Pin.pin.id.slice(-8)} 있음, 사용 전환 전` : ""}`;
+    ? `S5와 연결됨 (기본) · 고정 참조 ${s5Pin.pin.id.slice(-8)} (${s5Pin.pin.pinnedAt.slice(0, 10)} · ${s5Pin.pin.pinnedBy})${s5Pin.pin.s5SimRunId ? ` · 시뮬레이션 ${s5Pin.pin.s5SimRunId.slice(-8)}` : ""}${s5Pin.state === "stale" ? " · 재평가 필요" : ""}`
+    : s5Pin?.reverted
+      ? `복사본 (사람이 되돌림)${s5Pin?.pin ? ` — 고정 참조 ${s5Pin.pin.id.slice(-8)} 있음, 사용하지 않음` : ""}`
+      : `복사본${s5Pin?.pin ? ` — 고정 참조 ${s5Pin.pin.id.slice(-8)} 있음, 아직 첫 \`자동 생성\` 전` : ""}`;
   // Green Field collapses the two override rows into the rows they override (growth, volatility).
   const growthRow: ParamLine = gf
     ? resolved.growthOverride != null
@@ -410,8 +413,8 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
               <label className="grid gap-1 text-sm">S5 계획 출처 (ADR-0178)
                 <select className="form-input" value={form.s5_source ?? ""} onChange={(e) => setForm({ ...form, s5_source: e.target.value })}>
                   <option value="">— 미변경 —</option>
-                  <option value="0">복사본 (기존 방식)</option>
-                  <option value="1" disabled={!s5Pin?.pin}>S5 고정 참조{s5Pin?.pin ? "" : " — 고정 참조 없음(먼저 연결하세요)"}</option>
+                  <option value="0">복사본으로 되돌림</option>
+                  <option value="1" disabled={!s5Pin?.pin}>S5와 다시 연결 (고정 참조){s5Pin?.pin ? "" : " — 고정 참조 없음(먼저 연결하세요)"}</option>
                 </select>
               </label>
             )}
