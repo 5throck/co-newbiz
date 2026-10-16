@@ -1,0 +1,52 @@
+---
+lang: ko
+lang_reason: proper-noun
+---
+
+# ADR-0179 - Market-anchor scope compatibility: structured target scope, anchor scope check, sourced market share, segment-scoped sizing, plausibility guards
+
+- Status: Accepted (2026-10-16)
+- Date: 2026-10-16
+- Decider: Human decider (chat 2026-10-16, "그렇게 해줘" in answer to approving the design as summarised with the recommended open decisions). Drafted by platform-lead.
+- Drafted by: platform-lead
+- Design-of-record: [docs/designs/2026-10-16-market-anchor-scope-compatibility-design.md](../designs/2026-10-16-market-anchor-scope-compatibility-design.md)
+- Related: ADR-0170 (`재평가 필요` staleness pattern), ADR-0176 (visible degradation labels), ADR-0178 (pinned S5 reference, run-note provenance), project non-negotiables #2 (human decisions) and #4 (data confidence caps the RAG grade)
+- Incident that motivates this: opportunity `01M1MVCQ2T8R32JDNM1ZTP0668` (`유압식 브레이커 — 유럽 Stage V 시장 공략`) anchors S8 on a 3,580,000 KRW-M market size whose implicit scope is worldwide, against a Europe Stage V target, with a bare-default 0.5% capture rate — year-1 revenue ~17,900 KRW-M vs ~100 KRW-M capex, IRR in the thousands of percent. The mismatch surfaces only as an implausible IRR, late and indirectly.
+- Slices: 1 structured target scope (additive migration) + IRR ceiling review guard, 2 scope-compatibility flags, 3 share labelling + ratio plausibility guard, 4 segment-scoped sizing pipeline. None implemented by this ADR.
+
+## Context (verified in code)
+
+`opportunity.market_scope` is free text (migration 0042) — not machine-comparable to anything. `caseInputsBaseForProject` (`app/web-next/lib/business-case-generator.ts:1182`) reads `market_size_krw_m`/`growth_rate` off the opportunity row with no scope metadata; nothing records what geography or segment the number covers. `market_sizing_analysis`/`market_sizing_version` (migration 0046) are industry-keyed with no declared scope. The capture-rate default `CAPTURE_RATE = 0.005` (`:222`) is labelled `"기본값"` but never as *unsourced*; no surface compares an anchor's coverage to the opportunity's target scope; no plausibility check exists. No consumer anywhere in the pipeline would have flagged the incident's worldwide-vs-Europe mismatch.
+
+## Decision
+
+1. **Structured target scope.** New nullable `opportunity.target_scope_json` (`regions[]` on a fixed region enum incl. `worldwide`, `segments[]` free tags, `unit_basis` enum, `set_by`/`set_at`), set by a person (analyst+, human-only write) on the opportunity S1/S2 surface. The free-text `market_scope` stays. Legacy rows stay NULL — NULL means "scope unknown," never a silent OK; no backfill from free text (that would be an LLM guess presented as data). Generation arithmetic is untouched; the scope feeds only flags and labels.
+2. **Anchor scope-compatibility check.** A `market_sizing_version` declares its scope (in the version payload; an additive column is the fallback option). A pure `compareAnchorScope(anchorScope, targetScope)` yields `ok` / `mismatch` (`시장 범위 불일치`) / `unknown` (`시장 범위 미확인`), where a legacy unscoped anchor or an unset target scope is `unknown`, and a worldwide anchor against a regional target without a documented derivation factor is `mismatch` — coverage is not compatibility. The check runs at generation (run-note fields `anchor_scope=`, `anchor_scope_reason=`) and in the read model (live flags next to the anchor on the params table, ValuationMethodology, gate-brief text). **Never a gate block, never a grade cap by itself**; per non-negotiable #4 an unresolved mismatch/unknown is recorded as confidence-lowering evidence for the human RAG judgement, and the flag text says so.
+3. **Sourced market-share rule.** A bare-default capture rate renders as `근거 없는 기본 점유율 (0.5%)` wherever the anchor is shown; a person-confirmed rate is prompted for a basis note (optional; an empty basis is labelled `근거 미기재`). A linked-valuation generation using the bare default emits `share_unsourced=1` into the run note plus a case-level warning row. The 0.5% default value stays — the fix is labelling, not removal of the documented deterministic fallback.
+4. **Segment-scoped sizing and proxy chain.** The sizing pipeline gains region/segment-scoped analyses; region derivation is an explicit sourced step (global value × regional share, the share carrying its own source) recorded as lineage in the version payload; the proxy chain (e.g. European construction-equipment fleet → breaker attach rate → segment value) is a sanctioned scoped method owned by quant-methodologist. Old versions are never rewritten; their absent scope is `unknown`.
+5. **Plausibility guards.** Deterministic warnings, evaluated at generation and recomputed live, surfaced to the optimism-bias review; they never block and never alter a stored number. The **IRR ceiling review guard** (decider-requested, 2026-10-16): above a threshold the IRR figure stays fully visible but renders with a `극단값 — 검토 필요 (가정 점검: 시장 범위·점유율·투자 규모)` chip in scenario comparison rows, the methodology panel and gate-brief/IC text; a lower `주의` band gives an early warning. Thresholds are person-settable project-level assumptions (`bc.irr_flag_threshold` / `bc.irr_caution_threshold`) with code defaults 100% / 50% for the 5-year horizon (OPEN-7 — the bands are the platform-lead recommendation, the decider approves the values); changing a threshold is display metadata only. An IRR breach renders a diagnostic pointer listing the likely causes in order — anchor scope mismatch, bare-default share, undersized capex — linking to the scope-compatibility and share flags where present. The ratio guard (Y1 revenue vs plan investment >20×) is unchanged.
+6. **Human ownership.** Scope, sizing scope, derivation factors and share basis are person-set; AI proposes in text only. Decision support only: no flag blocks a gate; data confidence continues to cap the RAG grade.
+7. **Offline degradation.** Slices 1-3 work entirely on stored data; Slice 4 depends on the market-sizing pipeline being reachable (its MCP call failed with ECONNREFUSED on 2026-10-16). Unreachable pipeline → scoped sizings cannot be produced and unscoped anchors stay honestly flagged; nothing is fabricated, nothing blocks.
+
+## Consequences
+
+- A scope mismatch becomes visible at first anchor consumption instead of surfacing as an implausible IRR after adoption-grade work.
+- Flags will be noisy initially: every legacy opportunity and legacy sizing is `unknown` until a person sets scope. Accepted — silence was the failure mode.
+- The bare `opportunity.market_size_krw_m` anchor is now an explicit legacy compat path; the follow-up (referencing a sizing version instead) is registered as OPEN-3 of the design, not done here.
+- The compatibility check compares declared scopes only; wrong-but-consistent declarations remain undetectable by machinery and stay with the human reviewer and the data-confidence cap.
+
+## Open decisions
+
+OPEN-1..8 in the design §10, each with a recommendation (region enum vs tags; payload vs column; anchor→sizing-version reference as follow-up; pilot-anchor migration; check in generator + read model; share-warning surfaces; guard thresholds; mismatch never blocks). Resolved at acceptance as recommended: hybrid scope taxonomy (fixed region enum + free segment tags, OPEN-1), scope in the version payload first (OPEN-2), compatibility check in generator + read model both (OPEN-5), a scope mismatch never blocks anything (OPEN-8), and the pilot anchor is re-scoped by a person via a re-run scoped sizing (OPEN-4). OPEN-3 (anchor→sizing-version reference) stays a registered follow-up; OPEN-6 (share warning in note + case-level row, as recommended) and OPEN-7 (IRR guard bands 100%/50%, person-settable; ratio >20×) are approved as recommended, with the band values revisitable after the first month of flags.
+
+## Acceptance record
+
+- Approver: the human decider (user, account techcross), chat 2026-10-16, answering approval of ADR-0179/design as summarised — including the recommended open decisions: hybrid scope taxonomy, the compatibility check living in generator + read model both, never a gate block, and the pilot anchor re-scoped by the person — with "그렇게 해줘". Recorded in [DEC-20261016-02](../decisions/DEC-20261016-02.md).
+- Basis: chat approval of the decision as summarised; the approver did not review a per-item checklist, and this record does not claim the approver read specific items. The IRR ceiling review guard was requested by the decider earlier the same day and folded into the design before approval.
+- Schema change: acceptance covers the new nullable `opportunity.target_scope_json` column; the migration is part of Slice 1's additive column. Threshold overrides reuse the existing `bc.*` assumption store (no migration).
+- Implementation status (2026-10-16): not implemented. Slices 1-3 are next (offline-capable); Slice 4 depends on the market-sizing pipeline being reachable (its MCP call failed with ECONNREFUSED 2026-10-16).
+- Not verified by the AI: the exact systematic-market-sizing version payload JSON shape was not inspected (scope may exist informally inside `payload`); whether the incident's IRR would trip the recommended guard thresholds is plausible from the incident figures but not re-simulated; the dev DB was not queried; no slice is implemented or browser-verified.
+
+## Honest limits
+
+Accepted but not implemented: no numbers change for any project until a person sets scope. Segment comparison is advisory text, not a predicate. Guard thresholds are heuristics that can both over-fire and miss. Whether the incident's numbers would trip the recommended thresholds is plausible from the incident figures but not re-simulated. The pipeline dependency is unresolved as of 2026-10-16.
