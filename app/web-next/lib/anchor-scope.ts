@@ -10,7 +10,9 @@
 // non-negotiable #4 an unresolved mismatch/unknown is recorded as
 // confidence-lowering evidence for the human RAG judgement (the note says so).
 
-import { parseTargetScopeJson, type TargetScope } from "./target-scope.ts";
+import type { TargetScope } from "./target-scope.ts";
+import { readSizingDeclaredScope } from "./sizing-payload.ts";
+import { readTargetScope } from "../../../db/repositories/entry-market.repository.ts";
 import type { Database } from "bun:sqlite";
 
 export type AnchorScopeStatus = "ok" | "mismatch" | "unknown";
@@ -60,29 +62,14 @@ export function compareAnchorScope(anchorScope: ScopeLike | null, targetScope: S
 }
 
 /** The anchor's declared scope from a market_sizing_version payload (OPEN-2:
- *  payload-only, extracted on read). Tolerant by contract: invalid JSON, a
- *  missing/malformed `scope` object or wrong-shaped regions yield null
- *  (→ `unknown`), NEVER a throw — a legacy or hand-written payload can never
- *  break a read. set_by/set_at are not required on the sizing side. */
+ *  payload-only, extracted on read). Delegates to the shared shape-compatible
+ *  reader (ADR-0180 slice 1 — top-level or matrix.scope). Tolerant by
+ *  contract: invalid JSON, a missing/malformed `scope` object or wrong-shaped
+ *  regions yield null (→ `unknown`), NEVER a throw — a legacy or hand-written
+ *  payload can never break a read. set_by/set_at are not required on the
+ *  sizing side. */
 export function extractSizingVersionScope(payload: string | null | undefined): { regions: string[]; segments: string[]; unit_basis: string | null } | null {
-  if (payload == null || payload === "") return null;
-  let data: unknown;
-  try {
-    data = JSON.parse(payload);
-  } catch {
-    return null;
-  }
-  if (typeof data !== "object" || data === null) return null;
-  const scope = (data as Record<string, unknown>).scope;
-  if (typeof scope !== "object" || scope === null) return null;
-  const s = scope as Record<string, unknown>;
-  if (!Array.isArray(s.regions) || s.regions.length === 0 || !s.regions.every((r) => typeof r === "string" && r.length > 0)) return null;
-  const segments = Array.isArray(s.segments) ? s.segments.filter((x): x is string => typeof x === "string") : [];
-  return {
-    regions: s.regions as string[],
-    segments,
-    unit_basis: typeof s.unit_basis === "string" ? s.unit_basis : null,
-  };
+  return readSizingDeclaredScope(payload);
 }
 
 /** The anchor side resolved from the opportunity's LINKED sizing version
@@ -131,16 +118,14 @@ export interface AnchorScopeFlag {
 export function resolveAnchorScopeFlag(db: Database, projectId: string): AnchorScopeFlag | null {
   const row = db
     .query(
-      "SELECT o.id AS opp_id, o.target_scope_json FROM md_project p LEFT JOIN opportunity o ON o.id = p.source_opportunity_id WHERE p.id = ?",
+      "SELECT o.id AS opp_id FROM md_project p LEFT JOIN opportunity o ON o.id = p.source_opportunity_id WHERE p.id = ?",
     )
-    .get(projectId) as { opp_id: string | null; target_scope_json: string | null } | undefined;
+    .get(projectId) as { opp_id: string | null } | undefined;
   if (!row?.opp_id) return null;
-  let targetScope: TargetScope | null = null;
-  try {
-    targetScope = parseTargetScopeJson(row.target_scope_json);
-  } catch {
-    targetScope = null; // hand-written wrong-shape column: unknown, never a read failure
-  }
+  // ADR-0181 slice 1: the scope reads through the entry-market repository
+  // (0151 tables first, frozen JSON fallback) — a hand-written wrong-shape
+  // column or a corrupt table row yields unknown, never a read failure.
+  const targetScope: TargetScope | null = readTargetScope(db, row.opp_id);
   // Anchor scope: the opportunity's LINKED sizing version (amendment slice A).
   // Unlinked (or a deleted version row / unparsable payload) → null → honest
   // `unknown`; linked, the pinned version's declared scope decides

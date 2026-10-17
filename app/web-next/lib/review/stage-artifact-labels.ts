@@ -16,6 +16,7 @@ export const STAGE_ARTIFACT_LABELS: readonly StageArtifactLabel[] = [
   { key: "stage:S1:2", stageId: "S1", label: "S1 경쟁 구조" },
   { key: "stage:S1:3", stageId: "S1", label: "S1 가치사슬 구조" },
   { key: "stage:S2:1", stageId: "S2", label: "S2 기회 등록" },
+  { key: "stage:S2:2", stageId: "S2", label: "S2 진입시장 산정" },
   { key: "stage:S3:1", stageId: "S3", label: "S3 시너지 평가" },
   { key: "stage:S3:2", stageId: "S3", label: "S3 전략적 적합성 판단" },
   { key: "stage:S4:1", stageId: "S4", label: "S4 트랙 결정" },

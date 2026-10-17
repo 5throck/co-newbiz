@@ -58,6 +58,7 @@ let analystCookie = "";
 let viewerCookie = "";
 
 let industryId = "";
+let sizingVersionId = ""; // the industry's completed S1 version — the S2 entry-market link source
 let companyId = "";
 let oppId = ""; // the full-journey opportunity
 let freshOppId = ""; // the no-automation (c) opportunity
@@ -67,8 +68,9 @@ function seedOpportunity(name: string, completeS1S3: boolean): string {
   const id = ulid();
   db.run(
     `INSERT INTO opportunity (id, name, market_scope, value_chain_node, market_size_krw_m, growth_rate,
-       attractiveness_score, synergy_score, rationale, status, created_by, created_at, capability_gap_json)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       attractiveness_score, synergy_score, rationale, status, created_by, created_at, capability_gap_json,
+       sizing_version_id, target_scope_json)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
       id, name, completeS1S3 ? "테스트 산업" : "미분석 산업", completeS1S3 ? "크랭크샤프트" : null,
       completeS1S3 ? 5000 : null, completeS1S3 ? 8.0 : null,
@@ -76,6 +78,10 @@ function seedOpportunity(name: string, completeS1S3: boolean): string {
       completeS1S3 ? "전략적 적합성 근거" : null,
       completeS1S3 ? "selected" : "identified", ANALYST, NOW,
       completeS1S3 ? JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", source: "manual", resolution: "hire" }], updatedAt: NOW }) : null,
+      // flow.spec v2.9.0 (ADR-0180): an S2-complete opportunity carries the
+      // entry-market surface — the S1 sizing link + the person-set target scope.
+      completeS1S3 ? sizingVersionId : null,
+      completeS1S3 ? JSON.stringify({ regions: ["kr"], segments: [], unit_basis: "krw_m_year", set_by: ANALYST, set_at: NOW }) : null,
     ],
   );
   return id;
@@ -143,9 +149,10 @@ beforeAll(async () => {
     "INSERT INTO market_sizing_analysis (id, industry_id, status, current_step, methodology_version, created_by, created_at, completed_at) VALUES (?,?,?,?,?,?,?,?)",
     [analysisId, industryId, "completed", 8, "test", "test", NOW, NOW],
   );
+  sizingVersionId = ulid();
   db.run(
     "INSERT INTO market_sizing_version (id, analysis_id, version_no, payload, created_by, created_at, data_confidence_grade, chain_hops) VALUES (?,?,?,?,?,?,?,?)",
-    [ulid(), analysisId, 1, JSON.stringify({ matrix: { competitive: { concentration: "moderate", key_players: ["A"] } } }), "test", NOW, "B", 0],
+    [sizingVersionId, analysisId, 1, JSON.stringify({ matrix: { competitive: { concentration: "moderate", key_players: ["A"] } } }), "test", NOW, "B", 0],
   );
 });
 

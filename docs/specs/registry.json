@@ -1048,6 +1048,24 @@
       "last_updated": "2026-10-11"
     },
     {
+      "id": "2026-10-17-entry-market-s2-promotion-s3-linkage-design",
+      "title": "entry market s2 promotion s3 linkage design",
+      "file": "docs/designs/2026-10-17-entry-market-s2-promotion-s3-linkage-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-10-17",
+      "last_updated": "2026-10-17"
+    },
+    {
+      "id": "2026-10-17-entry-market-subject-market-design",
+      "title": "entry market subject market design",
+      "file": "docs/designs/2026-10-17-entry-market-subject-market-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-10-17",
+      "last_updated": "2026-10-17"
+    },
+    {
       "id": "design-checklist",
       "title": "DESIGN CHECKLIST",
       "file": "docs/designs/DESIGN-CHECKLIST.md",

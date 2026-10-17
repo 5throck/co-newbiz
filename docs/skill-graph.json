@@ -898,6 +898,16 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0180",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
+      "id": "adr:0181",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent:root/antitrust-agent",
       "type": "agent",
       "layer": "L3",
@@ -3198,11 +3208,7 @@
         ".agents/skills/source-command-commit-push-pr/SKILL.md",
         ".codex/skills/source-command-commit-push-pr/SKILL.md",
         ".hermes/skills/source-command-commit-push-pr/SKILL.md"
-      ],
-      "usage": {
-        "sessions": 1,
-        "last_used": "2026-10-10"
-      }
+      ]
     },
     {
       "id": "skill:root/stage-gate-governance",
@@ -3277,7 +3283,7 @@
       ],
       "usage": {
         "sessions": 2,
-        "last_used": "2026-10-11"
+        "last_used": "2026-10-18"
       }
     },
     {

@@ -29,6 +29,11 @@ class NumpyBackend:
         return rng.uniform(low, high, size=size)
 
     def triangular(self, rng: Any, size: tuple[int, ...], low: float, expected: float, high: float) -> Any:
+        # A degenerate band (low == high — e.g. the ADR-0181 fx_index with a
+        # zero volatility) is a CONSTANT: numpy's triangular rejects
+        # left == right, so emit the deterministic value instead.
+        if low == high:
+            return np.full(size, low)
         return rng.triangular(low, expected, high, size=size)
 
     def bernoulli(self, rng: Any, size: tuple[int, ...], probability: float) -> Any:

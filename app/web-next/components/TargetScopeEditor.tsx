@@ -35,11 +35,16 @@ const REGION_LABEL: Record<string, string> = {
   kr: "국내 (KR)", we: "서유럽 (WE)", ee: "동유럽 (EE)", ru: "러시아 (RU)", na: "북미 (NA)", cn: "중국 (CN)", sea: "동남아 (SEA)", sa: "남미 (SA)", af: "아프리카 (AF)", me: "중동 (ME)", worldwide: "전 세계 (worldwide)",
 };
 
-export function TargetScopeEditor({ opportunityId, canAct, linked, scope, disabledReason, onSaved }: {
+export function TargetScopeEditor({ opportunityId, canAct, linked, scope, matrixRegions, matrixSegments, disabledReason, onSaved }: {
   opportunityId: string;
   canAct: boolean;
   linked: LinkedSizingReference | null;
   scope: TargetScope | null;
+  /** ADR-0181 slice 2 — the LINKED S1 matrix's own regions (read-only S1
+   *  data): the entry region is picked FROM S1 when the matrix has any,
+   *  falling back to the fixed enum. */
+  matrixRegions: Array<{ code: string; label: string; weight: number }>;
+  matrixSegments: Array<{ code: string; label: string }>;
   disabledReason: string | null;
   onSaved: (saved: TargetScope) => void | Promise<void>;
 }) {
@@ -143,14 +148,39 @@ export function TargetScopeEditor({ opportunityId, canAct, linked, scope, disabl
       {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-1">{notice}</p>}
       {canAct && (
         <div className="flex flex-wrap items-center gap-2">
+          {/* ADR-0181 slice 2 — the entry region is picked FROM the linked S1
+              matrix (with its S1 weight shown) when the matrix has regions;
+              the fixed enum is the fallback. S1 stays frozen (read-only). */}
           <fieldset className="flex flex-wrap items-center gap-2 border-0 p-0 m-0" disabled={disabledReason != null}>
             <legend className="sr-only">지역</legend>
-            {TARGET_SCOPE_REGIONS.map((r) => (
-              <label key={r} className="flex items-center gap-1 text-[length:var(--fs-caption)]">
-                <input type="checkbox" disabled={disabledReason != null} checked={regions.includes(r)} onChange={() => toggleRegion(r)} /> {REGION_LABEL[r]}
+            {(matrixRegions.length > 0
+              ? matrixRegions.map((r) => ({ code: r.code, label: `${r.label} (S1 가중치 ${r.weight}%)` }))
+              : TARGET_SCOPE_REGIONS.map((r) => ({ code: r, label: REGION_LABEL[r] }))
+            ).map((r) => (
+              <label key={r.code} className="flex items-center gap-1 text-[length:var(--fs-caption)]">
+                <input type="checkbox" disabled={disabledReason != null} checked={regions.includes(r.code)} onChange={() => toggleRegion(r.code)} /> {r.label}
               </label>
             ))}
           </fieldset>
+          {matrixSegments.length > 0 && (
+            <fieldset className="flex flex-wrap items-center gap-2 border-0 p-0 m-0" disabled={disabledReason != null}>
+              <legend className="sr-only">S1 세그먼트</legend>
+              {matrixSegments.map((s) => (
+                <label key={s.code} className="flex items-center gap-1 text-[length:var(--fs-caption)]">
+                  <input
+                    type="checkbox"
+                    disabled={disabledReason != null}
+                    checked={segments.split(",").map((x) => x.trim()).filter(Boolean).includes(s.code)}
+                    onChange={() => {
+                      const cur = segments.split(",").map((x) => x.trim()).filter(Boolean);
+                      const next = cur.includes(s.code) ? cur.filter((x) => x !== s.code) : [...cur, s.code];
+                      setSegments(next.join(", "));
+                    }}
+                  /> {s.label}
+                </label>
+              ))}
+            </fieldset>
+          )}
           <input aria-label="세그먼트" placeholder="세그먼트 (쉼표 구분)" value={segments} onChange={(e) => setSegments(e.target.value)}
             disabled={disabledReason != null}
             className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 12rem" }} />

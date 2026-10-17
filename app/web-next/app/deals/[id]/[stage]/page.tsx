@@ -29,6 +29,7 @@ import { DealStructureStage } from "../../../../components/stages/DealStructureS
 import { IcReviewStage } from "../../../../components/stages/IcReviewStage.tsx";
 import { useDealOpportunityId } from "../../../../components/stages/use-deal-opportunity-id.ts";
 import { PortfolioStage } from "../../../../components/stages/PortfolioStage.tsx";
+import { DealEntryMarketStrip } from "../../../../components/EntryMarketContextStrip.tsx";
 
 interface ProcessView {
   currentStage: string | null; nextStage: string | null; track: string | null;
@@ -109,6 +110,7 @@ function StageTab() {
           Greenfield(자체 역량 진출)는 S5 역량 평가로, Brownfield(기존 기업·자산 결합)는
           S6 대상 후보 발굴로 진행됩니다. Brownfield ≠ M&A — 라우트 유형을 함께 선택합니다.
         </StageFrame>
+        <DealEntryMarketStrip routeId={params.id} />
         <RouteDecisionStage opportunityId={params.id} rationaleParam={searchParams.get("rationale")} />
       </main>
     );
@@ -153,6 +155,7 @@ function StageTab() {
               결과와 연결해 시너지 영역 후보를 도출하고 우선 시너지 영역으로 좁힙니다. 기회를 연결하면 완료 시 해당 기회에
               synergy_score 권고가 기록됩니다.
             </StageFrame>
+            <DealEntryMarketStrip routeId={params.id} />
             <S3Synergy routeId={params.id} analysisId={searchParams.get("analysis") ?? undefined} />
           </>
         )}
@@ -170,6 +173,7 @@ function StageTab() {
           직접 구축 / 전략 제휴 / 인력 영입 / 지분 투자 중 결정하고, 필요 역량(S3에서 이미 정의·판정된
           내용)을 확인한 뒤 투자비 검토 요건을 정리합니다.
         </StageFrame>
+        <DealEntryMarketStrip routeId={params.id} />
         <TrackGate carrierId={params.id} stageLabel="S5 자체 진출" only="greenfield" otherStage="s6">
           <GreenfieldStage opportunityId={params.id} />
         </TrackGate>
@@ -188,6 +192,7 @@ function StageTab() {
           대상 후보를 발굴하고(S6 후보 전체 목록), <code>대상 사전 검토 체크리스트</code> 체크리스트로 스크리닝해
           최종 후보 목록으로 좁힙니다(S7). CDD/TDD는 최종 후보 목록 확정 후 S9에서 수행합니다.
         </StageFrame>
+        <DealEntryMarketStrip routeId={params.id} />
         <TrackGate carrierId={params.id} stageLabel={`${stageId} 대상발굴·선정`} only="brownfield" otherStage="s5">
           <BrownfieldStage opportunityId={params.id} />
         </TrackGate>
@@ -198,7 +203,15 @@ function StageTab() {
   // S8~S12 프로젝트 단계 — Wave 3 통합. 캐리어가 기회면 승격된 프로젝트 id로
   // 해석하고, 프로젝트 id면 그대로 사용한다.
   if (stageId === "S8" || stageId === "S9" || stageId === "S10" || stageId === "S11" || stageId === "S12") {
-    return <ProjectStageTab carrierId={params.id} stageId={stageId} />;
+    // ADR-0181 slice 5 — S9~S12 also operate on the S2-decided entry market:
+    // the subject-market header rides every project stage surface (the strip
+    // resolves the promoted project back to its source opportunity).
+    return (
+      <>
+        <DealEntryMarketStrip routeId={params.id} />
+        <ProjectStageTab carrierId={params.id} stageId={stageId} />
+      </>
+    );
   }
 
   return <StageGuidanceTab carrierId={params.id} stageId={stageId} />;

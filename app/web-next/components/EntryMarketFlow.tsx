@@ -49,6 +49,24 @@ interface FlowStatusResponse {
   scope_set: boolean;
   scope_unit_basis: string | null;
   legacy_anchor: LegacyAnchor | null;
+  // ADR-0181 additive record inputs:
+  market_brief: string | null;
+  currency: string | null;
+  growth_rate: number | null;
+  fx: Array<{ currency: string; rate: number; volatility: number | null; set_by: string; set_at: string }>;
+  matrix_regions: Array<{ code: string; label: string; weight: number }>;
+  matrix_segments: Array<{ code: string; label: string }>;
+  region_trends: Array<{ region: string; segments: Array<{ code: string; baseline: number | null; cagr: number | null }> }>;
+}
+
+/** The anchor currency suggested from the scope's unit basis (ADR-0181 §4):
+ *  usd_m_year → USD, eur_m_year → EUR, krw_m_year / units_year → null (no FX
+ *  needed). Unknown <ccy>_m_year patterns yield the upper-cased prefix. */
+export function suggestedAnchorCurrency(unitBasis: string | null | undefined): string | null {
+  if (!unitBasis) return null;
+  if (unitBasis === "krw_m_year" || unitBasis === "units_year") return null;
+  const m = unitBasis.match(/^([a-z]{3})_m_year$/);
+  return m ? m[1].toUpperCase() : null;
 }
 
 interface SizingVersionOption {
@@ -177,6 +195,52 @@ export function EntryMarketFlow({ opportunityId, canAct }: { opportunityId: stri
   const enabled = provenance !== "none";
   const scopeSet = scope != null;
   const derivationSet = flow?.derivation != null;
+
+  // ── ADR-0181 slice 2/3: 진입 시장 정보 (market_brief) + 다통화 기준 환율 ──
+  const [brief, setBrief] = useState<string>("");
+  const [fxRows, setFxRows] = useState<Array<{ currency: string; rate: string; volatility: string }>>([]);
+  const [metaBusy, setMetaBusy] = useState(false);
+  useEffect(() => {
+    setBrief(flow?.market_brief ?? "");
+    setFxRows((flow?.fx ?? []).map((r) => ({ currency: r.currency, rate: String(r.rate), volatility: r.volatility != null ? String(r.volatility) : "" })));
+  }, [flow?.market_brief, flow?.fx]);
+  const anchorCurrencySuggestion = suggestedAnchorCurrency(flow?.scope_unit_basis ?? null);
+  async function saveMeta() {
+    setMetaBusy(true); setError(null); setNotice(null);
+    try {
+      const body: Record<string, unknown> = {};
+      if ((flow?.market_brief ?? "") !== brief) body.market_brief = brief.trim() === "" ? null : brief.trim();
+      const parsedFx = fxRows
+        .filter((r) => r.currency.trim() !== "" && r.rate.trim() !== "")
+        .map((r) => ({
+          currency: r.currency.trim().toUpperCase(),
+          rate: Number(r.rate),
+          volatility: r.volatility.trim() === "" ? null : Number(r.volatility),
+        }));
+      for (const r of parsedFx) {
+        if (!/^[A-Z]{3}$/.test(r.currency) || r.currency === "KRW") throw new Error(`환율 통화 ${r.currency}는 3자 대문자 코드(KRW 제외)여야 합니다.`);
+        if (!Number.isFinite(r.rate) || r.rate <= 0) throw new Error(`${r.currency} 환율은 0보다 큰 숫자여야 합니다.`);
+        if (r.volatility != null && (!Number.isFinite(r.volatility) || r.volatility < 0 || r.volatility > 0.5)) {
+          throw new Error(`${r.currency} 변동폭은 0~0.5 비율이어야 합니다 (예: 0.10 = ±10%).`);
+        }
+      }
+      if (JSON.stringify(parsedFx) !== JSON.stringify((flow?.fx ?? []).map((r) => ({ currency: r.currency, rate: r.rate, volatility: r.volatility })))) {
+        body.fx = parsedFx;
+      }
+      if (Object.keys(body).length === 0) {
+        setNotice("변경된 내용이 없습니다.");
+        return;
+      }
+      await api.put(`/api/opportunities/${encodeURIComponent(opportunityId)}/entry-market-derivation`, body);
+      setNotice("진입 시장 정보·환율을 저장했습니다.");
+      await refetchAll();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "저장 실패");
+    } finally {
+      setMetaBusy(false);
+    }
+  }
+
   const flowState = deriveFlowState({
     linkProvenance: provenance,
     newerVersionAvailable: flow?.newer_version_available ?? false,
@@ -295,7 +359,10 @@ export function EntryMarketFlow({ opportunityId, canAct }: { opportunityId: stri
           Their editors stay gated (disabled with reason when unlinked); with
           a link but no scope, step 3 keeps the 범위 미설정 warning. Props-fed:
           the parent owns ALL loading, children only edit + save through the
-          same PUTs. */}
+          same PUTs. ADR-0181: step 2 feeds the editor the S1 matrix's own
+          regions/segments (S1 frozen — read-only), and the integrated flow
+          gains the market-brief input and the per-currency FX editor between
+          steps 2 and 3. */}
       <section aria-label={TAB2_LABEL} data-testid="entry-flow-step-section-scope">
         <h4 className="text-[length:var(--fs-body)] font-semibold mt-2 mb-1 flex items-center gap-1 flex-wrap">
           {TAB2_LABEL}
@@ -307,6 +374,8 @@ export function EntryMarketFlow({ opportunityId, canAct }: { opportunityId: stri
             canAct={canAct && enabled}
             linked={linked}
             scope={scope}
+            matrixRegions={flow?.matrix_regions ?? []}
+            matrixSegments={flow?.matrix_segments ?? []}
             disabledReason={flowState.warnings.disableReason}
             onSaved={async (saved) => {
               setScope(saved);
@@ -314,6 +383,80 @@ export function EntryMarketFlow({ opportunityId, canAct }: { opportunityId: stri
             }}
           />
         </div>
+      </section>
+
+      {/* ADR-0181 slices 2+3 — 진입 시장 정보 (market_brief, the person's
+          market context for the AI draft) and the PER-CURRENCY reference FX
+          rates (개산 + Monte Carlo volatility source). One audited human PUT. */}
+      <section aria-label="진입 시장 정보·기준 환율" data-testid="entry-flow-step-section-meta" className="market-section">
+        <h4 className="text-[length:var(--fs-body)] font-semibold mt-2 mb-1 flex items-center gap-1 flex-wrap">
+          진입 시장 정보 · 기준 환율
+          <span className={chipClass(enabled ? "info" : "muted")}>{enabled ? "입력 가능" : "S1 연결 필요"}</span>
+        </h4>
+        {enabled ? (
+          <div className="mb-2">
+            <label className="text-[length:var(--fs-caption)] block mb-1">
+              진입하고자 하는 시장에 대한 정보 (AI 배수 추천의 근거로 사용됩니다)
+              <textarea
+                className="sizing-new-input sizing-new-input-sm w-full"
+                rows={2}
+                maxLength={2000}
+                value={brief}
+                disabled={metaBusy}
+                placeholder="예: 유럽 Stage V 규제 대응 건설장비용 유압 브레이커 — 신규 규제 수요 중심"
+                onChange={(e) => setBrief(e.target.value)}
+                data-testid="entry-flow-market-brief"
+              />
+            </label>
+            <div className="text-[length:var(--fs-caption)] mb-1">
+              기준 환율 (원/통화 — 개산과 환 리스크 변동폭의 기준)
+              {anchorCurrencySuggestion && (
+                <span className="ml-1 text-[color:var(--muted-fg)]">앵커 통화 제안: {anchorCurrencySuggestion}</span>
+              )}
+            </div>
+            {fxRows.map((r, i) => (
+              <div key={i} className="flex flex-wrap items-center gap-2 mb-1" data-testid={`entry-flow-fx-row-${i}`}>
+                <input aria-label="통화 코드" className="sizing-new-input sizing-new-input-sm" style={{ width: "5rem" }} value={r.currency}
+                  disabled={metaBusy} onChange={(e) => setFxRows((cur) => cur.map((x, j) => (j === i ? { ...x, currency: e.target.value.toUpperCase() } : x)))} />
+                <input aria-label="원/통화 환율" className="sizing-new-input sizing-new-input-sm" style={{ width: "8rem" }} placeholder="예: 1400" value={r.rate}
+                  disabled={metaBusy} onChange={(e) => setFxRows((cur) => cur.map((x, j) => (j === i ? { ...x, rate: e.target.value } : x)))} />
+                <input aria-label="변동폭 (비율)" className="sizing-new-input sizing-new-input-sm" style={{ width: "8rem" }} placeholder="변동폭 0.10" value={r.volatility}
+                  disabled={metaBusy} onChange={(e) => setFxRows((cur) => cur.map((x, j) => (j === i ? { ...x, volatility: e.target.value } : x)))} />
+                <button type="button" className="btn-ghost btn-sm" disabled={metaBusy}
+                  onClick={() => setFxRows((cur) => cur.filter((_, j) => j !== i))}>삭제</button>
+              </div>
+            ))}
+            {canAct && (
+              <div className="flex flex-wrap items-center gap-2 mt-1">
+                <button type="button" className="btn-ghost btn-sm" disabled={metaBusy}
+                  onClick={() => setFxRows((cur) => [...cur, { currency: anchorCurrencySuggestion ?? "", rate: "", volatility: "0.1" }])}
+                  data-testid="entry-flow-fx-add">
+                  통화 추가
+                </button>
+                <button type="button" className="btn-ghost btn-sm" disabled={metaBusy} onClick={() => void saveMeta()} data-testid="entry-flow-meta-save">
+                  진입 시장 정보·환율 저장
+                </button>
+                {flow?.currency && (
+                  <span className="text-[color:var(--muted-fg)]">
+                    앵커 통화: {flow.currency}
+                    {(flow?.fx ?? []).some((r) => r.currency === flow.currency)
+                      ? ""
+                      : " — 기준 환율 미설정 (개산·환 리스크 비활성)"}
+                  </span>
+                )}
+              </div>
+            )}
+            {canAct && anchorCurrencySuggestion && !(flow?.fx ?? []).some((r) => r.currency === anchorCurrencySuggestion) && fxRows.length === 0 && (
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
+                앵커가 {anchorCurrencySuggestion} 기준입니다 — 통화 추가로 기준 환율을 설정하세요.
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
+            S1 시장규모 분석을 연결하면 진입 시장 정보와 기준 환율을 입력할 수 있습니다.
+          </p>
+        )}
       </section>
       <section aria-label={TAB3_LABEL} data-testid="entry-flow-step-section-derivation">
         <h4 className="text-[length:var(--fs-body)] font-semibold mt-2 mb-1 flex items-center gap-1 flex-wrap">
@@ -336,6 +479,9 @@ export function EntryMarketFlow({ opportunityId, canAct }: { opportunityId: stri
               confidence: flow.confidence,
               region_caveat: flow.region_caveat,
               max_steps: flow.max_steps,
+              growth_rate: flow.growth_rate,
+              currency: flow.currency,
+              region_trends: flow.region_trends,
             } : null}
             onDataChanged={refetchAll}
           />

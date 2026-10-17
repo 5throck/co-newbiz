@@ -335,6 +335,8 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0177` | adr | — | — | — |
 | `adr:0178` | adr | — | — | — |
 | `adr:0179` | adr | — | — | — |
+| `adr:0180` | adr | — | — | — |
+| `adr:0181` | adr | — | — | — |
 | `dec:DEC-20260908-01` | decision | `root/project-review` | — | — |
 | `dec:DEC-20260908-02` | decision | `root/waiver-management` | — | — |
 | `dec:DEC-20260909-01` | decision | — | — | — |
@@ -544,7 +546,7 @@ None — every capability has a single content hash.
 
 | Type | Count | Nodes |
 |------|-------|-------|
-| adr | 172 | (expected until docs `references` edges are mined) |
+| adr | 174 | (expected until docs `references` edges are mined) |
 | agent | 18 | root/backend-engineer, root/data-architect, root/dba, root/design-system-agent, root/financing-agent, root/frontend-engineer, root/glossary-curator, root/industry-lead, root/infra-automation-engineer, root/ip-agent, root/ir-agent, root/platform-lead, root/region-lead, root/release-engineer, root/security-engineer, root/site-facility-agent, root/sre, root/ux-designer-agent |
 | decision | 4 | (expected until docs `references` edges are mined) |
 | skill | 17 | root/api-documentation, root/assumption-audit, root/explain-me, root/finishing-a-development-branch, root/forward-industry-research, root/gateguard, root/market-data-pipeline, root/platform-command-lifecycle-manager, root/platform-skill-lifecycle-manager, root/sample-driven-report-writing, root/source-command-commit-push-pr, root/standup-synthesizer, root/sync, root/target-costing-analysis, root/value-chain-driver-identification, root/value-chain-stage-financials, root/zod-contract-gate |
@@ -559,7 +561,7 @@ No suggestions: no procedure step pairs one of these skills with an owning agent
 
 ## Skill Usage (E3)
 
-Joined from memory `## Skills Used` sections (names resolve via capability); reference date = newest memory log (2026-10-17), window 90 days. Skill nodes with usage: 2.
+Joined from memory `## Skills Used` sections (names resolve via capability); reference date = newest memory log (2026-10-18), window 90 days. Skill nodes with usage: 1.
 
-- **used-but-unlinked** (usage > 0, no `used_by`) (2): root/source-command-commit-push-pr, root/sync
-- **unused** (0 sessions in 90 days) (103): root/accessibility-audit, root/agent-lifecycle-manager, root/antitrust-screening, root/api-documentation, root/assumption-audit, root/brownfield-feasibility, root/certification-roadmap, root/certification-transferability, root/ci-triage, root/commercial-due-diligence, root/community-partnership-planning, root/company-intelligence, root/compensation-harmonization-analysis, root/competitive-intelligence, root/compliance-monitoring, root/customer-attrition-risk, root/dd-to-valuation-bridge, root/deal-execution-playbook, root/debt-and-contingent-liability-simulation, root/decision-record, root/design-foundation, root/documentation-writing, root/evidence-ledger, root/executive-presentation, root/explain-me, root/financial-statement-analysis, root/financing-plan-review, root/finishing-a-development-branch, root/forward-industry-research, root/gateguard, root/greenfield-feasibility, root/group-level-review, root/growth-projection-modeling, root/handbook, root/handbook-sync-audit, root/historical-financial-analysis, root/i18n-audit, root/i18n-formatting, root/i18n-layout, root/i18n-locale-config … and 63 more
+- **used-but-unlinked** (usage > 0, no `used_by`) (1): root/sync
+- **unused** (0 sessions in 90 days) (104): root/accessibility-audit, root/agent-lifecycle-manager, root/antitrust-screening, root/api-documentation, root/assumption-audit, root/brownfield-feasibility, root/certification-roadmap, root/certification-transferability, root/ci-triage, root/commercial-due-diligence, root/community-partnership-planning, root/company-intelligence, root/compensation-harmonization-analysis, root/competitive-intelligence, root/compliance-monitoring, root/customer-attrition-risk, root/dd-to-valuation-bridge, root/deal-execution-playbook, root/debt-and-contingent-liability-simulation, root/decision-record, root/design-foundation, root/documentation-writing, root/evidence-ledger, root/executive-presentation, root/explain-me, root/financial-statement-analysis, root/financing-plan-review, root/finishing-a-development-branch, root/forward-industry-research, root/gateguard, root/greenfield-feasibility, root/group-level-review, root/growth-projection-modeling, root/handbook, root/handbook-sync-audit, root/historical-financial-analysis, root/i18n-audit, root/i18n-formatting, root/i18n-layout, root/i18n-locale-config … and 64 more

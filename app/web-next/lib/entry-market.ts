@@ -13,6 +13,7 @@
 // a 400 with a reason, never silently dropped.
 
 import type { Database } from "bun:sqlite";
+import { readSizingAnchorTotal } from "./sizing-payload.ts";
 import { parseTargetScopeJson, type TargetScope } from "./target-scope.ts";
 
 /** Sane maximum chain length (design §12.3 slice B). */
@@ -152,17 +153,12 @@ export function parseTargetScopeJsonSafe(raw: string | null | undefined): Target
   }
 }
 
-/** The year-1 S1 anchor value from a market_sizing_version matrix payload
- *  (payload.anchor.total — the same tolerant read the sizing-link GET uses).
+/** The year-1 S1 anchor value from a market_sizing_version payload —
+ *  delegated to the shared shape-compatible reader (ADR-0180 slice 1: the
+ *  pipeline writes matrix.anchor.total; legacy top-level also accepted).
  *  Returns null when absent or unparsable, never a throw. */
 export function readS1AnchorYear1(payload: string | null | undefined): number | null {
-  if (payload == null) return null;
-  try {
-    const matrix = JSON.parse(payload) as { anchor?: { total?: unknown } };
-    return typeof matrix?.anchor?.total === "number" ? matrix.anchor.total : null;
-  } catch {
-    return null;
-  }
+  return readSizingAnchorTotal(payload);
 }
 
 export interface EntryMarketChainStepResult {
@@ -263,44 +259,9 @@ export function confidenceLoweringCount(steps: readonly EntryMarketStep[]): numb
   return steps.length;
 }
 
-/** Consumption read-model (design §12.2): when the opportunity has BOTH a
- *  pinned S1 link AND a derivation chain, this returns the DERIVED
- *  entry-market value for the year-1 baseline of the pinned version, the
- *  provenance (step count + derivation hash) and the reached-scope verdict
- *  against the opportunity's target scope. Tolerant by contract: no link, a
- *  deleted version row, an unparsable payload or an unparsable derivation
- *  column all yield null → the caller keeps the legacy bare anchor
- *  (bit-identical), never a throw, never a fabricated factor. */
-export function resolveDerivedEntryMarket(
-  db: Database,
-  opportunityId: string,
-): { entry_market_krw_m: number; steps: number; hash: string; factor_product: number; scope_status: EntryMarketScopeStatus } | null {
-  try {
-    const row = db
-      .query(
-        "SELECT o.entry_market_derivation_json AS der, o.target_scope_json AS scope_json, mv.payload AS payload" +
-          " FROM opportunity o LEFT JOIN market_sizing_version mv ON mv.id = o.sizing_version_id WHERE o.id = ?",
-      )
-      .get(opportunityId) as { der: string | null; scope_json: string | null; payload: string | null } | undefined;
-    if (!row?.der || !row.payload) return null;
-    const derivation = parseEntryMarketDerivationJson(row.der);
-    if (!derivation) return null;
-    const anchor = readS1AnchorYear1(row.payload);
-    if (anchor == null || !Number.isFinite(anchor) || anchor <= 0) return null;
-    const computed = computeEntryMarketChain(anchor, derivation.steps);
-    const targetScope = parseTargetScopeJsonSafe(row.scope_json);
-    const reached = reachedScopeOf(derivation.steps);
-    return {
-      entry_market_krw_m: computed.entry_market_krw_m,
-      steps: derivation.steps.length,
-      hash: derivationHash(derivation.steps),
-      factor_product: computed.factor_product,
-      scope_status: compareReachedScope(reached, targetScope).status,
-    };
-  } catch {
-    return null; // unparsable stored column degrades to the legacy anchor, never blocks
-  }
-}
+/** Consumption read-model — moved to db/repositories/entry-market.repository.ts
+ *  (ADR-0181 slice 1: the person-set inputs live in FK tables; the DB-facing
+ *  resolver belongs to the repository layer. This module stays pure.) */
 
 /** Run-note fragment — appended ONLY when a derived entry-market actually
  *  replaced the anchor, so every other note stays byte-identical. */

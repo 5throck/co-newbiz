@@ -34,12 +34,13 @@ import {
   confidenceLoweringCount,
   ENTRY_MARKET_SCOPE_NOTE,
   normalizeEntryMarketDerivationInput,
-  parseTargetScopeJsonSafe,
   reachedScopeOf,
   REGION_DEFINITION_CAVEAT,
   type EntryMarketStep,
 } from "../../../../../../lib/entry-market.ts";
 import { extractSizingVersionScope } from "../../../../../../lib/anchor-scope.ts";
+import { readSizingAnchorTotal, readSizingRegionTrends, readSizingRegions } from "../../../../../../lib/sizing-payload.ts";
+import { readEntryMarketRecord, readTargetScope } from "../../../../../../../../db/repositories/entry-market.repository.ts";
 import { lazyAutoLinkOnRead } from "../../../../../../lib/sizing-auto-link.ts";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -48,9 +49,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "AI 배수 추천은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
   const { id } = await params;
   const db = getDb();
-  const opp = db.query("SELECT id, target_scope_json AS scopeJson FROM opportunity WHERE id = ?").get(id) as
-    | { id: string; scopeJson: string | null }
-    | undefined;
+  const opp = db.query("SELECT id FROM opportunity WHERE id = ?").get(id) as { id: string } | undefined;
   if (!opp) return notFound();
   const linked = readLinkedDraftContext(db, id);
   if (linked === null || !linked.ok) {
@@ -63,9 +62,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
     return fail(409, "not_linked", "S1 시장규모 분석이 연결되지 않았습니다 — AI 배수 추천은 연결된 S1 버전을 근거로만 동작합니다.");
   }
-  const targetScope = parseTargetScopeJsonSafe(opp.scopeJson);
+  const targetScope = readTargetScope(db, id);
+  const record = readEntryMarketRecord(db, id);
+  const marketBrief = record?.market_brief ?? null;
+  const trends = targetScope ? readSizingRegionTrends(linked.promptContext.payload, targetScope.regions) : [];
   // ── LLM call: only on this person-initiated request; never automatic ──
   let draftSteps: EntryMarketStep[] | null = null;
+  let growthProposal: { growth_rate: number; basis: string } | null = null;
   let source: "llm" | "unavailable" = "unavailable";
   let note: string;
   if (!isLlmConfigured()) {
@@ -73,7 +76,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   } else {
     try {
       const res = await completeDetailed(
-        [systemMessage("s2.entry_market_draft"), { role: "user" as const, content: buildDraftUserPrompt(linked.promptContext, targetScope) }],
+        [systemMessage("s2.entry_market_draft"), { role: "user" as const, content: buildDraftUserPrompt(linked.promptContext, targetScope, marketBrief) }],
         { maxTokens: 1600, agent: promptAgent("s2.entry_market_draft") },
       );
       // Strict validation with the SAME rules as PUT: one parse of the whole
@@ -93,7 +96,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         steps = draftStepsFromReply(repair.text);
       }
       if (!steps) throw new Error(lastDraftFailure ?? "모델 응답을 검증 규칙에 맞게 수정하지 못했습니다.");
-      draftSteps = steps;
+      // ADR-0181 slice 2 — the model never invents tags: the server derives
+      // them from the PERSON's selection (step 0 = scope regions, step 1 =
+      // scope segments). The growth proposal is read from the S1 matrix's own
+      // cagrBase for the selected region×segment (fraction) — deterministic,
+      // not model-invented; the person confirms it through the audited PUT.
+      draftSteps = steps.map((s, i) => {
+        if (i === 0 && targetScope) s.region_tags = [...targetScope.regions];
+        if (i === 1 && targetScope) s.segment_tags = [...targetScope.segments];
+        return s;
+      });
+      growthProposal = deriveGrowthProposal({ trends }, targetScope);
       source = "llm";
       note = "AI 배수 추천 초안 — 모든 단계의 배율과 출처를 검증·보완한 뒤 저장하세요 (저장은 사람의 행위, 경계 #2).";
     } catch (err) {
@@ -108,6 +121,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             computed: computeEntryMarketChain(linked.anchorValue, draftSteps),
             confidence_lowering_count: confidenceLoweringCount(draftSteps),
             scope_flag: { ...compareReachedScope(reachedScopeOf(draftSteps), targetScope), note: ENTRY_MARKET_SCOPE_NOTE },
+            growth_proposal: growthProposal,
           }
         : null,
       source,
@@ -116,6 +130,30 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     },
     200,
   );
+}
+
+/** ADR-0181 slice 2 — the entry-market growth proposal: the S1 matrix's own
+ *  `cagrBase[region][segment]` FRACTION for the first selected region and the
+ *  first segment with a recorded value (S1-derived, deterministic — the AI
+ *  does not invent growth). Null when the matrix has no value for the
+ *  selection; the person decides whether to store it. */
+export function deriveGrowthProposal(
+  ctx: { trends: Array<{ region: string; segments: Array<{ code: string; cagr: number | null }> }> },
+  scope: { regions: readonly string[]; segments: readonly string[] } | null,
+): { growth_rate: number; basis: string } | null {
+  if (!scope) return null;
+  const regionLower = scope.regions.map((r) => r.toLowerCase());
+  const segmentLower = scope.segments.map((s) => s.toLowerCase());
+  for (const trend of ctx.trends) {
+    if (!regionLower.includes(trend.region.toLowerCase())) continue;
+    for (const seg of trend.segments) {
+      if (seg.cagr != null && Number.isFinite(seg.cagr) && seg.cagr > 0) {
+        const segLabel = segmentLower.includes(seg.code.toLowerCase()) ? seg.code : `${trend.region}/${seg.code}`;
+        return { growth_rate: seg.cagr, basis: `S1 매트릭스 cagrBase (${segLabel}) — 사람 확정 필요` };
+      }
+    }
+  }
+  return null;
 }
 
 /** The LINKED S1 draft context: the pinned version's declared scope, the
@@ -133,6 +171,7 @@ interface DraftPromptContext {
   declared_scope: { regions: readonly string[]; segments: readonly string[]; unit_basis: string | null } | null;
   regions: Array<{ code: string; label: string; weight: number }>;
   anchor_sources: Array<{ label: string; estimate: number; as_of: string | null }>;
+  payload: string;
 }
 type DraftContext =
   | { ok: true; anchorValue: number; promptContext: DraftPromptContext }
@@ -154,33 +193,40 @@ function readLinkedDraftContext(db: ReturnType<typeof getDb>, opportunityId: str
     if (!row) return null;
   }
   if (!row.versionId || !row.payload) return { ok: false, code: "not_linked" };
-  type DraftMatrix = { anchor?: { sources?: Array<{ label?: unknown; estimate?: unknown; asOf?: unknown }>; total?: unknown }; regions?: Array<{ code?: unknown; label?: unknown; weight?: unknown }>; scope?: unknown };
-  let matrix: DraftMatrix | null = null;
+  // Payload reads go through the shared shape-compatible reader (ADR-0180
+  // slice 1): the pipeline writes matrix.anchor.total / matrix.regions, so a
+  // top-level-only read made every live draft 409 anchor_unavailable.
+  type DraftAnchorSources = { sources?: Array<{ label?: unknown; estimate?: unknown; asOf?: unknown }> };
+  let anchorSources: Array<{ label: string; estimate: number; as_of: string | null }> = [];
   try {
-    matrix = JSON.parse(row.payload) as DraftMatrix;
+    const root = JSON.parse(row.payload) as Record<string, unknown>;
+    const holders: Array<Record<string, unknown>> = [root];
+    if (typeof root.matrix === "object" && root.matrix !== null && !Array.isArray(root.matrix)) {
+      holders.push(root.matrix as Record<string, unknown>);
+    }
+    for (const holder of holders) {
+      const anchor = holder.anchor as DraftAnchorSources | undefined;
+      if (anchor && Array.isArray(anchor.sources)) {
+        anchorSources = anchor.sources
+          .filter((s): s is { label: string; estimate: number; asOf?: string } =>
+            typeof s?.label === "string" && typeof s?.estimate === "number")
+          .map((s) => ({ label: s.label, estimate: s.estimate, as_of: typeof s.asOf === "string" ? s.asOf : null }));
+        break;
+      }
+    }
   } catch {
     return { ok: false, code: "anchor_unavailable" };
   }
-  if (!matrix || typeof matrix !== "object") return { ok: false, code: "anchor_unavailable" };
-  const anchorValue = typeof matrix.anchor?.total === "number" ? matrix.anchor.total : null;
+  const anchorValue = readSizingAnchorTotal(row.payload);
   if (anchorValue == null || anchorValue <= 0) return { ok: false, code: "anchor_unavailable" };
   const scope = extractSizingVersionScope(row.payload);
   const promptContext = {
     declared_scope: scope
       ? { regions: scope.regions, segments: scope.segments, unit_basis: scope.unit_basis }
       : null,
-    regions: Array.isArray(matrix.regions)
-      ? matrix.regions
-          .filter((r): r is { code: string; label: string; weight: number } =>
-            typeof r?.code === "string" && typeof r?.label === "string" && typeof r?.weight === "number")
-          .map((r) => ({ code: r.code, label: r.label, weight: r.weight }))
-      : [],
-    anchor_sources: Array.isArray(matrix.anchor?.sources)
-      ? matrix.anchor.sources
-          .filter((s): s is { label: string; estimate: number; asOf?: string } =>
-            typeof s?.label === "string" && typeof s?.estimate === "number")
-          .map((s) => ({ label: s.label, estimate: s.estimate, as_of: typeof s.asOf === "string" ? s.asOf : null }))
-      : [],
+    regions: readSizingRegions(row.payload).map((r) => ({ code: r.code, label: r.label, weight: r.weight })),
+    anchor_sources: anchorSources,
+    payload: row.payload,
   };
   return { ok: true as const, anchorValue, promptContext };
 }
@@ -197,7 +243,11 @@ export function draftOutputInstruction(): string {
   ].join("\n");
 }
 
-export function buildDraftUserPrompt(ctx: DraftPromptContext, targetScope: { regions: readonly string[]; segments: string[] } | null): string {
+export function buildDraftUserPrompt(
+  ctx: DraftPromptContext,
+  targetScope: { regions: readonly string[]; segments: readonly string[] } | null,
+  marketBrief: string | null,
+): string {
   const scopeLine = ctx.declared_scope
     ? `선언 범위: 지역 ${ctx.declared_scope.regions.join(", ")}${ctx.declared_scope.segments.length ? ` · 세그먼트 ${ctx.declared_scope.segments.join(", ")}` : ""}${ctx.declared_scope.unit_basis ? ` · 단위 ${ctx.declared_scope.unit_basis}` : ""}`
     : "선언 범위: 미기재";
@@ -208,9 +258,13 @@ export function buildDraftUserPrompt(ctx: DraftPromptContext, targetScope: { reg
   const target = targetScope
     ? `지역 ${targetScope.regions.join(", ")}${targetScope.segments.length ? ` · 세그먼트 ${targetScope.segments.join(", ")}` : ""}`
     : "미설정";
+  const brief = marketBrief ? `[진입 시장 정보 (사람 입력)]\n${marketBrief}\n` : "";
   return [
-    "연결된 S1 시장규모 분석과 기회의 대상 범위를 근거로, S2 진입 시장 도출 사슬의 배율 인자 단계를 초안하세요.",
+    "연결된 S1 시장규모 분석과 사람이 선택한 대상 범위·진입 시장 정보를 근거로, S2 진입 시장 도출 사슬의 배율 인자 단계를 초안하세요. 사람이 선택한 지역·세그먼트는 확정된 전제이며, 배율과 출처만 제안합니다.",
     "",
+    `[사람이 선택한 진입 대상]`,
+    target,
+    brief,
     `[S1 앵커]`,
     scopeLine,
     `[지역 구성과 가중치]`,

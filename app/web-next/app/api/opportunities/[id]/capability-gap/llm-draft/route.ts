@@ -14,6 +14,7 @@ import { buildRequirementSources, deterministicSeedRows, loadSynergyAreas, NO_RE
 import { failureSuffix, runRequirementDraft } from "../../../../../../lib/capability-requirement-draft.ts";
 import type { LlmCall } from "../../../../../../lib/llm-json.ts";
 import { promptAgent, systemMessage } from "../../../../../../lib/prompts.ts";
+import { buildSubjectMarketContext, subjectMarketPromptBlock } from "../../../../../../lib/entry-market-context.ts";
 
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
     const auth = authenticate(request);
@@ -47,6 +48,11 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     });
     const synergyAreasText = blocks.find((b) => b.kind === "synergy_area")?.text ?? "";
     const extraSourcesText = blocks.filter((b) => b.kind !== "synergy_area").map((b) => `${b.heading}\n${b.text}`).join("\n\n");
+    // ADR-0181 slice 5 — the S2-confirmed entry market grounds WHICH
+    // capabilities the target segment demands; the guarded block is evidence
+    // (FACT, may be unset), never instructions.
+    const subjectCtx = buildSubjectMarketContext(db, id);
+    const subjectText = subjectCtx ? `\n\n${subjectMarketPromptBlock(subjectCtx)}` : "";
     const usedNote = sourcesUsedNote(blocks);
 
     // 행이 없어도 어느 한 근거라도 있으면 새 행 제안은 가능하다 — 모두 없으면 제안할 근거가 없다.
@@ -69,7 +75,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
           return { ok: false, text: "", reason: err instanceof Error ? err.message.slice(0, 80) : "call_failed" };
         }
       };
-      const out = await runRequirementDraft({ system: systemMessage("s3.capability_gap_draft"), ctx: { oppName: opp.name, marketScope: opp.market_scope, synergyAreasText, extraSourcesText, sourceKinds: blocks.map((b) => b.kind) }, current, call });
+      const out = await runRequirementDraft({ system: systemMessage("s3.capability_gap_draft"), ctx: { oppName: opp.name, marketScope: opp.market_scope, synergyAreasText, extraSourcesText: extraSourcesText + subjectText, sourceKinds: blocks.map((b) => b.kind) }, current, call });
       rows = out.rows;
       Object.assign(drafts, out.drafts);
       proposedNew = out.proposedNew;

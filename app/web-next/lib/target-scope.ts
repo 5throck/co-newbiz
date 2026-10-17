@@ -30,21 +30,26 @@ export const SCOPE_UNIT_BASIS_CAPTION = "앵커의 단위 구분 — 절대값 �
 /** Slice 4: unit_basis is no longer a person input. Resolve the value the PUT
  *  body carries: the person-saved scope wins, then the LINKED version's
  *  declared unit_basis, then the krw_m_year default. Unknown/missing values
- *  fall through to the default rather than breaking the save. */
+ *  fall through to the default rather than breaking the save. ADR-0181 §4:
+ *  the multi-currency `<ccy>_m_year` pattern (eur_m_year …) is accepted —
+ *  the anchor currency derives from it (lib/fx.ts). */
 export function resolveUnitBasis(
   saved: string | null | undefined,
   linked: string | null | undefined,
-): TargetScopeUnitBasis {
+): TargetScopeUnitBasis | (string & {}) {
   for (const v of [saved, linked]) {
-    if (typeof v === "string" && (TARGET_SCOPE_UNIT_BASES as readonly string[]).includes(v)) {
-      return v as TargetScopeUnitBasis;
+    if (typeof v === "string" && ((TARGET_SCOPE_UNIT_BASES as readonly string[]).includes(v) || /^[a-z]{3}_m_year$/.test(v))) {
+      return v;
     }
   }
   return "krw_m_year";
 }
 
 export interface TargetScope {
-  regions: TargetScopeRegion[];
+  /** ADR-0181 §4 — the region vocabulary is OPEN: the linked S1 matrix's
+   *  codes plus the fixed enum (`worldwide` stays exclusive). The enum check
+   *  lives at the WRITE path; storage/read accept any non-empty code. */
+  regions: string[];
   segments: string[];
   unit_basis: TargetScopeUnitBasis;
   set_by: string;

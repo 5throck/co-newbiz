@@ -38,7 +38,7 @@ export const STAGES: StageDefinition[] = [
 // hand-edit divergent strings. applicableTracks ["all"] == spec
 // [greenfield, brownfield] (engine normalization for the skip logic).
   { id: "S1", name: "시장분석", sequence: 1, objective: "어디에 기회가 있는가? — 시장 규모·성장·경쟁구조와 가치사슬을 파악한다", applicableTracks: ["all"], gateIds: ["screening"], requiredArtifacts: ["시장 규모·성장 추정", "경쟁 구조", "가치사슬 구조"] },
-  { id: "S2", name: "기회 발굴", sequence: 2, objective: "무엇을 할 것인가? — 가치사슬상 사업 기회를 등록·평가한다", applicableTracks: ["all"], gateIds: ["screening"], requiredArtifacts: ["기회 등록(가치사슬 노드·매력도)"] },
+  { id: "S2", name: "기회 발굴", sequence: 2, objective: "무엇을 할 것인가? — 가치사슬상 사업 기회를 등록·평가한다", applicableTracks: ["all"], gateIds: ["screening"], requiredArtifacts: ["기회 등록(가치사슬 노드·매력도)", "진입시장 산정 (S1 링크·대상 범위·도출 사슬)"] },
   { id: "S3", name: "시너지·전략적 적합성", sequence: 3, objective: "우리가 해야 하는가? — 자사 역량과의 시너지를 평가한다", applicableTracks: ["all"], gateIds: ["screening"], requiredArtifacts: ["시너지 평가", "전략적 적합성 판단"] },
   { id: "S4", name: "진출방식 결정", sequence: 4, objective: "어떻게 들어갈 것인가? — Greenfield(자체 역량 진출) vs Brownfield(기존 기업·자산 결합)를 결정한다. Brownfield ≠ M&A — M&A·JV·전략적 투자·소수점 지분·파트너십·R&BD·사내벤처(CVC) 중 Route를 고른다", applicableTracks: ["all"], gateIds: ["screening", "pre_fs"], requiredArtifacts: ["트랙 결정(GF/BF)·근거", "Brownfield 선택 시 Route 유형(M&A/JV/전략적 투자/소수점 지분/파트너십/R&BD/CVC)", "5criteria 채점 결과(통제 필요도·역량 결정성·시장 불확실성·통합 역량·역량확보 속도 각 20%)", "검토한 대안"] },
   { id: "S5", name: "자체 진출", sequence: 5, objective: "스스로 진입할 수 있는가? — 자체 역량을 평가하고 격차를 구축 방안(Build/Partner/Hire/Invest)으로 해소해 진출전략을 세운다 (Greenfield 전용 — Target Company 객체가 존재하지 않는다)", applicableTracks: ["greenfield"], gateIds: ["pre_fs"], requiredArtifacts: ["역량 격차 평가", "진출전략(Build/Partner/Hire/Invest 결정·근거)"] },
@@ -70,6 +70,15 @@ export const PORTFOLIO_TRANSITIONS = [
 export const ADR_0151_MIGRATION_DATE = "2026-10-02";
 
 /**
+ * ADR-0180 predicate date — the flow.spec v2.9.0 S2 completion criterion
+ * (entry-market S1 link + person-set target scope) applies only to
+ * opportunities created on/after this date; earlier opportunities keep the
+ * legacy predicate (ADR-0151 precedent — a tightening never retroactively
+ * un-completes in-flight work).
+ */
+export const ADR_0180_PREDICATE_DATE = "2026-10-17";
+
+/**
  * Wave F-6 migration date (migrations 0125/0126). The F4 predicate tightenings
  * (S1 confidence grade, S3 capability list, S6 per-candidate source/attributes,
  * S7 per-candidate screening evidence, S11 PMI kickoff + human reviewer record)
@@ -83,6 +92,7 @@ export const ADR_0151_MIGRATION_DATE = "2026-10-02";
  */
 export { WAVE_F_PREDICATE_DATE } from "./wave-f-date.ts";
 import { WAVE_F_PREDICATE_DATE } from "./wave-f-date.ts";
+import { readTargetScope } from "../../../db/repositories/entry-market.repository.ts";
 import { cleanList, holdBlockerText } from "./review/review-display.ts";
 
 function opportunityGrandfathered(opp: { created_at: string | null }): boolean {
@@ -244,6 +254,25 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
     const missing: string[] = [];
     let complete = false;
     if (opp.attractiveness_score === null) { blockers.push("매력도 평가가 필요합니다"); missing.push("기회 매력도 평가"); }
+    // flow.spec S2 completionCriteria (v2.9.0, ADR-0180): the entry-market
+    // surface must have been used — this opportunity carries the S1 sizing
+    // link AND a person-set target scope. ADR-0181 slice 1: the scope reads
+    // through the entry-market repository (0151 tables first, frozen JSON
+    // fallback), so newly-saved scopes are seen regardless of the frozen
+    // column. The DERIVATION CHAIN is deliberately NOT required: it is
+    // decision support and never blocks (ADR-0179, 경계 #2/#4). Grandfathered
+    // like every predicate tightening (ADR-0151 precedent): opportunities
+    // created before the ADR date keep the legacy predicate — in-flight work
+    // is never retroactively un-completed.
+    if ((opp.created_at ?? "") >= ADR_0180_PREDICATE_DATE) {
+      if (!opp.sizing_version_id) {
+        blockers.push("진입시장 산정: S1 시장규모 버전 연결이 필요합니다 (진입시장 산정 1단계)");
+        missing.push("진입시장 산정 (S1 링크·대상 범위·도출 사슬)");
+      } else if (!readTargetScope(getDb(), opp.id)) {
+        blockers.push("진입시장 산정: 대상 범위 기록이 필요합니다 (진입시장 산정 2단계)");
+        missing.push("진입시장 산정 (S1 링크·대상 범위·도출 사슬)");
+      }
+    }
     complete = blockers.length === 0;
     return { complete, blockers, missing };
   },
@@ -790,6 +819,8 @@ interface OpportunityRow {
   project_id: string | null;
   industry_id: string | null;
   created_at: string | null;
+  sizing_version_id: string | null;
+  target_scope_json: string | null;
 }
 
 /**

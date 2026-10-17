@@ -63,8 +63,8 @@ export function OpportunityDetail() {
   const [versionSketch, setVersionSketch] = useState<Sketch | null>(null);
   const { confirm, confirmDialog } = useConfirm();
   const initialTab = searchParams.get("tab");
-  const [tab, setTab] = useState<"factors" | "sketch">(
-    initialTab === "sketch" ? initialTab : "factors",
+  const [tab, setTab] = useState<"factors" | "sketch" | "entry">(
+    initialTab === "sketch" || initialTab === "entry" ? initialTab : "factors",
   );
 
   const load = useCallback(() => {
@@ -281,8 +281,11 @@ export function OpportunityDetail() {
         )}
       </section>
 
-      {/* 기회·위험 요인 / 비즈니스 모델 검토 — 탭으로 분리 (한 화면에 두 섹션이
-          모두 펼쳐져 있으면 스크롤이 길어져 각 섹션을 찾기 어렵다는 피드백). */}
+      {/* 기회·위험 요인 / 비즈니스 모델 검토 / 진입시장 산정 — 탭으로 분리 (한 화면에
+          모든 섹션이 펼쳐져 있으면 스크롤이 길어져 각 섹션을 찾기 어렵다는 피드백).
+          진입시장 산정은 ADR-0180에서 기회·위험 요인·비즈니스 모델 검토와 동일한
+          수준의 S2 정규 산출물로 승격되어 세 번째 탭이 되었다 (카드 내부의
+          스택형 3단계 표시는 2026-10-17 결정대로 유지). */}
       <div className="library-tabs" role="tablist" aria-label="기회 상세 섹션">
         <button type="button" role="tab" aria-selected={tab === "factors"} className={`library-tab ${tab === "factors" ? "library-tab-active" : ""}`} onClick={() => setTab("factors")}>
           기회·위험 요인
@@ -291,6 +294,9 @@ export function OpportunityDetail() {
         <button type="button" role="tab" aria-selected={tab === "sketch"} className={`library-tab ${tab === "sketch" ? "library-tab-active" : ""}`} onClick={() => setTab("sketch")}>
           비즈니스 모델 검토
           {(sketchView?.versions.length ?? 0) > 0 && <span className="library-tab-count">{sketchView!.versions.length}</span>}
+        </button>
+        <button type="button" role="tab" aria-selected={tab === "entry"} className={`library-tab ${tab === "entry" ? "library-tab-active" : ""}`} onClick={() => setTab("entry")}>
+          진입시장 산정
         </button>
       </div>
 
@@ -408,10 +414,12 @@ export function OpportunityDetail() {
       </section>
       )}
 
-      {/* ADR-0179 consolidation — ONE card: 진입시장 산정 (3-step flow).
-          Placement (2026-10-17 decider feedback): AFTER the 기회/위험 요인
-          section and the 비즈니스 모델 검토 section. */}
-      <EntryMarketFlow opportunityId={id} canAct={canAct} />
+      {/* ADR-0179 consolidation / ADR-0180 promotion — the 진입시장 산정
+          3-step flow is the THIRD TAB, a peer of the other two reviews. The
+          card's internal stacked steps are unchanged (2026-10-17 decision). */}
+      {tab === "entry" && (
+        <EntryMarketFlow opportunityId={id} canAct={canAct} />
+      )}
 
       {/* 승격 — 선별 상태이며 미승격일 때 (ADR-0095) */}
       {opp.status === "selected" && !opp.project_id && (

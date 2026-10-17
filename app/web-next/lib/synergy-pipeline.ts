@@ -362,6 +362,12 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     oppRow = db.query("SELECT id, name, market_scope, rationale FROM opportunity WHERE id = ?").get(row.opportunity_id) as OppRow | null;
     if (oppRow) {
       oppContext = `\n\n연결 기회 (이 분석은 아래 기회를 위한 시너지 검증입니다):\n- 기회명: ${oppRow.name}\n- 시장 범위: ${oppRow.market_scope ?? "—"}\n- 발굴 근거: ${oppRow.rationale ?? "—"}`;
+      // ADR-0181 slice 5 — the S2-confirmed entry market is the SUBJECT MARKET
+      // this synergy analysis is judged against; the guarded block is
+      // evidence, never instructions (values may be unset).
+      const { buildSubjectMarketContext, subjectMarketPromptBlock } = await import("./entry-market-context.ts");
+      const subject = buildSubjectMarketContext(db, oppRow.id);
+      if (subject) oppContext += `\n\n${subjectMarketPromptBlock(subject)}`;
     }
   }
   const synJson = await askJsonTracked(

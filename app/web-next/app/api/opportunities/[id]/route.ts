@@ -2,6 +2,7 @@
 // Status moves identified→assessed→selected|dropped; decided_by/decided_at
 // are stamped when the row reaches a terminal-or-selected state.
 import { getDb } from "../../../../../../db/client.ts";
+import { readEntryMarketRecord, readTargetScope } from "../../../../../../db/repositories/entry-market.repository.ts";
 import { appendAudit } from "../../../../../../db/lib/access-control.ts";
 import { getSystemMode } from "../../../../../../db/lib/system-mode.ts";
 import { recordDealArchive } from "../../../../lib/deal-archive.ts";
@@ -21,11 +22,22 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!auth.ok) return auth.response;
   { const denied = requireBusinessActor(auth.auth, "read"); if (denied) return denied; }
   const { id } = await params;
-  const row = getDb()
+  const db = getDb();
+  const row = db
     .query("SELECT * FROM opportunity WHERE id = ?")
-    .get(id);
+    .get(id) as Record<string, unknown> | undefined;
   if (!row) return notFound();
-  return ok(row, 200);
+  // ADR-0181 slice 1 — additive normalized entry-market fields. The frozen
+  // JSON storage columns still ride the row for legacy rows, but the
+  // normalized source of truth is the 0151 tables via the repository.
+  return ok(
+    {
+      ...row,
+      target_scope: readTargetScope(db, id),
+      entry_market_meta: readEntryMarketRecord(db, id),
+    },
+    200,
+  );
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {

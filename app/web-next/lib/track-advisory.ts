@@ -5,6 +5,7 @@
 // re-review triggers (B3).
 import type { Database } from "bun:sqlite";
 import { gapCautions, parseGapRegister, summarizeGap } from "./capability-gap.ts";
+import { buildSubjectMarketContext } from "./entry-market-context.ts";
 
 export interface AdvisorySignal {
   key: string;
@@ -34,16 +35,31 @@ export function computeTrackAdvisory(db: Database, opportunityId: string): Track
   // signal (1b) so a second S1 query is never needed.
   let s1HasAnalysis = false;
   let s1HasCompetitive = false;
+  // ADR-0180 slice 6: resolve the S1 analysis through the opportunity's
+  // industry FK (migration 0126 — the industry IS the real FK), falling back
+  // to the legacy market_scope string join only when the FK is unset. The
+  // name join silently missed every opportunity whose market_scope text
+  // drifted from the industry name, starving the S4 advisory of its S1 input.
   const market = db
     .query(
       `SELECT i.name_ko, m.payload FROM market_sizing_analysis a
        JOIN md_industry i ON i.id = a.industry_id
        JOIN market_sizing_version m ON m.analysis_id = a.id
        WHERE a.status = 'completed' AND m.version_no = (SELECT MAX(version_no) FROM market_sizing_version x WHERE x.analysis_id = a.id)
-         AND i.name_ko = (SELECT market_scope FROM opportunity WHERE id = ?)
+         AND a.industry_id = (SELECT industry_id FROM opportunity WHERE id = ?)
        LIMIT 1`,
     )
-    .get(opportunityId) as { name_ko: string; payload: string } | undefined;
+    .get(opportunityId) as { name_ko: string; payload: string } | undefined
+    ?? db
+      .query(
+        `SELECT i.name_ko, m.payload FROM market_sizing_analysis a
+         JOIN md_industry i ON i.id = a.industry_id
+         JOIN market_sizing_version m ON m.analysis_id = a.id
+         WHERE a.status = 'completed' AND m.version_no = (SELECT MAX(version_no) FROM market_sizing_version x WHERE x.analysis_id = a.id)
+           AND i.name_ko = (SELECT market_scope FROM opportunity WHERE id = ? AND industry_id IS NULL)
+         LIMIT 1`,
+      )
+      .get(opportunityId) as { name_ko: string; payload: string } | undefined;
   if (market) {
     s1HasAnalysis = true;
     try {
@@ -53,11 +69,19 @@ export function computeTrackAdvisory(db: Database, opportunityId: string): Track
           competitive?: { structure?: string; players?: Array<{ tier?: string }> };
         };
       }).matrix ?? {};
-      const cagr = m.consistency?.bottomUpCagr ?? null;
+      // ADR-0181 slice 5 — the S4 growth signal reads the S2-CONFIRMED ENTRY
+      // MARKET growth when set (the subject market of S3~S12), falling back
+      // to the S1 whole-market CAGR. UNITS: bottomUpCagr is stored ×100
+      // (percent), the entry-market growth_rate is a RATIO (0..1) — the seam
+      // converts at exactly one place (percent = ratio × 100).
+      const entryCtx = buildSubjectMarketContext(db, opportunityId);
+      const entryGrowthPercent = entryCtx?.growthRate != null ? entryCtx.growthRate * 100 : null;
+      const cagr = entryGrowthPercent ?? m.consistency?.bottomUpCagr ?? null;
+      const cagrBasis = entryGrowthPercent != null ? "진입시장 성장률 (S2 확정)" : "S1 전체시장 CAGR";
       if (cagr !== null) {
         const high = cagr >= 15;
         signals.push({
-          key: "market_growth", label: `시장 성장률 ${cagr.toFixed(0)}%`,
+          key: "market_growth", label: `시장 성장률 ${cagr.toFixed(0)}% (${cagrBasis})`,
           leans: high ? "greenfield" : "brownfield", weight: high ? 3 : 2,
           note: high
             ? "고성장 초기 시장 — 신규 진입(내부 벤처)도 수요 성장에 편승 가능"

@@ -65,6 +65,9 @@ const SPECS: readonly RouteToolSpec[] = [
     activities: ["business-model-sketch"], description: "Generate a one-page business-model sketch from the linked S1 analysis." },
   { name: "get_business_model_sketch", kind: "read", method: "GET", path: "/api/opportunities/{opportunityId}/sketch",
     activities: ["business-model-sketch"], description: "The persisted business-model sketch." },
+  { name: "get_entry_market_derivation", kind: "read", method: "GET", path: "/api/opportunities/{opportunityId}/entry-market-derivation",
+    activities: ["entry-market-sizing"], artifacts: ["stage:S2:2"],
+    description: "The S2 entry-market derivation state — linked S1 anchor, person-set target scope, ratio-factor chain (read-only; every write on this surface is human-only, ADR-0180)." },
 
   // ── S3 synergy and strategic fit ─────────────────────────────────────
   { name: "get_opportunity_screening", kind: "read", method: "GET", path: "/api/opportunities/{opportunityId}/screening",

@@ -1,8 +1,11 @@
 "use client";
 
 // Split from components/stages/SynergyStage.tsx (Wave U-3 decomposition); behavior unchanged.
+// ADR-0180 slice 5: selecting a linked opportunity shows its S2 entry market
+// (read-only strip) so the analyst sees the market the fit is judged against.
 import Link from "next/link";
 import { profileHrefFor } from "./synergyFormat.ts";
+import { EntryMarketContextStrip } from "../../EntryMarketContextStrip.tsx";
 import type { SynergyStageState } from "./useSynergyList.ts";
 
 export function NewSynergyForm({ ctx }: { ctx: SynergyStageState }) {
@@ -47,6 +50,7 @@ export function NewSynergyForm({ ctx }: { ctx: SynergyStageState }) {
                 <option key={o.id} value={o.id}>[{o.status}] {o.name}</option>
               ))}
             </select>
+            {oppSel && <EntryMarketContextStrip opportunityId={oppSel} />}
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" className="btn-ghost" onClick={() => setShowNewForm(false)}>취소</button>
