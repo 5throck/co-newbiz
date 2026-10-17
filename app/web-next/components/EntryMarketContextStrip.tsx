@@ -127,7 +127,7 @@ export function EntryMarketContextStrip({ opportunityId }: { opportunityId: stri
           <strong>
             {fmt(krwValue)} 백만원/년
           </strong>
-          {` — 개산 (${anchorCcy} ${fmt(fxRow!.rate)} 원/통화 적용; 원시장 ${fmt(derived)}${unit ? ` ${unit}` : ""}, 배율 ${fmt(flow?.computed?.factor_product ?? 1)}, 사슬 ${flow?.derivation.steps.length}단계`}
+          {` — 개산 (${anchorCcy} ${fmt(fxRow!.rate)} 원/통화 적용; 원시장 ${fmt(derived!)}${unit ? ` ${unit}` : ""}, 배율 ${fmt(flow?.computed?.factor_product ?? 1)}, 사슬 ${flow?.derivation.steps.length}단계`}
           {growthLabel && ` · 성장률 ${growthLabel}`}
           {scopeChip && <span className={`${scopeChip.cls} ml-1`}>{scopeChip.label}</span>}
         </>

@@ -51,7 +51,10 @@ export function TargetScopeEditor({ opportunityId, canAct, linked, scope, matrix
   // Local form state, initialized from the parent-owned scope prop.
   const [regions, setRegions] = useState<string[]>([]);
   const [segments, setSegments] = useState("");
-  const [unitBasis, setUnitBasis] = useState<TargetScopeUnitBasis>("krw_m_year");
+  // ADR-0181 §4: the resolved basis may be a multi-currency pattern
+  // (`eur_m_year`, …) — the state carries the wider string form; the PUT body
+  // and the label lookup both accept it.
+  const [unitBasis, setUnitBasis] = useState<ReturnType<typeof resolveUnitBasis>>("krw_m_year");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -132,7 +135,7 @@ export function TargetScopeEditor({ opportunityId, canAct, linked, scope, matrix
               input — the value the PUT body sends is shown, so the person
               never reads it as an absolute-value field. */}
           <span className="text-[color:var(--muted-fg)]" data-testid="target-scope-unit-basis">
-            {" · "}단위 기준: {TARGET_SCOPE_UNIT_BASIS_LABEL[unitBasis] ?? unitBasis} ({SCOPE_UNIT_BASIS_CAPTION})
+            {" · "}단위 기준: {(TARGET_SCOPE_UNIT_BASIS_LABEL as Record<string, string>)[unitBasis] ?? unitBasis} ({SCOPE_UNIT_BASIS_CAPTION})
           </span>
           {linked.anchor_value_krw_m != null && ` · 앵커값: ${linked.anchor_value_krw_m.toLocaleString()} KRW M`}
           {linked.confidence_grade && ` · 신뢰도 ${linked.confidence_grade}`}
