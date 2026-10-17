@@ -1,13 +1,17 @@
 "use client";
 
 // EntryMarketFlow - the consolidated 진입시장 산정 card (ADR-0179), now the
-// 2026-10-17 entry-market flow redesign slice 1: ONE card, one state, one
-// fetch. This component owns ALL loading (target-scope GET, entry-market
-// derivation GET, sizing-link versions GET - one fetch each; the two step
-// panels are pure presentational views fed by props). A single FlowState
-// (pure derivation in lib/entry-market-flow-state.ts) drives the tabs, the
-// persistent card-header status strip (state chip + linked S1 + the
-// anchor-in-force line) and every tab's gating/warnings. Link-change
+// 2026-10-17 decider-feedback revision of the entry-market flow redesign:
+// the PR 615 3-tab structure is REVERTED. The three steps render STACKED
+// and always visible in one flow (section headers `1. S1 링크` /
+// `2. 대상 범위` / `3. 진입시장 유도`, each carrying its status chip; step 1
+// also the newer-version hint). Gating is unchanged: steps 2-3 editors
+// disabled with a reason when unlinked; step 3 keeps the 범위 미설정
+// warning when linked-but-scope-unset. This component owns ALL loading
+// (target-scope GET, entry-market derivation GET, sizing-link versions GET
+// - one fetch each). A single FlowState (pure derivation in
+// lib/entry-market-flow-state.ts) drives the step headers, the persistent
+// card-header status strip and the gating/warnings. Link-change
 // reactions (design §5.3/OD-6): changing the linked S1 version with a
 // derivation chain present shows a confirm-styled inline warning before the
 // SAME human-only PUT (warn, never block); clearing the link with a chain
@@ -22,16 +26,12 @@ import {
   REPIN_WARNING,
   UNLINK_CHAIN_WARNING,
   type LinkProvenance,
-  type EntryTabKey,
-  type EntryTab,
   type LegacyAnchor,
   TAB1_LABEL,
   TAB2_LABEL,
   TAB3_LABEL,
-  NEWER_HINT,
 } from "../lib/entry-market-flow-state.ts";
 import { type TargetScope } from "../lib/target-scope.ts";
-import { TabNav } from "./TabNav.tsx";
 import { TargetScopeEditor, type LinkedSizingReference } from "./TargetScopeEditor.tsx";
 import { EntryMarketDerivationPanel, type EntryMarketDerivationData } from "./EntryMarketDerivationPanel.tsx";
 
@@ -60,12 +60,6 @@ interface SizingVersionOption {
   completed_at: string | null;
 }
 
-const TAB_PANEL_ID: Record<EntryTabKey, string> = {
-  link: "entry-flow-panel-link",
-  scope: "entry-flow-panel-scope",
-  derivation: "entry-flow-panel-derivation",
-};
-
 function chipClass(tone: "info" | "warn" | "muted"): string {
   return tone === "info"
     ? "status-chip status-info"
@@ -88,8 +82,6 @@ export function EntryMarketFlow({ opportunityId, canAct }: { opportunityId: stri
   // Confirm-styled inline warnings (warn, never block - design §5.3/OD-6).
   const [pendingRepin, setPendingRepin] = useState<string | null>(null);
   const [pendingUnlink, setPendingUnlink] = useState(false);
-  // Page-local view state - switching tabs is NOT a route change.
-  const [activeTab, setActiveTab] = useState<EntryTabKey>("link");
 
   const loadScope = useCallback(async () => {
     try {
@@ -194,11 +186,10 @@ export function EntryMarketFlow({ opportunityId, canAct }: { opportunityId: stri
     legacyAnchor: flow?.legacy_anchor ?? null,
     s1: linked ? { version_no: linked.version_no, confidence_grade: linked.confidence_grade } : null,
   });
-  const tabs: EntryTab[] = [
-    { key: "link", label: TAB1_LABEL, chip: flowState.chips.step1, locked: false, newerHint: flowState.warnings.staleLine != null ? NEWER_HINT : null },
-    { key: "scope", label: TAB2_LABEL, chip: flowState.chips.step2, locked: provenance === "none", newerHint: null },
-    { key: "derivation", label: TAB3_LABEL, chip: flowState.chips.step3, locked: provenance === "none", newerHint: null },
-  ];
+  // 2026-10-17 decider decision: the PR 615 tab control is REVERTED — the
+  // three steps render STACKED and always visible; the step labels stay as
+  // section headers with their status chips; gating is unchanged.
+  const newerHintOnStep1 = flowState.warnings.staleLine != null;
 
   const currentValue = linked?.version_id ?? "";
 
@@ -222,39 +213,25 @@ export function EntryMarketFlow({ opportunityId, canAct }: { opportunityId: stri
         )}
       </div>
 
-      {/* Tab control - each tab keeps its own status chip as its marker; tab 1
-          additionally carries the newer-version hint. Locked tabs 2-3 stay
-          visible (chip + disabled reason inside their bodies). */}
-      <div data-testid="entry-flow-rail">
-        <TabNav
-          tabs={tabs.map((t) => ({
-            key: t.key,
-            label: t.label,
-            panelId: TAB_PANEL_ID[t.key],
-            marker: (
-              <span className="flex items-center gap-1">
-                <span className={chipClass(t.chip.tone)} data-testid={`entry-flow-step-${t.key}`}>{t.chip.label}</span>
-                {t.newerHint && (
-                  <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="entry-flow-newer-hint">
-                    더 최신 S1 버전 있음
-                  </span>
-                )}
-              </span>
-            ),
-          }))}
-          active={activeTab}
-          onSelect={(k) => setActiveTab(k as EntryTabKey)}
-          label="진입시장 산정 단계"
-        />
-      </div>
-
-      {/* Step 1 body - S1 link dropdown (completed versions of the
+      {/* Stacked steps (2026-10-17 decider decision: the PR 615 tab control
+          is REVERTED) - every step header and body always visible in one
+          flow. Step 1 body - S1 link dropdown (completed versions of the
           opportunity's industry, newest first), auto provenance chip and
           연결 해제. With a derivation chain present, changing the version or
           unlinking first shows the confirm-styled inline warnings below
           (proceed = the SAME human-only PUT). */}
-      {activeTab === "link" && (
-        <div className="border-b border-[color:var(--border)] pb-2 mb-2" data-testid="entry-flow-link-step" id={TAB_PANEL_ID.link} role="tabpanel" aria-label="S1 링크">
+      <div data-testid="entry-flow-steps">
+      <section aria-label={TAB1_LABEL} data-testid="entry-flow-step-section-link">
+        <h4 className="text-[length:var(--fs-body)] font-semibold mt-2 mb-1 flex items-center gap-1 flex-wrap">
+          {TAB1_LABEL}
+          <span className={chipClass(flowState.chips.step1.tone)} data-testid="entry-flow-step-link">{flowState.chips.step1.label}</span>
+          {newerHintOnStep1 && (
+            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="entry-flow-newer-hint">
+              더 최신 S1 버전 있음
+            </span>
+          )}
+        </h4>
+        <div className="border-b border-[color:var(--border)] pb-2 mb-2" data-testid="entry-flow-link-step">
           <div className="text-[length:var(--fs-caption)] mb-1">
             {provenance === "auto" && <span className="status-chip status-info" data-testid="entry-market-link-auto">자동 연결</span>}
             {provenance === "manual" && <span data-testid="entry-market-link-manual">(수동 연결)</span>}
@@ -312,14 +289,19 @@ export function EntryMarketFlow({ opportunityId, canAct }: { opportunityId: stri
           {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-1">{error}</p>}
           {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-1">{notice}</p>}
         </div>
-      )}
+      </section>
 
-      {/* Steps 2-3 bodies - one visible at a time. Locked tabs stay visible
-          and their bodies render the disable reason; with a link but no
-          scope, step 3 keeps the 범위 미설정 warning. Props-fed: the parent
-          owns ALL loading, children only edit + save through the same PUTs. */}
-      {activeTab === "scope" && (
-        <div data-testid="entry-flow-scope-step" id={TAB_PANEL_ID.scope} role="tabpanel" aria-label="대상 범위" className="mb-2">
+      {/* Steps 2-3 - stacked, always visible (PR 615 tab control REVERTED).
+          Their editors stay gated (disabled with reason when unlinked); with
+          a link but no scope, step 3 keeps the 범위 미설정 warning. Props-fed:
+          the parent owns ALL loading, children only edit + save through the
+          same PUTs. */}
+      <section aria-label={TAB2_LABEL} data-testid="entry-flow-step-section-scope">
+        <h4 className="text-[length:var(--fs-body)] font-semibold mt-2 mb-1 flex items-center gap-1 flex-wrap">
+          {TAB2_LABEL}
+          <span className={chipClass(flowState.chips.step2.tone)} data-testid="entry-flow-step-scope">{flowState.chips.step2.label}</span>
+        </h4>
+        <div data-testid="entry-flow-scope-step" className="mb-2">
           <TargetScopeEditor
             opportunityId={opportunityId}
             canAct={canAct && enabled}
@@ -332,9 +314,13 @@ export function EntryMarketFlow({ opportunityId, canAct }: { opportunityId: stri
             }}
           />
         </div>
-      )}
-      {activeTab === "derivation" && (
-        <div id={TAB_PANEL_ID.derivation} role="tabpanel" aria-label="진입시장 유도">
+      </section>
+      <section aria-label={TAB3_LABEL} data-testid="entry-flow-step-section-derivation">
+        <h4 className="text-[length:var(--fs-body)] font-semibold mt-2 mb-1 flex items-center gap-1 flex-wrap">
+          {TAB3_LABEL}
+          <span className={chipClass(flowState.chips.step3.tone)} data-testid="entry-flow-step-derivation">{flowState.chips.step3.label}</span>
+        </h4>
+        <div data-testid="entry-flow-derivation-step">
           <EntryMarketDerivationPanel
             opportunityId={opportunityId}
             canAct={canAct && enabled}
@@ -354,7 +340,9 @@ export function EntryMarketFlow({ opportunityId, canAct }: { opportunityId: stri
             onDataChanged={refetchAll}
           />
         </div>
-      )}
+      </section>
+      </div>
     </section>
   );
 }
+

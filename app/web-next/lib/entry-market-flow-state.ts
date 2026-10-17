@@ -71,7 +71,10 @@ export function deriveEntryFlowStatus(input: {
   };
 }
 
-// --- Tab model (2026-10-17 decider feedback) ---------------------------------
+// --- Step headers (2026-10-17 decider feedback: the PR 615 3-tab structure
+// is REVERTED — the three steps render STACKED and always visible; these
+// labels are the step SECTION headers now, not tab labels; the tab model
+// (the tab key/type/derivation trio) is removed. -----------------------------
 
 export const TAB1_LABEL = "1. S1 링크";
 export const TAB2_LABEL = "2. 대상 범위";
@@ -82,29 +85,6 @@ export const NO_COMPLETED_VERSIONS =
 /** Select placeholder — the default selection is the auto-linked (latest
  *  completed) version; empty value = no pick yet. */
 export const VERSION_PLACEHOLDER = "연결할 S1 시장규모 버전 선택";
-
-export type EntryTabKey = "link" | "scope" | "derivation";
-
-export interface EntryTab {
-  key: EntryTabKey;
-  label: string;
-  /** The tab's own status chip (자동/수동/없음 · 설정/미설정 · 유도 있음/없음). */
-  chip: RailChip;
-  /** Locked tabs stay visible; their bodies render the disable reason. */
-  locked: boolean;
-  /** Newer-version hint — tab 1 only, only while a (manual) link is kept. */
-  newerHint: string | null;
-}
-
-/** Derive the tab control from the flow status. Pure. */
-export function deriveEntryTabs(flow: EntryFlowStatus): EntryTab[] {
-  const locked = !flow.steps23Enabled;
-  return [
-    { key: "link", label: TAB1_LABEL, chip: flow.step1, locked: false, newerHint: flow.newerHint },
-    { key: "scope", label: TAB2_LABEL, chip: flow.step2, locked, newerHint: null },
-    { key: "derivation", label: TAB3_LABEL, chip: flow.step3, locked, newerHint: null },
-  ];
-}
 
 // --- FlowState machine (2026-10-17 redesign, design §4/§5.1) -----------------
 // UNLINKED → LINKED_UNSCOPED → LINKED_SCOPED → DERIVED, plus the advisory
