@@ -7,7 +7,7 @@
  * never silently dropped), bit-identity for projects without a scope,
  * and degradation: a hand-written invalid column never blocks generation.
  * Real route handlers + scratch SQLite; migration test on :memory:.
- * ASCII-only source (Korean via \u escapes).
+ * ASCII-only source (Korean via  escapes).
  */
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
 import { Database } from "bun:sqlite";
@@ -33,8 +33,10 @@ const { runAsPrincipal } = await import("../../app/web-next/lib/mcp/principal-co
 const { isHumanOnly } = await import("../../app/web-next/lib/mcp/in-process-port.ts");
 const scopeRoute = await import("../../app/web-next/app/api/opportunities/[id]/target-scope/route.ts");
 const gen = await import("../../app/web-next/lib/business-case-generator.ts");
-const { normalizeTargetScopeInput, parseTargetScopeJson, TargetScopeValidationError, TARGET_SCOPE_REGIONS } =
+const { normalizeTargetScopeInput, parseTargetScopeJson, TargetScopeValidationError, TARGET_SCOPE_REGIONS, resolveUnitBasis, SCOPE_UNIT_BASIS_CAPTION } =
   await import("../../app/web-next/lib/target-scope.ts");
+const { STATE_CHIP_LEGACY_ANCHOR, ANCHOR_LEGACY_LINE_PREFIX, anchorLegacyLine } =
+  await import("../../app/web-next/lib/entry-market-flow-state.ts");
 
 const NOW = new Date().toISOString();
 const ANALYST = "scope-analyst";
@@ -241,5 +243,34 @@ describe("generation inputs", () => {
     // is proven at that seam: the full caseInputs read (growth model
     // resolution included) succeeds on the corrupted row.
     expect(gen.caseInputsForProject(pid).targetScope).toBeNull();
+  });
+});
+
+// -- redesign slice 4 (OD-3): unit_basis as data -------------------------------------------------
+describe("slice 4: unit_basis as data (resolveUnitBasis + caption)", () => {
+  test("saved scope wins, then linked version scope, then krw_m_year default", () => {
+    expect(resolveUnitBasis("units_year", "usd_m_year")).toBe("units_year");
+    expect(resolveUnitBasis(null, "usd_m_year")).toBe("usd_m_year");
+    expect(resolveUnitBasis(undefined, undefined)).toBe("krw_m_year");
+    expect(resolveUnitBasis("", null)).toBe("krw_m_year");
+    // Unknown values fall through to the default rather than breaking a save.
+    expect(resolveUnitBasis("nonsense", "also-nonsense")).toBe("krw_m_year");
+  });
+
+  test("PUT body keeps unit_basis unchanged for a saved-scope fixture (round-trip)", async () => {
+    const opp = makeOpp("greenfield");
+    await putScope(opp, VALID);
+    expect(await getScope(opp).then((r) => r.json())).toMatchObject({ data: { scope: VALID } });
+  });
+
+  test("caption is the design wording and names the absolute-value exclusion", () => {
+    expect(SCOPE_UNIT_BASIS_CAPTION).toBe("\uc575\ucee4\uc758 \ub2e8\uc704 \uad6c\ubd84 \u2014 \uc808\ub300\uac12 \uc785\ub825\uc774 \uc544\ub2d9\ub2c8\ub2e4");
+    expect(SCOPE_UNIT_BASIS_CAPTION).toContain("\uc808\ub300\uac12");
+  });
+
+  test("header-strip legacy-anchor wording matches design OD-2 (\u00a75.5)", () => {
+    expect(STATE_CHIP_LEGACY_ANCHOR).toBe("\ub808\uac70\uc2dc \uae30\ud68c \ud544\ub4dc \uc575\ucee4");
+    expect(ANCHOR_LEGACY_LINE_PREFIX).toBe("\uc575\ucee4: \ub808\uac70\uc2dc \uae30\ud68c \ud544\ub4dc");
+    expect(anchorLegacyLine({ market_size_krw_m: 80000, growth_rate: 0.03 })).toBe("\uc575\ucee4: \ub808\uac70\uc2dc \uae30\ud68c \ud544\ub4dc (80,000 KRW M)");
   });
 });

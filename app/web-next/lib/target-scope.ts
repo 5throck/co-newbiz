@@ -22,6 +22,27 @@ export const TARGET_SCOPE_UNIT_BASIS_LABEL: Record<TargetScopeUnitBasis, string>
   usd_m_year: "연매출 (백만 USD/년)",
 };
 
+/** Slice 4 (design §5.2, OD-3): caption shown next to unit_basis once it
+ *  renders as DATA inside the linked-S1 reference strip. The strip shows the
+ *  value the PUT body carries — it must never read as an absolute input. */
+export const SCOPE_UNIT_BASIS_CAPTION = "앵커의 단위 구분 — 절대값 입력이 아닙니다";
+
+/** Slice 4: unit_basis is no longer a person input. Resolve the value the PUT
+ *  body carries: the person-saved scope wins, then the LINKED version's
+ *  declared unit_basis, then the krw_m_year default. Unknown/missing values
+ *  fall through to the default rather than breaking the save. */
+export function resolveUnitBasis(
+  saved: string | null | undefined,
+  linked: string | null | undefined,
+): TargetScopeUnitBasis {
+  for (const v of [saved, linked]) {
+    if (typeof v === "string" && (TARGET_SCOPE_UNIT_BASES as readonly string[]).includes(v)) {
+      return v as TargetScopeUnitBasis;
+    }
+  }
+  return "krw_m_year";
+}
+
 export interface TargetScope {
   regions: TargetScopeRegion[];
   segments: string[];
