@@ -64,6 +64,9 @@ export function EntryMarketDerivationPanel({ opportunityId, canAct, scopeSet, di
   const [notice, setNotice] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [growthProposal, setGrowthProposal] = useState<{ growth_rate: number; basis: string } | null>(null);
+  // locally adopted growth rate (avoiding a parent refetch that would wipe an
+  // unsaved draft form)
+  const [growthStored, setGrowthStored] = useState<number | null>(null);
 
   // Reset the form whenever the parent refetches (fresh data identity).
   // Empty state = exactly TWO named base cards (design §5.3).
@@ -139,14 +142,16 @@ export function EntryMarketDerivationPanel({ opportunityId, canAct, scopeSet, di
 
   // ADR-0181 slice 2 — adopt the growth proposal (or a person-entered value)
   // through the SAME human-only PUT; the number came from the S1 matrix, the
-  // confirmation is the person's.
+  // confirmation is the person's. NO refetch afterwards: a parent refetch
+  // would reset the form state and wipe an unsaved AI draft (browser-verify
+  // finding, 2026-10-18) — the adopted rate is shown locally instead.
   async function adoptGrowth(rate: number) {
     setBusy(true); setError(null); setNotice(null);
     try {
       await api.put(`/api/opportunities/${encodeURIComponent(opportunityId)}/entry-market-derivation`, { growth_rate: rate });
       setGrowthProposal(null);
+      setGrowthStored(rate);
       setNotice(`진입시장 성장률을 ${Math.round(rate * 1000) / 10}%로 기록했습니다.`);
-      await onDataChanged?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : "성장률 저장 실패");
     } finally {
@@ -205,27 +210,28 @@ export function EntryMarketDerivationPanel({ opportunityId, canAct, scopeSet, di
           저장: {data.derivation.set_by} · {data.derivation.set_at.slice(0, 10)}
         </p>
       )}
-      {/* Empty state - the AI 배수 추천 as the PRIMARY action; manual entry
-          remains possible by typing into the two fixed cards. */}
+      {/* ADR-0181: the actions row above is the single recommend/save surface
+          (the former empty-state primary button duplicated the recommend
+          control — removed; the empty-state hint text below explains the
+          flow). */}
       {canAct && isEmptyState && (
-        <div className="mb-2" data-testid="entry-market-empty-primary">
-          <button type="button" className="btn-primary btn-sm" disabled={busy} onClick={() => void recommend()} data-testid="entry-market-recommend">
-            AI 배수 추천
-          </button>
-          <span className="ml-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-            두 고정 단계(지역 비중 · 세그먼트 비율)의 배율·출처·기준 시점 초안을 한 번에 채웁니다. 직접 입력도 가능합니다.
-          </span>
-        </div>
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="entry-market-empty-primary">
+          AI 배수 추천으로 두 고정 단계(지역 비중 · 세그먼트 비율)의 배율·출처·기준 시점 초안을 한 번에 채울 수 있습니다. 직접 입력도 가능합니다.
+        </p>
       )}
-      {canAct && !isEmptyState && (
+      {/* ADR-0181 (browser-verify finding, 2026-10-18): the actions row must
+          exist ALSO in the empty state once the AI draft has filled the form —
+          otherwise the drafted chain is unsavable (확정 불가). 저장 stays
+          disabled until the form is dirty and valid. */}
+      {canAct && (
         <div className="flex flex-wrap items-center gap-2 mb-2" data-testid="entry-market-actions">
           <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void recommend()} data-testid="entry-market-recommend">
             AI 배수 추천
             </button>
-          <button type="button" className="btn-ghost btn-sm" disabled={busy || !hasForm || !dirty || formInvalid} onClick={() => void save()} data-testid="entry-market-save">
+          <button type="button" className="btn-ghost btn-sm" disabled={busy || !dirty || formInvalid} onClick={() => void save()} data-testid="entry-market-save">
             저장
           </button>
-          <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void clearChain()} data-testid="entry-market-clear">
+          <button type="button" className="btn-ghost btn-sm" disabled={busy || steps.every((s) => !s.factor && !s.source && !s.as_of)} onClick={() => void clearChain()} data-testid="entry-market-clear">
             전체 지우기
           </button>
         </div>
@@ -294,8 +300,8 @@ export function EntryMarketDerivationPanel({ opportunityId, canAct, scopeSet, di
           action. Ratio display, percent label — the storage unit is a ratio. */}
       <div className="text-[length:var(--fs-caption)] mb-1" data-testid="entry-market-growth">
         <span className="status-chip status-info">진입시장 성장률</span>{" "}
-        {data?.growth_rate != null ? (
-          <strong className="mono-num">{Math.round(data.growth_rate * 1000) / 10}%/년</strong>
+        {(data?.growth_rate ?? growthStored) != null ? (
+          <strong className="mono-num">{Math.round((data?.growth_rate ?? growthStored) * 1000) / 10}%/년</strong>
         ) : (
           <span className="text-[color:var(--muted-fg)]">미확정</span>
         )}

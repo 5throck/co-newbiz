@@ -162,7 +162,15 @@ export function TargetScopeEditor({ opportunityId, canAct, linked, scope, matrix
               <legend className="text-[length:var(--fs-caption)] font-semibold px-1">지역</legend>
               <div className="flex flex-wrap gap-x-3 gap-y-1">
                 {(matrixRegions.length > 0
-                  ? matrixRegions.map((r) => ({ code: r.code, label: `${r.label} (S1 가중치 ${r.weight}%)` }))
+                  ? [
+                      ...matrixRegions.map((r) => ({ code: r.code, label: `${r.label} (S1 가중치 ${r.weight}%)` })),
+                      // legacy-saved codes absent from the matrix list must
+                      // stay UNCHECKABLE — render them so a person can remove
+                      // them (ADR-0181 verification finding, 2026-10-18).
+                      ...regions
+                        .filter((c) => !matrixRegions.some((r) => r.code === c))
+                        .map((c) => ({ code: c, label: `${c} (기존 저장 코드)` })),
+                    ]
                   : TARGET_SCOPE_REGIONS.map((r) => ({ code: r, label: REGION_LABEL[r] }))
                 ).map((r) => (
                   <label key={r.code} className="flex items-center gap-1 text-[length:var(--fs-caption)]">
