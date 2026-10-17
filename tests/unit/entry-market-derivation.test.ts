@@ -384,7 +384,7 @@ describe("generator consumption", () => {
     // labelled default 1400 원/USD — the pre-ADR-0180 behavior consumed the
     // USD figure as KRW-M (a ~1,400x understatement).
     expect(inputs.entryMarket).toMatchObject({ entry_market_krw_m: 400, steps: 1 });
-    expect(inputs.entryMarketFx).toEqual({ rate: 1400, source: "default", currency: "USD" });
+    expect(inputs.entryMarketFx).toEqual({ rate: 1400, source: "default", currency: "USD", scale: 1 });
     expect(inputs.marketSizeKrwM).toBeCloseTo(400 * 1400, 6);
   });
 
@@ -639,7 +639,7 @@ describe("entry-market fx (ADR-0181 slice 3)", () => {
       [json({ steps: [GOOD_STEP], set_by: ANALYST, set_at: NOW }), opp]);
     const pid = promote(opp);
     const inputs = gen.caseInputsBaseForProject(pid);
-    expect(inputs.entryMarketFx).toEqual({ rate: 1400, source: "default", currency: "USD" });
+    expect(inputs.entryMarketFx).toEqual({ rate: 1400, source: "default", currency: "USD", scale: 1 });
     expect(inputs.marketSizeKrwM).toBeCloseTo(100 * 0.5 * 1400, 6); // USD 50 x 1400
   });
 
@@ -654,7 +654,7 @@ describe("entry-market fx (ADR-0181 slice 3)", () => {
     const put = await putEm(opp, { steps: [GOOD_STEP], fx: [{ currency: "USD", rate: 1350, volatility: 0.12 }] });
     expect(put.status).toBe(200);
     const inputs = gen.caseInputsBaseForProject(pid);
-    expect(inputs.entryMarketFx).toEqual({ rate: 1350, source: "person", currency: "USD" });
+    expect(inputs.entryMarketFx).toEqual({ rate: 1350, source: "person", currency: "USD", scale: 1 });
     expect(inputs.marketSizeKrwM).toBeCloseTo(100 * 0.5 * 1350, 6);
   });
 
@@ -687,6 +687,28 @@ describe("entry-market fx (ADR-0181 slice 3)", () => {
     expect(inputs.entryMarketFx).toBeNull();
     expect(inputs.entryMarketFxUnsetCcy).toBe("EUR");
     expect(inputs.marketSizeKrwM).toBe(80000); // legacy anchor, honest fallback
+  });
+
+  test("an UNDECLARED anchor unit NEVER converts and marks the run honestly (ADR-0181 amendment)", async () => {
+    const opp = makeOpp();
+    // the payload declares NO unit_basis — the derived value's unit is unknown
+    const UNDECLARED = json({
+      methodology: "m",
+      matrix: {
+        anchor: { sources: [], total: 100 },
+        regions: [{ code: "we", label: "서유럽", weight: 100 }],
+      },
+      stepSummaries: [],
+    });
+    const { versionId } = seedSizing("ind-fx-und", UNDECLARED);
+    db.run("UPDATE opportunity SET sizing_version_id = ? WHERE id = ?", [versionId, opp]);
+    db.run("UPDATE opportunity SET entry_market_derivation_json = ? WHERE id = ?",
+      [json({ steps: [GOOD_STEP], set_by: ANALYST, set_at: NOW }), opp]);
+    const pid = promote(opp);
+    const inputs = gen.caseInputsBaseForProject(pid);
+    expect(inputs.entryMarketFx).toBeNull();
+    expect(inputs.entryMarketUnitUndeclared).toBe(true);
+    expect(inputs.marketSizeKrwM).toBe(80000); // legacy anchor — never a raw unknown-scale pass-through
   });
 
   test("krw-denominated derived entry market is NEVER converted (entryMarketFx null)", () => {

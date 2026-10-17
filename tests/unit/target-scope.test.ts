@@ -251,13 +251,15 @@ describe("generation inputs", () => {
 
 // -- redesign slice 4 (OD-3): unit_basis as data -------------------------------------------------
 describe("slice 4: unit_basis as data (resolveUnitBasis + caption)", () => {
-  test("saved scope wins, then linked version scope, then krw_m_year default", () => {
+  test("saved scope wins, then linked version scope, then UNDECLARED (null — never a fabricated krw default)", () => {
     expect(resolveUnitBasis("units_year", "usd_m_year")).toBe("units_year");
     expect(resolveUnitBasis(null, "usd_m_year")).toBe("usd_m_year");
-    expect(resolveUnitBasis(undefined, undefined)).toBe("krw_m_year");
-    expect(resolveUnitBasis("", null)).toBe("krw_m_year");
-    // Unknown values fall through to the default rather than breaking a save.
-    expect(resolveUnitBasis("nonsense", "also-nonsense")).toBe("krw_m_year");
+    expect(resolveUnitBasis("usd_b_year", null)).toBe("usd_b_year"); // ADR-0181 amendment: scale pattern
+    // ADR-0181 amendment: undeclared is NULL — an unknown unit can never be
+    // labelled 백만원/년 or converted (the ~1,400× mislabel this prevents).
+    expect(resolveUnitBasis(undefined, undefined)).toBeNull();
+    expect(resolveUnitBasis("", null)).toBeNull();
+    expect(resolveUnitBasis("nonsense", "also-nonsense")).toBeNull();
   });
 
   test("PUT body keeps unit_basis unchanged for a saved-scope fixture (round-trip)", async () => {

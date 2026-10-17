@@ -566,7 +566,7 @@ export interface CaseInputs {
   /** ADR-0181 slice 3 — set only when the derived entry market carried a
    *  foreign-currency anchor WITH a known rate (person-set or the documented
    *  USD default); the KRW-converted anchor multiplies by this rate. */
-  entryMarketFx?: { rate: number; source: "person" | "default"; currency: string } | null;
+  entryMarketFx?: { rate: number; source: "person" | "default"; currency: string; scale: number } | null;
   /** ADR-0181 slice 4 — the person-set FX volatility band (±ratio) for the
    *  anchor currency; null → the documented 0.10 default (labelled). */
   entryMarketFxVolatility?: number | null;
@@ -574,6 +574,13 @@ export interface CaseInputs {
    *  the honest `entry_market_fx=unset (<ccy>)` note marker; no conversion
    *  happens and the legacy anchor path resumes. */
   entryMarketFxUnsetCcy?: string | null;
+  /** ADR-0181 amendment — the declared anchor unit (target scope → linked
+   *  declaration); null = undeclared (원화 개산 불가, honest marker). */
+  entryMarketUnitBasis?: string | null;
+  /** ADR-0181 amendment — TRUE when the derived anchor's unit is UNDECLARED:
+   *  the derived value can neither be labelled nor converted, so the legacy
+   *  anchor path resumes with an honest run-note marker. */
+  entryMarketUnitUndeclared?: boolean;
 }
 
 /** Default sales-plan curve (design REQ-W1-2) — utilization by year. */
@@ -1392,7 +1399,8 @@ export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "g
     entryMarketDerived && row?.source_opportunity_id ? readTargetScope(getDb(), row.source_opportunity_id)?.unit_basis ?? null : null,
     entryMarketDerived && row?.source_opportunity_id ? resolveLinkedDeclaredUnitBasis(getDb(), row.source_opportunity_id) : null,
   );
-  const entryMarketAnchorCcy = entryMarketDerived ? anchorCurrencyOfUnitBasis(entryMarketUnitBasis) : null;
+  const entryMarketAnchorUnit = entryMarketDerived ? anchorCurrencyOfUnitBasis(entryMarketUnitBasis) : null;
+  const entryMarketAnchorCcy = entryMarketAnchorUnit?.currency ?? null;
   const entryMarketFxRow = entryMarketDerived && entryMarketAnchorCcy && row?.source_opportunity_id
     ? readFx(getDb(), row.source_opportunity_id).find((r) => r.currency === entryMarketAnchorCcy) ?? null
     : null;
@@ -1400,19 +1408,21 @@ export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "g
     ? resolveFxRateForCurrency(entryMarketAnchorCcy, entryMarketFxRow?.rate ?? null)
     : null;
   const entryMarketFx = entryMarketDerived && entryMarketAnchorCcy && entryMarketFxResolved
-    ? { rate: entryMarketFxResolved.rate, source: entryMarketFxResolved.source, currency: entryMarketAnchorCcy }
+    ? { rate: entryMarketFxResolved.rate, source: entryMarketFxResolved.source, currency: entryMarketAnchorCcy, scale: entryMarketAnchorUnit!.scale }
     : null;
   const entryMarketFxVolatility: number | null = entryMarketFxRow?.volatility ?? null;
-  // FX needed but UNSET: honest degradation to the legacy anchor (never a raw
-  // foreign-scale pass-through), surfaced in the run note.
+  // FX needed but UNSET, or the unit UNDECLARED: honest degradation to the
+  // legacy anchor (never a raw foreign/unknown-scale pass-through), surfaced
+  // in the run note.
   const entryMarketFxUnsetCcy: string | null =
     entryMarketDerived && entryMarketAnchorCcy && !entryMarketFxResolved ? entryMarketAnchorCcy : null;
+  const entryMarketUnitUndeclared: boolean = entryMarketDerived != null && entryMarketUnitBasis == null;
   const entryMarketKrwM = entryMarketDerived
     ? entryMarketFx
-      ? entryMarketDerived.entry_market_krw_m * entryMarketFx.rate
-      : entryMarketAnchorCcy == null
-        ? entryMarketDerived.entry_market_krw_m // KRW/units anchor — no conversion needed
-        : null // FX needed, rate unset → legacy anchor path
+      ? entryMarketDerived.entry_market_krw_m * entryMarketFx.rate * entryMarketFx.scale
+      : entryMarketAnchorCcy == null && !entryMarketUnitUndeclared
+        ? entryMarketDerived.entry_market_krw_m // explicit KRW/units declaration — no conversion needed
+        : null // FX needed with no rate, or unit undeclared → legacy anchor path
     : null;
   return {
     projectId,
@@ -1464,6 +1474,8 @@ export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "g
     entryMarketFx,
     entryMarketFxVolatility,
     entryMarketFxUnsetCcy,
+    entryMarketUnitBasis,
+    entryMarketUnitUndeclared,
   };
 }
 
@@ -1892,11 +1904,13 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       // when a USD-denominated derived entry market was converted; every
       // other note stays byte-identical.
       const entryMarketFxFragment = ctx.inputs.entryMarketFx
-        ? `; entry_market_fx=${ctx.inputs.entryMarketFx.currency} ${ctx.inputs.entryMarketFx.rate} (${ctx.inputs.entryMarketFx.source === "person" ? "person" : "기본값 — 검증 전"})` +
+        ? `; entry_market_fx=${ctx.inputs.entryMarketFx.currency} ${ctx.inputs.entryMarketFx.rate} ×${ctx.inputs.entryMarketFx.scale} (${ctx.inputs.entryMarketFx.source === "person" ? "person" : "기본값 — 검증 전"}; 단위 ${ctx.inputs.entryMarketUnitBasis ?? "선언"})` +
           `; fx_ccy=${ctx.inputs.entryMarketFx.currency}; fx_vol=${(ctx.inputs.entryMarketFxVolatility ?? 0.1).toFixed(2)}; fx_dist=triangular; fx_basis=index-no-drift`
         : ctx.inputs.entryMarketFxUnsetCcy
           ? `; entry_market_fx=unset (${ctx.inputs.entryMarketFxUnsetCcy} 기준 환율 미설정 — 개산 생략, 레거시 앵커)`
-          : "";
+          : ctx.inputs.entryMarketUnitUndeclared
+            ? `; entry_market_unit=undeclared (앵커 단위 미선언 — 원화 개산 불가, 레거시 앵커)`
+            : "";
       // ADR-0179 slice 3 — sourced-market-share labelling (design §6.1) and the
       // Y1-revenue/capex ratio plausibility guard (design §7.1). Display
       // metadata only: fragments are appended ONLY when they fire (share: a
