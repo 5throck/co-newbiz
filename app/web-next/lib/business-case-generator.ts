@@ -29,6 +29,7 @@ import { noteNumber, parseSimNote } from "./sim-note.ts";
 import { irrGuardBand, IRR_CAUTION_THRESHOLD_DEFAULT, IRR_FLAG_THRESHOLD_DEFAULT } from "./irr-guard.ts";
 import { parseTargetScopeJson, type TargetScope } from "./target-scope.ts";
 import { anchorScopeNoteFragment, resolveLinkedAnchorScope } from "./anchor-scope.ts";
+import { entryMarketNoteFragment, resolveDerivedEntryMarket } from "./entry-market.ts";
 import { Y1_INVESTMENT_RATIO_THRESHOLD, ratioGuardTripped, shareUnsourcedNoteFragment } from "./share-guard.ts";
 import { resolveEffectiveCagr } from "./market-calibration.ts";
 import { getDb } from "../../../db/client.ts";
@@ -533,6 +534,12 @@ export interface CaseInputs {
    *  scope feeding extractSizingVersionScope. Unlinked = null (bit-identical
    *  with the pre-amendment path; the fragment then says unknown). */
   anchorScope?: { regions: readonly string[] } | null;
+  /** ADR-0179 amendment slice B — the DERIVED entry-market replacing the raw
+   *  anchor (design §12.2): present only when the opportunity has BOTH a
+   *  pinned S1 link AND a validated derivation chain. Carries the computed
+   *  value + provenance for the run-note fragment; null = legacy bare
+   *  anchor, byte-identical notes. */
+  entryMarket?: { entry_market_krw_m: number; steps: number; hash: string; factor_product: number; scope_status: "exact" | "partial" | "none" | "unknown" } | null;
 }
 
 /** Default sales-plan curve (design REQ-W1-2) — utilization by year. */
@@ -1320,9 +1327,17 @@ export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "g
   // store 0.06) and is used as-is — no percent conversion.
   const bcParams = resolveBusinessCaseParams(getDb(), projectId);
   const s5Plan = resolveS5InvestmentPlan(getDb(), projectId);
+  // ADR-0179 amendment slice B — the DERIVED entry-market value replaces the
+  // raw opportunity anchor when BOTH the S1 link and the derivation chain
+  // exist (design §12.2); resolved once here so marketSizeKrwM and the
+  // run-note provenance use the same numbers. Unlinked / chain-absent /
+  // unparsable → null → legacy path, bit-identical.
+  const entryMarketDerived = row?.sizing_version_id
+    ? resolveDerivedEntryMarket(getDb(), row.source_opportunity_id ?? "")
+    : null;
   return {
     projectId,
-    marketSizeKrwM: row?.market_size_krw_m ?? 50000,
+    marketSizeKrwM: entryMarketDerived?.entry_market_krw_m ?? row?.market_size_krw_m ?? 50000,
     anchorGrowth: row?.growth_rate ?? 0.05,
     wacc: resolveProjectWacc(getDb(), projectId),
     waccScope: { scope: "project" },
@@ -1359,6 +1374,13 @@ export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "g
     anchorScope: row?.sizing_version_id
       ? resolveLinkedAnchorScope(getDb(), row.source_opportunity_id ?? "")
       : null,
+    // ADR-0179 amendment slice B — when the opportunity has BOTH a pinned S1
+    // link AND a person-set derivation chain, the anchor becomes the DERIVED
+    // entry-market value (design §12.2: derived(t) = S1_anchor(t) x Πf, so
+    // it composes with the S1 series growth and survives S1 re-basing). The
+    // resolved value replaces marketSizeKrwM below; unlinked / chain-absent
+    // / unparsable → null → the legacy bare anchor path, bit-identical.
+    entryMarket: entryMarketDerived,
   };
 }
 
@@ -1763,6 +1785,10 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       // opportunity→sizing reference is the OPEN-3 follow-up — so a set
       // target scope yields an honest `unknown`, never a fabricated ok.
       const anchorScopeFragment = anchorScopeNoteFragment(ctx.inputs.targetScope, ctx.inputs.anchorScope ?? null);
+      // ADR-0179 amendment slice B — entry-market derivation provenance
+      // (design §12.2). Appended ONLY when a derived entry-market actually
+      // replaced the anchor; every other note stays byte-identical.
+      const entryMarketFragment = entryMarketNoteFragment(ctx.inputs.entryMarket);
       // ADR-0179 slice 3 — sourced-market-share labelling (design §6.1) and the
       // Y1-revenue/capex ratio plausibility guard (design §7.1). Display
       // metadata only: fragments are appended ONLY when they fire (share: a
@@ -1804,7 +1830,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       const anchorFragment = ctx.inputs.revenueAnchor
         ? `revenue_anchor=${ctx.inputs.revenueAnchor.source}${acqFragment}${xcheckFragment}`
         : `capture_rate=${bc.captureRate}; capture_source=${bc.captureSource}`;
-      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}; wacc_scope=${ctx.inputs.waccScope?.scope ?? "project"}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; wacc_subject=${waccSubject}; ${anchorFragment}${shareFragment}${ratioFragment}; ramp_source=${bc.rampSource}; ${provenance}${tcFragment}${basisFragment}; engine=${engineMeta.engine}${s5Provenance ? " (S8 엔진 우회 — 연도별 capex 스케줄 미지원, ADR-0174)" : ""}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}${irrGuardFragment}${anchorScopeFragment}`;
+      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}; wacc_scope=${ctx.inputs.waccScope?.scope ?? "project"}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; wacc_subject=${waccSubject}; ${anchorFragment}${shareFragment}${ratioFragment}; ramp_source=${bc.rampSource}; ${provenance}${tcFragment}${basisFragment}; engine=${engineMeta.engine}${s5Provenance ? " (S8 엔진 우회 — 연도별 capex 스케줄 미지원, ADR-0174)" : ""}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}${irrGuardFragment}${anchorScopeFragment}${entryMarketFragment}`;
       db.run(`UPDATE business_case_model SET inputs_json = ? WHERE id = ?`, [JSON.stringify(jobSpec), modelId]);
       for (const pct of ["p05", "p50", "p95"] as const) {
         const isP50 = pct === "p50";

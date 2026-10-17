@@ -196,6 +196,9 @@ export const HUMAN_ONLY_ROUTES: readonly HumanOnlyRule[] = [
   // ADR-0179 amendment slice A: pinning/clearing the S1 market-sizing link is
   // a person's act — agents read it but never write it.
   { method: "PUT", pattern: "/api/opportunities/:id/sizing-link" },
+  // ADR-0179 amendment slice B: the entry-market derivation chain is a
+  // person's input on the opportunity — agents read it but never write it.
+  { method: "PUT", pattern: "/api/opportunities/:id/entry-market-derivation" },
 ];
 
 export function isHumanOnly(method: string, pathname: string, body: unknown): boolean {

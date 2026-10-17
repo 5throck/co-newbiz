@@ -105,3 +105,7 @@ call_sites:
     sites: 2
     json_parse_migration: "Deferred: no suite covers it (exempt); migrating without a suite would be unmeasured."
     exempt: "Evidence or web-research pipeline; the golden set has no expectation type for it, and design 3.3 forbids new research in this wave."
+
+  - file: app/web-next/app/api/opportunities/[id]/entry-market-derivation/draft/route.ts
+    sites: 1
+    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."

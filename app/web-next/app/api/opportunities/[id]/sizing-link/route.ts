@@ -13,6 +13,7 @@ import { authenticate, callPathOf, humanOnlyDenied, requireBusinessActor } from 
 import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { extractSizingVersionScope } from "../../../../../lib/anchor-scope.ts";
+import { latestCompletedVersionNo, sizingLinkProvenance } from "../../../../../lib/sizing-auto-link.ts";
 
 export interface SizingLinkReference {
   analysis_id: string;
@@ -62,7 +63,20 @@ export function readSizingLink(db: ReturnType<typeof getDb>, opportunityId: stri
       };
     }
   }
-  return { link, reference };
+  return { link, reference, link_provenance: sizingLinkProvenance(db, opportunityId), newer_version_available: newerVersionAvailable(db, opportunityId) };
+}
+
+/** Display-side freshness hint (auto-link addition): TRUE when the
+ *  opportunity's industry has a completed version NEWER than the linked one
+ *  — surfaced as '더 최신 S1 버전 있음' on a frozen (manual) link; auto links
+ *  follow on the next completion, so the hint is false right after a refresh
+ *  run. Tolerant: no industry/analysis → false. */
+function newerVersionAvailable(db: ReturnType<typeof getDb>, opportunityId: string): boolean {
+  const latest = latestCompletedVersionNo(db, opportunityId);
+  const current = db
+    .query("SELECT mv.version_no AS v FROM opportunity o LEFT JOIN market_sizing_version mv ON mv.id = o.sizing_version_id WHERE o.id = ?")
+    .get(opportunityId) as { v: number | null } | undefined;
+  return latest != null && current?.v != null && current.v < latest;
 }
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
