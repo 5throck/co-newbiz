@@ -1,8 +1,9 @@
 "use client";
 
 // EntryMarketDerivationPanel - ADR-0179 amendment slice B (2026-10-17,
-// design 12.2): the entry-market derivation surface on the S2 opportunity
-// detail, mounted next to the target-scope editor. Shows the linked S1
+// design 12.2): step 3 of the consolidated 진입시장 산정 card
+// (EntryMarketFlow). Previously a standalone panel mounted next to the
+// target-scope editor. Shows the linked S1
 // anchor, the factor steps (factor, source, as_of, per-step result, computed
 // result), the computed entry-market value and the confidence note. Writes
 // are person-only server-side (PUT entry-market-derivation is human-only);
@@ -12,6 +13,10 @@
 // "AI 추천 — 검증 전" chip until the person edits/sources it and saves; the
 // saved lineage keeps the display-only `origin: ai_suggested` marker (never
 // affects the math).
+// Presentational consolidation (decider feedback 2026-10-17): without an S1
+// link the parent passes disabledReason and this step renders disabled with
+// the reason; with a link but no target scope the parent passes scopeWarning
+// (the scope verdict cannot be graded). Routes and payloads unchanged.
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api.ts";
 import { computeEntryMarketChain, ENTRY_MARKET_MAX_STEPS, REGION_DEFINITION_CAVEAT } from "../lib/entry-market.ts";
@@ -83,12 +88,18 @@ function fromForm(s: DerivationStepForm): Record<string, unknown> {
   return out;
 }
 
-export function EntryMarketDerivationPanel({ opportunityId, canAct }: { opportunityId: string; canAct: boolean }) {
+export function EntryMarketDerivationPanel({ opportunityId, canAct, scopeSet, disabledReason, scopeWarning, onDataChanged }: {
+  opportunityId: string;
+  canAct: boolean;
+  scopeSet: boolean;
+  disabledReason: string | null;
+  scopeWarning: string | null;
+  onDataChanged?: () => Promise<void>;
+}) {
   const [data, setData] = useState<GetResponse | null>(null);
   const [steps, setSteps] = useState<DerivationStepForm[]>([]);
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [notLinked, setNotLinked] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -98,11 +109,9 @@ export function EntryMarketDerivationPanel({ opportunityId, canAct }: { opportun
       const r = await api.get<GetResponse>(`/api/opportunities/${encodeURIComponent(opportunityId)}/entry-market-derivation`);
       setData(r.data);
       setSteps((r.data.derivation?.steps ?? []).map(toForm));
-      setNotLinked(false);
       setError(null);
     } catch (e) {
       // 409 not_linked: the honest empty state, never a blocking failure.
-      setNotLinked(true);
       setData(null);
       setSteps([]);
     } finally {
@@ -148,6 +157,7 @@ export function EntryMarketDerivationPanel({ opportunityId, canAct }: { opportun
       await api.put(`/api/opportunities/${encodeURIComponent(opportunityId)}/entry-market-derivation`, { steps: body });
       setNotice("진입 시장 도출 사슬을 저장했습니다 — AI 표시는 검증 후 사라집니다.");
       await load();
+      await onDataChanged?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : "저장 실패");
     } finally {
@@ -161,6 +171,7 @@ export function EntryMarketDerivationPanel({ opportunityId, canAct }: { opportun
       await api.put(`/api/opportunities/${encodeURIComponent(opportunityId)}/entry-market-derivation`, { steps: null });
       setNotice("도출 사슬을 지웠습니다 — 기존 시장 앵커 경로로 돌아갑니다.");
       await load();
+      await onDataChanged?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : "지우기 실패");
     } finally {
@@ -206,14 +217,19 @@ export function EntryMarketDerivationPanel({ opportunityId, canAct }: { opportun
   return (
     <section aria-label="진입 시장 도출 (entry market derivation)" className="market-section" data-testid="entry-market-panel">
       <h3 className="text-[length:var(--fs-body)] font-semibold mb-1">
-        진입 시장 도출 <span className="status-chip status-info">사람 입력 (ADR-0179 수정안)</span>
+        3. 진입시장 유도 <span className="status-chip status-info">사람 입력 (ADR-0179 수정안)</span>
       </h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
         연결된 S1 시장규모에서 배율 인자(0-1)만 곱해 이 딜의 진입 시장 규모를 도출합니다. 각 단계에 출처가 필수이며 절대값은 받지 않습니다.
       </p>
-      {notLinked && (
+      {disabledReason && (
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="entry-market-not-linked">
-          연결된 S1 시장규모 분석이 없습니다 — 위 대상 범위 편집기에서 S1 분석을 먼저 연결하면 진입 시장 도출을 사용할 수 있습니다.
+          {disabledReason}
+        </p>
+      )}
+      {scopeWarning && !disabledReason && (
+        <p className="text-[length:var(--fs-caption)] mb-2" data-testid="entry-flow-scope-warning">
+          <span className="status-chip status-warn">범위 미설정</span> {scopeWarning}
         </p>
       )}
       {data && (
@@ -221,8 +237,8 @@ export function EntryMarketDerivationPanel({ opportunityId, canAct }: { opportun
           <span className="status-chip status-info">연결된 S1</span>{" "}
           <a href={data.reference?.href ?? "#"} className="underline">S1 화면에서 열기</a>
           {" · "}v{data.reference?.version_no}
-          {data.link_provenance === "auto" && <span className="status-chip status-info ml-1" data-testid="entry-market-link-auto">자동 연결</span>}
-          {data.link_provenance === "manual" && <span className="text-[color:var(--muted-fg)] ml-1" data-testid="entry-market-link-manual">(수동 연결)</span>}
+          {/* link provenance chip + newer-version rail hint moved to the
+              EntryMarketFlow step-1 / status rail (single source). */}
           {data.newer_version_available && (
             <span className="ml-2 text-[color:var(--muted-fg)]" data-testid="entry-market-newer-version">더 최신 S1 버전 있음 — 수동 연결은 유지됩니다</span>
           )}
