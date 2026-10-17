@@ -301,7 +301,7 @@ export function EntryMarketDerivationPanel({ opportunityId, canAct, scopeSet, di
       <div className="text-[length:var(--fs-caption)] mb-1" data-testid="entry-market-growth">
         <span className="status-chip status-info">진입시장 성장률</span>{" "}
         {(data?.growth_rate ?? growthStored) != null ? (
-          <strong className="mono-num">{Math.round((data?.growth_rate ?? growthStored) * 1000) / 10}%/년</strong>
+          <strong className="mono-num">{Math.round(((data?.growth_rate ?? growthStored) as number) * 1000) / 10}%/년</strong>
         ) : (
           <span className="text-[color:var(--muted-fg)]">미확정</span>
         )}

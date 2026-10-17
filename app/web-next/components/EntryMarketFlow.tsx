@@ -65,7 +65,7 @@ interface FlowStatusResponse {
 export function suggestedAnchorCurrency(unitBasis: string | null | undefined): string | null {
   if (!unitBasis) return null;
   if (unitBasis === "krw_m_year" || unitBasis === "units_year") return null;
-  const m = unitBasis.match(/^([a-z]{3})_m_year$/);
+  const m = unitBasis.match(/^([a-z]{3})_[mb]_year$/);
   return m ? m[1].toUpperCase() : null;
 }
 

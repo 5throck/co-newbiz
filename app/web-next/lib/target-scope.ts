@@ -22,27 +22,51 @@ export const TARGET_SCOPE_UNIT_BASIS_LABEL: Record<TargetScopeUnitBasis, string>
   usd_m_year: "연매출 (백만 USD/년)",
 };
 
+/** ADR-0181 amendment (2026-10-18, decider feedback): the anchor unit may
+ *  carry a SCALE — third-party market reports quote sizes in USD billions,
+ *  so `usd_b_year` (십억 달러/년) and friends are valid declarations. The
+ *  known-enum list stays for the common picker options; any
+ *  `<ccy>_[mb]_year` pattern is accepted. */
+export const UNIT_BASIS_PATTERN = /^(krw_m_year|units_year|[a-z]{3}_[mb]_year)$/;
+
+export function isKnownUnitBasis(v: string): boolean {
+  return (TARGET_SCOPE_UNIT_BASES as readonly string[]).includes(v) || /^[a-z]{3}_[mb]_year$/.test(v);
+}
+
+/** Label for any declared unit basis, including the multi-currency/scale
+ *  patterns (fallback = the raw declaration). */
+export function unitBasisLabel(v: string | null | undefined): string {
+  if (!v) return "미선언";
+  const known = (TARGET_SCOPE_UNIT_BASIS_LABEL as Record<string, string>)[v];
+  if (known) return known;
+  const m = v.match(/^([a-z]{3})_([mb])_year$/);
+  if (m) {
+    const ccy = m[1].toUpperCase();
+    const scale = m[2] === "b" ? "십억" : "백만";
+    return `연매출 (${scale} ${ccy}/년)`;
+  }
+  return v;
+}
+
 /** Slice 4 (design §5.2, OD-3): caption shown next to unit_basis once it
  *  renders as DATA inside the linked-S1 reference strip. The strip shows the
  *  value the PUT body carries — it must never read as an absolute input. */
 export const SCOPE_UNIT_BASIS_CAPTION = "앵커의 단위 구분 — 절대값 입력이 아닙니다";
 
-/** Slice 4: unit_basis is no longer a person input. Resolve the value the PUT
- *  body carries: the person-saved scope wins, then the LINKED version's
- *  declared unit_basis, then the krw_m_year default. Unknown/missing values
- *  fall through to the default rather than breaking the save. ADR-0181 §4:
- *  the multi-currency `<ccy>_m_year` pattern (eur_m_year …) is accepted —
- *  the anchor currency derives from it (lib/fx.ts). */
+/** ADR-0181 amendment (2026-10-18): resolve the anchor's DECLARED unit — the
+ *  person-saved scope wins, then the LINKED version's declared unit_basis.
+ *  UNDECLARED yields NULL (not a krw default): an unknown unit can never be
+ *  labelled as 백만원/년 or converted — the surfaces show an honest
+ *  `앵커 단위 미선언` warning and the 원화 개산 stays disabled until a person
+ *  declares the unit. */
 export function resolveUnitBasis(
   saved: string | null | undefined,
   linked: string | null | undefined,
-): TargetScopeUnitBasis | (string & {}) {
+): string | null {
   for (const v of [saved, linked]) {
-    if (typeof v === "string" && ((TARGET_SCOPE_UNIT_BASES as readonly string[]).includes(v) || /^[a-z]{3}_m_year$/.test(v))) {
-      return v;
-    }
+    if (typeof v === "string" && UNIT_BASIS_PATTERN.test(v)) return v;
   }
-  return "krw_m_year";
+  return null;
 }
 
 export interface TargetScope {

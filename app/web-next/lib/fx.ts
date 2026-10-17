@@ -49,15 +49,20 @@ export function resolveFxRateForCurrency(currency: string, personRate: number | 
   return null;
 }
 
-/** The anchor currency implied by the S1 unit declaration (ADR-0181 §4):
- *  `usd_m_year` → USD, `eur_m_year` → EUR, `krw_m_year`/`units_year` → null
- *  (no FX needed). Unknown `<ccy>_m_year` patterns yield the upper-cased
- *  prefix. */
-export function anchorCurrencyOfUnitBasis(unitBasis: string | null | undefined): string | null {
+/** The anchor currency + SCALE implied by the S1 unit declaration
+ *  (ADR-0181 amendment): `usd_m_year` → USD ×1, `usd_b_year` → USD ×1000
+ *  (the anchor is quoted in billions — the scale multiplies the FX-converted
+ *  value into 백만원), `krw_m_year`/`units_year` → null (no FX needed).
+ *  Returns null when no FX applies; the scale is meaningful only with a
+ *  currency. */
+export function anchorCurrencyOfUnitBasis(
+  unitBasis: string | null | undefined,
+): { currency: string; /** multiplier from the anchor unit to 백만원 after the FX rate */ scale: number } | null {
   if (!unitBasis) return null;
   if (unitBasis === "krw_m_year" || unitBasis === "units_year") return null;
-  const m = unitBasis.match(/^([a-z]{3})_m_year$/);
-  return m ? m[1].toUpperCase() : null;
+  const m = unitBasis.match(/^([a-z]{3})_([mb])_year$/);
+  if (!m) return null;
+  return { currency: m[1].toUpperCase(), scale: m[2] === "b" ? 1000 : 1 };
 }
 
 /** The linked S1 sizing version's DECLARED unit basis (the anchor's unit,

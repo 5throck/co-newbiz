@@ -40,13 +40,25 @@ const UNIT_LABEL: Record<string, string> = {
   usd_m_year: "백만 USD/년",
 };
 
-/** The anchor currency from the scope's unit basis (ADR-0181 §4); null when
- *  no FX is needed (KRW anchor, units basis). */
-function anchorCurrencyOf(unitBasis: string | null | undefined): string | null {
+/** Unit label for any declared basis, including the multi-currency/scale
+ *  patterns (ADR-0181 amendment). */
+function unitLabel(ub: string | null | undefined): string | null {
+  if (!ub) return null;
+  if (UNIT_LABEL[ub]) return UNIT_LABEL[ub];
+  const m = ub.match(/^([a-z]{3})_([mb])_year$/);
+  if (m) return `연매출 (${m[2] === "b" ? "십억" : "백만"} ${m[1].toUpperCase()}/년)`;
+  return ub;
+}
+
+/** The anchor currency + scale (to 백만원) from the scope's unit basis
+ *  (ADR-0181 amendment); null when no FX is needed (KRW anchor, units basis)
+ *  or the unit is undeclared. */
+function anchorUnitOf(unitBasis: string | null | undefined): { currency: string; scale: number } | null {
   if (!unitBasis) return null;
   if (unitBasis === "krw_m_year" || unitBasis === "units_year") return null;
-  const m = unitBasis.match(/^([a-z]{3})_m_year$/);
-  return m ? m[1].toUpperCase() : null;
+  const m = unitBasis.match(/^([a-z]{3})_([mb])_year$/);
+  if (!m) return null;
+  return { currency: m[1].toUpperCase(), scale: m[2] === "b" ? 1000 : 1 };
 }
 
 const SCOPE_CHIP: Record<string, { label: string; cls: string }> = {
@@ -95,19 +107,23 @@ export function EntryMarketContextStrip({ opportunityId }: { opportunityId: stri
   }
   if (!flow) return null; // loading
 
-  const unit = flow?.scope_unit_basis ? (UNIT_LABEL[flow.scope_unit_basis] ?? flow.scope_unit_basis) : null;
+  const unit = unitLabel(flow?.scope_unit_basis ?? null);
   const scopeChip = flow?.scope_flag ? (SCOPE_CHIP[flow.scope_flag.status] ?? SCOPE_CHIP.unknown) : null;
   const derived = flow?.computed?.entry_market_krw_m;
   const anchor = flow?.computed?.anchor_value_krw_m ?? flow?.reference?.anchor_value_krw_m ?? null;
-  // ADR-0181 slice 3 — 개산 (KRW conversion at the reference rate). S3부터는
-  // 원화 기준: the strip always shows the KRW-converted value when the anchor
-  // currency's rate is set; a needed-but-unset rate renders an honest warning
-  // (never a silent pass-through).
-  const anchorCcy = flow?.currency ?? anchorCurrencyOf(flow?.scope_unit_basis ?? null);
+  // ADR-0181 slice 3 + amendment — 개산 (KRW conversion at the reference rate
+  // × the declared scale). S3부터는 원화 기준: the strip shows the KRW-converted
+  // value when the anchor currency's rate is set; a needed-but-unset rate or
+  // an UNDECLARED unit renders an honest warning (never a silent pass-through
+  // — the ~1,400× mislabel this prevents).
+  const anchorUnit = anchorUnitOf(flow?.scope_unit_basis ?? null);
+  const anchorCcy = flow?.currency ?? anchorUnit?.currency ?? null;
   const fxRow = anchorCcy ? (flow?.fx ?? []).find((r) => r.currency === anchorCcy) ?? null : null;
   const needsFx = anchorCcy != null;
-  const krwValue = derived != null && needsFx && fxRow ? derived * fxRow.rate : null;
+  const scale = anchorUnit?.scale ?? 1;
+  const krwValue = derived != null && needsFx && fxRow ? derived * fxRow.rate * scale : null;
   const fxMissing = derived != null && needsFx && !fxRow;
+  const unitUndeclared = derived != null && flow?.scope_unit_basis == null;
   const growthLabel = flow?.growth_rate != null ? `${Math.round(flow.growth_rate * 1000) / 10}%/년` : null;
 
   return (
@@ -127,8 +143,18 @@ export function EntryMarketContextStrip({ opportunityId }: { opportunityId: stri
           <strong>
             {fmt(krwValue)} 백만원/년
           </strong>
-          {` — 개산 (${anchorCcy} ${fmt(fxRow!.rate)} 원/통화 적용; 원시장 ${fmt(derived!)}${unit ? ` ${unit}` : ""}, 배율 ${fmt(flow?.computed?.factor_product ?? 1)}, 사슬 ${flow?.derivation.steps.length}단계`}
+          {` — 개산 (${anchorCcy} ${fmt(fxRow!.rate)} 원/통화${scale > 1 ? ` ×${fmt(scale)}` : ""} 적용; 원시장 ${fmt(derived!)}${unit ? ` ${unit}` : ""}, 배율 ${fmt(flow?.computed?.factor_product ?? 1)}, 사슬 ${flow?.derivation.steps.length}단계`}
           {growthLabel && ` · 성장률 ${growthLabel}`}
+          {scopeChip && <span className={`${scopeChip.cls} ml-1`}>{scopeChip.label}</span>}
+        </>
+      ) : derived != null && unitUndeclared ? (
+        <>
+          <strong>
+            {fmt(derived)}
+            {unit ? ` ${unit}` : " (앵커 단위)"}
+          </strong>
+          {` — 배율 ${fmt(flow?.computed?.factor_product ?? 1)}, 사슬 ${flow?.derivation.steps.length}단계`}
+          <span className="status-chip status-warn ml-1">앵커 단위 미선언 — 대상 범위에서 단위를 선언하면 원화 개산이 활성화됩니다</span>
           {scopeChip && <span className={`${scopeChip.cls} ml-1`}>{scopeChip.label}</span>}
         </>
       ) : derived != null ? (

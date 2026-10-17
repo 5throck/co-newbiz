@@ -41,3 +41,13 @@ lang_reason: proper-noun
 ## Honest limits
 
 Unset non-USD currencies intentionally disable 개산 and the FX risk variable until a person sets the rate. The growth-rate swap changes downstream numbers only for opportunities with a confirmed entry market (unset = legacy bit-identity, run-note provenance). The FX ±10 % default volatility is precedent-consistent, not a validated market band. The conditional JSON freeze (NULL-link chains readable via fallback) remains until those rows are resolved.
+
+## Amendment (2026-10-18) — anchor unit declaration with scale (decider feedback)
+
+- Status: Accepted (2026-10-18). Decider: human decider (chat 2026-10-18 — "0.08은 전체 시장의 점유율에 대한 비율이고 이를 다시 원화로 산정해야 제대로된 시장 규모가 나오지 않을까?" while reviewing the S3 subject-market header). Drafted by platform-lead.
+- The first S3~S12 verification exposed a unit-semantics gap: the pilot's S1 anchor (2.4) is quoted in **USD billions** (the three anchor sources are $B-scale market reports), but the legacy version declares no unit, and the resolution chain defaulted to `krw_m_year` — so the derived 0.081 rendered as "0.08 백만원/년", wrong by ~6 orders of magnitude.
+- Decision:
+  1. **Unit vocabulary gains scale**: `<ccy>_[mb]_year` — `m` = 백만, `b` = 십억 (e.g. `usd_b_year` = 연매출 (십억 USD/년)). `krw_m_year`/`units_year` unchanged.
+  2. **The anchor unit is a PERSON DECLARATION.** When the linked S1 version declares no unit, the person declares the anchor's denomination through the saved target scope (`unit_basis` select — 앵커 단위 선언, not an absolute-value input). The old krw_m_year FALLBACK is removed: **undeclared = no conversion**, the derived value renders in 앵커 단위 with an `앵커 단위 미선언` warning and the S8 math honestly falls back to the legacy anchor with an `entry_market_unit=undeclared` run-note marker.
+  3. **개산 applies the scale**: KRW 백만원 = derived × FX rate × scale (m = ×1, b = ×1,000). The S4/S8 subject-market growth swap is unaffected.
+- Implementation: `lib/target-scope.ts` (UNIT_BASIS_PATTERN, unitBasisLabel, resolveUnitBasis → null default), `lib/fx.ts` (anchorCurrencyOfUnitBasis → {currency, scale}), the derivation GET + strip (scale-aware 개산, undeclared warning), the scope editor (앵커 단위 선언 select), the generator (scale in the FX conversion + `entry_market_unit=undeclared` marker + `단위 <decl>` in the fx fragment). Verified live on the pilot: usd_b_year declared → S3 strip shows 진입시장 109,350 백만원/년 (개산 USD 1,350 ×1,000 적용; 원시장 0.08 십억 USD).

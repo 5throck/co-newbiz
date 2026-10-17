@@ -18,7 +18,7 @@ import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate, callPathOf, humanOnlyDenied, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
-import { TARGET_SCOPE_REGIONS, type TargetScope } from "../../../../../lib/target-scope.ts";
+import { TARGET_SCOPE_REGIONS, UNIT_BASIS_PATTERN, type TargetScope } from "../../../../../lib/target-scope.ts";
 import { readSizingRegions, readSizingSegments } from "../../../../../lib/sizing-payload.ts";
 import { readTargetScope, writeTargetScope } from "../../../../../../../db/repositories/entry-market.repository.ts";
 import { readSizingLink } from "../sizing-link/route.ts";
@@ -82,10 +82,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (s.length > 100) return badRequest("invalid_request", "segments 항목은 100자 이하여야 합니다.");
   }
   const unitBasis = o.unit_basis;
-  if (unitBasis !== undefined && unitBasis !== null && (typeof unitBasis !== "string" || !/^(krw_m_year|units_year)$/.test(unitBasis) && !/^[a-z]{3}_m_year$/.test(unitBasis))) {
-    return badRequest("invalid_request", "unit_basis는 krw_m_year / units_year / <통화>_m_year 형태여야 합니다.");
+  if (unitBasis !== undefined && unitBasis !== null && (typeof unitBasis !== "string" || !UNIT_BASIS_PATTERN.test(unitBasis))) {
+    return badRequest("invalid_request", "unit_basis는 krw_m_year / units_year / <통화>_[mb]_year 형태여야 합니다 (예: usd_m_year, usd_b_year).");
   }
-  const scope = { regions, segments, unit_basis: (typeof unitBasis === "string" ? unitBasis : "krw_m_year") as TargetScope["unit_basis"] };
+  const scope = { regions, segments, unit_basis: (typeof unitBasis === "string" ? unitBasis : null) as TargetScope["unit_basis"] };
   const at = new Date().toISOString();
   writeTargetScope(db, id, scope, ctx.userId, at);
   appendAudit(db, { actor: ctx.userId, action: "opportunity_target_scope.write", target: `${id}#target-scope@${callPathOf(ctx)}`, now: at });
