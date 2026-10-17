@@ -175,9 +175,10 @@ export function EntryMarketDerivationPanel({ opportunityId, canAct, scopeSet, di
 
   return (
     <section aria-label="진입 시장 도출 (entry market derivation)" className="market-section" data-testid="entry-market-panel">
-      <h3 className="text-[length:var(--fs-body)] font-semibold mb-1">
-        3. 진입시장 유도 <span className="status-chip status-info">사람 입력 (ADR-0179 수정안)</span>
-      </h3>
+      {/* ADR-0181: the section heading ("3. 진입시장 유도" + status chip) lives
+          on the parent EntryMarketFlow step section — the child renders no
+          title of its own (decider feedback 2026-10-18: the title appeared
+          twice). */}
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
         연결된 S1 시장규모에서 배율 인자(0-1)만 곱해 이 딜의 진입 시장 규모를 도출합니다. 각 단계에 출처가 필수이며 절대값은 받지 않습니다.
       </p>

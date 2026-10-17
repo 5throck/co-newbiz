@@ -115,3 +115,7 @@ app/web-next/next-env.d.ts
 
 # bun test --coverage output
 coverage/
+
+# SQLite WAL sidecars — runtime artifacts that change on every app run (ADR-0181 follow-up, decider approved 2026-10-18)
+db/dev.db-shm
+db/dev.db-wal
