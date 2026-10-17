@@ -100,6 +100,24 @@ export function autoLinkSizing(db: Database, opportunityId: string, actor: strin
   return { version_id: pinAutoLink(db, opportunityId, versionId, actor, now), reason: "linked" };
 }
 
+/** Lazy auto-link on the READ path (2026-10-17 follow-up): opportunities
+ *  created BEFORE the auto-link feature shipped never got a creation-hook
+ *  link, and their industries' completed analyses never trigger the
+ *  pipeline hook for them — a permanent coverage gap for every pre-existing
+ *  opportunity. Called from the sizing-link GET (readSizingLink): when the
+ *  opportunity is STILL unlinked and NOT manually frozen, autoLinkSizing
+ *  (same rules, same audited write in its own small transaction) links the
+ *  industry's latest COMPLETED version on first read. Failure degrades to
+ *  returning the unlinked state: never throws, never blocks the GET. */
+export function lazyAutoLinkOnRead(db: Database, opportunityId: string, now: string): string | null {
+  try {
+    const r = autoLinkSizing(db, opportunityId, "system:lazy-read", now);
+    return r.version_id;
+  } catch {
+    return null; // corrupted state / unexpected failure -> degrade to unlinked
+  }
+}
+
 /** Auto-follow on a NEW completed version: refresh every opportunity of the
  *  industry whose link is not frozen — unlinked ones get linked, and links
  *  that are still auto-provenanced move to the newer version. Manual
