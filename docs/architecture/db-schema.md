@@ -169,6 +169,21 @@ Scenario inputs ride run-versioning as exact `drv.rate_bp` / `drv.fx_pct` / `drv
 | `establishment_mode_event` | Append-only history of Green Field establishment mode decisions (ADR-0167, migration 0142) | `id`, `project_id`, `kind` (`set` \| `change`), `from_mode`, `to_mode`, `reason` (>= 10 chars on a change), `actor_user_id`, `audit_id`, `via`, `created_at` |
 | `notification` | Delivered/pending alert | `id`, `user_id`, `project_id`, `trigger_type` (adds `establishment_step_reopened` / `establishment_step_assigned` in migration 0141), `payload`, `channel`, `sent_at`, `read_at` (0077), `dedupe_key` (0141, partial UNIQUE with `user_id`) |
 
+## 10.2 Entry-Market Tables (migration 0151 — ADR-0181)
+
+The S2 entry-market inputs (ADR-0179 amendment §B storage superseded by the ERD-normalization principle): person-set numeric data lives in FK tables; the legacy JSON columns (`opportunity.target_scope_json` / `entry_market_derivation_json`) are backfilled and frozen read-only fallbacks (conditional freeze: chains whose link was cleared stay JSON-readable).
+
+| Table | Purpose | Key Fields |
+|---|---|---|
+| `opportunity_target_scope` | 기회 대상 범위 — 링크 없이도 저장 가능(기존 PUT 시맨틱) | `opportunity_id` (UNIQUE FK), `unit_basis`, `set_by/at` |
+| `target_scope_region` / `target_scope_segment` | 범위의 지역·세그먼트 코드(어휘 개방 — S1 매트릭스 코드 ∪ 고정 enum, `worldwide` 배타) | `scope_id` (FK CASCADE), `code`, `position`, UNIQUE(scope_id, code) |
+| `entry_market` | 진입시장 aggregate — S1 앵커에 대한 배율 사슬·시장정보·앵커 통화·진입시장 성장률 | `opportunity_id` (UNIQUE FK), `sizing_version_id` (NOT NULL FK), `market_brief`, `currency` (CHECK 3자 대문), `growth_rate` (CHECK 0..1 RATIO), `set_by/at` |
+| `entry_market_fx` | 다통화 기준 환율·변동폭 — 개산과 몬테카를로 환 리스크의 기준 (USD만 문서화 기본값 1400; 미설정 통화는 무변환+정직 표시) | `entry_market_id` (FK CASCADE), `currency`, `rate` (CHECK >0 ≤1e6), `volatility` (CHECK 0..0.5), UNIQUE(entry_market_id, currency) |
+| `entry_market_step` | 배율 인자 사슬 — 지역 비중 → 세그먼트 비율(고정 2단계 + AI 초안 확장) | `entry_market_id` (FK CASCADE), `seq`, `base`, `factor` (CHECK 0..1), `source`, `as_of`, `note/origin` (해시 안정성), `region_tags_json/segment_tags_json` (레거시 백필 전용), UNIQUE(entry_market_id, seq) |
+| `entry_market_competitive` | 선택 지역·세그먼트 스코프 경쟁 재분석 결과(사람 확정분; S1에는 기록하지 않음) | `entry_market_id` (FK CASCADE), `player`, `tier`, `region`, `source`, `set_by/at` |
+
+All access through `db/repositories/entry-market.repository.ts` (fallback reads cover the frozen JSON columns).
+
 ## 10.1 Application Tables from Recent Migrations (0089-0092)
 
 | Table | Purpose | Key Fields |

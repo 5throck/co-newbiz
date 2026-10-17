@@ -67,6 +67,7 @@ export const ROUTE_TABLE: readonly RouteEntry[] = [
   { pattern: "/api/opportunities/:id/capability-attainability/ai-draft", load: () => import("../../app/api/opportunities/[id]/capability-attainability/ai-draft/route.ts") },
   { pattern: "/api/opportunities/:id/committee-sessions", load: () => import("../../app/api/opportunities/[id]/committee-sessions/route.ts") },
   { pattern: "/api/opportunities/:id/committee-sessions/:sessionId", load: () => import("../../app/api/opportunities/[id]/committee-sessions/[sessionId]/route.ts") },
+  { pattern: "/api/opportunities/:id/entry-market-derivation", load: () => import("../../app/api/opportunities/[id]/entry-market-derivation/route.ts") },
   { pattern: "/api/opportunities/:id/factors", load: () => import("../../app/api/opportunities/[id]/factors/route.ts") },
   { pattern: "/api/opportunities/:id/gate-decisions", load: () => import("../../app/api/opportunities/[id]/gate-decisions/route.ts") },
   { pattern: "/api/opportunities/:id/pipeline/status", load: () => import("../../app/api/opportunities/[id]/pipeline/status/route.ts") },

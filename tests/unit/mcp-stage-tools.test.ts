@@ -41,13 +41,12 @@ describe("coverage gate", () => {
   test("mcp-coverage passes: every activity and artifact has a tool, no exclusion gained one", async () => {
     const report = await runCoverage();
     expect(report.errors).toEqual([]);
-    // Pinned on purpose: flow.spec v2.8.0 has 45 activities (v2.7.0: four new S9
-    // activities; v2.8.0: greenfield-execution-baseline, integration-monitoring,
-    // partnership-monitoring — ADR-0161). Artifacts 33: the ADR-0161 Row 1
-    // follow-up added S12 requiredArtifacts "execution baseline variance
-    // (greenfield)" (stage:S12:4, read via get_portfolio_scorecard).
-    expect(report.activities).toBe(45);
-    expect(report.artifacts).toBe(33);
+    // Pinned on purpose: flow.spec v2.9.0 has 46 activities (v2.8.0: 45 — four
+    // new S9 activities, ADR-0161 S12 follow-ups; v2.9.0: entry-market-sizing,
+    // ADR-0180). Artifacts 34: v2.9.0 added the S2 required artifact
+    // 진입시장 산정 (stage:S2:2, read via get_entry_market_derivation).
+    expect(report.activities).toBe(46);
+    expect(report.artifacts).toBe(34);
   });
 
   test("the coverage script fails when a human-only route gains a tool (self-test)", async () => {

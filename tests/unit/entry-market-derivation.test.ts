@@ -9,7 +9,7 @@
  * sizing auto-link rules (creation, refresh, freeze, audit, provenance).
  * ASCII-only source (Korean via \u escapes).
  */
-import { test, expect, beforeAll, afterAll, describe } from "bun:test";
+import { test, expect, beforeAll, afterAll, describe, mock } from "bun:test";
 import { Database } from "bun:sqlite";
 import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -26,6 +26,28 @@ runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
 
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
+
+// -- fake the LLM (ADR-0180 slice 2: hermetic tests; no live call, no .env
+//    key consumed — the draft describe previously made a REAL 6s LLM call
+//    whenever the dev .env carried CO_NEWBIZ_LLM_API_KEY and failed the 5s
+//    suite timeout). Disabled by default; the nested-shape describe flips it
+//    on with a scripted valid reply.
+const realLlm = await import("../../app/web-next/lib/llm.ts");
+let llmEnabled = false;
+let llmReplies: string[] = [];
+mock.module("../../app/web-next/lib/llm.ts", () => ({
+  ...realLlm,
+  isLlmConfigured: () => llmEnabled,
+  completeDetailed: async () => {
+    const text = llmReplies.shift() ?? "";
+    return {
+      text,
+      usage: { inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0, model: "mock-model", provider: "mock" },
+      finishReason: "stop" as const,
+    };
+  },
+}));
+
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { promoteOpportunity } = await import("../../db/repositories/project.repository.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
@@ -38,8 +60,8 @@ const {
   compareReachedScope,
   computeEntryMarketChain,
   entryMarketNoteFragment,
-  resolveDerivedEntryMarket,
 } = await import("../../app/web-next/lib/entry-market.ts");
+const { resolveDerivedEntryMarket } = await import("../../db/repositories/entry-market.repository.ts");
 const { autoLinkSizing, refreshAutoSizingLinks, sizingLinkProvenance } = await import(
   "../../app/web-next/lib/sizing-auto-link.ts"
 );
@@ -350,7 +372,7 @@ describe("generator consumption", () => {
     expect(rest2).toEqual(rest);
   });
 
-  test("linked + chained: the DERIVED value replaces the market anchor in the case inputs", () => {
+  test("linked + chained: the DERIVED value replaces the market anchor; a USD-declared anchor converts at the reference rate (ADR-0180 slice 7)", () => {
     const opp = makeOpp();
     const { versionId } = seedSizing("ind-gen-a", PAYLOAD);
     db.run("UPDATE opportunity SET sizing_version_id = ? WHERE id = ?", [versionId, opp]);
@@ -358,8 +380,12 @@ describe("generator consumption", () => {
       [json({ steps: [GOOD_STEP], set_by: ANALYST, set_at: NOW }), opp]);
     const pid = promote(opp);
     const inputs = gen.caseInputsBaseForProject(pid);
-    expect(inputs.marketSizeKrwM).toBeCloseTo(400, 12); // 800 * 0.5
+    // PAYLOAD declares unit_basis usd_m_year: derived 400 (USD-M) x the
+    // labelled default 1400 원/USD — the pre-ADR-0180 behavior consumed the
+    // USD figure as KRW-M (a ~1,400x understatement).
     expect(inputs.entryMarket).toMatchObject({ entry_market_krw_m: 400, steps: 1 });
+    expect(inputs.entryMarketFx).toEqual({ rate: 1400, source: "default", currency: "USD" });
+    expect(inputs.marketSizeKrwM).toBeCloseTo(400 * 1400, 6);
   });
 
   test("note fragment: empty when absent; provenance fragments when derived (byte-exact)", () => {
@@ -511,5 +537,177 @@ describe("sizing auto-link", () => {
     expect(sizingLinkProvenance(db, opp)).toBe("auto");
     auditManualLink(opp);
     expect(sizingLinkProvenance(db, opp)).toBe("manual");
+  });
+});
+
+// -- ADR-0180 slice 1: the REAL pipeline payload shape (nested matrix.*) --------
+// The sizing pipeline writes {methodology, matrix: {anchor, regions, …},
+// stepSummaries} — every ADR-0179 reader that looked at the top-level shape
+// returned null on live data, making the whole flow inert. These tests pin
+// the shape-compatible behavior end to end.
+describe("nested pipeline payload shape (ADR-0180 slice 1)", () => {
+  const NESTED_PAYLOAD = json({
+    methodology: "systematic-market-sizing v1.2.0",
+    matrix: {
+      industryLabel: "t",
+      anchor: { sources: [{ label: "source-a", estimate: 2400, asOf: "2026-06" }], total: 2400 },
+      regions: [
+        { code: "china", label: "중국", weight: 30, mix: { demo: 35 } },
+        { code: "we", label: "서유럽", weight: 18 },
+      ],
+      segments: [],
+    },
+    stepSummaries: [],
+  });
+  const NESTED_DRAFT_REPLY = json({
+    steps: [
+      { base: "s1_anchor", factor: 0.18, source: "지역 가중치 18% (서유럽)", as_of: "2026-06", region_tags: ["we"] },
+      { base: "step:0", factor: 0.4, source: "대상 세그먼트 비율 추정", as_of: "2026-06", segment_tags: ["seg"] },
+    ],
+  });
+
+  test("readSizingLink reference reads the anchor value and regions from matrix.*", async () => {
+    const { versionId } = seedSizing("ind-nested-a", NESTED_PAYLOAD);
+    const opp = makeOpp("ind-nested-a");
+    autoLinkSizing(db, opp, ANALYST, NOW);
+    const state = readSizingLink(db, opp)!;
+    expect(state.link).toEqual({ analysis_id: "ana-ind-nested-a", version_id: versionId });
+    expect(state.reference?.anchor_value_krw_m).toBe(2400);
+  });
+
+  test("derivation GET computes from the nested anchor; PUT+saving yields a derived value", async () => {
+    const { versionId } = seedSizing("ind-nested-b", NESTED_PAYLOAD);
+    const opp = makeOpp("ind-nested-b");
+    await putLink(opp, { version_id: versionId });
+    const g1 = await getEm(opp);
+    expect(g1.status).toBe(200);
+    const body1 = await g1.json();
+    expect(body1.data.reference.anchor_value_krw_m).toBe(2400);
+    expect(body1.data.computed).toBeNull(); // no chain yet
+    const put = await putEm(opp, { steps: [GOOD_STEP] });
+    expect(put.status).toBe(200);
+    const body2 = await (await getEm(opp)).json();
+    expect(body2.data.computed.entry_market_krw_m).toBe(1200); // 2400 x 0.5
+    expect(resolveDerivedEntryMarket(db, opp)?.entry_market_krw_m).toBe(1200);
+  });
+
+  test("draft POST reaches the LLM path on a nested payload (no anchor_unavailable) and writes nothing", async () => {
+    const { versionId } = seedSizing("ind-nested-c", NESTED_PAYLOAD);
+    const opp = makeOpp("ind-nested-c");
+    await putLink(opp, { version_id: versionId });
+    llmEnabled = true;
+    llmReplies = [NESTED_DRAFT_REPLY];
+    try {
+      const res = await postDraft(opp);
+      expect(res.status).toBe(200); // was 409 anchor_unavailable before the shape fix
+      const body = await res.json();
+      expect(body.data.source).toBe("llm");
+      expect(body.data.draft.steps).toHaveLength(2);
+      for (const s of body.data.draft.steps) expect(s.origin).toBe("ai_suggested");
+      expect(body.data.draft.computed.entry_market_krw_m).toBeCloseTo(2400 * 0.18 * 0.4, 6);
+      const row = db.query("SELECT entry_market_derivation_json AS der FROM opportunity WHERE id = ?").get(opp) as { der: string | null };
+      expect(row.der).toBeNull();
+      expect(auditCount("opportunity_entry_market.write", opp + "#entry-market@%")).toBe(0);
+    } finally {
+      llmEnabled = false;
+      llmReplies = [];
+    }
+  });
+});
+
+// -- ADR-0181 slice 3: multi-currency FX at the S1→S8 seam ----------------------
+describe("entry-market fx (ADR-0181 slice 3)", () => {
+  function promote(oppId: string): string {
+    return promoteOpportunity(oppId, { promotedBy: ANALYST, needToKnowBasis: "t" }).project.id;
+  }
+  const USD_NESTED = json({
+    methodology: "m",
+    matrix: {
+      anchor: { sources: [], total: 100 },
+      regions: [{ code: "we", label: "서유럽", weight: 100 }],
+      scope: { regions: ["we"], segments: [], unit_basis: "usd_m_year" },
+    },
+    stepSummaries: [],
+  });
+  const usdScope = json({ regions: ["we"], segments: [], unit_basis: "usd_m_year", set_by: ANALYST, set_at: NOW });
+
+  test("USD-declared derived entry market converts at the LABELLED default rate", async () => {
+    const opp = makeOpp();
+    const { versionId } = seedSizing("ind-fx-a", USD_NESTED);
+    db.run("UPDATE opportunity SET sizing_version_id = ?, target_scope_json = ? WHERE id = ?", [versionId, usdScope, opp]);
+    db.run("UPDATE opportunity SET entry_market_derivation_json = ? WHERE id = ?",
+      [json({ steps: [GOOD_STEP], set_by: ANALYST, set_at: NOW }), opp]);
+    const pid = promote(opp);
+    const inputs = gen.caseInputsBaseForProject(pid);
+    expect(inputs.entryMarketFx).toEqual({ rate: 1400, source: "default", currency: "USD" });
+    expect(inputs.marketSizeKrwM).toBeCloseTo(100 * 0.5 * 1400, 6); // USD 50 x 1400
+  });
+
+  test("a person-set per-currency rate on entry_market_fx wins and is labelled person", async () => {
+    const opp = makeOpp();
+    const { analysisId, versionId } = seedSizing("ind-fx-b", USD_NESTED);
+    db.run("UPDATE opportunity SET sizing_analysis_id = ?, sizing_version_id = ?, target_scope_json = ? WHERE id = ?", [analysisId, versionId, usdScope, opp]);
+    const pid = promote(opp);
+    // ADR-0181: the chain AND the fx ride ONE audited PUT — the steps land in
+    // the 0151 tables (a table row with zero steps correctly means "chain
+    // cleared" and shadows the frozen JSON fallback).
+    const put = await putEm(opp, { steps: [GOOD_STEP], fx: [{ currency: "USD", rate: 1350, volatility: 0.12 }] });
+    expect(put.status).toBe(200);
+    const inputs = gen.caseInputsBaseForProject(pid);
+    expect(inputs.entryMarketFx).toEqual({ rate: 1350, source: "person", currency: "USD" });
+    expect(inputs.marketSizeKrwM).toBeCloseTo(100 * 0.5 * 1350, 6);
+  });
+
+  test("out-of-bounds fx rates are rejected at the audited PUT; an unset non-USD rate NEVER converts", async () => {
+    const opp = makeOpp();
+    const { analysisId, versionId } = seedSizing("ind-fx-c2", USD_NESTED);
+    db.run("UPDATE opportunity SET sizing_analysis_id = ?, sizing_version_id = ?, target_scope_json = ? WHERE id = ?", [analysisId, versionId, usdScope, opp]);
+    const bad = await putEm(opp, { fx: [{ currency: "USD", rate: -5 }] });
+    expect(bad.status).toBe(400);
+    expect(await bad.json()).toMatchObject({ error: { code: "invalid_request" } });
+    // EUR anchor with NO person-set rate: no conversion, honest unset marker,
+    // the legacy anchor path resumes (never a raw foreign-scale pass-through).
+    const EUR_PAYLOAD = json({
+      methodology: "m",
+      matrix: {
+        anchor: { sources: [], total: 100 },
+        regions: [{ code: "we", label: "서유럽", weight: 100 }],
+        scope: { regions: ["we"], segments: [], unit_basis: "eur_m_year" },
+      },
+      stepSummaries: [],
+    });
+    const eurScope = json({ regions: ["we"], segments: [], unit_basis: "eur_m_year", set_by: ANALYST, set_at: NOW });
+    const { versionId: eurV } = seedSizing("ind-fx-eur", EUR_PAYLOAD);
+    const eurOpp = makeOpp();
+    db.run("UPDATE opportunity SET sizing_version_id = ?, target_scope_json = ? WHERE id = ?", [eurV, eurScope, eurOpp]);
+    db.run("UPDATE opportunity SET entry_market_derivation_json = ? WHERE id = ?",
+      [json({ steps: [GOOD_STEP], set_by: ANALYST, set_at: NOW }), eurOpp]);
+    const eurPid = promote(eurOpp);
+    const inputs = gen.caseInputsBaseForProject(eurPid);
+    expect(inputs.entryMarketFx).toBeNull();
+    expect(inputs.entryMarketFxUnsetCcy).toBe("EUR");
+    expect(inputs.marketSizeKrwM).toBe(80000); // legacy anchor, honest fallback
+  });
+
+  test("krw-denominated derived entry market is NEVER converted (entryMarketFx null)", () => {
+    const opp = makeOpp();
+    const krwPayload = json({
+      methodology: "m",
+      matrix: {
+        anchor: { sources: [], total: 800 },
+        regions: [{ code: "kr", label: "한국", weight: 100 }],
+        scope: { regions: ["kr"], segments: [], unit_basis: "krw_m_year" },
+      },
+      stepSummaries: [],
+    });
+    const { versionId } = seedSizing("ind-fx-d", krwPayload);
+    db.run("UPDATE opportunity SET sizing_version_id = ? WHERE id = ?", [versionId, opp]);
+    db.run("UPDATE opportunity SET entry_market_derivation_json = ? WHERE id = ?",
+      [json({ steps: [GOOD_STEP], set_by: ANALYST, set_at: NOW }), opp]);
+    const pid = promote(opp);
+    const inputs = gen.caseInputsBaseForProject(pid);
+    expect(inputs.entryMarketFx).toBeNull();
+    expect(inputs.entryMarketFxUnsetCcy).toBeNull();
+    expect(inputs.marketSizeKrwM).toBeCloseTo(400, 12); // 800 x 0.5, no conversion
   });
 });

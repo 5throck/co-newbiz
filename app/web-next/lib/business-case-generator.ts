@@ -27,9 +27,14 @@
 
 import { noteNumber, parseSimNote } from "./sim-note.ts";
 import { irrGuardBand, IRR_CAUTION_THRESHOLD_DEFAULT, IRR_FLAG_THRESHOLD_DEFAULT } from "./irr-guard.ts";
-import { parseTargetScopeJson, type TargetScope } from "./target-scope.ts";
+import { resolveUnitBasis, type TargetScope } from "./target-scope.ts";
+import { triangular } from "./investment-simulation.ts";
 import { anchorScopeNoteFragment, resolveLinkedAnchorScope } from "./anchor-scope.ts";
-import { entryMarketNoteFragment, resolveDerivedEntryMarket } from "./entry-market.ts";
+import { entryMarketNoteFragment } from "./entry-market.ts";
+import { readEntryMarketRecord, readFx, readTargetScope, resolveDerivedEntryMarket } from "../../../db/repositories/entry-market.repository.ts";
+import { buildSubjectMarketContext } from "./entry-market-context.ts";
+import { anchorCurrencyOfUnitBasis, resolveFxRateForCurrency, resolveLinkedDeclaredUnitBasis } from "./fx.ts";
+
 import { Y1_INVESTMENT_RATIO_THRESHOLD, ratioGuardTripped, shareUnsourcedNoteFragment } from "./share-guard.ts";
 import { resolveEffectiveCagr } from "./market-calibration.ts";
 import { getDb } from "../../../db/client.ts";
@@ -120,11 +125,18 @@ const pct1 = (v: number): string => `${(v * 100).toFixed(1)}%`;
 export function resolveGrowthModel(db: ReturnType<typeof getDb>, projectId: string, opts?: { companyId?: string | null }): GrowthModel {
   const opp = db
     .query(
-      "SELECT o.growth_rate, o.market_scope FROM md_project p LEFT JOIN opportunity o ON o.id = p.source_opportunity_id WHERE p.id = ?",
+      "SELECT o.id AS opp_id, o.growth_rate, o.market_scope FROM md_project p LEFT JOIN opportunity o ON o.id = p.source_opportunity_id WHERE p.id = ?",
     )
-    .get(projectId) as { growth_rate: number | null; market_scope: string | null } | undefined;
-  let marketGrowth = opp?.growth_rate ?? 0.05;
-  let marketGrowthSource = opp?.growth_rate != null ? "시장 성장률 (opportunity)" : "기본값 5% (기회 미입력)";
+    .get(projectId) as { opp_id: string | null; growth_rate: number | null; market_scope: string | null } | undefined;
+  // ADR-0181 slice 5 — the subject-market principle: the S2-CONFIRMED
+  // entry-market growth is the S8 growth basis when set; the legacy
+  // opportunity growth_rate stays the fallback. bc.growth_override (a
+  // person's explicit override) keeps precedence over BOTH downstream.
+  const entryCtx = opp?.opp_id ? buildSubjectMarketContext(db, opp.opp_id) : null;
+  let marketGrowth = entryCtx?.growthRate ?? opp?.growth_rate ?? 0.05;
+  let marketGrowthSource = entryCtx?.growthRate != null
+    ? `진입시장 성장률 (S2 확정 — ${Math.round(entryCtx.growthRate * 1000) / 10}%)`
+    : opp?.growth_rate != null ? "시장 성장률 (opportunity)" : "기본값 5% (기회 미입력)";
   // 에스컬레이션 조정 CAGR — 사람이 기록한 결정이 기회 성장률보다 우선한다
   // (design 2026-09-20-escalation-downstream §3.2-1). 출처는 note 스탬프로 남긴다.
   const industryRow = opp?.market_scope
@@ -395,8 +407,19 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
   // ADR-0176 slice 3: per-draw pairing with the confirmed S5 run - iteration `it` uses S5 draw
   // `it % drawCount`. The factors are precomputed, so the revenue rng stream is untouched.
   const sim5 = s5 && !s5.pnl ? inputs.s5Sim ?? null : null;
+  // ADR-0181 slice 4 — the FX risk INDEX (환 리스크): a per-iteration CONSTANT
+  // triangular draw around 1.0 (fx_basis=index-no-drift — growth stays
+  // anchor-currency-observed, the index adds drift-free FX noise). Drawn at
+  // the TOP of each iteration, AFTER nothing else in the revenue stream —
+  // and when FX is INACTIVE the draw is never consumed, so fx-free cases
+  // keep their exact legacy sample streams (bit-identity).
+  const fxBand = inputs.entryMarketFx
+    ? (inputs.entryMarketFxVolatility ?? 0.1)
+    : null;
+  const fxDist = fxBand != null ? { low: 1 - fxBand, mode: 1.0, high: 1 + fxBand } : null;
   for (let it = 0; it < iterationsOf(inputs); it++) {
     let revenue = year1Revenue;
+    if (fxDist) revenue *= triangular(rng, fxDist.low, fxDist.mode, fxDist.high);
     const capF = sim5 ? sim5.capFactors[it % sim5.drawCount] : 1;
     const manF = sim5 ? sim5.manFactors[it % sim5.drawCount] : 1;
     let npv = s5?.pnl
@@ -540,6 +563,17 @@ export interface CaseInputs {
    *  value + provenance for the run-note fragment; null = legacy bare
    *  anchor, byte-identical notes. */
   entryMarket?: { entry_market_krw_m: number; steps: number; hash: string; factor_product: number; scope_status: "exact" | "partial" | "none" | "unknown" } | null;
+  /** ADR-0181 slice 3 — set only when the derived entry market carried a
+   *  foreign-currency anchor WITH a known rate (person-set or the documented
+   *  USD default); the KRW-converted anchor multiplies by this rate. */
+  entryMarketFx?: { rate: number; source: "person" | "default"; currency: string } | null;
+  /** ADR-0181 slice 4 — the person-set FX volatility band (±ratio) for the
+   *  anchor currency; null → the documented 0.10 default (labelled). */
+  entryMarketFxVolatility?: number | null;
+  /** ADR-0181 slice 3 — the anchor currency needing a rate that has NONE:
+   *  the honest `entry_market_fx=unset (<ccy>)` note marker; no conversion
+   *  happens and the legacy anchor path resumes. */
+  entryMarketFxUnsetCcy?: string | null;
 }
 
 /** Default sales-plan curve (design REQ-W1-2) — utilization by year. */
@@ -918,6 +952,7 @@ export async function recordBusinessCaseParams(
   }
   if (p.irr_flag_threshold !== undefined) put("bc.irr_flag_threshold", p.irr_flag_threshold);
   if (p.irr_caution_threshold !== undefined) put("bc.irr_caution_threshold", p.irr_caution_threshold);
+
   if (written.length === 0) throw new Error("no parameters provided");
   return { written, run_id: run.run_id };
 }
@@ -1335,10 +1370,59 @@ export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "g
   const entryMarketDerived = row?.sizing_version_id
     ? resolveDerivedEntryMarket(getDb(), row.source_opportunity_id ?? "")
     : null;
+  // ADR-0180 slice 7 — the S1→S8 currency seam. The derived entry market
+  // carries the S1 anchor's UNIT (the person-declared unit_basis chain:
+  // saved target scope → linked version's declared scope → krw_m_year); a
+  // USD-denominated anchor converts into the KRW business case at the
+  // reference rate (person-set bc.fx_rate or the LABELLED default). The
+  // legacy bare `market_size_krw_m` column is KRW by name and is NEVER
+  // converted. krw/units anchors pass through untouched (bit-identical).
+  // ADR-0181 slice 3 — the S1→S8 currency seam, MULTI-CURRENCY. The derived
+  // entry market carries the S1 anchor's UNIT (saved target scope → linked
+  // declared scope → krw_m_year); the anchor currency derives from that unit
+  // declaration and converts at the PERSON-SET per-currency rate on the
+  // opportunity's entry_market_fx rows (USD alone carries a labelled
+  // documented default). An unset rate means NO conversion — the derived
+  // figure is never passed through as KRW (the ~1,400× bug this seam
+  // prevents); the case falls back to the legacy anchor with an honest
+  // `entry_market_fx=unset` note marker. The legacy bare `market_size_krw_m`
+  // column is KRW by name and is NEVER converted. krw/units anchors pass
+  // through untouched (bit-identical).
+  const entryMarketUnitBasis = resolveUnitBasis(
+    entryMarketDerived && row?.source_opportunity_id ? readTargetScope(getDb(), row.source_opportunity_id)?.unit_basis ?? null : null,
+    entryMarketDerived && row?.source_opportunity_id ? resolveLinkedDeclaredUnitBasis(getDb(), row.source_opportunity_id) : null,
+  );
+  const entryMarketAnchorCcy = entryMarketDerived ? anchorCurrencyOfUnitBasis(entryMarketUnitBasis) : null;
+  const entryMarketFxRow = entryMarketDerived && entryMarketAnchorCcy && row?.source_opportunity_id
+    ? readFx(getDb(), row.source_opportunity_id).find((r) => r.currency === entryMarketAnchorCcy) ?? null
+    : null;
+  const entryMarketFxResolved = entryMarketAnchorCcy
+    ? resolveFxRateForCurrency(entryMarketAnchorCcy, entryMarketFxRow?.rate ?? null)
+    : null;
+  const entryMarketFx = entryMarketDerived && entryMarketAnchorCcy && entryMarketFxResolved
+    ? { rate: entryMarketFxResolved.rate, source: entryMarketFxResolved.source, currency: entryMarketAnchorCcy }
+    : null;
+  const entryMarketFxVolatility: number | null = entryMarketFxRow?.volatility ?? null;
+  // FX needed but UNSET: honest degradation to the legacy anchor (never a raw
+  // foreign-scale pass-through), surfaced in the run note.
+  const entryMarketFxUnsetCcy: string | null =
+    entryMarketDerived && entryMarketAnchorCcy && !entryMarketFxResolved ? entryMarketAnchorCcy : null;
+  const entryMarketKrwM = entryMarketDerived
+    ? entryMarketFx
+      ? entryMarketDerived.entry_market_krw_m * entryMarketFx.rate
+      : entryMarketAnchorCcy == null
+        ? entryMarketDerived.entry_market_krw_m // KRW/units anchor — no conversion needed
+        : null // FX needed, rate unset → legacy anchor path
+    : null;
   return {
     projectId,
-    marketSizeKrwM: entryMarketDerived?.entry_market_krw_m ?? row?.market_size_krw_m ?? 50000,
-    anchorGrowth: row?.growth_rate ?? 0.05,
+    marketSizeKrwM: entryMarketKrwM ?? row?.market_size_krw_m ?? 50000,
+    // ADR-0181 slice 5 — the subject-market growth (S2 확정) replaces the
+    // whole-market opportunity growth as the anchor growth; unset → legacy
+    // fallback (bit-identical), provenance in the run-note growth_source.
+    anchorGrowth: (row?.source_opportunity_id
+      ? readEntryMarketRecord(getDb(), row.source_opportunity_id)?.growth_rate
+      : null) ?? row?.growth_rate ?? 0.05,
     wacc: resolveProjectWacc(getDb(), projectId),
     waccScope: { scope: "project" },
     bcParams,
@@ -1353,18 +1437,11 @@ export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "g
     s5Sim: bcParams.investmentBasis !== "ratio" && bcParams.investmentBasis !== "s5_pnl" && s5Plan
       ? s5Plan.pinId ? resolvePinnedS5SimConsumption(getDb(), getCurrentS5PlanPin(getDb(), projectId)!) : resolveS5SimConsumption(getDb(), row?.source_opportunity_id)
       : null,
-    // ADR-0179 slice 1 — the person-set target scope passes through for later
-    // consumption; a NULL or unparsable column never blocks generation (parse
-    // failures degrade to null, the caller sees legacy behavior). The CHECK
-    // constraint should keep invalid JSON out, but generation must be robust
-    // to hand-written rows anyway — hence the defensive try/catch.
-    targetScope: (() => {
-      try {
-        return parseTargetScopeJson(row?.target_scope_json ?? null) ?? null;
-      } catch {
-        return null;
-      }
-    })(),
+    // ADR-0179 slice 1 / ADR-0181 slice 1 — the person-set target scope is
+    // read through the entry-market repository (0151 tables first, frozen
+    // JSON fallback). A NULL scope never blocks generation (the caller sees
+    // legacy behavior).
+    targetScope: row?.source_opportunity_id ? readTargetScope(getDb(), row.source_opportunity_id) : null,
     // ADR-0179 amendment slice A — the anchor side from the LINKED sizing
     // version's declared scope (design §12.1). Unlinked → null → the honest
     // `unknown` (bit-identical with the pre-amendment path); linked, the
@@ -1381,6 +1458,12 @@ export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "g
     // resolved value replaces marketSizeKrwM below; unlinked / chain-absent
     // / unparsable → null → the legacy bare anchor path, bit-identical.
     entryMarket: entryMarketDerived,
+    // ADR-0181 slice 3 — set ONLY when a foreign-currency anchor was
+    // converted at a known rate (the note fragment fires with it); null
+    // otherwise so every other note stays byte-identical.
+    entryMarketFx,
+    entryMarketFxVolatility,
+    entryMarketFxUnsetCcy,
   };
 }
 
@@ -1581,6 +1664,22 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
           revenue_y1: { dist: "constant", value: y1.value, unit: "KRW_M", source: y1.source },
           ramp_up: { dist: "constant", value: bc.rampUp, source: bc.rampSource },
           revenue_growth: { dist: "normal", mean: eff.growth, sigma: eff.disp, unit: "ratio", source: eff.growthSource },
+          // ADR-0181 slice 4 — the FX risk INDEX: per-iteration constant
+          // triangular around 1.0 (fx_basis=index-no-drift); the level rate
+          // lives only in the deterministic KRW conversion (entryMarketFx),
+          // so the index NEVER double-converts (review-board P0 fix).
+          ...(inputs.entryMarketFx
+            ? {
+                fx_index: {
+                  dist: "triangular",
+                  low: 1 - (inputs.entryMarketFxVolatility ?? 0.1),
+                  expected: 1.0,
+                  high: 1 + (inputs.entryMarketFxVolatility ?? 0.1),
+                  unit: "index",
+                  source: `환 리스크 지수 — ${inputs.entryMarketFx.currency} 기준 환율 ${inputs.entryMarketFx.rate} ±${Math.round((inputs.entryMarketFxVolatility ?? 0.1) * 100)}% (반복당 상수, fx_basis=index-no-drift)`,
+                },
+              }
+            : {}),
           opex_ratio: {
             dist: "constant",
             value: opexRatio,
@@ -1789,6 +1888,15 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       // (design §12.2). Appended ONLY when a derived entry-market actually
       // replaced the anchor; every other note stays byte-identical.
       const entryMarketFragment = entryMarketNoteFragment(ctx.inputs.entryMarket);
+      // ADR-0180 slice 7 — the USD→KRW conversion provenance, appended ONLY
+      // when a USD-denominated derived entry market was converted; every
+      // other note stays byte-identical.
+      const entryMarketFxFragment = ctx.inputs.entryMarketFx
+        ? `; entry_market_fx=${ctx.inputs.entryMarketFx.currency} ${ctx.inputs.entryMarketFx.rate} (${ctx.inputs.entryMarketFx.source === "person" ? "person" : "기본값 — 검증 전"})` +
+          `; fx_ccy=${ctx.inputs.entryMarketFx.currency}; fx_vol=${(ctx.inputs.entryMarketFxVolatility ?? 0.1).toFixed(2)}; fx_dist=triangular; fx_basis=index-no-drift`
+        : ctx.inputs.entryMarketFxUnsetCcy
+          ? `; entry_market_fx=unset (${ctx.inputs.entryMarketFxUnsetCcy} 기준 환율 미설정 — 개산 생략, 레거시 앵커)`
+          : "";
       // ADR-0179 slice 3 — sourced-market-share labelling (design §6.1) and the
       // Y1-revenue/capex ratio plausibility guard (design §7.1). Display
       // metadata only: fragments are appended ONLY when they fire (share: a
@@ -1830,7 +1938,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       const anchorFragment = ctx.inputs.revenueAnchor
         ? `revenue_anchor=${ctx.inputs.revenueAnchor.source}${acqFragment}${xcheckFragment}`
         : `capture_rate=${bc.captureRate}; capture_source=${bc.captureSource}`;
-      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}; wacc_scope=${ctx.inputs.waccScope?.scope ?? "project"}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; wacc_subject=${waccSubject}; ${anchorFragment}${shareFragment}${ratioFragment}; ramp_source=${bc.rampSource}; ${provenance}${tcFragment}${basisFragment}; engine=${engineMeta.engine}${s5Provenance ? " (S8 엔진 우회 — 연도별 capex 스케줄 미지원, ADR-0174)" : ""}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}${irrGuardFragment}${anchorScopeFragment}${entryMarketFragment}`;
+      const note = `seed=${sim.seed}; iterations=${sim.iterations}; scenario=${ctx.scenario}; growth=${eff.growth.toFixed(4)}; wacc=${ctx.inputs.wacc.value}; wacc_source=${ctx.inputs.wacc.source}; wacc_scope=${ctx.inputs.waccScope?.scope ?? "project"}${ctx.inputs.wacc.run_id ? `; wacc_run=${ctx.inputs.wacc.run_id}` : ""}; wacc_subject=${waccSubject}; ${anchorFragment}${shareFragment}${ratioFragment}; ramp_source=${bc.rampSource}; ${provenance}${tcFragment}${basisFragment}; engine=${engineMeta.engine}${s5Provenance ? " (S8 엔진 우회 — 연도별 capex 스케줄 미지원, ADR-0174)" : ""}; device=${engineMeta.device}; precision=${engineMeta.precision}${bepFragment}${irrGuardFragment}${anchorScopeFragment}${entryMarketFragment}${entryMarketFxFragment}`;
       db.run(`UPDATE business_case_model SET inputs_json = ? WHERE id = ?`, [JSON.stringify(jobSpec), modelId]);
       for (const pct of ["p05", "p50", "p95"] as const) {
         const isP50 = pct === "p50";

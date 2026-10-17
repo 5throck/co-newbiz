@@ -4,7 +4,7 @@
 // prompts and flowspec:// resources (ADR-0154, Wave M M-3).
 import type { StageGuideSpec } from "./stage-guides.ts";
 
-export const GUIDE_SPEC_VERSION = "2.8.0";
+export const GUIDE_SPEC_VERSION = "2.9.1";
 export const GUIDE_STAGES: StageGuideSpec[] = [
   {
     "id": "S1",
@@ -83,13 +83,24 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
           "greenfield-screening",
           "brownfield-screening"
         ]
+      },
+      {
+        "id": "entry-market-sizing",
+        "agent": "market-intelligence-agent",
+        "procedure": [
+          "opportunity-discovery",
+          "greenfield-screening",
+          "brownfield-screening"
+        ]
       }
     ],
     "requiredArtifacts": [
-      "기회 등록(가치사슬 노드·매력도)"
+      "기회 등록(가치사슬 노드·매력도)",
+      "진입시장 산정 (S1 링크·대상 범위·도출 사슬)"
     ],
     "completionCriteria": [
-      "최소 1개 기회가 등록되고 매력도가 평가되었다"
+      "최소 1개 기회가 등록되고 매력도가 평가되었다",
+      "최소 1개 기회에 S1 시장규모 버전이 연결되고 대상 범위가 기록되었다 (ADR-0180 — 미연결 상태는 미연결로 정직 표시되며 게이트를 막지 않는다)"
     ]
   },
   {

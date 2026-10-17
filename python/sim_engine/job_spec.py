@@ -133,7 +133,7 @@ def parse_case(raw: Any, index: int) -> dict:
 
     drivers: dict = {}
     for name in ("revenue_y1", "revenue_growth", "opex_ratio", "capex_ratio", "initial_investment",
-                 "exit_ev_revenue", "fixed_cost_annual", "unit_price", "unit_variable_cost"):
+                 "exit_ev_revenue", "fixed_cost_annual", "unit_price", "unit_variable_cost", "fx_index"):
         if name in raw_drivers:
             drivers[name] = parse_driver(raw_drivers[name], f"{label}.drivers.{name}")
     _require("revenue_y1" in drivers, f"{label}: drivers.revenue_y1 is required (the year-1 revenue anchor)")

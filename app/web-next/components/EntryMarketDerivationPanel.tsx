@@ -41,6 +41,10 @@ export interface EntryMarketDerivationData {
   confidence: { lowering_count: number; note: string } | null;
   region_caveat: string | null;
   max_steps: number;
+  // ADR-0181 additive record inputs:
+  growth_rate: number | null;
+  currency: string | null;
+  region_trends: Array<{ region: string; segments: Array<{ code: string; baseline: number | null; cagr: number | null }> }>;
 }
 
 export function EntryMarketDerivationPanel({ opportunityId, canAct, scopeSet, disabledReason, scopeWarning, data, onDataChanged }: {
@@ -59,6 +63,7 @@ export function EntryMarketDerivationPanel({ opportunityId, canAct, scopeSet, di
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [growthProposal, setGrowthProposal] = useState<{ growth_rate: number; basis: string } | null>(null);
 
   // Reset the form whenever the parent refetches (fresh data identity).
   // Empty state = exactly TWO named base cards (design §5.3).
@@ -110,20 +115,40 @@ export function EntryMarketDerivationPanel({ opportunityId, canAct, scopeSet, di
 
   // AI 배수 추천 - the empty state's primary action: fills BOTH fixed cards
   // (factor + source + as_of drafts) in one action; a draft with >2 steps
-  // lands the extras as 3+ rows (design §5.3/§5.4).
+  // lands the extras as 3+ rows (design §5.3/§5.4). ADR-0181: the response
+  // also carries a growth proposal (S1 matrix cagrBase, deterministic) that
+  // the person may adopt through the audited PUT — never auto-applied.
   async function recommend() {
     setBusy(true); setError(null); setNotice(null); setFormError(null);
     try {
-      const r = await api.post<{ draft: { steps: Array<Record<string, unknown>> } | null; source: string; note: string }>(
+      const r = await api.post<{ draft: { steps: Array<Record<string, unknown>>; growth_proposal: { growth_rate: number; basis: string } | null } | null; source: string; note: string }>(
         `/api/opportunities/${encodeURIComponent(opportunityId)}/entry-market-derivation/draft`);
       if (r.data.draft?.steps?.length) {
         setSteps(r.data.draft.steps.map(derivationStepToForm));
+        setGrowthProposal(r.data.draft.growth_proposal);
         setNotice(r.data.note);
       } else {
         setError(r.data.note);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "AI 추천 실패");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // ADR-0181 slice 2 — adopt the growth proposal (or a person-entered value)
+  // through the SAME human-only PUT; the number came from the S1 matrix, the
+  // confirmation is the person's.
+  async function adoptGrowth(rate: number) {
+    setBusy(true); setError(null); setNotice(null);
+    try {
+      await api.put(`/api/opportunities/${encodeURIComponent(opportunityId)}/entry-market-derivation`, { growth_rate: rate });
+      setGrowthProposal(null);
+      setNotice(`진입시장 성장률을 ${Math.round(rate * 1000) / 10}%로 기록했습니다.`);
+      await onDataChanged?.();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "성장률 저장 실패");
     } finally {
       setBusy(false);
     }
@@ -243,21 +268,6 @@ export function EntryMarketDerivationPanel({ opportunityId, canAct, scopeSet, di
                 <input className="sizing-new-input sizing-new-input-sm" style={{ width: "100%" }} value={s.as_of} disabled={busy}
                   onChange={(e) => updateStep(i, { as_of: e.target.value })} data-testid={`entry-market-step-${i}-as-of`} />
               </label>
-              <label className="text-[length:var(--fs-caption)]">
-                지역 태그 (쉼표)
-                <input className="sizing-new-input sizing-new-input-sm" style={{ width: "100%" }} value={s.region_tags} disabled={busy}
-                  onChange={(e) => updateStep(i, { region_tags: e.target.value })} data-testid={`entry-market-step-${i}-region`} />
-              </label>
-              <label className="text-[length:var(--fs-caption)]">
-                세그먼트 태그 (쉼표)
-                <input className="sizing-new-input sizing-new-input-sm" style={{ width: "100%" }} value={s.segment_tags} disabled={busy}
-                  onChange={(e) => updateStep(i, { segment_tags: e.target.value })} data-testid={`entry-market-step-${i}-segment`} />
-              </label>
-              <label className="text-[length:var(--fs-caption)]">
-                비고 (선택)
-                <input className="sizing-new-input sizing-new-input-sm" style={{ width: "100%" }} value={s.note} disabled={busy}
-                  onChange={(e) => updateStep(i, { note: e.target.value })} data-testid={`entry-market-step-${i}-note`} />
-              </label>
             </div>
           ) : (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
@@ -278,10 +288,52 @@ export function EntryMarketDerivationPanel({ opportunityId, canAct, scopeSet, di
           저장된 값: 진입시장 {data.computed.entry_market_krw_m.toLocaleString()} KRW M (배율 곱 {data.computed.factor_product.toFixed(4)})
         </p>
       )}
+      {/* ADR-0181 slice 2 — the entry-market GROWTH (S3~S12의 기준 성장률):
+          stored value + the AI proposal (S1 cagrBase) with an explicit adopt
+          action. Ratio display, percent label — the storage unit is a ratio. */}
+      <div className="text-[length:var(--fs-caption)] mb-1" data-testid="entry-market-growth">
+        <span className="status-chip status-info">진입시장 성장률</span>{" "}
+        {data?.growth_rate != null ? (
+          <strong className="mono-num">{Math.round(data.growth_rate * 1000) / 10}%/년</strong>
+        ) : (
+          <span className="text-[color:var(--muted-fg)]">미확정</span>
+        )}
+        {growthProposal && (
+          <span className="ml-2">
+            AI 제안: <strong className="mono-num">{Math.round(growthProposal.growth_rate * 1000) / 10}%/년</strong>
+            {" "}<span className="text-[color:var(--muted-fg)]">({growthProposal.basis})</span>{" "}
+            {canAct && (
+              <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void adoptGrowth(growthProposal.growth_rate)} data-testid="entry-market-growth-adopt">
+                성장률로 반영
+              </button>
+            )}
+          </span>
+        )}
+      </div>
+      {/* ADR-0181 slice 2 — the selected region's S1 trends (read-only matrix
+          data; S1 is frozen). */}
+      {data?.region_trends && data.region_trends.length > 0 && (
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1" data-testid="entry-market-region-trends">
+          선택 지역 동향 (S1 매트릭스):{" "}
+          {data.region_trends.map((t) => (
+            <span key={t.region} className="mr-2">
+              {t.region}: {t.segments.map((s) => `${s.code} ${s.cagr != null ? `${Math.round(s.cagr * 1000) / 10}%` : "-"}`).join(", ")}
+            </span>
+          ))}
+        </p>
+      )}
       {data?.scope_flag && (
         <p className="text-[length:var(--fs-caption)] mb-1" data-testid="entry-market-scope-flag">
-          <span className={data.scope_flag.status === "match" ? "status-chip status-info" : "status-chip status-warn"}>
-            도달 범위 판정: {data.scope_flag.status}
+          {/* ADR-0181 (supersedes §B.5): record-level verdict — the person's
+              selection vs the anchor's DECLARED scope (ok/mismatch/unknown). */}
+          <span className={
+            data.scope_flag.status === "ok"
+              ? "status-chip status-info"
+              : data.scope_flag.status === "mismatch"
+                ? "status-chip status-warn"
+                : "status-chip status-not-started"
+          }>
+            범위 판정: {data.scope_flag.status === "ok" ? "일치" : data.scope_flag.status === "mismatch" ? "불일치" : "미확인"}
           </span>{" "}
           {data.scope_flag.reason}
         </p>

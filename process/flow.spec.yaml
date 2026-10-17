@@ -21,7 +21,25 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.8.0"
+  version: "2.9.1"
+  # v2.9.1 — 진입시장 = S3~S12의 기준 시장 원칙 선언 (ADR-0181, 2026-10-17
+  #   사용자 지시 "S2에서 진입 시장(target segment) 구하는 작업을 한 뒤 S3
+  #   이후부터 모든 분석과 평가는 해당 진입 시장을 기준으로 진행"). S2
+  #   entry-market-sizing 액티비티가 통합 플로우(사람이 S1 매트릭스에서 지역·
+  #   세그먼트를 선택하고 진입 시장 정보를 입력하면 AI가 비율·성장률을 초안,
+  #   사람이 확정 — 경계 #2)와 다통화 기준 환율(entry_market_fx)을 다룬다는
+  #   것을 명시; S4·S8 inputs에 진입시장 성장률을 선언한다(선언적 — 엔진
+  #   무효). S1 구조는 동결(읽기 전용, 역반영 없음).
+  # v2.9.0 — S2 진입시장 산정이 기회·위험 요인·비즈니스 모델 검토와 동일한 수준의
+  #   정규 액티비티로 승격된다 (ADR-0180, 2026-10-17 사용자 지시 "S2 기회발굴에서
+  #   기회/위험 요인, 비즈니스 모델 검토와 동일한 수준으로 진입시장 산정을 다룰 것").
+  #   S2 gains the entry-market-sizing activity + the 진입시장 산정 output/
+  #   required artifact + a stage-scoped completion criterion; S3 inputs declare
+  #   the derived market (the S2-decided entry market is the subject market the
+  #   downstream stages operate on). Additive only — no stage/gate/track
+  #   structure change. The derivation stays decision support: an unset chain
+  #   displays honestly (미연결/unknown) and never blocks a gate (ADR-0179,
+  #   불변 경계 #2/#4).
   # (v2.8.0 문구 정정, 2026-10-13: S10 투자 수단 음차어 표기를 "투자 주체"로 교체 — 텍스트만 변경, 버전 유지)
   # v2.8.0 — S11/S12 실행·사후관리를 트랙·세부 트랙별로 범위화한다 (ADR-0161,
   #   Proposed; Q1~Q7은 2026-10-12 채팅에서 사용자가 결정). S11에
@@ -229,6 +247,7 @@ stages:
       - 가치사슬 구조 (S1)
     outputs:
       - 기회 퍼널(매력도 포함)
+      - 진입시장 산정 (기회별 — S1 링크·대상 범위·배율 도출 사슬, ADR-0180)
     entryCriteria:
       - S1 산출물 존재
     activities:
@@ -240,10 +259,28 @@ stages:
         agent: greenfield-agent
         skills: [scenario-planning]
         procedure: [opportunity-discovery, greenfield-screening, brownfield-screening]
+      - id: entry-market-sizing
+        agent: market-intelligence-agent
+        skills: [systematic-market-sizing]
+        procedure: [opportunity-discovery, greenfield-screening, brownfield-screening]
+        # ADR-0180 (v2.9.0) / ADR-0181 (v2.9.1) — 기회별 진입시장 산정: S1
+        # 시장규모 버전을 연결하고(opportunity.sizing_analysis_id/
+        # sizing_version_id), 사람이 S1 매트릭스의 지역·세그먼트를 선택해 진입
+        # 시장 정보(market_brief)를 입력하면 AI가 배율 인자와 진입시장 성장률을
+        # 초안 제안하고 사람이 확정한다(경계 #2 — 저장은 사람의 행위).
+        # 도출 = S1 앵커 × Πf (배율 전용·단계별 출처 필수 — ADR-0179 수정안
+        # §B; 단계별 범위 태그는 record-level 판정으로 대체 — ADR-0181).
+        # 다통화 기준 환율·변동폭(entry_market_fx)이 여기서 설정되고 S3부터는
+        # 원화 기준으로 진행한다. 도출값은 결정 지원이며 게이트를 막지 않는다
+        # (경계 #2/#4); S8의 시장 앵커·성장률을 대체하고 S3~S12 전체가 이
+        # 진입시장을 기준으로 진행한다. 수치 입력은 ERD 원칙에 따라 FK 기반
+        # 테이블(0151)에 저장된다.
     requiredArtifacts:
       - 기회 등록(가치사슬 노드·매력도)
+      - 진입시장 산정 (S1 링크·대상 범위·도출 사슬)
     completionCriteria:
       - 최소 1개 기회가 등록되고 매력도가 평가되었다
+      - 최소 1개 기회에 S1 시장규모 버전이 연결되고 대상 범위가 기록되었다 (ADR-0180 — 미연결 상태는 미연결로 정직 표시되며 게이트를 막지 않는다)
     applicableTracks: [greenfield, brownfield]
     stateTransitions: { onComplete: S3, onHold: S2, onKill: terminal }
     gates: [screening]
@@ -253,6 +290,7 @@ stages:
     objective: 우리가 해야 하는가? — 자사 역량과의 시너지를 평가한다
     inputs:
       - 후보 기회 (S2 기회 퍼널)
+      - 진입시장 산정 (S2 — 지역·세그먼트 도출 시장, ADR-0180; S3~S12가 대상으로 삼는 시장)
       - 자사 역량·포트폴리오 정보 (그룹/계열사 분석 산출 — 그룹/계열사 프로파일)
     outputs:
       - 시너지 점수
@@ -302,6 +340,7 @@ stages:
     inputs:
       - 시너지·적합성 평가
       - 역량 갭 분석 (S3 — 시장 요구사항 대비 그룹/계열사 보유 역량)
+      - 진입시장 성장률 (S2 확정 — ADR-0181; 라우트 어드바이저 성장 신호의 기준)
       - 시장 규모·성장 추정 (S1)
       - 경쟁 구조 (S1)
       - 가치사슬 구조 (S1)
@@ -464,6 +503,7 @@ stages:
       - 트랙 결정
       - 진출전략·Business Case 라인 (greenfield — S5)
       - Short List 대상 재무 정보 (brownfield — S7, 대상별)
+      - 진입시장 산정 (S2 확정 — ADR-0181; 시장 앵커·성장률·환율 개산과 몬테카를로 환 리스크의 기준)
     outputs:
       - Business Case / 밸류에이션 (brownfield — 대상별)
       - 시뮬레이션 NPV 분포

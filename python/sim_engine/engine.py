@@ -82,6 +82,16 @@ def run_case(case: dict, spec: dict, device_info: DeviceInfo) -> dict:
     revenue = backend.concatenate(
         [revenue, revenue * backend.cumprod(1.0 + growth[:, 1:], axis=1)], axis=1)
 
+    # ADR-0181 slice 4 — the FX risk INDEX driver (환 리스크): a per-iteration
+    # CONSTANT triangular index around 1.0 (fx_basis=index-no-drift — growth
+    # stays anchor-currency-observed; the index adds drift-free FX noise).
+    # Drawn AFTER the growth samples, BEFORE opex/capex; absent → no draw at
+    # all, so fx-free specs keep their exact legacy sample streams.
+    fx_driver = drivers.get("fx_index")
+    if fx_driver:
+        fx_index = _sample_driver(backend, rng, (iterations, 1), fx_driver)
+        revenue = revenue * fx_index
+
     opex = _sample_driver(backend, rng, (iterations, 1), opex_driver)
     capex = _sample_driver(backend, rng, (iterations, 1), capex_driver)
     fcf = revenue * (1.0 - opex - capex)

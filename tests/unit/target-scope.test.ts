@@ -31,6 +31,7 @@ const { promoteOpportunity } = await import("../../db/repositories/project.repos
 const { ulid } = await import("../../db/lib/ulid.ts");
 const { runAsPrincipal } = await import("../../app/web-next/lib/mcp/principal-context.ts");
 const { isHumanOnly } = await import("../../app/web-next/lib/mcp/in-process-port.ts");
+const { readTargetScope } = await import("../../db/repositories/entry-market.repository.ts");
 const scopeRoute = await import("../../app/web-next/app/api/opportunities/[id]/target-scope/route.ts");
 const gen = await import("../../app/web-next/lib/business-case-generator.ts");
 const { normalizeTargetScopeInput, parseTargetScopeJson, TargetScopeValidationError, TARGET_SCOPE_REGIONS, resolveUnitBasis, SCOPE_UNIT_BASIS_CAPTION } =
@@ -170,16 +171,18 @@ describe("target-scope route", () => {
     expect((db.query("SELECT target_scope_json AS v FROM opportunity WHERE id = ?").get(opp) as { v: string | null }).v).toBeNull();
   });
 
-  test("viewer PUT is 403; analyst PUT stores the scope, stamps set_by/set_at server-side, audits", async () => {
+  test("viewer PUT is 403; analyst PUT stores the scope (0151 tables), stamps set_by/set_at server-side, audits", async () => {
     const opp = makeOpp("greenfield");
     expect((await putScope(opp, VALID, { cookie: viewerCookie })).status).toBe(403);
     const res = await putScope(opp, VALID);
     expect(res.status).toBe(200);
-    const stored = JSON.parse((db.query("SELECT target_scope_json AS v FROM opportunity WHERE id = ?").get(opp) as { v: string }).v);
+    // ADR-0181 slice 1: the scope lives in the 0151 FK tables (the legacy
+    // JSON column stays NULL for new writes — repository readers only).
+    const stored = readTargetScope(db, opp);
     expect(stored).toMatchObject(VALID);
-    expect(stored.set_by).toBe(ANALYST);
-    expect(stored.set_at).toBeTruthy();
-    expect(await getScope(opp).then((r) => r.json())).toMatchObject({ data: { scope: stored } });
+    expect(stored?.set_by).toBe(ANALYST);
+    expect(stored?.set_at).toBeTruthy();
+    expect(await getScope(opp).then((r) => r.json())).toMatchObject({ data: { scope: VALID } });
     expect((db.query("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'opportunity_target_scope.write' AND target LIKE ?").get(`${opp}#%`) as { n: number }).n).toBe(1);
     // a second PUT overwrites (last write wins) and does not duplicate audit chaos
     await putScope(opp, { regions: ["worldwide"], segments: [], unit_basis: "krw_m_year" });

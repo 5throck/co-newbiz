@@ -1,4 +1,4 @@
-// @version 1.8.4
+// @version 1.9.0
 // Idempotent S1→S12 demo chain seeds — BROWNFIELD (seedS1ToS12Demo) and
 // GREENFIELD (seedGreenfieldS1ToS12Demo), one full lifecycle per track.
 //
@@ -11,6 +11,7 @@
 // Usage:
 //   bun scripts/co-newbiz/seed-s1-s12-demo.ts [--db-path <path>]
 import { getDb } from "../../db/client.ts";
+import { writeTargetScope } from "../../db/repositories/entry-market.repository.ts";
 import type { SizingMatrix } from "../../app/web-next/lib/market-sizing.ts";
 import { runMigrations } from "../../db/migrate.ts";
 import { ulid } from "../../db/lib/ulid.ts";
@@ -200,8 +201,8 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
       `INSERT OR IGNORE INTO opportunity
        (id, project_id, name, market_scope, value_chain_node, market_size_krw_m, growth_rate,
         attractiveness_score, synergy_score, status, rationale, decided_by, decided_at, created_by, created_at,
-        target_universe_json, capability_gap_json, synergy_score_confirmed_at, synergy_score_confirmed_by, industry_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'selected', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        target_universe_json, capability_gap_json, synergy_score_confirmed_at, synergy_score_confirmed_by, industry_id, sizing_version_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'selected', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         DEMO.oppId,
         null,
@@ -231,8 +232,11 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
         now,
         actor,
         DEMO.industryId,
+        DEMO.versionId,
       ],
     );
+    // ADR-0181 slice 1 — the target scope lives in the 0151 FK tables.
+    writeTargetScope(db, DEMO.oppId, { regions: ["KR"], segments: ["demo_core"], unit_basis: "usd_m_year" }, actor, now);
 
     db.run(
       `INSERT OR IGNORE INTO md_project
@@ -579,8 +583,9 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
       `INSERT OR IGNORE INTO opportunity
        (id, project_id, name, market_scope, value_chain_node, market_size_krw_m, growth_rate,
         attractiveness_score, synergy_score, status, rationale, decided_by, decided_at, created_by, created_at,
-        capability_gap_json, synergy_score_confirmed_at, synergy_score_confirmed_by, industry_id)
-       VALUES (?, ?, ?, ?, ?, 1080000, 0.18, 75, 55, 'selected', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        capability_gap_json, synergy_score_confirmed_at, synergy_score_confirmed_by, industry_id,
+        sizing_version_id)
+       VALUES (?, ?, ?, ?, ?, 1080000, 0.18, 75, 55, 'selected', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         GF.oppId, null, "S1-S12 데모 Greenfield 기회", "S1-S12 데모 신설 산업", "직접 진출 밸류체인 노드 (신설)",
         "시장 성장·자체 역량 조합에서 직접 진출 기회가 명확함", actor, now, actor, now,
@@ -591,8 +596,10 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
           ],
         }),
         now, actor, GF.industryId,
+        GF.versionId,
       ],
     );
+    writeTargetScope(db, GF.oppId, { regions: ["KR"], segments: ["demo_core"], unit_basis: "usd_m_year" }, actor, now);
 
     db.run(
       `INSERT OR IGNORE INTO md_project

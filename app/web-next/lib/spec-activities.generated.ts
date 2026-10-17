@@ -5,7 +5,7 @@
 // this projection mirrors the spec.)
 import type { SpecStage } from "./spec-activities.ts";
 
-export const SPEC_VERSION = "2.8.0";
+export const SPEC_VERSION = "2.9.1";
 export const SPEC_STAGES: SpecStage[] = [
   {
     "id": "S1",
@@ -68,6 +68,18 @@ export const SPEC_STAGES: SpecStage[] = [
         "agent": "greenfield-agent",
         "skills": [
           "scenario-planning"
+        ],
+        "procedure": [
+          "opportunity-discovery",
+          "greenfield-screening",
+          "brownfield-screening"
+        ]
+      },
+      {
+        "id": "entry-market-sizing",
+        "agent": "market-intelligence-agent",
+        "skills": [
+          "systematic-market-sizing"
         ],
         "procedure": [
           "opportunity-discovery",

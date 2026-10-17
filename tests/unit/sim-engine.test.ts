@@ -350,3 +350,68 @@ describe("sim_engine", () => {
     expect(kase.payback_discounted_years).toBe(0);
   });
 });
+
+// -- ADR-0181 slice 4 — the FX risk INDEX driver (환 리스크) ---------------------
+describe("sim_engine fx_index (ADR-0181 slice 4)", () => {
+  const BASE_DRIVERS = {
+    revenue_y1: { dist: "constant", value: 250, unit: "KRW_M" },
+    revenue_growth: { dist: "constant", value: 0 },
+    opex_ratio: { dist: "constant", value: 0.6 },
+    capex_ratio: { dist: "constant", value: 0.1 },
+    initial_investment: { dist: "constant", value: 100, unit: "KRW_M" },
+  };
+  function fxJob(fxDriver: Record<string, unknown> | null, caseId: string) {
+    return {
+      job_id: `test:${caseId}`,
+      device: "cpu",
+      iterations: 500,
+      horizon_years: 5,
+      discount_rate: { value: 0.1, subject: "promoter", source: "user" },
+      seed_policy: { base: "proj", hash: "fnv1a" },
+      cases: [
+        {
+          case_id: caseId,
+          drivers: fxDriver ? { ...BASE_DRIVERS, fx_index: fxDriver } : { ...BASE_DRIVERS },
+        },
+      ],
+    };
+  }
+
+  test.skipIf(!ENGINE_AVAILABLE)("fx_index ≡ 1.0 (constant) leaves the result EXACTLY unchanged (no double conversion)", async () => {
+    const base = await runEngine(fxJob(null, "fxbase:market_forward"));
+    expect(base.code).toBe(0);
+    const withFx = await runEngine(fxJob({ dist: "constant", value: 1.0, unit: "index" }, "fxc1:market_forward"));
+    expect(withFx.code).toBe(0);
+    const baseCase = (JSON.parse(base.stdout).cases as EngineCase[])[0];
+    const fxCases = (JSON.parse(withFx.stdout).cases as EngineCase[])[0];
+    // The level rate lives ONLY in the deterministic KRW conversion upstream —
+    // an index of exactly 1.0 must not move a single quantile.
+    expect(fxCases.npv.p50).toBeCloseTo(baseCase.npv.p50, 9);
+    expect(fxCases.npv.p05).toBeCloseTo(baseCase.npv.p05, 9);
+    expect(fxCases.npv.p95).toBeCloseTo(baseCase.npv.p95, 9);
+  });
+
+  test.skipIf(!ENGINE_AVAILABLE)("fx_index triangular vol=0 degenerates to the unchanged result; ±10% widens the band", async () => {
+    const base = await runEngine(fxJob(null, "fxbase2:market_forward"));
+    const degenerate = await runEngine(
+      fxJob({ dist: "triangular", low: 1.0, expected: 1.0, high: 1.0, unit: "index" }, "fxdeg:market_forward"),
+    );
+    expect(base.code).toBe(0);
+    expect(degenerate.code).toBe(0);
+    const baseCase = (JSON.parse(base.stdout).cases as EngineCase[])[0];
+    const degCase = (JSON.parse(degenerate.stdout).cases as EngineCase[])[0];
+    expect(degCase.npv.p50).toBeCloseTo(baseCase.npv.p50, 9);
+    expect(degCase.npv.std).toBeLessThan(1e-9);
+
+    // ±10% band on a constant-base case: the FX band alone must move the
+    // quantiles (p05 < p50 < p95) — the driver is APPLIED, not just parsed.
+    const band = await runEngine(
+      fxJob({ dist: "triangular", low: 0.9, expected: 1.0, high: 1.1, unit: "index" }, "fxband:market_forward"),
+    );
+    expect(band.code).toBe(0);
+    const bandCase = (JSON.parse(band.stdout).cases as EngineCase[])[0];
+    expect(bandCase.npv.p05).toBeLessThan(bandCase.npv.p50);
+    expect(bandCase.npv.p50).toBeLessThan(bandCase.npv.p95);
+    expect(bandCase.npv.std).toBeGreaterThan(0);
+  });
+});

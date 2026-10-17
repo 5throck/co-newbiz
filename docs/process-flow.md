@@ -170,12 +170,15 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **Activities**
 - opportunity-discovery · agent: `market-intelligence-agent` · skills: `insight-synthesis` · procedure: `opportunity-discovery`, `greenfield-screening`, `brownfield-screening`
 - business-model-sketch · agent: `greenfield-agent` · skills: `scenario-planning` · procedure: `opportunity-discovery`, `greenfield-screening`, `brownfield-screening`
+- entry-market-sizing · agent: `market-intelligence-agent` · skills: `systematic-market-sizing` · procedure: `opportunity-discovery`, `greenfield-screening`, `brownfield-screening`
 
 **필수 산출물**
 - 기회 등록(가치사슬 노드·매력도)
+- 진입시장 산정 (S1 링크·대상 범위·도출 사슬)
 
 **완료 기준**
 - 최소 1개 기회가 등록되고 매력도가 평가되었다
+- 최소 1개 기회에 S1 시장규모 버전이 연결되고 대상 범위가 기록되었다 (ADR-0180 — 미연결 상태는 미연결로 정직 표시되며 게이트를 막지 않는다)
 
 **적용 트랙**: greenfield, brownfield
 
@@ -200,6 +203,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 **입력**
 - 후보 기회 (S2 기회 퍼널)
+- 진입시장 산정 (S2 — 지역·세그먼트 도출 시장, ADR-0180; S3~S12가 대상으로 삼는 시장)
 - 자사 역량·포트폴리오 정보 (그룹/계열사 분석 산출 — 그룹/계열사 프로파일)
 
 **Activities**
@@ -240,6 +244,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **입력**
 - 시너지·적합성 평가
 - 역량 갭 분석 (S3 — 시장 요구사항 대비 그룹/계열사 보유 역량)
+- 진입시장 성장률 (S2 확정 — ADR-0181; 라우트 어드바이저 성장 신호의 기준)
 - 시장 규모·성장 추정 (S1)
 - 경쟁 구조 (S1)
 - 가치사슬 구조 (S1)
@@ -406,6 +411,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 트랙 결정
 - 진출전략·Business Case 라인 (greenfield — S5)
 - Short List 대상 재무 정보 (brownfield — S7, 대상별)
+- 진입시장 산정 (S2 확정 — ADR-0181; 시장 앵커·성장률·환율 개산과 몬테카를로 환 리스크의 기준)
 
 **Activities**
 - business-case-modeling · agent: `financial-analyst` · skills: `growth-projection-modeling`, `investment-feasibility-modeling` · procedure: `greenfield-fs`, `brownfield-fs`

@@ -13,6 +13,7 @@ import { authenticate, callPathOf, humanOnlyDenied, requireBusinessActor } from 
 import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { extractSizingVersionScope } from "../../../../../lib/anchor-scope.ts";
+import { readSizingAnchorTotal } from "../../../../../lib/sizing-payload.ts";
 import { latestCompletedVersionNo, lazyAutoLinkOnRead, sizingLinkProvenance } from "../../../../../lib/sizing-auto-link.ts";
 
 export interface SizingLinkReference {
@@ -51,16 +52,11 @@ export function readSizingLink(db: ReturnType<typeof getDb>, opportunityId: stri
       .query("SELECT version_no, payload, data_confidence_grade AS grade FROM market_sizing_version WHERE id = ? AND analysis_id = ?")
       .get(link.version_id, link.analysis_id) as { version_no: number; payload: string; grade: string | null } | undefined;
     if (v) {
-      // Tolerant payload read (untrusted JSON): an unparsable matrix yields
-      // a null anchor value, never a read failure — the scope extraction
-      // itself is the ADR-0179 slice-2 tolerant extractor.
-      let anchorValue: number | null = null;
-      try {
-        const matrix = JSON.parse(v.payload) as { anchor?: { total?: unknown } };
-        anchorValue = typeof matrix?.anchor?.total === "number" ? matrix.anchor.total : null;
-      } catch {
-        anchorValue = null;
-      }
+      // Tolerant payload read (untrusted JSON) via the shared shape-compatible
+      // reader (ADR-0180 slice 1): an unparsable payload yields a null anchor
+      // value, never a read failure — the scope extraction itself is the
+      // ADR-0179 slice-2 tolerant extractor.
+      const anchorValue = readSizingAnchorTotal(v.payload);
       reference = {
         analysis_id: link.analysis_id,
         version_id: link.version_id,
