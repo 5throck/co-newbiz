@@ -7,11 +7,15 @@
 // linked-S1 reference in; the editor's own GET is deleted. It only edits and
 // saves through the SAME human-only PUT (routes and payloads unchanged).
 // Amendment slice A reference display (linked S1 scope/anchor/confidence)
-// stays. The unit_basis select STAYS in this slice (moving it into the
-// linked-S1 reference strip with the 절대값 아님 caption is slice 4).
+// stays. Redesign slice 4 (design §7/§5.2, OD-3): the unit_basis select moves
+// OUT of the input row (regions + segments are the only person inputs) and
+// renders as DATA inside the linked-S1 reference strip with the
+// `앵커의 단위 구분 — 절대값 입력이 아닙니다` caption. unit_basis still rides
+// the PUT body unchanged (the control merely moves; the value is initialized
+// from the linked version's declared scope, falling back to krw_m_year).
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api.ts";
-import { TARGET_SCOPE_REGIONS, TARGET_SCOPE_UNIT_BASES, TARGET_SCOPE_UNIT_BASIS_LABEL, type TargetScope } from "../lib/target-scope.ts";
+import { SCOPE_UNIT_BASIS_CAPTION, TARGET_SCOPE_REGIONS, TARGET_SCOPE_UNIT_BASIS_LABEL, resolveUnitBasis, type TargetScope, type TargetScopeUnitBasis } from "../lib/target-scope.ts";
 import { extractSizingVersionScope } from "../lib/anchor-scope.ts";
 
 /** Reference row of the LINKED S1 analysis/version: declared scope, anchor
@@ -42,20 +46,23 @@ export function TargetScopeEditor({ opportunityId, canAct, linked, scope, disabl
   // Local form state, initialized from the parent-owned scope prop.
   const [regions, setRegions] = useState<string[]>([]);
   const [segments, setSegments] = useState("");
-  const [unitBasis, setUnitBasis] = useState<string>("krw_m_year");
+  const [unitBasis, setUnitBasis] = useState<TargetScopeUnitBasis>("krw_m_year");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const applyScope = useCallback((s: TargetScope | null) => {
+  // Slice 4: unit_basis is no longer a person input — it is carried as data
+  // for the PUT body. Initialized from the person-saved scope, falling back
+  // to the LINKED version's declared unit_basis, then to krw_m_year.
+  const applyScope = useCallback((s: TargetScope | null, l: LinkedSizingReference | null) => {
     setRegions(s?.regions ?? []);
     setSegments((s?.segments ?? []).join(", "));
-    setUnitBasis(s?.unit_basis ?? "krw_m_year");
+    setUnitBasis(resolveUnitBasis(s?.unit_basis, l?.scope?.unit_basis ?? null));
   }, []);
 
   useEffect(() => {
-    applyScope(scope);
-  }, [scope, applyScope]);
+    applyScope(scope, linked);
+  }, [scope, linked, applyScope]);
 
   function toggleRegion(r: string) {
     if (r === "worldwide") {
@@ -116,6 +123,12 @@ export function TargetScopeEditor({ opportunityId, canAct, linked, scope, disabl
           {linked.scope
             ? ` · 근거 범위: ${linked.scope.regions.map((r) => REGION_LABEL[r] ?? r).join(" / ")}${linked.scope.segments.length > 0 ? ` · 세그먼트: ${linked.scope.segments.join(", ")}` : ""}${linked.scope.unit_basis ? ` · 단위: ${linked.scope.unit_basis}` : ""}`
             : " · 근거 범위 미기재 (범위 지정 시장규모 미연결)"}
+          {/* Slice 4 (OD-3): unit_basis as data in the reference strip, not an
+              input — the value the PUT body sends is shown, so the person
+              never reads it as an absolute-value field. */}
+          <span className="text-[color:var(--muted-fg)]" data-testid="target-scope-unit-basis">
+            {" · "}단위 기준: {TARGET_SCOPE_UNIT_BASIS_LABEL[unitBasis] ?? unitBasis} ({SCOPE_UNIT_BASIS_CAPTION})
+          </span>
           {linked.anchor_value_krw_m != null && ` · 앵커값: ${linked.anchor_value_krw_m.toLocaleString()} KRW M`}
           {linked.confidence_grade && ` · 신뢰도 ${linked.confidence_grade}`}
         </div>
@@ -141,10 +154,6 @@ export function TargetScopeEditor({ opportunityId, canAct, linked, scope, disabl
           <input aria-label="세그먼트" placeholder="세그먼트 (쉼표 구분)" value={segments} onChange={(e) => setSegments(e.target.value)}
             disabled={disabledReason != null}
             className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 12rem" }} />
-          <select aria-label="단위 기준" value={unitBasis} onChange={(e) => setUnitBasis(e.target.value)}
-            disabled={disabledReason != null} className="sizing-new-input sizing-new-input-sm">
-            {TARGET_SCOPE_UNIT_BASES.map((b) => <option key={b} value={b}>{TARGET_SCOPE_UNIT_BASIS_LABEL[b]}</option>)}
-          </select>
           <button type="button" className="btn-ghost btn-sm" disabled={busy || regions.length === 0 || disabledReason != null} onClick={() => void save()}>저장</button>
         </div>
       )}
