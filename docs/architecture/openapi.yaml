@@ -2491,6 +2491,23 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/market-overview/analyses/{id}/unit:
+    get:
+      operationId: getMarketAnalysisUnit
+      summary: The analysis's declared market-size unit (null = the pipeline $B convention).
+      tags:
+        - market-overview
+      responses:
+        "200":
+          description: Declared unit.
+    put:
+      operationId: declareMarketAnalysisUnit
+      summary: Declare the market-size unit (analyst+, audited; patches the latest version payload scope declaration only).
+      tags:
+        - market-overview
+      responses:
+        "200":
+          description: Declared unit saved.
   /api/market-overview/analyses/{id}/rerun:
     post:
       operationId: rerunMarketAnalysis

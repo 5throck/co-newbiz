@@ -27,7 +27,7 @@
 
 import { noteNumber, parseSimNote } from "./sim-note.ts";
 import { irrGuardBand, IRR_CAUTION_THRESHOLD_DEFAULT, IRR_FLAG_THRESHOLD_DEFAULT } from "./irr-guard.ts";
-import { resolveUnitBasis, type TargetScope } from "./target-scope.ts";
+import type { TargetScope } from "./target-scope.ts";
 import { triangular } from "./investment-simulation.ts";
 import { anchorScopeNoteFragment, resolveLinkedAnchorScope } from "./anchor-scope.ts";
 import { entryMarketNoteFragment } from "./entry-market.ts";
@@ -1395,10 +1395,12 @@ export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "g
   // `entry_market_fx=unset` note marker. The legacy bare `market_size_krw_m`
   // column is KRW by name and is NEVER converted. krw/units anchors pass
   // through untouched (bit-identical).
-  const entryMarketUnitBasis = resolveUnitBasis(
-    entryMarketDerived && row?.source_opportunity_id ? readTargetScope(getDb(), row.source_opportunity_id)?.unit_basis ?? null : null,
-    entryMarketDerived && row?.source_opportunity_id ? resolveLinkedDeclaredUnitBasis(getDb(), row.source_opportunity_id) : null,
-  );
+  // ADR-0181 follow-up: the unit resolves from the LINKED S1 declaration
+  // ONLY (analysis unit_basis / $B convention) — the S2 scope no longer
+  // carries it (decider: S1 declares, S2 needs no separate declaration).
+  const entryMarketUnitBasis = entryMarketDerived && row?.source_opportunity_id
+    ? resolveLinkedDeclaredUnitBasis(getDb(), row.source_opportunity_id)
+    : null;
   const entryMarketAnchorUnit = entryMarketDerived ? anchorCurrencyOfUnitBasis(entryMarketUnitBasis) : null;
   const entryMarketAnchorCcy = entryMarketAnchorUnit?.currency ?? null;
   const entryMarketFxRow = entryMarketDerived && entryMarketAnchorCcy && row?.source_opportunity_id

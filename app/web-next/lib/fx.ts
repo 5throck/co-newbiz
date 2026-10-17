@@ -16,7 +16,7 @@
 // 0151 backfill and are no longer read.
 
 import type { Database } from "bun:sqlite";
-import { readSizingDeclaredScope } from "./sizing-payload.ts";
+import { readSizingEffectiveScope } from "./sizing-payload.ts";
 
 /** Documented deterministic default for the USD anchor (검증 전 기준 환율).
  *  A display/assumption default, not a market observation — always rendered
@@ -75,7 +75,9 @@ export function resolveLinkedDeclaredUnitBasis(db: Database, opportunityId: stri
       .query("SELECT mv.payload AS payload FROM opportunity o LEFT JOIN market_sizing_version mv ON mv.id = o.sizing_version_id WHERE o.id = ?")
       .get(opportunityId) as { payload: string | null } | undefined;
     if (!row?.payload) return null;
-    return readSizingDeclaredScope(row.payload)?.unit_basis ?? null;
+    // ADR-0181 amendment: explicit declaration first, then the pipeline's
+    // own USD-billion convention for systematic-market-sizing payloads.
+    return readSizingEffectiveScope(row.payload)?.unit_basis ?? null;
   } catch {
     return null;
   }

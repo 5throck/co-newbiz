@@ -108,7 +108,7 @@ describe("row hash and round-trip are unchanged by the holders removal", () => {
 
 describe("S3 UI has no 해소 힌트 and no holders inputs", () => {
   test("SynergyLinkageTab", () => {
-    const src = read("components/stages/synergy/SynergyLinkageTab.tsx");
+    const src = read("components/stages/synergy/SynergyCapabilityTab.tsx") + read("components/stages/synergy/SynergyLinkageTab.tsx");
     for (const k of ["해소 힌트", "RESOLUTION_LABEL", "GapResolution", "보유 주체", "holderText"]) expect(src).not.toContain(k);
     expect(src).not.toContain("resolution:");
     expect(src).toContain('<th scope="col">보유 수준</th><th scope="col">보유 근거</th>');

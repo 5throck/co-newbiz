@@ -344,12 +344,12 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
 
   const row = db
     .query(
-      `SELECT a.id, a.industry_id, a.after_analysis_id, i.name_ko, i.ksic_code
+      `SELECT a.id, a.industry_id, a.after_analysis_id, a.unit_basis, i.name_ko, i.ksic_code
        FROM market_sizing_analysis a JOIN md_industry i ON i.id = a.industry_id
        WHERE a.id = ?`,
     )
     .get(analysisId) as
-    | { id: string; industry_id: string; after_analysis_id: string | null; name_ko: string; ksic_code: string | null }
+    | { id: string; industry_id: string; after_analysis_id: string | null; unit_basis: string | null; name_ko: string; ksic_code: string | null }
     | null;
   if (!row) throw new Error(`analysis ${analysisId} not found`);
   const analysis = row; // non-null alias — narrowing does not reach the nested step functions
@@ -1072,7 +1072,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   const declaredScope = {
     regions: (matrix.regions ?? []).filter((r) => (r.weight ?? 0) > 0).map((r) => r.code),
     segments: (matrix.segments ?? []).map((s) => s.code),
-    unit_basis: "usd_b_year",
+    unit_basis: analysis.unit_basis ?? "usd_b_year", // ADR-0181 follow-up: S1 analysis-time declaration; NULL = the $B convention
   };
   const payload = JSON.stringify({
     methodology: "systematic-market-sizing v1.2.0",

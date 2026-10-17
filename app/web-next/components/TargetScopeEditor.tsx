@@ -86,10 +86,11 @@ export function TargetScopeEditor({ opportunityId, canAct, linked, scope, matrix
   async function save() {
     setBusy(true); setError(null); setNotice(null);
     try {
+      // ADR-0181 follow-up: unit_basis is NOT a scope input — the unit comes
+      // from the linked S1 declaration (analysis unit_basis / $B convention).
       const body = {
         regions,
         segments: segments.split(",").map((s) => s.trim()).filter(Boolean),
-        unit_basis: unitBasis,
       };
       const r = await api.put<{ scope: TargetScope }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/target-scope`, body);
       await onSaved(r.data.scope);
@@ -204,26 +205,6 @@ export function TargetScopeEditor({ opportunityId, canAct, linked, scope, matrix
                 className="sizing-new-input sizing-new-input-sm w-full" />
             </fieldset>
           </div>
-          <label className="text-[length:var(--fs-caption)] block mb-2">
-            앵커 단위 선언 (S1 앵커가 어느 통화·스케일로 산정되었는지 — 원화 개산의 기준; 절대값 입력이 아닙니다)
-            <select
-              aria-label="앵커 단위 선언"
-              className="sizing-new-input sizing-new-input-sm mt-1"
-              style={{ width: "100%" }}
-              value={unitBasis ?? ""}
-              disabled={disabledReason != null || busy}
-              onChange={(e) => setUnitBasis(e.target.value === "" ? null : e.target.value)}
-              data-testid="target-scope-unit-select"
-            >
-              <option value="">미선언 (원화 개산 불가)</option>
-              <option value="krw_m_year">연매출 (백만원/년)</option>
-              <option value="units_year">판매대수 (대/년)</option>
-              <option value="usd_m_year">연매출 (백만 USD/년)</option>
-              <option value="usd_b_year">연매출 (십억 USD/년)</option>
-              <option value="eur_m_year">연매출 (백만 EUR/년)</option>
-              <option value="eur_b_year">연매출 (십억 EUR/년)</option>
-            </select>
-          </label>
           <button type="button" className="btn-ghost btn-sm" disabled={busy || regions.length === 0 || disabledReason != null} onClick={() => void save()}>저장</button>
         </div>
       )}

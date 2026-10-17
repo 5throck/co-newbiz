@@ -7,6 +7,7 @@ import { PrimaryAction } from "../../ui.tsx";
 import { GateDecisionPanel } from "../../GateDecisionPanel.tsx";
 import { useSynergyResult } from "./useSynergyResult.ts";
 import { SynergyOverviewTab, SynergyShortlistTab } from "./SynergyTabs.tsx";
+import { SynergyCapabilityTab } from "./SynergyCapabilityTab.tsx";
 import { SynergyLinkageTab } from "./SynergyLinkageTab.tsx";
 import { targetLabel, STEP_TITLES, TABS } from "./synergyFormat.ts";
 import type { SynergyAnalysis } from "./types.ts";
@@ -90,52 +91,64 @@ export function SynergyResult(props0: {
 
           {tab === "refs" && (
             <div className="text-[0.88rem]">
-              {p.researchSources.length > 0 && (
-                <details className="market-section">
-                  <summary className="cursor-pointer text-[length:var(--fs-body)]">입수 출처 ({p.researchSources.length}건 — 출처 명기·교차검증)</summary>
+              {/* ADR-0181 (2026-10-18, decider feedback): the refs tab used to
+                  render nothing relevant when web research was unconfigured.
+                  Now: step notes render OPEN, an empty source list says so
+                  explicitly, and the pipeline provenance (profile reuse,
+                  credit text) shows as a note. */}
+              <details className="market-section" open={p.researchSources.length > 0}>
+                <summary className="cursor-pointer text-[length:var(--fs-body)]">입수 출처 ({p.researchSources.length}건 — 출처 명기·교차검증)</summary>
+                {p.researchSources.length > 0 ? (
                   <ul className="sizing-note-list mt-2">
                     {p.researchSources.map((s, i) => (
                       <li key={i}><a href={s.url} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">{s.title}</a><span className="text-[color:var(--muted-fg)]"> — {s.snippet}</span></li>
                     ))}
                   </ul>
-                </details>
-              )}
-              <details className="market-section">
-                <summary className="cursor-pointer text-[length:var(--fs-body)]">파이프라인 단계별 노트 ({p.stepSummaries.length}단계)</summary>
-                <ol className="mt-3 space-y-2 text-[length:var(--fs-body)]">
+                ) : (
+                  <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2 mb-0">
+                    웹 리서치 미구성 또는 재사용 분석 — 입수 출처가 없습니다. 근거는 아래 단계별 노트와 각 탭의 표를 참고하세요.
+                  </p>
+                )}
+              </details>
+              <div className="market-section">
+                <h3 className="sizing-step-title text-[0.95rem]">파이프라인 단계별 노트 ({p.stepSummaries.length}단계)</h3>
+                <ol className="mt-2 space-y-2 text-[length:var(--fs-body)]">
                   {p.stepSummaries.map((s) => (
                     <li key={s.step}><strong>{s.step}. {s.title}</strong> <span className={`status-chip ${s.source === "llm" ? "status-in-progress" : "status-not-started"}`}>{s.source === "llm" ? "AI" : "시스템"}</span><br />{s.summary}</li>
                   ))}
                 </ol>
-              </details>
+              </div>
             </div>
           )}
 
-          {/* Screening gate — flow.spec S1~S3 gates: [screening]. 탭 어디에 있든
-              같은 자리에서 기록할 수 있게 탭 판 바깥(상세 하단 고정)에 둔다
-              (2026-09-18 사용자 리뷰: 우선 시너지 영역 탭 맨 아래에 묻힌 것은
-              발견 가능성 문제). S3 산출물이 모이는 이 화면에서 GO/HOLD/KILL을
-              기록한다 (ADR-0094 경계 #2: 기록 버튼은 사람의 몫). GO 기록이 곧
-              S4 진행 결정이므로, 별도 "S4로 진행" 버튼 없이 GO 기록 시 바로
-              opportunity를 selected로 표시하고 /route-decision으로 이동한다. */}
-          {opportunityId && (
-            <div className="mt-4">
-              <GateDecisionPanel
-                opportunityId={opportunityId}
-                gates={["screening"]}
-                onRecorded={(decision, gate) => {
-                  if (decision === "go" && gate === "screening") void advanceToRouteDecision();
-                }}
-              />
-              <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                GO로 기록하면 이 검토/안건이 "selected"로 표시되고 S4 진출방식 결정으로 자동 이동합니다.{" "}
-                <a href={`/deals/${encodeURIComponent(opportunityId)}/s4`} className="text-[color:var(--accent)] underline">
-                  지금 바로 S4로 이동 →
-                </a>
-              </p>
-            </div>
+          {/* ADR-0181 (2026-10-18, decider feedback): the screening gate panel
+              ("의사결정 — 승인 기록") moved OUT of the under-tab fixed area
+              INTO its own 의사결정 tab (after 우선 시너지 영역) — it used to
+              render under EVERY tab, which read as duplication. GO 기록이 곧
+              S4 진행 결정이므로 GO 기록 시 바로 opportunity를 selected로
+              표시하고 /route-decision으로 이동한다 (ADR-0094 경계 #2). */}
+          {tab === "decision" && (
+            <>
+              {opportunityId && (
+                <div className="mt-2">
+                  <GateDecisionPanel
+                    opportunityId={opportunityId}
+                    gates={["screening"]}
+                    onRecorded={(decision, gate) => {
+                      if (decision === "go" && gate === "screening") void advanceToRouteDecision();
+                    }}
+                  />
+                  <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                    GO로 기록하면 이 검토/안건이 "selected"로 표시되고 S4 진출방식 결정으로 자동 이동합니다.{" "}
+                    <a href={`/deals/${encodeURIComponent(opportunityId)}/s4`} className="text-[color:var(--accent)] underline">
+                      지금 바로 S4로 이동 →
+                    </a>
+                  </p>
+                </div>
+              )}
+              {advanceError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-1">{advanceError}</p>}
+            </>
           )}
-          {advanceError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-1">{advanceError}</p>}
         </>
       )}
     </section>

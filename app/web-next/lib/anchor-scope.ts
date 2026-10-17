@@ -11,7 +11,7 @@
 // confidence-lowering evidence for the human RAG judgement (the note says so).
 
 import type { TargetScope } from "./target-scope.ts";
-import { readSizingDeclaredScope } from "./sizing-payload.ts";
+import { readSizingDeclaredScope, readSizingEffectiveScope } from "./sizing-payload.ts";
 import { readTargetScope } from "../../../db/repositories/entry-market.repository.ts";
 import type { Database } from "bun:sqlite";
 
@@ -82,7 +82,10 @@ export function resolveLinkedAnchorScope(db: Database, opportunityId: string): S
     .get(opportunityId) as { payload: string | null } | undefined;
   if (!row?.payload) return null;
   try {
-    return extractSizingVersionScope(row.payload);
+    // ADR-0181 amendment: an undeclared systematic-market-sizing payload's
+    // EFFECTIVE coverage is its own matrix (regions with weight > 0) — the
+    // anchor-scope verdict compares against that instead of always-unknown.
+    return extractSizingVersionScope(row.payload) ?? readSizingEffectiveScope(row.payload);
   } catch {
     return null;
   }
