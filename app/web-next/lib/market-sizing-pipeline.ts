@@ -1063,7 +1063,23 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     return;
   }
 
-  const payload = JSON.stringify({ methodology: "systematic-market-sizing v1.2.0", matrix, stepSummaries });
+  // ADR-0179 slice 4 / ADR-0181 follow-up — every NEW pipeline version
+  // SELF-DECLARES its scope so downstream surfaces (target-scope editor,
+  // anchor-scope verdict, entry-market unit resolution) read the declaration
+  // from the payload instead of falling back to person retro-declaration.
+  // The pipeline's own unit convention is USD billions (formatUsdBOrNa
+  // renders anchor.total as $B) — declared as usd_b_year.
+  const declaredScope = {
+    regions: (matrix.regions ?? []).filter((r) => (r.weight ?? 0) > 0).map((r) => r.code),
+    segments: (matrix.segments ?? []).map((s) => s.code),
+    unit_basis: "usd_b_year",
+  };
+  const payload = JSON.stringify({
+    methodology: "systematic-market-sizing v1.2.0",
+    matrix: { ...matrix, scope: declaredScope },
+    stepSummaries,
+    scope: declaredScope,
+  });
   const nextVersionNo =
     ((db.query("SELECT MAX(version_no) m FROM market_sizing_version WHERE analysis_id = ?").get(analysis.id) as { m: number | null }).m ?? 0) + 1;
   const changelog =

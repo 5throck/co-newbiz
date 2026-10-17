@@ -10,6 +10,8 @@
 // exact name and shape; that path is now a one-release re-export shim.
 // Korean strings live here as exported constants so the ASCII-only tests
 // compare identities, never literals.
+import { unitBasisLabel } from "./target-scope.ts";
+
 export type LinkProvenance = "auto" | "manual" | "none";
 
 export interface RailChip {
@@ -154,9 +156,13 @@ export function anchorLegacyLine(legacy: LegacyAnchor | null): string {
   return `${ANCHOR_LEGACY_LINE_PREFIX} (${typeof n === "number" ? n.toLocaleString("en-US") : "-"} KRW M)`;
 }
 
-/** Format the strip's derived-value line: value + the 배율 곱 (design §5.1). */
-export function derivedValueLine(entryMarketKrwM: number, factorProduct: number): string {
-  return `진입시장 ${entryMarketKrwM.toLocaleString("en-US")} KRW M (배율 곱 ${factorProduct.toFixed(4)})`;
+/** Format the strip's derived-value line: value + the 배율 곱 (design §5.1).
+ *  ADR-0181 amendment: the value is in the DECLARED anchor unit (십억 USD/년
+ *  etc.) — never labelled KRW M unless the declaration says so; undeclared
+ *  renders an honest 미선언 marker. */
+export function derivedValueLine(entryMarketKrwM: number, factorProduct: number, unitBasis?: string | null): string {
+  const label = unitBasis ? unitBasisLabel(unitBasis) : "앵커 단위 미선언";
+  return `진입시장 ${entryMarketKrwM.toLocaleString("en-US")} ${label} (배율 곱 ${factorProduct.toFixed(4)})`;
 }
 
 /** Format the linked-S1 summary `vN · 신뢰도 G`. */
@@ -175,6 +181,8 @@ export interface FlowStateInput {
   legacyAnchor: LegacyAnchor | null;
   /** Linked S1 reference summary for the strip (null when unlinked). */
   s1: { version_no: number; confidence_grade: string | null } | null;
+  /** ADR-0181 amendment — the declared anchor unit; null = undeclared. */
+  unitBasis?: string | null;
 }
 
 /** Derive the whole-card FlowState. Pure — no fetch, no write, no server
@@ -205,7 +213,7 @@ export function deriveFlowState(input: FlowStateInput): FlowState {
     stateChipLabel: state === "UNLINKED" ? STATE_CHIP_UNLINKED : derived ? STATE_CHIP_DERIVED : STATE_CHIP_LEGACY_ANCHOR,
     stateChipTone: state === "UNLINKED" ? "muted" : "info",
     anchorLine: derived
-      ? derivedValueLine(input.computed!.entry_market_krw_m, input.computed!.factor_product)
+      ? derivedValueLine(input.computed!.entry_market_krw_m, input.computed!.factor_product, input.unitBasis)
       : anchorInForce === "legacy_opportunity"
         ? anchorLegacyLine(input.legacyAnchor)
         : ANCHOR_DEFAULT_LINE,

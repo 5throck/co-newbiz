@@ -24,6 +24,7 @@ import {
   type DerivationStepForm,
 } from "../lib/entry-market-flow-state.ts";
 import { computeEntryMarketChain, ENTRY_MARKET_MAX_STEPS, REGION_DEFINITION_CAVEAT } from "../lib/entry-market.ts";
+import { unitBasisLabel } from "../lib/target-scope.ts";
 
 export interface StepResult {
   base: string;
@@ -45,6 +46,7 @@ export interface EntryMarketDerivationData {
   growth_rate: number | null;
   currency: string | null;
   region_trends: Array<{ region: string; segments: Array<{ code: string; baseline: number | null; cagr: number | null }> }>;
+  scope_unit_basis: string | null;
 }
 
 export function EntryMarketDerivationPanel({ opportunityId, canAct, scopeSet, disabledReason, scopeWarning, data, onDataChanged }: {
@@ -202,7 +204,7 @@ export function EntryMarketDerivationPanel({ opportunityId, canAct, scopeSet, di
           <span className="status-chip status-info">연결된 S1</span>{" "}
           <a href={data.reference?.href ?? "#"} className="underline">S1 화면에서 열기</a>
           {" · "}v{data.reference?.version_no}
-          {anchor != null && <>{" · "}S1 앵커: <strong className="mono-num">{anchor.toLocaleString()}</strong> KRW M</>}
+          {anchor != null && <>{" · "}S1 앵커: <strong className="mono-num">{anchor.toLocaleString()}</strong> {data.scope_unit_basis ? unitBasisLabel(data.scope_unit_basis) : "(앵커 단위 미선언)"}</>}
         </div>
       )}
       {data?.derivation?.set_at && (
@@ -287,12 +289,12 @@ export function EntryMarketDerivationPanel({ opportunityId, canAct, scopeSet, di
       {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-1">{notice}</p>}
       {preview && (
         <p className="text-[length:var(--fs-caption)] mb-1" data-testid="entry-market-preview">
-          미리보기: 진입시장 {preview.entry_market_krw_m.toLocaleString()} KRW M (배율 곱 {preview.factor_product.toFixed(4)})
+          미리보기: 진입시장 {preview.entry_market_krw_m.toLocaleString()} {data?.scope_unit_basis ? unitBasisLabel(data.scope_unit_basis) : "앵커 단위 미선언"} (배율 곱 {preview.factor_product.toFixed(4)})
         </p>
       )}
       {data?.computed && (
         <p className="text-[length:var(--fs-caption)] mb-1" data-testid="entry-market-computed">
-          저장된 값: 진입시장 {data.computed.entry_market_krw_m.toLocaleString()} KRW M (배율 곱 {data.computed.factor_product.toFixed(4)})
+          저장된 값: 진입시장 {data.computed.entry_market_krw_m.toLocaleString()} {data?.scope_unit_basis ? unitBasisLabel(data.scope_unit_basis) : "앵커 단위 미선언"} (배율 곱 {data.computed.factor_product.toFixed(4)})
         </p>
       )}
       {/* ADR-0181 slice 2 — the entry-market GROWTH (S3~S12의 기준 성장률):
