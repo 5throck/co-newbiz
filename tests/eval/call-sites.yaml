@@ -107,5 +107,5 @@ call_sites:
     exempt: "Evidence or web-research pipeline; the golden set has no expectation type for it, and design 3.3 forbids new research in this wave."
 
   - file: app/web-next/app/api/opportunities/[id]/entry-market-derivation/draft/route.ts
-    sites: 1
-    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on."
+    sites: 2
+    exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on. The second call site is the one strict-validation repair retry (redesign slice 3, 2026-10-17); covered by fixture tests in tests/unit/entry-market-draft-reliability.test.ts."
