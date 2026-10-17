@@ -3028,6 +3028,26 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/opportunities/{id}/sizing-link/versions:
+    get:
+      operationId: listOpportunitySizingLinkVersions
+      summary: "Additive read-only listing (2026-10-17 decider feedback): the COMPLETED S1 market-sizing versions of the opportunity's industry, newest first, for the step-1 version dropdown in the consolidated entry-market card. Each row: {id, version_no, industry_name, scope (extractSizingVersionScope, tolerant -> null when unscoped/unparsable), confidence_grade, completed_at}. No write path here - the only audited write remains the human-only PUT on /sizing-link. Readable by anyone who can see the opportunity."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/OK'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/opportunities/{id}/entry-market-derivation:
     get:
       operationId: getOpportunityEntryMarketDerivation
