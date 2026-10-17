@@ -185,3 +185,36 @@ export function readSizingRegionTrends(payload: string | null | undefined, regio
   }
   return out;
 }
+
+export interface SizingEffectiveScope {
+  regions: string[];
+  segments: string[];
+  unit_basis: string | null;
+  /** "declared" = explicit scope in the payload; "convention" = the pipeline's
+   *  own $B convention applied when a systematic-market-sizing payload carries
+   *  no declaration. */
+  source: "declared" | "convention";
+}
+
+/** The EFFECTIVE declared scope of a sizing version: the explicit payload
+ *  scope first; a systematic-market-sizing payload WITHOUT a declaration
+ *  falls back to its own matrix coverage (regions with weight > 0, segments)
+ *  and the pipeline's USD-billion convention (ADR-0181 amendment — S8's
+ *  범위 미확인 fix and the unit resolution need no person retro-declaration).
+ *  S1 is FROZEN — read-only. */
+export function readSizingEffectiveScope(payload: string | null | undefined): SizingEffectiveScope | null {
+  const explicit = readSizingDeclaredScope(payload);
+  if (explicit) return { regions: explicit.regions, segments: explicit.segments, unit_basis: explicit.unit_basis, source: "declared" };
+  const root = parsePayload(payload);
+  if (!root) return null;
+  const methodology = typeof root.methodology === "string" ? root.methodology : "";
+  if (!methodology.includes("systematic-market-sizing")) return null;
+  const regions = readSizingRegions(payload);
+  if (regions.length === 0) return null;
+  return {
+    regions: regions.map((r) => r.code),
+    segments: readSizingSegments(payload).map((s) => s.code),
+    unit_basis: "usd_b_year",
+    source: "convention",
+  };
+}

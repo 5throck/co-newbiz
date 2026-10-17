@@ -176,7 +176,7 @@ describe("necessity / required-level draft (amendment 2026-10-14)", () => {
     expect(out[1]).toMatchObject({ necessity: "essential", requiredLevel: "R2" });
   });
   test("S3 UI: single primary action, draft chip, canonical order kept, ColGroup", () => {
-    const src = readFileSync(join(PROJECT_ROOT, "app/web-next/components/stages/synergy/SynergyLinkageTab.tsx"), "utf8");
+    const src = readFileSync(join(PROJECT_ROOT, "app/web-next/components/stages/synergy/SynergyCapabilityTab.tsx"), "utf8");
     expect(src).toContain("AI 초안");
     expect(src).toContain("저장 전 변경");
     expect(src).toContain("<ColGroup widths={GAP_COL_PCT}");
@@ -246,7 +246,7 @@ describe("row hash v2 and v1 compatibility", () => {
 describe("S3 table and modals (source structure)", () => {
   const read = (p: string) => readFileSync(join(PROJECT_ROOT, "app/web-next", p), "utf8");
   test("canonical column order and per-field controls", () => {
-    const src = read("components/stages/synergy/SynergyLinkageTab.tsx");
+    const src = read("components/stages/synergy/SynergyCapabilityTab.tsx");
     const heads = ["필요 역량", "필요도", "필요 수준", "보유 판정", "보유 수준", "보유 근거"].map((h) => src.indexOf(`<th scope="col">${h}</th>`));
     expect(heads.every((i) => i >= 0)).toBe(true);
     expect([...heads].sort((a, b) => a - b)).toEqual(heads);

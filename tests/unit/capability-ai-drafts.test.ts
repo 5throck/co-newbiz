@@ -97,7 +97,7 @@ describe("requirement proposal: new rows carry necessity + requiredLevel; client
     expect(out[1]).toMatchObject({ necessity: "essential", requiredLevel: "R" });
   });
   test("the propose button is enabled with zero rows", () => {
-    const src = readFileSync(join(ROOT, "app/web-next/components/stages/synergy/SynergyLinkageTab.tsx"), "utf8");
+    const src = readFileSync(join(ROOT, "app/web-next/components/stages/synergy/SynergyCapabilityTab.tsx"), "utf8") + readFileSync(join(ROOT, "app/web-next/components/stages/synergy/SynergyLinkageTab.tsx"), "utf8");
     const i = src.indexOf("void draftGap()");
     const btn = src.slice(src.lastIndexOf("<button", i), i);
     expect(btn).toContain("disabled={gapBusy || holdBusy}");
@@ -262,7 +262,7 @@ describe("routes (no LLM configured)", () => {
 describe("UI source structure", () => {
   const read = (p: string) => readFileSync(join(ROOT, "app/web-next", p), "utf8");
   test("two AI actions, single primary rule, inline narrative inputs, recheck apply/cancel", () => {
-    const src = read("components/stages/synergy/SynergyLinkageTab.tsx");
+    const src = read("components/stages/synergy/SynergyCapabilityTab.tsx") + read("components/stages/synergy/SynergyLinkageTab.tsx");
     for (const k of ["필요 역량 제안 (AI)", "보유 판정 확인 (AI)", "void checkHolding()", "void draftGap()", "저장 전 변경", "AI 초안", "SourceLinks"]) expect(src).toContain(k);
     for (const k of ["다시 확인", "recheckRow", "applyRecheck", "HoldingRecheckDialog"]) expect(src).not.toContain(k);
     expect(src).toContain('proposePrimary = !gapDirty && gapRows.length === 0');
@@ -366,7 +366,7 @@ describe("missing 필요도 / 필요 수준 detection", () => {
     expect(d.missing).toEqual({ before: 1, after: 1, necessity: 0, requiredLevel: 1 });
   });
   test("UI: header chip hidden at 0, per-cell 누락 marker with icon + text, request prompt requires missing rows", () => {
-    const tab = readFileSync(join(ROOT, "app/web-next/components/stages/synergy/SynergyLinkageTab.tsx"), "utf8");
+    const tab = readFileSync(join(ROOT, "app/web-next/components/stages/synergy/SynergyCapabilityTab.tsx"), "utf8") + readFileSync(join(ROOT, "app/web-next/components/stages/synergy/SynergyLinkageTab.tsx"), "utf8");
     expect(tab).toContain("missing.total > 0 &&");
     expect(tab).toContain("필요도·필요 수준 누락 {missing.total}건");
     expect(tab).toContain('<span aria-hidden="true">!</span> 누락');

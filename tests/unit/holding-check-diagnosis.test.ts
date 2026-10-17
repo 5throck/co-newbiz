@@ -234,7 +234,7 @@ describe("unsaved AI drafts survive a refetch (the vanishing-drafts bug)", () =>
     expect(effect).toContain("gapLoadedFor.current !== opportunityId");
     expect(hook).toContain("function discardDrafts");
     expect(hook).toContain("dismissGapNote");
-    const tab = read("components/stages/synergy/SynergyLinkageTab.tsx");
+    const tab = read("components/stages/synergy/SynergyCapabilityTab.tsx");
     for (const k of ["저장하지 않은 AI 초안 {draftCount}건", "AI 초안 버리기", "onClick={dismissGapNote}", 'data-testid="gap-note"']) expect(tab).toContain(k);
   });
 });

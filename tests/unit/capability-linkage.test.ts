@@ -343,7 +343,7 @@ describe("보유 근거 cell: button only", () => {
     expect(ref).not.toContain("<HeldEvidenceButton");
     expect(ref).not.toContain("<CapabilityHeldDialog");
     expect(ref).not.toContain("HeldEvidenceButton");
-    for (const f of ["synergy/SynergyLinkageTab.tsx"]) {
+    for (const f of ["synergy/SynergyCapabilityTab.tsx"]) {
       const src = readFileSync(join(root, f), "utf8");
       expect(src).toContain("<HeldEvidenceButton");
       expect(src).not.toContain("HeldSummary");
@@ -367,7 +367,7 @@ describe("보유 근거 cell: button only", () => {
 describe("UI source checks", () => {
   const read = (p: string) => readFileSync(join(PROJECT_ROOT, "app/web-next", p), "utf8");
   test("S3 register table has no 5-step level columns; keeps 보유 판정, 보유 근거 button, no 해소 힌트", () => {
-    const src = read("components/stages/synergy/SynergyLinkageTab.tsx");
+    const src = read("components/stages/synergy/SynergyCapabilityTab.tsx") + read("components/stages/synergy/SynergyLinkageTab.tsx");
     // ADR-0172: the narrative 필요 수준 / 보유 수준 columns are back (modal-based, no 5-step select).
     expect(src).not.toContain("LevelSelect");
     expect(src).toContain('<th scope="col">필요 역량</th><th scope="col">필요도</th><th scope="col">필요 수준</th><th scope="col">보유 판정</th>');

@@ -35,7 +35,7 @@ import {
   type EntryMarketDerivation,
 } from "../../../../../lib/entry-market.ts";
 import { compareAnchorScope, ANCHOR_SCOPE_CONFIDENCE_NOTE } from "../../../../../lib/anchor-scope.ts";
-import { readSizingRegionTrends, readSizingRegions, readSizingSegments } from "../../../../../lib/sizing-payload.ts";
+import { readSizingEffectiveScope, readSizingRegionTrends, readSizingRegions, readSizingSegments } from "../../../../../lib/sizing-payload.ts";
 import {
   readChain,
   readEntryMarketRecord,
@@ -47,6 +47,18 @@ import {
   writeFx,
 } from "../../../../../../../db/repositories/entry-market.repository.ts";
 import { readSizingLink } from "../sizing-link/route.ts";
+
+/** The linked version's EFFECTIVE declared unit (explicit declaration, then
+ *  the pipeline $B convention) — ADR-0181 amendment. */
+function linkedDeclaredUnit(db: ReturnType<typeof getDb>, opportunityId: string): string | null {
+  const link = readSizingLink(db, opportunityId);
+  if (!link?.link) return null;
+  const v = db.query("SELECT payload FROM market_sizing_version WHERE id = ?").get(link.link.version_id) as
+    | { payload: string | null }
+    | undefined;
+  const eff = readSizingEffectiveScope(v?.payload ?? null);
+  return eff?.unit_basis ?? null;
+}
 
 const FX_RATE_MAX = 1_000_000;
 
@@ -64,7 +76,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   // 409 body so an unlinked opportunity still renders its strip. Tolerant.
   const scope = readTargetScope(db, id);
   const scopeSet = scope != null;
-  const scopeUnitBasis = scope?.unit_basis ?? null;
+  // ADR-0181 follow-up: the unit resolves from the LINKED S1 declaration
+  // (analysis unit_basis / $B convention) — the saved scope no longer
+  // carries it.
+  const scopeUnitBasis = linkedDeclaredUnit(db, id);
   const legacyAnchor = { market_size_krw_m: row.market_size_krw_m ?? null, growth_rate: row.growth_rate ?? null };
   const record = readEntryMarketRecord(db, id);
   const fx = readFx(db, id);

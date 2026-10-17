@@ -8,7 +8,67 @@ import { ColGroup } from "../../ui.tsx";
 import { CompetitiveInputForm } from "./CompetitiveInputForm.tsx";
 import { AnchorChart, RegionWeightDonut, SegmentMixStack, RegionTable } from "./SizingCharts.tsx";
 import type { SizingReportState } from "./useSizingReport.ts";
+import { useState, useEffect } from "react";
 import { formatPctOrNa, formatUsdBOrNa, isSyntheticSizing, SYNTHETIC_BADGE_TEXT } from "../../../lib/synthetic-value.ts";
+
+/** ADR-0181 follow-up — the S1 analysis DECLARES its market-size unit at
+ *  analysis time (person-settable, audited on the server). The declaration
+ *  rides the version payload scope, so the entry-market unit resolution and
+ *  the KRW gaesan need no S2-side re-declaration. */
+function SizingUnitDeclaration({ ctx }: { ctx: SizingReportState }) {
+  const [unit, setUnit] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!ctx.analysisId) return;
+    fetch(`/api/market-overview/analyses/${encodeURIComponent(ctx.analysisId)}/unit`)
+      .then((r) => r.json())
+      .then((b) => { setUnit(b.data?.unit_basis ?? null); setLoaded(true); })
+      .catch(() => setLoaded(true));
+  }, [ctx.analysisId]);
+  async function save(v: string) {
+    setUnit(v === "" ? null : v);
+    setBusy(true); setNotice(null);
+    try {
+      const r = await fetch(`/api/market-overview/analyses/${encodeURIComponent(ctx.analysisId!)}/unit`, {
+        method: "PUT",
+        headers: { "content-type": "application/json", "X-CSRF-Token": document.cookie.split("; ").find((c) => c.startsWith("co_newbiz_csrf="))?.split("=")[1] ?? "" },
+        credentials: "include",
+        body: JSON.stringify({ unit_basis: v === "" ? null : v }),
+      });
+      if (!r.ok) {
+        const b = await r.json().catch(() => null);
+        setNotice(b?.error?.message ?? "저장 실패");
+      } else {
+        setNotice("시장 규모 단위를 선언했습니다 — 다음 버전부터 이 단위가 payload에 선언됩니다.");
+        await ctx.reload();
+      }
+    } finally { setBusy(false); }
+  }
+  if (!ctx.analysisId || !ctx.canCurate || !loaded) return null;
+  return (
+    <label className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] flex items-center gap-1" data-testid="sizing-unit-declaration">
+      시장 규모 단위 선언
+      <select
+        aria-label="시장 규모 단위 선언"
+        className="sizing-new-input sizing-new-input-sm"
+        value={unit ?? ""}
+        disabled={busy}
+        onChange={(e) => void save(e.target.value)}
+      >
+        <option value="">관례 (십억 USD/년)</option>
+        <option value="usd_b_year">연매출 (십억 USD/년)</option>
+        <option value="usd_m_year">연매출 (백만 USD/년)</option>
+        <option value="krw_m_year">연매출 (백만원/년)</option>
+        <option value="eur_b_year">연매출 (십억 EUR/년)</option>
+        <option value="eur_m_year">연매출 (백만 EUR/년)</option>
+        <option value="units_year">판매대수 (대/년)</option>
+      </select>
+      {notice && <span>{notice}</span>}
+    </label>
+  );
+}
 
 export function SizingOverviewTab({ ctx }: { ctx: SizingReportState }) {
   const { tab, matrix, proj2030Total, stepSummaries } = ctx;
@@ -25,6 +85,7 @@ export function SizingOverviewTab({ ctx }: { ctx: SizingReportState }) {
               <span className="summary-value mono-num">{formatUsdBOrNa(matrix.anchor.total)}</span>
               {badge}
               <span className="text-label">기준 시장규모 (2026)</span>
+              <SizingUnitDeclaration ctx={ctx} />
             </div>
             <div className="summary-card glass">
               <span className="summary-value mono-num">{formatPctOrNa(matrix.consistency.bottomUpCagr)}</span>

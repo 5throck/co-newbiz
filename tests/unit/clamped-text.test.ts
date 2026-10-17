@@ -19,7 +19,7 @@ test("ClampedText clamps to 2 lines with title tooltip and focusable element, no
 });
 
 test("S3, S5 and S8 required-note cells use ClampedText", () => {
-  const s3 = read("components/stages/synergy/SynergyLinkageTab.tsx");
+  const s3 = read("components/stages/synergy/SynergyCapabilityTab.tsx") + read("components/stages/synergy/SynergyLinkageTab.tsx");
   // ADR-0171: S5 and S8 render the required note through the one shared judgement table.
   const s5 = read("components/stages/CapabilityJudgementTable.tsx");
   const s8 = s5;
@@ -39,7 +39,7 @@ test("origin label helper: no S3 self-reference inside S3, shared by S3 and S4",
   expect(gapSourceLabel("s2_sketch", true)).toBe("S2 스케치에서 도출");
   expect(gapSourceLabel("s1_factors", false)).toBe("S1 요인에서 도출");
   expect(gapSourceLabel("manual", true)).toBe("직접 입력");
-  const s3 = read("components/stages/synergy/SynergyLinkageTab.tsx");
+  const s3 = read("components/stages/synergy/SynergyCapabilityTab.tsx") + read("components/stages/synergy/SynergyLinkageTab.tsx");
   expect(s3).toContain("gapSourceLabel(r.source, true)");
   expect(s3).not.toContain("S3 시너지 영역");
   expect(read("components/stages/route-decision/EvalTab.tsx")).toContain("gapSourceLabel(r.source, false)");

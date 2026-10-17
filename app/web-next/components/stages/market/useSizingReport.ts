@@ -129,7 +129,7 @@ export function useSizingReport({ detail, matrix, stepSummaries, analysisId, onA
     ["risk", "신뢰도·리스크"],
     ["validate", "검증·한계"],
   ] as const;
-  return { TABS, tab, setTab, matrix, proj2030Total, canCurate, onAddLinked, view, retiringLinkId, retireLink, approving, approveProposal, chainLinkError, manualLink, setManualLink, linkSaving, submitManualLink, linkSaved, legacyRelation, setLegacyRelation, legacyAssigning, assignLegacyRelation, detail, rerunStarted, analysisId, setRerunError, setRerunStarted, rerunError, stepSummaries };
+  return { TABS, tab, setTab, matrix, proj2030Total, canCurate, onAddLinked, view, retiringLinkId, retireLink, approving, approveProposal, chainLinkError, manualLink, setManualLink, linkSaving, submitManualLink, linkSaved, legacyRelation, setLegacyRelation, legacyAssigning, assignLegacyRelation, detail, rerunStarted, analysisId, setRerunError, setRerunStarted, rerunError, stepSummaries, reload };
 }
 
 export type SizingReportState = ReturnType<typeof useSizingReport>;

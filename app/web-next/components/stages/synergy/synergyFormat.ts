@@ -21,8 +21,10 @@ export const STEP_TITLES = ["DART 재무 입수", "외부 리서치", "재무 �
 // 담당하고, /synergy는 시너지 고유 내용(연계 시너지·우선 시너지 영역)만 다룬다.
 export const TABS = [
   ["overview", "개요"],
+  ["capability", "필요 역량 수준"],
   ["linkage", "연계 시너지"],
   ["shortlist", "우선 시너지 영역"],
+  ["decision", "의사결정"],
   ["refs", "출처·노트"],
 ] as const;
 

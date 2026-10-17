@@ -41,7 +41,7 @@ function seedIndustryAndVersion() {
   db.run("INSERT INTO market_sizing_analysis (id, industry_id, status, created_by, created_at, completed_at) VALUES (?,?,?,?,?,?)",
     ["ana-" + ind, ind, "completed", ANALYST, NOW, NOW]);
   db.run("INSERT INTO market_sizing_version (id, analysis_id, version_no, payload, created_by, created_at, data_confidence_grade) VALUES (?,?,?,?,?,?,?)",
-    ["ver-" + ind, "ana-" + ind, 1, json({ anchor: { sources: [], total: 90000 } }), ANALYST, NOW, "B"]);
+    ["ver-" + ind, "ana-" + ind, 1, json({ anchor: { sources: [], total: 90000 }, scope: { regions: ["kr"], segments: ["Stage V"], unit_basis: "usd_m_year" } }), ANALYST, NOW, "B"]);
   return ind;
 }
 
