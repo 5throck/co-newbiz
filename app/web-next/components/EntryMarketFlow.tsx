@@ -249,6 +249,7 @@ export function EntryMarketFlow({ opportunityId, canAct }: { opportunityId: stri
     computed: flow?.computed ?? null,
     legacyAnchor: flow?.legacy_anchor ?? null,
     s1: linked ? { version_no: linked.version_no, confidence_grade: linked.confidence_grade } : null,
+    unitBasis: flow?.scope_unit_basis ?? null,
   });
   // 2026-10-17 decider decision: the PR 615 tab control is REVERTED — the
   // three steps render STACKED and always visible; the step labels stay as
@@ -482,6 +483,7 @@ export function EntryMarketFlow({ opportunityId, canAct }: { opportunityId: stri
               growth_rate: flow.growth_rate,
               currency: flow.currency,
               region_trends: flow.region_trends,
+              scope_unit_basis: flow.scope_unit_basis,
             } : null}
             onDataChanged={refetchAll}
           />
