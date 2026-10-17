@@ -13,6 +13,16 @@
 // person-initiated call — no automatic LLM call exists on any other path.
 // Failure degrades to draft: null with an honest note, never blocking the
 // panel.
+//
+// Redesign slice 3 (2026-10-17 entry-market flow redesign, §5.4): draft
+// reliability. The user prompt's JSON template is a VALID JSON literal with a
+// numeric factor (the old `0.0-1.0` prose placeholder taught models to emit
+// string factors the strict validator rejects whole); extraction tries
+// whole-text -> fenced block -> first balanced object; and ONE repair retry
+// runs on strict-validation failure, feeding the validator's Korean error
+// back for corrected JSON only (design §OD-5 accepts the retry cost). The
+// strict validation rules are unchanged — invalid output is still rejected,
+// never coerced.
 import { getDb } from "../../../../../../../../db/client.ts";
 import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
 import { fail, notFound, ok } from "../../../../../../lib/envelope.ts";
@@ -60,9 +70,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       );
       // Strict validation with the SAME rules as PUT: one parse of the whole
       // chain — invalid model output is rejected whole, never coerced.
-      const parsed = extractJsonObject(res.text);
-      if (!parsed) throw new Error("모델 응답에서 JSON을 찾을 수 없습니다.");
-      const { steps } = normalizeEntryMarketDerivationInput(parsed);
+      let steps = draftStepsFromReply(res.text);
+      if (!steps) {
+        // One repair retry (design §5.4 #3): feed the failing rule and the
+        // rejected text back for corrected JSON only — still strictly
+        // validated, still writes nothing.
+        const repair = await completeDetailed(
+          [
+            systemMessage("s2.entry_market_draft"),
+            { role: "user" as const, content: buildRepairUserPrompt(res.text, lastDraftFailure ?? "모델 응답에서 JSON을 찾을 수 없습니다.") },
+          ],
+          { maxTokens: 1600, agent: promptAgent("s2.entry_market_draft") },
+        );
+        steps = draftStepsFromReply(repair.text);
+      }
+      if (!steps) throw new Error(lastDraftFailure ?? "모델 응답을 검증 규칙에 맞게 수정하지 못했습니다.");
       draftSteps = steps;
       source = "llm";
       note = "AI 배수 추천 초안 — 모든 단계의 배율과 출처를 검증·보완한 뒤 저장하세요 (저장은 사람의 행위, 경계 #2).";
@@ -106,7 +128,6 @@ function readLinkedDraftContext(db: ReturnType<typeof getDb>, opportunityId: str
     return null;
   }
   if (!matrix || typeof matrix !== "object") return null;
-  if (!matrix || typeof matrix !== "object") return null;
   const anchorValue = typeof matrix.anchor?.total === "number" ? matrix.anchor.total : null;
   if (anchorValue == null || anchorValue <= 0) return null;
   const scope = extractSizingVersionScope(row.payload);
@@ -130,7 +151,19 @@ function readLinkedDraftContext(db: ReturnType<typeof getDb>, opportunityId: str
   return { anchorValue, promptContext };
 }
 
-function buildDraftUserPrompt(ctx: NonNullable<ReturnType<typeof readLinkedDraftContext>>["promptContext"], targetScope: { regions: readonly string[]; segments: string[] } | null): string {
+/** The valid JSON output instruction (redesign slice 3, design §5.4 #1):
+ *  a concrete, parseable example with a NUMERIC factor literal plus an
+ *  explicit factor-is-a-number rule — replacing the old prose placeholder
+ *  (`0.0-1.0 배율`) that taught models to emit string factors. */
+export function draftOutputInstruction(): string {
+  return [
+    "JSON만 출력합니다 (설명·코드펜스 금지). 출력 예시 (유효한 JSON):",
+    '{"steps":[{"base":"s1_anchor","factor":0.35,"source":"앵커 지역 범위 중 사업 대상 지역 비중 추정 (검증 필요)","as_of":"2026-06","region_tags":["we"],"segment_tags":[]},{"base":"step:0","factor":0.4,"source":"대상 세그먼트 시장 비율 추정 (검증 필요)","as_of":"2026-06","region_tags":[],"segment_tags":["seg"]}]}',
+    "규칙: factor는 JSON 숫자 리터럴(예: 0.35)이며 문자열이 아닙니다. 모든 단계에 비어있지 않은 source와 as_of를 넣고, 첫 단계 base는 \"s1_anchor\", 두 번째 단계부터는 직전 단계를 가리키는 \"step:0\", \"step:1\", ... (0부터 시작), 단계는 최대 6개입니다.",
+  ].join("\n");
+}
+
+export function buildDraftUserPrompt(ctx: NonNullable<ReturnType<typeof readLinkedDraftContext>>["promptContext"], targetScope: { regions: readonly string[]; segments: string[] } | null): string {
   const scopeLine = ctx.declared_scope
     ? `선언 범위: 지역 ${ctx.declared_scope.regions.join(", ")}${ctx.declared_scope.segments.length ? ` · 세그먼트 ${ctx.declared_scope.segments.join(", ")}` : ""}${ctx.declared_scope.unit_basis ? ` · 단위 ${ctx.declared_scope.unit_basis}` : ""}`
     : "선언 범위: 미기재";
@@ -153,20 +186,88 @@ function buildDraftUserPrompt(ctx: NonNullable<ReturnType<typeof readLinkedDraft
     `[기회의 대상 범위 (사람 설정)]`,
     target,
     "",
-    `JSON만 출력: {"steps":[{"base":"s1_anchor","factor":0.0-1.0 배율,"source":"출처 문장","as_of":"YYYY-MM-DD","note":"선택","region_tags":["..."],"segment_tags":["..."]}, ...]}`,
+    draftOutputInstruction(),
   ].join("\n");
 }
 
-/** Extract the first JSON object from a model reply (tolerant of prose
- *  fences); null when none parses. */
-function extractJsonObject(text: string): Record<string, unknown> | null {
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start === -1 || end <= start) return null;
-  try {
-    const v = JSON.parse(text.slice(start, end + 1)) as unknown;
-    return typeof v === "object" && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
-  } catch {
+/** The failing rule from the last strict validation (the Korean
+ *  EntryMarketValidationError message) or extraction — surfaced in the
+ *  repair prompt and, when everything fails, in the honest failure note. */
+let lastDraftFailure: string | null = null;
+
+/** Extract + strictly normalize a model reply into draft steps; null and a
+ *  recorded failure reason when the reply does not pass (never coerced). */
+function draftStepsFromReply(text: string): EntryMarketStep[] | null {
+  lastDraftFailure = null;
+  const parsed = extractJsonObject(text);
+  if (!parsed) {
+    lastDraftFailure = "모델 응답에서 JSON을 찾을 수 없습니다.";
     return null;
   }
+  try {
+    return normalizeEntryMarketDerivationInput(parsed).steps;
+  } catch (err) {
+    lastDraftFailure = err instanceof Error ? err.message : String(err);
+    return null;
+  }
+}
+
+/** The one repair-retry prompt (design §5.4 #3): the validator's Korean
+ *  error message plus the rejected reply, corrected strict JSON only. */
+export function buildRepairUserPrompt(rejectedText: string, failure: string): string {
+  return [
+    "이전 응답이 검증 규칙에 맞지 않아 기각되었습니다.",
+    `실패 사유: ${failure}`,
+    "기각된 이전 응답:",
+    rejectedText.slice(0, 2000),
+    "검증 규칙을 모두 만족하는 수정된 JSON만 출력하세요 (설명·코드펜스 금지). factor는 (0, 1] 범위의 JSON 숫자 리터럴이며 문자열이 아닙니다.",
+    draftOutputInstruction(),
+  ].join("\n");
+}
+
+/** Extract the first JSON object from a model reply (redesign slice 3,
+ *  design §5.4 #2). Tolerant attempts, first parse wins: (1) whole-text
+ *  parse, (2) a fenced ```json block, (3) the first balanced-brace object
+ *  (string-aware, so prose between two brace groups no longer fails
+ *  wholesale). null when none parses. */
+export function extractJsonObject(text: string): Record<string, unknown> | null {
+  const attempts: string[] = [text];
+  for (const m of text.matchAll(/```(?:json)?\s*\n?([\s\S]*?)```/g)) attempts.push(m[1]);
+  const balanced = firstBalancedObject(text);
+  if (balanced !== null) attempts.push(balanced);
+  for (const a of attempts) {
+    try {
+      const v = JSON.parse(a) as unknown;
+      if (typeof v === "object" && v !== null && !Array.isArray(v)) return v as Record<string, unknown>;
+    } catch {
+      // next attempt
+    }
+  }
+  return null;
+}
+
+/** The substring of the first balanced `{...}` object in `text` (string and
+ *  escape aware), or null when none closes. */
+function firstBalancedObject(text: string): string | null {
+  const start = text.indexOf("{");
+  if (start === -1) return null;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null;
 }
