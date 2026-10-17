@@ -12,6 +12,7 @@
 // key is 400 invalid_request with a reason, never silently dropped, and a
 // factor is never fabricated. Audit: opportunity_entry_market.write,
 // target "<id>#entry-market@<via>".
+import { NextResponse } from "next/server";
 import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate, callPathOf, humanOnlyDenied, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, fail, notFound, ok } from "../../../../../lib/envelope.ts";
@@ -38,13 +39,42 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!auth.ok) return auth.response;
   const { id } = await params;
   const db = getDb();
-  const row = db.query("SELECT entry_market_derivation_json AS der, target_scope_json AS scope_json FROM opportunity WHERE id = ?").get(id) as
-    | { der: string | null; scope_json: string | null }
+  const row = db
+    .query(
+      "SELECT entry_market_derivation_json AS der, target_scope_json AS scope_json, market_size_krw_m, growth_rate FROM opportunity WHERE id = ?",
+    )
+    .get(id) as
+    | { der: string | null; scope_json: string | null; market_size_krw_m: number | null; growth_rate: number | null }
     | undefined;
   if (!row) return notFound();
+  // Additive redesign fields (2026-10-17 entry-market flow redesign, §5.1):
+  // scope_set / scope_unit_basis / legacy_anchor let ONE fetch power the whole
+  // card, including the header strip's anchor-in-force line. They ride even
+  // the not-linked 409 body (additive data alongside the unchanged error) so
+  // an unlinked opportunity still renders its strip. Parse is tolerant — a
+  // malformed scope degrades to unset, never a read failure.
+  let scopeSet = false;
+  let scopeUnitBasis: string | null = null;
+  try {
+    const scope = parseTargetScopeJson(row.scope_json);
+    scopeSet = scope != null;
+    scopeUnitBasis = scope?.unit_basis ?? null;
+  } catch {
+    scopeSet = false;
+    scopeUnitBasis = null;
+  }
+  const legacyAnchor = { market_size_krw_m: row.market_size_krw_m ?? null, growth_rate: row.growth_rate ?? null };
+  const additive = { scope_set: scopeSet, scope_unit_basis: scopeUnitBasis, legacy_anchor: legacyAnchor };
   const linked = readSizingLink(db, id);
   if (!linked?.link) {
-    return fail(409, "not_linked", "S1 시장규모 분석이 연결되지 않았습니다 — 도출 사슬은 연결된 S1 버전의 앵커에서만 계산됩니다 (sizing-link 연결 후 시도).");
+    const res = fail(409, "not_linked", "S1 시장규모 분석이 연결되지 않았습니다 — 도출 사슬은 연결된 S1 버전의 앵커에서만 계산됩니다 (sizing-link 연결 후 시도).");
+    try {
+      const body = (await res.json()) as { data: unknown; error: unknown };
+      body.data = additive;
+      return NextResponse.json(body, { status: 409 });
+    } catch {
+      return res;
+    }
   }
   let derivation: EntryMarketDerivation | null = null;
   let derError: string | null = null;
@@ -80,6 +110,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       confidence: { lowering_count: derivation ? confidenceLoweringCount(derivation.steps) : 0, note: ENTRY_MARKET_CONFIDENCE_NOTE },
       region_caveat: REGION_DEFINITION_CAVEAT,
       max_steps: ENTRY_MARKET_MAX_STEPS,
+      scope_set: additive.scope_set,
+      scope_unit_basis: additive.scope_unit_basis,
+      legacy_anchor: additive.legacy_anchor,
     },
     200,
   );
