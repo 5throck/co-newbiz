@@ -13,7 +13,7 @@ import { authenticate, callPathOf, humanOnlyDenied, requireBusinessActor } from 
 import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { extractSizingVersionScope } from "../../../../../lib/anchor-scope.ts";
-import { latestCompletedVersionNo, sizingLinkProvenance } from "../../../../../lib/sizing-auto-link.ts";
+import { latestCompletedVersionNo, lazyAutoLinkOnRead, sizingLinkProvenance } from "../../../../../lib/sizing-auto-link.ts";
 
 export interface SizingLinkReference {
   analysis_id: string;
@@ -35,7 +35,16 @@ export function readSizingLink(db: ReturnType<typeof getDb>, opportunityId: stri
     .query("SELECT sizing_analysis_id AS analysisId, sizing_version_id AS versionId FROM opportunity WHERE id = ?")
     .get(opportunityId) as { analysisId: string | null; versionId: string | null } | undefined;
   if (!opp) return undefined;
-  const link = opp.analysisId && opp.versionId ? { analysis_id: opp.analysisId, version_id: opp.versionId } : null;
+  // Lazy auto-link on the read path (2026-10-17 follow-up): pre-existing
+  // opportunities that predate the auto-link hooks get linked on first GET
+  // when the rules allow (no stored link, no manual lineage, industry has a
+  // COMPLETED analysis). Degrades silently — never blocks the read.
+  if (!opp.analysisId || !opp.versionId) lazyAutoLinkOnRead(db, opportunityId, new Date().toISOString());
+  const fresh = db
+    .query("SELECT sizing_analysis_id AS analysisId, sizing_version_id AS versionId FROM opportunity WHERE id = ?")
+    .get(opportunityId) as { analysisId: string | null; versionId: string | null } | undefined;
+  if (!fresh) return undefined;
+  const link = fresh.analysisId && fresh.versionId ? { analysis_id: fresh.analysisId, version_id: fresh.versionId } : null;
   let reference: SizingLinkReference | null = null;
   if (link) {
     const v = db

@@ -264,7 +264,67 @@ describe("reference display fields", () => {
   });
 });
 
-// -- compatibility flag transitions ---------------------------------------------------------------
+// -- lazy auto-link on the read path ---------------------------------------------------------------
+describe("lazy auto-link on the read path", () => {
+  test("pre-existing unlinked opportunity with a completed industry analysis is auto-linked on first GET", async () => {
+    // Simulate a PRE-EXISTING opportunity: industry set, no link stored,
+    // no audit lineage at all (predates the auto-link feature).
+    const opp = makeOpp("greenfield");
+    const seed = seedSizing("ind-lazy-a", SCOPED_PAYLOAD);
+    db.run("UPDATE opportunity SET industry_id = ? WHERE id = ?", ["ind-lazy-a", opp]);
+    const body = await getLink(opp).then((r) => r.json());
+    expect(body.data.link).toMatchObject({ analysis_id: seed.analysisId, version_id: seed.versionId });
+    expect(body.data.reference.version_id).toBe(seed.versionId);
+    expect(body.data.link_provenance).toBe("auto");
+    expect(
+      (db.query("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'opportunity_sizing_link.auto' AND target LIKE ?").get(`${opp}%`) as { n: number }).n,
+    ).toBe(1);
+  });
+
+  test("manual-override frozen opportunity stays unlinked on GET (audit-as-lineage)", async () => {
+    const opp = makeOpp("greenfield");
+    const seed = seedSizing("ind-lazy-b", SCOPED_PAYLOAD);
+    db.run("UPDATE opportunity SET industry_id = ? WHERE id = ?", ["ind-lazy-b", opp]);
+    // A person manually CLEARS the link: a manual write freezes auto forever.
+    await putLink(opp, { analysis_id: null, version_id: null });
+    const body = await getLink(opp).then((r) => r.json());
+    expect(body.data.link).toBeNull();
+    expect(body.data.reference).toBeNull();
+    expect(body.data.link_provenance).toBe("manual");
+    // and the lazy path never re-links a manually frozen opportunity
+    const { lazyAutoLinkOnRead } = await import("../../app/web-next/lib/sizing-auto-link.ts");
+    expect(lazyAutoLinkOnRead(db, opp, NOW)).toBeNull();
+    // frozen staleness hint surfaces instead
+    expect(body.data.newer_version_available).toBe(false);
+  });
+
+  test("industry without a completed analysis stays unlinked on GET", async () => {
+    const opp = makeOpp("greenfield");
+    db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", ["ind-no-analysis", "ind-no-analysis", "t", "T", NOW]);
+    db.run("UPDATE opportunity SET industry_id = ? WHERE id = ?", ["ind-no-analysis", opp]);
+    const body = await getLink(opp).then((r) => r.json());
+    expect(body.data.link).toBeNull();
+    expect(body.data.reference).toBeNull();
+    expect(body.data.link_provenance).toBe("none");
+  });
+
+  test("corrupted state degrades: unknown id returns null; dangling stored link never throws on read", async () => {
+    const { lazyAutoLinkOnRead } = await import("../../app/web-next/lib/sizing-auto-link.ts");
+    expect(lazyAutoLinkOnRead(db, "01NOPE00000000000000000000", NOW)).toBeNull();
+    // dangling stored link (FK-off raw writer simulates pre-FK legacy rows):
+    // reference degrades to null, the read succeeds
+    const opp = makeOpp("greenfield");
+    const raw = new Database(TEST_DB_PATH);
+    raw.run("PRAGMA foreign_keys = OFF");
+    raw.run("UPDATE opportunity SET sizing_analysis_id = 'ana-GONE', sizing_version_id = 'ver-GONE' WHERE id = ?", [opp]);
+    raw.close();
+    const body = await getLink(opp).then((r) => r.json());
+    expect(body.data.link).toMatchObject({ analysis_id: "ana-GONE", version_id: "ver-GONE" });
+    expect(body.data.reference).toBeNull();
+  });
+});
+
+// -- compatibility flag via the link --------------------------------------------------------------... (truncated)
 describe("compatibility flag via the link", () => {
   test("unknown -> ok / mismatch when the link lands; bit-identical inputs when unlinked", async () => {
     const opp = makeOpp("greenfield");
