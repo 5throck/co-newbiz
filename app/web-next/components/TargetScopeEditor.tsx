@@ -1,17 +1,14 @@
 "use client";
 
-// TargetScopeEditor — ADR-0179 slice 1: the person-set structured target
+// TargetScopeEditor - ADR-0179 slice 1: the person-set structured target
 // scope on the S2 opportunity detail. Step 2 (대상 범위) of the consolidated
-// 진입시장 산정 card (EntryMarketFlow): a person (analyst+) records which
-// regions / segments / unit basis the deal actually addresses; agents never
-// write it (PUT is human-only server-side). Amendment slice A: the LINKED
-// S1 market-sizing reference display — while choosing a scope the person
-// sees what the upstream numbers cover (declared scope, anchor value,
-// confidence grade, open link), now rendered BESIDE the inputs via the
-// `linked` prop owned by the parent flow. Presentational consolidation
-// only — routes and payloads are unchanged. The version-ID link management
-// moved to the parent's step 1; without an S1 link this editor renders
-// disabled with the reason (`disabledReason`).
+// 진입시장 산정 card (EntryMarketFlow), now PROPS-FED (2026-10-17 entry-market
+// flow redesign slice 1): the parent owns ALL loading and passes the scope +
+// linked-S1 reference in; the editor's own GET is deleted. It only edits and
+// saves through the SAME human-only PUT (routes and payloads unchanged).
+// Amendment slice A reference display (linked S1 scope/anchor/confidence)
+// stays. The unit_basis select STAYS in this slice (moving it into the
+// linked-S1 reference strip with the 절대값 아님 caption is slice 4).
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api.ts";
 import { TARGET_SCOPE_REGIONS, TARGET_SCOPE_UNIT_BASES, TARGET_SCOPE_UNIT_BASIS_LABEL, type TargetScope } from "../lib/target-scope.ts";
@@ -19,7 +16,7 @@ import { extractSizingVersionScope } from "../lib/anchor-scope.ts";
 
 /** Reference row of the LINKED S1 analysis/version: declared scope, anchor
  *  value, confidence grade and an href to open the S1 screen. Owned by the
- *  parent EntryMarketFlow (step 1 fetch) and passed down. */
+ *  parent EntryMarketFlow and passed down. */
 export interface LinkedSizingReference {
   analysis_id: string;
   version_id: string;
@@ -34,15 +31,15 @@ const REGION_LABEL: Record<string, string> = {
   kr: "국내 (KR)", we: "서유럽 (WE)", ee: "동유럽 (EE)", ru: "러시아 (RU)", na: "북미 (NA)", cn: "중국 (CN)", sea: "동남아 (SEA)", sa: "남미 (SA)", af: "아프리카 (AF)", me: "중동 (ME)", worldwide: "전 세계 (worldwide)",
 };
 
-export function TargetScopeEditor({ opportunityId, canAct, linked, disabledReason, onScopeChange }: {
+export function TargetScopeEditor({ opportunityId, canAct, linked, scope, disabledReason, onSaved }: {
   opportunityId: string;
   canAct: boolean;
   linked: LinkedSizingReference | null;
+  scope: TargetScope | null;
   disabledReason: string | null;
-  onScopeChange?: (scopeSet: boolean) => void;
+  onSaved: (saved: TargetScope) => void | Promise<void>;
 }) {
-  const [scope, setScope] = useState<TargetScope | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  // Local form state, initialized from the parent-owned scope prop.
   const [regions, setRegions] = useState<string[]>([]);
   const [segments, setSegments] = useState("");
   const [unitBasis, setUnitBasis] = useState<string>("krw_m_year");
@@ -50,29 +47,15 @@ export function TargetScopeEditor({ opportunityId, canAct, linked, disabledReaso
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const apply = useCallback((s: TargetScope | null) => {
-    setScope(s);
+  const applyScope = useCallback((s: TargetScope | null) => {
     setRegions(s?.regions ?? []);
     setSegments((s?.segments ?? []).join(", "));
     setUnitBasis(s?.unit_basis ?? "krw_m_year");
-    onScopeChange?.(s != null);
-  }, [onScopeChange]);
-
-  const load = useCallback(async () => {
-    try {
-      const r = await api.get<{ scope: TargetScope | null }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/target-scope`);
-      apply(r.data.scope);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "불러오기 실패");
-    } finally {
-      setLoaded(true);
-    }
-  }, [opportunityId, apply]);
+  }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    applyScope(scope);
+  }, [scope, applyScope]);
 
   function toggleRegion(r: string) {
     if (r === "worldwide") {
@@ -94,13 +77,13 @@ export function TargetScopeEditor({ opportunityId, canAct, linked, disabledReaso
         unit_basis: unitBasis,
       };
       const r = await api.put<{ scope: TargetScope }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/target-scope`, body);
-      apply(r.data.scope);
+      await onSaved(r.data.scope);
       setNotice("대상 범위를 저장했습니다.");
     } catch (err) { setError(err instanceof Error ? err.message : "저장 실패"); }
     finally { setBusy(false); }
   }
 
-  if (!canAct && !loaded && !disabledReason) return null;
+  if (!canAct && !scope && !disabledReason) return null;
 
   return (
     <section aria-label="대상 범위 (target scope)" className="market-section" data-testid="target-scope-editor">
@@ -121,8 +104,8 @@ export function TargetScopeEditor({ opportunityId, canAct, linked, disabledReaso
           <span className="text-[color:var(--muted-fg)]"> ({scope.set_by} · {scope.set_at.slice(0, 10)})</span>
         </p>
       )}
-      {!scope && loaded && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="target-scope-empty">미설정 — 기본 시장 앵커 범위를 따릅니다.</p>}
-      {/* ADR-0179 amendment slice A — reference display of the LINKED S1
+      {!scope && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="target-scope-empty">미설정 — 기본 시장 앵커 범위를 따릅니다.</p>}
+      {/* ADR-0179 amendment slice A - reference display of the LINKED S1
           analysis beside the scope inputs (design §12.1 (b)). Reference
           only; nothing set automatically. */}
       {linked ? (
@@ -137,7 +120,7 @@ export function TargetScopeEditor({ opportunityId, canAct, linked, disabledReaso
           {linked.confidence_grade && ` · 신뢰도 ${linked.confidence_grade}`}
         </div>
       ) : (
-        loaded && !disabledReason && (
+        !disabledReason && (
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="target-scope-linked-empty">
             연결된 S1 시장규모 분석이 없습니다 — S1 분석을 연결하면 범위 선택이 상류 수치의 실제 커버리지에 근거하게 됩니다.
           </p>
