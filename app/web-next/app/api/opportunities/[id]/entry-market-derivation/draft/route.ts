@@ -40,6 +40,7 @@ import {
   type EntryMarketStep,
 } from "../../../../../../lib/entry-market.ts";
 import { extractSizingVersionScope } from "../../../../../../lib/anchor-scope.ts";
+import { lazyAutoLinkOnRead } from "../../../../../../lib/sizing-auto-link.ts";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
@@ -52,7 +53,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     | undefined;
   if (!opp) return notFound();
   const linked = readLinkedDraftContext(db, id);
-  if (!linked) {
+  if (linked === null || !linked.ok) {
+    if (linked !== null && linked.code === "anchor_unavailable") {
+      return fail(
+        409,
+        "anchor_unavailable",
+        "연결된 S1 시장규모 버전에 앵커 값(1차년도 총계)이 없습니다 — AI 배수 추천은 앵커 값이 있는 S1 버전을 근거로만 동작합니다. 연결 자체는 되어 있습니다.",
+      );
+    }
     return fail(409, "not_linked", "S1 시장규모 분석이 연결되지 않았습니다 — AI 배수 추천은 연결된 S1 버전을 근거로만 동작합니다.");
   }
   const targetScope = parseTargetScopeJsonSafe(opp.scopeJson);
@@ -112,24 +120,50 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
 /** The LINKED S1 draft context: the pinned version's declared scope, the
  *  matrix's region weights, the anchor sources with their as-of, and the
- *  year-1 anchor value. Null when unlinked (409 not_linked). */
-function readLinkedDraftContext(db: ReturnType<typeof getDb>, opportunityId: string) {
-  const row = db
-    .query(
-      "SELECT mv.payload AS payload FROM opportunity o LEFT JOIN market_sizing_version mv ON mv.id = o.sizing_version_id WHERE o.id = ?",
-    )
-    .get(opportunityId) as { payload: string | null } | undefined;
-  if (!row?.payload) return null;
+ *  year-1 anchor value. Null when unlinked (409 not_linked) or the
+ *  opportunity itself is gone.
+ *
+ *  2026-10-17 decider-feedback fix: this read now applies the SAME
+ *  lazyAutoLinkOnRead as readSizingLink (the path the card's 자동 연결 chip
+ *  sees) — a pre-existing opportunity whose link existed only as a pending
+ *  lazy auto-link no longer 409s here while the chip says linked. And an
+ *  anchor-less pinned version is a DISTINCT failure (code "anchor_unavailable")
+ *  instead of collapsing into the misleading generic not_linked. */
+interface DraftPromptContext {
+  declared_scope: { regions: readonly string[]; segments: readonly string[]; unit_basis: string | null } | null;
+  regions: Array<{ code: string; label: string; weight: number }>;
+  anchor_sources: Array<{ label: string; estimate: number; as_of: string | null }>;
+}
+type DraftContext =
+  | { ok: true; anchorValue: number; promptContext: DraftPromptContext }
+  | { ok: false; code: "not_linked" | "anchor_unavailable" };
+
+function readLinkedDraftContext(db: ReturnType<typeof getDb>, opportunityId: string): DraftContext | null {
+  const select = () =>
+    db
+      .query(
+        "SELECT o.sizing_analysis_id AS analysisId, o.sizing_version_id AS versionId, mv.payload AS payload FROM opportunity o LEFT JOIN market_sizing_version mv ON mv.id = o.sizing_version_id WHERE o.id = ?",
+      )
+      .get(opportunityId) as { analysisId: string | null; versionId: string | null; payload: string | null } | undefined;
+  let row = select();
+  if (!row) return null;
+  if (!row.analysisId || !row.versionId) {
+    // Same lazy auto-link the card's chip path (readSizingLink) applies.
+    lazyAutoLinkOnRead(db, opportunityId, new Date().toISOString());
+    row = select();
+    if (!row) return null;
+  }
+  if (!row.versionId || !row.payload) return { ok: false, code: "not_linked" };
   type DraftMatrix = { anchor?: { sources?: Array<{ label?: unknown; estimate?: unknown; asOf?: unknown }>; total?: unknown }; regions?: Array<{ code?: unknown; label?: unknown; weight?: unknown }>; scope?: unknown };
   let matrix: DraftMatrix | null = null;
   try {
     matrix = JSON.parse(row.payload) as DraftMatrix;
   } catch {
-    return null;
+    return { ok: false, code: "anchor_unavailable" };
   }
-  if (!matrix || typeof matrix !== "object") return null;
+  if (!matrix || typeof matrix !== "object") return { ok: false, code: "anchor_unavailable" };
   const anchorValue = typeof matrix.anchor?.total === "number" ? matrix.anchor.total : null;
-  if (anchorValue == null || anchorValue <= 0) return null;
+  if (anchorValue == null || anchorValue <= 0) return { ok: false, code: "anchor_unavailable" };
   const scope = extractSizingVersionScope(row.payload);
   const promptContext = {
     declared_scope: scope
@@ -148,7 +182,7 @@ function readLinkedDraftContext(db: ReturnType<typeof getDb>, opportunityId: str
           .map((s) => ({ label: s.label, estimate: s.estimate, as_of: typeof s.asOf === "string" ? s.asOf : null }))
       : [],
   };
-  return { anchorValue, promptContext };
+  return { ok: true as const, anchorValue, promptContext };
 }
 
 /** The valid JSON output instruction (redesign slice 3, design §5.4 #1):
@@ -163,7 +197,7 @@ export function draftOutputInstruction(): string {
   ].join("\n");
 }
 
-export function buildDraftUserPrompt(ctx: NonNullable<ReturnType<typeof readLinkedDraftContext>>["promptContext"], targetScope: { regions: readonly string[]; segments: string[] } | null): string {
+export function buildDraftUserPrompt(ctx: DraftPromptContext, targetScope: { regions: readonly string[]; segments: string[] } | null): string {
   const scopeLine = ctx.declared_scope
     ? `선언 범위: 지역 ${ctx.declared_scope.regions.join(", ")}${ctx.declared_scope.segments.length ? ` · 세그먼트 ${ctx.declared_scope.segments.join(", ")}` : ""}${ctx.declared_scope.unit_basis ? ` · 단위 ${ctx.declared_scope.unit_basis}` : ""}`
     : "선언 범위: 미기재";

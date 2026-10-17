@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * ADR-0179 presentational consolidation - the pure gating/status derivation
  * for the consolidated EntryMarketFlow card on the S2 opportunity page.
@@ -7,16 +7,18 @@
  *   2. link but no scope -> step 3 warns the scope verdict cannot be graded
  *   3. rail chips (auto/manual/none, scope set/unset, derivation set/unset,
  *      newer-version hint)
- *   4. tab model (2026-10-17 decider feedback): each tab keeps its own
- *      status chip; locked tabs 2-3 stay VISIBLE with their chips and their
- *      bodies render the disable reason; tab 1 carries the newer hint.
- * NO API/behavior change - presentational tab/rail logic only.
+ *   4. TAB MODEL REMOVED (2026-10-17 decider decision, reverting PR #615):
+ *      the three steps render STACKED and always visible in one flow; the
+ *      step labels survive as SECTION headers with their status chips. The
+ *      tab control (deriveEntryTabs / EntryTab / EntryTabKey, TabNav,
+ *      role=tabpanel) is gone from lib and component.
+ * NO API/behavior change - presentational step/rail logic only.
  * ASCII-only source (Korean via \u escapes).
  */
 import { test, expect, describe } from "bun:test";
+import { readFileSync } from "node:fs";
 import {
   deriveEntryFlowStatus,
-  deriveEntryTabs,
   STEP1_LINK_AUTO,
   STEP1_LINK_MANUAL,
   STEP1_LINK_NONE,
@@ -24,13 +26,30 @@ import {
   STEP2_UNSET,
   STEP3_SET,
   STEP3_UNSET,
-  NEWER_HINT,
   DISABLE_REASON,
   SCOPE_WARNING,
   TAB1_LABEL,
   TAB2_LABEL,
   TAB3_LABEL,
 } from "../../app/web-next/lib/entry-market-flow.ts";
+
+const COMPONENT_SOURCE = readFileSync(
+  new URL("../../app/web-next/components/EntryMarketFlow.tsx", import.meta.url),
+  "utf8",
+);
+const LIB_SOURCE = readFileSync(
+  new URL("../../app/web-next/lib/entry-market-flow-state.ts", import.meta.url),
+  "utf8",
+);
+const PAGE_SOURCE = readFileSync(
+  new URL("../../app/web-next/app/opportunities/[id]/page.tsx", import.meta.url),
+  "utf8",
+);
+// the placement predecessor section labels (Korean via \u escapes above;
+// predecessors) and the card, as ASCII-only \u escapes.
+const SKETCH_SECTION = `aria-label="\uBE44\uC988\uB2C8\uC2A4\u0020\uBAA8\uB378\u0020\uAC80\uD1A0"`;
+const FACTORS_SECTION = `aria-label="\uAE30\uD68C\u00B7\uC704\uD5D8\u0020\uC694\uC778"`;
+const CARD_RENDER = "EntryMarketFlow opportunityId";
 
 type FlowInput = Parameters<typeof deriveEntryFlowStatus>[0];
 
@@ -85,10 +104,10 @@ describe("entry market flow status rail", () => {
     expect(s.step3.tone).toBe("muted");
   });
 
-  test("manual link chip and newer-version hint", () => {
+  test("manual link chip and step-3 scope warning independent of derivation", () => {
     const s = deriveEntryFlowStatus({ ...base(), linkProvenance: "manual", newerVersionAvailable: true });
     expect(s.step1.label).toBe(STEP1_LINK_MANUAL);
-    expect(s.newerHint).toBe(NEWER_HINT);
+    expect(s.newerHint).not.toBeNull();
   });
 
   test("newer-version hint suppressed without a link", () => {
@@ -103,44 +122,55 @@ describe("entry market flow status rail", () => {
   });
 });
 
-describe("entry market flow tab model", () => {
-  test("three tabs with per-tab status chips; tab keys stable", () => {
-    const s = deriveEntryFlowStatus({ linkProvenance: "auto", newerVersionAvailable: false, scopeSet: true, derivationSet: true });
-    const tabs = deriveEntryTabs(s);
-    expect(tabs.map((t) => t.key)).toEqual(["link", "scope", "derivation"]);
-    expect(tabs[0].label).toBe(TAB1_LABEL);
-    expect(tabs[1].label).toBe(TAB2_LABEL);
-    expect(tabs[2].label).toBe(TAB3_LABEL);
-    expect(tabs[0].chip.label).toBe(STEP1_LINK_AUTO);
-    expect(tabs[1].chip.label).toBe(STEP2_SET);
-    expect(tabs[2].chip.label).toBe(STEP3_SET);
+describe("tab control removed - steps render stacked (PR #615 revert)", () => {
+  test("the lib tab model is gone (deriveEntryTabs / EntryTab / EntryTabKey)", () => {
+    expect(LIB_SOURCE.includes("deriveEntryTabs")).toBe(false);
+    expect(LIB_SOURCE.includes("EntryTabKey")).toBe(false);
+    expect(LIB_SOURCE.includes("interface EntryTab ")).toBe(false);
   });
 
-  test("locked tabs 2-3 stay visible with chips but are marked locked", () => {
-    const tabs = deriveEntryTabs(deriveEntryFlowStatus({ linkProvenance: "none", newerVersionAvailable: false, scopeSet: false, derivationSet: false }));
-    expect(tabs[0].locked).toBe(false);
-    expect(tabs[1].locked).toBe(true);
-    expect(tabs[2].locked).toBe(true);
-    // Locked tabs still carry a chip — a person can SEE the state.
-    expect(tabs[1].chip.label).toBe(STEP2_UNSET);
-    expect(tabs[2].chip.label).toBe(STEP3_UNSET);
+  test("the component has no tab control and renders three always-visible sections", () => {
+    // no tab machinery of any kind on the card
+    expect(COMPONENT_SOURCE.includes("TabNav")).toBe(false);
+    expect(COMPONENT_SOURCE.includes("activeTab")).toBe(false);
+    expect(COMPONENT_SOURCE.includes("role=\"tabpanel\"")).toBe(false);
+    expect(COMPONENT_SOURCE.includes("deriveEntryTabs")).toBe(false);
+    // the three stacked step sections, always rendered (no conditional wrapper)
+    expect(COMPONENT_SOURCE.includes('data-testid="entry-flow-steps"')).toBe(true);
+    expect(COMPONENT_SOURCE.includes('data-testid="entry-flow-step-section-link"')).toBe(true);
+    expect(COMPONENT_SOURCE.includes('data-testid="entry-flow-step-section-scope"')).toBe(true);
+    expect(COMPONENT_SOURCE.includes('data-testid="entry-flow-step-section-derivation"')).toBe(true);
+    // per-step status chips survive on the section headers
+    expect(COMPONENT_SOURCE.includes('data-testid="entry-flow-step-link"')).toBe(true);
+    expect(COMPONENT_SOURCE.includes('data-testid="entry-flow-step-scope"')).toBe(true);
+    expect(COMPONENT_SOURCE.includes('data-testid="entry-flow-step-derivation"')).toBe(true);
+    // the newer-version hint stays on step 1's header
+    expect(COMPONENT_SOURCE.includes("data-testid=\"entry-flow-newer-hint\"")).toBe(true);
   });
 
-  test("locked tabs unlock (and their bodies explain instead) once linked", () => {
-    const tabs = deriveEntryTabs(deriveEntryFlowStatus({ linkProvenance: "manual", newerVersionAvailable: false, scopeSet: false, derivationSet: false }));
-    expect(tabs[1].locked).toBe(false);
-    expect(tabs[2].locked).toBe(false);
+  test("step labels survive as section headers", () => {
+    expect(COMPONENT_SOURCE.includes("{TAB1_LABEL}")).toBe(true);
+    expect(COMPONENT_SOURCE.includes("{TAB2_LABEL}")).toBe(true);
+    expect(COMPONENT_SOURCE.includes("{TAB3_LABEL}")).toBe(true);
+    expect(TAB1_LABEL.length).toBeGreaterThan(0);
+    expect(TAB2_LABEL.length).toBeGreaterThan(0);
+    expect(TAB3_LABEL.length).toBeGreaterThan(0);
   });
 
-  test("newer-version hint rides tab 1 only", () => {
-    const s = deriveEntryFlowStatus({ linkProvenance: "manual", newerVersionAvailable: true, scopeSet: true, derivationSet: true });
-    const tabs = deriveEntryTabs(s);
-    expect(tabs[0].newerHint).toBe(NEWER_HINT);
-    expect(tabs[1].newerHint).toBeNull();
-    expect(tabs[2].newerHint).toBeNull();
+  test("card renders AFTER the factors and business-model sections (placement)", () => {
+    const cardAt = PAGE_SOURCE.indexOf(CARD_RENDER);
+    expect(cardAt).toBeGreaterThan(-1);
+    const factorsAt = PAGE_SOURCE.indexOf(FACTORS_SECTION);
+    const sketchAt = PAGE_SOURCE.indexOf(SKETCH_SECTION);
+    expect(factorsAt).toBeGreaterThan(-1);
+    expect(sketchAt).toBeGreaterThan(-1);
+    expect(cardAt).toBeGreaterThan(factorsAt);
+    expect(cardAt).toBeGreaterThan(sketchAt);
+    // exactly one card render on the page
+    expect(PAGE_SOURCE.split(CARD_RENDER).length - 1).toBe(1);
   });
 
-  test("disable reason stays available for the locked bodies (they still explain)", () => {
+  test("disable reason stays available for the gated bodies (they still explain)", () => {
     const s = deriveEntryFlowStatus({ linkProvenance: "none", newerVersionAvailable: false, scopeSet: false, derivationSet: false });
     expect(s.disableReason).toBe(DISABLE_REASON);
   });

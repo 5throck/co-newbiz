@@ -225,8 +225,6 @@ export function OpportunityDetail() {
       )}
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       <KnownTargetGuide opportunityId={id} />
-      {/* ADR-0179 consolidation — ONE card: 진입시장 산정 (3-step flow) */}
-      <EntryMarketFlow opportunityId={id} canAct={canAct} />
 
       {/* 기회 개요 + 매력도 평가 */}
       <section aria-label="기회 개요" className="market-section">
@@ -409,6 +407,11 @@ export function OpportunityDetail() {
         )}
       </section>
       )}
+
+      {/* ADR-0179 consolidation — ONE card: 진입시장 산정 (3-step flow).
+          Placement (2026-10-17 decider feedback): AFTER the 기회/위험 요인
+          section and the 비즈니스 모델 검토 section. */}
+      <EntryMarketFlow opportunityId={id} canAct={canAct} />
 
       {/* 승격 — 선별 상태이며 미승격일 때 (ADR-0095) */}
       {opp.status === "selected" && !opp.project_id && (
