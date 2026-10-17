@@ -3028,6 +3028,108 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/opportunities/{id}/entry-market-derivation:
+    get:
+      operationId: getOpportunityEntryMarketDerivation
+      summary: "ADR-0179 amendment slice B: the entry-market derivation chain over the LINKED S1 series. Returns the stored chain ({steps, set_by, set_at}), the always-COMPUTED value (S1 anchor x product of factors at the pinned version's year-1 baseline), the reached-scope verdict (exact/partial/none/unknown, advisory per OPEN-1), the per-step confidence-lowering count, link provenance (auto/manual), the newer-version hint and the region-definition caveat. 409 not_linked when the opportunity has no pinned S1 link. Readable by anyone who can see the opportunity."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/OK'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: "not_linked - no pinned S1 sizing link"
+    put:
+      operationId: putOpportunityEntryMarketDerivation
+      summary: "HUMAN-ONLY (boundary #2; in HUMAN_ONLY_ROUTES + MCP-coverage exclusions, agent principals get 403 human_only). A person (analyst+) replaces the WHOLE chain atomically ({steps: [{base, factor (0..1], source (mandatory), as_of (mandatory), note?, region_tags?, segment_tags?, origin?}]}, 1..6 steps, strict key whitelist - absolute amounts have no accepted field) or clears it ({steps: null}). Invalid input is 400 invalid_request with a reason, never silently dropped; a factor is never fabricated. The derived value is always COMPUTED, never stored as an input. Audit opportunity_entry_market.write."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                steps:
+                  type: [array, "null"]
+                  items:
+                    type: object
+                    properties:
+                      base:
+                        type: string
+                        enum: [s1_anchor, "step:0", "step:1", "step:2", "step:3", "step:4", "step:5"]
+                      factor:
+                        type: number
+                      source:
+                        type: string
+                      as_of:
+                        type: string
+                      note:
+                        type: string
+                      region_tags:
+                        type: array
+                        items:
+                          type: string
+                      segment_tags:
+                        type: array
+                        items:
+                          type: string
+                      origin:
+                        type: string
+                        enum: [ai_suggested]
+      responses:
+        '200':
+          $ref: '#/components/responses/OK'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: "not_linked - no pinned S1 sizing link"
+  /api/opportunities/{id}/entry-market-derivation/draft:
+    post:
+      operationId: postOpportunityEntryMarketDraft
+      summary: "AI-RECOMMENDATION draft of the factor chain (ADR-0179 amendment, AI addition). Analyst+; writes NOTHING - returns the draft steps (each with origin: ai_suggested), the computed preview and the confidence/scope summary, or draft: null with an honest note when the LLM is unavailable or its output fails the SAME strict validation as the PUT (invalid model output is rejected, never coerced). 409 not_linked without a pinned S1 link. The model is invoked only on this person-initiated call - no automatic invocation exists."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/OK'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: "not_linked - no pinned S1 sizing link"
   /api/opportunities/{id}/establishment:
     get:
       operationId: getOpportunityEstablishment

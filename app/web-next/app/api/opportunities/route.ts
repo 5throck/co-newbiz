@@ -4,6 +4,8 @@
 // authenticated user (pre-project intelligence); writes require analyst+.
 import { getDb } from "../../../../../db/client.ts";
 import { appendAudit } from "../../../../../db/lib/access-control.ts";
+import { autoLinkSizing } from "../../../lib/sizing-auto-link.ts";
+
 import { ulid } from "../../../../../db/lib/ulid.ts";
 import { authenticate, requireBusinessActor } from "../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../lib/envelope.ts";
@@ -100,6 +102,12 @@ export async function POST(request: Request) {
       status, body.rationale?.trim() ?? null, ctx.userId, now, industryId],
   );
   appendAudit(db, { actor: ctx.userId, action: "opportunity_create", target: `${id}:${body.name.trim()}`, now });
+  // ADR-0179 amendment slice B (auto-link addition): when the industry
+  // already has a completed S1 analysis the sizing link is set automatically
+  // to its latest completed version (audited `opportunity_sizing_link.auto`).
+  // No industry / no completed analysis = no link, nothing fabricated; a
+  // manual write later freezes auto forever.
+  autoLinkSizing(db, id, ctx.userId, now);
   let knownTargetId: string | null = null;
   if (knownTargetName) {
     // Pre-fill S6: the named target enters the Long List with a discovery

@@ -10,7 +10,7 @@ export interface PromptEntry {
   system: string;
 }
 
-export type PromptKey = "s2.discover" | "s1.sizing_ask_json" | "s1.sizing_summarize" | "s1.ksic_classify" | "market.related_candidates" | "s3.opportunity_factors" | "company_profile.qualitative" | "company_profile.competitive" | "company_profile.crosscheck" | "s4.synergy_fa" | "s4.synergy_synergy" | "s4.synergy_ic" | "s3.attractiveness_recommendation" | "s3.capability_gap_draft" | "s5.capability_judgement_draft" | "s5.entry_strategy_draft" | "opportunity.gate_brief" | "project.gate_brief" | "s4.route_recommendation" | "opportunity.sketch" | "s5.greenfield_recommendation" | "s6.universe_criteria_draft" | "s6.target_proposal_web_search" | "s7.screening_draft" | "s8.business_case_prose" | "s8.business_case_adoption" | "s8.deal_structure_recommendation" | "s9.dd_tailor" | "s11.monitoring_brief" | "pm.query_classify" | "committee.position" | "company_profile.competitor_web_search" | "s8.price_evidence";
+export type PromptKey = "s2.discover" | "s1.sizing_ask_json" | "s1.sizing_summarize" | "s1.ksic_classify" | "market.related_candidates" | "s3.opportunity_factors" | "company_profile.qualitative" | "company_profile.competitive" | "company_profile.crosscheck" | "s4.synergy_fa" | "s4.synergy_synergy" | "s4.synergy_ic" | "s3.attractiveness_recommendation" | "s3.capability_gap_draft" | "s5.capability_judgement_draft" | "s5.entry_strategy_draft" | "opportunity.gate_brief" | "project.gate_brief" | "s4.route_recommendation" | "opportunity.sketch" | "s5.greenfield_recommendation" | "s6.universe_criteria_draft" | "s6.target_proposal_web_search" | "s7.screening_draft" | "s8.business_case_prose" | "s8.business_case_adoption" | "s8.deal_structure_recommendation" | "s9.dd_tailor" | "s11.monitoring_brief" | "pm.query_classify" | "committee.position" | "company_profile.competitor_web_search" | "s8.price_evidence" | "s2.entry_market_draft";
 
 export const PROMPTS: Record<PromptKey, PromptEntry> = {
   "s2.discover": {
@@ -210,5 +210,11 @@ export const PROMPTS: Record<PromptKey, PromptEntry> = {
     agent: "quant-methodologist",
     purpose: "S8 타겟코스팅 — 웹검색 근거에서 시장가격 후보 추출 (제안 전용, 확정은 사람)",
     system: "당신은 신규사업 검토의 정량 방법론 전문가입니다. 제공된 웹 검색 결과만 사용해 대상 제품·서비스의 시장가격 후보를 추출하세요. 규칙: (1) 통화와 단위(EA·세트·kg 등)가 명시된 가격만 후보로 인정합니다. (2) 모든 후보는 출처 URL과 근거 인용문을 포함해야 하며, URL이 없는 가격은 절대 반환하지 않습니다. (3) 근거가 없으면 후보 배열을 비우고 반환합니다. (4) 근거에 없는 값을 만들어내지 않습니다. 지정된 JSON 스키마만 출력합니다.",
+  },
+  "s2.entry_market_draft": {
+    key: "s2.entry_market_draft",
+    agent: "quant-methodologist",
+    purpose: "S2 진입 시장 도출 사슬 AI 배수 추천 초안 (제안 전용, 저장은 사람)",
+    system: "당신은 신규사업 검토의 정량 방법론 전문가입니다. 제공된 연결 S1 시장규모 분석(선언 범위, 지역 가중치, 앵커 출처와 기준 시점)과 기회의 대상 범위만 근거로 진입 시장 도출 사슬의 배율 인자를 초안하세요. 규칙: (1) 각 인자는 (0, 1] 배율이며 절대값을 만들지 않습니다. (2) 모든 단계에 비어있지 않은 출처(source)와 기준 시점(as_of)을 적되, 근거가 없는 값은 만들어내지 않습니다 — 추정치는 출처 문장에 '추정/검증 필요'로 표기합니다. (3) 첫 단계 base는 s1_anchor, 이후는 step:<n-1>입니다. (4) 단계는 최대 6개까지입니다. (5) 지역 인자는 지역 정의(UN M49 등)를 출처에 명시합니다. (6) 지정된 JSON 스키마만 출력합니다.",
   },
 };

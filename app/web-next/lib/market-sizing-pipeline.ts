@@ -32,6 +32,7 @@ import {
 import { GENERIC_SEGMENTS, type SizingMatrix } from "./market-sizing.ts";
 import { searchKsic } from "./ksic.ts";
 import { systemMessage, promptAgent } from "./prompts.ts";
+import { refreshAutoSizingLinks } from "./sizing-auto-link.ts";
 
 // ---------------------------------------------------------------------------
 // Serial linked-analysis queue (design 2026-09-13, meeting panel-reviewed).
@@ -1098,6 +1099,16 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       }
     }
   })();
+  // ADR-0179 amendment slice B (auto-link addition): a newly completed
+  // version lets the industry's opportunities auto-follow — unlinked
+  // opportunities get linked and still-auto links move to the newer version;
+  // manual overrides stay frozen (the display hint flags the staleness).
+  try {
+    refreshAutoSizingLinks(db, analysis.industry_id, "market-sizing-pipeline", now());
+  } catch {
+    // Honest degradation: an auto-link failure must never fail a completed
+    // sizing run. The display hint still flags any staleness on read.
+  }
   }
 }
 

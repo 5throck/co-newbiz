@@ -19,6 +19,7 @@ import { ClosureModal } from "../../../components/ClosureModal.tsx";
 import { PromotionPanel } from "../../../components/PromotionPanel.tsx";
 import { KnownTargetGuide } from "../../../components/KnownTargetGuide.tsx";
 import { TargetScopeEditor } from "../../../components/TargetScopeEditor.tsx";
+import { EntryMarketDerivationPanel } from "../../../components/EntryMarketDerivationPanel.tsx";
 
 interface OpportunityRow {
   id: string; project_id: string | null; name: string; market_scope: string | null; value_chain_node: string | null;
@@ -227,6 +228,7 @@ export function OpportunityDetail() {
       <KnownTargetGuide opportunityId={id} />
       {/* ADR-0179 slice 1 — person-set structured target scope */}
       <TargetScopeEditor opportunityId={id} canAct={canAct} />
+      <EntryMarketDerivationPanel opportunityId={id} canAct={canAct} />
 
       {/* 기회 개요 + 매력도 평가 */}
       <section aria-label="기회 개요" className="market-section">
