@@ -36,6 +36,7 @@ import {
 } from "../../../../../lib/entry-market.ts";
 import { compareAnchorScope, ANCHOR_SCOPE_CONFIDENCE_NOTE } from "../../../../../lib/anchor-scope.ts";
 import { readSizingEffectiveScope, readSizingRegionTrends, readSizingRegions, readSizingSegments } from "../../../../../lib/sizing-payload.ts";
+import { extractSizingVersionScope } from "../../../../../lib/anchor-scope.ts";
 import {
   readChain,
   readEntryMarketRecord,
@@ -109,7 +110,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   // selection vs the anchor's DECLARED scope. Regions decide; advisory only.
   let scopeFlag: { status: string; reason: string; note: string } | null = null;
   if (derivation && scope) {
-    const anchorScope = linked.reference?.scope ?? null;
+    // ADR-0181 amendment: the anchor side uses the EFFECTIVE coverage
+    // (explicit declaration, then the pipeline $B-payload convention) so a
+    // legacy undeclared version still produces a meaningful verdict.
+    const v = db.query("SELECT payload FROM market_sizing_version WHERE id = ?").get(linked.link.version_id) as
+      | { payload: string | null }
+      | undefined;
+    const anchorScope = extractSizingVersionScope(v?.payload ?? null) ?? readSizingEffectiveScope(v?.payload ?? null);
     const verdict = compareAnchorScope(anchorScope, scope);
     scopeFlag = {
       status: verdict.status,
