@@ -1229,7 +1229,14 @@ export function normalizeBusinessCaseLines(
     if ((raw as { startYear?: unknown }).startYear === PRE_LAUNCH_START_YEAR) {
       return { ok: false, error: { code: "invalid_request", message: `${row.capability}: 역량 해소 비용은 시작 전 투자(0년차)로 지정할 수 없습니다 — 집행 연차는 1..${horizon}년이어야 합니다.` } };
     }
-    const startYear = isValidYearValue((raw as { startYear?: unknown }).startYear) ? (raw as { startYear: number }).startYear : undefined;
+    // 2026-10-18 decider report — a POST that omits startYear (e.g. a save for a
+    // DIFFERENT row) must not wipe this row's saved spend-year override: fall back
+    // to the previously stored value before falling to the months-derived default.
+    const startYear = isValidYearValue((raw as { startYear?: unknown }).startYear)
+      ? (raw as { startYear: number }).startYear
+      : isValidYearValue(before?.startYear)
+        ? (before as { startYear: number }).startYear
+        : undefined;
     if (startYear !== undefined && (startYear < 1 || startYear > horizon)) {
       return { ok: false, error: { code: "invalid_request", message: `${row.capability}: 집행 연차는 1..${horizon}년이어야 합니다.` } };
     }

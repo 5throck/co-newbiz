@@ -698,7 +698,12 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 onEditorApi={(api) => { judgeApiRef.current = api; }}
                 onDirtyChange={setJudgeDirty}
                 /* 판정 dialog의 시작 연차 = 투자비 항목과 같은 cost-entry override (저장은 투자비 저장과 함께). */
-                startYearFor={(id) => { const v = capStartYear[id]; return typeof v === "number" && Number.isFinite(v) ? v : null; }}
+                startYearFor={(id) => {
+                  const v = capStartYear[id];
+                  if (typeof v === "number" && Number.isFinite(v)) return v;
+                  // 저장된 cost-entry override(있으면) — 없으면 판정 개월 기본값(라인의 유효 시작 연차).
+                  return costView.lines.find((l) => l.capabilityKey === id)?.startYear ?? null;
+                }}
                 onStartYearChange={(id, v) => setCapStartYear((p) => ({ ...p, [id]: v ?? Number.NaN }))}
               />
             </div>

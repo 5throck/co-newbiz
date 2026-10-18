@@ -199,6 +199,10 @@ export function CapabilityJudgementDialog({ row, draft, note, s3Href, hasPrev, h
                   value={spendStart}
                   data-testid="judge-start-year"
                   disabled={onStartYearChange === undefined}
+                  /* 포커스 순간 표시값을 override로 고정한다 — 기간(개월)을 나중에
+                     바꿔도 사람이 입력한 시작 연차가 기본값으로 덮이지 않는다
+                     (2026-10-18 decider report: "1연차 입력 후 36개월 입력 시 3으로 변경"). */
+                  onFocus={() => { if (startOverride === null) setStartOverride(spendStart); }}
                   onChange={(e) => {
                     const raw = e.target.value;
                     const v = raw === "" || !Number.isFinite(Number(raw)) ? null : Math.max(1, Math.floor(Number(raw)));
