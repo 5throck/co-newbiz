@@ -48,6 +48,9 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
     decision: v.decision,
     rationale: v.rationale,
     missing_artifacts: v.missing,
+    // ADR-0182 §5 — the 판단 필요 claims the human confirmed with this decision,
+    // so the buckets can render the saved state instead of pending checkboxes.
+    judgement_confirmations: v.judgementConfirmations,
   }));
   return ok({ latest, history,
   }, 200, { count: history.length });

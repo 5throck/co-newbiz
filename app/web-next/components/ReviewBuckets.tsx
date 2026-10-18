@@ -111,6 +111,7 @@ export function ReviewBuckets({
   judgementChecks,
   onToggleJudgement,
   onDecisionJump,
+  confirmedJudgements,
 }: {
   entityType: "opportunity" | "project";
   entityId: string;
@@ -130,6 +131,9 @@ export function ReviewBuckets({
   onToggleJudgement?: (claim: string, checked: boolean) => void;
   /** Discoverability: jump from the 판단 필요 bucket to the decision form. */
   onDecisionJump?: () => void;
+  /** 판단 필요 claims already confirmed with a recorded gate decision — they
+   *  render as a saved-state chip instead of a pending checkbox. */
+  confirmedJudgements?: ReadonlySet<string>;
 }) {
   const { me } = useAuth();
   const canRequest = entityType === "project" ? canWriteProject(me?.role) : canWriteBusiness(me?.role);
@@ -320,6 +324,7 @@ export function ReviewBuckets({
                         {items.map(({ it, s }) => {
                           const l = localizeItem(it);
                           const claimKey = `${s.id}-${it.claim}`;
+                          const confirmed = confirmedJudgements?.has(it.claim) ?? false;
                           const judgementable = b.key === "needs_judgement" && !!onToggleJudgement && canRequest;
                           return (
                             <li key={claimKey}>
@@ -328,7 +333,14 @@ export function ReviewBuckets({
                               <span className="block text-[color:var(--muted-fg)]">
                                 출처: {citationLabel(s.origin, s.reviewer_domain, it.evidence_ref)}
                               </span>
-                              {judgementable && (
+                              {b.key === "needs_judgement" && confirmed && (
+                                <span className="block mt-1">
+                                  <span className="status-chip status-green" title="이 항목은 결정 기록과 함께 사람 확인으로 저장되었습니다">
+                                    <span aria-hidden="true">✓</span> 사람 확인됨 — 결정 기록과 함께 저장
+                                  </span>
+                                </span>
+                              )}
+                              {b.key === "needs_judgement" && !confirmed && judgementable && (
                                 <label className="flex items-center gap-1 mt-1 cursor-pointer">
                                   <input
                                     type="checkbox"

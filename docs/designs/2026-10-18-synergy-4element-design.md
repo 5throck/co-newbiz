@@ -27,3 +27,18 @@ ADR-0182 구현 설계. 디시더 방향: 관계 도식화, 흐름 순서 탭 �
 - **POST /api/synergy/ai-score-adjustment** (신규): 저장된 근거(규칙 팩터·주요 검토 영역·필요 역량 충족도)에서 ±10 경계 보정 초안을 재제안 — 무기록(쓰기 없음), 사람이 누른 버튼의 결과로 확정 폼에만 프리필. LLM call-site 인벤토리 등록(exempt).
 - **검토 확정 기록 (ADR-0153 최소주의)**: migration 0153 `gate_decision.judgement_confirmations_json` (신규 테이블 없음). ReviewBuckets 판단 필요 항목에 "사람 확인" 체크박스(onToggleJudgement 제공 시에만 렌더 — 게이트 결정 패널 한정)와 결정 폼 앵커 링크, GateDecisionPanel이 체크 목록을 결정 POST에 동봉, 결정 이력에 "사람 확인 N건" 표시. 체크는 선택 사항 — 결정을 막지 않는다.
 - **검증**: 신규 유닛 10건(tests/unit/synergy-score-eval-ai.test.ts), openapi/call-sites/table-sizing 래칫 갱신, `next build` 성공, 브라우저 실측(탭 순서·배지 부재·점수 평가 탭·AI 보정 제안 +3 프리필·체크박스·앵커 포커스). 시나리오(e2e)·axe 실패는 main 사전존재(stash 기준선 확인).
+
+## As-built (2026-10-18, decider feedback slice 2 — 확인 상태 유지·버튼 가독성)
+
+- **판단 필요 확인 상태가 결정 기록에서 역조회된다**: `latestGateDecisions`가
+  `judgement_confirmations_json`을 함께 읽고(GET `latest`에 `judgement_confirmations`로
+  노출), ReviewBuckets는 기록된 확인 항목을 `✓ 사람 확인됨 — 결정 기록과 함께 저장`
+  칩으로 렌더한다(미확인 항목에만 체크박스). 기록 후 체크박스가 리셋돼도 저장
+  상태가 화면에 남는다(2026-10-18 사용자 리포트 "다 선택하고 저장했음에도 해당
+  항목이 사라지지 않음").
+- **재분석 버튼**: 라벨 `🤖 재분석 (AI)`(AI 재도출임을 라벨에 표기), 범위 문구는
+  헤더 옆 인라인에서 아래 줄 캡션으로 분리, 진행 중 라벨 `재분석 진행 중...`.
+- **필요 역량 탭 툴바 가독성**: AI 버튼에 🤖 아이콘(`🤖 필요 역량 제안 (AI)`·
+  `🤖 보유 판정 확인 (AI)`), 바쁨 라벨 구체화(초안 생성 중/확인 중/저장 중),
+  AI 초안 버리기·저장 그룹은 오른쪽 구분선 뒤로 분리, 행 추가 버튼 `＋ 역량 행 추가`.
+  테스트가 고정하는 라벨 문자열은 그대로 유지(아이콘은 aria-hidden).

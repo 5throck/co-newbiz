@@ -67,21 +67,28 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
   return (
     <>{tab === "linkage" && (
             <div className="text-[0.88rem]">
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
                 <h3 className="sizing-step-title text-[0.95rem] mb-0">S1·S2 연계 시너지 영역 (후보 탐색 → 본검증)</h3>
                 {/* ADR-0182 — 재분석은 이 흐름의 시작(연계 탭)에서만 노출한다.
-                    헤더 상시 버튼이던 것을 이동: 재도출 범위를 눈앞에서 확인하게. */}
+                    AI 재도출임을 라벨에 드러내고, 범위 문구는 아래 줄에 분리해
+                    읽게 한다(2026-10-18 사용자 리포트). */}
                 {canCurate && (
-                  <div className="flex items-center gap-2">
-                    <button type="button" className="btn-ghost btn-sm" disabled={inProgress} onClick={onRerun}>
-                      재분석
-                    </button>
-                    <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                      재분석하면 연계 시너지 영역·주요 검토 영역·시너지 점수가 재도출됩니다{inProgress ? " — 진행 중" : ""}.
-                    </span>
-                  </div>
+                  <button
+                    type="button"
+                    className="btn-ghost btn-sm"
+                    disabled={inProgress}
+                    title="AI가 DART 재무 입수부터 시너지 점수까지 5단계를 다시 실행합니다"
+                    onClick={onRerun}
+                  >
+                    {inProgress ? "재분석 진행 중..." : <><span aria-hidden="true">🤖</span> 재분석 (AI)</>}
+                  </button>
                 )}
               </div>
+              {canCurate && (
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
+                  재분석하면 연계 시너지 영역·주요 검토 영역·시너지 점수가 AI로 재도출됩니다 — 사람이 추가·수정한 영역과 확정 점수는 재도출 결과로 대체될 수 있습니다.
+                </p>
+              )}
               <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                 연계 시장: {p.marketLinkage.marketSummaries.map((m) => `${m.industry} (CAGR ${m.cagrPct ?? "?"}%${m.gapPct !== null ? `, 격차 ${m.gapPct > 0 ? "+" : ""}${m.gapPct}%` : ""})`).join(" · ") || "없음"}
               </p>
