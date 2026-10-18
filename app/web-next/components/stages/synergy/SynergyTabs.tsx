@@ -4,6 +4,7 @@
 import type { SynergyResultState } from "./useSynergyResult.ts";
 import type { SynergyPayload } from "./types.ts";
 import { ColGroup } from "../../ui.tsx";
+import { SynergyScoreEvidence } from "./SynergyScoreEvidence.tsx";
 import { shortlistColPct } from "./constants.ts";
 
 export function SynergyOverviewTab({ ctx, p }: { ctx: SynergyResultState; p: SynergyPayload }) {
@@ -96,6 +97,15 @@ export function SynergyOverviewTab({ ctx, p }: { ctx: SynergyResultState; p: Syn
                           </p>
                         </div>
                       )}
+          {/* ADR-0182 Phase 2 — 시너지 점수 산정 근거 (팩터별 점수·방법론 기술) */}
+          <SynergyScoreEvidence
+            factors={ctx.p?.synergyScoreFactors}
+            finalScore={ctx.currentScore}
+            rationale={ctx.currentRationale}
+            capabilityCoverage={ctx.p?.capabilityCoverage ?? null}
+            capabilityCoverageNote={ctx.p?.capabilityCoverageNote ?? null}
+            adjustment={ctx.p?.scoreAdjustment ?? null}
+          />
                     </>
                   ) : (
                     <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">연결된 분석에 시너지 점수 권고가 아직 없습니다 — 분석 완료 후 권고가 기록됩니다.</p>

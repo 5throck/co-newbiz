@@ -8,6 +8,7 @@ import { GateDecisionPanel } from "../../GateDecisionPanel.tsx";
 import { useSynergyResult } from "./useSynergyResult.ts";
 import { SynergyOverviewTab, SynergyShortlistTab } from "./SynergyTabs.tsx";
 import { SynergyCapabilityTab } from "./SynergyCapabilityTab.tsx";
+import { SynergyFlowDiagram } from "./SynergyFlowDiagram.tsx";
 import { SynergyLinkageTab } from "./SynergyLinkageTab.tsx";
 import { targetLabel, STEP_TITLES, TABS } from "./synergyFormat.ts";
 import type { SynergyAnalysis } from "./types.ts";
@@ -83,13 +84,27 @@ export function SynergyResult(props0: {
             ))}
           </div>
 
-          <SynergyOverviewTab ctx={ctx} p={p} />
+          {/* ADR-0182 Phase 1 — 4요소 관계도: 연계(후보) → 우선(선별) → 필요 역량(레지스터) → 시너지 점수.
+              노트 클릭 시 해당 탭으로 이동. */}
+          <SynergyFlowDiagram
+            data={{
+              linkageCount: ctx.p?.marketLinkage.synergyAreas.length ?? 0,
+              shortlistCount: (ctx.p?.shortList ?? []).filter((s) => s.verdict === "Short List").length,
+              capabilityRows: ctx.gapRows.length,
+              capabilityJudged: ctx.gapSummary.evaluated,
+              capabilityCoveragePct: ctx.gapSummary.coveragePct,
+              synergyScore: ctx.currentScore,
+              scoreConfirmed: ctx.synState?.confirmed ?? false,
+            }}
+            activeTab={tab}
+            onJump={onTab}
+          />
+
+          {tab === "linkage" && <SynergyLinkageTab ctx={ctx} p={p} />}
+
+          {tab === "shortlist" && <SynergyShortlistTab ctx={ctx} p={p} />}
 
           {tab === "capability" && <SynergyCapabilityTab ctx={ctx} p={p} />}
-
-          <SynergyLinkageTab ctx={ctx} p={p} />
-
-          <SynergyShortlistTab ctx={ctx} p={p} />
 
           {tab === "refs" && (
             <div className="text-[0.88rem]">

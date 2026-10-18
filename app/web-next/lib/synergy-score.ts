@@ -20,7 +20,7 @@ import {
 } from "./scoring-weights.ts";
 
 export interface ScoreFactor {
-  key: "market_attractiveness" | "industry_match" | "financial_capacity" | "scope_match";
+  key: "market_attractiveness" | "industry_match" | "financial_capacity" | "scope_match" | "capability_coverage";
   label: string;
   weight: number; // renormalized weight actually applied
   baseWeight: number;
@@ -55,6 +55,12 @@ export interface ScoreInputs {
     ratios?: Array<{ year: string; debtRatio?: number | null; roe?: number | null; operatingMargin?: number | null }>;
   } | null;
   markets: MarketSnapshot[]; // completed S1 analyses (latest version each)
+  /** ADR-0182 — 필요 역량 충족도 (0-100): the capability register's
+   *  holding coverage (holding ratio weighted ×2 for essential rows).
+   *  Null/undefined when the register is empty or unjudged → the factor is
+   *  excluded (미반영 명시), never fabricated. */
+  capabilityCoverage?: number | null;
+  capabilityCoverageNote?: string | null;
 }
 
 const tokens = (s: string): string[] =>
@@ -141,6 +147,23 @@ export function computeSynergyScore(inputs: ScoreInputs): SynergyScoreResult {
   } else {
     missing.push("DART 재무 비율 없음 — 재무 여력 팩터 미반영");
     factors.push({ key: "financial_capacity", label: "재무 여력", baseWeight: SYNERGY_FACTOR_WEIGHTS.financial_capacity, weight: 0, value: null, note: "입력 부재로 제외" });
+  }
+
+  // 3.5) ADR-0182 — 필요 역량 충족도 (capability coverage): the register's
+  // holding coverage 0-100. Absent register → factor excluded with a missing
+  // note (never a fabricated 0/100).
+  if (typeof inputs.capabilityCoverage === "number" && Number.isFinite(inputs.capabilityCoverage)) {
+    const value = clamp(inputs.capabilityCoverage);
+    factors.push({
+      key: "capability_coverage", label: "필요 역량 충족도",
+      baseWeight: SYNERGY_FACTOR_WEIGHTS.capability_coverage, weight: SYNERGY_FACTOR_WEIGHTS.capability_coverage, value,
+      note: inputs.capabilityCoverageNote ?? `필요 역량 레지스터 보유율 기준 ${value.toFixed(0)}/100`,
+    });
+  } else {
+    missing.push("필요 역량 레지스터 미입력 — 충족도 팩터 미반영");
+    factors.push({
+      key: "capability_coverage", label: "필요 역량 충족도",
+      baseWeight: SYNERGY_FACTOR_WEIGHTS.capability_coverage, weight: 0, value: null, note: "입력 부재로 제외" });
   }
 
   // 4) Scope match — 기회 market_scope와 시장분석 산업명 일치도.

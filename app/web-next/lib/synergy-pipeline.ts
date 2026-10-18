@@ -11,7 +11,7 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { completeOrFallback, isLlmConfigured } from "./llm.ts";
-import { parseGapRegister } from "./capability-gap.ts";
+import { parseGapRegister, summarizeGap } from "./capability-gap.ts";
 import { persistGapRegister } from "./capability-register-write.ts";
 import { isWebResearchConfigured, researchSources, type WebSource } from "./web-research.ts";
 import { fetchFinancials, findCorpCode, isDartConfigured, type DartFinancials } from "./dart-client.ts";
@@ -70,6 +70,11 @@ export interface SynergyPayload {
   scoringMethod?: "hybrid" | "rule-based" | "unavailable";
   synergyScoreFactors?: unknown;
   synergyScoreLimitations?: string[];
+  /** ADR-0182 — 필요 역량 충족도 (0-100, 레지스터 보유율·필수 충족율 혼합) */
+  capabilityCoverage?: number | null;
+  capabilityCoverageNote?: string | null;
+  /** ADR-0182 — LLM ±10 보정 이력 (delta 0도 사유와 함께 기록) */
+  scoreAdjustment?: { delta: number; reason: string } | null;
   /** ADR-0094 — 재사용된 프로파일의 딥링크 (상세 재무·SWOT는 /our-company가 담당) */
   profileRef?: { kind: "affiliate" | "group"; id: string; label: string; profileVersion: number | null };
 }
@@ -404,12 +409,39 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
   // LLM이 가용하면 서사 근거와 ±10p 이내 보정만 추가한다. LLM 불가 시에도
   // 규칙 점수 + 템플릿 근거로 저하 동작한다 (fail-degraded, 점수 소실 없음).
   const { computeSynergyScore } = await import("./synergy-score.ts");
+  // ADR-0182 — 필요 역량 충족도 (5번째 팩터): the opportunity's capability
+  // register holding coverage (0-100, essential rows weighted ×2 via
+  // summarizeGap.essentialCoveragePct blend). Null when the register is
+  // empty/unjudged — the factor is then excluded with a 미반영 note.
+  let capabilityCoverage: number | null = null;
+  let capabilityCoverageNote: string | null = null;
+  if (oppRow) {
+    const storedGapJson = (db.query("SELECT capability_gap_json FROM opportunity WHERE id = ?").get(oppRow.id) as { capability_gap_json: string | null } | undefined)?.capability_gap_json ?? null;
+    const reg = parseGapRegister(storedGapJson);
+    if (reg.rows.length > 0) {
+      const s = summarizeGap(reg.rows);
+      const essential = s.essentialCoveragePct;
+      if (s.evaluated === 0) {
+        capabilityCoverage = null;
+        capabilityCoverageNote = `필요 역량 ${s.total}건 모두 미판정 — 충족도 팩터 미반영`;
+      } else {
+        capabilityCoverage = essential !== null && s.coveragePct !== null
+          ? Math.round(s.coveragePct * 0.5 + essential * 0.5)
+          : s.coveragePct;
+        capabilityCoverageNote = `필요 역량 ${s.total}건 중 판정 ${s.evaluated}건 — 보유율 ${s.coveragePct !== null ? s.coveragePct + "%" : "—"}, 필수 충족율 ${essential !== null ? essential + "%" : "—"}`;
+      }
+    }
+  }
   const rule = computeSynergyScore({
     opportunity: oppRow ? { market_scope: oppRow.market_scope, value_chain_node: null, name: oppRow.name } : null,
     profile: reusedProfile ? { industryExposure: reusedProfile.industryExposure ?? [], strengths: financialStrengths, ratios: reusedProfile.financialAnalysis?.ratios ?? [] } : null,
     markets: marketSummaries.map((m) => ({ industry: m.industry, cagr: m.cagrPct === null ? null : m.cagrPct > 1 ? m.cagrPct / 100 : m.cagrPct, relatedIndustries: m.relatedIndustries })),
+    capabilityCoverage,
+    capabilityCoverageNote,
   });
   let synergyScore: number | null = rule.score;
+  let adjustmentDelta = 0;
+  let adjustmentReason = "";
   // 사람이 읽는 근거는 산식(값×가중치)이 아니라 서술이어야 한다 — 계산
   // 과정을 그대로 노출하면 "확정 근거"를 사람이 검토·작성한 것처럼 보여줄 때
   // 어색해진다(2026-09-15 사용자 리포트). 반영된 요소 이름만 나열하고, 실제
@@ -433,6 +465,9 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
       } else if (adj.reason) {
         synergyRationale = String(adj.reason);
       }
+      // ADR-0182 Phase 2 — 보정 이력을 breakdown에 남긴다 (delta 0도 기록).
+      adjustmentDelta = delta;
+      adjustmentReason = String(adj.reason ?? "");
     }
   }
   stepSummaries.push({
@@ -510,6 +545,9 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
     scoringMethod: oppRow ? scoringMethod : undefined,
     synergyScoreFactors: oppRow ? rule.factors : undefined,
     synergyScoreLimitations: oppRow ? rule.missing : undefined,
+    capabilityCoverage: oppRow ? capabilityCoverage : null,
+    capabilityCoverageNote: oppRow ? capabilityCoverageNote : null,
+    scoreAdjustment: adjustmentDelta !== 0 || adjustmentReason ? { delta: adjustmentDelta, reason: adjustmentReason } : null,
   };
   const nextVersionNo =
     ((db.query("SELECT MAX(version_no) m FROM synergy_version WHERE analysis_id = ?").get(analysisId) as { m: number | null }).m ?? 0) + 1;
