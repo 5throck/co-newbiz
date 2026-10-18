@@ -408,7 +408,12 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
       setSimRunning(false);
     }
   }, [selected, simRunning, simInputError, simEnvNum, simDrawsNum]);
-  const investDirty = manualDirty || reflectDirty || staffDirty || simOvDirty;
+  // 판정 dialog의 시작 연차 override(capStartYear)도 저장 대상 변경이다 — 저장 시 startYear로 실린다.
+  const startYearDirty = useMemo(
+    () => Object.values(capStartYear).some((v) => typeof v === "number" && Number.isFinite(v) && v >= 1),
+    [capStartYear],
+  );
+  const investDirty = manualDirty || reflectDirty || staffDirty || simOvDirty || startYearDirty;
   const savedReflected = useMemo(() => {
     const saved = capLines.filter((l) => lineStates[l.capabilityKey] === "saved");
     return { count: saved.length, krwM: saved.reduce((n, l) => n + l.costKrwM, 0) };
@@ -679,6 +684,9 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 onRowsChange={setAttRows}
                 onEditorApi={(api) => { judgeApiRef.current = api; }}
                 onDirtyChange={setJudgeDirty}
+                /* 판정 dialog의 시작 연차 = 투자비 항목과 같은 cost-entry override (저장은 투자비 저장과 함께). */
+                startYearFor={(id) => { const v = capStartYear[id]; return typeof v === "number" && Number.isFinite(v) ? v : null; }}
+                onStartYearChange={(id, v) => setCapStartYear((p) => ({ ...p, [id]: v ?? Number.NaN }))}
               />
             </div>
           )}
@@ -829,6 +837,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                     <span className="status-chip status-not-started"><span aria-hidden="true">⛓</span> 역량 해소 연동</span>
                     {row.saveState === "saved" && !row.pendingRemoval && <span className="status-chip status-green"><span aria-hidden="true">✓</span> 반영됨 · 저장됨</span>}
                     {(row.saveState === "unsaved" || row.pendingRemoval) && <span className="status-chip status-amber"><span aria-hidden="true">!</span> 저장 전{row.pendingRemoval ? " · 반영 해제" : ""}</span>}
+                    {row.savedUnreflected && <span className="status-chip status-not-started" title="반영 해제가 저장된 항목입니다 — 합계에서 제외됩니다. 다시 반영을 누르고 저장하면 복원됩니다.">미반영 (합계 제외)</span>}
                     {row.needsRejudge && <span className="status-chip status-amber">재판정 필요</span>}
                   </div></td>
                   <td>
@@ -852,7 +861,21 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   </td>
                   <td><select aria-label="금액 단위" value="krw_m" disabled className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-ro"><option value="krw_m">백만원</option></select></td>
                   <td><select aria-label="기준 통화" value="KRW" disabled className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-ro"><option value="KRW">{CURRENCY_LABEL.KRW}</option></select></td>
-                  <td><select aria-label="금액 기준 (반복 주기 또는 일시불)" value="lumpsum" disabled className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-ro"><option value="lumpsum">{PERIOD_LABEL.lumpsum}</option></select></td>
+                  <td>
+                    {/* 2026-10-18 decider ask — the linked line's cadence is person-editable (일시불 총액 or 연간 반복). */}
+                    <select
+                      aria-label={`${row.name} 금액 기준 (반복 주기 또는 일시불)`}
+                      value={row.period ?? "lumpsum"}
+                      disabled={!canAct}
+                      data-testid={`invest-cap-period-${row.capabilityKey}`}
+                      onChange={(e) => { const v = e.target.value as "lumpsum" | "yearly"; setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], period: v } })); }}
+                      className="sizing-new-input sizing-new-input-sm invest-ctl"
+                    >
+                      <option value="lumpsum">{PERIOD_LABEL.lumpsum}</option>
+                      <option value="yearly">연간 (금액 = 연간 집행액)</option>
+                    </select>
+                    {row.period === "yearly" && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">검토 기간까지 반복</span>}
+                  </td>
                   <td>
                     <div className="invest-year-cell">
                       <label className="invest-year-field">
@@ -882,6 +905,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   <td><div className="invest-action-cell">
                     <a href="#cap-judgement-section" onClick={(e) => { e.preventDefault(); goToCapabilityJudgement(); }} className="text-[length:var(--fs-caption)] text-[color:var(--accent)] underline">판정 보기</a>
                     {canAct && !row.pendingRemoval && <button type="button" className="btn-ghost btn-sm" aria-label={`${row.name} 반영 해제`} onClick={() => setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], reflected: false } }))}>반영 해제</button>}
+                    {canAct && (row.pendingRemoval || row.savedUnreflected) && <button type="button" className="btn-ghost btn-sm" data-testid={`invest-cap-rereflect-${row.capabilityKey}`} aria-label={`${row.name} 다시 반영`} onClick={() => setCapSel((p) => { const cur = p[row.capabilityKey] ?? {}; const { reflected: _d, ...rest } = cur; return { ...p, [row.capabilityKey]: { ...rest, reflected: true } }; })}>다시 반영</button>}
                   </div></td>
                 </tr>
               );

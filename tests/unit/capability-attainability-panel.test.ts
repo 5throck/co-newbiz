@@ -113,7 +113,8 @@ describe("judgement dialog structure", () => {
     expect(dlg).toContain("rows={4} maxLength={NARRATIVE_CAP}");
     expect(dlg).toContain("rows={6} maxLength={RATIONALE_MAX}");
     expect(dlg).toContain("export const RATIONALE_MAX = 600");
-    expect(dlg.match(/type="number"/g)?.length).toBe(2);
+    // 2026-10-18: the 시작 연차 input joins 금액·기간(개월) — the dialog now has three numeric inputs.
+    expect(dlg.match(/type="number"/g)?.length).toBe(3);
     expect(dlg).toContain('{ value: "", text: "미판정" }');
     for (const [v, t] of [["high", "높음"], ["medium", "중간"], ["low", "낮음"]]) expect(dlg).toContain(`{ value: "${v}", text: "${t}" }`);
     expect(dlg).toContain("RESOLUTION_EXPECTED_LEVEL_HINT[resolution]");

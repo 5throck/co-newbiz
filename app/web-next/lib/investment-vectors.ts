@@ -4,7 +4,7 @@
 // helpers are reused; nothing is recomputed differently), so mode === the stored totals.
 // Bands are DETERMINISTIC extremes of human-confirmed assumption ranges — no sampling, no
 // draws, no probabilities (those are slice 2). Decision support only; never a gate or a cap.
-import { manualLineKrwM, manualLineNeedsConfirm, manualLineYearVector, preLaunchAmountOf, type CapabilityCostLine, type SimOverrides } from "./capability-cost-lines.ts";
+import { manualLineKrwM, manualLineNeedsConfirm, manualLineYearVector, preLaunchAmountOf, type CapabilityCostLine, type SimOverrides, capabilityYearVector } from "./capability-cost-lines.ts";
 import { rowAnnualCostKrwM, staffingSummaryVector, type StaffingPlanEntry, type StaffingRow } from "./staffing-plan.ts";
 
 /** Loose manual-line shape (same subset the S5 summary accepts). */
@@ -175,8 +175,8 @@ function modeCapabilityVector(capLines: ReadonlyArray<CapabilityCostLine>, H: nu
   const out = Array<number>(H).fill(0);
   for (const c of capLines) {
     if (!reflectedKeys.has(c.capabilityKey)) continue;
-    const y = Math.max(1, Math.min(c.startYear, H));
-    out[y - 1] += c.costKrwM;
+    const vec = capabilityYearVector(c, H);
+    for (let i = 0; i < H; i++) out[i] += vec[i] ?? 0;
   }
   return out.map(round2);
 }

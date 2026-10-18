@@ -38,7 +38,7 @@ function BasisLine({ field, fields, text }: { field: JudgementField; fields: Jud
   return <p className="m-0 mt-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid={`ai-basis-${field}`}>AI 근거: {text}</p>;
 }
 
-export function CapabilityJudgementDialog({ row, draft, note, s3Href, hasPrev, hasNext, onApply, onAiFields, onRejudge, onClose, ai, aiFields: initialAiFields = [] }: {
+export function CapabilityJudgementDialog({ row, draft, note, s3Href, hasPrev, hasNext, onApply, onAiFields, onRejudge, onClose, ai, aiFields: initialAiFields = [], startYear = null, onStartYearChange }: {
   row: AttainabilityRowView;
   draft: JudgementDraft;
   /** Current S5 비고 (saved through the S3 register route); omitted when the page does not show it. */
@@ -54,6 +54,11 @@ export function CapabilityJudgementDialog({ row, draft, note, s3Href, hasPrev, h
   aiFields?: JudgementField[];
   onRejudge: () => void;
   onClose: () => void;
+  /** 2026-10-18 decider ask — the linked spend's start year is editable HERE too.
+   *  null = the judgement-months default; the value lands in the cost entry's
+   *  startYear override through the parent (saved with the 투자비 저장). */
+  startYear?: number | null;
+  onStartYearChange?: (v: number | null) => void;
 }) {
   const [mounted, setMounted] = useState(false);
   const [d, setD] = useState<JudgementDraft>(draft);
@@ -94,7 +99,9 @@ export function CapabilityJudgementDialog({ row, draft, note, s3Href, hasPrev, h
   const needsExpected = !!resolution && d.expectedLevel.trim() === "";
   const needsRationale = (d.grade === "high" || d.grade === "low") && d.rationale.trim() === "";
   const spendMonths = d.months.trim() === "" ? null : Number(d.months);
-  const spendStart = capabilityDefaultStartYear(spendMonths);
+  const derivedStart = capabilityDefaultStartYear(spendMonths);
+  const [startOverride, setStartOverride] = useState<number | null>(startYear);
+  const spendStart = startOverride ?? derivedStart;
   const needsCategory = Number(d.cost) > 0 && !d.category;
   const apply = (nav: DialogNav) => {
     onApply(d, note === undefined ? undefined : noteVal, nav);
@@ -182,9 +189,24 @@ export function CapabilityJudgementDialog({ row, draft, note, s3Href, hasPrev, h
                 <input id={`${uid}-cost`} type="number" min={0} value={d.cost} onChange={(e) => patch({ cost: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "8rem" }} />
               </div>
               <div>
-                <span className="block text-[length:var(--fs-caption)] font-semibold mb-1">시작 연차</span>
-                <span className="text-[length:var(--fs-caption)]" data-testid="judge-start-year">{spendStart}연차</span>
-                <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">투자비 항목에서 집행 연차를 조정할 수 있습니다.</p>
+                <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-start`}>시작 연차</label>
+                <input
+                  id={`${uid}-start`}
+                  type="number"
+                  min={1}
+                  value={spendStart}
+                  data-testid="judge-start-year"
+                  disabled={onStartYearChange === undefined}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    const v = raw === "" || !Number.isFinite(Number(raw)) ? null : Math.max(1, Math.floor(Number(raw)));
+                    setStartOverride(v);
+                    onStartYearChange?.(v);
+                  }}
+                  className="sizing-new-input sizing-new-input-sm"
+                  style={{ width: "6rem" }}
+                />
+                <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">기본은 기간(개월)에서 도출 — 투자비 항목 저장 시 함께 기록됩니다.</p>
               </div>
               <div>
                 <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-mon`}>기간(개월)<AiChip field="months" fields={aiFields} /></label>

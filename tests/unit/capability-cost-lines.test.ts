@@ -645,3 +645,57 @@ describe("judgement-owned category and spend years (ADR-0173 amendment 2026-10-1
     expect(flagged.needsRejudge).toBe(true);
   });
 });
+
+describe("linked-line cadence and re-reflect listing (2026-10-18 decider asks)", () => {
+  const crows = [src(), src({ id: "k2", capability: "채용", resolution: "hire", closing_cost_krw_m: 800, confirmed_at: null })];
+  const actor = { userId: "u1", at: NOW };
+
+  test("capabilityYearVector: 일시불 = 총액 at startYear; 연간 = 연간 금액 from startYear through the horizon", () => {
+    const lump = cl.capabilityYearVector({ startYear: 2, period: "lumpsum", costKrwM: 100 }, 5);
+    expect(lump).toEqual([0, 100, 0, 0, 0]);
+    const yearly = cl.capabilityYearVector({ startYear: 2, period: "yearly", costKrwM: 100 }, 5);
+    expect(yearly).toEqual([0, 100, 100, 100, 100]);
+  });
+
+  test("investmentTotals spreads a yearly linked line and counts it as recurring", () => {
+    const stored = [{ line: "A 역량 해소", category: "opex", amount: 100, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly", note: "n", source: "capability", capabilityKey: "k1", reflected: true, basisHash: cl.costBasisHash(crows[0]), costKrwM: 100 }];
+    const view = cl.deriveCapabilityCostLines(crows, stored);
+    // The linked amount follows the JUDGEMENT (3000/년) — 연간 주기면 그 금액이 검토 기간까지 반복된다.
+    const summary = cl.buildInvestmentSummary([], view.lines, 5, new Set(["k1"]));
+    expect(summary.schedule.map((r: { opex: number }) => r.opex)).toEqual([3000, 3000, 3000, 3000, 3000]);
+    expect(summary.annualRecurringKrwM).toBeGreaterThanOrEqual(3000);
+  });
+
+  test("a saved-unreflected linked row stays listed (savedUnreflected) so a 다시 반영 is possible in place", () => {
+    const stored = [{ line: "A 역량 해소", category: "opex", amount: 100, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "lumpsum", note: "n", source: "capability", capabilityKey: "k1", reflected: false, basisHash: cl.costBasisHash(crows[0]), costKrwM: 100 }];
+    const view = cl.deriveCapabilityCostLines(crows, stored);
+    const rowsOut = cl.unifiedInvestmentRows([], view.lines, {});
+    const unreflected = rowsOut.find((r) => r.kind === "capability" && r.capabilityKey === "k1");
+    expect(unreflected).toBeDefined();
+    expect((unreflected as { savedUnreflected?: boolean }).savedUnreflected).toBe(true);
+    // The real save path overlays the selection first (applySelection), then reflects the payload.
+    const overlaid = cl.applySelection(view, { k1: { reflected: true } });
+    const payload = cl.selectionPayload(overlaid, { k1: { reflected: true } });
+    expect(payload.find((p) => p.capabilityKey === "k1")?.reflected).toBe(true);
+    expect(payload.find((p) => p.capabilityKey === "k1")?.period).toBe("lumpsum");
+  });
+
+  test("the server rejects an unknown cadence and stores 연간 when valid", () => {
+    const bad = cl.normalizeBusinessCaseLines(
+      [{ source: "capability", capabilityKey: "k1", reflected: true, category: "opex", amount: 3000, amountUnit: "krw_m", amountUnitConfirmed: true, period: "monthly" }],
+      crows, null, actor,
+    );
+    expect(bad.ok).toBe(false);
+    if (!bad.ok) expect(bad.error.code).toBe("invalid_request");
+    const good = cl.normalizeBusinessCaseLines(
+      [{ source: "capability", capabilityKey: "k1", reflected: true, category: "opex", amount: 3000, amountUnit: "krw_m", amountUnitConfirmed: true, period: "yearly" }],
+      crows, null, actor,
+    );
+    expect(good.ok).toBe(true);
+    if (good.ok) {
+      const entry = good.lines.find((l) => (l as { source?: string }).source === "capability") as { period?: string };
+      expect(entry.period).toBe("yearly");
+      expect((entry as { amount?: number }).amount).toBe(3000);
+    }
+  });
+});

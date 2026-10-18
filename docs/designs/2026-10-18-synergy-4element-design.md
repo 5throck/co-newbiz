@@ -104,3 +104,27 @@ ADR-0182 구현 설계. 디시더 방향: 관계 도식화, 흐름 순서 탭 �
   브라우저 실측 — 유압식 브레이커 v3(구 체계) → v4: 규칙 40 + LLM 보정 +2(사유
   기록) = 권고 42, 5팩터 표(충족도 31, 가중치 20%) 렌더, 구 체계 안내·미포함 행
   소멸. 재계산 후 확정 상태 재조회 보강(화면이 서버 기준 상태를 보여주도록).
+
+## As-built (2026-10-18, decider feedback slice 7 — 투자비 연동 항목 제어성 4건)
+
+디시더 리포트 4건: ① 외화 항목이 사실상 원화만 가능, ② S5 연동 항목의 주기가
+일시불 고정, ③ 판정에서 시작 연차를 조절할 수 없음, ④ 반영 해제 후 재반영 불가.
+
+- **② 연동 항목 주기 편집**: `StoredCapabilityEntry.period`가 `"lumpsum" |
+  "yearly"`로 확장 — selectionPayload·normalize(월간 등은 400 invalid_request)·
+  `capabilityYearVector`(신규 공유 헬퍼)·investmentTotals·modeCapabilityVector까지
+  스레딩. 연간 선택 시 금액 = 연간 집행액이 검토 기간까지 반복되고(일시불 = 총액),
+  S8 s5_plan 집계(s5-plan-pin aggregatePlanLines)는 기존 period 봉합으로 그대로
+  확산된다. 투자비 표의 연동 행 주기 select가 편집 가능해졌다.
+- **③ 판정 dialog 시작 연차 편집**: CapabilityJudgementDialog의 읽기 전용
+  "N연차" 표시가 number input으로 바뀌고, 값은 기존 cost-entry startYear
+  override(capStartYear 지도)에 실시간 반영 — 투자비 저장 시 함께 기록된다.
+  종료 연차 표시도 override를 따른다. 테이블·에디터로 optional props 스레딩.
+- **④ 반영 해제 후 재반영**: unifiedInvestmentRows가 "저장된 미반영" 연동 행을
+  계속 나열(합계 제외 상태 표시)하고, 행에 `다시 반영` 버튼 추가 — 해제·저장·
+  재로드 후에도 같은 표에서 복원 가능. (S5 역량 해소 비용 블록의 체크박스 경로도
+  유효 — 발견성 문제였다.)
+- **① 외화 항목**: 수동 항목의 통화 select(KRW/USD/EUR/JPY/CNY)는 이미 존재하나
+  외화 항목은 합계에서 제외(환율 미반영) 상태 — FX 환산(person-set
+  entry_market_fx 요율 적용)은 별도 슬라이스로 설계 중(합계·벡터 변경이 커서
+  분리). 이 슬라이스에서는 제외 안내 문구가 그대로 유지된다.
