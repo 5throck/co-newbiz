@@ -97,6 +97,8 @@ export function suggestSubCategory(resolution: GapResolution | null, category: C
 export const STAFFING_SUB_CATEGORY = { salary: "direct_labor", recruiting: "recruiting_training" } as const satisfies Record<string, SubCategoryKey>;
 
 /** The judgement fields this feature reads (a subset of AttainabilityRowView, so server and client share it). */
+export type LinkedSpendPeriod = "monthly" | "quarterly" | "yearly" | "lumpsum";
+
 export interface CostSourceRow {
   id: string;
   capability: string;
@@ -109,6 +111,8 @@ export interface CostSourceRow {
   /** Null when unconfirmed or stale (rowView clears it for stale rows). */
   confirmed_at: string | null;
   stale: boolean;
+  /** 2026-10-18 decider ask — 판정이 고른 집행 주기 (금액 = 주기당 금액); null = 일시불 취급. */
+  period: LinkedSpendPeriod | null;
 }
 
 export const sourceRowOf = (r: CapabilityGapRow): CostSourceRow => {
@@ -119,6 +123,7 @@ export const sourceRowOf = (r: CapabilityGapRow): CostSourceRow => {
     capability: r.capability,
     resolution: r.resolution,
     category: a?.category ?? null,
+    period: a?.spendPeriod ?? null,
     closing_cost_krw_m: a?.closingCostKrwM ?? null,
     months_to_attain: a?.monthsToAttain ?? null,
     grade: a?.grade ?? null,
@@ -247,21 +252,20 @@ export const capabilityDefaultStartYear = (monthsToAttain: number | null): numbe
 /** Read-only end-year display (ADR-0173 amendment 2026-10-15): start + ceil(months/12) − 1; a 12-month spend starting Y1 ends Y1. */
 /** Year vector of a linked line: 일시불 = 총액 at startYear; 연간 = 연간 금액 from startYear through the horizon
  *  (2026-10-18 decider ask — the cadence is person-editable). Consumers (totals, vectors) share this. */
-export function capabilityYearVector(c: { startYear: number; endYear?: number; period: "lumpsum" | "yearly"; costKrwM: number }, H: number): number[] {
+export function capabilityYearVector(c: { startYear: number; endYear?: number; period: LinkedSpendPeriod; costKrwM: number }, H: number): number[] {
+  // 금액 = 주기당 금액 (수동 항목과 동일 규약). 연간 벡터 = 금액 × 주기계수를
+  // 시작~종료 창구 매년 반영; 일시불 = 금액을 시작 연차 1회.
   const vec = Array<number>(Math.max(1, Math.floor(H))).fill(0);
-  const y = Math.max(1, Math.min(c.startYear, vec.length));
-  if (c.period === "yearly") {
-    // 연간(균분): the judgement's 총액 spreads EVENLY over 시작~종료 연차 (the
-    // 36/60-month window), NOT through the horizon — the spend stops where the
-    // judgement window stops (2026-10-18 decider report: 총 20억 × 2년 kept
-    // flowing into Y3+).
-    const end = Math.min(c.endYear ?? vec.length, vec.length);
-    const active = Math.max(1, end - y + 1);
-    const perYear = c.costKrwM / active;
-    for (let i = y - 1; i < end; i++) vec[i] += perYear;
-  } else {
-    vec[y - 1] += c.costKrwM;
+  // period 미지정(레거시) = 일시불 취급 — 기존 소비처 호환.
+  const period = c.period ?? "lumpsum";
+  const start = Math.max(1, Math.min(c.startYear, vec.length));
+  if (period === "lumpsum") {
+    vec[start - 1] += c.costKrwM;
+    return vec;
   }
+  const annual = c.costKrwM * cadenceMultiplier(period as Exclude<LinkedSpendPeriod, "lumpsum">);
+  const end = c.endYear !== undefined ? Math.max(start, Math.min(c.endYear, vec.length)) : vec.length;
+  for (let i = start - 1; i < end; i++) vec[i] += annual;
   return vec;
 }
 
@@ -559,7 +563,7 @@ export interface StoredCapabilityEntry {
   amountUnitConfirmed?: true;
   currency: "KRW";
   /** 일시불(총액, 기본) 또는 연간(금액 = 연간 집행액, 검토 기간까지 반복). */
-  period: "lumpsum" | "yearly";
+  period: "monthly" | "quarterly" | "yearly" | "lumpsum";
   /** Human spend-year override (ADR-0174 slice 1); unset = derived from the judgement months (OD-6). */
   startYear?: number;
   /** 2026-10-18 decider ask — spend-window end (연간 균분의 마지막 연차). Unset = derived from the judgement months. */
@@ -602,8 +606,8 @@ export interface CapabilityCostLine {
   startYear: number;
   /** Read-only end-year display: start + ceil(months/12) − 1 (ADR-0173 amendment 2026-10-15); 연간 주기에서는 검토 기간까지 반복. */
   endYear: number;
-  /** Effective cadence: the stored/selected person choice, else 일시불 (2026-10-18 decider ask). */
-  period: "lumpsum" | "yearly";
+  /** Effective cadence: 저장 entry → 판정 주기 → 일시불 (2026-10-18 decider ask). */
+  period: "monthly" | "quarterly" | "yearly" | "lumpsum";
   /** 반영 가능 = confirmed and not stale; 참고(미반영) otherwise. */
   state: "reflectable" | "reference";
   stateLabel: string;
@@ -682,7 +686,9 @@ export function deriveCapabilityCostLines(rows: CostSourceRow[], stored: unknown
       startYear,
       /** End year display: stored override, else start + ceil(months/12) − 1. 연간 주기에서는 이 창구까지 균분된다. */
       endYear: isValidYearValue(e?.endYear) ? (e!.endYear as number) : capabilityEndYearOf(startYear, r.months_to_attain),
-      period: e?.period === "yearly" ? "yearly" : "lumpsum",
+      // 주기 관리 주체 = 판정 (2026-10-18 decider ask) — 판정에 주기가 있으면 그 값을
+      // 따르고, 없으면 저장 entry(기존 표에서 바꾼 값) → 일시불 순으로 폴백.
+      period: r.period ?? e?.period ?? "lumpsum",
       state: reflectable ? "reflectable" : "reference",
       stateLabel: reflectable ? "반영 가능" : "참고(미반영)",
       disabledReason: reflectable || (e?.reflected === true) ? null : r.stale ? "S3 내용이 바뀌어 재판정이 필요합니다 — 재판정·확정 후 반영할 수 있습니다." : "사람이 확정한 판정만 반영할 수 있습니다 — 판정을 확정하세요.",
@@ -1002,7 +1008,7 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
     for (let i = 0; i < H; i++) yearCat[c.category][i] += vec[i];
     addSub(c.category, c.subCategory, vec);
     if (c.period === "lumpsum") lumpByCat[c.category] += c.costKrwM;
-    else annualByCat[c.category] += Math.round((vec.reduce((s, n) => s + n, 0) / Math.max(1, Math.min(c.endYear ?? H, H) - Math.max(1, Math.min(c.startYear, H)) + 1)) * 100) / 100;
+    else annualByCat[c.category] += Math.round(c.costKrwM * cadenceMultiplier(c.period as Exclude<LinkedSpendPeriod, "lumpsum">) * 100) / 100;
     if (c.startYear === c.defaultStartYear && c.monthsToAttain !== null && c.monthsToAttain > 0) capabilitySpendFromMilestone += 1;
   }
   // ADR-0175: the 인력 운영 계획 vector feeds the 인건비 category per year (derived, read-only,
@@ -1250,9 +1256,9 @@ export function normalizeBusinessCaseLines(
       return { ok: false, error: { code: "invalid_request", message: `${row.capability}: 집행 연차는 1..${horizon}년이어야 합니다.` } };
     }
     // 2026-10-18 decider ask — the linked line's cadence is person-editable: 일시불(총액) or 연간(총액을 시작~종료 창구에 균분).
-    const rawPeriod = (raw as { period?: unknown }).period;
-    if (rawPeriod !== undefined && rawPeriod !== "lumpsum" && rawPeriod !== "yearly") {
-      return { ok: false, error: { code: "invalid_request", message: `${row.capability}: 주기는 일시불 또는 연간이어야 합니다.` } };
+    const rawPeriod = normalizePeriod((raw as { period?: unknown }).period);
+    if (rawPeriod !== undefined && rawPeriod !== "lumpsum" && rawPeriod !== "yearly" && rawPeriod !== "monthly" && rawPeriod !== "quarterly") {
+      return { ok: false, error: { code: "invalid_request", message: `${row.capability}: 주기는 월간·분기·연간·일시불 중 하나여야 합니다.` } };
     }
     const rawEndYear = (raw as { endYear?: unknown }).endYear;
     if (rawEndYear !== undefined && !isValidYearValue(rawEndYear)) {
@@ -1269,7 +1275,7 @@ export function normalizeBusinessCaseLines(
       amountUnit: AMOUNT_UNIT_KRW_M,
       amountUnitConfirmed: true,
       currency: "KRW",
-      ...(rawPeriod === "yearly" ? { period: "yearly" as const } : { period: "lumpsum" as const }),
+      ...(rawPeriod ? { period: rawPeriod } : { period: "lumpsum" as const }),
       ...(isValidYearValue(rawEndYear) ? { endYear: rawEndYear as number } : {}),
       note: `S5 역량 해소 비용 연동 (${row.resolution ? RESOLUTION_LABEL[row.resolution] : "해소 방식 미정"})`,
       ...(startYear !== undefined ? { startYear } : {}),
@@ -1398,7 +1404,7 @@ export function applySelection(view: CapabilityCostView, sel: Readonly<Record<st
 }
 
 /** Payload entries for the saved capability lines: reflected ones, plus explicit un-checks of default/previously stored rows. */
-export function selectionPayload(lines: CapabilityCostLine[], sel: Readonly<Record<string, CostSelection>>): Array<{ source: "capability"; capabilityKey: string; reflected: boolean; category: CostCategory; amount: number; amountUnit: typeof AMOUNT_UNIT_KRW_M; amountUnitConfirmed: true; period: "lumpsum" | "yearly"; endYear?: number; subCategory?: SubCategoryKey }> {
+export function selectionPayload(lines: CapabilityCostLine[], sel: Readonly<Record<string, CostSelection>>): Array<{ source: "capability"; capabilityKey: string; reflected: boolean; category: CostCategory; amount: number; amountUnit: typeof AMOUNT_UNIT_KRW_M; amountUnitConfirmed: true; period: LinkedSpendPeriod; endYear?: number; subCategory?: SubCategoryKey }> {
   return lines
     .filter((l) => l.reflected || l.persisted || sel[l.capabilityKey]?.reflected === false)
     .map((l) => ({ source: "capability" as const, capabilityKey: l.capabilityKey, reflected: l.reflected, category: l.category, amount: l.costKrwM, amountUnit: AMOUNT_UNIT_KRW_M, amountUnitConfirmed: true as const, period: l.period, endYear: l.endYear, ...(l.subCategory ? { subCategory: l.subCategory } : {}) }));
@@ -1418,9 +1424,12 @@ export function lineSaveStates(lines: CapabilityCostLine[], stored: unknown, sel
     const savedCategory = e && CAPABILITY_COST_CATEGORIES.includes(e.category as CostCategory) ? (e.category as CostCategory) : l.suggestedCategory;
     const touched = !!sel[l.capabilityKey];
     const savedSub = e && validSubCategory(savedCategory, e.subCategory) ? e.subCategory : null;
+    const savedPeriod = e?.period ?? "lumpsum";
+    const periodChanged = (sel[l.capabilityKey]?.period ?? l.period) !== savedPeriod;
     const subChanged = (l.subCategory ?? null) !== (savedSub ?? null);
-    if (l.reflected && savedReflected && l.category === savedCategory && !subChanged) out[l.capabilityKey] = "saved";
-    else if (l.reflected !== savedReflected || (l.reflected && (l.category !== savedCategory || subChanged)) || (touched && !e && l.reflected)) out[l.capabilityKey] = "unsaved";
+    const savedPeriodMatch = (sel[l.capabilityKey]?.period ?? l.period ?? "lumpsum") === savedPeriod;
+    if (l.reflected && savedReflected && l.category === savedCategory && !subChanged && !periodChanged && savedPeriodMatch) out[l.capabilityKey] = "saved";
+    else if (l.reflected !== savedReflected || (l.reflected && (l.category !== savedCategory || subChanged || !savedPeriodMatch)) || (touched && !e && l.reflected)) out[l.capabilityKey] = "unsaved";
     else out[l.capabilityKey] = null;
   }
   return out;
@@ -1452,7 +1461,7 @@ export type UnifiedRow =
       note: string;
       saveState: LineSaveState;
       /** Effective cadence (stored/selected): 일시불 or 연간 (2026-10-18 decider ask). */
-      period: "lumpsum" | "yearly";
+      period: LinkedSpendPeriod;
       /** Saved-reflected but unchecked on the page: shown until the reflect button saves the removal. */
       pendingRemoval: boolean;
       /** Saved-unreflected: stays listed (totals-excluded) so a 다시 반영 is possible in place (2026-10-18 decider report). */

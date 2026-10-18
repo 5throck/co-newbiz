@@ -163,3 +163,21 @@ FX 환산이 없어 외화 항목이 통째로 제외되고 있었다(환율 미
   큽니다")이 그대로 경고한다.
 - **실측**: 유닛 3건 신규(fx_m 환산·무환율 미변경·승격 전환/스킵) + 브라우저에서
   통화 USD 전환 시 "(환율 적용)" readout 확인 후 원복(저장 없음).
+
+## As-built (2026-10-18, decider feedback slice 10 — 판정·연동 항목 주기 모델 통합)
+
+디시더 방향: "S5 연동 항목도 투자 항목과 같은 주기로 관리 + 판정도 주기 관리 방식
+변경". 수동 투자 항목과 동일 규약(금액 = 주기당 금액)으로 통일했다.
+
+- **판정에 `spendPeriod` 추가**: `CapabilityAttainability.spendPeriod`
+  (monthly|quarterly|yearly|lumpsum, capability_gap_json 안 additive 필드).
+  판정 dialog에 주기 select(기본 연간) 추가, 금액 라벨을 "금액(주기당, 백만원)"으로
+  변경. PUT(judgementPatch.spendPeriod)로 저장. unset → 일시불 취급(기존 행 호환).
+- **연동 항목 주기 우선순위 = 판정**: derive period = 판정 spendPeriod → 저장 entry
+  period → 일시불. 서버 normalize는 전체 어휘(월/분기/년/일시불)를 수용하고 미지는
+  lumpsum 정규화.
+- **연간 벡터 = 금액 × 주기계수(월×12·분기×4·년×1)을 시작~종료 창구 매년** — 이전의
+  "총액을 검토 기간까지 반복/균분" 모델을 대체. 일시불 = 총액을 시작 연차 1회. 합계
+  연간 반복 = 금액 × 계수. 종료 연차는 연동 행에서 편집 가능(#641)이고 저장·승격까지
+  이관된다(splitForPromotion/writeS5CostModel: end_year 저장, 연간 = 연간 집행액).
+- 기존 저장분(주기 없음)은 일시불 취급으로 합계·벡터 불변 — 마이그레이션 불요.

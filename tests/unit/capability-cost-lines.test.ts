@@ -651,14 +651,14 @@ describe("linked-line cadence and re-reflect listing (2026-10-18 decider asks)",
   const actor = { userId: "u1", at: NOW };
 
   test("capabilityYearVector: 일시불 = 총액 at startYear; 연간 = 총액을 시작~종료 창구에 균분 (종료에서 멈춤)", () => {
-    const lump = cl.capabilityYearVector({ startYear: 2, period: "lumpsum", costKrwM: 100 }, 5);
+    const lump = cl.capabilityYearVector({ startYear: 2, endYear: 2, period: "lumpsum", costKrwM: 100 }, 5);
     expect(lump).toEqual([0, 100, 0, 0, 0]);
-    // 창구 Y2..Y5: 100을 4년 균분.
+    // 연간 100 × 창구 Y2..Y5.
     const yearly = cl.capabilityYearVector({ startYear: 2, endYear: 5, period: "yearly", costKrwM: 100 }, 5);
-    expect(yearly).toEqual([0, 25, 25, 25, 25]);
-    // 좁은 창구 Y1..Y2: 총 2000을 2년 균분 = 1,000/년 뒤 멈춘다 (2026-10-18 decider report).
+    expect(yearly).toEqual([0, 100, 100, 100, 100]);
+    // 좁은 창구 Y1..Y2: 연간 2000 × 2년 뒤 멈춘다 (2026-10-18 decider report — 총 20억 × 2년).
     const narrow = cl.capabilityYearVector({ startYear: 1, endYear: 2, period: "yearly", costKrwM: 2000 }, 5);
-    expect(narrow).toEqual([1000, 1000, 0, 0, 0]);
+    expect(narrow).toEqual([2000, 2000, 0, 0, 0]);
   });
 
   test("investmentTotals spreads a windowed yearly linked line over its start..end window", () => {
@@ -667,9 +667,9 @@ describe("linked-line cadence and re-reflect listing (2026-10-18 decider asks)",
     const stored = [{ line: "A 역량 해소", category: "opex", amount: 300, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly", note: "n", source: "capability", capabilityKey: "k1", reflected: true, basisHash: cl.costBasisHash(crows60[0]), startYear: 1, costKrwM: 300 }];
     const view = cl.deriveCapabilityCostLines(crows60, stored);
     const summary = cl.buildInvestmentSummary([], view.lines, 5, new Set(["k1"]));
-    // 연간 금액 = 총액 3000 ÷ 5년 = 600/년.
-    expect(summary.schedule.map((r: { opex: number }) => r.opex)).toEqual([600, 600, 600, 600, 600]);
-    expect(summary.annualRecurringKrwM).toBeGreaterThanOrEqual(600);
+    // 연간 금액 = 판정 금액(3000/년) × 창구 Y1..Y5 — 금액은 판정을 따른다.
+    expect(summary.schedule.map((r: { opex: number }) => r.opex)).toEqual([3000, 3000, 3000, 3000, 3000]);
+    expect(summary.annualRecurringKrwM).toBeGreaterThanOrEqual(3000);
   });
 
   test("a saved-unreflected linked row stays listed (savedUnreflected) so a 다시 반영 is possible in place", () => {
@@ -686,22 +686,18 @@ describe("linked-line cadence and re-reflect listing (2026-10-18 decider asks)",
     expect(payload.find((p) => p.capabilityKey === "k1")?.period).toBe("lumpsum");
   });
 
-  test("the server rejects an unknown cadence and stores 연간 when valid", () => {
-    const bad = cl.normalizeBusinessCaseLines(
-      [{ source: "capability", capabilityKey: "k1", reflected: true, category: "opex", amount: 3000, amountUnit: "krw_m", amountUnitConfirmed: true, period: "monthly" }],
-      crows, null, actor,
-    );
-    expect(bad.ok).toBe(false);
-    if (!bad.ok) expect(bad.error.code).toBe("invalid_request");
-    const good = cl.normalizeBusinessCaseLines(
-      [{ source: "capability", capabilityKey: "k1", reflected: true, category: "opex", amount: 3000, amountUnit: "krw_m", amountUnitConfirmed: true, period: "yearly" }],
-      crows, null, actor,
-    );
-    expect(good.ok).toBe(true);
-    if (good.ok) {
-      const entry = good.lines.find((l) => (l as { source?: string }).source === "capability") as { period?: string };
-      expect(entry.period).toBe("yearly");
-      expect((entry as { amount?: number }).amount).toBe(3000);
+  test("the server accepts the full manual cadence vocabulary (unknown values normalize to lumpsum)", () => {
+    for (const period of ["monthly", "quarterly", "yearly", "lumpsum", "weekly"] as const) {
+      const res = cl.normalizeBusinessCaseLines(
+        [{ source: "capability", capabilityKey: "k1", reflected: true, category: "opex", amount: 3000, amountUnit: "krw_m", amountUnitConfirmed: true, period }],
+        crows, null, actor,
+      );
+      expect(res.ok).toBe(true);
+      if (res.ok) {
+        const entry = res.lines.find((l) => (l as { source?: string }).source === "capability") as { period?: string };
+        expect(entry.period).toBe(period === "weekly" ? "lumpsum" : period);
+        expect((entry as { amount?: number }).amount).toBe(3000);
+      }
     }
   });
 });

@@ -70,6 +70,8 @@ export interface CapabilityAttainability {
   expectedLevel?: string;
   /** 분류 (ADR-0173 amendment 2026-10-15): judgement-owned; absent = 미입력 (투자비 항목은 해소 방식으로 추정). */
   category?: JudgementCategory;
+  /** 2026-10-18 decider ask — 집행 주기 (금액 = 주기당 금액). absent = 일시불 취급(기존 행 호환). */
+  spendPeriod?: "monthly" | "quarterly" | "yearly" | "lumpsum";
   draftedBy: AttainabilityDrafter | null;
   confirmedBy: string | null;
   confirmedAt: string | null;
@@ -326,6 +328,8 @@ export function normalizeAttainability(raw: unknown): CapabilityAttainability | 
   const staleSince = str(a.staleSince, 40);
   const expectedLevel = str(a.expectedLevel, NARRATIVE_CAP);
   const category = JUDGEMENT_CATEGORIES.includes(a.category as JudgementCategory) ? (a.category as JudgementCategory) : undefined;
+  const SPEND_PERIODS = ["monthly", "quarterly", "yearly", "lumpsum"];
+  const spendPeriod = SPEND_PERIODS.includes(a.spendPeriod as string) ? (a.spendPeriod as "monthly" | "quarterly" | "yearly" | "lumpsum") : undefined;
   const s3Snapshot = normalizeS3Snapshot(a.s3Snapshot);
   const milestoneCandidate = normalizeMilestoneCandidate(a.milestoneCandidate);
   const history = Array.isArray(a.history)
@@ -339,6 +343,7 @@ export function normalizeAttainability(raw: unknown): CapabilityAttainability | 
     evidence: strArr(a.evidence, 8, 300),
     ...(expectedLevel ? { expectedLevel } : {}),
     ...(category ? { category } : {}),
+    ...(spendPeriod ? { spendPeriod } : {}),
     draftedBy: drafter,
     // 확정자와 확정일은 함께 있을 때만 유효하다.
     confirmedBy: confirmedBy && confirmedAt ? confirmedBy : null,

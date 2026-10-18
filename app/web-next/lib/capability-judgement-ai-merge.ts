@@ -26,7 +26,7 @@ export interface JudgementProposal {
 }
 
 /** Page draft state shape (mirrors JudgementDraft in CapabilityJudgementTable.tsx; strings only). */
-export interface PageJudgementDraft { resolution: string; expectedLevel: string; cost: string; months: string; grade: string; rationale: string; category: string }
+export interface PageJudgementDraft { resolution: string; expectedLevel: string; cost: string; months: string; grade: string; rationale: string; category: string; /** 2026-10-18 decider ask — 집행 주기 (금액 = 주기당). "" = 미입력(일시불 취급). */ period: string }
 export type AiMarks = Record<string, JudgementField[]>;
 
 /**
