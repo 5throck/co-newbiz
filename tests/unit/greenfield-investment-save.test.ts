@@ -130,7 +130,8 @@ describe("UI structure: one grid, shared columns, chips in-row, own save button"
     const scope = stage().slice(stage().indexOf('data-testid="invest-item-list"'), stage().indexOf('data-testid="invest-item-footer"'));
     expect(scope).toContain('<option value="krw_m">백만원</option>');
     expect(scope).toContain("{CURRENCY_LABEL.KRW}</option>");
-    expect(scope).toContain("{PERIOD_LABEL.lumpsum}</option>");
+    // 2026-10-18: the linked row's period select now carries the full vocabulary (map-rendered).
+    expect(scope).toContain("(Object.keys(PERIOD_LABEL) as BcPeriod[]).map((p2) =>");
     expect(scope).toContain("판정 보기</a>");
     expect(scope).toContain("반영 해제</button>");
     expect(scope).toContain("재판정 필요</span>");
