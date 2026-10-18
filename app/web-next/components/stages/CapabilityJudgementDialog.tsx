@@ -67,6 +67,9 @@ export function CapabilityJudgementDialog({ row, draft, note, s3Href, hasPrev, h
   const [aiBasis, setAiBasis] = useState<JudgementProposal["basis"] | undefined>(ai?.basis[row.id]);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiMsg, setAiMsg] = useState<string | null>(null);
+  // Hooks Rules — this must sit ABOVE the `if (!mounted) return null` early return,
+  // or the first render skips it and React sees a hook-order change (2026-10-18 live error).
+  const [startOverride, setStartOverride] = useState<number | null>(startYear);
   const uid = useId();
   useEffect(() => setMounted(true), []);
   const { panelRef, onKeyDown } = useModalFocus(onClose);
@@ -100,7 +103,6 @@ export function CapabilityJudgementDialog({ row, draft, note, s3Href, hasPrev, h
   const needsRationale = (d.grade === "high" || d.grade === "low") && d.rationale.trim() === "";
   const spendMonths = d.months.trim() === "" ? null : Number(d.months);
   const derivedStart = capabilityDefaultStartYear(spendMonths);
-  const [startOverride, setStartOverride] = useState<number | null>(startYear);
   const spendStart = startOverride ?? derivedStart;
   const needsCategory = Number(d.cost) > 0 && !d.category;
   const apply = (nav: DialogNav) => {
