@@ -650,20 +650,26 @@ describe("linked-line cadence and re-reflect listing (2026-10-18 decider asks)",
   const crows = [src(), src({ id: "k2", capability: "채용", resolution: "hire", closing_cost_krw_m: 800, confirmed_at: null })];
   const actor = { userId: "u1", at: NOW };
 
-  test("capabilityYearVector: 일시불 = 총액 at startYear; 연간 = 연간 금액 from startYear through the horizon", () => {
+  test("capabilityYearVector: 일시불 = 총액 at startYear; 연간 = 총액을 시작~종료 창구에 균분 (종료에서 멈춤)", () => {
     const lump = cl.capabilityYearVector({ startYear: 2, period: "lumpsum", costKrwM: 100 }, 5);
     expect(lump).toEqual([0, 100, 0, 0, 0]);
-    const yearly = cl.capabilityYearVector({ startYear: 2, period: "yearly", costKrwM: 100 }, 5);
-    expect(yearly).toEqual([0, 100, 100, 100, 100]);
+    // 창구 Y2..Y5: 100을 4년 균분.
+    const yearly = cl.capabilityYearVector({ startYear: 2, endYear: 5, period: "yearly", costKrwM: 100 }, 5);
+    expect(yearly).toEqual([0, 25, 25, 25, 25]);
+    // 좁은 창구 Y1..Y2: 총 2000을 2년 균분 = 1,000/년 뒤 멈춘다 (2026-10-18 decider report).
+    const narrow = cl.capabilityYearVector({ startYear: 1, endYear: 2, period: "yearly", costKrwM: 2000 }, 5);
+    expect(narrow).toEqual([1000, 1000, 0, 0, 0]);
   });
 
-  test("investmentTotals spreads a yearly linked line and counts it as recurring", () => {
-    const stored = [{ line: "A 역량 해소", category: "opex", amount: 100, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly", note: "n", source: "capability", capabilityKey: "k1", reflected: true, basisHash: cl.costBasisHash(crows[0]), costKrwM: 100 }];
-    const view = cl.deriveCapabilityCostLines(crows, stored);
-    // The linked amount follows the JUDGEMENT (3000/년) — 연간 주기면 그 금액이 검토 기간까지 반복된다.
+  test("investmentTotals spreads a windowed yearly linked line over its start..end window", () => {
+    // months 60 → 창구 Y1..Y5; 총액 300을 5년 균분 = 60/년.
+    const crows60 = [src({ months_to_attain: 60 })];
+    const stored = [{ line: "A 역량 해소", category: "opex", amount: 300, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly", note: "n", source: "capability", capabilityKey: "k1", reflected: true, basisHash: cl.costBasisHash(crows60[0]), startYear: 1, costKrwM: 300 }];
+    const view = cl.deriveCapabilityCostLines(crows60, stored);
     const summary = cl.buildInvestmentSummary([], view.lines, 5, new Set(["k1"]));
-    expect(summary.schedule.map((r: { opex: number }) => r.opex)).toEqual([3000, 3000, 3000, 3000, 3000]);
-    expect(summary.annualRecurringKrwM).toBeGreaterThanOrEqual(3000);
+    // 연간 금액 = 총액 3000 ÷ 5년 = 600/년.
+    expect(summary.schedule.map((r: { opex: number }) => r.opex)).toEqual([600, 600, 600, 600, 600]);
+    expect(summary.annualRecurringKrwM).toBeGreaterThanOrEqual(600);
   });
 
   test("a saved-unreflected linked row stays listed (savedUnreflected) so a 다시 반영 is possible in place", () => {
