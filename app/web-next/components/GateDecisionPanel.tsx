@@ -5,7 +5,7 @@
 // 이 패널은 그 기록 행위의 표준 UI이며 /route-decision·/greenfield·/brownfield에
 // 마운트된다. HOLD는 missing_artifacts 없이 기록할 수 없다(soft-pass 방지).
 import Link from "next/link";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness, canWriteProject } from "../lib/project-write-access.ts";
@@ -26,6 +26,8 @@ interface GateLatest {
   missing_artifacts: string[] | null;
   /** R2-B item 3 - the typed rationale an IC GO carried despite missing artifacts. */
   gap_override?: { items: string[]; rationale: string } | null;
+  /** ADR-0182 §5 — 판단 필요 claims confirmed with this decision. */
+  judgement_confirmations?: string[];
 }
 interface GateHistoryRow extends GateLatest { id: string; decided_by: string; decided_at: string; /** ADR-0182 §5 — needs_judgement claims the human marked as reviewed. */ judgement_confirmations?: string[] }
 
@@ -186,6 +188,15 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   const toggleJudgement = useCallback((claim: string, checked: boolean) => {
     setJudgementChecks((m) => ({ ...m, [claim]: checked }));
   }, []);
+  // 판단 필요 항목 중 이미 결정과 함께 "사람 확인"으로 기록된 것들 — 버킷은
+  // 미확인 항목에만 체크박스를 두고 확인된 항목은 기록 상태를 보여준다.
+  const confirmedJudgements = useMemo(() => {
+    const out = new Set<string>();
+    for (const g of gates) {
+      for (const claim of latest?.find((l) => l.gate === g)?.judgement_confirmations ?? []) out.add(claim);
+    }
+    return out;
+  }, [gates, latest]);
   // ADR-0118 — LLM 진행 브리프(제안). 권고·근거 초안만 제공하며 결정 select는
   // 건드리지 않는다. "근거에 반영"은 rationale 프리필일 뿐, 기록은 사람이다.
   const [briefData, setBriefData] = useState<GateBriefData | null>(null);
@@ -389,6 +400,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
           judgementChecks={judgementChecks}
           onToggleJudgement={canRecord ? toggleJudgement : undefined}
           onDecisionJump={canRecord ? () => focusGateDecision(gates[0]) : undefined}
+          confirmedJudgements={confirmedJudgements}
         />
       )}
 

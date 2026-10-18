@@ -130,18 +130,22 @@ export interface ProcessEvaluation {
   reopenedAfterGate?: boolean;
 }
 
-export function latestGateDecisions(entityType: "opportunity" | "project", entityId: string): Map<GateId, { decision: GateVerdict; missing: string[] | null; rationale: string }> {
+export function latestGateDecisions(entityType: "opportunity" | "project", entityId: string): Map<GateId, { decision: GateVerdict; missing: string[] | null; rationale: string; judgementConfirmations: string[] }> {
   const rows = getDb()
     .query(
-      `SELECT gate, decision, missing_artifacts_json, rationale FROM (
-         SELECT gate, decision, missing_artifacts_json, rationale,
+      `SELECT gate, decision, missing_artifacts_json, rationale, judgement_confirmations_json FROM (
+         SELECT gate, decision, missing_artifacts_json, rationale, judgement_confirmations_json,
                 ROW_NUMBER() OVER (PARTITION BY gate ORDER BY decided_at DESC, id DESC) AS rn
          FROM gate_decision g WHERE g.entity_type = ? AND g.entity_id = ?
            AND NOT EXISTS (SELECT 1 FROM gate_decision_stale s WHERE s.decision_id = g.id)
        ) WHERE rn = 1`,
     )
-    .all(entityType, entityId) as Array<{ gate: GateId; decision: GateVerdict; missing_artifacts_json: string | null; rationale: string }>;
-  return new Map(rows.map((r) => [r.gate, { decision: r.decision, missing: r.missing_artifacts_json ? JSON.parse(r.missing_artifacts_json) : null, rationale: r.rationale }]));
+    .all(entityType, entityId) as Array<{ gate: GateId; decision: GateVerdict; missing_artifacts_json: string | null; rationale: string; judgement_confirmations_json: string | null }>;
+  return new Map(rows.map((r) => {
+    let judgementConfirmations: string[] = [];
+    try { judgementConfirmations = r.judgement_confirmations_json ? (JSON.parse(r.judgement_confirmations_json) as string[]) : []; } catch { /* corrupt json → none */ }
+    return [r.gate, { decision: r.decision, missing: r.missing_artifacts_json ? JSON.parse(r.missing_artifacts_json) : null, rationale: r.rationale, judgementConfirmations }];
+  }));
 }
 // Latest gate_decision per gate is shared by the process engine and the
 // gate-decisions API so the tie-breaking rule cannot drift between surfaces.

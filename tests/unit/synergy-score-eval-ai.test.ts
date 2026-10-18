@@ -154,4 +154,31 @@ describe("gate decision judgement_confirmations sidecar (ADR-0182 §5)", () => {
     expect(panel).toContain("judgement_confirmations:");
     expect(panel).toContain("onDecisionJump={canRecord ? () => focusGateDecision(gates[0]) : undefined}");
   });
+
+  test("GET latest echoes the saved confirmations so the buckets can render the confirmed state", async () => {
+    // The two earlier screening HOLDs have no/latest confirmations; record one WITH
+    // confirmations so it becomes the latest row for its gate, then read it back.
+    const res = await nextRequest(`/api/opportunities/${oppId}/gate-decisions`, {
+      method: "POST",
+      headers: { cookie },
+      body: JSON.stringify({
+        gate: "pre_fs",
+        decision: "hold",
+        rationale: "확인 상태 역조회 검증",
+        missing_artifacts: ["x"],
+        judgement_confirmations: ["확인한 판단 항목"],
+      }),
+    });
+    expect(res.status).toBe(201);
+    const get = await nextRequest(`/api/opportunities/${oppId}/gate-decisions`, { headers: { cookie } });
+    const latest = (await get.json()).data.latest as Array<{ gate: string; judgement_confirmations: string[] }>;
+    expect(latest.find((l) => l.gate === "pre_fs")?.judgement_confirmations).toEqual(["확인한 판단 항목"]);
+  });
+
+  test("a confirmed claim renders as a saved-state chip, not a pending checkbox", () => {
+    const buckets = readFileSync("app/web-next/components/ReviewBuckets.tsx", "utf8");
+    expect(buckets).toContain("confirmedJudgements");
+    expect(buckets).toContain("사람 확인됨 — 결정 기록과 함께 저장");
+    expect(buckets).toContain("!confirmed && judgementable");
+  });
 });

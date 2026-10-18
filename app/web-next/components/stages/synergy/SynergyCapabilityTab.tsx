@@ -67,21 +67,24 @@ export function SynergyCapabilityTab({ ctx, p }: { ctx: SynergyResultState; p: S
                       </span>
                     ) : undefined}
                     actions={canCurate ? (
-                      <span className="flex items-center gap-1">
+                      <span className="flex flex-wrap items-center gap-1">
                         <button type="button" className={proposePrimary ? "btn-primary btn-sm" : "btn-ghost btn-sm"} disabled={gapBusy || holdBusy} title="시너지 영역 근거로 추가 필요 역량과 누락된(빈) 필요도·필요 수준을 초안으로 제안합니다 (제안 전용 — 저장은 사람)" onClick={() => void draftGap()}>
-                          {gapBusy ? "처리 중..." : "필요 역량 제안 (AI)"}
+                          {gapBusy ? "초안 생성 중..." : <><span aria-hidden="true">🤖</span> 필요 역량 제안 (AI)</>}
                         </button>
                         <button type="button" className="btn-ghost btn-sm" disabled={gapBusy || holdBusy || gapRows.length === 0} aria-busy={holdBusy} title="그룹/계열사 회사 정보(프로필)와 외부 웹 검색으로 보유 판정·보유 수준·근거를 초안으로 확인합니다 — 출처 인용 필수, 제안 전용" onClick={() => void checkHolding()}>
-                          {holdBusy ? "확인 중..." : "보유 판정 확인 (AI)"}
+                          {holdBusy ? "확인 중..." : <><span aria-hidden="true">🤖</span> 보유 판정 확인 (AI)</>}
                         </button>
                         <label className="flex items-center gap-1 text-[length:var(--fs-caption)]" title="판정 대상 회사·그룹과 같은 그룹의 다른 계열사(최대 8곳) 프로필·공시도 근거로 씁니다 — 근거가 된 회사명은 보유 근거에 적히고, 보유 판정은 선택한 범위 기준입니다">
                           <input type="checkbox" checked={includeGroup} disabled={gapBusy || holdBusy} onChange={(e) => setIncludeGroup(e.target.checked)} />
                           그룹 내 다른 계열사 프로필도 참고
                         </label>
-                        {draftCount > 0 && <button type="button" className="btn-ghost btn-sm" disabled={gapBusy || holdBusy} onClick={discardDrafts} title="저장하지 않은 AI 초안을 버리고 저장된 값으로 되돌립니다">AI 초안 버리기</button>}
-                        <button type="button" className={gapDirty ? "btn-primary btn-sm" : "btn-ghost btn-sm"} disabled={gapBusy || holdBusy || gapRows.length === 0 || !gapDirty} onClick={() => void saveGap()}>
-                          {gapBusy ? "처리 중..." : "저장"}
-                        </button>
+                        {/* AI 초안·저장 계열은 오른쪽에 모아 AI 제안 버튼과 시각적으로 분리한다 */}
+                        <span className="flex items-center gap-1 ml-auto pl-2 border-l border-[color:var(--border)]">
+                          {draftCount > 0 && <button type="button" className="btn-ghost btn-sm" disabled={gapBusy || holdBusy} onClick={discardDrafts} title="저장하지 않은 AI 초안을 버리고 저장된 값으로 되돌립니다">AI 초안 버리기</button>}
+                          <button type="button" className={gapDirty ? "btn-primary btn-sm" : "btn-ghost btn-sm"} disabled={gapBusy || holdBusy || gapRows.length === 0 || !gapDirty} onClick={() => void saveGap()}>
+                            {gapBusy ? "저장 중..." : gapDirty ? "변경 저장" : "저장"}
+                          </button>
+                        </span>
                       </span>
                     ) : undefined}
                   />
@@ -213,7 +216,7 @@ export function SynergyCapabilityTab({ ctx, p }: { ctx: SynergyResultState; p: S
                     <input aria-label="필요 역량 추가" placeholder="필요 역량 추가" value={newGapCap}
                       onChange={(e) => setNewGapCap(e.target.value)}
                       className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 14rem" }} />
-                    <button type="button" className="btn-ghost btn-sm" onClick={addGapRow}>추가</button>
+                    <button type="button" className="btn-ghost btn-sm" onClick={addGapRow}>＋ 역량 행 추가</button>
                   </div>
                   )}
                 </div>
