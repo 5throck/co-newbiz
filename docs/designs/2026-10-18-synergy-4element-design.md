@@ -196,3 +196,24 @@ FX 환산이 없어 외화 항목이 통째로 제외되고 있었다(환율 미
 - **dialog 총액 가시화**: 연동 fieldset에 `집행 기간 총액` readout 추가 — 주기당
   금액 × 주기계수(월×12·분기×4·연간·일시불×1) × 창구 연수. 예: 금액 3,000 연간 +
   36개월 + 시작 3연차 → 총액 9,000백만원 (Y3~Y5).
+
+## As-built (2026-10-19, decider feedback slice 12 — S8 재무 탭 재구성: 대상회사 개칭 + 신규 재무분석(BEP·재무제표) 탭)
+
+디시더 요청: "재무적 타당성의 재무분석 탭을 대상회사로 변경 + 재무분석 탭을 새로
+만들어 해당 투자에 따른 BEP Analysis와 재무제표 제공" (+ "BEP/재무분석에 그래프").
+
+- **개칭**: 기존 "재무분석" 하위 탭(financial-analysis, DART 대상회사 실적 조회)을
+  **"대상회사"**로 개칭 — stage-tabs·BusinessCaseStage 하위 탭 라벨·bridge 페이지
+  헤딩("대상회사 — 대상 회사 연결"). key·라우트(/financial-analysis)는 딥링크 호환을
+  위해 유지.
+- **신규 "재무분석" 탭 (key `bep`)**: `deterministicCaseYearTable` (신규 export)이
+  deterministicCashflows와 동일 분기 로직을 연도별로 분해 — 매출·가동률·운영비·
+  설비투자·순현금흐름·할인 FCF·누적 할인 FCF + 손익분기 매출(계획 고정 운영비가
+  있는 해만; ratio 경로는 매출 비례라 null). BEP 요약: 손익분기(회수) 연도·초기
+  투자·NPV·IRR·처분가치. GET /api/projects/[id]/business-case/bep (읽기 전용 계산,
+  비저장) → BepAnalysisPanel: 시나리오 선택 + 요약 칩 + 연도 명세 표 + **ECharts
+  조합 차트**(매출·운영비·설비투자 바 + 순현금흐름·누적 할인 FCF 라인 — decider
+  "그래프로 가독성" 요청 반영). 재무상태표(BS)는 감가상각·자산/부채 모델이 없어
+  제공하지 않음을 명시.
+- 연도별 명세는 deterministicCashflows와 완전히 일치(같은 분기 로직 재사용) — 유닛
+  테스트가 세 시나리오 모두에서 레거시 FCF 벡터와 정확히 일치함을 검증.

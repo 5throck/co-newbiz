@@ -73,7 +73,7 @@ describe("stage tabs", () => {
     expect(sub("/business-case", null)).toBe("설명·생성·권고");
     expect(sub("/business-case", "scenarios")).toBe("시나리오 비교");
     expect(sub("/wacc", null)).toBe("WACC");
-    expect(sub("/financial-analysis", null)).toBe("재무분석");
+    expect(sub("/financial-analysis", null)).toBe("대상회사");
     expect(sub("/business-case", "overview")).toBe("설명·생성·권고");
     expect(sub("/business-case", "params")).toBe("파라미터·스냅샷");
     expect(sub("/business-case", "target-costing")).toBe("타겟코스팅");
@@ -82,7 +82,7 @@ describe("stage tabs", () => {
 
   test("S8 sub-tab and more-menu membership; deep links stay reachable", () => {
     const s8 = groupForSegment("/business-case")!;
-    expect(s8.subtabs!.map((t) => t.query ?? t.seg)).toEqual(["overview", "scenarios", "/wacc", "/financial-analysis", "params", "target-costing"]);
+    expect(s8.subtabs!.map((t) => t.query ?? t.seg)).toEqual(["overview", "scenarios", "/wacc", "/financial-analysis", "bep", "params", "target-costing"]);
     expect(s8.more.map((t) => t.query ?? (t.seg || "summary"))).toEqual(["summary", "/risk-heatmap"]);
     expect(allDefs(s8).some((t) => t.query === "overview")).toBe(true);
   });

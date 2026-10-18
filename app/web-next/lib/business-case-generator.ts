@@ -1586,6 +1586,94 @@ export function listShortlistSubjects(db: ReturnType<typeof getDb>, opportunityI
 
 /** Deterministic (mid-point) cash-flow vector — exported for the ADR-0174
  *  golden/no-double-count tests (tests/unit/business-case-s5-plan.test.ts). */
+
+/** 2026-10-19 decider ask — 연도별 명세 + BEP 요약 (재무분석 탭). deterministicCashflows와
+ *  동일한 분기 로직을 연도별로 분해해 반환한다: 매출·운영비·설비투자·순현금흐름·할인
+ *  누계. BEP = 누적 할인 현금흐름이 0을 넘는 회수 연도(기존 bepYear 산식과 동일).
+ *  손익분기 매출은 고정 운영비가 있는 해(s5_plan 계획 커버 연도, s5_pnl)에만 계산
+ *  가능 — ratio 경로는 운영비 전체가 매출 비례라 손익분기 매출이 0(모든 매출 흑자). */
+export interface CaseYearRow {
+  year: number;
+  revenue: number;
+  utilization: number;
+  opex: number;
+  capex: number;
+  fcf: number;
+  discountedFcf: number;
+  cumulativeDiscountedFcf: number;
+  breakEvenRevenue: number | null;
+}
+
+export interface CaseYearTable {
+  basis: "ratio" | "s5_plan" | "s5_pnl";
+  wacc: number;
+  horizon: number;
+  initialInvestment: number;
+  exitValue: number;
+  rows: CaseYearRow[];
+  npv: number;
+  irrValue: number | null;
+  bepYear: number | null;
+}
+
+export function deterministicCaseYearTable(inputs: CaseInputs, scenario: Scenario, variant: CaseVariant = "market_forward"): CaseYearTable {
+  const delta = SCENARIO_DELTA[scenario];
+  const eff = effGrowthDisp(inputs, scenario, variant);
+  const year1Revenue = year1RevenueOf(inputs, delta.growth).value;
+  const exitMult = exitEvRevenueOf(inputs);
+  const s5 = s5PlanOf(inputs);
+  const opexRatioD = opexRatioOf(inputs, scenario);
+  const capexRatioD = capexRatioOf(inputs);
+  const initialInvestment = s5?.pnl ? (s5.plan.preLaunchKrwM ?? 0) : s5 ? s5.plan.capexByYear[0] : initialInvestmentOf(inputs, year1Revenue).value;
+  let revenue = year1Revenue;
+  const ramp = rampUpOf(inputs);
+  const wacc = inputs.wacc.value;
+  const discount = (v: number, y: number) => v / Math.pow(1 + wacc, y);
+  const rows: CaseYearRow[] = [{ year: 0, revenue: 0, utilization: 1, opex: 0, capex: initialInvestment, fcf: -initialInvestment, discountedFcf: -initialInvestment, cumulativeDiscountedFcf: -initialInvestment, breakEvenRevenue: null }];
+  const basis = s5?.pnl ? "s5_pnl" : s5 ? "s5_plan" : "ratio";
+  const exitValue = exitMult > 0 ? revenue * exitMult : 0;
+  for (let year = 1; year <= horizonOf(inputs); year++) {
+    if (year > 1) revenue *= 1 + eff.growth;
+    const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
+    let opex: number;
+    let capex: number;
+    let fcf: number;
+    if (s5?.pnl) {
+      const i = year - 1;
+      const revUtil = revenue * utilization;
+      const covered = (i < s5.plan.opexCovered.length && s5.plan.opexCovered[i]) || (i < s5.plan.govRndByYear.length && s5.plan.govRndByYear[i] > 0);
+      opex = covered ? s5.plan.laborOpexByYear[i] + s5.plan.govRndByYear[i] : revUtil * opexRatioD;
+      capex = i < s5.plan.capexByYear.length ? s5.plan.capexByYear[i] : revUtil * capexRatioD;
+      fcf = revUtil - opex - capex;
+    } else if (s5) {
+      opex = opexOfYear(inputs, s5, year, revenue);
+      capex = capexOfYear(inputs, s5, year, revenue);
+      fcf = (revenue - opex) * utilization - capex;
+    } else {
+      opex = revenue * opexRatioD;
+      capex = revenue * capexRatioD;
+      fcf = revenue * (1 - opexRatioD - capexRatioD) * utilization;
+    }
+    const breakEvenRevenue = s5?.pnl && utilization > 0 ? (opex + capex) / utilization : null;
+    rows.push({ year, revenue, utilization, opex, capex, fcf, discountedFcf: discount(fcf, year), cumulativeDiscountedFcf: 0, breakEvenRevenue });
+  }
+  if (exitMult > 0) {
+    rows[rows.length - 1].fcf += exitValue;
+    rows[rows.length - 1].breakEvenRevenue = null; // 처분가치 포함 연도는 매출 손익분기 정의가 성립하지 않음
+  }
+  let cum = 0;
+  for (const r of rows) {
+    cum += r.year === 0 ? r.fcf : discount(r.fcf, r.year);
+    r.discountedFcf = r.year === 0 ? r.fcf : discount(r.fcf, r.year);
+    r.cumulativeDiscountedFcf = Math.round(cum * 100) / 100;
+  }
+  const flows = rows.map((r) => r.fcf);
+  return {
+    basis, wacc, horizon: rows.length - 1, initialInvestment, exitValue,
+    rows, npv: Math.round(cum * 100) / 100, irrValue: irr(flows), bepYear: discountedPaybackYear(initialInvestment, flows.slice(1), wacc),
+  };
+}
+
 export function deterministicCashflows(inputs: CaseInputs, scenario: Scenario, variant: CaseVariant = "market_forward"): number[] {
   const delta = SCENARIO_DELTA[scenario];
   const eff = effGrowthDisp(inputs, scenario, variant);

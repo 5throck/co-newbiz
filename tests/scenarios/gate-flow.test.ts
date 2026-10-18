@@ -34,7 +34,7 @@ describe("R2-B shared gate-recording flow (S8)", () => {
     await s.page.waitForFunction(() => !!document.activeElement?.closest('[data-gate-form="fs"] form'), undefined, { timeout: 10_000 });
     // One tab row: WACC and 재무분석 live in the stage row only, not repeated in the in-page tabs.
     expect(await s.page.getByRole("tab", { name: "WACC" }).count()).toBe(1);
-    expect(await s.page.getByRole("tab", { name: "재무분석" }).count()).toBe(1);
+    expect(await s.page.getByRole("tab", { name: "대상회사" }).count()).toBe(1);
   }, 60_000);
 
   test("confirm -> toast -> recorded summary -> no resubmission -> next-stage link", async () => {
