@@ -167,7 +167,8 @@ describe("reflection action helpers", () => {
     const body = cl.reflectionBody([{ line: "임대", category: "opex", amount: 10, amountUnit: "krw_m" } as any, { line: "  " } as any], lines, {});
     expect(Object.keys(body)).toEqual(["business_case_lines"]);
     expect(body.business_case_lines[0]).toMatchObject({ line: "임대" });
-    expect(body.business_case_lines).toContainEqual({ source: "capability", capabilityKey: "k1", reflected: true, category: "capex", amount: 3000, amountUnit: "krw_m", amountUnitConfirmed: true });
+    // 2026-10-18: the payload now carries the linked line's cadence (period).
+    expect(body.business_case_lines).toContainEqual({ source: "capability", capabilityKey: "k1", reflected: true, category: "capex", amount: 3000, amountUnit: "krw_m", amountUnitConfirmed: true, period: "lumpsum" });
     expect(body.business_case_lines).toHaveLength(3);
   });
   test("summary message", () => {
