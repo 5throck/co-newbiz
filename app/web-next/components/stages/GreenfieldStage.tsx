@@ -912,8 +912,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                       onChange={(e) => { const v = e.target.value as "lumpsum" | "yearly"; setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], period: v } })); }}
                       className="sizing-new-input sizing-new-input-sm invest-ctl"
                     >
-                      <option value="lumpsum">{PERIOD_LABEL.lumpsum} (총액)</option>
-                      <option value="yearly">연간 (총액을 시작~종료에 균분)</option>
+                      {(Object.keys(PERIOD_LABEL) as BcPeriod[]).map((p2) => <option key={p2} value={p2}>{p2 === "lumpsum" ? PERIOD_LABEL.lumpsum : `${PERIOD_LABEL[p2]} (총액 균분)`}</option>)}
                     </select>
                   </td>
                   <td>
