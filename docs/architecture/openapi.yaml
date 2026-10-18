@@ -2500,6 +2500,17 @@ paths:
       responses:
         "200":
           description: Suggested areas or an honest note.
+  /api/synergy/analyses/{id}/rescore:
+    post:
+      operationId: rescoreSynergyAnalysis
+      summary: Recompute a legacy 4-factor stored payload under the current 5-factor scheme, appending a new version (analyst+).
+      tags:
+        - synergy
+      responses:
+        "201":
+          description: New version number, score, method and capability coverage.
+        "400":
+          description: No opportunity / no stored version.
   /api/synergy/ai-score-adjustment:
     post:
       operationId: suggestScoreAdjustment
