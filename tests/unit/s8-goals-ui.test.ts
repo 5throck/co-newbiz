@@ -25,7 +25,7 @@ describe("S8 tab order and greenfield redirect", () => {
   test("stage tab row: goals, technical, financial, targets, decision; financial sub-tab row (ADR-0169)", () => {
     const s8 = STAGE_TAB_GROUPS.find((g) => g.stage === "S8")!;
     expect(s8.tabs.map((t) => t.query ?? t.seg)).toEqual(["goals", "technical", "financial", "targets", "decision"]);
-    expect(s8.subtabs!.map((t) => t.query ?? t.seg)).toEqual(["overview", "scenarios", "/wacc", "/financial-analysis", "params", "target-costing"]);
+    expect(s8.subtabs!.map((t) => t.query ?? t.seg)).toEqual(["overview", "scenarios", "/wacc", "/financial-analysis", "bep", "params", "target-costing"]);
     expect(primaryTabKeys(false)).toEqual(["goals", "technical", "financial", "targets", "decision"]);
     expect(primaryTabKeys(true)).toEqual(["goals", "technical", "financial", "decision"]);
   });
