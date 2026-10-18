@@ -61,10 +61,12 @@ function anchorUnitOf(unitBasis: string | null | undefined): { currency: string;
   return { currency: m[1].toUpperCase(), scale: m[2] === "b" ? 1000 : 1 };
 }
 
+// ADR-0181: record-level verdict vocabulary (compareAnchorScope) — ok /
+// mismatch / unknown. The former exact/partial/none map belonged to the
+// superseded per-step grading.
 const SCOPE_CHIP: Record<string, { label: string; cls: string }> = {
-  exact: { label: "범위 일치", cls: "status-chip status-info" },
-  partial: { label: "범위 부분일치", cls: "status-chip status-warn" },
-  none: { label: "범위 불일치", cls: "status-chip status-warn" },
+  ok: { label: "범위 일치", cls: "status-chip status-info" },
+  mismatch: { label: "범위 불일치", cls: "status-chip status-warn" },
   unknown: { label: "범위 미확인", cls: "status-chip status-not-started" },
 };
 
