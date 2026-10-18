@@ -23,7 +23,7 @@ export interface GapWiring {
   setRows: Dispatch<SetStateAction<CapabilityGapRow[]>>;
 }
 
-export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraft = false, onRowsChange, onEditorApi, onDirtyChange, refreshKey }: {
+export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraft = false, onRowsChange, onEditorApi, onDirtyChange, refreshKey, startYearFor, onStartYearChange }: {
   /** Base URL of the judgement routes: GET/PUT here, POST `${endpoint}/confirm`. */
   endpoint: string;
   s3Href: string;
@@ -39,6 +39,9 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
   onDirtyChange?: (dirty: boolean) => void;
   /** Change it to refetch the view (e.g. after the S7 criterion verdict or the criteria reconcile changed); unsaved drafts are kept. */
   refreshKey?: string | number;
+  /** 2026-10-18 decider ask — threaded to the judgement dialog's editable 시작 연차 (cost-entry start-year override). */
+  startYearFor?: (id: string) => number | null;
+  onStartYearChange?: (id: string, v: number | null) => void;
 }) {
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
@@ -229,7 +232,7 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
         <p className="text-[color:var(--muted-fg)]">S3 필요 역량 레지스터에 행이 없습니다. S3에서 필요 역량을 먼저 정리하세요.</p>
       ) : (
         <CapabilityJudgementTable rows={view.rows} drafts={drafts} editable={canAct} onSet={set} s3Href={s3Href} dirty={dirty} ai={aiWiring}
-          note={noteMap ? { value: (id) => noteMap.get(id) ?? "", onChange: (id, v) => { gap!.setRows((prev) => prev.map((g) => (g.id === id ? { ...g, note: v } : g))); setNotesDirty(true); } } : undefined} />
+          note={noteMap ? { value: (id) => noteMap.get(id) ?? "", onChange: (id, v) => { gap!.setRows((prev) => prev.map((g) => (g.id === id ? { ...g, note: v } : g))); setNotesDirty(true); } } : undefined}  startYearFor={startYearFor} onStartYearChange={onStartYearChange} />
       )}
       <RemovedCapabilities removed={view.removed_capabilities ?? []} />
     </div>

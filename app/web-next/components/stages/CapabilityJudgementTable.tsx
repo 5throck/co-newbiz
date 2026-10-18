@@ -121,7 +121,7 @@ export const COL_MIN_REM = [0, 6.5, 6.5, 8, 8, 7] as const;
 const FILTER_LABEL: Record<JudgementFilter, string> = { todo: "처리할 것", all: "전체" };
 const EMPTY_DIRTY: ReadonlySet<string> = new Set();
 
-export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href, note, dirty = EMPTY_DIRTY, judgeHref, judgeLabel = "S5에서 판정", ai }: {
+export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href, note, dirty = EMPTY_DIRTY, judgeHref, judgeLabel = "S5에서 판정", ai, startYearFor, onStartYearChange }: {
   rows: AttainabilityRowView[];
   drafts: Record<string, JudgementDraft>;
   /** True only on the S5 edit surface; S8 and viewers get no inputs and no dialog. */
@@ -138,6 +138,9 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
   judgeLabel?: string;
   /** S5 only: AI judgement proposals (drafts in page state; a person edits, saves and confirms). */
   ai?: AiWiring;
+  /** 2026-10-18 decider ask — the dialog's 시작 연차 reads/writes the cost entry's start-year override. */
+  startYearFor?: (id: string) => number | null;
+  onStartYearChange?: (id: string, v: number | null) => void;
 }) {
   const canEdit = editable && !!onSet;
   const counts = filterCounts(rows, dirty);
@@ -231,7 +234,7 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
         </div>
       )}
       {editing && (
-        <CapabilityJudgementDialog key={editing.id} row={editing} draft={draftOf(editing)} note={note ? note.value(editing.id) : undefined} s3Href={s3Href}
+        <CapabilityJudgementDialog key={editing.id} row={editing} draft={draftOf(editing)} note={note ? note.value(editing.id) : undefined} s3Href={s3Href} startYear={startYearFor?.(editing.id) ?? null} onStartYearChange={(v) => onStartYearChange?.(editing.id, v)}
           hasPrev={neighborId(shownIds, editing.id, -1) !== null} hasNext={neighborId(shownIds, editing.id, 1) !== null}
           ai={ai} aiFields={ai?.marks[editing.id] ?? []} onAiFields={(f, b) => ai?.markFields(editing.id, f, b)} onApply={(d, n, nav) => apply(editing, d, n, nav)} onRejudge={() => onSet?.(editing.id, {})} onClose={() => setEditingId(null)} />
       )}
