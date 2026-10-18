@@ -30,7 +30,7 @@ export function useSynergyList({ opportunityId, analysisId, embedded, noSourceOp
   const [oppSel, setOppSel] = useState("");
   const [creating, setCreating] = useState(false);
   const { confirm, confirmDialog } = useConfirm();
-  const [tab, setTab] = useState<TabKey>("overview");
+  const [tab, setTab] = useState<TabKey>("linkage");
   // S3 deal scope (design 2026-10-11): inside a deal the list defaults to this deal's analyses.
   const dealScoped = !!embedded && (!!opportunityId || !!noSourceOpportunity);
   const [scope, setScope] = useState<"deal" | "all">("deal");

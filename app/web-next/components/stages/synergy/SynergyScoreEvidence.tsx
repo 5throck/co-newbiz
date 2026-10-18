@@ -2,7 +2,7 @@
 
 // SynergyScoreEvidence — ADR-0182 Phase 2: the synergy score's factor
 // breakdown and methodology, rendered beside the score confirm editor in the
-// S3 overview tab. Data comes from the stored analysis payload
+// S3 시너지 점수 평가 tab (scoreEval). Data comes from the stored analysis payload
 // (synergyScoreFactors + scoreAdjustment + capabilityCoverage). When the
 // payload predates ADR-0182 the panel recomputes deterministically from
 // current DB state via computeSynergyScore and says so.

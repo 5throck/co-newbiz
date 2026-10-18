@@ -28,13 +28,18 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
   const { id } = await params;
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();
-  const history = db
+  const rawHistory = db
     .query(
-      `SELECT id, gate, decision, rationale, missing_artifacts_json, decided_by, decided_at
+      `SELECT id, gate, decision, rationale, missing_artifacts_json, judgement_confirmations_json, decided_by, decided_at
        FROM gate_decision WHERE entity_type = 'opportunity' AND entity_id = ?
        ORDER BY decided_at DESC`,
     )
-    .all(id) as Array<{ id: string; gate: string; decision: string; rationale: string; missing_artifacts_json: string | null; decided_by: string; decided_at: string }>;
+    .all(id) as Array<{ id: string; gate: string; decision: string; rationale: string; missing_artifacts_json: string | null; judgement_confirmations_json: string | null; decided_by: string; decided_at: string }>;
+  const history = rawHistory.map((v) => {
+    let judgement_confirmations: string[] = [];
+    try { judgement_confirmations = v.judgement_confirmations_json ? (JSON.parse(v.judgement_confirmations_json) as string[]) : []; } catch { /* corrupt json → none */ }
+    return { id: v.id, gate: v.gate, decision: v.decision, rationale: v.rationale, missing_artifacts: v.missing_artifacts_json ? JSON.parse(v.missing_artifacts_json) as string[] : null, judgement_confirmations, decided_by: v.decided_by, decided_at: v.decided_at };
+  });
   // Latest decision per gate — same helper as the process engine (ADR-0094),
   // so the tie-breaking rule cannot drift between surfaces.
   const latestMap = latestGateDecisions("opportunity", id);
@@ -59,6 +64,9 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     // ADR-0097 back-compat: optional provenance link to the committee
     // deliberation that proposed this decision (0066 nullable column).
     gate_evaluation_id?: string; learning_capture?: string;
+    // ADR-0182 §5 — needs_judgement claims the human marks as reviewed.
+    // Optional, never validated against the review records, never blocks.
+    judgement_confirmations?: string[];
   } | null;
   if (!body?.gate || !GATES.has(body.gate)) {
     return badRequest("invalid_request", `gate must be one of ${[...GATES].join("|")} — fs/dd/entity_ic/group_ic are project-carrier (S8–S12) gates and belong on /api/projects/[id]/gate-decisions.`);
@@ -116,11 +124,17 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   }
   // ADR-0153 — snapshot the artifact as the human saw it, BEFORE the decision lands.
   const reviewSnapshot = captureReviewSnapshot(body.gate, id);
+  // ADR-0182 §5 — the checked "판단 필요" claims ride with the decision as a
+  // sidecar snapshot (no new table). Optional and never blocking.
+  const judgementConfirmations = Array.isArray(body.judgement_confirmations)
+    ? [...new Set(body.judgement_confirmations.map((c) => String(c).trim().slice(0, 300)).filter(Boolean))].slice(0, 30)
+    : [];
   db.run(
-    `INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, missing_artifacts_json, decided_by, decided_at, gate_evaluation_id, learning_capture)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, missing_artifacts_json, decided_by, decided_at, gate_evaluation_id, learning_capture, judgement_confirmations_json)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
     [gid, "opportunity", id, body.gate, body.decision, rationale,
-      body.decision === "hold" ? JSON.stringify(missing) : null, ctx.userId, nowTs, gateEvaluationId, body.decision === "kill" ? learningCapture : null],
+      body.decision === "hold" ? JSON.stringify(missing) : null, ctx.userId, nowTs, gateEvaluationId, body.decision === "kill" ? learningCapture : null,
+      judgementConfirmations.length > 0 ? JSON.stringify(judgementConfirmations) : null],
   );
   appendAudit(db, { actor: ctx.userId, action: "gate_decision.record", target: `${id}:${body.gate}:${body.decision}`, now: nowTs });
   // ADR-0153 — human_final review row: a side effect of THIS human POST only.
