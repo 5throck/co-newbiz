@@ -38,7 +38,7 @@ import { buildInvestmentVectors, effectiveAssumptions, SALARY_RANGE, SALARY_INCR
 import { EntryStrategySection } from "./EntryStrategySection.tsx";
 import { parseEntryStrategy, serializeEntryStrategy, type EntryFormState, type EntryModes } from "../../lib/greenfield-entry-strategy.ts";
 import {
-  AMOUNT_UNIT_KRW_M, amountUnitLabel, scheduleTotals, SUB_CATEGORY_LABEL, SUB_CATEGORY_PARENT, SUB_CATEGORY_S8_NOTE, STAFFING_SUB_CATEGORY, subCategoriesOf, subCategoryDef, validSubCategory, type SubCategoryKey, applySelection, buildInvestmentSummary, DEFAULT_HORIZON_YEARS, deriveCapabilityCostLines, findDuplicateWarnings, formatKrwM, hasUnsavedReflection, confirmUnitOnAmountEdit, unitOnCurrencyChange, investmentTotals, isCapabilityEntry, manualLineAmounts, isPlanMetaEntry, lineSaveStates, manualLineIssues, manualLineKrwM, MAX_HORIZON_YEAR_LIMIT, MIN_HORIZON_YEARS, normalizeLegacyLine, planMetaOf, reflectionBody, reflectionSummary, sanityLineOversize, sanityTotalOversize, selectionPayload, unifiedFooter, unifiedInvestmentRows, validateLineYears, capabilityEndYearOf,
+  AMOUNT_UNIT_KRW_M, amountUnitLabel, convertManualLinesToKrw, scheduleTotals, SUB_CATEGORY_LABEL, SUB_CATEGORY_PARENT, SUB_CATEGORY_S8_NOTE, STAFFING_SUB_CATEGORY, subCategoriesOf, subCategoryDef, validSubCategory, type SubCategoryKey, applySelection, buildInvestmentSummary, DEFAULT_HORIZON_YEARS, deriveCapabilityCostLines, findDuplicateWarnings, formatKrwM, hasUnsavedReflection, confirmUnitOnAmountEdit, unitOnCurrencyChange, investmentTotals, isCapabilityEntry, manualLineAmounts, isPlanMetaEntry, lineSaveStates, manualLineIssues, manualLineKrwM, MAX_HORIZON_YEAR_LIMIT, MIN_HORIZON_YEARS, normalizeLegacyLine, planMetaOf, reflectionBody, reflectionSummary, sanityLineOversize, sanityTotalOversize, selectionPayload, unifiedFooter, unifiedInvestmentRows, validateLineYears, capabilityEndYearOf,
   SIM_OVERRIDE_KEYS, simOverridesOf, validateSimOverrides,
   type AmountUnit, type CapabilityCostView, type CostCategory, type CostSelection, type DuplicateWarning, type ManualCostLine, type MilestoneCandidateView, type PlanMetaEntry, type SimOverrideKey, type SimOverrides,
 } from "../../lib/capability-cost-lines.ts";
@@ -326,20 +326,33 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   // The plan is fitted to the live horizon before costing, so a horizon change never silently drops or pads on the server.
   const staffEff = useMemo(() => fitPlanToHorizon(staffPlan, horizon), [staffPlan, horizon]);
   const staffActive = staffEff.rows.length > 0 ? staffEff : null;
-  const invTotals = investmentTotals(costView, new Set(reflectedLines.map((l) => l.capabilityKey)), bcLines, staffActive, horizon);
+  // ADR-0181 seam — 외화 투자비 항목은 사람이 설정한 검토/안건 환율(entry_market_fx)로
+  // 백만원 환산해 합계·스케줄·벡터에 반영한다. 환율이 없는 통화는 기존대로 제외된다.
+  const [fxRates, setFxRates] = useState<Record<string, number> | undefined>(undefined);
+  const fxRatesKey = selected?.opportunity.id ?? null;
+  useEffect(() => {
+    if (!fxRatesKey) { setFxRates(undefined); return; }
+    let alive = true;
+    api.get<{ fx: Array<{ currency: string; rate: number }> | null }>(`/api/opportunities/${encodeURIComponent(fxRatesKey)}/entry-market-derivation`)
+      .then((r) => { if (alive) setFxRates(Object.fromEntries((r.data.fx ?? []).map((f) => [f.currency, f.rate]))); })
+      .catch(() => { if (alive) setFxRates(undefined); });
+    return () => { alive = false; };
+  }, [fxRatesKey]);
+  const bcLinesKrw = useMemo(() => convertManualLinesToKrw(bcLines, fxRates), [bcLines, fxRates]);
+  const invTotals = investmentTotals(costView, new Set(reflectedLines.map((l) => l.capabilityKey)), bcLinesKrw, staffActive, horizon);
   const dupWarnings = findDuplicateWarnings(reflectedLines, bcLines);
   const reflectedKeySet = useMemo(() => new Set(reflectedLines.map((l) => l.capabilityKey)), [reflectedLines]);
   // ADR-0174 slice 1 — 투자비 요약 recomputed from the page state (read-only, decision support).
   const summary = useMemo(
-    () => buildInvestmentSummary(bcLines, capLinesEff, horizon, reflectedKeySet, staffActive),
-    [bcLines, capLinesEff, horizon, reflectedKeySet, staffActive],
+    () => buildInvestmentSummary(bcLinesKrw, capLinesEff, horizon, reflectedKeySet, staffActive),
+    [bcLinesKrw, capLinesEff, horizon, reflectedKeySet, staffActive],
   );
   const schedTotals = useMemo(() => scheduleTotals(summary), [summary]);
   const hasPreLaunch = (summary.preLaunchKrwM ?? 0) > 0;
   // ADR-0176 slice 1 — deterministic low/mode/high bands over the same inputs as the summary.
   const vectors = useMemo(
-    () => buildInvestmentVectors({ manual: bcLines, capLines: capLinesEff, horizon, reflectedKeys: reflectedKeySet, staffing: staffActive, overrides: simOv }),
-    [bcLines, capLinesEff, horizon, reflectedKeySet, staffActive, simOv],
+    () => buildInvestmentVectors({ manual: bcLinesKrw, capLines: capLinesEff, horizon, reflectedKeys: reflectedKeySet, staffing: staffActive, overrides: simOv }),
+    [bcLinesKrw, capLinesEff, horizon, reflectedKeySet, staffActive, simOv],
   );
   const effA = effectiveAssumptions(simOv);
   // Per-line timing errors (Korean messages from validateLineYears); any error blocks save.
@@ -913,7 +926,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
             const i = row.manualIndex;
             const l = bcLines[i];
             const issues = manualLineIssues(l);
-            const canonical = manualLineKrwM(l);
+            const canonical = manualLineKrwM(bcLinesKrw[i]);
             const fieldIssues = issues.filter((iss) => iss !== "unit");
             const confirmChip = fieldIssues.length > 0;
             const issueText = fieldIssues.length === 0 ? null : `확인 필요: ${fieldIssues.map((iss) => ({ category: "분류", period: "주기", currency: "통화", unit: "단위" }[iss])).join("·")}`;
@@ -969,11 +982,13 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 <td>
                   <input aria-label="금액" type="number" placeholder="금액" value={l.amount || ""} onChange={(e) => setBc(i, { amount: Number(e.target.value) })} className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-num" />
                   {(() => {
-                    const amt = issues.length === 0 && (l.currency ?? "KRW") === "KRW" ? manualLineAmounts(l, horizon) : null;
+                    const lKrw = bcLinesKrw[i];
+                    const amt = issues.length === 0 ? manualLineAmounts(lKrw, horizon) : null;
+                    const fxApplied = (l.currency ?? "KRW") !== "KRW" && (lKrw.currency ?? "KRW") === "KRW";
                     if (!amt) return null;
                     return (
                       <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mono-num text-right whitespace-nowrap" data-testid={`invest-row-annualised-${i}`}>
-                        {amt.annualKrwM !== null && <>연 {fmtM(amt.annualKrwM)} · </>}기간 {fmtM(amt.totalKrwM)}
+                        {amt.annualKrwM !== null && <>연 {fmtM(amt.annualKrwM)} · </>}기간 {fmtM(amt.totalKrwM)}{fxApplied ? " (환율 적용)" : ""}
                       </span>
                     );
                   })()}
@@ -1193,7 +1208,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">매출·정부 R&D 행은 투자비 제외 — 유입 참고용입니다.</p>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-subcategory-s8-note">{SUB_CATEGORY_S8_NOTE}</p>
             <ul className="list-none p-0 m-0" data-testid="invest-summary-flags">
-              {summary.excludedNonKrw > 0 && <li className="text-[length:var(--fs-caption)]">외화 항목 {summary.excludedNonKrw}건은 합계에서 제외 (환율 미반영)</li>}
+              {summary.excludedNonKrw > 0 && <li className="text-[length:var(--fs-caption)]">외화 항목 {summary.excludedNonKrw}건은 합계에서 제외 — 검토/안건의 환율(entry_market_fx)을 설정하면 환산 반영됩니다</li>}
               {summary.excludedNeedsConfirm > 0 && <li className="text-[length:var(--fs-caption)]">확인 필요 항목 {summary.excludedNeedsConfirm}건은 합계에서 제외</li>}
               {summary.endYearExceedsHorizon > 0 && <li className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))]">종료 연차가 검토 기간을 넘는 항목 {summary.endYearExceedsHorizon}건 — 검토 기간 안에서 집계됨</li>}
               {summary.capabilitySpendFromMilestone > 0 && <li className="text-[length:var(--fs-caption)]">판정 기간에서 산정한 집행 연차 {summary.capabilitySpendFromMilestone}건</li>}

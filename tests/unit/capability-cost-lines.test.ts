@@ -699,3 +699,41 @@ describe("linked-line cadence and re-reflect listing (2026-10-18 decider asks)",
     }
   });
 });
+
+describe("FX conversion for foreign investment lines (2026-10-18 decider ask)", () => {
+  test("manualLineInKrw converts fx_m at the person-set rate; no rate = unchanged (환율 미반영)", () => {
+    const rates = { USD: 1350 };
+    const usd = { line: "부품 허브", category: "opex", amount: 200, amountUnit: "fx_m", amountUnitConfirmed: true, currency: "USD", period: "monthly" };
+    const converted = cl.manualLineInKrw(usd, rates);
+    expect(converted.amount).toBe(270000); // 200 × 1,350 = 백만원
+    expect(converted.currency).toBe("KRW");
+    expect(converted.amountUnit).toBe("krw_m");
+    // Without a rate the line passes through untouched (excluded downstream).
+    expect(cl.manualLineInKrw(usd, undefined)).toBe(usd);
+    expect(cl.manualLineInKrw(usd, { EUR: 1500 })).toBe(usd);
+    // KRW lines are never touched.
+    const krw = { line: "x", currency: "KRW", amount: 5, amountUnit: "krw_m" };
+    expect(cl.manualLineInKrw(krw, rates)).toBe(krw);
+  });
+
+  test("converted lines enter the totals: a USD opex line counts in the schedule at the FX rate", () => {
+    const usd = { line: "부품 허브", category: "opex", amount: 1, amountUnit: "fx_m", amountUnitConfirmed: true, currency: "USD", period: "yearly", startYear: 1, endYear: 5 };
+    const converted = cl.convertManualLinesToKrw([usd], { USD: 1350 });
+    expect(converted[0].amount).toBe(1350);
+    // The schedule lives on buildInvestmentSummary (investmentTotals carries the head counts).
+    const summary = cl.buildInvestmentSummary(converted, [], 5, new Set());
+    expect(summary.schedule.map((r: { opex: number }) => r.opex)).toEqual([1350, 1350, 1350, 1350, 1350]);
+    expect(summary.excludedNonKrw).toBe(0);
+  });
+
+  test("promotion converts foreign lines when a rate exists and still skips without one", () => {
+    const crows = [src()];
+    const fx = { USD: 1350 };
+    const foreign = { line: "부품 허브", category: "opex", amount: 1, amountUnit: "fx_m", amountUnitConfirmed: true, currency: "USD", period: "monthly" };
+    const withRate = cl.splitForPromotion([foreign], crows, fx);
+    expect(withRate.skippedManual).toHaveLength(0);
+    expect(withRate.manual[0]).toMatchObject({ currency: "KRW", amount: 1350 });
+    const noRate = cl.splitForPromotion([foreign], crows, undefined);
+    expect(noRate.skippedManual).toEqual([{ line: "부품 허브", reason: "currency_non_krw" }]);
+  });
+});

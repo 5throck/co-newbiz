@@ -1169,13 +1169,18 @@ export interface S5InvestmentPlan {
  *  when the project has none — every consumer then falls back to the ratio
  *  path, never to zero. */
 export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (...args: unknown[]) => unknown; all: (...args: unknown[]) => unknown[] } }, projectId: string): S5InvestmentPlan | null {
+  // ADR-0181 seam — the person-set entry_market_fx rates convert foreign plan lines.
+  const srcOpp = (db.query("SELECT source_opportunity_id FROM md_project WHERE id = ?").get(projectId) as { source_opportunity_id: string | null } | undefined)?.source_opportunity_id ?? null;
+  const fxRates: Record<string, number> | undefined = srcOpp
+    ? Object.fromEntries(readFx(getDb(), srcOpp).map((f) => [f.currency, f.rate]))
+    : undefined;
   // ADR-0178 amendment: the pinned path (a current pin unless a person reverted) computes from the
   // pinned snapshot through the same aggregation; without it the copy path below is unchanged.
   const active = resolveActivePin(db, projectId);
   if (active) {
     const { horizon: pinHorizon, lines: pinLines } = pinPlanLinesOf(active.input);
     if (pinLines.length === 0) return null; // nothing importable in the pinned version: ratio path, like the copy
-    const agg = aggregatePlanLines(pinHorizon, pinLines);
+    const agg = aggregatePlanLines(pinHorizon, pinLines, fxRates);
     const modelId = `pin:${active.pin.id}`;
     const lineHash = scenarioSeed(modelId, JSON.stringify({ c: agg.capexByYear, o: agg.laborOpexByYear, g: agg.govRndByYear, ...(agg.preLaunchLines ? { p: agg.preLaunchKrwM } : {}) })).toString(16);
     return { modelId, horizonYears: agg.horizonYears, capexByYear: agg.capexByYear, laborOpexByYear: agg.laborOpexByYear, govRndByYear: agg.govRndByYear, opexCovered: agg.opexCovered, skippedLines: agg.skippedLines, lineHash, capexCapabilityByYear: agg.capexCapabilityByYear, laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear, ...(agg.preLaunchLines ? { preLaunchKrwM: agg.preLaunchKrwM, preLaunchLines: agg.preLaunchLines } : {}), pinId: active.pin.id, planHash: active.pin.plan_hash };
@@ -1191,7 +1196,7 @@ export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (..
   const lines = db
     .query("SELECT category, annual_amount_krw_m, start_year, end_year, growth_rate, unit, note FROM business_case_line WHERE model_id = ?")
     .all(model.id) as Array<{ category: string; annual_amount_krw_m: number; start_year: number; end_year: number | null; growth_rate: number; unit: string | null; note?: string | null }>;
-  const agg = aggregatePlanLines(model.horizon_years, lines);
+  const agg = aggregatePlanLines(model.horizon_years, lines, fxRates);
   const lineHash = scenarioSeed(model.id, JSON.stringify({ c: agg.capexByYear, o: agg.laborOpexByYear, g: agg.govRndByYear, ...(agg.preLaunchLines ? { p: agg.preLaunchKrwM } : {}) })).toString(16);
   return { modelId: model.id, horizonYears: agg.horizonYears, capexByYear: agg.capexByYear, laborOpexByYear: agg.laborOpexByYear, govRndByYear: agg.govRndByYear, opexCovered: agg.opexCovered, skippedLines: agg.skippedLines, lineHash, capexCapabilityByYear: agg.capexCapabilityByYear, laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear, ...(agg.preLaunchLines ? { preLaunchKrwM: agg.preLaunchKrwM, preLaunchLines: agg.preLaunchLines } : {}) };
 }
