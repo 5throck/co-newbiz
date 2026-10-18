@@ -1,5 +1,24 @@
 #!/usr/bin/env bun
-// @version 1.70.2
+// @version 1.71.0
+// v1.71.0 (2026-10-17, T-20261017-001 canary): VARIANT SCRIPTS SYNC gains the
+//          variant OVERLAY top-level walk — templates/<variant>/scripts/*.ts deliver
+//          to project scripts/ root (new-project §6.6 parity; co-abap's
+//          validate-abap-platform-parity.ts was CI-referenced but never delivered).
+// v1.70.6 (2026-10-14, T-20261014-002): reconcileScriptRegistry's append arm
+//          delegates its boundary scan to helpers/registry-append.ts
+//          registryAppendIndex (1.1.0) — retires the second inline
+//          registry-append implementation with divergent boundary semantics
+//          (the old scan was not ## Registry-anchored).
+// v1.70.5 (2026-10-13, T-20261013-009 phase 2): COMMANDS_SYNC delivers the .gemini
+//          surface's rendered <name>.toml files (extension-aware) — the toml-only
+//          template conversion otherwise reached no upgraded project.
+// v1.70.4 (2026-10-13, T-20261013-001): registry-append mechanics extracted to
+//          helpers/registry-append.ts (L0+L1, shared with new-project §6.6).
+// v1.70.3 (2026-10-13, T-20261013-010): mergeGitleaksToml extracted to
+//          helpers/gitleaks-merge.ts (L0+L1) with a replacer-FUNCTION merge — a `$'`
+//          sequence in a `$1`-interpolated replacement string substituted the
+//          text-after-match and corrupted `$''`-anchored allowlist entries
+//          (co-abap .gitleaks.toml, 0.18.0 wave).
 // v1.70.2 (2026-10-13, T-20261013-006): VARIANT SCRIPTS SYNC registry rows carry
 //          the <variant>/-prefixed key (scan starts at rel=variant) — bare
 //          basenames duplicated the existing nested rows as ghost entries
@@ -603,6 +622,8 @@ import { extractScriptVersion, preserveLifecycleFrontmatter } from './helpers/up
 import { scanLocalPatches } from './helpers/local-patch-scan.ts';
 import { applySubstitutions } from './helpers/substitute-placeholders.ts';
 import { selectIgnoredToolingArtifacts } from './helpers/ignored-tooling.ts';
+import { mergeGitleaksToml } from './helpers/gitleaks-merge.ts';
+import { appendRegistryRows, registryAppendIndex } from './helpers/registry-append.ts';
 import { extractFrontmatterVersionAndReviewed, reconcileSkillRegistry, alignSkillRegistryRowsWithFrontmatter } from './helpers/skills-registry.ts';
 import {
   splitIntoSections,
@@ -1176,9 +1197,9 @@ function reconcileScriptRegistry(scriptRelPath: string): void {
     return;
   }
 
-  // No row at all — append the upstream row after the last `| \`*.ts\` |` row
-  // INSIDE the registry table (stop at the first `#### \`` detail-section header,
-  // whose flag tables also contain `| \`*.ts\` |`-shaped rows).
+  // No row at all — append the upstream row at the shared registry boundary
+  // (helpers/registry-append.ts registryAppendIndex; the same `## Registry`
+  // anchor + first-`#### \`` bound the prune helpers respect).
   // Rows marked layer `L0`/`L0-only` are invisible to verify-scripts at project
   // context (L0_ONLY_LAYERS skip) while the file itself ships on disk, which
   // reads as "Unregistered script" — rewrite the layer cell to `L3` on append.
@@ -1187,13 +1208,9 @@ function reconcileScriptRegistry(scriptRelPath: string): void {
     (_m, head, layer, tail) => /^L0(-only)?$/.test(layer.trim()) ? `${head}L3${tail}` : _m,
   );
   const lines = content.split('\n');
-  let lastRowIdx = -1;
-  for (let i = 0; i < lines.length; i++) {
-    if (/^####\s+`/.test(lines[i])) break;
-    if (/^\|\s*`[^`]+\.ts`\s*\|/.test(lines[i])) lastRowIdx = i;
-  }
-  if (lastRowIdx >= 0) {
-    lines.splice(lastRowIdx + 1, 0, appendedRow);
+  const insertAt = registryAppendIndex(lines);
+  if (insertAt > 0) {
+    lines.splice(insertAt, 0, appendedRow);
     writeFileSync(registryPath, lines.join('\n'), 'utf8');
     console.log(`    📝 scripts/SCRIPTS.md: registered ${name} (v${targetVersion})`);
   }
@@ -1401,70 +1418,6 @@ let treeChanged = 0;
 let w2HarvestLines = 0; // v1.42.0 — variant-only lines found inside W2-removed sections
 
 /**
- * Extract every `'''...'''` (or `'...'`) string literal from a named TOML array
- * (e.g. `regexes = [ ... ]` or `paths = [ ... ]`), by array name. Comment-only lines
- * are stripped first — explanatory comments routinely contain apostrophes (e.g. "AI
- * session notes" or "they're"), which a naive single-quote match mistakes for the
- * start of a string literal and misparses everything after it.
- */
-function extractGitleaksArray(content: string, arrayName: string): string[] {
-  const blockMatch = content.match(new RegExp(`${arrayName}\\s*=\\s*\\[([\\s\\S]*?)\\n\\]`));
-  if (!blockMatch) return [];
-  const codeOnly = blockMatch[1]
-    .split('\n')
-    .filter(line => !line.trim().startsWith('#'))
-    .join('\n');
-  const entries: string[] = [];
-  for (const m of codeOnly.matchAll(/'''([^']*)'''|'([^']*)'/g)) {
-    entries.push(m[1] ?? m[2]);
-  }
-  return entries;
-}
-
-/**
- * .gitleaks.toml is shared boilerplate but routinely carries project-specific allowlist
- * entries (e.g. co-abap's exclusion for vendored ABAP source that trips generic-api-key
- * false positives) — a plain LOCKED overwrite silently deletes those, and the next
- * `git push` fails the pre-push secret scan on findings that were already known-safe.
- * Preserve any project-only `regexes`/`paths` entries by appending them into the new
- * template content before writing, rather than dropping them.
- */
-function mergeGitleaksToml(dest: string, src: string): void {
-  if (!existsSync(dest)) {
-    if (!dryRun) { mkdirSync(dirname(dest), { recursive: true }); copyFileSync(src, dest); }
-    console.log(`  ${dryTag}WROTE: .gitleaks.toml (new)`);
-    return;
-  }
-  const destContent = readFileSync(dest, 'utf8');
-  const srcContent = readFileSync(src, 'utf8');
-  const srcRegexes = new Set(extractGitleaksArray(srcContent, 'regexes'));
-  const srcPaths = new Set(extractGitleaksArray(srcContent, 'paths'));
-  const projectOnlyRegexes = extractGitleaksArray(destContent, 'regexes').filter(e => !srcRegexes.has(e));
-  const projectOnlyPaths = extractGitleaksArray(destContent, 'paths').filter(e => !srcPaths.has(e));
-
-  let merged = srcContent;
-  if (projectOnlyRegexes.length > 0) {
-    merged = merged.replace(
-      /(regexes\s*=\s*\[[\s\S]*?)(\n\])/,
-      `$1\n  # Preserved from this project's prior .gitleaks.toml (not in the current common template):\n` +
-        projectOnlyRegexes.map(e => `  '''${e}''',`).join('\n') + `$2`
-    );
-    console.log(`  ⚠️  Preserved ${projectOnlyRegexes.length} project-specific regex allowlist entr${projectOnlyRegexes.length === 1 ? 'y' : 'ies'} that the template overwrite would have dropped`);
-  }
-  if (projectOnlyPaths.length > 0) {
-    merged = merged.replace(
-      /(paths\s*=\s*\[[\s\S]*?)(\n\])/,
-      `$1\n  # Preserved from this project's prior .gitleaks.toml (not in the current common template):\n` +
-        projectOnlyPaths.map(e => `  '''${e}''',`).join('\n') + `$2`
-    );
-    console.log(`  ⚠️  Preserved ${projectOnlyPaths.length} project-specific path exclusion${projectOnlyPaths.length === 1 ? '' : 's'} that the template overwrite would have dropped`);
-  }
-  diffSummary(dest, src);
-  if (!dryRun) writeFileSync(dest, merged, 'utf8');
-  console.log(`  ${dryTag}WROTE: .gitleaks.toml`);
-}
-
-/**
  * .gitattributes is shared boilerplate but routinely carries project-specific attribute
  * lines (GitLFS trackers, custom merge drivers, project-added eol pins — and the
  * scaffold-time `docs/context.md merge=ours` rule, which the template itself does not
@@ -1529,7 +1482,7 @@ for (const rel of LOCKED_FILES) {
     console.log(`  SKIP (no template): ${rel}`);
   } else {
     console.log(`  LOCKED (merge-aware): ${rel}`);
-    mergeGitleaksToml(dest, src);
+    mergeGitleaksToml(dest, src, { dryRun });
     lockedChanged++;
   }
 }
@@ -1775,7 +1728,11 @@ for (const cmdDir of COMMANDS_DIRS) {
   const tplCmdDir = existsSync(join(templatesDir, cmdDir)) ? join(templatesDir, cmdDir) : join(commonDir, cmdDir);
   if (!existsSync(tplCmdDir)) { console.log(`  SKIP (no template): ${cmdDir}/`); continue; }
   for (const fname of readdirSync(tplCmdDir)) {
-    if (!fname.endsWith('.md')) continue;
+    // Gemini custom commands are TOML-only (T-20261013-009 phase 2): the .gemini
+    // surface stores rendered `<name>.toml`, the .claude surface keeps `<name>.md`.
+    const isMd = fname.endsWith('.md');
+    const isToml = cmdDir === '.gemini/commands' && fname.endsWith('.toml');
+    if (!isMd && !isToml) continue;
     const rel = `${cmdDir}/${fname}`;
     const src = join(tplCmdDir, fname);
     const dest = join(projectDir, rel);
@@ -2070,6 +2027,56 @@ if (existsSync(variantScriptsSrc)) {
   };
   preserveVariantScripts(variantScriptsDst, '');
 
+  // T-20261012-001 completion (T-20261017-001 canary): variant OVERLAY top-level
+  // scripts (templates/<variant>/scripts/*.ts, e.g. co-abap's
+  // validate-abap-platform-parity.ts) had no upgrade delivery path — new-project
+  // §6.6 delivers them at scaffold time, upgrades never did, so the variant's CI
+  // job referencing the script failed with Module-not-found. Same NEW/UPDATE
+  // semantics as the nested walk, delivered to project scripts/ root.
+  const overlayScriptsTop = join(templatesDir, 'scripts');
+  if (existsSync(overlayScriptsTop)) {
+    for (const entry of readdirSync(overlayScriptsTop, { withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.endsWith('.ts')) continue;
+      const rel2 = `scripts/${entry.name}`;
+      const src = join(overlayScriptsTop, entry.name);
+      const projFile = join(projectDir, rel2);
+      const tplVer = extractScriptVersion(src);
+      if (!tplVer) continue;
+      const projVer = existsSync(projFile) ? extractScriptVersion(projFile) : '';
+      if (!existsSync(projFile)) {
+        console.log(`  NEW   ${rel2}  (none) → ${tplVer}`);
+        if (!dryRun) { mkdirSync(dirname(projFile), { recursive: true }); copyFileSync(src, projFile); }
+        console.log(`  ${dryTag}COPIED: ${rel2}`);
+        syncChanged++;
+      } else if (semverGt(tplVer, projVer)) {
+        if (isLocallyModified(projFile)) {
+          console.log(`  ⚠️  CONFLICT ${rel2}  ${projVer} → ${tplVer}  (local modifications exist — template will overwrite)`);
+        } else {
+          console.log(`  UPDATE ${rel2}  ${projVer} → ${tplVer}`);
+          if (!dryRun) copyFileSync(src, projFile);
+          console.log(`  ${dryTag}COPIED: ${rel2}`);
+        }
+        syncChanged++;
+      } else {
+        console.log(`  OK     ${rel2}`);
+      }
+      // Auto-register the delivered top-level script (same contract as the
+      // nested scan below): a delivered script without a row fails the
+      // project's first verify-scripts (T-20261012-001 lesson).
+      const regPath = join(projectDir, 'scripts', 'SCRIPTS.md');
+      if (!dryRun && existsSync(regPath)) {
+        const regText = readFileSync(regPath, 'utf-8');
+        if (!regText.split('\n').some((l) => l.includes(`\`${entry.name}\``))) {
+          const ver = tplVer;
+          appendRegistryRows(regPath, [
+            `| \`${entry.name}\` | L2-only | ${ver} | active | Variant-delivered top-level script (auto-registered at upgrade, T-20261012-001) | —| L2-only | —|`,
+          ]);
+          console.log(`  📝 SCRIPTS.md: registered ${entry.name} (v${ver})`);
+        }
+      }
+    }
+  }
+
   // T-20261012-001: variant top-level/nested-delivered scripts need registry
   // rows in the project scripts/SCRIPTS.md — the L1 snapshot has no rows for
   // them (co-abap's sap-mcp-proxy.ts failed the project's first verify-scripts).
@@ -2102,21 +2109,8 @@ if (existsSync(variantScriptsSrc)) {
       }
     };
     scanVariantScripts(variantScriptsDst, variant);
-    if (missingRows.length > 0) {
-      const lines = reg.split('\n');
-      const regStart = lines.findIndex((l) => /^## Registry/.test(l));
-      if (regStart >= 0) {
-        let insertAt = -1;
-        for (let i = regStart; i < lines.length; i++) {
-          if (/^\|\s*`/.test(lines[i])) insertAt = i + 1;
-          else if (insertAt >= 0 && !/^\|/.test(lines[i])) break;
-        }
-        if (insertAt > 0) {
-          lines.splice(insertAt, 0, ...missingRows);
-          writeFileSync(projectRegPath, lines.join('\n'), 'utf-8');
-          console.log(`  📝 SCRIPTS.md: registered ${missingRows.length} variant-delivered script(s) (T-20261012-001)`);
-        }
-      }
+    if (missingRows.length > 0 && appendRegistryRows(projectRegPath, missingRows)) {
+      console.log(`  📝 SCRIPTS.md: registered ${missingRows.length} variant-delivered script(s) (T-20261012-001)`);
     }
   }
   // Sync the variant SCRIPTS.md registry from the template.
