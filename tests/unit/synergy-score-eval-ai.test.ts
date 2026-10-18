@@ -175,6 +175,21 @@ describe("gate decision judgement_confirmations sidecar (ADR-0182 §5)", () => {
     expect(latest.find((l) => l.gate === "pre_fs")?.judgement_confirmations).toEqual(["확인한 판단 항목"]);
   });
 
+  test("the evidence panel closes the equation: weighted sum → adjustment → recommendation → confirmation", () => {
+    const ev = readFileSync("app/web-next/components/stages/synergy/SynergyScoreEvidence.tsx", "utf8");
+    // The contributions column sums to the rule score (tfoot subtotal), never a bare finalScore.
+    expect(ev).toContain("규칙 가중합");
+    expect(ev).toContain("기여도 합계 = 규칙 점수");
+    expect(ev).toContain("hasAdjustmentGap");
+    expect(ev).toContain("보정 내역이 기록되기 이전 버전");
+    expect(ev).toContain("권고 점수:");
+    expect(ev).toContain("사람 확정");
+    expect(ev).not.toContain("finalScore");
+    const tabs = readFileSync("app/web-next/components/stages/synergy/SynergyTabs.tsx", "utf8");
+    expect(tabs).toContain("recommendedScore={typeof ctx.p?.synergyScore");
+    expect(tabs).toContain("confirmed={ctx.synState?.confirmed");
+  });
+
   test("a confirmed claim renders as a saved-state chip, not a pending checkbox", () => {
     const buckets = readFileSync("app/web-next/components/ReviewBuckets.tsx", "utf8");
     expect(buckets).toContain("confirmedJudgements");
