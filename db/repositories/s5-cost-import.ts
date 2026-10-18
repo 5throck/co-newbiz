@@ -15,6 +15,10 @@ type S5Line = { line: string; category: string; amount: number; amountUnit?: str
 const VALID_CATEGORIES = new Set(["labor", "opex", "capex", "revenue", "gov_rnd"]);
 const PERIOD_MULTIPLIER: Record<string, number> = { monthly: 12, quarterly: 4, yearly: 1, lumpsum: 1 };
 
+function fxRatesOf(db: Database, opportunityId: string): FxRates {
+  return Object.fromEntries(readFx(db, opportunityId).map((f) => [f.currency, f.rate]));
+}
+
 /** Copy the S5 line's own growth rate, validated and clamped to [0,1] (ratio, like the other
  *  rate fields). A missing, non-finite or negative rate copies as 0 — never fabricated. */
 function lineGrowthRate(v: unknown): number {
@@ -33,7 +37,7 @@ export interface S5ImportPlan {
 }
 
 /** Pure read of what an import of this opportunity's S5 plan would copy. */
-export function planS5Import(db: Database, opportunityId: string): S5ImportPlan {
+export function planS5Import(db: Database, opportunityId: string, fxRates?: FxRates): S5ImportPlan {
   const assessment = db
     .query("SELECT business_case_lines_json FROM greenfield_assessment WHERE opportunity_id = ? ORDER BY updated_at DESC LIMIT 1")
     .get(opportunityId) as { business_case_lines_json: string | null } | undefined;
@@ -42,7 +46,6 @@ export function planS5Import(db: Database, opportunityId: string): S5ImportPlan 
     lines = assessment?.business_case_lines_json ? JSON.parse(assessment.business_case_lines_json) : [];
   } catch { /* malformed — treat as none, don't block promotion over it */ }
   const gapJson = (db.query("SELECT capability_gap_json AS j FROM opportunity WHERE id = ?").get(opportunityId) as { j: string | null } | undefined)?.j;
-  const fxRates: FxRates = Object.fromEntries(readFx(db, opportunityId).map((f) => [f.currency, f.rate]));
   const split = splitForPromotion(Array.isArray(lines) ? lines : [], parseGapRegister(gapJson).rows.map(sourceRowOf), fxRates);
   const manualAll = split.manual as S5Line[];
   const kept = manualAll.filter((l) => l?.line?.trim() && VALID_CATEGORIES.has(l.category));
@@ -60,7 +63,8 @@ export function writeS5CostModel(
   db: Database,
   opts: { projectId: string; opportunityId: string; actor: string; now: string; modelName: string; auditSkips: boolean },
 ): S5ImportResult {
-  const plan = planS5Import(db, opts.opportunityId);
+  const fxRates = fxRatesOf(db, opts.opportunityId);
+  const plan = planS5Import(db, opts.opportunityId, fxRates);
   const { split, lines } = plan;
   if (lines.length === 0 && split.capability.length === 0) return { modelId: null, manualCopied: 0, capabilityCopied: 0 };
   const { actor, now } = opts;
