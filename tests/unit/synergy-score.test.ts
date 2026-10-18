@@ -67,6 +67,30 @@ describe("computeSynergyScore", () => {
     expect(computeSynergyScore(mk(0.4)).factors[0].value).toBe(100);
   });
 
+  test("the total can never exceed 100 — even with scope_match saturating at 100 (2026-10-18 decider question)", () => {
+    // Every usable factor at its ceiling: weights renormalize to sum 1, so the
+    // score is a weighted AVERAGE bounded by the max factor value (100), and the
+    // engine clamps regardless. With market/scope/capability all at 100 and the
+    // other two factors excluded, the score must be exactly 100 — not more.
+    const r = computeSynergyScore(baseInputs({
+      capabilityCoverage: 100,
+      profile: { industryExposure: [], strengths: [], ratios: [] }, // industry·재무 팩터 제외
+      markets: [{ industry: "휴머노이드 로봇", cagr: 0.5, relatedIndustries: [] }], // scope 직접 일치 → 100
+    }));
+    expect(r.factors.filter((f) => f.value !== null).map((f) => f.key).sort()).toEqual(["capability_coverage", "market_attractiveness", "scope_match"]);
+    expect(r.factors.filter((f) => f.value !== null).every((f) => f.value === 100)).toBe(true);
+    expect(r.score).toBe(100);
+    // The renormalized weights the panel displays always sum to exactly 1 —
+    // so Σ(기여도) = Σ(점수×가중치) can never cross 100 on screen either.
+    const wsum = r.factors.reduce((s, f) => s + f.weight, 0);
+    expect(wsum).toBeCloseTo(1, 5);
+    expect(Math.round(r.factors.reduce((s, f) => s + (f.value as number) * f.weight, 0))).toBe(r.score);
+    // And a mixed case (only 일치도 at 100) stays far below the ceiling.
+    const mixed = computeSynergyScore(baseInputs({ capabilityCoverage: 40 }));
+    expect(mixed.score).toBeLessThan(100);
+    expect(mixed.score).toBe(Math.round(mixed.factors.filter((f) => f.value !== null).reduce((s, f) => s + (f.value as number) * f.weight, 0)));
+  });
+
   test("fail-closed: fewer than 2 usable factors → null score with missing list", () => {
     const r = computeSynergyScore(baseInputs({
       opportunity: { market_scope: null, value_chain_node: null, name: "op" },
