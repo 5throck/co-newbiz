@@ -91,6 +91,14 @@ export function SynergyScoreEvidence({ factors, recommendedScore, confirmed, rat
   // 보정 유무의 1차 증거는 권고와 규칙 점수의 차이 — scoreAdjustment가 없는
   // 구버전(2026-10-18 이전 산출분)은 사유가 없다는 사실 자체를 명시한다.
   const hasAdjustmentGap = ruleScore !== null && recommendedScore !== null && recommendedScore !== ruleScore;
+  // 2026-10-18 디시더 리포트 — 구 4팩터 체계(가중치 35/30/20/15, 충족도 미포함)로
+  // 저장된 분석은 현재 체계(30/25/15/10/20)와 가중치가 다르고 충족도가 계산에
+  // 없다. 화면이 이 시대 차이를 설명하지 않으면 범례와 표가 어긋나 보인다.
+  const hasCapabilityFactor = breakdown.some((f) => f.key === "capability_coverage");
+  const legacyScheme = hasStored && !hasCapabilityFactor;
+  const storedWeightsText = usable
+    .map((f) => `${f.label} ${Math.round(f.weight * 100)}%`)
+    .join(" · ");
 
   return (
     <div className="p-2 border border-[color:var(--border)] rounded mt-2" data-testid="synergy-score-evidence" aria-label="시너지 점수 산정 근거">
@@ -98,6 +106,12 @@ export function SynergyScoreEvidence({ factors, recommendedScore, confirmed, rat
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
         산정 방법: 필요 역량 충족도를 포함한 {breakdown.length}개 팩터의 점수 × 가중치 합이 규칙 점수가 되고, LLM 가용 시 ±10점 이내 정성 보정이 더해져 권고 점수가 됩니다. 최종 확정은 사람의 행위입니다 (경계 #2).
       </p>
+      {legacyScheme && (
+        <p className="text-[length:var(--fs-caption)] mb-2" role="note">
+          <span className="status-chip status-amber">구 4팩터 체계 저장분</span>{" "}
+          이 분석은 현재 체계 이전에 저장되었습니다 — 저장 가중치({storedWeightsText})가 현재 체계(시장 매력도 30% · 산업·역량 교집합 25% · 재무 여력 15% · 기회-시장 일치도 10% · 필요 역량 충족도 20%)와 다르고, <strong>필요 역량 충족도는 이 버전의 계산에 포함되어 있지 않습니다</strong>. 아래 표는 저장된 그대로의 산출근거이며, 재분석하면 현재 5팩터 체계로 재계산됩니다.
+        </p>
+      )}
       {/* 2026-10-18 디시더 피드백 — 팩터 점수가 어떻게 매겨지는지 화면에서 확인 가능하게. 숫자는
           scoring-weights.ts에서 가져와 범례가 엔진과 어긋나지 않는다. */}
       <details className="mb-2">
@@ -123,6 +137,15 @@ export function SynergyScoreEvidence({ factors, recommendedScore, confirmed, rat
                 <td className="text-[color:var(--muted-fg)]">{f.note}</td>
               </tr>
             ))}
+            {legacyScheme && (
+              <tr className="text-[color:var(--muted-fg)]">
+                <td className="font-semibold">필요 역량 충족도</td>
+                <td className="mono-num">미포함</td>
+                <td className="mono-num">—</td>
+                <td className="mono-num">—</td>
+                <td className="text-[color:var(--muted-fg)]">이 버전 저장 시점에는 이 팩터가 없었습니다 — 재분석 시 현재 체계(20%)로 반영됩니다.</td>
+              </tr>
+            )}
           </tbody>
           <tfoot>
             <tr className="font-semibold">
