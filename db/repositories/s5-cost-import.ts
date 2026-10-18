@@ -92,10 +92,12 @@ export function writeS5CostModel(
     );
   }
   for (const c of split.capability) {
+    // 연간(균분) linked lines carry the per-year amount with the windowed end year;
+    // 일시불 keeps the lump sum in its start year.
     db.run(
       `INSERT INTO business_case_line (id, model_id, category, name, annual_amount_krw_m, unit, start_year, end_year, growth_rate, note, created_by, created_at)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [ulid(), modelId, c.category, c.name, c.krwM, "KRW_M", c.startYear, c.startYear, 0, c.note, actor, now],
+      [ulid(), modelId, c.category, c.name, c.krwM, "KRW_M", c.startYear, c.endYear ?? c.startYear, 0, c.note, actor, now],
     );
   }
   if (opts.auditSkips) {
