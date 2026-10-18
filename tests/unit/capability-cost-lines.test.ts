@@ -737,3 +737,34 @@ describe("FX conversion for foreign investment lines (2026-10-18 decider ask)", 
     expect(noRate.skippedManual).toEqual([{ line: "부품 허브", reason: "currency_non_krw" }]);
   });
 });
+
+describe("start-year override survives partial saves (2026-10-18 decider report)", () => {
+  const crows = [src()];
+  const actor = { userId: "u1", at: NOW };
+
+  test("a save that omits startYear keeps the previously stored override", () => {
+    // First save carries the person's override (startYear 1 for a 36-month judgement).
+    const first = cl.normalizeBusinessCaseLines(
+      [{ source: "capability", capabilityKey: "k1", reflected: true, category: "capex", amount: 3000, amountUnit: "krw_m", amountUnitConfirmed: true, period: "yearly", startYear: 1 }],
+      crows, null, actor,
+    );
+    expect(first.ok).toBe(true);
+    const stored = first.ok ? first.lines : [];
+    // A later save for a DIFFERENT purpose omits startYear entirely.
+    const second = cl.normalizeBusinessCaseLines(
+      [{ source: "capability", capabilityKey: "k1", reflected: true, category: "capex", amount: 3000, amountUnit: "krw_m", amountUnitConfirmed: true, period: "yearly" }],
+      crows, stored, actor,
+    );
+    expect(second.ok).toBe(true);
+    const entry = second.ok ? (second.lines.find((l) => (l as { source?: string }).source === "capability") as { startYear?: number }) : null;
+    expect(entry?.startYear).toBe(1);
+  });
+
+  test("deriveCapabilityCostLines uses the stored override over the months default", () => {
+    // months 36 → default start 3; the stored override (1) wins.
+    const stored = [{ line: "A 역량 해소", category: "capex", amount: 3000, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "lumpsum", note: "n", source: "capability", capabilityKey: "k1", reflected: true, basisHash: cl.costBasisHash(crows[0]), startYear: 1, costKrwM: 3000 }];
+    const view = cl.deriveCapabilityCostLines([src({ months_to_attain: 36 })], stored);
+    expect(view.lines[0].startYear).toBe(1);
+    expect(view.lines[0].endYear).toBe(3); // 1 + ceil(36/12) − 1
+  });
+});
