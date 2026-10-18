@@ -95,7 +95,7 @@ export function writeS5CostModel(
     db.run(
       `INSERT INTO business_case_line (id, model_id, category, name, annual_amount_krw_m, unit, start_year, end_year, growth_rate, note, created_by, created_at)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [ulid(), modelId, c.category, c.name, c.krwM, "KRW_M", c.startYear, c.startYear, 0, c.note, actor, now],
+      [ulid(), modelId, c.category, c.name, c.krwM, "KRW_M", c.startYear, c.endYear ?? c.startYear, 0, c.note, actor, now],
     );
   }
   if (opts.auditSkips) {
