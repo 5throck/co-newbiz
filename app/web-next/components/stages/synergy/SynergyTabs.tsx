@@ -146,10 +146,13 @@ export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState;
                           </p>
                         </div>
                       )}
-          {/* ADR-0182 Phase 2 — 시너지 점수 산정 근거 (팩터별 점수·방법론 기술) */}
+          {/* ADR-0182 Phase 2 — 시너지 점수 산정 근거. 2026-10-18 디시더 피드백:
+              규칙 가중합 → 보정 → 권고 → 사람 확정의 등식이 화면에서 닫히도록
+              권고(payload)와 확정(synState)을 분리해 넘긴다. */}
           <SynergyScoreEvidence
             factors={ctx.p?.synergyScoreFactors}
-            finalScore={ctx.currentScore}
+            recommendedScore={typeof ctx.p?.synergyScore === "number" ? ctx.p.synergyScore : null}
+            confirmed={ctx.synState?.confirmed && ctx.synState.synergyScore != null ? { score: ctx.synState.synergyScore, at: ctx.synState.confirmedAt, by: ctx.synState.confirmedBy } : null}
             rationale={ctx.currentRationale}
             capabilityCoverage={ctx.p?.capabilityCoverage ?? null}
             capabilityCoverageNote={ctx.p?.capabilityCoverageNote ?? null}
