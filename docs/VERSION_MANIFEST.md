@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-18T15:48:56.447Z
+**Generated**: 2026-10-18T21:51:55.779Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -10,7 +10,7 @@
 
 - **Agents**: 42
 - **Skills**: 105
-- **Scripts**: 166 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Scripts**: 167 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 8
 
 ---
@@ -196,7 +196,7 @@
 | archive-memory.ts | 1.1.0 | scripts/archive-memory.ts | N/A |
 | assume.ts | 1.0.0 | scripts/co-newbiz/assume.ts | N/A |
 | audit-variant.ts | 1.0.0 | scripts/co-newbiz/audit-variant.ts | N/A |
-| audit.ts | 2.53.0 | scripts/audit.ts | bun |
+| audit.ts | 2.54.0 | scripts/audit.ts | bun |
 | backfill-brownfield-financial-criteria.ts | 1.0.0 | scripts/co-newbiz/backfill-brownfield-financial-criteria.ts | N/A |
 | backfill-capability-gap.ts | 1.1.0 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
 | backfill-hyd-brk-report.ts | 1.1.0 | scripts/co-newbiz/backfill-hyd-brk-report.ts | N/A |
@@ -238,13 +238,13 @@
 | design-lint.ts | 1.4.0 | scripts/co-newbiz/design-lint.ts | N/A |
 | design-lint.ts | 2.1.0 | scripts/design-lint.ts | js-yaml |
 | deterministic.ts | 1.1.0 | scripts/eval/deterministic.ts | N/A |
-| dev-sync.ts | 1.27.0 | scripts/dev-sync.ts | bun |
+| dev-sync.ts | 1.28.0 | scripts/dev-sync.ts | bun |
 | dispatch-parallel.ts | 1.1.1 | scripts/dispatch-parallel.ts | N/A |
 | dispatch-serial.ts | 1.1.2 | scripts/dispatch-serial.ts | N/A |
 | dispatch.ts | 1.1.1 | scripts/dispatch.ts | N/A |
 | driver-tree.ts | 1.0.0 | scripts/co-newbiz/driver-tree.ts | N/A |
 | env-check.ts | 1.1.1 | scripts/co-newbiz/env-check.ts | N/A |
-| evidence-backport-scan.ts | 1.1.0 | scripts/evidence-backport-scan.ts | N/A |
+| evidence-backport-scan.ts | 1.2.0 | scripts/evidence-backport-scan.ts | N/A |
 | extract-copycode.ts | 1.0.0 | scripts/handbook/extract-copycode.ts | N/A |
 | fin-analyze.ts | 1.0.0 | scripts/co-newbiz/fin-analyze.ts | N/A |
 | fin-pipeline.ts | 1.0.0 | scripts/co-newbiz/fin-pipeline.ts | N/A |
@@ -270,7 +270,7 @@
 | inventory.ts | 1.0.0 | scripts/eval/inventory.ts | js-yaml, zod |
 | job-worker.ts | 1.0.0 | scripts/co-newbiz/job-worker.ts | N/A |
 | kosis-units.ts | 1.0.2 | scripts/co-newbiz/kosis-units.ts | N/A |
-| lifecycle-sync-audit.ts | 1.18.0 | scripts/lifecycle-sync-audit.ts | js-yaml |
+| lifecycle-sync-audit.ts | 1.18.1 | scripts/lifecycle-sync-audit.ts | js-yaml |
 | lint-instructions.ts | 1.0.0 | scripts/lint-instructions.ts | N/A |
 | lint-server-boundary.ts | 1.0.0 | scripts/co-newbiz/lint-server-boundary.ts | N/A |
 | llm-suites.ts | 1.0.0 | scripts/eval/llm-suites.ts | zod |
@@ -290,6 +290,7 @@
 | readme-lifecycle-audit.ts | 1.1.0 | scripts/readme-lifecycle-audit.ts | N/A |
 | regenerate-agents-md.ts | 1.3.0 | scripts/regenerate-agents-md.ts | fs, path |
 | register-hydraulic-breaker-assumptions.ts | 1.0.0 | scripts/co-newbiz/register-hydraulic-breaker-assumptions.ts | N/A |
+| render-commands.ts | 1.1.0 | scripts/render-commands.ts | N/A |
 | render-pdf-deck.ts | 1.0.1 | scripts/render-pdf-deck.ts | N/A |
 | report.ts | 1.0.0 | scripts/co-newbiz/report.ts | N/A |
 | resolve-variants.ts | 1.0.3 | scripts/resolve-variants.ts | fs, js-yaml, path |
@@ -323,7 +324,7 @@
 | typecheck.ts | 1.2.0 | scripts/typecheck.ts | N/A |
 | types.ts | 1.1.0 | scripts/eval/types.ts | N/A |
 | update-footers.ts | 1.0.0 | scripts/handbook/update-footers.ts | N/A |
-| upgrade-project.ts | 1.70.2 | scripts/upgrade-project.ts | N/A |
+| upgrade-project.ts | 1.71.0 | scripts/upgrade-project.ts | N/A |
 | ux-layout-check.ts | 1.0.0 | scripts/co-newbiz/ux-layout-check.ts | N/A |
 | validate-agents.ts | 1.3.2 | scripts/validate-agents.ts | N/A |
 | validate-decisions.ts | 1.1.0 | scripts/validate-decisions.ts | js-yaml |
@@ -339,7 +340,7 @@
 | validate-raci.ts | 1.2.0 | scripts/validate-raci.ts | js-yaml |
 | validate-skills.ts | 1.5.1 | scripts/validate-skills.ts | N/A |
 | validate-surface-registry.ts | 1.1.1 | scripts/validate-surface-registry.ts | N/A |
-| validate-templates.ts | 1.55.0 | scripts/validate-templates.ts | js-yaml |
+| validate-templates.ts | 1.57.0 | scripts/validate-templates.ts | js-yaml |
 | validate-variant-readiness.ts | 1.1.0 | scripts/validate-variant-readiness.ts | N/A |
 | verify-agent-deliverables.ts | 1.0.1 | scripts/verify-agent-deliverables.ts | fs |
 | verify-memory.ts | 1.2.0 | scripts/verify-memory.ts | fs, path |

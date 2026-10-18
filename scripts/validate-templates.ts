@@ -1,7 +1,14 @@
 #!/usr/bin/env bun
 /**
  * Template Lifecycle Validation Script
- * @version 1.55.0
+ * @version 1.57.0
+ *
+ * v1.57.0 (2026-10-14, T-20261014-001): P-02 root↔common commands parity is
+ *          STEM-normalized and toml-aware — the .gemini/commands dirs were
+ *          converted to .toml, so the bare .endsWith('.md') filters made both
+ *          legs empty and the parity passed vacuously. Both sides now list
+ *          .md/.toml, compare stems, and keep the new-project workspace-only
+ *          special case (gemini-parity: skip).
  *
  * v1.55.0 (2026-10-11, T-20261011-002): checkVariantPackageContract crash fix —
  *          the per-variant verdict re-parsed templates/common/package.json
@@ -1481,8 +1488,11 @@ function checkCommands(variant: string): void {
       const soak = SOAK_COMMAND_SURFACES.has(`${platform}/${leaf}`);
       const emit = soak ? warn : fail;
       for (const cmd of allSharedCommands) {
-        if (!existsSync(join(commandsDir, cmd))) {
-          emit('common', 'command-missing', `${platform}/${leaf}/${cmd} not found in common/`);
+        // Gemini custom commands are TOML-only (T-20261013-009 phase 2): the
+        // .gemini surface stores `<name>.toml` rendered from the .claude SSOT.
+        const expected = platform === '.gemini' ? cmd.replace(/\.md$/, '.toml') : cmd;
+        if (!existsSync(join(commandsDir, expected))) {
+          emit('common', 'command-missing', `${platform}/${leaf}/${expected} not found in common/`);
         }
       }
       pass(`common/${platform}/${leaf}: ${allSharedCommands.length} shared commands OK${soak ? ' (soak: WARN until promotion)' : ''}`);
@@ -1970,37 +1980,46 @@ function checkRootCommonCommandsParity(): void {
     },
   ];
 
+  // T-20261014-001: extension-aware — the .gemini/commands dirs were converted
+  // to .toml, so legs filter by STEM (name without .md/.toml) on both sides.
+  // A bare .endsWith('.md') made both toml-only legs empty and the parity pass
+  // vacuously.
+  const commandStems = (dir: string): string[] =>
+    existsSync(dir)
+      ? readdirSync(dir)
+          .filter(f => f.endsWith('.md') || f.endsWith('.toml'))
+          .map(f => f.replace(/\.(md|toml)$/, ''))
+      : [];
+
   for (const { rootDir, commonDir, label } of pairs) {
     if (!existsSync(rootDir)) continue;
-    const rootFiles = readdirSync(rootDir).filter(f => f.endsWith('.md'));
-    const commonFiles = existsSync(commonDir)
-      ? new Set(readdirSync(commonDir).filter(f => f.endsWith('.md')))
-      : new Set<string>();
+    const rootStems = new Set(commandStems(rootDir));
+    const commonStems = new Set(commandStems(commonDir));
 
-    // Special case: new-project.md has gemini-parity: skip
+    // Special case: new-project has gemini-parity: skip
     // It should exist in .claude/commands/ but NOT in .gemini/commands/
-    const workspaceOnlyCmd = 'new-project.md';
+    const workspaceOnlyCmd = 'new-project';
     const isGemini = label.includes('.gemini');
 
     // Filter out the workspace-only command when checking parity
-    // new-project.md is workspace-only and should NOT be in common/
-    const filesToCheck = rootFiles.filter(f => f !== workspaceOnlyCmd);
+    // new-project is workspace-only and should NOT be in common/
+    const filesToCheck = [...rootStems].filter(f => f !== workspaceOnlyCmd);
 
-    const missing = filesToCheck.filter(f => !commonFiles.has(f));
+    const missing = filesToCheck.filter(f => !commonStems.has(f));
     if (missing.length > 0) {
       fail('root', 'command-parity',
         `Root ${label}/ has files not mirrored in templates/common/${label}/: ${missing.join(', ')}`,
         `Copy missing files to templates/common/${label}/`
       );
     } else {
-      // Verify that new-project.md is NOT in .gemini/commands/
-      if (isGemini && rootFiles.includes(workspaceOnlyCmd)) {
+      // Verify that new-project is NOT in .gemini/commands/
+      if (isGemini && rootStems.has(workspaceOnlyCmd)) {
         fail('root', 'command-parity',
           `Root ${label}/ contains ${workspaceOnlyCmd} but it has gemini-parity: skip — remove from ${label}`,
           `Remove ${workspaceOnlyCmd} from ${label} (it should only exist in .claude/commands/)`
         );
       } else {
-        pass(`Root ↔ common ${label} parity OK (${rootFiles.length} file(s))`);
+        pass(`Root ↔ common ${label} parity OK (${rootStems.size} command(s))`);
       }
     }
   }
