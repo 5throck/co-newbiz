@@ -43,6 +43,7 @@ export function CapabilityCostBlock({ lines, orphans, totals, warnings, candidat
         <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
           읽기 전용입니다. 금액은 S5 판정의 해소 비용에서 정해지며(백만원, 일시불), 바꾸려면 판정을 바꾸세요.
           투자비에 담을지는 사람이 줄마다 정하며, "선택한 비용을 투자비에 반영"을 눌러 저장해야 반영됩니다. 확정된 판정만 처음부터 선택됩니다.
+          여기서 "투자비"는 설비투자만이 아니라 판정 분류(인건비·운영비·설비투자)로 구분되는 투자 계획 항목 전체를 가리킵니다 — 운영비 항목도 이 블록에서 반영합니다.
         </p>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">금액 (단위: 백만원)</p>
         {r && canAct && (
@@ -85,7 +86,8 @@ export function CapabilityCostBlock({ lines, orphans, totals, warnings, candidat
                   <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">해소 방식 {l.resolutionLabel}</span>
                   <span className="font-semibold">{formatKrwM(l.costKrwM)}</span>
                   <select
-                    aria-label={`${l.name} 분류`}
+                    aria-label={`${l.name} 분류 (인건비·운영비·설비투자)`}
+                    title="반영되는 계획 카테고리 — 설비투자(capex)뿐 아니라 운영비(opex)·인건비(labor) 항목도 여기서 반영합니다"
                     value={l.category}
                     disabled={!canAct}
                     onChange={(e) => onCategory(l.capabilityKey, e.target.value as CostCategory)}
