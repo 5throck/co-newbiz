@@ -3,6 +3,7 @@
 // Split from components/stages/SynergyStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import { useState } from "react";
 import { api } from "../../../lib/api.ts";
+import { useConfirm } from "../../crud.tsx";
 import type { SynergyResultState } from "./useSynergyResult.ts";
 import type { SynergyPayload } from "./types.ts";
 import { ColGroup } from "../../ui.tsx";
@@ -44,6 +45,38 @@ export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState;
   // 프리필한다. 프리필은 사람이 누른 버튼의 결과이며 확정 저장은 사람의 행위다(경계 #2).
   const [aiAdjBusy, setAiAdjBusy] = useState(false);
   const [aiAdjNote, setAiAdjNote] = useState<string | null>(null);
+  // ADR-0182 (2026-10-18 디시더 요청) — 구 4팩터 저장분을 현재 체계(충족도 포함
+  // 5팩터)로 전환하는 재계산. 저장된 S1 시장·프로파일·레지스터를 현재 가중치로
+  // 규칙 재계산하고 LLM 가용 시 ±10 보정을 더해 새 버전으로 기록한다 — 버튼은
+  // 사람이 누르고, 기록 후 점수가 바뀌면 기존 확정은 무효화된다(재분석과 같은 규칙).
+  const { confirm, confirmDialog } = useConfirm();
+  const [rescoreBusy, setRescoreBusy] = useState(false);
+  const [rescoreNote, setRescoreNote] = useState<string | null>(null);
+  const storedFactors = Array.isArray(p.synergyScoreFactors) ? (p.synergyScoreFactors as Array<{ key?: unknown }>) : [];
+  const legacyScheme = storedFactors.length > 0 && !storedFactors.some((f) => f?.key === "capability_coverage");
+  function requestRescore() {
+    if (rescoreBusy || !ctx.analysis?.id) return;
+    confirm("구 체계 저장분을 현재 5팩터 체계로 재계산할까요?", () => void rescoreCurrentScheme(), {
+      body: "저장된 S1 시장·프로파일·필요 역량 레지스터를 현재 가중치로 다시 계산하고, LLM 가용 시 ±10점 이내 보정을 더해 새 버전으로 기록합니다. 점수가 바뀌면 기존 사람 확정은 무효화됩니다.",
+      confirmLabel: "재계산",
+    });
+  }
+  async function rescoreCurrentScheme() {
+    if (!ctx.analysis?.id || rescoreBusy) return;
+    setRescoreBusy(true); setRescoreNote(null);
+    try {
+      const r = await api.post<{ message: string }>(`/api/synergy/analyses/${encodeURIComponent(ctx.analysis.id)}/rescore`, {});
+      setRescoreNote(r.data.message);
+      ctx.onRefresh?.();
+      // 재계산이 권고를 다시 기록하면(점수 변경 시 확정 무효화) 확정 상태도
+      // 함께 다시 읽어야 패널이 서버 기준 상태를 보여준다.
+      await ctx.refreshSynState?.();
+    } catch (err) {
+      setRescoreNote(err instanceof Error ? err.message : "재계산 실패");
+    } finally {
+      setRescoreBusy(false);
+    }
+  }
   async function proposeAdjustment() {
     if (!ctx.analysis?.id || aiAdjBusy || currentScore == null) return;
     setAiAdjBusy(true); setAiAdjNote(null);
@@ -149,6 +182,23 @@ export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState;
           {/* ADR-0182 Phase 2 — 시너지 점수 산정 근거. 2026-10-18 디시더 피드백:
               규칙 가중합 → 보정 → 권고 → 사람 확정의 등식이 화면에서 닫히도록
               권고(payload)와 확정(synState)을 분리해 넘긴다. */}
+          {legacyScheme && canCurate && opportunityId && (
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <button
+                type="button"
+                className="btn-ghost btn-sm"
+                disabled={rescoreBusy}
+                title="저장된 S1 시장·프로파일·필요 역량 레지스터를 현재 가중치(충족도 포함 5팩터)로 다시 계산하고, LLM 가용 시 ±10점 이내 보정을 더해 새 버전으로 기록합니다."
+                onClick={requestRescore}
+              >
+                {rescoreBusy ? "재계산 중..." : <><span aria-hidden="true">🤖</span> 현재 체계로 재계산 (AI)</>}
+              </button>
+              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                구 4팩터 저장분을 충족도 포함 현재 체계로 전환합니다 — 점수가 바뀌면 기존 확정은 무효화됩니다.
+              </span>
+            </div>
+          )}
+          {rescoreNote && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{rescoreNote}</p>}
           <SynergyScoreEvidence
             factors={ctx.p?.synergyScoreFactors}
             recommendedScore={typeof ctx.p?.synergyScore === "number" ? ctx.p.synergyScore : null}
@@ -158,6 +208,7 @@ export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState;
             capabilityCoverageNote={ctx.p?.capabilityCoverageNote ?? null}
             adjustment={ctx.p?.scoreAdjustment ?? null}
           />
+          {confirmDialog}
                     </>
                   ) : (
                     <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">연결된 분석에 시너지 점수 권고가 아직 없습니다 — 분석 완료 후 권고가 기록됩니다.</p>

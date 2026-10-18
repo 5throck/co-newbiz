@@ -109,6 +109,9 @@ call_sites:
   - file: app/web-next/app/api/opportunities/[id]/entry-market-derivation/draft/route.ts
     sites: 2
     exempt: "Route-level LLM draft or recommendation; the golden set has no expectation type for it yet. Add a suite before its output is relied on. The second call site is the one strict-validation repair retry (redesign slice 3, 2026-10-17); covered by fixture tests in tests/unit/entry-market-draft-reliability.test.ts."
+  - file: app/web-next/lib/synergy-rescore.ts
+    sites: 1
+    exempt: "Legacy-scheme conversion: mirrors the pipeline's ±10-bounded s4.synergy_ic adjustment on rescore; shape/clamps/no-overwrite covered in tests/unit/synergy-rescore.test.ts."
   - file: app/web-next/app/api/synergy/ai-areas/route.ts
     sites: 1
     exempt: "On-demand AI synergy-area suggestion; no eval suite for open-ended area proposals yet."
