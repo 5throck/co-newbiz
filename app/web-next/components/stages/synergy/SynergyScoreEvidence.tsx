@@ -19,11 +19,46 @@ interface ScoreFactorView {
   note: string;
 }
 
+import { FINANCIAL_CAPACITY_PARAMS, MARKET_ATTRACTIVENESS_CURVE, SYNERGY_FACTOR_WEIGHTS } from "../../../lib/scoring-weights.ts";
+
 export interface ScoreConfirmedInfo {
   score: number;
   at: string | null;
   by: string | null;
 }
+
+const pct = (v: number) => `${Math.round(v * 100)}%`;
+const CURVE = MARKET_ATTRACTIVENESS_CURVE;
+const F = FINANCIAL_CAPACITY_PARAMS;
+
+/** 팩터 점수 산출 규칙 — numbers come from lib/scoring-weights.ts so the legend cannot drift from the engine. */
+const FACTOR_RULES: Array<{ key: string; label: string; rule: string }> = [
+  {
+    key: "market_attractiveness",
+    label: `시장 매력도 (가중치 ${pct(SYNERGY_FACTOR_WEIGHTS.market_attractiveness)})`,
+    rule: `연계 시장 CAGR를 구간선형으로 환산합니다 — CAGR 0% → 0점, ${pct(CURVE.cagrMidpoint)} → 50점, ${pct(CURVE.cagrMidpoint + CURVE.cagrUpperSpan)} 이상 → 100점 (성숙 시장이 0점으로 납작해지지 않게 하는 곡선).`,
+  },
+  {
+    key: "industry_match",
+    label: `산업·역량 교집합 (가중치 ${pct(SYNERGY_FACTOR_WEIGHTS.industry_match)})`,
+    rule: "S1 인접 산업 목록에서 프로파일의 산업 노출·강점과 어휘가 겹치는 산업 수 ÷ 인접 산업 수 × 100.",
+  },
+  {
+    key: "financial_capacity",
+    label: `재무 여력 (가중치 ${pct(SYNERGY_FACTOR_WEIGHTS.financial_capacity)})`,
+    rule: `최신 연도 DART 비율로 계산 — 기본 ${F.base}점에서 시작해 부채비율 ${pct(F.debtFloor)} 초과분에 ×${F.debtPenaltySlope} 감점(최대 −${F.debtPenaltyMax}), ROE ×${F.roeSlope}의 ${pct(F.roeContribution)}과 영업이익률 ×${F.marginSlope}의 ${pct(F.marginContribution)}을 가산, 0-100으로 잘라냅니다.`,
+  },
+  {
+    key: "scope_match",
+    label: `기회-시장 일치도 (가중치 ${pct(SYNERGY_FACTOR_WEIGHTS.scope_match)})`,
+    rule: "기회의 시장 범위가 S1 산업명과 직접 일치하면 100점, 아니면 어휘 겹침 비율로 판정합니다.",
+  },
+  {
+    key: "capability_coverage",
+    label: `필요 역량 충족도 (가중치 ${pct(SYNERGY_FACTOR_WEIGHTS.capability_coverage)})`,
+    rule: "필요 역량 레지스터의 전체 보유율 × 0.5 + 필수 행 충족율 × 0.5 — 레지스터가 비어 있거나 전부 미판정이면 이 팩터는 제외됩니다.",
+  },
+];
 
 interface ScoreEvidenceProps {
   /** synergyScoreFactors from the stored analysis payload — ADR-0103 형식. */
@@ -63,6 +98,16 @@ export function SynergyScoreEvidence({ factors, recommendedScore, confirmed, rat
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
         산정 방법: 필요 역량 충족도를 포함한 {breakdown.length}개 팩터의 점수 × 가중치 합이 규칙 점수가 되고, LLM 가용 시 ±10점 이내 정성 보정이 더해져 권고 점수가 됩니다. 최종 확정은 사람의 행위입니다 (경계 #2).
       </p>
+      {/* 2026-10-18 디시더 피드백 — 팩터 점수가 어떻게 매겨지는지 화면에서 확인 가능하게. 숫자는
+          scoring-weights.ts에서 가져와 범례가 엔진과 어긋나지 않는다. */}
+      <details className="mb-2">
+        <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">팩터 점수 기준 보기 (각 팩터의 0-100 점수 산출 규칙)</summary>
+        <ul className="sizing-note-list mt-1">
+          {FACTOR_RULES.map((r) => (
+            <li key={r.key}><span className="font-semibold">{r.label}</span> — {r.rule}</li>
+          ))}
+        </ul>
+      </details>
       {hasStored ? (
         <table className="data-table w-full text-[length:var(--fs-caption)]" aria-label="시너지 점수 팩터별 근거">
           <thead>
