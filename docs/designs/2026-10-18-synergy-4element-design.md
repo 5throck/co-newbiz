@@ -181,3 +181,18 @@ FX 환산이 없어 외화 항목이 통째로 제외되고 있었다(환율 미
   연간 반복 = 금액 × 계수. 종료 연차는 연동 행에서 편집 가능(#641)이고 저장·승격까지
   이관된다(splitForPromotion/writeS5CostModel: end_year 저장, 연간 = 연간 집행액).
 - 기존 저장분(주기 없음)은 일시불 취급으로 합계·벡터 불변 — 마이그레이션 불요.
+
+## As-built (2026-10-19, decider feedback slice 11 — 표→판정 동기화·dialog 총액 가시화)
+
+디시더 리포트: "투자비 항목에서 S5 연관 항목의 분류/주기 변경 시 판정에 반영되지
+않는다 + 판정 UI 개선 필요".
+
+- **표→판정 동기화**: 연동 행의 주기 select 변경이 `judgeApiRef.patchDraft(key,
+  { period })`로 판정 draft에 즉시 반영된다(분류와 동일 패턴 — 기존에는 분류만).
+- **저장 시 판정 flush**: `CapabilityJudgementEditor.onEditorApi`에 `saveDirty`
+  노출 — GreenfieldStage의 세 저장 경로(진출전략 save/반영 reflectCosts/투자비 항목
+  saveInvestmentLines)가 POST 전에 `await saveDirty()`로 판정 PUT을 먼저 실행한다.
+  표의 분류·주기 변경이 한 번의 저장으로 판정까지 기록된다.
+- **dialog 총액 가시화**: 연동 fieldset에 `집행 기간 총액` readout 추가 — 주기당
+  금액 × 주기계수(월×12·분기×4·연간·일시불×1) × 창구 연수. 예: 금액 3,000 연간 +
+  36개월 + 시작 3연차 → 총액 9,000백만원 (Y3~Y5).
