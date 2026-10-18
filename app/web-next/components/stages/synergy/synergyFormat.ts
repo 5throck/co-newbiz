@@ -24,7 +24,7 @@ export const STEP_TITLES = ["DART 재무 입수", "외부 리서치", "재무 �
 export const TABS = [
   ["overview", "개요"],
   ["linkage", "연계 시너지"],
-  ["shortlist", "우선 시너지 영역"],
+  ["shortlist", "주요 검토 영역"],
   ["capability", "필요 역량"],
   ["decision", "의사결정"],
   ["refs", "출처·노트"],
