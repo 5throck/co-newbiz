@@ -115,6 +115,16 @@ describe("judgement dialog structure", () => {
     expect(dlg).toContain("export const RATIONALE_MAX = 600");
     // 2026-10-18: the 시작 연차 input joins 금액·기간(개월) — the dialog now has three numeric inputs.
     expect(dlg.match(/type="number"/g)?.length).toBe(3);
+    // Rules of Hooks guard (2026-10-18 live error): every useState must sit
+    // ABOVE the dialog's `if (!mounted) return null` early return.
+    {
+      const early = dlg.indexOf("if (!mounted) return null;");
+      expect(early).toBeGreaterThan(0);
+      const beforeEarly = dlg.slice(0, early);
+      const afterEarly = dlg.slice(early);
+      expect((afterEarly.match(/useState\(/g) ?? []).length).toBe(0);
+      expect((beforeEarly.match(/useState\(/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    }
     expect(dlg).toContain('{ value: "", text: "미판정" }');
     for (const [v, t] of [["high", "높음"], ["medium", "중간"], ["low", "낮음"]]) expect(dlg).toContain(`{ value: "${v}", text: "${t}" }`);
     expect(dlg).toContain("RESOLUTION_EXPECTED_LEVEL_HINT[resolution]");
