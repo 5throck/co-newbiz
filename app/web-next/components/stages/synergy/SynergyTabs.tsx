@@ -1,35 +1,72 @@
 "use client";
 
 // Split from components/stages/SynergyStage.tsx (Wave U-3 decomposition); behavior unchanged.
+import { useState } from "react";
+import { api } from "../../../lib/api.ts";
 import type { SynergyResultState } from "./useSynergyResult.ts";
 import type { SynergyPayload } from "./types.ts";
 import { ColGroup } from "../../ui.tsx";
 import { SynergyScoreEvidence } from "./SynergyScoreEvidence.tsx";
 import { shortlistColPct } from "./constants.ts";
 
-export function SynergyOverviewTab({ ctx, p }: { ctx: SynergyResultState; p: SynergyPayload }) {
-  const { tab, confirmError, currentScore, synState, currentRationale, canCurate, opportunityId, confirmForm, setConfirmForm, confirmSaving, confirmSynergyScore, retractSynergyScore } = ctx;
+/** ADR-0182 — 프로파일 요약은 탭이 아니라 관계도 아래 상시 컨텍스트.
+ *  상세 재무·강/약점은 /our-company 담당(ADR-0094)이므로 요약+딥링크만 남긴다. */
+export function SynergyProfileContext({ p }: { p: SynergyPayload }) {
   return (
-    <>{tab === "overview" && (
+    <div className="sizing-grade-card mb-3">
+      <div className="flex flex-wrap items-center gap-2 mb-1">
+        <strong className="text-[0.9rem]">{p.target?.name ?? p.company.name}</strong>
+        {p.dataSources?.dart && <span className="status-chip status-green">DART {p.dataSources.dartYear ?? ""}</span>}
+        {(p.financialStrengths?.length ?? 0) > 0 && <span className="status-chip status-in-progress">강점 {p.financialStrengths.length}건</span>}
+        {(p.financialWeaknesses?.length ?? 0) > 0 && <span className="status-chip status-not-started">약점 {p.financialWeaknesses.length}건</span>}
+        {p.profileRef && (
+          <a
+            href={p.profileRef.kind === "affiliate" ? `/our-company?member=${encodeURIComponent(p.profileRef.id)}` : "/our-company"}
+            className="text-[color:var(--accent)] underline text-[length:var(--fs-caption)]"
+          >
+            상세 프로파일 보기 →
+          </a>
+        )}
+      </div>
+      {p.businessAssessment && (
+        <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" style={{ whiteSpace: "pre-line" }}>{p.businessAssessment}</p>
+      )}
+    </div>
+  );
+}
+
+/** ADR-0182 — 시너지 점수 평가 탭(구 개요 탭의 점수 부분): 현재 기록 →
+ *  사람 확정 편집기(경계 #2) → 팩터별 산정 근거(SynergyScoreEvidence). */
+export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState; p: SynergyPayload }) {
+  const { tab, confirmError, currentScore, synState, currentRationale, canCurate, opportunityId, confirmForm, setConfirmForm, confirmSaving, confirmSynergyScore, retractSynergyScore } = ctx;
+  // ADR-0182 Phase 4 — AI 보정 제안(초안). 저장된 근거(규칙 팩터·주요 검토
+  // 영역·필요 역량 충족도)에서 ±10 이내 보정을 다시 제안받아 확인 폼에
+  // 프리필한다. 프리필은 사람이 누른 버튼의 결과이며 확정 저장은 사람의 행위다(경계 #2).
+  const [aiAdjBusy, setAiAdjBusy] = useState(false);
+  const [aiAdjNote, setAiAdjNote] = useState<string | null>(null);
+  async function proposeAdjustment() {
+    if (!ctx.analysis?.id || aiAdjBusy || currentScore == null) return;
+    setAiAdjBusy(true); setAiAdjNote(null);
+    try {
+      const r = await api.post<{ proposal: { adjustment: number; rationale: string } | null; note: string | null }>(
+        "/api/synergy/ai-score-adjustment",
+        { analysisId: ctx.analysis.id },
+      );
+      setAiAdjNote(r.data.note);
+      if (r.data.proposal) {
+        const next = Math.max(0, Math.min(100, currentScore + r.data.proposal.adjustment));
+        setConfirmForm({ score: String(next), rationale: r.data.proposal.rationale });
+      }
+    } catch (err) {
+      setAiAdjNote(err instanceof Error ? err.message : "AI 보정 제안 실패");
+    } finally {
+      setAiAdjBusy(false);
+    }
+  }
+  return (
+    <>{tab === "scoreEval" && (
             <div className="text-[0.88rem]">
-              <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">◎</span> 프로파일 요약 — 상세는 그룹/계열사 분석 담당</h3>
-              <div className="sizing-grade-card mb-3">
-                <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <strong className="text-[0.9rem]">{p.target?.name ?? p.company.name}</strong>
-                  {p.dataSources?.dart && <span className="status-chip status-green">DART {p.dataSources.dartYear ?? ""}</span>}
-                  {(p.financialStrengths?.length ?? 0) > 0 && <span className="status-chip status-in-progress">강점 {p.financialStrengths.length}건</span>}
-                  {(p.financialWeaknesses?.length ?? 0) > 0 && <span className="status-chip status-not-started">약점 {p.financialWeaknesses.length}건</span>}
-                  {p.profileRef && (
-                    <a
-                      href={p.profileRef.kind === "affiliate" ? `/our-company?member=${encodeURIComponent(p.profileRef.id)}` : "/our-company"}
-                      className="text-[color:var(--accent)] underline text-[length:var(--fs-caption)]"
-                    >
-                      상세 프로파일 보기 →
-                    </a>
-                  )}
-                </div>
-                <p className="mb-0 text-[length:var(--fs-body)]" style={{ whiteSpace: "pre-line" }}>{p.businessAssessment}</p>
-              </div>
+              <h3 className="sizing-step-title text-[0.95rem]">시너지 점수 평가 — 산정 근거와 확정</h3>
               {p.opportunity && (
                 <div className="sizing-grade-card mb-3">
                   <h4 className="text-[length:var(--fs-body)] mb-2">연결 기회 — S2 기회발굴</h4>
@@ -85,6 +122,17 @@ export function SynergyOverviewTab({ ctx, p }: { ctx: SynergyResultState; p: Syn
                                 AI 초안 불러오기
                               </button>
                             )}
+                            {currentScore != null && (
+                              <button
+                                type="button"
+                                className="btn-ghost btn-sm"
+                                disabled={aiAdjBusy}
+                                title="저장된 근거(규칙 팩터·주요 검토 영역·필요 역량 충족도)에서 ±10 이내 보정 초안을 제안받아 폼에 채웁니다 — 검토·수정 후 확정하세요."
+                                onClick={() => void proposeAdjustment()}
+                              >
+                                {aiAdjBusy ? "제안 생성 중..." : "🤖 AI 보정 제안"}
+                              </button>
+                            )}
                             <button type="button" className="btn-ghost btn-sm" disabled={confirmSaving || confirmForm.score === ""} onClick={confirmSynergyScore}>
                               {confirmSaving ? "저장 중..." : "확정 저장"}
                             </button>
@@ -92,6 +140,7 @@ export function SynergyOverviewTab({ ctx, p }: { ctx: SynergyResultState; p: Syn
                               <button type="button" className="btn-ghost btn-sm" disabled={confirmSaving} onClick={retractSynergyScore}>확정 철회</button>
                             )}
                           </div>
+                          {aiAdjNote && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">{aiAdjNote}</p>}
                           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">
                             확정된 점수만 S4 진출방식 결정의 트랙 판단 근거로 반영됩니다. 재분석이 다른 점수를 기록하면 확정은 자동으로 무효화됩니다.
                           </p>
@@ -122,10 +171,10 @@ export function SynergyShortlistTab({ ctx, p }: { ctx: SynergyResultState; p: Sy
   return (
     <>{tab === "shortlist" && (
             <div className="text-[0.88rem]">
-              <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge sizing-step-badge-deep">4</span> 우선 시너지 영역 — 선별 결과</h3>
+              <h3 className="sizing-step-title text-[0.95rem]">주요 검토 영역 — 선별 결과</h3>
               <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-              <table className="data-table list-table table-fixed-pct tmin-56" aria-label="우선 시너지 영역">
-                <caption className="sr-only">우선 시너지 영역</caption>
+              <table className="data-table list-table table-fixed-pct tmin-56" aria-label="주요 검토 영역">
+                <caption className="sr-only">주요 검토 영역</caption>
                 <ColGroup widths={shortlistColPct(canCurate ? 6 : 5)} />
                 <thead><tr><th scope="col">순위</th><th scope="col">영역</th><th scope="col">판정</th><th scope="col">사유</th><th scope="col">출처</th>{canCurate && <th scope="col"><span className="sr-only">작업</span></th>}</tr></thead>
                 <tbody>

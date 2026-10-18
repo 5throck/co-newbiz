@@ -6,7 +6,7 @@ import { ListBackButton } from "../../ListBackButton.tsx";
 import { PrimaryAction } from "../../ui.tsx";
 import { GateDecisionPanel } from "../../GateDecisionPanel.tsx";
 import { useSynergyResult } from "./useSynergyResult.ts";
-import { SynergyOverviewTab, SynergyShortlistTab } from "./SynergyTabs.tsx";
+import { SynergyScoreEvaluationTab, SynergyShortlistTab, SynergyProfileContext } from "./SynergyTabs.tsx";
 import { SynergyCapabilityTab } from "./SynergyCapabilityTab.tsx";
 import { SynergyFlowDiagram } from "./SynergyFlowDiagram.tsx";
 import { SynergyLinkageTab } from "./SynergyLinkageTab.tsx";
@@ -35,7 +35,7 @@ export function SynergyResult(props0: {
           !canCurate ? "적합성 평가 저장은 analyst 권한이 필요합니다."
             : !opportunityId ? "기회와 연결된 분석에서만 저장할 수 있습니다."
             : confirmSaving ? "저장 중입니다."
-            : "개요 탭에서 점수(0~100)를 입력하면 저장할 수 있습니다."
+            : "시너지 점수 평가 탭에서 점수(0~100)를 입력하면 저장할 수 있습니다."
         }
       />
       <SectionToolbar
@@ -56,14 +56,7 @@ export function SynergyResult(props0: {
           </span>
         }
         actions={
-          <>
-            <ListBackButton onClick={onBack} />
-            {canCurate && (
-              <button type="button" className="btn-ghost" disabled={inProgress} onClick={onRerun}>
-                재분석
-              </button>
-            )}
-          </>
+          <ListBackButton onClick={onBack} />
         }
       />
 
@@ -85,7 +78,8 @@ export function SynergyResult(props0: {
           </div>
 
           {/* ADR-0182 Phase 1 — 4요소 관계도: 연계(후보) → 우선(선별) → 필요 역량(레지스터) → 시너지 점수.
-              노트 클릭 시 해당 탭으로 이동. */}
+              노트 클릭 시 해당 탭으로 이동. 프로파일 요약(구 개요 탭)은 탭이 아니라
+              이 관계도 아래 상시 컨텍스트로 표시 — 상세는 /our-company(ADR-0094). */}
           <SynergyFlowDiagram
             data={{
               linkageCount: ctx.p?.marketLinkage.synergyAreas.length ?? 0,
@@ -99,12 +93,15 @@ export function SynergyResult(props0: {
             activeTab={tab}
             onJump={onTab}
           />
+          <SynergyProfileContext p={p} />
 
           {tab === "linkage" && <SynergyLinkageTab ctx={ctx} p={p} />}
 
           {tab === "shortlist" && <SynergyShortlistTab ctx={ctx} p={p} />}
 
           {tab === "capability" && <SynergyCapabilityTab ctx={ctx} p={p} />}
+
+          {tab === "scoreEval" && <SynergyScoreEvaluationTab ctx={ctx} p={p} />}
 
           {tab === "refs" && (
             <div className="text-[0.88rem]">

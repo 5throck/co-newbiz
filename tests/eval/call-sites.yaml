@@ -112,3 +112,6 @@ call_sites:
   - file: app/web-next/app/api/synergy/ai-areas/route.ts
     sites: 1
     exempt: "On-demand AI synergy-area suggestion; no eval suite for open-ended area proposals yet."
+  - file: app/web-next/app/api/synergy/ai-score-adjustment/route.ts
+    sites: 1
+    exempt: "On-demand AI score-adjustment draft (±10 bounded, editor prefill only); shape/clamps/no-write covered in tests/unit/synergy-score-eval-ai.test.ts. No eval suite for open-ended rationales yet."

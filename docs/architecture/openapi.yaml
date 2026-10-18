@@ -2500,6 +2500,15 @@ paths:
       responses:
         "200":
           description: Suggested areas or an honest note.
+  /api/synergy/ai-score-adjustment:
+    post:
+      operationId: suggestScoreAdjustment
+      summary: On-demand AI score-adjustment draft for the score confirm editor (analyst+, writes nothing, ±10 bounded).
+      tags:
+        - synergy
+      responses:
+        "200":
+          description: A bounded adjustment proposal or an honest note.
   /api/market-overview/analyses/{id}/unit:
     get:
       operationId: getMarketAnalysisUnit

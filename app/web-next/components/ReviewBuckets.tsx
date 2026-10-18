@@ -108,6 +108,9 @@ export function ReviewBuckets({
   headerPrimary,
   variant = "summary",
   headerSlot,
+  judgementChecks,
+  onToggleJudgement,
+  onDecisionJump,
 }: {
   entityType: "opportunity" | "project";
   entityId: string;
@@ -120,6 +123,13 @@ export function ReviewBuckets({
   variant?: ReviewVariant;
   /** Expanded variant only: rendered on the header row beside the three counts (the inbox primary link). */
   headerSlot?: ReactNode;
+  /** ADR-0182 §5 — controlled "사람 확인" state for needs_judgement items,
+   *  keyed by claim text. Checkboxes render only when onToggleJudgement is
+   *  given (i.e. the surrounding panel records the decision). */
+  judgementChecks?: Record<string, boolean>;
+  onToggleJudgement?: (claim: string, checked: boolean) => void;
+  /** Discoverability: jump from the 판단 필요 bucket to the decision form. */
+  onDecisionJump?: () => void;
 }) {
   const { me } = useAuth();
   const canRequest = entityType === "project" ? canWriteProject(me?.role) : canWriteBusiness(me?.role);
@@ -298,19 +308,36 @@ export function ReviewBuckets({
                       {BUCKET_TITLE[b.key].ko}, {items.length}건
                     </h4>
                     <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{b.hint}</p>
+                    {b.key === "needs_judgement" && items.length > 0 && onDecisionJump && (
+                      <button type="button" className="btn-ghost btn-sm mb-1" onClick={onDecisionJump}>
+                        이 항목들을 검토한 뒤 결정을 기록하세요 →
+                      </button>
+                    )}
                     {items.length === 0 ? (
                       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">해당 항목 없음</p>
                     ) : (
                       <ul className="review-items text-[length:var(--fs-caption)]">
                         {items.map(({ it, s }) => {
                           const l = localizeItem(it);
+                          const claimKey = `${s.id}-${it.claim}`;
+                          const judgementable = b.key === "needs_judgement" && !!onToggleJudgement && canRequest;
                           return (
-                            <li key={`${s.id}-${it.claim}`}>
+                            <li key={claimKey}>
                               <span className="font-semibold" title={l.localized ? it.claim : undefined}>{l.claim}</span>
                               <span className="block text-[color:var(--muted-fg)]" title={l.localized ? it.reason : undefined}>{l.reason}</span>
                               <span className="block text-[color:var(--muted-fg)]">
                                 출처: {citationLabel(s.origin, s.reviewer_domain, it.evidence_ref)}
                               </span>
+                              {judgementable && (
+                                <label className="flex items-center gap-1 mt-1 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={judgementChecks?.[it.claim] ?? false}
+                                    onChange={(e) => onToggleJudgement?.(it.claim, e.target.checked)}
+                                  />
+                                  <span>사람 확인 — 내용을 검토했습니다 (체크는 결정 기록과 함께 남습니다)</span>
+                                </label>
+                              )}
                             </li>
                           );
                         })}

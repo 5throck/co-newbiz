@@ -264,6 +264,28 @@ cover + hero max-width 34rem 제한으로 텍스트 길이·패널 높이와 무
   클릭이 해당 분석 리포트의 진입점(회사 셀은 분석 1건일 때만 클릭 가능). DART 고유번호
   컬럼 제거, "구분"(계열사/그룹/legacy) 컬럼 신설.
 
+### As-built 2026-10-18 — S3 탭 최종 구조와 시너지 점수 평가 독립 탭 (ADR-0182 완결 슬라이스)
+
+- 탭 순서는 4요소 흐름을 그대로 따른다: 연계 시너지 → 주요 검토 영역(구 "우선 시너지
+  영역") → 필요 역량 → 시너지 점수 평가(구 "개요", 탭 키 `scoreEval`) → 의사결정 →
+  출처·노트. 탭 상태는 로컬 useState(기본값 연계), URL 탭 파라미터가 없으므로
+  `overview` 키 제거만으로 호환성이 닫힌다. 번호 배지(연계 "3"·주요 "4"·필요 역량
+  "2.5")는 모두 제거했다.
+- 시너지 점수 평가 탭: 연결 기회 카드 → 현재 기록(확정/권고 칩) → 사람 확정 편집기
+  (항상 펼침, 경계 #2) → 팩터별 산정 근거(SynergyScoreEvidence) → `🤖 AI 보정 제안`
+  버튼. 프로파일 요약은 탭이 아니라 4요소 관계도 아래 상시 컨텍스트 카드
+  (`SynergyProfileContext` — 대상명·DART 칩·강점/약점 건수·/our-company 딥링크).
+- AI 제안 쌍: 연계 탭의 `🤖 AI 영역 제안`(제안 카드 → 사람 전용 추가 폼 프리필)과
+  점수 평가 탭의 `🤖 AI 보정 제안`(저장된 근거 기준 ±10 경계 초안 → 확정 폼 프리필).
+  둘 다 analyst+ 개시, 무기록(쓰기 없음), 프리필은 사람이 누른 버튼의 결과.
+- 재분석 버튼은 헤더에서 연계 탭 상단으로 이동했고 재도출 범위 문구를 함께 보여준다.
+- 의사결정 탭(GateDecisionPanel)의 판단 필요 버킷: 항목별 "사람 확인 — 내용을
+  검토했습니다" 체크박스(결정 기록 화면에서만 렌더)와 "이 항목들을 검토한 뒤 결정을
+  기록하세요 →" 앵커 버튼(결정 폼의 결정 select로 포커스 이동). 체크 목록은 결정
+  POST에 동봉되어 `gate_decision.judgement_confirmations_json`(migration 0153,
+  신규 테이블 없음)에 남고 결정 이력에 "사람 확인 N건" 칩으로 표시된다. 체크는
+  선택 사항이며 결정을 막지 않는다.
+
 ### As-built 2026-10-13 - S11 establishment table and merged committee decision (ADR-0165)
 
 - Establishment table (`EstablishmentPanel.tsx`, view model `lib/establishment-view.ts`): columns step, status, assignee, last recorded, updated, actions (read-only viewers see five columns). The primary button is "change status" (hidden for done steps); the row menu holds assign and, for done steps, reopen. Brownfield/unclassified origins show an info note (ADR-0047) instead of the table. Server error codes (`evidence_required`, `reopen_required`, `assignee_not_member`, `dependent_step_done`) map to Korean text; `dependent_step_done` opens a second confirmation and resends with `cascade_step5`.

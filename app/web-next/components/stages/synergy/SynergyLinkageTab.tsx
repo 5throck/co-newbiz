@@ -3,6 +3,7 @@
 // Split from components/stages/SynergyStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import { useState } from "react";
 import { SectionToolbar } from "../../layout.tsx";
+import { api } from "../../../lib/api.ts";
 import { type GapHeldStatus, type GapNecessity, HELD_STATUS_CHIP, HELD_STATUS_LABEL, NECESSITY_LABEL, NECESSITY_UNSET_LABEL, NECESSITY_NOTE_CAP, gapCautions, summarizeGap, gapSourceLabel } from "../../../lib/capability-gap.ts";
 import { countDraftFields, countMissingRequirement, missingRequirementCells } from "../../../lib/capability-gap-necessity-draft.ts";
 import type { SynergyResultState } from "./useSynergyResult.ts";
@@ -36,15 +37,51 @@ function DraftChip({ basis, sources }: { basis?: string; sources?: Array<{ title
 const SYNERGY_AREA_COL_PCT = [14, 10, 30, 20, 16, 10] as const;
 
 export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: SynergyPayload }) {
-  const { tab, canCurate, showLinkageForm, setShowLinkageForm, linkageForm, setLinkageForm, linkageError, setLinkageError, linkageSaving, addLinkageItem, opportunityId, gapRows, gapBusy, discardDrafts, dismissGapNote, draftGap, saveGap, gapNote, gapDrafts, gapDirty, holdBusy, checkHolding, includeGroup, setIncludeGroup, holdReasons, gapError, updateGapHeld, updateGapRow, setGapRows, newGapCap, setNewGapCap, addGapRow } = ctx;
+  const { tab, canCurate, showLinkageForm, setShowLinkageForm, linkageForm, setLinkageForm, linkageError, setLinkageError, linkageSaving, addLinkageItem, opportunityId, gapRows, gapBusy, discardDrafts, dismissGapNote, draftGap, saveGap, gapNote, gapDrafts, gapDirty, holdBusy, checkHolding, includeGroup, setIncludeGroup, holdReasons, gapError, updateGapHeld, updateGapRow, setGapRows, newGapCap, setNewGapCap, addGapRow, inProgress, onRerun } = ctx;
   const proposePrimary = !gapDirty && gapRows.length === 0;
   const missing = countMissingRequirement(gapRows);
   const draftCount = countDraftFields(gapDrafts);
   const [heldEditing, setHeldEditing] = useState<string | null>(null);
+  // ADR-0182 Phase 4 — AI 영역 제안(초안). 서버가 무엇도 쓰지 않고 제안만
+  // 돌려주며, 추가 폼 프리필과 저장은 전부 사람의 행위다(경계 #2).
+  const [aiAreasBusy, setAiAreasBusy] = useState(false);
+  const [aiAreas, setAiAreas] = useState<Array<{ area: string; synergyType: string; rationale: string; opportunity: string; risk: string }> | null>(null);
+  const [aiAreasNote, setAiAreasNote] = useState<string | null>(null);
+  const [aiAreasError, setAiAreasError] = useState<string | null>(null);
+  async function proposeAreas() {
+    if (!opportunityId || aiAreasBusy) return;
+    setAiAreasBusy(true); setAiAreasError(null); setAiAreasNote(null);
+    try {
+      const r = await api.post<{ suggestedAreas: Array<{ area: string; synergyType: string; rationale: string; opportunity: string; risk: string }> | null; note: string | null }>(
+        "/api/synergy/ai-areas",
+        { opportunityId, exclude: p.marketLinkage.synergyAreas.map((a) => a.area) },
+      );
+      setAiAreas(r.data.suggestedAreas);
+      setAiAreasNote(r.data.note);
+    } catch (err) {
+      setAiAreasError(err instanceof Error ? err.message : "AI 영역 제안 실패");
+    } finally {
+      setAiAreasBusy(false);
+    }
+  }
   return (
     <>{tab === "linkage" && (
             <div className="text-[0.88rem]">
-              <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">3</span> S1·S2 연계 시너지 영역 (후보 탐색 → 본검증)</h3>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <h3 className="sizing-step-title text-[0.95rem] mb-0">S1·S2 연계 시너지 영역 (후보 탐색 → 본검증)</h3>
+                {/* ADR-0182 — 재분석은 이 흐름의 시작(연계 탭)에서만 노출한다.
+                    헤더 상시 버튼이던 것을 이동: 재도출 범위를 눈앞에서 확인하게. */}
+                {canCurate && (
+                  <div className="flex items-center gap-2">
+                    <button type="button" className="btn-ghost btn-sm" disabled={inProgress} onClick={onRerun}>
+                      재분석
+                    </button>
+                    <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                      재분석하면 연계 시너지 영역·주요 검토 영역·시너지 점수가 재도출됩니다{inProgress ? " — 진행 중" : ""}.
+                    </span>
+                  </div>
+                )}
+              </div>
               <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                 연계 시장: {p.marketLinkage.marketSummaries.map((m) => `${m.industry} (CAGR ${m.cagrPct ?? "?"}%${m.gapPct !== null ? `, 격차 ${m.gapPct > 0 ? "+" : ""}${m.gapPct}%` : ""})`).join(" · ") || "없음"}
               </p>
@@ -73,6 +110,43 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                 </tbody>
               </table>
               </div>
+              {canCurate && opportunityId && (
+                <div className="mt-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button type="button" className="btn-ghost btn-sm" disabled={aiAreasBusy} onClick={() => void proposeAreas()}>
+                      {aiAreasBusy ? "제안 생성 중..." : aiAreas ? "🤖 AI 영역 다시 제안" : "🤖 AI 영역 제안"}
+                    </button>
+                    <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                      기존 영역을 제외한 신규 시너지 영역 초안 — 추가는 사람의 행위입니다 (경계 #2)
+                    </span>
+                  </div>
+                  {aiAreasError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-1 mb-0">{aiAreasError}</p>}
+                  {aiAreasNote && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">{aiAreasNote}</p>}
+                  {aiAreas && aiAreas.length > 0 && (
+                    <ul className="sizing-note-list mt-2" aria-label="AI 영역 제안 초안">
+                      {aiAreas.map((a) => (
+                        <li key={a.area}>
+                          <span className="status-chip status-in-progress"><span aria-hidden="true">✦</span> AI 초안</span>{" "}
+                          <strong>{a.area}</strong> <span className="text-[color:var(--muted-fg)]">({a.synergyType})</span>
+                          <span className="block text-[color:var(--muted-fg)]">{a.rationale}</span>
+                          {a.opportunity && <span className="block text-[color:var(--muted-fg)]">기회: {a.opportunity}</span>}
+                          {a.risk && <span className="block text-[color:var(--muted-fg)]">위험: {a.risk}</span>}
+                          <span className="block mt-1">
+                            <button
+                              type="button"
+                              className="btn-ghost btn-sm"
+                              onClick={() => { setShowLinkageForm(true); setLinkageForm({ area: a.area, synergyType: a.synergyType, rationale: a.rationale, opportunity: a.opportunity, risk: a.risk }); }}
+                            >
+                              추가 폼에 불러오기
+                            </button>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
               {canCurate && (
                 <div className="mt-3">
                   {!showLinkageForm ? (

@@ -27,7 +27,7 @@ interface GateLatest {
   /** R2-B item 3 - the typed rationale an IC GO carried despite missing artifacts. */
   gap_override?: { items: string[]; rationale: string } | null;
 }
-interface GateHistoryRow extends GateLatest { id: string; decided_by: string; decided_at: string }
+interface GateHistoryRow extends GateLatest { id: string; decided_by: string; decided_at: string; /** ADR-0182 §5 — needs_judgement claims the human marked as reviewed. */ judgement_confirmations?: string[] }
 
 
 /** Scroll to a gate decision panel and focus its first field (the "결정 기록" primary of gate stages). */
@@ -179,6 +179,13 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
     missing: "",
     learning: "",
   });
+  // ADR-0182 §5 — needs_judgement 항목의 "사람 확인" 체크. ReviewBuckets가
+  // 렌더링하고, 여기서 상태를 소유해 결정 기록 POST에 함께 실린다(부속
+  // 스냅샷, 신규 테이블 없음). 체크는 선택 사항 — 결정을 막지 않는다.
+  const [judgementChecks, setJudgementChecks] = useState<Record<string, boolean>>({});
+  const toggleJudgement = useCallback((claim: string, checked: boolean) => {
+    setJudgementChecks((m) => ({ ...m, [claim]: checked }));
+  }, []);
   // ADR-0118 — LLM 진행 브리프(제안). 권고·근거 초안만 제공하며 결정 select는
   // 건드리지 않는다. "근거에 반영"은 rationale 프리필일 뿐, 기록은 사람이다.
   const [briefData, setBriefData] = useState<GateBriefData | null>(null);
@@ -255,6 +262,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
     if (saving) return;
     setSaving(true); setError(null);
     try {
+      const judgementConfirmations = Object.entries(judgementChecks).filter(([, v]) => v).map(([k]) => k);
       await api.post(basePath, {
         gate: form.gate,
         decision: form.decision,
@@ -263,11 +271,14 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
         missing_artifacts: form.decision === "hold" ? form.missing.split(/[\n,]/).map((s) => s.trim()).filter(Boolean) : undefined,
         // ADR-0152: every KILL carries learning capture (the route answers 422 without it).
         learning_capture: form.decision === "kill" ? form.learning.trim() : undefined,
+        // ADR-0182 §5: checked 판단 필요 claims ride with the decision.
+        judgement_confirmations: judgementConfirmations.length > 0 ? judgementConfirmations : undefined,
       });
       // Step 2-4: toast, the form collapses into a "recorded" summary (no resubmission), next-stage prompt.
       setRecorded({ gate: form.gate, decision: form.decision, rationale: form.rationale.trim(), at: new Date().toISOString(), gap: gapRationale ?? null });
       toast(`${GATE_LABEL[form.gate]} ${form.decision.toUpperCase()} 결정을 기록했습니다.`);
       setForm((f) => ({ ...f, rationale: "", missing: "", learning: "" }));
+      setJudgementChecks({});
       load();
       onRecorded?.(form.decision, form.gate);
     } catch (err) {
@@ -366,8 +377,20 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
         </table>
       )}
 
-      {/* ADR-0153 — 3단계 검토(확인됨 / 확인하지 못함 / 판단 필요). PASS 표시 없음 */}
-      {showReview && <ReviewBuckets entityType={entityType} entityId={opportunityId} gates={gates} variant="expanded" />}
+      {/* ADR-0153 — 3단계 검토(확인됨 / 확인하지 못함 / 판단 필요). PASS 표시 없음.
+          ADR-0182 §5 — 판단 필요 항목에 "사람 확인" 체크(결정 POST에 동봉)와
+          결정 폼으로의 이동 링크를 심는다. */}
+      {showReview && (
+        <ReviewBuckets
+          entityType={entityType}
+          entityId={opportunityId}
+          gates={gates}
+          variant="expanded"
+          judgementChecks={judgementChecks}
+          onToggleJudgement={canRecord ? toggleJudgement : undefined}
+          onDecisionJump={canRecord ? () => focusGateDecision(gates[0]) : undefined}
+        />
+      )}
 
       {/* ADR-0118 — LLM 진행 브리프(제안): 권고·근거 초안 제공, 기록은 사람 */}
       {canRecord && !hideBrief && (
@@ -539,6 +562,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
                           <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                             {h.rationale}
                             {h.gap_override && <span className="block">누락 산출물 예외 근거: {h.gap_override.rationale} (누락: {h.gap_override.items.join("; ")})</span>}
+                            {!!h.judgement_confirmations?.length && <span className="block"><span className="status-chip status-in-progress">사람 확인 {h.judgement_confirmations.length}건</span></span>}
                           </td>
                           <td className="text-[length:var(--fs-caption)]">{h.decided_by}</td>
                           <td className="text-[length:var(--fs-caption)] tabular-nums">{h.decided_at.slice(0, 10)}</td>
@@ -568,6 +592,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
                   <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                     {h.rationale}
                     {h.gap_override && <span className="block">누락 산출물 예외 근거: {h.gap_override.rationale} (누락: {h.gap_override.items.join("; ")})</span>}
+                    {!!h.judgement_confirmations?.length && <span className="block"><span className="status-chip status-in-progress">사람 확인 {h.judgement_confirmations.length}건</span></span>}
                   </td>
                   <td className="text-[length:var(--fs-caption)]">{h.decided_by}</td>
                   <td className="text-[length:var(--fs-caption)] tabular-nums">{h.decided_at.slice(0, 10)}</td>

@@ -51,7 +51,7 @@ export function SynergyCapabilityTab({ ctx, p }: { ctx: SynergyResultState; p: S
                   행이 더 필요할 때 쓴다. */}
               {opportunityId ? (
                 <div className="mt-4 pt-3 border-t border-[color:var(--border)]">
-                  <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">2.5</span> 필요 역량 수준 — 시너지 영역을 채울 자사 역량은 있는가</h3>
+                  <h3 className="sizing-step-title text-[0.95rem]">필요 역량 수준 — 시너지 영역을 채울 자사 역량은 있는가</h3>
                   <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
                     우선 시너지 영역에서 선별된 항목의 필요 역량만 표시됩니다. 보류 판정 영역의 역량은 제외됩니다.
                   </p>
@@ -219,7 +219,7 @@ export function SynergyCapabilityTab({ ctx, p }: { ctx: SynergyResultState; p: S
                 </div>
               ) : (
                 <div className="mt-4 pt-3 border-t border-[color:var(--border)]">
-                  <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">2.5</span> 필요 역량 수준</h3>
+                  <h3 className="sizing-step-title text-[0.95rem]">필요 역량 수준</h3>
                   <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">
                     이 분석에 연결된 기회가 없어 필요 역량 수준 레지스터를 사용할 수 없습니다 — 분석 등록 시 기회를 연결하세요.
                   </p>
