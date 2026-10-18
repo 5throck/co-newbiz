@@ -190,6 +190,14 @@ describe("gate decision judgement_confirmations sidecar (ADR-0182 §5)", () => {
     expect(tabs).toContain("confirmed={ctx.synState?.confirmed");
   });
 
+  test("a stored legacy 4-factor payload is labelled as such and shows the missing capability factor", () => {
+    const ev = readFileSync("app/web-next/components/stages/synergy/SynergyScoreEvidence.tsx", "utf8");
+    expect(ev).toContain("legacyScheme");
+    expect(ev).toContain("구 4팩터 체계 저장분");
+    expect(ev).toContain("필요 역량 충족도는 이 버전의 계산에 포함되어 있지 않습니다");
+    expect(ev).toContain("이 버전 저장 시점에는 이 팩터가 없었습니다");
+  });
+
   test("a confirmed claim renders as a saved-state chip, not a pending checkbox", () => {
     const buckets = readFileSync("app/web-next/components/ReviewBuckets.tsx", "utf8");
     expect(buckets).toContain("confirmedJudgements");
