@@ -1059,9 +1059,6 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                                       >
                                         {IRR_GUARD_CHIP_LABEL[band]} (기준 {irrThresholds ? `${(irrThresholds[band === "extreme" ? "flag" : "caution"] * 100).toFixed(0)}%` : band === "extreme" ? "100%" : "50%"})
                                       </span>
-                                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" data-testid="irr-guard-diagnostic">
-                                        {IRR_GUARD_DIAGNOSTIC}
-                                      </span>
                                     </>
                                   )}
                                 </>
