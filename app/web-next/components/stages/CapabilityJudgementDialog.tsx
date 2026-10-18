@@ -187,8 +187,25 @@ export function CapabilityJudgementDialog({ row, draft, note, s3Href, hasPrev, h
                 <BasisLine field="category" fields={aiFields} text={aiBasis?.category} />
               </div>
               <div>
-                <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-cost`}>금액(백만원)<AiChip field="cost" fields={aiFields} /></label>
+                <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-cost`}>금액(주기당, 백만원)<AiChip field="cost" fields={aiFields} /></label>
                 <input id={`${uid}-cost`} type="number" min={0} value={d.cost} onChange={(e) => patch({ cost: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "8rem" }} />
+              </div>
+              <div>
+                <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-period`}>주기</label>
+                <select
+                  id={`${uid}-period`}
+                  value={d.period || "yearly"}
+                  data-testid="judge-period"
+                  onChange={(e) => patch({ period: e.target.value })}
+                  className="sizing-new-input sizing-new-input-sm"
+                  style={{ width: "auto" }}
+                >
+                  <option value="yearly">연간</option>
+                  <option value="monthly">월간</option>
+                  <option value="quarterly">분기</option>
+                  <option value="lumpsum">일시불(총액)</option>
+                </select>
+                <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">금액은 선택한 주기의 금액입니다.</p>
               </div>
               <div>
                 <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={`${uid}-start`}>시작 연차</label>

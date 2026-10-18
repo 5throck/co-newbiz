@@ -104,6 +104,8 @@ export interface AttainabilityRowView {
   expected_level: string;
   /** 분류 (ADR-0173 amendment 2026-10-15): judgement-owned; null = 미입력. */
   category: JudgementCategory | null;
+  /** 2026-10-18 decider ask — 집행 주기 (연동 투자비 항목이 수동 항목과 같은 어휘 사용); null = 일시불 취급. */
+  period: "monthly" | "quarterly" | "yearly" | "lumpsum" | null;
   /** S5 free-text 비고 (not S3-hashed, not a judgement field). */
   note: string;
   closing_cost_krw_m: number | null;
@@ -152,6 +154,7 @@ export function rowView(r: CapabilityGapRow): AttainabilityRowView {
     resolution: r.resolution,
     expected_level: a?.expectedLevel ?? "",
     category: a?.category ?? null,
+    period: a?.spendPeriod ?? null,
     note: r.note,
     closing_cost_krw_m: a?.closingCostKrwM ?? null,
     months_to_attain: a?.monthsToAttain ?? null,
@@ -202,6 +205,8 @@ export interface AttainabilityPatch {
   expectedLevel?: unknown;
   /** 분류 (ADR-0173 amendment 2026-10-15): labor|opex|capex; null/"" = unset. */
   category?: unknown;
+  /** 2026-10-18 decider ask — 집행 주기: monthly|quarterly|yearly|lumpsum. */
+  spendPeriod?: unknown;
   closingCostKrwM?: unknown;
   monthsToAttain?: unknown;
   grade?: unknown;
@@ -276,6 +281,15 @@ export function applyAttainabilityPatches(
       const cat = raw.category ? (raw.category as JudgementCategory) : undefined;
       if (cat) a.category = cat;
       else delete a.category;
+    }
+    if ("spendPeriod" in raw) {
+      const SP = ["monthly", "quarterly", "yearly", "lumpsum"];
+      if (raw.spendPeriod !== null && raw.spendPeriod !== "" && !SP.includes(raw.spendPeriod as string)) {
+        return { ok: false, error: { code: "invalid_request", message: "spendPeriod는 monthly | quarterly | yearly | lumpsum 또는 null(미입력)입니다." } };
+      }
+      const sp = raw.spendPeriod ? (raw.spendPeriod as "monthly" | "quarterly" | "yearly" | "lumpsum") : undefined;
+      if (sp) a.spendPeriod = sp;
+      else delete a.spendPeriod;
     }
     if ("closingCostKrwM" in raw) {
       const n = numOrNull(raw.closingCostKrwM);

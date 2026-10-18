@@ -59,6 +59,8 @@ export interface JudgementDraft {
   grade: string;
   rationale: string;
   category: string;
+  /** 2026-10-18 decider ask — 집행 주기 (금액 = 주기당 금액). "" = 미입력(일시불 취급). */
+  period: string;
 }
 
 export const toJudgementDraft = (r: AttainabilityRowView): JudgementDraft => ({
@@ -69,6 +71,7 @@ export const toJudgementDraft = (r: AttainabilityRowView): JudgementDraft => ({
   grade: r.grade ?? "",
   rationale: r.rationale,
   category: r.category ?? "",
+  period: r.period ?? "",
 });
 
 /** Server patch body for one dirty row: judgement-owned fields plus the S3 hash the page showed. */
@@ -77,6 +80,7 @@ export const judgementPatch = (id: string, d: JudgementDraft, s3Hash: string | u
   closingCostKrwM: d.cost.trim() === "" ? null : Number(d.cost), monthsToAttain: d.months.trim() === "" ? null : Number(d.months),
   grade: d.grade || null, rationale: d.rationale,
   category: d.category || null,
+  spendPeriod: d.period || null,
 });
 
 

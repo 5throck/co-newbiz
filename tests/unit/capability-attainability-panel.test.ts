@@ -105,7 +105,7 @@ describe("judgement dialog structure", () => {
       expect(s3Block).toContain(k);
     }
     const s5Block = dlg.slice(s5, dlg.indexOf("<div className=\"flex flex-wrap justify-end"));
-    const order5 = ["해소 방식", "기대 수준", "분류", "금액(백만원)", "시작 연차", "기간(개월)", "종료 연차", "달성 가능성", "근거·증빙", "비고"].map((k) => s5Block.indexOf(k));
+    const order5 = ["해소 방식", "기대 수준", "분류", "금액(주기당, 백만원)", "주기", "시작 연차", "기간(개월)", "종료 연차", "달성 가능성", "근거·증빙", "비고"].map((k) => s5Block.indexOf(k));
     expect(order5.every((i) => i >= 0)).toBe(true);
     expect([...order5].sort((a, b) => a - b)).toEqual(order5);
   });
