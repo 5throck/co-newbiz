@@ -190,7 +190,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   const [savedStaffJson, setSavedStaffJson] = useState<string>("");
   const [attRows, setAttRows] = useState<AttainabilityRowView[] | null>(null);
   // ADR-0173 amendment 2026-10-15: the judgement editor exposes patchDraft so the investment table's 분류 select writes back into the row's judgement draft (marks dirty; saved via the S5 judgement PUT).
-  const judgeApiRef = useRef<{ patchDraft: (id: string, p: Partial<JudgementDraft>) => void } | null>(null);
+  const judgeApiRef = useRef<{ patchDraft: (id: string, p: Partial<JudgementDraft>) => void; saveDirty: () => Promise<void> } | null>(null);
   // ADR-0118 — S5 투자비 검토 요건 LLM 추천(제안). 저장은 사람의 행위다.
   const [reco, setReco] = useState<InvestmentReco | null>(null);
   const [recoLoading, setRecoLoading] = useState(false);
@@ -491,6 +491,8 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     if (!selected || busy) return;
     setBusy(true); setError(null);
     try {
+      // 표에서 바꾼 판정 분류·주기를 먼저 판정 PUT으로 기록 (2026-10-18 decider ask).
+      await judgeApiRef.current?.saveDirty?.();
       await api.post(`/api/greenfield/${selected.opportunity.id}`, {
         entry_strategy: serializeEntryStrategy(entryModes, entryStrategy) || undefined,
         alternatives_considered: alternatives || undefined,
@@ -535,6 +537,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     if (!selected || costSaving) return;
     setCostSaving(true); setCostError(null); setCostNote(null);
     try {
+      await judgeApiRef.current?.saveDirty?.();
       const body = reflectionBody(bcLines, capLines, capSel);
       await api.post(`/api/greenfield/${selected.opportunity.id}`, { business_case_lines: [metaEntry(), ...body.business_case_lines.map((l) => {
         if (!isCapabilityEntry(l)) return l;
@@ -563,6 +566,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     if (!selected || linesSaving || !investDirty || staffError || simOvError) return;
     setLinesSaving(true); setLinesError(null); setLinesNote(null);
     try {
+      await judgeApiRef.current?.saveDirty?.();
       const body = reflectionBody(bcLines, capLines, capSel);
       await api.post(`/api/greenfield/${selected.opportunity.id}`, {
         business_case_lines: [metaEntry(), ...staffingPayload(), ...body.business_case_lines.map((l) => {
@@ -909,10 +913,10 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                       value={row.period ?? "lumpsum"}
                       disabled={!canAct}
                       data-testid={`invest-cap-period-${row.capabilityKey}`}
-                      onChange={(e) => { const v = e.target.value as "lumpsum" | "yearly"; setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], period: v } })); }}
+                      onChange={(e) => { const v = e.target.value as "lumpsum" | "yearly"; setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], period: v } })); judgeApiRef.current?.patchDraft(row.capabilityKey, { period: v }); }}
                       className="sizing-new-input sizing-new-input-sm invest-ctl"
                     >
-                      {(Object.keys(PERIOD_LABEL) as BcPeriod[]).map((p2) => <option key={p2} value={p2}>{p2 === "lumpsum" ? PERIOD_LABEL.lumpsum : `${PERIOD_LABEL[p2]} (총액 균분)`}</option>)}
+                      {(Object.keys(PERIOD_LABEL) as BcPeriod[]).map((p2) => <option key={p2} value={p2}>{PERIOD_LABEL[p2]}</option>)}
                     </select>
                   </td>
                   <td>

@@ -34,7 +34,7 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
   /** ADR-0173: called with the SAVED server rows whenever the view (re)loads, so S5 can derive capability cost lines. */
   onRowsChange?: (rows: AttainabilityViewData["rows"]) => void;
   /** ADR-0173 amendment 2026-10-15: exposes patchDraft so the investment table's 분류 select can write the category into the row's judgement draft (marks it dirty; saved through the existing S5 judgement PUT). */
-  onEditorApi?: (api: { patchDraft: (id: string, p: Partial<JudgementDraft>) => void }) => void;
+  onEditorApi?: (api: { patchDraft: (id: string, p: Partial<JudgementDraft>) => void; /** 투자비 저장 전 판정 PUT flush (2026-10-18 decider ask — 표의 분류/주기 변경을 판정에 반영). */ saveDirty: () => Promise<void> }) => void;
   /** Presentation only: reports whether the editor holds unsaved judgement drafts or notes (page-level unsaved indicator). */
   onDirtyChange?: (dirty: boolean) => void;
   /** Change it to refetch the view (e.g. after the S7 criterion verdict or the criteria reconcile changed); unsaved drafts are kept. */
@@ -94,7 +94,7 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
     setDirty((p) => new Set(p).add(id));
   };
   // ADR-0173 amendment 2026-10-15: hand the patch API to the parent each render (set is recreated per render).
-  useEffect(() => { onEditorApi?.({ patchDraft: set }); });
+  useEffect(() => { onEditorApi?.({ patchDraft: set, saveDirty: () => save() }); });
   const unsavedNow = dirty.size > 0 || notesDirty;
   useEffect(() => { onDirtyChange?.(unsavedNow); }, [unsavedNow, onDirtyChange]);
 

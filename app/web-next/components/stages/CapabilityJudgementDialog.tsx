@@ -236,6 +236,20 @@ export function CapabilityJudgementDialog({ row, draft, note, s3Href, hasPrev, h
                 <input id={`${uid}-mon`} type="number" min={0} value={d.months} onChange={(e) => patch({ months: e.target.value })} className="sizing-new-input sizing-new-input-sm" style={{ width: "8rem" }} />
                 <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" aria-live="polite">종료 연차: {capabilityEndYearOf(spendStart, spendMonths)}연차</p>
               </div>
+              {(() => {
+                // 2026-10-18 decider ask — 주기당 금액 모델의 총액 가시화 (2026-10-19 decider UI 개선).
+                const mult = d.period === "monthly" ? 12 : d.period === "quarterly" ? 4 : d.period === "lumpsum" ? 1 : 1;
+                const windowYears = Math.max(1, capabilityEndYearOf(spendStart, spendMonths) - spendStart + 1);
+                const total = Number(d.cost) > 0 && spendMonths !== null && spendMonths > 0
+                  ? (d.period === "lumpsum" ? Number(d.cost) : Number(d.cost) * mult * windowYears)
+                  : null;
+                if (total === null) return null;
+                return (
+                  <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" aria-live="polite" data-testid="judge-total-krw">
+                    집행 기간 총액: {total.toLocaleString("ko-KR")}백만원 ({d.period === "lumpsum" ? "일시불" : `주기당 ${Number(d.cost)} × 창구 ${windowYears}년`})
+                  </p>
+                );
+              })()}
             </div>
           </fieldset>
           {(aiFields.includes("cost") || aiFields.includes("months")) && (
