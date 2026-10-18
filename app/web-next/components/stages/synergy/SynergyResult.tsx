@@ -85,6 +85,8 @@ export function SynergyResult(props0: {
 
           <SynergyOverviewTab ctx={ctx} p={p} />
 
+          {tab === "capability" && <SynergyCapabilityTab ctx={ctx} p={p} />}
+
           <SynergyLinkageTab ctx={ctx} p={p} />
 
           <SynergyShortlistTab ctx={ctx} p={p} />
