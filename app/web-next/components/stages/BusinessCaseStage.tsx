@@ -704,7 +704,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               <th scope="col" className="num">S7 순위</th>
               <th scope="col" className="num">기본 NPV 하위 5%<UnitNote /></th>
               <th scope="col" className="num">기본 NPV 중앙값<UnitNote /></th>
-              <th scope="col" className="num">IRR <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">(%)</span></th>
+              <th scope="col" className="num">IRR (%)</th>
               <th scope="col" className="num">케이스</th>
               <th scope="col">계산 엔진</th>
               <th scope="col" title="페이드 DCF(성장률이 선형 수렴하는 대안 구조) NPV가 기본 구조 중앙값과 얼마나 벌어지는지 — 표시 전용이며 순위에 반영되지 않습니다.">구조 교차검증<span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">(페이드 DCF 대 중앙값)</span></th>
@@ -856,7 +856,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       )}
 
       {run && (
-        <details className="mb-3" open>
+        <details className="mb-3">
           <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">생성 실행 로그 ({run.runId} — {run.status})</summary>
           <ul className="sizing-note-list mt-1">
             {run.activities.map((a) => (
