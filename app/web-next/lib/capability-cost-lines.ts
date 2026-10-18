@@ -453,6 +453,39 @@ export const manualLineNeedsConfirm = (l: ManualCostLine): boolean => manualLine
  * Canonical 백만원 for a manual line; null when the unit is unknown/unconfirmed or the currency is
  * not KRW (no FX in this feature). The server-stored `amountKrwM` wins when present.
  */
+/** Person-set FX rates (원/통화) — e.g. { USD: 1350 } from the opportunity's
+ *  entry_market_fx rows (ADR-0181). Undefined/absent currency = the honest
+ *  환율 미반영 exclusion (the line stays out of the totals). */
+export type FxRates = Record<string, number>;
+
+/** A foreign-currency line rewritten as KRW at the given rate — a COMPUTATION
+ *  copy only: the stored entry keeps the original currency/amount/unit so the
+ *  person's input is never mutated. Returns the line unchanged when the
+ *  currency is KRW or no rate exists. */
+export function manualLineInKrw<T extends { amount?: unknown; amountUnit?: unknown; amountKrwM?: unknown; currency?: unknown }>(l: T, fxRates?: FxRates): T {
+  const cur = (l.currency ?? "KRW") as string;
+  if (cur === "KRW") return l;
+  const rate = fxRates?.[cur];
+  if (!rate || !(rate > 0)) return l;
+  const n = typeof l.amount === "number" && Number.isFinite(l.amount) ? l.amount : 0;
+  const round2 = (v: number) => Math.round(v * 100) / 100;
+  if (l.amountUnit === "fx_m") {
+    const krwM = round2(n * rate); // 백만 통화 × 원/통화 = 백만원
+    return { ...l, amount: krwM, amountUnit: "krw_m", amountUnitConfirmed: true as const, amountKrwM: krwM, currency: "KRW" } as T;
+  }
+  if (l.amountUnit === "fx_eok") {
+    const krwM = round2(n * rate * 100); // 억 통화 → 백만원 = ×rate×100
+    return { ...l, amount: krwM, amountUnit: "krw_m", amountUnitConfirmed: true as const, amountKrwM: krwM, currency: "KRW" } as T;
+  }
+  return l;
+}
+
+export function convertManualLinesToKrw<T>(lines: ReadonlyArray<T>, fxRates?: FxRates): T[] {
+  return fxRates && Object.keys(fxRates).length > 0
+    ? (lines.map((l) => manualLineInKrw(l as { amount?: unknown; amountUnit?: unknown; currency?: unknown }, fxRates)) as T[])
+    : [...lines];
+}
+
 export function manualLineKrwM(l: { amount?: unknown; amountUnit?: unknown; amountKrwM?: unknown; currency?: unknown }): number | null {
   if (l.currency !== undefined && l.currency !== "KRW") return null;
   // Derive from the live amount + unit first: a stored amountKrwM goes stale the moment the person
@@ -1251,7 +1284,7 @@ export interface PromotionCapabilityLine { category: CostCategory; name: string;
  * sums recomputed from the live judgement (a deleted/zero-cost capability is skipped and listed); the plan
  * horizon from `plan_meta` (default 5) is returned for the copied model.
  */
-export function splitForPromotion(lines: unknown[], rows: CostSourceRow[]): { manual: unknown[]; capability: PromotionCapabilityLine[]; skipped: string[]; skippedManual: Array<{ line: string; reason: "unit_unconfirmed" | "currency_non_krw" }>; horizon: number } {
+export function splitForPromotion(lines: unknown[], rows: CostSourceRow[], fxRates?: FxRates): { manual: unknown[]; capability: PromotionCapabilityLine[]; skipped: string[]; skippedManual: Array<{ line: string; reason: "unit_unconfirmed" | "currency_non_krw" }>; horizon: number } {
   const byId = new Map(rows.map((r) => [r.id, r]));
   const manual: unknown[] = [];
   const capability: PromotionCapabilityLine[] = [];
@@ -1263,8 +1296,12 @@ export function splitForPromotion(lines: unknown[], rows: CostSourceRow[]): { ma
     if (!isCapabilityEntry(l)) {
       const m = l as ManualCostLine;
       if (manualLineNeedsConfirm(m)) { skippedManual.push({ line: String(m.line ?? ""), reason: "unit_unconfirmed" }); continue; }
-      if (m.currency && m.currency !== "KRW") { skippedManual.push({ line: String(m.line ?? ""), reason: "currency_non_krw" }); continue; }
-      manual.push(l);
+      if (m.currency && m.currency !== "KRW" && !(fxRates && (fxRates[m.currency] ?? 0) > 0)) {
+        // A foreign line with a person-set rate converts (manualLineInKrw below); without a rate it stays skipped (환율 미반영).
+        skippedManual.push({ line: String(m.line ?? ""), reason: "currency_non_krw" });
+        continue;
+      }
+      manual.push(fxRates ? manualLineInKrw(m, fxRates) : l);
       continue;
     }
     if (l.reflected !== true) continue;

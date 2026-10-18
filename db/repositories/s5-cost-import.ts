@@ -5,7 +5,8 @@
 // judgements; nothing is fabricated; amounts are 백만원.
 import type { Database } from "bun:sqlite";
 import { parseGapRegister } from "../../app/web-next/lib/capability-gap.ts";
-import { manualLineKrwM, sourceRowOf, splitForPromotion } from "../../app/web-next/lib/capability-cost-lines.ts";
+import { manualLineInKrw, manualLineKrwM, type FxRates, sourceRowOf, splitForPromotion } from "../../app/web-next/lib/capability-cost-lines.ts";
+import { readFx } from "./entry-market.repository.ts";
 import { ulid } from "../lib/ulid.ts";
 import { appendAudit } from "../lib/access-control.ts";
 
@@ -41,7 +42,8 @@ export function planS5Import(db: Database, opportunityId: string): S5ImportPlan 
     lines = assessment?.business_case_lines_json ? JSON.parse(assessment.business_case_lines_json) : [];
   } catch { /* malformed — treat as none, don't block promotion over it */ }
   const gapJson = (db.query("SELECT capability_gap_json AS j FROM opportunity WHERE id = ?").get(opportunityId) as { j: string | null } | undefined)?.j;
-  const split = splitForPromotion(Array.isArray(lines) ? lines : [], parseGapRegister(gapJson).rows.map(sourceRowOf));
+  const fxRates: FxRates = Object.fromEntries(readFx(db, opportunityId).map((f) => [f.currency, f.rate]));
+  const split = splitForPromotion(Array.isArray(lines) ? lines : [], parseGapRegister(gapJson).rows.map(sourceRowOf), fxRates);
   const manualAll = split.manual as S5Line[];
   const kept = manualAll.filter((l) => l?.line?.trim() && VALID_CATEGORIES.has(l.category));
   return { lines: kept, split, invalid: manualAll.length - kept.length, importable: kept.length + split.capability.length };
@@ -69,8 +71,9 @@ export function writeS5CostModel(
   );
   for (const l of lines) {
     const periodMult = PERIOD_MULTIPLIER[l.period ?? "yearly"] ?? 1;
-    // Canonical 백만원 from the confirmed unit; splitForPromotion already excluded unconfirmed/non-KRW lines.
-    const annualAmount = (manualLineKrwM(l) ?? 0) * periodMult;
+    // Canonical 백만원 from the confirmed unit (FX-converted for foreign lines); splitForPromotion
+    // already excluded unconfirmed/no-rate lines.
+    const annualAmount = (manualLineKrwM(manualLineInKrw(l, fxRates)) ?? 0) * periodMult;
     const startYear = l.startYear ?? 1;
     // A lump sum spends in its start year only (ADR-0174 slice 2); a recurring
     // line without an explicit end year runs through the model horizon.

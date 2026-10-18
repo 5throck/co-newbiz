@@ -213,7 +213,8 @@ describe("source structure", () => {
     // The copy moved into the shared promotion / re-import module (ADR-0174 follow-up).
     const repo = read("db/repositories/s5-cost-import.ts");
     expect(read("db/repositories/project.repository.ts")).toContain("writeS5CostModel(");
-    expect(repo).toContain("(manualLineKrwM(l) ?? 0) * periodMult");
+    // 2026-10-18: foreign lines convert at the person-set entry_market_fx rate first.
+    expect(repo).toContain("(manualLineKrwM(manualLineInKrw(l, fxRates)) ?? 0) * periodMult");
     expect(repo).toContain("greenfield_cost.promotion_skipped");
     expect(repo).not.toContain("lineAmountKrwM(l) * periodMult");
   });

@@ -6,7 +6,8 @@
 // KRW manual lines + reflected, priced capability lines) so a fresh pin and a fresh copy yield the
 // same plan vectors - the parity test freezes that. Nothing here touches the database.
 import { createHash } from "node:crypto";
-import { manualLineKrwM, manualLineNeedsConfirm, type CapabilityCostLine, type ManualCostLine } from "./capability-cost-lines.ts";
+import { manualLineInKrw, manualLineKrwM, manualLineNeedsConfirm, type CapabilityCostLine, type FxRates, type ManualCostLine } from "./capability-cost-lines.ts";
+import { readFx } from "../../../db/repositories/entry-market.repository.ts";
 import { investmentInputPayload } from "./investment-simulation.ts";
 import type { InvestmentVectorsInput, VectorManualLine } from "./investment-vectors.ts";
 import type { StaffingPlanEntry } from "./staffing-plan.ts";
@@ -133,7 +134,7 @@ export interface AggregatedPlan {
  * (rows derived from the snapshot), so the two cannot diverge. Moved verbatim from the generator:
  * the copy path stays bit-identical.
  */
-export function aggregatePlanLines(horizonRaw: number, lines: ReadonlyArray<PlanLineRow>): AggregatedPlan {
+export function aggregatePlanLines(horizonRaw: number, lines: ReadonlyArray<PlanLineRow>, fxRates?: FxRates): AggregatedPlan {
   const horizon = Math.min(Math.max(Math.round(horizonRaw), 1), 50);
   const capexByYear = new Array<number>(horizon).fill(0);
   const laborOpexByYear = new Array<number>(horizon).fill(0);
@@ -144,7 +145,9 @@ export function aggregatePlanLines(horizonRaw: number, lines: ReadonlyArray<Plan
   let skippedLines = 0;
   let preLaunchKrwM = 0;
   let preLaunchLines = 0;
-  for (const l of lines) {
+  for (const rawLine of lines) {
+    // ADR-0181 seam — foreign lines convert at the person-set rate; KRW lines pass through.
+    const l = manualLineInKrw(rawLine as unknown as { amount?: unknown; amountUnit?: unknown; currency?: unknown }, fxRates) as unknown as PlanLineRow;
     if (l.unit === "KRW_M" && l.start_year === 0) {
       preLaunchKrwM += l.annual_amount_krw_m;
       preLaunchLines += 1;
