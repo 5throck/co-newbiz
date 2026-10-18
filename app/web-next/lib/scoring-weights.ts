@@ -12,11 +12,16 @@
 // in sync when re-tuning.
 
 /** Factor base weights before renormalization over available factors. */
+// ADR-0182: 5-factor weights — capability_coverage (필요 역량 충족도) joins
+// with 0.20; the legacy four keep their relative proportions (0.35:0.30:0.20:
+// 0.15 renormalized over 0.80 → 0.30/0.25/0.15/0.10 rounded to the values
+// below). The single data module for scoring defaults (ADR-0024/0044).
 export const SYNERGY_FACTOR_WEIGHTS = {
-  market_attractiveness: 0.35,
-  industry_match: 0.3,
-  financial_capacity: 0.2,
-  scope_match: 0.15,
+  market_attractiveness: 0.3,
+  industry_match: 0.25,
+  financial_capacity: 0.15,
+  scope_match: 0.1,
+  capability_coverage: 0.2,
 } as const;
 
 /**

@@ -22,6 +22,13 @@ export interface SynergyPayload {
   opportunity?: { id: string; name: string } | null;
   synergyScore?: number | null;
   synergyRationale?: string | null;
+  /** ADR-0103/0182 — 팩터 분해·충족도·보정 이력 */
+  scoringMethod?: string;
+  synergyScoreFactors?: unknown;
+  synergyScoreLimitations?: string[];
+  capabilityCoverage?: number | null;
+  capabilityCoverageNote?: string | null;
+  scoreAdjustment?: { delta: number; reason: string } | null;
   /** ADR-0094 — 재사용된 프로파일 딥링크 (상세 재무·SWOT는 /our-company 담당) */
   profileRef?: { kind: "affiliate" | "group"; id: string; label: string; profileVersion: number | null };
 }

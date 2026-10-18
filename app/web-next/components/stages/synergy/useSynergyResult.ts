@@ -7,7 +7,7 @@ import { useAuth } from "../../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../../lib/project-write-access.ts";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { api } from "../../../lib/api.ts";
-import { type CapabilityGapRow } from "../../../lib/capability-gap.ts";
+import { summarizeGap, type CapabilityGapRow } from "../../../lib/capability-gap.ts";
 import { discardAiDrafts, mergeDraftResponse, mergeServerRows, pruneDrafts, type DraftMark } from "../../../lib/capability-gap-necessity-draft.ts";
 import type { GapGetResponse, SynergyAnalysis } from "./types.ts";
 import type { TabKey } from "./synergyFormat.ts";
@@ -323,7 +323,8 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
       setAdvancing(false);
     }
   }, [opportunityId, advancing, p?.synergyRationale, router]);
-  return { discardDrafts, dismissGapNote: () => setGapNote(null), analysis, analysisDate, latest, synState, onBack, canCurate, inProgress, onRerun, p, tab, onTab, opportunityId, advanceToRouteDecision, advanceError, confirmError, currentScore, currentRationale, confirmForm, setConfirmForm, confirmSaving, confirmSynergyScore, retractSynergyScore, showLinkageForm, setShowLinkageForm, linkageForm, setLinkageForm, linkageError, setLinkageError, linkageSaving, addLinkageItem, gapRows, gapBusy, draftGap, saveGap, gap, gapNote, gapDrafts, gapDirty, holdBusy, checkHolding, includeGroup, setIncludeGroup, holdReasons, gapError, updateGapHeld, updateGapRow, setGapRows, newGapCap, setNewGapCap, addGapRow, editingArea, editForm, setEditForm, editSaving, setEditingArea, saveShortlistItem, editError, showShortlistForm, setShowShortlistForm, shortlistForm, setShortlistForm };
+  const gapSummary = summarizeGap(gapRows);
+  return { gapSummary, discardDrafts, dismissGapNote: () => setGapNote(null), analysis, analysisDate, latest, synState, onBack, canCurate, inProgress, onRerun, p, tab, onTab, opportunityId, advanceToRouteDecision, advanceError, confirmError, currentScore, currentRationale, confirmForm, setConfirmForm, confirmSaving, confirmSynergyScore, retractSynergyScore, showLinkageForm, setShowLinkageForm, linkageForm, setLinkageForm, linkageError, setLinkageError, linkageSaving, addLinkageItem, gapRows, gapBusy, draftGap, saveGap, gap, gapNote, gapDrafts, gapDirty, holdBusy, checkHolding, includeGroup, setIncludeGroup, holdReasons, gapError, updateGapHeld, updateGapRow, setGapRows, newGapCap, setNewGapCap, addGapRow, editingArea, editForm, setEditForm, editSaving, setEditingArea, saveShortlistItem, editError, showShortlistForm, setShowShortlistForm, shortlistForm, setShortlistForm };
 }
 
 export type SynergyResultState = ReturnType<typeof useSynergyResult>;

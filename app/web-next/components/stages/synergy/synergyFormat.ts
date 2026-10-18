@@ -19,11 +19,13 @@ export const STEP_TITLES = ["DART 재무 입수", "외부 리서치", "재무 �
 
 // ADR-0094 역할 분리 — 재무 현황·강/약점 상세는 /our-company(그룹/계열사 분석)가
 // 담당하고, /synergy는 시너지 고유 내용(연계 시너지·우선 시너지 영역)만 다룬다.
+// ADR-0182: tab order follows the 4-element flow — 연계(후보) → 우선(선별) →
+// 필요 역량(무엇이 필요한가) → 의사결정(판단 기록) → 출처·노트.
 export const TABS = [
   ["overview", "개요"],
-  ["capability", "필요 역량"],
   ["linkage", "연계 시너지"],
   ["shortlist", "우선 시너지 영역"],
+  ["capability", "필요 역량"],
   ["decision", "의사결정"],
   ["refs", "출처·노트"],
 ] as const;

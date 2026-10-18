@@ -26,14 +26,19 @@ describe("computeSynergyScore", () => {
     const r = computeSynergyScore(baseInputs());
     expect(r.score).not.toBeNull();
     expect(r.method).toBe("rule-based");
-    expect(r.factors).toHaveLength(4);
+    // ADR-0182: 5 factors — capability_coverage is null (absent register) in
+    // this fixture, so it is excluded from the weighted sum but still listed.
+    expect(r.factors).toHaveLength(5);
+    expect(r.factors.find((f) => f.key === "capability_coverage")?.value).toBeNull();
     const wsum = r.factors.filter((f) => f.value !== null).reduce((s, f) => s + f.weight, 0);
     expect(wsum).toBeCloseTo(1, 5);
     // market 0.36 → capped 100; match 1/3→33.3; fin ≈ 69.7; scope 100
     // weighted ≈ 100*.35 + 33.3*.30 + 69.7*.20 + 100*.15 ≈ 78
     expect(r.score).toBeGreaterThanOrEqual(70);
     expect(r.score).toBeLessThanOrEqual(95);
-    expect(r.missing).toHaveLength(0);
+    // capability_coverage absent from this fixture → listed as 미반영
+    expect(r.missing).toHaveLength(1);
+    expect(r.missing[0]).toContain("필요 역량 레지스터");
   });
 
   test("piecewise mature-market curve: 5.7% CAGR is NOT flattened to zero", () => {
@@ -43,6 +48,16 @@ describe("computeSynergyScore", () => {
     const mkt = r.factors.find((f) => f.key === "market_attractiveness")!;
     expect(mkt.value).toBeCloseTo((0.057 / 0.08) * 50, 1); // ≈ 35.6
     expect(mkt.value).toBeGreaterThan(30);
+  });
+
+  test("capabilityCoverage 0-100 enters as the 5th factor (ADR-0182)", () => {
+    const withCov = computeSynergyScore(baseInputs({ capabilityCoverage: 62, capabilityCoverageNote: "보유율 62%" }));
+    const cov = withCov.factors.find((f) => f.key === "capability_coverage")!;
+    expect(cov.value).toBe(62);
+    expect(withCov.missing.join()).not.toContain("필요 역량 레지스터");
+    // clamp: >100 degrades to 100
+    const capped = computeSynergyScore(baseInputs({ capabilityCoverage: 250 }));
+    expect(capped.factors.find((f) => f.key === "capability_coverage")!.value).toBe(100);
   });
 
   test("curve anchors: 0% → 0, 8% → 50, 35%+ → 100", () => {

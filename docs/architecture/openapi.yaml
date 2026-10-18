@@ -2491,6 +2491,15 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/synergy/ai-areas:
+    post:
+      operationId: suggestSynergyAreas
+      summary: On-demand AI suggestion for new synergy areas (analyst+, writes nothing).
+      tags:
+        - synergy
+      responses:
+        "200":
+          description: Suggested areas or an honest note.
   /api/market-overview/analyses/{id}/unit:
     get:
       operationId: getMarketAnalysisUnit
