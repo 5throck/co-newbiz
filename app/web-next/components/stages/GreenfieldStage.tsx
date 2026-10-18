@@ -172,6 +172,8 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   // ADR-0174 slice 1: 검토 기간 (plan_meta horizonYears, default 5) and per-capability spend-year overrides.
   const [horizon, setHorizon] = useState(DEFAULT_HORIZON_YEARS);
   const [capStartYear, setCapStartYear] = useState<Record<string, number>>({});
+  // 2026-10-18 decider ask — 창구 끝 연차 override (연간 균분의 마지막 해). 저장은 시작 연차와 함께.
+  const [capEndYear, setCapEndYear] = useState<Record<string, number>>({});
   // ADR-0176: decider-entered simulation assumption-range overrides (plan_meta.simOverrides) + last saved snapshot for dirty tracking.
   const [simOv, setSimOv] = useState<SimOverrides>({});
   const [savedSimOvJson, setSavedSimOvJson] = useState<string>("{}");
@@ -318,9 +320,14 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   const capLinesEff = useMemo(
     () => capLines.map((l) => {
       const y = capStartYear[l.capabilityKey];
-      return Number.isInteger(y) && y >= 1 ? { ...l, startYear: y } : l;
+      const e = capEndYear[l.capabilityKey];
+      return {
+        ...l,
+        ...(Number.isInteger(y) && y >= 1 ? { startYear: y } : {}),
+        ...(Number.isInteger(e) && e >= 1 ? { endYear: e } : {}),
+      };
     }),
-    [capLines, capStartYear],
+    [capLines, capStartYear, capEndYear],
   );
   const reflectedLines = capLines.filter((l) => l.reflected);
   // The plan is fitted to the live horizon before costing, so a horizon change never silently drops or pads on the server.
@@ -365,6 +372,11 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     for (const [key, y] of Object.entries(capStartYear)) {
       const e = validateLineYears({ startYear: y }, horizon);
       if (e) errs[`c${key}`] = e;
+    }
+    for (const [key, e] of Object.entries(capEndYear)) {
+      const start = capStartYear[key];
+      const err = validateLineYears({ startYear: Number.isFinite(start) ? start : 1, endYear: e, period: "yearly" }, horizon);
+      if (err) errs[`ce${key}`] = err;
     }
     return errs;
   }, [bcLines, capStartYear, horizon]);
@@ -524,7 +536,11 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     setCostSaving(true); setCostError(null); setCostNote(null);
     try {
       const body = reflectionBody(bcLines, capLines, capSel);
-      await api.post(`/api/greenfield/${selected.opportunity.id}`, { business_case_lines: [metaEntry(), ...body.business_case_lines.map((l) => (isCapabilityEntry(l) && capStartYear[(l as { capabilityKey: string }).capabilityKey] !== undefined ? { ...l, startYear: capStartYear[(l as { capabilityKey: string }).capabilityKey] } : l))] });
+      await api.post(`/api/greenfield/${selected.opportunity.id}`, { business_case_lines: [metaEntry(), ...body.business_case_lines.map((l) => {
+        if (!isCapabilityEntry(l)) return l;
+        const key = (l as { capabilityKey: string }).capabilityKey;
+        return { ...l, ...(capStartYear[key] !== undefined ? { startYear: capStartYear[key] } : {}), ...(capEndYear[key] !== undefined && Number.isFinite(capEndYear[key]) ? { endYear: capEndYear[key] } : {}) };
+      })] });
       await loadDetail(selected.opportunity.id, "cost");
       setCostNote("__pending__");
       onSaved?.();
@@ -549,7 +565,11 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     try {
       const body = reflectionBody(bcLines, capLines, capSel);
       await api.post(`/api/greenfield/${selected.opportunity.id}`, {
-        business_case_lines: [metaEntry(), ...staffingPayload(), ...body.business_case_lines.map((l) => (isCapabilityEntry(l) && capStartYear[(l as { capabilityKey: string }).capabilityKey] !== undefined ? { ...l, startYear: capStartYear[(l as { capabilityKey: string }).capabilityKey] } : l))],
+        business_case_lines: [metaEntry(), ...staffingPayload(), ...body.business_case_lines.map((l) => {
+          if (!isCapabilityEntry(l)) return l;
+          const key = (l as { capabilityKey: string }).capabilityKey;
+          return { ...l, ...(capStartYear[key] !== undefined ? { startYear: capStartYear[key] } : {}), ...(capEndYear[key] !== undefined && Number.isFinite(capEndYear[key]) ? { endYear: capEndYear[key] } : {}) };
+        })],
       });
       const savedCount = body.business_case_lines.length;
       await loadDetail(selected.opportunity.id, "cost");
@@ -845,6 +865,9 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
             if (row.kind === "capability") {
               const capLine = capLinesEff.find((c) => c.capabilityKey === row.capabilityKey);
               const capStart = capLine?.startYear ?? 1;
+              const capEnd = capEndYear[row.capabilityKey] !== undefined && Number.isFinite(capEndYear[row.capabilityKey])
+                ? Math.min(horizon, Math.max(capStart, capEndYear[row.capabilityKey]))
+                : (capLine?.endYear ?? capStart);
               const capYearErr = yearErrors[`c${row.capabilityKey}`];
               return (
                 <tr key={`c${row.capabilityKey}`} data-testid={`invest-cap-row-${row.capabilityKey}`}>
@@ -889,10 +912,9 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                       onChange={(e) => { const v = e.target.value as "lumpsum" | "yearly"; setCapSel((p) => ({ ...p, [row.capabilityKey]: { ...p[row.capabilityKey], period: v } })); }}
                       className="sizing-new-input sizing-new-input-sm invest-ctl"
                     >
-                      <option value="lumpsum">{PERIOD_LABEL.lumpsum}</option>
-                      <option value="yearly">연간 (금액 = 연간 집행액)</option>
+                      <option value="lumpsum">{PERIOD_LABEL.lumpsum} (총액)</option>
+                      <option value="yearly">연간 (총액을 시작~종료에 균분)</option>
                     </select>
-                    {row.period === "yearly" && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">검토 기간까지 반복</span>}
                   </td>
                   <td>
                     <div className="invest-year-cell">
@@ -912,7 +934,18 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                       </label>
                       <label className="invest-year-field">
                         종료
-                        <input aria-label={`${row.name} 종료 연차`} data-testid={`invest-cap-end-year-${row.capabilityKey}`} value={capabilityEndYearOf(capStart, capLine?.monthsToAttain ?? null)} readOnly className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-num invest-ctl-ro" />
+                        <input
+                          aria-label={`${row.name} 종료 연차`}
+                          data-testid={`invest-cap-end-year-${row.capabilityKey}`}
+                          type="number"
+                          min={capStart}
+                          max={horizon}
+                          value={capEnd}
+                          disabled={!canAct}
+                          onChange={(e) => { const raw = e.target.value; const v = Number(raw); setCapEndYear((p) => ({ ...p, [row.capabilityKey]: raw === "" || !Number.isFinite(v) ? Number.NaN : v })); }}
+                          onBlur={(e) => { const v = Math.floor(Number(e.target.value) || capStart); setCapEndYear((p) => ({ ...p, [row.capabilityKey]: Math.min(horizon, Math.max(capStart, v)) })); }}
+                          className="sizing-new-input sizing-new-input-sm invest-ctl invest-ctl-num"
+                        />
                       </label>
                     </div>
                     {capYearErr && <span role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">{capYearErr}</span>}

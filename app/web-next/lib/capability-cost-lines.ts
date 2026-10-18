@@ -247,11 +247,18 @@ export const capabilityDefaultStartYear = (monthsToAttain: number | null): numbe
 /** Read-only end-year display (ADR-0173 amendment 2026-10-15): start + ceil(months/12) − 1; a 12-month spend starting Y1 ends Y1. */
 /** Year vector of a linked line: 일시불 = 총액 at startYear; 연간 = 연간 금액 from startYear through the horizon
  *  (2026-10-18 decider ask — the cadence is person-editable). Consumers (totals, vectors) share this. */
-export function capabilityYearVector(c: { startYear: number; period: "lumpsum" | "yearly"; costKrwM: number }, H: number): number[] {
+export function capabilityYearVector(c: { startYear: number; endYear?: number; period: "lumpsum" | "yearly"; costKrwM: number }, H: number): number[] {
   const vec = Array<number>(Math.max(1, Math.floor(H))).fill(0);
   const y = Math.max(1, Math.min(c.startYear, vec.length));
   if (c.period === "yearly") {
-    for (let i = y - 1; i < vec.length; i++) vec[i] += c.costKrwM;
+    // 연간(균분): the judgement's 총액 spreads EVENLY over 시작~종료 연차 (the
+    // 36/60-month window), NOT through the horizon — the spend stops where the
+    // judgement window stops (2026-10-18 decider report: 총 20억 × 2년 kept
+    // flowing into Y3+).
+    const end = Math.min(c.endYear ?? vec.length, vec.length);
+    const active = Math.max(1, end - y + 1);
+    const perYear = c.costKrwM / active;
+    for (let i = y - 1; i < end; i++) vec[i] += perYear;
   } else {
     vec[y - 1] += c.costKrwM;
   }
@@ -555,6 +562,8 @@ export interface StoredCapabilityEntry {
   period: "lumpsum" | "yearly";
   /** Human spend-year override (ADR-0174 slice 1); unset = derived from the judgement months (OD-6). */
   startYear?: number;
+  /** 2026-10-18 decider ask — spend-window end (연간 균분의 마지막 연차). Unset = derived from the judgement months. */
+  endYear?: number;
   /** ADR-0177 slice 1: person-picked 세부 과목 (parent = category). Unset = 미지정. */
   subCategory?: SubCategoryKey;
   note: string;
@@ -671,8 +680,8 @@ export function deriveCapabilityCostLines(rows: CostSourceRow[], stored: unknown
       monthsToAttain: r.months_to_attain,
       defaultStartYear,
       startYear,
-      /** End year display: start + ceil(months / 12) − 1 (a 12-month spend starting Y1 ends Y1); 연간 주기는 검토 기간까지 반복. */
-      endYear: capabilityEndYearOf(startYear, r.months_to_attain),
+      /** End year display: stored override, else start + ceil(months/12) − 1. 연간 주기에서는 이 창구까지 균분된다. */
+      endYear: isValidYearValue(e?.endYear) ? (e!.endYear as number) : capabilityEndYearOf(startYear, r.months_to_attain),
       period: e?.period === "yearly" ? "yearly" : "lumpsum",
       state: reflectable ? "reflectable" : "reference",
       stateLabel: reflectable ? "반영 가능" : "참고(미반영)",
@@ -993,7 +1002,7 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
     for (let i = 0; i < H; i++) yearCat[c.category][i] += vec[i];
     addSub(c.category, c.subCategory, vec);
     if (c.period === "lumpsum") lumpByCat[c.category] += c.costKrwM;
-    else annualByCat[c.category] += c.costKrwM;
+    else annualByCat[c.category] += Math.round((vec.reduce((s, n) => s + n, 0) / Math.max(1, Math.min(c.endYear ?? H, H) - Math.max(1, Math.min(c.startYear, H)) + 1)) * 100) / 100;
     if (c.startYear === c.defaultStartYear && c.monthsToAttain !== null && c.monthsToAttain > 0) capabilitySpendFromMilestone += 1;
   }
   // ADR-0175: the 인력 운영 계획 vector feeds the 인건비 category per year (derived, read-only,
@@ -1240,10 +1249,18 @@ export function normalizeBusinessCaseLines(
     if (startYear !== undefined && (startYear < 1 || startYear > horizon)) {
       return { ok: false, error: { code: "invalid_request", message: `${row.capability}: 집행 연차는 1..${horizon}년이어야 합니다.` } };
     }
-    // 2026-10-18 decider ask — the linked line's cadence is person-editable: 일시불(총액) or 연간(금액 = 연간 집행액, 검토 기간까지 반복).
+    // 2026-10-18 decider ask — the linked line's cadence is person-editable: 일시불(총액) or 연간(총액을 시작~종료 창구에 균분).
     const rawPeriod = (raw as { period?: unknown }).period;
     if (rawPeriod !== undefined && rawPeriod !== "lumpsum" && rawPeriod !== "yearly") {
       return { ok: false, error: { code: "invalid_request", message: `${row.capability}: 주기는 일시불 또는 연간이어야 합니다.` } };
+    }
+    const rawEndYear = (raw as { endYear?: unknown }).endYear;
+    if (rawEndYear !== undefined && !isValidYearValue(rawEndYear)) {
+      return { ok: false, error: { code: "invalid_request", message: `${row.capability}: 종료 연차는 1..${horizon}년의 정수여야 합니다.` } };
+    }
+    const rawStartForEnd = isValidYearValue((raw as { startYear?: unknown }).startYear) ? (raw as { startYear: number }).startYear : isValidYearValue(before?.startYear) ? (before as { startYear: number }).startYear : undefined;
+    if (isValidYearValue(rawEndYear) && rawStartForEnd !== undefined && (rawEndYear as number) < rawStartForEnd) {
+      return { ok: false, error: { code: "invalid_request", message: `${row.capability}: 종료 연차는 시작 연차보다 빠를 수 없습니다.` } };
     }
     out.push({
       line: `${row.capability} 역량 해소`,
@@ -1253,6 +1270,7 @@ export function normalizeBusinessCaseLines(
       amountUnitConfirmed: true,
       currency: "KRW",
       ...(rawPeriod === "yearly" ? { period: "yearly" as const } : { period: "lumpsum" as const }),
+      ...(isValidYearValue(rawEndYear) ? { endYear: rawEndYear as number } : {}),
       note: `S5 역량 해소 비용 연동 (${row.resolution ? RESOLUTION_LABEL[row.resolution] : "해소 방식 미정"})`,
       ...(startYear !== undefined ? { startYear } : {}),
       ...(subCategory !== undefined ? { subCategory } : {}),
@@ -1283,7 +1301,7 @@ export function normalizeBusinessCaseLines(
 
 // ── Promotion (server) ──────────────────────────────────────────────────────
 
-export interface PromotionCapabilityLine { category: CostCategory; name: string; krwM: number; note: string; /** Spend year: stored override, else the milestone months (OD-6), else 1. */ startYear: number }
+export interface PromotionCapabilityLine { category: CostCategory; name: string; /** 일시불 = 총액; 연간(균분) = 연간 집행액. */ krwM: number; note: string; /** Spend year: stored override, else the milestone months (OD-6), else 1. */ startYear: number; /** Windowed yearly: the last spend year; lumpsum = startYear. */ endYear?: number }
 
 /**
  * Split stored lines for the greenfield promotion copy (ADR-0137/0138, ADR-0174 slice 2): `reflected:false`
@@ -1318,7 +1336,13 @@ export function splitForPromotion(lines: unknown[], rows: CostSourceRow[], fxRat
     const category = row.category ?? (CAPABILITY_COST_CATEGORIES.includes(l.category as CostCategory) ? (l.category as CostCategory) : suggestCategory(row.resolution).category);
     const flags = ["역량 해소 비용", `S5 연동 (판정 ${row.id})`, "일시불 총액"];
     if (row.stale || (!!l.basisHash && !basisHashMatches(l.basisHash, row))) flags.push("역량 판정 재판정 필요 — 금액 검증 필요");
-    capability.push({ category, name: `${row.capability} 역량 해소`, krwM: cost, note: flags.join(". "), startYear: isValidYearValue(l.startYear) ? l.startYear : capabilityDefaultStartYear(row.months_to_attain) });
+    {
+      const capStart = isValidYearValue(l.startYear) ? l.startYear : capabilityDefaultStartYear(row.months_to_attain);
+      const capEnd = isValidYearValue(l.endYear) ? l.endYear : capabilityEndYearOf(capStart, row.months_to_attain);
+      const windowed = l.period === "yearly";
+      const active = Math.max(1, Math.min(capEnd, 50) - capStart + 1);
+      capability.push({ category, name: `${row.capability} 역량 해소`, krwM: windowed ? Math.round((cost / active) * 100) / 100 : cost, note: flags.join(". "), startYear: capStart, endYear: windowed ? capEnd : capStart });
+    }
   }
   return { manual, capability, skipped, skippedManual, horizon };
 }
@@ -1355,7 +1379,7 @@ export function milestoneCandidateView(row: CapabilityGapRow): MilestoneCandidat
 
 // ── Client selection overlay ────────────────────────────────────────────────
 
-export interface CostSelection { reflected?: boolean; category?: CostCategory; /** ADR-0177: null = explicitly cleared. */ subCategory?: SubCategoryKey | null; /** 2026-10-18 decider ask: the linked line's cadence is person-editable (일시불/연간). */ period?: "lumpsum" | "yearly" }
+export interface CostSelection { reflected?: boolean; category?: CostCategory; /** ADR-0177: null = explicitly cleared. */ subCategory?: SubCategoryKey | null; /** 2026-10-18 decider ask: the linked line's cadence is person-editable (일시불/연간). */ period?: "lumpsum" | "yearly"; /** 창구 끝 연차 (연간 균분의 마지막 해). */ endYear?: number }
 
 /** Overlay the person's unsaved checkbox/category choices on the derived lines. */
 export function applySelection(view: CapabilityCostView, sel: Readonly<Record<string, CostSelection>>): CapabilityCostLine[] {
@@ -1365,18 +1389,19 @@ export function applySelection(view: CapabilityCostView, sel: Readonly<Record<st
     const reflected = s.reflected ?? l.reflected;
     const category = s.category ?? l.category;
     const period = s.period ?? l.period;
+    const endYear = s.endYear ?? l.endYear;
     const pickedSub = s.subCategory !== undefined ? s.subCategory : l.subCategory;
     // A category change drops a sub-category that no longer fits (the UI shows a chip for it).
     const subCategory = pickedSub && validSubCategory(category, pickedSub) ? pickedSub : null;
-    return { ...l, reflected, category, period, subCategory, suggestedSubCategory: suggestSubCategory(l.resolution, category), needsRejudge: reflected && (l.stale || l.needsRejudge) };
+    return { ...l, reflected, category, period, endYear, subCategory, suggestedSubCategory: suggestSubCategory(l.resolution, category), needsRejudge: reflected && (l.stale || l.needsRejudge) };
   });
 }
 
 /** Payload entries for the saved capability lines: reflected ones, plus explicit un-checks of default/previously stored rows. */
-export function selectionPayload(lines: CapabilityCostLine[], sel: Readonly<Record<string, CostSelection>>): Array<{ source: "capability"; capabilityKey: string; reflected: boolean; category: CostCategory; amount: number; amountUnit: typeof AMOUNT_UNIT_KRW_M; amountUnitConfirmed: true; period: "lumpsum" | "yearly"; subCategory?: SubCategoryKey }> {
+export function selectionPayload(lines: CapabilityCostLine[], sel: Readonly<Record<string, CostSelection>>): Array<{ source: "capability"; capabilityKey: string; reflected: boolean; category: CostCategory; amount: number; amountUnit: typeof AMOUNT_UNIT_KRW_M; amountUnitConfirmed: true; period: "lumpsum" | "yearly"; endYear?: number; subCategory?: SubCategoryKey }> {
   return lines
     .filter((l) => l.reflected || l.persisted || sel[l.capabilityKey]?.reflected === false)
-    .map((l) => ({ source: "capability" as const, capabilityKey: l.capabilityKey, reflected: l.reflected, category: l.category, amount: l.costKrwM, amountUnit: AMOUNT_UNIT_KRW_M, amountUnitConfirmed: true as const, period: l.period, ...(l.subCategory ? { subCategory: l.subCategory } : {}) }));
+    .map((l) => ({ source: "capability" as const, capabilityKey: l.capabilityKey, reflected: l.reflected, category: l.category, amount: l.costKrwM, amountUnit: AMOUNT_UNIT_KRW_M, amountUnitConfirmed: true as const, period: l.period, endYear: l.endYear, ...(l.subCategory ? { subCategory: l.subCategory } : {}) }));
 }
 
 // ── S5 reflection action (explicit save of the capability selections) ────────
