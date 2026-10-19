@@ -99,6 +99,9 @@ export const STAFFING_SUB_CATEGORY = { salary: "direct_labor", recruiting: "recr
 /** The judgement fields this feature reads (a subset of AttainabilityRowView, so server and client share it). */
 export type LinkedSpendPeriod = "monthly" | "quarterly" | "yearly" | "lumpsum";
 
+/** Korean labels for the recurring periods (promotion notes); lumpsum is labelled 일시불 separately. */
+const PERIOD_LABEL_KO: Record<Exclude<LinkedSpendPeriod, "lumpsum">, string> = { monthly: "월간", quarterly: "분기", yearly: "연간" };
+
 export interface CostSourceRow {
   id: string;
   capability: string;
@@ -1340,14 +1343,19 @@ export function splitForPromotion(lines: unknown[], rows: CostSourceRow[], fxRat
     const cost = row?.closing_cost_krw_m ?? null;
     if (!row || cost === null || !(cost > 0)) { skipped.push(l.capabilityKey); continue; }
     const category = row.category ?? (CAPABILITY_COST_CATEGORIES.includes(l.category as CostCategory) ? (l.category as CostCategory) : suggestCategory(row.resolution).category);
-    const flags = ["역량 해소 비용", `S5 연동 (판정 ${row.id})`, "일시불 총액"];
-    if (row.stale || (!!l.basisHash && !basisHashMatches(l.basisHash, row))) flags.push("역량 판정 재판정 필요 — 금액 검증 필요");
     {
       const capStart = isValidYearValue(l.startYear) ? l.startYear : capabilityDefaultStartYear(row.months_to_attain);
       const capEnd = isValidYearValue(l.endYear) ? l.endYear : capabilityEndYearOf(capStart, row.months_to_attain);
-      const windowed = l.period === "yearly";
-      const active = Math.max(1, Math.min(capEnd, 50) - capStart + 1);
-      capability.push({ category, name: `${row.capability} 역량 해소`, krwM: windowed ? Math.round((cost / active) * 100) / 100 : cost, note: flags.join(". "), startYear: capStart, endYear: windowed ? capEnd : capStart });
+      // 주기당 금액 semantics (the 판정 dialog's 금액): a recurring entry contributes
+      // 금액 × 주기계수 in EVERY window year — capabilityYearVector parity. The old
+      // 균분(cost/active) rule halved 연간 lines, and 월간/분기 rows collapsed to a
+      // single start year with no ×12/×4.
+      const recurring = l.period === "monthly" || l.period === "quarterly" || l.period === "yearly";
+      const annual = recurring ? Math.round(cost * cadenceMultiplier(l.period) * 100) / 100 : cost;
+      const periodFlag = recurring ? `${PERIOD_LABEL_KO[l.period]} 주기당 금액 — ${capStart}~${capEnd}연차 반복` : "일시불 총액";
+      const flags = ["역량 해소 비용", `S5 연동 (판정 ${row.id})`, periodFlag];
+      if (row.stale || (!!l.basisHash && !basisHashMatches(l.basisHash, row))) flags.push("역량 판정 재판정 필요 — 금액 검증 필요");
+      capability.push({ category, name: `${row.capability} 역량 해소`, krwM: annual, note: flags.join(". "), startYear: capStart, endYear: recurring ? capEnd : capStart });
     }
   }
   return { manual, capability, skipped, skippedManual, horizon };
