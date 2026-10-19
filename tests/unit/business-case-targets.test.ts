@@ -685,4 +685,22 @@ describe("S8 human-confirmed EV/Revenue band (design 2026-10-11-s8-ev-band-user-
     expect(src).toContain("이 도메인에 대한 출처 없음, 참고용");
     expect(src).not.toContain("(보수 스크리닝)");
   });
+
+  test("기본 배수 (default): optional, must sit inside the band, and drives the acquisition price when no direct pin (2026-10-19 decider)", async () => {
+    // validation: outside the band and non-positive values are rejected
+    await expect(recordEvRevenueBand(db, { projectId, ...good, default: 3, actor: ANALYST })).rejects.toThrow();
+    await expect(recordEvRevenueBand(db, { projectId, ...good, default: 0, actor: ANALYST })).rejects.toThrow();
+    // route-level: a string default is 400
+    expect((await bandRoute(analystCookie, { ...good, default: "5" })).status).toBe(400);
+    // a good confirmation with a default persists and reads back — stamped AFTER the
+    // review-amendments run (which itself carries now = +60s) so it sorts newest.
+    await recordEvRevenueBand(db, { projectId, ...good, default: 5, actor: ANALYST, now: new Date(Date.now() + 120000).toISOString() });
+    const band = resolveConfirmedEvBand(db, projectId)!;
+    expect(band).toMatchObject({ min: 4, max: 8, default: 5 });
+    // and with no direct bc.acquisition_ev_revenue pin, the band default drives bcParams
+    const { resolveBusinessCaseParams } = await import("../../app/web-next/lib/business-case-generator.ts");
+    const params = resolveBusinessCaseParams(db, projectId);
+    expect(params.acquisitionEvRevenue).toBe(5);
+    expect(params.acquisitionEvRevenueSource).toBe("확정 밴드 기본 배수 (bc.acquisition_ev_revenue_band.default)");
+  });
 });
