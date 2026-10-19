@@ -66,7 +66,8 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
 
   const option = useMemo<EChartsOption | null>(() => {
     if (!table) return null;
-    const yrs = table.rows.filter((r) => r.year > 0).map((r) => `Y${r.year}`);
+    // Y0 포함 — 누적 할인 현금흐름이 −초기투자에서 시작하는 표준 DCF 형태 (회수 교차점 가시화).
+    const yrs = table.rows.map((r) => `Y${r.year}`);
     return {
       backgroundColor: "transparent",
       tooltip: { trigger: "axis" },
@@ -77,11 +78,11 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
         { type: "value", name: "누적 (백만원)", axisLabel: { color: ct.muted }, nameTextStyle: { color: ct.muted }, splitLine: { show: false } },
       ],
       series: [
-        { name: "매출", type: "bar", data: years.map((r) => Math.round(r.revenue * 100) / 100), itemStyle: { color: ct.color[0] } },
-        { name: "운영비", type: "bar", data: years.map((r) => Math.round(r.opex * 100) / 100), itemStyle: { color: ct.color[1] } },
-        { name: "설비투자", type: "bar", data: years.map((r) => Math.round(r.capex * 100) / 100), itemStyle: { color: ct.color[2] } },
-        { name: "순현금흐름", type: "line", data: years.map((r) => Math.round(r.fcf * 100) / 100), itemStyle: { color: ct.color[3] } },
-        { name: "누적 할인 현금흐름", type: "line", yAxisIndex: 1, data: table.rows.filter((r) => r.year > 0).map((r) => r.cumulativeDiscountedFcf), itemStyle: { color: ct.color[4] } },
+        { name: "매출", type: "bar", data: table.rows.map((r) => Math.round(r.revenue * 100) / 100), itemStyle: { color: ct.color[0] } },
+        { name: "운영비", type: "bar", data: table.rows.map((r) => Math.round(r.opex * 100) / 100), itemStyle: { color: ct.color[1] } },
+        { name: "설비투자", type: "bar", data: table.rows.map((r) => Math.round(r.capex * 100) / 100), itemStyle: { color: ct.color[2] } },
+        { name: "순현금흐름", type: "line", data: table.rows.map((r) => Math.round(r.fcf * 100) / 100), itemStyle: { color: ct.color[3] } },
+        { name: "누적 할인 현금흐름", type: "line", yAxisIndex: 1, data: table.rows.map((r) => r.cumulativeDiscountedFcf), itemStyle: { color: ct.color[4] } },
       ],
     };
   }, [table, ct]);
@@ -131,6 +132,9 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
           <thead>
             <tr>
               <th scope="col">구분</th>
+              {/* Y0 = 초기 투자 시점 (plan 연차 1 설비투자가 여기 적립된다 — OD-3). The Y0
+                  column keeps the 설비투자 합계 equal to the S5 투자비 총액 at a glance. */}
+              <th scope="col" className="num">Y0</th>
               {years.map((r) => <th scope="col" key={r.year} className="num">Y{r.year}</th>)}
               <th scope="col" className="num">합계</th>
             </tr>
@@ -145,15 +149,11 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
             ] as Array<[string, (r: YearRow) => number]>).map(([label, get]) => (
               <tr key={label}>
                 <td className="font-semibold">{label}</td>
+                <td className="num mono-num">{fmt(table.rows[0] ? get(table.rows[0]) : 0)}</td>
                 {years.map((r) => <td key={r.year} className="num mono-num">{fmt(get(r))}</td>)}
-                <td className="num mono-num font-semibold">{fmt(years.reduce((s, r) => s + get(r), 0))}</td>
+                <td className="num mono-num font-semibold">{fmt(table.rows.reduce((s, r) => s + get(r), 0))}</td>
               </tr>
             ))}
-            <tr>
-              <td className="font-semibold">초기 투자 (year-0)</td>
-              <td colSpan={years.length} className="num mono-num">{fmt(table.initialInvestment)}</td>
-              <td />
-            </tr>
           </tbody>
         </table>
       </div>

@@ -7,10 +7,10 @@
 // same plan vectors - the parity test freezes that. Nothing here touches the database.
 import { createHash } from "node:crypto";
 import { manualLineInKrw, manualLineKrwM, manualLineNeedsConfirm, type CapabilityCostLine, type FxRates, type ManualCostLine } from "./capability-cost-lines.ts";
+import { staffingSummaryVector, type StaffingPlanEntry } from "./staffing-plan.ts";
 import { readFx } from "../../../db/repositories/entry-market.repository.ts";
 import { investmentInputPayload } from "./investment-simulation.ts";
 import type { InvestmentVectorsInput, VectorManualLine } from "./investment-vectors.ts";
-import type { StaffingPlanEntry } from "./staffing-plan.ts";
 
 /** Promotion stamps every capability-sourced line with this note flag (splitForPromotion). */
 export const CAPABILITY_LINE_NOTE_MARK = "역량 해소 비용";
@@ -178,6 +178,28 @@ export function aggregatePlanLines(horizonRaw: number, lines: ReadonlyArray<Plan
     }
   }
   return { horizonYears: horizon, capexByYear, laborOpexByYear, govRndByYear, opexCovered, capexCapabilityByYear, laborOpexCapabilityByYear, skippedLines, ...(preLaunchLines > 0 ? { preLaunchKrwM, preLaunchLines } : {}) };
+}
+
+/**
+ * 2026-10-19 decider report (`인건비와 설비투자가 제대로 반영되지 않고 있어`) — the staffing
+ * plan's labor vector joins the s5 plan's opex side in BOTH read paths, so the S8 `s5_plan`
+ * totals equal the S5 `투자비` summary (which has always counted labor). The staffing rows
+ * cannot be plan lines (per-year headcount is not expressible as amount × growth), so this is
+ * a vector append after aggregation. Years with any staffing cost count as opex-covered.
+ * Mutates and returns `agg`. The plan_hash is unaffected: it hashes the snapshot input
+ * (staffing included) directly, not the aggregated vectors.
+ */
+export function applyStaffingLaborToPlan(agg: AggregatedPlan, staffing: StaffingPlanEntry | null | undefined): AggregatedPlan {
+  if (!staffing) return agg;
+  const vec = staffingSummaryVector(staffing, agg.horizonYears);
+  for (let i = 0; i < agg.horizonYears; i++) {
+    const v = (vec.annualByYear[i] ?? 0) + (vec.recruitingByYear[i] ?? 0);
+    if (v > 0) {
+      agg.laborOpexByYear[i] += v;
+      agg.opexCovered[i] = true;
+    }
+  }
+  return agg;
 }
 
 /**

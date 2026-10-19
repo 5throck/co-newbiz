@@ -314,6 +314,36 @@ describe("pinned read path", () => {
     }
   });
 
+  test("staffing labor joins BOTH read paths' plan vectors and stays in parity (2026-10-19 인건비 미반영)", async () => {
+    // pure helper: the labor vector lands on the opex side and marks the years covered
+    const agg = pinLib.aggregatePlanLines(5, [{ category: "opex", annual_amount_krw_m: 100, start_year: 1, end_year: 5, growth_rate: 0, unit: "KRW_M", note: null }]);
+    const staffed = pinLib.applyStaffingLaborToPlan(agg, {
+      source: "staffing_plan",
+      rows: [{ id: "r1", roleFamily: "연구개발", grade: "과장", headcountByYear: [2, 3, 3, 2, 2], avgAnnualBaseSalaryKrwM: 70, salaryIncreaseRatePct: 5, onCostRatePct: 0, hireStartQuarter: null, recruitingOneOffKrwM: 0 }],
+      startYear: 1, endYear: 5, attritionBackfillPct: 0,
+    } as never);
+    expect(staffed.laborOpexByYear[0]).toBeCloseTo(100 + 140, 6); // 2명 × 70
+    expect(staffed.laborOpexByYear[1]).toBeCloseTo(100 + 220.5, 6); // 3명 × 70 × 1.05
+    expect(staffed.opexCovered.every(Boolean)).toBe(true);
+    expect(pinLib.applyStaffingLaborToPlan(agg, null)).toBe(agg);
+
+    // end to end: an assessment staffing entry reaches the copy AND the pinned read, equally
+    const LINES_STAFF = [
+      ml("Plant", "capex", 1200, "lumpsum", 1),
+      { source: "staffing_plan", rows: [{ id: "r1", roleFamily: "연구개발", grade: "과장", headcountByYear: [2, 3, 3, 2, 2], avgAnnualBaseSalaryKrwM: 70, salaryIncreaseRatePct: 5, onCostRatePct: 0, hireStartQuarter: null, recruitingOneOffKrwM: 0 }], startYear: 1, endYear: 5, attritionBackfillPct: 0 },
+      { source: "plan_meta", horizonYears: 5 },
+    ];
+    const pid = promote(makeOpp("greenfield", LINES_STAFF));
+    await optIn(pid, 0); // capture the copy path
+    const copy = gen.resolveS5InvestmentPlan(db, pid)!;
+    await optIn(pid);
+    const pinned = gen.resolveS5InvestmentPlan(db, pid)!;
+    expect(copy.laborOpexByYear[0]).toBeCloseTo(140, 6);
+    expect(copy.laborOpexByYear[1]).toBeCloseTo(220.5, 6);
+    expect(copy.opexCovered[0]).toBe(true);
+    expect(planCmp(pinned)).toEqual(planCmp(copy));
+  });
+
   test("PARITY with a confirmed S5 run: the pinned variant consumes the pinned run and matches the copy's draws", async () => {
     const opp = makeOpp("greenfield", LINES);
     const run = confirmRun(opp, "h-run");
