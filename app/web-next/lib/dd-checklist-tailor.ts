@@ -608,6 +608,48 @@ function isGrandfatheredDomain(domain: DdDomain): boolean {
  */
 export const DD_NOT_COUNTED_REASON = "Recorded for reference; not counted in S9 completion for projects created before 2026-10-01";
 
+export interface DdDomainAdoption {
+  adopted: boolean;
+  rationale: string;
+  by: string;
+  at: string;
+}
+
+/** 2026-10-19 decider-approved option: a PERSON may adopt the four newer DD
+ *  domains (재무·인사·시장·자금조달 계획) into THIS project's S9 completion count
+ *  and the dd gate — the same escape hatch as the greenfield hr exception, but
+ *  recorded (rationale mandatory + audited) instead of silent. Null = grandfathered
+ *  reference-only (today's behavior). */
+export function ddDomainAdoption(projectId: string): DdDomainAdoption | null {
+  const row = getDb()
+    .query("SELECT dd_domain_adopt_json AS j FROM md_project WHERE id = ?")
+    .get(projectId) as { j: string | null } | undefined;
+  if (!row?.j) return null;
+  try {
+    const parsed = JSON.parse(row.j) as { adopted?: unknown; rationale?: unknown; by?: unknown; at?: unknown };
+    if (parsed.adopted !== true || typeof parsed.rationale !== "string") return null;
+    return { adopted: true, rationale: parsed.rationale, by: String(parsed.by ?? ""), at: String(parsed.at ?? "") };
+  } catch {
+    return null;
+  }
+}
+
+export function writeDdDomainAdoption(
+  db: { run: (sql: string, ...args: unknown[]) => void },
+  projectId: string,
+  opts: { adopted: boolean; rationale: string; by: string; at: string },
+): void {
+  const json = opts.adopted ? JSON.stringify({ adopted: true, rationale: opts.rationale, by: opts.by, at: opts.at }) : null;
+  db.run("UPDATE md_project SET dd_domain_adopt_json = ? WHERE id = ?", [json, projectId]);
+}
+
+/** The effective "newer DD domains count" flag: created on/after the cut-off, OR
+ *  the person adopted them for this project. Every DD counting path reads this —
+ *  never the raw created_at test alone. */
+export function newerDomainsCounted(projectId: string): boolean {
+  return countsUnassessedItems(projectId) || ddDomainAdoption(projectId)?.adopted === true;
+}
+
 export function isDdDomain(value: string): value is DdDomain {
   return (DD_DOMAINS as readonly string[]).includes(value);
 }
@@ -693,7 +735,7 @@ export function ddCompletionSummary(projectId: string, opts: { targetId?: string
     )
     .all(projectId, targetId) as Array<{ checklist_id: string; item_id: string; status: string; waiver_id: string | null }>)
     // Reference-only rows (newer domains of a pre-2026-10-01 project) never enter the count.
-    .filter((r) => !uncountedRow(r.checklist_id, countsUnassessedItems(projectId)));
+    .filter((r) => !uncountedRow(r.checklist_id, newerDomainsCounted(projectId)));
   const extraIds = subTrackChecklistIds(projectId);
   const extraSet = new Set(extraIds);
   let pending = 0;
@@ -720,10 +762,10 @@ export function ddCompletionSummary(projectId: string, opts: { targetId?: string
     }
   }
   let unassessed = 0;
-  if (countsUnassessedItems(projectId) || extraIds.length > 0) {
+  if (newerDomainsCounted(projectId) || extraIds.length > 0) {
     const have = new Set(rows.map((r) => `${r.checklist_id}:${r.item_id}`));
     const applicable = [
-      ...(countsUnassessedItems(projectId) ? Object.values(DD_WORKSPACE_CHECKLISTS) : []),
+      ...(newerDomainsCounted(projectId) ? Object.values(DD_WORKSPACE_CHECKLISTS) : []),
       ...extraSet,
     ];
     for (const checklistId of applicable) {
@@ -742,7 +784,7 @@ export function ddCompletionSummary(projectId: string, opts: { targetId?: string
  */
 function countedWorkspaceChecklists(projectId: string, gfInScope = false): string[] {
   const all = Object.values(DD_WORKSPACE_CHECKLISTS);
-  if (countsUnassessedItems(projectId)) return all;
+  if (newerDomainsCounted(projectId)) return all;
   const keep = new Set(gfInScope ? [...GF_SCOPE_COUNTED_NEW_DOMAINS].map((d) => DD_WORKSPACE_CHECKLISTS[d]) : []);
   return all.filter((c) => !DD_NEW_DOMAIN_CHECKLISTS.has(c) || keep.has(c));
 }
@@ -772,7 +814,7 @@ function scopedCompletionSummary(projectId: string, ws: ScopedInput): DdCompleti
   const rows = (getDb()
     .query("SELECT checklist_id, item_id, status, waiver_id FROM project_checklist_item_state WHERE project_id = ? AND target_id IS NULL")
     .all(projectId) as Array<{ checklist_id: string; item_id: string; status: string; waiver_id: string | null }>)
-    .filter((r) => !uncountedRow(r.checklist_id, countsUnassessedItems(projectId), !!ws.gfInScope));
+    .filter((r) => !uncountedRow(r.checklist_id, newerDomainsCounted(projectId), !!ws.gfInScope));
   const counted = countedWorkspaceChecklists(projectId, !!ws.gfInScope);
   const outOfScope = (r: { checklist_id: string; item_id: string }) => ws.items.get(`${r.checklist_id}:${r.item_id}`)?.judgeable === false;
   let pending = 0;
@@ -792,7 +834,7 @@ function scopedCompletionSummary(projectId: string, ws: ScopedInput): DdCompleti
   }
   // Workspace binding items (fin-09) are never N/X (overlay validator) and keep the default rule.
   const byKey = new Map(rows.map((r) => [`${r.checklist_id}:${r.item_id}`, r]));
-  const countUnassessed = countsUnassessedItems(projectId);
+  const countUnassessed = newerDomainsCounted(projectId);
   let unassessed = 0;
   let judged = 0;
   let workspaceJudgeable = 0;
@@ -1179,7 +1221,7 @@ export function listDdWorkspace(projectId: string, opts: { targetId?: string | n
     // All seven domains carry the Korean DD_DOMAIN_LABEL titles (UI tabs, payload and reports agree).
     financial: DD_DOMAIN_LABEL.financial!, hr: DD_DOMAIN_LABEL.hr!, market: DD_DOMAIN_LABEL.market!, financing: DD_DOMAIN_LABEL.financing!,
   };
-  const countsNewDomains = countsUnassessedItems(projectId);
+  const countsNewDomains = newerDomainsCounted(projectId);
   const gfScope = greenfieldSelection(projectId, db);
   // ADR-0160 addendum (b): the gate scope only (target_id NULL); comparison targets are brownfield.
   const wsView = gfScope && targetId === null ? workspaceScopeView(projectId, gfScope) : null;
