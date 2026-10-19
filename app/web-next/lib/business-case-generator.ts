@@ -1135,10 +1135,16 @@ export interface S5InvestmentPlan {
   /** The model's own horizon (OD-2: after promotion S8's bc.horizon_years
    *  governs — years beyond the plan horizon fall back to the ratio path). */
   horizonYears: number;
-  /** Index 0 = plan year 1 … H-1 = plan year H, KRW_M, growth-compounded
-   *  (the copy and the pin snapshot both carry the S5 line's own growth rate now —
-   *  promotion/re-import used to write 0, so the compounding was a no-op there). */
+  /** Index 0 = plan year 1 … H-1 = plan year H, KRW_M at the lines' BASE amounts —
+   *  the aggregation no longer compounds the lines' growth_rate (2026-10-19 decider
+   *  consistency rule: the S5 투자비 탭 has no growth input, so S8 reads what the S5
+   *  table shows; escalation becomes a visible S5 field before it compounds). */
   capexByYear: number[];
+  /** Category split of `laborOpexByYear` (2026-10-19 decider ask: `재무분석` 비용 =
+   *  S5와 같은 구조) — staffing labor and labor-category lines vs opex-category lines.
+   *  `laborOpexByYear` stays the merged vector the sim/s5_pnl paths read. */
+  laborByYear: number[];
+  opexByYear: number[];
   laborOpexByYear: number[];
   govRndByYear: number[];
   /** True where any labor/opex line covers the plan year — only such years
@@ -1200,7 +1206,7 @@ export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (..
     const agg = applyStaffingLaborToPlan(aggregatePlanLines(pinHorizon, pinLines, fxRates), active.input.staffing ?? null);
     const modelId = `pin:${active.pin.id}`;
     const lineHash = scenarioSeed(modelId, JSON.stringify({ c: agg.capexByYear, o: agg.laborOpexByYear, g: agg.govRndByYear, ...(agg.preLaunchLines ? { p: agg.preLaunchKrwM } : {}) })).toString(16);
-    return { modelId, horizonYears: agg.horizonYears, capexByYear: agg.capexByYear, laborOpexByYear: agg.laborOpexByYear, govRndByYear: agg.govRndByYear, opexCovered: agg.opexCovered, skippedLines: agg.skippedLines, lineHash, capexCapabilityByYear: agg.capexCapabilityByYear, laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear, ...(agg.preLaunchLines ? { preLaunchKrwM: agg.preLaunchKrwM, preLaunchLines: agg.preLaunchLines } : {}), pinId: active.pin.id, planHash: active.pin.plan_hash };
+    return { modelId, horizonYears: agg.horizonYears, capexByYear: agg.capexByYear, laborByYear: agg.laborByYear, opexByYear: agg.opexByYear, laborOpexByYear: agg.laborOpexByYear, govRndByYear: agg.govRndByYear, opexCovered: agg.opexCovered, skippedLines: agg.skippedLines, lineHash, capexCapabilityByYear: agg.capexCapabilityByYear, laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear, ...(agg.preLaunchLines ? { preLaunchKrwM: agg.preLaunchKrwM, preLaunchLines: agg.preLaunchLines } : {}), pinId: active.pin.id, planHash: active.pin.plan_hash };
   }
   const model = db
     .query(
@@ -1215,7 +1221,7 @@ export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (..
     .all(model.id) as Array<{ category: string; annual_amount_krw_m: number; start_year: number; end_year: number | null; growth_rate: number; unit: string | null; note?: string | null }>;
   const agg = applyStaffingLaborToPlan(aggregatePlanLines(model.horizon_years, lines, fxRates), staffingOfAssessment(getDb(), srcOpp, model.horizon_years));
   const lineHash = scenarioSeed(model.id, JSON.stringify({ c: agg.capexByYear, o: agg.laborOpexByYear, g: agg.govRndByYear, ...(agg.preLaunchLines ? { p: agg.preLaunchKrwM } : {}) })).toString(16);
-  return { modelId: model.id, horizonYears: agg.horizonYears, capexByYear: agg.capexByYear, laborOpexByYear: agg.laborOpexByYear, govRndByYear: agg.govRndByYear, opexCovered: agg.opexCovered, skippedLines: agg.skippedLines, lineHash, capexCapabilityByYear: agg.capexCapabilityByYear, laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear, ...(agg.preLaunchLines ? { preLaunchKrwM: agg.preLaunchKrwM, preLaunchLines: agg.preLaunchLines } : {}) };
+  return { modelId: model.id, horizonYears: agg.horizonYears, capexByYear: agg.capexByYear, laborByYear: agg.laborByYear, opexByYear: agg.opexByYear, laborOpexByYear: agg.laborOpexByYear, govRndByYear: agg.govRndByYear, opexCovered: agg.opexCovered, skippedLines: agg.skippedLines, lineHash, capexCapabilityByYear: agg.capexCapabilityByYear, laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear, ...(agg.preLaunchLines ? { preLaunchKrwM: agg.preLaunchKrwM, preLaunchLines: agg.preLaunchLines } : {}) };
 }
 
 /** The plan in force for a case — only when a human chose an s5_plan basis
@@ -1613,7 +1619,11 @@ export interface CaseYearRow {
   year: number;
   revenue: number;
   utilization: number;
+  /** The MERGED operating cost the fcf row uses — `labor` + pure opex. */
   opex: number;
+  /** The labor part of `opex` (plan staffing + labor lines; 0 on ratio/fallback years) —
+   *  2026-10-19 decider ask: `재무분석` 비용 = S5와 같은 구조. opex − labor = 운영비. */
+  labor: number;
   capex: number;
   fcf: number;
   discountedFcf: number;
@@ -1646,13 +1656,14 @@ export function deterministicCaseYearTable(inputs: CaseInputs, scenario: Scenari
   const ramp = rampUpOf(inputs);
   const wacc = inputs.wacc.value;
   const discount = (v: number, y: number) => v / Math.pow(1 + wacc, y);
-  const rows: CaseYearRow[] = [{ year: 0, revenue: 0, utilization: 1, opex: 0, capex: initialInvestment, fcf: -initialInvestment, discountedFcf: -initialInvestment, cumulativeDiscountedFcf: -initialInvestment, breakEvenRevenue: null }];
+  const rows: CaseYearRow[] = [{ year: 0, revenue: 0, utilization: 1, opex: 0, labor: 0, capex: initialInvestment, fcf: -initialInvestment, discountedFcf: -initialInvestment, cumulativeDiscountedFcf: -initialInvestment, breakEvenRevenue: null }];
   const basis = s5?.pnl ? "s5_pnl" : s5 ? "s5_plan" : "ratio";
   const exitValue = exitMult > 0 ? revenue * exitMult : 0;
   for (let year = 1; year <= horizonOf(inputs); year++) {
     if (year > 1) revenue *= 1 + eff.growth;
     const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
     let opex: number;
+    let labor = 0;
     let capex: number;
     let fcf: number;
     if (s5?.pnl) {
@@ -1660,10 +1671,12 @@ export function deterministicCaseYearTable(inputs: CaseInputs, scenario: Scenari
       const revUtil = revenue * utilization;
       const covered = (i < s5.plan.opexCovered.length && s5.plan.opexCovered[i]) || (i < s5.plan.govRndByYear.length && s5.plan.govRndByYear[i] > 0);
       opex = covered ? s5.plan.laborOpexByYear[i] + s5.plan.govRndByYear[i] : revUtil * opexRatioD;
+      labor = covered ? s5.plan.laborByYear?.[i] ?? 0 : 0;
       capex = i < s5.plan.capexByYear.length ? s5.plan.capexByYear[i] : revUtil * capexRatioD;
       fcf = revUtil - opex - capex;
     } else if (s5) {
       opex = opexOfYear(inputs, s5, year, revenue);
+      labor = s5.full === true && s5.plan.opexCovered[year - 1] === true ? s5.plan.laborByYear?.[year - 1] ?? 0 : 0;
       capex = capexOfYear(inputs, s5, year, revenue);
       fcf = (revenue - opex) * utilization - capex;
     } else {
@@ -1681,7 +1694,7 @@ export function deterministicCaseYearTable(inputs: CaseInputs, scenario: Scenari
     const breakEvenRevenue = opexFixed && utilization > 0
       ? (s5?.pnl ? (opex + capex) / utilization : opex + capex / utilization)
       : null;
-    rows.push({ year, revenue, utilization, opex, capex, fcf, discountedFcf: discount(fcf, year), cumulativeDiscountedFcf: 0, breakEvenRevenue });
+    rows.push({ year, revenue, utilization, opex, labor, capex, fcf, discountedFcf: discount(fcf, year), cumulativeDiscountedFcf: 0, breakEvenRevenue });
   }
   if (exitMult > 0) {
     rows[rows.length - 1].fcf += exitValue;

@@ -117,6 +117,10 @@ export interface PlanLineRow {
 export interface AggregatedPlan {
   horizonYears: number;
   capexByYear: number[];
+  /** Category split (2026-10-19 decider ask: `재무분석` 비용 = S5와 같은 구조) — labor and
+   *  opex keep their own vectors; `laborOpexByYear` stays the merged one the sim/s5_pnl paths read. */
+  laborByYear: number[];
+  opexByYear: number[];
   laborOpexByYear: number[];
   govRndByYear: number[];
   opexCovered: boolean[];
@@ -142,6 +146,8 @@ export interface AggregatedPlan {
 export function aggregatePlanLines(horizonRaw: number, lines: ReadonlyArray<PlanLineRow>, fxRates?: FxRates): AggregatedPlan {
   const horizon = Math.min(Math.max(Math.round(horizonRaw), 1), 50);
   const capexByYear = new Array<number>(horizon).fill(0);
+  const laborByYear = new Array<number>(horizon).fill(0);
+  const opexByYear = new Array<number>(horizon).fill(0);
   const laborOpexByYear = new Array<number>(horizon).fill(0);
   const govRndByYear = new Array<number>(horizon).fill(0);
   const opexCovered = new Array<boolean>(horizon).fill(false);
@@ -167,17 +173,26 @@ export function aggregatePlanLines(horizonRaw: number, lines: ReadonlyArray<Plan
     const end = Math.min(l.end_year ?? horizon, horizon);
     const isCapex = l.category === "capex";
     const isGovRnd = l.category === "gov_rnd";
+    const isLabor = l.category === "labor";
     const fromCapability = (l.note ?? "").includes(CAPABILITY_LINE_NOTE_MARK);
     const amounts = isCapex ? capexByYear : isGovRnd ? govRndByYear : laborOpexByYear;
+    // Category split (2026-10-19 decider ask: `재무분석` 비용 = S5와 같은 구조) — labor and
+    // opex keep their own vectors alongside the merged one the sim/s5_pnl paths read.
+    const categoryAmounts = isLabor ? laborByYear : isGovRnd || isCapex ? null : opexByYear;
     for (let y = Math.max(1, l.start_year); y <= end; y++) {
-      const amount = l.annual_amount_krw_m * Math.pow(1 + l.growth_rate, y - l.start_year);
+      // 기준 금액 — the line's growth_rate does NOT compound here. The S5 투자비 탭 has no
+      // growth input (the value rides in from legacy/AI lines invisible to the person), and
+      // the decider set the consistency rule: S8 aggregation reads what the S5 table shows.
+      // Escalation, if wanted, becomes a visible S5 field first (future slice).
+      const amount = l.annual_amount_krw_m;
       amounts[y - 1] += amount;
+      if (categoryAmounts) categoryAmounts[y - 1] += amount;
       if (fromCapability && isCapex) capexCapabilityByYear[y - 1] += amount;
       else if (fromCapability && !isGovRnd) laborOpexCapabilityByYear[y - 1] += amount;
       if (!isCapex && !isGovRnd) opexCovered[y - 1] = true;
     }
   }
-  return { horizonYears: horizon, capexByYear, laborOpexByYear, govRndByYear, opexCovered, capexCapabilityByYear, laborOpexCapabilityByYear, skippedLines, ...(preLaunchLines > 0 ? { preLaunchKrwM, preLaunchLines } : {}) };
+  return { horizonYears: horizon, capexByYear, laborByYear, opexByYear, laborOpexByYear, govRndByYear, opexCovered, capexCapabilityByYear, laborOpexCapabilityByYear, skippedLines, ...(preLaunchLines > 0 ? { preLaunchKrwM, preLaunchLines } : {}) };
 }
 
 /**
@@ -195,6 +210,7 @@ export function applyStaffingLaborToPlan(agg: AggregatedPlan, staffing: Staffing
   for (let i = 0; i < agg.horizonYears; i++) {
     const v = (vec.annualByYear[i] ?? 0) + (vec.recruitingByYear[i] ?? 0);
     if (v > 0) {
+      agg.laborByYear[i] += v;
       agg.laborOpexByYear[i] += v;
       agg.opexCovered[i] = true;
     }
