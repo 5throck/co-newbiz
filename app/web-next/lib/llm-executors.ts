@@ -99,15 +99,58 @@ export function parseDrafts(raw: string): TailorItemDraft[] {
 export function makeLlmDdTailorExecutor(): DdTailorExecutor {
   return async (domain, ctx) => {
     if (!isLlmConfigured()) throw llmUnavailable();
+    const userPrompt = `도메인: ${domain}\n산업: ${ctx.industry}\n프로젝트: ${ctx.projectId}`;
     const raw = await complete(
       [
         systemMessage("s9.dd_tailor"),
-        { role: "user", content: `도메인: ${domain}\n산업: ${ctx.industry}\n프로젝트: ${ctx.projectId}` },
+        { role: "user", content: userPrompt },
       ],
       { temperature: 0.4, maxTokens: 1400, agent: promptAgent("s9.dd_tailor") },
     );
-    const drafts = parseDrafts(raw);
-    if (drafts.length > 0) return drafts;
-    throw new Error("LLM tailor 응답을 항목 배열로 해석하지 못했습니다.");
+    let drafts = parseDrafts(raw);
+    if (drafts.length === 0) throw new Error("LLM tailor 응답을 항목 배열로 해석하지 못했습니다.");
+    // 2026-10-19 decider report ("산업 맞춤 제안이 영어로 작성"): the model ignored the
+    // Korean instruction on the first pass. The test is HANGUL-MAJORITY on the LABEL
+    // alone — the Korean industry name inside an English sentence
+    // ("Assess ... in 휴머노이드 로봇 ...") must NOT pass, and a Korean rationale does
+    // not rescue an English label (the label is the visible one-liner). TWO repair
+    // retries; a reply that still refuses Korean fails the tailor loudly (the person
+    // retries) instead of shipping English items the decider already rejected.
+    const labelKorean = (d: { itemLabel: string }): boolean => {
+      const hangul = (d.itemLabel.match(/[가-힣]/g) ?? []).length;
+      const latin = (d.itemLabel.match(/[A-Za-z]/g) ?? []).length;
+      return hangul >= latin;
+    };
+    const repairOnce = async (rejectedText: string, attempt: number) => {
+      const repair = await complete(
+        [
+          systemMessage("s9.dd_tailor"),
+          {
+            role: "user" as const,
+            content: [
+              `이전 응답이 한국어 규칙에 맞지 않아 기각되었습니다 (기각 ${attempt}회) — item_label을 반드시 한국어로 재작성하세요. rationale도 한국어로 쓰세요. 고유명사·규격명(예: ISO 45001)만 원어 병기합니다.`,
+              "기각된 이전 응답:",
+              rejectedText.slice(0, 1500),
+              "수정된 JSON 배열만 출력하세요 (설명·코드펜스 금지). item_label은 JSON 숫자·영문 문자열이 아니라 한국어 문장입니다.",
+            ].join("\n"),
+          },
+        ],
+        { temperature: 0.2 + attempt * 0.1, maxTokens: 1400, agent: promptAgent("s9.dd_tailor") },
+      );
+      return parseDrafts(repair);
+    };
+    if (!drafts.every(labelKorean)) {
+      let rejectedText = raw;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        const repaired = await repairOnce(rejectedText, attempt);
+        if (repaired.length === 0) throw new Error("LLM tailor 재시도 응답을 항목 배열로 해석하지 못했습니다.");
+        if (repaired.every(labelKorean)) { drafts = repaired; break; }
+        rejectedText = JSON.stringify(repaired.map((d) => ({ item_label: d.itemLabel, rationale: d.rationale })));
+        if (attempt === 2 && !repaired.every(labelKorean)) {
+          throw new Error("LLM tailor 응답이 두 번의 재시도 후에도 한국어로 작성되지 않았습니다 — 다시 생성을 실행하세요.");
+        }
+      }
+    }
+    return drafts;
   };
 }

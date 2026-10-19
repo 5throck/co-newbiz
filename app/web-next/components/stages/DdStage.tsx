@@ -239,16 +239,16 @@ export function DdStage({ projectId }: { projectId: string }) {
     else if (summary?.opened) load(next);
   }
 
-  async function tailor() {
+  async function tailor(regenerate = false) {
     if (busy) return;
     setBusy(true); setError(null); setNotice(null);
     try {
       const r = await api.post<{ runId: string; proposedCount: number }>(
         `/api/projects/${encodeURIComponent(projectId)}/dd-checklist/tailor`,
-        scopeParam ? { target_id: scopeParam } : {},
+        { ...(scopeParam ? { target_id: scopeParam } : {}), ...(regenerate ? { regenerate: true } : {}) },
       );
       setNotice(
-        `산업 맞춤 제안 생성 완료 (run ${r.data.runId}, 제안 ${r.data.proposedCount}건) — 제안 상태로만 기록되었습니다. 승인 전까지 완료 기준에 반영되지 않습니다.`,
+        `산업 맞춤 제안 ${regenerate ? "재생성" : "생성"} 완료 (제안 ${r.data.proposedCount}건) — 제안 상태로만 기록되었습니다. 승인 전까지 완료 기준에 반영되지 않습니다.`,
       );
       reload();
     } catch (e) {
@@ -547,8 +547,19 @@ export function DdStage({ projectId }: { projectId: string }) {
 
         {canAct && !viewNotOpened && (
           <div className="mb-3">
-            <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void tailor()}>
-              {busy ? "생성 중..." : "산업 맞춤 제안 생성 (commercial-dd-agent · technical-dd-agent · legal-counsel)"}
+            <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => {
+              const hasProposed = (data?.domains ?? []).some((d) => d.custom.some((c) => c.status === "proposed"));
+              if (hasProposed) {
+                confirm(
+                  "산업 맞춤 제안 재생성",
+                  () => { void tailor(true); },
+                  { body: "기존 대기 중인 제안(미승인 AI 초안)을 삭제하고 새로 생성합니다 — 승인·기각된 항목은 그대로 유지됩니다." },
+                );
+              } else {
+                void tailor(false);
+              }
+            }}>
+              {busy ? "생성 중..." : "산업 맞춤 제안 생성 · 다시 생성 (commercial-dd-agent · technical-dd-agent · legal-counsel)"}
             </button>
           </div>
         )}
