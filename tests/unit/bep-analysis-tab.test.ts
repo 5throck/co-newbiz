@@ -41,4 +41,13 @@ describe("S8 tab restructure: 재무분석 → 대상회사 + 신규 재무분�
     expect(stage).toContain('label: "대상회사"');
     expect(read("app/web-next/components/stages/BepAnalysisPanel.tsx")).toContain("BEP Analysis");
   });
+
+  test("the panel reads the scenario tables off the route payload's `scenarios` key (regression: flat read stuck the tab on 불러오는 중)", () => {
+    const panel = read("app/web-next/components/stages/BepAnalysisPanel.tsx");
+    expect(panel).toContain("interface BepPayload");
+    expect(panel).toContain("r.data?.scenarios ?? null");
+    // and the route actually nests the tables under `scenarios`
+    const route = read("app/web-next/app/api/projects/[id]/business-case/bep/route.ts");
+    expect(route).toContain("scenarios: Object.fromEntries");
+  });
 });

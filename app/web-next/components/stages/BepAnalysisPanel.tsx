@@ -34,6 +34,10 @@ interface ScenarioTable {
   bepYear: number | null;
 }
 type ScenarioKey = "base" | "downside" | "upside";
+interface BepPayload {
+  wacc: number;
+  scenarios: Record<ScenarioKey, ScenarioTable>;
+}
 const SCENARIO_LABEL: Record<ScenarioKey, string> = { base: "기본(Base)", downside: "보수(Downside)", upside: "낙관(Upside)" };
 const BASIS_LABEL: Record<ScenarioTable["basis"], string> = { ratio: "비율 기준", s5_plan: "S5 투자 계획 기준", s5_pnl: "S5 손익 계획 기준" };
 const fmt = (n: number) => n.toLocaleString("ko-KR", { maximumFractionDigits: 1 });
@@ -46,8 +50,8 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     let alive = true;
-    api.get<Record<ScenarioKey, ScenarioTable>>(`/api/projects/${encodeURIComponent(projectId)}/business-case/bep`)
-      .then((r) => { if (alive) setData(r.data); })
+    api.get<BepPayload>(`/api/projects/${encodeURIComponent(projectId)}/business-case/bep`)
+      .then((r) => { if (alive) setData(r.data?.scenarios ?? null); })
       .catch((e) => { if (alive) setError(e instanceof Error ? e.message : "불러오기 실패"); });
     return () => { alive = false; };
   }, [projectId]);
