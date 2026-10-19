@@ -88,6 +88,30 @@ export const NO_COMPLETED_VERSIONS =
  *  completed) version; empty value = no pick yet. */
 export const VERSION_PLACEHOLDER = "연결할 S1 시장규모 버전 선택";
 
+/**
+ * Placeholder for `진입 시장 정보` (market_brief). 2026-10-19 decider report:
+ * the old hardcoded example named a construction-equipment breaker market, which
+ * is meaningless on an unrelated opportunity (e.g. an M&A robotics deal). The
+ * example is now composed from the LINKED S1 version's industry and the matrix
+ * scope, so it shows the domain the person is actually working in; with no
+ * linked version it degrades to a domain-neutral prompt instead of another
+ * industry's example.
+ */
+export function marketBriefExample(input: {
+  industryName?: string | null;
+  regionLabels?: readonly string[];
+  segmentLabels?: readonly string[];
+}): string {
+  const industry = (input.industryName ?? "").trim();
+  const region = (input.regionLabels ?? [])[0]?.trim() ?? "";
+  const segment = (input.segmentLabels ?? [])[0]?.trim() ?? "";
+  if (industry) {
+    const scope = [region, segment].filter(Boolean).join(" ");
+    return scope ? `예: ${scope} — ${industry} 수요 중심` : `예: ${industry} — 진입 대상 수요 중심`;
+  }
+  return "예: 진입할 지역·고객군·제품(서비스)과 핵심 수요 동인을 한 줄로 적어 주세요";
+}
+
 // --- FlowState machine (2026-10-17 redesign, design §4/§5.1) -----------------
 // UNLINKED → LINKED_UNSCOPED → LINKED_SCOPED → DERIVED, plus the advisory
 // +STALE flag (manual link pinned to a non-latest version — never blocks).

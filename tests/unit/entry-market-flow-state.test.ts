@@ -26,6 +26,7 @@ import {
   derivationStepFromForm,
   buildDerivationSavePayload,
   derivationFormError,
+  marketBriefExample,
 } from "../../app/web-next/lib/entry-market-flow-state.ts";
 import * as shim from "../../app/web-next/lib/entry-market-flow.ts";
 
@@ -228,5 +229,20 @@ describe("one-release re-export shim (OD-4)", () => {
   test("old import path re-exports the folded module's API", () => {
     expect((shim as { deriveFlowState?: unknown }).deriveFlowState).toBe(deriveFlowState);
     expect((shim as { buildDerivationSavePayload?: unknown }).buildDerivationSavePayload).toBe(deriveFlowState ? buildDerivationSavePayload : null);
+  });
+});
+
+describe("marketBriefExample (진입 시장 정보 placeholder)", () => {
+  test("composes the example from the LINKED S1 industry and the matrix scope", () => {
+    expect(marketBriefExample({ industryName: "산업용 로봇", regionLabels: ["유럽"], segmentLabels: ["자동화"] }))
+      .toBe("예: 유럽 자동화 — 산업용 로봇 수요 중심");
+    expect(marketBriefExample({ industryName: "산업용 로봇", regionLabels: [], segmentLabels: [] }))
+      .toBe("예: 산업용 로봇 — 진입 대상 수요 중심");
+  });
+  test("degrades to a domain-neutral prompt instead of another industry's example", () => {
+    const neutral = marketBriefExample({ industryName: null });
+    expect(neutral).toContain("진입할 지역");
+    expect(neutral).not.toContain("Stage V");
+    expect(neutral).not.toContain("유압 브레이커");
   });
 });
