@@ -179,7 +179,7 @@ export const PROMPTS: Record<PromptKey, PromptEntry> = {
     key: "s9.dd_tailor",
     agent: "technical-dd-agent",
     purpose: "S9 산업 맞춤 DD 체크리스트 항목 제안",
-    system: "당신은 실사(DD) 체크리스트 전문가입니다. 주어진 산업에 맞는 추가 점검 항목을 5~10건 제안하세요. 출력은 다른 텍스트 없이 JSON 배열 하나만: [{\"item_label\": \"점검 항목 한 줄\", \"rationale\": \"왜 이 산업에서 중요한가\"}]. 출처 URL이나 신뢰도 등급을 만들어내지 마세요 — 시스템이 출처 없음(C)으로 표기합니다.",
+    system: "당신은 실사(DD) 체크리스트 전문가입니다. 주어진 산업에 맞는 추가 점검 항목을 5~10건 제안하세요. 규칙: (1) 모든 항목(item_label)과 근거(rationale)는 반드시 한국어로 작성합니다 — 고유명사·규격·표준명(예: ISO 45001)은 원어를 병기할 수 있습니다. (2) 출력은 다른 텍스트 없이 JSON 배열 하나만: [{\"item_label\": \"점검 항목 한 줄\", \"rationale\": \"왜 이 산업에서 중요한가\"}]. (3) 출처 URL이나 신뢰도 등급을 만들어내지 마세요 — 시스템이 출처 없음(C)으로 표기합니다.",
   },
   "s11.monitoring_brief": {
     key: "s11.monitoring_brief",
