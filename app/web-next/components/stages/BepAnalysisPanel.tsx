@@ -85,10 +85,22 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
     // Columns follow the table: Y0 only for pre-launch spend, otherwise plan years 1..H.
     const chartRows = showY0 ? table.rows : table.rows.filter((r) => r.year > 0);
     const yrs = chartRows.map((r) => `Y${r.year}`);
+    // M&A keeps the price and operating capex as separate bars (2026-10-19 decider direction).
+    const capexSeries: Array<{ name: string; type: "bar"; data: number[]; itemStyle: { color: string } }> = acquisition
+      ? [
+          { name: "인수가격", type: "bar", data: chartRows.map((r) => (r.year === 0 ? Math.round(r.capex * 100) / 100 : 0)), itemStyle: { color: ct.color[3] } },
+          { name: "설비투자 (운영)", type: "bar", data: chartRows.map((r) => (r.year === 0 ? 0 : Math.round(r.capex * 100) / 100)), itemStyle: { color: ct.color[5] ?? ct.color[2] } },
+        ]
+      : [{ name: "설비투자", type: "bar", data: chartRows.map((r) => Math.round(r.capex * 100) / 100), itemStyle: { color: ct.color[3] } }];
     return {
       backgroundColor: "transparent",
       tooltip: { trigger: "axis" },
-      legend: { data: ["매출", "인건비", "운영비", "설비투자", "순현금흐름", "누적 할인 현금흐름"], textStyle: { color: ct.muted } },
+      legend: {
+        data: acquisition
+          ? ["매출", "인건비", "운영비", "인수가격", "설비투자 (운영)", "순현금흐름", "누적 할인 현금흐름"]
+          : ["매출", "인건비", "운영비", "설비투자", "순현금흐름", "누적 할인 현금흐름"],
+        textStyle: { color: ct.muted },
+      },
       xAxis: { type: "category", data: yrs, axisLabel: { color: ct.muted } },
       yAxis: [
         { type: "value", name: "백만원/년", axisLabel: { color: ct.muted }, nameTextStyle: { color: ct.muted }, splitLine: { lineStyle: { color: ct.muted, opacity: 0.15 } } },
@@ -98,7 +110,7 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
         { name: "매출", type: "bar", data: chartRows.map((r) => Math.round(r.revenue * 100) / 100), itemStyle: { color: ct.color[0] } },
         { name: "인건비", type: "bar", data: chartRows.map((r) => Math.round(r.labor * 100) / 100), itemStyle: { color: ct.color[1] } },
         { name: "운영비", type: "bar", data: chartRows.map((r) => Math.round((r.opex - r.labor) * 100) / 100), itemStyle: { color: ct.color[2] } },
-        { name: "설비투자", type: "bar", data: chartRows.map((r) => Math.round(r.capex * 100) / 100), itemStyle: { color: ct.color[3] } },
+        ...capexSeries,
         { name: "순현금흐름", type: "line", data: chartRows.map((r) => Math.round(r.fcf * 100) / 100), itemStyle: { color: ct.color[4] } },
         { name: "누적 할인 현금흐름", type: "line", yAxisIndex: 1, data: chartRows.map((r) => r.cumulativeDiscountedFcf), itemStyle: { color: ct.color[5] ?? ct.color[0] } },
       ],
@@ -175,7 +187,15 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
               // 인건비 only where the case separates it (S5 plan); a ratio case folds labor into 운영비.
               ...(table.rows.some((r) => r.labor > 0) ? [["인건비", (r: YearRow) => r.labor] as [string, (r: YearRow) => number]] : []),
               ["운영비", (r: YearRow) => r.opex - r.labor],
-              ["설비투자", (r: YearRow) => r.capex],
+              // 2026-10-19 decider direction: an M&A case pays the acquisition price at
+              // year 0 and only then spends operating capex — one mixed `설비투자` row
+              // mislabelled the price, so an acquisition case splits them.
+              ...(acquisition
+                ? ([
+                    ["인수가격", (r: YearRow) => (r.year === 0 ? r.capex : 0)],
+                    ["설비투자 (운영)", (r: YearRow) => (r.year === 0 ? 0 : r.capex)],
+                  ] as Array<[string, (r: YearRow) => number]>)
+                : ([["설비투자", (r: YearRow) => r.capex]] as Array<[string, (r: YearRow) => number]>)),
               ["순현금흐름", (r: YearRow) => r.fcf],
               ["누적 할인 현금흐름", (r: YearRow) => r.cumulativeDiscountedFcf],
             ] as Array<[string, (r: YearRow) => number]>).map(([label, get]) => (
