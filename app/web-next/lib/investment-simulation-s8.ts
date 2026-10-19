@@ -10,7 +10,10 @@ import { drawInvestmentFactors, simulationInputHash } from "./investment-simulat
 import { loadInvestmentVectorsInput } from "./investment-simulation-input.ts";
 import type { effectiveAssumptions } from "./investment-vectors.ts";
 
-/** Per-draw group factors of the latest confirmed S5 run (ramp/salary groups need staffing, which S8 does not carry). */
+/** Per-draw factors of the latest confirmed S5 run. 2026-10-19 decider direction:
+ *  ALL S5 assumption groups propagate — salary / increase / on-cost / ramp move the
+ *  staffing labor exactly as the S5 investment simulation moves it, cap/man move the
+ *  capability and manual plan lines. */
 export interface S5SimConsumption {
   runId: string;
   inputHash: string;
@@ -18,6 +21,14 @@ export interface S5SimConsumption {
   drawCount: number;
   capFactors: number[];
   manFactors: number[];
+  /** Triangular multipliers around 1.0 (급여 ±range). */
+  salaryFactors: number[];
+  /** Percentage-point shifts for the annual increase rate. */
+  increaseFactorsPp: number[];
+  /** Percentage-point shifts for the on-cost rate. */
+  onCostFactorsPp: number[];
+  /** Half-year shift fractions in [-w, w]; > 0 delays, < 0 advances. */
+  rampFactors: number[];
 }
 
 /** Draw index used by S8 iteration `it` - the S8 iteration count differs from the S5 draw count. */
@@ -38,6 +49,10 @@ export function resolveS5SimConsumption(db: Database, opportunityId: string | nu
       drawCount: run.draw_count,
       capFactors: factors.map((f) => f.cap),
       manFactors: factors.map((f) => f.man),
+      salaryFactors: factors.map((f) => f.salary),
+      increaseFactorsPp: factors.map((f) => f.inc),
+      onCostFactorsPp: factors.map((f) => f.onc),
+      rampFactors: factors.map((f) => f.ramp),
     };
   } catch {
     return null; // migration 0144/0146 pending: behave as "no run"
