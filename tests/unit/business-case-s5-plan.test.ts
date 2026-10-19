@@ -153,15 +153,20 @@ describe("s5_plan cash flows", () => {
     expect(deterministicCashflows(inputsFor("ratio", true), "base")).toEqual(deterministicCashflows(inputsFor("ratio", false), "base"));
   });
 
-  test("year-0 is the plan Y1 capex; plan years replace ratio capex (no double count)", () => {
+  test("plan-year alignment: year n carries plan year n's capex (2026-10-19 decider direction — same years as the S5 table)", () => {
     const bc = resolveBusinessCaseParamsDefaults();
     const planFlows = deterministicCashflows(inputsFor("s5_plan", true), "base");
-    expect(planFlows[0]).toBe(-500);
-    // rev1 = market × captureRate; flow1 = (rev1 - rev1·opex)·util1 - capexY2
+    // No year-0 outflow without pre-launch (start_year 0) lines.
+    expect(planFlows[0]).toBe(0);
+    // rev1 = market × captureRate; flow1 = (rev1 - rev1·opex)·util1 - capexY1 (500)
     const rev1 = 100000 * bc.captureRate;
     const util1 = bc.rampUp[0];
-    const expectedFlow1 = (rev1 - rev1 * bc.opexRatio) * util1 - 300;
-    expect(planFlows[1]).toBeCloseTo(expectedFlow1, 8);
+    expect(planFlows[1]).toBeCloseTo((rev1 - rev1 * bc.opexRatio) * util1 - 500, 8);
+    // flow2 carries plan year 2's capex (300): compare against the same flow with
+    // the plan's year-2 capex zeroed — the difference must be exactly 300.
+    const noY2Capex = [500, 0, 0, 0, 0];
+    const shifted = deterministicCashflows(inputsFor("s5_plan", true, { s5Plan: planOf({ capexByYear: noY2Capex }) }), "base");
+    expect(planFlows[2] - shifted[2]).toBeCloseTo(-300, 8);
   });
 
   test("beyond the plan the capex is 0 — the plan replaces, never supplements (spec)", () => {
@@ -191,10 +196,10 @@ describe("s5_plan cash flows", () => {
     // books in slice 2. rev1 is back-solved from the s5_plan year-1 flow.
     const bc = resolveBusinessCaseParamsDefaults();
     const util1 = bc.rampUp[0];
-    const rev1 = (planFlows[1] + 300) / ((1 - bc.opexRatio) * util1);
+    const rev1 = (planFlows[1] + 500) / ((1 - bc.opexRatio) * util1);
     const opexShift = (rev1 * bc.opexRatio - 200) * util1;
     expect(fullFlows[1] - planFlows[1]).toBeCloseTo(opexShift, 8);
-    expect(fullFlows[0]).toBe(-500);
+    expect(fullFlows[0]).toBe(0);
   });
 
   test("s5_plan_full with no opex coverage: full is identical to s5_plan", () => {

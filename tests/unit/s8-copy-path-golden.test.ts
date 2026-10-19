@@ -216,73 +216,73 @@ const GOLDEN: Record<string, unknown> = {
   "jobSpec": "{\"job_id\":\"s8:01GOLDENGF0000000000000000:downside:market_forward\",\"seed_policy\":{\"base\":\"01GOLDENGF0000000000000000\",\"hash\":\"fnv1a\"},\"device\":\"auto\",\"iterations\":2000,\"horizon_years\":5,\"discount_rate\":{\"value\":0.1,\"subject\":\"promoter\",\"source\":\"default\",\"scope\":\"project\"},\"cases\":[{\"case_id\":\"downside:market_forward\",\"drivers\":{\"revenue_y1\":{\"dist\":\"constant\",\"value\":320,\"unit\":\"KRW_M\",\"source\":\"\uc2dc\uc7a5\uaddc\ubaa8 \u00d7 \uc2dc\uc7a5\uc810\uc720\uc728 0.5% (\uae30\ubcf8\uac12)\"},\"ramp_up\":{\"dist\":\"constant\",\"value\":[0.4,0.7,0.9,1,1],\"source\":\"\uae30\ubcf8\uac12\"},\"revenue_growth\":{\"dist\":\"normal\",\"mean\":0.048,\"sigma\":0.016,\"unit\":\"ratio\",\"source\":\"\uc2dc\uc7a5 \uc131\uc7a5\ub960 (opportunity)\"},\"opex_ratio\":{\"dist\":\"constant\",\"value\":0.6,\"unit\":\"ratio\",\"source\":\"\uae30\ubcf8\uac12\"},\"capex_ratio\":{\"dist\":\"constant\",\"value\":0.1,\"unit\":\"ratio\",\"source\":\"\uae30\ubcf8\uac12\"},\"initial_investment\":{\"dist\":\"constant\",\"value\":160,\"unit\":\"KRW_M\",\"source\":\"ADR-0106 (\uae30\ubcf8\uac12)\"}}}]}"
  },
  "s5_plan": {
-  "sim": {
-   "seed": 2596622385,
-   "p05": -1460.115808,
-   "p50": -1439.843296,
-   "p95": -1418.633243,
-   "mean": -1439.663504,
-   "std": 12.742647,
-   "bep": null
-  },
-  "flows": [
-   -1700,
-   -236,
-   118.72,
-   161.7984,
-   190.56256,
-   201.996314
-  ],
-  "plan": {
-   "capex": [
-    1700,
-    300,
-    0,
-    0,
-    0
-   ],
-   "labor": [
-    400,
-    670,
-    550,
-    550,
-    400
-   ],
-   "gov": [
-    0,
-    100,
-    0,
-    0,
-    0
-   ],
-   "covered": [
-    true,
-    true,
-    true,
-    true,
-    true
-   ],
-   "capexCap": [
-    500,
-    0,
-    0,
-    0,
-    0
-   ],
-   "laborCap": [
-    0,
-    120,
-    0,
-    0,
-    0
-   ],
-   "skipped": 0,
-   "lineHash": "53db88a4",
-   "horizon": 5
-  },
-  "s5Sim": null,
-  "jobSpec": "{\"job_id\":\"s8:01GOLDENGF0000000000000000:base:market_forward\",\"seed_policy\":{\"base\":\"01GOLDENGF0000000000000000\",\"hash\":\"fnv1a\"},\"device\":\"auto\",\"iterations\":2000,\"horizon_years\":5,\"discount_rate\":{\"value\":0.1,\"subject\":\"promoter\",\"source\":\"default\",\"scope\":\"project\"},\"cases\":[{\"case_id\":\"base:market_forward\",\"drivers\":{\"revenue_y1\":{\"dist\":\"constant\",\"value\":400,\"unit\":\"KRW_M\",\"source\":\"\uc2dc\uc7a5\uaddc\ubaa8 \u00d7 \uc2dc\uc7a5\uc810\uc720\uc728 0.5% (\uae30\ubcf8\uac12)\"},\"ramp_up\":{\"dist\":\"constant\",\"value\":[0.4,0.7,0.9,1,1],\"source\":\"\uae30\ubcf8\uac12\"},\"revenue_growth\":{\"dist\":\"normal\",\"mean\":0.06,\"sigma\":0.02,\"unit\":\"ratio\",\"source\":\"\uc2dc\uc7a5 \uc131\uc7a5\ub960 (opportunity)\"},\"opex_ratio\":{\"dist\":\"constant\",\"value\":0.6,\"unit\":\"ratio\",\"source\":\"\uae30\ubcf8\uac12\"},\"capex_ratio\":{\"dist\":\"constant\",\"value\":0,\"unit\":\"ratio\",\"source\":\"S5 \ud22c\uc790 \uacc4\ud68d \uc2a4\ucf00\uc904\ub85c \ub300\uccb4 (model <model>)\"},\"initial_investment\":{\"dist\":\"constant\",\"value\":1700,\"unit\":\"KRW_M\",\"source\":\"S5 \ud22c\uc790 \uacc4\ud68d Y1 \uc9d1\ud589\uc561 \u2014 greenfield_cost model <model> (OD-3: \uacc4\ud68d 1\ub144\ucc28 \uc9c0\ucd9c\uc744 year-0\uc73c\ub85c \ubc18\uc601)\"}}}]}"
+ "sim": {
+  "seed": 2596622385,
+  "p05": -1280.776965,
+  "p50": -1260.504453,
+  "p95": -1239.2944,
+  "mean": -1260.324661,
+  "std": 12.742647,
+  "bep": null
  },
+ "flows": [
+  0,
+  -1636,
+  -181.28,
+  161.7984,
+  190.56256,
+  201.996314
+ ],
+ "plan": {
+  "capex": [
+   1700,
+   300,
+   0,
+   0,
+   0
+  ],
+  "labor": [
+   400,
+   670,
+   550,
+   550,
+   400
+  ],
+  "gov": [
+   0,
+   100,
+   0,
+   0,
+   0
+  ],
+  "covered": [
+   true,
+   true,
+   true,
+   true,
+   true
+  ],
+  "capexCap": [
+   500,
+   0,
+   0,
+   0,
+   0
+  ],
+  "laborCap": [
+   0,
+   120,
+   0,
+   0,
+   0
+  ],
+  "skipped": 0,
+  "lineHash": "53db88a4",
+  "horizon": 5
+ },
+ "s5Sim": null,
+ "jobSpec": "{\"job_id\":\"s8:01GOLDENGF0000000000000000:base:market_forward\",\"seed_policy\":{\"base\":\"01GOLDENGF0000000000000000\",\"hash\":\"fnv1a\"},\"device\":\"auto\",\"iterations\":2000,\"horizon_years\":5,\"discount_rate\":{\"value\":0.1,\"subject\":\"promoter\",\"source\":\"default\",\"scope\":\"project\"},\"cases\":[{\"case_id\":\"base:market_forward\",\"drivers\":{\"revenue_y1\":{\"dist\":\"constant\",\"value\":400,\"unit\":\"KRW_M\",\"source\":\"\uc2dc\uc7a5\uaddc\ubaa8 \u00d7 \uc2dc\uc7a5\uc810\uc720\uc728 0.5% (\uae30\ubcf8\uac12)\"},\"ramp_up\":{\"dist\":\"constant\",\"value\":[0.4,0.7,0.9,1,1],\"source\":\"\uae30\ubcf8\uac12\"},\"revenue_growth\":{\"dist\":\"normal\",\"mean\":0.06,\"sigma\":0.02,\"unit\":\"ratio\",\"source\":\"\uc2dc\uc7a5 \uc131\uc7a5\ub960 (opportunity)\"},\"opex_ratio\":{\"dist\":\"constant\",\"value\":0.6,\"unit\":\"ratio\",\"source\":\"\uae30\ubcf8\uac12\"},\"capex_ratio\":{\"dist\":\"constant\",\"value\":0,\"unit\":\"ratio\",\"source\":\"S5 \ud22c\uc790 \uacc4\ud68d \uc2a4\ucf00\uc904\ub85c \ub300\uccb4 (model <model>)\"},\"initial_investment\":{\"dist\":\"constant\",\"value\":1700,\"unit\":\"KRW_M\",\"source\":\"S5 \ud22c\uc790 \uacc4\ud68d Y1 \uc9d1\ud589\uc561 \u2014 greenfield_cost model <model> (OD-3: \uacc4\ud68d 1\ub144\ucc28 \uc9c0\ucd9c\uc744 year-0\uc73c\ub85c \ubc18\uc601)\"}}}]}"
+},
  "s5_planDown": {
   "sim": {
    "seed": 1281435003,
@@ -352,145 +352,145 @@ const GOLDEN: Record<string, unknown> = {
   "jobSpec": "{\"job_id\":\"s8:01GOLDENGF0000000000000000:downside:market_forward\",\"seed_policy\":{\"base\":\"01GOLDENGF0000000000000000\",\"hash\":\"fnv1a\"},\"device\":\"auto\",\"iterations\":2000,\"horizon_years\":5,\"discount_rate\":{\"value\":0.1,\"subject\":\"promoter\",\"source\":\"default\",\"scope\":\"project\"},\"cases\":[{\"case_id\":\"downside:market_forward\",\"drivers\":{\"revenue_y1\":{\"dist\":\"constant\",\"value\":320,\"unit\":\"KRW_M\",\"source\":\"\uc2dc\uc7a5\uaddc\ubaa8 \u00d7 \uc2dc\uc7a5\uc810\uc720\uc728 0.5% (\uae30\ubcf8\uac12)\"},\"ramp_up\":{\"dist\":\"constant\",\"value\":[0.4,0.7,0.9,1,1],\"source\":\"\uae30\ubcf8\uac12\"},\"revenue_growth\":{\"dist\":\"normal\",\"mean\":0.048,\"sigma\":0.016,\"unit\":\"ratio\",\"source\":\"\uc2dc\uc7a5 \uc131\uc7a5\ub960 (opportunity)\"},\"opex_ratio\":{\"dist\":\"constant\",\"value\":0.6,\"unit\":\"ratio\",\"source\":\"\uae30\ubcf8\uac12\"},\"capex_ratio\":{\"dist\":\"constant\",\"value\":0,\"unit\":\"ratio\",\"source\":\"S5 \ud22c\uc790 \uacc4\ud68d \uc2a4\ucf00\uc904\ub85c \ub300\uccb4 (model <model>)\"},\"initial_investment\":{\"dist\":\"constant\",\"value\":1700,\"unit\":\"KRW_M\",\"source\":\"S5 \ud22c\uc790 \uacc4\ud68d Y1 \uc9d1\ud589\uc561 \u2014 greenfield_cost model <model> (OD-3: \uacc4\ud68d 1\ub144\ucc28 \uc9c0\ucd9c\uc744 year-0\uc73c\ub85c \ubc18\uc601)\"}}}]}"
  },
  "s5_plan_full": {
-  "sim": {
-   "seed": 2596622385,
-   "p05": -2220.183219,
-   "p50": -2169.501938,
-   "p95": -2116.476806,
-   "mean": -2169.052458,
-   "std": 31.856618,
-   "bep": null
-  },
-  "flows": [
-   -1700,
-   -300,
-   -172.2,
-   -90.504,
-   -73.5936,
-   104.990784
-  ],
-  "plan": {
-   "capex": [
-    1700,
-    300,
-    0,
-    0,
-    0
-   ],
-   "labor": [
-    400,
-    670,
-    550,
-    550,
-    400
-   ],
-   "gov": [
-    0,
-    100,
-    0,
-    0,
-    0
-   ],
-   "covered": [
-    true,
-    true,
-    true,
-    true,
-    true
-   ],
-   "capexCap": [
-    500,
-    0,
-    0,
-    0,
-    0
-   ],
-   "laborCap": [
-    0,
-    120,
-    0,
-    0,
-    0
-   ],
-   "skipped": 0,
-   "lineHash": "53db88a4",
-   "horizon": 5
-  },
-  "s5Sim": null,
-  "jobSpec": "{\"job_id\":\"s8:01GOLDENGF0000000000000000:base:market_forward\",\"seed_policy\":{\"base\":\"01GOLDENGF0000000000000000\",\"hash\":\"fnv1a\"},\"device\":\"auto\",\"iterations\":2000,\"horizon_years\":5,\"discount_rate\":{\"value\":0.1,\"subject\":\"promoter\",\"source\":\"default\",\"scope\":\"project\"},\"cases\":[{\"case_id\":\"base:market_forward\",\"drivers\":{\"revenue_y1\":{\"dist\":\"constant\",\"value\":400,\"unit\":\"KRW_M\",\"source\":\"\uc2dc\uc7a5\uaddc\ubaa8 \u00d7 \uc2dc\uc7a5\uc810\uc720\uc728 0.5% (\uae30\ubcf8\uac12)\"},\"ramp_up\":{\"dist\":\"constant\",\"value\":[0.4,0.7,0.9,1,1],\"source\":\"\uae30\ubcf8\uac12\"},\"revenue_growth\":{\"dist\":\"normal\",\"mean\":0.06,\"sigma\":0.02,\"unit\":\"ratio\",\"source\":\"\uc2dc\uc7a5 \uc131\uc7a5\ub960 (opportunity)\"},\"opex_ratio\":{\"dist\":\"constant\",\"value\":0.6,\"unit\":\"ratio\",\"source\":\"\uae30\ubcf8\uac12\"},\"capex_ratio\":{\"dist\":\"constant\",\"value\":0,\"unit\":\"ratio\",\"source\":\"S5 \ud22c\uc790 \uacc4\ud68d \uc2a4\ucf00\uc904\ub85c \ub300\uccb4 (model <model>)\"},\"initial_investment\":{\"dist\":\"constant\",\"value\":1700,\"unit\":\"KRW_M\",\"source\":\"S5 \ud22c\uc790 \uacc4\ud68d Y1 \uc9d1\ud589\uc561 \u2014 greenfield_cost model <model> (OD-3: \uacc4\ud68d 1\ub144\ucc28 \uc9c0\ucd9c\uc744 year-0\uc73c\ub85c \ubc18\uc601)\"}}}]}"
+ "sim": {
+  "seed": 2596622385,
+  "p05": -2040.844376,
+  "p50": -1990.163095,
+  "p95": -1937.137963,
+  "mean": -1989.713615,
+  "std": 31.856618,
+  "bep": null
  },
+ "flows": [
+  0,
+  -1700,
+  -472.2,
+  -90.504,
+  -73.5936,
+  104.990784
+ ],
+ "plan": {
+  "capex": [
+   1700,
+   300,
+   0,
+   0,
+   0
+  ],
+  "labor": [
+   400,
+   670,
+   550,
+   550,
+   400
+  ],
+  "gov": [
+   0,
+   100,
+   0,
+   0,
+   0
+  ],
+  "covered": [
+   true,
+   true,
+   true,
+   true,
+   true
+  ],
+  "capexCap": [
+   500,
+   0,
+   0,
+   0,
+   0
+  ],
+  "laborCap": [
+   0,
+   120,
+   0,
+   0,
+   0
+  ],
+  "skipped": 0,
+  "lineHash": "53db88a4",
+  "horizon": 5
+ },
+ "s5Sim": null,
+ "jobSpec": "{\"job_id\":\"s8:01GOLDENGF0000000000000000:base:market_forward\",\"seed_policy\":{\"base\":\"01GOLDENGF0000000000000000\",\"hash\":\"fnv1a\"},\"device\":\"auto\",\"iterations\":2000,\"horizon_years\":5,\"discount_rate\":{\"value\":0.1,\"subject\":\"promoter\",\"source\":\"default\",\"scope\":\"project\"},\"cases\":[{\"case_id\":\"base:market_forward\",\"drivers\":{\"revenue_y1\":{\"dist\":\"constant\",\"value\":400,\"unit\":\"KRW_M\",\"source\":\"\uc2dc\uc7a5\uaddc\ubaa8 \u00d7 \uc2dc\uc7a5\uc810\uc720\uc728 0.5% (\uae30\ubcf8\uac12)\"},\"ramp_up\":{\"dist\":\"constant\",\"value\":[0.4,0.7,0.9,1,1],\"source\":\"\uae30\ubcf8\uac12\"},\"revenue_growth\":{\"dist\":\"normal\",\"mean\":0.06,\"sigma\":0.02,\"unit\":\"ratio\",\"source\":\"\uc2dc\uc7a5 \uc131\uc7a5\ub960 (opportunity)\"},\"opex_ratio\":{\"dist\":\"constant\",\"value\":0.6,\"unit\":\"ratio\",\"source\":\"\uae30\ubcf8\uac12\"},\"capex_ratio\":{\"dist\":\"constant\",\"value\":0,\"unit\":\"ratio\",\"source\":\"S5 \ud22c\uc790 \uacc4\ud68d \uc2a4\ucf00\uc904\ub85c \ub300\uccb4 (model <model>)\"},\"initial_investment\":{\"dist\":\"constant\",\"value\":1700,\"unit\":\"KRW_M\",\"source\":\"S5 \ud22c\uc790 \uacc4\ud68d Y1 \uc9d1\ud589\uc561 \u2014 greenfield_cost model <model> (OD-3: \uacc4\ud68d 1\ub144\ucc28 \uc9c0\ucd9c\uc744 year-0\uc73c\ub85c \ubc18\uc601)\"}}}]}"
+},
  "s5_plan_run": {
-  "sim": {
-   "seed": 2596622385,
-   "p05": -1658.670673,
-   "p50": -1439.447175,
-   "p95": -1230.205303,
-   "mean": -1440.596097,
-   "std": 131.567692,
-   "bep": null
-  },
-  "flows": [
-   -1700,
-   -236,
-   118.72,
-   161.7984,
-   190.56256,
-   201.996314
-  ],
-  "plan": {
-   "capex": [
-    1700,
-    300,
-    0,
-    0,
-    0
-   ],
-   "labor": [
-    400,
-    670,
-    550,
-    550,
-    400
-   ],
-   "gov": [
-    0,
-    100,
-    0,
-    0,
-    0
-   ],
-   "covered": [
-    true,
-    true,
-    true,
-    true,
-    true
-   ],
-   "capexCap": [
-    500,
-    0,
-    0,
-    0,
-    0
-   ],
-   "laborCap": [
-    0,
-    120,
-    0,
-    0,
-    0
-   ],
-   "skipped": 0,
-   "lineHash": "53db88a4",
-   "horizon": 5
-  },
-  "s5Sim": {
-   "runId": "present",
-   "hash": "golden-hash",
-   "draws": 300
-  },
-  "jobSpec": "{\"job_id\":\"s8:01GOLDENGF0000000000000000:base:market_forward\",\"seed_policy\":{\"base\":\"01GOLDENGF0000000000000000\",\"hash\":\"fnv1a\"},\"device\":\"auto\",\"iterations\":2000,\"horizon_years\":5,\"discount_rate\":{\"value\":0.1,\"subject\":\"promoter\",\"source\":\"default\",\"scope\":\"project\"},\"cases\":[{\"case_id\":\"base:market_forward\",\"drivers\":{\"revenue_y1\":{\"dist\":\"constant\",\"value\":400,\"unit\":\"KRW_M\",\"source\":\"\uc2dc\uc7a5\uaddc\ubaa8 \u00d7 \uc2dc\uc7a5\uc810\uc720\uc728 0.5% (\uae30\ubcf8\uac12)\"},\"ramp_up\":{\"dist\":\"constant\",\"value\":[0.4,0.7,0.9,1,1],\"source\":\"\uae30\ubcf8\uac12\"},\"revenue_growth\":{\"dist\":\"normal\",\"mean\":0.06,\"sigma\":0.02,\"unit\":\"ratio\",\"source\":\"\uc2dc\uc7a5 \uc131\uc7a5\ub960 (opportunity)\"},\"opex_ratio\":{\"dist\":\"constant\",\"value\":0.6,\"unit\":\"ratio\",\"source\":\"\uae30\ubcf8\uac12\"},\"capex_ratio\":{\"dist\":\"constant\",\"value\":0,\"unit\":\"ratio\",\"source\":\"S5 \ud22c\uc790 \uacc4\ud68d \uc2a4\ucf00\uc904\ub85c \ub300\uccb4 (model <model>)\"},\"initial_investment\":{\"dist\":\"constant\",\"value\":1700,\"unit\":\"KRW_M\",\"source\":\"S5 \ud22c\uc790 \uacc4\ud68d Y1 \uc9d1\ud589\uc561 \u2014 greenfield_cost model <model> (OD-3: \uacc4\ud68d 1\ub144\ucc28 \uc9c0\ucd9c\uc744 year-0\uc73c\ub85c \ubc18\uc601)\"}}}]}"
+ "sim": {
+  "seed": 2596622385,
+  "p05": -1459.376345,
+  "p50": -1259.885645,
+  "p95": -1069.831696,
+  "mean": -1261.172473,
+  "std": 119.695078,
+  "bep": null
  },
+ "flows": [
+  0,
+  -1636,
+  -181.28,
+  161.7984,
+  190.56256,
+  201.996314
+ ],
+ "plan": {
+  "capex": [
+   1700,
+   300,
+   0,
+   0,
+   0
+  ],
+  "labor": [
+   400,
+   670,
+   550,
+   550,
+   400
+  ],
+  "gov": [
+   0,
+   100,
+   0,
+   0,
+   0
+  ],
+  "covered": [
+   true,
+   true,
+   true,
+   true,
+   true
+  ],
+  "capexCap": [
+   500,
+   0,
+   0,
+   0,
+   0
+  ],
+  "laborCap": [
+   0,
+   120,
+   0,
+   0,
+   0
+  ],
+  "skipped": 0,
+  "lineHash": "53db88a4",
+  "horizon": 5
+ },
+ "s5Sim": {
+  "runId": "present",
+  "hash": "golden-hash",
+  "draws": 300
+ },
+ "jobSpec": "{\"job_id\":\"s8:01GOLDENGF0000000000000000:base:market_forward\",\"seed_policy\":{\"base\":\"01GOLDENGF0000000000000000\",\"hash\":\"fnv1a\"},\"device\":\"auto\",\"iterations\":2000,\"horizon_years\":5,\"discount_rate\":{\"value\":0.1,\"subject\":\"promoter\",\"source\":\"default\",\"scope\":\"project\"},\"cases\":[{\"case_id\":\"base:market_forward\",\"drivers\":{\"revenue_y1\":{\"dist\":\"constant\",\"value\":400,\"unit\":\"KRW_M\",\"source\":\"\uc2dc\uc7a5\uaddc\ubaa8 \u00d7 \uc2dc\uc7a5\uc810\uc720\uc728 0.5% (\uae30\ubcf8\uac12)\"},\"ramp_up\":{\"dist\":\"constant\",\"value\":[0.4,0.7,0.9,1,1],\"source\":\"\uae30\ubcf8\uac12\"},\"revenue_growth\":{\"dist\":\"normal\",\"mean\":0.06,\"sigma\":0.02,\"unit\":\"ratio\",\"source\":\"\uc2dc\uc7a5 \uc131\uc7a5\ub960 (opportunity)\"},\"opex_ratio\":{\"dist\":\"constant\",\"value\":0.6,\"unit\":\"ratio\",\"source\":\"\uae30\ubcf8\uac12\"},\"capex_ratio\":{\"dist\":\"constant\",\"value\":0,\"unit\":\"ratio\",\"source\":\"S5 \ud22c\uc790 \uacc4\ud68d \uc2a4\ucf00\uc904\ub85c \ub300\uccb4 (model <model>)\"},\"initial_investment\":{\"dist\":\"constant\",\"value\":1700,\"unit\":\"KRW_M\",\"source\":\"S5 \ud22c\uc790 \uacc4\ud68d Y1 \uc9d1\ud589\uc561 \u2014 greenfield_cost model <model> (OD-3: \uacc4\ud68d 1\ub144\ucc28 \uc9c0\ucd9c\uc744 year-0\uc73c\ub85c \ubc18\uc601)\"}}}]}"
+},
  "noplan": {
   "sim": {
    "seed": 3577540653,

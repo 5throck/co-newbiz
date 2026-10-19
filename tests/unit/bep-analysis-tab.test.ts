@@ -44,12 +44,14 @@ describe("deterministicCaseYearTable (재무분석 탭 데이터)", () => {
       const t = deterministicCaseYearTable(inputs, scenario);
       expect(t.basis).toBe("s5_plan");
       expect(t.rows.map((r) => r.fcf)).toEqual(legacy);
-      expect(t.rows[0].fcf).toBeLessThan(0);
+      expect(t.rows[0].fcf).toBe(0); // plan-year aligned: no year-0 outflow without pre-launch
       expect(t.npv).not.toBeNaN();
     }
     const base = deterministicCaseYearTable(inputs, "base");
-    expect(base.initialInvestment).toBe(2200); // plan 연차 1 capex → year 0 (OD-3)
-    expect(base.rows[1].capex).toBe(2000); // plan 연차 2 capex → cashflow year 1
+    // 2026-10-19 plan-year alignment: year n carries plan year n (same columns as the S5 table).
+    expect(base.initialInvestment).toBe(0); // no pre-launch spend in this fixture
+    expect(base.rows[1].capex).toBe(2200); // plan 연차 1
+    expect(base.rows[2].capex).toBe(2000); // plan 연차 2
     expect(base.bepYear === null || base.bepYear > 0).toBe(true); // payback depends on the revenue anchor
   });
   test("손익분기 매출 fires on fixed-opex years and solves each branch's fcf structure", () => {

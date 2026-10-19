@@ -61,6 +61,8 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
 
   const table = data?.[scenario] ?? null;
   const years = table?.rows.filter((r) => r.year > 0) ?? [];
+  // Y0 exists only for pre-launch (start_year 0) spend; a plan-year-aligned case has none.
+  const showY0 = table != null && table.rows.some((r) => r.year === 0 && (r.capex !== 0 || r.opex !== 0 || r.fcf !== 0));
   const firstPosYear = years.find((r) => r.cumulativeDiscountedFcf >= 0) ?? null;
   const brepRevYear = years.find((r) => r.breakEvenRevenue !== null && r.revenue > 0) ?? null;
   const safetyMargin = brepRevYear && brepRevYear.breakEvenRevenue !== null
@@ -69,8 +71,9 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
 
   const option = useMemo<EChartsOption | null>(() => {
     if (!table) return null;
-    // Y0 포함 — 누적 할인 현금흐름이 −초기투자에서 시작하는 표준 DCF 형태 (회수 교차점 가시화).
-    const yrs = table.rows.map((r) => `Y${r.year}`);
+    // Columns follow the table: Y0 only for pre-launch spend, otherwise plan years 1..H.
+    const chartRows = showY0 ? table.rows : table.rows.filter((r) => r.year > 0);
+    const yrs = chartRows.map((r) => `Y${r.year}`);
     return {
       backgroundColor: "transparent",
       tooltip: { trigger: "axis" },
@@ -81,15 +84,15 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
         { type: "value", name: "누적 (백만원)", axisLabel: { color: ct.muted }, nameTextStyle: { color: ct.muted }, splitLine: { show: false } },
       ],
       series: [
-        { name: "매출", type: "bar", data: table.rows.map((r) => Math.round(r.revenue * 100) / 100), itemStyle: { color: ct.color[0] } },
-        { name: "인건비", type: "bar", data: table.rows.map((r) => Math.round(r.labor * 100) / 100), itemStyle: { color: ct.color[1] } },
-        { name: "운영비", type: "bar", data: table.rows.map((r) => Math.round((r.opex - r.labor) * 100) / 100), itemStyle: { color: ct.color[2] } },
-        { name: "설비투자", type: "bar", data: table.rows.map((r) => Math.round(r.capex * 100) / 100), itemStyle: { color: ct.color[3] } },
-        { name: "순현금흐름", type: "line", data: table.rows.map((r) => Math.round(r.fcf * 100) / 100), itemStyle: { color: ct.color[4] } },
-        { name: "누적 할인 현금흐름", type: "line", yAxisIndex: 1, data: table.rows.map((r) => r.cumulativeDiscountedFcf), itemStyle: { color: ct.color[5] ?? ct.color[0] } },
+        { name: "매출", type: "bar", data: chartRows.map((r) => Math.round(r.revenue * 100) / 100), itemStyle: { color: ct.color[0] } },
+        { name: "인건비", type: "bar", data: chartRows.map((r) => Math.round(r.labor * 100) / 100), itemStyle: { color: ct.color[1] } },
+        { name: "운영비", type: "bar", data: chartRows.map((r) => Math.round((r.opex - r.labor) * 100) / 100), itemStyle: { color: ct.color[2] } },
+        { name: "설비투자", type: "bar", data: chartRows.map((r) => Math.round(r.capex * 100) / 100), itemStyle: { color: ct.color[3] } },
+        { name: "순현금흐름", type: "line", data: chartRows.map((r) => Math.round(r.fcf * 100) / 100), itemStyle: { color: ct.color[4] } },
+        { name: "누적 할인 현금흐름", type: "line", yAxisIndex: 1, data: chartRows.map((r) => r.cumulativeDiscountedFcf), itemStyle: { color: ct.color[5] ?? ct.color[0] } },
       ],
     };
-  }, [table, ct]);
+  }, [table, ct, showY0]);
 
   if (error) return <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">{error}</p>;
   if (!table) return <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">불러오는 중…</p>;
@@ -113,7 +116,9 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
           <span className={`status-chip ${table.bepYear != null ? "status-green" : "status-amber"}`}>
             손익분기(회수) 연도: {table.bepYear != null ? `${table.bepYear.toFixed(2)}년차` : "검토 기간 내 미도달"}
           </span>
-          <span className="status-chip status-not-started">초기 투자: {fmt(table.initialInvestment)}백만원</span>
+          {table.initialInvestment > 0 && (
+            <span className="status-chip status-not-started">출시 전 투자: {fmt(table.initialInvestment)}백만원</span>
+          )}
           {table.exitValue > 0 && <span className="status-chip status-not-started">처분 가치: {fmt(table.exitValue)}백만원</span>}
           <span className="status-chip status-not-started">NPV: {fmt(table.npv)}백만원</span>
           {table.irrValue != null && <span className="status-chip status-not-started">IRR: {(table.irrValue * 100).toFixed(1)}%</span>}
@@ -136,9 +141,10 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
           <thead>
             <tr>
               <th scope="col">구분</th>
-              {/* Y0 = 초기 투자 시점 (plan 연차 1 설비투자가 여기 적립된다 — OD-3). The Y0
-                  column keeps the 설비투자 합계 equal to the S5 투자비 총액 at a glance. */}
-              <th scope="col" className="num">Y0</th>
+              {/* 연차 = S5 투자비 표와 같은 계획 연차 (2026-10-19 decider direction).
+                  Y0 shows only PRE-LAUNCH (start_year 0) spend, so it appears only when
+                  such a line exists; plan-year capex sits in its own column. */}
+              {showY0 && <th scope="col" className="num">Y0</th>}
               {years.map((r) => <th scope="col" key={r.year} className="num">Y{r.year}</th>)}
               <th scope="col" className="num">합계</th>
             </tr>
@@ -154,7 +160,7 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
             ] as Array<[string, (r: YearRow) => number]>).map(([label, get]) => (
               <tr key={label}>
                 <td className="font-semibold">{label}</td>
-                <td className="num mono-num">{fmt(table.rows[0] ? get(table.rows[0]) : 0)}</td>
+                {showY0 && <td className="num mono-num">{fmt(table.rows[0] ? get(table.rows[0]) : 0)}</td>}
                 {years.map((r) => <td key={r.year} className="num mono-num">{fmt(get(r))}</td>)}
                 <td className="num mono-num font-semibold">{fmt(table.rows.reduce((s, r) => s + get(r), 0))}</td>
               </tr>
@@ -164,7 +170,7 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
       </div>
 
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">
-        비용 행은 S5 투자비 표와 같은 구조·같은 기준 금액(연 환산, 성장률 미반영)입니다. 재무상태표(대차대조표)는 감가상각·자산/부채 모델이 없어 제공하지 않습니다 — 이 명세는 현금흐름 기반 요약입니다. 결정 기록은 '결정' 탭에서 합니다.
+        비용 행은 S5 투자비 표와 같은 연차·같은 구조·같은 기준 금액(연 환산, 성장률 미반영)입니다. 재무상태표(대차대조표)는 감가상각·자산/부채 모델이 없어 제공하지 않습니다 — 이 명세는 현금흐름 기반 요약입니다. 결정 기록은 '결정' 탭에서 합니다.
       </p>
 
       {option && (

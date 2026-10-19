@@ -1350,12 +1350,12 @@ export function splitForPromotion(lines: unknown[], rows: CostSourceRow[], fxRat
       // 금액 × 주기계수 in EVERY window year — capabilityYearVector parity. The old
       // 균분(cost/active) rule halved 연간 lines, and 월간/분기 rows collapsed to a
       // single start year with no ×12/×4.
-      const recurring = l.period === "monthly" || l.period === "quarterly" || l.period === "yearly";
-      const annual = recurring ? Math.round(cost * cadenceMultiplier(l.period) * 100) / 100 : cost;
-      const periodFlag = recurring ? `${PERIOD_LABEL_KO[l.period]} 주기당 금액 — ${capStart}~${capEnd}연차 반복` : "일시불 총액";
+      const recurringPeriod = l.period === "monthly" || l.period === "quarterly" || l.period === "yearly" ? l.period : null;
+      const annual = recurringPeriod ? Math.round(cost * cadenceMultiplier(recurringPeriod) * 100) / 100 : cost;
+      const periodFlag = recurringPeriod ? `${PERIOD_LABEL_KO[recurringPeriod]} 주기당 금액 — ${capStart}~${capEnd}연차 반복` : "일시불 총액";
       const flags = ["역량 해소 비용", `S5 연동 (판정 ${row.id})`, periodFlag];
       if (row.stale || (!!l.basisHash && !basisHashMatches(l.basisHash, row))) flags.push("역량 판정 재판정 필요 — 금액 검증 필요");
-      capability.push({ category, name: `${row.capability} 역량 해소`, krwM: annual, note: flags.join(". "), startYear: capStart, endYear: recurring ? capEnd : capStart });
+      capability.push({ category, name: `${row.capability} 역량 해소`, krwM: annual, note: flags.join(". "), startYear: capStart, endYear: recurringPeriod ? capEnd : capStart });
     }
   }
   return { manual, capability, skipped, skippedManual, horizon };
