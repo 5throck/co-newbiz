@@ -297,6 +297,23 @@ describe("promotion split", () => {
     expect(lump).toMatchObject({ line: "일시", startYear: 3 });
     expect(lump.endYear).toBeUndefined(); // unset — the promotion insert derives end_year = start_year for lump sums
   });
+  test("recurring capability entries promote at 주기당 semantics: 월×12·분×4·연×1 per window year (2026-10-19 decider report)", () => {
+    // The 판정 dialog's 금액 is a PER-PERIOD amount; the promoted annual_amount must
+    // apply the cadence multiplier and keep the window — the old 균분(cost/active)
+    // rule halved 연간 lines and collapsed 월간 rows to one year.
+    const rows = [src({ closing_cost_krw_m: 120, months_to_attain: 60 }), src({ id: "k2", capability: "인프라", resolution: "build", closing_cost_krw_m: 2000, months_to_attain: 24 }), src({ id: "k3", capability: "분기", resolution: "build", closing_cost_krw_m: 100, months_to_attain: 12 })];
+    const s = cl.splitForPromotion([
+      { source: "capability", capabilityKey: "k1", reflected: true, category: "opex", period: "monthly", startYear: 1, endYear: 5, basisHash: cl.costBasisHash(rows[0]) },
+      { source: "capability", capabilityKey: "k2", reflected: true, category: "capex", period: "yearly", startYear: 1, endYear: 2, basisHash: cl.costBasisHash(rows[1]) },
+      { source: "capability", capabilityKey: "k3", reflected: true, category: "opex", period: "quarterly", startYear: 2, endYear: 3, basisHash: cl.costBasisHash(rows[2]) },
+    ], rows);
+    const [monthly, yearly, quarterly] = s.capability;
+    expect(monthly).toMatchObject({ krwM: 1440, startYear: 1, endYear: 5 }); // 120/월 × 12, window kept
+    expect(monthly.note).toContain("월간 주기당 금액");
+    expect(yearly).toMatchObject({ krwM: 2000, startYear: 1, endYear: 2 }); // 연간 = per-year amount, NOT 2000/2 균분
+    expect(yearly.note).toContain("연간 주기당 금액");
+    expect(quarterly).toMatchObject({ krwM: 400, startYear: 2, endYear: 3 }); // 100/분기 × 4
+  });
 });
 
 // ── DB-backed: routes, persistence, promotion, milestones ───────────────────

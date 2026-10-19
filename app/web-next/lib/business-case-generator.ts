@@ -1654,7 +1654,16 @@ export function deterministicCaseYearTable(inputs: CaseInputs, scenario: Scenari
       capex = revenue * capexRatioD;
       fcf = revenue * (1 - opexRatioD - capexRatioD) * utilization;
     }
-    const breakEvenRevenue = s5?.pnl && utilization > 0 ? (opex + capex) / utilization : null;
+    // 손익분기 매출 needs a FIXED cost year: the s5_pnl covered years and the
+    // s5_plan(_full) years whose opex the plan covers. Ratio/fallback years are
+    // revenue-proportional — a break-even revenue is undefined there. Each
+    // branch solves ITS fcf structure: s5_pnl multiplies utilization into
+    // revenue (rev·u = opex + capex); the s5_plan branch multiplies it into
+    // the margin ((rev − opex)·u = capex → rev = opex + capex/u).
+    const opexFixed = (s5?.pnl ?? false) || (!!s5 && !s5.pnl && s5.full === true && s5.plan.opexCovered[year - 1] === true);
+    const breakEvenRevenue = opexFixed && utilization > 0
+      ? (s5?.pnl ? (opex + capex) / utilization : opex + capex / utilization)
+      : null;
     rows.push({ year, revenue, utilization, opex, capex, fcf, discountedFcf: discount(fcf, year), cumulativeDiscountedFcf: 0, breakEvenRevenue });
   }
   if (exitMult > 0) {

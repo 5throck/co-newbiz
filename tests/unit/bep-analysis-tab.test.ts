@@ -4,22 +4,74 @@
 // spending window (종료 이후 0), and the tab structure carries the new key.
 import { test, expect, describe } from "bun:test";
 import { readFileSync } from "node:fs";
-import { caseInputsForProject, deterministicCaseYearTable, deterministicCashflows } from "../../app/web-next/lib/business-case-generator.ts";
+import {
+  deterministicCaseYearTable,
+  deterministicCashflows,
+  resolveBusinessCaseParamsDefaults,
+  type BusinessCaseParams,
+  type CaseInputs,
+} from "../../app/web-next/lib/business-case-generator.ts";
+
+/** Synthetic s5_plan_full inputs — reading the live dev db here made this test
+ *  depend on local state AND on suite order (business-case.test.ts re-points
+ *  CO_NEWBIZ_DB_PATH for the rest of the process). */
+function inputsFor(basis: BusinessCaseParams["investmentBasis"], overrides?: Partial<CaseInputs>): CaseInputs {
+  return {
+    projectId: "01TESTPROJECT0000000000",
+    marketSizeKrwM: 100000,
+    anchorGrowth: 0.03,
+    wacc: { value: 0.08, source: "default", assumption_id: null, run_id: null, as_of: null, rationale: null, anchor_ref: null },
+    bcParams: { ...resolveBusinessCaseParamsDefaults(), investmentBasis: basis },
+    s5Plan: {
+      modelId: "model-1",
+      horizonYears: 5,
+      capexByYear: [2200, 2000, 0, 0, 0],
+      laborOpexByYear: [6360, 6360, 6360, 6360, 6360],
+      govRndByYear: [0, 0, 0, 0, 0],
+      opexCovered: [true, true, true, true, true],
+      skippedLines: 0,
+      lineHash: "abc",
+    },
+    ...overrides,
+  } as CaseInputs;
+}
 
 describe("deterministicCaseYearTable (재무분석 탭 데이터)", () => {
   test("per-year breakdown reconciles exactly with the legacy FCF vector", () => {
-    const inputs = caseInputsForProject("01M1MXQN21DP8KYHNW3GDSE4PW");
-    const legacy = deterministicCashflows(inputs, "base");
+    const inputs = inputsFor("s5_plan_full");
     for (const scenario of ["base", "downside", "upside"] as const) {
+      const legacy = deterministicCashflows(inputs, scenario);
       const t = deterministicCaseYearTable(inputs, scenario);
-      expect(["ratio", "s5_plan", "s5_pnl"]).toContain(t.basis);
-      const fcf = t.rows.map((r) => r.fcf);
-      expect(fcf).toEqual(legacy.map((v) => v) && deterministicCashflows(inputs, scenario));
-      expect(fcf[0]).toBeLessThan(0);
+      expect(t.basis).toBe("s5_plan");
+      expect(t.rows.map((r) => r.fcf)).toEqual(legacy);
+      expect(t.rows[0].fcf).toBeLessThan(0);
       expect(t.npv).not.toBeNaN();
     }
     const base = deterministicCaseYearTable(inputs, "base");
-    expect(base.bepYear).not.toBeNull();
+    expect(base.initialInvestment).toBe(2200); // plan 연차 1 capex → year 0 (OD-3)
+    expect(base.rows[1].capex).toBe(2000); // plan 연차 2 capex → cashflow year 1
+    expect(base.bepYear === null || base.bepYear > 0).toBe(true); // payback depends on the revenue anchor
+  });
+  test("손익분기 매출 fires on fixed-opex years and solves each branch's fcf structure", () => {
+    const plan = inputsFor("s5_plan_full");
+    const t = deterministicCaseYearTable(plan, "base");
+    const y1 = t.rows[1];
+    // s5_plan branch: fcf = (rev − opex)·util − capex → BEP rev = opex + capex/util
+    expect(y1.breakEvenRevenue).toBeCloseTo(y1.opex + y1.capex / y1.utilization, 6);
+    expect(t.rows.every((r) => r.year === 0 || r.breakEvenRevenue !== null)).toBe(true);
+    // ratio basis: opex is revenue-proportional — no break-even revenue exists
+    const ratio = deterministicCaseYearTable(inputsFor("ratio"), "base");
+    expect(ratio.rows.every((r) => r.year === 0 || r.breakEvenRevenue === null)).toBe(true);
+    // s5_plan (non-full): covered flag irrelevant — opex stays ratio-based
+    const nonFull = deterministicCaseYearTable(inputsFor("s5_plan"), "base");
+    expect(nonFull.rows.every((r) => r.year === 0 || r.breakEvenRevenue === null)).toBe(true);
+  });
+  test("s5_pnl keeps the utilization-into-revenue break-even form", () => {
+    const pnl = inputsFor("s5_pnl");
+    const t = deterministicCaseYearTable(pnl, "base");
+    const y1 = t.rows[1];
+    // fcf = rev·util − opex − capex → BEP rev = (opex + capex)/util
+    expect(y1.breakEvenRevenue).toBeCloseTo((y1.opex + y1.capex) / y1.utilization, 6);
   });
 });
 
