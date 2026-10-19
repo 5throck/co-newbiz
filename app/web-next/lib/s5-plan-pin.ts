@@ -93,7 +93,12 @@ export function pinPlanLinesOf(input: InvestmentVectorsInput): { horizon: number
   }
   for (const c of input.capLines) {
     if (!(c.reflected && c.persisted) || !(c.costKrwM > 0)) continue;
-    lines.push({ category: c.category, annual_amount_krw_m: c.costKrwM, start_year: c.startYear, end_year: c.startYear, growth_rate: 0, unit: "KRW_M", note: CAPABILITY_LINE_NOTE_MARK });
+    // 주기당 금액 semantics — parity with the copy path (splitForPromotion): a
+    // recurring entry contributes 금액 × 주기계수 per WINDOW year. The old flat
+    // write (cost at start year) under-read every 월간/연간-windowed pin.
+    const recurring = c.period === "monthly" || c.period === "quarterly" || c.period === "yearly";
+    const annual = recurring ? Math.round(c.costKrwM * (PERIOD_MULTIPLIER[c.period] ?? 1) * 100) / 100 : c.costKrwM;
+    lines.push({ category: c.category, annual_amount_krw_m: annual, start_year: c.startYear, end_year: recurring ? c.endYear ?? c.startYear : c.startYear, growth_rate: 0, unit: "KRW_M", note: CAPABILITY_LINE_NOTE_MARK });
   }
   return { horizon: input.horizon, lines };
 }
