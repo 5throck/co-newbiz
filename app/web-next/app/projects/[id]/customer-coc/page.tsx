@@ -50,8 +50,11 @@ function CocView() {
   return (
     <main>
       <StageTabs projectId={id} />
-      <h1>고객 집중·CoC</h1>
-      <p className="objective">고객·공급 계약의 변경 통제 조항과 매출 집중도를 점검합니다 — 30% 이상 집중은 자동 플래그됩니다.</p>
+      <h1>고객 집중·지위 변동 (CoC, Change of Control)</h1>
+      <p className="objective">
+        고객·공급 계약의 <b>지위 변동(CoC, Change of Control)</b> 조항 — 인수로 지배구조가 바뀔 때 계약 해지·재협상·동의가 트리거되는 조항 — 과
+        매출 집중도를 점검합니다. 집중도 30% 이상은 자동 플래그되며, 플래그 건은 조사내역(dd_finding)으로 등록해 게이트 판정 근거로 사용할 수 있습니다.
+      </p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       <section className="market-section" aria-label="계약 CoC">
         {rows === null ? <PageState state="loading" /> : rows.length === 0 ? (
@@ -60,7 +63,7 @@ function CocView() {
           <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
             <table className="data-table" aria-label="계약 CoC">
               <caption className="sr-only">계약 CoC</caption>
-              <thead><tr><th>상대</th><th>방향</th><th>CoC 조항</th><th className="col-num">집중도</th><th className="col-num">추정 이탈</th></tr></thead>
+              <thead><tr><th>상대</th><th>방향</th><th>지위 변동(CoC) 조항</th><th className="col-num">집중도</th><th className="col-num">추정 이탈</th><th>조사내역 등록</th></tr></thead>
               <tbody>{rows.map((r) => (
                 <tr key={r.id} className={r.flagged ? "row-selected" : undefined}>
                   <td className="font-semibold">{r.counterparty}{r.flagged ? <span className="status-chip status-red" style={{ marginLeft: 6 }}>집중 30%+</span> : null}</td>
@@ -68,6 +71,31 @@ function CocView() {
                   <td>{r.coc_clause_present ? <span className="status-chip status-red">조항 있음</span> : <span className="status-chip status-green">없음</span>}</td>
                   <td className="col-num tabular-nums">{r.concentration_pct != null ? `${r.concentration_pct}%` : "—"}</td>
                   <td className="col-num tabular-nums">{r.est_exit_loss != null ? `${r.est_exit_loss}억` : "—"}</td>
+                  <td>
+                    {canAct && (r.flagged || r.coc_clause_present) && (
+                      <button
+                        type="button"
+                        className="btn-ghost btn-sm"
+                        title="이 계약을 조사내역(dd_finding)으로 등록합니다 — 카테고리 고객·집중, 가치 영향 = 추정 이탈 손실"
+                        onClick={() => {
+                          void (async () => {
+                            setBusy(true);
+                            try {
+                              await api.post(`/api/projects/${encodeURIComponent(id)}/dd/findings`, {
+                                category: "고객·집중",
+                                description: `[${r.direction === "customer" ? "고객" : "공급"}] ${r.counterparty} — 지위 변동(CoC) 조항 ${r.coc_clause_present ? "있음" : "없음"}${r.concentration_pct != null ? `, 집중도 ${r.concentration_pct}%` : ""}${r.clause_summary ? ` — ${r.clause_summary}` : ""}`,
+                                value_impact: r.est_exit_loss != null ? Math.round(r.est_exit_loss * 100) : null,
+                                evidence_ref: `customer-coc:${r.id}`,
+                              });
+                              toast("조사내역(dd_finding)으로 등록했습니다 — S9 조사내역 탭과 S10 입력에 반영됩니다.");
+                            } catch (e) {
+                              toast(e instanceof Error ? `등록 실패: ${e.message}` : "등록 실패");
+                            } finally { setBusy(false); }
+                          })();
+                        }}
+                      >→ 조사내역</button>
+                    )}
+                  </td>
                 </tr>
               ))}</tbody>
             </table>
