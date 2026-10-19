@@ -229,6 +229,26 @@ describe("plan_hash changes only when a year-0 line exists", () => {
     const legacyAgg = pinLib.aggregatePlanLines(5, pinLib.pinPlanLinesOf(base([ml("Plant", "capex", 1200, "lumpsum", 1)])).lines);
     expect("preLaunchKrwM" in legacyAgg).toBe(false);
   });
+  test("pinPlanLinesOf derives capability lines at 주기당 semantics (2026-10-19 decider report: 갱신 후에도 설비투자 미반영)", () => {
+    // The pinned snapshot stores the SOURCE state (period + window); the annual
+    // amount is derived at READ time — 월간 ×12, 연간 windowed, lumpsum at start.
+    const cap = (over: Record<string, unknown>) => ({
+      capabilityKey: "cap-a", name: "cap-a", line: "cap-a", category: "capex",
+      costKrwM: 2000, startYear: 1, defaultStartYear: 1, monthsToAttain: null,
+      subCategory: null, reflected: true, persisted: true, ...over,
+    }) as never;
+    const input = { manual: [] as never[], capLines: [
+      cap({ period: "monthly", endYear: 5, category: "opex" }),
+      cap({ period: "yearly", endYear: 2 }),
+      cap({ period: "lumpsum", endYear: 1 }),
+    ], horizon: 5, reflectedKeys: new Set<string>(), staffing: null };
+    const derived = pinLib.pinPlanLinesOf(input as never).lines;
+    expect(derived.map((l) => [l.annual_amount_krw_m, l.start_year, l.end_year])).toEqual([
+      [24000, 1, 5], // 월 2,000 × 12, window kept
+      [2000, 1, 2],  // 연간 = per-year amount over the window (NOT 균분)
+      [2000, 1, 1],  // 일시불 total at start year
+    ]);
+  });
 });
 
 // -- DB-backed: promotion copy, S8 copy path, pinned path, re-import -------------------------------
