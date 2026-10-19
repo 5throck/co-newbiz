@@ -363,6 +363,23 @@ export function DdStage({ projectId }: { projectId: string }) {
   const capTab = isBrownfield && !!data && tab === capTabIdx;
   const decisionTabIdx = data ? capTabIdx + (isBrownfield ? 1 : 0) : -1;
   const decisionTab = !!data && tab === decisionTabIdx;
+  // Decision-tab summary: verdict COUNTS only — for Brownfield the acquisition itself is the
+  // capability resolution, so no cost input and no business-case reflection (decider 2026-10-19).
+  const [capSummary, setCapSummary] = useState<{ resolved: number; partial: number; unresolved: number; pending: number } | null>(null);
+  useEffect(() => {
+    if (!isBrownfield) return;
+    api.get<{ rows: Array<{ verdict: { coverage: string } | null }>; pending: number }>(
+      `/api/projects/${encodeURIComponent(projectId)}/capability-dd`,
+    ).then((r) => {
+      const rows = r.data.rows ?? [];
+      setCapSummary({
+        resolved: rows.filter((x) => x.verdict?.coverage === "resolved").length,
+        partial: rows.filter((x) => x.verdict?.coverage === "partial").length,
+        unresolved: rows.filter((x) => x.verdict?.coverage === "unresolved").length,
+        pending: r.data.pending ?? 0,
+      });
+    }).catch(() => setCapSummary(null));
+  }, [isBrownfield, projectId, tab]);
   const domainTabs = (data?.domains ?? []).map((d, i) => ({ key: String(i), label: tabLabel(data?.greenfield_scope, d) }));
   const tabItems = data
     ? [
@@ -539,7 +556,7 @@ export function DdStage({ projectId }: { projectId: string }) {
         {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
         {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {notice}</p>}
 
-        {(domain || planTab || capTab) && !viewNotOpened && (
+        {(domain || planTab || capTab || decisionTab) && !viewNotOpened && (
           <>
             <TabNav
               className="mb-0"
@@ -765,62 +782,44 @@ export function DdStage({ projectId }: { projectId: string }) {
               </details>
             )}
 
+            <section className="market-section sizing-step mt-3" aria-label="산업 맞춤 제안">
+              <h3 className="sizing-step-title text-[0.9rem]">산업 맞춤 제안 (proposed)</h3>
+              {domain.custom.filter((c) => c.status === "proposed").length === 0 && (
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">대기 중인 제안이 없습니다 — 에이전트 제안은 실사 체크리스트 수행 중 도착합니다.</p>
+              )}
+              <ul className="sizing-note-list">
+                {domain.custom.filter((c) => c.status === "proposed").map((c) => (
+                  <li key={c.id}>
+                    {c.item_label}
+                    <span className="ml-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title={proposerLabel(c)}>
+                      ({DOMAIN_LABEL[c.domain] ?? c.domain} · {proposerLabel(c)})
+                    </span>
+                    {c.rationale && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">근거: {c.rationale}</span>}
+                    {c.source_url ? (
+                      <a className="text-[length:var(--fs-caption)]" href={c.source_url} target="_blank" rel="noreferrer">
+                        출처 ({c.source_reliability ?? "?"}): {c.source_url}
+                      </a>
+                    ) : (
+                      <span className="status-chip status-amber ml-0" title="이 제안은 외부 출처가 확인되지 않았습니다 (신뢰도 C — 최저 등급)">
+                        출처 없음 (C)
+                      </span>
+                    )}
+                    {canAct && c.is_proposer && (
+                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="dd-self-approval-hint">{SELF_APPROVAL_HINT}</span>
+                    )}
+                    {canAct && !c.is_proposer && (
+                      <span className="actions-row ml-2">
+                        <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => review(c, "approved")}>승인</button>
+                        <button type="button" className="btn-danger btn-sm" disabled={busy} onClick={() => review(c, "rejected")}>기각</button>
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+
             </>)}
 
-            {(() => {
-              // 2026-10-19 decider: pending proposals are visible on every tab, grouped by
-              // their domain — a proposal stays bound to the domain it was drafted for
-              // (승인 시 그 도메인 체크리스트에 편입) but the review is never tab-hidden.
-              const proposedAll = (data?.domains ?? []).flatMap((d) => d.custom.filter((c) => c.status === "proposed").map((c) => ({ domain: d.domain, item: c })));
-              const grouped = new Map<string, typeof proposedAll>();
-              for (const p of proposedAll) grouped.set(p.domain, [...(grouped.get(p.domain) ?? []), p]);
-              return (
-                <section className="market-section sizing-step mt-3" aria-label="산업 맞춤 제안 (전체 도메인)" data-testid="dd-custom-all">
-                  <h3 className="sizing-step-title text-[0.9rem]">산업 맞춤 제안 (proposed) — 전체 도메인</h3>
-                  {proposedAll.length === 0 ? (
-                    <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">대기 중인 제안이 없습니다 — 에이전트 제안은 실사 체크리스트 수행 중 도착합니다.</p>
-                  ) : (
-                    <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-                      대기 {proposedAll.length}건 — 승인 시 해당 도메인 체크리스트에 필수 항목으로 편입됩니다. 모든 제안은 한국어로 작성되도록 안내되며, 출처 없는 제안은 신뢰도 C로 표기됩니다.
-                    </p>
-                  )}
-                  {[...grouped.entries()].map(([domain, items]) => (
-                    <div key={domain} className="mt-2">
-                      <p className="text-[length:var(--fs-caption)] font-semibold">{DOMAIN_LABEL[domain] ?? domain}</p>
-                      <ul className="sizing-note-list">
-                        {items.map(({ item: c }) => (
-                          <li key={c.id}>
-                            {c.item_label}
-                            <span className="ml-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title={proposerLabel(c)}>
-                              ({DOMAIN_LABEL[c.domain] ?? c.domain} · {proposerLabel(c)})
-                            </span>
-                            {c.rationale && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">근거: {c.rationale}</span>}
-                            {c.source_url ? (
-                              <a className="text-[length:var(--fs-caption)]" href={c.source_url} target="_blank" rel="noreferrer">
-                                출처 ({c.source_reliability ?? "?"}): {c.source_url}
-                              </a>
-                            ) : (
-                              <span className="status-chip status-amber ml-0" title="이 제안은 외부 출처가 확인되지 않았습니다 (신뢰도 C — 최저 등급)">
-                                출처 없음 (C)
-                              </span>
-                            )}
-                            {canAct && c.is_proposer && (
-                              <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="dd-self-approval-hint">{SELF_APPROVAL_HINT}</span>
-                            )}
-                            {canAct && !c.is_proposer && (
-                              <span className="actions-row ml-2">
-                                <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => review(c, "approved")}>승인</button>
-                                <button type="button" className="btn-danger btn-sm" disabled={busy} onClick={() => review(c, "rejected")}>기각</button>
-                              </span>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </section>
-              );
-            })()}
 
             <section className="market-section sizing-step mt-3" aria-label="조사내역 (dd_finding)" id="dd-findings">
               <h3 className="sizing-step-title text-[0.9rem]">조사내역 (dd_finding)</h3>
@@ -846,14 +845,24 @@ export function DdStage({ projectId }: { projectId: string }) {
                 </p>
               )}
             </section>
-          </>
-        )}
-
-        <div className="mt-4">
-          <WaiverPanel projectId={projectId} targetId={scopeParam} />
-        </div>
-        {decisionTab && (
+                    {decisionTab && (
           <div className="mt-4">
+            {capSummary && (
+              <div className="market-section sizing-step mb-3" aria-label="필요 역량 판정 요약" data-testid="capability-dd-summary">
+                <h3 className="sizing-step-title text-[0.9rem]">필요 역량 판정 요약 (capability-dd)</h3>
+                <p className="flex flex-wrap gap-2 items-center">
+                  <span className="status-chip status-green">해소 {capSummary.resolved}</span>
+                  <span className="status-chip status-amber">부분 해소 {capSummary.partial}</span>
+                  <span className={`status-chip ${capSummary.unresolved > 0 ? "status-red" : "status-not-started"}`}>미해소 {capSummary.unresolved}</span>
+                  {capSummary.pending > 0 && <span className="status-chip status-amber">미판정 {capSummary.pending}</span>}
+                  {capSummary.unresolved + capSummary.partial > 0 && (
+                    <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                      — 인수만으로 해소되지 않는 역량입니다. 필요 역량 검증 탭의 판정 근거와 함께 S10 검토 사항으로 확인하세요.
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="dd-gate-subject">
               게이트 판정 대상: <strong>{selectedTarget?.name ?? "선정 대상 없음 (프로젝트 기준)"}</strong>
               {targets.length >= 2 && " — 다른 대상의 DD는 비교 근거이며 이 판정에 반영되지 않습니다."}
@@ -867,6 +876,12 @@ export function DdStage({ projectId }: { projectId: string }) {
             />
           </div>
         )}
+          </>
+        )}
+
+        <div className="mt-4">
+          <WaiverPanel projectId={projectId} targetId={scopeParam} />
+        </div>
         {waiverDlg && (
           <WaiverDialog
             dlg={waiverDlg}
