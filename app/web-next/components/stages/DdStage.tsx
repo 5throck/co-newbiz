@@ -333,6 +333,11 @@ export function DdStage({ projectId }: { projectId: string }) {
   const stepTags = domain ? tabStepTags(data?.greenfield_scope, domain) : [];
   const notCounted = domain ? notCountedNotice(domain) : null;
   const previousHere = domain ? (ws ? ws.previous_scope.filter((p) => p.checklist_id === domain.checklistId) : bfPreviousForTab(bf, domain.checklistId)) : [];
+  // 2026-10-19 decider: the 의사결정 panel renders once, right after the FINAL check
+  // (the last domain tab — 체결 전 딜 구조 점검). On earlier domain tabs it showed the
+  // same panel at every scroll, which read as duplicated; those tabs get a pointer instead.
+  const lastDomainIdx = Math.max(0, (data?.domains.length ?? 1) - 1);
+  const atFinalCheck = !data || tab >= lastDomainIdx;
   const bfExtraTab = !!domain && isBfExtraTab(bf, domain.checklistId);
 
   return (
@@ -763,13 +768,22 @@ export function DdStage({ projectId }: { projectId: string }) {
             게이트 판정 대상: <strong>{selectedTarget?.name ?? "선정 대상 없음 (프로젝트 기준)"}</strong>
             {targets.length >= 2 && " — 다른 대상의 DD는 비교 근거이며 이 판정에 반영되지 않습니다."}
           </p>
-          <GateDecisionPanel
-            opportunityId={projectId}
-            gates={["dd"]}
-            entityType="project"
-            showReview={false}
-            nextStage={{ label: "S10 투자구조 설계", href: `/projects/${projectId}/deal-structure` }}
-          />
+          {!atFinalCheck && data && (
+            <p className="status-chip status-not-started block w-fit max-w-full whitespace-normal [overflow-wrap:anywhere] mb-2" data-testid="dd-decision-deferred">
+              <span aria-hidden="true">ⓘ </span>
+              의사결정은 모든 실사 확인 후 기록합니다 — 마지막 점검({tabLabel(data?.greenfield_scope, data.domains[lastDomainIdx])}) 탭 하단에 열립니다.{" "}
+              <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab(lastDomainIdx)}>마지막 점검으로 →</button>
+            </p>
+          )}
+          {atFinalCheck && (
+            <GateDecisionPanel
+              opportunityId={projectId}
+              gates={["dd"]}
+              entityType="project"
+              showReview={false}
+              nextStage={{ label: "S10 투자구조 설계", href: `/projects/${projectId}/deal-structure` }}
+            />
+          )}
         </div>
         {waiverDlg && (
           <WaiverDialog
