@@ -50,7 +50,8 @@ import { fmtNpvInteger } from "./npv-format.ts";
 import { resolveDownsideOpexUplift } from "./target-costing.ts";
 import { archiveSupersededRound } from "./business-case-cleanup.ts";
 import { resolveS5SimConsumption, type S5SimConsumption } from "./investment-simulation-s8.ts";
-import { aggregatePlanLines, pinPlanLinesOf } from "./s5-plan-pin.ts";
+import { aggregatePlanLines, applyStaffingLaborToPlan, pinPlanLinesOf } from "./s5-plan-pin.ts";
+import { fitPlanToHorizon, staffingPlanOf, type StaffingPlanEntry } from "./staffing-plan.ts";
 import { getCurrentS5PlanPin, resolveActivePin, resolvePinnedS5SimConsumption, s5SourceOptedIn } from "./s5-plan-pin-s8.ts";
 
 // Per-step S8 agent assignment reads from process/flow.spec.yaml (SSOT,
@@ -1168,6 +1169,20 @@ export interface S5InvestmentPlan {
  *  `greenfield_cost` model (written at S5 promotion, ADR-0174 §6.1). Null
  *  when the project has none — every consumer then falls back to the ratio
  *  path, never to zero. */
+/** The staffing plan stored on the source opportunity's S5 assessment, fitted to the plan
+ *  horizon — the same derivation `loadInvestmentVectorsInput` uses. Null without a link or
+ *  plan. The copy path reads it live (the pin path reads the snapshot's copy). */
+function staffingOfAssessment(db: { query: (sql: string) => { get: (...args: unknown[]) => unknown; all: (...args: unknown[]) => unknown[] } }, srcOpp: string | null, horizon: number): StaffingPlanEntry | null {
+  if (!srcOpp) return null;
+  const row = db.query("SELECT business_case_lines_json FROM greenfield_assessment WHERE opportunity_id = ? ORDER BY updated_at DESC LIMIT 1").get(srcOpp) as { business_case_lines_json: string | null } | undefined;
+  let lines: unknown = null;
+  try { lines = row?.business_case_lines_json ? JSON.parse(row.business_case_lines_json) : null; } catch { lines = null; }
+  if (!Array.isArray(lines)) return null;
+  const stored = staffingPlanOf(lines);
+  const fitted = stored ? fitPlanToHorizon(stored, horizon) : null;
+  return fitted && fitted.rows.length > 0 ? fitted : null;
+}
+
 export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (...args: unknown[]) => unknown; all: (...args: unknown[]) => unknown[] } }, projectId: string): S5InvestmentPlan | null {
   // ADR-0181 seam — the person-set entry_market_fx rates convert foreign plan lines.
   const srcOpp = (db.query("SELECT source_opportunity_id FROM md_project WHERE id = ?").get(projectId) as { source_opportunity_id: string | null } | undefined)?.source_opportunity_id ?? null;
@@ -1180,7 +1195,9 @@ export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (..
   if (active) {
     const { horizon: pinHorizon, lines: pinLines } = pinPlanLinesOf(active.input);
     if (pinLines.length === 0) return null; // nothing importable in the pinned version: ratio path, like the copy
-    const agg = aggregatePlanLines(pinHorizon, pinLines, fxRates);
+    // 2026-10-19 decider report (인건비 미반영) — the snapshot's staffing plan joins the plan
+    // vectors so the S8 totals match the S5 투자비 요약; pin semantics read the SNAPSHOT state.
+    const agg = applyStaffingLaborToPlan(aggregatePlanLines(pinHorizon, pinLines, fxRates), active.input.staffing ?? null);
     const modelId = `pin:${active.pin.id}`;
     const lineHash = scenarioSeed(modelId, JSON.stringify({ c: agg.capexByYear, o: agg.laborOpexByYear, g: agg.govRndByYear, ...(agg.preLaunchLines ? { p: agg.preLaunchKrwM } : {}) })).toString(16);
     return { modelId, horizonYears: agg.horizonYears, capexByYear: agg.capexByYear, laborOpexByYear: agg.laborOpexByYear, govRndByYear: agg.govRndByYear, opexCovered: agg.opexCovered, skippedLines: agg.skippedLines, lineHash, capexCapabilityByYear: agg.capexCapabilityByYear, laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear, ...(agg.preLaunchLines ? { preLaunchKrwM: agg.preLaunchKrwM, preLaunchLines: agg.preLaunchLines } : {}), pinId: active.pin.id, planHash: active.pin.plan_hash };
@@ -1196,7 +1213,7 @@ export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (..
   const lines = db
     .query("SELECT category, annual_amount_krw_m, start_year, end_year, growth_rate, unit, note FROM business_case_line WHERE model_id = ?")
     .all(model.id) as Array<{ category: string; annual_amount_krw_m: number; start_year: number; end_year: number | null; growth_rate: number; unit: string | null; note?: string | null }>;
-  const agg = aggregatePlanLines(model.horizon_years, lines, fxRates);
+  const agg = applyStaffingLaborToPlan(aggregatePlanLines(model.horizon_years, lines, fxRates), staffingOfAssessment(getDb(), srcOpp, model.horizon_years));
   const lineHash = scenarioSeed(model.id, JSON.stringify({ c: agg.capexByYear, o: agg.laborOpexByYear, g: agg.govRndByYear, ...(agg.preLaunchLines ? { p: agg.preLaunchKrwM } : {}) })).toString(16);
   return { modelId: model.id, horizonYears: agg.horizonYears, capexByYear: agg.capexByYear, laborOpexByYear: agg.laborOpexByYear, govRndByYear: agg.govRndByYear, opexCovered: agg.opexCovered, skippedLines: agg.skippedLines, lineHash, capexCapabilityByYear: agg.capexCapabilityByYear, laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear, ...(agg.preLaunchLines ? { preLaunchKrwM: agg.preLaunchKrwM, preLaunchLines: agg.preLaunchLines } : {}) };
 }
