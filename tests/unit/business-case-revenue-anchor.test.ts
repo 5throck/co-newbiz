@@ -360,19 +360,20 @@ describe("brownfield per-target revenue anchor", () => {
     expect(methodsMixedAcrossTargets(rows.map((r) => ({ ...r, anchorMethod: null })))).toBe(false);
   });
 
-  test("(g) overrides: user bc.acquisition_ev_revenue prices the deal; explicit bc.initial_investment_ratio wins over both", async () => {
-    // 1) User pins the multiple at 5× — entry and exit follow.
+  test("(g) overrides: the exit knob (bc.exit_ev_revenue) is a separate decision; the direct ratio knob wins over both (2026-10-19 entry/exit split)", async () => {
+    // 1) Exit knob pinned at 4× — the entry stays at the band-default multiple (3.0
+    //    placeholder; no band confirmed in this fixture), the exit follows the knob.
     await recordBusinessCaseParams(db, {
       projectId,
-      params: { acquisition_ev_revenue: 5 },
-      rationale: "디들 프리미엄 반영 — 전략적 인수 사례 기준 상향 (test)",
+      params: { exit_ev_revenue: 4 },
+      rationale: "처분 배수 별도 확정 — 진입보다 보수적 회수 가정 (test)",
       actor: "anchor-test",
     });
     await generateBusinessCases(projectId, { actor: "anchor-test" });
     let drivers = latestDrivers(db, projectId, targetAId, "base");
-    expect(drivers.initial_investment!.value).toBeCloseTo(ANCHOR_KRW_M * 5, 4);
-    expect(drivers.exit_ev_revenue!.value).toBe(5);
-    expect(noteOf(db, projectId, targetAId, "base")).toContain("acq_ev=5.00x");
+    expect(drivers.initial_investment!.value).toBeCloseTo(ANCHOR_KRW_M * 3, 4);
+    expect(drivers.exit_ev_revenue!.value).toBe(4);
+    expect(noteOf(db, projectId, targetAId, "base")).toContain("exit_ev=4.00x");
 
     // 2) User pins the direct ratio knob — the ratio model wins and the
     // acquisition pricing (entry AND exit) is off.
