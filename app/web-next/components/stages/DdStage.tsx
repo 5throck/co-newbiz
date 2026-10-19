@@ -177,6 +177,36 @@ export function DdStage({ projectId }: { projectId: string }) {
       .catch((e) => setError(e instanceof Error ? e.message : "실사 데이터를 불러오지 못했습니다."));
   }, [projectId]);
 
+  // 2026-10-19 decider-approved option: adopt the four newer DD domains into this
+  // project's S9 completion count — person-only, rationale mandatory, audited.
+  const [adopt, setAdopt] = useState<{ adopted: boolean; rationale: string; by: string; at: string } | null>(null);
+  const [adoptRationale, setAdoptRationale] = useState("");
+  const [adoptBusy, setAdoptBusy] = useState(false);
+  useEffect(() => {
+    api.get<{ adoption: { adopted: boolean; rationale: string; by: string; at: string } | null }>(
+      `/api/projects/${encodeURIComponent(projectId)}/dd-domain-adopt`,
+    ).then((r) => setAdopt(r.data.adoption)).catch(() => setAdopt(null));
+  }, [projectId]);
+
+  async function submitAdopt() {
+    if (adoptBusy || adoptRationale.trim().length < 10) return;
+    setAdoptBusy(true); setError(null);
+    try {
+      const r = await api.post<{ adoption: { adopted: boolean; rationale: string; by: string; at: string } | null }>(
+        `/api/projects/${encodeURIComponent(projectId)}/dd-domain-adopt`,
+        { adopt: true, rationale: adoptRationale.trim() },
+      );
+      setAdopt(r.data.adoption);
+      setAdoptRationale("");
+      setNotice("추가 실사 도메인(재무·인사·시장·자금조달 계획)을 판정에 반영합니다 — 기록되었습니다.");
+      reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "반영 설정에 실패했습니다.");
+    } finally {
+      setAdoptBusy(false);
+    }
+  }
+
   useEffect(() => { load(null); }, [load]);
 
   const targets = data?.targets ?? [];
@@ -579,6 +609,24 @@ export function DdStage({ projectId }: { projectId: string }) {
                 <p role="note" className="status-chip status-amber block mt-2" data-testid="dd-not-counted">
                   <span aria-hidden="true">ⓘ </span>{notCounted.text}
                 </p>
+              )}
+              {notCounted && canAct && !adopt?.adopted && (
+                <div className="mt-2 mb-1 grid gap-1" data-testid="dd-adopt">
+                  <label className="text-[length:var(--fs-caption)] block" htmlFor="dd-adopt-rationale">
+                    이 도메인들을 이 프로젝트의 판정에 반영할 수 있습니다 — 근거를 기재하고 사람이 확정하세요 (게이트 규칙 변경은 기록으로 남습니다).
+                  </label>
+                  <textarea
+                    id="dd-adopt-rationale"
+                    className="sizing-new-input sizing-new-input-sm w-full"
+                    rows={2}
+                    value={adoptRationale}
+                    placeholder="예: 본 딜은 컷오프 이후 재무·시장 실사를 실질 수행 — 반영 확정 (담당: 이름)"
+                    onChange={(e) => setAdoptRationale(e.target.value)}
+                  />
+                  <button type="button" className="btn-ghost btn-sm justify-self-start" disabled={adoptBusy || adoptRationale.trim().length < 10} onClick={() => void submitAdopt()} data-testid="dd-adopt-submit">
+                    {adoptBusy ? "반영 중..." : "추가 실사 도메인을 판정에 반영 (사람 확정)"}
+                  </button>
+                </div>
               )}
               {domain.domain === "hr" && ws && (
                 <p role="note" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2" data-testid="dd-hr-tab-hint">
