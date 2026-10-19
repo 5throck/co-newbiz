@@ -26,17 +26,22 @@ const EV_BAND_REF = { min: 2, max: 6 } as const;
 
 interface ConfirmedBand { min: number; max: number; rationale: string; source: string; confirmedBy: string; confirmedAt: string }
 
-function validateBand(minRaw: string, maxRaw: string, rationale: string, source: string) {
-  const errs: { min?: string; max?: string; rationale?: string; source?: string } = {};
+function validateBand(minRaw: string, maxRaw: string, defaultRaw: string, rationale: string, source: string) {
+  const errs: { min?: string; max?: string; default?: string; rationale?: string; source?: string } = {};
   const min = minRaw.trim() === "" ? NaN : Number(minRaw);
   const max = maxRaw.trim() === "" ? NaN : Number(maxRaw);
+  const def = defaultRaw.trim() === "" ? null : Number(defaultRaw);
   if (!Number.isFinite(min) || min <= 0) errs.min = "하한은 0보다 큰 숫자여야 합니다.";
   if (!Number.isFinite(max)) errs.max = "상한은 숫자여야 합니다.";
   else if (max > EV_BAND_MAX_SANE) errs.max = `상한은 ${EV_BAND_MAX_SANE}배 이하여야 합니다 (입력 오류로 간주).`;
   if (!errs.min && !errs.max && min >= max) errs.max = "하한은 상한보다 작아야 합니다.";
+  if (def !== null) {
+    if (!Number.isFinite(def) || def <= 0) errs.default = "기본 배수는 0보다 큰 숫자여야 합니다.";
+    else if (!errs.min && !errs.max && (def < min || def > max)) errs.default = "기본 배수는 확정 밴드 [하한, 상한] 안에 있어야 합니다.";
+  }
   if (rationale.trim().length < 10) errs.rationale = "근거는 10자 이상 입력하세요.";
   if (source.trim().length < 3) errs.source = "출처는 3자 이상 입력하세요 (예: 경영진 판단: 담당자명).";
-  return { errs, min, max, valid: Object.keys(errs).length === 0 };
+  return { errs, min, max, default: def, valid: Object.keys(errs).length === 0 };
 }
 
 /** user > derived > default made visible: three distinct chip tones, the raw source string stays as tooltip. */
@@ -296,13 +301,14 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
   const canAct = canWriteProject(me?.role);
   const [bandMin, setBandMin] = useState("");
   const [bandMax, setBandMax] = useState("");
+  const [bandDefault, setBandDefault] = useState("");
   const [bandRationale, setBandRationale] = useState("");
   const [bandSource, setBandSource] = useState("");
   const [bandTouched, setBandTouched] = useState(false);
   const [bandMsg, setBandMsg] = useState<string | null>(null);
   const [bandErr, setBandErr] = useState<string | null>(null);
   const [bandBusy, setBandBusy] = useState(false);
-  const bandCheck = validateBand(bandMin, bandMax, bandRationale, bandSource);
+  const bandCheck = validateBand(bandMin, bandMax, bandDefault, bandRationale, bandSource);
 
   async function submitBand(e: React.FormEvent) {
     e.preventDefault();
@@ -313,10 +319,12 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
     setBandBusy(true);
     try {
       await api.post(`/api/projects/${encodeURIComponent(projectId)}/business-case/ev-band`, {
-        min: bandCheck.min, max: bandCheck.max, rationale: bandRationale.trim(), source: bandSource.trim(),
+        min: bandCheck.min, max: bandCheck.max,
+        ...(bandCheck.default !== null ? { default: bandCheck.default } : {}),
+        rationale: bandRationale.trim(), source: bandSource.trim(),
       });
-      setBandMsg("밴드를 확정했습니다. 대상 비교 탭에 확정 밴드 기준으로 반영됩니다.");
-      setBandMin(""); setBandMax(""); setBandRationale(""); setBandSource(""); setBandTouched(false);
+      setBandMsg("밴드를 확정했습니다. 대상 비교 탭과 브라운필드 인수가격(기본 배수)에 반영됩니다.");
+      setBandMin(""); setBandMax(""); setBandDefault(""); setBandRationale(""); setBandSource(""); setBandTouched(false);
       load();
     } catch (err) {
       setBandErr(err instanceof Error ? err.message : "밴드 확정에 실패했습니다.");
@@ -487,7 +495,9 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
       <section className="market-section sizing-step mt-3" aria-label="EV/매출 밴드 확정">
         <h3 className="sizing-step-title">EV/매출 밴드 확정 <span className="status-chip status-info">사람 전용 — 에이전트는 설정할 수 없습니다</span></h3>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-          확정한 밴드만 대상 비교의 범위 내/밖 표시 기준이 되며 순위·밸류에이션에는 영향이 없습니다.{" "}
+          이 밴드는 브라운필드 인수가격 산정(대상 회사 매출 × EV/매출 배수)의 근거로 사용됩니다 — 아래{" "}
+          <b>기본 배수</b>를 확정하면 인수가격과 재무분석의 처분 가치가 그 배수로 계산되고, 미확정 시 출처 미확보 스크리닝 자리값{" "}
+          <b>3.0× (밴드 2–6×)</b>가 적용됩니다. 확정한 밴드는 대상 비교의 범위 내/밖 표시 기준이 되며 순위에는 영향이 없습니다.{" "}
           {onOpenTargets ? (
             <button type="button" className="text-[color:var(--accent)] font-bold" onClick={onOpenTargets}>밴드 상태는 대상 비교·선정 탭 →</button>
           ) : (
@@ -501,7 +511,7 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
           </p>
         ) : (
           <form className="grid gap-3" onSubmit={submitBand} noValidate style={{ maxWidth: 560 }}>
-            <div className="grid gap-2 md:grid-cols-2">
+            <div className="grid gap-2 md:grid-cols-3">
               <label className="grid gap-1 text-sm" htmlFor="evband-min">하한 (배, 필수)
                 <input id="evband-min" className="form-input" inputMode="decimal" value={bandMin} onChange={(e) => setBandMin(e.target.value)} placeholder="2" aria-invalid={bandTouched && !!bandCheck.errs.min} aria-describedby={bandTouched && bandCheck.errs.min ? "evband-min-err" : undefined} />
                 {bandTouched && bandCheck.errs.min && <span id="evband-min-err" role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {bandCheck.errs.min}</span>}
@@ -509,6 +519,10 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
               <label className="grid gap-1 text-sm" htmlFor="evband-max">상한 (배, 필수)
                 <input id="evband-max" className="form-input" inputMode="decimal" value={bandMax} onChange={(e) => setBandMax(e.target.value)} placeholder="6" aria-invalid={bandTouched && !!bandCheck.errs.max} aria-describedby={bandTouched && bandCheck.errs.max ? "evband-max-err" : undefined} />
                 {bandTouched && bandCheck.errs.max && <span id="evband-max-err" role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {bandCheck.errs.max}</span>}
+              </label>
+              <label className="grid gap-1 text-sm" htmlFor="evband-default">기본 배수 (배, 선택 — 밴드 안)
+                <input id="evband-default" className="form-input" inputMode="decimal" value={bandDefault} onChange={(e) => setBandDefault(e.target.value)} placeholder="3" aria-invalid={bandTouched && !!bandCheck.errs.default} aria-describedby={bandTouched && bandCheck.errs.default ? "evband-default-err" : undefined} />
+                {bandTouched && bandCheck.errs.default && <span id="evband-default-err" role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {bandCheck.errs.default}</span>}
               </label>
             </div>
             <label className="grid gap-1 text-sm" htmlFor="evband-rationale">근거 (필수, 10자 이상)

@@ -615,10 +615,17 @@ export const EV_BAND_SOURCE_MAX = 500;
 export class EvBandValidationError extends Error {}
 export const EV_BAND_MIN_KEY = "bc.acquisition_ev_revenue_band.min";
 export const EV_BAND_MAX_KEY = "bc.acquisition_ev_revenue_band.max";
+/** 2026-10-19 decider: the band carries its own 기본 배수 — the multiple used for the
+ *  brownfield acquisition price when no direct `bc.acquisition_ev_revenue` is pinned. */
+export const EV_BAND_DEFAULT_KEY = "bc.acquisition_ev_revenue_band.default";
 
 export interface ConfirmedEvBand {
   min: number;
   max: number;
+  /** The band's own 기본 배수 (optional): the brownfield acquisition price uses this
+   *  multiple when no direct `bc.acquisition_ev_revenue` is pinned; before any band
+   *  confirmation the hardcoded 3.0× screening placeholder applies. */
+  default?: number;
   rationale: string;
   source: string;
   /** run.created_by / run.created_at of the confirming run. */
@@ -636,17 +643,18 @@ export function resolveConfirmedEvBand(db: EvBandDb, projectId: string): Confirm
     .query(
       `SELECT a.run_id, a.assumption_key, a.value, a.rationale, a.anchor_ref, r.created_by, r.created_at
        FROM assumption a JOIN run r ON r.id = a.run_id
-       WHERE r.project_id = ? AND a.kind = 'user' AND a.assumption_key IN (?, ?)
+       WHERE r.project_id = ? AND a.kind = 'user' AND a.assumption_key IN (?, ?, ?)
        ORDER BY r.created_at DESC, r.id DESC, a.id DESC`,
     )
-    .all(projectId, EV_BAND_MIN_KEY, EV_BAND_MAX_KEY) as Array<{
+    .all(projectId, EV_BAND_MIN_KEY, EV_BAND_MAX_KEY, EV_BAND_DEFAULT_KEY) as Array<{
     run_id: string; assumption_key: string; value: number; rationale: string | null; anchor_ref: string | null; created_by: string; created_at: string;
   }>;
-  const byRun = new Map<string, { min?: (typeof rows)[number]; max?: (typeof rows)[number] }>();
+  const byRun = new Map<string, { min?: (typeof rows)[number]; max?: (typeof rows)[number]; def?: (typeof rows)[number] }>();
   for (const r of rows) {
     const e = byRun.get(r.run_id) ?? {};
     if (r.assumption_key === EV_BAND_MIN_KEY && !e.min) e.min = r;
     if (r.assumption_key === EV_BAND_MAX_KEY && !e.max) e.max = r;
+    if (r.assumption_key === EV_BAND_DEFAULT_KEY && !e.def) e.def = r;
     byRun.set(r.run_id, e); // Map preserves insertion order = newest run first
   }
   for (const [runId, e] of byRun) {
@@ -655,6 +663,7 @@ export function resolveConfirmedEvBand(db: EvBandDb, projectId: string): Confirm
     return {
       min: e.min.value,
       max: e.max.value,
+      ...(e.def && Number.isFinite(e.def.value) ? { default: e.def.value } : {}),
       rationale: e.min.rationale ?? "",
       source: e.min.anchor_ref ?? "",
       confirmedBy: e.min.created_by,
@@ -666,36 +675,46 @@ export function resolveConfirmedEvBand(db: EvBandDb, projectId: string): Confirm
 }
 
 /** Validate a band confirmation (server-authoritative). Throws Error with a field-specific message. */
-export function validateEvBandInput(input: { min: unknown; max: unknown; rationale: unknown; source: unknown }): { min: number; max: number; rationale: string; source: string } {
+export function validateEvBandInput(input: { min: unknown; max: unknown; default?: unknown; rationale: unknown; source: unknown }): { min: number; max: number; default?: number; rationale: string; source: string } {
   const { min, max } = input;
   const bad = (m: string) => new EvBandValidationError(m);
   if (typeof min !== "number" || !Number.isFinite(min) || min <= 0) throw bad("min은 0보다 큰 유한한 숫자여야 합니다.");
   if (typeof max !== "number" || !Number.isFinite(max)) throw bad("max는 유한한 숫자여야 합니다.");
   if (min >= max) throw bad("min은 max보다 작아야 합니다.");
   if (max > EV_BAND_MAX_SANE) throw bad(`max는 ${EV_BAND_MAX_SANE}x 이하여야 합니다 (입력 오류로 간주).`);
+  // 기본 배수 (선택): absent/blank = none; present must sit inside its own band —
+  // a default outside the confirmed range would contradict the band itself.
+  let def: number | undefined;
+  if (input.default !== undefined && input.default !== null && input.default !== "") {
+    if (typeof input.default !== "number" || !Number.isFinite(input.default) || input.default <= 0) throw bad("default는 0보다 큰 유한한 숫자여야 합니다.");
+    if (input.default < min || input.default > max) throw bad("default는 확정 밴드 [min, max] 안에 있어야 합니다.");
+    def = input.default;
+  }
   const rationale = typeof input.rationale === "string" ? input.rationale.trim() : "";
   if (rationale.length < 10) throw bad("rationale은 10자 이상이어야 합니다.");
   if (rationale.length > EV_BAND_RATIONALE_MAX) throw bad(`rationale은 ${EV_BAND_RATIONALE_MAX}자 이하여야 합니다.`);
   const source = typeof input.source === "string" ? input.source.trim() : "";
   if (source.length < 3) throw bad("source는 3자 이상이어야 합니다.");
   if (source.length > EV_BAND_SOURCE_MAX) throw bad(`source는 ${EV_BAND_SOURCE_MAX}자 이하여야 합니다.`);
-  return { min, max, rationale, source };
+  return { min, max, ...(def !== undefined ? { default: def } : {}), rationale, source };
 }
 
 /** Human-only write: two kind='user' rows in ONE fresh run; overwrite-only. */
 export async function recordEvRevenueBand(
   db: { run: (sql: string, ...args: unknown[]) => void },
-  opts: { projectId: string; min: number; max: number; rationale: string; source: string; actor: string; now?: string },
+  opts: { projectId: string; min: number; max: number; default?: number; rationale: string; source: string; actor: string; now?: string },
 ): Promise<{ run_id: string; written: string[] }> {
   const v = validateEvBandInput(opts);
   const { createRun } = await import("../../../db/lib/versioning.ts");
   const { recordAssumption } = await import("../../../db/lib/assumption.ts");
   const now = opts.now ?? new Date().toISOString();
   const run = createRun(db as never, { projectId: opts.projectId, label: "EV/Revenue band confirmation", createdBy: opts.actor, overrides: {}, now });
-  for (const [key, value] of [[EV_BAND_MIN_KEY, v.min], [EV_BAND_MAX_KEY, v.max]] as const) {
+  const rows: Array<[string, number]> = [[EV_BAND_MIN_KEY, v.min], [EV_BAND_MAX_KEY, v.max]];
+  if (v.default !== undefined) rows.push([EV_BAND_DEFAULT_KEY, v.default]);
+  for (const [key, value] of rows) {
     recordAssumption(db as never, { runId: run.run_id, assumptionKey: key, kind: "user", value, asOf: now.slice(0, 10), rationale: v.rationale, anchorRef: v.source, actor: opts.actor, now });
   }
-  return { run_id: run.run_id, written: [EV_BAND_MIN_KEY, EV_BAND_MAX_KEY] };
+  return { run_id: run.run_id, written: rows.map(([k]) => k) };
 }
 
 export interface EvRevenueBandPayload {
@@ -819,6 +838,9 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
   const initInv = ratio("bc.initial_investment_ratio", INITIAL_INVESTMENT_RATIO);
   const basisCode = scalar("bc.investment_basis");
   const acqEv = scalar("bc.acquisition_ev_revenue");
+  // 2026-10-19 decider: with no direct pin, the confirmed band's 기본 배수 drives the
+  // acquisition price (before this, the hardcoded 3.0× screening placeholder always won).
+  const acqBandDefault = acqEv === null ? (resolveConfirmedEvBand(db, projectId)?.default ?? null) : null;
   const fadeH = ratio("bc.fade_horizon_years", FADE_HORIZON_YEARS);
   const gTerminal = scalar("bc.growth_terminal");
   const growthOv = scalar("bc.growth_override");
@@ -853,8 +875,13 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
     initialInvestmentSource: initInv.source,
     investmentBasis: investmentBasisOfCode(basisCode),
     investmentBasisSource: basisCode != null ? "사용자 확정 (bc.investment_basis)" : "기본값 (비율 추정, ADR-0174 OD-4)",
-    acquisitionEvRevenue: acqEv !== null && acqEv >= 0 ? acqEv : null,
-    acquisitionEvRevenueSource: acqEv !== null && acqEv >= 0 ? "사용자 확정 (bc.acquisition_ev_revenue)" : "기본값",
+    acquisitionEvRevenue: acqEv !== null && acqEv >= 0 ? acqEv : acqBandDefault,
+    acquisitionEvRevenueSource:
+      acqEv !== null && acqEv >= 0
+        ? "사용자 확정 (bc.acquisition_ev_revenue)"
+        : acqBandDefault !== null
+          ? "확정 밴드 기본 배수 (bc.acquisition_ev_revenue_band.default)"
+          : "기본값",
     acquisitionEvRevenueBand: resolveConfirmedEvBand(db, projectId),
     fadeHorizonYears: Math.min(Math.max(Math.round(fadeH.value), 1), 50),
     fadeHorizonSource: fadeH.source,
@@ -1611,7 +1638,7 @@ export function caseInputsForTarget(
           evRevenue: base.bcParams.acquisitionEvRevenue ?? ACQUISITION_EV_REVENUE_DEFAULT,
           source:
             base.bcParams.acquisitionEvRevenue !== null
-              ? "사용자 확정 (bc.acquisition_ev_revenue)"
+              ? base.bcParams.acquisitionEvRevenueSource
               : `컴프 기본값 ${ACQUISITION_EV_REVENUE_DEFAULT.toFixed(1)}× — 글로벌 로보틱스/자동화 M&A 밴드 2–6× (이 도메인에 대한 출처 없음, 참고용)`,
         }
       : undefined;

@@ -23,7 +23,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   try {
-    const v = validateEvBandInput({ min: body?.min, max: body?.max, rationale: body?.rationale, source: body?.source });
+    const v = validateEvBandInput({ min: body?.min, max: body?.max, default: body?.default, rationale: body?.rationale, source: body?.source });
     const result = await recordEvRevenueBand(getDb(), { projectId: id, ...v, actor: auth.auth.userId });
     return ok({ run_id: result.run_id, evRevenueBand: evRevenueBandPayload(resolveConfirmedEvBand(getDb(), id)) }, 201);
   } catch (err) {
