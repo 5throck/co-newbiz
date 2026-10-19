@@ -360,7 +360,9 @@ export function irr(cashflows: number[]): number | null {
  *  the fallback path and the engine agree). */
 export function discountedPaybackYear(initialInvestment: number, flows: number[], rate: number): number | null {
   let cumulative = -initialInvestment;
-  if (cumulative >= 0) return 0;
+  // `> 0` (not `>= 0`): a plan-year-aligned case has no year-0 outflow, and the
+  // payback must come from the flows, not from the empty starting balance.
+  if (cumulative > 0) return 0;
   let previous = cumulative;
   for (let year = 1; year <= flows.length; year++) {
     cumulative += flows[year - 1] / Math.pow(1 + rate, year);
@@ -423,11 +425,9 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
     if (fxDist) revenue *= triangular(rng, fxDist.low, fxDist.mode, fxDist.high);
     const capF = sim5 ? sim5.capFactors[it % sim5.drawCount] : 1;
     const manF = sim5 ? sim5.manFactors[it % sim5.drawCount] : 1;
-    let npv = s5?.pnl
-      ? -(s5.plan.preLaunchKrwM ?? 0)
-      : s5
-        ? -(sim5 ? drawnCapex(s5.plan, 0, capF, manF) : s5.plan.capexByYear[0])
-        : -initialInvestment; // year-0 (s5_pnl: 출시 전 투자, OD-3)
+    // year 0 carries ONLY pre-launch (start_year 0) spend — plan-year capex
+    // stays in its own year (2026-10-19 plan-year alignment, same as the table).
+    let npv = s5 ? -(s5.plan.preLaunchKrwM ?? 0) : -initialInvestment;
     for (let year = 1; year <= horizon; year++) {
       if (year > 1) {
         const [z1] = normalPair(rng);
@@ -450,7 +450,7 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
       } else if (s5) {
         let opex = opexOfYear(inputs, s5, year, revenue);
         if (sim5 && s5.full && year - 1 < s5.plan.opexCovered.length && s5.plan.opexCovered[year - 1]) opex = drawnLaborOpex(s5.plan, year - 1, capF, manF);
-        const capex = sim5 ? drawnCapex(s5.plan, year, capF, manF) : capexOfYear(inputs, s5, year, revenue);
+        const capex = sim5 ? drawnCapex(s5.plan, year - 1, capF, manF) : capexOfYear(inputs, s5, year, revenue);
         flow = (revenue - opex) * utilization - capex;
       } else {
         const fcf = revenue * (1 - opexRatio) - revenue * capexRatio;
@@ -470,8 +470,10 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
   // Deterministic path - same BEP/payback definition as the engine. Under
   // s5_pnl the year-0 outflow is the plan's pre-launch amount (OD-3) and the
   // plan's per-year opex/capex ride inside the flows (utilization on revenue only).
-  const detInitial = s5?.pnl ? (s5.plan.preLaunchKrwM ?? 0) : s5 ? s5.plan.capexByYear[0] : initialInvestmentOf(inputs, year1Revenue).value;
-  const detFlows: number[] = [-detInitial];
+  // 2026-10-19: only PRE-LAUNCH (start_year 0) spend books at year 0; plan-year
+  // capex stays in its own year (plan-year alignment with the S5 table).
+  const detInitial = s5 ? (s5.plan.preLaunchKrwM ?? 0) : initialInvestmentOf(inputs, year1Revenue).value;
+  const detFlows: number[] = [detInitial === 0 ? 0 : -detInitial];
   let detRevenue = year1Revenue;
   for (let year = 1; year <= horizon; year++) {
     if (year > 1) detRevenue *= 1 + anchorGrowth;
@@ -1247,16 +1249,17 @@ function drawnLaborOpex(plan: S5InvestmentPlan, index: number, capF: number, man
   return cap * capF + (plan.laborOpexByYear[index] - cap) * manF;
 }
 
-/** Plan capex landing at cashflow index `year` (index 0 = the year-0 outflow
- *  per OD-3: plan year 1 spend is treated as year 0, matching today's year-0
- *  convention — so in-loop index `year` carries plan year `year + 1`). Years
- *  beyond the plan horizon fall back to the ratio path (labelled in the
- *  provenance), never to silent zero. */
+/** Plan capex for cashflow year `year` (1-based) — PLAN-YEAR ALIGNED (2026-10-19
+ *  decider direction: `재무분석` 비용은 S5 `투자비` 표와 같은 연차에 놓여야 한다).
+ *  Year n carries plan year n's capex, so the year table's `설비투자` row matches
+ *  the S5 table column for column. This supersedes OD-3's one-year-early shift for
+ *  the s5_plan basis (s5_pnl was already aligned); pre-launch (start_year 0) lines
+ *  still book at year 0 through `preLaunchKrwM`. Years beyond the plan are 0 — the
+ *  plan replaces the ratio, never supplements. */
 function capexOfYear(inputs: CaseInputs, s5: { plan: S5InvestmentPlan } | null, year: number, revenue: number): number {
   if (!s5) return revenue * capexRatioOf(inputs);
-  // The plan REPLACES the ratio (team-lead slice-2 spec): a year without a
-  // plan entry has capex 0 — the schedule substitutes, never supplements.
-  return year < s5.plan.capexByYear.length ? s5.plan.capexByYear[year] : 0;
+  const i = year - 1;
+  return i >= 0 && i < s5.plan.capexByYear.length ? s5.plan.capexByYear[i] : 0;
 }
 
 /** Opex for cashflow year `year` (1-based). Under `s5_plan_full` the explicit
@@ -1651,12 +1654,14 @@ export function deterministicCaseYearTable(inputs: CaseInputs, scenario: Scenari
   const s5 = s5PlanOf(inputs);
   const opexRatioD = opexRatioOf(inputs, scenario);
   const capexRatioD = capexRatioOf(inputs);
-  const initialInvestment = s5?.pnl ? (s5.plan.preLaunchKrwM ?? 0) : s5 ? s5.plan.capexByYear[0] : initialInvestmentOf(inputs, year1Revenue).value;
+  // 2026-10-19: only PRE-LAUNCH (start_year 0) spend books at year 0; plan-year
+  // capex stays in its own year (plan-year alignment with the S5 table).
+  const initialInvestment = s5 ? (s5.plan.preLaunchKrwM ?? 0) : initialInvestmentOf(inputs, year1Revenue).value;
   let revenue = year1Revenue;
   const ramp = rampUpOf(inputs);
   const wacc = inputs.wacc.value;
   const discount = (v: number, y: number) => v / Math.pow(1 + wacc, y);
-  const rows: CaseYearRow[] = [{ year: 0, revenue: 0, utilization: 1, opex: 0, labor: 0, capex: initialInvestment, fcf: -initialInvestment, discountedFcf: -initialInvestment, cumulativeDiscountedFcf: -initialInvestment, breakEvenRevenue: null }];
+  const rows: CaseYearRow[] = [{ year: 0, revenue: 0, utilization: 1, opex: 0, labor: 0, capex: initialInvestment, fcf: initialInvestment === 0 ? 0 : -initialInvestment, discountedFcf: initialInvestment === 0 ? 0 : -initialInvestment, cumulativeDiscountedFcf: initialInvestment === 0 ? 0 : -initialInvestment, breakEvenRevenue: null }];
   const basis = s5?.pnl ? "s5_pnl" : s5 ? "s5_plan" : "ratio";
   const exitValue = exitMult > 0 ? revenue * exitMult : 0;
   for (let year = 1; year <= horizonOf(inputs); year++) {
@@ -1721,10 +1726,12 @@ export function deterministicCashflows(inputs: CaseInputs, scenario: Scenario, v
   const s5 = s5PlanOf(inputs);
   const opexRatioD = opexRatioOf(inputs, scenario);
   const capexRatioD = capexRatioOf(inputs);
-  const initialInvestment = s5?.pnl ? (s5.plan.preLaunchKrwM ?? 0) : s5 ? s5.plan.capexByYear[0] : initialInvestmentOf(inputs, year1Revenue).value;
+  // 2026-10-19: only PRE-LAUNCH (start_year 0) spend books at year 0; plan-year
+  // capex stays in its own year (plan-year alignment with the S5 table).
+  const initialInvestment = s5 ? (s5.plan.preLaunchKrwM ?? 0) : initialInvestmentOf(inputs, year1Revenue).value;
   let revenue = year1Revenue;
   const ramp = rampUpOf(inputs);
-  const flows: number[] = [-initialInvestment]; // year-0 투자 (s5_plan: 계획 Y1 집행액, OD-3)
+  const flows: number[] = [initialInvestment === 0 ? 0 : -initialInvestment]; // year-0 = 출시 전 투자만 (2026-10-19 plan-year alignment)
   for (let year = 1; year <= horizonOf(inputs); year++) {
     if (year > 1) revenue *= 1 + eff.growth;
     const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
