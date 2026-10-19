@@ -30,6 +30,7 @@ import {
   TAB1_LABEL,
   TAB2_LABEL,
   TAB3_LABEL,
+  marketBriefExample,
 } from "../lib/entry-market-flow-state.ts";
 import { type TargetScope } from "../lib/target-scope.ts";
 import { TargetScopeEditor, type LinkedSizingReference } from "./TargetScopeEditor.tsx";
@@ -404,7 +405,11 @@ export function EntryMarketFlow({ opportunityId, canAct }: { opportunityId: stri
                 maxLength={2000}
                 value={brief}
                 disabled={metaBusy}
-                placeholder="예: 유럽 Stage V 규제 대응 건설장비용 유압 브레이커 — 신규 규제 수요 중심"
+                placeholder={marketBriefExample({
+                  industryName: versionOptions.find((v) => v.id === flow?.link?.version_id)?.industry_name ?? null,
+                  regionLabels: (flow?.matrix_regions ?? []).map((r) => r.label),
+                  segmentLabels: (flow?.matrix_segments ?? []).map((x) => x.label),
+                })}
                 onChange={(e) => setBrief(e.target.value)}
                 data-testid="entry-flow-market-brief"
               />

@@ -72,7 +72,7 @@ export function LinkToDealModal({ state, projectId, onClose, onLinked }: {
             value={rationale}
             onChange={(e) => setRationale(e.target.value)}
             rows={3}
-            placeholder="예: S6 유니버스 검증 산업 — 유럽 Stage V 수요 산업으로 직접 관련"
+            placeholder="예: 이 S1 시장 분석의 수요가 어느 검토 안건과 어떻게 연결되는지 한 줄로 적어 주세요"
             className="sizing-new-input w-full"
           />
         </label>
