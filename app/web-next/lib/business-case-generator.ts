@@ -252,8 +252,9 @@ const INITIAL_INVESTMENT_RATIO = 0.5;
  *  한국 전략적 휴머노이드 프리미엄은 훨씬 높다(삼성전자–레인보우로보틱스
  *  2023.12: 지분+유상증자 약 2,674억 — 당기 매출 152억; 2026년 기업가치
  *  약 2조 / 매출 341억 ≈ 59×). 3.0×는 보수적 스크리닝 기준값이며,
- *  딜 특성 프리미엄은 bc.acquisition_ev_revenue(kind=user, 근거 필수)로
- *  분석가가 확정한다. */
+ *  2026-10-19 split: 이 값은 진입(인수가격)의 폴백이며 확정 밴드의 기본 배수가
+ *  있으면 그 값이 이긴다. 처분 배수는 별도 결정 — bc.exit_ev_revenue (사람 확정),
+ *  미확정 시 진입 배수와 동일 (멀티플 확대 없음). */
 export const ACQUISITION_EV_REVENUE_DEFAULT = 3.0;
 /** 이중 구조 교차검증(페이드 DCF)의 명시적 창구 기본 연수 — 표준 기업가치
  *  DCF의 명시적 전망 창구(10년) 관행을 따른다 (사용자 bc.fade_horizon_years
@@ -771,6 +772,10 @@ export interface BusinessCaseParams {
   /** 인수 EV/Revenue 배수 (user 확정 없으면 null → 컴프 기본값). */
   acquisitionEvRevenue: number | null;
   acquisitionEvRevenueSource: string;
+  /** 2026-10-19 split — the EXIT multiple knob (bc.exit_ev_revenue, kind=user).
+   *  null = unpinned: the exit reuses the entry multiple (멀티플 확대 없음). */
+  exitEvRevenue: number | null;
+  exitEvRevenueSource: string;
   /** Human-confirmed project EV/Revenue band (read-only here; written only via
    *  the human-only ev-band route). null = not confirmed. */
   acquisitionEvRevenueBand: ConfirmedEvBand | null;
@@ -837,10 +842,13 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
   const capex = ratio("bc.capex_ratio", CAPEX_RATIO);
   const initInv = ratio("bc.initial_investment_ratio", INITIAL_INVESTMENT_RATIO);
   const basisCode = scalar("bc.investment_basis");
-  const acqEv = scalar("bc.acquisition_ev_revenue");
-  // 2026-10-19 decider: with no direct pin, the confirmed band's 기본 배수 drives the
-  // acquisition price (before this, the hardcoded 3.0× screening placeholder always won).
-  const acqBandDefault = acqEv === null ? (resolveConfirmedEvBand(db, projectId)?.default ?? null) : null;
+  // 2026-10-19 decider split: the ENTRY multiple is the confirmed band's 기본 배수
+  // (3.0× placeholder fallback) — the retired `bc.acquisition_ev_revenue` direct pin
+  // is no longer read. The EXIT multiple is its own knob, `bc.exit_ev_revenue`;
+  // unpinned it equals the entry multiple (멀티플 확대 없음), resolved by the case
+  // accessors (they see acquisition/revenueAnchor).
+  const acqBandDefault = resolveConfirmedEvBand(db, projectId)?.default ?? null;
+  const exitEv = scalar("bc.exit_ev_revenue");
   const fadeH = ratio("bc.fade_horizon_years", FADE_HORIZON_YEARS);
   const gTerminal = scalar("bc.growth_terminal");
   const growthOv = scalar("bc.growth_override");
@@ -875,13 +883,16 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
     initialInvestmentSource: initInv.source,
     investmentBasis: investmentBasisOfCode(basisCode),
     investmentBasisSource: basisCode != null ? "사용자 확정 (bc.investment_basis)" : "기본값 (비율 추정, ADR-0174 OD-4)",
-    acquisitionEvRevenue: acqEv !== null && acqEv >= 0 ? acqEv : acqBandDefault,
+    acquisitionEvRevenue: acqBandDefault,
     acquisitionEvRevenueSource:
-      acqEv !== null && acqEv >= 0
-        ? "사용자 확정 (bc.acquisition_ev_revenue)"
-        : acqBandDefault !== null
-          ? "확정 밴드 기본 배수 (bc.acquisition_ev_revenue_band.default)"
-          : "기본값",
+      acqBandDefault !== null
+        ? "확정 밴드 기본 배수 (bc.acquisition_ev_revenue_band.default)"
+        : "기본값 (스크리닝 자리값 3.0× — 출처 미확보)",
+    exitEvRevenue: exitEv !== null && exitEv > 0 ? exitEv : null,
+    exitEvRevenueSource:
+      exitEv !== null && exitEv > 0
+        ? "사용자 확정 (bc.exit_ev_revenue)"
+        : "미확정 — 인수(진입) 배수와 동일 (멀티플 확대 없음)",
     acquisitionEvRevenueBand: resolveConfirmedEvBand(db, projectId),
     fadeHorizonYears: Math.min(Math.max(Math.round(fadeH.value), 1), 50),
     fadeHorizonSource: fadeH.source,
@@ -923,7 +934,8 @@ export async function recordBusinessCaseParams(
       opex_ratio?: number;
       capex_ratio?: number;
       initial_investment_ratio?: number;
-      acquisition_ev_revenue?: number;
+      /** 2026-10-19 split — the EXIT multiple (진입은 밴드 기본 배수가 정함). */
+      exit_ev_revenue?: number;
       fade_horizon_years?: number;
       growth_terminal?: number;
       growth_override?: number;
@@ -974,7 +986,7 @@ export async function recordBusinessCaseParams(
     ["bc.opex_ratio", p.opex_ratio],
     ["bc.capex_ratio", p.capex_ratio],
     ["bc.initial_investment_ratio", p.initial_investment_ratio],
-    ["bc.acquisition_ev_revenue", p.acquisition_ev_revenue],
+    ["bc.exit_ev_revenue", p.exit_ev_revenue],
     ["bc.fade_horizon_years", p.fade_horizon_years],
     ["bc.growth_terminal", p.growth_terminal],
     ["bc.growth_override", p.growth_override],
@@ -1028,7 +1040,9 @@ export function resolveBusinessCaseParamsDefaults(): BusinessCaseParams {
     s5SourceSource: "기본값 (복사본, ADR-0178)",
     s5PinId: null,
     acquisitionEvRevenue: null,
-    acquisitionEvRevenueSource: "기본값",
+    acquisitionEvRevenueSource: "기본값 (스크리닝 자리값 3.0× — 출처 미확보)",
+    exitEvRevenue: null,
+    exitEvRevenueSource: "미확정 — 인수(진입) 배수와 동일 (멀티플 확대 없음)",
     acquisitionEvRevenueBand: null,
     fadeHorizonYears: FADE_HORIZON_YEARS,
     fadeHorizonSource: "기본값",
@@ -1071,9 +1085,9 @@ function year1RevenueOf(inputs: CaseInputs, deltaGrowth: number): { value: numbe
 }
 
 /** Year-0 outflow and its provenance. An acquisition-priced case pays the
- *  enterprise value — anchor revenue × EV/Revenue multiple, scenario-
- *  INDEPENDENT (the price is negotiated once; scenarios vary post-deal
- *  performance) — unless the user pinned the direct ratio knob
+ *  enterprise value — anchor revenue × the ENTRY multiple (확정 밴드 기본 배수,
+ *  3.0× placeholder fallback; scenario-INDEPENDENT — the price is negotiated
+ *  once) — unless the user pinned the direct ratio knob
  *  (bc.initial_investment_ratio kind=user), which wins. Everything else
  *  keeps ADR-0106's year-1-revenue ratio. */
 function initialInvestmentOf(inputs: CaseInputs, year1Revenue: number): { value: number; source: string } {
@@ -1088,11 +1102,16 @@ function initialInvestmentOf(inputs: CaseInputs, year1Revenue: number): { value:
   return { value: year1Revenue * bc.initialInvestmentRatio, source: `ADR-0106 (${bc.initialInvestmentSource})` };
 }
 
-/** Exit (terminal) value multiple at the horizon — the entry multiple reused
- *  (no multiple expansion assumed). 0 = no exit value (legacy contract). */
+/** Exit (terminal) value multiple at the horizon. 2026-10-19 decider split:
+ *  인수(진입) 배수는 확정 밴드 기본(3.0× 자리값 폴백)이 정하고, 처분 배수는 별도
+ *  결정 — `bc.exit_ev_revenue` (kind=user)로 확정하면 그 값, 없으면 진입 배수와
+ *  동일 (멀티플 확대 없음, 보수). 0 = no exit value (legacy contract). The
+ *  retired `bc.acquisition_ev_revenue` direct pin no longer moves either side. */
 function exitEvRevenueOf(inputs: CaseInputs): number {
   const ratioUserPinned = inputs.bcParams?.initialInvestmentSource.startsWith("사용자") ?? false;
-  if (inputs.acquisition && inputs.revenueAnchor && !ratioUserPinned) return inputs.acquisition.evRevenue;
+  if (inputs.acquisition && inputs.revenueAnchor && !ratioUserPinned) {
+    return inputs.bcParams?.exitEvRevenue ?? inputs.acquisition.evRevenue;
+  }
   return 0;
 }
 
@@ -1729,7 +1748,10 @@ export function deterministicCaseYearTable(inputs: CaseInputs, scenario: Scenari
   const discount = (v: number, y: number) => v / Math.pow(1 + wacc, y);
   const rows: CaseYearRow[] = [{ year: 0, revenue: 0, utilization: 1, opex: 0, labor: 0, capex: initialInvestment, fcf: initialInvestment === 0 ? 0 : -initialInvestment, discountedFcf: initialInvestment === 0 ? 0 : -initialInvestment, cumulativeDiscountedFcf: initialInvestment === 0 ? 0 : -initialInvestment, breakEvenRevenue: null }];
   const basis = s5?.pnl ? "s5_pnl" : s5 ? "s5_plan" : "ratio";
-  const exitValue = exitMult > 0 ? revenue * exitMult : 0;
+  // 처분가치 = 최종년 매출 × 처분 배수 — the loop's last revenue, matching
+  // deterministicCashflows / the seeded sim / the design ("최종년 매출로 처분").
+  // The pre-loop Y1-revenue computation was a defect the exit-split test exposed.
+  let exitValue = 0;
   for (let year = 1; year <= horizonOf(inputs); year++) {
     if (year > 1) revenue *= 1 + eff.growth;
     const utilization = ramp[year - 1] ?? ramp[ramp.length - 1] ?? 1;
@@ -1768,6 +1790,7 @@ export function deterministicCaseYearTable(inputs: CaseInputs, scenario: Scenari
     rows.push({ year, revenue, utilization, opex, labor, capex, fcf, discountedFcf: discount(fcf, year), cumulativeDiscountedFcf: 0, breakEvenRevenue });
   }
   if (exitMult > 0) {
+    exitValue = revenue * exitMult; // revenue = the FINAL year's after the loop
     rows[rows.length - 1].fcf += exitValue;
     rows[rows.length - 1].breakEvenRevenue = null; // 처분가치 포함 연도는 매출 손익분기 정의가 성립하지 않음
   }

@@ -69,6 +69,7 @@ interface ResolvedParams {
   /** ADR-0178 slice 0 - where the S5 plan comes from (copy default / pinned reference, opt-in). */
   s5Source?: "copy" | "pinned"; s5SourceSource?: string; s5PinId?: string | null;
   acquisitionEvRevenue: number | null; acquisitionEvRevenueSource: string;
+  exitEvRevenue: number | null; exitEvRevenueSource: string;
   acquisitionEvRevenueBand?: ConfirmedBand | null;
   fadeHorizonYears: number; fadeHorizonSource: string;
   growthTerminal: number | null; growthTerminalSource: string;
@@ -204,7 +205,10 @@ function CurrentParamsTable({ resolved, track, s5Pin, s5Run, s5PinCapexTotal, an
           </>
         ) },
         growthRow,
-        ...(!gf ? [{ key: "acq", label: "인수 EV/Revenue 배수 (브라운필드)", value: resolved.acquisitionEvRevenue != null ? resolved.acquisitionEvRevenue.toFixed(2) : "3.0 — 미확정 시 컴프 기본값 (글로벌 로보틱스 M&A 2–6×)", numeric: resolved.acquisitionEvRevenue != null, unit: resolved.acquisitionEvRevenue != null ? "배" : "", source: <SourceChip source={resolved.acquisitionEvRevenueSource} /> } as ParamLine] : []),
+        ...(!gf ? [
+          { key: "acq", label: "인수 EV/Revenue 배수 (브라운필드 — 밴드 기본)", value: resolved.acquisitionEvRevenue != null ? resolved.acquisitionEvRevenue.toFixed(2) : "3.0 — 미확정 시 스크리닝 자리값 (글로벌 로보틱스 M&A 2–6×)", numeric: resolved.acquisitionEvRevenue != null, unit: resolved.acquisitionEvRevenue != null ? "배" : "", source: <SourceChip source={resolved.acquisitionEvRevenueSource} /> } as ParamLine,
+          { key: "exitEv", label: "처분가 EV/Revenue 배수 (브라운필드)", value: resolved.exitEvRevenue != null ? resolved.exitEvRevenue.toFixed(2) : "진입 배수와 동일 (멀티플 확대 없음)", numeric: resolved.exitEvRevenue != null, unit: resolved.exitEvRevenue != null ? "배" : "", source: <SourceChip source={resolved.exitEvRevenueSource} /> } as ParamLine,
+        ] : []),
       ],
     },
     {
@@ -308,7 +312,33 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
   const [bandMsg, setBandMsg] = useState<string | null>(null);
   const [bandErr, setBandErr] = useState<string | null>(null);
   const [bandBusy, setBandBusy] = useState(false);
+  const [bandAiBusy, setBandAiBusy] = useState(false);
+  const [bandAiNote, setBandAiNote] = useState<string | null>(null);
   const bandCheck = validateBand(bandMin, bandMax, bandDefault, bandRationale, bandSource);
+
+  // 2026-10-19 decider direction — AI 밴드 추천: the LLM drafts the band; the draft
+  // only PREFILLS this form and the person still confirms through 밴드 확정 (boundary #2).
+  async function recommendBand() {
+    setBandAiNote(null);
+    setBandAiBusy(true);
+    try {
+      const r = await api.post<{ draft: { min: number; max: number; default?: number; rationale: string; source: string } | null; source: string; note: string }>(
+        `/api/projects/${encodeURIComponent(projectId)}/business-case/ev-band/recommend`,
+      );
+      setBandAiNote(r.data.note);
+      if (r.data.draft) {
+        setBandMin(String(r.data.draft.min));
+        setBandMax(String(r.data.draft.max));
+        setBandDefault(r.data.draft.default !== undefined ? String(r.data.draft.default) : "");
+        setBandRationale(r.data.draft.rationale);
+        setBandSource(r.data.draft.source);
+      }
+    } catch (err) {
+      setBandAiNote(err instanceof Error ? err.message : "AI 추천에 실패했습니다.");
+    } finally {
+      setBandAiBusy(false);
+    }
+  }
 
   async function submitBand(e: React.FormEvent) {
     e.preventDefault();
@@ -460,7 +490,7 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
                 </select>
               </label>
             )}
-            <label className="grid gap-1 text-sm">인수 EV/매출 배수 (예: 3.0 — 확정 시 인수가·처분가 모두 이 배수)<input className="form-input" value={form.acquisition_ev_revenue ?? ""} onChange={(e) => setForm({ ...form, acquisition_ev_revenue: e.target.value })} placeholder="3.0" /></label>
+            <label className="grid gap-1 text-sm">처분가 배수 (EV/매출 — 미입력 시 인수 배수와 동일; 확정 시 처분가치가 이 배수)<input className="form-input" value={form.exit_ev_revenue ?? ""} onChange={(e) => setForm({ ...form, exit_ev_revenue: e.target.value })} placeholder="미입력 = 인수 배수" /></label>
             <label className="grid gap-1 text-sm">교차검증 창구 (페이드 DCF 연수, 예: 10)<input className="form-input" value={form.fade_horizon_years ?? ""} onChange={(e) => setForm({ ...form, fade_horizon_years: e.target.value })} placeholder="10" /></label>
             <label className="grid gap-1 text-sm">말기 성장률 (비율, 예: 0.03)<input className="form-input" value={form.growth_terminal ?? ""} onChange={(e) => setForm({ ...form, growth_terminal: e.target.value })} placeholder="0.03" /></label>
             <label className="grid gap-1 text-sm">성장률 오버라이드 (비율)<input className="form-input" value={form.growth_override ?? ""} onChange={(e) => setForm({ ...form, growth_override: e.target.value })} placeholder="0.05" /></label>
@@ -495,9 +525,10 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
       <section className="market-section sizing-step mt-3" aria-label="EV/매출 밴드 확정">
         <h3 className="sizing-step-title">EV/매출 밴드 확정 <span className="status-chip status-info">사람 전용 — 에이전트는 설정할 수 없습니다</span></h3>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-          이 밴드는 브라운필드 인수가격 산정(대상 회사 매출 × EV/매출 배수)의 근거로 사용됩니다 — 아래{" "}
-          <b>기본 배수</b>를 확정하면 인수가격과 재무분석의 처분 가치가 그 배수로 계산되고, 미확정 시 출처 미확보 스크리닝 자리값{" "}
-          <b>3.0× (밴드 2–6×)</b>가 적용됩니다. 확정한 밴드는 대상 비교의 범위 내/밖 표시 기준이 되며 순위에는 영향이 없습니다.{" "}
+          이 밴드는 브라운필드 <b>인수가격</b> 산정(대상 회사 매출 × EV/매출 배수)의 근거로 사용됩니다 — 아래{" "}
+          <b>기본 배수</b>를 확정하면 인수가격이 그 배수로 계산되고, 미확정 시 출처 미확보 스크리닝 자리값{" "}
+          <b>3.0× (밴드 2–6×)</b>가 적용됩니다. 처분가치는 파라미터 폼의 <b>처분가 배수</b>(미확정 시 인수 배수와 동일)를 따릅니다.
+          확정한 밴드는 대상 비교의 범위 내/밖 표시 기준이 되며 순위에는 영향이 없습니다.{" "}
           {onOpenTargets ? (
             <button type="button" className="text-[color:var(--accent)] font-bold" onClick={onOpenTargets}>밴드 상태는 대상 비교·선정 탭 →</button>
           ) : (
@@ -510,6 +541,16 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
             현재 역할은 밴드를 확정할 수 없습니다 (분석가만 가능).
           </p>
         ) : (
+          <>
+          <div className="flex items-center gap-2 mb-2">
+            <button type="button" className="btn-ghost btn-sm" disabled={bandAiBusy} onClick={() => void recommendBand()} data-testid="evband-ai-recommend">
+              {bandAiBusy ? "AI 추천 중..." : "🤖 AI 밴드 추천"}
+            </button>
+            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">대상 매출·참고 밴드를 근거로 초안을 만들어 폼을 채웁니다 — 확정은 사람이 합니다.</span>
+          </div>
+          {bandAiNote && (
+            <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="evband-ai-note">{bandAiNote}</p>
+          )}
           <form className="grid gap-3" onSubmit={submitBand} noValidate style={{ maxWidth: 560 }}>
             <div className="grid gap-2 md:grid-cols-3">
               <label className="grid gap-1 text-sm" htmlFor="evband-min">하한 (배, 필수)
@@ -537,6 +578,7 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
             {bandErr && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {bandErr}</p>}
             {bandMsg && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)]">✓ {bandMsg}</p>}
           </form>
+          </>
         )}
       </section>
 

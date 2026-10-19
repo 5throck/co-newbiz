@@ -84,6 +84,24 @@ describe("deterministicCaseYearTable (재무분석 탭 데이터)", () => {
     expect(t.rows.every((r) => r.year === 0 || r.breakEvenRevenue === null)).toBe(true);
   });
 
+  test("exit split: 처분가 배수(bc.exit_ev_revenue) moves only the exit value; unpinned reuses the entry multiple (2026-10-19 decider direction)", () => {
+    const mk = (exit: number | null) => ({
+      ...inputsFor("ratio"),
+      revenueAnchor: { krwM: 40000, source: "대상 최연 매출 (test)" },
+      acquisition: { evRevenue: 3, source: "밴드 기본 (test)" },
+      bcParams: { ...inputsFor("ratio").bcParams, exitEvRevenue: exit },
+    }) as CaseInputs;
+    // unpinned: exit = entry multiple (멀티플 확대 없음)
+    const same = deterministicCaseYearTable(mk(null), "base");
+    expect(same.initialInvestment).toBe(120000); // 40,000 × 3.0 (band default)
+    expect(same.exitValue).toBeCloseTo(same.rows[same.rows.length - 1].revenue * 3, 6);
+    // pinned 4.5: only the exit moves; the price stays at the entry multiple
+    const pinned = deterministicCaseYearTable(mk(4.5), "base");
+    expect(pinned.initialInvestment).toBe(120000);
+    expect(pinned.exitValue).toBeCloseTo(same.exitValue * 1.5, 6);
+    expect(pinned.npv).not.toBe(same.npv);
+  });
+
   test("s5_pnl keeps the utilization-into-revenue break-even form", () => {
     const pnl = inputsFor("s5_pnl");
     const t = deterministicCaseYearTable(pnl, "base");
@@ -110,6 +128,22 @@ describe("S8 tab restructure: 재무분석 → 대상회사 + 신규 재무분�
     expect(stage).toContain('{tab === "bep" && <BepAnalysisPanel projectId={projectId} />}');
     expect(stage).toContain('label: "대상회사"');
     expect(read("app/web-next/components/stages/BepAnalysisPanel.tsx")).toContain("BEP Analysis");
+  });
+
+  test("AI 밴드 추천: the route drafts (never writes) and degrades honestly without an LLM", () => {
+    const route = read("app/web-next/app/api/projects/[id]/business-case/ev-band/recommend/route.ts");
+    // boundary #2: recommendation only — the person's POST stays the only writer
+    expect(route).toContain("THE ENDPOINT WRITES NOTHING");
+    expect(route).not.toContain("recordEvRevenueBand");
+    // strict validation reuses the band rules; one repair retry
+    expect(route).toContain("validateEvBandInput");
+    expect(route).toContain("repair");
+    // without a brownfield subject it refuses honestly (no thin-air drafting)
+    expect(route).toContain("no_subject");
+    // panel: the button prefills, never confirms
+    const panel = read("app/web-next/components/business-case/ParamsPanel.tsx");
+    expect(panel).toContain("evband-ai-recommend");
+    expect(panel).toContain("setBandMin(String(r.data.draft.min))");
   });
 
   test("brownfield: the route resolves a subject target and the panel labels the acquisition price", () => {
