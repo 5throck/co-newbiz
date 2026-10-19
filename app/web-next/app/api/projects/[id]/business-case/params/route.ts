@@ -101,7 +101,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       opex_ratio: num("opex_ratio"),
       capex_ratio: num("capex_ratio"),
       initial_investment_ratio: num("initial_investment_ratio"),
-      acquisition_ev_revenue: num("acquisition_ev_revenue"),
+      exit_ev_revenue: num("exit_ev_revenue"),
       fade_horizon_years: num("fade_horizon_years"),
       growth_terminal: num("growth_terminal"),
       growth_override: num("growth_override"),
