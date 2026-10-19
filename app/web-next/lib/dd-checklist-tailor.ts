@@ -153,29 +153,30 @@ export function industryLabelForProject(projectId: string): string {
   return scope?.market_scope ?? "the target's industry";
 }
 
-// ── Deterministic proposal templates (English content, industry-interpolated) ──
+// ── Deterministic proposal templates (한국어 — 산업명 보간; 2026-10-19 decider:
+// 영어 템플릿 제안이 그대로 저장되어 한국어 번역 요구) ──
 
 const TEMPLATES: Record<DdTailorDomain, Array<{ label: string; rationale: string }>> = {
   commercial: [
-    { label: "Assess revenue concentration on the top-3 customers in {industry} against signed contracts, not management statements", rationale: "Industry-specific customer concentration is a common blind spot of the generic floor items; verify shares contractually." },
-    { label: "Benchmark {industry} pricing power and cost pass-through evidence across the last downturn", rationale: "Generic pricing-power questions need an industry benchmark reference point to be answerable." },
-    { label: "Map the {industry} channel structure and confirm distributor economics, rebates, and channel inventory", rationale: "Channel-heavy industries hide demand inflation in channel inventory; the floor items do not force this." },
-    { label: "Test {industry} demand cyclicality against the proxy-chain demand estimate used in the S8 business case", rationale: "Ties DD back to the S8 demand anchor so a wrong market assumption surfaces as a DD finding." },
-    { label: "Review announced {industry} competitor capacity expansions and substitution threats to the target's share", rationale: "Forward capacity announcements precede margin compression well before it shows in financials." },
+    { label: "상위 3개 고객 매출 집중도를 경영진 설명이 아닌 계약서 기준으로 검증 ({industry})", rationale: "산업별 고객 집중도는 일반 항목이 놓치는 사각지대 — 지분을 계약서로 확인해야 합니다." },
+    { label: "{industry} 가격 결정력과 비용 전가력을 직전 불황기 벤치마크로 검증", rationale: "일반적인 가격력 질문은 산업 벤치마크 없이는 답할 수 없습니다." },
+    { label: "{industry} 유통 구조를 매핑하고 유통사 수익성·리베이트·채널 재고를 확인", rationale: "유통 의존 산업은 채널 재고에 수요 과대 계상이 숨습니다. 일반 항목은 이를 강제하지 않습니다." },
+    { label: "{industry} 수요 순환성을 S8 사업 케이스의 프록시 체인 수요 추정치와 대조 검증", rationale: "실사를 S8 수요 앵커에 연결해 시장 가정 오류가 발견사항으로 드러나게 합니다." },
+    { label: "발표된 {industry} 경쟁사 증설과 대상 지분 점유 위협을 검토", rationale: "용량 증설 발표는 재무제표에 반영되기 훨씬 전에 마진 압박을 예고합니다." },
   ],
   technical: [
-    { label: "Verify {industry} process bottlenecks by physical observation, not management walkthroughs alone", rationale: "Floor item tdd-04 asks that bottlenecks are identified; for this industry the identification method matters." },
-    { label: "Assess equipment age and maintenance backlog against {industry} reinvestment norms", rationale: "Deferred maintenance risk is industry-specific in scale and lead time." },
-    { label: "Confirm {industry}-specific line certifications/qualifications and their renewal status", rationale: "A qualification lapse is a sales stop in regulated industries — feed certification-agent, do not duplicate." },
-    { label: "Review {industry} EHS liabilities including site contamination history and permit-to-operate conditions", rationale: "Floor tdd-06 is generic; the industry defines which EHS exposures are material." },
-    { label: "Validate the capex plan against {industry} benchmark unit costs and equipment lead times", rationale: "Capex realism is only checkable against industry-level unit costs." },
+    { label: "{industry} 공정 병목을 경영진 인터뷰가 아닌 현장 관찰로 검증", rationale: "일반 항목 tdd-04는 병목 식별만 요구 — 이 산업에서는 식별 방법 자체가 중요합니다." },
+    { label: "설비 연식과 유지보수 적체를 {industry} 재투자 관행과 대조 평가", rationale: "유지보수 지연 리스크의 규모와 리드타임은 산업별로 다릅니다." },
+    { label: "{industry} 특화 라인 인증·자격 현황과 갱신 상태를 확인", rationale: "규제 산업에서 인증 만기는 곧 판매 정지 — certification-agent에 연계하고 중복 생성하지 않습니다." },
+    { label: "부지 오염 이력과 운영 허가 조건을 포함한 {industry} EHS 부채를 검토", rationale: "일반 항목 tdd-06은 포괄적 — 어떤 EHS 노출이 중요한지는 산업이 정의합니다." },
+    { label: "자본 지출 계획을 {industry} 벤치마크 단위 원가와 설비 리드타임으로 검증", rationale: "자본 지출의 현실성은 산업 단위 원가와만 대조 가능합니다." },
   ],
   legal: [
-    { label: "Classify every {industry} business licence: transfers automatically / requires consent / must be re-issued on change of control", rationale: "Industry licence portability is the single most common structural legal risk; floor ldd-15 asks for this only generically." },
-    { label: "Check {industry}-specific regulatory investigations and sanction exposure of the target and its beneficial owners", rationale: "Regulated industries carry sector-specific investigation risk the generic scan can miss." },
-    { label: "Review the {industry} IP title chain and encumbrances including trade-secret protection practice", rationale: "What counts as protectable IP differs sharply by industry." },
-    { label: "Assess the {industry} labor structure — union CBA successorship clauses and key-person dependencies", rationale: "Labor-transfer doctrine and CBA exposure are industry-shaped." },
-    { label: "Scan top {industry} customer/supplier contracts for change-of-control and anti-assignment clauses", rationale: "Prioritizes the contract scan to the counterparties that actually matter in this industry." },
+    { label: "{industry} 사업 인허가 전수 분류 — 지위 변동 시 자동 승계 / 동의 필요 / 재발급 필요", rationale: "산업 인허가 이전 가능성이 가장 흔한 구조적 법률 리스크 — 일반 항목 ldd-15는 포괄적으로만 다룹니다." },
+    { label: "{industry} 특화 규제 조사와 대상·실소유주의 제재 노출 확인", rationale: "규제 산업은 일반 스캔이 놓치는 섹터 특화 조사 리스크를 가집니다." },
+    { label: "영업비밀 보호 관행을 포함한 {industry} IP 권리관계와 담보 설정을 검토", rationale: "보호 가능한 IP의 범위는 산업마다 크게 다릅니다." },
+    { label: "{industry} 노동 구조 — 노조 단체협약 승계 조항과 핵심 인력 의존도 평가", rationale: "노동 이전 법리와 단체협약 노출은 산업 구조의 영향을 받습니다." },
+    { label: "상위 {industry} 고객·공급사 계약의 지위 변동·양도 금지 조항 스캔", rationale: "이 산업에서 실제 중요한 거래처로 계약 검토를 우선순위화합니다." },
   ],
 };
 
