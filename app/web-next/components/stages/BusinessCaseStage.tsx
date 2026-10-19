@@ -46,6 +46,7 @@ import { S5ConnectBlock } from "../business-case/S5ConnectBlock.tsx";
 import { TargetCostingPanel } from "../business-case/TargetCostingPanel.tsx";
 import { ValuationMethodology } from "../business-case/ValuationMethodology.tsx";
 import { FinancialAnalysisPanel } from "../FinancialAnalysisPanel.tsx";
+import { BepAnalysisPanel } from "./BepAnalysisPanel.tsx";
 import { RowMenu, useConfirm } from "../crud.tsx";
 import { canWriteProject, isReadOnlyAdmin } from "../../lib/project-write-access.ts";
 import { countLegacyUnassignedModels, hideHistoricalForGreenfield } from "../../lib/business-case-legacy.ts";
@@ -610,7 +611,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             { key: "overview", label: "설명·생성·권고" },
             { key: "scenarios", label: "시나리오 비교" },
             { key: "wacc", label: "WACC" },
-            { key: "financial-analysis", label: "재무분석" },
+            { key: "financial-analysis", label: "대상회사" },
+            { key: "bep", label: "재무분석" },
             { key: "params", label: "파라미터·스냅샷" },
             { key: "target-costing", label: "타겟코스팅" },
           ]}
@@ -637,6 +639,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       {tab === "target-costing" && <TargetCostingPanel projectId={projectId} />}
       {tab === "wacc" && <WaccPanel projectId={projectId} />}
       {tab === "financial-analysis" && <FinancialAnalysisPanel projectId={projectId} />}
+      {tab === "bep" && <BepAnalysisPanel projectId={projectId} />}
 
       {/* ── ADR-0143 대상 비교·선정 (brownfield) — 권고 ≠ 선정, 선정은 사람 ── */}
       {tab === "targets" && targets.length === 0 && (

@@ -2500,6 +2500,17 @@ paths:
       responses:
         "200":
           description: Suggested areas or an honest note.
+  /api/projects/{id}/business-case/bep:
+    get:
+      operationId: getBusinessCaseBep
+      summary: Read-only deterministic per-year 재무 명세 + BEP 요약 for the 재무분석 tab (no persistence).
+      tags:
+        - business-case
+      responses:
+        "200":
+          description: Per-scenario year tables and BEP summary.
+        "404":
+          description: Project not found.
   /api/synergy/analyses/{id}/rescore:
     post:
       operationId: rescoreSynergyAnalysis
