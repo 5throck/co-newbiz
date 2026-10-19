@@ -15,7 +15,10 @@ interface YearRow {
   year: number;
   revenue: number;
   utilization: number;
+  /** MERGED operating cost (labor + pure opex) — the fcf row's basis. */
   opex: number;
+  /** The labor part of opex (S5 staffing + labor lines); opex − labor = 운영비. */
+  labor: number;
   capex: number;
   fcf: number;
   discountedFcf: number;
@@ -71,7 +74,7 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
     return {
       backgroundColor: "transparent",
       tooltip: { trigger: "axis" },
-      legend: { data: ["매출", "운영비", "설비투자", "순현금흐름", "누적 할인 현금흐름"], textStyle: { color: ct.muted } },
+      legend: { data: ["매출", "인건비", "운영비", "설비투자", "순현금흐름", "누적 할인 현금흐름"], textStyle: { color: ct.muted } },
       xAxis: { type: "category", data: yrs, axisLabel: { color: ct.muted } },
       yAxis: [
         { type: "value", name: "백만원/년", axisLabel: { color: ct.muted }, nameTextStyle: { color: ct.muted }, splitLine: { lineStyle: { color: ct.muted, opacity: 0.15 } } },
@@ -79,10 +82,11 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
       ],
       series: [
         { name: "매출", type: "bar", data: table.rows.map((r) => Math.round(r.revenue * 100) / 100), itemStyle: { color: ct.color[0] } },
-        { name: "운영비", type: "bar", data: table.rows.map((r) => Math.round(r.opex * 100) / 100), itemStyle: { color: ct.color[1] } },
-        { name: "설비투자", type: "bar", data: table.rows.map((r) => Math.round(r.capex * 100) / 100), itemStyle: { color: ct.color[2] } },
-        { name: "순현금흐름", type: "line", data: table.rows.map((r) => Math.round(r.fcf * 100) / 100), itemStyle: { color: ct.color[3] } },
-        { name: "누적 할인 현금흐름", type: "line", yAxisIndex: 1, data: table.rows.map((r) => r.cumulativeDiscountedFcf), itemStyle: { color: ct.color[4] } },
+        { name: "인건비", type: "bar", data: table.rows.map((r) => Math.round(r.labor * 100) / 100), itemStyle: { color: ct.color[1] } },
+        { name: "운영비", type: "bar", data: table.rows.map((r) => Math.round((r.opex - r.labor) * 100) / 100), itemStyle: { color: ct.color[2] } },
+        { name: "설비투자", type: "bar", data: table.rows.map((r) => Math.round(r.capex * 100) / 100), itemStyle: { color: ct.color[3] } },
+        { name: "순현금흐름", type: "line", data: table.rows.map((r) => Math.round(r.fcf * 100) / 100), itemStyle: { color: ct.color[4] } },
+        { name: "누적 할인 현금흐름", type: "line", yAxisIndex: 1, data: table.rows.map((r) => r.cumulativeDiscountedFcf), itemStyle: { color: ct.color[5] ?? ct.color[0] } },
       ],
     };
   }, [table, ct]);
@@ -142,7 +146,8 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
           <tbody>
             {([
               ["매출", (r: YearRow) => r.revenue],
-              ["운영비", (r: YearRow) => r.opex],
+              ["인건비", (r: YearRow) => r.labor],
+              ["운영비", (r: YearRow) => r.opex - r.labor],
               ["설비투자", (r: YearRow) => r.capex],
               ["순현금흐름", (r: YearRow) => r.fcf],
               ["누적 할인 현금흐름", (r: YearRow) => r.cumulativeDiscountedFcf],
@@ -159,7 +164,7 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
       </div>
 
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">
-        재무상태표(대차대조표)는 감가상각·자산/부채 모델이 없어 제공하지 않습니다 — 이 명세는 현금흐름 기반 요약입니다. 결정 기록은 '결정' 탭에서 합니다.
+        비용 행은 S5 투자비 표와 같은 구조·같은 기준 금액(연 환산, 성장률 미반영)입니다. 재무상태표(대차대조표)는 감가상각·자산/부채 모델이 없어 제공하지 않습니다 — 이 명세는 현금흐름 기반 요약입니다. 결정 기록은 '결정' 탭에서 합니다.
       </p>
 
       {option && (

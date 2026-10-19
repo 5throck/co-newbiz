@@ -708,15 +708,32 @@ describe("growth rate is preserved by the copy and the pin snapshot", () => {
     expect(planCmp(pinned)).toEqual(planCmp(copy));
   });
 
-  test("growth changes the plan vectors (compounding is live, not a no-op)", async () => {
+  test("plan vectors read the lines' BASE amounts — growth does not compound (2026-10-19 decider consistency rule)", () => {
+    // The S5 투자비 탭 has no growth input; a rate riding in from legacy/AI lines must not
+    // silently escalate S8 costs away from what the S5 table shows. Escalation becomes a
+    // visible S5 field before it compounds again.
     const mk = (growthRate: number) => [
       { line: "L", category: "opex", amount: 100, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly", startYear: 1, endYear: 3, growthRate },
     ];
     const withGrowth = gen.resolveS5InvestmentPlan(db, promote(makeOpp("greenfield", mk(0.1))))!;
     const without = gen.resolveS5InvestmentPlan(db, promote(makeOpp("greenfield", mk(undefined))))!;
-    // horizon is 5 (plan meta default): years past the line's end stay 0; floats to 6 dp
     expect(withGrowth.laborOpexByYear.length).toBe(5);
-    withGrowth.laborOpexByYear.forEach((v, i) => expect(v).toBeCloseTo([100, 110, 121, 0, 0][i], 6));
-    without.laborOpexByYear.forEach((v, i) => expect(v).toBeCloseTo([100, 100, 100, 0, 0][i], 6));
+    for (const plan of [withGrowth, without]) {
+      plan.laborOpexByYear.forEach((v, i) => expect(v).toBeCloseTo([100, 100, 100, 0, 0][i], 6));
+      expect(plan.laborByYear.every((v) => v === 0)).toBe(true);
+      expect(plan.opexByYear).toEqual(plan.laborOpexByYear);
+    }
+  });
+  test("category split: labor-category lines land on laborByYear, opex on opexByYear, and staffing joins labor", async () => {
+    const lines = [
+      { line: "Wage", category: "labor", amount: 50, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly", startYear: 1, endYear: 5 },
+      { line: "Rent", category: "opex", amount: 100, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly", startYear: 1, endYear: 5 },
+      { source: "staffing_plan", rows: [{ id: "r1", roleFamily: "연구개발", grade: "과장", headcountByYear: [2, 2, 2, 2, 2], avgAnnualBaseSalaryKrwM: 70, salaryIncreaseRatePct: 0, onCostRatePct: 0, hireStartQuarter: null, recruitingOneOffKrwM: 0 }], startYear: 1, endYear: 5, attritionBackfillPct: 0 },
+      { source: "plan_meta", horizonYears: 5 },
+    ];
+    const plan = gen.resolveS5InvestmentPlan(db, promote(makeOpp("greenfield", lines as unknown[])))!;
+    expect(plan.laborByYear[0]).toBeCloseTo(50 + 140, 6); // labor line 50 + staffing 2명 × 70
+    expect(plan.opexByYear[0]).toBeCloseTo(100, 6);
+    expect(plan.laborOpexByYear[0]).toBeCloseTo(290, 6); // merged = labor + opex
   });
 });

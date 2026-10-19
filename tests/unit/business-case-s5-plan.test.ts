@@ -100,14 +100,14 @@ describe("resolveS5InvestmentPlan", () => {
     expect(plan?.skippedLines).toBe(0);
   });
 
-  test("growth compounds from start_year", () => {
+  test("growth_rate does not compound — the vectors read the lines' base amounts (2026-10-19 consistency rule)", () => {
+    // The S5 투자비 탭 has no growth input, so S8 reads what the S5 table shows; a rate
+    // riding in from legacy/AI lines must not silently escalate S8 costs.
     const plan = resolveS5InvestmentPlan(
       fakeDb(model, [line({ category: "capex", annual_amount_krw_m: 100, growth_rate: 0.1 })]),
       "p1",
     );
-    expect(plan?.capexByYear[0]).toBe(100);
-    expect(plan?.capexByYear[1]).toBeCloseTo(110, 8);
-    expect(plan?.capexByYear[2]).toBeCloseTo(121, 8);
+    expect(plan?.capexByYear).toEqual([100, 100, 100, 100, 100]);
   });
 
   test("non-KRW_M and beyond-horizon lines are skipped and counted", () => {
