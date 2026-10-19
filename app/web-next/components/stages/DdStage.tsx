@@ -21,6 +21,7 @@ import { useAuth } from "../../lib/auth-client.tsx";
 import { StageFrame } from "../StageFrame.tsx";
 import { TabNav } from "../TabNav.tsx";
 import { GateDecisionJump, GateDecisionPanel } from "../GateDecisionPanel.tsx";
+import { CapabilityDdTab } from "./CapabilityDdTab.tsx";
 import { WaiverPanel, WaiverRequestForm } from "../WaiverPanel.tsx";
 import { koChecklistText, nonWaivableReason } from "../../lib/dd-checklist-ko.ts";
 import { ddItemDisplay, matchesFilter, type ItemFilter } from "../../lib/dd-item-display.ts";
@@ -324,20 +325,30 @@ export function DdStage({ projectId }: { projectId: string }) {
   const ws = workspaceView(data?.greenfield_scope);
   const bf = bfScopeBlock(data?.brownfield_scope);
   // The virtual "plan readiness" tab sits after the real domain tabs (workspace scope only).
+  // 2026-10-19 decider direction: Brownfield adds a 필요 역량 검증 tab (capability-dd) and the
+  // gate decision becomes its OWN tab at the very end — never a tail panel repeated per tab.
   const planTab = !!ws && !!data && tab === data.domains.length;
+  const isBrownfield = !!bf;
+  const capTabIdx = data ? data.domains.length + (ws ? 1 : 0) : -1;
+  const capTab = isBrownfield && !!data && tab === capTabIdx;
+  const decisionTabIdx = data ? capTabIdx + (isBrownfield ? 1 : 0) : -1;
+  const decisionTab = !!data && tab === decisionTabIdx;
   const domainTabs = (data?.domains ?? []).map((d, i) => ({ key: String(i), label: tabLabel(data?.greenfield_scope, d) }));
-  const tabItems = ws && data ? [...domainTabs, { key: String(data.domains.length), label: planReadinessLabel(data.greenfield_scope) }] : domainTabs;
+  const tabItems = data
+    ? [
+        ...domainTabs,
+        ...(ws ? [{ key: String(data.domains.length), label: planReadinessLabel(data.greenfield_scope) }] : []),
+        ...(isBrownfield ? [{ key: String(capTabIdx), label: "필요 역량 검증" }] : []),
+        { key: String(decisionTabIdx), label: "의사결정" },
+      ]
+    : domainTabs;
   const headerCount = countLocation(data?.greenfield_scope) === "header" ? judgedLine(data?.greenfield_scope, data?.domains ?? []) : null;
   const split = domain ? splitItems(domain.items) : null;
   const counts = domain ? tabCounts(domain) : null;
   const stepTags = domain ? tabStepTags(data?.greenfield_scope, domain) : [];
   const notCounted = domain ? notCountedNotice(domain) : null;
   const previousHere = domain ? (ws ? ws.previous_scope.filter((p) => p.checklist_id === domain.checklistId) : bfPreviousForTab(bf, domain.checklistId)) : [];
-  // 2026-10-19 decider: the 의사결정 panel renders once, right after the FINAL check
-  // (the last domain tab — 체결 전 딜 구조 점검). On earlier domain tabs it showed the
-  // same panel at every scroll, which read as duplicated; those tabs get a pointer instead.
-  const lastDomainIdx = Math.max(0, (data?.domains.length ?? 1) - 1);
-  const atFinalCheck = !data || tab >= lastDomainIdx;
+
   const bfExtraTab = !!domain && isBfExtraTab(bf, domain.checklistId);
 
   return (
@@ -498,7 +509,7 @@ export function DdStage({ projectId }: { projectId: string }) {
         {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
         {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {notice}</p>}
 
-        {(domain || planTab) && !viewNotOpened && (
+        {(domain || planTab || capTab) && !viewNotOpened && (
           <>
             <TabNav
               className="mb-0"
@@ -542,6 +553,8 @@ export function DdStage({ projectId }: { projectId: string }) {
                 </div>
               </section>
             )}
+
+            {capTab && <CapabilityDdTab projectId={projectId} />}
 
             {domain && split && counts && (<>
             <div className="mt-3 mb-2" data-testid="dd-tab-header">
@@ -763,19 +776,12 @@ export function DdStage({ projectId }: { projectId: string }) {
         <div className="mt-4">
           <WaiverPanel projectId={projectId} targetId={scopeParam} />
         </div>
-        <div className="mt-4">
-          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="dd-gate-subject">
-            게이트 판정 대상: <strong>{selectedTarget?.name ?? "선정 대상 없음 (프로젝트 기준)"}</strong>
-            {targets.length >= 2 && " — 다른 대상의 DD는 비교 근거이며 이 판정에 반영되지 않습니다."}
-          </p>
-          {!atFinalCheck && data && (
-            <p className="status-chip status-not-started block w-fit max-w-full whitespace-normal [overflow-wrap:anywhere] mb-2" data-testid="dd-decision-deferred">
-              <span aria-hidden="true">ⓘ </span>
-              의사결정은 모든 실사 확인 후 기록합니다 — 마지막 점검({tabLabel(data?.greenfield_scope, data.domains[lastDomainIdx])}) 탭 하단에 열립니다.{" "}
-              <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab(lastDomainIdx)}>마지막 점검으로 →</button>
+        {decisionTab && (
+          <div className="mt-4">
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="dd-gate-subject">
+              게이트 판정 대상: <strong>{selectedTarget?.name ?? "선정 대상 없음 (프로젝트 기준)"}</strong>
+              {targets.length >= 2 && " — 다른 대상의 DD는 비교 근거이며 이 판정에 반영되지 않습니다."}
             </p>
-          )}
-          {atFinalCheck && (
             <GateDecisionPanel
               opportunityId={projectId}
               gates={["dd"]}
@@ -783,8 +789,8 @@ export function DdStage({ projectId }: { projectId: string }) {
               showReview={false}
               nextStage={{ label: "S10 투자구조 설계", href: `/projects/${projectId}/deal-structure` }}
             />
-          )}
-        </div>
+          </div>
+        )}
         {waiverDlg && (
           <WaiverDialog
             dlg={waiverDlg}
