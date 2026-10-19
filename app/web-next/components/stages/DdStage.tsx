@@ -765,46 +765,69 @@ export function DdStage({ projectId }: { projectId: string }) {
               </details>
             )}
 
-            <section className="market-section sizing-step mt-3" aria-label="산업 맞춤 제안">
-              <h3 className="sizing-step-title text-[0.9rem]">산업 맞춤 제안 (proposed)</h3>
-              {domain.custom.filter((c) => c.status === "proposed").length === 0 && (
-                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">대기 중인 제안이 없습니다 — 에이전트 제안은 실사 체크리스트 수행 중 도착합니다.</p>
-              )}
-              <ul className="sizing-note-list">
-                {domain.custom.filter((c) => c.status === "proposed").map((c) => (
-                  <li key={c.id}>
-                    {c.item_label}
-                    <span className="ml-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title={proposerLabel(c)}>
-                      ({DOMAIN_LABEL[c.domain] ?? c.domain} · {proposerLabel(c)})
-                    </span>
-                    {c.rationale && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">근거: {c.rationale}</span>}
-                    {c.source_url ? (
-                      <a className="text-[length:var(--fs-caption)]" href={c.source_url} target="_blank" rel="noreferrer">
-                        출처 ({c.source_reliability ?? "?"}): {c.source_url}
-                      </a>
-                    ) : (
-                      <span className="status-chip status-amber ml-0" title="이 제안은 외부 출처가 확인되지 않았습니다 (신뢰도 C — 최저 등급)">
-                        출처 없음 (C)
-                      </span>
-                    )}
-                    {canAct && c.is_proposer && (
-                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="dd-self-approval-hint">{SELF_APPROVAL_HINT}</span>
-                    )}
-                    {canAct && !c.is_proposer && (
-                      <span className="actions-row ml-2">
-                        <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => review(c, "approved")}>승인</button>
-                        <button type="button" className="btn-danger btn-sm" disabled={busy} onClick={() => review(c, "rejected")}>기각</button>
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
-
             </>)}
+
+            {(() => {
+              // 2026-10-19 decider: pending proposals are visible on every tab, grouped by
+              // their domain — a proposal stays bound to the domain it was drafted for
+              // (승인 시 그 도메인 체크리스트에 편입) but the review is never tab-hidden.
+              const proposedAll = (data?.domains ?? []).flatMap((d) => d.custom.filter((c) => c.status === "proposed").map((c) => ({ domain: d.domain, item: c })));
+              const grouped = new Map<string, typeof proposedAll>();
+              for (const p of proposedAll) grouped.set(p.domain, [...(grouped.get(p.domain) ?? []), p]);
+              return (
+                <section className="market-section sizing-step mt-3" aria-label="산업 맞춤 제안 (전체 도메인)" data-testid="dd-custom-all">
+                  <h3 className="sizing-step-title text-[0.9rem]">산업 맞춤 제안 (proposed) — 전체 도메인</h3>
+                  {proposedAll.length === 0 ? (
+                    <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">대기 중인 제안이 없습니다 — 에이전트 제안은 실사 체크리스트 수행 중 도착합니다.</p>
+                  ) : (
+                    <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
+                      대기 {proposedAll.length}건 — 승인 시 해당 도메인 체크리스트에 필수 항목으로 편입됩니다. 모든 제안은 한국어로 작성되도록 안내되며, 출처 없는 제안은 신뢰도 C로 표기됩니다.
+                    </p>
+                  )}
+                  {[...grouped.entries()].map(([domain, items]) => (
+                    <div key={domain} className="mt-2">
+                      <p className="text-[length:var(--fs-caption)] font-semibold">{DOMAIN_LABEL[domain] ?? domain}</p>
+                      <ul className="sizing-note-list">
+                        {items.map(({ item: c }) => (
+                          <li key={c.id}>
+                            {c.item_label}
+                            <span className="ml-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title={proposerLabel(c)}>
+                              ({DOMAIN_LABEL[c.domain] ?? c.domain} · {proposerLabel(c)})
+                            </span>
+                            {c.rationale && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">근거: {c.rationale}</span>}
+                            {c.source_url ? (
+                              <a className="text-[length:var(--fs-caption)]" href={c.source_url} target="_blank" rel="noreferrer">
+                                출처 ({c.source_reliability ?? "?"}): {c.source_url}
+                              </a>
+                            ) : (
+                              <span className="status-chip status-amber ml-0" title="이 제안은 외부 출처가 확인되지 않았습니다 (신뢰도 C — 최저 등급)">
+                                출처 없음 (C)
+                              </span>
+                            )}
+                            {canAct && c.is_proposer && (
+                              <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="dd-self-approval-hint">{SELF_APPROVAL_HINT}</span>
+                            )}
+                            {canAct && !c.is_proposer && (
+                              <span className="actions-row ml-2">
+                                <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => review(c, "approved")}>승인</button>
+                                <button type="button" className="btn-danger btn-sm" disabled={busy} onClick={() => review(c, "rejected")}>기각</button>
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </section>
+              );
+            })()}
 
             <section className="market-section sizing-step mt-3" aria-label="조사내역 (dd_finding)" id="dd-findings">
               <h3 className="sizing-step-title text-[0.9rem]">조사내역 (dd_finding)</h3>
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="dd-findings-flow">
+                반영 경로: ① 아래 판정 기록과 함께 <b>dd 게이트 판정 근거</b>가 되고, ② 가치 영향이 기재된 최근 6건은{" "}
+                <b>S10 투자구조 추천</b> 생성 입력으로 자동 전달되며, ③ S11 <b>투자심사 패키지</b>에도 포함됩니다. 이 탭에서의 추가 편집은 없습니다 — 기록이 곧 반영입니다.
+              </p>
               {(data?.findings.length ?? 0) === 0 && (
                 <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">등록된 조사내역이 없습니다 — 실사 수행 중 발견한 사실을 상단 폼에서 기록하세요.</p>
               )}
@@ -812,11 +835,16 @@ export function DdStage({ projectId }: { projectId: string }) {
                 {(data?.findings ?? []).map((f) => (
                   <li key={f.id}>
                     <strong>{FINDING_CATEGORY_LABEL[f.category] ?? f.category}</strong>: {f.description}
-                    {f.value_impact != null && <span className="ml-1 tabular-nums">(가치 영향 {f.value_impact})</span>}
+                    {f.value_impact != null && <span className="status-chip status-info ml-1 tabular-nums" title="S10 투자구조 추천 입력으로 전달됩니다">가치 영향 {f.value_impact} → S10</span>}
                     {f.evidence_ref && <span className="ml-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title="증적 참조">증적: {f.evidence_ref}</span>}
                   </li>
                 ))}
               </ul>
+              {(data?.findings.length ?? 0) > 6 && (
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" role="note">
+                  ⓘ 조사내역이 {data?.findings.length}건입니다 — S10 추천 입력에는 최근 6건만 자동 전달됩니다. 나머지는 게이트 판정 근거와 투자심사 패키지에 포함됩니다.
+                </p>
+              )}
             </section>
           </>
         )}
