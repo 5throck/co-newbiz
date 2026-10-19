@@ -363,6 +363,47 @@ export function DdStage({ projectId }: { projectId: string }) {
   const capTab = isBrownfield && !!data && tab === capTabIdx;
   const decisionTabIdx = data ? capTabIdx + (isBrownfield ? 1 : 0) : -1;
   const decisionTab = !!data && tab === decisionTabIdx;
+  // 조사내역 정정 (2026-10-19 decider): recorded findings were append-only; the person
+  // now can correct or remove a mis-recorded finding (analyst+, audited).
+  const [editingFinding, setEditingFinding] = useState<string | null>(null);
+  const [findingDraft, setFindingDraft] = useState<{ description: string; value_impact: string; evidence_ref: string }>({ description: "", value_impact: "", evidence_ref: "" });
+
+  async function saveFinding(fid: string) {
+    if (busy) return;
+    const valueImpact = findingDraft.value_impact.trim() === "" ? null : Number(findingDraft.value_impact);
+    if (findingDraft.value_impact.trim() !== "" && !Number.isInteger(valueImpact)) {
+      setError("가치 영향은 정수(백만원)로 입력하세요."); return;
+    }
+    setBusy(true); setError(null);
+    try {
+      await api.put(`/api/projects/${encodeURIComponent(projectId)}/dd/findings`, {
+        finding_id: fid, description: findingDraft.description, value_impact: valueImpact, evidence_ref: findingDraft.evidence_ref,
+      });
+      setNotice("조사내역을 정정했습니다 — 반영 경로는 동일합니다 (게이트 근거 · S10 입력 · 투자심사 패키지).");
+      setEditingFinding(null);
+      reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "조사내역 정정 실패");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function removeFinding(fid: string) {
+    confirm("조사내역 삭제", () => {
+      void (async () => {
+        setBusy(true); setError(null);
+        try {
+          await api.delete(`/api/projects/${encodeURIComponent(projectId)}/dd/findings`, { finding_id: fid });
+          setNotice("조사내역을 삭제했습니다 — 감사 로그에 기록됩니다.");
+          reload();
+        } catch (e) {
+          setError(e instanceof Error ? e.message : "조사내역 삭제 실패");
+        } finally { setBusy(false); }
+      })();
+    }, { body: "삭제한 조사내역은 S10 추천 입력과 투자심사 패키지에서도 제외됩니다 — 감사 로그에는 기록이 남습니다.", tone: "danger" });
+  }
+
   // Decision-tab summary: verdict COUNTS only — for Brownfield the acquisition itself is the
   // capability resolution, so no cost input and no business-case reflection (decider 2026-10-19).
   const [capSummary, setCapSummary] = useState<{ resolved: number; partial: number; unresolved: number; pending: number } | null>(null);
@@ -567,6 +608,9 @@ export function DdStage({ projectId }: { projectId: string }) {
         {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
         {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {notice}</p>}
 
+        <div className="mt-3">
+          <WaiverPanel projectId={projectId} targetId={scopeParam} />
+        </div>
         {(domain || planTab || capTab || decisionTab) && !viewNotOpened && (
           <>
             <TabNav
@@ -844,9 +888,28 @@ export function DdStage({ projectId }: { projectId: string }) {
               <ul className="sizing-note-list">
                 {(data?.findings ?? []).map((f) => (
                   <li key={f.id}>
-                    <strong>{FINDING_CATEGORY_LABEL[f.category] ?? f.category}</strong>: {f.description}
-                    {f.value_impact != null && <span className="status-chip status-info ml-1 tabular-nums" title="S10 투자구조 추천 입력으로 전달됩니다">가치 영향 {f.value_impact} → S10</span>}
-                    {f.evidence_ref && <span className="ml-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title="증적 참조">증적: {f.evidence_ref}</span>}
+                    <strong>{FINDING_CATEGORY_LABEL[f.category] ?? f.category}</strong>:{" "}
+                    {editingFinding === f.id ? (
+                      <span className="inline-flex flex-wrap gap-1 items-center align-middle">
+                        <input aria-label="발견 내용 수정" className="sizing-new-input sizing-new-input-sm" style={{ width: "24rem" }} value={findingDraft.description} onChange={(e) => setFindingDraft((d) => ({ ...d, description: e.target.value }))} />
+                        <input aria-label="가치 영향 수정 (백만원)" className="sizing-new-input sizing-new-input-sm" style={{ width: "8rem" }} placeholder="가치 영향" value={findingDraft.value_impact} onChange={(e) => setFindingDraft((d) => ({ ...d, value_impact: e.target.value }))} />
+                        <input aria-label="증적 참조 수정" className="sizing-new-input sizing-new-input-sm" style={{ width: "10rem" }} placeholder="증적" value={findingDraft.evidence_ref} onChange={(e) => setFindingDraft((d) => ({ ...d, evidence_ref: e.target.value }))} />
+                        <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void saveFinding(f.id)}>저장</button>
+                        <button type="button" className="btn-ghost btn-sm" onClick={() => setEditingFinding(null)}>취소</button>
+                      </span>
+                    ) : (
+                      <>
+                        {f.description}
+                        {f.value_impact != null && <span className="status-chip status-info ml-1 tabular-nums" title="S10 투자구조 추천 입력으로 전달됩니다">가치 영향 {f.value_impact} → S10</span>}
+                        {f.evidence_ref && <span className="ml-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title="증적 참조">증적: {f.evidence_ref}</span>}
+                        {canAct && (
+                          <span className="actions-row ml-2 align-middle">
+                            <button type="button" className="btn-ghost btn-sm" onClick={() => { setEditingFinding(f.id); setFindingDraft({ description: f.description, value_impact: f.value_impact != null ? String(f.value_impact) : "", evidence_ref: f.evidence_ref ?? "" }); }}>정정</button>
+                            <button type="button" className="btn-ghost btn-sm" onClick={() => removeFinding(f.id)}>삭제</button>
+                          </span>
+                        )}
+                      </>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -890,9 +953,6 @@ export function DdStage({ projectId }: { projectId: string }) {
           </>
         )}
 
-        <div className="mt-4">
-          <WaiverPanel projectId={projectId} targetId={scopeParam} />
-        </div>
         {waiverDlg && (
           <WaiverDialog
             dlg={waiverDlg}

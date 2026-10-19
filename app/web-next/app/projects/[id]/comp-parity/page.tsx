@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
 import { PageState, useToast } from "../../../../components/ui.tsx";
+import { useAuth } from "../../../../lib/auth-client.tsx";
+import { canWriteProject } from "../../../../lib/project-write-access.ts";
 
 // 경영진 보상·임금 형평 (hr-integration-agent) — Wave 0 REST B9.
 // 집계 전용 (k-익명성 ≥3) + 경영진 참조만 노출 (SEC-05, 개인 노출 없음).
@@ -16,11 +18,37 @@ function CompView() {
   const [data, setData] = useState<{ parity: Parity[]; management_packages: Pkg[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const { me } = useAuth();
+  const canAct = canWriteProject(me?.role);
+  const [entry, setEntry] = useState({ job_family: "", grade: "", headcount: "", target_median: "", acquirer_median: "" });
+  const [entryErr, setEntryErr] = useState<string | null>(null);
+  const [entryMsg, setEntryMsg] = useState<string | null>(null);
+  const [entryBusy, setEntryBusy] = useState(false);
+
+  const load = useCallback(() => {
     api.get<{ parity: Parity[]; management_packages: Pkg[] }>(`/api/projects/${encodeURIComponent(id)}/comp-parity`)
       .then((r) => setData(r.data))
       .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
   }, [id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function submitEntry(e: React.FormEvent) {
+    e.preventDefault();
+    if (entryBusy) return;
+    setEntryErr(null); setEntryMsg(null);
+    try {
+      await api.post(`/api/projects/${encodeURIComponent(id)}/comp-parity`, {
+        job_family: entry.job_family, grade: entry.grade, headcount: Number(entry.headcount),
+        target_median: Number(entry.target_median), acquirer_median: Number(entry.acquirer_median),
+      });
+      setEntryMsg("임금 형평 데이터를 기록했습니다 — 집계 표에 반영됩니다 (k-익명성 ≥3 스키마 강제).");
+      setEntry({ job_family: "", grade: "", headcount: "", target_median: "", acquirer_median: "" });
+      load();
+    } catch (err) {
+      setEntryErr(err instanceof Error ? err.message : "기록 실패");
+    }
+  }
 
   const fmt = (v: number | null) => (v == null ? "—" : v.toLocaleString("ko-KR"));
 
@@ -50,6 +78,22 @@ function CompView() {
             </table>
           )}
         </section>
+        {canAct && (
+          <section className="market-section" aria-label="임금 형평 데이터 기록">
+            <h2 className="text-[0.9rem] mb-2">임금 형평 데이터 기록 (직군 집계 — 사람 확정)</h2>
+            <form className="grid gap-2 md:grid-cols-5" onSubmit={submitEntry}>
+              <label className="grid gap-1 text-sm">직군<input className="form-input" value={entry.job_family} onChange={(e) => setEntry({ ...entry, job_family: e.target.value })} placeholder="연구개발" required /></label>
+              <label className="grid gap-1 text-sm">직급<input className="form-input" value={entry.grade} onChange={(e) => setEntry({ ...entry, grade: e.target.value })} placeholder="과장" required /></label>
+              <label className="grid gap-1 text-sm">인원 (≥3)<input className="form-input" inputMode="numeric" value={entry.headcount} onChange={(e) => setEntry({ ...entry, headcount: e.target.value })} placeholder="5" required /></label>
+              <label className="grid gap-1 text-sm">피인수 중위 (원/월)<input className="form-input" inputMode="numeric" value={entry.target_median} onChange={(e) => setEntry({ ...entry, target_median: e.target.value })} placeholder="4800000" required /></label>
+              <label className="grid gap-1 text-sm">인수 중위 (원/월)<input className="form-input" inputMode="numeric" value={entry.acquirer_median} onChange={(e) => setEntry({ ...entry, acquirer_median: e.target.value })} placeholder="5200000" required /></label>
+              <button className="btn-ghost btn-sm justify-self-start" type="submit" disabled={entryBusy}>{entryBusy ? "기록 중..." : "기록"}</button>
+            </form>
+            {entryErr && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-1">✕ {entryErr}</p>}
+            {entryMsg && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mt-1">✓ {entryMsg}</p>}
+          </section>
+        )}
+
         <section className="market-section" aria-label="임금 형평">
           <h2 className="text-[0.9rem] mb-2">임금 형평 (직군 집계)</h2>
           {data === null ? <PageState state="loading" /> : data.parity.length === 0 ? (
