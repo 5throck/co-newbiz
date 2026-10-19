@@ -51,7 +51,8 @@ import { resolveDownsideOpexUplift } from "./target-costing.ts";
 import { archiveSupersededRound } from "./business-case-cleanup.ts";
 import { resolveS5SimConsumption, type S5SimConsumption } from "./investment-simulation-s8.ts";
 import { aggregatePlanLines, applyStaffingLaborToPlan, pinPlanLinesOf } from "./s5-plan-pin.ts";
-import { fitPlanToHorizon, staffingPlanOf, type StaffingPlanEntry } from "./staffing-plan.ts";
+import { fitPlanToHorizon, staffingPlanOf, staffingSummaryVector, type StaffingPlanEntry } from "./staffing-plan.ts";
+import { shiftAdvanceHalf, shiftDelayHalf, staffingAnnualVectorWithFactors } from "./investment-vectors.ts";
 import { getCurrentS5PlanPin, resolveActivePin, resolvePinnedS5SimConsumption, s5SourceOptedIn } from "./s5-plan-pin-s8.ts";
 
 // Per-step S8 agent assignment reads from process/flow.spec.yaml (SSOT,
@@ -423,8 +424,15 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
   for (let it = 0; it < iterationsOf(inputs); it++) {
     let revenue = year1Revenue;
     if (fxDist) revenue *= triangular(rng, fxDist.low, fxDist.mode, fxDist.high);
-    const capF = sim5 ? sim5.capFactors[it % sim5.drawCount] : 1;
-    const manF = sim5 ? sim5.manFactors[it % sim5.drawCount] : 1;
+    const di = sim5 ? it % sim5.drawCount : 0;
+    const capF = sim5 ? sim5.capFactors[di] : 1;
+    const manF = sim5 ? sim5.manFactors[di] : 1;
+    // 2026-10-19 decider direction: the S5 investment simulation's OWN salary model moves
+    // 인건비 per draw (급여·인상률·on-cost·램프 시프트) — the staffing slice is recomputed
+    // exactly as S5's simulateInvestment does, instead of the generic manual ±20% factor.
+    const staffingDrawn = sim5 && s5?.plan.staffing
+      ? staffingDrawVector(s5.plan, di, sim5)
+      : null;
     // year 0 carries ONLY pre-launch (start_year 0) spend — plan-year capex
     // stays in its own year (2026-10-19 plan-year alignment, same as the table).
     let npv = s5 ? -(s5.plan.preLaunchKrwM ?? 0) : -initialInvestment;
@@ -449,7 +457,12 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
         flow = revUtil - opex - capex;
       } else if (s5) {
         let opex = opexOfYear(inputs, s5, year, revenue);
-        if (sim5 && s5.full && year - 1 < s5.plan.opexCovered.length && s5.plan.opexCovered[year - 1]) opex = drawnLaborOpex(s5.plan, year - 1, capF, manF);
+        if (sim5 && s5.full && year - 1 < s5.plan.opexCovered.length && s5.plan.opexCovered[year - 1]) {
+          opex = drawnLaborOpex(s5.plan, year - 1, capF, manF);
+          // Swap the mode staffing slice (which drawnLaborOpex scaled by manF) for the
+          // S5 salary/inc/on-cost/ramp draw.
+          opex += (staffingDrawn?.[year - 1] ?? 0) - (s5.plan.staffingLaborByYear?.[year - 1] ?? 0) * manF;
+        }
         const capex = sim5 ? drawnCapex(s5.plan, year - 1, capF, manF) : capexOfYear(inputs, s5, year, revenue);
         flow = (revenue - opex) * utilization - capex;
       } else {
@@ -1160,6 +1173,12 @@ export interface S5InvestmentPlan {
    *  scale each group by its own factor. Not part of `lineHash`. Absent in hand-built fixtures. */
   capexCapabilityByYear?: number[];
   laborOpexCapabilityByYear?: number[];
+  /** The mode staffing labor slice INSIDE `laborByYear`/`laborOpexByYear` (annual + recruiting).
+   *  The seeded simulator swaps exactly this slice for its per-draw S5 salary/ramp recomputation. */
+  staffingLaborByYear?: number[];
+  /** The staffing plan the slice came from (pin snapshot or the source assessment) — null when
+   *  the opportunity has no staffing plan. Carried so S8 can apply the S5 draw factors itself. */
+  staffing?: StaffingPlanEntry | null;
   /** ADR-0178 slice 1 - 시작 전 (start_year 0) lines of the plan: EXCLUDED from the per-year vectors above
    *  (not in year 1, not dropped silently), counted here and flagged in the run note until the s5_pnl
    *  basis (slice 2) consumes them as year 0. Present only when such a line exists. */
@@ -1205,10 +1224,11 @@ export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (..
     if (pinLines.length === 0) return null; // nothing importable in the pinned version: ratio path, like the copy
     // 2026-10-19 decider report (인건비 미반영) — the snapshot's staffing plan joins the plan
     // vectors so the S8 totals match the S5 투자비 요약; pin semantics read the SNAPSHOT state.
-    const agg = applyStaffingLaborToPlan(aggregatePlanLines(pinHorizon, pinLines, fxRates), active.input.staffing ?? null);
+    const pinStaffing = active.input.staffing ?? null;
+    const agg = applyStaffingLaborToPlan(aggregatePlanLines(pinHorizon, pinLines, fxRates), pinStaffing);
     const modelId = `pin:${active.pin.id}`;
     const lineHash = scenarioSeed(modelId, JSON.stringify({ c: agg.capexByYear, o: agg.laborOpexByYear, g: agg.govRndByYear, ...(agg.preLaunchLines ? { p: agg.preLaunchKrwM } : {}) })).toString(16);
-    return { modelId, horizonYears: agg.horizonYears, capexByYear: agg.capexByYear, laborByYear: agg.laborByYear, opexByYear: agg.opexByYear, laborOpexByYear: agg.laborOpexByYear, govRndByYear: agg.govRndByYear, opexCovered: agg.opexCovered, skippedLines: agg.skippedLines, lineHash, capexCapabilityByYear: agg.capexCapabilityByYear, laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear, ...(agg.preLaunchLines ? { preLaunchKrwM: agg.preLaunchKrwM, preLaunchLines: agg.preLaunchLines } : {}), pinId: active.pin.id, planHash: active.pin.plan_hash };
+    return { modelId, horizonYears: agg.horizonYears, capexByYear: agg.capexByYear, laborByYear: agg.laborByYear, opexByYear: agg.opexByYear, laborOpexByYear: agg.laborOpexByYear, govRndByYear: agg.govRndByYear, opexCovered: agg.opexCovered, skippedLines: agg.skippedLines, lineHash, capexCapabilityByYear: agg.capexCapabilityByYear, laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear, staffingLaborByYear: agg.staffingLaborByYear, ...(agg.preLaunchLines ? { preLaunchKrwM: agg.preLaunchKrwM, preLaunchLines: agg.preLaunchLines } : {}), pinId: active.pin.id, planHash: active.pin.plan_hash, staffing: pinStaffing };
   }
   const model = db
     .query(
@@ -1221,9 +1241,10 @@ export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (..
   const lines = db
     .query("SELECT category, annual_amount_krw_m, start_year, end_year, growth_rate, unit, note FROM business_case_line WHERE model_id = ?")
     .all(model.id) as Array<{ category: string; annual_amount_krw_m: number; start_year: number; end_year: number | null; growth_rate: number; unit: string | null; note?: string | null }>;
-  const agg = applyStaffingLaborToPlan(aggregatePlanLines(model.horizon_years, lines, fxRates), staffingOfAssessment(getDb(), srcOpp, model.horizon_years));
+  const copyStaffing = staffingOfAssessment(getDb(), srcOpp, model.horizon_years);
+  const agg = applyStaffingLaborToPlan(aggregatePlanLines(model.horizon_years, lines, fxRates), copyStaffing);
   const lineHash = scenarioSeed(model.id, JSON.stringify({ c: agg.capexByYear, o: agg.laborOpexByYear, g: agg.govRndByYear, ...(agg.preLaunchLines ? { p: agg.preLaunchKrwM } : {}) })).toString(16);
-  return { modelId: model.id, horizonYears: agg.horizonYears, capexByYear: agg.capexByYear, laborByYear: agg.laborByYear, opexByYear: agg.opexByYear, laborOpexByYear: agg.laborOpexByYear, govRndByYear: agg.govRndByYear, opexCovered: agg.opexCovered, skippedLines: agg.skippedLines, lineHash, capexCapabilityByYear: agg.capexCapabilityByYear, laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear, ...(agg.preLaunchLines ? { preLaunchKrwM: agg.preLaunchKrwM, preLaunchLines: agg.preLaunchLines } : {}) };
+  return { modelId: model.id, horizonYears: agg.horizonYears, capexByYear: agg.capexByYear, laborByYear: agg.laborByYear, opexByYear: agg.opexByYear, laborOpexByYear: agg.laborOpexByYear, govRndByYear: agg.govRndByYear, opexCovered: agg.opexCovered, skippedLines: agg.skippedLines, lineHash, capexCapabilityByYear: agg.capexCapabilityByYear, laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear, staffingLaborByYear: agg.staffingLaborByYear, ...(agg.preLaunchLines ? { preLaunchKrwM: agg.preLaunchKrwM, preLaunchLines: agg.preLaunchLines } : {}), staffing: copyStaffing };
 }
 
 /** The plan in force for a case — only when a human chose an s5_plan basis
@@ -1244,6 +1265,24 @@ function drawnCapex(plan: S5InvestmentPlan, index: number, capF: number, manF: n
   const cap = plan.capexCapabilityByYear?.[index] ?? 0;
   return cap * capF + (plan.capexByYear[index] - cap) * manF;
 }
+/** Per-draw staffing labor vector under the S5 run's own salary assumptions — the exact
+ *  formula `simulateInvestment` uses (salary factor, increase pp, on-cost pp, then the
+ *  triangular half-year ramp shift; recruiting one-offs ride along). Null-safe parts:
+ *  absent factors stay at their mode (1 / 0 / 0). */
+function staffingDrawVector(plan: S5InvestmentPlan, drawIndex: number, sim5: { salaryFactors: number[]; increaseFactorsPp: number[]; onCostFactorsPp: number[]; rampFactors: number[]; drawCount: number }): number[] | null {
+  if (!plan.staffing) return null;
+  const H = plan.horizonYears;
+  const recruiting = staffingSummaryVector(plan.staffing, H).recruitingByYear;
+  const salary = sim5.salaryFactors[drawIndex] ?? 1;
+  const inc = sim5.increaseFactorsPp[drawIndex] ?? 0;
+  const onc = sim5.onCostFactorsPp[drawIndex] ?? 0;
+  const rampShift = sim5.rampFactors[drawIndex] ?? 0;
+  let annual = staffingAnnualVectorWithFactors(plan.staffing, H, salary, inc, onc);
+  if (rampShift > 0) annual = shiftDelayHalf(annual, rampShift);
+  else if (rampShift < 0) annual = shiftAdvanceHalf(annual, -rampShift);
+  return annual.map((v, i) => Math.round((v + recruiting[i]) * 100) / 100);
+}
+
 function drawnLaborOpex(plan: S5InvestmentPlan, index: number, capF: number, manF: number): number {
   const cap = plan.laborOpexCapabilityByYear?.[index] ?? 0;
   return cap * capF + (plan.laborOpexByYear[index] - cap) * manF;

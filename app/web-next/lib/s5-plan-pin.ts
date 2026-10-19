@@ -126,6 +126,10 @@ export interface AggregatedPlan {
   opexCovered: boolean[];
   capexCapabilityByYear: number[];
   laborOpexCapabilityByYear: number[];
+  /** Mode staffing labor (annual + recruiting) already inside `laborByYear`/`laborOpexByYear`.
+   *  The S8 simulator replaces exactly this slice with its per-draw staffing recomputation,
+   *  so the S5 salary/inc/on-cost/ramp draws apply to 인건비 (2026-10-19 decider direction). */
+  staffingLaborByYear: number[];
   skippedLines: number;
   /**
    * ADR-0178 slice 1: 시작 전 (start_year 0) lines. They are EXCLUDED from the Y1..YN vectors above
@@ -153,6 +157,7 @@ export function aggregatePlanLines(horizonRaw: number, lines: ReadonlyArray<Plan
   const opexCovered = new Array<boolean>(horizon).fill(false);
   const capexCapabilityByYear = new Array<number>(horizon).fill(0);
   const laborOpexCapabilityByYear = new Array<number>(horizon).fill(0);
+  const staffingLaborByYear = new Array<number>(horizon).fill(0);
   let skippedLines = 0;
   let preLaunchKrwM = 0;
   let preLaunchLines = 0;
@@ -192,7 +197,7 @@ export function aggregatePlanLines(horizonRaw: number, lines: ReadonlyArray<Plan
       if (!isCapex && !isGovRnd) opexCovered[y - 1] = true;
     }
   }
-  return { horizonYears: horizon, capexByYear, laborByYear, opexByYear, laborOpexByYear, govRndByYear, opexCovered, capexCapabilityByYear, laborOpexCapabilityByYear, skippedLines, ...(preLaunchLines > 0 ? { preLaunchKrwM, preLaunchLines } : {}) };
+  return { horizonYears: horizon, capexByYear, laborByYear, opexByYear, laborOpexByYear, govRndByYear, opexCovered, capexCapabilityByYear, laborOpexCapabilityByYear, staffingLaborByYear, skippedLines, ...(preLaunchLines > 0 ? { preLaunchKrwM, preLaunchLines } : {}) };
 }
 
 /**
@@ -210,6 +215,7 @@ export function applyStaffingLaborToPlan(agg: AggregatedPlan, staffing: Staffing
   for (let i = 0; i < agg.horizonYears; i++) {
     const v = (vec.annualByYear[i] ?? 0) + (vec.recruitingByYear[i] ?? 0);
     if (v > 0) {
+      agg.staffingLaborByYear[i] += v;
       agg.laborByYear[i] += v;
       agg.laborOpexByYear[i] += v;
       agg.opexCovered[i] = true;

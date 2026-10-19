@@ -117,6 +117,10 @@ export function resolvePinnedS5SimConsumption(db: Database, pin: Pick<S5PlanPinR
       drawCount: run.draw_count,
       capFactors: factors.map((f) => f.cap),
       manFactors: factors.map((f) => f.man),
+      salaryFactors: factors.map((f) => f.salary),
+      increaseFactorsPp: factors.map((f) => f.inc),
+      onCostFactorsPp: factors.map((f) => f.onc),
+      rampFactors: factors.map((f) => f.ramp),
     };
   } catch {
     return null;

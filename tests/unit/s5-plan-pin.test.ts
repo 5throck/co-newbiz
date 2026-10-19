@@ -344,6 +344,30 @@ describe("pinned read path", () => {
     expect(planCmp(pinned)).toEqual(planCmp(copy));
   });
 
+  test("the S5 salary/inc/on-cost/ramp draws move the S8 인건비 per draw (2026-10-19 decider direction)", async () => {
+    const lines = [
+      ml("Plant", "capex", 1200, "lumpsum", 1),
+      { source: "staffing_plan", rows: [{ id: "r1", roleFamily: "연구개발", grade: "과장", headcountByYear: [10, 10, 10, 10, 10], avgAnnualBaseSalaryKrwM: 70, salaryIncreaseRatePct: 0, onCostRatePct: 0, hireStartQuarter: null, recruitingOneOffKrwM: 0 }], startYear: 1, endYear: 5, attritionBackfillPct: 0 },
+      { source: "plan_meta", horizonYears: 5 },
+    ];
+    const opp = makeOpp("greenfield", lines as unknown[]);
+    // A run whose ONLY varying dimension is the salary factor.
+    const run = runRepo.insertInvestmentSimulationRun({ opportunityId: opp, inputHash: "h-salary", seed: 4242, drawCount: 200, horizonYears: 5, envelopeKrwM: null, assumptions: { salaryRange: 0.1, salaryIncreaseRangePp: 0, onCostRangePp: 0, rampShiftHalfYears: 0, capabilityRange: 0, manualLineRange: 0 }, results: {}, actor: ANALYST, now: new Date().toISOString() }, db);
+    runRepo.confirmInvestmentSimulationRun(opp, run.id, ANALYST, new Date().toISOString(), db);
+    const pid = promote(opp);
+    // s5_plan_full: the plan's opex (and therefore 인건비) drives the flows; the plain
+    // s5_plan basis keeps opex on the ratio path by design.
+    await setBasis(pid, "s5_plan_full");
+    const inputs = gen.caseInputsForProject(pid);
+    expect(inputs.s5Plan!.staffing).toBeTruthy();
+    expect(inputs.s5Plan!.staffingLaborByYear![0]).toBeCloseTo(700, 6); // 10명 × 70
+    expect(inputs.s5Sim!.salaryFactors.length).toBe(200);
+    // Same seed with NO draws => the salary factor is always 1 (mode).
+    const withSalary = gen.runSeededSimulation(inputs, "base");
+    const modeOnly = gen.runSeededSimulation({ ...inputs, s5Sim: { ...inputs.s5Sim!, salaryFactors: inputs.s5Sim!.salaryFactors.map(() => 1), increaseFactorsPp: inputs.s5Sim!.increaseFactorsPp.map(() => 0), onCostFactorsPp: inputs.s5Sim!.onCostFactorsPp.map(() => 0), rampFactors: inputs.s5Sim!.rampFactors.map(() => 0), capFactors: inputs.s5Sim!.capFactors.map(() => 1), manFactors: inputs.s5Sim!.manFactors.map(() => 1) } }, "base");
+    expect(withSalary.p50).not.toBe(modeOnly.p50);
+  });
+
   test("PARITY with a confirmed S5 run: the pinned variant consumes the pinned run and matches the copy's draws", async () => {
     const opp = makeOpp("greenfield", LINES);
     const run = confirmRun(opp, "h-run");

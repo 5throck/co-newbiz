@@ -39,6 +39,10 @@ interface ScenarioTable {
 type ScenarioKey = "base" | "downside" | "upside";
 interface BepPayload {
   wacc: number;
+  /** Brownfield (M&A): the year-0 outflow is the acquisition EV, not a build-out investment. */
+  acquisition: { evRevenue: number; source: string } | null;
+  /** Brownfield analysis subject (selected company or rank-1 shortlist target). */
+  subject: { id: string; name: string } | null;
   scenarios: Record<ScenarioKey, ScenarioTable>;
 }
 const SCENARIO_LABEL: Record<ScenarioKey, string> = { base: "기본(Base)", downside: "보수(Downside)", upside: "낙관(Upside)" };
@@ -48,13 +52,20 @@ const fmt = (n: number) => n.toLocaleString("ko-KR", { maximumFractionDigits: 1 
 export function BepAnalysisPanel({ projectId }: { projectId: string }) {
   const ct = useChartTheme();
   const [data, setData] = useState<Record<ScenarioKey, ScenarioTable> | null>(null);
+  const [acquisition, setAcquisition] = useState<{ evRevenue: number; source: string } | null>(null);
+  const [subject, setSubject] = useState<{ id: string; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scenario, setScenario] = useState<ScenarioKey>("base");
 
   useEffect(() => {
     let alive = true;
     api.get<BepPayload>(`/api/projects/${encodeURIComponent(projectId)}/business-case/bep`)
-      .then((r) => { if (alive) setData(r.data?.scenarios ?? null); })
+      .then((r) => {
+        if (!alive) return;
+        setData(r.data?.scenarios ?? null);
+        setAcquisition(r.data?.acquisition ?? null);
+        setSubject(r.data?.subject ?? null);
+      })
       .catch((e) => { if (alive) setError(e instanceof Error ? e.message : "불러오기 실패"); });
     return () => { alive = false; };
   }, [projectId]);
@@ -108,7 +119,9 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
       </div>
 
       <div className="sizing-grade-card mb-3">
-        <h4 className="text-[length:var(--fs-caption)] font-semibold mb-1">BEP Analysis — 손익분기 ({SCENARIO_LABEL[scenario]}, {BASIS_LABEL[table.basis]})</h4>
+        <h4 className="text-[length:var(--fs-caption)] font-semibold mb-1">
+          BEP Analysis — {acquisition ? "인수가격 회수" : "손익분기"} ({SCENARIO_LABEL[scenario]}, {BASIS_LABEL[table.basis]})
+        </h4>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
           손익분기 연도 = 누적 할인 현금흐름이 0을 넘는 해 (WACC {(table.wacc * 100).toFixed(1)}% 할인 기준).
         </p>
@@ -116,9 +129,16 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
           <span className={`status-chip ${table.bepYear != null ? "status-green" : "status-amber"}`}>
             손익분기(회수) 연도: {table.bepYear != null ? `${table.bepYear.toFixed(2)}년차` : "검토 기간 내 미도달"}
           </span>
-          {table.initialInvestment > 0 && (
-            <span className="status-chip status-not-started">출시 전 투자: {fmt(table.initialInvestment)}백만원</span>
+          {acquisition ? (
+            <span className="status-chip status-not-started">
+              인수가격(EV): {fmt(table.initialInvestment)}백만원 ({acquisition.evRevenue.toFixed(1)}×)
+            </span>
+          ) : (
+            table.initialInvestment > 0 && (
+              <span className="status-chip status-not-started">출시 전 투자: {fmt(table.initialInvestment)}백만원</span>
+            )
           )}
+          {subject && <span className="status-chip status-not-started">대상: {subject.name}</span>}
           {table.exitValue > 0 && <span className="status-chip status-not-started">처분 가치: {fmt(table.exitValue)}백만원</span>}
           <span className="status-chip status-not-started">NPV: {fmt(table.npv)}백만원</span>
           {table.irrValue != null && <span className="status-chip status-not-started">IRR: {(table.irrValue * 100).toFixed(1)}%</span>}
@@ -152,7 +172,8 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
           <tbody>
             {([
               ["매출", (r: YearRow) => r.revenue],
-              ["인건비", (r: YearRow) => r.labor],
+              // 인건비 only where the case separates it (S5 plan); a ratio case folds labor into 운영비.
+              ...(table.rows.some((r) => r.labor > 0) ? [["인건비", (r: YearRow) => r.labor] as [string, (r: YearRow) => number]] : []),
               ["운영비", (r: YearRow) => r.opex - r.labor],
               ["설비투자", (r: YearRow) => r.capex],
               ["순현금흐름", (r: YearRow) => r.fcf],
@@ -170,7 +191,10 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
       </div>
 
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">
-        비용 행은 S5 투자비 표와 같은 연차·같은 구조·같은 기준 금액(연 환산, 성장률 미반영)입니다. 재무상태표(대차대조표)는 감가상각·자산/부채 모델이 없어 제공하지 않습니다 — 이 명세는 현금흐름 기반 요약입니다. 결정 기록은 '결정' 탭에서 합니다.
+        {acquisition
+          ? "인수(M&A) 케이스입니다 — year-0 지출은 인수가격(EV)이며, 비용은 비율 가정으로 모델링되고 잔여 지분은 종료 연도 매출 × 진입 배수로 회수합니다."
+          : "비용 행은 S5 투자비 표와 같은 연차·같은 구조·같은 기준 금액(연 환산, 성장률 미반영)입니다."}{" "}
+        재무상태표(대차대조표)는 감가상각·자산/부채 모델이 없어 제공하지 않습니다 — 이 명세는 현금흐름 기반 요약입니다. 결정 기록은 '결정' 탭에서 합니다.
       </p>
 
       {option && (

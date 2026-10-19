@@ -68,6 +68,22 @@ describe("deterministicCaseYearTable (재무분석 탭 데이터)", () => {
     const nonFull = deterministicCaseYearTable(inputsFor("s5_plan"), "base");
     expect(nonFull.rows.every((r) => r.year === 0 || r.breakEvenRevenue === null)).toBe(true);
   });
+  test("brownfield: an acquisition-priced case books the EV at year 0 and exits at the entry multiple", () => {
+    // 2026-10-19 decider question: the S5-linked build-out model is GREENFIELD only;
+    // a brownfield case pays the acquisition price and recovers it through the exit.
+    const inputs = {
+      ...inputsFor("ratio"),
+      revenueAnchor: { krwM: 40000, source: "대상 회사 최연 매출 (test)" },
+      acquisition: { evRevenue: 3, source: "컴프 test" },
+    } as CaseInputs;
+    const t = deterministicCaseYearTable(inputs, "base");
+    expect(t.initialInvestment).toBe(120000); // 40,000 × 3.0×
+    expect(t.exitValue).toBeGreaterThan(0); // final-year revenue × the same multiple
+    expect(t.basis).toBe("ratio"); // no S5 plan on an M&A case
+    // no plan → no fixed-opex year → no revenue break-even (proportional costs)
+    expect(t.rows.every((r) => r.year === 0 || r.breakEvenRevenue === null)).toBe(true);
+  });
+
   test("s5_pnl keeps the utilization-into-revenue break-even form", () => {
     const pnl = inputsFor("s5_pnl");
     const t = deterministicCaseYearTable(pnl, "base");
@@ -94,6 +110,16 @@ describe("S8 tab restructure: 재무분석 → 대상회사 + 신규 재무분�
     expect(stage).toContain('{tab === "bep" && <BepAnalysisPanel projectId={projectId} />}');
     expect(stage).toContain('label: "대상회사"');
     expect(read("app/web-next/components/stages/BepAnalysisPanel.tsx")).toContain("BEP Analysis");
+  });
+
+  test("brownfield: the route resolves a subject target and the panel labels the acquisition price", () => {
+    const route = read("app/web-next/app/api/projects/[id]/business-case/bep/route.ts");
+    expect(route).toContain("caseInputsForTarget");
+    expect(route).toContain("listShortlistSubjects");
+    expect(route).toContain("acquisition:");
+    const panel = read("app/web-next/components/stages/BepAnalysisPanel.tsx");
+    expect(panel).toContain("인수가격(EV)");
+    expect(panel).toContain("인수(M&A) 케이스");
   });
 
   test("the panel reads the scenario tables off the route payload's `scenarios` key (regression: flat read stuck the tab on 불러오는 중)", () => {
