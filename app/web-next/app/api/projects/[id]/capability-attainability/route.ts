@@ -38,7 +38,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const scope = tid ? targetScope(db, tid) : null;
     if (scope?.ok) {
       const v = buildTargetView(db, scope.target);
-      return ok({ ...v, edit_at: "S7", track: stage.track, selected_target: { id: scope.target.id, company_name: scope.target.company_name }, edit_href: `/brownfield/targets/${encodeURIComponent(scope.target.id)}` }, 200);
+      return ok({ ...v, edit_at: "S7", track: stage.track, selected_target: { id: scope.target.id, company_name: scope.target.company_name }, edit_href: null }, 200); // 2026-10-20: the S7 per-target judgement surface is retired — S8 points at S9 (capability-dd)
     }
     // No (shortlisted) target selected yet: S3 definitions only, every judgement unjudged.
     const bare = reg.rows.map(({ attainability: _a, resolution: _r, ...r }) => ({ ...r, resolution: null }));
