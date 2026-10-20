@@ -68,7 +68,7 @@ ADR-0136 (S3 역량 갭 레지스터 단일화 — 이 ADR의 기술 평가 시�
 
 ## Addendum (2026-10-20, a) — explicit per-category save, judged/total basis on the score, flow.spec-aligned gate hint
 
-Status at time of writing: Proposed. Direction given by the human decider in chat on 2026-10-20 (S6/S7 evaluation round); acceptance of this addendum text is pending.
+Status at time of writing: Proposed. Accepted 2026-10-20 by the human decider (chat instruction "진행해줘" after the documentation-audit report; recorded as DEC-20261020-01), covering this addendum. Direction given by the human decider in chat on 2026-10-20 (S6/S7 evaluation round); acceptance of this addendum text is pending.
 
 1. **Explicit save.** Verdict and weight edits on the target evaluation tab are LOCAL until the person presses the category's `저장` button (bottom-right, after the 항목 추가 row; a pending-changes count and `변경 취소` sit beside it). The previous save-on-every-change behaviour is retired. A visible AI draft's evidence note still rides along at save time, and the bulk `초안 저장` flow is unchanged.
 2. **Score basis on the chip.** The category score chip states `판정 N/M 항목` — the weighted mean covers judged items only (`충족 1 · 부분충족 0.5 · 미충족 0`, `해당없음·예외` excluded, pending not yet counted), so the basis is visible while items remain unjudged. The formula itself is unchanged (re-verified against the database: the earlier `기술 58` was the same formula over fewer judged items).
