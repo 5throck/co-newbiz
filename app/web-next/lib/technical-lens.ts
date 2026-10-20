@@ -8,6 +8,7 @@
 // caps a grade and never blocks a gate.
 import type { CapabilityGapRow } from "./capability-gap.ts";
 import { isStale } from "./capability-linkage.ts";
+import type { TechnicalItemVerdict } from "./technical-item-verdicts.ts";
 
 export const TECH_ITEM_KEYS = ["T1", "T2", "T3", "T4", "T5"] as const;
 export type TechItemKey = (typeof TECH_ITEM_KEYS)[number];
@@ -256,7 +257,7 @@ function storedStatus(it: TechnicalLensItem | undefined): { status: LensStatus; 
 export function summarizeTechnicalLens(
   rows: CapabilityGapRow[],
   lens: TechnicalLens | null | undefined,
-  opts: { subject?: string; brownfield?: boolean } = {},
+  opts: { subject?: string; brownfield?: boolean; s9Items?: Partial<Record<"T2" | "T3" | "T4" | "T5", TechnicalItemVerdict>> } = {},
 ): TechnicalLensSummary {
   const subject = lens?.subjects[opts.subject ?? PROJECT_SUBJECT];
   const t1 = deriveT1(rows);
@@ -264,16 +265,36 @@ export function summarizeTechnicalLens(
     { key: "T1", label: TECH_ITEM_LABELS.T1, status: t1.status, derived: true, judged: t1.judged, note: t1.note },
   ];
   for (const k of ["T2", "T3", "T4", "T5"] as const) {
+    // 2026-10-20 decider round 4: the recording home for T2-T5 is S9 실사·검증 —
+    // a person verdict there DERIVES the lens item; an unjudged item points at
+    // S9 instead of the old "next release" note. Warning-only: 미충족 still
+    // surfaces as 주의 on the strip and the note carries the real verdict.
+    const s9 = opts.s9Items?.[k];
+    if (s9) {
+      const vKo = s9.verdict === "met" ? "충족" : s9.verdict === "caution" ? "주의" : "미충족";
+      items.push({
+        key: k,
+        label: TECH_ITEM_LABELS[k],
+        status: s9.verdict === "met" ? "met" : "caution",
+        derived: true,
+        judged: true,
+        note: `S9 판정 (${vKo}) — ${s9.by} · ${s9.at.slice(0, 10)}${s9.note ? ` · ${s9.note}` : ""}`,
+      });
+      continue;
+    }
     const s = storedStatus(subject?.items[k]);
-    items.push({ key: k, label: TECH_ITEM_LABELS[k], status: s.status, derived: false, judged: s.judged, note: s.judged ? "" : "다음 릴리스에서 입력 기능이 열립니다." });
+    items.push({ key: k, label: TECH_ITEM_LABELS[k], status: s.status, derived: false, judged: s.judged, note: s.judged ? "" : "S9 실사·검증 — 기술 탭에서 판정을 기록하세요." });
   }
+  // T6 — the S8↔S9 pairing itself. With T2-T5 recorded in S9, pairing is complete
+  // when every one of them carries an S9 verdict; until then the note counts the gap.
+  const s9Judged = (["T2", "T3", "T4", "T5"] as const).filter((k) => !!opts.s9Items?.[k]).length;
   items.push({
     key: "T6",
     label: opts.brownfield ? TECH_ITEM_LABEL_T6_BROWNFIELD : TECH_ITEM_LABELS.T6,
-    status: "undetermined",
+    status: s9Judged === 4 ? "met" : "undetermined",
     derived: true,
-    judged: false,
-    note: "다음 릴리스에서 입력 기능이 열립니다.",
+    judged: s9Judged === 4,
+    note: s9Judged === 4 ? "T2~T5 모두 S9 판정과 짝지어졌습니다." : `S9 판정 ${s9Judged}/4 기록됨 — 나머지는 S9 기술 탭에서 기록하세요.`,
   });
   const judged = items.filter((i) => i.judged).length;
   const cautions = items.filter((i) => i.status === "caution");

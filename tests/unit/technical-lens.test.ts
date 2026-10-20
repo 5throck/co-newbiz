@@ -154,7 +154,9 @@ describe("technicalLens parse and summary", () => {
     expect(s.judged).toBe(1);
     expect(s.status).toBe("undetermined");
     expect(s.items.map((i) => i.key)).toEqual(["T1", "T2", "T3", "T4", "T5", "T6"]);
-    expect(s.items[1].note).toContain("다음 릴리스");
+    // 2026-10-20 round 4: unjudged T2-T5 point at their S9 recording home, not a "next release"
+    expect(s.items[1].note).toContain("S9 실사·검증");
+    expect(s.items[5].note).toContain("0/4");
   });
   test("a fully judged lens is 충족 or 주의; mismatches counted; Brown Field T6 label", () => {
     const item = (status: string) => ({ status, confirmedBy: "u", confirmedAt: NOW, rationale: "r" });

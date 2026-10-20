@@ -1,0 +1,12 @@
+-- 0157_technical_item_verdicts.sql (2026-10-20 decider direction — the S8
+-- technical lens items T2-T5 are JUDGED in S9, same as the capability verdicts).
+--
+-- The S8 technical lens (ADR-0169) carried T2 기술 성숙도(TRL) / T3 핵심
+-- 인력·설비·시설 / T4 지식재산·라이선스 / T5 인허가·인증 as "input opens in a
+-- later release" placeholders. Decider round 4 moved the recording home to S9
+-- 실사·검증 (the technical DD tab records them citing DD findings); S8 reflects
+-- them read-only. The verdicts ride in a SIDECAR on the opportunity next to the
+-- lens they feed (capability_gap_json holds the lens JSON) — one row per item
+-- key, latest wins. Null = nothing recorded yet; S8 shows 미판정 honestly and
+-- nothing is capped or blocked (warning-only lens).
+ALTER TABLE opportunity ADD COLUMN technical_item_verdicts_json TEXT;

@@ -32,6 +32,7 @@ import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import { ReviewBadgeChip } from "../ReviewBadge.tsx";
 import { DRAFT_AI_MARKER, reviewBadge, type ReviewStatus } from "../../lib/checklist-review-status.ts";
+import { TechnicalItemsDdBlock } from "./TechnicalItemsDdBlock.tsx";
 import TargetSelector, { type AnalysisTarget } from "../TargetSelector.tsx";
 
 // S9 실사·검증 — 표준 DD 체크리스트 판정 + 산업 맞춤 제안 승인 화면 (ADR-0099 §4).
@@ -805,6 +806,10 @@ export function DdStage({ projectId }: { projectId: string }) {
               </tbody>
             </table>
             </div>
+
+            {/* 2026-10-20 decider round 4: the S8 technical lens items T2-T5 are judged HERE
+                (person, citing the findings above); S8 reflects them read-only. */}
+            {domain.domain === "technical" && <TechnicalItemsDdBlock projectId={projectId} canAct={canAct} />}
 
             {split.excluded.length > 0 && (
               <details className="mt-3" data-testid="dd-excluded">
