@@ -326,7 +326,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0168` | adr | — | — | — |
 | `adr:0169` | adr | — | — | — |
 | `adr:0170` | adr | — | — | — |
-| `adr:0171` | adr | — | — | — |
+| `adr:0171` | adr | — | root/brownfield-feasibility | — |
 | `adr:0172` | adr | — | — | — |
 | `adr:0173` | adr | — | — | — |
 | `adr:0174` | adr | — | — | — |
@@ -547,7 +547,7 @@ None — every capability has a single content hash.
 
 | Type | Count | Nodes |
 |------|-------|-------|
-| adr | 175 | (expected until docs `references` edges are mined) |
+| adr | 174 | (expected until docs `references` edges are mined) |
 | agent | 18 | root/backend-engineer, root/data-architect, root/dba, root/design-system-agent, root/financing-agent, root/frontend-engineer, root/glossary-curator, root/industry-lead, root/infra-automation-engineer, root/ip-agent, root/ir-agent, root/platform-lead, root/region-lead, root/release-engineer, root/security-engineer, root/site-facility-agent, root/sre, root/ux-designer-agent |
 | decision | 4 | (expected until docs `references` edges are mined) |
 | skill | 17 | root/api-documentation, root/assumption-audit, root/explain-me, root/finishing-a-development-branch, root/forward-industry-research, root/gateguard, root/market-data-pipeline, root/platform-command-lifecycle-manager, root/platform-skill-lifecycle-manager, root/sample-driven-report-writing, root/source-command-commit-push-pr, root/standup-synthesizer, root/sync, root/target-costing-analysis, root/value-chain-driver-identification, root/value-chain-stage-financials, root/zod-contract-gate |
