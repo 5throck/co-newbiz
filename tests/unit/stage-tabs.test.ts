@@ -87,6 +87,13 @@ describe("stage tabs", () => {
     expect(allDefs(s8).some((t) => t.query === "overview")).toBe(true);
   });
 
+  test("the risk heatmap moved to the S9 more-menu, next to the diligence inputs it aggregates (2026-10-17 round 2)", () => {
+    const s9 = groupForSegment("/dd")!;
+    expect(s9.more.map((t) => t.seg)).toContain("/risk-heatmap");
+    const s8 = groupForSegment("/business-case")!;
+    expect(allDefs(s8).map((t) => t.seg)).not.toContain("/risk-heatmap");
+  });
+
   test("greenfield drops the targets tab; unknown ?tab=targets lands on the financial lens", () => {
     const gf = groupForTrack(groupForSegment("/business-case")!, "greenfield");
     expect(gf.tabs.map((t) => t.label)).toEqual(["사업 목표", "기술적 타당성", "재무적 타당성", "결정"]);

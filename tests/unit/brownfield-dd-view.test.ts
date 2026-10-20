@@ -219,6 +219,11 @@ describe("replaced-item wording and custom proposer (DdStage)", () => {
     expect(src).toContain("제안한 사람은 직접 승인할 수 없습니다 — 다른 사람이 검토해야 합니다");
     expect(src).toContain("canAct && !c.is_proposer");
   });
+  test("draft-AI chips are trimmed from checklist rows — the item id carries the full tooltip (2026-10-17 round 2)", () => {
+    expect(src).toContain('reviewBadge(item).status === "draft-AI" ? `검토 상태: ${DRAFT_AI_MARKER}` : undefined');
+    expect(src).toContain('reviewBadge(item).status !== "draft-AI" && <ReviewBadgeChip item={item} />');
+    expect(src).toContain('import { DRAFT_AI_MARKER, reviewBadge, type ReviewStatus } from "../../lib/checklist-review-status.ts"');
+  });
   test("X rows show pending note until a pointer is pass/fail", async () => {
     const v = await import("../../app/web-next/lib/greenfield-dd-view.ts");
     const ptr = (status: string | null) => ({ checklist_id: "c", item_id: "i", stage: "S9", in_s9: true, status, judged: status === "pass", assessed_by: null, assessed_at: null });
