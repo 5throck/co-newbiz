@@ -324,6 +324,12 @@ Key rules:
 - Commit messages and PR artifacts in **English only**
 <!-- COMMON-CONTEXT:END -->
 
+### Project testing notes (co-newbiz, 2026-10-20)
+
+- The official unit command is `bun run test:unit` (`scripts/test-runner.ts`, one process per file). A bare `bun test tests/unit/` runs every file in one process and leaks module mocks across files; use `bun test tests/unit/ --isolate` when you need a single-process run.
+- Module mocks: bun's `mock.module()` mutates the module object in place and `mock.restore()` does not undo it. Snapshot the real module BEFORE mocking (`const real = { ...await import("./x.ts") }`) and re-register it in `afterAll` (`mock.module("./x.ts", () => ({ ...real }))`) — see `tests/unit/entry-market-derivation.test.ts`.
+- Route suites that must never dial the dev `.env` LLM set `process.env.CO_NEWBIZ_LLM_PROVIDER = "none"` at the top of the file.
+
 ---
 
 ## File Organization Policy

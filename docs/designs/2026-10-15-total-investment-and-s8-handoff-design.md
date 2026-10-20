@@ -157,3 +157,13 @@ Resolved: the human decider directed in chat on 2026-10-15 that S5 cost items (i
 - Whether the Python standalone engine (`sim_engine`) mirrors the TS cash flows exactly for an explicit capex vector; it would need the same change.
 - No DSCR computation found in the generator; if it exists elsewhere it was not traced.
 - Nothing exercised in a browser or against the live database.
+
+
+## Amendment (2026-10-19, decider) — 계획 연차 정렬(OD-3 철회), 비용 카테고리 공유, 복리 제거, 인건비 반영
+
+- **OD-3 철회**: "Y1 지출을 year 0으로 취급"하는 연차 관행을 버리고 **계획 연차를 그대로 정렬**한다 — 계획 Y1 = 평가 1년차. 재무분석(BEP) 탭은 Y0 열을 두어 초기 투자(진입가 등)를 분리해 보인다. 화면에 연차 규칙을 명시한다.
+- **같은 테이블·같은 구조**: 재무분석 비용은 S5 투자 계획과 같은 구조(인건비 / 운영비 / 설비투자)로 같은 라인 데이터를 공유한다. `aggregatePlanLines`가 7도메인 카테고리 벡터(`laborByYear` / `opexByYear` / `laborOpexByYear` / `capexByYear`)를 만들고, 주기(`monthly·quarterly·yearly·lumpsum`)는 주기당 금액 semantics로 해석한다. 투자비·재무분석·NPV·IRR 네 뷰가 같은 원천을 본다(시나리오 NPV는 저장 실행분이므로 재실행이 필요).
+- **복리 제거**: 라인 금액에 연복리를 적용하던 경로를 없앴다(계획에 적힌 금액이 그 연차의 금액).
+- **인건비**: 인력 계획(staffing)의 인건비를 `applyStaffingLaborToPlan`으로 s5_plan 양 경로(핀 스냅샷·복사 경로)에 반영한다. 핀 스냅샷은 `pinPlanLinesOf`가 읽기 시점에 파생한다(재갱신 불필요).
+- **BEP 분기**: `breakEvenRevenue`가 s5_plan 분기에서 pnl 공식을 재사용하던 오류를 분리했다(Y1 과대 수정).
+- 검증: `bep-analysis-tab.test.ts`, S5 핀/집계 테스트. CHANGELOG 2026-10-19.

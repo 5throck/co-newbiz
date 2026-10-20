@@ -21,7 +21,7 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.9.1"
+  version: "2.10.0"
   # v2.9.1 — 진입시장 = S3~S12의 기준 시장 원칙 선언 (ADR-0181, 2026-10-17
   #   사용자 지시 "S2에서 진입 시장(target segment) 구하는 작업을 한 뒤 S3
   #   이후부터 모든 분석과 평가는 해당 진입 시장을 기준으로 진행"). S2
@@ -565,10 +565,13 @@ stages:
       - 게이트 체크리스트 (commercial/technical/legal)
       - 조사 근거
       - S8 대상 선정 기록 (brownfield)
+      - S3 필요 역량 등록부 (brownfield — capability-dd 입력; design 2026-10-19-brownfield-capability-dd)
     outputs:
       - DD 체크리스트 판정
       - 조사내역(dd_finding)
       - 대상별 DD 비교(선택)
+      - 필요 역량 검증 판정 (brownfield, 역량별 해소/부분 해소/미해소 — S8 기술 렌즈 T1의 근거)
+      - 기술 렌즈 T2~T5 롤업 근거 (기술·인사·법무 체크리스트 판정 — design 2026-10-20-technical-items-s9)
     entryCriteria:
       - S8 완료
     activities:
@@ -604,6 +607,14 @@ stages:
         agent: compliance-officer
         skills: [waiver-management]
         procedure: [greenfield-dd, brownfield-dd]
+      # 2026-10-20 (design 2026-10-19-brownfield-capability-dd §3.1): brownfield verifies the S3
+      # required-capability register against the selected target here — a person records per-row
+      # 해소/부분 해소/미해소; S8 T1 reflects the coverage. Skill is the activity agent's own.
+      # Brownfield-only (greenfield answers this at S5), so the procedure list is brownfield-dd alone.
+      - id: capability-dd
+        agent: brownfield-agent
+        skills: [brownfield-feasibility]
+        procedure: [brownfield-dd]
         # 필수 항목 미충족은 활성 waiver 없이는 게이트를 통과할 수 없다
         # (kill criteria: "waiver 불가능한 필수 항목"). waiver 요청·승인·만료를
         # 이 활동이 소유한다 — skills/waiver-management.

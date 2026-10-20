@@ -4544,6 +4544,12 @@
     },
     {
       "type": "references",
+      "from": "adr:0171",
+      "to": "skill:root/brownfield-feasibility",
+      "source": "prose"
+    },
+    {
+      "type": "references",
       "from": "agent:root/i18n-specialist",
       "to": "skill:root/i18n-audit",
       "source": "prose"

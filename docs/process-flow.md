@@ -110,7 +110,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - S6 대상 후보 발굴: `brownfield-agent`, `market-intelligence-agent`
 - S7 대상 선정: `brownfield-agent`, `antitrust-agent`
 - S8 사업성 분석: `financial-analyst`, `valuation-agent`, `quant-methodologist`, `pm`
-- S9 실사·검증: `commercial-dd-agent`, `technical-dd-agent`, `legal-counsel`, `financial-analyst`, `hr-integration-agent`, `market-intelligence-agent`, `financing-agent`, `compliance-officer`
+- S9 실사·검증: `commercial-dd-agent`, `technical-dd-agent`, `legal-counsel`, `financial-analyst`, `hr-integration-agent`, `market-intelligence-agent`, `financing-agent`, `compliance-officer`, `brownfield-agent`
 - S10 투자구조 설계: `brownfield-agent`, `valuation-agent`
 - S11 투자심사·실행: `pm`, `brownfield-agent`, `risk-officer`, `group-review-agent`, `process-governance-manager`, `pmi-agent`, `greenfield-agent`
 - S12 사후 관리: `group-review-agent`, `pmi-agent`, `partnership-agent`
@@ -456,6 +456,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 게이트 체크리스트 (commercial/technical/legal)
 - 조사 근거
 - S8 대상 선정 기록 (brownfield)
+- S3 필요 역량 등록부 (brownfield — capability-dd 입력; design 2026-10-19-brownfield-capability-dd)
 
 **Activities**
 - commercial-dd · agent: `commercial-dd-agent` · skills: `commercial-due-diligence` · procedure: `greenfield-dd`, `brownfield-dd`
@@ -466,6 +467,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - market-dd · agent: `market-intelligence-agent` · skills: `competitive-intelligence` · procedure: `greenfield-dd`, `brownfield-dd`
 - financing-dd · agent: `financing-agent` · skills:  · procedure: `greenfield-dd`, `brownfield-dd`
 - dd-waiver-review · agent: `compliance-officer` · skills: `waiver-management` · procedure: `greenfield-dd`, `brownfield-dd`
+- capability-dd · agent: `brownfield-agent` · skills: `brownfield-feasibility` · procedure: `brownfield-dd`
 
 **필수 산출물**
 - DD 체크리스트 판정(필수 항목 해소)

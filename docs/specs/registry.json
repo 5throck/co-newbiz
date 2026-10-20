@@ -1084,6 +1084,15 @@
       "last_updated": "2026-10-20"
     },
     {
+      "id": "2026-10-19-s9-heatmap-assessment-domain-adopt-design",
+      "title": "s9 heatmap assessment domain adopt design",
+      "file": "docs/designs/2026-10-19-s9-heatmap-assessment-domain-adopt-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-10-20",
+      "last_updated": "2026-10-20"
+    },
+    {
       "id": "2026-10-20-technical-items-s9-design",
       "title": "technical items s9 design",
       "file": "docs/designs/2026-10-20-technical-items-s9-design.md",
