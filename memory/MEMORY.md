@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-10-21](2026-10-21.md) | memory-session-log-20261021 |
 | [2026-10-20](2026-10-20.md) | docs(docs): workspace sync (5 files) |
 | [2026-10-19](2026-10-19.md) | test(tests): workspace sync (spec 2026-10-18-synergy-4element, 10 files) |
 | [2026-10-18](2026-10-18.md) | docs(docs): workspace sync (55 files) |
@@ -11,7 +12,7 @@
 | [2026-10-16](2026-10-16.md) | feat(s5): ADR-0178 slice 1 pre-launch (year-0) marking of S5 capex lines |
 | [2026-10-15](2026-10-15.md) | fix(s3): AI proposal without synergy analysis, holding check search chain and evidence quality, degraded profile flag |
 | [2026-10-14](2026-10-14.md) | feat(promotion): default Green Field project origin to internal (ADR-0166) |
-| [2026-10-13](2026-10-13.md) | chore(scripts): workspace sync (16 files) |
+| 2026-10-13 | chore(scripts): workspace sync (16 files) |
 | 2026-10-12 | chore: workspace sync |
 | 2026-10-11 | chore: update |
 | 2026-10-10 | fix(s8): consume per-target WACC in brownfield business-case valuation (ADR-0156 amendment 2) |

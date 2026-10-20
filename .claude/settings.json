@@ -9,10 +9,11 @@
       "Bash(bun scripts/validate-templates.ts *)",
       "WebSearch(*)",
       "WebFetch(*)",
-      "Bash(node dist/cli.js:*)",
+      "Bash(trail:*)",
       "Bash(graft:*)",
       "Bash(npx graft:*)",
-      "Bash(graft-dev:*)"
+      "Bash(graft-dev:*)",
+      "Bash(node dist/cli.js:*)"
     ],
     "deny": [
       "Bash(git push --force*)",
@@ -181,6 +182,17 @@
             "type": "command",
             "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/helpers/graft-hooks.cjs\" stop",
             "timeout": 8000
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/helpers/graft-hooks.cjs\" session-end",
+            "timeout": 5000
           }
         ]
       }
