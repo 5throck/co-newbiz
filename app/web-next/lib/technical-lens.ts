@@ -8,7 +8,7 @@
 // caps a grade and never blocks a gate.
 import type { CapabilityGapRow } from "./capability-gap.ts";
 import { isStale } from "./capability-linkage.ts";
-import type { TechnicalItemVerdict } from "./technical-item-verdicts.ts";
+import { ROLLUP_LABEL, type ConstituentRollup } from "./technical-item-constituents.ts"; // round 5c: roll-up only
 
 export const TECH_ITEM_KEYS = ["T1", "T2", "T3", "T4", "T5"] as const;
 export type TechItemKey = (typeof TECH_ITEM_KEYS)[number];
@@ -254,47 +254,78 @@ function storedStatus(it: TechnicalLensItem | undefined): { status: LensStatus; 
   return { status: it.status, judged: true };
 }
 
+/** 2026-10-20 round 5: brownfield T1 reads the S9 capability-dd verdicts (the recording home). */
+export interface S9CapabilityCoverage { total: number; judged: number; resolved: number; partial: number; unresolved: number }
+
 export function summarizeTechnicalLens(
   rows: CapabilityGapRow[],
   lens: TechnicalLens | null | undefined,
-  opts: { subject?: string; brownfield?: boolean; s9Items?: Partial<Record<"T2" | "T3" | "T4" | "T5", TechnicalItemVerdict>> } = {},
+  opts: {
+    subject?: string;
+    brownfield?: boolean;
+    s9Capability?: S9CapabilityCoverage | null;
+    /** round 5c: constituent S9 checklist roll-ups per item — the ONLY source of T2-T5 (no separate verdict). */
+    s9Rollups?: Partial<Record<"T2" | "T3" | "T4" | "T5", ConstituentRollup>>;
+  } = {},
 ): TechnicalLensSummary {
   const subject = lens?.subjects[opts.subject ?? PROJECT_SUBJECT];
   const t1 = deriveT1(rows);
-  const items: LensItemView[] = [
-    { key: "T1", label: TECH_ITEM_LABELS.T1, status: t1.status, derived: true, judged: t1.judged, note: t1.note },
-  ];
+  const cap = opts.s9Capability;
+  const t1Item: LensItemView = cap && cap.judged > 0
+    ? {
+        key: "T1",
+        label: TECH_ITEM_LABELS.T1,
+        // S9 verdicts cover the register: met when every capability is resolved, caution when
+        // any is partial/unresolved; incomplete coverage stays undetermined (warning-only lens).
+        status: cap.judged < cap.total ? "undetermined" : cap.partial + cap.unresolved > 0 ? "caution" : "met",
+        derived: true,
+        judged: cap.judged >= cap.total && cap.total > 0,
+        note: `S9 필요 역량 검증 ${cap.judged}/${cap.total} · 해소 ${cap.resolved} · 부분 해소 ${cap.partial} · 미해소 ${cap.unresolved}`,
+      }
+    : { key: "T1", label: TECH_ITEM_LABELS.T1, status: t1.status, derived: true, judged: t1.judged, note: t1.note };
+  const items: LensItemView[] = [t1Item];
   for (const k of ["T2", "T3", "T4", "T5"] as const) {
-    // 2026-10-20 decider round 4: the recording home for T2-T5 is S9 실사·검증 —
-    // a person verdict there DERIVES the lens item; an unjudged item points at
-    // S9 instead of the old "next release" note. Warning-only: 미충족 still
-    // surfaces as 주의 on the strip and the note carries the real verdict.
-    const s9 = opts.s9Items?.[k];
-    if (s9) {
-      const vKo = s9.verdict === "met" ? "충족" : s9.verdict === "caution" ? "주의" : "미충족";
+    // 2026-10-20 decider round 5c: T2-T5 are DERIVED from the S9 DD structure as it is — each
+    // item names the checklist items that constitute it (기술·인사·법무 실사 tabs), those are
+    // judged on their own tabs by people, and the roll-up is the lens value. No separate
+    // per-item verdict exists. Warning-only: 미충족 surfaces as 주의 on the strip.
+    const rawRollup = opts.s9Rollups?.[k];
+    const rollup = rawRollup && rawRollup.total > 0 ? rawRollup : undefined; // no constituents in this track = no roll-up
+    if (rollup && rollup.judged === rollup.total) {
       items.push({
         key: k,
         label: TECH_ITEM_LABELS[k],
-        status: s9.verdict === "met" ? "met" : "caution",
+        status: rollup.status === "pass" ? "met" : rollup.status === "na" ? "undetermined" : "caution",
         derived: true,
-        judged: true,
-        note: `S9 판정 (${vKo}) — ${s9.by} · ${s9.at.slice(0, 10)}${s9.note ? ` · ${s9.note}` : ""}`,
+        judged: rollup.status !== "na",
+        note: `S9 체크리스트 롤업 (${ROLLUP_LABEL[rollup.status]}) — 구성 항목 ${rollup.total}건${rollup.failed > 0 ? ` · 미충족 ${rollup.failed}건` : ""}`,
+      });
+      continue;
+    }
+    if (rollup) {
+      items.push({
+        key: k,
+        label: TECH_ITEM_LABELS[k],
+        status: rollup.failed > 0 ? "caution" : "undetermined",
+        derived: true,
+        judged: false,
+        note: `구성 항목 ${rollup.judged}/${rollup.total} 판정${rollup.failed > 0 ? ` · 미충족 ${rollup.failed}건` : ""} — 나머지는 S9 해당 실사 탭에서 판정하세요.`,
       });
       continue;
     }
     const s = storedStatus(subject?.items[k]);
-    items.push({ key: k, label: TECH_ITEM_LABELS[k], status: s.status, derived: false, judged: s.judged, note: s.judged ? "" : "S9 실사·검증 — 기술 탭에서 판정을 기록하세요." });
+    items.push({ key: k, label: TECH_ITEM_LABELS[k], status: s.status, derived: false, judged: s.judged, note: s.judged ? "" : "S9 실사·검증의 체크리스트 항목으로 판정됩니다 — 이 트랙에는 구성 항목이 없습니다." });
   }
-  // T6 — the S8↔S9 pairing itself. With T2-T5 recorded in S9, pairing is complete
-  // when every one of them carries an S9 verdict; until then the note counts the gap.
-  const s9Judged = (["T2", "T3", "T4", "T5"] as const).filter((k) => !!opts.s9Items?.[k]).length;
+  // T6 — the S8↔S9 pairing itself: complete when every T2-T5 roll-up is complete; until then
+  // the note counts the gap.
+  const s9Judged = items.filter((i) => (["T2", "T3", "T4", "T5"] as string[]).includes(i.key) && i.judged).length;
   items.push({
     key: "T6",
     label: opts.brownfield ? TECH_ITEM_LABEL_T6_BROWNFIELD : TECH_ITEM_LABELS.T6,
     status: s9Judged === 4 ? "met" : "undetermined",
     derived: true,
     judged: s9Judged === 4,
-    note: s9Judged === 4 ? "T2~T5 모두 S9 판정과 짝지어졌습니다." : `S9 판정 ${s9Judged}/4 기록됨 — 나머지는 S9 기술 탭에서 기록하세요.`,
+    note: s9Judged === 4 ? "T2~T5 모두 S9 체크리스트 판정과 짝지어졌습니다." : `S9 짝 검증 ${s9Judged}/4 완료 — 나머지 항목의 구성 체크리스트를 S9에서 판정하세요.`,
   });
   const judged = items.filter((i) => i.judged).length;
   const cautions = items.filter((i) => i.status === "caution");
