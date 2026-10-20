@@ -21,6 +21,7 @@ import { EstablishmentPanel } from "./EstablishmentPanel.tsx";
 import { establishmentApplies, type EventView, type MemberView, type StepRowView } from "../../lib/establishment-view.ts";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import { ExecutionBaselinePanel } from "./ExecutionBaselinePanel.tsx";
+import { IcReviewStepsPanel } from "./IcReviewStepsPanel.tsx";
 import { fmtNpvKrwM } from "../../lib/npv-format.ts";
 
 // S11 투자심사·실행 — 투자심의 자료 열람 + 법인·그룹 투자심의위원회 진행 기록 + 설립 실행
@@ -316,6 +317,9 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
             );
           })()}
         </section>
+
+        {/* ── 투자심사 절차 단계 (entity-ic-review · group-investment-review) ── */}
+        <IcReviewStepsPanel projectId={projectId} canAct={canAct} />
 
         {/* ── 설립 실행 5단계 (ADR-0165) ───────────────────────────────── */}
         <EstablishmentPanel

@@ -30,6 +30,7 @@ import { IcReviewStage } from "../../../../components/stages/IcReviewStage.tsx";
 import { useDealOpportunityId } from "../../../../components/stages/use-deal-opportunity-id.ts";
 import { PortfolioStage } from "../../../../components/stages/PortfolioStage.tsx";
 import { DealEntryMarketStrip } from "../../../../components/EntryMarketContextStrip.tsx";
+import { LearningCorpusPanel } from "../../../../components/LearningCorpusPanel.tsx";
 
 interface ProcessView {
   currentStage: string | null; nextStage: string | null; track: string | null;
@@ -83,6 +84,8 @@ function StageTab() {
     return (
       <main>
         <MarketAnalysisStage embedded dealId={params.id} industryId={searchParams.get("industry") ?? undefined} />
+        {/* ADR-0150 criterion 6 — kill learnings as S1 base-rate reference (display-only). */}
+        <LearningCorpusPanel />
       </main>
     );
   }
@@ -96,6 +99,8 @@ function StageTab() {
           시장분석(S1) 산출물에서 기회를 발굴하고, 기회·위험 요인을 근거로 매력도를 평가합니다.
         </StageFrame>
         <OpportunityFunnelStage opportunityId={params.id} />
+        {/* ADR-0150 criterion 6 — kill learnings as S2 base-rate reference (display-only). */}
+        <LearningCorpusPanel />
       </main>
     );
   }

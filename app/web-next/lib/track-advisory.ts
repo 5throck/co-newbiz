@@ -21,7 +21,7 @@ export interface TrackAdvisory {
   greenfieldScore: number; // 0-100
   brownfieldScore: number; // 0-100
   signals: AdvisorySignal[];
-  baseRates: { track: string; decisions: number; with_entity_ic_go: number }[];
+  baseRates: { track: string; decisions: number; with_entity_ic_go: number; killed_with_learning?: number }[];
   reReviewTriggers: string[];
 }
 
@@ -215,7 +215,7 @@ export function computeTrackAdvisory(db: Database, opportunityId: string): Track
     total === 0 ? "neutral" : greenfieldScore >= 60 ? "greenfield" : brownfieldScore >= 60 ? "brownfield" : "neutral";
 
   // Base rates (B2) — past decisions by track and whether entity_ic went.
-  const baseRates = db
+  const baseRateRows = db
     .query(
       `SELECT rd.track, COUNT(*) decisions,
               SUM(CASE WHEN EXISTS (
@@ -225,6 +225,16 @@ export function computeTrackAdvisory(db: Database, opportunityId: string): Track
        FROM route_decision rd GROUP BY rd.track`,
     )
     .all() as Array<{ track: string; decisions: number; with_entity_ic_go: number }>;
+  // ADR-0150 criterion 6 — kills with captured learning feed the S1/S2 base rates
+  // (display-only corpus signal; the base-rate judgement itself stays with risk-officer).
+  const killRows = db
+    .query(
+      `SELECT p.track, COUNT(DISTINCT p.id) AS n FROM md_project p
+       WHERE EXISTS (SELECT 1 FROM venture_transition_decision v WHERE v.project_id = p.id AND v.decision = 'kill_with_learning_captured')
+       GROUP BY p.track`,
+    )
+    .all() as Array<{ track: string | null; n: number }>;
+  const baseRates = baseRateRows.map((r) => ({ ...r, killed_with_learning: killRows.find((k) => k.track === r.track)?.n ?? 0 }));
 
   // Re-review triggers (B3).
   const reReviewTriggers: string[] = [];

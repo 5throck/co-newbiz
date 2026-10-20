@@ -45,6 +45,23 @@ export interface HypothesisRow {
   hypothesized_by: string;
   hypothesized_at: string;
   rationale: string;
+  /** Derived (2026-10-21) from the audit trail — the completion's artifact reference, reviewer and time; null until completed. */
+  four_axis_artifact_ref?: string | null;
+  four_axis_reviewed_by?: string | null;
+  four_axis_reviewed_at?: string | null;
+}
+
+/** ADR-0045's four mandatory axes — each note must be present before the review can be completed. */
+export const FOUR_AXIS_NOTE_FIELDS = [
+  ["tax_structure_note", "절세 구조"],
+  ["liability_isolation_note", "책임 격리"],
+  ["financing_leverage_note", "재무 레버리지"],
+  ["exit_structure_note", "엑싯 구조"],
+] as const;
+
+/** Axis notes still empty on a hypothesis (empty array = all four written). */
+export function missingFourAxisNotes(row: Pick<HypothesisRow, "tax_structure_note" | "liability_isolation_note" | "financing_leverage_note" | "exit_structure_note">): string[] {
+  return FOUR_AXIS_NOTE_FIELDS.filter(([field]) => !row[field]?.trim()).map(([field]) => field);
 }
 
 export interface HypothesizeInput {
@@ -84,7 +101,7 @@ const SELECT_BY_ID = `SELECT id, project_id, run_id, asset_or_stock, stake_type,
   FROM deal_structure_hypothesis WHERE id = ?`;
 
 export function getHypotheses(projectId: string, db: ReturnType<typeof getDb> = getDb()): HypothesisRow[] {
-  return db
+  const rows = db
     .query(
       `SELECT id, project_id, run_id, asset_or_stock, stake_type, instrument_mix, vehicle,
        commercialization_path, tax_structure_note, liability_isolation_note, financing_leverage_note,
@@ -92,6 +109,24 @@ export function getHypotheses(projectId: string, db: ReturnType<typeof getDb> = 
        FROM deal_structure_hypothesis WHERE project_id = ? ORDER BY hypothesized_at DESC, id DESC`
     )
     .all(projectId) as HypothesisRow[];
+  // 2026-10-21: surface the completion's artifact reference from the audit trail
+  // (its only home by design) so the IC reader sees the evidence, not just a flag.
+  for (const row of rows) {
+    if (row.four_axis_review_completed !== 1) {
+      row.four_axis_artifact_ref = null; row.four_axis_reviewed_by = null; row.four_axis_reviewed_at = null;
+      continue;
+    }
+    const audit = db
+      .query(
+        `SELECT actor_user_id, target, created_at FROM audit_log
+         WHERE action = 'four_axis_review_completed' AND target LIKE ? ORDER BY created_at DESC LIMIT 1`,
+      )
+      .get(`${row.id}:%`) as { actor_user_id: string; target: string; created_at: string } | undefined;
+    row.four_axis_artifact_ref = audit ? audit.target.slice(row.id.length + 1) : null;
+    row.four_axis_reviewed_by = audit?.actor_user_id ?? null;
+    row.four_axis_reviewed_at = audit?.created_at ?? null;
+  }
+  return rows;
 }
 
 /**
@@ -201,6 +236,14 @@ export function completeFourAxisReview(
   if (row.four_axis_review_completed === 1) {
     throw new Error(
       `deal_structure_hypothesis_write_rejected: hypothesis '${input.hypothesis_id}' already has four_axis_review_completed=1 — completion is one deliberate act; re-review by a new hypothesis, not by re-completing.`,
+    );
+  }
+  // 2026-10-21: a "four-axis review" with an empty axis is not a review of four
+  // axes — the spec's completion criterion names all four (절세·책임격리·레버리지·엑싯).
+  const missing = missingFourAxisNotes(row);
+  if (missing.length > 0) {
+    throw new Error(
+      `deal_structure_hypothesis_write_rejected: four_axis_note_missing:${missing.join(",")} — every ADR-0045 axis note must be written on the hypothesis before its review can be completed.`,
     );
   }
 

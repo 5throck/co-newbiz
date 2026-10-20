@@ -3,10 +3,13 @@ import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { covenantHeadroom } from "../../../../../lib/covenant-headroom.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 
 // GET/POST /api/projects/[id]/debt — debt instruments + covenant tests
-// (financing/valuation). B6. Covenant scenario recompute is a Wave-3 refinement.
+// (financing/valuation). B6. 2026-10-21: GET adds the covenant headroom of the
+// latest simulation (S10 financing-plan "커버넌트 여력", fin-03; also a heatmap
+// input per ADR-0122 #2) — insufficient_evidence when no simulation has run.
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
@@ -15,9 +18,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const instruments = getDb()
     .query("SELECT * FROM debt_instrument WHERE project_id = ? ORDER BY rowid")
     .all(id);
-  // covenant_test rows are simulation-keyed (join via run) — surfaced through
-  // the backtest/liabilities views rather than this list endpoint.
-  return ok({ instruments }, 200, { instruments: instruments.length });
+  // covenant_test rows are simulation-keyed (join via run) — the headroom view
+  // reads the latest simulation; the raw rows stay in the liabilities views.
+  return ok({ instruments, headroom: covenantHeadroom(getDb(), id) }, 200, { instruments: instruments.length });
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {

@@ -12,8 +12,11 @@ import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
 
 // 부채·커버넌트 (financing/valuation) — Wave 0 REST B6. 차입 상품 목록 관리;
-// 커버넌트 시나리오 테스트는 Wave 3 계산 뷰.
+// 2026-10-21: 최신 시뮬레이션의 커버넌트 여력(headroom)을 서버(lib/covenant-headroom)
+// 에서 읽어 S10 산출물 "커버넌트 여력"으로 표시한다 — 투자심의 자료·히트맵에도 전달.
 interface Instrument { id: string; lender: string | null; principal: number; rate_type: string; rate: number; maturity: string | null; covenant_json: string | null; security: string | null; seniority: string | null }
+interface HeadroomRow { covenant_key: string; direction: "max" | "min" | "unknown"; min_headroom_pct: number | null; tightest_period: string | null; periods: number; breached_periods: number; status: "breached" | "tight" | "ok" | "unknown_direction" }
+interface Headroom { status: "computed" | "insufficient_evidence"; reason?: string; simulation_id: string | null; covenants: HeadroomRow[] }
 
 function DebtView() {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +24,7 @@ function DebtView() {
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
   const [rows, setRows] = useState<Instrument[] | null>(null);
+  const [headroom, setHeadroom] = useState<Headroom | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ lender: "", principal: "", rate: "", rate_type: "fixed", maturity: "", covenant_json: "" });
   const [busy, setBusy] = useState(false);
@@ -30,8 +34,8 @@ function DebtView() {
   const [stress, setStress] = useState(false);
 
   const load = useCallback(() => {
-    api.get<{ instruments: Instrument[] }>(`/api/projects/${encodeURIComponent(id)}/debt`)
-      .then((r) => setRows(r.data.instruments))
+    api.get<{ instruments: Instrument[]; headroom: Headroom }>(`/api/projects/${encodeURIComponent(id)}/debt`)
+      .then((r) => { setRows(r.data.instruments); setHeadroom(r.data.headroom); })
       .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
   }, [id]);
   useEffect(() => { load(); }, [load]);
@@ -117,6 +121,30 @@ function DebtView() {
           </div>
         )}
       </section>
+      <section className="market-section" aria-label="커버넌트 여력" data-testid="covenant-headroom">
+        <h2 className="text-[0.9rem] mb-2">커버넌트 여력 <span className="note">— 최신 시뮬레이션의 재무약정 시험(covenant_test) 기준 · S10 자금조달 산출물</span></h2>
+        {headroom === null ? <PageState state="loading" /> : headroom.status === "insufficient_evidence" ? (
+          <PageState state="empty" emptyText={headroom.reason === "no_simulation" ? "시뮬레이션이 아직 실행되지 않아 커버넌트 여력을 계산할 수 없습니다 — 근거 부족으로 표시합니다 (값을 추정하지 않습니다)." : "최신 시뮬레이션에 재무약정 시험 행이 없습니다 — 차입의 커버넌트 조건을 등록한 뒤 시뮬레이션을 다시 실행하세요."} />
+        ) : (
+          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+            <table className="data-table" aria-label="커버넌트 여력">
+              <caption className="sr-only">커버넌트 여력</caption>
+              <thead><tr><th>커버넌트</th><th>방향</th><th className="col-num">최소 여력</th><th>가장 빠듯한 기간</th><th className="col-num">위반 기간</th><th>판정</th></tr></thead>
+              <tbody>{headroom.covenants.map((c) => (
+                <tr key={c.covenant_key}>
+                  <td className="font-semibold">{c.covenant_key}</td>
+                  <td className="text-[length:var(--fs-caption)]">{c.direction === "max" ? "상한 (≤)" : c.direction === "min" ? "하한 (≥)" : <span title="차입의 커버넌트 조건에 방향이 없어 여력 부호를 알 수 없습니다 — 위반 플래그만 표시">미지정</span>}</td>
+                  <td className="col-num tabular-nums">{c.min_headroom_pct != null ? `${Math.round(c.min_headroom_pct * 1000) / 10}%` : "—"}</td>
+                  <td className="tabular-nums">{c.tightest_period ?? "—"}</td>
+                  <td className="col-num tabular-nums">{c.breached_periods}/{c.periods}</td>
+                  <td>{c.status === "breached" ? <span className="status-chip status-red">위반</span> : c.status === "tight" ? <span className="status-chip status-amber">빠듯 (&lt;10%)</span> : c.status === "ok" ? <span className="status-chip status-green">여력 있음</span> : <span className="status-chip status-gray">방향 미지정</span>}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        )}
+        <p className="note" style={{ margin: "6px 0 0" }}>위반·빠듯 판정은 S9 리스크 히트맵(cov: 항목)과 투자심의 자료 deal_structure.covenant_headroom에 그대로 전달됩니다.</p>
+      </section>
       <section className="market-section" aria-label="커버넌트 시나리오 계산" style={{ border: "1px solid var(--border)", borderRadius: 12 }}>
         <h2 className="text-[0.9rem] mb-2">커버넌트 시나리오 계산 <span className="note">— 산식은 저장 조건 기반, 현금흐름은 명시적 가정 입력</span></h2>
         <div className="form-grid" style={{ marginBottom: 8 }}>
@@ -153,7 +181,7 @@ function DebtView() {
           <p className="note" style={{ margin: 0 }}>시나리오 현금흐름을 입력하면 각 차입의 연간 상환액(연금공식)과 부채상환비율을 계산해 임계값과 대조합니다.</p>
         )}
         <p className="note" style={{ margin: "6px 0 0" }}>
-          재무약정 판정 결과는 참고용 시나리오이며 공식 테스트는 재무약정 시험(시뮬레이션 실행)으로 확정됩니다 — 시뮬레이션 연계는 백로그.
+          재무약정 판정 결과는 참고용 시나리오이며 공식 테스트는 재무약정 시험(시뮬레이션 실행)으로 확정됩니다 — 확정 결과는 위 "커버넌트 여력" 표에 표시됩니다.
         </p>
       </section>
 
