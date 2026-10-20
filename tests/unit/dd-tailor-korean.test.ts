@@ -20,9 +20,13 @@ describe("makeLlmDdTailorExecutor Korean enforcement", () => {
   async function setup(replies: string[]) {
     let call = 0;
     const seen: string[] = [];
-    const mod = await import("../../app/web-next/lib/llm.ts");
+    const mod = { ...await import("../../app/web-next/lib/llm.ts") }; // snapshot before mock.module mutates the module in place
     const mod2 = await import("../../app/web-next/lib/prompts.ts");
     resets.push(() => mock.restore());
+    // bun's mock.restore() does not undo mock.module() — also re-register the
+    // real module so the partial mock (isLlmConfigured=true) cannot leak into
+    // later files of the same process.
+    resets.push(() => mock.module("../../app/web-next/lib/llm.ts", () => ({ ...mod })));
     mock.module("../../app/web-next/lib/llm.ts", () => ({
       ...mod,
       isLlmConfigured: () => true,

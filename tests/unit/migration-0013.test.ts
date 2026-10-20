@@ -282,6 +282,9 @@ describe("shape: four new tables + md_project.current_stage_gate", () => {
       "wacc_subject", "wacc_subject_rationale", "wacc_subject_decided_by", "wacc_subject_decided_at", "closure_type",
       // 0142 (ADR-0167): Green Field establishment mode + non-binding hint appended.
       "establishment_mode", "establishment_mode_suggested",
+      // 0155/0156 (S9 정비, 2026-10-17/19): person-adoption sidecars appended —
+      // industry-tailored domain adoption and the heatmap assessment map.
+      "dd_domain_adopt_json", "risk_heatmap_assessment_json",
     ]);
   });
 

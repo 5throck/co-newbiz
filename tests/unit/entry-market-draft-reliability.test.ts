@@ -32,7 +32,7 @@ const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
 
 // -- fake the LLM (no live call in tests; pattern: recorded fixtures) -----------
-const realLlm = await import("../../app/web-next/lib/llm.ts");
+const realLlm = { ...await import("../../app/web-next/lib/llm.ts") }; // snapshot BEFORE mock.module mutates the module in place
 const llmCalls: Array<{ userContent: string }> = [];
 let replies: string[] = [];
 mock.module("../../app/web-next/lib/llm.ts", () => ({
@@ -104,6 +104,9 @@ beforeAll(async () => {
   cookie = await login(ANALYST, "pw-draft-rel-1");
 });
 afterAll(() => {
+  // bun's mock.restore() does not undo mock.module() — re-register the real
+  // module so the mock does not leak into later files in the same process.
+  mock.module("../../app/web-next/lib/llm.ts", () => ({ ...realLlm }));
   resetDb();
   for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 });

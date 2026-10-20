@@ -175,13 +175,24 @@ describe("S8 CapabilityAttainabilityPanel is read-only", () => {
   test("shared table with editable={false}; S5에서 판정 link; no inputs or save/confirm of its own", () => {
     expect(panel).toContain("<CapabilityJudgementTable");
     for (const k of ["<input", "<select", "<textarea", "초안 저장", "판정 확정", "api.put", "api.post", "btn-primary"]) expect(panel).not.toContain(k);
-    expect(panel).toContain("judgeHref={editHref}");
+    // 2026-10-17 round 2: brownfield judgement moved to the S9 tab — the entry
+    // is track-conditional and the S5/S7 anchors stay for greenfield/S7 scopes.
+    expect(panel).toContain("judgeHref={isBrownfield ? s9Href : editHref}");
     expect(panel).toContain("S5에서 판정");
     expect(panel).toContain("읽기 전용");
   });
   test("keeps the compact strip for the scenario tab", () => {
     expect(panel).toContain("compact");
     expect(panel).toContain("<SummaryStrip s={view.summary} />");
+  });
+  test("mirrors S9 capability-dd verdicts read-only; the brownfield entry names the S9 tab (2026-10-17 round 2)", () => {
+    expect(panel).toContain('data-testid="s9-capability-dd-results"');
+    expect(panel).toContain("ddVerdicts && ddVerdicts.length > 0");
+    expect(panel).toContain('view.track === "brownfield"');
+    expect(panel).toContain("브라운필드 필요 역량 판정 주전장은 S9 실사·검증");
+    // no new writes introduced by the mirror
+    expect(panel).not.toContain("api.put");
+    expect(panel).not.toContain("api.post");
   });
 });
 

@@ -32,7 +32,7 @@ const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
 //    whenever the dev .env carried CO_NEWBIZ_LLM_API_KEY and failed the 5s
 //    suite timeout). Disabled by default; the nested-shape describe flips it
 //    on with a scripted valid reply.
-const realLlm = await import("../../app/web-next/lib/llm.ts");
+const realLlm = { ...await import("../../app/web-next/lib/llm.ts") }; // snapshot BEFORE mock.module mutates the module in place
 let llmEnabled = false;
 let llmReplies: string[] = [];
 mock.module("../../app/web-next/lib/llm.ts", () => ({
@@ -139,6 +139,10 @@ beforeAll(async () => {
   viewerCookie = await login(VIEWER, "pw-entry-viewer-1");
 });
 afterAll(() => {
+  // Release the process-wide llm.ts module mock — bun runs the whole suite
+  // in one process and mock.restore() does NOT undo mock.module(), so the
+  // real module is re-registered for every file that loads after this one.
+  mock.module("../../app/web-next/lib/llm.ts", () => ({ ...realLlm }));
   resetDb();
   for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 });
