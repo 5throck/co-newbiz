@@ -83,7 +83,7 @@ describe("stage tabs", () => {
   test("S8 sub-tab and more-menu membership; deep links stay reachable", () => {
     const s8 = groupForSegment("/business-case")!;
     expect(s8.subtabs!.map((t) => t.query ?? t.seg)).toEqual(["overview", "scenarios", "/wacc", "/financial-analysis", "bep", "params", "target-costing"]);
-    expect(s8.more.map((t) => t.query ?? (t.seg || "summary"))).toEqual(["summary", "/risk-heatmap"]);
+    expect(s8.more.map((t) => t.query ?? (t.seg || "summary"))).toEqual(["summary"]);
     expect(allDefs(s8).some((t) => t.query === "overview")).toBe(true);
   });
 

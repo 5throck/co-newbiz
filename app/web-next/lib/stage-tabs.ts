@@ -48,7 +48,6 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
     ],
     more: [
       { seg: "", label: "요약" },
-      { seg: "/risk-heatmap", label: "리스크 히트맵" },
     ],
     subtabs: [
       { seg: "/business-case", query: "overview", label: "설명·생성·권고", isDefault: true },
@@ -70,6 +69,7 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
       { seg: "/interviews", label: "인터뷰" },
       { seg: "/comp-parity", label: "보상·형평" },
       { seg: "/customer-coc", label: "고객 CoC" },
+      { seg: "/risk-heatmap", label: "리스크 히트맵" },
       { seg: "/backtest", label: "백테스트" },
     ],
   },
