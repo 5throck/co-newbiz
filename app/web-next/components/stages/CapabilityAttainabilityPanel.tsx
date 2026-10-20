@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import {
   CapabilityJudgementTable, RemovedCapabilities, SummaryStrip, toJudgementDraft,
-  type AttainabilityViewData,
+  type AttainabilityViewData, type CapabilityDdVerdictView,
 } from "./CapabilityJudgementTable.tsx";
 
 export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { projectId: string; compact?: boolean; onOpen?: () => void }) {
@@ -57,30 +57,15 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
   const drafts = Object.fromEntries(view.rows.map((r) => [r.id, toJudgementDraft(r)]));
   const isBrownfield = view.track === "brownfield";
   const s9Href = `/projects/${encodeURIComponent(projectId)}/dd`;
-  const coverageKo: Record<string, string> = { resolved: "해소 (대상 보유)", partial: "부분 해소", unresolved: "미해소 (자체 투자 필요)" };
+  // 2026-10-17 round 3 (decider): the separate "S9 필요 역량 검증 결과" table went away —
+  // the verdicts ride on the canonical table as a read-only "S9 검증" column
+  // (one row per capability, one home per fact). Recording stays S9-only.
+  const s9ByRow: Record<string, CapabilityDdVerdictView> = Object.fromEntries(
+    (ddVerdicts ?? []).map((v) => [v.rowId, { coverage: v.coverage, note: v.note, by: v.by, at: v.at }]),
+  );
   return (
     <section className="market-section sizing-step mb-3" aria-label="필요 역량 달성 가능성">
       <h3 className="sizing-step-title">필요 역량 달성 가능성</h3>
-      {/* 2026-10-19 decider: S9 실사·검증의 필요 역량 검증 결과를 이 패널에 반영합니다 —
-          읽기 전용이며, 판정 기록은 S9 필요 역량 검증 탭(사람 전용)입니다. */}
-      {ddVerdicts && ddVerdicts.length > 0 && (
-        <section className="market-section mt-2" aria-label="S9 필요 역량 검증 결과" data-testid="s9-capability-dd-results">
-          <h4 className="text-[0.9rem] font-semibold mb-1">S9 필요 역량 검증 결과 (브라운필드 대상 기준)</h4>
-          <table className="data-table" aria-label="S9 필요 역량 검증 결과">
-            <thead><tr><th scope="col">필요 역량</th><th scope="col">판정</th><th scope="col">근거</th><th scope="col">기록</th></tr></thead>
-            <tbody>
-              {ddVerdicts.map((v) => (
-                <tr key={v.rowId}>
-                  <td className="font-semibold">{v.capability}</td>
-                  <td><span className={`status-chip ${v.coverage === "resolved" ? "status-green" : v.coverage === "partial" ? "status-amber" : "status-red"}`}>{coverageKo[v.coverage] ?? v.coverage}</span></td>
-                  <td className="text-[length:var(--fs-caption)]">{v.note || "—"}</td>
-                  <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{v.by} · {v.at.slice(0, 10)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      )}
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
         {isBrownfield
           ? <>브라운필드 필요 역량 판정 주전장은 S9 실사·검증 — <a href={s9Href} className="text-[color:var(--accent)] underline font-semibold">필요 역량 검증 탭에서</a> 판정을 기록하며, 그 결과는 이 패널에 반영됩니다.</>
@@ -94,7 +79,7 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
       {view.rows.length === 0 ? (
         <p className="text-[color:var(--muted-fg)]">S3 필요 역량 레지스터에 행이 없습니다. S3에서 필요 역량을 먼저 정리하세요.</p>
       ) : (
-        <CapabilityJudgementTable rows={view.rows} drafts={drafts} editable={false} s3Href={s3Href} judgeHref={isBrownfield ? s9Href : editHref} judgeLabel={isBrownfield ? "S9에서 판정" : editAt === "S7" ? "S7에서 판정" : "S5에서 판정"} />
+        <CapabilityJudgementTable rows={view.rows} drafts={drafts} editable={false} s3Href={s3Href} judgeHref={isBrownfield ? s9Href : editHref} judgeLabel={isBrownfield ? "S9에서 판정" : editAt === "S7" ? "S7에서 판정" : "S5에서 판정"} s9={ddVerdicts && ddVerdicts.length > 0 ? s9ByRow : undefined} />
       )}
       <RemovedCapabilities removed={view.removed_capabilities ?? []} />
     </section>

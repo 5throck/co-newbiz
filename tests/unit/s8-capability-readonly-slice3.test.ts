@@ -214,12 +214,15 @@ describe("source guards", () => {
     expect(panel).not.toContain("method: \"PUT\"");
   });
 
-  test("S9 round 2: the panel mirrors capability-dd verdicts read-only and routes brownfield judgement to the S9 tab", () => {
+  test("S9 round 2/3: the panel mirrors capability-dd verdicts read-only and routes brownfield judgement to the S9 tab", () => {
     const panel = read("app/web-next/components/stages/CapabilityAttainabilityPanel.tsx");
-    // the read-only mirror block renders only when S9 verdicts exist
-    expect(panel).toContain('data-testid="s9-capability-dd-results"');
+    // round 3: verdicts ride on the canonical table ("S9 검증" column) — the separate
+    // mirror table is gone; the fetch stays and the prop is conditional on verdicts.
+    expect(panel).not.toContain('data-testid="s9-capability-dd-results"');
     expect(panel).toContain("}/capability-dd`");
-    expect(panel).toContain("ddVerdicts && ddVerdicts.length > 0");
+    expect(panel).toContain("s9={ddVerdicts && ddVerdicts.length > 0 ? s9ByRow : undefined}");
+    const table = read("app/web-next/components/stages/CapabilityJudgementTable.tsx");
+    expect(table).toContain('data-testid="capability-s9-col"');
     // brownfield detection comes from the GET track field; judgement entry follows the S9 tab
     expect(panel).toContain('view.track === "brownfield"');
     expect(panel).toContain("judgeHref={isBrownfield ? s9Href : editHref}");

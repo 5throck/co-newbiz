@@ -15,18 +15,22 @@ const editor = read("CapabilityJudgementEditor.tsx");
 const panel = read("CapabilityAttainabilityPanel.tsx");
 
 describe("summary table structure", () => {
-  test("one <tr> per capability in a single tbody; six columns; no inputs, textareas or selects", () => {
+  test("one <tr> per capability in a single tbody; six columns (+ conditional S9 검증); no inputs, textareas or selects", () => {
     expect(src.match(/<tr key=\{r\.id\}>/g)?.length).toBe(1);
     expect(src.match(/<tbody>/g)?.length).toBe(1);
     const head = src.slice(src.indexOf("<thead>"), src.indexOf("</thead>"));
-    expect(head.match(/<th scope="col"/g)?.length).toBe(6);
-    for (const t of ["필요 역량", "필요도", "보유 판정", "판정 요약", "확정", "작업"]) expect(head).toContain(`>${t}</th>`);
-    expect([...head.matchAll(/>([^<>]+)<\/th>/g)].map((m) => m[1])).toEqual(["필요 역량", "필요도", "보유 판정", "판정 요약", "확정", "작업"]);
+    expect(head.match(/<th scope="col"/g)?.length).toBe(7); // 6 base + conditional S9 검증
+    for (const t of ["필요 역량", "필요도", "보유 판정", "판정 요약", "확정", "S9 검증", "작업"]) expect(head).toContain(`>${t}</th>`);
+    // base order unchanged; the S9 column sits between 확정 and 작업 and only renders with the s9 prop
+    expect(head).toContain('>확정</th>{s9 && <th scope="col"');
     for (const k of ["<input", "<select", "<textarea", "NarrativeCell", "HeldEvidenceButton", "colSpan", "rowSpan", "aria-expanded", "cap-sticky"]) expect(src).not.toContain(k);
     const pct = src.match(/COL_PCT = \[([^\]]*)\]/)![1].split(",").map(Number);
     expect(pct.length).toBe(6);
     expect(pct.reduce((a, b) => a + b, 0)).toBe(100);
     expect(pct).toEqual([39, 9, 10, 16, 15, 11]);
+    const pctS9 = src.match(/COL_PCT_S9 = \[([^\]]*)\]/)![1].split(",").map(Number);
+    expect(pctS9.length).toBe(7);
+    expect(pctS9.reduce((a, b) => a + b, 0)).toBe(100);
     const mins = src.match(/COL_MIN_REM = \[([^\]]*)\]/)![1].split(",").map(Number);
     expect(mins.length).toBe(6);
     pct.forEach((p, i) => expect((p / 100) * 1200).toBeGreaterThanOrEqual(mins[i] * 16)); // each column fits its content at a 1200px table
@@ -185,9 +189,12 @@ describe("S8 CapabilityAttainabilityPanel is read-only", () => {
     expect(panel).toContain("compact");
     expect(panel).toContain("<SummaryStrip s={view.summary} />");
   });
-  test("mirrors S9 capability-dd verdicts read-only; the brownfield entry names the S9 tab (2026-10-17 round 2)", () => {
-    expect(panel).toContain('data-testid="s9-capability-dd-results"');
-    expect(panel).toContain("ddVerdicts && ddVerdicts.length > 0");
+  test("mirrors S9 capability-dd verdicts read-only; the brownfield entry names the S9 tab (2026-10-17 round 2/3)", () => {
+    // round 3: the separate S9 table is gone — verdicts ride on the canonical
+    // table as the read-only "S9 검증" column (one home per fact).
+    expect(panel).not.toContain('data-testid="s9-capability-dd-results"');
+    expect(panel).toContain("s9ByRow");
+    expect(panel).toContain("s9={ddVerdicts && ddVerdicts.length > 0 ? s9ByRow : undefined}");
     expect(panel).toContain('view.track === "brownfield"');
     expect(panel).toContain("브라운필드 필요 역량 판정 주전장은 S9 실사·검증");
     // no new writes introduced by the mirror

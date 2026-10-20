@@ -121,11 +121,20 @@ export function RemovedCapabilities({ removed }: { removed: RemovedCapability[] 
 // 판정 요약 one line "인력 영입 · 중간" (ellipsis + tooltip); 확정 chip "! 재판정 필요" + "<name> · MM-DD";
 // 작업 link "S5에서 판정" (must not wrap). Index 0 (name) has no minimum. Below ~960px tmin scrolls horizontally.
 const COL_PCT = [39, 9, 10, 16, 15, 11] as const;
+/** 2026-10-17 round 3: with the S9 verdict column the widths re-balance to keep 100%. */
+const COL_PCT_S9 = [35, 8, 9, 15, 13, 10, 10] as const;
 export const COL_MIN_REM = [0, 6.5, 6.5, 8, 8, 7] as const;
 const FILTER_LABEL: Record<JudgementFilter, string> = { todo: "처리할 것", all: "전체" };
+/** S9 필요 역량 검증 판정 (capability-dd) — S8 패널은 읽기 전용 반영, 기록은 S9 탭(사람 전용). */
+export interface CapabilityDdVerdictView { coverage: string; note: string; by: string; at: string }
+const S9_COVERAGE_LABEL: Record<string, { label: string; cls: string }> = {
+  resolved: { label: "해소 (대상 보유)", cls: "status-green" },
+  partial: { label: "부분 해소", cls: "status-amber" },
+  unresolved: { label: "미해소 (자체 투자 필요)", cls: "status-red" },
+};
 const EMPTY_DIRTY: ReadonlySet<string> = new Set();
 
-export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href, note, dirty = EMPTY_DIRTY, judgeHref, judgeLabel = "S5에서 판정", ai, startYearFor, onStartYearChange }: {
+export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href, note, dirty = EMPTY_DIRTY, judgeHref, judgeLabel = "S5에서 판정", ai, startYearFor, onStartYearChange, s9 }: {
   rows: AttainabilityRowView[];
   drafts: Record<string, JudgementDraft>;
   /** True only on the S5 edit surface; S8 and viewers get no inputs and no dialog. */
@@ -145,6 +154,9 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
   /** 2026-10-18 decider ask — the dialog's 시작 연차 reads/writes the cost entry's start-year override. */
   startYearFor?: (id: string) => number | null;
   onStartYearChange?: (id: string, v: number | null) => void;
+  /** S9 capability-dd verdicts by register row id (2026-10-17 round 3): renders the read-only
+   *  "S9 검증" column instead of a separate table — one row per capability, one home per fact. */
+  s9?: Record<string, CapabilityDdVerdictView>;
 }) {
   const canEdit = editable && !!onSet;
   const counts = filterCounts(rows, dirty);
@@ -178,10 +190,10 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
         <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
           <table className="data-table mb-2 table-fixed-pct tmin-48" aria-label="필요 역량 달성 가능성 표">
             <caption className="sr-only">필요 역량 달성 가능성 — 필요도, 보유 판정, 판정 요약, 확정 순</caption>
-            <ColGroup widths={COL_PCT} />
+            <ColGroup widths={s9 ? COL_PCT_S9 : COL_PCT} />
             <thead>
               <tr>
-                <th scope="col">필요 역량</th><th scope="col" style={{ minWidth: "6.5rem" }}>필요도</th><th scope="col" style={{ minWidth: "6.5rem" }}>보유 판정</th><th scope="col" style={{ minWidth: "8rem" }}>판정 요약</th><th scope="col" style={{ minWidth: "8rem" }}>확정</th><th scope="col" style={{ minWidth: "7rem" }}>작업</th>
+                <th scope="col">필요 역량</th><th scope="col" style={{ minWidth: "6.5rem" }}>필요도</th><th scope="col" style={{ minWidth: "6.5rem" }}>보유 판정</th><th scope="col" style={{ minWidth: "8rem" }}>판정 요약</th><th scope="col" style={{ minWidth: "8rem" }}>확정</th>{s9 && <th scope="col" style={{ minWidth: "8rem" }} data-testid="capability-s9-col">S9 검증</th>}<th scope="col" style={{ minWidth: "7rem" }}>작업</th>
               </tr>
             </thead>
             <tbody>
@@ -225,6 +237,18 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
                         : r.stale ? <span className="status-chip status-amber"><span aria-hidden="true">!</span> 재판정 필요</span>
                         : r.grade ? <span className="status-chip status-not-started"><span aria-hidden="true">○</span> 확정 전</span> : "—"}
                     </td>
+                    {s9 && (() => {
+                      const v = s9[r.id];
+                      const cov = v ? S9_COVERAGE_LABEL[v.coverage] : undefined;
+                      const tip = v ? `근거: ${v.note || "—"} · ${v.by} · ${v.at.slice(0, 10)} — 판정 기록은 S9 필요 역량 검증 탭(사람 전용)` : "";
+                      return (
+                        <td className="text-[length:var(--fs-caption)]" data-testid={`capability-s9-cell-${r.id}`} title={tip}>
+                          {v && cov
+                            ? <span className={`status-chip ${cov.cls}`}><span aria-hidden="true">{v.coverage === "resolved" ? "✓" : v.coverage === "partial" ? "◐" : "▲"}</span> {cov.label}</span>
+                            : <span className="text-[color:var(--muted-fg)]" title={v ? tip : "S9에서 아직 판정되지 않았습니다"}>—</span>}
+                        </td>
+                      );
+                    })()}
                     <td className="text-[length:var(--fs-caption)]">
                       {canEdit
                         ? <button type="button" className="btn-ghost btn-sm" aria-label={`${r.capability} 판정`} onClick={() => setEditingId(r.id)}>판정</button>
