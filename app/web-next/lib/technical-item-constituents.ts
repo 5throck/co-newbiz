@@ -31,7 +31,7 @@ export const TECHNICAL_ITEM_CONSTITUENTS: Record<TechnicalItemKey, readonly stri
   T5: ["tdd-08", "tdd-06", "ldd-15"],
 };
 
-/** Evidence prerequisites shared by every technical item (shown under T6 짝 검증). */
+/** Evidence prerequisites shared by every technical item (shown under T6 S9 실사 반영 현황). */
 export const TECHNICAL_EVIDENCE_BASE: readonly string[] = ["tdd-01", "tdd-02"];
 
 export interface DdItemStatusView { label: string; cls: string; icon: string }

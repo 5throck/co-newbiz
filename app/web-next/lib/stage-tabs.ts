@@ -40,15 +40,17 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
     // ADR-0169: three parts (사업 목표 / 기술적 타당성 / 재무적 타당성); WACC, 재무분석 and the
     // scenario comparison are the financial sub-tab row. INTERIM-WORDING: labels are provisional.
     tabs: [
-      { seg: "/business-case", query: "goals", label: "사업 목표" }, // INTERIM-WORDING (ADR-0159)
+      // extraSegs [""]: the project overview page stays an S8 page (group lookup + highlight) now that
+      // the more-menu no longer lists it.
+      { seg: "/business-case", query: "goals", label: "사업 목표", extraSegs: [""] }, // INTERIM-WORDING (ADR-0159)
       { seg: "/business-case", query: "technical", label: "기술적 타당성", aliases: ["capability"], lens: "technical" },
       { seg: "/business-case", query: "financial", label: "재무적 타당성", aliases: ["scenarios", "overview", "params", "target-costing"], extraSegs: ["/wacc", "/financial-analysis"], isDefault: true, lens: "financial" },
       { seg: "/business-case", query: "targets", label: "대상 비교·선정" },
       { seg: "/business-case", query: "decision", label: "결정" },
     ],
-    more: [
-      { seg: "", label: "요약" },
-    ],
+    // 2026-10-20 decider: the S8 more-menu's lone "요약" entry (the project overview) was noise —
+    // the header's "프로젝트 개요 돌아가기" already reaches it. Empty more = no 더보기 button.
+    more: [],
     subtabs: [
       { seg: "/business-case", query: "overview", label: "설명·생성·권고", isDefault: true },
       { seg: "/business-case", query: "scenarios", label: "시나리오 비교" },

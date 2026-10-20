@@ -13,16 +13,17 @@ import { ROLLUP_LABEL, type ConstituentRollup } from "./technical-item-constitue
 export const TECH_ITEM_KEYS = ["T1", "T2", "T3", "T4", "T5"] as const;
 export type TechItemKey = (typeof TECH_ITEM_KEYS)[number];
 
-/** UI labels of the six displayed items (T6 = S9 link; Brown Field pairs instead). */
+/** UI labels of the six displayed items (T6 = how far the S9 DD judgements are reflected into T2-T5). */
 export const TECH_ITEM_LABELS: Record<TechItemKey | "T6", string> = {
   T1: "역량 달성 가능성",
   T2: "기술 성숙도(TRL)",
   T3: "핵심 인력·설비·시설",
   T4: "지식재산·라이선스",
   T5: "인허가·인증 확보 가능성",
-  T6: "S9 기술 실사 연결",
+  T6: "S9 실사 반영 현황",
 };
-export const TECH_ITEM_LABEL_T6_BROWNFIELD = "S9 기술 실사 짝 검증";
+/** 2026-10-20 decider: "짝 검증" read oddly — both tracks now share the same label; kept for callers/tests. */
+export const TECH_ITEM_LABEL_T6_BROWNFIELD = "S9 실사 반영 현황";
 
 export type LensItemStatus = "met" | "caution" | null;
 /** Status shown on the lens chips and the summary strip. */
@@ -316,8 +317,8 @@ export function summarizeTechnicalLens(
     const s = storedStatus(subject?.items[k]);
     items.push({ key: k, label: TECH_ITEM_LABELS[k], status: s.status, derived: false, judged: s.judged, note: s.judged ? "" : "S9 실사·검증의 체크리스트 항목으로 판정됩니다 — 이 트랙에는 구성 항목이 없습니다." });
   }
-  // T6 — the S8↔S9 pairing itself: complete when every T2-T5 roll-up is complete; until then
-  // the note counts the gap.
+  // T6 — how far the S9 DD judgements are reflected into T2-T5: complete when every roll-up is
+  // complete; until then the note counts the gap.
   const s9Judged = items.filter((i) => (["T2", "T3", "T4", "T5"] as string[]).includes(i.key) && i.judged).length;
   items.push({
     key: "T6",
@@ -325,7 +326,7 @@ export function summarizeTechnicalLens(
     status: s9Judged === 4 ? "met" : "undetermined",
     derived: true,
     judged: s9Judged === 4,
-    note: s9Judged === 4 ? "T2~T5 모두 S9 체크리스트 판정과 짝지어졌습니다." : `S9 짝 검증 ${s9Judged}/4 완료 — 나머지 항목의 구성 체크리스트를 S9에서 판정하세요.`,
+    note: s9Judged === 4 ? "T2~T5 모두 S9 실사 판정이 반영되었습니다." : `S9 실사 반영 ${s9Judged}/4 — 나머지 항목의 구성 체크리스트를 S9에서 판정하세요.`,
   });
   const judged = items.filter((i) => i.judged).length;
   const cautions = items.filter((i) => i.status === "caution");
