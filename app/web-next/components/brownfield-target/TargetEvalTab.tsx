@@ -1,6 +1,9 @@
 "use client";
 
-// Split from app/brownfield/targets/[targetId]/page.tsx (Wave U-3 decomposition); behavior unchanged.
+// Split from app/brownfield/targets/[targetId]/page.tsx (Wave U-3 decomposition).
+// 2026-10-20 decider: verdict/weight edits are LOCAL until the person presses the category's
+// 저장 button (explicit save instead of save-on-change); the score chip shows judged/total items.
+import { useState } from "react";
 import { isFinancialDataRef, parseRubric, rubricFields } from "../../lib/brownfield-financial-rubric.ts";
 import { EVAL_CATEGORY_LABEL, VERDICT_KO, EVAL_VERDICTS } from "./constants.ts";
 import type { TargetDetailViewState } from "./useTargetActions.ts";
@@ -8,18 +11,46 @@ import type { EvalItem, EvalCategoryScore } from "./types.ts";
 
 export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinancial, proposedCount, pendingTechnical }: { ctx: TargetDetailViewState; evalItems: EvalItem[]; scores: Record<"financial" | "technical", EvalCategoryScore> & { combined: number | null; }; scoreChip: (score: number | null) => string; pendingFinancial: EvalItem[]; proposedCount: number; pendingTechnical: EvalItem[] }) {
   const { detail, loadDetail, profileTab, canAct, draftBusy, draftCategory, evalDraft, busy, setEvalDraft, setDraftCategory, setDraftNote, rubricOpen, setRubricOpen, draftNote, evalBusy, rubricBusy, newCriterionLabel, setNewCriterionLabel, generateEvalDraft, saveDraftVerdicts, setEvalWeight, setEvalVerdict, removeEvalCriterion, saveRubric, addEvalCriterion } = ctx;
+  void detail; void loadDetail;
+  type EvalStatusValue = "pending" | "pass" | "partial" | "fail" | "na" | "waived";
+  type PendingEdit = { status?: EvalStatusValue; weight?: number; note?: string };
+  const [pending, setPending] = useState<Record<string, PendingEdit>>({});
+  const [savingCat, setSavingCat] = useState<"financial" | "technical" | null>(null);
+  const editPending = (id: string, patch: PendingEdit) => setPending((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+  const discardCategory = (ids: string[]) => setPending((prev) => { const next = { ...prev }; for (const id of ids) delete next[id]; return next; });
+  async function saveCategory(cat: "financial" | "technical", items: EvalItem[]) {
+    const targets = items.filter((it) => pending[it.id]);
+    if (targets.length === 0) return;
+    setSavingCat(cat);
+    try {
+      for (const it of targets) {
+        const p = pending[it.id];
+        if (p.weight !== undefined && p.weight > 0 && p.weight !== it.weight) await setEvalWeight(it.id, p.weight);
+        if (p.status !== undefined && p.status !== (it.state?.status ?? "pending")) await setEvalVerdict(it.id, p.status, p.note);
+      }
+      discardCategory(targets.map((t) => t.id));
+      // a saved verdict supersedes any AI draft still shown on the row
+      setEvalDraft((prev) => { if (!prev) return prev; const next = { ...prev }; for (const t of targets) delete next[t.id]; return next; });
+    } finally {
+      setSavingCat(null);
+    }
+  }
   return (
     <>{profileTab === "eval" && (
           <div className="mt-3">
             {(["financial", "technical"] as const).map((cat) => {
               const items = evalItems.filter((it) => it.category === cat);
               const catScore = scores[cat];
+              const judgedCount = items.filter((it) => ["pass", "partial", "fail"].includes(it.state?.status ?? "pending")).length;
+              const countedTotal = items.filter((it) => !["na", "waived"].includes(it.state?.status ?? "pending")).length;
+              const catPending = items.filter((it) => pending[it.id]);
               return (
                 <div key={cat} className="card mb-3">
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <h4 className="text-[0.9rem] mb-0">{EVAL_CATEGORY_LABEL[cat]}</h4>
-                    <span className={scoreChip(catScore.score)} title="충족 1점·부분충족 0.5점·미충족 0점을 항목 가중치로 가중평균 — 예외(해당없음·예외)는 계산에서 제외">
+                    <span className={scoreChip(catScore.score)} title="충족 1점·부분충족 0.5점·미충족 0점을 항목 가중치로 가중평균 — 예외(해당없음·예외)는 계산에서 제외, 미판정 항목은 아직 점수에 들어가지 않음" data-testid={`eval-score-${cat}`}>
                       {catScore.score == null ? "점수 — 판정 필요" : `${catScore.score}점 / 100점`}
+                      <span className="ml-1 font-normal">(판정 {judgedCount}/{countedTotal} 항목)</span>
                     </span>
                   </div>
                   {catScore.totalWeight > catScore.scoredWeight && (
@@ -127,11 +158,11 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                               <input
                                 type="number" min={1} step={1}
                                 aria-label={`${it.label} 가중치`}
-                                defaultValue={it.weight}
-                                disabled={evalBusy === it.id}
-                                onBlur={(e) => {
+                                value={pending[it.id]?.weight ?? it.weight}
+                                disabled={evalBusy === it.id || savingCat !== null}
+                                onChange={(e) => {
                                   const v = Number(e.target.value);
-                                  if (v > 0 && v !== it.weight) void setEvalWeight(it.id, v);
+                                  if (Number.isFinite(v)) editPending(it.id, { weight: v });
                                 }}
                                 className="sizing-new-input sizing-new-input-sm"
                                 style={{ width: "4rem" }}
@@ -143,20 +174,14 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                             ) : (
                             <select
                               aria-label={`${it.label} 판정`}
-                              value={draft?.status ?? it.state?.status ?? "pending"}
-                              disabled={evalBusy === it.id}
+                              value={pending[it.id]?.status ?? draft?.status ?? it.state?.status ?? "pending"}
+                              disabled={evalBusy === it.id || savingCat !== null}
                               onChange={(e) => {
-                                const v = e.target.value as "pending" | "pass" | "partial" | "fail" | "na" | "waived";
-                                // 초안이 떠 있는 항목을 직접 바꾸면 근거 노트를 함께 기록하고 초안을 치운다.
-                                void setEvalVerdict(it.id, v, draft ? draft.note : undefined);
-                                if (draft) setEvalDraft((prev) => {
-                                  if (!prev) return prev;
-                                  const next = { ...prev };
-                                  delete next[it.id];
-                                  return next;
-                                });
+                                const v = e.target.value as EvalStatusValue;
+                                // local until the category 저장 button; a visible AI draft's note rides along at save time
+                                editPending(it.id, { status: v, note: draft ? draft.note : undefined });
                               }}
-                              className="sizing-new-input sizing-new-input-sm"
+                              className={`sizing-new-input sizing-new-input-sm${pending[it.id]?.status !== undefined ? " ring-1" : ""}`}
                             >
                               <option value="pending">미판정</option>
                               {EVAL_VERDICTS.map((v) => (
@@ -238,6 +263,20 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                     />
                     <button type="button" className="btn-ghost btn-sm" disabled={evalBusy === cat || !(newCriterionLabel[cat] ?? "").trim()} onClick={() => void addEvalCriterion(cat)}>추가</button>
                   </div>)}
+                  {/* 2026-10-20 decider: explicit save lives at the BOTTOM-RIGHT of the category, after the items. */}
+                  {canAct && (
+                    <div className="flex flex-wrap items-center justify-end gap-1 mt-2" data-testid={`eval-save-bar-${cat}`}>
+                      {catPending.length > 0 && (
+                        <>
+                          <span className="status-chip status-amber">저장 전 변경 {catPending.length}건 — 점수는 저장 후 갱신됩니다</span>
+                          <button type="button" className="btn-ghost btn-sm" onClick={() => discardCategory(catPending.map((it) => it.id))}>변경 취소</button>
+                        </>
+                      )}
+                      <button type="button" className="btn-premium btn-sm" disabled={catPending.length === 0 || savingCat !== null} onClick={() => void saveCategory(cat, items)} data-testid={`eval-save-${cat}`}>
+                        {savingCat === cat ? "저장 중…" : `${EVAL_CATEGORY_LABEL[cat]} 저장${catPending.length > 0 ? ` (${catPending.length}건)` : ""}`}
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}
