@@ -5,7 +5,7 @@
 // ADR-0168 panel; T2-T5 are DERIVED from the S9 DD structure as it is — each names the
 // checklist items that constitute it (기술·인사·법무 실사 tabs), people judge those on their own
 // tabs, and the roll-up is the lens value (no separate per-item verdict); T6 shows the S8↔S9
-// pairing progress and the shared evidence base. Warning only: nothing here caps a grade or
+// S9 reflection progress and the shared evidence base. Warning only: nothing here caps a grade or
 // blocks a gate.
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
@@ -132,7 +132,7 @@ function TechItemVerdictView({ item, s9Href, ddIndex }: { item: LensItemView; s9
   );
 }
 
-/** T6: how the S8 items pair with their S9 basis, plus the shared evidence prerequisites. */
+/** T6: how far each S8 item is backed by S9 judgements, plus the shared evidence prerequisites. */
 function PairingView({ items, note, mismatchCount, s9Href, ddIndex }: { items: LensItemView[]; note: string; mismatchCount: number; s9Href: string; ddIndex: Map<string, DdItemLookup> | null }) {
   const basis = (it: LensItemView) =>
     it.key === "T1" ? "필요 역량 판정에서 자동 도출" : it.judged ? "S9 체크리스트 롤업 완료" : "S9 체크리스트 판정 진행 중";
@@ -140,7 +140,7 @@ function PairingView({ items, note, mismatchCount, s9Href, ddIndex }: { items: L
   return (
     <div className="grid gap-2" data-testid="tech-item-pairing">
       <p className="text-[length:var(--fs-body)] m-0">{note}</p>
-      <ul className="sizing-note-list" aria-label="항목별 S9 짝 검증 근거">
+      <ul className="sizing-note-list" aria-label="항목별 S9 반영 근거">
         {items.filter((it) => it.key !== "T6").map((it) => (
           <li key={it.key}>
             <span className="font-bold mr-1">{it.key}</span>{it.label} — <span className={it.judged ? "" : "text-[color:var(--muted-fg)]"}>{basis(it)}</span>
@@ -155,7 +155,7 @@ function PairingView({ items, note, mismatchCount, s9Href, ddIndex }: { items: L
       </div>
       {mismatchCount > 0 && <p className="status-chip status-amber inline-block" role="note">실사와 다름 {mismatchCount}건 — 기록된 검증 결과가 S8 항목과 어긋납니다.</p>}
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] m-0">
-        짝 검증은 S9 각 실사 탭에서 구성 체크리스트가 모두 판정될 때 채워집니다 — <a href={s9Href} className="text-[color:var(--accent)] font-bold">S9 실사·검증 →</a>
+        S9 실사 반영은 각 실사 탭에서 구성 체크리스트가 모두 판정될 때 채워집니다 — <a href={s9Href} className="text-[color:var(--accent)] font-bold">S9 실사·검증 →</a>
       </p>
     </div>
   );
