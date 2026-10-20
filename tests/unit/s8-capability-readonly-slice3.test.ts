@@ -214,6 +214,25 @@ describe("source guards", () => {
     expect(panel).not.toContain("method: \"PUT\"");
   });
 
+  test("S9 round 2: the panel mirrors capability-dd verdicts read-only and routes brownfield judgement to the S9 tab", () => {
+    const panel = read("app/web-next/components/stages/CapabilityAttainabilityPanel.tsx");
+    // the read-only mirror block renders only when S9 verdicts exist
+    expect(panel).toContain('data-testid="s9-capability-dd-results"');
+    expect(panel).toContain("}/capability-dd`");
+    expect(panel).toContain("ddVerdicts && ddVerdicts.length > 0");
+    // brownfield detection comes from the GET track field; judgement entry follows the S9 tab
+    expect(panel).toContain('view.track === "brownfield"');
+    expect(panel).toContain("judgeHref={isBrownfield ? s9Href : editHref}");
+    expect(panel).toContain('judgeLabel={isBrownfield ? "S9'+"에서 판정\"");
+    // the legacy target edit payload is untouched (route still sends edit_href)
+    const route = read("app/web-next/app/api/projects/[id]/capability-attainability/route.ts");
+    expect(route).toContain("edit_href");
+    // the S8 scenarios note points brownfield at the S9 tab, greenfield keeps the technical tab
+    const bcs = read("app/web-next/components/stages/BusinessCaseStage.tsx");
+    expect(bcs).toContain("!greenfield && targets.length > 0");
+    expect(bcs).toContain("`/projects/${projectId}/dd`");
+  });
+
   test("no grade cap or gate block is introduced by the S8 readers", () => {
     for (const f of ["app/web-next/lib/s8-lens-summary.ts", "app/web-next/lib/gate-brief.ts"]) {
       const src = read(f);
