@@ -222,7 +222,9 @@ describe("source guards", () => {
     expect(panel).toContain("}/capability-dd`");
     expect(panel).toContain("s9={ddVerdicts && ddVerdicts.length > 0 ? s9ByRow : undefined}");
     const table = read("app/web-next/components/stages/CapabilityJudgementTable.tsx");
-    expect(table).toContain('data-testid="capability-s9-col"');
+    // round 4: no separate S9 column — the verdict rides inside the merged 판정 cell
+    expect(table).not.toContain('data-testid="capability-s9-col"');
+    expect(table).toContain('data-testid={`capability-s9-cell-${r.id}`}');
     // brownfield detection comes from the GET track field; judgement entry follows the S9 tab
     expect(panel).toContain('view.track === "brownfield"');
     expect(panel).toContain("judgeHref={isBrownfield ? s9Href : editHref}");

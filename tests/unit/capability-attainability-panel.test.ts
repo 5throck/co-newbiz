@@ -15,28 +15,27 @@ const editor = read("CapabilityJudgementEditor.tsx");
 const panel = read("CapabilityAttainabilityPanel.tsx");
 
 describe("summary table structure", () => {
-  test("one <tr> per capability in a single tbody; six columns (+ conditional S9 검증); no inputs, textareas or selects", () => {
+  test("one <tr> per capability in a single tbody; five columns with one merged 판정 cell; no inputs, textareas or selects", () => {
     expect(src.match(/<tr key=\{r\.id\}>/g)?.length).toBe(1);
     expect(src.match(/<tbody>/g)?.length).toBe(1);
     const head = src.slice(src.indexOf("<thead>"), src.indexOf("</thead>"));
-    expect(head.match(/<th scope="col"/g)?.length).toBe(7); // 6 base + conditional S9 검증
-    for (const t of ["필요 역량", "필요도", "보유 판정", "판정 요약", "확정", "S9 검증", "작업"]) expect(head).toContain(`>${t}</th>`);
-    // base order unchanged; the S9 column sits between 확정 and 작업 and only renders with the s9 prop
-    expect(head).toContain('>확정</th>{s9 && <th scope="col"');
+    expect(head.match(/<th scope="col"/g)?.length).toBe(5);
+    for (const t of ["필요 역량", "필요도", "보유 판정", "판정", "작업"]) expect(head).toContain(`>${t}</th>`);
+    // round 4 (decider): 판정 요약·확정·S9 검증 merged into ONE 판정 cell — no separate S9 column
+    expect(src).not.toContain('data-testid="capability-s9-col"');
+    expect(src).toContain('data-testid={`capability-s9-cell-${r.id}`}');
+    expect(src).toContain('data-testid="judgement-summary"');
     for (const k of ["<input", "<select", "<textarea", "NarrativeCell", "HeldEvidenceButton", "colSpan", "rowSpan", "aria-expanded", "cap-sticky"]) expect(src).not.toContain(k);
     const pct = src.match(/COL_PCT = \[([^\]]*)\]/)![1].split(",").map(Number);
-    expect(pct.length).toBe(6);
+    expect(pct.length).toBe(5);
     expect(pct.reduce((a, b) => a + b, 0)).toBe(100);
-    expect(pct).toEqual([39, 9, 10, 16, 15, 11]);
-    const pctS9 = src.match(/COL_PCT_S9 = \[([^\]]*)\]/)![1].split(",").map(Number);
-    expect(pctS9.length).toBe(7);
-    expect(pctS9.reduce((a, b) => a + b, 0)).toBe(100);
+    expect(pct).toEqual([42, 9, 11, 28, 10]);
+    expect(src).not.toContain("COL_PCT_S9");
     const mins = src.match(/COL_MIN_REM = \[([^\]]*)\]/)![1].split(",").map(Number);
-    expect(mins.length).toBe(6);
+    expect(mins.length).toBe(5);
     pct.forEach((p, i) => expect((p / 100) * 1200).toBeGreaterThanOrEqual(mins[i] * 16)); // each column fits its content at a 1200px table
     mins.slice(1).forEach((m) => expect(src).toContain(`minWidth: "${m}rem"`));
     expect(pct[0]).toBe(Math.max(...pct)); // 필요 역량 is the widest column
-    expect(pct[3]).toBeLessThan(pct[0]); // 판정 요약 is narrower than the name column
     expect(src).toContain("table-fixed-pct tmin-48");
   });
   test("판정 button only when editable; S8 gets the S5에서 판정 link; viewers get nothing", () => {
