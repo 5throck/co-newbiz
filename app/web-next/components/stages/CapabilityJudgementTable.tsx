@@ -120,10 +120,8 @@ export function RemovedCapabilities({ removed }: { removed: RemovedCapability[] 
 // 필요 역량 wraps (widest, remainder); 필요도 chip "! 부분 필수"; 보유 판정 chip "! 업계 리딩";
 // 판정 요약 one line "인력 영입 · 중간" (ellipsis + tooltip); 확정 chip "! 재판정 필요" + "<name> · MM-DD";
 // 작업 link "S5에서 판정" (must not wrap). Index 0 (name) has no minimum. Below ~960px tmin scrolls horizontally.
-const COL_PCT = [39, 9, 10, 16, 15, 11] as const;
-/** 2026-10-17 round 3: with the S9 verdict column the widths re-balance to keep 100%. */
-const COL_PCT_S9 = [35, 8, 9, 15, 13, 10, 10] as const;
-export const COL_MIN_REM = [0, 6.5, 6.5, 8, 8, 7] as const;
+const COL_PCT = [42, 9, 11, 28, 10] as const;
+export const COL_MIN_REM = [0, 6.5, 6.5, 10, 7] as const;
 const FILTER_LABEL: Record<JudgementFilter, string> = { todo: "처리할 것", all: "전체" };
 /** S9 필요 역량 검증 판정 (capability-dd) — S8 패널은 읽기 전용 반영, 기록은 S9 탭(사람 전용). */
 export interface CapabilityDdVerdictView { coverage: string; note: string; by: string; at: string }
@@ -189,11 +187,11 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
       ) : (
         <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
           <table className="data-table mb-2 table-fixed-pct tmin-48" aria-label="필요 역량 달성 가능성 표">
-            <caption className="sr-only">필요 역량 달성 가능성 — 필요도, 보유 판정, 판정 요약, 확정 순</caption>
-            <ColGroup widths={s9 ? COL_PCT_S9 : COL_PCT} />
+            <caption className="sr-only">필요 역량 달성 가능성 — 필요도, 보유 판정, 판정 순</caption>
+            <ColGroup widths={COL_PCT} />
             <thead>
               <tr>
-                <th scope="col">필요 역량</th><th scope="col" style={{ minWidth: "6.5rem" }}>필요도</th><th scope="col" style={{ minWidth: "6.5rem" }}>보유 판정</th><th scope="col" style={{ minWidth: "8rem" }}>판정 요약</th><th scope="col" style={{ minWidth: "8rem" }}>확정</th>{s9 && <th scope="col" style={{ minWidth: "8rem" }} data-testid="capability-s9-col">S9 검증</th>}<th scope="col" style={{ minWidth: "7rem" }}>작업</th>
+                <th scope="col">필요 역량</th><th scope="col" style={{ minWidth: "6.5rem" }}>필요도</th><th scope="col" style={{ minWidth: "6.5rem" }}>보유 판정</th><th scope="col" style={{ minWidth: "10rem" }}>판정</th><th scope="col" style={{ minWidth: "7rem" }}>작업</th>
               </tr>
             </thead>
             <tbody>
@@ -225,30 +223,37 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
                       <span className={`status-chip ${HELD_STATUS_CHIP[r.held_status]}`}>{HELD_STATUS_LABEL[r.held_status]}</span>
                     </td>
                     <td className="text-[length:var(--fs-caption)]" data-testid="judgement-summary">
-                      {sentence ? <ClampedText text={sentence} title={buildJudgementDetail(draftOf(r))} lines={1} /> : <span className="text-[color:var(--muted-fg)]">미판정</span>}
-                      {dirty.has(r.id) && (
-                        <span className="block text-[color:var(--muted-fg)]">
-                          저장 전{ai?.marks[r.id]?.length ? <> · <span className="status-chip status-not-started" data-testid="ai-draft-chip" title={`AI 초안(저장 전): ${ai.marks[r.id].map((f) => JUDGEMENT_FIELD_LABEL[f]).join(", ")} — 사람이 검토·수정한 뒤 저장하세요.`}><span aria-hidden="true">✦</span> AI 초안</span></> : null}
-                        </span>
-                      )}
+                      {(() => {
+                        // 2026-10-17 round 4 (decider): 판정 요약·확정·S9 검증 were three near-duplicate
+                        // columns — one 판정 cell now stacks the active bases: the S9 verification chip
+                        // (when recorded), the S5/S7 judgement sentence, and the confirmation meta.
+                        const v = s9?.[r.id];
+                        const cov = v ? S9_COVERAGE_LABEL[v.coverage] : undefined;
+                        const s9Tip = v ? `근거: ${v.note || "—"} · ${v.by} · ${v.at.slice(0, 10)} — 판정 기록은 S9 필요 역량 검증 탭(사람 전용)` : "";
+                        const s5s7Empty = !sentence && !r.confirmed_at && !r.stale && !r.grade;
+                        return (
+                          <>
+                            {v && cov && (
+                              <span className="block mb-1" data-testid={`capability-s9-cell-${r.id}`} title={s9Tip}>
+                                <span className={`status-chip ${cov.cls}`}><span aria-hidden="true">{v.coverage === "resolved" ? "✓" : v.coverage === "partial" ? "◐" : "▲"}</span> {cov.label}</span>
+                                <span className="block break-words text-[color:var(--muted-fg)]">S9 기록 · {v.by} · {v.at.slice(5, 10)}</span>
+                              </span>
+                            )}
+                            {sentence
+                              ? <ClampedText text={sentence} title={buildJudgementDetail(draftOf(r))} lines={1} />
+                              : !v && <span className="text-[color:var(--muted-fg)]">미판정</span>}
+                            {dirty.has(r.id) && (
+                              <span className="block text-[color:var(--muted-fg)]">
+                                저장 전{ai?.marks[r.id]?.length ? <> · <span className="status-chip status-not-started" data-testid="ai-draft-chip" title={`AI 초안(저장 전): ${ai.marks[r.id].map((f) => JUDGEMENT_FIELD_LABEL[f]).join(", ")} — 사람이 검토·수정한 뒤 저장하세요.`}><span aria-hidden="true">✦</span> AI 초안</span></> : null}
+                              </span>
+                            )}
+                            {r.confirmed_at && <span className="block mt-1"><span className="status-chip status-green"><span aria-hidden="true">✓</span> 확정</span><span className="block break-words text-[color:var(--muted-fg)]">{r.confirmed_by} · {r.confirmed_at.slice(5, 10)}</span></span>}
+                            {!r.confirmed_at && r.stale && <span className="status-chip status-amber"><span aria-hidden="true">!</span> 재판정 필요</span>}
+                            {!r.confirmed_at && !r.stale && r.grade && <span className="status-chip status-not-started"><span aria-hidden="true">○</span> 확정 전</span>}
+                          </>
+                        );
+                      })()}
                     </td>
-                    <td className="text-[length:var(--fs-caption)]">
-                      {r.confirmed_at ? <><span className="status-chip status-green"><span aria-hidden="true">✓</span> 확정</span><span className="block break-words text-[color:var(--muted-fg)]">{r.confirmed_by} · {r.confirmed_at.slice(5, 10)}</span></>
-                        : r.stale ? <span className="status-chip status-amber"><span aria-hidden="true">!</span> 재판정 필요</span>
-                        : r.grade ? <span className="status-chip status-not-started"><span aria-hidden="true">○</span> 확정 전</span> : "—"}
-                    </td>
-                    {s9 && (() => {
-                      const v = s9[r.id];
-                      const cov = v ? S9_COVERAGE_LABEL[v.coverage] : undefined;
-                      const tip = v ? `근거: ${v.note || "—"} · ${v.by} · ${v.at.slice(0, 10)} — 판정 기록은 S9 필요 역량 검증 탭(사람 전용)` : "";
-                      return (
-                        <td className="text-[length:var(--fs-caption)]" data-testid={`capability-s9-cell-${r.id}`} title={tip}>
-                          {v && cov
-                            ? <span className={`status-chip ${cov.cls}`}><span aria-hidden="true">{v.coverage === "resolved" ? "✓" : v.coverage === "partial" ? "◐" : "▲"}</span> {cov.label}</span>
-                            : <span className="text-[color:var(--muted-fg)]" title={v ? tip : "S9에서 아직 판정되지 않았습니다"}>—</span>}
-                        </td>
-                      );
-                    })()}
                     <td className="text-[length:var(--fs-caption)]">
                       {canEdit
                         ? <button type="button" className="btn-ghost btn-sm" aria-label={`${r.capability} 판정`} onClick={() => setEditingId(r.id)}>판정</button>
