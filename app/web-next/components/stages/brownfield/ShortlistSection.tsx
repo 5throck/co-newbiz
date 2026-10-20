@@ -6,7 +6,6 @@ import { normalizeVerdict, precheckRecommendation, KNOCKOUT_IDS, SCREENING_VERDI
 import { CommitteePanel } from "../../CommitteePanel.tsx";
 import { GateDecisionPanel } from "../../GateDecisionPanel.tsx";
 import { PromotionPanel } from "../../PromotionPanel.tsx";
-import { CapabilityReadinessNotice } from "./CapabilityReadinessNotice.tsx";
 import { ColGroup } from "../../ui.tsx";
 import { SECTION_IDS, shortlistColPct } from "./constants.ts";
 import { buildEvalBriefMd } from "./evalBrief.ts";
@@ -223,18 +222,27 @@ export function ShortlistSection({ ctx }: { ctx: BrownfieldStageState }) {
             </section>
           )}
 
-          {/* ADR-0171 D7: warning-only required-capability check per shortlisted target (no grade cap, no gate block). */}
-          <CapabilityReadinessNotice opportunityId={selected.opportunity.id} />
-
+          {/* flow.spec target_screening killCriteria: knock-out 통과 후보가 0건이다. 2026-10-20 decider:
+              the old proxy ("evaluation complete = every item judged") fired the kill language whenever
+              later-seeded criteria stayed pending — evaluation completeness is informational, not a kill. */}
           <GateDecisionPanel
             opportunityId={selected.opportunity.id}
             gates={["target_screening"]}
             killHint={
-              selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded" && t.eval_summary?.complete === true)
-                ? "재무·기술 평가가 완료된 후보가 0건입니다 — 대상 선정 단계의 중단 기준 검토가 필요합니다."
+              selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded")
+                ? "knock-out 스크리닝을 통과한 후보가 0건입니다 — 중단 기준(진입 가능한 대상 없음)에 해당하는지 검토하세요."
                 : null
             }
           />
+          {(() => {
+            const incomplete = selected.targets.filter((t) => t.status !== "excluded" && t.eval_summary && !t.eval_summary.complete);
+            if (incomplete.length === 0) return null;
+            return (
+              <p role="note" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="eval-incomplete-note">
+                ⓘ 평가가 끝나지 않은 최종 후보 {incomplete.length}건 ({incomplete.map((t) => t.company_name).join(", ")}) — 후보 상세의 평가 탭에서 남은 항목을 판정하면 점수가 확정됩니다 (참고 정보이며 게이트 조건이 아닙니다).
+              </p>
+            );
+          })()}
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
             ↓ 위 대상 선정 게이트가 <b>진행</b>으로 기록되어야 아래 프로젝트 추진이 가능합니다 — 승인 기록은 판단, 추진은 그 판단을 전제로 한 장부상 전환입니다.
           </p>

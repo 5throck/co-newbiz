@@ -344,17 +344,12 @@ describe("criteria reconcile + detection", () => {
   });
 });
 
-describe("S7 readiness is warning-only", () => {
-  test("per-target counts and a warning text; the payload offers no block or grade cap", async () => {
-    const r = (await (await req(`/api/brownfield/${oppId}/capability-readiness`, { headers: { cookie } })).json()) as any;
-    expect(r.data.targets.map((t: any) => t.company_name)).toEqual(["Target One", "Target Two"]);
-    const t = r.data.targets.find((x: any) => x.target_id === t1);
-    expect(t.total).toBe(3);
-    expect(typeof t.confirmed).toBe("number");
-    expect(typeof r.data.warning).toBe("string");
-    expect(Object.keys(r.data).sort()).toEqual(["opportunity_id", "reconcile", "targets", "warning"]);
-    expect(r.data.warning).toContain("\uac8c\uc774\ud2b8"); // states that it does not block the gate
-    expect((await req(`/api/brownfield/nope/capability-readiness`, { headers: { cookie } })).status).toBe(404);
+describe("S7 readiness (2026-10-20 decider) — the readiness route/notice are retired with the S7 check", () => {
+  test("the readiness route and the ShortlistSection notice no longer exist; the lib helper stays as read-only legacy", () => {
+    expect(existsSync(join(PROJECT_ROOT, "app/web-next/app/api/brownfield/[oppId]/capability-readiness/route.ts"))).toBe(false);
+    expect(existsSync(join(PROJECT_ROOT, "app/web-next/components/stages/brownfield/CapabilityReadinessNotice.tsx"))).toBe(false);
+    expect(read("app/web-next/components/stages/brownfield/ShortlistSection.tsx")).not.toContain("CapabilityReadinessNotice");
+    expect(read("app/web-next/lib/brownfield-capability-judgement.ts")).toContain("export function capabilityReadiness");
   });
 
   test("source: readiness and promotion code never read judgements as a gate or a cap", () => {
@@ -393,6 +388,6 @@ describe("deleting a target and the S8 bridge", () => {
     expect(s8).not.toContain("CapabilityJudgementEditor");
     expect(s8).not.toContain("<input");
     expect(s8).toContain("S7\uc5d0\uc11c \ud310\uc815");
-    expect(read("app/web-next/components/stages/brownfield/ShortlistSection.tsx")).toContain("CapabilityReadinessNotice");
+    expect(read("app/web-next/components/stages/brownfield/ShortlistSection.tsx")).not.toContain("CapabilityReadinessNotice"); // retired 2026-10-20
   });
 });

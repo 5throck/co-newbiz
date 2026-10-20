@@ -4574,28 +4574,6 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/brownfield/{oppId}/capability-readiness:
-    get:
-      operationId: getBrownfieldCapabilityReadiness
-      summary: "S7 target_screening readiness for the required-capability check (ADR-0171 D7), WARNING ONLY: per shortlisted target total / confirmed / unconfirmed / stale / unjudged / unreconciled counts, the reconcile detection and an advisory warning text. It never caps a grade or blocks a gate or a promotion."
-      tags:
-        - Analysis
-      parameters:
-        - name: oppId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
   /api/brownfield/{oppId}/eval-criteria:
     get:
       operationId: listBrownfieldEvalCriteria
