@@ -11,13 +11,38 @@ import { sourceOpportunityOf } from "./capability-attainability.ts";
 import { buildLensStripView, financialLensStatus, type FinancialLensSummary, type S8LensStripView } from "./s8-lens-status.ts";
 import { buildInvestUncertainty, type InvestUncertaintyView } from "./investment-uncertainty-s8.ts";
 import { PROJECT_SUBJECT, parseTechnicalLens, summarizeTechnicalLens, targetSubject, type TechnicalLensSummary } from "./technical-lens.ts";
-import { parseTechnicalItemVerdicts, type TechnicalItemKey, type TechnicalItemVerdict } from "./technical-item-verdicts.ts";
+import { parseCapabilityDdVerdicts } from "./capability-dd.ts";
+import type { S9CapabilityCoverage } from "./technical-lens.ts";
+import { TECHNICAL_ITEM_CONSTITUENTS, indexDdItems, rollupConstituentStatuses, type ConstituentRollup, type TechnicalItemKey } from "./technical-item-constituents.ts";
+import { listDdWorkspace } from "./dd-checklist-tailor.ts";
 
-/** 2026-10-20 round 4: S9-recorded T2-T5 verdicts (sidecar on the opportunity, migration 0157). */
-function technicalItemVerdictsOf(db: Database, oppId: string | null): Partial<Record<TechnicalItemKey, TechnicalItemVerdict>> {
-  if (!oppId) return {};
-  const row = db.query("SELECT technical_item_verdicts_json AS j FROM opportunity WHERE id = ?").get(oppId) as { j: string | null } | null;
-  return Object.fromEntries(parseTechnicalItemVerdicts(row?.j ?? null).map((v) => [v.itemKey, v])) as Partial<Record<TechnicalItemKey, TechnicalItemVerdict>>;
+/** 2026-10-20 round 5b: roll up the constituent S9 checklist states per lens item for the judged scope
+ *  (selected target for brownfield, project scope otherwise). Only constituents PRESENT in this
+ *  project's checklists count — an id the track never carries is not "pending", it is absent. */
+function constituentRollupsOf(db: Database, projectId: string, targetId: string | null): Partial<Record<TechnicalItemKey, ConstituentRollup>> {
+  void db;
+  let index: ReturnType<typeof indexDdItems>;
+  try {
+    index = indexDdItems(listDdWorkspace(projectId, { targetId }).domains);
+  } catch {
+    return {};
+  }
+  const out: Partial<Record<TechnicalItemKey, ConstituentRollup>> = {};
+  for (const k of Object.keys(TECHNICAL_ITEM_CONSTITUENTS) as TechnicalItemKey[]) {
+    const present = TECHNICAL_ITEM_CONSTITUENTS[k].filter((id) => index.has(id));
+    out[k] = rollupConstituentStatuses(present.map((id) => index.get(id)!.status));
+  }
+  return out;
+}
+
+/** 2026-10-20 round 5: brownfield T1 reads the S9 capability-dd verdicts against the live register rows. */
+function s9CapabilityCoverageOf(db: Database, oppId: string | null, registerRowIds: string[]): S9CapabilityCoverage | null {
+  if (!oppId) return null;
+  const row = db.query("SELECT capability_dd_verdicts_json AS j FROM opportunity WHERE id = ?").get(oppId) as { j: string | null } | null;
+  const known = new Set(registerRowIds);
+  const verdicts = parseCapabilityDdVerdicts(row?.j ?? null).filter((v) => known.has(v.rowId));
+  const count = (c: string) => verdicts.filter((v) => v.coverage === c).length;
+  return { total: registerRowIds.length, judged: verdicts.length, resolved: count("resolved"), partial: count("partial"), unresolved: count("unresolved") };
 }
 
 export interface S8LensSummary {
@@ -55,7 +80,12 @@ export function buildS8LensSummary(db: Database, projectId: string): S8LensSumma
       ? targetJudgementRows(db, scope.target)
       : s3Rows.map(({ attainability: _a, resolution: _r, ...r }) => ({ ...r, resolution: null }));
   }
-  const technical = summarizeTechnicalLens(rows, lens, { subject, brownfield, s9Items: technicalItemVerdictsOf(db, oppId) });
+  const technical = summarizeTechnicalLens(rows, lens, {
+    subject,
+    brownfield,
+    s9Capability: brownfield ? s9CapabilityCoverageOf(db, oppId, s3Rows.map((r) => r.id)) : null,
+    s9Rollups: constituentRollupsOf(db, projectId, selected),
+  });
 
   let financial: FinancialLensSummary;
   const goals = { goal_count: 0, met: 0, missed: 0, hasCase: false };

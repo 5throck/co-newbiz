@@ -6296,33 +6296,6 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/projects/{id}/technical-items:
-    get:
-      operationId: listProjectTechnicalItemVerdicts
-      summary: S9-recorded verdicts for the S8 technical lens items T2-T5 (one per item key; the S8 technical tab derives its items from these).
-      tags:
-        - Deal Review
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    put:
-      operationId: recordProjectTechnicalItemVerdict
-      summary: "Record one T2-T5 verdict (met/caution/unmet + evidence note citing DD findings; analyst+ person-only, audited technical_item.recorded — boundary #2). Sidecar on the opportunity; the lens JSON is untouched."
-      tags:
-        - Deal Review
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/business-case/ev-band/recommend:
     post:
       operationId: recommendProjectEvBand

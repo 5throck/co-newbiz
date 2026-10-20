@@ -161,8 +161,9 @@ describe("technicalLens parse and summary", () => {
   test("a fully judged lens is 충족 or 주의; mismatches counted; Brown Field T6 label", () => {
     const item = (status: string) => ({ status, confirmedBy: "u", confirmedAt: NOW, rationale: "r" });
     const lens = tl.normalizeTechnicalLens({ subjects: { project: { items: { T2: item("met"), T3: item("met"), T4: item("met"), T5: item("met") } } } });
-    // T6 has no input yet: even a full T1-T5 lens is not fully judged
-    expect(tl.summarizeTechnicalLens([row("high", true)], lens).status).toBe("undetermined");
+    // round 4/5: T6 is the pairing progress — once T2-T5 are judged it is judged too, so a
+    // fully judged T1-T5 lens is now fully judged (met here: every item met).
+    expect(tl.summarizeTechnicalLens([row("high", true)], lens).status).toBe("met");
     const withMismatch = tl.normalizeTechnicalLens(LENS);
     expect(tl.summarizeTechnicalLens([], withMismatch, { subject: "target:abc", brownfield: true }).mismatchCount).toBe(1);
     expect(tl.summarizeTechnicalLens([], null, { brownfield: true }).items[5].label).toBe(tl.TECH_ITEM_LABEL_T6_BROWNFIELD);

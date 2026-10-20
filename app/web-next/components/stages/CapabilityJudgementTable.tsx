@@ -132,7 +132,7 @@ const S9_COVERAGE_LABEL: Record<string, { label: string; cls: string }> = {
 };
 const EMPTY_DIRTY: ReadonlySet<string> = new Set();
 
-export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href, note, dirty = EMPTY_DIRTY, judgeHref, judgeLabel = "S5에서 판정", ai, startYearFor, onStartYearChange, s9 }: {
+export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href, note, dirty = EMPTY_DIRTY, judgeHref, judgeLabel = "S5에서 판정", ai, startYearFor, onStartYearChange, s9, showFilter = true }: {
   rows: AttainabilityRowView[];
   drafts: Record<string, JudgementDraft>;
   /** True only on the S5 edit surface; S8 and viewers get no inputs and no dialog. */
@@ -155,12 +155,15 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
   /** S9 capability-dd verdicts by register row id (2026-10-17 round 3): renders the read-only
    *  "S9 검증" column instead of a separate table — one row per capability, one home per fact. */
   s9?: Record<string, CapabilityDdVerdictView>;
+  /** 2026-10-20 round 5: the S8 read-only panel hides the 처리할 것/전체 filter — nothing is
+   *  "processed" in S8 (judgement lives in S5/S7/S9), so every row is shown. */
+  showFilter?: boolean;
 }) {
   const canEdit = editable && !!onSet;
   const counts = filterCounts(rows, dirty);
   const [filter, setFilter] = useState<JudgementFilter>(() => defaultFilter(counts.todo));
   const [editingId, setEditingId] = useState<string | null>(null);
-  const shown = filterRows(rows, filter, dirty);
+  const shown = showFilter ? filterRows(rows, filter, dirty) : rows;
   const shownIds = shown.map((x) => x.id);
   const editing = canEdit && editingId ? rows.find((x) => x.id === editingId) ?? null : null;
   const draftOf = (r: AttainabilityRowView) => drafts[r.id] ?? toJudgementDraft(r);
@@ -173,16 +176,18 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
 
   return (
     <>
-      <div role="tablist" aria-label="필요 역량 보기 필터" className="flex flex-wrap gap-1 mb-2">
-        {(["todo", "all"] as const).map((f) => (
-          <button key={f} type="button" role="tab" aria-selected={filter === f} className={filter === f ? "btn-primary btn-sm" : "btn-ghost btn-sm"} onClick={() => setFilter(f)}>
-            {FILTER_LABEL[f]} ({counts[f]})
-          </button>
-        ))}
-      </div>
+      {showFilter && (
+        <div role="tablist" aria-label="필요 역량 보기 필터" className="flex flex-wrap gap-1 mb-2">
+          {(["todo", "all"] as const).map((f) => (
+            <button key={f} type="button" role="tab" aria-selected={filter === f} className={filter === f ? "btn-primary btn-sm" : "btn-ghost btn-sm"} onClick={() => setFilter(f)}>
+              {FILTER_LABEL[f]} ({counts[f]})
+            </button>
+          ))}
+        </div>
+      )}
       {shown.length === 0 ? (
         <p className="text-[color:var(--muted-fg)] mb-2" data-testid="filter-empty">
-          {filter === "todo" ? "처리할 판정이 없습니다 — 전체에서 확인하세요" : "해당하는 필요 역량이 없습니다."}
+          {showFilter && filter === "todo" ? "처리할 판정이 없습니다 — 전체에서 확인하세요" : "해당하는 필요 역량이 없습니다."}
         </p>
       ) : (
         <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>

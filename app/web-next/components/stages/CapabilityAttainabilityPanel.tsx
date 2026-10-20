@@ -75,11 +75,21 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
           : <>읽기 전용 요약입니다 — 정의는 S3에서, 해소 방식·기대 수준·비용·기간·달성 가능성의 판정과 확정은 S5에서 합니다.
             {editHref && <> <a href={editHref} className="text-[color:var(--accent)] underline font-semibold">S5에서 판정</a></>}</>}
       </p>
-      <SummaryStrip s={view.summary} />
+      {/* 2026-10-20 round 5: for a brownfield project the S9 verdicts ARE the judgement — the
+          S5/S7-based strip (판정 0/7 · 미판정 7) contradicted them on the same screen, so the
+          S9 coverage line replaces it once any S9 verdict exists. */}
+      {isBrownfield && ddVerdicts && ddVerdicts.length > 0 ? (
+        <p className="m-0 mb-2 text-[length:var(--fs-caption)]" aria-label="S9 필요 역량 검증 요약" data-testid="capability-s9-summary">
+          S9 필요 역량 검증 {ddVerdicts.length}/{view.rows.length} · 해소 {ddVerdicts.filter((v) => v.coverage === "resolved").length} · 부분 해소 {ddVerdicts.filter((v) => v.coverage === "partial").length} · 미해소 {ddVerdicts.filter((v) => v.coverage === "unresolved").length}
+          {ddVerdicts.length < view.rows.length && <span className="ml-1 text-[color:var(--muted-fg)]">· 미판정 {view.rows.length - ddVerdicts.length} (S9에서 기록)</span>}
+        </p>
+      ) : (
+        <SummaryStrip s={view.summary} />
+      )}
       {view.rows.length === 0 ? (
         <p className="text-[color:var(--muted-fg)]">S3 필요 역량 레지스터에 행이 없습니다. S3에서 필요 역량을 먼저 정리하세요.</p>
       ) : (
-        <CapabilityJudgementTable rows={view.rows} drafts={drafts} editable={false} s3Href={s3Href} judgeHref={isBrownfield ? s9Href : editHref} judgeLabel={isBrownfield ? "S9에서 판정" : editAt === "S7" ? "S7에서 판정" : "S5에서 판정"} s9={ddVerdicts && ddVerdicts.length > 0 ? s9ByRow : undefined} />
+        <CapabilityJudgementTable rows={view.rows} drafts={drafts} editable={false} showFilter={false} s3Href={s3Href} judgeHref={isBrownfield ? s9Href : editHref} judgeLabel={isBrownfield ? "S9에서 판정" : editAt === "S7" ? "S7에서 판정" : "S5에서 판정"} s9={ddVerdicts && ddVerdicts.length > 0 ? s9ByRow : undefined} />
       )}
       <RemovedCapabilities removed={view.removed_capabilities ?? []} />
     </section>
