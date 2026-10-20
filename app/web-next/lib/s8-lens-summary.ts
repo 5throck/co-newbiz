@@ -11,6 +11,14 @@ import { sourceOpportunityOf } from "./capability-attainability.ts";
 import { buildLensStripView, financialLensStatus, type FinancialLensSummary, type S8LensStripView } from "./s8-lens-status.ts";
 import { buildInvestUncertainty, type InvestUncertaintyView } from "./investment-uncertainty-s8.ts";
 import { PROJECT_SUBJECT, parseTechnicalLens, summarizeTechnicalLens, targetSubject, type TechnicalLensSummary } from "./technical-lens.ts";
+import { parseTechnicalItemVerdicts, type TechnicalItemKey, type TechnicalItemVerdict } from "./technical-item-verdicts.ts";
+
+/** 2026-10-20 round 4: S9-recorded T2-T5 verdicts (sidecar on the opportunity, migration 0157). */
+function technicalItemVerdictsOf(db: Database, oppId: string | null): Partial<Record<TechnicalItemKey, TechnicalItemVerdict>> {
+  if (!oppId) return {};
+  const row = db.query("SELECT technical_item_verdicts_json AS j FROM opportunity WHERE id = ?").get(oppId) as { j: string | null } | null;
+  return Object.fromEntries(parseTechnicalItemVerdicts(row?.j ?? null).map((v) => [v.itemKey, v])) as Partial<Record<TechnicalItemKey, TechnicalItemVerdict>>;
+}
 
 export interface S8LensSummary {
   project_id: string;
@@ -47,7 +55,7 @@ export function buildS8LensSummary(db: Database, projectId: string): S8LensSumma
       ? targetJudgementRows(db, scope.target)
       : s3Rows.map(({ attainability: _a, resolution: _r, ...r }) => ({ ...r, resolution: null }));
   }
-  const technical = summarizeTechnicalLens(rows, lens, { subject, brownfield });
+  const technical = summarizeTechnicalLens(rows, lens, { subject, brownfield, s9Items: technicalItemVerdictsOf(db, oppId) });
 
   let financial: FinancialLensSummary;
   const goals = { goal_count: 0, met: 0, missed: 0, hasCase: false };
