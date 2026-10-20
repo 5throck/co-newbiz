@@ -64,3 +64,14 @@ Long List 후보를 그 역량 갭을 실제로 채울 수 있는지(기술 평�
 ADR-0136 (S3 역량 갭 레지스터 단일화 — 이 ADR의 기술 평가 시딩이
 그 레지스터를 그대로 소비한다), ADR-0081 (chk-target-screening 고정
 체크리스트), ADR-0099 (project_checklist_item_custom/state 원형 패턴).
+
+
+## Addendum (2026-10-20, a) — explicit per-category save, judged/total basis on the score, flow.spec-aligned gate hint
+
+Status at time of writing: Proposed. Direction given by the human decider in chat on 2026-10-20 (S6/S7 evaluation round); acceptance of this addendum text is pending.
+
+1. **Explicit save.** Verdict and weight edits on the target evaluation tab are LOCAL until the person presses the category's `저장` button (bottom-right, after the 항목 추가 row; a pending-changes count and `변경 취소` sit beside it). The previous save-on-every-change behaviour is retired. A visible AI draft's evidence note still rides along at save time, and the bulk `초안 저장` flow is unchanged.
+2. **Score basis on the chip.** The category score chip states `판정 N/M 항목` — the weighted mean covers judged items only (`충족 1 · 부분충족 0.5 · 미충족 0`, `해당없음·예외` excluded, pending not yet counted), so the basis is visible while items remain unjudged. The formula itself is unchanged (re-verified against the database: the earlier `기술 58` was the same formula over fewer judged items).
+3. **Gate hint follows flow.spec.** The S7 `target_screening` kill hint fires only on the spec's kill criterion — no knock-out survivor (no non-excluded candidate). The former proxy ("no candidate has EVERY evaluation item judged") is retired; evaluation completeness is an informational note (candidate names + a pointer to the eval tab), never kill language. The ADR-0171 addendum-b readiness notice/route are removed in the same window.
+
+Honest limits: per-item judgement completeness is still what `eval_summary.complete` means (promotion precondition unchanged); the informational note does not rank candidates.
