@@ -24,7 +24,6 @@ const { ulid } = await import("../../db/lib/ulid.ts");
 const crit = await import("../../app/web-next/lib/brownfield-eval-criteria.ts");
 const bf = await import("../../app/web-next/lib/brownfield-capability-judgement.ts");
 const { buildS8LensSummary } = await import("../../app/web-next/lib/s8-lens-summary.ts");
-const { bfCapabilityCheckLines } = await import("../../app/web-next/lib/gate-brief.ts");
 const { deriveT1 } = await import("../../app/web-next/lib/technical-lens.ts");
 const { runLegacyCopy } = await import("../../scripts/co-newbiz/copy-legacy-bf-capability-judgements.ts");
 const { parseGapRegister, normalizeGapRows } = await import("../../app/web-next/lib/capability-gap.ts");
@@ -190,12 +189,10 @@ describe("S8 reads the selected target's S7 judgements (Brown Field)", () => {
     expect(deriveT1(rows).status).toBe("caution");
   });
 
-  test("the gate brief carries a labeled, per-target S7 capability line that is not an approval condition", () => {
-    const text = bfCapabilityCheckLines(db, oppId);
-    expect(text).toContain("Selected Co");
-    expect(text).toContain("Other Co");
-    expect(text).toContain("승인 조건이 아닙니다");
-    expect(text).toMatch(/확정 \d/);
+  test("2026-10-20 decider: the gate brief no longer carries the S7 per-target capability line (verification lives in S9; S7/S9 unlinked)", () => {
+    const src = read("app/web-next/lib/gate-brief.ts");
+    expect(src).not.toContain("bfCapabilityCheckLines");
+    expect(src).not.toContain("필요 역량 점검(S7");
   });
 });
 

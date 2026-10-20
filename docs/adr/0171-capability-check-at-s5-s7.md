@@ -79,3 +79,13 @@ Status at time of writing: Proposed. Direction given by the human decider in cha
 3. **Consequences for decision 3/4.** The S8 surface remains read-only; the "edit links" of decision 3 point to S9 for Brown Field. Nothing caps a grade or blocks a gate; the dd-gate warning surfaces unrecorded verdicts honestly.
 
 Honest limits: S7 and S9 answer different questions (screening vs verification) and both persist; no reconciliation between a confirmed S7 attainability and an S9 `미해소` is enforced beyond the S8 panel showing both in one cell.
+
+## Addendum (2026-10-20, b) — the S7 per-target 필요 역량 점검 surface is retired; S6/S7 and S9 are not linked
+
+Status at time of writing: Proposed. Direction given by the human decider in chat on 2026-10-20 ("S6/S7 단계에서 S9의 기술적 평가 내용은 제거… S6/S7과 S9는 연결되지 않아도 된다"); acceptance of this addendum text is pending.
+
+1. **What S6/S7 judges.** At target identification/selection the technical evaluation is the per-target criteria list (S3 capabilities seeded as technical criteria plus custom items), scored by a person from the candidates' three-year disclosures, the AI profile and web-search evidence. That list stays as it is.
+2. **What leaves S7.** The per-target 필요 역량 점검 block under 기술적 평가 (the ADR-0171 slice-2 judgement table with its 처리할 것/전체 filter, `TargetCapabilityCheck`) is removed from the target detail page, and the `필요 역량 점검(S7, 최종 후보별)` line leaves the S6/S7 gate brief. Whether the chosen target actually closes the S3 gaps is verified only in S9 (`capability-dd`, addendum a) after the target is decided; S7 and S9 carry no link.
+3. **Kept as legacy.** Stored S7 judgements, the per-target judgement routes and `brownfield-capability-judgement.ts` remain read-only compatibility (the S8 panel falls back to them only when no S9 verdict exists); `GET /api/projects/{id}/capability-attainability` returns `edit_href: null` for Brown Field since no S7 surface exists; the legacy-copy script is unaffected.
+
+Honest limits: decisions 2 (S7 ownership) and 7 (S7 readiness warning) of the original ADR are thereby superseded for Brown Field; no data is deleted.

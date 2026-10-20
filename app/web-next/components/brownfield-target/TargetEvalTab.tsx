@@ -5,7 +5,6 @@ import { isFinancialDataRef, parseRubric, rubricFields } from "../../lib/brownfi
 import { EVAL_CATEGORY_LABEL, VERDICT_KO, EVAL_VERDICTS } from "./constants.ts";
 import type { TargetDetailViewState } from "./useTargetActions.ts";
 import type { EvalItem, EvalCategoryScore } from "./types.ts";
-import { TargetCapabilityCheck } from "./TargetCapabilityCheck.tsx";
 
 export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinancial, proposedCount, pendingTechnical }: { ctx: TargetDetailViewState; evalItems: EvalItem[]; scores: Record<"financial" | "technical", EvalCategoryScore> & { combined: number | null; }; scoreChip: (score: number | null) => string; pendingFinancial: EvalItem[]; proposedCount: number; pendingTechnical: EvalItem[] }) {
   const { detail, loadDetail, profileTab, canAct, draftBusy, draftCategory, evalDraft, busy, setEvalDraft, setDraftCategory, setDraftNote, rubricOpen, setRubricOpen, draftNote, evalBusy, rubricBusy, newCriterionLabel, setNewCriterionLabel, generateEvalDraft, saveDraftVerdicts, setEvalWeight, setEvalVerdict, removeEvalCriterion, saveRubric, addEvalCriterion } = ctx;
@@ -223,16 +222,11 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                       })}
                     </ul>
                   )}
-                  {cat === "technical" && detail && (
-                    <TargetCapabilityCheck
-                      targetId={detail.target.id}
-                      oppId={detail.opportunity.id}
-                      status={detail.target.status}
-                      reconcile={detail.reconcile}
-                      refreshKey={items.map((it) => `${it.id}:${it.state?.status ?? "pending"}:${it.state?.note ?? ""}`).join("|")}
-                      onChanged={loadDetail}
-                    />
-                  )}
+                  {/* 2026-10-20 decider: the per-target 필요 역량 점검 (judgement table with 처리할 것/전체)
+                      left S7 — at S6/S7 the technical evaluation is the criteria above, scored from the
+                      candidates' three-year disclosures, AI profile and web search; whether the chosen
+                      target actually closes the S3 gaps is verified in S9 (capability-dd). S7 and S9
+                      are not linked. */}
                   {canAct && (<div className="flex items-center gap-1">
                     <input
                       aria-label={`${EVAL_CATEGORY_LABEL[cat]} 항목 추가`}

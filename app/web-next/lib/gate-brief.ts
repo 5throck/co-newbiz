@@ -17,7 +17,6 @@ import {
   ATTAINABILITY_GRADE_LABEL, HELD_STATUS_LABEL, NECESSITY_LABEL, NECESSITY_UNSET_LABEL, RESOLUTION_LABEL,
   gapCautions, parseGapRegister, summarizeGap, type CapabilityGapRow,
 } from "./capability-gap.ts";
-import { capabilityReadiness } from "./brownfield-capability-judgement.ts";
 import { attainabilitySummary } from "./capability-attainability.ts";
 import { entryStrategyText } from "./greenfield-entry-strategy.ts";
 import { isStale } from "./capability-linkage.ts";
@@ -210,18 +209,6 @@ function s5Summary(db: Database, oppId: string): string {
   ].filter(Boolean).join("\n") || "S5 역량 평가: 요약 없음";
 }
 
-/** ADR-0171 slice 3: per-target S7 capability check as labeled decision support (never a gate condition). */
-export function bfCapabilityCheckLines(db: Database, oppId: string): string {
-  try {
-    const r = capabilityReadiness(db, oppId);
-    if (r.targets.length === 0) return "";
-    const per = r.targets.map((t) => `- ${t.company_name}: 확정 ${t.confirmed} · 확정 전 ${t.unconfirmed} · 재판정 필요 ${t.stale} · 미판정 ${t.unjudged}건 (총 ${t.total})`);
-    return ["필요 역량 점검(S7, 최종 후보별):", ...per, "참고 정보이며 승인 조건이 아닙니다"].join("\n");
-  } catch {
-    return "";
-  }
-}
-
 function bfSummary(db: Database, oppId: string): string {
   const targets = db
     .query("SELECT company_name, status, exclusion_reason, screening_json FROM brownfield_target WHERE opportunity_id = ? ORDER BY created_at DESC LIMIT 12")
@@ -230,7 +217,8 @@ function bfSummary(db: Database, oppId: string): string {
   return [
     `Long/Short List ${targets.length}건`,
     ...lines,
-    bfCapabilityCheckLines(db, oppId),
+    // 2026-10-20 decider: the S7 per-target capability-check line is gone — capability
+    // verification lives in S9 (capability-dd) and S7/S9 are not linked.
   ].filter(Boolean).join("\n") || "S6/S7 대상: 없음";
 }
 

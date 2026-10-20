@@ -386,13 +386,9 @@ describe("deleting a target and the S8 bridge", () => {
     expect(d.data.evalItems.filter((i: any) => i.category === "technical" && i.source === "seeded").map((i: any) => i.seed_ref ?? i.label)).toBeDefined();
   });
 
-  test("UI source: the S7 check mounts the shared editor on the target routes; S8 panel has no inputs and links to S7", () => {
-    const comp = read("app/web-next/components/brownfield-target/TargetCapabilityCheck.tsx");
-    expect(comp).toContain("CapabilityJudgementEditor");
-    expect(comp).toContain("/api/brownfield/targets/");
-    expect(comp).toContain("\uc20f\ub9ac\uc2a4\ud2b8 \ud6c4 \uc810\uac80"); // long-list targets: disabled note
-    expect(comp).toContain("eval-criteria/reconcile");
-    expect(read("app/web-next/components/brownfield-target/TargetEvalTab.tsx")).toContain("TargetCapabilityCheck");
+  test("UI source (2026-10-20 decider): the S7 per-target capability check is retired — no component, not mounted; S8 panel has no inputs and points at S9", () => {
+    expect(existsSync(join(PROJECT_ROOT, "app/web-next/components/brownfield-target/TargetCapabilityCheck.tsx"))).toBe(false);
+    expect(read("app/web-next/components/brownfield-target/TargetEvalTab.tsx")).not.toContain("TargetCapabilityCheck");
     const s8 = read("app/web-next/components/stages/CapabilityAttainabilityPanel.tsx");
     expect(s8).not.toContain("CapabilityJudgementEditor");
     expect(s8).not.toContain("<input");
