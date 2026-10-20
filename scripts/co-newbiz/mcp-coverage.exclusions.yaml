@@ -18,6 +18,10 @@
 # are absent from its route table), so no HUMAN_ONLY_ROUTES rule is required.
 version: 1
 exclusions:
+  - id: capability-dd-activity
+    kind: activity
+    ref: capability-dd
+    reason: S9 brownfield required-capability verdicts are recorded by a person (boundary #2; design 2026-10-19-brownfield-capability-dd) — no tool lists the activity.
   - id: pmi-kickoff-activity
     kind: activity
     ref: pmi-kickoff

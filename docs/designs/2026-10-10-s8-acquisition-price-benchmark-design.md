@@ -158,3 +158,11 @@ lang_reason: source-material
   3.0×) → NPV p05 1,701억 / p50 2,394억·**IRR 40.0%**(시장 성장 40%),
   과거 기반(자체 CAGR ~15%) IRR 20.0%·BEP 4.2년; 레인보우로보틱스 인수가
   1,024억 → p50 1,997억. 배수·출처는 note와 파라미터 탭에서 추적 가능.
+
+
+## Amendment (2026-10-19, decider) — 밴드 기본 배수·AI 추천·진입/처분 배수 분리
+
+- **밴드 기본 배수**: EV/매출 밴드에 기본 배수가 들어가고, 진입 배수(`initial_investment`의 근거)는 밴드 기본값을 쓴다. 사용자가 `bc.acquisition_ev_revenue`를 핀하면 그 값이 우선한다.
+- **AI 추천**: `POST /api/projects/{id}/business-case/ev-band/recommend`가 기록된 인수 벤치마크에서 밴드 앵커를 **제안**만 한다(프롬프트 `s8.ev_band_recommend`). 적용은 기존 감사 로그가 남는 밴드 POST로 사람이 한다(경계 #2).
+- **진입/처분 분리**: 위 표의 "처분 = 진입과 동일 배수"는 **기본값**으로만 남는다. 처분 배수는 별도 드라이버 `bc.exit_ev_revenue`로 사람이 따로 정할 수 있고, 미확정이면 진입 배수와 같다. 명시적 `bc.initial_investment_ratio`가 있으면 비율 모델이 이기고 인수가(진입·처분) 경로는 꺼진다. note 스탬프 `acq_ev=…x; exit_ev=…x`는 유지.
+- 검증: `business-case-revenue-anchor.test.ts` (g) 재작성(진입·처분 분리), `eval` 호출지 인벤토리에 추천 라우트 등록. CHANGELOG 2026-10-19.

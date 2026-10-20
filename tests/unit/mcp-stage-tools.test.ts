@@ -41,11 +41,13 @@ describe("coverage gate", () => {
   test("mcp-coverage passes: every activity and artifact has a tool, no exclusion gained one", async () => {
     const report = await runCoverage();
     expect(report.errors).toEqual([]);
-    // Pinned on purpose: flow.spec v2.9.0 has 46 activities (v2.8.0: 45 — four
+    // Pinned on purpose: flow.spec v2.10.0 has 47 activities (v2.8.0: 45 — four
     // new S9 activities, ADR-0161 S12 follow-ups; v2.9.0: entry-market-sizing,
-    // ADR-0180). Artifacts 34: v2.9.0 added the S2 required artifact
-    // 진입시장 산정 (stage:S2:2, read via get_entry_market_derivation).
-    expect(report.activities).toBe(46);
+    // ADR-0180; v2.10.0: S9 capability-dd, human-only — design
+    // 2026-10-19-brownfield-capability-dd, excluded in mcp-coverage.exclusions.yaml).
+    // Artifacts 34: v2.9.0 added the S2 required artifact 진입시장 산정
+    // (stage:S2:2, read via get_entry_market_derivation).
+    expect(report.activities).toBe(47);
     expect(report.artifacts).toBe(34);
   });
 

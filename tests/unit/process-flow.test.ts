@@ -129,8 +129,12 @@ describe("process flow spec integrity (ADR-0074)", () => {
       "market-dd:market-intelligence-agent",
       "financing-dd:financing-agent",
       "dd-waiver-review:compliance-officer",
+      "capability-dd:brownfield-agent", // 2026-10-20 (v2.10.0, design 2026-10-19-brownfield-capability-dd): brownfield-only
     ]);
-    for (const a of s9.activities) expect(a.procedure).toEqual(["greenfield-dd", "brownfield-dd"]);
+    for (const a of s9.activities) {
+      if (a.id === "capability-dd") { expect(a.procedure).toEqual(["brownfield-dd"]); continue; } // greenfield answers it at S5
+      expect(a.procedure).toEqual(["greenfield-dd", "brownfield-dd"]);
+    }
     const skillsOf = (id: string) => s9.activities.find((a) => a.id === id)!.skills;
     expect(skillsOf("financial-dd")).toEqual(["quality-of-earnings", "historical-financial-analysis"]);
     expect(skillsOf("hr-dd")).toEqual(["org-readiness-assessment", "talent-pipeline-planning"]);
