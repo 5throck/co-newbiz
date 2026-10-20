@@ -6226,6 +6226,132 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+    post:
+      operationId: recordCompBenchmark
+      summary: Record one job-family benchmark row (analyst+; audited comp_benchmark.recorded; management packages stay batch-fed).
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/capability-dd:
+    get:
+      operationId: listProjectCapabilityDd
+      summary: Brownfield S9 capability verification register — rows from the S3 capability gap register with any recorded person verdicts.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      operationId: recordProjectCapabilityDdVerdict
+      summary: Record one per-capability verdict (coverage resolved/partial/unresolved + evidence note; analyst+ person-only, audited capability_dd.verdict_recorded; the register itself is untouched).
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/risk-assessment:
+    get:
+      operationId: getProjectRiskAssessment
+      summary: Read the heatmap person-override map (item key -> likelihood/impact).
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      operationId: recordProjectRiskAssessment
+      summary: "Record one heatmap item override (analyst+ person-only, audited risk_assessment.recorded — boundary #2; the automatic values stay the defaults)."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/business-case/ev-band/recommend:
+    post:
+      operationId: recommendProjectEvBand
+      summary: "AI-proposed EV/revenue band anchors from the recorded acquisition benchmarks (returns a proposal only — applying goes through the existing audited band POST, boundary #2)."
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/dd-domain-adopt:
+    get:
+      operationId: getProjectDdDomainAdoption
+      summary: Read which industry-tailored proposal domains a person has adopted or restored.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: adoptProjectDdDomain
+      summary: Adopt or restore one tailored-proposal domain (analyst+ person-only, rationale mandatory, audited dd_domain.adopted / dd_domain.reverted).
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: revertProjectDdDomain
+      summary: Restore one adopted domain back to the AI draft (analyst+ person-only, audited dd_domain.reverted).
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/brownfield/{oppId}/target-proposals:
     get:
       operationId: listBrownfieldTargetProposals
@@ -7154,6 +7280,34 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+    put:
+      operationId: updateProjectDdFinding
+      summary: Correct one recorded finding (analyst+ person write; dd_finding.update audit; the register stays append-visible in history via the audit trail).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteProjectDdFinding
+      summary: Remove one mis-recorded finding (analyst+ person write; dd_finding.delete audit keeps the removal traceable for S10/IC).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /api/projects/{id}/dd-checklist/state:
     put:

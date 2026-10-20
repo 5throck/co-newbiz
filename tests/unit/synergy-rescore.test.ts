@@ -10,6 +10,10 @@ import { ulid } from "../../db/lib/ulid.ts";
 
 const TEST_DB_PATH = "db/data/test-synergy-rescore.sqlite";
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
+// Hermetic: the rescore rerun must not dial the real LLM from the dev .env —
+// with `bun test --isolate` this file runs in a fresh env and the rerun made
+// a real ~5s LLM call that timed out. Same guard the other route suites set.
+process.env.CO_NEWBIZ_LLM_PROVIDER = "none";
 for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 
 const { resetDb, getDb } = await import("../../db/client.ts");
