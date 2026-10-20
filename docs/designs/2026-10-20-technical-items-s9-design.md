@@ -26,7 +26,7 @@ S8 기술적 타당성 렌즈(ADR-0169 release 1)는 T2 기술 성숙도(TRL)·T
 ## 3. 범위 밖
 
 - 구성 항목 매핑의 프로젝트별 커스텀(산업 맞춤 제안으로 승인된 커스텀 항목을 T에 귀속) — 후속.
-- 마이그레이션 0157 `technical_item_verdicts_json` 칼럼 정리(미사용·널 허용; 삭제 마이그레이션은 데이터 영향 검토 후).
+- ~~마이그레이션 0157 칼럼 정리~~ — 완료(2026-10-20, DEC-20261020-01): 마이그레이션 0158 `ALTER TABLE opportunity DROP COLUMN technical_item_verdicts_json`로 제거했다.
 
 ## 4. 검증
 
