@@ -947,8 +947,19 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       {tab === "scenarios" && (
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-3" role="note">
           <span className="status-chip status-not-started mr-1"><span aria-hidden="true">ⓘ</span> 역량</span>
-          필요 역량 달성 가능성 판정은{" "}
-          <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("technical")}>기술적 타당성 탭 →</button>
+          {/* 2026-10-19 decider: Brownfield의 필요 역량 판정 주전장은 S9 실사·검증(필요 역량 검증 탭) —
+              S8 기술 탭은 그 결과를 반영하는 읽기 전용 뷰다. */}
+          {!greenfield && targets.length > 0 ? (
+            <>
+              브라운필드 필요 역량 판정은 S9 실사·검증 —{" "}
+              <a href={`/projects/${projectId}/dd`} className="text-[color:var(--accent)] font-bold">필요 역량 검증 탭 →</a>
+            </>
+          ) : (
+            <>
+              필요 역량 달성 가능성 판정은{" "}
+              <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("technical")}>기술적 타당성 탭 →</button>
+            </>
+          )}
         </p>
       )}
       {tab === "scenarios" && (
