@@ -14,6 +14,10 @@ import { resetDb, getDb, type getDb as GetDb } from "../../db/client.ts";
 import { runMigrations } from "../../db/migrate.ts";
 import { ulid } from "../../db/lib/ulid.ts";
 
+// The step-4.5 draft route calls the LLM when one is configured; tests pin the
+// deterministic fallback (same convention as capability-judgement-ai.test.ts).
+process.env.CO_NEWBIZ_LLM_PROVIDER = "none";
+
 const TEST_DB_PATH = "db/data/test-ic-steps.sqlite";
 const NOW = "2026-10-21T10:00:00Z";
 type Db = ReturnType<typeof GetDb>;
@@ -204,8 +208,8 @@ describe("ic-review-steps — statuses, records, and informational gaps", () => 
     const draft = await req(`/api/projects/${projectId}/ic-review-steps`, json({ action: "draft_insight_review" }));
     expect(draft.status).toBe(200);
     const d = (await draft.json()).data as { source: string; draft: { synthesis: string; open_questions: string[] } };
-    expect(["llm", "synthesis"]).toContain(d.source);
-    expect(d.draft.synthesis.length).toBeGreaterThan(10);
+    expect(d.source).toBe("synthesis"); // CO_NEWBIZ_LLM_PROVIDER=none → deterministic fallback, no network
+    expect(d.draft.synthesis).toContain("결정론 폴백");
     // nothing persisted by a draft
     expect((db.query("SELECT COUNT(*) AS c FROM ic_review_step_record WHERE project_id = ?").get(projectId) as { c: number }).c).toBe(before.c);
     expect((await req(`/api/projects/${projectId}/ic-review-steps`, json({ action: "draft_insight_review" }, viewerCookie))).status).toBe(403);
