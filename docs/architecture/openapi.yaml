@@ -6034,6 +6034,36 @@ paths:
           $ref: '#/components/responses/NotFound'
         '201':
           $ref: '#/components/responses/Created'
+    put:
+      operationId: updateProjectIncentive
+      summary: "Change an incentive's direction (prospective ↔ granted) — analyst+, audited incentive.direction_changed."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteProjectIncentive
+      summary: "Remove one incentive (?id=) — hard delete with an audit row (incentive.deleted); analyst+."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/sites:
     get:
       operationId: listProjectSites
@@ -6065,6 +6095,20 @@ paths:
           $ref: '#/components/responses/NotFound'
         '201':
           $ref: '#/components/responses/Created'
+    delete:
+      operationId: deleteProjectSite
+      summary: "Remove one site candidate (?id=) — hard delete with an audit row (site.deleted); analyst+."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/permits:
     get:
       operationId: listProjectPermits
@@ -6096,6 +6140,38 @@ paths:
           $ref: '#/components/responses/NotFound'
         '201':
           $ref: '#/components/responses/Created'
+    put:
+      operationId: updateProjectPermitOrCertification
+      summary: "Change a tracked permit/certification's status ({kind, id, status}) — analyst+, audited {kind}.status_changed."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteProjectPermitOrCertification
+      summary: "Remove one tracked permit/certification (?kind=&id=) — critical-path edges cleaned first, audit {kind}.deleted; analyst+."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/debt:
     get:
       operationId: listProjectDebt
@@ -6673,6 +6749,110 @@ paths:
           $ref: '#/components/responses/Ok'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/milestones:
+    get:
+      operationId: listProjectMilestones
+      summary: "The person-managed milestone register (migration 0167) with derived status (done/overdue/due_soon/planned) and a summary; ?summary=1 returns the counts only (sidebar badge)."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createProjectMilestone
+      summary: "Create one milestone {title, category, due_date, owner?, notes?} — analyst+, audited project_milestone.created."
+      tags:
+        - Deal Review
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/milestones/import-baseline:
+    post:
+      operationId: importProjectMilestonesFromBaseline
+      summary: "Import the confirmed greenfield execution baseline's permit/certification milestones (idempotent by title) — analyst+, audited through the create path."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/milestones/{milestoneId}:
+    put:
+      operationId: updateProjectMilestone
+      summary: "Update one milestone (fields and/or the done toggle) — analyst+, audited project_milestone.updated."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteProjectMilestone
+      summary: "Remove one milestone — hard delete with an audit row (project_milestone.deleted); analyst+."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/reports/{snapshotId}:
+    get:
+      operationId: getProjectReportSnapshot
+      summary: "One report snapshot's full markdown (archived snapshots stay readable)."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: archiveProjectReportSnapshot
+      summary: "SOFT delete — sets archived_at so the history list hides the snapshot while the row and its render files stay auditable; analyst+, audited report_snapshot.archived."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':

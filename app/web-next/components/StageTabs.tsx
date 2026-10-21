@@ -82,6 +82,16 @@ function StageTabsInner({ projectId }: { projectId: string }) {
   const baseGroup: StageTabGroup | null = seg === null ? null : groupForSegment(seg);
   const track = useProjectTrack(projectId, baseGroup?.stage === "S8");
   const pmiApplies = useProjectPmiApplies(projectId, baseGroup?.stage === "S12");
+  // Milestone badge for the common link (2026-10-21 decider: the schedule is
+  // managed from the sidebar). Summary-only fetch; failures leave the badge off.
+  const [milestoneBadge, setMilestoneBadge] = useState<{ due_soon: number; overdue: number; total: number } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    api.get<{ summary: { due_soon: number; overdue: number; total: number } }>(`/api/projects/${encodeURIComponent(projectId)}/milestones?summary=1`)
+      .then((r) => { if (alive) setMilestoneBadge(r.data.summary); })
+      .catch(() => { if (alive) setMilestoneBadge({ due_soon: 0, overdue: 0, total: 0 }); });
+    return () => { alive = false; };
+  }, [projectId]);
   // The PMI tab is removed from the DOM when PMI does not apply; PMI-applicable projects get the same group object.
   const pmiGroup: StageTabGroup | null = baseGroup && pmiApplies === false
     ? (stageTabGroupsFor({ pmiApplies: false }).find((g) => g.stage === baseGroup.stage) ?? baseGroup)
@@ -184,10 +194,13 @@ function StageTabsInner({ projectId }: { projectId: string }) {
             )}
           </span>
         )}
-        {/* Project-common destinations (2026-10-21 decider) — the charter is one click away from every stage. */}
+        {/* Project-common destinations (2026-10-21 decider) — one click from every stage. */}
         <span className="stage-tab-more ml-auto" role="presentation" data-testid="project-common-tabs">
           {PROJECT_COMMON_TABS.map((t) => {
             const active = seg === t.seg;
+            const badge = t.seg === "/milestones" && milestoneBadge && milestoneBadge.due_soon + milestoneBadge.overdue > 0
+              ? { n: milestoneBadge.due_soon + milestoneBadge.overdue, overdue: milestoneBadge.overdue }
+              : null;
             return (
               <Link
                 key={t.seg}
@@ -195,9 +208,14 @@ function StageTabsInner({ projectId }: { projectId: string }) {
                 data-tab-item
                 aria-current={active ? "page" : undefined}
                 className={`stage-tab${active ? " stage-tab-active" : ""}`}
-                title="프로젝트 공통 — 모든 단계에서 열 수 있습니다 (S8 승격 시 생성, S11에서 기준선 확정)"
+                title="프로젝트 공통 — 모든 단계에서 열 수 있습니다"
               >
                 {t.label}
+                {badge && (
+                  <span className={`status-chip ml-1 ${badge.overdue > 0 ? "status-red" : "status-amber"}`} data-testid="milestone-badge">
+                    {badge.overdue > 0 ? `지연 ${badge.overdue}` : ""}{badge.overdue > 0 && badge.n > badge.overdue ? " · " : ""}{badge.n > badge.overdue ? `임박 ${badge.n - badge.overdue}` : ""}
+                  </span>
+                )}
               </Link>
             );
           })}

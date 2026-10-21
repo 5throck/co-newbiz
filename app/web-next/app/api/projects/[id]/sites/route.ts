@@ -51,3 +51,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   appendAudit(getDb(), { actor: auth.auth.userId, action: "site.create", target: `${id}:${row.id}`, now });
   return ok({ site: row }, 201);
 }
+
+// DELETE ?id= — remove a site candidate (2026-10-21: the register had no
+// lifecycle at all — a mistyped candidate was permanent). Hard delete with an
+// audit row, the financing-entry pattern; analyst+, members only.
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const auth = authenticate(request);
+  if (!auth.ok) return auth.response;
+  if (auth.auth.role === "viewer") return forbidden("role_required", "부지 삭제는 analyst 역할 이상이어야 합니다.");
+  const { id } = await params;
+  if (!visibleProject(auth.auth, id)) return notFound();
+  const siteId = new URL(request.url).searchParams.get("id") ?? "";
+  const row = getDb().query("SELECT id FROM site WHERE id = ? AND project_id = ?").get(siteId, id) as { id: string } | undefined;
+  if (!row) return notFound();
+  const now = new Date().toISOString();
+  getDb().run("DELETE FROM site WHERE id = ?", [siteId]);
+  appendAudit(getDb(), { actor: auth.auth.userId, action: "site.deleted", target: `${id}:${siteId}`, now });
+  return ok({ id: siteId }, 200);
+}

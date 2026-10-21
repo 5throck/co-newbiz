@@ -279,6 +279,109 @@ describe("review claim acks + project-gate confirmation snapshot (ADR-0182 §5 a
   });
 });
 
+describe("S10 register lifecycle — delete + status change (2026-10-21 decider)", () => {
+  test("incentives: create two, delete one, direction change, audit; viewer 403", async () => {
+    const a = await req(`/api/projects/${projectId}/incentives`, json(analystCookie, { program_name: "보조금 A", npv_value: 5, evidence_ref: "교부결정" }));
+    const b = await req(`/api/projects/${projectId}/incentives`, json(analystCookie, { program_name: "보조금 B", npv_value: 7 }));
+    expect(a.status).toBe(201);
+    expect(b.status).toBe(201);
+    const idA = ((await a.json()).data as { id: string }).id;
+    expect((await req(`/api/projects/${projectId}/incentives`, json(analystCookie, { id: idA, direction: "granted" }, "PUT"))).status).toBe(200);
+    expect((await req(`/api/projects/${projectId}/incentives`, json(viewerCookie, { id: idA, direction: "granted" }, "PUT"))).status).toBe(403);
+    expect((await req(`/api/projects/${projectId}/incentives?id=${idA}`, { method: "DELETE", headers: { cookie: viewerCookie } })).status).toBe(403);
+    expect((await req(`/api/projects/${projectId}/incentives?id=${idA}`, { method: "DELETE", headers: { cookie: analystCookie } })).status).toBe(200);
+    const list = await req(`/api/projects/${projectId}/incentives`, { headers: { cookie: analystCookie } });
+    const rows = ((await list.json()).data as { incentives: Array<{ program_name: string; direction: string }> }).incentives;
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ program_name: "보조금 B" });
+    expect(count("SELECT COUNT(*) AS c FROM audit_log WHERE action IN ('incentive.deleted','incentive.direction_changed')")).toBe(2);
+  });
+
+  test("permits: create, status change, delete (critical-path edges cleaned), certifications likewise", async () => {
+    const p = await req(`/api/projects/${projectId}/permits`, json(analystCookie, { kind: "permit", name: "건축허가" }));
+    const pid = ((await p.json()).data as { id: string }).id;
+    db.run("INSERT INTO permit_edge (from_permit_id, to_permit_id) VALUES (?,?)", [pid, pid]);
+    expect((await req(`/api/projects/${projectId}/permits`, json(analystCookie, { kind: "permit", id: pid, status: "submitted" }, "PUT"))).status).toBe(400);
+    expect((await req(`/api/projects/${projectId}/permits`, json(analystCookie, { kind: "permit", id: pid, status: "in_progress" }, "PUT"))).status).toBe(200);
+    expect((await req(`/api/projects/${projectId}/permits?kind=permit&id=${pid}`, { method: "DELETE", headers: { cookie: analystCookie } })).status).toBe(200);
+    expect(count("SELECT COUNT(*) AS c FROM permit WHERE project_id = ? AND id = ?", projectId, pid)).toBe(0);
+    expect(count("SELECT COUNT(*) AS c FROM permit_edge WHERE from_permit_id = ?", pid)).toBe(0);
+    const c = await req(`/api/projects/${projectId}/permits`, json(analystCookie, { kind: "certification", name: "ISO 9001" }));
+    const cid = ((await c.json()).data as { id: string }).id;
+    expect((await req(`/api/projects/${projectId}/permits`, json(analystCookie, { kind: "certification", id: cid, status: "granted" }, "PUT"))).status).toBe(200);
+    expect((await req(`/api/projects/${projectId}/permits?kind=certification&id=${cid}`, { method: "DELETE", headers: { cookie: analystCookie } })).status).toBe(200);
+    expect(count("SELECT COUNT(*) AS c FROM certification WHERE project_id = ? AND id = ?", projectId, cid)).toBe(0);
+    expect(count("SELECT COUNT(*) AS c FROM audit_log WHERE action LIKE 'permit.status_changed' OR action LIKE 'certification.%'")).toBeGreaterThanOrEqual(2);
+  });
+
+  test("sites: create two, delete one; the other survives", async () => {
+    const a = await req(`/api/projects/${projectId}/sites`, json(analystCookie, { name: "부지 A", infra_score: 80 }));
+    const b = await req(`/api/projects/${projectId}/sites`, json(analystCookie, { name: "부지 B", infra_score: 60 }));
+    expect(a.status).toBe(201);
+    expect(b.status).toBe(201);
+    const idA = ((await a.json()).data.site as { id: string }).id;
+    expect((await req(`/api/projects/${projectId}/sites?id=${idA}`, { method: "DELETE", headers: { cookie: analystCookie } })).status).toBe(200);
+    const list = await req(`/api/projects/${projectId}/sites`, { headers: { cookie: analystCookie } });
+    const rows = ((await list.json()).data as { sites: Array<{ name: string }> }).sites;
+    expect(rows.map((r) => r.name)).toEqual(["부지 B"]);
+    expect(count("SELECT COUNT(*) AS c FROM audit_log WHERE action = 'site.deleted'")).toBe(1);
+  });
+});
+
+describe("report snapshot lifecycle — body reopen + archive (2026-10-21 decider)", () => {
+  let sid = "";
+  test("save (no render) → single GET returns markdown → archive hides it from the list, ?archived=1 surfaces it", async () => {
+    const save = await req(`/api/projects/${projectId}/reports`, json(analystCookie, { title: "초안 1", content_md: "# 초안\n\n내용", formats: [] }));
+    expect(save.status).toBe(201);
+    sid = ((await save.json()).data as { snapshot: { id: string } }).snapshot.id;
+    const one = await req(`/api/projects/${projectId}/reports/${sid}`, { headers: { cookie: analystCookie } });
+    expect(one.status).toBe(200);
+    expect(((await one.json()).data as { content_md: string }).content_md).toContain("# 초안");
+    let list = await req(`/api/projects/${projectId}/reports`, { headers: { cookie: analystCookie } });
+    expect(((await list.json()).data as { reports: unknown[] }).reports).toHaveLength(1);
+    expect((await req(`/api/projects/${projectId}/reports/${sid}`, { method: "DELETE", headers: { cookie: viewerCookie } })).status).toBe(403);
+    expect((await req(`/api/projects/${projectId}/reports/${sid}`, { method: "DELETE", headers: { cookie: analystCookie } })).status).toBe(200);
+    list = await req(`/api/projects/${projectId}/reports`, { headers: { cookie: analystCookie } });
+    expect(((await list.json()).data as { reports: unknown[] }).reports).toHaveLength(0);
+    list = await req(`/api/projects/${projectId}/reports?archived=1`, { headers: { cookie: analystCookie } });
+    const archived = ((await list.json()).data as { reports: Array<{ id: string; archived_at: string | null }> }).reports;
+    expect(archived.find((r) => r.id === sid)?.archived_at).toBeTruthy();
+    expect(count("SELECT COUNT(*) AS c FROM audit_log WHERE action = 'report_snapshot.archived'")).toBe(1);
+  });
+});
+
+describe("milestones — person-managed schedule (2026-10-21 decider)", () => {
+  test("create → derived status → done toggle → delete; summary counts; viewer 403; no confirmed baseline → import 400", async () => {
+    expect((await req(`/api/projects/${projectId}/milestones?summary=1`, { headers: { cookie: analystCookie } })).status).toBe(200);
+    expect((await req(`/api/projects/${projectId}/milestones`, json(viewerCookie, { title: "x", due_date: "2027-03-01" }))).status).toBe(403);
+    expect((await req(`/api/projects/${projectId}/milestones`, json(analystCookie, { title: "잘못된 기한", due_date: "2027-3-1" }))).status).toBe(400);
+    const m = await req(`/api/projects/${projectId}/milestones`, json(analystCookie, { title: "상위 고객 계약 갱신", category: "contract", due_date: "2027-01-10", owner: "영업" }));
+    expect(m.status).toBe(201);
+    const mid = ((await m.json()).data as { id: string }).id;
+    let list = await req(`/api/projects/${projectId}/milestones`, { headers: { cookie: analystCookie } });
+    let data = (await list.json()).data as { milestones: Array<{ id: string; status: string; days_to_due: number | null }>; summary: { total: number; overdue: number; due_soon: number } };
+    const row = data.milestones.find((x) => x.id === mid)!;
+    expect(["overdue", "due_soon", "planned"]).toContain(row.status);
+    expect(row.days_to_due).not.toBeNull();
+    expect(data.summary.total).toBe(1);
+
+    expect((await req(`/api/projects/${projectId}/milestones/${mid}`, json(analystCookie, { done: true }, "PUT"))).status).toBe(200);
+    list = await req(`/api/projects/${projectId}/milestones`, { headers: { cookie: analystCookie } });
+    data = (await list.json()).data as typeof data;
+    expect(data.milestones.find((x) => x.id === mid)!.status).toBe("done");
+    expect(data.summary.done).toBe(1);
+
+    // import: no confirmed baseline → 400 with guidance (idempotent source stays empty)
+    const imp = await req(`/api/projects/${projectId}/milestones/import-baseline`, { method: "POST", headers: { cookie: analystCookie } });
+    expect(imp.status).toBe(400);
+    expect(((await imp.json()) as { error: { message: string } }).error.message).toContain("실행 기준선");
+
+    expect((await req(`/api/projects/${projectId}/milestones/${mid}`, { method: "DELETE", headers: { cookie: analystCookie } })).status).toBe(200);
+    expect((await req(`/api/projects/${projectId}/milestones/${mid}`, { method: "DELETE", headers: { cookie: analystCookie } })).status).toBe(404);
+    expect(count("SELECT COUNT(*) AS c FROM project_milestone WHERE project_id = ?", projectId)).toBe(0);
+  });
+});
+
 describe("confidence grade adjustment proposals — proposed, human-approved, cap only tightens", () => {
   let proposalId = "";
 

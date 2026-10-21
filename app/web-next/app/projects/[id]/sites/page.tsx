@@ -5,9 +5,10 @@ import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
 import { ColGroup, PageState, useToast } from "../../../../components/ui.tsx";
+import { useConfirm } from "../../../../components/crud.tsx";
 
 // 부지 비교 8열 — 부지명·지역에 여유, 점수 열은 균등하게 좁게.
-const SITE_COL_PCT = [16, 14, 11, 11, 11, 13, 12, 12] as const;
+const SITE_COL_PCT = [16, 13, 10, 10, 10, 12, 11, 10, 8] as const;
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
 
@@ -24,6 +25,20 @@ function SitesView() {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", region_code: "", infra_score: "", logistics_score: "", labor_score: "", permit_lead_time_days: "", total_score: "" });
   const [busy, setBusy] = useState(false);
+  const { confirm, confirmDialog } = useConfirm();
+
+  // 2026-10-21 lifecycle — 후보 삭제 (잘못 입력한 행이 영구 잔존하지 않도록).
+  function remove(r: Row) {
+    confirm("부지 후보 삭제", () => {
+      void (async () => {
+        try {
+          await api.delete(`/api/projects/${encodeURIComponent(id)}/sites?id=${encodeURIComponent(r.id)}`);
+          toast("삭제했습니다 — 감사 로그에 남습니다.");
+          load();
+        } catch (e) { toast(e instanceof Error ? `삭제 실패: ${e.message}` : "삭제 실패"); }
+      })();
+    }, { body: `"${r.name}" 후보를 삭제합니다. 삭제는 감사 로그에 기록됩니다.`, confirmLabel: "삭제" });
+  }
 
   const load = useCallback(() => {
     api.get<{ sites: Row[] }>(`/api/projects/${encodeURIComponent(id)}/sites`)
@@ -64,7 +79,7 @@ function SitesView() {
             <table className="data-table table-fixed-pct tmin-56" aria-label="부지 비교">
               <caption className="sr-only">부지 비교</caption>
               <ColGroup widths={SITE_COL_PCT} />
-              <thead><tr><th>부지</th><th>지역</th><th className="col-num">인프라</th><th className="col-num">물류</th><th className="col-num">노동력</th><th className="col-num">인허가(일)</th><th className="col-num">총점</th><th>순위</th></tr></thead>
+              <thead><tr><th>부지</th><th>지역</th><th className="col-num">인프라</th><th className="col-num">물류</th><th className="col-num">노동력</th><th className="col-num">인허가(일)</th><th className="col-num">총점</th><th>순위</th><th>관리</th></tr></thead>
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id}>
@@ -76,6 +91,7 @@ function SitesView() {
                     <td className="col-num tabular-nums">{r.permit_lead_time_days ?? "—"}</td>
                     <td className="col-num tabular-nums font-semibold">{r.total_score ?? "—"}</td>
                     <td>{r.rank ? <span className="status-chip status-green">#{r.rank}</span> : "—"}</td>
+                    <td>{canAct && <button type="button" className="btn-danger btn-sm" onClick={() => remove(r)} title="이 후보를 삭제합니다 — 감사 로그에 기록됩니다">삭제</button>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -101,6 +117,7 @@ function SitesView() {
           </form>
         </section>
       )}
+      {confirmDialog}
     </main>
   );
 }

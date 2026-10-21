@@ -8,6 +8,7 @@ import { fmtNpvInteger } from "../../../../lib/npv-format.ts";
 import { PageState, useToast } from "../../../../components/ui.tsx";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
+import { useConfirm } from "../../../../components/crud.tsx";
 
 // 인센티브·클로백 (incentive-agent) — Wave 0 REST B3. 수혜 예정/확정 인센티브와
 // 클로백 조건을 관리하고 클로백 추정액은 S10 자금조달과 대조된다.
@@ -26,6 +27,27 @@ function IncentivesView() {
   const [form, setForm] = useState({ program_name: "", grantor: "", npv_value: "", clawback_rule: "", direction: "prospective", evidence_ref: "" });
   const [busy, setBusy] = useState(false);
   const [pushBusy, setPushBusy] = useState<string | null>(null);
+  const { confirm, confirmDialog } = useConfirm();
+
+  // 2026-10-21 lifecycle — 방향 전환(prospective↔granted)·삭제.
+  async function setDirection(r: Row, direction: string) {
+    try {
+      await api.put(`/api/projects/${encodeURIComponent(id)}/incentives`, { id: r.id, direction });
+      toast(`방향을 ${direction === "granted" ? "확정" : "수혜 예정"}으로 변경했습니다.`);
+      load();
+    } catch (e) { toast(e instanceof Error ? `변경 실패: ${e.message}` : "변경 실패"); }
+  }
+  function remove(r: Row) {
+    confirm("인센티브 삭제", () => {
+      void (async () => {
+        try {
+          await api.delete(`/api/projects/${encodeURIComponent(id)}/incentives?id=${encodeURIComponent(r.id)}`);
+          toast("삭제했습니다 — 감사 로그에 남습니다.");
+          load();
+        } catch (e) { toast(e instanceof Error ? `삭제 실패: ${e.message}` : "삭제 실패"); }
+      })();
+    }, { body: `"${r.program_name ?? "프로그램"}" 인센티브를 삭제합니다. 삭제는 감사 로그에 기록됩니다.`, confirmLabel: "삭제" });
+  }
 
   const load = useCallback(() => {
     api.get<{ incentives: Row[] }>(`/api/projects/${encodeURIComponent(id)}/incentives`)
@@ -86,13 +108,17 @@ function IncentivesView() {
           <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
             <table className="data-table" aria-label="인센티브">
               <caption className="sr-only">인센티브</caption>
-              <thead><tr><th>프로그램</th><th>부여기관</th><th>방향</th><th className="col-num">NPV</th><th>클로백 조건</th><th>적격 증빙 · 자금 조달</th></tr></thead>
+              <thead><tr><th>프로그램</th><th>부여기관</th><th>방향</th><th className="col-num">NPV</th><th>클로백 조건</th><th>적격 증빙 · 자금 조달</th><th>관리</th></tr></thead>
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id}>
                     <td className="font-semibold">{r.program_name ?? "—"}</td>
                     <td>{r.grantor ?? "—"}</td>
-                    <td><span className={`status-chip ${r.direction === "granted" ? "status-green" : "status-amber"}`}>{r.direction === "granted" ? "확정" : "수혜 예정"}</span></td>
+                    <td>{canAct ? (
+                        <select aria-label={`${r.program_name ?? "프로그램"} 방향`} className="sizing-new-input sizing-new-input-sm" value={r.direction} onChange={(e) => void setDirection(r, e.target.value)}>
+                          <option value="prospective">수혜 예정</option><option value="granted">확정</option>
+                        </select>
+                      ) : <span className={`status-chip ${r.direction === "granted" ? "status-green" : "status-amber"}`}>{r.direction === "granted" ? "확정" : "수혜 예정"}</span>}</td>
                     <td className="col-num tabular-nums">{r.npv_value != null ? `${fmtNpvInteger(r.npv_value)}억` : "—"}</td>
                     <td className="text-[length:var(--fs-caption)]">{r.clawback_rule ?? "—"}</td>
                     <td className="text-[length:var(--fs-caption)]">
@@ -103,6 +129,7 @@ function IncentivesView() {
                           onClick={() => void pushToFinancing(r)}>→ 자금 조달</button>
                       )}
                     </td>
+                    <td>{canAct && <button type="button" className="btn-danger btn-sm" onClick={() => remove(r)}>삭제</button>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -130,6 +157,7 @@ function IncentivesView() {
           </form>
         </section>
       )}
+      {confirmDialog}
     </main>
   );
 }

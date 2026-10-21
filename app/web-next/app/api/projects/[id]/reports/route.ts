@@ -54,9 +54,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const project = visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true });
   if (!project) return notFound();
   const db = getDb();
+  // 2026-10-21: archived (soft-deleted) snapshots are hidden by default; ?archived=1 surfaces them.
+  const includeArchived = new URL(request.url).searchParams.get("archived") === "1";
   const rows = db.query(
-    `SELECT id, project_id, title, content_md, created_by, created_at
-     FROM report_snapshot WHERE project_id = ? ORDER BY created_at DESC, id DESC`
+    `SELECT id, project_id, title, content_md, created_by, created_at, archived_at
+     FROM report_snapshot WHERE project_id = ? ${includeArchived ? "" : "AND archived_at IS NULL"}
+     ORDER BY created_at DESC, id DESC`
   ).all(id) as Array<{ id: string }>;
   // ADR-0116 Phase 6: rendered files are surfaced next to their snapshot so
   // the UI can offer downloads without touching the filesystem itself.

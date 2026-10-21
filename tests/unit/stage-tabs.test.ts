@@ -121,11 +121,20 @@ describe("stage tabs", () => {
     expect(s9.more.filter((t) => !t.hidden).map((t) => t.seg)).toEqual(["/risk-heatmap"]);
   });
 
-  test("(2026-10-21 decider) the charter is a project-common tab with its S11 home", () => {
+  test("(2026-10-21 decider) the charter and the milestone register are project-common tabs", () => {
     expect(groupForSegment("/charter")?.stage).toBe("S11");
     const s12 = STAGE_TAB_GROUPS.find((g) => g.stage === "S12")!;
     expect([...s12.tabs, ...s12.more].map((t) => t.seg)).not.toContain("/charter");
-    expect(PROJECT_COMMON_TABS).toEqual([{ seg: "/charter", label: "추진계획(차터)" }]);
+    expect(PROJECT_COMMON_TABS).toEqual([
+      { seg: "/charter", label: "추진계획(차터)" },
+      { seg: "/milestones", label: "마일스톤" },
+    ]);
+  });
+
+  test("(2026-10-21) the milestone register's home is S12 (post-management planning), reached from the common link", () => {
+    expect(groupForSegment("/milestones")?.stage).toBe("S12");
+    const s12 = STAGE_TAB_GROUPS.find((g) => g.stage === "S12")!;
+    expect(s12.more.find((t) => t.seg === "/milestones")?.hidden).toBe(true);
   });
 
   test("PMI stays a listed S12 tab only when applicable (ADR-0161); non-applicable projects lose it", () => {

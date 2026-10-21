@@ -33,9 +33,14 @@ export interface StageTabDef {
  * Project-common destinations (2026-10-21 decider): shown on every stage's tab
  * bar regardless of the active stage. The charter (추진계획) is authored from
  * S8 promotion onward and confirmed in S11 (flow.spec `charter-baseline`), so it
- * lives with S11 for the rail but is one click away from any stage.
+ * lives with S11 for the rail but is one click away from any stage. The
+ * milestone register (추진 일정) is likewise stage-spanning — S8 promotion to
+ * S12 post-management, with its S12 home.
  */
-export const PROJECT_COMMON_TABS: StageTabDef[] = [{ seg: "/charter", label: "추진계획(차터)" }];
+export const PROJECT_COMMON_TABS: StageTabDef[] = [
+  { seg: "/charter", label: "추진계획(차터)" },
+  { seg: "/milestones", label: "마일스톤" },
+];
 
 export interface StageTabGroup {
   stage: ProjectStageId;
@@ -129,6 +134,8 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
       { seg: "/timeline", label: "타임라인·SLA" },
       // 2026-10-21 decider: S8 forecast vs S12 actuals belongs with the actuals (ADR-0123 #3 addendum).
       { seg: "/backtest", label: "백테스트" },
+      // Milestone register home (post-management planning); reached from the common link on every stage.
+      { seg: "/milestones", label: "마일스톤", hidden: true },
     ],
   },
 ];
