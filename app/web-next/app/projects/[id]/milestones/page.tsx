@@ -9,7 +9,7 @@ import { PageState, useToast } from "../../../../components/ui.tsx";
 import { useConfirm } from "../../../../components/crud.tsx";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
-import { DUE_SOON_DAYS, type MilestoneCategory, type MilestoneStatus, type MilestoneView } from "../../../../lib/milestones.ts";
+import { DUE_SOON_DAYS, type MilestoneCategory, type MilestoneStatus, type MilestoneView } from "../../../../lib/milestone-view.ts";
 
 // 프로젝트 마일스톤 (2026-10-21, migration 0167) — S12 일정관리의 사람 전용
 // 원장. 모든 단계 바의 공통 링크로 도달한다(프로젝트 공통). 상태는 기한·완료일에서
@@ -41,6 +41,36 @@ function MilestonesView() {
   const [form, setForm] = useState({ title: "", category: "custom", due_date: "", owner: "", notes: "" });
   const [busy, setBusy] = useState(false);
   const [importing, setImporting] = useState(false);
+  // AI 추천 (제안 전용 — 등록은 사람이 항목별로 실행, 감사 기록)
+  const [suggestions, setSuggestions] = useState<Array<{ title: string; category: MilestoneCategory; due_date: string; reason: string }> | null>(null);
+  const [suggestBusy, setSuggestBusy] = useState(false);
+
+  async function suggestMilestones() {
+    if (suggestBusy) return;
+    setSuggestBusy(true);
+    try {
+      const r = await api.post<{ source: string; note: string; suggestions: Array<{ title: string; category: MilestoneCategory; due_date: string; reason: string }> }>(
+        `/api/projects/${encodeURIComponent(id)}/milestones/suggest`, {},
+      );
+      setSuggestions(r.data.suggestions);
+      toast(r.data.source === "llm" ? "AI 추천 마일스톤을 받았습니다 — 검토 후 추가하세요." : "LLM 미구성 — 트랙 기본 추천입니다.");
+    } catch (e) {
+      toast(e instanceof Error ? `추천 실패: ${e.message}` : "추천 실패");
+    } finally {
+      setSuggestBusy(false);
+    }
+  }
+
+  async function addSuggestion(sg: { title: string; category: MilestoneCategory; due_date: string }) {
+    try {
+      await api.post(`/api/projects/${encodeURIComponent(id)}/milestones`, { title: sg.title, category: sg.category, due_date: sg.due_date });
+      toast(`"${sg.title}" 마일스톤을 등록했습니다.`);
+      setSuggestions((cur) => (cur ? cur.filter((x) => x.title !== sg.title) : cur));
+      load();
+    } catch (e) {
+      toast(e instanceof Error ? `등록 실패: ${e.message}` : "등록 실패");
+    }
+  }
 
   const load = useCallback(() => {
     api.get<{ milestones: MilestoneView[]; summary: typeof summary }>(`/api/projects/${encodeURIComponent(id)}/milestones`)
@@ -192,6 +222,22 @@ function MilestonesView() {
             <label className="text-[length:var(--fs-caption)] block mt-2"><span className="block mb-1">메모</span>
               <input className="sizing-new-input w-full" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></label>
           </form>
+          <div className="flex items-center gap-2 mt-2">
+            <button type="button" className="btn-ghost btn-sm" disabled={suggestBusy}
+              title="트랙·채택 사업 케이스를 근거로 마일스톤 4~7건을 AI가 추천합니다 — 제안 전용이며 등록은 사람이 실행합니다"
+              onClick={() => void suggestMilestones()}>{suggestBusy ? "추천 생성 중..." : "🤖 AI 추천 마일스톤 보기"}</button>
+          </div>
+          {suggestions && suggestions.length > 0 && (
+            <ul className="sizing-note-list mt-1" aria-label="AI 추천 마일스톤" data-testid="milestone-suggestions">
+              {suggestions.map((sg) => (
+                <li key={sg.title}>
+                  <strong>{sg.title}</strong>
+                  <span className="note ml-1">{CATEGORY_LABEL[sg.category] ?? sg.category} · 기한 {sg.due_date} · {sg.reason}</span>
+                  {canAct && <button type="button" className="btn-ghost btn-sm ml-2" onClick={() => void addSuggestion(sg)}>추가</button>}
+                </li>
+              ))}
+            </ul>
+          )}
           {baselineReady && (
             <div className="flex items-center gap-2 mt-2">
               <button type="button" className="btn-ghost btn-sm" disabled={importing}

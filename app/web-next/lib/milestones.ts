@@ -16,12 +16,23 @@ import { latestConfirmedBaseline } from "./greenfield-execution.ts";
 
 type Db = ReturnType<typeof getDb>;
 
-export const MILESTONE_CATEGORIES = ["permit", "certification", "capex", "contract", "custom"] as const;
-export type MilestoneCategory = (typeof MILESTONE_CATEGORIES)[number];
-export const DUE_SOON_DAYS = 7;
+// Client-safe constants/types live in lib/milestone-view.ts (SSOT); this server
+// module re-exports them so existing server-side imports keep working.
+export {
+  MILESTONE_CATEGORIES,
+  DUE_SOON_DAYS,
+} from "./milestone-view.ts";
+export type {
+  MilestoneCategory,
+  MilestoneStatus,
+} from "./milestone-view.ts";
+import {
+  DUE_SOON_DAYS,
+  MILESTONE_CATEGORIES,
+  type MilestoneCategory,
+  type MilestoneStatus,
+} from "./milestone-view.ts";
 export const DUE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
-export type MilestoneStatus = "done" | "overdue" | "due_soon" | "planned";
 
 export interface MilestoneRow {
   id: string;

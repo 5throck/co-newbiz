@@ -6784,6 +6784,21 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/milestones/suggest:
+    post:
+      operationId: suggestProjectMilestones
+      summary: "AI milestone RECOMMENDATIONS (track, adopted business case, existing register → 4–7 non-duplicate suggestions with computed due dates). Returned, never persisted — each becomes a milestone only via the audited create; analyst+."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/milestones/import-baseline:
     post:
       operationId: importProjectMilestonesFromBaseline
