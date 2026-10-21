@@ -6319,7 +6319,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       operationId: recordProjectIcReviewStep
-      summary: "Record one intermediate human step (action record: step 2 needs a verdict for every applicable kill criterion, step 4 stores the derived certainty fact; action snapshot_ic_memo builds and records the step-3 memo with a content hash). Derived steps are refused; analyst+, audited ic_review_step.recorded."
+      summary: "One action on the S11 procedure ledger: record (step 2 needs a verdict for every applicable kill criterion, step 4 stores the derived certainty fact), snapshot_ic_memo (step 3 memo + content hash), draft_insight_review (step 4.5 LLM/fallback draft — returned, never persisted), attach_decision_deck (step 4.6: briefing pack built, hashed and recorded). Derived steps are refused; analyst+, audited ic_review_step.recorded."
       tags:
         - Deal Review
       responses:

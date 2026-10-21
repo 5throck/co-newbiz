@@ -3,9 +3,9 @@
 // auto-derived heatmap had hardcoded likelihood). GET returns the latest
 // assessment per item (with mitigation) plus the append-only history; PUT
 // records one assessment (analyst+ person-only, audited — boundary #2) as a
-// new ledger row (migration 0160, ADR-0122 #2 "risk ledger") and refreshes
-// the 0156 sidecar projection. The auto-derived values remain the default
-// display when no assessment exists.
+// new ledger row (migration 0160, ADR-0122 #2 "risk ledger"; the 0156 sidecar
+// was folded into the ledger by 0164). The auto-derived values remain the
+// default display when no assessment exists.
 import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";

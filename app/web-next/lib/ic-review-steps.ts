@@ -29,6 +29,7 @@ import { ulid } from "../../../db/lib/ulid.ts";
 import { getHypotheses } from "../../../db/repositories/deal-structure-hypothesis.repository.ts";
 import { financingCertainty, financingTotals, type FinancingCertainty } from "../../../db/repositories/financing-plan.repository.ts";
 import { findAdoptedCase, listBusinessCases } from "./business-case.ts";
+import { buildBriefingPack } from "./briefing-pack.ts";
 import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
 import { establishmentProgress } from "./establishment.ts";
 import { latestGateDecisions } from "./process-flow.ts";
@@ -362,8 +363,8 @@ export function recordIcReviewStep(db: Db, input: RecordIcStepInput): StepRecord
   return insertRecord(db, input, def, "recorded", { note: note || null });
 }
 
-/** Build the IC memo from the ledgers of record and record it as step 3 with a content hash. */
-export function snapshotIcMemo(db: Db, projectId: string, by: string, note?: string | null): StepRecordRow {
+/** The IC memo content from the ledgers of record (also the context the step-4.5 insight draft reads). */
+export function buildIcMemo(db: Db, projectId: string, note?: string | null): { memo: Record<string, unknown>; snapshot_hash: string } {
   const list = listBusinessCases(projectId);
   const adopted = findAdoptedCase(list);
   const rag = readRagView(db, projectId);
@@ -389,6 +390,45 @@ export function snapshotIcMemo(db: Db, projectId: string, by: string, note?: str
     note: note?.trim() || null,
   };
   const snapshot_hash = createHash("sha256").update(JSON.stringify({ ...memo, generated_at: undefined })).digest("hex").slice(0, 16);
+  return { memo, snapshot_hash };
+}
+
+/** Build the IC memo from the ledgers of record and record it as step 3 with a content hash. */
+export function snapshotIcMemo(db: Db, projectId: string, by: string, note?: string | null): StepRecordRow {
+  const { memo, snapshot_hash } = buildIcMemo(db, projectId, note);
   const def = ENTITY_IC_STEPS.find((d) => d.id === "3")!;
   return insertRecord(db, { projectId, procedure: "entity-ic-review", stepId: "3", by }, def, "recorded", { ...memo, snapshot_hash });
+}
+
+/**
+ * Step 4.6 — the decision deck. In this workspace the committee's deck is the
+ * deterministic briefing pack (E1, ADR-0104 §pipeline): build it, hash it,
+ * and record 4.6 with the hash as the evidence reference. The pack itself is
+ * returned to the caller for display; nothing but the record is stored.
+ */
+export function attachDecisionDeck(db: Db, projectId: string, by: string): { row: StepRecordRow; pack: string; pack_hash: string } {
+  const pack = buildBriefingPack(db, { type: "project", id: projectId });
+  const pack_hash = createHash("sha256").update(pack).digest("hex").slice(0, 16);
+  const def = ENTITY_IC_STEPS.find((d) => d.id === "4.6")!;
+  const row = insertRecord(
+    db,
+    { projectId, procedure: "entity-ic-review", stepId: "4.6", by, evidenceRef: `briefing-pack:${pack_hash}` },
+    def,
+    "recorded",
+    { pack_hash, pack_chars: pack.length, generated_at: new Date().toISOString() },
+  );
+  return { row, pack, pack_hash };
+}
+
+/** Deterministic step-4.5 fallback when no LLM is configured — counts only, no judgement. */
+export function insightFallback(view: IcReviewStepsView, memo: Record<string, unknown>): { synthesis: string; tensions: string[]; open_questions: string[]; recommendation_note: string } {
+  const s2 = view.entity.find((s) => s.id === "2")!;
+  const s4 = view.entity.find((s) => s.id === "4")!;
+  const heat = memo.risk_heatmap as { counts?: { high: number; mid: number; low: number } } | undefined;
+  return {
+    synthesis: `결정론 폴백 — Kill Criteria ${view.kill_criteria.length}건 중 미판정 ${Number(s2.detail.unanswered ?? view.kill_criteria.length)}건·미충족 ${Number(s2.detail.failed ?? 0)}건, 자금확정성 ${s4.status === "pass" ? "충족" : "미충족"}, 리스크 높음 ${heat?.counts?.high ?? 0}건이 기록되어 있습니다. 차원 간 통합 해석은 LLM 구성 후 생성하거나 사람이 직접 작성하세요.`,
+    tensions: [],
+    open_questions: view.gaps,
+    recommendation_note: "결정론 폴백 — 권고 초안은 데이터만으로 산출할 수 없어 비어 있습니다 (사람이 판단하세요).",
+  };
 }

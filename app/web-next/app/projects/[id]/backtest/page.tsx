@@ -138,13 +138,14 @@ function BacktestView() {
                 {" "}<strong>{p.scope === "org" ? "조직" : "프로젝트"}</strong> → 등급 <strong>{p.proposed_grade}</strong> · {p.rationale}
                 <span className="note ml-1">({p.proposed_by}, {p.proposed_at.slice(0, 10)}{p.decided_by ? ` → ${p.decided_by} ${p.decided_at?.slice(0, 10)}` : ""})</span>
                 {p.decision_rationale && <span className="note block ml-1">결정 근거: {p.decision_rationale}</span>}
-                {canAct && p.status === "proposed" && (
+                {canAct && p.status === "proposed" && p.proposed_by !== me?.userId && (
                   <span className="actions-row ml-2 flex flex-wrap gap-1 items-center">
                     <input aria-label="결정 근거" className="sizing-new-input sizing-new-input-sm" style={{ minWidth: "12rem" }} placeholder="결정 근거 (5자 이상)" value={decisionText[p.id] ?? ""} onChange={(e) => setDecisionText((cur) => ({ ...cur, [p.id]: e.target.value }))} />
                     <button type="button" className="btn-ghost btn-sm" disabled={busy === p.id} onClick={() => void decide(p, "approve")}>승인</button>
                     <button type="button" className="btn-ghost btn-sm" disabled={busy === p.id} onClick={() => void decide(p, "reject")}>반려</button>
                   </span>
                 )}
+                {canAct && p.status === "proposed" && p.proposed_by === me?.userId && <span className="note ml-2">제안자는 결정할 수 없습니다 — 다른 analyst가 승인·반려합니다.</span>}
               </li>
             ))}
           </ul>

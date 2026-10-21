@@ -5,8 +5,8 @@
 // 중간 단계(Kill Criteria 명시적 판정, IC 메모 스냅샷, 자금확정성 사실 확인,
 // 통합 인사이트 리뷰, 의사결정 덱, 그룹 검토 소견)를 기록한다. 파생 단계
 // (AI 종합 등급 제안, 투자심의위원회 결정)는 각자의 원장이 권위이며 여기서
-// 기록하지 않는다. 절차 격차는 참고 표시다 — 진행 결정의 예외 근거 대상에
-// 넣을지는 사람 결정(설계 문서 열린 결정).
+// 기록하지 않는다. 절차 격차는 진행 결정의 누락 산출물 예외 근거 대상이다
+// (decider 2026-10-21 — 차단이 아니라 사람의 근거를 요구한다).
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { PageState, useToast } from "../ui.tsx";
@@ -44,6 +44,25 @@ export function IcReviewStepsPanel({ projectId, canAct }: { projectId: string; c
   const [memoNote, setMemoNote] = useState("");
   const [stepInput, setStepInput] = useState<Record<string, { evidence_ref: string; note: string }>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  const [insight, setInsight] = useState<{ source: string; note: string; draft: { synthesis: string; tensions: string[]; open_questions: string[]; recommendation_note: string } } | null>(null);
+
+  async function draftInsight() {
+    setBusy("insight");
+    try {
+      const r = await api.post<{ source: string; note: string; draft: { synthesis: string; tensions: string[]; open_questions: string[]; recommendation_note: string } }>(
+        `/api/projects/${encodeURIComponent(projectId)}/ic-review-steps`, { action: "draft_insight_review" },
+      );
+      setInsight(r.data);
+      const d = r.data.draft;
+      const text = [d.synthesis, ...d.tensions.map((t) => `긴장: ${t}`), ...d.open_questions.map((q) => `질문: ${q}`), d.recommendation_note].filter(Boolean).join("\n");
+      setStepInput((cur) => ({ ...cur, "entity-ic-review:4.5": { evidence_ref: cur["entity-ic-review:4.5"]?.evidence_ref ?? "", note: text } }));
+      toast(r.data.source === "llm" ? "통합 인사이트 초안을 받았습니다 — 검토 후 4.5로 기록하세요." : "LLM 미구성 — 결정론 폴백 초안입니다.");
+    } catch (e) {
+      toast(e instanceof Error ? `초안 생성 실패: ${e.message}` : "초안 생성 실패");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   const load = useCallback(() => {
     api.get<View>(`/api/projects/${encodeURIComponent(projectId)}/ic-review-steps`)
@@ -90,7 +109,7 @@ export function IcReviewStepsPanel({ projectId, canAct }: { projectId: string; c
         {canAct && (
           <span className="flex flex-wrap gap-1 items-center mt-1">
             <input aria-label={`${s.title} 근거 참조`} className="sizing-new-input sizing-new-input-sm" style={{ minWidth: "12rem" }} placeholder="근거 참조 (문서/링크)" value={inp.evidence_ref} onChange={(e) => setStepInput((cur) => ({ ...cur, [k]: { ...inp, evidence_ref: e.target.value } }))} />
-            <input aria-label={`${s.title} 메모`} className="sizing-new-input sizing-new-input-sm" style={{ minWidth: "14rem" }} placeholder="메모 (근거 참조가 없으면 10자 이상)" value={inp.note} onChange={(e) => setStepInput((cur) => ({ ...cur, [k]: { ...inp, note: e.target.value } }))} />
+            <textarea aria-label={`${s.title} 메모`} className="sizing-new-input sizing-new-input-sm" style={{ minWidth: "18rem", flex: 1 }} rows={2} placeholder="메모 (근거 참조가 없으면 10자 이상)" value={inp.note} onChange={(e) => setStepInput((cur) => ({ ...cur, [k]: { ...inp, note: e.target.value } }))} />
             <button type="button" className="btn-ghost btn-sm" disabled={busy === k}
               onClick={() => void post(k, { action: "record", procedure, step_id: s.id, evidence_ref: inp.evidence_ref || null, payload: { note: inp.note } }, `${s.title}을(를) 기록했습니다.`)}>
               기록
@@ -114,7 +133,7 @@ export function IcReviewStepsPanel({ projectId, canAct }: { projectId: string; c
       {view.gaps.length > 0 && (
         <p className="text-[length:var(--fs-caption)] mb-2" data-testid="ic-procedure-gaps">
           <span className="status-chip status-amber">절차 격차 {view.gaps.length}건</span>
-          <span className="text-[color:var(--muted-fg)] ml-1">{view.gaps.join(" · ")} — 참고 표시이며 진행 결정을 막지 않습니다.</span>
+          <span className="text-[color:var(--muted-fg)] ml-1">{view.gaps.join(" · ")} — 진행(GO) 기록 시 누락 산출물 예외 근거가 필요합니다 (차단은 아닙니다).</span>
         </p>
       )}
       <h4 className="text-[length:var(--fs-body)] mt-1 mb-1">법인 투자심의위원회 검토 (entity-ic-review)</h4>
@@ -177,7 +196,25 @@ export function IcReviewStepsPanel({ projectId, canAct }: { projectId: string; c
         <button type="button" className="btn-ghost btn-sm" disabled={busy === "fin"} onClick={() => void post("fin", { action: "record", procedure: "entity-ic-review", step_id: "4" }, "자금확정성 사실 확인을 기록했습니다.")}>현재 사실 상태로 확인 기록</button>
       )}
 
-      <ul className="sizing-note-list mt-3">
+      <h5 className="text-[length:var(--fs-caption)] font-semibold mt-3 mb-1">step 4.5 · 4.6 — 통합 인사이트 리뷰 · 의사결정 덱</h5>
+      {canAct && (
+        <div className="flex flex-wrap gap-1 items-center mb-1">
+          <button type="button" className="btn-ghost btn-sm" disabled={busy === "insight"} title="투자심의 자료 요약만을 근거로 LLM이 통합 해석 초안을 만듭니다 — 저장되지 않으며, 검토 후 4.5 메모로 기록합니다"
+            onClick={() => void draftInsight()}>{busy === "insight" ? "초안 생성 중..." : "통합 인사이트 초안 생성 (LLM)"}</button>
+          <button type="button" className="btn-ghost btn-sm" disabled={busy === "deck"} title="브리핑 팩(E1)을 생성해 해시와 함께 4.6 의사결정 덱으로 기록합니다"
+            onClick={() => void post("deck", { action: "attach_decision_deck" }, "의사결정 덱(브리핑 팩)을 생성·기록했습니다.")}>의사결정 덱 생성·기록</button>
+        </div>
+      )}
+      {insight && (
+        <div className="card mb-2" data-testid="ic-insight-draft">
+          <p className="text-[length:var(--fs-caption)]"><span className={`status-chip ${insight.source === "llm" ? "status-amber" : "status-gray"}`}>{insight.source === "llm" ? "LLM 초안" : "결정론 폴백"}</span> <span className="note">{insight.note}</span></p>
+          <p className="text-[length:var(--fs-caption)]">{insight.draft.synthesis}</p>
+          {insight.draft.tensions.length > 0 && <ul className="sizing-note-list">{insight.draft.tensions.map((t, i) => <li key={`t-${i}`}>긴장: {t}</li>)}</ul>}
+          {insight.draft.open_questions.length > 0 && <ul className="sizing-note-list">{insight.draft.open_questions.map((q, i) => <li key={`q-${i}`}>질문: {q}</li>)}</ul>}
+          <p className="note">{insight.draft.recommendation_note} — 아래 4.5 메모에 채워졌습니다. 수정 후 기록하세요.</p>
+        </div>
+      )}
+      <ul className="sizing-note-list">
         {view.entity.filter((s) => s.id === "4.5" || s.id === "4.6").map((s) => genericRecord("entity-ic-review", s))}
       </ul>
 

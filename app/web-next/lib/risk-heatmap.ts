@@ -6,9 +6,9 @@
  * IC package or the quarterly briefing, and covenant headroom (a listed input)
  * was missing. This module builds the same items from the same ledgers —
  * dd_finding, contract_coc, incentive — adds covenant headroom (cov:<key>),
- * applies the person's latest assessment per key (risk_assessment_ledger →
- * 0156 sidecar fallback) and returns a hash-stamped snapshot. Only real
- * records are plotted; nothing is invented when a ledger is empty.
+ * applies the person's latest assessment per key (risk_assessment_ledger) and
+ * returns a hash-stamped snapshot. Only real records are plotted; nothing is
+ * invented when a ledger is empty.
  */
 import { createHash } from "node:crypto";
 import type { getDb } from "../../../db/client.ts";

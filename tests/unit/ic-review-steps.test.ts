@@ -109,6 +109,11 @@ describe("ic-review-steps — statuses, records, and informational gaps", () => 
     expect(v.group.find((s) => s.id === "1")!.status).toBe("fail"); // entity decision absent
     expect(v.gaps.join("\n")).toContain("Kill Criteria");
     expect(v.gaps.join("\n")).toContain("IC 메모");
+    // 2026-10-21 (decider): the procedure gaps ride the IC GO gap-rationale contract.
+    const pkg = await req(`/api/projects/${projectId}/ic-package`, { headers: { cookie: analystCookie } });
+    const goGaps = ((await pkg.json()).data as { gates: { go_gaps: string[] } }).gates.go_gaps;
+    expect(goGaps.some((g) => g.includes("Kill Criteria"))).toBe(true);
+    expect(goGaps.some((g) => g.includes("자금확정성"))).toBe(true);
     expect(v.kill_criteria.length).toBeGreaterThan(0);
     const procedures = new Set(v.kill_criteria.map((c) => c.procedure));
     expect(procedures.has("entity-ic-review")).toBe(true);
@@ -192,5 +197,34 @@ describe("ic-review-steps — statuses, records, and informational gaps", () => 
     const steps = ((await pkg.json()).data as { ic_steps: { entity: Array<{ status: string }>; procedure_gaps: string[] } }).ic_steps;
     expect(steps.procedure_gaps).toEqual([]);
     expect(steps.entity.filter((s) => s.status === "recorded" || s.status === "pass").length).toBeGreaterThanOrEqual(4); // 2·3·4·4.5
+  });
+
+  test("step 4.5 draft is a non-persisted LLM/fallback proposal; step 4.6 attaches the hashed briefing pack as the decision deck", async () => {
+    const before = db.query("SELECT COUNT(*) AS c FROM ic_review_step_record WHERE project_id = ?").get(projectId) as { c: number };
+    const draft = await req(`/api/projects/${projectId}/ic-review-steps`, json({ action: "draft_insight_review" }));
+    expect(draft.status).toBe(200);
+    const d = (await draft.json()).data as { source: string; draft: { synthesis: string; open_questions: string[] } };
+    expect(["llm", "synthesis"]).toContain(d.source);
+    expect(d.draft.synthesis.length).toBeGreaterThan(10);
+    // nothing persisted by a draft
+    expect((db.query("SELECT COUNT(*) AS c FROM ic_review_step_record WHERE project_id = ?").get(projectId) as { c: number }).c).toBe(before.c);
+    expect((await req(`/api/projects/${projectId}/ic-review-steps`, json({ action: "draft_insight_review" }, viewerCookie))).status).toBe(403);
+
+    const deck = await req(`/api/projects/${projectId}/ic-review-steps`, json({ action: "attach_decision_deck" }));
+    expect(deck.status).toBe(201);
+    const body = (await deck.json()).data as { pack_hash: string; pack: string; record: { step_id: string; evidence_ref: string; status: string } };
+    expect(body.pack_hash).toHaveLength(16);
+    expect(body.pack.length).toBeGreaterThan(50);
+    expect(body.record).toMatchObject({ step_id: "4.6", status: "recorded", evidence_ref: `briefing-pack:${body.pack_hash}` });
+    const v = await view();
+    expect(v.entity.find((s) => s.id === "4.6")).toMatchObject({ status: "recorded" });
+  });
+
+  test("incentives carry their eligibility evidence (the S10 sources-side precondition)", async () => {
+    const res = await req(`/api/projects/${projectId}/incentives`, json({ program_name: "지방투자촉진보조금", grantor: "충북", npv_value: 12, evidence_ref: "교부결정 통지 2026-10-15" }));
+    expect(res.status).toBe(201);
+    const list = await req(`/api/projects/${projectId}/incentives`, { headers: { cookie: analystCookie } });
+    const rows = ((await list.json()).data as { incentives: Array<{ program_name: string; evidence_ref: string | null }> }).incentives;
+    expect(rows.find((r) => r.program_name === "지방투자촉진보조금")?.evidence_ref).toBe("교부결정 통지 2026-10-15");
   });
 });

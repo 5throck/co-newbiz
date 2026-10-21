@@ -23,8 +23,10 @@ type Db = ReturnType<typeof GetDb>;
 let db: Db;
 
 const ANALYST = "s9depth-analyst";
+const APPROVER = "s9depth-approver";
 const VIEWER = "s9depth-viewer";
 let analystCookie = "";
+let approverCookie = "";
 let viewerCookie = "";
 let projectId = "";
 
@@ -50,6 +52,8 @@ beforeAll(async () => {
   approveUser(db, { userId: ANALYST, approvedBy: "test", now: NOW });
   await createUser(db, { userId: VIEWER, role: "viewer", password: "pw-viewer-12345", createdBy: "test", now: NOW });
   approveUser(db, { userId: VIEWER, approvedBy: "test", now: NOW });
+  await createUser(db, { userId: APPROVER, role: "analyst", password: "pw-approver-1234", createdBy: "test", now: NOW });
+  approveUser(db, { userId: APPROVER, approvedBy: "test", now: NOW });
   db.run("UPDATE app_user SET must_change_password = 0");
   const login = async (userId: string, password: string): Promise<string> => {
     const res = await req("/api/auth/login", { method: "POST", body: JSON.stringify({ userId, password }) });
@@ -57,6 +61,7 @@ beforeAll(async () => {
   };
   analystCookie = await login(ANALYST, "pw-analyst-12345");
   viewerCookie = await login(VIEWER, "pw-viewer-12345");
+  approverCookie = await login(APPROVER, "pw-approver-1234");
 
   const opportunityId = ulid();
   db.run(
@@ -86,6 +91,11 @@ beforeAll(async () => {
   }
   const { promoteOpportunity } = await import("../../db/repositories/project.repository.ts");
   projectId = promoteOpportunity(opportunityId, { promotedBy: ANALYST, needToKnowBasis: "s9 depth test" }).project.id;
+  // The approver is a project member so project-scope decisions resolve (visibleProject).
+  db.run(
+    "INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)",
+    [projectId, APPROVER, "member", ANALYST, NOW, "two-person approval test"],
+  );
 });
 
 afterAll(() => {
@@ -153,8 +163,6 @@ describe("risk heatmap — server builder, assessment ledger, IC snapshot", () =
     const put = await req(`/api/projects/${projectId}/risk-assessment`, json(analystCookie, { key, likelihood: 1, impact: 2, mitigation: "보증보험 가입으로 노출 상한" }, "PUT"));
     expect(put.status).toBe(201);
     expect(count("SELECT COUNT(*) AS c FROM risk_assessment_ledger WHERE project_id = ? AND item_key = ?", projectId, key)).toBe(1);
-    const sidecar = db.query("SELECT risk_heatmap_assessment_json AS j FROM md_project WHERE id = ?").get(projectId) as { j: string };
-    expect(JSON.parse(sidecar.j)[key]).toMatchObject({ likelihood: 1, impact: 2 });
 
     const before = buildRiskHeatmap(db, projectId).snapshot_hash;
     const again = await req(`/api/projects/${projectId}/risk-assessment`, json(analystCookie, { key, likelihood: 3, impact: 3 }, "PUT"));
@@ -234,16 +242,19 @@ describe("confidence grade adjustment proposals — proposed, human-approved, ca
     expect(data.bias.direction).toBe("insufficient_evidence");
   });
 
-  test("approve → the adjustment applies (C); a second decision on the same row is refused; a later project-scope B cannot loosen it", async () => {
-    expect((await req(`/api/portfolio/backtest/proposals`, json(analystCookie, { action: "approve", id: proposalId, decision_rationale: "ok" }))).status).toBe(400);
-    const ok = await req(`/api/portfolio/backtest/proposals`, json(analystCookie, { action: "approve", id: proposalId, decision_rationale: "편향 근거 확인 — 캡 하향 승인" }));
+  test("approve by a DIFFERENT person → the adjustment applies (C); self-decision and a second decision are refused; a later project-scope B cannot loosen it", async () => {
+    expect((await req(`/api/portfolio/backtest/proposals`, json(approverCookie, { action: "approve", id: proposalId, decision_rationale: "ok" }))).status).toBe(400);
+    const self = await req(`/api/portfolio/backtest/proposals`, json(analystCookie, { action: "approve", id: proposalId, decision_rationale: "스스로 승인 시도" }));
+    expect(self.status).toBe(400);
+    expect(((await self.json()) as { error: { code: string } }).error.code).toBe("self_decision_not_allowed");
+    const ok = await req(`/api/portfolio/backtest/proposals`, json(approverCookie, { action: "approve", id: proposalId, decision_rationale: "편향 근거 확인 — 캡 하향 승인" }));
     expect(ok.status).toBe(200);
     expect(approvedConfidenceAdjustment(db, projectId)).toBe("C");
-    expect((await req(`/api/portfolio/backtest/proposals`, json(analystCookie, { action: "reject", id: proposalId, decision_rationale: "다시 결정 시도" }))).status).toBe(400);
+    expect((await req(`/api/portfolio/backtest/proposals`, json(approverCookie, { action: "reject", id: proposalId, decision_rationale: "다시 결정 시도" }))).status).toBe(400);
 
     const second = await req(`/api/portfolio/backtest/proposals`, json(analystCookie, { action: "propose", scope: "project", project_id: projectId, proposed_grade: "B", rationale: "프로젝트 단위 완화 시도 — 허용되지 않아야 함" }));
     expect(second.status).toBe(201);
-    await req(`/api/portfolio/backtest/proposals`, json(analystCookie, { action: "approve", id: (await second.json()).data.id, decision_rationale: "프로젝트 B 승인" }));
+    expect((await req(`/api/portfolio/backtest/proposals`, json(approverCookie, { action: "approve", id: (await second.json()).data.id, decision_rationale: "프로젝트 B 승인" }))).status).toBe(200);
     expect(approvedConfidenceAdjustment(db, projectId)).toBe("C");
     expect(count("SELECT COUNT(*) AS c FROM audit_log WHERE action LIKE 'confidence_grade_adjustment.%'")).toBe(4);
   });

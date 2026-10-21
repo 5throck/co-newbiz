@@ -1,16 +1,14 @@
-// @version 1.1.0
+// @version 2.0.0
 /**
  * risk-assessment — S9 리스크 히트맵의 사람 판정 (2026-10-19 decider question:
  * likelihood가 전부 하드코딩 2라 실제 평가 도구가 아니었다). 항목 소스 키
  * (dd:<finding_id> / coc:<contract_id> / inc:<incentive_id> / cov:<covenant_key>)
- * 별로 사람의 가능성·영향(1~3)을 기록한다. 자동 산정값은 오버라이드가 없을 때의
- * 기본값이며, 기록은 analyst+ 사람 전용 (경계 #2), 감사가 남는다.
+ * 별로 사람의 가능성·영향(1~3)과 완화조치를 기록한다. 자동 산정값은 기록이 없을
+ * 때의 기본값이며, 기록은 analyst+ 사람 전용 (경계 #2), 감사가 남는다.
  *
- * v1.1.0 (2026-10-21, ADR-0122 #2 "risk ledger"): every assessment is appended
- * to risk_assessment_ledger (migration 0160) with the optional mitigation the
- * 2026-10-19 design deferred; the 0156 sidecar
- * (md_project.risk_heatmap_assessment_json) is kept as the latest-per-key
- * projection so earlier readers keep working.
+ * v2.0.0 (2026-10-21, migration 0164): risk_assessment_ledger (0160, append-only)
+ * is the ONLY store — the 0156 sidecar column was migrated into the ledger and
+ * dropped. Latest-per-key is a read over the ledger, never a second copy.
  */
 import { appendAudit } from "../../../db/lib/access-control.ts";
 import type { getDb } from "../../../db/client.ts";
@@ -22,39 +20,12 @@ export const RISK_ASSESSMENT_LEVELS = [1, 2, 3] as const;
 export const RISK_ITEM_KEY_PATTERN = /^(dd|coc|inc|cov):/;
 export const MITIGATION_MAX_LENGTH = 1000;
 
-export interface RiskAssessmentOverride {
+export interface RiskAssessmentRecord {
   likelihood: 1 | 2 | 3;
   impact: 1 | 2 | 3;
+  mitigation: string | null;
   by: string;
   at: string;
-}
-
-export interface RiskAssessmentRecord extends RiskAssessmentOverride {
-  mitigation: string | null;
-}
-
-export type RiskAssessmentMap = Record<string, RiskAssessmentOverride>;
-
-export function parseRiskAssessment(raw: string | null | undefined): RiskAssessmentMap {
-  if (!raw) return {};
-  try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const out: RiskAssessmentMap = {};
-    for (const [key, v] of Object.entries(parsed ?? {})) {
-      if (!v || typeof v !== "object") continue;
-      const o = v as { likelihood?: unknown; impact?: unknown; by?: unknown; at?: unknown };
-      if (o.likelihood !== 1 && o.likelihood !== 2 && o.likelihood !== 3) continue;
-      if (o.impact !== 1 && o.impact !== 2 && o.impact !== 3) continue;
-      out[key] = { likelihood: o.likelihood, impact: o.impact, by: String(o.by ?? ""), at: String(o.at ?? "") };
-    }
-    return out;
-  } catch {
-    return {};
-  }
-}
-
-export function serializeRiskAssessment(map: RiskAssessmentMap): string {
-  return JSON.stringify(map);
 }
 
 export class RiskAssessmentValidationError extends Error {}
@@ -77,10 +48,6 @@ export function validateRiskAssessmentInput(input: {
   return { key, likelihood: input.likelihood, impact: input.impact, mitigation };
 }
 
-export function mergeRiskAssessment(map: RiskAssessmentMap, key: string, likelihood: 1 | 2 | 3, impact: 1 | 2 | 3, by: string, at: string): RiskAssessmentMap {
-  return { ...map, [key]: { likelihood, impact, by, at } };
-}
-
 export interface RecordRiskAssessmentInput {
   projectId: string;
   key: string;
@@ -91,11 +58,7 @@ export interface RecordRiskAssessmentInput {
   at?: string;
 }
 
-/**
- * Append one assessment to the ledger and refresh the sidecar projection —
- * one transaction, one audit row. The ledger is the history; the sidecar is
- * only ever the latest value per key.
- */
+/** Append one assessment to the ledger — one row, one audit entry; the ledger is the history. */
 export function recordRiskAssessment(db: Db, input: RecordRiskAssessmentInput): RiskAssessmentRecord & { id: string } {
   const at = input.at ?? new Date().toISOString();
   const id = ulid();
@@ -105,11 +68,6 @@ export function recordRiskAssessment(db: Db, input: RecordRiskAssessmentInput): 
        VALUES (?,?,?,?,?,?,?,?)`,
       [id, input.projectId, input.key, input.likelihood, input.impact, input.mitigation, input.by, at],
     );
-    const row = db
-      .query("SELECT risk_heatmap_assessment_json AS j FROM md_project WHERE id = ?")
-      .get(input.projectId) as { j: string | null } | undefined;
-    const merged = mergeRiskAssessment(parseRiskAssessment(row?.j), input.key, input.likelihood, input.impact, input.by, at);
-    db.run("UPDATE md_project SET risk_heatmap_assessment_json = ? WHERE id = ?", [serializeRiskAssessment(merged), input.projectId]);
     appendAudit(db, {
       actor: input.by,
       action: "risk_assessment.recorded",
@@ -120,13 +78,9 @@ export function recordRiskAssessment(db: Db, input: RecordRiskAssessmentInput): 
   return { id, likelihood: input.likelihood, impact: input.impact, mitigation: input.mitigation, by: input.by, at };
 }
 
-/** Latest assessment per item key — ledger first, sidecar as the pre-0160 fallback. */
+/** Latest assessment per item key, read from the ledger. */
 export function latestRiskAssessments(db: Db, projectId: string): Record<string, RiskAssessmentRecord> {
   const out: Record<string, RiskAssessmentRecord> = {};
-  const row = db
-    .query("SELECT risk_heatmap_assessment_json AS j FROM md_project WHERE id = ?")
-    .get(projectId) as { j: string | null } | undefined;
-  for (const [key, v] of Object.entries(parseRiskAssessment(row?.j))) out[key] = { ...v, mitigation: null };
   const ledger = db
     .query(
       `SELECT item_key, likelihood, impact, mitigation, recorded_by, recorded_at

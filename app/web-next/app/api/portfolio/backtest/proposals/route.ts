@@ -3,7 +3,8 @@
 // human-approved"; migration 0161). GET lists proposals with the current
 // backtest bias; POST takes one action: `propose` (a person files a proposal —
 // the bias statistics are captured server-side at filing time), `approve` or
-// `reject` (a person decides, with a rationale). An APPROVED row lowers the
+// `reject` (a different person decides, with a rationale — the proposer cannot
+// decide their own proposal). An APPROVED row lowers the
 // RAG data-confidence cap (rag-service.approvedConfidenceAdjustment) — it can
 // only tighten, never loosen (boundary #4). Analyst+ for every write, audited.
 import { getDb } from "../../../../../../../db/client.ts";
@@ -91,6 +92,9 @@ export async function POST(request: Request) {
     const row = db.query("SELECT * FROM confidence_grade_adjustment_proposal WHERE id = ?").get(id) as ProposalRow | undefined;
     if (!row) return notFound();
     if (row.status !== "proposed") return badRequest("invalid_state", `이미 ${row.status} 상태인 제안은 다시 결정할 수 없습니다 — 새 제안을 올리세요.`);
+    // 2026-10-21 (decider: proceed with the remaining work) — two-person rule: the
+    // person who filed the proposal cannot be the one who decides it.
+    if (row.proposed_by === auth.auth.userId) return badRequest("self_decision_not_allowed", "제안자는 자신의 제안을 승인·반려할 수 없습니다 — 다른 analyst+가 결정해야 합니다.");
     if (row.scope === "project" && row.project_id && !visibleProject(auth.auth, row.project_id, { includeClosed: true })) return notFound();
     const status = action === "approve" ? "approved" : "rejected";
     db.run(

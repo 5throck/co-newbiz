@@ -124,9 +124,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       // committee can tell which snapshot it read. Informational, never gates.
       risk_heatmap: heatmapSnapshot(buildRiskHeatmap(db, id)),
       // 2026-10-21 — entity-ic-review / group-investment-review step status
-      // (lib/ic-review-steps). Informational: procedure gaps are shown next to
-      // the gate panel but are NOT part of go_gaps (that would change gate
-      // behaviour for in-flight projects — a human decision, see the design doc).
+      // (lib/ic-review-steps). procedure_gaps are the step items that also ride
+      // go_gaps (decider 2026-10-21: the GO gap-rationale contract covers them).
       ic_steps: (() => {
         const v = icReviewStepsView(db, id);
         return {

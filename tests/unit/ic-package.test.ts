@@ -354,7 +354,9 @@ describe("(e) S11 completion — both gates go AND establishment 5/5", () => {
   test("one gate go is not enough", async () => {
     const res = await req(`/api/projects/${projectId}/gate-decisions`, {
       method: "POST", headers: { cookie: analystCookie },
-      body: JSON.stringify({ gate: "entity_ic", decision: "go", rationale: "투자심의 자료 검토 후 인적 결재" }),
+      body: JSON.stringify({ gate: "entity_ic", decision: "go", rationale: "투자심의 자료 검토 후 인적 결재",
+        // 2026-10-21: the S11 procedure steps (Kill Criteria check, IC memo, certainty of funds) are GO gaps — a typed rationale rides along.
+        gap_rationale: "테스트 — 절차 단계 미기록 상태의 GO" }),
     });
     expect(res.status).toBe(201);
 
@@ -367,7 +369,7 @@ describe("(e) S11 completion — both gates go AND establishment 5/5", () => {
   test("both gates go + charter confirmed + 5/5 flips S11 complete (origin internal)", async () => {
     const res = await req(`/api/projects/${projectId}/gate-decisions`, {
       method: "POST", headers: { cookie: analystCookie },
-      body: JSON.stringify({ gate: "group_ic", decision: "go", rationale: "그룹 투자심사 인적 결재" }),
+      body: JSON.stringify({ gate: "group_ic", decision: "go", rationale: "그룹 투자심사 인적 결재", gap_rationale: "테스트 — 절차 단계 미기록 상태의 GO" }),
     });
     expect(res.status).toBe(201);
 

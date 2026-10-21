@@ -40,9 +40,10 @@ S10 점검 결과 완료 기준(4축 완료 + sources=uses>0)은 스펙과 1:1�
   - **원장**: step 2 Kill Criteria — 적용 절차(`entity-ic-review` + 트랙별 `brownfield-fs/-fs-comparative/-dd` 또는 `greenfield-dd` + 설립 방식별 establishment 절차)의 `procedures/_kill-criteria/*.json` 전부에 사람의 `pass|fail|na`가 있어야 기록되며, 엔진의 `kill_criteria_evaluation` 결과는 **제안**으로 나란히 표시된다. step 3 IC 메모 = 채택 케이스·등급 제안·DD 요약·투자구조(아티팩트 참조 포함)·자금 확정성·Kill 판정·리스크 히트맵 스냅샷을 묶어 sha256 앞 16자와 함께 기록. step 4 기록 = 파생 사실의 사람 확인(덮어쓰기 불가). 4.5·4.6·그룹 2~4.5 = 근거 참조 또는 10자 이상 메모.
 - `GET/POST /api/projects/{id}/ic-review-steps`(record | snapshot_ic_memo), 투자심의 자료에 `ic_steps{entity, group, procedure_gaps}` 요약, `IcReviewStepsPanel`을 S11 화면 투자심의 자료 요약 바로 아래에 장착.
 
-### 2.5 절차 격차의 지위 — **참고 표시** (열린 결정)
-- 계획은 절차 격차를 `icGoGapItems`(GO 예외 근거 대상)에 넣는 것이었다. 그러나 게이트 라우트는 열린 격차가 있으면 `gap_rationale` 없는 IC GO를 422로 거부하므로, 넣는 즉시 **진행 중인 모든 프로젝트의 IC GO 계약이 바뀐다**(5개 테스트 스위트도 그 경로로 GO를 기록). ADR-0150의 전례(진행 중 프로젝트에 대한 기준 변경은 사람 결정)에 따라 이번 슬라이스는 `procedure_gaps`를 **별도 참고 목록**으로 화면·투자심의 자료에 표시만 한다.
-- **사람 결정 필요**: 절차 격차를 GO 예외 근거 대상에 포함할지, 포함한다면 컷오프(생성일 또는 명시적 채택)를 둘지. 결정되면 `icGoGapItems`에 `icStepGapItems` 한 줄을 더하면 된다(`lib/ic-review-steps.ts`에 이미 준비).
+### 2.5 절차 격차의 지위 — GO 예외 근거 대상에 **포함** (2026-10-21 decider 결정)
+- 최초 구현은 절차 격차를 `procedure_gaps` 참고 목록으로만 표시했다. 게이트 라우트가 열린 격차가 있으면 `gap_rationale` 없는 IC GO를 422로 거부하므로, 포함 시 진행 중 프로젝트의 GO 계약이 바뀌기 때문이다(ADR-0150 전례 — 사람 결정 사항).
+- **decider가 같은 날 "잔여 작업을 진행해줘"로 포함을 결정**했다. `icGoGapItems`가 `icStepGapItems`를 더해, Kill Criteria 미기록/미판정/미충족·IC 메모 미기록·자금확정성 미충족이 누락 산출물로 나열되고 GO 기록 시 사람의 예외 근거(`gap_rationale`)를 요구한다 — R2-B item 3의 원칙 그대로 **차단이 아니라 근거 요구**다. 진행 중 프로젝트는 다음 GO 기록 때부터 적용되며 기존 결정 행은 건드리지 않는다(쓰기 시점 검사).
+- 테스트: `ic-package.test.ts`의 GO 기록은 `gap_rationale`을 함께 보내고, `ic-review-steps.test.ts`가 `go_gaps`에 절차 항목이 들어가는지 고정한다.
 
 ## 3. 범위 밖
 - 4.5 통합 인사이트·4.6 덱의 LLM 생성(현재는 사람 기록만), 그룹 검토 2~4의 자동 산출(portfolio-overlap 등 기존 lib 연결), 제안자≠승인자 규칙.

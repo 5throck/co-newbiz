@@ -10,7 +10,7 @@ export interface PromptEntry {
   system: string;
 }
 
-export type PromptKey = "s2.discover" | "s1.sizing_ask_json" | "s1.sizing_summarize" | "s1.ksic_classify" | "market.related_candidates" | "s3.opportunity_factors" | "company_profile.qualitative" | "company_profile.competitive" | "company_profile.crosscheck" | "s4.synergy_fa" | "s4.synergy_synergy" | "s4.synergy_ic" | "s3.attractiveness_recommendation" | "s3.capability_gap_draft" | "s5.capability_judgement_draft" | "s5.entry_strategy_draft" | "opportunity.gate_brief" | "project.gate_brief" | "s4.route_recommendation" | "opportunity.sketch" | "s5.greenfield_recommendation" | "s6.universe_criteria_draft" | "s6.target_proposal_web_search" | "s7.screening_draft" | "s8.business_case_prose" | "s8.business_case_adoption" | "s8.deal_structure_recommendation" | "s9.dd_tailor" | "s11.monitoring_brief" | "pm.query_classify" | "committee.position" | "company_profile.competitor_web_search" | "s8.price_evidence" | "s2.entry_market_draft" | "s8.ev_band_recommend";
+export type PromptKey = "s2.discover" | "s1.sizing_ask_json" | "s1.sizing_summarize" | "s1.ksic_classify" | "market.related_candidates" | "s3.opportunity_factors" | "company_profile.qualitative" | "company_profile.competitive" | "company_profile.crosscheck" | "s4.synergy_fa" | "s4.synergy_synergy" | "s4.synergy_ic" | "s3.attractiveness_recommendation" | "s3.capability_gap_draft" | "s5.capability_judgement_draft" | "s5.entry_strategy_draft" | "opportunity.gate_brief" | "project.gate_brief" | "s4.route_recommendation" | "opportunity.sketch" | "s5.greenfield_recommendation" | "s6.universe_criteria_draft" | "s6.target_proposal_web_search" | "s7.screening_draft" | "s8.business_case_prose" | "s8.business_case_adoption" | "s8.deal_structure_recommendation" | "s9.dd_tailor" | "s11.monitoring_brief" | "pm.query_classify" | "committee.position" | "company_profile.competitor_web_search" | "s8.price_evidence" | "s2.entry_market_draft" | "s8.ev_band_recommend" | "s11.integrated_insight";
 
 export const PROMPTS: Record<PromptKey, PromptEntry> = {
   "s2.discover": {
@@ -222,5 +222,11 @@ export const PROMPTS: Record<PromptKey, PromptEntry> = {
     agent: "quant-methodologist",
     purpose: "S8 브라운필드 — EV/매출 밴드 AI 추천 초안 (제안 전용, 확정은 사람)",
     system: "당신은 신규사업 검토의 M&A 밸류에이션 정량 전문가입니다. 제공된 대상 회사 정보(매출·산업·거래 맥락)와 참고 밴드만 근거로 EV/Revenue 배수 밴드(하한·상한·기본 배수)를 초안하세요. 규칙: (1) min < default < max이며 default는 반드시 밴드 안에 있어야 합니다. (2) 근거 없는 특정 거래 배수를 인용하지 않습니다 — 근거가 부족하면 밴드를 넓히고 rationale에 '추정/검증 필요'로 표기합니다. (3) rationale은 10자 이상, 근거의 성격(컴프·거래·판단)을 명시합니다. (4) source는 3자 이상으로 근거 출처의 성격과 담당을 씁니다 (예: '컴프 조사 필요: 분석가 확인'). (5) 숫자는 JSON 숫자 리터럴이며 문자열이 아닙니다. (6) 지정된 JSON 스키마만 출력합니다 (설명·코드펜스 금지).",
+  },
+  "s11.integrated_insight": {
+    key: "s11.integrated_insight",
+    agent: "process-governance-manager",
+    purpose: "S11 투자심사 step 4.5 — 통합 인사이트 리뷰 초안 (제안 전용, 기록은 사람)",
+    system: "당신은 신규사업 투자심사의 통합 검토 책임자입니다. 제공된 투자심의 자료 요약(채택 사업성 케이스, 종합 등급 제안, DD 요약·발견사항, 투자구조·4축, 자금 확정성, Kill Criteria 판정, 리스크 히트맵)만을 근거로 재무·기술·법무·리스크 차원을 가로지르는 통합 인사이트를 초안합니다. 규칙: (1) 데이터 밖의 사실을 만들지 않습니다 — 근거가 없으면 '근거 부족'으로 씁니다. (2) 결정은 사람(법인 투자심의위원회)이 기록하며 당신 산출물은 초안입니다. (3) 지정된 JSON 스키마만 출력합니다 (설명·코드펜스 금지).",
   },
 };
