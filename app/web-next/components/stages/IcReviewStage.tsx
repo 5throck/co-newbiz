@@ -139,11 +139,14 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
   }
 
   // 2026-10-21 decider: S11 화면을 업무 절차 순서의 내부 탭으로 구분한다.
-  type IcView = "dossier" | "steps" | "establishment" | "decision";
+  // 2차 지시로 실행 기준선(트랜치·인허가/인증·인력/조직·가동 KPI·인센티브 의무)을
+  // 설립 실행에서 떼어 별도 탭으로 분리한다.
+  type IcView = "dossier" | "steps" | "establishment" | "baseline" | "decision";
   const IC_VIEWS: Array<{ key: IcView; label: string }> = [
     { key: "dossier", label: "투자심의 자료" },
     { key: "steps", label: "투자심사 절차 단계" },
-    { key: "establishment", label: "설립 실행 · 기준선" },
+    { key: "establishment", label: "설립 실행" },
+    { key: "baseline", label: "실행 기준선" },
     { key: "decision", label: "의사결정 · 승인 기록" },
   ];
   const [icView, setIcView] = useState<IcView>("dossier");
@@ -347,7 +350,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
           <IcReviewStepsPanel projectId={projectId} canAct={canAct} />
         </div>
 
-        {/* ── 설립 실행 5단계 + 실행 기준선 (ADR-0165 · ADR-0161) — 승인 후 실행 활동 ── */}
+        {/* ── 설립 실행 5단계 (ADR-0165) — 승인 후 실행 활동 ── */}
         <div hidden={icView !== "establishment"}>
           <EstablishmentPanel
             projectId={projectId}
@@ -357,6 +360,10 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
             fallbackReopen={pkg?.establishment}
             onChanged={load}
           />
+        </div>
+
+        {/* ── 신규 사업 실행 기준선 (ADR-0161 Row 3) — 별도 탭 (2026-10-21 decider 2차) ── */}
+        <div hidden={icView !== "baseline"}>
           <ExecutionBaselinePanel projectId={projectId} canAct={canAct} />
         </div>
 

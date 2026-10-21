@@ -14,7 +14,7 @@ import { canWriteBusiness, canWriteProject } from "../lib/project-write-access.t
 import { GATE_LABEL, type GateMetaId } from "../lib/stage-meta.ts";
 import { BUCKET_TITLE, ai2ndStatusMessage, bucketCounts, citationLabel, gateDisplayName, localizeItem, localizeNotPerformedReason, reviewOriginText } from "../lib/review/review-display.ts";
 import { TabNav } from "./TabNav.tsx";
-import { PrimaryAction } from "./ui.tsx";
+import { PrimaryAction, useToast } from "./ui.tsx";
 
 type ReviewGateId = Exclude<GateMetaId, "target_screening"> | "transition";
 
@@ -160,6 +160,44 @@ export function ReviewBuckets({
   const uid = useId();
   const [open, setOpen] = useState(variant === "expanded");
 
+  // 2026-10-21 decider: "게이트 결정이 끝났는데도 검토가 종결되지 않는다" —
+  // 결정 패널(GateDecisionPanel) 밖에서 렌더링되는 이 블록(단계 화면·인박스·제안
+  // 확인)은 ack 원장(review_claim_ack)을 읽지 않아 확인 저장이 화면에 반영되지
+  // 않았다. 부모가 ack 상태를 주지 않으면 이 컴포넌트가 직접 원장을 읽고 토글을
+  // 즉시 저장한다 — 기록 행위는 여전히 사람의 클릭이다(경계 #2).
+  const { toast } = useToast();
+  const parentOwnedAcks = !!onToggleJudgement;
+  const [selfChecks, setSelfChecks] = useState<Record<string, boolean>>({});
+  const [selfAckMeta, setSelfAckMeta] = useState<Record<string, { by: string; at: string }>>({});
+  const acksPath = `/api/${entityType === "project" ? "projects" : "opportunities"}/${encodeURIComponent(entityId)}/review-acks`;
+  // 게이트 탭이면 게이트 id, 산출물 탭이면 stage:S#:N — 둘 다 원장의 유효한 키다.
+  const ackGate = active.startsWith("gate:") ? active.slice(5) : active;
+  useEffect(() => {
+    if (parentOwnedAcks || !ackGate) return;
+    let alive = true;
+    api.get<{ acks: Array<{ claim: string; acked: boolean; by: string; at: string }> }>(`${acksPath}?gate=${encodeURIComponent(ackGate)}`)
+      .then((r) => {
+        if (!alive) return;
+        const checks: Record<string, boolean> = {};
+        const meta: Record<string, { by: string; at: string }> = {};
+        for (const a of r.data.acks) {
+          if (a.acked) { checks[a.claim] = true; meta[a.claim] = { by: a.by, at: a.at }; }
+        }
+        setSelfChecks(checks);
+        setSelfAckMeta(meta);
+      })
+      .catch(() => { /* acks are optional review state — the review never depends on them */ });
+    return () => { alive = false; };
+  }, [parentOwnedAcks, acksPath, ackGate]);
+  const toggleSelf = useCallback((claim: string, checked: boolean, gate: string) => {
+    setSelfChecks((m) => ({ ...m, [claim]: checked }));
+    if (checked) setSelfAckMeta((m) => ({ ...m, [claim]: { by: me?.userId ?? "", at: new Date().toISOString() } }));
+    api.post(acksPath, { gate, claim, acked: checked }).catch((e) => {
+      setSelfChecks((m) => ({ ...m, [claim]: !checked }));
+      toast(e instanceof Error ? `확인 저장 실패: ${e.message}` : "확인 저장 실패");
+    });
+  }, [acksPath, me?.userId, toast]);
+
   const base = `/api/${entityType === "project" ? "projects" : "opportunities"}/${encodeURIComponent(entityId)}/reviews`;
 
   const refresh = useCallback(
@@ -240,9 +278,9 @@ export function ReviewBuckets({
   const resolvedClaims = useMemo(() => {
     const set = new Set<string>();
     for (const c of confirmedJudgements ?? []) set.add(c);
-    for (const [claim, checked] of Object.entries(judgementChecks ?? {})) if (checked) set.add(claim);
+    for (const [claim, checked] of Object.entries(judgementChecks ?? selfChecks)) if (checked) set.add(claim);
     return set;
-  }, [confirmedJudgements, judgementChecks]);
+  }, [confirmedJudgements, judgementChecks, selfChecks]);
   const claimsOf = (bucket: keyof typeof stages[number]) =>
     stages
       .filter((st) => st.performed || st.origin === "AI 1st")
@@ -258,6 +296,11 @@ export function ReviewBuckets({
     claimsOf("needs_judgement").length + claimsOf("could_not_verify").length > 0 &&
     displayCounts.needs_judgement === 0 &&
     displayCounts.could_not_verify === 0;
+  // 부모 소유(GateDecisionPanel)가 아니면 셀프 로딩·토글을 쓴다 — 표시·저장 경로가
+  // 어느 화면에서든 동일하게 작동한다.
+  const checksFor = judgementChecks ?? selfChecks;
+  const metaFor = ackMeta ?? selfAckMeta;
+  const toggleFor = onToggleJudgement ?? toggleSelf;
   const activeLabel = tabs.find((t) => t.key === active)?.label;
   const panelId = `${uid}-panel`;
   const summaryMode = variant === "summary";
@@ -283,6 +326,7 @@ export function ReviewBuckets({
             ) : (
               <span className="review-counts-target">{error ? "불러오지 못함" : "불러오는 중…"}</span>
             )}
+            {view && allReviewed && <span className="status-chip status-green">✓ 종결</span>}
             <span className="review-strip-action">{open ? "접기" : "펼쳐서 보기"}</span>
           </button>
         </div>
@@ -298,6 +342,12 @@ export function ReviewBuckets({
         검토 결과는 승인·통과 표시가 아닙니다. AI가 확인한 것, 확인하지 못한 것, 사람이 판단할 것을 나누어 보여줄 뿐이며
         결정은 아래에서 사람이 기록합니다.
       </p>
+      {allReviewed && (
+        <p className="mb-2 text-[length:var(--fs-caption)]" role="status" data-testid="review-all-reviewed">
+          <span className="status-chip status-green">✓ 모두 사람 확인 완료</span>
+          <span className="ml-2 text-[color:var(--muted-fg)]">이 검토의 확인·판단 항목을 모두 확인했습니다 — 사람 확인으로 종결되었습니다.</span>
+        </p>
+      )}
       {tabs.length > 1 && (
         <TabNav
           label="검토 대상 산출물"
@@ -357,7 +407,7 @@ export function ReviewBuckets({
                           const claimKey = `${s.id}-${it.claim}`;
                           const confirmed = confirmedJudgements?.has(it.claim) ?? false;
                           // 확인하다 못함(could_not_verify)도 같은 ack 흐름으로 종결할 수 있다 (2026-10-21 decider).
-                          const judgementable = (b.key === "needs_judgement" || b.key === "could_not_verify") && !!onToggleJudgement && canRequest;
+                          const judgementable = (b.key === "needs_judgement" || b.key === "could_not_verify") && !!toggleFor && canRequest;
                           return (
                             <li key={claimKey}>
                               <span className="font-semibold" title={l.localized ? it.claim : undefined}>{l.claim}</span>
@@ -376,15 +426,15 @@ export function ReviewBuckets({
                                 <label className="flex items-center gap-1 mt-1 cursor-pointer">
                                   <input
                                     type="checkbox"
-                                    checked={judgementChecks?.[it.claim] ?? false}
-                                    onChange={(e) => onToggleJudgement?.(it.claim, e.target.checked, active.startsWith("gate:") ? active.slice(5) : active)}
+                                    checked={checksFor[it.claim] ?? false}
+                                    onChange={(e) => toggleFor(it.claim, e.target.checked, active.startsWith("gate:") ? active.slice(5) : active)}
                                   />
                                   <span>사람 확인 — 내용을 검토했습니다 (즉시 저장되며, 결정 기록에도 함께 남습니다)</span>
                                 </label>
                               )}
-                              {!confirmed && ackMeta?.[it.claim] && (
+                              {!confirmed && metaFor?.[it.claim] && (
                                 <span className="block mt-1 note" data-testid="review-ack-saved">
-                                  확인 저장됨 · {ackMeta[it.claim].by} · {ackMeta[it.claim].at.slice(0, 10)}
+                                  확인 저장됨 · {metaFor[it.claim].by} · {metaFor[it.claim].at.slice(0, 10)}
                                 </span>
                               )}
                             </li>

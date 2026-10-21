@@ -155,7 +155,13 @@ describe("component wiring (source checks)", () => {
   const ic = src("components/stages/IcReviewStage.tsx");
   test("S11 mounts the panel; brownfield/needs_classification branches render no form", () => {
     expect(ic).toContain("<ExecutionBaselinePanel projectId={projectId} canAct={canAct} />");
-    expect(panel).toContain('status.applicability.state === "not_applicable") return null');
+    // 2026-10-21 decider: the panel owns a dedicated S11 tab, so not_applicable renders an
+    // informational notice (never silent null, never a form); loading stays a bare status line.
+    expect(panel).toContain('status.applicability.state === "not_applicable"');
+    expect(panel).toContain('data-testid="gx-not-applicable"');
+    expect(panel).toContain('적용 대상 아님');
+    const na = panel.slice(panel.indexOf('state === "not_applicable"'), panel.indexOf('if (status.requirement === "classification_conflict")'));
+    expect(na).not.toContain("<form");
     const nc = panel.slice(panel.indexOf('state === "needs_classification"'), panel.indexOf("const rec = status.reconciliation"));
     expect(nc).not.toContain("<form");
     expect(nc).toContain("NEEDS_CLASSIFICATION_NOTE");

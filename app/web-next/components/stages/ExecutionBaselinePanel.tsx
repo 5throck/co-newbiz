@@ -218,9 +218,23 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
     return () => { live = false; };
   }, [projectId, status?.record?.id]);
 
-  // Brownfield (not_applicable) renders nothing so the S11 screen stays unchanged.
+  // 2026-10-21 decider 2차: 이 패널이 전용 탭(실행 기준선)을 지게 되어 무음(null)
+  // 대신 로딩·적용 대상 아님을 명시한다 — 빈 탭처럼 보이지 않게.
   if (loadError) return <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-3">✕ {loadError}</p>;
-  if (!status || status.applicability.state === "not_applicable") return null;
+  if (!status) return <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-3" role="status">실행 기준선을 불러오는 중…</p>;
+  if (status.applicability.state === "not_applicable") {
+    return (
+      <section className="market-section sizing-step mt-3" aria-label="신규 사업 실행 기준선" data-testid="gx-not-applicable">
+        <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">📋</span> 신규 사업 실행 기준선</h3>
+        <p className="text-[length:var(--fs-caption)] mb-0" role="note">
+          <span className="status-chip status-not-started">○ 적용 대상 아님</span>
+          <span className="block mt-1 text-[color:var(--muted-fg)]">
+            이 프로젝트는 신규 사업(greenfield) 트랙의 실행 기준선 절차가 적용되지 않습니다. brownfield(M&A·합작·전략적 투자)는 설립 실행 탭의 PMI 킥오프가 대체 절차입니다.
+          </span>
+        </p>
+      </section>
+    );
+  }
 
   if (status.requirement === "classification_conflict") {
     // Conflicting case_type vs route track: a human must reconcile them first; no form is offered.
