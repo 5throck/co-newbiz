@@ -295,8 +295,8 @@ describe("investment vectors: assumption overrides", () => {
 
   it("invalid overrides are a hard 400 at the route (person-entered input, never silently dropped)", () => {
     const lines = [{ source: "plan_meta", horizonYears: 5, simOverrides: { capabilityRange: -1 } }];
-    const rows = [];
-    const norm = normalizeBusinessCaseLines(lines, rows, [], "test-user");
+    const rows: import("../../app/web-next/lib/capability-cost-lines.ts").CostSourceRow[] = [];
+    const norm = normalizeBusinessCaseLines(lines, rows, [], { userId: "test-user", at: new Date().toISOString() });
     expect(norm.ok).toBe(false);
     if (!norm.ok) {
       expect(norm.error.code).toBe("invalid_request");

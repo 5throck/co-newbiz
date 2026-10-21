@@ -138,7 +138,7 @@ describe("planCapexTotalOf (pure derivation)", () => {
   });
   test("no capex lines means 0 - not null", () => {
     expect(planCapexTotalOf(input([]))).toBe(0);
-    expect(planCapexTotalOf(input([{ line: "opex", category: "labor", period: "yearly", currency: "KRW", amountUnit: "krw_m", amountUnitConfirmed: true, amount: 50, startYear: 1 }]))).toBe(0);
+    expect(planCapexTotalOf(input([{ category: "labor", period: "yearly", currency: "KRW", amountUnit: "krw_m", amountUnitConfirmed: true, amount: 50, startYear: 1 }]))).toBe(0);
   });
   test("unconfirmed-unit or non-KRW capex lines are filtered out (same filters as the copy path)", () => {
     expect(planCapexTotalOf(input([capex(100, { amountUnitConfirmed: false })]))).toBe(0);

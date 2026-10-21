@@ -77,3 +77,13 @@ directive:
   List) and `screening_longlist` serve the new stages as-is; no migration required.
 - **Neutral**: existing procedures referenced by stage number in prose only — they key on gate
   names, so the renumbering required no procedure moves.
+
+## Errata (2026-10-22) — the target_screening gate is human-decided, per ADR-0053 boundary #2
+
+Decision 2 introduces `target_screening` as "agent-decided, attached to S7". As shipped, the
+gate follows the same human-decision contract as every other gate: the gate-decision route
+records only human POSTs (agents supply the evaluation and recommendation), per design v1.0's
+non-negotiable boundary #2 — "gate approval and the investment decision belong to humans" —
+formalized by ADR-0053. The Decision 2 text above stands as history and is not rewritten;
+ADR-0053 boundary #2 governs who decides target_screening, as it does screening/pre_fs/fs/dd
+(see the errata on ADR-0074 Decision 3).

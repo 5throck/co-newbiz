@@ -260,7 +260,7 @@ describe("reference display fields", () => {
     expect(body.data.reference.scope).toBeNull();
     expect(body.data.reference.anchor_value_krw_m).toBeNull();
     // tolerant helper too
-    expect(readSizingLink(db, opp).reference!.version_no).toBe(1);
+    expect(readSizingLink(db, opp)!.reference!.version_no).toBe(1);
   });
 });
 
@@ -331,20 +331,20 @@ describe("compatibility flag via the link", () => {
     const pid = promote(opp);
     await putScope(opp, { regions: ["we"], segments: [], unit_basis: "krw_m_year" });
     // unlinked: honest unknown
-    expect(resolveAnchorScopeFlag(db, pid).status).toBe("unknown");
+    expect(resolveAnchorScopeFlag(db, pid)!.status).toBe("unknown");
     const before = gen.caseInputsBaseForProject(pid);
     expect(before.anchorScope).toBeNull();
     // link a scoped version whose regions include the target -> ok
     const good = seedSizing("ind-flag-a", SCOPED_PAYLOAD); // regions we, ee
     await putLink(opp, { version_id: good.versionId });
-    expect(resolveAnchorScopeFlag(db, pid).status).toBe("ok");
+    expect(resolveAnchorScopeFlag(db, pid)!.status).toBe("ok");
     // link a worldwide version -> mismatch (coverage is not compatibility)
     const ww = seedSizing("ind-flag-b", WW_PAYLOAD);
     await putLink(opp, { version_id: ww.versionId });
-    expect(resolveAnchorScopeFlag(db, pid).status).toBe("mismatch");
+    expect(resolveAnchorScopeFlag(db, pid)!.status).toBe("mismatch");
     // clearing returns to unknown
     await putLink(opp, { analysis_id: null, version_id: null });
-    expect(resolveAnchorScopeFlag(db, pid).status).toBe("unknown");
+    expect(resolveAnchorScopeFlag(db, pid)!.status).toBe("unknown");
     // bit-identity: linked/restored inputs equal the unlinked base apart from anchorScope
     const after = gen.caseInputsBaseForProject(pid);
     expect(after.anchorScope).toBeNull();

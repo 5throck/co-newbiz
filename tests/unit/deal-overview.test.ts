@@ -55,6 +55,20 @@ describe("buildDealOverview", () => {
     expect(o.holds[0]!.href).toBe("/deals/D1/s3");
     expect(o.gates[0]).toMatchObject({ gate: "screening", decision: "hold" });
   });
+  test("pre_fs links split by track: brownfield resolves on the S4 committee tab, greenfield on S5 (T-20261022-002)", () => {
+    const bfHold = [{ entityType: "opportunity" as const, entityId: "D1", gate: "pre_fs" }];
+    const bf = buildDealOverview("D1", { status: "assessed", attractiveness_score: null, synergy_score: null },
+      proc({ track: "brownfield", gateStatus: { pre_fs: "hold" } }), bfHold);
+    expect(bf.holds[0]!.href).toBe("/deals/D1/s4");
+    expect(bf.nextAction).toMatchObject({ type: "resolve_hold", href: "/deals/D1/s4" });
+    const gf = buildDealOverview("D1", { status: "assessed", attractiveness_score: null, synergy_score: null },
+      proc({ track: "greenfield", gateStatus: { pre_fs: "hold" } }), bfHold);
+    expect(gf.holds[0]!.href).toBe("/deals/D1/s5");
+    // Unknown track keeps the historical S5 destination.
+    const unknown = buildDealOverview("D1", { status: "assessed", attractiveness_score: null, synergy_score: null },
+      proc({ gateStatus: { pre_fs: "hold" } }), bfHold);
+    expect(unknown.holds[0]!.href).toBe("/deals/D1/s5");
+  });
 });
 
 describe("buildDealOverview data contract (refinement Row 1)", () => {

@@ -13,6 +13,7 @@ import {
   resolveS5InvestmentPlan,
   type BusinessCaseParams,
   type CaseInputs,
+  type InvestmentBasis,
 } from "../../app/web-next/lib/business-case-generator.ts";
 
 type Plan = NonNullable<CaseInputs["s5Plan"]>;
@@ -29,17 +30,20 @@ function fakeDb(modelRow: unknown, lineRows: unknown[]) {
 }
 
 function planOf(opts?: Partial<Plan>): Plan {
+  // Partial spread leaves optional keys `T | undefined`; the cast restores the full plan shape.
   return {
     modelId: "model-1",
     horizonYears: 5,
     capexByYear: [500, 300, 0, 0, 0],
+    laborByYear: [0, 0, 0, 0, 0],
+    opexByYear: [200, 200, 200, 200, 200],
     laborOpexByYear: [200, 200, 200, 200, 200],
     govRndByYear: [0, 100, 0, 0, 0],
     opexCovered: [true, true, false, false, false],
     skippedLines: 0,
     lineHash: "abc",
     ...opts,
-  };
+  } as Plan;
 }
 
 function baseParams(basis: BusinessCaseParams["investmentBasis"]): BusinessCaseParams {
@@ -275,7 +279,7 @@ describe("bc.investment_basis persistence", () => {
   });
 
   test("record 0/1/2 codes and re-resolve (encode/decode round trip)", async () => {
-    for (const [basis, code] of Object.entries(INVESTMENT_BASIS_CODES)) {
+    for (const [basis, code] of Object.entries(INVESTMENT_BASIS_CODES) as Array<[InvestmentBasis, number]>) {
       await recordBusinessCaseParams(paramsDb, {
         projectId: PARAMS_PROJECT_ID,
         params: { investment_basis: basis as keyof typeof INVESTMENT_BASIS_CODES },

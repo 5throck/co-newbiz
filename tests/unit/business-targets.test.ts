@@ -85,11 +85,11 @@ function adoptedCase(): NonNullable<Parameters<typeof evaluateTargets>[2]> {
     created_by: "test",
     created_at: NOW,
     lines: [
-      { id: "l1", category: "revenue", name: "장비 매출", annual_amount_krw_m: 40000, start_year: 1, growth_rate: 0.05, unit: null, note: null },
-      { id: "l2", category: "labor", name: "인건비", annual_amount_krw_m: 20000, start_year: 1, growth_rate: 0, unit: null, note: null },
-      { id: "l3", category: "opex", name: "운영비", annual_amount_krw_m: 10000, start_year: 1, growth_rate: 0, unit: null, note: null },
+      { id: "l1", category: "revenue", name: "장비 매출", annual_amount_krw_m: 40000, start_year: 1, end_year: null, growth_rate: 0.05, unit: null, note: null },
+      { id: "l2", category: "labor", name: "인건비", annual_amount_krw_m: 20000, start_year: 1, end_year: null, growth_rate: 0, unit: null, note: null },
+      { id: "l3", category: "opex", name: "운영비", annual_amount_krw_m: 10000, start_year: 1, end_year: null, growth_rate: 0, unit: null, note: null },
       // capex is investment — must stay out of the operating-margin numerator
-      { id: "l4", category: "capex", name: "설비 투자", annual_amount_krw_m: 20000, start_year: 1, growth_rate: 0, unit: null, note: null },
+      { id: "l4", category: "capex", name: "설비 투자", annual_amount_krw_m: 20000, start_year: 1, end_year: null, growth_rate: 0, unit: null, note: null },
     ],
     simulations: [],
   };

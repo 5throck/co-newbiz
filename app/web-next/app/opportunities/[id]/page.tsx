@@ -421,9 +421,11 @@ export function OpportunityDetail() {
         <EntryMarketFlow opportunityId={id} canAct={canAct} />
       )}
 
-      {/* 승격 — 선별 상태이며 미승격일 때 (ADR-0095) */}
+      {/* 승격 — 선별 상태이며 미승격일 때 (ADR-0095). 헤딩의 핸드오프 단계는
+          패널이 트랙(S4 route 결정)에서 파생한다 — greenfield S5→S8,
+          brownfield S7→S8. */}
       {opp.status === "selected" && !opp.project_id && (
-        <PromotionPanel opportunityId={opp.id} heading={`${opp.name} — 프로젝트로 추진 (S7 → S8)`} />
+        <PromotionPanel opportunityId={opp.id} headingName={opp.name} />
       )}
     </main>
   );

@@ -94,6 +94,7 @@ export { WAVE_F_PREDICATE_DATE } from "./wave-f-date.ts";
 import { WAVE_F_PREDICATE_DATE } from "./wave-f-date.ts";
 import { readTargetScope } from "../../../db/repositories/entry-market.repository.ts";
 import { cleanList, holdBlockerText } from "./review/review-display.ts";
+import { resolveTrack } from "./project-track.ts";
 
 function opportunityGrandfathered(opp: { created_at: string | null }): boolean {
   return (opp.created_at ?? "") < WAVE_F_PREDICATE_DATE;
@@ -126,6 +127,13 @@ export interface ProcessEvaluation {
   /** opportunity 전용 — 이미 프로젝트로 추진(승격)됐다면 그 project id. 승격
    * 후에는 팀 배정 등 세부 내용을 다시 노출하지 않고 이 값만으로 판단한다. */
   projectId: string | null;
+  /** opportunity 전용 — 트랙 최종 단계(S5|S7)까지 완료(또는 트랙 skip)했지만
+   * 아직 승격된 프로젝트가 없다. 캐리어 스코프(S1~S7, ADR-0094)가 끝났음을
+   * 나타내는 명시적 마커다 — evaluateProcess는 기회도 S8~S12를 함께 걷기 때문에
+   * currentStage가 프로젝트 전용 단계 S8로 읽힐 수 있고, 이 마커 없이는
+   * "승격 대기"와 "S8 작업 중"을 구분할 수 없다. project 엔티티에서는 항상
+   * false (프로젝트의 캐리어는 프로젝트 자신이다). */
+  carrierScopeFinished: boolean;
   /** project 전용 — 설립 실행 단계가 최근 유효한 dd/entity_ic/group_ic GO 이후 재개되었는지 (ADR-0165 addendum). opportunity에서는 생략. */
   reopenedAfterGate?: boolean;
 }
@@ -423,7 +431,13 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
   },
 };
 
-/** Unmapped opportunity stages default to not-complete (no blockers recorded). */
+/**
+ * Unmapped opportunity stages default to not-complete (no blockers recorded).
+ * For S8–S12 (project-carrier stages, ADR-0095) this is what makes an
+ * un-promoted opportunity read as "current on S8" — ProcessEvaluation's
+ * carrierScopeFinished is the sanctioned signal that the S1–S7 carrier scope
+ * is actually done and awaiting promotion, not working on S8.
+ */
 function evaluateOpportunityStage(stage: StageDefinition, opp: OpportunityRow): StageEvaluation {
   const predicate = OPPORTUNITY_STAGE_COMPLETION[stage.id];
   return predicate ? predicate({ opp }) : { complete: false, blockers: [], missing: [] };
@@ -724,20 +738,33 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
     // lib/portfolio.ts의 isFreshReviewCycle 참고 — 분기 단위 cadence라 직전
     // 분기 스코어카드도 현 분기 투자심의의 정당한 근거다). 어긋나면 낡은 주기를
     // 이름으로 지적한다.
+    //
+    // The DEMAND is keyed on the shared track resolver (project-track.ts) —
+    // the same resolver the only sanctioned write path (POST
+    // post-management/scorecard, greenfield-only) gates on. The venture
+    // scorecard is the S12 record of record for GREENFIELD only; brownfield
+    // monitors through integration/partnership (ADR-0161 — recommended,
+    // never blocking) and has no sanctioned venture_scorecard write path, so
+    // demanding the artifact from every track made brownfield S12
+    // completable only by direct DB writes (2026-10-22 review C1).
     const latest = db
       .query("SELECT MAX(review_cycle) AS c FROM venture_scorecard WHERE project_id = ?")
       .get(project.id) as { c: string | null };
-    if (!latest.c) {
-      blockers.push("벤처 스코어카드가 필요합니다");
-      missing.push("벤처 스코어카드");
-    } else if (!isFreshReviewCycle(latest.c)) {
-      blockers.push(`스코어카드 주기가 낡았습니다 (최신 ${latest.c} — 현재 분기 기준 갱신 필요)`);
-      missing.push("분기별 스코어카드 갱신");
+    if (resolveTrack(project.id, db).track === "greenfield") {
+      if (!latest.c) {
+        blockers.push("벤처 스코어카드가 필요합니다");
+        missing.push("벤처 스코어카드");
+      } else if (!isFreshReviewCycle(latest.c)) {
+        blockers.push(`스코어카드 주기가 낡았습니다 (최신 ${latest.c} — 현재 분기 기준 갱신 필요)`);
+        missing.push("분기별 스코어카드 갱신");
+      }
     }
     // ADR-0150 기준 2: 최신 리뷰 주기에 사람 전환 결정이 근거(rationale)와 함께
     // 기록되어 있어야 한다 (venture_transition_decision 원장, 0071). decided_by는
     // 스키마에서 인간 역할 'venture-portfolio-ic'로 CHECK 고정되지만(설계 경계 2),
     // 술어는 이를 다시 단언한다 (fail-closed, ADR-0053 사람 최종 승인).
+    // 트랙 무관하게 적용한다 — 전환 결정 기록 경로(POST transition-decision)는
+    // 트랙 제한이 없고, 기록된 주기에는 그 결정이 따라야 한다 (어느 트랙이든).
     if (latest.c) {
       const decision = db
         .query(
@@ -860,6 +887,7 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
   let track: "greenfield" | "brownfield" | null = null;
   let subTrack: string | null = null;
   let projectId: string | null = null;
+  let carrierScopeFinished = false;
 
   if (entity.type === "opportunity") {
     const opp = db
@@ -929,6 +957,13 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
         }
       }
     }
+
+    // 캐리어 스코프(S1~S7)가 끝났지만 아직 승격 전임을 명시한다. currentStage는
+    // 이 상태에서 프로젝트 전용 단계 S8로 읽힌다 — 소비자는 S8 해석 대신 이
+    // 마커를 봐야 한다 (pipeline 승격 규칙·PromotionPanel 준비 표시가 이를 쓴다).
+    carrierScopeFinished =
+      !terminated && track !== null && projectId === null &&
+      stages.filter((s) => s.sequence <= 7).every((s) => s.status === "complete" || s.status === "skipped");
   }
 
   else if (entity.type === "project") {
@@ -1034,6 +1069,7 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
     terminated,
     stages,
     projectId,
+    carrierScopeFinished,
     ...(entity.type === "project" ? { reopenedAfterGate: reopenedAfterGate(entity.id).reopened_after_gate } : {}),
   };
 }

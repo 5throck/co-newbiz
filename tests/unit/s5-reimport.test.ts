@@ -175,7 +175,7 @@ describe("reimport", () => {
   test("agent principals and viewers are refused; route registered human-only", async () => {
     const pid = promote(makeOpp("greenfield", LINES));
     const principal = { userId: ANALYST, role: "analyst", scopes: ["read", "write", "propose"], mustChangePassword: false, tokenId: "t", clientId: "c" };
-    const res = await runAsPrincipal(principal, () => route.POST(new Request("http://x/s5-reimport", { method: "POST" }), { params: Promise.resolve({ id: pid }) }));
+    const res = (await runAsPrincipal(principal, () => route.POST(new Request("http://x/s5-reimport", { method: "POST" }), { params: Promise.resolve({ id: pid }) })))!;
     expect(res.status).toBe(403);
     expect((await req(url(pid), { method: "POST", headers: { cookie: viewerCookie } })).status).toBe(403);
     expect(isHumanOnly("POST", url(pid), {})).toBe(true);

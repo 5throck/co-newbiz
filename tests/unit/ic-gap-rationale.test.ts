@@ -211,6 +211,13 @@ describe("R2-B item 3 - IC GO warning rationale", () => {
   });
 
   test("(b)(e) a GO with the typed rationale stores it with server-derived gaps (client cannot forge them)", async () => {
+    // T-20261022-011: the route now enforces the IC sequence server-side, so a
+    // group_ic GO needs a prior entity_ic GO. Seeded directly — the sequence
+    // contract itself is covered by gate-decisions-ic-sequence.test.ts.
+    db.run(
+      "INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)",
+      [ulid(), "project", projectId, "entity_ic", "go", "시퀀스 픽스처", ANALYST, NOW],
+    );
     const res = await req(`/api/projects/${projectId}/gate-decisions`, {
       method: "POST", headers: { cookie: analystCookie },
       body: JSON.stringify({

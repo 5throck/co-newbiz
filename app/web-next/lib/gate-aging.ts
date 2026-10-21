@@ -12,6 +12,8 @@ export interface GateAgingRow {
   decision: string;
   decidedAt: string;
   ageDays: number;
+  /** Carrier track (md_project.track / latest route_decision.track) — lets the inbox deep link to the track-appropriate decision surface. */
+  track: string | null;
 }
 
 export function listGateAging(db: Database, opts: { minAgeDays?: number } = {}): GateAgingRow[] {
@@ -24,7 +26,11 @@ export function listGateAging(db: Database, opts: { minAgeDays?: number } = {}):
                 CASE WHEN g.entity_type = 'project' THEN (SELECT project_no || '|' || COALESCE(project_name, project_no) FROM md_project WHERE id = g.entity_id) END,
                 CASE WHEN g.entity_type = 'opportunity' THEN (SELECT name FROM opportunity WHERE id = g.entity_id) END,
                 g.entity_id
-              ) AS label
+              ) AS label,
+              COALESCE(
+                CASE WHEN g.entity_type = 'project' THEN (SELECT track FROM md_project WHERE id = g.entity_id) END,
+                CASE WHEN g.entity_type = 'opportunity' THEN (SELECT track FROM route_decision WHERE opportunity_id = g.entity_id ORDER BY decided_at DESC, id DESC LIMIT 1) END
+              ) AS track
        FROM gate_decision g
        LEFT JOIN md_project p ON p.id = g.entity_id AND g.entity_type = 'project'
        WHERE g.decided_at >= datetime('now', '-90 days')
@@ -39,6 +45,7 @@ export function listGateAging(db: Database, opts: { minAgeDays?: number } = {}):
       decided_at: string;
       age_days: number;
       label: string;
+      track: string | null;
     }>;
 
   // Latest verdict per (entity, gate) only — history rows would double-count.
@@ -59,6 +66,7 @@ export function listGateAging(db: Database, opts: { minAgeDays?: number } = {}):
       decision: r.decision,
       decidedAt: r.decided_at,
       ageDays: r.age_days,
+      track: r.track ?? null,
     });
   }
   return out.sort((a, b) => b.ageDays - a.ageDays);

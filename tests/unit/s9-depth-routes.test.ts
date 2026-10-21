@@ -384,7 +384,7 @@ describe("milestones — person-managed schedule (2026-10-21 decider)", () => {
     expect(m.status).toBe(201);
     const mid = ((await m.json()).data as { id: string }).id;
     let list = await req(`/api/projects/${projectId}/milestones`, { headers: { cookie: analystCookie } });
-    let data = (await list.json()).data as { milestones: Array<{ id: string; status: string; days_to_due: number | null }>; summary: { total: number; overdue: number; due_soon: number } };
+    let data = (await list.json()).data as { milestones: Array<{ id: string; status: string; days_to_due: number | null }>; summary: { total: number; open: number; done: number; overdue: number; due_soon: number } };
     const row = data.milestones.find((x) => x.id === mid)!;
     expect(["overdue", "due_soon", "planned"]).toContain(row.status);
     expect(row.days_to_due).not.toBeNull();

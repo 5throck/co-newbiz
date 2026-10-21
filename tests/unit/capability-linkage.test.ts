@@ -329,7 +329,12 @@ describe("routes", () => {
 
 describe("보유 근거 cell: button only", () => {
   test("evidence preview helper and legacy-holders caption", async () => {
-    const { evidencePreview, legacyHoldersCaption } = await import("../../app/web-next/components/stages/CapabilityHeldDialog.tsx");
+    // Computed specifier: the .tsx module is runtime-resolved by bun; tsc runs without --jsx.
+    const dialogPath = "../../app/web-next/components/stages/CapabilityHeldDialog.tsx";
+    const { evidencePreview, legacyHoldersCaption } = (await import(dialogPath)) as {
+      evidencePreview: (s: string, cap?: number) => string;
+      legacyHoldersCaption: (holders?: string[] | null) => string;
+    };
     expect(evidencePreview("")).toBe("");
     expect(evidencePreview("x".repeat(70), 60)).toBe(`${"x".repeat(60)}…`);
     expect(legacyHoldersCaption([])).toBe("");

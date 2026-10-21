@@ -30,3 +30,25 @@ The Review Model in CLAUDE.md requires AI 1st → AI 2nd (different domain) → 
 
 1. Agent domain resolution uses a `domain:` frontmatter field added to `agents/*.md` in PR F-2.
 2. The AI 2nd token cap comes from env `REVIEW_MONTHLY_TOKEN_CAP`, default 200k tokens per project per month. A capped review is recorded as "not performed".
+
+## Addendum (2026-10-22, a) — target_screening stays outside the review runtime's gate set
+
+Status: Proposed (documentation of record for an existing runtime boundary; no behavior
+change in this addendum). Decision 7's "7 gate proposals" counts screening, pre_fs, fs, dd,
+entity_ic, group_ic and the S12 transition proposal. The brownfield S7 gate
+`target_screening` (ADR-0076) is not in that set, and this addendum records that exclusion
+as the decision of record rather than an omission: `REVIEW_GATES`/`GATE_ENTITY`
+(`app/web-next/lib/review/gate-artifacts.ts`) do not list it, so a target_screening gate
+decision records no `human_final` review row.
+
+Rationale: adding the gate would newly engage the full AI-1st / AI-2nd / human-final
+pipeline — a gate artifact snapshot, LLM 2nd-stage spend under the monthly token cap, and
+human-final rows — for every brownfield S7 decision. That is a rollout and cost step
+Decision 7 never scheduled, and no test covers the gate in the review runtime. The S7
+judgement already carries the ADR-0076 evidence set (universe criteria, knock-out results,
+ranking, written exclusion reasons), and the gate-brief and committee surfaces still include
+the gate by name (`review-display.ts` maps `target_screening`).
+
+Accepted consequence: brownfield's only exclusive gate produces no `human_final` snapshot.
+Closing that gap is a future rollout step; it must add the gate to `REVIEW_GATES`/`GATE_ENTITY`,
+its coverage tests, and supersede this addendum in the same change.

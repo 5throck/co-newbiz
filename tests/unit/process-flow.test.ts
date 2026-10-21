@@ -3,8 +3,8 @@
 // integrity, its references into the real agents/skills/procedures trees,
 // the completeness of the Gate definitions, and that docs/process-flow.md
 // is the up-to-date regeneration of the spec.
-import { test, expect, describe, beforeAll } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { test, expect, describe, beforeAll, afterAll } from "bun:test";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import * as yaml from "js-yaml";
 
@@ -266,5 +266,143 @@ describe("process flow spec integrity (ADR-0074)", () => {
     expect(existsSync(genPath)).toBe(true);
     const proc = Bun.spawnSync(["bun", genPath, "--check"], { cwd: ROOT });
     expect(proc.exitCode).toBe(0);
+  });
+});
+
+// ── Engine behavior against a real scratch SQLite (review 2026-10-22) ──────
+// Two fixes are exercised here through evaluateProcess and the full demo
+// seeds (both tracks, structurally complete S1–S12):
+//  - T-001: the S12 venture-scorecard demand is keyed on the track —
+//    greenfield only (the sole track with a sanctioned write path and
+//    portfolio-venture-monitoring applicability); brownfield treats a cycle
+//    as optional but still requires the paired transition decision.
+//  - T-014: ProcessEvaluation.carrierScopeFinished marks the un-promoted
+//    opportunity whose S1–S7 carrier scope is done (its currentStage
+//    otherwise misreads as the project-carrier stage S8).
+const TEST_DB_PATH = "db/data/test-process-flow.sqlite";
+process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
+for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
+
+const { resetDb, getDb } = await import("../../db/client.ts");
+const { runMigrations } = await import("../../db/migrate.ts");
+resetDb();
+runMigrations(TEST_DB_PATH);
+const db = getDb(TEST_DB_PATH);
+
+const { evaluateProcess } = await import("../../app/web-next/lib/process-flow.ts");
+const { seedS1ToS12Demo, seedGreenfieldS1ToS12Demo } = await import("../../scripts/co-newbiz/seed-s1-s12-demo.ts");
+const { trancheReconciliation, trancheSnapshotHash } = await import("../../app/web-next/lib/greenfield-execution.ts");
+const { ulid } = await import("../../db/lib/ulid.ts");
+
+const NOW = new Date().toISOString();
+
+afterAll(() => {
+  resetDb();
+  for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
+});
+
+describe("opportunity carrier scope marker (review 2026-10-22, T-014)", () => {
+  test("settled un-promoted greenfield opportunity: carrierScopeFinished true even though currentStage misreads S8", async () => {
+    const gf = await seedGreenfieldS1ToS12Demo();
+    db.run("UPDATE opportunity SET project_id = NULL WHERE id = ?", [gf.opportunityId]);
+    const ev = evaluateProcess({ type: "opportunity", id: gf.opportunityId });
+    // The ambiguity the marker disambiguates: the opportunity loop walks all
+    // 12 stages, its default predicate leaves the project-carrier stage S8
+    // "current" with no blockers, and nextStage advances to S9 — the S8–S12
+    // work does not belong to this carrier (ADR-0095).
+    expect(ev.track).toBe("greenfield");
+    expect(ev.currentStage).toBe("S8");
+    expect(ev.nextStage).toBe("S9");
+    expect(ev.blockers).toEqual([]);
+    expect(ev.projectId).toBeNull();
+    expect(ev.carrierScopeFinished).toBe(true);
+    db.run("UPDATE opportunity SET project_id = ? WHERE id = ?", [gf.projectId, gf.opportunityId]);
+  });
+
+  test("promoted opportunity: marker false — the project is the carrier now", async () => {
+    const gf = await seedGreenfieldS1ToS12Demo();
+    const ev = evaluateProcess({ type: "opportunity", id: gf.opportunityId });
+    expect(ev.projectId).not.toBeNull();
+    expect(ev.carrierScopeFinished).toBe(false);
+  });
+
+  test("mid-flight opportunity (no track, S1 incomplete): marker false", () => {
+    const id = ulid();
+    db.run(
+      "INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)",
+      [id, "마커 테스트 기회", "마커 테스트 산업", "identified", "tester", NOW],
+    );
+    const ev = evaluateProcess({ type: "opportunity", id });
+    expect(ev.currentStage).toBe("S1");
+    expect(ev.track).toBeNull();
+    expect(ev.carrierScopeFinished).toBe(false);
+  });
+
+  test("project entities never carry the marker", () => {
+    const bf = seedS1ToS12Demo();
+    const ev = evaluateProcess({ type: "project", id: bf.projectId });
+    expect(ev.carrierScopeFinished).toBe(false);
+  });
+});
+
+describe("S12 scorecard demand keyed on track (review 2026-10-22, T-001)", () => {
+  test("brownfield demo completes S12 with its seeded cycle + transition decision (no regression)", () => {
+    const bf = seedS1ToS12Demo();
+    const ev = evaluateProcess({ type: "project", id: bf.projectId });
+    expect(ev.completedStages).toContain("S12");
+    expect(ev.currentStage).toBeNull();
+  });
+
+  test("brownfield with NO scorecard completes S12 — the cycle is optional off-greenfield", () => {
+    const bf = seedS1ToS12Demo();
+    db.run("DELETE FROM venture_scorecard WHERE project_id = ?", [bf.projectId]);
+    const ev = evaluateProcess({ type: "project", id: bf.projectId });
+    expect(ev.currentStage).toBeNull();
+    expect(ev.completedStages).toContain("S12");
+    expect(ev.blockers).toEqual([]);
+  });
+
+  test("brownfield WITH a recorded cycle still requires the paired human transition decision", () => {
+    const bf = seedS1ToS12Demo();
+    db.run("DELETE FROM venture_transition_decision WHERE project_id = ?", [bf.projectId]);
+    const ev = evaluateProcess({ type: "project", id: bf.projectId });
+    expect(ev.completedStages).not.toContain("S12");
+    expect(ev.currentStage).toBe("S12");
+    expect(ev.blockers.join("\n")).toContain("사람 전환 결정 기록이 필요합니다");
+  });
+
+  test("greenfield is NOT weakened: without a scorecard S12 stays blocked on the artifact", async () => {
+    const gf = await seedGreenfieldS1ToS12Demo();
+    db.run("DELETE FROM venture_scorecard WHERE project_id = ?", [gf.projectId]);
+    // The greenfield twin leaves S11's establishment execution and the
+    // execution-baseline human confirmation un-seeded — complete both so S12
+    // is the current stage and its blockers actually surface.
+    db.run("UPDATE md_project SET establishment_mode = 'new_entity' WHERE id = ?", [gf.projectId]);
+    for (const n of [1, 2, 3, 4, 5]) {
+      db.run(
+        `INSERT OR IGNORE INTO entity_establishment_step (id, opportunity_id, step_no, status, mode, origin, checklist_item, owner, updated_at)
+         VALUES (?,?,?,?,?,?,?,?,?)`,
+        [`t-gf-est-${n}`, gf.opportunityId, n, "done", "new_entity", "internal", `ef-0${n}`, "tester", NOW],
+      );
+    }
+    const rec = db.run(
+      `INSERT INTO process_run (id, entity_type, entity_id, project_id, spec_version, stage, status, started_by, started_at, meta_json)
+       VALUES ('t-gf-baseline', 'project', ?, ?, 'test', 's11_execution_baseline', 'done', 'tester', ?, ?)`,
+      [
+        gf.projectId,
+        gf.projectId,
+        NOW,
+        JSON.stringify({
+          entries: {},
+          confirmation: { rationale: "테스트 픽스처 실행 기준선 확인", tranche_hash: trancheSnapshotHash(trancheReconciliation(gf.projectId, db)) },
+        }),
+      ],
+    );
+    expect(rec.changes).toBe(1);
+    const ev = evaluateProcess({ type: "project", id: gf.projectId });
+    expect(ev.completedStages).toContain("S11");
+    expect(ev.completedStages).not.toContain("S12");
+    expect(ev.currentStage).toBe("S12");
+    expect(ev.blockers.join("\n")).toContain("벤처 스코어카드가 필요합니다");
   });
 });

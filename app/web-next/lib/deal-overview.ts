@@ -162,7 +162,9 @@ export function buildDealOverview(
   const prevId = meta && meta.sequence > 1 ? STAGE_META[meta.sequence - 2]!.id : null;
   const nextId: string | null = proc.nextStage ?? (meta && meta.onComplete !== "terminal" ? meta.onComplete : null);
   const gateStatus = proc.gateStatus ?? {};
-  const gateHref = (gate: string) => gateHoldHref({ entityType: "opportunity", entityId: dealId, gate });
+  // Track-aware gate links (T-20261022-002): a brownfield pre_fs decision lives
+  // on the S4 committee tab, greenfield on S5; unknown track keeps the S5 default.
+  const gateHref = (gate: string) => gateHoldHref({ entityType: "opportunity", entityId: dealId, gate, track: proc.track });
 
   const base = proc.requiredArtifacts.map((a) => ({ label: localizeRequirement(a), done: isArtifactDone(a, proc.blockers) }));
   const firstOpen = base.findIndex((c) => !c.done);
@@ -175,7 +177,7 @@ export function buildDealOverview(
   const holdRows = holds.map((h) => ({
     gate: h.gate,
     gateLabel: GATE_LABEL[h.gate] ?? h.gate,
-    href: gateHoldHref(h),
+    href: gateHoldHref({ ...h, track: proc.track }),
     ...heldAge(h.decidedAt, now),
   }));
 

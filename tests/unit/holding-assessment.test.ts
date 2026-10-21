@@ -32,7 +32,7 @@ const row = (over: Record<string, unknown> = {}) => ({ ...norm(), ...over }) as 
 
 describe("held status compat reader", () => {
   test("new keys pass through; met -> average (+hint); unmet -> none; unknown -> unevaluated", () => {
-    for (const k of ["leading", "average", "partial", "none", "unevaluated"]) expect(norm({ held: { status: k, holders: ["A"] } }).held.status).toBe(k);
+    for (const k of ["leading", "average", "partial", "none", "unevaluated"] as const) expect(norm({ held: { status: k, holders: ["A"] } }).held.status).toBe(k);
     const met = norm({ held: { status: "met", holders: ["A"] } });
     expect(met.held).toMatchObject({ status: "average", legacyStatus: "met", reassessHint: true });
     const unmet = norm({ held: { status: "unmet" } });
@@ -262,7 +262,9 @@ describe("S3 table and modals (source structure)", () => {
     expect(cg.NARRATIVE_CAP).toBe(400);
   });
   test("button label helper", async () => {
-    const { narrativeButtonLabel } = await import("../../app/web-next/components/stages/CapabilityNarrativeDialog.tsx");
+    // Computed specifier: the .tsx module is runtime-resolved by bun; tsc runs without --jsx.
+    const dialogPath = "../../app/web-next/components/stages/CapabilityNarrativeDialog.tsx";
+    const { narrativeButtonLabel } = (await import(dialogPath)) as { narrativeButtonLabel: (s: string, has: boolean) => string };
     expect([narrativeButtonLabel("", false), narrativeButtonLabel("x", false), narrativeButtonLabel("x", true), narrativeButtonLabel("", true)]).toEqual(["입력", "수정", "보기", "보기"]);
   });
   test("S5 hosts the judgement editor; S3 columns are read-only, canonical order, no 5-step select", () => {

@@ -3,7 +3,7 @@ import { getDb } from "../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../db/lib/ulid.ts";
 import { authenticate, requireBusinessActor } from "../../../../lib/auth.ts";
-import { badRequest, notFound, ok } from "../../../../lib/envelope.ts";
+import { badRequest, fail, notFound, ok } from "../../../../lib/envelope.ts";
 import { readRegister } from "../../../../lib/capability-attainability.ts";
 import { normalizeStoredEntryStrategy } from "../../../../lib/greenfield-entry-strategy.ts";
 import { deriveCapabilityCostLines, milestoneCandidateView, normalizeBusinessCaseLines, planMetaOf, sourceRowOf, DEFAULT_HORIZON_YEARS } from "../../../../lib/capability-cost-lines.ts";
@@ -83,6 +83,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   } | null;
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(oppId)) return notFound();
+  // T-20261022-007: the S5 write surface is greenfield-only. The client gates it
+  // with TrackGate, but the server must not trust that — a brownfield route
+  // decision makes the save 409 not_applicable_track (same code as the S11/S12
+  // guards). No route decision yet stays writable: S5 drafting on legacy data
+  // precedes the S4 record, and only an explicit brownfield call is refused.
+  const routeTrack = db
+    .query("SELECT track FROM route_decision WHERE opportunity_id = ? AND is_current = 1 LIMIT 1")
+    .get(oppId) as { track: string } | null;
+  if (routeTrack?.track === "brownfield") {
+    return fail(409, "not_applicable_track", "S5 자체 진출 평가는 Greenfield Route에만 저장할 수 있습니다 — 이 기회의 현재 Route 결정은 Brownfield입니다.");
+  }
   // ADR-0171 amendment (2): modes header + rationale share this column; canonical form on write (legacy text only trimmed).
   const entryStrategy = typeof body?.entry_strategy === "string" ? normalizeStoredEntryStrategy(body.entry_strategy) || null : null;
   const ts = now();

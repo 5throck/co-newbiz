@@ -20,7 +20,7 @@ import {
   tabHref,
   type StageTabGroup,
 } from "../lib/stage-tabs.ts";
-import { StageRail } from "./StageFrame.tsx";
+import { StageRail, useSourceOpportunity } from "./StageFrame.tsx";
 import { PrimarySlot } from "./ui.tsx";
 import { api } from "../lib/api.ts";
 import { S8PartHeader } from "./stages/S8PartHeader.tsx";
@@ -59,21 +59,8 @@ function useProjectPmiApplies(projectId: string, enabled: boolean): boolean | nu
   return applies;
 }
 
-// Source opportunity of a project (S1-S4 live on the opportunity, not on /projects/{id}). Cached per project.
-const sourceOppCache = new Map<string, string | null>();
-
-function useSourceOpportunity(projectId: string): string | null {
-  const [oppId, setOppId] = useState<string | null>(sourceOppCache.get(projectId) ?? null);
-  useEffect(() => {
-    if (sourceOppCache.has(projectId)) { setOppId(sourceOppCache.get(projectId) ?? null); return; }
-    let live = true;
-    api.get<{ opportunity: { id: string } | null }>(`/api/projects/${encodeURIComponent(projectId)}/process`)
-      .then((r) => { const id = r.data.opportunity?.id ?? null; sourceOppCache.set(projectId, id); if (live) setOppId(id); })
-      .catch(() => { /* no link when the source cannot be resolved */ });
-    return () => { live = false; };
-  }, [projectId]);
-  return oppId;
-}
+// Source opportunity of a project: resolved by StageFrame's shared hook
+// (hoisted there for the stage rail's S1~S7 links, T-20261022-019).
 
 function StageTabsInner({ projectId }: { projectId: string }) {
   const pathname = usePathname();

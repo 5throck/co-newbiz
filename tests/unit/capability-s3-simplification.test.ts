@@ -128,7 +128,9 @@ describe("S3 UI has no 해소 힌트 and no holders inputs", () => {
     expect(eval_).not.toContain("해소 힌트");
   });
   test("legacy caption renders only with holders (button + caption helper)", async () => {
-    const { legacyHoldersCaption } = await import("../../app/web-next/components/stages/CapabilityHeldDialog.tsx");
+    // Computed specifier: the .tsx module is runtime-resolved by bun; tsc runs without --jsx.
+    const dialogPath = "../../app/web-next/components/stages/CapabilityHeldDialog.tsx";
+    const { legacyHoldersCaption } = (await import(dialogPath)) as { legacyHoldersCaption: (holders?: string[] | null) => string };
     expect(legacyHoldersCaption([])).toBe("");
     expect(legacyHoldersCaption(["레인보우로보틱스"])).toBe("기존 보유 주체: 레인보우로보틱스");
   });

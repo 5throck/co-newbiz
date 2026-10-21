@@ -7,6 +7,12 @@
 // role separation. Read-only — writes go through the tailor/review/state
 // routes. ADR-0157: ?target_id= selects an opened comparison target (409 when
 // DD was never opened there); the payload also carries targets[] summaries.
+// tool_counts is main-scope only — null when target_id is set (2026-10-21
+// decider, intended). Every counted tool (interviews, risk heatmap, customer
+// CoC, comp parity) is project-scoped with no target_id axis, so per-target
+// counts would repeat identical project-wide numbers on each comparison view;
+// a target-scoped workspace renders its per-target checklists instead
+// (ADR-0157: comparison evidence carries no verdict-like summary).
 import { authenticate } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { listDdWorkspace } from "../../../../../lib/dd-checklist-tailor.ts";

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { currentTurn, gateLockedReason, gateState, IC_STEP_LABEL } from "../../app/web-next/lib/gate-sequence-view.ts";
+import { currentTurn, gateLockedReason, gateSequenceBlocker, gateState, IC_STEP_LABEL } from "../../app/web-next/lib/gate-sequence-view.ts";
 
 const G = ["entity_ic", "group_ic"];
 const L = (e: string | null, g: string | null) => [{ gate: "entity_ic", decision: e }, { gate: "group_ic", decision: g }];
@@ -21,6 +21,18 @@ describe("gate-sequence-view", () => {
     expect(gateLockedReason(G, "entity_ic", null, IC_STEP_LABEL)).toBeNull();
     expect(gateLockedReason(G, "group_ic", L("hold", null), IC_STEP_LABEL)).toContain("법인 투자심의위원회 GO");
     expect(gateLockedReason(G, "group_ic", L("go", null), IC_STEP_LABEL)).toBeNull();
+  });
+  test("gateSequenceBlocker — the shared rule behind the lock and the route guard (T-20261022-011)", () => {
+    // group_ic is blocked by the first earlier gate without a GO (hold, kill, or missing).
+    expect(gateSequenceBlocker(G, "group_ic", null)).toBe("entity_ic");
+    expect(gateSequenceBlocker(G, "group_ic", L("hold", null))).toBe("entity_ic");
+    expect(gateSequenceBlocker(G, "group_ic", L("kill", null))).toBe("entity_ic");
+    expect(gateSequenceBlocker(G, "group_ic", L("go", null))).toBeNull();
+    expect(gateSequenceBlocker(G, "group_ic", L("go", "hold"))).toBeNull();
+    // The first gate of the sequence and gates outside it are always open.
+    expect(gateSequenceBlocker(G, "entity_ic", null)).toBeNull();
+    expect(gateSequenceBlocker(["fs", "dd"], "fs", null)).toBeNull();
+    expect(gateSequenceBlocker(G, "fs", null)).toBeNull();
   });
 });
 

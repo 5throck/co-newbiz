@@ -187,7 +187,9 @@ const OPPORTUNITY_GATES: GateId[] = ["screening", "pre_fs", "target_screening"];
  * S7. Pending-but-not-yet-relevant gates must NOT pause the pipeline — the
  * stage work in front of them is what the rules below handle first. Note
  * evaluateProcess walks S1–S12 for opportunities too, so currentStage alone
- * cannot distinguish "gate pending" from "carrier scope finished".
+ * cannot distinguish "gate pending" from "carrier scope finished" — that is
+ * exactly what ev.carrierScopeFinished disambiguates (the promotion rule
+ * consumes it instead of re-deriving stage statuses).
  */
 function firstPendingGate(ev: ProcessEvaluation, gates: GateId[]): GateId | null {
   const relevant: Partial<Record<GateId, boolean>> = {
@@ -201,13 +203,6 @@ function firstPendingGate(ev: ProcessEvaluation, gates: GateId[]): GateId | null
     if (relevant[g] && ev.gateStatus[g] !== "go") return g;
   }
   return null;
-}
-
-/** The S1–S7 carrier scope is done: every stage complete or track-skipped. */
-function opportunityScopeSettled(ev: ProcessEvaluation): boolean {
-  return ev.stages
-    .filter((s) => s.sequence <= 7)
-    .every((s) => s.status === "complete" || s.status === "skipped");
 }
 
 const OPPORTUNITY_RULES: Rule[] = [
@@ -288,13 +283,17 @@ const OPPORTUNITY_RULES: Rule[] = [
   {
     // Promotion preconditions met → promoteOpportunity (the ADR-0095 carrier
     // handoff). Preconditions are FACT checks inside promoteOpportunity; the
-    // fs/dd/entity_ic/group_ic gates stay human.
+    // fs/dd/entity_ic/group_ic gates stay human. carrierScopeFinished is the
+    // evaluation's own carrier-scope marker (track-final stage done, no
+    // project yet) — the row probe below re-checks project_id because a
+    // promotion recorded BETWEEN evaluateProcess and this probe must not
+    // double-promote.
     key: "promotion",
     kind: "automatable",
     when: ({ entity, ev }) => {
       if (entity.type !== "opportunity" || ev.terminated) return false;
       if (firstPendingGate(ev, OPPORTUNITY_GATES) !== null) return false;
-      if (ev.track === null || !opportunityScopeSettled(ev)) return false;
+      if (!ev.carrierScopeFinished) return false;
       const row = getDb().query("SELECT project_id FROM opportunity WHERE id = ?").get(entity.id) as { project_id: string | null } | undefined;
       return !!row && row.project_id === null;
     },

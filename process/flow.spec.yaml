@@ -22,6 +22,16 @@ meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
   version: "2.10.0"
+  # v2.10.0 — S9에 capability-dd 활동을 추가한다 (design
+  #   2026-10-19-brownfield-capability-dd, 2026-10-20 반영). brownfield가
+  #   S3 필요 역량 등록부를 선택 대상에 대해 검증하는 활동으로, 사람이
+  #   역량별 해소/부분 해소/미해소 판정을 근거와 함께 기록한다 (경계 #2 —
+  #   human-only MCP 배제). agent brownfield-agent, skill
+  #   brownfield-feasibility(활동 에이전트의 고유 스킬), procedure는
+  #   brownfield-dd 단일 — greenfield는 S5 capability-assessment에서 답한다.
+  #   S9 inputs에 S3 필요 역량 등록부를, outputs에 필요 역량 검증 판정
+  #   (S8 기술 렌즈 T1의 근거)과 기술 렌즈 T2~T5 롤업 근거를 추가한다.
+  #   활동 1건·입력 1건·출력 2건 추가 — stage/gate/track 구조 변경 없음.
   # v2.9.1 — 진입시장 = S3~S12의 기준 시장 원칙 선언 (ADR-0181, 2026-10-17
   #   사용자 지시 "S2에서 진입 시장(target segment) 구하는 작업을 한 뒤 S3
   #   이후부터 모든 분석과 평가는 해당 진입 시장을 기준으로 진행"). S2
@@ -375,7 +385,7 @@ stages:
       - 5criteria 채점 결과(통제 필요도·역량 결정성·시장 불확실성·통합 역량·역량확보 속도 각 20%)
       - 검토한 대안
     completionCriteria:
-      - route_decision 레코드가 존재한다 (track 필수, greenfield는 sub_track, brownfield는 Route 유형)
+      - route_decision 레코드가 존재한다 (track 필수; brownfield는 Route 유형(sub_track) 필수, greenfield의 sub_track은 선택)
       - Brownfield인 경우 5criteria 채점 결과와 사전배제 점검이 기록되었다
       - Greenfield인 경우에도 5criteria 채점 결과를 기록한다 (ADR-0104 — 트랙 간 비교 가능성)
     applicableTracks: [greenfield, brownfield]
@@ -636,6 +646,12 @@ stages:
     outputs:
       - 투자구조 가설(4축 검토 완료 — deal_structure_review 아티팩트 참조; 그린필드는 설립 구조 결정(신규 법인 설립 또는 신규 사업부 추진) 포함)
       - 자금조달 계획(sources & uses 균형·자금 확정성 증빙)
+      # 브라운필드 지급 조건(획득형 보수 등 단계별 지급) 전용 화면은 없다 —
+      # capex 트랜치 탭은 greenfield 전용이다. 공식 기록 운반체는
+      # venture_transition_decision.tranche_condition (ADR-0151, S12 술어가
+      # next_tranche_released/held_evidence_incomplete 결정에 컬럼을 강제)다
+      # (ADR-0151 addendum 2026-10-22 a). S10에서는 4축 가설 노트·자금조달
+      # 계획이 초안 위치다.
     entryCriteria:
       - S9 완료
     activities:
@@ -705,7 +721,9 @@ stages:
         # 출구 전 라이프사이클 약속의 기준선).
         # v2.8.0 (ADR-0161 Q6): owner는 brownfield-agent 그대로(활동 필드는 트랙별로
         # 바꿀 수 없다). greenfield는 greenfield-agent가 소유하고 financing-agent가
-        # 공동검토한다 — entity-ic-review step 3.1(case_type=greenfield)이 이를 강제한다.
+        # 공동검토한다 — entity-ic-review step 3.1(case_type=greenfield)의 정의에
+        # 기록된다. 절차 스키마는 단계별 단일 agent_key만 지원하므로 공동검토는
+        # 기계 강제가 아니라 절차 정의가 운반하는 계약이다.
       - id: risk-review
         agent: risk-officer
         skills: [legal-risk-register]

@@ -1,4 +1,4 @@
-// @version 1.9.0
+// @version 1.10.0
 // Idempotent S1→S12 demo chain seeds — BROWNFIELD (seedS1ToS12Demo) and
 // GREENFIELD (seedGreenfieldS1ToS12Demo), one full lifecycle per track.
 //
@@ -489,11 +489,6 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
   return { opportunityId: DEMO.oppId, projectId: DEMO.projectId };
 }
 
-if (import.meta.main) {
-  const result = seedS1ToS12Demo(argValue(process.argv.slice(2), "--db-path"));
-  console.log(`S1-S12 demo seed ready: opportunity=${result.opportunityId}, project=${result.projectId}`);
-}
-
 // ── Greenfield twin (2026-10-10) — S1→S12 with the track-appropriate stages ──
 // Same lifecycle shape as the brownfield seed, but through the greenfield
 // branch: S4 routes to 자체 진출, S5 carries the entry-strategy evidence
@@ -604,8 +599,8 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
     db.run(
       `INSERT OR IGNORE INTO md_project
        (id, project_no, created_at, current_stage_gate, company_id, origin, source_opportunity_id, track,
-        project_name, charter_json, charter_confirmed_at, status, subject_company_rationale)
-       VALUES (?, 'DEMO-GF', ?, 'group_ic', ?, 'internal', ?, 'greenfield', ?, ?, ?, 'open', ?)`,
+        project_name, charter_json, charter_confirmed_at, status, subject_company_rationale, establishment_mode)
+       VALUES (?, 'DEMO-GF', ?, 'group_ic', ?, 'internal', ?, 'greenfield', ?, ?, ?, 'open', ?, 'new_entity')`,
       [
         GF.projectId, now, GF.companyId, GF.oppId, "S1-S12 데모 Greenfield 프로젝트",
         json({ milestones: ["법인 설립", "설비 가동", "흑자 전환"], owner: actor, note: "S1-S12 greenfield demo charter baseline" }),
@@ -644,6 +639,14 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
       `INSERT OR IGNORE INTO project_classification
        (project_id, sensitivity, mnpi_flag, wall_group, classified_by, classified_at)
        VALUES (?, 'internal', 0, NULL, ?, ?)`,
+      [GF.projectId, actor, now],
+    );
+    // The execution-baseline confirmation (ADR-0161) is a PROJECT-LEAD-only
+    // human act — the demo lead doubles as the confirming person below.
+    db.run(
+      `INSERT OR IGNORE INTO project_member
+       (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis)
+       VALUES (?, 'admin', 'lead', ?, ?, 'S1-S12 greenfield demo owner')`,
       [GF.projectId, actor, now],
     );
 
@@ -731,18 +734,9 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
     }
 
     const cycle = currentReviewCycle();
-    for (const [section, measure, target, actual] of [
-      ["financial", "revenue_ramp", ">=35%", "38%"],
-      ["strategic", "plant_commissioning", "on schedule", "on schedule"],
-    ] as const) {
-      db.run(
-        `INSERT OR IGNORE INTO venture_scorecard
-         (id, run_id, project_id, source_procedure, review_cycle, venture_class, section, measure_key,
-          target_value, actual_value, status, evidence_ref, observed_at, created_at)
-         VALUES (?, ?, ?, 'portfolio-venture-monitoring', ?, 'driving', ?, ?, ?, ?, 'on_target', ?, ?, ?)`,
-        [`demo-gf-score-${measure}`, GF.runId, GF.projectId, cycle, section, measure, target, actual, `demo:gf-scorecard:${measure}`, now, now],
-      );
-    }
+    // S12 venture scorecard is NOT raw-inserted here: the sanctioned write path is
+    // recordGreenfieldScorecardFromRequest (the POST post-management/scorecard
+    // service, greenfield-only) — recorded after the S8 block below.
     if (humanDecisions) db.run(
       `INSERT OR IGNORE INTO venture_transition_decision
          (id, run_id, project_id, review_cycle, decision, decided_by, decided_at, rationale, learning_capture, core_handoff, created_at)
@@ -780,5 +774,87 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
     }
   }
 
+  if (humanDecisions) {
+    // ── S12 — record the venture scorecard through the ONLY sanctioned write
+    // path (the POST post-management/scorecard service, greenfield-only).
+    const geo = await import("../../app/web-next/lib/greenfield-execution.ts");
+    const cycle = currentReviewCycle();
+    const alreadyRecorded = db
+      .query("SELECT 1 FROM venture_scorecard WHERE project_id = ? AND review_cycle = ? LIMIT 1")
+      .get(GF.projectId, cycle);
+    if (!alreadyRecorded) {
+      const sc = geo.recordGreenfieldScorecardFromRequest(
+        {
+          projectId: GF.projectId,
+          actor: "admin", // human lead (AGENT_KEYS fail-closed)
+          now,
+          body: {
+            review_cycle: cycle,
+            measures: [
+              { measure_key: "revenue_vs_case", target_value: 100, value: 105, status: "on_target", evidence_ref: "src:demo-gf" },
+              { measure_key: "headcount_vs_plan", target_value: 10, value: 11, status: "on_target", evidence_ref: "src:demo-gf" },
+            ],
+          },
+        },
+        db,
+      );
+      if (!sc.ok) throw new Error(`greenfield demo S12 scorecard failed (${sc.code}): ${sc.message}`);
+    }
+
+    // ── S11 — greenfield execution baseline (ADR-0161): record the entries and
+    // confirm them through the same service functions the execution-baseline
+    // route uses (recordBaselineEntries + confirmExecutionBaseline). Idempotent:
+    // an already-confirmed baseline is never re-recorded (a fresh entries row
+    // would supersede the confirmation).
+    if (!geo.latestConfirmedBaseline(GF.projectId, db)) {
+      const recorded = geo.recordBaselineEntries(
+        {
+          projectId: GF.projectId,
+          actor: "admin", // record: any person; confirm below: project lead only
+          now,
+          entries: {
+            permit_milestones: [],
+            certification_milestones: [
+              { name: "ISO 9001 품질경영 인증 (데모)", issuer: "데모 인증기관", target_date: "2027-06-30", gates_ref: null, certification_id: null },
+            ],
+            hiring_plan: [
+              { role_family: "생산운영", quarter: "2027-Q1", headcount: 12 },
+              { role_family: "품질관리", quarter: "2027-Q2", headcount: 4 },
+            ],
+            kpi_targets: [
+              { metric_key: "revenue_vs_case", target_value: 100, unit: "ratio", due: "2027-Q4" },
+            ],
+            incentive_obligations: [],
+          },
+        },
+        db,
+      );
+      if (!recorded.ok) throw new Error(`greenfield demo execution baseline entries failed (${recorded.code}): ${recorded.message}`);
+      // A confirmation must acknowledge every open reconciliation finding (R3) —
+      // the demo carries no capex tranches, so the findings (if any) are the
+      // tranche-comparison notes a human would judge.
+      const findings = geo.trancheReconciliation(GF.projectId, db).findings;
+      const confirmed = geo.confirmExecutionBaseline(
+        {
+          projectId: GF.projectId,
+          actor: "admin", // project lead (see project_member above)
+          now,
+          rationale: "S1-S12 greenfield demo — 설립 실행 기준선(트랜치·인증·채용·KPI)을 프로젝트 lead가 확인했다 (데모 시드).",
+          acknowledgedFindings: findings.map((f) => ({ code: f.code, rationale: "S1-S12 greenfield demo — 데모 시드에서 인지한 대조 결과이다." })),
+        },
+        db,
+      );
+      if (!confirmed.ok) throw new Error(`greenfield demo execution baseline confirm failed (${confirmed.code}): ${confirmed.message}`);
+    }
+  }
+
   return { opportunityId: GF.oppId, projectId: GF.projectId };
+}
+
+if (import.meta.main) {
+  const dbPath = argValue(process.argv.slice(2), "--db-path");
+  const bf = seedS1ToS12Demo(dbPath);
+  console.log(`S1-S12 demo seed ready: opportunity=${bf.opportunityId}, project=${bf.projectId}`);
+  const gf = await seedGreenfieldS1ToS12Demo(dbPath);
+  console.log(`S1-S12 greenfield twin seed ready: opportunity=${gf.opportunityId}, project=${gf.projectId}`);
 }
