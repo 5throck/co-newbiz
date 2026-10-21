@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
 import { PageState, useToast } from "../../../../components/ui.tsx";
@@ -91,7 +92,7 @@ function PermitsView() {
     <main>
       <StageTabs projectId={id} />
       <h1>인허가·인증 추적</h1>
-      <p className="objective">허가와 인증을 별도로 추적합니다 — 만료·갱신은 감시 규칙으로 태스크가 생성됩니다.</p>
+      <p className="objective">허가와 인증을 별도로 추적합니다 — 만료·갱신은 감시 규칙으로 태스크가 생성됩니다. <Link href={`/projects/${encodeURIComponent(id)}/sites`} className="underline">부지·시설 평가(주소 기반 법규 사전검토)와 함께 검토 →</Link></p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       <div className="grid2e">
         <section className="market-section" aria-label="허가">

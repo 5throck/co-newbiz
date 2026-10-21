@@ -101,7 +101,8 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
     stage: "S10", name: "투자구조 설계",
     tabs: [
       { seg: "/deal-structure", label: "투자구조" },
-      { seg: "/debt", label: "부채" },
+      // 2026-10-21 decider: "부채·커버넌트"는 차입 및 여신관리 화면 — 용어를 현업 언어로.
+      { seg: "/debt", label: "차입·여신" },
     ],
     more: [
       { seg: "/incentives", label: "인센티브" },

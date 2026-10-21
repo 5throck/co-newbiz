@@ -64,6 +64,9 @@ call_sites:
   - file: app/web-next/app/api/projects/[id]/ic-review-steps/route.ts
     sites: 1
     exempt: "Route-level LLM draft (S11 step 4.5 integrated insight — returned, never persisted); the golden set has no expectation type for it yet. Add a suite before its output is relied on."
+  - file: app/web-next/app/api/projects/[id]/sites/regulatory-draft/route.ts
+    sites: 1
+    exempt: "Route-level LLM draft (S10 site regulatory pre-review — returned, never persisted, k-law 원문 확인 전까지 참조 불가); the golden set has no expectation type for it yet."
   - file: app/web-next/lib/agent-chains.ts
     sites: 1
     json_parse_migration: "Deferred: chain steps feed raw reply text to later steps; stage-reco scores schema validity of the current replies but has no LLM baseline yet."

@@ -9,6 +9,7 @@ import { getDb } from "../../../../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../../../../lib/auth.ts";
 import { fail, notFound, ok } from "../../../../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../../../../lib/project-visibility.ts";
+import { route } from "../../../../../../../../lib/route.ts";
 
 const CONTENT_TYPES: Record<string, string> = {
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -17,10 +18,10 @@ const CONTENT_TYPES: Record<string, string> = {
 };
 const FORMATS = new Set(Object.keys(CONTENT_TYPES));
 
-export async function GET(
+export const GET = route(async (
   request: Request,
   { params }: { params: Promise<{ id: string; snapshotId: string; format: string }> },
-) {
+) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id, snapshotId, format } = await params;
@@ -56,4 +57,4 @@ export async function GET(
       "Cache-Control": "no-store",
     },
   });
-}
+});

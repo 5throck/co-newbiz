@@ -36,6 +36,7 @@ function MilestonesView() {
   const [rows, setRows] = useState<MilestoneView[] | null>(null);
   const [summary, setSummary] = useState<{ total: number; open: number; done: number; overdue: number; due_soon: number } | null>(null);
   const [baselineReady, setBaselineReady] = useState<boolean | null>(null);
+  const [track, setTrack] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ title: "", category: "custom", due_date: "", owner: "", notes: "" });
   const [busy, setBusy] = useState(false);
@@ -50,6 +51,15 @@ function MilestonesView() {
       .catch(() => setBaselineReady(false));
   }, [id]);
   useEffect(() => { load(); }, [load]);
+  // 트랙 관점 가이드 (2026-10-21 decider: greenfield은 연구개발 기반 사업화,
+  // brownfield는 M&A 실사·PMI 관점). 표시 전용.
+  useEffect(() => {
+    let alive = true;
+    api.get<{ track: string | null }>(`/api/projects/${encodeURIComponent(id)}/process`)
+      .then((r) => { if (alive) setTrack(r.data.track ?? null); })
+      .catch(() => { if (alive) setTrack(null); });
+    return () => { alive = false; };
+  }, [id]);
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -109,6 +119,14 @@ function MilestonesView() {
       <StageTabs projectId={id} />
       <h1>프로젝트 마일스톤</h1>
       <p className="objective">주요 마일스톤의 기한과 완료를 관리합니다 — 프로젝트 공통 화면으로 모든 단계에서 열 수 있으며, 기준선 마일스톤(인허가·인증)도 여기에 모입니다. 지연 표시는 참고이며 게이트가 아닙니다.</p>
+      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="milestone-track-hint">
+        {track === "greenfield"
+          ? "Green Field — 연구개발(R&D) 기반 사업화 관점: 기술 검증(TRL)·인허가·초기 판매·설비투자 트랜치 마일스톤을 권장합니다."
+          : track === "brownfield"
+            ? "Brown Field — M&A 실사·PMI 관점: 단계별 실사 종결·시너지 인증·핵심인재 확보·통합 마일스톤을 권장합니다."
+            : "트랙이 확정되면 Green Field(연구개발 기반 사업화) 또는 Brown Field(M&A 실사·PMI) 관점의 권장 마일스톤이 표시됩니다."}
+        {" "}이 화면은 프로젝트 공통 — S8~S12 어느 단계에서도 관리할 수 있습니다 (사이드바 공통 링크·배지).
+      </p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
 
       {summary && summary.total > 0 && (

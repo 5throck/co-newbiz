@@ -10,7 +10,7 @@ export interface PromptEntry {
   system: string;
 }
 
-export type PromptKey = "s2.discover" | "s1.sizing_ask_json" | "s1.sizing_summarize" | "s1.ksic_classify" | "market.related_candidates" | "s3.opportunity_factors" | "company_profile.qualitative" | "company_profile.competitive" | "company_profile.crosscheck" | "s4.synergy_fa" | "s4.synergy_synergy" | "s4.synergy_ic" | "s3.attractiveness_recommendation" | "s3.capability_gap_draft" | "s5.capability_judgement_draft" | "s5.entry_strategy_draft" | "opportunity.gate_brief" | "project.gate_brief" | "s4.route_recommendation" | "opportunity.sketch" | "s5.greenfield_recommendation" | "s6.universe_criteria_draft" | "s6.target_proposal_web_search" | "s7.screening_draft" | "s8.business_case_prose" | "s8.business_case_adoption" | "s8.deal_structure_recommendation" | "s9.dd_tailor" | "s11.monitoring_brief" | "pm.query_classify" | "committee.position" | "company_profile.competitor_web_search" | "s8.price_evidence" | "s2.entry_market_draft" | "s8.ev_band_recommend" | "s11.integrated_insight";
+export type PromptKey = "s2.discover" | "s1.sizing_ask_json" | "s1.sizing_summarize" | "s1.ksic_classify" | "market.related_candidates" | "s3.opportunity_factors" | "company_profile.qualitative" | "company_profile.competitive" | "company_profile.crosscheck" | "s4.synergy_fa" | "s4.synergy_synergy" | "s4.synergy_ic" | "s3.attractiveness_recommendation" | "s3.capability_gap_draft" | "s5.capability_judgement_draft" | "s5.entry_strategy_draft" | "opportunity.gate_brief" | "project.gate_brief" | "s4.route_recommendation" | "opportunity.sketch" | "s5.greenfield_recommendation" | "s6.universe_criteria_draft" | "s6.target_proposal_web_search" | "s7.screening_draft" | "s8.business_case_prose" | "s8.business_case_adoption" | "s8.deal_structure_recommendation" | "s9.dd_tailor" | "s11.monitoring_brief" | "pm.query_classify" | "committee.position" | "company_profile.competitor_web_search" | "s8.price_evidence" | "s2.entry_market_draft" | "s8.ev_band_recommend" | "s11.integrated_insight" | "s10.site_regulatory_draft";
 
 export const PROMPTS: Record<PromptKey, PromptEntry> = {
   "s2.discover": {
@@ -228,5 +228,11 @@ export const PROMPTS: Record<PromptKey, PromptEntry> = {
     agent: "process-governance-manager",
     purpose: "S11 투자심사 step 4.5 — 통합 인사이트 리뷰 초안 (제안 전용, 기록은 사람)",
     system: "당신은 신규사업 투자심사의 통합 검토 책임자입니다. 제공된 투자심의 자료 요약(채택 사업성 케이스, 종합 등급 제안, DD 요약·발견사항, 투자구조·4축, 자금 확정성, Kill Criteria 판정, 리스크 히트맵)만을 근거로 재무·기술·법무·리스크 차원을 가로지르는 통합 인사이트를 초안합니다. 규칙: (1) 데이터 밖의 사실을 만들지 않습니다 — 근거가 없으면 '근거 부족'으로 씁니다. (2) 결정은 사람(법인 투자심의위원회)이 기록하며 당신 산출물은 초안입니다. (3) 지정된 JSON 스키마만 출력합니다 (설명·코드펜스 금지).",
+  },
+  "s10.site_regulatory_draft": {
+    key: "s10.site_regulatory_draft",
+    agent: "legal-counsel",
+    purpose: "S10 부지·시설 — 주소 기반 건축법·인허가 법규 사전검토 초안 (제안 전용, 확정은 사람·법무)",
+    system: "당신은 신규사업 부지 검토의 법무 전문가입니다. 제공된 부지 정보(주소·지역·용도)를 근거로 건축법, 산업집적활성화법, 환경 관련 법령, 해당 지역 인허가 절차 등 검토가 필요한 법령·인허가 사안을 목록화합니다. 규칙: (1) 실제 법령 조항 번호는 단정하지 말고 '확인 필요'로 표기하세요 — 최종 판단은 k-law 원문 확인과 법무 담당자 검토입니다. (2) 부지 용도와 무관한 항목은 제외하세요. (3) 지정된 JSON 스키마만 출력합니다 (설명·코드펜스 금지).",
   },
 };

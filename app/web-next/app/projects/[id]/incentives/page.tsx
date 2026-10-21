@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
-import { fmtNpvInteger } from "../../../../lib/npv-format.ts";
+import { fmtNpvEok } from "../../../../lib/npv-format.ts";
 import { PageState, useToast } from "../../../../components/ui.tsx";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
@@ -63,7 +63,8 @@ function IncentivesView() {
     try {
       await api.post(`/api/projects/${encodeURIComponent(id)}/incentives`, {
         program_name: form.program_name.trim(), grantor: form.grantor.trim() || undefined,
-        npv_value: form.npv_value ? Number(form.npv_value) : undefined,
+        // 화면 단위 억원 → 저장 단위 백만 KRW(×100, ADR-0061) — 0168부터 저장 단위 고정.
+        npv_value: form.npv_value ? Number(form.npv_value) * 100 : undefined,
         clawback_rule: form.clawback_rule.trim() || undefined, direction: form.direction,
         evidence_ref: form.evidence_ref.trim() || undefined,
       });
@@ -74,7 +75,7 @@ function IncentivesView() {
     finally { setBusy(false); }
   }
 
-  // 인센티브 수입을 S10 자금조달 sources로 — 적격 증빙과 NPV가 있는 행만. 화면 단위 억원 → 백만 KRW(×100).
+  // 인센티브 수입을 S10 자금조달 sources로 — 적격 증빙과 NPV가 있는 행만. 저장 단위는 이미 백만 KRW.
   async function pushToFinancing(r: Row) {
     if (!r.evidence_ref || r.npv_value == null) return;
     setPushBusy(r.id);
@@ -82,12 +83,12 @@ function IncentivesView() {
       await api.post(`/api/projects/${encodeURIComponent(id)}/deal-structure`, {
         action: "add_financing_entry", kind: "source",
         name: `인센티브 — ${r.program_name ?? "프로그램"}${r.grantor ? ` (${r.grantor})` : ""}`,
-        amount_krw_m: Math.round(r.npv_value * 100),
+        amount_krw_m: r.npv_value,
         note: `${r.direction === "granted" ? "확정" : "수혜 예정"} 인센티브${r.clawback_rule ? ` · 클로백: ${r.clawback_rule}` : ""}`,
         evidence_kind: "subsidy_grant",
         evidence_ref: `incentive:${r.id} · ${r.evidence_ref}`,
       });
-      toast("자금조달 sources 항목으로 등록했습니다 (억원 → 백만 KRW 환산) — 투자구조 탭에서 금액을 확인하세요.");
+      toast("자금조달 sources 항목으로 등록했습니다 (백만 KRW) — 투자구조 탭에서 금액을 확인하세요.");
     } catch (e) {
       toast(e instanceof Error ? `등록 실패: ${e.message}` : "등록 실패");
     } finally {
@@ -119,7 +120,7 @@ function IncentivesView() {
                           <option value="prospective">수혜 예정</option><option value="granted">확정</option>
                         </select>
                       ) : <span className={`status-chip ${r.direction === "granted" ? "status-green" : "status-amber"}`}>{r.direction === "granted" ? "확정" : "수혜 예정"}</span>}</td>
-                    <td className="col-num tabular-nums">{r.npv_value != null ? `${fmtNpvInteger(r.npv_value)}억` : "—"}</td>
+                    <td className="col-num tabular-nums">{r.npv_value != null ? `${fmtNpvEok(r.npv_value)}억` : "—"}</td>
                     <td className="text-[length:var(--fs-caption)]">{r.clawback_rule ?? "—"}</td>
                     <td className="text-[length:var(--fs-caption)]">
                       {r.evidence_ref ? <code className="dd-item-id mr-1" title={r.evidence_ref}>{r.evidence_ref.slice(0, 24)}</code> : <span className="status-chip status-amber mr-1" title="적격 증빙이 없으면 자금조달 sources에 넣을 수 없습니다">증빙 없음</span>}

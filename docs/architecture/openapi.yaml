@@ -6832,6 +6832,23 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/sites/regulatory-draft:
+    post:
+      operationId: draftProjectSiteRegulatoryReview
+      summary: "k-law-grounded regulatory pre-review DRAFT for one site candidate (address/region/notes → 건축법·인허가 검토 축). Returned, never persisted; deterministic fallback without an LLM; analyst+, audited site_regulatory_draft.generate."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/reports/{snapshotId}:
     get:
       operationId: getProjectReportSnapshot

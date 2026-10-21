@@ -14,7 +14,7 @@ import { canWriteProject } from "../../../../lib/project-write-access.ts";
 // 부채·커버넌트 (financing/valuation) — Wave 0 REST B6. 차입 상품 목록 관리;
 // 2026-10-21: 최신 시뮬레이션의 커버넌트 여력(headroom)을 서버(lib/covenant-headroom)
 // 에서 읽어 S10 산출물 "커버넌트 여력"으로 표시한다 — 투자심의 자료·히트맵에도 전달.
-interface Instrument { id: string; lender: string | null; principal: number; rate_type: string; rate: number; maturity: string | null; covenant_json: string | null; security: string | null; seniority: string | null }
+interface Instrument { id: string; lender: string | null; principal: number; rate_type: string; rate: number; maturity: string | null; amortization: string | null; covenant_json: string | null; security: string | null; seniority: string | null }
 interface HeadroomRow { covenant_key: string; direction: "max" | "min" | "unknown"; min_headroom_pct: number | null; tightest_period: string | null; periods: number; breached_periods: number; status: "breached" | "tight" | "ok" | "unknown_direction" }
 interface Headroom { status: "computed" | "insufficient_evidence"; reason?: string; simulation_id: string | null; covenants: HeadroomRow[] }
 
@@ -95,8 +95,8 @@ function DebtView() {
   return (
     <main>
       <StageTabs projectId={id} />
-      <h1>부채·커버넌트</h1>
-      <p className="objective">차입 상품과 커버넌트 조건을 관리합니다 — 커버넌트 여력은 자금조달(S10)과 대조됩니다.</p>
+      <h1>차입·여신 관리 <span className="note">(부채·커버넌트)</span></h1>
+      <p className="objective">차입 상품·상환 구조와 커버넌트 조건을 관리하고 여신 여력을 점검합니다 — 커버넌트 여력은 자금조달(S10)과 대조되고 투자심의 자료·리스크 히트맵에 전달됩니다.</p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       <section className="market-section" aria-label="차입 목록">
         {rows === null ? <PageState state="loading" /> : rows.length === 0 ? (
@@ -112,7 +112,7 @@ function DebtView() {
                   <td className="font-semibold">{r.lender ?? "—"}</td>
                   <td className="col-num tabular-nums">{r.principal}</td>
                   <td className="tabular-nums">{r.rate_type === "fixed" ? "고정" : "변동"} {r.rate}%</td>
-                  <td className="tabular-nums">{r.maturity ?? "—"}</td>
+                  <td className="tabular-nums" title={r.amortization ? `상환 구조: ${r.amortization}` : undefined}>{r.maturity ?? "—"}{r.amortization ? <span className="note"> · {r.amortization}</span> : null}</td>
                   <td className="text-[length:var(--fs-caption)]">{r.covenant_json ?? "—"}</td>
                   <td className="text-[length:var(--fs-caption)]">{[r.security, r.seniority].filter(Boolean).join(" · ") || "—"}</td>
                 </tr>

@@ -29,6 +29,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     logistics_score?: number | null; labor_score?: number | null;
     permit_lead_time_days?: number | null; infra_capex?: number | null;
     total_score?: number | null; rank?: number | null; note?: string | null;
+    address?: string | null; infra_notes?: string | null; labor_notes?: string | null;
   } | null;
   if (!body?.name?.trim()) return badRequest("name_required", "부지명은 필수입니다.");
   const now = new Date().toISOString();
@@ -39,14 +40,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     labor_score: body.labor_score ?? null, permit_lead_time_days: body.permit_lead_time_days ?? null,
     infra_capex: body.infra_capex ?? null, total_score: body.total_score ?? null,
     rank: body.rank ?? null, note: body.note?.trim() || null,
+    address: body.address?.trim() || null,
+    infra_notes: body.infra_notes?.trim() || null,
+    labor_notes: body.labor_notes?.trim() || null,
     created_by: auth.auth.userId, created_at: now, updated_at: now,
   };
   getDb().run(
-    `INSERT INTO site (id, project_id, name, region_code, infra_score, logistics_score, labor_score, permit_lead_time_days, infra_capex, total_score, rank, note, created_by, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO site (id, project_id, name, region_code, infra_score, logistics_score, labor_score, permit_lead_time_days, infra_capex, total_score, rank, note, address, infra_notes, labor_notes, created_by, created_at, updated_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [row.id, row.project_id, row.name, row.region_code, row.infra_score, row.logistics_score,
      row.labor_score, row.permit_lead_time_days, row.infra_capex, row.total_score, row.rank,
-     row.note, row.created_by, row.created_at, row.updated_at],
+     row.note, row.address, row.infra_notes, row.labor_notes, row.created_by, row.created_at, row.updated_at],
   );
   appendAudit(getDb(), { actor: auth.auth.userId, action: "site.create", target: `${id}:${row.id}`, now });
   return ok({ site: row }, 201);

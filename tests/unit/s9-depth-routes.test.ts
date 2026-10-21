@@ -18,6 +18,7 @@ import { stageArtifactDefsFor } from "../../app/web-next/lib/review/stage-artifa
 import { buildRiskHeatmap, heatmapSnapshot } from "../../app/web-next/lib/risk-heatmap.ts";
 import { covenantHeadroom } from "../../app/web-next/lib/covenant-headroom.ts";
 
+process.env.CO_NEWBIZ_LLM_PROVIDER = "none"; // draft routes must not call a real provider in tests
 const TEST_DB_PATH = "db/data/test-s9-depth.sqlite";
 const NOW = "2026-10-21T10:00:00Z";
 type Db = ReturnType<typeof GetDb>;
@@ -280,6 +281,30 @@ describe("review claim acks + project-gate confirmation snapshot (ADR-0182 §5 a
 });
 
 describe("S10 register lifecycle — delete + status change (2026-10-21 decider)", () => {
+  test("site regulatory draft: deterministic fallback (no persistence) + viewer 403 + compose carries the new sections", async () => {
+    const s = await req(`/api/projects/${projectId}/sites`, json(analystCookie, { name: "규제 검토 부지", address: "충북 청주시 청원구 OOO 123" }));
+    expect(s.status).toBe(201);
+    const siteId = ((await s.json()).data.site as { id: string }).id;
+    const before = count("SELECT COUNT(*) AS c FROM audit_log WHERE action = 'site_regulatory_draft.generate'");
+    const draft = await req(`/api/projects/${projectId}/sites/regulatory-draft`, json(analystCookie, { site_id: siteId }));
+    expect(draft.status).toBe(200);
+    const d = (await draft.json()).data as { source: string; draft: { synthesis: string; items: Array<{ area: string }> } };
+    expect(d.source).toBe("synthesis");
+    expect(d.draft.synthesis).toContain("결정론 폴백");
+    expect(d.draft.items.length).toBeGreaterThan(0);
+    expect((await req(`/api/projects/${projectId}/sites/regulatory-draft`, json(viewerCookie, { site_id: siteId }))).status).toBe(403);
+    expect(count("SELECT COUNT(*) AS c FROM audit_log WHERE action = 'site_regulatory_draft.generate'")).toBe(before + 1);
+    // cleanup — later suites assert on the sites list
+    await req(`/api/projects/${projectId}/sites?id=${encodeURIComponent(siteId)}`, { method: "DELETE", headers: { cookie: analystCookie } });
+    const compose = await req(`/api/projects/${projectId}/reports/compose`, { method: "POST", headers: { cookie: analystCookie } });
+    expect(compose.status).toBe(200);
+    const c = (await compose.json()).data as { sections: string[]; content_md: string };
+    for (const sec of ["리스크 히트맵", "자금 확정성·커버넌트", "인허가·인증 현황", "마일스톤", "투자심사 절차 상태"]) {
+      expect(c.sections).toContain(sec);
+    }
+    expect(c.content_md).toContain("## 8. 리스크 히트맵 요약");
+  });
+
   test("incentives: create two, delete one, direction change, audit; viewer 403", async () => {
     const a = await req(`/api/projects/${projectId}/incentives`, json(analystCookie, { program_name: "보조금 A", npv_value: 5, evidence_ref: "교부결정" }));
     const b = await req(`/api/projects/${projectId}/incentives`, json(analystCookie, { program_name: "보조금 B", npv_value: 7 }));
@@ -324,7 +349,7 @@ describe("S10 register lifecycle — delete + status change (2026-10-21 decider)
     const list = await req(`/api/projects/${projectId}/sites`, { headers: { cookie: analystCookie } });
     const rows = ((await list.json()).data as { sites: Array<{ name: string }> }).sites;
     expect(rows.map((r) => r.name)).toEqual(["부지 B"]);
-    expect(count("SELECT COUNT(*) AS c FROM audit_log WHERE action = 'site.deleted'")).toBe(1);
+    expect(count("SELECT COUNT(*) AS c FROM audit_log WHERE action = 'site.deleted' AND target LIKE ?", `${projectId}:%`)).toBe(2); // 부지 A + 규제 검토 부지(초안 테스트 정리)
   });
 });
 
