@@ -140,25 +140,31 @@ function SitesView() {
       {canAct && (
         <section className="market-section" aria-label="부지 등록">
           <h2 className="text-[0.9rem] mb-2">부지 등록</h2>
-          <form className="sizing-new-form" onSubmit={create}>
-            <div className="flex flex-wrap items-end gap-2">
-              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">부지명 *</span>
-                <input className="sizing-new-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></label>
-              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[16rem]"><span className="block mb-1">주소 (법규 검토 근거)</span>
+            <div className="grid gap-x-3 gap-y-2 md:grid-cols-3 text-[length:var(--fs-caption)]">
+              <label className="grid gap-1"><span className="block">부지명 *</span>
+                <input className="sizing-new-input w-full" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></label>
+              <label className="grid gap-1 md:col-span-2"><span className="block">주소 (법규 검토 근거)</span>
                 <input className="sizing-new-input w-full" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="예: 충북 청주시 청원구 OOO 123" /></label>
-              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">지역코드</span>
-                <input className="sizing-new-input sizing-new-input-sm" value={form.region_code} onChange={(e) => setForm({ ...form, region_code: e.target.value })} /></label>
-              {(["infra_score", "logistics_score", "labor_score", "permit_lead_time_days", "total_score"] as const).map((k) => (
-                <label key={k} className="text-[length:var(--fs-caption)] w-[6rem]"><span className="block mb-1">{k === "infra_score" ? "인프라" : k === "logistics_score" ? "물류" : k === "labor_score" ? "노동력" : k === "permit_lead_time_days" ? "인허가(일)" : "총점"}</span>
-                  <input type="number" className="sizing-new-input sizing-new-input-sm" value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} /></label>
-              ))}
-              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[24rem]"><span className="block mb-1">인프라 확인 메모 (상하수도·전기·도로·물류 — 사람 확인 값)</span>
+              <label className="grid gap-1"><span className="block">지역코드</span>
+                <input className="sizing-new-input w-full" value={form.region_code} onChange={(e) => setForm({ ...form, region_code: e.target.value })} /></label>
+              <label className="grid gap-1"><span className="block">인프라 점수</span>
+                <input type="number" className="sizing-new-input w-full" value={form.infra_score} onChange={(e) => setForm({ ...form, infra_score: e.target.value })} /></label>
+              <label className="grid gap-1"><span className="block">물류 점수</span>
+                <input type="number" className="sizing-new-input w-full" value={form.logistics_score} onChange={(e) => setForm({ ...form, logistics_score: e.target.value })} /></label>
+              <label className="grid gap-1"><span className="block">노동력 점수</span>
+                <input type="number" className="sizing-new-input w-full" value={form.labor_score} onChange={(e) => setForm({ ...form, labor_score: e.target.value })} /></label>
+              <label className="grid gap-1"><span className="block">인허가 리드타임(일)</span>
+                <input type="number" className="sizing-new-input w-full" value={form.permit_lead_time_days} onChange={(e) => setForm({ ...form, permit_lead_time_days: e.target.value })} /></label>
+              <label className="grid gap-1"><span className="block">총점</span>
+                <input type="number" className="sizing-new-input w-full" value={form.total_score} onChange={(e) => setForm({ ...form, total_score: e.target.value })} /></label>
+              <label className="grid gap-1 md:col-span-3"><span className="block">인프라 확인 메모 (상하수도·전기·도로·물류 — 사람 확인 값)</span>
                 <input className="sizing-new-input w-full" value={form.infra_notes} onChange={(e) => setForm({ ...form, infra_notes: e.target.value })} placeholder="예: 상수도 관로 인접, 22.9kV 전력 신설 필요" /></label>
-              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[24rem]"><span className="block mb-1">인력 확인 메모 (주변 학교·인력pool)</span>
+              <label className="grid gap-1 md:col-span-3"><span className="block">인력 확인 메모 (주변 학교·인력pool)</span>
                 <input className="sizing-new-input w-full" value={form.labor_notes} onChange={(e) => setForm({ ...form, labor_notes: e.target.value })} placeholder="예: 반경 5km 내 공대 2곳, 생산 인력 확보 양호" /></label>
-              <button type="submit" className="btn-primary" disabled={busy}>{busy ? "등록 중..." : "등록"}</button>
+              <div className="md:col-span-3">
+                <button type="submit" className="btn-primary" disabled={busy}>{busy ? "등록 중..." : "등록"}</button>
+              </div>
             </div>
-          </form>
         </section>
       )}
       {confirmDialog}

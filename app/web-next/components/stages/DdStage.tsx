@@ -218,6 +218,9 @@ export function DdStage({ projectId }: { projectId: string }) {
   useEffect(() => { load(null); }, [load]);
 
   const targets = data?.targets ?? [];
+  // 실사 조사 도구 트랙 필터 (2026-10-21 decider): greenfield는 고객 CoC·경영진 보상
+  // (M&A 실사 항목)이 도메인 범위 밖 — ADR-0160/0162의 도메인 범위를 따른다.
+  const toolsGf = !!data?.greenfield_scope;
   const selectedTarget = targets.find((t) => t.is_selected) ?? null;
   const viewSummary = viewTarget ? targets.find((t) => t.target_id === viewTarget) ?? null : null;
   // A comparison target whose DD was never opened has no checklist to show or edit.
@@ -520,22 +523,11 @@ export function DdStage({ projectId }: { projectId: string }) {
             </h3>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               이 화면들의 기록은 S9 실사 체크리스트(ma-04~08 · cdd-07)와 리스크 히트맵·투자심의 자료로 흘러갑니다.
+              {toolsGf
+                ? " Green Field는 고객 CoC·경영진 보상(M&A 실사 항목)이 도메인 범위 밖이라 인터뷰·리스크 히트맵만 표시됩니다."
+                : " Brown Field는 고객 CoC·경영진 보상 실사도 포함됩니다."}
             </p>
             <ul className="grid gap-2 md:grid-cols-4 list-none p-0 m-0">
-              <li>
-                <Link href={`/projects/${projectId}/customer-coc`} className="card block" data-testid="dd-tool-coc">
-                  <strong>고객 집중 · 지위 변동(CoC)</strong>
-                  <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">ma-07/08 — 계약 스캔 · 집중도 30% 자동 플래그</span>
-                  <span className="status-chip status-not-started mt-1">기록 {data.tool_counts.contracts.total}건 · 플래그 {data.tool_counts.contracts.plotted}건</span>
-                </Link>
-              </li>
-              <li>
-                <Link href={`/projects/${projectId}/comp-parity`} className="card block" data-testid="dd-tool-comp">
-                  <strong>경영진 보상 · 임금 형평</strong>
-                  <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">ma-04~06 · hdd — CoC 트리거 보상 · k≥3 집계</span>
-                  <span className="status-chip status-not-started mt-1">패키지 {data.tool_counts.compensation.packages}건 · 형평 {data.tool_counts.compensation.parity_rows}건</span>
-                </Link>
-              </li>
               <li>
                 <Link href={`/projects/${projectId}/interviews`} className="card block" data-testid="dd-tool-interviews">
                   <strong>전문가 인터뷰 · 채널 체크</strong>
@@ -550,6 +542,24 @@ export function DdStage({ projectId }: { projectId: string }) {
                   <span className={`status-chip ${data.tool_counts.heatmap.high > 0 ? "status-red" : "status-green"} mt-1`}>항목 {data.tool_counts.heatmap.total}건 · 높음 {data.tool_counts.heatmap.high}건</span>
                 </Link>
               </li>
+              {!toolsGf && (
+              <li>
+                <Link href={`/projects/${projectId}/customer-coc`} className="card block" data-testid="dd-tool-coc">
+                  <strong>고객 집중 · 지위 변동(CoC)</strong>
+                  <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">ma-07/08 — 계약 스캔 · 집중도 30% 자동 플래그</span>
+                  <span className="status-chip status-not-started mt-1">기록 {data.tool_counts.contracts.total}건 · 플래그 {data.tool_counts.contracts.plotted}건</span>
+                </Link>
+              </li>
+              )}
+              {!toolsGf && (
+              <li>
+                <Link href={`/projects/${projectId}/comp-parity`} className="card block" data-testid="dd-tool-comp">
+                  <strong>경영진 보상 · 임금 형평</strong>
+                  <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">ma-04~06 · hdd — CoC 트리거 보상 · k≥3 집계</span>
+                  <span className="status-chip status-not-started mt-1">패키지 {data.tool_counts.compensation.packages}건 · 형평 {data.tool_counts.compensation.parity_rows}건</span>
+                </Link>
+              </li>
+              )}
             </ul>
           </section>
         )}

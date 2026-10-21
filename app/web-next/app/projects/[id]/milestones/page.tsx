@@ -151,7 +151,7 @@ function MilestonesView() {
       <p className="objective">주요 마일스톤의 기한과 완료를 관리합니다 — 프로젝트 공통 화면으로 모든 단계에서 열 수 있으며, 기준선 마일스톤(인허가·인증)도 여기에 모입니다. 지연 표시는 참고이며 게이트가 아닙니다.</p>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="milestone-track-hint">
         {track === "greenfield"
-          ? "Green Field — 연구개발(R&D) 기반 사업화 관점: 기술 검증(TRL)·인허가·초기 판매·설비투자 트랜치 마일스톤을 권장합니다."
+          ? "Green Field — 연구개발(R&D) 기반 사업화 관점: 기술 검증(TRL)·인허가·초기 판매·설비투자 집행 단계 마일스톤을 권장합니다."
           : track === "brownfield"
             ? "Brown Field — M&A 실사·PMI 관점: 단계별 실사 종결·시너지 인증·핵심인재 확보·통합 마일스톤을 권장합니다."
             : "트랙이 확정되면 Green Field(연구개발 기반 사업화) 또는 Brown Field(M&A 실사·PMI) 관점의 권장 마일스톤이 표시됩니다."}

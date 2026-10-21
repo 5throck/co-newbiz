@@ -152,7 +152,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
         if (gf) {
           api.get<{ tranches: TrancheView[] }>(`/api/projects/${encodeURIComponent(projectId)}/capex-tranches`)
             .then((t) => setTranches(t.data.tranches))
-            .catch((e) => setError(e instanceof Error ? e.message : "설비투자 트랜치를 불러오지 못했습니다."));
+            .catch((e) => setError(e instanceof Error ? e.message : "설비투자 집행 단계를 불러오지 못했습니다."));
         }
       })
       .catch(() => setIsGf(false));
