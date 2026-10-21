@@ -94,7 +94,7 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
       { seg: "/interviews", label: "인터뷰", hidden: true },
       { seg: "/comp-parity", label: "보상·형평", hidden: true },
       { seg: "/customer-coc", label: "고객 CoC", hidden: true },
-      { seg: "/risk-heatmap", label: "리스크 히트맵" },
+      { seg: "/risk-heatmap", label: "리스크 히트맵", hidden: true },
     ],
   },
   {
@@ -116,9 +116,10 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
       { seg: "/ic-review", label: "투자심의" },
       { seg: "/reports", label: "보고서" },
     ],
+    // 2026-10-21 decider: 외부 공유·에이전트 이력은 더보기에서 제외(페이지는 URL로 유지).
     more: [
-      { seg: "/share", label: "외부 공유" },
-      { seg: "/agent-runs", label: "에이전트 이력" },
+      { seg: "/share", label: "외부 공유", hidden: true },
+      { seg: "/agent-runs", label: "에이전트 이력", hidden: true },
       // Charter home (flow.spec S11 charter-baseline); listed on every stage via PROJECT_COMMON_TABS.
       { seg: "/charter", label: "추진계획(차터)", hidden: true },
     ],

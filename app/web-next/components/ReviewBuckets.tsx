@@ -234,6 +234,30 @@ export function ReviewBuckets({
   }
 
   const counts = bucketCounts(stages);
+  // 2026-10-21 (decider: "다 확인했음에도 종결되지 않음") — 사람 확인(ack)과 결정
+  // 기록에 들어간 항목은 버킷 건수에서 제외해 "모두 확인" 상태를 보인다. 원본
+  // 버킷 데이터는 그대로이며, 건수는 표시값일 뿐 게이트를 막지 않는다.
+  const resolvedClaims = useMemo(() => {
+    const set = new Set<string>();
+    for (const c of confirmedJudgements ?? []) set.add(c);
+    for (const [claim, checked] of Object.entries(judgementChecks ?? {})) if (checked) set.add(claim);
+    return set;
+  }, [confirmedJudgements, judgementChecks]);
+  const claimsOf = (bucket: keyof typeof stages[number]) =>
+    stages
+      .filter((st) => st.performed || st.origin === "AI 1st")
+      .flatMap((st) => st[bucket] as ReadonlyArray<{ claim?: string }>)
+      .map((it) => String(it?.claim ?? ""));
+  const displayCounts = (() => {
+    const c = { ...counts };
+    c.needs_judgement = claimsOf("needs_judgement").filter((cl) => !resolvedClaims.has(cl)).length;
+    c.could_not_verify = claimsOf("could_not_verify").filter((cl) => !resolvedClaims.has(cl)).length;
+    return c;
+  })();
+  const allReviewed =
+    claimsOf("needs_judgement").length + claimsOf("could_not_verify").length > 0 &&
+    displayCounts.needs_judgement === 0 &&
+    displayCounts.could_not_verify === 0;
   const activeLabel = tabs.find((t) => t.key === active)?.label;
   const panelId = `${uid}-panel`;
   const summaryMode = variant === "summary";
@@ -255,7 +279,7 @@ export function ReviewBuckets({
             {open ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}
             <span className="review-strip-title">3단계 검토</span>
             {view ? (
-              <CountStrip counts={counts} label={tabs.length > 1 ? activeLabel : undefined} />
+              <CountStrip counts={displayCounts} label={tabs.length > 1 ? activeLabel : undefined} />
             ) : (
               <span className="review-counts-target">{error ? "불러오지 못함" : "불러오는 중…"}</span>
             )}
@@ -265,7 +289,7 @@ export function ReviewBuckets({
       ) : (
         <div className="review-head">
           <h3 className="sizing-step-title text-[0.95rem]">3단계 검토 — 사람 판단 전 참고 자료</h3>
-          {view && <CountStrip counts={counts} />}
+          {view && <CountStrip counts={displayCounts} />}
           {headerSlot && <span className="review-head-slot">{headerSlot}</span>}
         </div>
       )}
@@ -309,6 +333,9 @@ export function ReviewBuckets({
                   .flatMap((s) => s[b.key].map((it) => ({ it, s })));
                 const headingId = `${uid}-${b.key}`;
                 const prominent = b.key === "needs_judgement";
+                const openItems = b.key === "needs_judgement" || b.key === "could_not_verify"
+                  ? items.filter(({ it }) => !resolvedClaims.has(it.claim))
+                  : items;
                 return (
                   <section
                     key={b.key}
@@ -316,7 +343,7 @@ export function ReviewBuckets({
                     className={`review-bucket border rounded-lg px-3 py-2 ${prominent ? "border-2 border-[color:var(--accent)]" : "border-[color:var(--border)]"}`}
                   >
                     <h4 id={headingId} className="text-[length:var(--fs-body)] font-semibold mb-1" title={BUCKET_TITLE[b.key].en}>
-                      {BUCKET_TITLE[b.key].ko}, {items.length}건
+                      {BUCKET_TITLE[b.key].ko}, {openItems.length}건
                     </h4>
                     <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{b.hint}</p>
                     {b.key === "needs_judgement" && items.length > 0 && onDecisionJump && (
@@ -324,11 +351,8 @@ export function ReviewBuckets({
                         이 항목들을 검토한 뒤 결정을 기록하세요 →
                       </button>
                     )}
-                    {items.length === 0 ? (
-                      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">해당 항목 없음</p>
-                    ) : (
                       <ul className="review-items text-[length:var(--fs-caption)]">
-                        {items.map(({ it, s }) => {
+                        {openItems.map(({ it, s }) => {
                           const l = localizeItem(it);
                           const claimKey = `${s.id}-${it.claim}`;
                           const confirmed = confirmedJudgements?.has(it.claim) ?? false;
@@ -366,7 +390,6 @@ export function ReviewBuckets({
                           );
                         })}
                       </ul>
-                    )}
                   </section>
                 );
               })}

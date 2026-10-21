@@ -118,7 +118,8 @@ describe("stage tabs", () => {
       expect(g.more.find((t) => t.seg === seg)?.hidden).toBe(true);
     }
     const s9 = groupForSegment("/interviews")!;
-    expect(s9.more.filter((t) => !t.hidden).map((t) => t.seg)).toEqual(["/risk-heatmap"]);
+    // 2026-10-21 decider(2차): the heatmap card lives in the workspace tools row — the menu hides it too.
+    expect(s9.more.filter((t) => !t.hidden).map((t) => t.seg)).toEqual([]);
   });
 
   test("(2026-10-21 decider) the charter and the milestone register are project-common tabs", () => {

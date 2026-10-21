@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { PageState, useToast } from "../ui.tsx";
+import { KILL_CRITERIA_KO } from "../../lib/review/kill-criteria-ko.ts";
 
 type StepStatus = "pending" | "incomplete" | "pass" | "fail" | "recorded";
 type Verdict = "pass" | "fail" | "na";
@@ -150,7 +151,7 @@ export function IcReviewStepsPanel({ projectId, canAct }: { projectId: string; c
             <tbody>{view.kill_criteria.map((c) => (
               <tr key={c.key}>
                 <td className="text-[length:var(--fs-caption)]">{c.procedure}</td>
-                <td className="text-[length:var(--fs-caption)]" title={c.criterion_id}>{c.title}{!c.enabled && <span className="note ml-1">(예측 미정의)</span>}</td>
+                <td className="text-[length:var(--fs-caption)]" title={c.criterion_id}>{KILL_CRITERIA_KO[c.criterion_id] ?? c.title}{!c.enabled && <span className="note ml-1">(예측 미정의)</span>}</td>
                 <td className="text-[length:var(--fs-caption)]">{c.action}</td>
                 <td>{c.automated ? <span className={`status-chip ${AUTO_LABEL[c.automated].cls}`}>{AUTO_LABEL[c.automated].label}</span> : <span className="note">평가 실행 없음</span>}</td>
                 <td>
