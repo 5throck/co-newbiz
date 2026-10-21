@@ -10,11 +10,24 @@
 import type { getDb } from "../../../../db/client.ts";
 import { appendAudit } from "../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../db/lib/ulid.ts";
-
-type Db = ReturnType<typeof getDb>;
+import { isReviewGate } from "./gate-artifacts.ts";
+import { parseStageArtifactKey, stageArtifactDef } from "./stage-artifacts.ts";
 
 export type AckEntityType = "opportunity" | "project";
 export const CLAIM_MAX_LENGTH = 300;
+
+/**
+ * The gate column stores either a review gate ("dd", "entity_ic", …) or a
+ * stage-artifact key ("stage:S9:1") — the review tabs carry both, and a claim
+ * is acknowledged under whichever tab produced it. Anything else is rejected.
+ */
+export function isValidAckGate(gate: string): boolean {
+  if (isReviewGate(gate)) return true;
+  const parsed = parseStageArtifactKey(gate);
+  return parsed !== null && stageArtifactDef(parsed.stageId, parsed.index) !== null;
+}
+
+type Db = ReturnType<typeof getDb>;
 
 export interface ClaimAck {
   claim: string;

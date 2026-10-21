@@ -352,7 +352,7 @@ export function ReviewBuckets({
                                   <input
                                     type="checkbox"
                                     checked={judgementChecks?.[it.claim] ?? false}
-                                    onChange={(e) => onToggleJudgement?.(it.claim, e.target.checked, active)}
+                                    onChange={(e) => onToggleJudgement?.(it.claim, e.target.checked, active.startsWith("gate:") ? active.slice(5) : active)}
                                   />
                                   <span>사람 확인 — 내용을 검토했습니다 (즉시 저장되며, 결정 기록에도 함께 남습니다)</span>
                                 </label>

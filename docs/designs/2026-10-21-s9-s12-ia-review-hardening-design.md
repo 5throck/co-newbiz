@@ -44,6 +44,7 @@ lang_reason: source-material
 ### 2.7 3단계 검토 확인 저장 + 프로젝트 게이트 버그 (질의 7)
 - 마이그레이션 **0165** `review_claim_ack`(append-only, entity·gate·claim별 최신 행이 현재 상태). `GET/POST /api/{projects|opportunities}/[id]/review-acks`(analyst+ 쓰기·감사). `GateDecisionPanel`이 마운트 시 acks로 체크를 복원하고 토글 즉시 저장(저장 실패 토스트), `ReviewBuckets`에 `확인 저장됨 · by · 날짜` 칩과 문구 갱신. 결정 기록은 기존대로 자체 스냅샷을 유지(양쪽 다 남음).
 - **버그 수정**: 프로젝트 게이트 라우트가 `judgement_confirmations`를 저장하지 않던 누락(기회 라우트와 동일하게 저장·조회 파싱).
+- **저장 불가 회귀 수정(동일 날짜, decider "검토 체크 저장 불가 문제가 해결되지 않았어")**: `ReviewBuckets` 탭 키는 `gate:<id>` 접두사 형태라 토글이 `gate="gate:dd"`를 전송 → 라우트 검증에서 항상 400. 접두사를 벗겨 전달하도록 수정하고, 산출물 탭(`stage:S#:N`)의 항목도 저장할 수 있게 라우트 검증을 `isValidAckGate`(검토 게이트 ∪ 레지스트리에 존재하는 단계 산출물 키)로 확장. 회귀 테스트가 접두사 거부·산출물 키 수락을 고정.
 - ADR-0182 §5 addendum: "신규 테이블 없음" 조항 수정(신규 테이블 1개, 사유: 검토 작업 유실 방지).
 
 ## 3. 범위 밖

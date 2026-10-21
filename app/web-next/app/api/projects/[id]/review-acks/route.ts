@@ -8,10 +8,11 @@
 import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
-import { isReviewGate } from "../../../../../lib/review/gate-artifacts.ts";
-import { listClaimAcks, recordClaimAck, type AckEntityType } from "../../../../../lib/review/claim-acks.ts";
+import { isValidAckGate, listClaimAcks, recordClaimAck, type AckEntityType } from "../../../../../lib/review/claim-acks.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { route } from "../../../../../lib/route.ts";
+
+const GATE_MESSAGE = `gate는 검토 게이트(screening·pre_fs·fs·dd·entity_ic·group_ic·transition) 또는 단계 산출물 키(stage:S#:N)여야 합니다.`;
 
 export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
@@ -19,7 +20,7 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
   const { id } = await params;
   if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const gate = new URL(request.url).searchParams.get("gate") ?? "";
-  if (!isReviewGate(gate)) return badRequest("invalid_request", `gate는 ${["screening", "pre_fs", "fs", "dd", "entity_ic", "group_ic", "transition"].join(" | ")} 중 하나입니다.`);
+  if (!isValidAckGate(gate)) return badRequest("invalid_request", GATE_MESSAGE);
   const acks = listClaimAcks(getDb(), "project" as AckEntityType, id, gate);
   return ok({ acks }, 200, { count: acks.length });
 });
@@ -33,7 +34,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as { gate?: unknown; claim?: unknown; acked?: unknown; note?: unknown } | null;
   const gate = typeof body?.gate === "string" ? body.gate : "";
-  if (!isReviewGate(gate)) return badRequest("invalid_request", "gate가 올바르지 않습니다.");
+  if (!isValidAckGate(gate)) return badRequest("invalid_request", GATE_MESSAGE);
   if (typeof body?.claim !== "string" || !body.claim.trim()) return badRequest("invalid_request", "claim은 필수입니다.");
   if (typeof body?.acked !== "boolean") return badRequest("invalid_request", "acked는 boolean이어야 합니다.");
   const ack = recordClaimAck(getDb(), {

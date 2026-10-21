@@ -14,6 +14,7 @@ import { resetDb, getDb, type getDb as GetDb } from "../../db/client.ts";
 import { runMigrations } from "../../db/migrate.ts";
 import { ulid } from "../../db/lib/ulid.ts";
 import { approvedConfidenceAdjustment } from "../../db/lib/rag-service.ts";
+import { stageArtifactDefsFor } from "../../app/web-next/lib/review/stage-artifacts.ts";
 import { buildRiskHeatmap, heatmapSnapshot } from "../../app/web-next/lib/risk-heatmap.ts";
 import { covenantHeadroom } from "../../app/web-next/lib/covenant-headroom.ts";
 
@@ -235,6 +236,17 @@ describe("covenant headroom — latest simulation's covenant_test rows", () => {
 });
 
 describe("review claim acks + project-gate confirmation snapshot (ADR-0182 §5 addendum)", () => {
+  test("the tab's prefixed key ('gate:dd') is rejected; a stage-artifact key is accepted (2026-10-21 save-fix regression)", async () => {
+    // Regression: ReviewBuckets tab keys are 'gate:<id>' — sending the prefix raw made every save 400.
+    expect((await req(`/api/projects/${projectId}/review-acks`, json(analystCookie, { gate: "gate:dd", claim: "c0", acked: true }))).status).toBe(400);
+    const defs = stageArtifactDefsFor("S9");
+    expect(defs.length).toBeGreaterThan(0);
+    const artifactKey = `stage:S9:${defs[0].index}`;
+    expect((await req(`/api/projects/${projectId}/review-acks`, json(analystCookie, { gate: artifactKey, claim: "산출물 항목 확인", acked: true }))).status).toBe(201);
+    const list = await req(`/api/projects/${projectId}/review-acks?gate=${encodeURIComponent(artifactKey)}`, { headers: { cookie: analystCookie } });
+    expect(((await list.json()).data as { acks: Array<{ claim: string; acked: boolean }> }).acks).toMatchObject([{ claim: "산출물 항목 확인", acked: true }]);
+  });
+
   test("toggle → append-only rows, latest wins, audit per row; viewer 403; bad gate 400", async () => {
     expect((await req(`/api/projects/${projectId}/review-acks?gate=dd`, { headers: { cookie: analystCookie } })).status).toBe(200);
     expect((await req(`/api/projects/${projectId}/review-acks?gate=bogus`, { headers: { cookie: analystCookie } })).status).toBe(400);
@@ -248,8 +260,9 @@ describe("review claim acks + project-gate confirmation snapshot (ADR-0182 §5 a
       { claim: "c1", acked: false, by: ANALYST },
       { claim: "c2", acked: true, by: ANALYST },
     ]);
-    expect(count("SELECT COUNT(*) AS c FROM review_claim_ack WHERE entity_type = 'project' AND entity_id = ?", projectId)).toBe(3);
-    expect(count("SELECT COUNT(*) AS c FROM audit_log WHERE action = 'review_claim_ack.recorded'")).toBe(3);
+    expect(count("SELECT COUNT(*) AS c FROM review_claim_ack WHERE entity_type = 'project' AND entity_id = ? AND gate = 'dd'", projectId)).toBe(3);
+    // gate='dd' rows only — the artifact-key regression test above added its own row under a different gate.
+    expect(count("SELECT COUNT(*) AS c FROM audit_log WHERE action = 'review_claim_ack.recorded' AND target LIKE '%:dd:%'")).toBe(3);
   });
 
   test("project gate decisions persist the confirmation snapshot (the dropped-field bug) and return it parsed", async () => {
