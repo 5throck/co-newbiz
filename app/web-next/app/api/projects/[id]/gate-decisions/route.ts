@@ -12,6 +12,7 @@ import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { gateGoPrerequisiteGaps, latestGateDecisions, type GateId } from "../../../../../lib/process-flow.ts";
 import { badRequest, fail, forbidden, notFound, ok, unprocessable } from "../../../../../lib/envelope.ts";
 import { IC_GAP_GATES, composeRationale, icGoGapItems, parseRationale } from "../../../../../lib/ic-gap-override.ts";
+import { IC_SEQUENCE, IC_STEP_LABEL, gateSequenceBlocker } from "../../../../../lib/gate-sequence-view.ts";
 import { captureReviewSnapshot, recordHumanFinalReview } from "../../../../../lib/review/human-final.ts";
 
 const GATES = new Set(["fs", "dd", "entity_ic", "group_ic"]);
@@ -84,6 +85,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // Wave C-3 (pilot-009 D-4): GO needs the gate's stage prerequisites complete.
   // HOLD/KILL stay allowed anytime. New writes only — existing rows are untouched.
   if (body.decision === "go") {
+    // T-20261022-011 (flow.spec.yaml group_ic): the entity committee GO precedes the
+    // group committee GO. Same rule the panel locks on (gate-sequence-view), now
+    // enforced on the write path — a GO recorded out of order is 409 with the
+    // file's GO-prerequisite code. Same latest-decision source as the process
+    // engine (GET), so the tie-breaking cannot drift between surfaces.
+    const latest = [...latestGateDecisions("project", id)].map(([gate, v]) => ({ gate, decision: v.decision as string | null }));
+    const blocker = gateSequenceBlocker(IC_SEQUENCE, body.gate, latest);
+    if (blocker) {
+      const label = IC_STEP_LABEL[blocker as keyof typeof IC_STEP_LABEL] ?? blocker;
+      return fail(409, "gate_prerequisites_incomplete", `GO 불가 — ${body.gate} 결정 전에 ${label}(${blocker}) GO가 선행되어야 합니다. HOLD 또는 KILL은 언제든 기록할 수 있습니다.`);
+    }
     const gaps = gateGoPrerequisiteGaps({ type: "project", id }, body.gate as GateId);
     if (gaps.length > 0) {
       return fail(409, "gate_prerequisites_incomplete", `GO 불가 — ${body.gate} 진행의 선행 단계가 완료되지 않았습니다: ${gaps.join("; ")}. HOLD 또는 KILL은 언제든 기록할 수 있습니다.`);

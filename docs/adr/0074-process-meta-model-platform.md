@@ -74,3 +74,16 @@ procedure/skill graphs.
   "Definition-driven UI" as its first principles; the UI is a workbench for verifying agent
   output, not the process itself.
 - `process_run.spec_version` preserves the time-axis split between Definition and Execution.
+
+## Errata (2026-10-22) — gate decisions are human-recorded, per ADR-0053 boundary #2
+
+Decision 3 reads "screening/pre_fs/fs/dd are agent-decided (decided_by = agent, override
+allowed, human notified)". The shipped system never records an agent as the gate decider:
+every gate-decision route (including `app/web-next/app/api/projects/[id]/gate-decisions`)
+accepts a human POST only and stores the human actor as `decided_by`; agents produce gate
+evaluations and recommendations that a person then decides on. The authority of record is
+design v1.0's non-negotiable boundary #2 — "gate approval and the investment decision belong
+to humans" — formalized as a procedure-schema contract by ADR-0053. The Decision 3 text above
+stands as history and is not rewritten; readers should treat ADR-0053 boundary #2 as
+governing who owns gate decisions. The override and notification intent of Decision 3 is
+subsumed: the agent's role is recommendation, the human's role is decision.

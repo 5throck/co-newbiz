@@ -57,3 +57,21 @@ Each row uses at most one of the three columns; the kill path (`learning_capture
 - `procedures/portfolio-venture-monitoring` (1.1.0): field references are updated **only if the column names change — they do not**; the procedure already names the three record fields in prose per ADR-0150. No procedure amendment required.
 
 Implementation (migration 0080 + predicate + route validation) is owned by backend-engineer and follows in its own PR, only after this ADR's human acceptance (granted 2026-10-02).
+
+## Addendum (2026-10-22, a) — tranche_condition is the official carrier for brownfield payment-condition milestones
+
+Status: Proposed (documentation of record; no schema or UI change). Brownfield S10 has no
+dedicated earn-out / staged-payment surface: the only tranche tab in the deal-structure
+stage is the Green Field capex execution table (`DealStructureStage.tsx`, `capex` tab is
+`isGf`-gated), while the S11 output named in flow.spec (investment-structure confirmation ... payment schedule) names a
+payment schedule with no brownfield screen to record it. Rather than adding new UI, this addendum designates
+the existing `venture_transition_decision.tranche_condition` column as the official carrier
+of record for payment-condition milestones (earn-out and other staged-payment release
+conditions): the S12 predicate (this ADR's Decision) already fail-closes on it — a
+`next_tranche_released` / `held_evidence_incomplete` transition recorded from the migration
+date onward must carry a non-empty `tranche_condition` — so the payment condition is
+queryable, auditable and enforced without a new table. The S12 human_final review covers the
+transition record that carries it. Limitation (accepted): conditions are recorded at the S12
+transition decision, not drafted at S10; until a dedicated S10 surface is designed, the S10
+four-axis hypothesis notes and the financing plan remain the drafting home, and the S12
+column remains the enforced record of the release condition itself.

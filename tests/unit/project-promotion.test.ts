@@ -70,7 +70,7 @@ function completeS5(opportunityId: string): void {
 }
 
 /** ADR-0137: S5 투자비 검토 요건 — completeS5 후 business_case_lines_json을 채운다. */
-function setS5InvestmentLines(opportunityId: string, lines: Array<{ line: string; category: string; amount: number; note?: string; period?: string; currency?: string }>): void {
+function setS5InvestmentLines(opportunityId: string, lines: Array<{ line: string; category: string; amount: number; amountUnit?: string; amountUnitConfirmed?: boolean; note?: string; period?: string; currency?: string }>): void {
   db.run(
     "UPDATE greenfield_assessment SET business_case_lines_json = ? WHERE opportunity_id = ?",
     [JSON.stringify(lines), opportunityId],

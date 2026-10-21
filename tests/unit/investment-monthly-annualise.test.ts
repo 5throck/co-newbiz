@@ -95,7 +95,7 @@ describe("monthly opex is annualised in every view", () => {
 
   test("capability lump sum and staffing labour combine with the monthly line without double-annualising", () => {
     const manual = persistAndLoad([uiLine()]);
-    const view = cl.deriveCapabilityCostLines([{ id: "k1", capability: "cap", resolution: "build", closing_cost_krw_m: 300, months_to_attain: 0, grade: "high", confirmed_at: NOW, stale: false }], [{ source: "capability", capabilityKey: "k1", reflected: true, category: "capex", amount: 300, amountUnit: "krw_m", amountUnitConfirmed: true }]);
+    const view = cl.deriveCapabilityCostLines([{ id: "k1", capability: "cap", resolution: "build", category: null, closing_cost_krw_m: 300, months_to_attain: 0, grade: "high", confirmed_at: NOW, stale: false, period: null }], [{ source: "capability", capabilityKey: "k1", reflected: true, category: "capex", amount: 300, amountUnit: "krw_m", amountUnitConfirmed: true }]);
     const staffing = { source: "staffing_plan" as const, startYear: 1, endYear: H, attritionBackfillPct: 0, rows: [{ id: "r1", roleFamily: "ops", grade: "staff", headcountByYear: [1, 2, 2, 2, 2], avgAnnualBaseSalaryKrwM: 50, salaryIncreaseRatePct: 0, onCostRatePct: 0, hireStartQuarter: null, recruitingOneOffKrwM: 0, salarySource: "analyst" }] };
     const keys = new Set(["k1"]);
     const summary = cl.buildInvestmentSummary(manual, view.lines, H, keys, staffing);

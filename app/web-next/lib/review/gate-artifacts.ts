@@ -4,6 +4,14 @@
 // stages feeding the gate (completion status, required artifacts, blockers),
 // so its content hash changes exactly when the underlying evidence does —
 // that hash is the AI 2nd cache key.
+//
+// target_screening (the brownfield S7 gate, ADR-0076) is deliberately NOT in
+// this set — documented as the decision of record in the ADR-0153 addendum
+// (2026-10-22, a). Adding it would newly engage the AI-1st/AI-2nd/human-final
+// pipeline (snapshot rows + LLM 2nd-stage spend) for every brownfield S7
+// decision: a rollout step ADR-0153 never scheduled and no test covers.
+// Consequence (accepted): target_screening decisions record no human_final
+// snapshot; gate briefs/committees still name the gate (review-display.ts).
 import { createHash } from "node:crypto";
 import { evaluateProcess, STAGES, type ProcessEvaluation, type StageId } from "../process-flow.ts";
 import { loadStageActivities } from "../spec-activities.ts";

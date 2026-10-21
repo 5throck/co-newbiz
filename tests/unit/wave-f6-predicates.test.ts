@@ -8,7 +8,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { getDb, resetDb } from "../../db/client.ts";
-import { seedS1ToS12Demo } from "../../scripts/co-newbiz/seed-s1-s12-demo.ts";
+import { seedGreenfieldS1ToS12Demo, seedS1ToS12Demo } from "../../scripts/co-newbiz/seed-s1-s12-demo.ts";
 import { evaluateProcess, WAVE_F_PREDICATE_DATE } from "../../app/web-next/lib/process-flow.ts";
 import { countSourcedCapabilityRows } from "../../app/web-next/lib/capability-gap.ts";
 import { recordPmiKickoff, PmiKickoffError } from "../../app/web-next/lib/pmi-kickoff.ts";
@@ -184,22 +184,48 @@ describe("S11 PMI kickoff and human reviewer", () => {
 });
 
 describe("S12 staleness and run-status consistency", () => {
-  function run(db: ReturnType<typeof getDb>, projectId: string, status: string) {
+  function run(
+    db: ReturnType<typeof getDb>,
+    projectId: string,
+    status: string,
+    ids: { runId?: string; industryId?: string; companyId?: string } = {},
+  ) {
+    const { runId = "r1", industryId = "demo-s1-s12-industry", companyId = "demo-s1-s12-company" } = ids;
     db.run("INSERT OR IGNORE INTO md_company (id, name_ko, name_en, created_at) VALUES ('c1','c','c','x')");
     db.run(
       `INSERT INTO pipeline_run (id, entity_type, entity_id, industry_id, initiating_company_id, status, current_stage, started_by, started_at, updated_at)
-       VALUES ('r1','project',?,'demo-s1-s12-industry','demo-s1-s12-company',?,'S12','t','x','x')`,
-      [projectId, status],
+       VALUES (?, 'project', ?, ?, ?, ?, 'S12','t','x','x')`,
+      [runId, projectId, industryId, companyId, status],
     );
-    return db.query("SELECT * FROM pipeline_run WHERE id = 'r1'").get() as Parameters<typeof maybeReopenStaleS12>[0];
+    return db.query("SELECT * FROM pipeline_run WHERE id = ?").get(runId) as Parameters<typeof maybeReopenStaleS12>[0];
   }
-  test("a stale scorecard cycle reopens a completed run for an open project", () => {
+  test("a stale scorecard cycle reopens a completed run for an open project", async () => {
+    // T-20261022-001: the scorecard cycle is S12-blocking where it is required
+    // — greenfield. Brownfield treats it as recommended-only, so the brownfield
+    // sibling below must NOT reopen.
+    const gfDir = mkdtempSync(join(tmpdir(), "co-newbiz-f6-gf-"));
+    const gfIds = await seedGreenfieldS1ToS12Demo(join(gfDir, "gf.sqlite"));
+    const gfDb = getDb(join(gfDir, "gf.sqlite"));
+    gfDb.run("UPDATE venture_scorecard SET review_cycle = '2020-Q1'");
+    gfDb.run("UPDATE venture_transition_decision SET review_cycle = '2020-Q1'");
+    expect(proj(gfIds.projectId).currentStage).toBe("S12");
+    const gfRun = run(gfDb, gfIds.projectId, "completed", {
+      runId: "gf-r1",
+      industryId: "demo-gf-industry",
+      companyId: "demo-gf-company",
+    });
+    expect(maybeReopenStaleS12(gfRun).status).toBe("running");
+    rmSync(gfDir, { recursive: true, force: true });
+  });
+  test("a stale brownfield scorecard cycle does not reopen a completed run (T-20261022-001: recommended-only)", () => {
     const { db, projectId } = demo();
     db.run("UPDATE venture_scorecard SET review_cycle = '2020-Q1'");
     db.run("UPDATE venture_transition_decision SET review_cycle = '2020-Q1'");
-    expect(proj(projectId).currentStage).toBe("S12");
+    // S12 completes blocker-free (recommended-only scorecard), so there is no
+    // current stage left to turn stale — the run stays completed.
+    expect(proj(projectId).currentStage).toBe(null);
     const r = maybeReopenStaleS12(run(db, projectId, "completed"));
-    expect(r.status).toBe("running");
+    expect(r.status).toBe("completed");
   });
   test("a fresh S12 leaves a completed run alone; a closed project is never reopened", () => {
     const { db, projectId } = demo();

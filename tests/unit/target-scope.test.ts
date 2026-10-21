@@ -71,7 +71,7 @@ const putScope = (id: string, body: unknown, headers: Record<string, string> = {
   nextRequest(`/api/opportunities/${id}/target-scope`, { method: "PUT", headers, body: json(body) });
 const getScope = (id: string, headers: Record<string, string> = { cookie }) =>
   nextRequest(`/api/opportunities/${id}/target-scope`, { method: "GET", headers });
-const VALID = { regions: ["kr", "we"], segments: ["Stage V", "construction"], unit_basis: "units_year" };
+const VALID = { regions: ["kr", "we"], segments: ["Stage V", "construction"], unit_basis: "units_year" as const };
 
 beforeAll(async () => {
   await createUser(db, { userId: ANALYST, role: "analyst", password: "pw-scope-analyst-12", createdBy: "test", now: NOW });

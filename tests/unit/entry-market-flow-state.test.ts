@@ -228,7 +228,7 @@ describe("fixed 2-step form mappers", () => {
 describe("one-release re-export shim (OD-4)", () => {
   test("old import path re-exports the folded module's API", () => {
     expect((shim as { deriveFlowState?: unknown }).deriveFlowState).toBe(deriveFlowState);
-    expect((shim as { buildDerivationSavePayload?: unknown }).buildDerivationSavePayload).toBe(deriveFlowState ? buildDerivationSavePayload : null);
+    expect((shim as { buildDerivationSavePayload?: unknown }).buildDerivationSavePayload).toBe(buildDerivationSavePayload);
   });
 });
 

@@ -4,6 +4,8 @@
 import { test, expect, beforeAll, describe } from "bun:test";
 import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
+// Type-only namespace for the dynamically imported generator module (value usages go through `gen` below).
+import type * as genT from "../../app/web-next/lib/business-case-generator.ts";
 
 const PROJECT_ROOT = join(import.meta.dirname, "../..");
 const TEST_DB_PATH = join(PROJECT_ROOT, "db/data/test-investment-simulation-s8.sqlite");
@@ -110,19 +112,25 @@ describe("per-draw pairing", () => {
 });
 
 // -- generator: bit-identical without a run, paired draws with one ---------------------------
-function caseInputs(basis: "ratio" | "s5_plan" | "s5_plan_full", s5Sim: gen.CaseInputs["s5Sim"], plan?: gen.CaseInputs["s5Plan"]): gen.CaseInputs {
+function caseInputs(basis: "ratio" | "s5_plan" | "s5_plan_full", s5Sim: genT.CaseInputs["s5Sim"], plan?: genT.CaseInputs["s5Plan"]): genT.CaseInputs {
   return {
     projectId: "01TESTPROJECT0000000000",
     marketSizeKrwM: 100000,
     anchorGrowth: 0.03,
     wacc: { value: 0.08, source: "default", assumption_id: null, run_id: null, as_of: null, rationale: null, anchor_ref: null } as never,
     bcParams: { ...gen.resolveBusinessCaseParamsDefaults(), investmentBasis: basis, iterations: 400 },
-    s5Plan: plan === undefined ? ({ modelId: "m1", horizonYears: 5, capexByYear: [500, 300, 0, 0, 0], laborOpexByYear: [200, 200, 200, 200, 200], govRndByYear: [0, 0, 0, 0, 0], opexCovered: [true, true, true, true, true], skippedLines: 0, lineHash: "abc" }) : plan,
+    s5Plan: plan === undefined ? ({ modelId: "m1", horizonYears: 5, capexByYear: [500, 300, 0, 0, 0], laborByYear: [0, 0, 0, 0, 0], opexByYear: [200, 200, 200, 200, 200], laborOpexByYear: [200, 200, 200, 200, 200], govRndByYear: [0, 0, 0, 0, 0], opexCovered: [true, true, true, true, true], skippedLines: 0, lineHash: "abc" }) : plan,
     s5Sim,
   };
 }
 
 describe("S8 generator consumption", () => {
+  // S5SimConsumption fixture; the staffing slices stay neutral (salary x1, pp shifts 0) and are
+  // unused anyway because these plans carry no staffing plan.
+  const simRun = (drawCount: number, capFactors: number[], manFactors: number[]) => ({
+    runId: "r", inputHash: "h", seed: 1, drawCount, capFactors, manFactors,
+    salaryFactors: [1], increaseFactorsPp: [0], onCostFactorsPp: [0], rampFactors: [0],
+  });
   test("without a run both ratio and s5_plan paths are bit-identical to the pre-slice-3 behaviour", () => {
     for (const basis of ["ratio", "s5_plan", "s5_plan_full"] as const) {
       const none = gen.runSeededSimulation(caseInputs(basis, null), "base");
@@ -130,19 +138,19 @@ describe("S8 generator consumption", () => {
       expect(none).toEqual(absent);
     }
     // a run attached to a ratio-basis case is ignored entirely
-    const run = { runId: "r", inputHash: "h", seed: 1, drawCount: 3, capFactors: [1.3, 1.3, 1.3], manFactors: [1.3, 1.3, 1.3] };
+    const run = simRun(3, [1.3, 1.3, 1.3], [1.3, 1.3, 1.3]);
     expect(gen.runSeededSimulation(caseInputs("ratio", run), "base")).toEqual(gen.runSeededSimulation(caseInputs("ratio", null), "base"));
   });
 
   test("unit factors reproduce the single-point plan exactly", () => {
-    const ones = { runId: "r", inputHash: "h", seed: 1, drawCount: 4, capFactors: [1, 1, 1, 1], manFactors: [1, 1, 1, 1] };
+    const ones = simRun(4, [1, 1, 1, 1], [1, 1, 1, 1]);
     expect(gen.runSeededSimulation(caseInputs("s5_plan", ones), "base")).toEqual(gen.runSeededSimulation(caseInputs("s5_plan", null), "base"));
   });
 
   test("a paired draw scales the plan: manual factor 2 equals a plan with doubled capex, revenue stream untouched", () => {
-    const doubled = { runId: "r", inputHash: "h", seed: 1, drawCount: 1, capFactors: [1], manFactors: [2] };
+    const doubled = simRun(1, [1], [2]);
     const withSim = gen.runSeededSimulation(caseInputs("s5_plan", doubled), "base");
-    const plan2 = { modelId: "m1", horizonYears: 5, capexByYear: [1000, 600, 0, 0, 0], laborOpexByYear: [200, 200, 200, 200, 200], govRndByYear: [0, 0, 0, 0, 0], opexCovered: [true, true, true, true, true], skippedLines: 0, lineHash: "abc" };
+    const plan2 = { modelId: "m1", horizonYears: 5, capexByYear: [1000, 600, 0, 0, 0], laborByYear: [0, 0, 0, 0, 0], opexByYear: [200, 200, 200, 200, 200], laborOpexByYear: [200, 200, 200, 200, 200], govRndByYear: [0, 0, 0, 0, 0], opexCovered: [true, true, true, true, true], skippedLines: 0, lineHash: "abc" };
     const direct = gen.runSeededSimulation(caseInputs("s5_plan", null, plan2), "base");
     expect(withSim.p05).toBe(direct.p05);
     expect(withSim.p50).toBe(direct.p50);
@@ -150,8 +158,8 @@ describe("S8 generator consumption", () => {
   });
 
   test("capability-sourced capex scales by the capability factor, the rest by the manual factor", () => {
-    const f = { runId: "r", inputHash: "h", seed: 1, drawCount: 1, capFactors: [3], manFactors: [1] };
-    const split = { modelId: "m1", horizonYears: 5, capexByYear: [500, 300, 0, 0, 0], capexCapabilityByYear: [500, 0, 0, 0, 0], laborOpexByYear: [200, 200, 200, 200, 200], govRndByYear: [0, 0, 0, 0, 0], opexCovered: [true, true, true, true, true], skippedLines: 0, lineHash: "abc" };
+    const f = simRun(1, [3], [1]);
+    const split = { modelId: "m1", horizonYears: 5, capexByYear: [500, 300, 0, 0, 0], capexCapabilityByYear: [500, 0, 0, 0, 0], laborByYear: [0, 0, 0, 0, 0], opexByYear: [200, 200, 200, 200, 200], laborOpexByYear: [200, 200, 200, 200, 200], govRndByYear: [0, 0, 0, 0, 0], opexCovered: [true, true, true, true, true], skippedLines: 0, lineHash: "abc" };
     const res = gen.runSeededSimulation(caseInputs("s5_plan", f, split), "base");
     const tripled = gen.runSeededSimulation(caseInputs("s5_plan", null, { ...split, capexByYear: [1500, 300, 0, 0, 0] }), "base");
     expect(res.p50).toBe(tripled.p50);
@@ -159,7 +167,7 @@ describe("S8 generator consumption", () => {
 
   test("investment draws spread the NPV distribution (deterministic for the same run)", () => {
     const factors = Array.from({ length: 50 }, (_, i) => 0.7 + (i / 49) * 0.6);
-    const run = { runId: "r", inputHash: "h", seed: 1, drawCount: 50, capFactors: factors, manFactors: factors };
+    const run = simRun(50, factors, factors);
     const a = gen.runSeededSimulation(caseInputs("s5_plan", run), "base");
     const b = gen.runSeededSimulation(caseInputs("s5_plan", run), "base");
     const base = gen.runSeededSimulation(caseInputs("s5_plan", null), "base");

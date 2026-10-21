@@ -37,14 +37,16 @@ const json = JSON.stringify;
 let cookie = "";
 
 // -- hand-built fixtures (no DB needed for the pure-function tests) ------------
-const WACC = { value: 0.08, source: "test", scope: "project" as const };
+const WACC = { value: 0.08, source: "default" as const, assumption_id: null, run_id: null, as_of: null, rationale: null, anchor_ref: null };
 const makePlan = (over: Record<string, unknown> = {}) => ({
   modelId: "m1", horizonYears: 4,
   capexByYear: [100, 50, 0, 0],
+  laborByYear: [60, 80, 90, 90].map(() => 0),
+  opexByYear: [60, 80, 90, 90],
   laborOpexByYear: [60, 80, 90, 90],
   govRndByYear: [0, 20, 0, 0],
   opexCovered: [true, true, true, true],
-  skippedLines: [],
+  skippedLines: 0,
   lineHash: "h",
   capexCapabilityByYear: [0, 0, 0, 0],
   laborOpexCapabilityByYear: [0, 0, 0, 0],

@@ -84,7 +84,7 @@ describe("computeSynergyScore", () => {
     // so Σ(기여도) = Σ(점수×가중치) can never cross 100 on screen either.
     const wsum = r.factors.reduce((s, f) => s + f.weight, 0);
     expect(wsum).toBeCloseTo(1, 5);
-    expect(Math.round(r.factors.reduce((s, f) => s + (f.value as number) * f.weight, 0))).toBe(r.score);
+    expect(Math.round(r.factors.reduce((s, f) => s + (f.value as number) * f.weight, 0))).toBe(r.score as number);
     // And a mixed case (only 일치도 at 100) stays far below the ceiling.
     const mixed = computeSynergyScore(baseInputs({ capabilityCoverage: 40 }));
     expect(mixed.score).toBeLessThan(100);

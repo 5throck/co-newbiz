@@ -101,7 +101,7 @@ describe("with a confirmed run", () => {
     expect(v.hasRun).toBe(true);
     expect(v.total).toEqual({ p50: r.total.p50, p95: r.total.p95 });
     expect(v.exceed).toEqual({ envelopeKrwM: r.exceed!.envelopeKrwM, probability: r.exceed!.probability });
-    expect(v.topSensitivities.map((t) => t.key)).toEqual(r.tornado.filter((t) => t.active).slice(0, 3).map((t) => t.key));
+    expect(v.topSensitivities.map((t) => t.key)).toEqual(r.tornado.filter((t) => t.active).slice(0, 3).map((t) => t.key) as Array<typeof v.topSensitivities[number]["key"]>);
     expect(v.run).toMatchObject({ id: run.id, hash: run.input_hash, confirmedBy: LEAD, drawCount: 100 });
     expect(v.disclaimer).toContain("\uc2dc\ubbac\ub808\uc774\uc158 \uc0b0\ucd9c\ubb3c");
     expect(v.opportunityId).toBe(oppId);

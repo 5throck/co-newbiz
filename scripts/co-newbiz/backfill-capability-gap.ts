@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.1.1
 // ADR-0136 1회성 백필 — greenfield_assessment.capability_gaps_json에 있던 필요
 // 역량 행을 opportunity.capability_gap_json(S3 레지스터)으로 병합한다. S3에
 // capability 텍스트(대소문자 무시, trim)로 이미 있는 행이면 requiredLevel/
@@ -74,6 +74,8 @@ for (const row of rows) {
         capability: legacy.capability!.trim(),
         source: "manual",
         requiredNote: legacy.gap ? `S5 격차 메모(백필): ${legacy.gap}` : "",
+        necessity: "",
+        necessityScopeNote: "",
         held: { status: "unevaluated", holders: [], evidence: "" },
         resolution: (legacy.resolution as CapabilityGapRow["resolution"]) ?? null,
         note: legacy.note ?? "",

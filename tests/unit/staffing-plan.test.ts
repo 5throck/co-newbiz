@@ -7,6 +7,8 @@
 import { test, expect, describe, beforeAll } from "bun:test";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
+// Type-only: narrows the isStaffingPlanEntry guard result (Partial<StaffingPlanEntry>) to the full entry.
+import type { StaffingPlanEntry } from "../../app/web-next/lib/staffing-plan.ts";
 
 const ROOT = join(import.meta.dirname, "../..");
 const TEST_DB_PATH = join(ROOT, "db/data/test-staffing-plan.sqlite");
@@ -232,13 +234,13 @@ describe("routes: partial saves, masking, audit", () => {
   test("lines-only POST without the plan keeps it; unchanged plan re-save writes no second audit event", async () => {
     expect((await post({ business_case_lines: [META, manual] })).status).toBe(200);
     expect(stored().filter(sp.isStaffingPlanEntry)).toHaveLength(1);
-    const kept = stored().find(sp.isStaffingPlanEntry);
+    const kept = stored().find(sp.isStaffingPlanEntry) as StaffingPlanEntry;
     expect((await post({ business_case_lines: [META, plan(kept.rows, { startYear: 1, endYear: 3 }), manual] })).status).toBe(200);
     expect((db.query("SELECT COUNT(*) n FROM audit_log WHERE action = 'staffing_plan.updated'").get() as { n: number }).n).toBe(1);
   });
 
   test("a staffing change keeps the manual lines and entry_strategy; a changed plan audits again", async () => {
-    const kept = stored().find(sp.isStaffingPlanEntry);
+    const kept = stored().find(sp.isStaffingPlanEntry) as StaffingPlanEntry;
     const rows = [...kept.rows, row({ id: "r2", roleFamily: "영업", grade: "사원", headcountByYear: [2, 2, 2] })];
     expect((await post({ business_case_lines: [META, plan(rows, { startYear: 1, endYear: 3 }), manual] })).status).toBe(200);
     expect(stored().filter((l) => !sp.isStaffingPlanEntry(l) && l.source !== "plan_meta")).toHaveLength(1);

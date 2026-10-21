@@ -21,6 +21,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // T-20261022-020: until React attaches onSubmit, a submit (button click or
+  // Enter) would fire the NATIVE form submission. The form therefore declares
+  // method="post" + action="/api/auth/login" so a pre-hydration submit POSTs
+  // (credentials never land in the URL query) — the login route only parses a
+  // JSON body, so the form-encoded native POST is refused with 400 and never
+  // processed. The submit button stays disabled until hydration, and once the
+  // handler is attached preventDefault keeps the fetch-based flow below.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   // 배경 롤링 (ADR-0105 보완) — 신규사업 모티프 3장을 7초 간격 크로스페이드.
   // prefers-reduced-motion 사용자에게는 정적 첫 장면만 유지한다.
@@ -60,7 +71,7 @@ export default function LoginPage() {
         <p className="login-hero-sub">시장분석 → 기회 발굴 → 시너지 → 진출방식 결정 → 사업성·밸류에이션 → 실사 → 투자심의</p>
       </div>
       <div className="login-panel">
-        <form onSubmit={onSubmit} className="login-form" aria-labelledby="login-heading">
+        <form onSubmit={onSubmit} method="post" action="/api/auth/login" className="login-form" aria-labelledby="login-heading">
           <h1 id="login-heading">co-newbiz 로그인</h1>
           <label htmlFor="userId">아이디</label>
           <input id="userId" name="userId" autoComplete="username" value={userId} onChange={(e) => setUserId(e.target.value)} required />
@@ -71,7 +82,7 @@ export default function LoginPage() {
               {error}
             </p>
           )}
-          <button type="submit" className="btn-primary" disabled={busy}>
+          <button type="submit" className="btn-primary" disabled={busy || !hydrated}>
             {busy ? "로그인 중..." : "로그인"}
           </button>
         </form>

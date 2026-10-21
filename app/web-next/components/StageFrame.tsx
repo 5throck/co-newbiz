@@ -56,9 +56,13 @@ function useStageLinks(): (id: StageMetaId) => StageLink {
   const routeId = params?.id;
   const underProjects = (usePathname() ?? "").startsWith("/projects/");
   const deal = useDealContext(routeId, !underProjects);
+  // Under /projects, S1~S7 belong to the source opportunity's deal tabs — without
+  // the source id these links would hit the carrier-less flat stubs, whose
+  // CarrierGate auto-picks whichever deal is newest (T-20261022-019).
+  const sourceOppId = useSourceOpportunity(underProjects ? routeId : undefined);
   return (id) => {
     const projectStage = PROJECT_STAGE_IDS.has(id);
-    if (!projectStage) return { href: STAGE_HREF[id](underProjects ? undefined : routeId), reason: null };
+    if (!projectStage) return { href: STAGE_HREF[id](underProjects ? sourceOppId ?? undefined : routeId), reason: null };
     if (underProjects) return { href: STAGE_HREF[id](undefined, routeId), reason: null };
     if (!routeId) return { href: null, reason: "프로젝트(검토/안건) 화면에서만 열립니다." };
     if (deal.state === "loading") return { href: null, reason: "프로젝트 승격 여부를 확인하는 중입니다." };
@@ -66,6 +70,26 @@ function useStageLinks(): (id: StageMetaId) => StageLink {
     const pid = deal.ctx.projectId;
     return pid ? { href: STAGE_HREF[id](routeId, pid), reason: null } : { href: null, reason: NOT_PROMOTED_REASON };
   };
+}
+
+// Source opportunity of a project (S1~S7 live on the source opportunity's deal
+// tabs, not on /projects/{id}). Cached per project and shared with StageTabs
+// (hoisted from there, T-20261022-019) so both consumers resolve once; null also
+// covers "cannot be resolved", which leaves the caller without the link.
+const sourceOppCache = new Map<string, string | null>();
+
+export function useSourceOpportunity(projectId: string | undefined): string | null {
+  const [oppId, setOppId] = useState<string | null>(projectId ? sourceOppCache.get(projectId) ?? null : null);
+  useEffect(() => {
+    if (!projectId) return;
+    if (sourceOppCache.has(projectId)) { setOppId(sourceOppCache.get(projectId) ?? null); return; }
+    let live = true;
+    api.get<{ opportunity: { id: string } | null }>(`/api/projects/${encodeURIComponent(projectId)}/process`)
+      .then((r) => { const id = r.data.opportunity?.id ?? null; sourceOppCache.set(projectId, id); if (live) setOppId(id); })
+      .catch(() => { /* no link when the source cannot be resolved */ });
+    return () => { live = false; };
+  }, [projectId]);
+  return oppId;
 }
 
 // Track of the current carrier (opportunity or project), cached per id. Lets the stage rail show

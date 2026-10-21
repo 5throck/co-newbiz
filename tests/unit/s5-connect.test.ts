@@ -192,7 +192,7 @@ describe("connect preview and apply", () => {
     const pid = promote(makeOpp("greenfield", LINES));
     const principal = { userId: ANALYST, role: "analyst", scopes: ["read", "write", "propose"], mustChangePassword: false, tokenId: "t", clientId: "c" };
     for (const [fn, name] of [[connectRoute.POST, "s5-connect"], [connectRoute.GET, "s5-connect"], [disconnectRoute.POST, "s5-disconnect"]] as const) {
-      const r = await runAsPrincipal(principal, () => fn(new Request(`http://x/${name}`, { method: "POST" }), { params: Promise.resolve({ id: pid }) }));
+      const r = (await runAsPrincipal(principal, () => fn(new Request(`http://x/${name}`, { method: "POST" }), { params: Promise.resolve({ id: pid }) })))!;
       expect(r.status).toBe(403);
       expect((await r.json()).error.code).toBe("human_only");
     }

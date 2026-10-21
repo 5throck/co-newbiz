@@ -90,6 +90,8 @@ export interface HoldSrc {
   decision: string;
   decidedAt: string;
   ageDays: number;
+  /** Carrier track (pipeline currentHolds) — only pre_fs splits its decision surface by track. */
+  track?: string | null;
 }
 export interface PipelineSrc {
   projects: PipelineProjectSrc[];
@@ -112,11 +114,11 @@ export interface InboxSources {
 }
 
 /**
- * Stage tab that hosts each gate's decision form (GateDecisionPanel). The deal
- * id is the carrier id (opportunity or project), which the stage tabs resolve.
- * Verified against the components: screening -> SynergyResult (S3), pre_fs ->
- * GreenfieldStage (S5), target_screening -> brownfield ShortlistSection (S7),
- * fs -> S8, dd -> S9, entity_ic/group_ic -> S11.
+ * Stage tab that hosts each gate's decision form (GateDecisionPanel or the S4
+ * committee panel). The deal id is the carrier id (opportunity or project),
+ * which the stage tabs resolve. Verified against the components: screening ->
+ * SynergyResult (S3), pre_fs -> GreenfieldStage (S5), target_screening ->
+ * brownfield ShortlistSection (S7), fs -> S8, dd -> S9, entity_ic/group_ic -> S11.
  */
 export const GATE_STAGE_TAB: Record<string, string> = {
   screening: "s3",
@@ -128,9 +130,21 @@ export const GATE_STAGE_TAB: Record<string, string> = {
   group_ic: "s11",
 };
 
-export function gateHoldHref(h: Pick<HoldSrc, "entityType" | "entityId" | "gate">): string {
+/**
+ * Track-aware tab resolution. Only pre_fs splits by track: a brownfield deal
+ * records its pre_fs decision on the S4 committee panel (RouteDecisionStage) —
+ * S5 is a TrackGate dead end for it and S6 hosts no decision panel, while the
+ * greenfield pre_fs panel lives on S5 (T-20261022-002). Unknown/absent track
+ * keeps the historical S5 destination.
+ */
+export function gateStageTab(gate: string, track?: string | null): string | undefined {
+  if (gate === "pre_fs" && track === "brownfield") return "s4";
+  return GATE_STAGE_TAB[gate];
+}
+
+export function gateHoldHref(h: Pick<HoldSrc, "entityType" | "entityId" | "gate" | "track">): string {
   const id = encodeURIComponent(h.entityId);
-  const tab = GATE_STAGE_TAB[h.gate];
+  const tab = gateStageTab(h.gate, h.track);
   if (tab) return `/deals/${id}/${tab}`;
   return h.entityType === "project" ? `/projects/${id}/process` : `/opportunities/${id}`;
 }

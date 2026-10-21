@@ -28,6 +28,9 @@ interface ProcessView {
   blockers: string[];
   stages: ProcessStageLite[];
   projectId: string | null;
+  /** 트랙 최종 단계까지 완료했지만 아직 승격 전 — 서버 평가의 캐리어 스코프
+   * 마커 (process-flow.ts). 로컬에서 단계 상태를 다시 유추하지 않는다. */
+  carrierScopeFinished: boolean;
 }
 
 interface PromoteResult {
@@ -54,6 +57,13 @@ function finalStageOf(track: ProcessView["track"]): string | null {
   return null;
 }
 
+/** 승격 핸드오프 라벨 — finalStageOf에서 파생한다 (greenfield "S5 → S8",
+ * brownfield "S7 → S8"; 트랙 미결정이면 null). 헤딩 문구의 유일한 출처다. */
+export function promotionHandoffLabel(track: ProcessView["track"]): string | null {
+  const finalStage = finalStageOf(track);
+  return finalStage ? `${finalStage} → S8` : null;
+}
+
 function describePromoteError(err: unknown): string {
   if (err instanceof ApiError) {
     switch (err.code) {
@@ -76,9 +86,13 @@ function describePromoteError(err: unknown): string {
 export function PromotionPanel({
   opportunityId,
   heading,
+  headingName,
 }: {
   opportunityId: string;
   heading?: string;
+  /** 기회 표시 이름 — heading이 없을 때 기본 헤딩을 구성하는 데 쓴다
+   * (핸드오프 단계는 promotionHandoffLabel(proc.track)에서 파생). */
+  headingName?: string;
 }) {
   const router = useRouter();
   const { me } = useAuth();
@@ -133,11 +147,12 @@ export function PromotionPanel({
     proc !== null && finalStageId !== null
       ? proc.stages.find((s) => s.id === finalStageId)
       : undefined;
-  const ready =
-    proc !== null &&
-    finalStage !== undefined &&
-    finalStage.status === "complete" &&
-    !proc.terminated;
+  // 준비 여부는 서버 평가의 캐리어 스코프 마커 한 곳에서 판정한다 — 트랙 최종
+  // 단계 완료 + 미승격을 로컬에서 다시 유추하지 않는다 (단계 상태 이중 해석 방지).
+  const ready = proc !== null && proc.carrierScopeFinished;
+  // 헤딩의 핸드오프 단계는 트랙에서 파생한다 (greenfield S5 → S8, brownfield S7 → S8).
+  const handoff = promotionHandoffLabel(proc?.track ?? null);
+  const baseHeading = headingName ? `${headingName} — 프로젝트로 추진` : "🚀 프로젝트로 추진";
 
   function addMember(hit: UserHit) {
     if (members.some((m) => m.userId === hit.user_id)) return;
@@ -186,7 +201,7 @@ export function PromotionPanel({
     return (
       <section aria-label="프로젝트로 추진" className="market-section">
         <div className="section-toolbar">
-          <span className="section-title"><h2>{heading ?? "🚀 프로젝트로 추진"}</h2></span>
+          <span className="section-title"><h2>{heading ?? baseHeading}</h2></span>
           <span className="status-chip status-green">추진됨</span>
         </div>
         <p className="mb-0 text-[length:var(--fs-body)]">
@@ -203,7 +218,7 @@ export function PromotionPanel({
     <section aria-label="프로젝트로 추진" className="market-section">
       <div className="section-toolbar">
         <span className="section-title">
-          <h2>{heading ?? "🚀 프로젝트로 추진 (S7 → S8)"}</h2>
+          <h2>{heading ?? (handoff ? `${baseHeading} (${handoff})` : baseHeading)}</h2>
         </span>
         {finalStageId && finalStage && (
           <span className={`status-chip ${ready ? "status-green" : "status-amber"}`}>

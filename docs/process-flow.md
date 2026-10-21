@@ -261,7 +261,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 검토한 대안
 
 **완료 기준**
-- route_decision 레코드가 존재한다 (track 필수, greenfield는 sub_track, brownfield는 Route 유형)
+- route_decision 레코드가 존재한다 (track 필수; brownfield는 Route 유형(sub_track) 필수, greenfield의 sub_track은 선택)
 - Brownfield인 경우 5criteria 채점 결과와 사전배제 점검이 기록되었다
 - Greenfield인 경우에도 5criteria 채점 결과를 기록한다 (ADR-0104 — 트랙 간 비교 가능성)
 

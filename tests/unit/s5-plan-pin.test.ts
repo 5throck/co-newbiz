@@ -246,10 +246,10 @@ describe("promotion writes the initial pin; the amended default reads pinned", (
     expect(rows[0].plan_hash).toBe(pinLib.s5PlanHashOf(inputLib.loadInvestmentVectorsInput(db, opp)!));
     const p = gen.resolveBusinessCaseParams(db, pid);
     expect(p.s5Source).toBe("pinned");
-    expect(p.s5PinId).toBe(rows[0].id);
+    expect(p.s5PinId).toBe(rows[0].id as string);
     expect(p.s5SourceSource).toContain("기본"); // label says the amended default, not a person's opt-in
     const plan = gen.resolveS5InvestmentPlan(db, pid)!;
-    expect(plan.pinId).toBe(rows[0].id);
+    expect(plan.pinId).toBe(rows[0].id as string);
     expect(plan.modelId).toBe(`pin:${rows[0].id}`);
     expect(db.query("SELECT COUNT(*) AS n FROM assumption WHERE assumption_key = 'bc.s5_source' AND run_id IN (SELECT id FROM run WHERE project_id = ?)").get(pid)).toEqual({ n: 0 });
     expect((db.query("SELECT COUNT(*) AS n FROM audit_log WHERE action = 's5_plan_pin.pinned' AND target LIKE ?").get(`${pid}#%`) as { n: number }).n).toBe(1);
@@ -478,7 +478,7 @@ describe("stale rules (design 4A.4)", () => {
     expect(pinS8.s5PinStatusForProject(db, pid).reasons).toEqual(["source_changed"]);
     // plan_meta horizon
     db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [json({ rows: [CAP_ROW], updatedAt: NOW }), opp]);
-    setLines(opp, LINES.map((l) => (l.source === "plan_meta" ? { ...l, horizonYears: 6 } : l)));
+    setLines(opp, LINES.map((l) => ((l as { source?: string }).source === "plan_meta" ? { ...l, horizonYears: 6 } : l)));
     expect(pinS8.s5PinStatusForProject(db, pid).reasons).toEqual(["source_changed"]);
   });
 
@@ -622,10 +622,10 @@ describe("s5-pin route", () => {
     const pid = promote(makeOpp("greenfield", LINES));
     const principal = { userId: ANALYST, role: "analyst", scopes: ["read", "write", "propose"], mustChangePassword: false, tokenId: "t", clientId: "c" };
     const before = pinRows(pid).length;
-    const asAgent = await runAsPrincipal(principal, () => pinRoute.POST(new Request("http://x/s5-pin", { method: "POST" }), { params: Promise.resolve({ id: pid }) }));
+    const asAgent = (await runAsPrincipal(principal, () => pinRoute.POST(new Request("http://x/s5-pin", { method: "POST" }), { params: Promise.resolve({ id: pid }) })))!;
     expect(asAgent.status).toBe(403);
     expect((await asAgent.json()).error.code).toBe("human_only");
-    const asAgentGet = await runAsPrincipal(principal, () => pinRoute.GET(new Request("http://x/s5-pin"), { params: Promise.resolve({ id: pid }) }));
+    const asAgentGet = (await runAsPrincipal(principal, () => pinRoute.GET(new Request("http://x/s5-pin"), { params: Promise.resolve({ id: pid }) })))!;
     expect(asAgentGet.status).toBe(403);
     expect((await nextRequest(url(pid), { method: "POST", headers: { cookie: viewerCookie } })).status).toBe(403);
     expect((await nextRequest(url(pid), { method: "POST" })).status).toBe(401);
@@ -736,7 +736,7 @@ describe("growth rate is preserved by the copy and the pin snapshot", () => {
     // The S5 투자비 탭 has no growth input; a rate riding in from legacy/AI lines must not
     // silently escalate S8 costs away from what the S5 table shows. Escalation becomes a
     // visible S5 field before it compounds again.
-    const mk = (growthRate: number) => [
+    const mk = (growthRate: number | undefined) => [
       { line: "L", category: "opex", amount: 100, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly", startYear: 1, endYear: 3, growthRate },
     ];
     const withGrowth = gen.resolveS5InvestmentPlan(db, promote(makeOpp("greenfield", mk(0.1))))!;

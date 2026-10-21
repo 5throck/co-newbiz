@@ -5,9 +5,10 @@
 // through the create path; members only (FR-SEC-01).
 import { getDb } from "../../../../../../../../db/client.ts";
 import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
-import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { badRequest, fail, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { importBaselineMilestones } from "../../../../../../lib/milestones.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
+import { resolveTrack } from "../../../../../../lib/project-track.ts";
 import { route } from "../../../../../../lib/route.ts";
 
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
@@ -17,6 +18,13 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   if (denied) return denied;
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
+  // T-20261022-016: the import source is the greenfield execution baseline, so the
+  // carrier must still resolve greenfield. latestConfirmedBaseline alone cannot see
+  // a re-classification — a project moved to brownfield (or unresolvable) keeps its
+  // historical baseline but must not import from it (same guard shape as the S5 route).
+  if (resolveTrack(id, getDb()).track !== "greenfield") {
+    return fail(409, "not_applicable_track", "실행 기준선 가져오기는 greenfield 프로젝트에만 적용됩니다 — 현재 트랙이 brownfield이거나 확인되지 않았습니다.");
+  }
   try {
     const result = importBaselineMilestones(getDb(), id, auth.auth.userId);
     return ok(result, 200);

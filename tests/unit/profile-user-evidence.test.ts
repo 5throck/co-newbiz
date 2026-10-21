@@ -29,7 +29,9 @@ const edit = await import("../../app/web-next/lib/profile-analyst-edit.ts");
 const { setWebResearchOverrideForTests } = await import("../../app/web-next/lib/web-research.ts");
 const { profileEvidence } = await import("../../app/web-next/lib/capability-holding-context.ts");
 const ev = await import("../../app/web-next/components/stages/our-company/profile-evidence.ts");
-const { showDegradedChip } = await import("../../app/web-next/components/stages/our-company/ProfileChips.tsx");
+// Computed specifier: the .tsx module is runtime-resolved by bun; tsc runs without --jsx.
+const chipsPath = "../../app/web-next/components/stages/our-company/ProfileChips.tsx";
+const { showDegradedChip } = (await import(chipsPath)) as { showDegradedChip: (...args: unknown[]) => boolean };
 
 const NOW = new Date().toISOString();
 const req = (path: string, init?: RequestInit) => nextRequest(path, init);

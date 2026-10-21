@@ -97,8 +97,8 @@ describe("route: lines-only POST preserves the other stored fields", () => {
   });
   test("selectionPayload includes persisted lines so a lines-only save never drops stored reflections", () => {
     const lines = cl.applySelection(cl.deriveCapabilityCostLines([{
-      id: "r1", capability: "정밀 가공", resolution: "hire", closing_cost_krw_m: 500, months_to_attain: 6, grade: "high",
-      confirmed_at: NOW, stale: false,
+      id: "r1", capability: "정밀 가공", resolution: "hire", category: null, closing_cost_krw_m: 500, months_to_attain: 6, grade: "high",
+      confirmed_at: NOW, stale: false, period: null,
     }], getLines().filter((l) => l.source === "capability")), {});
     const sel = cl.selectionPayload(lines, {});
     expect(sel).toHaveLength(1);

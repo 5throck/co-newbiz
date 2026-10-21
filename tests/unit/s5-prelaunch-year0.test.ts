@@ -299,7 +299,9 @@ describe("copy / promotion / re-import carry year 0 faithfully", () => {
   });
   test("the loader (reload path) keeps startYear 0 on the manual line", () => {
     const input = inputLib.loadInvestmentVectorsInput(db, oppOf(promote(makeOpp(SAVED))))!;
-    expect(input.manual.find((m) => m.line === "Site0")?.startYear).toBe(0);
+    // The stored manual line keeps its `line` label at runtime even though the loose
+    // VectorManualLine view type does not declare it.
+    expect(input.manual.find((m) => (m as { line?: string }).line === "Site0")?.startYear).toBe(0);
     expect(vec.buildInvestmentVectors(input).mode.preLaunchKrwM).toBe(1500);
   });
 });

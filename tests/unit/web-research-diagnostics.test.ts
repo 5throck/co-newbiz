@@ -5,6 +5,8 @@
  * stubbed fetch, CO_NEWBIZ_LLM_PROVIDER=none. No real network, no real LLM.
  */
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+// Type-only namespace for the dynamically imported web-research module (runtime usages go through `wr` below).
+import type * as wrT from "../../app/web-next/lib/web-research.ts";
 
 process.env.CO_NEWBIZ_LLM_PROVIDER = "none";
 const wr = await import("../../app/web-next/lib/web-research.ts");
@@ -20,7 +22,7 @@ const saved: Record<string, string | undefined> = {};
 beforeEach(() => {
   for (const k of ENV_KEYS) saved[k] = process.env[k];
   wr.setWebResearchOverrideForTests(null);
-  globalThis.fetch = (async () => { throw new Error("no real network in tests"); }) as typeof fetch;
+  globalThis.fetch = (async () => { throw new Error("no real network in tests"); }) as unknown as typeof fetch;
 });
 afterEach(() => {
   globalThis.fetch = ORIGINAL_FETCH;
@@ -29,8 +31,8 @@ afterEach(() => {
 });
 
 const src = (u: string) => ({ title: u, url: `https://${u}.example.com/x`, snippet: "s" });
-function fake(name: wr.ProviderName, status: wr.ProviderStatus, sources: ReturnType<typeof src>[] = [], log?: string[], http?: number): wr.SearchProvider {
-  return { name, unavailable: () => null, search: async (q) => { log?.push(`${name}:${q}`); return { sources, status, http }; } };
+function fake(name: wrT.ProviderName, status: wrT.ProviderStatus, sources: ReturnType<typeof src>[] = [], log?: string[], http?: number): wrT.SearchProvider {
+  return { name, unavailable: () => null, search: async (q: string) => { log?.push(`${name}:${q}`); return { sources, status, http }; } };
 }
 
 const CHALLENGE = `<html><body><div class="anomaly-modal__title">Unfortunately, bots use DuckDuckGo too.</div><form id="challenge-form"></form></body></html>`;
@@ -64,7 +66,7 @@ describe("DuckDuckGo challenge detection", () => {
     expect(calls).toEqual(["GET https://html.duckduckgo.com/html/", "POST https://lite.duckduckgo.com/lite/"]);
 
     wr.resetWebResearchStateForTests();
-    globalThis.fetch = (async () => new Response(CHALLENGE, { status: 200 })) as typeof fetch;
+    globalThis.fetch = (async () => new Response(CHALLENGE, { status: 200 })) as unknown as typeof fetch;
     const blocked = await wr.researchSourcesDetailed(["q"], 5);
     expect(blocked.sources).toHaveLength(0);
     expect(blocked.providers.find((p) => p.name === "ddg")?.status).toBe("blocked");
@@ -109,7 +111,7 @@ describe("provider chain", () => {
     expect(r.providers.map((p) => p.name)).toEqual(["tavily", "brave", "serper"]);
   });
   test("a key-less provider is reported no_key and skipped; quota on the first moves on to the next", async () => {
-    const noKey: wr.SearchProvider = { name: "brave", unavailable: () => "no_key", search: async () => { throw new Error("must not run"); } };
+    const noKey: wrT.SearchProvider = { name: "brave", unavailable: () => "no_key", search: async () => { throw new Error("must not run"); } };
     wr.setWebProvidersForTests([fake("tavily", "quota_exceeded", [], undefined, 432), noKey, fake("ddg", "ok", [src("d")])]);
     const r = await wr.researchSourcesDetailed(["q"], 5);
     expect(r.providers.map((p) => p.status)).toEqual(["quota_exceeded", "no_key", "ok"]);

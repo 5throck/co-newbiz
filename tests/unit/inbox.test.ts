@@ -3,7 +3,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { buildInbox, gateHoldHref, loadInbox, type ProposalSrc } from "../../app/web-next/lib/inbox.ts";
+import { buildInbox, gateHoldHref, gateStageTab, loadInbox, type ProposalSrc } from "../../app/web-next/lib/inbox.ts";
 
 const NOW = Date.parse("2026-10-08T12:00:00Z");
 const proposal = (over: Partial<ProposalSrc>): ProposalSrc => ({
@@ -51,8 +51,8 @@ describe("buildInbox", () => {
 });
 
 describe("gate HOLD links", () => {
-  const hold = (entityType: "opportunity" | "project", entityId: string, gate: string) =>
-    ({ entityType, entityId, gate, label: "L", decision: "hold", decidedAt: "2026-10-01T00:00:00Z", ageDays: 3 });
+  const hold = (entityType: "opportunity" | "project", entityId: string, gate: string, track?: string | null) =>
+    ({ entityType, entityId, gate, label: "L", decision: "hold", decidedAt: "2026-10-01T00:00:00Z", ageDays: 3, track });
   test("screening HOLD opens the S3 tab where the screening gate form lives", () => {
     const [i] = buildInbox({ pipeline: { projects: [], currentHolds: [hold("opportunity", "o1", "screening")] } }, NOW);
     expect(i.kind).toBe("gate_hold");
@@ -65,6 +65,22 @@ describe("gate HOLD links", () => {
     expect(gateHoldHref(hold("project", "p1", "dd"))).toBe("/deals/p1/s9");
     expect(gateHoldHref(hold("project", "p1", "entity_ic"))).toBe("/deals/p1/s11");
     expect(gateHoldHref(hold("project", "p1", "group_ic"))).toBe("/deals/p1/s11");
+  });
+  test("pre_fs splits by track: brownfield records on the S4 committee tab, greenfield stays on S5", () => {
+    // T-20261022-002: S5 is a TrackGate dead end for a brownfield deal and S6 hosts
+    // no pre_fs decision panel — the S4 committee panel is that track's surface.
+    expect(gateStageTab("pre_fs", "brownfield")).toBe("s4");
+    expect(gateHoldHref(hold("opportunity", "o-bf", "pre_fs", "brownfield"))).toBe("/deals/o-bf/s4");
+    expect(gateHoldHref(hold("project", "p-bf", "pre_fs", "brownfield"))).toBe("/deals/p-bf/s4");
+    expect(gateStageTab("pre_fs", "greenfield")).toBe("s5");
+    expect(gateHoldHref(hold("opportunity", "o-gf", "pre_fs", "greenfield"))).toBe("/deals/o-gf/s5");
+  });
+  test("pre_fs HOLD without a known track keeps the historical S5 destination", () => {
+    expect(gateHoldHref(hold("opportunity", "o1", "pre_fs", null))).toBe("/deals/o1/s5");
+    expect(gateHoldHref(hold("opportunity", "o1", "pre_fs", "zzz_track"))).toBe("/deals/o1/s5");
+  });
+  test("other gates ignore the track", () => {
+    expect(gateHoldHref(hold("opportunity", "o1", "target_screening", "greenfield"))).toBe("/deals/o1/s7");
   });
   test("unknown gate falls back to the previous entity pages", () => {
     expect(gateHoldHref(hold("project", "p1", "zzz"))).toBe("/projects/p1/process");

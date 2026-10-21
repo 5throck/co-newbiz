@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-20T15:36:49.456Z
+**Generated**: 2026-10-21T23:44:49.620Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -198,7 +198,7 @@
 | audit-variant.ts | 1.0.0 | scripts/co-newbiz/audit-variant.ts | N/A |
 | audit.ts | 2.54.0 | scripts/audit.ts | bun |
 | backfill-brownfield-financial-criteria.ts | 1.0.0 | scripts/co-newbiz/backfill-brownfield-financial-criteria.ts | N/A |
-| backfill-capability-gap.ts | 1.1.0 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
+| backfill-capability-gap.ts | 1.1.1 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
 | backfill-hyd-brk-report.ts | 1.1.0 | scripts/co-newbiz/backfill-hyd-brk-report.ts | N/A |
 | backup.ts | 1.0.1 | scripts/co-newbiz/backup.ts | N/A |
 | beta-series.ts | 1.2.0 | scripts/co-newbiz/beta-series.ts | N/A |
@@ -304,7 +304,7 @@
 | scorecard-rollup.ts | 1.0.0 | scripts/co-newbiz/scorecard-rollup.ts | N/A |
 | seed-benchmark-cases.ts | 1.0.0 | scripts/co-newbiz/seed-benchmark-cases.ts | bun:sqlite |
 | seed-hydraulic-breaker-matrix.ts | 1.1.0 | scripts/co-newbiz/seed-hydraulic-breaker-matrix.ts | N/A |
-| seed-s1-s12-demo.ts | 1.9.0 | scripts/co-newbiz/seed-s1-s12-demo.ts | N/A |
+| seed-s1-s12-demo.ts | 1.10.0 | scripts/co-newbiz/seed-s1-s12-demo.ts | N/A |
 | setup-github-branch-protection.ts | 1.0.1 | scripts/setup-github-branch-protection.ts | bun |
 | shadow-compare.ts | 1.0.0 | scripts/co-newbiz/shadow-compare.ts | N/A |
 | simulate.ts | 1.0.0 | scripts/co-newbiz/simulate.ts | N/A |

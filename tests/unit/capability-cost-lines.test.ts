@@ -36,8 +36,8 @@ const WEB = join(PROJECT_ROOT, "app/web-next");
 
 // ── helpers for pure tests ──────────────────────────────────────────────────
 const src = (o: Partial<import("../../app/web-next/lib/capability-cost-lines.ts").CostSourceRow> = {}) => ({
-  id: "k1", capability: "정밀 가공", resolution: "build" as const, closing_cost_krw_m: 3000, months_to_attain: 12, grade: "high",
-  confirmed_at: NOW as string | null, stale: false, ...o,
+  id: "k1", capability: "정밀 가공", resolution: "build" as const, category: null, closing_cost_krw_m: 3000, months_to_attain: 12, grade: "high",
+  confirmed_at: NOW as string | null, stale: false, period: null, ...o,
 });
 
 describe("units and category mapping", () => {
@@ -550,9 +550,13 @@ describe("S5 UI structure", () => {
     expect(cl.CAPABILITY_BLOCK_TITLE).toBe("역량 해소 비용 (S5 판정에서 연동)");
   });
   test("rendered markup: read-only lines, disabled checkbox with reason, flags, totals, warning, candidate list", async () => {
-    const { renderToStaticMarkup } = await import("../../app/web-next/node_modules/react-dom/server.js");
-    const { createElement } = await import("../../app/web-next/node_modules/react/index.js");
-    const { CapabilityCostBlock } = await import("../../app/web-next/components/stages/CapabilityCostBlock.tsx");
+    // Runtime-only modules (bun resolves them); computed specifiers keep tsc from pulling them into the program.
+    const reactDomServerPath = "../../app/web-next/node_modules/react-dom/server.js";
+    const reactPath = "../../app/web-next/node_modules/react/index.js";
+    const costBlockPath = "../../app/web-next/components/stages/CapabilityCostBlock.tsx";
+    const { renderToStaticMarkup } = (await import(reactDomServerPath)) as { renderToStaticMarkup: (el: unknown) => string };
+    const { createElement } = (await import(reactPath)) as { createElement: (type: unknown, props: unknown) => unknown };
+    const { CapabilityCostBlock } = (await import(costBlockPath)) as { CapabilityCostBlock: unknown };
     const view = cl.deriveCapabilityCostLines([src(), src({ id: "k2", capability: "채용", resolution: "hire", closing_cost_krw_m: 1234, confirmed_at: null })], []);
     const lines = cl.applySelection(view, {});
     const totals = cl.investmentTotals(view, new Set(["k1"]), [{ category: "capex", amount: 5, currency: "KRW", period: "lumpsum" }]); // unconfirmed unit: excluded

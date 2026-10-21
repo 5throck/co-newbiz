@@ -13,6 +13,8 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { api } from "../../../../lib/api.ts";
 import { STAGE_STATUS_LABEL, labelText, localizeRequirement, trackLabel } from "../../../../lib/labels.ts";
+import { resolveDealCarrier } from "../../../../lib/deal-carrier.ts";
+import type { TrackId } from "../../../../lib/stage-meta.ts";
 import { PageState } from "../../../../components/ui.tsx";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { DealBreadcrumb } from "../../../../components/DealBreadcrumb.tsx";
@@ -36,23 +38,17 @@ interface ProcessView {
   currentStage: string | null; nextStage: string | null; track: string | null;
   blockers: string[]; requiredArtifacts: string[]; gateStatus: Record<string, string>;
   stages: Array<{ id: string; status: string }>;
+  /** Project carrier: source opportunity (resolveDealCarrier's CarrierProcess contract). */
+  opportunity?: { id: string } | null;
 }
 
 // D-03/D-18: S5 is Green Field only, S6/S7 are Brown Field only. Opening the other track's stage
 // shows a plain notice with a link to the stage that applies instead of the working screen.
-function TrackGate({ carrierId, stageLabel, only, otherStage, children }: {
-  carrierId: string; stageLabel: string; only: "greenfield" | "brownfield"; otherStage: "s5" | "s6"; children: React.ReactNode;
+// The track is the carrier's own track (resolved once by CarrierStageBody, T-20261022-018) —
+// null keeps every stage applicable, same as an unresolvable track did before.
+function TrackGate({ routeId, track, stageLabel, only, otherStage, children }: {
+  routeId: string; track: TrackId | null; stageLabel: string; only: "greenfield" | "brownfield"; otherStage: "s5" | "s6"; children: React.ReactNode;
 }) {
-  const [track, setTrack] = useState<string | null | undefined>(undefined);
-  useEffect(() => {
-    let alive = true;
-    api.get<{ track: string | null }>(`/api/opportunities/${encodeURIComponent(carrierId)}/process`)
-      .catch(() => api.get<{ track: string | null }>(`/api/projects/${encodeURIComponent(carrierId)}/process`))
-      .then((r) => { if (alive) setTrack(r.data.track ?? null); })
-      .catch(() => { if (alive) setTrack(null); });
-    return () => { alive = false; };
-  }, [carrierId]);
-  if (track === undefined) return <PageState state="loading" />;
   if (track && track !== only) {
     const thisName = track === "greenfield" ? "Green Field" : "Brown Field";
     return (
@@ -63,7 +59,7 @@ function TrackGate({ carrierId, stageLabel, only, otherStage, children }: {
           {" "}이 검토/안건의 트랙은 {thisName}입니다.
         </p>
         <p>
-          <Link className="control-chip status-green" href={`/deals/${carrierId}/${otherStage}`}>
+          <Link className="control-chip status-green" href={`/deals/${encodeURIComponent(routeId)}/${otherStage}`}>
             {otherStage === "s5" ? "S5 자체 진출로 이동" : "S6 대상 발굴로 이동"}
           </Link>
         </p>
@@ -71,6 +67,44 @@ function TrackGate({ carrierId, stageLabel, only, otherStage, children }: {
     );
   }
   return <>{children}</>;
+}
+
+// S2/S4/S5/S6/S7 body — the route id may be a promoted project id, so the carrier is
+// resolved once the way the S3 body and the S8~S12 tab already do (lib/deal-carrier.ts):
+// the stage screens receive the source opportunity id instead of the raw route id
+// (T-20261022-010), and the track-fixed StageFrame/TrackGate get the carrier's track
+// instead of a hardcoded one (T-20261022-018). A project without a source opportunity
+// gets an empty state — the S1~S7 screens are opportunity-scoped by construction.
+function CarrierStageBody({ routeId, children }: { routeId: string; children: (carrier: { opportunityId: string; track: TrackId | null }) => React.ReactNode }) {
+  const [state, setState] = useState<
+    | { status: "loading" }
+    | { status: "ready"; opportunityId: string; track: TrackId | null }
+    | { status: "error"; message: string }
+  >({ status: "loading" });
+
+  useEffect(() => {
+    let alive = true;
+    setState({ status: "loading" });
+    resolveDealCarrier<ProcessView>((u) => api.get(u), routeId)
+      .then((c) => {
+        if (!alive) return;
+        const t = c.proc.track;
+        setState({
+          status: "ready",
+          opportunityId: c.opportunityId ?? "",
+          track: t === "greenfield" || t === "brownfield" ? t : null,
+        });
+      })
+      .catch((e) => { if (alive) setState({ status: "error", message: e instanceof Error ? e.message : "딜 정보를 불러오지 못했습니다." }); });
+    return () => { alive = false; };
+  }, [routeId]);
+
+  if (state.status === "loading") return <PageState state="loading" />;
+  if (state.status === "error") return <PageState state="error" errorText={state.message} onRetry={() => window.location.reload()} />;
+  if (state.opportunityId === "") {
+    return <PageState state="empty" emptyText="이 프로젝트에는 원본 기회가 연결되어 있지 않습니다 — S1~S7 화면은 기회 단위로 동작합니다." />;
+  }
+  return <>{children({ opportunityId: state.opportunityId, track: state.track })}</>;
 }
 
 function StageTab() {
@@ -98,7 +132,9 @@ function StageTab() {
         <StageFrame stageId="S2">
           시장분석(S1) 산출물에서 기회를 발굴하고, 기회·위험 요인을 근거로 매력도를 평가합니다.
         </StageFrame>
-        <OpportunityFunnelStage opportunityId={params.id} />
+        <CarrierStageBody routeId={params.id}>
+          {({ opportunityId }) => <OpportunityFunnelStage opportunityId={opportunityId} />}
+        </CarrierStageBody>
         {/* ADR-0150 criterion 6 — kill learnings as S2 base-rate reference (display-only). */}
         <LearningCorpusPanel />
       </main>
@@ -116,7 +152,9 @@ function StageTab() {
           S6 대상 후보 발굴로 진행됩니다. Brownfield ≠ M&A — 라우트 유형을 함께 선택합니다.
         </StageFrame>
         <DealEntryMarketStrip routeId={params.id} />
-        <RouteDecisionStage opportunityId={params.id} rationaleParam={searchParams.get("rationale")} />
+        <CarrierStageBody routeId={params.id}>
+          {({ opportunityId }) => <RouteDecisionStage opportunityId={opportunityId} rationaleParam={searchParams.get("rationale")} />}
+        </CarrierStageBody>
       </main>
     );
   }
@@ -173,15 +211,21 @@ function StageTab() {
     return (
       <main>
         <DealBreadcrumb dealId={params.id} stageId="S5" />
-        <StageFrame stageId="S5" track="greenfield">
-          Greenfield 경로 — 자체 역량으로 진입할 수 있는지 평가합니다. 진출전략을
-          직접 구축 / 전략 제휴 / 인력 영입 / 지분 투자 중 결정하고, 필요 역량(S3에서 이미 정의·판정된
-          내용)을 확인한 뒤 투자비 검토 요건을 정리합니다.
-        </StageFrame>
-        <DealEntryMarketStrip routeId={params.id} />
-        <TrackGate carrierId={params.id} stageLabel="S5 자체 진출" only="greenfield" otherStage="s6">
-          <GreenfieldStage opportunityId={params.id} />
-        </TrackGate>
+        <CarrierStageBody routeId={params.id}>
+          {({ opportunityId, track }) => (
+            <>
+              <StageFrame stageId="S5" track={track ?? undefined}>
+                Greenfield 경로 — 자체 역량으로 진입할 수 있는지 평가합니다. 진출전략을
+                직접 구축 / 전략 제휴 / 인력 영입 / 지분 투자 중 결정하고, 필요 역량(S3에서 이미 정의·판정된
+                내용)을 확인한 뒤 투자비 검토 요건을 정리합니다.
+              </StageFrame>
+              <DealEntryMarketStrip routeId={params.id} />
+              <TrackGate routeId={params.id} track={track} stageLabel="S5 자체 진출" only="greenfield" otherStage="s6">
+                <GreenfieldStage opportunityId={opportunityId} />
+              </TrackGate>
+            </>
+          )}
+        </CarrierStageBody>
       </main>
     );
   }
@@ -192,15 +236,21 @@ function StageTab() {
     return (
       <main>
         <DealBreadcrumb dealId={params.id} stageId={stageId as "S6" | "S7"} />
-        <StageFrame stageId={["S6", "S7"]} track="brownfield" heading="S6/S7 대상발굴·선정">
-          Brownfield 경로 — 진출방식이 Brownfield로 결정된 기회의
-          대상 후보를 발굴하고(S6 후보 전체 목록), <code>대상 사전 검토 체크리스트</code> 체크리스트로 스크리닝해
-          최종 후보 목록으로 좁힙니다(S7). CDD/TDD는 최종 후보 목록 확정 후 S9에서 수행합니다.
-        </StageFrame>
-        <DealEntryMarketStrip routeId={params.id} />
-        <TrackGate carrierId={params.id} stageLabel={`${stageId} 대상발굴·선정`} only="brownfield" otherStage="s5">
-          <BrownfieldStage opportunityId={params.id} />
-        </TrackGate>
+        <CarrierStageBody routeId={params.id}>
+          {({ opportunityId, track }) => (
+            <>
+              <StageFrame stageId={["S6", "S7"]} track={track ?? undefined} heading="S6/S7 대상발굴·선정">
+                Brownfield 경로 — 진출방식이 Brownfield로 결정된 기회의
+                대상 후보를 발굴하고(S6 후보 전체 목록), <code>대상 사전 검토 체크리스트</code> 체크리스트로 스크리닝해
+                최종 후보 목록으로 좁힙니다(S7). CDD/TDD는 최종 후보 목록 확정 후 S9에서 수행합니다.
+              </StageFrame>
+              <DealEntryMarketStrip routeId={params.id} />
+              <TrackGate routeId={params.id} track={track} stageLabel={`${stageId} 대상발굴·선정`} only="brownfield" otherStage="s5">
+                <BrownfieldStage opportunityId={opportunityId} />
+              </TrackGate>
+            </>
+          )}
+        </CarrierStageBody>
       </main>
     );
   }
