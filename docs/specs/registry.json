@@ -1102,6 +1102,78 @@
       "last_updated": "2026-10-20"
     },
     {
+      "id": "2026-10-21-s10-funding-certainty-s11-ic-review-steps-design",
+      "title": "s10 funding certainty s11 ic review steps design",
+      "file": "docs/designs/2026-10-21-s10-funding-certainty-s11-ic-review-steps-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-10-20",
+      "last_updated": "2026-10-20"
+    },
+    {
+      "id": "2026-10-21-s10-s11-s12-management-upgrades-design",
+      "title": "s10 s11 s12 management upgrades design",
+      "file": "docs/designs/2026-10-21-s10-s11-s12-management-upgrades-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-10-21",
+      "last_updated": "2026-10-21"
+    },
+    {
+      "id": "2026-10-21-s10-terms-reports-milestones-design",
+      "title": "s10 terms reports milestones design",
+      "file": "docs/designs/2026-10-21-s10-terms-reports-milestones-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-10-21",
+      "last_updated": "2026-10-21"
+    },
+    {
+      "id": "2026-10-21-s12-baseline-variance-and-learning-corpus-design",
+      "title": "s12 baseline variance and learning corpus design",
+      "file": "docs/designs/2026-10-21-s12-baseline-variance-and-learning-corpus-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-10-20",
+      "last_updated": "2026-10-20"
+    },
+    {
+      "id": "2026-10-21-s3-review-closure-s11-baseline-tab-design",
+      "title": "s3 review closure s11 baseline tab design",
+      "file": "docs/designs/2026-10-21-s3-review-closure-s11-baseline-tab-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-10-21",
+      "last_updated": "2026-10-21"
+    },
+    {
+      "id": "2026-10-21-s9-s10-depth-compensation-interview-heatmap-backtest-covenant-design",
+      "title": "s9 s10 depth compensation interview heatmap backtest covenant design",
+      "file": "docs/designs/2026-10-21-s9-s10-depth-compensation-interview-heatmap-backtest-covenant-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-10-20",
+      "last_updated": "2026-10-20"
+    },
+    {
+      "id": "2026-10-21-s9-s12-depth-followups-design",
+      "title": "s9 s12 depth followups design",
+      "file": "docs/designs/2026-10-21-s9-s12-depth-followups-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-10-21",
+      "last_updated": "2026-10-21"
+    },
+    {
+      "id": "2026-10-21-s9-s12-ia-review-hardening-design",
+      "title": "s9 s12 ia review hardening design",
+      "file": "docs/designs/2026-10-21-s9-s12-ia-review-hardening-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-10-21",
+      "last_updated": "2026-10-21"
+    },
+    {
       "id": "design-checklist",
       "title": "DESIGN CHECKLIST",
       "file": "docs/designs/DESIGN-CHECKLIST.md",

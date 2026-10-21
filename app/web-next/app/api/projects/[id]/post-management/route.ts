@@ -8,8 +8,10 @@
 import { authenticate } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { route } from "../../../../../lib/route.ts";
 import { getDb } from "../../../../../../../db/client.ts";
 import { requireInsiderIfMnpi } from "../../../../../../../db/lib/access-control.ts";
+import { baselineVariance } from "../../../../../lib/baseline-variance.ts";
 import {
   greenfieldRampUpView,
   integrationMonitoringView,
@@ -17,7 +19,7 @@ import {
   postManagementApplicability,
 } from "../../../../../lib/greenfield-execution.ts";
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
@@ -32,9 +34,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     {
       applicability,
       greenfield_ramp_up: greenfieldRampUpView(id),
+      // 2026-10-21 — flow.spec S12 output "실행 기준선 대비 차이 (greenfield)": the
+      // confirmed S11 baseline vs the latest cycle's scorecard (derived, reference only).
+      baseline_variance: baselineVariance(getDb(), id),
       integration_monitoring: applicability.integration_monitoring ? integrationMonitoringView(id) : null,
       partnership_monitoring: applicability.partnership_monitoring ? partnershipMonitoringView(id) : null,
     },
     200,
   );
-}
+});

@@ -44,6 +44,8 @@ const RAMP_MEASURE_COL_PCT = [34, 18, 14, 14, 20] as const;
 const RAMP_GOAL_COL_PCT = [26, 30, 22, 22] as const;
 /** Column shares (%): section, measure, state. */
 const PARTNER_MEASURE_COL_PCT = [24, 46, 30] as const;
+/** Column shares (%): item, baseline, actual, variance, state. */
+const VARIANCE_COL_PCT = [40, 14, 14, 14, 18] as const;
 
 const MEASURE_STATUS: Record<string, { icon: string; label: string; cls: string }> = {
   on_target: { icon: "●", label: "목표 달성", cls: "status-green" },
@@ -168,6 +170,40 @@ export function PostManagementPanel({ projectId }: { projectId: string }) {
             </div>
           ) : (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">아직 기록된 가동 측정이 없습니다 — portfolio-venture-monitoring 분기 기록이 여기에 표시됩니다.</p>
+          )}
+
+          {view.baseline_variance && view.baseline_variance.status !== "not_applicable" && (
+            <div className="mt-3" data-testid="baseline-variance">
+              <h4 className="text-[length:var(--fs-body)] mb-1">실행 기준선 대비 차이 <span className="note">— S11 확정 기준선 vs 분기 스코어카드 (참고 · 게이트를 막지 않음)</span></h4>
+              {view.baseline_variance.status === "no_confirmed_baseline" ? (
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">확정된 실행 기준선이 없습니다 — S11 화면에서 기준선을 확정하면 분기별 차이가 여기에 표시됩니다.</p>
+              ) : view.baseline_variance.status === "no_scorecard_cycle" ? (
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">기준선은 확정되었으나 아직 스코어카드 분기 기록이 없습니다 — 아래 안착 지표를 기록하면 차이가 계산됩니다.</p>
+              ) : (
+                <>
+                  <p className="text-[length:var(--fs-caption)] mb-1">
+                    분기 {view.baseline_variance.review_cycle} · 기준선 확정 {view.baseline_variance.baseline_confirmed_at?.slice(0, 10)} ·
+                    {" "}계획대로 {view.baseline_variance.summary.on_plan} · 뒤처짐 {view.baseline_variance.summary.behind} · 앞섬 {view.baseline_variance.summary.ahead} · 근거 부족 {view.baseline_variance.summary.insufficient_evidence}
+                  </p>
+                  <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+                    <table className="data-table table-fixed-pct tmin-48" aria-label="실행 기준선 대비 차이">
+                      <caption className="sr-only">실행 기준선 대비 차이</caption>
+                      <ColGroup widths={VARIANCE_COL_PCT} />
+                      <thead><tr><th>항목</th><th className="col-num">기준선</th><th className="col-num">실적</th><th className="col-num">차이</th><th>판정</th></tr></thead>
+                      <tbody>{view.baseline_variance.rows.map((r) => (
+                        <tr key={`${r.area}:${r.key}`}>
+                          <td title={r.note ?? undefined}>{r.label}{r.comparison === "higher_is_better_assumed" && <span className="note ml-1" title="방향 정보가 없어 높을수록 좋은 것으로 읽었습니다">(↑ 가정)</span>}</td>
+                          <td className="col-num tabular-nums">{r.baseline ?? "—"}</td>
+                          <td className="col-num tabular-nums">{r.actual ?? "—"}</td>
+                          <td className="col-num tabular-nums">{r.variance != null ? `${r.variance > 0 ? "+" : ""}${r.variance}` : "—"}</td>
+                          <td>{r.status === "on_plan" ? <span className="status-chip status-green">계획대로</span> : r.status === "behind" ? <span className="status-chip status-amber">뒤처짐</span> : r.status === "ahead" ? <span className="status-chip status-green">앞섬</span> : <span className="status-chip status-not-started">근거 부족</span>}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
           )}
 
           {canAct && <ScorecardForm projectId={projectId} ramp={ramp} onRecorded={() => load()} />}

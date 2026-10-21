@@ -22,6 +22,9 @@ import * as hypothesisRepo from "../../db/repositories/deal-structure-hypothesis
 const TEST_DB_PATH = "db/data/test-deal-structure-hypothesis-write.sqlite";
 const NOW = "2026-08-23T10:00:00Z";
 const ARTIFACT = "deliverables/reports/P012-brownfield-fs-deal-structure-review.pdf";
+// 2026-10-21: completion now requires all four ADR-0045 axis notes — fixtures
+// that complete a hypothesis carry them.
+const NOTES = { tax_structure_note: "절세", liability_isolation_note: "책임격리", financing_leverage_note: "레버리지", exit_structure_note: "엑싯" };
 
 type Db = ReturnType<typeof GetDb>;
 let db: Db;
@@ -179,7 +182,7 @@ describe("completeFourAxisReview()", () => {
 
   test("with reviewer identity + artifact_ref → sets 0→1 and records the artifact in the append-only audit trail", () => {
     const pid = plainProject();
-    const row = hypothesisRepo.hypothesize({ project_id: pid, hypothesized_by: U1, rationale: "r", now: NOW });
+    const row = hypothesisRepo.hypothesize({ project_id: pid, hypothesized_by: U1, rationale: "r", ...NOTES, now: NOW });
     const completed = hypothesisRepo.completeFourAxisReview({ hypothesis_id: row.id, reviewed_by: U2, artifact_ref: ARTIFACT, now: NOW });
     expect(completed.four_axis_review_completed).toBe(1);
     const audit = db
@@ -189,29 +192,36 @@ describe("completeFourAxisReview()", () => {
     expect(audit.target).toBe(`${row.id}:${ARTIFACT}`);
   });
 
+  test("an empty axis note → REJECTED (a four-axis review with an unwritten axis is not a review of four axes)", () => {
+    const pid = plainProject();
+    const row = hypothesisRepo.hypothesize({ project_id: pid, hypothesized_by: U1, rationale: "r", ...NOTES, exit_structure_note: "", now: NOW });
+    expect(() => hypothesisRepo.completeFourAxisReview({ hypothesis_id: row.id, reviewed_by: U2, artifact_ref: ARTIFACT, now: NOW })).toThrow(/four_axis_note_missing:exit_structure_note/);
+    expect((db.query("SELECT four_axis_review_completed FROM deal_structure_hypothesis WHERE id = ?").get(row.id) as { four_axis_review_completed: number }).four_axis_review_completed).toBe(0);
+  });
+
   test("second completion of the same hypothesis → REJECTED", () => {
     const pid = plainProject();
-    const row = hypothesisRepo.hypothesize({ project_id: pid, hypothesized_by: U1, rationale: "r", now: NOW });
+    const row = hypothesisRepo.hypothesize({ project_id: pid, hypothesized_by: U1, rationale: "r", ...NOTES, now: NOW });
     hypothesisRepo.completeFourAxisReview({ hypothesis_id: row.id, reviewed_by: U2, artifact_ref: ARTIFACT, now: NOW });
     expect(() => hypothesisRepo.completeFourAxisReview({ hypothesis_id: row.id, reviewed_by: U2, artifact_ref: "another.pdf", now: NOW })).toThrow(/already has four_axis_review_completed=1/);
   });
 
   test("non-member reviewer → REJECTED; MNPI non-insider reviewer → REJECTED", () => {
     const pid = plainProject();
-    const row = hypothesisRepo.hypothesize({ project_id: pid, hypothesized_by: U1, rationale: "r", now: NOW });
+    const row = hypothesisRepo.hypothesize({ project_id: pid, hypothesized_by: U1, rationale: "r", ...NOTES, now: NOW });
     expect(() => hypothesisRepo.completeFourAxisReview({ hypothesis_id: row.id, reviewed_by: U3, artifact_ref: ARTIFACT, now: NOW })).toThrow(new RegExp(`'${U3}' is not an active project_member`));
 
     const mnpiPid = insertProject(true);
     grantMember(mnpiPid, U1);
     grantMember(mnpiPid, U2);
     enrollInsider(mnpiPid, U1); // author yes, reviewer no
-    const mrow = hypothesisRepo.hypothesize({ project_id: mnpiPid, hypothesized_by: U1, rationale: "r", now: NOW });
+    const mrow = hypothesisRepo.hypothesize({ project_id: mnpiPid, hypothesized_by: U1, rationale: "r", ...NOTES, now: NOW });
     expect(() => hypothesisRepo.completeFourAxisReview({ hypothesis_id: mrow.id, reviewed_by: U2, artifact_ref: ARTIFACT, now: NOW })).toThrow(/MNPI project.*not on its active insider list/);
   });
 
   test("completion logs a write", () => {
     const pid = plainProject();
-    const row = hypothesisRepo.hypothesize({ project_id: pid, hypothesized_by: U1, rationale: "r", now: NOW });
+    const row = hypothesisRepo.hypothesize({ project_id: pid, hypothesized_by: U1, rationale: "r", ...NOTES, now: NOW });
     const before = writeLogCount(pid);
     hypothesisRepo.completeFourAxisReview({ hypothesis_id: row.id, reviewed_by: U2, artifact_ref: ARTIFACT, now: NOW });
     expect(writeLogCount(pid)).toBe(before + 1);
@@ -223,8 +233,8 @@ describe("completeFourAxisReview()", () => {
 // ---------------------------------------------------------------------------
 
 describe("no naked flag writes", () => {
-  test("the module exports exactly hypothesize/getHypotheses/completeFourAxisReview — no generic update exists", () => {
-    expect(Object.keys(hypothesisRepo).sort()).toEqual(["completeFourAxisReview", "getHypotheses", "hypothesize"]);
+  test("the module exports exactly hypothesize/getHypotheses/completeFourAxisReview (+ the axis-note predicate constants) — no generic update exists", () => {
+    expect(Object.keys(hypothesisRepo).sort()).toEqual(["FOUR_AXIS_NOTE_FIELDS", "completeFourAxisReview", "getHypotheses", "hypothesize", "missingFourAxisNotes"]);
   });
 
   test("hypothesize() input carries no four_axis_review_completed field — the flag cannot ride along on an insert", () => {

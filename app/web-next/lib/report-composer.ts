@@ -12,6 +12,11 @@ import { evaluateProcess, latestGateDecisions, type GateId } from "./process-flo
 import { buildBriefingPack } from "./briefing-pack.ts";
 import { getHypotheses } from "../../../db/repositories/deal-structure-hypothesis.repository.ts";
 import { financingTotals } from "../../../db/repositories/financing-plan.repository.ts";
+import { financingCertainty } from "../../../db/repositories/financing-plan.repository.ts";
+import { buildRiskHeatmap, heatmapSnapshot } from "./risk-heatmap.ts";
+import { covenantHeadroom } from "./covenant-headroom.ts";
+import { milestoneSummary } from "./milestones.ts";
+import { icReviewStepsView } from "./ic-review-steps.ts";
 
 export interface ComposedReport {
   title: string;
@@ -142,6 +147,79 @@ export function composeProjectReport(db: Database, projectId: string, projectNo:
   lines.push("## 7. 파이프라인 스냅샷");
   lines.push("");
   lines.push(buildBriefingPack(db, { type: "project", id: projectId }));
+  lines.push("");
+
+  // 2026-10-21 (decider: 보고서가 전체 진행결과를 구체적으로 담을 것) — S9~S12의
+  // 실제 판정·수치를 섹션 8~11로 추가한다. 모두 기존 원장의 계산값이며, 근거 없는
+  // 숫자는 만들지 않는다.
+  sections.push("리스크 히트맵");
+  lines.push("## 8. 리스크 히트맵 요약");
+  lines.push("");
+  try {
+    const heat = heatmapSnapshot(buildRiskHeatmap(db, projectId), 5);
+    if (heat.total === 0) {
+      lines.push("- 플로팅된 리스크 없음 (DD·계약 CoC·클로백·커버넌트 기록 없음)");
+    } else {
+      lines.push(`- 항목 ${heat.total}건 — 높음 ${heat.counts.high} · 중간 ${heat.counts.mid} · 낮음 ${heat.counts.low} (스냅샷 ${heat.snapshot_hash})`);
+      for (const t of heat.top) lines.push(`  - [${t.severity}] ${t.label} (${t.likelihood}×${t.impact}${t.assessed ? ", 사람 판정" : ""}${t.mitigation ? ` — 완화: ${t.mitigation}` : ""})`);
+    }
+  } catch {
+    lines.push("- 리스크 히트맵 산출 실패");
+  }
+  lines.push("");
+
+  sections.push("자금 확정성·커버넌트");
+  lines.push("## 9. 자금 확정성 및 커버넌트 여력");
+  lines.push("");
+  try {
+    const certainty = financingCertainty(projectId, db as unknown as Parameters<typeof financingCertainty>[1]);
+    lines.push(`- 조달 ${certainty.source_lines}건 중 증빙 ${certainty.evidenced_lines}건 · 미증빙 ${certainty.unevidenced_lines}건 (${certainty.unevidenced_amount_krw_m} 백만 KRW)`);
+    const cov = covenantHeadroom(db as unknown as Parameters<typeof covenantHeadroom>[0], projectId);
+    if (cov.status === "computed") {
+      for (const c of cov.covenants) lines.push(`- 커버넌트 ${c.covenant_key}: ${c.status}${c.min_headroom_pct != null ? ` (최소 여력 ${Math.round(c.min_headroom_pct * 1000) / 10}%)` : ""}`);
+    } else {
+      lines.push("- 커버넌트 여력: 시뮬레이션 없음 (근거 부족)");
+    }
+  } catch {
+    lines.push("- 자금 데이터 없음");
+  }
+  lines.push("");
+
+  sections.push("인허가·인증 현황");
+  lines.push("## 10. 인허가·인증 현황");
+  lines.push("");
+  try {
+    const permits = db.query("SELECT name, status FROM permit WHERE project_id = ? ORDER BY rowid").all(projectId) as Array<{ name: string; status: string }>;
+    const certs = db.query("SELECT name, status FROM certification WHERE project_id = ? ORDER BY rowid").all(projectId) as Array<{ name: string; status: string }>;
+    if (permits.length === 0 && certs.length === 0) lines.push("- 등록된 인허가·인증 없음");
+    for (const p of permits) lines.push(`- [허가] ${p.name} — ${p.status}`);
+    for (const c of certs) lines.push(`- [인증] ${c.name} — ${c.status}`);
+  } catch {
+    lines.push("- 인허가·인증 데이터 없음");
+  }
+  lines.push("");
+
+  sections.push("마일스톤");
+  lines.push("## 11. 마일스톤 요약");
+  lines.push("");
+  try {
+    const ms = milestoneSummary(db, projectId);
+    if (ms.total === 0) lines.push("- 등록된 마일스톤 없음");
+    else lines.push(`- 전체 ${ms.total}건 — 지연 ${ms.overdue} · 임박 ${ms.due_soon} · 완료 ${ms.done}`);
+  } catch {
+    lines.push("- 마일스톤 데이터 없음");
+  }
+  lines.push("");
+
+  sections.push("투자심사 절차 상태");
+  lines.push("## 12. 투자심사 절차 단계");
+  lines.push("");
+  try {
+    const steps = icReviewStepsView(db, projectId).entity;
+    for (const s of steps) lines.push(`- step ${s.id} ${s.title}: ${s.status}`);
+  } catch {
+    lines.push("- 절차 단계 산출 실패");
+  }
   lines.push("");
 
   const markdown = lines.join("\n");

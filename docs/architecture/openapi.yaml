@@ -6034,6 +6034,36 @@ paths:
           $ref: '#/components/responses/NotFound'
         '201':
           $ref: '#/components/responses/Created'
+    put:
+      operationId: updateProjectIncentive
+      summary: "Change an incentive's direction (prospective ↔ granted) — analyst+, audited incentive.direction_changed."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteProjectIncentive
+      summary: "Remove one incentive (?id=) — hard delete with an audit row (incentive.deleted); analyst+."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/sites:
     get:
       operationId: listProjectSites
@@ -6065,6 +6095,20 @@ paths:
           $ref: '#/components/responses/NotFound'
         '201':
           $ref: '#/components/responses/Created'
+    delete:
+      operationId: deleteProjectSite
+      summary: "Remove one site candidate (?id=) — hard delete with an audit row (site.deleted); analyst+."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/permits:
     get:
       operationId: listProjectPermits
@@ -6096,6 +6140,38 @@ paths:
           $ref: '#/components/responses/NotFound'
         '201':
           $ref: '#/components/responses/Created'
+    put:
+      operationId: updateProjectPermitOrCertification
+      summary: "Change a tracked permit/certification's status ({kind, id, status}) — analyst+, audited {kind}.status_changed."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteProjectPermitOrCertification
+      summary: "Remove one tracked permit/certification (?kind=&id=) — critical-path edges cleaned first, audit {kind}.deleted; analyst+."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/debt:
     get:
       operationId: listProjectDebt
@@ -6272,6 +6348,65 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/risk-heatmap:
+    get:
+      operationId: getProjectRiskHeatmap
+      summary: "Server-built S9 risk heatmap (ADR-0122 #2): dd_finding, contract_coc, incentive clawback and covenant headroom items with the person's latest ledger assessment applied; hash-stamped snapshot shared with the IC package and the monitoring brief."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/comp-parity/packages:
+    post:
+      operationId: recordProjectManagementPackage
+      summary: "Record one management incentive package (brownfield-dd step 7, ma-04~06): anonymous executive_ref only (SEC-05), CoC trigger requires a payout estimate; analyst+, audited management_package.recorded."
+      tags:
+        - Deal Review
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/ic-review-steps:
+    get:
+      operationId: getProjectIcReviewSteps
+      summary: "S11 entity-ic-review / group-investment-review step status from the ledgers of record (RAG proposal, Kill Criteria explicit verdicts with the engine's evaluation as a proposal, IC memo snapshot, certainty-of-funds fact, gate decisions) plus the applicable kill-criteria list and procedure gaps (informational)."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: recordProjectIcReviewStep
+      summary: "One action on the S11 procedure ledger: record (step 2 needs a verdict for every applicable kill criterion, step 4 stores the derived certainty fact), snapshot_ic_memo (step 3 memo + content hash), draft_insight_review (step 4.5 LLM/fallback draft — returned, never persisted), attach_decision_deck (step 4.6: briefing pack built, hashed and recorded). Derived steps are refused; analyst+, audited ic_review_step.recorded."
+      tags:
+        - Deal Review
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /api/projects/{id}/business-case/ev-band/recommend:
@@ -6516,6 +6651,244 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/portfolio/backtest/proposals:
+    get:
+      operationId: listConfidenceGradeAdjustmentProposals
+      summary: "Data-confidence grade adjustment proposals (ADR-0123 #3) with the current backtest bias statistics."
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: actOnConfidenceGradeAdjustmentProposal
+      summary: "One action on the proposal ledger: propose (bias captured server-side) | approve | reject — analyst+ persons only, audited; an approved row can only lower the RAG data-confidence cap (boundary #4)."
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '201':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/portfolio/learnings:
+    get:
+      operationId: listKillLearnings
+      summary: "Kill-with-learning corpus (ADR-0150 criterion 6) for the S1/S2 base-rate reference: learning_capture rows by track/industry; project identity withheld for non-members. Display-only."
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/projects/{id}/review-acks:
+    get:
+      operationId: listProjectReviewClaimAcks
+      summary: "Latest interim '사람 확인' acknowledgement per claim for a gate (?gate=), from the review_claim_ack ledger (migration 0165; ADR-0182 §5 addendum) — the review work survives navigation; the decision record still carries its own snapshot."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: recordProjectReviewClaimAck
+      summary: "Append one acknowledgement {gate, claim, acked, note?} — analyst+, audited review_claim_ack.recorded; a toggle is a new row, latest wins."
+      tags:
+        - Deal Review
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/opportunities/{id}/review-acks:
+    get:
+      operationId: listOpportunityReviewClaimAcks
+      summary: "Opportunity-carrier twin of the project review-acks route (S1–S7 gates)."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: recordOpportunityReviewClaimAck
+      summary: "Append one acknowledgement on the opportunity carrier — analyst+, audited."
+      tags:
+        - Deal Review
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/milestones:
+    get:
+      operationId: listProjectMilestones
+      summary: "The person-managed milestone register (migration 0167) with derived status (done/overdue/due_soon/planned) and a summary; ?summary=1 returns the counts only (sidebar badge)."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createProjectMilestone
+      summary: "Create one milestone {title, category, due_date, owner?, notes?} — analyst+, audited project_milestone.created."
+      tags:
+        - Deal Review
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/milestones/suggest:
+    post:
+      operationId: suggestProjectMilestones
+      summary: "AI milestone RECOMMENDATIONS (track, adopted business case, existing register → 4–7 non-duplicate suggestions with computed due dates). Returned, never persisted — each becomes a milestone only via the audited create; analyst+."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/milestones/import-baseline:
+    post:
+      operationId: importProjectMilestonesFromBaseline
+      summary: "Import the confirmed greenfield execution baseline's permit/certification milestones (idempotent by title) — analyst+, audited through the create path."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/milestones/{milestoneId}:
+    put:
+      operationId: updateProjectMilestone
+      summary: "Update one milestone (fields and/or the done toggle) — analyst+, audited project_milestone.updated."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteProjectMilestone
+      summary: "Remove one milestone — hard delete with an audit row (project_milestone.deleted); analyst+."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/sites/regulatory-draft:
+    post:
+      operationId: draftProjectSiteRegulatoryReview
+      summary: "k-law-grounded regulatory pre-review DRAFT for one site candidate (address/region/notes → 건축법·인허가 검토 축). Returned, never persisted; deterministic fallback without an LLM; analyst+, audited site_regulatory_draft.generate."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/reports/{snapshotId}:
+    get:
+      operationId: getProjectReportSnapshot
+      summary: "One report snapshot's full markdown (archived snapshots stay readable)."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: archiveProjectReportSnapshot
+      summary: "SOFT delete — sets archived_at so the history list hides the snapshot while the row and its render files stay auditable; analyst+, audited report_snapshot.archived."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /api/comments:

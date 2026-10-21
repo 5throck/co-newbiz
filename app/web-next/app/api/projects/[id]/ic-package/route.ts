@@ -21,16 +21,20 @@ import { icGoGapItems, parseRationale } from "../../../../../lib/ic-gap-override
 import { latestGateDecisions, latestRouteDecision, type GateId, type GateVerdict } from "../../../../../lib/process-flow.ts";
 import { latestPmiKickoff, pmiKickoffApplies } from "../../../../../lib/pmi-kickoff.ts";
 import { notFound, ok } from "../../../../../lib/envelope.ts";
+import { route } from "../../../../../lib/route.ts";
 import { ddCompletionSummary, listDdWorkspace, type DdCompletionSummary, type FindingRow } from "../../../../../lib/dd-checklist-tailor.ts";
 import { draftAiSummary } from "../../../../../lib/checklist-review-status.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
+import { buildRiskHeatmap, heatmapSnapshot } from "../../../../../lib/risk-heatmap.ts";
+import { covenantHeadroom } from "../../../../../lib/covenant-headroom.ts";
+import { icReviewStepsView } from "../../../../../lib/ic-review-steps.ts";
 import { getHypotheses } from "../../../../../../../db/repositories/deal-structure-hypothesis.repository.ts";
-import { financingTotals, listFinancingEntries } from "../../../../../../../db/repositories/financing-plan.repository.ts";
+import { financingCertainty, financingTotals, listFinancingEntries } from "../../../../../../../db/repositories/financing-plan.repository.ts";
 
 const IC_GATES: GateId[] = ["entity_ic", "group_ic"];
 const TOP_FINDINGS = 10;
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
@@ -116,6 +120,21 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         : { adopted: null, adoption, note: "채택(adopt)된 Business Case가 없습니다 — 법인 투자심의위원회 심사 전 S8 채택이 필요합니다." },
       // Informational only (never gates): in-scope checklist items still draft-AI, shown in the IC "could not verify" area.
       dd: { completion, findings, finding_count: findings.length, review_status: draftAiSummary(listDdWorkspace(id)) },
+      // ADR-0122 #2 — the S9 risk heatmap snapshot auto-attaches to the IC
+      // package: same server builder as the heatmap page, hash-stamped so the
+      // committee can tell which snapshot it read. Informational, never gates.
+      risk_heatmap: heatmapSnapshot(buildRiskHeatmap(db, id)),
+      // 2026-10-21 — entity-ic-review / group-investment-review step status
+      // (lib/ic-review-steps). procedure_gaps are the step items that also ride
+      // go_gaps (decider 2026-10-21: the GO gap-rationale contract covers them).
+      ic_steps: (() => {
+        const v = icReviewStepsView(db, id);
+        return {
+          entity: v.entity.map((s) => ({ id: s.id, output_type: s.output_type, status: s.status })),
+          group: v.group.map((s) => ({ id: s.id, output_type: s.output_type, status: s.status })),
+          procedure_gaps: v.gaps,
+        };
+      })(),
       rag: {
         status: rag.status,
         grade: overall?.grade ?? null, // null = not graded (never a default color)
@@ -148,8 +167,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
           latest_hypothesis: latestHypothesis,
           hypothesis_count: hypotheses.length,
           four_axis_review_completed: latestHypothesis?.four_axis_review_completed === 1,
-          financing: { entries: listFinancingEntries(id, db), totals },
+          financing: { entries: listFinancingEntries(id, db), totals, certainty: financingCertainty(id, db) },
           balanced: totals.balanced,
+          // S10 financing-plan output "커버넌트 여력" (fin-03) — latest simulation's covenant headroom.
+          covenant_headroom: covenantHeadroom(db, id),
         };
       })(),
       // S11 PMI kickoff (Wave F-6) — brownfield M&A/JV/strategic only.
@@ -171,4 +192,4 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     200,
     { gate_count: history.length },
   );
-}
+});

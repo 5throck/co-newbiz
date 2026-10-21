@@ -15,11 +15,13 @@ import {
 } from "../../../../../../../db/repositories/deal-structure-hypothesis.repository.ts";
 import {
   addFinancingEntry,
+  financingCertainty,
   financingTotals,
   listFinancingEntries,
   removeFinancingEntry,
 } from "../../../../../../../db/repositories/financing-plan.repository.ts";
 import { badRequest, notFound, ok, forbidden } from "../../../../../lib/envelope.ts";
+import { route } from "../../../../../lib/route.ts";
 import { recordHumanFinalForStageArtifacts } from "../../../../../lib/review/human-final.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { greenfieldHypothesisIssue } from "../../../../../lib/greenfield-structure.ts";
@@ -29,10 +31,12 @@ interface DealStructureView {
   financing: {
     entries: ReturnType<typeof listFinancingEntries>;
     totals: ReturnType<typeof financingTotals>;
+    /** 2026-10-21 — certainty-of-funds fact over the source lines (S11 step 4 reads this). */
+    certainty: ReturnType<typeof financingCertainty>;
   };
 }
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
@@ -40,12 +44,12 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
   const db = getDb();
   const view: DealStructureView = {
     hypotheses: getHypotheses(id, db),
-    financing: { entries: listFinancingEntries(id, db), totals: financingTotals(id, db) },
+    financing: { entries: listFinancingEntries(id, db), totals: financingTotals(id, db), certainty: financingCertainty(id, db) },
   };
   return ok(view, 200);
-}
+});
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
@@ -104,6 +108,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           name: (body?.name as string | undefined) ?? "",
           amount_krw_m: Number(body?.amount_krw_m),
           note: (body?.note as string | undefined) ?? null,
+          evidence_kind: (body?.evidence_kind as string | undefined) ?? null,
+          evidence_ref: (body?.evidence_ref as string | undefined) ?? null,
           created_by: ctx.userId,
         },
         db,
@@ -121,4 +127,4 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   } catch (err) {
     return badRequest("deal_structure_write_failed", err instanceof Error ? err.message : "Deal-structure write failed.");
   }
-}
+});

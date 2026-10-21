@@ -97,6 +97,37 @@ function deriveDataConfidence(db: Database, projectId: string): DataConfidenceGr
       .get(id) as { g: DataConfidenceGrade } | undefined;
     if (v) worst = worst ? worseGrade(worst, v.g) : v.g;
   }
+  // ADR-0123 #3 — a human-APPROVED backtest grade adjustment (migration 0161)
+  // can only tighten the cap: take the worse of the derived grade and the
+  // approved grade, never a better one (boundary #4).
+  const approved = approvedConfidenceAdjustment(db, projectId);
+  if (approved) worst = worst ? worseGrade(worst, approved) : approved;
+  return worst;
+}
+
+/**
+ * Worst approved grade across the LATEST org-scope and the LATEST
+ * project-scope confidence adjustment (a newer approval supersedes the older
+ * one within its scope); null when none is approved. The result only ever
+ * lowers the derived grade — the caller takes the worse of the two.
+ */
+export function approvedConfidenceAdjustment(db: Database, projectId: string): DataConfidenceGrade | null {
+  let worst: DataConfidenceGrade | null = null;
+  try {
+    const latest = (scopeSql: string, params: string[]) =>
+      db
+        .query(
+          `SELECT proposed_grade AS g FROM confidence_grade_adjustment_proposal
+           WHERE status = 'approved' AND ${scopeSql} ORDER BY decided_at DESC, id DESC LIMIT 1`,
+        )
+        .get(...params) as { g: DataConfidenceGrade } | undefined;
+    for (const r of [latest("scope = 'org'", []), latest("scope = 'project' AND project_id = ?", [projectId])]) {
+      if (r) worst = worst ? worseGrade(worst, r.g) : r.g;
+    }
+  } catch {
+    // Table absent on a pre-0161 database: no adjustment applies.
+    return null;
+  }
   return worst;
 }
 

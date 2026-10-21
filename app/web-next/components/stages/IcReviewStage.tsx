@@ -21,6 +21,7 @@ import { EstablishmentPanel } from "./EstablishmentPanel.tsx";
 import { establishmentApplies, type EventView, type MemberView, type StepRowView } from "../../lib/establishment-view.ts";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import { ExecutionBaselinePanel } from "./ExecutionBaselinePanel.tsx";
+import { IcReviewStepsPanel } from "./IcReviewStepsPanel.tsx";
 import { fmtNpvKrwM } from "../../lib/npv-format.ts";
 
 // S11 투자심사·실행 — 투자심의 자료 열람 + 법인·그룹 투자심의위원회 진행 기록 + 설립 실행
@@ -137,6 +138,18 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
     });
   }
 
+  // 2026-10-21 decider: S11 화면을 업무 절차 순서의 내부 탭으로 구분한다.
+  // 2차 지시로 실행 기준선(트랜치·인허가/인증·인력/조직·가동 KPI·인센티브 의무)을
+  // 설립 실행에서 떼어 별도 탭으로 분리한다.
+  type IcView = "dossier" | "steps" | "establishment" | "baseline" | "decision";
+  const IC_VIEWS: Array<{ key: IcView; label: string }> = [
+    { key: "dossier", label: "투자심의 자료" },
+    { key: "steps", label: "투자심사 절차 단계" },
+    { key: "establishment", label: "설립 실행" },
+    { key: "baseline", label: "실행 기준선" },
+    { key: "decision", label: "의사결정 · 승인 기록" },
+  ];
+  const [icView, setIcView] = useState<IcView>("dossier");
   const entityGo = pkg?.gates.latest.find((x) => x.gate === "entity_ic")?.decision === "go";
   const bothGatesGo = ["entity_ic", "group_ic"].every((g) =>
     pkg?.gates.latest.find((x) => x.gate === g)?.decision === "go",
@@ -171,12 +184,27 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
             </span>
           )}
         </p>
+        {/* 내부 탭 — 업무 절차 순서: 자료 → 절차 단계 → 설립·실행 → 의사결정 (2026-10-21 decider) */}
+        <div role="tablist" aria-label="투자심사 화면" className="flex flex-wrap gap-1 mb-3">
+          {IC_VIEWS.map((v) => (
+            <button
+              key={v.key}
+              type="button"
+              role="tab"
+              aria-selected={icView === v.key}
+              className={`stage-tab${icView === v.key ? " stage-tab-active" : ""}`}
+              onClick={() => setIcView(v.key)}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
 
         {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
         {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {notice}</p>}
 
         {/* ── 투자심의 자료 요약 ─────────────────────────────────────────── */}
-        <section className="market-section sizing-step" aria-label="투자심의 자료 요약">
+        <section className="market-section sizing-step" aria-label="투자심의 자료 요약" hidden={icView !== "dossier"}>
           <h3 className="sizing-step-title text-[0.95rem]">
             <span className="sizing-step-badge">📦</span> 투자심의 자료 — 사업성 · 실사 · 종합 등급 제안
           </h3>
@@ -317,21 +345,30 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
           })()}
         </section>
 
-        {/* ── 설립 실행 5단계 (ADR-0165) ───────────────────────────────── */}
-        <EstablishmentPanel
-          projectId={projectId}
-          canAct={canAct}
-          est={est}
-          fallbackSteps={pkg?.establishment.steps ?? []}
-          fallbackReopen={pkg?.establishment}
-          onChanged={load}
-        />
+        {/* ── 투자심사 절차 단계 (entity-ic-review · group-investment-review) ── */}
+        <div hidden={icView !== "steps"}>
+          <IcReviewStepsPanel projectId={projectId} canAct={canAct} />
+        </div>
 
-        {/* ── 신규 사업 실행 기준선 (ADR-0161) — greenfield 전용, 그 외 트랙은 아무것도 그리지 않는다 ── */}
-        <ExecutionBaselinePanel projectId={projectId} canAct={canAct} />
+        {/* ── 설립 실행 5단계 (ADR-0165) — 승인 후 실행 활동 ── */}
+        <div hidden={icView !== "establishment"}>
+          <EstablishmentPanel
+            projectId={projectId}
+            canAct={canAct}
+            est={est}
+            fallbackSteps={pkg?.establishment.steps ?? []}
+            fallbackReopen={pkg?.establishment}
+            onChanged={load}
+          />
+        </div>
+
+        {/* ── 신규 사업 실행 기준선 (ADR-0161 Row 3) — 별도 탭 (2026-10-21 decider 2차) ── */}
+        <div hidden={icView !== "baseline"}>
+          <ExecutionBaselinePanel projectId={projectId} canAct={canAct} />
+        </div>
 
         {/* ── PMI 킥오프 (brownfield M&A·JV·전략적 투자) ─────────────── */}
-        {pkg?.pmi_kickoff.applies && (
+        {pkg?.pmi_kickoff.applies && icView === "establishment" && (
           <section className="market-section sizing-step mt-3" aria-label="PMI 킥오프">
             <h3 className="sizing-step-title text-[0.95rem]">
               <span className="sizing-step-badge">🤝</span> PMI 킥오프 — Brownfield 통합 계획 기준선
@@ -380,7 +417,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
         )}
 
         {/* ── 의사결정: 법인 → 그룹 투자심의위원회 한 구역 (검토 블록은 상단에 한 번만) ── */}
-        <div className="mt-4">
+        <div className="mt-4" hidden={icView !== "decision"}>
           <GateDecisionPanel
             opportunityId={projectId}
             gates={["entity_ic", "group_ic"]}

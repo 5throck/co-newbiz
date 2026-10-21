@@ -1,0 +1,38 @@
+// Kill Criteria 한국어 제목 맵 (2026-10-21, decider: "step 2 내용이 영어로 되어있는데
+// 한국어로 번역해줘"). procedures/_kill-criteria/*.json의 title은 영어 SSOT이므로
+// 화면 표시용 번역을 여기에 둔다. criterion_id 기준 — 프로시저가 달라도 같은
+// criterion_id면 같은 뜻이다. 없는 항목은 원문 title을 그대로 표시한다.
+export const KILL_CRITERIA_KO: Record<string, string> = {
+  any_of_six_ma_validators_missing_at_dd_exit: "DD 종결 시 육대 검증기 중 해당하는 하나라도 누락",
+  certification_transferability_computed_by_inference_not_confirmation: "인증 승계 가능성을 추론으로 판정(원문 확인 없음)",
+  covenant_breach_with_coc_acceleration_under_downside: "하방 시나리오에서 커버넌트 위반 + 지위 변동(CoC) 가속 조항 발동",
+  partner_dependency_unconfirmed_and_no_alternative: "파트너 의존성 미확인, 대안 없음",
+  no_target_meets_base_scenario_hurdle: "롱리스트 어느 대상도 S8 대상별 FS의 기본 시나리오 허들 미달(기준 p05 NPV ≤ 0 또는 확정 허들 IRR 미달)",
+  qoe_reveals_material_earnings_quality_gap_unexplained: "QoE에서 설명되지 않는 중대한 이익의 질 격차 발견",
+  certification_transferability_unconfirmed_and_load_bearing: "인증 승계 가능성이 미확인 상태로 딜 근거의 핵심 부담 요인",
+  wacc_hurdle_still_assumed: "WACC 허들이 여전히 가정값(근거 입력 없음)",
+  no_viable_target_in_longlist: "롱리스트에 실행 가능한 대상 없음",
+  preliminary_hhi_flags_certain_block: "예비 HHI가 특정 사업 결합 제소 가능성 플래그",
+  minimum_coverage_not_achievable: "롱리스트 최소 커버리지 달성 불가 — 퍼널이 선언한 커버리지 기준 충족 불가",
+  universe_cannot_be_defined: "대상 우주(Universe) 정의 불가 — 방어 가능한 선정 기준·커버리지 없음",
+  no_candidate_passes_knock_out: "롱리스트 후보 중 chk-target-screening 녹아웃(t-01~t-05) 통과 없음",
+  shortlist_quality_below_threshold: "숏리스트 품질이 기준 미달 — 평점 스코어카드 기준 통과 후보 없음(t-06~t-09)",
+  permit_not_possible_under_existing_entity_name: "필요 인허가를 현 법인 명의로 보유할 수 없음",
+  no_viable_deal_shape: "전략적 적합성 기준을 충족하는 딜 형태 없음",
+  partner_dd_red_financial_distress: "파트너 DD 적색 판정 — 출시 구간을 포함한 동행 기간 생존 불가",
+  partner_dd_red_ip_chain: "파트너 DD 적색 판정 — 지재권 귀속·체인·권리 침해가 우리 독점권과 충돌",
+  employment_transfer_without_consent_determination: "동의 체계 판정 없이 고용 이전 실행",
+  ip_assignment_chain_incomplete_at_establishment: "설립 시점 IP 양도 체인 미완결",
+  origin_classification_missing_at_entity_ic_exit: "법인 투자심의위원회 종료 시점에 origin 분류 미기록",
+  analysis_task_reviewed_by_null_on_required_deliverable: "필수 산출물의 analysis_task에 검토자(reviewed_by) 미기록",
+  kill_criteria_condition_triggered: "상위 Kill Criteria 조건 발동(메타 기준)",
+  dd_finding_with_value_impact_not_in_valuation_bridge: "가치 영향이 있는 DD 발견사항이 밸류에이션 브리지에 미반영",
+  wastewater_capacity_insufficient_and_no_mitigation: "폐수 처리 용량 부족 + 완화 방안 없음",
+  growth_projection_outside_top_decile_without_risk_officer_signoff: "성장 전망이 상위 10% 초과 — 리스크 책임자 승인 없음",
+  permit_critical_path_exceeds_incentive_deadline: "인허가 임계경로가 인센티브 기한 초과",
+  infrastructure_plan_not_finalized_at_site_announcement: "입지 발표 시점에 인프라 계획 미확정",
+  zero_site_clears_infrastructure_minimums: "인프라 최소 기준을 충족하는 후보 부지 0건",
+  clean_team_protocol_breach: "클로즈 전 민감정보 작업 중 클린팀 프로토콜 위반",
+  key_talent_attrition_above_threshold_at_90d: "90일 시점 핵심인재 이탈률 기준 초과",
+  synergy_run_rate_uncertified_at_bau_handover: "BAU 이관 시점에 시너지 런레이트 미인증",
+};

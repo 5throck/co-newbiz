@@ -105,7 +105,7 @@ export function CapexTrancheTable({ projectId, tranches, canAct, onChanged, meUs
   const summary = trancheSummary(tranches);
 
   return (
-    <section className="market-section sizing-step" aria-label="설비투자 집행 단계(트랜치)" data-testid="capex-tranches">
+    <section className="market-section sizing-step" aria-label="설비투자 집행 단계(집행 단계)" data-testid="capex-tranches">
       <h3 className="sizing-step-title text-[0.9rem]">설비투자 집행 단계 — 트랜치와 집행 조건 ({tranches.length}건)</h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
         투자금을 한 번에 집행하지 않고 조건이 충족될 때마다 나눠 집행합니다. 금액은 입력한 통화 단위 그대로이며, 집행 완료로 기록된 트랜치는 수정하거나 폐기할 수 없습니다.
@@ -115,7 +115,7 @@ export function CapexTrancheTable({ projectId, tranches, canAct, onChanged, meUs
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
 
       <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-        <table className="data-table table-fixed-pct tmin-48" aria-label="설비투자 트랜치">
+        <table className="data-table table-fixed-pct tmin-48" aria-label="설비투자 집행 단계">
           <caption className="sr-only">설비투자 트랜치별 금액, 집행 조건, 상태</caption>
           <ColGroup widths={canAct ? TRANCHE_COL_PCT_ACT : TRANCHE_COL_PCT_READONLY} />
           <thead>
@@ -144,7 +144,7 @@ export function CapexTrancheTable({ projectId, tranches, canAct, onChanged, meUs
                 {canAct && (
                   <td data-label="작업">
                     {menuItems(t).length > 0
-                      ? <RowMenu label={`트랜치 ${t.tranche_no} 작업`} items={menuItems(t)} />
+                      ? <RowMenu label={`집행 단계 ${t.tranche_no} 작업`} items={menuItems(t)} />
                       : trancheEditable(t.status) ? <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">승인 대기</span> : <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">잠김</span>}
                   </td>
                 )}
@@ -158,7 +158,7 @@ export function CapexTrancheTable({ projectId, tranches, canAct, onChanged, meUs
       </div>
 
       {summary.length > 0 && (
-        <ul className="text-[length:var(--fs-caption)] mt-1" aria-label="통화별 트랜치 합계">
+        <ul className="text-[length:var(--fs-caption)] mt-1" aria-label="통화별 집행 단계 합계">
           {summary.map((s) => (
             <li key={s.currency} className="tabular-nums">
               {s.currency} 합계 {fmtAmount(s.total)} — 집행 완료 {fmtAmount(s.released)} · 집행 예정 {fmtAmount(s.planned)} · 보류 {fmtAmount(s.withheld)}
@@ -170,7 +170,7 @@ export function CapexTrancheTable({ projectId, tranches, canAct, onChanged, meUs
       {canAct && (
         <form
           className="flex flex-wrap items-end gap-2 mt-2 text-[length:var(--fs-caption)]"
-          aria-label="트랜치 추가"
+          aria-label="집행 단계 추가"
           onSubmit={(e) => { e.preventDefault(); void create(); }}
         >
           <label htmlFor={`${uid}-no`}>번호
@@ -185,7 +185,7 @@ export function CapexTrancheTable({ projectId, tranches, canAct, onChanged, meUs
           <label htmlFor={`${uid}-cond`}>집행 조건 (필수)
             <input id={`${uid}-cond`} className="sizing-new-input ml-1" style={{ minWidth: "18rem" }} placeholder="예: 인허가 취득 및 1차 설비 발주 확정" value={form.releaseCondition} onChange={(e) => setForm({ ...form, releaseCondition: e.target.value })} />
           </label>
-          <button type="submit" className="btn-ghost btn-sm" disabled={busy}>{busy ? "기록 중..." : "트랜치 추가"}</button>
+          <button type="submit" className="btn-ghost btn-sm" disabled={busy}>{busy ? "기록 중..." : "집행 단계 추가"}</button>
         </form>
       )}
       {formError && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-1">✕ {formError}</p>}
@@ -220,10 +220,10 @@ function TrancheDialog({ dlg, busy, onClose, onSubmit }: {
   const [problem, setProblem] = useState<string | null>(null);
   const edit = dlg.kind === "edit";
   const title = edit
-    ? `트랜치 ${dlg.t.tranche_no} 수정`
+    ? `집행 단계 ${dlg.t.tranche_no} 수정`
     : dlg.kind === "retire"
-      ? `트랜치 ${dlg.t.tranche_no} 폐기`
-      : `트랜치 ${dlg.t.tranche_no} — ${dlg.next === "released" ? (dlg.t.pending_release ? "집행 승인" : "집행 요청") : dlg.next === "withheld" ? "보류로 기록" : "집행 예정으로 되돌림"}`;
+      ? `집행 단계 ${dlg.t.tranche_no} 폐기`
+      : `집행 단계 ${dlg.t.tranche_no} — ${dlg.next === "released" ? (dlg.t.pending_release ? "집행 승인" : "집행 요청") : dlg.next === "withheld" ? "보류로 기록" : "집행 예정으로 되돌림"}`;
 
   function submit() {
     const p = edit
@@ -241,7 +241,7 @@ function TrancheDialog({ dlg, busy, onClose, onSubmit }: {
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
             {dlg.t.pending_release
               ? "다른 사람이 집행을 요청했습니다. 승인하면 집행 완료로 기록되어 되돌릴 수 없고 수정·폐기도 할 수 없습니다. 집행 판단은 사람의 결정이며 감사 기록에 남습니다."
-              : "집행은 두 사람이 필요합니다. 지금 기록하면 집행 요청만 남고 상태는 바뀌지 않으며, 트랜치 작성자와 요청자가 아닌 다른 사람이 승인해야 집행 완료가 됩니다."} {/* INTERIM-WORDING */}
+              : "집행은 두 사람이 필요합니다. 지금 기록하면 집행 요청만 남고 상태는 바뀌지 않으며, 집행 단계 작성자와 요청자가 아닌 다른 사람이 승인해야 집행 완료가 됩니다."} {/* INTERIM-WORDING */}
           </p>
         )}
         {edit ? (

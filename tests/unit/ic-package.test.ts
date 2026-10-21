@@ -343,10 +343,11 @@ describe("(d) boundary #2 — RAG is a labeled proposal; the read writes nothing
     const after = (db.query("SELECT COUNT(*) n FROM gate_decision WHERE entity_type = 'project'").get() as { n: number }).n;
     expect(after).toBe(before);
 
-    // The route file exports GET only — the IC read can never confirm anything.
+    // The route file exports GET only (wrapped in route() since 2026-10-21) — the IC read can never confirm anything.
     const src = readFileSync(join(PROJECT_ROOT, "app/web-next/app/api/projects/[id]/ic-package/route.ts"), "utf8");
-    expect(src).toContain("export async function GET");
-    expect(src).not.toMatch(/export async function (POST|PUT|PATCH|DELETE)/);
+    expect(src).toContain("export const GET = route(");
+    expect(src).not.toMatch(/export const (POST|PUT|PATCH|DELETE) = route\(/);
+    expect(src).not.toMatch(/export async function (GET|POST|PUT|PATCH|DELETE)\(/);
   });
 });
 
@@ -354,7 +355,9 @@ describe("(e) S11 completion — both gates go AND establishment 5/5", () => {
   test("one gate go is not enough", async () => {
     const res = await req(`/api/projects/${projectId}/gate-decisions`, {
       method: "POST", headers: { cookie: analystCookie },
-      body: JSON.stringify({ gate: "entity_ic", decision: "go", rationale: "투자심의 자료 검토 후 인적 결재" }),
+      body: JSON.stringify({ gate: "entity_ic", decision: "go", rationale: "투자심의 자료 검토 후 인적 결재",
+        // 2026-10-21: the S11 procedure steps (Kill Criteria check, IC memo, certainty of funds) are GO gaps — a typed rationale rides along.
+        gap_rationale: "테스트 — 절차 단계 미기록 상태의 GO" }),
     });
     expect(res.status).toBe(201);
 
@@ -367,7 +370,7 @@ describe("(e) S11 completion — both gates go AND establishment 5/5", () => {
   test("both gates go + charter confirmed + 5/5 flips S11 complete (origin internal)", async () => {
     const res = await req(`/api/projects/${projectId}/gate-decisions`, {
       method: "POST", headers: { cookie: analystCookie },
-      body: JSON.stringify({ gate: "group_ic", decision: "go", rationale: "그룹 투자심사 인적 결재" }),
+      body: JSON.stringify({ gate: "group_ic", decision: "go", rationale: "그룹 투자심사 인적 결재", gap_rationale: "테스트 — 절차 단계 미기록 상태의 GO" }),
     });
     expect(res.status).toBe(201);
 

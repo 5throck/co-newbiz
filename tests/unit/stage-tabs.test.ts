@@ -8,6 +8,8 @@ import {
   activeSubtabIndex,
   allDefs,
   groupForTrack,
+  PROJECT_COMMON_TABS,
+  stageTabGroupsFor,
   STAGE_TAB_GROUPS,
   activeTabIndex,
   groupForSegment,
@@ -98,5 +100,48 @@ describe("stage tabs", () => {
     const gf = groupForTrack(groupForSegment("/business-case")!, "greenfield");
     expect(gf.tabs.map((t) => t.label)).toEqual(["사업 목표", "기술적 타당성", "재무적 타당성", "결정"]);
     expect([...gf.tabs, ...gf.more][activeTabIndex(gf, "/business-case", "targets")].label).toBe("재무적 타당성");
+  });
+
+  test("(2026-10-21 decider) the backtest is an S12 surface — S8 forecast vs S12 actuals, not diligence", () => {
+    const s9 = groupForSegment("/interviews")!;
+    const s12 = groupForSegment("/backtest")!;
+    expect(s9.stage).toBe("S9");
+    expect(s12.stage).toBe("S12");
+    expect(s9.more.map((t) => t.seg)).not.toContain("/backtest");
+    expect(s12.more.map((t) => t.seg)).toContain("/backtest");
+  });
+
+  test("(2026-10-21 decider) the diligence tools stay S9 pages but are menu-less (reached from the workspace section)", () => {
+    for (const seg of ["/interviews", "/comp-parity", "/customer-coc"]) {
+      const g = groupForSegment(seg)!;
+      expect(g.stage).toBe("S9");
+      expect(g.more.find((t) => t.seg === seg)?.hidden).toBe(true);
+    }
+    const s9 = groupForSegment("/interviews")!;
+    // 2026-10-21 decider(2차): the heatmap card lives in the workspace tools row — the menu hides it too.
+    expect(s9.more.filter((t) => !t.hidden).map((t) => t.seg)).toEqual([]);
+  });
+
+  test("(2026-10-21 decider) the charter and the milestone register are project-common tabs", () => {
+    expect(groupForSegment("/charter")?.stage).toBe("S11");
+    const s12 = STAGE_TAB_GROUPS.find((g) => g.stage === "S12")!;
+    expect([...s12.tabs, ...s12.more].map((t) => t.seg)).not.toContain("/charter");
+    expect(PROJECT_COMMON_TABS).toEqual([
+      { seg: "/charter", label: "추진계획(차터)" },
+      { seg: "/milestones", label: "마일스톤" },
+    ]);
+  });
+
+  test("(2026-10-21) the milestone register's home is S12 (post-management planning), reached from the common link", () => {
+    expect(groupForSegment("/milestones")?.stage).toBe("S12");
+    const s12 = STAGE_TAB_GROUPS.find((g) => g.stage === "S12")!;
+    expect(s12.more.find((t) => t.seg === "/milestones")?.hidden).toBe(true);
+  });
+
+  test("PMI stays a listed S12 tab only when applicable (ADR-0161); non-applicable projects lose it", () => {
+    const s12 = STAGE_TAB_GROUPS.find((g) => g.stage === "S12")!;
+    expect(s12.tabs.map((t) => t.seg)).toContain("/pmi");
+    const without = stageTabGroupsFor({ pmiApplies: false }).find((g) => g.stage === "S12")!;
+    expect(without.tabs.map((t) => t.seg)).not.toContain("/pmi");
   });
 });

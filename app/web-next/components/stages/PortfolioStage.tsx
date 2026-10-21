@@ -78,8 +78,8 @@ const EMPTY_FORM = { decision: "next_tranche_released", rationale: "", learning_
 // ADR-0151: each non-kill transition carries its own dedicated record column;
 // the route answers 400 without it, so the form must collect it.
 const RECORD_FIELD: Record<string, { key: "tranche_condition" | "core_handoff" | "divest_plan"; label: string }> = {
-  next_tranche_released: { key: "tranche_condition", label: "차기 트랜치 조건 (필수)" },
-  held_evidence_incomplete: { key: "tranche_condition", label: "차기 트랜치 조건 (필수)" },
+  next_tranche_released: { key: "tranche_condition", label: "차기 집행 단계 조건 (필수)" },
+  held_evidence_incomplete: { key: "tranche_condition", label: "차기 집행 단계 조건 (필수)" },
   graduate_to_core: { key: "core_handoff", label: "핵심사업 인계 기록 (필수)" },
   reduce_or_divest: { key: "divest_plan", label: "매각/청산 계획 (필수)" },
 };
@@ -158,7 +158,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
         }
       })();
     }, {
-      body: "venture-portfolio-IC의 결정을 장부에 기록합니다. 이 결정은 투자결정(트랜치 집행·kill/divest)으로서 사람의 판단이며, 에이전트가 대신 결정할 수 없습니다. 기록 후에는 수정·삭제할 수 없습니다.",
+      body: "venture-portfolio-IC의 결정을 장부에 기록합니다. 이 결정은 투자결정(집행 단계 집행·kill/divest)으로서 사람의 판단이며, 에이전트가 대신 결정할 수 없습니다. 기록 후에는 수정·삭제할 수 없습니다.",
       confirmLabel: "기록",
     });
   }

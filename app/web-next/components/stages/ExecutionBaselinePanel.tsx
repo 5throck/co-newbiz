@@ -192,6 +192,8 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // 2026-10-21 decider: 실행 기준선 5개 하위 섹션을 서브탭으로 구분 (전체 보기 기본).
+  const [gxTab, setGxTab] = useState<"all" | "tranches" | "permits_certs" | "hiring_kpi" | "incentives">("all");
   const [announce, setAnnounce] = useState("");
   const [rationale, setRationale] = useState("");
   const [rationaleError, setRationaleError] = useState<string | null>(null);
@@ -216,9 +218,23 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
     return () => { live = false; };
   }, [projectId, status?.record?.id]);
 
-  // Brownfield (not_applicable) renders nothing so the S11 screen stays unchanged.
+  // 2026-10-21 decider 2차: 이 패널이 전용 탭(실행 기준선)을 지게 되어 무음(null)
+  // 대신 로딩·적용 대상 아님을 명시한다 — 빈 탭처럼 보이지 않게.
   if (loadError) return <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-3">✕ {loadError}</p>;
-  if (!status || status.applicability.state === "not_applicable") return null;
+  if (!status) return <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-3" role="status">실행 기준선을 불러오는 중…</p>;
+  if (status.applicability.state === "not_applicable") {
+    return (
+      <section className="market-section sizing-step mt-3" aria-label="신규 사업 실행 기준선" data-testid="gx-not-applicable">
+        <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">📋</span> 신규 사업 실행 기준선</h3>
+        <p className="text-[length:var(--fs-caption)] mb-0" role="note">
+          <span className="status-chip status-not-started">○ 적용 대상 아님</span>
+          <span className="block mt-1 text-[color:var(--muted-fg)]">
+            이 프로젝트는 신규 사업(greenfield) 트랙의 실행 기준선 절차가 적용되지 않습니다. brownfield(M&A·합작·전략적 투자)는 설립 실행 탭의 PMI 킥오프가 대체 절차입니다.
+          </span>
+        </p>
+      </section>
+    );
+  }
 
   if (status.requirement === "classification_conflict") {
     // Conflicting case_type vs route track: a human must reconcile them first; no form is offered.
@@ -375,6 +391,27 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
       )}
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-2">✕ {error}</p>}
 
+      {/* 서브탭 — 2026-10-21 decider: 트랜치 / 인허가·인증 / 인력·조직 / 가동 KPI / 인센티브 의무 구분 */}
+      <div role="tablist" aria-label="실행 기준선 하위 화면" className="flex flex-wrap gap-1 mb-2">
+        {([
+          { key: "all", label: "전체" },
+          { key: "tranches", label: "집행 단계(트랜치)" },
+          { key: "permits_certs", label: "인허가·인증" },
+          { key: "hiring_kpi", label: "인력·조직 · 가동 KPI" },
+          { key: "incentives", label: "인센티브 의무" },
+        ] as Array<{ key: typeof gxTab; label: string }>).map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            role="tab"
+            aria-selected={gxTab === t.key}
+            className={`stage-tab${gxTab === t.key ? " stage-tab-active" : ""}`}
+            onClick={() => setGxTab(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
       {status.findings.length > 0 && (
         <div className="mt-2" data-testid="gx-findings">
           <h4 className="text-[length:var(--fs-body)] mb-1">확인 필요 항목 ({status.findings.length}건)</h4>
@@ -385,12 +422,12 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
       )}
 
       {/* 1. 트랜치 대조 */}
-      <div className="mt-3" data-testid="gx-tranches">
+      <div className="mt-3" data-testid="gx-tranches" hidden={gxTab !== "all" && gxTab !== "tranches"}>
         <h4 className="text-[length:var(--fs-body)] mb-1">설비투자 트랜치 대조 — S10 집행 조건과 S8 채택 케이스</h4>
         {rec && (
           <>
             <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-              <table className="data-table table-fixed-pct tmin-48" aria-label="설비투자 트랜치 대조">
+              <table className="data-table table-fixed-pct tmin-48" aria-label="설비투자 집행 단계 대조">
                 <caption className="sr-only">S10에서 기록한 설비투자 트랜치의 금액, 통화, 집행 조건, 상태</caption>
                 <ColGroup widths={TRANCHE_RECON_COL_PCT} />
                 <thead>
@@ -434,18 +471,29 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
 
       {/* 2-5. 기록 항목 */}
       {permitNote && <p className="text-[length:var(--fs-caption)] mt-3" role="note"><span className="status-chip status-not-started">○ 참고</span> {permitNote}</p>}
-      {ENTRY_KINDS.map((kind) => (
-        <EntrySection
-          key={kind}
-          kind={kind}
-          entries={entries}
-          canAct={canAct}
-          busy={busy}
-          sourceOptions={srcOptions(kind)}
-          onSave={saveEntries}
-          onRemove={removeEntry}
-        />
-      ))}
+      {ENTRY_KINDS.map((kind) => {
+        // 2026-10-21 decider: 하위탭 필터 — 전체 / 트랜치 / 인허가·인증 / 인력·조직 / 가동 KPI / 인센티브 의무
+        const show = gxTab === "all" || gxTab === "tranches"
+          ? true
+          : gxTab === "permits_certs"
+            ? kind === "permit_milestones" || kind === "certification_milestones"
+            : gxTab === "hiring_kpi"
+              ? kind === "hiring_plan" || kind === "kpi_targets"
+              : kind === "incentive_obligations";
+        if (!show) return null;
+        return (
+          <EntrySection
+            key={kind}
+            kind={kind}
+            entries={entries}
+            canAct={canAct}
+            busy={busy}
+            sourceOptions={srcOptions(kind)}
+            onSave={saveEntries}
+            onRemove={removeEntry}
+          />
+        );
+      })}
 
       {/* S8 사업 목표: 참고 증적 (판정 아님) */}
       {(status.sources?.goals_reference_only.length ?? 0) > 0 && (

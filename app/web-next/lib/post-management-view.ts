@@ -8,6 +8,9 @@ import {
   POST_MANAGEMENT_ITEM_LABEL,
   VENTURE_CLASS_LABEL,
 } from "./labels.ts";
+import type { BaselineVarianceView } from "./baseline-variance.ts";
+
+export type { BaselineVarianceView };
 
 export interface PostManagementApplicability {
   route: { track: string | null; sub_track: string | null; origin: string | null; case_type: string | null; basis: string };
@@ -54,6 +57,8 @@ export interface PartnershipMonitoring {
 export interface PostManagementView {
   applicability: PostManagementApplicability;
   greenfield_ramp_up: GreenfieldRampUp | null;
+  /** 2026-10-21 — S12 "실행 기준선 대비 차이" (greenfield; reference only, never gating). */
+  baseline_variance?: BaselineVarianceView | null;
   integration_monitoring: IntegrationMonitoring | null;
   partnership_monitoring: PartnershipMonitoring | null;
 }

@@ -15,6 +15,7 @@ import {
   groupForSegment,
   groupForTrack,
   projectSegment,
+  PROJECT_COMMON_TABS,
   stageTabGroupsFor,
   tabHref,
   type StageTabGroup,
@@ -81,6 +82,16 @@ function StageTabsInner({ projectId }: { projectId: string }) {
   const baseGroup: StageTabGroup | null = seg === null ? null : groupForSegment(seg);
   const track = useProjectTrack(projectId, baseGroup?.stage === "S8");
   const pmiApplies = useProjectPmiApplies(projectId, baseGroup?.stage === "S12");
+  // Milestone badge for the common link (2026-10-21 decider: the schedule is
+  // managed from the sidebar). Summary-only fetch; failures leave the badge off.
+  const [milestoneBadge, setMilestoneBadge] = useState<{ due_soon: number; overdue: number; total: number } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    api.get<{ summary: { due_soon: number; overdue: number; total: number } }>(`/api/projects/${encodeURIComponent(projectId)}/milestones?summary=1`)
+      .then((r) => { if (alive) setMilestoneBadge(r.data.summary); })
+      .catch(() => { if (alive) setMilestoneBadge({ due_soon: 0, overdue: 0, total: 0 }); });
+    return () => { alive = false; };
+  }, [projectId]);
   // The PMI tab is removed from the DOM when PMI does not apply; PMI-applicable projects get the same group object.
   const pmiGroup: StageTabGroup | null = baseGroup && pmiApplies === false
     ? (stageTabGroupsFor({ pmiApplies: false }).find((g) => g.stage === baseGroup.stage) ?? baseGroup)
@@ -98,7 +109,9 @@ function StageTabsInner({ projectId }: { projectId: string }) {
   const primaryCount = group.tabs.length;
   const subIdx = activeSubtabIndex(group, seg, tabParam);
   const subtabs = group.subtabs ?? [];
-  const moreActive = activeIdx >= primaryCount;
+  // A hidden (menu-less) page keeps its stage for the rail but highlights nothing in the bar.
+  const moreActive = activeIdx >= primaryCount && !group.more[activeIdx - primaryCount]?.hidden;
+  const visibleMore = group.more.filter((t) => !t.hidden);
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     const items = Array.from(listRef.current?.querySelectorAll<HTMLElement>("[data-tab-item]") ?? []);
@@ -138,7 +151,7 @@ function StageTabsInner({ projectId }: { projectId: string }) {
           );
         })}
         </div>
-        {group.more.length > 0 && (
+        {visibleMore.length > 0 && (
           <span className="stage-tab-more" role="presentation">
             <button
               ref={moreBtn}
@@ -163,6 +176,7 @@ function StageTabsInner({ projectId }: { projectId: string }) {
                 }}
               >
                 {group.more.map((t, j) => {
+                  if (t.hidden) return null;
                   const active = primaryCount + j === activeIdx;
                   return (
                     <Link
@@ -180,6 +194,32 @@ function StageTabsInner({ projectId }: { projectId: string }) {
             )}
           </span>
         )}
+        {/* Project-common destinations (2026-10-21 decider) — one click from every stage. */}
+        <span className="stage-tab-more ml-auto" role="presentation" data-testid="project-common-tabs">
+          {PROJECT_COMMON_TABS.map((t) => {
+            const active = seg === t.seg;
+            const badge = t.seg === "/milestones" && milestoneBadge && milestoneBadge.due_soon + milestoneBadge.overdue > 0
+              ? { n: milestoneBadge.due_soon + milestoneBadge.overdue, overdue: milestoneBadge.overdue }
+              : null;
+            return (
+              <Link
+                key={t.seg}
+                href={tabHref(projectId, t)}
+                data-tab-item
+                aria-current={active ? "page" : undefined}
+                className={`stage-tab${active ? " stage-tab-active" : ""}`}
+                title="프로젝트 공통 — 모든 단계에서 열 수 있습니다"
+              >
+                {t.label}
+                {badge && (
+                  <span className={`status-chip ml-1 ${badge.overdue > 0 ? "status-red" : "status-amber"}`} data-testid="milestone-badge">
+                    {badge.overdue > 0 ? `지연 ${badge.overdue}` : ""}{badge.overdue > 0 && badge.n > badge.overdue ? " · " : ""}{badge.n > badge.overdue ? `임박 ${badge.n - badge.overdue}` : ""}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </span>
       </div>
     </nav>
     {/* The screen's Primary Action (design §5) sits at the top right, beside the stage tabs. */}

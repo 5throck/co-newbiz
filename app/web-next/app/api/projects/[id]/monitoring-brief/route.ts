@@ -10,6 +10,7 @@ import { forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { completeOrFallback, isLlmConfigured } from "../../../../../lib/llm.ts";
 import { route } from "../../../../../lib/route.ts";
 import { promptAgent, systemMessage } from "../../../../../lib/prompts.ts";
+import { buildRiskHeatmap, heatmapSnapshot } from "../../../../../lib/risk-heatmap.ts";
 
 const TRANSITIONS = [
   "next_tranche_released",
@@ -71,7 +72,9 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     .query("SELECT decision, rationale FROM gate_decision WHERE entity_type = 'project' AND entity_id = ? AND gate IN ('entity_ic','group_ic') ORDER BY decided_at DESC, id DESC LIMIT 1")
     .get(id) as { decision: string; rationale: string } | undefined;
 
-  const manifest = ["포트폴리오 스코어카드", "시너지 인증", "핵심인재 상태", "전환 이력", "IC 승인 결정"];
+  const manifest = ["포트폴리오 스코어카드", "시너지 인증", "핵심인재 상태", "전환 이력", "IC 승인 결정", "리스크 히트맵 스냅샷"];
+  // ADR-0122 #2 — the heatmap snapshot rides the quarterly briefing too (same server builder as S9/IC).
+  const heatmap = heatmapSnapshot(buildRiskHeatmap(db, id), 5);
   const context = [
     `프로젝트: ${project?.project_name ?? id} (트랙 ${project?.track ?? "?"}, 단계 ${project?.current_stage_gate ?? "?"})`,
     `\n[IC 승인 결정]\n${icGate ? `${icGate.decision.toUpperCase()} — ${icGate.rationale.slice(0, 200)}` : "미기록"}`,
@@ -79,6 +82,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     `\n[시너지 인증]\n${certs.length > 0 ? certs.map((c) => `- run-rate ${c.run_rate_bp ?? "?"}bp / ${c.sustained_quarters ?? "?"}분기 지속 (${c.signed_at?.slice(0, 10) ?? "?"})`).join("\n") : "없음"}`,
     `\n[핵심인재]\n${talent.length > 0 ? talent.map((t) => `- ${t.role_ref}: ${t.status}${t.exit_date ? ` (퇴사 ${t.exit_date.slice(0, 10)})` : ""}`).join("\n") : "없음"}`,
     `\n[전환 이력]\n${transitions.length > 0 ? transitions.map((t) => `- ${t.decision}: ${t.rationale.slice(0, 160)}`).join("\n") : "없음"}`,
+    `\n[리스크 히트맵 ${heatmap.snapshot_hash}]\n${heatmap.total > 0 ? `높음 ${heatmap.counts.high} / 중간 ${heatmap.counts.mid} / 낮음 ${heatmap.counts.low}\n${heatmap.top.map((t) => `- [${t.severity}] ${t.label}${t.mitigation ? ` — 완화: ${t.mitigation.slice(0, 80)}` : ""}`).join("\n")}` : "플로팅된 리스크 없음"}`,
   ].join("\n");
 
   let payload: BriefPayload;
@@ -125,7 +129,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   }
 
   appendAudit(db, { actor: ctx.userId, action: "monitoring_brief.generate", target: `${id}:${source}`, now: new Date().toISOString() });
-  return ok({ source, provider, note, manifest, brief: payload }, 200);
+  return ok({ source, provider, note, manifest, brief: payload, risk_heatmap: heatmap }, 200);
 });
 
 function synthesisFallback(scorecard: unknown[], certs: unknown[], talent: unknown[]): BriefPayload {

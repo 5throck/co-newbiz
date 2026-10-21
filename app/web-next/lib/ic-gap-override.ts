@@ -9,6 +9,7 @@ import { getDb } from "../../../db/client.ts";
 import { readRagView, recomputeRag } from "../../../db/lib/rag-service.ts";
 import { findAdoptedCase, listBusinessCases } from "./business-case.ts";
 import { establishmentProgress } from "./establishment.ts";
+import { icStepGapItems } from "./ic-review-steps.ts";
 
 export const IC_GAP_GATES = ["entity_ic", "group_ic"] as const;
 export const GAP_MARKER = "[누락 산출물 예외 근거]";
@@ -33,6 +34,10 @@ export function icGoGapItems(projectId: string, actor?: string): string[] {
     if (p.mode === null) gaps.push("설립 방식 미선택 (신규 법인 설립 / 신규 사업부 추진)");
     else if (!p.complete) gaps.push(`${p.mode === "business_unit" ? "사업부 신설 실행" : "설립 실행"} ${p.done}/5 — 대기 ${p.total - p.done}단계`);
   }
+  // 2026-10-21 (decider: proceed with the remaining work) — the S11 procedure
+  // steps (Kill Criteria check, IC memo, certainty of funds) join the same
+  // contract: evidence the IC reads, a typed rationale when missing, never a block.
+  gaps.push(...icStepGapItems(db, projectId));
   return gaps;
 }
 

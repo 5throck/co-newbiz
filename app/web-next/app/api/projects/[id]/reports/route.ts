@@ -12,6 +12,7 @@ import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
+import { route } from "../../../../../lib/route.ts";
 
 type ReportFormat = "docx" | "pdf" | "hwpx";
 const FORMATS = new Set(["docx", "pdf", "hwpx"]);
@@ -47,16 +48,19 @@ async function renderSnapshotReport(markdownPath: string, formats: ReportFormat[
   });
 }
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
   const project = visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true });
   if (!project) return notFound();
   const db = getDb();
+  // 2026-10-21: archived (soft-deleted) snapshots are hidden by default; ?archived=1 surfaces them.
+  const includeArchived = new URL(request.url).searchParams.get("archived") === "1";
   const rows = db.query(
-    `SELECT id, project_id, title, content_md, created_by, created_at
-     FROM report_snapshot WHERE project_id = ? ORDER BY created_at DESC, id DESC`
+    `SELECT id, project_id, title, content_md, created_by, created_at, archived_at
+     FROM report_snapshot WHERE project_id = ? ${includeArchived ? "" : "AND archived_at IS NULL"}
+     ORDER BY created_at DESC, id DESC`
   ).all(id) as Array<{ id: string }>;
   // ADR-0116 Phase 6: rendered files are surfaced next to their snapshot so
   // the UI can offer downloads without touching the filesystem itself.
@@ -70,9 +74,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     200,
     { count: (rows as unknown[]).length, render_count: renders.length },
   );
-}
+});
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   if (auth.auth.role === "viewer") return forbidden("role_required", "보고서 스냅샷 생성은 analyst 역할 이상이어야 합니다.");
@@ -116,4 +120,4 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
   }
   return ok({ snapshot: { id: snapshotId, project_id: id, title, content_md: contentMd, created_by: auth.auth.userId, created_at: now }, renders }, 201, { render_count: renders.length });
-}
+});
