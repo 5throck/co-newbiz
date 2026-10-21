@@ -356,7 +356,8 @@ export function ReviewBuckets({
                           const l = localizeItem(it);
                           const claimKey = `${s.id}-${it.claim}`;
                           const confirmed = confirmedJudgements?.has(it.claim) ?? false;
-                          const judgementable = b.key === "needs_judgement" && !!onToggleJudgement && canRequest;
+                          // 확인하다 못함(could_not_verify)도 같은 ack 흐름으로 종결할 수 있다 (2026-10-21 decider).
+                          const judgementable = (b.key === "needs_judgement" || b.key === "could_not_verify") && !!onToggleJudgement && canRequest;
                           return (
                             <li key={claimKey}>
                               <span className="font-semibold" title={l.localized ? it.claim : undefined}>{l.claim}</span>
@@ -364,14 +365,14 @@ export function ReviewBuckets({
                               <span className="block text-[color:var(--muted-fg)]">
                                 출처: {citationLabel(s.origin, s.reviewer_domain, it.evidence_ref)}
                               </span>
-                              {b.key === "needs_judgement" && confirmed && (
+                              {confirmed && (
                                 <span className="block mt-1">
                                   <span className="status-chip status-green" title="이 항목은 결정 기록과 함께 사람 확인으로 저장되었습니다">
                                     <span aria-hidden="true">✓</span> 사람 확인됨 — 결정 기록과 함께 저장
                                   </span>
                                 </span>
                               )}
-                              {b.key === "needs_judgement" && !confirmed && judgementable && (
+                              {!confirmed && judgementable && (
                                 <label className="flex items-center gap-1 mt-1 cursor-pointer">
                                   <input
                                     type="checkbox"
@@ -381,7 +382,7 @@ export function ReviewBuckets({
                                   <span>사람 확인 — 내용을 검토했습니다 (즉시 저장되며, 결정 기록에도 함께 남습니다)</span>
                                 </label>
                               )}
-                              {b.key === "needs_judgement" && !confirmed && ackMeta?.[it.claim] && (
+                              {!confirmed && ackMeta?.[it.claim] && (
                                 <span className="block mt-1 note" data-testid="review-ack-saved">
                                   확인 저장됨 · {ackMeta[it.claim].by} · {ackMeta[it.claim].at.slice(0, 10)}
                                 </span>
