@@ -27,5 +27,7 @@
 
 ## Alternatives rejected
 
+> **Addendum 2026-10-21 (decider, chat):** item 3's backtest viewer is an S12 surface, not S9 — it compares S8 forecasts with S12 scorecard actuals (a learning loop over time), so its tab moved from the S9 more-menu to the S12 more-menu. API (`/api/portfolio/backtest`, org-wide) unchanged; nothing in the data contract moves.
+
 - Storing LLM reliability scores as authoritative quality metrics: they are display-only learning signals — acceptance rate conflates proposal quality with task difficulty, and gating on it would quietly automate judgement (boundary #2).
 - Letting the backtest viewer rewrite confidence grades automatically: grade adjustments are proposed, human-approved.

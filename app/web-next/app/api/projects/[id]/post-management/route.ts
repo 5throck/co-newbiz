@@ -8,6 +8,7 @@
 import { authenticate } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { route } from "../../../../../lib/route.ts";
 import { getDb } from "../../../../../../../db/client.ts";
 import { requireInsiderIfMnpi } from "../../../../../../../db/lib/access-control.ts";
 import { baselineVariance } from "../../../../../lib/baseline-variance.ts";
@@ -18,7 +19,7 @@ import {
   postManagementApplicability,
 } from "../../../../../lib/greenfield-execution.ts";
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
@@ -41,4 +42,4 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     },
     200,
   );
-}
+});

@@ -8,13 +8,14 @@ import { getDb } from "../../../../../../db/client.ts";
 import { authenticate } from "../../../../lib/auth.ts";
 import { runBacktest } from "../../../../lib/backtest.ts";
 import { ok } from "../../../../lib/envelope.ts";
+import { route } from "../../../../lib/route.ts";
 import { visibleProject } from "../../../../lib/project-visibility.ts";
 
 // 품평회 P1 수정 (2026-09-12): 검토/안건별 상세 행은 멤버에게만 — 비멤버에게는
 // 프로젝트명 없는 조직 집계(건수·편향 %)만 반환한다 (k≥3 억제 준용).
-export async function GET(request: Request) {
+export const GET = route(async (request: Request) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const result = runBacktest(getDb(), (projectId) => Boolean(visibleProject(auth.auth, projectId, { includeClosed: true, includeDeleted: true })));
   return ok(result, 200, { count: result.rows.length });
-}
+});

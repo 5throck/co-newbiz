@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
+import Link from "next/link";
 import { api } from "../../../../lib/api.ts";
 import { PageState, useToast } from "../../../../components/ui.tsx";
 import { useAuth } from "../../../../lib/auth-client.tsx";
@@ -15,13 +16,14 @@ import { canWriteProject } from "../../../../lib/project-write-access.ts";
 // 플로팅한다 (값 발명 금지).
 type Level = 1 | 2 | 3;
 interface Item {
-  key: string; source: "dd" | "coc" | "inc" | "cov"; label: string;
+  key: string; source: "dd" | "coc" | "inc" | "cov"; label: string; category: string | null;
   likelihood: Level; impact: Level; severity: "high" | "mid" | "low";
   auto: { likelihood: Level; impact: Level }; assessed: boolean; assessed_at: string | null; mitigation: string | null;
 }
+interface SourceStatus { source: "dd" | "coc" | "inc" | "cov"; label: string; recorded: number; plotted: number; href: string; hint: string | null }
 interface Heatmap {
   items: Item[]; grid: number[][]; counts: { high: number; mid: number; low: number };
-  sources: { dd: number; coc: number; inc: number; cov: number }; assessed_at: string | null;
+  sources: { dd: number; coc: number; inc: number; cov: number }; sources_status: SourceStatus[]; assessed_at: string | null;
   covenant_status: "computed" | "insufficient_evidence"; snapshot_hash: string;
 }
 
@@ -38,6 +40,30 @@ function HeatmapView() {
   // 항목별 가능성·영향(+완화조치, 2026-10-21 원장)을 기록하면 그 값이 우선한다.
   const [drafts, setDrafts] = useState<Record<string, { likelihood: Level; impact: Level; mitigation: string }>>({});
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  // 사람이 리스크를 직접 등록 — dd_finding(카테고리 "리스크")으로 저장되어 히트맵·
+  // 조사내역·투자심의 자료에 같이 반영된다 (신규 테이블 없음).
+  const [riskForm, setRiskForm] = useState({ description: "", value_impact: "", evidence_ref: "" });
+  const [riskBusy, setRiskBusy] = useState(false);
+
+  async function registerRisk(e: React.FormEvent) {
+    e.preventDefault();
+    if (riskBusy || !riskForm.description.trim()) return;
+    setRiskBusy(true);
+    try {
+      await api.post(`/api/projects/${encodeURIComponent(id)}/dd/findings`, {
+        category: "리스크", description: riskForm.description.trim(),
+        value_impact: riskForm.value_impact === "" ? null : Number(riskForm.value_impact),
+        evidence_ref: riskForm.evidence_ref.trim() || null,
+      });
+      toast("리스크 항목을 등록했습니다 — 조사내역(dd_finding)과 이 히트맵에 함께 반영됩니다.");
+      setRiskForm({ description: "", value_impact: "", evidence_ref: "" });
+      load();
+    } catch (e) {
+      toast(e instanceof Error ? `등록 실패: ${e.message}` : "등록 실패");
+    } finally {
+      setRiskBusy(false);
+    }
+  }
 
   const load = useCallback(() => {
     api.get<Heatmap>(`/api/projects/${encodeURIComponent(id)}/risk-heatmap`)
@@ -76,6 +102,22 @@ function HeatmapView() {
       <h1>검토/안건 리스크 히트맵</h1>
       <p className="objective">DD 발견사항·고객 집중·클로백·커버넌트 여력을 하나의 그리드로 통합해 위험 전망을 봅니다 — 실재 기록만 플로팅합니다.</p>
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}
+      {/* 판정 대기 스트립 — 무엇을 판정할 수 있는지와 기록 위치를 먼저 보여준다 (2026-10-21 decider). */}
+      {heatmap && (
+        <section className="market-section" aria-label="판정 대기 — 리스크 소스별 기록 상태" data-testid="risk-source-status">
+          <h2 className="text-[0.9rem] mb-2">판정 대기 — 어디에 무엇이 기록되어 있나</h2>
+          <ul className="sizing-note-list">
+            {heatmap.sources_status.map((s) => (
+              <li key={s.source}>
+                <span className={`status-chip ${s.plotted > 0 ? "status-green" : "status-amber"}`}>{s.plotted > 0 ? `플로팅 ${s.plotted}` : "기록 없음"}</span>
+                {" "}<Link href={`/projects/${encodeURIComponent(id)}${s.href}`} className="underline font-semibold">{s.label}</Link>
+                <span className="note ml-1">기록 {s.recorded}건</span>
+                {s.hint && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">→ {s.hint}</span>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <div className="grid2e">
         <section className="market-section" aria-label="리스크 그리드">
           <h2 className="text-[0.9rem] mb-2">그리드 (행 아래쪽 = 가능성 높음 / 오른쪽 = 영향 큼)</h2>
@@ -125,6 +167,7 @@ function HeatmapView() {
                   <li key={it.key}>
                     <span className="status-chip" style={{ background: color(it.severity), color: "var(--surface)", marginRight: 6 }}>{it.severity === "high" ? "높음" : it.severity === "mid" ? "중간" : "낮음"}</span>
                     <span className="status-chip status-gray mr-1">{SOURCE_LABEL[it.source]}</span>
+                    {it.source === "dd" && it.category && it.category !== "리스크" && <span className="status-chip status-gray mr-1">{it.category}</span>}
                     {it.label}
                     {it.assessed && <span className="status-chip status-green ml-1" title={`사람 판정 기록됨${it.assessed_at ? ` (${it.assessed_at.slice(0, 10)})` : ""} — 자동값 ${it.auto.likelihood}×${it.auto.impact}`}>판정됨</span>}
                     {it.mitigation && !canAct && <span className="note block ml-1">완화: {it.mitigation}</span>}
@@ -154,6 +197,17 @@ function HeatmapView() {
             </ul>
           )}
           <p className="note" style={{ marginBottom: 0 }}>스냅샷은 투자심의 자료·분기 모니터링 브리프에 자동 첨부됩니다 — 완화 판단은 사람 (경계 #2)</p>
+          {canAct && (
+            <form className="flex flex-wrap items-end gap-2 mt-2 text-[length:var(--fs-caption)]" aria-label="리스크 항목 등록" data-testid="risk-register-form" onSubmit={registerRisk}>
+              <label className="flex-1 min-w-[16rem]"><span className="block mb-1">리스크 항목 등록 (설명 *)</span>
+                <input className="sizing-new-input w-full" value={riskForm.description} onChange={(e) => setRiskForm({ ...riskForm, description: e.target.value })} placeholder="예: 상위 3개 고객 계약 갱신이 동시에 도래" required /></label>
+              <label className="w-[9rem]"><span className="block mb-1">가치 영향 (백만 KRW, 음수)</span>
+                <input type="number" className="sizing-new-input sizing-new-input-sm w-full" value={riskForm.value_impact} onChange={(e) => setRiskForm({ ...riskForm, value_impact: e.target.value })} placeholder="-120" /></label>
+              <label className="w-[12rem]"><span className="block mb-1">근거 참조</span>
+                <input className="sizing-new-input sizing-new-input-sm w-full" value={riskForm.evidence_ref} onChange={(e) => setRiskForm({ ...riskForm, evidence_ref: e.target.value })} placeholder="dd#3 / 인터뷰#2" /></label>
+              <button type="submit" className="btn-ghost btn-sm" disabled={riskBusy}>{riskBusy ? "등록 중..." : "리스크 등록"}</button>
+            </form>
+          )}
         </section>
       </div>
     </main>

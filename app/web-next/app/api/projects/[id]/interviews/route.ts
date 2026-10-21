@@ -3,6 +3,7 @@ import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { route } from "../../../../../lib/route.ts";
 import { summarizeTriangulation, type InterviewSourceRow } from "../../../../../lib/interview-triangulation.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 
@@ -11,7 +12,7 @@ import { visibleProject } from "../../../../../lib/project-visibility.ts";
 // 2026-10-21: `claim` (migration 0159) names the key claim an interview is a
 // source for; GET adds the cdd-07 triangulation summary (independent sources
 // per claim) — the checklist verdict itself stays a human judgement.
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
@@ -20,9 +21,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     .query("SELECT * FROM dd_interview WHERE project_id = ? ORDER BY created_at DESC")
     .all(id) as Array<InterviewSourceRow & Record<string, unknown>>;
   return ok({ interviews: rows, triangulation: summarizeTriangulation(rows) }, 200, { count: rows.length });
-}
+});
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   if (auth.auth.role === "viewer") return forbidden("role_required", "인터뷰 기록은 analyst 역할 이상이어야 합니다.");
@@ -49,4 +50,4 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   );
   appendAudit(getDb(), { actor: auth.auth.userId, action: "dd_interview.create", target: `${id}:${rid}`, now });
   return ok({ interview: { id: rid, claim } }, 201);
-}
+});

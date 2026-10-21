@@ -3,6 +3,7 @@ import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../../../db/lib/ulid.ts";
 import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { route } from "../../../../../../lib/route.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
 
 // POST /api/projects/[id]/comp-parity/packages — management incentive package
@@ -14,7 +15,7 @@ import { visibleProject } from "../../../../../../lib/project-visibility.ts";
 const EXECUTIVE_REF = /^[A-Z][A-Z0-9_]*-\d{2}$/;
 const FLIGHT_RISK = new Set(["low", "medium", "high"]);
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "경영진 보상 패키지 기록은 analyst 역할 이상이어야 합니다." });
@@ -65,4 +66,4 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   );
   appendAudit(db, { actor: auth.auth.userId, action: "management_package.recorded", target: `${id}:${rowId}:${executiveRef}`, now });
   return ok({ id: rowId, executive_ref: executiveRef, coc_trigger: cocTrigger === 1 }, 201);
-}
+});

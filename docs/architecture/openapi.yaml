@@ -6617,6 +6617,68 @@ paths:
           $ref: '#/components/responses/Ok'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/projects/{id}/review-acks:
+    get:
+      operationId: listProjectReviewClaimAcks
+      summary: "Latest interim '사람 확인' acknowledgement per claim for a gate (?gate=), from the review_claim_ack ledger (migration 0165; ADR-0182 §5 addendum) — the review work survives navigation; the decision record still carries its own snapshot."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: recordProjectReviewClaimAck
+      summary: "Append one acknowledgement {gate, claim, acked, note?} — analyst+, audited review_claim_ack.recorded; a toggle is a new row, latest wins."
+      tags:
+        - Deal Review
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/opportunities/{id}/review-acks:
+    get:
+      operationId: listOpportunityReviewClaimAcks
+      summary: "Opportunity-carrier twin of the project review-acks route (S1–S7 gates)."
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: recordOpportunityReviewClaimAck
+      summary: "Append one acknowledgement on the opportunity carrier — analyst+, audited."
+      tags:
+        - Deal Review
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/comments:
     get:
       operationId: listEntityComments

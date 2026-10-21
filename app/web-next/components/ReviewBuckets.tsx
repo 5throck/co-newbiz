@@ -110,6 +110,7 @@ export function ReviewBuckets({
   headerSlot,
   judgementChecks,
   onToggleJudgement,
+  ackMeta,
   onDecisionJump,
   confirmedJudgements,
 }: {
@@ -128,7 +129,13 @@ export function ReviewBuckets({
    *  keyed by claim text. Checkboxes render only when onToggleJudgement is
    *  given (i.e. the surrounding panel records the decision). */
   judgementChecks?: Record<string, boolean>;
-  onToggleJudgement?: (claim: string, checked: boolean) => void;
+  /** gate-aware toggle (2026-10-21): the third argument names the gate whose
+   *  review produced the claim, so the interim acknowledgement lands in the
+   *  review_claim_ack ledger under the right gate. */
+  onToggleJudgement?: (claim: string, checked: boolean, gate: string) => void;
+  /** Saved interim acknowledgements (review_claim_ack latest per claim) — a checked
+   *  item shows who acknowledged it and when. */
+  ackMeta?: Record<string, { by: string; at: string }>;
   /** Discoverability: jump from the 판단 필요 bucket to the decision form. */
   onDecisionJump?: () => void;
   /** 판단 필요 claims already confirmed with a recorded gate decision — they
@@ -345,10 +352,15 @@ export function ReviewBuckets({
                                   <input
                                     type="checkbox"
                                     checked={judgementChecks?.[it.claim] ?? false}
-                                    onChange={(e) => onToggleJudgement?.(it.claim, e.target.checked)}
+                                    onChange={(e) => onToggleJudgement?.(it.claim, e.target.checked, active)}
                                   />
-                                  <span>사람 확인 — 내용을 검토했습니다 (체크는 결정 기록과 함께 남습니다)</span>
+                                  <span>사람 확인 — 내용을 검토했습니다 (즉시 저장되며, 결정 기록에도 함께 남습니다)</span>
                                 </label>
+                              )}
+                              {b.key === "needs_judgement" && !confirmed && ackMeta?.[it.claim] && (
+                                <span className="block mt-1 note" data-testid="review-ack-saved">
+                                  확인 저장됨 · {ackMeta[it.claim].by} · {ackMeta[it.claim].at.slice(0, 10)}
+                                </span>
                               )}
                             </li>
                           );

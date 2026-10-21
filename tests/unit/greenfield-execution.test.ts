@@ -389,7 +389,8 @@ describe("(c) PMI guards", () => {
     const hidden = stageTabGroupsFor({ pmiApplies: false });
     const s12 = hidden.find((g) => g.stage === "S12")!;
     expect([...s12.tabs, ...s12.more].some((t) => t.seg === "/pmi")).toBe(false);
-    expect(s12.tabs.map((t) => t.seg)).toEqual(["/portfolio", "/charter"]);
+    // 2026-10-21 decider: the charter is a project-common tab (S11 home) — off the S12 tab list.
+    expect(s12.tabs.map((t) => t.seg)).toEqual(["/portfolio"]);
     expect(hidden.filter((g) => g.stage !== "S12")).toEqual(STAGE_TAB_GROUPS.filter((g) => g.stage !== "S12"));
   });
 });

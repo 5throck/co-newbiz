@@ -183,11 +183,38 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   });
   // ADR-0182 §5 — needs_judgement 항목의 "사람 확인" 체크. ReviewBuckets가
   // 렌더링하고, 여기서 상태를 소유해 결정 기록 POST에 함께 실린다(부속
-  // 스냅샷, 신규 테이블 없음). 체크는 선택 사항 — 결정을 막지 않는다.
+  // 스냅샷). 2026-10-21(decider)부터 체크는 review_claim_ack 원장에도 즉시
+  // 저장된다 — 페이지를 떠나도 검토 작업이 남는다(ADR-0182 §5 addendum).
   const [judgementChecks, setJudgementChecks] = useState<Record<string, boolean>>({});
-  const toggleJudgement = useCallback((claim: string, checked: boolean) => {
+  const [ackMeta, setAckMeta] = useState<Record<string, { by: string; at: string }>>({});
+  const acksPath = `/api/${entityType === "project" ? "projects" : "opportunities"}/${encodeURIComponent(opportunityId)}/review-acks`;
+  useEffect(() => {
+    let alive = true;
+    for (const g of gates) {
+      api.get<{ acks: Array<{ claim: string; acked: boolean; by: string; at: string }> }>(`${acksPath}?gate=${encodeURIComponent(g)}`)
+        .then((r) => {
+          if (!alive) return;
+          setJudgementChecks((m) => {
+            const next = { ...m };
+            for (const a of r.data.acks) if (a.acked) next[a.claim] = true;
+            return next;
+          });
+          setAckMeta((m) => {
+            const next = { ...m };
+            for (const a of r.data.acks) if (a.acked) next[a.claim] = { by: a.by, at: a.at };
+            return next;
+          });
+        })
+        .catch(() => { /* acks are optional review state — the decision flow never depends on them */ });
+    }
+    return () => { alive = false; };
+  }, [acksPath, gates]);
+  const toggleJudgement = useCallback((claim: string, checked: boolean, gate: string) => {
     setJudgementChecks((m) => ({ ...m, [claim]: checked }));
-  }, []);
+    if (checked) setAckMeta((m) => ({ ...m, [claim]: { by: me?.userId ?? "", at: new Date().toISOString() } }));
+    api.post(acksPath, { gate, claim, acked: checked })
+      .catch((e) => toast(e instanceof Error ? `확인 저장 실패: ${e.message}` : "확인 저장 실패"));
+  }, [acksPath, toast]);
   // 판단 필요 항목 중 이미 결정과 함께 "사람 확인"으로 기록된 것들 — 버킷은
   // 미확인 항목에만 체크박스를 두고 확인된 항목은 기록 상태를 보여준다.
   const confirmedJudgements = useMemo(() => {
@@ -399,6 +426,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
           variant="expanded"
           judgementChecks={judgementChecks}
           onToggleJudgement={canRecord ? toggleJudgement : undefined}
+          ackMeta={ackMeta}
           onDecisionJump={canRecord ? () => focusGateDecision(gates[0]) : undefined}
           confirmedJudgements={confirmedJudgements}
         />

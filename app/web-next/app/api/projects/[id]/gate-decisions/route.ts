@@ -25,12 +25,12 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
   const db = getDb();
   const history = db
     .query(
-      `SELECT g.id, g.gate, g.decision, g.rationale, g.missing_artifacts_json, g.decided_by, g.decided_at, s.stale_at, s.stale_reason
+      `SELECT g.id, g.gate, g.decision, g.rationale, g.missing_artifacts_json, g.judgement_confirmations_json, g.decided_by, g.decided_at, s.stale_at, s.stale_reason
        FROM gate_decision g LEFT JOIN gate_decision_stale s ON s.decision_id = g.id
        WHERE g.entity_type = 'project' AND g.entity_id = ?
        ORDER BY g.decided_at DESC`,
     )
-    .all(id) as Array<{ id: string; gate: string; decision: string; rationale: string; missing_artifacts_json: string | null; decided_by: string; decided_at: string; stale_at: string | null; stale_reason: string | null }>;
+    .all(id) as Array<{ id: string; gate: string; decision: string; rationale: string; missing_artifacts_json: string | null; judgement_confirmations_json: string | null; decided_by: string; decided_at: string; stale_at: string | null; stale_reason: string | null }>;
   // Latest decision per gate — same helper as the process engine, so the
   // tie-breaking rule cannot drift between surfaces.
   const latestMap = latestGateDecisions("project", id);
@@ -40,7 +40,13 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
     ...parseRationale(v.rationale),
     missing_artifacts: v.missing,
   }));
-  return ok({ latest, history: history.map((h) => ({ ...h, ...parseRationale(h.rationale) })) }, 200, { count: history.length });
+  return ok({ latest, history: history.map((h) => ({ ...h, ...parseRationale(h.rationale), judgement_confirmations: parseConfirmations(h.judgement_confirmations_json) })) }, 200, { count: history.length });
+}
+
+/** ADR-0182 §5 — the decision's confirmation snapshot, parsed leniently. */
+function parseConfirmations(raw: string | null): string[] {
+  if (!raw) return [];
+  try { return JSON.parse(raw) as string[]; } catch { return []; }
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -53,6 +59,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const body = (await request.json().catch(() => null)) as {
     gate?: string; decision?: string; rationale?: string; missing_artifacts?: string[];
     gate_evaluation_id?: string; learning_capture?: string; gap_rationale?: string;
+    // ADR-0182 §5 — checked 판단 필요 claims ride with the decision (the project
+    // route dropped them until 2026-10-21 — fixed to match the opportunity route).
+    judgement_confirmations?: string[];
   } | null;
   if (!body?.gate || !GATES.has(body.gate)) {
     return badRequest("invalid_request", `gate must be one of ${[...GATES].join("|")}.`);
@@ -120,13 +129,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const storedRationale = composeRationale(rationale, gapOverride);
   const nowTs = new Date().toISOString();
   const gid = ulid();
+  // ADR-0182 §5 — the checked "판단 필요" claims ride with the decision as a
+  // sidecar snapshot. Optional and never blocking.
+  const judgementConfirmations = Array.isArray(body.judgement_confirmations)
+    ? [...new Set(body.judgement_confirmations.map((c) => String(c).trim().slice(0, 300)).filter(Boolean))].slice(0, 30)
+    : [];
   // ADR-0153 — snapshot the artifact as the human saw it, BEFORE the decision lands.
   const reviewSnapshot = captureReviewSnapshot(body.gate, id);
   db.run(
-    `INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, missing_artifacts_json, decided_by, decided_at, gate_evaluation_id, learning_capture)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, missing_artifacts_json, decided_by, decided_at, gate_evaluation_id, learning_capture, judgement_confirmations_json)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
     [gid, "project", id, body.gate, body.decision, storedRationale,
-      body.decision === "hold" ? JSON.stringify(missing) : null, ctx.userId, nowTs, gateEvaluationId, body.decision === "kill" ? learningCapture : null],
+      body.decision === "hold" ? JSON.stringify(missing) : null, ctx.userId, nowTs, gateEvaluationId, body.decision === "kill" ? learningCapture : null,
+      judgementConfirmations.length > 0 ? JSON.stringify(judgementConfirmations) : null],
   );
   appendAudit(db, { actor: ctx.userId, action: "gate_decision.record", target: `${id}:${body.gate}:${body.decision}`, now: nowTs });
   // ADR-0153 — human_final review row: a side effect of THIS human POST only.

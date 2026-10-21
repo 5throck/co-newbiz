@@ -21,7 +21,21 @@ export interface StageTabDef {
   isDefault?: boolean;
   /** S8 lens the tab belongs to (ADR-0169); the financial lens owns a sub-tab row. */
   lens?: "technical" | "financial";
+  /**
+   * Resolvable but not listed (2026-10-21 decider): the page still belongs to the
+   * stage for the tab bar and highlighting, but it is reached from inside the
+   * stage's working screen (e.g. the S9 diligence tools section), not the menu.
+   */
+  hidden?: boolean;
 }
+
+/**
+ * Project-common destinations (2026-10-21 decider): shown on every stage's tab
+ * bar regardless of the active stage. The charter (추진계획) is authored from
+ * S8 promotion onward and confirmed in S11 (flow.spec `charter-baseline`), so it
+ * lives with S11 for the rail but is one click away from any stage.
+ */
+export const PROJECT_COMMON_TABS: StageTabDef[] = [{ seg: "/charter", label: "추진계획(차터)" }];
 
 export interface StageTabGroup {
   stage: ProjectStageId;
@@ -67,12 +81,15 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
       { seg: "/dd", label: "실사 워크스페이스" },
       { seg: "/proxy-chain", label: "가치사슬 연계" },
     ],
+    // 2026-10-21 decider: the diligence tools (customer CoC, compensation, interviews)
+    // are reached from the workspace's "실사 조사 도구" section — hidden from the menu,
+    // still S9 pages. The backtest moved to S12 (it compares S8 forecasts with S12
+    // actuals — ADR-0123 #3 addendum).
     more: [
-      { seg: "/interviews", label: "인터뷰" },
-      { seg: "/comp-parity", label: "보상·형평" },
-      { seg: "/customer-coc", label: "고객 CoC" },
+      { seg: "/interviews", label: "인터뷰", hidden: true },
+      { seg: "/comp-parity", label: "보상·형평", hidden: true },
+      { seg: "/customer-coc", label: "고객 CoC", hidden: true },
       { seg: "/risk-heatmap", label: "리스크 히트맵" },
-      { seg: "/backtest", label: "백테스트" },
     ],
   },
   {
@@ -96,6 +113,8 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
     more: [
       { seg: "/share", label: "외부 공유" },
       { seg: "/agent-runs", label: "에이전트 이력" },
+      // Charter home (flow.spec S11 charter-baseline); listed on every stage via PROJECT_COMMON_TABS.
+      { seg: "/charter", label: "추진계획(차터)", hidden: true },
     ],
   },
   {
@@ -103,12 +122,13 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
     tabs: [
       { seg: "/portfolio", label: "포트폴리오" },
       { seg: "/pmi", label: "PMI" },
-      { seg: "/charter", label: "추진계획" },
     ],
     more: [
       { seg: "/partnership", label: "파트너·JV" },
       { seg: "/process", label: "프로세스" },
       { seg: "/timeline", label: "타임라인·SLA" },
+      // 2026-10-21 decider: S8 forecast vs S12 actuals belongs with the actuals (ADR-0123 #3 addendum).
+      { seg: "/backtest", label: "백테스트" },
     ],
   },
 ];

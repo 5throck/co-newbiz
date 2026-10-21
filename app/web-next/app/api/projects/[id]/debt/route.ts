@@ -3,6 +3,7 @@ import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { route } from "../../../../../lib/route.ts";
 import { covenantHeadroom } from "../../../../../lib/covenant-headroom.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 
@@ -10,7 +11,7 @@ import { visibleProject } from "../../../../../lib/project-visibility.ts";
 // (financing/valuation). B6. 2026-10-21: GET adds the covenant headroom of the
 // latest simulation (S10 financing-plan "커버넌트 여력", fin-03; also a heatmap
 // input per ADR-0122 #2) — insufficient_evidence when no simulation has run.
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
@@ -21,9 +22,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   // covenant_test rows are simulation-keyed (join via run) — the headroom view
   // reads the latest simulation; the raw rows stay in the liabilities views.
   return ok({ instruments, headroom: covenantHeadroom(getDb(), id) }, 200, { instruments: instruments.length });
-}
+});
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   if (auth.auth.role === "viewer") return forbidden("role_required", "차입 등록은 analyst 역할 이상이어야 합니다.");
@@ -45,4 +46,4 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   );
   appendAudit(getDb(), { actor: auth.auth.userId, action: "debt.create", target: `${id}:${rid}`, now: new Date().toISOString() });
   return ok({ id: rid }, 201);
-}
+});

@@ -13,6 +13,7 @@ import { GreenfieldScopePanel } from "./GreenfieldScopePanel.tsx";
 import { BrownfieldScopePanel } from "./BrownfieldScopePanel.tsx";
 import { bfCodeMeta, bfExcludedGroups, bfNeedsNaReason, bfPreviousForTab, bfScopeBlock, isBfExtraTab, type BfScopeBlock } from "../../lib/brownfield-dd-view.ts";
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { StageTabs } from "../StageTabs.tsx";
@@ -126,6 +127,13 @@ interface WorkspaceView {
   scope_target_id: string | null;
   selected_target_id: string | null;
   targets: DdTargetRow[];
+  /** 2026-10-21 decider — record counts for the workspace's diligence tools (main scope only). */
+  tool_counts?: {
+    contracts: { total: number; plotted: number };
+    compensation: { packages: number; parity_rows: number };
+    interviews: { total: number; triangulated_claims: number; pending_claims: number };
+    heatmap: { total: number; high: number };
+  } | null;
   /** ADR-0160: present for greenfield routes only; absent for brownfield (payload unchanged). */
   greenfield_scope?: GfScope;
   /** ADR-0162: present only for brownfield non-baseline sub-tracks in the scoped view; absent for m_and_a, null and grandfathered (payload unchanged). */
@@ -502,6 +510,48 @@ export function DdStage({ projectId }: { projectId: string }) {
             onChanged={reload}
             onSelectTab={setTab}
           />
+        )}
+
+        {/* ── 실사 조사 도구 (2026-10-21 decider) — 실사 산물인 조사 화면을 워크스페이스에서 한 눈에 ── */}
+        {data?.tool_counts && (
+          <section className="market-section sizing-step mb-3" aria-label="실사 조사 도구" data-testid="dd-tools">
+            <h3 className="sizing-step-title text-[0.9rem]">
+              <span className="sizing-step-badge">🧰</span> 실사 조사 도구 — 실사 산물을 기록하는 화면
+            </h3>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
+              이 화면들의 기록은 S9 실사 체크리스트(ma-04~08 · cdd-07)와 리스크 히트맵·투자심의 자료로 흘러갑니다.
+            </p>
+            <ul className="grid gap-2 md:grid-cols-4 list-none p-0 m-0">
+              <li>
+                <Link href={`/projects/${projectId}/customer-coc`} className="card block" data-testid="dd-tool-coc">
+                  <strong>고객 집중 · 지위 변동(CoC)</strong>
+                  <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">ma-07/08 — 계약 스캔 · 집중도 30% 자동 플래그</span>
+                  <span className="status-chip status-not-started mt-1">기록 {data.tool_counts.contracts.total}건 · 플래그 {data.tool_counts.contracts.plotted}건</span>
+                </Link>
+              </li>
+              <li>
+                <Link href={`/projects/${projectId}/comp-parity`} className="card block" data-testid="dd-tool-comp">
+                  <strong>경영진 보상 · 임금 형평</strong>
+                  <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">ma-04~06 · hdd — CoC 트리거 보상 · k≥3 집계</span>
+                  <span className="status-chip status-not-started mt-1">패키지 {data.tool_counts.compensation.packages}건 · 형평 {data.tool_counts.compensation.parity_rows}건</span>
+                </Link>
+              </li>
+              <li>
+                <Link href={`/projects/${projectId}/interviews`} className="card block" data-testid="dd-tool-interviews">
+                  <strong>전문가 인터뷰 · 채널 체크</strong>
+                  <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">cdd-07 — 주장당 독립 출처 2개 이상</span>
+                  <span className={`status-chip ${data.tool_counts.interviews.pending_claims > 0 ? "status-amber" : "status-green"} mt-1`}>인터뷰 {data.tool_counts.interviews.total}건 · 삼각검증 {data.tool_counts.interviews.triangulated_claims} / 미충족 {data.tool_counts.interviews.pending_claims}</span>
+                </Link>
+              </li>
+              <li>
+                <Link href={`/projects/${projectId}/risk-heatmap`} className="card block" data-testid="dd-tool-heatmap">
+                  <strong>리스크 히트맵</strong>
+                  <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">ADR-0122 — DD·CoC·클로백·커버넌트 통합 판정</span>
+                  <span className={`status-chip ${data.tool_counts.heatmap.high > 0 ? "status-red" : "status-green"} mt-1`}>항목 {data.tool_counts.heatmap.total}건 · 높음 {data.tool_counts.heatmap.high}건</span>
+                </Link>
+              </li>
+            </ul>
+          </section>
         )}
 
         {data && !data.greenfield_scope && (

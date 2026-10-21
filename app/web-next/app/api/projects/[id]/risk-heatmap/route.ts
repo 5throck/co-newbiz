@@ -7,14 +7,15 @@
 import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../lib/envelope.ts";
+import { route } from "../../../../../lib/route.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { buildRiskHeatmap } from "../../../../../lib/risk-heatmap.ts";
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
   if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const heatmap = buildRiskHeatmap(getDb(), id);
   return ok(heatmap, 200, { count: heatmap.items.length });
-}
+});

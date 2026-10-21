@@ -28,3 +28,7 @@ lang_reason: proper-noun
 ## Acceptance record
 
 - Approver: the human decider (user, account techcross), chat 2026-10-18 — 본 계획 승인으로 ADR-0102 팩터 구조 확장(5번째 팩터)과 검토 확정 스냅샷 방식을 결재. 브라우저 실측은 병합 후 확인.
+
+## Addendum 2026-10-21 (decider, chat — "확인한 내용을 저장할 방안이 없는 듯 해")
+
+§5의 확인 상태는 결정 기록 부속 스냅샷**만**으로는 검토 작업이 페이지 이동 시 소실된다. 확인 체크를 `review_claim_ack` 원장(migration 0165, append-only, entity·gate·claim별 최신 행이 현재 상태)에 **중간 저장**하고, 결정 기록은 기존대로 자체 스냅샷(`judgement_confirmations_json`)을 유지한다. 이로써 본 ADR의 "신규 테이블 없음" 조항을 수정한다(신규 테이블 1개). 또한 프로젝트 게이트 라우트가 `judgement_confirmations`를 저장하지 않던 누락을 기회 라우트와 동일하게 수정한다. 결정은 여전히 사람이며, 체크는 결정을 막지 않는다.

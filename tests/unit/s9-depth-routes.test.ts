@@ -156,6 +156,14 @@ describe("risk heatmap — server builder, assessment ledger, IC snapshot", () =
     expect(hm.grid[1][2]).toBe(1);
     expect(hm.covenant_status).toBe("insufficient_evidence");
     expect(hm.snapshot_hash).toHaveLength(16);
+    // 판정 대기 스트립 — sources_status names what is on record and what is missing (2026-10-21 decider).
+    const st = Object.fromEntries(hm.sources_status.map((s) => [s.source, s]));
+    expect(st.dd).toMatchObject({ recorded: 1, plotted: 1, href: "/dd", hint: null });
+    expect(st.coc).toMatchObject({ recorded: 0, plotted: 0, href: "/customer-coc" });
+    expect(st.coc.hint).toContain("고객 CoC");
+    expect(st.inc.recorded).toBe(0);
+    expect(st.cov).toMatchObject({ recorded: 0, plotted: 0, href: "/debt" });
+    expect(st.cov.hint).toContain("차입 기록");
   });
 
   test("PUT appends a ledger row with mitigation, refreshes the sidecar, and the heatmap shows the person's value", async () => {
@@ -223,6 +231,38 @@ describe("covenant headroom — latest simulation's covenant_test rows", () => {
     expect(hm.items.find((i) => i.key === "cov:DSCR")).toMatchObject({ source: "cov", auto: { likelihood: 3, impact: 3 }, severity: "high" });
     expect(hm.items.find((i) => i.key === "cov:NetLev")).toMatchObject({ auto: { likelihood: 3, impact: 2 } });
     expect(hm.sources.cov).toBe(2);
+  });
+});
+
+describe("review claim acks + project-gate confirmation snapshot (ADR-0182 §5 addendum)", () => {
+  test("toggle → append-only rows, latest wins, audit per row; viewer 403; bad gate 400", async () => {
+    expect((await req(`/api/projects/${projectId}/review-acks?gate=dd`, { headers: { cookie: analystCookie } })).status).toBe(200);
+    expect((await req(`/api/projects/${projectId}/review-acks?gate=bogus`, { headers: { cookie: analystCookie } })).status).toBe(400);
+    expect((await req(`/api/projects/${projectId}/review-acks`, json(viewerCookie, { gate: "dd", claim: "c1", acked: true }))).status).toBe(403);
+    expect((await req(`/api/projects/${projectId}/review-acks`, json(analystCookie, { gate: "dd", claim: "c1", acked: true }))).status).toBe(201);
+    expect((await req(`/api/projects/${projectId}/review-acks`, json(analystCookie, { gate: "dd", claim: "c1", acked: false }))).status).toBe(201);
+    expect((await req(`/api/projects/${projectId}/review-acks`, json(analystCookie, { gate: "dd", claim: "c2", acked: true }))).status).toBe(201);
+    const list = await req(`/api/projects/${projectId}/review-acks?gate=dd`, { headers: { cookie: analystCookie } });
+    const acks = ((await list.json()).data as { acks: Array<{ claim: string; acked: boolean; by: string }> }).acks;
+    expect(acks).toMatchObject([
+      { claim: "c1", acked: false, by: ANALYST },
+      { claim: "c2", acked: true, by: ANALYST },
+    ]);
+    expect(count("SELECT COUNT(*) AS c FROM review_claim_ack WHERE entity_type = 'project' AND entity_id = ?", projectId)).toBe(3);
+    expect(count("SELECT COUNT(*) AS c FROM audit_log WHERE action = 'review_claim_ack.recorded'")).toBe(3);
+  });
+
+  test("project gate decisions persist the confirmation snapshot (the dropped-field bug) and return it parsed", async () => {
+    // HOLD — GO needs the S8–S10 stage prerequisites this scratch project does not have;
+    // the confirmation snapshot rides any decision.
+    const go = await req(`/api/projects/${projectId}/gate-decisions`, json(analystCookie, {
+      gate: "entity_ic", decision: "hold", rationale: "테스트 결정", missing_artifacts: ["미완료 산출물"],
+      judgement_confirmations: ["c1", "c1", "c2", ""],
+    }));
+    expect(go.status).toBe(201);
+    const list = await req(`/api/projects/${projectId}/gate-decisions`, { headers: { cookie: analystCookie } });
+    const row = ((await list.json()).data as { history: Array<{ gate: string; judgement_confirmations: string[] }> }).history.find((h) => h.gate === "entity_ic");
+    expect(row?.judgement_confirmations).toEqual(["c1", "c2"]);
   });
 });
 

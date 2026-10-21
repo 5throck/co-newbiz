@@ -21,6 +21,7 @@ import { icGoGapItems, parseRationale } from "../../../../../lib/ic-gap-override
 import { latestGateDecisions, latestRouteDecision, type GateId, type GateVerdict } from "../../../../../lib/process-flow.ts";
 import { latestPmiKickoff, pmiKickoffApplies } from "../../../../../lib/pmi-kickoff.ts";
 import { notFound, ok } from "../../../../../lib/envelope.ts";
+import { route } from "../../../../../lib/route.ts";
 import { ddCompletionSummary, listDdWorkspace, type DdCompletionSummary, type FindingRow } from "../../../../../lib/dd-checklist-tailor.ts";
 import { draftAiSummary } from "../../../../../lib/checklist-review-status.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
@@ -33,7 +34,7 @@ import { financingCertainty, financingTotals, listFinancingEntries } from "../..
 const IC_GATES: GateId[] = ["entity_ic", "group_ic"];
 const TOP_FINDINGS = 10;
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
@@ -191,4 +192,4 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     200,
     { gate_count: history.length },
   );
-}
+});

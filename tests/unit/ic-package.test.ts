@@ -343,10 +343,11 @@ describe("(d) boundary #2 — RAG is a labeled proposal; the read writes nothing
     const after = (db.query("SELECT COUNT(*) n FROM gate_decision WHERE entity_type = 'project'").get() as { n: number }).n;
     expect(after).toBe(before);
 
-    // The route file exports GET only — the IC read can never confirm anything.
+    // The route file exports GET only (wrapped in route() since 2026-10-21) — the IC read can never confirm anything.
     const src = readFileSync(join(PROJECT_ROOT, "app/web-next/app/api/projects/[id]/ic-package/route.ts"), "utf8");
-    expect(src).toContain("export async function GET");
-    expect(src).not.toMatch(/export async function (POST|PUT|PATCH|DELETE)/);
+    expect(src).toContain("export const GET = route(");
+    expect(src).not.toMatch(/export const (POST|PUT|PATCH|DELETE) = route\(/);
+    expect(src).not.toMatch(/export async function (GET|POST|PUT|PATCH|DELETE)\(/);
   });
 });
 

@@ -6,10 +6,11 @@
 import { getDb } from "../../../../../../db/client.ts";
 import { authenticate } from "../../../../lib/auth.ts";
 import { ok } from "../../../../lib/envelope.ts";
+import { route } from "../../../../lib/route.ts";
 import { killLearnings } from "../../../../lib/learnings.ts";
 import { visibleProject } from "../../../../lib/project-visibility.ts";
 
-export async function GET(request: Request) {
+export const GET = route(async (request: Request) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const url = new URL(request.url);
@@ -20,4 +21,4 @@ export async function GET(request: Request) {
     visible: (pid) => Boolean(visibleProject(auth.auth, pid, { includeClosed: true, includeDeleted: true })),
   });
   return ok(corpus, 200, { count: corpus.rows.length });
-}
+});

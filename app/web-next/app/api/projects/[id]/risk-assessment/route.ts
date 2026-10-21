@@ -10,6 +10,7 @@ import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { badRequest, fail, notFound, ok } from "../../../../../lib/envelope.ts";
+import { route } from "../../../../../lib/route.ts";
 import {
   latestRiskAssessments,
   recordRiskAssessment,
@@ -18,7 +19,7 @@ import {
   RiskAssessmentValidationError,
 } from "../../../../../lib/risk-assessment.ts";
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
@@ -27,9 +28,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const url = new URL(request.url);
   const key = url.searchParams.get("key") ?? undefined;
   return ok({ overrides: latestRiskAssessments(db, id), history: riskAssessmentHistory(db, id, key) }, 200);
-}
+});
 
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const PUT = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "리스크 판정 기록은 analyst 역할 이상이어야 합니다." });
@@ -46,4 +47,4 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     console.error("risk-assessment PUT failed", err);
     return fail(500, "internal_error", "리스크 판정 저장에 실패했습니다.");
   }
-}
+});

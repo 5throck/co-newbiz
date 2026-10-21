@@ -13,6 +13,7 @@ import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { runBacktest } from "../../../../../lib/backtest.ts";
 import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
+import { route } from "../../../../../lib/route.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 
 const GRADES = new Set(["A", "B", "C"]);
@@ -38,16 +39,16 @@ function listProposals(db: ReturnType<typeof getDb>): ProposalRow[] {
     .all() as ProposalRow[];
 }
 
-export async function GET(request: Request) {
+export const GET = route(async (request: Request) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const db = getDb();
   const bias = runBacktest(db, () => false).org.bias;
   const proposals = listProposals(db);
   return ok({ proposals, bias }, 200, { count: proposals.length });
-}
+});
 
-export async function POST(request: Request) {
+export const POST = route(async (request: Request) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "신뢰도 등급 조정 제안·결정은 analyst 역할 이상이어야 합니다." });
@@ -106,4 +107,4 @@ export async function POST(request: Request) {
   }
 
   return badRequest("invalid_action", "action은 propose | approve | reject 중 하나여야 합니다.");
-}
+});

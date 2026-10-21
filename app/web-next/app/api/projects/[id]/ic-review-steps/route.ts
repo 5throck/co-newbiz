@@ -14,6 +14,7 @@ import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
+import { route } from "../../../../../lib/route.ts";
 import {
   attachDecisionDeck,
   buildIcMemo,
@@ -41,15 +42,15 @@ function normalizeInsight(raw: Record<string, unknown>): InsightDraft {
   };
 }
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
   if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
   return ok(icReviewStepsView(getDb(), id), 200);
-}
+});
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "투자심사 절차 단계 기록은 analyst 역할 이상이어야 합니다." });
@@ -122,4 +123,4 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (err instanceof IcReviewStepError) return badRequest("invalid_request", err.message);
     throw err;
   }
-}
+});

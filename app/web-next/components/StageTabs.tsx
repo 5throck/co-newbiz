@@ -15,6 +15,7 @@ import {
   groupForSegment,
   groupForTrack,
   projectSegment,
+  PROJECT_COMMON_TABS,
   stageTabGroupsFor,
   tabHref,
   type StageTabGroup,
@@ -98,7 +99,9 @@ function StageTabsInner({ projectId }: { projectId: string }) {
   const primaryCount = group.tabs.length;
   const subIdx = activeSubtabIndex(group, seg, tabParam);
   const subtabs = group.subtabs ?? [];
-  const moreActive = activeIdx >= primaryCount;
+  // A hidden (menu-less) page keeps its stage for the rail but highlights nothing in the bar.
+  const moreActive = activeIdx >= primaryCount && !group.more[activeIdx - primaryCount]?.hidden;
+  const visibleMore = group.more.filter((t) => !t.hidden);
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     const items = Array.from(listRef.current?.querySelectorAll<HTMLElement>("[data-tab-item]") ?? []);
@@ -138,7 +141,7 @@ function StageTabsInner({ projectId }: { projectId: string }) {
           );
         })}
         </div>
-        {group.more.length > 0 && (
+        {visibleMore.length > 0 && (
           <span className="stage-tab-more" role="presentation">
             <button
               ref={moreBtn}
@@ -163,6 +166,7 @@ function StageTabsInner({ projectId }: { projectId: string }) {
                 }}
               >
                 {group.more.map((t, j) => {
+                  if (t.hidden) return null;
                   const active = primaryCount + j === activeIdx;
                   return (
                     <Link
@@ -180,6 +184,24 @@ function StageTabsInner({ projectId }: { projectId: string }) {
             )}
           </span>
         )}
+        {/* Project-common destinations (2026-10-21 decider) — the charter is one click away from every stage. */}
+        <span className="stage-tab-more ml-auto" role="presentation" data-testid="project-common-tabs">
+          {PROJECT_COMMON_TABS.map((t) => {
+            const active = seg === t.seg;
+            return (
+              <Link
+                key={t.seg}
+                href={tabHref(projectId, t)}
+                data-tab-item
+                aria-current={active ? "page" : undefined}
+                className={`stage-tab${active ? " stage-tab-active" : ""}`}
+                title="프로젝트 공통 — 모든 단계에서 열 수 있습니다 (S8 승격 시 생성, S11에서 기준선 확정)"
+              >
+                {t.label}
+              </Link>
+            );
+          })}
+        </span>
       </div>
     </nav>
     {/* The screen's Primary Action (design §5) sits at the top right, beside the stage tabs. */}
