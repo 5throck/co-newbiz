@@ -48,4 +48,26 @@ describe("project rail source-opportunity wiring (T-20261022-019)", () => {
     expect(tabs).toMatch(/from "\.\/StageFrame\.tsx"/);
     expect(tabs).not.toContain("sourceOppCache");
   });
+
+  test("the not-promoted rail reason derives from the carrier track, not a hardcoded stage (T-20261022-041)", () => {
+    expect(frame).toContain("notPromotedReason(track)");
+    expect(frame).not.toContain("NOT_PROMOTED_REASON");
+    // StageRail/StageFrame both feed the resolved carrier track into the links.
+    expect(frame).toContain("useStageLinks(track ?? carrierTrack ?? undefined)");
+    expect(frame).toContain("useStageLinks(track)");
+  });
+});
+
+describe("S4 ?tab=committee deep-link wiring (T-20261022-041)", () => {
+  const stage = read("app/deals/[id]/[stage]/page.tsx");
+  const routeDecision = read("components/stages/route-decision/useRouteDecision.ts");
+
+  test("the S4 page forwards the tab query param and the hook applies it to the tab state", () => {
+    expect(stage).toContain('tabParam={searchParams.get("tab")}');
+    expect(routeDecision).toContain("tabParam");
+    // Only the four real tab keys may be applied — unknown values keep the default.
+    for (const key of ["competitive", "eval", "committee", "decision"]) {
+      expect(routeDecision).toContain(`"${key}"`);
+    }
+  });
 });

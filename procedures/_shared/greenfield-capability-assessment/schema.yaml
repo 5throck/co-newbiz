@@ -14,6 +14,12 @@ gate: Pre-FS
 # 결정 → Business Case 라인)이 1:1로 매핑되는 절차. S4에서 track=greenfield로
 # 결정된 기회에 적용된다. 그린필드는 Target Company 객체가 없음 — "우리 스스로
 # 진입 가능한가, 무엇을 구축해야 하는가"가 핵심 질문.
+#
+# 트랙 스코핑 (2026-10-22 프로젝트 리뷰 M7): 이 절차의 트랙 범위는 소유 stage가
+# 강제한다 — flow.spec S5 applicableTracks [greenfield] (S5 greenfield 전용)이며,
+# 트랙 불일치 stage는 app/web-next/lib/process-flow.ts가 통째로 skipped 처리한다.
+# 기회(operation) 단계에는 project 계층 case_type이 존재하지 않아 기계판독 가능한
+# 트랙 predicate을 둘 수 없다 — 후속 과제로 기록 (docs/reports/2026-10-22-project-review-full.md M7).
 
 steps:
   - id: 1

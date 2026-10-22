@@ -21,7 +21,14 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.10.0"
+  version: "2.10.1"
+  # v2.10.1 — T-20261022-035(review H2, 2026-10-22)의 SSOT 반영: T-001 결정
+  #   (design 2026-10-22-review-ticket-remediation §1 row 1, 커밋 ebbac854)에서
+  #   엔진이 이미 그린필드에만 스코어카드를 요구하도록 고쳐졌으므로, S12 벤처
+  #   스코어카드 산출물과 "리뷰 주기별로 스코어카드 검토" 완료 기준에도 동일
+  #   한정자를 명시한다 — brownfield은 integration/partnership 모니터링
+  #   (ADR-0161)으로 대체되며 권장·비차단이다. 문언 정정만 — stage/gate/track
+  #   구조 변경 없음. 차단기 문자열("벤처 스코어카드가 필요합니다")은 불변.
   # v2.10.0 — S9에 capability-dd 활동을 추가한다 (design
   #   2026-10-19-brownfield-capability-dd, 2026-10-20 반영). brownfield가
   #   S3 필요 역량 등록부를 선택 대상에 대해 검증하는 활동으로, 사람이
@@ -737,6 +744,11 @@ stages:
         skills: [legal-due-diligence, k-law, certification-transferability, org-readiness-assessment, stage-gate-governance]
         procedure: [entity-establishment-execution]
         # origin∈{internal,joint}에서만 적용 (ADR-0047) — 절차 applies_when이 강제한다.
+        # 사업부 신설(origin=internal, establishment_mode=business_unit)은 자매
+        # 절차 business-unit-establishment-execution(ADR-0167)이 담당한다 —
+        # 아래 requiredArtifacts의 "신규 사업부 추진" 증적(chk-business-unit-formation)의
+        # 절차 원이며, 본 활동 목록에는 단일 절차 키 제약상 나열되지 않는다
+        # (T-20261022-043, review M8).
         # 법인 투자심의위원회 승인 후 실행: 설립준비(관할·주식구조·이사회 결의) → 법인등기·정관·
         # 사업자등록 → 신설법인 인허가 이전/재발급 분류 → 인력이전(신 근로계약+PIIA) →
         # 완료확인(IP양도체인·거버넌스 베이스라인, JV는 이사회·데드락 조항 추가검증).
@@ -804,13 +816,13 @@ stages:
         # brownfield partnership의 사후 관리 (ADR-0161 Q3) — jv-lifecycle-governance
         # step 2 건강 스코어카드의 파트너십 변형. 다른 단계는 origin=joint에서만 적용.
     requiredArtifacts:
-      - 벤처 스코어카드
+      - "벤처 스코어카드 (greenfield — brownfield은 integration/partnership 모니터링, 권장·비차단)"
       - "사람 전환 결정 기록(어휘 5종, decided_by=venture-portfolio-ic, rationale 필수 — venture_transition_decision 원장)"
       - "전환별 결정 부속 기록: 차기 트랜치 조건(next_tranche_released/held_evidence_incomplete), 핵심사업 인계 기록(graduate_to_core), 매각/청산 계획(reduce_or_divest), 학습 포착 기록(kill_with_learning_captured — group-review-agent 기록, risk-officer가 S1/S2 기본률에 환류)"
       - 실행 기준선 대비 차이(greenfield)
     completionCriteria:
       # ADR-0150 (accepted 2026-10-02) — 즉시 전면 적용(진행 중 핀 프로젝트 포함, 컷오프 없음)
-      - "리뷰 주기별로 스코어카드 검토가 존재한다"
+      - "리뷰 주기별로 스코어카드 검토가 존재한다 (greenfield — brownfield은 integration/partnership 모니터링으로 대체, 권장·비차단)"
       - "각 검토마다 사람 전환 결정이 근거(rationale)와 함께 기록되어 있다"
       - "지속 결정(next_tranche_released/held_evidence_incomplete)은 차기 트랜치 조건을 기록한다"
       - "확장 결정(graduate_to_core)은 핵심사업 인계를 기록한다"

@@ -87,3 +87,22 @@ non-negotiable boundary #2 — "gate approval and the investment decision belong
 formalized by ADR-0053. The Decision 2 text above stands as history and is not rewritten;
 ADR-0053 boundary #2 governs who decides target_screening, as it does screening/pre_fs/fs/dd
 (see the errata on ADR-0074 Decision 3).
+
+## Addendum (2026-10-22, a) — the live resolver owns post-promotion track semantics (T-20261022-036)
+
+The 2026-10-22 full-domain project review found two track resolvers inside the engine:
+`md_project.track` (the promotion-time snapshot, read directly by the S8 subjectScope
+branch, the S11 PMI-kickoff demand, the project-branch `track` field and
+`selectTarget`) and `resolveTrack` (`lib/project-track.ts`: live
+`project_case_classification.case_type` → current route decision → `md_project.track`
+fallback, conflict ⇒ null). Because classification writes never update the snapshot,
+a post-promotion reclassification left the engine believing both tracks at once
+(S8 brownfield per-target predicates on a stale snapshot while S11 baseline/S12
+scorecard followed the live classification).
+
+**Decision**: `resolveTrack` is the single owner of post-promotion track semantics.
+All four engine reads now go through it; conflict/unresolved resolves to `null`
+(fail-closed) and the existing S11 `classification_conflict` blocker surfaces the
+ambiguity. `md_project.track` is demoted to a promotion-time display snapshot — it
+seeds the resolver's last-resort fallback and legacy displays, and nothing branches
+on it directly. Recorded in `docs/designs/2026-10-22-review-followup-hardening-design.md` §6.

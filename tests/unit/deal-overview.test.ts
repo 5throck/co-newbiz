@@ -59,8 +59,8 @@ describe("buildDealOverview", () => {
     const bfHold = [{ entityType: "opportunity" as const, entityId: "D1", gate: "pre_fs" }];
     const bf = buildDealOverview("D1", { status: "assessed", attractiveness_score: null, synergy_score: null },
       proc({ track: "brownfield", gateStatus: { pre_fs: "hold" } }), bfHold);
-    expect(bf.holds[0]!.href).toBe("/deals/D1/s4");
-    expect(bf.nextAction).toMatchObject({ type: "resolve_hold", href: "/deals/D1/s4" });
+    expect(bf.holds[0]!.href).toBe("/deals/D1/s4?tab=committee");
+    expect(bf.nextAction).toMatchObject({ type: "resolve_hold", href: "/deals/D1/s4?tab=committee" });
     const gf = buildDealOverview("D1", { status: "assessed", attractiveness_score: null, synergy_score: null },
       proc({ track: "greenfield", gateStatus: { pre_fs: "hold" } }), bfHold);
     expect(gf.holds[0]!.href).toBe("/deals/D1/s5");

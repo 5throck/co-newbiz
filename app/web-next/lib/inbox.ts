@@ -145,7 +145,13 @@ export function gateStageTab(gate: string, track?: string | null): string | unde
 export function gateHoldHref(h: Pick<HoldSrc, "entityType" | "entityId" | "gate" | "track">): string {
   const id = encodeURIComponent(h.entityId);
   const tab = gateStageTab(h.gate, h.track);
-  if (tab) return `/deals/${id}/${tab}`;
+  if (tab) {
+    // brownfield pre_fs의 결정면은 S4 페이지의 기본 탭이 아니라 위원회 심의
+    // 탭이다 — ?tab=committee로 리뷰어를 바로 그 탭에 착륙시킨다
+    // (T-20261022-002 후속, T-20261022-041).
+    const anchor = h.gate === "pre_fs" && h.track === "brownfield" ? "?tab=committee" : "";
+    return `/deals/${id}/${tab}${anchor}`;
+  }
   return h.entityType === "project" ? `/projects/${id}/process` : `/opportunities/${id}`;
 }
 

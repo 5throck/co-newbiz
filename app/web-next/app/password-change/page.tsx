@@ -5,7 +5,7 @@
 // current (or admin-issued temporary) password plus the new password with
 // a confirmation field, so "same value in both boxes" can no longer be
 // mistaken for a verify-and-confirm form.
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
@@ -18,6 +18,17 @@ export default function PasswordChangePage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // T-20261022-034: same pre-hydration native-submit defect as the login page
+  // (T-20261022-020). Until React attaches onSubmit, a submit POSTs natively —
+  // the form declares method="post" + action="/api/auth/password-change" so the
+  // credentials never land in a URL query, and the route (session-gated, JSON
+  // body only) refuses the form-encoded POST with 4xx. The button stays
+  // disabled until hydration; once the handler is attached, preventDefault
+  // keeps the fetch-based flow below.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -44,7 +55,7 @@ export default function PasswordChangePage() {
 
   return (
     <main className="login-page">
-      <form onSubmit={onSubmit} className="login-form" aria-labelledby="pw-heading">
+      <form onSubmit={onSubmit} method="post" action="/api/auth/password-change" className="login-form" aria-labelledby="pw-heading">
         <h1 id="pw-heading">비밀번호 변경</h1>
         <p>
           관리자가 발급한 임시 비밀번호로 로그인한 경우, 새 비밀번호로 바꿔야 다음 단계로 진행할 수 있습니다.
@@ -61,7 +72,7 @@ export default function PasswordChangePage() {
             {error}
           </p>
         )}
-        <button type="submit" className="btn-primary" disabled={busy}>
+        <button type="submit" className="btn-primary" disabled={busy || !hydrated}>
           {busy ? "변경 중..." : "비밀번호 변경"}
         </button>
       </form>

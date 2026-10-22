@@ -70,8 +70,10 @@ describe("gate HOLD links", () => {
     // T-20261022-002: S5 is a TrackGate dead end for a brownfield deal and S6 hosts
     // no pre_fs decision panel — the S4 committee panel is that track's surface.
     expect(gateStageTab("pre_fs", "brownfield")).toBe("s4");
-    expect(gateHoldHref(hold("opportunity", "o-bf", "pre_fs", "brownfield"))).toBe("/deals/o-bf/s4");
-    expect(gateHoldHref(hold("project", "p-bf", "pre_fs", "brownfield"))).toBe("/deals/p-bf/s4");
+    // ?tab=committee lands the reviewer on the committee tab itself — the S4
+    // page's default tab is 경쟁 구조, not the decision surface (T-20261022-041).
+    expect(gateHoldHref(hold("opportunity", "o-bf", "pre_fs", "brownfield"))).toBe("/deals/o-bf/s4?tab=committee");
+    expect(gateHoldHref(hold("project", "p-bf", "pre_fs", "brownfield"))).toBe("/deals/p-bf/s4?tab=committee");
     expect(gateStageTab("pre_fs", "greenfield")).toBe("s5");
     expect(gateHoldHref(hold("opportunity", "o-gf", "pre_fs", "greenfield"))).toBe("/deals/o-gf/s5");
   });

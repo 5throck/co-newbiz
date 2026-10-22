@@ -5,7 +5,12 @@ scope: shared
 level: entity
 version: "1.6.1"
 status: active
-applicability: mandatory
+# 트랙 스코핑 (2026-10-22 프로젝트 리뷰 M7): S9 brownfield DD에 procedure 계층
+# 기계판독 predicate을 둔다 — greenfield-execution-baseline·pmi-integration-
+# execution과 같은 모양 (flow.spec 교리 "범위는 각 procedure의 applies_when이
+# 강제한다"). Metadata-only 변경 — version 1.6.1 유지.
+applicability: conditional
+applies_when: { op: "cmp", var: "project.case_type", cmp: "eq", value: "brownfield" }
 workflow_type: core
 gate: DD
 

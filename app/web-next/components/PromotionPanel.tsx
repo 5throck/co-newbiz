@@ -188,7 +188,7 @@ export function PromotionPanel({
         }
       },
       {
-        body: `S1~S7 산출물로 차터가 자동 구성되고, 추진한 사람이 프로젝트 리드로 등록됩니다${members.length > 0 ? ` (추가 팀원 ${members.length}명 함께 배정)` : ""}. 추진 후 기회 캐리어는 S7에서 종결됩니다.`,
+        body: `S1~S7 산출물로 차터가 자동 구성되고, 추진한 사람이 프로젝트 리드로 등록됩니다${members.length > 0 ? ` (추가 팀원 ${members.length}명 함께 배정)` : ""}. 추진 후 기회 캐리어는 ${finalStageOf(proc?.track ?? null) ?? "S7"}에서 종결됩니다.`,
         confirmLabel: "추진",
       },
     );

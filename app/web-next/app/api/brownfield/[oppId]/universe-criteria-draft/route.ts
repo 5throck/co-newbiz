@@ -11,6 +11,7 @@ import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../lib/envelope.ts";
 import { completeOrFallback, type LlmOrFallback } from "../../../../../lib/llm.ts";
 import { systemMessage } from "../../../../../lib/prompts.ts";
+import { trackConflictResponse } from "../../../../../lib/route-track-guard.ts";
 
 interface DraftCriteria {
   industry: string;
@@ -43,6 +44,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     .query("SELECT id, name, market_scope, capability_gap_json FROM opportunity WHERE id = ?")
     .get(oppId) as { id: string; name: string; market_scope: string | null; capability_gap_json: string | null } | undefined;
   if (!opp) return notFound();
+  // T-20261022-038: the S6 draft suggestion is a brownfield-only surface. The client
+  // gates it with TrackGate, but the server must not trust that — a greenfield route
+  // decision makes the draft call 409 not_applicable_track before any LLM invocation
+  // or audit write (mirror of T-20261022-007's S5 guard). No route decision yet stays
+  // usable, same back-compat choice as the S5 route.
+  const conflict = trackConflictResponse(
+    db, oppId, "brownfield",
+    "S6 선정 기준 초안 생성은 Brownfield Route에서만 할 수 있습니다 — 이 기회의 현재 Route 결정은 Greenfield입니다.",
+  );
+  if (conflict) return conflict;
 
   // ── 입력 매니페스트 (이 제안이 본 산출물) ──
   const manifest: string[] = [];

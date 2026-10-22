@@ -79,7 +79,10 @@ export function PostManagementPanel({ projectId }: { projectId: string }) {
   if (error) return <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-3">✕ {error}</p>;
   if (!view) return null;
 
-  const items = applicableItems(view.applicability);
+  // The venture-scorecard form is greenfield-only (T-20261022-001); off-greenfield
+  // the portfolio_venture_monitoring recommendation is procedural — say so on the
+  // chip instead of implying a recorder this screen does not offer (T-20261022-044).
+  const items = applicableItems(view.applicability, { ventureRecorder: isGreenfieldRampUp(view) ? "in_app" : "procedure_only" });
   const ramp = isGreenfieldRampUp(view) ? view.greenfield_ramp_up : null;
   const integ = view.integration_monitoring;
   const partner = view.partnership_monitoring;

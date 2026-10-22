@@ -5,21 +5,25 @@
  * Real scratch SQLite, no HTTP.
  */
 
-import { test, expect, beforeAll, describe } from "bun:test";
+import { test, expect, beforeAll, afterAll, describe } from "bun:test";
 import { existsSync, rmSync } from "node:fs";
-import { resetDb, getDb, type getDb as GetDb } from "../../db/client.ts";
-import { runMigrations } from "../../db/migrate.ts";
 import { ulid } from "../../db/lib/ulid.ts";
-import { listGateAging } from "../../app/web-next/lib/gate-aging.ts";
 
 const TEST_DB_PATH = "db/data/test-gate-aging-track.sqlite";
 const NOW = "2026-10-21T10:00:00Z";
-type Db = ReturnType<typeof GetDb>;
+// CO_NEWBIZ_DB_PATH must be set BEFORE the db client module loads —
+// db/client.ts resolves DEFAULT_DB_PATH at import time (review 2026-10-22 L3:
+// the former beforeAll assignment was a no-op after the static import).
+process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
+const { resetDb, getDb } = await import("../../db/client.ts");
+const { runMigrations } = await import("../../db/migrate.ts");
+const { listGateAging } = await import("../../app/web-next/lib/gate-aging.ts");
+
+type Db = ReturnType<typeof getDb>;
 let db: Db;
 
 beforeAll(() => {
   for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
-  process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
   resetDb();
   runMigrations(TEST_DB_PATH);
   db = getDb(TEST_DB_PATH);
@@ -63,6 +67,10 @@ beforeAll(() => {
     "INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)",
     [ulid(), "opportunity", oppNone, "screening", "hold", "보류", "test", "2026-10-04T00:00:00Z"],
   );
+});
+
+afterAll(() => {
+  for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 });
 
 describe("listGateAging track resolution", () => {

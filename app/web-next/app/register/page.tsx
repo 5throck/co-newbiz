@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { api } from "../../lib/api.ts";
 
@@ -15,6 +15,16 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
+  // T-20261022-034: React가 onSubmit을 부착하기 전 제출(버튼 클릭·Enter)은
+  // 네이티브 form 제출로 진행된다. form이 method="post" + action="/api/auth/register"를
+  // 선언해 선(先)하이드레이션 제출이 POST로 나가도록 한다(자격 증명이 URL 쿼리에
+  // 기록되지 않음) — register 라우트는 JSON 본문만 파싱하므로 form 인코딩 네이티브
+  // POST는 400으로 거부된다. 버튼은 하이드레이션 전까지 비활성이며, 핸들러 부착 후에는
+  // preventDefault로 아래 fetch 기반 흐름을 유지한다.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -56,7 +66,7 @@ export default function RegisterPage() {
             <p className="login-hint">
               신규 계정은 <strong>viewer(열람)</strong> 권한으로 생성되며, 관리자 승인 시 역할이 부여됩니다.
             </p>
-            <form onSubmit={onSubmit} aria-labelledby="register-heading">
+            <form onSubmit={onSubmit} method="post" action="/api/auth/register" aria-labelledby="register-heading">
               <h2 id="register-heading" className="sr-only">
                 계정 신청 양식
               </h2>
@@ -73,7 +83,7 @@ export default function RegisterPage() {
                   {error}
                 </p>
               )}
-              <button type="submit" className="btn-ghost" disabled={busy}>
+              <button type="submit" className="btn-ghost" disabled={busy || !hydrated}>
                 {busy ? "신청 중..." : "계정 신청"}
               </button>
             </form>

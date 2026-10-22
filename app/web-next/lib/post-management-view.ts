@@ -72,14 +72,25 @@ export interface ApplicableItem {
   cls: "status-amber" | "status-not-started";
 }
 
-/** The three ADR-0161 S12 items. Every applicable one is "recommended"; S12 has no gate, so none blocks. */
-export function applicableItems(a: PostManagementApplicability): ApplicableItem[] {
+/** The three ADR-0161 S12 items. Every applicable one is "recommended"; S12 has no gate, so none blocks.
+ *  `ventureRecorder` — the venture-scorecard FORM is greenfield-only (T-20261022-001); for a
+ *  brownfield internal/hybrid/joint project the recommendation is procedural
+ *  (portfolio-venture-monitoring run outside the in-app form, ADR-0161 addendum 2026-10-22 b),
+ *  and the chip says so instead of implying a recorder this screen does not offer (T-20261022-044). */
+export function applicableItems(
+  a: PostManagementApplicability,
+  opts: { ventureRecorder?: "in_app" | "procedure_only" } = {},
+): ApplicableItem[] {
   const keys = ["portfolio_venture_monitoring", "integration_monitoring", "partnership_monitoring"] as const;
   return keys.map((key) => ({
     key,
     label: POST_MANAGEMENT_ITEM_LABEL[key],
     applies: a[key],
-    chip: a[key] ? "○ 권장 (차단하지 않음)" : "— 적용 대상 아님", // INTERIM-WORDING
+    chip: !a[key]
+      ? "— 적용 대상 아님" // INTERIM-WORDING
+      : key === "portfolio_venture_monitoring" && opts.ventureRecorder === "procedure_only"
+        ? "○ 권장 (차단하지 않음 — 기록은 절차 수행, 앱 기록 화면 없음)"
+        : "○ 권장 (차단하지 않음)",
     cls: a[key] ? "status-amber" : "status-not-started",
   }));
 }

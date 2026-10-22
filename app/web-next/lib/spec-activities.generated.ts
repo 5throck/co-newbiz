@@ -5,7 +5,7 @@
 // this projection mirrors the spec.)
 import type { SpecStage } from "./spec-activities.ts";
 
-export const SPEC_VERSION = "2.10.0";
+export const SPEC_VERSION = "2.10.1";
 export const SPEC_STAGES: SpecStage[] = [
   {
     "id": "S1",
