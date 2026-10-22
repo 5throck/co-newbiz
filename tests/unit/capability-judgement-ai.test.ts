@@ -267,7 +267,7 @@ describe("registration and UI structure", () => {
   });
   test("S5 editor: button, note, unsaved counter and discard; S8 panel has no AI", () => {
     const ed = read("app/web-next/components/stages/CapabilityJudgementEditor.tsx");
-    for (const k of ["판정 제안 (AI)", "저장하지 않은 AI 초안", "AI 초안 버리기", "ai-note", "AI 제안 결과 닫기", "/ai-draft", "title=\"AI가"]) expect(ed).toContain(k);
+    for (const k of ["판정 제안 (AI)", "저장하지 않은 AI 초안", "초안 버리기 (AI)", "ai-note", "AI 제안 결과 닫기", "/ai-draft", "title=\"AI가"]) expect(ed).toContain(k);
     expect(ed).toContain("aiDraft && canAct");
     expect(read("app/web-next/components/stages/GreenfieldStage.tsx")).toContain("aiDraft");
     const panel = read("app/web-next/components/stages/CapabilityAttainabilityPanel.tsx");

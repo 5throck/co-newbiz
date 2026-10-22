@@ -169,7 +169,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
       >
         {/* 게이트 결정은 "의사결정 · 승인 기록" 내부 탭에 있다 — 점프 전에 탭을
             열어 포커스 대상이 실제로 보이게 한다(F6, BusinessCaseStage와 동일 패턴). */}
-        <GateDecisionJump gate={entityGo ? "group_ic" : "entity_ic"} inline beforeJump={() => setIcView("decision")} />
+        <GateDecisionJump gate={entityGo ? "group_ic" : "entity_ic"} beforeJump={() => setIcView("decision")} />
         {/* One review block for both IC gates (the panels below do not repeat it). */}
         <ReviewBuckets entityType="project" entityId={projectId} gates={["entity_ic", "group_ic"]} artifacts={stageArtifactTabs("S11")} />
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">

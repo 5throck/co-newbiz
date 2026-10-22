@@ -337,14 +337,6 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
         </div>
       )}
       {knownTargetMode && registerSection}
-      {opportunityId && (
-        <PrimaryAction
-          label={carrierRow ? `S3로: ${carrierRow.name}` : "스크리닝으로 승격 (S3)"}
-          href={`/deals/${encodeURIComponent(opportunityId)}/s3`}
-          disabled={!carrierRow || carrierRow.status === "dropped"}
-          disabledReason={!carrierRow ? "승격할 기회(이 안건)를 먼저 선택하세요." : "제외된 기회는 승격할 수 없습니다."}
-        />
-      )}
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       {opportunityId && <ReviewBuckets entityType="opportunity" entityId={opportunityId} artifacts={stageArtifactTabs("S2")} />}
 

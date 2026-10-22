@@ -459,7 +459,7 @@ export function DdStage({ projectId }: { projectId: string }) {
         heading={s9Heading(data?.greenfield_scope)}
         railSlot={<StageTabs projectId={projectId} />}
       >
-        <GateDecisionJump gate="dd" inline beforeJump={() => { if (data) setTab(decisionTabIdx); }} />
+        <GateDecisionJump gate="dd" beforeJump={() => { if (data) setTab(decisionTabIdx); }} />
         <ReviewBuckets entityType="project" entityId={projectId} gates={["dd"]} artifacts={stageArtifactTabs("S9")} />
         {data && (
           <div className="mb-3 flex flex-wrap items-center gap-2" data-testid="dd-subject-header">

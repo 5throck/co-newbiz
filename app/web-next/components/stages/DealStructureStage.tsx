@@ -257,7 +257,6 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
             프레임 머리(레일 슬롯 아래)에 둔다. */}
         <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S10")} />
         <PrimaryAction
-          inline
           label="투자구조 가설 기록"
           onClick={() => {
             setTab("hypotheses");

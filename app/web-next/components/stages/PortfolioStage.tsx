@@ -178,7 +178,6 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
         {/* Wave U-1 (design §3.5): home of the closure flow — preconditions are
             shown inside ClosureModal; the decision itself stays human-only. */}
         <PrimaryAction
-          inline
           label="프로젝트 종료…"
           onClick={() => setClosing(true)}
           disabled={!canWriteProject(me?.role)}

@@ -595,7 +595,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   if (!selected) {
     return (
       <>
-        <PrimaryAction label="타당성 검토 실행" disabled disabledReason="평가할 기회를 불러오면 실행할 수 있습니다." />
+        <PrimaryAction inline label="평가 기록 (사람이 확정)" disabled disabledReason="평가할 기회를 불러오면 실행할 수 있습니다." />
         <p role="status" aria-live="polite">
           {error
             ? <span role="alert" className="text-[color:var(--red-fg)]">{error}</span>
@@ -1449,8 +1449,9 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
               ))}
             </ul>
             <PrimaryAction
+              inline
               form="greenfield-eval-form"
-              label="타당성 검토 실행"
+              label="평가 기록 (사람이 확정)"
               disabled={!canAct || busy || (entryStrategy.trim() === "" && entryModes.modes.length === 0)}
               disabledReason={!canAct ? "평가 기록은 analyst 권한이 필요합니다." : busy ? "저장 중입니다." : "진출 방식을 선택하거나 선택 근거를 입력하면 실행할 수 있습니다."}
             />

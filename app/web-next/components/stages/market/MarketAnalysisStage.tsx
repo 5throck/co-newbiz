@@ -171,11 +171,12 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
 function MarketPrimaryAction({ ctx }: { ctx: ReturnType<typeof useMarketData> & ReturnType<typeof useMarketLinking> }) {
   const { canCurate, showNewForm, setShowNewForm, newName, openLinkModal } = ctx;
   if (!canCurate) {
-    return <PrimaryAction label="시장 규모 분석 실행" disabled disabledReason="산업 분석은 analyst 권한이 필요합니다." />;
+    return <PrimaryAction inline label="시장 규모 분석 실행" disabled disabledReason="산업 분석은 analyst 권한이 필요합니다." />;
   }
   if (!showNewForm || !newName.trim()) {
     return (
       <PrimaryAction
+        inline
         label="새 산업 분석 입력"
         onClick={() => {
           setShowNewForm(true);
@@ -184,5 +185,5 @@ function MarketPrimaryAction({ ctx }: { ctx: ReturnType<typeof useMarketData> & 
       />
     );
   }
-  return <PrimaryAction label="시장 규모 분석 실행" onClick={() => void openLinkModal(newName.trim())} />;
+  return <PrimaryAction inline label="시장 규모 분석 실행" onClick={() => void openLinkModal(newName.trim())} />;
 }

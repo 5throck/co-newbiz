@@ -27,6 +27,7 @@ export function BrownfieldStage(props0: { opportunityId: string; onSaved?: () =>
     <>
       {(shortlistedTargets.length === 0 || !canAct) && (
         <PrimaryAction
+          inline
           label="사전 검토 실행 (위원회 추천 검토)"
           disabled
           disabledReason={!canAct ? "사전 검토는 analyst 권한이 필요합니다." : "최종 후보 목록 후보를 먼저 선정하면 실행할 수 있습니다."}

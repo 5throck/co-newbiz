@@ -30,7 +30,7 @@ export function RouteDecisionStage(props0: { opportunityId: string; rationalePar
   if (notFound) {
     return (
       <>
-        <PrimaryAction label="진출방식 제안 (사람이 확정)" disabled disabledReason="선별된 기회가 없어 제안할 수 없습니다." />
+        <PrimaryAction inline label="진출방식 제안 (사람이 확정)" disabled disabledReason="선별된 기회가 없어 제안할 수 없습니다." />
       <div className="card">
         <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">
           선별(selected)된 기회를 찾을 수 없습니다 — S3 시너지·적합성 평가를 마친 기회만 여기서 진출방식을 결정할 수 있습니다.{" "}
@@ -46,7 +46,7 @@ export function RouteDecisionStage(props0: { opportunityId: string; rationalePar
   if (!selected) {
     return (
       <>
-        <PrimaryAction label="진출방식 제안 (사람이 확정)" disabled disabledReason="안건을 불러오면 제안할 수 있습니다." />
+        <PrimaryAction inline label="진출방식 제안 (사람이 확정)" disabled disabledReason="안건을 불러오면 제안할 수 있습니다." />
         <div className="card"><p>불러오는 중...</p></div>
       </>
     );
@@ -60,9 +60,9 @@ export function RouteDecisionStage(props0: { opportunityId: string; rationalePar
   return (
     <>
       {tab === "decision" ? (
-        <PrimaryAction form="route-form" label="진출방식 제안 (사람이 확정)" disabled={proposeBlocked} disabledReason={proposeReason} />
+        <PrimaryAction inline form="route-form" label="진출방식 제안 (사람이 확정)" disabled={proposeBlocked} disabledReason={proposeReason} />
       ) : (
-        <PrimaryAction label="진출방식 제안 (사람이 확정)" onClick={() => setTab("decision")} disabled={proposeBlocked} disabledReason={proposeReason} />
+        <PrimaryAction inline label="진출방식 제안 (사람이 확정)" onClick={() => setTab("decision")} disabled={proposeBlocked} disabledReason={proposeReason} />
       )}
       <ReviewBuckets entityType="opportunity" entityId={opportunityId} artifacts={stageArtifactTabs("S4")} />
       {/* ── 진출방식 추천 — 탭 밖 상시 노출 (2026-09-14 재설계). 예전엔 이 카드와

@@ -175,24 +175,26 @@ export function StageFrame({
         <h1>
           {heading ?? `${stage.id} ${ids.length > 1 ? `· ${STAGE_META.find((s) => s.id === ids[1])!.name}` : stage.name}`}
         </h1>
-        {/* 프로젝트 화면(/projects/**)의 머리 우상단 = 다음 단계 내비게이션으로 통일
-            (2026-10-22 사용자 리포트: 단계별로 기록·생성·종료 등 제각각이어서 혼란).
-            트랙 인지 스킵(nextApplicableStage)으로 다음 적용 단계를 계산하며, 단계의
-            기록·생성 액션은 각 작업 면(인라인)에 남긴다. 다음 단계가 없으면(종료) 숨긴다. */}
-        {railSlot !== undefined
-          ? (() => {
-              const nextId = nextApplicableStage(primary, track ?? carrierTrack ?? undefined);
-              if (!nextId) return null;
-              const link = linkFor(nextId);
-              if (!link?.href) return null;
-              const nextName = STAGE_META.find((s) => s.id === nextId)!.name;
-              return (
-                <Link className="btn-primary" href={link.href}>
-                  다음: {nextName} →
-                </Link>
-              );
-            })()
-          : <PrimarySlot />}
+        {/* 모든 단계 화면의 머리 우상단 = 다음 단계 내비게이션으로 통일(2026-10-22
+            사용자 리포트: 단계별로 생성·제안·기록·종료 등 제각각이어서 혼란). 트랙 인지
+            스킵(nextApplicableStage)으로 다음 적용 단계를 계산하며, 단계의 기록·생성
+            액션은 각 작업 면(인라인)에 남긴다. 다음 단계가 없으면(종료) 숨긴다. */}
+        {(() => {
+          const t = track ?? carrierTrack ?? undefined;
+          // 트랙 미확정(로딩 중)에는 다음 단계를 추측하지 않는다 — 트랙 전용 단계로
+          // 잘못 안내되는 과도 상태를 막는다(fail-honest).
+          if (!t) return null;
+          const nextId = nextApplicableStage(primary, t);
+          if (!nextId) return null;
+          const link = linkFor(nextId);
+          if (!link?.href) return null;
+          const nextName = STAGE_META.find((s) => s.id === nextId)!.name;
+          return (
+            <Link className="btn-primary" href={link.href}>
+              다음: {nextName} →
+            </Link>
+          );
+        })()}
       </div>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">{stage.objective}</p>
       {/* 스트립은 목적선 바로 다음 — S1~S12 모든 화면에서 같은 머리 순서(h1 → 목적 → 스트립 →

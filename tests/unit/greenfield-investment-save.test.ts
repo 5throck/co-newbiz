@@ -191,7 +191,7 @@ describe("save button wiring: lines-only payload, dirty tracking, success note",
   });
   test("the whole-assessment save paths are untouched", () => {
     const s = stage();
-    expect(s).toContain('label="타당성 검토 실행"');
+    expect(s).toContain('label="평가 기록 (사람이 확정)"');
     expect(s).toContain(">저장</button>");
     expect(s).toContain("선택한 비용을 투자비에 반영".slice(1)); // reflect button label comes from CapabilityCostBlock
     const block = read("app/web-next/components/stages/CapabilityCostBlock.tsx");
