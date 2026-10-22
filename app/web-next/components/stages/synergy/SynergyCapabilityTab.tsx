@@ -80,7 +80,7 @@ export function SynergyCapabilityTab({ ctx, p }: { ctx: SynergyResultState; p: S
                         </label>
                         {/* AI 초안·저장 계열은 오른쪽에 모아 AI 제안 버튼과 시각적으로 분리한다 */}
                         <span className="flex items-center gap-1 ml-auto pl-2 border-l border-[color:var(--border)]">
-                          {draftCount > 0 && <button type="button" className="btn-ghost btn-sm" disabled={gapBusy || holdBusy} onClick={discardDrafts} title="저장하지 않은 AI 초안을 버리고 저장된 값으로 되돌립니다">AI 초안 버리기</button>}
+                          {draftCount > 0 && <button type="button" className="btn-ghost btn-sm" disabled={gapBusy || holdBusy} onClick={discardDrafts} title="저장하지 않은 AI 초안을 버리고 저장된 값으로 되돌립니다">초안 버리기 (AI)</button>}
                           <button type="button" className={gapDirty ? "btn-primary btn-sm" : "btn-ghost btn-sm"} disabled={gapBusy || holdBusy || gapRows.length === 0 || !gapDirty} onClick={() => void saveGap()}>
                             {gapBusy ? "저장 중..." : gapDirty ? "변경 저장" : "저장"}
                           </button>

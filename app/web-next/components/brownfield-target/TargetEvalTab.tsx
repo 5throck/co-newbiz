@@ -80,7 +80,7 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                           >
                             초안 저장 ({proposedCount}건)
                           </button>
-                          <button type="button" className="btn-ghost btn-sm" onClick={() => { setEvalDraft(null); setDraftCategory(null); setDraftNote(null); }}>초안 버리기</button>
+                          <button type="button" className="btn-ghost btn-sm" onClick={() => { setEvalDraft(null); setDraftCategory(null); setDraftNote(null); }}>초안 버리기 (AI)</button>
                         </>
                       )}
                       <button
@@ -121,7 +121,7 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                           >
                             초안 저장 ({proposedCount}건)
                           </button>
-                          <button type="button" className="btn-ghost btn-sm" onClick={() => { setEvalDraft(null); setDraftCategory(null); setDraftNote(null); }}>초안 버리기</button>
+                          <button type="button" className="btn-ghost btn-sm" onClick={() => { setEvalDraft(null); setDraftCategory(null); setDraftNote(null); }}>초안 버리기 (AI)</button>
                         </>
                       )}
                       {draftCategory === "technical" ? (

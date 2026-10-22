@@ -139,6 +139,12 @@ icons:
     source: unicode-emoji
     contexts: [ai action buttons, ai brief/judgement headings, synergy ai proposals]
     aria_label_required: false
+    # Action-button standard (2026-10-22 사용자 리포트 — AI 기능 버튼 표준화):
+    #   AI를 제공하는 버튼은 [아이콘 + 기능 + (AI)] 형태로 통일한다 — 예)
+    #   "🤖 추천 생성 (AI)", "🤖 재생성 (AI)", "초안 버리기 (AI)".
+    #   생성·재생성 계열은 🤖 접두, AI 초안에 대한 보조 동작은 (AI) 접미만.
+    #   판정 근거: 위 경계 #2 마커 규칙과 동일 — 사람이 AI 개입 여부를
+    #   버튼에서 즉시 식별하게 한다.
   # Governance semantics
   - id: emoji-waiver
     source: unicode-emoji

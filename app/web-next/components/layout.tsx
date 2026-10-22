@@ -12,7 +12,7 @@ export function PageHeader({ title, description }: { title: string; description?
     <>
       <h1>{title}</h1>
       {description && (
-        <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">{description}</p>
+        <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">{description}</p>
       )}
     </>
   );

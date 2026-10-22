@@ -189,7 +189,7 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
         <h1>{TITLE_BY_ROUTE[route]}</h1>
         <PrimaryAction inline href={CREATE_BY_ROUTE[route].href} label={CREATE_BY_ROUTE[route].label} />
       </div>
-      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
+      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
         {SUMMARY_BY_ROUTE[route]} {CREATE_BY_ROUTE[route].hint}
       </p>
       {error && <PageState state="error" errorText={error} onRetry={loadRows} />}

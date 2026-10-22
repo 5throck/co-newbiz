@@ -110,7 +110,7 @@ export function EntryStrategySection({ opportunityId, value, onChange, canAct, r
         {marks.length > 0 && (
           <span className="flex items-center gap-1" data-testid="entry-ai-unsaved">
             <span className="status-chip status-not-started" role="status"><span aria-hidden="true">✦</span> 저장하지 않은 AI 초안 {marks.length}건</span>
-            {canAct && <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={discard}>AI 초안 버리기</button>}
+            {canAct && <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={discard}>초안 버리기 (AI)</button>}
           </span>
         )}
         {canAct && (

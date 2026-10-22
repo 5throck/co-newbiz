@@ -75,7 +75,7 @@ export function AiJudgementSupport({ projectId, gate = "fs", cases, canAct, onAp
 
   return (
     <section className="market-section sizing-step mt-3" aria-label="AI 판단 지원">
-      <h3 className="sizing-step-title text-[0.9rem]">🤖 AI 판단 지원</h3>
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]">🤖 AI 판단 지원</h3>
       <div className="flex flex-wrap items-center gap-2 mb-2">
         <button type="button" className="btn-ghost" disabled={busy} onClick={() => void generateAll()}>
           {busy ? "생성 중..." : generated ? "재생성" : "AI 판단 지원 생성"}

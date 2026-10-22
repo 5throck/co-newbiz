@@ -257,6 +257,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
             프레임 머리(레일 슬롯 아래)에 둔다. */}
         <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S10")} />
         <PrimaryAction
+          inline
           label="투자구조 가설 기록"
           onClick={() => {
             setTab("hypotheses");
@@ -302,7 +303,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
             {recoError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
             {!reco && !recoLoading && !recoError && (
               <div className="flex flex-wrap items-center gap-2 mb-0">
-                <button type="button" className="btn-ghost" onClick={() => void generateReco()}>▶ AI 추천 생성</button>
+                <button type="button" className="btn-ghost" onClick={() => void generateReco()}>🤖 추천 생성 (AI)</button>
                 <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{isGf ? "설립 법인 형태" : "투자 주체"}·지분·수단과 4축 노트·구조 근거 초안을 작성해 가설 등록을 돕습니다.</span>
               </div>
             )}

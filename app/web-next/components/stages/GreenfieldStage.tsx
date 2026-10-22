@@ -818,7 +818,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 {reco.recommendation.cautions.length > 0 && (
                   <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mb-2">{reco.recommendation.cautions.join(" / ")}</p>
                 )}
-                {canAct && <button type="button" className="btn-ghost btn-sm" disabled={recoLoading} onClick={() => void generateReco()}>{recoLoading ? "재생성 중..." : "재생성"}</button>}
+                {canAct && <button type="button" className="btn-ghost btn-sm" disabled={recoLoading} onClick={() => void generateReco()}>{recoLoading ? "재생성 중..." : "🤖 재생성 (AI)"}</button>}
               </>
             )}
             </div>

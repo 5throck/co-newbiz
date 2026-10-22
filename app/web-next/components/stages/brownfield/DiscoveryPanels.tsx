@@ -139,14 +139,14 @@ export function UniverseEditModal({ ctx }: { ctx: BrownfieldStageState }) {
                         {rationaleAlreadySaved ? "이미 반영됨" : uniRecoApplied ? "다시 적용" : "정의 입력에 적용"}
                       </button>
                       <button type="button" className="btn-ghost btn-sm" onClick={() => { setUniReco(null); setUniRecoApplied(false); }}>닫기</button>
-                      <button type="button" className="btn-ghost btn-sm" disabled={uniBusy} onClick={() => void generateUniReco()}>{uniBusy ? "재생성 중..." : "재생성"}</button>
+                      <button type="button" className="btn-ghost btn-sm" disabled={uniBusy} onClick={() => void generateUniReco()}>{uniBusy ? "재생성 중..." : "🤖 재생성 (AI)"}</button>
                     </div>
                   </div>
                 );
               })() : (
                 <div>
                   <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--amber-fg)]">{uniReco.note ?? "초안을 만들 수 없습니다."}</p>
-                  <button type="button" className="btn-ghost btn-sm" disabled={uniBusy} onClick={() => void generateUniReco()}>{uniBusy ? "재생성 중..." : "다시 시도"}</button>
+                  <button type="button" className="btn-ghost btn-sm" disabled={uniBusy} onClick={() => void generateUniReco()}>{uniBusy ? "재생성 중..." : "🤖 다시 시도 (AI)"}</button>
                 </div>
               )}
             </div>

@@ -47,11 +47,12 @@ export function focusGateDecision(gate?: string, attempts = 12): void {
 }
 
 /** The gate stages' Primary Action: jump to (and focus) the decision form, which sits at the end of the page. */
-export function GateDecisionJump({ gate, entityType = "project", beforeJump }: { gate: string; entityType?: "opportunity" | "project"; beforeJump?: () => void }) {
+export function GateDecisionJump({ gate, entityType = "project", beforeJump, inline }: { gate: string; entityType?: "opportunity" | "project"; beforeJump?: () => void; inline?: boolean }) {
   const { me } = useAuth();
   const can = entityType === "project" ? canWriteProject(me?.role) : canWriteBusiness(me?.role);
   return (
     <PrimaryAction
+      inline={inline}
       label="결정 기록 (사람)"
       onClick={() => { beforeJump?.(); window.setTimeout(() => focusGateDecision(gate), 0); }}
       disabled={!can}
