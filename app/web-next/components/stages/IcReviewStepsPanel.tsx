@@ -130,7 +130,7 @@ export function IcReviewStepsPanel({ projectId, canAct }: { projectId: string; c
 
   return (
     <section className="market-section sizing-step mt-3" aria-label="투자심사 절차 단계" data-testid="ic-review-steps">
-      <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">📋</span> 투자심사 절차 단계 — 법인 검토 · 그룹 검토</h3>
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]"><span className="sizing-step-badge" aria-hidden="true">📋</span> 투자심사 절차 단계 — 법인 검토 · 그룹 검토</h3>
       {view.gaps.length > 0 && (
         <p className="text-[length:var(--fs-caption)] mb-2" data-testid="ic-procedure-gaps">
           <span className="status-chip status-amber">절차 격차 {view.gaps.length}건</span>

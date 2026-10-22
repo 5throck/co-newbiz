@@ -10,10 +10,10 @@ export function ProfileOverviewTab({ ctx, profile }: { ctx: OurCompanyStageState
   const { profileTab } = ctx;
   return (
     <>{profileTab === "overview" && (
-              <div className="text-[0.88rem]">
+              <div className="text-[length:var(--fs-body)]">
                 {profile.ragCapRecommendation && (
                   <div className="sizing-grade-card mb-3">
-                    <h4 className="text-[0.9rem] mb-2">🚦 신뢰도 상한 권고</h4>
+                    <h4 className="text-[length:var(--fs-body)] mb-2">🚦 신뢰도 상한 권고</h4>
                     <span className={`status-chip ${profile.ragCapRecommendation.grade === "green" ? "status-green" : profile.ragCapRecommendation.grade === "amber" ? "status-amber" : "status-red"}`}>
                       상한 {profile.ragCapRecommendation.grade.toUpperCase()}
                     </span>
@@ -21,9 +21,9 @@ export function ProfileOverviewTab({ ctx, profile }: { ctx: OurCompanyStageState
                   </div>
                 )}
                 <ProfileFieldEditor key={profile.companyName + (profile.analystEditLog?.length ?? 0)} ctx={ctx} memberId={ctx.openMember!} profile={profile} />
-                <h3 className="sizing-step-title text-[0.95rem]">종합 평가 {profile.analystEdited?.businessAssessment && <AnalystEditedChip />}</h3>
+                <h3 className="sizing-step-title text-[length:var(--fs-body)]">종합 평가 {profile.analystEdited?.businessAssessment && <AnalystEditedChip />}</h3>
                 <p className="mb-3">{profile.businessAssessment || "—"}</p>
-                <h3 className="sizing-step-title text-[0.95rem]">산업 노출</h3>
+                <h3 className="sizing-step-title text-[length:var(--fs-body)]">산업 노출</h3>
                 {profile.industryExposure && profile.industryExposure.length > 0 ? (
                   <div className="flex flex-wrap gap-1 mb-3">
                     {profile.industryExposure.map((x) => <span key={x} className="status-chip status-in-progress">{x}{isEditedItem(profile, "industryExposure", x) && <AnalystEditedChip />}</span>)}
@@ -45,7 +45,7 @@ export function ProfileSwotTab({ ctx, profile }: { ctx: OurCompanyStageState; pr
   const { profileTab } = ctx;
   return (
     <>{profileTab === "swot" && (
-              <div className="text-[0.88rem]">
+              <div className="text-[length:var(--fs-body)]">
                 {profile.swot && (
                   <p className="sizing-note-list mb-2 text-[length:var(--fs-caption)] text-[color:var(--amber-fg)]" role="note">
                     ⚠ 기회·위협은 AI 추정 — 분석가 확정 전까지 인용 시 검증 필요 표기를 유지하세요.
@@ -73,7 +73,7 @@ export function ProfileSwotTab({ ctx, profile }: { ctx: OurCompanyStageState; pr
                     </>
                   )}
                 </div>
-                <p className="mt-3 mb-0 text-[0.88rem]"><strong>종합 평가:</strong> {profile.businessAssessment || "—"}</p>
+                <p className="mt-3 mb-0 text-[length:var(--fs-body)]"><strong>종합 평가:</strong> {profile.businessAssessment || "—"}</p>
               </div>
             )}</>
   );
@@ -83,8 +83,8 @@ export function ProfileIndustryTab({ ctx, profile }: { ctx: OurCompanyStageState
   const { profileTab, s1Requests, canAct, requestS1Analysis } = ctx;
   return (
     <>{profileTab === "industry" && (
-              <div className="text-[0.88rem]">
-                <h3 className="sizing-step-title text-[0.95rem]">S1 시장분석 연계</h3>
+              <div className="text-[length:var(--fs-body)]">
+                <h3 className="sizing-step-title text-[length:var(--fs-body)]">S1 시장분석 연계</h3>
                 <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
                   산업 노출 항목을 S1 시장분석 매트릭스와 연결합니다 — 완료된 시장분석이 있으면 앵커·CAGR·외부 전망 격차가 실측 연결됩니다.
                 </p>
@@ -172,7 +172,7 @@ export function ProfileSourcesTab({ ctx, profile }: { ctx: OurCompanyStageState;
   const { profileTab } = ctx;
   return (
     <>{profileTab === "sources" && (
-              <div className="text-[0.88rem]">
+              <div className="text-[length:var(--fs-body)]">
                 <ProfileProvidedSources ctx={ctx} memberId={ctx.openMember!} profile={profile} />
                 {(profile.researchSources ?? []).filter((s) => !s.provided).length > 0 ? (
                   <ul className="sizing-note-list mb-3">
@@ -185,7 +185,7 @@ export function ProfileSourcesTab({ ctx, profile }: { ctx: OurCompanyStageState;
                 )}
                 {profile.sectionConfidence && profile.sectionConfidence.length > 0 && (
                   <>
-                    <h3 className="sizing-step-title text-[0.95rem] mt-3">섹션별 데이터 신뢰도 등급 (A 확정 ~ D 추정 불가)</h3>
+                    <h3 className="sizing-step-title text-[length:var(--fs-body)] mt-3">섹션별 데이터 신뢰도 등급 (A 확정 ~ D 추정 불가)</h3>
                     <table className="data-table" aria-label="섹션별 신뢰도 등급">
                       <caption className="sr-only">섹션별 신뢰도 등급</caption>
                       <thead><tr><th scope="col">섹션</th><th scope="col">등급</th><th scope="col">비고</th></tr></thead>
@@ -208,7 +208,7 @@ export function ProfileSourcesTab({ ctx, profile }: { ctx: OurCompanyStageState;
                 {profile.verificationLedger && profile.verificationLedger.length > 0 && (
                   <details className="mt-3">
                     <summary className="cursor-pointer text-[length:var(--fs-body)] text-[color:var(--accent)]">
-                      🔍 검증 원장 ({profile.verificationLedger.length}건 — 확인/확인불가/판단필요)
+                      <span aria-hidden="true">🔍</span> 검증 원장 ({profile.verificationLedger.length}건 — 확인/확인불가/판단필요)
                     </summary>
                     <table className="data-table mt-2" aria-label="검증 원장">
                       <caption className="sr-only">주장별 검증 상태</caption>

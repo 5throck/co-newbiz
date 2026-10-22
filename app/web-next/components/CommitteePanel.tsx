@@ -250,7 +250,7 @@ export function CommitteePanel({
 
   return (
     <section aria-label="위원회 심의" className="market-section sizing-step">
-      <h3 className="sizing-step-title text-[0.95rem]">
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]">
         <span className="sizing-step-badge">⚖️</span> {committeeLabel} — 위원회 심의
       </h3>
       <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">

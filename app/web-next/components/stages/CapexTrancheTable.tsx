@@ -106,7 +106,7 @@ export function CapexTrancheTable({ projectId, tranches, canAct, onChanged, meUs
 
   return (
     <section className="market-section sizing-step" aria-label="설비투자 집행 단계(집행 단계)" data-testid="capex-tranches">
-      <h3 className="sizing-step-title text-[0.9rem]">설비투자 집행 단계 — 트랜치와 집행 조건 ({tranches.length}건)</h3>
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]">설비투자 집행 단계 — 트랜치와 집행 조건 ({tranches.length}건)</h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
         투자금을 한 번에 집행하지 않고 조건이 충족될 때마다 나눠 집행합니다. 금액은 입력한 통화 단위 그대로이며, 집행 완료로 기록된 트랜치는 수정하거나 폐기할 수 없습니다.
         기록과 집행 판단은 사람만 합니다.

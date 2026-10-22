@@ -70,7 +70,7 @@ export default function ProjectOverviewPage() {
       </header>
 
       <section aria-label="추진계획 요약" className="market-section">
-        <h2 className="text-[0.92rem] font-semibold mb-2">추진계획 요약 {latest ? `(v${latest.version})` : ""}</h2>
+        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">추진계획 요약 {latest ? `(v${latest.version})` : ""}</h2>
         {latest ? (
           <dl className="text-[length:var(--fs-body)] space-y-1">
             <div><dt className="inline font-semibold mr-1">목적:</dt><dd className="inline">{latest.purpose}</dd></div>
@@ -85,7 +85,7 @@ export default function ProjectOverviewPage() {
 
       {process && (
         <section aria-label="프로세스 스냅샷" className="market-section">
-          <h2 className="text-[0.92rem] font-semibold mb-2">프로세스 현황</h2>
+          <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">프로세스 현황</h2>
           <ol className="space-y-1 text-[length:var(--fs-body)]">
             {process.stages.map((s2) => (
               <li key={s2.id}>

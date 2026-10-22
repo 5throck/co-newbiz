@@ -169,8 +169,12 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
 
   return (
 <>
-      <StageTabs projectId={projectId} />
-      <StageFrame stageId="S12" heading="S12 사후 관리 — 포트폴리오 스코어카드 · 전환 결정">
+      {/* 리뷰 2026-10-22 (사용자 리포트): StageTabs는 레일 슬롯으로 — 머리 위치 일관성. */}
+      <StageFrame
+        stageId="S12"
+        heading="S12 사후 관리 — 포트폴리오 스코어카드 · 전환 결정"
+        railSlot={<StageTabs projectId={projectId} />}
+      >
         {/* Wave U-1 (design §3.5): home of the closure flow — preconditions are
             shown inside ClosureModal; the decision itself stays human-only. */}
         <PrimaryAction
@@ -180,7 +184,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
           disabledReason="프로젝트 종료는 analyst 권한이 필요합니다."
         />
         {canWriteProject(me?.role) && (
-          <p className="mb-3 text-[0.875rem] text-[color:var(--muted-fg)]">종료 선결조건은 다음 창에서 확인합니다. 종료는 사람이 기록합니다.</p>
+          <p className="mb-3 text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">종료 선결조건은 다음 창에서 확인합니다. 종료는 사람이 기록합니다.</p>
         )}
         {closing && (
           <ClosureModal
@@ -207,8 +211,8 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
 
         {/* ── 주기별 트렌드 ──────────────────────────────────────────── */}
         <section className="market-section sizing-step" aria-label="스코어카드 트렌드">
-          <h3 className="sizing-step-title text-[0.95rem]">
-            <span className="sizing-step-badge">📈</span> 스코어카드 트렌드 — 분기별 요약
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">
+            <span className="sizing-step-badge" aria-hidden="true">📈</span> 스코어카드 트렌드 — 분기별 요약
           </h3>
           {(view?.trend.length ?? 0) > 0 ? (
             <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table" aria-label="분기별 스코어카드 요약">
@@ -230,15 +234,15 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
             </table></div>
           ) : (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              아직 기록된 스코어카드 주기가 없습니다 — portfolio-venture-monitoring 절차의 분기 기록이 여기 표시됩니다.
+              아직 기록된 스코어카드 주기가 없습니다 — 아래 「적용되는 사후 관리 항목」의 「S12 안착 지표 기록」에서 기록하세요.
             </p>
           )}
         </section>
 
         {/* ── 최신 주기 롤업 ─────────────────────────────────────────── */}
         <section className="market-section sizing-step mt-3" aria-label="최신 주기 스코어카드">
-          <h3 className="sizing-step-title text-[0.95rem]">
-            <span className="sizing-step-badge">🗂</span> 최신 주기 롤업
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">
+            <span className="sizing-step-badge" aria-hidden="true">🗂</span> 최신 주기 롤업
             {rollup?.review_cycle && <span className="status-chip status-not-started ml-2">{rollup.review_cycle}</span>}
           </h3>
           {(rollup?.class_rollup.length ?? 0) > 0 && (
@@ -308,7 +312,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
         {/* ── LLM 모니터링 브리프 (결정 지원) — ADR-0118: 초안은 LLM, 전환 결정은 사람 ── */}
         {canAct && (
           <section className="market-section sizing-step mt-3" aria-label="AI 모니터링 브리프">
-            <h3 className="sizing-step-title text-[0.9rem]">🤖 AI 모니터링 브리프 (초안)</h3>
+            <h3 className="sizing-step-title text-[length:var(--fs-body)]">🤖 AI 모니터링 브리프 (초안)</h3>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               원칙 (경계 #2): 전환 결정은 사람(venture-portfolio-IC)이 기록합니다 — 스코어카드·시너지 인증·핵심인재·전환 이력에서 만든 <b>초안</b>입니다.
             </p>
@@ -360,7 +364,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
         {/* ── 전환 결정 장부 ─────────────────────────────────────────── */}
         <ReviewBuckets entityType="project" entityId={projectId} variant="expanded" gates={["transition"]} artifacts={stageArtifactTabs("S12")} />
         <section className="market-section sizing-step mt-3" aria-label="포트폴리오 전환 결정">
-          <h3 className="sizing-step-title text-[0.95rem]">
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">
             <span className="sizing-step-badge">⚖️</span> 포트폴리오 전환 결정 — venture-portfolio-IC 인적 결정 장부
           </h3>
           <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">

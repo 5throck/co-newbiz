@@ -35,7 +35,7 @@ function AgentRunsView() {
       <p className="objective">이 검토/안건에서 에이전트·AI가 실행한 활동과 제안을 추적합니다 — 제안과 사람 기록은 항상 구분됩니다.</p>
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}
       <section className="market-section" aria-label="실행 타임라인">
-        <h2 className="text-[0.9rem] mb-2">실행 타임라인</h2>
+        <h2 className="text-[length:var(--fs-body)] mb-2">실행 타임라인</h2>
         {data === null ? <PageState state="loading" /> : data.runs.length === 0 ? (
           <PageState state="empty" emptyText="실행된 에이전트 활동이 없습니다." emptyAction={<Link href="/deals" className="text-[color:var(--accent)] underline not-italic">파이프라인 시작 →</Link>} />
         ) : (
@@ -59,7 +59,7 @@ function AgentRunsView() {
         )}
       </section>
       <section className="market-section" aria-label="AI 신뢰도">
-        <h2 className="text-[0.9rem] mb-2">AI 추천 신뢰도 점수 <span className="note">— 제안 후 사람의 같은 의사결정과의 일치율 (표시 전용)</span></h2>
+        <h2 className="text-[length:var(--fs-body)] mb-2">AI 추천 신뢰도 점수 <span className="note">— 제안 후 사람의 같은 의사결정과의 일치율 (표시 전용)</span></h2>
         {data === null ? <PageState state="loading" /> : data.reliability.length === 0 ? (
           <PageState state="empty" emptyText="아직 사람 결정과 비교할 제안이 없습니다." />
         ) : (
@@ -79,7 +79,7 @@ function AgentRunsView() {
         <p className="note" style={{ marginBottom: 0 }}>일치율은 학습 신호일 뿐 진행 처리에 사용되지 않습니다 — 판단은 사람이 유지합니다.</p>
       </section>
       <section className="market-section" aria-label="제안 기록">
-        <h2 className="text-[0.9rem] mb-2">위원회 제안 기록</h2>
+        <h2 className="text-[length:var(--fs-body)] mb-2">위원회 제안 기록</h2>
         {data === null ? <PageState state="loading" /> : data.proposals.length === 0 ? (
           <PageState state="empty" emptyText="기록된 위원회 제안이 없습니다." />
         ) : (

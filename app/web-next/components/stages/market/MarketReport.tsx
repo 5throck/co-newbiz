@@ -161,7 +161,7 @@ export function VersionBar({ versions }: { versions: VersionInfo[] }) {
 export function StepSection({ n, id, title, children }: { n: number; id: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} aria-label={`단계 ${n}: ${title}`} className="market-section sizing-step">
-      <h3 className="sizing-step-title text-[0.95rem]">
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]">
         <span className="sizing-step-badge">{n}</span> {title}
       </h3>
       {children}

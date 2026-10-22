@@ -19,7 +19,7 @@ export function ProfileReport({ ctx, openMember }: { ctx: OurCompanyStageState; 
         return (
           <>
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <h2 className="text-[0.95rem] !mb-0">{profile.companyName} 프로파일</h2>
+              <h2 className="text-[length:var(--fs-body)] !mb-0">{profile.companyName} 프로파일</h2>
               {profile.dataSources?.dart && <span className="status-chip status-green">DART {profile.dataSources.dartYear ?? ""}</span>}
               {(profile.dataSources?.webResearchCount ?? 0) > 0 && <span className="status-chip status-in-progress">외부 리서치 {profile.dataSources!.webResearchCount}건</span>}
               {hasAnalystEvidence(profile) && <AnalystEvidenceChip />}

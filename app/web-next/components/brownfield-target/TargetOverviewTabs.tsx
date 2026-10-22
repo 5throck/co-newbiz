@@ -59,24 +59,24 @@ export function TargetOverviewTab({ ctx }: { ctx: TargetDetailViewState }) {
   const { profileTab, companyProfile, setProfileTab } = ctx;
   return (
     <>{profileTab === "overview" && companyProfile?.profile && (
-          <div className="card mt-3 text-[0.88rem]">
-            <h4 className="text-[0.9rem] mb-2">🏢 {companyProfile.profile.companyName} AI 프로파일</h4>
+          <div className="card mt-3 text-[length:var(--fs-body)]">
+            <h4 className="text-[length:var(--fs-body)] mb-2"><span aria-hidden="true">🏢</span> {companyProfile.profile.companyName} AI 프로파일</h4>
             {companyProfile.profile.ragCapRecommendation && (
               <div className="sizing-grade-card mb-3">
-                <h4 className="text-[0.9rem] mb-2">🚦 신뢰도 상한 권고</h4>
+                <h4 className="text-[length:var(--fs-body)] mb-2">🚦 신뢰도 상한 권고</h4>
                 <span className={`status-chip ${companyProfile.profile.ragCapRecommendation.grade === "green" ? "status-green" : companyProfile.profile.ragCapRecommendation.grade === "amber" ? "status-amber" : "status-red"}`}>
                   상한 {companyProfile.profile.ragCapRecommendation.grade.toUpperCase()}
                 </span>
-                <p className="mt-2 mb-0 text-[0.88rem]">{companyProfile.profile.ragCapRecommendation.rationale}</p>
+                <p className="mt-2 mb-0 text-[length:var(--fs-body)]">{companyProfile.profile.ragCapRecommendation.rationale}</p>
               </div>
             )}
-            <h3 className="sizing-step-title text-[0.9rem]">종합 평가</h3>
+            <h3 className="sizing-step-title text-[length:var(--fs-body)]">종합 평가</h3>
             <p className="mb-3">
               {companyProfile.profile.businessAssessment
                 ? renderWithCitations(companyProfile.profile.businessAssessment, companyProfile.profile.researchSources)
                 : "—"}
             </p>
-            <h3 className="sizing-step-title text-[0.9rem]">산업 노출</h3>
+            <h3 className="sizing-step-title text-[length:var(--fs-body)]">산업 노출</h3>
             {companyProfile.profile.industryExposure.length > 0 ? (
               <div className="flex flex-wrap gap-1">
                 {companyProfile.profile.industryExposure.map((x) => <span key={x} className="status-chip status-in-progress">{x}</span>)}
@@ -87,7 +87,7 @@ export function TargetOverviewTab({ ctx }: { ctx: TargetDetailViewState }) {
                 링크와 연결되고, 근거 출처 상위 3건을 이 자리에 노출한다. */}
             {companyProfile.profile.researchSources.length > 0 && (
               <>
-                <h3 className="sizing-step-title text-[0.9rem] mt-3">외부 리서치 근거 ({companyProfile.profile.researchSources.length}건)</h3>
+                <h3 className="sizing-step-title text-[length:var(--fs-body)] mt-3">외부 리서치 근거 ({companyProfile.profile.researchSources.length}건)</h3>
                 <ul className="sizing-note-list mb-0" style={{ fontSize: "0.88rem" }}>
                   {companyProfile.profile.researchSources.slice(0, 3).map((s) => (
                     <li key={s.url}>

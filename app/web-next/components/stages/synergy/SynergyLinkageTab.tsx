@@ -66,9 +66,9 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
   }
   return (
     <>{tab === "linkage" && (
-            <div className="text-[0.88rem]">
+            <div className="text-[length:var(--fs-body)]">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-                <h3 className="sizing-step-title text-[0.95rem] mb-0">S1·S2 연계 시너지 영역 (후보 탐색 → 본검증)</h3>
+                <h3 className="sizing-step-title text-[length:var(--fs-body)] mb-0">S1·S2 연계 시너지 영역 (후보 탐색 → 본검증)</h3>
                 {/* ADR-0182 — 재분석은 이 흐름의 시작(연계 탭)에서만 노출한다.
                     AI 재도출임을 라벨에 드러내고, 범위 문구는 아래 줄에 분리해
                     읽게 한다(2026-10-18 사용자 리포트). */}

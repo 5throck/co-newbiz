@@ -114,7 +114,7 @@ export function DataTab() {
           <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 검색어와 일치하는 시계열이 없습니다.</p>
         ) : (
           <div className="table-scroll mt-2 mb-6" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-          <table className="w-full border-collapse table-fixed-pct tmin-48 [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
+          <table className="data-table table-fixed-pct tmin-48">
             <ColGroup widths={SERIES_COL_PCT} />
             <caption className="sr-only">시계열 목록</caption>
             <thead>
@@ -178,7 +178,7 @@ export function DataTab() {
           ) : observations.length === 0 ? (
             <p className="text-[color:var(--muted-fg)] italic">데이터 없음 — 이 시계열에 관측치가 없습니다.</p>
           ) : (
-            <table className="w-full border-collapse mt-2 mb-6 [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
+            <table className="data-table">
               <caption className="sr-only">{selected} 관측치</caption>
               <thead>
                 <tr>

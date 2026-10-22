@@ -1,0 +1,294 @@
+# components.registry.yaml — co-newbiz standard component registry (design-lint §5.1)
+#
+# Describes the standard component vocabulary AS BUILT: the reusable classes in
+# app/web-next/app/styles.css and the shared primitives in app/web-next/components/
+# (ui.tsx, layout.tsx, StageFrame, GateDecisionPanel, ...). Doctrine sources:
+# docs/design-system/design-guide.md §6 (component standard), design-components.md
+# (catalog rules), docs/design-foundation.md §5 (token architecture).
+#
+# Token bindings are written in the token-source naming of
+# docs/design-tokens.template.css (the only file design-lint discovers as token
+# source in this repo: project root and docs/, /token/i). Where the app
+# instantiation in app/web-next/app/styles.css uses a different name for the same
+# semantic role, the alias is recorded in a per-entry "App instantiation" comment.
+# Naming drift between the workspace scaffold and styles.css is reported to the
+# design review board (2026-10-22 registry-authoring run).
+#
+# Known lint limitation (reported, not worked around silently): the scaffold
+# declares the --success/--warning/--danger fg/border members mid-line
+# ("--success-bg: X;  --success-fg: Y; ..."), and design-lint's line-oriented
+# token extractor only sees line-start names — so bindings reference the bg
+# member of each triplet; the fg/border roles are part of the same scaffold
+# contract (design-foundation.md §5 rule 4).
+#
+# New components enter only via the design-phase gate (design-foundation.md §2b
+# rule 4): a design doc declares the component here before first use.
+version: 1
+components:
+  # App shell: collapsible sidebar + topbar + content pane; desktop push-collapse
+  # vs mobile overlay drawer under data-sidebar-state (design-guide.md §5).
+  # CSS: .app-shell .topbar .app-sidebar .drawer-backdrop .sidebar-head
+  #      .topbar-icon-btn .skip-link
+  # TSX: components/AppShell.tsx
+  # App instantiation tokens: --bg --sidebar-bg --border-subtle --shadow-xl --ease-spring
+  - id: app-shell
+    tokens:
+      default: [--surface, --border, --hover-bg, --muted-fg, --shadow-lg]
+    layout_primitives: [flex, sticky, fixed]
+    status: active
+
+  # Card / glass surface: cards and panels (design-guide.md §6 "Card").
+  # CSS: .card .glass
+  # App instantiation tokens: --radius-3xl --radius-2xl --ease-spring --glass-bg --glass-inset
+  - id: card
+    tokens:
+      default: [--surface, --border, --shadow-lg]
+    layout_primitives: [flex, block, grid]
+    status: active
+
+  # Button system: .btn-premium (primary action, one per view), .btn-ghost
+  # (secondary), .btn-primary, .btn-danger (destructive = confirm dialog required).
+  # CSS: .btn-premium .btn-ghost .btn-primary .btn-danger
+  # TSX: Button (components/ui.tsx)
+  # App instantiation tokens: --accent --accent-fg --radius-xl --ease-spring
+  # Doctrine note: design-guide.md §6 calls the primary ".btn-premium"; that is
+  # the as-built class — .btn-primary is the variant emitted by the Button
+  # primitive for inline primary actions.
+  - id: button
+    tokens:
+      default: [--primary, --primary-fg, --surface, --border, --hover-bg, --radius-md, --shadow-md]
+    layout_primitives: [inline-flex]
+    status: active
+
+  # Primary action slot: the ONE filled action of a screen. StageFrame renders
+  # <PrimarySlot/> in the page header; a screen declares its action with
+  # <PrimaryAction/> from anywhere in its body (ui.tsx, "Wave U design §5").
+  # CSS: .primary-slot
+  # TSX: PrimaryAction / PrimarySlot (components/ui.tsx)
+  # App instantiation tokens: --accent --accent-fg
+  - id: primary-action
+    tokens:
+      default: [--primary, --primary-fg, --surface, --border, --radius-md]
+    layout_primitives: [inline-flex]
+    status: active
+
+  # Data table: border-b rows, centered header cells by default, numeric columns
+  # via .col-num, date columns via .col-date, wide tables in .table-scroll,
+  # per-row-action tables MUST carry .list-table with an sr-only actions header
+  # (design-components.md list-table standard).
+  # CSS: .data-table .table-scroll .list-table .col-num .col-date
+  #      .sizing-actions-cell .invest-action-cell .cell-clamp-3 .cell-nowrap
+  #      .cell-truncate .cell-wrap .table-fixed-pct
+  # App instantiation tokens: --fs-body --lh-table --muted-bg --table-min --accent
+  # A11y contract: caption.sr-only on every table; header/cell alignment match per column.
+  - id: data-table
+    tokens:
+      default: [--border, --muted-fg, --surface]
+    layout_primitives: [block, table]
+    status: active
+
+  # Status chip: icon + text + color, never color-only (design-guide.md P5/§3.2).
+  # Status chips (where things stand): .status-green .status-amber .status-red
+  # .status-not-started. Decision chips (who decided what, boundary #1):
+  # .status-approved .status-in-progress .status-rejected .status-unknown.
+  # CSS: .status-chip .status-green .status-amber .status-red .status-not-started
+  #      .status-approved .status-in-progress .status-rejected .status-unknown
+  # App instantiation tokens: --green-bg --green-fg --green-border --amber-bg
+  #      --amber-fg --amber-border --red-bg --red-fg --red-border --muted-bg
+  - id: status-chip
+    tokens:
+      default: [--muted-fg]
+      pass: [--success-bg]
+      hold: [--warning-bg]
+      fail: [--danger-bg]
+    layout_primitives: [inline-flex]
+    status: active
+
+  # Signal light: icon + stage id + status label (design-guide.md §6 "Signal
+  # light"); the S1–S7 progress encoding ● done / ◐ current / ○ pending / ✕
+  # terminated (glyphs registered in icon-vocabulary.yaml).
+  # CSS: .process-light .process-lights .pl-icon .pl-id .pl-status .pl-body
+  #      .pl-complete .pl-current .pl-terminated .stage-light .stage-lights
+  # App instantiation tokens: --fs-caption --muted-bg
+  - id: process-light
+    tokens:
+      default: [--border, --muted-fg, --radius-full]
+    layout_primitives: [inline-flex]
+    status: active
+
+  # Stage stepper: stage-guided navigation and progress (design-guide.md §5
+  # "Deal detail is stage-guided"). Locked/skipped/terminated states are
+  # enforced, not decorative (design-screens.md stage-order invariant).
+  # CSS: .stage-stepper .stage-stepper--status .stage-stepper-compact
+  #      .stage-step .stage-step-icon .stage-step-num .stage-step-id
+  #      .stage-step-complete .stage-step-current .stage-step-locked
+  #      .stage-step-skipped .stage-step-terminated .stage-step-mark
+  #      .stage-step-state .stage-gate-chip .stage-gate-marker
+  # App instantiation tokens: --radius-lg
+  - id: stage-stepper
+    tokens:
+      default: [--border, --surface, --muted-fg]
+    layout_primitives: [flex, sticky]
+    status: active
+
+  # Tabs: in-page section switching with aria-current and URL state
+  # (design-guide.md §6 "Tabs"). Shared primitives: TabNav, StageTabs, DataTab,
+  # Tabs (ui.tsx).
+  # CSS: .tab-nav .stage-tabs .stage-tabs-bar .stage-tabs-wrap .stage-tab
+  #      .stage-tab-active .stage-nav-tabs .stage-nav-tab
+  # App instantiation tokens: --fg
+  - id: tabs
+    tokens:
+      default: [--border, --primary, --muted-fg]
+    layout_primitives: [flex]
+    status: active
+
+  # Stage frame: skeleton of every stage screen — title, description, body
+  # slots, page header with <PrimarySlot/> (design-components.md catalog row 1).
+  # TSX: StageFrame.tsx; CSS: .stage-head .page-header-row .page-header-actions
+  # App instantiation tokens: --space-1..8 scale
+  - id: stage-frame
+    tokens:
+      default: [--surface, --border, --muted-fg]
+    layout_primitives: [block, flex]
+    status: active
+
+  # Modal: ESC/backdrop close, focus trap + focus restore (design-guide.md §6
+  # "Modal"). TSX: ConfirmDialog, ClosureModal, BaselineConfirmDialog,
+  # CapabilityJudgementDialog, useModalFocus.
+  # CSS: .modal-backdrop .modal-panel .modal-head
+  # App instantiation tokens: --shadow-xl --radius-xl
+  - id: modal
+    tokens:
+      default: [--surface, --border, --shadow-lg, --radius-md]
+    layout_primitives: [fixed, flex]
+    status: active
+
+  # Section toolbar: subheading-style divider marking pattern boundaries when
+  # patterns stack on one screen (design-screens.md stacking rule); carries an
+  # optional decorative glyph via the `icon` prop (values registered in
+  # icon-vocabulary.yaml, glyph-edit / glyph-document / glyph-scroll).
+  # CSS: .section-toolbar
+  # TSX: SectionToolbar (components/layout.tsx)
+  - id: section-toolbar
+    tokens:
+      default: [--border, --muted-fg]
+    layout_primitives: [flex]
+    status: active
+
+  # Form control: token background/border, focus ring --primary 3px, label
+  # mandatory (design-guide.md §6 "Form control").
+  # CSS: .form-input .sizing-new-input .pat-field .pat-form-grid
+  # App instantiation tokens: --primary focus ring
+  - id: form-input
+    tokens:
+      default: [--input-bg, --border, --placeholder-fg, --primary]
+    layout_primitives: [block]
+    status: active
+
+  # Toast: visible success/failure feedback for write paths (design-guide.md P4).
+  # CSS: .toast .toast-region
+  # TSX: ToastProvider / useToast (components/ui.tsx)
+  # App instantiation tokens: --green --fs-caption --radius-lg
+  - id: toast
+    tokens:
+      default: [--surface, --border, --shadow-md]
+    layout_primitives: [fixed]
+    status: active
+
+  # Skeleton: async loading placeholder (PageState loading variant).
+  # CSS: .skeleton
+  # App instantiation tokens: --bg
+  - id: skeleton
+    tokens:
+      default: [--surface, --hover-bg]
+    layout_primitives: [block]
+    status: active
+
+  # Sizing step: the step-section header unit used across analysis panels —
+  # numbered rail, title, badge glyph (badge glyphs registered in
+  # icon-vocabulary.yaml tier 2).
+  # CSS: .sizing-step .sizing-step-badge .sizing-step-badge-deep
+  #      .sizing-step-title .sizing-step-num .sizing-step-rail .sizing-step-link
+  # App instantiation tokens: --radius-xl --accent --accent-fg --fs-caption
+  - id: sizing-step
+    tokens:
+      default: [--surface, --border]
+    layout_primitives: [block, flex]
+    status: active
+
+  # Breadcrumb: location context in the topbar / deal pages.
+  # CSS: .breadcrumb .breadcrumb-sep
+  # TSX: Breadcrumb.tsx, DealBreadcrumb.tsx
+  # App instantiation tokens: --fs-caption --space-2
+  - id: breadcrumb
+    tokens:
+      default: [--muted-fg]
+    layout_primitives: [flex]
+    status: active
+
+  # Gate decision panel: the human Approve/Hold/Kill card with reason and
+  # decision maker (design-components.md catalog; boundary #2 — AI proposals
+  # must never render like a human decision).
+  # TSX: GateDecisionPanel.tsx; CSS: .gate-recorded .gate-status-row
+  - id: gate-decision-panel
+    tokens:
+      default: [--surface, --border, --primary, --primary-fg, --muted-fg]
+      pass: [--success-bg]
+      hold: [--warning-bg]
+      fail: [--danger-bg]
+    layout_primitives: [block, flex, grid]
+    status: active
+
+  # Committee panel: member seating, score sheets, minutes (design-components.md
+  # catalog; S4/S11 committee review screens).
+  # TSX: CommitteePanel.tsx
+  - id: committee-panel
+    tokens:
+      default: [--surface, --border, --muted-fg]
+    layout_primitives: [grid, flex]
+    status: active
+
+  # List back button: the single list-return control, identical on every screen
+  # entered from a list (design-components.md catalog; PR #219 consolidation).
+  # TSX: ListBackButton.tsx; CSS: .back-link .list-back
+  # App instantiation tokens: --accent --radius-full --fs-caption
+  - id: list-back-button
+    tokens:
+      default: [--surface, --border, --muted-fg]
+    layout_primitives: [inline-flex]
+    status: active
+
+  # Fact grid: label/value fact pairs for route decision and overview screens.
+  # TSX: stages/route-decision/FactGrid.tsx
+  # CSS: .route-fact-grid .route-fact-card .route-fact-label .route-fact-value
+  #      .inbox-facts
+  # App instantiation tokens: --fs-caption
+  - id: fact-grid
+    tokens:
+      default: [--surface, --border, --muted-fg]
+    layout_primitives: [grid]
+    status: active
+
+  # Row menu: per-row overflow actions inside list tables; danger items use the
+  # danger fg role (scaffold --danger-fg, app --red-fg) and a confirm dialog
+  # (design-guide.md P4).
+  # CSS: .row-menu .row-menu-trigger .row-menu-item .row-menu-item-danger
+  #      .row-menu-sep .row-menu-wrap
+  # TSX: RowMenu / RowActions (components/crud.tsx)
+  # App instantiation tokens: --red-fg --space-1
+  - id: row-menu
+    tokens:
+      default: [--surface, --border, --hover-bg]
+    layout_primitives: [absolute]
+    status: active
+
+  # Screen-reader-only utility: table captions (caption.sr-only), visually
+  # hidden actions-column header in list tables, skip link target support.
+  # Structural vocabulary, binds no visual tokens.
+  # CSS: .sr-only .skip-link
+  - id: sr-only
+    tokens:
+      default: []
+    layout_primitives: [block]
+    status: active

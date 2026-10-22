@@ -108,7 +108,7 @@ counterpart: design-guide.md
 | 컴포넌트 | 사양 |
 |---|---|
 | 카드 | `.card` / `.glass` — surface + border + radius-3xl, 호버 시 들림 ≤4px |
-| 버튼 | `.btn-premium`(기본 액션, 화면당 하나), `.btn-ghost`(보조), 파괴적 액션은 확인 다이얼로그 필수 |
+| 버튼 | `.btn-primary`(기본 액션, 화면당 하나 — `PrimaryAction`이 렌더하는 클래스; `.btn-premium`은 폐기 예정 별칭, 2026-10-22 리뷰 — 남은 호출처를 이관하고 새 코드에 쓰지 않음), `.btn-ghost`(보조), 파괴적 액션은 확인 다이얼로그 필수 |
 | 테이블 | `.data-table` — border-b 행; **헤더 셀은 기본적으로 중앙 정렬**(`.data-table th`), 본문 셀은 왼쪽 정렬, 숫자 컬럼은 `.col-num`으로 오른쪽 정렬(헤더+셀); 넓은 테이블은 `min-width`와 함께 `.table-scroll`로 감쌈; 수치에는 `tabular-nums`, `caption.sr-only`. 헤더 정렬 예외는 컬럼별 오버라이드로만 허용 — 기본값을 다시 왼쪽 정렬로 바꾸지 않음 |
 | 배지 / 칩 | `.status-chip status-*` — 아이콘 + 텍스트, 절대 색상만으로 판단 금지 |
 | 폼 컨트롤 | 토큰 배경/테두리, 포커스 링 `--primary` 3px, 라벨 필수 |

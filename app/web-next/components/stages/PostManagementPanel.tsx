@@ -89,7 +89,7 @@ export function PostManagementPanel({ projectId }: { projectId: string }) {
 
   return (
     <section className="market-section sizing-step mt-3" aria-label="적용되는 사후 관리 항목" data-testid="pm-panel">
-      <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">🧭</span> 적용되는 사후 관리 항목 (ADR-0161)</h3>
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]"><span className="sizing-step-badge" aria-hidden="true">🧭</span> 적용되는 사후 관리 항목 (ADR-0161)</h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
         S12에는 게이트가 없어 아래 항목은 모두 권장이며 어떤 것도 단계를 막지 않습니다. 이 화면은 읽기 전용이고, 판단과 전환 결정은 사람이 기록합니다.
       </p>
@@ -199,7 +199,8 @@ export function PostManagementPanel({ projectId }: { projectId: string }) {
                           <td className="col-num tabular-nums">{r.baseline ?? "—"}</td>
                           <td className="col-num tabular-nums">{r.actual ?? "—"}</td>
                           <td className="col-num tabular-nums">{r.variance != null ? `${r.variance > 0 ? "+" : ""}${r.variance}` : "—"}</td>
-                          <td>{r.status === "on_plan" ? <span className="status-chip status-green">계획대로</span> : r.status === "behind" ? <span className="status-chip status-amber">뒤처짐</span> : r.status === "ahead" ? <span className="status-chip status-green">앞섬</span> : <span className="status-chip status-not-started">근거 부족</span>}</td>
+                          {/* P5 신호등 — 색 + 글리프 + 텍스트 3중 부호화 (design-guide.md P5) */}
+                          <td>{r.status === "on_plan" ? <span className="status-chip status-green"><span aria-hidden="true">●</span> 계획대로</span> : r.status === "behind" ? <span className="status-chip status-amber"><span aria-hidden="true">◐</span> 뒤처짐</span> : r.status === "ahead" ? <span className="status-chip status-green"><span aria-hidden="true">●</span> 앞섬</span> : <span className="status-chip status-not-started"><span aria-hidden="true">○</span> 근거 부족</span>}</td>
                         </tr>
                       ))}</tbody>
                     </table>

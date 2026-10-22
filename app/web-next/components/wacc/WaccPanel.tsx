@@ -584,7 +584,8 @@ export function WaccPanel({ projectId }: { projectId: string }) {
             </h3>
             <DerivationTable derivation={view.derivation} />
             <div className="overflow-x-auto mt-3">
-              <table className="w-full text-[length:var(--fs-body)]">
+              <table className="data-table" aria-label="저장된 WACC 컴포넌트">
+                <caption className="sr-only">저장된 WACC 컴포넌트 — 가정 키·값·kind·출처·기준일</caption>
                 <thead>
                   <tr className="text-left text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] border-b border-[color:var(--border-bright)]">
                     <th className="py-1.5 px-1.5">가정 키</th>
@@ -625,10 +626,10 @@ export function WaccPanel({ projectId }: { projectId: string }) {
           {/* 모드 탭 */}
           <div className="flex gap-1.5 mt-6" role="tablist" aria-label="입력 모드">
             <button role="tab" aria-selected={mode === "direct"} type="button"
-              className={`rounded-t-lg border border-b-0 px-4 py-2 text-[0.88rem] font-semibold ${mode === "direct" ? "bg-[color:var(--surface)] text-[color:var(--accent)]" : "bg-[color:var(--muted-bg)] text-[color:var(--muted-fg)]"}`}
+              className={`rounded-t-lg border border-b-0 px-4 py-2 text-[length:var(--fs-body)] font-semibold ${mode === "direct" ? "bg-[color:var(--surface)] text-[color:var(--accent)]" : "bg-[color:var(--muted-bg)] text-[color:var(--muted-fg)]"}`}
               onClick={() => setMode("direct")}>직접 입력</button>
             <button role="tab" aria-selected={mode === "capm"} type="button"
-              className={`rounded-t-lg border border-b-0 px-4 py-2 text-[0.88rem] font-semibold ${mode === "capm" ? "bg-[color:var(--surface)] text-[color:var(--accent)]" : "bg-[color:var(--muted-bg)] text-[color:var(--muted-fg)]"}`}
+              className={`rounded-t-lg border border-b-0 px-4 py-2 text-[length:var(--fs-body)] font-semibold ${mode === "capm" ? "bg-[color:var(--surface)] text-[color:var(--accent)]" : "bg-[color:var(--muted-bg)] text-[color:var(--muted-fg)]"}`}
               onClick={() => setMode("capm")}>CAPM 분해</button>
           </div>
 
@@ -636,6 +637,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
             <section className="market-section sizing-step mt-3" aria-label="WACC 참조값">
               <h3 className="sizing-step-title">WACC 참조값 <span className="status-chip status-info">{sugg.subject?.name_ko ?? "대상 회사"} 기준 · 제안 — 확정은 사람</span></h3>
               <table className="data-table">
+                <caption className="sr-only">WACC 참조값 — 파라미터·참조값·출처·기준일</caption>
                 <thead><tr><th scope="col">파라미터</th><th scope="col" className="num">참조값</th><th scope="col">출처 · 기준일</th><th scope="col"></th></tr></thead>
                 <tbody>
                   {sugg.suggestions.map((x) => (
@@ -809,7 +811,8 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                 <>
                   <h3 className="sizing-step-title mt-6">기록될 컴포넌트·출처 <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">— assumption registry에 <span className="font-mono">wacc.*</span> 키로 함께 저장됩니다</span></h3>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-[length:var(--fs-body)]">
+                    <table className="data-table" aria-label="기록될 WACC 컴포넌트">
+                      <caption className="sr-only">기록될 WACC 컴포넌트·출처 — 가정 키·값·kind</caption>
                       <thead>
                         <tr className="text-left text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] border-b border-[color:var(--border-bright)]">
                           <th className="py-1.5 px-1.5">가정 키</th>

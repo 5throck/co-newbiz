@@ -3,13 +3,16 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "../../lib/api.ts";
-import { dealStageHref } from "../../lib/deal-links.ts";
 import { useConfirm } from "../../components/crud.tsx";
 import { ClosureModal } from "../../components/ClosureModal.tsx";
 import { ColGroup } from "../../components/ui.tsx";
 
-// 프로젝트 목록 7열 — 번호·트랙·생성일은 좁게, 프로젝트명·원본 기회에 여유.
-const PROJECTS_COL_PCT = [13, 22, 10, 12, 21, 11, 11] as const;
+// 프로젝트 목록 6열 — 사업 기회 열은 제거(2026-10-22 사용자 리포트: 프로젝트명 링크로
+// 충분). 생성일은 날짜 한 줄 최소폭(7%, nowrap), 바로가기는 4개 단계 버튼 + 리드 전용
+// 종료·삭제가 모두 한 줄에 나란히 놓이도록 가장 넓게 배분한다. 라벨은 스테이지명 기반
+// (포트폴리오는 URL 슬러그이며 절차명 portfolio-venture-monitoring에서 흘러든 것 —
+// 공식명은 사후 관리. 2026-10-22 명칭 확인).
+const PROJECTS_COL_PCT = [11, 20, 8, 10, 7, 44] as const;
 
 // 프로젝트 (/projects) — S8~S12(사업성 분석·DD·투심·포트폴리오)로 이어지는
 // 프로젝트 키 화면군의 진입점. 승격된 프로젝트는 이전까지 /opportunities의
@@ -72,8 +75,8 @@ export function ProjectsView() {
   return (
     <main>
       <h1>프로젝트</h1>
-      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
-        추진된 프로젝트의 사업성 분석(S8)·실사(S9)·투심(S11)·포트폴리오(S12) 화면으로 이동합니다.
+      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
+        추진된 프로젝트의 사업성 분석(S8)·실사(S9)·투자심사(S11)·사후 관리(S12) 화면으로 이동합니다.
       </p>
       {error && (
         <p role="alert" className="text-[color:var(--red-fg)]">
@@ -95,7 +98,6 @@ export function ProjectsView() {
                 <th className="text-left">프로젝트명</th>
                 <th className="text-left">트랙</th>
                 <th className="text-left">데이터 상태</th>
-                <th className="text-left">원본 기회</th>
                 <th className="col-num">생성일</th>
                 <th className="text-left">바로가기</th>
               </tr>
@@ -125,28 +127,26 @@ export function ProjectsView() {
                       <span className="status-chip status-green" title="프로젝트 목록 기준 stale 신호 없음">✓ 최신</span>
                     )}
                   </td>
+                  <td className="col-num whitespace-nowrap px-1">{fmtDate(p.created_at)}</td>
                   <td>
-                    {p.source_opportunity_id ? (
-                      <Link href={dealStageHref(p.source_opportunity_id, "S4")}>원본 기회 보기</Link>
-                    ) : (
-                      <span className="text-[color:var(--muted-fg)]">—</span>
-                    )}
-                  </td>
-                  <td className="col-num">{fmtDate(p.created_at)}</td>
-                  <td>
-                    <div className="flex gap-2 flex-wrap">
-                      <Link className="btn-ghost btn-sm" href={`/projects/${p.id}/business-case`}>
-                        사업성(S8)
-                      </Link>
-                      <Link className="btn-ghost btn-sm" href={`/projects/${p.id}/dd`}>
-                        실사(S9)
-                      </Link>
-                      <Link className="btn-ghost btn-sm" href={`/projects/${p.id}/ic-review`}>
-                        투심(S11)
-                      </Link>
-                      <Link className="btn-ghost btn-sm" href={`/projects/${p.id}/portfolio`}>
-                        포트폴리오(S12)
-                      </Link>
+                    {/* 바로가기 = 버튼 어휘(2026-10-22 사용자 2차 리포트 — 링크보다 버튼이
+                        바람직). 4개 단계 바로가기는 whitespace-nowrap으로 한 줄을 보장하고,
+                        종료·삭제도 같은 줄에 나란히 둔다(3차 리포트). */}
+                    <div className="flex flex-nowrap gap-1.5 items-start">
+                      <span className="flex gap-1.5 whitespace-nowrap">
+                        <Link className="btn-ghost btn-sm" href={`/projects/${p.id}/business-case`}>
+                          사업성(S8)
+                        </Link>
+                        <Link className="btn-ghost btn-sm" href={`/projects/${p.id}/dd`}>
+                          실사(S9)
+                        </Link>
+                        <Link className="btn-ghost btn-sm" href={`/projects/${p.id}/ic-review`}>
+                          투자심사(S11)
+                        </Link>
+                        <Link className="btn-ghost btn-sm" href={`/projects/${p.id}/portfolio`}>
+                          사후 관리(S12)
+                        </Link>
+                      </span>
                       {p.is_lead && (
                         <>
                           <button

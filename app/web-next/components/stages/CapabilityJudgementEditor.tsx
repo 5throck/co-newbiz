@@ -205,7 +205,7 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
             {aiRowCount > 0 && (
               <span className="flex items-center gap-1" data-testid="ai-unsaved">
                 <span className="status-chip status-not-started" role="status"><span aria-hidden="true">✦</span> 저장하지 않은 AI 초안 {aiRowCount}건</span>
-                <button type="button" className="btn-ghost btn-sm" disabled={busy || aiBusy} onClick={discardAi}>AI 초안 버리기</button>
+                <button type="button" className="btn-ghost btn-sm" disabled={busy || aiBusy} onClick={discardAi}>초안 버리기 (AI)</button>
               </span>
             )}
             {aiWiring && (

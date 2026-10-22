@@ -85,7 +85,7 @@ export default function CompanyFinancialsPage() {
           {DART_CORP_CODE_LABEL} <span lang="en">{view.company.dart_corp_code}</span>
         </p>
       )}
-      <p className="text-[color:var(--muted-fg)] text-[0.9rem] mb-3">인수 대상 · 분석 기준 회사의 과거 실적과 재무 건전성을 한 화면에서 확인합니다. 프로젝트 재무분석 탭은 이 화면의 요약에 연결됩니다.</p>
+      <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-body)] mb-3">인수 대상 · 분석 기준 회사의 과거 실적과 재무 건전성을 한 화면에서 확인합니다. 프로젝트 재무분석 탭은 이 화면의 요약에 연결됩니다.</p>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {error}</p>}
       {message && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--success)]">✓ {message}</p>}
@@ -119,11 +119,12 @@ export default function CompanyFinancialsPage() {
             {accounts.length === 0 ? (
               <div>
                 <p className="text-[color:var(--muted-fg)]">{canAct ? "재무 fact가 없습니다 — 아래 동기화 버튼으로 DART에서 5개 회계연도 실적을 가져오세요." : "아직 수집된 재무 데이터가 없습니다."}</p>
-                {canAct && <button className="bg-[color:var(--accent)] text-[color:var(--accent-fg)] rounded-lg px-4 py-2 text-[0.88rem] font-bold cursor-pointer mt-2" type="button" onClick={runSync} disabled={syncing}>{syncing ? "동기화 중..." : "DART에서 최신 실적 동기화"}</button>}
+                {canAct && <button className="bg-[color:var(--accent)] text-[color:var(--accent-fg)] rounded-lg px-4 py-2 text-[length:var(--fs-body)] font-bold cursor-pointer mt-2" type="button" onClick={runSync} disabled={syncing}>{syncing ? "동기화 중..." : "DART에서 최신 실적 동기화"}</button>}
                 {syncError && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-2">✕ {syncError}</p>}
               </div>
             ) : (
               <table className="data-table">
+                <caption className="sr-only">재무실적 — 계정 × 회계연도 (단위 억원)</caption>
                 <thead><tr><th>계정</th>{years.map((y) => <th key={y} className="num">{y}</th>)}</tr></thead>
                 <tbody>
                   {accounts.map((a) => (
@@ -181,7 +182,7 @@ export default function CompanyFinancialsPage() {
           {view.financials.length > 0 && (
             <section className="market-section sizing-step mt-3">
               <div className="flex gap-2 items-center flex-wrap">
-                {canAct && <button className="bg-[color:var(--accent)] text-[color:var(--accent-fg)] rounded-lg px-4 py-2 text-[0.88rem] font-bold cursor-pointer" type="button" onClick={runSync} disabled={syncing}>{syncing ? "동기화 중..." : "DART에서 최신 실적 동기화"}</button>}
+                {canAct && <button className="bg-[color:var(--accent)] text-[color:var(--accent-fg)] rounded-lg px-4 py-2 text-[length:var(--fs-body)] font-bold cursor-pointer" type="button" onClick={runSync} disabled={syncing}>{syncing ? "동기화 중..." : "DART에서 최신 실적 동기화"}</button>}
                 <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">마지막 동기화 {view.latest_sync_at ? new Date(view.latest_sync_at).toLocaleString("ko-KR") : "—"}</span>
                 {syncError && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-2">✕ {syncError}</p>}
               </div>

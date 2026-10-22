@@ -20,7 +20,7 @@ export function SizingReport(props0: {
   const ctx = { ...h0 };
   const { TABS, tab, setTab } = ctx;
   return (
-    <div className="sizing-report text-[0.88rem]">
+    <div className="sizing-report text-[length:var(--fs-body)]">
       <div className="library-tabs" role="tablist" aria-label="리포트 섹션">
         {TABS.map(([key, label]) => (
           <button key={key} type="button" role="tab" aria-selected={tab === key} className={`library-tab ${tab === key ? "library-tab-active" : ""}`} onClick={() => setTab(key)}>

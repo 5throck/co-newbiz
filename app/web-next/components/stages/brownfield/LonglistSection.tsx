@@ -6,9 +6,10 @@ import { Fragment } from "react";
 import { SECTION_IDS, STATUS_LABEL } from "./constants.ts";
 import { ColGroup } from "../../ui.tsx";
 
-// 후보 전체 목록 — 후보명·DART·재무기술 칩 2개·잠정 순위·상태·제외 사유 6열.
-// 상태 열에는 칩+버튼이 들어가고 후보명·제외 사유는 긴 텍스트다.
-const LONG_LIST_COL_PCT = [22, 12, 18, 14, 18, 16] as const;
+// 후보 전체 목록 — 후보명·DART·재무기술 칩 2개·잠정 순위·상태·제외 사유·작업 7열.
+// 작업 열(승격·순위 조정)은 list-table 표준에 따라 마지막 sizing-actions-cell로
+// 분리되고 상태 열에는 칩만 남는다 (2026-10 행 인터랙션 리뷰 — IndustryTable 참조 구현).
+const LONG_LIST_COL_PCT = [21, 10, 17, 13, 13, 16, 10] as const;
 import type { BrownfieldStageState } from "./useBrownfieldTargets.ts";
 
 export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
@@ -34,19 +35,22 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
           {targets.length === 0 ? (
             <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)] mb-0">후보 전체 목록 후보가 없습니다 — 위에서 후보를 등록하세요.</p>
           ) : displayedTargets.length === 0 ? (
-            <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)] mb-0">해당 상태의 후보가 없습니다.</p>
+            // 품평회 2026-10-22 (ux-researcher): 막다른 글 대신 원인과 다음 행동을 안내한다 —
+            // 상태 필터 조절 또는 후보 등록. 필터 리셋 콘트롤은 후속 티켓.
+            <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)] mb-0">해당 상태의 후보가 없습니다 — 상태 필터를 다른 값으로 바꾸거나, 위 폼에서 후보를 새로 등록하세요.</p>
           ) : (
             <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table table-fixed-pct tmin-56" aria-label="후보 전체 목록">
+            <table className="data-table list-table table-fixed-pct tmin-56" aria-label="후보 전체 목록">
               <caption className="sr-only">후보 전체 목록 후보 — 평가 점수·잠정 순위·상태</caption>
               <ColGroup widths={LONG_LIST_COL_PCT} />
               <thead>
                 <tr>
                   <th scope="col">후보</th><th scope="col">DART</th>
                   <th scope="col" title="재무·기술 평가 100점 가중 점수 — 충족 1점·부분충족 0.5점·미충족 0점을 가중평균, 예외(해당없음·예외)는 제외">재무·기술 평가</th>
-                  <th scope="col" title="위 재무·기술 평가 종합 점수(financial·technical 평균) — 후보 전체 목록 잠정 순위(최종 후보 목록 rank와 별개)">잠정 순위</th>
+                  <th scope="col" className="col-num" title="위 재무·기술 평가 종합 점수(financial·technical 평균) — 후보 전체 목록 잠정 순위(최종 후보 목록 rank와 별개)">잠정 순위</th>
                   <th scope="col">상태</th>
                   <th scope="col">제외 사유</th>
+                  <th scope="col"><span className="sr-only">작업</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -80,7 +84,7 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                             </span>
                           </span>
                         </td>
-                        <td className="tabular-nums" title="재무·기술 평가 종합 점수(financial·technical 평균) 기준 잠정 순위 — 제외를 뺀 전 후보 대상으로 유지(승격해도 사라지지 않음). 최종 후보 목록 rank(사람이 조정)와 별개">
+                        <td className="col-num tabular-nums" title="재무·기술 평가 종합 점수(financial·technical 평균) 기준 잠정 순위 — 제외를 뺀 전 후보 대상으로 유지(승격해도 사라지지 않음). 최종 후보 목록 rank(사람이 조정)와 별개">
                           {t.status === "excluded" ? (
                             <span className="text-[color:var(--muted-fg)]">—</span>
                           ) : es?.combined != null ? (
@@ -96,19 +100,8 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                           )}
                         </td>
                         <td>
-                          <span className="flex items-center gap-1">
-                            <span className={`status-chip ${t.status === "shortlisted" ? "status-green" : t.status === "excluded" ? "status-red" : "status-not-started"}`}>
-                              {STATUS_LABEL[t.status]}{t.status === "shortlisted" && t.rank ? ` #${t.rank}` : ""}
-                            </span>
-                            {canAct && canPromote && (
-                              <button type="button" className="btn-ghost btn-sm" disabled={busy} title="재무·기술 평가 완료 — 최종 후보 목록으로 승격" onClick={() => shortlist(t.id)}>승격</button>
-                            )}
-                            {canAct && t.status === "shortlisted" && (
-                              <span role="group" aria-label="최종 후보 목록 순위 조정" className="flex items-center gap-0.5">
-                                <button type="button" className="btn-ghost btn-sm" disabled={busy || orderIdx <= 0} aria-label={`${t.company_name} 순위 올리기`} onClick={() => rerank(t.id, "up")}>↑</button>
-                                <button type="button" className="btn-ghost btn-sm" disabled={busy || orderIdx < 0 || orderIdx >= shortlistOrder.length - 1} aria-label={`${t.company_name} 순위 내리기`} onClick={() => rerank(t.id, "down")}>↓</button>
-                              </span>
-                            )}
+                          <span className={`status-chip ${t.status === "shortlisted" ? "status-green" : t.status === "excluded" ? "status-red" : "status-not-started"}`}>
+                            {STATUS_LABEL[t.status]}{t.status === "shortlisted" && t.rank ? ` #${t.rank}` : ""}
                           </span>
                         </td>
                         <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
@@ -116,6 +109,17 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                             <span className="inline-block max-w-[18rem] truncate align-bottom" title={t.exclusion_reason}>{t.exclusion_reason}</span>
                           ) : "—"}
                         </td>
+                        <td className="sizing-actions-cell"><span className="actions-row">
+                          {canAct && canPromote && (
+                            <button type="button" className="btn-ghost btn-sm" disabled={busy} title="재무·기술 평가 완료 — 최종 후보 목록으로 승격" aria-label={`${t.company_name} 최종 후보 목록 승격`} onClick={() => shortlist(t.id)}>승격</button>
+                          )}
+                          {canAct && t.status === "shortlisted" && (
+                            <span role="group" aria-label="최종 후보 목록 순위 조정" className="flex items-center gap-0.5">
+                              <button type="button" className="btn-ghost btn-sm" disabled={busy || orderIdx <= 0} aria-label={`${t.company_name} 순위 올리기`} onClick={() => rerank(t.id, "up")}>↑</button>
+                              <button type="button" className="btn-ghost btn-sm" disabled={busy || orderIdx < 0 || orderIdx >= shortlistOrder.length - 1} aria-label={`${t.company_name} 순위 내리기`} onClick={() => rerank(t.id, "down")}>↓</button>
+                            </span>
+                          )}
+                        </span></td>
                       </tr>
                     </Fragment>
                   );

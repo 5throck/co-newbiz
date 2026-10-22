@@ -23,7 +23,7 @@ export function TargetAiProfileTab({ ctx, t }: { ctx: TargetDetailViewState; t: 
                 {/* 헤더 — 회사명·배지만 표시. 분석 실행/재분석 버튼은 탭 목록과
                     같은 줄 오른쪽으로 이동했다(사용자 요청, 2026-09-15). */}
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <h2 className="text-[0.95rem] !mb-0">🏢 {companyProfile.profile?.companyName ?? t.company_name} 강·약점 SWOT</h2>
+                  <h2 className="text-[length:var(--fs-body)] !mb-0"><span aria-hidden="true">🏢</span> {companyProfile.profile?.companyName ?? t.company_name} 강·약점 SWOT</h2>
                   {companyProfile.profile?.dataSources?.dart && <span className="status-chip status-green">DART {companyProfile.profile.dataSources.dartYear ?? ""}</span>}
                   {(companyProfile.profile?.dataSources?.webResearchCount ?? 0) > 0 && (
                     <span className="status-chip status-in-progress">외부 리서치 {companyProfile.profile!.dataSources.webResearchCount}건</span>
@@ -38,7 +38,7 @@ export function TargetAiProfileTab({ ctx, t }: { ctx: TargetDetailViewState; t: 
                 ) : companyProfile.status === "not_started" || !companyProfile.profile ? (
                   <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">아직 분석된 프로파일이 없습니다 — "AI 분석 실행"으로 강점·약점·산업 노출·경쟁 포지셔닝을 생성하세요.</p>
                 ) : (
-                  <div className="text-[0.88rem]">
+                  <div className="text-[length:var(--fs-body)]">
                     {companyProfile.profile.swot && (
                       <p className="sizing-note-list mb-2 text-[length:var(--fs-caption)] text-[color:var(--amber-fg)]" role="note">
                         ⚠ 기회·위협은 AI 추정 — 분석가 확정 전까지 인용 시 검증 필요 표기를 유지하세요.
@@ -66,7 +66,7 @@ export function TargetAiProfileTab({ ctx, t }: { ctx: TargetDetailViewState; t: 
                         </>
                       )}
                     </div>
-                    <p className="mt-3 mb-0 text-[0.88rem]">
+                    <p className="mt-3 mb-0 text-[length:var(--fs-body)]">
                       <strong>종합 평가:</strong>{" "}
                       {companyProfile.profile.businessAssessment
                         ? renderWithCitations(companyProfile.profile.businessAssessment, companyProfile.profile?.researchSources ?? [])
@@ -75,7 +75,7 @@ export function TargetAiProfileTab({ ctx, t }: { ctx: TargetDetailViewState; t: 
 
                     {companyProfile.profile.competitive && !companyProfile.profile.competitive.degraded && (
                       <>
-                        <h3 className="sizing-step-title text-[0.95rem] mt-3">경쟁 포지셔닝</h3>
+                        <h3 className="sizing-step-title text-[length:var(--fs-body)] mt-3">경쟁 포지셔닝</h3>
                         <p className="mb-2">{renderWithCitations(companyProfile.profile.competitive.positioning || "—", companyProfile.profile?.researchSources ?? [])}</p>
                         {/* ADR-0142 — 확정 경쟁사 레지스트리가 1순위. 없으면 payload
                             제안을 "미확정" 표기와 함께 보여준다(제안≠확정). */}

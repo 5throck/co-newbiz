@@ -170,12 +170,20 @@ export function ShortlistSection({ ctx }: { ctx: BrownfieldStageState }) {
                               {canAct && <button
                                 type="button"
                                 className="btn-ghost btn-sm"
-                                disabled={precheckBusy === t.id || recoBusy || dirtyCount === 0}
-                                title="화면에서 고른 판정을 저장합니다 — 수집 근거도 함께 저장되어 후보 상세 '사전 검토 근거' 탭에서 참고할 수 있습니다"
-                                onClick={() => savePrecheck(t.id)}
+                                disabled={precheckBusy === t.id || recoBusy}
+                                aria-disabled={dirtyCount === 0 || undefined}
+                                title={dirtyCount === 0
+                                  ? "변경된 판정이 없습니다 — 판정을 바꾼 뒤 저장하세요"
+                                  : "화면에서 고른 판정을 저장합니다 — 수집 근거도 함께 저장되어 후보 상세 '사전 검토 근거' 탭에서 참고할 수 있습니다"}
+                                onClick={() => { if (dirtyCount === 0) return; savePrecheck(t.id); }}
                               >
                                 판정 저장{dirtyCount > 0 ? ` (${dirtyCount}건)` : ""}
                               </button>}
+                              {canAct && dirtyCount === 0 && (
+                                // disabled 대신 aria-disabled — 버튼이 포커스 가능하게
+                                // 남아 무엇이 빠졌는지 설명에 키보드로 도달할 수 있다.
+                                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">변경된 판정이 없습니다</span>
+                              )}
                               {note && (
                                 <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] max-w-[10rem] truncate" title={note}>{note}</span>
                               )}

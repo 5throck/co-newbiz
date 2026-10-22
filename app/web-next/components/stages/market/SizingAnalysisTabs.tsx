@@ -11,7 +11,7 @@ export function SizingPipelineTab({ ctx }: { ctx: SizingReportState }) {
   return (
     <>{tab === "pipeline" && (
         <section aria-label="수요 파이프라인" className="market-section sizing-step sizing-step-deep">
-          <h3 className="sizing-step-title text-[0.95rem]">
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">
             <span className="sizing-step-badge sizing-step-badge-deep">4-B</span> 수요 파이프라인 — 프로젝트별 신뢰도 티어
           </h3>
           <p className="mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
@@ -65,7 +65,7 @@ export function SizingRegulationTab({ ctx }: { ctx: SizingReportState }) {
   return (
     <>{tab === "regulation" && (
         <section aria-label="규제 환경" className="market-section sizing-step sizing-step-deep">
-          <h3 className="sizing-step-title text-[0.95rem]">
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">
             <span className="sizing-step-badge sizing-step-badge-deep">5-B</span> 규제 환경 비교 — 관할권×항목
           </h3>
           <p className="mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
@@ -120,7 +120,7 @@ export function SizingRiskTab({ ctx }: { ctx: SizingReportState }) {
   return (
     <>{tab === "risk" && (
         <section aria-label="신뢰도·리스크" className="market-section sizing-step sizing-step-deep">
-          <h3 className="sizing-step-title text-[0.95rem]">
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">
             <span className="sizing-step-badge sizing-step-badge-deep">7-A</span> 신뢰도·리스크 — RAG 상한 권고·Kill Criteria·검증 원장
           </h3>
           <p className="mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
@@ -129,7 +129,7 @@ export function SizingRiskTab({ ctx }: { ctx: SizingReportState }) {
           </p>
           {matrix.ragCapRecommendation && (
             <div className="sizing-grade-card mt-3">
-              <h4 className="text-[0.9rem] mb-2">RAG 상한 권고</h4>
+              <h4 className="text-[length:var(--fs-body)] mb-2">RAG 상한 권고</h4>
               <span className={`status-chip ${matrix.ragCapRecommendation.grade === "green" ? "status-green" : matrix.ragCapRecommendation.grade === "amber" ? "status-amber" : "status-red"}`}>
                 상한 {matrix.ragCapRecommendation.grade.toUpperCase()}
               </span>
@@ -272,8 +272,12 @@ export function SizingValidateTab({ ctx }: { ctx: SizingReportState }) {
         <details className="market-section sizing-step">
           <summary className="cursor-pointer text-[length:var(--fs-body)]">파이프라인 단계별 분석 노트 ({stepSummaries.length}단계)</summary>
           <ol className="mt-3 space-y-2 text-[length:var(--fs-body)]">
-            {stepSummaries.map((s) => (
-              <li key={s.step}>
+            {stepSummaries.map((s, i) => (
+              // 파이프라인은 단계 5를 최대 3회 기록한다(탑다운 CAGR·외부 전망 격차·
+              // 드라이버 보정 루프 — market-sizing-pipeline.ts) — step 값만 키로 쓰면
+              // 중복 key "5"가 된다(2026-10-22 사용자 리포트). 목록은 렌더 내 append-only
+              // 이므로 step-색인 복합 키를 쓴다.
+              <li key={`${s.step}-${i}`}>
                 <strong>{s.step}. {STEPS[s.step - 1]?.title ?? s.step}</strong>{" "}
                 <span className={`status-chip ${s.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
                   {s.source === "llm" ? "LLM 요약" : "결정론 요약"}

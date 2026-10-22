@@ -154,7 +154,7 @@ function CharterViewInner() {
 
         {latest && (
           <section className="market-section sizing-step" aria-label={`최신 추진계획 v${latest.version}`}>
-            <h3 className="sizing-step-title text-[0.9rem]">
+            <h3 className="sizing-step-title text-[length:var(--fs-body)]">
               최신 추진계획 v{latest.version}
               <span className="ml-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                 {latest.source} · {latest.built_by} · {latest.built_at.slice(0, 10)}
@@ -183,7 +183,7 @@ function CharterViewInner() {
 
         {latest && latest.kpis.length > 0 && (
           <section className="market-section sizing-step mt-3" aria-label="KPI 사전 확정">
-            <h3 className="sizing-step-title text-[0.9rem]">KPI 사전 확정 (pre-commit)</h3>
+            <h3 className="sizing-step-title text-[length:var(--fs-body)]">KPI 사전 확정 (pre-commit)</h3>
             <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
             <table className="data-table table-fixed-pct tmin-32" aria-label="KPI 사전 확정">
               <caption className="sr-only">KPI 사전 확정 — 목표값</caption>
@@ -207,7 +207,7 @@ function CharterViewInner() {
 
         {canAct && latest && (
           <section className="market-section sizing-step mt-3" aria-label="차터 수정안">
-            <h3 className="sizing-step-title text-[0.9rem]">차터 수정안 (append-only · analyst+)</h3>
+            <h3 className="sizing-step-title text-[length:var(--fs-body)]">차터 수정안 (append-only · analyst+)</h3>
             <form className="sizing-new-form" onSubmit={amend}>
               <label className="block text-[length:var(--fs-caption)] mb-2">
                 <span className="block mb-1">변경 사유 (note) * — 스코프 크리프 추적을 위해 기록됩니다</span>
@@ -236,7 +236,7 @@ function CharterViewInner() {
 
         {versions.length > 0 && (
           <section className="market-section sizing-step mt-3" aria-label="버전 이력">
-            <h3 className="sizing-step-title text-[0.9rem]">버전 이력</h3>
+            <h3 className="sizing-step-title text-[length:var(--fs-body)]">버전 이력</h3>
             <ul className="sizing-note-list">
               {versions.map((v) => (
                 <li key={v.version}>

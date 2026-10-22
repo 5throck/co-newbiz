@@ -62,7 +62,7 @@ export function BenchmarksView() {
   return (
     <main>
       <h1>벤치마킹 사례</h1>
-      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
+      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
         공개된 신설·M&A·라이선스·합작 사례를 업종·지역·검토/안건 유형으로 조회합니다. 등록·수정은 관리자 콘솔에서 수행됩니다.
       </p>
       <div className="benchmark-filters">

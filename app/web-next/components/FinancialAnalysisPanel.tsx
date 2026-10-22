@@ -132,7 +132,7 @@ export function FinancialAnalysisPanel({ projectId }: { projectId: string }) {
             </section>
           ) : (
             <section className="market-section sizing-step">
-              <div className="border border-dashed border-[color:var(--border-bright)] rounded-lg p-6 text-center text-[color:var(--muted-fg)] text-[0.88rem]">
+              <div className="border border-dashed border-[color:var(--border-bright)] rounded-lg p-6 text-center text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
                 {canAct ? (
                   <>
                     연결된 대상 회사가 없습니다 — 아래에서 회사를 검색해 연결하면<br />

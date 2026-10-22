@@ -229,7 +229,8 @@ export function BetaPanel({
 
       {betaTab === "peer" ? (
         <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-          <table className="w-full text-[length:var(--fs-body)] table-fixed-pct tmin-48">
+          <table className="data-table table-fixed-pct tmin-48" aria-label="동종사 공표 베타">
+            <caption className="sr-only">동종사 공표 베타 — 레버드 β·D/E·βU 환산·출처</caption>
             <ColGroup widths={PEER_BETA_COL_PCT} />
             <thead>
               <tr className="text-left text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] border-b border-[color:var(--border-bright)]">
@@ -285,7 +286,7 @@ export function BetaPanel({
                     <label className="flex items-center gap-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                       <span>시장 지수</span> {/* INTERIM-WORDING */}
                       <select
-                        className="form-input !h-[33px] !py-0"
+                        className="form-input !h-[33px] !py-0" /* design-token-exempt: control height aligned to sibling row (one-off) */
                         value={indexChoice ?? defaultIndex ?? "KOSPI"}
                         onChange={(e) => {
                           const next = e.target.value as BetaIndexMarket;

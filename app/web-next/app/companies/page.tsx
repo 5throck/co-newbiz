@@ -31,7 +31,7 @@ export default function CompaniesPage() {
   return (
     <main className="market-page">
       <h1 className="text-[1.35rem] font-extrabold tracking-tight mt-6">회사</h1>
-      <p className="text-[color:var(--muted-fg)] text-[0.9rem] mb-3">인수 대상 및 분석 기준 회사의 재무성과 분석 화면입니다. 회사를 검색해 선택하세요.</p>
+      <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-body)] mb-3">인수 대상 및 분석 기준 회사의 재무성과 분석 화면입니다. 회사를 검색해 선택하세요.</p>
       {/* INTERIM-WORDING */}
       <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-body)] mb-3">그룹·계열사 프로파일에 등록된 회사는 <Link className="text-[color:var(--accent)] font-bold" href="/our-company">우리 회사</Link>에서 관리합니다.</p>
 
@@ -46,18 +46,19 @@ export default function CompaniesPage() {
           placeholder="회사명 또는 DART 고유번호 검색"
           aria-label="회사 검색"
         />
-        <button className="bg-[color:var(--accent)] text-[color:var(--accent-fg)] rounded-lg px-4 py-2 text-[0.88rem] font-bold cursor-pointer" type="submit">검색</button>
+        <button className="bg-[color:var(--accent)] text-[color:var(--accent-fg)] rounded-lg px-4 py-2 text-[length:var(--fs-body)] font-bold cursor-pointer" type="submit">검색</button>
       </form>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {error}</p>}
       {!rows ? (
         <p className="text-[color:var(--muted-fg)]">불러오는 중...</p>
       ) : rows.length === 0 ? (
-        <div className="border border-dashed border-[color:var(--border-bright)] rounded-lg p-6 text-center text-[color:var(--muted-fg)] text-[0.88rem]">
+        <div className="border border-dashed border-[color:var(--border-bright)] rounded-lg p-6 text-center text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
           검색 결과가 없습니다 — 회사 연결이 필요하면 프로젝트 재무분석 탭에서 DART 고유번호와 함께 등록하세요.
         </div>
       ) : (
         <table className="data-table">
+          <caption className="sr-only">연동 회사 목록</caption>
           <thead><tr><th>회사명</th><th>DART 고유번호</th><th>재무 데이터</th><th>마지막 동기화</th><th></th></tr></thead>
           <tbody>
             {rows.map((c) => (

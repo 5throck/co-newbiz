@@ -92,7 +92,10 @@ function ConstituentRow({ c }: { c: DdItemLookup | { id: string; missing: true }
 function TechItemVerdictView({ item, s9Href, ddIndex }: { item: LensItemView; s9Href: string; ddIndex: Map<string, DdItemLookup> | null }) {
   const v = LENS_VIEW[item.status];
   const rows = ddIndex ? constituentsOf(item.key as TechnicalItemKey, ddIndex) : [];
-  const present = rows.filter((r): r is DdItemLookup => !("missing" in r));
+  // ADR-0160 addendum b: a constituent the workspace scope excludes (N/X) is not rendered
+  // by its S9 tab and takes no judgement — the mirror here treats it as absent, never
+  // pending (2026-10-22 live-use report: greenfield T3 hung on hdd-03).
+  const present = rows.filter((r): r is DdItemLookup => !("missing" in r) && r.judgeable !== false);
   const missing = rows.filter((r) => "missing" in r);
   const rollup = present.length > 0 ? rollupConstituentStatuses(present.map((r) => r.status)) : null;
   const groups = new Map<string, DdItemLookup[]>();
@@ -104,7 +107,7 @@ function TechItemVerdictView({ item, s9Href, ddIndex }: { item: LensItemView; s9
         {item.judged ? item.note : <span className="text-[color:var(--muted-fg)]">{item.note}</span>}
       </p>
       <div>
-        <h4 className="text-[0.9rem] font-semibold mb-1">
+        <h4 className="text-[length:var(--fs-body)] font-semibold mb-1">
           구성 항목 — S9 실사 탭별 판정 상태
           {rollup && <span className="ml-2 text-[length:var(--fs-caption)] font-normal text-[color:var(--muted-fg)]" data-testid={`tech-item-rollup-${item.key}`}>롤업: {ROLLUP_LABEL[rollup.status]} ({rollup.judged}/{rollup.total} 판정)</span>}
         </h4>
@@ -148,7 +151,7 @@ function PairingView({ items, note, mismatchCount, s9Href, ddIndex }: { items: L
         ))}
       </ul>
       <div>
-        <h4 className="text-[0.9rem] font-semibold mb-1">공통 증적 항목 — 모든 기술 판정의 전제</h4>
+        <h4 className="text-[length:var(--fs-body)] font-semibold mb-1">공통 증적 항목 — 모든 기술 판정의 전제</h4>
         {ddIndex === null
           ? <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">S9 체크리스트를 불러오는 중…</p>
           : <ul className="sizing-note-list" aria-label="공통 증적 항목" data-testid="tech-item-evidence-base">{evidence.map((c) => <ConstituentRow key={c.id} c={c} />)}</ul>}

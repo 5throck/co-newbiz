@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { api, ApiError } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { useConfirm } from "./crud.tsx";
+import { invalidateCarrierCaches } from "./StageFrame.tsx";
 import { localizeRequirement } from "../lib/labels.ts";
 
 interface ProcessStageLite {
@@ -181,6 +182,9 @@ export function PromotionPanel({
               ...(members.length > 0 ? { members: members.map((m) => ({ userId: m.userId, projectRole: m.projectRole })) } : {}),
             },
           );
+          // 품평회 2026-10-22 잔여 #3 — 승격 직후 캐리어 캐시를 무효화해 레일의
+          // "미승격/미적용" 표시가 하드 리로드 없이 갱신되게 한다.
+          invalidateCarrierCaches(opportunityId, r.data.project_id);
           router.push(`/projects/${r.data.project_id}`);
         } catch (err) {
           setError(describePromoteError(err));

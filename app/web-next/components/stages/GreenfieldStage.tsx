@@ -595,7 +595,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   if (!selected) {
     return (
       <>
-        <PrimaryAction label="타당성 검토 실행" disabled disabledReason="평가할 기회를 불러오면 실행할 수 있습니다." />
+        <PrimaryAction inline label="평가 기록 (사람이 확정)" disabled disabledReason="평가할 기회를 불러오면 실행할 수 있습니다." />
         <p role="status" aria-live="polite">
           {error
             ? <span role="alert" className="text-[color:var(--red-fg)]">{error}</span>
@@ -818,7 +818,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 {reco.recommendation.cautions.length > 0 && (
                   <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mb-2">{reco.recommendation.cautions.join(" / ")}</p>
                 )}
-                {canAct && <button type="button" className="btn-ghost btn-sm" disabled={recoLoading} onClick={() => void generateReco()}>{recoLoading ? "재생성 중..." : "재생성"}</button>}
+                {canAct && <button type="button" className="btn-ghost btn-sm" disabled={recoLoading} onClick={() => void generateReco()}>{recoLoading ? "재생성 중..." : "🤖 재생성 (AI)"}</button>}
               </>
             )}
             </div>
@@ -1106,7 +1106,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   <input aria-label="비고" placeholder="비고" value={l.note ?? ""} onChange={(e) => setBc(i, { note: e.target.value })} className="sizing-new-input sizing-new-input-sm invest-ctl" />
                 </td>
                 <td><div className="invest-action-cell">
-                  {canAct && <button type="button" className="btn-ghost btn-sm whitespace-nowrap" aria-label="항목 삭제" onClick={() => setBcLines((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>}
+                  {canAct && <button type="button" className="btn-ghost btn-sm whitespace-nowrap" aria-label={`${l.line || "항목"} 삭제`} title={`${l.line || "항목"} 삭제`} onClick={() => setBcLines((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>}
                 </div></td>
               </tr>
             );
@@ -1449,8 +1449,9 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
               ))}
             </ul>
             <PrimaryAction
+              inline
               form="greenfield-eval-form"
-              label="타당성 검토 실행"
+              label="평가 기록 (사람이 확정)"
               disabled={!canAct || busy || (entryStrategy.trim() === "" && entryModes.modes.length === 0)}
               disabledReason={!canAct ? "평가 기록은 analyst 권한이 필요합니다." : busy ? "저장 중입니다." : "진출 방식을 선택하거나 선택 근거를 입력하면 실행할 수 있습니다."}
             />

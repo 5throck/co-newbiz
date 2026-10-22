@@ -302,7 +302,8 @@ export function OpportunityDetail() {
 
       {tab === "factors" && (
       <section aria-label="기회·위험 요인" className="market-section">
-        <SectionToolbar title="기회·위험 요인" icon="" count={(factors?.opportunity.length ?? 0) + (factors?.risk.length ?? 0)} />
+        {/* icon-vocabulary.yaml glyph-edit — 등록된 section-toolbar 글리프만 쓴다 (빈 문자열 금지). */}
+        <SectionToolbar title="기회·위험 요인" icon="✍️" count={(factors?.opportunity.length ?? 0) + (factors?.risk.length ?? 0)} />
         <div className="chart-pair">
           <div className="chart-half sizing-grade-card">
             <h4 className="text-[length:var(--fs-body)] mb-1">✅ 기회 요인</h4>

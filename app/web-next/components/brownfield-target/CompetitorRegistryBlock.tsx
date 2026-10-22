@@ -50,7 +50,7 @@ export function CompetitorRegistryBlock({ companyId, payloadCompetitors }: {
   return (
     <div className="market-section mt-2">
       <div className="flex flex-wrap items-center gap-2 mb-2">
-        <h4 className="text-[0.88rem] font-semibold m-0">확정 경쟁사</h4>
+        <h4 className="text-[length:var(--fs-body)] font-semibold m-0">확정 경쟁사</h4>
         <span className="status-chip status-green">{confirmed.length}건</span>
         <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">AI 추천 수용 또는 수작업 등록으로만 생긴다</span>
         <DevRef refs="ADR-0142" />

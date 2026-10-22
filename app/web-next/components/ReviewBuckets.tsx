@@ -332,7 +332,7 @@ export function ReviewBuckets({
         </div>
       ) : (
         <div className="review-head">
-          <h3 className="sizing-step-title text-[0.95rem]">3단계 검토 — 사람 판단 전 참고 자료</h3>
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">3단계 검토 — 사람 판단 전 참고 자료</h3>
           {view && <CountStrip counts={displayCounts} />}
           {headerSlot && <span className="review-head-slot">{headerSlot}</span>}
         </div>

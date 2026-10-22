@@ -111,22 +111,17 @@ export function SynergyListSection({ ctx }: { ctx: SynergyStageState }) {
                 // 안 잡힌다 — 재분석/삭제를 막으려면 이 플래그도 함께 봐야 한다.
                 const busy = inProgress || !!a.rerun_in_progress;
                 return (
-                  // 행 전체가 상세 진입점이다(2026-09-18 사용자 리뷰 — 연결 기회
-                  // 버튼만 진입 가능한 것은 발견성 문제). 회사 셀은 여전히 묶음
-                  // 헤더 레이블이고, 행 내 버튼들은 stopPropagation으로 행 클릭과
-                  // 분리된다. 키보드 접근: Enter/Space.
+                  // 행 전체 클릭 진입점은 제거됐다(2026-10 접근성 리뷰 — 행 합성
+                  // 타깃은 스크린리더에서 셀 구조를 무너뜨린다). 상세 진입은 연결
+                  // 기회 셀의 리포트 버튼이 담당한다.
                   <tr
                     key={a.id}
-                    className={`cursor-pointer ${selectedId === a.id ? "row-selected" : undefined}`}
-                    tabIndex={0}
-                    aria-label={`${targetLabel(a)} 시너지 분석 리포트 열기`}
-                    onClick={() => openDetail(a)}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetail(a); } }}
+                    className={selectedId === a.id ? "row-selected" : undefined}
                   >
                     {companyCell !== null && (() => {
                       const groupLen = groups.get(analysisGroupKey(companyCell))!.length;
                       // 회사 셀은 항상 묶음 헤더(레이블)일 뿐이다 — 상세 진입은
-                      // 그룹 크기와 무관하게 행 클릭이 일관되게 담당한다.
+                      // 연결 기회 셀의 리포트 버튼이 일관되게 담당한다.
                       return (
                         <td className="cell-primary align-top" rowSpan={groupLen}>
                           <span className="font-semibold">{targetLabel(companyCell)}</span>
@@ -138,7 +133,7 @@ export function SynergyListSection({ ctx }: { ctx: SynergyStageState }) {
                         type="button"
                         className={a.opportunity_name ? "text-[length:var(--fs-caption)] text-left underline-offset-2 hover:underline" : "text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] text-left underline-offset-2 hover:underline"}
                         title="시너지 정합성 리포트 열기"
-                        onClick={(e) => { e.stopPropagation(); openDetail(a); }}
+                        onClick={() => openDetail(a)}
                       >
                         {a.opportunity_name ?? "— (시장 연계만)"}
                       </button>
@@ -166,13 +161,13 @@ export function SynergyListSection({ ctx }: { ctx: SynergyStageState }) {
                           type="button"
                           className="btn-ghost btn-sm"
                           title={a.target_type ? "같은 분석 행을 재사용해 새 버전으로 재실행합니다" : "기존 별도 등록(legacy) 분석은 재실행할 수 없습니다 — 레지스트리 대상 새 분석을 생성하세요"}
-                          onClick={(e) => { e.stopPropagation(); void rerun(a, { stayOnList: true }); }}
+                          onClick={() => { void rerun(a, { stayOnList: true }); }}
                         >
                           재분석
                         </button>
                       )}
                       {!busy && canCurate && (
-                        <button type="button" className="btn-danger btn-sm" title="이 시너지 분석을 삭제합니다" onClick={(e) => { e.stopPropagation(); removeAnalysis(a); }}>
+                        <button type="button" className="btn-danger btn-sm" title="이 시너지 분석을 삭제합니다" onClick={() => removeAnalysis(a)}>
                           삭제
                         </button>
                       )}

@@ -64,7 +64,7 @@ export function AgentsView() {
   return (
     <main>
       <h1>에이전트 질의</h1>
-      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
+      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
         PM 에이전트에게 질의하세요. PM이 질의를 분류해 적임 에이전트(또는 에이전트 체인)를 배정하고, 각 에이전트의 관점을 취합해 제안을 돌려줍니다.
         모든 응답은 제안 전용이며 최종 판단과 기록은 사람의 몫입니다. 기회를 연결하면 그 기회의 근거(요인·점수·판정)가 에이전트에게 함께 제공됩니다.
       </p>

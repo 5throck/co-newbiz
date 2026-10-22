@@ -146,7 +146,7 @@ export function MasterDataSection() {
       </div>
 
       {data && (
-        <table className="w-full border-collapse [&_th]:border-b [&_th]:border-[color:var(--border)] [&_th]:p-2 [&_th]:text-left [&_td]:border-b [&_td]:border-[color:var(--border)] [&_td]:p-2 [&_td]:text-left">
+        <table className="data-table">
           <caption className="sr-only">{data.table} 코드 목록</caption>
           <thead>
             <tr>

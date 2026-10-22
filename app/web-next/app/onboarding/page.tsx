@@ -19,13 +19,27 @@ export default function OnboardingPage() {
       <section className="market-section" aria-label="온보딩 단계">
         {STEPS.map((s) => (
           <div key={s.n} className="market-section" style={{ marginBottom: 10 }}>
-            <h2 className="text-[0.9rem] mb-1">
+            <h2 className="text-[length:var(--fs-body)] mb-1">
               <span className="sizing-step-num">{s.n}</span> {s.label}
             </h2>
-            <p className="text-[length:var(--fs-caption)]" style={{ margin: "0 0 6px" }}>{s.desc}</p>
+            <p className="text-[length:var(--fs-caption)]" style={{ margin: "0 0 6px" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>{s.desc}</p>
             <Link className="btn-ghost btn-sm" href={s.href}>이동 →</Link>
           </div>
         ))}
+        {/* 승격 이후 — 단계 목록과 같은 리스트 스타일의 이어짐 (F11). 이동 링크는
+            없다: 승격은 트랙 최종 단계(S5/S7) 화면에서 사람이 실행한다. */}
+        <div className="market-section" style={{ marginBottom: 10 }}>
+          <h2 className="text-[length:var(--fs-body)] mb-1">승격</h2>
+          <p className="text-[length:var(--fs-caption)]" style={{ margin: "0 0 6px" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>
+            S5(그린필드)/S7(브라운필드) 완료 후 프로젝트로 추진하면 S8~S12가 열립니다.
+          </p>
+        </div>
+        <div className="market-section" style={{ marginBottom: 10 }}>
+          <h2 className="text-[length:var(--fs-body)] mb-1">프로젝트 단계 (S8~S12)</h2>
+          <p className="text-[length:var(--fs-caption)]" style={{ margin: "0 0 6px" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>
+            S8 사업성 → S9 실사 → S10 투자구조 → S11 투자심사·실행 → S12 사후관리 — 사람의 게이트 결정이 각 전환을 기록합니다.
+          </p>
+        </div>
       </section>
       <p className="note">시연 데이터로 먼저 둘러보려면 <Link href="/deals" className="text-[color:var(--accent)] underline">검토/안건 보드</Link>를 참고하세요.</p>
     </main>

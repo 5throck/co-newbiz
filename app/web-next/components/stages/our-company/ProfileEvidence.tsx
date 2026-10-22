@@ -75,7 +75,7 @@ export function ProfileProvidedSources({ ctx, memberId, profile }: { ctx: OurCom
   };
   return (
     <section aria-label="분석가 제공 출처" className="mb-3">
-      <h3 className="sizing-step-title text-[0.95rem]">분석가 제공 출처 {entries.length > 0 && <AnalystEvidenceChip />}</h3>
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]">분석가 제공 출처 {entries.length > 0 && <AnalystEvidenceChip />}</h3>
       {profile.userNote && <p className="text-[length:var(--fs-body)]"><strong>회사 소개 메모:</strong> {profile.userNote}</p>}
       {entries.length > 0 ? (
         <ul className="sizing-note-list">
@@ -99,7 +99,7 @@ export function ProfileProvidedSources({ ctx, memberId, profile }: { ctx: OurCom
       )}
       {canAct && (
         <div className="mt-2">
-          <h4 className="text-[0.9rem]">{editingId ? "출처 수정" : "출처 추가"}</h4>
+          <h4 className="text-[length:var(--fs-body)]">{editingId ? "출처 수정" : "출처 추가"}</h4>
           <label className="block text-[length:var(--fs-caption)]" htmlFor="manual-source-url">주소(URL, 선택)</label>
           <input id="manual-source-url" className="sizing-new-input w-full" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://..." />
           <label className="block text-[length:var(--fs-caption)] mt-1" htmlFor="manual-source-title">제목</label>
@@ -156,7 +156,7 @@ export function ProfileFieldEditor({ ctx, memberId, profile }: { ctx: OurCompany
   );
   return (
     <section aria-label="분석가 수정" className="sizing-grade-card mb-3">
-      <h4 className="text-[0.9rem]">분석가 수정 <AnalystEditedChip /></h4>
+      <h4 className="text-[length:var(--fs-body)]">분석가 수정 <AnalystEditedChip /></h4>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" role="note">수정하면 새 버전으로 저장되고(이전 버전은 보존), 수정한 항목은 사유와 함께 검증 원장에 &quot;확인&quot;으로 기록됩니다. 사유는 필수입니다.</p>
       {area("industryExposure", 3)}
       {area("strengths", 4)}

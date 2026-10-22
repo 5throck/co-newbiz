@@ -89,7 +89,7 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
             {!inDealContext && dealId && canCurate && (
               <button
                 type="button"
-                className="btn-primary"
+                className="btn-ghost"
                 onClick={() => openLinkToDeal({ open: true, industry: { id: detail.industry.id, name_ko: detail.industry.name_ko } })}
                 title="이 산업 분석을 이 안건의 S1 근거로 연결합니다"
               >
@@ -127,7 +127,7 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
               없으면(신규 워크스페이스) 버튼 자체를 숨긴다. */}
           {chainGraph && chainGraph.nodes.length > 0 && (
             <button type="button" className="btn-ghost btn-sm whitespace-nowrap" onClick={() => setChainGraphOpen(true)}>
-              🔗 산업 간 가치사슬 관계도 보기 ({chainGraph.nodes.length}개 산업)
+              <span aria-hidden="true">🔗</span> 산업 간 가치사슬 관계도 보기 ({chainGraph.nodes.length}개 산업)
             </button>
           )}
         </span>
@@ -150,9 +150,9 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
             aria-modal="true"
             aria-label="산업 간 가치사슬 관계도"
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: "min(90vw, 960px)" }}
+            style={{ maxWidth: "min(90vw, var(--content-modal))" }}
           >
-            <h2 className="text-[0.95rem] mb-1">산업 간 가치사슬 관계도</h2>
+            <h2 className="text-[length:var(--fs-body)] mb-1">산업 간 가치사슬 관계도</h2>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               사람이 확정한 전방/전전방/후방/후후방 연계만 표시합니다 — 색이 채워진 노드는 분석 완료된 산업입니다.
             </p>
@@ -171,11 +171,12 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
 function MarketPrimaryAction({ ctx }: { ctx: ReturnType<typeof useMarketData> & ReturnType<typeof useMarketLinking> }) {
   const { canCurate, showNewForm, setShowNewForm, newName, openLinkModal } = ctx;
   if (!canCurate) {
-    return <PrimaryAction label="시장 규모 분석 실행" disabled disabledReason="산업 분석은 analyst 권한이 필요합니다." />;
+    return <PrimaryAction inline label="시장 규모 분석 실행" disabled disabledReason="산업 분석은 analyst 권한이 필요합니다." />;
   }
   if (!showNewForm || !newName.trim()) {
     return (
       <PrimaryAction
+        inline
         label="새 산업 분석 입력"
         onClick={() => {
           setShowNewForm(true);
@@ -184,5 +185,5 @@ function MarketPrimaryAction({ ctx }: { ctx: ReturnType<typeof useMarketData> & 
       />
     );
   }
-  return <PrimaryAction label="시장 규모 분석 실행" onClick={() => void openLinkModal(newName.trim())} />;
+  return <PrimaryAction inline label="시장 규모 분석 실행" onClick={() => void openLinkModal(newName.trim())} />;
 }

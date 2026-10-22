@@ -176,6 +176,7 @@ export default function ReportsPage() {
         <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">{showArchived ? "보관된 스냅샷이 없습니다." : "저장된 보고서가 없습니다 — 위에서 "}<b>투자심의 자료로 초안 생성</b>{showArchived ? "" : " 후 스냅샷을 저장하세요."}</p>
       ) : (
         <table className="data-table">
+          <caption className="sr-only">보고서 스냅샷 이력</caption>
           <thead><tr><th scope="col">제목</th><th scope="col">생성</th><th scope="col">렌더 파일</th><th scope="col">상태</th><th scope="col">관리</th></tr></thead>
           <tbody>
             {view.reports.map((r) => {

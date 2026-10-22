@@ -14,7 +14,8 @@ export function DerivationTable({ derivation }: { derivation: WaccDerivation }) 
   }
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-[length:var(--fs-body)]">
+      <table className="data-table" aria-label="WACC 산식 분해">
+        <caption className="sr-only">WACC 산식 분해 — 항목·산식·대입·결과</caption>
         <thead>
           <tr className="text-left text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] border-b border-[color:var(--border-bright)]">
             <th className="py-1.5 px-1.5 font-semibold whitespace-nowrap">항목</th>

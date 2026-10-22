@@ -1,0 +1,80 @@
+# patterns.registry.yaml — co-newbiz standard screen-pattern registry (design-lint §5.2)
+#
+# The P0–P5 screen-type classification is the declared inventory of
+# docs/design-system/design-screens.md (basis: docs/designs/2026-09-01-standard-
+# screen-patterns-design_ko.md §3–5). Screen design starts by choosing one of
+# these six patterns; new patterns enter only via a design-document revision of
+# design-screens.md (design-foundation.md §2b rule 1).
+#
+# Stacking rule (design-screens.md): when one stage needs multiple patterns at
+# once they are laid out top-to-bottom in order, and each pattern boundary is
+# marked with a SectionToolbar divider (component id: section-toolbar).
+# Stage-order invariant: a later stage can never render complete while an
+# earlier stage is unfinished — enforced by evaluateProcess, mirrored in the
+# stage-stepper component.
+#
+# composes_from references component ids in components.registry.yaml.
+version: 1
+patterns:
+  # P0 Shell — common skeleton of every screen.
+  - id: p0-shell
+    trigger: >-
+      Common skeleton shared by every screen: topbar + collapsible sidebar +
+      content pane (design-screens.md P0). Also carries breadcrumb context and,
+      on deal detail, the sticky stage-guided progress header.
+    entry_tokens: [--surface, --border, --muted-fg, --shadow-lg]
+    layout_primitives: [flex, sticky]
+    composes_from: [app-shell, tabs, stage-stepper, breadcrumb]
+
+  # P1 Registry — list + registration screens for picking among many items
+  # (S6 candidate long list, S7 short list, S1 industry lists, admin tables).
+  - id: p1-registry
+    trigger: >-
+      Lists many items and lets the user pick among them; per-row actions go
+      through the .list-table data-table standard (design-screens.md P1,
+      design-components.md list-table rules).
+    entry_tokens: [--surface, --border, --muted-fg]
+    layout_primitives: [block, flex, grid]
+    composes_from: [data-table, section-toolbar, row-menu, list-back-button, breadcrumb, card]
+
+  # P2 Report — read-only analysis reading (S1 market analysis, S9 DD report).
+  - id: p2-report
+    trigger: >-
+      Screens for reading analysis results only — no decision affordances;
+      evidence/source linkage is first-class (design-screens.md P2).
+    entry_tokens: [--surface, --border, --muted-fg]
+    layout_primitives: [block, grid]
+    composes_from: [card, data-table, sizing-step, fact-grid]
+
+  # P3 Decision — a human directly decides (S3/S4/S7 decisions, S10 investment
+  # structure, S11 investment review). Gate verdicts are human-only; AI input
+  # stays visually marked as proposal (boundary #2).
+  - id: p3-decision
+    trigger: >-
+      Screens where a human approves/rejects/scoring happens; renders the gate
+      decision card and committee panel, never an AI-styled decision
+      (design-screens.md P3; design-philosophy.md boundaries #1 and #2).
+    entry_tokens: [--surface, --border, --primary]
+    layout_primitives: [block, flex, grid]
+    composes_from: [gate-decision-panel, committee-panel, status-chip, stage-stepper, primary-action]
+
+  # P4 Execution — working through checklist items (S5, S9 checklist, S11
+  # incorporation execution, S8 pipeline work). Write paths are explicit: every
+  # create/update/delete has a form/dialog, audit trail, and visible feedback.
+  - id: p4-execution
+    trigger: >-
+      Screens for working through a to-do list item by item; destructive
+      actions require a confirm dialog (design-screens.md P4; design-guide.md P4).
+    entry_tokens: [--input-bg, --border, --surface]
+    layout_primitives: [block, flex, grid]
+    composes_from: [sizing-step, form-input, row-menu, status-chip, modal, primary-action]
+
+  # P5 Monitoring — dashboards watching progress in real time (S12, pipeline
+  # status board).
+  - id: p5-monitoring
+    trigger: >-
+      At-a-glance progress and status surfaces; status is always multi-encoded
+      color + glyph + text (design-screens.md P5; design-guide.md P5).
+    entry_tokens: [--surface, --border, --shadow-md]
+    layout_primitives: [grid, flex]
+    composes_from: [card, status-chip, process-light, stage-stepper, tabs]

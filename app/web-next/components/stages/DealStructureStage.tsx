@@ -246,23 +246,30 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
 
   return (
 <>
-      <StageTabs projectId={projectId} />
-      <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S10")} />
-      <PrimaryAction
-        label="투자구조 가설 기록"
-        onClick={() => {
-          setTab("hypotheses");
-          setFormOpen(true);
-          window.setTimeout(() => {
-            formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-            formRef.current?.querySelector<HTMLElement>("select, input, textarea")?.focus({ preventScroll: true });
-          }, 80);
-        }}
-        disabled={!canAct}
-        disabledReason="투자구조 가설 기록은 analyst 권한이 필요합니다."
-      />
-      {/* INTERIM-WORDING: "투자 주체"/"설립 법인 형태" replace the transliterated "vehicle" term */}
-      <StageFrame stageId="S10" heading={isGf ? `S10 ${GF_S10_STAGE_LABEL} — ${isBu ? "사업부 신설 형태" : "설립 법인 형태"}·4축 검토·자금조달·집행 단계` : "S10 투자구조 설계 — 투자 주체·4축 검토·자금조달"}>
+      {/* 리뷰 2026-10-22 (사용자 리포트): StageTabs는 레일 슬롯으로 — h1·스트립이 탭 행
+          아래로 밀리지 않고 S1~S7 딜 화면과 같은 머리 위치를 유지한다. */}
+      <StageFrame
+        stageId="S10"
+        heading={isGf ? `S10 ${GF_S10_STAGE_LABEL} — ${isBu ? "사업부 신설 형태" : "설립 법인 형태"}·4축 검토·자금조달·집행 단계` : "S10 투자구조 설계 — 투자 주체·4축 검토·자금조달"}
+        railSlot={<StageTabs projectId={projectId} />}
+      >
+        {/* 3차 사용자 리포트: 종료… 제외 모든 컨트롤이 한 줄 — 검토 버킷과 1차 액션도
+            프레임 머리(레일 슬롯 아래)에 둔다. */}
+        <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S10")} />
+        <PrimaryAction
+          label="투자구조 가설 기록"
+          onClick={() => {
+            setTab("hypotheses");
+            setFormOpen(true);
+            window.setTimeout(() => {
+              formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+              formRef.current?.querySelector<HTMLElement>("select, input, textarea")?.focus({ preventScroll: true });
+            }, 80);
+          }}
+          disabled={!canAct}
+          disabledReason="투자구조 가설 기록은 analyst 권한이 필요합니다."
+        />
+        {/* INTERIM-WORDING: "투자 주체"/"설립 법인 형태" replace the transliterated "vehicle" term */}
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
           {isGf ? (isBu ? "사업부 신설 형태" : "설립 법인 형태(SPC 포함)") : "투자 주체(SPC 포함)"}와 절세 구조·책임 격리·재무 레버리지·엑싯 구조 4대 축을 검토하고,
           자금조달 sources &amp; uses를 균형시킵니다. 이 산출물이 S11 투자심의 자료의 입력입니다.
@@ -288,14 +295,14 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
         {/* ── AI 추천 검토/안건구조 (결정 지원) — ADR-0118: 제안은 LLM, 가설 등록은 사람 ── */}
         {tab === "reco" && canAct && (
           <section className="market-section sizing-step mb-3" aria-label="AI 추천 검토/안건구조">
-            <h3 className="sizing-step-title text-[0.9rem]">🤖 AI 추천 검토/안건구조 (제안)</h3>
+            <h3 className="sizing-step-title text-[length:var(--fs-body)]">🤖 AI 추천 검토/안건구조 (제안)</h3>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               원칙 (경계 #2): 가설 등록·4축 확정은 사람이 합니다 — S8 채택 BC·S9 발견사항·WACC·현재 상태에서 만든 제안입니다.
             </p>
             {recoError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
             {!reco && !recoLoading && !recoError && (
               <div className="flex flex-wrap items-center gap-2 mb-0">
-                <button type="button" className="btn-ghost" onClick={() => void generateReco()}>▶ AI 추천 생성</button>
+                <button type="button" className="btn-ghost" onClick={() => void generateReco()}>🤖 추천 생성 (AI)</button>
                 <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{isGf ? "설립 법인 형태" : "투자 주체"}·지분·수단과 4축 노트·구조 근거 초안을 작성해 가설 등록을 돕습니다.</span>
               </div>
             )}
@@ -344,7 +351,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
 
         {tab === "hypotheses" && (
         <section className="market-section sizing-step mb-3" aria-label="투자구조 가설">
-          <h3 className="sizing-step-title text-[0.9rem]">투자구조 가설 ({data?.hypotheses.length ?? 0}건)</h3>
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">투자구조 가설 ({data?.hypotheses.length ?? 0}건)</h3>
           {(data?.hypotheses ?? []).map((h) => (
             <div key={h.id} className="sizing-grade-card mb-2">
               <div className="flex flex-wrap items-center gap-1 mb-1">
@@ -488,7 +495,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
 
         {tab === "financing" && (
         <section className="market-section sizing-step" aria-label="자금조달 계획">
-          <h3 className="sizing-step-title text-[0.9rem]">자금조달 계획 (자금 조달·사용)</h3>
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">자금조달 계획 (자금 조달·사용)</h3>
           {totals && (
             <p className="text-[length:var(--fs-caption)] mb-1">
               조달 <span className="mono-num">{fmt(totals.sources)}</span> · 사용 <span className="mono-num">{fmt(totals.uses)}</span> · 차액{" "}

@@ -104,7 +104,7 @@ export function SynergyResult(props0: {
           {tab === "scoreEval" && <SynergyScoreEvaluationTab ctx={ctx} p={p} />}
 
           {tab === "refs" && (
-            <div className="text-[0.88rem]">
+            <div className="text-[length:var(--fs-body)]">
               {/* ADR-0181 (2026-10-18, decider feedback): the refs tab used to
                   render nothing relevant when web research was unconfigured.
                   Now: step notes render OPEN, an empty source list says so
@@ -125,7 +125,7 @@ export function SynergyResult(props0: {
                 )}
               </details>
               <div className="market-section">
-                <h3 className="sizing-step-title text-[0.95rem]">파이프라인 단계별 노트 ({p.stepSummaries.length}단계)</h3>
+                <h3 className="sizing-step-title text-[length:var(--fs-body)]">파이프라인 단계별 노트 ({p.stepSummaries.length}단계)</h3>
                 <ol className="mt-2 space-y-2 text-[length:var(--fs-body)]">
                   {p.stepSummaries.map((s) => (
                     <li key={s.step}><strong>{s.step}. {s.title}</strong> <span className={`status-chip ${s.source === "llm" ? "status-in-progress" : "status-not-started"}`}>{s.source === "llm" ? "AI" : "시스템"}</span><br />{s.summary}</li>

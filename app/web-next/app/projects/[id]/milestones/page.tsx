@@ -173,7 +173,7 @@ function MilestonesView() {
       ) : (
         STATUS_ORDER.filter((s) => (grouped.get(s) ?? []).length > 0).map((s) => (
           <section key={s} className="market-section" aria-label={STATUS_META[s].label}>
-            <h2 className="text-[0.9rem] mb-2">
+            <h2 className="text-[length:var(--fs-body)] mb-2">
               <span className={`status-chip ${STATUS_META[s].cls}`}>{STATUS_META[s].label}</span>
               {" "}<span className="note">{(grouped.get(s) ?? []).length}건</span>
             </h2>
@@ -204,7 +204,7 @@ function MilestonesView() {
 
       {canAct && (
         <section className="market-section mt-3" aria-label="마일스톤 등록">
-          <h2 className="text-[0.9rem] mb-2">마일스톤 등록</h2>
+          <h2 className="text-[length:var(--fs-body)] mb-2">마일스톤 등록</h2>
           <form className="sizing-new-form" onSubmit={create}>
             <div className="flex flex-wrap items-end gap-2">
               <label className="text-[length:var(--fs-caption)] flex-1 min-w-[14rem]"><span className="block mb-1">제목 *</span>

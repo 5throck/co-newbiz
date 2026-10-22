@@ -47,7 +47,7 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
               return (
                 <div key={cat} className="card mb-3">
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <h4 className="text-[0.9rem] mb-0">{EVAL_CATEGORY_LABEL[cat]}</h4>
+                    <h4 className="text-[length:var(--fs-body)] mb-0">{EVAL_CATEGORY_LABEL[cat]}</h4>
                     <span className={scoreChip(catScore.score)} title="충족 1점·부분충족 0.5점·미충족 0점을 항목 가중치로 가중평균 — 예외(해당없음·예외)는 계산에서 제외, 미판정 항목은 아직 점수에 들어가지 않음" data-testid={`eval-score-${cat}`}>
                       {catScore.score == null ? "점수 — 판정 필요" : `${catScore.score}점 / 100점`}
                       <span className="ml-1 font-normal">(판정 {judgedCount}/{countedTotal} 항목)</span>
@@ -80,7 +80,7 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                           >
                             초안 저장 ({proposedCount}건)
                           </button>
-                          <button type="button" className="btn-ghost btn-sm" onClick={() => { setEvalDraft(null); setDraftCategory(null); setDraftNote(null); }}>초안 버리기</button>
+                          <button type="button" className="btn-ghost btn-sm" onClick={() => { setEvalDraft(null); setDraftCategory(null); setDraftNote(null); }}>초안 버리기 (AI)</button>
                         </>
                       )}
                       <button
@@ -121,7 +121,7 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                           >
                             초안 저장 ({proposedCount}건)
                           </button>
-                          <button type="button" className="btn-ghost btn-sm" onClick={() => { setEvalDraft(null); setDraftCategory(null); setDraftNote(null); }}>초안 버리기</button>
+                          <button type="button" className="btn-ghost btn-sm" onClick={() => { setEvalDraft(null); setDraftCategory(null); setDraftNote(null); }}>초안 버리기 (AI)</button>
                         </>
                       )}
                       {draftCategory === "technical" ? (

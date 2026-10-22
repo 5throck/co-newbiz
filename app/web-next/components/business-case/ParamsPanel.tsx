@@ -609,6 +609,7 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
             </p>
             <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
               <table className="data-table">
+                <caption className="sr-only">시뮬레이션 드라이버 분포 — 드라이버·분포·값·출처</caption>
                 <thead>
                   <tr>
                     <th className="col-label text-left">드라이버</th>

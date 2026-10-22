@@ -12,7 +12,7 @@ export function TargetPrecheckTab({ ctx, screening_summary, savedVerdicts, check
           <div className="mt-3">
             <div className="card mb-3">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                <h4 className="text-[0.9rem] mb-0">사전 검토 — 대상 사전 검토 체크리스트(9개 항목)</h4>
+                <h4 className="text-[length:var(--fs-body)] mb-0">사전 검토 — 대상 사전 검토 체크리스트(9개 항목)</h4>
                 <span
                   className={`status-chip ${screening_summary.anyKnockOutFail ? "status-red" : screening_summary.assessed === 0 ? "status-not-started" : screening_summary.assessed < screening_summary.total || screening_summary.mandatoryOpen.length > 0 ? "status-amber" : "status-green"}`}
                   title={`확정 판정 ${screening_summary.assessed}/${screening_summary.total}${screening_summary.mandatoryOpen.length ? ` · 미판정 필수: ${screening_summary.mandatoryOpen.join(", ")}` : ""}`}
@@ -63,7 +63,7 @@ export function TargetPrecheckTab({ ctx, screening_summary, savedVerdicts, check
             </div>
             {evidence.length > 0 && (
               <div className="card">
-                <h4 className="text-[0.9rem] mb-2">정보 수집 타임라인</h4>
+                <h4 className="text-[length:var(--fs-body)] mb-2">정보 수집 타임라인</h4>
                 <ul className="sizing-note-list mb-0">
                   {evidence.map((e) => (
                     <li key={e.id} className="text-[length:var(--fs-caption)]">

@@ -142,6 +142,7 @@ export default function ProxyChainPage() {
         <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">바인딩된 산업이 없습니다 — 아래에서 산업을 검색해 바인딩하면 통계 보정 대상이 됩니다.</p>
       ) : (
         <table className="data-table">
+          <caption className="sr-only">프로젝트 산업 바인딩 목록</caption>
           <thead><tr><th scope="col">산업</th><th scope="col">바인딩 근거</th><th scope="col">바인딩자</th><th scope="col">상태</th><th scope="col"></th></tr></thead>
           <tbody>
             {bindings.map((b) => (
@@ -199,6 +200,7 @@ export default function ProxyChainPage() {
         <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
         <table className="data-table table-fixed-pct tmin-64">
           <ColGroup widths={LINK_COL_PCT} />
+          <caption className="sr-only">프로젝트 가치사슬 링크 목록</caption>
           <thead><tr><th scope="col">방향</th><th scope="col">from → to</th><th scope="col" className="num">탄력성</th><th scope="col" className="num">상관(R²)</th><th scope="col">전환비용</th><th scope="col">대체위협</th><th scope="col">근거</th></tr></thead>
           <tbody>
             {view.links.map((l) => (
@@ -268,6 +270,7 @@ export default function ProxyChainPage() {
         <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
         <table className="data-table table-fixed-pct tmin-56">
           <ColGroup widths={PROXY_LINK_COL_PCT} />
+          <caption className="sr-only">산출된 전달 링크(hop) 목록</caption>
           <thead><tr><th scope="col">Hop</th><th scope="col">유형</th><th scope="col" className="num">계수/β</th><th scope="col" className="num">R²</th><th scope="col" className="num">95% CI</th><th scope="col">근거</th></tr></thead>
           <tbody>
             {view.proxyLinks.map((p) => (

@@ -34,7 +34,7 @@ export default function AdminDashboardPage() {
   return (
     <main className="admin-console-page">
       <h1>시스템 대시보드</h1>
-      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">시스템 운영 현황 요약 — 감사 로그·사용자·스케줄·기오퍼널 지표입니다.</p>
+      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">시스템 운영 현황 요약 — 감사 로그·사용자·스케줄·기오퍼널 지표입니다.</p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       {!stats && !error && <p>불러오는 중...</p>}
       {stats && (

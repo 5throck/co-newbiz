@@ -110,7 +110,7 @@ export function EntryStrategySection({ opportunityId, value, onChange, canAct, r
         {marks.length > 0 && (
           <span className="flex items-center gap-1" data-testid="entry-ai-unsaved">
             <span className="status-chip status-not-started" role="status"><span aria-hidden="true">✦</span> 저장하지 않은 AI 초안 {marks.length}건</span>
-            {canAct && <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={discard}>AI 초안 버리기</button>}
+            {canAct && <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={discard}>초안 버리기 (AI)</button>}
           </span>
         )}
         {canAct && (
@@ -136,7 +136,7 @@ export function EntryStrategySection({ opportunityId, value, onChange, canAct, r
         {ENTRY_MODES.map((m) => {
           const on = value.modes.modes.includes(m);
           return (
-            <div key={m} className="sizing-grade-card" style={{ minWidth: 190, flex: "1 1 190px" }} data-testid={`entry-mode-${m}`}>
+            <div key={m} className="sizing-grade-card" style={{ minWidth: 190, flex: "1 1 190px" /* design-token-exempt: layout-tuned card flex-basis (one-off) */ }} data-testid={`entry-mode-${m}`}>
               <label className="flex items-center gap-1">
                 <input type="checkbox" checked={on} onChange={() => pickMode(m)} aria-describedby={`${uid}-${m}-hint`} />
                 <span className="font-semibold">{ENTRY_MODE_LABEL[m]}</span>

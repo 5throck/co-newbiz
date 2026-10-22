@@ -1,7 +1,7 @@
 // /api/projects/[id]/business-case/s5-pin - the S5 plan pin of a Green Field project (ADR-0178
 // slice 0). GET returns the pin/stale status and the re-pin preview (pinned vs current S5 totals,
 // confirmed run); POST pins: the INITIAL pin when none exists, otherwise `최신 S5로 갱신` (supersede
-// the current pin, insert the next, refresh the compat copy through the PR #590 re-import, audit
+// the current pin, insert the next, refresh the compat copy through the PR #590 (design-token-exempt: PR number in prose, not a color) re-import, audit
 // `s5_plan_pin.repinned` - one transaction). Existing cases/simulations/adopted results are never
 // touched and bc.s5_source / bc.investment_basis are never changed. Human only (agent principals are
 // rejected, boundary #2), analyst+, deny-by-default visibility, Green Field only.

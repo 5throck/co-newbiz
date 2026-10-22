@@ -149,7 +149,7 @@ export function CapabilityJudgementDialog({ row, draft, note, s3Href, hasPrev, h
           )}
         </section>
 
-        <section aria-label="S5 판정 (입력)" className="mt-3 grid gap-2" style={{ borderLeft: "2px solid var(--accent)", paddingLeft: "0.6rem" }}>
+        <section aria-label="S5 판정 (입력)" className="mt-3 grid gap-2" style={{ borderLeft: "var(--border-width-strong) solid var(--accent)", paddingLeft: "0.6rem" }}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-[length:var(--fs-caption)] font-semibold m-0">S5 판정 (입력)</h3>
             {ai && (

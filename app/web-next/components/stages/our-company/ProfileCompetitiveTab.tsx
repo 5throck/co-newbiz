@@ -11,14 +11,14 @@ export function ProfileCompetitiveTab({ ctx, profile }: { ctx: OurCompanyStageSt
   const { profileTab, compError, competitors, editingCompetitor, excludingCompetitor, setEditingCompetitor, compBusy, setExcludingCompetitor, canAct, webBusy, competitorProposals, dismissedProposals, setDismissedProposals, webSuggestions, webNote, setWebSuggestions, competitorForm, setCompetitorForm, competitorDartSearching, competitorDartResults, saveCompetitorEdit, saveCompetitorExclude, restoreCompetitorRow, runCompetitorWebSearch, acceptProposal, acceptWebSuggestion, searchCompetitorDart, registerManualCompetitor } = ctx;
   return (
     <>{profileTab === "competitive" && (
-              <div className="text-[0.88rem]">
-                <h3 className="sizing-step-title text-[0.95rem]">경쟁 포지셔닝</h3>
+              <div className="text-[length:var(--fs-body)]">
+                <h3 className="sizing-step-title text-[length:var(--fs-body)]">경쟁 포지셔닝</h3>
                 {compError && <p role="alert" className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">{compError}</p>}
 
                 {/* ① 확정 경쟁사 — 사람의 수용·등록으로만 생긴 레지스트리(ADR-0142) */}
                 <div className="market-section mb-3">
                   <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <h4 className="text-[0.9rem] font-semibold m-0">확정 경쟁사</h4>
+                    <h4 className="text-[length:var(--fs-body)] font-semibold m-0">확정 경쟁사</h4>
                     <span className="status-chip status-green">{(competitors ?? []).filter((c) => c.status === "confirmed").length}건</span>
                   </div>
                   {(competitors ?? []).filter((c) => c.status === "confirmed").length === 0 ? (
@@ -103,7 +103,7 @@ export function ProfileCompetitiveTab({ ctx, profile }: { ctx: OurCompanyStageSt
                 {/* ② AI 추천 — 최신 프로필 분석의 경쟁사 후보. 수용은 사람(경계 #2) */}
                 <div className="market-section mb-3">
                   <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <h4 className="text-[0.9rem] font-semibold m-0">AI 추천</h4>
+                    <h4 className="text-[length:var(--fs-body)] font-semibold m-0">AI 추천</h4>
                     <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">최신 프로필 분석 기준 — 제안 전용, 수용은 사람</span>
                     {canAct && (
                     <button type="button" className="btn-ghost btn-sm" disabled={webBusy} onClick={() => void runCompetitorWebSearch()}>
@@ -122,7 +122,7 @@ export function ProfileCompetitiveTab({ ctx, profile }: { ctx: OurCompanyStageSt
                         return (
                           <div key={p.name} className="sizing-grade-card mb-0">
                             <div className="flex flex-wrap items-center gap-2 mb-1">
-                              <strong className="text-[0.88rem]">{p.name}</strong>
+                              <strong className="text-[length:var(--fs-body)]">{p.name}</strong>
                               {meta && <span className={`status-chip ${meta.chip}`} title="공시·리서치 원문 대조 판정 (제안 시점)">{meta.label}</span>}
                               <span className="status-chip status-not-started" title="이 제안은 확정 기록이 아니며, 수용 버튼으로만 등록됩니다">제안</span>
                             </div>
@@ -151,7 +151,7 @@ export function ProfileCompetitiveTab({ ctx, profile }: { ctx: OurCompanyStageSt
                       {webSuggestions.map((ws) => (
                         <div key={ws.name} className="sizing-grade-card mb-0">
                           <div className="flex flex-wrap items-center gap-2 mb-1">
-                            <strong className="text-[0.88rem]">{ws.name}</strong>
+                            <strong className="text-[length:var(--fs-body)]">{ws.name}</strong>
                             <span className={`status-chip ${ws.reliability === "B" ? "status-in-progress" : "status-amber"}`} title="웹검색 근거 기반 제안 — 수용 전 출처를 확인하세요">
                               {ws.reliability === "B" ? "제안 · 웹검색 근거" : "제안 · 미검증"}
                             </span>
@@ -177,7 +177,7 @@ export function ProfileCompetitiveTab({ ctx, profile }: { ctx: OurCompanyStageSt
 
                 {/* ③ 수작업 등록 — 상시 노출 (브라운필드 후보 등록 폼 패턴) */}
                 {canAct && (<div className="market-section mb-3">
-                  <h4 className="text-[0.9rem] font-semibold mb-2">수작업 등록</h4>
+                  <h4 className="text-[length:var(--fs-body)] font-semibold mb-2">수작업 등록</h4>
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <span className="flex items-center gap-2">
                       <input value={competitorForm.name} onChange={(e) => setCompetitorForm({ ...competitorForm, name: e.target.value })} className="sizing-new-input" style={{ width: "14rem", maxWidth: "100%" }} placeholder="경쟁사명 *" aria-label="경쟁사명" />
@@ -216,7 +216,7 @@ export function ProfileCompetitiveTab({ ctx, profile }: { ctx: OurCompanyStageSt
                     {profile.competitive.crossCheck && (
                       <div className="mt-3">
                         <div className="mb-1 flex flex-wrap items-center gap-2">
-                          <h4 className="text-[0.9rem] font-semibold">공시·리서치 원문 대조</h4>
+                          <h4 className="text-[length:var(--fs-body)] font-semibold">공시·리서치 원문 대조</h4>
                           <span className={`status-chip ${CROSSCHECK_STATUS_META[profile.competitive.crossCheck.status].chip}`}>
                             {CROSSCHECK_STATUS_META[profile.competitive.crossCheck.status].label}
                           </span>

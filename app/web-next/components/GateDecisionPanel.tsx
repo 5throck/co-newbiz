@@ -47,11 +47,12 @@ export function focusGateDecision(gate?: string, attempts = 12): void {
 }
 
 /** The gate stages' Primary Action: jump to (and focus) the decision form, which sits at the end of the page. */
-export function GateDecisionJump({ gate, entityType = "project", beforeJump }: { gate: string; entityType?: "opportunity" | "project"; beforeJump?: () => void }) {
+export function GateDecisionJump({ gate, entityType = "project", beforeJump, inline }: { gate: string; entityType?: "opportunity" | "project"; beforeJump?: () => void; inline?: boolean }) {
   const { me } = useAuth();
   const can = entityType === "project" ? canWriteProject(me?.role) : canWriteBusiness(me?.role);
   return (
     <PrimaryAction
+      inline={inline}
       label="결정 기록 (사람)"
       onClick={() => { beforeJump?.(); window.setTimeout(() => focusGateDecision(gate), 0); }}
       disabled={!can}
@@ -332,7 +333,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   const summaryOnly = !!recorded && recorded.decision !== "hold" && !(seq && recorded.decision === "go" && nextGate);
   return (
     <section aria-label="의사결정" className="market-section sizing-step" data-gate-form={panelKey.replace(/,/g, " ")} id={`gate-decision-${panelKey.replace(/,/g, "-")}`} tabIndex={-1}>
-      <h3 className="sizing-step-title text-[0.95rem]">
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]">
         <span className="sizing-step-badge">🚦</span> 의사결정 — 승인 기록 (경계 #2)
       </h3>
       <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">

@@ -290,7 +290,7 @@ describe("table column sizing guard", () => {
       { file: "app/projects/[id]/share/page.tsx", label: "공유 링크", tmin: "tmin-48", expect: ["cell-truncate"] },
       { file: "components/DataTab.tsx", label: "tmin-48", tmin: "tmin-48", expect: ["cell-truncate"] },
       { file: "components/stages/synergy/SynergyTabs.tsx", label: "주요 검토 영역", tmin: "tmin-56", expect: ["cell-truncate"] },
-      { file: "components/wacc/BetaPanel.tsx", label: "w-full text-[length:var(--fs-body)]", tmin: "tmin-48", expect: [] },
+      { file: "components/wacc/BetaPanel.tsx", label: "동종사 공표 베타", tmin: "tmin-48", expect: [] },
     ];
     const problems: string[] = [];
     for (const c of batch3) {

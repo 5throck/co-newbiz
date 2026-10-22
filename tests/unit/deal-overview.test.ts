@@ -52,7 +52,8 @@ describe("buildDealOverview", () => {
   test("hold mapping uses gateHoldHref; gate chips labelled", () => {
     const o = buildDealOverview("D1", { status: "assessed", attractiveness_score: null, synergy_score: null },
       proc({ gateStatus: { screening: "hold" } }), [{ entityType: "opportunity", entityId: "D1", gate: "screening" }]);
-    expect(o.holds[0]!.href).toBe("/deals/D1/s3");
+    // F9 query contract: S3 opens its 의사결정 tab on ?tab=decision.
+    expect(o.holds[0]!.href).toBe("/deals/D1/s3?tab=decision");
     expect(o.gates[0]).toMatchObject({ gate: "screening", decision: "hold" });
   });
   test("pre_fs links split by track: brownfield resolves on the S4 committee tab, greenfield on S5 (T-20261022-002)", () => {
@@ -63,11 +64,31 @@ describe("buildDealOverview", () => {
     expect(bf.nextAction).toMatchObject({ type: "resolve_hold", href: "/deals/D1/s4?tab=committee" });
     const gf = buildDealOverview("D1", { status: "assessed", attractiveness_score: null, synergy_score: null },
       proc({ track: "greenfield", gateStatus: { pre_fs: "hold" } }), bfHold);
-    expect(gf.holds[0]!.href).toBe("/deals/D1/s5");
-    // Unknown track keeps the historical S5 destination.
+    // F9 query contract: S5 opens its 검토·확정 tab on ?tab=review.
+    expect(gf.holds[0]!.href).toBe("/deals/D1/s5?tab=review");
+    // Unknown track keeps the historical S5 destination (same review-tab contract).
     const unknown = buildDealOverview("D1", { status: "assessed", attractiveness_score: null, synergy_score: null },
       proc({ gateStatus: { pre_fs: "hold" } }), bfHold);
-    expect(unknown.holds[0]!.href).toBe("/deals/D1/s5");
+    expect(unknown.holds[0]!.href).toBe("/deals/D1/s5?tab=review");
+  });
+  test("carrierScopeFinished -> the next action is PROMOTION, not the S8 artifact/fs-gate state (journey F2)", () => {
+    // The engine's opportunity-branch currentStage reads S8 for a finished but
+    // un-promoted carrier and reports S8's own artifacts as missing — neither is
+    // the user's job before promotion.
+    const procDone = {
+      currentStage: "S8", blockers: [], track: "greenfield" as const,
+      requiredArtifacts: ["Business Case(비용·수익 라인 또는 밸류에이션 — brownfield는 대상별)"], carrierScopeFinished: true,
+    };
+    const gf = buildDealOverview("D1", { status: "selected", attractiveness_score: null, synergy_score: null }, procDone);
+    expect(gf.nextAction).toMatchObject({ type: "advance_stage", subject: "프로젝트로 추진", href: "/deals/D1/s5" });
+    const bf = buildDealOverview("D1", { status: "selected", attractiveness_score: null, synergy_score: null },
+      { ...procDone, track: "brownfield" as const });
+    expect(bf.nextAction).toMatchObject({ type: "advance_stage", href: "/deals/D1/s7" });
+    // Without the marker the old behavior is untouched (fs gate request).
+    const notDone = buildDealOverview("D1", { status: "selected", attractiveness_score: null, synergy_score: null },
+      { currentStage: "S8", blockers: [], track: "greenfield" as const, requiredArtifacts: [] });
+    expect(notDone.nextAction).toMatchObject({ type: "request_gate_decision" });
+    expect(notDone.nextAction!.href).toBe("/deals/D1/s8");
   });
 });
 
@@ -87,7 +108,8 @@ describe("buildDealOverview data contract (refinement Row 1)", () => {
   });
   test("nextAction: gate decision when all artifacts done; advance when the stage has no open gate", () => {
     const g = buildDealOverview("D1", opp(), proc({ requiredArtifacts: ["A"] }));
-    expect(g.nextAction).toMatchObject({ type: "request_gate_decision", href: "/deals/D1/s3", reason: { type: "gate_pending", gate: "screening" } });
+    // F9 query contract: the screening decision surface is S3's 의사결정 tab.
+    expect(g.nextAction).toMatchObject({ type: "request_gate_decision", href: "/deals/D1/s3?tab=decision", reason: { type: "gate_pending", gate: "screening" } });
     const adv = buildDealOverview("D1", opp(), proc({ requiredArtifacts: ["A"], gateStatus: { screening: "go" }, nextStage: "S4" }));
     expect(adv.nextAction).toMatchObject({ type: "advance_stage", subject: "진출방식 결정", href: "/deals/D1/s4" });
   });
@@ -104,11 +126,11 @@ describe("buildDealOverview data contract (refinement Row 1)", () => {
     expect(by(s2, "attractiveness")).toMatchObject({ state: "missing", href: "/deals/D1/s2" });
     expect(by(s2, "synergy")).toMatchObject({ state: "pending", applicableFromStage: "S3" });
     expect(by(s2, "track")).toMatchObject({ state: "pending", applicableFromStage: "S4" });
-    expect(by(s2, "gate")).toMatchObject({ state: "none", href: "/deals/D1/s3" });
+    expect(by(s2, "gate")).toMatchObject({ state: "none", href: "/deals/D1/s3?tab=decision" });
     const s4 = buildDealOverview("D1", opp({ status: "selected", attractiveness_score: 5 }), proc());
     expect(by(s4, "attractiveness").state).toBe("value");
     expect(by(s4, "track")).toMatchObject({ state: "missing", href: "/deals/D1/s4" });
-    expect(s2.nextGate).toMatchObject({ gate: "screening", href: "/deals/D1/s3" });
+    expect(s2.nextGate).toMatchObject({ gate: "screening", href: "/deals/D1/s3?tab=decision" });
   });
   test("project fact only when a linked project id exists", () => {
     expect(buildDealOverview("D1", opp(), proc()).facts.some((f) => f.key === "project")).toBe(false);

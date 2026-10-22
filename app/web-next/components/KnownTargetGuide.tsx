@@ -30,7 +30,7 @@ export function KnownTargetGuide({ opportunityId }: { opportunityId: string }) {
   const steps = (proc?.stages ?? []).filter((s) => ["S1", "S2", "S3", "S4"].includes(s.id));
   return (
     <section aria-label="알려진 대상 안내" className="market-section" data-testid="known-target-guide">
-      <h3 className="sizing-step-title text-[0.95rem]">알려진 대상으로 시작한 검토 — {target}</h3>
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]">알려진 대상으로 시작한 검토 — {target}</h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
         대상 기업은 S6 대상 후보(후보 전체 목록)에 미리 등록되어 있습니다. S1~S4는 생략되지 않습니다 — 아래 순서대로 대상을 염두에 두고 완료하세요.
         시장 규모·경쟁 구조(S1), 매력도(S2), 시너지(S3), 진출방식 결정(S4)은 사람이 판단해 입력합니다.

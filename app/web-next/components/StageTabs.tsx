@@ -21,7 +21,6 @@ import {
   type StageTabGroup,
 } from "../lib/stage-tabs.ts";
 import { StageRail, useSourceOpportunity } from "./StageFrame.tsx";
-import { PrimarySlot } from "./ui.tsx";
 import { api } from "../lib/api.ts";
 import { S8PartHeader } from "./stages/S8PartHeader.tsx";
 
@@ -209,8 +208,8 @@ function StageTabsInner({ projectId }: { projectId: string }) {
         </span>
       </div>
     </nav>
-    {/* The screen's Primary Action (design §5) sits at the top right, beside the stage tabs. */}
-    <PrimarySlot />
+    {/* The screen's Primary Action slot moved to the StageFrame head (2026-10-22 사용자
+        리포트: S2처럼 h1 행 우상단 하나로 통일 — 이 중복 슬롯은 탭 행 아래 버튼을 만들었다). */}
     </div>
     {subIdx >= 0 && (
       <nav aria-label="재무적 타당성 하위 화면" className="stage-tabs-wrap">
@@ -232,9 +231,11 @@ function StageTabsInner({ projectId }: { projectId: string }) {
     )}
     {group.stage === "S8" && (seg === "/wacc" || seg === "/financial-analysis") && <S8PartHeader part="financial" />}
     {sourceOppId && (
+      // F12: the link lands on S4 only — say so instead of implying S1~S4 (S1~S3
+      // are reached through the stage rail's 이동 메뉴 above).
       <p className="mb-2 text-[length:var(--fs-caption)]">
-        <Link href={`/deals/${encodeURIComponent(sourceOppId)}/s4`} className="text-[color:var(--accent)] font-bold">원본 기회 보기</Link>
-        <span className="text-[color:var(--muted-fg)]"> — S1~S4(시장분석·기회·시너지·진출방식) 화면으로 이동합니다.</span>
+        <Link href={`/deals/${encodeURIComponent(sourceOppId)}/s4`} className="text-[color:var(--accent)] font-bold">사업 기회 보기</Link>
+        <span className="text-[color:var(--muted-fg)]"> — S4 진출방식 결정 화면으로 이동합니다 (S1~S3는 단계 이동 메뉴에서).</span>
       </p>
     )}
     </>

@@ -86,7 +86,7 @@ function BacktestView() {
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}
 
       <section className="market-section" aria-label="편향 탐지" data-testid="backtest-bias">
-        <h2 className="text-[0.9rem] mb-2">편향 탐지 <span className="note">— 부호 괴리 = (실적 − 예측) ÷ 예측 · 음수 = 과대 예측</span></h2>
+        <h2 className="text-[length:var(--fs-body)] mb-2">편향 탐지 <span className="note">— 부호 괴리 = (실적 − 예측) ÷ 예측 · 음수 = 과대 예측</span></h2>
         {org === null || bias === null ? <PageState state="loading" /> : (
           <ul className="sizing-note-list">
             <li>
@@ -127,7 +127,7 @@ function BacktestView() {
       </section>
 
       <section className="market-section" aria-label="신뢰도 등급 조정 제안" data-testid="confidence-proposals">
-        <h2 className="text-[0.9rem] mb-2">데이터 신뢰도 등급 조정 제안 <span className="note">— 제안·승인 모두 사람 · 승인은 캡을 낮추기만 함</span></h2>
+        <h2 className="text-[length:var(--fs-body)] mb-2">데이터 신뢰도 등급 조정 제안 <span className="note">— 제안·승인 모두 사람 · 승인은 캡을 낮추기만 함</span></h2>
         {proposals === null ? <PageState state="loading" /> : proposals.length === 0 ? (
           <p className="note">기록된 제안이 없습니다.</p>
         ) : (

@@ -34,6 +34,7 @@ const gf = await import("../../app/web-next/lib/greenfield-subtrack.ts");
 const tailor = await import("../../app/web-next/lib/dd-checklist-tailor.ts");
 const { getChecklistItems, getWorkspaceOverlay } = await import("../../app/web-next/lib/library.ts");
 const { DdTargetError } = await import("../../app/web-next/lib/dd-target.ts");
+const { buildS8LensSummary } = await import("../../app/web-next/lib/s8-lens-summary.ts");
 
 const NOW = new Date().toISOString();
 const OLD = "2026-06-01T00:00:00.000Z"; // before GF_SUBTRACK_PREDICATE_DATE / GF_WORKSPACE_SCOPE_DATE (2026-07-01)
@@ -357,5 +358,37 @@ describe("(g) fail-closed overlay rows", () => {
     } finally {
       gf.setWorkspaceOverlayForTest();
     }
+  });
+});
+
+describe("(h) lens constituents excluded by the overlay are absent, not pending (2026-10-22 live-use report)", () => {
+  test("greenfield T3: hdd-03 is overlay-N — the three judgeable constituents roll T3 to met (3/3)", () => {
+    const p = seedProject("greenfield", null);
+    // hdd-03 carries NO state row and the workspace scope marks it N (Day-1 does not
+    // exist for greenfield) — before the fix the S8 lens rolled it up as pending and
+    // T3 could never complete.
+    const judged: Array<[string, string]> = [
+      ["chk-technical-dd-checklist", "tdd-05"],
+      ["chk-technical-dd-checklist", "tdd-07"],
+      ["chk-hr-dd-checklist", "hdd-01"],
+    ];
+    for (const [cl, id] of judged) {
+      db.run(
+        "INSERT INTO project_checklist_item_state (id, project_id, checklist_id, item_id, status, note, assessed_by, assessed_at) VALUES (?,?,?,?,?,?,?,?)",
+        [ulid(), p, cl, id, "pass", "test", A1, NOW],
+      );
+    }
+    // The workspace item itself must carry the exclusion flag the lens filters on.
+    const hr = tailor.listDdWorkspace(p, { targetId: null }).domains.find((d) => d.checklistId === "chk-hr-dd-checklist")!;
+    const hdd03 = hr.items.find((x) => x.id === "hdd-03")!;
+    expect(hdd03.scope?.judgeable).toBe(false);
+
+    const s = buildS8LensSummary(db, p);
+    const t3 = s.technical.items.find((i) => i.key === "T3")!;
+    expect(t3.status).toBe("met");
+    expect(t3.note).toContain("구성 항목 3건"); // 4가 아니라 3 — 범위 밖 항목은 부재
+    // The other lens items keep their own constituent sets (tdd-03/04 unjudged -> undetermined).
+    const t2 = s.technical.items.find((i) => i.key === "T2")!;
+    expect(t2.status).toBe("undetermined");
   });
 });

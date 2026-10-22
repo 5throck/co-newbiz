@@ -2,7 +2,7 @@
 
 // 통합 시각 레이아웃 프리미티브 (ADR-0083).
 // 페이지 헤더/섹션 헤더/행 액션은 이 모듈의 구조만 사용한다 —
-// 등록 버튼의 위치, 버튼 크기(툴바=기본, 행=btn-sm), 간격(8px)은
+// 등록 버튼의 위치, 버튼 크기(툴바=기본, 행=btn-sm), 간격(8px, design-token-exempt: prose)은
 // 컴포넌트 안에서 고정되므로 페이지별 편차가 생기지 않는다.
 
 import type { ReactNode } from "react";
@@ -12,7 +12,7 @@ export function PageHeader({ title, description }: { title: string; description?
     <>
       <h1>{title}</h1>
       {description && (
-        <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">{description}</p>
+        <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">{description}</p>
       )}
     </>
   );

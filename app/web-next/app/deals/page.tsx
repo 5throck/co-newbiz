@@ -232,7 +232,7 @@ function DealsBoard() {
           <Link href="/opportunities?known_target=1" className="btn-ghost ml-2">알려진 대상으로 시작</Link>
         </span>
       </div>
-      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
+      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
         모든 검토/안건을 퍼널 한 장으로 봅니다 — 기회(S1~S7)와 프로젝트(S8~S12), 진행 에이징까지.
       </p>
       {/* R2-A item 8: every screen that has no sidebar entry is reachable from here. */}
@@ -270,8 +270,8 @@ function DealsBoard() {
 
       {data && (opps ?? []).filter((o) => o.status !== "dropped").length === 0 && data.projects.length === 0 && (
         <div className="market-section mb-4" style={{ border: "1px dashed var(--border)" }}>
-          <h2 className="text-[0.9rem] mb-1">아직 진행 중인 검토/안건이 없습니다</h2>
-          <p className="text-[length:var(--fs-caption)]" style={{ margin: "0 0 8px" }}>
+          <h2 className="text-[length:var(--fs-body)] mb-1">아직 진행 중인 검토/안건이 없습니다</h2>
+          <p className="text-[length:var(--fs-caption)]" style={{ margin: "0 0 var(--space-2)" }}>
             첫 신규사업 검토는 시장분석(S1)부터 시작합니다 — 4단계 가이드가 준비되어 있습니다.
           </p>
           <Link href="/onboarding" className="btn-ghost btn-sm" style={{ textDecoration: "none", display: "inline-block" }}>
@@ -315,7 +315,7 @@ function DealsBoard() {
                           )}
                         </Link>
                         {c.sourceHref && (
-                          <Link href={c.sourceHref} className="btn-ghost btn-sm">원본 기회 보기</Link>
+                          <Link href={c.sourceHref} className="btn-ghost btn-sm">사업 기회 보기</Link>
                         )}
                         </div>
                       );
@@ -328,7 +328,7 @@ function DealsBoard() {
           </div>
 
           <section className="market-section" aria-label="진행 에이징">
-            <h3 className="sizing-step-title text-[0.9rem] mb-1">진행 에이징 — HOLD·KILL 경과</h3>
+            <h3 className="sizing-step-title text-[length:var(--fs-body)] mb-1">진행 에이징 — HOLD·KILL 경과</h3>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               위 퍼널(S1~S7, S8~S12) 어느 한쪽에 속한 목록이 아니라, 전체 단계의 게이트({Object.values(GATE_LABEL).join("·")}) HOLD·KILL 결정을 모두 모은 목록입니다 — &quot;진행&quot; 열이 각 행이 어느 게이트에서 나온 결정인지 나타냅니다.
             </p>

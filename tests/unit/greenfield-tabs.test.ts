@@ -132,7 +132,7 @@ describe("GreenfieldStage tab structure (source)", () => {
     expect(sim).toContain("data-testid={`invest-simulation-row-${k}`}");
     expect(sim).toContain("{BAND_LABEL[k]}");
     const rev = stage.slice(stage.indexOf('panel("review"'));
-    for (const s of ['aria-label="평가 근거"', "타당성 검토 실행", "gf-checklist", "<GateDecisionPanel", 'gates={["pre_fs"]}']) expect(rev).toContain(s);
+    for (const s of ['aria-label="평가 근거"', "평가 기록 (사람이 확정)", "gf-checklist", "<GateDecisionPanel", 'gates={["pre_fs"]}']) expect(rev).toContain(s);
   });
   test("one save handler for 투자비 항목 저장 (no duplicated logic)", () => {
     expect(stage.match(/void saveInvestmentLines\(\)/g)?.length).toBe(1);

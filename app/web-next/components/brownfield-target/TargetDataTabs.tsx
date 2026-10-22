@@ -35,7 +35,7 @@ export function TargetFinancialsTab({ ctx }: { ctx: TargetDetailViewState }) {
               };
               return (
                 <div className="card mb-3">
-                  <h4 className="text-[0.9rem] mb-2">전자공시 재무 현황 ({companyProfile.profile.dartFinancials!.year}년)</h4>
+                  <h4 className="text-[length:var(--fs-body)] mb-2">전자공시 재무 현황 ({companyProfile.profile.dartFinancials!.year}년)</h4>
                   <EChart option={chartOption} height={300} ariaLabel="전자공시 재무 현황 — 계정별 연도 비교" />
                   <p className="mt-1 mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">단위: 억원 · 출처: 전자공시(전자공시) 사업보고서</p>
                   <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
@@ -105,7 +105,7 @@ export function TargetDisclosuresTab({ ctx }: { ctx: TargetDetailViewState }) {
                         <code className="dd-item-id">{d.rcept_dt}</code>
                         <span className="flex-1 min-w-[16rem]">{d.report_nm}</span>
                         {d.viewer_url && (
-                          <a href={d.viewer_url} target="_blank" rel="noreferrer" className="text-[0.88rem] text-[color:var(--accent)] underline">보고서 열기</a>
+                          <a href={d.viewer_url} target="_blank" rel="noreferrer" className="text-[length:var(--fs-body)] text-[color:var(--accent)] underline">보고서 열기</a>
                         )}
                       </li>
                     ))}
@@ -123,7 +123,7 @@ export function TargetSourcesTab({ ctx }: { ctx: TargetDetailViewState }) {
   return (
     <>{profileTab === "sources" && (
           <div className="card mt-3">
-            <h4 className="text-[0.9rem] mb-2">출처 · 데이터</h4>
+            <h4 className="text-[length:var(--fs-body)] mb-2">출처 · 데이터</h4>
             {!companyId ? (
               <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">회사 마스터가 아직 연결되지 않았습니다.</p>
             ) : companyProfile === undefined ? (
@@ -137,7 +137,7 @@ export function TargetSourcesTab({ ctx }: { ctx: TargetDetailViewState }) {
                   {" "}외부 웹 리서치 {companyProfile.profile.dataSources?.webResearchCount ?? 0}건
                 </p>
                 {companyProfile.profile.dartFinancials?.available && (
-                  <p className="mb-2 text-[0.88rem]">
+                  <p className="mb-2 text-[length:var(--fs-body)]">
                     <span className="status-chip status-green mr-1">DART</span>
                     전자공시 사업보고서 ({companyProfile.profile.dartFinancials.year}년)
                     {companyProfile.profile.dartFinancials.reportUrl && (

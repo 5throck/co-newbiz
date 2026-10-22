@@ -29,7 +29,7 @@ export function GoalAttainmentTable({
   if (goalCount === 0) {
     return (
       <section className="mt-4" aria-label="시나리오별 달성 여부">
-        <h3 className="sizing-step-title text-[0.9rem]">시나리오별 달성 여부</h3> {/* INTERIM-WORDING */}
+        <h3 className="sizing-step-title text-[length:var(--fs-body)]">시나리오별 달성 여부</h3> {/* INTERIM-WORDING */}
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" role="note">
           <AttainmentStatus status={null} /> 목표를 추가하면 시나리오별 달성 여부가 표시됩니다. {/* INTERIM-WORDING */}
         </p>
@@ -42,7 +42,7 @@ export function GoalAttainmentTable({
   if (rowsSource.length === 0) return null;
   return (
     <section className="mt-4" aria-label="시나리오별 달성 여부">
-      <h3 className="sizing-step-title text-[0.9rem]">시나리오별 달성 여부</h3> {/* INTERIM-WORDING */}
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]">시나리오별 달성 여부</h3> {/* INTERIM-WORDING */}
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
         참고 근거이며 판단은 사람이 합니다. {/* INTERIM-WORDING */}
         <span data-testid="attainment-legend"> {(["met", "missed", "indeterminate", "manual"] as const).map((k) => `${attainmentView(k).icon} ${attainmentView(k).label}`).join(" · ")}</span>
