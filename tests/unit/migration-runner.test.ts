@@ -82,12 +82,14 @@ describe("migration runner stop-on-error", () => {
       "INSERT INTO guard VALUES (5);", // CHECK violation mid-script
       "INSERT INTO m VALUES (1);",
     ].join("\n");
-    // OLD behavior: db.run on the whole script silently skips the bad INSERT
-    // and still applies the LAST statement — the defect.
+    // OLD-runner characterization (bun 1.3.14): db.run on the whole script
+    // silently skipped the bad INSERT and still applied the LAST statement —
+    // the defect that motivated the statement-split runner. The quirk is fixed
+    // in bun ≥ 1.4: the driver itself now raises at the violating statement,
+    // so the legacy shape is loud too; the NEW runner keeps the same guarantee
+    // (throws at the violation, applies nothing after it).
     const legacyDb = mkdb();
-    expect(() => legacyDb.run(sql)).not.toThrow();
-    expect((legacyDb.query("SELECT COUNT(*) c FROM m").get() as { c: number }).c).toBe(1);
-    // NEW behavior: throws at the violating statement; nothing applied after it.
+    expect(() => legacyDb.run(sql)).toThrow(/CHECK|constraint/i);
     const newDb = mkdb();
     expect(() => { for (const s of splitSqlStatements(sql)) newDb.run(s); }).toThrow(/CHECK|constraint/i);
     expect((newDb.query("SELECT COUNT(*) c FROM m").get() as { c: number }).c).toBe(0);
@@ -158,7 +160,7 @@ describe("0132/0137 header assertions now abort", () => {
   test("0132 rebuild row-count guard actually aborts on violation", () => {
     const sql = sabotage(readFileSync(join(DIR, files.find((f) => f.startsWith("0132_"))!), "utf-8"));
     const legacyDb = mkMigrated("0132_");
-    expect(() => legacyDb.run(sql)).not.toThrow(); // OLD: assertion dead, migration "succeeds"
+    expect(() => legacyDb.run(sql)).toThrow(/CHECK|constraint/i); // bun ≥ 1.4: the sabotaged guard INSERT raises loudly (was silently dead on 1.3.14)
     const newDb = mkMigrated();
     expect(() => { for (const s of splitSqlStatements(sql)) newDb.run(s); }).toThrow(/CHECK|constraint/i); // NEW: aborts
   });
@@ -166,7 +168,7 @@ describe("0132/0137 header assertions now abort", () => {
   test("0137 rebuild guard actually aborts on violation", () => {
     const sql = sabotage(readFileSync(join(DIR, files.find((f) => f.startsWith("0137_"))!), "utf-8"));
     const legacyDb = mkMigrated("0137_");
-    expect(() => legacyDb.run(sql)).not.toThrow();
+    expect(() => legacyDb.run(sql)).toThrow(/CHECK|constraint/i); // bun ≥ 1.4: loud (was silently dead on 1.3.14)
     const newDb = mkMigrated();
     expect(() => { for (const s of splitSqlStatements(sql)) newDb.run(s); }).toThrow(/CHECK|constraint/i);
   });

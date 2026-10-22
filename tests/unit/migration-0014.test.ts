@@ -146,16 +146,17 @@ describe("0014 idempotence", () => {
     expect(seedRows().length).toBe(before); // before/after-relative — a later seed migration must not break this pin
   });
 
-  test("re-executing the 0014 SQL duplicates nothing (bun multi-statement run silently no-ops; the PK is the hard guard)", () => {
-    // bun 1.3.14 quirk, verified while writing this test: db.run() over a
-    // multi-line statement followed by a trailing newline after ';' does
-    // NOT raise the UNIQUE violation on duplicate rows — it reports
-    // changes: 0. So the whole-file re-exec is asserted non-duplicating,
-    // and the PK guard is proven separately with a single-statement INSERT
-    // (which bun does let fail loudly).
+  test("re-executing the 0014 SQL duplicates nothing (PK guard bites regardless of how the driver re-runs the file)", () => {
+    // Contract updated for bun ≥ 1.4: the 1.3.14 quirk (multi-statement
+    // db.run() silently no-ops duplicate INSERTs, changes: 0) is gone — the
+    // raw re-exec now raises UNIQUE on the fixed var_key PK. The invariant
+    // under test is driver-behavior-agnostic: after a whole-file re-exec the
+    // seed set is unchanged, whether the driver no-oped or threw loudly.
     const before = seedRows().length;
     const sql = readFileSync(join(MIGRATIONS_DIR, MIGRATION_FILE), "utf-8");
-    db.run(sql);
+    expect(() =>
+      db.run(sql)
+    ).toThrow(/UNIQUE constraint failed/);
     expect(seedRows().length).toBe(before);
     expect(() =>
       db.run(
