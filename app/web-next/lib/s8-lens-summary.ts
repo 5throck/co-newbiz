@@ -29,7 +29,14 @@ function constituentRollupsOf(db: Database, projectId: string, targetId: string 
   }
   const out: Partial<Record<TechnicalItemKey, ConstituentRollup>> = {};
   for (const k of Object.keys(TECHNICAL_ITEM_CONSTITUENTS) as TechnicalItemKey[]) {
-    const present = TECHNICAL_ITEM_CONSTITUENTS[k].filter((id) => index.has(id));
+    // ADR-0160 addendum b: a constituent the workspace scope excludes (N/X) takes no
+    // judgement and the S9 tab does not render it — rolling it up as pending would hang
+    // the lens item forever (2026-10-22 live-use report: greenfield T3 on hdd-03, N in
+    // the overlay). Same doctrine sentence as below the import: out of scope = absent.
+    const present = TECHNICAL_ITEM_CONSTITUENTS[k].filter((id) => {
+      const it = index.get(id);
+      return it !== undefined && it.judgeable !== false;
+    });
     out[k] = rollupConstituentStatuses(present.map((id) => index.get(id)!.status));
   }
   return out;

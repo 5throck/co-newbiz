@@ -46,12 +46,21 @@ export function ddItemStatusView(status: string | null | undefined): DdItemStatu
   }
 }
 
-export interface DdItemLookup { id: string; text: string; status: string | null; domainTitle: string }
+export interface DdItemLookup {
+  id: string;
+  text: string;
+  status: string | null;
+  domainTitle: string;
+  /** false = the workspace scope excludes this item (ADR-0160 addendum b: N/X takes no
+   *  judgement and the S9 tab does not render it) — the lens must treat it as absent,
+   *  never as pending (2026-10-22 live-use report: greenfield T3 hung on hdd-03). */
+  judgeable: boolean;
+}
 
 /** Flatten a `/dd` response (domains → items) into an id-keyed lookup. */
-export function indexDdItems(domains: Array<{ title: string; items: Array<{ id: string; text: string; state: { status: string } | null }> }>): Map<string, DdItemLookup> {
+export function indexDdItems(domains: Array<{ title: string; items: Array<{ id: string; text: string; state: { status: string } | null; scope?: { judgeable?: boolean } | null }> }>): Map<string, DdItemLookup> {
   const out = new Map<string, DdItemLookup>();
-  for (const d of domains) for (const it of d.items) out.set(it.id, { id: it.id, text: it.text, status: it.state?.status ?? null, domainTitle: d.title });
+  for (const d of domains) for (const it of d.items) out.set(it.id, { id: it.id, text: it.text, status: it.state?.status ?? null, domainTitle: d.title, judgeable: it.scope?.judgeable ?? true });
   return out;
 }
 

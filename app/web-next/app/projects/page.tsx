@@ -8,8 +8,9 @@ import { useConfirm } from "../../components/crud.tsx";
 import { ClosureModal } from "../../components/ClosureModal.tsx";
 import { ColGroup } from "../../components/ui.tsx";
 
-// 프로젝트 목록 7열 — 번호·트랙·생성일은 좁게, 프로젝트명·원본 기회에 여유.
-const PROJECTS_COL_PCT = [13, 22, 10, 12, 21, 11, 11] as const;
+// 프로젝트 목록 7열 — 생성일은 날짜 1줄이면 충분해 좁히고, 그 몫을 바로가기로
+// (2026-10-22 사용자 리포트: 생성일 11%는 과대, 바로가기 11%는 세로 적층 유발).
+const PROJECTS_COL_PCT = [13, 22, 10, 12, 21, 8, 14] as const;
 
 // 프로젝트 (/projects) — S8~S12(사업성 분석·DD·투심·포트폴리오)로 이어지는
 // 프로젝트 키 화면군의 진입점. 승격된 프로젝트는 이전까지 /opportunities의

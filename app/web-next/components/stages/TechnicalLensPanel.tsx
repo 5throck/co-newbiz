@@ -92,7 +92,10 @@ function ConstituentRow({ c }: { c: DdItemLookup | { id: string; missing: true }
 function TechItemVerdictView({ item, s9Href, ddIndex }: { item: LensItemView; s9Href: string; ddIndex: Map<string, DdItemLookup> | null }) {
   const v = LENS_VIEW[item.status];
   const rows = ddIndex ? constituentsOf(item.key as TechnicalItemKey, ddIndex) : [];
-  const present = rows.filter((r): r is DdItemLookup => !("missing" in r));
+  // ADR-0160 addendum b: a constituent the workspace scope excludes (N/X) is not rendered
+  // by its S9 tab and takes no judgement — the mirror here treats it as absent, never
+  // pending (2026-10-22 live-use report: greenfield T3 hung on hdd-03).
+  const present = rows.filter((r): r is DdItemLookup => !("missing" in r) && r.judgeable !== false);
   const missing = rows.filter((r) => "missing" in r);
   const rollup = present.length > 0 ? rollupConstituentStatuses(present.map((r) => r.status)) : null;
   const groups = new Map<string, DdItemLookup[]>();
