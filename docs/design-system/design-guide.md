@@ -120,7 +120,8 @@ list gaps 8–10px, section separation 24px+.
 | Component | Spec |
 |---|---|
 | Card | `.card` / `.glass` — surface + border + radius-3xl, hover lift ≤4px |
-| Button | `.btn-primary` (primary action, one per view — the class `PrimaryAction` renders; `.btn-premium` is a DEPRECATED alias with 2026-10-22 review — migrate its remaining call sites, do not use in new code), `.btn-ghost` (secondary), destructive = confirm dialog required |
+| Button | `.btn-primary` (primary action, one per view — the class `PrimaryAction` renders; `.btn-premium` is a DEPRECATED alias with 2026-10-22 review — migrate its remaining call sites, do not use in new code), `.btn-ghost` (secondary), destructive = confirm dialog required. **AI를 제공하는 버튼의 형태(2026-10-22 사용자 리포트)**: `아이콘 + 기능 + (AI)` — 생성·재생성 계열은 "🤖 추천 생성 (AI)", AI 초안 보조 동작은 "초안 버리기 (AI)"; 🤖는 icon-vocabulary의 경계 #2 마커이며 사람이 AI 개입 여부를 버튼에서 즉시 식별하게 한다 |
+| Head action | 모든 단계 화면의 머리 우상단 버튼 = **다음 단계 내비게이션**("다음: {스테이지명} →", StageFrame 렌더·트랙 인지 스킵). 단계의 기록·생성 액션은 본문 작업 면에 둔다 — design-screens.md 표준 해부 순서 참조 |
 | Table | `.data-table` — border-b rows; **header cells centered by default** (`.data-table th`), body cells left-aligned, numeric columns right via `.col-num` (header+cell); wide tables wrapped in `.table-scroll` with `min-width`; `tabular-nums` for figures, `caption.sr-only`. Header alignment exceptions are per-column overrides only — never re-left the default |
 | Badge / chip | `.status-chip status-*` — icon + text, never color-only |
 | Form control | token background/border, focus ring `--primary` 3px, label mandatory |

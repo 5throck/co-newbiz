@@ -52,3 +52,15 @@ lang_reason: source-material
 
 - tsc core/web-next 0 errors · typecheck-baseline OK(신규 0) · `procedures/_validate.ts` 0 errors · `audit.ts` 전체 통과(활성화된 design-lint 게이트 포함) · design-lint 5/5 PASS · 단위 테스트 326파일(4건의 합법적 파괴를 수정된 계약으로 갱신 후 전부 통과 — 토큰 치환·행 특정 라벨·라이브러리 투영 재동기화)
 - 3단계 검토: AI 1차(머신 게이트)·AI 2차(품평회 심사위원 2라운드) 완료 — 사람 최종 승인은 PR 리뷰 시점
+
+## Final round — 머리 액션·AI 버튼·폰트 완전 통일 (같은 날 추가 사용자 리포트 4건)
+
+리뷰 이후 실사용에서 추가 발견된 4건을 수선하고 표준으로 등록했다 (설계: `docs/designs/2026-10-22-head-action-standard-design.md`, registered implemented):
+
+1. **머리 우상단 버튼 = 다음 단계 내비게이션 통일**: StageFrame이 트랙 인지 스킵으로 "다음: {스테이지명} →"을 렌더(브라운필드 S4→대상 후보 발굴, 그린필드 S5→사업성 분석). 단계의 기록·생성 액션은 본문 작업 면으로 이동. 12화면 실측: 전부 "다음: … →" 확인(S12 종료 단계는 숨김이 정답).
+2. **스트립 위치 통일**: 입력과 출력 스트립을 목적선 바로 다음(레일/StageTabs 행 앞)으로 이동 — 12화면 동일 순서.
+3. **복합 단계(S6/S7)**: 머리 버튼이 현재 경로 단계 기준으로 계산(/s6→대상 선정, /s7→사업성 분석).
+4. **프로젝트 화면 머리 밀림**: StageTabs가 StageFrame보다 먼저 렌더되던 구조를 railSlot으로 해소 — S8–S12 전 화면 H1이 top bar 바로 아래(83px)로 정착.
+
+**표준 등록**: AI 액션 버튼 [🤖 기능 (AI)] 형태(icon-vocabulary.yaml 결정-of-record), 폰트 2단계 스케일 완전 수렴(TSX+styles.css 잔존 0), StageTabs 중복 PrimarySlot 제거(단일 슬롯). **예방 래칫**: design-screens.md 표준 해부 순서 등록, design-guide.md AI 버튼 표준·Head action 행 추가.
+
