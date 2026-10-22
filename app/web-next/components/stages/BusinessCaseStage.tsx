@@ -509,11 +509,16 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
   return (
 <>
-      <StageTabs projectId={projectId} />
-      {/* The jump chip is the 결정 tab's shortcut — hidden when already there (IA cleanup 2026-10-14). */}
-      {tab !== "decision" && <GateDecisionJump gate="fs" beforeJump={() => setTab("decision")} />}
-      <StageFrame stageId="S8" heading={greenfield ? "S8 사업성 분석 — 시장 기반 밸류에이션" : "S8 사업성 분석 — 이중 관점 밸류에이션 비교"}>
-      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
+      {/* 리뷰 2026-10-22 (사용자 리포트): StageTabs는 레일 슬롯으로 — h1·스트립이 탭 행
+          아래로 밀리지 않고 S1~S7 딜 화면과 같은 머리 위치를 유지한다. */}
+      <StageFrame
+        stageId="S8"
+        heading={greenfield ? "S8 사업성 분석 — 시장 기반 밸류에이션" : "S8 사업성 분석 — 이중 관점 밸류에이션 비교"}
+        railSlot={<StageTabs projectId={projectId} />}
+      >
+        {/* The jump chip is the 결정 tab's shortcut — hidden when already there (IA cleanup 2026-10-14). */}
+        {tab !== "decision" && <GateDecisionJump gate="fs" beforeJump={() => setTab("decision")} />}
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
         {greenfield ? (
           <>시나리오마다 <b>시장 기반(진행 판정 1차)</b> 관점으로 평가합니다. 성장은 시장 규모와 시장점유율에서 오며, 대상 회사가 없어 과거 실적과의 비교는 없습니다.</>
         ) : (

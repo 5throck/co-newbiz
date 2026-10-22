@@ -169,8 +169,12 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
 
   return (
 <>
-      <StageTabs projectId={projectId} />
-      <StageFrame stageId="S12" heading="S12 사후 관리 — 포트폴리오 스코어카드 · 전환 결정">
+      {/* 리뷰 2026-10-22 (사용자 리포트): StageTabs는 레일 슬롯으로 — 머리 위치 일관성. */}
+      <StageFrame
+        stageId="S12"
+        heading="S12 사후 관리 — 포트폴리오 스코어카드 · 전환 결정"
+        railSlot={<StageTabs projectId={projectId} />}
+      >
         {/* Wave U-1 (design §3.5): home of the closure flow — preconditions are
             shown inside ClosureModal; the decision itself stays human-only. */}
         <PrimaryAction

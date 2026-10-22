@@ -235,7 +235,7 @@ function StageTabsInner({ projectId }: { projectId: string }) {
       // F12: the link lands on S4 only — say so instead of implying S1~S4 (S1~S3
       // are reached through the stage rail's 이동 메뉴 above).
       <p className="mb-2 text-[length:var(--fs-caption)]">
-        <Link href={`/deals/${encodeURIComponent(sourceOppId)}/s4`} className="text-[color:var(--accent)] font-bold">원본 기회 보기</Link>
+        <Link href={`/deals/${encodeURIComponent(sourceOppId)}/s4`} className="text-[color:var(--accent)] font-bold">사업 기회 보기</Link>
         <span className="text-[color:var(--muted-fg)]"> — S4 진출방식 결정 화면으로 이동합니다 (S1~S3는 단계 이동 메뉴에서).</span>
       </p>
     )}

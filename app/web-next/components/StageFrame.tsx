@@ -145,6 +145,7 @@ export function StageFrame({
   stageId,
   track,
   heading,
+  railSlot,
   children,
 }: {
   /** 이 화면이 담당하는 단계 — 복합 단계는 배열(S6·S7처럼 한 화면이 두 단계) */
@@ -153,6 +154,10 @@ export function StageFrame({
   track?: TrackId;
   /** 지원 도구 화면용 제목 재정의 (예: S3의 그룹/계열사 프로파일 화면) — 레일·메타는 stageId를 따른다 */
   heading?: string;
+  /** 프로젝트 화면(/projects/**) 전용 — StageTabs(스테퍼·단계 탭 행)를 레일 자리에 렌더한다.
+      이렇게 하지 않으면 h1·스트립이 탭 행 아래로 밀려 deal 화면(S1~S7: h1 → 레일 → 스트립)과
+      머리 위치가 어긋난다(2026-10-22 사용자 리포트 — S8~S12 전 단계 일관성). */
+  railSlot?: ReactNode;
   children?: ReactNode;
 }) {
   const ids = Array.isArray(stageId) ? stageId : [stageId];
@@ -173,7 +178,9 @@ export function StageFrame({
         {!stepperOwnedByTabs && <PrimarySlot />}
       </div>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">{stage.objective}</p>
-      {!stepperOwnedByTabs && <StageRail current={ids} track={track} />}
+      {railSlot !== undefined
+        ? railSlot
+        : !stepperOwnedByTabs && <StageRail current={ids} track={track} />}
       <StageHandoffStrip primary={primary} track={track ?? carrierTrack ?? undefined} linkFor={linkFor} />
       {projectId && PROJECT_STAGE_IDS.has(primary) && <StageGuidance projectId={projectId} stageId={primary} />}
       {/* 단계 설명 슬롯 — 서식은 프레임이 표준화한다(0.9rem·muted·leading-relaxed,

@@ -102,7 +102,7 @@ function CarrierStageBody({ routeId, children }: { routeId: string; children: (c
   if (state.status === "loading") return <PageState state="loading" />;
   if (state.status === "error") return <PageState state="error" errorText={state.message} onRetry={() => window.location.reload()} />;
   if (state.opportunityId === "") {
-    return <PageState state="empty" emptyText="이 프로젝트에는 원본 기회가 연결되어 있지 않습니다 — S1~S7 화면은 기회 단위로 동작합니다." />;
+    return <PageState state="empty" emptyText="이 프로젝트에는 사업 기회가 연결되어 있지 않습니다 — S1~S7 화면은 기회 단위로 동작합니다." />;
   }
   return <>{children({ opportunityId: state.opportunityId, track: state.track })}</>;
 }

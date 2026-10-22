@@ -452,12 +452,15 @@ export function DdStage({ projectId }: { projectId: string }) {
 
   return (
 <>
-      <StageTabs projectId={projectId} />
-      {/* 게이트 결정은 의사결정 탭에 있다 — 점프 전에 탭을 열어 포커스 대상이
-          보이게 한다(F6, BusinessCaseStage:514와 동일 패턴). */}
-      <GateDecisionJump gate="dd" beforeJump={() => { if (data) setTab(decisionTabIdx); }} />
-      <ReviewBuckets entityType="project" entityId={projectId} gates={["dd"]} artifacts={stageArtifactTabs("S9")} />
-      <StageFrame stageId="S9" heading={s9Heading(data?.greenfield_scope)}>
+      {/* 리뷰 2026-10-22 (사용자 리포트): StageTabs를 레일 슬롯으로 — h1·스트립이
+          탭 행 아래로 밀리지 않고 S1~S7 딜 화면과 같은 머리 위치를 유지한다. */}
+      <StageFrame
+        stageId="S9"
+        heading={s9Heading(data?.greenfield_scope)}
+        railSlot={<StageTabs projectId={projectId} />}
+      >
+        <GateDecisionJump gate="dd" beforeJump={() => { if (data) setTab(decisionTabIdx); }} />
+        <ReviewBuckets entityType="project" entityId={projectId} gates={["dd"]} artifacts={stageArtifactTabs("S9")} />
         {data && (
           <div className="mb-3 flex flex-wrap items-center gap-2" data-testid="dd-subject-header">
             {targets.length === 0 ? (

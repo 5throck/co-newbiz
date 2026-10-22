@@ -315,7 +315,7 @@ function DealsBoard() {
                           )}
                         </Link>
                         {c.sourceHref && (
-                          <Link href={c.sourceHref} className="btn-ghost btn-sm">원본 기회 보기</Link>
+                          <Link href={c.sourceHref} className="btn-ghost btn-sm">사업 기회 보기</Link>
                         )}
                         </div>
                       );

@@ -161,13 +161,17 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
 
   return (
 <>
-      <StageTabs projectId={projectId} />
-      {/* 게이트 결정은 "의사결정 · 승인 기록" 내부 탭에 있다 — 점프 전에 탭을
-          열어 포커스 대상이 실제로 보이게 한다(F6, BusinessCaseStage와 동일 패턴). */}
-      <GateDecisionJump gate={entityGo ? "group_ic" : "entity_ic"} beforeJump={() => setIcView("decision")} />
-      {/* One review block for both IC gates (the panels below do not repeat it). */}
-      <ReviewBuckets entityType="project" entityId={projectId} gates={["entity_ic", "group_ic"]} artifacts={stageArtifactTabs("S11")} />
-      <StageFrame stageId="S11" heading="S11 투자심사·실행 — 투자심의 자료 · 법인·그룹 투자심의위원회 · 설립 실행">
+      {/* 리뷰 2026-10-22 (사용자 리포트): StageTabs는 레일 슬롯으로 — 머리 위치 일관성. */}
+      <StageFrame
+        stageId="S11"
+        heading="S11 투자심사·실행 — 투자심의 자료 · 법인·그룹 투자심의위원회 · 설립 실행"
+        railSlot={<StageTabs projectId={projectId} />}
+      >
+        {/* 게이트 결정은 "의사결정 · 승인 기록" 내부 탭에 있다 — 점프 전에 탭을
+            열어 포커스 대상이 실제로 보이게 한다(F6, BusinessCaseStage와 동일 패턴). */}
+        <GateDecisionJump gate={entityGo ? "group_ic" : "entity_ic"} beforeJump={() => setIcView("decision")} />
+        {/* One review block for both IC gates (the panels below do not repeat it). */}
+        <ReviewBuckets entityType="project" entityId={projectId} gates={["entity_ic", "group_ic"]} artifacts={stageArtifactTabs("S11")} />
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
           법인 투자심의위원회와 그룹 투자심의위원회 승인이 모두 기록되고, 내부 추진·합작 프로젝트는 S10에서 확정한 설립 방식
           (신규 법인 설립 또는 신규 사업부 추진)의 5단계 완료 기록이 존재해야 S11이 완료됩니다.

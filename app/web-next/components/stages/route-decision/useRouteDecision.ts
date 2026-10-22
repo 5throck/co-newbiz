@@ -92,7 +92,7 @@ export function useRouteDecision({ opportunityId, rationaleParam, tabParam }: { 
   }, []);
   // 검토/안건은 URL로 고정된다 — 목업처럼 선택 칩 없이 바로 이 기회를 로드한다.
   // 단건 조회(GET /api/opportunities/{id})는 목록 조회와 달리 삭제 표시된
-  // 행도 그대로 돌려준다 — 프로젝트로 승격된 뒤 원본 기회가 삭제 표시되어도
+  // 행도 그대로 돌려준다 — 프로젝트로 승격된 뒤 사업 기회가 삭제 표시되어도
   // 그 S4 결정 이력은 계속 열람할 수 있어야 한다.
   useEffect(() => {
     let alive = true;
