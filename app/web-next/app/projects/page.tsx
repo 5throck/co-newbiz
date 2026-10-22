@@ -138,7 +138,7 @@ export function ProjectsView() {
                     {/* 바로가기 열은 작업이 아니라 내비게이션이다 — 배경 채움 버튼(btn-ghost)은
                         눌린 상태처럼 읽히므로(2026-10-22 사용자 리포트) 같은 행의
                         "원본 기회 보기"와 같은 링크 어휘를 쓴다. 종료·삭제만 버튼. */}
-                    <div className="flex flex-col gap-1 items-start">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 items-start">
                       <Link className="text-[length:var(--fs-caption)] text-[color:var(--accent)] underline-offset-2 hover:underline" href={`/projects/${p.id}/business-case`}>
                         사업성(S8)
                       </Link>
