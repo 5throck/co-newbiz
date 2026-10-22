@@ -21,7 +21,6 @@ import {
   type StageTabGroup,
 } from "../lib/stage-tabs.ts";
 import { StageRail, useSourceOpportunity } from "./StageFrame.tsx";
-import { PrimarySlot } from "./ui.tsx";
 import { api } from "../lib/api.ts";
 import { S8PartHeader } from "./stages/S8PartHeader.tsx";
 
@@ -209,8 +208,8 @@ function StageTabsInner({ projectId }: { projectId: string }) {
         </span>
       </div>
     </nav>
-    {/* The screen's Primary Action (design §5) sits at the top right, beside the stage tabs. */}
-    <PrimarySlot />
+    {/* The screen's Primary Action slot moved to the StageFrame head (2026-10-22 사용자
+        리포트: S2처럼 h1 행 우상단 하나로 통일 — 이 중복 슬롯은 탭 행 아래 버튼을 만들었다). */}
     </div>
     {subIdx >= 0 && (
       <nav aria-label="재무적 타당성 하위 화면" className="stage-tabs-wrap">

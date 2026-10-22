@@ -175,13 +175,17 @@ export function StageFrame({
         <h1>
           {heading ?? `${stage.id} ${ids.length > 1 ? `· ${STAGE_META.find((s) => s.id === ids[1])!.name}` : stage.name}`}
         </h1>
-        {!stepperOwnedByTabs && <PrimarySlot />}
+        {/* 프로젝트 화면(/projects/**)에서도 딜 화면과 같은 자리 — 1차 액션은 항상
+            머리 우상단(2026-10-22 사용자 리포트: S2는 우상단, S11은 탭 행 아래 별도 행). */}
+        <PrimarySlot />
       </div>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">{stage.objective}</p>
+      {/* 스트립은 목적선 바로 다음 — S1~S12 모든 화면에서 같은 머리 순서(h1 → 목적 → 스트립 →
+          레일/탭)를 유지한다(2026-10-22 사용자 리포트: S2와 S11의 스트립 위치 불일치). */}
+      <StageHandoffStrip primary={primary} track={track ?? carrierTrack ?? undefined} linkFor={linkFor} />
       {railSlot !== undefined
         ? railSlot
         : !stepperOwnedByTabs && <StageRail current={ids} track={track} />}
-      <StageHandoffStrip primary={primary} track={track ?? carrierTrack ?? undefined} linkFor={linkFor} />
       {projectId && PROJECT_STAGE_IDS.has(primary) && <StageGuidance projectId={projectId} stageId={primary} />}
       {/* 단계 설명 슬롯 — 서식은 프레임이 표준화한다(0.9rem·muted·leading-relaxed,
           하단 간격 mb-4). 페이지별 클래스·<strong> 강조 금지(설계서 개정 2026-09-04). */}
