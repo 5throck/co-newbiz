@@ -166,6 +166,13 @@ export function StageFrame({
   const params = useParams<{ id?: string }>();
   const carrierTrack = useCarrierTrack(track === undefined);
   const linkFor = useStageLinks(track ?? carrierTrack ?? undefined);
+  // 복합 단계(S6·S7 한 화면)에서 현재 경로가 어느 단계인지 — 다음 단계 버튼의 기준점.
+  const pathStageId = (() => {
+    const m = (usePathname() ?? "").match(/\/s(\d{1,2})$/);
+    const id = m ? (`S${m[1]}` as StageMetaId) : null;
+    return id && ids.includes(id) ? id : null;
+  })();
+  const navSource = pathStageId ?? primary;
   // Under /projects/[id]/** StageTabs owns the stepper (one stepper per screen).
   const stepperOwnedByTabs = (usePathname() ?? "").startsWith("/projects/");
   const projectId = stepperOwnedByTabs ? params?.id : undefined;
@@ -178,13 +185,14 @@ export function StageFrame({
         {/* 모든 단계 화면의 머리 우상단 = 다음 단계 내비게이션으로 통일(2026-10-22
             사용자 리포트: 단계별로 생성·제안·기록·종료 등 제각각이어서 혼란). 트랙 인지
             스킵(nextApplicableStage)으로 다음 적용 단계를 계산하며, 단계의 기록·생성
-            액션은 각 작업 면(인라인)에 남긴다. 다음 단계가 없으면(종료) 숨긴다. */}
+            액션은 각 작업 면(인라인)에 남긴다. 다음 단계가 없으면(종료) 숨긴다.
+            복합 단계(S6·S7)에서는 현재 경로의 단계 기준으로 계산한다. */}
         {(() => {
           const t = track ?? carrierTrack ?? undefined;
           // 트랙 미확정(로딩 중)에는 다음 단계를 추측하지 않는다 — 트랙 전용 단계로
           // 잘못 안내되는 과도 상태를 막는다(fail-honest).
           if (!t) return null;
-          const nextId = nextApplicableStage(primary, t);
+          const nextId = nextApplicableStage(navSource, t);
           if (!nextId) return null;
           const link = linkFor(nextId);
           if (!link?.href) return null;
