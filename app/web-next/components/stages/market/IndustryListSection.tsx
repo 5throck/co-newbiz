@@ -109,7 +109,7 @@ export function IndustryListSection({ ctx }: { ctx: MarketAnalysisStageState }) 
                         if (!newName.trim()) setNewName(it.name_ko);
                       }}
                     >
-                      {newCode === it.code ? "✔ " : ""}{it.name_ko} <code className="dd-item-id">{it.code}</code>
+                      {newCode === it.code ? "✓ " : ""}{it.name_ko} <code className="dd-item-id">{it.code}</code>
                       {it.profile && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"> · 업종 프로필</span>}
                     </button>
                   </li>

@@ -15,7 +15,7 @@ export function LinkCandidatesModal({ ctx }: { ctx: MarketAnalysisStageState }) 
             aria-label="가치사슬 연계 산업 선택"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-[0.95rem] mb-1">
+            <h2 className="text-[length:var(--fs-body)] mb-1">
               {linkModal.rerunAnalysisId ? "가치사슬 연계 산업 선택" : "가치사슬 연계 산업 미리보기"} — <span className="font-semibold">{linkModal.primaryName}</span>
             </h2>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">

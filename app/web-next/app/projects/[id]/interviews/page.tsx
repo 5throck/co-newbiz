@@ -79,7 +79,7 @@ function InterviewsView() {
       <p className="objective">CDD 증적(인터뷰·채널 확인)을 기록합니다 — 증적 참조가 필수이며 주제별 합의·엇갈림이 롤업되고, 핵심 주장별 삼각검증(cdd-07)이 집계됩니다.</p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       <section className="market-section" aria-label="삼각검증 요약" data-testid="interview-triangulation">
-        <h2 className="text-[0.9rem] mb-2">삼각검증 (cdd-07 — 주장당 독립 출처 2개 이상)</h2>
+        <h2 className="text-[length:var(--fs-body)] mb-2">삼각검증 (cdd-07 — 주장당 독립 출처 2개 이상)</h2>
         {tri === null ? <PageState state="loading" /> : tri.claims.length === 0 ? (
           <PageState state="empty" emptyText={`핵심 주장이 기록된 인터뷰가 없습니다${tri.unclaimed > 0 ? ` — 주장 미지정 ${tri.unclaimed}건은 집계되지 않습니다` : ""}.`} />
         ) : (
@@ -130,7 +130,7 @@ function InterviewsView() {
       </section>
       {canAct && (
         <section className="market-section" aria-label="인터뷰 기록">
-          <h2 className="text-[0.9rem] mb-2">인터뷰 기록</h2>
+          <h2 className="text-[length:var(--fs-body)] mb-2">인터뷰 기록</h2>
           <form className="sizing-new-form" onSubmit={create}>
             <div className="flex flex-wrap items-end gap-2">
               <label className="text-[length:var(--fs-caption)] flex-1 min-w-[10rem]"><span className="block mb-1">대상 *</span>

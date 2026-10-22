@@ -56,10 +56,11 @@ describe("gate HOLD links", () => {
   test("screening HOLD opens the S3 tab where the screening gate form lives", () => {
     const [i] = buildInbox({ pipeline: { projects: [], currentHolds: [hold("opportunity", "o1", "screening")] } }, NOW);
     expect(i.kind).toBe("gate_hold");
-    expect(i.href).toBe("/deals/o1/s3");
+    // F9 query contract: S3 opens its 의사결정 tab on ?tab=decision.
+    expect(i.href).toBe("/deals/o1/s3?tab=decision");
   });
   test("each gate maps to the stage tab hosting its decision panel", () => {
-    expect(gateHoldHref(hold("opportunity", "o1", "pre_fs"))).toBe("/deals/o1/s5");
+    expect(gateHoldHref(hold("opportunity", "o1", "pre_fs"))).toBe("/deals/o1/s5?tab=review");
     expect(gateHoldHref(hold("opportunity", "o1", "target_screening"))).toBe("/deals/o1/s7");
     expect(gateHoldHref(hold("project", "p 1", "fs"))).toBe("/deals/p%201/s8");
     expect(gateHoldHref(hold("project", "p1", "dd"))).toBe("/deals/p1/s9");
@@ -70,16 +71,18 @@ describe("gate HOLD links", () => {
     // T-20261022-002: S5 is a TrackGate dead end for a brownfield deal and S6 hosts
     // no pre_fs decision panel — the S4 committee panel is that track's surface.
     expect(gateStageTab("pre_fs", "brownfield")).toBe("s4");
-    // ?tab=committee lands the reviewer on the committee tab itself — the S4
-    // page's default tab is 경쟁 구조, not the decision surface (T-20261022-041).
+    // F9 query contract: the decision surface is not the stage's default tab —
+    // brownfield S4 committee (?tab=committee), greenfield S5 검토·확정 (?tab=review).
     expect(gateHoldHref(hold("opportunity", "o-bf", "pre_fs", "brownfield"))).toBe("/deals/o-bf/s4?tab=committee");
     expect(gateHoldHref(hold("project", "p-bf", "pre_fs", "brownfield"))).toBe("/deals/p-bf/s4?tab=committee");
     expect(gateStageTab("pre_fs", "greenfield")).toBe("s5");
-    expect(gateHoldHref(hold("opportunity", "o-gf", "pre_fs", "greenfield"))).toBe("/deals/o-gf/s5");
+    expect(gateHoldHref(hold("opportunity", "o-gf", "pre_fs", "greenfield"))).toBe("/deals/o-gf/s5?tab=review");
   });
   test("pre_fs HOLD without a known track keeps the historical S5 destination", () => {
-    expect(gateHoldHref(hold("opportunity", "o1", "pre_fs", null))).toBe("/deals/o1/s5");
-    expect(gateHoldHref(hold("opportunity", "o1", "pre_fs", "zzz_track"))).toBe("/deals/o1/s5");
+    // The destination stage is unchanged; the S5 landing tab follows the same
+    // review-tab contract as a known greenfield carrier (F9).
+    expect(gateHoldHref(hold("opportunity", "o1", "pre_fs", null))).toBe("/deals/o1/s5?tab=review");
+    expect(gateHoldHref(hold("opportunity", "o1", "pre_fs", "zzz_track"))).toBe("/deals/o1/s5?tab=review");
   });
   test("other gates ignore the track", () => {
     expect(gateHoldHref(hold("opportunity", "o1", "target_screening", "greenfield"))).toBe("/deals/o1/s7");

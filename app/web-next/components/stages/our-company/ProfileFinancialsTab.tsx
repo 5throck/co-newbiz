@@ -13,8 +13,8 @@ export function ProfileFinancialsTab({ ctx, profile }: { ctx: OurCompanyStageSta
   const { profileTab, ct } = ctx;
   return (
     <>{profileTab === "financials" && (
-              <div className="text-[0.88rem]">
-                <h3 className="sizing-step-title text-[0.95rem]">재무 현황 {profile.dartFinancials?.available ? `(DART ${profile.dartFinancials.year ?? ""}년)` : "(DART 미입수)"}</h3>
+              <div className="text-[length:var(--fs-body)]">
+                <h3 className="sizing-step-title text-[length:var(--fs-body)]">재무 현황 {profile.dartFinancials?.available ? `(DART ${profile.dartFinancials.year ?? ""}년)` : "(DART 미입수)"}</h3>
                 {profile.dartFinancials?.available && profile.dartFinancials.items ? (() => {
                   const items = profile.dartFinancials.items;
                   const years = [...new Set(items.map((i) => i.year ?? ""))].filter(Boolean).sort().reverse();
@@ -68,7 +68,7 @@ export function ProfileFinancialsTab({ ctx, profile }: { ctx: OurCompanyStageSta
                 {profile.financialAnalysis && (
                   profile.financialAnalysis.available ? (
                     <>
-                      <h3 className="sizing-step-title text-[0.95rem] mt-4">재무 비율·추세 (결정론 산출)</h3>
+                      <h3 className="sizing-step-title text-[length:var(--fs-body)] mt-4">재무 비율·추세 (결정론 산출)</h3>
                       <div className="report-chart-card">
                         <EChartsCore
                           option={{

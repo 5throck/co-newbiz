@@ -112,7 +112,7 @@ export function UniverseSection({ ctx }: { ctx: BrownfieldStageState }) {
                         aria-pressed={newTarget.dart_corp_code === r.corp_code}
                         onClick={() => { setNewTarget((prev) => ({ ...prev, company_name: r.corp_name, dart_corp_code: r.corp_code })); setDartResults(null); }}
                       >
-                        {newTarget.dart_corp_code === r.corp_code ? "✔ 선택됨" : "이 회사로 채우기"}
+                        {newTarget.dart_corp_code === r.corp_code ? "✓ 선택됨" : "이 회사로 채우기"}
                       </button>
                     </li>
                   ))}

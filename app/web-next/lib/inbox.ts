@@ -142,15 +142,27 @@ export function gateStageTab(gate: string, track?: string | null): string | unde
   return GATE_STAGE_TAB[gate];
 }
 
+/**
+ * The query contract the target stage pages honour (2026-10-22 review F9 —
+ * shared by every gateHoldHref consumer: the inbox, the deals board and the
+ * deal overview): the decision surface is never the stage page's default
+ * tab. S3 opens 의사결정 on ?tab=decision, S5 opens 검토·확정 on ?tab=review,
+ * the brownfield S4 committee panel is ?tab=committee. Emit exactly these
+ * values — the stage components are wired to them.
+ */
+function gateHoldAnchor(gate: string, track?: string | null): string {
+  if (gate === "screening") return "?tab=decision";
+  if (gate === "pre_fs") return track === "brownfield" ? "?tab=committee" : "?tab=review";
+  return "";
+}
+
 export function gateHoldHref(h: Pick<HoldSrc, "entityType" | "entityId" | "gate" | "track">): string {
   const id = encodeURIComponent(h.entityId);
   const tab = gateStageTab(h.gate, h.track);
   if (tab) {
-    // brownfield pre_fs의 결정면은 S4 페이지의 기본 탭이 아니라 위원회 심의
-    // 탭이다 — ?tab=committee로 리뷰어를 바로 그 탭에 착륙시킨다
-    // (T-20261022-002 후속, T-20261022-041).
-    const anchor = h.gate === "pre_fs" && h.track === "brownfield" ? "?tab=committee" : "";
-    return `/deals/${id}/${tab}${anchor}`;
+    // 리뷰어를 단계 페이지의 기본 탭이 아니라 결정면에 바로 착륙시킨다
+    // (T-20261022-002, T-20261022-041, F9 — gateHoldAnchor의 쿼리 계약).
+    return `/deals/${id}/${tab}${gateHoldAnchor(h.gate, h.track)}`;
   }
   return h.entityType === "project" ? `/projects/${id}/process` : `/opportunities/${id}`;
 }

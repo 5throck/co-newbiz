@@ -22,7 +22,7 @@ export function FactGrid({ ctx, selected }: { ctx: RouteDecisionStageState; sele
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               원칙 (경계 #2): 최종 결정은 사람이 기록합니다 — 이 카드는 S1~S3 산출물에서 자동으로 만든 <b>제안</b>이며, 아래 &quot;결정&quot; 탭에 반영한 뒤 자유롭게 수정할 수 있습니다.
             </p>
-            <p className="text-[0.95rem] mb-0">
+            <p className="text-[length:var(--fs-body)] mb-0">
               추천: <strong className={advisory.recommendedTrack === "greenfield" ? "text-[color:var(--green-fg)]" : advisory.recommendedTrack === "brownfield" ? "text-[color:var(--amber-fg)]" : undefined}>{trackLabel}</strong>
             </p>
             <div className="route-score-bar" role="img" aria-label={`Greenfield ${advisory.greenfieldScore}점, Brownfield ${advisory.brownfieldScore}점`}>

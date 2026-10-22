@@ -145,7 +145,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
   const IC_VIEWS: Array<{ key: IcView; label: string }> = [
     { key: "dossier", label: "투자심의 자료" },
     { key: "steps", label: "투자심사 절차 단계" },
-    { key: "establishment", label: "설립 실행" },
+    { key: "establishment", label: "실행 · PMI" },
     { key: "baseline", label: "실행 기준선" },
     { key: "decision", label: "의사결정 · 승인 기록" },
   ];
@@ -162,7 +162,9 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
   return (
 <>
       <StageTabs projectId={projectId} />
-      <GateDecisionJump gate={entityGo ? "group_ic" : "entity_ic"} />
+      {/* 게이트 결정은 "의사결정 · 승인 기록" 내부 탭에 있다 — 점프 전에 탭을
+          열어 포커스 대상이 실제로 보이게 한다(F6, BusinessCaseStage와 동일 패턴). */}
+      <GateDecisionJump gate={entityGo ? "group_ic" : "entity_ic"} beforeJump={() => setIcView("decision")} />
       {/* One review block for both IC gates (the panels below do not repeat it). */}
       <ReviewBuckets entityType="project" entityId={projectId} gates={["entity_ic", "group_ic"]} artifacts={stageArtifactTabs("S11")} />
       <StageFrame stageId="S11" heading="S11 투자심사·실행 — 투자심의 자료 · 법인·그룹 투자심의위원회 · 설립 실행">
@@ -191,6 +193,8 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
               key={v.key}
               type="button"
               role="tab"
+              id={`ic-tab-${v.key}`}
+              aria-controls={v.key === "establishment" ? "ic-panel-establishment ic-panel-pmi" : `ic-panel-${v.key}`}
               aria-selected={icView === v.key}
               className={`stage-tab${icView === v.key ? " stage-tab-active" : ""}`}
               onClick={() => setIcView(v.key)}
@@ -204,9 +208,9 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
         {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {notice}</p>}
 
         {/* ── 투자심의 자료 요약 ─────────────────────────────────────────── */}
-        <section className="market-section sizing-step" aria-label="투자심의 자료 요약" hidden={icView !== "dossier"}>
-          <h3 className="sizing-step-title text-[0.95rem]">
-            <span className="sizing-step-badge">📦</span> 투자심의 자료 — 사업성 · 실사 · 종합 등급 제안
+        <section id="ic-panel-dossier" role="tabpanel" aria-labelledby="ic-tab-dossier" className="market-section sizing-step" hidden={icView !== "dossier"}>
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">
+            <span className="sizing-step-badge" aria-hidden="true">📦</span> 투자심의 자료 — 사업성 · 실사 · 종합 등급 제안
           </h3>
 
           <h4 className="text-[length:var(--fs-body)] mt-2 mb-1">채택 사업성 케이스 (S8)</h4>
@@ -256,7 +260,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
               <ul className="sizing-note-list" aria-label="상시 위험">
                 {pkg!.standing_risks!.map((r) => (
                   <li key={r.key}>
-                    <span className="status-chip status-amber">주의</span> {r.text}
+                    <span className="status-chip status-amber"><span aria-hidden="true">◐</span> 주의</span> {r.text}
                   </li>
                 ))}
               </ul>
@@ -346,12 +350,12 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
         </section>
 
         {/* ── 투자심사 절차 단계 (entity-ic-review · group-investment-review) ── */}
-        <div hidden={icView !== "steps"}>
+        <div id="ic-panel-steps" role="tabpanel" aria-labelledby="ic-tab-steps" hidden={icView !== "steps"}>
           <IcReviewStepsPanel projectId={projectId} canAct={canAct} />
         </div>
 
         {/* ── 설립 실행 5단계 (ADR-0165) — 승인 후 실행 활동 ── */}
-        <div hidden={icView !== "establishment"}>
+        <div id="ic-panel-establishment" role="tabpanel" aria-labelledby="ic-tab-establishment" hidden={icView !== "establishment"}>
           <EstablishmentPanel
             projectId={projectId}
             canAct={canAct}
@@ -363,15 +367,19 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
         </div>
 
         {/* ── 신규 사업 실행 기준선 (ADR-0161 Row 3) — 별도 탭 (2026-10-21 decider 2차) ── */}
-        <div hidden={icView !== "baseline"}>
+        <div id="ic-panel-baseline" role="tabpanel" aria-labelledby="ic-tab-baseline" hidden={icView !== "baseline"}>
           <ExecutionBaselinePanel projectId={projectId} canAct={canAct} />
         </div>
 
-        {/* ── PMI 킥오프 (brownfield M&A·JV·전략적 투자) ─────────────── */}
-        {pkg?.pmi_kickoff.applies && icView === "establishment" && (
+        {/* ── PMI 킥오프 (brownfield M&A·JV·전략적 투자) — 실행 · PMI 탭 패널 안에 렌더링 ─────────────── */}
+        {pkg?.pmi_kickoff.applies && (
+          // 품평회 2026-10-22 잔여 #2: PMI 섹션이 establishment 탭패널의 형제 div였으면
+          // 탭의 aria-controls 매핑이 불완전했다 — 자체 패널 id를 부여하고 탭 쪽에서
+          // 두 패널을 함께 가리킨다.
+          <div id="ic-panel-pmi" role="tabpanel" aria-labelledby="ic-tab-establishment" hidden={icView !== "establishment"}>
           <section className="market-section sizing-step mt-3" aria-label="PMI 킥오프">
-            <h3 className="sizing-step-title text-[0.95rem]">
-              <span className="sizing-step-badge">🤝</span> PMI 킥오프 — Brownfield 통합 계획 기준선
+            <h3 className="sizing-step-title text-[length:var(--fs-body)]">
+              <span className="sizing-step-badge" aria-hidden="true">🤝</span> PMI 킥오프 — Brownfield 통합 계획 기준선
             </h3>
             {pkg.pmi_kickoff.record ? (
               <p className="text-[length:var(--fs-caption)]">
@@ -414,10 +422,11 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
               </form>
             )}
           </section>
+          </div>
         )}
 
         {/* ── 의사결정: 법인 → 그룹 투자심의위원회 한 구역 (검토 블록은 상단에 한 번만) ── */}
-        <div className="mt-4" hidden={icView !== "decision"}>
+        <div id="ic-panel-decision" role="tabpanel" aria-labelledby="ic-tab-decision" className="mt-4" hidden={icView !== "decision"}>
           <GateDecisionPanel
             opportunityId={projectId}
             gates={["entity_ic", "group_ic"]}

@@ -67,7 +67,7 @@ export function CapabilityDdTab({ projectId }: { projectId: string }) {
 
   return (
     <section className="market-section sizing-step mt-3" aria-label="필요 역량 검증" data-testid="capability-dd">
-      <h3 className="sizing-step-title text-[0.9rem]">필요 역량 검증 (capability-dd)</h3>
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]">필요 역량 검증 (capability-dd)</h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
         그린필드는 S5 자체 진출 단계에서 필요 역량을 검증합니다 — 브라운필드는 이 인수가 S3 필요 역량 격차를{" "}
         실제로 메우는지 <b>S9 실사에서 판정</b>합니다. 미해소분의 해소 비용이 채택 케이스 비용에 반영되었는지도 확인하세요
@@ -132,10 +132,21 @@ export function CapabilityDdTab({ projectId }: { projectId: string }) {
                     />
                   </td>
                   <td data-label="기록">
-                    <button type="button" className="btn-ghost btn-sm" disabled={busyRow === r.id || !d?.coverage} onClick={() => void save(r)}>
+                    <button
+                      type="button"
+                      className="btn-ghost btn-sm"
+                      disabled={busyRow === r.id}
+                      aria-disabled={busyRow === r.id || !d?.coverage ? true : undefined}
+                      title={!d?.coverage ? "판정(해소/부분 해소/미해소)을 먼저 선택하세요" : undefined}
+                      onClick={() => { if (!d?.coverage) return; void save(r); }}
+                    >
                       {busyRow === r.id ? "기록 중..." : "판정 기록"}
                     </button>
-                    {effCoverage === "" && <span className="sr-only">미판정</span>}
+                    {effCoverage === "" && (
+                      // disabled 대신 aria-disabled — 버튼이 포커스 가능하게 남아
+                      // 무엇이 빠졌는지 힌트에 키보드로 도달할 수 있다.
+                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">판정을 먼저 선택하세요</span>
+                    )}
                   </td>
                 </tr>
               );

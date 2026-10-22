@@ -225,7 +225,7 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
   if (status.applicability.state === "not_applicable") {
     return (
       <section className="market-section sizing-step mt-3" aria-label="신규 사업 실행 기준선" data-testid="gx-not-applicable">
-        <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">📋</span> 신규 사업 실행 기준선</h3>
+        <h3 className="sizing-step-title text-[length:var(--fs-body)]"><span className="sizing-step-badge" aria-hidden="true">📋</span> 신규 사업 실행 기준선</h3>
         <p className="text-[length:var(--fs-caption)] mb-0" role="note">
           <span className="status-chip status-not-started">○ 적용 대상 아님</span>
           <span className="block mt-1 text-[color:var(--muted-fg)]">
@@ -241,7 +241,7 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
     const cc = requirementView("classification_conflict");
     return (
       <section className="market-section sizing-step mt-3" aria-label="신규 사업 실행 기준선" data-testid="gx-classification-conflict">
-        <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">📋</span> 신규 사업 실행 기준선</h3>
+        <h3 className="sizing-step-title text-[length:var(--fs-body)]"><span className="sizing-step-badge" aria-hidden="true">📋</span> 신규 사업 실행 기준선</h3>
         <div role="alert" className="text-[length:var(--fs-caption)] border border-[color:var(--amber-border,var(--primary-border))] rounded-lg px-3 py-2">
           <span className={`status-chip ${cc.cls}`}>{cc.chip}</span>
           <span className="block mt-1 font-semibold">{cc.text}</span>
@@ -254,7 +254,7 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
   if (status.applicability.state === "needs_classification") {
     return (
       <section className="market-section sizing-step mt-3" aria-label="신규 사업 실행 기준선" data-testid="gx-needs-classification">
-        <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">📋</span> 신규 사업 실행 기준선</h3>
+        <h3 className="sizing-step-title text-[length:var(--fs-body)]"><span className="sizing-step-badge" aria-hidden="true">📋</span> 신규 사업 실행 기준선</h3>
         <p className="text-[length:var(--fs-caption)]" role="note">
           <span className="status-chip status-not-started">○ 트랙 분류 필요</span>
           <span className="block mt-1 text-[color:var(--muted-fg)]">{NEEDS_CLASSIFICATION_NOTE}</span>
@@ -365,7 +365,7 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
 
   return (
     <section className="market-section sizing-step mt-3" aria-label="신규 사업 실행 기준선" data-testid="gx-baseline">
-      <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">📋</span> 신규 사업 실행 기준선 — 트랜치 · 인허가/인증 · 인력/조직 계획 · 가동 KPI · 인센티브 의무</h3>
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]"><span className="sizing-step-badge" aria-hidden="true">📋</span> 신규 사업 실행 기준선 — 트랜치 · 인허가/인증 · 인력/조직 계획 · 가동 KPI · 인센티브 의무</h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
         S10에서 정한 투자 조건과 S8 채택 케이스를 기준으로 실행 계획을 한곳에 고정합니다. 기록과 확인은 사람이 하며, 이 패널은 설비투자 트랜치를 바꾸지 않습니다. 섹션 순서(트랜치 → 인허가/인증 → 인력/조직 계획 → 가동 KPI → 인센티브 의무)대로 위에서 아래로 기록하면 됩니다.
       </p>

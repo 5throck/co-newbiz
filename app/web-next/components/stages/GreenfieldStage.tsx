@@ -1106,7 +1106,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   <input aria-label="비고" placeholder="비고" value={l.note ?? ""} onChange={(e) => setBc(i, { note: e.target.value })} className="sizing-new-input sizing-new-input-sm invest-ctl" />
                 </td>
                 <td><div className="invest-action-cell">
-                  {canAct && <button type="button" className="btn-ghost btn-sm whitespace-nowrap" aria-label="항목 삭제" onClick={() => setBcLines((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>}
+                  {canAct && <button type="button" className="btn-ghost btn-sm whitespace-nowrap" aria-label={`${l.line || "항목"} 삭제`} title={`${l.line || "항목"} 삭제`} onClick={() => setBcLines((prev) => prev.filter((_, idx) => idx !== i))}>✕</button>}
                 </div></td>
               </tr>
             );

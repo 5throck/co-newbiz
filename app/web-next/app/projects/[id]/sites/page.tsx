@@ -126,7 +126,7 @@ function SitesView() {
       </section>
       {draft && (
         <section className="market-section" aria-label="법규 사전검토 초안" data-testid="site-regulatory-draft">
-          <h2 className="text-[0.9rem] mb-2">법규 사전검토 초안 — {draft.siteName} <span className={`status-chip ${draft.source === "llm" ? "status-amber" : "status-gray"}`}>{draft.source === "llm" ? "LLM 초안" : "결정론 폴백"}</span></h2>
+          <h2 className="text-[length:var(--fs-body)] mb-2">법규 사전검토 초안 — {draft.siteName} <span className={`status-chip ${draft.source === "llm" ? "status-amber" : "status-gray"}`}>{draft.source === "llm" ? "LLM 초안" : "결정론 폴백"}</span></h2>
           <p className="text-[length:var(--fs-caption)]">{draft.synthesis}</p>
           <ul className="sizing-note-list mt-1">
             {draft.items.map((it, i) => (
@@ -139,7 +139,7 @@ function SitesView() {
       )}
       {canAct && (
         <section className="market-section" aria-label="부지 등록">
-          <h2 className="text-[0.9rem] mb-2">부지 등록</h2>
+          <h2 className="text-[length:var(--fs-body)] mb-2">부지 등록</h2>
             <div className="grid gap-x-3 gap-y-2 md:grid-cols-3 text-[length:var(--fs-caption)]">
               <label className="grid gap-1"><span className="block">부지명 *</span>
                 <input className="sizing-new-input w-full" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></label>

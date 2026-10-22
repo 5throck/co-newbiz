@@ -48,7 +48,7 @@ export function EstablishmentModePanel({ projectId, canAct, onState }: {
   if (!loaded || !state || !state.applicable) {
     return loaded && state && !state.applicable ? (
       <section className="market-section sizing-step mb-3" aria-label="설립 방식">
-        <h3 className="sizing-step-title text-[0.9rem]">설립 방식</h3>
+        <h3 className="sizing-step-title text-[length:var(--fs-body)]">설립 방식</h3>
         <p role="note" className="status-chip status-not-started" style={{ whiteSpace: "normal" }}>ⓘ 이 프로젝트의 추진 방식에는 설립 방식 선택이 적용되지 않습니다. 설립 방식은 내부 추진·합작 프로젝트에만 있습니다.</p>
       </section>
     ) : null;
@@ -88,7 +88,7 @@ export function EstablishmentModePanel({ projectId, canAct, onState }: {
 
   return (
     <section className="market-section sizing-step mb-3" aria-label="설립 방식">
-      <h3 className="sizing-step-title text-[0.9rem]">설립 방식</h3>
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]">설립 방식</h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
         새 법인을 세울지, 기존 법인 안에서 사업부로 추진할지를 정합니다. 사람이 직접 확정하며 에이전트는 제안만 할 수 있습니다. 확정한 방식이 S11 설립 실행 단계를 정합니다.
       </p>

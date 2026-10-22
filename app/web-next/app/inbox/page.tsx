@@ -44,10 +44,10 @@ export default function InboxPage() {
 
   useEffect(() => { setSnoozed(readSnooze()); }, []);
 
-  // Single-column layout (<= 880px): the detail pane is a pushed view, so the list view needs its own primary.
+  // Single-column layout (<= 880px): the detail pane is a pushed view, so the list view needs its own primary. (design-token-exempt: prose)
   const [narrow, setNarrow] = useState(false);
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 880px)");
+    const mq = window.matchMedia("(max-width: 880px)"); // design-token-exempt: breakpoint (matchMedia cannot resolve CSS custom properties)
     const sync = () => setNarrow(mq.matches);
     sync();
     mq.addEventListener("change", sync);

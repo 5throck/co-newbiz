@@ -71,7 +71,7 @@ function StageList({ stages, gateStatus }: { stages: StageView[]; gateStatus: Re
   return (
     <ol className="mt-2 space-y-1">
       {stages.map((s) => (
-        <li key={s.id} className="flex flex-wrap items-start gap-2 text-[0.88rem]">
+        <li key={s.id} className="flex flex-wrap items-start gap-2 text-[length:var(--fs-body)]">
           <span className={`status-chip ${STATUS_CLASS[s.status]} whitespace-nowrap justify-center`}>{STATUS_LABEL[s.status]}</span>
           <span className="w-8 font-semibold tabular-nums">{s.id}</span>
           <span className="flex-1 min-w-0">
@@ -156,7 +156,7 @@ export default function ProjectProcessPage() {
 
       {data.blockers.length > 0 && (
         <section aria-label="현재 차단 요건" className="market-section">
-          <h2 className="text-[0.92rem] font-semibold mb-1">현재 차단 요건</h2>
+          <h2 className="text-[length:var(--fs-body)] font-semibold mb-1">현재 차단 요건</h2>
           <ul className="sizing-note-list text-[length:var(--fs-body)]">
             {data.blockers.map((b, i) => <li key={i}>{localizeRequirement(b)}</li>)}
           </ul>
@@ -164,13 +164,13 @@ export default function ProjectProcessPage() {
       )}
 
       <section aria-label="프로젝트 단계 (S4~S12)" className="market-section">
-        <h2 className="text-[0.92rem] font-semibold">프로젝트 단계</h2>
+        <h2 className="text-[length:var(--fs-body)] font-semibold">프로젝트 단계</h2>
         <StageList stages={stagesWithGates} gateStatus={data.gateStatus} />
       </section>
 
       {data.opportunity && (
         <section aria-label="기회 단계 (S1~S4)" className="market-section">
-          <h2 className="text-[0.92rem] font-semibold">
+          <h2 className="text-[length:var(--fs-body)] font-semibold">
             기회 단계 <a className="text-[color:var(--accent)] underline text-[length:var(--fs-caption)]" href={dealStageHref(data.opportunity.id, opportunityStages?.find((s) => s.status === "current")?.id)}>기회 화면 →</a>
           </h2>
           <StageList stages={opportunityStages ?? []} gateStatus={data.opportunity.gateStatus} />

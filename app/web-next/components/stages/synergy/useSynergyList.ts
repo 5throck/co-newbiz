@@ -8,7 +8,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useConfirm } from "../../crud.tsx";
 import { api } from "../../../lib/api.ts";
 import type { SynergyAnalysis } from "./types.ts";
-import type { TabKey } from "./synergyFormat.ts";
+import { tabFromParam, type TabKey } from "./synergyFormat.ts";
 
 export function useSynergyList({ opportunityId, analysisId, embedded, noSourceOpportunity }: { opportunityId?: string; analysisId?: string; embedded?: boolean; noSourceOpportunity?: boolean }) {
 
@@ -30,7 +30,9 @@ export function useSynergyList({ opportunityId, analysisId, embedded, noSourceOp
   const [oppSel, setOppSel] = useState("");
   const [creating, setCreating] = useState(false);
   const { confirm, confirmDialog } = useConfirm();
-  const [tab, setTab] = useState<TabKey>("linkage");
+  // 딥링크 계약(2026-10-22 리뷰 N) — ?tab=decision이면 상세 화면을 「의사결정」
+  // 탭으로 연다(의사결정 탭은 상세 뷰 안에 산다). 마운트 시 1회 해석한다.
+  const [tab, setTab] = useState<TabKey>(() => tabFromParam(searchParams.get("tab")) ?? "linkage");
   // S3 deal scope (design 2026-10-11): inside a deal the list defaults to this deal's analyses.
   const dealScoped = !!embedded && (!!opportunityId || !!noSourceOpportunity);
   const [scope, setScope] = useState<"deal" | "all">("deal");

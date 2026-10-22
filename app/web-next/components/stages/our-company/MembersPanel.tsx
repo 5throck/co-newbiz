@@ -83,7 +83,7 @@ export function MembersPanel({ ctx }: { ctx: OurCompanyStageState }) {
                   <span className="flex items-center gap-2">
                     <input value={memberForm.company_name} onChange={(e) => { setMemberForm({ ...memberForm, company_name: e.target.value }); setDartResults([]); }} required className="sizing-new-input" autoFocus />
                     <button type="button" className="btn-ghost btn-sm" disabled={dartSearching || !memberForm.company_name.trim()} onClick={() => void searchMemberDart()}>
-                      {dartSearching ? "검색 중..." : "🔍 DART 검색"}
+                      {dartSearching ? "검색 중..." : (<><span aria-hidden="true">🔍</span> DART 검색</>)}
                     </button>
                   </span>
                 </label>
@@ -113,10 +113,10 @@ export function MembersPanel({ ctx }: { ctx: OurCompanyStageState }) {
                         className={`btn-ghost btn-sm w-full text-left ${memberForm.dart_corp_code === r.corp_code ? "font-semibold" : ""}`}
                         onClick={() => setMemberForm((prev) => ({ ...prev, dart_corp_code: r.corp_code, company_name: r.corp_name }))}
                       >
-                        {memberForm.dart_corp_code === r.corp_code ? "✔ " : ""}{r.corp_name} <code className="dd-item-id">{r.corp_code}</code>
+                        {memberForm.dart_corp_code === r.corp_code ? "✓ " : ""}{r.corp_name} <code className="dd-item-id">{r.corp_code}</code>
                         {r.source === "web" && (
                           <span className={`status-chip ml-1 ${r.validated ? "status-green" : "status-amber"}`} title={r.validated ? "DART 기업개황으로 이름 일치 확인" : "웹 검색 폴백 — DART 역조회 실패(다중 소스 일치)"}>
-                            웹 {r.validated ? "✔교차검증" : "미검증"}
+                            웹 {r.validated ? "✓교차검증" : "미검증"}
                           </span>
                         )}
                       </button>

@@ -163,7 +163,7 @@ export default function PartnershipPage() {
 
       <section className="market-section mb-3" aria-label="파트너 후보">
         <div className="section-toolbar">
-          <h2 className="text-[0.92rem] font-semibold">파트너 후보 ({data?.partners.length ?? 0}건)</h2>
+          <h2 className="text-[length:var(--fs-body)] font-semibold">파트너 후보 ({data?.partners.length ?? 0}건)</h2>
         </div>
         <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
           <table className="data-table table-fixed-pct tmin-64">
@@ -229,7 +229,7 @@ export default function PartnershipPage() {
       </section>
 
       <section className="market-section mb-3" aria-label="실사 지적사항">
-        <h2 className="text-[0.92rem] font-semibold mb-2">파트너 실사 지적사항</h2>
+        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">파트너 실사 지적사항</h2>
         {(data?.partners ?? []).filter((p) => p.findings.length > 0).map((p) => (
           <div key={p.id} className="sizing-grade-card mb-2">
             <p className="text-[length:var(--fs-body)] font-semibold mb-1">{p.name}</p>
@@ -278,7 +278,7 @@ export default function PartnershipPage() {
       </section>
 
       <section className="market-section" aria-label="JV 조건">
-        <h2 className="text-[0.92rem] font-semibold mb-2">JV 조건 ({data?.terms.length ?? 0}건)</h2>
+        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">JV 조건 ({data?.terms.length ?? 0}건)</h2>
         <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
           <table className="data-table table-fixed-pct tmin-64">
             <caption className="sr-only">JV 조건 목록</caption>

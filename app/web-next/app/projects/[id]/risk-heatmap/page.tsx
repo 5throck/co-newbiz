@@ -105,7 +105,7 @@ function HeatmapView() {
       {/* 판정 대기 스트립 — 무엇을 판정할 수 있는지와 기록 위치를 먼저 보여준다 (2026-10-21 decider). */}
       {heatmap && (
         <section className="market-section" aria-label="판정 대기 — 리스크 소스별 기록 상태" data-testid="risk-source-status">
-          <h2 className="text-[0.9rem] mb-2">판정 대기 — 어디에 무엇이 기록되어 있나</h2>
+          <h2 className="text-[length:var(--fs-body)] mb-2">판정 대기 — 어디에 무엇이 기록되어 있나</h2>
           <ul className="sizing-note-list">
             {heatmap.sources_status.map((s) => (
               <li key={s.source}>
@@ -120,7 +120,7 @@ function HeatmapView() {
       )}
       <div className="grid2e">
         <section className="market-section" aria-label="리스크 그리드">
-          <h2 className="text-[0.9rem] mb-2">그리드 (행 아래쪽 = 가능성 높음 / 오른쪽 = 영향 큼)</h2>
+          <h2 className="text-[length:var(--fs-body)] mb-2">그리드 (행 아래쪽 = 가능성 높음 / 오른쪽 = 영향 큼)</h2>
           {heatmap === null ? <PageState state="loading" /> : (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
@@ -153,7 +153,7 @@ function HeatmapView() {
           )}
         </section>
         <section className="market-section" aria-label="리스크 목록">
-          <h2 className="text-[0.9rem] mb-2">리스크 목록 · 판정 원장</h2>
+          <h2 className="text-[length:var(--fs-body)] mb-2">리스크 목록 · 판정 원장</h2>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="risk-heatmap-caveat">
             ⓘ 가능성·영향은 기록 기준 자동 산정값이 기본이며, 사람이 항목별로 판정(과 완화조치)을 기록하면 그 값이 우선합니다 — 기록은 원장에 쌓이고 감사 로그에 남습니다.
           </p>

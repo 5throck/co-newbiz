@@ -699,7 +699,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             </p>
           )}
         </div>
-        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table table-fixed-pct tmin-80">
+        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table table-fixed-pct tmin-80" aria-label="대상 비교">
+          <caption className="sr-only">대상 비교 — S7 순위·NPV·IRR·케이스 수·가정 배수</caption>
           <ColGroup widths={CASE_COMPARE_COL_PCT} />
           <thead>
             <tr>
@@ -792,11 +793,15 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                     {!t.anchorMethod && <span className="status-chip status-not-started whitespace-nowrap">미평가</span>}
                   </td>
                   <td className="min-w-[calc(var(--space-8)*3)]">
-                    {canAct && !isSelected && (
+                    {canAct && !isSelected ? (
                       <button type="button" className="btn-ghost btn-sm whitespace-nowrap" disabled={busy} onClick={() => { setSelecting({ targetId: t.targetId, name: t.companyName }); setSelectionRationale(""); }}>
                         대상 선택
                       </button>
-                    )}
+                    ) : isSelected ? (
+                      // 빈 작업 셀 대신 선정 상태를 남긴다 — 이 행의 액션이 비어 있는
+                      // 이유(이미 선정됨)를 표가 설명하게 한다(2026-10 표 인터랙션 리뷰).
+                      <span className="status-chip status-green whitespace-nowrap">선택됨</span>
+                    ) : null}
                   </td>
                 </tr>
               );
@@ -878,6 +883,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       <section className="market-section sizing-step mb-3" aria-label="평가 관점의 의미">
         <h3 className="sizing-step-title">평가 관점의 의미</h3>
         <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table">
+          <caption className="sr-only">평가 관점의 의미 — 성장률·변동성 근거와 쓰임</caption>
           <thead><tr><th scope="col">관점</th><th scope="col">성장률 근거</th><th scope="col">변동성(sigma) 근거</th><th scope="col">쓰임</th></tr></thead>
           <tbody>
             <tr>
@@ -898,6 +904,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         <section className="market-section sizing-step mb-3" aria-label="두 관점의 의미">
           <h3 className="sizing-step-title">두 관점의 의미</h3>
           <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table">
+            <caption className="sr-only">두 관점의 의미 — 성장률·변동성 근거와 쓰임</caption>
             <thead><tr><th scope="col">관점</th><th scope="col">성장률 근거</th><th scope="col">변동성(sigma) 근거</th><th scope="col">쓰임</th></tr></thead>
             <tbody>
               <tr>
@@ -993,6 +1000,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               </p>
             ) : (
               <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table table-fixed-pct tmin-56">
+                <caption className="sr-only">{SCEN_LABEL[s]} 케이스 비교 — 관점·성장률·변동성·NPV·IRR</caption>
                 <ColGroup widths={greenfield ? SCENARIO_CASE_COL_PCT_GF : SCENARIO_CASE_COL_PCT} />
                 <thead>
                   <tr>
@@ -1198,7 +1206,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           aria-label="투자 라인 (읽기 전용)"
           data-testid="s8-lines-readonly"
         >
-          <h3 className="sizing-step-title text-[0.9rem]">투자 라인 (읽기 전용)</h3>
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">투자 라인 (읽기 전용)</h3>
           <p className="text-[length:var(--fs-caption)] mb-1" data-testid="s8-lines-readonly-caption">
             <span className="status-chip status-not-started mr-1">S5 단일 원본</span>{" "}
             편집 대상: <b>{viewing.label}</b> —{" "}
@@ -1224,6 +1232,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           )}
           <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
             <table className="data-table" data-testid="s8-lines-readonly-table">
+              <caption className="sr-only">투자 라인 (읽기 전용) — 분류·항목명·연간 금액·시작 연도</caption>
               <thead>
                 <tr>
                   <th scope="col">분류</th>
@@ -1256,7 +1265,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
       {editing && (
         <section ref={editorSectionRef} className="market-section sizing-step mt-3 scroll-mt-20" aria-label="라인 편집">
-          <h3 className="sizing-step-title text-[0.9rem]">라인 편집 (JSON — 저장 시 전체 교체)</h3>
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">라인 편집 (JSON — 저장 시 전체 교체)</h3>
           <p className="text-[length:var(--fs-caption)] mb-1" data-testid="line-editor-caption">편집 대상: <b>{editing.label}</b></p>
           <p className="sr-only" role="status" aria-live="polite">라인 편집기가 아래에 열렸습니다 — {editing.label}</p>
           <textarea

@@ -52,7 +52,8 @@ describe("our-company layout source", () => {
   test("group cards keep aria-pressed and show a check icon", () => {
     expect(groups).toContain("aria-pressed={active}");
     expect(groups).toContain("CheckIcon");
-    expect(css).toMatch(/\.group-card \{[^}]*min-width: 10rem;[^}]*min-height: 44px/s);
+    // 2026-10-22 토큰 수선: 44px 리터럴이 --touch-target 토큰으로 치환되었다 (동일 산출값).
+    expect(css).toMatch(/\.group-card \{[^}]*min-width: 10rem;[^}]*min-height: (?:44px|var\(--touch-target\))/s);
   });
   test("member table is scrollable, fixed-width, with a read-only viewer chip", () => {
     expect(members).toContain('className="table-scroll"');

@@ -149,7 +149,10 @@ describe("UI structure: one grid, shared columns, chips in-row, own save button"
     expect(scope).not.toContain("invest-unit-text-");
     expect(scope).not.toContain("단위 확인 필요");
     expect(scope).not.toContain("invest-unit-marker-");
-    expect(scope).toContain('aria-label="항목 삭제"');
+    // 2026-10-22 표 감사 수선: 일반 "항목 삭제" 라벨은 행 특정 라벨로 대체되었다
+    // (어느 행의 삭제인지 스크린리더가 알 수 있게) — 제네릭 라벨의 재유입을 막는다.
+    expect(scope).not.toContain('aria-label="항목 삭제"');
+    expect(scope).toContain('{l.line || "항목"} 삭제');
     // Delete button appears only in the manual branch.
     const capPart = scope.slice(scope.indexOf("invest-cap-row-"), scope.indexOf("invest-manual-row-"));
     expect(capPart).not.toContain("항목 삭제");

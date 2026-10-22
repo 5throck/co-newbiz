@@ -510,7 +510,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     } catch {
       // localStorage 불가 환경(비공개 모드 등) — 기본값(펼침) 유지.
     }
-    const mq = window.matchMedia("(max-width: 880px)");
+    const mq = window.matchMedia("(max-width: 880px)"); // design-token-exempt: breakpoint (matchMedia cannot resolve CSS custom properties)
     const syncMobile = () => setIsMobile(mq.matches);
     syncMobile();
     mq.addEventListener("change", syncMobile);

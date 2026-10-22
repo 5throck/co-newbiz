@@ -136,7 +136,7 @@ export function EntryStrategySection({ opportunityId, value, onChange, canAct, r
         {ENTRY_MODES.map((m) => {
           const on = value.modes.modes.includes(m);
           return (
-            <div key={m} className="sizing-grade-card" style={{ minWidth: 190, flex: "1 1 190px" }} data-testid={`entry-mode-${m}`}>
+            <div key={m} className="sizing-grade-card" style={{ minWidth: 190, flex: "1 1 190px" /* design-token-exempt: layout-tuned card flex-basis (one-off) */ }} data-testid={`entry-mode-${m}`}>
               <label className="flex items-center gap-1">
                 <input type="checkbox" checked={on} onChange={() => pickMode(m)} aria-describedby={`${uid}-${m}-hint`} />
                 <span className="font-semibold">{ENTRY_MODE_LABEL[m]}</span>

@@ -10,6 +10,7 @@
 // 사람이 기록하며, 화면은 LLM 정보·추천을 적극 제공한다 — "LLM 추천" 섹션이
 // 그 구현이고, 산출물은 제안일 뿐 결정 기록(POST /route-decision)은 사람의 몫.
 // Split from components/stages/RouteDecisionStage.tsx (Wave U-3 decomposition); behavior unchanged.
+import Link from "next/link";
 import { ReviewBuckets } from "../../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../../lib/review/stage-artifact-labels.ts";
 import { Tabs, PrimaryAction } from "../../ui.tsx";
@@ -23,7 +24,7 @@ import { EvalTab } from "./EvalTab.tsx";
 export function RouteDecisionStage(props0: { opportunityId: string; rationaleParam?: string | null; tabParam?: string | null }) {
   const h0 = useRouteDecision(props0);
   const ctx = { ...h0 };
-  const { opportunityId, selected, advisory, tab, setTab, error, confirmDialog, notFound, canAct, canSubmit, saving } = ctx;
+  const { opportunityId, selected, advisory, tab, setTab, error, savedNotice, confirmDialog, notFound, canAct, canSubmit, saving } = ctx;
 
 
   if (notFound) {
@@ -32,7 +33,10 @@ export function RouteDecisionStage(props0: { opportunityId: string; rationalePar
         <PrimaryAction label="진출방식 제안 (사람이 확정)" disabled disabledReason="선별된 기회가 없어 제안할 수 없습니다." />
       <div className="card">
         <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">
-          선별(selected)된 기회를 찾을 수 없습니다 — S3 시너지·적합성 평가를 마친 기회만 여기서 진출방식을 결정할 수 있습니다.
+          선별(selected)된 기회를 찾을 수 없습니다 — S3 시너지·적합성 평가를 마친 기회만 여기서 진출방식을 결정할 수 있습니다.{" "}
+          {/* 리뷰 2026-10-22 (저니 F5): 막다른 글이 아니라 이전 단계로 돌아가는 링크를 제공한다.
+              품평회 잔여 #4 — next/link로 SPA 내비게이션 유지. */}
+          <Link className="text-[length:var(--fs-body)] underline" href={`/deals/${encodeURIComponent(opportunityId)}/s3`}>S3 시너지·적합성으로 이동</Link>
         </p>
       </div>
       </>
@@ -88,6 +92,17 @@ export function RouteDecisionStage(props0: { opportunityId: string; rationalePar
       />
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
+      {savedNotice && (
+        // 리뷰 2026-10-22 (저니 F5): 결정 기록 직후의 전진 큐 — 엔진 nextStage의
+        // 스킵 semantics와 동일(greenfield→S5, brownfield→S6).
+        <p role="status" className="text-[length:var(--fs-body)]">
+          결정 기록됨 — 다음:{" "}
+          <Link className="underline" href={`/deals/${encodeURIComponent(opportunityId)}/s${savedNotice.track === "brownfield" ? "6" : "5"}`}>
+            {savedNotice.track === "brownfield" ? "S6 대상 후보 발굴" : "S5 자체 진출"}
+          </Link>{" "}
+          →
+        </p>
+      )}
 
       {/* ── 의사결정 탭: 트랙·라우트·의도 선택 + 근거 + 저장 (채점은 별도 탭) ── */}
       <DecisionTab ctx={ctx} selected={selected} />

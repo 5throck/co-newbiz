@@ -32,6 +32,16 @@ export const TABS = [
 ] as const;
 
 export type TabKey = (typeof TABS)[number][0];
+
+/**
+ * URL ?tab= 딥링크 계약(2026-10-22 리뷰 M/N) — 값이 `decision`이면 상세 화면의
+ * 「의사결정」 탭으로 연다. 다른 값·없음은 null(기본 linkage)로 둔다. 목록 화면은
+ * 이 파라미터를 무시하고, 상세 진입 시 탭 상태에 반영된다.
+ */
+export function tabFromParam(raw: string | null | undefined): TabKey | null {
+  return raw === "decision" ? "decision" : null;
+}
+
 /** Where the group / affiliate profile is registered: the deal's S3 company surface, or the standalone page. */
 export function profileHrefFor(opportunityId?: string): string {
   return opportunityId ? `/deals/${encodeURIComponent(opportunityId)}/s3?surface=company` : "/our-company";

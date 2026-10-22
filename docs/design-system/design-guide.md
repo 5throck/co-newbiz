@@ -120,7 +120,7 @@ list gaps 8–10px, section separation 24px+.
 | Component | Spec |
 |---|---|
 | Card | `.card` / `.glass` — surface + border + radius-3xl, hover lift ≤4px |
-| Button | `.btn-premium` (primary action, one per view), `.btn-ghost` (secondary), destructive = confirm dialog required |
+| Button | `.btn-primary` (primary action, one per view — the class `PrimaryAction` renders; `.btn-premium` is a DEPRECATED alias with 2026-10-22 review — migrate its remaining call sites, do not use in new code), `.btn-ghost` (secondary), destructive = confirm dialog required |
 | Table | `.data-table` — border-b rows; **header cells centered by default** (`.data-table th`), body cells left-aligned, numeric columns right via `.col-num` (header+cell); wide tables wrapped in `.table-scroll` with `min-width`; `tabular-nums` for figures, `caption.sr-only`. Header alignment exceptions are per-column overrides only — never re-left the default |
 | Badge / chip | `.status-chip status-*` — icon + text, never color-only |
 | Form control | token background/border, focus ring `--primary` 3px, label mandatory |

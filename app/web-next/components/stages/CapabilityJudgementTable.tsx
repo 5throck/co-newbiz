@@ -116,10 +116,10 @@ export function RemovedCapabilities({ removed }: { removed: RemovedCapability[] 
 }
 
 
-// Column widths sized from real content (16px rem) at a ~1200px table (1280px viewport):
+// Column widths sized from real content (16px rem) at a ~1200px table (1280px viewport) — design-token-exempt: prose:
 // 필요 역량 wraps (widest, remainder); 필요도 chip "! 부분 필수"; 보유 판정 chip "! 업계 리딩";
 // 판정 요약 one line "인력 영입 · 중간" (ellipsis + tooltip); 확정 chip "! 재판정 필요" + "<name> · MM-DD";
-// 작업 link "S5에서 판정" (must not wrap). Index 0 (name) has no minimum. Below ~960px tmin scrolls horizontally.
+// 작업 link "S5에서 판정" (must not wrap). Index 0 (name) has no minimum. Below ~960px (design-token-exempt: prose) tmin scrolls horizontally.
 const COL_PCT = [42, 9, 11, 28, 10] as const;
 export const COL_MIN_REM = [0, 6.5, 6.5, 10, 7] as const;
 const FILTER_LABEL: Record<JudgementFilter, string> = { todo: "처리할 것", all: "전체" };

@@ -49,7 +49,7 @@ export function BrownfieldScopePanel({ projectId, block, domains, canAct, previe
 
   return (
     <section className="market-section sizing-step mb-3" aria-label="브라운필드 세부 트랙 범위 요약" data-testid="bf-scope-panel">
-      <h3 className="sizing-step-title text-[0.9rem]">
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]">
         범위 요약{active ? ` — ${bfSubTrackName(active.sub_track)}` : ""} {/* INTERIM-WORDING */}
       </h3>
 

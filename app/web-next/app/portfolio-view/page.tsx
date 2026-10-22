@@ -110,7 +110,7 @@ function PortfolioView() {
         <div className="summary-card glass text-left"><span className="summary-value mono-num">{dupCount}</span><span className="text-label">시장 중복 후보</span></div>
       </div>
       <section className="market-section" aria-label="중복 감지">
-        <h2 className="text-[0.9rem] mb-2">시장 중복 감지 <span className="note">— 같은 산업(또는 근사 시장 범위)에 활성 노출 2건 이상</span></h2>
+        <h2 className="text-[length:var(--fs-body)] mb-2">시장 중복 감지 <span className="note">— 같은 산업(또는 근사 시장 범위)에 활성 노출 2건 이상</span></h2>
         {hiddenCount > 0 && (
           <p className="glass p-3 mb-3 status-amber" role="note">
             <span aria-hidden="true">⚠</span> 승격된 안건 {hiddenCount}건은 해당 프로젝트를 볼 수 있는 권한이 없어 제외되었습니다 — 표시된 노출 규모가 실제보다 작을 수 있습니다.
@@ -183,7 +183,7 @@ function PortfolioView() {
       </section>
       {result && (naTotal > 0 || result.counts.na_opportunities > 0 || result.counts.na_projects > 0) && (
         <section className="market-section mt-4" aria-label="산업 미지정 항목">
-          <h2 className="text-[0.9rem] mb-2">산업 미지정 (N/A) <span className="note">— 키가 없어 중복 감지 대상에서 제외된 항목</span></h2>
+          <h2 className="text-[length:var(--fs-body)] mb-2">산업 미지정 (N/A) <span className="note">— 키가 없어 중복 감지 대상에서 제외된 항목</span></h2>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
             산업이 지정(고정)되지 않은 항목은 중복 노출 후보로 묶이지 않습니다 — 임의로 그룹화하지 않습니다.
             기회는 S1 산업 지정에서, 프로젝트는 S8+ 산업 바인딩에서 지정할 수 있습니다.

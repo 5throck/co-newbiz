@@ -288,7 +288,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
         {/* ── AI 추천 검토/안건구조 (결정 지원) — ADR-0118: 제안은 LLM, 가설 등록은 사람 ── */}
         {tab === "reco" && canAct && (
           <section className="market-section sizing-step mb-3" aria-label="AI 추천 검토/안건구조">
-            <h3 className="sizing-step-title text-[0.9rem]">🤖 AI 추천 검토/안건구조 (제안)</h3>
+            <h3 className="sizing-step-title text-[length:var(--fs-body)]">🤖 AI 추천 검토/안건구조 (제안)</h3>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               원칙 (경계 #2): 가설 등록·4축 확정은 사람이 합니다 — S8 채택 BC·S9 발견사항·WACC·현재 상태에서 만든 제안입니다.
             </p>
@@ -344,7 +344,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
 
         {tab === "hypotheses" && (
         <section className="market-section sizing-step mb-3" aria-label="투자구조 가설">
-          <h3 className="sizing-step-title text-[0.9rem]">투자구조 가설 ({data?.hypotheses.length ?? 0}건)</h3>
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">투자구조 가설 ({data?.hypotheses.length ?? 0}건)</h3>
           {(data?.hypotheses ?? []).map((h) => (
             <div key={h.id} className="sizing-grade-card mb-2">
               <div className="flex flex-wrap items-center gap-1 mb-1">
@@ -488,7 +488,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
 
         {tab === "financing" && (
         <section className="market-section sizing-step" aria-label="자금조달 계획">
-          <h3 className="sizing-step-title text-[0.9rem]">자금조달 계획 (자금 조달·사용)</h3>
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">자금조달 계획 (자금 조달·사용)</h3>
           {totals && (
             <p className="text-[length:var(--fs-caption)] mb-1">
               조달 <span className="mono-num">{fmt(totals.sources)}</span> · 사용 <span className="mono-num">{fmt(totals.uses)}</span> · 차액{" "}

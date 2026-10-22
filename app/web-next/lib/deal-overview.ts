@@ -27,6 +27,8 @@ export interface OverviewProcess {
   projectName?: string | null;
   /** Linked project id (opportunity process `projectId`), for the optional "project" fact. */
   projectId?: string | null;
+  /** Engine marker (ADR-0095): the S1–S7 carrier scope is complete/skipped and the deal awaits promotion. */
+  carrierScopeFinished?: boolean;
   /** Process response stages; `requiredArtifacts` feeds the previous/next flow artifact lists. */
   stages?: Array<{ id: string; requiredArtifacts?: string[] }>;
 }
@@ -194,6 +196,16 @@ export function buildDealOverview(
     const stageGate = meta.gateIds.find((g) => gateStatus[g] !== "go");
     if (hold) {
       nextAction = { type: "resolve_hold", subject: hold.gateLabel, reason: { type: "hold", gate: hold.gate, gateLabel: hold.gateLabel, heldSince: hold.heldSince, ageDays: hold.ageDays }, href: hold.href, buttonTarget: hold.gateLabel };
+    } else if (proc.carrierScopeFinished) {
+      // Review 2026-10-22 (journey F2): the S1–S7 scope is done — the next action
+      // is PROMOTION, not the S8 artifact checklist or the fs gate (both belong to
+      // the project carrier, unreachable before promotion). The engine's
+      // opportunity-branch currentStage reads S8 here; the CTA must lead to the
+      // track-final stage page that hosts PromotionPanel. Checked before
+      // firstOpen because the engine reports S8's own artifacts as missing for a
+      // finished but un-promoted carrier.
+      const handoffStage = proc.track === "brownfield" ? "S7" : "S5";
+      nextAction = { type: "advance_stage", subject: "프로젝트로 추진", reason: { type: "stage_complete", stageId, stageName: meta.name }, href: dealStageHref(dealId, handoffStage), buttonTarget: "프로젝트로 추진 (승격)" };
     } else if (firstOpen >= 0) {
       nextAction = { type: "record_artifact", subject: base[firstOpen]!.label, reason: { type: "artifact_missing", stageId, stageName: meta.name, done: completionCounts.done, total: completionCounts.total }, href: stageHref, buttonTarget: `${meta.id} ${meta.name}` };
     } else if (stageGate) {

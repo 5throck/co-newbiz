@@ -30,6 +30,8 @@ export function useRouteDecision({ opportunityId, rationaleParam, tabParam }: { 
   const [historyYear, setHistoryYear] = useState("");
   const [historyMonth, setHistoryMonth] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // 리뷰 2026-10-22 (저니 F5) — 방금 기록된 결정의 트랙별 다음 단계 안내.
+  const [savedNotice, setSavedNotice] = useState<{ track: "greenfield" | "brownfield" } | null>(null);
   const [track, setTrack] = useState<"greenfield" | "brownfield">("greenfield");
   const [intent, setIntent] = useState<"" | "integration" | "capability_access">("");
   const [subTrack, setSubTrack] = useState("");
@@ -207,7 +209,7 @@ export function useRouteDecision({ opportunityId, rationaleParam, tabParam }: { 
   // 등)를 공유하므로 어느 탭에서 눌러도 결과는 동일하다.
   async function performSave() {
     if (!selected || saving) return;
-    setSaving(true); setError(null);
+    setSaving(true); setError(null); setSavedNotice(null);
     try {
       await api.post(`/api/opportunities/${selected.id}/route-decision`, {
         track,
@@ -221,6 +223,10 @@ export function useRouteDecision({ opportunityId, rationaleParam, tabParam }: { 
       loadDecisions(selected.id);
       loadSessions(selected.id);
       setHistoryOpen(true);
+      // 리뷰 2026-10-22 (저니 F5): 저장 성공이 조용히 끝나지 않게 — 트랙별 다음
+      // 단계로 이어지는 전진 큐를 남긴다 (엔진 nextStage의 스킵 semantics와 동일:
+      // greenfield→S5, brownfield→S6).
+      setSavedNotice({ track });
     } catch (err) {
       setError(err instanceof Error ? err.message : "결정 저장 실패");
     } finally {
@@ -257,7 +263,7 @@ export function useRouteDecision({ opportunityId, rationaleParam, tabParam }: { 
   }
 
   const subs = track === "greenfield" ? GF_SUB : BF_SUB;
-  return { opportunityId, selected, advisory, tab, setTab, error, confirmDialog, notFound, reco, canAct, recoLoading, generateRecommendation, recoError, confirm, applyRecommendation, decisions, saveDecision, track, setTrack, setIntent, setSubTrack, subTrack, subs, overrideBlocked, intent, stagingHint, rationale, setRationale, alternatives, setAlternatives, draftSaving, performSaveDraft, saving, canSubmit, draftSavedAt, totalScore, allScored, historyYear, historyMonth, historyOpen, setHistoryOpen, setHistoryYear, setHistoryMonth, sessions, scored, setScore };
+  return { opportunityId, selected, advisory, tab, setTab, error, savedNotice, confirmDialog, notFound, reco, canAct, recoLoading, generateRecommendation, recoError, confirm, applyRecommendation, decisions, saveDecision, track, setTrack, setIntent, setSubTrack, subTrack, subs, overrideBlocked, intent, stagingHint, rationale, setRationale, alternatives, setAlternatives, draftSaving, performSaveDraft, saving, canSubmit, draftSavedAt, totalScore, allScored, historyYear, historyMonth, historyOpen, setHistoryOpen, setHistoryYear, setHistoryMonth, sessions, scored, setScore };
 }
 
 export type RouteDecisionStageState = ReturnType<typeof useRouteDecision>;

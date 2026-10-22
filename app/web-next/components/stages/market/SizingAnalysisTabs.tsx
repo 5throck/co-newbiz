@@ -11,7 +11,7 @@ export function SizingPipelineTab({ ctx }: { ctx: SizingReportState }) {
   return (
     <>{tab === "pipeline" && (
         <section aria-label="수요 파이프라인" className="market-section sizing-step sizing-step-deep">
-          <h3 className="sizing-step-title text-[0.95rem]">
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">
             <span className="sizing-step-badge sizing-step-badge-deep">4-B</span> 수요 파이프라인 — 프로젝트별 신뢰도 티어
           </h3>
           <p className="mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
@@ -65,7 +65,7 @@ export function SizingRegulationTab({ ctx }: { ctx: SizingReportState }) {
   return (
     <>{tab === "regulation" && (
         <section aria-label="규제 환경" className="market-section sizing-step sizing-step-deep">
-          <h3 className="sizing-step-title text-[0.95rem]">
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">
             <span className="sizing-step-badge sizing-step-badge-deep">5-B</span> 규제 환경 비교 — 관할권×항목
           </h3>
           <p className="mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
@@ -120,7 +120,7 @@ export function SizingRiskTab({ ctx }: { ctx: SizingReportState }) {
   return (
     <>{tab === "risk" && (
         <section aria-label="신뢰도·리스크" className="market-section sizing-step sizing-step-deep">
-          <h3 className="sizing-step-title text-[0.95rem]">
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">
             <span className="sizing-step-badge sizing-step-badge-deep">7-A</span> 신뢰도·리스크 — RAG 상한 권고·Kill Criteria·검증 원장
           </h3>
           <p className="mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
@@ -129,7 +129,7 @@ export function SizingRiskTab({ ctx }: { ctx: SizingReportState }) {
           </p>
           {matrix.ragCapRecommendation && (
             <div className="sizing-grade-card mt-3">
-              <h4 className="text-[0.9rem] mb-2">RAG 상한 권고</h4>
+              <h4 className="text-[length:var(--fs-body)] mb-2">RAG 상한 권고</h4>
               <span className={`status-chip ${matrix.ragCapRecommendation.grade === "green" ? "status-green" : matrix.ragCapRecommendation.grade === "amber" ? "status-amber" : "status-red"}`}>
                 상한 {matrix.ragCapRecommendation.grade.toUpperCase()}
               </span>

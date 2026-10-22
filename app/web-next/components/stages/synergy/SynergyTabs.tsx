@@ -16,7 +16,7 @@ export function SynergyProfileContext({ p }: { p: SynergyPayload }) {
   return (
     <div className="sizing-grade-card mb-3">
       <div className="flex flex-wrap items-center gap-2 mb-1">
-        <strong className="text-[0.9rem]">{p.target?.name ?? p.company.name}</strong>
+        <strong className="text-[length:var(--fs-body)]">{p.target?.name ?? p.company.name}</strong>
         {p.dataSources?.dart && <span className="status-chip status-green">DART {p.dataSources.dartYear ?? ""}</span>}
         {(p.financialStrengths?.length ?? 0) > 0 && <span className="status-chip status-in-progress">강점 {p.financialStrengths.length}건</span>}
         {(p.financialWeaknesses?.length ?? 0) > 0 && <span className="status-chip status-not-started">약점 {p.financialWeaknesses.length}건</span>}
@@ -98,8 +98,8 @@ export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState;
   }
   return (
     <>{tab === "scoreEval" && (
-            <div className="text-[0.88rem]">
-              <h3 className="sizing-step-title text-[0.95rem]">시너지 점수 평가 — 산정 근거와 확정</h3>
+            <div className="text-[length:var(--fs-body)]">
+              <h3 className="sizing-step-title text-[length:var(--fs-body)]">시너지 점수 평가 — 산정 근거와 확정</h3>
               {p.opportunity && (
                 <div className="sizing-grade-card mb-3">
                   <h4 className="text-[length:var(--fs-body)] mb-2">연결 기회 — S2 기회발굴</h4>
@@ -224,8 +224,8 @@ export function SynergyShortlistTab({ ctx, p }: { ctx: SynergyResultState; p: Sy
   const { tab, canCurate, editingArea, editForm, setEditForm, editSaving, setEditingArea, saveShortlistItem, editError, showShortlistForm, setShowShortlistForm, shortlistForm, setShortlistForm, opportunityId } = ctx;
   return (
     <>{tab === "shortlist" && (
-            <div className="text-[0.88rem]">
-              <h3 className="sizing-step-title text-[0.95rem]">주요 검토 영역 — 선별 결과</h3>
+            <div className="text-[length:var(--fs-body)]">
+              <h3 className="sizing-step-title text-[length:var(--fs-body)]">주요 검토 영역 — 선별 결과</h3>
               <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
               <table className="data-table list-table table-fixed-pct tmin-56" aria-label="주요 검토 영역">
                 <caption className="sr-only">주요 검토 영역</caption>

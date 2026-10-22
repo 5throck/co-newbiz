@@ -26,7 +26,7 @@ export function LinkToDealModal({ state, projectId, onClose, onLinked }: {
     return (
       <div className="modal-backdrop" onClick={onClose}>
         <div className="modal-panel" role="dialog" aria-modal="true" aria-label="안건에 산업 연결" onClick={(e) => e.stopPropagation()}>
-          <h2 className="text-[0.95rem] mb-1">이 안건에 연결</h2>
+          <h2 className="text-[length:var(--fs-body)] mb-1">이 안건에 연결</h2>
           <p role="note" className="text-[length:var(--fs-body)] mb-2">
             이 검토에는 아직 사업 프로젝트 행이 없어 산업을 연결할 수 없습니다. S8 승격 후 연결하거나, 먼저 S1 분석을 진행하세요.
           </p>
@@ -61,7 +61,7 @@ export function LinkToDealModal({ state, projectId, onClose, onLinked }: {
   return (
     <div className="modal-backdrop" onClick={close}>
       <div className="modal-panel" role="dialog" aria-modal="true" aria-label="안건에 산업 연결" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-[0.95rem] mb-1">이 안건에 연결</h2>
+        <h2 className="text-[length:var(--fs-body)] mb-1">이 안건에 연결</h2>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
           <strong>{state.industry.name_ko}</strong> 분석을 이 안건의 S1 근거로 연결합니다. 연결되면 목록 최상단 "이 안건의 산업
           분석" 영역으로 올라옵니다.

@@ -107,7 +107,7 @@ function CompView() {
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       <div className="grid2e">
         <section className="market-section" aria-label="경영진 보상 패키지">
-          <h2 className="text-[0.9rem] mb-2">경영진 보상 패키지</h2>
+          <h2 className="text-[length:var(--fs-body)] mb-2">경영진 보상 패키지</h2>
           {data === null ? <PageState state="loading" /> : data.management_packages.length === 0 ? (
             <PageState state="empty" emptyText="등록된 보상 패키지가 없습니다." />
           ) : (
@@ -138,7 +138,7 @@ function CompView() {
         </section>
         {canAct && (
           <section className="market-section" aria-label="경영진 보상 패키지 기록">
-            <h2 className="text-[0.9rem] mb-2">경영진 보상 패키지 기록 (ma-04~06 — 익명 참조만)</h2>
+            <h2 className="text-[length:var(--fs-body)] mb-2">경영진 보상 패키지 기록 (ma-04~06 — 익명 참조만)</h2>
             <form className="grid gap-2 md:grid-cols-4" onSubmit={submitPackage}>
               <label className="grid gap-1 text-sm">임원 참조<input className="form-input" value={pkg.executive_ref} onChange={(e) => setPkg({ ...pkg, executive_ref: e.target.value })} placeholder="CEO-01" required /></label>
               <label className="grid gap-1 text-sm">역할<input className="form-input" value={pkg.role_title} onChange={(e) => setPkg({ ...pkg, role_title: e.target.value })} placeholder="대표이사" required /></label>
@@ -161,7 +161,7 @@ function CompView() {
         )}
         {canAct && (
           <section className="market-section" aria-label="임금 형평 데이터 기록">
-            <h2 className="text-[0.9rem] mb-2">임금 형평 데이터 기록 (직군 집계 — 사람 확정)</h2>
+            <h2 className="text-[length:var(--fs-body)] mb-2">임금 형평 데이터 기록 (직군 집계 — 사람 확정)</h2>
             <form className="grid gap-2 md:grid-cols-5" onSubmit={submitEntry}>
               <label className="grid gap-1 text-sm">직군<input className="form-input" value={entry.job_family} onChange={(e) => setEntry({ ...entry, job_family: e.target.value })} placeholder="연구개발" required /></label>
               <label className="grid gap-1 text-sm">직급<input className="form-input" value={entry.grade} onChange={(e) => setEntry({ ...entry, grade: e.target.value })} placeholder="과장" required /></label>
@@ -176,7 +176,7 @@ function CompView() {
         )}
 
         <section className="market-section" aria-label="임금 형평">
-          <h2 className="text-[0.9rem] mb-2">임금 형평 (직군 집계)</h2>
+          <h2 className="text-[length:var(--fs-body)] mb-2">임금 형평 (직군 집계)</h2>
           {data === null ? <PageState state="loading" /> : data.parity.length === 0 ? (
             <PageState state="empty" emptyText="등록된 형평 데이터가 없습니다." />
           ) : (

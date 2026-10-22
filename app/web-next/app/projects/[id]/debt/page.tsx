@@ -122,7 +122,7 @@ function DebtView() {
         )}
       </section>
       <section className="market-section" aria-label="커버넌트 여력" data-testid="covenant-headroom">
-        <h2 className="text-[0.9rem] mb-2">커버넌트 여력 <span className="note">— 최신 시뮬레이션의 재무약정 시험(covenant_test) 기준 · S10 자금조달 산출물</span></h2>
+        <h2 className="text-[length:var(--fs-body)] mb-2">커버넌트 여력 <span className="note">— 최신 시뮬레이션의 재무약정 시험(covenant_test) 기준 · S10 자금조달 산출물</span></h2>
         {headroom === null ? <PageState state="loading" /> : headroom.status === "insufficient_evidence" ? (
           <PageState state="empty" emptyText={headroom.reason === "no_simulation" ? "시뮬레이션이 아직 실행되지 않아 커버넌트 여력을 계산할 수 없습니다 — 근거 부족으로 표시합니다 (값을 추정하지 않습니다)." : "최신 시뮬레이션에 재무약정 시험 행이 없습니다 — 차입의 커버넌트 조건을 등록한 뒤 시뮬레이션을 다시 실행하세요."} />
         ) : (
@@ -143,10 +143,10 @@ function DebtView() {
             </table>
           </div>
         )}
-        <p className="note" style={{ margin: "6px 0 0" }}>위반·빠듯 판정은 S9 리스크 히트맵(cov: 항목)과 투자심의 자료 deal_structure.covenant_headroom에 그대로 전달됩니다.</p>
+        <p className="note" style={{ margin: "6px 0 0" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>위반·빠듯 판정은 S9 리스크 히트맵(cov: 항목)과 투자심의 자료 deal_structure.covenant_headroom에 그대로 전달됩니다.</p>
       </section>
       <section className="market-section" aria-label="커버넌트 시나리오 계산" style={{ border: "1px solid var(--border)", borderRadius: 12 }}>
-        <h2 className="text-[0.9rem] mb-2">커버넌트 시나리오 계산 <span className="note">— 산식은 저장 조건 기반, 현금흐름은 명시적 가정 입력</span></h2>
+        <h2 className="text-[length:var(--fs-body)] mb-2">커버넌트 시나리오 계산 <span className="note">— 산식은 저장 조건 기반, 현금흐름은 명시적 가정 입력</span></h2>
         <div className="form-grid" style={{ marginBottom: 8 }}>
           <label className="text-[length:var(--fs-caption)] w-[12rem]"><span className="block mb-1">시나리오 연간 영업현금흐름 (억원)</span>
             <input type="number" className="sizing-new-input sizing-new-input-sm" value={scenarioCf} onChange={(e) => setScenarioCf(e.target.value)} placeholder="예: 120" /></label>
@@ -180,14 +180,14 @@ function DebtView() {
         ) : (
           <p className="note" style={{ margin: 0 }}>시나리오 현금흐름을 입력하면 각 차입의 연간 상환액(연금공식)과 부채상환비율을 계산해 임계값과 대조합니다.</p>
         )}
-        <p className="note" style={{ margin: "6px 0 0" }}>
+        <p className="note" style={{ margin: "6px 0 0" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>
           재무약정 판정 결과는 참고용 시나리오이며 공식 테스트는 재무약정 시험(시뮬레이션 실행)으로 확정됩니다 — 확정 결과는 위 "커버넌트 여력" 표에 표시됩니다.
         </p>
       </section>
 
       {canAct && (
         <section className="market-section" aria-label="차입 등록">
-          <h2 className="text-[0.9rem] mb-2">차입 등록</h2>
+          <h2 className="text-[length:var(--fs-body)] mb-2">차입 등록</h2>
           <form className="sizing-new-form" onSubmit={create}>
             <div className="flex flex-wrap items-end gap-2">
               <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">대출기관</span>

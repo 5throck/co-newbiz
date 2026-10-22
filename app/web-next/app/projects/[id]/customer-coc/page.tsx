@@ -104,7 +104,7 @@ function CocView() {
       </section>
       {canAct && (
         <section className="market-section" aria-label="계약 등록">
-          <h2 className="text-[0.9rem] mb-2">계약 CoC 등록</h2>
+          <h2 className="text-[length:var(--fs-body)] mb-2">계약 CoC 등록</h2>
           <form className="sizing-new-form" onSubmit={create}>
             <div className="flex flex-wrap items-end gap-2">
               <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]"><span className="block mb-1">상대 *</span>

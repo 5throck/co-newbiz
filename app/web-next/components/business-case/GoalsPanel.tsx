@@ -319,7 +319,7 @@ export function GoalsPanel({ projectId, data, canAct, onChanged, loadError }: { 
 
       {canAct && editor && (
         <form ref={editorRef} onSubmit={save} className="sizing-new-form mb-3" aria-label={editor.mode === "create" ? "목표 추가" : "목표 수정"} aria-describedby={error ? errId : undefined}>
-          <h3 className="sizing-step-title text-[0.9rem]">{editor.mode === "create" ? "목표 추가" : `목표 수정 — ${editor.goal.label ?? presetOf(editor.goal.metric_key)?.label ?? editor.goal.metric_key}`}</h3>
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">{editor.mode === "create" ? "목표 추가" : `목표 수정 — ${editor.goal.label ?? presetOf(editor.goal.metric_key)?.label ?? editor.goal.metric_key}`}</h3>
           {editor.mode === "supersede" && (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" role="note">새 버전이 만들어지며 이전 값은 이력에 남습니다.</p>
           )}
@@ -389,7 +389,7 @@ export function GoalsPanel({ projectId, data, canAct, onChanged, loadError }: { 
         </div>
       ) : (
         <div>
-        <h3 className="sizing-step-title text-[0.9rem]">적용 중인 목표</h3> {/* INTERIM-WORDING */}
+        <h3 className="sizing-step-title text-[length:var(--fs-body)]">적용 중인 목표</h3> {/* INTERIM-WORDING */}
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
           계열사·그룹 행은 상위에서 내려온 기준이며, 프로젝트 목표로 지정하면 이 프로젝트에서는 그 값이 우선합니다. {/* INTERIM-WORDING */}
         </p>
@@ -461,7 +461,7 @@ export function GoalsPanel({ projectId, data, canAct, onChanged, loadError }: { 
 
       {showHistory && (
         <div className="mt-3">
-          <h3 className="sizing-step-title text-[0.9rem]">변경 이력</h3>
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">변경 이력</h3>
           {history === null ? (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">불러오는 중...</p>
           ) : history.length === 0 ? (

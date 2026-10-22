@@ -84,6 +84,18 @@ function useStageLinks(track?: TrackId | null): (id: StageMetaId) => StageLink {
 // (hoisted from there, T-20261022-019) so both consumers resolve once; null also
 // covers "cannot be resolved", which leaves the caller without the link.
 const sourceOppCache = new Map<string, string | null>();
+const carrierTrackCache = new Map<string, TrackId | null>();
+
+/** 품평회 2026-10-22 잔여 #3 — 승격 직후 스테일 캐시 무효화. PromotionPanel이
+ *  승격 성공 직후 호출한다: 직전까지 "미승격/미적용"이던 레일·소스 링크가
+ *  하드 리로드 없이 곧바로 갱신되게 한다. */
+export function invalidateCarrierCaches(opportunityId?: string, projectId?: string): void {
+  for (const [k] of sourceOppCache) if (projectId && k === projectId) sourceOppCache.delete(k);
+  for (const [k] of carrierTrackCache) {
+    const id = k.slice(2);
+    if ((opportunityId && id === opportunityId) || (projectId && id === projectId)) carrierTrackCache.delete(k);
+  }
+}
 
 export function useSourceOpportunity(projectId: string | undefined): string | null {
   const [oppId, setOppId] = useState<string | null>(projectId ? sourceOppCache.get(projectId) ?? null : null);
@@ -101,7 +113,7 @@ export function useSourceOpportunity(projectId: string | undefined): string | nu
 
 // Track of the current carrier (opportunity or project), cached per id. Lets the stage rail show
 // "미적용" for the other track's stages on every screen, not only on the track-fixed ones.
-const carrierTrackCache = new Map<string, TrackId | null>();
+// (The cache map itself is declared next to sourceOppCache, above — invalidateCarrierCaches clears both.)
 
 function useCarrierTrack(enabled: boolean): TrackId | null {
   const params = useParams<{ id?: string }>();
@@ -160,14 +172,14 @@ export function StageFrame({
         </h1>
         {!stepperOwnedByTabs && <PrimarySlot />}
       </div>
-      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">{stage.objective}</p>
+      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">{stage.objective}</p>
       {!stepperOwnedByTabs && <StageRail current={ids} track={track} />}
-      <StageHandoffStrip primary={primary} linkFor={linkFor} />
+      <StageHandoffStrip primary={primary} track={track ?? carrierTrack ?? undefined} linkFor={linkFor} />
       {projectId && PROJECT_STAGE_IDS.has(primary) && <StageGuidance projectId={projectId} stageId={primary} />}
       {/* 단계 설명 슬롯 — 서식은 프레임이 표준화한다(0.9rem·muted·leading-relaxed,
           하단 간격 mb-4). 페이지별 클래스·<strong> 강조 금지(설계서 개정 2026-09-04). */}
       {children && (
-        <div className="mb-4 text-[0.9rem] text-[color:var(--muted-fg)] leading-relaxed">
+        <div className="mb-4 text-[length:var(--fs-body)] text-[color:var(--muted-fg)] leading-relaxed">
           {children}
         </div>
       )}
@@ -175,13 +187,31 @@ export function StageFrame({
   );
 }
 
+/** 단계 연계 스트립의 다음 단계 — 트랙 인지형 (F1/F10, 2026-10-22 리뷰).
+    onComplete 사슬을 트랙 비적용 단계인 채로 링크하면 TrackGate 루프에 빠진다
+    (greenfield S5 → S6 링크). 엔진의 skip 의미론(lib/process-flow.ts —
+    sequence가 뒤인 첫 skipped 아닌 단계가 nextStage)을 클라이언트에서
+    미러링한다: applicableTracks가 캐리어 트랙을 제외하는 단계는 건너뛰고
+    그다음 적용 단계로 나아간다 (S5→S8, brownfield S4→S6). 트랙 미확정이면
+    기존처럼 onComplete 한 칸을 그대로 쓴다. */
+function nextApplicableStage(from: StageMetaId, track?: TrackId | null): StageMetaId | null {
+  let id: StageMetaId | "terminal" | null = STAGE_META.find((s) => s.id === from)?.onComplete ?? null;
+  while (id && id !== "terminal") {
+    const meta = STAGE_META.find((s) => s.id === id);
+    if (!meta) return null;
+    if (!track || meta.applicableTracks.includes(track)) return id;
+    id = meta.onComplete;
+  }
+  return null;
+}
+
 /** 단계 연계 스트립 — 이 단계가 받는 입력과 넘기는 출력을 모든 단계 화면에
     표시한다 (ADR-0120 단계 연계). 다음 단계 CTA는 트랙·프로젝트 컨텍스트를
     반영해 STAGE_HREF로 연결된다. */
-function StageHandoffStrip({ primary, linkFor }: { primary: StageMetaId; linkFor: (id: StageMetaId) => StageLink }) {
+function StageHandoffStrip({ primary, track, linkFor }: { primary: StageMetaId; track?: TrackId | null; linkFor: (id: StageMetaId) => StageLink }) {
   const handoff = STAGE_HANDOFF[primary];
-  const nextId = STAGE_META.find((s) => s.id === primary)?.onComplete ?? null;
-  const nextHref = nextId && nextId !== "terminal" ? linkFor(nextId).href : null;
+  const nextId = nextApplicableStage(primary, track);
+  const nextHref = nextId ? linkFor(nextId).href : null;
   return (
     <details className="handoff-panel">
       <summary>입력과 출력 <span className="handoff-panel-hint">이 단계가 받는 것 · 넘기는 것</span></summary>
@@ -263,8 +293,9 @@ function StageGuidance({ projectId, stageId }: { projectId: string; stageId: str
 }
 
 /** Layer 2 of the IA (design §3.3): one stepper, roving tabindex, arrow keys,
-    aria-current="step". At <=880px it collapses to "S8 / 12 · name" with a
-    disclosure list. Status is text (current/skipped), never colour alone. */
+    aria-current="step". At <=880px (design-token-exempt: prose) it collapses
+    to "S8 / 12 · name" with a disclosure list. Status is text
+    (current/skipped), never colour alone. */
 export type StageRailStatus = "complete" | "current" | "skipped" | "pending";
 // INTERIM-WORDING: state words shown to assistive tech (full rail) and as text (compact list).
 const RAIL_STATE_TEXT: Record<StageRailStatus, string> = { complete: "완료", current: "진행 중", skipped: "건너뜀", pending: "" };

@@ -180,6 +180,7 @@ export default function StrategyPage() {
         <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
           <table className="w-full border-collapse table-fixed-pct tmin-56">
             <ColGroup widths={MODULES_COL_PCT} />
+            <caption className="sr-only">모듈별 시장성 · 라이선스 매트릭스</caption>
             <thead>
               <tr className="text-left text-sm">
                 <th className="p-3 border-b border-[color:var(--border)]">모듈</th>

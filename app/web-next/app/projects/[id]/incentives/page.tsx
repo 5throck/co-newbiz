@@ -140,7 +140,7 @@ function IncentivesView() {
       </section>
       {canAct && (
         <section className="market-section" aria-label="인센티브 등록">
-          <h2 className="text-[0.9rem] mb-2">인센티브 등록</h2>
+          <h2 className="text-[length:var(--fs-body)] mb-2">인센티브 등록</h2>
           <form className="sizing-new-form" onSubmit={create}>
             <div className="flex flex-wrap items-end gap-2">
               <label className="text-[length:var(--fs-caption)] flex-1 min-w-[14rem]"><span className="block mb-1">프로그램명 *</span>

@@ -177,7 +177,7 @@ export function EstablishmentPanel({ projectId, canAct, est, fallbackSteps, fall
   if (est && applies && mode === null) {
     return (
       <section className="market-section sizing-step mt-3" aria-label="설립 실행 5단계">
-        <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">🏗</span> 설립 실행 — 5단계</h3>
+        <h3 className="sizing-step-title text-[length:var(--fs-body)]"><span className="sizing-step-badge" aria-hidden="true">🏗</span> 설립 실행 — 5단계</h3>
         <p role="note" className="status-chip status-amber" style={{ whiteSpace: "normal" }}>ⓘ {MODE_NOT_CHOSEN_NOTICE}</p>
         <p className="text-[length:var(--fs-caption)] mt-2">
           <Link href={`/projects/${encodeURIComponent(projectId)}/deal-structure`} className="underline">S10 투자구조 설계에서 설립 방식 정하기 →</Link>
@@ -190,7 +190,7 @@ export function EstablishmentPanel({ projectId, canAct, est, fallbackSteps, fall
   if (est && !applies) {
     return (
       <section className="market-section sizing-step mt-3" aria-label="설립 실행 5단계">
-        <h3 className="sizing-step-title text-[0.95rem]"><span className="sizing-step-badge">🏗</span> 설립 실행 — 5단계</h3>
+        <h3 className="sizing-step-title text-[length:var(--fs-body)]"><span className="sizing-step-badge" aria-hidden="true">🏗</span> 설립 실행 — 5단계</h3>
         <p role="note" className="status-chip status-not-started" style={{ whiteSpace: "normal" }}>ⓘ {notApplicableNote(origin)}</p>
       </section>
     );
@@ -198,8 +198,8 @@ export function EstablishmentPanel({ projectId, canAct, est, fallbackSteps, fall
 
   return (
     <section className="market-section sizing-step mt-3" aria-label="설립 실행 5단계">
-      <h3 className="sizing-step-title text-[0.95rem]">
-        <span className="sizing-step-badge">🏗</span> {s11Title(mode)}
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]">
+        <span className="sizing-step-badge" aria-hidden="true">🏗</span> {s11Title(mode)}
       </h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
         {S11_INTRO[mode ?? "new_entity"]}

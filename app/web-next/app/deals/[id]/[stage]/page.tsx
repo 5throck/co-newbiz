@@ -295,17 +295,35 @@ const PROJECT_STAGES: Record<string, (props: { projectId: string }) => React.Rea
 function ProjectStageTab({ carrierId, stageId }: { carrierId: string; stageId: string }) {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // 미승격 빈 상태의 유도 링크 (F3) — 트랙 최종 단계(greenfield S5 / brownfield
+  // S7)의 승격 화면으로 보낸다. 트랙을 못 받으면 기회 개요로 폴백한다.
+  const [promoHref, setPromoHref] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
     setError(null);
     setProjectId(null);
+    setPromoHref(null);
     api
       .get<{ project_id: string | null }>(`/api/opportunities/${encodeURIComponent(carrierId)}`)
       .then((r) => {
         if (!alive) return;
         if (r.data.project_id) setProjectId(r.data.project_id);
-        else setError("이 기회는 아직 프로젝트로 추진되지 않았습니다 — 승격(S5→S8 또는 S7→S8)이 먼저 필요합니다.");
+        else {
+          setError("이 기회는 아직 프로젝트로 추진되지 않았습니다 — 승격(S5→S8 또는 S7→S8)이 먼저 필요합니다.");
+          // 캐리어 트랙으로 승격 링크의 착지 단계를 정한다 — resolveDealCarrier가
+          // 이 파일의 다른 바디에서 쓰는 것과 동일한 process 뷰의 track 필드.
+          api.get<{ track: string | null }>(`/api/opportunities/${encodeURIComponent(carrierId)}/process`)
+            .then((p) => {
+              if (!alive) return;
+              setPromoHref(
+                p.data.track === "greenfield" ? `/deals/${encodeURIComponent(carrierId)}/s5`
+                  : p.data.track === "brownfield" ? `/deals/${encodeURIComponent(carrierId)}/s7`
+                    : `/opportunities/${encodeURIComponent(carrierId)}`,
+              );
+            })
+            .catch(() => { if (alive) setPromoHref(`/opportunities/${encodeURIComponent(carrierId)}`); });
+        }
       })
       .catch(() => {
         // 캐리어가 이미 프로젝트 id인 경우 — process 엔드포인트(GET 지원)로
@@ -321,7 +339,15 @@ function ProjectStageTab({ carrierId, stageId }: { carrierId: string; stageId: s
   return (
     <main>
       <DealBreadcrumb dealId={carrierId} stageId={stageId as "S8"} />
-      {error && <PageState state="empty" emptyText={error} />}
+      {error && (
+        <PageState
+          state="empty"
+          emptyText={error}
+          emptyAction={promoHref && (
+            <Link className="btn-ghost btn-sm" href={promoHref}>승격 화면으로 이동</Link>
+          )}
+        />
+      )}
       {!error && !projectId && <PageState state="loading" />}
       {projectId && StageComponent ? StageComponent({ projectId }) : null}
     </main>

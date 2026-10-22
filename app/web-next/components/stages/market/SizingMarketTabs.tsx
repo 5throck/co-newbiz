@@ -77,7 +77,7 @@ export function SizingOverviewTab({ ctx }: { ctx: SizingReportState }) {
   return (
     <>{tab === "overview" && (
         <section aria-label="개요" className="market-section sizing-step">
-          <h3 className="sizing-step-title text-[0.95rem]">
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">
             <span className="sizing-step-badge"></span> 핵심 요약
           </h3>
           <div className="summary-cards">
@@ -118,7 +118,7 @@ export function SizingCompetitiveTab({ ctx }: { ctx: SizingReportState }) {
   return (
     <>{tab === "competitive" && (
         <section aria-label="경쟁 구조" className="market-section sizing-step">
-          <h3 className="sizing-step-title text-[0.95rem]">
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">
             <span className="sizing-step-badge">2-A</span> 경쟁 구조 — 시장 집중도와 주요 기업
           </h3>
         {/* S1 competitive-intelligence 산출 — 산업 적응형 컬럼: (1) 레거시/시드 매트릭스의

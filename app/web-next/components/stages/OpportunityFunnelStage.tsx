@@ -553,22 +553,6 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
                       {o.value_chain_node && <span className="text-[color:var(--muted-fg)]">{o.value_chain_node}</span>}
                       {!o.market_scope && !o.value_chain_node && "—"}
                     </span>
-                    {canAct && !o.project_id && insights && insights.length > 0 && (
-                      <label className="block text-[length:var(--fs-caption)] mt-1">
-                        <span className="mr-1">S1 분석 산업 연결</span>
-                        <select
-                          aria-label={`${o.name} S1 분석 산업 연결`}
-                          value={o.industry_id ?? ""}
-                          onChange={(e) => void linkIndustry(o, e.target.value)}
-                          className="sizing-new-input sizing-new-input-sm"
-                        >
-                          <option value="">연결 안 됨</option>
-                          {insights.map((i) => (
-                            <option key={i.industry_id} value={i.industry_id}>{i.industry_name}</option>
-                          ))}
-                        </select>
-                      </label>
-                    )}
                   </td>
                   <td className="tabular-nums">
                     {o.attractiveness_score ?? "—"}
@@ -586,6 +570,24 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
                     )}
                   </td>
                   <td className="sizing-actions-cell"><span className="actions-row">
+                    {canAct && !o.project_id && insights && insights.length > 0 && (
+                      // S1 연결 select는 폼 컨트롤이므로 이름 열이 아니라 작업 셀에서
+                      // 편집한다(2026-10 표 인터랙션 리뷰 — 이름 열은 읽기 표면 유지).
+                      <label className="flex items-center gap-1 text-[length:var(--fs-caption)]">
+                        <span className="whitespace-nowrap">S1 연결</span>
+                        <select
+                          aria-label={`${o.name} S1 분석 산업 연결`}
+                          value={o.industry_id ?? ""}
+                          onChange={(e) => void linkIndustry(o, e.target.value)}
+                          className="sizing-new-input sizing-new-input-sm"
+                        >
+                          <option value="">연결 안 됨</option>
+                          {insights.map((i) => (
+                            <option key={i.industry_id} value={i.industry_id}>{i.industry_name}</option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
                     {nextStepActions(o)}
                     {canAct && !o.project_id && (
                       <button

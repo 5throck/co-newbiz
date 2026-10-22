@@ -96,7 +96,7 @@ function PermitsView() {
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       <div className="grid2e">
         <section className="market-section" aria-label="허가">
-          <h2 className="text-[0.9rem] mb-2">허가</h2>
+          <h2 className="text-[length:var(--fs-body)] mb-2">허가</h2>
           {data === null ? <PageState state="loading" /> : data.permits.length === 0 ? (
             <PageState state="empty" emptyText="등록된 허가가 없습니다." />
           ) : (
@@ -109,7 +109,7 @@ function PermitsView() {
           )}
         </section>
         <section className="market-section" aria-label="인증">
-          <h2 className="text-[0.9rem] mb-2">인증</h2>
+          <h2 className="text-[length:var(--fs-body)] mb-2">인증</h2>
           {data === null ? <PageState state="loading" /> : data.certifications.length === 0 ? (
             <PageState state="empty" emptyText="등록된 인증이 없습니다." />
           ) : (
@@ -124,7 +124,7 @@ function PermitsView() {
       </div>
       {canAct && (
         <section className="market-section" aria-label="등록">
-          <h2 className="text-[0.9rem] mb-2">등록</h2>
+          <h2 className="text-[length:var(--fs-body)] mb-2">등록</h2>
           <form className="sizing-new-form" onSubmit={create}>
             <div className="flex flex-wrap items-end gap-2">
               <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">구분 *</span>

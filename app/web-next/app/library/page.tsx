@@ -190,7 +190,7 @@ export function LibraryView() {
   return (
     <main>
       <h1>문서 허브</h1>
-      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
+      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
         정책집·절차서·체크리스트·매뉴얼·참고문서·템플릿·디자인 가이드·DD 실사 문서를 저장소 원본에서
         실시간으로 읽어 열람합니다. (검토/안건 단위 체크리스트 판정은 S4 이후 흐름 재구축 시 제공됩니다.)
       </p>

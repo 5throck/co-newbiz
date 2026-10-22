@@ -453,7 +453,9 @@ export function DdStage({ projectId }: { projectId: string }) {
   return (
 <>
       <StageTabs projectId={projectId} />
-      <GateDecisionJump gate="dd" />
+      {/* 게이트 결정은 의사결정 탭에 있다 — 점프 전에 탭을 열어 포커스 대상이
+          보이게 한다(F6, BusinessCaseStage:514와 동일 패턴). */}
+      <GateDecisionJump gate="dd" beforeJump={() => { if (data) setTab(decisionTabIdx); }} />
       <ReviewBuckets entityType="project" entityId={projectId} gates={["dd"]} artifacts={stageArtifactTabs("S9")} />
       <StageFrame stageId="S9" heading={s9Heading(data?.greenfield_scope)}>
         {data && (
@@ -518,8 +520,8 @@ export function DdStage({ projectId }: { projectId: string }) {
         {/* ── 실사 조사 도구 (2026-10-21 decider) — 실사 산물인 조사 화면을 워크스페이스에서 한 눈에 ── */}
         {data?.tool_counts && (
           <section className="market-section sizing-step mb-3" aria-label="실사 조사 도구" data-testid="dd-tools">
-            <h3 className="sizing-step-title text-[0.9rem]">
-              <span className="sizing-step-badge">🧰</span> 실사 조사 도구 — 실사 산물을 기록하는 화면
+            <h3 className="sizing-step-title text-[length:var(--fs-body)]">
+              <span className="sizing-step-badge" aria-hidden="true">🧰</span> 실사 조사 도구 — 실사 산물을 기록하는 화면
             </h3>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               이 화면들의 기록은 S9 실사 체크리스트(ma-04~08 · cdd-07)와 리스크 히트맵·투자심의 자료로 흘러갑니다.
@@ -594,7 +596,7 @@ export function DdStage({ projectId }: { projectId: string }) {
 
         {comparisonRows.length >= 2 && (
           <section className="market-section sizing-step mb-3" aria-label="비교 근거">
-            <h3 className="sizing-step-title text-[0.9rem]">비교 근거</h3>
+            <h3 className="sizing-step-title text-[length:var(--fs-body)]">비교 근거</h3>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               열린 대상별 DD 현황입니다. 합격·불합격 표시 없이 아직 확인하지 못한 항목 수를 그대로 보여주며, 선정 대상 외 행은 게이트 판정에 반영되지 않습니다.
             </p>
@@ -682,7 +684,7 @@ export function DdStage({ projectId }: { projectId: string }) {
             />
             {planTab && ws && (
               <section className="market-section sizing-step mt-3" aria-label="계획 준비 상태" data-testid="dd-plan-readiness">
-                <h3 className="sizing-step-title text-[0.9rem]">{planReadinessLabel(data?.greenfield_scope)}</h3>
+                <h3 className="sizing-step-title text-[length:var(--fs-body)]">{planReadinessLabel(data?.greenfield_scope)}</h3>
                 <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
                   체크리스트 항목이 없는 단계(4·5·6)의 상태입니다. 완료 집계에 들어가지 않으며, 판정 버튼도 없습니다. {/* INTERIM-WORDING */}
                 </p>
@@ -720,7 +722,7 @@ export function DdStage({ projectId }: { projectId: string }) {
 
             {domain && split && counts && (<>
             <div className="mt-3 mb-2" data-testid="dd-tab-header">
-              <h3 className="sizing-step-title text-[0.9rem]">
+              <h3 className="sizing-step-title text-[length:var(--fs-body)]">
                 {tabLabel(data?.greenfield_scope, domain)}
                 {(ws || bf) && (
                   <span className="ml-2 text-[length:var(--fs-caption)] font-normal text-[color:var(--muted-fg)]" role="status" aria-live="polite" data-testid="dd-tab-count">
@@ -816,11 +818,11 @@ export function DdStage({ projectId }: { projectId: string }) {
                       {rowCanAct && (
                         <td data-label="판정 기록">
                           <span className="actions-row dd-actions">
-                            <button type="button" className="btn-ghost btn-sm" disabled={busy} title="충족 판정" onClick={() => void judge(domain.checklistId, item.id, "pass")}>✓ 충족</button>
-                            <button type="button" className="btn-danger btn-sm" disabled={busy} title="미충족 판정 (필수 항목은 waiver 없이 S9 완료 불가)" onClick={() => void judge(domain.checklistId, item.id, "fail")}>✕ 미충족</button>
-                            <button type="button" className="btn-ghost btn-sm" disabled={busy} title="해당 없음 판정" onClick={() => requestNa(domain.checklistId, item.id, `${item.id} ${ko.text}`)}>— 해당없음</button>
+                            <button type="button" className="btn-ghost btn-sm" disabled={busy} title="충족 판정" aria-label={`${ko.text} 충족 판정`} onClick={() => void judge(domain.checklistId, item.id, "pass")}>✓ 충족</button>
+                            <button type="button" className="btn-danger btn-sm" disabled={busy} title="미충족 판정 (필수 항목은 waiver 없이 S9 완료 불가)" aria-label={`${ko.text} 미충족 판정`} onClick={() => void judge(domain.checklistId, item.id, "fail")}>✕ 미충족</button>
+                            <button type="button" className="btn-ghost btn-sm" disabled={busy} title="해당 없음 판정" aria-label={`${ko.text} 해당 없음 판정`} onClick={() => requestNa(domain.checklistId, item.id, `${item.id} ${ko.text}`)}>— 해당없음</button>
                             {item.waiver_eligible ? (
-                              <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => openWaiverDialog(domain.checklistId, item.id, `${item.id} ${ko.text}`)}>
+                              <button type="button" className="btn-ghost btn-sm" disabled={busy} aria-label={`${ko.text} 면제 요청·연결`} onClick={() => openWaiverDialog(domain.checklistId, item.id, `${item.id} ${ko.text}`)}>
                                 ⚖ 면제 요청·연결
                               </button>
                             ) : (
@@ -853,9 +855,9 @@ export function DdStage({ projectId }: { projectId: string }) {
                       {rowCanAct && (
                         <td data-label="판정 기록">
                           <span className="actions-row dd-actions">
-                            <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void judge(`custom:${c.domain}`, c.id, "pass")}>✓ 충족</button>
-                            <button type="button" className="btn-danger btn-sm" disabled={busy} onClick={() => void judge(`custom:${c.domain}`, c.id, "fail")}>✕ 미충족</button>
-                            <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void judge(`custom:${c.domain}`, c.id, "na")}>— 해당없음</button>
+                            <button type="button" className="btn-ghost btn-sm" disabled={busy} title="충족 판정" aria-label={`${c.item_label} 충족 판정`} onClick={() => void judge(`custom:${c.domain}`, c.id, "pass")}>✓ 충족</button>
+                            <button type="button" className="btn-danger btn-sm" disabled={busy} title="미충족 판정 (필수 항목은 waiver 없이 S9 완료 불가)" aria-label={`${c.item_label} 미충족 판정`} onClick={() => void judge(`custom:${c.domain}`, c.id, "fail")}>✕ 미충족</button>
+                            <button type="button" className="btn-ghost btn-sm" disabled={busy} title="해당 없음 판정" aria-label={`${c.item_label} 해당 없음 판정`} onClick={() => requestNa(`custom:${c.domain}`, c.id, `${c.id} ${c.item_label}`)}>— 해당없음</button>
                           </span>
                         </td>
                       )}
@@ -905,7 +907,7 @@ export function DdStage({ projectId }: { projectId: string }) {
             )}
 
             <section className="market-section sizing-step mt-3" aria-label="산업 맞춤 제안">
-              <h3 className="sizing-step-title text-[0.9rem]">산업 맞춤 제안 (proposed)</h3>
+              <h3 className="sizing-step-title text-[length:var(--fs-body)]">산업 맞춤 제안 (proposed)</h3>
               {domain.custom.filter((c) => c.status === "proposed").length === 0 && (
                 <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">대기 중인 제안이 없습니다 — 에이전트 제안은 실사 체크리스트 수행 중 도착합니다.</p>
               )}
@@ -944,7 +946,7 @@ export function DdStage({ projectId }: { projectId: string }) {
 
 
             <section className="market-section sizing-step mt-3" aria-label="조사내역 (dd_finding)" id="dd-findings">
-              <h3 className="sizing-step-title text-[0.9rem]">조사내역 (dd_finding)</h3>
+              <h3 className="sizing-step-title text-[length:var(--fs-body)]">조사내역 (dd_finding)</h3>
               <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="dd-findings-flow">
                 반영 경로: ① 아래 판정 기록과 함께 <b>dd 게이트 판정 근거</b>가 되고, ② 가치 영향이 기재된 최근 6건은{" "}
                 <b>S10 투자구조 추천</b> 생성 입력으로 자동 전달되며, ③ S11 <b>투자심사 패키지</b>에도 포함됩니다. 이 탭에서의 추가 편집은 없습니다 — 기록이 곧 반영입니다.
@@ -990,7 +992,7 @@ export function DdStage({ projectId }: { projectId: string }) {
           <div className="mt-4">
             {capSummary && (
               <div className="market-section sizing-step mb-3" aria-label="필요 역량 판정 요약" data-testid="capability-dd-summary">
-                <h3 className="sizing-step-title text-[0.9rem]">필요 역량 판정 요약 (capability-dd)</h3>
+                <h3 className="sizing-step-title text-[length:var(--fs-body)]">필요 역량 판정 요약 (capability-dd)</h3>
                 <p className="flex flex-wrap gap-2 items-center">
                   <span className="status-chip status-green">해소 {capSummary.resolved}</span>
                   <span className="status-chip status-amber">부분 해소 {capSummary.partial}</span>

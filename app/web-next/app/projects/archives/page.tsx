@@ -103,7 +103,7 @@ export function ProjectArchivesView() {
   return (
     <main>
       <h1>아카이브</h1>
-      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[0.9rem]">
+      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
         마감·보관한 프로젝트와 삭제 표시된 검토/안건의 원본을 열람합니다. 데이터는 물리적으로 삭제되지 않으며, 열람 기록은 감사 로그에 남습니다.
       </p>
       {error && (
@@ -113,7 +113,7 @@ export function ProjectArchivesView() {
       )}
 
       <section aria-label="보관 프로젝트" className="market-section">
-        <h2 className="text-[0.92rem] font-semibold mb-2">보관 프로젝트</h2>
+        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">보관 프로젝트</h2>
         {archived === null ? (
           <p>불러오는 중...</p>
         ) : archived.length === 0 ? (
@@ -168,7 +168,7 @@ export function ProjectArchivesView() {
       </section>
 
       <section aria-label="삭제된 검토/안건" className="market-section">
-        <h2 className="text-[0.92rem] font-semibold mb-2">삭제된 검토/안건</h2>
+        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">삭제된 검토/안건</h2>
         {deleted === null ? (
           <p>불러오는 중...</p>
         ) : deleted.length === 0 ? (

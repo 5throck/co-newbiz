@@ -49,7 +49,7 @@ export function SizingGrowthTab({ ctx }: { ctx: SizingReportState }) {
 
       {/* 4-A: 방법론 8단계 번호는 유지하고 별도 영역으로 표시 */}
       <section id="yearly-share" aria-label="연도별 시장점유율 추이" className="market-section sizing-step sizing-step-deep">
-        <h3 className="sizing-step-title text-[0.95rem]">
+        <h3 className="sizing-step-title text-[length:var(--fs-body)]">
           <span className="sizing-step-badge sizing-step-badge-deep">4-A</span> 연도별 시장점유율 추이 (2026 → 2030, 기본 시나리오)
         </h3>
         <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
@@ -166,7 +166,7 @@ export function SizingQualitativeTab({ ctx }: { ctx: SizingReportState }) {
   return (
     <>{tab === "qualitative" && (
         <section aria-label="정성 분석 — 기회·위험 요인" className="market-section sizing-step sizing-step-deep">
-          <h3 className="sizing-step-title text-[0.95rem]">
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">
             <span className="sizing-step-badge sizing-step-badge-deep">5-A</span> 정성 분석 — 기회 요인과 위험 요인
           </h3>
           <p className="mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
@@ -175,13 +175,13 @@ export function SizingQualitativeTab({ ctx }: { ctx: SizingReportState }) {
           </p>
           <div className="chart-pair">
             <div className="chart-half sizing-grade-card">
-              <h4 className="text-[0.9rem] mb-2">✅ 기회 요인</h4>
+              <h4 className="text-[length:var(--fs-body)] mb-2">✅ 기회 요인</h4>
               <ul className="sizing-note-list">
                 {matrix.qualitative.opportunityFactors.map((f, i) => <li key={i}>{f}</li>)}
               </ul>
             </div>
             <div className="chart-half sizing-grade-card">
-              <h4 className="text-[0.9rem] mb-2">위험 요인</h4>
+              <h4 className="text-[length:var(--fs-body)] mb-2">위험 요인</h4>
               <ul className="sizing-note-list">
                 {matrix.qualitative.riskFactors.map((f, i) => <li key={i}>{f}</li>)}
               </ul>
@@ -189,7 +189,7 @@ export function SizingQualitativeTab({ ctx }: { ctx: SizingReportState }) {
           </div>
           {matrix.externalForecast?.newDrivers && matrix.externalForecast.newDrivers.length > 0 && (
             <div className="sizing-grade-card mt-3">
-              <h4 className="text-[0.9rem] mb-2">외부 전망 대비 신규·강화 드라이버</h4>
+              <h4 className="text-[length:var(--fs-body)] mb-2">외부 전망 대비 신규·강화 드라이버</h4>
               <div className="flex flex-wrap gap-1 mb-2">
                 {matrix.externalForecast.newDrivers.map((d) => (
                   <span key={d} className="status-chip status-in-progress">{d}</span>

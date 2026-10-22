@@ -103,7 +103,7 @@ export function GreenfieldScopePanel({ projectId, scope, domains, meUserId, canA
 
   return (
     <section className="market-section sizing-step mb-3" aria-label="그린필드 세부 트랙 범위 요약" data-testid="gf-scope-panel">
-      <h3 className="sizing-step-title text-[0.9rem]">범위 요약 — {subTrackName(scope)}</h3> {/* INTERIM-WORDING */}
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]">범위 요약 — {subTrackName(scope)}</h3> {/* INTERIM-WORDING */}
 
       {people && (
         <div role="group" aria-labelledby={`${uid}-people`} className="mb-2" data-testid="gf-people-plan">

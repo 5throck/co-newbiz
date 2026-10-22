@@ -332,7 +332,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   const summaryOnly = !!recorded && recorded.decision !== "hold" && !(seq && recorded.decision === "go" && nextGate);
   return (
     <section aria-label="의사결정" className="market-section sizing-step" data-gate-form={panelKey.replace(/,/g, " ")} id={`gate-decision-${panelKey.replace(/,/g, "-")}`} tabIndex={-1}>
-      <h3 className="sizing-step-title text-[0.95rem]">
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]">
         <span className="sizing-step-badge">🚦</span> 의사결정 — 승인 기록 (경계 #2)
       </h3>
       <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">

@@ -1,0 +1,217 @@
+# icon-vocabulary.yaml — co-newbiz registered icon vocabulary (design-lint §5.3)
+#
+# DECIDED iconography stance (2026-10-22 registry-authoring run):
+# co-newbiz uses a dependency-free UNICODE GLYPH policy — no icon font and no
+# SVG sprite library. There is no docs/design.md `iconography` block, so the
+# lint's built-in conventions (<Icon name="..."> and icon="...") apply; the only
+# icon-attribute surface in the app is the SectionToolbar `icon` prop
+# (components/layout.tsx), whose non-empty values are registered below.
+#
+# Two sanctioned tiers:
+#   1. functional text glyphs — the P5 multi-encoded signal set and navigation/
+#      state indicators (design-guide.md P5 "signal lights: ● done / ◐ current /
+#      ○ pending / ✕ terminated"; §3.2 status pairing ✓ ⚠ ✕ ○). System-font
+#      text, theme-colored via tokens.
+#   2. semantic emoji markers — the de-facto section-badge standard rendered in
+#      .sizing-step-badge / status-chip / heading contexts. These carry meaning
+#      (AI-proposal marking, waiver, SWOT sections) and are therefore registered,
+#      not banned. Doctrine basis: design-guide.md P4 (agentic-first UI needs a
+#      visible AI marker) and design-philosophy.md boundary #2.
+#
+# Rules (review-enforced):
+#   - A glyph NEVER stands alone: status/decision semantics are always color +
+#     glyph + text (design-guide.md P5); decorative badges sit next to a text
+#     heading or inside a labelled control.
+#   - Purely decorative glyphs SHOULD carry aria-hidden="true" (existing practice,
+#     e.g. AI-draft chips); the declarative aria_label_required flag is false for
+#     every entry because no registered glyph is used icon-only today. Any future
+#     icon-ONLY interactive control requires aria-label (design-guide.md §7) and
+#     must flip its entry's aria_label_required to true at registration time.
+#   - New glyphs/emoji enter only via the design-phase gate: register here before
+#     first use. Glyphs observed in the app but NOT registered are deviations —
+#     see the review-board triage list of the 2026-10-22 run.
+version: 1
+icons:
+  # ── Tier 1 — functional text glyphs (system font, token-colored) ───────────
+  # P5 signal-light set
+  - id: glyph-signal-done
+    source: unicode-text-glyph
+    contexts: [process-light, stage-stepper, status-chip]
+    aria_label_required: false
+  - id: glyph-signal-current
+    source: unicode-text-glyph
+    contexts: [process-light, stage-stepper, status-chip]
+    aria_label_required: false
+  - id: glyph-signal-pending
+    source: unicode-text-glyph
+    contexts: [process-light, status-chip]
+    aria_label_required: false
+  - id: glyph-terminated
+    source: unicode-text-glyph
+    contexts: [process-light, stage-stepper, status-chip]
+    aria_label_required: false
+  # status pairing set (design-guide.md §3.2)
+  - id: glyph-check
+    source: unicode-text-glyph
+    contexts: [status-chip, checklist, dd-checklist]
+    aria_label_required: false
+  - id: glyph-selected
+    source: unicode-text-glyph
+    contexts: [selection indicator, dd-checklist]
+    aria_label_required: false
+  - id: glyph-warning
+    source: unicode-text-glyph
+    contexts: [status-chip, warning notes]
+    aria_label_required: false
+  # state / rating / terminal markers
+  - id: glyph-escalation
+    source: unicode-text-glyph
+    contexts: [status-chip tone marker, finding lists, reconfirm cues]
+    aria_label_required: false
+  - id: glyph-square-terminal
+    source: unicode-text-glyph
+    contexts: [killed/withdrawn chip icon, staleness marker]
+    aria_label_required: false
+  - id: glyph-pin
+    source: unicode-text-glyph
+    contexts: [industry pinning, ratings]
+    aria_label_required: false
+  - id: glyph-spark
+    source: unicode-text-glyph
+    contexts: [status-chip AI-draft marker]
+    aria_label_required: false
+  - id: glyph-refresh
+    source: unicode-text-glyph
+    contexts: [rerun actions, revised state icon]
+    aria_label_required: false
+  # expand/collapse carets
+  - id: glyph-caret-down
+    source: unicode-text-glyph
+    contexts: [expand toggles, more-menus]
+    aria_label_required: false
+  - id: glyph-caret-up
+    source: unicode-text-glyph
+    contexts: [collapse toggles]
+    aria_label_required: false
+  - id: glyph-caret-right-small
+    source: unicode-text-glyph
+    contexts: [collapsed toggles, nesting indicators]
+    aria_label_required: false
+  - id: glyph-caret-down-small
+    source: unicode-text-glyph
+    contexts: [expanded toggles]
+    aria_label_required: false
+  - id: glyph-caret-play
+    source: unicode-text-glyph
+    contexts: [nav arrows]
+    aria_label_required: false
+  # flow / direction arrows
+  - id: glyph-arrow-right
+    source: unicode-text-glyph
+    contexts: [flow derivation, handoff, table arrows]
+    aria_label_required: false
+  - id: glyph-arrow-left
+    source: unicode-text-glyph
+    contexts: [back links, flow derivation]
+    aria_label_required: false
+  - id: glyph-arrow-up
+    source: unicode-text-glyph
+    contexts: [trend indicators]
+    aria_label_required: false
+  - id: glyph-arrow-down
+    source: unicode-text-glyph
+    contexts: [trend indicators]
+    aria_label_required: false
+  - id: glyph-arrow-both
+    source: unicode-text-glyph
+    contexts: [bidirectional linkage]
+    aria_label_required: false
+  - id: glyph-branch-nested
+    source: unicode-text-glyph
+    contexts: [nested list indentation]
+    aria_label_required: false
+
+  # ── Tier 2 — semantic emoji markers (section badges / AI-proposal marker) ──
+  # Boundary #2 marker: content proposed by the AI (design-philosophy.md #2,
+  # design-guide.md P4). Pairs with "AI" text; wrap in aria-hidden when purely
+  # decorative (existing practice).
+  - id: emoji-ai-marker
+    source: unicode-emoji
+    contexts: [ai action buttons, ai brief/judgement headings, synergy ai proposals]
+    aria_label_required: false
+  # Governance semantics
+  - id: emoji-waiver
+    source: unicode-emoji
+    contexts: [waiver chips (status-amber), waiver panels, committee headings]
+    aria_label_required: false
+  - id: emoji-confidence
+    source: unicode-emoji
+    contexts: [confidence-ceiling recommendation headings]
+    aria_label_required: false
+  - id: emoji-kill-hint
+    source: unicode-emoji
+    contexts: [kill-criteria warning notes]
+    aria_label_required: false
+  # Outcome / lifecycle markers
+  - id: emoji-confirm
+    source: unicode-emoji
+    contexts: [success feedback, opportunity-factor headings]
+    aria_label_required: false
+  - id: emoji-compass
+    source: unicode-emoji
+    contexts: [post-management guidance headings]
+    aria_label_required: false
+  - id: emoji-rocket
+    source: unicode-emoji
+    contexts: [promotion-to-project actions]
+    aria_label_required: false
+  - id: emoji-clipboard
+    source: unicode-emoji
+    contexts: [checklist/artifact headings]
+    aria_label_required: false
+  - id: emoji-lock
+    source: unicode-emoji
+    contexts: [locked states, permission cues]
+    aria_label_required: false
+  - id: emoji-search
+    source: unicode-emoji
+    contexts: [inspection/verification cues]
+    aria_label_required: false
+  - id: emoji-construction
+    source: unicode-emoji
+    contexts: [establishment/execution headings]
+    aria_label_required: false
+  # SWOT badge family (AI company profile tabs)
+  - id: emoji-company
+    source: unicode-emoji
+    contexts: [company profile headings]
+    aria_label_required: false
+  - id: emoji-swot-strength
+    source: unicode-emoji
+    contexts: [SWOT strength section]
+    aria_label_required: false
+  - id: emoji-swot-weakness
+    source: unicode-emoji
+    contexts: [SWOT weakness section]
+    aria_label_required: false
+  - id: emoji-swot-opportunity
+    source: unicode-emoji
+    contexts: [SWOT opportunity section]
+    aria_label_required: false
+  - id: emoji-swot-threat
+    source: unicode-emoji
+    contexts: [SWOT threat section]
+    aria_label_required: false
+  # SectionToolbar icon= prop values (the app's only icon-attribute surface)
+  - id: glyph-edit
+    source: unicode-emoji
+    contexts: [section-toolbar icon prop]
+    aria_label_required: false
+  - id: glyph-document
+    source: unicode-emoji
+    contexts: [section-toolbar icon prop]
+    aria_label_required: false
+  - id: glyph-scroll
+    source: unicode-emoji
+    contexts: [section-toolbar icon prop]
+    aria_label_required: false
