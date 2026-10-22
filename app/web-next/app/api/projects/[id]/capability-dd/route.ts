@@ -10,6 +10,7 @@
 import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
+import { resolveTrack } from "../../../../../lib/project-track.ts";
 import { badRequest, fail, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { parseGapRegister } from "../../../../../lib/capability-gap.ts";
 import {
@@ -62,6 +63,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "필요 역량 판정 기록은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
+  // T-20261022-038: capability-dd is a brownfield-only S9 activity (flow.spec S9
+  // capability-dd → procedure [brownfield-dd]). The client hides the surface on a
+  // greenfield carrier, but the server must not trust that — resolveTrack (same
+  // guard shape as the import-baseline route, T-20261022-016) refuses a
+  // greenfield or unresolvable carrier with 409 not_applicable_track. GET stays
+  // open: read-only evidence.
+  if (resolveTrack(id, getDb()).track !== "brownfield") {
+    return fail(409, "not_applicable_track", "필요 역량 판정(S9)은 brownfield 프로젝트에만 적용됩니다 — 현재 트랙이 greenfield이거나 확인되지 않았습니다.");
+  }
   const db = getDb();
   const opp = resolveOpportunity(db, id);
   if (!opp) return notFound();

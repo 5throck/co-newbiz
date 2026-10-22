@@ -584,13 +584,13 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - partnership-monitoring · agent: `partnership-agent` · skills:  · procedure: `jv-lifecycle-governance`
 
 **필수 산출물**
-- 벤처 스코어카드
+- 벤처 스코어카드 (greenfield — brownfield은 integration/partnership 모니터링, 권장·비차단)
 - 사람 전환 결정 기록(어휘 5종, decided_by=venture-portfolio-ic, rationale 필수 — venture_transition_decision 원장)
 - 전환별 결정 부속 기록: 차기 트랜치 조건(next_tranche_released/held_evidence_incomplete), 핵심사업 인계 기록(graduate_to_core), 매각/청산 계획(reduce_or_divest), 학습 포착 기록(kill_with_learning_captured — group-review-agent 기록, risk-officer가 S1/S2 기본률에 환류)
 - 실행 기준선 대비 차이(greenfield)
 
 **완료 기준**
-- 리뷰 주기별로 스코어카드 검토가 존재한다
+- 리뷰 주기별로 스코어카드 검토가 존재한다 (greenfield — brownfield은 integration/partnership 모니터링으로 대체, 권장·비차단)
 - 각 검토마다 사람 전환 결정이 근거(rationale)와 함께 기록되어 있다
 - 지속 결정(next_tranche_released/held_evidence_incomplete)은 차기 트랜치 조건을 기록한다
 - 확장 결정(graduate_to_core)은 핵심사업 인계를 기록한다
@@ -618,7 +618,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 Stage state is **derived, never stored**: there is no persisted `current_stage`.
 UI and the agent orchestrator both call `evaluateProcess(entity)` in
-`app/web-next/lib/process-flow.ts:330`, which recomputes the full
+`app/web-next/lib/process-flow.ts`, which recomputes the full
 `ProcessEvaluation` (currentStage, completedStages, blockedStages, nextStage,
 blockers, requiredArtifacts, gateStatus, track/subTrack, terminated) from
 persisted artifacts and the latest `gate_decision` rows.
@@ -626,7 +626,7 @@ persisted artifacts and the latest `gate_decision` rows.
 Two entity lifecycles (ADR-0094/0095):
 
 - **opportunity** carries S1–S7. Track is derived from the S4
-  `route_decision` (process-flow.ts:353); track-inapplicable stages render as
+  `route_decision` (via `latestRouteDecision`); track-inapplicable stages render as
   `skipped`, downstream siblings of an incomplete stage as `locked`.
 - **project** carries S8–S12. The **S7→S8 handoff is promotion**
   (`promoteOpportunity`, `db/repositories/project.repository.ts`; wired by
@@ -655,12 +655,13 @@ artifact, blocks completion), and S4 now checks `alternatives_considered`.
 | S9 | `ddCompletionSummary`: total > 0, pending = 0, mandatoryUnmet = 0 — ADR-0099 |
 | S10 | latest `deal_structure_hypothesis` has `four_axis_review_completed` = 1 AND `financing_sources_uses` sources == uses > 0 (balanced) — flow.spec v2.2.0, ADR-0045 |
 | S11 | `entity_ic` AND `group_ic` gate decisions both `go` (human record only); for origin ∈ {internal, joint}, `establishmentProgress` = 5/5 — ADR-0100 |
-| S12 | ADR-0150 six criteria: `venture_scorecard` exists with a fresh review cycle (current or previous quarter, `isFreshReviewCycle` — criterion 1, ADR-0101 §4 mechanics) AND a human transition decision recorded with rationale for the latest cycle (criterion 2), AND the transition's criterion-specific record — tranche conditions (criterion 3), core handover (criterion 4), divest/liquidation plan (criterion 5), captured learning fed back to S1/S2 base rates (criterion 6) |
+| S12 | ADR-0150 six criteria: `venture_scorecard` exists with a fresh review cycle (current or previous quarter, `isFreshReviewCycle` — criterion 1, ADR-0101 §4 mechanics; **greenfield-only since v2.10.1 — T-20261022-001: brownfield monitors via integration/partnership, recommended·non-blocking**) AND a human transition decision recorded with rationale for the latest cycle (criterion 2, track-agnostic), AND the transition's criterion-specific record — tranche conditions (criterion 3), core handover (criterion 4), divest/liquidation plan (criterion 5), captured learning fed back to S1/S2 base rates (criterion 6) |
 
 Gate semantics: every gate verdict is a human-recorded `gate_decision` row
 (ADR-0053 `decision_authority: human`; ADR-0094 — the sole human-confirmation
 ledger). HOLD blocks re-evaluation of the current stage's gate, not the work
-itself (process-flow.ts:394–399, 463–472); any `kill` terminates the entity.
+itself (the HOLD branch of the stage walkers in `process-flow.ts`); any
+`kill` terminates the entity.
 
 ## Automation surfaces per stage (S8–S12)
 

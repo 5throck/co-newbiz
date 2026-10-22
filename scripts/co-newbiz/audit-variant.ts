@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.1.0
 /**
  * co-newbiz variant audit hook — executed by scripts/audit.ts §27 (the
  * pluggable variant-specific audit checks; probed at
@@ -10,9 +10,132 @@
  *   - MCP coverage (Wave M, ADR-0154): every flow.spec S1-S12 activity and
  *     requiredArtifact has an MCP tool, and no human-only exclusion gained one
  *     (scripts/co-newbiz/mcp-coverage.ts).
+ *   - SKILLS.md registry parity (T-20261022-037): skills/SKILLS.md structural
+ *     section headers appear at most once and carry no duplicate rows, the
+ *     Workspace Skills table's skill-name set equals the set of skills/<name>/
+ *     directories (both directions reported), and no "Retired / Tracked
+ *     Elsewhere" row has a directory (repaired skills must graduate back into
+ *     the Workspace Skills table).
  */
 
+import { readdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { runCoverage } from "./mcp-coverage.ts";
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+
+interface RegistryReport {
+  errors: string[];
+  workspaceRows: number;
+  directories: number;
+  retiredRows: number;
+}
+
+/** Structural section headers of skills/SKILLS.md — each must appear at most once. */
+const STRUCTURAL_HEADERS = [
+  "# SKILLS.md — Skill Lifecycle Registry",
+  "## Registry",
+  "### Workspace Skills",
+  "### Variant-Exclusive Skills",
+  "### Retired / Tracked Elsewhere",
+];
+
+/** Table data row: backticked skill name in the first cell (header/separator rows don't match). */
+const ROW_RE = /^\|\s*`([a-z0-9-]+)`\s*\|/;
+
+/** Skill names of one registry section's table: from its header to the next header. */
+function sectionRows(lines: string[], header: string): string[] {
+  const names: string[] = [];
+  let inSection = false;
+  for (const line of lines) {
+    if (line.trimEnd() === header) {
+      inSection = true;
+      continue;
+    }
+    if (!inSection) continue;
+    if (line.startsWith("#")) break;
+    const m = line.match(ROW_RE);
+    if (m) names.push(m[1]);
+  }
+  return names;
+}
+
+/**
+ * SKILLS.md registry parity (T-20261022-037). The registry rotted invisibly
+ * because audit.ts only checks VERSION_MANIFEST.md ↔ skills/ parity — this gate
+ * makes the registry's own structure machine-checked: (a) each structural
+ * header at most once and no duplicated rows inside a section, (b) the
+ * Workspace Skills table's skill-name set equals the skills/ directory set
+ * (rows-without-dir and dirs-without-row both reported), (c) no Retired row
+ * has a directory (graduation ratchet).
+ */
+async function runRegistryParity(): Promise<RegistryReport> {
+  const report: RegistryReport = { errors: [], workspaceRows: 0, directories: 0, retiredRows: 0 };
+  try {
+    const content = await Bun.file(join(ROOT, "skills", "SKILLS.md")).text();
+    const lines = content.split("\n");
+
+    // (a) structural headers at most once
+    for (const header of STRUCTURAL_HEADERS) {
+      const count = lines.filter((l) => l.trimEnd() === header).length;
+      if (count > 1) {
+        report.errors.push(`structural header appears ${count}x (must be 1): "${header}"`);
+      }
+    }
+
+    const workspaceNames = sectionRows(lines, "### Workspace Skills");
+    const retiredNames = sectionRows(lines, "### Retired / Tracked Elsewhere");
+    const dirs = readdirSync(join(ROOT, "skills"), { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)
+      .sort();
+    const dirSet = new Set(dirs);
+    const nameSet = new Set(workspaceNames);
+
+    // (a, cont.) duplicated rows inside a section are the same rot class
+    for (const [label, names] of [
+      ["Workspace Skills", workspaceNames],
+      ["Retired / Tracked Elsewhere", retiredNames],
+    ] as const) {
+      const seen = new Map<string, number>();
+      for (const n of names) seen.set(n, (seen.get(n) ?? 0) + 1);
+      const dupes = [...seen.entries()].filter(([, c]) => c > 1).map(([n, c]) => `${n} (${c}x)`);
+      if (dupes.length > 0) {
+        report.errors.push(`duplicate rows in the ${label} table: ${dupes.join(", ")}`);
+      }
+    }
+
+    // (b) Workspace Skills table ↔ skills/ directories, both directions
+    const rowsWithoutDir = [...nameSet].filter((n) => !dirSet.has(n)).sort();
+    const dirsWithoutRow = dirs.filter((d) => !nameSet.has(d));
+    if (rowsWithoutDir.length > 0) {
+      report.errors.push(
+        `Workspace Skills rows with no skills/<name>/ directory (${rowsWithoutDir.length}): ${rowsWithoutDir.join(", ")}`,
+      );
+    }
+    if (dirsWithoutRow.length > 0) {
+      report.errors.push(
+        `skills/<name>/ directories with no Workspace Skills row (${dirsWithoutRow.length}): ${dirsWithoutRow.join(", ")}`,
+      );
+    }
+
+    // (c) graduation ratchet: a Retired row must not have a directory
+    const graduated = retiredNames.filter((n) => dirSet.has(n)).sort();
+    if (graduated.length > 0) {
+      report.errors.push(
+        `Retired / Tracked Elsewhere rows that now have a skills/<name>/ directory — move them into the Workspace Skills table (${graduated.length}): ${graduated.join(", ")}`,
+      );
+    }
+
+    report.workspaceRows = workspaceNames.length;
+    report.directories = dirs.length;
+    report.retiredRows = retiredNames.length;
+  } catch (e) {
+    report.errors.push(`skills/SKILLS.md unreadable or unparseable: ${e instanceof Error ? e.message : e}`);
+  }
+  return report;
+}
 
 let failed = false;
 
@@ -25,6 +148,17 @@ if (coverage.errors.length === 0) {
   failed = true;
   console.error(`  ✗ MCP coverage failed (${coverage.errors.length}):`);
   for (const e of coverage.errors) console.error(`      - ${e}`);
+}
+
+const registry = await runRegistryParity();
+if (registry.errors.length === 0) {
+  console.log(
+    `  ✓ SKILLS.md registry parity: ${registry.workspaceRows} workspace rows == ${registry.directories} skill directories; ${registry.retiredRows} retired entries tracked`,
+  );
+} else {
+  failed = true;
+  console.error(`  ✗ SKILLS.md registry parity failed (${registry.errors.length}):`);
+  for (const e of registry.errors) console.error(`      - ${e}`);
 }
 
 process.exit(failed ? 1 : 0);

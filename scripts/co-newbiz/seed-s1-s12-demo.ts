@@ -1,4 +1,4 @@
-// @version 1.10.0
+// @version 1.11.0
 // Idempotent S1→S12 demo chain seeds — BROWNFIELD (seedS1ToS12Demo) and
 // GREENFIELD (seedGreenfieldS1ToS12Demo), one full lifecycle per track.
 //
@@ -6,7 +6,9 @@
 // can pass schema checks while still lacking a deal that demonstrates
 // the full S1-S12 lifecycle. Each seed creates one compact, clearly-labelled
 // demo chain that satisfies the process-flow predicates without fabricating it
-// as production data.
+// as production data. v1.11.0 also seeds the predicate-optional demo surfaces
+// the S9/S11/S12 tool cards read (T-20261022-042): DD tool rows, PMI
+// monitoring (brownfield), and the milestone register (both tracks).
 //
 // Usage:
 //   bun scripts/co-newbiz/seed-s1-s12-demo.ts [--db-path <path>]
@@ -403,6 +405,136 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
       }
     }
 
+    // ── T-20261022-042 — predicate-optional demo surfaces ────────────────────
+    // The S9 DD tool cards (contracts·compensation·interviews — the
+    // tool_counts block of GET /api/projects/[id]/dd), the S11 PMI monitoring
+    // tables and the S12 milestone register are predicate-optional: the
+    // 2026-10-22 review (finding M5) noted a fresh DB leaves them empty,
+    // weakening the smoke-test claim in this file's header. The rows below are
+    // demo-labelled, stable-id INSERT OR IGNORE — purely additive, never a
+    // gate input. PMI rows exist on the brownfield track only (ADR-0161).
+    // S9 tool card — expert interviews (commercial-dd cdd-07 shape): two key
+    // claims × two independent sources each, so the workspace triangulation
+    // summary shows TRIANGULATED claims, not pending ones.
+    for (const [idx, [claim, topic, interviewee, summary, ref]] of [
+      [
+        "데모 대상회사의 상위 고객 리텐션이 지배권 변경 조건에 민감하다",
+        "고객 계약 지배권 변경(CoC) 조항 실태",
+        "데모 전문가 A — 유통업계 사업개발 임원",
+        "상위 고객 계약 다수에 CoC 해지 조항이 있어 인수 후 계약 유지 협상이 관건이라고 진술",
+        "demo:dd-interview:1",
+      ],
+      [
+        "데모 대상회사의 상위 고객 리텐션이 지배권 변경 조건에 민감하다",
+        "고객 계약 지배권 변경(CoC) 조항 실태",
+        "데모 전문가 B — 전략 컨설팅 파트너",
+        "고객 이탈은 계약 조항보다 서비스 연속성 커뮤니케이션으로 방어한다고 진술",
+        "demo:dd-interview:2",
+      ],
+      [
+        "데모 대상회사의 핵심 생산 설비는 5년 내 교체 주기에 도달한다",
+        "설비 수명과 교체 자본지출",
+        "데모 전문가 C — 설비 정비 책임자",
+        "주요 라인 설비가 10년 이상 운용돼 5년 내 단계 교체가 필요하다고 진술",
+        "demo:dd-interview:3",
+      ],
+      [
+        "데모 대상회사의 핵심 생산 설비는 5년 내 교체 주기에 도달한다",
+        "설비 수명과 교체 자본지출",
+        "데모 전문가 D — 산업 리서치 애널리스트",
+        "동종 설비 교체 주기 벤치마크상 4~6년 내 자본지출이 합리적이라고 진술",
+        "demo:dd-interview:4",
+      ],
+    ].entries()) {
+      db.run(
+        `INSERT OR IGNORE INTO dd_interview
+         (id, project_id, interviewee, topic, response_summary, disagreement, follow_up, evidence_ref, claim, created_by, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?)`,
+        [`demo-s1-s12-dd-interview-${idx + 1}`, DEMO.projectId, interviewee, topic, summary, ref, claim, actor, now, now],
+      );
+    }
+    // S9 tool card — customer/supplier contract change-of-control
+    // (customer-retention). Row 1 plots on the card (concentration >= 30).
+    for (const [id, counterparty, direction, coc, clause, conc, exitLoss, ref] of [
+      ["demo-s1-s12-coc-1", "데모 주요 고객사 A", "customer", 1, "지배권 변경 시 60일 내 계약 해지 가능 (데모)", 35, 1200, "demo:contract-coc:1"],
+      ["demo-s1-s12-coc-2", "데모 주요 고객사 B", "customer", 0, null, 18, null, "demo:contract-coc:2"],
+      ["demo-s1-s12-coc-3", "데모 주요 협력사 C", "supplier", 1, "지배권 변경 시 가격 재협약 조항 (데모)", 22, 400, "demo:contract-coc:3"],
+    ] as const) {
+      db.run(
+        `INSERT OR IGNORE INTO contract_coc
+         (id, project_id, counterparty, direction, coc_clause_present, clause_summary, concentration_pct, est_exit_loss, evidence_ref, created_by, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, DEMO.projectId, counterparty, direction, coc, clause, conc, exitLoss, ref, actor, now, now],
+      );
+    }
+    // S9 tool card — compensation (hr-integration). executive_ref/role_ref are
+    // POSITION surrogates (ADR-0039 PII guard): never a real name. base_pay and
+    // coc_payout_estimate are integer KRW won; value_impact is KRW millions
+    // (day-one CoC cash outflow, bf-04).
+    for (const [id, execRef, title, basePay, cocTrigger, payout, vesting, ncMonths, ncEnf, retention, flight, impact] of [
+      ["demo-s1-s12-mgmt-1", "TARGET-CEO-01", "대표이사 (데모)", 250000000, 1, 800000000, 0, 24, 1, 600000000, "high", 800],
+      ["demo-s1-s12-mgmt-2", "TARGET-CFO-01", "재무담당 임원 (데모)", 180000000, 1, 450000000, 1, 12, 1, 400000000, "medium", 400],
+      ["demo-s1-s12-mgmt-3", "TARGET-CTO-01", "기술책임 임원 (데모)", 200000000, 0, null, 0, 12, 0, 500000000, "medium", 300],
+    ] as const) {
+      db.run(
+        `INSERT OR IGNORE INTO management_package
+         (id, project_id, executive_ref, role_title, base_pay, coc_trigger, coc_payout_estimate, accelerated_vesting, non_compete_months, non_compete_enforceable, retention_plan_cost, flight_risk, value_impact, evidence_ref)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, DEMO.projectId, execRef, title, basePay, cocTrigger, payout, vesting, ncMonths, ncEnf, retention, flight, impact, `demo:management-package:${execRef}`],
+      );
+    }
+    for (const [id, family, grade, headcount, targetMedian, acquirerMedian, gapPct, delta] of [
+      ["demo-s1-s12-comp-1", "생산운영", "P4", 12, 85000000, 78000000, 8.97, 84000000],
+      ["demo-s1-s12-comp-2", "품질관리", "P3", 6, 72000000, 70000000, 2.86, 12000000],
+    ] as const) {
+      db.run(
+        `INSERT OR IGNORE INTO comp_benchmark
+         (id, project_id, job_family, grade, headcount, target_median, acquirer_median, gap_pct, annual_cost_delta, evidence_ref)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, DEMO.projectId, family, grade, headcount, targetMedian, acquirerMedian, gapPct, delta, `demo:comp-benchmark:${family}`],
+      );
+    }
+    // S11 PMI monitoring (brownfield M&A only — ADR-0161): key-talent rows are
+    // ROLE references (one retired from the register, exit dated) and two
+    // signed cost-synergy certifications (run_rate_bp is basis points of the
+    // committed run-rate; certified_by is a person, as the API route enforces).
+    for (const [id, roleRef, status, exitDate] of [
+      ["demo-s1-s12-talent-1", "C-OP-001", "active", null],
+      ["demo-s1-s12-talent-2", "C-FN-001", "active", null],
+      ["demo-s1-s12-talent-3", "T-RD-002", "departed_planned", "2027-06-30"],
+    ] as const) {
+      db.run(
+        `INSERT OR IGNORE INTO pmi_key_talent (id, project_id, role_ref, status, exit_date, locked_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [id, DEMO.projectId, roleRef, status, exitDate, now, now],
+      );
+    }
+    for (const [id, runRateBp, quarters] of [
+      ["demo-s1-s12-syn-cert-1", 7500, 2],
+      ["demo-s1-s12-syn-cert-2", 6000, 4],
+    ] as const) {
+      db.run(
+        `INSERT OR IGNORE INTO pmi_synergy_certification (id, project_id, run_rate_bp, sustained_quarters, certified_by, baseline_locked_at, signed_at, created_at)
+         VALUES (?, ?, ?, ?, 'admin', ?, ?, ?)`,
+        [id, DEMO.projectId, runRateBp, quarters, now, now, now],
+      );
+    }
+    // S12 milestone register — the charter's promised milestones (LOI done,
+    // SPA/PMI Day-1 open) so the schedule surface shows the derived-status
+    // range. Status is computed from due_date/done_at and never stored.
+    for (const [id, title, category, dueDate, doneAt, notes] of [
+      ["demo-s1-s12-milestone-loi", "LOI 체결 (데모)", "contract", "2027-03-31", now, "S1-S12 데모 차터 마일스톤 — 완료 상태 데모"],
+      ["demo-s1-s12-milestone-spa", "SPA 체결 (데모)", "contract", "2027-06-30", null, "S1-S12 데모 차터 마일스톤"],
+      ["demo-s1-s12-milestone-pmi-day1", "PMI Day-1 (데모)", "custom", "2027-09-30", null, "S1-S12 데모 차터 마일스톤"],
+    ] as const) {
+      db.run(
+        `INSERT OR IGNORE INTO project_milestone (id, project_id, title, category, due_date, owner, source, done_at, notes, created_by, created_at)
+         VALUES (?, ?, ?, ?, ?, 'admin', 'manual', ?, ?, ?, ?)`,
+        [id, DEMO.projectId, title, category, dueDate, doneAt, notes, actor, now],
+      );
+    }
+    // ── end T-20261022-042 demo surfaces ────────────────────────────────────
+
     db.run(
       `INSERT OR IGNORE INTO run (id, project_id, label, input_hash, created_by, created_at)
        VALUES (?, ?, 'S1-S12 demo scorecard run', ?, ?, ?)`,
@@ -714,6 +846,23 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
          (id, opportunity_id, project_id, step_no, status, origin, checklist_item, evidence_url, note, owner, updated_at)
          VALUES (?, ?, ?, ?, 'done', 'internal', NULL, NULL, ?, ?, ?)`,
         [`demo-gf-est-${stepNo}`, GF.oppId, GF.projectId, stepNo, `S1-S12 greenfield demo 설립 ${stepNo}/5 완료`, actor, now],
+      );
+    }
+
+    // T-20261022-042 — S12 milestone register (predicate-optional demo
+    // surface): the charter's promised milestones, 법인 설립 marked done to
+    // match the 5/5 establishment record above. Manual source only — the
+    // execution-baseline import path (source='execution_baseline') stays the
+    // sanctioned writer for baseline-derived rows.
+    for (const [id, title, category, dueDate, doneAt, notes] of [
+      ["demo-gf-milestone-establish", "법인 설립 완료 (데모)", "custom", "2027-03-31", now, "S1-S12 greenfield 데모 차터 마일스톤 — 설립 5단계 완료와 연동"],
+      ["demo-gf-milestone-plant", "설비 가동 (데모)", "capex", "2027-09-30", null, "S1-S12 greenfield 데모 차터 마일스톤"],
+      ["demo-gf-milestone-breakeven", "흑자 전환 (데모)", "custom", "2028-06-30", null, "S1-S12 greenfield 데모 차터 마일스톤"],
+    ] as const) {
+      db.run(
+        `INSERT OR IGNORE INTO project_milestone (id, project_id, title, category, due_date, owner, source, done_at, notes, created_by, created_at)
+         VALUES (?, ?, ?, ?, ?, 'admin', 'manual', ?, ?, ?, ?)`,
+        [id, GF.projectId, title, category, dueDate, doneAt, notes, actor, now],
       );
     }
 

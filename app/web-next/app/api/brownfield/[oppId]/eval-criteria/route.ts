@@ -3,6 +3,7 @@ import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
 import { addCustomCriterion, listOrSeedCriteria } from "../../../../../lib/brownfield-eval-criteria.ts";
+import { trackConflictResponse } from "../../../../../lib/route-track-guard.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
   const auth = authenticate(request);
@@ -24,6 +25,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   const { oppId } = await params;
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(oppId)) return notFound();
+  // T-20261022-038: S7 is a brownfield-only write surface. The client gates it with
+  // TrackGate, but the server must not trust that — a greenfield route decision makes
+  // the save 409 not_applicable_track (mirror of T-20261022-007's S5 guard). No route
+  // decision yet stays writable, same back-compat choice as the S5 route.
+  const conflict = trackConflictResponse(
+    db, oppId, "brownfield",
+    "S7 재무·기술 평가 항목 관리는 Brownfield Route에서만 할 수 있습니다 — 이 기회의 현재 Route 결정은 Greenfield입니다.",
+  );
+  if (conflict) return conflict;
   const body = (await request.json().catch(() => null)) as { category?: string; label?: string; description?: string; weight?: number } | null;
   if (body?.category !== "financial" && body?.category !== "technical") {
     return badRequest("invalid_request", "category는 financial | technical 중 하나입니다.");

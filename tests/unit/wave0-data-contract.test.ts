@@ -24,6 +24,10 @@ let analystCookie = "";
 let viewerCookie = "";
 let projectId = "";
 let opportunityId = "";
+// T-20261022-038: the brownfield S6 routes reject greenfield carriers now, so
+// the target-proposal tests write through a dedicated brownfield carrier — the
+// main fixture stays greenfield (its promotion preconditions are S5 facts).
+let brownfieldOppId = "";
 
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
@@ -82,6 +86,19 @@ beforeAll(async () => {
   }
   const { promoteOpportunity } = await import("../../db/repositories/project.repository.ts");
   projectId = promoteOpportunity(opportunityId, { promotedBy: ANALYST, needToKnowBasis: "wave0 test" }).project.id;
+
+  // Brownfield carrier for the S6 target-proposal writes (route-track guard).
+  brownfieldOppId = ulid();
+  db.run(
+    `INSERT INTO opportunity (id, name, market_scope, value_chain_node, market_size_krw_m, growth_rate,
+       attractiveness_score, synergy_score, rationale, status, created_by, created_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [brownfieldOppId, "Wave0 브라운필드 기회", "로봇 산업", "시스템 통합", 5000, 8.0, 80, 70, "근거", "selected", ANALYST, NOW],
+  );
+  db.run(
+    "INSERT INTO route_decision (id, opportunity_id, track, sub_track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,?,1)",
+    [ulid(), brownfieldOppId, "brownfield", "m_and_a", "test", ANALYST, NOW],
+  );
 });
 
 afterAll(() => {
@@ -203,7 +220,7 @@ describe("Wave 0 — interviews / customer-coc / comp-parity", () => {
 
 describe("Wave 0 — target proposals (provenance A1/A2, opportunity-keyed)", () => {
   test("POST accepts with discovery_source; row carries provenance", async () => {
-    const res = await req(`/api/brownfield/${opportunityId}/target-proposals`, {
+    const res = await req(`/api/brownfield/${brownfieldOppId}/target-proposals`, {
       method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
       body: JSON.stringify({ company_name: "테스트중공업", discovery_source: "master_proposal" }),
     });
@@ -213,7 +230,7 @@ describe("Wave 0 — target proposals (provenance A1/A2, opportunity-keyed)", ()
     ).get(((await res.json()).data as { id: string }).id) as { discovery_source: string; proposal_accepted_at: string };
     expect(row.discovery_source).toBe("master_proposal");
     expect(row.proposal_accepted_at).not.toBeNull();
-    expect((await req(`/api/brownfield/${opportunityId}/target-proposals`, {
+    expect((await req(`/api/brownfield/${brownfieldOppId}/target-proposals`, {
       method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
       body: JSON.stringify({ company_name: "x", discovery_source: "gpt_said_so" }),
     })).status).toBe(400);
@@ -224,19 +241,19 @@ describe("Wave 0 — target proposals (provenance A1/A2, opportunity-keyed)", ()
   // which now lives inside createTarget(), would have silently never run on
   // this path even though it's the one the Universe-tab "확정" button uses.
   test("accept-proposal path also resolves md_company + seeds eval criteria (createTarget consolidation)", async () => {
-    const res = await req(`/api/brownfield/${opportunityId}/target-proposals`, {
+    const res = await req(`/api/brownfield/${brownfieldOppId}/target-proposals`, {
       method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
       body: JSON.stringify({ company_name: "웹검색확정테스트", discovery_source: "web_proposal" }),
     });
     expect(res.status).toBe(201);
     const mc = db.query("SELECT id FROM md_company WHERE name_ko = ?").get("웹검색확정테스트") as { id: string } | undefined;
     expect(mc).toBeTruthy();
-    const criteria = db.query("SELECT COUNT(*) c FROM brownfield_eval_criterion WHERE opportunity_id = ? AND category = 'financial' AND source = 'builtin'").get(opportunityId) as { c: number };
+    const criteria = db.query("SELECT COUNT(*) c FROM brownfield_eval_criterion WHERE opportunity_id = ? AND category = 'financial' AND source = 'builtin'").get(brownfieldOppId) as { c: number };
     expect(criteria.c).toBe(4);
   });
 
   test("viewer POST is 403 (analyst+ floor)", async () => {
-    const res = await req(`/api/brownfield/${opportunityId}/target-proposals`, {
+    const res = await req(`/api/brownfield/${brownfieldOppId}/target-proposals`, {
       method: "POST", headers: { cookie: viewerCookie, "content-type": "application/json" },
       body: JSON.stringify({ company_name: "뷰어시도", discovery_source: "manual" }),
     });

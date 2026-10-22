@@ -20,7 +20,7 @@ import { DecisionTab } from "./DecisionTab.tsx";
 import { CompetitiveTab } from "./CompetitiveTab.tsx";
 import { EvalTab } from "./EvalTab.tsx";
 
-export function RouteDecisionStage(props0: { opportunityId: string; rationaleParam?: string | null }) {
+export function RouteDecisionStage(props0: { opportunityId: string; rationaleParam?: string | null; tabParam?: string | null }) {
   const h0 = useRouteDecision(props0);
   const ctx = { ...h0 };
   const { opportunityId, selected, advisory, tab, setTab, error, confirmDialog, notFound, canAct, canSubmit, saving } = ctx;

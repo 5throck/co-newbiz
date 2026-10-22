@@ -6,6 +6,7 @@ import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
 import { createTarget, listTargets, screeningItems, screeningSummary } from "../../../../../lib/brownfield-targets.ts";
 import { combinedEvalScore, computeEvalScore, targetEvalStates } from "../../../../../lib/brownfield-eval-criteria.ts";
+import { promotedCarrierResponse, trackConflictResponse } from "../../../../../lib/route-track-guard.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
   const auth = authenticate(request);
@@ -82,6 +83,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   if (!name) return badRequest("invalid_request", "company_name은 필수입니다.");
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(oppId)) return notFound();
+  // T-20261022-038: S6 candidate registration is a brownfield-only write surface. The
+  // client gates it with TrackGate, but the server must not trust that — a greenfield
+  // route decision makes the registration 409 not_applicable_track (mirror of
+  // T-20261022-007's S5 guard). No route decision yet stays writable, same back-compat
+  // choice as the S5 route.
+  const conflict = trackConflictResponse(
+    db, oppId, "brownfield",
+    "S6 대상 후보 등록은 Brownfield Route에서만 할 수 있습니다 — 이 기회의 현재 Route 결정은 Greenfield입니다.",
+  );
+  if (conflict) return conflict;
+  // T-20261022-039: the Short List is the S8 subjectScope set (ADR-0143) —
+  // frozen once the carrier is promoted; widening happens before S7→S8 or via
+  // the ADR-0157 per-target DD path on existing members.
+  const promoted = promotedCarrierResponse(
+    db, oppId,
+    "이 기회는 이미 프로젝트로 승격되었습니다 — Short List 변경은 승격 전에, 승격 후에는 ADR-0157 대상별 DD 경로로 수행합니다.",
+  );
+  if (promoted) return promoted;
   const dup = db
     .query("SELECT id FROM brownfield_target WHERE opportunity_id = ? AND company_name = ? AND status != 'excluded'")
     .get(oppId, name) as { id: string } | undefined;

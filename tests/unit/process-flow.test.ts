@@ -179,7 +179,11 @@ describe("process flow spec integrity (ADR-0074)", () => {
 
   test("web stage-meta mirrors the spec stages (ADR-0086 StageFrame data source)", () => {
     // app/web-next/lib/stage-meta.ts는 flow.spec의 클라이언트 안전 발췌본이다 —
-    // 단계 id·이름·게이트·트랙·전이가 스펙과 일치하는지 강제한다.
+    // 단계 id·이름·게이트·트랙·전이가 스펙과 일치하는지 강제한다. 게이트는
+    // "포함"이 아닌 정확 일치로, applicableTracks도 정확 일치로 단언한다 —
+    // 여분 게이트나 트랙 드리프트를 통과시키지 않기 위해서다 (deal-overview의
+    // findNextGate가 stage-meta applicableTracks로 다음 게이트를 골라내는
+    // load-bearing 값이므로, review 2026-10-22 script-gap M4의 래칫).
     const metaPath = join(ROOT, "app", "web-next", "lib", "stage-meta.ts");
     expect(existsSync(metaPath)).toBe(true);
     const src = readFileSync(metaPath, "utf-8");
@@ -191,7 +195,12 @@ describe("process flow spec integrity (ADR-0074)", () => {
       const block = src.slice(src.indexOf(`id: "${st.id}",`));
       const end = block.indexOf("},");
       const body = block.slice(0, end);
-      for (const g of (st.gates ?? []) as string[]) expect(body).toContain(`"${g}"`);
+      const gatesField = body.match(/gateIds: \[([^\]]*)\]/)?.[1] ?? "";
+      const gateIds = [...gatesField.matchAll(/"([a-z_]+)"/g)].map((m) => m[1]!);
+      expect(gateIds).toEqual((st.gates ?? []) as string[]);
+      const tracksField = body.match(/applicableTracks: \[([^\]]*)\]/)?.[1] ?? "";
+      const tracks = [...tracksField.matchAll(/"(greenfield|brownfield)"/g)].map((m) => m[1]!);
+      expect([...tracks].sort()).toEqual([...(st.applicableTracks as string[])].sort());
       const on = st.stateTransitions?.onComplete as string;
       expect(body).toContain(`onComplete: "${on}"`);
     }

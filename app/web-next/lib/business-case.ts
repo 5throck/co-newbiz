@@ -16,6 +16,7 @@ import { evaluateTargets, resolveProjectTargets } from "./business-targets.ts";
 import { resolveOrCreateCompany } from "./brownfield-targets.ts";
 import { SPEC_VERSION } from "./spec-activities.generated.ts";
 import { applyDdReselection, selectedTargetId } from "./dd-target.ts";
+import { resolveTrack } from "./project-track.ts";
 
 /** Typed not-found error (D5): routes map this to HTTP 404 via instanceof
  *  instead of matching on message prefixes, so rewording a lib message can
@@ -137,7 +138,9 @@ export function selectTarget(projectId: string, targetId: string, rationale: str
     .query("SELECT id, track, source_opportunity_id FROM md_project WHERE id = ?")
     .get(projectId) as { id: string; track: "greenfield" | "brownfield" | null; source_opportunity_id: string | null } | undefined;
   if (!project) throw new NotFoundError(`project '${projectId}' not found`);
-  if (project.track !== "brownfield") throw new Error("target selection applies to brownfield projects only");
+  // T-20261022-036: same single live resolver as the engine predicates — the
+  // promotion-time md_project.track snapshot must not decide selection.
+  if (resolveTrack(projectId, db).track !== "brownfield") throw new Error("target selection applies to brownfield projects only");
   const target = db
     .query("SELECT id, company_name, dart_corp_code, status FROM brownfield_target WHERE id = ? AND opportunity_id = ?")
     .get(targetId, project.source_opportunity_id ?? "") as { id: string; company_name: string; dart_corp_code: string | null; status: string } | undefined;

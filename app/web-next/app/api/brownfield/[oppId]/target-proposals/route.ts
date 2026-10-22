@@ -3,6 +3,7 @@ import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
 import { createTarget } from "../../../../../lib/brownfield-targets.ts";
+import { trackConflictResponse } from "../../../../../lib/route-track-guard.ts";
 
 // GET/POST /api/brownfield/[oppId]/target-proposals — S6 candidate discovery.
 // Keyed by OPPORTUNITY id: the /brownfield screen works pre-promotion (a
@@ -74,6 +75,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   }
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(oppId)) return notFound();
+  // T-20261022-038: S6 proposal acceptance is a brownfield-only write surface. The
+  // client gates it with TrackGate, but the server must not trust that — a greenfield
+  // route decision makes the acceptance 409 not_applicable_track (mirror of
+  // T-20261022-007's S5 guard). No route decision yet stays writable, same back-compat
+  // choice as the S5 route.
+  const conflict = trackConflictResponse(
+    db, oppId, "brownfield",
+    "S6 후보 제안 수락은 Brownfield Route에서만 할 수 있습니다 — 이 기회의 현재 Route 결정은 Greenfield입니다.",
+  );
+  if (conflict) return conflict;
   const dup = db
     .query("SELECT id FROM brownfield_target WHERE opportunity_id = ? AND company_name = ? AND status != 'excluded'")
     .get(oppId, body.company_name.trim()) as { id: string } | undefined;

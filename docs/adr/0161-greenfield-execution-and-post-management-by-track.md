@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # ADR-0161 — Greenfield execution (S11) and post-management (S12) scoped by track and sub-track
 
 - Status: Accepted
@@ -92,3 +97,19 @@ Status at time of writing: Proposed. Accepted 2026-10-13 by the human decider (c
 - **R7 (S3):** The committee session routes (transcript, minutes GET/POST, advance, positions) bind the session to the path opportunity, to a committee run (stage not an `s<N>_*` ledger and `meta_json.committee_key` present) and to promoted-project visibility. Session meta is read and written only for runs that pass this check, and `confirmCommitteeMinutes` refuses ledger runs. A `s11_execution_baseline` run returns 404 and is never rewritten. The business-case run GET also excludes that stage.
 - **R8/R9:** The post-management GET includes closed projects but not deleted ones. All three new GETs check MNPI insider status.
 - **R10 (B):** The audit targets for baseline entries, baseline confirmation, `policy_migration` and the scorecard cycle and override hold record ids, hashes and summaries of at most 120 characters. Full text stays in the `process_run` record or the `venture_scorecard` rows. For `policy_migration`, which has no ledger row, only the summary and the hash are kept.
+
+## Addendum (2026-10-22, b) — the brownfield venture-monitoring recommendation is procedural (T-20261022-044)
+
+Review 2026-10-22 (finding M9) surfaced the residual asymmetry after T-20261022-001: a
+brownfield project with origin ∈ {internal, hybrid, joint} sees
+`portfolio_venture_monitoring` flagged "recommended (non-blocking)" on the S12 panel,
+yet the only in-app recorder (POST /post-management/scorecard) is greenfield-only —
+the chip implied a surface the screen does not offer.
+
+**Decision (option a)**: keep the recommendation (the portfolio-venture-monitoring
+procedure applies to these classes by design) and make its carrier explicit — the
+recommendation is satisfied by running the `portfolio-venture-monitoring` procedure
+outside the in-app scorecard form; the S12 chip now reads "권장 (차단하지 않음 — 기록은
+절차 수행, 앱 기록 화면 없음)" for those projects. Wiring a brownfield/JV scorecard
+recorder (the prior review's option b) is deferred as future work and is NOT scheduled
+by this addendum.

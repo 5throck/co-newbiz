@@ -5,7 +5,13 @@ scope: shared
 level: entity
 version: "1.0.0"
 status: active
-applicability: mandatory
+# 트랙 스코핑 (2026-10-22 프로젝트 리뷰 M7): S8은 project 계층 stage이므로
+# project.case_type 라우팅 변수에 기계판독 가능한 predicate을 둔다 —
+# greenfield-execution-baseline·pmi-integration-execution과 같은 모양
+# (flow.spec 교리 "범위는 각 procedure의 applies_when이 강제한다").
+# Metadata-only 변경 — version 1.0.0 유지.
+applicability: conditional
+applies_when: { op: "cmp", var: "project.case_type", cmp: "eq", value: "brownfield" }
 workflow_type: core
 gate: FS
 

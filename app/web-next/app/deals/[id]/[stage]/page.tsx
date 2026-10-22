@@ -153,7 +153,7 @@ function StageTab() {
         </StageFrame>
         <DealEntryMarketStrip routeId={params.id} />
         <CarrierStageBody routeId={params.id}>
-          {({ opportunityId }) => <RouteDecisionStage opportunityId={opportunityId} rationaleParam={searchParams.get("rationale")} />}
+          {({ opportunityId }) => <RouteDecisionStage opportunityId={opportunityId} rationaleParam={searchParams.get("rationale")} tabParam={searchParams.get("tab")} />}
         </CarrierStageBody>
       </main>
     );

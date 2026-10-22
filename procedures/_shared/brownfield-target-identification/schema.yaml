@@ -16,6 +16,12 @@ gate: Pre-FS
 # candidate universe with explicit selection criteria and coverage, then
 # registers the Target Company Long List that S7 (target_screening gate)
 # narrows to a Short List.
+#
+# 트랙 스코핑 (2026-10-22 프로젝트 리뷰 M7): 이 절차의 트랙 범위는 소유 stage가
+# 강제한다 — flow.spec S6 applicableTracks [brownfield] (S6·S7 brownfield 전용)이며,
+# 트랙 불일치 stage는 app/web-next/lib/process-flow.ts가 통째로 skipped 처리한다.
+# 기회(operation) 단계에는 project 계층 case_type이 존재하지 않아 기계판독 가능한
+# 트랙 predicate을 둘 수 없다 — 후속 과제로 기록 (docs/reports/2026-10-22-project-review-full.md M7).
 
 steps:
   - id: 1

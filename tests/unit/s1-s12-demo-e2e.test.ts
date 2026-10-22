@@ -70,12 +70,20 @@ describe("S1-S12 demo seeds satisfy the process predicates (both tracks)", () =>
     expect(ev.blockers).toEqual([]);
     for (const id of ["S1", "S2", "S3", "S4", "S6", "S7"] as const) expect(stageStatus(ev, id)).toBe("complete");
     expect(stageStatus(ev, "S5")).toBe("skipped");
+    // T-20261022-040: the opportunity-carrier gate ledger is pinned exactly —
+    // deleting a gate fixture row must fail here, not slip through silently
+    // (only entity_ic/group_ic are predicate-consumed downstream).
+    expect(ev.gateStatus).toEqual({ screening: "go", pre_fs: "go", target_screening: "go" });
   });
 
   test("brownfield project: full S1-S12 walk completes with no blockers (per-stage)", () => {
     const ev = expectWalkDone({ type: "project", id: bf.projectId });
     expect(ev.track).toBe("brownfield");
     expect(ev.currentStage).toBeNull();
+    // Project-carrier ledger (fs/dd/entity_ic/group_ic — screening/pre_fs/
+    // target_screening live on the opportunity carrier, pinned above; the two
+    // pins together cover all 7 flow.spec gates).
+    expect(ev.gateStatus).toEqual({ fs: "go", dd: "go", entity_ic: "go", group_ic: "go" });
     // Explicit S1→S12 walk: each stage individually complete (S5 skipped on brownfield).
     for (const s of ev.stages) {
       if (s.id === "S5") expect(s.status).toBe("skipped");
@@ -99,10 +107,14 @@ describe("S1-S12 demo seeds satisfy the process predicates (both tracks)", () =>
     for (const id of ["S1", "S2", "S3", "S4", "S5"] as const) expect(stageStatus(opp, id)).toBe("complete");
     expect(stageStatus(opp, "S6")).toBe("skipped");
     expect(stageStatus(opp, "S7")).toBe("skipped");
+    // Gate ledger, greenfield twin: target_screening is brownfield-only — its
+    // ABSENCE is part of the pin (T-20261022-040).
+    expect(opp.gateStatus).toEqual({ screening: "go", pre_fs: "go" });
 
     // Project carrier: the full walk, stage by stage.
     const ev = expectWalkDone({ type: "project", id: gf.projectId });
     expect(ev.currentStage).toBeNull();
+    expect(ev.gateStatus).toEqual({ fs: "go", dd: "go", entity_ic: "go", group_ic: "go" });
     for (const s of ev.stages) {
       if (s.id === "S6" || s.id === "S7") expect(s.status).toBe("skipped");
       else expect(`${s.id}:${s.status}`).toBe(`${s.id}:complete`);

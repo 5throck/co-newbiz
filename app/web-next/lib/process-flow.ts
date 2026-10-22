@@ -48,7 +48,7 @@ export const STAGES: StageDefinition[] = [
   { id: "S9", name: "실사·검증", sequence: 9, objective: "사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 S8에서 선정된 대상 DD, 선택적으로 다른 Short List 대상 DD를 비교 근거로 열 수 있다. greenfield는 실현가능성 검증)", applicableTracks: ["all"], gateIds: ["dd"], requiredArtifacts: ["DD 체크리스트 판정(필수 항목 해소)"] },
   { id: "S10", name: "투자구조 설계", sequence: 10, objective: "어떤 그릇으로, 어떤 자금으로 들어갈 것인가? — 투자 주체(direct/SPC/holdco/내부 스핀오프/JV)과 ADR-0045 4대 축(절세 구조·책임 격리·재무 레버리지·엑싯 구조)을 검토하고 자금조달 계획(sources & uses)을 균형시킨다 (투자심의의 입력 설계)", applicableTracks: ["all"], gateIds: [], requiredArtifacts: ["투자구조 가설(4축 검토 완료)", "자금조달 계획(sources & uses 균형)"] },
   { id: "S11", name: "투자심사·실행", sequence: 11, objective: "투자할 것인가? — S10에서 설계한 투자 구조와 자금 조달 계획을 투자심의 자료로 묶어 법인·그룹 투자심의위원회 심사를 통과하고, 승인되면 트랙에 맞는 실행에 들어간다(인수 종결, 설립 또는 사업부 신설 실행, greenfield 실행 기준선 확정)", applicableTracks: ["all"], gateIds: ["entity_ic", "group_ic"], requiredArtifacts: ["투자심의 자료", "추진계획(차터) 기준선 — 목적·트랙 근거·진출 범위·KPI 선커밋", "사람 최종 승인(reviewer 기록)", "설립 실행 기록(신규 법인 설립 — 설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint} / 신규 사업부 추진 — 신설 결의·사업자등록 정리·인허가 명의 확인·인력 배치·완료 확인 — chk-business-unit-formation 증적, origin=internal)"] },
-  { id: "S12", name: "사후 관리", sequence: 12, objective: "투자 후 사업이 궤도에 올랐는가? — 포트폴리오 성과를 모니터링한다", applicableTracks: ["all"], gateIds: [], requiredArtifacts: ["벤처 스코어카드", "사람 전환 결정 기록(어휘 5종, decided_by=venture-portfolio-ic, rationale 필수 — venture_transition_decision 원장)", "전환별 결정 부속 기록: 차기 트랜치 조건(next_tranche_released/held_evidence_incomplete), 핵심사업 인계 기록(graduate_to_core), 매각/청산 계획(reduce_or_divest), 학습 포착 기록(kill_with_learning_captured — group-review-agent 기록, risk-officer가 S1/S2 기본률에 환류)", "실행 기준선 대비 차이(greenfield)"] },
+  { id: "S12", name: "사후 관리", sequence: 12, objective: "투자 후 사업이 궤도에 올랐는가? — 포트폴리오 성과를 모니터링한다", applicableTracks: ["all"], gateIds: [], requiredArtifacts: ["벤처 스코어카드 (greenfield — brownfield은 integration/partnership 모니터링, 권장·비차단)", "사람 전환 결정 기록(어휘 5종, decided_by=venture-portfolio-ic, rationale 필수 — venture_transition_decision 원장)", "전환별 결정 부속 기록: 차기 트랜치 조건(next_tranche_released/held_evidence_incomplete), 핵심사업 인계 기록(graduate_to_core), 매각/청산 계획(reduce_or_divest), 학습 포착 기록(kill_with_learning_captured — group-review-agent 기록, risk-officer가 S1/S2 기본률에 환류)", "실행 기준선 대비 차이(greenfield)"] },
 ];
 
 /** S12 포트폴리오 전환 결정 어휘 5종 (flow.spec S12, portfolio-venture-monitoring). */
@@ -479,7 +479,12 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
     // List의 각 대상이다 — 전 대상이 각각 분석(모델 + p50 BEP + 입력 스냅샷)
     // 되어야 하고, 대상 비교와 사람의 대상 선정 기록(s8_target_select)까지
     // 완료 산물이다. greenfield는 프로젝트 자체가 주체 — 기존 술어 그대로.
-    if (project.track === "brownfield") {
+    // T-20261022-036: the subjectScope branch follows the ONE live resolver
+    // (project-track.ts), not the promotion-time md_project.track snapshot —
+    // a post-promotion reclassification must move S8 with S11/S12, not split
+    // the engine across two resolvers. Conflict/unresolved ⇒ not brownfield
+    // here; S11's classification_conflict blocker surfaces the ambiguity.
+    if (resolveTrack(project.id, db).track === "brownfield") {
       if (!project.source_opportunity_id) {
         blockers.push("원 기회(source opportunity) 연결이 필요합니다");
         missing.push("Business Case(비용·수익 라인 또는 밸류에이션 — brownfield는 대상별)");
@@ -696,9 +701,9 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
         blockers.push(`사람 최종 승인(reviewer) 기록이 필요합니다 — ${unreviewed.map((r) => r.gate).join(", ")} 진행 기록의 결정자가 사람이 아닙니다`);
         missing.push("사람 최종 승인(reviewer 기록)");
       }
-      if (project.track === "brownfield") {
+      if (resolveTrack(project.id, db).track === "brownfield") {
         const sub = project.source_opportunity_id ? (latestRouteDecision(project.source_opportunity_id)?.sub_track ?? null) : null;
-        if (pmiKickoffApplies(project.track, sub) && !latestPmiKickoff(db, project.id)) {
+        if (pmiKickoffApplies("brownfield", sub) && !latestPmiKickoff(db, project.id)) {
           blockers.push("Brownfield PMI 킥오프 기록이 필요합니다 (통합 책임자·통합 계획 기준선 — S11 IC 승인 후 기록)");
           missing.push("PMI 킥오프 기록 (brownfield)");
         }
@@ -977,7 +982,11 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
     const gates = latestGateDecisions("project", entity.id);
     gateStatus = Object.fromEntries([...gates.entries()].map(([g, v]) => [g, v.decision]));
     terminated = [...gates.values()].some((g) => g.decision === "kill");
-    track = project.track;
+    // T-20261022-036 (ADR-0076 addendum): the live resolver owns post-promotion
+    // track semantics — case_type → route → md_project.track fallback, conflict
+    // ⇒ null (fail-closed; S11's classification_conflict blocker surfaces it).
+    // md_project.track stays a promotion-time display snapshot only.
+    track = resolveTrack(project.id, db).track;
     subTrack = project.source_opportunity_id
       ? (latestRouteDecision(project.source_opportunity_id)?.sub_track ?? null)
       : null;

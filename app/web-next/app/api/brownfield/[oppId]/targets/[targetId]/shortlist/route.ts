@@ -5,6 +5,7 @@ import { authenticate, requireBusinessActor } from "../../../../../../../lib/aut
 import { badRequest, notFound, ok } from "../../../../../../../lib/envelope.ts";
 import { resolveOrCreateCompany, type TargetRow } from "../../../../../../../lib/brownfield-targets.ts";
 import { computeEvalScore, targetEvalStates } from "../../../../../../../lib/brownfield-eval-criteria.ts";
+import { promotedCarrierResponse } from "../../../../../../../lib/route-track-guard.ts";
 
 const now = () => new Date().toISOString();
 
@@ -26,6 +27,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     .query("SELECT * FROM brownfield_target WHERE id = ? AND opportunity_id = ?")
     .get(targetId, oppId) as unknown as TargetRow | undefined;
   if (!target) return notFound();
+  // T-20261022-039: Short List membership is the S8 subjectScope set (ADR-0143) —
+  // frozen at promotion; the ADR-0157 per-target DD path covers post-promotion
+  // analysis on existing members.
+  const promoted = promotedCarrierResponse(
+    db, oppId,
+    "이 기회는 이미 프로젝트로 승격되었습니다 — Short List 승격은 승격 전에 수행합니다.",
+  );
+  if (promoted) return promoted;
   // 승격 조건(2026-09-15 사용자 결정): chk-target-screening(t-01~09) knock-out이
   // 아니라 재무·기술 평가(ADR-0139)의 전 항목 판정 완료로 한다 — 랭킹이 이
   // 평가 점수 기준이므로 승격도 같은 기준을 따른다.

@@ -40,7 +40,14 @@ const STAGE_HREF: Record<StageMetaId, (dealId?: string, projectId?: string) => s
   S12: (_d, p) => (p ? `/projects/${p}/portfolio` : null),
 };
 
-export const NOT_PROMOTED_REASON = "아직 프로젝트로 승격되지 않았습니다 — S7 선정 후 승격하면 열립니다.";
+/** 미승격 사유 — 트랙 최종 단계(greenfield S5 / brownfield S7)를 이름으로 지적한다.
+    트랙 미확정이면 트랙 중립 문구로 폴백한다 (T-20261022-041: "S7 선정"은
+    brownfield 전용 사건이라 greenfield 딜의 레일에서는 오안내였다). */
+export function notPromotedReason(track?: TrackId | null): string {
+  if (track === "greenfield") return "아직 프로젝트로 승격되지 않았습니다 — S5 진출전략 확정 후 승격하면 열립니다.";
+  if (track === "brownfield") return "아직 프로젝트로 승격되지 않았습니다 — S7 대상 선정 후 승격하면 열립니다.";
+  return "아직 프로젝트로 승격되지 않았습니다 — 승격(S5→S8 또는 S7→S8) 후에 열립니다.";
+}
 
 export interface StageLink {
   href: string | null;
@@ -51,7 +58,7 @@ export interface StageLink {
 /** Resolves every stage link for the current route: S1~S7 use the deal id,
     S8~S12 the promoted project id (looked up from the opportunity) and are
     disabled with a reason while the deal is not promoted. */
-function useStageLinks(): (id: StageMetaId) => StageLink {
+function useStageLinks(track?: TrackId | null): (id: StageMetaId) => StageLink {
   const params = useParams<{ id?: string }>();
   const routeId = params?.id;
   const underProjects = (usePathname() ?? "").startsWith("/projects/");
@@ -68,7 +75,7 @@ function useStageLinks(): (id: StageMetaId) => StageLink {
     if (deal.state === "loading") return { href: null, reason: "프로젝트 승격 여부를 확인하는 중입니다." };
     if (!deal.ctx) return { href: null, reason: "이 안건의 정보를 확인할 수 없어 열 수 없습니다." };
     const pid = deal.ctx.projectId;
-    return pid ? { href: STAGE_HREF[id](routeId, pid), reason: null } : { href: null, reason: NOT_PROMOTED_REASON };
+    return pid ? { href: STAGE_HREF[id](routeId, pid), reason: null } : { href: null, reason: notPromotedReason(track) };
   };
 }
 
@@ -140,7 +147,8 @@ export function StageFrame({
   const primary = ids[0];
   const stage = STAGE_META.find((s) => s.id === primary)!;
   const params = useParams<{ id?: string }>();
-  const linkFor = useStageLinks();
+  const carrierTrack = useCarrierTrack(track === undefined);
+  const linkFor = useStageLinks(track ?? carrierTrack ?? undefined);
   // Under /projects/[id]/** StageTabs owns the stepper (one stepper per screen).
   const stepperOwnedByTabs = (usePathname() ?? "").startsWith("/projects/");
   const projectId = stepperOwnedByTabs ? params?.id : undefined;
@@ -274,9 +282,9 @@ export function StageRail({
   /** false = static (overview pages); stage pages keep the sticky default. */
   sticky?: boolean;
 }) {
-  const linkFor = useStageLinks();
   const carrierTrack = useCarrierTrack(track === undefined);
   track = track ?? carrierTrack ?? undefined;
+  const linkFor = useStageLinks(track);
   const listRef = useRef<HTMLDivElement>(null);
   const cur = STAGE_META.find((s) => s.id === current[0])!;
 

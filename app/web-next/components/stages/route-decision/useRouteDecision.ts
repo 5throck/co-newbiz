@@ -9,7 +9,7 @@ import { api, ApiError } from "../../../lib/api.ts";
 import { CRITERIA, OVERRIDDEN_SUBS, GF_SUB, BF_SUB } from "./constants.ts";
 import type { OpportunityRow, RouteDecision, AdvisoryResponse, RouteRecommendation, RouteDecisionDraft } from "./types.ts";
 
-export function useRouteDecision({ opportunityId, rationaleParam }: { opportunityId: string; rationaleParam?: string | null }) {
+export function useRouteDecision({ opportunityId, rationaleParam, tabParam }: { opportunityId: string; rationaleParam?: string | null; tabParam?: string | null }) {
 
   const { me } = useAuth();
   const canAct = canWriteBusiness(me?.role);
@@ -127,6 +127,14 @@ export function useRouteDecision({ opportunityId, rationaleParam }: { opportunit
     setRationale(rationaleParam);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rationaleParam]);
+
+  // 딥링크 ?tab= — 인박스의 brownfield pre_fs HOLD 링크가 위원회 심의 탭에
+  // 바로 착륙하게 한다 (T-20261022-041). 알 수 없는 값은 기본 탭을 유지한다.
+  useEffect(() => {
+    if (tabParam === "competitive" || tabParam === "eval" || tabParam === "committee" || tabParam === "decision") {
+      setTab(tabParam);
+    }
+  }, [tabParam]);
 
   const generateRecommendation = useCallback(async () => {
     if (!selected || recoLoading) return;
