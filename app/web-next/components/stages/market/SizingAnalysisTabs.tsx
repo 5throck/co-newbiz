@@ -272,8 +272,12 @@ export function SizingValidateTab({ ctx }: { ctx: SizingReportState }) {
         <details className="market-section sizing-step">
           <summary className="cursor-pointer text-[length:var(--fs-body)]">파이프라인 단계별 분석 노트 ({stepSummaries.length}단계)</summary>
           <ol className="mt-3 space-y-2 text-[length:var(--fs-body)]">
-            {stepSummaries.map((s) => (
-              <li key={s.step}>
+            {stepSummaries.map((s, i) => (
+              // 파이프라인은 단계 5를 최대 3회 기록한다(탑다운 CAGR·외부 전망 격차·
+              // 드라이버 보정 루프 — market-sizing-pipeline.ts) — step 값만 키로 쓰면
+              // 중복 key "5"가 된다(2026-10-22 사용자 리포트). 목록은 렌더 내 append-only
+              // 이므로 step-색인 복합 키를 쓴다.
+              <li key={`${s.step}-${i}`}>
                 <strong>{s.step}. {STEPS[s.step - 1]?.title ?? s.step}</strong>{" "}
                 <span className={`status-chip ${s.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
                   {s.source === "llm" ? "LLM 요약" : "결정론 요약"}

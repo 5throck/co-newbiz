@@ -134,17 +134,20 @@ export function ProjectsView() {
                   </td>
                   <td className="col-num">{fmtDate(p.created_at)}</td>
                   <td>
-                    <div className="flex gap-2 flex-wrap">
-                      <Link className="btn-ghost btn-sm" href={`/projects/${p.id}/business-case`}>
+                    {/* 바로가기 열은 작업이 아니라 내비게이션이다 — 배경 채움 버튼(btn-ghost)은
+                        눌린 상태처럼 읽히므로(2026-10-22 사용자 리포트) 같은 행의
+                        "원본 기회 보기"와 같은 링크 어휘를 쓴다. 종료·삭제만 버튼. */}
+                    <div className="flex flex-col gap-1 items-start">
+                      <Link className="text-[length:var(--fs-caption)] text-[color:var(--accent)] underline-offset-2 hover:underline" href={`/projects/${p.id}/business-case`}>
                         사업성(S8)
                       </Link>
-                      <Link className="btn-ghost btn-sm" href={`/projects/${p.id}/dd`}>
+                      <Link className="text-[length:var(--fs-caption)] text-[color:var(--accent)] underline-offset-2 hover:underline" href={`/projects/${p.id}/dd`}>
                         실사(S9)
                       </Link>
-                      <Link className="btn-ghost btn-sm" href={`/projects/${p.id}/ic-review`}>
+                      <Link className="text-[length:var(--fs-caption)] text-[color:var(--accent)] underline-offset-2 hover:underline" href={`/projects/${p.id}/ic-review`}>
                         투심(S11)
                       </Link>
-                      <Link className="btn-ghost btn-sm" href={`/projects/${p.id}/portfolio`}>
+                      <Link className="text-[length:var(--fs-caption)] text-[color:var(--accent)] underline-offset-2 hover:underline" href={`/projects/${p.id}/portfolio`}>
                         포트폴리오(S12)
                       </Link>
                       {p.is_lead && (
