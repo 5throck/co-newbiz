@@ -557,9 +557,14 @@ describe("compliance_check result extension", () => {
     const { applied } = runMigrations(SURVIVAL_DB_PATH);
     expect(applied[0]).toBe("0013_classification_infra.sql"); // first in filename order; later migrations may follow
 
-    const after = sdb.query("SELECT * FROM compliance_check WHERE id = ?").get(seedId);
-    expect(after).toEqual(before);
-    expect(JSON.stringify(after)).toBe(JSON.stringify(before)); // byte-identical serialization, Korean text included
+    const after = sdb.query("SELECT * FROM compliance_check WHERE id = ?").get(seedId) as Record<string, unknown>;
+    // 0013 extends every row with two nullable invalidation columns; a pre-0013
+    // row must survive with them NULL and every pre-0013 column byte-identical.
+    const { invalidated_at: afterInvalidatedAt, invalidated_by_classification: afterInvalidatedBy, ...pre0013 } = after;
+    expect(afterInvalidatedAt).toBeNull();
+    expect(afterInvalidatedBy).toBeNull();
+    expect(pre0013).toEqual(before);
+    expect(JSON.stringify(pre0013)).toBe(JSON.stringify(before)); // byte-identical serialization, Korean text included
     expect((after as { result: string }).result).toBe("blocked");
 
     // restore the main test singleton (and the module-level handle) for the
