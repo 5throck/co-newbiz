@@ -7,7 +7,7 @@
  */
 
 import { test, expect, describe } from "bun:test";
-import { defaultRewriteContext, getWikiPage, renderWikiMarkdown, resolveWikiImageFile, rewriteWikiLinks } from "../../app/web-next/lib/wiki.ts";
+import { decodePathSegment, defaultRewriteContext, getWikiPage, renderWikiMarkdown, resolveWikiImageFile, rewriteWikiLinks } from "../../app/web-next/lib/wiki.ts";
 import { wikiHeadingSlug, wikiHeadingSlugs, stripInlineMarkdown } from "../../app/web-next/lib/wiki-heading-slug.ts";
 
 const CTX = defaultRewriteContext();
@@ -139,5 +139,40 @@ describe("slug and image allowlists (design D3/D4)", () => {
     expect(resolveWikiImageFile("../../../etc/passwd")).toBeNull();
     expect(resolveWikiImageFile("..\\..\\secret.png")).toBeNull();
     expect(resolveWikiImageFile("not-in-allowlist.png")).toBeNull();
+  });
+
+  test("encoded segment decodes once; raw and malformed input pass through without throwing", () => {
+    // 라우터가 인코딩된 세그먼트를 그대로 싣는 실측 결함의 해제 헬퍼 계약.
+    expect(decodePathSegment("31-%EA%B3%B5%ED%86%B5-S9-%EC%8B%A4%EC%82%AC")).toBe("31-공통-S9-실사");
+    // 이미 풀린 원값은 no-op(키 집합 조회와 동일한 문자열).
+    expect(decodePathSegment("31-공통-S9-실사")).toBe("31-공통-S9-실사");
+    // malformed 시퀀스(%zz)는 URIError 대신 원값 통과 — 경로가 500이 되지 않는다.
+    expect(decodePathSegment("%zz")).toBe("%zz");
+    expect(decodePathSegment("100%2")).toBe("100%2");
+  });
+});
+
+describe("single tilde is not strikethrough (2026-10-23 defect fix)", () => {
+  test("S1~S4 ranges render the literal tilde with zero <del> elements", () => {
+    const html = renderWikiMarkdown("공통 단계 S1~S4를 지나 S8부터 두 길이 다시 만나 S12까지 함께 간다.");
+    expect(html).toContain("S1~S4");
+    expect(html).toContain("S12");
+    expect(html).not.toContain("<del>");
+  });
+
+  test("the Home.md track-comparison cell renders intact inside a table", () => {
+    // 실측 결함의 원형 셀 — marked의 단일 ~ del 토크나이저가 셀을
+    // "S1"+취소선("S4 → S8~")+S12로 삼켰다. 두 범위 모두 평문으로 남아야 한다.
+    const html = renderWikiMarkdown("| 길 | 경로 |\n|---|---|\n| 그린필드 | S1~S4 → **S5** → S8~S12 |\n");
+    expect(html).toContain("<td>S1~S4 → <strong>S5</strong> → S8~S12</td>");
+    expect(html).not.toContain("<del>");
+  });
+
+  test("double tilde is likewise plain text — the corpus never uses strikethrough (measured)", () => {
+    // docs/wiki/ko 전역 grep 실측 0건: 취소선 문법은 위키 원문에 없으므로
+    // 이중 물결도 토크나이저가 삼키지 않는 쪽이 정확하다(단일·이중 함께 비활성).
+    const html = renderWikiMarkdown("~~취소선~~ 문장");
+    expect(html).toContain("~~취소선~~");
+    expect(html).not.toContain("<del>");
   });
 });

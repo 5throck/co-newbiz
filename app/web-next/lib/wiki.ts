@@ -37,6 +37,22 @@ export interface WikiSidebarGroup {
   items: Array<{ slug: string; title: string }>;
 }
 
+// ── 동적 세그먼트 해제(2026-10-23 결함 수정 — 이중 인코딩 슬러그) ─────────────
+
+/**
+ * 라우터·라우트 핸들러가 동적 세그먼트를 인코딩된 채 전달할 수 있다(실측:
+ * Next가 %XX를 그대로 param에 싣는다). 한 번만 풀어 원값으로 정규화한다.
+ * `%zz` 같은 malformed 시퀀스는 decodeURIComponent가 던지므로 원값을 그대로
+ * 돌린다 — 핸들러·화면이 500이 아니라 키 집합 조회 실패(404)로 내려가게.
+ */
+export function decodePathSegment(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 // ── 키 집합 조회(D3 — never raw paths) ──────────────────────────────────────
 
 export function listWikiPages(): WikiPageSummary[] {
@@ -152,6 +168,18 @@ function createWikiMarked(): Marked {
   const seen = new Map<string, number>();
   instance.use({
     gfm: true,
+    tokenizer: {
+      // GFM 취소선 토크나이저를 끈다 — marked의 del 토크나이저는 단일 `~`도
+      // 구분자로 삼아 `S1~S4` 같은 범위 표기가 "S1"+취소선+S12로 깨진다
+      // (실측 결함: Home.md 표 셀에서 <del> 발생). 위키 원문에 `~~취소선~~`은
+      // 없다(grep 실측 0건) — 토큰을 내지 않는 쪽이 정확하다.
+      // 주의: `false`를 돌리면 marked v18의 use() 래퍼가 기본 토크나이저로
+      // 폴백시킨다(c === !1 → built-in 재호출). 반드시 undefined를 돌려
+      // inlineTokens의 falsy 분기(평문으로 낙하)를 타게 한다.
+      del(): undefined {
+        return undefined;
+      },
+    },
     hooks: {
       // 사전 변환(설계 D5): `> [!NOTE]` 마커 줄 바로 뒤를 빈 인용 줄로 끊어
       // 마커가 별도 문단이 되게 한다. 마커와 본문이 한 문단으로 붙으면
