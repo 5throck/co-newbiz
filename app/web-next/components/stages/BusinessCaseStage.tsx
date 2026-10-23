@@ -17,6 +17,8 @@ const SCENARIO_CASE_COL_PCT = [11, 14, 9, 9, 9, 9, 6, 12, 11, 10] as const;
 // Green Field는 중앙값 차이·페이드 DCF(교차검증) 열이 없다 — 과거 기반이 없어 두 열이
 // 항상 "—"가 되는 정리(2026-10-16). 8열로 재분배해 콜그룹 합계 100을 유지한다.
 const SCENARIO_CASE_COL_PCT_GF = [11, 14, 9, 9, 9, 9, 6, 33] as const;
+// S8 읽기 전용 투자 라인 표 6열 — ColGroup 고정 % (R10 table-sizing).
+const S8_LINES_RO_COL_PCT = [16, 24, 16, 12, 12, 20] as const;
 // 중앙값 차이(시장 기반 대비)가 이 비율을 넘으면 설명 문구를 덧붙인다 — 계산 버그가
 // 아니라 설계된 교차검증 신호(공통 배수, 성장 가정 차이가 지배)임을 사용자에게 알리기 위함.
 // XCHECK_DIVERGENCE_WARN_RATIO(lib/business-case-generator.ts)와 같은 0.5 기준.
@@ -1236,8 +1238,9 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             </p>
           )}
           <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table" data-testid="s8-lines-readonly-table">
+            <table className="data-table table-fixed-pct tmin-56" data-testid="s8-lines-readonly-table">
               <caption className="sr-only">투자 라인 (읽기 전용) — 분류·항목명·연간 금액·시작 연도</caption>
+              <ColGroup widths={S8_LINES_RO_COL_PCT} />
               <thead>
                 <tr>
                   <th scope="col">분류</th>

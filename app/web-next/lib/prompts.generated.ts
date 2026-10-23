@@ -10,7 +10,7 @@ export interface PromptEntry {
   system: string;
 }
 
-export type PromptKey = "s2.discover" | "s1.sizing_ask_json" | "s1.sizing_summarize" | "s1.ksic_classify" | "market.related_candidates" | "s3.opportunity_factors" | "company_profile.qualitative" | "company_profile.competitive" | "company_profile.crosscheck" | "s4.synergy_fa" | "s4.synergy_synergy" | "s4.synergy_ic" | "s3.attractiveness_recommendation" | "s3.capability_gap_draft" | "s5.capability_judgement_draft" | "s5.entry_strategy_draft" | "opportunity.gate_brief" | "project.gate_brief" | "s4.route_recommendation" | "opportunity.sketch" | "s5.greenfield_recommendation" | "s6.universe_criteria_draft" | "s6.target_proposal_web_search" | "s7.screening_draft" | "s8.business_case_prose" | "s8.business_case_adoption" | "s8.deal_structure_recommendation" | "s9.dd_tailor" | "s11.monitoring_brief" | "pm.query_classify" | "committee.position" | "company_profile.competitor_web_search" | "s8.price_evidence" | "s2.entry_market_draft" | "s8.ev_band_recommend" | "s11.integrated_insight" | "s10.site_regulatory_draft" | "s11.report_narration" | "s12.milestone_suggest";
+export type PromptKey = "s2.discover" | "s1.sizing_ask_json" | "s1.sizing_summarize" | "s1.ksic_classify" | "market.related_candidates" | "s3.opportunity_factors" | "company_profile.qualitative" | "company_profile.competitive" | "company_profile.crosscheck" | "s4.synergy_fa" | "s4.synergy_synergy" | "s4.synergy_ic" | "s3.attractiveness_recommendation" | "s3.capability_gap_draft" | "s5.capability_judgement_draft" | "s5.entry_strategy_draft" | "opportunity.gate_brief" | "project.gate_brief" | "s4.route_recommendation" | "opportunity.sketch" | "s5.greenfield_recommendation" | "s6.universe_criteria_draft" | "s6.target_proposal_web_search" | "s7.screening_draft" | "s8.business_case_prose" | "s8.business_case_adoption" | "s8.deal_structure_recommendation" | "s9.dd_tailor" | "s11.monitoring_brief" | "pm.query_classify" | "committee.position" | "company_profile.competitor_web_search" | "s8.price_evidence" | "s2.entry_market_draft" | "s8.ev_band_recommend" | "s11.integrated_insight" | "s10.site_regulatory_draft" | "s11.report_narration" | "s12.milestone_suggest" | "pm.flow_suggest";
 
 export const PROMPTS: Record<PromptKey, PromptEntry> = {
   "s2.discover": {
@@ -246,5 +246,11 @@ export const PROMPTS: Record<PromptKey, PromptEntry> = {
     agent: "process-governance-manager",
     purpose: "S12 마일스톤 — 트랙·사업 케이스 기반 마일스톤 추천 (제안 전용, 등록은 사람)",
     system: "당신은 신규사업 포트폴리오의 마일스톤을 설계하는 거버넌스 전문가입니다. 제공된 트랙(greenfield=연구개발 기반 사업화 / brownfield=M&A 실사·PMI), 채택 사업 케이스, 기존 마일스톤 목록을 근거로 앞으로 등록하면 좋은 마일스톤 4~7건을 추천합니다. 규칙: (1) 기존 마일스톤과 중복되지 않게 하세요. (2) due_in_days는 오늘로부터 일수(60~730)입니다. (3) 데이터에 없는 팩트를 만들지 말고 제목은 실행 가능한 문장으로. (4) 지정된 JSON 스키마만 출력합니다 (설명·코드펜스 금지).",
+  },
+  "pm.flow_suggest": {
+    key: "pm.flow_suggest",
+    agent: "pm",
+    purpose: "플로우 콘솔 개선 제안 — 프롬프트 개선 초안 또는 에이전트 재배정 후보를 근거와 함께 산출(제안 전용)",
+    system: "당신은 신규사업 검토 플로우(S1-S12)의 PM 코디네이터입니다. 제공된 프롬프트(시스템 지시문), 목적, 최근 실패 기록을 근거로 개선 제안을 산출하세요.\n반드시 아래 JSON 형식 하나만 출력하세요(다른 텍스트 금지):\n{\"type\": \"prompt_improvement\"|\"agent_reassignment\", \"improvedSystem\": \"개선된 시스템 프롬프트 전문(type이 prompt_improvement일 때만)\", \"candidateAgents\": [{\"key\": \"agents/ 로스터에 있는 에이전트 키\", \"rationale\": \"재배정 근거\"}], \"rationale\": \"제안 근거 — 최근 실패 기록과 목적에 대한 근거를 한 문단으로\"}\n규칙:\n1. 이 산출물은 제안(proposal)입니다 — 게이트 결정이나 SSOT 반영이 아닙니다. 확정 문구를 쓰지 마세요.\n2. type이 prompt_improvement면 improvedSystem에 개선된 시스템 프롬프트 전문을 넣고 candidateAgents는 생략하세요.\n3. type이 agent_reassignment면 candidateAgents에 로스터에 존재하는 키만 최대 3개까지 넣고 improvedSystem은 생략하세요.\n4. 근거에 없는 사실을 만들어내지 마세요. 실패 기록이 비어 있으면 그 사실을 rationale에 명시하세요.",
   },
 };

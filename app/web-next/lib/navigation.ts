@@ -45,6 +45,9 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/wiki", label: "사용 안내서" },
       { href: "/glossary", label: "용어집" },
       { href: "/strategy", label: "R&BD 전략" },
+      // 플로우 콘솔(2026-10-24-flow-console-screen-design §2.3) — 참조 성격이라
+      // R&BD 전략 뒤에 배치. 드라이런 세션 경로(/flows/dry-run*)는 NON_MENU_ROUTES.
+      { href: "/flows", label: "플로우 콘솔" },
     ],
   },
   {
@@ -138,6 +141,13 @@ export const NON_MENU_ROUTES: string[] = [
   "/portfolio-view",
   "/onboarding",
   "/admin/business-targets",
+  // 플로우 콘솔 드라이런 세션(2026-10-24-flow-console-screen-design §2.1/§2.3) —
+  // 별도 여정이라 사이드바 밖. /flows/dry-run(세션 목록)은 /flows 탭 행의 텍스트
+  // 링크와 블루프린트 "드라이런 시작"으로, [sessionId]는 세션 목록·런 레저 칩의
+  // 딥링크로 진입한다(A3-5 URL 공유). [sessionId]는 동적 세그먼트라 패리티 검사에서
+  // 존재 검사를 건너뛴다.
+  "/flows/dry-run",
+  "/flows/dry-run/[sessionId]",
 ];
 
 /**

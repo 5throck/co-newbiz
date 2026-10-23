@@ -73,6 +73,9 @@ call_sites:
   - file: app/web-next/app/api/projects/[id]/milestones/suggest/route.ts
     sites: 1
     exempt: "Route-level LLM recommendations (milestone suggestions — returned, added only by the person); the golden set has no expectation type for it yet."
+  - file: app/web-next/lib/dry-run.ts
+    sites: 3
+    exempt: "Dry-run lane (2026-09-15-runtime-pm-agent-orchestration §6.6): reusing the production completeOrFallback/completeStructured path IS the requirement — design forbids a parallel experiment path. tests/unit/dry-run.test.ts proves path reuse, ledger flags (is_dry_run/dry_run_group_id), business-table isolation and the PM gateway under overrides; the golden set has no expectation type for experiment traffic."
   - file: app/web-next/lib/agent-chains.ts
     sites: 1
     json_parse_migration: "Deferred: chain steps feed raw reply text to later steps; stage-reco scores schema validity of the current replies but has no LLM baseline yet."
@@ -111,7 +114,7 @@ call_sites:
     json_parse_migration: "Deferred: no suite covers it (exempt); migrating without a suite would be unmeasured."
     exempt: "Evidence or web-research pipeline; the golden set has no expectation type for it, and design 3.3 forbids new research in this wave."
   - file: app/web-next/lib/review/ai-second.ts
-    sites: 1
+    sites: 2
     suites: [review-ai2]
   - file: app/web-next/lib/synergy-pipeline.ts
     sites: 2

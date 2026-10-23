@@ -8,6 +8,8 @@ import { ColGroup, PageState, useToast } from "../../../../components/ui.tsx";
 
 // 차입 6열 — 대출기관·커버넌트·담보 텍스트에 여유, 수치·날짜는 좁게.
 const DEBT_COL_PCT = [20, 13, 13, 11, 22, 21] as const;
+// 커버넌트 여력 표 6열 — ColGroup 고정 % (R10 table-sizing).
+const COV_HEADROOM_COL_PCT = [22, 12, 14, 18, 14, 20] as const;
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
 
@@ -127,8 +129,9 @@ function DebtView() {
           <PageState state="empty" emptyText={headroom.reason === "no_simulation" ? "시뮬레이션이 아직 실행되지 않아 커버넌트 여력을 계산할 수 없습니다 — 근거 부족으로 표시합니다 (값을 추정하지 않습니다)." : "최신 시뮬레이션에 재무약정 시험 행이 없습니다 — 차입의 커버넌트 조건을 등록한 뒤 시뮬레이션을 다시 실행하세요."} />
         ) : (
           <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table" aria-label="커버넌트 여력">
+            <table className="data-table table-fixed-pct tmin-48" aria-label="커버넌트 여력">
               <caption className="sr-only">커버넌트 여력</caption>
+              <ColGroup widths={COV_HEADROOM_COL_PCT} />
               <thead><tr><th>커버넌트</th><th>방향</th><th className="col-num">최소 여력</th><th>가장 빠듯한 기간</th><th className="col-num">위반 기간</th><th>판정</th></tr></thead>
               <tbody>{headroom.covenants.map((c) => (
                 <tr key={c.covenant_key}>

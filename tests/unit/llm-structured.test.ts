@@ -13,7 +13,7 @@ process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
 for (const x of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + x)) rmSync(TEST_DB_PATH + x);
 const { resetDb, getDb } = await import("../../db/client.ts");
 const { runMigrations } = await import("../../db/migrate.ts");
-const { completeStructured, completeDetailed, stream, getLlmCaps } = await import("../../app/web-next/lib/llm.ts");
+const { completeStructured, completeDetailed, stream, completeOrFallback, PmGateError, getLlmCaps } = await import("../../app/web-next/lib/llm.ts");
 const { parseUsage, costUsd, setPricingTableForTests, estimateTokens } = await import("../../app/web-next/lib/llm-usage.ts");
 const { llmUsageRollup } = await import("../../app/web-next/lib/llm-rollup.ts");
 resetDb();
@@ -26,6 +26,8 @@ afterAll(() => {
 
 const Schema = z.object({ verdict: z.string(), score: z.number() }).strict();
 const GOOD = { verdict: "ok", score: 3 };
+// ADR-0183 D2 — 모든 LLM 진입점은 agents/ 로스터 키의 agent 메타를 필수로 요구한다.
+const agent = { key: "pm", purpose: "test" };
 const ENV_KEYS = ["CO_NEWBIZ_LLM_PROVIDER", "CO_NEWBIZ_LLM_BASE_URL", "CO_NEWBIZ_LLM_API_KEY", "CO_NEWBIZ_LLM_MODEL", "CO_NEWBIZ_LLM_CAPS", "OTEL_EXPORTER_OTLP_ENDPOINT"];
 const saved: Record<string, string | undefined> = {};
 const realFetch = globalThis.fetch;
@@ -86,7 +88,7 @@ describe("completeStructured", () => {
     mockReplies([anthropicTool(GOOD, { input_tokens: 100, output_tokens: 20, cache_read_input_tokens: 400, cache_creation_input_tokens: 50 })]);
     const r = await completeStructured({
       messages: [{ role: "system", content: "sys" }, { role: "user", content: "hi" }],
-      schema: Schema, schemaName: "verdict", cache: { system: true },
+      schema: Schema, schemaName: "verdict", cache: { system: true }, agent,
     });
     expect(r.source).toBe("llm");
     if (r.source !== "llm") throw new Error("unreachable");
@@ -102,14 +104,14 @@ describe("completeStructured", () => {
   test("cache flag is ignored when the cache cap is not declared", async () => {
     configure("anthropic", "structured");
     mockReplies([anthropicTool(GOOD)]);
-    await completeStructured({ messages: [{ role: "system", content: "sys" }, { role: "user", content: "hi" }], schema: Schema, schemaName: "v", cache: { system: true } });
+    await completeStructured({ messages: [{ role: "system", content: "sys" }, { role: "user", content: "hi" }], schema: Schema, schemaName: "v", cache: { system: true }, agent });
     expect(typeof (calls[0].body as { system: unknown }).system).toBe("string");
   });
 
   test("openai: response_format json_schema, prompt_tokens_details.cached_tokens split out", async () => {
     configure("openai", "structured");
     mockReplies([openaiText(JSON.stringify(GOOD), { prompt_tokens: 80, completion_tokens: 12, prompt_tokens_details: { cached_tokens: 30 } })]);
-    const r = await completeStructured({ messages: [{ role: "user", content: "hi" }], schema: Schema, schemaName: "v" });
+    const r = await completeStructured({ messages: [{ role: "user", content: "hi" }], schema: Schema, schemaName: "v", agent });
     if (r.source !== "llm") throw new Error("expected llm");
     expect((calls[0].body as { response_format: { type: string } }).response_format.type).toBe("json_schema");
     expect(r.usage).toMatchObject({ inputTokens: 50, outputTokens: 12, cacheReadTokens: 30 });
@@ -118,7 +120,7 @@ describe("completeStructured", () => {
   test("gemini: responseJsonSchema + usageMetadata", async () => {
     configure("gemini", "structured", "gem-x");
     mockReplies([{ candidates: [{ content: { parts: [{ text: JSON.stringify(GOOD) }] } }], usageMetadata: { promptTokenCount: 70, candidatesTokenCount: 9, cachedContentTokenCount: 20 } }]);
-    const r = await completeStructured({ messages: [{ role: "system", content: "s" }, { role: "user", content: "hi" }], schema: Schema, schemaName: "v" });
+    const r = await completeStructured({ messages: [{ role: "system", content: "s" }, { role: "user", content: "hi" }], schema: Schema, schemaName: "v", agent });
     if (r.source !== "llm") throw new Error("expected llm");
     expect(calls[0].url).toContain(":generateContent");
     expect((calls[0].body as { generationConfig: { responseMimeType: string } }).generationConfig.responseMimeType).toBe("application/json");
@@ -128,7 +130,7 @@ describe("completeStructured", () => {
   test("custom (openai-compatible) without the structured cap: instruct-and-parse from fenced text", async () => {
     configure("custom", "");
     mockReplies([openaiText("```json\n" + JSON.stringify(GOOD) + "\n```")]);
-    const r = await completeStructured({ messages: [{ role: "user", content: "hi" }], schema: Schema, schemaName: "v" });
+    const r = await completeStructured({ messages: [{ role: "user", content: "hi" }], schema: Schema, schemaName: "v", agent });
     expect(r.source).toBe("llm");
     const body = calls[0].body as { response_format?: unknown; messages: Array<{ content: string }> };
     expect(body.response_format).toBeUndefined();
@@ -138,7 +140,7 @@ describe("completeStructured", () => {
   test("invalid then repaired: one repair retry names failing paths and does not echo the raw output", async () => {
     configure("anthropic", "structured");
     mockReplies([anthropicTool({ verdict: "ok", score: "SECRET-RAW" }), anthropicTool(GOOD)]);
-    const r = await completeStructured({ messages: [{ role: "user", content: "hi" }], schema: Schema, schemaName: "v" });
+    const r = await completeStructured({ messages: [{ role: "user", content: "hi" }], schema: Schema, schemaName: "v", agent });
     if (r.source !== "llm") throw new Error("expected repaired llm result");
     expect(calls).toHaveLength(2);
     const followUp = JSON.stringify(calls[1].body);
@@ -150,7 +152,7 @@ describe("completeStructured", () => {
   test("invalid twice: explicit synthesis fallback with validation_failed", async () => {
     configure("anthropic", "structured");
     mockReplies([anthropicTool({ nope: 1 })]);
-    const r = await completeStructured({ messages: [{ role: "user", content: "hi" }], schema: Schema, schemaName: "v" });
+    const r = await completeStructured({ messages: [{ role: "user", content: "hi" }], schema: Schema, schemaName: "v", agent });
     expect(r.source).toBe("synthesis");
     expect((r as { reason?: string }).reason).toBe("validation_failed");
     expect(calls).toHaveLength(2);
@@ -159,14 +161,14 @@ describe("completeStructured", () => {
   test("provider HTTP failure: fallback, no throw", async () => {
     configure("openai", "structured");
     globalThis.fetch = (async () => new Response("boom", { status: 500 })) as unknown as typeof fetch;
-    const r = await completeStructured({ messages: [{ role: "user", content: "hi" }], schema: Schema, schemaName: "v" });
+    const r = await completeStructured({ messages: [{ role: "user", content: "hi" }], schema: Schema, schemaName: "v", agent });
     expect(r.source).toBe("synthesis");
   });
 
   test("no provider configured: synthesis, no network", async () => {
     process.env.CO_NEWBIZ_LLM_PROVIDER = "none";
     mockReplies([{}]);
-    const r = await completeStructured({ messages: [{ role: "user", content: "hi" }], schema: Schema, schemaName: "v" });
+    const r = await completeStructured({ messages: [{ role: "user", content: "hi" }], schema: Schema, schemaName: "v", agent });
     expect(r.source).toBe("synthesis");
     expect(calls).toHaveLength(0);
   });
@@ -174,7 +176,7 @@ describe("completeStructured", () => {
   test("missing usage block: chars/4 fallback flagged estimated", async () => {
     configure("openai", "structured");
     mockReplies([{ choices: [{ message: { content: JSON.stringify(GOOD) } }] }]);
-    const r = await completeStructured({ messages: [{ role: "user", content: "hello world!" }], schema: Schema, schemaName: "v" });
+    const r = await completeStructured({ messages: [{ role: "user", content: "hello world!" }], schema: Schema, schemaName: "v", agent });
     if (r.source !== "llm") throw new Error("expected llm");
     expect(r.usage.estimated).toBe(true);
     expect(r.usage.inputTokens).toBeGreaterThan(0);
@@ -185,7 +187,7 @@ describe("completeDetailed", () => {
   test("returns text and provider usage", async () => {
     configure("custom", "");
     mockReplies([openaiText("plain", { prompt_tokens: 5, completion_tokens: 2 })]);
-    const r = await completeDetailed([{ role: "user", content: "x" }]);
+    const r = await completeDetailed([{ role: "user", content: "x" }], { agent });
     expect(r.text).toBe("plain");
     expect(r.usage).toMatchObject({ inputTokens: 5, outputTokens: 2, model: "test-model", provider: "custom" });
   });
@@ -240,7 +242,7 @@ describe("stream", () => {
     ])) as unknown as typeof fetch;
     let text = "";
     let usage: unknown = null;
-    for await (const ev of stream({ messages: [{ role: "user", content: "hi" }] })) {
+    for await (const ev of stream({ messages: [{ role: "user", content: "hi" }], agent })) {
       if (ev.type === "text") text += ev.delta;
       else usage = ev.usage;
     }
@@ -259,7 +261,7 @@ describe("stream", () => {
     }) as unknown as typeof fetch;
     const out: string[] = [];
     let usage: unknown = null;
-    for await (const ev of stream({ messages: [{ role: "user", content: "hi" }] })) {
+    for await (const ev of stream({ messages: [{ role: "user", content: "hi" }], agent })) {
       if (ev.type === "text") out.push(ev.delta);
       else usage = ev.usage;
     }
@@ -271,7 +273,7 @@ describe("stream", () => {
     configure("openai", "");
     mockReplies([openaiText("whole")]);
     const evs = [];
-    for await (const ev of stream({ messages: [{ role: "user", content: "hi" }] })) evs.push(ev);
+    for await (const ev of stream({ messages: [{ role: "user", content: "hi" }], agent })) evs.push(ev);
     expect(evs.map((e) => e.type)).toEqual(["text", "usage"]);
   });
 });
@@ -302,8 +304,7 @@ describe("OTel GenAI spans", () => {
 });
 
 describe("agent call ledger + per-deal rollup", () => {
-  test("tokens, cost, deal id and function are logged; unknown model costs null; rollup sums per deal", async () => {
-    configure("anthropic", "structured");
+  test("tokens, cost, deal id and function are logged; unknown model costs null; rollup sums per deal", async () => {    configure("anthropic", "structured");
     mockReplies([anthropicTool(GOOD, { input_tokens: 1_000_000, output_tokens: 0 })]);
     await completeStructured({
       messages: [{ role: "user", content: "hi" }], schema: Schema, schemaName: "v",
@@ -323,5 +324,38 @@ describe("agent call ledger + per-deal rollup", () => {
     expect(roll).toMatchObject({ calls: 2, llm_calls: 2, unpriced_calls: 1, input_tokens: 1_000_100 });
     expect(roll.cost_usd).toBeCloseTo(3, 6);
     expect(roll.by_function.map((f) => f.function_name).sort()).toEqual(["fn.priced", "fn.unpriced"]);
+  });
+});
+
+describe("PM gateway enforcement (ADR-0183 D2)", () => {
+  test("omitting agent meta throws PmGateError before any provider/network work", async () => {
+    configure("openai", "structured");
+    mockReplies([openaiText(JSON.stringify(GOOD))]);
+    const noMeta = {} as unknown as Parameters<typeof completeStructured>[0];
+    await expect(completeStructured({ ...noMeta, messages: [{ role: "user", content: "hi" }], schema: Schema, schemaName: "v" })).rejects.toBeInstanceOf(PmGateError);
+    await expect(completeDetailed([{ role: "user", content: "x" }], {} as unknown as Parameters<typeof completeDetailed>[1])).rejects.toBeInstanceOf(PmGateError);
+    await expect(completeOrFallback([{ role: "user", content: "x" }], () => "fb", {} as unknown as Parameters<typeof completeOrFallback>[2])).rejects.toBeInstanceOf(PmGateError);
+    expect(calls).toHaveLength(0); // guard fires before fetch
+  });
+
+  test("an unknown agent key throws PmGateError — roster membership is the invariant", async () => {
+    configure("openai", "structured");
+    mockReplies([openaiText(JSON.stringify(GOOD))]);
+    await expect(
+      completeStructured({ messages: [{ role: "user", content: "hi" }], schema: Schema, schemaName: "v", agent: { key: "not-in-roster", purpose: "x" } }),
+    ).rejects.toThrow(/not in the agents\/ roster/);
+    expect(calls).toHaveLength(0);
+  });
+
+  test("the guard is independent of LLM configuration — undeclared calls fail even with no provider", async () => {
+    process.env.CO_NEWBIZ_LLM_PROVIDER = "none";
+    mockReplies([{}]);
+    await expect(
+      completeOrFallback([{ role: "user", content: "x" }], () => "synthesized", {} as unknown as Parameters<typeof completeOrFallback>[2]),
+    ).rejects.toBeInstanceOf(PmGateError); // not a silent synthesis fallback
+    await expect(
+      completeStructured({ messages: [{ role: "user", content: "hi" }], schema: Schema, schemaName: "v", agent: { key: "ghost", purpose: "x" } }),
+    ).rejects.toBeInstanceOf(PmGateError);
+    expect(calls).toHaveLength(0);
   });
 });

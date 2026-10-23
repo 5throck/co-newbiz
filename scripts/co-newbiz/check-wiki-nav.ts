@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * @version 1.0.0
+ * @version 1.0.1
  */
 // check-wiki-nav.ts — 위키 내비 사슬·문장 규범 기계 검사기(2026-10-23 위키
 // handbook 표준 재작성 설계 docs/designs/2026-10-23-wiki-handbook-standard-rebuild-design.md
@@ -117,20 +117,23 @@ export function deriveChainFromSidebar(sidebarRaw: string, existingSlugs: Readon
   if (laneIdx[0] >= 0 && laneIdx[1] === laneIdx[0] + 1) {
     const laneGroups = [sidebar.groups[laneIdx[0]], sidebar.groups[laneIdx[1]]];
     const entrances = laneGroups.map((g) => g.items[0]?.slug);
-    const exits = laneGroups.map((g) => g.items.at(-1)?.slug);
+    // `.at(-1)`의 반환 타입은 T | undefined라 배열 요소 접근(exits[0])으로는 좁혀지지 않는다 —
+    // 이름 있는 스칼라로 꺼내야 아래 가드가 string으로 좁힌다.
+    const exit1 = laneGroups[0].items.at(-1)?.slug;
+    const exit2 = laneGroups[1].items.at(-1)?.slug;
     const fork = laneIdx[0] > 0 ? sidebar.groups[laneIdx[0] - 1].items.at(-1)?.slug : undefined;
     const join = sidebar.groups[laneIdx[1] + 1]?.items[0]?.slug;
-    if (!fork || !join || entrances.some((e) => !e) || exits.some((e) => !e)) {
+    if (!fork || !join || entrances.some((e) => !e) || !exit1 || !exit2) {
       errors.push("_Sidebar.md — 갈림길 구조(R2·R3)를 유도하기에 그룹 항목이 비어 있다");
-    } else if (new Set([fork, ...entrances, ...exits, join]).size !== 6) {
-      errors.push(`_Sidebar.md — 갈림길 구조 앵커가 서로 겹친다(R2·R3 유도 불가): 갈림길=${fork} 입구=${entrances.join("/")} 끝=${exits.join("/")} 합류=${join}`);
+    } else if (new Set([fork, ...entrances, exit1, exit2, join]).size !== 6) {
+      errors.push(`_Sidebar.md — 갈림길 구조 앵커가 서로 겹친다(R2·R3 유도 불가): 갈림길=${fork} 입구=${entrances.join("/")} 끝=${exit1}/${exit2} 합류=${join}`);
     } else {
       // R2: 직선 유도에 생긴 "길1 끝 → 길2 입구" 간선을 끊고, 갈림길 → 길2 입구를 얹는다
       // (갈림길 → 길1 입구는 직선 유도에 이미 있다).
-      dropEdge(exits[0], entrances[1]);
+      dropEdge(exit1, entrances[1]);
       addEdge(fork, entrances[1]);
       // R3: 길1 끝 → 합류점(길2 끝 → 합류점은 직선 유도에 이미 있다).
-      addEdge(exits[0], join);
+      addEdge(exit1, join);
     }
   }
 

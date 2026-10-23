@@ -3,8 +3,26 @@
  * validate-model-registry.ts
  * Validates that all agents/*.md frontmatter model comments match docs/workspace-schema.json models block,
  * and that the tier→model mapping prose in AGENTS.md §3.6 / CLAUDE.md / GEMINI.md / CODEX.md
- * names exactly the models the registry declares for each tier.
- * Level: L0 | Status: active | @version 1.4.1
+ * names exactly the models the registry declares for each tier,
+ * and that the runtime catalog projections (agent-registry.generated.ts,
+ * pm-catalog.generated.ts) stay consistent with the same agents/*.md frontmatter.
+ * Level: L0 | Status: active | @version 1.6.0
+ *
+ * v1.6.0 (ADR-0183 D3, design 2026-09-15-runtime-pm-agent-orchestration §6.4):
+ * runtime catalog parity — the web runtime derives its agent data from the
+ * same agents/*.md SSOT the 7 harness platforms consume (it is the 8th
+ * consumer), so the generated roster (agent-registry.generated.ts) and PM
+ * catalog (pm-catalog.generated.ts) are now validated against that SSOT:
+ * roster keys and per-entry name·role·domain must match the frontmatter this
+ * script already parses, and every non-null catalog agentKey must resolve in
+ * the roster. Both targets self-skip with a visible note in contexts that do
+ * not deliver the web runtime projection. The 7-platform model-comment and
+ * tier→model prose checks are unchanged.
+ *
+ * v1.5.0 (design 2026-10-23-zai-tier-floor-support): `hermes` and `zai` join
+ * PLATFORMS (5 → 7) so both platforms' registry entries and agent frontmatter
+ * model comments are validated; the AGENTS.md §3.6 "distinct" prose target
+ * now expects the GLM ids. No validation logic changes.
  *
  * v1.4.0 (T-20260916-011): the CODEX.md prose target is now platform-delivery
  * aware. Projects scaffolded without the codex platform carry neither
@@ -42,7 +60,7 @@ interface Mismatch {
   expectedModel: string;
 }
 
-const PLATFORMS = ["claude", "gemini", "antigravity", "gemini-cli", "codex"] as const;
+const PLATFORMS = ["claude", "gemini", "antigravity", "gemini-cli", "codex", "hermes", "zai"] as const;
 type Platform = typeof PLATFORMS[number];
 
 /**
@@ -308,8 +326,134 @@ for (const target of deliveredTargets) {
   }
 }
 
-if (mismatches.length === 0 && proseMismatches.length === 0) {
+// Step 9: Runtime catalog parity (ADR-0183 D3 — harness↔runtime parity guard)
+// The web runtime (app/web-next) consumes the same agents/*.md SSOT the 7
+// harness platforms consume — it is the 8th consumer, and its data is a
+// generated projection (scripts/co-newbiz/generate-agent-registry.ts,
+// generate-pm-catalog.ts). This step proves the projection derives from the
+// same frontmatter validated above: roster keys and per-entry
+// name·formal_name·role·domain must match exactly, and every non-null PM
+// catalog agentKey must resolve in the roster. Targets self-skip (visible
+// note, never a silent pass) in contexts that do not deliver the web runtime.
+interface CatalogMismatch {
+  file: string;
+  message: string;
+}
+const catalogMismatches: CatalogMismatch[] = [];
+
+/**
+ * Parse scalar (word-key, single-line) frontmatter entries — the exact
+ * matching rules generate-agent-registry.ts applies to the roster SSOT
+ * (top-level word keys only, so nested blocks like `tier:` contribute only
+ * their own key; CRLF normalized).
+ */
+function parseScalarFrontmatter(content: string): Record<string, string> {
+  const normalized = content.replace(/\r\n/g, "\n");
+  const m = normalized.match(/^---\n([\s\S]*?)\n---/);
+  const fm: Record<string, string> = {};
+  if (!m) return fm;
+  for (const line of m[1].split("\n")) {
+    const kv = line.match(/^(\w+):\s*(.*)$/);
+    if (kv) fm[kv[1]] = kv[2].replace(/^["']|["']$/g, "").trim();
+  }
+  return fm;
+}
+
+const registryGenPath = join(WORKSPACE_ROOT, "app", "web-next", "lib", "agent-registry.generated.ts");
+const catalogGenPath = join(WORKSPACE_ROOT, "app", "web-next", "lib", "pm-catalog.generated.ts");
+const registryDelivered = existsSync(registryGenPath);
+const catalogDelivered = existsSync(catalogGenPath);
+if (!registryDelivered) {
+  console.log(`ℹ️  app/web-next/lib/agent-registry.generated.ts: skipped (web runtime roster projection not delivered in this context)`);
+}
+if (!catalogDelivered) {
+  console.log(`ℹ️  app/web-next/lib/pm-catalog.generated.ts: skipped (web runtime catalog projection not delivered in this context)`);
+}
+
+if (registryDelivered) {
+  // Expected roster, derived with the generator's own rules from the same
+  // agent files Step 3-7 just validated.
+  const expectedRoster = new Map<string, { name: string; role: string; domain: string | null }>();
+  for (const filePath of agentFiles) {
+    const fm = parseScalarFrontmatter(readFileSync(filePath, "utf-8"));
+    if (!fm.name) continue;
+    expectedRoster.set(fm.name, {
+      name: fm.formal_name ?? fm.name,
+      role: fm.role ?? "",
+      domain: fm.domain ?? null,
+    });
+  }
+
+  try {
+    const { AGENT_REGISTRY } = (await import(
+      `file://${registryGenPath.replace(/\\/g, "/")}`
+    )) as { AGENT_REGISTRY: Array<{ key: string; name: string; role: string; domain: string | null }> };
+
+    const projectedKeys = new Set(AGENT_REGISTRY.map((a) => a.key));
+    for (const [key, expected] of expectedRoster) {
+      const actual = AGENT_REGISTRY.find((a) => a.key === key);
+      if (!actual) {
+        catalogMismatches.push({
+          file: "app/web-next/lib/agent-registry.generated.ts",
+          message: `roster key '${key}' present in agents/*.md frontmatter but missing from the runtime projection — regenerate with: bun scripts/co-newbiz/generate-agent-registry.ts`,
+        });
+        continue;
+      }
+      if (actual.name !== expected.name || actual.role !== expected.role || actual.domain !== expected.domain) {
+        catalogMismatches.push({
+          file: "app/web-next/lib/agent-registry.generated.ts",
+          message: `entry '${key}' drifted: projected name="${actual.name}" role="${actual.role}" domain=${JSON.stringify(actual.domain)} but frontmatter says name="${expected.name}" role="${expected.role}" domain=${JSON.stringify(expected.domain)} — regenerate with: bun scripts/co-newbiz/generate-agent-registry.ts`,
+        });
+      }
+    }
+    for (const key of projectedKeys) {
+      if (!expectedRoster.has(key)) {
+        catalogMismatches.push({
+          file: "app/web-next/lib/agent-registry.generated.ts",
+          message: `projected key '${key}' has no agents/*.md frontmatter counterpart — stale projection; regenerate with: bun scripts/co-newbiz/generate-agent-registry.ts`,
+        });
+      }
+    }
+  } catch (err) {
+    catalogMismatches.push({
+      file: "app/web-next/lib/agent-registry.generated.ts",
+      message: `could not load the runtime roster projection: ${String(err)}`,
+    });
+  }
+}
+
+if (registryDelivered && catalogDelivered) {
+  try {
+    const { PM_CATALOG } = (await import(
+      `file://${catalogGenPath.replace(/\\/g, "/")}`
+    )) as { PM_CATALOG: Record<string, { agentKey: string | null }> };
+
+    const roster = new Set(
+      agentFiles
+        .map((f) => parseScalarFrontmatter(readFileSync(f, "utf-8")).name)
+        .filter((n): n is string => Boolean(n)),
+    );
+    for (const [promptKey, entry] of Object.entries(PM_CATALOG)) {
+      if (entry.agentKey !== null && !roster.has(entry.agentKey)) {
+        catalogMismatches.push({
+          file: "app/web-next/lib/pm-catalog.generated.ts",
+          message: `prompt '${promptKey}' owns agent '${entry.agentKey}' which is not in the agents/*.md roster — regenerate with: bun scripts/co-newbiz/generate-pm-catalog.ts`,
+        });
+      }
+    }
+  } catch (err) {
+    catalogMismatches.push({
+      file: "app/web-next/lib/pm-catalog.generated.ts",
+      message: `could not load the runtime PM catalog projection: ${String(err)}`,
+    });
+  }
+}
+
+if (mismatches.length === 0 && proseMismatches.length === 0 && catalogMismatches.length === 0) {
   console.log("✓ All agent model names + tier→model mapping prose match registry");
+  if (registryDelivered && catalogDelivered && catalogMismatches.length === 0) {
+    console.log("✓ Runtime catalog projections (agent-registry, pm-catalog) match agents/*.md frontmatter");
+  }
   if (import.meta.main) {
     process.exit(0);
   }
@@ -321,6 +465,9 @@ if (mismatches.length === 0 && proseMismatches.length === 0) {
   }
   for (const p of proseMismatches) {
     console.error(`ERROR: ${p.file}: ${p.message}`);
+  }
+  for (const c of catalogMismatches) {
+    console.error(`ERROR: ${c.file}: ${c.message}`);
   }
   if (import.meta.main) {
     process.exit(1);

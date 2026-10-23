@@ -6,6 +6,8 @@
 // AI proposal is a later slice (see lib/staffing-plan.ts seam comment).
 import { useMemo, useState } from "react";
 import { newStaffingRow, staffingPlanView, MAX_STAFFING_ROWS, type StaffingDuplicateWarning, type StaffingPlanEntry, type StaffingRow } from "../../lib/staffing-plan.ts";
+import { ColGroup } from "../ui.tsx";
+import { staffingColPct } from "./constants.ts";
 
 const fmt = (n: number) => n.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
 const numOrNull = (raw: string): number | null => (raw === "" ? null : Number(raw));
@@ -60,7 +62,8 @@ export function StaffingPlanSection({ plan, horizon, canAct, masked, error, warn
             </div>
           ))}
           <div className="table-scroll mb-1">
-            <table className="data-table tmin-56" aria-label="인력 운영 계획 표" data-testid="staffing-grid">
+            <table className="data-table table-fixed-pct tmin-56" aria-label="인력 운영 계획 표" data-testid="staffing-grid">
+              <ColGroup widths={staffingColPct(years.length)} />
               <thead>
                 <tr>
                   <th scope="col">직무군</th>

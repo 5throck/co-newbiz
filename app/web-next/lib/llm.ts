@@ -14,6 +14,7 @@
 import { z } from "zod";
 import { costUsd, estimatedUsage, parseUsage, type LlmUsage } from "./llm-usage.ts";
 import { emitGenAiSpan } from "./llm-otel.ts";
+import { AGENT_KEYS } from "./agent-registry.generated.ts";
 
 export type { LlmUsage } from "./llm-usage.ts";
 
@@ -191,8 +192,9 @@ export interface CompleteDetailed {
 /** Like complete() but also returns usage (provider-reported, or flagged estimate). */
 export async function completeDetailed(
   messages: LlmMessage[],
-  opts: { temperature?: number; maxTokens?: number; agent?: AgentCallMeta } = {},
+  opts: { temperature?: number; maxTokens?: number; agent: AgentCallMeta; dryRun?: DryRunContext },
 ): Promise<CompleteDetailed> {
+  requireAgentMeta(opts.agent);
   const cfg = getProviderConfig();
   if (!cfg) throw new Error("LLM provider is not configured.");
   const started = Date.now();
@@ -202,11 +204,11 @@ export async function completeDetailed(
     const usage = reply.usage ?? estimatedUsage(cfg.provider, model, messages.map((m) => m.content).join("\n"), reply.text);
     // 직접 호출 지점도 ADR-0128 런 장부에 남는다 — completeOrFallback 경로의 기록과 중복되지 않도록
     // 성공/실패 로그는 이곳(complete)에서만 담당한다.
-    logAgentCall(opts.agent, { source: "llm", provider: cfg.provider, model }, true, null, Date.now() - started, usage);
+    logAgentCall(opts.agent, { source: "llm", provider: cfg.provider, model }, true, null, Date.now() - started, usage, opts.dryRun);
     return { text: reply.text, usage, finishReason: reply.finishReason };
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
-    logAgentCall(opts.agent, { source: "llm", provider: cfg.provider, model }, false, reason, Date.now() - started, null);
+    logAgentCall(opts.agent, { source: "llm", provider: cfg.provider, model }, false, reason, Date.now() - started, null, opts.dryRun);
     throw err instanceof Error ? err : new Error("LLM call failed.");
   }
 }
@@ -214,7 +216,7 @@ export async function completeDetailed(
 /** One shot: messages → text. Throws on provider errors after a single retry. */
 export async function complete(
   messages: LlmMessage[],
-  opts: { temperature?: number; maxTokens?: number; agent?: AgentCallMeta } = {},
+  opts: { temperature?: number; maxTokens?: number; agent: AgentCallMeta; dryRun?: DryRunContext },
 ): Promise<string> {
   return (await completeDetailed(messages, opts)).text;
 }
@@ -226,7 +228,7 @@ export interface StructuredOptions<T> {
   schema: z.ZodType<T>;
   schemaName: string;
   cache?: { system?: boolean };
-  agent?: AgentCallMeta;
+  agent: AgentCallMeta;
   temperature?: number;
   maxTokens?: number;
   signal?: AbortSignal;
@@ -273,6 +275,7 @@ function describeIssues(err: z.ZodError | null): string {
  * (source "synthesis", reason "validation_failed" | "llm_error" | "not_configured").
  */
 export async function completeStructured<T>(opts: StructuredOptions<T>): Promise<StructuredResult<T> | SynthesisResult> {
+  requireAgentMeta(opts.agent);
   const cfg = getProviderConfig();
   if (!cfg) {
     logAgentCall(opts.agent, SYNTH, true, null, 0, null);
@@ -379,9 +382,10 @@ export async function* stream(opts: {
   messages: LlmMessage[];
   temperature?: number;
   maxTokens?: number;
-  agent?: AgentCallMeta;
+  agent: AgentCallMeta;
   signal?: AbortSignal;
 }): AsyncGenerator<LlmStreamEvent, void, void> {
+  requireAgentMeta(opts.agent);
   const cfg = getProviderConfig();
   if (!cfg) throw new Error("LLM provider is not configured.");
   const model = cfg.model ?? "unknown";
@@ -573,18 +577,71 @@ export interface AgentCallMeta {
   promptHash?: string;
 }
 
+/** ADR-0183 D2 — 분류 근거 어휘. "catalog"은 단계 산출물 provenance용(후속 로우에서
+ * 표면화), pm-router 자체는 "rules" | "llm"만 생산한다. */
+export type ClassifiedBy = "catalog" | "llm" | "rules";
+
+/**
+ * 2026-09-15-runtime-pm-agent-orchestration §6.6 (D5) — 드라이런 오버라이드
+ * 컨텍스트. 존재하면 (a) system 메시지가 promptOverride로 대체되고,
+ * (b) agent.key가 agentOverride로 교체된다(로스터 검증은 requireAgentMeta가
+ * 그대로 수행 — 관문은 오버라이드에도 적용된다), (c) 런 장부 기록에
+ * is_dry_run=1 + dry_run_group_id가 남는다. dryRun이 없는 호출의 동작은
+ * 이 필드 도입 이전과 동일하다(운영 경로 무변경).
+ * 이 컨텍스트는 세션 스코프 저장소(dry_run_session, 0172)의 값만 전달한다 —
+ * SSOT(prompts.json 등)을 쓰는 경로는 여기에 없다.
+ */
+export interface DryRunContext {
+  /** dry_run_session.id — llm_call_log.dry_run_group_id 조인 키. */
+  groupId: string;
+  /** 카탈로그 시스템 프롬프트 대체문(없으면 원본 사용). */
+  promptOverride?: string;
+  /** 카탈로그 에이전트 키 대체(없으면 원본 사용). 반드시 agents/ 로스터 키. */
+  agentOverride?: string;
+}
+
+/** PM 관문 위반 — 선언 없는 LLM 호출 또는 로스터에 없는 에이전트 키 (ADR-0183 D2). */
+export class PmGateError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PmGateError";
+  }
+}
+
+/**
+ * 모든 LLM 진입점의 필수 선언 관문 (ADR-0183 D2, design §6.3). provider·네트워크·
+ * LLM 구성 확인보다 먼저 실행된다 — 선언 강제는 LLM 구성과 무관한 컴파일/런타임
+ * 불변식이고("LLM 없이도 완전 기능" 유지), 폴백·합성 경로도 선언을 요구한다.
+ * 관문에 걸린 호출은 런 장부에도 남지 않는다 — 미기록이 아니라 불가능이 정답이다.
+ */
+function requireAgentMeta(agent: AgentCallMeta | undefined): AgentCallMeta {
+  if (!agent || typeof agent.key !== "string" || agent.key.trim() === "") {
+    throw new PmGateError(
+      "PM gateway: agent call meta is required — pass agent: { key, purpose } (an agents/ roster key, e.g. via prompts.promptAgent()) to every LLM entry point (ADR-0183 D2).",
+    );
+  }
+  if (!AGENT_KEYS.has(agent.key)) {
+    throw new PmGateError(
+      `PM gateway: agent key '${agent.key}' is not in the agents/ roster (ADR-0128). Declare a rostered agent key or add the agent to agents/*.md.`,
+    );
+  }
+  return agent;
+}
+
 function logAgentCall(
-  agent: AgentCallMeta | undefined,
+  agent: AgentCallMeta,
   outcome: { source: "llm" | "synthesis"; provider: string; model: string },
   ok: boolean,
   error: string | null,
   latencyMs: number,
   usage: LlmUsage | null = null,
+  dryRun?: DryRunContext,
 ): void {
-  if (!agent) return;
   const projectId = agent.projectId ?? (agent.contextType === "project" ? agent.contextId : undefined);
   if (outcome.source === "llm") {
     const end = Date.now();
+    // emitGenAiSpan은 고정 속성 세트만 받는다 — 드라이런 태깅용 커스텀 속성이
+    // 없어 §6.6의 스팬 태깅은 스킵한다(런 장부 플래그가 근거의 SSOT다).
     emitGenAiSpan(
       {
         system: outcome.provider,
@@ -607,14 +664,16 @@ function logAgentCall(
     const { ulid } = require("../../../db/lib/ulid.ts") as typeof import("../../../db/lib/ulid.ts");
     getDb().run(
       `INSERT INTO llm_call_log (id, agent_key, purpose, context_type, context_id, source, provider, model, ok, error, latency_ms, created_by, created_at,
-                                 input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd, usage_estimated, project_id, function_name, prompt_hash)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+                                 input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd, usage_estimated, project_id, function_name, prompt_hash,
+                                 is_dry_run, dry_run_group_id)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [ulid(), agent.key, agent.purpose, agent.contextType ?? null, agent.contextId ?? null,
         outcome.source, outcome.provider, outcome.model, ok ? 1 : 0, error, latencyMs, "system", new Date().toISOString(),
         usage ? usage.inputTokens : null, usage ? usage.outputTokens : null,
         usage ? usage.cacheReadTokens : null, usage ? usage.cacheWriteTokens : null,
         usage ? costUsd(usage) : null, usage?.estimated ? 1 : 0,
-        projectId ?? null, agent.functionName ?? null, agent.promptHash ?? null],
+        projectId ?? null, agent.functionName ?? null, agent.promptHash ?? null,
+        dryRun?.groupId ? 1 : 0, dryRun?.groupId ?? null],
     );
   } catch (err) {
     // 런 장부 기록 실패는 본 기능을 막지 않는다 — 관찰 가능성 손실만 남긴다.
@@ -625,24 +684,39 @@ function logAgentCall(
 export async function completeOrFallback(
   messages: LlmMessage[],
   fallback: () => string,
-  opts: { temperature?: number; maxTokens?: number; agent?: AgentCallMeta } = {},
+  opts: { temperature?: number; maxTokens?: number; agent: AgentCallMeta; dryRun?: DryRunContext },
 ): Promise<LlmOrFallback> {
+  requireAgentMeta(opts.agent);
+  // §6.6 D5 — 오버라이드는 세션 스코프 값(dry_run_session)의 전달일 뿐이며,
+  // SSOT을 읽거나 쓰지 않는다. agentOverride 교체 후에도 requireAgentMeta가
+  // 로스터 등록을 강제하므로 PM 관문은 오버라이드 경로에서도 유효하다.
+  const dry = opts.dryRun;
+  const agent: AgentCallMeta = dry?.agentOverride ? { ...opts.agent, key: dry.agentOverride } : opts.agent;
+  // agentOverride 교체분도 즉시 검증한다 — 관문 위반은 LLM 구성 여부와 무관하게
+  // 폴백이 아니라 예외여야 한다(미기록이 아니라 불가능이 정답).
+  requireAgentMeta(agent);
+  const effectiveMessages: LlmMessage[] = dry?.promptOverride
+    ? messages.map((m) => (m.role === "system" ? { ...m, content: dry.promptOverride as string } : m))
+    : messages;
   const cfg = getProviderConfig();
   if (!cfg) {
-    logAgentCall(opts.agent, SYNTH, true, null, 0);
+    logAgentCall(agent, SYNTH, true, null, 0, null, dry);
     return { source: "synthesis", provider: "deterministic", text: fallback() };
   }
   const started = Date.now();
   try {
     // llm 경로의 런 장부 기록은 complete() 내부에서 이루어진다.
-    const text = await complete(messages, opts);
+    const text = await complete(effectiveMessages, { temperature: opts.temperature, maxTokens: opts.maxTokens, agent, dryRun: dry });
     return { source: "llm", provider: cfg.provider, text };
   } catch (err) {
+    // 관문 위반은 폴백으로 흡수되지 않는다 — 결정론 폴백은 호출 실패의 대응이지
+    // 선언 위반의 대응이 아니다 (design §6.3, ADR-0183 D2).
+    if (err instanceof PmGateError) throw err;
     // 폴백 자체는 설계된 동작이지만 사유가 로그에 없으면 현장에서 진단 불가 —
     // 실제 원인(HTTP 상태·타임아웃·빈 응답)을 남긴다.
     const reason = err instanceof Error ? err.message : String(err);
     console.error(`llm fallback (${cfg.provider}/${cfg.model}):`, reason);
-    logAgentCall(opts.agent, SYNTH, false, reason, Date.now() - started);
+    logAgentCall(agent, SYNTH, false, reason, Date.now() - started, null, dry);
     return { source: "synthesis", provider: "deterministic", text: fallback() };
   }
 }

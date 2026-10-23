@@ -5,10 +5,13 @@ import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
 import { fmtNpvEok } from "../../../../lib/npv-format.ts";
-import { PageState, useToast } from "../../../../components/ui.tsx";
+import { ColGroup, PageState, useToast } from "../../../../components/ui.tsx";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
 import { useConfirm } from "../../../../components/crud.tsx";
+
+// 인센티브 표 7열 — ColGroup 고정 % (R10 table-sizing).
+const INCENTIVE_COL_PCT = [16, 12, 12, 10, 18, 22, 10] as const;
 
 // 인센티브·클로백 (incentive-agent) — Wave 0 REST B3. 수혜 예정/확정 인센티브와
 // 클로백 조건을 관리하고 클로백 추정액은 S10 자금조달과 대조된다.
@@ -107,8 +110,9 @@ function IncentivesView() {
           <PageState state="empty" emptyText="등록된 인센티브가 없습니다." />
         ) : (
           <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table" aria-label="인센티브">
+            <table className="data-table table-fixed-pct tmin-64" aria-label="인센티브">
               <caption className="sr-only">인센티브</caption>
+              <ColGroup widths={INCENTIVE_COL_PCT} />
               <thead><tr><th>프로그램</th><th>부여기관</th><th>방향</th><th className="col-num">NPV</th><th>클로백 조건</th><th>적격 증빙 · 자금 조달</th><th>관리</th></tr></thead>
               <tbody>
                 {rows.map((r) => (

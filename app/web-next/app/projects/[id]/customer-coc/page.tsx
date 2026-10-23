@@ -4,9 +4,12 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
-import { PageState, useToast } from "../../../../components/ui.tsx";
+import { ColGroup, PageState, useToast } from "../../../../components/ui.tsx";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
+
+// 계약 CoC 표 6열 — ColGroup 고정 % (R10 table-sizing).
+const COC_COL_PCT = [18, 10, 16, 12, 12, 32] as const;
 
 // 고객 집중·CoC (customer-retention-agent) — Wave 0 REST B8.
 // 매출 집중도 30% 이상은 자동 플래그, 추정 이탈은 가치 영향으로 반영된다.
@@ -61,8 +64,9 @@ function CocView() {
           <PageState state="empty" emptyText="등록된 계약이 없습니다." />
         ) : (
           <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table" aria-label="계약 CoC">
+            <table className="data-table table-fixed-pct tmin-48" aria-label="계약 CoC">
               <caption className="sr-only">계약 CoC</caption>
+              <ColGroup widths={COC_COL_PCT} />
               <thead><tr><th>상대</th><th>방향</th><th>지위 변동(CoC) 조항</th><th className="col-num">집중도</th><th className="col-num">추정 이탈</th><th>조사내역 등록</th></tr></thead>
               <tbody>{rows.map((r) => (
                 <tr key={r.id} className={r.flagged ? "row-selected" : undefined}>

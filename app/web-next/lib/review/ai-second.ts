@@ -42,25 +42,32 @@ export function monthlyTokenCap(): number {
 export const estimateTokens = estimateTokensFallback;
 
 export interface Ai2ndDeps {
-  complete: (messages: LlmMessage[], opts?: { temperature?: number; maxTokens?: number }) => Promise<string>;
+  complete: (messages: LlmMessage[], opts?: { temperature?: number; maxTokens?: number; reviewerAgent?: string }) => Promise<string>;
   /** Preferred path (schema-validated, repaired once, real usage). Absent → legacy text path via `complete`. */
   completeStructured?: (
     messages: LlmMessage[],
-    opts: { temperature: number; maxTokens: number },
+    opts: { temperature: number; maxTokens: number; reviewerAgent: string },
   ) => Promise<{ value: Ai2ndOutput; tokens: number | null } | null>;
   isConfigured: () => boolean;
   modelId: () => string | null;
 }
 export const defaultAi2ndDeps: Ai2ndDeps = {
-  complete,
+  // 런 장부 agent_key는 agents/ 로스터의 키여야 한다(ADR-0183 D2 관문 검증) —
+  // 가상 키 "ai-second-reviewer" 대신 실제 선정된 도메인 리드 리뷰어로 귀속한다.
+  complete: (messages, opts = {}) =>
+    complete(messages, {
+      ...opts,
+      agent: { key: opts.reviewerAgent ?? "pm", purpose: "AI 2nd cross-domain review", functionName: "review.ai_second" },
+    }),
   completeStructured: async (messages, opts) => {
     const r = await completeStructured({
       messages,
       schema: Ai2ndOutputSchema,
       schemaName: "ai_second_review",
       cache: { system: true },
-      agent: { key: "ai-second-reviewer", purpose: "AI 2nd cross-domain review", functionName: "review.ai_second" },
-      ...opts,
+      agent: { key: opts.reviewerAgent, purpose: "AI 2nd cross-domain review", functionName: "review.ai_second" },
+      temperature: opts.temperature,
+      maxTokens: opts.maxTokens,
     });
     if (r.source !== "llm") return null;
     // Real provider usage; an estimated record falls back to chars/4 by construction.
@@ -237,7 +244,7 @@ export async function runAiSecond(req: Ai2ndRequest, deps: Ai2ndDeps = defaultAi
   let parsed: Ai2ndOutput | null = null;
   if (deps.completeStructured) {
     try {
-      const r = await deps.completeStructured(messages, { temperature: 0, maxTokens: 1500 });
+      const r = await deps.completeStructured(messages, { temperature: 0, maxTokens: 1500, reviewerAgent: sel.reviewerAgent });
       if (r) {
         parsed = r.value;
         spent = r.tokens ?? promptTokens;
@@ -252,8 +259,8 @@ export async function runAiSecond(req: Ai2ndRequest, deps: Ai2ndDeps = defaultAi
   } else {
     for (let attempt = 0; attempt < 2 && !parsed; attempt++) {
       let text: string;
-      try {
-        text = await deps.complete(messages, { temperature: 0, maxTokens: 1500 });
+        try {
+          text = await deps.complete(messages, { temperature: 0, maxTokens: 1500, reviewerAgent: sel.reviewerAgent });
       } catch (err) {
         return record({
           ...base,

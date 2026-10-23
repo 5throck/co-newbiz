@@ -5,11 +5,14 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
-import { PageState, useToast } from "../../../../components/ui.tsx";
+import { ColGroup, PageState, useToast } from "../../../../components/ui.tsx";
 import { useConfirm } from "../../../../components/crud.tsx";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
 import { DUE_SOON_DAYS, type MilestoneCategory, type MilestoneStatus, type MilestoneView } from "../../../../lib/milestone-view.ts";
+
+// 마일스톤 표 7열 — ColGroup 고정 % (R10 table-sizing).
+const MILESTONE_COL_PCT = [26, 10, 12, 10, 12, 8, 22] as const;
 
 // 프로젝트 마일스톤 (2026-10-21, migration 0167) — S12 일정관리의 사람 전용
 // 원장. 모든 단계 바의 공통 링크로 도달한다(프로젝트 공통). 상태는 기한·완료일에서
@@ -178,8 +181,9 @@ function MilestonesView() {
               {" "}<span className="note">{(grouped.get(s) ?? []).length}건</span>
             </h2>
             <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-              <table className="data-table" aria-label={`마일스톤 — ${STATUS_META[s].label}`}>
+              <table className="data-table table-fixed-pct tmin-56" aria-label={`마일스톤 — ${STATUS_META[s].label}`}>
                 <caption className="sr-only">마일스톤</caption>
+                <ColGroup widths={MILESTONE_COL_PCT} />
                 <thead><tr><th>제목</th><th>분류</th><th className="col-num">기한</th><th className="col-num">D-day</th><th>담당</th><th>완료</th><th>관리</th></tr></thead>
                 <tbody>{(grouped.get(s) ?? []).map((r) => (
                   <tr key={r.id}>
