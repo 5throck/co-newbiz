@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+/* Pretendard Variable, self-hosted (no CDN — app must work offline/intranet).
+   Single variable woff2 covers weights 45–920; the second format() entry is
+   the fallback for engines that predate woff2-variations. SIL OFL 1.1 license
+   ships alongside at /fonts/OFL.txt. */
+@font-face {
+  font-family: "Pretendard";
+  src: url("/fonts/PretendardVariable.woff2") format("woff2-variations"),
+    url("/fonts/PretendardVariable.woff2") format("woff2");
+  font-weight: 45 920;
+  font-display: swap;
+  font-style: normal;
+}
+
 /* Onyx 3.0 Design System — light-default with dark toggle (evolution of
    Onyx 2.0). All custom-property names preserved for backward compatibility
    with the ported component files. Default theme is light (modern SaaS
