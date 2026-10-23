@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-23T14:11:27.196Z
+**Generated**: 2026-10-23T16:34:39.832Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -276,7 +276,7 @@
 | lint-server-boundary.ts | 1.0.0 | scripts/co-newbiz/lint-server-boundary.ts | N/A |
 | llm-suites.ts | 1.0.0 | scripts/eval/llm-suites.ts | zod |
 | loader.ts | 1.0.0 | scripts/eval/loader.ts | js-yaml, zod |
-| manual-capture.ts | 1.0.0 | scripts/co-newbiz/manual-capture.ts | N/A |
+| manual-capture.ts | 1.1.0 | scripts/co-newbiz/manual-capture.ts | N/A |
 | mcp-coverage.ts | 1.0.0 | scripts/co-newbiz/mcp-coverage.ts | js-yaml |
 | md-to-ooxml.ts | 1.2.0 | scripts/md-to-ooxml.ts | fs, path |
 | migrate-quality-gates.ts | 1.1.0 | scripts/migrate-quality-gates.ts | fs, js-yaml, path |
