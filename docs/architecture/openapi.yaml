@@ -2445,6 +2445,55 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Ok'
+  /api/wiki:
+    get:
+      operationId: listWikiPages
+      summary: 'User-guide wiki index: page summaries plus journey groups (from _Sidebar.md) and footer (2026-10-23 wiki in-app viewer design D1/D7).'
+      tags:
+        - Reference
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/wiki/{slug}:
+    get:
+      operationId: getWikiPage
+      summary: Single wiki page's summary plus frontmatter-stripped body. Slugs resolve only against the generated projection keys (never raw paths); unknown slug is 404.
+      tags:
+        - Reference
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/wiki/images/{file}:
+    get:
+      operationId: getWikiImage
+      summary: Wiki capture PNG from docs/wiki/ko/images. Filename resolves against the generated allowlist after basename normalization (traversal attempts 404); served with Content-Type image/png and short max-age + ETag revalidation.
+      tags:
+        - Reference
+      parameters:
+        - name: file
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: PNG bytes.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/llm-status:
     get:
       operationId: getLlmStatus

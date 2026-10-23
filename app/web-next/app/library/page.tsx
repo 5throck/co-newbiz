@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { marked } from "marked";
 import { api } from "../../lib/api.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
@@ -52,8 +53,11 @@ function MarkdownView({ text }: { text: string }) {
   return <div className="library-doc-body" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
-function DocViewer({ docs, allDocs }: { docs: DocSummary[]; allDocs: DocSummary[] }) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+function DocViewer({ docs, allDocs, initialDocId }: { docs: DocSummary[]; allDocs: DocSummary[]; initialDocId?: string | null }) {
+  // initialDocId — /wiki 등 다른 화면의 딥링크(?doc=<id>)로 특정 문서를 연 채로
+  // 시작하는 마운트 훅(2026-10-23 위키 인앱 뷰어 설계 D5 규칙 4). 이후 전환은
+  // 기존대로 이 화면 안에서만 일어난다.
+  const [selectedId, setSelectedId] = useState<string | null>(initialDocId ?? null);
   const [detail, setDetail] = useState<DocContent | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -169,6 +173,8 @@ export function LibraryView() {
   const [error, setError] = useState<string | null>(null);
   const [docCategory, setDocCategory] = useState<Category>("policy");
   const [langFilter, setLangFilter] = useState<LangFilter>("all");
+  // ?doc=<id> 딥링크 — 위키의 폴더 밖 매뉴얼 링크가 이 표면으로 온다(설계 D5-4/D7a).
+  const deepLinkDocId = useSearchParams().get("doc");
 
   useEffect(() => {
     api
@@ -176,6 +182,12 @@ export function LibraryView() {
       .then((r) => setDocs(r.data))
       .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
   }, []);
+
+  // 딥링크 문서가 현재 카테고리 탭에 안 보이면 해당 문서의 탭으로 옮겨 준다.
+  useEffect(() => {
+    const doc = (docs ?? []).find((d) => d.id === deepLinkDocId);
+    if (doc) setDocCategory(doc.category);
+  }, [docs, deepLinkDocId]);
 
   const docList = useMemo(
     () =>
@@ -239,11 +251,18 @@ export function LibraryView() {
               </label>
             }
           />
-          <DocViewer docs={docList} allDocs={docs} />
+          <DocViewer docs={docList} allDocs={docs} initialDocId={deepLinkDocId} />
         </>
       )}
     </main>
   );
 }
 
-export default LibraryView;
+// useSearchParams는 정적 렌더 시 Suspense 경계를 요구한다(route-decision과 같은 규약).
+export default function LibraryPage() {
+  return (
+    <Suspense fallback={null}>
+      <LibraryView />
+    </Suspense>
+  );
+}

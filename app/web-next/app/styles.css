@@ -2056,6 +2056,174 @@
   padding-left: 0.75rem;
   color: var(--muted-fg);
 }
+/* 마크다운 이미지(위키 캡처) — 문서 폭을 넘지 않게 하고 스크린샷 경계를 낸다.
+   /library는 이미지가 없어 규약이 없었고, 위키 뷰어가 처음 쓴다. */
+.library-doc-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.75rem 0 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+/* ── User Guide Wiki (/wiki) ────────────────────────────────────────────
+   docs/wiki/ko/ 사용자 안내서 뷰어(2026-10-23 설계). 여정 그룹 왼쪽 열 +
+   본문 구성은 /library의 master-detail 표면을 따르고, 콜아웃(GitHub
+   alert)·배지만 위키 고유 규약으로 추가한다. */
+.wiki-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) 1fr; /* design-token-exempt: layout-tuned grid column minimum */
+  gap: 1.25rem;
+  align-items: start;
+}
+.wiki-toc {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  max-height: 75vh;
+  overflow-y: auto;
+}
+.wiki-toc-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.wiki-group-title {
+  margin: 0;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--muted-fg);
+  letter-spacing: 0.02em;
+}
+.wiki-group-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.wiki-toc-item {
+  display: block;
+  padding: 0.3rem 0.5rem;
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  text-decoration: none;
+  font-size: var(--fs-body);
+  line-height: 1.4;
+  word-break: keep-all;
+}
+.wiki-toc-item:hover {
+  background: color-mix(in oklab, var(--primary) 10%, transparent);
+}
+.wiki-toc-current {
+  background: color-mix(in oklab, var(--primary) 14%, var(--surface));
+  font-weight: 600;
+}
+.wiki-content-pane {
+  min-width: 0;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+}
+.wiki-badges {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0 0 0.9rem;
+  padding: 0;
+}
+.wiki-badge {
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--muted-bg);
+  color: var(--muted-fg);
+  font-size: var(--fs-caption);
+}
+.wiki-badge-verified {
+  border-color: color-mix(in oklab, var(--primary) 40%, var(--border));
+  color: color-mix(in oklab, var(--primary) 80%, var(--fg));
+}
+/* GitHub alert(> [!NOTE])의 렌더 결과 — 콜아웃 div + 라벨(설계 D5). */
+.wiki-callout {
+  margin: 0.6rem 0;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid color-mix(in oklab, var(--primary) 35%, var(--border));
+  border-left: var(--border-width-accent) solid var(--primary);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, var(--primary) 7%, var(--surface));
+}
+.wiki-callout-label {
+  margin: 0 0 0.2rem;
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: color-mix(in oklab, var(--primary) 75%, var(--fg));
+}
+.wiki-callout p {
+  margin: 0.25rem 0;
+}
+.wiki-callout-warning,
+.wiki-callout-caution {
+  border-color: color-mix(in oklab, var(--amber-border) 70%, var(--border));
+  border-left-color: var(--amber-border);
+  background: var(--amber-bg);
+}
+.wiki-callout-warning .wiki-callout-label,
+.wiki-callout-caution .wiki-callout-label {
+  color: var(--amber-fg);
+}
+.wiki-home-body {
+  margin-bottom: 1.5rem;
+}
+.wiki-list-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+}
+.wiki-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); /* design-token-exempt: layout-tuned grid column minimum */
+  gap: 0.9rem;
+}
+.wiki-group {
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.wiki-footer-note {
+  margin: 1.25rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted-fg);
+  font-size: var(--fs-caption);
+  line-height: 1.6;
+  word-break: keep-all;
+}
+/* 푸터는 마크다운 파이프라인으로 렌더한다(원문에 링크가 있음) — 내부
+   library-doc-body의 p 마진을 눌러 평문 시절과 같은 밀도를 유지한다. */
+.wiki-footer-note p {
+  margin: 0;
+}
+.wiki-content-footer {
+  margin-top: 1.5rem;
+}
+@media (max-width: 880px) { /* design-token-exempt: breakpoint (custom properties invalid in query conditions) */
+  .wiki-layout {
+    grid-template-columns: 1fr;
+  }
+  .wiki-toc {
+    max-height: 40vh;
+  }
+}
 
 /* ── DD Workspace (checklist-driven DD) ── */
 .dd-progress {

@@ -411,7 +411,7 @@
    "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
    "steps": [
     {
-     "click": "role=tab[name=/capex 집행 단계/]"
+     "click": "role=tab[name=/설비투자 집행 단계/]"
     }
    ],
    "page": "42-공통-S10-투자구조-설계.md",
@@ -433,6 +433,12 @@
    "url": "/projects/{gfProj}/ic-review",
    "as": "analyst",
    "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
+   "steps": [
+    {
+     "click": "role=tab[name=/실행 · PMI/]",
+     "waitFor": "#ic-panel-establishment section[aria-label='설립 실행 5단계']"
+    }
+   ],
    "page": "43-공통-S11-투자심사-실행.md",
    "caption": "설립 실행 5단계"
   },
