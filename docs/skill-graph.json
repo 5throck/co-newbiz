@@ -913,6 +913,11 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0183",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent:root/antitrust-agent",
       "type": "agent",
       "layer": "L3",
@@ -1632,6 +1637,11 @@
     },
     {
       "id": "dec:DEC-20261020-01",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
+      "id": "dec:DEC-20261023-01",
       "type": "decision",
       "layer": "L3"
     },
@@ -3296,8 +3306,8 @@
         ".hermes/skills/sync/SKILL.md"
       ],
       "usage": {
-        "sessions": 5,
-        "last_used": "2026-10-22"
+        "sessions": 6,
+        "last_used": "2026-10-23"
       }
     },
     {
@@ -4854,6 +4864,12 @@
     {
       "type": "cites_skill",
       "from": "dec:DEC-20261020-01",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261023-01",
       "to": "skill:root/decision-record",
       "source": "skills_used"
     },
