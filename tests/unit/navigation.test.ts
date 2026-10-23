@@ -85,6 +85,24 @@ describe("navigation SSOT (ADR-0105)", () => {
     }
   });
 
+  // 2026-10-23 위키 인앱 뷰어 설계 D6: 이 구간 순서를 고정하는 단언이 없어
+  // 추가됐다 — 문서 허브(모든 문서) 다음에 사용자용 안내서(/wiki)가 온다.
+  test("분석·참조 section order is pinned: benchmarks → library → wiki → glossary → strategy", () => {
+    const section = NAV_SECTIONS.find((s: { label: string }) => s.label === "분석·참조")!;
+    expect(section.items.map((i: { href: string }) => i.href)).toEqual([
+      "/benchmarks",
+      "/library",
+      "/wiki",
+      "/glossary",
+      "/strategy",
+    ]);
+    const wiki = section.items.find((i: { href: string }) => i.href === "/wiki");
+    expect(wiki?.label).toBe("사용 안내서");
+    // /wiki 본문 경로는 동적 세그먼트라 존재 검사를 건너뛰지만, 고아 검사를
+    // 통과하려면 명시적 탈메뉴 등재가 필요하다(위 70–73행 원칙).
+    expect(NON_MENU_ROUTES).toContain("/wiki/[slug]");
+  });
+
   test("connected apps is a registered sidebar and admin entry (no longer a topbar-only link)", () => {
     expect(menuHrefs()).toContain("/settings/connected-apps");
     expect(ADMIN_NAV.map((i: { href: string }) => i.href)).toContain("/settings/connected-apps");

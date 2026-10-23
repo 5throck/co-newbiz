@@ -1,7 +1,7 @@
 ---
 title: User Manual Wiki — Journey-Map-Driven Design
 date: 2026-10-13
-status: draft (Row 0 — awaiting human decision)
+status: implemented
 owner: ux-designer-agent
 reviewers: docs-writer, process-governance-manager, design-system-agent
 lang: ko
@@ -223,3 +223,11 @@ Definition of done per page: frontmatter complete; ≥1 capture with caption; nu
 4. Who acts as the human final walker for each lane?
 5. Should S6/S7 tabs be shown (disabled) or hidden for greenfield deals — the manual must describe one behaviour (see defect log D-03).
 6. English-only docs policy: confirm `docs/wiki/ko/` is accepted as a locale zone by the language lint.
+
+## 12. Refresh log
+
+- **2026-10-23** — refresh round 1 of 2: reflects the 2026-10-21~22 app changes. Updated page groups:
+  - Stage shared pages `31`/`32`/`33`/`34-공통-*`: S9–S12 IA overhaul (backtest → S12, DD tool cards, heatmap pending-strip + risk register, charter project-common, review-ack saving), depth-closure features (debt schedule, incentive NPV units, site columns, permits pre-review, IC steps 4.5/4.6, report sections §8–§12), head-action screen standard (`다음: … →` navigation, strip order, `🤖 … (AI)` buttons), terminology renames (부채 → `차입·여신`, 트랜치 → `집행 단계(트랜치)`, 원본기회 → `사업기회`).
+  - Green Field lane pages `43`/`44`/`45-그린필드-*` and Brown Field lane pages `54`/`55`/`56-브라운필드-*`: only the portions the above changes touch.
+  - Project screen guide `60-프로젝트-화면-안내.md`: `/projects` list columns, backtest location, charter common link, milestone common page + sidebar badge, report section expansion.
+  - Round 2 of 2 (this change set): `Home.md`, `01-*`, `11-*`, `12-*`, `22-*`, `30-공통-S8*`, `40-*`, `80-*`, `81-*`, `90-*`, `91-*`, `82-변경-이력.md` received the minimal terminology / orphaned-reference sweep in this round, not a full rewrite (rename follows the on-screen `사업 기회 보기`; the `/projects` 사업 기회 column itself was removed 2026-10-22). `30-공통-S8*` was audited only (financial-prose `부채` kept, no edit needed). On `12-*` the deeper anatomy items (head nav `다음: … →`, strip order, `🤖 … (AI)` buttons, font scale) had no target — the page does not describe stage-screen anatomy — so only its stale pointers were fixed.

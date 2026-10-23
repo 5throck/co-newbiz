@@ -41,6 +41,8 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/benchmarks", label: "벤치마킹 사례" },
       { href: "/library", label: "문서 허브" },
+      // 모든 문서(문서 허브) 다음에 사용자용 안내서가 온다(2026-10-23 위키 인앱 뷰어 설계 D6).
+      { href: "/wiki", label: "사용 안내서" },
       { href: "/glossary", label: "용어집" },
       { href: "/strategy", label: "R&BD 전략" },
     ],
@@ -99,6 +101,7 @@ export const NON_MENU_ROUTES: string[] = [
   "/brownfield/targets/[targetId]",
   "/companies",
   "/companies/[companyId]",
+  "/wiki/[slug]", // 2026-10-23: 위키 본문 — /wiki(메뉴 등록)에서 여정 목차로 진입
   "/process/[stage]",
   "/projects/[id]",
   "/projects/[id]/business-case",
