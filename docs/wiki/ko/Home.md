@@ -15,11 +15,70 @@ verified_on: 2026-10-23
 
 공통 단계 S1~S4를 지나 S4에서 길이 갈라지고, S8부터 두 길이 다시 만나 S12까지 함께 간다.
 
-```
-공통:       S1 → S2 → S3 → S4 (갈림길)
-그린필드:   S4 → S5 → S8 → S9 → S10 → S11 → S12   (S6·S7 건너뜀)
-브라운필드: S4 → S6 → S7 → S8 → S9 → S10 → S11 → S12   (S5 건너뜀)
-```
+<svg viewBox="0 0 908 150" width="100%" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>여정 지도: S4에서 갈라져 S8에서 다시 만난다</title>
+  <defs>
+    <marker id="wiki-ah" markerWidth="7" markerHeight="7" refX="5.5" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 z" fill="var(--border)"></path>
+    </marker>
+  </defs>
+  <text x="64" y="31" text-anchor="end" font-size="12" fill="var(--muted-fg)">공통</text>
+  <text x="64" y="73" text-anchor="end" font-size="12" fill="var(--muted-fg)">그린필드</text>
+  <text x="64" y="117" text-anchor="end" font-size="12" fill="var(--muted-fg)">브라운필드</text>
+  <rect x="72" y="14" width="54" height="26" rx="6" fill="none" stroke="var(--border)"></rect>
+  <text x="99" y="31.5" text-anchor="middle" font-size="13" fill="var(--fg)">S1</text>
+  <line x1="126" y1="27" x2="142" y2="27" stroke="var(--border)" stroke-width="1.2" marker-end="url(#wiki-ah)"></line>
+  <rect x="148" y="14" width="54" height="26" rx="6" fill="none" stroke="var(--border)"></rect>
+  <text x="175" y="31.5" text-anchor="middle" font-size="13" fill="var(--fg)">S2</text>
+  <line x1="202" y1="27" x2="218" y2="27" stroke="var(--border)" stroke-width="1.2" marker-end="url(#wiki-ah)"></line>
+  <rect x="224" y="14" width="54" height="26" rx="6" fill="none" stroke="var(--border)"></rect>
+  <text x="251" y="31.5" text-anchor="middle" font-size="13" fill="var(--fg)">S3</text>
+  <line x1="278" y1="27" x2="294" y2="27" stroke="var(--border)" stroke-width="1.2" marker-end="url(#wiki-ah)"></line>
+  <circle cx="287" cy="27" r="3.5" fill="var(--primary)"></circle>
+  <rect x="300" y="14" width="54" height="26" rx="6" fill="none" stroke="var(--border)"></rect>
+  <text x="327" y="31.5" text-anchor="middle" font-size="13" fill="var(--fg)">S4</text>
+  <line x1="354" y1="27" x2="368" y2="27" stroke="var(--border)" stroke-width="1.2"></line>
+  <line x1="368" y1="27" x2="368" y2="113" stroke="var(--border)" stroke-width="1.2"></line>
+  <line x1="368" y1="69" x2="381" y2="69" stroke="var(--border)" stroke-width="1.2" marker-end="url(#wiki-ah)"></line>
+  <circle cx="375" cy="69" r="3" fill="var(--primary)"></circle>
+  <line x1="368" y1="113" x2="381" y2="113" stroke="var(--border)" stroke-width="1.2" marker-end="url(#wiki-ah)"></line>
+  <circle cx="375" cy="113" r="3" fill="var(--primary)"></circle>
+  <rect x="386" y="56" width="54" height="26" rx="6" fill="var(--primary)" fill-opacity="0.08" stroke="var(--border)"></rect>
+  <text x="413" y="73.5" text-anchor="middle" font-size="13" fill="var(--fg)">S5</text>
+  <line x1="440" y1="69" x2="556" y2="69" stroke="var(--border)" stroke-width="1.2" marker-end="url(#wiki-ah)"></line>
+  <text x="501" y="52" text-anchor="middle" font-size="12" fill="var(--muted-fg)">S6·S7 건너뜀</text>
+  <rect x="562" y="56" width="54" height="26" rx="6" fill="none" stroke="var(--border)"></rect>
+  <text x="589" y="73.5" text-anchor="middle" font-size="13" fill="var(--fg)">S8</text>
+  <rect x="386" y="100" width="54" height="26" rx="6" fill="var(--primary)" fill-opacity="0.08" stroke="var(--border)"></rect>
+  <text x="413" y="117.5" text-anchor="middle" font-size="13" fill="var(--fg)">S6</text>
+  <line x1="440" y1="113" x2="452" y2="113" stroke="var(--border)" stroke-width="1.2" marker-end="url(#wiki-ah)"></line>
+  <rect x="458" y="100" width="54" height="26" rx="6" fill="var(--primary)" fill-opacity="0.08" stroke="var(--border)"></rect>
+  <text x="485" y="117.5" text-anchor="middle" font-size="13" fill="var(--fg)">S7</text>
+  <line x1="512" y1="113" x2="556" y2="113" stroke="var(--border)" stroke-width="1.2" marker-end="url(#wiki-ah)"></line>
+  <circle cx="537" cy="113" r="3" fill="var(--primary)"></circle>
+  <rect x="562" y="100" width="54" height="26" rx="6" fill="none" stroke="var(--border)"></rect>
+  <text x="589" y="117.5" text-anchor="middle" font-size="13" fill="var(--fg)">S8</text>
+  <line x1="616" y1="69" x2="632" y2="69" stroke="var(--border)" stroke-width="1.2"></line>
+  <line x1="616" y1="113" x2="632" y2="113" stroke="var(--border)" stroke-width="1.2"></line>
+  <line x1="632" y1="69" x2="632" y2="113" stroke="var(--border)" stroke-width="1.2"></line>
+  <line x1="632" y1="91" x2="644" y2="91" stroke="var(--border)" stroke-width="1.2" marker-end="url(#wiki-ah)"></line>
+  <circle cx="639" cy="91" r="3" fill="var(--primary)"></circle>
+  <rect x="650" y="78" width="48" height="26" rx="6" fill="none" stroke="var(--border)"></rect>
+  <text x="674" y="95.5" text-anchor="middle" font-size="13" fill="var(--fg)">S9</text>
+  <line x1="698" y1="91" x2="710" y2="91" stroke="var(--border)" stroke-width="1.2" marker-end="url(#wiki-ah)"></line>
+  <circle cx="704" cy="91" r="3" fill="var(--primary)"></circle>
+  <rect x="716" y="78" width="48" height="26" rx="6" fill="none" stroke="var(--border)"></rect>
+  <text x="740" y="95.5" text-anchor="middle" font-size="13" fill="var(--fg)">S10</text>
+  <line x1="764" y1="91" x2="776" y2="91" stroke="var(--border)" stroke-width="1.2" marker-end="url(#wiki-ah)"></line>
+  <rect x="782" y="78" width="48" height="26" rx="6" fill="none" stroke="var(--border)"></rect>
+  <text x="806" y="95.5" text-anchor="middle" font-size="13" fill="var(--fg)">S11</text>
+  <line x1="830" y1="91" x2="848" y2="91" stroke="var(--border)" stroke-width="1.2" marker-end="url(#wiki-ah)"></line>
+  <circle cx="839" cy="87" r="2.6" fill="var(--primary)"></circle>
+  <circle cx="839" cy="95" r="2.6" fill="var(--primary)"></circle>
+  <rect x="854" y="78" width="48" height="26" rx="6" fill="none" stroke="var(--border)"></rect>
+  <text x="878" y="95.5" text-anchor="middle" font-size="13" fill="var(--fg)">S12</text>
+  <text x="72" y="146" font-size="12" fill="var(--muted-fg)">작은 원: 게이트 기록 자리 (Screening · Pre-FS · Target Screening · FS · DD · 법인·그룹)</text>
+</svg>
 
 ## 처음이라면
 

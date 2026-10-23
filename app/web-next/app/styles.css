@@ -2216,6 +2216,71 @@
 .wiki-content-footer {
   margin-top: 1.5rem;
 }
+/* 가독성 패스(2026-10-23, 결정: "handbook의 스타일이 제대로 적용되지 않아
+   가독성이 떨어진다") — 산문 텍스트 흐름에만 읽기 폭(measure)을 두고, 표·
+   콜아웃·SVG 다이어그램은 판 너비 전체를 유지한다. 컨테이너를 통째로 캡하면
+   넓은 가구까지 같이 좁아지므로 산문 블록(h1–h4·p·목록·인용)에 개별 캡을
+   건다. 왼쪽 여정 목차와 왼쪽 기준선을 맞추므로 블록별 중앙 정렬은 하지
+   않는다(짧은 문단이 한 칸씩 떠 보이는 부작용). 78ch 대신 rem 고정 — ch는
+   실제 적용 폰트의 0 글리프 폭에 의존해 OS 폰트 폴백마다 폭이 달라진다. */
+.wiki-content-pane .library-doc-body,
+.wiki-home-body .library-doc-body {
+  max-width: none;
+}
+.wiki-content-pane .library-doc-body h1,
+.wiki-content-pane .library-doc-body h2,
+.wiki-content-pane .library-doc-body h3,
+.wiki-content-pane .library-doc-body h4,
+.wiki-content-pane .library-doc-body p,
+.wiki-content-pane .library-doc-body ul,
+.wiki-content-pane .library-doc-body ol,
+.wiki-content-pane .library-doc-body blockquote,
+.wiki-home-body .library-doc-body h1,
+.wiki-home-body .library-doc-body h2,
+.wiki-home-body .library-doc-body h3,
+.wiki-home-body .library-doc-body h4,
+.wiki-home-body .library-doc-body p,
+.wiki-home-body .library-doc-body ul,
+.wiki-home-body .library-doc-body ol,
+.wiki-home-body .library-doc-body blockquote {
+  max-width: 48rem;
+}
+/* 한국어 산문 리듬 — 행간 1.7, 어절 단위 줄바꿈(keep-all). 자간·justify는
+   산문에 어디에도 걸려 있지 않음을 확인했고, 스크린샷의 이간 문제는 keep-all
+   부재로 인한 어중 줄바꿈이다. 표 셀의 ADR-0088 규약과 같은 조합이며, 긴
+   URL·코드 토큰은 overflow-wrap으로 잘라 넘침을 막는다. */
+.wiki-content-pane .library-doc-body p,
+.wiki-content-pane .library-doc-body li,
+.wiki-home-body .library-doc-body p,
+.wiki-home-body .library-doc-body li {
+  line-height: 1.7;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+/* 절 전환 리듬 — h2 위 여백을 넓혀 절이 문단 사이에서 읽히게 한다.
+   글자 크기는 /library 공유 규약(--fs 스케일)을 그대로 둔다. */
+.wiki-content-pane .library-doc-body h2 {
+  margin: 2rem 0 0.6rem;
+}
+.wiki-content-pane .library-doc-body ul,
+.wiki-content-pane .library-doc-body ol,
+.wiki-home-body .library-doc-body ul,
+.wiki-home-body .library-doc-body ol {
+  margin: 0.5rem 0;
+  padding-left: 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+/* 콘텐츠 SVG 다이어그램 — 판 너비를 넘지 않고 종횡비를 유지하며 반응형으로
+   줄어든다. 색상은 CSS 변수라 라이트/다크 테마 대응은 추가 작업이 없다.
+   (main svg로 넓히면 앱 전역 인라인 아이콘이 함께 영향받으므로 판 범위로
+   한정한다) */
+.wiki-content-pane svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
 @media (max-width: 880px) { /* design-token-exempt: breakpoint (custom properties invalid in query conditions) */
   .wiki-layout {
     grid-template-columns: 1fr;
