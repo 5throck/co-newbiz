@@ -87,7 +87,8 @@ describe("navigation SSOT (ADR-0105)", () => {
 
   // 2026-10-23 위키 인앱 뷰어 설계 D6: 이 구간 순서를 고정하는 단언이 없어
   // 추가됐다 — 문서 허브(모든 문서) 다음에 사용자용 안내서(/wiki)가 온다.
-  test("분석·참조 section order is pinned: benchmarks → library → wiki → glossary → strategy", () => {
+  // 2026-10-24 플로우 콘솔(화면 설계 §2.3): /flows는 R&BD 전략 뒤(참조 성격)로 등록.
+  test("분석·참조 section order is pinned: benchmarks → library → wiki → glossary → strategy → flows", () => {
     const section = NAV_SECTIONS.find((s: { label: string }) => s.label === "분석·참조")!;
     expect(section.items.map((i: { href: string }) => i.href)).toEqual([
       "/benchmarks",
@@ -95,12 +96,26 @@ describe("navigation SSOT (ADR-0105)", () => {
       "/wiki",
       "/glossary",
       "/strategy",
+      "/flows",
     ]);
     const wiki = section.items.find((i: { href: string }) => i.href === "/wiki");
     expect(wiki?.label).toBe("사용 안내서");
     // /wiki 본문 경로는 동적 세그먼트라 존재 검사를 건너뛰지만, 고아 검사를
     // 통과하려면 명시적 탈메뉴 등재가 필요하다(위 70–73행 원칙).
     expect(NON_MENU_ROUTES).toContain("/wiki/[slug]");
+  });
+
+  // 2026-10-24 플로우 콘솔 화면 설계 §2.1/§6(성공 기준 6): /flows는 메뉴 항목,
+  // 드라이런 세션 경로는 NON_MENU_ROUTES(사이드바 밖 별도 여정). 세션 목록
+  // (/flows/dry-run)도 Row 6 화면과 함께 NON_MENU 등재 — /flows 링크로 진입.
+  test("/flows is a menu item and its dry-run session routes stay off the menu", () => {
+    const section = NAV_SECTIONS.find((s: { label: string }) => s.label === "분석·참조")!;
+    const flows = section.items.find((i: { href: string }) => i.href === "/flows");
+    expect(flows?.label).toBe("플로우 콘솔");
+    expect(menuHrefs()).toContain("/flows");
+    expect(NON_MENU_ROUTES).toContain("/flows/dry-run");
+    expect(NON_MENU_ROUTES).toContain("/flows/dry-run/[sessionId]");
+    expect(menuHrefs()).not.toContain("/flows/dry-run");
   });
 
   test("connected apps is a registered sidebar and admin entry (no longer a topbar-only link)", () => {

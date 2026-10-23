@@ -2506,6 +2506,235 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/flows:
+    get:
+      operationId: getFlowsBlueprint
+      summary: S1-S12 flow console blueprint from the generated projections (stages/activities/agents/prompts/roster) — no runtime SSOT reads (ADR-0183 D4). requireBusinessActor read gate — admin gets role_forbidden (ADR-0146).
+      tags:
+        - Agents
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/flows/runs:
+    get:
+      operationId: listFlowRuns
+      summary: Global run ledger — process_run→activity_run→agent_run expansion, llm_call_log rows and a windowed usage summary (ADR-0183 D4). Cursor pagination (limit+before); project-entity rows are membership-scoped, opportunity rows are open to business actors. requireBusinessActor read gate (ADR-0146).
+      tags:
+        - Agents
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: before
+          in: query
+          schema:
+            type: string
+        - name: agentKey
+          in: query
+          schema:
+            type: string
+        - name: entityType
+          in: query
+          schema:
+            type: string
+            enum: [opportunity, project]
+        - name: entityId
+          in: query
+          schema:
+            type: string
+        - name: ok
+          in: query
+          schema:
+            type: integer
+            enum: [0, 1]
+        - name: source
+          in: query
+          schema:
+            type: string
+            enum: [llm, synthesis]
+        - name: includeDryRun
+          in: query
+          schema:
+            type: integer
+            enum: [0, 1]
+          description: '1 = include dry-run ledger rows (llm_call_log.is_dry_run=1, migration 0171). Default (absent) excludes them from both the llmCalls list and the summary (design §6.6 "운영 대시보드는 기본적으로 제외").'
+        - name: window
+          in: query
+          schema:
+            type: string
+            enum: [24h, 7d, 30d]
+          description: Summary aggregation window only; list pagination is cursor-based.
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/flows/dry-run/sessions:
+    get:
+      operationId: listDryRunSessions
+      summary: List dry-run sessions with status and cumulative session cost (ledger aggregate on dry_run_group_id). Expired sessions are purged on read (TTL, design §6.8). requireBusinessActor read gate (ADR-0146).
+      tags:
+        - Agents
+      parameters:
+        - name: mine
+          in: query
+          schema:
+            type: integer
+            enum: [0, 1]
+          description: 1 = only sessions created by the caller.
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      operationId: createDryRunSession
+      summary: Create a dry-run session for one catalog prompt (validates the prompt is cataloged with a static agent and the override agent key is on the roster; returns a cost estimate). Does NOT execute — execution is a separate confirmed step. Session-scoped overrides only; the SSOT (prompts.json / flow.spec.yaml / agents) is never written (design §6.6). requireBusinessActor write (analyst+).
+      tags:
+        - Agents
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '201':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+
+  /api/flows/dry-run/sessions/{sessionId}:
+    get:
+      operationId: getDryRunSession
+      summary: Dry-run session detail — overrides, latest base/override outputs with source flags, preference, and ledger aggregates (runs/cost) for the session group.
+      tags:
+        - Agents
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/flows/dry-run/sessions/{sessionId}/execute:
+    post:
+      operationId: executeDryRunSession
+      summary: Run the dry-run — base and override calls BOTH go through the production completeOrFallback path with a dryRun context (no parallel implementation, design §6.6). Ledger rows are flagged is_dry_run=1 + dry_run_group_id=session id; results never touch business tables. LLM-unconfigured returns deterministic fallback text for both legs with source flags (not an error). requireBusinessActor write (analyst+).
+      tags:
+        - Agents
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+
+  /api/flows/dry-run/sessions/{sessionId}/preference:
+    post:
+      operationId: recordDryRunPreference
+      summary: Record the A/B preference (base|override|tie) with an optional one-line note — the golden-set seed (design §6.6 (3), screen design §13-5). Only after an execution. requireBusinessActor write (analyst+).
+      tags:
+        - Agents
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+
+  /api/flows/dry-run/sessions/{sessionId}/export:
+    post:
+      operationId: exportDryRunProposal
+      summary: Build the proposal-only export package (prompt key, base/override system text, diff summary, preference, dry-run evidence with outputs/cost, catalogVersion) as a markdown artifact. The ONLY permanent-landing vehicle — the package goes to a repository PR via the Design Gate; this API never writes the SSOT. requireBusinessActor write (analyst+).
+      tags:
+        - Agents
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+
+  /api/flows/dry-run/suggest:
+    post:
+      operationId: suggestDryRunImprovement
+      summary: AI improvement proposal (D6, proposal-only) for one prompt — improved system draft or up to 3 roster agent-reassignment candidates with rationale. The suggestion call itself goes through the PM gateway and run ledger as the pm.flow_suggest catalog activity (no dry-run flag). LLM-unconfigured returns available=false with "제안 생성 불가" and the failure reason — never fake suggestions. requireBusinessActor write (analyst+).
+      tags:
+        - Agents
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /api/market-overview/analyses:
     post:
       operationId: createMarketAnalysis
@@ -8661,6 +8890,12 @@ components:
             $ref: '#/components/schemas/Envelope'
     NotFound:
       description: 'The 404 contract — returned both for missing resources AND for projects the caller cannot see (FR-SEC-01: existence itself is protected; project reads never return 403).'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+    Unprocessable:
+      description: Semantically invalid for the current state — envelope error.code names the violated precondition (e.g. not_executed, expired, dynamic_prompt).
       content:
         application/json:
           schema:

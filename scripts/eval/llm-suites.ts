@@ -18,15 +18,15 @@ import { runOpportunityEvaluationChain } from "../../app/web-next/lib/agent-chai
 import { parsePositionMeta } from "../../app/web-next/lib/committee-llm.ts";
 import { parseDrafts } from "../../app/web-next/lib/llm-executors.ts";
 import { promptSystem, systemMessage } from "../../app/web-next/lib/prompts.ts";
-import { completeDetailed, completeStructured, type LlmMessage, type StructuredResult, type SynthesisResult } from "../../app/web-next/lib/llm.ts";
+import { completeDetailed, completeStructured, type AgentCallMeta, type LlmMessage, type StructuredResult, type SynthesisResult } from "../../app/web-next/lib/llm.ts";
 import { costUsd, type LlmUsage } from "../../app/web-next/lib/llm-usage.ts";
 import type { LoadedCase } from "./loader.ts";
 import type { GoldenSet } from "./loader.ts";
 import type { CaseScore, CouldNotEvaluate, SuiteResult } from "./types.ts";
 
 export interface EvalLlm {
-  completeDetailed(messages: LlmMessage[], opts: { temperature?: number; maxTokens?: number }): Promise<{ text: string; usage: LlmUsage }>;
-  completeStructured<T>(opts: { messages: LlmMessage[]; schema: z.ZodType<T>; schemaName: string; maxTokens?: number }): Promise<StructuredResult<T> | SynthesisResult>;
+  completeDetailed(messages: LlmMessage[], opts: { temperature?: number; maxTokens?: number; agent: AgentCallMeta }): Promise<{ text: string; usage: LlmUsage }>;
+  completeStructured<T>(opts: { messages: LlmMessage[]; schema: z.ZodType<T>; schemaName: string; maxTokens?: number; agent: AgentCallMeta }): Promise<StructuredResult<T> | SynthesisResult>;
 }
 
 export const realEvalLlm: EvalLlm = {
@@ -169,7 +169,7 @@ export async function runReviewAi2Suite(set: GoldenSet, llm: EvalLlm): Promise<S
     }
     attempted++;
     const messages = buildAi2ndMessages(art, sel.reviewerAgent, sel.reviewerDomain, sel.authorDomain);
-    const r = await llm.completeStructured({ messages, schema: Ai2ndOutputSchema, schemaName: "ai_second_review", maxTokens: 1500 });
+    const r = await llm.completeStructured({ messages, schema: Ai2ndOutputSchema, schemaName: "ai_second_review", maxTokens: 1500, agent: { key: sel.reviewerAgent, purpose: "eval review_findings", functionName: "eval.review_ai2" } });
     if (r.source !== "llm") {
       cases.push({ caseId: lc.case.case_id, stage: exp.stage, fn: "review_findings", score: 0, failures: [`no valid structured output (${"reason" in r ? String(r.reason) : "synthesis"})`] });
       continue;
@@ -212,7 +212,7 @@ export async function runStageRecoSuite(set: GoldenSet, llm: EvalLlm): Promise<S
     const texts = new Map<string, string>();
     const ask: Parameters<typeof runOpportunityEvaluationChain>[1] = async (agent, system, user, fallback, maxTokens) => {
       try {
-        const r = await llm.completeDetailed([{ role: "system", content: system }, { role: "user", content: user }], { temperature: 0, maxTokens });
+        const r = await llm.completeDetailed([{ role: "system", content: system }, { role: "user", content: user }], { temperature: 0, maxTokens, agent: { key: agent.key, purpose: `eval stage-reco: ${agent.key}`, functionName: "eval.stage_reco" } });
         texts.set(agent.key, r.text);
         return { text: r.text, source: "llm" };
       } catch (err) {
@@ -261,7 +261,7 @@ export async function runCommitteeSuite(set: GoldenSet, llm: EvalLlm): Promise<S
   for (const lc of set.cases) {
     const agentKey = "risk-officer";
     const prompt = `Deal: ${caseName(lc)}\nFacts (public, pre-decision): ${JSON.stringify(factsOf(lc)).slice(0, 1500)}\nGive your position.`;
-    const r = await llm.completeDetailed([systemMessage("committee.position"), { role: "user", content: `당신은 ${agentKey} 입니다.\n\n${prompt}` }], { temperature: 0, maxTokens: 900 });
+    const r = await llm.completeDetailed([systemMessage("committee.position"), { role: "user", content: `당신은 ${agentKey} 입니다.\n\n${prompt}` }], { temperature: 0, maxTokens: 900, agent: { key: agentKey, purpose: "eval committee position", functionName: "eval.committee" } });
     const meta = parsePositionMeta(r.text);
     const failures: string[] = [];
     let score = 1;
@@ -289,7 +289,7 @@ export async function runDdTailorSuite(set: GoldenSet, llm: EvalLlm): Promise<Su
     const exp = lc.case.expectations.find((e) => e.function === "dd_tailoring");
     if (!exp) continue;
     n++;
-    const r = await llm.completeDetailed([systemMessage("s9.dd_tailor"), { role: "user", content: `도메인: legal\n산업: ${String(factsOf(lc).relevant_market ?? caseName(lc))}\n프로젝트: ${lc.case.case_id}` }], { temperature: 0, maxTokens: 1400 });
+    const r = await llm.completeDetailed([systemMessage("s9.dd_tailor"), { role: "user", content: `도메인: legal\n산업: ${String(factsOf(lc).relevant_market ?? caseName(lc))}\n프로젝트: ${lc.case.case_id}` }], { temperature: 0, maxTokens: 1400, agent: { key: "technical-dd-agent", purpose: "eval dd_tailoring", functionName: "eval.dd_tailor" } });
     const drafts = parseDrafts(r.text);
     const failures: string[] = [];
     if (drafts.length === 0) failures.push("no parseable tailored items");
@@ -312,7 +312,7 @@ export async function runBusinessCaseSuite(set: GoldenSet, llm: EvalLlm): Promis
       .filter(([, v]) => typeof v === "number" || typeof v === "string")
       .map(([k, v]) => `- ${k}: ${String(v)}`)
       .join("\n");
-    const r = await llm.completeDetailed([systemMessage("s8.business_case_prose"), { role: "user", content: `단계/역할: valuation-agent\n시나리오: base\n\n[확정 수치 블록]\n${block}` }], { temperature: 0, maxTokens: 800 });
+    const r = await llm.completeDetailed([systemMessage("s8.business_case_prose"), { role: "user", content: `단계/역할: valuation-agent\n시나리오: base\n\n[확정 수치 블록]\n${block}` }], { temperature: 0, maxTokens: 800, agent: { key: "valuation-agent", purpose: "eval business_case_prose", functionName: "eval.business_case" } });
     const text = r.text.trim();
     const failures: string[] = [];
     if (!text) {

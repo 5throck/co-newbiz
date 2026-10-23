@@ -1,0 +1,11 @@
+-- @reversible: true (additive index on an append-only execution ledger;
+-- rollback is a pre-migration backup restore, scripts/co-newbiz/restore.ts,
+-- ADR-0014. No existing column or row is changed.)
+-- 2026-09-15-runtime-pm-agent-orchestration §6.5 (D4 플로우 콘솔) —
+-- /api/flows/runs 의 agent_key 필터·요약 집계가 agent_run 전체 스캔 없이
+-- 동작하도록 한다. 기존 인덱스는 idx_agent_run_process(process_run_id)뿐이고
+-- llm_call_log 쪽에는 idx_llm_call_log_agent(0092)가 이미 있어 agent_key
+-- 필터가 agent_run에서만 병목이었다. 컬럼명은 0045_process_execution.sql
+-- (agent_key TEXT NOT NULL, started_at TEXT NOT NULL)에서 확인했다.
+-- IF NOT EXISTS: 0064 계열 테이블 리빌드 환경에서의 재적용 안전을 위해 명시한다.
+CREATE INDEX IF NOT EXISTS idx_agent_run_agent_key ON agent_run(agent_key, started_at DESC);

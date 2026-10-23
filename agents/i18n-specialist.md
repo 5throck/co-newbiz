@@ -3,12 +3,15 @@ name: i18n-specialist
 formal_name: I18N Specialist Agent
 role: specialist
 status: active
+domain: _shared
 tier:
   claude: medium
   gemini: medium
   antigravity: medium
   gemini-cli: medium
   codex: medium
+  hermes: medium  # claude-sonnet-5-5
+  zai: medium  # glm-5.3-flash
 model: inherit
 lifecycle:
   phase: production

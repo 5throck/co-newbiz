@@ -1,10 +1,11 @@
 #!/usr/bin/env bun
-// @version 1.1.0
+// @version 1.2.0
 /**
  * co-newbiz variant audit hook — executed by scripts/audit.ts §27 (the
- * pluggable variant-specific audit checks; probed at
- * scripts/<variant>/audit-variant.ts). Runs the project-local gates that the
- * shared core audit knows nothing about. Exits non-zero when any fails.
+ * pluggable variant-specific audit checks; declared in variant.json
+ * script_manifest.local as scripts/co-newbiz/audit-variant.ts). Runs the
+ * project-local gates that the shared core audit knows nothing about. Exits
+ * non-zero when any fails (audit.ts §27 maps that to a Fail).
  *
  * Checks:
  *   - MCP coverage (Wave M, ADR-0154): every flow.spec S1-S12 activity and
@@ -16,9 +17,20 @@
  *     directories (both directions reported), and no "Retired / Tracked
  *     Elsewhere" row has a directory (repaired skills must graduate back into
  *     the Workspace Skills table).
+ *   - Runtime agent-registry drift gate (ADR-0183 D3, design
+ *     2026-09-15-runtime-pm-agent-orchestration §6.4): v1.2.0 moved this gate
+ *     here from a direct scripts/audit.ts wiring — audit.ts is a core script
+ *     that must stay identical to templates/common (Core Script
+ *     Standardization), so variant-specific audit checks belong in this
+ *     pluggable hook. Skips with a visible note when the generator is absent
+ *     (non-web contexts).
+ *   - Runtime PM-catalog drift gate (ADR-0183 D1/D3, design §6.2/§6.4): same
+ *     relocation rationale; unit-level enforcement also exists in
+ *     tests/unit/pm-catalog.test.ts — this keeps a stale catalog from passing
+ *     an audit run that skips unit tests.
  */
 
-import { readdirSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runCoverage } from "./mcp-coverage.ts";
@@ -160,5 +172,47 @@ if (registry.errors.length === 0) {
   console.error(`  ✗ SKILLS.md registry parity failed (${registry.errors.length}):`);
   for (const e of registry.errors) console.error(`      - ${e}`);
 }
+
+/**
+ * Runtime projection drift gates (ADR-0183 D1/D3). Each gate runs its
+ * generator's --check via Bun spawn: exit 0 = projection matches its SSOTs
+ * (Pass); non-zero = drift (Fail with the regeneration remediation hint).
+ * A missing generator script means a non-web context — skip with a visible
+ * note, never silently.
+ */
+function runDriftGate(label: string, generator: string, staleTarget: string): void {
+  const generatorPath = join(ROOT, generator);
+  if (!existsSync(generatorPath)) {
+    console.log(`  – ${label} drift gate skipped: ${generator} not present (non-web context)`);
+    return;
+  }
+  const proc = Bun.spawnSync(["bun", generator, "--check"], {
+    cwd: ROOT,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  if (proc.exitCode !== 0) {
+    failed = true;
+    console.error(`  ✗ ${label} drift detected: ${staleTarget} is stale —`);
+    const out = new TextDecoder().decode(proc.stdout);
+    const err = new TextDecoder().decode(proc.stderr);
+    if (out) console.error(out);
+    if (err) console.error(err);
+    console.error(`      remediation: bun ${generator}, review, and commit`);
+  } else {
+    console.log(`  ✓ ${label} drift gate: runtime projection matches its SSOTs`);
+  }
+}
+
+runDriftGate(
+  "Agent-registry",
+  "scripts/co-newbiz/generate-agent-registry.ts",
+  "app/web-next/lib/agent-registry.generated.ts",
+);
+runDriftGate(
+  "PM-catalog",
+  "scripts/co-newbiz/generate-pm-catalog.ts",
+  "app/web-next/lib/pm-catalog.generated.ts",
+);
 
 process.exit(failed ? 1 : 0);

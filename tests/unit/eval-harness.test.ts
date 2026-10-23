@@ -151,8 +151,9 @@ describe("runEval", () => {
     try {
       const ledger = new RunLedger(2);
       const llm = metered(mockLlm("x"), ledger);
-      await llm.completeDetailed([], {});
-      await expect(llm.completeDetailed([], {})).rejects.toThrow(/no price/);
+      const meta = { agent: { key: "pm", purpose: "eval harness" } };
+      await llm.completeDetailed([], meta);
+      await expect(llm.completeDetailed([], meta)).rejects.toThrow(/no price/);
     } finally {
       setPricingTableForTests(null);
     }
