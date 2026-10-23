@@ -85,9 +85,16 @@ function insertRun(projectId: string): string {
   return id;
 }
 
+let industrySeq = 0;
 function insertIndustry(): string {
   const id = ulid();
-  db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [id, `30${id.slice(-3)}`, "테스트 업종", "Test industry", NOW]);
+  // ksic_code is UNIQUE (migration 0001). The old derivation, "30" + ulid.slice(-3), was 15 random
+  // bits: ulid() re-seeds fresh 80-bit randomness on every new millisecond (ids born in the SAME
+  // millisecond are monotonic and safe), so two industries created in different tests collided at
+  // the birthday rate (~1/32768 per cross-test pair) and threw UNIQUE constraint failures in a
+  // random test of this file (~1 run in 200) — the intermittent full-suite flake. A file-local
+  // counter cannot collide and keeps a KSIC-shaped 5-digit code ("30001", …).
+  db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [id, `30${String(++industrySeq).padStart(3, "0")}`, "테스트 업종", "Test industry", NOW]);
   return id;
 }
 

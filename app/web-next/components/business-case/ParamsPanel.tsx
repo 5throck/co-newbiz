@@ -247,7 +247,7 @@ function CurrentParamsTable({ resolved, track, s5Pin, s5Run, s5PinCapexTotal, an
         <thead>
           <tr>
             <th scope="col">항목</th>
-            <th scope="col">값</th>
+            <th scope="col" className="col-num">값</th>
             <th scope="col" className="whitespace-nowrap">단위</th>
             <th scope="col" className="whitespace-nowrap">출처</th>
             {gf && <th scope="col" className="whitespace-nowrap">S5 연동</th>}

@@ -4,9 +4,13 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { api } from "../../../../lib/api.ts";
-import { PageState, useToast } from "../../../../components/ui.tsx";
+import { ColGroup, PageState, useToast } from "../../../../components/ui.tsx";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
+
+// 보상 패키지 표 6열(조사내역 등록 열은 canAct일 때만) — ColGroup 고정 % (R10 table-sizing).
+const PKG_COL_PCT_ACT = [14, 18, 18, 12, 14, 24] as const;
+const PKG_COL_PCT_RO = [18, 24, 22, 14, 22] as const;
 
 // 경영진 보상·임금 형평 (hr-integration-agent) — Wave 0 REST B9.
 // 집계 전용 (k-익명성 ≥3) + 경영진 참조만 노출 (SEC-05, 개인 노출 없음).
@@ -112,7 +116,8 @@ function CompView() {
             <PageState state="empty" emptyText="등록된 보상 패키지가 없습니다." />
           ) : (
             <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table" aria-label="보상 패키지">
+            <table className="data-table table-fixed-pct tmin-56" aria-label="보상 패키지">
+              <ColGroup widths={canAct ? PKG_COL_PCT_ACT : PKG_COL_PCT_RO} />
               <thead><tr><th>임원 참조</th><th>역할</th><th className="col-num">기본급</th><th>CoC</th><th>리스크</th>{canAct && <th>조사내역 등록</th>}</tr></thead>
               <tbody>{data.management_packages.map((r) => (
                 <tr key={r.id}>

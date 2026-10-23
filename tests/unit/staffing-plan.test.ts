@@ -197,6 +197,11 @@ describe("routes: partial saves, masking, audit", () => {
   const stored = (): any[] => JSON.parse((db.query("SELECT business_case_lines_json j FROM greenfield_assessment WHERE opportunity_id = ?").get(oppId) as { j: string }).j);
   const META = { source: "plan_meta", horizonYears: 3 };
   const manual = { line: "임대료", category: "opex", amount: 5, amountUnit: "krw_m", amountUnitConfirmed: true, currency: "KRW", period: "yearly" };
+  // Volatile tokens in server output — ISO timestamps and ULIDs — can contain a numeric sentinel's
+  // digits by chance (the ".777Z" millisecond field flaked the raw-JSON check once per ~1000 runs,
+  // and a ULID's base32 chars can spell a short digit run too). Scrub them so a match can only mean
+  // a genuine salary leak — the same discipline as the detail strip below.
+  const scrubVolatile = (s: string) => s.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/g, "").replace(/[0-9A-Z]{26}/g, "");
 
   beforeAll(async () => {
     for (const [u, role] of [[LEAD, "analyst"], [VIEW, "viewer"]] as const) {
@@ -228,7 +233,7 @@ describe("routes: partial saves, masking, audit", () => {
     const detail = audit[0].target.split("#").slice(1).join("#").replace(/[0-9a-f]{8,}/gi, "");
     for (const v of ["777", "33", "내부 추정"]) expect(detail).not.toContain(v);
     expect(audit[0].target).not.toContain("내부 추정");
-    expect(audit[0].target).not.toContain("777");
+    expect(scrubVolatile(audit[0].target)).not.toContain("777");
   });
 
   test("lines-only POST without the plan keeps it; unchanged plan re-save writes no second audit event", async () => {
@@ -269,7 +274,7 @@ describe("routes: partial saves, masking, audit", () => {
       expect(r.salarySource).toBeNull();
       expect(r.headcountByYear.length).toBe(3);
     }
-    expect(JSON.stringify(d)).not.toContain("777");
+    expect(scrubVolatile(JSON.stringify(d))).not.toContain("777");
     expect(d.staffing_plan_view.totalKrwM).toBeGreaterThan(0);
     expect((await post({ business_case_lines: [META, plan([])] }, viewer)).status).toBe(403);
   });
