@@ -102,3 +102,48 @@ describe("wiki read routes require authentication (design D7)", () => {
     expect((await res.json()).error.code).toBe("not_found");
   });
 });
+
+describe("percent-encoded slug resolution (2026-10-23 double-encoding defect)", () => {
+  // 실측 결함: 클라이언트가 이미 인코딩된 useParams 값을 encodeURIComponent로
+  // 한 번 더 싸서(%25EA…) 이중 인코딩 URL로 조회 → 핸들러가 인코딩 문자열을 그대로
+  // 받아 키 집합 조회 실패(404). 핸들러의 방어적 해제로 인코딩·원값 모두 성립한다.
+  const RAW = "31-공통-S9-실사";
+  const ONCE = "31-%EA%B3%B5%ED%86%B5-S9-%EC%8B%A4%EC%82%AC"; // 정상 클라이언트(한 번 인코딩) URL 꼴
+  const TWICE = "31-%25EA%25B3%25B5%25ED%2586%25B5-S9-%25EC%258B%25A4%25EC%2582%25AC"; // 결함 클라이언트(이중 인코딩) URL 꼴
+
+  test("single-encoded URL resolves the page (dispatcher decodes, handler decode is a no-op)", async () => {
+    const res = await req(`/api/wiki/${ONCE}`, { headers: { cookie: viewerCookie } });
+    expect(res.status).toBe(200);
+    expect((await res.json()).data.slug).toBe(RAW);
+  });
+
+  test("double-encoded URL also resolves — the handler received the once-encoded segment (the measured 404 scenario)", async () => {
+    const res = await req(`/api/wiki/${TWICE}`, { headers: { cookie: viewerCookie } });
+    expect(res.status).toBe(200);
+    expect((await res.json()).data.slug).toBe(RAW);
+  });
+
+  test("raw Korean slug still resolves after the defensive decode", async () => {
+    const res = await req(`/api/wiki/${RAW}`, { headers: { cookie: viewerCookie } });
+    expect(res.status).toBe(200);
+    expect((await res.json()).data.slug).toBe(RAW);
+  });
+
+  test("malformed % sequence is 404 not_found, never a thrown 500", async () => {
+    // %25zz → 디스패처 해제 후 핸들러가 "%zz"를 받는다 — decodeURIComponent가
+    // 던지는 URIError는 원값 통과로 흡수되고, 없는 슬러그는 404 봉투로 내려간다.
+    const res = await req("/api/wiki/%25zz", { headers: { cookie: viewerCookie } });
+    expect(res.status).toBe(404);
+    expect((await res.json()).error.code).toBe("not_found");
+  });
+
+  test("encoded image file name resolves through the same defensive decode (D4 allowlist intact)", async () => {
+    // 허용목록은 ASCII지만 세그먼트가 인코딩된 채 도달하는 꼴에서도 같은 이름으로 성립한다.
+    const res = await req("/api/wiki/images/common-01-login.png", { headers: { cookie: viewerCookie } });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("image/png");
+    const encoded = await req("/api/wiki/images/common%2D01%2Dlogin%2Epng", { headers: { cookie: viewerCookie } });
+    expect(encoded.status).toBe(200);
+    expect(encoded.headers.get("content-type")).toBe("image/png");
+  });
+});

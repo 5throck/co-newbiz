@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { api, ApiError } from "../../../lib/api.ts";
-import { defaultRewriteContext, renderWikiMarkdown, rewriteWikiLinks } from "../../../lib/wiki.ts";
+import { decodePathSegment, defaultRewriteContext, renderWikiMarkdown, rewriteWikiLinks } from "../../../lib/wiki.ts";
 import type { WikiPageContent, WikiSidebarGroup } from "../../../lib/wiki.ts";
 
 // 렌더 대상은 저장소에 커밋된 위키 원본뿐(인덱스 화면과 동일 신뢰 모델).
@@ -76,7 +76,11 @@ function JourneyNav({ groups, current }: { groups: WikiSidebarGroup[]; current: 
 }
 
 export function WikiPageView() {
-  const { slug } = useParams<{ slug: string }>();
+  // useParams는 세그먼트를 인코딩된 채 돌려준다(실측 결함: 인코딩된 값을
+  // encodeURIComponent로 다시 싸서 이중 인코딩 URL로 조회 → 404). 한 번 풀어
+  // 상태로 쓴다 — fetch 인자·목차 하이라이트·effect 의존성이 전부 이 값이다.
+  const rawSlug = useParams<{ slug: string }>().slug;
+  const slug = decodePathSegment(rawSlug ?? "");
   const [groups, setGroups] = useState<WikiSidebarGroup[]>([]);
   const [footer, setFooter] = useState("");
   const [page, setPage] = useState<WikiPageContent | null>(null);
@@ -109,7 +113,7 @@ export function WikiPageView() {
   return (
     <main>
       <div className="wiki-layout">
-        <JourneyNav groups={groups} current={slug ?? null} />
+        <JourneyNav groups={groups} current={slug} />
         <div className="wiki-content-pane">
           {missing ? (
             <p role="alert">해당 문서를 찾을 수 없습니다. 왼쪽 목록에서 페이지를 고르세요.</p>

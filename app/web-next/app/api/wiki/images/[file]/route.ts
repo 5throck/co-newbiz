@@ -8,7 +8,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { authenticate } from "../../../../../lib/auth.ts";
-import { resolveWikiImageFile } from "../../../../../lib/wiki.ts";
+import { decodePathSegment, resolveWikiImageFile } from "../../../../../lib/wiki.ts";
 import { notFound } from "../../../../../lib/envelope.ts";
 
 // import.meta.dirname은 Turbopack 번들링에서 생존하지 않는다(프로덕션 컨테이너
@@ -32,9 +32,12 @@ export async function GET(
 ) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const { file } = await params;
-  const name = resolveWikiImageFile(file);
-  if (!name) return notFound(`No wiki image named ${name ?? file}.`);
+  const { file: rawFile } = await params;
+  // 슬러그 경로와 같은 방어(실측: 세그먼트가 인코딩된 채 도달할 수 있다) —
+  // 허용목록은 전부 ASCII라 오늘 원값과 동일하지만, 클라이언트가 인코딩해 보내는
+  // 꼴에서도 같은 이름으로 성립하게 키 집합 조회 전에 한 번 푼다.
+  const name = resolveWikiImageFile(decodePathSegment(rawFile));
+  if (!name) return notFound(`No wiki image named ${name ?? rawFile}.`);
 
   const filePath = path.join(resolveWikiImagesDir(), name);
   let bytes: Buffer;
