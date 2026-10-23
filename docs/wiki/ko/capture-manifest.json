@@ -420,12 +420,27 @@
   {
    "id": "s10-gf-03-baseline-confirm-dialog",
    "file": "s10-gf-03-baseline-confirm-dialog.png",
-   "url": "/projects/{gfProj}/deal-structure",
+   "url": "/projects/{gfProj}/ic-review",
    "as": "analyst",
    "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
-   "page": "42-공통-S10-투자구조-설계.md",
-   "caption": "기준선 확정 대화상자(열기만 함)",
-   "skip": "데모 시드에 기준선이 이미 확정되어 있어 확정 대화상자를 열 수 없음"
+   "steps": [
+    {
+     "click": "role=tab[name=/실행 기준선/]"
+    },
+    {
+     "fill": {
+      "selector": "form[aria-label='실행 기준선 확인'] textarea",
+      "text": "데모 캡처용 근거 — 대화상자를 열어 보기만 하고 기록하지 않는다."
+     }
+    },
+    {
+     "click": "form[aria-label='실행 기준선 확인'] button[type=submit]",
+     "openOnly": true,
+     "waitFor": "[role='alertdialog'][aria-label='실행 기준선 확인']"
+    }
+   ],
+   "page": "43-그린필드-S10-실행-기준선.md",
+   "caption": "실행 기준선 확인 대화상자(열기만 함)"
   },
   {
    "id": "s11-gf-01-establishment",
@@ -448,7 +463,8 @@
    "url": "/projects/{gfProj}/portfolio",
    "as": "analyst",
    "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
-   "page": "44-공통-S12-사후-관리.md",
+   "fullPage": true,
+   "page": "45-그린필드-S12-사후-관리.md",
    "caption": "기준선 대비 차이"
   },
   {

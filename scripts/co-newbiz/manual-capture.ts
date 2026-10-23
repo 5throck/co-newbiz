@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 // User-manual screenshot capture. Boots the E2E harness (isolated production
 // build, throwaway SQLite DB, free port; never 7748/7749), seeds BOTH S1-S12
 // demo chains (Brown Field M&A + Green Field) into that one DB, logs in through
@@ -38,6 +38,9 @@ interface Step {
   click?: string;
   /** Click is allowed to hit a write-looking label because it only opens a dialog. */
   openOnly?: boolean;
+  /** Type this text into the selector (client-side only — never submits; the
+   *  read-only route lock still blocks any non-GET the page might fire). */
+  fill?: { selector: string; text: string };
   /** Wait for this selector to be visible after the step. */
   waitFor?: string;
   /** Scroll this selector into view. */
@@ -159,6 +162,11 @@ async function runStep(page: Page, step: Step, c: Capture): Promise<void> {
     if (!step.openOnly && WRITE_LABEL.test(label)) throw new Error(`${c.id}: refusing to click write-looking label "${label}"`);
     await loc.click();
     await settle(page);
+  }
+  if (step.fill) {
+    const loc = page.locator(step.fill.selector).first();
+    await loc.waitFor({ state: "visible", timeout: 15_000 });
+    await loc.fill(step.fill.text);
   }
   if (step.waitFor) await page.locator(step.waitFor).first().waitFor({ state: "visible", timeout: 20_000 });
   if (step.scrollTo) await page.locator(step.scrollTo).first().scrollIntoViewIfNeeded();
