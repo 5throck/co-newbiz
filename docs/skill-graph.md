@@ -339,6 +339,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0181` | adr | — | — | — |
 | `adr:0182` | adr | — | — | — |
 | `adr:0183` | adr | — | — | — |
+| `adr:0184` | adr | — | root/i18n-audit, root/i18n-locale-config | — |
 | `dec:DEC-20260908-01` | decision | `root/project-review` | — | — |
 | `dec:DEC-20260908-02` | decision | `root/waiver-management` | — | — |
 | `dec:DEC-20260909-01` | decision | — | — | — |
@@ -378,6 +379,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20261017-01` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261020-01` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261023-01` | decision | `root/decision-record` | — | — |
+| `dec:DEC-20261023-02` | decision | `root/decision-record` | — | — |
 | `doc:AGENTS.md` | doc | `root/agent-lifecycle-manager`, `root/skill-lifecycle-manager` | — | — |
 | `doc:CODEX.md` | doc | `root/meeting-facilitation` | — | — |
 | `doc:procedures/README.md` | doc | `root/antitrust-screening`, `root/brownfield-feasibility`, `root/regional-incentive-sourcing`, `root/site-infrastructure-assessment` | — | — |

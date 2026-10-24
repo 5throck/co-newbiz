@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-23T20:55:39.234Z
+**Generated**: 2026-10-24T10:06:58.853Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -10,7 +10,7 @@
 
 - **Agents**: 42
 - **Skills**: 105
-- **Scripts**: 170 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Scripts**: 171 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 8
 
 ---
@@ -269,6 +269,7 @@
 | handbook-doctor.ts | 1.0.0 | scripts/handbook/handbook-doctor.ts | N/A |
 | handbook-sync-audit.ts | 1.0.0 | scripts/handbook/handbook-sync-audit.ts | N/A |
 | hwp-extract.ts | 1.0.0 | scripts/co-newbiz/hwp-extract.ts | N/A |
+| i18n-lint.ts | 1.0.0 | scripts/co-newbiz/i18n-lint.ts | N/A |
 | inventory.ts | 1.0.0 | scripts/eval/inventory.ts | js-yaml, zod |
 | job-worker.ts | 1.0.0 | scripts/co-newbiz/job-worker.ts | N/A |
 | kosis-units.ts | 1.0.2 | scripts/co-newbiz/kosis-units.ts | N/A |
