@@ -14,7 +14,7 @@ function OurCompanyView() {
   const tr = useTranslations();
   return (
     <main>
-      <h1>{tr("ourCompany.h1")}</h1>
+      <h1>{tr("pages.ourCompany.h1")}</h1>
       <p className="mt-[0.15rem] mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">{tr(OUR_COMPANY_COPY.s3Lead)}</p>
       <details className="how-used mb-3">
         <summary>{tr(OUR_COMPANY_COPY.howUsedSummary)}</summary>
