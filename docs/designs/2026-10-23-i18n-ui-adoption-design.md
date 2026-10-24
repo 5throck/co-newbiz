@@ -142,7 +142,7 @@ Termbase: `glossary/*.yaml` (87 approved ko/en term pairs) is the authoritative 
 - DB `name_ko`-style schema changes (no stored-name localization)
 - Translations beyond ko/en
 - ja/zh (and other CJK) font work
-- ~~In-app language switcher UI control~~ — scope amendment: brought INTO scope per the approved execution plan 2026-10-23 (the user approved the plan containing it); ships as `components/LocaleSwitcher.tsx` in the AppShell on the same `NEXT_LOCALE` cookie seam (D3), with catalog endonym labels (`common.locale.*`)
+- ~~In-app language switcher UI control~~ — scope amendment: brought INTO scope per the approved execution plan 2026-10-23 (the user approved the plan containing it); ships as `components/LocaleSwitcher.tsx` in the AppShell on the same `NEXT_LOCALE` cookie seam (D3), with catalog endonym labels (`common.locale.*`). Switcher form amendment (2026-10-24, user-directed): the switcher is a disclosure dropdown, not a pill button group — the trigger shows the active locale's endonym plus a caret (ARIA label `common.languageSwitcher`); the popup (`role="menu"`) lists every locale in `i18n/config.ts` `locales` order as endonyms (`common.locale.*`), the active entry being `role="menuitemradio"` with `aria-checked="true"`; the house disclosure pattern (crud.tsx `RowMenu` / StageTabs) scales to the 16-locale baseline without topbar layout growth.
 - RTL layout verification (the direction map is infrastructure only)
 
 ## 8. Governance notes
