@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-10-25](2026-10-25.md) | docs(docs): workspace sync (11 files) |
 | [2026-10-25](2026-10-25.md) | chore(visual): commit aHash baselines, pin macos runner; record getDb migration analysis |
 | [2026-10-24](2026-10-24.md) | docs(wiki): close the five visual-enrichment follow-ups from the rebuild design V1 waiver |
 | [2026-10-23](2026-10-23.md) | test: refresh migration/library test contracts for bun 1.4 driver behavior and the 0013 schema extension |

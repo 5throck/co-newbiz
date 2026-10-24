@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-24T15:04:23.340Z
+**Generated**: 2026-10-24T17:46:53.600Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -37,7 +37,7 @@
 | greenfield-agent | agents/greenfield-agent.md | high | inherit | 2026-10-08 |
 | group-review-agent | agents/group-review-agent.md | high | inherit | 2026-10-08 |
 | hr-integration-agent | agents/hr-integration-agent.md | high | inherit | 2026-10-08 |
-| i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-10-23 |
+| i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-10-24 |
 | incentive-agent | agents/incentive-agent.md | medium | inherit | 2026-10-08 |
 | industry-lead | agents/industry-lead.md | high | inherit | 2026-10-08 |
 | infra-automation-engineer | agents/infra-automation-engineer.md | medium | inherit | 2026-10-08 |
@@ -239,7 +239,7 @@
 | design-lint.ts | 1.4.0 | scripts/co-newbiz/design-lint.ts | N/A |
 | design-lint.ts | 2.2.0 | scripts/design-lint.ts | js-yaml |
 | deterministic.ts | 1.1.0 | scripts/eval/deterministic.ts | N/A |
-| dev-sync.ts | 1.28.0 | scripts/dev-sync.ts | bun |
+| dev-sync.ts | 1.29.0 | scripts/dev-sync.ts | bun |
 | dispatch-parallel.ts | 1.1.1 | scripts/dispatch-parallel.ts | N/A |
 | dispatch-serial.ts | 1.1.2 | scripts/dispatch-serial.ts | N/A |
 | dispatch.ts | 1.1.1 | scripts/dispatch.ts | N/A |
@@ -328,7 +328,7 @@
 | typecheck.ts | 1.2.0 | scripts/typecheck.ts | N/A |
 | types.ts | 1.1.0 | scripts/eval/types.ts | N/A |
 | update-footers.ts | 1.0.0 | scripts/handbook/update-footers.ts | N/A |
-| upgrade-project.ts | 1.71.0 | scripts/upgrade-project.ts | N/A |
+| upgrade-project.ts | 1.72.0 | scripts/upgrade-project.ts | N/A |
 | ux-layout-check.ts | 1.0.0 | scripts/co-newbiz/ux-layout-check.ts | N/A |
 | validate-agents.ts | 1.3.2 | scripts/validate-agents.ts | N/A |
 | validate-decisions.ts | 1.1.0 | scripts/validate-decisions.ts | js-yaml |

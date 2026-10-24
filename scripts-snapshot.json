@@ -1,5 +1,5 @@
 {
-  "created": "2026-10-23",
+  "created": "2026-10-24",
   "variant": "co-newbiz",
   "l1_source": "templates/common/scripts",
   "scripts": {
@@ -76,7 +76,7 @@
       "status": "active"
     },
     "dev-sync.ts": {
-      "version": "1.28.0",
+      "version": "1.29.0",
       "status": "active"
     },
     "dispatch-parallel.ts": {
@@ -540,7 +540,7 @@
       "status": "active"
     },
     "upgrade-project.ts": {
-      "version": "1.71.0",
+      "version": "1.72.0",
       "status": "active"
     },
     "validate-agents.ts": {
