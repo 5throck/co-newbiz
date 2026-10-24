@@ -21,8 +21,7 @@ regexes = [
   '''YOUR_SECRET''',
   # gitleaks:allow inline marker (single-line suppression)
   '''gitleaks:allow''',
-  # Preserved from this project's prior .gitleaks.toml (not in the current common template).
-  # Prompt-registry keys ("s2.discover", "s11.integrated_insight") — stage prefixes run to S12.
+  # Preserved from this project's prior .gitleaks.toml (not in the current common template):
   '''s\d{1,2}\.[a-z_]+''',
 ]
 paths = [
