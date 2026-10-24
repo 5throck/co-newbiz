@@ -23,8 +23,9 @@ counterpart: design-guide_ko.md
 1. **Clarity-first** — every screen answers "what am I looking at, what can I
    do, what happens next" within one glance. Dense but never cramped.
 2. **Evidence-driven** — numbers, sources, and provenance are first-class.
-   Financial figures use `JetBrains Mono` with `tabular-nums`; every material
-   value links to its evidence (source tooltip / anchor_ref).
+   Financial figures align with `tabular-nums` in the sans stack (JetBrains
+   Mono is reserved for code/IDs — see §4); every material value links to its
+   evidence (source tooltip / anchor_ref).
 3. **Stage-guided** — the UI reflects the S1–S7 process: the user is always
    shown where the deal stands and what the current stage requires.
 4. **Agentic-first, Human-final** — agents execute and recommend; the UI is a
@@ -81,9 +82,17 @@ theme; components reference tokens only.
 | Page title (h1) | Pretendard | 1.25–1.5rem / 800 | one per page |
 | Section title (h2/h3) | Pretendard | 1–1.15rem / 700 | |
 | Body | Pretendard | 0.85–0.9rem / 400 | line-height ≥ 1.55 |
-| Sub-label / meta | Pretendard | 0.72–0.8rem | `--muted-fg`, uppercase for column headers |
-| Financial figures | JetBrains Mono | any / 700 | `tabular-nums`, KRM unit label nearby |
-| Code / IDs | JetBrains Mono | 0.72–0.8rem | `code` element |
+| Sub-label / meta | Pretendard | 0.8125–0.875rem (`--fs-caption` is the floor) | `--muted-fg`, uppercase for column headers |
+| Financial figures | Pretendard (sans) | any / 700 | `tabular-nums`, KRM unit label nearby |
+| Code / IDs | JetBrains Mono | 0.8125rem (`--fs-caption`) | `code` element |
+
+> **2026-10-22 review reconcile (품평회 잔여 #5)**: the former sub-label range
+> `0.72–0.8rem` (11.5–12.8px) sat below the Wave U-2 13px floor
+> (`--fs-caption` 0.8125rem — "no micro tier below 13px", design-tokens.md).
+> The floor is now stated as `--fs-caption`; the guide text and the shipped
+> tokens agree. Financial figures are of-record **sans + `tabular-nums`** —
+> the code never rendered them in JetBrains Mono, so the mono claim was
+> doc-side drift; JetBrains Mono stays scoped to code/IDs.
 
 Spacing follows an 8px base grid (`0.25rem` steps): card padding 16–24px,
 list gaps 8–10px, section separation 24px+.

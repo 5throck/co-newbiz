@@ -24,7 +24,12 @@ export default async function OnboardingPage() {
               <span className="sizing-step-num">{s.n}</span> {t(s.labelKey)}
             </h2>
             <p className="text-[length:var(--fs-caption)]" style={{ margin: "0 0 6px" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>{t(s.descKey)}</p>
-            <Link className="btn-ghost btn-sm" href={s.href}>{t("go")}</Link>
+            {/* 품평회 2026-10-22 잔여 #7 — 중첩 market-section과 동일 무게 CTA 나열에서
+                진입 CTA가 묻히지 않게 첫 단계를 primary "여기서 시작"으로 격상한다.
+                나머지 단계는 종속 탐색으로 유지해 위계를 만든다. */}
+            <Link className={s.n === 1 ? "btn-primary btn-sm" : "btn-ghost btn-sm"} href={s.href}>
+              {s.n === 1 ? t("startHere") : t("go")}
+            </Link>
           </div>
         ))}
         {/* 승격 이후 — 단계 목록과 같은 리스트 스타일의 이어짐 (F11). 이동 링크는

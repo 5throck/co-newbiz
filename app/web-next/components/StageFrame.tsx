@@ -251,7 +251,9 @@ function StageHandoffStrip({ primary, track, linkFor }: { primary: StageMetaId; 
   const nextId = nextApplicableStage(primary, track);
   const nextHref = nextId ? linkFor(nextId).href : null;
   return (
-    <details className="handoff-panel">
+    // 품평회 2026-10-22 잔여 #6 — 단계 연계(입력·출력 계약)는 열린 채로 읽힌다
+    // (opt-out). 요약을 누르면 접을 수 있으나 기본값은 노출이다.
+    <details className="handoff-panel" open>
       <summary>입력과 출력 <span className="handoff-panel-hint">이 단계가 받는 것 · 넘기는 것</span></summary>
       <div className="handoff" role="note" aria-label="단계 연계">
         <span className="handoff-hl">입력 ←</span>
@@ -453,6 +455,9 @@ export function StageRail({
               {!status && isCurrent && <span className="stage-step-state">현재</span>}
               {skipped && <span className="stage-step-state">미적용</span>}
               {!skipped && !href && blocked && <span className="stage-step-state">승격 후</span>}
+              {/* 품평회 2026-10-22 잔여 #3 — 차단 사유를 title(hover) 한정으로 두지
+                  않는다. 포커스(탭·탭) 시 사유를 눈에 보이는 말풍선으로 띄운다. */}
+              {!skipped && !href && blocked && <span className="stage-step-reason" aria-hidden="true">{blocked}</span>}
             </>
           );
           return href ? (
@@ -467,7 +472,7 @@ export function StageRail({
               {body}
             </Link>
           ) : (
-            <span key={s.id} title={title} aria-disabled="true" className={`stage-step stage-step-skipped`}>{body}</span>
+            <span key={s.id} title={title} aria-disabled="true" tabIndex={0} className={`stage-step stage-step-skipped`}>{body}</span>
           );
         })}
         {gateIds.length > 0 && (

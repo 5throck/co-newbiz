@@ -86,11 +86,14 @@
   --red-fg: #b32318; /* design-token-exempt: token SSOT definition */
   --red-border: hsla(0, 72%, 46%, 0.26); /* design-token-exempt: token SSOT definition */
 
-  /* ── 6-step radius scale ── */
+  /* ── 6-step radius scale ──
+     품평회 2026-10-22 잔여 #8 — lg와 xl이 같은 값(1rem)이면 토큰이 구분 없는
+     별칭이 된다. 단조 스케일로 되살린다: … md 0.625 · (기본) 0.75 · lg 0.875 ·
+     xl 1 · 2xl 1.25 · 3xl 1.5. xl 사용부는 값이 그대로라 시각 변화 없음. */
   --radius: 0.75rem;
   --radius-sm: 0.5rem;
   --radius-md: 0.625rem;
-  --radius-lg: 1rem;
+  --radius-lg: 0.875rem;
   --radius-xl: 1rem;
   --radius-2xl: 1.25rem;
   --radius-3xl: 1.5rem;
@@ -111,7 +114,10 @@
   /* ── Type scale (Wave U-2): 14px floor; 13px only for captions/source/units ── */ /* design-token-exempt: prose */
   --fs-body: 0.875rem;
   --fs-caption: 0.8125rem;
-  --lh-body: 1.5;
+  /* 품평회 2026-10-22 잔여 #4 — 문서(design-guide §4 "line-height ≥ 1.55")와
+     코드의 드리프트를 코드가 문서를 따라가는 쪽으로 닫았다(1.5 → 1.55).
+     밀도를 해치지 않는 수준이며 표는 --lh-table 1.35를 그대로 쓴다. */
+  --lh-body: 1.55;
   --lh-table: 1.35;
 
   /* ── Spacing scale (Wave U-2) ── */
@@ -2565,6 +2571,34 @@
 .table-fixed-pct td, .table-fixed-pct th { overflow-wrap: anywhere; }
 .cell-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cell-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+/* 품평회 2026-10-22 잔여 #2 — 잘린 셀 전문(제외 사유)을 포커스·클릭으로 펼치는
+   토글. title 속성(hover 한정)은 터치·키보드 사용자가 전문에 닿게 못 하므로
+   버튼으로 만들어 탭 도달 + aria-expanded 상태를 준다. */
+.cell-reason-toggle {
+  display: inline-block;
+  max-width: 18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.cell-reason-toggle[aria-expanded="true"],
+.cell-reason-toggle:focus-visible {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+/* S6/S7 후보 전체 목록 상태 필터 행 (품평회 2026-10-22 잔여 #1) — 필터 선택과
+   초기화를 한 줄에 모아 빈 상태에서의 되돌리기를 한 번에 닿게 한다. */
+.longlist-filter-row { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }
+.longlist-status-filter { width: auto; padding: 0.3rem 0.5rem; font-size: var(--fs-caption); }
 /* S1 시장분석 목록 — 분석 상태 열(긴 진행률 칩) 예산을 위해 상향.
    모든 열이 th 고정 폭을 가져 폭 흡수 왜곡 없이 남는 폭이 비례 배분된다. */
 .list-table.market-list-table { max-width: 72rem; }
@@ -3733,9 +3767,28 @@ main li { overflow-wrap: anywhere; }
 }
 a.stage-step:hover { background: var(--hover-bg); color: var(--fg); }
 a.stage-step:focus-visible, .stage-tab:focus-visible, .stage-tab-menu-item:focus-visible,
-.inbox-row:focus-visible, .stage-stepper-compact summary:focus-visible { outline: var(--border-width-strong) solid var(--primary); outline-offset: var(--focus-ring-offset); }
+.inbox-row:focus-visible, .stage-stepper-compact summary:focus-visible,
+.stage-step-skipped:focus-visible { outline: var(--border-width-strong) solid var(--primary); outline-offset: var(--focus-ring-offset); }
 .stage-step-current { color: var(--primary); background: var(--primary-bg); border-color: var(--primary-border); font-weight: 600; }
-.stage-step-skipped { color: var(--muted-fg); text-decoration: line-through; }
+.stage-step-skipped { color: var(--muted-fg); text-decoration: line-through; cursor: help; }
+/* 품평회 2026-10-22 잔여 #3 — 차단(승격 전) 단계의 사유를 title(hover) 한정으로
+   두지 않는다. 단계 알약이 포커스(탭 도달)되면 사유를 눈에 보이는 말풍선으로
+   띄운다 — 키보드·터치 사용자도 전문을 읽을 수 있다. */
+.stage-step { position: relative; }
+.stage-step-reason {
+  display: none;
+  position: absolute; top: 100%; left: 0; z-index: 10;
+  margin-top: 0.35rem; max-width: 16rem;
+  white-space: normal; text-decoration: none;
+  font-size: var(--fs-caption); font-weight: 400; line-height: var(--lh-body);
+  color: var(--fg);
+  background: var(--surface-elevated, var(--surface));
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 0.4rem 0.6rem;
+  box-shadow: var(--shadow-md);
+}
+.stage-step-skipped:focus .stage-step-reason,
+.stage-step-skipped:focus-within .stage-step-reason { display: block; }
 .stage-step-num {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 1.4rem; height: 1.4rem; border-radius: var(--radius-full);
@@ -4068,6 +4121,10 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
  .group-card-check { width: 16px; height: 16px; flex: none; color: var(--accent); display: inline-flex; } /* design-token-exempt: check icon size (one-off) */
 .group-card-body { display: flex; flex-direction: column; min-width: 0; }
 .group-card-name { font-weight: 600; max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 품평회 2026-10-22 잔여 #9 — 말줄임 이름의 전문을 title(hover) 외에 키보드로도
+   닿게 한다: 카드(버튼) 포커스 시 줄바꿈으로 전문을 노출. 마우스는 title 유지. */
+.group-card:focus .group-card-name,
+.group-card:focus-visible .group-card-name { white-space: normal; overflow-wrap: anywhere; }
 .group-meta { margin: 0 0 var(--space-3); font-size: var(--fs-caption); color: var(--muted-fg); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .stale-cue { display: inline-flex; align-items: center; gap: 0.25rem; margin-left: var(--space-2); color: var(--amber-fg); font-size: var(--fs-caption); white-space: nowrap; }
 .group-meta .stale-cue { margin-left: 0; }

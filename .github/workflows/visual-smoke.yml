@@ -1,0 +1,64 @@
+name: Visual Smoke
+
+# T-20261022-050 — visual/layout smoke over the 12 stage paths (both tracks):
+# real login, live-shaped demo data, head/strip/primary geometry invariants and
+# opt-in screenshot aHash diffs (tests/e2e-visual).
+#
+# Maturing job, deliberately NOT merge-blocking:
+#   - it never runs on pull_request/push (manual dispatch and a weekly schedule
+#     only), and
+#   - the job itself carries continue-on-error so screenshot drift (font raster,
+#     chart jitter) cannot fail the workflow while the baselines mature.
+# The geometry assertions inside the spec are the durable gate; the screenshot
+# diff activates once baselines are committed under tests/e2e-visual/__screenshots__
+# (generate locally with `E2E_VISUAL_DIFF=update bun run test:visual`).
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly, Mondays 03:20 UTC — off the top of the hour on purpose.
+    - cron: "20 3 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  visual-smoke:
+    name: Stage-path visual smoke (12 paths x 2 tracks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.x"
+
+      - name: Install dependencies
+        run: |
+          bun install --frozen-lockfile
+          bun install --frozen-lockfile --cwd app/web-next
+
+      # Prerequisite: the headless browser the spec drives. playwright-core
+      # (already a web-next dependency) ships no browser — install Chromium
+      # exactly like the quality.yml e2e job does.
+      - name: Install Chromium for Playwright
+        run: bunx --bun playwright-core install --with-deps chromium
+        working-directory: app/web-next
+
+      - name: Run visual smoke (geometry + screenshot aHash diff)
+        env:
+          E2E_VISUAL_DIFF: check
+        run: bun run test:visual
+
+      - name: Upload screenshots and geometry snapshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: visual-smoke-screenshots
+          path: tests/e2e-visual/screenshots
+          if-no-files-found: warn

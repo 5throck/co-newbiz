@@ -4435,6 +4435,7 @@
         "provisionalRankingByTheFinancial": "재무·기술 평가 종합 점수(financial·technical 평균) 기준 잠정 순위 — 제외를 뺀 전 후보 대상으로 유지(승격해도 사라지지 않음). 최종 후보 목록 rank(사람이 조정)와 별개",
         "pt": "점)",
         "pt2": "점)",
+        "resetFilter": "필터 초기화",
         "shortlist": "· 최종 후보 목록",
         "targetCandidateScreening": "대상 후보 스크리닝",
         "technology": "기술",
@@ -7983,7 +7984,8 @@
       "projectStagesDesc": "S8 사업성 → S9 실사 → S10 투자구조 → S11 투자심사·실행 → S12 사후관리 — 사람의 게이트 결정이 각 전환을 기록합니다.",
       "demoNotePre": "시연 데이터로 먼저 둘러보려면 ",
       "demoLink": "검토/안건 보드",
-      "demoNotePost": "를 참고하세요."
+      "demoNotePost": "를 참고하세요.",
+      "startHere": "여기서 시작"
     },
     "wiki": {
       "heading": "사용 안내서",
