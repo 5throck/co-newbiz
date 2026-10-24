@@ -21,6 +21,10 @@ process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
 // route module loads so validateCorpCode/researchSources/complete all take
 // their unconfigured branches regardless of the operator's root .env.
 process.env.CO_NEWBIZ_LLM_PROVIDER = "none";
+// bun test runs every file in one process, so a module-level blank leaks into
+// sibling files still in flight. Remember the originals; afterAll restores them.
+const BLANKED_ENV_KEYS = ["DART_API_KEY", "TAVILY_API_KEY", "WEB_SEARCH_DDG_ENABLED"] as const;
+const BLANKED_ENV_ORIGINALS = BLANKED_ENV_KEYS.map((k) => [k, process.env[k]] as const);
 process.env.DART_API_KEY = "";
 process.env.TAVILY_API_KEY = "";
 // DuckDuckGo fallback is on by default and does real HTTP; switch it off.
@@ -86,6 +90,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   _profileJobs.clear();
+  for (const [k, v] of BLANKED_ENV_ORIGINALS) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
   resetDb();
   for (let attempt = 0; attempt < 5; attempt++) {
     try {

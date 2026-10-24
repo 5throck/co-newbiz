@@ -10,6 +10,12 @@ import { existsSync, rmSync, readFileSync } from "node:fs";
 const TEST_DB_PATH = "db/data/test-profile-user-evidence.sqlite";
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
 process.env.CO_NEWBIZ_LLM_PROVIDER = "none";
+// bun test runs every file in one process, so a module-level blank leaks into
+// sibling files still in flight (it flipped capability-ai-sources' B1 holding
+// probe into gatherHoldingSources' not-configured early return). Remember the
+// originals and restore them in afterAll.
+const BLANKED_ENV_KEYS = ["DART_API_KEY", "TAVILY_API_KEY", "WEB_SEARCH_DDG_ENABLED"] as const;
+const BLANKED_ENV_ORIGINALS = BLANKED_ENV_KEYS.map((k) => [k, process.env[k]] as const);
 process.env.DART_API_KEY = "";
 process.env.TAVILY_API_KEY = "";
 process.env.WEB_SEARCH_DDG_ENABLED = "false";
@@ -54,6 +60,7 @@ beforeAll(async () => {
 afterAll(async () => {
   _profileJobs.clear();
   setWebResearchOverrideForTests(null);
+  for (const [k, v] of BLANKED_ENV_ORIGINALS) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
   resetDb();
   for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 });

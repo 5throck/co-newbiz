@@ -16,6 +16,10 @@ import { existsSync, rmSync } from "node:fs";
 const TEST_DB_PATH = "db/data/test-wave-c3-defects.sqlite";
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
 process.env.CO_NEWBIZ_QUEUE_NO_SPAWN = "1";
+// bun test runs every file in one process, so a module-level blank leaks into
+// sibling files still in flight. Remember the originals; afterAll restores them.
+const BLANKED_ENV_KEYS = ["CO_NEWBIZ_LLM_API_KEY", "CO_NEWBIZ_LLM_MODEL", "TAVILY_API_KEY", "ECOS_API_KEY", "KRX_API_KEY", "DART_API_KEY", "CO_NEWBIZ_DART_API_KEY", "WEB_SEARCH_DDG_ENABLED"] as const;
+const BLANKED_ENV_ORIGINALS = BLANKED_ENV_KEYS.map((k) => [k, process.env[k]] as const);
 for (const k of ["CO_NEWBIZ_LLM_PROVIDER", "CO_NEWBIZ_LLM_API_KEY", "CO_NEWBIZ_LLM_MODEL", "TAVILY_API_KEY", "ECOS_API_KEY", "KRX_API_KEY", "DART_API_KEY", "CO_NEWBIZ_DART_API_KEY"]) process.env[k] = "";
 process.env.WEB_SEARCH_DDG_ENABLED = "false";
 for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
@@ -44,6 +48,7 @@ beforeAll(async () => {
   cookie = (res.headers.getSetCookie()[0] ?? "").split(";")[0];
 });
 afterAll(() => {
+  for (const [k, v] of BLANKED_ENV_ORIGINALS) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
   resetDb();
   for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 });

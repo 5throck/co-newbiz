@@ -157,7 +157,12 @@ describe("gate decision judgement_confirmations sidecar (ADR-0182 §5)", () => {
       body: JSON.stringify({ gate: "screening", decision: "hold", rationale: "체크 없이 기록", missing_artifacts: ["x"] }),
     });
     expect(res.status).toBe(201);
-    const row = db.query("SELECT judgement_confirmations_json FROM gate_decision WHERE entity_id = ? ORDER BY decided_at DESC LIMIT 1").get(oppId) as { judgement_confirmations_json: string | null };
+    // Select the row the route just created by its returned id: the previous test's
+    // POST can share the same millisecond, and "ORDER BY decided_at DESC LIMIT 1"
+    // is then an unspecified tie (flaked 1-in-30 even solo).
+    const createdId = ((await res.json()) as any).data.id as string;
+    const row = db.query("SELECT judgement_confirmations_json FROM gate_decision WHERE id = ?").get(createdId) as { judgement_confirmations_json: string | null };
+    expect(row).toBeDefined();
     expect(row.judgement_confirmations_json).toBeNull();
   });
 

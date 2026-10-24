@@ -6,7 +6,7 @@
  *     optional same-group scope, unverified profile claims are non-citable, degraded profiles are flagged.
  * Fakes only: no network, no browser, no real LLM (CO_NEWBIZ_LLM_PROVIDER=none, provider/Playwright overrides).
  */
-import { test, expect, describe, beforeAll, afterEach } from "bun:test";
+import { test, expect, describe, beforeAll, beforeEach, afterEach } from "bun:test";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
@@ -147,7 +147,22 @@ describe("B1. web-research chain: Playwright last, opt-in, diagnosed, breaker-aw
     async search() { (this as any).calls++; return { sources, status, http }; },
   });
   const PW = [{ title: "브라우저 결과", url: "https://example.com/pw", snippet: "s" }];
-  afterEach(() => { wr.setWebProvidersForTests(null); wr.resetWebResearchStateForTests(); ps.setPlaywrightSearchOverrideForTests(null); delete process.env.WEB_SEARCH_PLAYWRIGHT_ENABLED; });
+  // Sibling test files blank the search keys at module level and bun runs every file
+  // in one process — a blank landing inside a B1 test sends gatherHoldingSources down
+  // its not-configured early return (rowsNotSearched undefined). The fakes here never
+  // read these keys; only the configuration gate does. Pin a deterministically
+  // configured state per test and restore whatever the process had.
+  const SEARCH_ENV_KEYS = ["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "SERPER_API_KEY", "WEB_SEARCH_DDG_ENABLED"] as const;
+  let savedSearchEnv: Array<[string, string | undefined]> = [];
+  beforeEach(() => {
+    savedSearchEnv = SEARCH_ENV_KEYS.map((k) => [k, process.env[k]]);
+    if (!process.env.TAVILY_API_KEY?.trim()) process.env.TAVILY_API_KEY = "test";
+    delete process.env.WEB_SEARCH_DDG_ENABLED;
+  });
+  afterEach(() => {
+    for (const [k, v] of savedSearchEnv) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+    wr.setWebProvidersForTests(null); wr.resetWebResearchStateForTests(); ps.setPlaywrightSearchOverrideForTests(null); delete process.env.WEB_SEARCH_PLAYWRIGHT_ENABLED;
+  });
 
   test("after Tavily quota and DuckDuckGo block it runs last and its status is in the diagnostics list", async () => {
     wr.setWebProvidersForTests([fake("tavily", "quota_exceeded", [], 432) as any, fake("ddg", "blocked") as any]);
