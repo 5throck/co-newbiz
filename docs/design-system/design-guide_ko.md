@@ -27,8 +27,9 @@ counterpart: design-guide.md
    무엇을 할 수 있는지, 다음에 무슨 일이 일어나는지"에 답합니다. 밀도는 높되,
    결코 답답하지 않게.
 2. **근거 기반(Evidence-driven)** — 숫자, 출처, 이력(provenance)은 일급
-   시민입니다. 재무 수치는 `tabular-nums`를 적용한 `JetBrains Mono`를 사용하며,
-   모든 중요 값은 그 근거(소스 툴팁 / anchor_ref)에 연결됩니다.
+   시민입니다. 재무 수치는 산 세리프(sans) 스택에 `tabular-nums` 정렬을 적용하며
+   (`JetBrains Mono`는 코드/ID로 범위를 한정 — §4 참조), 모든 중요 값은 그 근거
+   (소스 툴팁 / anchor_ref)에 연결됩니다.
 3. **단계 안내(Stage-guided)** — UI는 S1~S7 프로세스를 반영합니다. 사용자는
    항상 딜이 어느 단계에 있는지, 현재 단계가 무엇을 요구하는지 보게 됩니다.
 4. **에이전트 우선, 사람 확정(Agentic-first, Human-final)** — 에이전트가 실행하고
@@ -85,9 +86,17 @@ counterpart: design-guide.md
 | 페이지 제목 (h1) | Pretendard | 1.25–1.5rem / 800 | 페이지당 하나 |
 | 섹션 제목 (h2/h3) | Pretendard | 1–1.15rem / 700 | |
 | 본문 | Pretendard | 0.85–0.9rem / 400 | line-height ≥ 1.55 |
-| 보조 라벨 / 메타 | Pretendard | 0.72–0.8rem | `--muted-fg`, 컬럼 헤더는 대문자 |
-| 재무 수치 | JetBrains Mono | 모두 / 700 | `tabular-nums`, 근처에 KRM 단위 라벨 |
-| 코드 / ID | JetBrains Mono | 0.72–0.8rem | `code` 요소 |
+| 보조 라벨 / 메타 | Pretendard | 0.8125–0.875rem (`--fs-caption`이 하한) | `--muted-fg`, 컬럼 헤더는 대문자 |
+| 재무 수치 | Pretendard (sans) | 모두 / 700 | `tabular-nums`, 근처에 KRM 단위 라벨 |
+| 코드 / ID | JetBrains Mono | 0.8125rem (`--fs-caption`) | `code` 요소 |
+
+> **2026-10-22 리뷰 정합 (품평회 잔여 #5)**: 종전 보조 라벨 범위 `0.72–0.8rem`
+> (11.5–12.8px)은 Wave U-2의 13px 하한(`--fs-caption` 0.8125rem — "13px 아래
+> 마이크로 단계 없음", design-tokens.md) 밑이었다. 하한을 `--fs-caption`으로
+> 못 박아 문서와 코드 토큰을 일치시켰다. 재무 수치의 레코드 기록(record)은
+> **sans + `tabular-nums`** 이다 — 코드는 한 번도 JetBrains Mono로 렌더한 적이
+> 없으므로 모노 규정은 문서 쪽 드리프트였고, JetBrains Mono는 코드/ID로 범위를
+> 한정한다.
 
 간격은 8px 기본 그리드(`0.25rem` 단위)를 따릅니다: 카드 패딩 16–24px, 리스트
 간격 8–10px, 섹션 구분 24px 이상.

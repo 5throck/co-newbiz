@@ -2,8 +2,9 @@
 
 // Split from components/stages/BrownfieldStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import { SectionToolbar } from "../../layout.tsx";
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { SECTION_IDS, STATUS_LABEL } from "./constants.ts";
+import { filterTargetsByStatus, TARGET_STATUS_FILTERS, type TargetStatusFilter } from "./longlist-filter.ts";
 import { ColGroup } from "../../ui.tsx";
 
 // 후보 전체 목록 — 후보명·DART·재무기술 칩 2개·잠정 순위·상태·제외 사유·작업 7열.
@@ -15,6 +16,13 @@ import { useTranslations } from "next-intl";
 
 export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {const tr = useTranslations(); const t = useTranslations("stages.s67.longlistSection"); const tc = useTranslations("common");
   const { selected, canAct, busy, targets, shortlistedTargets, displayedTargets, shortlistOrder, evalRank, shortlist, rerank } = ctx;
+  // 품평회 2026-10-22 잔여 #1 — 상태 필터 + 초기화. 빈 상태 문구가 "상태 필터를
+  // 다른 값으로 바꾸라"고 안내하는 동안 그 필터 자체가 없어 막다른 글이었다.
+  const [statusFilter, setStatusFilter] = useState<TargetStatusFilter>("all");
+  // 품평회 2026-10-22 잔여 #2 — 제외 사유 전문 펼침 상태(행 1개만 펼친다).
+  const [expandedReasonId, setExpandedReasonId] = useState<string | null>(null);
+  const visibleTargets = filterTargetsByStatus(displayedTargets, statusFilter);
+  const statusLabels = STATUS_LABEL(tr);
   return (
     <>{selected && (
         <div id={SECTION_IDS.longlist} style={{ scrollMarginTop: "1rem" }}>
@@ -33,11 +41,31 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {const t
             summary={<span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("fullCandidateList")} {targets.length} {t("shortlist")} {shortlistedTargets.length}</span>}
           />
           <div className="sizing-grade-card">
+          {targets.length > 0 && (
+            // 품평회 2026-10-22 잔여 #1 — 상태 필터 행. 초기화 버튼은 필터가 걸려
+            // 있을 때만 렌더한다(눌러도 변화가 없는 죽은 콘트롤을 두지 않는다).
+            <div className="longlist-filter-row">
+              <label htmlFor="longlist-status-filter" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{tc("status")}</label>
+              <select
+                id="longlist-status-filter"
+                className="longlist-status-filter"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as TargetStatusFilter)}
+              >
+                {TARGET_STATUS_FILTERS.map((f) => (
+                  <option key={f} value={f}>{f === "all" ? tc("all") : tr(statusLabels[f])}</option>
+                ))}
+              </select>
+              {statusFilter !== "all" && (
+                <button type="button" className="btn-ghost btn-sm" onClick={() => setStatusFilter("all")}>{t("resetFilter")}</button>
+              )}
+            </div>
+          )}
           {targets.length === 0 ? (
             <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)] mb-0">{t("noCandidatesRegisterCandidatesAbove")}</p>
-          ) : displayedTargets.length === 0 ? (
+          ) : visibleTargets.length === 0 ? (
             // 품평회 2026-10-22 (ux-researcher): 막다른 글 대신 원인과 다음 행동을 안내한다 —
-            // 상태 필터 조절 또는 후보 등록. 필터 리셋 콘트롤은 후속 티켓.
+            // 상태 필터 조절(위 필터 행의 초기화) 또는 후보 등록.
             <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)] mb-0">{t("noCandidatesWithThisStatus")}</p>
           ) : (
             <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
@@ -55,7 +83,7 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {const t
                 </tr>
               </thead>
               <tbody>
-                {displayedTargets.map((tgt) => {
+                {visibleTargets.map((tgt) => {
                   const es = tgt.eval_summary;
                   const orderIdx = shortlistOrder.indexOf(tgt.id);
                   const canPromote = tgt.status === "pending" && tgt.eval_summary?.complete === true;
@@ -107,7 +135,17 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {const t
                         </td>
                         <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                           {tgt.exclusion_reason ? (
-                            <span className="inline-block max-w-[18rem] truncate align-bottom" title={tgt.exclusion_reason}>{tgt.exclusion_reason}</span>
+                            /* 품평회 2026-10-22 잔여 #2 — 잘린 제외 사유 전문을 title(hover)
+                                한정이 아니라 포커스·클릭으로 펼쳐 본다(키보드·터치 접근성).
+                                버튼이므로 탭으로 도달 가능하고 aria-expanded가 상태를 알린다. */
+                            <button
+                              type="button"
+                              className="cell-reason-toggle"
+                              aria-expanded={expandedReasonId === tgt.id}
+                              onClick={() => setExpandedReasonId(expandedReasonId === tgt.id ? null : tgt.id)}
+                            >
+                              {tgt.exclusion_reason}
+                            </button>
                           ) : "—"}
                         </td>
                         <td className="sizing-actions-cell"><span className="actions-row">

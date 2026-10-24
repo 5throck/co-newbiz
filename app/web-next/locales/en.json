@@ -4435,6 +4435,7 @@
         "provisionalRankingByTheFinancial": "Provisional ranking by the financial/technology composite score (average) — kept across all candidates except excluded ones (survives promotion). Separate from the shortlist rank (person-adjusted)",
         "pt": "pt)",
         "pt2": "pt)",
+        "resetFilter": "Reset filter",
         "shortlist": "· shortlist",
         "targetCandidateScreening": "Target candidate screening",
         "technology": "Technology",
@@ -7983,7 +7984,8 @@
       "projectStagesDesc": "S8 business case → S9 due diligence → S10 investment structure → S11 investment review and execution → S12 post-investment — a human gate decision records each transition.",
       "demoNotePre": "To explore with demo data first, see the ",
       "demoLink": "review/case board",
-      "demoNotePost": "."
+      "demoNotePost": ".",
+      "startHere": "Start here"
     },
     "wiki": {
       "heading": "User guide",

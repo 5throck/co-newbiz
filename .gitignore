@@ -119,3 +119,8 @@ coverage/
 # SQLite WAL sidecars — runtime artifacts that change on every app run (ADR-0181 follow-up, decider approved 2026-10-18)
 db/dev.db-shm
 db/dev.db-wal
+
+# Visual smoke (T-20261022-050) — captured screenshots and geometry snapshots are
+# ephemeral run artifacts; only the opt-in __screenshots__/ aHash baselines are
+# meant to be committed.
+tests/e2e-visual/screenshots/
