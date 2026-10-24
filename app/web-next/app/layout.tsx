@@ -17,8 +17,11 @@ import "./styles.css";
 // WCAG 2.4.2 (axe document-title): every page needs a <title>. Pages inherit this default.
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("common");
+  // `titleSuffix` lives under pages.titles (locale restructure); scope a
+  // second translator there, matching every other pages.titles consumer.
+  const tTitles = await getTranslations("pages.titles");
   return {
-    title: { default: t("appName"), template: `%s · ${t("titleSuffix")}` },
+    title: { default: t("appName"), template: `%s · ${tTitles("titleSuffix")}` },
   };
 }
 
