@@ -1745,6 +1745,11 @@
       "title": "Page not found",
       "body": "The address changed or the page does not exist. Go back to the review/deal board or navigate back."
     },
+    "unexpected": {
+      "title": "Something went wrong",
+      "body": "An unexpected error occurred. This is usually temporary — try again in a moment. If it keeps happening, refresh the page or go back to the previous screen.",
+      "digest": "Error digest: {digest}"
+    },
     "codes": {
       "active_run_exists": "An analysis run is already in progress.",
       "admin_required": "Interpretations are recorded by the governance administrator.",
@@ -7823,6 +7828,23 @@
       "noGateNote": "No permission can execute gate approvals, investment decisions, or closures. The connection can be revoked at any time on the “Connected apps” screen.",
       "approveBtn": "Allow",
       "denyBtn": "Deny"
+    },
+    "glossary": {
+      "heading": "Glossary",
+      "searchAria": "Search the glossary",
+      "phSearch": "Search terms",
+      "empty": "No terms match your search.",
+      "totalCount": "{count} terms",
+      "detailAriaEmpty": "Glossary details panel",
+      "detailEmptyPrompt": "Select a term from the list to see its definition, why it matters, and related terms here.",
+      "detailAria": "Details of {name}",
+      "closeAria": "Close the details panel",
+      "secDefinition": "Definition",
+      "secWhy": "Why it matters",
+      "secAliases": "Aliases",
+      "secRelated": "Related terms",
+      "secUsedIn": "Used in",
+      "secOwner": "Owner agent"
     },
     "library": {
       "selectPrompt": "Select a document on the left to see its content.",
