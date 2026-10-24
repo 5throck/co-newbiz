@@ -29,12 +29,12 @@ function resolveSubject(db: ReturnType<typeof getDb>, projectId: string): { subj
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "가격 초안 생성은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Pricing-draft generation requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as { subject?: unknown } | null;
   if (body?.subject !== undefined && typeof body.subject !== "string") {
-    return badRequest("invalid_request", "subject는 문자열이어야 합니다.");
+    return badRequest("invalid_request", "subject must be a string.");
   }
   const custom = typeof body?.subject === "string" && body.subject.trim() ? body.subject.trim() : null;
   const { subject, company } = resolveSubject(getDb(), id);
@@ -42,6 +42,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const draft = await draftPriceEvidence({ subject: custom ?? subject, company });
     return ok({ ...draft, subject: custom ?? subject }, 200);
   } catch (err) {
-    return badRequest("price_draft_failed", err instanceof Error ? err.message : "가격 초안 생성에 실패했습니다.");
+    return badRequest("price_draft_failed", err instanceof Error ? err.message : "Failed to generate the pricing draft.");
   }
 }

@@ -11,7 +11,7 @@ const STATUSES = new Set(["pending", "pass", "partial", "fail", "na", "waived"])
 export async function PUT(request: Request, { params }: { params: Promise<{ oppId: string; targetId: string; criterionId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "평가 판정은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Evaluation judgements require the analyst role or higher." });
   if (denied) return denied;
   const { oppId, targetId, criterionId } = await params;
   const db = getDb();
@@ -21,7 +21,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ oppI
   if (!criterion) return notFound();
   const body = (await request.json().catch(() => null)) as { status?: string; note?: string; evidence_ref?: string } | null;
   if (!body?.status || !STATUSES.has(body.status)) {
-    return badRequest("invalid_request", `status는 ${[...STATUSES].join(" | ")} 중 하나입니다.`);
+    return badRequest("invalid_request", `status must be one of: ${[...STATUSES].join(" | ")}.`);
   }
   const state = upsertEvalState(targetId, criterionId, {
     status: body.status as "pending" | "pass" | "partial" | "fail" | "na" | "waived",

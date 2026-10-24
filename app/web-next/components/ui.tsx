@@ -7,8 +7,22 @@
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useAuth } from "../lib/auth-client.tsx";
-import { VIEWER_READONLY_TEXT } from "../lib/labels.ts";
+import { setApiErrorTranslator } from "../lib/error-messages.ts";
+
+/* ── ApiErrorBridge — captures the errors.codes translator for lib/api.ts ──
+   lib/api.ts throws ApiError outside the React tree (design §3.5), so the
+   catalog lookup for `errors.codes.<code>` is captured here once at mount
+   into the module registry in lib/error-messages.ts. Unmount clears it. */
+function ApiErrorBridge() {
+  const t = useTranslations("errors.codes");
+  useEffect(() => {
+    setApiErrorTranslator((code) => (t.has(code) ? t(code) : null));
+    return () => setApiErrorTranslator(null);
+  }, [t]);
+  return null;
+}
 
 /* ── ColGroup — percentage column widths for .table-fixed-pct tables ──
    Numbers only: there is no way to express `auto`, so no single column can absorb
@@ -92,11 +106,12 @@ export interface PrimaryActionProps {
 export function PrimaryAction({ label, onClick, href, form, disabled, disabledReason: reasonIn, inline, readOnly }: PrimaryActionProps) {
   const slot = useSyncExternalStore(subscribePrimarySlot, () => primarySlotEl, () => null);
   const reasonId = useId();
+  const tr = useTranslations();
   const { me } = useAuth();
   // R2-C 9: a viewer sees the action but cannot use it, and is told why (the server rejects viewer writes too).
   const viewerBlocked = me?.role === "viewer" && !readOnly;
   const blocked = !!disabled || viewerBlocked;
-  const disabledReason = viewerBlocked ? VIEWER_READONLY_TEXT : reasonIn;
+  const disabledReason = viewerBlocked ? tr("common.viewerReadOnly") : reasonIn;
   const control = href && !blocked ? (
     <Link href={href} className="btn-primary">{label}</Link>
   ) : (
@@ -136,9 +151,9 @@ export interface ParamRow {
 export function ParamTable({
   rows,
   caption,
-  labelHeader = "항목",
+  labelHeader,
   valueAlign = "end",
-  extraHeader = "비고",
+  extraHeader,
 }: {
   rows: ParamRow[];
   extraHeader?: string;
@@ -147,6 +162,11 @@ export function ParamTable({
   /** "end" for numbers (right-aligned, tabular); "start" for text facts. */
   valueAlign?: "end" | "start";
 }) {
+  const tt = useTranslations("components.paramTable");
+  // Headers default to the catalog (components.paramTable.*); a caller-provided
+  // header (e.g. the S8 `S5 연동` extra column) wins over the default.
+  const labelHeaderText = labelHeader ?? tt("label");
+  const extraHeaderText = extraHeader ?? tt("note");
   // Unit and source columns only appear when at least one row carries them, so
   // plain fact tables (label + value) do not show empty columns.
   const hasUnit = rows.some((r) => r.unit);
@@ -154,16 +174,16 @@ export function ParamTable({
   const hasExtra = rows.some((r) => r.extra);
   const valueCls = `param-value${valueAlign === "start" ? " param-value-start" : ""}`;
   return (
-    <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+    <div className="table-scroll" role="region" aria-label={tt("scrollRegion")} tabIndex={0}>
       <table className="param-table">
         {caption && <caption className="sr-only">{caption}</caption>}
         <thead>
           <tr>
-            <th scope="col" className="param-label">{labelHeader}</th>
-            <th scope="col" className={valueCls}>값</th>
-            {hasUnit && <th scope="col" className="param-unit">단위</th>}
-            {hasSource && <th scope="col" className="param-source">출처</th>}
-            {hasExtra && <th scope="col" className="param-source">{extraHeader}</th>}
+            <th scope="col" className="param-label">{labelHeaderText}</th>
+            <th scope="col" className={valueCls}>{tt("value")}</th>
+            {hasUnit && <th scope="col" className="param-unit">{tt("unit")}</th>}
+            {hasSource && <th scope="col" className="param-source">{tt("source")}</th>}
+            {hasExtra && <th scope="col" className="param-source">{extraHeaderText}</th>}
           </tr>
         </thead>
         <tbody>
@@ -239,9 +259,10 @@ export function Tabs({
 /* ── DevRef — ADR/spec references live in a collapsed developer disclosure, never in reader-facing copy (R2-C 8) ── */
 
 export function DevRef({ refs }: { refs: string }) {
+  const t = useTranslations("components.devRef");
   return (
     <details className="review-dev">
-      <summary>개발자 참고</summary>
+      <summary>{t("summary")}</summary>
       <span>{refs}</span>
     </details>
   );
@@ -264,9 +285,11 @@ export function PageState({
   onRetry?: () => void;
   rows?: number;
 }) {
+  const tc = useTranslations("common");
+  const ps = useTranslations("components.pageState");
   if (state === "loading") {
     return (
-      <div role="status" aria-busy="true" aria-label="불러오는 중">
+      <div role="status" aria-busy="true" aria-label={ps("loading")}>
         <div className="skeleton" style={{ width: "45%" }} />
         {Array.from({ length: rows }, (_, i) => (
           <div key={i} className="skeleton" style={{ width: `${88 - i * 12}%` }} />
@@ -278,11 +301,11 @@ export function PageState({
     return (
       <div>
         <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">
-          ✕ {errorText ?? "데이터를 불러오지 못했습니다"}
+          ✕ {errorText ?? tc("errors.loadFailedData")}
         </p>
         {onRetry && (
           <button type="button" className="btn-ghost btn-sm" onClick={onRetry}>
-            다시 시도
+            {tc("retry")}
           </button>
         )}
       </div>
@@ -290,7 +313,7 @@ export function PageState({
   }
   return (
     <div className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">
-      {emptyText ?? "데이터가 없습니다."} {emptyAction}
+      {emptyText ?? tc("emptyState")} {emptyAction}
     </div>
   );
 }
@@ -306,6 +329,7 @@ interface ToastItem {
 const ToastContext = createContext<{ toast: (message: string, kind?: "status" | "alert") => void } | null>(null);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const tc = useTranslations("common");
   const [items, setItems] = useState<ToastItem[]>([]);
   const toast = useCallback((message: string, kind: "status" | "alert" = "status") => {
     const id = Date.now() + Math.random();
@@ -315,6 +339,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const value = useMemo(() => ({ toast }), [toast]);
   return (
     <ToastContext.Provider value={value}>
+      <ApiErrorBridge />
       {children}
       <div className="toast-region" aria-live="polite">
         {items.map((t) => (
@@ -324,7 +349,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <button
               type="button"
               className="btn-ghost btn-sm"
-              aria-label="닫기"
+              aria-label={tc("close")}
               onClick={() => setItems((prev) => prev.filter((x) => x.id !== t.id))}
             >
               ×

@@ -5,9 +5,11 @@
 // 행 액션(리드 전용)에서 수행한다.
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { STAGE_STATUS_KEY, trackKeyParts, trackKeysText, resolveLabelTokens } from "../../../lib/label-keys.ts";
 import { api } from "../../../lib/api.ts";
 import { StageTabs } from "../../../components/StageTabs.tsx";
-import { STAGE_STATUS_LABEL, trackLabel, trackLabelParts } from "../../../lib/labels.ts";
+
 import { RawKey } from "../../../components/RawKey.tsx";
 
 interface CharterKpi { key: string; label: string; target: string }
@@ -31,13 +33,15 @@ interface CharterData { project_name: string | null; charter_confirmed_at: strin
 interface ProcessData { currentStage: string | null; nextStage: string | null; track: string | null; subTrack: string | null; stages: StageView[] }
 interface OverviewData { project_name: string | null; charter_confirmed_at: string | null; versions: CharterVersion[]; process: ProcessData | null }
 
-const STATUS_LABEL = STAGE_STATUS_LABEL as Record<StageView["status"], string>;
 const STATUS_CLASS: Record<StageView["status"], string> = {
   complete: "status-green", current: "status-in-progress", blocked: "status-red",
   locked: "status-not-started", skipped: "status-not-started", terminated: "status-red",
 };
 
 export default function ProjectOverviewPage() {
+  const tr = useTranslations();
+  const t = useTranslations("pages.projects.overview");
+  const tc = useTranslations("common");
   const params = useParams<{ id: string }>();
   const projectId = params?.id as string;
   const [data, setData] = useState<OverviewData | null>(null);
@@ -49,14 +53,14 @@ export default function ProjectOverviewPage() {
       api.get<CharterData>(`/api/projects/${encodeURIComponent(projectId)}/charter`).then((r) => r.data).catch(() => null),
       api.get<ProcessData>(`/api/projects/${encodeURIComponent(projectId)}/process`).then((r) => r.data).catch(() => null),
     ]).then(([charter, process]) => {
-      if (!charter && !process) { setError("프로젝트 정보를 불러오지 못했습니다."); return; }
+      if (!charter && !process) { setError(t("loadFailed")); return; }
       setData({ ...(charter ?? {}), process: process ?? null } as OverviewData);
     });
   }, [projectId]);
   useEffect(() => { load(); }, [load]);
 
   if (error) return <main className="p-6"><p role="alert" className="text-[color:var(--red-fg)]">{error}</p></main>;
-  if (!data) return <main className="p-6"><p role="status">불러오는 중...</p></main>;
+  if (!data) return <main className="p-6"><p role="status">{tc("loading")}</p></main>;
 
   const versions = data.versions ?? [];
   const latest = versions[versions.length - 1] ?? null;
@@ -66,38 +70,38 @@ export default function ProjectOverviewPage() {
     <main className="p-6 space-y-4">
       <StageTabs projectId={projectId} />
       <header>
-        <h1 className="text-[1.05rem] font-semibold">프로젝트 개요 — {data.project_name ?? projectId}</h1>
+        <h1 className="text-[1.05rem] font-semibold">{t("heading", { name: data.project_name ?? projectId })}</h1>
       </header>
 
-      <section aria-label="추진계획 요약" className="market-section">
-        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">추진계획 요약 {latest ? `(v${latest.version})` : ""}</h2>
+      <section aria-label={t("charterSectionAria")} className="market-section">
+        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">{t("charterHeading", { suffix: latest ? `(v${latest.version})` : "" })}</h2>
         {latest ? (
           <dl className="text-[length:var(--fs-body)] space-y-1">
-            <div><dt className="inline font-semibold mr-1">목적:</dt><dd className="inline">{latest.purpose}</dd></div>
-            <div><dt className="inline font-semibold mr-1">시장:</dt><dd className="inline">{latest.marketScope ?? "—"}</dd></div>
-            <div><dt className="inline font-semibold mr-1">진출 범위:</dt><dd className="inline">{latest.entryScope}</dd></div>
-            <div><dt className="inline font-semibold mr-1">KPI:</dt><dd className="inline">{latest.kpis?.length ? latest.kpis.map((k) => `${k.label}: ${k.target}`).join(" · ") : "미설정"}</dd></div>
+            <div><dt className="inline font-semibold mr-1">{t("dtPurpose")}</dt><dd className="inline">{latest.purpose}</dd></div>
+            <div><dt className="inline font-semibold mr-1">{t("dtMarket")}</dt><dd className="inline">{latest.marketScope ?? "—"}</dd></div>
+            <div><dt className="inline font-semibold mr-1">{t("dtEntryScope")}</dt><dd className="inline">{latest.entryScope}</dd></div>
+            <div><dt className="inline font-semibold mr-1">{t("dtKpi")}</dt><dd className="inline">{latest.kpis?.length ? latest.kpis.map((k) => `${k.label}: ${k.target}`).join(" · ") : t("kpisUnset")}</dd></div>
           </dl>
         ) : (
-          <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">추진계획이 아직 생성되지 않았습니다.</p>
+          <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">{t("noCharter")}</p>
         )}
       </section>
 
       {process && (
-        <section aria-label="프로세스 스냅샷" className="market-section">
-          <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">프로세스 현황</h2>
+        <section aria-label={t("processSectionAria")} className="market-section">
+          <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">{t("processHeading")}</h2>
           <ol className="space-y-1 text-[length:var(--fs-body)]">
             {process.stages.map((s2) => (
               <li key={s2.id}>
-                <span className={`status-chip ${STATUS_CLASS[s2.status]} w-[5.2rem] justify-center mr-2`}>{STATUS_LABEL[s2.status]}</span>
+                <span className={`status-chip ${STATUS_CLASS[s2.status]} w-[5.2rem] justify-center mr-2`}>{tr(STAGE_STATUS_KEY[s2.status] ?? s2.status)}</span>
                 <span className="font-semibold mr-1">{s2.id}</span> {s2.name}
               </li>
             ))}
           </ol>
           {process.track && (
             <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2">
-              트랙: {trackLabel(process.track, process.subTrack)}
-              <RawKey parts={trackLabelParts(process.track, process.subTrack)} />
+              {t("trackLine", { track: resolveLabelTokens(trackKeysText(process.track, process.subTrack), tr) })}
+              <RawKey parts={trackKeyParts(process.track, process.subTrack).map((p2) => ({ label: "", raw: p2.raw, isFallback: p2.key === null }))} />
             </div>
           )}
         </section>

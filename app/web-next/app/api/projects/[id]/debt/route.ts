@@ -27,14 +27,14 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "차입 등록은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Registering debt instruments requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
     lender?: string | null; principal?: number; rate_type?: string; rate?: number;
     maturity?: string | null; covenant_json?: string | null; security?: string | null; seniority?: string | null;
   } | null;
-  if (typeof body?.principal !== "number" || body.principal <= 0) return badRequest("principal_required", "principal은 양수여야 합니다.");
+  if (typeof body?.principal !== "number" || body.principal <= 0) return badRequest("principal_required", "principal must be a positive number.");
   const rateType = body.rate_type === "floating" ? "floating" : "fixed";
   const rid = ulid();
   getDb().run(

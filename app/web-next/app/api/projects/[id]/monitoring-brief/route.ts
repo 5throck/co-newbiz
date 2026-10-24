@@ -49,7 +49,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "모니터링 브리프 생성은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Monitoring-brief generation requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const db = getDb();

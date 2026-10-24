@@ -75,7 +75,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "설립 실행 기록 갱신은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Updating establishment-execution records requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
@@ -91,25 +91,25 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (denied) return denied;
   }
   const stepNo = Number(body?.step_no);
-  if (!Number.isInteger(stepNo) || stepNo < 1 || stepNo > 5) return badRequest("invalid_request", "step_no는 1–5 사이 정수입니다.");
+  if (!Number.isInteger(stepNo) || stepNo < 1 || stepNo > 5) return badRequest("invalid_request", "step_no must be a number between 1 and 5.");
   const status = body?.status;
   if (!status || !CHANGEABLE.includes(status as (typeof CHANGEABLE)[number])) {
-    return badRequest("invalid_request", `status는 ${CHANGEABLE.join(" | ")} 중 하나입니다.`);
+    return badRequest("invalid_request", `status must be one of: ${CHANGEABLE.join(" | ")}.`);
   }
   const origin = body?.origin;
   if (!origin || !ESTABLISHMENT_ORIGINS.includes(origin as (typeof ESTABLISHMENT_ORIGINS)[number])) {
-    return badRequest("invalid_request", "origin은 internal | joint 중 하나입니다 (ADR-0047).");
+    return badRequest("invalid_request", "origin must be one of: internal | joint (ADR-0047).");
   }
   for (const f of ["evidence_url", "note", "checklist_item"] as const) {
-    if (body?.[f] != null && typeof body[f] !== "string") return badRequest("invalid_request", `${f}는 문자열이어야 합니다.`);
+    if (body?.[f] != null && typeof body[f] !== "string") return badRequest("invalid_request", `${f} must be a string.`);
   }
-  if ((body?.note?.length ?? 0) > 2000) return badRequest("invalid_request", "note는 2000자 이하입니다.");
+  if ((body?.note?.length ?? 0) > 2000) return badRequest("invalid_request", "note must be at most 2,000 characters.");
   if (body?.mode != null && !(ESTABLISHMENT_MODES as readonly string[]).includes(body.mode)) {
-    return badRequest("invalid_request", `mode는 ${ESTABLISHMENT_MODES.join(" | ")} 중 하나입니다 (ADR-0167).`);
+    return badRequest("invalid_request", `mode must be one of: ${ESTABLISHMENT_MODES.join(" | ")} (ADR-0167).`);
   }
   const hasAssignee = !!body && Object.prototype.hasOwnProperty.call(body, "assignee_user_id");
   if (hasAssignee && body?.assignee_user_id != null && typeof body.assignee_user_id !== "string") {
-    return badRequest("invalid_request", "assignee_user_id는 문자열 또는 null입니다.");
+    return badRequest("invalid_request", "assignee_user_id must be a string or null.");
   }
 
   const result = changeEstablishmentStatus(

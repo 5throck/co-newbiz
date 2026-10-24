@@ -26,7 +26,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ comp
   const url = new URL(request.url);
   const presetParam = url.searchParams.get("preset") ?? "recent";
   if (!DISCLOSURE_PRESETS.some((p) => p.key === presetParam)) {
-    return badRequest("invalid_preset", `preset는 ${DISCLOSURE_PRESETS.map((p) => p.key).join(" | ")} 중 하나입니다.`);
+    return badRequest("invalid_preset", `preset must be one of: ${DISCLOSURE_PRESETS.map((p) => p.key).join(" | ")}.`);
   }
   const result = await searchDisclosures(company.dart_corp_code, presetParam as DisclosurePreset["key"], 20);
   // DART 목록은 페이지네이션 겹침 등으로 같은 접수번호가 중복될 수 있다 — dedupe.

@@ -15,7 +15,8 @@ import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness } from "../lib/project-write-access.ts";
 import { useModalFocus } from "../lib/use-modal-focus.ts";
 import { PrimaryAction } from "./ui.tsx";
-import { DECISION_MODE_LABEL, GATE_LABEL, STAGE_STATUS_LABEL, labelText } from "../lib/labels.ts";
+import { useTranslations } from "next-intl";
+import { DECISION_MODE_LABEL_KEY, GATE_LABEL_KEY, STAGE_STATUS_KEY } from "../lib/label-keys.ts";
 
 interface SessionPosition {
   positionId: string;
@@ -107,6 +108,7 @@ export function CommitteePanel({
   /** Wave U: render the convene action as the screen's Primary Action in the page header. */
   headerPrimary?: boolean;
 }) {
+  const tr = useTranslations();
   const { me } = useAuth();
   const canAct = canWriteBusiness(me?.role);
   const [sessions, setSessions] = useState<Array<{ sessionId: string; meta: SessionTranscript["meta"]; status: string; startedAt: string }>>([]);
@@ -262,15 +264,15 @@ export function CommitteePanel({
           <label className="text-[length:var(--fs-caption)]">
             <span className="block mb-1">의사결정 모드</span>
             <select value={decisionMode} onChange={(e) => setDecisionMode(e.target.value as typeof decisionMode)} className="sizing-new-input sizing-new-input-sm">
-              <option value="agent_team">{DECISION_MODE_LABEL.agent_team}</option>
-              <option value="hybrid">{DECISION_MODE_LABEL.hybrid}</option>
-              <option value="human_only">{DECISION_MODE_LABEL.human_only}</option>
+              <option value="agent_team">{tr(DECISION_MODE_LABEL_KEY.agent_team)}</option>
+              <option value="hybrid">{tr(DECISION_MODE_LABEL_KEY.hybrid)}</option>
+              <option value="human_only">{tr(DECISION_MODE_LABEL_KEY.human_only)}</option>
             </select>
           </label>
           <label className="text-[length:var(--fs-caption)]">
             <span className="block mb-1">진행</span>
             <select value={gate} onChange={(e) => setGate(e.target.value as typeof gate)} className="sizing-new-input sizing-new-input-sm">
-              {gates.map((g) => <option key={g} value={g}>{GATE_LABEL[g] ?? g}</option>)}
+              {gates.map((g) => <option key={g} value={g}>{tr(GATE_LABEL_KEY[g] ?? g)}</option>)}
             </select>
           </label>
           {headerPrimary ? (
@@ -528,6 +530,7 @@ function MinutesModal({
   dissents: DissentEntry[];
   onClose: () => void;
 }) {
+  const tr = useTranslations();
   const { panelRef, onKeyDown } = useModalFocus(onClose);
   return createPortal(
     <div className="modal-backdrop" onClick={onClose} role="presentation" onKeyDown={onKeyDown}>
@@ -545,7 +548,7 @@ function MinutesModal({
           <button type="button" className="btn-ghost btn-sm" onClick={onClose} aria-label="닫기">닫기</button>
         </div>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-3">
-          세션 {transcript.sessionId.slice(-6)} · 진행 {GATE_LABEL[transcript.meta.gate] ?? transcript.meta.gate} · 모드 {DECISION_MODE_LABEL[transcript.meta.decision_mode] ?? transcript.meta.decision_mode} · 상태 {labelText(STAGE_STATUS_LABEL, transcript.status)}
+          세션 {transcript.sessionId.slice(-6)} · 진행 {tr(GATE_LABEL_KEY[transcript.meta.gate] ?? transcript.meta.gate)} · 모드 {tr(DECISION_MODE_LABEL_KEY[transcript.meta.decision_mode] ?? transcript.meta.decision_mode)} · 상태 {tr(STAGE_STATUS_KEY[transcript.status] ?? transcript.status)}
         </p>
 
         {/* 좌석별 포지션 요약 표는 제거(사용자 리포트, 2026-09-16 — 큰 의미 없음).

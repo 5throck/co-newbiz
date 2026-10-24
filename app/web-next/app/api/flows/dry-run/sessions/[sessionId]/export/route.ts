@@ -13,7 +13,7 @@ import { route } from "../../../../../../../lib/route.ts";
 export const POST = route(async (request: Request, ctx: { params: Promise<{ sessionId: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const guard = requireBusinessActor(auth.auth, "write", { viewerMessage: "제안 패키지 내보내기는 analyst 역할 이상이어야 합니다." });
+  const guard = requireBusinessActor(auth.auth, "write", { viewerMessage: "Proposal-package export requires the analyst role or higher." });
   if (guard) return guard;
 
   const { sessionId } = await ctx.params;

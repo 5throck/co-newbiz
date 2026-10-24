@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "신규 산업 분석 생성은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "New industry-analysis creation requires the analyst role or higher." });
   if (denied) return denied;
 
   let body: { name_ko?: string; ksic_code?: string; after_analysis_id?: string; linked_relation?: string };
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
   // 산업명은 저장·표시용 식별자 — LLM 제안 등에서 붙은 인용 표기([2] 등)가
   // 섞여 들어오지 않도록 저장 전에 제거한다(사용자 리포트, 2026-09-16).
   const nameKo = body.name_ko?.trim() ? stripCitationMarkers(body.name_ko.trim()) : undefined;
-  if (!nameKo) return badRequest("name_required", "산업명(name_ko)은 필수입니다.");
+  if (!nameKo) return badRequest("name_required", "Industry name (name_ko) is required.");
   const ksic = parseKsicInput(body.ksic_code);
   if (!ksic.ok) return badRequest("invalid_ksic_code", ksic.reason);
   const ksicCode = ksic.code;
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
   const afterId = body.after_analysis_id?.trim() || null;
   const linkedRelation = body.linked_relation?.trim() || null;
   if (linkedRelation && !LINKED_RELATIONS.includes(linkedRelation)) {
-    return badRequest("invalid_relation", "linked_relation은 전방 | 전전방 | 후방 | 후후방 중 하나입니다.");
+    return badRequest("invalid_relation", "linked_relation must be one of: forward | forward-plus-forward | backward | backward-plus-backward.");
   }
 
   const db = getDb();
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
       );
     } catch (err) {
       if (err instanceof Error && err.message.includes("UNIQUE")) {
-        return fail(409, "code_in_use", `KSIC 코드 ${ksicCode}는 이미 다른 산업에 할당되어 있습니다. 인라인 편집으로 기존 산업을 확인하세요.`);
+        return fail(409, "code_in_use", `KSIC code ${ksicCode} is already assigned to another industry. Verify the existing industry via inline edit.`);
       }
       throw err;
     }
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
       db.run("UPDATE md_industry SET ksic_code = ? WHERE id = ?", [ksicCode, industry.id]);
     } catch (err) {
       if (err instanceof Error && err.message.includes("UNIQUE")) {
-        return fail(409, "code_in_use", `KSIC 코드 ${ksicCode}는 이미 다른 산업에 할당되어 있습니다.`);
+        return fail(409, "code_in_use", `KSIC code ${ksicCode} is already assigned to another industry.`);
       }
       throw err;
     }
@@ -104,10 +104,10 @@ export async function POST(request: Request) {
     anchor = db
       .query("SELECT id, status, industry_id FROM market_sizing_analysis WHERE id = ?")
       .get(afterId) as { id: string; status: string; industry_id: string } | null;
-    if (!anchor) return badRequest("anchor_not_found", "선행 분석(after_analysis_id)을 찾을 수 없습니다.");
-    if (anchor.industry_id === industry.id) return badRequest("anchor_self", "선행 분석과 대상 산업이 같습니다.");
-    if (anchor.status === "failed") return fail(409, "anchor_not_ready", "선행 분석이 실패한 상태입니다 — 먼저 재분석을 완료한 뒤 연계 산업을 추가하세요.");
-    if (anchor.status === "pending") return fail(409, "anchor_not_ready", "선행 분석이 아직 대기 중입니다 — 대기 중인 분석에는 연계를 추가할 수 없습니다.");
+    if (!anchor) return badRequest("anchor_not_found", "The preceding analysis (after_analysis_id) was not found.");
+    if (anchor.industry_id === industry.id) return badRequest("anchor_self", "The preceding analysis targets the same industry.");
+    if (anchor.status === "failed") return fail(409, "anchor_not_ready", "The preceding analysis failed — complete a re-analysis before adding linked industries.");
+    if (anchor.status === "pending") return fail(409, "anchor_not_ready", "The preceding analysis is still pending — links cannot be added to a pending analysis.");
   }
 
   // One active analysis per industry: reuse an existing in_progress or queued

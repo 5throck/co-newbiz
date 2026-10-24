@@ -28,11 +28,11 @@ interface StoredPayload {
 export async function POST(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "AI 보정 제안은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "AI calibration proposals require the analyst role or higher." }); if (denied) return denied; }
   const db = getDb();
   const body = (await request.json().catch(() => null)) as { analysisId?: string } | null;
   const analysisId = typeof body?.analysisId === "string" ? body.analysisId : null;
-  if (!analysisId) return badRequest("invalid_request", "analysisId가 필요합니다.");
+  if (!analysisId) return badRequest("invalid_request", "analysisId is required.");
 
   const row = db
     .query(

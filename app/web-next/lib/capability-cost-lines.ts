@@ -5,6 +5,7 @@
 import { JUDGEMENT_CATEGORIES, RESOLUTION_LABEL, type CapabilityGapRow, type GapResolution, type JudgementCategory, type MilestoneCandidate } from "./capability-gap.ts";
 import { isStale, sha256Hex } from "./capability-linkage.ts";
 import { findStaffingDuplicateWarnings, isStaffingPlanEntry, normalizeStaffingPlanEntry, staffingPlanAuditHash, staffingPlanChanged, staffingPlanOf, staffingPlanView, staffingSummaryVector, type StaffingPlanEntry, type StaffingDuplicateWarning, type StaffingPlanView } from "./staffing-plan.ts";
+import { formatNumber, type Locale } from "./format.ts";
 export { findStaffingDuplicateWarnings, isStaffingPlanEntry, staffingPlanOf, type StaffingDuplicateWarning, type StaffingPlanEntry, type StaffingPlanView };
 
 export type CostCategory = JudgementCategory;
@@ -294,7 +295,7 @@ export const lineAmountKrwM = (l: { amount?: unknown; amountUnit?: unknown }): n
   return l.amountUnit === AMOUNT_UNIT_KRW_M ? Math.round(n * 100) / 100 : eokToKrwM(n);
 };
 /** "1,250백만원" (up to 2 decimals, thousands separators). */
-export const formatKrwM = (krwM: number): string => `${(Math.round(krwM * 100) / 100).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}백만원`;
+export const formatKrwM = (krwM: number, locale: Locale | string = "ko"): string => `${formatNumber(Math.round(krwM * 100) / 100, locale, { maximumFractionDigits: 2 })}백만원`;
 
 // ── Manual line units (amountUnitConfirmed model, decider 2026-10-15) ────────
 // A stored/posted manual line is CONFIRMED only when a human explicitly picked its unit in the UI

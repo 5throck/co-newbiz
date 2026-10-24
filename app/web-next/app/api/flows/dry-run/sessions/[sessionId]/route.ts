@@ -16,6 +16,6 @@ export const GET = route(async (request: Request, ctx: { params: Promise<{ sessi
   const { sessionId } = await ctx.params;
   purgeExpiredDryRunSessions();
   const session = getDryRunSessionDetail(sessionId);
-  if (!session) return notFound("드라이런 세션을 찾을 수 없습니다.");
+  if (!session) return notFound("Dry-run session not found.");
   return ok(session);
 });

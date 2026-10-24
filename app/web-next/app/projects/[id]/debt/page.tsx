@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
+import { useTranslations } from "next-intl";
 import { api } from "../../../../lib/api.ts";
 import { ColGroup, PageState, useToast } from "../../../../components/ui.tsx";
 
@@ -21,6 +22,8 @@ interface HeadroomRow { covenant_key: string; direction: "max" | "min" | "unknow
 interface Headroom { status: "computed" | "insufficient_evidence"; reason?: string; simulation_id: string | null; covenants: HeadroomRow[] }
 
 function DebtView() {
+  const t = useTranslations("pages.projects.debt");
+  const tc = useTranslations("common");
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const { me } = useAuth();
@@ -38,7 +41,7 @@ function DebtView() {
   const load = useCallback(() => {
     api.get<{ instruments: Instrument[]; headroom: Headroom }>(`/api/projects/${encodeURIComponent(id)}/debt`)
       .then((r) => { setRows(r.data.instruments); setHeadroom(r.data.headroom); })
-      .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
+      .catch((e) => setError(e instanceof Error ? e.message : tc("errors.loadFailed")));
   }, [id]);
   useEffect(() => { load(); }, [load]);
 
@@ -52,10 +55,10 @@ function DebtView() {
         rate: form.rate ? Number(form.rate) : 0, rate_type: form.rate_type,
         maturity: form.maturity.trim() || undefined, covenant_json: form.covenant_json.trim() || undefined,
       });
-      toast("차입이 등록되었습니다");
+      toast(t("created"));
       setForm({ ...form, lender: "", principal: "", rate: "", maturity: "", covenant_json: "" });
       load();
-    } catch (err) { setError(err instanceof Error ? err.message : "등록 실패"); }
+    } catch (err) { setError(err instanceof Error ? err.message : tc("errors.createFailed")); }
     finally { setBusy(false); }
   }
 
@@ -67,7 +70,7 @@ function DebtView() {
       const out: Array<{ key: string; op: string; value: number }> = [];
       for (const [k, v] of Object.entries(parsed)) {
         if (typeof v !== "number") continue;
-        const upper = /max|le|<=|상한|ceiling/i.test(k);
+        const upper = /max|le|<=|상한|ceiling/i.test(k);
         out.push({ key: k.replace(/^(wacc\.)?/i, "").replace(/_min$|_max$|_min$|_max$/i, ""), op: upper ? "≤" : "≥", value: v });
       }
       return out;
@@ -97,24 +100,24 @@ function DebtView() {
   return (
     <main>
       <StageTabs projectId={id} />
-      <h1>차입·여신 관리 <span className="note">(부채·커버넌트)</span></h1>
-      <p className="objective">차입 상품·상환 구조와 커버넌트 조건을 관리하고 여신 여력을 점검합니다 — 커버넌트 여력은 자금조달(S10)과 대조되고 투자심의 자료·리스크 히트맵에 전달됩니다.</p>
+      <h1>{t("heading")}{" "}<span className="note">{t("headingSuffix")}</span></h1>
+      <p className="objective">{t("objective")}</p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
-      <section className="market-section" aria-label="차입 목록">
+      <section className="market-section" aria-label={t("listSectionAria")}>
         {rows === null ? <PageState state="loading" /> : rows.length === 0 ? (
-          <PageState state="empty" emptyText="등록된 차입이 없습니다." />
+          <PageState state="empty" emptyText={t("empty")} />
         ) : (
-          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table table-fixed-pct tmin-48" aria-label="차입">
-              <caption className="sr-only">차입</caption>
+          <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+            <table className="data-table table-fixed-pct tmin-48" aria-label={t("tableAria")}>
+              <caption className="sr-only">{t("tableAria")}</caption>
               <ColGroup widths={DEBT_COL_PCT} />
-              <thead><tr><th>대출기관</th><th className="col-num">원금</th><th>금리</th><th>만기</th><th>커버넌트</th><th>담보·선위</th></tr></thead>
+              <thead><tr><th>{t("thLender")}</th><th className="col-num">{t("thPrincipal")}</th><th>{t("thRate")}</th><th>{t("thMaturity")}</th><th>{t("thCovenant")}</th><th>{t("thSecurity")}</th></tr></thead>
               <tbody>{rows.map((r) => (
                 <tr key={r.id}>
                   <td className="font-semibold">{r.lender ?? "—"}</td>
                   <td className="col-num tabular-nums">{r.principal}</td>
-                  <td className="tabular-nums">{r.rate_type === "fixed" ? "고정" : "변동"} {r.rate}%</td>
-                  <td className="tabular-nums" title={r.amortization ? `상환 구조: ${r.amortization}` : undefined}>{r.maturity ?? "—"}{r.amortization ? <span className="note"> · {r.amortization}</span> : null}</td>
+                  <td className="tabular-nums">{r.rate_type === "fixed" ? t("rateFixed") : t("rateFloating")}{" "}{r.rate}%</td>
+                  <td className="tabular-nums" title={r.amortization ? t("amortTitle", { value: r.amortization }) : undefined}>{r.maturity ?? "—"}{r.amortization ? <span className="note"> · {r.amortization}</span> : null}</td>
                   <td className="text-[length:var(--fs-caption)]">{r.covenant_json ?? "—"}</td>
                   <td className="text-[length:var(--fs-caption)]">{[r.security, r.seniority].filter(Boolean).join(" · ") || "—"}</td>
                 </tr>
@@ -123,89 +126,89 @@ function DebtView() {
           </div>
         )}
       </section>
-      <section className="market-section" aria-label="커버넌트 여력" data-testid="covenant-headroom">
-        <h2 className="text-[length:var(--fs-body)] mb-2">커버넌트 여력 <span className="note">— 최신 시뮬레이션의 재무약정 시험(covenant_test) 기준 · S10 자금조달 산출물</span></h2>
+      <section className="market-section" aria-label={t("headroomSectionAria")} data-testid="covenant-headroom">
+        <h2 className="text-[length:var(--fs-body)] mb-2">{t("headroomHeading")} <span className="note">{t("headroomNote")}</span></h2>
         {headroom === null ? <PageState state="loading" /> : headroom.status === "insufficient_evidence" ? (
-          <PageState state="empty" emptyText={headroom.reason === "no_simulation" ? "시뮬레이션이 아직 실행되지 않아 커버넌트 여력을 계산할 수 없습니다 — 근거 부족으로 표시합니다 (값을 추정하지 않습니다)." : "최신 시뮬레이션에 재무약정 시험 행이 없습니다 — 차입의 커버넌트 조건을 등록한 뒤 시뮬레이션을 다시 실행하세요."} />
+          <PageState state="empty" emptyText={headroom.reason === "no_simulation" ? t("headroomNoSim") : t("headroomNoRows")} />
         ) : (
-          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table table-fixed-pct tmin-48" aria-label="커버넌트 여력">
-              <caption className="sr-only">커버넌트 여력</caption>
+          <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+            <table className="data-table table-fixed-pct tmin-48" aria-label={t("headroomSectionAria")}>
+              <caption className="sr-only">{t("headroomSectionAria")}</caption>
               <ColGroup widths={COV_HEADROOM_COL_PCT} />
-              <thead><tr><th>커버넌트</th><th>방향</th><th className="col-num">최소 여력</th><th>가장 빠듯한 기간</th><th className="col-num">위반 기간</th><th>판정</th></tr></thead>
+              <thead><tr><th>{t("thCovenant")}</th><th>{tc("direction")}</th><th className="col-num">{t("hMinHeadroom")}</th><th>{t("hTightestPeriod")}</th><th className="col-num">{t("hBreachedPeriods")}</th><th>{t("hVerdict")}</th></tr></thead>
               <tbody>{headroom.covenants.map((c) => (
                 <tr key={c.covenant_key}>
                   <td className="font-semibold">{c.covenant_key}</td>
-                  <td className="text-[length:var(--fs-caption)]">{c.direction === "max" ? "상한 (≤)" : c.direction === "min" ? "하한 (≥)" : <span title="차입의 커버넌트 조건에 방향이 없어 여력 부호를 알 수 없습니다 — 위반 플래그만 표시">미지정</span>}</td>
+                  <td className="text-[length:var(--fs-caption)]">{c.direction === "max" ? t("dirMax") : c.direction === "min" ? t("dirMin") : <span title={t("dirUnknownTitle")}>{t("dirUnknown")}</span>}</td>
                   <td className="col-num tabular-nums">{c.min_headroom_pct != null ? `${Math.round(c.min_headroom_pct * 1000) / 10}%` : "—"}</td>
                   <td className="tabular-nums">{c.tightest_period ?? "—"}</td>
                   <td className="col-num tabular-nums">{c.breached_periods}/{c.periods}</td>
-                  <td>{c.status === "breached" ? <span className="status-chip status-red">위반</span> : c.status === "tight" ? <span className="status-chip status-amber">빠듯 (&lt;10%)</span> : c.status === "ok" ? <span className="status-chip status-green">여력 있음</span> : <span className="status-chip status-gray">방향 미지정</span>}</td>
+                  <td>{c.status === "breached" ? <span className="status-chip status-red">{t("chipBreached")}</span> : c.status === "tight" ? <span className="status-chip status-amber">{t("chipTight")}</span> : c.status === "ok" ? <span className="status-chip status-green">{t("chipOk")}</span> : <span className="status-chip status-gray">{t("chipNoDir")}</span>}</td>
                 </tr>
               ))}</tbody>
             </table>
           </div>
         )}
-        <p className="note" style={{ margin: "6px 0 0" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>위반·빠듯 판정은 S9 리스크 히트맵(cov: 항목)과 투자심의 자료 deal_structure.covenant_headroom에 그대로 전달됩니다.</p>
+        <p className="note" style={{ margin: "6px 0 0" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>{t("headroomFootnote")}</p>
       </section>
-      <section className="market-section" aria-label="커버넌트 시나리오 계산" style={{ border: "1px solid var(--border)", borderRadius: 12 }}>
-        <h2 className="text-[length:var(--fs-body)] mb-2">커버넌트 시나리오 계산 <span className="note">— 산식은 저장 조건 기반, 현금흐름은 명시적 가정 입력</span></h2>
+      <section className="market-section" aria-label={t("scenarioSectionAria")} style={{ border: "1px solid var(--border)", borderRadius: 12 }}>
+        <h2 className="text-[length:var(--fs-body)] mb-2">{t("scenarioHeading")} <span className="note">{t("scenarioNote")}</span></h2>
         <div className="form-grid" style={{ marginBottom: 8 }}>
-          <label className="text-[length:var(--fs-caption)] w-[12rem]"><span className="block mb-1">시나리오 연간 영업현금흐름 (억원)</span>
-            <input type="number" className="sizing-new-input sizing-new-input-sm" value={scenarioCf} onChange={(e) => setScenarioCf(e.target.value)} placeholder="예: 120" /></label>
-          <span className="note">금리 +2%p 스트레스는 체크박스로 적용</span>
-          <label className="text-[length:var(--fs-caption)] flex items-center gap-1" style={{ marginBottom: 4 }}><input type="checkbox" checked={stress} onChange={(e) => setStress(e.target.checked)} /> 금리 +2%p 스트레스</label>
+          <label className="text-[length:var(--fs-caption)] w-[12rem]"><span className="block mb-1">{t("scenarioCfLabel")}</span>
+            <input type="number" className="sizing-new-input sizing-new-input-sm" value={scenarioCf} onChange={(e) => setScenarioCf(e.target.value)} placeholder={t("scenarioCfPlaceholder")} /></label>
+          <span className="note">{t("stressNote")}</span>
+          <label className="text-[length:var(--fs-caption)] flex items-center gap-1" style={{ marginBottom: 4 }}><input type="checkbox" checked={stress} onChange={(e) => setStress(e.target.checked)} /> {t("stressLabel")}</label>
         </div>
         {rows && rows.length > 0 && scenarioCf && Number(scenarioCf) > 0 ? (
-          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table" aria-label="커버넌트 시나리오">
-              <caption className="sr-only">커버넌트 시나리오 계산</caption>
-              <thead><tr><th>차입</th><th className="col-num">연간 상환액</th><th className="col-num">부채상환비율</th><th>임계값</th><th>판정</th></tr></thead>
+          <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+            <table className="data-table" aria-label={t("scenarioTableAria")}>
+              <caption className="sr-only">{t("scenarioCaption")}</caption>
+              <thead><tr><th>{t("sThInstrument")}</th><th className="col-num">{t("sThAnnualService")}</th><th className="col-num">{t("sThDscr")}</th><th>{t("sThThreshold")}</th><th>{t("hVerdict")}</th></tr></thead>
               <tbody>{rows.map((r) => {
                 const rate = (stress ? r.rate + 2 : r.rate) / 100;
                 const n = remainingYears(r.maturity);
                 const ds = r.principal > 0 && rate >= 0 ? Math.round(r.principal * (rate / (1 - Math.pow(1 + rate, -n)))) : 0;
                 const dscr = ds > 0 ? Math.round((Number(scenarioCf) / ds) * 100) / 100 : null;
-                const th = parseThresholds(r.covenant_json).find((t) => /dscr/i.test(t.key));
+                const th = parseThresholds(r.covenant_json).find((cv) => /dscr/i.test(cv.key));
                 const pass = dscr != null && th ? dscr >= th.value : null;
                 return (
                   <tr key={r.id}>
-                    <td className="font-semibold">{r.lender ?? "차입"}</td>
-                    <td className="col-num tabular-nums">{ds}억</td>
+                    <td className="font-semibold">{r.lender ?? t("fallbackLender")}</td>
+                    <td className="col-num tabular-nums">{t("annualService", { value: ds })}</td>
                     <td className="col-num tabular-nums font-semibold">{dscr ?? "—"}</td>
-                    <td className="text-[length:var(--fs-caption)]">{th ? `부채상환비율 ≥ ${th.value}` : "임계값 미등록"}</td>
-                    <td>{pass == null ? <span className="status-chip status-gray">판정 불가</span> : pass ? <span className="status-chip status-green">충족</span> : <span className="status-chip status-red">위반</span>}</td>
+                    <td className="text-[length:var(--fs-caption)]">{th ? t("thresholdDscr", { value: th.value }) : t("noThreshold")}</td>
+                    <td>{pass == null ? <span className="status-chip status-gray">{t("verdictUnknown")}</span> : pass ? <span className="status-chip status-green">{t("verdictPass")}</span> : <span className="status-chip status-red">{t("chipBreached")}</span>}</td>
                   </tr>
                 );
               })}</tbody>
             </table>
           </div>
         ) : (
-          <p className="note" style={{ margin: 0 }}>시나리오 현금흐름을 입력하면 각 차입의 연간 상환액(연금공식)과 부채상환비율을 계산해 임계값과 대조합니다.</p>
+          <p className="note" style={{ margin: 0 }}>{t("scenarioHint")}</p>
         )}
         <p className="note" style={{ margin: "6px 0 0" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>
-          재무약정 판정 결과는 참고용 시나리오이며 공식 테스트는 재무약정 시험(시뮬레이션 실행)으로 확정됩니다 — 확정 결과는 위 "커버넌트 여력" 표에 표시됩니다.
+          {t("scenarioDisclaimer")}
         </p>
       </section>
 
       {canAct && (
-        <section className="market-section" aria-label="차입 등록">
-          <h2 className="text-[length:var(--fs-body)] mb-2">차입 등록</h2>
+        <section className="market-section" aria-label={t("registerSectionAria")}>
+          <h2 className="text-[length:var(--fs-body)] mb-2">{t("registerHeading")}</h2>
           <form className="sizing-new-form" onSubmit={create}>
             <div className="flex flex-wrap items-end gap-2">
-              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">대출기관</span>
+              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">{t("lblLender")}</span>
                 <input className="sizing-new-input sizing-new-input-sm" value={form.lender} onChange={(e) => setForm({ ...form, lender: e.target.value })} /></label>
-              <label className="text-[length:var(--fs-caption)] w-[8rem]"><span className="block mb-1">원금 *</span>
+              <label className="text-[length:var(--fs-caption)] w-[8rem]"><span className="block mb-1">{t("lblPrincipal")}</span>
                 <input type="number" className="sizing-new-input sizing-new-input-sm" value={form.principal} onChange={(e) => setForm({ ...form, principal: e.target.value })} required /></label>
-              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">금리 종류</span>
-                <select className="sizing-new-input sizing-new-input-sm" value={form.rate_type} onChange={(e) => setForm({ ...form, rate_type: e.target.value })}><option value="fixed">고정</option><option value="floating">변동</option></select></label>
-              <label className="text-[length:var(--fs-caption)] w-[6rem]"><span className="block mb-1">금리 (%)</span>
+              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">{t("lblRateType")}</span>
+                <select className="sizing-new-input sizing-new-input-sm" value={form.rate_type} onChange={(e) => setForm({ ...form, rate_type: e.target.value })}><option value="fixed">{t("rateFixed")}</option><option value="floating">{t("rateFloating")}</option></select></label>
+              <label className="text-[length:var(--fs-caption)] w-[6rem]"><span className="block mb-1">{t("lblRate")}</span>
                 <input type="number" step="0.01" className="sizing-new-input sizing-new-input-sm" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} /></label>
-              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">만기</span>
+              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">{t("lblMaturity")}</span>
                 <input className="sizing-new-input sizing-new-input-sm" value={form.maturity} onChange={(e) => setForm({ ...form, maturity: e.target.value })} placeholder="2031-06" /></label>
-              <button type="submit" className="btn-primary" disabled={busy}>{busy ? "등록 중..." : "등록"}</button>
+              <button type="submit" className="btn-primary" disabled={busy}>{busy ? tc("registering") : tc("register")}</button>
             </div>
-            <label className="text-[length:var(--fs-caption)] block mt-2"><span className="block mb-1">커버넌트 (JSON 또는 요약)</span>
+            <label className="text-[length:var(--fs-caption)] block mt-2"><span className="block mb-1">{t("lblCovenant")}</span>
               <input className="sizing-new-input w-full" value={form.covenant_json} onChange={(e) => setForm({ ...form, covenant_json: e.target.value })} placeholder="DSCR >= 1.3 · NetLev <= 3.5x" /></label>
           </form>
         </section>

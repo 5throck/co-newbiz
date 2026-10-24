@@ -12,6 +12,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { api } from "../../lib/api.ts";
 import { PageState, PrimaryAction } from "../../components/ui.tsx";
 import { StageFrame } from "../../components/StageFrame.tsx";
@@ -25,6 +26,8 @@ interface OpportunityRow {
 }
 
 function RouteDecisionRedirect() {
+  const t = useTranslations("pages.routeDecision");
+  const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
   const opportunityId = searchParams.get("opportunity");
@@ -49,7 +52,7 @@ function RouteDecisionRedirect() {
     // 계속 열람할 수 있어야 한다.
     api.get<OpportunityRow[]>("/api/opportunities?status=selected&includePromoted=1").then((r) => {
       setRows(r.data);
-    }).catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
+    }).catch((e) => setError(e instanceof Error ? e.message : tc("errors.loadFailed")));
   }, []);
 
   useEffect(() => {
@@ -65,7 +68,7 @@ function RouteDecisionRedirect() {
       {error && <PageState state="error" errorText={error} onRetry={loadRows} />}
       {!error && rows === null && <PageState state="loading" />}
       {!error && rows !== null && rows.length === 0 && (
-        <PageState state="empty" emptyText="선별(selected)된 기회가 없습니다 — 기회 발굴(S2)에서 시너지·적합성 평가(S3)를 마친 기회를 선별하면 여기 표시됩니다." />
+        <PageState state="empty" emptyText={t("empty")} />
       )}
       {!error && rows !== null && rows.length > 0 && (() => {
         // 승격 여부는 project_id로 판정한다 — deleted_at은 그 뒤 별도로
@@ -78,17 +81,17 @@ function RouteDecisionRedirect() {
           <>
             {active.length > 0 && (
               <div className="card">
-                <h2>검토/안건 선택</h2>
+                <h2>{t("pickHeading")}</h2>
                 <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
-                  진출방식을 결정할 검토/안건을 선택하세요 — 결정 화면은 검토/안건별로 열립니다.
+                  {t("pickNote")}
                 </p>
                 <div className="deal-pick-grid">
                   {active.map((o) => (
                     <Link key={o.id} href={`/deals/${encodeURIComponent(o.id)}/s4`} className="deal-pick-card">
                       <span className="deal-pick-card-title">{o.name}</span>
                       <span className="deal-pick-card-stats">
-                        <span className="status-chip status-not-started">매력도 <strong className="ml-1">{o.attractiveness_score ?? "—"}</strong></span>
-                        <span className="status-chip status-not-started">시너지 <strong className="ml-1">{o.synergy_score ?? "—"}</strong></span>
+                        <span className="status-chip status-not-started">{t("attractiveness")} <strong className="ml-1">{o.attractiveness_score ?? "—"}</strong></span>
+                        <span className="status-chip status-not-started">{t("synergy")} <strong className="ml-1">{o.synergy_score ?? "—"}</strong></span>
                       </span>
                     </Link>
                   ))}
@@ -110,47 +113,47 @@ function RouteDecisionRedirect() {
               return (
                 <div className="card mt-4">
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-                    <h2 className="mb-0">승격 <span className="text-[length:var(--fs-caption)] font-normal text-[color:var(--muted-fg)]">— 결정 이력만 열람 · {filteredPromoted.length}건</span></h2>
+                    <h2 className="mb-0">{t("promotedHeading")} <span className="text-[length:var(--fs-caption)] font-normal text-[color:var(--muted-fg)]">{t("promotedSuffix", { count: filteredPromoted.length })}</span></h2>
                     <div className="flex flex-wrap items-center gap-2">
                       <label className="text-[length:var(--fs-caption)]">
-                        <span className="sr-only">연도</span>
+                        <span className="sr-only">{t("srYear")}</span>
                         <select
                           value={promotedYear}
                           onChange={(e) => { setPromotedYear(e.target.value); setPromotedMonth(""); }}
                           className="sizing-new-input sizing-new-input-sm"
                         >
-                          <option value="">전체 연도</option>
-                          {years.map((y) => <option key={y} value={y}>{y}년</option>)}
+                          <option value="">{t("allYears")}</option>
+                          {years.map((y) => <option key={y} value={y}>{t("yearValue", { year: y })}</option>)}
                         </select>
                       </label>
                       <label className="text-[length:var(--fs-caption)]">
-                        <span className="sr-only">월</span>
+                        <span className="sr-only">{t("srMonth")}</span>
                         <select
                           value={promotedMonth}
                           onChange={(e) => setPromotedMonth(e.target.value)}
                           disabled={!promotedYear}
                           className="sizing-new-input sizing-new-input-sm"
                         >
-                          <option value="">전체 월</option>
-                          {months.map((m) => <option key={m} value={m}>{Number(m)}월</option>)}
+                          <option value="">{t("allMonths")}</option>
+                          {months.map((m) => <option key={m} value={m}>{t("monthValue", { month: Number(m) })}</option>)}
                         </select>
                       </label>
                     </div>
                   </div>
                   <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
-                    이미 프로젝트로 추진된 검토/안건입니다 — 새로 결정할 수는 없지만 S4 결정 이력은 계속 열람할 수 있습니다.
+                    {t("promotedNote")}
                   </p>
                   {filteredPromoted.length === 0 ? (
-                    <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">선택한 기간에 승격된 검토/안건이 없습니다.</p>
+                    <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">{t("noPromotedInRange")}</p>
                   ) : (
                     <div className="deal-pick-grid">
                       {filteredPromoted.map((o) => (
                         <Link key={o.id} href={`/deals/${encodeURIComponent(o.id)}/s4`} className="deal-pick-card">
                           <span className="deal-pick-card-title">{o.name}</span>
                           <span className="deal-pick-card-stats">
-                            <span className="status-chip status-green">승격됨</span>
-                            <span className="status-chip status-not-started">매력도 <strong className="ml-1">{o.attractiveness_score ?? "—"}</strong></span>
-                            <span className="status-chip status-not-started">시너지 <strong className="ml-1">{o.synergy_score ?? "—"}</strong></span>
+                            <span className="status-chip status-green">{t("promotedChip")}</span>
+                            <span className="status-chip status-not-started">{t("attractiveness")} <strong className="ml-1">{o.attractiveness_score ?? "—"}</strong></span>
+                            <span className="status-chip status-not-started">{t("synergy")} <strong className="ml-1">{o.synergy_score ?? "—"}</strong></span>
                           </span>
                         </Link>
                       ))}
@@ -169,10 +172,11 @@ function RouteDecisionRedirect() {
 /** 검토/안건 미지정 진입 전용 — 검토/안건 컨텍스트(project id)가 없어 스테이지 레일 없이
     h1 · 만들기 액션 · 설명을 표시한다(R2-A 페이지 계약). */
 function StageFrameLite() {
+  const t = useTranslations("pages.routeDecision");
   return (
     <StageFrame stageId="S4">
-      <PrimaryAction href="/market?new=1" label="새 검토 시작 (시장분석부터)" />
-      Greenfield vs Brownfield를 결정한다 (Brownfield ≠ M&A). 결정 화면은 검토/안건별로 열리며, 새 검토는 시장분석부터 시작합니다.
+      <PrimaryAction href="/market?new=1" label={t("newSearchLabel")} />
+      {t("frameText")}
     </StageFrame>
   );
 }

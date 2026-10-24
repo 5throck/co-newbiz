@@ -20,7 +20,7 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "JV 조건 수정은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Updating JV terms requires the analyst role or higher.");
   const { id, termId } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const db = getDb();
@@ -63,7 +63,7 @@ export const DELETE = route(async (request: Request, { params }: { params: Promi
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "JV 조건 삭제는 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Deleting JV terms requires the analyst role or higher.");
   const { id, termId } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const db = getDb();

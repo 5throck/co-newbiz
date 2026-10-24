@@ -9,6 +9,7 @@
 import { useState } from "react";
 import { api } from "../../../lib/api.ts";
 import type { LinkableIndustry } from "./types.ts";
+import { useTranslations } from "next-intl";
 
 export interface LinkToDealModalState { open: boolean; industry: LinkableIndustry | null }
 
@@ -17,7 +18,7 @@ export function LinkToDealModal({ state, projectId, onClose, onLinked }: {
   projectId: string | null;
   onClose: () => void;
   onLinked: (industryName: string) => void;
-}) {
+}) {const t = useTranslations("stages.s1.linkToDealModal"); const tc = useTranslations("common");
   const [rationale, setRationale] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,13 +26,13 @@ export function LinkToDealModal({ state, projectId, onClose, onLinked }: {
   if (!projectId) {
     return (
       <div className="modal-backdrop" onClick={onClose}>
-        <div className="modal-panel" role="dialog" aria-modal="true" aria-label="안건에 산업 연결" onClick={(e) => e.stopPropagation()}>
-          <h2 className="text-[length:var(--fs-body)] mb-1">이 안건에 연결</h2>
+        <div className="modal-panel" role="dialog" aria-modal="true" aria-label={t("linkIndustryToTheDeal")} onClick={(e) => e.stopPropagation()}>
+          <h2 className="text-[length:var(--fs-body)] mb-1">{tc("linkToThisDeal")}</h2>
           <p role="note" className="text-[length:var(--fs-body)] mb-2">
-            이 검토에는 아직 사업 프로젝트 행이 없어 산업을 연결할 수 없습니다. S8 승격 후 연결하거나, 먼저 S1 분석을 진행하세요.
+            {t("thisReviewHasNoBusiness")}
           </p>
           <div className="flex justify-end mt-3">
-            <button type="button" className="btn-ghost btn-sm" onClick={onClose}>닫기</button>
+            <button type="button" className="btn-ghost btn-sm" onClick={onClose}>{tc("close")}</button>
           </div>
         </div>
       </div>
@@ -41,7 +42,7 @@ export function LinkToDealModal({ state, projectId, onClose, onLinked }: {
   const submit = async () => {
     if (!state.industry || busy) return;
     if (!rationale.trim()) {
-      setError("연결 근거(rationale)는 필수입니다 — 바인딩은 판정 기록 행위입니다.");
+      setError(t("theLinkingRationaleIsRequired"));
       return;
     }
     setBusy(true);
@@ -51,7 +52,7 @@ export function LinkToDealModal({ state, projectId, onClose, onLinked }: {
         { industry_id: state.industry.id, rationale: rationale.trim() },
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "연결 실패");
+      setError(err instanceof Error ? err.message : t("linkFailed"));
       setBusy(false);
       return;
     }
@@ -60,26 +61,25 @@ export function LinkToDealModal({ state, projectId, onClose, onLinked }: {
   };
   return (
     <div className="modal-backdrop" onClick={close}>
-      <div className="modal-panel" role="dialog" aria-modal="true" aria-label="안건에 산업 연결" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-[length:var(--fs-body)] mb-1">이 안건에 연결</h2>
+      <div className="modal-panel" role="dialog" aria-modal="true" aria-label={t("linkIndustryToTheDeal2")} onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-[length:var(--fs-body)] mb-1">{tc("linkToThisDeal")}</h2>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-          <strong>{state.industry.name_ko}</strong> 분석을 이 안건의 S1 근거로 연결합니다. 연결되면 목록 최상단 "이 안건의 산업
-          분석" 영역으로 올라옵니다.
+          <strong>{state.industry.name_ko}</strong> {t("linksTheAnalysisAsThis")}
         </p>
         <label className="text-[length:var(--fs-caption)] block mb-2">
-          <span className="block mb-1">연결 근거 *</span>
+          <span className="block mb-1">{t("linkingRationale")}</span>
           <textarea
             value={rationale}
             onChange={(e) => setRationale(e.target.value)}
             rows={3}
-            placeholder="예: 이 S1 시장 분석의 수요가 어느 검토 안건과 어떻게 연결되는지 한 줄로 적어 주세요"
+            placeholder={t("eGDescribeInOne")}
             className="sizing-new-input w-full"
           />
         </label>
         {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">{error}</p>}
         <div className="flex justify-end gap-2">
-          <button type="button" className="btn-ghost btn-sm" onClick={close} disabled={busy}>취소</button>
-          <button type="button" className="btn-primary btn-sm" onClick={() => void submit()} disabled={busy || !rationale.trim()}>연결</button>
+          <button type="button" className="btn-ghost btn-sm" onClick={close} disabled={busy}>{tc("cancel")}</button>
+          <button type="button" className="btn-primary btn-sm" onClick={() => void submit()} disabled={busy || !rationale.trim()}>{tc("link")}</button>
         </div>
       </div>
     </div>

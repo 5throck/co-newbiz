@@ -57,7 +57,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "파라미터 확정은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Confirming parameters requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
@@ -65,25 +65,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     rationale?: string;
   } | null;
   const rationale = typeof body?.rationale === "string" ? body.rationale.trim() : "";
-  if (!rationale) return badRequest("invalid_request", "파라미터 확정에는 근거(rationale)가 필수입니다.");
+  if (!rationale) return badRequest("invalid_request", "Confirming parameters requires a rationale.");
   const raw = body?.params ?? {};
   if (Object.keys(raw).some((k) => k.replace(/^bc\./, "").startsWith("acquisition_ev_revenue_band"))) {
-    return badRequest("invalid_request", "EV/Revenue 밴드는 사람 전용 경로(business-case/ev-band)로만 확정할 수 있습니다 (use the human-only ev-band route).");
+    return badRequest("invalid_request", "EV/Revenue bands can only be confirmed via the human-only path (business-case/ev-band).");
   }
   // ADR-0178: switching a project to the pinned S5 reference is a person's opt-in - never an agent's.
   if (raw["s5_source"] !== undefined && raw["s5_source"] !== null && raw["s5_source"] !== "" && currentPrincipal()) {
-    return forbidden("human_only", "S5 고정 참조 사용 전환은 사람만 확정할 수 있습니다 (boundary #2).");
+    return forbidden("human_only", "Only a human can confirm the switch to pinned S5 reference (boundary #2).");
   }
   // ADR-0178 slice 2 (s5_pnl): switching to the plan P&L basis is a person's act too, and it is
   // Green Field + pinned-path only (OD-5/OD-6). Checked before the other field validations.
   if (raw["investment_basis"] !== undefined && raw["investment_basis"] !== null && raw["investment_basis"] !== "") {
     const nb = typeof raw["investment_basis"] === "number" ? investmentBasisOfCode(raw["investment_basis"] as number) : String(raw["investment_basis"]);
     if (nb === "s5_pnl") {
-      if (currentPrincipal()) return forbidden("human_only", "S5 계획 손익(s5_pnl) 기준 전환은 사람만 확정할 수 있습니다 (boundary #2).");
+      if (currentPrincipal()) return forbidden("human_only", "Only a human can confirm the switch to the s5_pnl basis (boundary #2).");
       const proj = getDb().query("SELECT track FROM md_project WHERE id = ?").get(id) as { track: string | null } | undefined;
-      if (proj?.track !== "greenfield") return badRequest("invalid_request", "s5_pnl 기준은 Green Field 프로젝트에서만 사용할 수 있습니다 (OD-5).");
+      if (proj?.track !== "greenfield") return badRequest("invalid_request", "The s5_pnl basis is available only for Green Field projects (OD-5).");
       if (!getCurrentS5PlanPin(getDb(), id) || !resolveS5InvestmentPlan(getDb(), id)) {
-        return badRequest("invalid_request", "s5_pnl 기준은 S5 고정 참조(pinned path)가 있을 때만 사용할 수 있습니다 (OD-6).");
+        return badRequest("invalid_request", "The s5_pnl basis requires a pinned S5 reference (OD-6).");
       }
     }
   }
@@ -156,6 +156,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       written_count: String(result.written.length),
     });
   } catch (err) {
-    return badRequest("invalid_request", err instanceof Error ? err.message : "파라미터 저장에 실패했습니다.");
+    return badRequest("invalid_request", err instanceof Error ? err.message : "Failed to save the parameters.");
   }
 }

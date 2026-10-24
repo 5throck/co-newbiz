@@ -25,6 +25,9 @@ const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
 const sp = await import("../../app/web-next/lib/staffing-plan.ts");
 const cl = await import("../../app/web-next/lib/capability-cost-lines.ts");
+// i18n: section labels resolve through the catalog — pin the keys to their
+// original Korean wording so a rename cannot silently change the UI text.
+const koCatalog = await import("../../app/web-next/locales/ko.json");
 
 const NOW = new Date().toISOString();
 const json = JSON.stringify;
@@ -36,21 +39,21 @@ const okPlan = (rows: unknown[], h = 3, o: Record<string, unknown> = {}) => { co
 
 describe("validation table", () => {
   const bad: Array<[string, unknown[], Record<string, unknown>, RegExp]> = [
-    ["empty roleFamily", [row({ roleFamily: "  " })], {}, /직무군/],
-    ["empty grade", [row({ grade: "" })], {}, /직급/],
-    ["negative headcount", [row({ headcountByYear: [-1, 0, 0] })], {}, /인원/],
-    ["headcount > 100000", [row({ headcountByYear: [100001] })], {}, /인원/],
-    ["more year columns than horizon", [row({ headcountByYear: [1, 1, 1, 1] })], {}, /연도 열/],
-    ["salary > 10000", [row({ avgAnnualBaseSalaryKrwM: 10001 })], {}, /평균 연봉/],
-    ["negative salary", [row({ avgAnnualBaseSalaryKrwM: -1 })], {}, /평균 연봉/],
-    ["increase > 100", [row({ salaryIncreaseRatePct: 101 })], {}, /인상률/],
-    ["on-cost > 100", [row({ onCostRatePct: 101 })], {}, /가산율/],
+    ["empty roleFamily", [row({ roleFamily: "  " })], {}, /job family/],
+    ["empty grade", [row({ grade: "" })], {}, /grade/],
+    ["negative headcount", [row({ headcountByYear: [-1, 0, 0] })], {}, /headcount/],
+    ["headcount > 100000", [row({ headcountByYear: [100001] })], {}, /headcount/],
+    ["more year columns than horizon", [row({ headcountByYear: [1, 1, 1, 1] })], {}, /year columns/],
+    ["salary > 10000", [row({ avgAnnualBaseSalaryKrwM: 10001 })], {}, /average salary/],
+    ["negative salary", [row({ avgAnnualBaseSalaryKrwM: -1 })], {}, /average salary/],
+    ["increase > 100", [row({ salaryIncreaseRatePct: 101 })], {}, /annual raise/],
+    ["on-cost > 100", [row({ onCostRatePct: 101 })], {}, /premium/],
     ["bad quarter", [row({ hireStartQuarter: "2027-5" })], {}, /YYYY-Qn/],
-    ["negative recruiting", [row({ recruitingOneOffKrwM: -1 })], {}, /채용 일회비/],
-    ["start year out of horizon", [row()], { startYear: 4 }, /시작 연차/],
-    ["end before start", [row()], { startYear: 3, endYear: 2 }, /종료 연차/],
-    ["attrition > 100", [row()], { attritionBackfillPct: 101 }, /이탈 보충률/],
-    ["non-object row", ["x"], {}, /형식/],
+    ["negative recruiting", [row({ recruitingOneOffKrwM: -1 })], {}, /one-time hiring cost/],
+    ["start year out of horizon", [row()], { startYear: 4 }, /start year/],
+    ["end before start", [row()], { startYear: 3, endYear: 2 }, /end year/],
+    ["attrition > 100", [row()], { attritionBackfillPct: 101 }, /attrition backfill rate/],
+    ["non-object row", ["x"], {}, /malformed/],
   ];
   for (const [name, rows, o, re] of bad) test(`rejects ${name}`, () => { const v = norm(plan(rows, o)); expect(v.ok).toBe(false); if (!v.ok) expect(v.message).toMatch(re); });
   test("rejects more than 100 rows", () => { expect(norm(plan(Array.from({ length: 101 }, (_, i) => row({ id: `x${i}` })))).ok).toBe(false); });
@@ -170,7 +173,7 @@ describe("meta entry in stored lines (pure normalizer)", () => {
   test("an invalid row fails the whole save with a precise message", () => {
     const r = cl.normalizeBusinessCaseLines([{ source: "plan_meta", horizonYears: 3 }, plan([row({ grade: "" })])], [], null, actor);
     expect(r.ok).toBe(false);
-    if (!r.ok) { expect(r.error.code).toBe("invalid_request"); expect(r.error.message).toContain("1번째 행: 직급"); }
+    if (!r.ok) { expect(r.error.code).toBe("invalid_request"); expect(r.error.message).toContain("Row 1: enter the grade"); }
   });
   test("lines without the plan keep the stored one; an explicit empty-rows save clears it", () => {
     const stored = [{ source: "plan_meta", horizonYears: 3 }, { ...okPlan([row()]), updatedAt: NOW, updatedBy: "u" }, manual];
@@ -259,7 +262,7 @@ describe("routes: partial saves, masking, audit", () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as any;
     expect(body.error.code).toBe("invalid_request");
-    expect(body.error.message).toContain("1번째 행: 평균 연봉");
+    expect(body.error.message).toContain("Row 1: the average salary");
     expect(JSON.stringify(stored())).toBe(before);
   });
 
@@ -288,12 +291,19 @@ describe("S5 UI structure (source)", () => {
     expect(stage.indexOf("<StaffingPlanSection")).toBeLessThan(stage.indexOf("unifiedRows.map"));
     expect(stage).toContain("staffingPayload()");
     expect(stage).toContain("!isStaffingPlanEntry(l)");
-    expect(stage).toContain("투자비 항목 저장");
-    expect(stage).toContain("인건비 항목 저장");
+    expect(stage).toContain('t("saveInvestmentItems")'); // i18n: labels resolve through the catalog
+    expect(stage).toContain('t("saveLaborCostItems")');
   });
   test("grid, + 행 추가, delete, canAct gating and the masked cell", () => {
-    for (const s of ["인력 운영 계획", "+ 행 추가", "평균 연봉(백만원)", "가산율(%)", "채용 일회비", "확인 필요", "연평균 인원", "staffing-masked-cell", "열람 권한 없음", "aria-expanded"]) expect(sec).toContain(s);
+    // i18n: section copy resolves through the catalog — pin the key call sites and structural testids.
+    for (const s of ['t("staffingPlan")', 't("addRow")', 't("averageSalaryKrwMillions")', 't("upliftRate")', 't("hiringCostKrwMillions")', 'tc("needsCheck")', 't("annualAverage")', "staffing-masked-cell", 't("noViewPermission")', "aria-expanded"]) expect(sec).toContain(s);
     expect(sec).toContain("disabled={disabled}");
     expect(sec).toContain("masked ? mask");
+    // The keys resolve to the original Korean labels in the ko master catalog.
+    expect(koCatalog.stages.s5.staffingPlan.averageSalaryKrwMillions).toBe("평균 연봉(백만원)");
+    expect(koCatalog.stages.s5.staffingPlan.upliftRate).toBe("가산율(%)");
+    expect(koCatalog.stages.s5.staffingPlan.hiringCostKrwMillions).toBe("채용 일회비(백만원)");
+    expect(koCatalog.stages.s5.staffingPlan.annualAverage).toBe("연평균");
+    expect(koCatalog.common.needsCheck).toBe("확인 필요");
   });
 });

@@ -50,7 +50,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "시너지 점수 확정은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Synergy-score confirmation requires the analyst role or higher." }); if (denied) return denied; }
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { score?: unknown; rationale?: unknown } | null;
 
@@ -63,10 +63,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   let score = row.synergy_score;
   if (body?.score !== undefined && body.score !== null && body.score !== "") {
     const n = Number(body.score);
-    if (!Number.isFinite(n) || n < 0 || n > 100) return badRequest("invalid_request", "score는 0~100 사이의 숫자여야 합니다.");
+    if (!Number.isFinite(n) || n < 0 || n > 100) return badRequest("invalid_request", "score must be a number between 0 and 100.");
     score = Math.round(n);
   }
-  if (score === null || score === undefined) return badRequest("no_recommendation", "확정할 시너지 권고가 없습니다 — score를 함께 보내거나 먼저 S3 분석을 완료하세요.");
+  if (score === null || score === undefined) return badRequest("no_recommendation", "No synergy recommendation to confirm — send a score or complete the S3 analysis first.");
   const rationale = typeof body?.rationale === "string" && body.rationale.trim() ? body.rationale.trim().slice(0, 2000) : row.synergy_rationale;
 
   const at = now();
@@ -81,12 +81,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "시너지 점수 확정 철회는 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Synergy-score confirmation revocation requires the analyst role or higher." }); if (denied) return denied; }
   const { id } = await params;
   const db = getDb();
   const row = getRow(db, id);
   if (!row) return notFound();
-  if (!row.synergy_score_confirmed_at) return badRequest("not_confirmed", "확정 기록이 없습니다.");
+  if (!row.synergy_score_confirmed_at) return badRequest("not_confirmed", "No confirmation record exists.");
   const at = now();
   // 점수 자체는 남기고 확정 표시만 지운다 — 값은 권고 상태로 되돌아간다.
   db.run("UPDATE opportunity SET synergy_score_confirmed_at = NULL, synergy_score_confirmed_by = NULL WHERE id = ?", [id]);

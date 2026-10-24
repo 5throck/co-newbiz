@@ -5,23 +5,24 @@
 // (docs/designs/mockups/2026-09-10-wacc-capm-ui-mockup_ko.html) 기준.
 
 import type { WaccDerivation } from "../../../../db/lib/wacc-components.ts";
+import { useTranslations } from "next-intl";
 
 const pct = (n: number) => `${(n * 100).toFixed(2)}%`;
 
-export function DerivationTable({ derivation }: { derivation: WaccDerivation }) {
+export function DerivationTable({ derivation }: { derivation: WaccDerivation }) {const t = useTranslations("stages.s8.wacc.derivationTable"); const tc = useTranslations("common");
   if (derivation.steps.length === 0) {
-    return <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">산식 분해에 필요한 컴포넌트가 부족합니다.</p>;
+    return <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{t("componentsNeededForTheFormula")}</p>;
   }
   return (
     <div className="overflow-x-auto">
-      <table className="data-table" aria-label="WACC 산식 분해">
-        <caption className="sr-only">WACC 산식 분해 — 항목·산식·대입·결과</caption>
+      <table className="data-table" aria-label={t("waccFormulaBreakdown")}>
+        <caption className="sr-only">{t("waccFormulaBreakdownItemsFormulas")}</caption>
         <thead>
           <tr className="text-left text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] border-b border-[color:var(--border-bright)]">
-            <th className="py-1.5 px-1.5 font-semibold whitespace-nowrap">항목</th>
-            <th className="py-1.5 px-1.5 font-semibold">산식</th>
-            <th className="py-1.5 px-1.5 font-semibold">대입</th>
-            <th className="py-1.5 px-1.5 font-semibold text-right">결과</th>
+            <th className="py-1.5 px-1.5 font-semibold whitespace-nowrap">{tc("items")}</th>
+            <th className="py-1.5 px-1.5 font-semibold">{t("formula")}</th>
+            <th className="py-1.5 px-1.5 font-semibold">{t("substitution")}</th>
+            <th className="py-1.5 px-1.5 font-semibold text-right">{t("result")}</th>
           </tr>
         </thead>
         <tbody>

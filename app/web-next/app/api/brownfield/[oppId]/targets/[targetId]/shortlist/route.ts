@@ -12,7 +12,7 @@ const now = () => new Date().toISOString();
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string; targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Short List 승격은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Short List promotion requires the analyst role or higher." });
   if (denied) return denied;
   const { oppId, targetId } = await params;
   const body = (await request.json().catch(() => null)) as { rank?: number; universe_note?: string; gate_evaluation_id?: string } | null;
@@ -21,7 +21,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   // deliberation that proposed this promotion (0066 nullable column).
   const gateEvaluationId = body?.gate_evaluation_id?.trim() || null;
   if (gateEvaluationId && !db.query("SELECT id FROM gate_evaluation WHERE id = ?").get(gateEvaluationId)) {
-    return badRequest("invalid_request", "gate_evaluation_id가 존재하지 않습니다 — 위원회 세션의 gate_evaluation을 확인하세요.");
+    return badRequest("invalid_request", "gate_evaluation_id does not exist — check the gate_evaluation of the committee session.");
   }
   const target = db
     .query("SELECT * FROM brownfield_target WHERE id = ? AND opportunity_id = ?")
@@ -48,8 +48,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
       "eval_pending",
       incomplete
         .map((c) => (scores[c].totalWeight === 0
-          ? (c === "technical" ? "기술 평가 항목 없음 — S3에서 필요 역량을 먼저 정의하세요" : "재무 평가 항목 없음")
-          : `${c === "technical" ? "기술" : "재무"} 평가 미판정 가중치 ${scores[c].totalWeight - scores[c].scoredWeight}`))
+          ? (c === "technical" ? "no technical evaluation items — define required capabilities in S3 first" : "no financial evaluation items")
+          : `${c === "technical" ? "technical" : "financial"} unscored weight ${scores[c].totalWeight - scores[c].scoredWeight}`))
         .join(" · "),
     );
   }

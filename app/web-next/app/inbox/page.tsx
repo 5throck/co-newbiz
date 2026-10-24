@@ -7,14 +7,15 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { PageState, FilterChip, PrimaryAction } from "../../components/ui.tsx";
 import { InboxList } from "../../components/InboxList.tsx";
 import { ReviewBuckets } from "../../components/ReviewBuckets.tsx";
 import { useInbox } from "../../lib/use-inbox.ts";
-import { KIND_LABEL, SEVERITY_LABEL, type InboxItem, type InboxKind } from "../../lib/inbox.ts";
+import { KIND_LABEL_KEY, SEVERITY_LABEL, type InboxItem, type InboxKind } from "../../lib/inbox.ts";
 
 const SNOOZE_KEY = "cn-inbox-snooze";
-const ALL_KINDS = Object.keys(KIND_LABEL) as InboxKind[];
+const ALL_KINDS = Object.keys(KIND_LABEL_KEY) as InboxKind[];
 const REVIEW_GATES = new Set(["screening", "pre_fs", "fs", "dd", "entity_ic", "group_ic"]);
 
 function readSnooze(): Record<string, number> {
@@ -25,14 +26,18 @@ function readSnooze(): Record<string, number> {
   }
 }
 
-function primaryLabel(kind: InboxKind): string {
-  if (kind === "gate_proposal" || kind === "decision_proposal") return "제안 확인 화면 열기";
-  if (kind === "gate_hold") return "게이트 결정 화면 열기";
-  if (kind === "closure_precondition") return "종료·전환 화면 열기";
-  return "알림 대상 열기";
-}
+// Primary-action label per kind — key map resolved at render (label maps stay out of JSX).
+const PRIMARY_LABEL_KEY: Partial<Record<InboxKind, string>> = {
+  gate_proposal: "openProposal",
+  decision_proposal: "openProposal",
+  gate_hold: "openGate",
+  closure_precondition: "openClosure",
+};
 
 export default function InboxPage() {
+  const t = useTranslations();
+  const ti = useTranslations("pages.inbox");
+  const tc = useTranslations("common");
   const { result, loading } = useInbox();
   // Empty set = "전체" (no kind filter). A chip is filled only when it is an active filter.
   const [kinds, setKinds] = useState<Set<InboxKind>>(new Set());
@@ -65,7 +70,7 @@ export default function InboxPage() {
   }, [result]);
   const selected: InboxItem | null = items.find((i) => i.id === selectedId) ?? items[0] ?? null;
   const showReview = !!(selected?.entityType && selected.dealId && selected.gate && REVIEW_GATES.has(selected.gate));
-  const primaryLink = selected ? <Link href={selected.href} className="btn-primary">{primaryLabel(selected.kind)}</Link> : null;
+  const primaryLink = selected ? <Link href={selected.href} className="btn-primary">{ti(PRIMARY_LABEL_KEY[selected.kind] ?? "openTarget")}</Link> : null;
 
   function select(id: string) {
     setSelectedId(id);
@@ -85,36 +90,36 @@ export default function InboxPage() {
   return (
     <main className="inbox-page">
       <div className="page-header-row">
-        <h1>결정 대기함</h1>
+        <h1>{ti("heading")}</h1>
         {narrow && !mobileDetail && items.length > 0 && (
           <span className="ml-auto">
-            <PrimaryAction readOnly inline label="맨 위 항목 열기" onClick={() => select(items[0].id)} />
+            <PrimaryAction readOnly inline label={ti("openFirstItem")} onClick={() => select(items[0].id)} />
           </span>
         )}
       </div>
       <p className="inbox-lead">
-        내가 판단해야 하는 항목을 한곳에 모았습니다. 이 화면은 조회 전용이며, 결정은 각 항목의 기존 사람 전용 화면에서만 기록됩니다.
+        {ti("lead")}
       </p>
 
       {result && result.failed.length > 0 && (
         <div role="alert">
           <ul className="inbox-failed">
             {result.failed.map((f) => (
-              <li key={f.source}>불러오지 못함: {f.source} — {f.message}</li>
+              <li key={f.source}>{ti("failedItem", { source: f.source, message: f.message })}</li>
             ))}
           </ul>
         </div>
       )}
 
-      <div className="inbox-filters" role="group" aria-label="필터">
-        <FilterChip selected={kinds.size === 0} onClick={() => setKinds(new Set())}>전체</FilterChip>
+      <div className="inbox-filters" role="group" aria-label={ti("filtersAria")}>
+        <FilterChip selected={kinds.size === 0} onClick={() => setKinds(new Set())}>{tc("all")}</FilterChip>
         {ALL_KINDS.map((k) => (
-          <FilterChip key={k} selected={kinds.has(k)} onClick={() => toggleKind(k)}>{KIND_LABEL[k]}</FilterChip>
+          <FilterChip key={k} selected={kinds.has(k)} onClick={() => toggleKind(k)}>{t(KIND_LABEL_KEY[k])}</FilterChip>
         ))}
         <label className="inbox-deal-filter">
-          <span>검토/안건</span>
+          <span>{ti("reviewDeal")}</span>
           <select className="form-input" value={deal} onChange={(e) => setDeal(e.target.value)}>
-            <option value="">전체</option>
+            <option value="">{tc("all")}</option>
             {deals.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
           </select>
         </label>
@@ -123,27 +128,27 @@ export default function InboxPage() {
       {loading ? (
         <PageState state="loading" />
       ) : items.length === 0 ? (
-        <p className="inbox-empty" role="status">대기 중인 결정이 없습니다. 지금 처리할 항목이 없습니다.</p>
+        <p className="inbox-empty" role="status">{ti("empty")}</p>
       ) : (
         <div className="inbox-layout" data-detail={mobileDetail ? "open" : "closed"}>
           <div className="inbox-list-pane">
             <InboxList items={items} selectedId={selected?.id ?? null} onSelect={select} />
           </div>
           {selected && (
-            <aside className="inbox-detail" aria-label="항목 상세">
+            <aside className="inbox-detail" aria-label={ti("detailAria")}>
               <button type="button" className="btn-ghost btn-sm inbox-back" onClick={() => setMobileDetail(false)}>
-                <ArrowLeft size={14} aria-hidden="true" /> 목록
+                <ArrowLeft size={14} aria-hidden="true" /> {tc("backToList")}
               </button>
               <h2 tabIndex={-1} ref={detailHeading}>{selected.title}</h2>
               <dl className="inbox-facts">
-                <div><dt>종류</dt><dd>{KIND_LABEL[selected.kind]}</dd></div>
-                <div><dt>검토/안건</dt><dd>{selected.dealName}{selected.stage ? ` · ${selected.stage}` : ""}</dd></div>
-                <div><dt>경과</dt><dd>{selected.ageDays}일</dd></div>
-                <div><dt>긴급도</dt><dd>{SEVERITY_LABEL[selected.severity]}</dd></div>
+                <div><dt>{ti("dtKind")}</dt><dd>{t(KIND_LABEL_KEY[selected.kind])}</dd></div>
+                <div><dt>{ti("reviewDeal")}</dt><dd>{selected.dealName}{selected.stage ? ` · ${selected.stage}` : ""}</dd></div>
+                <div><dt>{ti("dtAge")}</dt><dd>{ti("ageDaysValue", { days: selected.ageDays })}</dd></div>
+                <div><dt>{ti("dtSeverity")}</dt><dd>{SEVERITY_LABEL[selected.severity]}</dd></div>
               </dl>
               {selected.aiDraft && (
                 <p className="inbox-ai-draft">
-                  <strong>AI 추천(초안)</strong> — 제안일 뿐 결정이 아닙니다. {selected.aiDraft}
+                  <strong>{ti("aiDraftLabel")}</strong> {ti("aiDraftNote")} {selected.aiDraft}
                 </p>
               )}
               {showReview ? (
@@ -160,9 +165,9 @@ export default function InboxPage() {
               )}
               <div className="inbox-actions">
                 {selected.entityType === "project" && selected.dealId && (
-                  <Link href={`/projects/${encodeURIComponent(selected.dealId)}/process`} className="btn-ghost">단계 화면에서 열기</Link>
+                  <Link href={`/projects/${encodeURIComponent(selected.dealId)}/process`} className="btn-ghost">{ti("openInStage")}</Link>
                 )}
-                <button type="button" className="btn-ghost" onClick={() => snooze(selected.id)}>하루 미루기</button>
+                <button type="button" className="btn-ghost" onClick={() => snooze(selected.id)}>{ti("snoozeDay")}</button>
               </div>
             </aside>
           )}

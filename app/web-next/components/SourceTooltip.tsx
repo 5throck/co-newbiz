@@ -1,7 +1,9 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
+import { useLocale } from "next-intl";
 import { provenanceOf, type ProvenanceMeta } from "../lib/api.ts";
+import { formatDateTime } from "../lib/format.ts";
 
 // Source tooltip — ui-spec.md §1 / FR-SYS-03: every numeric figure carries
 // its provenance (assumption_key, as_of, source, anchor_ref, run_id) read
@@ -22,11 +24,6 @@ const FIELD_LABELS: { key: keyof ProvenanceMeta; label: string }[] = [
   { key: "assessed_at", label: "평가 시점" },
 ];
 
-function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString("ko-KR");
-}
-
 export function SourceTooltip({
   provenance,
   children,
@@ -34,6 +31,7 @@ export function SourceTooltip({
   provenance: ProvenanceMeta | Record<string, unknown> | undefined;
   children: ReactNode;
 }) {
+  const locale = useLocale();
   const picked = provenanceOf(provenance);
   const fields = FIELD_LABELS.filter(({ key }) => typeof picked[key] === "string");
   const popoverId = useId();
@@ -72,7 +70,7 @@ export function SourceTooltip({
             {fields.map(({ key, label }) => (
               <div key={key} className="source-field">
                 <dt>{label}</dt>
-                <dd>{key === "as_of" || key === "assessed_at" ? formatDateTime(picked[key]!) : picked[key]}</dd>
+                <dd>{key === "as_of" || key === "assessed_at" ? formatDateTime(picked[key]!, locale) : picked[key]}</dd>
               </div>
             ))}
           </dl>

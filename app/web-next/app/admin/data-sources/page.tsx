@@ -2,6 +2,6 @@
 
 import { AdminConsole } from "../../../components/admin/AdminConsole.tsx";
 
-export default function Admin데이터소스관리Page() {{
+export default function AdminDataSourcePage() {{
   return <AdminConsole section="data-sources" />;
 }}

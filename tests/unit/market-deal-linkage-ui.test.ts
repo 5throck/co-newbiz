@@ -92,14 +92,15 @@ test("MarketAnalysisStage: deal breadcrumb for linked, NEUTRAL breadcrumb for un
   // linked in deal -> DealBreadcrumb with the industry tail
   expect(s).toContain('inDealContext ? (\n          <DealBreadcrumb dealId={dealId!}');
   // unlinked in deal -> neutral "시장 분석 › <산업명>" path, no deal tail
-  expect(s).toContain('[{ label: "시장 분석", href: "/market" }, { label: detail.industry.name_ko }]');
+  expect(s).toContain('[{ label: t("marketAnalysis"), href: "/market" }, { label: detail.industry.name_ko }]');
   // standalone path (non-deal) keeps the original neutral items
-  expect(s).toContain('label: "검토/안건 보드", href: "/deals"');
+  expect(s).toContain('label: t("reviewDealBoard"), href: "/deals"'); // i18n: standalone breadcrumb resolves through the catalog
 });
 
 test("MarketAnalysisStage: '다음: S2' only for linked, CTA visible only for unlinked analyst+ (detail view)", () => {
   const s = src("MarketAnalysisStage.tsx");
-  expect(s).toContain('{inDealContext && <PrimaryAction readOnly inline href={nextHref} label="다음: S2 기회 발굴 →" />}');
+  // i18n: CTA label resolves through the catalog (stages.s1.marketAnalysisStage.nextS2OpportunityDiscovery).
+  expect(s).toContain('{inDealContext && <PrimaryAction readOnly inline href={nextHref} label={t("nextS2OpportunityDiscovery")} />}');
   expect(s).toContain("{!inDealContext && dealId && canCurate && (");
   expect(s).toContain("이 안건에 연결");
 });
@@ -108,7 +109,7 @@ test("IndustryListSection: linked-first ordering with the muted other-reviews he
   const s = src("IndustryListSection.tsx");
   // linked section renders BEFORE the other-reviews section
   const linkedIdx = s.indexOf("ctx.linkedFlatRows");
-  const otherIdx = s.indexOf('uppercase tracking-wide">다른 검토의 산업 분석</h3>');
+  const otherIdx = s.indexOf('{t("otherDealsIndustryAnalyses")}'); // i18n: header key (IndustryListSection)
   const plainIdx = s.indexOf("<IndustryTable ctx={ctx} />");
   expect(linkedIdx).toBeGreaterThan(-1);
   expect(otherIdx).toBeGreaterThan(linkedIdx);

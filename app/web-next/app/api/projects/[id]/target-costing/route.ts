@@ -26,7 +26,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "타겟코스팅 분석은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Target-costing analysis requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
@@ -42,7 +42,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const num = (key: string): number => {
     const v = (body as Record<string, unknown> | null)?.[key];
     const n = typeof v === "string" && v.trim() !== "" ? Number(v) : v;
-    if (typeof n !== "number") throw new TargetCostValidationError(`${key}는 숫자여야 합니다.`);
+    if (typeof n !== "number") throw new TargetCostValidationError(`${key} must be a number.`);
     return n;
   };
 
@@ -58,7 +58,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       // rather than silently downgraded to manual entry.
       const url = priceEvidence.source_url;
       if (typeof url !== "string" || !/^https?:\/\//.test(url)) {
-        return badRequest("invalid_request", "price_evidence.source_url는 http(s) URL이어야 합니다.");
+        return badRequest("invalid_request", "price_evidence.source_url must be an http(s) URL.");
       }
     }
     const row = recordTargetCostAnalysis(

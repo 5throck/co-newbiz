@@ -20,6 +20,8 @@ import { useConfirm } from "../crud.tsx";
 import { SectionToolbar } from "../layout.tsx";
 import { ColGroup, PrimaryAction } from "../ui.tsx";
 import { isDegeneratePct, NOT_COMPUTABLE_TEXT, SYNTHETIC_BADGE_TEXT } from "../../lib/synthetic-value.ts";
+import { TranslatorFn } from "../../i18n/config.ts";
+import { useTranslations } from "next-intl";
 
 /** Column shares (%) in header order: status, name, attractiveness, synergy, actions. */
 const FUNNEL_COL_PCT = [14, 34, 12, 16, 24] as const;
@@ -43,11 +45,12 @@ interface OpportunityRow {
   created_at: string;
 }
 
+// 라벨은 카탈로그 키 — 렌더 시 TranslatorFn으로 푼다.
 const COLUMNS: Array<{ status: OpportunityRow["status"]; label: string }> = [
-  { status: "identified", label: "발굴" },
-  { status: "assessed", label: "평가" },
-  { status: "selected", label: "선별" },
-  { status: "dropped", label: "제외" },
+  { status: "identified", label: "stages.s2.stage.discovery" },
+  { status: "assessed", label: "stages.s2.stage.evaluation" },
+  { status: "selected", label: "common.shortlist" },
+  { status: "dropped", label: "common.exclude" },
 ];
 
 // S1 시장분석 인사이트 — 기회 발굴·평가의 입력(market-sizing 5-B).
@@ -80,23 +83,23 @@ interface SizingInsight {
  * 없이 상태만 바꾸는 중복 경로였다 — 제거하고 상세 화면 링크 하나로 통일
  * (삭제는 별도 셀, ADR-0127).
  */
-function nextStepActions(o: OpportunityRow) {
+function nextStepActions(o: OpportunityRow, t: TranslatorFn) {
   return (
     <>
       {/* R2-A item 5: every row advances ITS OWN opportunity — the header primary
           acts on the deal you entered through, which is a different row. */}
       {o.status === "identified" && (
-        <Link className="btn-ghost btn-sm" href={`/opportunities/${encodeURIComponent(o.id)}?focus=score`} title="이 기회의 매력도를 평가합니다 (평가하면 S3로 진행할 수 있습니다)">
-          매력도 평가<span className="sr-only"> — {o.name}</span>
+        <Link className="btn-ghost btn-sm" href={`/opportunities/${encodeURIComponent(o.id)}?focus=score`} title={t("evaluateThisOpportunitySAttractiveness")}>
+          {t("attractivenessEvaluation")}<span className="sr-only"> — {o.name}</span>
         </Link>
       )}
       {(o.status === "assessed" || o.status === "selected") && (
-        <Link className="btn-ghost btn-sm" href={`/deals/${encodeURIComponent(o.id)}/s3`} title="이 기회의 S3 시너지·전략적 적합성 화면으로 진행합니다">
-          S3로 진행<span className="sr-only"> — {o.name}</span>
+        <Link className="btn-ghost btn-sm" href={`/deals/${encodeURIComponent(o.id)}/s3`} title={t("proceedToThisOpportunityS")}>
+          {t("proceedToS3")}<span className="sr-only"> — {o.name}</span>
         </Link>
       )}
-      <Link className="btn-ghost btn-sm" href={`/opportunities/${encodeURIComponent(o.id)}?tab=sketch`} title="상세 화면의 비즈니스 모델 검토 탭으로 이동합니다">
-        비즈니스 모델 검토
+      <Link className="btn-ghost btn-sm" href={`/opportunities/${encodeURIComponent(o.id)}?tab=sketch`} title={t("goesToTheBusinessModel")}>
+        {t("businessModelReview")}
       </Link>
     </>
   );
@@ -107,7 +110,7 @@ function nextStepActions(o: OpportunityRow) {
  * focused (R2-A item 7): "known_target" additionally moves the form to the top of the
  * page; both focus the first field (the opportunity name).
  */
-export function OpportunityFunnelStage({ opportunityId, startRegister }: { opportunityId?: string; startRegister?: "name" | "known_target" }) {
+export function OpportunityFunnelStage({ opportunityId, startRegister }: { opportunityId?: string; startRegister?: "name" | "known_target" }) {const tr = useTranslations(); const t = useTranslations("stages.s2.stage"); const tc = useTranslations("common");
   const { me } = useAuth();
   const canAct = canWriteBusiness(me?.role);
   const [rows, setRows] = useState<OpportunityRow[] | null>(null);
@@ -132,7 +135,7 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
 
   const load = useCallback(() => {
     const qs = statusFilter ? `?status=${statusFilter}` : "";
-    api.get<OpportunityRow[]>(`/api/opportunities${qs}`).then((r) => setRows(r.data)).catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+    api.get<OpportunityRow[]>(`/api/opportunities${qs}`).then((r) => setRows(r.data)).catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
   }, [statusFilter]);
 
   // ?status= 딥링크는 유지 (?opportunity= 펼침은 상세 화면 분리로 폐지 — ADR-0127)
@@ -177,7 +180,7 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
       await api.put(`/api/opportunities/${encodeURIComponent(o.id)}`, { industry_id: industryId });
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "산업 연결 실패");
+      setError(err instanceof Error ? err.message : t("failedToLinkTheIndustry"));
     }
   }
 
@@ -203,7 +206,7 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
       }
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "등록 실패");
+      setError(err instanceof Error ? err.message : tc("errors.createFailed"));
     } finally {
       setBusy(false);
     }
@@ -217,9 +220,9 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
     try {
       const res = await api.post<{ inserted: Array<{ name: string }>; source: string }>("/api/opportunities/discover", { industry });
       load();
-      setDiscoverNotice(`기회 ${res.data.inserted.length}건이 발굴되었습니다 (${res.data.source === "llm" ? "AI" : "결정론 합성"}${res.data.inserted.length ? `: ${res.data.inserted.map((o) => o.name).join(", ")}` : ""}). 기회/위험 요인도 자동 도출되었습니다.`);
+      setDiscoverNotice(t("p1OpportunityIesDiscoveredP2", { p1: res.data.inserted.length, p2: res.data.source === "llm" ? "AI" : t("deterministicSynthesis"), p3: res.data.inserted.length ? `: ${res.data.inserted.map((o) => o.name).join(", ")}` : "" }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "기회 발굴 실패");
+      setError(err instanceof Error ? err.message : t("opportunityDiscoveryFailed"));
     } finally {
       setDiscovering(null);
     }
@@ -229,17 +232,17 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
   // 서버에서도 차단되며, S4+ 단계 연계가 있으면 삭제가 거부된다.
   function deleteOpportunity(o: OpportunityRow) {
     confirm(
-      `기회 "${o.name}" 삭제`,
+      t("deleteOpportunityP1", { p1: o.name }),
       async () => {
         setError(null);
         try {
           await api.delete(`/api/opportunities/${o.id}`);
           setRows((prev) => (prev ? prev.filter((r) => r.id !== o.id) : prev));
         } catch (err) {
-          setError(err instanceof Error ? err.message : "기회 삭제 실패");
+          setError(err instanceof Error ? err.message : t("failedToDeleteTheOpportunity"));
         }
       },
-      { body: "이 기회와 평가 요인이 함께 삭제되며 되돌릴 수 없습니다." },
+      { body: t("thisOpportunityAndItsEvaluation") },
     );
   }
 
@@ -271,54 +274,54 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
   const registerSection = (
     <>
       {canAct && (
-      <section aria-label="기회 수동 등록" className="market-section">
+      <section aria-label={t("registerOpportunityManually")} className="market-section">
         <SectionToolbar
-          title="기회 직접 등록"
+          title={t("registerOpportunityDirectly")}
           icon="✍️"
           actions={
             <button type="button" className="btn-ghost whitespace-nowrap" onClick={() => setShowCreateForm((v) => !v)} aria-expanded={showCreateForm}>
-              ＋ 기회 직접 등록
+              {t("registerOpportunityDirectly2")}
             </button>
           }
         />
         {showCreateForm && (
           <form onSubmit={create} className="sizing-new-form mb-3">
-            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">알려진 대상 기업을 입력하면 S6 대상 후보에 미리 등록됩니다 — S1~S4는 생략되지 않으며 순서대로 완료해야 합니다.</p>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{t("knownTargetCompaniesAreAs")}</p>
             <div className="flex flex-wrap items-end gap-2">
               <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1">기회명 *</span>
+                <span className="block mb-1">{t("opportunityName")}</span>
                 <input id="opp-new-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="sizing-new-input" />
               </label>
               <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1">시장 범위</span>
+                <span className="block mb-1">{t("marketScope")}</span>
                 <input value={form.market_scope} onChange={(e) => setForm({ ...form, market_scope: e.target.value })} className="sizing-new-input sizing-new-input-sm" />
               </label>
               <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1">알려진 대상 기업 (선택)</span>
-                <input id="opp-known-target" value={form.known_target} onChange={(e) => setForm({ ...form, known_target: e.target.value })} placeholder="인수 대상이 이미 정해진 경우" className="sizing-new-input sizing-new-input-sm" />
+                <span className="block mb-1">{t("knownTargetCompaniesOptional")}</span>
+                <input id="opp-known-target" value={form.known_target} onChange={(e) => setForm({ ...form, known_target: e.target.value })} placeholder={t("whenTheAcquisitionTargetIs")} className="sizing-new-input sizing-new-input-sm" />
               </label>
               <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1">S1 분석 산업</span>
+                <span className="block mb-1">{t("s1AnalyzedIndustries")}</span>
                 <select value={form.industry_id} onChange={(e) => setForm({ ...form, industry_id: e.target.value })} className="sizing-new-input sizing-new-input-sm">
-                  <option value="">연결 안 함</option>
+                  <option value="">{t("doNotLink")}</option>
                   {(insights ?? []).map((i) => (
                     <option key={i.industry_id} value={i.industry_id}>{i.industry_name}</option>
                   ))}
                 </select>
               </label>
               <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1">가치사슬 노드</span>
+                <span className="block mb-1">{t("valueChainNode")}</span>
                 <input value={form.value_chain_node} onChange={(e) => setForm({ ...form, value_chain_node: e.target.value })} className="sizing-new-input sizing-new-input-sm" />
               </label>
               <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1">매력도 (0-100)</span>
+                <span className="block mb-1">{t("attractiveness")}</span>
                 <input type="number" min={0} max={100} value={form.attractiveness_score} onChange={(e) => setForm({ ...form, attractiveness_score: e.target.value })} className="sizing-new-input sizing-new-input-sm" />
               </label>
               <button type="submit" className="btn-ghost" disabled={busy || !form.name.trim()}>
-                {busy ? "등록 중..." : "등록"}
+                {busy ? tc("registering") : tc("register")}
               </button>
               <button type="button" className="btn-ghost" onClick={() => setShowCreateForm(false)}>
-                취소
+                {tc("cancel")}
               </button>
             </div>
           </form>
@@ -333,7 +336,7 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
       {confirmDialog}
       {knownTargetMode && canAct && (
         <div className="focus-banner" role="note">
-          <strong>알려진 대상으로 시작</strong> — 기회명과 알려진 대상 기업을 입력해 등록하면 대상이 S6 후보에 미리 등록되고, 안내(S1~S4)가 있는 화면으로 이동합니다.
+          <strong>{t("startWithAKnownTarget")}</strong> {t("registerWithTheOpportunityName")}
         </div>
       )}
       {knownTargetMode && registerSection}
@@ -343,11 +346,11 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
       {/* ── KPI 요약 (클릭 = 상태 필터) ── */}
       <div className="summary-cards mb-4">
         {([
-          ["", "전체", counts.total],
-          ["identified", "발굴", counts.identified],
-          ["assessed", "평가", counts.assessed],
-          ["selected", "선별", counts.selected],
-          ["dropped", "제외", counts.dropped],
+          ["", tc("all"), counts.total],
+          ["identified", t("discovery2"), counts.identified],
+          ["assessed", t("evaluation2"), counts.assessed],
+          ["selected", tc("shortlist"), counts.selected],
+          ["dropped", tc("exclude"), counts.dropped],
         ] as const).map(([key, label, count]) => (
           <button
             key={label}
@@ -365,8 +368,8 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
       {discoverNotice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-body)] mb-2">{discoverNotice}</p>}
 
       {/* ── 분석된 산업 (S1 연동, 접힘) ── */}
-      <section aria-label="분석된 산업" className="market-section">
-        <div className="section-toolbar"><span className="section-title"><h2>분석된 산업 — 선택해 기회 발굴</h2></span></div>
+      <section aria-label={t("analyzedIndustries")} className="market-section">
+        <div className="section-toolbar"><span className="section-title"><h2>{t("analyzedIndustriesPickOneTo")}</h2></span></div>
         {insights !== null && insights.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {insights.map((s) => (
@@ -381,22 +384,22 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
                 <span className="sizing-chip-meta">
                   CAGR {isDegeneratePct(s.bottom_up_cagr_pct) ? NOT_COMPUTABLE_TEXT : `${s.bottom_up_cagr_pct}%`}
                   {s.synthetic && <span className="status-chip status-amber ml-1">{SYNTHETIC_BADGE_TEXT}</span>}
-                  {s.escalated_cagr_pct !== null && <span title="에스컬레이션 조정 CAGR (외부 참조 × 0.85 — 사람 결정)"> · 에스컬레이션 {s.escalated_cagr_pct}%</span>}
-                  {s.external_forecast?.gap_pct != null ? ` · 격차 ${s.external_forecast.gap_pct > 0 ? "+" : ""}${s.external_forecast.gap_pct}%` : ""}
+                  {s.escalated_cagr_pct !== null && <span title={t("cagrExternalReference085")}> {t("escalation")} {s.escalated_cagr_pct}%</span>}
+                  {s.external_forecast?.gap_pct != null ? t("gapP1P2", { p1: s.external_forecast.gap_pct > 0 ? "+" : "", p2: s.external_forecast.gap_pct }) : ""}
                 </span>
               </button>
             ))}
           </div>
         ) : (
           <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">
-            완료된 시장분석이 없습니다.{" "}
+            {t("noCompletedMarketAnalysis")}{" "}
             <Link
               href={opportunityId ? `/deals/${encodeURIComponent(opportunityId)}/s1` : "/market"}
               className="text-[color:var(--accent)] underline"
             >
-              시장분석(S1)
+              {t("marketAnalysisS1")}
             </Link>
-            에서 산업을 먼저 분석하세요.
+            {t("analyzeIndustriesThereFirst")}
           </p>
         )}
 
@@ -412,25 +415,25 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
                 className="btn-ghost btn-sm"
                 style={{ marginLeft: "auto" }} /* lint-exempt: 폼 내부 헤더(SectionToolbar 외부 컨텍스트) */
                 disabled={discovering !== null}
-                title="시장분석 근거(기회 요인·드라이버·격차 분석)에서 기회 후보를 자동 발굴하고, 기회/위험 요인도 함께 도출합니다"
+                title={t("automaticallyDiscoversOpportunityCandidatesFrom")}
                 onClick={() => discoverOpportunities(selectedInsight.industry_name)}
               >
-                {discovering === selectedInsight.industry_name ? "기회 발굴 중..." : "기회 발굴 (요인 자동 도출)"}
+                {discovering === selectedInsight.industry_name ? t("discoveringOpportunities") : t("opportunityDiscoveryAutomaticFactorDerivation")}
               </button>}
             </div>
             <details>
-              <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">인사이트 상세 (기회·위험 요인, 격차 분석)</summary>
+              <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("insightDetailsOpportunityAndRisk")}</summary>
               <div className="chart-pair mt-2">
                 <div className="chart-half sizing-grade-card">
-                  <h4 className="text-[length:var(--fs-body)] mb-2">✅ 기회 요인</h4>
+                  <h4 className="text-[length:var(--fs-body)] mb-2">{t("opportunityFactor")}</h4>
                   <ul className="sizing-note-list">
-                    {(selectedInsight.opportunity_factors.length ? selectedInsight.opportunity_factors : ["분석 보완 필요"]).map((f, i) => <li key={i}>{f}</li>)}
+                    {(selectedInsight.opportunity_factors.length ? selectedInsight.opportunity_factors : [t("analysisNeedsReinforcement")]).map((f, i) => <li key={i}>{f}</li>)}
                   </ul>
                 </div>
                 <div className="chart-half sizing-grade-card">
-                  <h4 className="text-[length:var(--fs-body)] mb-2">위험 요인</h4>
+                  <h4 className="text-[length:var(--fs-body)] mb-2">{t("riskFactor")}</h4>
                   <ul className="sizing-note-list">
-                    {(selectedInsight.risk_factors.length ? selectedInsight.risk_factors : ["분석 보완 필요"]).map((f, i) => <li key={i}>{f}</li>)}
+                    {(selectedInsight.risk_factors.length ? selectedInsight.risk_factors : [t("analysisNeedsReinforcement2")]).map((f, i) => <li key={i}>{f}</li>)}
                   </ul>
                   {selectedInsight.external_forecast?.gap_analysis && (
                     <p className="mt-2 mb-0 text-[length:var(--fs-caption)] whitespace-pre-line">{selectedInsight.external_forecast.gap_analysis}</p>
@@ -443,24 +446,24 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
       </section>
 
       {/* ── 기회 퍼널 (리스트 + 행 펼침 평가 패널) ── */}
-      <section aria-label="기회 퍼널" className="market-section">
+      <section aria-label={t("opportunityFunnel")} className="market-section">
         <SectionToolbar
-          title="기회 퍼널"
+          title={t("opportunityFunnel2")}
           icon=""
           count={sortedRows.length}
           filters={
             <>
               <span className="section-meta">
-                {statusFilter ? `${COLUMNS.find((c) => c.status === statusFilter)?.label ?? statusFilter} 필터 · ` : ""}
+                {statusFilter ? t("p1Filter", { p1: (COLUMNS.find((c) => c.status === statusFilter)?.label && tr(COLUMNS.find((c) => c.status === statusFilter)!.label)) ?? statusFilter }) : ""}
               </span>
-              <span role="group" aria-label="산업 필터" className="flex flex-wrap gap-1">
+              <span role="group" aria-label={t("industryFilter")} className="flex flex-wrap gap-1">
                 <button
                   type="button"
                   aria-pressed={industryFilter === ""}
                   className={`control-chip ${industryFilter === "" ? "status-green" : "status-not-started"}`}
                   onClick={() => setIndustryFilter("")}
                 >
-                  전체 산업
+                  {t("allIndustries")}
                 </button>
                 {industries.map((ind) => (
                   <button
@@ -480,13 +483,13 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
             <>
             {canAct && (
             <button type="button" className="btn-ghost btn-sm whitespace-nowrap" onClick={() => setShowCreateForm((v) => !v)} aria-expanded={showCreateForm}>
-              ＋ 기회 등록
+              {t("registerOpportunity")}
             </button>
             )}
-            <span role="group" aria-label="정렬" className="flex gap-1">
+            <span role="group" aria-label={t("sort")} className="flex gap-1">
               {([
-                ["attractiveness", "매력도순"],
-                ["recent", "최근 등록순"],
+                ["attractiveness", t("byAttractiveness")],
+                ["recent", t("newestFirst")],
               ] as const).map(([key, label]) => (
                 <button
                   key={key}
@@ -503,23 +506,23 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
           }
         />
         {rows === null ? (
-          <p>불러오는 중...</p>
+          <p>{tc("loading")}</p>
         ) : sortedRows.length === 0 ? (
           <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">
-            {statusFilter ? "필터 조건에 맞는 기회가 없습니다." : "등록된 기회가 없습니다 — 분석된 산업에서 기회 발굴을 시작하세요."}
+            {statusFilter ? t("noOpportunitiesMatchTheFilter") : t("noOpportunitiesRegisteredStartOpportunity")}
           </p>
         ) : (
-          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table list-table list-wide table-fixed-pct tmin-56 opp-funnel-table" aria-label="기회 퍼널 목록">
-            <caption className="sr-only">기회 퍼널 목록</caption>
+          <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}><table className="data-table list-table list-wide table-fixed-pct tmin-56 opp-funnel-table" aria-label={t("opportunityFunnelList")}>
+            <caption className="sr-only">{t("opportunityFunnelList2")}</caption>
             <ColGroup widths={FUNNEL_COL_PCT} />
             <thead>
               <tr>
-                <th scope="col">상태</th>
+                <th scope="col">{tc("status")}</th>
                 {/* 열 폭은 FUNNEL_COL_PCT(%)가 정한다 — 기회명 칸은 넘치면 말줄임(…) 처리한다. */}
-                <th scope="col">기회명</th>
-                <th scope="col">매력도</th>
-                <th scope="col">시너지</th>
-                <th scope="col"><span className="sr-only">작업</span></th>
+                <th scope="col">{t("opportunityName2")}</th>
+                <th scope="col">{t("attractiveness2")}</th>
+                <th scope="col">{t("synergy")}</th>
+                <th scope="col"><span className="sr-only">{tc("actions")}</span></th>
               </tr>
             </thead>
             <tbody>
@@ -527,7 +530,7 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
                 <tr key={o.id} aria-current={o.id === opportunityId ? "true" : undefined}>
                   <td>
                     <span className={`status-chip ${o.status === "selected" ? "status-green" : o.status === "dropped" ? "status-red" : o.status === "assessed" ? "status-amber" : "status-not-started"}`}>
-                      {COLUMNS.find((c) => c.status === o.status)?.label}
+                      {(() => { const col = COLUMNS.find((c) => c.status === o.status); return col ? tr(col.label) : ""; })()}
                     </span>
                   </td>
                   <td>
@@ -539,7 +542,7 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
                       {o.name}
                     </Link>
                     {/* deals 탭에서 진입한 경우 — 이 검토/안건의 캐리어 기회를 표시 */}
-                    {o.id === opportunityId && <span className="status-chip status-amber ml-1" title="이 검토/안건의 캐리어 기회입니다">이 안건</span>}
+                    {o.id === opportunityId && <span className="status-chip status-amber ml-1" title={t("thisIsTheCarrierOpportunity")}>{t("thisDeal")}</span>}
                     <span className="block text-[length:var(--fs-caption)]">
                       {o.market_scope && <span className="status-chip status-amber mr-1">{o.market_scope}</span>}
                       {o.value_chain_node && <span className="text-[color:var(--muted-fg)]">{o.value_chain_node}</span>}
@@ -549,7 +552,7 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
                   <td className="tabular-nums">
                     {o.attractiveness_score ?? "—"}
                     {o.attractiveness_score !== null && o.status === "identified" && (
-                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">제안</span>
+                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{tc("proposal")}</span>
                     )}
                   </td>
                   <td className="tabular-nums">
@@ -557,8 +560,8 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
                     {/* 경계 #2 — 파이프라인 권고와 사람 확정을 구분해 표시한다. */}
                     {o.synergy_score !== null && (
                       o.synergy_score_confirmed_at
-                        ? <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">확정</span>
-                        : <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">권고(미확정)</span>
+                        ? <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{tc("confirmed")}</span>
+                        : <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("recommendationUnconfirmed")}</span>
                     )}
                   </td>
                   <td className="sizing-actions-cell"><span className="actions-row">
@@ -566,29 +569,29 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
                       // S1 연결 select는 폼 컨트롤이므로 이름 열이 아니라 작업 셀에서
                       // 편집한다(2026-10 표 인터랙션 리뷰 — 이름 열은 읽기 표면 유지).
                       <label className="flex items-center gap-1 text-[length:var(--fs-caption)]">
-                        <span className="whitespace-nowrap">S1 연결</span>
+                        <span className="whitespace-nowrap">{t("s1Link")}</span>
                         <select
-                          aria-label={`${o.name} S1 분석 산업 연결`}
+                          aria-label={t("linkP1ToS1Analyzed", { p1: o.name })}
                           value={o.industry_id ?? ""}
                           onChange={(e) => void linkIndustry(o, e.target.value)}
                           className="sizing-new-input sizing-new-input-sm"
                         >
-                          <option value="">연결 안 됨</option>
+                          <option value="">{t("notLinked")}</option>
                           {insights.map((i) => (
                             <option key={i.industry_id} value={i.industry_id}>{i.industry_name}</option>
                           ))}
                         </select>
                       </label>
                     )}
-                    {nextStepActions(o)}
+                    {nextStepActions(o, t)}
                     {canAct && !o.project_id && (
                       <button
                         type="button"
                         className="btn-danger btn-sm"
-                        title="이 기회를 삭제합니다 (검토/안건으로 승격된 기회는 삭제할 수 없습니다)"
+                        title={t("deletesThisOpportunityOpportunitiesPromoted")}
                         onClick={() => deleteOpportunity(o)}
                       >
-                        삭제
+                        {tc("delete")}
                       </button>
                     )}
                   </span></td>

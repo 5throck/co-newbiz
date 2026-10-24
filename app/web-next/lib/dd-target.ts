@@ -79,17 +79,17 @@ export function isDdTargetOpen(projectId: string, targetId: string, db: Database
  */
 export function resolveDdScope(projectId: string, raw: unknown, db: Database = getDb()): DdScope {
   if (raw === undefined || raw === null || raw === "") return { ok: true, targetId: null };
-  if (typeof raw !== "string") return { ok: false, error: new DdTargetError(400, "invalid_request", "target_id는 문자열이어야 합니다.") };
+  if (typeof raw !== "string") return { ok: false, error: new DdTargetError(400, "invalid_request", "target_id must be a string.") };
   const targetId = raw.trim();
   if (!targetId) return { ok: true, targetId: null };
   const project = projectLite(db, projectId);
   if (!project) return { ok: false, error: new DdTargetError(404, "not_found", "project not found") };
   if (project.track !== "brownfield") {
-    return { ok: false, error: new DdTargetError(400, "invalid_request", "대상별 DD는 brownfield 프로젝트에만 적용됩니다.") };
+    return { ok: false, error: new DdTargetError(400, "invalid_request", "Target DD applies only to brownfield projects.") };
   }
   if (targetId === selectedTargetId(projectId, db)) return { ok: true, targetId: null };
   if (!shortlistedTarget(db, project, targetId)) {
-    return { ok: false, error: new DdTargetError(400, "invalid_target", "이 프로젝트의 Short List 대상이 아닙니다.") };
+    return { ok: false, error: new DdTargetError(400, "invalid_target", "Not a Short List target of this project.") };
   }
   if (!isDdTargetOpen(projectId, targetId, db)) {
     return { ok: false, error: new DdTargetError(409, "dd_target_not_open", DD_TARGET_NOT_OPEN_MESSAGE) };
@@ -132,14 +132,14 @@ export function openDdTarget(projectId: string, targetId: string, rationale: str
   const db = getDb();
   const project = projectLite(db, projectId);
   if (!project) throw new DdTargetError(404, "not_found", "project not found");
-  if (project.track !== "brownfield") throw new DdTargetError(400, "invalid_request", "대상별 DD는 brownfield 프로젝트에만 적용됩니다.");
+  if (project.track !== "brownfield") throw new DdTargetError(400, "invalid_request", "Target DD applies only to brownfield projects.");
   const trimmed = rationale?.trim() ?? "";
-  if (!trimmed) throw new DdTargetError(400, "invalid_request", "DD를 여는 근거(rationale)는 필수입니다.");
-  if (trimmed.length > 4000) throw new DdTargetError(400, "invalid_request", "근거는 4,000자 이내여야 합니다.");
-  if (!shortlistedTarget(db, project, targetId)) throw new DdTargetError(400, "invalid_target", "이 프로젝트의 Short List 대상이 아닙니다.");
+  if (!trimmed) throw new DdTargetError(400, "invalid_request", "The rationale for opening DD is required.");
+  if (trimmed.length > 4000) throw new DdTargetError(400, "invalid_request", "The rationale must be at most 4,000 characters.");
+  if (!shortlistedTarget(db, project, targetId)) throw new DdTargetError(400, "invalid_target", "Not a Short List target of this project.");
   const selected = selectedTargetId(projectId, db);
-  if (!selected) throw new DdTargetError(400, "selection_required", "S8에서 대상을 먼저 선정해야 다른 대상의 DD를 열 수 있습니다.");
-  if (targetId === selected) throw new DdTargetError(400, "already_selected", "선정 대상은 기본 DD 범위입니다 — 따로 열 필요가 없습니다.");
+  if (!selected) throw new DdTargetError(400, "selection_required", "Select a target in S8 before opening another target's DD.");
+  if (targetId === selected) throw new DdTargetError(400, "already_selected", "The selected target is already the default DD scope — no need to open it separately.");
   const existing = db.query("SELECT * FROM dd_target_open WHERE project_id = ? AND target_id = ?").get(projectId, targetId) as OpenRow | undefined;
   if (existing) return toRecord(existing, false);
   const now = new Date().toISOString();

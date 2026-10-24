@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
+import { useTranslations } from "next-intl";
 import { api } from "../../../../lib/api.ts";
 import { PageState } from "../../../../components/ui.tsx";
 
@@ -12,6 +13,8 @@ import { PageState } from "../../../../components/ui.tsx";
 interface StageRow { stage_id: string; milestone_at: string | null; elapsed_days: number | null; sla_target_days: number | null; sla_breach: boolean | null; sla_set: boolean; in_progress: boolean; status?: string | null; not_applicable?: boolean }
 
 function TimelineView() {
+  const t = useTranslations("pages.projects.timeline");
+  const tc = useTranslations("common");
   const { id } = useParams<{ id: string }>();
   const [stages, setStages] = useState<StageRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +22,7 @@ function TimelineView() {
   useEffect(() => {
     api.get<{ stages: StageRow[] }>(`/api/projects/${encodeURIComponent(id)}/timeline`)
       .then((r) => setStages(r.data.stages))
-      .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
+      .catch((e) => setError(e instanceof Error ? e.message : tc("errors.loadFailed")));
   }, [id]);
 
   const maxElapsed = Math.max(1, ...(stages ?? []).map((s) => s.elapsed_days ?? 0));
@@ -27,18 +30,18 @@ function TimelineView() {
   return (
     <main>
       <StageTabs projectId={id} />
-      <h1>프로세스 타임라인·SLA</h1>
-      <p className="objective">단계별 목표 리드타임(SLA 정책) 대비 실제 경과를 추적하고 병목을 찾아냅니다 — 경과는 계산값이며 저장되지 않습니다.</p>
+      <h1>{t("heading")}</h1>
+      <p className="objective">{t("objective")}</p>
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}
-      <section className="market-section" aria-label="타임라인">
+      <section className="market-section" aria-label={t("sectionAria")}>
         {stages === null ? <PageState state="loading" /> : (
-          <table className="data-table" aria-label="단계 타임라인">
-            <caption className="sr-only">단계 타임라인 — SLA 대비</caption>
-            <thead><tr><th>단계</th><th>SLA 목표</th><th style={{ width: "38%" }}>경과</th><th className="col-num">경과/목표</th><th>상태</th></tr></thead>
+          <table className="data-table" aria-label={t("tableAria")}>
+            <caption className="sr-only">{t("caption")}</caption>
+            <thead><tr><th>{tc("stage")}</th><th>{t("thSlaTarget")}</th><th style={{ width: "38%" }}>{t("thElapsed")}</th><th className="col-num">{t("thElapsedVsTarget")}</th><th>{tc("status")}</th></tr></thead>
             <tbody>{stages.map((s) => (
               <tr key={s.stage_id} className={s.sla_breach ? "row-selected" : undefined}>
                 <td className="font-semibold">{s.stage_id}</td>
-                <td className="tabular-nums">{s.not_applicable ? "—" : s.sla_set ? `${s.sla_target_days}일` : <span className="note">정책 미설정</span>}</td>
+                <td className="tabular-nums">{s.not_applicable ? "—" : s.sla_set ? t("daysValue", { n: s.sla_target_days ?? 0 }) : <span className="note">{t("notSet")}</span>}</td>
                 <td>
                   <div style={{ position: "relative", height: 12, background: "var(--bg)", borderRadius: 6 }}>
                     <div style={{ position: "absolute", left: 0, top: 0, bottom: 0,
@@ -47,17 +50,17 @@ function TimelineView() {
                       opacity: 0.75, borderRadius: 6 }} />
                   </div>
                 </td>
-                <td className="col-num tabular-nums">{s.elapsed_days != null ? `${s.elapsed_days}일${s.sla_set ? ` / ${s.sla_target_days}일` : ""}` : "—"}</td>
-                <td>{s.not_applicable ? <span className="chip gray">미적용</span> : s.sla_breach ? <span className="status-chip status-red">SLA 초과</span>
-                  : s.in_progress ? <span className="status-chip status-amber">진행 중</span>
-                  : s.status === "complete" || s.elapsed_days != null ? <span className="status-chip status-green">완료</span>
-                  : <span className="chip gray">대기</span>}</td>
+                <td className="col-num tabular-nums">{s.elapsed_days != null ? t("elapsedCell", { days: s.elapsed_days, target: s.sla_set ? ` / ${t("daysValue", { n: s.sla_target_days ?? 0 })}` : "" }) : "—"}</td>
+                <td>{s.not_applicable ? <span className="chip gray">{t("chipNA")}</span> : s.sla_breach ? <span className="status-chip status-red">{t("chipBreach")}</span>
+                  : s.in_progress ? <span className="status-chip status-amber">{t("chipInProgress")}</span>
+                  : s.status === "complete" || s.elapsed_days != null ? <span className="status-chip status-green">{t("chipComplete")}</span>
+                  : <span className="chip gray">{t("chipWaiting")}</span>}</td>
               </tr>
             ))}</tbody>
           </table>
         )}
         <p className="note" style={{ marginTop: 8, marginBottom: 0 }}>
-          마일스톤은 각 단계 대표 산출물의 최초/최종 산출 시각에서 계산됩니다. SLA 초과 단계는 <a href="#" className="text-[color:var(--accent)] underline">리스크 히트맵</a>·감시 규칙과 연동됩니다.
+          {t("footnoteLead")}<a href="#" className="text-[color:var(--accent)] underline">{t("footnoteLink")}</a>{t("footnoteTail")}
         </p>
       </section>
     </main>

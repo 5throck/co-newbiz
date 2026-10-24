@@ -33,7 +33,7 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
 export const PUT = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "리스크 판정 기록은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Recording risk judgements requires the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
@@ -45,6 +45,6 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
   } catch (err) {
     if (err instanceof RiskAssessmentValidationError) return badRequest("invalid_request", err.message);
     console.error("risk-assessment PUT failed", err);
-    return fail(500, "internal_error", "리스크 판정 저장에 실패했습니다.");
+    return fail(500, "internal_error", "Failed to save the risk judgement.");
   }
 });

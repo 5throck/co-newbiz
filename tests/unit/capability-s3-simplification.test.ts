@@ -111,7 +111,7 @@ describe("S3 UI has no 해소 힌트 and no holders inputs", () => {
     const src = read("components/stages/synergy/SynergyCapabilityTab.tsx") + read("components/stages/synergy/SynergyLinkageTab.tsx");
     for (const k of ["해소 힌트", "RESOLUTION_LABEL", "GapResolution", "보유 주체", "holderText"]) expect(src).not.toContain(k);
     expect(src).not.toContain("resolution:");
-    expect(src).toContain('<th scope="col">보유 수준</th><th scope="col">보유 근거</th>');
+    expect(src).toContain('<th scope="col">{tc("heldLevel")}</th><th scope="col">{tc("heldEvidence")}</th>');
     expect(src).toContain("<HeldEvidenceButton");
     expect(src).toContain("legacyHolders={r.held.holders}");
   });
@@ -121,10 +121,10 @@ describe("S3 UI has no 해소 힌트 and no holders inputs", () => {
       expect(read(f)).not.toContain("보유 주체·근거");
     }
     const dlg = read("components/stages/CapabilityHeldDialog.tsx");
-    expect(dlg).toContain("기존 보유 주체:");
+    expect(dlg).toContain('existingHoldingEntitiesP1');
     expect(dlg).not.toMatch(/setHolder|onChange=\{\(e\) => setHolder/);
     const eval_ = read("components/stages/route-decision/EvalTab.tsx");
-    expect(eval_).toContain("기존 보유 주체:");
+    expect(eval_).toContain('t("existingHoldingEntity")'); // EvalTab uses its own catalog key (stages.s4.evalTab.existingHoldingEntity)
     expect(eval_).not.toContain("해소 힌트");
   });
   test("legacy caption renders only with holders (button + caption helper)", async () => {
@@ -132,6 +132,9 @@ describe("S3 UI has no 해소 힌트 and no holders inputs", () => {
     const dialogPath = "../../app/web-next/components/stages/CapabilityHeldDialog.tsx";
     const { legacyHoldersCaption } = (await import(dialogPath)) as { legacyHoldersCaption: (holders?: string[] | null) => string };
     expect(legacyHoldersCaption([])).toBe("");
-    expect(legacyHoldersCaption(["레인보우로보틱스"])).toBe("기존 보유 주체: 레인보우로보틱스");
+    const tr = (key: string, values?: Record<string, string | number | Date>) => key === "components.capabilityJudgement.heldDialog.existingHoldingEntitiesP1"
+      ? `기존 보유 주체: ${values?.p1}`
+      : key;
+    expect(legacyHoldersCaption(["레인보우로보틱스"], tr)).toBe("기존 보유 주체: 레인보우로보틱스");
   });
 });

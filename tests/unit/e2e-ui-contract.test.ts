@@ -25,7 +25,9 @@ describe("UI sends what the decision routes require (ADR-0151 / ADR-0152)", () =
 
 describe("accessibility defaults pinned by the axe gate", () => {
   test("root layout declares a document title", () => {
-    expect(read("app/layout.tsx")).toMatch(/export const metadata[\s\S]*title/);
+    // generateMetadata (locale-aware title since the i18n adoption) satisfies
+    // the axe document-title rule the same way export const metadata did.
+    expect(read("app/layout.tsx")).toMatch(/export (const metadata|async function generateMetadata)[\s\S]*title/);
   });
 
   test("the stage tablist contains tabs only (the More menu button is its sibling)", () => {

@@ -13,7 +13,7 @@ export async function handleMemberProfileEdit(
 ): Promise<Response> {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "프로파일 수정은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Profile updates requires the analyst role or higher." });
   if (denied) return denied;
   const db = getDb();
   const member = db.query("SELECT id FROM company_group_member WHERE id = ?").get(memberId);
@@ -22,10 +22,10 @@ export async function handleMemberProfileEdit(
   if (opts.hasBody !== false) {
     try {
       const parsed = JSON.parse(await request.text()) as unknown;
-      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return badRequest("invalid_body", "요청 본문은 JSON 객체여야 합니다.");
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return badRequest("invalid_body", "Request body must be a JSON object.");
       body = parsed as Record<string, unknown>;
     } catch {
-      return badRequest("invalid_body", "요청 본문이 올바른 JSON이 아닙니다.");
+      return badRequest("invalid_body", "Request body is not valid JSON.");
     }
   }
   try {

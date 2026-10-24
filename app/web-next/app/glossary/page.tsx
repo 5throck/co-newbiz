@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { api, type GlossaryTermSummary } from "../../lib/api.ts";
 import { dedupTermNames, glossaryCategoryLabel } from "../../lib/labels.ts";
 
@@ -18,6 +19,8 @@ interface GlossaryTermDetail extends GlossaryTermSummary {
 }
 
 export function GlossaryView() {
+  const t = useTranslations("pages.glossary");
+  const tc = useTranslations("common");
   const [terms, setTerms] = useState<GlossaryTermSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -28,8 +31,8 @@ export function GlossaryView() {
     api
       .get<GlossaryTermSummary[]>("/api/glossary")
       .then((r) => setTerms(r.data))
-      .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
-  }, []);
+      .catch((e) => setError(e instanceof Error ? e.message : tc("errors.loadFailed")));
+  }, [tc]);
 
   const loadDetail = useCallback((key: string) => {
     setSelectedKey(key);
@@ -43,18 +46,18 @@ export function GlossaryView() {
     if (terms === null) return null;
     const needle = query.trim().toLowerCase();
     if (needle === "") return terms;
-    return terms.filter((t) =>
-      [t.key, t.ko, t.en, t.category].some((f) => f.toLowerCase().includes(needle)),
+    return terms.filter((term) =>
+      [term.key, term.ko, term.en, term.category].some((f) => f.toLowerCase().includes(needle)),
     );
   }, [terms, query]);
 
   return (
     <main>
-      <h1>용어집</h1>
+      <h1>{t("heading")}</h1>
       <input
         type="search"
-        aria-label="용어 검색"
-        placeholder="용어·영문명·분류 검색"
+        aria-label={t("searchAria")}
+        placeholder={t("phSearch")}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
@@ -64,30 +67,30 @@ export function GlossaryView() {
         </p>
       )}
       {filtered === null ? (
-        <p>불러오는 중...</p>
+        <p>{tc("loading")}</p>
       ) : filtered.length === 0 ? (
-        <p className="text-[color:var(--muted-fg)] italic">검색어와 일치하는 용어가 없습니다.</p>
+        <p className="text-[color:var(--muted-fg)] italic">{t("empty")}</p>
       ) : (
         <>
-          <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">총 {filtered.length}건 · 카드를 클릭하면 상세가 열립니다</p>
+          <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">{t("totalCount", { count: filtered.length })}</p>
           <div className="glossary-split">
             <ul className="glossary-grid">
-              {filtered.map((t) => (
-                <li key={t.key} className="glossary-card">
+              {filtered.map((term) => (
+                <li key={term.key} className="glossary-card">
                   <button
                     type="button"
-                    className={`glossary-card-open ${selectedKey === t.key ? "glossary-card-active" : ""}`}
-                    onClick={() => loadDetail(t.key)}
+                    className={`glossary-card-open ${selectedKey === term.key ? "glossary-card-active" : ""}`}
+                    onClick={() => loadDetail(term.key)}
                   >
                     <div className="glossary-card-head">
-                      <strong>{dedupTermNames(t.ko, t.en).primary}</strong>
-                      {t.category && <span className="dd-category-badge">{glossaryCategoryLabel(t.category).label}</span>}
+                      <strong>{dedupTermNames(term.ko, term.en).primary}</strong>
+                      {term.category && <span className="dd-category-badge">{glossaryCategoryLabel(term.category).label}</span>}
                     </div>
                     <p className="mt-[0.15rem] mb-0 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
-                      {dedupTermNames(t.ko, t.en).secondary && `${dedupTermNames(t.ko, t.en).secondary} · `}
-                      <code>{t.key}</code>
+                      {dedupTermNames(term.ko, term.en).secondary && `${dedupTermNames(term.ko, term.en).secondary} · `}
+                      <code>{term.key}</code>
                     </p>
-                    <GlossaryPreview termKey={t.key} />
+                    <GlossaryPreview termKey={term.key} />
                   </button>
                 </li>
               ))}
@@ -148,21 +151,23 @@ function GlossaryDetailPanel({
   onOpenTerm: (key: string) => void;
   onClose: () => void;
 }) {
+  const t = useTranslations("pages.glossary");
+  const tc = useTranslations("common");
   if (!detail) {
     return (
-      <aside className="glossary-detail" aria-label="용어 상세">
+      <aside className="glossary-detail" aria-label={t("detailAriaEmpty")}>
         <p className="text-[color:var(--muted-fg)] italic">
-          {loading ? "불러오는 중..." : "카드를 클릭하면 상세가 표시됩니다."}
+          {loading ? tc("loading") : t("detailEmptyPrompt")}
         </p>
       </aside>
     );
   }
   return (
-    <aside className="glossary-detail" aria-label={`${detail.ko} 상세`}>
+    <aside className="glossary-detail" aria-label={t("detailAria", { name: detail.ko })}>
       <div className="glossary-detail-head">
         <h2>{detail.ko}</h2>
-        <button type="button" className="btn-ghost" onClick={onClose} aria-label="상세 닫기">
-          닫기
+        <button type="button" className="btn-ghost" onClick={onClose} aria-label={t("closeAria")}>
+          {tc("close")}
         </button>
       </div>
       <p className="glossary-detail-en">
@@ -170,23 +175,23 @@ function GlossaryDetailPanel({
         <code>{detail.key}</code>
         {detail.category && <span className="dd-category-badge ml-2">{glossaryCategoryLabel(detail.category).label}</span>}
       </p>
-      <section aria-label="정의">
-        <h3>정의</h3>
+      <section aria-label={t("secDefinition")}>
+        <h3>{t("secDefinition")}</h3>
         <p>{detail.definition_ko || "—"}</p>
       </section>
-      <section aria-label="왜 중요한가">
-        <h3>왜 중요한가</h3>
+      <section aria-label={t("secWhy")}>
+        <h3>{t("secWhy")}</h3>
         <p>{detail.why_it_matters_ko || "—"}</p>
       </section>
       {detail.aliases && detail.aliases.length > 0 && (
-        <section aria-label="별칭">
-          <h3>별칭</h3>
+        <section aria-label={t("secAliases")}>
+          <h3>{t("secAliases")}</h3>
           <p>{detail.aliases.join(", ")}</p>
         </section>
       )}
       {detail.related && detail.related.length > 0 && (
-        <section aria-label="관련 용어">
-          <h3>관련 용어</h3>
+        <section aria-label={t("secRelated")}>
+          <h3>{t("secRelated")}</h3>
           <div className="glossary-related">
             {detail.related.map((r) => (
               <button key={r} type="button" className="btn-ghost" onClick={() => onOpenTerm(r)}>
@@ -197,8 +202,8 @@ function GlossaryDetailPanel({
         </section>
       )}
       {detail.used_in && detail.used_in.length > 0 && (
-        <section aria-label="사용 프로시저·스킬">
-          <h3>사용 프로시저·스킬</h3>
+        <section aria-label={t("secUsedIn")}>
+          <h3>{t("secUsedIn")}</h3>
           <ul className="glossary-usedin">
             {detail.used_in.map((u) => (
               <li key={u}>
@@ -209,8 +214,8 @@ function GlossaryDetailPanel({
         </section>
       )}
       {detail.owner && (
-        <section aria-label="소유 에이전트">
-          <h3>소유 에이전트</h3>
+        <section aria-label={t("secOwner")}>
+          <h3>{t("secOwner")}</h3>
           <p>
             <code>{detail.owner}</code>
           </p>

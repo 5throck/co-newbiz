@@ -36,7 +36,7 @@ const str = (v: unknown, max: number): string => (typeof v === "string" ? v.trim
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "평가 기준 초안 생성은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Evaluation-criteria draft generation requires the analyst role or higher." });
   if (denied) return denied;
   const { oppId } = await params;
   const db = getDb();

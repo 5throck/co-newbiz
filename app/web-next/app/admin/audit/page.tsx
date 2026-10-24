@@ -2,6 +2,6 @@
 
 import { AdminConsole } from "../../../components/admin/AdminConsole.tsx";
 
-export default function Admin로그관리Page() {{
+export default function AdminAuditLogPage() {{
   return <AdminConsole section="audit" />;
 }}

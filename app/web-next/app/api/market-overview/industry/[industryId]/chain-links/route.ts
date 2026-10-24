@@ -36,7 +36,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "가치사슬 연계 등록은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Registering value-chain links requires the analyst role or higher." });
   if (denied) return denied;
   const { industryId } = await params;
   const db = getDb();
@@ -49,15 +49,15 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   } | null;
   const relation = body?.relation as Relation | undefined;
   if (!relation || !(relation in RELATION_TO_HOP_DISTANCE)) {
-    return badRequest("invalid_request", "relation은 전방 | 전전방 | 후방 | 후후방 중 하나입니다.");
+    return badRequest("invalid_request", "relation must be one of: forward | forward-plus-forward | backward | backward-plus-backward.");
   }
   const otherId = body?.industry_id?.trim();
-  if (!otherId) return badRequest("invalid_request", "industry_id는 필수입니다.");
+  if (!otherId) return badRequest("invalid_request", "industry_id is required.");
   const evidenceRef = body?.evidence_ref?.trim();
-  if (!evidenceRef) return badRequest("invalid_request", "evidence_ref는 필수입니다 — 무근거 링크는 등록할 수 없습니다.");
+  if (!evidenceRef) return badRequest("invalid_request", "evidence_ref is required — links without evidence cannot be registered.");
   const other = db.query("SELECT id FROM md_industry WHERE id = ?").get(otherId) as { id: string } | null;
-  if (!other) return badRequest("invalid_request", "industry_id가 md_industry에 없습니다.");
-  if (otherId === industryId) return badRequest("invalid_request", "자기 자신과의 링크는 등록할 수 없습니다.");
+  if (!other) return badRequest("invalid_request", "industry_id is not in md_industry.");
+  if (otherId === industryId) return badRequest("invalid_request", "A link to itself cannot be registered.");
 
   const direction = RELATION_TO_DIRECTION[relation];
   const hopDistance = RELATION_TO_HOP_DISTANCE[relation];
@@ -72,7 +72,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const dup = db
     .query("SELECT id FROM proxy_link WHERE from_industry_id = ? AND to_industry_id = ? AND status = 'active'")
     .get(from, to) as { id: string } | null;
-  if (dup) return badRequest("already_linked", "이미 등록된 링크입니다.");
+  if (dup) return badRequest("already_linked", "The link is already registered.");
 
   // source: LLM 제안을 사람이 승인한 경로면 'approved', 직접 등록("직접 등록" 폼)이면
   // 기본값 'user_added' — 둘 다 사람의 행위이며, source는 그 경로를 구분하는 기록일 뿐이다.

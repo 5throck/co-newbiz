@@ -144,10 +144,10 @@ describe("draft route consults the same lazy auto-link as the card", () => {
     expect(body.error.code).toBe("anchor_unavailable");
     // the message names the real cause (the version carries no anchor
     // value) and is DISTINCT from the generic not-linked phrasing
-    const NOT_LINKED_KO = "\u0053\u0031\u0020\uC2DC\uC7A5\uADDC\uBAA8\u0020\uBD84\uC11D\uC774\u0020\uC5F0\uACB0\uB418\uC9C0\u0020\uC54A\uC558\uC2B5\uB2C8\uB2E4";
-    const ANCHOR_KO = "\uC575\uCEE4";
+    const NOT_LINKED_EN = "No linked S1 market-sizing analysis";
+    const ANCHOR_EN = "anchor value";
     const msg = String(body.error.message);
-    expect(msg).not.toContain(NOT_LINKED_KO);
-    expect(msg).toContain(ANCHOR_KO);
+    expect(msg).not.toContain(NOT_LINKED_EN);
+    expect(msg).toContain(ANCHOR_EN);
   });
 });

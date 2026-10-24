@@ -21,7 +21,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "계약 CoC 등록은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Registering contract CoC clauses requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
@@ -29,8 +29,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     clause_summary?: string | null; concentration_pct?: number | null;
     est_exit_loss?: number | null; evidence_ref?: string | null;
   } | null;
-  if (!body?.counterparty?.trim()) return badRequest("counterparty_required", "counterparty는 필수입니다.");
-  if (body.direction !== "customer" && body.direction !== "supplier") return badRequest("invalid_direction", "direction은 customer 또는 supplier입니다.");
+  if (!body?.counterparty?.trim()) return badRequest("counterparty_required", "counterparty is required.");
+  if (body.direction !== "customer" && body.direction !== "supplier") return badRequest("invalid_direction", "direction must be customer or supplier.");
   const now = new Date().toISOString();
   const rid = ulid();
   getDb().run(

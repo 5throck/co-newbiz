@@ -53,7 +53,7 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "설립 실행 기록 갱신은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Establishment-execution record updates require the analyst role or higher." }); if (denied) return denied; }
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as {
     step_no?: number; status?: string; origin?: string;
@@ -66,14 +66,14 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
     if (denied) return denied;
   }
   const stepNo = Number(body?.step_no);
-  if (!Number.isInteger(stepNo) || stepNo < 1 || stepNo > 5) return badRequest("invalid_request", "step_no는 1–5 사이 정수입니다.");
+  if (!Number.isInteger(stepNo) || stepNo < 1 || stepNo > 5) return badRequest("invalid_request", "step_no must be a number between 1 and 5.");
   const status = body?.status;
   if (!status || !STATUSES.includes(status as typeof STATUSES[number])) {
-    return badRequest("invalid_request", `status는 ${STATUSES.join(" | ")} 중 하나입니다.`);
+    return badRequest("invalid_request", `status must be one of: ${STATUSES.join(" | ")}.`);
   }
   const origin = body?.origin;
   if (!origin || !ORIGINS.includes(origin as typeof ORIGINS[number])) {
-    return badRequest("invalid_request", "origin은 internal | joint 중 하나입니다 (ADR-0047).");
+    return badRequest("invalid_request", "origin must be one of: internal | joint (ADR-0047).");
   }
 
   const db = getDb();
@@ -90,7 +90,7 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
          WHERE opportunity_id = ? AND step_no < 5 AND status = 'done'`,
       )
       .get(id) as { c: number };
-    if (prior.c < 4) return badRequest("invalid_request", "완료확인(5단계)은 선행 4단계가 모두 완료된 후에만 완료할 수 있습니다.");
+    if (prior.c < 4) return badRequest("invalid_request", "Step 5 completion is only allowed after all four preceding steps are complete.");
   }
 
   const now = new Date().toISOString();
@@ -99,7 +99,7 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
     .get(id, stepNo, body?.checklist_item?.trim() || null) as { id: string; status: string } | undefined;
   // ADR-0165: a done step is immutable through this legacy projection; the
   // reopen action exists on the project route only.
-  if (existing?.status === "done") return fail(409, "reopen_required", "완료된 단계는 먼저 재개해야 변경할 수 있습니다.");
+  if (existing?.status === "done") return fail(409, "reopen_required", "A completed step must be reopened before it can be changed.");
   let rowId: string;
   if (existing) {
     rowId = existing.id;

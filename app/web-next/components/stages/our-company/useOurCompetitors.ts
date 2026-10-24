@@ -5,8 +5,9 @@ import { useCallback, useEffect } from "react";
 import { api } from "../../../lib/api.ts";
 import type { useOurCompanyBase } from "./useOurCompanyBase.ts";
 import type { CompetitorRowView, CompetitorProposalView, WebSuggestionView } from "./types.ts";
+import { useTranslations } from "next-intl";
 
-export function useOurCompetitors(prev: ReturnType<typeof useOurCompanyBase>) {
+export function useOurCompetitors(prev: ReturnType<typeof useOurCompanyBase>) {const t = useTranslations("components.ourCompany.useOurCompetitors");
   const { setCompetitors, setCompetitorProposals, openMember, setDismissedProposals, setExcludingCompetitor, setEditingCompetitor, compBusy, setCompBusy, setCompError, webBusy, setWebBusy, setWebSuggestions, setWebNote, competitorForm, setCompetitorForm, setCompetitorDartResults, competitorDartSearching, setCompetitorDartSearching, excludingCompetitor, editingCompetitor } = prev;
 
 
@@ -34,7 +35,7 @@ export function useOurCompetitors(prev: ReturnType<typeof useOurCompanyBase>) {
       setDismissedProposals((prev) => [...prev, name]);
       loadCompetitors(openMember);
     } catch (err) {
-      setCompError(err instanceof Error ? err.message : "경쟁사 수용 실패");
+      setCompError(err instanceof Error ? err.message : t("failedToAcceptTheCompetitor"));
     } finally {
       setCompBusy(false);
     }
@@ -48,7 +49,7 @@ export function useOurCompetitors(prev: ReturnType<typeof useOurCompanyBase>) {
       setWebSuggestions(r.data.suggestions ?? []);
       setWebNote(r.data.note ?? null);
     } catch (err) {
-      setCompError(err instanceof Error ? err.message : "웹검색 재제안 실패");
+      setCompError(err instanceof Error ? err.message : t("failedToViaWebSearch"));
     } finally {
       setWebBusy(false);
     }
@@ -67,7 +68,7 @@ export function useOurCompetitors(prev: ReturnType<typeof useOurCompanyBase>) {
       setWebSuggestions((prev) => (prev ?? []).filter((x) => x.name !== ws.name));
       loadCompetitors(openMember);
     } catch (err) {
-      setCompError(err instanceof Error ? err.message : "경쟁사 수용 실패");
+      setCompError(err instanceof Error ? err.message : t("failedToAcceptTheCompetitor2"));
     } finally {
       setCompBusy(false);
     }
@@ -87,7 +88,7 @@ export function useOurCompetitors(prev: ReturnType<typeof useOurCompanyBase>) {
       setCompetitorDartResults([]);
       loadCompetitors(openMember);
     } catch (err) {
-      setCompError(err instanceof Error ? err.message : "경쟁사 등록 실패");
+      setCompError(err instanceof Error ? err.message : t("failedToRegisterTheCompetitor"));
     } finally {
       setCompBusy(false);
     }
@@ -101,7 +102,7 @@ export function useOurCompetitors(prev: ReturnType<typeof useOurCompanyBase>) {
       const res = await api.get<{ configured: boolean; results: Array<{ corp_code: string; corp_name: string; source?: string; validated?: boolean | null }>; error?: string }>(`/api/synergy/dart-search?q=${encodeURIComponent(q)}`);
       setCompetitorDartResults(res.data.results ?? []);
     } catch (err) {
-      setCompError(err instanceof Error ? err.message : "DART 검색 실패");
+      setCompError(err instanceof Error ? err.message : t("dartSearchFailed"));
     } finally {
       setCompetitorDartSearching(false);
     }
@@ -115,7 +116,7 @@ export function useOurCompetitors(prev: ReturnType<typeof useOurCompanyBase>) {
       setExcludingCompetitor(null);
       loadCompetitors(openMember);
     } catch (err) {
-      setCompError(err instanceof Error ? err.message : "경쟁사 제외 실패");
+      setCompError(err instanceof Error ? err.message : t("failedToExcludeTheCompetitor"));
     } finally {
       setCompBusy(false);
     }
@@ -128,7 +129,7 @@ export function useOurCompetitors(prev: ReturnType<typeof useOurCompanyBase>) {
       await api.post(`/api/our-company/members/${encodeURIComponent(openMember)}/competitors/${encodeURIComponent(id)}/restore`, {});
       loadCompetitors(openMember);
     } catch (err) {
-      setCompError(err instanceof Error ? err.message : "경쟁사 복원 실패");
+      setCompError(err instanceof Error ? err.message : t("failedToRestoreTheCompetitor"));
     } finally {
       setCompBusy(false);
     }
@@ -145,7 +146,7 @@ export function useOurCompetitors(prev: ReturnType<typeof useOurCompanyBase>) {
       setEditingCompetitor(null);
       loadCompetitors(openMember);
     } catch (err) {
-      setCompError(err instanceof Error ? err.message : "경쟁사 수정 실패");
+      setCompError(err instanceof Error ? err.message : t("failedToUpdateTheCompetitor"));
     } finally {
       setCompBusy(false);
     }

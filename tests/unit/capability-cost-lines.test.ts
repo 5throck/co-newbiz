@@ -533,7 +533,7 @@ describe("S5 UI structure", () => {
   const stage = readFileSync(join(WEB, "components/stages/GreenfieldStage.tsx"), "utf8");
   const block = readFileSync(join(WEB, "components/stages/CapabilityCostBlock.tsx"), "utf8");
   test("the derived block sits below the unified item table (decider: AI reco, table, capability costs, summary last) inside the investment tab and the payload carries only the person's choices", () => {
-    const sec = stage.indexOf("투자비 항목 (S8 사업성 분석 입력)");
+    const sec = stage.indexOf('t("investmentItemsS8BusinessCase")'); // i18n: heading moved to the catalog
     expect(sec).toBeGreaterThan(0);
     expect(stage.indexOf("data-testid=\"invest-summary\"")).toBeGreaterThan(stage.indexOf("<CapabilityCostBlock"));
     expect(stage.indexOf("<CapabilityCostBlock", sec)).toBeGreaterThan(sec);
@@ -542,7 +542,9 @@ describe("S5 UI structure", () => {
     expect(stage).toContain("onRowsChange={setAttRows}");
   });
   test("block copy: titles, checkbox label, status chips, disabled reason wiring, totals, warning, candidates", () => {
-    for (const s of ["역량 해소 비용 (S5 판정에서 연동)", "투자비에 반영", "재판정 필요", "수동 항목 유지", "투자비 검토 합계", "역량 해소 비용 합계", "반영 합계", "수동 입력 합계", "달성 기간", "해소 방식"]) expect(block + readFileSync(join(WEB, "lib/capability-cost-lines.ts"), "utf8")).toContain(s);
+    // i18n: block copy moved to the catalog (stages.s5.capabilityCost.*) — pin the key call sites; the lib stays Korean.
+    const lib = readFileSync(join(WEB, "lib/capability-cost-lines.ts"), "utf8");
+    for (const k of ['CAPABILITY_BLOCK_TITLE', 't("reflectIntoInvestment")', 'tc("rejudgeNeeded")', 't("keepManualItems")', 't("investmentReviewTotal")', 't("capabilityResolutionCostTotal")', 't("reflectedTotal")', 't("manuallyEnteredTotal")', 't("mo")', 't("resolutionMethod")']) expect(block + lib).toContain(k);
     expect(block).toContain("aria-describedby");
     expect(block).toContain("MILESTONE_BLOCK_TITLE");
     expect(cl.MILESTONE_BLOCK_TITLE).toBe("마일스톤 후보 (사후관리 연동 예정)");
@@ -556,23 +558,28 @@ describe("S5 UI structure", () => {
     const costBlockPath = "../../app/web-next/components/stages/CapabilityCostBlock.tsx";
     const { renderToStaticMarkup } = (await import(reactDomServerPath)) as { renderToStaticMarkup: (el: unknown) => string };
     const { createElement } = (await import(reactPath)) as { createElement: (type: unknown, props: unknown) => unknown };
+    // i18n: the block resolves catalog keys at render — wrap in NextIntlClientProvider with the ko messages.
+    const { NextIntlClientProvider } = (await import("../../app/web-next/node_modules/next-intl")) as { NextIntlClientProvider: unknown };
+    const koMessages = (await import("../../app/web-next/locales/ko.json")).default as Record<string, unknown>;
+    const withIntl = (el: unknown) => createElement(NextIntlClientProvider, { locale: "ko", messages: koMessages, now: new Date() }, el);
     const { CapabilityCostBlock } = (await import(costBlockPath)) as { CapabilityCostBlock: unknown };
     const view = cl.deriveCapabilityCostLines([src(), src({ id: "k2", capability: "채용", resolution: "hire", closing_cost_krw_m: 1234, confirmed_at: null })], []);
     const lines = cl.applySelection(view, {});
     const totals = cl.investmentTotals(view, new Set(["k1"]), [{ category: "capex", amount: 5, currency: "KRW", period: "lumpsum" }]); // unconfirmed unit: excluded
     const warnings = cl.findDuplicateWarnings(lines.filter((l) => l.reflected), [{ line: "정밀 가공 설비" }]);
-    const html = renderToStaticMarkup(createElement(CapabilityCostBlock, {
+    const html = renderToStaticMarkup(withIntl(createElement(CapabilityCostBlock, {
       lines, orphans: [], totals, warnings, canAct: true,
       candidates: [{ name: "정밀 가공 해소", months: 12, resolution: "build", rowId: "k1", derivedFromHash: "h", stale: true, outdated: false, stored: true }],
       onToggle: () => {}, onCategory: () => {}, onDismiss: () => {},
-    }));
+    })));
+    // i18n: block copy comes from stages.s5.capabilityCost / stages.s5.capability-cost-lines via the provider.
     expect(html).toContain("역량 해소 비용 (S5 판정에서 연동)");
     expect(html).toContain("3,000백만원");
     expect(html).toContain("1,234백만원");
     expect(html).toContain("금액 (단위: 백만원)");
     expect(html).toContain("반영 가능");
     expect(html).toContain("참고(미반영)");
-    const input = (name: string) => html.match(new RegExp(`<input[^>]*aria-label="${name} 투자비에 반영"[^>]*>`))![0];
+    const input = (name: string) => html.match(new RegExp(`<input[^>]*aria-label="${name}[^"]*반영[^"]*"[^>]*>`))![0];
     expect(input("채용")).toContain("disabled");
     expect(input("채용")).toContain("aria-describedby");
     expect(input("정밀 가공")).not.toContain("disabled");
@@ -623,7 +630,8 @@ describe("unified investment item list", () => {
   });
   test("GreenfieldStage renders the unified list with chips, actions and footer; counter counts reflected lines", () => {
     const stage = readFileSync(join(WEB, "components/stages/GreenfieldStage.tsx"), "utf8");
-    for (const s of ["unifiedInvestmentRows", "역량 해소 연동", "판정 보기", "반영 해제", "저장 전", "재판정 필요", "invest-item-footer", "역량 해소 비용에서 반영한 항목은 이 목록에 포함됩니다", "reflectedLines.length > 0"]) expect(stage).toContain(s);
+    // i18n: unified-list copy moved to the catalog (stages.s5.stage.*) — pin the keys.
+    for (const k of ["unifiedInvestmentRows", 't("capabilityResolutionLinkage")', 't("viewJudgement")', 't("unreflect2")', 'tc("unsaved")', 'tc("rejudgeNeeded")', "invest-item-footer", 't("itemsReflectedFromCapabilityResolution")', "reflectedLines.length > 0"]) expect(stage).toContain(k);
   });
 });
 

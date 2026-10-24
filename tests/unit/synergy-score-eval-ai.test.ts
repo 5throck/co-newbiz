@@ -7,6 +7,12 @@ import { test, expect, beforeAll, afterAll, describe } from "bun:test";
 import { existsSync, rmSync } from "node:fs";
 import { readFileSync } from "node:fs";
 import { ulid } from "../../db/lib/ulid.ts";
+// i18n (design 2026-10-23-i18n-ui-adoption): tab labels and evidence copy
+// resolve through the catalog — pins below assert the key and the ko master
+// catalog value (the original Korean label), in order for the tab row.
+const koCatalog = await import("../../app/web-next/locales/ko.json");
+const koOf = (key: string): string =>
+  key.split(".").reduce<unknown>((acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined), koCatalog) as string;
 
 const TEST_DB_PATH = "db/data/test-synergy-score-eval.sqlite";
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
@@ -62,8 +68,17 @@ describe("TABS restructure (ADR-0182)", () => {
   test("tab order follows the flow: 연계 → 주요 검토 영역 → 필요 역량 → 시너지 점수 평가 → 의사결정 → 출처·노트", async () => {
     const { TABS } = await import("../../app/web-next/components/stages/synergy/synergyFormat.ts");
     expect(TABS.map(([k]) => k)).toEqual(["linkage", "shortlist", "capability", "scoreEval", "decision", "refs"]);
-    expect(TABS.find(([k]) => k === "shortlist")?.[1]).toBe("주요 검토 영역");
-    expect(TABS.find(([k]) => k === "scoreEval")?.[1]).toBe("시너지 점수 평가");
+    // i18n: labels are catalog keys — the keys must appear in tab order and each
+    // must resolve to the original Korean label, in the same order.
+    expect(TABS.map(([, label]) => label)).toEqual([
+      "stages.s3.synergyFormat.linkedSynergy",
+      "common.keyReviewAreas",
+      "common.requiredCapability",
+      "stages.s3.synergyFormat.synergyScoreEvaluation",
+      "common.decisionMaking",
+      "stages.s3.synergyFormat.sourcesAndNotes",
+    ]);
+    expect(TABS.map(([, label]) => koOf(label))).toEqual(["연계 시너지", "주요 검토 영역", "필요 역량", "시너지 점수 평가", "의사결정", "출처·노트"]);
   });
   test("the old 개요 tab is gone from every synergy surface", () => {
     for (const f of [
@@ -142,7 +157,12 @@ describe("gate decision judgement_confirmations sidecar (ADR-0182 §5)", () => {
       body: JSON.stringify({ gate: "screening", decision: "hold", rationale: "체크 없이 기록", missing_artifacts: ["x"] }),
     });
     expect(res.status).toBe(201);
-    const row = db.query("SELECT judgement_confirmations_json FROM gate_decision WHERE entity_id = ? ORDER BY decided_at DESC LIMIT 1").get(oppId) as { judgement_confirmations_json: string | null };
+    // Select the row the route just created by its returned id: the previous test's
+    // POST can share the same millisecond, and "ORDER BY decided_at DESC LIMIT 1"
+    // is then an unspecified tie (flaked 1-in-30 even solo).
+    const createdId = ((await res.json()) as any).data.id as string;
+    const row = db.query("SELECT judgement_confirmations_json FROM gate_decision WHERE id = ?").get(createdId) as { judgement_confirmations_json: string | null };
+    expect(row).toBeDefined();
     expect(row.judgement_confirmations_json).toBeNull();
   });
 
@@ -178,12 +198,18 @@ describe("gate decision judgement_confirmations sidecar (ADR-0182 §5)", () => {
   test("the evidence panel closes the equation: weighted sum → adjustment → recommendation → confirmation", () => {
     const ev = readFileSync("app/web-next/components/stages/synergy/SynergyScoreEvidence.tsx", "utf8");
     // The contributions column sums to the rule score (tfoot subtotal), never a bare finalScore.
-    expect(ev).toContain("규칙 가중합");
-    expect(ev).toContain("기여도 합계 = 규칙 점수");
+    // i18n: the wording is pinned through the key call site + ko catalog value.
+    expect(ev).toContain('t("ruleWeightedSum")');
+    expect(koOf("stages.s3.synergyScoreEvidence.ruleWeightedSum")).toBe("규칙 가중합");
+    expect(ev).toContain('t("contributionSumRuleScore")');
+    expect(koOf("stages.s3.synergyScoreEvidence.contributionSumRuleScore")).toBe("기여도 합계 = 규칙 점수");
     expect(ev).toContain("hasAdjustmentGap");
-    expect(ev).toContain("보정 내역이 기록되기 이전 버전");
-    expect(ev).toContain("권고 점수:");
-    expect(ev).toContain("사람 확정");
+    expect(ev).toContain('t("aVersionFromBeforeCalibration")');
+    expect(koOf("stages.s3.synergyScoreEvidence.aVersionFromBeforeCalibration")).toContain("보정 내역이 기록되기 이전 버전");
+    expect(ev).toContain('t("recommendationScore")');
+    expect(koOf("stages.s3.synergyScoreEvidence.recommendationScore")).toBe("권고 점수:");
+    expect(ev).toContain('t("humanConfirmationFinal")');
+    expect(koOf("stages.s3.synergyScoreEvidence.humanConfirmationFinal")).toBe("사람 확정");
     expect(ev).not.toContain("finalScore");
     const tabs = readFileSync("app/web-next/components/stages/synergy/SynergyTabs.tsx", "utf8");
     expect(tabs).toContain("recommendedScore={typeof ctx.p?.synergyScore");
@@ -193,9 +219,12 @@ describe("gate decision judgement_confirmations sidecar (ADR-0182 §5)", () => {
   test("a stored legacy 4-factor payload is labelled as such and shows the missing capability factor", () => {
     const ev = readFileSync("app/web-next/components/stages/synergy/SynergyScoreEvidence.tsx", "utf8");
     expect(ev).toContain("legacyScheme");
-    expect(ev).toContain("구 4팩터 체계 저장분");
-    expect(ev).toContain("필요 역량 충족도는 이 버전의 계산에 포함되어 있지 않습니다");
-    expect(ev).toContain("이 버전 저장 시점에는 이 팩터가 없었습니다");
+    expect(ev).toContain('t("savedRecordsFromTheLegacy")');
+    expect(koOf("stages.s3.synergyScoreEvidence.savedRecordsFromTheLegacy")).toBe("구 4팩터 체계 저장분");
+    expect(ev).toContain('t("requiredCapabilityFulfillmentIsNot")');
+    expect(koOf("stages.s3.synergyScoreEvidence.requiredCapabilityFulfillmentIsNot")).toBe("필요 역량 충족도는 이 버전의 계산에 포함되어 있지 않습니다");
+    expect(ev).toContain('t("thisFactorDidNotExist")');
+    expect(koOf("stages.s3.synergyScoreEvidence.thisFactorDidNotExist")).toContain("이 버전 저장 시점에는 이 팩터가 없었습니다");
   });
 
   test("a confirmed claim renders as a saved-state chip, not a pending checkbox", () => {

@@ -21,7 +21,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "가치사슬 링크 등록은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Registering value-chain links requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
 
@@ -42,10 +42,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   } | null;
 
   if (!body?.from_industry_id?.trim() || !body?.to_industry_id?.trim()) {
-    return badRequest("industries_required", "from_industry_id와 to_industry_id는 필수입니다.");
+    return badRequest("industries_required", "Both from_industry_id and to_industry_id are required.");
   }
   if (body.direction !== "upstream" && body.direction !== "downstream") {
-    return badRequest("invalid_direction", "direction은 upstream 또는 downstream이어야 합니다.");
+    return badRequest("invalid_direction", "direction must be upstream or downstream.");
   }
 
   try {
@@ -68,6 +68,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     });
     return ok({ link }, 201, { link_id: link.id });
   } catch (err) {
-    return badRequest("link_rejected", err instanceof Error ? err.message : "링크 등록에 실패했습니다.");
+    return badRequest("link_rejected", err instanceof Error ? err.message : "Link registration failed.");
   }
 }

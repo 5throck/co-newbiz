@@ -25,7 +25,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ oppI
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "평가 기준 맞추기는 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Evaluation-criteria tailoring requires the analyst role or higher." });
   if (denied) return denied;
   const { oppId } = await params;
   const db = getDb();

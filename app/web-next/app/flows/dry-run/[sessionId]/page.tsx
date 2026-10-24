@@ -10,13 +10,14 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { SectionToolbar } from "../../../../components/layout.tsx";
 import { Button, ColGroup, FilterChip, PageState, PrimaryAction, useToast } from "../../../../components/ui.tsx";
 import { ConfirmDialog, useConfirm } from "../../../../components/crud.tsx";
 import { api, ApiError } from "../../../../lib/api.ts";
 import { SuggestionPanel } from "../suggestion-panel.tsx";
 import {
-  DRY_RUN_DISCLOSURE,
+  DRY_RUN_DISCLOSURE_KEY,
   expiryChip,
   fmtDateTime,
   fmtInt,
@@ -24,7 +25,7 @@ import {
   fmtUsd,
   gradeFromPreference,
   lineDiffSummary,
-  preferenceLabel,
+  preferenceLabelKey,
   sessionStatusChip,
   sourceChip,
   type BlueprintAgent,
@@ -39,9 +40,17 @@ import {
 // 실행 기록 소형 표 열 비율 — 시각 | 다리 | 모델 | 상태 | 지연 | 비용.
 const RUN_HISTORY_COL_PCT = [17, 11, 21, 12, 13, 26] as const;
 
-const ADMIN_FORBIDDEN_TEXT = "관리자 계정은 업무 콘텐츠에서 분리되어 이 화면을 볼 수 없습니다(ADR-0146). 이 상태는 오류가 아니라 설계된 접근 경계입니다.";
+const ADMIN_FORBIDDEN_KEY = "adminForbidden";
 
 export function DryRunSessionView() {
+  const t = useTranslations("pages.flows.dryRunSession");
+  const tc = useTranslations("common");
+  const tr = useTranslations();
+  /** 선호 라벨 — flows-view-lib가 방출한 catalog 키를 풀어 쓴다(미기록 "—" 폴백). */
+  const prefLabel = (p: DryRunPreference | null | undefined): string => {
+    const k = preferenceLabelKey(p);
+    return k ? tr(k) : "—";
+  };
   const params = useParams<{ sessionId: string }>();
   const sessionId = params.sessionId;
   const router = useRouter();
@@ -110,7 +119,7 @@ export function DryRunSessionView() {
       .catch((err: unknown) => {
         if (!alive) return;
         if (err instanceof ApiError && err.status === 403) setForbidden(true);
-        else setErrorText(err instanceof Error ? err.message : "세션을 불러오지 못했습니다");
+        else setErrorText(err instanceof Error ? err.message : t("loadFailed"));
         setStatus("error");
       });
     return () => {
@@ -141,12 +150,12 @@ export function DryRunSessionView() {
     if (!session) return;
     const est = estimateFromLedger(session.ledger);
     confirm(
-      "드라이런 실행 — 비용 확인",
+      t("executeConfirmTitle"),
       () => void doExecute(),
       {
         tone: "neutral",
-        confirmLabel: "실행",
-        body: `${est.note}\n${DRY_RUN_DISCLOSURE}`,
+        confirmLabel: t("executeConfirmAction"),
+        body: `${tr(est.noteKey, est.noteParams)}\n${tr(DRY_RUN_DISCLOSURE_KEY)}`,
       },
     );
   }
@@ -160,9 +169,9 @@ export function DryRunSessionView() {
         sampleUser.trim() ? { user: sampleUser.trim() } : {},
       );
       setSession(r.data.session);
-      toast("드라이런 실행 완료 — 결과는 A/B 비교에 반영되었습니다.");
+      toast(t("executeDoneToast"));
     } catch (err) {
-      toast(err instanceof Error ? err.message : "드라이런 실행에 실패했습니다", "alert");
+      toast(err instanceof Error ? err.message : t("executeFailedToast"), "alert");
     } finally {
       setBusyExecute(false);
     }
@@ -177,11 +186,11 @@ export function DryRunSessionView() {
     setApplyError(null);
     try {
       const r = await api.post<{ session: { id: string } }>("/api/flows/dry-run/sessions", body);
-      toast("변경 오버라이드로 새 세션을 만들었습니다 — 기존 세션은 그대로 남습니다.");
+      toast(t("applyDoneToast"));
       router.replace(`/flows/dry-run/${r.data.session.id}`);
     } catch (err) {
       // 400 unknown_agent / 422 dynamic_prompt·empty_override_system — 서버 사유를 그대로 노출한다.
-      setApplyError(err instanceof Error ? err.message : "오버라이드 적용에 실패했습니다");
+      setApplyError(err instanceof Error ? err.message : t("applyFailedToast"));
     } finally {
       setBusyApply(false);
     }
@@ -198,9 +207,9 @@ export function DryRunSessionView() {
       setSession(r.data.session);
       setPrefChoice(r.data.session.preference ?? "");
       setPrefNote(r.data.session.preference_note ?? "");
-      toast(`선호를 기록했습니다 — ${preferenceLabel(r.data.session.preference)}`);
+      toast(t("prefRecordedToast", { p1: prefLabel(r.data.session.preference) }));
     } catch (err) {
-      toast(err instanceof Error ? err.message : "선호 기록에 실패했습니다", "alert");
+      toast(err instanceof Error ? err.message : t("prefFailedToast"), "alert");
     } finally {
       setBusyPref(false);
     }
@@ -223,9 +232,9 @@ export function DryRunSessionView() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast("제안 패키지를 내려받았습니다 — 착지 경로는 저장소 PR(Design Gate)뿐입니다.");
+      toast(t("exportDoneToast"));
     } catch (err) {
-      toast(err instanceof Error ? err.message : "제안 패키지 내보내기에 실패했습니다", "alert");
+      toast(err instanceof Error ? err.message : t("exportFailedToast"), "alert");
     } finally {
       setBusyExport(false);
     }
@@ -235,8 +244,8 @@ export function DryRunSessionView() {
     return (
       <main>
         <BackLinks />
-        <h1>드라이런 세션</h1>
-        <PageState state="error" errorText={ADMIN_FORBIDDEN_TEXT} />
+        <h1>{t("h1")}</h1>
+        <PageState state="error" errorText={t(ADMIN_FORBIDDEN_KEY)} />
         {confirmDialog}
       </main>
     );
@@ -245,7 +254,7 @@ export function DryRunSessionView() {
     return (
       <main>
         <BackLinks />
-        <h1>드라이런 세션</h1>
+        <h1>{t("h1")}</h1>
         <PageState state="loading" rows={5} />
         {confirmDialog}
       </main>
@@ -255,7 +264,7 @@ export function DryRunSessionView() {
     return (
       <main>
         <BackLinks />
-        <h1>드라이런 세션</h1>
+        <h1>{t("h1")}</h1>
         <PageState state="error" errorText={errorText ?? undefined} onRetry={() => setRetryTick((t) => t + 1)} />
         {confirmDialog}
       </main>
@@ -264,72 +273,73 @@ export function DryRunSessionView() {
 
   const expiry = expiryChip(session.expires_at);
   const grade = gradeFromPreference(session.preference);
+  const statusChip = sessionStatusChip(session.status);
   const executeBlockedReason = !storedHasOverride
-    ? "오버라이드가 없는 실행은 base와 동일합니다 — 프롬프트 또는 에이전트 축을 오버라이드한 뒤 적용·실행하세요."
+    ? t("blockedNoOverride")
     : !llmConfigured
-      ? "LLM이 구성되지 않아 드라이런을 실행할 수 없습니다 — 시스템 모드에서 LLM 구성을 확인하세요."
+      ? t("blockedNoLlm")
       : undefined;
 
   return (
     <main>
       <BackLinks />
-      <h1>드라이런 세션</h1>
+      <h1>{t("h1")}</h1>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
-        SSOT을 건드리지 않는 세션 스코프 실험입니다 — 결과는 제안 전용이며, 영구 반영은 제안 패키지(저장소 PR) 경로뿐입니다.
+        {t("intro")}
       </p>
 
       {/* 세션 헤더 — id·상태·만료 칩 + 세션 비용·호출 누계 바(벤치 B3-3/A5-5) + PrimaryAction. */}
-      <section aria-label="세션 요약" className="market-section">
+      <section aria-label={t("sessionSummarySection")} className="market-section">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div style={{ minWidth: "18rem" }}>
             <div className="flex flex-wrap items-center gap-1">
               <code className="dd-item-id">{session.id}</code>
-              <span className={sessionStatusChip(session.status).cls}>{sessionStatusChip(session.status).label}</span>
-              {expiry && <span className={expiry.cls} title={expiry.title}>{expiry.label}</span>}
+              <span className={statusChip.cls}>{statusChip.key ? tr(statusChip.key) : statusChip.label}</span>
+              {expiry && <span className={expiry.cls} title={tr(expiry.titleKey, expiry.titleParams)}>{tr(expiry.key)}</span>}
             </div>
             <p className="mt-1 mb-0 text-[length:var(--fs-caption)]">
-              대상: {session.activity_id ? <><code className="dd-item-id">{session.activity_id}</code> · </> : null}
-              프롬프트 <code className="dd-item-id">{session.prompt_key}</code> · base{" "}
+              {t("targetPrefix")} {session.activity_id ? <><code className="dd-item-id">{session.activity_id}</code> · </> : null}
+              {t("promptWord")} <code className="dd-item-id">{session.prompt_key}</code> · base{" "}
               <code className="dd-item-id">{session.base_agent_key}</code> → override{" "}
-              {session.override_agent_key ? <code className="dd-item-id">{session.override_agent_key}</code> : "(미변경)"}
+              {session.override_agent_key ? <code className="dd-item-id">{session.override_agent_key}</code> : t("unchanged")}
             </p>
             <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              목적: {session.purpose} · 생성 {fmtDateTime(session.created_at)} by {session.created_by} · TTL 만료 {fmtDateTime(session.expires_at)}
+              {t("purposeLine", { p1: session.purpose, p2: fmtDateTime(session.created_at), p3: session.created_by, p4: fmtDateTime(session.expires_at) })}
             </p>
           </div>
           <div className="text-right" style={{ minWidth: "14rem" }}>
-            <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">세션 비용 누계</div>
+            <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("costTotal")}</div>
             <div className="text-xl font-bold tabular-nums">{fmtUsd(session.ledger.costUsd)}</div>
             <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              {fmtInt(session.ledger.llmCalls)} llm 호출 · {fmtInt(session.ledger.runs)} runs
-              {session.ledger.lastRunAt ? ` · 최근 실행 ${fmtDateTime(session.ledger.lastRunAt)}` : ""}
+              {t("ledgerLine", { p1: fmtInt(session.ledger.llmCalls), p2: fmtInt(session.ledger.runs) })}
+              {session.ledger.lastRunAt ? " " + t("lastRunSuffix", { p1: fmtDateTime(session.ledger.lastRunAt) }) : ""}
             </div>
           </div>
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <PrimaryAction
             inline
-            label={busyExecute ? "실행 중..." : "드라이런 실행 — 비용 확인"}
+            label={busyExecute ? t("executing") : t("executeCta")}
             onClick={askExecute}
             disabled={busyExecute || !storedHasOverride || !llmConfigured}
             disabledReason={executeBlockedReason}
           />
           <label className="text-[length:var(--fs-caption)]" style={{ flex: "1 1 14rem" }}>
-            <span className="block mb-0.5">샘플 입력 (선택 — 미입력 시 활동 목적 문장 사용)</span>
+            <span className="block mb-0.5">{t("sampleInputLabel")}</span>
             <input className="sizing-new-input sizing-new-input-sm w-full" value={sampleUser} maxLength={500} onChange={(e) => setSampleUser(e.target.value)} />
           </label>
         </div>
         <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-          <span className="status-chip status-amber">제안 전용</span> 이 세션의 모든 산출물과 수용은 세션 스코프에만 존재합니다 — SSOT(prompts.json·flow.spec.yaml)에는 반영되지 않으며, 드라이런 호출은 런 장부에 is_dry_run 플래그로 기록되어 운영 집계에서 제외됩니다.
+          <span className="status-chip status-amber">{t("proposalOnlyChip")}</span> {t("boundaryNote")}
         </p>
       </section>
 
       {/* 오버라이드 편집기(좌열) + A/B 비교(우열) — flex-wrap으로 48rem 미만 세로 스택(§11). */}
       <div className="flex flex-wrap items-start gap-3">
-        <section aria-label="오버라이드 편집기" className="market-section" style={{ flex: "1 1 22rem" }}>
-          <SectionToolbar title="오버라이드 편집기" summary={<span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">저장 = 세션 스코프만</span>} />
+        <section aria-label={t("overrideSection")} className="market-section" style={{ flex: "1 1 22rem" }}>
+          <SectionToolbar title={t("overrideTitle")} summary={<span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("overrideScopeNote")}</span>} />
           <label className="text-[length:var(--fs-caption)] block mb-2">
-            <span className="block mb-1">프롬프트 본문 (오버라이드)</span>
+            <span className="block mb-1">{t("promptBodyLabel")}</span>
             <textarea
               className="sizing-new-input w-full"
               rows={10}
@@ -340,109 +350,109 @@ export function DryRunSessionView() {
           </label>
           <p id="dry-run-override-note" className="mb-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
             {diff.added + diff.removed > 0 ? (
-              <span className="status-chip status-in-progress">diff +{fmtInt(diff.added)} / −{fmtInt(diff.removed)} 줄</span>
+              <span className="status-chip status-in-progress">{t("diffLines", { p1: fmtInt(diff.added), p2: fmtInt(diff.removed) })}</span>
             ) : (
-              <span className="status-chip status-not-started">원본과 동일</span>
+              <span className="status-chip status-not-started">{t("diffSame")}</span>
             )}{" "}
-            base(카탈로그 원본) 대비 줄 수 기준 요약입니다.
+            {t("diffNote")}
           </p>
           <details className="mb-2">
-            <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">base 시스템 프롬프트 참조 (카탈로그 원본)</summary>
+            <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">{t("basePromptRef")}</summary>
             <pre className="mt-1 text-[length:var(--fs-caption)]" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: "14rem", overflowY: "auto" }}>{session.base_system}</pre>
           </details>
           <label className="text-[length:var(--fs-caption)] block mb-2">
-            <span className="block mb-1">에이전트 재배정 (로스터 한정 — 존재하지 않는 키는 저장 불가, §6.6 (1))</span>
+            <span className="block mb-1">{t("reassignLabel")}</span>
             <select className="sizing-new-input w-full" value={overrideAgentKey} onChange={(e) => setOverrideAgentKey(e.target.value)} disabled={roster.length === 0}>
-              <option value="">미변경 ({session.base_agent_key})</option>
+              <option value="">{t("unchangedAgent", { p1: session.base_agent_key })}</option>
               {roster.map((a) => (
                 <option key={a.key} value={a.key}>{a.key} — {a.name}</option>
               ))}
             </select>
           </label>
           {roster.length === 0 && (
-            <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">에이전트 로스터를 불러오지 못했습니다 — 재배정은 로스터 로딩 후 가능합니다(프롬프트 축 편집은 가능).</p>
+            <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("rosterFailed")}</p>
           )}
           {applyError && <p role="alert" className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">✕ {applyError}</p>}
           <div className="flex flex-wrap gap-2">
             <Button size="sm" disabled={!dirty || busyApply} onClick={() => void applyOverrideAsNewSession()}>
-              {busyApply ? "적용 중..." : "오버라이드 적용(새 세션)"}
+              {busyApply ? t("applying") : t("applyCta")}
             </Button>
             <Button size="sm" disabled={!dirty || busyApply} onClick={() => { setOverrideSystem(session.override_system ?? ""); setOverrideAgentKey(session.override_agent_key ?? ""); }}>
-              편집 되돌리기
+              {t("revertEdits")}
             </Button>
           </div>
           {dirty && (
             <p role="status" className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              변경사항은 이 세션에 저장되지 않습니다 — 적용하면 변경된 오버라이드를 가진 새 세션이 만들어집니다(기존 세션은 증거로 남습니다).
+              {t("dirtyNote")}
             </p>
           )}
         </section>
 
-        <section aria-label="A/B 비교" className="market-section" style={{ flex: "2 1 30rem" }}>
+        <section aria-label={t("abSection")} className="market-section" style={{ flex: "2 1 30rem" }}>
           <SectionToolbar
-            title="A/B 비교"
-            filters={<span className={grade.cls}>등급: {grade.label}</span>}
-            summary={<span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">base 고정(카탈로그 원본) — 벤치 A1-6 변형</span>}
+            title={t("abTitle")}
+            filters={<span className={grade.cls}>{t("gradeLabel", { p1: tr(grade.key) })}</span>}
+            summary={<span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("abScopeNote")}</span>}
           />
           {!executed ? (
-            <PageState state="empty" emptyText="아직 실행하지 않았습니다 — 상단의 드라이런 실행(비용 확인)을 먼저 수행하세요." />
+            <PageState state="empty" emptyText={t("notExecuted")} />
           ) : (
             <>
               <div className="flex flex-wrap gap-2">
                 <LegCard
-                  title="base (카탈로그 원본 — 고정)"
+                  title={t("legBaseTitle")}
                   text={session.base_output ?? ""}
                   source={session.base_output_source}
                   meta={session.base_run_call_id ? callMeta.get(session.base_run_call_id) : undefined}
                   callId={session.base_run_call_id}
                 />
                 <LegCard
-                  title="override (이 세션)"
+                  title={t("legOverrideTitle")}
                   text={session.override_output ?? ""}
                   source={session.override_output_source}
                   meta={session.override_run_call_id ? callMeta.get(session.override_run_call_id) : undefined}
                   callId={session.override_run_call_id}
-                  overrideNote={session.override_agent_key ? `에이전트 재배정: ${session.override_agent_key}` : undefined}
+                  overrideNote={session.override_agent_key ? t("reassignNote", { p1: session.override_agent_key }) : undefined}
                 />
               </div>
 
               {/* 선호 기록(벤치 A3-3 변형) — 3상(base|override|tie) + 비고 1줄, 골든셋
                   시드(§6.6 (3)). 한 번의 POST로 preference+note를 함께 기록한다. */}
-              <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label="선호 기록 (base/override/tie 3상 + 비고)">
-                <span className="text-[length:var(--fs-caption)] font-semibold">선호 기록:</span>
-                <FilterChip selected={prefChoice === "base"} onClick={() => setPrefChoice("base")}>base 선호</FilterChip>
-                <FilterChip selected={prefChoice === "override"} onClick={() => setPrefChoice("override")}>override 선호</FilterChip>
-                <FilterChip selected={prefChoice === "tie"} onClick={() => setPrefChoice("tie")}>동률</FilterChip>
+              <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label={t("prefGroup")}>
+                <span className="text-[length:var(--fs-caption)] font-semibold">{t("prefRecordLabel")}</span>
+                <FilterChip selected={prefChoice === "base"} onClick={() => setPrefChoice("base")}>{t("prefBase")}</FilterChip>
+                <FilterChip selected={prefChoice === "override"} onClick={() => setPrefChoice("override")}>{t("prefOverride")}</FilterChip>
+                <FilterChip selected={prefChoice === "tie"} onClick={() => setPrefChoice("tie")}>{t("prefTie")}</FilterChip>
                 <input
                   className="sizing-new-input sizing-new-input-sm"
                   style={{ flex: "1 1 12rem" }}
                   maxLength={500}
-                  placeholder="비고 (한 줄, 500자 이내 — 선택)"
-                  aria-label="선호 비고"
+                  placeholder={t("prefNotePlaceholder")}
+                  aria-label={t("prefNoteAria")}
                   value={prefNote}
                   onChange={(e) => setPrefNote(e.target.value)}
                 />
                 <Button size="sm" disabled={!executed || !prefChoice || busyPref} onClick={() => void recordPreference(prefChoice as DryRunPreference, prefNote)}>
-                  {busyPref ? "기록 중..." : "선호 기록"}
+                  {busyPref ? t("recording") : t("recordCta")}
                 </Button>
               </div>
               {!executed && (
                 <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                  실행 전에는 선호를 기록할 수 없습니다 — 판정 대상이 없는 선호는 데이터가 아니라 소음입니다(§6.6 (3)).
+                  {t("prefBeforeExecute")}
                 </p>
               )}
               {session.preference && (
                 <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                  기록됨: {preferenceLabel(session.preference)}{session.preference_note ? ` — ${session.preference_note}` : ""}
+                  {t("prefRecordedLine", { p1: prefLabel(session.preference), p2: session.preference_note ? ` — ${session.preference_note}` : "" })}
                 </p>
               )}
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Button size="sm" disabled={busyExport || !executed} onClick={() => void exportPackage()}>
-                  {busyExport ? "내보내는 중..." : "제안 패키지 내보내기"}
+                  {busyExport ? t("exporting") : t("exportCta")}
                 </Button>
                 <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                  패키지는 제안 전용 markdown입니다 — 착지 경로는 Design Gate를 통과한 저장소 PR뿐입니다.
+                  {t("exportNote")}
                 </span>
               </div>
             </>
@@ -455,45 +465,45 @@ export function DryRunSessionView() {
         promptKey={session.prompt_key}
         onApplyOverride={(improved) => {
           setOverrideSystem(improved);
-          toast("제안 초안을 오버라이드 편집기에 적용했습니다 — 세션에 저장하려면 '오버라이드 적용'을 누르세요.");
+          toast(t("suggestionAppliedToast"));
         }}
         onApplyAgent={(key) => {
           setOverrideAgentKey(key);
-          toast(`재배정 후보 ${key}를 편집기 select에 적용했습니다 — 세션에 저장하려면 '오버라이드 적용'을 누르세요.`);
+          toast(t("agentAppliedToast", { p1: key }));
         }}
       />
 
       {/* 실행 기록 — dry_run_group_id 그룹핑(벤치 B1-2 변형). 재실행은 기존 결과를
           덮지 않고 새 런 장부 행으로 적재된다(벤치 A3-3u 변형). */}
-      <section aria-label="실행 기록" className="market-section">
+      <section aria-label={t("historySection")} className="market-section">
         <SectionToolbar
-          title="실행 기록"
+          title={t("historyTitle")}
           count={runHistory.length}
-          summary={<span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">dry_run_group_id = 세션 id · is_dry_run=1 (런 장부)</span>}
+          summary={<span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("historyScopeNote")}</span>}
         />
         {runHistory.length === 0 ? (
-          <PageState state="empty" emptyText="이 세션의 드라이런 호출 기록이 없습니다." />
+          <PageState state="empty" emptyText={t("emptyHistory")} />
         ) : (
-          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table table-fixed-pct tmin-40" aria-label="이 세션의 드라이런 런 장부 기록">
-              <caption className="sr-only">세션 {session.id}의 드라이런 호출 기록 — 다리·모델·상태·지연·비용</caption>
+          <div className="table-scroll" role="region" aria-label={t("tableScrollRegion")} tabIndex={0}>
+            <table className="data-table table-fixed-pct tmin-40" aria-label={t("historyTableAria")}>
+              <caption className="sr-only">{t("historyTableCaption", { p1: session.id })}</caption>
               <ColGroup widths={RUN_HISTORY_COL_PCT} />
               <thead>
                 <tr>
-                  <th scope="col">시각</th>
-                  <th scope="col">다리</th>
-                  <th scope="col">모델</th>
-                  <th scope="col">상태</th>
-                  <th scope="col" className="col-num">지연</th>
-                  <th scope="col" className="col-num">비용</th>
+                  <th scope="col">{t("colTime")}</th>
+                  <th scope="col">{t("colLeg")}</th>
+                  <th scope="col">{t("colModel")}</th>
+                  <th scope="col">{tc("status")}</th>
+                  <th scope="col" className="col-num">{t("colLatency")}</th>
+                  <th scope="col" className="col-num">{t("colCost")}</th>
                 </tr>
               </thead>
               <tbody>
                 {runHistory.map((row) => {
                   const leg = row.id === session.base_run_call_id ? "base" : row.id === session.override_run_call_id ? "override" : "—";
                   const okChip = row.ok === 1
-                    ? { label: "✓ 성공", cls: "status-chip status-approved" }
-                    : { label: "✕ 실패", cls: "status-chip status-rejected" };
+                    ? { label: t("chipSuccess"), cls: "status-chip status-approved" }
+                    : { label: t("chipFailed"), cls: "status-chip status-rejected" };
                   return (
                     <tr key={row.id}>
                       <td className="tabular-nums">{fmtDateTime(row.created_at)}</td>
@@ -510,7 +520,7 @@ export function DryRunSessionView() {
           </div>
         )}
         <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-          이 표는 런 장부(llm_call_log)의 is_dry_run=1 행 중 dry_run_group_id가 이 세션인 것만 나열합니다 — 최근 30일 창 기준.
+          {t("historyNote")}
         </p>
       </section>
 
@@ -521,13 +531,14 @@ export function DryRunSessionView() {
 
 /** 화면 상단 복귀 링크 — NON_MENU 라우트라 사이드바가 없다(§2.3). */
 function BackLinks() {
+  const t = useTranslations("pages.flows.dryRunSession");
   return (
     <p className="mb-1 text-[length:var(--fs-caption)]">
-      <Link href="/flows" className="text-[color:var(--accent)] underline">← 플로우 콘솔</Link>
+      <Link href="/flows" className="text-[color:var(--accent)] underline">{t("backToFlows")}</Link>
       {" · "}
-      <Link href="/flows?tab=blueprint" className="text-[color:var(--accent)] underline">블루프린트</Link>
+      <Link href="/flows?tab=blueprint" className="text-[color:var(--accent)] underline">{t("blueprintLink")}</Link>
       {" · "}
-      <Link href="/flows/dry-run" className="text-[color:var(--accent)] underline">세션 목록</Link>
+      <Link href="/flows/dry-run" className="text-[color:var(--accent)] underline">{t("sessionListLink")}</Link>
     </p>
   );
 }
@@ -548,12 +559,13 @@ function LegCard({
   callId: string | null;
   overrideNote?: string;
 }) {
+  const tr = useTranslations();
   const chip = sourceChip(source);
   return (
     <div className="sizing-grade-card" style={{ flex: "1 1 18rem" }}>
       <div className="flex flex-wrap items-center gap-1">
         <span className="font-semibold text-[length:var(--fs-caption)]">{title}</span>
-        <span className={chip.cls}>{chip.label}</span>
+        <span className={chip.cls}>{tr(chip.key)}</span>
       </div>
       {overrideNote && <div className="mt-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{overrideNote}</div>}
       <div className="mt-1 mb-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] tabular-nums">

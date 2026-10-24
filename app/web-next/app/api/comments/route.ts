@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const entityType = url.searchParams.get("entity_type");
   const entityId = url.searchParams.get("entity_id");
   if ((entityType !== "opportunity" && entityType !== "project") || !entityId) {
-    return badRequest("entity_required", "entity_type(opportunity|project)·entity_id는 필수입니다.");
+    return badRequest("entity_required", "entity_type(opportunity|project)·entity_id is required.");
   }
   if (entityType === "project" && !visibleProject(auth.auth, entityId, { includeClosed: true, includeDeleted: true })) {
     return notFound();
@@ -39,9 +39,9 @@ export async function POST(request: Request) {
     entity_type?: string; entity_id?: string; body?: string;
   } | null;
   if ((body?.entity_type !== "opportunity" && body?.entity_type !== "project") || !body?.entity_id) {
-    return badRequest("entity_required", "entity_type(opportunity|project)·entity_id는 필수입니다.");
+    return badRequest("entity_required", "entity_type(opportunity|project)·entity_id is required.");
   }
-  if (!body.body?.trim()) return badRequest("body_required", "본문은 필수입니다.");
+  if (!body.body?.trim()) return badRequest("body_required", "Body is required.");
   if (body.entity_type === "project" && !visibleProject(auth.auth, body.entity_id)) return notFound();
   const now = new Date().toISOString();
   const rid = ulid();

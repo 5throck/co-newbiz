@@ -8,7 +8,7 @@ import { updateCompetitor } from "../../../../../../lib/company-competitors.ts";
 export async function PATCH(request: Request, { params }: { params: Promise<{ companyId: string; competitorId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "경쟁사 수정은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Updating competitors requires the analyst role or higher." });
   if (denied) return denied;
   const { companyId, competitorId } = await params;
   const body = (await request.json().catch(() => null)) as { note?: string | null; dart_corp_code?: string | null } | null;

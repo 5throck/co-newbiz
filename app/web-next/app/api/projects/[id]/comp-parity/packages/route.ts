@@ -18,18 +18,18 @@ const FLIGHT_RISK = new Set(["low", "medium", "high"]);
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "경영진 보상 패키지 기록은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Recording executive comp packages requires the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
 
   const executiveRef = typeof body?.executive_ref === "string" ? body.executive_ref.trim().toUpperCase() : "";
-  if (!EXECUTIVE_REF.test(executiveRef)) return badRequest("invalid_request", "executive_ref는 익명 참조(예: CEO-01, CFO-02)여야 합니다 — 실명은 기록할 수 없습니다 (SEC-05).");
+  if (!EXECUTIVE_REF.test(executiveRef)) return badRequest("invalid_request", "executive_ref must be an anonymous reference (e.g. CEO-01, CFO-02) — real names are never recorded (SEC-05).");
   const roleTitle = typeof body?.role_title === "string" ? body.role_title.trim() : "";
-  if (!roleTitle) return badRequest("invalid_request", "role_title은 필수입니다.");
+  if (!roleTitle) return badRequest("invalid_request", "role_title is required.");
   const basePay = Number(body?.base_pay);
-  if (!Number.isInteger(basePay) || basePay <= 0) return badRequest("invalid_request", "base_pay는 양의 정수(원 단위)여야 합니다.");
+  if (!Number.isInteger(basePay) || basePay <= 0) return badRequest("invalid_request", "base_pay must be a positive integer (KRW).");
   const cocTrigger = body?.coc_trigger === true ? 1 : 0;
   const optionalInt = (k: string): number | null | undefined => {
     const v = body?.[k];
@@ -38,20 +38,20 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     return Number.isInteger(n) && n >= 0 ? n : undefined;
   };
   const cocPayout = optionalInt("coc_payout_estimate");
-  if (cocPayout === undefined) return badRequest("invalid_request", "coc_payout_estimate는 0 이상의 정수(원 단위)여야 합니다.");
-  if (cocTrigger === 1 && cocPayout === null) return badRequest("invalid_request", "coc_trigger가 있으면 coc_payout_estimate(추정 지급액)가 필요합니다 — ma-04.");
+  if (cocPayout === undefined) return badRequest("invalid_request", "coc_payout_estimate must be an integer >= 0 (KRW).");
+  if (cocTrigger === 1 && cocPayout === null) return badRequest("invalid_request", "A coc_trigger requires coc_payout_estimate — ma-04.");
   const nonCompete = optionalInt("non_compete_months");
-  if (nonCompete === undefined) return badRequest("invalid_request", "non_compete_months는 0 이상의 정수여야 합니다.");
+  if (nonCompete === undefined) return badRequest("invalid_request", "non_compete_months must be an integer >= 0.");
   const retention = optionalInt("retention_plan_cost");
-  if (retention === undefined) return badRequest("invalid_request", "retention_plan_cost는 0 이상의 정수(원 단위)여야 합니다.");
+  if (retention === undefined) return badRequest("invalid_request", "retention_plan_cost must be an integer >= 0 (KRW).");
   const acceleratedVesting = body?.accelerated_vesting === true ? 1 : 0;
   const enforceableRaw = body?.non_compete_enforceable;
   const enforceable = enforceableRaw === undefined || enforceableRaw === null ? null : enforceableRaw === true ? 1 : 0;
   const flightRisk = typeof body?.flight_risk === "string" && body.flight_risk ? body.flight_risk : null;
-  if (flightRisk !== null && !FLIGHT_RISK.has(flightRisk)) return badRequest("invalid_request", "flight_risk는 low | medium | high 중 하나입니다.");
+  if (flightRisk !== null && !FLIGHT_RISK.has(flightRisk)) return badRequest("invalid_request", "flight_risk must be one of: low | medium | high.");
   const valueImpactRaw = body?.value_impact;
   const valueImpact = valueImpactRaw === undefined || valueImpactRaw === null || valueImpactRaw === "" ? null : Number(valueImpactRaw);
-  if (valueImpact !== null && !Number.isInteger(valueImpact)) return badRequest("invalid_request", "value_impact는 정수(백만 KRW)여야 합니다.");
+  if (valueImpact !== null && !Number.isInteger(valueImpact)) return badRequest("invalid_request", "value_impact must be an integer (KRW millions).");
   const evidenceRef = typeof body?.evidence_ref === "string" ? body.evidence_ref.trim() || null : null;
 
   const db = getDb();

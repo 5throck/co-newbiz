@@ -4,13 +4,14 @@
 import { SectionToolbar } from "../../layout.tsx";
 import type { OurCompanyStageState } from "./useOurGroups.ts";
 import { CheckIcon } from "./icons.tsx";
+import { useTranslations } from "next-intl";
 
-export function GroupSelectPanel({ ctx }: { ctx: OurCompanyStageState }) {
+export function GroupSelectPanel({ ctx }: { ctx: OurCompanyStageState }) {const t = useTranslations("components.ourCompany.groupPanels"); const tc = useTranslations("common");
   const { canAct, setShowGroupForm, setShowMemberForm, showGroupForm, groupName, setGroupName, busy, groups, selectedGroup, createGroup, backToList, loadGroup } = ctx;
   return (
-    <section aria-label="그룹" className="market-section" aria-busy={groups === null}>
+    <section aria-label={t("group")} className="market-section" aria-busy={groups === null}>
         <SectionToolbar
-          title="분석 대상 그룹"
+          title={t("groupsInAnalysisScope")}
           actions={
             canAct ? (
               <button
@@ -19,7 +20,7 @@ export function GroupSelectPanel({ ctx }: { ctx: OurCompanyStageState }) {
                 onClick={() => { setShowGroupForm((v) => !v); setShowMemberForm(false); }}
                 aria-expanded={showGroupForm}
               >
-                ＋ 그룹 등록
+                {t("registerGroup")}
               </button>
             ) : undefined
           }
@@ -28,22 +29,22 @@ export function GroupSelectPanel({ ctx }: { ctx: OurCompanyStageState }) {
           <form onSubmit={createGroup} className="sizing-new-form mb-3">
             <div className="flex flex-wrap items-end gap-2">
               <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1">그룹명 *</span>
-                <input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="예: 테크크로스 그룹" required className="sizing-new-input" autoFocus />
+                <span className="block mb-1">{t("groupName")}</span>
+                <input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder={t("eGTechcrossGroup")} required className="sizing-new-input" autoFocus />
               </label>
               <span className="flex items-center gap-2">
-                <button type="submit" className="btn-ghost btn-sm" disabled={busy || !groupName.trim()}>등록</button>
-                <button type="button" className="btn-ghost btn-sm" onClick={() => setShowGroupForm(false)}>취소</button>
+                <button type="submit" className="btn-ghost btn-sm" disabled={busy || !groupName.trim()}>{tc("register")}</button>
+                <button type="button" className="btn-ghost btn-sm" onClick={() => setShowGroupForm(false)}>{tc("cancel")}</button>
               </span>
             </div>
           </form>
         )}
         {groups === null ? (
-          <p>불러오는 중...</p>
+          <p>{tc("loading")}</p>
         ) : groups.length === 0 ? (
-          <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">등록된 그룹이 없습니다. "＋ 그룹 등록"으로 시작하세요.</p>
+          <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">{t("noGroupsRegisteredStartWith")}</p>
         ) : (
-          <div role="group" aria-label="분석 대상 그룹" className="group-card-list">
+          <div role="group" aria-label={t("groupsInAnalysisScope2")} className="group-card-list">
             {groups.map((g) => {
               const active = selectedGroup?.group.id === g.id;
               return (
@@ -57,7 +58,7 @@ export function GroupSelectPanel({ ctx }: { ctx: OurCompanyStageState }) {
                   <span className="group-card-check">{active && <CheckIcon />}</span>
                   <span className="group-card-body">
                     <span className="group-card-name" title={g.name}>{g.name}</span>
-                    <span className="sizing-chip-meta">계열사 {g.member_count}</span>
+                    <span className="sizing-chip-meta">{tc("affiliate")} {g.member_count}</span>
                   </span>
                 </button>
               );
@@ -68,7 +69,7 @@ export function GroupSelectPanel({ ctx }: { ctx: OurCompanyStageState }) {
   );
 }
 
-export function ProfileSummaryPanel({ ctx }: { ctx: OurCompanyStageState }) {
+export function ProfileSummaryPanel({ ctx }: { ctx: OurCompanyStageState }) {const t = useTranslations("components.ourCompany.groupPanels");
   const { selectedGroup } = ctx;
   return (
     <>{selectedGroup && (() => {
@@ -91,16 +92,15 @@ export function ProfileSummaryPanel({ ctx }: { ctx: OurCompanyStageState }) {
         if (pairs.length === 0) return null;
         pairs.sort((x, y) => y.score - x.score);
         return (
-          <section aria-label="계열사 간 시너지" className="market-section">
-            <div className="section-toolbar"><span className="section-title"><h2>계열사 간 시너지 매트릭스 — 산업 노출 겹침 기준</h2></span></div>
+          <section aria-label={t("synergy")} className="market-section">
+            <div className="section-toolbar"><span className="section-title"><h2>{t("synergyMatrixByIndustryExposure")}</h2></span></div>
             <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              각 계열사 프로파일의 산업 노출(industryExposure)이 겹치는 정도를 시너지 후보 지표로 환산한 정성 매트릭스입니다.
-              겹침이 있는 계열사 쌍이 상위 표시됩니다 — 공동 R&BD·제휴·수직 통합 후보 발굴의 입력으로 활용하세요.
+              {t("aQualitativeMatrixConvertingHow")}
             </p>
-            <table className="data-table" aria-label="계열사 간 시너지">
-              <caption className="sr-only">계열사 간 시너지 매트릭스</caption>
+            <table className="data-table" aria-label={t("synergy2")}>
+              <caption className="sr-only">{t("synergyMatrix")}</caption>
               <thead>
-                <tr><th scope="col">계열사 A</th><th scope="col">계열사 B</th><th scope="col">겹치는 산업</th><th scope="col" className="w-[7rem]">시너지 지표</th></tr>
+                <tr><th scope="col">{t("affiliateA")}</th><th scope="col">{t("affiliateB")}</th><th scope="col">{t("overlappingIndustries")}</th><th scope="col" className="w-[7rem]">{t("synergyMetrics")}</th></tr>
               </thead>
               <tbody>
                 {pairs.map((pr) => (

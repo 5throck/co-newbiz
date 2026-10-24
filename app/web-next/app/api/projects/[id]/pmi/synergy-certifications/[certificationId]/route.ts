@@ -11,7 +11,7 @@ export const DELETE = route(async (request: Request, { params }: { params: Promi
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "시너지 인증 해제는 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Unconfirming a synergy requires the analyst role or higher.");
   const { id, certificationId } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   if (!pmiApplicability(getDb(), id).applies) return forbidden("not_applicable_track", PMI_NOT_APPLICABLE_MESSAGE);

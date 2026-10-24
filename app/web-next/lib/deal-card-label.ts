@@ -1,15 +1,18 @@
-import { GATE_LABEL, type GateMetaId } from "./stage-meta.ts";
+// i18n (design 2026-10-23-i18n-ui-adoption): gate display names are `common.gate.*`
+// catalog keys (lib/label-keys.ts GATE_LABEL_KEY); the render site resolves them with
+// the ROOT translator and composes the "… HOLD" chip. Client-safe: no imports.
+import { GATE_LABEL_KEY } from "./label-keys.ts";
 
 export interface DealCardChips {
   /** Current stage chip (never carries HOLD). */
   stageLabel: string;
-  /** Separate chip naming the gate that holds, e.g. "FS HOLD"; null when no HOLD. */
-  holdLabel: string | null;
+  /** Catalog keys naming the gate(s) that hold, e.g. ["common.gate.fs"]; the card renders "…·… HOLD". null when no HOLD. */
+  holdLabelKeys: string[] | null;
 }
 
-/** Display name of a gate id; unknown ids are shown as-is. */
+/** Catalog key of a gate display name; unknown gate ids pass through unchanged. */
 export function gateName(gate: string): string {
-  return GATE_LABEL[gate as GateMetaId] ?? gate;
+  return GATE_LABEL_KEY[gate] ?? gate;
 }
 
 /**
@@ -21,6 +24,6 @@ export function buildCardChips(stage: string, holdGates: readonly string[], wait
   const unique = [...new Set(holdGates)];
   return {
     stageLabel: waitingLabel ?? stage,
-    holdLabel: unique.length ? `${unique.map(gateName).join("·")} HOLD` : null,
+    holdLabelKeys: unique.length ? unique.map(gateName) : null,
   };
 }

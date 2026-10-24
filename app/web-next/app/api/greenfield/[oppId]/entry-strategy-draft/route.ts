@@ -19,7 +19,7 @@ import { capabilityEvidenceLines, routeDecisionLines, runEntryStrategyDraft } fr
 export const POST = route(async (request: Request, { params }: { params: Promise<{ oppId: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "진출전략 제안(AI)은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Market-entry strategy proposals (AI) require the analyst role or higher." }); if (denied) return denied; }
   const { oppId } = await params;
   const db = getDb();
   const opp = db.query("SELECT id, name, market_scope FROM opportunity WHERE id = ?").get(oppId) as { id: string; name: string; market_scope: string | null } | undefined;

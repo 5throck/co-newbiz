@@ -8,6 +8,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { PageState, Tabs } from "../../components/ui.tsx";
 import { api, ApiError } from "../../lib/api.ts";
@@ -15,9 +16,10 @@ import { BlueprintView } from "./blueprint-view.tsx";
 import { LedgerView } from "./ledger-view.tsx";
 import type { FlowsBlueprint } from "./flows-view-lib.ts";
 
-const ADMIN_FORBIDDEN_TEXT = "관리자 계정은 업무 콘텐츠에서 분리되어 이 화면을 볼 수 없습니다(ADR-0146). 이 상태는 오류가 아니라 설계된 접근 경계입니다.";
+const ADMIN_FORBIDDEN_KEY = "adminForbidden";
 
 export function FlowsView() {
+  const t = useTranslations("pages.flows.flowsAdmin");
   const searchParams = useSearchParams();
   const router = useRouter();
   const tab = searchParams.get("tab") === "ledger" ? "ledger" : "blueprint";
@@ -43,7 +45,7 @@ export function FlowsView() {
       .catch((err: unknown) => {
         if (!alive) return;
         if (err instanceof ApiError && err.status === 403) setForbidden(true);
-        else setErrorText(err instanceof Error ? err.message : "블루프린트를 불러오지 못했습니다");
+        else setErrorText(err instanceof Error ? err.message : t("loadFailed"));
         setStatus("error");
       });
     return () => {
@@ -59,29 +61,29 @@ export function FlowsView() {
 
   return (
     <main>
-      <h1>플로우 콘솔</h1>
+      <h1>{t("h1")}</h1>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
-        설계된 PM 에이전트 플로우와 런 장부를 추적합니다 — 모든 AI 산출물은 제안 전용이며 게이트 결정은 사람이 기록합니다.
+        {t("intro")}
       </p>
 
       {forbidden ? (
         // §10 상태 매트릭스 — 403(admin)은 재시도 버튼 없이 설계된 경계임을 명시한다.
-        <PageState state="error" errorText={ADMIN_FORBIDDEN_TEXT} />
+        <PageState state="error" errorText={t(ADMIN_FORBIDDEN_KEY)} />
       ) : (
         <>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Tabs
               tabs={[
-                { key: "blueprint", label: "블루프린트" },
-                { key: "ledger", label: "런 레저" },
+                { key: "blueprint", label: t("tabBlueprint") },
+                { key: "ledger", label: t("tabLedger") },
               ]}
               active={tab}
               onSelect={selectTab}
-              label="플로우 콘솔 보기"
+              label={t("tabsLabel")}
             />
             {/* 드라이런 세션 목록 진입(§2.2) — NON_MENU 라우트, 두 탭 옆 텍스트 링크. */}
             <Link href="/flows/dry-run" className="text-[length:var(--fs-caption)] text-[color:var(--accent)] underline">
-              드라이런 세션 →
+              {t("dryRunSessionsLink")}
             </Link>
           </div>
           {status === "loading" && <PageState state="loading" rows={5} />}
@@ -96,11 +98,11 @@ export function FlowsView() {
         </>
       )}
 
-      <section aria-label="화면 경계 안내" className="market-section">
-        <SectionToolbar title="이 화면의 경계" />
+      <section aria-label={t("boundarySection")} className="market-section">
+        <SectionToolbar title={t("boundaryTitle")} />
         <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-          플로우 콘솔은 읽기 전용입니다 — SSOT(flow.spec.yaml·prompts.json)을 직접 편집하는 표면이 아니며, 모든 AI 산출물은 제안 전용입니다.
-          실험은 드라이런 세션(<Link href="/flows/dry-run" className="text-[color:var(--accent)] underline">/flows/dry-run</Link>)에서만, 결과의 영구 반영은 제안 패키지(저장소 PR) 경로로만 가능합니다.
+          {t("boundaryNote")}
+          {t("experimentBoundary", { p1: "(/flows/dry-run)" })}
         </p>
       </section>
     </main>

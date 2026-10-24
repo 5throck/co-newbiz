@@ -10,7 +10,7 @@ import { decideCalibrationDriver } from "../../../../../../lib/market-calibratio
 export async function POST(request: Request, { params }: { params: Promise<{ industryId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "보정 사이클은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Calibration cycles require the analyst role or higher." });
   if (denied) return denied;
   const { industryId } = await params;
   const body = (await request.json().catch(() => null)) as { acceptProposals?: boolean } | null;

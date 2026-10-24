@@ -3,8 +3,9 @@
 // Split from components/stages/MarketAnalysisStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import { useChartTheme } from "../../../lib/echarts-theme.ts";
 import type { ChainGraphNode, ChainGraphEdge } from "./types.ts";
+import { useTranslations } from "next-intl";
 
-export function IndustryChainGraph({ nodes, edges }: { nodes: ChainGraphNode[]; edges: ChainGraphEdge[] }) {
+export function IndustryChainGraph({ nodes, edges }: { nodes: ChainGraphNode[]; edges: ChainGraphEdge[] }) {const t = useTranslations("stages.s1.industryChainGraph"); const tc = useTranslations("common");
   const ct = useChartTheme();
   if (nodes.length === 0) return null;
 
@@ -36,7 +37,7 @@ export function IndustryChainGraph({ nodes, edges }: { nodes: ChainGraphNode[]; 
 
   return (
     <div className="table-scroll" style={{ overflowX: "auto" }}>
-      <svg width={width} height={height} role="img" aria-label="산업 간 가치사슬 관계도" style={{ minWidth: "100%" }}>
+      <svg width={width} height={height} role="img" aria-label={tc("industryValueChainMap")} style={{ minWidth: "100%" }}>
         <defs>
           <marker id="chain-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill={ct.muted} />
@@ -78,7 +79,7 @@ export function IndustryChainGraph({ nodes, edges }: { nodes: ChainGraphNode[]; 
                 stroke={n.analyzed ? ct.color[0] : ct.muted}
                 strokeWidth={1}
               >
-                <title>{n.name_ko}{n.analyzed ? " — 분석 완료" : " — 미분석"}</title>
+                <title>{n.name_ko}{n.analyzed ? t("analysisComplete") : t("notAnalyzed")}</title>
               </rect>
               <text x={NODE_W / 2} y={NODE_H / 2 + 4} textAnchor="middle" fontSize={11} fill={ct.text ?? ct.muted}>
                 {n.name_ko.length > 14 ? `${n.name_ko.slice(0, 13)}…` : n.name_ko}

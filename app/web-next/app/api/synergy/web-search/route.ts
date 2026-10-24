@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   // 유료 외부 검색 트리거는 analyst 이상만 허용한다 (ADR-0118 analyst+ floor).
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "웹 리서치 검색은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Web research searches require the analyst role or higher." });
   if (denied) return denied;
   const q = new URL(request.url).searchParams.get("q")?.trim() ?? "";
   if (!isWebResearchConfigured()) return ok({ configured: false, results: [] }, 200);

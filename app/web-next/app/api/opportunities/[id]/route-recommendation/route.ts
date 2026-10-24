@@ -110,7 +110,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "LLM 추천 생성은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "LLM recommendation generation requires the analyst role or higher." }); if (denied) return denied; }
   const { id } = await params;
   const db = getDb();
   const opp = db
@@ -121,7 +121,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   if (!opp) return notFound();
   // S4 화면과 동일한 전제 — 선별(selected)된 기회만 결정 작업의 대상이다.
   const row = db.query("SELECT status FROM opportunity WHERE id = ?").get(id) as { status: string } | undefined;
-  if (!row || row.status !== "selected") return badRequest("invalid_request", "선별(selected)된 기회만 LLM 진출방식 추천을 받을 수 있습니다.");
+  if (!row || row.status !== "selected") return badRequest("invalid_request", "Only a selected opportunity can get an LLM market-entry recommendation.");
 
   const advisory = computeTrackAdvisory(db, id);
 

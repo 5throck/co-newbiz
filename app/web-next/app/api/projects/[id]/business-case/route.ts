@@ -90,7 +90,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "Business Case 등록은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Registering a Business Case requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
@@ -100,10 +100,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     target_id?: string;
     lines?: LineInput[];
   } | null;
-  if (!body?.name?.trim()) return badRequest("invalid_request", "name은 필수입니다.");
+  if (!body?.name?.trim()) return badRequest("invalid_request", "name is required.");
   const name = body.name.trim();
   const kind = body.kind ?? "valuation";
-  if (!KINDS.has(kind)) return badRequest("invalid_request", `kind는 ${[...KINDS].join(" | ")} 중 하나입니다.`);
+  if (!KINDS.has(kind)) return badRequest("invalid_request", `kind must be one of: ${[...KINDS].join(" | ")}.`);
   const db = getDb();
   const lineError = validateLines(body.lines ?? []);
   if (lineError) return badRequest("invalid_request", lineError);
@@ -117,7 +117,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
          WHERE p.id = ? AND bt.id = ? AND bt.status = 'shortlisted'`,
       )
       .get(id, body.target_id) as { id: string } | undefined;
-    if (!t) return badRequest("invalid_request", "target_id는 이 프로젝트 Short List의 대상이어야 합니다.");
+    if (!t) return badRequest("invalid_request", "target_id must be a target on this project's Short List.");
     targetId = t.id;
   }
   const modelId = ulid();
@@ -138,7 +138,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "Business Case 수정은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Updating a Business Case requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
@@ -149,7 +149,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     // Full line replacement — the manual editor sends the whole set.
     lines?: LineInput[];
   } | null;
-  if (!body?.model_id) return badRequest("invalid_request", "model_id는 필수입니다.");
+  if (!body?.model_id) return badRequest("invalid_request", "model_id is required.");
   const db = getDb();
   const model = db.query("SELECT id FROM business_case_model WHERE id = ? AND project_id = ?").get(body.model_id, id) as
     | { id: string }
@@ -175,7 +175,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         return fail(
           409,
           "greenfield_lines_readonly",
-          "Green Field 케이스의 투자비 라인은 S5가 단일 원본입니다 — S5 투자비 탭에서 투자비 항목을 관리하고, S8의 S5 연결 블록에서 `최신 S5로 갱신` 후 `자동 생성`을 다시 실행하세요.",
+          "Green Field case capex lines have S5 as the single source — manage capex items in the S5 capex tab, then in the S8 S5-link block run `refresh from latest S5` and re-run `auto-generate`.",
         );
       }
     }
@@ -190,7 +190,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
            WHERE p.id = ? AND bt.id = ? AND bt.status = 'shortlisted'`,
         )
         .get(id, body.target_id) as { id: string } | undefined;
-      if (!t) return badRequest("invalid_request", "target_id는 이 프로젝트 Short List의 대상이어야 합니다.");
+      if (!t) return badRequest("invalid_request", "target_id must be a target on this project's Short List.");
       db.run("UPDATE business_case_model SET target_id = ? WHERE id = ?", [body.target_id, body.model_id]);
     }
   }
@@ -220,11 +220,11 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "Business Case 삭제는 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Deleting a Business Case requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const modelId = new URL(request.url).searchParams.get("model_id");
-  if (!modelId) return badRequest("invalid_request", "model_id 쿼리 파라미터가 필요합니다.");
+  if (!modelId) return badRequest("invalid_request", "The model_id query parameter is required.");
   const db = getDb();
   const model = db.query("SELECT id FROM business_case_model WHERE id = ? AND project_id = ?").get(modelId, id) as
     | { id: string }

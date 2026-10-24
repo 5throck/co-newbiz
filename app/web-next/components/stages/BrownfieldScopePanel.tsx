@@ -12,6 +12,8 @@ import { useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { useModalFocus } from "../../lib/use-modal-focus.ts";
 import { REPLACED_JUDGED_HELP, optInPreviewLines, validateMigrationNote, type WsDomainLike } from "../../lib/greenfield-dd-view.ts";
+import { useTranslations } from "next-intl";
+import { resolveLabelTokens } from "../../lib/label-keys.ts";
 import {
   bfCanOfferOptIn, bfOptInExtrasLines, type BfOptInPreview, bfCountAnnouncement, bfJudgedLine, bfScopeBlock, bfScopeErrorText, bfSubTrackName, type BfScopeBlock,
 } from "../../lib/brownfield-dd-view.ts";
@@ -26,6 +28,7 @@ export function BrownfieldScopePanel({ projectId, block, domains, canAct, previe
   previewEnabled: boolean;
   onChanged: () => void;
 }) {
+  const tr = useTranslations();const t = useTranslations("stages.s9.brownfieldScope"); const tc = useTranslations("common");
   const active = bfScopeBlock(block);
   const [preview, setPreview] = useState<BfOptInPreview | null>(null);
   const [optOpen, setOptOpen] = useState(false);
@@ -48,9 +51,9 @@ export function BrownfieldScopePanel({ projectId, block, domains, canAct, previe
   const line = bfJudgedLine(active, domains);
 
   return (
-    <section className="market-section sizing-step mb-3" aria-label="브라운필드 세부 트랙 범위 요약" data-testid="bf-scope-panel">
+    <section className="market-section sizing-step mb-3" aria-label={t("brownfieldScopeSummary")} data-testid="bf-scope-panel">
       <h3 className="sizing-step-title text-[length:var(--fs-body)]">
-        범위 요약{active ? ` — ${bfSubTrackName(active.sub_track)}` : ""} {/* INTERIM-WORDING */}
+        {t("scopeSummary")}{active ? ` — ${resolveLabelTokens(bfSubTrackName(active.sub_track), tr)}` : ""} {/* INTERIM-WORDING */}
       </h3>
 
       {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {notice}</p>}
@@ -59,8 +62,8 @@ export function BrownfieldScopePanel({ projectId, block, domains, canAct, previe
         <p className="mt-1 text-[length:var(--fs-body)]" data-testid="bf-judged-line">
           <span role="status" aria-live="polite" aria-atomic="true">
             <strong className="tabular-nums">{line.text}</strong>
-            <span className="ml-3">필수 미충족 <span className="tabular-nums">{line.mandatoryUnmet}</span>건</span> {/* INTERIM-WORDING */}
-            <span className="ml-3">트랙 규칙으로 제외 <span className="tabular-nums" data-testid="bf-excluded-count">{line.excluded}</span>건</span> {/* INTERIM-WORDING */}
+            <span className="ml-3">{t("requiredCriteriaNotMet")} <span className="tabular-nums">{line.mandatoryUnmet}</span>{tc("countUnit")}</span> {/* INTERIM-WORDING */}
+            <span className="ml-3">{t("excludedByTrackRule")} <span className="tabular-nums" data-testid="bf-excluded-count">{line.excluded}</span>{tc("countUnit")}</span> {/* INTERIM-WORDING */}
             <span className="sr-only">{bfCountAnnouncement(line)}</span>
           </span>
           {line.replacedCount > 0 && (
@@ -68,8 +71,8 @@ export function BrownfieldScopePanel({ projectId, block, domains, canAct, previe
           )}
           {(line.extra || line.extrasExcluded > 0) && (
             <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="bf-extra-line">
-              {line.extra ? `추가 체크리스트 판정 ${line.extra.judged} / ${line.extra.judgeable}` : "추가 체크리스트"}
-              {line.extrasExcluded > 0 ? ` · 트랙 규칙으로 제외 ${line.extrasExcluded}건` : ""} — 위 줄과 별도로 센 값입니다. {/* INTERIM-WORDING */}
+              {line.extra ? t("additionalChecklistJudgedP1P2", { p1: line.extra.judged, p2: line.extra.judgeable }) : t("additionalChecklist")}
+              {line.extrasExcluded > 0 ? t("excludedByTrackRulesP1", { p1: line.extrasExcluded }) : ""} {t("countedSeparatelyFromTheRow")} {/* INTERIM-WORDING */}
             </span>
           )}
         </p>
@@ -78,12 +81,12 @@ export function BrownfieldScopePanel({ projectId, block, domains, canAct, previe
       {!active && offer && preview && (
         <div data-testid="bf-optin">
           <p className="text-[length:var(--fs-caption)] mb-1">
-            이 프로젝트는 새 작업 범위 규칙 도입 전에 시작되어 기존 범위가 유지됩니다. 사람이 전환 사유를 기록하면 거래 유형에 맞는 범위로 바뀝니다. 이미 기록된 판정은 지워지지 않습니다. {/* INTERIM-WORDING */}
+            {t("thisProjectStartedBeforeThe")} {/* INTERIM-WORDING */}
           </p>
           {canAct ? (
-            <button type="button" className="btn-ghost btn-sm" onClick={() => setOptOpen(true)}>새 작업 범위로 전환 미리보기</button>
+            <button type="button" className="btn-ghost btn-sm" onClick={() => setOptOpen(true)}>{t("preview")}</button>
           ) : (
-            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">전환은 analyst 역할 이상의 사람만 할 수 있습니다.</p>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("onlyAPersonWithThe")}</p>
           )}
         </div>
       )}
@@ -93,7 +96,7 @@ export function BrownfieldScopePanel({ projectId, block, domains, canAct, previe
           preview={preview}
           optBase={optBase}
           onClose={() => setOptOpen(false)}
-          onDone={() => { setOptOpen(false); setNotice("새 작업 범위로 전환했습니다. 기존 판정은 모두 보존됩니다."); onChanged(); }}
+          onDone={() => { setOptOpen(false); setNotice(t("switchedToTheNewWork")); onChanged(); }}
         />
       )}
     </section>
@@ -106,7 +109,7 @@ function BrownfieldOptInDialog({ preview, optBase, onClose, onDone }: {
   optBase: string;
   onClose: () => void;
   onDone: () => void;
-}) {
+}) {const t = useTranslations("stages.s9.brownfieldScope"); const tc = useTranslations("common");
   const { panelRef, onKeyDown } = useModalFocus(onClose);
   const [note, setNote] = useState("");
   const [touched, setTouched] = useState(false);
@@ -129,12 +132,12 @@ function BrownfieldOptInDialog({ preview, optBase, onClose, onDone }: {
   return (
     <div className="modal-backdrop" role="presentation" onKeyDown={onKeyDown} onClick={onClose}>
       <div ref={panelRef} className="modal-panel" role="dialog" aria-modal="true" aria-labelledby="bf-optin-title" style={{ maxWidth: "40rem", width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <h3 id="bf-optin-title" className="text-[1rem] font-semibold mb-1">새 작업 범위로 전환</h3> {/* INTERIM-WORDING */}
-        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">아래는 미리보기이며 아직 아무것도 기록되지 않았습니다.</p>
+        <h3 id="bf-optin-title" className="text-[1rem] font-semibold mb-1">{t("switchToTheNewWork")}</h3> {/* INTERIM-WORDING */}
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{t("theFollowingIsAPreview")}</p>
         <ul className="sizing-note-list mb-3" data-testid="bf-optin-preview">
           {[...optInPreviewLines(preview), ...bfOptInExtrasLines(preview)].map((l) => <li key={l}>{l}</li>)}
         </ul>
-        <label className="text-[length:var(--fs-caption)] block" htmlFor="bf-optin-note">전환 사유 (필수)</label>
+        <label className="text-[length:var(--fs-caption)] block" htmlFor="bf-optin-note">{t("transitionReasonRequired")}</label>
         <textarea
           id="bf-optin-note"
           className="sizing-new-input mt-1 w-full"
@@ -151,8 +154,8 @@ function BrownfieldOptInDialog({ preview, optBase, onClose, onDone }: {
           {error ? `✕ ${error}` : touched && problem ? `✕ ${problem}` : ""}
         </p>
         <div className="flex flex-wrap items-center justify-end gap-2 mt-2">
-          <button type="button" className="btn-ghost btn-sm" onClick={onClose}>취소</button>
-          <button type="button" className="btn-premium btn-sm" disabled={saving} onClick={() => void submit()}>{saving ? "기록 중..." : "전환 기록"}</button>
+          <button type="button" className="btn-ghost btn-sm" onClick={onClose}>{tc("cancel")}</button>
+          <button type="button" className="btn-premium btn-sm" disabled={saving} onClick={() => void submit()}>{saving ? tc("recording") : t("transitionRecord")}</button>
         </div>
       </div>
     </div>

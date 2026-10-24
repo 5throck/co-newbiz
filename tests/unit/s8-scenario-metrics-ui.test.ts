@@ -11,6 +11,12 @@ import type { InvestmentVectorsInput } from "../../app/web-next/lib/investment-v
 
 const WEB = join(import.meta.dirname, "../../app/web-next");
 const read = (p: string) => readFileSync(join(WEB, p), "utf8");
+// i18n (design 2026-10-23-i18n-ui-adoption): warning copy resolves through the
+// catalog — wording pins below assert the key call site in the component source
+// and the ko master catalog value (the original Korean label).
+const koCatalog = await import("../../app/web-next/locales/ko.json");
+const koOf = (key: string): string =>
+  key.split(".").reduce<unknown>((acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined), koCatalog) as string;
 
 const STAGE = read("components/stages/BusinessCaseStage.tsx");
 const CONNECT = read("components/business-case/S5ConnectBlock.tsx");
@@ -36,9 +42,13 @@ describe("IRR no-flow chip (scenario comparison)", () => {
   });
   test("chip text and tooltip explain the zero-capex cause and the fix", () => {
     expect(STAGE).toContain('data-testid="irr-no-flow-chip"');
-    expect(STAGE).toContain("\ud22c\uc790 \ud50c\ub85c\uc6b0 \uc5c6\uc74c \u2014 S5 \uacc4\ud68d\uc5d0 \uc124\ube44\ud22c\uc790(capex) \uc904\uc774 \uc5c6\uc2b5\ub2c8\ub2e4");
-    expect(STAGE).toContain("BEP");
-    expect(STAGE).toContain("capex");
+    // i18n: chip text and tooltip are catalog keys; the ko values carry the wording.
+    expect(STAGE).toContain('{t("noInvestmentFlowsTheS5")}');
+    expect(STAGE).toContain('title={t("thatIsWhyThePayback")}');
+    expect(koOf("stages.s8.stage.noInvestmentFlowsTheS5")).toBe("투자 플로우 없음 — S5 계획에 설비투자(capex) 줄이 없습니다");
+    const tooltip = koOf("stages.s8.stage.thatIsWhyThePayback");
+    expect(tooltip).toContain("BEP");
+    expect(tooltip).toContain("capex");
   });
   test("payload flag is additive on the business-case GET only", () => {
     const route = read("app/api/projects/[id]/business-case/route.ts");
@@ -82,13 +92,17 @@ describe("capex-missing warnings (S5 connect + params)", () => {
   test("S5ConnectBlock warns when pinned AND pinned plan capex total is 0", () => {
     expect(CONNECT).toContain("const capexZero = pinned && data.s5_pin_capex_total_krw_m === 0;");
     expect(CONNECT).toContain('data-testid="s8-s5-connect-capex-warning"');
-    expect(CONNECT).toContain("\uc124\ube44\ud22c\uc790 \uc5c6\uc74c");
-    expect(CONNECT).toContain("S5 \uacc4\ud68d\uc5d0 \uc124\ube44\ud22c\uc790(capex) \uc904\uc774 \uc5c6\uc2b5\ub2c8\ub2e4");
+    // i18n: chip text ("설비투자 없음") and body copy are catalog keys.
+    expect(CONNECT).toContain('{t("noCapex")}');
+    expect(koOf("stages.s8.s5ConnectBlock.noCapex")).toBe("설비투자 없음");
+    expect(CONNECT).toContain('{t("theS5PlanHasNo")}');
+    expect(koOf("stages.s8.s5ConnectBlock.theS5PlanHasNo")).toContain("S5 계획에 설비투자(capex) 줄이 없습니다");
   });
   test("ParamsPanel warns under the current-params table on the same condition", () => {
     expect(PARAMS).toContain('data-testid="s8-params-capex-warning"');
     expect(PARAMS).toContain("s5_pin_capex_total_krw_m");
-    expect(PARAMS).toContain("\uc124\ube44\ud22c\uc790\uac00 \uc788\ub2e4\uba74 S5 \ud22c\uc790\ube44 \ud0ed\uc5d0 \uc785\ub825\ud558\uc138\uc694");
+    expect(PARAMS).toContain('{t("theS5PlanHasNo")}');
+    expect(koOf("stages.s8.paramsPanel.theS5PlanHasNo")).toContain("설비투자가 있다면 S5 투자비 탭에 입력하세요");
   });
 });
 

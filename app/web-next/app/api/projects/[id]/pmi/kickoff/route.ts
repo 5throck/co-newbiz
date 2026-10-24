@@ -28,13 +28,13 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "PMI 킥오프 기록은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Recording the PMI kickoff requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const a = applicability(id);
   if (!a.applies) {
     // ADR-0161: greenfield and non-PMI sub-tracks are refused like the other PMI writes.
-    return forbidden("not_applicable_track", "PMI 킥오프는 Brownfield M&A·JV·전략적 투자 Route에만 적용됩니다.");
+    return forbidden("not_applicable_track", "PMI kickoff applies only to brownfield M&A, JV, and strategic-investment routes.");
   }
   const body = (await request.json().catch(() => null)) as { owner?: string; plan_note?: string } | null;
   const db = getDb();

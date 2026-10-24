@@ -374,7 +374,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ in
   }
 
   const name = body?.name_ko?.trim();
-  if (!name) return badRequest("invalid_request", "산업명은 필수입니다.");
+  if (!name) return badRequest("invalid_request", "Industry name is required.");
   const ksic = parseKsicInput(body?.ksic_code);
   if (!ksic.ok) return badRequest("invalid_ksic_code", ksic.reason);
   const code = ksic.code;
@@ -389,9 +389,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ in
     db.query("UPDATE md_industry SET name_ko = ?, ksic_code = ? WHERE id = ?").run(name, code, industryId);
   } catch (err) {
     if (err instanceof Error && err.message.includes("UNIQUE")) {
-      return fail(409, "code_in_use", `KSIC 코드 ${code}는 이미 다른 산업에 할당되어 있습니다.`);
+      return fail(409, "code_in_use", `KSIC code ${code} is already assigned to another industry.`);
     }
-    return fail(500, "update_failed", `산업 정보 수정 중 오류가 발생했습니다: ${err instanceof Error ? err.message : String(err)}`);
+    return fail(500, "update_failed", `Error updating the industry: ${err instanceof Error ? err.message : String(err)}`);
   }
   const updated = db
     .query("SELECT id, name_ko, name_en, ksic_code, naics_code FROM md_industry WHERE id = ?")
@@ -426,7 +426,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     .query("SELECT 1 FROM market_sizing_analysis WHERE industry_id = ? AND (status = 'in_progress' OR rerun_in_progress = 1) LIMIT 1")
     .get(industryId);
   if (running) {
-    return fail(409, "analysis_running", "이 산업은 분석(또는 재분석)이 진행 중이어서 삭제할 수 없습니다 — 완료 후 다시 시도하세요.");
+    return fail(409, "analysis_running", "This industry cannot be deleted while an analysis (or re-analysis) is running — retry after it completes.");
   }
 
   try {
@@ -478,9 +478,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     try { db.query("ROLLBACK").run(); } catch { /* no open transaction */ }
     const msg = err instanceof Error ? err.message : String(err);
     if (/FOREIGN KEY|constraint/i.test(msg)) {
-      return fail(409, "industry_in_use", "이 산업은 가치사슬·검토/안건 등 다른 데이터에서 참조 중이어서 삭제할 수 없습니다.");
+      return fail(409, "industry_in_use", "This industry is referenced by other data (value chain, reviews/cases, etc.) and cannot be deleted.");
     }
-    return fail(500, "delete_failed", `산업 삭제 중 오류가 발생했습니다: ${msg}`);
+    return fail(500, "delete_failed", `Error deleting the industry: ${msg}`);
   }
 
   return ok({ deleted: industry.id, name_ko: industry.name_ko }, 200);

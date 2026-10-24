@@ -26,7 +26,7 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "인터뷰 기록은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Recording interviews requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
@@ -34,11 +34,11 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     disagreement?: string | null; follow_up?: string | null; evidence_ref?: string; claim?: string | null;
   } | null;
   if (!body?.interviewee?.trim() || !body?.topic?.trim() || !body?.response_summary?.trim()) {
-    return badRequest("fields_required", "interviewee·topic·response_summary은 필수입니다.");
+    return badRequest("fields_required", "interviewee·topic·response_summary is required.");
   }
-  if (!body.evidence_ref?.trim()) return badRequest("evidence_required", "evidence_ref는 필수입니다 (ADR-0058).");
+  if (!body.evidence_ref?.trim()) return badRequest("evidence_required", "evidence_ref is required (ADR-0058).");
   const claim = typeof body.claim === "string" ? body.claim.trim() || null : null;
-  if (claim && claim.length > 300) return badRequest("invalid_request", "claim은 300자 이내여야 합니다.");
+  if (claim && claim.length > 300) return badRequest("invalid_request", "claim must be at most 300 characters.");
   const now = new Date().toISOString();
   const rid = ulid();
   getDb().run(

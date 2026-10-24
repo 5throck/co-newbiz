@@ -62,10 +62,10 @@ export function recordPmiKickoff(
 ): PmiKickoffRecord {
   const owner = input.owner.trim();
   const planNote = input.planNote.trim();
-  if (!owner) throw new PmiKickoffError("invalid_input", "owner(통합 책임자)는 필수입니다.");
-  if (planNote.length < 20) throw new PmiKickoffError("invalid_input", "plan_note(통합 계획 기준선)는 20자 이상이어야 합니다.");
+  if (!owner) throw new PmiKickoffError("invalid_input", "owner (integration owner) is required.");
+  if (planNote.length < 20) throw new PmiKickoffError("invalid_input", "plan_note (integration plan baseline) must be at least 20 characters.");
   if (AGENT_KEYS.has(input.recordedBy)) {
-    throw new PmiKickoffError("agent_forbidden", "PMI 킥오프 기록은 사람(세션 사용자)만 남길 수 있습니다.");
+    throw new PmiKickoffError("agent_forbidden", "Only a human (the session user) can record the PMI kickoff.");
   }
   const now = input.now ?? new Date().toISOString();
   const id = ulid();

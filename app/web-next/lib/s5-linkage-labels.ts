@@ -14,18 +14,17 @@ export type S5Linkage = "pinned" | "copy" | "ratio";
 /** The one unified S5 basis (2026-10-16 decider): stored legacy code 2 (`s5_plan_full`), capex + labor/opex. */
 export const S5_UNIFIED_BASIS: InvestmentBasisKey = "s5_plan_full";
 
+/** Basis label catalog keys (components.s5Linkage.*) — resolve through t() at render. */
 export const BASIS_LABEL: Record<InvestmentBasisKey, string> = {
-  ratio: "비율 추정",
-  s5_plan: "S5 투자 계획 (예전: 설비투자만)",
-  s5_plan_full: "S5 투자 계획",
-  s5_pnl: "S5 계획 손익",
+  ratio: "components.s5Linkage.basisRatio",
+  s5_plan: "components.s5Linkage.basisS5Plan",
+  s5_plan_full: "components.s5Linkage.basisS5PlanFull",
+  s5_pnl: "components.s5Linkage.basisS5Pnl",
 };
 
-/** Hint shown next to a stored legacy capex-only `s5_plan` basis; null when none applies. */
-export function s5BasisHint(basis: InvestmentBasisKey): string | null {
-  return basis === "s5_plan"
-    ? "예전 기준(설비투자만)입니다 — 다음 `S5와 연결하기` 또는 `자동 생성`에서 통합 `S5 투자 계획` 기준(설비투자 + 인건비·운영비)으로 옮겨갑니다."
-    : null;
+/** Hint key shown next to a stored legacy capex-only `s5_plan` basis; null when none applies. */
+export function s5BasisHintKey(basis: InvestmentBasisKey): string | null {
+  return basis === "s5_plan" ? "components.s5Linkage.basisHintLegacy" : null;
 }
 
 export function s5LinkageOf(basis: InvestmentBasisKey, path: "copy" | "pinned" | undefined): S5Linkage {
@@ -39,28 +38,33 @@ export interface RatioAssumptions { opexRatio: number; capexRatio: number; initi
 
 export interface PinLabelInput { id: string; pinnedAt: string }
 
-/** (a) investment source line of the status block. */
-export function s5SourceLine(link: S5Linkage, pin: PinLabelInput | null, ratios: RatioAssumptions): string {
-  if (link === "pinned" && pin) return `S5와 연결됨 (기본 — 고정 참조 ${pin.id.slice(-8)}, ${pin.pinnedAt.slice(0, 10)})`;
-  if (link === "ratio") {
-    return `S5와 연결 안 됨 — S5에 가져올 계획이 없어 비율 추정을 사용합니다 (운영비 ${pct0(ratios.opexRatio)}, 설비투자 ${pct0(ratios.capexRatio)}, year-0 = 매출의 ${pct0(ratios.initialInvestmentRatio)})`;
+export interface S5LinePart { key: string; params: Record<string, string> }
+
+/** (a) investment source line of the status block — emit a catalog key + params; resolve through t() at render. */
+export function s5SourceLineParts(link: S5Linkage, pin: PinLabelInput | null, ratios: RatioAssumptions): S5LinePart {
+  if (link === "pinned" && pin) {
+    return { key: "components.s5Linkage.sourcePinned", params: { p1: pin.id.slice(-8), p2: pin.pinnedAt.slice(0, 10) } };
   }
-  return "복사본 사용 중 (사람이 복사본으로 되돌렸거나 아직 첫 `자동 생성` 전) — 승격 시점 또는 마지막 가져오기 시점의 S5 계획 복사본";
+  if (link === "ratio") {
+    return {
+      key: "components.s5Linkage.sourceRatio",
+      params: { p1: pct0(ratios.opexRatio), p2: pct0(ratios.capexRatio), p3: pct0(ratios.initialInvestmentRatio) },
+    };
+  }
+  return { key: "components.s5Linkage.sourceCopy", params: {} };
 }
 
-/** (e) what the simulation reaches in S8 today. */
-export function s5ScopeNote(basis: InvestmentBasisKey): string {
+/** (e) what the simulation reaches in S8 today — emit catalog keys; the render joins t() over them in order. */
+export function s5ScopeNoteKeys(basis: InvestmentBasisKey): string[] {
   const reach =
     basis === "s5_plan_full"
-      ? "현재 `S5 투자 계획` 기준에서 S5 시뮬레이션은 설비투자 줄과 인건비·운영비 줄에 도달합니다"
+      ? "components.s5Linkage.scopeReachFull"
       : basis === "s5_plan"
-        ? "예전 기준(설비투자만)에서는 설비투자 줄에만 도달합니다 — 다음 연결 또는 `자동 생성`에서 통합 기준으로 옮겨갑니다"
-        : "현재 `비율 추정` 기준에서는 S5 금액도 S5 시뮬레이션도 S8 계산에 쓰이지 않습니다";
+        ? "components.s5Linkage.scopeReachPlan"
+        : "components.s5Linkage.scopeReachRatio";
   const pnlTail =
-    basis === "s5_pnl"
-      ? " `S5 계획 손익` 기준은 year-0에 출시 전 투자를 반영하고 계획 줄 기반 연도별 손익을 씁니다 (계획 미포함 연도는 가동률 반영 매출 x 비율로 대체)."
-      : " year-0과 S5 줄 기반 연도별 손익 전체(s5_pnl)는 슬라이스 2에서 도입되었습니다 — `S5 계획 손익` 기준을 선택하면 적용됩니다.";
-  return `${reach}. 인력 계획의 급여·인상률·부대비용·투입 일정 요인은 ADR-0178 슬라이스 3 이후에만 S8에 도달합니다.${pnlTail}`;
+    basis === "s5_pnl" ? "components.s5Linkage.scopePnlTailPnl" : "components.s5Linkage.scopePnlTailOther";
+  return [reach, "components.s5Linkage.scopeTail", pnlTail];
 }
 
 export type S5ParamKey = "capture" | "opex" | "capex" | "initial" | "sigma" | "iterations" | "ramp";

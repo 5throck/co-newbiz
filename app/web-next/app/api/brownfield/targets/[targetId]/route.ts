@@ -66,14 +66,14 @@ const now = () => new Date().toISOString();
 export async function PATCH(request: Request, { params }: { params: Promise<{ targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "후보 수정은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Candidate updates require the analyst role or higher." });
   if (denied) return denied;
   const { targetId } = await params;
   const body = (await request.json().catch(() => null)) as
     | { company_name?: string; dart_corp_code?: string | null; universe_note?: string | null }
     | null;
   if (body?.company_name !== undefined && !body.company_name.trim()) {
-    return badRequest("invalid_request", "company_name은 비워둘 수 없습니다.");
+    return badRequest("invalid_request", "company_name cannot be blank.");
   }
   const db = getDb();
   const existing = db.query("SELECT * FROM brownfield_target WHERE id = ?").get(targetId) as
@@ -99,7 +99,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ta
 export async function DELETE(request: Request, { params }: { params: Promise<{ targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "후보 삭제는 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Candidate deletion requires the analyst role or higher." });
   if (denied) return denied;
   const { targetId } = await params;
   const db = getDb();
@@ -113,7 +113,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ t
     .query("SELECT COUNT(*) AS n FROM business_case_model WHERE target_id = ?")
     .get(targetId) as { n: number };
   if (caseCount.n > 0) {
-    return fail(409, "target_has_cases", `S8 분석이 존재하는 대상은 삭제할 수 없습니다 — 먼저 해당 대상의 Business Case ${caseCount.n}건을 삭제하세요.`);
+    return fail(409, "target_has_cases", `A target with S8 analyses cannot be deleted — delete the target's ${caseCount.n} Business Case(s) first.`);
   }
   db.transaction(() => {
     db.run("DELETE FROM brownfield_target_eval_state WHERE brownfield_target_id = ?", [targetId]);

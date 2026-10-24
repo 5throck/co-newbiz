@@ -3,12 +3,12 @@
 // 스펙과의 일치를 강제한다.
 // 표준 화면 패턴 P0 StageFrame/StageRail의 유일한 데이터원 (ADR-0086).
 
-// Gate labels come from the glossary label source (lib/labels.ts) so the rail,
+// Gate labels are catalog keys (lib/label-keys.ts GATE_LABEL_KEY) so the rail,
 // the decision panels, the process chips and the committee select share one
-// vocabulary (T-20261022-009). lib/labels.ts imports nothing, so this stays
-// client-safe. `transition` stays out — it is an S12 review pseudo-gate, not a
-// flow.spec gate.
-import { GATE_LABEL as GLOSSARY_GATE_LABEL } from "./labels.ts";
+// vocabulary (T-20261022-009); render sites resolve them with the ROOT translator.
+// `transition` stays out of the flow.spec gate record — it is an S12 review
+// pseudo-gate, not a flow.spec gate.
+export { GATE_LABEL_KEY } from "./label-keys.ts";
 
 export type StageMetaId = "S1" | "S2" | "S3" | "S4" | "S5" | "S6" | "S7" | "S8" | "S9" | "S10" | "S11" | "S12";
 export type GateMetaId = "screening" | "pre_fs" | "target_screening" | "fs" | "dd" | "entity_ic" | "group_ic";
@@ -23,16 +23,6 @@ export interface StageMeta {
   gateIds: GateMetaId[];
   onComplete: StageMetaId | "terminal";
 }
-
-export const GATE_LABEL: Record<GateMetaId, string> = {
-  screening: GLOSSARY_GATE_LABEL.screening,
-  pre_fs: GLOSSARY_GATE_LABEL.pre_fs,
-  target_screening: GLOSSARY_GATE_LABEL.target_screening,
-  fs: GLOSSARY_GATE_LABEL.fs,
-  dd: GLOSSARY_GATE_LABEL.dd,
-  entity_ic: GLOSSARY_GATE_LABEL.entity_ic,
-  group_ic: GLOSSARY_GATE_LABEL.group_ic,
-};
 
 export const STAGE_META: StageMeta[] = [
   { id: "S1", sequence: 1, name: "시장분석", objective: "어디에 기회가 있는가?", applicableTracks: ["greenfield", "brownfield"], gateIds: ["screening"], onComplete: "S2" },

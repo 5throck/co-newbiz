@@ -7,6 +7,8 @@
 // attractiveness/synergy come from the source opportunity.
 // All new Korean copy here is INTERIM-WORDING (design O-1) pending product confirmation.
 import { resolveDealCarrier } from "../../../lib/deal-carrier.ts";
+import { useTranslations } from "next-intl";
+import { resolveLabelTokens } from "../../../lib/label-keys.ts";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -51,9 +53,8 @@ interface ProcessView {
   opportunity?: { id: string } | null;
 }
 
-const EYEBROW = "현재 검토/안건 개요";
-const OBJECTIVE = "현재 단계·다음 할 일·완료 조건·진행 상태를 한 장으로 봅니다.";
-const SECTION = { stage: "현재 단계", next: "다음 할 일", done: "완료 조건", facts: "주요 사실", hold: "보류 중" } as const; // "보류 중": INTERIM-WORDING
+// i18n (design 2026-10-23-i18n-ui-adoption): 화면 문안은 pages.dealOverview 카탈로그 키로
+// 해석한다(eyebrow·objective·section*). "보류 중" 섹션 라벨은 INTERIM-WORDING(design O-1)이다.
 const stageNameOf = (id: string): string | null => STAGE_META.find((s) => s.id === id)?.name ?? null;
 
 type OppState = { status: "loading" } | { status: "error"; message: string } | { status: "ok"; data: OverviewOpportunity };
@@ -79,19 +80,21 @@ function GateChip({ label, decision, decisionLabel }: { label: string; decision:
 }
 
 function HoldCard({ holds, suffix }: { holds: Overview["holds"]; suffix: string }) {
+  const root = useTranslations();
+  const t = useTranslations("pages.dealOverview");
   const headId = `ov-hold-h-${suffix}`;
   return (
     <section id={`ov-hold-${suffix}`} className={`card deal-overview-card deal-overview-hold deal-overview-hold-${suffix}`} aria-labelledby={headId} tabIndex={-1}>
-      <h2 id={headId} className="text-[length:var(--fs-body)] mb-2">{SECTION.hold}</h2>
+      <h2 id={headId} className="text-[length:var(--fs-body)] mb-2">{t("sectionHold")}</h2>
       <ul className="list-none p-0 m-0 grid gap-2">
         {holds.map((h) => {
           const age = holdAgeText(h.ageDays);
           return (
             <li key={h.gate} className="flex flex-wrap items-center gap-2">
               <span className="status-chip status-amber"><PauseCircle size={14} aria-hidden="true" />HOLD</span>
-              <span>{h.gateLabel}</span>
+              <span>{resolveLabelTokens(h.gateLabel, root)}</span>
               {age && <span className="text-[color:var(--muted-fg)]">{age}</span>}
-              <Link href={h.href} className="guide-link deal-overview-link">결정 화면 열기</Link>
+              <Link href={h.href} className="guide-link deal-overview-link">{t("openDecision")}</Link>
             </li>
           );
         })}
@@ -105,6 +108,8 @@ function CardSkeleton({ rows = 3 }: { rows?: number }) {
 }
 
 function DealOverview() {
+  const tr = useTranslations("pages.dealOverview");
+  const root = useTranslations();
   const params = useParams<{ id: string }>();
   const id = params.id;
   const [proc, setProc] = useState<ProcessView | null>(null);
@@ -118,7 +123,7 @@ function DealOverview() {
     setOpp({ status: "loading" });
     api.get<OverviewOpportunity>(`/api/opportunities/${encodeURIComponent(opportunityId)}`)
       .then((r) => { if (alive()) setOpp({ status: "ok", data: r.data }); })
-      .catch((e) => { if (alive()) setOpp({ status: "error", message: e instanceof Error ? e.message : "기회 정보를 불러오지 못했습니다." }); });
+      .catch((e) => { if (alive()) setOpp({ status: "error", message: e instanceof Error ? e.message : tr("oppLoadFailed") }); });
   }, []);
 
   const loadAll = useCallback((alive: () => boolean) => {
@@ -142,7 +147,7 @@ function DealOverview() {
           }
         }
       })
-      .catch((e) => { if (alive()) setError(e instanceof Error ? e.message : "프로세스를 불러오지 못했습니다."); });
+      .catch((e) => { if (alive()) setError(e instanceof Error ? e.message : tr("processLoadFailed")); });
   }, [id, loadOpp]);
 
   useEffect(() => {
@@ -183,7 +188,7 @@ function DealOverview() {
   const nameReady = !!proc && (!!proc.project?.project_name?.trim() || opp.status !== "loading");
 
   useEffect(() => {
-    document.title = documentTitle(knownName, EYEBROW);
+    document.title = documentTitle(knownName, tr("eyebrow"));
   }, [knownName]);
 
   const railStatus = useMemo(() => (proc ? railStatusFromStages(proc.stages) : undefined), [proc]);
@@ -198,8 +203,8 @@ function DealOverview() {
   if (error) {
     return (
       <main aria-labelledby="deal-title">
-        <p className="eyebrow">{EYEBROW}</p>
-        <h1 id="deal-title">{EYEBROW}</h1>
+        <p className="eyebrow">{tr("eyebrow")}</p>
+        <h1 id="deal-title">{tr("eyebrow")}</h1>
         <PageState state="error" errorText={error} onRetry={retryAll} />
       </main>
     );
@@ -207,17 +212,22 @@ function DealOverview() {
 
   const stageChip = ov?.identity.stage ? `${ov.identity.stage.id} ${ov.identity.stage.name}` : null;
   const hasHold = !!ov && ov.holds.length > 0;
-  const factsView = ov ? ov.facts.map((f) => factView(f, stageNameOf)) : [];
+  const factsView = ov
+    ? ov.facts.map((f) => {
+        const v = factView(f, stageNameOf);
+        return { ...v, text: resolveLabelTokens(v.text, root), note: v.note ? resolveLabelTokens(v.note, root) : null, linkText: v.linkText ? resolveLabelTokens(v.linkText, root) : null };
+      })
+    : [];
 
   return (
     <main aria-labelledby="deal-title">
       <header className="deal-overview-head" aria-busy={!ov || !nameReady}>
-        <p className="eyebrow">{EYEBROW}</p>
+        <p className="eyebrow">{tr("eyebrow")}</p>
         {ov && nameReady ? (
           <>
-            <h1 id="deal-title">{knownName ?? EYEBROW}</h1>
+            <h1 id="deal-title">{knownName ?? tr("eyebrow")}</h1>
             <div className="chip-row flex flex-wrap items-center gap-2">
-              {ov.identity.terminated && <span className="status-chip status-red"><XCircle size={14} aria-hidden="true" />종료됨</span>}
+              {ov.identity.terminated && <span className="status-chip status-red"><XCircle size={14} aria-hidden="true" />{tr("terminated")}</span>}
               {ov.identity.statusLabel && <span className="status-chip">{ov.identity.statusLabel}</span>}
               {stageChip && <span className="status-chip"><Flag size={14} aria-hidden="true" />{stageChip}</span>}
               {hasHold && (
@@ -229,12 +239,12 @@ function DealOverview() {
           </>
         ) : (
           <>
-            <h1 id="deal-title" className="sr-only">{EYEBROW}</h1>
+            <h1 id="deal-title" className="sr-only">{tr("eyebrow")}</h1>
             <div className="skeleton" style={{ width: "40%" }} aria-hidden="true" />
             <div className="skeleton" style={{ width: "25%" }} aria-hidden="true" />
           </>
         )}
-        <p className="objective">{OBJECTIVE}</p>
+        <p className="objective">{tr("objective")}</p>
       </header>
 
       {proc && ov && railStatus && ov.currentStage ? (
@@ -252,23 +262,23 @@ function DealOverview() {
           ) : (
             <>
               <section className="card deal-overview-card" aria-labelledby="ov-stage">
-                <h2 id="ov-stage" className="text-[length:var(--fs-body)] mb-2">{SECTION.stage}</h2>
+                <h2 id="ov-stage" className="text-[length:var(--fs-body)] mb-2">{tr("sectionStage")}</h2>
                 {ov.currentStage ? (
                   <>
                     <p className="m-0 deal-overview-stage-name font-semibold">{ov.currentStage.id} {ov.currentStage.name}</p>
                     <p className="m-0 text-[color:var(--muted-fg)]">{ov.currentStage.objective}</p>
                   </>
                 ) : (
-                  <p className="m-0 text-[color:var(--muted-fg)]">{ov.statusText ?? "진행할 단계가 없습니다"}</p>
+                  <p className="m-0 text-[color:var(--muted-fg)]">{ov.statusText ?? tr("noCurrentStage")}</p>
                 )}
                 <dl className="deal-overview-flow m-0 mt-3">
-                  <FlowRow label="받는 것" entry={ov.flow.previous} />
-                  <FlowRow label="넘기는 것" entry={ov.flow.next} />
+                  <FlowRow label={tr("receives")} entry={ov.flow.previous} />
+                  <FlowRow label={tr("handsOff")} entry={ov.flow.next} />
                 </dl>
               </section>
 
               <section className="card deal-overview-card" aria-labelledby="ov-next">
-                <h2 id="ov-next" className="text-[length:var(--fs-body)] mb-2">{SECTION.next}</h2>
+                <h2 id="ov-next" className="text-[length:var(--fs-body)] mb-2">{tr("sectionNext")}</h2>
                 {ov.nextAction ? (
                   <NextActionBody ov={ov} />
                 ) : (
@@ -279,12 +289,12 @@ function DealOverview() {
               {hasHold && <HoldCard holds={ov.holds} suffix="inline" />}
 
               <section className="card deal-overview-card" aria-labelledby="ov-done">
-                <h2 id="ov-done" className="text-[length:var(--fs-body)] mb-2">{SECTION.done}</h2>
+                <h2 id="ov-done" className="text-[length:var(--fs-body)] mb-2">{tr("sectionDone")}</h2>
                 {ov.completion.length === 0 ? (
-                  <p className="m-0 text-[color:var(--muted-fg)]">이 단계에 필수 산출물이 없습니다.</p>
+                  <p className="m-0 text-[color:var(--muted-fg)]">{tr("noRequiredArtifacts")}</p>
                 ) : (
                   <>
-                    <p className="m-0 mb-2 text-[color:var(--muted-fg)]">{ov.completionCounts.total}개 중 {ov.completionCounts.done}개 완료</p>
+                    <p className="m-0 mb-2 text-[color:var(--muted-fg)]">{tr("completionProgress", { p1: ov.completionCounts.total, p2: ov.completionCounts.done })}</p>
                     <ul className="list-none p-0 m-0 grid gap-2">
                       {ov.completion.map((c) => (
                         <li key={c.label} id={c.isNext ? "ov-next-criterion" : undefined} className="flex flex-wrap items-center gap-2">
@@ -292,8 +302,8 @@ function DealOverview() {
                             ? <CheckCircle2 size={16} aria-hidden="true" className="text-[color:var(--green-fg)]" />
                             : <Circle size={16} aria-hidden="true" className="text-[color:var(--muted-fg)]" />}
                           <span>{c.label}</span>
-                          <span className={`status-chip ${c.done ? "status-green" : ""}`}>{c.done ? "완료" : "미완료"}</span>
-                          {c.isNext && <span className="status-chip status-amber"><ArrowRight size={14} aria-hidden="true" />다음</span>}
+                          <span className={`status-chip ${c.done ? "status-green" : ""}`}>{c.done ? tr("done") : tr("notDone")}</span>
+                          {c.isNext && <span className="status-chip status-amber"><ArrowRight size={14} aria-hidden="true" />{tr("nextChip")}</span>}
                         </li>
                       ))}
                     </ul>
@@ -301,7 +311,7 @@ function DealOverview() {
                 )}
                 {ov.otherBlockers.length > 0 && (
                   <>
-                    <h3 className="text-[length:var(--fs-caption)] mt-3 mb-1">그 밖의 막힘 사유</h3>
+                    <h3 className="text-[length:var(--fs-caption)] mt-3 mb-1">{tr("otherBlockers")}</h3>
                     <ul className="list-none p-0 m-0 grid gap-1">
                       {ov.otherBlockers.map((b) => (
                         <li key={b}><AlertTriangle size={16} aria-hidden="true" className="inline mr-1 text-[color:var(--amber-fg)]" />{b}</li>
@@ -321,7 +331,7 @@ function DealOverview() {
             <>
               {hasHold && <HoldCard holds={ov.holds} suffix="aside" />}
               <section className="card deal-overview-card" aria-labelledby="ov-facts">
-                <h2 id="ov-facts" className="text-[length:var(--fs-body)] mb-2">{SECTION.facts}</h2>
+                <h2 id="ov-facts" className="text-[length:var(--fs-body)] mb-2">{tr("sectionFacts")}</h2>
                 {opp.status === "loading" ? (
                   <PageState state="loading" rows={3} />
                 ) : opp.status === "error" ? (
@@ -336,14 +346,14 @@ function DealOverview() {
                             <Value f={f} />
                             {f.note && <span className="text-[color:var(--muted-fg)]"> ({f.note})</span>}
                             {f.href && f.linkText && <> <Link href={f.href} className="guide-link deal-overview-link">{f.linkText}</Link></>}
-                            {f.key === "project" && f.href && !f.linkText && <> <Link href={f.href} className="guide-link deal-overview-link">열기</Link></>}
+                            {f.key === "project" && f.href && !f.linkText && <> <Link href={f.href} className="guide-link deal-overview-link">{tr("openLink")}</Link></>}
                           </dd>
                         </div>
                       ))}
                     </dl>
                     {ov.gates.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2" aria-label="게이트 결정">
-                        {ov.gates.map((g) => <GateChip key={g.gate} label={g.gateLabel} decision={g.decision} decisionLabel={g.decisionLabel} />)}
+                      <div className="flex flex-wrap gap-1 mt-2" aria-label={tr("gatesAria")}>
+                        {ov.gates.map((g) => <GateChip key={g.gate} label={resolveLabelTokens(g.gateLabel, root)} decision={g.decision} decisionLabel={resolveLabelTokens(g.decisionLabel, root)} />)}
                       </div>
                     )}
                   </>
@@ -358,8 +368,9 @@ function DealOverview() {
 }
 
 function FlowRow({ label, entry }: { label: string; entry: Overview["flow"]["previous"] }) {
+  const t = useTranslations("pages.dealOverview");
   const artifacts = entry?.artifacts ?? [];
-  const name = entry ? <span className="font-semibold">{entry.id} {entry.name}</span> : <span className="text-[color:var(--muted-fg)]">없음</span>;
+  const name = entry ? <span className="font-semibold">{entry.id} {entry.name}</span> : <span className="text-[color:var(--muted-fg)]">{t("none")}</span>;
   return (
     <div className="deal-overview-flow-row">
       <dt className="text-[color:var(--muted-fg)]">{label}</dt>
@@ -367,7 +378,7 @@ function FlowRow({ label, entry }: { label: string; entry: Overview["flow"]["pre
         {artifacts.length > 0 ? (
           // INTERIM-WORDING: "산출물 N건" — artifact names stay one tap away so the next action stays above the fold.
           <details className="deal-overview-flow-details">
-            <summary>{name} <span className="text-[color:var(--muted-fg)]">산출물 {artifacts.length}건</span></summary>
+            <summary>{name} <span className="text-[color:var(--muted-fg)]">{t("artifactsCount", { p1: artifacts.length })}</span></summary>
             <ul className="m-0 mt-1 pl-4 text-[color:var(--muted-fg)]">
               {artifacts.map((a) => <li key={a}>{a}</li>)}
             </ul>
@@ -379,7 +390,11 @@ function FlowRow({ label, entry }: { label: string; entry: Overview["flow"]["pre
 }
 
 function NextActionBody({ ov }: { ov: Overview }) {
-  const a = ov.nextAction!;
+  const root = useTranslations();
+  const raw = ov.nextAction!;
+  // i18n: gate subjects/button targets arrive as common.gate.* keys — resolve them for
+  // the interim Korean next-action copy (deal-overview-view), which stays a §4 surface.
+  const a = { ...raw, subject: resolveLabelTokens(raw.subject, root), buttonTarget: resolveLabelTokens(raw.buttonTarget, root) };
   const copy = nextActionCopy(a);
   const describedBy = a.type === "record_artifact" ? "ov-next-criterion" : undefined;
   return (

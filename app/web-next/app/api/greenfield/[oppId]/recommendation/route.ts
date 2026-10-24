@@ -57,7 +57,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "투자비 항목 추천 생성은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Capex-item recommendation generation requires the analyst role or higher." });
   if (denied) return denied;
   const { oppId } = await params;
   const db = getDb();

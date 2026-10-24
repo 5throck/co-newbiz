@@ -199,7 +199,7 @@ export function applyCalibrationEscalation(
        ORDER BY v.version_no DESC LIMIT 1`,
     )
     .get(industryId) as { id: string; payload: string } | undefined;
-  if (!version) throw new EscalationError("no_completed_version", "완료된 시장분석 버전이 없습니다.");
+  if (!version) throw new EscalationError("no_completed_version", "No completed market-analysis version.");
   let calib: { gapPct?: number | null; ourCagrPct?: number | null; externalCagrPct?: number | null } | undefined;
   try {
     calib = (JSON.parse(version.payload) as { matrix?: { calibration?: typeof calib } }).matrix?.calibration;
@@ -210,10 +210,10 @@ export function applyCalibrationEscalation(
   const external = calib?.externalCagrPct;
   const gap = calib?.gapPct;
   if (typeof our !== "number" || typeof external !== "number" || typeof gap !== "number") {
-    throw new EscalationError("no_calibration_block", "최신 버전에 보정 블록이 없습니다 — 재분석이 먼저 필요합니다.");
+    throw new EscalationError("no_calibration_block", "The latest version has no calibration block — re-analysis is required first.");
   }
   if (gap <= CONVERGENCE_TARGET_PCT) {
-    throw new EscalationError("already_converged", `격차 ${gap}%가 이미 수렴선(${CONVERGENCE_TARGET_PCT}%) 이하입니다.`);
+    throw new EscalationError("already_converged", `The gap ${gap}% is already within the convergence target (${CONVERGENCE_TARGET_PCT}%).`);
   }
   const { scaledCagrPct, residualGapPct } = computeDeterministicScaling(external);
   const id = ulid();

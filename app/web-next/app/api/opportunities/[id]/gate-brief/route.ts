@@ -21,12 +21,12 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "진행 브리프 생성은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Gate-brief generation requires the analyst role or higher." }); if (denied) return denied; }
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { gate?: string } | null;
   const gate = body?.gate?.trim() ?? "";
   if (!(OPPORTUNITY_GATE_BRIEFS as readonly string[]).includes(gate)) {
-    return badRequest("invalid_request", `gate는 ${OPPORTUNITY_GATE_BRIEFS.join(" | ")} 중 하나입니다.`);
+    return badRequest("invalid_request", `gate must be one of: ${OPPORTUNITY_GATE_BRIEFS.join(" | ")}.`);
   }
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();

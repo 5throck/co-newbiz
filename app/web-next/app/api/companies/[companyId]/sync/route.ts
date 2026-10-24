@@ -11,7 +11,7 @@ import { DartSyncError, syncCompanyFinancialFacts } from "../../../../../lib/dar
 export async function POST(request: Request, { params }: { params: Promise<{ companyId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "DART 동기화는 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "DART sync requires the analyst role or higher." });
   if (denied) return denied;
   const { companyId } = await params;
   const db = getDb();
@@ -29,7 +29,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
   } catch (err) {
     if (err instanceof DartSyncError) {
       if (err.code === "dart_not_configured") {
-        return fail(503, err.code, `${err.message} (루트 .env: DART_API_KEY=...)`);
+        return fail(503, err.code, `${err.message} (root .env: DART_API_KEY=...)`);
       }
       return fail(409, err.code, err.message);
     }

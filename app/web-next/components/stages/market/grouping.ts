@@ -2,11 +2,18 @@
 // deal-context split) can exercise them without importing React hook modules.
 // No "use client", no framework imports — data in, data out.
 import type { IndustryRow, IndustryLink } from "./types.ts";
+import { KO_DATA, isDownstreamRelation } from "../../../lib/ko-data-values.ts";
+import { useTranslations } from "next-intl";
 
 export interface IndustryGroup { ind: IndustryRow; children: Array<{ ind: IndustryRow; relation: string }> }
 export interface FlatIndustryRow { ind: IndustryRow; relation: string | null; childCount: number; expanded: boolean; onToggle: (() => void) | null }
 
-export const RELATION_ORDER: Record<string, number> = { "전전방": 0, "전방": 1, "후방": 2, "후후방": 3 };
+export const RELATION_ORDER: Record<string, number> = {
+  [KO_DATA.relationDown2]: 0,
+  [KO_DATA.relationDown]: 1,
+  [KO_DATA.relationUp]: 2,
+  [KO_DATA.relationUp2]: 3,
+};
 
 export function buildIndustryGroups(
   visibleIndustries: IndustryRow[],
@@ -37,7 +44,7 @@ export function buildIndustryGroups(
   }
   // (2) 가치사슬 연계(proxy_link) 경로 — 전방/전전방은 from이 앵커, 후방/후후방은 to가 앵커.
   for (const link of industryLinks ?? []) {
-    const isDownstream = link.relation === "전방" || link.relation === "전전방";
+    const isDownstream = isDownstreamRelation(link.relation);
     const rootId = isDownstream ? link.from_industry_id : link.to_industry_id;
     const childId = isDownstream ? link.to_industry_id : link.from_industry_id;
     const root = byIndustryId.get(rootId);

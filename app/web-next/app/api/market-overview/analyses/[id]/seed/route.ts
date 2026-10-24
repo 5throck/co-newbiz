@@ -76,7 +76,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "매트릭스 시드 등록은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Matrix seed registration requires the analyst role or higher." });
   if (denied) return denied;
 
   const { id } = await params;
@@ -84,7 +84,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const analysis = db.query("SELECT id, industry_id FROM market_sizing_analysis WHERE id = ?").get(id) as
     | { id: string; industry_id: string }
     | null;
-  if (!analysis) return notFound("분석을 찾을 수 없습니다.");
+  if (!analysis) return notFound("Analysis not found.");
 
   let body: unknown;
   try {

@@ -918,6 +918,11 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0184",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent:root/antitrust-agent",
       "type": "agent",
       "layer": "L3",
@@ -1642,6 +1647,11 @@
     },
     {
       "id": "dec:DEC-20261023-01",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
+      "id": "dec:DEC-20261023-02",
       "type": "decision",
       "layer": "L3"
     },
@@ -4569,6 +4579,18 @@
     },
     {
       "type": "references",
+      "from": "adr:0184",
+      "to": "skill:root/i18n-audit",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0184",
+      "to": "skill:root/i18n-locale-config",
+      "source": "prose"
+    },
+    {
+      "type": "references",
       "from": "agent:root/i18n-specialist",
       "to": "skill:root/i18n-audit",
       "source": "prose"
@@ -4870,6 +4892,12 @@
     {
       "type": "cites_skill",
       "from": "dec:DEC-20261023-01",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261023-02",
       "to": "skill:root/decision-record",
       "source": "skills_used"
     },

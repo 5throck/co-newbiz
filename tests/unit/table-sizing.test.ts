@@ -7,6 +7,16 @@ import { join, relative } from "node:path";
 
 const ROOT = "./app/web-next";
 const css = readFileSync(`${ROOT}/app/styles.css`, "utf8");
+// i18n (design 2026-10-23-i18n-ui-adoption): migrated tables label themselves
+// through catalog keys, so the locators below match the key call sites and the
+// dedicated test at the bottom pins each key to its original Korean label.
+const koCatalog = await import("../../app/web-next/locales/ko.json");
+
+function koOf(key: string): string {
+  const v = key.split(".").reduce<unknown>((acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined), koCatalog);
+  if (typeof v !== "string") throw new Error(`ko catalog key not found: ${key}`);
+  return v;
+}
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -98,22 +108,47 @@ const allowlisted = (t: TableInfo) =>
 
 /**
  * Audited tables (design B, rows 1-14) that must adopt table-fixed-pct. `match` is a fragment of the
- * table's aria-label or className. A row leaves KNOWN_OFFENDERS in the batch that migrates it.
+ * table's aria-label call site (a literal for unconverted pages, a catalog key name for i18n-migrated
+ * components — resolved labels are pinned in MIGRATED_TABLE_LABELS below). A row leaves
+ * KNOWN_OFFENDERS in the batch that migrates it.
  */
 const AUDITED_TABLES: Array<{ file: string; match: string }> = [
-  { file: "components/stages/OpportunityFunnelStage.tsx", match: "기회 퍼널 목록" },
-  { file: "components/stages/DdStage.tsx", match: "체크리스트" },
-  { file: "components/stages/brownfield/ShortlistSection.tsx", match: "사전 검토 · 위원회 추천" },
-  { file: "components/stages/CapabilityJudgementTable.tsx", match: "필요 역량 달성 가능성 표" },
-  { file: "components/stages/market/SizingMarketTabs.tsx", match: "경쟁 구조 — 주요 기업" },
-  { file: "app/agents/page.tsx", match: "에이전트 로스터" },
-  { file: "app/settings/connected-apps/page.tsx", match: "개인 API 토큰 목록" },
-  { file: "app/deals/page.tsx", match: "진행 에이징" },
-  { file: "components/stages/EstablishmentPanel.tsx", match: "설립 실행 단계 현황" },
-  { file: "app/projects/[id]/backtest/page.tsx", match: "백테스트" },
-  { file: "app/projects/[id]/charter/page.tsx", match: "KPI 사전 확정" },
-  { file: "components/stages/brownfield/LonglistSection.tsx", match: "후보 전체 목록" },
+  { file: "components/stages/OpportunityFunnelStage.tsx", match: "opportunityFunnelList" },
+  { file: "components/stages/DdStage.tsx", match: "p1Checklist" },
+  { file: "components/stages/brownfield/ShortlistSection.tsx", match: "andCommitteeRecommendation2" },
+  { file: "components/stages/CapabilityJudgementTable.tsx", match: "capabilityAttainabilityTable" },
+  { file: "components/stages/market/SizingMarketTabs.tsx", match: "competitiveStructureKeyCompanies" },
+  { file: "app/agents/page.tsx", match: "rosterTitle" },
+  { file: "app/settings/connected-apps/page.tsx", match: "patTableAria" },
+  { file: "app/deals/page.tsx", match: "pages.deals.agingTableAria" },
+  { file: "components/stages/EstablishmentPanel.tsx", match: "establishmentExecutionStepStatus" },
+  { file: "app/projects/[id]/backtest/page.tsx", match: "tableAria" },
+  { file: "app/projects/[id]/charter/page.tsx", match: "kpiSectionAria" },
+  { file: "components/stages/brownfield/LonglistSection.tsx", match: "fullCandidateList2" },
   { file: "app/strategy/page.tsx", match: "w-full border-collapse" },
+];
+
+/** i18n: migrated aria-label keys → the original Korean labels, pinned in locales/ko.json. */
+const MIGRATED_TABLE_LABELS: Array<[string, string]> = [
+  ["stages.s2.stage.opportunityFunnelList", "기회 퍼널 목록"],
+  ["stages.s9.stage.p1Checklist", "{p1} 체크리스트"],
+  ["stages.s67.shortlistSection.andCommitteeRecommendation2", "사전 검토 · 위원회 추천"],
+  ["components.capabilityJudgement.table.capabilityAttainabilityTable", "필요 역량 달성 가능성 표"],
+  ["stages.s1.sizingMarketTabs.competitiveStructureKeyCompanies", "경쟁 구조 — 주요 기업"],
+  ["common.competitiveStructureKeyCompanies", "경쟁 구조 — 주요 기업"],
+  ["stages.s11.establishment.establishmentExecutionStepStatus", "설립 실행 단계 현황"],
+  ["stages.s67.longlistSection.fullCandidateList2", "후보 전체 목록"],
+  ["stages.s4.decisionTab.routeDecisionHistory", "진출방식 결정 이력"],
+  ["stages.s4.evalTab.requiredCapabilityLevelRegisterS3", "필요 역량 수준 레지스터 (S3 연계)"],
+  ["stages.s3.synergyListSection.companyListInAnalysisScope", "분석 대상 회사 목록"],
+  ["common.keyReviewAreas", "주요 검토 영역"],
+  ["stages.s8.wacc.betaPanel.peerPublishedBeta", "동종사 공표 베타"],
+  ["pages.connectedApps.patTableAria", "개인 API 토큰 목록"],
+  ["pages.agents.rosterTitle", "에이전트 로스터"],
+  ["pages.agents.stepsTableAria", "체인 단계별 실행 기록"],
+  ["pages.projects.backtest.tableAria", "백테스트"],
+  ["pages.projects.charter.kpiSectionAria", "KPI 사전 확정"],
+  ["pages.projects.share.tableAria", "공유 링크"],
 ];
 
 const WIDE_TABLE_HEADER_CELLS = 6; // same threshold as the design-lint table-sizing/no-bare-wide-table rule
@@ -244,16 +279,16 @@ describe("table column sizing guard", () => {
     // covered generically above; here we pin each batch-2 table to its tmin token and the
     // long-text truncation classes so a later edit cannot silently drop them.
     const batch2: Array<{ file: string; label: string; tmin: string; expect: string[] }> = [
-      { file: "components/stages/route-decision/DecisionTab.tsx", label: "진출방식 결정 이력", tmin: "tmin-64", expect: ["table-fixed-pct", "cell-truncate"] },
-      { file: "components/stages/route-decision/CompetitiveTab.tsx", label: "경쟁 구조 — 주요 기업", tmin: "tmin-40", expect: ["table-fixed-pct", "cell-truncate"] },
-      { file: "components/stages/route-decision/EvalTab.tsx", label: "필요 역량 수준 레지스터", tmin: "tmin-56", expect: ["table-fixed-pct"] },
-      { file: "components/stages/CapabilityJudgementTable.tsx", label: "필요 역량 달성 가능성 표", tmin: "tmin-48", expect: ["table-fixed-pct"] },
-      { file: "components/stages/market/SizingMarketTabs.tsx", label: "경쟁 구조 — 주요 기업", tmin: "tmin-80", expect: ["table-fixed-pct", "cell-truncate"] },
-      { file: "app/agents/page.tsx", label: "에이전트 로스터", tmin: "tmin-40", expect: ["table-fixed-pct"] },
-      { file: "app/agents/page.tsx", label: "체인 단계별 실행 기록", tmin: "tmin-48", expect: ["table-fixed-pct", "cell-truncate"] },
-      { file: "app/deals/page.tsx", label: "진행 에이징", tmin: "tmin-48", expect: ["table-fixed-pct", "cell-truncate"] },
-      { file: "app/settings/connected-apps/page.tsx", label: "개인 API 토큰 목록", tmin: "tmin-64", expect: ["table-fixed-pct", "cell-truncate"] },
-      { file: "components/stages/synergy/SynergyListSection.tsx", label: "분석 대상 회사 목록", tmin: "tmin-56", expect: ["table-fixed-pct"] },
+      { file: "components/stages/route-decision/DecisionTab.tsx", label: "routeDecisionHistory", tmin: "tmin-64", expect: ["table-fixed-pct", "cell-truncate"] },
+      { file: "components/stages/route-decision/CompetitiveTab.tsx", label: "competitiveStructureKeyCompanies", tmin: "tmin-40", expect: ["table-fixed-pct", "cell-truncate"] },
+      { file: "components/stages/route-decision/EvalTab.tsx", label: "requiredCapabilityLevelRegisterS3", tmin: "tmin-56", expect: ["table-fixed-pct"] },
+      { file: "components/stages/CapabilityJudgementTable.tsx", label: "capabilityAttainabilityTable", tmin: "tmin-48", expect: ["table-fixed-pct"] },
+      { file: "components/stages/market/SizingMarketTabs.tsx", label: "competitiveStructureKeyCompanies", tmin: "tmin-80", expect: ["table-fixed-pct", "cell-truncate"] },
+      { file: "app/agents/page.tsx", label: "rosterTitle", tmin: "tmin-40", expect: ["table-fixed-pct"] },
+      { file: "app/agents/page.tsx", label: "stepsTableAria", tmin: "tmin-48", expect: ["table-fixed-pct", "cell-truncate"] },
+      { file: "app/deals/page.tsx", label: "pages.deals.agingTableAria", tmin: "tmin-48", expect: ["table-fixed-pct", "cell-truncate"] },
+      { file: "app/settings/connected-apps/page.tsx", label: "patTableAria", tmin: "tmin-64", expect: ["table-fixed-pct", "cell-truncate"] },
+      { file: "components/stages/synergy/SynergyListSection.tsx", label: "companyListInAnalysisScope", tmin: "tmin-56", expect: ["table-fixed-pct"] },
     ];
     const problems: string[] = [];
     for (const c of batch2) {
@@ -280,17 +315,17 @@ describe("table column sizing guard", () => {
   test("batch 3 migrated tables keep the shared classes", () => {
     // Same per-table source pins as batch 2, for the batch-3 rollout.
     const batch3 = [
-      { file: "app/projects/[id]/backtest/page.tsx", label: "백테스트", tmin: "tmin-40", expect: ["cell-truncate"] },
-      { file: "app/projects/[id]/charter/page.tsx", label: "KPI 사전 확정", tmin: "tmin-32", expect: [] },
+      { file: "app/projects/[id]/backtest/page.tsx", label: "tableAria", tmin: "tmin-40", expect: ["cell-truncate"] },
+      { file: "app/projects/[id]/charter/page.tsx", label: "kpiSectionAria", tmin: "tmin-32", expect: [] },
       { file: "app/strategy/page.tsx", label: "w-full border-collapse", tmin: "tmin-56", expect: ["cell-clamp-3"] },
-      { file: "components/stages/EstablishmentPanel.tsx", label: "설립 실행 단계 현황", tmin: "tmin-48", expect: [] },
-      { file: "components/stages/brownfield/LonglistSection.tsx", label: "후보 전체 목록", tmin: "tmin-56", expect: ["cell-truncate"] },
+      { file: "components/stages/EstablishmentPanel.tsx", label: "establishmentExecutionStepStatus", tmin: "tmin-48", expect: [] },
+      { file: "components/stages/brownfield/LonglistSection.tsx", label: "fullCandidateList2", tmin: "tmin-56", expect: ["cell-truncate"] },
       { file: "app/projects/[id]/proxy-chain/page.tsx", label: "tmin-64", tmin: "tmin-64", expect: [] },
       { file: "app/projects/[id]/proxy-chain/page.tsx", label: "tmin-56", tmin: "tmin-56", expect: [] },
-      { file: "app/projects/[id]/share/page.tsx", label: "공유 링크", tmin: "tmin-48", expect: ["cell-truncate"] },
+      { file: "app/projects/[id]/share/page.tsx", label: "tableAria", tmin: "tmin-48", expect: ["cell-truncate"] },
       { file: "components/DataTab.tsx", label: "tmin-48", tmin: "tmin-48", expect: ["cell-truncate"] },
-      { file: "components/stages/synergy/SynergyTabs.tsx", label: "주요 검토 영역", tmin: "tmin-56", expect: ["cell-truncate"] },
-      { file: "components/wacc/BetaPanel.tsx", label: "동종사 공표 베타", tmin: "tmin-48", expect: [] },
+      { file: "components/stages/synergy/SynergyTabs.tsx", label: "keyReviewAreas", tmin: "tmin-56", expect: ["cell-truncate"] },
+      { file: "components/wacc/BetaPanel.tsx", label: "peerPublishedBeta", tmin: "tmin-48", expect: [] },
     ];
     const problems: string[] = [];
     for (const c of batch3) {
@@ -312,6 +347,13 @@ describe("table column sizing guard", () => {
 
   test("allowlist entries carry a reason", () => {
     for (const a of CONTENT_SIZED_TABLES) expect(a.reason.length).toBeGreaterThan(10);
+  });
+
+  // i18n: the batch locators above match key call sites; the human-visible
+  // wording stays pinned here — every migrated aria-label key must resolve to
+  // its original Korean label in the ko master catalog.
+  test("migrated table aria-label keys resolve to the original Korean labels", () => {
+    for (const [key, ko] of MIGRATED_TABLE_LABELS) expect(koOf(key)).toBe(ko);
   });
 
   test("shared sizing CSS exists and the mobile max-content rule excludes fixed-pct tables", () => {

@@ -2,6 +2,6 @@
 
 import { AdminConsole } from "../../../components/admin/AdminConsole.tsx";
 
-export default function Admin사용자관리Page() {{
+export default function AdminUsersPage() {{
   return <AdminConsole section="users" />;
 }}

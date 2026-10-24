@@ -22,7 +22,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   let companyId = (db.query("SELECT company_id FROM md_project WHERE id = ?").get(id) as { company_id: string | null } | undefined)?.company_id ?? null;
   if (targetId) {
     const t = listProjectAnalysisTargets(db, id).find((x) => x.targetId === targetId);
-    if (!t || !t.companyId) return badRequest("invalid_request", "target_id는 Short List에 오른 대상(분석 가능한 회사)이어야 합니다.");
+    if (!t || !t.companyId) return badRequest("invalid_request", "target_id must be a shortlisted target (a company that can be analyzed).");
     companyId = t.companyId;
   }
   if (!companyId) {

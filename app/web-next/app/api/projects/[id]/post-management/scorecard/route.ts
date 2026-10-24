@@ -26,9 +26,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
   if (ctx.via !== "cookie" || currentPrincipal() || AGENT_KEYS.has(ctx.userId)) {
-    return forbidden("human_only", "S12 스코어카드 주기 기록은 사람만 할 수 있습니다 (boundary #2) — 에이전트는 초안만 제안합니다.");
+    return forbidden("human_only", "Only a human can record an S12 scorecard cycle (boundary #2) — agents may only draft.");
   }
-  if (ctx.role === "viewer") return forbidden("role_required", "analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   try {

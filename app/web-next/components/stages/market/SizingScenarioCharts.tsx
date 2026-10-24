@@ -5,14 +5,16 @@ import { type SizingMatrix, regionTotal } from "../../../lib/market-sizing.ts";
 import { useChartTheme } from "../../../lib/echarts-theme.ts";
 import { EChart } from "../../EChart.tsx";
 import { r3 } from "./marketFormat.ts";
+import { useTranslations } from "next-intl";
 
+// 라벨은 카탈로그 키 — 렌더 시 TranslatorFn으로 푼다.
 export const SCENARIOS_META = [
-  { key: "down" as const, label: "비관" },
-  { key: "base" as const, label: "기본" },
-  { key: "up" as const, label: "낙관" },
+  { key: "down" as const, label: "stages.s1.sizingScenarioCharts.pessimistic" },
+  { key: "base" as const, label: "common.defaultLabel" },
+  { key: "up" as const, label: "stages.s1.sizingScenarioCharts.optimistic" },
 ];
 
-export function RegionScenarioChart({ matrix }: { matrix: SizingMatrix }) {
+export function RegionScenarioChart({ matrix }: { matrix: SizingMatrix }) {const tr = useTranslations(); const t = useTranslations("stages.s1.sizingScenarioCharts");
   const ct = useChartTheme();
   const option = {
     grid: { left: 110, right: 40, top: 30, bottom: 32 },
@@ -20,7 +22,7 @@ export function RegionScenarioChart({ matrix }: { matrix: SizingMatrix }) {
     xAxis: { type: "value" as const, axisLabel: { formatter: (v: unknown) => `$${Number(v)}`, color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
     yAxis: { type: "category" as const, data: [...matrix.regions].reverse().map((r) => r.label), axisLabel: { color: ct.muted, fontSize: 10 } },
     series: SCENARIOS_META.map((s) => ({
-      name: s.label,
+      name: tr(s.label),
       type: "bar" as const,
       data: [...matrix.regions].reverse().map((r) => r3(regionTotal(matrix, r.code, 4, s.key))),
       itemStyle: {
@@ -32,15 +34,15 @@ export function RegionScenarioChart({ matrix }: { matrix: SizingMatrix }) {
     })),
     tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const } },
   };
-  return <EChart option={option} ariaLabel="지역·부문별 시나리오 CAGR" height={280} />;
+  return <EChart option={option} ariaLabel={t("scenarioCagrByRegionAnd")} height={280} />;
 }
 
-export function RegionScenarioTable({ matrix }: { matrix: SizingMatrix }) {
+export function RegionScenarioTable({ matrix }: { matrix: SizingMatrix }) {const t = useTranslations("stages.s1.sizingScenarioCharts"); const tc = useTranslations("common");
   const globals = SCENARIOS_META.map((s) => matrix.regions.reduce((a, r) => a + regionTotal(matrix, r.code, 4, s.key), 0));
   return (
-    <table className="data-table" aria-label="시나리오별 권역 2030 전망">
-      <caption className="sr-only">시나리오별 권역 2030 전망</caption>
-      <thead><tr><th scope="col">권역</th><th scope="col">비관</th><th scope="col">기본</th><th scope="col">낙관</th></tr></thead>
+    <table className="data-table" aria-label={t("n2030OutlookByScenarioAnd")}>
+      <caption className="sr-only">{t("n2030OutlookByScenarioAnd2")}</caption>
+      <thead><tr><th scope="col">{tc("region")}</th><th scope="col">{t("pessimistic2")}</th><th scope="col">{tc("defaultLabel")}</th><th scope="col">{t("optimistic2")}</th></tr></thead>
       <tbody>
         {matrix.regions.map((r) => (
           <tr key={r.code}>
@@ -51,7 +53,7 @@ export function RegionScenarioTable({ matrix }: { matrix: SizingMatrix }) {
           </tr>
         ))}
         <tr className="row-selected">
-          <td className="font-semibold">글로벌</td>
+          <td className="font-semibold">{t("global")}</td>
           {globals.map((g, i) => (
             <td key={i} className="tabular-nums font-semibold">{r3(g).toFixed(2)}</td>
           ))}
@@ -77,7 +79,7 @@ export function yearlyShareMatrix(matrix: SizingMatrix): { years: number[]; shar
   return { years: YEARS, shares, totals: totals.map((t) => Math.round(t * 100) / 100) };
 }
 
-export function YearlyShareAreaChart({ matrix }: { matrix: SizingMatrix }) {
+export function YearlyShareAreaChart({ matrix }: { matrix: SizingMatrix }) {const t = useTranslations("stages.s1.sizingScenarioCharts");
   const ct = useChartTheme();
   const { shares } = yearlyShareMatrix(matrix);
   const option = {
@@ -97,10 +99,10 @@ export function YearlyShareAreaChart({ matrix }: { matrix: SizingMatrix }) {
     })),
     tooltip: { trigger: "axis" as const, valueFormatter: (v: unknown) => `${Number(v)}%` },
   };
-  return <EChart option={option} ariaLabel="연도별 지역 점유율 추이" height={300} />;
+  return <EChart option={option} ariaLabel={t("regionalShareTrendByYear")} height={300} />;
 }
 
-export function YearlySizeStackedBar({ matrix }: { matrix: SizingMatrix }) {
+export function YearlySizeStackedBar({ matrix }: { matrix: SizingMatrix }) {const t = useTranslations("stages.s1.sizingScenarioCharts");
   const ct = useChartTheme();
   const option = {
     grid: { left: 48, right: 24, top: 30, bottom: 32 },
@@ -117,18 +119,18 @@ export function YearlySizeStackedBar({ matrix }: { matrix: SizingMatrix }) {
     })),
     tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const } },
   };
-  return <EChart option={option} ariaLabel="연도별 지역 시장 규모" height={300} />;
+  return <EChart option={option} ariaLabel={t("regionalMarketSizeByYear")} height={300} />;
 }
 
-export function YearlyShareTable({ matrix }: { matrix: SizingMatrix }) {
+export function YearlyShareTable({ matrix }: { matrix: SizingMatrix }) {const t = useTranslations("stages.s1.sizingScenarioCharts"); const tc = useTranslations("common");
   const { years, shares, totals } = yearlyShareMatrix(matrix);
   return (
-    <table className="data-table mt-3" aria-label="연도별 권역 점유율">
-      <caption className="sr-only">연도별 권역 점유율 및 글로벌 총시장</caption>
+    <table className="data-table mt-3" aria-label={t("regionalShareByYear")}>
+      <caption className="sr-only">{t("regionalShareByYearAnd")}</caption>
       <thead>
         <tr>
-          <th scope="col">권역</th>
-          {years.map((y) => <th key={y} scope="col">{y} 점유율</th>)}
+          <th scope="col">{tc("region")}</th>
+          {years.map((y) => <th key={y} scope="col">{y} {t("marketShare")}</th>)}
         </tr>
       </thead>
       <tbody>
@@ -141,7 +143,7 @@ export function YearlyShareTable({ matrix }: { matrix: SizingMatrix }) {
           </tr>
         ))}
         <tr className="row-selected">
-          <td className="font-semibold">글로벌 총시장 ($B)</td>
+          <td className="font-semibold">{t("globalTotalMarket")}</td>
           {totals.map((t, y) => <td key={y} className="tabular-nums font-semibold">{t.toFixed(2)}</td>)}
         </tr>
       </tbody>
@@ -149,7 +151,7 @@ export function YearlyShareTable({ matrix }: { matrix: SizingMatrix }) {
   );
 }
 
-export function ConsistencyChart({ matrix }: { matrix: SizingMatrix }) {
+export function ConsistencyChart({ matrix }: { matrix: SizingMatrix }) {const t = useTranslations("stages.s1.sizingScenarioCharts");
   const ct = useChartTheme();
   // 축 상한은 데이터에서 뽑는다 — 8 고정이면 CAGR이 8%를 넘는 딜에서 막대가 축을
   // 넘어 잘려 꽉 찬 형태로 렌더링됐다(2026-09-15 사용자 리포트). 유효 CAGR 최댓값의
@@ -160,7 +162,7 @@ export function ConsistencyChart({ matrix }: { matrix: SizingMatrix }) {
   const option = {
     grid: { left: 130, right: 60, top: 16, bottom: 32 },
     xAxis: { type: "value" as const, min: 0, max: axisMax, axisLabel: { formatter: "{value}%", color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
-    yAxis: { type: "category" as const, data: ["매트릭스 롤업 (바텀업)", matrix.consistency.topDownCagr > 0 ? "컨센서스 (탑다운)" : "컨센서스 (미입력)"], axisLabel: { color: ct.muted, fontSize: 10 } },
+    yAxis: { type: "category" as const, data: [t("matrix"), matrix.consistency.topDownCagr > 0 ? t("consensus") : t("consensusNotEntered")], axisLabel: { color: ct.muted, fontSize: 10 } },
     series: [{
       type: "bar" as const,
       data: [
@@ -172,5 +174,5 @@ export function ConsistencyChart({ matrix }: { matrix: SizingMatrix }) {
     }],
     tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const } },
   };
-  return <EChart option={option} ariaLabel="가정 일관성 진단" height={140} />;
+  return <EChart option={option} ariaLabel={t("assumptionConsistencyDiagnostics")} height={140} />;
 }

@@ -8,11 +8,11 @@
 // N/A — the screen never invents a value.
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { api, ApiError } from "../../../lib/api.ts";
 import { formatAsOfLabel, formatWaccValue, mapSyncError, syncSuccessMessage } from "../../../lib/company-page-format.ts";
 import { useAuth } from "../../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../../lib/project-write-access.ts";
-import { DART_CORP_CODE_LABEL } from "../../../lib/labels.ts";
 
 interface SummaryCard { key: string; label: string; value: number | null; format: "percent" | "ratio"; trend: "up" | "down" | "flat" | null; trendText: string | null; say: string }
 interface Callout { tone: "warn" | "good" | "info"; text: string }
@@ -28,12 +28,15 @@ interface View {
   wacc_reference: { entries: WaccEntry[]; latest_year: string | null; disclaimer?: string };
 }
 
+// DART 계정명(저장 데이터의 account_name 매칭 키) — UI 문자열이 아니므로 카탈로그로 옮기지 않는다.
 const ACCOUNT_ORDER = ["매출액", "영업이익", "당기순이익", "자산총계", "부채총계", "자본총계"];
 const toEok = (v: number): string => (v / 1e8).toLocaleString("ko-KR", { maximumFractionDigits: 1 });
 const pct = (v: number): string => `${(v * 100).toFixed(1)}%`;
 const fmtCard = (c: SummaryCard): string => (c.value === null ? "N/A" : c.format === "percent" ? pct(c.value) : `${(c.value * 100).toFixed(0)}%`);
 
 export default function CompanyFinancialsPage() {
+  const t = useTranslations("pages.companyFinancials");
+  const tc = useTranslations("common");
   const { companyId } = useParams<{ companyId: string }>();
   const [view, setView] = useState<View | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +47,7 @@ export default function CompanyFinancialsPage() {
   const load = useCallback(() => {
     api.get<View>(`/api/companies/${encodeURIComponent(companyId)}/financials`)
       .then((r) => { setView(r.data); setError(null); })
-      .catch((e) => setError(e instanceof Error ? e.message : "회사 재무정보를 불러오지 못했습니다."));
+      .catch((e) => setError(e instanceof Error ? e.message : t("loadFailed")));
   }, [companyId]);
   useEffect(() => { load(); }, [load]);
 
@@ -78,24 +81,24 @@ export default function CompanyFinancialsPage() {
   return (
     <main className="market-page">
       <h1 className="text-[1.35rem] font-extrabold tracking-tight mt-6">
-        회사 재무성과 분석 — {view?.company.name_ko ?? "…"}
+        {t("heading", { name: view?.company.name_ko ?? "…" })}
       </h1>
       {view?.company.dart_corp_code && (
         <p className="font-mono text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] -mt-2 mb-3">
-          {DART_CORP_CODE_LABEL} <span lang="en">{view.company.dart_corp_code}</span>
+          {tc("dartId")} <span lang="en">{view.company.dart_corp_code}</span>
         </p>
       )}
-      <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-body)] mb-3">인수 대상 · 분석 기준 회사의 과거 실적과 재무 건전성을 한 화면에서 확인합니다. 프로젝트 재무분석 탭은 이 화면의 요약에 연결됩니다.</p>
+      <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-body)] mb-3">{t("intro")}</p>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {error}</p>}
       {message && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--success)]">✓ {message}</p>}
       {!view ? (
-        <p className="text-[color:var(--muted-fg)]">불러오는 중...</p>
+        <p className="text-[color:var(--muted-fg)]">{tc("loading")}</p>
       ) : (
         <>
           {/* ① 한눈에 요약 */}
           <section className="market-section sizing-step">
-            <h3 className="sizing-step-title">한눈에 요약 <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">— {view.latest_sync_at ? `마지막 DART 동기화 ${new Date(view.latest_sync_at).toLocaleDateString("ko-KR")}` : "아직 DART 동기화 전"} · 출처 dart (A등급)</span></h3>
+            <h3 className="sizing-step-title">{t("sumHeading")} <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">— {view.latest_sync_at ? t("lastDartSync", { date: new Date(view.latest_sync_at).toLocaleDateString("ko-KR") }) : t("notSyncedYet")} {t("sourceDart")}</span></h3>
             <div className="grid gap-2 md:grid-cols-4 mt-1">
               {view.commentary.summary.map((c) => (
                 <div key={c.key} className="border border-[color:var(--border)] rounded-lg p-3 bg-[color:var(--muted-bg)]">
@@ -115,17 +118,17 @@ export default function CompanyFinancialsPage() {
 
           {/* ② 재무실적 */}
           <section className="market-section sizing-step mt-3">
-            <h3 className="sizing-step-title">재무실적 <span className="inline-block rounded-full px-2 py-0.5 text-[length:var(--fs-caption)] font-bold whitespace-nowrap bg-[color:var(--success-bg)] text-[color:var(--success)]">live · 인용</span> <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">— 단위 억원 · DART 연결재무제표</span></h3>
+            <h3 className="sizing-step-title">{t("finHeading")} <span className="inline-block rounded-full px-2 py-0.5 text-[length:var(--fs-caption)] font-bold whitespace-nowrap bg-[color:var(--success-bg)] text-[color:var(--success)]">{t("finBadge")}</span> <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">{t("finUnit")}</span></h3>
             {accounts.length === 0 ? (
               <div>
-                <p className="text-[color:var(--muted-fg)]">{canAct ? "재무 fact가 없습니다 — 아래 동기화 버튼으로 DART에서 5개 회계연도 실적을 가져오세요." : "아직 수집된 재무 데이터가 없습니다."}</p>
-                {canAct && <button className="bg-[color:var(--accent)] text-[color:var(--accent-fg)] rounded-lg px-4 py-2 text-[length:var(--fs-body)] font-bold cursor-pointer mt-2" type="button" onClick={runSync} disabled={syncing}>{syncing ? "동기화 중..." : "DART에서 최신 실적 동기화"}</button>}
+                <p className="text-[color:var(--muted-fg)]">{canAct ? t("noFactCanWrite") : t("noFactViewer")}</p>
+                {canAct && <button className="bg-[color:var(--accent)] text-[color:var(--accent-fg)] rounded-lg px-4 py-2 text-[length:var(--fs-body)] font-bold cursor-pointer mt-2" type="button" onClick={runSync} disabled={syncing}>{syncing ? t("syncing") : t("syncBtn")}</button>}
                 {syncError && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-2">✕ {syncError}</p>}
               </div>
             ) : (
               <table className="data-table">
-                <caption className="sr-only">재무실적 — 계정 × 회계연도 (단위 억원)</caption>
-                <thead><tr><th>계정</th>{years.map((y) => <th key={y} className="num">{y}</th>)}</tr></thead>
+                <caption className="sr-only">{t("finCaption")}</caption>
+                <thead><tr><th>{t("thAccount")}</th>{years.map((y) => <th key={y} className="num">{y}</th>)}</tr></thead>
                 <tbody>
                   {accounts.map((a) => (
                     <tr key={a}>
@@ -141,13 +144,13 @@ export default function CompanyFinancialsPage() {
             )}
             {view.analysis.notes.length > 0 && <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mt-2">{view.analysis.notes.join(" · ")}</p>}
             {view.financials.length > 0 && (
-              <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mt-2">각 값의 출처는 <span className="mono">dart (A등급)</span> · <span className="mono">anchor: src:dart</span>. 과거 revision도 보존되어 이력 추적이 가능합니다.</p>
+              <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mt-2">{t("sourceNotePre")} <span className="mono">{t("sourceGrade")}</span> · <span className="mono">anchor: src:dart</span>{t("sourceNotePost")}</p>
             )}
           </section>
 
           {/* ③ 지표별 해설 */}
           <section className="market-section sizing-step mt-3">
-            <h3 className="sizing-step-title">지표별 해설 <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">— 복잡한 분석 결과를 문장으로 풀어서 설명합니다</span></h3>
+            <h3 className="sizing-step-title">{t("metricHeading")} <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">{t("metricNote")}</span></h3>
             {view.commentary.metrics.map((m) => (
               <div key={m.key} className="grid md:grid-cols-[11rem_1fr] gap-2 py-2 border-t border-[color:var(--border-subtle)] first:border-t-0">
                 <div className="font-bold text-[length:var(--fs-body)]">{m.name}<span className="block font-normal text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{m.sub}</span></div>
@@ -158,14 +161,14 @@ export default function CompanyFinancialsPage() {
 
           {/* ④ WACC 참조값 */}
           <section className="market-section sizing-step mt-3">
-            <h3 className="sizing-step-title">WACC 참조값 — 이 회사 기준 <span className="inline-block rounded-full px-2 py-0.5 text-[length:var(--fs-caption)] font-bold whitespace-nowrap bg-[color:var(--primary-bg)] text-[color:var(--accent)]">밸류에이션 관점</span></h3>
+            <h3 className="sizing-step-title">{t("waccHeading")} <span className="inline-block rounded-full px-2 py-0.5 text-[length:var(--fs-caption)] font-bold whitespace-nowrap bg-[color:var(--primary-bg)] text-[color:var(--accent)]">{t("waccBadge")}</span></h3>
             <div className="grid gap-2 md:grid-cols-4 mt-1">
               {view.wacc_reference.entries.map((e) => (
                 <div key={e.key} className="border border-[color:var(--border)] rounded-lg p-3 bg-[color:var(--muted-bg)]">
                   <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{e.label}</div>
                   <div className="font-extrabold text-[1.05rem] tabular-nums">{formatWaccValue(e.value, e.unit)}</div>
                   {e.value === null ? (
-                    <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{e.reason ?? "산출 근거 없음"}</div>
+                    <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{e.reason ?? t("noBasis")}</div>
                   ) : (
                     <>
                       <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{[formatAsOfLabel(e.as_of), e.source_label].filter(Boolean).join(" · ")}</div>
@@ -175,18 +178,18 @@ export default function CompanyFinancialsPage() {
                 </div>
               ))}
             </div>
-            <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mt-2">참조값은 <b>제안</b>입니다. 프로젝트 WACC 세션(사업성 분석 → WACC)에서 불러와 사람이 확인·수정한 뒤 확정합니다. 참조 주체가 다른 값(그룹 계열사 기준 — 투자 허들 관점)은 그룹/계열사 화면에서 별도 확인할 수 있습니다.</p>
+            <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mt-2">{t("waccNotePre")}<b>{t("waccNoteB")}</b>{t("waccNotePost")}</p>
           </section>
 
           {/* 동기화 */}
           {view.financials.length > 0 && (
             <section className="market-section sizing-step mt-3">
               <div className="flex gap-2 items-center flex-wrap">
-                {canAct && <button className="bg-[color:var(--accent)] text-[color:var(--accent-fg)] rounded-lg px-4 py-2 text-[length:var(--fs-body)] font-bold cursor-pointer" type="button" onClick={runSync} disabled={syncing}>{syncing ? "동기화 중..." : "DART에서 최신 실적 동기화"}</button>}
-                <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">마지막 동기화 {view.latest_sync_at ? new Date(view.latest_sync_at).toLocaleString("ko-KR") : "—"}</span>
+                {canAct && <button className="bg-[color:var(--accent)] text-[color:var(--accent-fg)] rounded-lg px-4 py-2 text-[length:var(--fs-body)] font-bold cursor-pointer" type="button" onClick={runSync} disabled={syncing}>{syncing ? t("syncing") : t("syncBtn")}</button>}
+                <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{t("lastSyncLabel", { date: view.latest_sync_at ? new Date(view.latest_sync_at).toLocaleString("ko-KR") : "—" })}</span>
                 {syncError && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-2">✕ {syncError}</p>}
               </div>
-              <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mt-2">동기화는 DART 공시 원천을 다시 읽어 값을 갱신합니다. 같은 값이면 새 기록을 만들지 않고, 바뀐 값만 새 revision으로 남깁니다(덮어쓰기 없음).</p>
+              <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mt-2">{t("syncNote")}</p>
             </section>
           )}
         </>

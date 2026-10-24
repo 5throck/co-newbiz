@@ -8,12 +8,12 @@ import { decideCalibrationDriver } from "../../../../../../../lib/market-calibra
 export async function POST(request: Request, { params }: { params: Promise<{ industryId: string; rowId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "보정 제안 결정은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Calibration-proposal decisions require the analyst role or higher." });
   if (denied) return denied;
   const { industryId, rowId } = await params;
   const body = (await request.json().catch(() => null)) as { action?: string } | null;
   if (body?.action !== "accept" && body?.action !== "dismiss") {
-    return badRequest("invalid_action", "action은 accept | dismiss 중 하나입니다.");
+    return badRequest("invalid_action", "action must be one of: accept | dismiss.");
   }
   const db = getDb();
   const row = db.query("SELECT industry_id FROM industry_driver_calibration WHERE id = ?").get(rowId) as { industry_id: string } | undefined;

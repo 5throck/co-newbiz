@@ -13,10 +13,12 @@
 // `앵커의 단위 구분 — 절대값 입력이 아닙니다` caption. unit_basis still rides
 // the PUT body unchanged (the control merely moves; the value is initialized
 // from the linked version's declared scope, falling back to krw_m_year).
+import { TranslatorFn } from "../i18n/config.ts";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api.ts";
 import { SCOPE_UNIT_BASIS_CAPTION, TARGET_SCOPE_REGIONS, TARGET_SCOPE_UNIT_BASIS_LABEL, resolveUnitBasis, type TargetScope, type TargetScopeUnitBasis } from "../lib/target-scope.ts";
 import { extractSizingVersionScope } from "../lib/anchor-scope.ts";
+import { useTranslations } from "next-intl";
 
 /** Reference row of the LINKED S1 analysis/version: declared scope, anchor
  *  value, confidence grade and an href to open the S1 screen. Owned by the
@@ -31,9 +33,9 @@ export interface LinkedSizingReference {
   href: string;
 }
 
-const REGION_LABEL: Record<string, string> = {
-  kr: "국내 (KR)", we: "서유럽 (WE)", ee: "동유럽 (EE)", ru: "러시아 (RU)", na: "북미 (NA)", cn: "중국 (CN)", sea: "동남아 (SEA)", sa: "남미 (SA)", af: "아프리카 (AF)", me: "중동 (ME)", worldwide: "전 세계 (worldwide)",
-};
+const REGION_LABEL = (tr: TranslatorFn): Record<string, string> => ({
+  kr: "components.targetScope.editor.domesticKr", we: "components.targetScope.editor.westernEuropeWe", ee: "components.targetScope.editor.easternEuropeEe", ru: "components.targetScope.editor.russiaRu", na: "components.targetScope.editor.northAmericaNa", cn: "components.targetScope.editor.chinaCn", sea: "components.targetScope.editor.southeastAsiaSea", sa: "components.targetScope.editor.southAmericaSa", af: "components.targetScope.editor.africaAf", me: "components.targetScope.editor.middleEastMe", worldwide: "components.targetScope.editor.worldwide",
+});
 
 export function TargetScopeEditor({ opportunityId, canAct, linked, scope, matrixRegions, matrixSegments, disabledReason, onSaved }: {
   opportunityId: string;
@@ -47,7 +49,7 @@ export function TargetScopeEditor({ opportunityId, canAct, linked, scope, matrix
   matrixSegments: Array<{ code: string; label: string }>;
   disabledReason: string | null;
   onSaved: (saved: TargetScope) => void | Promise<void>;
-}) {
+}) {const tr = useTranslations(); const t = useTranslations("components.targetScope.editor"); const tc = useTranslations("common");
   // Local form state, initialized from the parent-owned scope prop.
   const [regions, setRegions] = useState<string[]>([]);
   const [segments, setSegments] = useState("");
@@ -94,57 +96,57 @@ export function TargetScopeEditor({ opportunityId, canAct, linked, scope, matrix
       };
       const r = await api.put<{ scope: TargetScope }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/target-scope`, body);
       await onSaved(r.data.scope);
-      setNotice("대상 범위를 저장했습니다.");
-    } catch (err) { setError(err instanceof Error ? err.message : "저장 실패"); }
+      setNotice(t("targetScopeSaved"));
+    } catch (err) { setError(err instanceof Error ? err.message : tc("saveFailed")); }
     finally { setBusy(false); }
   }
 
   if (!canAct && !scope && !disabledReason) return null;
 
   return (
-    <section aria-label="대상 범위 (target scope)" className="market-section" data-testid="target-scope-editor">
+    <section aria-label={t("targetScope")} className="market-section" data-testid="target-scope-editor">
       {/* ADR-0181: the section heading ("2. 대상 범위" + status chip) lives on
           the parent EntryMarketFlow step section — the child renders no title
           of its own (decider feedback 2026-10-18: the title appeared twice). */}
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-        이 딜이 실제로 겨냥하는 시장 범위입니다. S8 시장 앵커와의 범위 불일치 점검에 사용됩니다.
+        {t("theMarketScopeThisDeal")}
       </p>
       {disabledReason && (
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="target-scope-disabled">{disabledReason}</p>
       )}
       {scope && (
         <p className="text-[length:var(--fs-caption)] mb-2" data-testid="target-scope-current">
-          현재 — 지역: {scope.regions.map((r) => REGION_LABEL[r] ?? r).join(" / ")}
-          {` · 세그먼트: ${scope.segments.length > 0 ? scope.segments.join(", ") : "—"}`}
+          {t("currentRegion")} {scope.regions.map((r) => REGION_LABEL(tr)[r] ?? r).join(" / ")}
+          {t("segmentsP1", { p1: scope.segments.length > 0 ? scope.segments.join(", ") : "—" })}
           {" · "}{(TARGET_SCOPE_UNIT_BASIS_LABEL as Record<string, string>)[scope.unit_basis] ?? scope.unit_basis}
           <span className="text-[color:var(--muted-fg)]"> ({scope.set_by} · {scope.set_at.slice(0, 10)})</span>
         </p>
       )}
-      {!scope && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="target-scope-empty">미설정 — 기본 시장 앵커 범위를 따릅니다.</p>}
+      {!scope && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="target-scope-empty">{t("notSetFollowsTheDefault")}</p>}
       {/* ADR-0179 amendment slice A - reference display of the LINKED S1
           analysis beside the scope inputs (design §12.1 (b)). Reference
           only; nothing set automatically. */}
       {linked ? (
         <div className="text-[length:var(--fs-caption)] mb-2" data-testid="target-scope-linked-sizing">
-          <span className="status-chip status-info">연결된 S1 시장규모 분석</span>{" "}
-          <a href={linked.href} className="underline">S1 화면에서 열기</a>
+          <span className="status-chip status-info">{t("linkedS1MarketSizingAnalysis")}</span>{" "}
+          <a href={linked.href} className="underline">{t("openOnTheS1Screen")}</a>
           {" · "}v{linked.version_no}
           {linked.scope
-            ? ` · 근거 범위: ${linked.scope.regions.map((r) => REGION_LABEL[r] ?? r).join(" / ")}${linked.scope.segments.length > 0 ? ` · 세그먼트: ${linked.scope.segments.join(", ")}` : ""}${linked.scope.unit_basis ? ` · 단위: ${linked.scope.unit_basis}` : ""}`
-            : " · 근거 범위 미기재 (범위 지정 시장규모 미연결)"}
+            ? t("evidenceScopeP1", { p1: `${linked.scope.regions.map((r) => REGION_LABEL(tr)[r] ?? r).join(" / ")}${linked.scope.segments.length > 0 ? t("segmentsP12", { p1: linked.scope.segments.join(", ") }) : ""}${linked.scope.unit_basis ? t("unitP1", { p1: linked.scope.unit_basis }) : ""}` })
+            : t("evidenceScopeNotFilledScoped")}
           {/* Slice 4 (OD-3): unit_basis as data in the reference strip, not an
               input — the value the PUT body sends is shown, so the person
               never reads it as an absolute-value field. */}
           <span className="text-[color:var(--muted-fg)]" data-testid="target-scope-unit-basis">
-            {" · "}단위 기준: {unitBasis ? (TARGET_SCOPE_UNIT_BASIS_LABEL as Record<string, string>)[unitBasis] ?? unitBasis : "미선언 (원화 개산 불가)"} ({SCOPE_UNIT_BASIS_CAPTION})
+            {" · "}{t("unitBasis")} {unitBasis ? (TARGET_SCOPE_UNIT_BASIS_LABEL as Record<string, string>)[unitBasis] ?? unitBasis : t("undeclaredCannotEstimateInKrw")} ({SCOPE_UNIT_BASIS_CAPTION})
           </span>
-          {linked.anchor_value_krw_m != null && ` · 앵커값: ${linked.anchor_value_krw_m.toLocaleString()} KRW M`}
-          {linked.confidence_grade && ` · 신뢰도 ${linked.confidence_grade}`}
+          {linked.anchor_value_krw_m != null && t("anchorValueP1KrwM", { p1: linked.anchor_value_krw_m.toLocaleString() })}
+          {linked.confidence_grade && t("confidenceP1", { p1: linked.confidence_grade })}
         </div>
       ) : (
         !disabledReason && (
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="target-scope-linked-empty">
-            연결된 S1 시장규모 분석이 없습니다 — S1 분석을 연결하면 범위 선택이 상류 수치의 실제 커버리지에 근거하게 됩니다.
+            {t("noLinkedS1MarketSizing")}
           </p>
         )
       )}
@@ -160,19 +162,19 @@ export function TargetScopeEditor({ opportunityId, canAct, linked, scope, matrix
               (read-only). */}
           <div className="grid md:grid-cols-2 gap-3 mb-2">
             <fieldset className="border border-[color:var(--border)] rounded p-2 min-w-0" disabled={disabledReason != null} data-testid="target-scope-region-group">
-              <legend className="text-[length:var(--fs-caption)] font-semibold px-1">지역</legend>
+              <legend className="text-[length:var(--fs-caption)] font-semibold px-1">{t("region")}</legend>
               <div className="flex flex-wrap gap-x-3 gap-y-1">
                 {(matrixRegions.length > 0
                   ? [
-                      ...matrixRegions.map((r) => ({ code: r.code, label: `${r.label} (S1 가중치 ${r.weight}%)` })),
+                      ...matrixRegions.map((r) => ({ code: r.code, label: t("p1S1WeightP2", { p1: r.label, p2: r.weight }) })),
                       // legacy-saved codes absent from the matrix list must
                       // stay UNCHECKABLE — render them so a person can remove
                       // them (ADR-0181 verification finding, 2026-10-18).
                       ...regions
                         .filter((c) => !matrixRegions.some((r) => r.code === c))
-                        .map((c) => ({ code: c, label: `${c} (기존 저장 코드)` })),
+                        .map((c) => ({ code: c, label: t("p1PreviouslySavedCode", { p1: c }) })),
                     ]
-                  : TARGET_SCOPE_REGIONS.map((r) => ({ code: r, label: REGION_LABEL[r] }))
+                  : TARGET_SCOPE_REGIONS.map((r) => ({ code: r, label: REGION_LABEL(tr)[r] }))
                 ).map((r) => (
                   <label key={r.code} className="flex items-center gap-1 text-[length:var(--fs-caption)]">
                     <input type="checkbox" disabled={disabledReason != null} checked={regions.includes(r.code)} onChange={() => toggleRegion(r.code)} /> {r.label}
@@ -181,7 +183,7 @@ export function TargetScopeEditor({ opportunityId, canAct, linked, scope, matrix
               </div>
             </fieldset>
             <fieldset className="border border-[color:var(--border)] rounded p-2 min-w-0" disabled={disabledReason != null} data-testid="target-scope-segment-group">
-              <legend className="text-[length:var(--fs-caption)] font-semibold px-1">세그먼트</legend>
+              <legend className="text-[length:var(--fs-caption)] font-semibold px-1">{t("segment")}</legend>
               {matrixSegments.length > 0 && (
                 <div className="flex flex-wrap gap-x-3 gap-y-1 mb-1">
                   {matrixSegments.map((s) => (
@@ -200,12 +202,12 @@ export function TargetScopeEditor({ opportunityId, canAct, linked, scope, matrix
                   ))}
                 </div>
               )}
-              <input aria-label="세그먼트 직접 입력" placeholder="직접 입력 (쉼표 구분)" value={segments} onChange={(e) => setSegments(e.target.value)}
+              <input aria-label={t("enterSegmentDirectly")} placeholder={t("enterDirectlyCommaSeparated")} value={segments} onChange={(e) => setSegments(e.target.value)}
                 disabled={disabledReason != null}
                 className="sizing-new-input sizing-new-input-sm w-full" />
             </fieldset>
           </div>
-          <button type="button" className="btn-ghost btn-sm" disabled={busy || regions.length === 0 || disabledReason != null} onClick={() => void save()}>저장</button>
+          <button type="button" className="btn-ghost btn-sm" disabled={busy || regions.length === 0 || disabledReason != null} onClick={() => void save()}>{tc("save")}</button>
         </div>
       )}
     </section>

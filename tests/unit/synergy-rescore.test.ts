@@ -123,7 +123,7 @@ describe("POST /api/synergy/analyses/[id]/rescore (legacy → current scheme)", 
 
   test("the scoreEval tab exposes the conversion only for legacy payloads", () => {
     const tabs = readFileSync("app/web-next/components/stages/synergy/SynergyTabs.tsx", "utf8");
-    expect(tabs).toContain("현재 체계로 재계산 (AI)");
+    expect(tabs).toContain('t("recomputeUnderTheCurrentScheme")'); // i18n: stages.s3.*
     expect(tabs).toContain("!storedFactors.some((f) => f?.key === \"capability_coverage\")");
     const route = readFileSync("app/web-next/app/api/synergy/analyses/[id]/rescore/route.ts", "utf8");
     expect(route).toContain("requireBusinessActor");

@@ -8,16 +8,17 @@ import { ProfileReport } from "./ProfileReport.tsx";
 import { ProfileChips } from "./ProfileChips.tsx";
 import { ProfileEvidencePanel } from "./ProfileEvidence.tsx";
 import type { OurCompanyStageState } from "./useOurGroups.ts";
+import { useTranslations } from "next-intl";
 
-export function ProfileSection({ ctx }: { ctx: OurCompanyStageState }) {
+export function ProfileSection({ ctx }: { ctx: OurCompanyStageState }) {const t = useTranslations("components.ourCompany.profileSection"); const tc = useTranslations("common");
   const { openMember, profiles, canAct, analyzeMember, backToList } = ctx;
   return (
     <>{openMember && (
-        <section aria-label="계열사 프로파일 리포트" className="market-section sizing-step">
+        <section aria-label={t("affiliateProfileReport")} className="market-section sizing-step">
           {/* Back navigation sits on its own line so the toolbar keeps one action + one next-stage link. */}
           <div className="mb-2"><ListBackButton onClick={backToList} /></div>
           <SectionToolbar
-            title="계열사 프로파일 분석"
+            title={t("affiliateProfileAnalysis")}
             summary={<ProfileChips profile={profiles[openMember]} />}
             actions={
               <>
@@ -29,21 +30,21 @@ export function ProfileSection({ ctx }: { ctx: OurCompanyStageState }) {
                   <Link
                     href="/synergy"
                     className="btn-ghost"
-                    title="이 계열사를 대상으로 시너지·전략적 적합성 분석을 진행합니다"
+                    title={t("runTheSynergyAndStrategic")}
                   >
-                    시너지 분석 →
+                    {t("synergyAnalysis")}
                   </Link>
                 )}
                 {canAct && (
                 <button type="button" className="btn-ghost" disabled={profiles[openMember] === "loading"} onClick={() => analyzeMember(openMember)}>
-                  {profiles[openMember] === "loading" ? "분석 중..." : "재분석"}
+                  {profiles[openMember] === "loading" ? tc("analyzing") : tc("reanalyze")}
                 </button>
                 )}
               </>
             }
           />
           {canAct && profiles[openMember] !== "loading" && <ProfileEvidencePanel ctx={ctx} memberId={openMember} profile={profiles[openMember]} />}
-          {profiles[openMember] === "loading" && <p className="text-[length:var(--fs-body)]" role="status">분석 중입니다 — 완료되면 자동으로 표시됩니다.</p>}
+          {profiles[openMember] === "loading" && <p className="text-[length:var(--fs-body)]" role="status">{t("analysisInProgressItWill")}</p>}
           <ProfileReport ctx={ctx} openMember={openMember} />
         </section>
       )}</>

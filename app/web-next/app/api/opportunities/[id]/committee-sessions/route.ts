@@ -24,19 +24,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "위원회 소집은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Committee convening requires the analyst role or higher." }); if (denied) return denied; }
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as {
     committeeKey?: string; decisionMode?: string; gate?: string; targetRef?: string; track?: string; briefMd?: string;
   } | null;
   if (!body?.committeeKey || typeof body.committeeKey !== "string") {
-    return badRequest("invalid_request", "committeeKey는 필수입니다.");
+    return badRequest("invalid_request", "committeeKey is required.");
   }
   if (!body.decisionMode || !DECISION_MODES.includes(body.decisionMode as DecisionMode)) {
-    return badRequest("invalid_request", `decisionMode는 ${DECISION_MODES.join(" | ")} 중 하나입니다.`);
+    return badRequest("invalid_request", `decisionMode must be one of: ${DECISION_MODES.join(" | ")}.`);
   }
   if (body.gate !== undefined && !["screening", "pre_fs", "target_screening", "fs", "dd", "entity_ic", "group_ic"].includes(body.gate)) {
-    return badRequest("invalid_request", "gate는 screening | pre_fs | target_screening | fs | dd | entity_ic | group_ic 중 하나입니다.");
+    return badRequest("invalid_request", "gate must be one of: screening | pre_fs | target_screening | fs | dd | entity_ic | group_ic.");
   }
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();

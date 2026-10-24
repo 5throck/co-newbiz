@@ -399,7 +399,7 @@ describe("milestones — person-managed schedule (2026-10-21 decider)", () => {
     // import: no confirmed baseline → 400 with guidance (idempotent source stays empty)
     const imp = await req(`/api/projects/${projectId}/milestones/import-baseline`, { method: "POST", headers: { cookie: analystCookie } });
     expect(imp.status).toBe(400);
-    expect(((await imp.json()) as { error: { message: string } }).error.message).toContain("실행 기준선");
+    expect(((await imp.json()) as { error: { message: string } }).error.message).toContain("execution baseline");
 
     expect((await req(`/api/projects/${projectId}/milestones/${mid}`, { method: "DELETE", headers: { cookie: analystCookie } })).status).toBe(200);
     expect((await req(`/api/projects/${projectId}/milestones/${mid}`, { method: "DELETE", headers: { cookie: analystCookie } })).status).toBe(404);

@@ -16,7 +16,7 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "우선 시너지 영역 판정 편집은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Priority synergy domain judgement edits require the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   const db = getDb();
@@ -27,9 +27,9 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
   const area = body?.area?.trim();
   const verdict = body?.verdict?.trim();
   const reason = body?.reason?.trim();
-  if (!area) return badRequest("invalid_request", "area는 필수입니다.");
-  if (!verdict) return badRequest("invalid_request", "verdict는 필수입니다.");
-  if (!reason) return badRequest("invalid_request", "reason은 필수입니다.");
+  if (!area) return badRequest("invalid_request", "area is required.");
+  if (!verdict) return badRequest("invalid_request", "verdict is required.");
+  if (!reason) return badRequest("invalid_request", "reason is required.");
 
   // 이 영역이 최신 LLM 산출(payload.shortList)에 이미 있었는지로 origin을 정한다.
   const latest = db.query("SELECT payload FROM synergy_version WHERE analysis_id = ? ORDER BY version_no DESC LIMIT 1").get(id) as { payload: string } | null;

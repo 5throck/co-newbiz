@@ -7,6 +7,7 @@
 // 내비는 전역 사이드바에 넣지 않고 [slug] 화면 안 왼쪽 열로 낸다(D6).
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { api } from "../../lib/api.ts";
 import { defaultRewriteContext, renderWikiMarkdown, rewriteWikiLinks } from "../../lib/wiki.ts";
 import type { WikiPageSummary, WikiSidebarGroup } from "../../lib/wiki.ts";
@@ -40,6 +41,8 @@ function WikiMarkdown({ text, stripTitle = false }: { text: string; stripTitle?:
 }
 
 export function WikiIndexView() {
+  const t = useTranslations("pages.wiki");
+  const tc = useTranslations("common");
   const [index, setIndex] = useState<WikiIndexData | null>(null);
   const [home, setHome] = useState<WikiPageData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +51,7 @@ export function WikiIndexView() {
     api
       .get<WikiIndexData>("/api/wiki")
       .then((r) => setIndex(r.data))
-      .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+      .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
     api
       .get<WikiPageData>("/api/wiki/Home")
       .then((r) => setHome(r.data))
@@ -57,10 +60,10 @@ export function WikiIndexView() {
 
   return (
     <main>
-      <h1>사용 안내서</h1>
+      <h1>{t("heading")}</h1>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
-        화면에서 무엇을 어디서 누르는지 사용자 여정 순서로 설명하는 안내서입니다. 원본은 저장소의
-        <code className="library-doc-path"> docs/wiki/ko/</code>이며 이 화면은 읽기 전용입니다.
+        {t("introPre")}
+        <code className="library-doc-path"> docs/wiki/ko/</code>{t("introPost")}
       </p>
       {error && (
         <p role="alert" className="text-[color:var(--red-fg)]">
@@ -68,13 +71,13 @@ export function WikiIndexView() {
         </p>
       )}
       {home && (
-        <section className="wiki-home-body" aria-label="안내서 소개">
+        <section className="wiki-home-body" aria-label={t("homeSectionAria")}>
           <WikiMarkdown text={home.body} stripTitle />
         </section>
       )}
       {index && (
-        <section aria-label="전체 페이지 목록">
-          <h2 className="wiki-list-title">전체 페이지 목록</h2>
+        <section aria-label={t("listSectionAria")}>
+          <h2 className="wiki-list-title">{t("listHeading")}</h2>
           <div className="wiki-groups">
             {index.groups.map((g) => (
               <div key={g.group} className="wiki-group">
@@ -96,7 +99,7 @@ export function WikiIndexView() {
           </div>
         </section>
       )}
-      {!index && !error && <p>불러오는 중...</p>}
+      {!index && !error && <p>{tc("loading")}</p>}
     </main>
   );
 }

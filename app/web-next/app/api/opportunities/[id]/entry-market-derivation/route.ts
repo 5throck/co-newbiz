@@ -87,7 +87,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const additive = { scope_set: scopeSet, scope_unit_basis: scopeUnitBasis, legacy_anchor: legacyAnchor };
   const linked = readSizingLink(db, id);
   if (!linked?.link) {
-    const res = fail(409, "not_linked", "S1 시장규모 분석이 연결되지 않았습니다 — 도출 사슬은 연결된 S1 버전의 앵커에서만 계산됩니다 (sizing-link 연결 후 시도).");
+    const res = fail(409, "not_linked", "No linked S1 market-sizing analysis — the derivation chain is computed only from the linked S1 version anchors (link sizing-link first).");
     try {
       const body = (await res.json()) as { data: unknown; error: unknown };
       body.data = { ...additive, market_brief: record?.market_brief ?? null, currency: record?.currency ?? null, growth_rate: record?.growth_rate ?? null, fx };
@@ -166,24 +166,24 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     "진입시장 산정 입력은 사람만 할 수 있습니다 (boundary #2) — 에이전트는 읽기만 가능합니다.",
   );
   if (denied) return denied;
-  { const d = requireBusinessActor(ctx, "write", { viewerMessage: "진입시장 산정 입력은 analyst 역할 이상이어야 합니다." }); if (d) return d; }
+  { const d = requireBusinessActor(ctx, "write", { viewerMessage: "Entry-market sizing inputs require the analyst role or higher." }); if (d) return d; }
   const { id } = await params;
   const db = getDb();
   const row = db.query("SELECT id FROM opportunity WHERE id = ?").get(id);
   if (!row) return notFound();
   const linked = readSizingLink(db, id);
   if (!linked?.link) {
-    return fail(409, "not_linked", "S1 시장규모 분석을 먼저 연결해야 진입시장 입력을 할 수 있습니다.");
+    return fail(409, "not_linked", "Link an S1 market-sizing analysis before entering entry-market inputs.");
   }
   const body = (await request.json().catch(() => null)) as unknown;
-  if (typeof body !== "object" || body === null) return badRequest("invalid_request", "진입시장 변경 요청이 아닙니다.");
+  if (typeof body !== "object" || body === null) return badRequest("invalid_request", "Not an entry-market change request.");
   const b = body as Record<string, unknown>;
   const now = new Date().toISOString();
   const touchesChain = b.steps !== undefined;
   const touchesMeta = b.market_brief !== undefined || b.currency !== undefined || b.growth_rate !== undefined;
   const touchesFx = b.fx !== undefined;
   if (!touchesChain && !touchesMeta && !touchesFx) {
-    return badRequest("invalid_request", "변경할 항목이 없습니다 (steps / market_brief / currency / growth_rate / fx 중 하나 이상).");
+    return badRequest("invalid_request", "Nothing to change (send at least one of: steps / market_brief / currency / growth_rate / fx).");
   }
 
   // ── Chain replace/clear (unchanged strict rules, ADR-0179 §B) ──
@@ -198,7 +198,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         return badRequest("invalid_request", err instanceof Error ? err.message : "invalid derivation");
       }
       if (linked.reference?.anchor_value_krw_m == null) {
-        return badRequest("invalid_request", "연결된 S1 버전에 앵커 값이 없어 도출 계산이 불가합니다 — 앵커가 있는 버전을 연결해 주세요.");
+        return badRequest("invalid_request", "The linked S1 version has no anchor values, so derivation cannot run — link a version with anchors.");
       }
     }
   }
@@ -209,40 +209,40 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (b.market_brief === null) meta.market_brief = null;
     else if (typeof b.market_brief === "string" && b.market_brief.trim().length > 0 && b.market_brief.length <= 2000) {
       meta.market_brief = b.market_brief.trim();
-    } else return badRequest("invalid_request", "market_brief는 2000자 이하의 문자열이어야 합니다.");
+    } else return badRequest("invalid_request", "market_brief must be a string of at most 2000 characters.");
   }
   if (b.currency !== undefined) {
     if (b.currency === null) meta.currency = null;
     else if (typeof b.currency === "string" && /^[A-Z]{3}$/.test(b.currency)) meta.currency = b.currency;
-    else return badRequest("invalid_request", "currency는 3자 대문자 ISO 통화 코드여야 합니다 (예: USD, EUR; KRW·units는 null).");
+    else return badRequest("invalid_request", "currency must be a 3-letter uppercase ISO currency code (e.g. USD, EUR; null for KRW/units).");
   }
   if (b.growth_rate !== undefined) {
     if (b.growth_rate === null) meta.growth_rate = null;
     else if (typeof b.growth_rate === "number" && Number.isFinite(b.growth_rate) && b.growth_rate > 0 && b.growth_rate <= 1) {
       meta.growth_rate = b.growth_rate; // RATIO storage — a percent-scale input (>1) is a 400 (unit-trap guard)
-    } else return badRequest("invalid_request", "growth_rate는 0~1 범위의 비율이어야 합니다 (예: 0.13 = 13%). 퍼센트 값은 100으로 나누어 입력하세요.");
+    } else return badRequest("invalid_request", "growth_rate must be a ratio in [0, 1] (e.g. 0.13 = 13%). Divide percent values by 100.");
   }
 
   // ── FX rows validation (per-currency, ADR-0181 slice 3) ──
   let fxRows: Array<{ currency: string; rate: number; volatility: number | null }> | null = null;
   if (touchesFx) {
-    if (!Array.isArray(b.fx)) return badRequest("invalid_request", "fx는 {currency, rate, volatility?} 배열이어야 합니다.");
+    if (!Array.isArray(b.fx)) return badRequest("invalid_request", "fx must be an array of {currency, rate, volatility?}.");
     const seen = new Set<string>();
     fxRows = [];
     for (const raw of b.fx) {
-      if (typeof raw !== "object" || raw === null) return badRequest("invalid_request", "fx 항목은 객체여야 합니다.");
+      if (typeof raw !== "object" || raw === null) return badRequest("invalid_request", "Each fx item must be an object.");
       const r = raw as Record<string, unknown>;
       if (typeof r.currency !== "string" || !/^[A-Z]{3}$/.test(r.currency)) {
-        return badRequest("invalid_request", "fx.currency는 3자 대문자 ISO 통화 코드여야 합니다.");
+        return badRequest("invalid_request", "fx.currency must be a 3-letter uppercase ISO currency code.");
       }
-      if (r.currency === "KRW") return badRequest("invalid_request", "KRW는 원화 기준 통화라 환율 행을 갖지 않습니다.");
+      if (r.currency === "KRW") return badRequest("invalid_request", "KRW is the base currency and has no FX row.");
       if (typeof r.rate !== "number" || !Number.isFinite(r.rate) || r.rate <= 0 || r.rate > FX_RATE_MAX) {
-        return badRequest("invalid_request", `fx.rate는 0 초과 ${FX_RATE_MAX} 이하의 숫자여야 합니다 (원/통화).`);
+        return badRequest("invalid_request", `fx.rate must be a number greater than 0 and at most ${FX_RATE_MAX} (KRW per currency).`);
       }
       if (r.volatility !== undefined && r.volatility !== null && (typeof r.volatility !== "number" || !Number.isFinite(r.volatility) || r.volatility < 0 || r.volatility > 0.5)) {
-        return badRequest("invalid_request", "fx.volatility는 0~0.5 범위의 비율이어야 합니다 (예: 0.10 = ±10%).");
+        return badRequest("invalid_request", "fx.volatility must be a ratio in [0, 0.5] (e.g. 0.10 = ±10%).");
       }
-      if (seen.has(r.currency)) return badRequest("invalid_request", `fx에 ${r.currency} 행이 중복됩니다.`);
+      if (seen.has(r.currency)) return badRequest("invalid_request", `fx has a duplicate ${r.currency} row.`);
       seen.add(r.currency);
       fxRows.push({ currency: r.currency, rate: r.rate, volatility: typeof r.volatility === "number" ? r.volatility : null });
     }

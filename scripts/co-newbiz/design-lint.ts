@@ -118,13 +118,16 @@ for (const file of targets) {
   //    width cap so the label column cannot absorb all leftover width — and
   //    (b) head its actions column (작업). A headerless actions column drifts
   //    past the header row on wide screens (2026-09-14 S1/S2 user report).
+  //    i18n (design 2026-10-23-i18n-ui-adoption): the header may be the literal
+  //    작업 (unconverted pages) or the shared ("actions") catalog key, which
+  //    resolves to 작업 in locales/ko.json — both keep the column headed.
   const tableRe = /<table\b[^>]*>[\s\S]*?<\/table>/g;
   for (const m of src.matchAll(tableRe)) {
     const t = m[0];
     if (!/data-table/.test(t) || !/sizing-actions-cell/.test(t)) continue;
     if (!/list-table/.test(t)) violations.push(`${rel}: row-action table without .list-table — apply the list-table standard (design-components.md)`);
     const head = t.match(/<thead[\s\S]*?<\/thead>/)?.[0] ?? "";
-    if (!/작업/.test(head)) violations.push(`${rel}: actions column without 작업 header — every list-table column must be headed`);
+    if (!/작업/.test(head) && !/\(\s*["']actions["']\s*\)/.test(head)) violations.push(`${rel}: actions column without 작업 header — every list-table column must be headed`);
   }
 
   // 1. hardcoded colors in tsx — 3/4/6/8-digit hex, rgba(), hsl()

@@ -2,7 +2,7 @@
 // Client-safe: no server or db imports. The server-side selection lives in
 // greenfield-subtrack.ts; this module only turns its JSON (the `greenfield_scope`
 // object of GET /api/projects/:id/dd and /greenfield-scope) into display rows.
-import { DD_DOMAIN_LABEL, GF_DD_STEP_LABEL, GF_S9_STAGE_LABEL, GF_SUB_TRACK_CLASS_LABEL } from "./labels.ts";
+import { DD_DOMAIN_KEY, GF_DD_STEP_KEY, GF_HEADING_KEY, GF_SUB_TRACK_CLASS_KEY } from "./label-keys.ts";
 
 export interface GfScope {
   sub_track: string | null;
@@ -40,12 +40,14 @@ export function showStepList(scope: GfScope | null | undefined): boolean {
 }
 
 export function subTrackName(scope: GfScope): string {
-  return GF_SUB_TRACK_CLASS_LABEL[scope.sub_track_class] ?? scope.sub_track_class;
+  // i18n (T3-6): `common.gfSubTrackClass.*` key — resolve with resolveLabelTokens at render.
+  return GF_SUB_TRACK_CLASS_KEY[scope.sub_track_class] ?? scope.sub_track_class;
 }
 
 /** S9 heading: only the named sub-tracks use the plan-verification wording; null and unknown keep the legacy heading. */
 export function s9Heading(scope: GfScope | null | undefined): string {
-  return showStepList(scope) ? `S9 ${GF_S9_STAGE_LABEL} — 체크리스트 판정` : "S9 실사·검증 — DD 체크리스트 판정";
+    // i18n (T3-6): whole-heading catalog key — resolve with resolveLabelTokens/tr at render.
+  return showStepList(scope) ? GF_HEADING_KEY.s9Plan : GF_HEADING_KEY.s9Legacy; // gitleaks:allow — catalog-key constant, not a credential
 }
 
 export type SiteControlKind = "unconfirmed" | "confirmed" | "default";
@@ -255,11 +257,13 @@ export function tabLabel(scope: GfScope | null | undefined, d: Pick<WsDomainLike
   if (d.checklistId === "chk-business-unit-formation-checklist") return d.title;
   const ws = workspaceView(scope);
   const fromOverlay = ws?.tab_labels[tabKeyOf(d)]?.ko;
-  return fromOverlay || DD_DOMAIN_LABEL[d.domain] || d.title;
+  // i18n (T3-6): domain fallback is a `common.ddDomain.*` key; overlay titles stay payload Korean.
+  return fromOverlay || DD_DOMAIN_KEY[d.domain] || d.title;
 }
 
 export function planReadinessLabel(scope: GfScope | null | undefined): string {
-  return workspaceView(scope)?.tab_labels[PLAN_READINESS_KEY]?.ko || "계획 준비 상태"; // INTERIM-WORDING
+  // i18n (T3-6): overlay label stays payload Korean; the fallback is a common.gf.* key.
+  return workspaceView(scope)?.tab_labels[PLAN_READINESS_KEY]?.ko || GF_HEADING_KEY.planReadiness;
 }
 
 export interface StepTagView {
@@ -278,7 +282,7 @@ export function tabStepTags(scope: GfScope | null | undefined, d: Pick<WsDomainL
   const tags = ws?.step_tabs[tabKeyOf(d)] ?? [];
   return tags.map((t) => ({
     step: t.step,
-    label: GF_DD_STEP_LABEL[t.step] ?? t.purpose,
+    label: GF_DD_STEP_KEY[t.step] ?? t.purpose, // i18n: common.gfDdStep.* key — resolve at render
     inScope: t.in_scope,
     stateText: t.in_scope ? "범위 안" : "범위 밖", // INTERIM-WORDING
     icon: t.in_scope ? "✓" : "—",
@@ -448,7 +452,7 @@ export function outOfScopeSteps(scope: GfScope): Array<{ step: number; label: st
     for (const tags of Object.values(ws.step_tabs)) for (const t of tags) if (!t.in_scope) reasons.set(t.step, t.reason);
     for (const r of ws.plan_readiness) if (!r.in_scope) reasons.set(r.step, r.reason);
   }
-  return [...scope.excluded_steps].sort((a, b) => a - b).map((step) => ({ step, label: GF_DD_STEP_LABEL[step] ?? `단계 ${step}`, reason: reasons.get(step) ?? null }));
+  return [...scope.excluded_steps].sort((a, b) => a - b).map((step) => ({ step, label: GF_DD_STEP_KEY[step] ?? `\ub2e8\uacc4 ${step}`, reason: reasons.get(step) ?? null })); // i18n: key — resolve at render
 }
 
 // ── People/organization plan readiness (what the greenfield panel leads with) ─────────────────────────
@@ -491,7 +495,7 @@ export function peoplePlanView(scope: GfScope | null | undefined, domains: WsDom
       const pts = t2.pointers;
       const judged = pts.filter((p) => p.judged).length;
       steps.push({
-        step: 2, label: GF_DD_STEP_LABEL[2] ?? t2.purpose,
+        step: 2, label: GF_DD_STEP_KEY["2"] ?? t2.purpose, // i18n: key — resolve at render
         text: t2.in_scope ? (pts.length ? `범위 안 — 판정 ${judged} / ${pts.length}` : "범위 안") : "범위 밖", // INTERIM-WORDING
         icon: t2.in_scope ? "✓" : "—", detail: t2.in_scope ? null : t2.reason,
       });
@@ -499,7 +503,8 @@ export function peoplePlanView(scope: GfScope | null | undefined, domains: WsDom
     const row6 = ws.plan_readiness.find((r) => r.step === 6);
     if (row6) {
       const st = PLAN_STATUS_TEXT[row6.status];
-      steps.push({ step: 6, label: GF_DD_STEP_LABEL[6] ?? row6.purpose, text: row6.in_scope ? st.text : "범위 밖", icon: row6.in_scope ? st.icon : "—", detail: row6.in_scope ? row6.detail : row6.reason });
+      steps.push({ step: 6, label: GF_DD_STEP_KEY["6"] ?? row6.purpose, // i18n: key — resolve at render
+        text: row6.in_scope ? st.text : "범위 밖", icon: row6.in_scope ? st.icon : "—", detail: row6.in_scope ? row6.detail : row6.reason });
     }
   }
   return {

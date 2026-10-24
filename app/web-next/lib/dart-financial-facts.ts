@@ -88,12 +88,12 @@ export async function syncCompanyFinancialFacts(
   opts: { years?: number; fetcher?: FinancialsFetcher; corpCode?: string } = {},
 ): Promise<SyncResult> {
   if (!isDartConfigured()) {
-    throw new DartSyncError("DART_API_KEY 미구성 — 루트 .env에 키를 설정한 뒤 다시 시도하세요.", "dart_not_configured");
+    throw new DartSyncError("DART_API_KEY is not configured — set the key in the root .env and retry.", "dart_not_configured");
   }
   const company = db.query("SELECT id, name_ko, dart_corp_code FROM md_company WHERE id = ?").get(companyId) as
     | { id: string; name_ko: string; dart_corp_code: string | null }
     | undefined;
-  if (!company) throw new DartSyncError("회사를 찾을 수 없습니다.", "company_not_found");
+  if (!company) throw new DartSyncError("Company not found.", "company_not_found");
 
   // corp code: trust the stored code when it still validates, otherwise
   // resolve by name — mirroring synergy-pipeline's validate → persist flow.
@@ -108,7 +108,7 @@ export async function syncCompanyFinancialFacts(
     const resolved = await resolveCorpCode(company.name_ko);
     if (!resolved.corpCode) {
       throw new DartSyncError(
-        `DART 고유번호를 확인할 수 없습니다 — 회사명 '${company.name_ko}'로 검색 실패. 회사 화면에서 dart corp code를 먼저 등록하세요.`,
+        `Cannot resolve the DART corp code — search by company name '${company.name_ko}' failed. Register the dart corp code on the company screen first.`,
         "corp_code_unresolved",
       );
     }
@@ -120,7 +120,7 @@ export async function syncCompanyFinancialFacts(
 
   const fin = await (opts.fetcher ?? fetchFinancials)(corpCode, { years: opts.years ?? 5 });
   if (!fin.found || (fin.yearly?.length ?? 0) === 0) {
-    throw new DartSyncError(`DART 조회 실패 — ${fin.error ?? "재무제표를 찾을 수 없습니다"}`, "dart_retrieval_failed");
+    throw new DartSyncError(`DART retrieval failed — ${fin.error ?? "Financial statements not found"}`, "dart_retrieval_failed");
   }
 
   const sourceId = ensureMdSourceDart(db);
@@ -174,7 +174,7 @@ export function getCompanyFinancialFacts(db: ReturnType<typeof getDb>, companyId
   const company = db.query("SELECT id, name_ko, dart_corp_code FROM md_company WHERE id = ?").get(companyId) as
     | { id: string; name_ko: string; dart_corp_code: string | null }
     | undefined;
-  if (!company) throw new DartSyncError("회사를 찾을 수 없습니다.", "company_not_found");
+  if (!company) throw new DartSyncError("Company not found.", "company_not_found");
   // Dedup: keep only the max revision per (period, account) — the unique
   // latest index orders revisions DESC, so a grouped max(revision_no) join
   // picks one row per account-year.

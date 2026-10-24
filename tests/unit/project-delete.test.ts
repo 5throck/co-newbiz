@@ -152,7 +152,7 @@ describe("DELETE /api/opportunities/[id] — deletion mark", () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: { code: string; message: string } | null };
     expect(body.error?.code).toBe("opportunity_promoted");
-    expect(body.error?.message).toContain("프로젝트");
+    expect(body.error?.message).toContain("project");
   });
 
   test("unpromoted opportunity gets its own delete mark + manifest; excluded from the list but still resolvable by id", async () => {

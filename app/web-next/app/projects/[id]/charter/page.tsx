@@ -3,8 +3,10 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
+import { useTranslations } from "next-intl";
+import { trackKeyParts, trackKeysText, resolveLabelTokens } from "../../../../lib/label-keys.ts";
 import { api } from "../../../../lib/api.ts";
-import { INTENT_LABEL, trackLabel, trackLabelParts } from "../../../../lib/labels.ts";
+
 import { RawKey } from "../../../../components/RawKey.tsx";
 import { useAuth } from "../../../../lib/auth-client.tsx";
 import { canWriteProject } from "../../../../lib/project-write-access.ts";
@@ -53,6 +55,11 @@ function parseKpis(text: string): CharterKpi[] {
 
 
 function CharterViewInner() {
+  const tr = useTranslations();
+  const t = useTranslations("pages.projects.charter");
+  const tc = useTranslations("common");
+  /** Route-decision intent → catalog key (ko master wording mirrors the former labels.ts INTENT_LABEL). */
+  const INTENT_KEY: Record<string, string> = { integration: "common.intentIntegration", capability_access: "common.capabilityApproach" };
   const params = useParams<{ id: string }>();
   const projectId = params.id;
   const { me } = useAuth();
@@ -68,7 +75,7 @@ function CharterViewInner() {
   const load = useCallback(() => {
     api.get<CharterView>(`/api/projects/${encodeURIComponent(projectId)}/charter`)
       .then((r) => setData(r.data))
-      .catch((e) => setError(e instanceof Error ? e.message : "차터를 불러오지 못했습니다."));
+      .catch((e) => setError(e instanceof Error ? e.message : t("loadFailed")));
   }, [projectId]);
 
   useEffect(() => { load(); }, [load]);
@@ -81,10 +88,10 @@ function CharterViewInner() {
     setBusy(true); setError(null); setNotice(null);
     try {
       await api.post<{ charter_confirmed_at: string }>(`/api/projects/${encodeURIComponent(projectId)}/charter/confirm`, {});
-      setNotice("차터 기준선이 확정되었습니다 — S11 투자심사(IC) 입력 요건이 충족됩니다.");
+      setNotice(t("baselineConfirmed"));
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "기준선 확정 실패");
+      setError(err instanceof Error ? err.message : t("baselineFailed"));
     } finally {
       setBusy(false);
     }
@@ -104,11 +111,11 @@ function CharterViewInner() {
         note: form.note.trim(),
         patch,
       });
-      setNotice(`수정안이 새 버전 v${r.data.version}으로 기록되었습니다 (append-only — 기존 버전은 보존됩니다).`);
+      setNotice(t("amended", { version: r.data.version }));
       setForm({ note: "", entryScope: "", purpose: "", kpis: "" });
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "수정안 기록 실패");
+      setError(err instanceof Error ? err.message : t("amendFailed"));
     } finally {
       setBusy(false);
     }
@@ -121,17 +128,16 @@ function CharterViewInner() {
     <main>
       <StageTabs projectId={projectId} />
       {/* Charter lives under the S12 tab group and feeds S11, so its tagline/rail follow S12 (not S8's "돈이 되는가?"). */}
-      <StageFrame stageId="S12" heading="프로젝트 추진계획 — 목적·범위·KPI 사전 확정">
+      <StageFrame stageId="S12" heading={t("stageHeading")}>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-          추진계획은 프로젝트의 목적·시장 범위·밸류체인 노드·진입 범위·KPI를 진행 심의 전에
-          문서로 고정합니다. 수정은 append-only 버전으로만 이루어지며 변경 사유(note)가 필수입니다.
+          {t("intro")}
           {data && (
             <>
               {" — "}
               {data.charter_confirmed_at ? (
-                <span className="status-chip status-green">✓ 확정됨 · {data.charter_confirmed_at.slice(0, 10)}</span>
+                <span className="status-chip status-green">{t("confirmedChip", { date: data.charter_confirmed_at.slice(0, 10) })}</span>
               ) : (
-                <span className="status-chip status-amber">○ 미확정</span>
+                <span className="status-chip status-amber">{t("unconfirmedChip")}</span>
               )}
             </>
           )}
@@ -140,56 +146,56 @@ function CharterViewInner() {
         {canAct && data && latest && !data.charter_confirmed_at && (
           <div className="flex flex-wrap items-center gap-2 mt-2 mb-0">
             <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void confirmBaseline()}>
-              {busy ? "확정 처리 중..." : "✓ 차터 기준선 확정 (S11 입력)"}
+              {busy ? t("confirming") : t("confirmBtn")}
             </button>
             <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              미확정 상태에서는 S11 투자심사 완료 요건이 충족되지 않습니다. 확정 후 수정안을 반영하면 다시 확정해야 합니다.
+              {t("confirmHint")}
             </span>
           </div>
         )}
 
         {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
         {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {notice}</p>}
-        {!data && !error && <p className="text-[length:var(--fs-caption)]">불러오는 중...</p>}
+        {!data && !error && <p className="text-[length:var(--fs-caption)]">{tc("loading")}</p>}
 
         {latest && (
-          <section className="market-section sizing-step" aria-label={`최신 추진계획 v${latest.version}`}>
+          <section className="market-section sizing-step" aria-label={t("latestHeading", { version: latest.version })}>
             <h3 className="sizing-step-title text-[length:var(--fs-body)]">
-              최신 추진계획 v{latest.version}
+              {t("latestHeading", { version: latest.version })}
               <span className="ml-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                 {latest.source} · {latest.built_by} · {latest.built_at.slice(0, 10)}
               </span>
             </h3>
             <dl className="text-[length:var(--fs-caption)]" style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "0.25rem 1rem" }}>
-              <dt className="text-[color:var(--muted-fg)]">목적</dt><dd>{latest.purpose}</dd>
-              <dt className="text-[color:var(--muted-fg)]">시장 범위</dt><dd>{latest.marketScope}</dd>
-              <dt className="text-[color:var(--muted-fg)]">밸류체인 노드</dt><dd>{latest.valueChainNode}</dd>
-              <dt className="text-[color:var(--muted-fg)]">트랙</dt>
+              <dt className="text-[color:var(--muted-fg)]">{t("dtPurpose")}</dt><dd>{latest.purpose}</dd>
+              <dt className="text-[color:var(--muted-fg)]">{t("dtMarketScope")}</dt><dd>{latest.marketScope}</dd>
+              <dt className="text-[color:var(--muted-fg)]">{t("dtValueChain")}</dt><dd>{latest.valueChainNode}</dd>
+              <dt className="text-[color:var(--muted-fg)]">{t("dtTrack")}</dt>
               <dd>
                 <span className={`status-chip ${latest.track === "brownfield" ? "status-amber" : "status-green"}`}>
-                  {trackLabel(latest.track, latest.subTrack)}
+                  {resolveLabelTokens(trackKeysText(latest.track, latest.subTrack), tr)}
                 </span>
                 {latest.track && (
-                  <RawKey parts={trackLabelParts(latest.track, latest.subTrack)} />
+                  <RawKey parts={trackKeyParts(latest.track, latest.subTrack).map((p2) => ({ label: "", raw: p2.raw, isFallback: p2.key === null }))} />
                 )}
-                {latest.intent && <span className="ml-1 text-[length:var(--fs-caption)]">{INTENT_LABEL[latest.intent] ?? latest.intent} 의도</span>}
-                {latest.totalScore !== null && <span className="ml-1 tabular-nums text-[length:var(--fs-caption)]">채점 {latest.totalScore}/3.0</span>}
+                {latest.intent && <span className="ml-1 text-[length:var(--fs-caption)]">{t("intentLine", { label: INTENT_KEY[latest.intent] ? tc(INTENT_KEY[latest.intent]) : latest.intent })}</span>}
+                {latest.totalScore !== null && <span className="ml-1 tabular-nums text-[length:var(--fs-caption)]">{t("scoreLine", { score: latest.totalScore })}</span>}
               </dd>
-              <dt className="text-[color:var(--muted-fg)]">트랙 근거</dt><dd>{latest.trackRationale}</dd>
-              <dt className="text-[color:var(--muted-fg)]">진입 범위</dt><dd>{latest.entryScope}</dd>
+              <dt className="text-[color:var(--muted-fg)]">{t("dtTrackRationale")}</dt><dd>{latest.trackRationale}</dd>
+              <dt className="text-[color:var(--muted-fg)]">{t("dtEntryScope")}</dt><dd>{latest.entryScope}</dd>
             </dl>
           </section>
         )}
 
         {latest && latest.kpis.length > 0 && (
-          <section className="market-section sizing-step mt-3" aria-label="KPI 사전 확정">
-            <h3 className="sizing-step-title text-[length:var(--fs-body)]">KPI 사전 확정 (pre-commit)</h3>
-            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table table-fixed-pct tmin-32" aria-label="KPI 사전 확정">
-              <caption className="sr-only">KPI 사전 확정 — 목표값</caption>
+          <section className="market-section sizing-step mt-3" aria-label={t("kpiSectionAria")}>
+            <h3 className="sizing-step-title text-[length:var(--fs-body)]">{t("kpiHeading")}</h3>
+            <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+            <table className="data-table table-fixed-pct tmin-32" aria-label={t("kpiSectionAria")}>
+              <caption className="sr-only">{t("kpiCaption")}</caption>
               <ColGroup widths={KPI_COL_PCT} />
               <thead>
-                <tr><th scope="col">KPI</th><th scope="col">키</th><th scope="col">목표값</th></tr>
+                <tr><th scope="col">{t("thKpi")}</th><th scope="col">{t("thKey")}</th><th scope="col">{t("thTarget")}</th></tr>
               </thead>
               <tbody>
                 {latest.kpis.map((k) => (
@@ -206,37 +212,37 @@ function CharterViewInner() {
         )}
 
         {canAct && latest && (
-          <section className="market-section sizing-step mt-3" aria-label="차터 수정안">
-            <h3 className="sizing-step-title text-[length:var(--fs-body)]">차터 수정안 (append-only · analyst+)</h3>
+          <section className="market-section sizing-step mt-3" aria-label={t("amendSectionAria")}>
+            <h3 className="sizing-step-title text-[length:var(--fs-body)]">{t("amendHeading")}</h3>
             <form className="sizing-new-form" onSubmit={amend}>
               <label className="block text-[length:var(--fs-caption)] mb-2">
-                <span className="block mb-1">변경 사유 (note) * — 스코프 크리프 추적을 위해 기록됩니다</span>
-                <textarea value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} rows={2} required className="sizing-new-input w-full" placeholder="예: 엔터티 IC HOLD 근거에 따라 진입 범위를 1개 국가로 축소" />
+                <span className="block mb-1">{t("lblNote")}</span>
+                <textarea value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} rows={2} required className="sizing-new-input w-full" placeholder={t("phNote")} />
               </label>
               <div className="flex flex-wrap gap-2 mb-2">
                 <label className="text-[length:var(--fs-caption)] flex-1 min-w-[16rem]">
-                  <span className="block mb-1">진입 범위 (entryScope) — 변경 시에만 입력</span>
+                  <span className="block mb-1">{t("lblEntryScope")}</span>
                   <input value={form.entryScope} onChange={(e) => setForm({ ...form, entryScope: e.target.value })} className="sizing-new-input w-full" />
                 </label>
                 <label className="text-[length:var(--fs-caption)] flex-1 min-w-[16rem]">
-                  <span className="block mb-1">목적 (purpose) — 변경 시에만 입력</span>
+                  <span className="block mb-1">{t("lblPurpose")}</span>
                   <input value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })} className="sizing-new-input w-full" />
                 </label>
               </div>
               <label className="block text-[length:var(--fs-caption)] mb-2">
-                <span className="block mb-1">KPI — 한 줄에 하나, "key | label | target" 형식 (변경 시에만 입력)</span>
-                <textarea value={form.kpis} onChange={(e) => setForm({ ...form, kpis: e.target.value })} rows={3} className="sizing-new-input w-full" placeholder={"npv_upside | NPV 상승분 | 150억 이상\npayback | 투자 회수 | 5년 이내"} />
+                <span className="block mb-1">{t("lblKpis")}</span>
+                <textarea value={form.kpis} onChange={(e) => setForm({ ...form, kpis: e.target.value })} rows={3} className="sizing-new-input w-full" placeholder={t("phKpis")} />
               </label>
               <button type="submit" className="btn-ghost btn-sm" disabled={busy || !form.note.trim()}>
-                {busy ? "기록 중..." : "수정안 기록 (새 버전)"}
+                {busy ? tc("recording") : t("amendBtn")}
               </button>
             </form>
           </section>
         )}
 
         {versions.length > 0 && (
-          <section className="market-section sizing-step mt-3" aria-label="버전 이력">
-            <h3 className="sizing-step-title text-[length:var(--fs-body)]">버전 이력</h3>
+          <section className="market-section sizing-step mt-3" aria-label={t("historyHeading")}>
+            <h3 className="sizing-step-title text-[length:var(--fs-body)]">{t("historyHeading")}</h3>
             <ul className="sizing-note-list">
               {versions.map((v) => (
                 <li key={v.version}>
@@ -244,7 +250,7 @@ function CharterViewInner() {
                   <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] tabular-nums">
                     {v.source} · {v.built_by} · {v.built_at.slice(0, 10)}
                   </span>
-                  {v.note && <span className="block text-[length:var(--fs-caption)]">사유: {v.note}</span>}
+                  {v.note && <span className="block text-[length:var(--fs-caption)]">{t("noteLine", { value: v.note })}</span>}
                 </li>
               ))}
             </ul>

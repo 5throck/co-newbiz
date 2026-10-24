@@ -33,7 +33,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "임금 형평 기록은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Recording pay-parity data requires the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
@@ -45,12 +45,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const headcount = Number(body?.headcount);
   const targetMedian = Number(body?.target_median);
   const acquirerMedian = Number(body?.acquirer_median);
-  if (!jobFamily) return badRequest("invalid_request", "job_family는 필수입니다.");
+  if (!jobFamily) return badRequest("invalid_request", "job_family is required.");
   // k-익명성 ≥3 (스키마 CHECK) — 5인 미만 집계 억제 원칙의 스키마 수준 강제.
-  if (!grade) return badRequest("invalid_request", "grade는 필수입니다.");
-  if (!Number.isInteger(headcount) || headcount < 3) return badRequest("invalid_request", "headcount는 k-익명성(≥3) 이상이어야 합니다.");
-  if (!Number.isInteger(targetMedian) || targetMedian <= 0) return badRequest("invalid_request", "target_median은 양의 정수(원 단위)여야 합니다.");
-  if (!Number.isInteger(acquirerMedian) || acquirerMedian <= 0) return badRequest("invalid_request", "acquirer_median은 양의 정수(원 단위)여야 합니다.");
+  if (!grade) return badRequest("invalid_request", "grade is required.");
+  if (!Number.isInteger(headcount) || headcount < 3) return badRequest("invalid_request", "headcount must satisfy k-anonymity (at least 3).");
+  if (!Number.isInteger(targetMedian) || targetMedian <= 0) return badRequest("invalid_request", "target_median must be a positive integer (KRW).");
+  if (!Number.isInteger(acquirerMedian) || acquirerMedian <= 0) return badRequest("invalid_request", "acquirer_median must be a positive integer (KRW).");
   const db = getDb();
   const now = new Date().toISOString();
   const rowId = ulid();

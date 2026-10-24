@@ -135,12 +135,13 @@ describe("BetaPanel regression step cards", () => {
   });
   test("segmented source control with both options", () => {
     expect(panel).toContain("<TabNav");
-    expect(panel).toContain("수집 데이터 사용");
-    expect(panel).toContain("직접 붙여넣기");
+    // i18n: labels moved to the catalog — pin the keys (stages.s8.wacc.betaPanel.*).
+    expect(panel).toContain('t("useCollectedData")');
+    expect(panel).toContain('t("pasteDirectly")');
     expect(panel).toContain("defaultSourceMode(collection?.status)");
   });
   test("placeholder is a single line with no sample rows", () => {
-    expect(panel).toContain('placeholder="date,price,index 형식으로 붙여넣기 (CSV/TSV)"');
+    expect(panel).toContain('placeholder={t("pasteAsDatePriceIndex")}');
     expect(panel).not.toContain("2026-09-10,68400");
   });
   test("status block lives inside step 1, before step 2", () => {
@@ -152,13 +153,13 @@ describe("BetaPanel regression step cards", () => {
   });
   test("raw rows are inspectable in a collapsed details; load precedes run", () => {
     expect(panel).toContain("<details");
-    expect(panel).toContain("불러온 원시 행 보기");
-    expect(panel.indexOf("수집 데이터 불러오기\"")).toBeLessThan(panel.indexOf("↻ 회귀 실행"));
+    expect(panel).toContain('t("viewImportedRawRows")');
+    expect(panel.indexOf('t("loadCollectedData2")')).toBeLessThan(panel.indexOf('t("runRegression")'));
   });
   test("run button disabled below 2 rows with visible reason; busy state kept", () => {
     expect(panel).toContain("disabled={!canRunRegression}");
     expect(panel).toContain("runDisabledReason(collectedRowCount, collection?.status)");
     expect(panel).toContain("aria-busy={loading}");
-    expect(panel).toContain("불러옴");
+    expect(panel).toContain('t("daysLoaded")');
   });
 });

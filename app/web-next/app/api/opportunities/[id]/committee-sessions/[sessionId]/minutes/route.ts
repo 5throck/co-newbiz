@@ -28,12 +28,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "회의록 확정은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Minutes confirmation requires the analyst role or higher." }); if (denied) return denied; }
   const { id, sessionId } = await params;
   if (!committeeSessionForOpportunity(id, sessionId, (pid) => !!visibleProject(ctx, pid, { includeClosed: true }))) return notFound();
   const body = (await request.json().catch(() => null)) as { confirm?: boolean } | null;
   if (body?.confirm !== true) {
-    return badRequest("invalid_request", '회의록 확정은 {"confirm": true} 본문이 필요합니다.');
+    return badRequest("invalid_request", 'Confirming the minutes requires a {"confirm": true} body.');
   }
   try {
     confirmCommitteeMinutes(getDb(), sessionId, ctx.userId);

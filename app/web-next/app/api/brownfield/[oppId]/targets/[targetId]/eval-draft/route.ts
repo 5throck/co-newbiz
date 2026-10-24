@@ -58,7 +58,7 @@ function resolveTargetCompanyId(db: ReturnType<typeof getDb>, targetId: string, 
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string; targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "평가 초안 생성은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Evaluation-draft generation requires the analyst role or higher." });
   if (denied) return denied;
   const { oppId, targetId } = await params;
   const body = (await request.json().catch(() => null)) as { category?: string } | null;
@@ -89,7 +89,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     try {
       facts = getCompanyFinancialFacts(db, target.company_id);
     } catch {
-      return badRequest("company_not_found", "회사 마스터를 찾을 수 없습니다.");
+      return badRequest("company_not_found", "Company master record not found.");
     }
     const analysis = deriveFinancialAnalysis({
       corpCode: facts.company.dart_corp_code ?? "",

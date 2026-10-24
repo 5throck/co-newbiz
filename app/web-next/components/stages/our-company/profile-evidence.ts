@@ -1,11 +1,13 @@
 // Pure helpers for the analyst-supplied evidence inputs of the profile generation panel (ADR-0172 amendment 4).
+import { TranslatorFn } from "../../../i18n/config.ts";
 import type { Profile } from "./types.ts";
 
 export interface EvidenceDraft { urls: string; note: string }
 export const EMPTY_EVIDENCE: EvidenceDraft = { urls: "", note: "" };
 
+/** Catalog key; resolve through a TranslatorFn at render. */
 export const EVIDENCE_HELP =
-  "여기에 넣은 근거 주소와 소개 메모는 분석가가 확인한 근거로 취급되어 프로파일 생성에 쓰이고, 프로파일 버전에 함께 저장됩니다. 주소는 한 줄에 하나(최대 8개, http/https), 메모는 2000자까지입니다.";
+  "components.ourCompany.profileEvidence.evidenceUrlsAndIntroductionMemos";
 
 /** Prefill from the last stored profile version so a regeneration reuses the previous inputs. */
 export function evidenceFromProfile(profile: Profile | "loading" | undefined): EvidenceDraft {
@@ -24,10 +26,10 @@ export function evidenceBody(draft: EvidenceDraft): { sourceUrls: string[]; comp
   return { sourceUrls: parseUrlLines(draft.urls), companyNote: draft.note.trim() };
 }
 
-export function sourceStatusChip(s: { status: "ok" | "thin" | "failed"; reason?: string }): { icon: string; text: string; tone: "status-green" | "status-amber" | "status-red" } {
-  if (s.status === "ok") return { icon: "✓", text: "수집됨", tone: "status-green" };
-  if (s.status === "thin") return { icon: "!", text: "본문 부족(출처로만 기록)", tone: "status-amber" };
-  return { icon: "×", text: `실패(${s.reason ?? "사유 없음"})`, tone: "status-red" };
+export function sourceStatusChip(s: { status: "ok" | "thin" | "failed"; reason?: string }, tr: TranslatorFn): { icon: string; text: string; tone: "status-green" | "status-amber" | "status-red" } {
+  if (s.status === "ok") return { icon: "✓", text: tr("components.ourCompany.profileEvidence.collected"), tone: "status-green" };
+  if (s.status === "thin") return { icon: "!", text: tr("components.ourCompany.profileEvidence.insufficientBodyRecordedBySource"), tone: "status-amber" };
+  return { icon: "×", text: tr("components.ourCompany.profileEvidence.failedP1", { p1: s.reason ?? tr("common.noReason") }), tone: "status-red" };
 }
 
 /** True when the analyst supplied usable evidence (a note or at least one source with a body). */
@@ -36,13 +38,13 @@ export function hasAnalystEvidence(profile: Pick<Profile, "dataSources">): boole
   return Boolean(d?.analystNote) || (d?.userSources ?? []).some((s) => s.status === "ok");
 }
 
-export function versionLabel(sourceRef: string | null): string | null {
-  if (sourceRef === "analyst_edit") return "분석가 수정";
-  if (sourceRef === "analyst_source") return "출처 변경";
+export function versionLabel(sourceRef: string | null, tr: TranslatorFn): string | null {
+  if (sourceRef === "analyst_edit") return tr("common.analystRevision");
+  if (sourceRef === "analyst_source") return tr("components.ourCompany.profileEvidence.changeSource");
   return null;
 }
 
-export const EDIT_FIELD_LABELS = { industryExposure: "산업 노출", strengths: "강점", weaknesses: "약점", businessAssessment: "사업 평가" } as const;
+export const EDIT_FIELD_LABELS = { industryExposure: "components.ourCompany.profileEvidence.industryExposure", strengths: "components.ourCompany.profileEvidence.strength", weaknesses: "components.ourCompany.profileEvidence.weakness", businessAssessment: "components.ourCompany.profileEvidence.businessEvaluation" } as const;
 
 /** Fields whose value differs from the current profile, ready for the overrides request (lists are one item per line). */
 export function overrideBody(profile: Profile, draft: { industryExposure: string; strengths: string; weaknesses: string; businessAssessment: string; reason: string; citeSource: string }) {

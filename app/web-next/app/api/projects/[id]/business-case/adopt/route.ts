@@ -14,11 +14,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "사업 채택(adopt)은 analyst 역할 이상이어야 합니다 — 채택은 인간의 판단입니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Business-case adoption requires the analyst role or higher — adoption is a human judgement.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as { model_id?: string; goals_ack?: { acknowledged?: unknown; note?: unknown } } | null;
-  if (!body?.model_id) return badRequest("invalid_request", "model_id는 필수입니다.");
+  if (!body?.model_id) return badRequest("invalid_request", "model_id is required.");
   // ADR-0159: optional acknowledgement that no business goals apply.
   const goalsAck =
     body.goals_ack && typeof body.goals_ack === "object"
@@ -37,6 +37,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (e instanceof GoalsAckNoteRequiredError) return badRequest("goals_ack_note_required", e.message);
     // ADR-0143 constraint violations (target not selected / wrong target) are
     // client-fixable 400s, not 404s.
-    return badRequest("adoption_rejected", msg || "채택할 수 없습니다.");
+    return badRequest("adoption_rejected", msg || "Adoption is not possible.");
   }
 }

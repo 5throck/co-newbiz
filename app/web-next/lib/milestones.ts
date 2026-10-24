@@ -118,9 +118,9 @@ function validDate(v: string): boolean {
 
 export function createMilestone(db: Db, input: CreateMilestoneInput): MilestoneRow {
   const title = input.title.trim();
-  if (!title) throw new MilestoneError("title은 필수입니다.");
-  if (title.length > 200) throw new MilestoneError("title은 200자 이내여야 합니다.");
-  if (!validDate(input.dueDate)) throw new MilestoneError("due_date는 YYYY-MM-DD 날짜여야 합니다.");
+  if (!title) throw new MilestoneError("title is required.");
+  if (title.length > 200) throw new MilestoneError("title must be at most 200 characters.");
+  if (!validDate(input.dueDate)) throw new MilestoneError("due_date must be a YYYY-MM-DD date.");
   const now = input.now ?? new Date().toISOString();
   const id = ulid();
   db.transaction(() => {
@@ -157,21 +157,21 @@ export function updateMilestone(db: Db, input: UpdateMilestoneInput): MilestoneR
   const params: Array<string | null> = [];
   if (input.title !== undefined) {
     const t = input.title.trim();
-    if (!t || t.length > 200) throw new MilestoneError("title은 1~200자여야 합니다.");
+    if (!t || t.length > 200) throw new MilestoneError("title must be 1-200 characters.");
     sets.push("title = ?"); params.push(t);
   }
   if (input.category !== undefined) {
-    if (!(MILESTONE_CATEGORIES as readonly string[]).includes(input.category)) throw new MilestoneError("category가 올바르지 않습니다.");
+    if (!(MILESTONE_CATEGORIES as readonly string[]).includes(input.category)) throw new MilestoneError("Invalid category.");
     sets.push("category = ?"); params.push(input.category);
   }
   if (input.dueDate !== undefined) {
-    if (!validDate(input.dueDate)) throw new MilestoneError("due_date는 YYYY-MM-DD 날짜여야 합니다.");
+    if (!validDate(input.dueDate)) throw new MilestoneError("due_date must be a YYYY-MM-DD date.");
     sets.push("due_date = ?"); params.push(input.dueDate);
   }
   if (input.owner !== undefined) { sets.push("owner = ?"); params.push(input.owner?.trim() || null); }
   if (input.notes !== undefined) { sets.push("notes = ?"); params.push(input.notes?.trim() || null); }
   if (input.done !== undefined) { sets.push("done_at = ?"); params.push(input.done ? (input.now ?? new Date().toISOString()) : null); }
-  if (sets.length === 0) throw new MilestoneError("변경할 필드가 없습니다.");
+  if (sets.length === 0) throw new MilestoneError("No fields to change.");
   const now = input.now ?? new Date().toISOString();
   sets.push("updated_by = ?", "updated_at = ?");
   params.push(input.by, now, input.milestoneId, input.projectId);
@@ -203,7 +203,7 @@ export function deleteMilestone(db: Db, projectId: string, milestoneId: string, 
  */
 export function importBaselineMilestones(db: Db, projectId: string, by: string, now?: string): { added: number; skipped: number } {
   const baseline = latestConfirmedBaseline(projectId, db);
-  if (!baseline?.confirmation) throw new MilestoneError("확정된 실행 기준선이 없습니다 — 먼저 S11에서 기준선을 확정하세요.");
+  if (!baseline?.confirmation) throw new MilestoneError("No confirmed execution baseline — confirm the baseline in S11 first.");
   const entries = baseline.entries;
   const existing = new Set(
     (db.query("SELECT title FROM project_milestone WHERE project_id = ? AND source = 'execution_baseline'").all(projectId) as Array<{ title: string }>)

@@ -1,10 +1,16 @@
 "use client";
 
 // Split from app/brownfield/targets/[targetId]/page.tsx (Wave U-3 decomposition); behavior unchanged.
+import { useLocale, useTranslations } from "next-intl";
 import { EChart } from "../EChart.tsx";
+import { formatNumber } from "../../lib/format.ts";
 import type { TargetDetailViewState } from "./useTargetActions.ts";
 
 export function TargetFinancialsTab({ ctx }: { ctx: TargetDetailViewState }) {
+  const t = useTranslations("components.brownfieldTarget.dataTabs");
+  const tf = useTranslations("format");
+  const tc = useTranslations("common");
+  const locale = useLocale();
   const { profileTab, companyProfile, ct, setProfileTab } = ctx;
   return (
     <>{profileTab === "financials" && (
@@ -19,13 +25,13 @@ export function TargetFinancialsTab({ ctx }: { ctx: TargetDetailViewState }) {
               const years = [...new Set(items.map((i) => i.year ?? ""))].filter(Boolean).sort().reverse();
               const accounts = [...new Set(items.map((i) => i.name))];
               const byKey = new Map(items.map((i) => [`${i.year}|${i.name}`, i.value]));
-              const fmtEok = (v: number) => (v / 1e8).toLocaleString("ko-KR", { maximumFractionDigits: 0 });
+              const fmtEok = (v: number) => formatNumber(v / 1e8, locale, { maximumFractionDigits: 0 });
               const chartOption = {
                 tooltip: { trigger: "axis" as const },
                 legend: { top: 0, textStyle: { color: ct.muted, fontSize: 11 } },
                 grid: { left: 60, right: 16, top: 32, bottom: 28 },
                 xAxis: { type: "category" as const, data: accounts, axisLabel: { color: ct.muted, fontSize: 11, interval: 0, rotate: accounts.length > 6 ? 20 : 0 } },
-                yAxis: { type: "value" as const, axisLabel: { color: ct.muted, formatter: (v: number) => `${fmtEok(v)}억` }, splitLine: { lineStyle: { color: ct.split } } },
+                yAxis: { type: "value" as const, axisLabel: { color: ct.muted, formatter: (v: number) => `${fmtEok(v)}${tf("eokUnit")}` }, splitLine: { lineStyle: { color: ct.split } } },
                 series: years.map((y, i) => ({
                   name: y,
                   type: "bar" as const,
@@ -35,14 +41,14 @@ export function TargetFinancialsTab({ ctx }: { ctx: TargetDetailViewState }) {
               };
               return (
                 <div className="card mb-3">
-                  <h4 className="text-[length:var(--fs-body)] mb-2">전자공시 재무 현황 ({companyProfile.profile.dartFinancials!.year}년)</h4>
-                  <EChart option={chartOption} height={300} ariaLabel="전자공시 재무 현황 — 계정별 연도 비교" />
-                  <p className="mt-1 mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">단위: 억원 · 출처: 전자공시(전자공시) 사업보고서</p>
-                  <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-                    <table className="data-table report-table" aria-label="전자공시 재무 요약 (계정 × 연도)">
-                      <caption className="sr-only">전자공시 재무 요약 (계정 × 연도)</caption>
+                  <h4 className="text-[length:var(--fs-body)] mb-2">{t("dartFinancialsHeading", { p1: String(companyProfile.profile.dartFinancials!.year) })}</h4>
+                  <EChart option={chartOption} height={300} ariaLabel={t("dartChartAria")} />
+                  <p className="mt-1 mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("dartUnitNote")}</p>
+                  <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+                    <table className="data-table report-table" aria-label={t("dartTableAria")}>
+                      <caption className="sr-only">{t("dartTableCaption")}</caption>
                       <thead>
-                        <tr><th scope="col" className="col-label">계정</th>{years.map((y) => <th key={y} scope="col" className="col-num">{y}</th>)}</tr>
+                        <tr><th scope="col" className="col-label">{t("colAccount")}</th>{years.map((y) => <th key={y} scope="col" className="col-num">{y}</th>)}</tr>
                       </thead>
                       <tbody>
                         {accounts.map((a) => (
@@ -50,7 +56,7 @@ export function TargetFinancialsTab({ ctx }: { ctx: TargetDetailViewState }) {
                             <td className="col-label font-semibold">{a}</td>
                             {years.map((y) => {
                               const v = byKey.get(`${y}|${a}`);
-                              return <td key={y} className="col-num tabular-nums">{v !== undefined ? `${fmtEok(v)} 억원` : "—"}</td>;
+                              return <td key={y} className="col-num tabular-nums">{v !== undefined ? `${fmtEok(v)} ${tf("eokWonUnit")}` : "—"}</td>;
                             })}
                           </tr>
                         ))}
@@ -62,7 +68,7 @@ export function TargetFinancialsTab({ ctx }: { ctx: TargetDetailViewState }) {
             })()}
             {!companyProfile?.profile?.dartFinancials?.available && (
               <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                계정별 상세 그래프는 AI 분석 실행 후 표시됩니다 — <button type="button" className="text-[color:var(--accent)] underline" onClick={() => setProfileTab("aiprofile")}>AI 분석 탭</button>에서 실행하세요.
+                {t("dartDetailPre")} <button type="button" className="text-[color:var(--accent)] underline" onClick={() => setProfileTab("aiprofile")}>{t("aiProfileTabLink")}</button>{t("dartDetailPost")}
               </p>
             )}
           </div>
@@ -71,33 +77,36 @@ export function TargetFinancialsTab({ ctx }: { ctx: TargetDetailViewState }) {
 }
 
 export function TargetDisclosuresTab({ ctx }: { ctx: TargetDetailViewState }) {
+  const t = useTranslations("components.brownfieldTarget.dataTabs");
+  const tc = useTranslations("common");
   const { profileTab, dartCode, companyId, discPreset, setDiscPreset, disclosures } = ctx;
+  const presetLabel = (label: string): string => (label === "presetRecent" ? t("presetRecent") : label === "presetBusiness" ? t("presetBusiness") : label);
   return (
     <>{profileTab === "disclosures" && (
           <div className="card mt-3">
             {!dartCode || !companyId ? (
               <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                전자공시 고유번호가 없어 공시를 조회할 수 없습니다 — 등록 시 8자리 고유번호를 입력하면 연결됩니다.
+                {t("noDartCode")}
               </p>
             ) : (
               <>
                 <div className="flex flex-wrap items-center gap-2 mb-2">
                   <label className="text-[length:var(--fs-caption)] flex items-center gap-1">
-                    공시
-                    <select value={discPreset} onChange={(e) => setDiscPreset(e.target.value)} className="sizing-new-input sizing-new-input-sm" aria-label="공시 프리셋">
-                      {(disclosures?.presets ?? [{ key: "recent", label: "최근 공시" }, { key: "business", label: "사업보고서" }]).map((pr) => (
-                        <option key={pr.key} value={pr.key}>{pr.label}</option>
+                    {t("disclosureLabel")}
+                    <select value={discPreset} onChange={(e) => setDiscPreset(e.target.value)} className="sizing-new-input sizing-new-input-sm" aria-label={t("presetAria")}>
+                      {(disclosures?.presets ?? [{ key: "recent", label: "presetRecent" }, { key: "business", label: "presetBusiness" }]).map((pr) => (
+                        <option key={pr.key} value={pr.key}>{presetLabel(pr.label)}</option>
                       ))}
                     </select>
                   </label>
-                  {disclosures === undefined && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">조회 중...</span>}
+                  {disclosures === undefined && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("querying")}</span>}
                 </div>
                 {disclosures === undefined ? null : disclosures === null ? (
-                  <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">공시 목록을 불러오지 못했습니다.</p>
+                  <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("disclosuresLoadFailed")}</p>
                 ) : disclosures.error ? (
                   <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{disclosures.error}</p>
                 ) : disclosures.disclosures.length === 0 ? (
-                  <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">해당 프리셋의 공시가 최근 12개월 내 없습니다.</p>
+                  <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("noDisclosures")}</p>
                 ) : (
                   <ul className="sizing-note-list mb-0" style={{ maxHeight: "16rem", overflowY: "auto", fontSize: "0.88rem" }}>
                     {disclosures.disclosures.map((d) => (
@@ -105,7 +114,7 @@ export function TargetDisclosuresTab({ ctx }: { ctx: TargetDetailViewState }) {
                         <code className="dd-item-id">{d.rcept_dt}</code>
                         <span className="flex-1 min-w-[16rem]">{d.report_nm}</span>
                         {d.viewer_url && (
-                          <a href={d.viewer_url} target="_blank" rel="noreferrer" className="text-[length:var(--fs-body)] text-[color:var(--accent)] underline">보고서 열기</a>
+                          <a href={d.viewer_url} target="_blank" rel="noreferrer" className="text-[length:var(--fs-body)] text-[color:var(--accent)] underline">{t("openReport")}</a>
                         )}
                       </li>
                     ))}
@@ -119,34 +128,36 @@ export function TargetDisclosuresTab({ ctx }: { ctx: TargetDetailViewState }) {
 }
 
 export function TargetSourcesTab({ ctx }: { ctx: TargetDetailViewState }) {
+  const t = useTranslations("components.brownfieldTarget.dataTabs");
+  const tc = useTranslations("common");
   const { profileTab, companyId, companyProfile } = ctx;
   return (
     <>{profileTab === "sources" && (
           <div className="card mt-3">
-            <h4 className="text-[length:var(--fs-body)] mb-2">출처 · 데이터</h4>
+            <h4 className="text-[length:var(--fs-body)] mb-2">{t("sourcesHeading")}</h4>
             {!companyId ? (
-              <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">회사 마스터가 아직 연결되지 않았습니다.</p>
+              <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("noCompany")}</p>
             ) : companyProfile === undefined ? (
-              <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">불러오는 중...</p>
+              <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{tc("loading")}</p>
             ) : !companyProfile?.profile ? (
-              <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">AI 분석을 먼저 실행하면 리서치 출처가 여기에 표시됩니다.</p>
+              <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("runAnalysisFirst")}</p>
             ) : (
               <>
                 <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                  DART {companyProfile.profile.dataSources?.dart ? `공시(${companyProfile.profile.dataSources.dartYear ?? "—"}년)` : "미입수"} ·
-                  {" "}외부 웹 리서치 {companyProfile.profile.dataSources?.webResearchCount ?? 0}건
+                  DART {companyProfile.profile.dataSources?.dart ? t("dartSourceObtained", { p1: companyProfile.profile.dataSources.dartYear ?? "—" }) : t("dartSourceMissing")} ·
+                  {" "}{t("webResearchCount", { p1: companyProfile.profile.dataSources?.webResearchCount ?? 0 })}
                 </p>
                 {companyProfile.profile.dartFinancials?.available && (
                   <p className="mb-2 text-[length:var(--fs-body)]">
                     <span className="status-chip status-green mr-1">DART</span>
-                    전자공시 사업보고서 ({companyProfile.profile.dartFinancials.year}년)
+                    {t("dartReportLabel", { p1: String(companyProfile.profile.dartFinancials.year) })}
                     {companyProfile.profile.dartFinancials.reportUrl && (
-                      <> — <a href={companyProfile.profile.dartFinancials.reportUrl} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">원문 보기</a></>
+                      <> — <a href={companyProfile.profile.dartFinancials.reportUrl} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">{t("viewOriginal")}</a></>
                     )}
                   </p>
                 )}
                 {companyProfile.profile.researchSources.length === 0 ? (
-                  <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">웹 리서치 출처가 없습니다.</p>
+                  <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("noWebSources")}</p>
                 ) : (
                   <ul className="sizing-note-list mb-0" style={{ fontSize: "0.88rem" }}>
                     {companyProfile.profile.researchSources.map((s, i) => (

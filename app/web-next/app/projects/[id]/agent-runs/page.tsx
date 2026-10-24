@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
+import { useTranslations } from "next-intl";
 import { api } from "../../../../lib/api.ts";
 import { ColGroup, PageState } from "../../../../components/ui.tsx";
 
@@ -18,6 +19,8 @@ interface Run {
 }
 
 function AgentRunsView() {
+  const t = useTranslations("pages.projects.agentRuns");
+  const tc = useTranslations("common");
   const { id } = useParams<{ id: string }>();
   const [data, setData] = useState<{ runs: Run[]; proposals: Array<{ id: string; gate: string; recommendation: string; started_at: string }>; reliability: Array<{ gate: string; total: number; accepted: number; agreement_pct: number }> } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -25,31 +28,31 @@ function AgentRunsView() {
   useEffect(() => {
     api.get<{ runs: Run[]; proposals: Array<{ id: string; gate: string; recommendation: string; started_at: string }>; reliability: Array<{ gate: string; total: number; accepted: number; agreement_pct: number }> }>(`/api/projects/${encodeURIComponent(id)}/agent-runs`)
       .then((r) => setData(r.data))
-      .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
+      .catch((e) => setError(e instanceof Error ? e.message : tc("errors.loadFailed")));
   }, [id]);
 
   return (
     <main>
       <StageTabs projectId={id} />
-      <h1>에이전트 실행 이력</h1>
-      <p className="objective">이 검토/안건에서 에이전트·AI가 실행한 활동과 제안을 추적합니다 — 제안과 사람 기록은 항상 구분됩니다.</p>
+      <h1>{t("heading")}</h1>
+      <p className="objective">{t("objective")}</p>
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}
-      <section className="market-section" aria-label="실행 타임라인">
-        <h2 className="text-[length:var(--fs-body)] mb-2">실행 타임라인</h2>
+      <section className="market-section" aria-label={t("timelineHeading")}>
+        <h2 className="text-[length:var(--fs-body)] mb-2">{t("timelineHeading")}</h2>
         {data === null ? <PageState state="loading" /> : data.runs.length === 0 ? (
-          <PageState state="empty" emptyText="실행된 에이전트 활동이 없습니다." emptyAction={<Link href="/deals" className="text-[color:var(--accent)] underline not-italic">파이프라인 시작 →</Link>} />
+          <PageState state="empty" emptyText={t("emptyRuns")} emptyAction={<Link href="/deals" className="text-[color:var(--accent)] underline not-italic">{t("startPipelineLink")}</Link>} />
         ) : (
-          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table table-fixed-pct tmin-48" aria-label="실행 타임라인">
-              <caption className="sr-only">에이전트 실행 타임라인</caption>
+          <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+            <table className="data-table table-fixed-pct tmin-48" aria-label={t("timelineHeading")}>
+              <caption className="sr-only">{t("timelineCaption")}</caption>
               <ColGroup widths={AGENT_RUN_COL_PCT} />
-              <thead><tr><th>시각</th><th>단계</th><th>활동</th><th>유형</th><th>상태</th><th>실행자</th></tr></thead>
+              <thead><tr><th>{t("thTime")}</th><th>{tc("stage")}</th><th>{t("thActivity")}</th><th>{t("thType")}</th><th>{tc("status")}</th><th>{t("thActor")}</th></tr></thead>
               <tbody>{data.runs.map((r, i) => (
                 <tr key={`${r.run_id}-${i}`}>
                   <td className="text-[length:var(--fs-caption)] tabular-nums">{r.started_at.slice(0, 16).replace("T", " ")}</td>
                   <td><span className="status-chip status-not-started">{r.stage}</span></td>
                   <td className="text-[length:var(--fs-caption)]">{r.activity_id ?? "—"}</td>
-                  <td>{r.activity_id ? <span className="status-chip status-gray">산출물</span> : <span className="chip gray">—</span>}</td>
+                  <td>{r.activity_id ? <span className="status-chip status-gray">{t("artifactChip")}</span> : <span className="chip gray">—</span>}</td>
                   <td>{r.activity_status ? <span className={`status-chip ${r.activity_status === "done" ? "status-green" : r.activity_status === "failed" ? "status-red" : "status-amber"}`}>{r.activity_status}</span> : "—"}</td>
                   <td className="text-[length:var(--fs-caption)]">{r.started_by}</td>
                 </tr>
@@ -58,14 +61,14 @@ function AgentRunsView() {
           </div>
         )}
       </section>
-      <section className="market-section" aria-label="AI 신뢰도">
-        <h2 className="text-[length:var(--fs-body)] mb-2">AI 추천 신뢰도 점수 <span className="note">— 제안 후 사람의 같은 의사결정과의 일치율 (표시 전용)</span></h2>
+      <section className="market-section" aria-label={t("reliabilitySectionAria")}>
+        <h2 className="text-[length:var(--fs-body)] mb-2">{t("reliabilityHeading")} <span className="note">{t("reliabilityNote")}</span></h2>
         {data === null ? <PageState state="loading" /> : data.reliability.length === 0 ? (
-          <PageState state="empty" emptyText="아직 사람 결정과 비교할 제안이 없습니다." />
+          <PageState state="empty" emptyText={t("emptyReliability")} />
         ) : (
-          <table className="data-table" aria-label="AI 신뢰도">
-            <caption className="sr-only">AI 추천 신뢰도</caption>
-            <thead><tr><th>진행</th><th className="col-num">제안</th><th className="col-num">수용</th><th className="col-num">일치율</th></tr></thead>
+          <table className="data-table" aria-label={t("reliabilitySectionAria")}>
+            <caption className="sr-only">{t("reliabilityCaption")}</caption>
+            <thead><tr><th>{t("thGate")}</th><th className="col-num">{t("thProposals")}</th><th className="col-num">{t("thAccepted")}</th><th className="col-num">{t("thAgreement")}</th></tr></thead>
             <tbody>{data.reliability.map((r) => (
               <tr key={r.gate}>
                 <td className="font-semibold">{r.gate}</td>
@@ -76,15 +79,15 @@ function AgentRunsView() {
             ))}</tbody>
           </table>
         )}
-        <p className="note" style={{ marginBottom: 0 }}>일치율은 학습 신호일 뿐 진행 처리에 사용되지 않습니다 — 판단은 사람이 유지합니다.</p>
+        <p className="note" style={{ marginBottom: 0 }}>{t("reliabilityFootnote")}</p>
       </section>
-      <section className="market-section" aria-label="제안 기록">
-        <h2 className="text-[length:var(--fs-body)] mb-2">위원회 제안 기록</h2>
+      <section className="market-section" aria-label={t("proposalsSectionAria")}>
+        <h2 className="text-[length:var(--fs-body)] mb-2">{t("proposalsHeading")}</h2>
         {data === null ? <PageState state="loading" /> : data.proposals.length === 0 ? (
-          <PageState state="empty" emptyText="기록된 위원회 제안이 없습니다." />
+          <PageState state="empty" emptyText={t("emptyProposals")} />
         ) : (
-          <table className="data-table" aria-label="제안">
-            <thead><tr><th>시각</th><th>진행</th><th>권고 (제안)</th></tr></thead>
+          <table className="data-table" aria-label={t("proposalsTableAria")}>
+            <thead><tr><th>{t("thTime")}</th><th>{t("thGate")}</th><th>{t("thRecommendation")}</th></tr></thead>
             <tbody>{data.proposals.map((p) => (
               <tr key={p.id}>
                 <td className="text-[length:var(--fs-caption)] tabular-nums">{p.started_at.slice(0, 16).replace("T", " ")}</td>

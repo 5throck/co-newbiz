@@ -20,8 +20,9 @@ import { FactGrid } from "./FactGrid.tsx";
 import { DecisionTab } from "./DecisionTab.tsx";
 import { CompetitiveTab } from "./CompetitiveTab.tsx";
 import { EvalTab } from "./EvalTab.tsx";
+import { useTranslations } from "next-intl";
 
-export function RouteDecisionStage(props0: { opportunityId: string; rationaleParam?: string | null; tabParam?: string | null }) {
+export function RouteDecisionStage(props0: { opportunityId: string; rationaleParam?: string | null; tabParam?: string | null }) {const t = useTranslations("stages.s4.routeDecisionStage"); const tc = useTranslations("common");
   const h0 = useRouteDecision(props0);
   const ctx = { ...h0 };
   const { opportunityId, selected, advisory, tab, setTab, error, savedNotice, confirmDialog, notFound, canAct, canSubmit, saving } = ctx;
@@ -30,13 +31,13 @@ export function RouteDecisionStage(props0: { opportunityId: string; rationalePar
   if (notFound) {
     return (
       <>
-        <PrimaryAction inline label="진출방식 제안 (사람이 확정)" disabled disabledReason="선별된 기회가 없어 제안할 수 없습니다." />
+        <PrimaryAction inline label={tc("routeProposalHumanConfirm")} disabled disabledReason={t("noSelectedOpportunitySoA")} />
       <div className="card">
         <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">
-          선별(selected)된 기회를 찾을 수 없습니다 — S3 시너지·적합성 평가를 마친 기회만 여기서 진출방식을 결정할 수 있습니다.{" "}
+          {t("noSelectedOpportunityFoundOnly")}{" "}
           {/* 리뷰 2026-10-22 (저니 F5): 막다른 글이 아니라 이전 단계로 돌아가는 링크를 제공한다.
               품평회 잔여 #4 — next/link로 SPA 내비게이션 유지. */}
-          <Link className="text-[length:var(--fs-body)] underline" href={`/deals/${encodeURIComponent(opportunityId)}/s3`}>S3 시너지·적합성으로 이동</Link>
+          <Link className="text-[length:var(--fs-body)] underline" href={`/deals/${encodeURIComponent(opportunityId)}/s3`}>{t("goToS3SynergyAnd")}</Link>
         </p>
       </div>
       </>
@@ -46,23 +47,23 @@ export function RouteDecisionStage(props0: { opportunityId: string; rationalePar
   if (!selected) {
     return (
       <>
-        <PrimaryAction inline label="진출방식 제안 (사람이 확정)" disabled disabledReason="안건을 불러오면 제안할 수 있습니다." />
-        <div className="card"><p>불러오는 중...</p></div>
+        <PrimaryAction inline label={tc("routeProposalHumanConfirm")} disabled disabledReason={t("proposalsUnlockOnceTheDeal")} />
+        <div className="card"><p>{tc("loading")}</p></div>
       </>
     );
   }
   const proposeBlocked = !canAct || saving || !canSubmit;
   const proposeReason = !canAct
-    ? "진출방식 결정은 analyst 권한이 필요합니다."
+    ? t("theRouteDecisionRequiresThe")
     : saving
-      ? "확정 중입니다."
-      : "결정 탭에서 채점·근거·대안을 모두 채우면 제안할 수 있습니다.";
+      ? t("confirming")
+      : t("onceScoringEvidenceAndAlternatives");
   return (
     <>
       {tab === "decision" ? (
-        <PrimaryAction inline form="route-form" label="진출방식 제안 (사람이 확정)" disabled={proposeBlocked} disabledReason={proposeReason} />
+        <PrimaryAction inline form="route-form" label={tc("routeProposalHumanConfirm")} disabled={proposeBlocked} disabledReason={proposeReason} />
       ) : (
-        <PrimaryAction inline label="진출방식 제안 (사람이 확정)" onClick={() => setTab("decision")} disabled={proposeBlocked} disabledReason={proposeReason} />
+        <PrimaryAction inline label={tc("routeProposalHumanConfirm")} onClick={() => setTab("decision")} disabled={proposeBlocked} disabledReason={proposeReason} />
       )}
       <ReviewBuckets entityType="opportunity" entityId={opportunityId} artifacts={stageArtifactTabs("S4")} />
       {/* ── 진출방식 추천 — 탭 밖 상시 노출 (2026-09-14 재설계). 예전엔 이 카드와
@@ -72,22 +73,22 @@ export function RouteDecisionStage(props0: { opportunityId: string; rationalePar
       <FactGrid ctx={ctx} selected={selected} />
       {selected && advisory === null && (
         <div className="card" id="reco-card">
-          <h2>진출방식 추천</h2>
+          <h2>{t("routeRecommendation")}</h2>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">
-            추천을 불러오지 못했습니다 — 새로고침하거나 S1 시장분석·S3 필요 역량 수준을 먼저 완료하세요.
+            {t("failedToLoadTheRecommendation")}
           </p>
         </div>
       )}
 
       <Tabs
-        label="S4 결정 탭"
+        label={t("s4DecisionTab")}
         active={tab}
         onSelect={(k) => setTab(k as typeof tab)}
         tabs={[
-          { key: "competitive", label: "경쟁 구조" },
-          { key: "eval", label: "평가 근거" },
-          { key: "committee", label: "위원회 심의" },
-          { key: "decision", label: "결정" },
+          { key: "competitive", label: tc("competitiveStructure") },
+          { key: "eval", label: t("evaluationEvidence") },
+          { key: "committee", label: t("committeeDeliberation") },
+          { key: "decision", label: tc("decision") },
         ]}
       />
 
@@ -96,9 +97,9 @@ export function RouteDecisionStage(props0: { opportunityId: string; rationalePar
         // 리뷰 2026-10-22 (저니 F5): 결정 기록 직후의 전진 큐 — 엔진 nextStage의
         // 스킵 semantics와 동일(greenfield→S5, brownfield→S6).
         <p role="status" className="text-[length:var(--fs-body)]">
-          결정 기록됨 — 다음:{" "}
+          {t("decisionRecordedNext")}{" "}
           <Link className="underline" href={`/deals/${encodeURIComponent(opportunityId)}/s${savedNotice.track === "brownfield" ? "6" : "5"}`}>
-            {savedNotice.track === "brownfield" ? "S6 대상 후보 발굴" : "S5 자체 진출"}
+            {savedNotice.track === "brownfield" ? t("s6TargetCandidateDiscovery") : t("s5GreenfieldEntry")}
           </Link>{" "}
           →
         </p>
@@ -125,7 +126,7 @@ export function RouteDecisionStage(props0: { opportunityId: string; rationalePar
           <CommitteePanel
             opportunityId={selected.id}
             committeeKey="route-steering-committee"
-            committeeLabel="S4 진출방식 스티어링 위원회"
+            committeeLabel={t("s4RouteSteeringCommittee")}
             gates={["pre_fs"]}
           />
         </div>

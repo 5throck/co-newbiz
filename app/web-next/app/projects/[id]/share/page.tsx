@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
+import { useTranslations } from "next-intl";
 import { api } from "../../../../lib/api.ts";
 import { ColGroup, PageState, useToast } from "../../../../components/ui.tsx";
 
@@ -15,7 +16,12 @@ import { canWriteProject } from "../../../../lib/project-write-access.ts";
 // 관리. UI는 security-engineer 설계 승인 후 확정된다 (현재 계약 계층 위 UI).
 interface Link { id: string; title: string; recipient: string; expires_at: string; revoked_at: string | null; access_count: number }
 
+// 데이터 프로토콜 값(저장 payload 기본 노트) — UI 문자열이 아니므로 카탈로그로 옮기지 않는다.
+const PAYLOAD_DEFAULT_NOTE = "요약 스냅샷";
+
 function ShareView() {
+  const t = useTranslations("pages.projects.share");
+  const tc = useTranslations("common");
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const { me } = useAuth();
@@ -28,7 +34,7 @@ function ShareView() {
   const load = useCallback(() => {
     api.get<{ links: Link[] }>(`/api/projects/${encodeURIComponent(id)}/share-links`)
       .then((r) => setRows(r.data.links))
-      .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
+      .catch((e) => setError(e instanceof Error ? e.message : tc("errors.loadFailed")));
   }, [id]);
   useEffect(() => { load(); }, [load]);
 
@@ -40,46 +46,46 @@ function ShareView() {
       await api.post(`/api/projects/${encodeURIComponent(id)}/share-links`, {
         title: form.title.trim(), recipient: form.recipient.trim(),
         expires_in_days: Number(form.expires_in_days) || 7,
-        payload: { note: form.payload.trim() || "요약 스냅샷" },
+        payload: { note: form.payload.trim() || PAYLOAD_DEFAULT_NOTE },
       });
-      toast("공유 링크가 생성되었습니다 (열람 시 기록됩니다)");
+      toast(t("created"));
       setForm({ ...form, title: "", recipient: "", payload: "" });
       load();
-    } catch (err) { setError(err instanceof Error ? err.message : "생성 실패"); }
+    } catch (err) { setError(err instanceof Error ? err.message : t("createFailed")); }
     finally { setBusy(false); }
   }
 
   async function revoke(linkId: string) {
     try {
       await api.delete(`/api/projects/${encodeURIComponent(id)}/share-links?link_id=${linkId}`);
-      toast("링크가 즉시 만료되었습니다");
+      toast(t("revokedToast"));
       load();
-    } catch (err) { setError(err instanceof Error ? err.message : "철회 실패"); }
+    } catch (err) { setError(err instanceof Error ? err.message : t("revokeFailed")); }
   }
 
   return (
     <main>
       <StageTabs projectId={id} />
-      <h1>외부 안전 공유 <span className="status-chip status-amber">보안 설계 승인 후 사용</span></h1>
-      <p className="objective">외부 자문사에게 스냅샷을 만료·워터마크·열람 기록이 있는 링크로만 공유합니다 — 원본 데이터는 노출되지 않습니다.</p>
+      <h1>{t("heading")} <span className="status-chip status-amber">{t("approvalChip")}</span></h1>
+      <p className="objective">{t("objective")}</p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
-      <section className="market-section" aria-label="공유 링크">
+      <section className="market-section" aria-label={t("tableAria")}>
         {rows === null ? <PageState state="loading" /> : rows.length === 0 ? (
-          <PageState state="empty" emptyText="활성·만료된 공유 링크가 없습니다." />
+          <PageState state="empty" emptyText={t("empty")} />
         ) : (
-          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-          <table className="data-table table-fixed-pct tmin-48" aria-label="공유 링크">
-            <caption className="sr-only">공유 링크</caption>
+          <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+          <table className="data-table table-fixed-pct tmin-48" aria-label={t("tableAria")}>
+            <caption className="sr-only">{t("tableAria")}</caption>
             <ColGroup widths={SHARE_COL_PCT} />
-            <thead><tr><th>자료</th><th>수신자</th><th>만료</th><th className="col-num">열람</th><th>상태</th><th></th></tr></thead>
+            <thead><tr><th>{t("thDoc")}</th><th>{t("thRecipient")}</th><th>{t("thExpires")}</th><th className="col-num">{t("thAccess")}</th><th>{tc("status")}</th><th></th></tr></thead>
             <tbody>{rows.map((r) => (
               <tr key={r.id}>
                 <td className="font-semibold cell-truncate">{r.title}</td>
                 <td>{r.recipient}</td>
                 <td className="tabular-nums text-[length:var(--fs-caption)]">{r.expires_at.slice(0, 10)}</td>
-                <td className="col-num tabular-nums">{r.access_count}회</td>
-                <td>{r.revoked_at ? <span className="status-chip status-gray">만료(철회)</span> : new Date(r.expires_at) > new Date() ? <span className="status-chip status-green">활성</span> : <span className="status-chip status-gray">만료</span>}</td>
-                <td>{canAct && !r.revoked_at && <button type="button" className="btn-danger btn-sm" onClick={() => revoke(r.id)}>즉시 만료</button>}</td>
+                <td className="col-num tabular-nums">{t("accessCell", { count: r.access_count })}</td>
+                <td>{r.revoked_at ? <span className="status-chip status-gray">{t("chipRevoked")}</span> : new Date(r.expires_at) > new Date() ? <span className="status-chip status-green">{t("chipActive")}</span> : <span className="status-chip status-gray">{t("chipExpired")}</span>}</td>
+                <td>{canAct && !r.revoked_at && <button type="button" className="btn-danger btn-sm" onClick={() => revoke(r.id)}>{t("revokeBtn")}</button>}</td>
               </tr>
             ))}</tbody>
           </table>
@@ -87,19 +93,19 @@ function ShareView() {
         )}
       </section>
       {canAct && (
-        <section className="market-section" aria-label="공유 링크 생성">
-          <h2 className="text-[length:var(--fs-body)] mb-2">공유 링크 생성</h2>
+        <section className="market-section" aria-label={t("createHeading")}>
+          <h2 className="text-[length:var(--fs-body)] mb-2">{t("createHeading")}</h2>
           <form className="sizing-new-form" onSubmit={create}>
             <div className="flex flex-wrap items-end gap-2">
-              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]"><span className="block mb-1">자료 제목 *</span>
+              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]"><span className="block mb-1">{t("lblTitle")}</span>
                 <input className="sizing-new-input w-full" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></label>
-              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[10rem]"><span className="block mb-1">수신자 *</span>
+              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[10rem]"><span className="block mb-1">{t("lblRecipient")}</span>
                 <input className="sizing-new-input w-full" value={form.recipient} onChange={(e) => setForm({ ...form, recipient: e.target.value })} required /></label>
-              <label className="text-[length:var(--fs-caption)] w-[7rem]"><span className="block mb-1">만료 (일, ≤30)</span>
+              <label className="text-[length:var(--fs-caption)] w-[7rem]"><span className="block mb-1">{t("lblExpires")}</span>
                 <input type="number" min={1} max={30} className="sizing-new-input sizing-new-input-sm" value={form.expires_in_days} onChange={(e) => setForm({ ...form, expires_in_days: e.target.value })} /></label>
-              <button type="submit" className="btn-primary" disabled={busy}>{busy ? "생성 중..." : "링크 생성"}</button>
+              <button type="submit" className="btn-primary" disabled={busy}>{busy ? t("creating") : t("createBtn")}</button>
             </div>
-            <label className="text-[length:var(--fs-caption)] block mt-2"><span className="block mb-1">스냅샷 요약 (원본 대신 전달됩니다)</span>
+            <label className="text-[length:var(--fs-caption)] block mt-2"><span className="block mb-1">{t("lblPayload")}</span>
               <input className="sizing-new-input w-full" value={form.payload} onChange={(e) => setForm({ ...form, payload: e.target.value })} /></label>
           </form>
         </section>

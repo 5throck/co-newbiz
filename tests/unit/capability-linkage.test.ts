@@ -333,13 +333,17 @@ describe("보유 근거 cell: button only", () => {
     const dialogPath = "../../app/web-next/components/stages/CapabilityHeldDialog.tsx";
     const { evidencePreview, legacyHoldersCaption } = (await import(dialogPath)) as {
       evidencePreview: (s: string, cap?: number) => string;
-      legacyHoldersCaption: (holders?: string[] | null) => string;
+      legacyHoldersCaption: (holders: string[] | null | undefined, tr: (key: string, values?: Record<string, string | number | Date>) => string) => string;
     };
+    // i18n: legacyHoldersCaption resolves the catalog key through a translator — stub one that renders the ko wording.
+    const tr = (key: string, values?: Record<string, string | number | Date>) => key === "components.capabilityJudgement.heldDialog.existingHoldingEntitiesP1"
+      ? `기존 보유 주체: ${values?.p1}`
+      : key;
     expect(evidencePreview("")).toBe("");
     expect(evidencePreview("x".repeat(70), 60)).toBe(`${"x".repeat(60)}…`);
-    expect(legacyHoldersCaption([])).toBe("");
-    expect(legacyHoldersCaption(undefined)).toBe("");
-    expect(legacyHoldersCaption(["A사", " B사 "])).toBe("기존 보유 주체: A사, B사");
+    expect(legacyHoldersCaption([], tr)).toBe("");
+    expect(legacyHoldersCaption(undefined, tr)).toBe("");
+    expect(legacyHoldersCaption(["A사", " B사 "], tr)).toBe("기존 보유 주체: A사, B사");
   });
   test("S3 cells use HeldEvidenceButton; S5/S8 have none, with no preview text or 미입력 marker", () => {
     const root = join(PROJECT_ROOT, "app/web-next/components/stages");
@@ -358,12 +362,13 @@ describe("보유 근거 cell: button only", () => {
     const btn = dlg.slice(dlg.indexOf("export function HeldEvidenceButton"), dlg.indexOf("export function CapabilityHeldDialog"));
     expect(btn).not.toContain("미입력");
     // state-aware label, check icon with text, tooltip, aria state, legacy caption
-    for (const k of ['readOnly ? "보기" : filled ? "수정" : "입력"', "✓", "title={filled ? evidencePreview(evidence, 60) : undefined}", '(입력됨)', "보유 근거 ${readOnly", "legacy-holders-caption"]) expect(btn).toContain(k);
+    // i18n: state-aware labels resolve through the common catalog — pin the key call sites.
+    for (const k of ['readOnly ? tc("view") : filled ? tc("edit") : tc("input")', "✓", "title={filled ? evidencePreview(evidence, 60) : undefined}", 't("entered")', 't("p1HeldEvidenceP2P3"', "legacy-holders-caption"]) expect(btn).toContain(k);
   });
   test("dialog: single evidence textarea, no holders editor", () => {
     const dlg = readFileSync(join(PROJECT_ROOT, "app/web-next/components/stages/CapabilityHeldDialog.tsx"), "utf8");
     expect(dlg.match(/<textarea/g)?.length).toBe(1);
-    for (const k of ["EVIDENCE_MAX = 400", "rows={8}", "${capability} 보유 근거", "readOnly ?"]) expect(dlg).toContain(k);
+    for (const k of ["EVIDENCE_MAX = 400", "rows={8}", 't("p1HeldEvidence", { p1: capability })', "readOnly ?"]) expect(dlg).toContain(k);
     expect(dlg).not.toContain("HOLDERS_MAX");
     expect(dlg).not.toContain("holderText");
   });
@@ -375,14 +380,15 @@ describe("UI source checks", () => {
     const src = read("components/stages/synergy/SynergyCapabilityTab.tsx") + read("components/stages/synergy/SynergyLinkageTab.tsx");
     // ADR-0172: the narrative 필요 수준 / 보유 수준 columns are back (modal-based, no 5-step select).
     expect(src).not.toContain("LevelSelect");
-    expect(src).toContain('<th scope="col">필요 역량</th><th scope="col">필요도</th><th scope="col">필요 수준</th><th scope="col">보유 판정</th>');
-    expect(src).toContain('<th scope="col">보유 수준</th><th scope="col">보유 근거</th>');
+    // i18n: headers resolve through the common catalog — pin the key calls (order kept).
+    expect(src).toContain('<th scope="col">{tc("requiredCapability")}</th><th scope="col">{tc("necessity")}</th><th scope="col">{tc("requiredLevel")}</th><th scope="col">{tc("heldJudgement")}</th>');
+    expect(src).toContain('<th scope="col">{tc("heldLevel")}</th><th scope="col">{tc("heldEvidence")}</th>');
     expect(src).not.toContain("해소 힌트");
     expect(src).not.toContain("GapResolution");
-    expect(src).toContain("${r.capability} 보유 판정");
+    expect(src).toContain('t("p1HeldJudgement", { p1: r.capability })');
     expect(src).not.toContain("보유 주체");
     expect(src).not.toContain('placeholder="근거(프로필 인용)"');
-    expect(src).toContain("읽기 전용으로 표시됩니다");
+    expect(src).toContain('t("requiredCapabilityProposalAiDrafts")'); // the AI-draft note explains the read-only columns
     expect(src).not.toContain("<fieldset");
   });
   test("held dialog: portal, dialog role, focus trap, caps, counter, read-only mode", () => {
@@ -399,14 +405,14 @@ describe("UI source checks", () => {
     expect(src).not.toContain("api.put");
     expect(src).not.toContain("api.post");
     expect(src).toContain("editable={false}");
-    expect(src).toContain("S5에서 판정");
+    expect(src).toContain('tc("judgedInS5")');
     expect(src).toContain("/s5`");
     expect(src).toContain("/s3`");
     const tbl = read("components/stages/CapabilityJudgementTable.tsx");
-    expect(tbl).toContain("S3 변경 — 재판정 필요");
-    expect(tbl).toContain("삭제된 역량 (판정 이력)");
+    expect(tbl).toContain('t("s3ChangeNeeded")');
+    expect(tbl).toContain('t("deletedCapabilitiesJudgementHistory")');
     expect(tbl).not.toContain("보유 주체");
-    expect(tbl).toContain("재판정 필요 {s.stale}");
+    expect(tbl).toContain('{tc("rejudgeNeeded")} {s.stale}');
     expect(tbl).not.toContain("LevelSelect");
   });
 });

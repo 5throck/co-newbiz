@@ -20,7 +20,7 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "요인 자동 도출은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Factor auto-derivation requires the analyst role or higher." }); if (denied) return denied; }
   const { id } = await params;
   const db = getDb();
   const row = db.query("SELECT id, name, market_scope, value_chain_node, rationale FROM opportunity WHERE id = ?").get(id) as
@@ -35,12 +35,12 @@ export const POST = route(async (request: Request, { params }: { params: Promise
 export const PUT = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "요인 등록은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Factor registration requires the analyst role or higher." }); if (denied) return denied; }
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { type?: string; text?: string } | null;
   const type = body?.type === "risk" ? "risk" : body?.type === "opportunity" ? "opportunity" : null;
   const text = body?.text?.trim();
-  if (!type || !text) return badRequest("invalid_request", "type (opportunity|risk)와 text는 필수입니다.");
+  if (!type || !text) return badRequest("invalid_request", "type (opportunity|risk) and text are required.");
   const db = getDb();
   const row = db.query("SELECT factors_json, factors_source FROM opportunity WHERE id = ?").get(id) as
     | { factors_json: string | null; factors_source: string | null }
@@ -57,12 +57,12 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
 export const DELETE = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "요인 삭제는 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Factor deletion requires the analyst role or higher." }); if (denied) return denied; }
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { type?: string; index?: number } | null;
   const type = body?.type === "risk" ? "risk" : body?.type === "opportunity" ? "opportunity" : null;
   const index = body?.index;
-  if (!type || typeof index !== "number") return badRequest("invalid_request", "type과 index는 필수입니다.");
+  if (!type || typeof index !== "number") return badRequest("invalid_request", "type and index are required.");
   const db = getDb();
   const row = db.query("SELECT factors_json, factors_source FROM opportunity WHERE id = ?").get(id) as
     | { factors_json: string | null; factors_source: string | null }

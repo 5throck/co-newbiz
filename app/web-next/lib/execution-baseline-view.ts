@@ -2,7 +2,20 @@
 // panel (ADR-0161 Row 3). Client-safe: no server or db imports. Mirrors the checkable
 // shapes and limits of lib/greenfield-execution.ts so a form can refuse early; the
 // server stays the authority and its messages are shown as returned.
-import { ADR0161_ERROR_LABEL } from "./labels.ts";
+// i18n (design 2026-10-23-i18n-ui-adoption): every render string is emitted as a catalog
+// key + params (I18nText); consumers resolve with the ROOT translator, `m.key ? tr(m.key, m.params) : m.text`.
+// Raw `text` is reserved for server-message passthrough (data, design §4) — the lib itself carries no Korean.
+import { formatNumber, type Locale } from "./format.ts";
+
+/** A render string reference: catalog `key` + `params`, or raw server `text` passthrough. */
+export interface I18nText { key: string | null; params: Record<string, string>; text: string | null }
+/** Catalog-key message (resolved through `tr(key, params)` at render). */
+export const kt = (key: string, params: Record<string, string> = {}): I18nText => ({ key, params, text: null });
+/** Raw passthrough text (server message / unknown data key) — rendered verbatim. */
+export const rt = (text: string): I18nText => ({ key: null, params: {}, text });
+/** Resolve an I18nText with the ROOT translator (key+params) or pass raw text through. */
+export const resolveI18n = (m: I18nText, tr: (key: string, params?: Record<string, string>) => string): string =>
+  m.key ? tr(m.key, m.params) : m.text ?? "";
 
 // ── Types of GET /api/projects/:id/execution-baseline ────────────────────
 
@@ -81,8 +94,8 @@ export const TRANCHES_CHANGED_CODE = "tranches_changed_since_confirmation";
 export interface RequirementView {
   /** Chip class; the text always carries the meaning (never colour only). */
   cls: "status-green" | "status-amber" | "status-not-started";
-  chip: string;
-  text: string;
+  chip: I18nText;
+  text: I18nText;
 }
 
 /**
@@ -93,48 +106,44 @@ export interface RequirementView {
 export function requirementView(requirement: BaselineRequirement, blocks = true): RequirementView {
   switch (requirement) {
     case "satisfied":
-      return { cls: "status-green", chip: "● 기준선 확인됨", text: "프로젝트 리드가 실행 기준선을 확인했습니다." }; // INTERIM-WORDING
+      return { cls: "status-green", chip: kt("stages.s11.executionBaseline.reqSatisfiedChip"), text: kt("stages.s11.executionBaseline.reqSatisfiedText") };
     case "recommended":
       return {
         cls: "status-amber",
-        chip: "○ 권장 — 차단하지 않음",
-        text: "이 프로젝트는 ADR-0161 적용 이전에 S11을 마쳤으므로, 실행 기준선 확인은 권장 사항이며 S11을 다시 열거나 차단하지 않습니다.", // INTERIM-WORDING
+        chip: kt("stages.s11.executionBaseline.reqRecommendedChip"),
+        text: kt("stages.s11.executionBaseline.reqRecommendedText"),
       };
     case "blocking":
       return {
         cls: "status-amber",
-        chip: "▲ 확인 전까지 S11 차단",
-        text: "프로젝트 리드가 실행 기준선을 확인할 때까지 S11을 완료할 수 없습니다.", // INTERIM-WORDING
+        chip: kt("stages.s11.executionBaseline.reqBlockingChip"),
+        text: kt("stages.s11.executionBaseline.reqBlockingText"),
       };
     case "reconfirm_required":
       return blocks
         ? {
             cls: "status-amber",
-            chip: "▲ 재확정 필요 — S11 차단",
-            text: "확정 이후 기준선 항목 또는 capex 트랜치가 바뀌었습니다. 재확정할 때까지 S11을 완료할 수 없습니다.", // INTERIM-WORDING
+            chip: kt("stages.s11.executionBaseline.reqReconfirmChip"),
+            text: kt("stages.s11.executionBaseline.reqReconfirmText"),
           }
         : {
             cls: "status-amber",
-            chip: "▲ 재확정 필요 — 차단하지 않는 경고",
-            text: "확정 이후 기준선 항목 또는 capex 트랜치가 바뀌었습니다. S11이 이미 완료되어 차단하지는 않지만 재확정하는 것이 좋습니다.", // INTERIM-WORDING
+            chip: kt("stages.s11.executionBaseline.reqReconfirmSoftChip"),
+            text: kt("stages.s11.executionBaseline.reqReconfirmSoftText"),
           };
     case "classification_conflict":
-      return { cls: "status-amber", chip: "▲ 트랙 분류 충돌", text: CLASSIFICATION_CONFLICT_TEXT };
+      return { cls: "status-amber", chip: kt("stages.s11.executionBaseline.reqConflictChip"), text: kt("stages.s11.executionBaseline.reqConflictText") };
     case "needs_classification":
-      return { cls: "status-not-started", chip: "○ 트랙 분류 필요", text: "트랙 신호가 없어 적용 여부를 판단할 수 없습니다. 차단하지 않으며 참고 안내입니다." }; // INTERIM-WORDING
+      return { cls: "status-not-started", chip: kt("stages.s11.executionBaseline.reqNeedsClassChip"), text: kt("stages.s11.executionBaseline.reqNeedsClassText") };
     default:
-      return { cls: "status-not-started", chip: "○ 적용 대상 아님", text: "신규 사업(greenfield) 프로젝트에만 적용됩니다." }; // INTERIM-WORDING
+      return { cls: "status-not-started", chip: kt("stages.s11.executionBaseline.reqNotApplicableChip"), text: kt("stages.s11.executionBaseline.reqNotApplicableText") };
   }
 }
 
-/** classification_conflict blocker wording (mirrors the server blocker prefix; case_type vs route track). */
-export const CLASSIFICATION_CONFLICT_TEXT =
-  "트랙 분류 충돌을 사람이 정리해야 합니다 — 프로젝트의 case_type과 경로(route) 트랙이 서로 달라 실행 기준선 적용 여부를 정할 수 없습니다. case_type과 route 트랙을 일치시킨 뒤 다시 확인하세요. 이 화면에서는 입력할 수 없습니다."; // INTERIM-WORDING
-
 export interface ConfirmationView {
   cls: "status-green" | "status-amber";
-  chip: string;
-  /** Extra line shown below the chip (who / when / rationale). */
+  chip: I18nText;
+  /** Extra line shown below the chip (who / when / rationale) — data, not a catalog string. */
   detail: string | null;
   /** Who recorded the confirmed entries (differs from the confirmer when another person recorded them). */
   recordedBy: string | null;
@@ -151,12 +160,12 @@ export function confirmationView(record: BaselineRecord | null, findings: Findin
   const source = confirmed?.confirmation ? confirmed : record;
   const c = source?.confirmation ?? null;
   const tranchesChanged = findings.some((f) => f.code === TRANCHES_CHANGED_CODE);
-  if (!c) return { cls: "status-amber", chip: "○ 미확정", detail: null, recordedBy: null, tranchesChanged: false, entriesNewer: false };
+  if (!c) return { cls: "status-amber", chip: kt("stages.s11.executionBaseline.confUnconfirmed"), detail: null, recordedBy: null, tranchesChanged: false, entriesNewer: false };
   const entriesNewer = !!record && !!source && record.id !== source.id;
   const stale = tranchesChanged || entriesNewer;
   return {
     cls: stale ? "status-amber" : "status-green",
-    chip: tranchesChanged ? "▲ 확정됨 — 이후 트랜치 변경" : entriesNewer ? "▲ 확정됨 — 이후 항목 변경" : "● 확정됨",
+    chip: tranchesChanged ? kt("stages.s11.executionBaseline.confTranchesChanged") : entriesNewer ? kt("stages.s11.executionBaseline.confEntriesChanged") : kt("stages.s11.executionBaseline.confConfirmed"),
     detail: `${c.confirmed_by} · ${c.confirmed_at.slice(0, 10)}`,
     recordedBy: c.entries_recorded_by ?? null,
     tranchesChanged,
@@ -171,62 +180,63 @@ export function entriesClearConfirmation(record: BaselineRecord | null): boolean
 
 export interface ReconciliationVerdict {
   cls: "status-green" | "status-amber" | "status-not-started";
-  chip: string;
-  text: string;
+  chip: I18nText;
+  text: I18nText;
 }
 
 /** Exact match only: a difference is a finding for a human, never a pass. */
 export function reconciliationVerdict(rec: TrancheReconciliationView): ReconciliationVerdict {
   if (rec.difference === null) {
-    return { cls: "status-not-started", chip: "○ 대조 불가", text: "트랜치 합계와 S8 채택 케이스 capex를 대조할 수 없습니다 — 아래 확인 필요 항목을 보세요." }; // INTERIM-WORDING
+    return { cls: "status-not-started", chip: kt("stages.s11.executionBaseline.verdictIncomparableChip"), text: kt("stages.s11.executionBaseline.verdictIncomparableText") };
   }
   if (rec.matches) {
-    return { cls: "status-green", chip: "● 정확히 일치", text: "트랜치 합계가 S8 채택 케이스 capex와 정확히 일치합니다 (허용 오차 없음)." }; // INTERIM-WORDING
+    return { cls: "status-green", chip: kt("stages.s11.executionBaseline.verdictMatchChip"), text: kt("stages.s11.executionBaseline.verdictMatchText") };
   }
   return {
     cls: "status-amber",
-    chip: `▲ 불일치 — 차이 ${fmtMoney(rec.difference)} 백만 KRW`,
-    text: "차이는 확인 필요 항목이며 자동으로 통과되지 않습니다 — 사람이 판단합니다.", // INTERIM-WORDING
+    chip: kt("stages.s11.executionBaseline.verdictDiffChip", { p1: fmtMoney(rec.difference) }),
+    text: kt("stages.s11.executionBaseline.verdictDiffText"),
   };
 }
 
-export const fmtNumber = (n: number) => n.toLocaleString("ko-KR", { maximumFractionDigits: 6 });
+export const fmtNumber = (n: number, locale: Locale | string = "ko") => formatNumber(n, locale, { maximumFractionDigits: 6 });
 
 /**
  * Display-only money format: thousand separators, at most 1 decimal for KRW (백만 KRW) and at
  * most 2 for other currencies. A nonzero value that would round to 0 keeps full precision so a
  * real difference is never shown as "0". Never used for exact-match comparison.
  */
-export function fmtMoney(n: number, currency: string | null = "KRW"): string {
+export function fmtMoney(n: number, currency: string | null = "KRW", locale: Locale | string = "ko"): string {
   const max = !currency || currency === "KRW" ? 1 : 2;
-  const out = n.toLocaleString("ko-KR", { maximumFractionDigits: max });
-  return n !== 0 && Number(out.replace(/,/g, "")) === 0 ? fmtNumber(n) : out;
+  const out = formatNumber(n, locale, { maximumFractionDigits: max });
+  return n !== 0 && Number(out.replace(/,/g, "")) === 0 ? fmtNumber(n, locale) : out;
 }
 
 /** Withheld tranches are listed but excluded from the total (server rule R5). */
 export const isExcludedTranche = (t: { status: string }) => t.status === "withheld";
-export const EXCLUDED_TRANCHE_TEXT = "합계 제외 (excluded)"; // INTERIM-WORDING
+export const EXCLUDED_TRANCHE_KEY = "stages.s11.executionBaseline.excludedTranche";
 
-// ── Findings (Korean text per code) ──────────────────────────────────────
+// ── Findings (catalog keys per code) ─────────────────────────────────────
 
-/** Korean wording for every reconciliation finding code; the server message is the fallback for unknown codes. */
-export const FINDING_LABEL: Record<string, string> = {
-  s10_structure_missing: "S10 투자구조 기록이 없어 트랜치 집행 조건의 근거를 확인할 수 없습니다.",
-  no_tranches: "합계에 들어가는 capex 트랜치(집행 예정·집행 완료)가 없습니다.",
-  tranche_condition_missing: "집행 조건이 비어 있는 트랜치가 있습니다.",
-  tranche_not_from_s10: "S10이 아닌 다른 단계에서 기록된 트랜치가 있습니다.",
-  no_adopted_case: "S8 채택 Business Case가 없어 capex를 대조할 수 없습니다.",
-  case_capex_missing: "S8 채택 케이스에 capex 행이 없어 트랜치 합계와 대조할 수 없습니다.",
-  case_unit_not_comparable: "S8 채택 케이스 capex 행의 단위가 KRW_M(백만 원)으로 명시되지 않아(미기재 포함) 단위를 추정하지 않고 대조하지 않았습니다.",
-  tranche_currency_not_comparable: "트랜치 통화가 S8 케이스 통화(KRW)와 달라 환산하지 않고 대조하지 않았습니다.",
-  tranche_total_differs: "트랜치 합계가 S8 채택 케이스 capex와 일치하지 않습니다 (허용 오차 없음, 사람이 판단).",
-  tranches_changed_since_confirmation: "확정 이후 capex 트랜치가 바뀌었습니다 — 기준선 재확정이 필요합니다.",
-  permit_step_not_applicable: "사내벤처에는 인허가·인증 단계가 기본 적용되지 않아 기록된 항목은 참고로만 표시합니다.",
-}; // INTERIM-WORDING
+/** Catalog key for every reconciliation finding code; the server message is the fallback for unknown codes. */
+export const FINDING_LABEL_KEY: Record<string, string> = {
+  s10_structure_missing: "stages.s11.executionBaseline.findingS10StructureMissing",
+  no_tranches: "stages.s11.executionBaseline.findingNoTranches",
+  tranche_condition_missing: "stages.s11.executionBaseline.findingTrancheConditionMissing",
+  tranche_not_from_s10: "stages.s11.executionBaseline.findingTrancheNotFromS10",
+  no_adopted_case: "stages.s11.executionBaseline.findingNoAdoptedCase",
+  case_capex_missing: "stages.s11.executionBaseline.findingCaseCapexMissing",
+  case_unit_not_comparable: "stages.s11.executionBaseline.findingCaseUnitNotComparable",
+  tranche_currency_not_comparable: "stages.s11.executionBaseline.findingTrancheCurrencyNotComparable",
+  tranche_total_differs: "stages.s11.executionBaseline.findingTrancheTotalDiffers",
+  tranches_changed_since_confirmation: "stages.s11.executionBaseline.findingTranchesChanged",
+  permit_step_not_applicable: "stages.s11.executionBaseline.findingPermitStepNotApplicable",
+};
 
-/** Korean finding text per code; the raw server message is shown ONLY for unknown codes. */
-export function findingText(f: Finding): string {
-  return FINDING_LABEL[f.code] ?? f.message;
+/** Finding text as a render reference; the raw server message is shown ONLY for unknown codes (data passthrough). */
+export function findingText(f: Finding): I18nText {
+  const key = FINDING_LABEL_KEY[f.code];
+  return key ? kt(key) : rt(f.message);
 }
 
 /** Finding codes the confirmer must acknowledge: the reconciliation findings (not the informational notes). */
@@ -259,15 +269,15 @@ export function buildAcknowledgements(openCodes: string[], texts: Record<string,
 
 // ── Missing required sections (409 baseline_empty / GET missing_sections) ──
 
-export interface MissingSectionView { key: string; label: string; anchor: string }
+export interface MissingSectionView { key: string; label: I18nText; anchor: string }
 const MISSING_SECTION: Record<string, MissingSectionView> = {
-  kpi_targets: { key: "kpi_targets", label: "가동(ramp-up) KPI 목표", anchor: "gx-kpi_targets" },
-  hiring_plan: { key: "hiring_plan", label: "채용 계획", anchor: "gx-hiring_plan" },
-  permit_or_certification_milestones: { key: "permit_or_certification_milestones", label: "인허가 또는 인증 마일스톤 (둘 중 하나 이상)", anchor: "gx-permit_milestones" },
-}; // INTERIM-WORDING
+  kpi_targets: { key: "kpi_targets", label: kt("stages.s11.executionBaseline.sectionKpiTargets"), anchor: "gx-kpi_targets" },
+  hiring_plan: { key: "hiring_plan", label: kt("stages.s11.executionBaseline.sectionHiringPlan"), anchor: "gx-hiring_plan" },
+  permit_or_certification_milestones: { key: "permit_or_certification_milestones", label: kt("stages.s11.executionBaseline.sectionPermitOrCert"), anchor: "gx-permit_milestones" },
+};
 
 export function missingSectionViews(keys: string[] | undefined): MissingSectionView[] {
-  return (keys ?? []).map((k) => MISSING_SECTION[k] ?? { key: k, label: k, anchor: "gx-baseline" });
+  return (keys ?? []).map((k) => MISSING_SECTION[k] ?? { key: k, label: rt(k), anchor: "gx-baseline" });
 }
 
 // ── Entry forms ──────────────────────────────────────────────────────────
@@ -276,85 +286,87 @@ export type EntryKind = keyof BaselineEntries;
 
 export interface EntryField {
   key: string;
-  label: string;
+  label: I18nText;
   kind: "text" | "date" | "number" | "select";
   required: boolean;
   max?: number;
-  placeholder?: string;
+  placeholder?: I18nText;
 }
 
 export interface EntryKindSpec {
   kind: EntryKind;
-  title: string;
-  description: string;
+  title: I18nText;
+  description: I18nText;
   fields: EntryField[];
   /** Four display column headers (the fifth, 관리, is added by the table). */
-  headers: [string, string, string, string];
-  addLabel: string;
+  headers: [I18nText, I18nText, I18nText, I18nText];
+  addLabel: I18nText;
 }
 
-const MILESTONE_FIELDS = (nameLabel: string): EntryField[] => [
-  { key: "name", label: `${nameLabel} 이름`, kind: "text", required: true, max: ENTRY_LIMITS.short },
-  { key: "issuer", label: "발급 기관", kind: "text", required: true, max: ENTRY_LIMITS.short },
-  { key: "target_date", label: "목표일", kind: "date", required: true },
-  { key: "gates_ref", label: "연결 단계 (선택)", kind: "text", required: false, max: ENTRY_LIMITS.short, placeholder: "예: S11 집행 조건" },
-  { key: "source_id", label: "출처 기록 (선택)", kind: "select", required: false },
+const EK = "stages.s11.executionBaseline";
+
+const MILESTONE_FIELDS = (kind: "permit" | "certification"): EntryField[] => [
+  { key: "name", label: kt(`${EK}.fld${kind === "permit" ? "Permit" : "Cert"}Name`), kind: "text", required: true, max: ENTRY_LIMITS.short },
+  { key: "issuer", label: kt(`${EK}.fldIssuer`), kind: "text", required: true, max: ENTRY_LIMITS.short },
+  { key: "target_date", label: kt(`${EK}.fldTargetDate`), kind: "date", required: true },
+  { key: "gates_ref", label: kt(`${EK}.fldGatesRef`), kind: "text", required: false, max: ENTRY_LIMITS.short, placeholder: kt(`${EK}.fldGatesRefPlaceholder`) },
+  { key: "source_id", label: kt(`${EK}.fldSourceId`), kind: "select", required: false },
 ];
 
 export const ENTRY_SPECS: Record<EntryKind, EntryKindSpec> = {
   permit_milestones: {
     kind: "permit_milestones",
-    title: "인허가 마일스톤",
-    description: "인허가는 운영할 수 있게 해 주는 것입니다. 인증과는 발급 기관·절차·일정이 달라 별도 목록으로 기록합니다.", // INTERIM-WORDING
-    fields: MILESTONE_FIELDS("인허가"),
-    headers: ["인허가 이름", "발급 기관", "목표일", "연결 단계 · 출처"],
-    addLabel: "인허가 마일스톤 추가",
+    title: kt(`${EK}.specPermitTitle`),
+    description: kt(`${EK}.specPermitDesc`),
+    fields: MILESTONE_FIELDS("permit"),
+    headers: [kt(`${EK}.hdrPermit1`), kt(`${EK}.hdrPermit2`), kt(`${EK}.hdrPermit3`), kt(`${EK}.hdrPermit4`)],
+    addLabel: kt(`${EK}.specPermitAdd`),
   },
   certification_milestones: {
     kind: "certification_milestones",
-    title: "인증 마일스톤",
-    description: "인증은 판매할 수 있게 해 주는 것입니다. 인허가와 분리해 기록합니다.", // INTERIM-WORDING
-    fields: MILESTONE_FIELDS("인증"),
-    headers: ["인증 이름", "발급 기관", "목표일", "연결 단계 · 출처"],
-    addLabel: "인증 마일스톤 추가",
+    title: kt(`${EK}.specCertTitle`),
+    description: kt(`${EK}.specCertDesc`),
+    fields: MILESTONE_FIELDS("certification"),
+    headers: [kt(`${EK}.hdrCert1`), kt(`${EK}.hdrCert2`), kt(`${EK}.hdrCert3`), kt(`${EK}.hdrCert4`)],
+    addLabel: kt(`${EK}.specCertAdd`),
   },
   hiring_plan: {
     kind: "hiring_plan",
-    title: "인력/조직 계획 — 채용 계획",
-    description: "직군별·분기별 인원 합계만 기록합니다. 개인 단위 정보는 입력하지 않습니다.", // INTERIM-WORDING
+    title: kt(`${EK}.specHiringTitle`),
+    description: kt(`${EK}.specHiringDesc`),
     fields: [
-      { key: "role_family", label: "직군", kind: "text", required: true, max: 100 },
-      { key: "quarter", label: "분기 (YYYY-Qn)", kind: "text", required: true, placeholder: "2027-Q1" },
-      { key: "headcount", label: "인원 (명)", kind: "number", required: true },
+      { key: "role_family", label: kt(`${EK}.fldRoleFamily`), kind: "text", required: true, max: 100 },
+      { key: "quarter", label: kt(`${EK}.fldQuarter`), kind: "text", required: true, placeholder: kt(`${EK}.fldQuarterPlaceholder`) },
+      { key: "headcount", label: kt(`${EK}.fldHeadcount`), kind: "number", required: true },
     ],
-    headers: ["직군", "분기", "인원", "누적 인원 (표시 순서 기준)"],
-    addLabel: "채용 계획 추가",
+    headers: [kt(`${EK}.hdrHiring1`), kt(`${EK}.hdrHiring2`), kt(`${EK}.hdrHiring3`), kt(`${EK}.hdrHiring4`)],
+    addLabel: kt(`${EK}.specHiringAdd`),
   },
   kpi_targets: {
     kind: "kpi_targets",
-    title: "가동(ramp-up) KPI 목표",
-    description: "S12 스코어카드가 대조할 목표값입니다. 'goal:' 접두 지표는 S8 사업 목표를 참고 증적으로만 가리키며 합격·불합격 판정이 아닙니다.", // INTERIM-WORDING
+    title: kt(`${EK}.specKpiTitle`),
+    description: kt(`${EK}.specKpiDesc`),
     fields: [
-      { key: "metric_key", label: "지표 키", kind: "text", required: true, max: 80, placeholder: "예: utilisation_pct 또는 goal:revenue" },
-      { key: "target_value", label: "목표값", kind: "number", required: true },
-      { key: "unit", label: "단위 (선택)", kind: "text", required: false, max: 20 },
-      { key: "due", label: "기한 (YYYY-Qn 또는 YYYY-MM-DD)", kind: "text", required: true },
+      { key: "metric_key", label: kt(`${EK}.fldMetricKey`), kind: "text", required: true, max: 80, placeholder: kt(`${EK}.fldMetricKeyPlaceholder`) },
+      { key: "target_value", label: kt(`${EK}.fldTargetValue`), kind: "number", required: true },
+      { key: "unit", label: kt(`${EK}.fldUnit`), kind: "text", required: false, max: 20 },
+      { key: "due", label: kt(`${EK}.fldDue`), kind: "text", required: true },
     ],
-    headers: ["지표 키", "목표값", "단위", "기한"],
-    addLabel: "KPI 목표 추가",
+    headers: [kt(`${EK}.hdrKpi1`), kt(`${EK}.hdrKpi2`), kt(`${EK}.hdrKpi3`), kt(`${EK}.hdrKpi4`)],
+    addLabel: kt(`${EK}.specKpiAdd`),
   },
   incentive_obligations: {
     kind: "incentive_obligations",
-    title: "인센티브 의무 등록부",
-    description: "보조금·세제 혜택에 딸린 의무(고용 유지, 투자 이행 등)와 기한입니다. 이행하지 못하면 환수될 수 있습니다.", // INTERIM-WORDING
+    title: kt(`${EK}.specIncentiveTitle`),
+    description: kt(`${EK}.specIncentiveDesc`),
     fields: [
-      { key: "obligation", label: "의무 내용", kind: "text", required: true, max: ENTRY_LIMITS.text },
-      { key: "deadline", label: "기한 (선택)", kind: "date", required: false },
-      { key: "depends_on", label: "선행 조건 (선택)", kind: "text", required: false, max: ENTRY_LIMITS.short },
-      { key: "incentive_id", label: "출처 인센티브 (선택)", kind: "select", required: false },
+      { key: "obligation", label: kt(`${EK}.fldObligation`), kind: "text", required: true, max: ENTRY_LIMITS.text },
+      { key: "deadline", label: kt(`${EK}.fldDeadline`), kind: "date", required: false },
+      { key: "depends_on", label: kt(`${EK}.fldDependsOn`), kind: "text", required: false, max: ENTRY_LIMITS.short },
+      { key: "incentive_id", label: kt(`${EK}.fldIncentiveId`), kind: "select", required: false },
     ],
-    headers: ["의무", "기한", "선행 조건", "출처 인센티브"],
-    addLabel: "인센티브 의무 추가",
+    headers: [kt(`${EK}.hdrIncentive1`), kt(`${EK}.hdrIncentive2`), kt(`${EK}.hdrIncentive3`), kt(`${EK}.hdrIncentive4`)],
+    addLabel: kt(`${EK}.specIncentiveAdd`),
   },
 };
 
@@ -365,18 +377,25 @@ const QUARTER_RE = /^\d{4}-Q[1-4]$/;
 const METRIC_RE = /^(goal:)?[a-z0-9_.-]{1,80}$/;
 const isDate = (v: string) => DATE_RE.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`));
 
-export type EntryBuild<T> = { ok: true; value: T } | { ok: false; message: string };
+export type EntryBuild<T> = { ok: true; value: T } | { ok: false; error: EntryError };
 export type EntryValues = Record<string, string>;
+
+/** Structured form-validation failure — the consumer composes the localized message
+ * (required/maxLength carry the field's catalog label; format codes map to fixed keys). */
+export type EntryError =
+  | { kind: "required"; field: string }
+  | { kind: "maxLength"; field: string; max: number }
+  | { kind: "format"; code: "target_date" | "quarter" | "headcount" | "metric_key" | "target_value" | "due" | "deadline" };
 
 function text(values: EntryValues, key: string): string {
   return (values[key] ?? "").trim();
 }
 
-function checkLengths(kind: EntryKind, values: EntryValues): string | null {
+function checkLengths(kind: EntryKind, values: EntryValues): EntryError | null {
   for (const f of ENTRY_SPECS[kind].fields) {
     const v = text(values, f.key);
-    if (f.required && !v) return `${f.label}을(를) 입력하세요.`;
-    if (f.max && v.length > f.max) return `${f.label}은(는) ${f.max}자 이하여야 합니다.`;
+    if (f.required && !v) return { kind: "required", field: f.key };
+    if (f.max && v.length > f.max) return { kind: "maxLength", field: f.key, max: f.max };
   }
   return null;
 }
@@ -384,10 +403,10 @@ function checkLengths(kind: EntryKind, values: EntryValues): string | null {
 /** Validate and normalise one form into the entry shape the API stores. Same rules as the server parser. */
 export function buildEntry(kind: EntryKind, values: EntryValues): EntryBuild<Milestone | HiringRow | KpiTarget | IncentiveObligation> {
   const lengthProblem = checkLengths(kind, values);
-  if (lengthProblem) return { ok: false, message: lengthProblem };
+  if (lengthProblem) return { ok: false, error: lengthProblem };
   if (kind === "permit_milestones" || kind === "certification_milestones") {
     const date = text(values, "target_date");
-    if (!isDate(date)) return { ok: false, message: "목표일은 YYYY-MM-DD 날짜여야 합니다." };
+    if (!isDate(date)) return { ok: false, error: { kind: "format", code: "target_date" } };
     return {
       ok: true,
       value: {
@@ -398,23 +417,23 @@ export function buildEntry(kind: EntryKind, values: EntryValues): EntryBuild<Mil
   }
   if (kind === "hiring_plan") {
     const q = text(values, "quarter");
-    if (!QUARTER_RE.test(q)) return { ok: false, message: "분기는 YYYY-Qn 형식이어야 합니다 (예: 2027-Q1)." };
+    if (!QUARTER_RE.test(q)) return { ok: false, error: { kind: "format", code: "quarter" } };
     const n = Number(text(values, "headcount"));
-    if (!Number.isInteger(n) || n < 0 || n > 100000) return { ok: false, message: "인원은 0~100000 사이의 정수여야 합니다." };
+    if (!Number.isInteger(n) || n < 0 || n > 100000) return { ok: false, error: { kind: "format", code: "headcount" } };
     return { ok: true, value: { role_family: text(values, "role_family"), quarter: q, headcount: n } };
   }
   if (kind === "kpi_targets") {
     const key = text(values, "metric_key");
-    if (!METRIC_RE.test(key)) return { ok: false, message: "지표 키는 소문자·숫자·_ . - (선택 접두 goal:) 1~80자여야 합니다." };
+    if (!METRIC_RE.test(key)) return { ok: false, error: { kind: "format", code: "metric_key" } };
     const raw = text(values, "target_value");
     const target = Number(raw);
-    if (raw === "" || !Number.isFinite(target)) return { ok: false, message: "목표값은 유한한 숫자여야 합니다." };
+    if (raw === "" || !Number.isFinite(target)) return { ok: false, error: { kind: "format", code: "target_value" } };
     const due = text(values, "due");
-    if (!QUARTER_RE.test(due) && !isDate(due)) return { ok: false, message: "기한은 YYYY-Qn 또는 YYYY-MM-DD 형식이어야 합니다." };
+    if (!QUARTER_RE.test(due) && !isDate(due)) return { ok: false, error: { kind: "format", code: "due" } };
     return { ok: true, value: { metric_key: key, target_value: target, unit: text(values, "unit") || null, due } };
   }
   const dl = text(values, "deadline");
-  if (dl && !isDate(dl)) return { ok: false, message: "기한은 YYYY-MM-DD 날짜여야 합니다." };
+  if (dl && !isDate(dl)) return { ok: false, error: { kind: "format", code: "deadline" } };
   return {
     ok: true,
     value: { obligation: text(values, "obligation"), deadline: dl || null, depends_on: text(values, "depends_on") || null, incentive_id: text(values, "incentive_id") || null },
@@ -453,18 +472,29 @@ export function canAddEntry(entries: BaselineEntries, kind: EntryKind): boolean 
   return entries[kind].length < ENTRY_LIMITS.list;
 }
 
-/** Four display cells (strings) for one row, in the order of ENTRY_SPECS[kind].headers. */
+/** One display cell: plain text/data, or a catalog reference ({@link I18nText}) resolved at render. */
+export type EntryCell = string | I18nText;
+
+/** Four display cells for one row, in the order of ENTRY_SPECS[kind].headers. */
 export function rowCells(
   kind: EntryKind,
   row: object,
   ctx: { cumulativeHeadcount?: number; sourceLabel?: (id: string | null) => string | null } = {},
-): [string, string, string, string] {
+): [EntryCell, EntryCell, EntryCell, EntryCell] {
   const r = row as Record<string, unknown>;
   const dash = (v: unknown) => (v === null || v === undefined || v === "" ? "—" : String(v));
   if (kind === "permit_milestones" || kind === "certification_milestones") {
     const src = ctx.sourceLabel?.((r.source_id as string | null) ?? null);
-    const link = [r.gates_ref ? String(r.gates_ref) : null, src ? `출처: ${src}` : null].filter(Boolean).join(" · ");
-    return [dash(r.name), dash(r.issuer), dash(r.target_date), link || "—"];
+    const gatesRef = r.gates_ref ? String(r.gates_ref) : null;
+    // The "출처:" prefix is UI wording — composed catalog keys with the data as params.
+    const link: EntryCell = gatesRef && src
+      ? kt("stages.s11.executionBaseline.rowLink", { p1: gatesRef, p2: src })
+      : gatesRef
+        ? gatesRef
+        : src
+          ? kt("stages.s11.executionBaseline.rowSourceRef", { p1: src })
+          : "—";
+    return [dash(r.name), dash(r.issuer), dash(r.target_date), link];
   }
   if (kind === "hiring_plan") return [dash(r.role_family), dash(r.quarter), dash(r.headcount), dash(ctx.cumulativeHeadcount)];
   if (kind === "kpi_targets") return [dash(r.metric_key), dash(r.target_value), dash(r.unit), dash(r.due)];
@@ -480,42 +510,51 @@ export function cumulativeHeadcounts(rows: HiringRow[]): number[] {
 
 // ── Confirmation form ────────────────────────────────────────────────────
 
-export function validateRationale(raw: string): string | null {
-  const t = raw.trim();
-  if (!t) return "확인 근거(rationale)를 입력하세요.";
-  if (t.length > MAX_RATIONALE_LEN) return `확인 근거는 ${MAX_RATIONALE_LEN}자 이하여야 합니다.`;
+export function validateRationale(rawInput: string): I18nText | null {
+  const t = rawInput.trim();
+  if (!t) return kt("stages.s11.executionBaseline.errRationaleRequired");
+  if (t.length > MAX_RATIONALE_LEN) return kt("stages.s11.executionBaseline.errRationaleMaxLength", { p1: String(MAX_RATIONALE_LEN) });
   return null;
 }
 
 /** Shown instead of the confirm form for anyone but the project lead. */
-export const LEAD_ONLY_TEXT = "확정은 프로젝트 리드만 할 수 있습니다"; // INTERIM-WORDING
+export const LEAD_ONLY_KEY = "stages.s11.executionBaseline.leadOnly";
 /** Shown when a GET returns insider_required (MNPI project). */
-export const INSIDER_REQUIRED_TEXT = "이 프로젝트의 조회 권한(내부자)이 필요합니다"; // INTERIM-WORDING
+export const INSIDER_REQUIRED_KEY = "stages.s11.executionBaseline.insiderRequired";
 
-/** Korean text for an API failure; server messages are already Korean and win, codes fill the gaps. */
-export function baselineErrorText(code: string | undefined, message: string | undefined): string {
-  if (code === "insider_required") return INSIDER_REQUIRED_TEXT;
-  if (code === "invalid_request" && message) return message;
-  if (code && ADR0161_ERROR_LABEL[code] && !message) return ADR0161_ERROR_LABEL[code];
-  if (message) return message;
-  return (code && ADR0161_ERROR_LABEL[code]) || "기록하지 못했습니다.";
+/** ADR-0161 API error codes → catalog keys (ko master wording mirrors labels.ts ADR0161_ERROR_LABEL). */
+const ERROR_CODE_KEY: Record<string, string> = {
+  not_applicable_track: "stages.s11.executionBaseline.errNotApplicableTrack",
+  needs_classification: "stages.s11.executionBaseline.errNeedsClassificationRecord",
+  human_only: "stages.s11.executionBaseline.errHumanOnly",
+  lead_required: "stages.s11.executionBaseline.errLeadRequired",
+  already_migrated: "stages.s11.executionBaseline.errAlreadyMigrated",
+  insider_required: INSIDER_REQUIRED_KEY,
+};
+
+/** Render reference for an API failure; server messages pass through raw (data, design §4), codes fill the gaps. */
+export function baselineErrorText(code: string | undefined, message: string | undefined): I18nText {
+  if (code === "insider_required") return kt(INSIDER_REQUIRED_KEY);
+  if (code === "invalid_request" && message) return rt(message);
+  if (code && ERROR_CODE_KEY[code] && !message) return kt(ERROR_CODE_KEY[code]);
+  if (message) return rt(message);
+  return kt(code && ERROR_CODE_KEY[code] ? ERROR_CODE_KEY[code] : "stages.s11.executionBaseline.errRecordFailed");
 }
 
 /** Failure text for the confirm action: lead_required has fixed wording; findings_open/baseline_empty are listed separately. */
-export function confirmErrorText(code: string | undefined, message: string | undefined): string {
-  if (code === "lead_required") return `${LEAD_ONLY_TEXT}.`;
-  if (code === "baseline_empty") return "필수 기준선 항목이 비어 있어 확정할 수 없습니다 — 아래 항목을 먼저 기록하세요.";
-  if (code === "findings_open") return "열린 확인 필요 항목이 있습니다 — 각 항목에 확인 근거를 적어야 확정할 수 있습니다.";
-  if (code === "needs_classification") return "트랙 분류가 확정되지 않아 확정할 수 없습니다 — 먼저 사람이 트랙을 정리해야 합니다.";
+export function confirmErrorText(code: string | undefined, message: string | undefined): I18nText {
+  if (code === "lead_required") return kt("stages.s11.executionBaseline.errLeadOnlyConfirm");
+  if (code === "baseline_empty") return kt("stages.s11.executionBaseline.errBaselineEmpty");
+  if (code === "findings_open") return kt("stages.s11.executionBaseline.errFindingsOpen");
+  if (code === "needs_classification") return kt("stages.s11.executionBaseline.errNeedsClassificationConfirm");
   return baselineErrorText(code, message);
 }
 
 /** Short note shown when the track is not classified (no form is offered). */
-export const NEEDS_CLASSIFICATION_NOTE =
-  "이 프로젝트의 트랙(신규 사업/인수합병)이 아직 분류되지 않아 실행 기준선 적용 여부를 판단할 수 없습니다. 어느 트랙으로도 기본 적용하지 않으며, 사람이 트랙을 분류한 뒤 이 화면에서 입력할 수 있습니다."; // INTERIM-WORDING
+export const NEEDS_CLASSIFICATION_KEY = "stages.s11.executionBaseline.needsClassificationNote";
 
-export function permitStepNote(permitStepApplies: boolean): string | null {
-  return permitStepApplies ? null : "사내벤처(intra_venture)에는 인허가·인증 단계가 기본 적용되지 않습니다. 기록해 둔 항목은 참고로만 표시됩니다."; // INTERIM-WORDING
+export function permitStepNote(permitStepApplies: boolean): I18nText | null {
+  return permitStepApplies ? null : kt("stages.s11.executionBaseline.permitStepNote");
 }
 
 /** Label for a permit / certification / incentive source row in a select. */
@@ -528,9 +567,9 @@ export function sourceOptionLabel(s: { name?: string | null; program_name?: stri
  * Whether the confirm control may run now: the project lead (analyst+ writer) with a valid
  * rationale. Per-finding acknowledgements are checked separately (buildAcknowledgements).
  */
-export function canConfirm(canAct: boolean, rationale: string, isLead = true): { allowed: boolean; reason: string | null } {
-  if (!canAct) return { allowed: false, reason: "analyst 이상 권한이 필요합니다." };
-  if (!isLead) return { allowed: false, reason: `${LEAD_ONLY_TEXT}.` };
+export function canConfirm(canAct: boolean, rationale: string, isLead = true): { allowed: boolean; reason: I18nText | null } {
+  if (!canAct) return { allowed: false, reason: kt("stages.s11.executionBaseline.errAnalystRequired") };
+  if (!isLead) return { allowed: false, reason: kt("stages.s11.executionBaseline.errLeadOnlyConfirm") };
   const problem = validateRationale(rationale);
   return problem ? { allowed: false, reason: problem } : { allowed: true, reason: null };
 }

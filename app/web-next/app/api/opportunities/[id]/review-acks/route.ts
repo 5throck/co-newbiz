@@ -24,15 +24,15 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "사람 확인 기록은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Recording human confirmations requires the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   if (!getDb().query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();
   const body = (await request.json().catch(() => null)) as { gate?: unknown; claim?: unknown; acked?: unknown; note?: unknown } | null;
   const gate = typeof body?.gate === "string" ? body.gate : "";
   if (!isValidAckGate(gate)) return badRequest("invalid_request", GATE_MESSAGE);
-  if (typeof body?.claim !== "string" || !body.claim.trim()) return badRequest("invalid_request", "claim은 필수입니다.");
-  if (typeof body?.acked !== "boolean") return badRequest("invalid_request", "acked는 boolean이어야 합니다.");
+  if (typeof body?.claim !== "string" || !body.claim.trim()) return badRequest("invalid_request", "claim is required.");
+  if (typeof body?.acked !== "boolean") return badRequest("invalid_request", "acked must be a boolean.");
   const ack = recordClaimAck(getDb(), {
     entityType: "opportunity", entityId: id, gate, claim: body.claim, acked: body.acked,
     note: typeof body.note === "string" ? body.note : null, by: auth.auth.userId,

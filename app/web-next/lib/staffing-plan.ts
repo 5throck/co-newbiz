@@ -13,6 +13,7 @@
 // analyst types a value and cites salarySource. Every proposed value carries a basis string and
 // nothing saves without the person's POST.
 import { sha256Hex } from "./capability-linkage.ts";
+import { formatNumber, type Locale } from "./format.ts";
 
 export const STAFFING_PLAN_SOURCE = "staffing_plan" as const;
 
@@ -108,54 +109,54 @@ export type StaffingPlanError = { ok: false; message: string };
  * there is no silent coercion of a value the person typed.
  */
 export function normalizeStaffingPlanEntry(raw: unknown, horizon: number): { ok: true; entry: StaffingPlanEntry } | StaffingPlanError {
-  if (!isStaffingPlanEntry(raw) || !Array.isArray(raw.rows)) return { ok: false, message: "인력 운영 계획 항목의 형식이 올바르지 않습니다." };
-  if (raw.rows.length > MAX_STAFFING_ROWS) return { ok: false, message: `인력 운영 계획은 최대 ${MAX_STAFFING_ROWS}행까지 저장할 수 있습니다.` };
+  if (!isStaffingPlanEntry(raw) || !Array.isArray(raw.rows)) return { ok: false, message: "The staffing-plan entry is malformed." };
+  if (raw.rows.length > MAX_STAFFING_ROWS) return { ok: false, message: `The staffing plan allows at most ${MAX_STAFFING_ROWS} rows.` };
   const startYear = raw.startYear === undefined ? 1 : intOrNull(raw.startYear);
   const endYear = raw.endYear === undefined ? horizon : intOrNull(raw.endYear);
-  if (startYear === null || startYear < 1 || startYear > horizon) return { ok: false, message: `인력 운영 계획의 시작 연차는 1..${horizon}년이어야 합니다.` };
-  if (endYear === null || endYear < 1 || endYear > horizon) return { ok: false, message: `인력 운영 계획의 종료 연차는 1..${horizon}년이어야 합니다.` };
-  if (endYear < startYear) return { ok: false, message: "인력 운영 계획의 종료 연차는 시작 연차보다 작을 수 없습니다." };
+  if (startYear === null || startYear < 1 || startYear > horizon) return { ok: false, message: `The staffing plan start year must be within 1..${horizon}.` };
+  if (endYear === null || endYear < 1 || endYear > horizon) return { ok: false, message: `The staffing plan end year must be within 1..${horizon}.` };
+  if (endYear < startYear) return { ok: false, message: "The staffing plan end year cannot precede the start year." };
   const attrition = raw.attritionBackfillPct === undefined || raw.attritionBackfillPct === null ? 0 : intOrNull(raw.attritionBackfillPct);
-  if (attrition === null || attrition < 0 || attrition > MAX_RATE_PCT) return { ok: false, message: `인력 이탈 보충률은 0..${MAX_RATE_PCT}% 사이여야 합니다.` };
+  if (attrition === null || attrition < 0 || attrition > MAX_RATE_PCT) return { ok: false, message: `The attrition backfill rate must be in 0..${MAX_RATE_PCT}%.` };
   const rows: StaffingRow[] = [];
   try {
     raw.rows.forEach((r, i) => {
     const n = i + 1;
-    if (!r || typeof r !== "object" || Array.isArray(r)) throw new RowError(`${n}번째 행의 형식이 올바르지 않습니다.`);
+    if (!r || typeof r !== "object" || Array.isArray(r)) throw new RowError(`Row ${n} is malformed.`);
     const row = r as unknown as Record<string, unknown>;
     const roleFamily = scrubStaffingText(row.roleFamily, 60);
     const grade = scrubStaffingText(row.grade, 60);
-    if (!roleFamily) throw new RowError(`${n}번째 행: 직무군을 입력하세요.`);
-    if (!grade) throw new RowError(`${n}번째 행: 직급을 입력하세요.`);
-    if (Array.isArray(row.headcountByYear) && row.headcountByYear.length > horizon) throw new RowError(`${n}번째 행: 인원 연도 열 수가 검토 기간(${horizon}년)을 넘습니다.`);
+    if (!roleFamily) throw new RowError(`Row ${n}: enter the job family.`);
+    if (!grade) throw new RowError(`Row ${n}: enter the grade.`);
+    if (Array.isArray(row.headcountByYear) && row.headcountByYear.length > horizon) throw new RowError(`Row ${n}: the headcount-year columns exceed the review horizon (${horizon} years).`);
     for (const [idx, v] of (Array.isArray(row.headcountByYear) ? row.headcountByYear : []).entries()) {
       const hc = intOrNull(v);
-      if (hc === null || hc < 0 || hc > MAX_HEADCOUNT_PER_YEAR) throw new RowError(`${n}번째 행: ${idx + 1}연차 인원은 0..${MAX_HEADCOUNT_PER_YEAR}명의 정수여야 합니다.`);
+      if (hc === null || hc < 0 || hc > MAX_HEADCOUNT_PER_YEAR) throw new RowError(`Row ${n}: year-${idx + 1} headcount must be an integer in 0..${MAX_HEADCOUNT_PER_YEAR}.`);
     }
     let salary: number | null = null;
     if (row.avgAnnualBaseSalaryKrwM !== undefined && row.avgAnnualBaseSalaryKrwM !== null && row.avgAnnualBaseSalaryKrwM !== "") {
       const s = intOrNull(row.avgAnnualBaseSalaryKrwM);
-      if (s === null || s < 0 || s > MAX_SALARY_KRW_M) throw new RowError(`${n}번째 행: 평균 연봉은 0..${MAX_SALARY_KRW_M}백만원 사이여야 합니다.`);
+      if (s === null || s < 0 || s > MAX_SALARY_KRW_M) throw new RowError(`Row ${n}: the average salary must be in 0..${MAX_SALARY_KRW_M} KRW millions.`);
       salary = s;
     }
     let increase = 0;
     if (row.salaryIncreaseRatePct !== undefined && row.salaryIncreaseRatePct !== null && row.salaryIncreaseRatePct !== "") {
       const p = intOrNull(row.salaryIncreaseRatePct);
-      if (p === null || p < 0 || p > MAX_RATE_PCT) throw new RowError(`${n}번째 행: 연 인상률은 0..${MAX_RATE_PCT}% 사이여야 합니다.`);
+      if (p === null || p < 0 || p > MAX_RATE_PCT) throw new RowError(`Row ${n}: the annual raise must be in 0..${MAX_RATE_PCT}%.`);
       increase = p;
     }
     let onCost: number | null = null;
     if (row.onCostRatePct !== undefined && row.onCostRatePct !== null && row.onCostRatePct !== "") {
       const p = intOrNull(row.onCostRatePct);
-      if (p === null || p < 0 || p > MAX_RATE_PCT) throw new RowError(`${n}번째 행: 가산율은 0..${MAX_RATE_PCT}% 사이여야 합니다 (HR·법무 확인 필요).`);
+      if (p === null || p < 0 || p > MAX_RATE_PCT) throw new RowError(`Row ${n}: the premium must be in 0..${MAX_RATE_PCT}% (verify with HR/legal).`);
       onCost = p;
     }
     const quarter = row.hireStartQuarter === undefined || row.hireStartQuarter === null || row.hireStartQuarter === "" ? null : String(row.hireStartQuarter);
-    if (quarter !== null && !QUARTER_RE.test(quarter)) throw new RowError(`${n}번째 행: 채용 시작 분기는 YYYY-Qn 형식이어야 합니다 (예: 2027-Q1).`);
+    if (quarter !== null && !QUARTER_RE.test(quarter)) throw new RowError(`Row ${n}: the hiring start quarter must match YYYY-Qn (e.g. 2027-Q1).`);
     let recruiting = 0;
     if (row.recruitingOneOffKrwM !== undefined && row.recruitingOneOffKrwM !== null && row.recruitingOneOffKrwM !== "") {
       const c = intOrNull(row.recruitingOneOffKrwM);
-      if (c === null || c < 0) throw new RowError(`${n}번째 행: 채용 일회비는 0 이상이어야 합니다.`);
+      if (c === null || c < 0) throw new RowError(`Row ${n}: the one-time hiring cost must be >= 0.`);
       recruiting = c;
     }
     const source = row.salarySource === undefined || row.salarySource === null || row.salarySource === "" ? null : scrubStaffingText(row.salarySource, 200);
@@ -173,7 +174,7 @@ export function normalizeStaffingPlanEntry(raw: unknown, horizon: number): { ok:
     });
     });
   } catch (e) {
-    return { ok: false, message: e instanceof RowError ? e.message : "인력 운영 계획 항목의 형식이 올바르지 않습니다." };
+    return { ok: false, message: e instanceof RowError ? e.message : "The staffing-plan entry is malformed." };
   }
   return {
     ok: true,
@@ -357,7 +358,7 @@ export function findStaffingDuplicateWarnings(rows: StaffingRow[], manual: Array
 }
 
 /** "1,250백만원" — same format as the capability lib's formatKrwM, kept local to avoid a cycle. */
-export const formatStaffingKrwM = (krwM: number): string => `${round2(krwM).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}백만원`;
+export const formatStaffingKrwM = (krwM: number, locale: Locale | string = "ko"): string => `${formatNumber(round2(krwM), locale, { maximumFractionDigits: 2 })}백만원`;
 
 // ── Read-only role masking (design OD-5) ────────────────────────────────────
 

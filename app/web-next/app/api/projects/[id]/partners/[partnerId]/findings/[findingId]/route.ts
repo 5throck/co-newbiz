@@ -12,7 +12,7 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "실사 지적사항 수정은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Updating DD findings requires the analyst role or higher.");
   const { id, partnerId, findingId } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const db = getDb();
@@ -24,7 +24,7 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
     workstream?: string; severity?: string; description?: string;
   } | null;
   if (body?.severity && !SEVERITIES.includes(body.severity.trim())) {
-    return badRequest("invalid_request", `severity는 ${SEVERITIES.join(" | ")} 중 하나입니다.`);
+    return badRequest("invalid_request", `severity must be one of: ${SEVERITIES.join(" | ")}.`);
   }
   const now = new Date().toISOString();
   db.run(
@@ -43,7 +43,7 @@ export const DELETE = route(async (request: Request, { params }: { params: Promi
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "실사 지적사항 삭제는 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Deleting DD findings requires the analyst role or higher.");
   const { id, partnerId, findingId } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const db = getDb();

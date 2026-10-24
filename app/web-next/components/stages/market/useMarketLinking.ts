@@ -4,8 +4,9 @@
 import { useState, useCallback } from "react";
 import { api } from "../../../lib/api.ts";
 import type { useMarketData } from "./useMarketData.ts";
+import { useTranslations } from "next-intl";
 
-export function useMarketLinking(prev: ReturnType<typeof useMarketData>) {
+export function useMarketLinking(prev: ReturnType<typeof useMarketData>) {const t = useTranslations("stages.s1.useMarketLinking"); const tc = useTranslations("common");
   const { setError, newCode, setNewName, setNewCode, setKsicResults, setShowNewForm, refreshOverview, setLinkNotice, urlSync, router, setLocalIndustry, setDetail } = prev;
 
 
@@ -137,9 +138,9 @@ export function useMarketLinking(prev: ReturnType<typeof useMarketData>) {
       }
       await refreshOverview();
       setLinkModal({ open: false, primaryName: "", rerunAnalysisId: null, candidates: [], industryKnown: false, selected: new Set(), loading: false, running: false, substitutes: [] });
-      if (extraCount > 0) setLinkNotice(`연계 산업 ${extraCount}건이 대기열에 등록되었습니다 (마스터 미등록 산업은 시작 시 자동 등록). '${linkModal.primaryName}' 분석 완료 후 한 건씩 자동 시작됩니다 — 진행 상황은 '대기' 필터에서 확인하세요.`);
+      if (extraCount > 0) setLinkNotice(t("p1LinkedIndustryIesQueued", { p1: extraCount, p2: linkModal.primaryName }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "분석 시작 실패");
+      setError(err instanceof Error ? err.message : tc("analysisStartFailed"));
       setLinkModal((prev) => ({ ...prev, running: false }));
     }
   }
@@ -155,10 +156,10 @@ export function useMarketLinking(prev: ReturnType<typeof useMarketData>) {
   const relDate = (d: string | null) => {
     if (!d) return null;
     const days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
-    if (days <= 0) return "오늘";
-    if (days < 30) return `${days}일 전`;
-    if (days < 365) return `${Math.floor(days / 30)}개월 전`;
-    return `${Math.floor(days / 365)}년 전`;
+    if (days <= 0) return t("today");
+    if (days < 30) return t("p1DAgo", { p1: days });
+    if (days < 365) return t("p1MoAgo", { p1: Math.floor(days / 30) });
+    return t("p1YrAgo", { p1: Math.floor(days / 365) });
   };
   async function rerunAnalysis(analysisId: string, industryName: string) {
     // 재분석도 연관 산업 선택 모달을 거친다 — 같은 분석 행을 재실행하며

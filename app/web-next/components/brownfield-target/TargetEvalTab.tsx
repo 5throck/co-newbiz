@@ -4,12 +4,16 @@
 // 2026-10-20 decider: verdict/weight edits are LOCAL until the person presses the category's
 // 저장 button (explicit save instead of save-on-change); the score chip shows judged/total items.
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { isFinancialDataRef, parseRubric, rubricFields } from "../../lib/brownfield-financial-rubric.ts";
-import { EVAL_CATEGORY_LABEL, VERDICT_KO, EVAL_VERDICTS } from "./constants.ts";
+import { EVAL_CATEGORY_KEY, VERDICT_KEY, EVAL_VERDICTS } from "./constants.ts";
 import type { TargetDetailViewState } from "./useTargetActions.ts";
 import type { EvalItem, EvalCategoryScore } from "./types.ts";
 
 export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinancial, proposedCount, pendingTechnical }: { ctx: TargetDetailViewState; evalItems: EvalItem[]; scores: Record<"financial" | "technical", EvalCategoryScore> & { combined: number | null; }; scoreChip: (score: number | null) => string; pendingFinancial: EvalItem[]; proposedCount: number; pendingTechnical: EvalItem[] }) {
+  const t = useTranslations("components.brownfieldTarget.evalTab");
+  const tk = useTranslations("components.brownfieldTarget.constants");
+  const tc = useTranslations("common");
   const { detail, loadDetail, profileTab, canAct, draftBusy, draftCategory, evalDraft, busy, setEvalDraft, setDraftCategory, setDraftNote, rubricOpen, setRubricOpen, draftNote, evalBusy, rubricBusy, newCriterionLabel, setNewCriterionLabel, generateEvalDraft, saveDraftVerdicts, setEvalWeight, setEvalVerdict, removeEvalCriterion, saveRubric, addEvalCriterion } = ctx;
   void detail; void loadDetail;
   type EvalStatusValue = "pending" | "pass" | "partial" | "fail" | "na" | "waived";
@@ -47,15 +51,15 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
               return (
                 <div key={cat} className="card mb-3">
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <h4 className="text-[length:var(--fs-body)] mb-0">{EVAL_CATEGORY_LABEL[cat]}</h4>
-                    <span className={scoreChip(catScore.score)} title="충족 1점·부분충족 0.5점·미충족 0점을 항목 가중치로 가중평균 — 예외(해당없음·예외)는 계산에서 제외, 미판정 항목은 아직 점수에 들어가지 않음" data-testid={`eval-score-${cat}`}>
-                      {catScore.score == null ? "점수 — 판정 필요" : `${catScore.score}점 / 100점`}
-                      <span className="ml-1 font-normal">(판정 {judgedCount}/{countedTotal} 항목)</span>
+                    <h4 className="text-[length:var(--fs-body)] mb-0">{tk(EVAL_CATEGORY_KEY[cat])}</h4>
+                    <span className={scoreChip(catScore.score)} title={t("scoreChipTitle")} data-testid={`eval-score-${cat}`}>
+                      {catScore.score == null ? t("scorePending") : t("scoreOf100", { p1: catScore.score })}
+                      <span className="ml-1 font-normal">{t("judgedCountLabel", { p1: judgedCount, p2: countedTotal })}</span>
                     </span>
                   </div>
                   {catScore.totalWeight > catScore.scoredWeight && (
                     <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                      미판정 가중치 {catScore.totalWeight - catScore.scoredWeight} / 전체 {catScore.totalWeight} 남음 — 전 항목 판정 전까지는 잠정 점수입니다.
+                      {t("unscoredWeights", { p1: catScore.totalWeight - catScore.scoredWeight, p2: catScore.totalWeight })}
                     </p>
                   )}
                   {canAct && cat === "financial" && (
@@ -64,10 +68,10 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                         type="button"
                         className="btn-ghost btn-sm"
                         disabled={draftBusy || pendingFinancial.length === 0}
-                        title="전자공시 재무 정보를 루브릭으로 계산해 미판정 항목의 판정 초안을 만듭니다 — 저장 전까지 화면 표시일 뿐입니다"
+                        title={t("financialDraftTitle")}
                         onClick={() => void generateEvalDraft("financial")}
                       >
-                        {draftBusy && draftCategory === "financial" ? "계산 중..." : "재무 판정 초안 (전자공시)"}
+                        {draftBusy && draftCategory === "financial" ? t("calculating") : t("financialDraftButton")}
                       </button>
                       {evalDraft && draftCategory === "financial" && (
                         <>
@@ -75,26 +79,26 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                             type="button"
                             className="btn-premium btn-sm"
                             disabled={busy || proposedCount === 0}
-                            title="표시된 초안(판정·근거 노트)을 판정으로 저장합니다 — 저장자는 현재 사용자로 기록됩니다"
+                            title={t("saveDraftTitle")}
                             onClick={() => void saveDraftVerdicts()}
                           >
-                            초안 저장 ({proposedCount}건)
+                            {t("saveDraftButton", { p1: proposedCount })}
                           </button>
-                          <button type="button" className="btn-ghost btn-sm" onClick={() => { setEvalDraft(null); setDraftCategory(null); setDraftNote(null); }}>초안 버리기 (AI)</button>
+                          <button type="button" className="btn-ghost btn-sm" onClick={() => { setEvalDraft(null); setDraftCategory(null); setDraftNote(null); }}>{t("discardDraftButton")}</button>
                         </>
                       )}
                       <button
                         type="button"
                         className="btn-ghost btn-sm"
                         aria-expanded={rubricOpen}
-                        title="자동 초안의 판정 기준치(CAGR·마진·부채비율 상한 등)를 항목별로 조정합니다"
+                        title={t("rubricTitle")}
                         onClick={() => setRubricOpen(!rubricOpen)}
                       >
-                        임계값 {rubricOpen ? "닫기" : "편집"}
+                        {rubricOpen ? t("thresholdClose") : t("thresholdEdit")}
                       </button>
                       {draftCategory !== "technical" && (
                         <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] flex-1 min-w-[16rem]">
-                          {draftNote ?? "전자공시 재무 정보로 미판정 항목의 판정 초안을 만듭니다 — 확인·수정 후 저장하며 확정은 항상 사람이 합니다 (경계 #2)."}
+                          {draftNote ?? t("financialDraftNote")}
                         </span>
                       )}
                     </div>
@@ -105,10 +109,10 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                         type="button"
                         className="btn-ghost btn-sm"
                         disabled={draftBusy || pendingTechnical.length === 0}
-                        title="최근 3년 전자공시·회사 AI 프로파일·항목별 웹 검색을 근거로 판정 초안을 만듭니다 — 근거로 확인 안 되는 항목은 '확인 안됨'으로 표시됩니다"
+                        title={t("technicalDraftTitle")}
                         onClick={() => void generateEvalDraft("technical")}
                       >
-                        {draftBusy && draftCategory === "technical" ? "근거 수집 중..." : "기술 판정 초안 (공시·프로파일·웹)"}
+                        {draftBusy && draftCategory === "technical" ? t("collecting") : t("technicalDraftButton")}
                       </button>
                       {evalDraft && draftCategory === "technical" && (
                         <>
@@ -116,28 +120,26 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                             type="button"
                             className="btn-premium btn-sm"
                             disabled={busy || proposedCount === 0}
-                            title="표시된 초안(판정·근거 노트)을 판정으로 저장합니다 — 저장자는 현재 사용자로 기록됩니다"
+                            title={t("saveDraftTitle")}
                             onClick={() => void saveDraftVerdicts()}
                           >
-                            초안 저장 ({proposedCount}건)
+                            {t("saveDraftButton", { p1: proposedCount })}
                           </button>
-                          <button type="button" className="btn-ghost btn-sm" onClick={() => { setEvalDraft(null); setDraftCategory(null); setDraftNote(null); }}>초안 버리기 (AI)</button>
+                          <button type="button" className="btn-ghost btn-sm" onClick={() => { setEvalDraft(null); setDraftCategory(null); setDraftNote(null); }}>{t("discardDraftButton")}</button>
                         </>
                       )}
                       {draftCategory === "technical" ? (
                         <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] flex-1 min-w-[16rem]">{draftNote}</span>
                       ) : (
                         <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] flex-1 min-w-[16rem]">
-                          최근 3년 공시·AI 프로파일·웹 검색으로 근거를 모아 판정 초안을 만듭니다 — 근거로 확인 안 되는 항목은 "확인 안됨"으로 표시되고, 판정 확정은 항상 사람이 합니다 (경계 #2).
+                          {t("technicalDraftNote")}
                         </span>
                       )}
                     </div>
                   )}
                   {items.length === 0 ? (
                     <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-                      {cat === "technical"
-                        ? "S3에 필요 역량이 정의되지 않아 기술 평가 항목이 없습니다 — 먼저 S3에서 정의하세요."
-                        : "재무 평가 항목이 없습니다 — 불러오는 중이었을 수 있습니다."}
+                      {cat === "technical" ? t("emptyTechnical") : t("emptyFinancial")}
                     </p>
                   ) : (
                     <ul className="sizing-note-list mb-2" style={{ fontSize: "0.88rem" }}>
@@ -149,15 +151,15 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                               {it.label}
                               {it.description && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{it.description}</span>}
                             </span>
-                            {it.is_mandatory === 1 && <span className="status-chip status-amber">{it.source === "seeded" ? "S3 승계·필수" : "필수"}</span>}
+                            {it.is_mandatory === 1 && <span className="status-chip status-amber">{it.source === "seeded" ? t("seededMandatory") : t("mandatory")}</span>}
                             {!canAct ? (
-                              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title="가중치 — 카테고리 100점 점수 계산 시 이 항목의 상대 비중">가중치 {it.weight}</span>
+                              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title={t("weightTitle")}>{t("weightLabel", { p1: it.weight })}</span>
                             ) : (
-                            <label className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] flex items-center gap-1" title="가중치 — 카테고리 100점 점수 계산 시 이 항목의 상대 비중">
-                              가중치
+                            <label className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] flex items-center gap-1" title={t("weightTitle")}>
+                              {t("weightWord")}
                               <input
                                 type="number" min={1} step={1}
-                                aria-label={`${it.label} 가중치`}
+                                aria-label={t("weightAria", { p1: it.label })}
                                 value={pending[it.id]?.weight ?? it.weight}
                                 disabled={evalBusy === it.id || savingCat !== null}
                                 onChange={(e) => {
@@ -170,10 +172,10 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                             </label>
                             )}
                             {!canAct ? (
-                              <span className="status-chip status-not-started" aria-label={`${it.label} 판정`}>{VERDICT_KO[it.state?.status ?? "pending"] ?? "미판정"}</span>
+                              <span className="status-chip status-not-started" aria-label={t("verdictAria", { p1: it.label })}>{tk(VERDICT_KEY[it.state?.status ?? "pending"] ?? "verdictPending")}</span>
                             ) : (
                             <select
-                              aria-label={`${it.label} 판정`}
+                              aria-label={t("verdictAria", { p1: it.label })}
                               value={pending[it.id]?.status ?? draft?.status ?? it.state?.status ?? "pending"}
                               disabled={evalBusy === it.id || savingCat !== null}
                               onChange={(e) => {
@@ -183,22 +185,22 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                               }}
                               className={`sizing-new-input sizing-new-input-sm${pending[it.id]?.status !== undefined ? " ring-1" : ""}`}
                             >
-                              <option value="pending">미판정</option>
+                              <option value="pending">{tk("verdictPending")}</option>
                               {EVAL_VERDICTS.map((v) => (
-                                <option key={v} value={v}>{VERDICT_KO[v]}</option>
+                                <option key={v} value={v}>{tk(VERDICT_KEY[v])}</option>
                               ))}
                             </select>
                             )}
                             {canAct && it.is_deletable === 1 && (
-                              <button type="button" className="btn-ghost btn-sm" disabled={evalBusy === it.id} title="항목 삭제" onClick={() => void removeEvalCriterion(it.id)}>✕</button>
+                              <button type="button" className="btn-ghost btn-sm" disabled={evalBusy === it.id} title={t("deleteItemTitle")} onClick={() => void removeEvalCriterion(it.id)}>✕</button>
                             )}
                             {draft && (
                               <div className="w-full mt-1 flex flex-col gap-1">
                                 <div className="flex flex-wrap items-center gap-1">
                                   {draft.status ? (
-                                    <span className="status-chip status-amber" title="근거 기반 자동 제안 — 확인·수정 후 저장하세요">자동 초안</span>
+                                    <span className="status-chip status-amber" title={t("autoDraftTitle")}>{t("autoDraftChip")}</span>
                                   ) : (
-                                    <span className="status-chip status-not-started" title="근거로 확인되지 않아 판정 제안을 만들지 않았습니다 — 판정은 사람이 직접 내려주세요">확인 안됨</span>
+                                    <span className="status-chip status-not-started" title={t("unverifiedTitle")}>{t("unverifiedChip")}</span>
                                   )}
                                   {draft.metrics.map((m) => (
                                     <span key={m.label} className="status-chip status-not-started" title={m.label}>{m.label} {m.value}</span>
@@ -208,9 +210,9 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                                   <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{draft.reason}</p>
                                 )}
                                 <input
-                                  aria-label={`${it.label} 초안 근거 노트`}
+                                  aria-label={t("draftNoteAria", { p1: it.label })}
                                   value={draft.note}
-                                  placeholder="초안 근거 — 저장 시 판정 노트로 기록됩니다"
+                                  placeholder={t("draftNotePlaceholder")}
                                   onChange={(e) => setEvalDraft((prev) => (prev ? { ...prev, [it.id]: { ...prev[it.id], note: e.target.value } } : prev))}
                                   className="sizing-new-input sizing-new-input-sm"
                                 />
@@ -220,7 +222,7 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                               const rubric = parseRubric(it.data_ref, it.rubric_json);
                               return (
                                 <div key={`${it.id}:${it.rubric_json ?? "default"}`} className="w-full mt-1 flex flex-wrap items-center gap-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                                  <span>임계값 —</span>
+                                  <span>{t("thresholdPrefix")}</span>
                                   {rubricFields(it.data_ref).map((f) => (
                                     <label key={f.key} className="flex items-center gap-1" title={f.hint}>
                                       {f.label}
@@ -254,26 +256,26 @@ export function TargetEvalTab({ ctx, evalItems, scores, scoreChip, pendingFinanc
                       are not linked. */}
                   {canAct && (<div className="flex items-center gap-1">
                     <input
-                      aria-label={`${EVAL_CATEGORY_LABEL[cat]} 항목 추가`}
-                      placeholder="+ 항목 추가"
+                      aria-label={t("addItemAria", { p1: tk(EVAL_CATEGORY_KEY[cat]) })}
+                      placeholder={t("addItemPlaceholder")}
                       value={newCriterionLabel[cat] ?? ""}
                       onChange={(e) => setNewCriterionLabel((prev) => ({ ...prev, [cat]: e.target.value }))}
                       className="sizing-new-input sizing-new-input-sm"
                       style={{ flex: "1 1 12rem" }}
                     />
-                    <button type="button" className="btn-ghost btn-sm" disabled={evalBusy === cat || !(newCriterionLabel[cat] ?? "").trim()} onClick={() => void addEvalCriterion(cat)}>추가</button>
+                    <button type="button" className="btn-ghost btn-sm" disabled={evalBusy === cat || !(newCriterionLabel[cat] ?? "").trim()} onClick={() => void addEvalCriterion(cat)}>{tc("add")}</button>
                   </div>)}
                   {/* 2026-10-20 decider: explicit save lives at the BOTTOM-RIGHT of the category, after the items. */}
                   {canAct && (
                     <div className="flex flex-wrap items-center justify-end gap-1 mt-2" data-testid={`eval-save-bar-${cat}`}>
                       {catPending.length > 0 && (
                         <>
-                          <span className="status-chip status-amber">저장 전 변경 {catPending.length}건 — 점수는 저장 후 갱신됩니다</span>
-                          <button type="button" className="btn-ghost btn-sm" onClick={() => discardCategory(catPending.map((it) => it.id))}>변경 취소</button>
+                          <span className="status-chip status-amber">{t("pendingChanges", { p1: catPending.length })}</span>
+                          <button type="button" className="btn-ghost btn-sm" onClick={() => discardCategory(catPending.map((it) => it.id))}>{t("discardChanges")}</button>
                         </>
                       )}
                       <button type="button" className="btn-premium btn-sm" disabled={catPending.length === 0 || savingCat !== null} onClick={() => void saveCategory(cat, items)} data-testid={`eval-save-${cat}`}>
-                        {savingCat === cat ? "저장 중…" : `${EVAL_CATEGORY_LABEL[cat]} 저장${catPending.length > 0 ? ` (${catPending.length}건)` : ""}`}
+                        {savingCat === cat ? t("savingEllipsis") : t("saveCategoryButton", { p1: tk(EVAL_CATEGORY_KEY[cat]) })}{catPending.length > 0 ? t("saveCategoryCountSuffix", { p1: catPending.length }) : ""}
                       </button>
                     </div>
                   )}

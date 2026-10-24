@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   if (adminCheck) return adminCheck;
   const body = (await request.json().catch(() => null)) as { mode?: string } | null;
   if (body?.mode !== "production" && body?.mode !== "development") {
-    return badRequest("invalid_request", "mode는 production | development 중 하나입니다.");
+    return badRequest("invalid_request", "mode must be one of: production | development.");
   }
   const db = getDb();
   const now = new Date().toISOString();

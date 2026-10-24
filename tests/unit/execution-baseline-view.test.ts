@@ -6,12 +6,18 @@ import { readFileSync } from "node:fs";
 import {
   EMPTY_ENTRIES, ENTRY_KINDS, ENTRY_SPECS, buildEntry, canAddEntry, canConfirm, confirmationView, cumulativeHeadcounts, emptyValues,
   entriesClearConfirmation, permitStepNote, baselineErrorText, reconciliationVerdict, requirementView, rowCells, validateRationale, valuesOf, withEntry,
-  FINDING_LABEL, findingText, fmtMoney,
+  FINDING_LABEL_KEY, findingText, fmtMoney,
   type BaselineRecord, type TrancheReconciliationView,
 } from "../../app/web-next/lib/execution-baseline-view.ts";
 
 const W = "./app/web-next";
 const src = (p: string) => readFileSync(`${W}/${p}`, "utf8");
+// i18n (design 2026-10-23-i18n-ui-adoption): wording pins assert the key call site + the ko
+// master catalog value (the original Korean wording, byte-identical to the pre-extraction lib).
+const koCatalog = await import("../../app/web-next/locales/ko.json");
+const koOf = (key: string): string =>
+  key.split(".").reduce<unknown>((acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined), koCatalog) as string;
+const ko = (m: { key: string | null; text: string | null }): string => (m.key ? koOf(m.key) : m.text ?? "");
 
 const rec = (over: Partial<TrancheReconciliationView> = {}): TrancheReconciliationView => ({
   tranches: [], tranche_total: 100, tranche_currencies: ["KRW"], case: { model_id: "m", capex_total_krw_m: 100, capex_lines: 1, unit_issue: false },
@@ -23,31 +29,31 @@ const record = (confirmed: boolean): BaselineRecord => ({
 });
 
 describe("requirement / retroactive messaging", () => {
-  test("recommended reads non-blocking, blocking reads blocking until confirmed", () => {
-    expect(requirementView("recommended").text).toContain("차단하지 않");
-    expect(requirementView("recommended").chip).toContain("권장");
-    expect(requirementView("blocking").text).toContain("확인할 때까지");
-    expect(requirementView("blocking").chip).toContain("차단");
-    expect(requirementView("satisfied").chip).toContain("확인됨");
+  test("recommended reads non-blocking, blocking reads blocking until confirmed (ko master values)", () => {
+    expect(ko(requirementView("recommended").text)).toContain("차단하지 않");
+    expect(ko(requirementView("recommended").chip)).toContain("권장");
+    expect(ko(requirementView("blocking").text)).toContain("확인할 때까지");
+    expect(ko(requirementView("blocking").chip)).toContain("차단");
+    expect(ko(requirementView("satisfied").chip)).toContain("확인됨");
   });
   test("status is never colour only: every chip carries an icon and text", () => {
     for (const r of ["satisfied", "blocking", "recommended", "needs_classification", "not_applicable"] as const) {
-      expect(requirementView(r).chip).toMatch(/^[●○▲] .+/);
+      expect(ko(requirementView(r).chip)).toMatch(/^[●○▲] .+/);
     }
   });
 });
 
 describe("confirmation chip", () => {
-  test("unconfirmed vs confirmed with who and when", () => {
-    expect(confirmationView(null, []).chip).toBe("○ 미확정");
+  test("unconfirmed vs confirmed with who and when (ko master values)", () => {
+    expect(ko(confirmationView(null, []).chip)).toBe("○ 미확정");
     const c = confirmationView(record(true), []);
-    expect(c.chip).toBe("● 확정됨");
+    expect(ko(c.chip)).toBe("● 확정됨");
     expect(c.detail).toBe("u2 · 2026-10-13");
   });
   test("changed tranches after confirmation downgrade the chip and flag it", () => {
     const c = confirmationView(record(true), [{ code: "tranches_changed_since_confirmation", message: "x" }]);
     expect(c.tranchesChanged).toBe(true);
-    expect(c.chip).toContain("트랜치 변경");
+    expect(ko(c.chip)).toContain("트랜치 변경");
     expect(c.cls).toBe("status-amber");
   });
   test("new entries clear an earlier confirmation notice only when one exists", () => {
@@ -58,20 +64,20 @@ describe("confirmation chip", () => {
 });
 
 describe("tranche reconciliation verdict (exact match, never a pass on a difference)", () => {
-  test("exact match only", () => {
-    expect(reconciliationVerdict(rec()).chip).toContain("정확히 일치");
+  test("exact match only (ko master value)", () => {
+    expect(ko(reconciliationVerdict(rec()).chip)).toContain("정확히 일치");
   });
   test("a difference is shown as a finding with the amount, not a pass", () => {
     const v = reconciliationVerdict(rec({ matches: false, difference: 5 }));
     expect(v.cls).toBe("status-amber");
-    expect(v.chip).toContain("불일치");
-    expect(v.chip).toContain("5");
-    expect(v.text).toContain("자동으로 통과되지 않습니다");
+    expect(ko(v.chip)).toContain("불일치");
+    expect(v.chip.params.p1).toBe(fmtMoney(5)); // the amount is a param of the chip key
+    expect(ko(v.text)).toContain("자동으로 통과되지 않습니다");
   });
   test("unknown difference is not comparable, not a pass", () => {
     const v = reconciliationVerdict(rec({ difference: null, matches: false }));
     expect(v.cls).toBe("status-not-started");
-    expect(v.chip).toContain("대조 불가");
+    expect(ko(v.chip)).toContain("대조 불가");
   });
 });
 
@@ -83,7 +89,7 @@ describe("entry forms mirror the server limits", () => {
     }
   });
   test("permit and certification are separate kinds with separate titles", () => {
-    expect(ENTRY_SPECS.permit_milestones.title).not.toBe(ENTRY_SPECS.certification_milestones.title);
+    expect(ko(ENTRY_SPECS.permit_milestones.title)).not.toBe(ko(ENTRY_SPECS.certification_milestones.title));
     expect(ENTRY_KINDS.indexOf("permit_milestones")).not.toBe(ENTRY_KINDS.indexOf("certification_milestones"));
   });
   test("milestone: required fields, date format, length limit", () => {
@@ -93,7 +99,9 @@ describe("entry forms mirror the server limits", () => {
     expect(buildEntry("permit_milestones", { ...base, target_date: "2027-13-01" }).ok).toBe(false);
     const long = buildEntry("certification_milestones", { ...base, name: "가".repeat(201) });
     expect(long.ok).toBe(false);
-    if (!long.ok) expect(long.message).toContain("200자");
+    // i18n: structured error — the panel composes errMaxLength with the field's catalog label.
+    if (!long.ok) expect(long.error).toEqual({ kind: "maxLength", field: "name", max: 200 });
+    if (!long.ok) expect(koOf("stages.s11.executionBaseline.errMaxLength")).toContain("자 이하여야");
   });
   test("hiring plan is aggregate only: quarter format and integer headcount", () => {
     expect(buildEntry("hiring_plan", { role_family: "생산", quarter: "2027-Q2", headcount: "12" })).toEqual({ ok: true, value: { role_family: "생산", quarter: "2027-Q2", headcount: 12 } });
@@ -132,21 +140,21 @@ describe("entry forms mirror the server limits", () => {
 
 describe("confirmation form and messages", () => {
   test("rationale is required and limited to 2000 characters", () => {
-    expect(validateRationale("   ")).toContain("입력");
-    expect(validateRationale("가".repeat(2001))).toContain("2000");
+    expect(ko(validateRationale("   ")!)).toContain("입력");
+    expect(validateRationale("가".repeat(2001))!.params.p1).toBe("2000");
     expect(validateRationale("근거")).toBeNull();
     expect(canConfirm(false, "근거").allowed).toBe(false);
     expect(canConfirm(true, "").allowed).toBe(false);
     expect(canConfirm(true, "근거").allowed).toBe(true);
   });
   test("server messages win, codes fill the gaps, no raw English fallback", () => {
-    expect(baselineErrorText("invalid_request", "목표일은 YYYY-MM-DD 날짜여야 합니다.")).toContain("목표일");
-    expect(baselineErrorText("not_applicable_track", undefined)).toContain("PMI");
-    expect(baselineErrorText(undefined, undefined)).toBe("기록하지 못했습니다.");
+    expect(baselineErrorText("invalid_request", "목표일은 YYYY-MM-DD 날짜여야 합니다.")).toEqual({ key: null, params: {}, text: "목표일은 YYYY-MM-DD 날짜여야 합니다." }); // server message passthrough (data)
+    expect(ko(baselineErrorText("not_applicable_track", undefined))).toContain("PMI");
+    expect(ko(baselineErrorText(undefined, undefined))).toBe("기록하지 못했습니다.");
   });
   test("intra_venture permit note appears only when the permit step does not apply", () => {
     expect(permitStepNote(true)).toBeNull();
-    expect(permitStepNote(false)).toContain("사내벤처");
+    expect(ko(permitStepNote(false)!)).toContain("사내벤처");
   });
 });
 
@@ -164,7 +172,7 @@ describe("component wiring (source checks)", () => {
     expect(na).not.toContain("<form");
     const nc = panel.slice(panel.indexOf('state === "needs_classification"'), panel.indexOf("const rec = status.reconciliation"));
     expect(nc).not.toContain("<form");
-    expect(nc).toContain("NEEDS_CLASSIFICATION_NOTE");
+    expect(nc).toContain("NEEDS_CLASSIFICATION_KEY");
   });
   test("posts record_entries and confirm, links to the S10 capex tab, never writes tranches", () => {
     expect(panel).toContain('action: "record_entries"');
@@ -180,8 +188,8 @@ describe("component wiring (source checks)", () => {
     expect(panel).not.toContain("<PrimaryAction");
   });
   test("goals are reference evidence only, never a pass/fail", () => {
-    expect(panel).toContain("참고 증적");
-    expect(panel).toContain("합격·불합격 판정이 아니며");
+    expect(panel).toContain('t("referenceEvidenceS8BusinessGoals")'); // i18n: stages.s11.executionBaseline.*
+    expect(panel).toContain('t("aReferenceValueForSetting")');
   });
 });
 
@@ -191,7 +199,7 @@ describe("ADR-0161 review-fix wiring (source checks)", () => {
     expect(panel).toContain('useIsProjectLead');
     expect(panel).toContain("pm-migration-hash");
     expect(panel).toContain("migration_note_hash");
-    expect(panel).toContain("INSIDER_REQUIRED_TEXT");
+    expect(panel).toContain("INSIDER_REQUIRED_KEY");
   });
   test("post-management panel GET maps insider_required through baselineErrorText", () => {
     const panel = src("components/stages/PostManagementPanel.tsx");
@@ -201,15 +209,15 @@ describe("ADR-0161 review-fix wiring (source checks)", () => {
   test("baseline panel: lead-only gating, findings dialog, ack payload, withheld rows, conflict no-form", () => {
     const panel = src("components/stages/ExecutionBaselinePanel.tsx");
     expect(panel).toContain("gx-lead-only");
-    expect(panel).toContain("LEAD_ONLY_TEXT");
+    expect(panel).toContain("LEAD_ONLY_KEY");
     expect(panel).toContain("canAct && isLead");
     expect(panel).toContain("BaselineConfirmDialog");
     expect(panel).toContain("acknowledged_findings");
     expect(panel).toContain("gx-classification-conflict");
     // Withheld tranche rows render excluded and the total label says so.
     expect(panel).toContain("isExcludedTranche");
-    expect(panel).toContain("EXCLUDED_TRANCHE_TEXT");
-    expect(panel).toContain("보류 행 제외");
+    expect(panel).toContain("EXCLUDED_TRANCHE_KEY");
+    expect(panel).toContain('t("trancheTotalHoldRowsExcluded")');
   });
   test("dialog requires a per-finding rationale and builds the ack payload", () => {
     const dialog = src("components/stages/BaselineConfirmDialog.tsx");
@@ -225,13 +233,14 @@ describe("ADR-0161 review-fix wiring (source checks)", () => {
 });
 
 describe("findingText / fmtMoney (display only)", () => {
-  test("known codes never show the raw backend message", () => {
-    for (const code of Object.keys(FINDING_LABEL)) {
-      expect(findingText({ code, message: "RAW backend message (planned·released)" })).toBe(FINDING_LABEL[code]);
+  test("known codes emit their catalog key (never the raw backend message)", () => {
+    for (const code of Object.keys(FINDING_LABEL_KEY)) {
+      expect(findingText({ code, message: "RAW backend message (planned·released)" })).toEqual({ key: FINDING_LABEL_KEY[code], params: {}, text: null });
+      expect(koOf(FINDING_LABEL_KEY[code]).length).toBeGreaterThan(0);
     }
   });
-  test("unknown codes fall back to the message", () => {
-    expect(findingText({ code: "zzz_unknown", message: "raw" })).toBe("raw");
+  test("unknown codes fall back to the message (data passthrough)", () => {
+    expect(findingText({ code: "zzz_unknown", message: "raw" })).toEqual({ key: null, params: {}, text: "raw" });
   });
   test("KRW: separators, at most 1 decimal; others at most 2", () => {
     expect(fmtMoney(10030.133473)).toBe("10,030.1");

@@ -59,7 +59,7 @@ export async function POST(request: Request) {
   } | null;
   if (!body?.name?.trim()) return badRequest("invalid_request", "name is required.");
   if (body.status === "dropped") {
-    return badRequest("typed_closure_required", "dropped는 생성 시 지정할 수 없습니다 — POST /api/opportunities/[id]/close로 제외하세요 (ADR-0152).");
+    return badRequest("typed_closure_required", "dropped cannot be set at creation — exclude via POST /api/opportunities/[id]/close (ADR-0152).");
   }
   if (body.status && !STATUSES.has(body.status)) {
     return badRequest("invalid_request", `status must be one of ${[...STATUSES].join("|")}.`);
@@ -82,11 +82,11 @@ export async function POST(request: Request) {
   // industry (the S1 predicate keys on opportunity.industry_id, migration 0126).
   const industryId = body.industry_id?.trim() || null;
   if (industryId && !db.query("SELECT id FROM md_industry WHERE id = ?").get(industryId)) {
-    return badRequest("invalid_industry", "industry_id가 md_industry에 존재하지 않습니다.");
+    return badRequest("invalid_industry", "industry_id does not exist in md_industry.");
   }
   const knownTargetName = body.known_target?.company_name?.trim() || null;
   if (body.known_target && !knownTargetName) {
-    return badRequest("invalid_request", "known_target.company_name이 필요합니다.");
+    return badRequest("invalid_request", "known_target.company_name is required.");
   }
   const now = new Date().toISOString();
   const id = ulid();

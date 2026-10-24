@@ -7,11 +7,13 @@
 // performed says so in text. The human decision controls stay in the
 // surrounding panel and are labelled as the human's decision (boundary #2).
 import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness, canWriteProject } from "../lib/project-write-access.ts";
-import { GATE_LABEL, type GateMetaId } from "../lib/stage-meta.ts";
+import type { GateMetaId } from "../lib/stage-meta.ts";
+import { GATE_LABEL_KEY } from "../lib/label-keys.ts";
 import { BUCKET_TITLE, ai2ndStatusMessage, bucketCounts, citationLabel, gateDisplayName, localizeItem, localizeNotPerformedReason, reviewOriginText } from "../lib/review/review-display.ts";
 import { TabNav } from "./TabNav.tsx";
 import { PrimaryAction, useToast } from "./ui.tsx";
@@ -27,7 +29,8 @@ const REVIEW_GATE_IDS: ReadonlySet<string> = new Set([
   "group_ic",
   "transition",
 ]);
-const gateLabel = (g: string): string => (g === "transition" ? gateDisplayName(g) : (GATE_LABEL[g as GateMetaId] ?? gateDisplayName(g)));
+/** Gate tab label — catalog key resolved with the ROOT translator; the review-lib Korean name stays the fallback. */
+const gateLabelKey = (g: string): string => (g === "transition" ? "" : (GATE_LABEL_KEY[g] ?? ""));
 
 /** A stage artifact tab (stage:S#:N) the caller offers, with a short Korean label. */
 export interface ReviewArtifactTab {
@@ -142,15 +145,16 @@ export function ReviewBuckets({
    *  render as a saved-state chip instead of a pending checkbox. */
   confirmedJudgements?: ReadonlySet<string>;
 }) {
+  const tr = useTranslations();
   const { me } = useAuth();
   const canRequest = entityType === "project" ? canWriteProject(me?.role) : canWriteBusiness(me?.role);
   const reviewGates = useMemo(() => (gates ?? []).filter((g) => REVIEW_GATE_IDS.has(g)) as ReviewGateId[], [gates]);
   const tabs = useMemo(
     () => [
-      ...reviewGates.map((g) => ({ key: `gate:${g}`, label: gateLabel(g) })),
+      ...reviewGates.map((g) => ({ key: `gate:${g}`, label: gateLabelKey(g) ? tr(gateLabelKey(g)) : gateDisplayName(g) })),
       ...(artifacts ?? []).filter((a) => /^stage:(S[1-9]|S1[0-2]):[1-9][0-9]*$/.test(a.key)),
     ],
-    [reviewGates, artifacts],
+    [reviewGates, artifacts, tr],
   );
   const [active, setActive] = useState<string>(tabs[0]?.key ?? "");
   const [views, setViews] = useState<Record<string, ReviewView>>({});

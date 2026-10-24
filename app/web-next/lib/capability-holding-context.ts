@@ -7,6 +7,7 @@
  */
 import { hasUsableAnalystEvidence } from "./profile-analyst-sources.ts";
 import type { CompanyProfilePayload } from "./company-profile-pipeline.ts";
+import { formatInteger, type Locale } from "./format.ts";
 
 const FIELD_CAP = 320;
 const COMPANY_CAP = 2600;
@@ -90,10 +91,10 @@ export function profileEvidenceLines(companyName: string, p: CompanyProfilePaylo
 
 export interface DisclosureItem { name: string; value: number; year?: string }
 
-const fmtKrw = (v: number): string => (Math.abs(v) >= 1e8 ? `${Math.round(v / 1e8).toLocaleString("en-US")}억원` : `${Math.round(v).toLocaleString("en-US")}원`);
+const fmtKrw = (v: number, locale: Locale | string = "ko"): string => (Math.abs(v) >= 1e8 ? `${formatInteger(Math.round(v / 1e8), locale)}억원` : `${formatInteger(Math.round(v), locale)}원`);
 
 /** "[공시·재무 근거]" lines: stored DART account values (latest years first, compact). */
-export function disclosureEvidenceLines(companyName: string, items: DisclosureItem[], maxItems = 24): string[] {
+export function disclosureEvidenceLines(companyName: string, items: DisclosureItem[], maxItems = 24, locale: Locale | string = "ko"): string[] {
   const rows = items.filter((i) => i && i.name && Number.isFinite(i.value));
   if (rows.length === 0) return [];
   const byYear = new Map<string, DisclosureItem[]>();
@@ -107,7 +108,7 @@ export function disclosureEvidenceLines(companyName: string, items: DisclosureIt
   for (const y of years) {
     const part = (byYear.get(y) ?? []).slice(0, left);
     left -= part.length;
-    lines.push(`- ${companyName} · 공시 ${y}: ${part.map((r) => `${clip(r.name, 30)} ${fmtKrw(r.value)}`).join(", ")}`);
+    lines.push(`- ${companyName} · 공시 ${y}: ${part.map((r) => `${clip(r.name, 30)} ${fmtKrw(r.value, locale)}`).join(", ")}`);
     if (left <= 0) break;
   }
   return lines;

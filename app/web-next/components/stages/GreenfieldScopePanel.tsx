@@ -10,6 +10,8 @@
 import { useEffect, useId, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { useModalFocus } from "../../lib/use-modal-focus.ts";
+import { useTranslations } from "next-intl";
+import { resolveLabelTokens } from "../../lib/label-keys.ts";
 import {
   canOfferWorkspaceOptIn,
   countAnnouncement,
@@ -44,7 +46,7 @@ export function GreenfieldScopePanel({ projectId, scope, domains, meUserId, canA
   onChanged: () => void;
   /** Selects a domain tab of the S9 payload by index (the people/organization link). */
   onSelectTab?: (index: number) => void;
-}) {
+}) {const tr = useTranslations(); const t = useTranslations("stages.s9.greenfieldScope"); const tc = useTranslations("common");
   const uid = useId();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,26 +104,26 @@ export function GreenfieldScopePanel({ projectId, scope, domains, meUserId, canA
   }
 
   return (
-    <section className="market-section sizing-step mb-3" aria-label="그린필드 세부 트랙 범위 요약" data-testid="gf-scope-panel">
-      <h3 className="sizing-step-title text-[length:var(--fs-body)]">범위 요약 — {subTrackName(scope)}</h3> {/* INTERIM-WORDING */}
+    <section className="market-section sizing-step mb-3" aria-label={t("greenfieldScopeSummary")} data-testid="gf-scope-panel">
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]">{t("scopeSummary")} {resolveLabelTokens(subTrackName(scope), tr)}</h3> {/* INTERIM-WORDING */}
 
       {people && (
         <div role="group" aria-labelledby={`${uid}-people`} className="mb-2" data-testid="gf-people-plan">
           <p id={`${uid}-people`} className="mb-1"><strong>{people.heading}</strong></p> {/* INTERIM-WORDING */}
           <p className="text-[length:var(--fs-body)]">
             {people.tabIndex !== null && onSelectTab ? (
-              <a href="#dd-tab-hr" data-testid="gf-people-link" onClick={(e) => { e.preventDefault(); onSelectTab(people.tabIndex!); }}>{people.tabLabel} 탭에서 판정하기</a>
+              <a href="#dd-tab-hr" data-testid="gf-people-link" onClick={(e) => { e.preventDefault(); onSelectTab(people.tabIndex!); }}>{resolveLabelTokens(people.tabLabel, tr)} {t("judgeInTheTab")}</a>
             ) : (
-              <strong>{people.tabLabel}</strong>
+              <strong>{resolveLabelTokens(people.tabLabel, tr)}</strong>
             )}
-            {" "}<span className="tabular-nums" data-testid="gf-people-judged">판정 {people.judged} / {people.judgeable}</span>
-            {people.reference && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"> (참고값 — 완료 집계에는 포함되지 않습니다)</span>} {/* INTERIM-WORDING */}
+            {" "}<span className="tabular-nums" data-testid="gf-people-judged">{tc("judgement")} {people.judged} / {people.judgeable}</span>
+            {people.reference && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"> {t("referenceValueExcludedFromCompletion")}</span>} {/* INTERIM-WORDING */}
           </p>
           {people.steps.length > 0 && (
             <ul className="text-[length:var(--fs-caption)] mt-1" data-testid="gf-people-steps">
               {people.steps.map((st) => (
                 <li key={st.step}>
-                  {st.step}단계 {st.label}: <span className="status-chip status-not-started"><span aria-hidden="true">{st.icon} </span>{st.text}</span>
+                  {st.step}{tc("stage")} {resolveLabelTokens(st.label, tr)}: <span className="status-chip status-not-started"><span aria-hidden="true">{st.icon} </span>{st.text}</span>
                   {st.detail && <span className="text-[color:var(--muted-fg)]"> — {st.detail}</span>}
                 </li>
               ))}
@@ -146,7 +148,7 @@ export function GreenfieldScopePanel({ projectId, scope, domains, meUserId, canA
           <p id={`${uid}-site`} className="mb-1">
             <span className={`status-chip ${site.kind === "confirmed" ? "status-green" : site.kind === "unconfirmed" ? "status-info" : "status-not-started"}`}>
               <span aria-hidden="true">{site.icon} </span>
-              {site.kind === "confirmed" || site.kind === "default" ? `부지: ${site.text}` : site.text}
+              {site.kind === "confirmed" || site.kind === "default" ? t("siteP1", { p1: site.text }) : site.text}
             </span>
           </p>
           {site.kind === "unconfirmed" && notes.length > 0 && (
@@ -159,43 +161,43 @@ export function GreenfieldScopePanel({ projectId, scope, domains, meUserId, canA
             <details open={siteOpen} onToggle={(e) => setSiteOpen((e.currentTarget as HTMLDetailsElement).open)} data-testid="gf-site-disclosure">
               <summary className="cursor-pointer" style={{ minHeight: "2.75rem" }}>{siteDisclosureLabel(site.kind)}</summary>
               <form
-                aria-label="부지 필요 여부 확인" /* INTERIM-WORDING: success notice says the confirmation applies immediately */
-                onSubmit={(e) => { e.preventDefault(); setTouched(true); if (!siteProblem) void act({ action: "confirm_site_required", site_required: value, rationale: rationale.trim() }, "부지 필요 여부 확인을 기록했습니다 — 바로 적용됩니다.").then((ok) => { if (ok) { setValue(null); setRationale(""); } }); }}
+                aria-label={t("checkSiteRequirement")} /* INTERIM-WORDING: success notice says the confirmation applies immediately */
+                onSubmit={(e) => { e.preventDefault(); setTouched(true); if (!siteProblem) void act({ action: "confirm_site_required", site_required: value, rationale: rationale.trim() }, t("siteRequirementCheckRecordedApplied")).then((ok) => { if (ok) { setValue(null); setRationale(""); } }); }}
               >
                 <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
-                  <legend className="text-[length:var(--fs-caption)] font-semibold mb-1">이 계획에 새 부지나 부지 확장이 필요한가 (필수)</legend>
+                  <legend className="text-[length:var(--fs-caption)] font-semibold mb-1">{t("doesThisPlanNeedA")}</legend>
                   <div role="radiogroup" className="flex flex-wrap gap-3 text-[length:var(--fs-caption)]">
                     <label className="flex items-center gap-1" style={{ minHeight: "2.75rem" }}>
-                      <input type="radio" name={`${uid}-site-value`} checked={value === true} onChange={() => setValue(true)} /> 필요 — 부지 단계 적용
+                      <input type="radio" name={`${uid}-site-value`} checked={value === true} onChange={() => setValue(true)} /> {t("neededSiteStageApplies")}
                     </label>
                     <label className="flex items-center gap-1" style={{ minHeight: "2.75rem" }}>
-                      <input type="radio" name={`${uid}-site-value`} checked={value === false} onChange={() => setValue(false)} /> 불필요 — 부지 단계 제외
+                      <input type="radio" name={`${uid}-site-value`} checked={value === false} onChange={() => setValue(false)} /> {t("notNeededSiteStageExcluded")}
                     </label>
                   </div>
                 </fieldset>
                 <div className="flex flex-wrap items-end gap-2 mt-1 text-[length:var(--fs-caption)]">
-                  <label htmlFor={`${uid}-why`}>확인 근거 (필수)
+                  <label htmlFor={`${uid}-why`}>{t("confirmationEvidenceRequired")}
                     <input id={`${uid}-why`} className="sizing-new-input ml-1" style={{ minWidth: "16rem" }} value={rationale} aria-invalid={touched && !rationale.trim()} onChange={(e) => setRationale(e.target.value)} />
                   </label>
-                  <button type="submit" className="btn-ghost btn-sm" disabled={busy || siteMissing.length > 0} aria-describedby={`${uid}-missing`}>부지 필요 여부 확인</button>
+                  <button type="submit" className="btn-ghost btn-sm" disabled={busy || siteMissing.length > 0} aria-describedby={`${uid}-missing`}>{t("checkSiteRequirement2")}</button>
                 </div>
                 <p id={`${uid}-missing`} role="note" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
-                  사람만 확인할 수 있으며, 확인하면 바로 적용됩니다. 바뀐 경우 새 근거를 적어 다시 확인할 수 있습니다. 에이전트는 제안만 합니다. {/* INTERIM-WORDING */}
-                  {siteMissing.length > 0 ? `확인 버튼을 쓰려면 먼저 입력하세요: ${siteMissing.join(", ")}.` : "입력이 끝났습니다 — 확인 버튼을 눌러야 기록됩니다. 선택만으로는 기록되지 않습니다."} {/* INTERIM-WORDING */}
+                  {t("onlyAPersonCanConfirm")} {/* INTERIM-WORDING */}
+                  {siteMissing.length > 0 ? t("enterTheseBeforeUsingThe", { p1: siteMissing.join(", ") }) : t("inputCompletePressTheConfirm")} {/* INTERIM-WORDING */}
                 </p>
                 {touched && siteProblem && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-1">✕ {siteProblem}</p>}
               </form>
             </details>
           ) : (
-            <p className="text-[color:var(--muted-fg)]">확인은 analyst 역할 이상의 사람만 할 수 있습니다.</p>
+            <p className="text-[color:var(--muted-fg)]">{t("onlyAPersonWithThe")}</p>
           )}
         </div>
       )}
 
       {outSteps.length > 0 && (
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2" data-testid="gf-out-of-scope">
-          <strong>범위 밖 단계:</strong>{" "} {/* INTERIM-WORDING */}
-          {outSteps.map((s) => `${s.step}단계 ${s.label}`).join(", ")} — 각 단계가 걸린 탭 머리글에서 이유를 볼 수 있습니다.
+          <strong>{t("steps")}</strong>{" "} {/* INTERIM-WORDING */}
+          {outSteps.map((s) => t("stepP1P2", { p1: s.step, p2: resolveLabelTokens(s.label, tr) })).join(", ")} {t("theReasonIsVisibleIn")}
         </p>
       )}
 
@@ -203,8 +205,8 @@ export function GreenfieldScopePanel({ projectId, scope, domains, meUserId, canA
         <p className="mt-2 text-[length:var(--fs-body)]" data-testid="gf-judged-line">
           <span role="status" aria-live="polite" aria-atomic="true">
             <strong className="tabular-nums">{line.text}</strong>
-            <span className="ml-3">필수 미충족 <span className="tabular-nums">{line.mandatoryUnmet}</span>건</span> {/* INTERIM-WORDING */}
-            <span className="ml-3">트랙 규칙으로 제외 <span className="tabular-nums">{line.excluded}</span>건</span> {/* INTERIM-WORDING */}
+            <span className="ml-3">{t("requiredCriteriaNotMet")} <span className="tabular-nums">{line.mandatoryUnmet}</span>{tc("countUnit")}</span> {/* INTERIM-WORDING */}
+            <span className="ml-3">{t("excludedByTrackRule")} <span className="tabular-nums">{line.excluded}</span>{tc("countUnit")}</span> {/* INTERIM-WORDING */}
             <span className="sr-only">{countAnnouncement(line)}</span>
           </span>
           {line.replacedCount > 0 && (
@@ -212,7 +214,7 @@ export function GreenfieldScopePanel({ projectId, scope, domains, meUserId, canA
           )}
           {line.extra && (
             <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              추가 체크리스트(R&BD 기술·법인 설립 등) 판정 {line.extra.judged} / {line.extra.judgeable} — 위 줄과 별도로 센 값입니다. {/* INTERIM-WORDING */}
+              {t("additionalChecklistJudgementRBd")} {line.extra.judged} / {line.extra.judgeable} {t("countedSeparatelyFromTheRow")} {/* INTERIM-WORDING */}
             </span>
           )}
         </p>
@@ -221,12 +223,12 @@ export function GreenfieldScopePanel({ projectId, scope, domains, meUserId, canA
       {named && !wsActive && canOfferWorkspaceOptIn(preview) && (
         <div className="mt-3" data-testid="gf-optin">
           <p className="text-[length:var(--fs-caption)] mb-1">
-            이 프로젝트는 새 작업 범위 규칙 도입 전에 시작되어 기존 범위가 유지됩니다. 사람이 전환 사유를 기록하면 트랙에 맞는 범위로 바뀝니다. 이미 기록된 판정은 지워지지 않습니다. {/* INTERIM-WORDING */}
+            {t("thisProjectStartedBeforeThe")} {/* INTERIM-WORDING */}
           </p>
           {canAct ? (
-            <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => setOptOpen(true)}>새 작업 범위로 전환 미리보기</button>
+            <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => setOptOpen(true)}>{t("preview")}</button>
           ) : (
-            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">전환은 analyst 역할 이상의 사람만 할 수 있습니다.</p>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("onlyAPersonWithThe2")}</p>
           )}
         </div>
       )}
@@ -236,7 +238,7 @@ export function GreenfieldScopePanel({ projectId, scope, domains, meUserId, canA
           preview={preview}
           optBase={optBase}
           onClose={() => setOptOpen(false)}
-          onDone={() => { setOptOpen(false); setNotice("새 작업 범위로 전환했습니다. 기존 판정은 모두 보존됩니다."); onChanged(); }}
+          onDone={() => { setOptOpen(false); setNotice(t("switchedToTheNewWork")); onChanged(); }}
         />
       )}
     </section>
@@ -249,7 +251,7 @@ function WorkspaceOptInDialog({ preview, optBase, onClose, onDone }: {
   optBase: string;
   onClose: () => void;
   onDone: () => void;
-}) {
+}) {const t = useTranslations("stages.s9.greenfieldScope"); const tc = useTranslations("common");
   const { panelRef, onKeyDown } = useModalFocus(onClose);
   const [note, setNote] = useState("");
   const [touched, setTouched] = useState(false);
@@ -272,12 +274,12 @@ function WorkspaceOptInDialog({ preview, optBase, onClose, onDone }: {
   return (
     <div className="modal-backdrop" role="presentation" onKeyDown={onKeyDown} onClick={onClose}>
       <div ref={panelRef} className="modal-panel" role="dialog" aria-modal="true" aria-labelledby="gf-optin-title" style={{ maxWidth: "40rem", width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <h3 id="gf-optin-title" className="text-[1rem] font-semibold mb-1">새 작업 범위로 전환</h3> {/* INTERIM-WORDING */}
-        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">아래는 미리보기이며 아직 아무것도 기록되지 않았습니다.</p>
+        <h3 id="gf-optin-title" className="text-[1rem] font-semibold mb-1">{t("switchToTheNewWork")}</h3> {/* INTERIM-WORDING */}
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{t("theFollowingIsAPreview")}</p>
         <ul className="sizing-note-list mb-3" data-testid="gf-optin-preview">
           {optInPreviewLines(preview).map((l) => <li key={l}>{l}</li>)}
         </ul>
-        <label className="text-[length:var(--fs-caption)] block" htmlFor="gf-optin-note">전환 사유 (필수)</label>
+        <label className="text-[length:var(--fs-caption)] block" htmlFor="gf-optin-note">{t("transitionReasonRequired")}</label>
         <textarea
           id="gf-optin-note"
           className="sizing-new-input mt-1 w-full"
@@ -294,8 +296,8 @@ function WorkspaceOptInDialog({ preview, optBase, onClose, onDone }: {
           {error ? `✕ ${error}` : touched && problem ? `✕ ${problem}` : ""}
         </p>
         <div className="flex flex-wrap items-center justify-end gap-2 mt-2">
-          <button type="button" className="btn-ghost btn-sm" onClick={onClose}>취소</button>
-          <button type="button" className="btn-premium btn-sm" disabled={saving} onClick={() => void submit()}>{saving ? "기록 중..." : "전환 기록"}</button>
+          <button type="button" className="btn-ghost btn-sm" onClick={onClose}>{tc("cancel")}</button>
+          <button type="button" className="btn-premium btn-sm" disabled={saving} onClick={() => void submit()}>{saving ? tc("recording") : t("transitionRecord")}</button>
         </div>
       </div>
     </div>

@@ -6,10 +6,11 @@ import { EChart } from "../../EChart.tsx";
 import { type SizingMatrix, segmentsOf, regionTotal, global2026, projection2030, bandFor } from "../../../lib/market-sizing.ts";
 import { SEGMENT_COLORS, r3, fmtBillions } from "./marketFormat.ts";
 import type { DriverSensitivity } from "./types.ts";
+import { useTranslations } from "next-intl";
 
 /* ── 단계별 차트 ── */
 
-export function StepSensitivityChart({ stepNumber, sensitivities }: { stepNumber?: number; sensitivities: DriverSensitivity[] }) {
+export function StepSensitivityChart({ stepNumber, sensitivities }: { stepNumber?: number; sensitivities: DriverSensitivity[] }) {const t = useTranslations("stages.s1.sizingCharts");
   const ct = useChartTheme();
   const agg = new Map<string, number>();
   for (const ds of sensitivities) {
@@ -18,7 +19,7 @@ export function StepSensitivityChart({ stepNumber, sensitivities }: { stepNumber
   }
   const labels = [...agg.keys()];
   const values = labels.map((l) => Math.round((agg.get(l) ?? 0) * 100) / 100);
-  if (labels.length === 0) return <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-caption)]">기록된 드라이버 민감도가 없습니다.</p>;
+  if (labels.length === 0) return <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-caption)]">{t("noRecordedDriverSensitivities")}</p>;
   const option = {
     grid: { left: 140, right: 40, top: 16, bottom: 32 },
     xAxis: { type: "value" as const, axisLabel: { color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
@@ -28,13 +29,13 @@ export function StepSensitivityChart({ stepNumber, sensitivities }: { stepNumber
   };
   return (
     <div className="mt-4">
-      {stepNumber !== undefined && <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">주요 드라이버 민감도 (민감도 절댓값 ≥ 0.3 → 주요 드라이버)</h4>}
-      <EChart option={option} ariaLabel="주요 드라이버 민감도" height={Math.max(140, labels.length * 40 + 48)} />
+      {stepNumber !== undefined && <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{t("keyDriverSensitivityAbsoluteSensitivity")}</h4>}
+      <EChart option={option} ariaLabel={t("keyDriverSensitivity")} height={Math.max(140, labels.length * 40 + 48)} />
     </div>
   );
 }
 
-export function AnchorChart({ matrix }: { matrix: SizingMatrix }) {
+export function AnchorChart({ matrix }: { matrix: SizingMatrix }) {const t = useTranslations("stages.s1.sizingCharts");
   const ct = useChartTheme();
   const option = {
     grid: { left: 170, right: 60, top: 16, bottom: 32 },
@@ -54,16 +55,16 @@ export function AnchorChart({ matrix }: { matrix: SizingMatrix }) {
         barMaxWidth: 24,
         markLine: {
           symbol: "none",
-          data: [{ xAxis: matrix.anchor.total, label: { formatter: `앵커 $${fmtBillions(matrix.anchor.total)}B`, color: ct.muted }, lineStyle: { color: ct.color[3], type: "dashed" as const, width: 2 } }],
+          data: [{ xAxis: matrix.anchor.total, label: { formatter: t("anchorP1B", { p1: fmtBillions(matrix.anchor.total) }), color: ct.muted }, lineStyle: { color: ct.color[3], type: "dashed" as const, width: 2 } }],
         },
       },
     ],
     tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const } },
   };
-  return <EChart option={option} ariaLabel="TAM/SAM/SOM 앵커 규모" height={170} />;
+  return <EChart option={option} ariaLabel={t("tamSamSomAnchorSize")} height={170} />;
 }
 
-export function RegionWeightDonut({ matrix }: { matrix: SizingMatrix }) {
+export function RegionWeightDonut({ matrix }: { matrix: SizingMatrix }) {const t = useTranslations("stages.s1.sizingCharts");
   const ct = useChartTheme();
   const option: Record<string, unknown> = {
     tooltip: { trigger: "item", formatter: (p: { name?: string; percent?: number }) => `${p.name}: ${p.percent}%` },
@@ -76,10 +77,10 @@ export function RegionWeightDonut({ matrix }: { matrix: SizingMatrix }) {
       data: matrix.regions.map((r, i) => ({ name: r.label, value: r.weight, itemStyle: { color: ct.color[i % ct.color.length] } })),
     }],
   };
-  return <EChart option={option as never} ariaLabel="지역별 가중치 비중" height={280} />;
+  return <EChart option={option as never} ariaLabel={t("weightShareByRegion")} height={280} />;
 }
 
-export function SegmentMixStack({ matrix }: { matrix: SizingMatrix }) {
+export function SegmentMixStack({ matrix }: { matrix: SizingMatrix }) {const t = useTranslations("stages.s1.sizingCharts");
   const ct = useChartTheme();
   const segs = segmentsOf(matrix);
   const option = {
@@ -97,19 +98,19 @@ export function SegmentMixStack({ matrix }: { matrix: SizingMatrix }) {
     })),
     tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const }, valueFormatter: (v: unknown) => `${Number(v)}%` },
   };
-  return <EChart option={option} ariaLabel="부문별 시장 구성" height={280} />;
+  return <EChart option={option} ariaLabel={t("marketCompositionBySegment")} height={280} />;
 }
 
-export function RegionTable({ matrix }: { matrix: SizingMatrix }) {
+export function RegionTable({ matrix }: { matrix: SizingMatrix }) {const t = useTranslations("stages.s1.sizingCharts"); const tc = useTranslations("common");
   const segs = segmentsOf(matrix);
   return (
-    <table className="data-table mt-3" aria-label="권역×세그먼트 배분표">
-      <caption className="sr-only">권역×세그먼트 배분 및 2026 기준선</caption>
+    <table className="data-table mt-3" aria-label={t("regionSegmentAllocationTable")}>
+      <caption className="sr-only">{t("regionSegmentAllocationAnd2026")}</caption>
       <thead>
         <tr>
-          <th scope="col">권역</th><th scope="col">가중치</th>
+          <th scope="col">{tc("region")}</th><th scope="col">{tc("weight")}</th>
           {segs.map((seg) => <th key={seg.code} scope="col">{seg.label}</th>)}
-          <th scope="col">2026 ($B)</th><th scope="col">주요 조정</th>
+          <th scope="col">2026 ($B)</th><th scope="col">{t("keyAdjustments")}</th>
         </tr>
       </thead>
       <tbody>
@@ -123,7 +124,7 @@ export function RegionTable({ matrix }: { matrix: SizingMatrix }) {
           </tr>
         ))}
         <tr className="row-selected">
-          <td className="font-semibold">글로벌</td>
+          <td className="font-semibold">{t("global")}</td>
           <td className="tabular-nums">100%</td>
           {(() => {
             const g = global2026(matrix);
@@ -132,7 +133,7 @@ export function RegionTable({ matrix }: { matrix: SizingMatrix }) {
                 {segs.map((seg) => (
                   <td key={seg.code} className="tabular-nums">{Math.round(((g[seg.code] ?? 0) / g.total) * 1000) / 10}%</td>
                 ))}
-                <td className="tabular-nums font-semibold">{g.total.toFixed(2)} (앵커 ${fmtBillions(matrix.anchor.total)})</td>
+                <td className="tabular-nums font-semibold">{g.total.toFixed(2)} {t("anchor")}{fmtBillions(matrix.anchor.total)})</td>
               </>
             );
           })()}
@@ -143,7 +144,7 @@ export function RegionTable({ matrix }: { matrix: SizingMatrix }) {
   );
 }
 
-export function CagrGroupedBar({ matrix }: { matrix: SizingMatrix }) {
+export function CagrGroupedBar({ matrix }: { matrix: SizingMatrix }) {const t = useTranslations("stages.s1.sizingCharts");
   const ct = useChartTheme();
   const segs = segmentsOf(matrix);
   const option = {
@@ -160,10 +161,10 @@ export function CagrGroupedBar({ matrix }: { matrix: SizingMatrix }) {
     })),
     tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const }, valueFormatter: (v: unknown) => `${(Number(v) * 100).toFixed(1)}%` },
   };
-  return <EChart option={option} ariaLabel="부문별 CAGR 비교" height={280} />;
+  return <EChart option={option} ariaLabel={t("cagrComparisonBySegment")} height={280} />;
 }
 
-export function ProjectionChart({ matrix }: { matrix: SizingMatrix }) {
+export function ProjectionChart({ matrix }: { matrix: SizingMatrix }) {const t = useTranslations("stages.s1.sizingCharts");
   const ct = useChartTheme();
   const proj = projection2030(matrix);
   const totals2026 = matrix.regions.map((r) => r3(regionTotal(matrix, r.code, 0)));
@@ -178,14 +179,14 @@ export function ProjectionChart({ matrix }: { matrix: SizingMatrix }) {
     yAxis: { type: "category" as const, data: [...matrix.regions].reverse().map((r) => r.label), axisLabel: { color: ct.muted, fontSize: 10 } },
     series: [
       { name: "2026", type: "bar" as const, data: [...totals2026].reverse(), itemStyle: { color: ct.color[0], opacity: 0.55, borderRadius: [0, 3, 3, 0] }, barMaxWidth: 12 },
-      { name: "2030 (기본)", type: "bar" as const, data: [...totals2030].reverse(), itemStyle: { color: ct.color[3], borderRadius: [0, 3, 3, 0] }, barMaxWidth: 12 },
+      { name: t("n2030Base"), type: "bar" as const, data: [...totals2030].reverse(), itemStyle: { color: ct.color[3], borderRadius: [0, 3, 3, 0] }, barMaxWidth: 12 },
     ],
     tooltip: { trigger: "axis" as const, axisPointer: { type: "shadow" as const } },
   };
-  return <EChart option={option} ariaLabel="연도별 시장 규모 전망" height={280} />;
+  return <EChart option={option} ariaLabel={t("marketSizeOutlookByYear")} height={280} />;
 }
 
-export function ScenarioBandChart({ matrix }: { matrix: SizingMatrix }) {
+export function ScenarioBandChart({ matrix }: { matrix: SizingMatrix }) {const t = useTranslations("stages.s1.sizingCharts");
   const ct = useChartTheme();
   const rows = matrix.regions.flatMap((r) => segmentsOf(matrix).map((seg) => {
     const b = bandFor(matrix, r.code, seg.code);
@@ -213,9 +214,9 @@ export function ScenarioBandChart({ matrix }: { matrix: SizingMatrix }) {
       trigger: "item" as const,
       formatter: (p: unknown) => {
         const r = rows[(p as { dataIndex: number }).dataIndex];
-        return `${r.label}<br/>비관 ${(r.down * 100).toFixed(1)}% ~ 낙관 ${(r.up * 100).toFixed(1)}%${r.isOverride ? "<br/><strong>문서화된 소스 불일치 → 넓은 밴드</strong>" : ""}`;
+        return t("p1P2ToOptimisticP3", { p1: r.label, p2: (r.down * 100).toFixed(1), p3: (r.up * 100).toFixed(1), p4: r.isOverride ? t("sourceMismatchWide") : "" });
       },
     },
   };
-  return <EChart option={option} ariaLabel="시나리오별 성장률 밴드" height={Math.max(280, rows.length * 17 + 48)} />;
+  return <EChart option={option} ariaLabel={t("growthRateBandByScenario")} height={Math.max(280, rows.length * 17 + 48)} />;
 }

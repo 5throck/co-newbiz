@@ -13,11 +13,11 @@ import { buildSubjectMarketContext, subjectMarketPromptBlock } from "../../../..
 export async function POST(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "AI 영역 제안은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "AI domain proposals require the analyst role or higher." }); if (denied) return denied; }
   const db = getDb();
   const body = (await request.json().catch(() => null)) as { opportunityId?: string; market_brief?: string; exclude?: string[] } | null;
   const oppId = typeof body?.opportunityId === "string" ? body.opportunityId : null;
-  if (!oppId) return badRequest("invalid_request", "opportunityId가 필요합니다.");
+  if (!oppId) return badRequest("invalid_request", "opportunityId is required.");
   const opp = db
     .query("SELECT id, name, market_scope, rationale FROM opportunity WHERE id = ?")
     .get(oppId) as { id: string; name: string; market_scope: string | null; rationale: string | null } | undefined;

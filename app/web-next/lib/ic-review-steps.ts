@@ -321,32 +321,32 @@ function insertRecord(db: Db, input: RecordIcStepInput, def: StepDef, status: Re
  */
 export function recordIcReviewStep(db: Db, input: RecordIcStepInput): StepRecordRow {
   const defs = input.procedure === "entity-ic-review" ? ENTITY_IC_STEPS : input.procedure === "group-investment-review" ? GROUP_IC_STEPS : null;
-  if (!defs) throw new IcReviewStepError("procedure는 entity-ic-review 또는 group-investment-review여야 합니다.");
+  if (!defs) throw new IcReviewStepError("procedure must be entity-ic-review or group-investment-review.");
   const def = defs.find((d) => d.id === input.stepId);
-  if (!def) throw new IcReviewStepError(`step_id '${input.stepId}'는 ${input.procedure} 절차에 없습니다.`);
-  if (def.source === "derived") throw new IcReviewStepError(`step ${def.id}(${def.output_type})는 다른 원장에서 파생되는 단계라 여기서 기록할 수 없습니다.`);
+  if (!def) throw new IcReviewStepError(`step_id '${input.stepId}' is not in the ${input.procedure} procedure.`);
+  if (def.source === "derived") throw new IcReviewStepError(`step ${def.id} (${def.output_type}) is derived from another ledger and cannot be recorded here.`);
   const payload = input.payload ?? null;
 
   if (input.procedure === "entity-ic-review" && def.id === "2") {
     const verdicts = (payload?.verdicts ?? null) as Record<string, unknown> | null;
-    if (!verdicts || typeof verdicts !== "object") throw new IcReviewStepError("payload.verdicts({ '<procedure>:<criterion_id>': pass|fail|na })가 필요합니다.");
+    if (!verdicts || typeof verdicts !== "object") throw new IcReviewStepError("payload.verdicts ({ '<procedure>:<criterion_id>': pass|fail|na }) is required.");
     const applicable = killCriteriaView(db, input.projectId, null);
     const known = new Set(applicable.map((c) => c.key));
     const clean: Record<string, Verdict> = {};
     for (const [k, v] of Object.entries(verdicts)) {
-      if (!known.has(k)) throw new IcReviewStepError(`'${k}'는 이 프로젝트에 적용되는 Kill Criteria가 아닙니다.`);
-      if (v !== "pass" && v !== "fail" && v !== "na") throw new IcReviewStepError(`'${k}'의 판정은 pass | fail | na여야 합니다.`);
+      if (!known.has(k)) throw new IcReviewStepError(`'${k}' is not a Kill Criterion applicable to this project.`);
+      if (v !== "pass" && v !== "fail" && v !== "na") throw new IcReviewStepError(`the verdict for '${k}' must be pass | fail | na.`);
       clean[k] = v;
     }
     const missing = applicable.filter((c) => !clean[c.key]).map((c) => c.key);
-    if (missing.length > 0) throw new IcReviewStepError(`모든 Kill Criteria에 명시적 판정이 필요합니다 — 미판정: ${missing.join(", ")}`);
+    if (missing.length > 0) throw new IcReviewStepError(`every Kill Criterion needs an explicit verdict — missing: ${missing.join(", ")}`);
     const note = typeof payload?.note === "string" ? payload.note.trim() : "";
     const failed = Object.values(clean).filter((v) => v === "fail").length;
     return insertRecord(db, input, def, failed > 0 ? "fail" : "pass", { verdicts: clean, note: note || null, failed });
   }
 
   if (input.procedure === "entity-ic-review" && def.id === "3") {
-    throw new IcReviewStepError("IC 메모는 snapshot_ic_memo 액션으로 생성·기록합니다.");
+    throw new IcReviewStepError("IC memos are created and recorded via the snapshot_ic_memo action.");
   }
 
   if (input.procedure === "entity-ic-review" && def.id === "4") {
@@ -358,7 +358,7 @@ export function recordIcReviewStep(db: Db, input: RecordIcStepInput): StepRecord
 
   const note = typeof payload?.note === "string" ? payload.note.trim() : "";
   if (!input.evidenceRef?.trim() && note.length < 10) {
-    throw new IcReviewStepError("evidence_ref 또는 10자 이상의 note가 필요합니다 — 근거 없는 단계 기록은 남길 수 없습니다.");
+    throw new IcReviewStepError("evidence_ref or a note of at least 10 characters is required — steps cannot be recorded without evidence.");
   }
   return insertRecord(db, input, def, "recorded", { note: note || null });
 }

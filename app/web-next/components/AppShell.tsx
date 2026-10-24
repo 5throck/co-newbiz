@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   ChevronLeft,
   GitBranch,
@@ -44,6 +45,7 @@ import { useInbox } from "../lib/use-inbox.ts";
 import { countOpenDecisions } from "../lib/inbox.ts";
 import { useModalFocus } from "../lib/use-modal-focus.ts";
 import { ThemeToggle } from "./ThemeToggle.tsx";
+import { LocaleSwitcher } from "./LocaleSwitcher.tsx";
 
 // 사이드 메뉴 상태 — docked(펼침, 데스크톱 전용) / closed(접힘: 데스크톱은
 // 폭 0 수축 push, 모바일은 화면 밖 대기) / open(모바일 오버레이 드로어).
@@ -106,6 +108,7 @@ function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggle
   sidebarDocked: boolean;
   onToggleSidebar: () => void;
 }) {
+  const t = useTranslations();
   const { me, logout } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -142,19 +145,19 @@ function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggle
   // opportunity detail goes back to the deal's S2 list (walkthrough F3).
   const oppDetailMatch = pathname.match(/^\/opportunities\/([^/]+)$/);
   const flatBack = oppDetailMatch
-    ? { href: `/deals/${oppDetailMatch[1]}/s2`, label: "S2 기회 발굴" }
+    ? { href: `/deals/${oppDetailMatch[1]}/s2`, label: "nav.stageS2" }
     : isDealFlowFlatRoute(pathname)
-      ? { href: "/deals", label: "검토/안건 보드" }
+      ? { href: "/deals", label: "nav.dealBoard" }
       : null;
   // The project list (/projects) is off the sidebar too; like the other
   // deal-less list screens it gets the topbar back to the board instead of
   // an in-page breadcrumb.
   const projectBack = pathname === "/projects"
-    ? { href: "/deals", label: "검토/안건 보드" }
+    ? { href: "/deals", label: "nav.dealBoard" }
     : projectSubMatch
-    ? { href: `/projects/${projectSubMatch[1]}`, label: "프로젝트 개요" }
+    ? { href: `/projects/${projectSubMatch[1]}`, label: "nav.projectOverview" }
     : projectOverviewMatch && projectOverviewMatch[1] !== "archives"
-      ? { href: "/deals", label: "검토/안건 보드" }
+      ? { href: "/deals", label: "nav.dealBoard" }
       : flatBack;
 
   // 활성 내비 항목 해석 — 최상위뿐 아니라 서브메뉴 자식(/synergy 등)도 찾는다.
@@ -194,13 +197,15 @@ function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggle
   // hasAppHistory)에는 브라우저 히스토리로 돌아가고, 새로고침·직접 URL
   // 진입처럼 되돌아갈 앱 내 이력이 없을 때만 기존 고정 경로로 폴백한다.
   const stageBackToHistory = !!dealStageMatch && hasAppHistory;
+  // Back labels are catalog keys (nav.* / common.*) resolved at render time.
   const backLabel = projectBack
     ? projectBack.label
     : dealStageMatch
-    ? (stageBackToHistory ? "이전" : "검토/안건 개요")
+    ? (stageBackToHistory ? "common.back" : "nav.dealOverview")
     : dealOverviewMatch
-      ? "검토/안건 보드"
-      : found?.parent ? found.parent.label : item?.label ?? "목록";
+      ? "nav.dealBoard"
+      : found?.parent ? found.parent.label : item?.label ?? "common.backToList";
+  const sidebarToggleLabel = sidebarState === "open" ? t("nav.sidebar.close") : t("nav.sidebar.open");
   return (
     <header className="topbar">
       {/* 사이드 메뉴 토글(topbar) — 사이드바가 화면에 없을 때(접힘/모바일)
@@ -212,9 +217,9 @@ function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggle
           type="button"
           className="topbar-icon-btn"
           onClick={onToggleSidebar}
-          aria-label={sidebarState === "open" ? "사이드 메뉴 닫기" : "사이드 메뉴 열기"}
+          aria-label={sidebarToggleLabel}
           aria-expanded={sidebarState === "open"}
-          title={sidebarState === "open" ? "사이드 메뉴 닫기" : "사이드 메뉴 열기"}
+          title={sidebarToggleLabel}
         >
           {sidebarState === "closed" ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
         </button>
@@ -243,27 +248,28 @@ function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggle
         >
           <ChevronLeft size={14} aria-hidden="true" />
           {/* WCAG 2.5.3: the accessible name is the visible label plus a screen-reader suffix. */}
-          {dealStageMatch || dealOverviewMatch || projectBack ? backLabel : item!.label}
-          <span className="sr-only"> 돌아가기</span>
+          {dealStageMatch || dealOverviewMatch || projectBack ? t(backLabel) : t(item!.label)}
+          <span className="sr-only">{" "}{t("common.backSuffix")}</span>
         </button>
       )}
       <div className="topbar-actions">
+        <LocaleSwitcher />
         <ThemeToggle compact />
         {me.role !== "admin" && (
-          <button type="button" className="topbar-logout" onClick={() => void markAllRead()} aria-label={`알림 ${unreadCount > 0 ? unreadCount : "0"} — 모두 읽음 처리`} title="읽지 않은 알림의 수입니다. 누르면 모두 읽음 처리합니다. 결정 대기함의 항목 수와는 별개입니다.">
+          <button type="button" className="topbar-logout" onClick={() => void markAllRead()} aria-label={t("common.notifications.markAll", { count: unreadCount > 0 ? unreadCount : 0 })} title={t("common.notifications.markAllHint")}>
             <Bell size={16} />
-            <span>알림 {unreadCount > 0 ? unreadCount : "0"}</span>
+            <span>{t("common.notifications.count", { count: unreadCount > 0 ? unreadCount : 0 })}</span>
           </button>
         )}
         <span className="topbar-user">{me.userId}</span>
         {/* 임의 비밀번호 변경 — must_change_password 플로우와 같은 화면을 재사용한다. */}
-        <button type="button" onClick={() => router.push("/password-change")} className="topbar-logout" aria-label="비밀번호 변경">
+        <button type="button" onClick={() => router.push("/password-change")} className="topbar-logout" aria-label={t("common.passwordChange")}>
           <KeyRound size={16} />
-          <span>비밀번호 변경</span>
+          <span>{t("common.passwordChange")}</span>
         </button>
-        <button type="button" onClick={() => logout()} className="topbar-logout" aria-label="로그아웃">
+        <button type="button" onClick={() => logout()} className="topbar-logout" aria-label={t("common.logout")}>
           <LogOut size={16} />
-          <span>로그아웃</span>
+          <span>{t("common.logout")}</span>
         </button>
       </div>
     </header>
@@ -281,9 +287,11 @@ function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar, inboxCount = 0 }
   onToggleSidebar?: () => void;
   inboxCount?: number;
 }) {
+  const t = useTranslations();
   const { me } = useAuth();
   const pathname = usePathname();
   if (!me) return null;
+  const collapseLabel = t("nav.sidebar.collapse");
 
   // ADR-0091 — 역할-화면 분리: admin은 관리 화면만, 비관리자는 비즈니스 화면만 본다.
   if (me.role === "admin") {
@@ -292,22 +300,22 @@ function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar, inboxCount = 0 }
         <div className="sidebar-head">
           <Link href="/admin" className="sidebar-brand">
             <span className="sidebar-brand-icon">CN</span>
-            <span>co-newbiz 관리</span>
+            <span>{t("nav.admin.brand")}</span>
           </Link>
           {onToggleSidebar && (
             <button
               type="button"
               className="sidebar-collapse-btn"
               onClick={onToggleSidebar}
-              aria-label="사이드 메뉴 접기"
-              title="사이드 메뉴 접기"
+              aria-label={collapseLabel}
+              title={collapseLabel}
             >
               <PanelLeftClose size={20} />
             </button>
           )}
         </div>
         <div>
-          <div className="sidebar-group-label">관리</div>
+          <div className="sidebar-group-label">{t("nav.section.admin")}</div>
           <nav className="sidebar-nav" aria-label="Primary">
             {ADMIN_NAV.map((item) => {
               const active = pathname === item.href || pathname.startsWith(item.href + "/");
@@ -319,7 +327,7 @@ function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar, inboxCount = 0 }
                   className={`side-nav-link ${active ? "side-nav-link-active" : ""}`}
                 >
                   {ADMIN_ICON_BY_HREF[item.href] ?? CHILD_ICON}
-                  <span>{item.label}</span>
+                  <span>{t(item.label)}</span>
                 </Link>
               );
             })}
@@ -343,21 +351,21 @@ function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar, inboxCount = 0 }
           <span>co-newbiz</span>
         </Link>
         {onToggleSidebar && (
-          <button
-            type="button"
-            className="sidebar-collapse-btn"
-            onClick={onToggleSidebar}
-            aria-label="사이드 메뉴 접기"
-            title="사이드 메뉴 접기"
-          >
-            <PanelLeftClose size={20} />
-          </button>
-        )}
+            <button
+              type="button"
+              className="sidebar-collapse-btn"
+              onClick={onToggleSidebar}
+              aria-label={collapseLabel}
+              title={collapseLabel}
+            >
+              <PanelLeftClose size={20} />
+            </button>
+          )}
       </div>
       {NAV_SECTIONS.map((section, idx) => (
         <div key={section.label}>
-          <div className="sidebar-group-label">{section.label}</div>
-          <nav className="sidebar-nav" aria-label={idx === 0 ? "Primary" : section.label}>
+          <div className="sidebar-group-label">{t(section.label)}</div>
+          <nav className="sidebar-nav" aria-label={idx === 0 ? "Primary" : t(section.label)}>
             {section.items.map((item) => {
               // The deal board owns its family of deal-less flat routes (R2-A item 2).
               // Inside a deal the contextual "current review/deal overview" item is the
@@ -372,14 +380,14 @@ function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar, inboxCount = 0 }
                   href={item.href}
                   className={`side-nav-link ${active ? "side-nav-link-active" : ""}`}
                   aria-current={active ? "page" : undefined}
-                  title={item.href === "/inbox" ? "결정 대기함 — 내가 결정해야 하는 열린 항목의 수입니다. 알림 수와는 별개입니다." : undefined}
+                  title={item.href === "/inbox" ? t("nav.inboxHint") : undefined}
                 >
                   {ICON_BY_HREF[item.href] ?? CHILD_ICON}
-                  <span>{item.label}</span>
+                  <span>{t(item.label)}</span>
                   {item.href === "/inbox" && (
                     <>
                       <span className="side-nav-badge" aria-hidden="true">{inboxCount > 0 ? inboxCount : ""}</span>
-                      <span className="sr-only" role="status" aria-live="polite">{inboxCount > 0 ? `대기 ${inboxCount}건` : "대기 없음"}</span>
+                      <span className="sr-only" role="status" aria-live="polite">{inboxCount > 0 ? t("nav.inboxPending", { count: inboxCount }) : t("nav.inboxPendingNone")}</span>
                     </>
                   )}
                 </Link>
@@ -392,14 +400,14 @@ function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar, inboxCount = 0 }
                 aria-current={pathname === dealOverviewHref ? "page" : undefined}
               >
                 <FolderKanban size={18} />
-                <span>현재 검토/안건 개요</span>
+                <span>{t("nav.currentDealOverview")}</span>
               </Link>
             )}
           </nav>
         </div>
       ))}
       <div className="sidebar-footer">
-        의사결정 지원 도구입니다. 게이트 승인과 투자 결정은 사람이 기록합니다.
+        {t("nav.disclaimer")}
       </div>
     </aside>
   );
@@ -427,19 +435,22 @@ function SidebarDrawer({ open, onClose, children }: {
   );
 }
 
+// Redirect notices are catalog keys (nav.moved.*); the record doubles as the
+// allowlist of valid `?moved=` keys.
 const MOVED_TEXT: Record<string, string> = {
-  market: "시장분석(/market)은 검토/안건별 S1 탭으로 통합되었습니다. 진행 중인 검토/안건이 하나뿐이라 그 화면으로 바로 이동했습니다.",
-  opportunities: "기회 발굴(/opportunities)은 검토/안건별 S2 탭으로 통합되었습니다. 진행 중인 검토/안건이 하나뿐이라 그 화면으로 바로 이동했습니다.",
-  synergy: "시너지 평가(/synergy)는 검토/안건별 S3 탭으로 통합되었습니다. 진행 중인 검토/안건이 하나뿐이라 그 화면으로 바로 이동했습니다.",
-  greenfield: "자체 진출(/greenfield)은 검토/안건별 S5 탭으로 통합되었습니다. 해당 트랙의 검토/안건이 하나뿐이라 그 화면으로 바로 이동했습니다.",
-  brownfield: "대상 발굴·선정(/brownfield)은 검토/안건별 S6 탭으로 통합되었습니다. 해당 트랙의 검토/안건이 하나뿐이라 그 화면으로 바로 이동했습니다.",
-  pipeline: "파이프라인 현황(/pipeline)은 검토/안건 보드로 통합되었습니다 — 퍼널과 진행 에이징은 아래 보드에서 봅니다.",
-  admin: "관리자 전용 화면입니다. 현재 계정(분석가·열람자)에는 접근 권한이 없어 검토/안건 보드로 이동했습니다. 권한이 필요하면 관리자에게 요청하세요.",
-  process: "단계별 허브(/process)는 단계 진행 표시줄과 검토/안건별 단계 탭으로 대체되었습니다. 검토/안건을 열어 단계를 이동하세요.",
+  market: "nav.moved.market",
+  opportunities: "nav.moved.opportunities",
+  synergy: "nav.moved.synergy",
+  greenfield: "nav.moved.greenfield",
+  brownfield: "nav.moved.brownfield",
+  pipeline: "nav.moved.pipeline",
+  admin: "nav.moved.admin",
+  process: "nav.moved.process",
 };
 
 /** Visible, dismissible notice for an automatic redirect (R2-A item 8: no silent redirects). */
 function MovedNotice() {
+  const t = useTranslations();
   const searchParams = useSearchParams();
   const [dismissed, setDismissed] = useState<string | null>(null);
   const key = searchParams.get("moved");
@@ -447,7 +458,7 @@ function MovedNotice() {
   if (!key || !text || dismissed === key) return null;
   return (
     <div role="status" className="moved-notice">
-      <span className="moved-notice-text">{text}</span>
+      <span className="moved-notice-text">{t(text)}</span>
       <button
         type="button"
         className="btn-ghost btn-sm"
@@ -458,13 +469,14 @@ function MovedNotice() {
           setDismissed(key);
         }}
       >
-        닫기
+        {t("common.close")}
       </button>
     </div>
   );
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const t = useTranslations();
   const { me, loading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
@@ -558,7 +570,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (loading)
     return (
       <div className="flex items-center justify-center h-screen text-[color:var(--muted-fg)]">
-        불러오는 중...
+        {t("common.loading")}
       </div>
     );
   if (!me) return null;
@@ -566,7 +578,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="app-shell" data-sidebar-state={sidebarState}>
-      <a href="#main-content" className="skip-link">본문으로 건너뛰기</a>
+      <a href="#main-content" className="skip-link">{t("common.skipToContent")}</a>
       {isMobile ? (
         <SidebarDrawer open={drawerOpen} onClose={closeDrawer}>
           {(drawerPanelRef) => <Sidebar panelRef={drawerPanelRef} inert={!drawerOpen} inboxCount={inboxCount} />}

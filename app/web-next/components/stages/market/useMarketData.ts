@@ -8,8 +8,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "../../../lib/api.ts";
 import { useConfirm } from "../../crud.tsx";
 import type { MarketOverview, IndustryDetail, KsicEntryView, LlmStatus, IndustryRow, ChainGraphNode, ChainGraphEdge } from "./types.ts";
+import { useTranslations } from "next-intl";
 
-export function useMarketData({ industryId: industryIdProp, embedded, startNew }: { industryId?: string; embedded?: boolean; startNew?: boolean }) {
+export function useMarketData({ industryId: industryIdProp, embedded, startNew }: { industryId?: string; embedded?: boolean; startNew?: boolean }) {const t = useTranslations("stages.s1.useMarketData"); const tc = useTranslations("common");
 
   const { me } = useAuth();
   const canCurate = canWriteBusiness(me?.role);
@@ -45,7 +46,7 @@ export function useMarketData({ industryId: industryIdProp, embedded, startNew }
       await api.patch(`/api/market-overview/industry/${encodeURIComponent(ind.id)}`, { pinned: !ind.pinned });
       await refreshOverview();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "고정 상태 변경 실패");
+      setError(e instanceof Error ? e.message : t("failedToChangeThePin"));
     } finally {
       setPinBusyId(null);
     }
@@ -65,7 +66,7 @@ export function useMarketData({ industryId: industryIdProp, embedded, startNew }
   const refreshOverview = useCallback(() => {
     return api.get<MarketOverview>("/api/market-overview")
       .then((r) => { setOverview(r.data); setError(null); })
-      .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
+      .catch((e) => setError(e instanceof Error ? e.message : tc("errors.loadFailed")));
   }, []);
 
   useEffect(() => {
@@ -93,7 +94,7 @@ export function useMarketData({ industryId: industryIdProp, embedded, startNew }
     setDetail(null);
     api.get<IndustryDetail>(`/api/market-overview/industry/${encodeURIComponent(selectedIndustry)}`)
       .then((r) => setDetail(r.data))
-      .catch((e) => setError(e instanceof Error ? e.message : "상세 불러오기 실패"));
+      .catch((e) => setError(e instanceof Error ? e.message : t("failedToLoadDetails")));
   }, [selectedIndustry]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // KSIC 코드 검색 — DART 검색과 동일한 표준 패턴(이름으로 검색 → 결과 선택 시 코드 채움):
@@ -108,9 +109,9 @@ export function useMarketData({ industryId: industryIdProp, embedded, startNew }
     try {
       const res = await api.get<{ entries: KsicEntryView[] }>(`/api/market-overview/ksic?q=${encodeURIComponent(q)}`);
       setKsicResults(res.data.entries);
-      if (res.data.entries.length === 0) setError("KSIC 검색 결과가 없습니다 — 코드를 직접 입력하세요.");
+      if (res.data.entries.length === 0) setError(t("noKsicSearchResultsEnter"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "KSIC 검색 실패");
+      setError(err instanceof Error ? err.message : t("ksicSearchFailed"));
     } finally {
       setKsicSearching(false);
     }

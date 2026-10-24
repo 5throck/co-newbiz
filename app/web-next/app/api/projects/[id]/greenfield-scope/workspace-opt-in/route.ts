@@ -22,7 +22,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const preview = workspaceOptInPreview(id);
-  if (!preview) return fail(409, "not_greenfield", "작업 범위 전환은 greenfield 경로 프로젝트에만 적용합니다.");
+  if (!preview) return fail(409, "not_greenfield", "Work-scope switching applies only to greenfield-route projects.");
   return ok({ preview }, 200);
 }
 
@@ -31,9 +31,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
   if (ctx.via !== "cookie" || currentPrincipal() || AGENT_KEYS.has(ctx.userId)) {
-    return forbidden("human_only", "작업 범위 전환은 사람만 할 수 있습니다 (boundary #2) — 에이전트는 제안만 가능합니다.");
+    return forbidden("human_only", "Only a human can switch the work scope (boundary #2) — agents may only propose.");
   }
-  if (ctx.role === "viewer") return forbidden("role_required", "analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;

@@ -14,7 +14,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "파이프라인 시작은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Pipeline starts require the analyst role or higher." }); if (denied) return denied; }
 
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as {
@@ -24,7 +24,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const industryId = body?.industry_id?.trim();
   const companyId = body?.initiating_company_id?.trim();
   if (!industryId || !companyId) {
-    return badRequest("invalid_request", "industry_id와 initiating_company_id는 모두 필수입니다 (산업 선정 + 계열사 결정).");
+    return badRequest("invalid_request", "Both industry_id and initiating_company_id are required (industry selection + affiliate decision).");
   }
 
   const db = getDb();
@@ -44,7 +44,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       if (err.code === "not_found") return notFound();
       return badRequest(err.code, err.message);
     }
-    return badRequest("pipeline_start_failed", err instanceof Error ? err.message : "파이프라인을 시작할 수 없습니다.");
+    return badRequest("pipeline_start_failed", err instanceof Error ? err.message : "Failed to start the pipeline.");
   }
 
   // First synchronous pass; the run lands in its terminal-for-now state

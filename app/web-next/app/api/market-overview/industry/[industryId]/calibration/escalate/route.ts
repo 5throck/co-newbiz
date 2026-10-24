@@ -11,12 +11,12 @@ import { applyCalibrationEscalation, EscalationError } from "../../../../../../.
 export async function POST(request: Request, { params }: { params: Promise<{ industryId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "에스컬레이션 적용은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Escalation application requires the analyst role or higher." });
   if (denied) return denied;
   const { industryId } = await params;
   const body = (await request.json().catch(() => null)) as { rationale?: string } | null;
   const rationale = body?.rationale?.trim();
-  if (!rationale) return badRequest("rationale_required", "에스컬레이션 근거(rationale)는 필수입니다.");
+  if (!rationale) return badRequest("rationale_required", "Escalation rationale is required.");
   const db = getDb();
   if (!db.query("SELECT id FROM md_industry WHERE id = ?").get(industryId)) return notFound();
   try {

@@ -426,14 +426,15 @@ describe("S8 fade-DCF cross-check and acquisition benchmark (display-only)", () 
   test("BusinessCaseStage renders band review warnings (display only)", async () => {
     const src = await Bun.file("app/web-next/components/stages/BusinessCaseStage.tsx").text();
     const gen = await import("../../app/web-next/lib/business-case-generator.ts");
-    expect(src).toContain(`&gt; ${gen.EV_BAND_SPREAD_FLAG_RATIO}배`);
+    // i18n: display-only warnings moved to the catalog (stages.s8.stage.*) — pin the keys.
     expect(src).toContain("evBand?.spreadFlag");
     expect(src).toContain("evBand?.stale");
     expect(src).toContain("data.target_selection.selectedBy === evBand.confirmed.confirmedBy");
-    expect(src).toContain("재확인 필요");
-    expect(src).toContain("(참고 표시)");
+    expect(src).toContain('t("theConfirmedBandIsWide")');
+    expect(src).toContain('t("neededAfterConfirmation")');
+    expect(src).toContain('t("advisoryOnlyItDoesNot")');
     expect(src).not.toContain("범위 내</");
-    expect(src).toContain("평가 기준이 다른 대상 간에는 밴드 판정을 비교할 수 없습니다");
+    expect(src).toContain('t("bandJudgementsCannotBeCompared")');
   });
 
   test("constants", () => {

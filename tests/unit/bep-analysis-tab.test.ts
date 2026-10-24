@@ -126,7 +126,7 @@ describe("S8 tab restructure: 재무분석 → 대상회사 + 신규 재무분�
   test("the stage renders the BEP panel; the old panel keeps its route", () => {
     const stage = read("app/web-next/components/stages/BusinessCaseStage.tsx");
     expect(stage).toContain('{tab === "bep" && <BepAnalysisPanel projectId={projectId} />}');
-    expect(stage).toContain('label: "대상회사"');
+    expect(stage).toContain('label: t("targetCompany")');
     expect(read("app/web-next/components/stages/BepAnalysisPanel.tsx")).toContain("BEP Analysis");
   });
 
@@ -152,12 +152,13 @@ describe("S8 tab restructure: 재무분석 → 대상회사 + 신규 재무분�
     expect(route).toContain("listShortlistSubjects");
     expect(route).toContain("acquisition:");
     const panel = read("app/web-next/components/stages/BepAnalysisPanel.tsx");
-    expect(panel).toContain("인수가격(EV)");
-    expect(panel).toContain("인수(M&A) 케이스");
+    // i18n: labels moved to the catalog — pin the keys (stages.s8.bepAnalysis.*).
+    expect(panel).toContain('t("acquisitionPriceEv")');
+    expect(panel).toContain('t("thisIsAnMA")');
     // An M&A case splits the price from operating capex in the year table/chart
     // (2026-10-19 decider direction: `설비투자` is the wrong label for the price).
-    expect(panel).toContain('["인수가격", (r: YearRow) => (r.year === 0 ? r.capex : 0)]');
-    expect(panel).toContain('["설비투자 (운영)", (r: YearRow) => (r.year === 0 ? 0 : r.capex)]');
+    expect(panel).toContain('[tc("acquisitionPrice"), (r: YearRow) => (r.year === 0 ? r.capex : 0)]');
+    expect(panel).toContain('[tc("capexOperating"), (r: YearRow) => (r.year === 0 ? 0 : r.capex)]');
   });
 
   test("the panel reads the scenario tables off the route payload's `scenarios` key (regression: flat read stuck the tab on 불러오는 중)", () => {

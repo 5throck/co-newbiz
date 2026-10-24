@@ -387,7 +387,7 @@ describe("deleting a target and the S8 bridge", () => {
     const s8 = read("app/web-next/components/stages/CapabilityAttainabilityPanel.tsx");
     expect(s8).not.toContain("CapabilityJudgementEditor");
     expect(s8).not.toContain("<input");
-    expect(s8).toContain("S7\uc5d0\uc11c \ud310\uc815");
+    expect(s8).toContain('t("judgedInS7")');
     expect(read("app/web-next/components/stages/brownfield/ShortlistSection.tsx")).not.toContain("CapabilityReadinessNotice"); // retired 2026-10-20
   });
 });

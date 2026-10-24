@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 import { useModalFocus } from "../lib/use-modal-focus.ts";
 
 /* ── ConfirmDialog + useConfirm ── */
@@ -28,6 +29,7 @@ export function ConfirmDialog({
   state: ConfirmState | null;
   onClose: () => void;
 }) {
+  const tc = useTranslations("common");
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const { panelRef, onKeyDown } = useModalFocus(onClose);
@@ -51,7 +53,7 @@ export function ConfirmDialog({
         )}
         <div className="flex justify-end gap-2 mt-4">
           <button type="button" className="btn-ghost btn-sm" onClick={onClose}>
-            취소
+            {tc("cancel")}
           </button>
           <button
             type="button"
@@ -62,7 +64,7 @@ export function ConfirmDialog({
               onClose();
             }}
           >
-            {state.confirmLabel ?? "확인"}
+            {state.confirmLabel ?? tc("confirm")}
           </button>
         </div>
       </div>
@@ -89,7 +91,7 @@ export function InlineCreateForm({
   onSubmit,
   onCancel,
   children,
-  submitLabel = "등록",
+  submitLabel,
   disabled = false,
   ariaLabel,
 }: {
@@ -97,20 +99,22 @@ export function InlineCreateForm({
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
   children: React.ReactNode;
+  /** Defaults to common.register ("등록") from the catalog. */
   submitLabel?: string;
   disabled?: boolean;
   ariaLabel: string;
 }) {
+  const tc = useTranslations("common");
   if (!open) return null;
   return (
     <form onSubmit={onSubmit} aria-label={ariaLabel} className="sizing-new-form mb-3">
       <div className="flex flex-wrap items-end gap-2">
         {children}
         <button type="submit" className="btn-ghost btn-sm" disabled={disabled}>
-          {submitLabel}
+          {submitLabel ?? tc("register")}
         </button>
         <button type="button" className="btn-ghost btn-sm" onClick={onCancel}>
-          취소
+          {tc("cancel")}
         </button>
       </div>
     </form>
@@ -140,6 +144,7 @@ export function RowEdit({
   width?: string;
   placeholder?: string;
 }) {
+  const tc = useTranslations("common");
   if (!editing) return null;
   return (
     <span className="row-edit-cell">
@@ -157,10 +162,10 @@ export function RowEdit({
         }}
       />
       <button type="button" className="btn-ghost btn-sm" disabled={saving} onClick={onSave}>
-        {saving ? "저장 중..." : "저장"}
+        {saving ? tc("saving") : tc("save")}
       </button>
       <button type="button" className="btn-ghost btn-sm" onClick={onCancel}>
-        취소
+        {tc("cancel")}
       </button>
     </span>
   );

@@ -23,8 +23,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (currentPrincipal()) return forbidden("human_only", "복사본으로 되돌리기는 사람만 실행할 수 있습니다 (boundary #2).");
-  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "복사본으로 되돌리기는 analyst 역할 이상이어야 합니다." });
+  if (currentPrincipal()) return forbidden("human_only", "Only a human can restore from a copy (boundary #2).");
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Restore from copy requires the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();

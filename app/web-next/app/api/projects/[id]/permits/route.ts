@@ -22,7 +22,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "인허가·인증 등록은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Registering permits/certifications requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
@@ -30,9 +30,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     transferable_on_coc?: string | null; status?: string;
   } | null;
   if (body?.kind !== "permit" && body?.kind !== "certification") {
-    return badRequest("kind_required", "kind은 permit 또는 certification이어야 합니다.");
+    return badRequest("kind_required", "kind must be permit or certification.");
   }
-  if (!body?.name?.trim()) return badRequest("name_required", "name은 필수입니다.");
+  if (!body?.name?.trim()) return badRequest("name_required", "name is required.");
   const rid = ulid();
   if (body.kind === "permit") {
     getDb().run(
@@ -60,13 +60,13 @@ const STATUS_ALLOWED = new Set(["not_started", "in_progress", "granted", "denied
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "인허가·인증 삭제는 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Deleting permits/certifications requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const url = new URL(request.url);
   const kind = url.searchParams.get("kind") ?? "";
   const rid = url.searchParams.get("id") ?? "";
-  if (kind !== "permit" && kind !== "certification") return badRequest("kind_required", "kind은 permit 또는 certification이어야 합니다.");
+  if (kind !== "permit" && kind !== "certification") return badRequest("kind_required", "kind must be permit or certification.");
   const db = getDb();
   const table = kind === "permit" ? "permit" : "certification";
   const row = db.query(`SELECT id FROM ${table} WHERE id = ? AND project_id = ?`).get(rid, id) as { id: string } | undefined;
@@ -85,16 +85,16 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "인허가·인증 갱신은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Updating permits/certifications requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as { kind?: unknown; id?: unknown; status?: unknown } | null;
   const kind = body?.kind === "permit" || body?.kind === "certification" ? body.kind : null;
   const rid = typeof body?.id === "string" ? body.id : "";
   const status = typeof body?.status === "string" ? body.status.trim() : "";
-  if (!kind || !rid) return badRequest("invalid_request", "kind과 id가 필요합니다.");
-  if (!status) return badRequest("invalid_request", "status는 필수입니다.");
-  if (!STATUS_ALLOWED.has(status)) return badRequest("invalid_request", `status는 ${[...STATUS_ALLOWED].join(" | ")} 중 하나입니다.`);
+  if (!kind || !rid) return badRequest("invalid_request", "kind and id are required.");
+  if (!status) return badRequest("invalid_request", "status is required.");
+  if (!STATUS_ALLOWED.has(status)) return badRequest("invalid_request", `status must be one of: ${[...STATUS_ALLOWED].join(" | ")}.`);
   const db = getDb();
   const row = db.query(`SELECT id FROM ${kind} WHERE id = ? AND project_id = ?`).get(rid, id) as { id: string } | undefined;
   if (!row) return notFound();

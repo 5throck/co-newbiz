@@ -19,18 +19,18 @@ import { JUDGEMENT_ROW_CAP, loadJudgementEvidence, runJudgementDraft, selectJudg
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "판정 제안(AI)은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Judgement proposals (AI) require the analyst role or higher." }); if (denied) return denied; }
   const { id } = await params;
   const db = getDb();
   const opp = db.query("SELECT id, name, market_scope FROM opportunity WHERE id = ?").get(id) as { id: string; name: string; market_scope: string | null } | undefined;
   if (!opp) return notFound();
   let body: { rowIds?: unknown; includeEvidence?: unknown } = {};
   try { body = ((await request.json()) as typeof body | null) ?? {}; } catch { /* empty body */ }
-  if (body.rowIds !== undefined && !(Array.isArray(body.rowIds) && body.rowIds.every((x) => typeof x === "string"))) return badRequest("invalid_request", "rowIds는 문자열 배열입니다.");
+  if (body.rowIds !== undefined && !(Array.isArray(body.rowIds) && body.rowIds.every((x) => typeof x === "string"))) return badRequest("invalid_request", "rowIds must be an array of strings.");
   const reg = readRegister(db, id);
-  if (!reg || reg.rows.length === 0) return badRequest("no_rows", "필요 역량 행이 없습니다 — S3에서 필요 역량을 먼저 정리하세요.");
+  if (!reg || reg.rows.length === 0) return badRequest("no_rows", "No capability rows — organize required capabilities in S3 first.");
   const { targets, unknown, capped } = selectJudgementTargets(reg.rows, body.rowIds as string[] | undefined);
-  if (unknown.length > 0) return badRequest("unknown_row", `레지스터에 없는 행입니다: ${unknown.slice(0, 3).join(", ")}`);
+  if (unknown.length > 0) return badRequest("unknown_row", `Rows not in the register: ${unknown.slice(0, 3).join(", ")}`);
   const empty = { drafts: {}, unfilled: {}, counts: { rows: 0, proposed: 0, fieldsFilled: 0, fieldsUnfilled: 0, kept: 0, failedRows: 0 } };
   if (targets.length === 0) return ok({ ...empty, source: "synthesis", note: "제안할 행이 없습니다 — 모든 행에 해소 방식·기대 수준·달성 가능성이 있고 S3 변경도 없습니다." }, 200);
   if (!isLlmConfigured()) {

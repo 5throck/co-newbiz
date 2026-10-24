@@ -44,13 +44,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "차터 변경은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Amending the charter requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as
     | { note?: string; patch?: { entryScope?: string; purpose?: string; kpis?: Array<{ key: string; label: string; target: string }> } }
     | null;
-  if (!body?.note?.trim()) return badRequest("invalid_request", "note(변경 사유)는 필수입니다 — 스코프 크리프 추적을 위해 기록됩니다.");
+  if (!body?.note?.trim()) return badRequest("invalid_request", "note (change reason) is required — recorded to track scope creep.");
   try {
     const result = appendCharterAmendment(getDb(), id, {
       builtBy: ctx.userId,

@@ -24,6 +24,12 @@ const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
 const cl = await import("../../app/web-next/lib/capability-cost-lines.ts");
+// i18n (design 2026-10-23-i18n-ui-adoption): S5 stage copy resolves through the
+// catalog — wording pins below assert the key call site in the component source
+// and the ko master catalog value (the original Korean label).
+const koCatalog = await import("../../app/web-next/locales/ko.json");
+const koOf = (key: string): string =>
+  key.split(".").reduce<unknown>((acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined), koCatalog) as string;
 
 const NOW = new Date().toISOString();
 const json = JSON.stringify;
@@ -109,14 +115,24 @@ describe("route: lines-only POST preserves the other stored fields", () => {
 describe("UI structure: one grid, shared columns, chips in-row, own save button", () => {
   test("unified list is a single data-table grid with the shared column order", () => {
     const s = stage();
-    const table = s.slice(s.indexOf('data-testid="invest-item-list"'));
     const scope = s.slice(s.indexOf('data-testid="invest-item-list"'), s.indexOf('data-testid="invest-item-footer"'));
-    void table;
-    expect(s).toContain('<table className="data-table table-fixed-pct tmin-80 invest-item-table" aria-label="투자비 항목 목록" data-testid="invest-item-list">');
+    expect(s).toContain('<table className="data-table table-fixed-pct tmin-80 invest-item-table" aria-label={t("investmentItemList")} data-testid="invest-item-list">');
+    expect(koOf("stages.s5.stage.investmentItemList")).toBe("투자비 항목 목록");
     expect(s).toContain('<ColGroup widths={INVEST_ITEM_COL_PCT} />');
     expect(s).toContain('<div className="table-scroll mb-1">');
-    for (const h of ["항목명", "출처", "분류", "금액 (연 환산·기간 총액, 백만원)", "단위", "통화", "주기", "시작·종료 연차", "비고", "작업"]) {
-      expect(scope).toContain(`<th scope="col">${h}</th>`);
+    // Shared column order: header cells reference catalog keys in the pinned order…
+    const head = scope.slice(scope.indexOf("<thead>"), scope.indexOf("</thead>"));
+    for (const cell of ['<th scope="col">{tc("itemName")}</th>', '<th scope="col">{tc("source")}</th>', '<th scope="col">{tc("classification")}</th>', '<th scope="col">{t("amountAnnualizedOrPeriodTotal")}</th>', '<th scope="col">{tc("unit")}</th>', '<th scope="col">{tc("currency")}</th>', '<th scope="col">{tc("cycle")}</th>', '<th scope="col">{t("startAndEndYears")}</th>', '<th scope="col">{tc("notes")}</th>', '<th scope="col">{tc("actions")}</th>']) {
+      expect(head).toContain(cell);
+    }
+    // …and each key resolves to the original Korean label in the ko catalog.
+    for (const [key, label] of [
+      ["common.itemName", "항목명"], ["common.source", "출처"], ["common.classification", "분류"],
+      ["stages.s5.stage.amountAnnualizedOrPeriodTotal", "금액 (연 환산·기간 총액, 백만원)"],
+      ["common.unit", "단위"], ["common.currency", "통화"], ["common.cycle", "주기"],
+      ["stages.s5.stage.startAndEndYears", "시작·종료 연차"], ["common.notes", "비고"], ["common.actions", "작업"],
+    ] as const) {
+      expect(koOf(key)).toBe(label);
     }
     // Both row kinds share the same <tr>/<td> grid.
     expect(scope).toContain('data-testid={`invest-manual-row-${i}`}');
@@ -128,31 +144,41 @@ describe("UI structure: one grid, shared columns, chips in-row, own save button"
   });
   test("capability row: read-only slots, editable 분류/집행 연차, chips, 판정 보기 and 반영 해제 in 작업", () => {
     const scope = stage().slice(stage().indexOf('data-testid="invest-item-list"'), stage().indexOf('data-testid="invest-item-footer"'));
-    expect(scope).toContain('<option value="krw_m">백만원</option>');
-    expect(scope).toContain("{CURRENCY_LABEL.KRW}</option>");
+    expect(scope).toContain('<option value="krw_m">{tc("krwMillionUnit")}</option>');
+    expect(koOf("common.krwMillionUnit")).toBe("백만원");
+    expect(scope).toContain("{CURRENCY_LABEL(tr).KRW}</option>");
     // 2026-10-18: the linked row's period select now carries the full vocabulary (map-rendered).
     expect(scope).toContain("(Object.keys(PERIOD_LABEL) as BcPeriod[]).map((p2) =>");
-    expect(scope).toContain("판정 보기</a>");
-    expect(scope).toContain("반영 해제</button>");
-    expect(scope).toContain("재판정 필요</span>");
-    expect(scope).toContain("반영됨 · 저장됨</span>");
+    expect(scope).toContain('{t("viewJudgement")}</a>');
+    expect(koOf("stages.s5.stage.viewJudgement")).toBe("판정 보기");
+    expect(scope).toContain('{t("unreflect2")}</button>');
+    expect(koOf("stages.s5.stage.unreflect2")).toBe("반영 해제");
+    expect(scope).toContain('{tc("rejudgeNeeded")}</span>');
+    expect(koOf("common.rejudgeNeeded")).toBe("재판정 필요");
+    expect(scope).toContain('{t("reflectedSaved")}</span>');
+    expect(koOf("stages.s5.stage.reflectedSaved")).toBe("반영됨 · 저장됨");
   });
   test("manual row: editable slots, per-row saved chips, delete only here", () => {
     const scope = stage().slice(stage().indexOf('data-testid="invest-item-list"'), stage().indexOf('data-testid="invest-item-footer"'));
-    for (const aria of ['aria-label="항목명"', 'aria-label="분류"', 'aria-label="금액"', 'aria-label="금액 단위"', 'aria-label="기준 통화"', 'aria-label="금액 기준 (반복 주기 또는 일시불)"', 'aria-label="비고"']) {
+    for (const aria of ['aria-label={tc("itemName")}', 'aria-label={tc("classification")}', 'aria-label={tc("amount")}', 'aria-label={t("amountUnit2")}', 'aria-label={t("baseCurrency2")}', 'aria-label={t("amountBasisRecurringCycleOr")}', 'aria-label={tc("notes")}']) {
       expect(scope).toContain(aria);
     }
     expect(scope).toContain('data-testid={`invest-confirm-chip-${i}`}');
-    expect(scope).toContain("수동</span>");
-    expect(scope).toContain("저장 전</span>");
-    expect(scope).toContain("저장됨</span>");
+    expect(scope).toContain('{t("manual")}</span>');
+    expect(koOf("stages.s5.stage.manual")).toBe("수동");
+    expect(scope).toContain('{tc("unsaved")}</span>');
+    expect(koOf("common.unsaved")).toBe("저장 전");
+    expect(scope).toContain('{t("saved")}</span>');
+    expect(koOf("stages.s5.stage.saved")).toBe("저장됨");
     expect(scope).not.toContain("invest-unit-text-");
     expect(scope).not.toContain("단위 확인 필요");
     expect(scope).not.toContain("invest-unit-marker-");
     // 2026-10-22 표 감사 수선: 일반 "항목 삭제" 라벨은 행 특정 라벨로 대체되었다
     // (어느 행의 삭제인지 스크린리더가 알 수 있게) — 제네릭 라벨의 재유입을 막는다.
     expect(scope).not.toContain('aria-label="항목 삭제"');
-    expect(scope).toContain('{l.line || "항목"} 삭제');
+    expect(scope).toContain('t("deleteP1", { p1: l.line || tc("items") })');
+    expect(koOf("stages.s5.stage.deleteP1")).toBe("{p1} 삭제");
+    expect(koOf("common.items")).toBe("항목");
     // Delete button appears only in the manual branch.
     const capPart = scope.slice(scope.indexOf("invest-cap-row-"), scope.indexOf("invest-manual-row-"));
     expect(capPart).not.toContain("항목 삭제");
@@ -162,9 +188,12 @@ describe("UI structure: one grid, shared columns, chips in-row, own save button"
 describe("save button wiring: lines-only payload, dirty tracking, success note", () => {
   test("section header carries the explicit save button, clean-state hint and helper line", () => {
     const s = stage();
-    expect(s).toContain("투자비 항목 저장");
-    expect(s).toContain("저장할 변경 없음");
-    expect(s).toContain("항목 변경 후 투자비 항목 저장을 누르세요");
+    expect(s).toContain('linesSaveButton(t("saveInvestmentItems"))');
+    expect(koOf("stages.s5.stage.saveInvestmentItems")).toBe("투자비 항목 저장");
+    expect(s).toContain('t("noChangesToSave2")');
+    expect(koOf("stages.s5.stage.noChangesToSave2")).toBe("저장할 변경 없음");
+    expect(s).toContain('t("afterChangingItemsPressSave")');
+    expect(koOf("stages.s5.stage.afterChangingItemsPressSave")).toBe("항목 변경 후 투자비 항목 저장을 누르세요");
     expect(s).toContain("data-testid=\"invest-item-save-actions\"");
     expect(s).toContain("data-testid=\"invest-item-dirty-chip\"");
     expect(s).toContain("data-testid=\"invest-item-note\"");
@@ -178,7 +207,8 @@ describe("save button wiring: lines-only payload, dirty tracking, success note",
     expect(s).toContain("api.post(`/api/greenfield/${selected.opportunity.id}`, {");
     expect(s).toContain("business_case_lines: [metaEntry(), ...body.business_case_lines.map");
     expect(s).toContain("amount_mismatch");
-    expect(s).toContain('setLinesNote(`${savedCount}건 저장 · 합계 ${formatKrwM(invTotals.grandKrwM)}`)');
+    expect(s).toContain('setLinesNote(t("p1ItemSSavedTotal", { p1: savedCount, p2: formatKrwM(invTotals.grandKrwM) }))');
+    expect(koOf("stages.s5.stage.p1ItemSSavedTotal")).toBe("{p1}건 저장 · 합계 {p2}");
     expect(s).toContain("investDirty ||");
   });
   test("dirty tracking: manual snapshot comparison plus reflectDirty feeds investDirty", () => {
@@ -191,11 +221,14 @@ describe("save button wiring: lines-only payload, dirty tracking, success note",
   });
   test("the whole-assessment save paths are untouched", () => {
     const s = stage();
-    expect(s).toContain('label="평가 기록 (사람이 확정)"');
-    expect(s).toContain(">저장</button>");
-    expect(s).toContain("선택한 비용을 투자비에 반영".slice(1)); // reflect button label comes from CapabilityCostBlock
+    expect(s).toContain('label={t("evaluationRecordConfirmedByA2")}');
+    expect(koOf("stages.s5.stage.evaluationRecordConfirmedByA2")).toBe("평가 기록 (사람이 확정)");
+    expect(s).toContain('>{tc("save")}</button>');
+    expect(koOf("common.save")).toBe("저장");
+    // reflect button label comes from CapabilityCostBlock
     const block = read("app/web-next/components/stages/CapabilityCostBlock.tsx");
-    expect(block).toContain("선택한 비용을 투자비에 반영");
+    expect(block).toContain('t("reflectTheSelectedCostsInto")');
+    expect(koOf("stages.s5.capabilityCost.reflectTheSelectedCostsInto")).toBe("선택한 비용을 투자비에 반영");
   });
 });
 

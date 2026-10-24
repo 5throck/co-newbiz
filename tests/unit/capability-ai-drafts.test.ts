@@ -263,23 +263,27 @@ describe("UI source structure", () => {
   const read = (p: string) => readFileSync(join(ROOT, "app/web-next", p), "utf8");
   test("two AI actions, single primary rule, inline narrative inputs, recheck apply/cancel", () => {
     const src = read("components/stages/synergy/SynergyCapabilityTab.tsx") + read("components/stages/synergy/SynergyLinkageTab.tsx");
-    for (const k of ["필요 역량 제안 (AI)", "보유 판정 확인 (AI)", "void checkHolding()", "void draftGap()", "저장 전 변경", "AI 초안", "SourceLinks"]) expect(src).toContain(k);
+    // i18n: section titles moved to the catalog (stages.s3.synergyCapabilityTab.*) — pin the keys.
+    for (const k of ['t("requiredCapabilityProposalAi")', 't("heldJudgementCheckAi")', "void checkHolding()", "void draftGap()", 't("hasUnsavedChanges")', 'tc("aiDraft")', "SourceLinks"]) expect(src).toContain(k);
     for (const k of ["다시 확인", "recheckRow", "applyRecheck", "HoldingRecheckDialog"]) expect(src).not.toContain(k);
     expect(src).toContain('proposePrimary = !gapDirty && gapRows.length === 0');
     expect((src.match(/btn-primary btn-sm/g) ?? []).length).toBe(2); // propose (rows empty) / save (dirty), mutually exclusive
     expect(src).not.toContain("NarrativeCell");
     expect(src).not.toContain("setNarrativeEditing");
-    expect(src).toContain('<NarrativeInput capability={r.capability} field="필요 수준"');
-    expect(src).toContain('<NarrativeInput capability={r.capability} field="보유 수준"');
-    const heads = ["필요 역량", "필요도", "필요 수준", "보유 판정", "보유 수준", "보유 근거"].map((h) => src.indexOf(`<th scope="col">${h}</th>`));
+    // i18n: `field` is the Korean payload discriminator (lib/ko-data-values.ts KO_NARRATIVE_FIELDS) — by design it stays Korean.
+    expect(src).toContain('field={KO_NARRATIVE_FIELDS.requiredLevel}');
+    expect(src).toContain('field={KO_NARRATIVE_FIELDS.heldLevel}');
+    // i18n: headers resolve through the common catalog — pin the keys in order.
+    const heads = ["requiredCapability", "necessity", "requiredLevel", "heldJudgement", "heldLevel", "heldEvidence"].map((h) => src.indexOf(`{tc("${h}")}</th>`));
     expect(heads.every((i) => i >= 0)).toBe(true);
+    expect([...heads].sort((a, b) => a - b)).toEqual(heads); // canonical column order kept
     expect([...heads].sort((a, b) => a - b)).toEqual(heads);
     expect(src).not.toContain("해소 힌트");
     expect(src).toContain("table-fixed-pct tmin-80");
   });
   test("inline narrative field: textarea, maxLength cap, counter, labels, placeholder", () => {
     const src = read("components/stages/CapabilityNarrativeDialog.tsx");
-    for (const k of ["export function NarrativeInput", "<textarea", "maxLength={NARRATIVE_CAP}", "aria-label={`${capability} ${field}`}", "placeholder={field}", "rows={4}", "minHeight: \"5.75rem\"", "maxHeight: \"15rem\"", "자</span>"]) expect(src).toContain(k);
+    for (const k of ["export function NarrativeInput", "<textarea", "maxLength={NARRATIVE_CAP}", "aria-label={`${capability} ${field}`}", "placeholder={field}", "rows={4}", "minHeight: \"5.75rem\"", "maxHeight: \"15rem\"", '{tc("charSuffix")}</span>']) expect(src).toContain(k);
   });
   test("per-row recheck is gone: dialog file removed, hook has no recheck state", () => {
     expect(existsSync(join(ROOT, "app/web-next/components/stages/synergy/HoldingRecheckDialog.tsx"))).toBe(false);
@@ -368,8 +372,8 @@ describe("missing 필요도 / 필요 수준 detection", () => {
   test("UI: header chip hidden at 0, per-cell 누락 marker with icon + text, request prompt requires missing rows", () => {
     const tab = readFileSync(join(ROOT, "app/web-next/components/stages/synergy/SynergyCapabilityTab.tsx"), "utf8") + readFileSync(join(ROOT, "app/web-next/components/stages/synergy/SynergyLinkageTab.tsx"), "utf8");
     expect(tab).toContain("missing.total > 0 &&");
-    expect(tab).toContain("필요도·필요 수준 누락 {missing.total}건");
-    expect(tab).toContain('<span aria-hidden="true">!</span> 누락');
+    expect(tab).toContain('t("missingNecessityOrRequiredLevel")');
+    expect(tab).toContain('<span aria-hidden="true">!</span> {t("missing")}');
     expect(tab).toContain("{miss.necessity && <MissingMark />}");
     expect(tab).toContain("{miss.requiredLevel && <MissingMark />}");
     const route = readFileSync(join(ROOT, "app/web-next/app/api/opportunities/[id]/capability-gap/llm-draft/route.ts"), "utf8");

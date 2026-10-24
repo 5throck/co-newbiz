@@ -2,6 +2,6 @@
 
 import { AdminConsole } from "../../../components/admin/AdminConsole.tsx";
 
-export default function Admin거버넌스문서Page() {{
+export default function AdminGovernanceDocsPage() {{
   return <AdminConsole section="governance" />;
 }}

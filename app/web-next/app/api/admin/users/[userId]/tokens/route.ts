@@ -34,7 +34,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ use
   const { userId } = await params;
   const targetUser = decodeURIComponent(userId);
   const body = (await request.json().catch(() => null)) as { label?: string; scopes?: string[] } | null;
-  if (!body?.label?.trim()) return badRequest("invalid_request", "label은 필수입니다.");
+  if (!body?.label?.trim()) return badRequest("invalid_request", "label is required.");
   const db = getDb();
   if (!assertUserExists(db, targetUser)) return notFound();
   try {
@@ -58,7 +58,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ u
   if (!guard.ok) return guard.response;
   const { userId } = await params;
   const tokenId = new URL(request.url).searchParams.get("tokenId");
-  if (!tokenId) return badRequest("invalid_request", "tokenId는 필수입니다.");
+  if (!tokenId) return badRequest("invalid_request", "tokenId is required.");
   const db = getDb();
   const targetUser = decodeURIComponent(userId);
   const row = db.query("SELECT user_id FROM api_token WHERE id = ?").get(tokenId) as { user_id: string } | null;

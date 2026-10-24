@@ -14,7 +14,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "실사 지적사항 등록은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Registering DD findings requires the analyst role or higher.");
   const { id, partnerId } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
@@ -24,10 +24,10 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const severity = body?.severity?.trim();
   const description = body?.description?.trim();
   if (!workstream || !severity || !description) {
-    return badRequest("invalid_request", "workstream(워크스트림), severity(심각도), description(내용)은 필수입니다.");
+    return badRequest("invalid_request", "workstream, severity, and description are required.");
   }
   if (!(SEVERITIES as readonly string[]).includes(severity)) {
-    return badRequest("invalid_request", `severity는 ${SEVERITIES.join(" | ")} 중 하나입니다.`);
+    return badRequest("invalid_request", `severity must be one of: ${SEVERITIES.join(" | ")}.`);
   }
   const db = getDb();
   if (!db.query("SELECT id FROM partner_candidate WHERE id = ? AND project_id = ?").get(partnerId, id)) return notFound();

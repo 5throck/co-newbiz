@@ -6,11 +6,17 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   bucketLlmCallsByDay, classifiedByChip, fmtDateTime, fmtInt, fmtPct, fmtSeconds, fmtUsd,
-  runStatusChip, stageName, totalTokens,
+  runStatusChip, stageNameKey, totalTokens,
   type LlmCallRow,
 } from "../../app/web-next/app/flows/flows-view-lib.ts";
 
 const FLOWS_DIR = join(import.meta.dirname, "../../app/web-next/app/flows");
+// i18n (design 2026-10-23-i18n-ui-adoption): wording pins assert the key call site
+// in the component source and the ko master catalog value (the original Korean).
+const koCatalog = await import("../../app/web-next/locales/ko.json");
+const koOf = (key: string): string =>
+  key.split(".").reduce<unknown>((acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined), koCatalog) as string;
+const SCROLL_LABEL = "데이터 표 (가로 스크롤)";
 
 const llmRow = (over: Partial<LlmCallRow> = {}): LlmCallRow => ({
   id: "c1", agent_key: "pm", purpose: "S2 기회 발굴 — 산업 근거 기반 기회 후보 도출", context_type: null, context_id: null,
@@ -44,23 +50,33 @@ describe("flows-view-lib — 포맷터", () => {
   });
 });
 
-describe("flows-view-lib — 칩 매핑 (A5: 색 단독 금지, 아이콘+텍스트)", () => {
-  test("런 상태는 ✓/✕ 아이콘+텍스트 병기", () => {
-    expect(runStatusChip("failed")).toEqual({ label: "✕ 실패", cls: "status-chip status-rejected" });
-    expect(runStatusChip("succeeded")).toEqual({ label: "✓ 성공", cls: "status-chip status-approved" });
-    expect(runStatusChip("unknown-state")).toEqual({ label: "unknown-state", cls: "status-chip status-not-started" });
+describe("flows-view-lib — 칩 매핑 (A5: 색 단독 금지, 아이콘+텍스트; i18n 키 방출)", () => {
+  test("런 상태는 ✓/✕ 아이콘+텍스트 병기 — catalog 키 방출, 미지 값은 원문 폴백", () => {
+    expect(runStatusChip("failed")).toEqual({ key: "pages.flows.chips.runFailed", label: "", cls: "status-chip status-rejected" });
+    expect(koOf("pages.flows.chips.runFailed")).toBe("✕ 실패");
+    expect(runStatusChip("succeeded")).toEqual({ key: "pages.flows.chips.runSuccess", label: "", cls: "status-chip status-approved" });
+    expect(koOf("pages.flows.chips.runSuccess")).toBe("✓ 성공");
+    expect(runStatusChip("unknown-state")).toEqual({ key: null, label: "unknown-state", cls: "status-chip status-not-started" });
   });
   test("근거 칩은 Row 3가 노출하는 catalogMatched+source로만 유도된다", () => {
-    expect(classifiedByChip(llmRow({ source: "synthesis" })).label).toBe("결정론");
-    expect(classifiedByChip(llmRow({ catalogMatched: true })).label).toBe("카탈로그");
-    expect(classifiedByChip(llmRow({ catalogMatched: false })).label).toBe("카탈로그 외");
+    expect(classifiedByChip(llmRow({ source: "synthesis" })).key).toBe("pages.flows.chips.deterministic");
+    expect(koOf("pages.flows.chips.deterministic")).toBe("결정론");
+    expect(classifiedByChip(llmRow({ catalogMatched: true })).key).toBe("pages.flows.chips.catalog");
+    expect(koOf("pages.flows.chips.catalog")).toBe("카탈로그");
+    expect(classifiedByChip(llmRow({ catalogMatched: false })).key).toBe("pages.flows.chips.offCatalog");
+    expect(koOf("pages.flows.chips.offCatalog")).toBe("카탈로그 외");
   });
 });
 
 describe("flows-view-lib — 단계명(사본)과 타임라인 버킷", () => {
-  test("S1–S12 한글명 사본이 비어 있지 않다(구현 편차 #1 — /api/flows가 name 미노출)", () => {
-    for (let i = 1; i <= 12; i++) expect(stageName(`S${i}`)).not.toBe(`S${i}`);
-    expect(stageName("S13")).toBe("S13"); // 미지 단계는 원문 id로 폴백
+  test("S1–S12 단계명 사본은 catalog 키로 방출된다(구현 편차 #1 — /api/flows가 name 미노출)", () => {
+    for (let i = 1; i <= 12; i++) {
+      expect(stageNameKey(`S${i}`)).toBe(`pages.flows.stageNames.S${i}`);
+      const ko = koOf(`pages.flows.stageNames.S${i}`);
+      expect(ko.length).toBeGreaterThan(0);
+      expect(ko).not.toBe(`S${i}`); // 미지 단계 원문 id가 아니라 한글명 마스터 값
+    }
+    expect(stageNameKey("S13")).toBeNull(); // 미지 단계는 null — 화면에서 원문 id 폴백
   });
   test("bucketLlmCallsByDay는 일 단위로 성공/실패/비용을 묶고 오름차순 정렬한다", () => {
     const rows = [
@@ -87,7 +103,13 @@ describe("flows 화면 소스 — a11y·IA 정적 규약 (화면 설계 §9)", (
       // 각 table-scroll 지역이 role/aria-label/tabIndex를 갖는지(간접: 파일 내 최소 등장 수).
       if (scrolls > 0) {
         expect(src, `${name} table-scroll role`).toContain('role="region"');
-        expect(src, `${name} table-scroll aria-label`).toContain('aria-label="데이터 표 (가로 스크롤)"');
+        // i18n: the scroll-region label resolves through a catalog key (ko value pinned).
+        const scrollKey = name === "ledger" ? "pages.flows.ledger.tableScrollRegion"
+          : name === "blueprint" ? "pages.flows.blueprint.tableScrollRegion"
+          : name === "expansion" ? "pages.flows.runExpansion.tableScrollRegion"
+          : "pages.flows.flowsAdmin.tableScrollRegion";
+        expect(koOf(scrollKey)).toBe(SCROLL_LABEL);
+        expect(src, `${name} table-scroll aria-label key`).toMatch(/aria-label=\{t\("/);
         expect(src, `${name} table-scroll tabIndex`).toContain("tabIndex={0}");
       }
     }
@@ -108,13 +130,16 @@ describe("flows 화면 소스 — a11y·IA 정적 규약 (화면 설계 §9)", (
   });
 
   test("§10 — 403(admin)은 재시도 없이 설계된 경계 문구로 표시된다", () => {
-    expect(page).toContain("ADR-0146");
+    expect(koOf("pages.flows.flowsAdmin.adminForbidden")).toContain("ADR-0146");
+    expect(page).toContain('t(ADMIN_FORBIDDEN_KEY)');
     expect(page).toContain("onRetry={() => setRetryTick");
-    expect(ledger).toContain("ADR-0146");
+    expect(ledger).toContain('t(ADMIN_FORBIDDEN_KEY)');
+    expect(koOf("pages.flows.ledger.adminForbidden")).toContain("ADR-0146");
   });
 
   test("§5.4 — LLM 미구성 상태가 empty와 구분된 문구로 분기된다", () => {
-    expect(ledger).toContain("LLM이 구성되지 않아");
+    expect(ledger).toContain('t("emptyNoLlm")');
+    expect(koOf("pages.flows.ledger.emptyNoLlm")).toContain("LLM이 구성되지 않아");
   });
 
   test("§11 — 필터 상태가 URL 쿼리에 동기된다(감사 화면 재현성)", () => {

@@ -8,6 +8,7 @@
 // 않고 이유만 반환한다 — 어떤 판정값도 날조하지 않는다(screening-draft와
 // 같은 원칙).
 import type { FinancialAnalysis, FinancialSeries } from "./company-financials.ts";
+import { formatNumber, type Locale } from "./format.ts";
 
 export type FinancialDataRef = "revenue_5y" | "operating_profit_5y" | "net_income_5y" | "debt_5y";
 
@@ -115,7 +116,7 @@ export interface FinancialDraft {
 
 const VERDICT_KO: Record<"pass" | "partial" | "fail", string> = { pass: "충족", partial: "부분충족", fail: "미충족" };
 
-const fmtEok = (v: number): string => v.toLocaleString("ko-KR", { maximumFractionDigits: 0 });
+const fmtEok = (v: number, locale: Locale | string = "ko"): string => formatNumber(v, locale, { maximumFractionDigits: 0 });
 const fmtPct = (ratio: number, digits = 1): string => `${(ratio * 100).toFixed(digits)}%`;
 const fmtSignedPct = (ratio: number, digits = 1): string => `${ratio >= 0 ? "+" : ""}${(ratio * 100).toFixed(digits)}%`;
 

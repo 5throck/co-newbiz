@@ -235,6 +235,7 @@ describe("unsaved AI drafts survive a refetch (the vanishing-drafts bug)", () =>
     expect(hook).toContain("function discardDrafts");
     expect(hook).toContain("dismissGapNote");
     const tab = read("components/stages/synergy/SynergyCapabilityTab.tsx");
-    for (const k of ["저장하지 않은 AI 초안 {draftCount}건", "초안 버리기 (AI)", "onClick={dismissGapNote}", 'data-testid="gap-note"']) expect(tab).toContain(k);
+    // i18n: draft chip labels resolve through the catalogs — pin the key call sites.
+    for (const k of ['tc("unsavedAiDraft")', 'tc("discardAiDraft")', "onClick={dismissGapNote}", 'data-testid="gap-note"']) expect(tab).toContain(k);
   });
 });

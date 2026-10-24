@@ -7,6 +7,7 @@ import { getLatestConfirmedInvestmentSimulationRun } from "../../../db/repositor
 import { sourceOpportunityOf } from "./capability-attainability.ts";
 import { s5SimStatusForProject, type S5SimStaleReason, type S5SimState } from "./investment-simulation-s8.ts";
 import type { SimulationResults, TornadoKey } from "./investment-simulation.ts";
+import { formatInteger, type Locale } from "./format.ts";
 
 export const INVEST_UNCERTAINTY_LABEL = "시뮬레이션 산출물(제안) - 게이트·등급·채택에 영향 없음";
 export const INVEST_UNCERTAINTY_NONE_LINE = "투자 불확실성: 확정된 S5 투자 시뮬레이션이 없습니다 - 참고 정보이며 차단하지 않습니다";
@@ -70,14 +71,14 @@ export function buildInvestUncertainty(db: Database, projectId: string): InvestU
   }
 }
 
-const fmt = (n: number): string => Math.round(n).toLocaleString("en-US");
+const fmt = (n: number, locale: Locale | string = "ko"): string => formatInteger(Math.round(n), locale);
 
 /** Compact brief text for the fs gate brief and the AI judgement support; labeled simulation output. */
-export function investUncertaintyBriefText(v: InvestUncertaintyView): string {
+export function investUncertaintyBriefText(v: InvestUncertaintyView, locale: Locale | string = "ko"): string {
   if (!v.hasRun || !v.run || !v.total) return INVEST_UNCERTAINTY_NONE_LINE;
   const parts = [
-    `총 투자비 p50 ${fmt(v.total.p50)} / p95 ${fmt(v.total.p95)} 백만원`,
-    v.exceed ? `예산 상한 ${fmt(v.exceed.envelopeKrwM)} 백만원 초과 확률 ${(v.exceed.probability * 100).toFixed(1)}%` : "",
+    `총 투자비 p50 ${fmt(v.total.p50, locale)} / p95 ${fmt(v.total.p95, locale)} 백만원`,
+    v.exceed ? `예산 상한 ${fmt(v.exceed.envelopeKrwM, locale)} 백만원 초과 확률 ${(v.exceed.probability * 100).toFixed(1)}%` : "",
     v.topSensitivities.length > 0 ? `주요 민감도 ${v.topSensitivities.map((t) => `${t.label} ${(t.share * 100).toFixed(0)}%`).join(", ")}` : "",
     v.npv.state === "stale" ? "NPV 분포 투자 불확실성 반영: 재평가 필요" : v.npv.includes ? "NPV 분포에 투자 불확실성 반영" : "NPV 분포에 투자 불확실성 미반영",
   ].filter(Boolean);

@@ -34,6 +34,7 @@
     "verify-scripts": "bun scripts/verify-scripts.ts",
     "clean:sandbox": "bun -e \"import {rmSync, mkdirSync} from 'node:fs'; rmSync('.sandbox', {recursive:true, force:true}); mkdirSync('.sandbox');\"",
     "design:lint": "bun scripts/co-newbiz/design-lint.ts",
+    "lint:i18n": "bun scripts/co-newbiz/i18n-lint.ts",
     "mcp:coverage": "bun scripts/co-newbiz/mcp-coverage.ts",
     "runbooks:validate": "bun scripts/co-newbiz/runbook-validate.ts",
     "contrast:check": "bun scripts/co-newbiz/contrast-check.ts",

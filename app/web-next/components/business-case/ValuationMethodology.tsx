@@ -7,6 +7,7 @@
 // 기반) 값 차이의 원인(성장률 가정 + 인수가 레버리지)을 함께 공개한다.
 // 모든 금액은 백만 원(KRW-M)으로 저장·계산된다(migration 0134 단위 계약).
 
+import { TranslatorFn } from "../../i18n/config.ts";
 import { fmtNpvEok } from "@/lib/npv-format";
 import { irrGuardBand, IRR_GUARD_CHIP_LABEL, IRR_GUARD_DIAGNOSTIC } from "@/lib/irr-guard";
 import { ANCHOR_SCOPE_CONFIDENCE_NOTE, type AnchorScopeFlag } from "@/lib/anchor-scope";
@@ -16,6 +17,7 @@ import { api } from "../../lib/api.ts";
 import { KRW_MILLIONS_UNIT } from "../../lib/format.ts";
 import { noteNumber, parseSimNote } from "../../lib/sim-note.ts";
 import { s5ParamLinkage, type S5ParamKey } from "../../lib/s5-linkage-labels.ts";
+import { useTranslations } from "next-intl";
 
 interface MethodCase {
   id: string;
@@ -43,7 +45,7 @@ interface ResolvedParams {
 }
 
 const pct1 = (v: number) => `${(v * 100).toFixed(1)}%`;
-const 억 = (krwM: number) => `${(krwM / 100).toLocaleString("ko-KR", { maximumFractionDigits: 1 })}억원`;
+const eok = (krwM: number, t: TranslatorFn) => t("p1HundredMillionKrw", { p1: (krwM / 100).toLocaleString("ko-KR", { maximumFractionDigits: 1 }) });
 
 export function ValuationMethodology({
   projectId,
@@ -56,7 +58,7 @@ export function ValuationMethodology({
   historicalCase: MethodCase | null;
   /** Green Field has no target company, so no past-based perspective exists. */
   greenfield?: boolean;
-}) {
+}) {const t = useTranslations("stages.s8.valuationMethodology"); const tc = useTranslations("common");
   const [params, setParams] = useState<ResolvedParams | null>(null);
   const [s5Run, setS5Run] = useState<{ drawCount: number } | null>(null);
   const [anchorScope, setAnchorScope] = useState<AnchorScopeFlag | null>(null);
@@ -65,7 +67,7 @@ export function ValuationMethodology({
   useEffect(() => {
     api.get<{ params: ResolvedParams; s5_connect?: { run: { drawCount: number } | null } | null; anchor_scope?: AnchorScopeFlag | null }>(`/api/projects/${encodeURIComponent(projectId)}/business-case/params`)
       .then((r) => { setParams(r.data.params); setS5Run(r.data.s5_connect?.run ?? null); setAnchorScope(r.data.anchor_scope ?? null); })
-      .catch(() => setError("파라미터를 불러오지 못했습니다."));
+      .catch(() => setError(t("failedToLoadParameters")));
   }, [projectId]);
 
   if (error) return <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">{error}</p>;
@@ -89,8 +91,8 @@ export function ValuationMethodology({
   const s5Basis = params?.investmentBasis != null && params.investmentBasis !== "ratio";
   const pnlBasis = params?.investmentBasis === "s5_pnl";
   // ADR-0178 slice 2 - s5_pnl honesty labels: pre-tax proxy + terminal-margin flag (flag only).
-  const preTaxNote = pnlBasis ? " · 세전 현금 근사 (세금 미반영)" : "";
-  const termFlag = pnlBasis ? " · 처분가치 배수와 계획 마진 불일치 가능" : "";
+  const preTaxNote = pnlBasis ? t("cashApproximationTaxesNotReflected") : "";
+  const termFlag = pnlBasis ? t("exitMultipleAndPlannedMargin") : "";
   const preLaunchKrwM = noteNumber(n.prelaunch_krw_m);
   const horizonMismatch = params?.s5PlanHorizonYears != null && params.s5PlanHorizonYears !== horizon;
 
@@ -107,29 +109,28 @@ export function ValuationMethodology({
     const cell = s5ParamLinkage(key, { basis: params.investmentBasis, run: s5Run, s8Iterations: params.iterations });
     return (
       <div data-testid={`s8-method-s5-${key}`} className="text-[length:var(--fs-caption)]">
-        <span className={`status-chip whitespace-nowrap ${cell.kind === "s5" ? "status-green" : "status-amber"}`}>{cell.kind === "s5" ? "S5 값" : "가정값"}</span> {cell.detail}
+        <span className={`status-chip whitespace-nowrap ${cell.kind === "s5" ? "status-green" : "status-amber"}`}>{cell.kind === "s5" ? t("s5Value") : t("assumptionValue")}</span> {cell.detail}
       </div>
     );
   };
 
   return (
-    <section className="market-section sizing-step mb-3" aria-label="기업가치 계산 방법">
-      <h3 className="sizing-step-title">기업가치 계산 방법 <span className="status-chip status-info">계산 사슬 공개</span></h3>
+    <section className="market-section sizing-step mb-3" aria-label={t("enterpriseValueCalculationMethod")}>
+      <h3 className="sizing-step-title">{t("enterpriseValueCalculationMethod2")} <span className="status-chip status-info">{t("showCalculationChain")}</span></h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-        이 화면의 NPV·IRR은 아래 사슬로 계산됩니다. 모든 금액은 <b>백만 원(KRW-M)</b> 단위로 저장·계산되고
-        각 행의 단위는 DB에 명시됩니다. 값 옆의 괄호는 근거 출처이며, 전체 근거는 시뮬레이션 노트와 파라미터·스냅샷 탭에서 추적할 수 있습니다.
+        {t("theNpvAndIrrOn")} <b>{t("krwMillions")}</b> {t("unitAndEachRowS")}
       </p>
       {!marketCase ? (
-        <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">아직 생성된 케이스가 없습니다 — 생성 후 이곳에 실제 값으로 계산 구조가 표시됩니다.</p>
+        <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">{t("noCasesGeneratedYetAfter")}</p>
       ) : (
-        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table">
-          <caption className="sr-only">기업가치 계산 사슬 — 단계와 현재 적용값</caption>
-          <thead><tr><th scope="col">단계</th><th scope="col">내용</th><th scope="col">현재 값</th></tr></thead>
+        <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}><table className="data-table">
+          <caption className="sr-only">{t("enterpriseValueCalculationChainSteps")}</caption>
+          <thead><tr><th scope="col">{tc("stage")}</th><th scope="col">{t("content")}</th><th scope="col">{t("currentValue")}</th></tr></thead>
           <tbody>
             <tr>
-              <td>① 매출 앵커</td>
+              <td>{t("revenueAnchor")}</td>
               <td>
-                {isAcquisition ? "인수 대상 회사의 최신 연매출 — 두 관점(시장·과거 기반)이 같은 앵커에서 출발" : "시장규모 × 시장점유율로 산정한 year-1 매출"}
+                {isAcquisition ? t("theTargetCompanySLatest") : t("revenueComputedAsMarketSize")}
                 {anchorScope && anchorScope.status !== "ok" && (
                   <div className="mt-1">
                     <span className="status-chip status-amber" data-testid="methodology-anchor-scope-flag" title={`${anchorScope.reason} — ${ANCHOR_SCOPE_CONFIDENCE_NOTE}`}>
@@ -140,42 +141,42 @@ export function ValuationMethodology({
                 )}
                 {params && isShareUnsourced(params.captureSource) && (
                   <div className="mt-1">
-                    <span className="status-chip status-amber" data-testid="methodology-share-unsourced-flag" title={`${captureSourceLabel(params.captureSource, params.captureRate)} — 사람이 근거를 남긴 점유율이 아닙니다 (ADR-0179). 참고 정보이며 승인 조건이 아닙니다.`}>
+                    <span className="status-chip status-amber" data-testid="methodology-share-unsourced-flag" title={t("p1NotAMarketShare", { p1: captureSourceLabel(params.captureSource, params.captureRate) })}>
                       {captureSourceLabel(params.captureSource, params.captureRate)}
                     </span>
                   </div>
                 )}
               </td>
-              <td className="num mono-num">{revLine ? 억(revLine.annual_amount_krw_m) : "—"}{isAcquisition ? ` (${n.revenue_anchor ?? ""})` : ""}</td>
+              <td className="num mono-num">{revLine ? eok(revLine.annual_amount_krw_m, t) : "—"}{isAcquisition ? ` (${n.revenue_anchor ?? ""})` : ""}</td>
             </tr>
             <tr>
-              <td>② 성장 가정</td>
-              <td>{greenfield ? "시장 성장률 (시장 규모 × 시장점유율 기반) — 대상 회사가 없어 과거 실적 비교는 없음" : "시장 기반 = 시장 성장률 / 과거 기반 = 대상 회사 자체 CAGR (DART) — 두 관점의 유일한 차이"}</td>
+              <td>{t("growthAssumption")}</td>
+              <td>{greenfield ? t("marketGrowthMarketSizeShare") : t("marketBasisMarketGrowthRate")}</td>
               <td className="num mono-num">
-                {gMf != null ? `시장 ${pct1(gMf)}` : "—"}{greenfield ? "" : ` · ${gHist != null ? `과거 ${pct1(gHist)}` : "—"}`}
+                {gMf != null ? t("marketP1", { p1: pct1(gMf) }) : "—"}{greenfield ? "" : ` · ${gHist != null ? t("pastP1", { p1: pct1(gHist) }) : "—"}`}
               </td>
             </tr>
             <tr>
-              <td>③ 변동성(σ)</td>
-              <td>연도별 매출 성장 노이즈의 표준편차 — 몬테카를로 분포의 폭</td>
+              <td>{t("volatilitySigma")}</td>
+              <td>{t("stdDeviationOfYearlyRevenue")}</td>
               <td className="num mono-num">{sigma != null ? pct1(sigma) : "—"} ({n.sigma_source ?? ""}){s5Tag("sigma")}</td>
             </tr>
             <tr>
-              <td>④ 손익 구조</td>
+              <td>{t("pLStructure")}</td>
               <td>
                 {pnlBasis
-                  ? "FCF = 매출 × 가동률 − S5 계획 운영비(인건비·운영비·정부R&D) − S5 계획 설비투자 — 가동률은 매출에만 적용; 계획 없는 연도는 가동률 반영 매출 × 비율로 대체"
+                  ? t("fcfRevenueUtilizationS5Planned")
                   : s5Basis
-                    ? "FCF = (매출 − 운영비) × 가동률 − S5 계획 연도별 투자비 — 계획이 있는 연도는 매출×설비투자율을 대체합니다"
-                    : "FCF = 매출 × (1 − 운영비율 − 설비투자율) × 가동률(램프업)"}
+                    ? t("fcfRevenueOperatingCostUtilization")
+                    : t("fcfRevenue1OpexRatio")}
               </td>
               <td className="num mono-num">
                 {pnlBasis
-                  ? `S5 계획 손익 적용 (가동률은 매출에만)${n.pnl_fallback ? ` · 비율 대체 ${n.pnl_fallback} 연도` : ""}${preLaunchKrwM != null ? ` · 출시 전 투자 ${억(preLaunchKrwM)}` : ""}${preLaunchKrwM === 0 ? " (출시 전 투자 미지정)" : ""}`
+                  ? t("s5PlannedPnlAppliedUtilizationOnRevenueOnlyP1P2P3", { p1: n.pnl_fallback ? t("ratioFallbackP1Yr", { p1: n.pnl_fallback }) : "", p2: preLaunchKrwM != null ? t("investmentP1", { p1: eok(preLaunchKrwM, t) }) : "", p3: preLaunchKrwM === 0 ? t("preLaunchInvestmentNotSpecifiedParens") : "" })
                   : s5Basis
-                  ? `S5 투자 계획 스케줄 적용${params?.investmentBasis === "s5_plan_full" ? " · 인건비/운영비도 계획값 사용" : params?.investmentBasis === "s5_plan" ? " · 인건비/운영비는 비율 (예전 기준: 설비투자만)" : ""}` + (params ? ` · 가동률 ${params.rampUp.map((v) => v.toFixed(1)).join("→")}` : "")
+                  ? t("s5InvestmentPlanScheduleApplied", { p1: params?.investmentBasis === "s5_plan_full" ? t("plannedValuesUsedForLabor") : params?.investmentBasis === "s5_plan" ? t("laborOperatingCostAsRatios") : "" }) + (params ? t("utilizationP1", { p1: params.rampUp.map((v) => v.toFixed(1)).join("→") }) : "")
                   : <>
-                    운영비 {params ? pct1(params.opexRatio) : "—"} · 설비투자 {params ? pct1(params.capexRatio) : "—"} · 가동률 {params ? params.rampUp.map((v) => v.toFixed(1)).join("→") : "—"}
+                    {tc("opex")} {params ? pct1(params.opexRatio) : "—"} {t("capex")} {params ? pct1(params.capexRatio) : "—"} {t("utilization")} {params ? params.rampUp.map((v) => v.toFixed(1)).join("→") : "—"}
                   </>}
                 {s5Tag("opex")}
                 {s5Tag("capex")}
@@ -186,44 +187,44 @@ export function ValuationMethodology({
               </td>
             </tr>
             <tr>
-              <td>⑤ year-0 투자</td>
+              <td>{t("investment")}</td>
               <td>
                 {isAcquisition
-                  ? "인수 기업가치 = 매출 앵커 × EV/Revenue 배수 (시나리오와 무관 — 가격은 한 번 협상)"
+                  ? t("acquisitionEvRevenueAnchorEv")
                   : pnlBasis
-                    ? "초기투자 = 출시 전(start-year 0) 투자 합계 — year-0 무할인 계상 (OD-3); 0이면 회수기간은 해당 없음"
+                    ? t("initialInvestment0InvestmentSum")
                     : s5Basis
-                      ? "초기투자 = S5 투자 계획 1차년도(Y1) 집행액 — 계획 Y1 지출은 year-0 유출로 계상 (OD-3)"
-                      : "초기투자 = year-1 매출 × 비율 (ADR-0106)"}
+                      ? t("initialInvestmentS5PlanY1")
+                      : t("initialInvestmentRevenueRatio")}
               </td>
               <td className="num mono-num">
                 {isAcquisition
-                  ? `${acqEv!.toFixed(2)}배 = ${fmtNpvEok(revLine!.annual_amount_krw_m * acqEv!)}`
+                  ? t("p1XP2", { p1: acqEv!.toFixed(2), p2: fmtNpvEok(revLine!.annual_amount_krw_m * acqEv!) })
                   : pnlBasis
-                    ? (preLaunchKrwM != null ? `${억(preLaunchKrwM)} (year-0${preLaunchKrwM === 0 ? " — 출시 전 투자 미지정" : ""})` : "출시 전 투자 합계 (year-0)")
+                    ? (preLaunchKrwM != null ? t("p1P2", { p1: eok(preLaunchKrwM, t), p2: preLaunchKrwM === 0 ? t("investmentNotSpecified") : "" }) : t("investmentTotal"))
                     : s5Basis
-                      ? "S5 계획 Y1 집행액 (year-0)"
-                      : params ? `매출의 ${(params.initialInvestmentRatio * 100).toFixed(0)}%` : "—"}
+                      ? t("s5PlanDeployment")
+                      : params ? t("p1OfRevenue", { p1: (params.initialInvestmentRatio * 100).toFixed(0) }) : "—"}
                 {s5Tag("initial")}
               </td>
             </tr>
             <tr>
-              <td>⑥ 할인·처분</td>
-              <td>{horizon}년 FCF를 WACC로 할인{isAcquisition ? " + 마지막 해에 동일 배수로 처분(멀티플 확대 없음)" : ""}</td>
-              <td className="num mono-num">WACC {wacc != null ? pct1(wacc) : "—"} ({n.wacc_source ?? ""}){exitEv != null ? ` · 처분 ${exitEv.toFixed(2)}배` : ""}</td>
+              <td>{t("discountingAndExit")}</td>
+              <td>{horizon}{t("yrOfFcfDiscountedAt")}{isAcquisition ? t("exitInTheFinalYear") : ""}</td>
+              <td className="num mono-num">WACC {wacc != null ? pct1(wacc) : "—"} ({n.wacc_source ?? ""}){exitEv != null ? t("exitP1X", { p1: exitEv.toFixed(2) }) : ""}</td>
             </tr>
             <tr>
-              <td>⑦ 분포 산출</td>
-              <td>시드 기반 몬테카를로 — 동일 시드로 재현 가능 (ADR-0052 §D.4)</td>
-              <td className="num mono-num">{iterations != null ? iterations.toLocaleString() + "회" : "—"} → 하위 5%/중앙값/상위 5%·IRR</td>
+              <td>{t("distributionOutput")}</td>
+              <td>{t("monteCarloReproducibleWithThe")}</td>
+              <td className="num mono-num">{iterations != null ? iterations.toLocaleString() + tc("timesUnit") : "—"} {t("bottomMedianTopAndIrr")}</td>
             </tr>
             <tr>
-              <td>⑧ 구조 교차검증</td>
-              <td>같은 케이스를 페이드 DCF(장기창구, 성장률 → 말기 성장률 수렴, 동일 배수 처분)로 재평가</td>
+              <td>{t("structure")}</td>
+              <td>{t("revaluesTheSameCaseWith")}</td>
               <td className="num mono-num">
                 {n.xcheck === "fade-dcf"
-                  ? `${n.xcheck_horizon}년 · → ${xTerminal != null ? pct1(xTerminal) : "—"} · NPV ${xNpv != null ? fmtNpvEok(xNpv) : "—"}`
-                  : "— (인수 가격 케이스에만)"}
+                  ? t("p1YrP2NpvP3", { p1: n.xcheck_horizon, p2: xTerminal != null ? pct1(xTerminal) : "—", p3: xNpv != null ? fmtNpvEok(xNpv) : "—" })
+                  : t("acquisitionPriceCaseOnly")}
               </td>
             </tr>
           </tbody>
@@ -236,7 +237,7 @@ export function ValuationMethodology({
         return (
           <div role="status" data-testid="methodology-irr-guard" className="mt-2 p-3 border border-[color:var(--border)] rounded-[length:var(--radius)]">
             <span className="status-chip status-amber">
-              IRR {(mf!.irr! * 100).toFixed(1)}% — {IRR_GUARD_CHIP_LABEL[band]} (기준 {((band === "extreme" ? params?.irrFlagThreshold ?? 1.0 : params?.irrCautionThreshold ?? 0.5) * 100).toFixed(0)}%)
+              IRR {(mf!.irr! * 100).toFixed(1)}% — {IRR_GUARD_CHIP_LABEL[band]} {t("base")} {((band === "extreme" ? params?.irrFlagThreshold ?? 1.0 : params?.irrCautionThreshold ?? 0.5) * 100).toFixed(0)}%)
             </span>{" "}
             <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{IRR_GUARD_DIAGNOSTIC}</span>
           </div>
@@ -245,32 +246,27 @@ export function ValuationMethodology({
 
       {horizonMismatch && (
         <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-2">
-          ⚠ S5 검토 기간({params?.s5PlanHorizonYears}년)과 사업계획 기간({horizon}년)이 다릅니다
+          {t("s5ReviewPeriod")}{params?.s5PlanHorizonYears}{t("yrAndTheHorizon")}{horizon}{t("yrDiffer")}
         </p>
       )}
 
       {!greenfield && marketCase && historicalCase && mf && hist && gMf != null && gHist != null && (
-        <div className="mt-2 p-3 border border-[color:var(--border)] rounded-[length:var(--radius)]" aria-label="두 관점 값 차이의 원인">
-          <p className="text-[length:var(--fs-body)] font-semibold mb-1">두 관점의 값이 왜 다른가?</p>
+        <div className="mt-2 p-3 border border-[color:var(--border)] rounded-[length:var(--radius)]" aria-label={t("whyTheTwoPerspectivesDiffer")}>
+          <p className="text-[length:var(--fs-body)] font-semibold mb-1">{t("whyDoTheTwoPerspectives")}</p>
           <p className="text-[length:var(--fs-caption)] mb-2">
-            두 관점은 <b>같은 매출 앵커·같은 인수가·같은 마진·같은 WACC</b>를 쓰고 <b>성장률만 다릅니다</b>
-            (시장 {pct1(gMf)} vs 과거 {pct1(gHist)}). {horizon}년 복리면 최종년 매출이{" "}
-            {terminalMultipleMf ? terminalMultipleMf.toFixed(2) : "—"}배 vs {terminalMultipleHist ? terminalMultipleHist.toFixed(2) : "—"}배로 벌어지고,
-            기업가치는 마지막 해 매출에 비례하며(처분가치) 인수가는 고정이라
-            <b> 성장률 차이가 NPV에서 몇 배로 증폭</b>됩니다 — 현재 중앙값 {fmtNpvEok(mf.npv_krw_m)} vs {fmtNpvEok(hist.npv_krw_m)}.
-            차이가 크다는 것은 곧 <b>성장 가정의 불확실성이 크다</b>는 신호입니다(ADR-0117): 로보티즈가 시장 성장률을 따라갈 수 있는가가
-            이 딜 가치의 절반 이상을 결정합니다.
+            {t("theTwoPerspectives")} <b>{t("sameRevenueAnchorSameAcquisition")}</b>{t("andUse")} <b>{t("onlyTheGrowthRateDiffers")}</b>
+            {t("market")} {pct1(gMf)} {t("vsPast")} {pct1(gHist)}). {horizon}{t("yrOfCompoundingTheRevenue")}{" "}
+            {terminalMultipleMf ? terminalMultipleMf.toFixed(2) : "—"}{t("xVs")} {terminalMultipleHist ? terminalMultipleHist.toFixed(2) : "—"}{t("xApartEnterpriseValueIs")}
+            <b> {t("howManyTimesTheGrowth")}</b>{t("currentMedian")} {fmtNpvEok(mf.npv_krw_m)} vs {fmtNpvEok(hist.npv_krw_m)}{t("aLargeDifferenceMeansPrecisely")} <b>{t("highUncertaintyInTheGrowth")}</b>{t("isTheSignalWhetherThe")}
           </p>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-            시장 기반의 {pct1(gMf)}는 &quot;{n.growth_source}&quot;에서, 과거 기반의 {pct1(gHist)}는 &quot;{hn.growth_source}&quot;에서 옵니다.
-            성장 가정을 바꾸려면 파라미터 탭의 성장률 오버라이드(bc.growth_override)를 사용하세요.
+            {t("marketBasisGrowthSourceComparison", { p1: pct1(gMf), p2: n.growth_source, p3: pct1(gHist), p4: hn.growth_source })}
           </p>
         </div>
       )}
 
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2">
-        단위 계약: DART 실적은 원 단위로 저장되고, 분석 계열은 억원으로 정규화된 뒤 백만 원(KRW-M)으로 변환되어
-        라인·시뮬레이션·스냅샷에 저장됩니다({KRW_MILLIONS_UNIT}). 단위 사슬의 일관성은 자동 회귀 테스트로 점검됩니다.
+        {t("unitContractDartActualsAre")}{KRW_MILLIONS_UNIT}{t("unitChainConsistencyIsChecked")}
       </p>
     </section>
   );

@@ -7,7 +7,9 @@
 // never "approve", and the server rejects agent identities. Unmet
 // preconditions keep submit disabled with the reason stated in text, and link
 // to the place where the missing record is created.
-import { CLOSURE_RECORD_LABEL, CLOSURE_TYPE_LABEL, TRANSITION_DECISION_LABEL, closureRecordLabel, localizeMessage } from "../lib/labels.ts";
+import { useTranslations } from "next-intl";
+import { CLOSURE_TYPE_KEY, TRANSITION_DECISION_KEY, closureRecordKeyOf } from "../lib/label-keys.ts";
+import { localizeMessage } from "../lib/labels.ts";
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
@@ -34,28 +36,15 @@ interface TypePreconditions {
   min_reason_length: number;
 }
 
-const TYPE_LABEL: Record<ClosureType, { name: string; hint: string }> = {
-  killed_at_gate: {
-    name: CLOSURE_TYPE_LABEL.killed_at_gate,
-    hint: "게이트에서 사람이 기록한 KILL 결정과 학습 포착이 있어야 합니다.",
-  },
-  withdrawn: {
-    name: CLOSURE_TYPE_LABEL.withdrawn,
-    hint: "기록된 근거가 없을 때의 탈출 경로입니다. 사유 20자 이상과 학습 포착이 필요합니다.",
-  },
-  graduated_to_core: {
-    name: CLOSURE_TYPE_LABEL.graduated_to_core,
-    hint: `S12 전환 결정 '${TRANSITION_DECISION_LABEL.graduate_to_core}'와 인계 기록이 있어야 합니다.`,
-  },
-  divested: { name: CLOSURE_TYPE_LABEL.divested, hint: `S12 전환 결정 '${TRANSITION_DECISION_LABEL.reduce_or_divest}'와 처분 계획이 있어야 합니다.` },
-  killed_with_learning: {
-    name: CLOSURE_TYPE_LABEL.killed_with_learning,
-    hint: `S12 전환 결정 '${TRANSITION_DECISION_LABEL.kill_with_learning_captured}'와 학습 포착 기록이 있어야 합니다.`,
-  },
-  dropped: {
-    name: CLOSURE_TYPE_LABEL.dropped,
-    hint: "S1~S3 단계에서 게이트 결정이 아직 없는 기회에만 사용합니다. 사유와 학습 포착이 필요합니다.",
-  },
+// i18n (T3-6): the type name resolves through common.closureType.* and the hint through
+// common.closureType.hint* at render; hints that quote a transition term take it as {p1}.
+const TYPE_HINT_KEY: Record<ClosureType, string> = {
+  killed_at_gate: "common.closureType.hintKilledAtGate",
+  withdrawn: "common.closureType.hintWithdrawn",
+  graduated_to_core: "common.closureType.hintGraduatedToCore",
+  divested: "common.closureType.hintDivested",
+  killed_with_learning: "common.closureType.hintKilledWithLearning",
+  dropped: "common.closureType.hintDropped",
 };
 
 function recordLink(entity: ClosureEntity, id: string, record: string): { href: string; label: string } | null {
@@ -82,6 +71,7 @@ export function ClosureModal({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const tr = useTranslations();
   const uid = useId();
   const base =
     entity === "project"
@@ -118,7 +108,7 @@ export function ClosureModal({
   const learningMissing = !!sel && sel.requires_learning_capture && !learning.trim();
   const blockers: string[] = [];
   if (!type) blockers.push("종료 유형을 선택하세요.");
-  if (sel && !sel.satisfied) blockers.push(`전제조건 기록이 없습니다: ${sel.missing.map((m) => closureRecordLabel(m.record)).join(", ")}`);
+  if (sel && !sel.satisfied) blockers.push(`전제조건 기록이 없습니다: ${sel.missing.map((m) => { const k = closureRecordKeyOf(m.record); return k ? tr(k.label) : m.record; }).join(", ")}`);
   if (sel && reasonShort)
     blockers.push(
       sel.min_reason_length > 1 ? `사유를 ${sel.min_reason_length}자 이상 입력하세요.` : "사유를 입력하세요.",
@@ -197,7 +187,7 @@ export function ClosureModal({
                           style={{ marginTop: "0.2rem" }}
                         />
                         <span>
-                          <span className="font-semibold">{TYPE_LABEL[t].name}</span>{" "}
+                          <span className="font-semibold">{tr(CLOSURE_TYPE_KEY[t])}</span>{" "}
                           <span className={`status-chip ${p.satisfied ? "status-green" : "status-amber"}`}>
                             <span aria-hidden="true">{p.satisfied ? "✓" : "!"}</span>{" "}
                             {p.satisfied ? "전제조건 충족" : "전제조건 미충족"}
@@ -205,14 +195,14 @@ export function ClosureModal({
                         </span>
                       </label>
                       <div id={descId} className="ml-6 text-[color:var(--muted-fg)]">
-                        <span>{TYPE_LABEL[t].hint}</span>
+                        <span>{tr(TYPE_HINT_KEY[t], { p1: tr(TRANSITION_DECISION_KEY[t === "graduated_to_core" ? "graduate_to_core" : t === "divested" ? "reduce_or_divest" : "kill_with_learning_captured"]) })}</span>
                         {!p.satisfied && (
                           <ul className="mt-1 mb-0 pl-4">
                             {p.missing.map((m) => {
                               const link = recordLink(entity, entityId, m.record);
                               return (
                                 <li key={m.record}>
-                                  <span className="font-semibold">누락: {closureRecordLabel(m.record)}</span> — {CLOSURE_RECORD_LABEL[m.record]?.message ?? localizeMessage(m.message)}{" "}
+                                  <span className="font-semibold">누락: {(() => { const k = closureRecordKeyOf(m.record); return k ? tr(k.label) : m.record; })()}</span> — {(() => { const k = closureRecordKeyOf(m.record); return k ? tr(k.message) : localizeMessage(m.message); })()}{" "}
                                   {link && (
                                     <Link href={link.href} className="text-[color:var(--accent)] underline">
                                       {link.label}

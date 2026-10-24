@@ -15,7 +15,7 @@ import { promptAgent, systemMessage } from "../../../../../../lib/prompts.ts";
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "보고서 초안 생성은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Report-draft generation requires the analyst role or higher.");
   const { id } = await params;
   const project = visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true });
   if (!project) return notFound();

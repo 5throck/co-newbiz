@@ -20,7 +20,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ oppI
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "평가 항목 추가는 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Evaluation-item additions require the analyst role or higher." });
   if (denied) return denied;
   const { oppId } = await params;
   const db = getDb();
@@ -36,10 +36,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   if (conflict) return conflict;
   const body = (await request.json().catch(() => null)) as { category?: string; label?: string; description?: string; weight?: number } | null;
   if (body?.category !== "financial" && body?.category !== "technical") {
-    return badRequest("invalid_request", "category는 financial | technical 중 하나입니다.");
+    return badRequest("invalid_request", "category must be one of: financial | technical.");
   }
   const label = body?.label?.trim();
-  if (!label) return badRequest("invalid_request", "label은 필수입니다.");
+  if (!label) return badRequest("invalid_request", "label is required.");
   const weight = typeof body.weight === "number" && Number.isFinite(body.weight) && body.weight > 0 ? Math.round(body.weight) : undefined;
   const criterion = addCustomCriterion(oppId, body.category, label, body.description?.trim() || null, auth.auth.userId, weight);
   return ok(criterion, 201);

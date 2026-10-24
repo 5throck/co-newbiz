@@ -6,30 +6,31 @@ import { ColGroup } from "../../ui.tsx";
 import { S4_COMPETITIVE_COL_PCT } from "./constants.ts";
 import type { RouteDecisionStageState } from "./useRouteDecision.ts";
 import type { OpportunityRow } from "./types.ts";
+import { useTranslations } from "next-intl";
 
-export function CompetitiveTab({ ctx, selected }: { ctx: RouteDecisionStageState; selected: OpportunityRow }) {
+export function CompetitiveTab({ ctx, selected }: { ctx: RouteDecisionStageState; selected: OpportunityRow }) {const t = useTranslations("stages.s4.competitiveTab"); const tc = useTranslations("common");
   const { tab, advisory } = ctx;
   return (
     <>{tab === "competitive" && (
         <div className="card">
-          <h2>{selected.name} — 경쟁 구조</h2>
+          <h2>{selected.name} {t("competitiveStructure")}</h2>
           {advisory === null ? (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">
-              근거를 불러오지 못했습니다 — 새로고침하거나 S1 시장분석을 먼저 완료하세요.
+              {t("failedToLoadEvidenceRefresh")}
             </p>
           ) : advisory.s1Evidence?.competitive ? (
             <>
               <h4 className="text-[length:var(--fs-body)] mb-1">
-                경쟁 구조 (S1 v{advisory.s1Evidence.versionNo ?? "?"} — {advisory.s1Evidence.industryName})
+                {t("competitiveStructureS1V")}{advisory.s1Evidence.versionNo ?? "?"} — {advisory.s1Evidence.industryName})
               </h4>
               <p className="text-[length:var(--fs-caption)] mb-1">{advisory.s1Evidence.competitive.structure}</p>
               {advisory.s1Evidence.competitive.players.length > 0 && (
-                <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-                  <table className="data-table mb-0 table-fixed-pct tmin-40" aria-label="경쟁 구조 — 주요 기업">
-                    <caption className="sr-only">경쟁 구조 — 주요 기업</caption>
+                <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+                  <table className="data-table mb-0 table-fixed-pct tmin-40" aria-label={tc("competitiveStructureKeyCompanies")}>
+                    <caption className="sr-only">{tc("competitiveStructureKeyCompanies")}</caption>
                     <ColGroup widths={S4_COMPETITIVE_COL_PCT} />
                     <thead>
-                      <tr><th scope="col">기업</th><th scope="col">티어</th><th scope="col">비고</th></tr>
+                      <tr><th scope="col">{t("company")}</th><th scope="col">{t("tier")}</th><th scope="col">{tc("notes")}</th></tr>
                     </thead>
                     <tbody>
                       {advisory.s1Evidence.competitive.players.map((p) => (
@@ -37,7 +38,7 @@ export function CompetitiveTab({ ctx, selected }: { ctx: RouteDecisionStageState
                           <td className="cell-primary">{p.name}</td>
                           <td>
                             <span className={`status-chip ${p.tier === "leader" ? "status-green" : p.tier === "challenger" ? "status-amber" : "status-not-started"}`}>
-                              {p.tier === "leader" ? "리더" : p.tier === "challenger" ? "도전자" : "니치"}
+                              {p.tier === "leader" ? t("leader") : p.tier === "challenger" ? t("challenger") : t("niche")}
                             </span>
                           </td>
                           <td className="cell-truncate text-[length:var(--fs-caption)]">{p.note}</td>
@@ -50,13 +51,13 @@ export function CompetitiveTab({ ctx, selected }: { ctx: RouteDecisionStageState
             </>
           ) : (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">
-              경쟁 구조 미기록 —{" "}
+              {t("competitiveStructureNotRecorded")}{" "}
               {selected.market_scope ? (
-                <Link href={`/market?industry=${encodeURIComponent(selected.market_scope)}`} className="text-[color:var(--accent)] underline">S1 리포트</Link>
+                <Link href={`/market?industry=${encodeURIComponent(selected.market_scope)}`} className="text-[color:var(--accent)] underline">{t("s1Report")}</Link>
               ) : (
-                <span>S1 리포트</span>
+                <span>{t("s1Report2")}</span>
               )}
-              {" "}에서 재분석으로 집중도·주요 플레이어를 보강하세요.
+              {" "}{t("reinforceConcentrationAndKeyPlayers")}
             </p>
           )}
         </div>

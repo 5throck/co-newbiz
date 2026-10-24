@@ -120,8 +120,8 @@ describe("greenfield_lines_readonly (ADR-0178 decider decision 2026-10-16)", () 
     const body = (await res.json()) as { error: { code: string; message: string } };
     expect(body.error.code).toBe("greenfield_lines_readonly");
     // Korean guidance must point at the S5 investment tab and the re-pin path.
-    expect(body.error.message).toContain("S5\uac00 \ub2e8\uc77c \uc6d0\ubcf8\uc785\ub2c8\ub2e4");
-    expect(body.error.message).toContain("\ucd5c\uc2e0 S5\ub85c \uac31\uc2e0");
+    expect(body.error.message).toContain("S5 as the single source");
+    expect(body.error.message).toContain("refresh from latest S5");
   });
 
   test("brownfield PUT lines is unchanged (200, full-line replacement)", async () => {
@@ -168,12 +168,13 @@ describe("source-guard: read-only view for Green Field, editor kept for Brown Fi
     expect(src).toContain('data-testid="s8-lines-readonly-table"');
     expect(src).toContain('data-testid="s8-lines-readonly-row"');
     expect(src).toContain("/s5?tab=investment");
-    expect(src).toContain("S5\uac00 \ub2e8\uc77c \uc6d0\ubcf8\uc785\ub2c8\ub2e4");
-    expect(src).toContain("\ucd5c\uc2e0 S5\ub85c \uac31\uc2e0");
+    // i18n: captions resolve through the catalog (stages.s8.stage.*) — pin the keys.
+    expect(src).toContain('t("s5IsTheSingleSource")');
+    expect(src).toContain('t("theFixedReferenceNeedsRefresh")');
   });
 
   test("RowMenu switches to view for greenfield, edit stays for brownfield", () => {
-    expect(src).toContain('greenfield ? "\ub77c\uc778 \ubcf4\uae30" : "\ub77c\uc778 \ud3b8\uc9d1"');
+    expect(src).toContain('greenfield ? t("viewLines") : t("editLine")');
     // The brownfield JSON editor still exists.
     expect(src).toContain("editing");
     expect(src).toContain("JSON");

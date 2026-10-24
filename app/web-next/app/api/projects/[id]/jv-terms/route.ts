@@ -40,7 +40,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "JV 조건 등록은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Registering JV terms requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
@@ -49,14 +49,14 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     non_compete_scope?: string | null;
   } | null;
   const partnerId = body?.partner_id?.trim();
-  if (!partnerId) return badRequest("invalid_request", "partner_id(파트너)는 필수입니다.");
+  if (!partnerId) return badRequest("invalid_request", "partner_id (partner) is required.");
   const db = getDb();
   const partner = db
     .query("SELECT id FROM partner_candidate WHERE id = ? AND project_id = ?")
     .get(partnerId, id) as { id: string } | undefined;
-  if (!partner) return badRequest("invalid_request", "이 검토/안건에 등록된 파트너 후보가 아닙니다.");
+  if (!partner) return badRequest("invalid_request", "Not a partner candidate registered on this review/case.");
   const dup = db.query("SELECT id FROM jv_term WHERE project_id = ? AND partner_id = ?").get(id, partnerId);
-  if (dup) return badRequest("duplicate_jv_term", "이 파트너에 대한 JV 조건이 이미 등록되어 있습니다.");
+  if (dup) return badRequest("duplicate_jv_term", "JV terms for this partner are already registered.");
   const now = new Date().toISOString();
   const rowId = ulid();
   db.run(

@@ -6,20 +6,21 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { resolveDealCarrier, type CarrierProcess } from "../../lib/deal-carrier.ts";
+import { useTranslations } from "next-intl";
 
 export type DealOpportunityState =
   | { status: "loading" }
   | { status: "ready"; opportunityId: string | null }
   | { status: "error"; message: string };
 
-export function useDealOpportunityId(routeId: string): DealOpportunityState {
+export function useDealOpportunityId(routeId: string): DealOpportunityState {const t = useTranslations("components.dealOpportunityId.hook");
   const [state, setState] = useState<DealOpportunityState>({ status: "loading" });
   useEffect(() => {
     let alive = true;
     setState({ status: "loading" });
     resolveDealCarrier<CarrierProcess>((u) => api.get(u), routeId)
       .then((c) => { if (alive) setState({ status: "ready", opportunityId: c.opportunityId }); })
-      .catch((e) => { if (alive) setState({ status: "error", message: e instanceof Error ? e.message : "딜 정보를 불러오지 못했습니다." }); });
+      .catch((e) => { if (alive) setState({ status: "error", message: e instanceof Error ? e.message : t("failedToLoadDealInformation") }); });
     return () => { alive = false; };
   }, [routeId]);
   return state;

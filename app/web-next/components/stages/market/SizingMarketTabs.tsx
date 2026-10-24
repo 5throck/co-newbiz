@@ -10,12 +10,13 @@ import { AnchorChart, RegionWeightDonut, SegmentMixStack, RegionTable } from "./
 import type { SizingReportState } from "./useSizingReport.ts";
 import { useState, useEffect } from "react";
 import { formatPctOrNa, formatUsdBOrNa, isSyntheticSizing, SYNTHETIC_BADGE_TEXT } from "../../../lib/synthetic-value.ts";
+import { useTranslations } from "next-intl";
 
 /** ADR-0181 follow-up — the S1 analysis DECLARES its market-size unit at
  *  analysis time (person-settable, audited on the server). The declaration
  *  rides the version payload scope, so the entry-market unit resolution and
  *  the KRW gaesan need no S2-side re-declaration. */
-function SizingUnitDeclaration({ ctx }: { ctx: SizingReportState }) {
+function SizingUnitDeclaration({ ctx }: { ctx: SizingReportState }) {const t = useTranslations("stages.s1.sizingMarketTabs"); const tc = useTranslations("common");
   const [unit, setUnit] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -39,9 +40,9 @@ function SizingUnitDeclaration({ ctx }: { ctx: SizingReportState }) {
       });
       if (!r.ok) {
         const b = await r.json().catch(() => null);
-        setNotice(b?.error?.message ?? "저장 실패");
+        setNotice(b?.error?.message ?? tc("saveFailed"));
       } else {
-        setNotice("시장 규모 단위를 선언했습니다 — 다음 버전부터 이 단위가 payload에 선언됩니다.");
+        setNotice(t("marketSizeUnitDeclaredFrom"));
         await ctx.reload();
       }
     } finally { setBusy(false); }
@@ -49,84 +50,84 @@ function SizingUnitDeclaration({ ctx }: { ctx: SizingReportState }) {
   if (!ctx.analysisId || !ctx.canCurate || !loaded) return null;
   return (
     <label className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] flex items-center gap-1" data-testid="sizing-unit-declaration">
-      시장 규모 단위 선언
+      {t("declareMarketSizeUnit")}
       <select
-        aria-label="시장 규모 단위 선언"
+        aria-label={t("declareMarketSizeUnit2")}
         className="sizing-new-input sizing-new-input-sm"
         value={unit ?? ""}
         disabled={busy}
         onChange={(e) => void save(e.target.value)}
       >
-        <option value="">관례 (십억 USD/년)</option>
-        <option value="usd_b_year">연매출 (십억 USD/년)</option>
-        <option value="usd_m_year">연매출 (백만 USD/년)</option>
-        <option value="krw_m_year">연매출 (백만원/년)</option>
-        <option value="eur_b_year">연매출 (십억 EUR/년)</option>
-        <option value="eur_m_year">연매출 (백만 EUR/년)</option>
-        <option value="units_year">판매대수 (대/년)</option>
+        <option value="">{t("conventionUsdBillionsYr")}</option>
+        <option value="usd_b_year">{t("annualRevenueUsdBillionsYr")}</option>
+        <option value="usd_m_year">{t("annualRevenueUsdMillionsYr")}</option>
+        <option value="krw_m_year">{t("annualRevenueKrwMillionsYr")}</option>
+        <option value="eur_b_year">{t("annualRevenueEurBillionsYr")}</option>
+        <option value="eur_m_year">{t("annualRevenueEurMillionsYr")}</option>
+        <option value="units_year">{t("unitsSoldUnitsYr")}</option>
       </select>
       {notice && <span>{notice}</span>}
     </label>
   );
 }
 
-export function SizingOverviewTab({ ctx }: { ctx: SizingReportState }) {
+export function SizingOverviewTab({ ctx }: { ctx: SizingReportState }) {const t = useTranslations("stages.s1.sizingMarketTabs"); const tc = useTranslations("common");
   const { tab, matrix, proj2030Total, stepSummaries } = ctx;
   const synthetic = isSyntheticSizing(stepSummaries);
   const badge = synthetic ? <span className="status-chip status-amber">{SYNTHETIC_BADGE_TEXT}</span> : null;
   return (
     <>{tab === "overview" && (
-        <section aria-label="개요" className="market-section sizing-step">
+        <section aria-label={tc("overview")} className="market-section sizing-step">
           <h3 className="sizing-step-title text-[length:var(--fs-body)]">
-            <span className="sizing-step-badge"></span> 핵심 요약
+            <span className="sizing-step-badge"></span> {t("keySummary")}
           </h3>
           <div className="summary-cards">
             <div className="summary-card glass">
               <span className="summary-value mono-num">{formatUsdBOrNa(matrix.anchor.total)}</span>
               {badge}
-              <span className="text-label">기준 시장규모 (2026)</span>
+              <span className="text-label">{t("baseMarketSize2026")}</span>
               <SizingUnitDeclaration ctx={ctx} />
             </div>
             <div className="summary-card glass">
               <span className="summary-value mono-num">{formatPctOrNa(matrix.consistency.bottomUpCagr)}</span>
               {badge}
-              <span className="text-label">성장률 (연평균, 2026→2030)</span>
+              <span className="text-label">{t("growthRateAnnualAverage")}</span>
             </div>
             <div className="summary-card glass">
               <span className="summary-value mono-num">{formatUsdBOrNa(proj2030Total)}</span>
               {badge}
-              <span className="text-label">2030 전망 (기본 시나리오)</span>
+              <span className="text-label">{t("n2030OutlookBaseScenario")}</span>
             </div>
             <div className="summary-card glass">
               <span className="summary-value mono-num">{matrix.chainGrade.grade}</span>
-              <span className="text-label">체인 등급 (통계 hop {matrix.chainGrade.statisticalHops}개)</span>
+              <span className="text-label">{t("chainGradeStatisticalHops")} {matrix.chainGrade.statisticalHops}{tc("countSuffixParen")}</span>
             </div>
           </div>
           <ul className="sizing-note-list mt-3">
-            <li>분석 방법: systematic-market-sizing v1.1 — {matrix.provenance === "frozen-research" ? "연구문서 기반 수동 분석(분석가 확정)" : "8단계 파이프라인 산출(AI 추정 포함, 분석가 확정 전)"}</li>
-            <li>세그먼트: {segmentsOf(matrix).map((x) => x.label).join(" / ")} — 권역 {matrix.regions.length}개</li>
-            <li>시나리오: 비관/기본/낙관 CAGR 밴드 — 세부는 <strong>성장성</strong> 탭</li>
-            <li>경쟁 구조 — 세부는 <strong>경쟁 구조</strong> 탭 · 기회/위험 요인 — <strong>정성 분석</strong> 탭</li>
+            <li>{t("analysisMethodV11")} {matrix.provenance === "frozen-research" ? t("manualAnalysisFromResearchDocuments") : t("pipelineOutputAiEstimatesIncluded")}</li>
+            <li>{t("segment")} {segmentsOf(matrix).map((x) => x.label).join(" / ")} {t("region")} {matrix.regions.length}{t("itemS")}</li>
+            <li>{t("scenarioPessimisticBaseOptimisticCagr")} <strong>{t("growth")}</strong> {t("tab")}</li>
+            <li>{t("competitiveStructureDetailsIn")} <strong>{tc("competitiveStructure")}</strong> {t("tabOpportunityRiskFactors")} <strong>{t("qualitativeAnalysis")}</strong> {t("tab2")}</li>
           </ul>
         </section>
       )}</>
   );
 }
 
-export function SizingCompetitiveTab({ ctx }: { ctx: SizingReportState }) {
+export function SizingCompetitiveTab({ ctx }: { ctx: SizingReportState }) {const t = useTranslations("stages.s1.sizingMarketTabs"); const tc = useTranslations("common");
   const { tab, matrix, canCurate, analysisId } = ctx;
   return (
     <>{tab === "competitive" && (
-        <section aria-label="경쟁 구조" className="market-section sizing-step">
+        <section aria-label={tc("competitiveStructure")} className="market-section sizing-step">
           <h3 className="sizing-step-title text-[length:var(--fs-body)]">
-            <span className="sizing-step-badge">2-A</span> 경쟁 구조 — 시장 집중도와 주요 기업
+            <span className="sizing-step-badge">2-A</span> {t("competitiveStructureMarketConcentrationAnd")}
           </h3>
         {/* S1 competitive-intelligence 산출 — 산업 적응형 컬럼: (1) 레거시/시드 매트릭스의
             techType·용량·진행상태는 데이터가 있을 때만, (2) 파이프라인 신규 산출은
             산업별 attributes(라벨 자유)를 동적 컬럼으로 렌더링한다 (ADR-0092 optional). */}
         {matrix.competitive && (
           <>
-            <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-4 mb-1">경쟁 구조</h4>
+            <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-4 mb-1">{tc("competitiveStructure")}</h4>
             <p className="mb-1 text-[length:var(--fs-body)]">{matrix.competitive.structure}</p>
             {matrix.competitive.players.length > 0 && (() => {
               const players = matrix.competitive.players;
@@ -143,19 +144,19 @@ export function SizingCompetitiveTab({ ctx }: { ctx: SizingReportState }) {
               const attrOf = (pl: (typeof players)[number], label: string) =>
                 pl.attributes?.find((a) => a.label === label)?.value ?? "—";
               return (
-              <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-              <table className="data-table report-table table-fixed-pct tmin-80" aria-label="경쟁 구조 — 주요 기업">
-                <caption className="sr-only">경쟁 구조 주요 기업</caption>
+              <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+              <table className="data-table report-table table-fixed-pct tmin-80" aria-label={tc("competitiveStructureKeyCompanies")}>
+                <caption className="sr-only">{t("competitiveStructureKeyCompanies")}</caption>
                 <ColGroup widths={competitiveColPct(1 + (hasTechType ? 1 : 0) + (hasCapacity ? 1 : 0) + (hasProjectStatus ? 1 : 0) + Math.min(attrLabels.length, 4))} />
                 <thead>
                   <tr>
-                    <th scope="col" className="col-label">기업</th>
-                    <th scope="col" className="col-type">포지션</th>
-                    {hasTechType && <th scope="col" className="col-type">기술 유형</th>}
-                    {hasCapacity && <th scope="col" className="col-num">용량 (MWe)</th>}
-                    {hasProjectStatus && <th scope="col" className="col-type">진행 상태</th>}
+                    <th scope="col" className="col-label">{t("company")}</th>
+                    <th scope="col" className="col-type">{t("position")}</th>
+                    {hasTechType && <th scope="col" className="col-type">{t("technologyType")}</th>}
+                    {hasCapacity && <th scope="col" className="col-num">{t("capacityMwe")}</th>}
+                    {hasProjectStatus && <th scope="col" className="col-type">{t("progressStatus")}</th>}
                     {attrLabels.slice(0, 4).map((label) => <th key={label} scope="col" className="col-type">{label}</th>)}
-                    <th scope="col" className="col-text">비고</th>
+                    <th scope="col" className="col-text">{tc("notes")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -164,7 +165,7 @@ export function SizingCompetitiveTab({ ctx }: { ctx: SizingReportState }) {
                       <td className="col-label font-semibold">{pl.name}</td>
                       <td className="col-type">
                         <span className={`status-chip ${pl.tier === "leader" ? "status-green" : pl.tier === "challenger" ? "status-amber" : "status-not-started"}`}>
-                          {pl.tier === "leader" ? "리더" : pl.tier === "challenger" ? "도전자" : "니치"}
+                          {pl.tier === "leader" ? t("leader") : pl.tier === "challenger" ? t("challenger") : t("niche")}
                         </span>
                       </td>
                       {hasTechType && <td className="col-type">{pl.techType ?? "—"}</td>}
@@ -183,36 +184,35 @@ export function SizingCompetitiveTab({ ctx }: { ctx: SizingReportState }) {
         )}
           {!matrix.competitive && (
             <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">
-              경쟁 구조 데이터가 없습니다 — 재분석 시 1단계에서 도출되며, 공시된 시장 구조는 아래에서 직접 입력할 수 있습니다.
+              {t("noCompetitiveStructureDataDerived")}
             </p>
           )}
           {canCurate && analysisId && <CompetitiveInputForm analysisId={analysisId} />}
           <p className="sizing-note-list mt-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-            점유율·순위는 정성 추정(공시 대조 전) — 정밀 수치는 S2~S3 이후 공시 교차검증으로 보강됩니다.
+            {t("shareAndRankAreQualitative")}
           </p>
         </section>
       )}</>
   );
 }
 
-export function SizingSizeTab({ ctx }: { ctx: SizingReportState }) {
+export function SizingSizeTab({ ctx }: { ctx: SizingReportState }) {const t = useTranslations("stages.s1.sizingMarketTabs"); const tc = useTranslations("common");
   const { tab, matrix } = ctx;
   return (
     <>{tab === "size" && (
       <>
-      <StepSection n={2} id="step-2" title="기준 시장규모 산정 (다중 소스 교차)">
+      <StepSection n={2} id="step-2" title={t("baseMarketSizingTriangulation")}>
         <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
-          독립 추정치 2–3개로 기준년 총시장(2026, $B)을 삼각검증하고 이상치를 명시적으로 제외합니다.
-          이후 모든 배분이 이 앵커로 수렴해야 합니다.
+          {t("twoOrThreeIndependentEstimates")}
         </p>
         <AnchorChart matrix={matrix} />
         <ul className="sizing-note-list mt-2">
           {matrix.anchor.sources.map((s) => (
             <li key={s.label} className={s.status === "excluded" ? "text-[color:var(--muted-fg)] line-through" : ""}>
               <strong>{s.label}</strong> — ${s.estimate.toFixed(2)}B
-              {s.sourceUrl && <> · <a href={s.sourceUrl} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">출처</a></>}
+              {s.sourceUrl && <> · <a href={s.sourceUrl} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">{tc("source")}</a></>}
               {s.asOf && <> <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">({s.asOf})</span></>}
-              {s.methodology && <span className="block pl-4 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">측정 방법론: {s.methodology}</span>}
+              {s.methodology && <span className="block pl-4 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("measurementMethodology")} {s.methodology}</span>}
               <span className="block pl-4 text-[length:var(--fs-caption)]">{s.note}</span>
             </li>
           ))}
@@ -223,23 +223,22 @@ export function SizingSizeTab({ ctx }: { ctx: SizingReportState }) {
   );
 }
 
-export function SizingAllocationTab({ ctx }: { ctx: SizingReportState }) {
+export function SizingAllocationTab({ ctx }: { ctx: SizingReportState }) {const t = useTranslations("stages.s1.sizingMarketTabs");
   const { tab, matrix } = ctx;
   return (
     <>{tab === "allocation" && (
       <>
-      <StepSection n={3} id="step-3" title="권역·세그먼트 배분">
+      <StepSection n={3} id="step-3" title={t("regionAndSegmentAllocation")}>
         <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
-          권역 가중치는 인접 공시시장 프록시에서, 세그먼트 믹스는 글로벌 교차검증치에 맞춘 보정 배분입니다.
-          판단 조정은 셀별로 출처와 함께 기록됩니다(바텀업 합산이 아님).
+          {t("regionWeightsComeFromAdjacent")}
         </p>
         <div className="chart-pair">
           <div className="chart-half">
-            <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">권역 가중치 (도넛)</h4>
+            <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{t("regionWeightsDonut")}</h4>
             <RegionWeightDonut matrix={matrix} />
           </div>
           <div className="chart-half">
-            <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">권역별 세그먼트 믹스 (100% 적층)</h4>
+            <h4 className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{t("segmentMixByRegionStacked")}</h4>
             <SegmentMixStack matrix={matrix} />
           </div>
         </div>

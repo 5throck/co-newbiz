@@ -76,7 +76,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "파트너 후보 등록은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Registering partner candidates requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
@@ -87,7 +87,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   } | null;
   const name = body?.name?.trim();
   const partnerType = body?.partner_type?.trim();
-  if (!name || !partnerType) return badRequest("invalid_request", "name(후보명)과 partner_type(제휴 유형)은 필수입니다.");
+  if (!name || !partnerType) return badRequest("invalid_request", "name (candidate name) and partner_type (partnership type) are required.");
   const status = body?.status?.trim() || "sourcing";
   const db = getDb();
   const now = new Date().toISOString();

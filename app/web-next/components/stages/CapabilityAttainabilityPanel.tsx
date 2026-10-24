@@ -10,12 +10,13 @@
 // edit link points at that target's `필요 역량 점검` on the target detail page.
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
+import { useTranslations } from "next-intl";
 import {
   CapabilityJudgementTable, RemovedCapabilities, SummaryStrip, toJudgementDraft,
   type AttainabilityViewData, type CapabilityDdVerdictView,
 } from "./CapabilityJudgementTable.tsx";
 
-export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { projectId: string; compact?: boolean; onOpen?: () => void }) {
+export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { projectId: string; compact?: boolean; onOpen?: () => void }) {const t = useTranslations("components.capabilityAttainability.panel"); const tc = useTranslations("common");
   const [view, setView] = useState<AttainabilityViewData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const base = `/api/projects/${encodeURIComponent(projectId)}/capability-attainability`;
@@ -25,7 +26,7 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
 
   useEffect(() => {
     let alive = true;
-    api.get<AttainabilityViewData>(base).then((res) => { if (alive) setView(res.data); }).catch((e) => { if (alive) setError(e instanceof Error ? e.message : "달성 가능성을 불러오지 못했습니다."); });
+    api.get<AttainabilityViewData>(base).then((res) => { if (alive) setView(res.data); }).catch((e) => { if (alive) setError(e instanceof Error ? e.message : t("failedToLoadAttainability")); });
     api.get<{ rows: Array<{ id: string; capability: string; verdict: { coverage: string; note: string; by: string; at: string } | null }> }>(
       `/api/projects/${encodeURIComponent(projectId)}/capability-dd`,
     ).then((res) => {
@@ -36,8 +37,8 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
     return () => { alive = false; };
   }, [base]);
 
-  if (error && !view) return <section className="market-section sizing-step mb-3" aria-label="필요 역량 달성 가능성"><p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">{error}</p></section>;
-  if (!view) return <section className="market-section sizing-step mb-3" aria-label="필요 역량 달성 가능성"><p className="text-[color:var(--muted-fg)]">불러오는 중…</p></section>;
+  if (error && !view) return <section className="market-section sizing-step mb-3" aria-label={tc("capabilityAttainability")}><p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">{error}</p></section>;
+  if (!view) return <section className="market-section sizing-step mb-3" aria-label={tc("capabilityAttainability")}><p className="text-[color:var(--muted-fg)]">{tc("loadingEllipsis")}</p></section>;
 
   const oppId = view.opportunity_id;
   const s3Href = `/deals/${encodeURIComponent(oppId ?? "")}/s3`;
@@ -46,10 +47,10 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
 
   if (compact) {
     return (
-      <section className="market-section sizing-step mb-3" aria-label="필요 역량 달성 가능성 요약">
-        <h3 className="sizing-step-title">필요 역량 달성 가능성</h3>
+      <section className="market-section sizing-step mb-3" aria-label={t("capabilityAttainabilitySummary")}>
+        <h3 className="sizing-step-title">{tc("capabilityAttainability")}</h3>
         <SummaryStrip s={view.summary} />
-        {onOpen && <button type="button" className="text-[color:var(--accent)] font-bold" onClick={onOpen}>달성 가능성 판정 보기 →</button>}
+        {onOpen && <button type="button" className="text-[color:var(--accent)] font-bold" onClick={onOpen}>{t("viewAttainabilityJudgements")}</button>}
       </section>
     );
   }
@@ -64,32 +65,32 @@ export function CapabilityAttainabilityPanel({ projectId, compact, onOpen }: { p
     (ddVerdicts ?? []).map((v) => [v.rowId, { coverage: v.coverage, note: v.note, by: v.by, at: v.at }]),
   );
   return (
-    <section className="market-section sizing-step mb-3" aria-label="필요 역량 달성 가능성">
-      <h3 className="sizing-step-title">필요 역량 달성 가능성</h3>
+    <section className="market-section sizing-step mb-3" aria-label={tc("capabilityAttainability")}>
+      <h3 className="sizing-step-title">{tc("capabilityAttainability")}</h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
         {isBrownfield
-          ? <>브라운필드 필요 역량 판정 주전장은 S9 실사·검증 — <a href={s9Href} className="text-[color:var(--accent)] underline font-semibold">필요 역량 검증 탭에서</a> 판정을 기록하며, 그 결과는 이 패널에 반영됩니다.</>
+          ? <>{t("thePrimaryVenueForBrownfield")} <a href={s9Href} className="text-[color:var(--accent)] underline font-semibold">{t("inTheRequiredCapabilityVerification")}</a> {t("recordsTheJudgementTheResult")}</>
           : editAt === "S7"
-          ? <>읽기 전용 요약입니다 — 정의는 S3에서, 해소 방식·기대 수준·비용·기간·달성 가능성의 판정과 확정은 S7 대상별 필요 역량 점검에서 합니다{view.selected_target ? ` (선정 대상: ${view.selected_target.company_name})` : " — 선정된 대상이 없어 아직 판정이 없습니다"}.
-            {editHref && <> <a href={editHref} className="text-[color:var(--accent)] underline font-semibold">S7에서 판정</a></>}</>
-          : <>읽기 전용 요약입니다 — 정의는 S3에서, 해소 방식·기대 수준·비용·기간·달성 가능성의 판정과 확정은 S5에서 합니다.
-            {editHref && <> <a href={editHref} className="text-[color:var(--accent)] underline font-semibold">S5에서 판정</a></>}</>}
+          ? <>{t("summaryDefinitionsLiveInS3")}{view.selected_target ? t("selectedTargetP1", { p1: view.selected_target.company_name }) : t("noSelectedTargetYetSo")}.
+            {editHref && <> <a href={editHref} className="text-[color:var(--accent)] underline font-semibold">{t("judgedInS7")}</a></>}</>
+          : <>{t("summaryDefinitionsLiveInS32")}
+            {editHref && <> <a href={editHref} className="text-[color:var(--accent)] underline font-semibold">{tc("judgedInS5")}</a></>}</>}
       </p>
       {/* 2026-10-20 round 5: for a brownfield project the S9 verdicts ARE the judgement — the
           S5/S7-based strip (판정 0/7 · 미판정 7) contradicted them on the same screen, so the
           S9 coverage line replaces it once any S9 verdict exists. */}
       {isBrownfield && ddVerdicts && ddVerdicts.length > 0 ? (
-        <p className="m-0 mb-2 text-[length:var(--fs-caption)]" aria-label="S9 필요 역량 검증 요약" data-testid="capability-s9-summary">
-          S9 필요 역량 검증 {ddVerdicts.length}/{view.rows.length} · 해소 {ddVerdicts.filter((v) => v.coverage === "resolved").length} · 부분 해소 {ddVerdicts.filter((v) => v.coverage === "partial").length} · 미해소 {ddVerdicts.filter((v) => v.coverage === "unresolved").length}
-          {ddVerdicts.length < view.rows.length && <span className="ml-1 text-[color:var(--muted-fg)]">· 미판정 {view.rows.length - ddVerdicts.length} (S9에서 기록)</span>}
+        <p className="m-0 mb-2 text-[length:var(--fs-caption)]" aria-label={t("s9RequiredCapabilityVerificationSummary")} data-testid="capability-s9-summary">
+          {t("s9RequiredCapabilityVerification")} {ddVerdicts.length}/{view.rows.length} {t("resolved")} {ddVerdicts.filter((v) => v.coverage === "resolved").length} {t("partiallyResolved")} {ddVerdicts.filter((v) => v.coverage === "partial").length} {t("unresolved")} {ddVerdicts.filter((v) => v.coverage === "unresolved").length}
+          {ddVerdicts.length < view.rows.length && <span className="ml-1 text-[color:var(--muted-fg)]">{t("notJudged")} {view.rows.length - ddVerdicts.length} {t("recordedInS9")}</span>}
         </p>
       ) : (
         <SummaryStrip s={view.summary} />
       )}
       {view.rows.length === 0 ? (
-        <p className="text-[color:var(--muted-fg)]">S3 필요 역량 레지스터에 행이 없습니다. S3에서 필요 역량을 먼저 정리하세요.</p>
+        <p className="text-[color:var(--muted-fg)]">{t("noRowsInTheS3")}</p>
       ) : (
-        <CapabilityJudgementTable rows={view.rows} drafts={drafts} editable={false} showFilter={false} s3Href={s3Href} judgeHref={isBrownfield ? s9Href : editHref} judgeLabel={isBrownfield ? "S9에서 판정" : editAt === "S7" ? "S7에서 판정" : "S5에서 판정"} s9={ddVerdicts && ddVerdicts.length > 0 ? s9ByRow : undefined} />
+        <CapabilityJudgementTable rows={view.rows} drafts={drafts} editable={false} showFilter={false} s3Href={s3Href} judgeHref={isBrownfield ? s9Href : editHref} judgeLabel={isBrownfield ? t("judgedInS9") : editAt === "S7" ? t("judgedInS72") : tc("judgedInS5")} s9={ddVerdicts && ddVerdicts.length > 0 ? s9ByRow : undefined} />
       )}
       <RemovedCapabilities removed={view.removed_capabilities ?? []} />
     </section>

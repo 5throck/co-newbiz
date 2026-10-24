@@ -53,9 +53,12 @@ describe("bfScopeBlock — which projects get the scoped view", () => {
     expect(bfPreviousForTab(undefined, "chk-legal-dd-checklist")).toEqual([]);
     expect(isBfExtraTab(undefined, "chk-deal-shape-presigning-checklist")).toBe(false);
   });
-  test("sub-track names are the shared Korean labels", () => {
-    expect(bfSubTrackName("partnership")).toBe("전략 제휴");
-    expect(bfSubTrackName("minority_investment")).toBe("소수지분 투자");
+  test("sub-track names are the shared Korean labels (i18n re-pin T3-6: common.subTrack.* keys)", () => {
+    const ko = JSON.parse(readFileSync("app/web-next/locales/ko.json", "utf8")) as Record<string, any>;
+    const tr = (key: string): string => key.split(".").reduce<unknown>((acc, k) => (acc as Record<string, any>)[k], ko) as string;
+    expect(tr(bfSubTrackName("partnership"))).toBe("전략 제휴");
+    expect(tr(bfSubTrackName("minority_investment"))).toBe("소수지분 투자");
+    expect(bfSubTrackName("zzz")).toBe("zzz");
   });
 });
 
@@ -214,13 +217,14 @@ describe("components (source reading)", () => {
 describe("replaced-item wording and custom proposer (DdStage)", () => {
   const src = readFileSync(new URL("../../app/web-next/components/stages/DdStage.tsx", import.meta.url), "utf8");
   test("human proposals show 제안: user; never the unknown-agent text; self-approval hidden with hint", () => {
-    expect(src).toContain("제안자 기록 없음");
+    // i18n: proposer wording moved to the catalog (stages.s9.stage.*) — pin the keys.
+    expect(src).toContain('stages.s9.stage.noProposerRecord');
     expect(src).not.toContain("알 수 없는 에이전트");
-    expect(src).toContain("제안한 사람은 직접 승인할 수 없습니다 — 다른 사람이 검토해야 합니다");
+    expect(src).toContain('stages.s9.stage.theProposerCannotApproveIt');
     expect(src).toContain("canAct && !c.is_proposer");
   });
   test("draft-AI chips are trimmed from checklist rows — the item id carries the full tooltip (2026-10-17 round 2)", () => {
-    expect(src).toContain('reviewBadge(item).status === "draft-AI" ? `검토 상태: ${DRAFT_AI_MARKER}` : undefined');
+    expect(src).toContain('reviewBadge(item).status === "draft-AI" ? t("reviewStatusP1", { p1: DRAFT_AI_MARKER }) : undefined');
     expect(src).toContain('reviewBadge(item).status !== "draft-AI" && <ReviewBadgeChip item={item} />');
     expect(src).toContain('import { DRAFT_AI_MARKER, reviewBadge, type ReviewStatus } from "../../lib/checklist-review-status.ts"');
   });

@@ -35,7 +35,7 @@ export const PATCH = route(
     const auth = authenticate(request);
     if (!auth.ok) return auth.response;
     const ctx = auth.auth;
-    const denied = requireBusinessActor(ctx, "write", { viewerMessage: "가치사슬 연계 수정은 analyst 역할 이상이어야 합니다." });
+    const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Updating value-chain links requires the analyst role or higher." });
     if (denied) return denied;
     const { industryId, linkId } = await params;
     const db = getDb();
@@ -50,16 +50,16 @@ export const PATCH = route(
     const body = (await request.json().catch(() => null)) as {
       status?: string; rationale?: string; relation?: string;
     } | null;
-    if (!body) return badRequest("invalid_request", "요청 본문이 필요합니다.");
+    if (!body) return badRequest("invalid_request", "Request body is required.");
 
     const now = new Date().toISOString();
 
     // 형태 1: 은퇴
     if (body.status !== undefined) {
-      if (body.status !== "retired") return badRequest("invalid_request", "status는 'retired'만 지원합니다.");
-      if (link.status === "retired") return badRequest("already_retired", "이미 은퇴된 링크입니다.");
+      if (body.status !== "retired") return badRequest("invalid_request", "status supports only 'retired'.");
+      if (link.status === "retired") return badRequest("already_retired", "The link is already retired.");
       const rationale = body.rationale?.trim();
-      if (!rationale) return badRequest("invalid_request", "은퇴에는 rationale이 필요합니다.");
+      if (!rationale) return badRequest("invalid_request", "Retiring requires a rationale.");
 
       db.run(
         "UPDATE proxy_link SET status = 'retired', retired_at = ?, retired_by = ? WHERE id = ?",
@@ -78,12 +78,12 @@ export const PATCH = route(
     if (body.relation !== undefined) {
       const relation = body.relation as Relation;
       if (!(relation in RELATION_TO_HOP_DISTANCE)) {
-        return badRequest("invalid_request", "relation은 전방 | 전전방 | 후방 | 후후방 중 하나입니다.");
+        return badRequest("invalid_request", "relation must be one of: forward | forward-plus-forward | backward | backward-plus-backward.");
       }
       if (link.relation !== null) {
         return badRequest(
           "relation_already_set",
-          "이미 relation이 설정된 링크입니다 — 덮어쓰는 대신 은퇴 후 재등록하세요.",
+          "The link already has a relation set — retire it and re-register instead of overwriting.",
         );
       }
       const hopDistance = RELATION_TO_HOP_DISTANCE[relation];
@@ -97,6 +97,6 @@ export const PATCH = route(
       return ok({ id: linkId, relation, hop_distance: hopDistance }, 200);
     }
 
-    return badRequest("invalid_request", "status(retired) 또는 relation 중 하나가 필요합니다.");
+    return badRequest("invalid_request", "Either status (retired) or relation is required.");
   },
 );

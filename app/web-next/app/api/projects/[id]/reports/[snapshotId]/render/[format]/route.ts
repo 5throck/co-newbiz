@@ -25,7 +25,7 @@ export const GET = route(async (
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id, snapshotId, format } = await params;
-  if (!FORMATS.has(format)) return fail(400, "invalid_format", "format은 docx/pdf/hwpx 중 하나입니다.");
+  if (!FORMATS.has(format)) return fail(400, "invalid_format", "format must be one of: docx/pdf/hwpx.");
   const project = visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true });
   if (!project) return notFound();
 
@@ -37,7 +37,7 @@ export const GET = route(async (
   const render = db
     .query("SELECT file_path FROM report_render WHERE snapshot_id = ? AND format = ?")
     .get(snapshotId, format) as { file_path: string } | undefined;
-  if (!render) return notFound("해당 포맷의 렌더 파일이 없습니다 — 포맷을 지정해 스냅샷을 다시 저장하세요.");
+  if (!render) return notFound("No render file for that format — re-save the snapshot specifying the format.");
 
   // Path-containment guard: the stored file must live in a directory that
   // ends with render_out/<projectId>/<snapshotId>/ — cwd-independent, and
@@ -45,8 +45,8 @@ export const GET = route(async (
   const expectedDirSuffix = ["render_out", id, snapshotId, ""].join(sep);
   const filePath = resolve(render.file_path);
   const fileDir = dirname(filePath) + sep;
-  if (!fileDir.endsWith(expectedDirSuffix)) return fail(400, "invalid_render_path", "렌더 파일 경로가 유효하지 않습니다.");
-  if (!existsSync(filePath)) return notFound("렌더 파일이 디스크에 없습니다 — 스냅샷을 다시 렌더링하세요.");
+  if (!fileDir.endsWith(expectedDirSuffix)) return fail(400, "invalid_render_path", "Invalid render file path.");
+  if (!existsSync(filePath)) return notFound("The render file is missing on disk — re-render the snapshot.");
 
   const bytes = readFileSync(filePath);
   return new Response(new Uint8Array(bytes), {

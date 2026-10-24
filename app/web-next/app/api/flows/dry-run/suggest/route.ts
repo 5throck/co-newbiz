@@ -15,7 +15,7 @@ import { route } from "../../../../../lib/route.ts";
 export const POST = route(async (request: Request) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const guard = requireBusinessActor(auth.auth, "write", { viewerMessage: "개선 제안 생성은 analyst 역할 이상이어야 합니다." });
+  const guard = requireBusinessActor(auth.auth, "write", { viewerMessage: "Improvement-proposal generation requires the analyst role or higher." });
   if (guard) return guard;
 
   const body = (await request.json().catch(() => null)) as {
@@ -23,7 +23,7 @@ export const POST = route(async (request: Request) => {
     evidence?: { recentFailures?: number; note?: string | null };
   } | null;
   if (!body?.promptKey || typeof body.promptKey !== "string") {
-    return badRequest("invalid_request", "promptKey 는 필수입니다.");
+    return badRequest("invalid_request", "promptKey is required.");
   }
   const evidence = body.evidence && typeof body.evidence === "object"
     ? { recentFailures: body.evidence.recentFailures, note: body.evidence.note ?? null }

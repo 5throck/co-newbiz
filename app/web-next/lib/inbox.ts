@@ -42,12 +42,15 @@ export interface InboxItem {
   createdAt: string;
 }
 
-export const KIND_LABEL: Record<InboxKind, string> = {
-  gate_proposal: "게이트 결정 제안",
-  decision_proposal: "결정 제안",
-  gate_hold: "게이트 HOLD",
-  closure_precondition: "종료·전환 선결조건",
-  notification: "알림",
+// i18n: kind labels resolve through common.inbox.kind.* catalog keys at
+// render time (app/inbox/page.tsx, components/InboxList.tsx) — this map only
+// pins the key per kind (design 2026-10-23-i18n-ui-adoption).
+export const KIND_LABEL_KEY: Record<InboxKind, string> = {
+  gate_proposal: "common.inbox.kind.gateProposal",
+  decision_proposal: "common.inbox.kind.decisionProposal",
+  gate_hold: "common.inbox.kind.gateHold",
+  closure_precondition: "common.inbox.kind.closurePrecondition",
+  notification: "common.inbox.kind.notification",
 };
 
 /** Open decision items only (the sidebar badge). Unread notifications are counted by the top-bar bell instead. */

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { api } from "../../lib/api.ts";
 import { useConfirm } from "../../components/crud.tsx";
 import { ClosureModal } from "../../components/ClosureModal.tsx";
@@ -32,13 +33,16 @@ interface ProjectRow {
   is_lead?: boolean;
 }
 
-const TRACK_LABEL: Record<string, string> = { greenfield: "그린필드", brownfield: "브라운필드" };
+// i18n: track chips resolve through common.track.* catalog keys at render time.
+const TRACK_KEY: Record<string, string> = { greenfield: "track.greenfield", brownfield: "track.brownfield" };
 
 function fmtDate(iso: string): string {
   return iso.slice(0, 10);
 }
 
 export function ProjectsView() {
+  const t = useTranslations("pages.projectsList");
+  const tc = useTranslations("common");
   const [rows, setRows] = useState<ProjectRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [closing, setClosing] = useState<{ id: string; name: string } | null>(null);
@@ -48,7 +52,7 @@ export function ProjectsView() {
     api
       .get<ProjectRow[]>("/api/projects")
       .then((r) => setRows(r.data))
-      .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+      .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
   }
 
   useEffect(() => {
@@ -57,26 +61,26 @@ export function ProjectsView() {
 
   function removeProject(p: ProjectRow) {
     confirm(
-      `${p.project_name ?? p.project_no} 삭제`,
+      t("deleteConfirmTitle", { name: p.project_name ?? p.project_no }),
       async () => {
         try {
           await api.delete(`/api/projects/${encodeURIComponent(p.id)}`);
           loadProjects();
         } catch (err) {
-          setError(err instanceof Error ? err.message : "프로젝트 삭제 실패");
+          setError(err instanceof Error ? err.message : t("deleteFailed"));
         }
       },
       {
-        body: "삭제 표시로 전환됩니다. 연결 기회(진출방식 결정·대상 선정·시너지 포함)가 함께 삭제 표시되고, 데이터는 보존되어 아카이브에서 감사용으로 열람할 수 있습니다.",
+        body: t("deleteConfirmBody"),
       },
     );
   }
 
   return (
     <main>
-      <h1>프로젝트</h1>
+      <h1>{t("heading")}</h1>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
-        추진된 프로젝트의 사업성 분석(S8)·실사(S9)·투자심사(S11)·사후 관리(S12) 화면으로 이동합니다.
+        {t("intro")}
       </p>
       {error && (
         <p role="alert" className="text-[color:var(--red-fg)]">
@@ -84,22 +88,22 @@ export function ProjectsView() {
         </p>
       )}
       {rows === null ? (
-        <p>불러오는 중...</p>
+        <p>{tc("loading")}</p>
       ) : rows.length === 0 ? (
-        <p className="text-[color:var(--muted-fg)]">접근 가능한 프로젝트가 없습니다.</p>
+        <p className="text-[color:var(--muted-fg)]">{t("empty")}</p>
       ) : (
-        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+        <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
           <table className="data-table table-fixed-pct tmin-56">
-            <caption className="sr-only">프로젝트 목록</caption>
+            <caption className="sr-only">{t("caption")}</caption>
             <ColGroup widths={PROJECTS_COL_PCT} />
             <thead>
               <tr>
-                <th className="text-left">프로젝트 번호</th>
-                <th className="text-left">프로젝트명</th>
-                <th className="text-left">트랙</th>
-                <th className="text-left">데이터 상태</th>
-                <th className="col-num">생성일</th>
-                <th className="text-left">바로가기</th>
+                <th className="text-left">{t("thNo")}</th>
+                <th className="text-left">{t("thName")}</th>
+                <th className="text-left">{tc("track")}</th>
+                <th className="text-left">{t("thDataStatus")}</th>
+                <th className="col-num">{t("thCreated")}</th>
+                <th className="text-left">{t("thLinks")}</th>
               </tr>
             </thead>
             <tbody>
@@ -114,7 +118,7 @@ export function ProjectsView() {
                   <td>
                     {p.track ? (
                       <span className={`status-chip ${p.track === "greenfield" ? "status-green" : "status-amber"}`}>
-                        {TRACK_LABEL[p.track]}
+                        {tc(TRACK_KEY[p.track])}
                       </span>
                     ) : (
                       <span className="text-[color:var(--muted-fg)]">—</span>
@@ -122,9 +126,9 @@ export function ProjectsView() {
                   </td>
                   <td>
                     {p.is_stale ? (
-                      <span className="status-chip status-amber" title={(p.stale_reasons ?? []).join(" · ") || "시장 데이터 최신성 확인 필요"}>◐ 갱신 필요</span>
+                      <span className="status-chip status-amber" title={(p.stale_reasons ?? []).join(" · ") || t("staleTitleFallback")}>{t("staleChip")}</span>
                     ) : (
-                      <span className="status-chip status-green" title="프로젝트 목록 기준 stale 신호 없음">✓ 최신</span>
+                      <span className="status-chip status-green" title={t("freshTitle")}>{t("freshChip")}</span>
                     )}
                   </td>
                   <td className="col-num whitespace-nowrap px-1">{fmtDate(p.created_at)}</td>
@@ -135,16 +139,16 @@ export function ProjectsView() {
                     <div className="flex flex-nowrap gap-1.5 items-start">
                       <span className="flex gap-1.5 whitespace-nowrap">
                         <Link className="btn-ghost btn-sm" href={`/projects/${p.id}/business-case`}>
-                          사업성(S8)
+                          {t("linkBusinessCase")}
                         </Link>
                         <Link className="btn-ghost btn-sm" href={`/projects/${p.id}/dd`}>
-                          실사(S9)
+                          {t("linkDd")}
                         </Link>
                         <Link className="btn-ghost btn-sm" href={`/projects/${p.id}/ic-review`}>
-                          투자심사(S11)
+                          {t("linkIcReview")}
                         </Link>
                         <Link className="btn-ghost btn-sm" href={`/projects/${p.id}/portfolio`}>
-                          사후 관리(S12)
+                          {t("linkPortfolio")}
                         </Link>
                       </span>
                       {p.is_lead && (
@@ -152,18 +156,18 @@ export function ProjectsView() {
                           <button
                             type="button"
                             className="btn-ghost btn-sm"
-                            title="유형과 전제조건을 확인하고 이 프로젝트를 종료합니다"
+                            title={t("closeBtnTitle")}
                             onClick={() => setClosing({ id: p.id, name: p.project_name ?? p.project_no })}
                           >
-                            종료…
+                            {t("closeBtn")}
                           </button>
                           <button
                             type="button"
                             className="btn-danger btn-sm"
-                            title="이 프로젝트와 S8~S12 전체 데이터를 삭제합니다"
+                            title={t("deleteBtnTitle")}
                             onClick={() => removeProject(p)}
                           >
-                            삭제
+                            {tc("delete")}
                           </button>
                         </>
                       )}

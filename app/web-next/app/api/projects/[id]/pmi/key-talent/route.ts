@@ -30,16 +30,16 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "핵심인력 등록은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Registering key talent requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   if (!pmiApplicability(getDb(), id).applies) return forbidden("not_applicable_track", PMI_NOT_APPLICABLE_MESSAGE);
   const body = (await request.json().catch(() => null)) as { role_ref?: string; status?: string } | null;
   const roleRef = body?.role_ref?.trim();
-  if (!roleRef) return badRequest("invalid_request", "role_ref(핵심인력 역할/식별자)는 필수입니다.");
+  if (!roleRef) return badRequest("invalid_request", "role_ref (key-talent role/identifier) is required.");
   const status = body?.status?.trim() || "active";
   if (!(TALENT_STATUSES as readonly string[]).includes(status)) {
-    return badRequest("invalid_request", `status는 ${TALENT_STATUSES.join(" | ")} 중 하나입니다.`);
+    return badRequest("invalid_request", `status must be one of: ${TALENT_STATUSES.join(" | ")}.`);
   }
   const db = getDb();
   const now = new Date().toISOString();

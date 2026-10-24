@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { StatusPage } from "../components/StatusPage.tsx";
 
-export const metadata: Metadata = { title: "페이지를 찾을 수 없습니다" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("errors");
+  return { title: t("notFound.title") };
+}
 
-export default function NotFound() {
+export default async function NotFound() {
+  const t = await getTranslations("errors");
   return (
-    <StatusPage title="페이지를 찾을 수 없습니다">
-      주소가 바뀌었거나 존재하지 않는 화면입니다. 검토/안건 보드로 돌아가거나 이전 화면으로 이동하세요.
+    <StatusPage title={t("notFound.title")}>
+      {t("notFound.body")}
     </StatusPage>
   );
 }

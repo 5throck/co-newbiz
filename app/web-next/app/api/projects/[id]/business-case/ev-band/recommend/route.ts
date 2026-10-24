@@ -62,7 +62,7 @@ function extractJsonObject(text: string): Record<string, unknown> | null {
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "AI 밴드 추천은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "AI band recommendation requires the analyst role or higher." }); if (denied) return denied; }
   const { id } = await params;
   const db = getDb();
   const project = db
@@ -76,7 +76,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const subjects = project.source_opportunity_id ? listShortlistSubjects(db, project.source_opportunity_id) : [];
   const picked = (project.company_id ? subjects.find((t: { companyId: string | null }) => t.companyId === project.company_id) : undefined) ?? subjects[0] ?? null;
   if (!picked) {
-    return fail(409, "no_subject", "브라운필드 대상이 없습니다 — AI 밴드 추천은 Short List 대상의 매출을 근거로만 동작합니다.");
+    return fail(409, "no_subject", "No brownfield target — AI band recommendation works only off Short List target revenue.");
   }
   const inputs = caseInputsForTarget(id, { id: picked.id, companyId: picked.companyId });
   const revenueKrwM = inputs.revenueAnchor?.krwM ?? null;

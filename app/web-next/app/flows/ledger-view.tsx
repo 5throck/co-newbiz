@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { EChartsOption } from "echarts";
+import { useTranslations } from "next-intl";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { ColGroup, FilterChip, PageState } from "../../components/ui.tsx";
 import { EChart } from "../../components/EChart.tsx";
@@ -38,7 +39,7 @@ const CHART_TABLE_COL_PCT = [25, 25, 25, 25] as const;
 const RUNS_COLS = 6;
 const LLM_COLS = 9;
 
-const ADMIN_FORBIDDEN_TEXT = "관리자 계정은 업무 콘텐츠에서 분리되어 이 화면을 볼 수 없습니다(ADR-0146).";
+const ADMIN_FORBIDDEN_KEY = "adminForbidden";
 
 interface Filters {
   window: "24h" | "7d" | "30d";
@@ -84,6 +85,9 @@ function buildParams(f: Filters, before: string | null): string {
 }
 
 export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
+  const t = useTranslations("pages.flows.ledger");
+  const tc = useTranslations("common");
+  const tr = useTranslations();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [filters, setFilters] = useState<Filters>(() => readFilters(searchParams));
@@ -148,7 +152,7 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
       .catch((err: unknown) => {
         if (!alive) return;
         if (err instanceof ApiError && err.status === 403) setForbidden(true);
-        else setErrorText(err instanceof Error ? err.message : "런 장부를 불러오지 못했습니다");
+        else setErrorText(err instanceof Error ? err.message : t("loadFailed"));
         setStatus("error");
       });
     return () => {
@@ -190,7 +194,7 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
 
   if (forbidden) {
     // §10 상태 매트릭스 — 403(ADMIN)은 재시도를 유도하지 않는다(설계된 상태).
-    return <PageState state="error" errorText={ADMIN_FORBIDDEN_TEXT} />;
+    return <PageState state="error" errorText={t(ADMIN_FORBIDDEN_KEY)} />;
   }
   if (status === "loading") return <PageState state="loading" rows={5} />;
   if (status === "error") return <PageState state="error" errorText={errorText ?? undefined} onRetry={() => setFilters((f) => ({ ...f }))} />;
@@ -200,57 +204,57 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
   return (
     <>
       {/* 요약 카드 4장 (§5.2) — 선택 기간(window) 기준, 색 단독 금지(A5). */}
-      <section aria-label="런 레저 요약" className="market-section">
+      <section aria-label={t("summarySection")} className="market-section">
         <SectionToolbar
-          title="요약"
+          title={t("summaryTitle")}
           filters={
-            <span className="flex flex-wrap items-center gap-1" role="group" aria-label="기간 선택">
-              <FilterChip selected={filters.window === "24h"} onClick={() => applyFilters({ window: "24h" })}>최근 24시간</FilterChip>
-              <FilterChip selected={filters.window === "7d"} onClick={() => applyFilters({ window: "7d" })}>최근 7일</FilterChip>
-              <FilterChip selected={filters.window === "30d"} onClick={() => applyFilters({ window: "30d" })}>최근 30일</FilterChip>
+            <span className="flex flex-wrap items-center gap-1" role="group" aria-label={t("windowGroup")}>
+              <FilterChip selected={filters.window === "24h"} onClick={() => applyFilters({ window: "24h" })}>{t("window24h")}</FilterChip>
+              <FilterChip selected={filters.window === "7d"} onClick={() => applyFilters({ window: "7d" })}>{t("window7d")}</FilterChip>
+              <FilterChip selected={filters.window === "30d"} onClick={() => applyFilters({ window: "30d" })}>{t("window30d")}</FilterChip>
             </span>
           }
-          summary={<span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">기준 창: {summary?.window ?? "—"}</span>}
+          summary={<span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("basisWindow", { p1: summary?.window ?? "—" })}</span>}
         />
         <div className="flex flex-wrap gap-2">
-          <SummaryCard label="호출 수" value={fmtInt(summary?.llmCalls ?? 0)} />
+          <SummaryCard label={t("callsCount")} value={fmtInt(summary?.llmCalls ?? 0)} />
           <SummaryCard
-            label="오류율"
+            label={t("errorRate")}
             value={fmtPct(errorRate)}
             alert={(errorRate ?? 0) > 0}
-            alertText="✕ 오류"
+            alertText={t("errorAlert")}
           />
           <SummaryCard
-            label="토큰 합"
+            label={t("tokensSum")}
             value={fmtInt((summary?.inputTokens ?? 0) + (summary?.outputTokens ?? 0) + (summary?.cacheReadTokens ?? 0) + (summary?.cacheWriteTokens ?? 0))}
-            sub={summary && summary.estimatedCalls > 0 ? `추정 ${fmtInt(summary.estimatedCalls)}건 포함` : undefined}
+            sub={summary && summary.estimatedCalls > 0 ? t("estimatedIncluded", { p1: fmtInt(summary.estimatedCalls) }) : undefined}
           />
           <SummaryCard
-            label="비용 합"
+            label={t("costSum")}
             value={fmtUsd(summary?.costUsd ?? 0)}
-            sub={summary && summary.unpricedCalls > 0 ? `미가격 ${fmtInt(summary.unpricedCalls)}건 제외` : undefined}
+            sub={summary && summary.unpricedCalls > 0 ? t("unpricedExcluded", { p1: fmtInt(summary.unpricedCalls) }) : undefined}
           />
         </div>
 
         {/* EChart 타임라인 + 데이터 테이블 대체(A4 — §6.5 요구). */}
         <div className="mt-3">
           <EChart
-            option={chartOption(buckets)}
+            option={chartOption(buckets, t)}
             height={260}
-            ariaLabel={`기간별 호출 수와 비용 — 불러온 ${fmtInt(llmRows?.length ?? 0)}건 기준`}
+            ariaLabel={t("chartAria", { p1: fmtInt(llmRows?.length ?? 0) })}
           />
           <details className="mt-1">
-            <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">표로 보기 (차트 데이터)</summary>
-            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-              <table className="data-table table-fixed-pct tmin-40 mt-1" aria-label="기간별 호출 수와 비용 데이터">
-                <caption className="sr-only">차트의 일 단위 호출 수·실패·비용 데이터</caption>
+            <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">{t("viewAsTable")}</summary>
+            <div className="table-scroll" role="region" aria-label={t("tableScrollRegion")} tabIndex={0}>
+              <table className="data-table table-fixed-pct tmin-40 mt-1" aria-label={t("chartTableAria")}>
+                <caption className="sr-only">{t("chartTableCaption")}</caption>
                 <ColGroup widths={CHART_TABLE_COL_PCT} />
                 <thead>
-                  <tr><th scope="col">일자</th><th scope="col" className="col-num">성공</th><th scope="col" className="col-num">실패</th><th scope="col" className="col-num">비용</th></tr>
+                  <tr><th scope="col">{t("colDay")}</th><th scope="col" className="col-num">{t("colSuccess")}</th><th scope="col" className="col-num">{t("colFailed")}</th><th scope="col" className="col-num">{t("colCost")}</th></tr>
                 </thead>
                 <tbody>
                   {buckets.length === 0 ? (
-                    <tr><td colSpan={4} className="text-[color:var(--muted-fg)]">데이터 없음</td></tr>
+                    <tr><td colSpan={4} className="text-[color:var(--muted-fg)]">{t("emptyData")}</td></tr>
                   ) : (
                     buckets.map((b) => (
                       <tr key={b.day}>
@@ -265,44 +269,44 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
               </table>
             </div>
             <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              차트와 표는 이 화면이 불러온 {fmtInt(llmRows?.length ?? 0)}건(커서 페이지 한도)을 반영합니다 — 기간 전체 집계는 위 요약 카드를 사용하세요.
+              {t("chartTableNote", { p1: fmtInt(llmRows?.length ?? 0) })}
             </p>
           </details>
         </div>
       </section>
 
       {/* 필터 바 (§5.1 고정 세트). */}
-      <section aria-label="런 목록" className="market-section">
-        <SectionToolbar title="프로세스 런" count={runs?.length} filters={<FilterBar filters={filters} agents={agents} onChange={applyFilters} />} />
+      <section aria-label={t("runsSection")} className="market-section">
+        <SectionToolbar title={t("processRunsTitle")} count={runs?.length} filters={<FilterBar filters={filters} agents={agents} onChange={applyFilters} />} />
         {dryRunNote && !filters.excludeDryRun && (
-          <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">참고: {dryRunNote}</p>
+          <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("dryRunNotePrefix", { p1: dryRunNote })}</p>
         )}
         {runs !== null && runs.length === 0 ? (
           !llmConfigured ? (
-            <PageState state="empty" emptyText="LLM이 구성되지 않아 런 장부 기록이 없습니다. 시스템 모드에서 LLM 구성을 확인하세요." />
+            <PageState state="empty" emptyText={t("emptyNoLlm")} />
           ) : (
-            <PageState state="empty" emptyText="기록된 런이 없습니다." />
+            <PageState state="empty" emptyText={t("emptyRuns")} />
           )
         ) : (
-          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table table-fixed-pct tmin-48" aria-label="프로세스 런 목록">
-              <caption className="sr-only">프로세스 런 목록 — 행 확장으로 활동·에이전트 기록 확인</caption>
+          <div className="table-scroll" role="region" aria-label={t("tableScrollRegion")} tabIndex={0}>
+            <table className="data-table table-fixed-pct tmin-48" aria-label={t("runsTableAria")}>
+              <caption className="sr-only">{t("runsTableCaption")}</caption>
               <ColGroup widths={RUNS_COL_PCT} />
               <thead>
                 <tr>
-                  <th scope="col">시각</th>
-                  <th scope="col">런</th>
-                  <th scope="col">에이전트</th>
-                  <th scope="col">상태</th>
-                  <th scope="col">spec 버전</th>
-                  <th scope="col">런 ID</th>
+                  <th scope="col">{t("colTime")}</th>
+                  <th scope="col">{t("colRun")}</th>
+                  <th scope="col">{t("colAgent")}</th>
+                  <th scope="col">{tc("status")}</th>
+                  <th scope="col">{t("colSpecVersion")}</th>
+                  <th scope="col">{t("colRunId")}</th>
                 </tr>
               </thead>
               <tbody>
                 {(runs ?? []).map((r) => {
                   const chip = r.status === "failed"
-                    ? { label: "✕ 실패", cls: "status-chip status-rejected" }
-                    : { label: "✓ 성공", cls: "status-chip status-approved" };
+                    ? { label: t("chipFailed"), cls: "status-chip status-rejected" }
+                    : { label: t("chipSuccess"), cls: "status-chip status-approved" };
                   const agentKeys = [...new Set(r.activities.flatMap((a) => a.agentRuns.map((ar) => ar.agent_key)))];
                   return (
                     <FragmentRow key={r.id}>
@@ -328,45 +332,45 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
         )}
         {nextBefore.processRuns && (
           <button type="button" className="btn-ghost btn-sm mt-2" disabled={busyRuns} onClick={() => void loadMore("processRuns")}>
-            {busyRuns ? "불러오는 중..." : "이전 런 불러오기"}
+            {busyRuns ? tc("loading") : t("loadOlderRuns")}
           </button>
         )}
       </section>
 
       {/* LLM 호출 평면 표 — 호출 단위 경제성(A5-5). 런 확장과의 정확한 연결 열이
           Row 3 계약에 없어 별도 섹션으로 둔다(구현 편차 #5). */}
-      <section aria-label="LLM 호출 기록" className="market-section">
-        <SectionToolbar title="LLM 호출" count={llmRows?.length} />
+      <section aria-label={t("llmSection")} className="market-section">
+        <SectionToolbar title={t("llmCallsTitle")} count={llmRows?.length} />
         {llmRows !== null && llmRows.length === 0 ? (
           !llmConfigured ? (
-            <PageState state="empty" emptyText="LLM이 구성되지 않아 호출 기록이 없습니다. 시스템 모드에서 LLM 구성을 확인하세요." />
+            <PageState state="empty" emptyText={t("emptyLlmNoLlm")} />
           ) : (
-            <PageState state="empty" emptyText="기록된 LLM 호출이 없습니다." />
+            <PageState state="empty" emptyText={t("emptyLlm")} />
           )
         ) : (
-          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table table-fixed-pct tmin-64" aria-label="LLM 호출 기록">
-              <caption className="sr-only">LLM 호출 기록 — 지연·토큰·비용·근거 칩</caption>
+          <div className="table-scroll" role="region" aria-label={t("tableScrollRegion")} tabIndex={0}>
+            <table className="data-table table-fixed-pct tmin-64" aria-label={t("llmTableAria")}>
+              <caption className="sr-only">{t("llmTableCaption")}</caption>
               <ColGroup widths={LLM_COL_PCT} />
               <thead>
                 <tr>
-                  <th scope="col">시각</th>
-                  <th scope="col">에이전트</th>
-                  <th scope="col">목적</th>
-                  <th scope="col">모델</th>
-                  <th scope="col">근거</th>
-                  <th scope="col">상태</th>
-                  <th scope="col" className="col-num">지연</th>
-                  <th scope="col" className="col-num">토큰 in/out</th>
-                  <th scope="col" className="col-num">비용</th>
+                  <th scope="col">{t("colTime")}</th>
+                  <th scope="col">{t("colAgent")}</th>
+                  <th scope="col">{t("llmColPurpose")}</th>
+                  <th scope="col">{t("llmColModel")}</th>
+                  <th scope="col">{t("llmColEvidence")}</th>
+                  <th scope="col">{tc("status")}</th>
+                  <th scope="col" className="col-num">{t("llmColLatency")}</th>
+                  <th scope="col" className="col-num">{t("llmColTokens")}</th>
+                  <th scope="col" className="col-num">{t("colCost")}</th>
                 </tr>
               </thead>
               <tbody>
                 {(llmRows ?? []).map((row) => {
                   const cls = classifiedByChip(row);
                   const okChip = row.ok === 1
-                    ? { label: "✓ 성공", cls: "status-chip status-approved" }
-                    : { label: "✕ 실패", cls: "status-chip status-rejected" };
+                    ? { label: t("chipSuccess"), cls: "status-chip status-approved" }
+                    : { label: t("chipFailed"), cls: "status-chip status-rejected" };
                   const dryRunGroup = dryRunGroupOf(row);
                   return (
                     <tr key={row.id}>
@@ -375,15 +379,15 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
                       <td className="cell-truncate text-[length:var(--fs-caption)]">{row.purpose ?? "—"}</td>
                       <td className="text-[length:var(--fs-caption)]">{row.model ?? "—"}</td>
                       <td>
-                        <span className={cls.cls}>{cls.label}</span>
+                        <span className={cls.cls}>{tr(cls.key)}</span>
                         {/* 드라이런 행(Row 5) — amber 칩 + 세션 딥링크(벤치 B1-2 그룹핑 변형).
                             기본 필터(드라이런 제외=ON)에서는 이 행 자체가 숨겨진다. */}
                         {dryRunGroup && (
                           <>
                             {" "}
-                            <span className="status-chip status-amber">드라이런</span>{" "}
+                            <span className="status-chip status-amber">{t("dryRunChip")}</span>{" "}
                             <Link href={`/flows/dry-run/${encodeURIComponent(dryRunGroup)}`} className="text-[length:var(--fs-caption)] text-[color:var(--accent)] underline">
-                              세션 →
+                              {t("sessionLink")}
                             </Link>
                           </>
                         )}
@@ -400,11 +404,11 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
           </div>
         )}
         <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-          불러온 {fmtInt(llmRows?.length ?? 0)}건 중 이 화면 기준 토큰 합계 {fmtInt(totalTokensSum)} — 전체 기간 집계는 요약 카드를 사용하세요.
+          {t("llmTokensNote", { p1: fmtInt(llmRows?.length ?? 0), p2: fmtInt(totalTokensSum) })}
         </p>
         {nextBefore.llmCalls && (
           <button type="button" className="btn-ghost btn-sm mt-2" disabled={busyLlm} onClick={() => void loadMore("llmCalls")}>
-            {busyLlm ? "불러오는 중..." : "이전 호출 불러오기"}
+            {busyLlm ? tc("loading") : t("loadOlderLlm")}
           </button>
         )}
       </section>
@@ -437,27 +441,29 @@ function FilterBar({
   agents: BlueprintAgent[];
   onChange: (patch: Partial<Filters>) => void;
 }) {
+  const t = useTranslations("pages.flows.ledger");
+  const tc = useTranslations("common");
   return (
     <span className="flex flex-wrap items-center gap-2">
       <label className="text-[length:var(--fs-caption)]">
-        <span className="block mb-0.5">에이전트</span>
+        <span className="block mb-0.5">{t("colAgent")}</span>
         <select className="sizing-new-input sizing-new-input-sm" value={filters.agentKey} onChange={(e) => onChange({ agentKey: e.target.value })}>
-          <option value="">전체</option>
+          <option value="">{tc("all")}</option>
           {agents.map((a) => (
             <option key={a.key} value={a.key}>{a.key}</option>
           ))}
         </select>
       </label>
       <label className="text-[length:var(--fs-caption)]">
-        <span className="block mb-0.5">엔터티</span>
+        <span className="block mb-0.5">{t("filterEntity")}</span>
         <span className="flex items-center gap-1">
           <select
             className="sizing-new-input sizing-new-input-sm"
             value={filters.entityType}
             onChange={(e) => onChange({ entityType: e.target.value as Filters["entityType"] })}
-            aria-label="엔터티 유형"
+            aria-label={t("filterEntityType")}
           >
-            <option value="">전체</option>
+            <option value="">{tc("all")}</option>
             <option value="opportunity">opportunity</option>
             <option value="project">project</option>
           </select>
@@ -465,46 +471,46 @@ function FilterBar({
             className="sizing-new-input sizing-new-input-sm"
             value={filters.entityId}
             placeholder="ID"
-            aria-label="엔터티 ID"
+            aria-label={t("filterEntityId")}
             onChange={(e) => onChange({ entityId: e.target.value })}
           />
         </span>
       </label>
-      <span role="group" aria-label="성공·실패 필터" className="flex items-center gap-1">
-        <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">상태</span>
-        <FilterChip selected={filters.ok === "all"} onClick={() => onChange({ ok: "all" })}>전체</FilterChip>
-        <FilterChip selected={filters.ok === "1"} onClick={() => onChange({ ok: "1" })}>성공만</FilterChip>
-        <FilterChip selected={filters.ok === "0"} onClick={() => onChange({ ok: "0" })}>실패만</FilterChip>
+      <span role="group" aria-label={t("okFilterGroup")} className="flex items-center gap-1">
+        <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{tc("status")}</span>
+        <FilterChip selected={filters.ok === "all"} onClick={() => onChange({ ok: "all" })}>{tc("all")}</FilterChip>
+        <FilterChip selected={filters.ok === "1"} onClick={() => onChange({ ok: "1" })}>{t("filterSuccessOnly")}</FilterChip>
+        <FilterChip selected={filters.ok === "0"} onClick={() => onChange({ ok: "0" })}>{t("filterFailedOnly")}</FilterChip>
       </span>
       <label className="text-[length:var(--fs-caption)]">
-        <span className="block mb-0.5">출처</span>
+        <span className="block mb-0.5">{t("filterSource")}</span>
         <select className="sizing-new-input sizing-new-input-sm" value={filters.source} onChange={(e) => onChange({ source: e.target.value as Filters["source"] })}>
-          <option value="">전체</option>
+          <option value="">{tc("all")}</option>
           <option value="llm">llm (AI)</option>
-          <option value="synthesis">synthesis (결정론)</option>
+          <option value="synthesis">{t("filterSourceSynthesis")}</option>
         </select>
       </label>
-      <FilterChip selected={filters.excludeDryRun} onClick={() => onChange({ excludeDryRun: !filters.excludeDryRun })} title="해제 시 드라이런 런도 포함됩니다">
-        드라이런 제외
+      <FilterChip selected={filters.excludeDryRun} onClick={() => onChange({ excludeDryRun: !filters.excludeDryRun })} title={t("filterDryRunTitle")}>
+        {t("filterExcludeDryRun")}
       </FilterChip>
     </span>
   );
 }
 
 /** §5.2 — 호출 수(막대, 성공/실패 분해) + 비용(선, 보조축). */
-function chartOption(buckets: Array<{ day: string; ok: number; failed: number; costUsd: number }>): EChartsOption {
+function chartOption(buckets: Array<{ day: string; ok: number; failed: number; costUsd: number }>, t: ReturnType<typeof useTranslations>): EChartsOption {
   return {
     tooltip: { trigger: "axis" },
-    legend: { data: ["성공 호출", "실패 호출", "비용"] },
+    legend: { data: [t("chartLegendSuccess"), t("chartLegendFailed"), t("colCost")] },
     xAxis: { type: "category", data: buckets.map((b) => b.day) },
     yAxis: [
-      { type: "value", name: "호출 수" },
-      { type: "value", name: "비용 ($)" },
+      { type: "value", name: t("callsCount") },
+      { type: "value", name: t("chartAxisCost") },
     ],
     series: [
-      { name: "성공 호출", type: "bar", stack: "calls", data: buckets.map((b) => b.ok) },
-      { name: "실패 호출", type: "bar", stack: "calls", data: buckets.map((b) => b.failed) },
-      { name: "비용", type: "line", yAxisIndex: 1, data: buckets.map((b) => Number(b.costUsd.toFixed(4))) },
+      { name: t("chartLegendSuccess"), type: "bar", stack: "calls", data: buckets.map((b) => b.ok) },
+      { name: t("chartLegendFailed"), type: "bar", stack: "calls", data: buckets.map((b) => b.failed) },
+      { name: t("colCost"), type: "line", yAxisIndex: 1, data: buckets.map((b) => Number(b.costUsd.toFixed(4))) },
     ],
   };
 }

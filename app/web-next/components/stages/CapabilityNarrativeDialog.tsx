@@ -8,20 +8,22 @@ import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { useModalFocus } from "../../lib/use-modal-focus.ts";
 import { NARRATIVE_CAP } from "../../lib/capability-gap.ts";
+import { type KoNarrativeField } from "../../lib/ko-data-values.ts";
 import { ClampedText } from "./ClampedText.tsx";
+import { useTranslations } from "next-intl";
 
-export type NarrativeField = "필요 수준" | "보유 수준" | "기대 수준";
+export type NarrativeField = KoNarrativeField;
 
-/** Button label: 입력 when empty, 수정 when filled and editable, 보기 when read-only. */
-export function narrativeButtonLabel(value: string, readOnly: boolean): "입력" | "수정" | "보기" {
-  if (readOnly) return "보기";
-  return value.trim() === "" ? "입력" : "수정";
+/** Button label keys: input when empty, edit when filled and editable, view when read-only. Resolve through the common catalog at render. */
+export function narrativeButtonLabelKey(value: string, readOnly: boolean): string {
+  if (readOnly) return "common.view";
+  return value.trim() === "" ? "common.input" : "common.edit";
 }
 
 export function CapabilityNarrativeDialog({ capability, field, value, readOnly, onSave, onClose }: {
   capability: string; field: NarrativeField; value: string; readOnly: boolean;
   onSave?: (v: string) => void; onClose: () => void;
-}) {
+}) {const t = useTranslations("components.capabilityJudgement.narrativeDialog"); const tc = useTranslations("common");
   const [mounted, setMounted] = useState(false);
   const [text, setText] = useState(value);
   const areaId = useId();
@@ -33,19 +35,19 @@ export function CapabilityNarrativeDialog({ capability, field, value, readOnly, 
     <div className="modal-backdrop" onClick={onClose} role="presentation" onKeyDown={onKeyDown}>
       <div ref={panelRef} className="modal-panel" role="dialog" aria-modal="true" aria-label={title} style={{ maxWidth: "36rem", width: "100%" }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-head"><h2 style={{ fontSize: "0.95rem" }}>{title}</h2></div>
-        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-2">필요 역량: {capability}</p>
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-2">{t("requiredCapabilities")} {capability}</p>
         {readOnly ? (
-          <p className="m-0" style={{ whiteSpace: "pre-wrap" }}>{value.trim() === "" ? <span className="text-[color:var(--muted-fg)]">미입력</span> : value}</p>
+          <p className="m-0" style={{ whiteSpace: "pre-wrap" }}>{value.trim() === "" ? <span className="text-[color:var(--muted-fg)]">{tc("notEntered")}</span> : value}</p>
         ) : (
           <>
-            <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={areaId}>{field} (서술)</label>
+            <label className="block text-[length:var(--fs-caption)] font-semibold mb-1" htmlFor={areaId}>{field} {t("narrative")}</label>
             <textarea id={areaId} className="sizing-new-input w-full" rows={8} autoFocus maxLength={NARRATIVE_CAP} value={text} onChange={(e) => setText(e.target.value)} />
-            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" aria-live="polite">{text.length} / {NARRATIVE_CAP}자</p>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" aria-live="polite">{text.length} / {NARRATIVE_CAP}{tc("charSuffix")}</p>
           </>
         )}
         <div className="flex justify-end gap-2 mt-4">
-          <button type="button" className="btn-ghost btn-sm" onClick={onClose}>{readOnly ? "닫기" : "취소"}</button>
-          {!readOnly && onSave && <button type="button" className="btn-ghost btn-sm" onClick={() => onSave(text.trim())}>저장</button>}
+          <button type="button" className="btn-ghost btn-sm" onClick={onClose}>{readOnly ? tc("close") : tc("cancel")}</button>
+          {!readOnly && onSave && <button type="button" className="btn-ghost btn-sm" onClick={() => onSave(text.trim())}>{tc("save")}</button>}
         </div>
       </div>
     </div>,
@@ -56,12 +58,12 @@ export function CapabilityNarrativeDialog({ capability, field, value, readOnly, 
 /** Table cell: 2-line preview (single 미입력 marker when empty) + the dialog button. */
 export function NarrativeCell({ capability, field, value, readOnly, onOpen }: {
   capability: string; field: NarrativeField; value: string; readOnly: boolean; onOpen: () => void;
-}) {
+}) {const t = useTranslations(); const tc = useTranslations("common");
   return (
     <>
-      {value.trim() === "" ? <span className="block text-[color:var(--muted-fg)]">미입력</span> : <ClampedText text={value} />}
-      <button type="button" className="btn-ghost btn-sm mt-1" aria-label={`${capability} ${field} ${narrativeButtonLabel(value, readOnly)}`} onClick={onOpen}>
-        {narrativeButtonLabel(value, readOnly)}
+      {value.trim() === "" ? <span className="block text-[color:var(--muted-fg)]">{tc("notEntered")}</span> : <ClampedText text={value} />}
+      <button type="button" className="btn-ghost btn-sm mt-1" aria-label={`${capability} ${field} ${t(narrativeButtonLabelKey(value, readOnly))}`} onClick={onOpen}>
+        {t(narrativeButtonLabelKey(value, readOnly))}
       </button>
     </>
   );
@@ -73,12 +75,12 @@ export function NarrativeCell({ capability, field, value, readOnly, onOpen }: {
  * NARRATIVE_CAP, counter shown on focus or near the cap. Read-only users see the clamped text.
  */
 export function NarrativeInput({ capability, field, value, readOnly, onChange }: {
-  capability: string; field: "필요 수준" | "보유 수준"; value: string; readOnly: boolean; onChange: (v: string) => void;
-}) {
+  capability: string; field: NarrativeField; value: string; readOnly: boolean; onChange: (v: string) => void;
+}) {const tc = useTranslations("common");
   const [focused, setFocused] = useState(false);
   const counterId = useId();
   if (readOnly) {
-    return value.trim() === "" ? <span className="block text-[color:var(--muted-fg)]">미입력</span> : <ClampedText text={value} />;
+    return value.trim() === "" ? <span className="block text-[color:var(--muted-fg)]">{tc("notEntered")}</span> : <ClampedText text={value} />;
   }
   const near = value.length >= NARRATIVE_CAP * 0.8;
   return (
@@ -90,7 +92,7 @@ export function NarrativeInput({ capability, field, value, readOnly, onChange }:
         onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
         onChange={(e) => { onChange(e.target.value); e.target.style.height = "auto"; e.target.style.height = `${Math.min(e.target.scrollHeight + 2, 240)}px`; }}
       />
-      {(focused || near) && <span id={counterId} className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" aria-live="polite">{value.length} / {NARRATIVE_CAP}자</span>}
+      {(focused || near) && <span id={counterId} className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" aria-live="polite">{value.length} / {NARRATIVE_CAP}{tc("charSuffix")}</span>}
     </>
   );
 }

@@ -53,7 +53,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "스케치 생성은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Sketch generation requires the analyst role or higher." }); if (denied) return denied; }
   const { id } = await params;
   // regenerateScenarios — 사용자 결정: 시나리오 전제(낙관/기본/비관)는 캔버스
   // 재생성과 성격이 다른 별도 행위다(캔버스는 자유롭게 다시 다듬는 초안,

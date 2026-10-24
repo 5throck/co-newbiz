@@ -24,13 +24,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "대상 선정은 analyst 역할 이상이어야 합니다 — 선정은 인간의 판단입니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Target selection requires the analyst role or higher — selection is a human judgement.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as { target_id?: string; rationale?: string } | null;
-  if (!body?.target_id) return badRequest("invalid_request", "target_id는 필수입니다.");
-  if (!body.rationale?.trim()) return badRequest("invalid_request", "선정 근거(rationale)는 필수입니다 (ADR-0053 결정 기록).");
-  if (body.rationale.length > 4000) return badRequest("invalid_request", "선정 근거는 4,000자 이내여야 합니다.");
+  if (!body?.target_id) return badRequest("invalid_request", "target_id is required.");
+  if (!body.rationale?.trim()) return badRequest("invalid_request", "Selection rationale is required (ADR-0053 decision record).");
+  if (body.rationale.length > 4000) return badRequest("invalid_request", "The selection rationale must be at most 4,000 characters.");
   try {
     const selection = selectTarget(id, body.target_id, body.rationale, ctx.userId);
     // ADR-0153: the human's target selection is the human_final review of the S8 artifacts.
@@ -40,6 +40,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const msg = e instanceof Error ? e.message : "";
     if (e instanceof NotFoundError) return notFound();
     // Not-brownfield / not-on-shortlist / empty rationale are client-fixable.
-    return badRequest("selection_rejected", msg || "대상을 선정할 수 없습니다.");
+    return badRequest("selection_rejected", msg || "The target cannot be selected.");
   }
 }

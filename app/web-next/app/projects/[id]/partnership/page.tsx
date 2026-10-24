@@ -6,6 +6,7 @@
 // 없이 StageTabs로 진입한다 (navigation.ts NON_MENU_ROUTES).
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
 import { useConfirm } from "../../../../components/crud.tsx";
 import { api } from "../../../../lib/api.ts";
@@ -56,14 +57,14 @@ interface JvTerm {
 }
 interface View { partners: Partner[]; terms: JvTerm[] }
 
-const STATUS_LABEL: Record<string, string> = {
-  sourcing: "소싱", contacted: "접촉", nda: "NDA", dd: "실사", term_sheet: "조건서", selected: "선정", dropped: "탈락",
+const STATUS_KEY: Record<string, string> = {
+  sourcing: "statusSourcing", contacted: "statusContacted", nda: "statusNda", dd: "statusDd", term_sheet: "statusTermSheet", selected: "statusSelected", dropped: "statusDropped",
 };
 const STATUS_CLASS: Record<string, string> = {
   sourcing: "status-not-started", contacted: "status-in-progress", nda: "status-in-progress",
   dd: "status-in-progress", term_sheet: "status-in-progress", selected: "status-green", dropped: "status-red",
 };
-const SEVERITY_LABEL: Record<string, string> = { high: "높음", medium: "보통", low: "낮음" };
+const SEVERITY_KEY: Record<string, string> = { high: "severityHigh", medium: "severityMedium", low: "severityLow" };
 const SEVERITY_CLASS: Record<string, string> = { high: "status-red", medium: "status-amber", low: "status-not-started" };
 
 const emptyNew = {
@@ -72,6 +73,8 @@ const emptyNew = {
 };
 
 export default function PartnershipPage() {
+  const t = useTranslations("pages.projects.partnership");
+  const tc = useTranslations("common");
   const params = useParams<{ id: string }>();
   const projectId = params.id;
   const { me } = useAuth();
@@ -91,7 +94,7 @@ export default function PartnershipPage() {
       api.get<{ terms: JvTerm[] }>(`${base}/jv-terms`),
     ])
       .then(([p, t]) => setData({ partners: p.data.partners, terms: t.data.terms }))
-      .catch((e) => setError(e instanceof Error ? e.message : "파트너 데이터를 불러오지 못했습니다."));
+      .catch((e) => setError(e instanceof Error ? e.message : t("loadFailed")));
   }, [base]);
   useEffect(() => { load(); }, [load]);
 
@@ -101,7 +104,7 @@ export default function PartnershipPage() {
       await api[method](`${base}${path}`, body);
       load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "저장 실패");
+      setError(e instanceof Error ? e.message : t("saveFailed"));
     } finally {
       setBusy(false);
     }
@@ -109,7 +112,7 @@ export default function PartnershipPage() {
 
   function addPartner() {
     if (!newPartner.name.trim() || !newPartner.partner_type.trim()) {
-      setError("후보명과 제휴 유형은 필수입니다."); return;
+      setError(t("errPartnerRequired")); return;
     }
     const numOrNull = (v: string) => (v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : null);
     void send("post", "/partners", {
@@ -130,14 +133,14 @@ export default function PartnershipPage() {
   function addFinding(partnerId: string) {
     const f = newFinding[partnerId];
     if (!f?.workstream.trim() || !f?.description.trim()) {
-      setError("워크스트림과 지적 내용은 필수입니다."); return;
+      setError(t("errFindingRequired")); return;
     }
     void send("post", `/partners/${partnerId}/findings`, { workstream: f.workstream.trim(), severity: f.severity || "medium", description: f.description.trim() });
     setNewFinding({ ...newFinding, [partnerId]: { workstream: "", severity: "medium", description: "" } });
   }
 
   function addTerm() {
-    if (!newTerm.partner_id) { setError("JV 조건을 등록할 파트너를 선택하세요."); return; }
+    if (!newTerm.partner_id) { setError(t("errTermPartner")); return; }
     void send("post", "/jv-terms", {
       partner_id: newTerm.partner_id,
       equity_split: newTerm.equity_split.trim() || null,
@@ -153,28 +156,28 @@ export default function PartnershipPage() {
     <main className="market-page">
       <StageTabs projectId={projectId} />
       <header className="mb-3">
-        <h1 className="text-[1.05rem] font-semibold">파트너 검토·JV 조건</h1>
+        <h1 className="text-[1.05rem] font-semibold">{t("h1")}</h1>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
-          제휴 파트너 후보와 실사 지적사항을 관리하고, 선정 파트너별 JV 조건(지분·거버넌스·엑싯)을 기록합니다.
+          {t("intro")}
         </p>
       </header>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">{error}</p>}
 
-      <section className="market-section mb-3" aria-label="파트너 후보">
+      <section className="market-section mb-3" aria-label={t("partnerSection")}>
         <div className="section-toolbar">
-          <h2 className="text-[length:var(--fs-body)] font-semibold">파트너 후보 ({data?.partners.length ?? 0}건)</h2>
+          <h2 className="text-[length:var(--fs-body)] font-semibold">{t("partnerHeading", { p1: data?.partners.length ?? 0 })}</h2>
         </div>
-        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+        <div className="table-scroll" role="region" aria-label={t("tableScrollRegion")} tabIndex={0}>
           <table className="data-table table-fixed-pct tmin-64">
-            <caption className="sr-only">파트너 후보 목록</caption>
+            <caption className="sr-only">{t("partnerTableCaption")}</caption>
             <ColGroup widths={PARTNER_COL_PCT} />
             <thead>
               <tr>
-                <th scope="col">후보명</th><th scope="col">유형</th><th scope="col">지역</th>
-                <th scope="col">역량</th><th scope="col">용량</th><th scope="col">재무</th>
-                <th scope="col">고객 적합</th><th scope="col">컴플라이언스 리스크</th>
-                <th scope="col">상태</th><th scope="col">NDA</th><th scope="col">지적사항</th><th scope="col">관리</th>
+                <th scope="col">{t("colName")}</th><th scope="col">{t("colType")}</th><th scope="col">{t("colRegion")}</th>
+                <th scope="col">{t("colCapability")}</th><th scope="col">{t("colCapacity")}</th><th scope="col">{t("colFinancial")}</th>
+                <th scope="col">{t("colCustomerFit")}</th><th scope="col">{t("colComplianceRisk")}</th>
+                <th scope="col">{tc("status")}</th><th scope="col">NDA</th><th scope="col">{t("colFindings")}</th><th scope="col">{t("colManage")}</th>
               </tr>
             </thead>
             <tbody>
@@ -188,21 +191,21 @@ export default function PartnershipPage() {
                   <td>{p.financial_score ?? "—"}</td>
                   <td>{p.customer_base_fit ?? "—"}</td>
                   <td>{p.compliance_risk ?? "—"}</td>
-                  <td><span className={`status-chip ${STATUS_CLASS[p.status] ?? "status-not-started"}`}>{STATUS_LABEL[p.status] ?? p.status}</span></td>
-                  <td>{p.nda_signed === 1 ? "서명" : "미서명"}</td>
-                  <td>{p.findings.length}건</td>
+                  <td><span className={`status-chip ${STATUS_CLASS[p.status] ?? "status-not-started"}`}>{STATUS_KEY[p.status] ? t(STATUS_KEY[p.status]) : p.status}</span></td>
+                  <td>{p.nda_signed === 1 ? t("ndaSigned") : t("ndaUnsigned")}</td>
+                  <td>{t("countSuffix", { p1: p.findings.length })}</td>
                   <td>
                     {canAct && (
                       <span className="flex gap-1">
                         <button type="button" className="btn-ghost btn-sm" disabled={busy}
-                          onClick={() => confirm("파트너 후보 삭제", () => { void send("delete", `/partners/${p.id}`); }, { body: `'${p.name}'과(와) 그 실사 지적사항이 삭제됩니다.`, confirmLabel: "삭제" })}>삭제</button>
+                          onClick={() => confirm(t("deletePartnerTitle"), () => { void send("delete", `/partners/${p.id}`); }, { body: t("deletePartnerBody", { p1: p.name }), confirmLabel: tc("delete") })}>{tc("delete")}</button>
                       </span>
                     )}
                   </td>
                 </tr>
               ))}
               {data && data.partners.length === 0 && (
-                <tr><td colSpan={12} className="text-[color:var(--muted-fg)]">등록된 파트너 후보가 없습니다.</td></tr>
+                <tr><td colSpan={12} className="text-[color:var(--muted-fg)]">{t("emptyPartners")}</td></tr>
               )}
             </tbody>
           </table>
@@ -210,46 +213,46 @@ export default function PartnershipPage() {
 
         {canAct && (
           <details className="mt-2">
-            <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">파트너 후보 등록</summary>
+            <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">{t("registerPartner")}</summary>
             <div className="flex flex-wrap gap-2 mt-2 text-[length:var(--fs-caption)]">
-              <label>후보명 (필수)<input className="sizing-new-input" value={newPartner.name} onChange={(e) => setNewPartner({ ...newPartner, name: e.target.value })} /></label>
-              <label>제휴 유형 (필수)<input className="sizing-new-input" placeholder="예: JV / 유통 / 기술제휴" value={newPartner.partner_type} onChange={(e) => setNewPartner({ ...newPartner, partner_type: e.target.value })} /></label>
-              <label>지역<input className="sizing-new-input" value={newPartner.region_code} onChange={(e) => setNewPartner({ ...newPartner, region_code: e.target.value })} /></label>
-              <label>역량 점수<input className="sizing-new-input" type="number" step="0.1" value={newPartner.capability_score} onChange={(e) => setNewPartner({ ...newPartner, capability_score: e.target.value })} /></label>
-              <label>용량 점수<input className="sizing-new-input" type="number" step="0.1" value={newPartner.capacity_score} onChange={(e) => setNewPartner({ ...newPartner, capacity_score: e.target.value })} /></label>
-              <label>재무 점수<input className="sizing-new-input" type="number" step="0.1" value={newPartner.financial_score} onChange={(e) => setNewPartner({ ...newPartner, financial_score: e.target.value })} /></label>
-              <label>고객 적합도<input className="sizing-new-input" type="number" step="0.1" value={newPartner.customer_base_fit} onChange={(e) => setNewPartner({ ...newPartner, customer_base_fit: e.target.value })} /></label>
-              <label>컴플라이언스 리스크<input className="sizing-new-input" value={newPartner.compliance_risk} onChange={(e) => setNewPartner({ ...newPartner, compliance_risk: e.target.value })} /></label>
-              <label>의존도 리스크<input className="sizing-new-input" value={newPartner.dependency_risk} onChange={(e) => setNewPartner({ ...newPartner, dependency_risk: e.target.value })} /></label>
-              <label>근거 참조<input className="sizing-new-input" value={newPartner.evidence_ref} onChange={(e) => setNewPartner({ ...newPartner, evidence_ref: e.target.value })} /></label>
+              <label>{t("lblName")}<input className="sizing-new-input" value={newPartner.name} onChange={(e) => setNewPartner({ ...newPartner, name: e.target.value })} /></label>
+              <label>{t("lblType")}<input className="sizing-new-input" placeholder={t("phType")} value={newPartner.partner_type} onChange={(e) => setNewPartner({ ...newPartner, partner_type: e.target.value })} /></label>
+              <label>{t("lblRegion")}<input className="sizing-new-input" value={newPartner.region_code} onChange={(e) => setNewPartner({ ...newPartner, region_code: e.target.value })} /></label>
+              <label>{t("lblCapabilityScore")}<input className="sizing-new-input" type="number" step="0.1" value={newPartner.capability_score} onChange={(e) => setNewPartner({ ...newPartner, capability_score: e.target.value })} /></label>
+              <label>{t("lblCapacityScore")}<input className="sizing-new-input" type="number" step="0.1" value={newPartner.capacity_score} onChange={(e) => setNewPartner({ ...newPartner, capacity_score: e.target.value })} /></label>
+              <label>{t("lblFinancialScore")}<input className="sizing-new-input" type="number" step="0.1" value={newPartner.financial_score} onChange={(e) => setNewPartner({ ...newPartner, financial_score: e.target.value })} /></label>
+              <label>{t("lblCustomerFit")}<input className="sizing-new-input" type="number" step="0.1" value={newPartner.customer_base_fit} onChange={(e) => setNewPartner({ ...newPartner, customer_base_fit: e.target.value })} /></label>
+              <label>{t("lblCompliance")}<input className="sizing-new-input" value={newPartner.compliance_risk} onChange={(e) => setNewPartner({ ...newPartner, compliance_risk: e.target.value })} /></label>
+              <label>{t("lblDependency")}<input className="sizing-new-input" value={newPartner.dependency_risk} onChange={(e) => setNewPartner({ ...newPartner, dependency_risk: e.target.value })} /></label>
+              <label>{t("lblEvidence")}<input className="sizing-new-input" value={newPartner.evidence_ref} onChange={(e) => setNewPartner({ ...newPartner, evidence_ref: e.target.value })} /></label>
             </div>
-            <button type="button" className="btn-ghost btn-sm mt-2" disabled={busy} onClick={addPartner}>등록</button>
+            <button type="button" className="btn-ghost btn-sm mt-2" disabled={busy} onClick={addPartner}>{t("registerCta")}</button>
           </details>
         )}
       </section>
 
-      <section className="market-section mb-3" aria-label="실사 지적사항">
-        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">파트너 실사 지적사항</h2>
+      <section className="market-section mb-3" aria-label={t("findingsSection")}>
+        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">{t("findingsHeading")}</h2>
         {(data?.partners ?? []).filter((p) => p.findings.length > 0).map((p) => (
           <div key={p.id} className="sizing-grade-card mb-2">
             <p className="text-[length:var(--fs-body)] font-semibold mb-1">{p.name}</p>
-            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+            <div className="table-scroll" role="region" aria-label={t("tableScrollRegion")} tabIndex={0}>
               <table className="data-table">
-                <caption className="sr-only">{p.name} 실사 지적사항</caption>
+                <caption className="sr-only">{t("findingTableCaption", { p1: p.name })}</caption>
                 <thead>
-                  <tr><th scope="col">워크스트림</th><th scope="col">심각도</th><th scope="col">내용</th><th scope="col">등록일</th><th scope="col">관리</th></tr>
+                  <tr><th scope="col">{t("colWorkstream")}</th><th scope="col">{t("colSeverity")}</th><th scope="col">{t("colDescription")}</th><th scope="col">{t("colRegisteredDate")}</th><th scope="col">{t("colManage")}</th></tr>
                 </thead>
                 <tbody>
                   {p.findings.map((f) => (
                     <tr key={f.id}>
                       <td>{f.workstream}</td>
-                      <td><span className={`status-chip ${SEVERITY_CLASS[f.severity] ?? "status-not-started"}`}>{SEVERITY_LABEL[f.severity] ?? f.severity}</span></td>
+                      <td><span className={`status-chip ${SEVERITY_CLASS[f.severity] ?? "status-not-started"}`}>{SEVERITY_KEY[f.severity] ? t(SEVERITY_KEY[f.severity]) : f.severity}</span></td>
                       <td>{f.description}</td>
                       <td>{f.created_at.slice(0, 10)}</td>
                       <td>
                         {canAct && (
                           <button type="button" className="btn-ghost btn-sm" disabled={busy}
-                            onClick={() => confirm("지적사항 삭제", () => { void send("delete", `/partners/${p.id}/findings/${f.id}`); }, { confirmLabel: "삭제" })}>삭제</button>
+                            onClick={() => confirm(t("deleteFindingTitle"), () => { void send("delete", `/partners/${p.id}/findings/${f.id}`); }, { confirmLabel: tc("delete") })}>{tc("delete")}</button>
                         )}
                       </td>
                     </tr>
@@ -259,58 +262,58 @@ export default function PartnershipPage() {
             </div>
             {canAct && (
               <div className="flex flex-wrap gap-2 mt-2 text-[length:var(--fs-caption)]">
-                <input className="sizing-new-input text-[length:var(--fs-caption)]" style={{ maxWidth: "10rem" }} placeholder="워크스트림 (예: 재무)"
+                <input className="sizing-new-input text-[length:var(--fs-caption)]" style={{ maxWidth: "10rem" }} placeholder={t("phWorkstream")}
                   value={newFinding[p.id]?.workstream ?? ""} onChange={(e) => setNewFinding({ ...newFinding, [p.id]: { ...(newFinding[p.id] ?? { severity: "medium", description: "" }), workstream: e.target.value } })} />
                 <select className="sizing-new-input text-[length:var(--fs-caption)]" value={newFinding[p.id]?.severity ?? "medium"}
                   onChange={(e) => setNewFinding({ ...newFinding, [p.id]: { ...(newFinding[p.id] ?? { workstream: "", description: "" }), severity: e.target.value } })}>
-                  <option value="high">높음</option><option value="medium">보통</option><option value="low">낮음</option>
+                  <option value="high">{t("severityHigh")}</option><option value="medium">{t("severityMedium")}</option><option value="low">{t("severityLow")}</option>
                 </select>
-                <input className="sizing-new-input text-[length:var(--fs-caption)] flex-1" style={{ minWidth: "16rem" }} placeholder="지적 내용"
+                <input className="sizing-new-input text-[length:var(--fs-caption)] flex-1" style={{ minWidth: "16rem" }} placeholder={t("phFinding")}
                   value={newFinding[p.id]?.description ?? ""} onChange={(e) => setNewFinding({ ...newFinding, [p.id]: { ...(newFinding[p.id] ?? { workstream: "", severity: "medium" }), description: e.target.value } })} />
-                <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => addFinding(p.id)}>지적사항 추가</button>
+                <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => addFinding(p.id)}>{t("addFindingCta")}</button>
               </div>
             )}
           </div>
         ))}
         {data && data.partners.filter((p) => p.findings.length > 0).length === 0 && (
-          <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">등록된 실사 지적사항이 없습니다 — 파트너 행에서 추가하세요.</p>
+          <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">{t("emptyFindings")}</p>
         )}
       </section>
 
-      <section className="market-section" aria-label="JV 조건">
-        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">JV 조건 ({data?.terms.length ?? 0}건)</h2>
-        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+      <section className="market-section" aria-label={t("termSection")}>
+        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">{t("termHeading", { p1: data?.terms.length ?? 0 })}</h2>
+        <div className="table-scroll" role="region" aria-label={t("tableScrollRegion")} tabIndex={0}>
           <table className="data-table table-fixed-pct tmin-64">
-            <caption className="sr-only">JV 조건 목록</caption>
+            <caption className="sr-only">{t("termTableCaption")}</caption>
             <ColGroup widths={JV_TERM_COL_PCT} />
             <thead>
               <tr>
-                <th scope="col">파트너</th><th scope="col">지분 구조</th><th scope="col">거버넌스</th>
-                <th scope="col">거부권 사항</th><th scope="col">출자</th><th scope="col">엑싯 조항</th>
-                <th scope="col">교착 해소</th><th scope="col">경업 금지</th><th scope="col">관리</th>
+                <th scope="col">{t("colPartner")}</th><th scope="col">{t("colEquitySplit")}</th><th scope="col">{t("colGovernance")}</th>
+                <th scope="col">{t("colVeto")}</th><th scope="col">{t("colContribution")}</th><th scope="col">{t("colExit")}</th>
+                <th scope="col">{t("colDeadlock")}</th><th scope="col">{t("colNonCompete")}</th><th scope="col">{t("colManage")}</th>
               </tr>
             </thead>
             <tbody>
-              {(data?.terms ?? []).map((t) => (
-                <tr key={t.id}>
-                  <td>{t.partner_name}</td>
-                  <td>{t.equity_split ?? "—"}</td>
-                  <td>{t.governance_json ? <code className="text-[length:var(--fs-caption)]">{t.governance_json}</code> : "—"}</td>
-                  <td>{t.veto_matters ?? "—"}</td>
-                  <td>{t.contribution_json ? <code className="text-[length:var(--fs-caption)]">{t.contribution_json}</code> : "—"}</td>
-                  <td>{t.exit_clause ?? "—"}</td>
-                  <td>{t.deadlock_mechanism ?? "—"}</td>
-                  <td>{t.non_compete_scope ?? "—"}</td>
+              {(data?.terms ?? []).map((term) => (
+                <tr key={term.id}>
+                  <td>{term.partner_name}</td>
+                  <td>{term.equity_split ?? "—"}</td>
+                  <td>{term.governance_json ? <code className="text-[length:var(--fs-caption)]">{term.governance_json}</code> : "—"}</td>
+                  <td>{term.veto_matters ?? "—"}</td>
+                  <td>{term.contribution_json ? <code className="text-[length:var(--fs-caption)]">{term.contribution_json}</code> : "—"}</td>
+                  <td>{term.exit_clause ?? "—"}</td>
+                  <td>{term.deadlock_mechanism ?? "—"}</td>
+                  <td>{term.non_compete_scope ?? "—"}</td>
                   <td>
                     {canAct && (
                       <button type="button" className="btn-ghost btn-sm" disabled={busy}
-                        onClick={() => confirm("JV 조건 삭제", () => { void send("delete", `/jv-terms/${t.id}`); }, { body: `'${t.partner_name}'의 JV 조건이 삭제됩니다.`, confirmLabel: "삭제" })}>삭제</button>
+                        onClick={() => confirm(t("deleteTermTitle"), () => { void send("delete", `/jv-terms/${term.id}`); }, { body: t("deleteTermBody", { p1: term.partner_name }), confirmLabel: tc("delete") })}>{tc("delete")}</button>
                     )}
                   </td>
                 </tr>
               ))}
               {data && data.terms.length === 0 && (
-                <tr><td colSpan={9} className="text-[color:var(--muted-fg)]">등록된 JV 조건이 없습니다.</td></tr>
+                <tr><td colSpan={9} className="text-[color:var(--muted-fg)]">{t("emptyTerms")}</td></tr>
               )}
             </tbody>
           </table>
@@ -318,23 +321,23 @@ export default function PartnershipPage() {
 
         {canAct && (
           <details className="mt-2">
-            <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">JV 조건 등록</summary>
+            <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">{t("registerTerm")}</summary>
             <div className="flex flex-wrap gap-2 mt-2 text-[length:var(--fs-caption)]">
-              <label>파트너 (필수)
+              <label>{t("lblTermPartner")}
                 <select className="sizing-new-input ml-1" value={newTerm.partner_id} onChange={(e) => setNewTerm({ ...newTerm, partner_id: e.target.value })}>
                   <option value="">—</option>
                   {(data?.partners ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </label>
-              <label>지분 구조<input className="sizing-new-input" placeholder="예: 51:49" value={newTerm.equity_split} onChange={(e) => setNewTerm({ ...newTerm, equity_split: e.target.value })} /></label>
-              <label>엑싯 조항<input className="sizing-new-input" value={newTerm.exit_clause} onChange={(e) => setNewTerm({ ...newTerm, exit_clause: e.target.value })} /></label>
-              <label>교착 해소<input className="sizing-new-input" value={newTerm.deadlock_mechanism} onChange={(e) => setNewTerm({ ...newTerm, deadlock_mechanism: e.target.value })} /></label>
-              <label>경업 금지 범위<input className="sizing-new-input" value={newTerm.non_compete_scope} onChange={(e) => setNewTerm({ ...newTerm, non_compete_scope: e.target.value })} /></label>
+              <label>{t("colEquitySplit")}<input className="sizing-new-input" placeholder={t("phEquitySplit")} value={newTerm.equity_split} onChange={(e) => setNewTerm({ ...newTerm, equity_split: e.target.value })} /></label>
+              <label>{t("colExit")}<input className="sizing-new-input" value={newTerm.exit_clause} onChange={(e) => setNewTerm({ ...newTerm, exit_clause: e.target.value })} /></label>
+              <label>{t("colDeadlock")}<input className="sizing-new-input" value={newTerm.deadlock_mechanism} onChange={(e) => setNewTerm({ ...newTerm, deadlock_mechanism: e.target.value })} /></label>
+              <label>{t("lblNonCompeteScope")}<input className="sizing-new-input" value={newTerm.non_compete_scope} onChange={(e) => setNewTerm({ ...newTerm, non_compete_scope: e.target.value })} /></label>
             </div>
-            <label className="block mt-2 text-[length:var(--fs-caption)]">거부권 사항
+            <label className="block mt-2 text-[length:var(--fs-caption)]">{t("colVeto")}
               <input className="sizing-new-input w-full" value={newTerm.veto_matters} onChange={(e) => setNewTerm({ ...newTerm, veto_matters: e.target.value })} />
             </label>
-            <button type="button" className="btn-ghost btn-sm mt-2" disabled={busy} onClick={addTerm}>등록</button>
+            <button type="button" className="btn-ghost btn-sm mt-2" disabled={busy} onClick={addTerm}>{t("registerCta")}</button>
           </details>
         )}
       </section>

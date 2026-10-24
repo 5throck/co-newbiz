@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { api } from "../../lib/api.ts";
 import { InlineCreateForm, useConfirm } from "../crud.tsx";
 import { SectionToolbar } from "../layout.tsx";
@@ -65,6 +66,8 @@ function toInputText(stored: number, unit: TargetUnit): string {
 }
 
 export function BusinessTargetsSection() {
+  const t = useTranslations("admin.businessTargets");
+  const tc = useTranslations("common");
   const { confirm, confirmDialog } = useConfirm();
   const [groups, setGroups] = useState<GroupRow[] | null>(null);
   const [members, setMembers] = useState<MemberRow[]>([]);
@@ -89,7 +92,7 @@ export function BusinessTargetsSection() {
     api
       .get<{ targets: TargetRow[] }>("/api/admin/business-targets")
       .then((r) => setTargets(r.data.targets))
-      .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+      .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
   }, []);
 
   useEffect(() => {
@@ -128,7 +131,7 @@ export function BusinessTargetsSection() {
     setNotice(null);
     const parsed = Number(formValue);
     if (!Number.isFinite(parsed)) {
-      setError("기준값을 숫자로 입력하세요.");
+      setError(t("errValueNumeric"));
       return;
     }
     const spec = unitSpec(formUnit);
@@ -142,13 +145,13 @@ export function BusinessTargetsSection() {
         direction: formDirection,
         target_value: parsed * spec.factor,
       });
-      setNotice("사업목표 기준이 등록되었습니다.");
+      setNotice(t("createdNotice"));
       setFormValue("");
       setFormCustomLabel("");
       setCreateOpen(false);
       loadTargets();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "등록 실패");
+      setError(err instanceof Error ? err.message : tc("errors.createFailed"));
     } finally {
       setSaving(false);
     }
@@ -159,7 +162,7 @@ export function BusinessTargetsSection() {
     setError(null);
     const parsed = Number(editing.value);
     if (!Number.isFinite(parsed)) {
-      setError("기준값을 숫자로 입력하세요.");
+      setError(t("errValueNumeric"));
       return;
     }
     const row = targets?.find((t) => t.id === editing.id);
@@ -172,11 +175,11 @@ export function BusinessTargetsSection() {
         direction: editing.direction,
         target_value: parsed * factor,
       });
-      setNotice("기준이 수정되었습니다.");
+      setNotice(t("updatedNotice"));
       setEditing(null);
       loadTargets();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "수정 실패");
+      setError(err instanceof Error ? err.message : t("updateFailed"));
     } finally {
       setSaving(false);
     }
@@ -184,31 +187,31 @@ export function BusinessTargetsSection() {
 
   function removeTarget(row: TargetRow) {
     confirm(
-      `‘${metricDisplayName(row)}’ 기준을 삭제할까요?`,
+      t("deleteConfirmTitle", { p1: metricDisplayName(row) }),
       async () => {
         setError(null);
         try {
           await api.delete("/api/admin/business-targets", { id: row.id });
           loadTargets();
         } catch (err) {
-          setError(err instanceof Error ? err.message : "삭제 실패");
+          setError(err instanceof Error ? err.message : tc("errors.deleteFailed"));
         }
       },
-      { body: "삭제는 기록이 남는 툼스톤 방식이며, fs 진행 근거 표에서 즉시 사라집니다." },
+      { body: t("deleteBody") },
     );
   }
 
   return (
     <>
       {confirmDialog}
-      <section className="market-section" aria-label="사업목표 기준">
+      <section className="market-section" aria-label={t("sectionTitle")}>
         <SectionToolbar
-          title="사업목표 기준"
+          title={t("sectionTitle")}
           count={targets?.length ?? 0}
-          summary={<span className="section-meta">그룹 공통 · 계열사별 사업목표 — fs 진행 판정기준으로 사용</span>}
+          summary={<span className="section-meta">{t("sectionSummary")}</span>}
           actions={
             <button type="button" className="btn-ghost btn-sm" onClick={() => setCreateOpen((v) => !v)}>
-              {createOpen ? "닫기" : "＋ 등록"}
+              {createOpen ? tc("close") : t("addButton")}
             </button>
           }
         />
@@ -225,7 +228,7 @@ export function BusinessTargetsSection() {
 
         {groups !== null && groups.length === 0 ? (
           <p className="text-[color:var(--muted-fg)]">
-            등록된 그룹이 없습니다. 먼저 <a href="/our-company" className="underline">우리 회사 분석</a>에서 그룹·계열사를 등록하세요.
+            {t("emptyGroupsPre")} <a href="/our-company" className="underline">{t("ourCompanyLink")}</a>{t("emptyGroupsPost")}
           </p>
         ) : (
           <>
@@ -234,17 +237,17 @@ export function BusinessTargetsSection() {
               onSubmit={addTarget}
               onCancel={() => setCreateOpen(false)}
               disabled={saving || !formGroupId || !formValue}
-              ariaLabel="사업목표 기준 추가"
+              ariaLabel={t("formAria")}
             >
-              <select aria-label="그룹" className="sizing-new-input sizing-new-input-sm" style={{ flex: "0 1 11rem" }} value={formGroupId} onChange={(e) => setFormGroupId(e.target.value)}>
+              <select aria-label={t("groupAria")} className="sizing-new-input sizing-new-input-sm" style={{ flex: "0 1 11rem" }} value={formGroupId} onChange={(e) => setFormGroupId(e.target.value)}>
                 {(groups ?? []).map((g) => (
                   <option key={g.id} value={g.id}>
                     {g.name}
                   </option>
                 ))}
               </select>
-              <select aria-label="적용 범위" className="sizing-new-input sizing-new-input-sm" style={{ flex: "0 1 12rem" }} value={formMemberId} onChange={(e) => setFormMemberId(e.target.value)}>
-                <option value="">그룹 공통</option>
+              <select aria-label={t("scopeAria")} className="sizing-new-input sizing-new-input-sm" style={{ flex: "0 1 12rem" }} value={formMemberId} onChange={(e) => setFormMemberId(e.target.value)}>
+                <option value="">{t("groupCommon")}</option>
                 {members.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.company_name}
@@ -252,7 +255,7 @@ export function BusinessTargetsSection() {
                 ))}
               </select>
               <select
-                aria-label="지표"
+                aria-label={t("metricAria")}
                 className="sizing-new-input sizing-new-input-sm"
                 style={{ flex: "0 1 15rem" }}
                 value={formMetric}
@@ -268,54 +271,54 @@ export function BusinessTargetsSection() {
                     {p.label}
                   </option>
                 ))}
-                <option value={CUSTOM_METRIC_KEY}>사용자 지정 KPI…</option>
+                <option value={CUSTOM_METRIC_KEY}>{t("customMetricOption")}</option>
               </select>
               {isCustom && (
                 <input
-                  aria-label="사용자 지정 지표명"
-                  placeholder="지표명 (예: 해외 매출 비중)"
+                  aria-label={t("customMetricNameAria")}
+                  placeholder={t("customMetricNamePlaceholder")}
                   className="sizing-new-input sizing-new-input-sm"
                   style={{ flex: "1 1 10rem" }}
                   value={formCustomLabel}
                   onChange={(e) => setFormCustomLabel(e.target.value)}
                 />
               )}
-              <select aria-label="방향" className="sizing-new-input sizing-new-input-sm" style={{ flex: "0 1 5.5rem" }} value={formDirection} onChange={(e) => setFormDirection(e.target.value as TargetDirection)}>
-                <option value="gte">이상 (≥)</option>
-                <option value="lte">이하 (≤)</option>
+              <select aria-label={t("directionAria")} className="sizing-new-input sizing-new-input-sm" style={{ flex: "0 1 5.5rem" }} value={formDirection} onChange={(e) => setFormDirection(e.target.value as TargetDirection)}>
+                <option value="gte">{t("directionGte")}</option>
+                <option value="lte">{t("directionLte")}</option>
               </select>
               <input
-                aria-label="기준값"
+                aria-label={t("valueAria")}
                 type="number"
                 step="any"
                 min="0"
-                placeholder="기준값"
+                placeholder={t("valueAria")}
                 className="sizing-new-input sizing-new-input-sm"
                 style={{ flex: "0 1 6.5rem" }}
                 value={formValue}
                 onChange={(e) => setFormValue(e.target.value)}
               />
               <span className="section-meta" style={{ minWidth: "2.2rem" }}>
-                {unitSpec(formUnit).inputLabel || "값"}
+                {unitSpec(formUnit).inputLabel || t("valueFallback")}
               </span>
             </InlineCreateForm>
 
             {targets === null ? (
-              <p>불러오는 중...</p>
+              <p>{tc("loading")}</p>
             ) : targets.length === 0 ? (
-              <p className="text-[color:var(--muted-fg)] italic">등록된 사업목표 기준이 없습니다.</p>
+              <p className="text-[color:var(--muted-fg)] italic">{t("emptyTargets")}</p>
             ) : (
-              <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-                <table className="data-table list-table table-fixed-pct tmin-48" aria-label="사업목표 기준 목록">
+              <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+                <table className="data-table list-table table-fixed-pct tmin-48" aria-label={t("tableAria")}>
                   <ColGroup widths={TARGETS_COL_PCT} />
                   <thead>
                     <tr>
-                      <th scope="col">그룹</th>
-                      <th scope="col">적용 범위</th>
-                      <th scope="col">지표</th>
-                      <th scope="col" className="col-num">기준</th>
-                      <th scope="col" className="col-date">등록일</th>
-                      <th scope="col"><span className="sr-only">작업</span></th>
+                      <th scope="col">{t("colGroup")}</th>
+                      <th scope="col">{t("colScope")}</th>
+                      <th scope="col">{t("colMetric")}</th>
+                      <th scope="col" className="col-num">{t("colTarget")}</th>
+                      <th scope="col" className="col-date">{t("colCreatedDate")}</th>
+                      <th scope="col"><span className="sr-only">{tc("actions")}</span></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -329,18 +332,18 @@ export function BusinessTargetsSection() {
                             {row.member_id ? (
                               <span className="status-chip status-green">{row.member_name}</span>
                             ) : (
-                              <span className="status-chip status-not-started">그룹 공통</span>
+                              <span className="status-chip status-not-started">{t("groupCommon")}</span>
                             )}
                           </td>
                           <td>
                             {metricDisplayName(row)}
-                            {!presetFor(row.metric_key) && <span className="section-meta"> · 사용자 지정</span>}
+                            {!presetFor(row.metric_key) && <span className="section-meta">{t("customMetricSuffix")}</span>}
                           </td>
                           <td className="col-num">
                             {isEditing ? (
                               <span className="row-edit-cell">
                                 <select
-                                  aria-label="방향 수정"
+                                  aria-label={t("directionEditAria")}
                                   className="sizing-new-input sizing-new-input-sm"
                                   style={{ width: "4.5rem", minWidth: "4.5rem" }}
                                   value={editing.direction}
@@ -350,7 +353,7 @@ export function BusinessTargetsSection() {
                                   <option value="lte">≤</option>
                                 </select>
                                 <input
-                                  aria-label="기준값 수정"
+                                  aria-label={t("valueEditAria")}
                                   type="number"
                                   step="any"
                                   min="0"
@@ -361,10 +364,10 @@ export function BusinessTargetsSection() {
                                 />
                                 {unitSpec(unit).inputLabel && <strong>{unitSpec(unit).inputLabel}</strong>}
                                 <button type="button" className="btn-ghost btn-sm" disabled={saving} onClick={saveEdit}>
-                                  저장
+                                  {tc("save")}
                                 </button>
                                 <button type="button" className="btn-ghost btn-sm" onClick={() => setEditing(null)}>
-                                  취소
+                                  {tc("cancel")}
                                 </button>
                               </span>
                             ) : (
@@ -381,15 +384,15 @@ export function BusinessTargetsSection() {
                                 className="btn-ghost btn-sm"
                                 onClick={() => setEditing({ id: row.id, value: toInputText(row.target_value, unit), direction: row.direction })}
                               >
-                                수정
+                                {tc("edit")}
                               </button>
                               <button
                                 type="button"
                                 className="btn-danger btn-sm"
-                                title="이 기준을 삭제합니다"
+                                title={t("deleteTitle")}
                                 onClick={() => removeTarget(row)}
                               >
-                                삭제
+                                {tc("delete")}
                               </button>
                             </div>
                           </td>
@@ -401,7 +404,7 @@ export function BusinessTargetsSection() {
               </div>
             )}
             <p className="section-meta">
-              같은 범위·같은 지표는 1건만 등록됩니다. 계열사 기준은 그룹 공통 기준보다 우선 적용되며, 사용자 지정 KPI는 fs 화면에서 “수동 확인”으로 표시됩니다.
+              {t("footnote")}
             </p>
           </>
         )}

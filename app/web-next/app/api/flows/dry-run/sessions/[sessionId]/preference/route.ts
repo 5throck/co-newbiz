@@ -13,12 +13,12 @@ import { route } from "../../../../../../../lib/route.ts";
 export const POST = route(async (request: Request, ctx: { params: Promise<{ sessionId: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const guard = requireBusinessActor(auth.auth, "write", { viewerMessage: "선호 기록은 analyst 역할 이상이어야 합니다." });
+  const guard = requireBusinessActor(auth.auth, "write", { viewerMessage: "Recording preferences requires the analyst role or higher." });
   if (guard) return guard;
 
   const { sessionId } = await ctx.params;
   const body = (await request.json().catch(() => null)) as { preference?: string; note?: string | null } | null;
-  if (!body?.preference) return badRequest("invalid_request", "preference 는 필수입니다(base|override|tie).");
+  if (!body?.preference) return badRequest("invalid_request", "preference is required (base|override|tie).");
   const r = recordPreference(sessionId, body.preference, body.note ?? null);
   if (!r.ok) {
     if (r.code === "not_found") return notFound(r.reason);

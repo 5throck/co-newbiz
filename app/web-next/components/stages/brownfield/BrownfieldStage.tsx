@@ -16,8 +16,9 @@ import { WebDiscoveryPanel, UniverseEditModal } from "./DiscoveryPanels.tsx";
 import { LonglistSection } from "./LonglistSection.tsx";
 import { ShortlistSection } from "./ShortlistSection.tsx";
 import { PrimaryAction } from "../../ui.tsx";
+import { useTranslations } from "next-intl";
 
-export function BrownfieldStage(props0: { opportunityId: string; onSaved?: () => void }) {
+export function BrownfieldStage(props0: { opportunityId: string; onSaved?: () => void }) {const t = useTranslations("stages.s67.brownfieldStage");
   const h0 = useBrownfieldBase(props0);
   const h1 = useBrownfieldUniverse({ ...h0 });
   const h2 = useBrownfieldTargets({ ...h0, ...h1 });
@@ -28,9 +29,9 @@ export function BrownfieldStage(props0: { opportunityId: string; onSaved?: () =>
       {(shortlistedTargets.length === 0 || !canAct) && (
         <PrimaryAction
           inline
-          label="사전 검토 실행 (위원회 추천 검토)"
+          label={t("runCommitteeRecommendationReview")}
           disabled
-          disabledReason={!canAct ? "사전 검토는 analyst 권한이 필요합니다." : "최종 후보 목록 후보를 먼저 선정하면 실행할 수 있습니다."}
+          disabledReason={!canAct ? t("requiresTheAnalystRole") : t("runningUnlocksOnceAShortlist")}
         />
       )}
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}

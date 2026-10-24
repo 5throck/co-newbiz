@@ -24,12 +24,12 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "진행 브리프 생성은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Gate-brief generation requires the analyst role or higher.");
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { gate?: string } | null;
   const gate = body?.gate?.trim() ?? "";
   if (!(PROJECT_GATE_BRIEFS as readonly string[]).includes(gate)) {
-    return badRequest("invalid_request", `gate는 ${PROJECT_GATE_BRIEFS.join(" | ")} 중 하나입니다.`);
+    return badRequest("invalid_request", `gate must be one of: ${PROJECT_GATE_BRIEFS.join(" | ")}.`);
   }
   if (!visibleProject(ctx, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const db = getDb();

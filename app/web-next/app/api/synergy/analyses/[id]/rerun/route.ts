@@ -12,7 +12,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "시너지 재분석은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Synergy re-analysis requires the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   const db = getDb();
@@ -27,14 +27,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return ok({ analysis_id: id, reused: true }, 200, { alreadyRunning: true, status: row.status });
   }
   if (!row.target_type) {
-    return badRequest("legacy_target", "레거시(회사 직접 등록) 분석은 재분석할 수 없습니다 — 그룹/계열사 레지스트리 대상으로 새 분석을 생성하세요.");
+    return badRequest("legacy_target", "Legacy (direct company) analyses cannot be re-analyzed — create a new analysis on a group/affiliate registry target.");
   }
   const hasProfile = row.target_type === "affiliate"
     ? !!db.query("SELECT 1 FROM company_profile_version WHERE member_id = ? LIMIT 1").get(row.member_id)
     : !!db.query(
         "SELECT 1 FROM company_group_member m WHERE m.group_id = ? AND EXISTS (SELECT 1 FROM company_profile_version v WHERE v.member_id = m.id) LIMIT 1",
       ).get(row.group_id);
-  if (!hasProfile) return badRequest("profile_required", "프로파일이 없습니다 — 그룹/계열사 분석 화면에서 먼저 분석하세요.");
+  if (!hasProfile) return badRequest("profile_required", "No profile — run the analysis in the group/affiliate analysis screen first.");
 
   const now = new Date().toISOString();
   // ADR-0132 — 이미 완료된 분석의 재분석은 status/completed_at을 건드리지

@@ -20,7 +20,7 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "진출방식 결정 초안 저장은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Market-entry decision draft saves require the analyst role or higher." }); if (denied) return denied; }
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as {
     track?: string; sub_track?: string; rationale?: string; alternatives_considered?: string;
@@ -34,18 +34,18 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
   // 값이 왔다면 형식은 검증한다 — 초안이라고 잘못된 값을 그냥 저장하지 않는다.
   const track = body?.track;
   if (track && !TRACKS.includes(track as typeof TRACKS[number])) {
-    return badRequest("invalid_request", "track은 greenfield | brownfield 중 하나입니다.");
+    return badRequest("invalid_request", "track must be one of: greenfield | brownfield.");
   }
   const subTrack = body?.sub_track?.trim() || null;
   if (subTrack && track === "greenfield" && !GF_SUB.includes(subTrack as typeof GF_SUB[number])) {
-    return badRequest("invalid_request", "greenfield sub_track은 existing_business_rbd | intra_venture 중 하나입니다.");
+    return badRequest("invalid_request", "greenfield sub_track must be one of: existing_business_rbd | intra_venture.");
   }
   if (subTrack && track === "brownfield" && !BF_SUB.includes(subTrack as typeof BF_SUB[number])) {
-    return badRequest("invalid_request", "brownfield sub_track 값이 올바르지 않습니다.");
+    return badRequest("invalid_request", "Invalid brownfield sub_track value.");
   }
   const intent = body?.intent || null;
   if (intent && !INTENTS.includes(intent as typeof INTENTS[number])) {
-    return badRequest("invalid_request", "intent는 integration | capability_access 중 하나입니다.");
+    return badRequest("invalid_request", "intent must be one of: integration | capability_access.");
   }
 
   const now = new Date().toISOString();
@@ -59,7 +59,7 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
       [track ?? existing.track, subTrack, body?.rationale?.trim() || null, body?.alternatives_considered?.trim() || null, intent, now, decisionId],
     );
   } else {
-    if (!track) return badRequest("invalid_request", "초안을 새로 만들려면 track이 필요합니다.");
+    if (!track) return badRequest("invalid_request", "track is required to create a new draft.");
     db.run(
       `INSERT INTO route_decision (id, opportunity_id, track, sub_track, rationale, alternatives_considered, decided_by, decided_at, intent, status, updated_at)
        VALUES (?,?,?,?,?,?,?,?,?,'draft',?)`,

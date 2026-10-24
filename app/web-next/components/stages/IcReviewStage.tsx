@@ -4,7 +4,8 @@
 // /deals/[id]/s11 탭이 동일 컴포넌트를 소비한다). StageTabs·StageFrame이
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 
-import { DECISION_LABEL, FINDING_CATEGORY_LABEL, GATE_LABEL, ragDimensionsLabel } from "../../lib/labels.ts";
+import { TranslatorFn } from "../../i18n/config.ts";
+import { DD_DOMAIN_KEY, DECISION_LABEL_KEY, GATE_LABEL_KEY, RAG_DIMENSION_KEY } from "../../lib/label-keys.ts";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
@@ -23,6 +24,7 @@ import { canWriteProject } from "../../lib/project-write-access.ts";
 import { ExecutionBaselinePanel } from "./ExecutionBaselinePanel.tsx";
 import { IcReviewStepsPanel } from "./IcReviewStepsPanel.tsx";
 import { fmtNpvKrwM } from "../../lib/npv-format.ts";
+import { useTranslations } from "next-intl";
 
 // S11 투자심사·실행 — 투자심의 자료 열람 + 법인·그룹 투자심의위원회 진행 기록 + 설립 실행
 // 5단계 진행 화면 (ADR-0100 §3). 경계 #2: 종합 등급은 'AI 추천'으로만 표시되고
@@ -32,8 +34,8 @@ import { fmtNpvKrwM } from "../../lib/npv-format.ts";
 
 interface SimRow { scenario: string; percentile: string; npv_krw_m: number; irr: number | null; note: string | null }
 // UI 표시용 라벨(식별자/enum 값은 그대로 유지)
-const SCENARIO_UI: Record<string, string> = { base: "기본", upside: "상승", downside: "하락" };
-const PCTL_UI: Record<string, string> = { p05: "하위 5%", p50: "중앙값", p95: "상위 5%" };
+const SCENARIO_UI = (tr: TranslatorFn): Record<string, string> => ({ base: "common.defaultLabel", upside: "stages.s11.stage.upside", downside: "stages.s11.stage.downside" });
+const PCTL_UI = (tr: TranslatorFn): Record<string, string> => ({ p05: "stages.s11.stage.bottom", p50: "stages.s11.stage.median", p95: "stages.s11.stage.top" });
 interface AdoptedCase { id: string; name: string; kind: string; scenario: string | null; archived_at?: string | null; simulations: SimRow[] }
 interface IcPackage {
   project: { id: string; project_no: string };
@@ -79,19 +81,19 @@ interface EstablishmentView {
   reopened_after_gate_detail?: { steps: number[]; count: number; since: string } | null;
 }
 
-const RAG_META: Record<string, { icon: string; cls: string }> = {
+const RAG_META = (tr: TranslatorFn): Record<string, { icon: string; cls: string }> => ({
   green: { icon: "●", cls: "status-green" },
   amber: { icon: "◐", cls: "status-amber" },
   red: { icon: "✕", cls: "status-red" },
-};
+});
 
 // 데이터 신뢰도 등급(green/amber/red)의 한글 라벨 — 원문 등급은 개발자 세부정보 성격으로 괄호에 병기한다.
-const CAP_LABEL: Record<string, string> = { green: "높음", amber: "중간", red: "낮음" };
-const capLabel = (cap: string) => CAP_LABEL[cap] ?? cap;
+const CAP_LABEL = (tr: TranslatorFn): Record<string, string> => ({ green: "common.high", amber: "common.medium", red: "common.low" });
+const capLabel = (cap: string, tr: TranslatorFn) => tr(CAP_LABEL(tr)[cap] ?? cap);
 // 종합 등급 표시명 — 원문(green/amber/red)은 화면에 노출하지 않는다.
-const RAG_LABEL: Record<string, string> = { green: "녹색(양호)", amber: "황색(주의)", red: "적색(위험)" };
+const RAG_LABEL = (tr: TranslatorFn): Record<string, string> => ({ green: "stages.s11.stage.greenGood", amber: "stages.s11.stage.yellowCaution", red: "stages.s11.stage.redRisk" });
 
-export function IcReviewStage({ projectId }: { projectId: string }) {
+export function IcReviewStage({ projectId }: { projectId: string }) {const tr = useTranslations(); const t = useTranslations("stages.s11.stage"); const tc = useTranslations("common");
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
   const { confirm, confirmDialog } = useConfirm();
@@ -106,7 +108,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
   const load = useCallback((): Promise<unknown> => {
     const pkgP = api.get<IcPackage>(`/api/projects/${encodeURIComponent(projectId)}/ic-package`)
       .then((r) => setPkg(r.data))
-      .catch((e) => setError(e instanceof Error ? e.message : "투자심의 자료를 불러오지 못했습니다."));
+      .catch((e) => setError(e instanceof Error ? e.message : t("failedToLoadTheIc")));
     const estP = api.get<EstablishmentView>(`/api/projects/${encodeURIComponent(projectId)}/establishment`)
       .then((r) => setEst(r.data))
       .catch(() => { /* the IC package already carries establishment progress */ });
@@ -116,24 +118,24 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
   useEffect(() => { load(); }, [load]);
 
   function recordKickoff() {
-    confirm("PMI 킥오프 기록", () => {
+    confirm(t("recordPmiKickoff"), () => {
       void (async () => {
         setBusy(true); setError(null);
         try {
           await api.post(`/api/projects/${encodeURIComponent(projectId)}/pmi/kickoff`, pmiForm);
-          setNotice("PMI 킥오프가 기록되었습니다.");
-          toast("PMI 킥오프를 기록했습니다.");
+          setNotice(t("pmiKickoffRecorded"));
+          toast(t("pmiKickoffRecorded2"));
           setPmiForm({ owner: "", plan_note: "" });
           load();
         } catch (e) {
-          setError(e instanceof Error ? e.message : "PMI 킥오프 기록 실패");
+          setError(e instanceof Error ? e.message : t("failedToRecordPmiKickoff"));
         } finally {
           setBusy(false);
         }
       })();
     }, {
-      body: "통합 책임자와 통합 계획 기준선을 기록합니다. 이 기록은 사람이 확인한 PMI 킥오프이며, 에이전트가 대신 기록할 수 없습니다.",
-      confirmLabel: "기록",
+      body: t("recordsTheIntegrationLeadAnd"),
+      confirmLabel: tc("record"),
       tone: "neutral",
     });
   }
@@ -143,11 +145,11 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
   // 설립 실행에서 떼어 별도 탭으로 분리한다.
   type IcView = "dossier" | "steps" | "establishment" | "baseline" | "decision";
   const IC_VIEWS: Array<{ key: IcView; label: string }> = [
-    { key: "dossier", label: "투자심의 자료" },
-    { key: "steps", label: "투자심사 절차 단계" },
-    { key: "establishment", label: "실행 · PMI" },
-    { key: "baseline", label: "실행 기준선" },
-    { key: "decision", label: "의사결정 · 승인 기록" },
+    { key: "dossier", label: t("icMaterials") },
+    { key: "steps", label: t("investmentReviewProcedureSteps") },
+    { key: "establishment", label: t("executionPmi") },
+    { key: "baseline", label: t("executionBaseline") },
+    { key: "decision", label: t("andApprovalRecord") },
   ];
   const [icView, setIcView] = useState<IcView>("dossier");
   const entityGo = pkg?.gates.latest.find((x) => x.gate === "entity_ic")?.decision === "go";
@@ -164,7 +166,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
       {/* 리뷰 2026-10-22 (사용자 리포트): StageTabs는 레일 슬롯으로 — 머리 위치 일관성. */}
       <StageFrame
         stageId="S11"
-        heading="S11 투자심사·실행 — 투자심의 자료 · 법인·그룹 투자심의위원회 · 설립 실행"
+        heading={t("s11InvestmentReviewAndExecution")}
         railSlot={<StageTabs projectId={projectId} />}
       >
         {/* 게이트 결정은 "의사결정 · 승인 기록" 내부 탭에 있다 — 점프 전에 탭을
@@ -173,15 +175,14 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
         {/* One review block for both IC gates (the panels below do not repeat it). */}
         <ReviewBuckets entityType="project" entityId={projectId} gates={["entity_ic", "group_ic"]} artifacts={stageArtifactTabs("S11")} />
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-          법인 투자심의위원회와 그룹 투자심의위원회 승인이 모두 기록되고, 내부 추진·합작 프로젝트는 S10에서 확정한 설립 방식
-          (신규 법인 설립 또는 신규 사업부 추진)의 5단계 완료 기록이 존재해야 S11이 완료됩니다.
-          <Link href={`/projects/${projectId}/charter`} className="ml-2 underline">프로젝트 추진계획(차터) 보기 →</Link>
+          {t("entityAndGroupInvestmentCommittee")}
+          <Link href={`/projects/${projectId}/charter`} className="ml-2 underline">{t("viewTheProjectCharter")}</Link>
           <span className={`status-chip ${bothGatesGo ? "status-green" : "status-amber"} ml-2`}>
-            {bothGatesGo ? "● 투자심의위원회 2/2 진행" : "○ 투자심의위원회 미승인"}
+            {bothGatesGo ? t("investmentCommittee22In") : t("notApprovedByTheInvestment")}
           </span>
           {estApplies && (
             <span className={`status-chip ${estComplete ? "status-green" : "status-amber"} ml-1`}>
-              {estComplete ? `● 설립 실행 완료 (${pkg?.establishment.progress ?? "—"})` : `◐ 설립 실행 ${pkg?.establishment.progress ?? "—"}`}
+              {estComplete ? t("establishmentExecutionCompleteP1", { p1: pkg?.establishment.progress ?? "—" }) : t("establishmentExecutionP1", { p1: pkg?.establishment.progress ?? "—" })}
             </span>
           )}
           {estApplies && (
@@ -191,7 +192,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
           )}
         </p>
         {/* 내부 탭 — 업무 절차 순서: 자료 → 절차 단계 → 설립·실행 → 의사결정 (2026-10-21 decider) */}
-        <div role="tablist" aria-label="투자심사 화면" className="flex flex-wrap gap-1 mb-3">
+        <div role="tablist" aria-label={t("investmentReviewScreen")} className="flex flex-wrap gap-1 mb-3">
           {IC_VIEWS.map((v) => (
             <button
               key={v.key}
@@ -214,37 +215,37 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
         {/* ── 투자심의 자료 요약 ─────────────────────────────────────────── */}
         <section id="ic-panel-dossier" role="tabpanel" aria-labelledby="ic-tab-dossier" className="market-section sizing-step" hidden={icView !== "dossier"}>
           <h3 className="sizing-step-title text-[length:var(--fs-body)]">
-            <span className="sizing-step-badge" aria-hidden="true">📦</span> 투자심의 자료 — 사업성 · 실사 · 종합 등급 제안
+            <span className="sizing-step-badge" aria-hidden="true">📦</span> {t("icMaterialsBusinessCaseDd")}
           </h3>
 
-          <h4 className="text-[length:var(--fs-body)] mt-2 mb-1">채택 사업성 케이스 (S8)</h4>
+          <h4 className="text-[length:var(--fs-body)] mt-2 mb-1">{t("adoptedBusinessCaseS8")}</h4>
           {pkg?.business_case.adopted ? (
             <>
               <p className="text-[length:var(--fs-caption)]">
                 {pkg.business_case.adopted.name}
-                <span className="status-chip status-green ml-2">✓ 채택됨</span>
+                <span className="status-chip status-green ml-2">{t("adopted")}</span>
                 {pkg.business_case.adopted.archived_at && (
-                  <span className="status-chip status-not-started ml-1" title={`보관일 ${pkg.business_case.adopted.archived_at.slice(0, 10)}`}>보관됨</span>
+                  <span className="status-chip status-not-started ml-1" title={t("archivedP1", { p1: pkg.business_case.adopted.archived_at.slice(0, 10) })}>{t("archived")}</span>
                 )}
                 {pkg.business_case.adopted.scenario && (
-                  <span className="status-chip status-not-started ml-1">시나리오: {pkg.business_case.adopted.scenario}</span>
+                  <span className="status-chip status-not-started ml-1">{t("scenario")} {pkg.business_case.adopted.scenario}</span>
                 )}
                 {pkg.business_case.adoption && (
                   <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                    채택자 {pkg.business_case.adoption.adoptedBy} · {pkg.business_case.adoption.adoptedAt.slice(0, 10)}
+                    {t("adoptedBy")} {pkg.business_case.adoption.adoptedBy} · {pkg.business_case.adoption.adoptedAt.slice(0, 10)}
                   </span>
                 )}
               </p>
-              <table className="data-table" aria-label="밸류에이션 시뮬레이션">
-                <caption className="sr-only">채택 케이스의 시뮬레이션 NPV 분위수</caption>
+              <table className="data-table" aria-label={t("valuationSimulation")}>
+                <caption className="sr-only">{t("simulationNpvQuantilesOfThe")}</caption>
                 <thead>
-                  <tr><th scope="col">시나리오</th><th scope="col">분위수</th><th scope="col">NPV (백만 KRW)</th><th scope="col">IRR</th></tr>
+                  <tr><th scope="col">{t("scenario2")}</th><th scope="col">{t("quantile")}</th><th scope="col">{t("npvMillionsOfKrw")}</th><th scope="col">IRR</th></tr>
                 </thead>
                 <tbody>
                   {pkg.business_case.adopted.simulations.map((s, i) => (
                     <tr key={`${s.scenario}-${s.percentile}-${i}`}>
-                      <td>{SCENARIO_UI[s.scenario] ?? s.scenario}</td>
-                      <td className="tabular-nums">{PCTL_UI[s.percentile] ?? s.percentile}</td>
+                      <td>{SCENARIO_UI(tr)[s.scenario] ?? s.scenario}</td>
+                      <td className="tabular-nums">{PCTL_UI(tr)[s.percentile] ?? s.percentile}</td>
                       <td className="mono-num">{fmtNpvKrwM(s.npv_krw_m)}</td>
                       <td className="mono-num">{s.irr != null ? (s.irr * 100).toFixed(1) + "%" : "—"}</td>
                     </tr>
@@ -254,82 +255,82 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
             </>
           ) : (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              {pkg?.business_case.note ?? "채택된 Business Case가 없습니다 — 사업성 분석 탭에서 케이스를 생성·채택하세요."}
+              {pkg?.business_case.note ?? t("noBusinessCaseAdoptedGenerate")}
             </p>
           )}
 
           {(pkg?.standing_risks?.length ?? 0) > 0 && (
             <>
-              <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">상시 위험</h4>
-              <ul className="sizing-note-list" aria-label="상시 위험">
+              <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">{t("standingRisk")}</h4>
+              <ul className="sizing-note-list" aria-label={t("standingRisk2")}>
                 {pkg!.standing_risks!.map((r) => (
                   <li key={r.key}>
-                    <span className="status-chip status-amber"><span aria-hidden="true">◐</span> 주의</span> {r.text}
+                    <span className="status-chip status-amber"><span aria-hidden="true">◐</span> {t("caution")}</span> {r.text}
                   </li>
                 ))}
               </ul>
-              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">참고 표시이며 게이트를 막지 않고 종합 등급을 자동으로 바꾸지 않습니다.</p>
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("informationalOnlyItDoesNot")}</p>
             </>
           )}
-          <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">DD 요약 (S9)</h4>
+          <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">{t("ddSummaryS9")}</h4>
           <p className="text-[length:var(--fs-caption)]">
             <span className={`status-chip ${pkg && pkg.dd.completion.total > 0 && pkg.dd.completion.pending === 0 && pkg.dd.completion.unassessed === 0 && pkg.dd.completion.mandatoryUnmet === 0 ? "status-green" : "status-amber"}`}>
               {pkg && pkg.dd.completion.total > 0
-                ? `판정 ${pkg.dd.completion.total}건 · 대기 ${pkg.dd.completion.pending}건 · 미판정 ${pkg.dd.completion.unassessed}건 · 필수 미충족 ${pkg.dd.completion.mandatoryUnmet}건`
-                : "판정 기록 없음"}
+                ? t("p1JudgementSPendingP2", { p1: pkg.dd.completion.total, p2: pkg.dd.completion.pending, p3: pkg.dd.completion.unassessed, p4: pkg.dd.completion.mandatoryUnmet })
+                : t("noJudgementRecord")}
             </span>
           </p>
           {pkg?.dd.review_status && (
-            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title="AI 작성 · 법령 원문 일부 확인 · 변호사 검토 전 — 확정 아님">
-              확인하지 못한 영역: 범위 안 체크리스트 항목 {pkg.dd.review_status.in_scope}건 중 {pkg.dd.review_status.draft_ai}건이 아직 AI 작성·검토 전입니다 (참고 표시이며 게이트를 막지 않습니다).
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title={t("aiDraftedStatuteOriginalsPartially")}>
+              {t("unconfirmedAreasChecklistItems")} {pkg.dd.review_status.in_scope}{t("of")} {pkg.dd.review_status.draft_ai}{t("itemSAreStillAnd")}
             </p>
           )}
           {(pkg?.dd.findings.length ?? 0) > 0 && (
             <ul className="sizing-note-list mt-1">
               {pkg!.dd.findings.map((f) => (
                 <li key={f.id}>
-                  <strong>{FINDING_CATEGORY_LABEL[f.category] ?? f.category}</strong>: {f.description}
-                  {f.value_impact != null && <span className="ml-1 tabular-nums">(가치 영향 {f.value_impact})</span>}
+                  <strong>{tr(DD_DOMAIN_KEY[f.category] ?? f.category)}</strong>: {f.description}
+                  {f.value_impact != null && <span className="ml-1 tabular-nums">{t("valueImpact")} {f.value_impact})</span>}
                 </li>
               ))}
             </ul>
           )}
 
-          <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">종합 등급</h4>
+          <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">{t("overallGrade")}</h4>
           {pkg?.rag.grade ? (
             <p className="text-[length:var(--fs-caption)]">
-              <span className={`status-chip ${RAG_META[pkg.rag.grade]?.cls ?? "status-not-started"}`}>
-                {RAG_META[pkg.rag.grade]?.icon ?? "?"} {RAG_LABEL[pkg.rag.grade] ?? pkg.rag.grade}
+              <span className={`status-chip ${RAG_META(tr)[pkg.rag.grade]?.cls ?? "status-not-started"}`}>
+                {RAG_META(tr)[pkg.rag.grade]?.icon ?? "?"} {RAG_LABEL(tr)[pkg.rag.grade] ?? pkg.rag.grade}
               </span>
-              <span className="status-chip status-amber ml-2" title="이 등급은 AI 분석이 제안한 값이며, IC 승인 기록이 아닙니다">
-                ⚠ AI 추천 (승인 아님)
+              <span className="status-chip status-amber ml-2" title={t("thisGradeIsAValue")}>
+                {t("aiRecommendationNotAnApproval")}
               </span>
               {pkg.rag.confidence_cap && (
                 <span className="status-chip status-not-started ml-1" title={pkg.rag.confidence_note ?? ""}>
-                  신뢰도 상한 {capLabel(pkg.rag.confidence_cap)}
+                  {t("confidenceCap")} {capLabel(pkg.rag.confidence_cap, tr)}
                 </span>
               )}
               {pkg.rag.rationale && (
-                <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">근거: {pkg.rag.rationale}</span>
+                <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">{tc("evidenceColon")} {pkg.rag.rationale}</span>
               )}
             </p>
           ) : (
             // Incomplete assessment: NO overall grade and NO color — "not graded"
             // is a distinct outcome, never a default Amber.
             <p className="text-[length:var(--fs-caption)]">
-              <span className="status-chip status-not-started">○ 미산정</span>
-              <span className="status-chip status-amber ml-2" title="이 평가는 AI 분석이 제안한 값이며, IC 승인 기록이 아닙니다">
-                ⚠ AI 추천 (승인 아님)
+              <span className="status-chip status-not-started">{t("notAssessed")}</span>
+              <span className="status-chip status-amber ml-2" title={t("thisEvaluationIsAValue")}>
+                {t("aiRecommendationNotAnApproval2")}
               </span>
               {pkg?.rag.confidence_cap && (
                 <span className="status-chip status-not-started ml-1" title={pkg.rag.confidence_note ?? ""}>
-                  신뢰도 상한 {capLabel(pkg.rag.confidence_cap)}
+                  {t("confidenceCap2")} {capLabel(pkg.rag.confidence_cap, tr)}
                 </span>
               )}
               <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
                 {pkg?.rag.missing_dimensions?.length
-                  ? `종합 등급을 낼 수 없습니다 — 미평가 차원: ${ragDimensionsLabel(pkg.rag.missing_dimensions)}. 여섯 차원이 모두 평가되어야 종합 등급이 산정됩니다 (빨강 신호는 예외로 즉시 표시).`
-                  : "종합 등급 평가 기록이 없습니다 — 입력이 채워지면 자동 제안됩니다."}
+                  ? t("anOverallGradeCannotBe", { p1: [...new Set(pkg.rag.missing_dimensions)].map((k) => tr(RAG_DIMENSION_KEY[k] ?? k)).join(", ") })
+                  : t("noOverallGradeEvaluationRecord")}
               </span>
             </p>
           )}
@@ -338,13 +339,13 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
             if (overrides.length === 0) return null;
             return (
               <>
-                <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">누락 산출물 예외 근거 (진행 기록 시 작성)</h4>
-                <ul className="sizing-note-list" aria-label="누락 산출물 예외 근거">
+                <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">{t("exceptionEvidenceWrittenWhenRecording")}</h4>
+                <ul className="sizing-note-list" aria-label={t("exceptionEvidence")}>
                   {overrides.map((h) => (
                     <li key={h.id}>
-                      <strong>{GATE_LABEL[h.gate] ?? h.gate} {DECISION_LABEL[h.decision] ?? h.decision}</strong> - {h.decided_by} · {h.decided_at.slice(0, 10)}
-                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">누락: {h.gap_override!.items.join("; ")}</span>
-                      <span className="block text-[length:var(--fs-caption)]">근거: {h.gap_override!.rationale}</span>
+                      <strong>{tr(GATE_LABEL_KEY[h.gate] ?? h.gate)} {tr(DECISION_LABEL_KEY[h.decision] ?? h.decision)}</strong> - {h.decided_by} · {h.decided_at.slice(0, 10)}
+                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("missing")} {h.gap_override!.items.join("; ")}</span>
+                      <span className="block text-[length:var(--fs-caption)]">{tc("evidenceColon")} {h.gap_override!.rationale}</span>
                     </li>
                   ))}
                 </ul>
@@ -381,27 +382,27 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
           // 탭의 aria-controls 매핑이 불완전했다 — 자체 패널 id를 부여하고 탭 쪽에서
           // 두 패널을 함께 가리킨다.
           <div id="ic-panel-pmi" role="tabpanel" aria-labelledby="ic-tab-establishment" hidden={icView !== "establishment"}>
-          <section className="market-section sizing-step mt-3" aria-label="PMI 킥오프">
+          <section className="market-section sizing-step mt-3" aria-label={t("pmiKickoff")}>
             <h3 className="sizing-step-title text-[length:var(--fs-body)]">
-              <span className="sizing-step-badge" aria-hidden="true">🤝</span> PMI 킥오프 — Brownfield 통합 계획 기준선
+              <span className="sizing-step-badge" aria-hidden="true">🤝</span> {t("pmiKickoffBrownfieldIntegrationPlan")}
             </h3>
             {pkg.pmi_kickoff.record ? (
               <p className="text-[length:var(--fs-caption)]">
-                <span className="status-chip status-green">● 킥오프 기록됨</span>
-                <span className="block text-[length:var(--fs-caption)] mt-1">통합 책임자 {pkg.pmi_kickoff.record.owner} · 기록자 {pkg.pmi_kickoff.record.recordedBy} · {pkg.pmi_kickoff.record.recordedAt.slice(0, 10)}</span>
+                <span className="status-chip status-green">{t("kickoffRecorded")}</span>
+                <span className="block text-[length:var(--fs-caption)] mt-1">{t("integrationLead")} {pkg.pmi_kickoff.record.owner} {t("recorder")} {pkg.pmi_kickoff.record.recordedBy} · {pkg.pmi_kickoff.record.recordedAt.slice(0, 10)}</span>
                 <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">{pkg.pmi_kickoff.record.planNote}</span>
               </p>
             ) : (
               <p className="text-[length:var(--fs-caption)]">
-                <span className="status-chip status-amber">○ 킥오프 미기록</span>
-                <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">S11 완료에는 사람이 기록한 PMI 킥오프(통합 책임자·계획 기준선)가 필요합니다.</span>
+                <span className="status-chip status-amber">{t("kickoffNotRecorded")}</span>
+                <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">{t("s11CompletionRequiresAPmi")}</span>
               </p>
             )}
             {canAct && !pkg.pmi_kickoff.record && (
-              <form className="sizing-new-form mt-2" aria-label="PMI 킥오프 기록" onSubmit={(e) => { e.preventDefault(); recordKickoff(); }}>
+              <form className="sizing-new-form mt-2" aria-label={t("recordPmiKickoff2")} onSubmit={(e) => { e.preventDefault(); recordKickoff(); }}>
                 <div className="flex flex-wrap items-end gap-2">
                   <label className="text-[length:var(--fs-caption)] min-w-[10rem]">
-                    <span className="block mb-1">통합 책임자 (필수)</span>
+                    <span className="block mb-1">{t("integrationLeadRequired")}</span>
                     <input
                       value={pmiForm.owner}
                       onChange={(e) => setPmiForm({ ...pmiForm, owner: e.target.value })}
@@ -410,7 +411,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
                     />
                   </label>
                   <label className="text-[length:var(--fs-caption)] flex-1 min-w-[16rem]">
-                    <span className="block mb-1">통합 계획 기준선 (필수, 20자 이상)</span>
+                    <span className="block mb-1">{t("integrationPlanBaselineRequired20")}</span>
                     <input
                       value={pmiForm.plan_note}
                       onChange={(e) => setPmiForm({ ...pmiForm, plan_note: e.target.value })}
@@ -421,7 +422,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
                   </label>
                 </div>
                 <button type="submit" className="btn-ghost btn-sm mt-2" disabled={busy}>
-                  {busy ? "기록 중..." : "킥오프 기록 (확인 필요)"}
+                  {busy ? tc("recording") : t("recordKickoffConfirmationNeeded")}
                 </button>
               </form>
             )}
@@ -439,7 +440,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
             killHint={null}
             showReview={false}
             goGaps={pkg?.gates.go_gaps}
-            nextStage={{ label: "S12 사후 관리", href: `/projects/${projectId}/portfolio` }}
+            nextStage={{ label: t("s12Management"), href: `/projects/${projectId}/portfolio` }}
           />
         </div>
         {confirmDialog}

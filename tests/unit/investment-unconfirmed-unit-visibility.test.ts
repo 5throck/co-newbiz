@@ -68,6 +68,8 @@ describe("S5 unit select highlight and excluded note are wired", async () => {
   test("unset unit select gets the highlight class; note carries the hint", () => {
     expect(src).toContain("invest-ctl-unset");
     expect(src).toContain("unitOnCurrencyChange(l, c)");
-    expect(src).toContain("분류·주기·단위를 고르면 반영</p>");
+    // i18n: the excluded note text moved to the catalog (stages.s5.stage.*) — pin the testid and the key.
+    expect(src).toContain('data-testid="invest-excluded-note"');
+    expect(src).toContain('t("itemSExcludedFromThe")'); // "...건은 합계에서 제외됨 — 분류·주기·단위를 고르면 반영"
   });
 });

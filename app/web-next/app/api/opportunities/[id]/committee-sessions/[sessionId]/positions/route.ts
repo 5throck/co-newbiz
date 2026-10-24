@@ -19,7 +19,7 @@ export async function POST(
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "위원회 입장 제출은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Committee position submission requires the analyst role or higher." }); if (denied) return denied; }
   const { id, sessionId } = await params;
   const db = getDb();
   // Session binding (opportunity + committee stage + promoted-project visibility).
@@ -28,13 +28,13 @@ export async function POST(
     seat?: string; positionMd?: string; confidence?: number; recommendation?: string; vetoDissent?: boolean; criteriaScores?: Record<string, number>;
   } | null;
   const positionMd = body?.positionMd?.trim();
-  if (!positionMd) return badRequest("invalid_request", "positionMd(입장 내용)는 필수입니다.");
+  if (!positionMd) return badRequest("invalid_request", "positionMd (position statement) is required.");
   if (body?.recommendation !== undefined && !RECOMMENDATIONS.has(body.recommendation)) {
-    return badRequest("invalid_request", "recommendation은 go | hold | kill 중 하나입니다.");
+    return badRequest("invalid_request", "recommendation must be one of: go | hold | kill.");
   }
   const confidence = body?.confidence;
   if (confidence !== undefined && (!Number.isFinite(confidence) || confidence < 0 || confidence > 100)) {
-    return badRequest("invalid_request", "confidence는 0–100 사이 숫자입니다.");
+    return badRequest("invalid_request", "confidence must be a number between 0 and 100.");
   }
   // ADR-0104 quantitative scorecard — optional, but when present all five
   // criteria must be integers 1-3 (partial scorecards break the aggregate).
@@ -42,13 +42,13 @@ export async function POST(
   let criteriaScores: Record<string, number> | undefined;
   if (body?.criteriaScores !== undefined) {
     const raw = body.criteriaScores;
-    if (typeof raw !== "object" || raw === null) return badRequest("invalid_request", "criteriaScores는 5기준 객체입니다.");
+    if (typeof raw !== "object" || raw === null) return badRequest("invalid_request", "criteriaScores must be an object over the 5 criteria.");
     const missing = CRITERIA.filter((c) => !(c in raw));
-    if (missing.length) return badRequest("invalid_request", `criteriaScores 5기준 전체가 필요합니다 — 누락: ${missing.join(", ")}`);
+    if (missing.length) return badRequest("invalid_request", `criteriaScores requires all 5 criteria — missing: ${missing.join(", ")}`);
     criteriaScores = {};
     for (const c of CRITERIA) {
       const v = Number((raw as Record<string, unknown>)[c]);
-      if (!Number.isInteger(v) || v < 1 || v > 3) return badRequest("invalid_request", `${c} 점수는 1–3 사이 정수입니다.`);
+      if (!Number.isInteger(v) || v < 1 || v > 3) return badRequest("invalid_request", `${c} score must be an integer between 1 and 3.`);
       criteriaScores[c] = v;
     }
   }
