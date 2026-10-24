@@ -53,4 +53,38 @@ describe("locale smoke (design §5.4)", () => {
     await context.addCookies([{ name: "NEXT_LOCALE", value: "en", url: app.baseUrl }]);
     await expectLocaleUI(page, app, "en", en.nav.dealBoard);
   }, 300_000);
+
+  // Switcher form amendment 2026-10-24 (user-directed): the LocaleSwitcher is a
+  // disclosure dropdown, so the end-to-end flip is driven through the real UI —
+  // open the menu, click the English endonym (menuitemradio), and the cookie +
+  // router.refresh() re-negotiate server-side.
+  test("LocaleSwitcher dropdown: clicking the English endonym flips html lang; URL unchanged", async () => {
+    const { page, context } = session;
+
+    // Test 1 leaves NEXT_LOCALE=en behind; start this scenario from the ko master.
+    await context.addCookies([{ name: "NEXT_LOCALE", value: "ko", url: app.baseUrl }]);
+    await expectLocaleUI(page, app, "ko", ko.nav.dealBoard);
+    const urlBefore = new URL(page.url());
+
+    // Drive the real UI: disclosure trigger (aria-expanded) → menu → endonym item.
+    const switcher = page.locator(".locale-switcher");
+    const trigger = switcher.getByRole("button", { name: ko.common.languageSwitcher });
+    await trigger.waitFor({ state: "visible", timeout: 15_000 });
+    await trigger.click();
+    const menu = switcher.getByRole("menu");
+    await menu.waitFor({ state: "visible", timeout: 5_000 });
+    expect(await trigger.getAttribute("aria-expanded")).toBe("true");
+    await switcher.getByRole("menuitemradio", { name: "English" }).click();
+
+    // select() wrote the NEXT_LOCALE cookie and refreshed; the server re-negotiates.
+    await page.locator('html[lang="en"]').waitFor({ timeout: 15_000 });
+    expect(await page.locator("html").getAttribute("lang")).toBe("en");
+    // The trigger now carries the active endonym with the menu closed.
+    const reopenedTrigger = switcher.getByRole("button", { name: en.common.languageSwitcher });
+    await reopenedTrigger.waitFor({ state: "visible", timeout: 15_000 });
+    expect(await reopenedTrigger.getAttribute("aria-expanded")).toBe("false");
+    // D3: same URL, no [locale] route segment.
+    const urlAfter = new URL(page.url());
+    expect(urlAfter.pathname + urlAfter.search).toBe(urlBefore.pathname + urlBefore.search);
+  }, 300_000);
 });
