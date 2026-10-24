@@ -2245,6 +2245,15 @@
 .wiki-content-pane .library-doc-body,
 .wiki-home-body .library-doc-body {
   max-width: none;
+  /* 본문 산문을 앱 표준 14px(--fs-body)로 — 위키만 루트 16px를 상속해 메인
+     UI 글자보다 크게 보이던 문제(2026-10-25, "위키 폰트가 메인과 다르다")를
+     닫는다. /library의 doc-body 규약은 그대로 둔다. */
+  font-size: var(--fs-body);
+}
+/* 푸터 노트는 캡션 크기가 설계 의도(.wiki-footer-note의 --fs-caption) —
+   위 컨테이너 규칙이 내부 doc-body까지 14px로 끌어올리지 않게 되돌린다. */
+.wiki-footer-note .library-doc-body {
+  font-size: inherit;
 }
 .wiki-content-pane .library-doc-body h1,
 .wiki-content-pane .library-doc-body h2,
@@ -2275,6 +2284,14 @@
   line-height: 1.7;
   word-break: keep-all;
   overflow-wrap: break-word;
+}
+/* 문서 제목 h1 — 컨테이너가 14px로 내려오면(Tailwind preflight가 제목 크기를
+   상속으로 되돌림) 제목이 본문과 같아져 위계가 무너지므로, 앱의 콘텐츠 문서
+   제목 선례(.deal-header h1)에 맞춘다. h1 19.2px > h2 16.8px(/library 공유
+   1.05rem) > 본문 14px 위계가 유지된다. */
+.wiki-content-pane .library-doc-body h1,
+.wiki-home-body .library-doc-body h1 {
+  font-size: 1.2rem;
 }
 /* 절 전환 리듬 — h2 위 여백을 넓혀 절이 문단 사이에서 읽히게 한다.
    글자 크기는 /library 공유 규약(--fs 스케일)을 그대로 둔다. */
