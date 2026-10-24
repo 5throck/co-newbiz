@@ -2847,8 +2847,10 @@ a.funnel-card:hover { border-color: var(--primary); }
   font-size: var(--fs-caption); cursor: pointer; transition: border-color 0.2s ease;
 }
 .theme-toggle-compact:hover { border-color: var(--primary); }
-.locale-switcher { display: inline-flex; gap: 0.3rem; }
-.locale-switcher button[aria-pressed="true"] { border-color: var(--primary); color: var(--primary); }
+.locale-switcher { position: relative; display: inline-flex; }
+/* Disclosure dropdown (2026-10-24, user-directed): the trigger keeps the .theme-toggle-compact pill; the popup reuses .stage-tab-menu (absolute, right-aligned under the trigger) + .row-menu-item (button reset). The checked entry mirrors the old [aria-pressed] pill mark. */
+.locale-switcher [role="menuitemradio"][aria-checked="true"] { color: var(--primary); font-weight: 600; }
+.locale-switcher [role="menuitemradio"][aria-checked="true"]::before { content: "✓"; margin-right: 0.4rem; }
 
 /* ── Process progress header (S1–S7 signal lights) ── */
 .process-header {
