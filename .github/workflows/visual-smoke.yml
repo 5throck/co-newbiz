@@ -25,7 +25,9 @@ permissions:
 jobs:
   visual-smoke:
     name: Stage-path visual smoke (12 paths x 2 tracks)
-    runs-on: ubuntu-latest
+    # macos-latest matches the committed aHash baseline provenance (generated on
+    # macOS; ubuntu font rasterization drifts the 64-bit hashes past tolerance).
+    runs-on: macos-latest
     timeout-minutes: 30
     continue-on-error: true
     steps:
