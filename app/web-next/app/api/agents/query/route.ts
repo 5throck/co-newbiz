@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctxUser = auth.auth;
-  const denied = requireBusinessActor(ctxUser, "write", { viewerMessage: "에이전트 질의는 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(ctxUser, "write", { viewerMessage: "Agent queries require the analyst role or higher." });
   if (denied) return denied;
 
   const body = (await request.json().catch(() => null)) as {
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     industryName?: string;
   } | null;
   const query = body?.query?.trim();
-  if (!query) return badRequest("query_required", "query는 필수입니다.");
+  if (!query) return badRequest("query_required", "query is required.");
 
   const routeCtx = {
     opportunityId: body?.opportunityId,
@@ -40,11 +40,11 @@ export async function POST(request: Request) {
   // ── 체인 모드: 기회 종합 평가 ──
   if (decision.mode === "chain" && decision.chain === "opportunity_evaluation") {
     const oppId = routeCtx.opportunityId;
-    if (!oppId) return badRequest("context_required", "기회 종합 평가 체인은 opportunityId 컨텍스트가 필요합니다.");
+    if (!oppId) return badRequest("context_required", "The opportunity assessment chain requires the opportunityId context.");
     const opp = db
       .query("SELECT id, name, market_scope, rationale, attractiveness_score, synergy_score FROM opportunity WHERE id = ? AND deleted_at IS NULL")
       .get(oppId) as OppLite | undefined;
-    if (!opp) return badRequest("context_invalid", "기회를 찾을 수 없습니다.");
+    if (!opp) return badRequest("context_invalid", "Opportunity not found.");
 
     const factorRow = db
       .query("SELECT factors_json FROM opportunity WHERE id = ?")

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useConfirm } from "../crud.tsx";
 import { BusinessTargetsSection } from "./BusinessTargetsSection.tsx";
 import { api } from "../../lib/api.ts";
@@ -31,31 +32,33 @@ const EDITABLE: Record<string, string[]> = {
   md_company: ["id", "dart_corp_code", "biz_reg_no", "name_ko", "name_en"],
 };
 
-// 화면 표시용 한국어 이름 (데이터 식별자는 그대로 유지)
-const TABLE_KO: Record<string, string> = {
-  md_industry: "산업",
-  md_currency: "통화",
-  md_country: "국가",
-  md_source: "데이터 출처",
-  md_unit: "단위",
-  md_company: "기업",
+// 화면 표시용 이름은 카탈로그 키로 해석 (데이터 식별자는 그대로 유지)
+const TABLE_KEY: Record<string, string> = {
+  md_industry: "tableIndustry",
+  md_currency: "tableCurrency",
+  md_country: "tableCountry",
+  md_source: "tableSource",
+  md_unit: "tableUnit",
+  md_company: "tableCompany",
 };
-const COL_KO: Record<string, string> = {
-  id: "코드",
-  ksic_code: "KSIC 코드",
-  naics_code: "NAICS 코드",
-  name_ko: "한글명",
-  name_en: "영문명",
-  iso_code: "ISO 코드",
-  code: "코드",
-  reliability_grade: "신뢰 등급",
-  dimension: "차원",
-  si_coefficient: "SI 환산계수",
-  dart_corp_code: "전자공시 고유번호",
-  biz_reg_no: "사업자등록번호",
+const COL_KEY: Record<string, string> = {
+  id: "colId",
+  ksic_code: "colKsic",
+  naics_code: "colNaics",
+  name_ko: "colNameKo",
+  name_en: "colNameEn",
+  iso_code: "colIso",
+  code: "colCode",
+  reliability_grade: "colReliability",
+  dimension: "colDimension",
+  si_coefficient: "colSiCoefficient",
+  dart_corp_code: "colDartCorpCode",
+  biz_reg_no: "colBizRegNo",
 };
 
 export function MasterDataSection() {
+  const t = useTranslations("admin.masterData");
+  const tc = useTranslations("common");
 
   const { confirm, confirmDialog } = useConfirm();
   const [tables, setTables] = useState<string[] | null>(null);
@@ -67,6 +70,9 @@ export function MasterDataSection() {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const tableName = TABLE_KEY[table] ? t(TABLE_KEY[table]) : table;
+  const colName = (c: string): string => (COL_KEY[c] ? t(COL_KEY[c]) : c);
+
   const loadStaging = useCallback(() => {
     api.get<StagingRow[]>("/api/admin/master-data/staging").then((r) => setStaging(r.data)).catch(() => setStaging([]));
   }, []);
@@ -76,7 +82,7 @@ export function MasterDataSection() {
     api
       .get<MdTableData>(`/api/admin/master-data?table=${encodeURIComponent(table)}`)
       .then((r) => setData(r.data))
-      .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+      .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
   }, [table]);
 
   useEffect(() => {
@@ -92,12 +98,12 @@ export function MasterDataSection() {
     setNotice(null);
     try {
       await api.post("/api/admin/master-data", { table, id: newId.trim(), fields: newFields });
-      setNotice(`${TABLE_KO[table] ?? table} 코드 추가됨: ${newId}`);
+      setNotice(t("codeAdded", { p1: tableName, p2: newId }));
       setNewId("");
       setNewFields({});
       loadTable();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "추가 실패");
+      setError(err instanceof Error ? err.message : t("addFailed"));
     }
   }
 
@@ -107,7 +113,7 @@ export function MasterDataSection() {
       await api.post("/api/admin/master-data/staging", { id, action });
       loadStaging();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "처리 실패");
+      setError(err instanceof Error ? err.message : t("resolveFailed"));
     }
   }
 
@@ -128,31 +134,31 @@ export function MasterDataSection() {
         </p>
       )}
 
-      <h3 className="mb-2">코드 테이블</h3>
-      <div className="mb-3 flex flex-wrap gap-2" role="tablist" aria-label="마스터데이터 테이블">
-        {(tables ?? []).map((t) => (
+      <h3 className="mb-2">{t("codeTablesHeading")}</h3>
+      <div className="mb-3 flex flex-wrap gap-2" role="tablist" aria-label={t("tablesTablistAria")}>
+        {(tables ?? []).map((tbl) => (
           <button
-            key={t}
+            key={tbl}
             type="button"
             role="tab"
-            aria-selected={table === t}
-            aria-current={table === t ? "true" : undefined}
-            className={table === t ? "chip-selected" : undefined}
-            onClick={() => setTable(t)}
+            aria-selected={table === tbl}
+            aria-current={table === tbl ? "true" : undefined}
+            className={table === tbl ? "chip-selected" : undefined}
+            onClick={() => setTable(tbl)}
           >
-            {TABLE_KO[t] ?? t}
+            {TABLE_KEY[tbl] ? t(TABLE_KEY[tbl]) : tbl}
           </button>
         ))}
       </div>
 
       {data && (
         <table className="data-table">
-          <caption className="sr-only">{data.table} 코드 목록</caption>
+          <caption className="sr-only">{t("tableCaption", { p1: data.table })}</caption>
           <thead>
             <tr>
               {data.columns.map((c) => (
                 <th key={c} scope="col">
-                  {COL_KO[c] ?? c}
+                  {colName(c)}
                 </th>
               ))}
             </tr>
@@ -169,18 +175,18 @@ export function MasterDataSection() {
                   <button
                     type="button"
                     className="btn-danger btn-sm"
-                    title="이 행을 삭제합니다"
-                    onClick={() => confirm(`이 ${TABLE_KO[table] ?? table} 코드 행을 삭제할까요?`, async () => {
+                    title={t("deleteRowTitle")}
+                    onClick={() => confirm(t("deleteRowConfirmTitle", { p1: tableName }), async () => {
                       setError(null);
                       try {
                         await api.delete("/api/admin/master-data", { table, id: String(row.id ?? "") });
                         loadTable();
                       } catch (err) {
-                        setError(err instanceof Error ? err.message : "삭제 실패");
+                        setError(err instanceof Error ? err.message : tc("errors.deleteFailed"));
                       }
-                    }, { body: "감사로그에 기록됩니다." })}
+                    }, { body: t("deleteRowBody") })}
                   >
-                    삭제
+                    {tc("delete")}
                   </button>
                 </td>
               </tr>
@@ -189,11 +195,11 @@ export function MasterDataSection() {
         </table>
       )}
 
-      <form onSubmit={addCode} aria-label="코드 추가" className="my-4 flex flex-wrap items-center gap-2">
+      <form onSubmit={addCode} aria-label={t("addFormAria")} className="my-4 flex flex-wrap items-center gap-2">
         <input
           type="text"
-          aria-label="새 코드 ID"
-          placeholder="코드 ID"
+          aria-label={t("newIdAria")}
+          placeholder={t("newIdPlaceholder")}
           value={newId}
           onChange={(e) => setNewId(e.target.value)}
           required
@@ -202,24 +208,24 @@ export function MasterDataSection() {
           <input
             key={c}
             type="text"
-            aria-label={`${COL_KO[c] ?? c} 값`}
-            placeholder={COL_KO[c] ?? c}
+            aria-label={t("fieldValueAria", { p1: colName(c) })}
+            placeholder={colName(c)}
             value={newFields[c] ?? ""}
             onChange={(e) => setNewFields((prev) => ({ ...prev, [c]: e.target.value }))}
           />
         ))}
         <button type="submit" className="btn-ghost">
-          코드 추가
+          {t("addCodeButton")}
         </button>
       </form>
 
       <BusinessTargetsSection />
 
-      <h3 className="mb-2">미매핑 큐</h3>
+      <h3 className="mb-2">{t("stagingHeading")}</h3>
       {staging === null ? (
-        <p>불러오는 중...</p>
+        <p>{tc("loading")}</p>
       ) : staging.length === 0 ? (
-        <p className="text-[color:var(--muted-fg)] italic">큐가 비어 있습니다.</p>
+        <p className="text-[color:var(--muted-fg)] italic">{t("stagingEmpty")}</p>
       ) : (
         <ul className="staging-list">
           {staging.map((r) => (
@@ -229,10 +235,10 @@ export function MasterDataSection() {
                 → {r.attempted_master_table} · {r.first_seen_at.slice(0, 10)}
               </span>
               <button type="button" className="btn-ghost" onClick={() => resolveStaging(r.id, "map")}>
-                매핑 완료(코드 추가 후)
+                {t("mapButton")}
               </button>
               <button type="button" className="btn-ghost" onClick={() => resolveStaging(r.id, "reject")}>
-                기각
+                {t("rejectButton")}
               </button>
             </li>
           ))}

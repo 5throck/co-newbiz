@@ -7,8 +7,9 @@ import { buildEvalBriefMd } from "./evalBrief.ts";
 import type { useBrownfieldBase } from "./useBrownfieldBase.ts";
 import type { useBrownfieldUniverse } from "./useBrownfieldUniverse.tsx";
 import type { PrecheckDraftItem, ScreeningDraftResponse } from "./types.ts";
+import { useTranslations } from "next-intl";
 
-export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> & ReturnType<typeof useBrownfieldUniverse>) {
+export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> & ReturnType<typeof useBrownfieldUniverse>) {const tr = useTranslations(); const t = useTranslations("stages.s67.useBrownfieldTargets");
   const { selected, newTarget, busy, setBusy, setError, setNewTarget, loadDetail, onSaved, precheckBusy, precheckDraft, setPrecheckBusy, setPrecheckDraft, setPrecheckDraftNote, recoBusy, setRecoBusy, setRecoProgress } = prev;
 
 
@@ -25,7 +26,7 @@ export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> 
       loadDetail(selected.opportunity.id);
       onSaved?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "후보 등록 실패");
+      setError(err instanceof Error ? err.message : t("failedToRegisterTheCandidate"));
     } finally {
       setBusy(false);
     }
@@ -55,7 +56,7 @@ export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> 
       setPrecheckDraftNote((prev) => { const n = { ...prev }; delete n[targetId]; return n; });
       loadDetail(selected.opportunity.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "사전 검토 판정 저장 실패");
+      setError(err instanceof Error ? err.message : t("failedToSaveTheJudgement"));
     } finally {
       setPrecheckBusy(null);
     }
@@ -101,20 +102,20 @@ export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> 
     try {
       const acc: Record<string, Record<string, PrecheckDraftItem>> = { ...precheckDraft };
       for (let i = 0; i < shortlistedTargets.length; i++) {
-        const t = shortlistedTargets[i];
-        setRecoProgress(`${t.company_name} (${i + 1}/${shortlistedTargets.length})`);
+        const target = shortlistedTargets[i];
+        setRecoProgress(`${target.company_name} (${i + 1}/${shortlistedTargets.length})`);
         try {
-          await draftPrecheckInto(t.id, acc);
+          await draftPrecheckInto(target.id, acc);
         } catch (err) {
-          failures.push(t.company_name);
+          failures.push(target.company_name);
           lastError = err instanceof Error ? err : new Error(String(err));
-          setError(`사전 검토 제안 생성 실패 — ${t.company_name}: ${lastError.message}`);
+          setError(t("failedToGenerateProposalsP1", { p1: target.company_name, p2: lastError.message }));
         }
       }
       if (failures.length > 0 && failures.length === shortlistedTargets.length) {
-        throw lastError ?? new Error("판정 제안 생성에 실패했습니다");
+        throw lastError ?? new Error(t("failedToGenerateJudgementProposals"));
       }
-      return buildEvalBriefMd(selected.targets, selected.checklist, acc);
+      return buildEvalBriefMd(selected.targets, selected.checklist, acc, tr);
     } finally {
       setRecoBusy(false);
       setRecoProgress(null);
@@ -129,7 +130,7 @@ export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> 
       loadDetail(selected.opportunity.id);
       onSaved?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "최종 후보 목록 승격 실패");
+      setError(err instanceof Error ? err.message : t("failedToPromoteToThe"));
     } finally {
       setBusy(false);
     }
@@ -143,7 +144,7 @@ export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> 
       await api.post(`/api/brownfield/${selected.opportunity.id}/targets/${targetId}/rerank`, { direction });
       loadDetail(selected.opportunity.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "순위 변경 실패");
+      setError(err instanceof Error ? err.message : t("failedToChangeTheRank"));
     } finally {
       setBusy(false);
     }

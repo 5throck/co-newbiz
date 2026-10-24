@@ -8,8 +8,9 @@ import { useConfirm } from "../../crud.tsx";
 import { api, ApiError } from "../../../lib/api.ts";
 import { CRITERIA, OVERRIDDEN_SUBS, GF_SUB, BF_SUB } from "./constants.ts";
 import type { OpportunityRow, RouteDecision, AdvisoryResponse, RouteRecommendation, RouteDecisionDraft } from "./types.ts";
+import { useTranslations } from "next-intl";
 
-export function useRouteDecision({ opportunityId, rationaleParam, tabParam }: { opportunityId: string; rationaleParam?: string | null; tabParam?: string | null }) {
+export function useRouteDecision({ opportunityId, rationaleParam, tabParam }: { opportunityId: string; rationaleParam?: string | null; tabParam?: string | null }) {const t = useTranslations("stages.s4.useRouteDecision"); const tc = useTranslations("common");
 
   const { me } = useAuth();
   const canAct = canWriteBusiness(me?.role);
@@ -84,7 +85,7 @@ export function useRouteDecision({ opportunityId, rationaleParam, tabParam }: { 
         }
         draftLoadedRef.current = true;
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "결정 이력 불러오기 실패"));
+      .catch((e) => setError(e instanceof Error ? e.message : t("failedToLoadTheDecision")));
   }, []);
   const loadSessions = useCallback((id: string) => {
     api.get<Array<{ sessionId: string; status: string; decisionMode: string | null; createdAt: string }>>(`/api/opportunities/${encodeURIComponent(id)}/committee-sessions`)
@@ -107,7 +108,7 @@ export function useRouteDecision({ opportunityId, rationaleParam, tabParam }: { 
       if (e instanceof ApiError && e.status === 404) {
         setNotFound(true);
       } else {
-        setError(e instanceof Error ? e.message : "불러오기 실패");
+        setError(e instanceof Error ? e.message : tc("errors.loadFailed"));
       }
     });
     return () => { alive = false; };
@@ -145,7 +146,7 @@ export function useRouteDecision({ opportunityId, rationaleParam, tabParam }: { 
       const r = await api.post<RouteRecommendation>(`/api/opportunities/${encodeURIComponent(selected.id)}/route-recommendation`, {});
       setReco(r.data);
     } catch (err) {
-      setRecoError(err instanceof Error ? err.message : "LLM 추천 생성 실패");
+      setRecoError(err instanceof Error ? err.message : t("failedToGenerateLlmRecommendation"));
     } finally {
       setRecoLoading(false);
     }
@@ -228,7 +229,7 @@ export function useRouteDecision({ opportunityId, rationaleParam, tabParam }: { 
       // greenfield→S5, brownfield→S6).
       setSavedNotice({ track });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "결정 저장 실패");
+      setError(err instanceof Error ? err.message : t("failedToSaveTheDecision"));
     } finally {
       setSaving(false);
     }
@@ -256,7 +257,7 @@ export function useRouteDecision({ opportunityId, rationaleParam, tabParam }: { 
       draftLoadedRef.current = true;
       setDraftSavedAt(r.data.updated_at);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "초안 저장 실패");
+      setError(err instanceof Error ? err.message : t("failedToSaveTheDraft"));
     } finally {
       setDraftSaving(false);
     }

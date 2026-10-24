@@ -9,27 +9,27 @@ import { getDb } from "../../../../../../../../db/client.ts";
 export async function PATCH(request: Request, { params }: { params: Promise<{ oppId: string; criterionId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "평가 항목 수정은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Evaluation-item updates require the analyst role or higher." });
   if (denied) return denied;
   const { criterionId } = await params;
   const body = (await request.json().catch(() => null)) as { weight?: number; rubric?: Record<string, unknown> } | null;
   if (body?.weight === undefined && body?.rubric === undefined) {
-    return badRequest("invalid_request", "weight(가중치, 양수) 또는 rubric(임계값) 중 하나는 필수입니다.");
+    return badRequest("invalid_request", "Either weight (a positive number) or rubric (threshold) is required.");
   }
   if (body?.weight !== undefined) {
-    if (typeof body.weight !== "number") return badRequest("invalid_request", "weight는 숫자여야 합니다.");
+    if (typeof body.weight !== "number") return badRequest("invalid_request", "weight must be a number.");
     const result = updateCriterionWeight(criterionId, body.weight);
     if (!result.ok) {
       if (result.reason === "not_found") return notFound();
-      return badRequest("invalid_weight", "weight는 0보다 큰 값이어야 합니다.");
+      return badRequest("invalid_weight", "weight must be greater than 0.");
     }
   }
   if (body?.rubric !== undefined) {
     const result = updateCriterionRubric(criterionId, body.rubric);
     if (!result.ok) {
       if (result.reason === "not_found") return notFound();
-      if (result.reason === "not_rubric_capable") return badRequest("not_rubric_capable", "임계값은 재무 빌트인 항목에만 설정할 수 있습니다.");
-      return badRequest("invalid_input", "rubric의 임계값이 범위를 벗어났거나 인식할 수 없습니다.");
+      if (result.reason === "not_rubric_capable") return badRequest("not_rubric_capable", "Thresholds can be set only on financial built-in items.");
+      return badRequest("invalid_input", "A rubric threshold is out of range or unrecognized.");
     }
     appendAudit(getDb(), { actor: auth.auth.userId, action: "eval_criterion.rubric_update", target: criterionId, now: new Date().toISOString() });
   }
@@ -39,14 +39,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ op
 export async function DELETE(request: Request, { params }: { params: Promise<{ oppId: string; criterionId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "평가 항목 삭제는 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Evaluation-item deletion requires the analyst role or higher." });
   if (denied) return denied;
   const { criterionId } = await params;
   const result = deleteCriterion(criterionId);
   if (!result.ok) {
     if (result.reason === "not_found") return notFound();
-    if (result.reason === "not_deletable") return badRequest("not_deletable", "필수·시딩 항목은 삭제할 수 없습니다.");
-    return badRequest("has_assessment", "이미 판정 기록이 있는 항목은 삭제할 수 없습니다.");
+    if (result.reason === "not_deletable") return badRequest("not_deletable", "Required/seeded items cannot be deleted.");
+    return badRequest("has_assessment", "Items with recorded judgements cannot be deleted.");
   }
   return ok({ ok: true }, 200);
 }

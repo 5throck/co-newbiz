@@ -177,8 +177,8 @@ describe("necessity / required-level draft (amendment 2026-10-14)", () => {
   });
   test("S3 UI: single primary action, draft chip, canonical order kept, ColGroup", () => {
     const src = readFileSync(join(PROJECT_ROOT, "app/web-next/components/stages/synergy/SynergyCapabilityTab.tsx"), "utf8");
-    expect(src).toContain("AI 초안");
-    expect(src).toContain("저장 전 변경");
+    expect(src).toContain('tc("aiDraft")'); // i18n: labels resolve through the catalogs
+    expect(src).toContain('t("hasUnsavedChanges")');
     expect(src).toContain("<ColGroup widths={GAP_COL_PCT}");
     expect(src).toContain("proposePrimary");
     expect(src).toContain("gapDirty ? \"btn-primary btn-sm\"");
@@ -247,10 +247,12 @@ describe("S3 table and modals (source structure)", () => {
   const read = (p: string) => readFileSync(join(PROJECT_ROOT, "app/web-next", p), "utf8");
   test("canonical column order and per-field controls", () => {
     const src = read("components/stages/synergy/SynergyCapabilityTab.tsx");
-    const heads = ["필요 역량", "필요도", "필요 수준", "보유 판정", "보유 수준", "보유 근거"].map((h) => src.indexOf(`<th scope="col">${h}</th>`));
+    // i18n: headers resolve through the common catalog — pin the key calls (order kept).
+    const heads = ["requiredCapability", "necessity", "requiredLevel", "heldJudgement", "heldLevel", "heldEvidence"].map((h) => src.indexOf(`{tc("${h}")}</th>`));
     expect(heads.every((i) => i >= 0)).toBe(true);
     expect([...heads].sort((a, b) => a - b)).toEqual(heads);
-    for (const k of ["${r.capability} 필요도", "${r.capability} 필수 범위", "${r.capability} 보유 판정", "재판정 권장", "gapCautions(r)", 'field="필요 수준"', 'field="보유 수준"', "readOnly={!canCurate}"]) expect(src).toContain(k);
+    // i18n: per-field aria labels and chips moved to the catalog; `field` stays the Korean payload discriminator (KO_NARRATIVE_FIELDS).
+    for (const k of ['t("p1Necessity", { p1: r.capability })', 't("p1RequiredScope", { p1: r.capability })', 't("p1HeldJudgement", { p1: r.capability })', 't("recommended")', "gapCautions(r)", 'field={KO_NARRATIVE_FIELDS.requiredLevel}', 'field={KO_NARRATIVE_FIELDS.heldLevel}', "readOnly={!canCurate}"]) expect(src).toContain(k);
     expect(src).toContain("NECESSITY_NOTE_CAP");
     expect(src).not.toContain("LevelSelect");
     expect(src).not.toContain("해소 힌트");
@@ -264,8 +266,10 @@ describe("S3 table and modals (source structure)", () => {
   test("button label helper", async () => {
     // Computed specifier: the .tsx module is runtime-resolved by bun; tsc runs without --jsx.
     const dialogPath = "../../app/web-next/components/stages/CapabilityNarrativeDialog.tsx";
-    const { narrativeButtonLabel } = (await import(dialogPath)) as { narrativeButtonLabel: (s: string, has: boolean) => string };
-    expect([narrativeButtonLabel("", false), narrativeButtonLabel("x", false), narrativeButtonLabel("x", true), narrativeButtonLabel("", true)]).toEqual(["입력", "수정", "보기", "보기"]);
+    const { narrativeButtonLabelKey } = (await import(dialogPath)) as { narrativeButtonLabelKey: (s: string, has: boolean) => string };
+    // i18n: the helper returns catalog keys (common.*) — resolve them with a stub translator.
+    const tr = (key: string) => ({ "common.input": "입력", "common.edit": "수정", "common.view": "보기" } as Record<string, string>)[key] ?? key;
+    expect([narrativeButtonLabelKey("", false), narrativeButtonLabelKey("x", false), narrativeButtonLabelKey("x", true), narrativeButtonLabelKey("", true)].map(tr)).toEqual(["입력", "수정", "보기", "보기"]);
   });
   test("S5 hosts the judgement editor; S3 columns are read-only, canonical order, no 5-step select", () => {
     const stage = read("components/stages/GreenfieldStage.tsx");
@@ -276,8 +280,8 @@ describe("S3 table and modals (source structure)", () => {
     const dlg = read("components/stages/CapabilityJudgementDialog.tsx");
     // the table is a one-line summary (no inputs); the S3 block precedes the S5 inputs in the dialog
     expect(tbl).not.toContain("<input");
-    expect(dlg.indexOf('aria-label="S3 정의 (읽기 전용)"')).toBeLessThan(dlg.indexOf('aria-label="S5 판정 (입력)"'));
-    for (const k of ["RESOLUTION_EXPECTED_LEVEL_HINT", "해소 방식", "기대 수준", "금액(주기당, 백만원)", "기간(개월)", "달성 가능성", "근거·증빙"]) expect(dlg).toContain(k);
+    expect(dlg.indexOf('aria-label={t("s3Definition")}')).toBeLessThan(dlg.indexOf('aria-label={t("s5JudgementInput")}'));
+    for (const k of ["RESOLUTION_EXPECTED_LEVEL_HINT", 't("resolutionMethod")', 't("expectedLevel")', 't("amountPerCycleKrwMillions")', 't("durationMonths")', 't("attainability")', 't("evidenceAndDocumentation")']) expect(dlg).toContain(k);
     // no S3-owned value is ever part of the draft that is sent
     const ed = read("components/stages/CapabilityJudgementEditor.tsx");
     expect(ed).toContain("judgementPatch(");

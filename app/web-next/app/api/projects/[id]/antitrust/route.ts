@@ -22,7 +22,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "독점규제 스크리닝 등록은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Registering the antitrust screening requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
@@ -30,7 +30,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     combination_type?: string | null; filing_jurisdictions?: string | null;
     remedy_type?: string; remedy_detail?: string | null; target_id?: string | null;
   } | null;
-  if (!body?.market_definition?.trim()) return badRequest("market_required", "market_definition은 필수입니다.");
+  if (!body?.market_definition?.trim()) return badRequest("market_required", "market_definition is required.");
   const remedy = body.remedy_type?.trim() || "none";
   const now = new Date().toISOString();
   const row = {

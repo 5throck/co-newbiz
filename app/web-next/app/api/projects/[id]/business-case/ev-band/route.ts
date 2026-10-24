@@ -18,7 +18,7 @@ import {
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "EV/Revenue 밴드 확정은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Confirming EV/Revenue bands requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
@@ -29,6 +29,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   } catch (err) {
     if (err instanceof EvBandValidationError) return badRequest("invalid_request", err.message);
     console.error("ev-band save failed", err);
-    return fail(500, "internal_error", "밴드 저장에 실패했습니다.");
+    return fail(500, "internal_error", "Failed to save the band.");
   }
 }

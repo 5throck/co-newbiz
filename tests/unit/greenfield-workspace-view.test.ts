@@ -37,6 +37,12 @@ const scope = (over: Partial<GfScope> = {}): GfScope => ({
   na_reason_checklists: [], excluded_steps: [1, 2, 3, 8], warnings: [], workspace_scope: ws(), ...over,
 });
 
+
+// i18n re-pin (T3-6): label emissions are common.* catalog keys — resolve through a ko stub translator.
+import { readFileSync } from "node:fs";
+const ko = JSON.parse(readFileSync("app/web-next/locales/ko.json", "utf8")) as Record<string, any>;
+const tr = (key: string): string => key.split(".").reduce<unknown>((acc, k) => (acc as Record<string, any>)[k], ko) as string;
+
 const dom = (domain: string, checklistId: string, items: WsDomainLike["items"], extra: Partial<WsDomainLike> = {}): WsDomainLike => ({ domain, checklistId, title: domain, items, ...extra });
 const judgedState = { status: "pass" };
 
@@ -44,17 +50,18 @@ describe("tab labels", () => {
   test("greenfield workspace scope uses the overlay's Korean interim label; otherwise the shared Korean label", () => {
     const d = { domain: "technical", checklistId: "chk-technical-dd-checklist", title: "Technical DD" };
     expect(tabLabel(scope(), d)).toBe("기술 계획");
-    expect(tabLabel(undefined, d)).toBe("기술 실사"); // brownfield: unchanged
-    expect(tabLabel(scope({ workspace_scope: undefined }), d)).toBe("기술 실사"); // grandfathered: unchanged
-    expect(tabLabel(undefined, { domain: "financing", checklistId: "x", title: "Financing" })).toBe("자금조달 계획");
+    expect(tr(tabLabel(undefined, d))).toBe("기술 실사"); // brownfield: unchanged (common.ddDomain.* key)
+    expect(tr(tabLabel(scope({ workspace_scope: undefined }), d))).toBe("기술 실사"); // grandfathered: unchanged
+    expect(tr(tabLabel(undefined, { domain: "financing", checklistId: "x", title: "Financing" }))).toBe("자금조달 계획");
   });
   test("extra tabs map to the overlay key by checklist id", () => {
     expect(tabKeyOf({ domain: "chk-rbd-technology-checklist", checklistId: "chk-rbd-technology-checklist" })).toBe("rbd_technology");
     expect(tabKeyOf({ domain: "hr", checklistId: "chk-hr-dd-checklist" })).toBe("hr");
   });
   test("plan readiness label falls back to a Korean default", () => {
+    // overlay tab_labels carry payload Korean (passthrough); the no-overlay fallback is a common.gf.* key
     expect(planReadinessLabel(scope())).toBe("계획 준비 상태");
-    expect(planReadinessLabel(undefined)).toBe("계획 준비 상태");
+    expect(tr(planReadinessLabel(undefined))).toBe("계획 준비 상태");
   });
 });
 
@@ -227,7 +234,7 @@ describe("people/organization plan readiness (panel lead)", () => {
     expect(v.steps.find((x) => x.step === 2)).toMatchObject({ text: "범위 밖", detail: "n/a for track" });
     const plain = peoplePlanView(scope({ workspace_scope: undefined }), [hrDom([])])!;
     expect(plain.steps).toEqual([]);
-    expect(plain.tabLabel).toBe("인사 실사");
+    expect(tr(plain.tabLabel)).toBe("인사 실사");
   });
   test("the null sub-track gets no people block", () => {
     expect(peoplePlanView(scope({ sub_track: null, sub_track_class: "none" }), [hrDom([])])).toBeNull();
@@ -252,8 +259,10 @@ describe("components (source reading)", () => {
     expect(stage).not.toContain("read_only");
     expect(stage).not.toContain("notCounted.reason");
     expect(stage).toContain("const rowCanAct = canAct;");
-    expect(stage).toContain('<th scope="col">판정</th>');
-    expect(stage).toContain('<th scope="col">판정 기록</th>');
+    // i18n: headers resolve through the catalogs — pin the key calls (판정 is
+    // unconditional; 판정 기록 renders only for editors, never hidden per tab).
+    expect(stage).toContain('<th scope="col">{tc("judgement")}</th>');
+    expect(stage).toContain('{rowCanAct && <th scope="col">{t("judgementRecord")}</th>}');
   });
   test("the stage renders the plan readiness tab, step tags, previous-scope and excluded disclosures", () => {
     for (const id of ["dd-plan-readiness", "dd-step-tags", "dd-previous-scope", "dd-excluded", "dd-not-counted", "dd-tab-count"]) expect(stage).toContain(id);

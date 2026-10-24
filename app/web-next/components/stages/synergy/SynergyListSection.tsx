@@ -12,21 +12,22 @@ import { profileHrefFor } from "./synergyFormat.ts";
 import { analysisGroupKey, targetLabel } from "./synergyFormat.ts";
 import type { SynergyStageState } from "./useSynergyList.ts";
 import type { SynergyAnalysis } from "./types.ts";
+import { useTranslations } from "next-intl";
 
-export function SynergyListSection({ ctx }: { ctx: SynergyStageState }) {
+export function SynergyListSection({ ctx }: { ctx: SynergyStageState }) {const tr = useTranslations(); const t = useTranslations("stages.s3.synergyListSection"); const tc = useTranslations("common");
   const { analyses, canCurate, setShowNewForm, showNewForm, selectedId, openDetail, rerun, removeAnalysis, hasInProgress, opportunityId, dealScoped, scope, setScope, setOppSel, opps } = ctx;
   // A project id (or unknown id) is not an opportunity: no analysis can be linked to it.
   const oppKnown = !!opportunityId && opps.some((o) => o.id === opportunityId);
   const startDisabledReason = !canCurate
-    ? "시너지 분석은 analyst 권한이 필요합니다."
+    ? t("synergyAnalysisRequiresTheAnalyst")
     : !opportunityId || (opps.length > 0 && !oppKnown)
-      ? "이 딜에 연결된 원천 기회가 없어 딜 기준으로 분석을 시작할 수 없습니다."
+      ? t("noOriginatingOpportunityLinkedTo")
       : null;
   const dealEmpty = dealScoped && scope === "deal" && analyses !== null && analyses.length === 0;
   return (
-    <section aria-label="분석 대상 회사" className="market-section">
+    <section aria-label={t("companiesInAnalysisScope")} className="market-section">
         <SectionToolbar
-          title="시너지 분석 목록"
+          title={t("synergyAnalysisList")}
           icon=""
           count={analyses?.length ?? 0}
           actions={
@@ -37,24 +38,24 @@ export function SynergyListSection({ ctx }: { ctx: SynergyStageState }) {
                 onClick={() => setShowNewForm((v) => !v)}
                 aria-expanded={showNewForm}
               >
-                ＋ 새 분석
+                {t("newAnalysis")}
               </button>
             ) : null
           }
         />
 
         {dealScoped && (
-          <div role="group" aria-label="분석 범위" className="flex flex-wrap gap-1 mb-2">
-            <button type="button" className={scope === "deal" ? "btn-primary btn-sm" : "btn-ghost btn-sm"} aria-pressed={scope === "deal"} onClick={() => setScope("deal")}>이 딜만</button>
-            <button type="button" className={scope === "all" ? "btn-primary btn-sm" : "btn-ghost btn-sm"} aria-pressed={scope === "all"} onClick={() => setScope("all")}>전체</button>
+          <div role="group" aria-label={t("analysisScope")} className="flex flex-wrap gap-1 mb-2">
+            <button type="button" className={scope === "deal" ? "btn-primary btn-sm" : "btn-ghost btn-sm"} aria-pressed={scope === "deal"} onClick={() => setScope("deal")}>{t("thisDealOnly")}</button>
+            <button type="button" className={scope === "all" ? "btn-primary btn-sm" : "btn-ghost btn-sm"} aria-pressed={scope === "all"} onClick={() => setScope("all")}>{tc("all")}</button>
           </div>
         )}
 
         {analyses === null ? (
-          <p>불러오는 중...</p>
+          <p>{tc("loading")}</p>
         ) : dealEmpty ? (
           <div className="text-[length:var(--fs-body)]" role="status">
-            <p className="mb-2">이 딜에 연결된 시너지 분석이 없습니다.</p>
+            <p className="mb-2">{t("noSynergyAnalysesLinkedTo")}</p>
             <button
               type="button"
               className="btn-primary"
@@ -62,32 +63,32 @@ export function SynergyListSection({ ctx }: { ctx: SynergyStageState }) {
               aria-describedby={startDisabledReason ? "synergy-deal-start-reason" : undefined}
               onClick={() => { if (opportunityId) setOppSel(opportunityId); setShowNewForm(true); setTimeout(() => document.querySelector(".sizing-new-form")?.scrollIntoView({ block: "center" }), 0); }}
             >
-              이 딜로 분석 시작
+              {t("startAnalysisForThisDeal")}
             </button>
             {startDisabledReason && <p id="synergy-deal-start-reason" className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{startDisabledReason}</p>}
-            <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">다른 딜의 분석은 「전체」에서 볼 수 있습니다. 분석 대상은 다음 화면에서 직접 고르며, 자동으로 제출되지 않습니다.</p>
+            <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("analysesOfOtherDealsAre")}</p>
           </div>
         ) : analyses.length === 0 ? (
           <div className="text-[length:var(--fs-body)]">
             <p className="text-[color:var(--muted-fg)] mb-2">
-              등록된 시너지 분석이 없습니다. 분석은 <strong>그룹 → 계열사 → 시너지 분석</strong> 순서로 진행합니다 — 먼저 그룹·계열사 프로파일이 필요합니다.
+              {t("noSynergyAnalysesRegisteredAnalysis")} <strong>{t("groupAffiliatesSynergyAnalysis")}</strong> {t("orderGroupAndAffiliateProfiles")}
             </p>
-            <Link href={profileHrefFor(opportunityId)} className="btn-ghost btn-sm">그룹·계열사 프로파일 등록 →</Link>
-            <span className="ml-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">프로파일을 만든 뒤 이 화면으로 돌아와 「＋ 새 분석」을 누르세요.</span>
+            <Link href={profileHrefFor(opportunityId)} className="btn-ghost btn-sm">{t("registerGroupAndAffiliateProfiles")}</Link>
+            <span className="ml-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("afterCreatingTheProfileCome")}</span>
           </div>
         ) : (
           <div className="table-scroll">
-          <table className="data-table list-table synergy-list-table table-fixed-pct tmin-56" aria-label="분석 대상 회사 목록">
-            <caption className="sr-only">분석 대상 회사 목록</caption>
+          <table className="data-table list-table synergy-list-table table-fixed-pct tmin-56" aria-label={t("companyListInAnalysisScope")}>
+            <caption className="sr-only">{t("companyListInAnalysisScope2")}</caption>
             <ColGroup widths={SYNERGY_COL_PCT} />
             <thead>
               <tr>
-                <th scope="col">회사명</th>
-                <th scope="col">연결 기회</th>
-                <th scope="col">구분</th>
-                <th scope="col">분석 상태</th>
-                <th scope="col" className="col-date">분석일</th>
-                <th scope="col"><span className="sr-only">작업</span></th>
+                <th scope="col">{t("companyName")}</th>
+                <th scope="col">{t("linkedOpportunity")}</th>
+                <th scope="col">{tc("division")}</th>
+                <th scope="col">{tc("analysisStatus")}</th>
+                <th scope="col" className="col-date">{tc("analysisDate")}</th>
+                <th scope="col"><span className="sr-only">{tc("actions")}</span></th>
               </tr>
             </thead>
             <tbody>
@@ -124,7 +125,7 @@ export function SynergyListSection({ ctx }: { ctx: SynergyStageState }) {
                       // 연결 기회 셀의 리포트 버튼이 일관되게 담당한다.
                       return (
                         <td className="cell-primary align-top" rowSpan={groupLen}>
-                          <span className="font-semibold">{targetLabel(companyCell)}</span>
+                          <span className="font-semibold">{targetLabel(companyCell, tr)}</span>
                         </td>
                       );
                     })()}
@@ -132,26 +133,26 @@ export function SynergyListSection({ ctx }: { ctx: SynergyStageState }) {
                       <button
                         type="button"
                         className={a.opportunity_name ? "text-[length:var(--fs-caption)] text-left underline-offset-2 hover:underline" : "text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] text-left underline-offset-2 hover:underline"}
-                        title="시너지 정합성 리포트 열기"
+                        title={t("openSynergyConsistencyReport")}
                         onClick={() => openDetail(a)}
                       >
-                        {a.opportunity_name ?? "— (시장 연계만)"}
+                        {a.opportunity_name ?? t("marketLinkageOnly")}
                       </button>
                       {scope === "all" && dealScoped && opportunityId && a.opportunity_id === opportunityId && (
-                        <span className="control-chip status-green ml-1">이 딜</span>
+                        <span className="control-chip status-green ml-1">{t("thisDeal")}</span>
                       )}
                     </td>
-                    <td>{a.target_type ? <span className="control-chip status-not-started">{a.target_type === "group" ? "그룹" : "계열사"}</span> : <span className="control-chip status-amber" title="기존 별도 등록 분석(legacy)">legacy</span>}</td>
+                    <td>{a.target_type ? <span className="control-chip status-not-started">{a.target_type === "group" ? t("group") : tc("affiliate")}</span> : <span className="control-chip status-amber" title={t("legacySeparatelyRegisteredAnalysis")}>legacy</span>}</td>
                     <td>
                       {inProgress ? (
-                        <span className="status-chip status-amber">분석 중 ({a.current_step}/5단계)</span>
+                        <span className="status-chip status-amber">{tc("analyzingOpen")}{a.current_step}{t("n5Steps")}</span>
                       ) : a.status === "completed" && a.rerun_in_progress ? (
                         // ADR-0132 — 재분석 진행 중에도 이전 완료 버전이 그대로 표시된다.
-                        <span className="status-chip status-amber" title="이전 완료 버전은 그대로 표시되며, 재분석이 성공해야만 새 버전으로 교체됩니다.">재분석 중 ({a.current_step ?? 0}/5단계, 이전 v{a.latest_version ?? 1} 유지)</span>
+                        <span className="status-chip status-amber" title={t("thePreviousCompletedVersionStays")}>{t("item")}{a.current_step ?? 0}{t("n5StepsPreviousV")}{a.latest_version ?? 1} {tc("keptSuffix")}</span>
                       ) : a.status === "completed" && a.error_message ? (
-                        <span className="status-chip status-red" title={`${a.error_message} — 표시 중인 버전은 이전 완료 버전입니다.`}>재분석 실패 (v{a.latest_version ?? 1} 유지)</span>
+                        <span className="status-chip status-red" title={t("p1TheDisplayedVersionIs", { p1: a.error_message })}>{t("failedV")}{a.latest_version ?? 1} {tc("keptSuffix")}</span>
                       ) : (
-                        <span className="status-chip status-green">분석 완료 (v{a.latest_version ?? 1})</span>
+                        <span className="status-chip status-green">{tc("analysisCompleteV")}{a.latest_version ?? 1})</span>
                       )}
                     </td>
                     <td className="col-date tabular-nums">{(a.completed_at ?? a.created_at).slice(0, 10)}</td>
@@ -160,15 +161,15 @@ export function SynergyListSection({ ctx }: { ctx: SynergyStageState }) {
                         <button
                           type="button"
                           className="btn-ghost btn-sm"
-                          title={a.target_type ? "같은 분석 행을 재사용해 새 버전으로 재실행합니다" : "기존 별도 등록(legacy) 분석은 재실행할 수 없습니다 — 레지스트리 대상 새 분석을 생성하세요"}
+                          title={a.target_type ? t("reusesTheSameAnalysisRow") : t("legacySeparatelyRegisteredAnalysesCannot")}
                           onClick={() => { void rerun(a, { stayOnList: true }); }}
                         >
-                          재분석
+                          {tc("reanalyze")}
                         </button>
                       )}
                       {!busy && canCurate && (
-                        <button type="button" className="btn-danger btn-sm" title="이 시너지 분석을 삭제합니다" onClick={() => removeAnalysis(a)}>
-                          삭제
+                        <button type="button" className="btn-danger btn-sm" title={t("deletesThisSynergyAnalysis")} onClick={() => removeAnalysis(a)}>
+                          {tc("delete")}
                         </button>
                       )}
                     </span></td>
@@ -180,7 +181,7 @@ export function SynergyListSection({ ctx }: { ctx: SynergyStageState }) {
           </table>
           </div>
         )}
-        {hasInProgress && <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" role="status">분석이 진행 중입니다 — 완료되면 목록이 자동으로 갱신됩니다.</p>}
+        {hasInProgress && <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" role="status">{t("analysisInProgressTheList")}</p>}
       </section>
   );
 }

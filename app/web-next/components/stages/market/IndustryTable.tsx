@@ -2,41 +2,43 @@
 
 // Split from components/stages/MarketAnalysisStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import type { MarketAnalysisStageState } from "./useMarketList.ts";
+import { KO_DATA, isDownstreamRelation } from "../../../lib/ko-data-values.ts";
 import { ColGroup } from "../../ui.tsx";
 import type { FlatIndustryRow } from "./grouping.ts";
 
 // 분석 대상 산업 목록 6열 — 산업명·분석 상태가 가장 긴 텍스트 열.
 const INDUSTRY_COL_PCT = [26, 8, 10, 22, 12, 22] as const;
 import type { AnalysisInfo } from "./types.ts";
+import { useTranslations } from "next-intl";
 
-export function IndustryTable({ ctx, rows }: { ctx: MarketAnalysisStageState; rows?: FlatIndustryRow[] }) {
+export function IndustryTable({ ctx, rows }: { ctx: MarketAnalysisStageState; rows?: FlatIndustryRow[] }) {const t = useTranslations("stages.s1.industryTable"); const tc = useTranslations("common");
   const { overview, editing, selectedIndustry, setEditing, canCurate, pinBusyId, togglePin, loadDetail, savingEdit, visibleIndustries, flatRows, saveEdit, deleteIndustry, STALE_DAYS, relDate, rerunAnalysis } = ctx;
   const shown = rows ?? flatRows;
   return (
     <>{overview === null ? (
-          <p>불러오는 중...</p>
+          <p>{tc("loading")}</p>
         ) : overview.industries.length === 0 ? (
-          <p className="text-[color:var(--muted-fg)] italic">등록된 산업이 없습니다. "신규 산업 분석"으로 시작하세요.</p>
+          <p className="text-[color:var(--muted-fg)] italic">{t("noIndustriesRegisteredStartWith")}</p>
         ) : visibleIndustries.length === 0 ? (
-          <p className="text-[color:var(--muted-fg)] italic">검색·필터 조건에 맞는 산업이 없습니다.</p>
+          <p className="text-[color:var(--muted-fg)] italic">{t("noIndustriesMatchTheSearch")}</p>
         ) : shown.length === 0 ? (
           null
         ) : (
-          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-          <table className="data-table list-table market-list-table table-fixed-pct tmin-64" aria-label="분석 대상 산업 목록">
-            <caption className="sr-only">분석 대상 산업 목록</caption>
+          <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+          <table className="data-table list-table market-list-table table-fixed-pct tmin-64" aria-label={t("industryListInAnalysisScope")}>
+            <caption className="sr-only">{t("industryListInAnalysisScope2")}</caption>
             <ColGroup widths={INDUSTRY_COL_PCT} />
             <thead>
               <tr>
-                <th scope="col">산업명</th>
-                <th scope="col">KSIC 코드</th>
-                <th scope="col">연결 드라이버</th>
+                <th scope="col">{t("industryName")}</th>
+                <th scope="col">{t("ksicCode")}</th>
+                <th scope="col">{t("linkedDrivers")}</th>
                 {/* 분석 상태는 가장 긴 텍스트 열(재분석 진행률·버전 유지 문구 칩) —
                     10rem에서는 3줄로 뭉개지므로 14rem으로 늘린다(max-width는
                     market-list-table이 72rem으로 상향, 아래 styles.css 참조). */}
-                <th scope="col">분석 상태</th>
-                <th scope="col" className="col-date">분석일</th>
-                <th scope="col"><span className="sr-only">작업</span></th>
+                <th scope="col">{tc("analysisStatus")}</th>
+                <th scope="col" className="col-date">{tc("analysisDate")}</th>
+                <th scope="col"><span className="sr-only">{tc("actions")}</span></th>
               </tr>
             </thead>
             <tbody>
@@ -48,13 +50,13 @@ export function IndustryTable({ ctx, rows }: { ctx: MarketAnalysisStageState; ro
                 const busy = inProgress || !!a?.rerun_in_progress;
                 // 큐 위치 표기(UX-4) — 같은 앵커의 대기열에서 몇 번째인지 칩 본문에 노출.
                 const queueLabel = (() => {
-                  if (a?.status !== "pending") return "연계 대기";
+                  if (a?.status !== "pending") return t("linkagePending");
                   const sibs = (overview?.industries ?? [])
                     .map((i2) => i2.analysis)
                     .filter((x): x is AnalysisInfo => Boolean(x) && x!.status === "pending" && x!.after_analysis_id === a.after_analysis_id)
                     .sort((x, y) => x.created_at.localeCompare(y.created_at));
                   const idx = sibs.findIndex((x) => x.id === a.id);
-                  return idx >= 0 ? `연계 대기 · ${idx + 1}번째` : "연계 대기";
+                  return idx >= 0 ? t("linkagePendingP1", { p1: idx + 1 }) : t("linkagePending2");
                 })();
                 const analysisDate = a ? (a.completed_at ?? a.created_at).slice(0, 10) : null;
                 const stale = a?.status === "completed" && analysisDate
@@ -66,7 +68,7 @@ export function IndustryTable({ ctx, rows }: { ctx: MarketAnalysisStageState; ro
                     <td className="cell-primary">
                       {isEditing ? (
                         <input
-                          aria-label="산업명 수정"
+                          aria-label={t("editIndustryName")}
                           value={editing.name}
                           onChange={(e) => setEditing({ ...editing, name: e.target.value })}
                           className="sizing-new-input"
@@ -82,8 +84,8 @@ export function IndustryTable({ ctx, rows }: { ctx: MarketAnalysisStageState; ro
                             type="button"
                             disabled={pinBusyId === ind.id}
                             className={ind.pinned ? "text-[color:var(--amber-fg)]" : "text-[color:var(--muted-fg)] hover:text-[color:var(--amber-fg)]"}
-                            title={ind.pinned ? "핵심 산업 고정 해제" : "핵심 산업으로 고정 — '핵심만 보기'에서 최상위로 표시됩니다"}
-                            aria-label={ind.pinned ? `중요 표시 해제: ${ind.name_ko}` : `중요 표시: ${ind.name_ko}`}
+                            title={ind.pinned ? t("unpinTheHomeIndustry") : t("pinAsHomeIndustryShown")}
+                            aria-label={ind.pinned ? t("unpinP1", { p1: ind.name_ko }) : t("pinP1", { p1: ind.name_ko })}
                             aria-pressed={Boolean(ind.pinned)}
                             onClick={() => void togglePin(ind)}
                           >
@@ -93,14 +95,14 @@ export function IndustryTable({ ctx, rows }: { ctx: MarketAnalysisStageState; ro
                           {relation && (
                             <>
                               <span aria-hidden="true" className="text-[color:var(--muted-fg)]">↳</span>
-                              <span className={`status-chip ${relation === "전방" || relation === "전전방" ? "status-in-progress" : "status-amber"}`}>{relation}</span>
+                              <span className={`status-chip ${isDownstreamRelation(relation) ? "status-in-progress" : "status-amber"}`}>{relation}</span>
                             </>
                           )}
                           {onToggle && (
                             <button
                               type="button"
                               className="text-[color:var(--muted-fg)] hover:text-[color:var(--fg)]"
-                              title={expanded ? "연계 산업 접기" : "연계 산업 펼치기"}
+                              title={expanded ? t("collapseLinkedIndustries") : t("expandLinkedIndustries")}
                               aria-expanded={expanded}
                               onClick={onToggle}
                             >
@@ -110,7 +112,7 @@ export function IndustryTable({ ctx, rows }: { ctx: MarketAnalysisStageState; ro
                           <button
                             type="button"
                             className={relation ? "text-left underline-offset-2 hover:underline" : "font-semibold text-left underline-offset-2 hover:underline"}
-                            title="분석 리포트 열기"
+                            title={t("openAnalysisReport")}
                             onClick={() => loadDetail(ind.id)}
                           >
                             {ind.name_ko}
@@ -119,10 +121,10 @@ export function IndustryTable({ ctx, rows }: { ctx: MarketAnalysisStageState; ro
                             <button
                               type="button"
                               className="status-chip status-not-started"
-                              title={expanded ? "연계 산업 접기" : "연계 산업 펼치기"}
+                              title={expanded ? t("collapseLinkedIndustries2") : t("expandLinkedIndustries2")}
                               onClick={onToggle ?? undefined}
                             >
-                              연계 {childCount}건
+                              {t("linkage")} {childCount}{tc("countUnit")}
                             </button>
                           )}
                         </span>
@@ -131,47 +133,47 @@ export function IndustryTable({ ctx, rows }: { ctx: MarketAnalysisStageState; ro
                     <td>
                       {isEditing ? (
                         <input
-                          aria-label="KSIC 코드 수정"
+                          aria-label={t("editKsicCode")}
                           value={editing.code}
                           onChange={(e) => setEditing({ ...editing, code: e.target.value })}
-                          placeholder="예: 28121"
+                          placeholder={t("eG28121")}
                           className="sizing-new-input sizing-new-input-sm"
                         />
                       ) : (
                         <code className="dd-item-id">{ind.ksic_code ?? "—"}</code>
                       )}
                     </td>
-                    <td className="tabular-nums">{ind.driver_count}건</td>
+                    <td className="tabular-nums">{ind.driver_count}{tc("countUnit")}</td>
                     <td>
                       {a?.status === "pending" ? (
-                        <span className="status-chip status-not-started" title="선행 산업 분석이 완료되면 자동으로 시작됩니다. 시작 전에는 언제든 재분석 모달에서 제외할 수 있습니다.">{queueLabel}</span>
+                        <span className="status-chip status-not-started" title={t("startsAutomaticallyOnceThePrerequisite")}>{queueLabel}</span>
                       ) : inProgress ? (
-                        <span className="status-chip status-amber">분석 중 ({a?.current_step ?? 0}/8단계)</span>
+                        <span className="status-chip status-amber">{tc("analyzingOpen")}{a?.current_step ?? 0}{t("n8Steps")}</span>
                       ) : a?.status === "completed" && a.rerun_in_progress ? (
                         // ADR-0131 — 재분석 진행 중에도 status는 여전히 이전(완료) 버전을 가리킨다.
                         // 새 버전은 성공해야만 "교체"되므로, 지금 화면에 보이는 건 이전 버전 그대로다.
-                        <span className="status-chip status-amber" title="이전 완료 버전은 그대로 표시되며, 재분석이 성공해야만 새 버전으로 교체됩니다.">재분석 중 ({a.current_step ?? 0}/8단계, 이전 v{a.latest_version ?? 1} 유지)</span>
+                        <span className="status-chip status-amber" title={t("thePreviousCompletedVersionStays")}>{t("item")}{a.current_step ?? 0}{t("n8StepsPreviousV")}{a.latest_version ?? 1} {tc("keptSuffix")}</span>
                       ) : a?.status === "completed" && a.error_message ? (
                         // 보호 모드 재분석이 LLM 장애로 실패한 직후 — status/completed_at은 그대로,
                         // error_message만 이번 시도 실패 사유로 남는다(날짜·버전 변경 없음).
-                        <span className="status-chip status-red" title={`${a.error_message} — 표시 중인 버전은 이전 완료 버전입니다.`}>재분석 실패 (v{a.latest_version ?? 1} 유지)</span>
+                        <span className="status-chip status-red" title={t("p1TheDisplayedVersionIs", { p1: a.error_message })}>{t("failedV")}{a.latest_version ?? 1} {tc("keptSuffix")}</span>
                       ) : stale ? (
-                        <span className="status-chip status-amber" title="분석일이 90일을 지났습니다 — 재분석로 최신화하세요.">업데이트 권장 (v{a?.latest_version ?? 1})</span>
+                        <span className="status-chip status-amber" title={t("theAnalysisDateIsOver")}>{t("updateRecommendedV")}{a?.latest_version ?? 1})</span>
                       ) : a?.status === "completed" && a.data_quality === "all_synthesis" ? (
                         // ADR-0131 후속 — 최신 완료 버전의 모든 단계가 AI 미설정/실패로
                         // 결정론 합성값으로 채워졌다. 수치를 전혀 신뢰할 수 없으므로
                         // "분석 완료"와 시각적으로 구별되는 경고 상태로 표시한다.
-                        <span className="status-chip status-red" title="이 버전은 전체 단계가 AI 미설정/실패로 합성(더미) 값입니다 — 수치를 신뢰하지 말고 재분석하세요.">분석 완료 (v{a.latest_version ?? 1}) — 합성 데이터</span>
+                        <span className="status-chip status-red" title={t("allStepsOfThisVersion")}>{tc("analysisCompleteV")}{a.latest_version ?? 1}{t("synthesizedData")}</span>
                       ) : a?.status === "completed" && a.data_quality === "partial_synthesis" ? (
-                        <span className="status-chip status-amber" title="이 버전은 일부 단계가 AI 미설정/실패로 합성(더미) 값입니다 — 리포트에서 어느 단계인지 확인 후 필요시 재분석하세요.">분석 완료 (v{a.latest_version ?? 1}) — 일부 합성</span>
+                        <span className="status-chip status-amber" title={t("someStepsOfThisVersion")}>{tc("analysisCompleteV")}{a.latest_version ?? 1}{t("partiallySynthesized")}</span>
                       ) : a?.status === "completed" ? (
-                        <span className="status-chip status-green">분석 완료 (v{a.latest_version ?? 1})</span>
-                      ) : a?.status === "failed" && a.error_message && (a.error_message.startsWith("선행 분석 실패") || a.error_message.startsWith("루트 재분석") || a.error_message.startsWith("선행 분석 장기")) ? (
-                        <span className="status-chip status-not-started" title={`${a.error_message} — 재분석 완료 후 모달에서 다시 선택하거나, 해당 산업을 직접 분석할 수 있습니다.`}>시작 취소</span>
+                        <span className="status-chip status-green">{tc("analysisCompleteV")}{a.latest_version ?? 1})</span>
+                      ) : a?.status === "failed" && a.error_message && (a.error_message.startsWith(KO_DATA.analysisErrorPrereqFailed) || a.error_message.startsWith(KO_DATA.analysisErrorRoot) || a.error_message.startsWith(KO_DATA.analysisErrorPrereqLong)) ? (
+                        <span className="status-chip status-not-started" title={t("p1AfterCompletesPickAgain", { p1: a.error_message })}>{t("cancelStart")}</span>
                       ) : a?.status === "failed" ? (
-                        <span className="status-chip status-red" title={a.error_message ?? "파이프라인 실행 중 오류가 발생했습니다."}>분석 실패</span>
+                        <span className="status-chip status-red" title={a.error_message ?? t("anErrorOccurredWhileRunning")}>{t("analysisFailed")}</span>
                       ) : (
-                        <span className="status-chip status-not-started">분석 대기</span>
+                        <span className="status-chip status-not-started">{t("analysisPending")}</span>
                       )}
                     </td>
                     <td className="col-date">
@@ -185,10 +187,10 @@ export function IndustryTable({ ctx, rows }: { ctx: MarketAnalysisStageState; ro
                       {isEditing ? (
                         <>
                           <button type="button" className="btn-ghost btn-sm" disabled={savingEdit || !editing.name.trim()} onClick={saveEdit}>
-                            {savingEdit ? "저장 중..." : "저장"}
+                            {savingEdit ? tc("saving") : tc("save")}
                           </button>
                           <button type="button" className="btn-ghost btn-sm" onClick={() => setEditing(null)}>
-                            취소
+                            {tc("cancel")}
                           </button>
                         </>
                       ) : (
@@ -197,30 +199,30 @@ export function IndustryTable({ ctx, rows }: { ctx: MarketAnalysisStageState; ro
                             <button
                               type="button"
                               className="btn-ghost btn-sm sizing-rerun-btn"
-                              title={stale ? "분석일이 90일 지났습니다" : "분석 실패 또는 갱신 필요 시 새 버전으로 재실행"}
+                              title={stale ? t("analysisDateIsOver90") : t("asANewVersionOn")}
                               onClick={() => rerunAnalysis(a.id, ind.name_ko)}
                             >
-                              재분석
+                              {tc("reanalyze")}
                             </button>
                           )}
                           {!busy && (
                             <button
                               type="button"
                               className="btn-ghost btn-sm"
-                              title="산업명·KSIC 코드 수정"
+                              title={t("editIndustryNameAndKsic")}
                               onClick={() => setEditing({ id: ind.id, name: ind.name_ko, code: ind.ksic_code ?? "" })}
                             >
-                              수정
+                              {tc("edit")}
                             </button>
                           )}
                           {!busy && canCurate && (
                             <button
                               type="button"
                               className="btn-danger btn-sm"
-                              title="이 산업과 시장분석 기록을 삭제합니다"
+                              title={t("deletesThisIndustryAndIts")}
                               onClick={() => deleteIndustry(ind)}
                             >
-                              삭제
+                              {tc("delete")}
                             </button>
                           )}
                         </>

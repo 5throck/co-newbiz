@@ -157,6 +157,6 @@ export async function DELETE(request: Request) {
     appendAudit(db, { actor: auth.auth.userId, action: "master_data_delete", target: `${table.name}:${body.id}`, now: new Date().toISOString() });
     return ok({ table: table.name, id: body.id.trim() });
   } catch {
-    return badRequest("referenced_row", "다른 데이터가 이 행을 참조하고 있습니다 — 참조를 먼저 정리하세요.");
+    return badRequest("referenced_row", "Other data references this row — clean up the references first.");
   }
 }

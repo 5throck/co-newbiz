@@ -49,7 +49,7 @@ function humanSession(request: Request): { ctx: AuthContext } | { response: Resp
   if (AGENT_KEYS.has(ctx.userId)) {
     return { response: forbidden("agent_forbidden", "An agent identity cannot confirm a decision proposal (boundary #1/#2).") };
   }
-  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "결정 확정은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Decision confirmation requires the analyst role or higher." });
   if (denied) return { response: denied };
   return { ctx };
 }

@@ -7,8 +7,9 @@ import { type CapabilityGapRow, summarizeGap } from "../../../lib/capability-gap
 import { useEffect } from "react";
 import type { useBrownfieldBase } from "./useBrownfieldBase.ts";
 import type { WebProposalResponse, UniRecoResponse, UniCriteria, EvalItem, EvalCategoryScore, FinancialsResp } from "./types.ts";
+import { useTranslations } from "next-intl";
 
-export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>) {
+export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>) {const t = useTranslations("stages.s67.useBrownfieldUniverse"); const tc = useTranslations("common");
   const { savingUniverse, selected, universeDraft, setSavingUniverse, setError, loadDetail, setEditingUniverse, setUniReco, setUniRecoApplied, setUniverseDraft, setGapHint, gapHint, opportunityId, setSelected, webBusy, setWebBusy, setWebProposals, setWebNote, setWebSource, uniBusy, setUniBusy, setEvalItems, setEvalScores, setFinancials } = prev;
 
   const universeModalFocus = useModalFocus(() => { if (!savingUniverse) closeUniverseEditor(); });
@@ -32,7 +33,7 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
       setUniReco(null);
       setUniRecoApplied(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "목표 시장 정의 저장 실패");
+      setError(err instanceof Error ? err.message : t("failedToSaveTheTarget"));
     } finally {
       setSavingUniverse(false);
     }
@@ -73,37 +74,37 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
   }
 
   // 목표 시장 정의 수정 폼 — 수정 모달 안에서만 쓰인다.
-  function UniverseForm() {
+  function UniverseForm() {const t = useTranslations("stages.s67.useBrownfieldUniverse"); const tc = useTranslations("common");
     return (
       <form
         className="sizing-new-form mb-0"
         onSubmit={(e) => { e.preventDefault(); void saveUniverse(); }}
-        aria-label="목표 시장 정의 수정"
+        aria-label={tc("editTargetMarketDefinition")}
       >
         <label className="text-[length:var(--fs-caption)] block mb-3">
-          <span className="block mb-1">정의 * (후보 풀의 범위)</span>
+          <span className="block mb-1">{t("definitionTheCandidatePoolS")}</span>
           <textarea
             value={universeDraft.definition}
             onChange={(e) => setUniverseDraft({ ...universeDraft, definition: e.target.value })}
-            placeholder="예: 국내 상장 로봇 부품·시스템 업체 전체"
+            placeholder={t("eGAllListedDomestic")}
             required
             rows={3}
             className="sizing-new-input w-full"
           />
         </label>
         <label className="text-[length:var(--fs-caption)] w-32 shrink-0 block mb-3">
-          <span className="block mb-1">최소 후보 수</span>
+          <span className="block mb-1">{t("minimumCandidateCount")}</span>
           <input type="number" min={1} value={universeDraft.min_long_list} onChange={(e) => setUniverseDraft({ ...universeDraft, min_long_list: e.target.value })} className="sizing-new-input sizing-new-input-sm w-full" />
         </label>
         {gapHint && (
           <p className="mb-3 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-            참고(강제 공식 아님): S3 필요 역량 중 미보유 {gapHint.unmet}건 · 부분충족 {gapHint.partial}건
+            {t("referenceNotAForcedFormula")} {gapHint.unmet}{t("itemSPartiallyMet")} {gapHint.partial}{tc("countUnit")}
           </p>
         )}
         <div className="flex items-center justify-end gap-2">
-          <button type="button" className="btn-ghost btn-sm" onClick={closeUniverseEditor} disabled={savingUniverse}>취소</button>
+          <button type="button" className="btn-ghost btn-sm" onClick={closeUniverseEditor} disabled={savingUniverse}>{tc("cancel")}</button>
           <button type="submit" className="btn-ghost btn-sm" disabled={savingUniverse || !universeDraft.definition.trim()}>
-            {savingUniverse ? "저장 중..." : "목표 시장 저장"}
+            {savingUniverse ? tc("saving") : t("saveTargetMarket")}
           </button>
         </div>
       </form>
@@ -134,7 +135,7 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
       setWebNote(res.data.note);
       setWebSource(res.data.source);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "웹검색 제안 생성 실패");
+      setError(err instanceof Error ? err.message : t("failedToGenerateWebSearch"));
     } finally {
       setWebBusy(false);
     }
@@ -149,7 +150,7 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
       setUniReco(res.data);
       setUniRecoApplied(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "정의 초안 생성 실패");
+      setError(err instanceof Error ? err.message : t("failedToGenerateTheDefinition"));
     } finally {
       setUniBusy(false);
     }
@@ -175,7 +176,7 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
         setEvalItems((prev) => ({ ...prev, [targetId]: r.data.items }));
         setEvalScores((prev) => ({ ...prev, [targetId]: r.data.scores }));
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "재무·기술 평가 불러오기 실패"));
+      .catch((e) => setError(e instanceof Error ? e.message : t("failedToLoadTheFinancial")));
   }
 
   function loadFinancials(companyId: string) {

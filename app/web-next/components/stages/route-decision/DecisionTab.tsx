@@ -5,11 +5,13 @@ import { Fragment, useState } from "react";
 import { buildDecisionDetail } from "../../../lib/route-decision-history-view.ts";
 import { SectionToolbar } from "../../layout.tsx";
 import { ColGroup, ParamTable } from "../../ui.tsx";
-import { DECISION_COL_PCT, OVERRIDDEN_SUBS, BF_SUB, GF_SUB } from "./constants.ts";
+import { DECISION_COL_PCT, OVERRIDDEN_SUBS } from "./constants.ts";
+import { resolveLabelTokens, SUB_TRACK_KEY } from "../../../lib/label-keys.ts";
 import type { RouteDecisionStageState } from "./useRouteDecision.ts";
 import type { OpportunityRow } from "./types.ts";
+import { useTranslations } from "next-intl";
 
-export function DecisionTab({ ctx, selected }: { ctx: RouteDecisionStageState; selected: OpportunityRow }) {
+export function DecisionTab({ ctx, selected }: { ctx: RouteDecisionStageState; selected: OpportunityRow }) {const tr = useTranslations(); const t = useTranslations("stages.s4.decisionTab"); const tc = useTranslations("common");
   const { tab, decisions, saveDecision, canAct, track, setTrack, setIntent, setSubTrack, subTrack, subs, overrideBlocked, intent, stagingHint, rationale, setRationale, alternatives, setAlternatives, draftSaving, performSaveDraft, saving, canSubmit, draftSavedAt, totalScore, allScored, setTab, historyYear, historyMonth, historyOpen, setHistoryOpen, setHistoryYear, setHistoryMonth, sessions } = ctx;
   const [expandedId, setExpandedId] = useState<string | null>(null);
   // D-22: when a decision is already on record, show what was recorded above the (empty) form.
@@ -18,41 +20,41 @@ export function DecisionTab({ ctx, selected }: { ctx: RouteDecisionStageState; s
     <>{tab === "decision" && (
         <div className="card">
           <h2>
-            {selected.name} — 트랙·라우트 결정{" "}
+            {selected.name} {t("trackAndRouteDecision")}{" "}
             <span className={`status-chip ${decisions.length > 0 ? "status-green" : "status-amber"}`}>
-              {decisions.length > 0 ? "결정 기록됨" : "결정 대기"}
+              {decisions.length > 0 ? t("decisionRecorded") : t("decisionPending")}
             </span>
           </h2>
           <ParamTable
-            caption="검토 안건 사실"
-            labelHeader="사실"
+            caption={t("reviewedDealFacts")}
+            labelHeader={t("fact")}
             valueAlign="start"
             rows={[
               {
-                label: "시장",
-                value: `${selected.market_scope ?? "—"}${selected.market_size_krw_m ? ` (규모 ${selected.market_size_krw_m.toLocaleString()} 백만원)` : ""}${selected.growth_rate !== null ? ` · CAGR ${(selected.growth_rate * 100).toFixed(1)}%` : ""}`,
+                label: t("market"),
+                value: `${selected.market_scope ?? "—"}${selected.market_size_krw_m ? t("sizeP1KrwMillions", { p1: selected.market_size_krw_m.toLocaleString() }) : ""}${selected.growth_rate !== null ? ` · CAGR ${(selected.growth_rate * 100).toFixed(1)}%` : ""}`,
               },
-              { label: "발굴 근거", value: selected.rationale ?? "—" },
+              { label: t("discoveryEvidence"), value: selected.rationale ?? "—" },
             ]}
           />
 
           {recorded && (
             <ParamTable
-              caption="기록된 결정"
-              labelHeader="기록된 결정"
+              caption={tc("recordedDecision")}
+              labelHeader={tc("recordedDecision")}
               valueAlign="start"
               rows={[
-                { label: "트랙", value: recorded.track === "brownfield" ? "Brownfield" : "Greenfield" },
-                { label: "라우트", value: recorded.sub_track ? (recorded.track === "brownfield" ? BF_SUB[recorded.sub_track] ?? recorded.sub_track : GF_SUB[recorded.sub_track] ?? recorded.sub_track) : "—" },
-                { label: "결정 근거", value: recorded.rationale || "—" },
-                { label: "검토한 대안", value: recorded.alternatives_considered || "—" },
-                { label: "결정자/일시", value: `${recorded.decided_by} · ${recorded.decided_at.slice(0, 10)}` },
+                { label: t("track"), value: recorded.track === "brownfield" ? "Brownfield" : "Greenfield" },
+                { label: tc("route"), value: recorded.sub_track ? resolveLabelTokens(SUB_TRACK_KEY[recorded.sub_track] ?? recorded.sub_track, tr) : "—" },
+                { label: t("decisionEvidence"), value: recorded.rationale || "—" },
+                { label: t("alternativesReviewed"), value: recorded.alternatives_considered || "—" },
+                { label: t("deciderTimestamp"), value: `${recorded.decided_by} · ${recorded.decided_at.slice(0, 10)}` },
               ]}
             />
           )}
           {recorded && (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-              아래 양식은 새 결정(또는 초안)을 입력하는 용도입니다. 위 내용이 현재 기록된 결정입니다.
+              {t("theFormBelowIsFor")}
             </p>
           )}
 
@@ -60,72 +62,72 @@ export function DecisionTab({ ctx, selected }: { ctx: RouteDecisionStageState; s
           <fieldset disabled={!canAct} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
             <div className="flex flex-wrap items-end gap-4 mb-3">
               <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1 font-medium">트랙 <span className="text-[color:var(--red-fg)]">*</span></span>
+                <span className="block mb-1 font-medium">{t("track2")} <span className="text-[color:var(--red-fg)]">*</span></span>
                 <select value={track} onChange={(e) => { setTrack(e.target.value as "greenfield" | "brownfield"); setIntent(""); setSubTrack(""); }} className="sizing-new-input">
-                  <option value="greenfield">Greenfield — 자체 역량으로 진출</option>
-                  <option value="brownfield">Brownfield — 기존 기업·자산과 결합</option>
+                  <option value="greenfield">{t("greenfieldEnterOnOurOwn")}</option>
+                  <option value="brownfield">{t("brownfieldCombineWithAnExisting")}</option>
                 </select>
               </label>
               <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1 font-medium">라우트 {track === "brownfield" ? <><span className="text-[color:var(--red-fg)]">*</span> (Brownfield)</> : "(선택)"}</span>
+                <span className="block mb-1 font-medium">{tc("route")} {track === "brownfield" ? <><span className="text-[color:var(--red-fg)]">*</span> (Brownfield)</> : t("optional")}</span>
                 <select value={subTrack} onChange={(e) => setSubTrack(e.target.value)} className="sizing-new-input">
-                  <option value="">선택...</option>
+                  <option value="">{tc("selectEllipsis")}</option>
                   {Object.entries(subs)
                     .filter(([k]) => !overrideBlocked || !OVERRIDDEN_SUBS.includes(k))
                     .map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
               </label>
               <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1 font-medium">의도 (Stage 1) <span className="text-[color:var(--red-fg)]">*</span></span>
+                <span className="block mb-1 font-medium">{t("intentStage1")} <span className="text-[color:var(--red-fg)]">*</span></span>
                 <select value={intent} onChange={(e) => setIntent(e.target.value as "" | "integration" | "capability_access")} className="sizing-new-input">
-                  <option value="">선택...</option>
-                  <option value="integration">통합</option>
-                  <option value="capability_access">역량접근</option>
+                  <option value="">{tc("selectEllipsis")}</option>
+                  <option value="integration">{t("consolidated")}</option>
+                  <option value="capability_access">{tc("capabilityApproach")}</option>
                 </select>
               </label>
             </div>
             {overrideBlocked && (
               <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">
-                사전배제: 통제 필요도가 높고 + 역량접근 의도에서는 전략 제휴·R&BD·CVC 라우트를 선택할 수 없습니다 (합산 점수와 무관).
+                {t("withHighControlNeedPlus")}
               </p>
             )}
             {stagingHint && (
               <p className="text-[length:var(--fs-caption)] text-[color:var(--accent)] mb-2">
-                스테이징 권고: 시장 불확실성이 높고 통제 필요도가 중간 이하 — 소수지분/공동개발 + 사전 협약된 step-up(call option / ROFR / 전환 트리거)을 권고합니다.
+                {t("stagingRecommendationHighMarketUncertainty")}
               </p>
             )}
             <label className="text-[length:var(--fs-caption)] block mb-2">
-              <span className="block mb-1">결정 근거 * (S1 시장분석·S3 적합성 판단을 인용 — 채점을 보완하는 서술)</span>
-              <textarea value={rationale} onChange={(e) => setRationale(e.target.value)} rows={3} required className="sizing-new-input" style={{ width: "100%" }} placeholder="예: S3 적합성 평가 Go(시너지 72) — 자사 역량 보유, 시장 성장 지속..." />
+              <span className="block mb-1">{t("decisionEvidenceCitesTheS1")}</span>
+              <textarea value={rationale} onChange={(e) => setRationale(e.target.value)} rows={3} required className="sizing-new-input" style={{ width: "100%" }} placeholder={t("eGS3FitEvaluation")} />
             </label>
             <label className="text-[length:var(--fs-caption)] block mb-3">
-              <span className="block mb-1">검토한 대안 * (고려했으나 선택하지 않은 트랙·라우트와 사유 — 초안 저장은 선택, 결정은 필수)</span>
-              <textarea value={alternatives} onChange={(e) => setAlternatives(e.target.value)} rows={2} required className="sizing-new-input" style={{ width: "100%" }} placeholder="고려했지만 선택하지 않은 트랙·라우트와 사유" />
+              <span className="block mb-1">{t("alternativesReviewedTracksAndRoutes")}</span>
+              <textarea value={alternatives} onChange={(e) => setAlternatives(e.target.value)} rows={2} required className="sizing-new-input" style={{ width: "100%" }} placeholder={t("tracksAndRoutesConsideredBut")} />
             </label>
             <div className="flex flex-wrap items-center gap-2">
               {canAct && (
                 <button type="button" className="btn-ghost" disabled={draftSaving} onClick={() => void performSaveDraft()}>
-                  {draftSaving ? "저장 중..." : "저장"}
+                  {draftSaving ? tc("saving") : tc("save")}
                 </button>
               )}
               {canAct && (
                 <button type="submit" className="btn-ghost" disabled={saving || !canSubmit}>
-                  {saving ? "확정 중..." : "결정"}
+                  {saving ? t("confirming") : tc("decision")}
                 </button>
               )}
               <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                {draftSavedAt && `초안 저장됨 · ${draftSavedAt.slice(0, 16).replace("T", " ")} · `}
-                {totalScore !== null ? `합산 ${totalScore} / 3.0 · ` : ""}양 트랙 공통 채점 · 사전배제 검증 자동
+                {draftSavedAt && t("draftSavedP1", { p1: draftSavedAt.slice(0, 16).replace("T", " ") })}
+                {totalScore !== null ? t("totalP130", { p1: totalScore }) : ""}{t("sharedScoringForBothTracks")}
                 {canAct && !allScored && (
                   <>
                     {" · "}
-                    <button type="button" className="btn-ghost btn-sm" onClick={() => setTab("eval")}>평가 근거 탭에서 5기준 완료 →</button>
+                    <button type="button" className="btn-ghost btn-sm" onClick={() => setTab("eval")}>{t("completeTheFiveCriteriaIn")}</button>
                   </>
                 )}
               </span>
             </div>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">
-              저장 = 초안을 서버에 보관(완결성 검증 없음) · 결정 = 5기준·근거 완료 후 불변 기록
+              {t("saveKeepsTheDraftOn")}
             </p>
           </fieldset>
           </form>
@@ -144,48 +146,48 @@ export function DecisionTab({ ctx, selected }: { ctx: RouteDecisionStageState; s
             );
             return (
               <details className="sizing-grade-card mt-3" open={historyOpen} onToggle={(e) => setHistoryOpen(e.currentTarget.open)}>
-                <summary className="cursor-pointer text-[length:var(--fs-body)] font-semibold">결정 이력 ({decisions.length}건) 보기</summary>
+                <summary className="cursor-pointer text-[length:var(--fs-body)] font-semibold">{tc("decisionHistoryOpen")}{decisions.length}{t("itemSView")}</summary>
                 <div className="mt-2">
                   {decisions.length > 0 && (
                     <div className="flex flex-wrap items-center gap-2 mb-2">
                       <label className="text-[length:var(--fs-caption)]">
-                        <span className="sr-only">연도</span>
+                        <span className="sr-only">{t("year")}</span>
                         <select
                           value={historyYear}
                           onChange={(e) => { setHistoryYear(e.target.value); setHistoryMonth(""); }}
                           className="sizing-new-input sizing-new-input-sm"
                         >
-                          <option value="">전체 연도</option>
-                          {years.map((y) => <option key={y} value={y}>{y}년</option>)}
+                          <option value="">{t("allYears")}</option>
+                          {years.map((y) => <option key={y} value={y}>{y}{tc("year")}</option>)}
                         </select>
                       </label>
                       <label className="text-[length:var(--fs-caption)]">
-                        <span className="sr-only">월</span>
+                        <span className="sr-only">{tc("month")}</span>
                         <select
                           value={historyMonth}
                           onChange={(e) => setHistoryMonth(e.target.value)}
                           disabled={!historyYear}
                           className="sizing-new-input sizing-new-input-sm"
                         >
-                          <option value="">전체 월</option>
-                          {months.map((m) => <option key={m} value={m}>{Number(m)}월</option>)}
+                          <option value="">{t("allMonths")}</option>
+                          {months.map((m) => <option key={m} value={m}>{Number(m)}{tc("month")}</option>)}
                         </select>
                       </label>
                     </div>
                   )}
                   {decisions.length === 0 ? (
-                    <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">아직 기록된 결정이 없습니다.</p>
+                    <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">{t("noDecisionsRecordedYet")}</p>
                   ) : filtered.length === 0 ? (
-                    <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">선택한 기간에 기록된 결정이 없습니다.</p>
+                    <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">{t("noDecisionsRecordedInThe")}</p>
                   ) : (
-                    <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-                      <table className="data-table report-table table-fixed-pct tmin-64" aria-label="진출방식 결정 이력">
-                        <caption className="sr-only">진출방식 결정 이력</caption>
+                    <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+                      <table className="data-table report-table table-fixed-pct tmin-64" aria-label={t("routeDecisionHistory")}>
+                        <caption className="sr-only">{t("routeDecisionHistory2")}</caption>
                         <ColGroup widths={DECISION_COL_PCT} />
                         <thead>
                           <tr>
-                            <th scope="col">트랙</th><th scope="col">라우트</th><th scope="col">의도</th>
-                            <th scope="col">채점</th><th scope="col">근거</th><th scope="col">대안</th><th scope="col">결정자/일시</th><th scope="col">상세</th>
+                            <th scope="col">{t("track3")}</th><th scope="col">{tc("route")}</th><th scope="col">{t("intent")}</th>
+                            <th scope="col">{t("scoring")}</th><th scope="col">{tc("evidence")}</th><th scope="col">{t("alternatives")}</th><th scope="col">{t("deciderTimestamp2")}</th><th scope="col">{t("details")}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -201,8 +203,8 @@ export function DecisionTab({ ctx, selected }: { ctx: RouteDecisionStageState; s
                                       {d.track === "brownfield" ? "Brownfield" : "Greenfield"}
                                     </span>
                                   </td>
-                                  <td className="text-[length:var(--fs-caption)]">{d.sub_track ? (d.track === "brownfield" ? BF_SUB[d.sub_track] ?? d.sub_track : GF_SUB[d.sub_track] ?? d.sub_track) : "—"}</td>
-                                  <td className="text-[length:var(--fs-caption)]">{d.intent ? (d.intent === "integration" ? "통합" : "역량접근") : "—"}</td>
+                                  <td className="text-[length:var(--fs-caption)]">{d.sub_track ? resolveLabelTokens(SUB_TRACK_KEY[d.sub_track] ?? d.sub_track, tr) : "—"}</td>
+                                  <td className="text-[length:var(--fs-caption)]">{d.intent ? (d.intent === "integration" ? t("consolidated2") : tc("capabilityApproach")) : "—"}</td>
                                   <td className="text-[length:var(--fs-caption)]">
                                     {d.total_score !== null ? (
                                       <span title={(d.scores ?? []).map((s) => `${s.criterion}: ${s.score} — ${s.evidence_note}`).join("\n")}>
@@ -210,7 +212,7 @@ export function DecisionTab({ ctx, selected }: { ctx: RouteDecisionStageState; s
                                       </span>
                                     ) : "—"}
                                     {d.staging_recommended && (
-                                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--accent)]">step-up 권고</span>
+                                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--accent)]">{t("recommendation")}</span>
                                     )}
                                   </td>
                                   <td className="cell-truncate text-[length:var(--fs-caption)]" title={detail.rationale}>{d.rationale}</td>
@@ -224,7 +226,7 @@ export function DecisionTab({ ctx, selected }: { ctx: RouteDecisionStageState; s
                                       aria-controls={panelId}
                                       onClick={() => setExpandedId(open ? null : d.id)}
                                     >
-                                      {open ? "접기" : "더보기"}
+                                      {open ? tc("collapse") : t("more")}
                                     </button>
                                   </td>
                                 </tr>
@@ -233,16 +235,16 @@ export function DecisionTab({ ctx, selected }: { ctx: RouteDecisionStageState; s
                                     <td colSpan={8} id={panelId}>
                                       <dl className="text-[length:var(--fs-caption)] space-y-2 m-0">
                                         <div>
-                                          <dt className="font-semibold">근거 (전문)</dt>
+                                          <dt className="font-semibold">{t("evidenceFullText")}</dt>
                                           <dd className="m-0" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{detail.rationale}</dd>
                                         </div>
                                         <div>
-                                          <dt className="font-semibold">검토한 대안 (전문)</dt>
+                                          <dt className="font-semibold">{t("alternativesReviewedFullText")}</dt>
                                           <dd className={`m-0 ${detail.alternativesRecorded ? "" : "text-[color:var(--muted-fg)]"}`} style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{detail.alternatives}</dd>
                                         </div>
                                         {detail.scores.length > 0 && (
                                           <div>
-                                            <dt className="font-semibold">채점 근거{detail.totalScore !== null ? ` (합산 ${detail.totalScore} / 3.0)` : ""}</dt>
+                                            <dt className="font-semibold">{t("scoringEvidence")}{detail.totalScore !== null ? t("totalP1302", { p1: detail.totalScore }) : ""}</dt>
                                             <dd className="m-0">
                                               <ul className="m-0 pl-4 list-disc">
                                                 {detail.scores.map((s) => (
@@ -256,12 +258,12 @@ export function DecisionTab({ ctx, selected }: { ctx: RouteDecisionStageState; s
                                         )}
                                         {detail.staging && (
                                           <div>
-                                            <dt className="font-semibold">스테이징 권고 (step-up)</dt>
+                                            <dt className="font-semibold">{t("stagingRecommendation")}</dt>
                                             <dd className="m-0" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{detail.staging}</dd>
                                           </div>
                                         )}
                                         <div>
-                                          <dt className="font-semibold">결정자 / 일시</dt>
+                                          <dt className="font-semibold">{t("deciderTimestamp3")}</dt>
                                           <dd className="m-0 tabular-nums">{detail.decidedBy} · {detail.decidedAtFull}</dd>
                                         </div>
                                       </dl>
@@ -277,13 +279,13 @@ export function DecisionTab({ ctx, selected }: { ctx: RouteDecisionStageState; s
                   )}
                   {sessions.length > 0 && (
                     <>
-                      <SectionToolbar title="위원회 심의 이력" />
+                      <SectionToolbar title={t("committeeDeliberationHistory")} />
                       <ul className="text-[length:var(--fs-body)] space-y-1">
                         {sessions.map((s2) => (
                           <li key={s2.sessionId}>
                             <span className={`status-chip ${s2.status === "done" ? "status-green" : "status-in-progress"}`}>{s2.status}</span>{" "}
                             {s2.decisionMode ?? "—"} · {s2.createdAt.slice(0, 10)} ·{" "}
-                            <a className="text-[color:var(--accent)] underline" href={`/api/opportunities/${encodeURIComponent(selected.id)}/committee-sessions/${s2.sessionId}/minutes`} target="_blank" rel="noreferrer">회의록</a>
+                            <a className="text-[color:var(--accent)] underline" href={`/api/opportunities/${encodeURIComponent(selected.id)}/committee-sessions/${s2.sessionId}/minutes`} target="_blank" rel="noreferrer">{t("meetingMinutes")}</a>
                           </li>
                         ))}
                       </ul>

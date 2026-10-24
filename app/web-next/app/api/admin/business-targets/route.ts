@@ -42,14 +42,14 @@ export async function POST(request: Request) {
     direction?: string;
     target_value?: number | string;
   } | null;
-  if (!body?.group_id?.trim()) return badRequest("invalid_request", "group_id는 필수입니다.");
+  if (!body?.group_id?.trim()) return badRequest("invalid_request", "group_id is required.");
   const direction = parseDirection(body.direction);
-  if (!direction) return badRequest("invalid_direction", "direction은 gte | lte 중 하나입니다.");
+  if (!direction) return badRequest("invalid_direction", "direction must be one of: gte | lte.");
   const targetValue = parseTargetValue(body.target_value);
-  if (targetValue == null) return badRequest("invalid_value", "target_value는 0 이상의 숫자여야 합니다.");
+  if (targetValue == null) return badRequest("invalid_value", "target_value must be a number >= 0.");
   const metricKey = body.metric_key?.trim() ?? "";
   if (!PRESET_KEYS.has(metricKey) && metricKey !== CUSTOM_METRIC_KEY) {
-    return badRequest("invalid_metric", `metric_key는 ${[...PRESET_KEYS, CUSTOM_METRIC_KEY].join(" | ")} 중 하나입니다.`);
+    return badRequest("invalid_metric", `metric_key must be one of: ${[...PRESET_KEYS, CUSTOM_METRIC_KEY].join(" | ")}.`);
   }
   // Preset metrics carry their canonical label; only custom rows name themselves.
   const label = metricKey === CUSTOM_METRIC_KEY ? body.label?.trim() || "" : null;
@@ -69,9 +69,9 @@ export async function POST(request: Request) {
       custom_label_required: "사용자 지정 지표에는 지표명이 필요합니다.",
       duplicate_target: "같은 범위·같은 지표의 기준이 이미 등록되어 있습니다 — 기존 행을 수정하세요.",
       invalid_value: "기준값이 올바르지 않습니다.",
-      insert_failed: "등록에 실패했습니다.",
+      insert_failed: "Registration failed.",
     };
-    return badRequest(result.code, messages[result.code] ?? "등록에 실패했습니다.");
+    return badRequest(result.code, messages[result.code] ?? "Registration failed.");
   }
   return ok({ id: result.id }, 201);
 }
@@ -86,11 +86,11 @@ export async function PUT(request: Request) {
     direction?: string;
     target_value?: number | string;
   } | null;
-  if (!body?.id?.trim()) return badRequest("invalid_request", "id는 필수입니다.");
+  if (!body?.id?.trim()) return badRequest("invalid_request", "id is required.");
   const direction = body.direction !== undefined ? parseDirection(body.direction) : undefined;
-  if (body.direction !== undefined && !direction) return badRequest("invalid_direction", "direction은 gte | lte 중 하나입니다.");
+  if (body.direction !== undefined && !direction) return badRequest("invalid_direction", "direction must be one of: gte | lte.");
   const targetValue = body.target_value !== undefined ? parseTargetValue(body.target_value) : undefined;
-  if (body.target_value !== undefined && targetValue == null) return badRequest("invalid_value", "target_value는 0 이상의 숫자여야 합니다.");
+  if (body.target_value !== undefined && targetValue == null) return badRequest("invalid_value", "target_value must be a number >= 0.");
   const result = updateBusinessTarget({ id: body.id.trim(), direction: direction ?? undefined, targetValue: targetValue ?? undefined, actor: auth.auth.userId });
   if (!result.ok) {
     const messages: Record<string, string> = {
@@ -98,7 +98,7 @@ export async function PUT(request: Request) {
       invalid_value: "기준값이 올바르지 않습니다.",
       no_fields: "수정할 필드가 없습니다.",
     };
-    return badRequest(result.code, messages[result.code] ?? "수정에 실패했습니다.");
+    return badRequest(result.code, messages[result.code] ?? "Update failed.");
   }
   return ok({ id: body.id.trim() });
 }
@@ -109,8 +109,8 @@ export async function DELETE(request: Request) {
   const adminCheck = requireAdmin(auth.auth);
   if (adminCheck) return adminCheck;
   const body = (await request.json().catch(() => null)) as { id?: string; reason?: string } | null;
-  if (!body?.id?.trim()) return badRequest("invalid_request", "id는 필수입니다.");
+  if (!body?.id?.trim()) return badRequest("invalid_request", "id is required.");
   const result = deleteBusinessTarget(body.id.trim(), auth.auth.userId, body.reason?.trim() ?? "");
-  if (!result.ok) return badRequest(result.code, "이미 삭제되었거나 존재하지 않는 기준 행입니다.");
+  if (!result.ok) return badRequest(result.code, "The criterion row is already deleted or does not exist.");
   return ok({ id: body.id.trim() });
 }

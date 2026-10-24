@@ -8,6 +8,7 @@ import { SizingStructureTab } from "./SizingStructureTab.tsx";
 import { SizingGrowthTab, SizingQualitativeTab } from "./SizingGrowthTabs.tsx";
 import { SizingPipelineTab, SizingRegulationTab, SizingRiskTab, SizingValidateTab } from "./SizingAnalysisTabs.tsx";
 import type { IndustryDetail } from "./types.ts";
+import { useTranslations } from "next-intl";
 
 export function SizingReport(props0: {
   detail: IndustryDetail;
@@ -15,13 +16,13 @@ export function SizingReport(props0: {
   stepSummaries: Array<{ step: number; summary: string; source: string; pendingInputs: string[] }> | null;
   analysisId: string | null;
   onAddLinked?: () => void;
-}) {
+}) {const t = useTranslations("stages.s1.sizingReport");
   const h0 = useSizingReport(props0);
   const ctx = { ...h0 };
   const { TABS, tab, setTab } = ctx;
   return (
     <div className="sizing-report text-[length:var(--fs-body)]">
-      <div className="library-tabs" role="tablist" aria-label="리포트 섹션">
+      <div className="library-tabs" role="tablist" aria-label={t("reportSection")}>
         {TABS.map(([key, label]) => (
           <button key={key} type="button" role="tab" aria-selected={tab === key} className={`library-tab ${tab === key ? "library-tab-active" : ""}`} onClick={() => setTab(key)}>
             {label}

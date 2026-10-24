@@ -9,18 +9,18 @@ const now = () => new Date().toISOString();
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string; targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "제외는 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Exclusion requires the analyst role or higher." });
   if (denied) return denied;
   const { oppId, targetId } = await params;
   const body = (await request.json().catch(() => null)) as { reason?: string; gate_evaluation_id?: string } | null;
   const reason = body?.reason?.trim();
-  if (!reason) return badRequest("invalid_request", "제외 사유(reason)는 필수입니다.");
+  if (!reason) return badRequest("invalid_request", "Exclusion reason is required.");
   const db = getDb();
   // ADR-0097 back-compat: optional provenance link to the S6/S7 committee
   // deliberation that proposed this exclusion (0066 nullable column).
   const gateEvaluationId = body?.gate_evaluation_id?.trim() || null;
   if (gateEvaluationId && !db.query("SELECT id FROM gate_evaluation WHERE id = ?").get(gateEvaluationId)) {
-    return badRequest("invalid_request", "gate_evaluation_id가 존재하지 않습니다 — 위원회 세션의 gate_evaluation을 확인하세요.");
+    return badRequest("invalid_request", "gate_evaluation_id does not exist — check the gate_evaluation of the committee session.");
   }
   const existing = db
     .query("SELECT id FROM brownfield_target WHERE id = ? AND opportunity_id = ?")

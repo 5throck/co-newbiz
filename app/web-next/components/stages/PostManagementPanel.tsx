@@ -5,13 +5,16 @@
 // '참고 증적'으로, 외부 brownfield의 통합·전략 제휴 모니터링 읽기 보기를 보여 준다. 판정은 사람의 몫이며
 // 이 패널은 어떤 값도 기록하지 않는다 (전환 결정 기록은 PortfolioStage 의 기존 폼).
 
+import { TranslatorFn } from "../../i18n/config.ts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import { ColGroup, ParamTable } from "../ui.tsx";
-import { GREENFIELD_TRANSITION_HELP, TRANSITION_DECISION_LABEL } from "../../lib/labels.ts";
+import { TRANSITION_DECISION_KEY, TRANSITION_HELP_KEY } from "../../lib/label-keys.ts";
 import { baselineErrorText } from "../../lib/execution-baseline-view.ts";
+import { useTranslations } from "next-intl";
+import { resolveI18n } from "../../lib/execution-baseline-view.ts";
 import {
   applicableItems,
   bpToPercent,
@@ -29,10 +32,10 @@ import {
   type MeasureDraft,
   goalDirectionText,
   goalJudgementMeta,
-  goalJudgementText,
+  goalJudgementI18n,
   isGreenfieldRampUp,
   retentionText,
-  ventureClassText,
+  ventureClassI18n,
   type PostManagementView,
 } from "../../lib/post-management-view.ts";
 
@@ -47,14 +50,19 @@ const PARTNER_MEASURE_COL_PCT = [24, 46, 30] as const;
 /** Column shares (%): item, baseline, actual, variance, state. */
 const VARIANCE_COL_PCT = [40, 14, 14, 14, 18] as const;
 
-const MEASURE_STATUS: Record<string, { icon: string; label: string; cls: string }> = {
-  on_target: { icon: "●", label: "목표 달성", cls: "status-green" },
-  deviation: { icon: "◐", label: "이탈", cls: "status-amber" },
-  insufficient_evidence: { icon: "○", label: "근거 부족", cls: "status-not-started" },
+const MEASURE_STATUS = (tr: TranslatorFn): Record<string, { icon: string; label: string; cls: string }> => ({
+  on_target: { icon: "●", label: "common.goalAttainment", cls: "status-green" },
+  deviation: { icon: "◐", label: "common.churn", cls: "status-amber" },
+  insufficient_evidence: { icon: "○", label: "common.insufficientEvidence", cls: "status-not-started" },
+});
+const measureStatus = (s: string, tr: TranslatorFn) => {
+  const m = MEASURE_STATUS(tr)[s];
+  return m ? { ...m, label: tr(m.label) } : { icon: "?", label: s, cls: "status-not-started" };
 };
-const measureStatus = (s: string) => MEASURE_STATUS[s] ?? { icon: "?", label: s, cls: "status-not-started" };
 
-export function PostManagementPanel({ projectId }: { projectId: string }) {
+export function PostManagementPanel({ projectId }: { projectId: string }) {const tr = useTranslations(); const t = useTranslations("stages.s12.postManagement"); const tc = useTranslations("common");
+  /** Resolve a lib-emitted render reference: catalog key + params, or raw server text passthrough. */
+  const tx = (m: { key: string | null; params: Record<string, string>; text: string | null }): string => (m.key ? tr(m.key, m.params) : m.text ?? "");
   const [view, setView] = useState<PostManagementView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { me } = useAuth();
@@ -66,7 +74,7 @@ export function PostManagementPanel({ projectId }: { projectId: string }) {
       if (isLive()) setView(r.data);
     } catch (e) {
       // Insider (read) gate: the same Korean message the other ADR-0161 GETs show.
-      if (isLive()) setError(baselineErrorText((e as { code?: string } | null)?.code, e instanceof Error ? e.message : "사후 관리 항목을 불러오지 못했습니다."));
+      if (isLive()) setError(tx(baselineErrorText((e as { code?: string } | null)?.code, e instanceof Error ? e.message : t("failedToLoadItems"))));
     }
   }, [projectId]);
 
@@ -88,21 +96,21 @@ export function PostManagementPanel({ projectId }: { projectId: string }) {
   const partner = view.partnership_monitoring;
 
   return (
-    <section className="market-section sizing-step mt-3" aria-label="적용되는 사후 관리 항목" data-testid="pm-panel">
-      <h3 className="sizing-step-title text-[length:var(--fs-body)]"><span className="sizing-step-badge" aria-hidden="true">🧭</span> 적용되는 사후 관리 항목 (ADR-0161)</h3>
+    <section className="market-section sizing-step mt-3" aria-label={t("applicableItems")} data-testid="pm-panel">
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]"><span className="sizing-step-badge" aria-hidden="true">🧭</span> {t("applicableItems2")}</h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-        S12에는 게이트가 없어 아래 항목은 모두 권장이며 어떤 것도 단계를 막지 않습니다. 이 화면은 읽기 전용이고, 판단과 전환 결정은 사람이 기록합니다.
+        {t("s12HasNoGatesSo")}
       </p>
-      <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-        <table className="data-table table-fixed-pct tmin-32" aria-label="적용되는 S12 항목">
-          <caption className="sr-only">이 프로젝트에 적용되는 S12 사후 관리 항목</caption>
+      <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+        <table className="data-table table-fixed-pct tmin-32" aria-label={t("applicableS12Items")}>
+          <caption className="sr-only">{t("s12ItemsApplyingToThis")}</caption>
           <ColGroup widths={ITEM_COL_PCT} />
-          <thead><tr><th scope="col">항목</th><th scope="col">적용</th></tr></thead>
+          <thead><tr><th scope="col">{tc("items")}</th><th scope="col">{tc("apply")}</th></tr></thead>
           <tbody>
             {items.map((it) => (
               <tr key={it.key}>
-                <td>{it.label}</td>
-                <td><span className={`status-chip ${it.cls}`}>{it.chip}</span></td>
+                <td>{resolveI18n(it.label, tr)}</td>
+                <td><span className={`status-chip ${it.cls}`}>{resolveI18n(it.chip, tr)}</span></td>
               </tr>
             ))}
           </tbody>
@@ -111,24 +119,23 @@ export function PostManagementPanel({ projectId }: { projectId: string }) {
 
       {ramp && (
         <div className="mt-3" data-testid="pm-ramp-up">
-          <h4 className="text-[length:var(--fs-body)] mb-1">신규 사업 가동 지표 — S8 사업 목표 대비 (참고 증적)</h4>
+          <h4 className="text-[length:var(--fs-body)] mb-1">{t("newBusinessOperatingMetricsVs")}</h4>
           <p className="text-[length:var(--fs-caption)] mb-1">
-            <span className="status-chip status-not-started">기본 벤처 클래스: {ventureClassText(ramp.default_venture_class)}</span>
-            <span className="status-chip status-not-started ml-1" data-testid="pm-effective-class">현재 적용: {effectiveClassText(ramp.venture_class, ramp.default_venture_class)}</span>
-            {ramp.review_cycle && <span className="status-chip status-not-started ml-1">리뷰 주기 {ramp.review_cycle}</span>}
+            <span className="status-chip status-not-started">{t("defaultVentureClass")} {resolveI18n(ventureClassI18n(ramp.default_venture_class), tr)}</span>
+            <span className="status-chip status-not-started ml-1" data-testid="pm-effective-class">{t("currentlyApplied")} {effectiveClassText(ramp.venture_class, ramp.default_venture_class, (cls) => resolveI18n(ventureClassI18n(cls), tr))}</span>
+            {ramp.review_cycle && <span className="status-chip status-not-started ml-1">{tc("reviewCycle")} {ramp.review_cycle}</span>}
           </p>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-            벤처 클래스는 신규 부지는 성장 주도형, 기존 사업 R&amp;BD는 역량 지원형, 사내벤처는 신생 탐색형이 기본값입니다. 스코어카드를 기록하는 사람이 다르게 지정할 수 있고,
-            기본값과 다르게 지정하면 감사 기록에 남습니다. 목표 대비 값은 참고 증적일 뿐 합격·불합격 판정이 아닙니다.
+            {t("ventureClassDefaultsForNew")}
           </p>
 
-          <h5 className="text-[length:var(--fs-body)] mb-1">S8 사업 목표 ({ramp.goals.length}건)</h5>
+          <h5 className="text-[length:var(--fs-body)] mb-1">{t("s8BusinessGoals")}{ramp.goals.length}{tc("countSuffixParen")}</h5>
           {ramp.goals.length > 0 ? (
-            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-              <table className="data-table table-fixed-pct tmin-40" aria-label="S8 사업 목표 참고">
-                <caption className="sr-only">S8 사업 목표와 스코어카드 판정 (참고)</caption>
+            <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+              <table className="data-table table-fixed-pct tmin-40" aria-label={t("s8BusinessGoalsReference")}>
+                <caption className="sr-only">{t("s8BusinessGoalsAndScorecard")}</caption>
                 <ColGroup widths={RAMP_GOAL_COL_PCT} />
-                <thead><tr><th scope="col">지표</th><th scope="col">이름</th><th scope="col">목표</th><th scope="col">판정</th></tr></thead>
+                <thead><tr><th scope="col">{tc("metric")}</th><th scope="col">{t("name")}</th><th scope="col">{tc("target")}</th><th scope="col">{tc("judgement")}</th></tr></thead>
                 <tbody>
                   {ramp.goals.map((g) => {
                     const m = goalJudgementMeta(g.judgement);
@@ -137,7 +144,7 @@ export function PostManagementPanel({ projectId }: { projectId: string }) {
                         <td className="tabular-nums">goal:{g.metric_key}</td>
                         <td>{g.label ?? g.metric_key}</td>
                         <td className="tabular-nums">{g.target_value.toLocaleString("ko-KR")} {goalDirectionText(g.direction)}</td>
-                        <td><span className={`status-chip ${m.cls}`}>{m.icon} {goalJudgementText(g.judgement)}</span></td>
+                        <td><span className={`status-chip ${m.cls}`}>{m.icon} {resolveI18n(goalJudgementI18n(g.judgement), tr)}</span></td>
                       </tr>
                     );
                   })}
@@ -145,23 +152,23 @@ export function PostManagementPanel({ projectId }: { projectId: string }) {
               </table>
             </div>
           ) : (
-            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">S8에서 기록한 사업 목표가 없습니다.</p>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("noBusinessGoalsRecordedIn")}</p>
           )}
 
-          <h5 className="text-[length:var(--fs-body)] mt-2 mb-1">최신 주기 가동 측정 ({ramp.measures.length}건)</h5>
+          <h5 className="text-[length:var(--fs-body)] mt-2 mb-1">{t("latestCycleOperatingMeasurement")}{ramp.measures.length}{tc("countSuffixParen")}</h5>
           {ramp.measures.length > 0 ? (
-            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-              <table className="data-table table-fixed-pct tmin-48" aria-label="신규 사업 가동 측정">
-                <caption className="sr-only">최신 리뷰 주기의 신규 사업 가동 측정</caption>
+            <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+              <table className="data-table table-fixed-pct tmin-48" aria-label={t("newBusinessOperatingMeasurement")}>
+                <caption className="sr-only">{t("newBusinessOperatingMeasurementFor")}</caption>
                 <ColGroup widths={RAMP_MEASURE_COL_PCT} />
-                <thead><tr><th scope="col">측정</th><th scope="col">클래스</th><th scope="col">목표</th><th scope="col">실적</th><th scope="col">상태</th></tr></thead>
+                <thead><tr><th scope="col">{tc("measurement")}</th><th scope="col">{t("class")}</th><th scope="col">{tc("target")}</th><th scope="col">{tc("actual")}</th><th scope="col">{tc("status")}</th></tr></thead>
                 <tbody>
                   {ramp.measures.map((r, i) => {
-                    const m = measureStatus(r.status);
+                    const m = measureStatus(r.status, tr);
                     return (
                       <tr key={`${r.section}-${r.measure_key}-${i}`}>
                         <td>{r.measure_key}</td>
-                        <td>{ventureClassText(r.venture_class)}</td>
+                        <td>{resolveI18n(ventureClassI18n(r.venture_class), tr)}</td>
                         <td>{r.target_value ?? "—"}</td>
                         <td>{r.actual_value ?? "—"}</td>
                         <td><span className={`status-chip ${m.cls}`}>{m.icon} {m.label}</span></td>
@@ -172,35 +179,35 @@ export function PostManagementPanel({ projectId }: { projectId: string }) {
               </table>
             </div>
           ) : (
-            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">아직 기록된 가동 측정이 없습니다 — portfolio-venture-monitoring 분기 기록이 여기에 표시됩니다.</p>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("noOperatingMeasurementsRecordedYet")}</p>
           )}
 
           {view.baseline_variance && view.baseline_variance.status !== "not_applicable" && (
             <div className="mt-3" data-testid="baseline-variance">
-              <h4 className="text-[length:var(--fs-body)] mb-1">실행 기준선 대비 차이 <span className="note">— S11 확정 기준선 vs 분기 스코어카드 (참고 · 게이트를 막지 않음)</span></h4>
+              <h4 className="text-[length:var(--fs-body)] mb-1">{tc("varianceVsExecutionBaseline")} <span className="note">{t("s11ConfirmedBaselineVsQuarterly")}</span></h4>
               {view.baseline_variance.status === "no_confirmed_baseline" ? (
-                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">확정된 실행 기준선이 없습니다 — S11 화면에서 기준선을 확정하면 분기별 차이가 여기에 표시됩니다.</p>
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("noConfirmedExecutionBaselineOnce")}</p>
               ) : view.baseline_variance.status === "no_scorecard_cycle" ? (
-                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">기준선은 확정되었으나 아직 스코어카드 분기 기록이 없습니다 — 아래 안착 지표를 기록하면 차이가 계산됩니다.</p>
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("theBaselineIsConfirmedBut")}</p>
               ) : (
                 <>
                   <p className="text-[length:var(--fs-caption)] mb-1">
-                    분기 {view.baseline_variance.review_cycle} · 기준선 확정 {view.baseline_variance.baseline_confirmed_at?.slice(0, 10)} ·
-                    {" "}계획대로 {view.baseline_variance.summary.on_plan} · 뒤처짐 {view.baseline_variance.summary.behind} · 앞섬 {view.baseline_variance.summary.ahead} · 근거 부족 {view.baseline_variance.summary.insufficient_evidence}
+                    {tc("quarter")} {view.baseline_variance.review_cycle} {t("baselineConfirmed")} {view.baseline_variance.baseline_confirmed_at?.slice(0, 10)} ·
+                    {" "}{t("asPlanned")} {view.baseline_variance.summary.on_plan} {t("lagging")} {view.baseline_variance.summary.behind} {t("ahead")} {view.baseline_variance.summary.ahead} {t("insufficientEvidence")} {view.baseline_variance.summary.insufficient_evidence}
                   </p>
-                  <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-                    <table className="data-table table-fixed-pct tmin-48" aria-label="실행 기준선 대비 차이">
-                      <caption className="sr-only">실행 기준선 대비 차이</caption>
+                  <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+                    <table className="data-table table-fixed-pct tmin-48" aria-label={tc("varianceVsExecutionBaseline")}>
+                      <caption className="sr-only">{tc("varianceVsExecutionBaseline")}</caption>
                       <ColGroup widths={VARIANCE_COL_PCT} />
-                      <thead><tr><th>항목</th><th className="col-num">기준선</th><th className="col-num">실적</th><th className="col-num">차이</th><th>판정</th></tr></thead>
+                      <thead><tr><th>{tc("items")}</th><th className="col-num">{t("baseline")}</th><th className="col-num">{tc("actual")}</th><th className="col-num">{t("difference")}</th><th>{tc("judgement")}</th></tr></thead>
                       <tbody>{view.baseline_variance.rows.map((r) => (
                         <tr key={`${r.area}:${r.key}`}>
-                          <td title={r.note ?? undefined}>{r.label}{r.comparison === "higher_is_better_assumed" && <span className="note ml-1" title="방향 정보가 없어 높을수록 좋은 것으로 읽었습니다">(↑ 가정)</span>}</td>
+                          <td title={r.note ?? undefined}>{r.label}{r.comparison === "higher_is_better_assumed" && <span className="note ml-1" title={t("noDirectionInformationSoRead")}>{t("assumptionAbove")}</span>}</td>
                           <td className="col-num tabular-nums">{r.baseline ?? "—"}</td>
                           <td className="col-num tabular-nums">{r.actual ?? "—"}</td>
                           <td className="col-num tabular-nums">{r.variance != null ? `${r.variance > 0 ? "+" : ""}${r.variance}` : "—"}</td>
                           {/* P5 신호등 — 색 + 글리프 + 텍스트 3중 부호화 (design-guide.md P5) */}
-                          <td>{r.status === "on_plan" ? <span className="status-chip status-green"><span aria-hidden="true">●</span> 계획대로</span> : r.status === "behind" ? <span className="status-chip status-amber"><span aria-hidden="true">◐</span> 뒤처짐</span> : r.status === "ahead" ? <span className="status-chip status-green"><span aria-hidden="true">●</span> 앞섬</span> : <span className="status-chip status-not-started"><span aria-hidden="true">○</span> 근거 부족</span>}</td>
+                          <td>{r.status === "on_plan" ? <span className="status-chip status-green"><span aria-hidden="true">●</span> {t("asPlanned2")}</span> : r.status === "behind" ? <span className="status-chip status-amber"><span aria-hidden="true">◐</span> {t("lagging2")}</span> : r.status === "ahead" ? <span className="status-chip status-green"><span aria-hidden="true">●</span> {t("ahead2")}</span> : <span className="status-chip status-not-started"><span aria-hidden="true">○</span> {tc("insufficientEvidence")}</span>}</td>
                         </tr>
                       ))}</tbody>
                     </table>
@@ -213,10 +220,10 @@ export function PostManagementPanel({ projectId }: { projectId: string }) {
           {canAct && <ScorecardForm projectId={projectId} ramp={ramp} onRecorded={() => load()} />}
 
           <details className="mt-2">
-            <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">전환 결정 용어 — 신규 사업에서의 뜻</summary>
-            <ul className="sizing-note-list mt-1" aria-label="신규 사업 전환 결정 용어">
-              {Object.entries(GREENFIELD_TRANSITION_HELP).map(([k, text]) => (
-                <li key={k}><strong>{TRANSITION_DECISION_LABEL[k] ?? k}</strong>: {text}</li>
+            <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">{t("transitionDecisionTermsMeaningIn")}</summary>
+            <ul className="sizing-note-list mt-1" aria-label={t("newBusinessTransitionDecisionTerms")}>
+              {Object.keys(TRANSITION_HELP_KEY).map((k) => (
+                <li key={k}><strong>{tr(TRANSITION_DECISION_KEY[k] ?? k)}</strong>: {tr(TRANSITION_HELP_KEY[k])}</li>
               ))}
             </ul>
           </details>
@@ -225,17 +232,17 @@ export function PostManagementPanel({ projectId }: { projectId: string }) {
 
       {integ && (
         <div className="mt-3" data-testid="pm-integration">
-          <h4 className="text-[length:var(--fs-body)] mb-1">통합 모니터링 — 인수 후 시너지·핵심인력 (읽기 전용)</h4>
+          <h4 className="text-[length:var(--fs-body)] mb-1">{t("integratedMonitoringSynergyAndKey")}</h4>
           <ParamTable
-            caption="통합 모니터링 요약"
+            caption={t("integratedMonitoringSummary")}
             valueAlign="end"
             rows={[
-              { label: "시너지 인증 건수", value: integ.synergy.certifications.toLocaleString("ko-KR"), unit: "건" },
-              { label: "최신 시너지 런레이트", value: integ.synergy.latest ? `${bpToPercent(integ.synergy.latest.run_rate_bp)} (${integ.synergy.latest.sustained_quarters}분기 지속)` : "—", source: integ.synergy.latest ? `서명 ${integ.synergy.latest.signed_at.slice(0, 10)}` : undefined },
-              { label: "핵심인력 재직", value: integ.key_talent.active.toLocaleString("ko-KR"), unit: "명" },
-              { label: "아쉬운 퇴사", value: integ.key_talent.departed_regretted.toLocaleString("ko-KR"), unit: "명" },
-              { label: "계획된 퇴사·이동", value: integ.key_talent.departed_planned.toLocaleString("ko-KR"), unit: "명" },
-              { label: "핵심인력 잔존율", value: retentionText(integ.key_talent.retention_pct) },
+              { label: t("synergyCertificationCount"), value: integ.synergy.certifications.toLocaleString("ko-KR"), unit: tc("countUnit") },
+              { label: t("latestSynergyRunRate"), value: integ.synergy.latest ? t("p1P2QuartersSustained", { p1: bpToPercent(integ.synergy.latest.run_rate_bp), p2: integ.synergy.latest.sustained_quarters }) : "—", source: integ.synergy.latest ? t("signedP1", { p1: integ.synergy.latest.signed_at.slice(0, 10) }) : undefined },
+              { label: t("keyTalentEmployment"), value: integ.key_talent.active.toLocaleString("ko-KR"), unit: tc("peopleUnit") },
+              { label: t("regrettedAttrition"), value: integ.key_talent.departed_regretted.toLocaleString("ko-KR"), unit: tc("peopleUnit") },
+              { label: t("plannedRetirementsAndMoves"), value: integ.key_talent.departed_planned.toLocaleString("ko-KR"), unit: tc("peopleUnit") },
+              { label: t("keyTalentRetentionRate"), value: retentionText(integ.key_talent.retention_pct) },
             ]}
           />
         </div>
@@ -243,23 +250,23 @@ export function PostManagementPanel({ projectId }: { projectId: string }) {
 
       {partner && (
         <div className="mt-3" data-testid="pm-partnership">
-          <h4 className="text-[length:var(--fs-body)] mb-1">전략 제휴 모니터링 — JV·제휴 조건과 성과 (읽기 전용)</h4>
+          <h4 className="text-[length:var(--fs-body)] mb-1">{t("strategicAllianceMonitoringJvAnd")}</h4>
           <p className="text-[length:var(--fs-caption)] mb-1">
-            기록된 JV 조건 {partner.jv_terms.toLocaleString("ko-KR")}건
-            {partner.review_cycle && <span className="status-chip status-not-started ml-2">리뷰 주기 {partner.review_cycle}</span>}
+            {t("recordedJvConditions")} {partner.jv_terms.toLocaleString("ko-KR")}{tc("countUnit")}
+            {partner.review_cycle && <span className="status-chip status-not-started ml-2">{tc("reviewCycle")} {partner.review_cycle}</span>}
           </p>
           {partner.measures.length > 0 ? (
-            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-              <table className="data-table table-fixed-pct tmin-32" aria-label="전략 제휴 측정">
-                <caption className="sr-only">최신 주기의 전략 제휴 측정</caption>
+            <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+              <table className="data-table table-fixed-pct tmin-32" aria-label={t("strategicAllianceMeasurement")}>
+                <caption className="sr-only">{t("strategicAllianceMeasurementForThe")}</caption>
                 <ColGroup widths={PARTNER_MEASURE_COL_PCT} />
-                <thead><tr><th scope="col">구분</th><th scope="col">측정</th><th scope="col">상태</th></tr></thead>
+                <thead><tr><th scope="col">{tc("division")}</th><th scope="col">{tc("measurement")}</th><th scope="col">{tc("status")}</th></tr></thead>
                 <tbody>
                   {partner.measures.map((m, i) => {
-                    const st = measureStatus(m.status);
+                    const st = measureStatus(m.status, tr);
                     return (
                       <tr key={`${m.section}-${m.measure_key}-${i}`}>
-                        <td>{m.section === "financial" ? "재무" : m.section === "strategic" ? "전략" : m.section}</td>
+                        <td>{m.section === "financial" ? tc("finance") : m.section === "strategic" ? t("strategy") : m.section}</td>
                         <td>{m.measure_key}</td>
                         <td><span className={`status-chip ${st.cls}`}>{st.icon} {st.label}</span></td>
                       </tr>
@@ -269,7 +276,7 @@ export function PostManagementPanel({ projectId }: { projectId: string }) {
               </table>
             </div>
           ) : (
-            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">아직 기록된 전략 제휴 측정이 없습니다.</p>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("noStrategicAllianceMeasurementsRecorded")}</p>
           )}
         </div>
       )}
@@ -279,10 +286,10 @@ export function PostManagementPanel({ projectId }: { projectId: string }) {
 
 /** Column shares (%): key, actual, target, status, evidence, observed, remove. */
 const FORM_COL_PCT = [22, 10, 10, 16, 22, 12, 8] as const;
-const STATUS_OPTION_LABEL: Record<string, string> = { on_target: "목표 달성", deviation: "이탈", insufficient_evidence: "근거 부족" };
+const STATUS_OPTION_LABEL = (tr: TranslatorFn): Record<string, string> => ({ on_target: "common.goalAttainment", deviation: "common.churn", insufficient_evidence: "common.insufficientEvidence" });
 
 /** S12 안착 지표 기록 — human-only greenfield scorecard cycle. A collapsed disclosure; the server stays the authority. */
-function ScorecardForm({ projectId, ramp, onRecorded }: { projectId: string; ramp: GreenfieldRampUp; onRecorded: () => Promise<void> }) {
+function ScorecardForm({ projectId, ramp, onRecorded }: { projectId: string; ramp: GreenfieldRampUp; onRecorded: () => Promise<void> }) {const tr = useTranslations(); const t = useTranslations("stages.s12.postManagement"); const tc = useTranslations("common");
   const def = ramp.default_venture_class;
   const effective = ramp.venture_class?.effective ?? def ?? "";
   const uidRef = useRef(0);
@@ -307,7 +314,7 @@ function ScorecardForm({ projectId, ramp, onRecorded }: { projectId: string; ram
     setBusy(true);
     try {
       const r = await api.post<{ review_cycle: string; measures: number }>(`/api/projects/${encodeURIComponent(projectId)}/post-management/scorecard`, built.payload);
-      setSuccess(`${r.data.review_cycle} 주기의 측정 ${r.data.measures}건을 기록했습니다. 목표 대비 값은 참고 증적이며 판정은 사람이 합니다.`); // INTERIM-WORDING
+      setSuccess(t("recordedP2MeasurementSFor", { p1: r.data.review_cycle, p2: r.data.measures })); // INTERIM-WORDING
       setRows([emptyMeasureDraft(nextUid())]);
       setCycle("");
       setNote("");
@@ -322,81 +329,80 @@ function ScorecardForm({ projectId, ramp, onRecorded }: { projectId: string; ram
 
   return (
     <details className="mt-2" data-testid="pm-scorecard-form">
-      <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">S12 안착 지표 기록</summary>
+      <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">{t("recordS12StabilizationMetrics")}</summary>
       <div className="mt-2">
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-          신규 사업의 한 리뷰 주기에 해당하는 측정을 한 번에 기록합니다. 기록한 주기는 바꿀 수 없고, 같은 지표를 다음 분기에 다시 기록하려면 새 분석 실행이 필요합니다.
-          값은 참고 증적이며 합격·불합격 판정이 아닙니다.
+          {t("recordsOneNewBusinessReview")}
         </p>
         <div className="flex flex-wrap gap-3 mb-2">
           <label className="text-[length:var(--fs-caption)]" htmlFor="pm-sc-cycle">
-            <span className="block mb-1">리뷰 주기</span>
+            <span className="block mb-1">{tc("reviewCycle")}</span>
             <input id="pm-sc-cycle" className="sizing-new-input" value={cycle} placeholder="2026-Q4" onChange={(e) => setCycle(e.target.value)} />
           </label>
           <label className="text-[length:var(--fs-caption)]" htmlFor="pm-sc-class">
-            <span className="block mb-1">벤처 클래스 (기본값: {ventureClassText(def)})</span>
+            <span className="block mb-1">{t("ventureClassDefault")} {resolveI18n(ventureClassI18n(def), tr)})</span>
             <select id="pm-sc-class" className="sizing-new-input" value={vclass} onChange={(e) => setVclass(e.target.value)}>
-              {VENTURE_CLASS_VALUES.map((c) => <option key={c} value={c}>{ventureClassText(c)}</option>)}
+              {VENTURE_CLASS_VALUES.map((c) => <option key={c} value={c}>{resolveI18n(ventureClassI18n(c), tr)}</option>)}
             </select>
           </label>
         </div>
         {override && (
           <div className="mb-2">
-            <label className="text-[length:var(--fs-caption)] block" htmlFor="pm-sc-note">기본값과 다르게 지정하는 사유 (필수)</label>
+            <label className="text-[length:var(--fs-caption)] block" htmlFor="pm-sc-note">{t("reasonForDeviatingFromThe")}</label>
             <textarea id="pm-sc-note" className="sizing-new-input mt-1 w-full" rows={3} maxLength={SCORECARD_FORM_LIMITS.note} required aria-required="true"
               value={note} onChange={(e) => setNote(e.target.value)} />
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              기본값과 다른 클래스는 변경 이력(누가, 언제, 사유)이 감사 기록에 남습니다.
+              {t("aClassDifferentFromThe")}
             </p>
           </div>
         )}
 
-        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-          <table className="data-table table-fixed-pct tmin-48" aria-label="기록할 측정 지표">
-            <caption className="sr-only">이번 리뷰 주기에 기록할 측정 지표</caption>
+        <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+          <table className="data-table table-fixed-pct tmin-48" aria-label={t("metricsToRecord")}>
+            <caption className="sr-only">{t("metricsToRecordThisReview")}</caption>
             <ColGroup widths={FORM_COL_PCT} />
             <thead>
               <tr>
-                <th scope="col">지표</th><th scope="col">실적</th><th scope="col">목표</th><th scope="col">상태</th>
-                <th scope="col">증적 참조</th><th scope="col">관측일</th><th scope="col"><span className="sr-only">삭제</span></th>
+                <th scope="col">{tc("metric")}</th><th scope="col">{tc("actual")}</th><th scope="col">{tc("target")}</th><th scope="col">{tc("status")}</th>
+                <th scope="col">{t("evidenceReference")}</th><th scope="col">{t("observationDate")}</th><th scope="col"><span className="sr-only">{tc("delete")}</span></th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r, i) => (
                 <tr key={r.uid}>
                   <td>
-                    <select aria-label={`${i + 1}번째 지표 키`} className="sizing-new-input w-full" value={r.measure_key} onChange={(e) => patch(r.uid, { measure_key: e.target.value })}>
-                      <option value="">선택…</option>
+                    <select aria-label={t("metricKeyP1", { p1: i + 1 })} className="sizing-new-input w-full" value={r.measure_key} onChange={(e) => patch(r.uid, { measure_key: e.target.value })}>
+                      <option value="">{t("item")}</option>
                       {keys.map((k) => <option key={k} value={k}>{k}</option>)}
                       {ramp.goals.map((g) => <option key={g.goal_id} value={`goal:${g.metric_key}`}>goal:{g.metric_key}</option>)}
-                      <option value={CUSTOM_GOAL_OPTION}>사업 목표 직접 입력 (goal:…)</option>
+                      <option value={CUSTOM_GOAL_OPTION}>{t("enterBusinessGoalDirectlyGoal")}</option>
                     </select>
                     {r.measure_key === CUSTOM_GOAL_OPTION && (
-                      <input aria-label={`${i + 1}번째 사업 목표 키`} className="sizing-new-input w-full mt-1" placeholder="metric_key" value={r.custom_goal} onChange={(e) => patch(r.uid, { custom_goal: e.target.value })} />
+                      <input aria-label={t("businessGoalKeyP1", { p1: i + 1 })} className="sizing-new-input w-full mt-1" placeholder="metric_key" value={r.custom_goal} onChange={(e) => patch(r.uid, { custom_goal: e.target.value })} />
                     )}
                   </td>
-                  <td><input type="number" step="any" aria-label={`${i + 1}번째 실적`} className="sizing-new-input w-full" value={r.value} onChange={(e) => patch(r.uid, { value: e.target.value })} /></td>
-                  <td><input type="number" step="any" aria-label={`${i + 1}번째 목표`} className="sizing-new-input w-full" value={r.target_value} onChange={(e) => patch(r.uid, { target_value: e.target.value })} /></td>
+                  <td><input type="number" step="any" aria-label={t("actualP1", { p1: i + 1 })} className="sizing-new-input w-full" value={r.value} onChange={(e) => patch(r.uid, { value: e.target.value })} /></td>
+                  <td><input type="number" step="any" aria-label={t("targetP1", { p1: i + 1 })} className="sizing-new-input w-full" value={r.target_value} onChange={(e) => patch(r.uid, { target_value: e.target.value })} /></td>
                   <td>
-                    <select aria-label={`${i + 1}번째 상태`} className="sizing-new-input w-full" value={r.status} onChange={(e) => patch(r.uid, { status: e.target.value })}>
-                      {MEASURE_STATUS_VALUES.map((s) => <option key={s} value={s}>{STATUS_OPTION_LABEL[s]}</option>)}
+                    <select aria-label={t("statusP1", { p1: i + 1 })} className="sizing-new-input w-full" value={r.status} onChange={(e) => patch(r.uid, { status: e.target.value })}>
+                      {MEASURE_STATUS_VALUES.map((s) => <option key={s} value={s}>{STATUS_OPTION_LABEL(tr)[s]}</option>)}
                     </select>
                   </td>
-                  <td><input aria-label={`${i + 1}번째 증적 참조`} title={EVIDENCE_REF_HINT} placeholder="doc:… / src:… / https://…" maxLength={SCORECARD_FORM_LIMITS.evidence_ref} className="sizing-new-input w-full" value={r.evidence_ref} onChange={(e) => patch(r.uid, { evidence_ref: e.target.value })} /></td>
-                  <td><input type="date" aria-label={`${i + 1}번째 관측일`} className="sizing-new-input w-full" value={r.observed_at} onChange={(e) => patch(r.uid, { observed_at: e.target.value })} /></td>
+                  <td><input aria-label={t("evidenceReferenceP1", { p1: i + 1 })} title={EVIDENCE_REF_HINT} placeholder="doc:… / src:… / https://…" maxLength={SCORECARD_FORM_LIMITS.evidence_ref} className="sizing-new-input w-full" value={r.evidence_ref} onChange={(e) => patch(r.uid, { evidence_ref: e.target.value })} /></td>
+                  <td><input type="date" aria-label={t("observationDateP1", { p1: i + 1 })} className="sizing-new-input w-full" value={r.observed_at} onChange={(e) => patch(r.uid, { observed_at: e.target.value })} /></td>
                   <td>
-                    <button type="button" className="btn-ghost btn-sm" disabled={rows.length <= 1 || busy} aria-label={`${i + 1}번째 지표 삭제`} onClick={() => setRows((rs) => rs.filter((x) => x.uid !== r.uid))}>삭제</button>
+                    <button type="button" className="btn-ghost btn-sm" disabled={rows.length <= 1 || busy} aria-label={t("deleteMetricP1", { p1: i + 1 })} onClick={() => setRows((rs) => rs.filter((x) => x.uid !== r.uid))}>{tc("delete")}</button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">증적 참조 형식: {EVIDENCE_REF_HINT}. 실적·목표가 비어 있으면 상태는 '근거 부족'이어야 합니다.</p>
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">{t("evidenceReferenceFormat")} {EVIDENCE_REF_HINT}{t("whenActualOrTargetIs")}</p>
 
         <div className="flex gap-2 mt-2">
-          <button type="button" className="btn-ghost btn-sm" disabled={busy || rows.length >= SCORECARD_FORM_LIMITS.measures * 2} onClick={() => setRows((rs) => [...rs, emptyMeasureDraft(nextUid())])}>+ 지표 추가</button>
-          <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void submit()}>{busy ? "기록 중…" : "이 주기 기록"}</button>
+          <button type="button" className="btn-ghost btn-sm" disabled={busy || rows.length >= SCORECARD_FORM_LIMITS.measures * 2} onClick={() => setRows((rs) => [...rs, emptyMeasureDraft(nextUid())])}>{t("addMetric")}</button>
+          <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void submit()}>{busy ? t("item2") : t("thisCycleSRecord")}</button>
         </div>
         <div aria-live="polite" role="status" className="min-h-[1.25rem] text-[length:var(--fs-caption)] mt-1">
           {success && <p>✓ {success}</p>}

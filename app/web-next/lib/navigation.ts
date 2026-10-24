@@ -4,7 +4,11 @@
 // JSX, so new standard screens shipped without a menu entry and section order
 // drifted with no way to detect it. tests/unit/navigation.test.ts enforces
 // page↔menu parity and the canonical order against this file.
-import type { ReactNode } from "react";
+//
+// i18n (design 2026-10-23-i18n-ui-adoption): `label` holds a catalog KEY
+// ("nav.inbox"), not display text — AppShell resolves it through next-intl at
+// render time. tests/unit/navigation.test.ts pins the keys and checks each
+// one resolves in the ko master catalog.
 
 export interface NavChild {
   href: string;
@@ -25,37 +29,37 @@ export interface NavSection {
 export const NAV_SECTIONS: NavSection[] = [
   {
     // Wave U-1 (design §3.2): layer 1 of the two-layer IA. The legacy
-    // "단계 화면(기존)" group is gone — stage routes stay as routes (ADR-0120
+    // stage group is gone — stage routes stay as routes (ADR-0120
     // compatibility, see NON_MENU_ROUTES) but are reached through the deal
     // stage stepper, not the sidebar. The deal-scoped "Overview" entry is
     // rendered dynamically by AppShell (it needs the current deal id).
-    label: "업무",
+    label: "nav.section.work",
     items: [
-      { href: "/inbox", label: "결정 대기함" },
-      { href: "/deals", label: "검토/안건 보드" },
-      { href: "/projects/archives", label: "아카이브" },
+      { href: "/inbox", label: "nav.inbox" },
+      { href: "/deals", label: "nav.dealBoard" },
+      { href: "/projects/archives", label: "nav.archives" },
     ],
   },
   {
-    label: "분석·참조",
+    label: "nav.section.reference",
     items: [
-      { href: "/benchmarks", label: "벤치마킹 사례" },
-      { href: "/library", label: "문서 허브" },
+      { href: "/benchmarks", label: "nav.benchmarks" },
+      { href: "/library", label: "nav.library" },
       // 모든 문서(문서 허브) 다음에 사용자용 안내서가 온다(2026-10-23 위키 인앱 뷰어 설계 D6).
-      { href: "/wiki", label: "사용 안내서" },
-      { href: "/glossary", label: "용어집" },
-      { href: "/strategy", label: "R&BD 전략" },
+      { href: "/wiki", label: "nav.wiki" },
+      { href: "/glossary", label: "nav.glossary" },
+      { href: "/strategy", label: "nav.strategy" },
       // 플로우 콘솔(2026-10-24-flow-console-screen-design §2.3) — 참조 성격이라
       // R&BD 전략 뒤에 배치. 드라이런 세션 경로(/flows/dry-run*)는 NON_MENU_ROUTES.
-      { href: "/flows", label: "플로우 콘솔" },
+      { href: "/flows", label: "nav.flows" },
     ],
   },
   {
     // Connected apps (ADR-0154) lives with the account/settings entries, not
     // in the topbar.
-    label: "설정",
+    label: "nav.section.settings",
     items: [
-      { href: "/settings/connected-apps", label: "연결된 앱" },
+      { href: "/settings/connected-apps", label: "nav.connectedApps" },
     ],
   },
 ];
@@ -174,22 +178,23 @@ export function isDealFlowFlatRoute(pathname: string): boolean {
   return DEAL_FLOW_FLAT_ROUTES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
-/** 관리자 전용 내비 (ADR-0091 역할-화면 분리) — 역시 본 파일이 SSOT다. */
+/** 관리자 전용 내비 (ADR-0091 역할-화면 분리) — 역시 본 파일이 SSOT다.
+ * `label` holds a catalog key (see the header note); AppShell resolves it. */
 export const ADMIN_NAV: Array<{ href: string; label: string }> = [
-  { href: "/admin", label: "시스템 대시보드" },
-  { href: "/admin/users", label: "사용자·토큰 관리" },
-  { href: "/admin/audit", label: "감사 로그" },
-  { href: "/admin/data-sources", label: "데이터 소스" },
-  { href: "/admin/schedule", label: "스케줄" },
-  { href: "/admin/database", label: "데이터베이스" },
-  { href: "/admin/notifications", label: "알림" },
-  { href: "/admin/glossary", label: "용어집 관리" },
-  { href: "/admin/governance", label: "거버넌스" },
-  { href: "/admin/master-data", label: "마스터 데이터" },
-  { href: "/admin/business-targets", label: "사업목표 기준" },
-  { href: "/admin/adr", label: "ADR" },
-  { href: "/admin/system-mode", label: "시스템 모드" },
-  { href: "/settings/connected-apps", label: "연결된 앱" },
+  { href: "/admin", label: "nav.admin.dashboard" },
+  { href: "/admin/users", label: "nav.admin.users" },
+  { href: "/admin/audit", label: "nav.admin.audit" },
+  { href: "/admin/data-sources", label: "nav.admin.dataSources" },
+  { href: "/admin/schedule", label: "nav.admin.schedule" },
+  { href: "/admin/database", label: "nav.admin.database" },
+  { href: "/admin/notifications", label: "nav.admin.notifications" },
+  { href: "/admin/glossary", label: "nav.admin.glossary" },
+  { href: "/admin/governance", label: "nav.admin.governance" },
+  { href: "/admin/master-data", label: "nav.admin.masterData" },
+  { href: "/admin/business-targets", label: "nav.admin.businessTargets" },
+  { href: "/admin/adr", label: "nav.admin.adr" },
+  { href: "/admin/system-mode", label: "nav.admin.systemMode" },
+  { href: "/settings/connected-apps", label: "nav.connectedApps" },
 ];
 
 export function adminNavHrefs(): string[] {

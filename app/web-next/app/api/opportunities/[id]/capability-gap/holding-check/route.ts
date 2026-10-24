@@ -24,7 +24,7 @@ interface MemberLite { id: string; company_name: string; group_id: string; dart_
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
     const auth = authenticate(request);
     if (!auth.ok) return auth.response;
-    { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "보유 판정 확인(AI)은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+    { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Holding judgement confirmation (AI) requires the analyst role or higher." }); if (denied) return denied; }
     const { id } = await params;
     const db = getDb();
     const opp = db
@@ -38,7 +38,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     if (current.length === 0) {
       try { current = normalizeGapRows(((JSON.parse(opp.capability_gap_json ?? "{}") as { rows?: unknown }).rows ?? []) as unknown); } catch { /* malformed */ }
     }
-    if (current.length === 0) return badRequest("no_rows", "필요 역량 수준 행이 없습니다 — 먼저 행을 추가하거나 S2 스케치에서 시드하세요.");
+    if (current.length === 0) return badRequest("no_rows", "No capability-level rows — add rows first or seed from the S2 sketch.");
     const targets = current.filter(needsHoldingCheck).slice(0, 30);
     if (targets.length === 0) {
       return ok({ rows: current, drafts: {}, source: "synthesis", note: "확인할 행이 없습니다 — 모든 행에 보유 판정·보유 수준·근거가 이미 있습니다.", counts: { proposed: 0, insufficient: 0, profile: 0, web: 0 } }, 200);
@@ -98,7 +98,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     const profileScope = profileNames.length > 0 ? `사용한 프로필 ${profileNames.length}곳(${profileNames.slice(0, 3).join(", ")}${profileNames.length > 3 ? " 외" : ""})` : `프로필이 있는 회사 0곳(등록 회사 ${scoped.length}곳 중)`;
     const search = await gatherHoldingSources(targets, profileNames.length > 0 ? profileNames : scoped.map((m) => m.company_name), opp.market_scope, body.webSearch !== false);
     if (profileLines.length === 0 && disclosureLines.length === 0 && search.sources.length === 0) {
-      return badRequest("no_evidence", `근거가 없습니다 — ${profileScope}이고 공시·재무 자료와 외부 검색 결과도 없습니다. 그룹/계열사 분석(our-company)으로 프로필을 만들거나 웹 검색(TAVILY_API_KEY, BRAVE_SEARCH_API_KEY, SERPER_API_KEY 또는 WEB_SEARCH_DDG_ENABLED)을 설정하거나 Chrome(CHROME_PATH)을 설치하세요.` + (search.failureNote ? ` ${search.failureNote}` : ` 조치: ${SEARCH_KEY_ACTION}`));
+      return badRequest("no_evidence", `No evidence available — ${profileScope}, with no disclosure/financial data or external search results. Build a profile via the group/affiliate analysis (our-company), configure a web search key (TAVILY_API_KEY, BRAVE_SEARCH_API_KEY, SERPER_API_KEY or WEB_SEARCH_DDG_ENABLED), or install Chrome (CHROME_PATH).` + (search.failureNote ? ` ${search.failureNote}` : ` Next step: ${SEARCH_KEY_ACTION}`));
     }
 
     const call: LlmCall = async (messages, maxTokens) => {

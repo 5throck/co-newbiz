@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
+import { useTranslations } from "next-intl";
 import { api } from "../../../../lib/api.ts";
 import { PageState, useToast } from "../../../../components/ui.tsx";
 import { useConfirm } from "../../../../components/crud.tsx";
@@ -18,6 +19,8 @@ interface Cert { id: string; name: string; agency: string | null; status: string
 const STATUS_OPTIONS = ["not_started", "in_progress", "granted", "denied", "withdrawn"];
 
 function PermitsView() {
+  const t = useTranslations("pages.projects.permits");
+  const tc = useTranslations("common");
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const { confirm, confirmDialog } = useConfirm();
@@ -31,7 +34,7 @@ function PermitsView() {
   const load = useCallback(() => {
     api.get<{ permits: Permit[]; certifications: Cert[] }>(`/api/projects/${encodeURIComponent(id)}/permits`)
       .then((r) => setData(r.data))
-      .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
+      .catch((e) => setError(e instanceof Error ? e.message : tc("errors.loadFailed")));
   }, [id]);
   useEffect(() => { load(); }, [load]);
 
@@ -44,31 +47,31 @@ function PermitsView() {
         kind: form.kind, name: form.name.trim(), agency: form.agency.trim() || undefined,
         statutory_days: form.statutory_days ? Number(form.statutory_days) : undefined,
       });
-      toast(`${form.kind === "permit" ? "허가" : "인증"}이 등록되었습니다`);
+      toast(t("created", { kind: form.kind === "permit" ? t("kindPermit") : t("kindCert") }));
       setForm({ ...form, name: "", agency: "", statutory_days: "" });
       load();
-    } catch (err) { setError(err instanceof Error ? err.message : "등록 실패"); }
+    } catch (err) { setError(err instanceof Error ? err.message : tc("errors.createFailed")); }
     finally { setBusy(false); }
   }
 
   async function setStatus(kind: "permit" | "certification", rowId: string, status: string) {
     try {
       await api.put(`/api/projects/${encodeURIComponent(id)}/permits`, { kind, id: rowId, status });
-      toast("상태를 변경했습니다.");
+      toast(t("statusChanged"));
       load();
-    } catch (e) { toast(e instanceof Error ? `변경 실패: ${e.message}` : "변경 실패"); }
+    } catch (e) { toast(e instanceof Error ? t("changeFailedWith", { message: e.message }) : t("changeFailed")); }
   }
 
   function remove(kind: "permit" | "certification", rowId: string, name: string) {
-    confirm(`${kind === "permit" ? "허가" : "인증"} 삭제`, () => {
+    confirm(t("deleteConfirmTitle", { kind: kind === "permit" ? t("kindPermit") : t("kindCert") }), () => {
       void (async () => {
         try {
           await api.delete(`/api/projects/${encodeURIComponent(id)}/permits?kind=${kind}&id=${encodeURIComponent(rowId)}`);
-          toast("삭제했습니다 — 감사 로그에 남습니다.");
+          toast(t("deleted"));
           load();
-        } catch (e) { toast(e instanceof Error ? `삭제 실패: ${e.message}` : "삭제 실패"); }
+        } catch (e) { toast(e instanceof Error ? t("deleteFailedWith", { message: e.message }) : tc("errors.deleteFailed")); }
       })();
-    }, { body: `"${name}" 항목과 그 중요 경로(critical path) 연결을 삭제합니다. 삭제는 감사 로그에 기록됩니다.`, confirmLabel: "삭제" });
+    }, { body: t("deleteConfirmBody", { name }), confirmLabel: tc("delete") });
   }
 
   const statusChip = (s: string) => (
@@ -76,7 +79,7 @@ function PermitsView() {
   );
   const statusEditor = (kind: "permit" | "certification", r: { id: string; status: string }) => (
     canAct
-      ? <select aria-label={`${r.id} 상태 변경`} className="sizing-new-input sizing-new-input-sm" value={STATUS_OPTIONS.includes(r.status) ? r.status : ""} onChange={(e) => { if (e.target.value) void setStatus(kind, r.id, e.target.value); }}>
+      ? <select aria-label={t("statusChangeAria", { id: r.id })} className="sizing-new-input sizing-new-input-sm" value={STATUS_OPTIONS.includes(r.status) ? r.status : ""} onChange={(e) => { if (e.target.value) void setStatus(kind, r.id, e.target.value); }}>
           {!STATUS_OPTIONS.includes(r.status) && <option value="">{r.status}</option>}
           {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
@@ -84,37 +87,37 @@ function PermitsView() {
   );
   const removeButton = (kind: "permit" | "certification", r: { id: string; name: string }) => (
     canAct
-      ? <button type="button" className="btn-danger btn-sm" onClick={() => remove(kind, r.id, r.name)}>삭제</button>
+      ? <button type="button" className="btn-danger btn-sm" onClick={() => remove(kind, r.id, r.name)}>{tc("delete")}</button>
       : null
   );
 
   return (
     <main>
       <StageTabs projectId={id} />
-      <h1>인허가·인증 추적</h1>
-      <p className="objective">허가와 인증을 별도로 추적합니다 — 만료·갱신은 감시 규칙으로 태스크가 생성됩니다. <Link href={`/projects/${encodeURIComponent(id)}/sites`} className="underline">부지·시설 평가(주소 기반 법규 사전검토)와 함께 검토 →</Link></p>
+      <h1>{t("heading")}</h1>
+      <p className="objective">{t("objective")}{" "}<Link href={`/projects/${encodeURIComponent(id)}/sites`} className="underline">{t("sitesLink")}</Link></p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       <div className="grid2e">
-        <section className="market-section" aria-label="허가">
-          <h2 className="text-[length:var(--fs-body)] mb-2">허가</h2>
+        <section className="market-section" aria-label={t("kindPermit")}>
+          <h2 className="text-[length:var(--fs-body)] mb-2">{t("kindPermit")}</h2>
           {data === null ? <PageState state="loading" /> : data.permits.length === 0 ? (
-            <PageState state="empty" emptyText="등록된 허가가 없습니다." />
+            <PageState state="empty" emptyText={t("emptyPermits")} />
           ) : (
-            <table className="data-table" aria-label="허가">
-              <thead><tr><th>허가</th><th>기관</th><th className="col-num">법정기간(일)</th><th>상태</th><th>관리</th></tr></thead>
+            <table className="data-table" aria-label={t("kindPermit")}>
+              <thead><tr><th>{t("kindPermit")}</th><th>{t("thAgency")}</th><th className="col-num">{t("thStatutoryDays")}</th><th>{tc("status")}</th><th>{t("thManage")}</th></tr></thead>
               <tbody>{data.permits.map((r) => (
                 <tr key={r.id}><td className="font-semibold">{r.name}</td><td>{r.agency ?? "—"}</td><td className="col-num tabular-nums">{r.statutory_days ?? "—"}</td><td>{statusEditor("permit", r)}</td><td>{removeButton("permit", r)}</td></tr>
               ))}</tbody>
             </table>
           )}
         </section>
-        <section className="market-section" aria-label="인증">
-          <h2 className="text-[length:var(--fs-body)] mb-2">인증</h2>
+        <section className="market-section" aria-label={t("kindCert")}>
+          <h2 className="text-[length:var(--fs-body)] mb-2">{t("kindCert")}</h2>
           {data === null ? <PageState state="loading" /> : data.certifications.length === 0 ? (
-            <PageState state="empty" emptyText="등록된 인증이 없습니다." />
+            <PageState state="empty" emptyText={t("emptyCerts")} />
           ) : (
-            <table className="data-table" aria-label="인증">
-              <thead><tr><th>인증</th><th>기관</th><th>상태</th><th>CoC 이전</th><th>관리</th></tr></thead>
+            <table className="data-table" aria-label={t("kindCert")}>
+              <thead><tr><th>{t("kindCert")}</th><th>{t("thAgency")}</th><th>{tc("status")}</th><th>{t("thCocTransfer")}</th><th>{t("thManage")}</th></tr></thead>
               <tbody>{data.certifications.map((r) => (
                 <tr key={r.id}><td className="font-semibold">{r.name}</td><td>{r.agency ?? "—"}</td><td>{statusEditor("certification", r)}</td><td>{r.transferable_on_coc ?? "—"}</td><td>{removeButton("certification", r)}</td></tr>
               ))}</tbody>
@@ -123,21 +126,21 @@ function PermitsView() {
         </section>
       </div>
       {canAct && (
-        <section className="market-section" aria-label="등록">
-          <h2 className="text-[length:var(--fs-body)] mb-2">등록</h2>
+        <section className="market-section" aria-label={tc("register")}>
+          <h2 className="text-[length:var(--fs-body)] mb-2">{tc("register")}</h2>
           <form className="sizing-new-form" onSubmit={create}>
             <div className="flex flex-wrap items-end gap-2">
-              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">구분 *</span>
+              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">{t("lblKind")}</span>
                 <select className="sizing-new-input sizing-new-input-sm" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
-                  <option value="permit">허가</option><option value="certification">인증</option>
+                  <option value="permit">{t("kindPermit")}</option><option value="certification">{t("kindCert")}</option>
                 </select></label>
-              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]"><span className="block mb-1">이름 *</span>
+              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]"><span className="block mb-1">{t("lblName")}</span>
                 <input className="sizing-new-input w-full" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></label>
-              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">기관</span>
+              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">{t("lblAgency")}</span>
                 <input className="sizing-new-input sizing-new-input-sm" value={form.agency} onChange={(e) => setForm({ ...form, agency: e.target.value })} /></label>
-              <label className="text-[length:var(--fs-caption)] w-[7rem]"><span className="block mb-1">법정기간(일)</span>
+              <label className="text-[length:var(--fs-caption)] w-[7rem]"><span className="block mb-1">{t("lblStatutoryDays")}</span>
                 <input type="number" className="sizing-new-input sizing-new-input-sm" value={form.statutory_days} onChange={(e) => setForm({ ...form, statutory_days: e.target.value })} /></label>
-              <button type="submit" className="btn-primary" disabled={busy}>{busy ? "등록 중..." : "등록"}</button>
+              <button type="submit" className="btn-primary" disabled={busy}>{busy ? tc("registering") : tc("register")}</button>
             </div>
           </form>
         </section>

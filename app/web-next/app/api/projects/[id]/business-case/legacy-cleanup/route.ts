@@ -12,15 +12,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (currentPrincipal()) return forbidden("human_only", "예전 모델 정리는 사람만 실행할 수 있습니다 (boundary #2).");
-  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "예전 모델 정리는 analyst 역할 이상이어야 합니다." });
+  if (currentPrincipal()) return forbidden("human_only", "Only a human can run old-model cleanup (boundary #2).");
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Old-model cleanup requires the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => ({}))) as { model_ids?: unknown } | null;
   const raw = body?.model_ids;
   if (raw !== undefined && (!Array.isArray(raw) || raw.length === 0 || raw.length > 200 || raw.some((m) => typeof m !== "string"))) {
-    return badRequest("invalid_request", "model_ids는 비어 있지 않은 문자열 배열이어야 합니다.");
+    return badRequest("invalid_request", "model_ids must be a non-empty array of strings.");
   }
   const result = cleanupLegacyModels(id, ctx.userId, raw as string[] | undefined);
   return ok(result, 200, { deleted: result.deleted.length, archived: result.archived.length });

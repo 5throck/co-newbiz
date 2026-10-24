@@ -7,6 +7,7 @@
 // this component owns only the AI marks/notes. Read-only for users without canAct (the parent fieldset is disabled).
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../../lib/api.ts";
+import { useTranslations } from "next-intl";
 import {
   ENTRY_AI_FIELD_LABEL, ENTRY_ALTERNATIVES_CAP, ENTRY_MODES, ENTRY_MODE_HINT, ENTRY_MODE_LABEL, ENTRY_RATIONALE_CAP,
   cautionText, mergeEntryProposal, normalizeModes, strategyMismatches, toggleMode,
@@ -38,7 +39,7 @@ export function EntryStrategySection({ opportunityId, value, onChange, canAct, r
   resetKey: number;
   /** Own save of ONLY the strategy fields (modes, main, rationale, alternatives). */
   save?: EntryStrategySaveUi;
-}) {
+}) {const t = useTranslations("stages.s5.entryStrategy"); const tc = useTranslations("common");
   const uid = useId();
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -72,10 +73,10 @@ export function EntryStrategySection({ opportunityId, value, onChange, canAct, r
         setMarks((prev) => [...new Set([...prev, ...merged.marks])]);
         setInfo({ proposal });
       } else {
-        setNote(`${n} 이미 입력된 칸은 그대로 두었고 새로 채울 빈 칸이 없습니다.`);
+        setNote(t("p1CellsWereKeptAnd", { p1: n }));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "진출전략 제안 실패");
+      setError(err instanceof Error ? err.message : t("entryStrategyProposalFailed"));
     } finally {
       setBusy(false);
     }
@@ -94,42 +95,42 @@ export function EntryStrategySection({ opportunityId, value, onChange, canAct, r
   }
 
   const aiChip = (f: EntryAiField) => marks.includes(f)
-    ? <span className="status-chip status-not-started" data-testid={`entry-ai-chip-${f}`} title={`AI 초안(저장 전): ${ENTRY_AI_FIELD_LABEL[f]} — 사람이 검토·수정한 뒤 저장하세요.`}><span aria-hidden="true">✦</span> AI 초안</span>
+    ? <span className="status-chip status-not-started" data-testid={`entry-ai-chip-${f}`} title={t("aiDraftUnsavedP1A", { p1: ENTRY_AI_FIELD_LABEL[f] })}><span aria-hidden="true">✦</span> {tc("aiDraft")}</span>
     : null;
   const basisLine = (f: EntryAiField, text: string | undefined) => marks.includes(f) && text
-    ? <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1" data-testid={`entry-ai-basis-${f}`}>AI 근거: {text}</p>
+    ? <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1" data-testid={`entry-ai-basis-${f}`}>{t("aiEvidence")} {text}</p>
     : null;
   const modeReasons = info && marks.includes("modes")
-    ? info.proposal.modes.map((m) => `${ENTRY_MODE_LABEL[m.mode]}${m.main ? "(주)" : ""} — ${m.reason}`).join(" / ")
+    ? info.proposal.modes.map((m) => t("p1P2P3", { p1: ENTRY_MODE_LABEL[m.mode], p2: m.main ? t("wks") : "", p3: m.reason })).join(" / ")
     : undefined;
 
   return (
     <div className="mb-3" data-testid="entry-strategy-section">
       <div className="flex flex-wrap items-center gap-2 mb-1">
-        <h3 className="text-[length:var(--fs-body)] mb-0">진출전략</h3>
+        <h3 className="text-[length:var(--fs-body)] mb-0">{t("entryStrategy")}</h3>
         {marks.length > 0 && (
           <span className="flex items-center gap-1" data-testid="entry-ai-unsaved">
-            <span className="status-chip status-not-started" role="status"><span aria-hidden="true">✦</span> 저장하지 않은 AI 초안 {marks.length}건</span>
-            {canAct && <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={discard}>초안 버리기 (AI)</button>}
+            <span className="status-chip status-not-started" role="status"><span aria-hidden="true">✦</span> {tc("unsavedAiDraft")} {marks.length}{tc("countUnit")}</span>
+            {canAct && <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={discard}>{tc("discardAiDraft")}</button>}
           </span>
         )}
         {canAct && (
           <button type="button" className="btn-ghost btn-sm ml-auto" disabled={busy} onClick={() => void propose()}
-            title="AI가 S3 필요 역량·S4 결정 기록·기회 맥락·프로필 근거로 비어 있는 칸(방식 선택·선택 근거·대안)을 초안으로 제안합니다 — 제안일 뿐이며 저장·결정은 사람이 합니다. 외부 웹 검색은 쓰지 않습니다.">
-            {busy ? "제안 중…" : "진출전략 제안 (AI)"}
+            title={t("theAiDraftsTheEmpty")}>
+            {busy ? tc("proposing") : t("entryStrategyProposalAi")}
           </button>
         )}
       </div>
       {note && (
         <div className="legacy-model-notice mb-2 flex items-start justify-between gap-2" role="status" data-testid="entry-ai-note">
           <p className="legacy-model-notice-text">{note}</p>
-          <button type="button" className="btn-ghost btn-sm" aria-label="AI 제안 결과 닫기" onClick={() => setNote(null)}>닫기</button>
+          <button type="button" className="btn-ghost btn-sm" aria-label={t("closeAiProposalResult")} onClick={() => setNote(null)}>{tc("close")}</button>
         </div>
       )}
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-1">{error}</p>}
 
       <div className="flex items-center gap-2 mb-1">
-        <span id={`${uid}-modes`} className="text-[length:var(--fs-caption)] font-semibold">진출 방식 선택 (복수 선택 가능 · 주된 방식 1개)</span>
+        <span id={`${uid}-modes`} className="text-[length:var(--fs-caption)] font-semibold">{t("entryModeSelectionMultipleAllowed")}</span>
         {aiChip("modes")}
       </div>
       <div role="group" aria-labelledby={`${uid}-modes`} className="flex flex-wrap gap-2 mb-1">
@@ -140,13 +141,13 @@ export function EntryStrategySection({ opportunityId, value, onChange, canAct, r
               <label className="flex items-center gap-1">
                 <input type="checkbox" checked={on} onChange={() => pickMode(m)} aria-describedby={`${uid}-${m}-hint`} />
                 <span className="font-semibold">{ENTRY_MODE_LABEL[m]}</span>
-                {on && <span className="status-chip status-green" data-testid={`entry-selected-${m}`}><span aria-hidden="true">✓</span> 선택</span>}
+                {on && <span className="status-chip status-green" data-testid={`entry-selected-${m}`}><span aria-hidden="true">✓</span> {tc("select")}</span>}
               </label>
               <p id={`${uid}-${m}-hint`} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{ENTRY_MODE_HINT[m]}</p>
               {on && (
                 <label className="flex items-center gap-1 text-[length:var(--fs-caption)]">
                   <input type="radio" name={`${uid}-main`} checked={main === m} disabled={value.modes.modes.length === 1} onChange={() => pickMain(m)} />
-                  <span>주된 방식{main === m ? " (현재)" : ""}</span>
+                  <span>{t("primaryMode")}{main === m ? t("current") : ""}</span>
                 </label>
               )}
             </div>
@@ -157,31 +158,31 @@ export function EntryStrategySection({ opportunityId, value, onChange, canAct, r
       {basisLine("modes", info?.proposal.basis.modes)}
 
       <div className="flex items-center gap-2 mt-2 mb-1">
-        <label htmlFor={`${uid}-rationale`} className="text-[length:var(--fs-caption)] font-semibold">선택 근거</label>
+        <label htmlFor={`${uid}-rationale`} className="text-[length:var(--fs-caption)] font-semibold">{t("selectionEvidence")}</label>
         {aiChip("rationale")}
         <span className="ml-auto text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="entry-rationale-count">{value.rationale.length}/{ENTRY_RATIONALE_CAP}</span>
       </div>
       <textarea
         id={`${uid}-rationale`}
-        aria-label="선택 근거"
+        aria-label={t("selectionEvidence2")}
         value={value.rationale}
         maxLength={ENTRY_RATIONALE_CAP}
         onChange={(e) => { clearMark("rationale"); onChange({ ...value, rationale: e.target.value }); }}
         rows={3}
-        placeholder="이 방식을 고른 이유와 역량 격차를 어떻게 해소하는지 — 예: 핵심 제조 역량은 직접 구축, 부족한 물류 운영은 외부 업체와 제휴"
+        placeholder={t("whyThisModeWasChosen")}
         className="sizing-new-input mb-1"
         style={{ width: "100%" }}
       />
-      {basisLine("rationale", [info?.proposal.basis.rationale, info?.proposal.basis.assumption ? `핵심 가정: ${info.proposal.basis.assumption}` : ""].filter(Boolean).join(" · "))}
+      {basisLine("rationale", [info?.proposal.basis.rationale, info?.proposal.basis.assumption ? t("keyAssumptionP1", { p1: info.proposal.basis.assumption }) : ""].filter(Boolean).join(" · "))}
 
       <div className="flex items-center gap-2 mt-1 mb-1">
-        <label htmlFor={`${uid}-alt`} className="text-[length:var(--fs-caption)] font-semibold">검토했으나 선택하지 않은 대안과 사유 (선택)</label>
+        <label htmlFor={`${uid}-alt`} className="text-[length:var(--fs-caption)] font-semibold">{t("alternativesConsideredButNotChosen")}</label>
         {aiChip("alternatives")}
         <span className="ml-auto text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="entry-alternatives-count">{value.alternatives.length}/{ENTRY_ALTERNATIVES_CAP}</span>
       </div>
       <textarea
         id={`${uid}-alt`}
-        aria-label="검토했으나 선택하지 않은 대안과 사유"
+        aria-label={t("alternativesConsideredButNotChosen2")}
         value={value.alternatives}
         maxLength={ENTRY_ALTERNATIVES_CAP}
         onChange={(e) => { clearMark("alternatives"); onChange({ ...value, alternatives: e.target.value }); }}
@@ -192,7 +193,7 @@ export function EntryStrategySection({ opportunityId, value, onChange, canAct, r
       {basisLine("alternatives", info?.proposal.basis.alternatives)}
 
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
-        역량별 해소 방식(아래 판정)은 역량마다 다른 층위이며 여기서 고른 진출전략과 다르면 주의가 표시됩니다
+        {t("theResolutionMethodJudgementsBelow")}
       </p>
       {mismatches.length > 0 && (
         <p className="mb-1" data-testid="entry-mismatch">
@@ -202,14 +203,14 @@ export function EntryStrategySection({ opportunityId, value, onChange, canAct, r
       {save && canAct && (
         <div className="flex flex-wrap items-center gap-2 mt-2" data-testid="entry-save-actions">
           <button type="button" className={save.dirty ? "btn-primary btn-sm" : "btn-ghost btn-sm"} disabled={!save.dirty || save.saving} aria-describedby={`${uid}-save-hint`} onClick={save.onSave}>
-            {save.saving ? "저장 중…" : "진출전략 저장"}
+            {save.saving ? t("item") : t("saveEntryStrategy")}
           </button>
-          {save.dirty && <span className="status-chip status-amber" role="status" data-testid="entry-dirty"><span aria-hidden="true">!</span> 저장하지 않은 변경</span>}
-          {!save.dirty && <span id={`${uid}-save-hint`} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">저장할 변경이 없습니다.</span>}
+          {save.dirty && <span className="status-chip status-amber" role="status" data-testid="entry-dirty"><span aria-hidden="true">!</span> {tc("unsavedChanges")}</span>}
+          {!save.dirty && <span id={`${uid}-save-hint`} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("noChangesToSave")}</span>}
           {save.note && (
             <span className="flex items-center gap-1" role="status" data-testid="entry-save-note">
               <span className="status-chip status-green"><span aria-hidden="true">✓</span> {save.note}</span>
-              <button type="button" className="btn-ghost btn-sm" aria-label="저장 결과 닫기" onClick={save.onDismissNote}>닫기</button>
+              <button type="button" className="btn-ghost btn-sm" aria-label={t("closeSaveResult")} onClick={save.onDismissNote}>{tc("close")}</button>
             </span>
           )}
           {save.error && <span role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)]" data-testid="entry-save-error">{save.error}</span>}
@@ -217,7 +218,7 @@ export function EntryStrategySection({ opportunityId, value, onChange, canAct, r
       )}
       {info && info.proposal.cautions.length > 0 && marks.length > 0 && (
         <ul className="sizing-note-list text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1" data-testid="entry-ai-cautions">
-          {info.proposal.cautions.map((c, i) => <li key={i}><span aria-hidden="true">⚠</span> AI 주의: {c}</li>)}
+          {info.proposal.cautions.map((c, i) => <li key={i}><span aria-hidden="true">⚠</span> {t("aiCaution")} {c}</li>)}
         </ul>
       )}
     </div>

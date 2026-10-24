@@ -1,16 +1,19 @@
+import { TranslatorFn } from "../../../i18n/config.ts";
 // Split from components/stages/RouteDecisionStage.tsx (Wave U-3 decomposition); behavior unchanged.
 
-// GF_SUB / BF_SUB live in lib/labels.ts (single label map); re-exported so existing imports keep working.
-export { GF_SUB, BF_SUB } from "../../../lib/labels.ts";
-// Stage 2 채점 기준 (각 20% × 1–3점)
+// i18n (T3-6): sub-track IDs per track (option order + validation). Display names resolve
+// common.subTrack.* via lib/label-keys.ts SUB_TRACK_KEY at render.
+export const GF_SUB = ["existing_business_rbd", "intra_venture"] as const;
+export const BF_SUB = ["m_and_a", "jv", "strategic_investment", "minority_investment", "partnership", "rbd", "corporate_venture"] as const;
+// Stage 2 채점 기준 (각 20% × 1–3점) — 라벨·힌트는 카탈로그 키, 렌더 시 TranslatorFn으로 푼다.
 export const CRITERIA: Array<{ key: string; label: string; hint: string }> = [
-  { key: "control_need", label: "통제 필요도", hint: "1=성과만 공유돼도 충분 ~ 3=운영 통제 없으면 위험" },
-  { key: "capability_criticality", label: "역량 결정성", hint: "1=대체 가능 ~ 3=암묵적 지식·대체 불가" },
-  { key: "market_uncertainty", label: "시장 불확실성", hint: "1=수요 검증됨 ~ 3=수요·규제 불확실" },
-  { key: "integration_capacity", label: "통합 역량", hint: "1=통합 경험·여력 충분 ~ 3=통합 수용력 부족" },
-  { key: "speed_to_capability", label: "역량확보 속도", hint: "1=천천히 구축 가능 ~ 3=즉시 확보 필요" },
+  { key: "control_need", label: "stages.s4.constants.controlNeed", hint: "stages.s4.constants.resultsSufficesToWithoutOperational" },
+  { key: "capability_criticality", label: "stages.s4.constants.capabilityCriticality", hint: "stages.s4.constants.toKnowledgeNotSubstitutable" },
+  { key: "market_uncertainty", label: "stages.s4.constants.marketUncertainty", hint: "stages.s4.constants.verifiedToAndRegulationUncertain" },
+  { key: "integration_capacity", label: "stages.s4.constants.integratedCapability", hint: "stages.s4.constants.integrationExperienceAndCapacityTo" },
+  { key: "speed_to_capability", label: "stages.s4.constants.capabilityAcquisitionSpeed", hint: "stages.s4.constants.buildSlowlyToSecureImmediately" },
 ];
-export const SCORE_LABEL: Record<number, string> = { 1: "낮음", 2: "중간", 3: "높음" };
+export const SCORE_LABEL = (tr: TranslatorFn): Record<number, string> => ({ 1: tr("common.low"), 2: tr("common.medium"), 3: tr("common.high") });
 // 사전배제 대상 라우트 — 통제 필요도=高 + 역량접근 의도에서 선택 불가
 export const OVERRIDDEN_SUBS = ["partnership", "rbd", "corporate_venture"];
 

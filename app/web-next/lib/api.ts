@@ -3,7 +3,7 @@
 // that knows the fetch/cookie/error-shape details so every page component
 // only sees typed data.
 
-import { localizeMessage } from "./labels.ts";
+import { resolveApiErrorText } from "./error-messages.ts";
 export interface Envelope<T> {
   data: T;
   meta: Record<string, unknown>;
@@ -32,7 +32,7 @@ function readCookie(name: string): string | null {
 // res.json()이 브라우저 원문 에러("Unexpected end of JSON input")를 던진다.
 // 그 원문이 UI에 그대로 노출되지 않도록 판독 가능한 ApiError로 바꾼다.
 function invalidResponse(res: Response): ApiError {
-  return new ApiError(res.status || 0, "invalid_response", "서버 응답이 비어 있거나 손상되었습니다 — 잠시 후 다시 시도하세요.");
+  return new ApiError(res.status || 0, "invalid_response", resolveApiErrorText("invalid_response", "The server response was empty or malformed — retry shortly."));
 }
 
 /** JSON 본문 파싱 — 빈·손상 본문이면 undefined (호출부가 재시도를 결정한다). */
@@ -70,7 +70,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<Envelope<T>
     if (body === undefined) throw invalidResponse(res);
   }
   if (!res.ok) {
-    throw new ApiError(res.status, body.error?.code ?? "unknown_error", localizeMessage(body.error?.message ?? "Request failed."), body.meta ?? {});
+    const code = body.error?.code ?? "unknown_error";
+    // §3.5: localized text resolves from errors.codes.<code> at this single
+    // choke point; unknown codes pass the (English) server message through.
+    throw new ApiError(res.status, code, resolveApiErrorText(code, body.error?.message ?? "Request failed."), body.meta ?? {});
   }
   return body;
 }

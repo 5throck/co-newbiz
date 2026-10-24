@@ -32,27 +32,31 @@ describe("ui label sweep (design 2026-10-11)", () => {
     expectNoMatch(read("components/stages/DealStructureStage.tsx"), [/"deal_structure_review/], "deal structure");
   });
 
-  test("charter page uses the shared trackLabel, not a local English map", () => {
+  test("charter page uses the shared track key vocabulary, not a local English map (i18n re-pin T3-6)", () => {
     const src = read("app/projects/[id]/charter/page.tsx");
-    expect(src).toMatch(/from "[^"]*lib\/labels\.ts"/);
+    expect(src).toMatch(/from "[^"]*lib\/label-keys\.ts"/);
     expect(src).not.toMatch(/greenfield: "Greenfield"/);
   });
 
-  test("PortfolioStage consumes the shared transition/record maps", () => {
+  test("PortfolioStage consumes the shared transition/record key maps (i18n re-pin T3-6)", () => {
     const src = read("components/stages/PortfolioStage.tsx");
-    expect(src).toMatch(/TRANSITION_DECISION_LABEL/);
-    expect(src).toMatch(/RECORD_KEY_LABEL/);
+    expect(src).toMatch(/TRANSITION_DECISION_KEY/);
+    expect(src).toMatch(/RECORD_KEY/);
     expect(src).not.toMatch(/\(tranche_condition — 필수\)/);
     expect(src).not.toMatch(/결정자\(decided_by\)/);
   });
 
-  test("/agents and /our-company do not use StageFrame; titles are not stage names", () => {
+  test("/agents and /our-company do not use StageFrame; titles are not stage names", async () => {
     for (const p of ["app/agents/page.tsx", "app/our-company/page.tsx"]) {
       const src = read(p);
       expect(src).not.toMatch(/StageFrame/);
     }
-    expect(read("app/agents/layout.tsx")).toMatch(/에이전트 질의/);
-    expect(read("app/our-company/layout.tsx")).toMatch(/그룹\/계열사 분석/);
+    // i18n: layout titles resolve through pages.titles — key call site + ko master value.
+    expect(read("app/agents/layout.tsx")).toMatch(/pages\.titles/);
+    expect(read("app/our-company/layout.tsx")).toMatch(/pages\.titles/);
+    const koTitles = await import("../../app/web-next/locales/ko.json");
+    expect(koTitles.pages.titles.agents).toBe("에이전트 질의");
+    expect(koTitles.pages.titles.ourCompany).toBe("그룹/계열사 분석");
     expect(read("app/agents/layout.tsx")).not.toMatch(/S2/);
     expect(read("app/our-company/layout.tsx")).not.toMatch(/S3/);
   });

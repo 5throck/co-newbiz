@@ -46,7 +46,7 @@ export async function POST(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "시너지 분석 생성은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Synergy-analysis creation requires the analyst role or higher." });
   if (denied) return denied;
 
   let body: { targetType?: "affiliate" | "group"; memberId?: string; groupId?: string; opportunityId?: string; source_ref?: string };
@@ -58,12 +58,12 @@ export async function POST(request: Request) {
 
   const targetType = body.targetType;
   if (targetType !== "affiliate" && targetType !== "group") {
-    return badRequest("target_required", "targetType은 affiliate | group 중 하나입니다 (ADR-0090 — 별도 회사 등록 제거).");
+    return badRequest("target_required", "targetType must be one of: affiliate | group (ADR-0090 — standalone company registration removed).");
   }
   const memberId = targetType === "affiliate" ? body.memberId?.trim() || null : null;
   const groupId = targetType === "group" ? body.groupId?.trim() || null : null;
-  if (targetType === "affiliate" && !memberId) return badRequest("member_required", "계열사 대상 분석에는 memberId가 필요합니다.");
-  if (targetType === "group" && !groupId) return badRequest("group_required", "그룹 대상 분석에는 groupId가 필요합니다.");
+  if (targetType === "affiliate" && !memberId) return badRequest("member_required", "An affiliate-targeted analysis requires memberId.");
+  if (targetType === "group" && !groupId) return badRequest("group_required", "A group-targeted analysis requires groupId.");
 
   const db = getDb();
   const now = new Date().toISOString();
@@ -71,23 +71,23 @@ export async function POST(request: Request) {
   // 대상 프로파일 존재 검증 — 시너지 파이프라인은 그룹/계열사 분석의 최신 프로파일을 재사용한다 (ADR-0090).
   if (targetType === "affiliate") {
     const member = db.query("SELECT company_name FROM company_group_member WHERE id = ?").get(memberId) as { company_name: string } | undefined;
-    if (!member) return badRequest("member_not_found", "계열사를 찾을 수 없습니다.");
+    if (!member) return badRequest("member_not_found", "Affiliate not found.");
     const hasProfile = db.query("SELECT 1 FROM company_profile_version WHERE member_id = ? LIMIT 1").get(memberId);
-    if (!hasProfile) return badRequest("profile_required", `"${member.company_name}"의 프로파일이 없습니다 — 그룹/계열사 분석 화면에서 먼저 분석하세요.`);
+    if (!hasProfile) return badRequest("profile_required", `No profile for "${member.company_name}" — run the analysis in the group/affiliate analysis screen first.`);
   } else {
     const group = db.query("SELECT name FROM company_group WHERE id = ?").get(groupId) as { name: string } | undefined;
-    if (!group) return badRequest("group_not_found", "그룹을 찾을 수 없습니다.");
+    if (!group) return badRequest("group_not_found", "Group not found.");
     const withProfile = db.query(
       `SELECT COUNT(*) c FROM company_group_member m
        WHERE m.group_id = ? AND EXISTS (SELECT 1 FROM company_profile_version v WHERE v.member_id = m.id)`,
     ).get(groupId) as { c: number };
-    if (withProfile.c === 0) return badRequest("profile_required", `"${group.name}" 그룹에 프로파일이 있는 계열사가 없습니다 — 그룹/계열사 분석을 먼저 실행하세요.`);
+    if (withProfile.c === 0) return badRequest("profile_required", `No affiliate with a profile in group "${group.name}" — run the group/affiliate analysis first.`);
   }
 
   const opportunityId = body.opportunityId?.trim() || null;
   if (opportunityId) {
     const opp = db.query("SELECT id, name FROM opportunity WHERE id = ?").get(opportunityId) as { name: string } | undefined;
-    if (!opp) return badRequest("opportunity_not_found", "연결할 기회를 찾을 수 없습니다.");
+    if (!opp) return badRequest("opportunity_not_found", "The opportunity to link was not found.");
   }
 
   const analysisId = ulid();

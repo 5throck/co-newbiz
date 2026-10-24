@@ -8,11 +8,11 @@ import { excludeCompetitor } from "../../../../../../../lib/company-competitors.
 export async function POST(request: Request, { params }: { params: Promise<{ companyId: string; competitorId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "경쟁사 제외는 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Excluding competitors requires the analyst role or higher." });
   if (denied) return denied;
   const { companyId, competitorId } = await params;
   const body = (await request.json().catch(() => null)) as { reason?: string } | null;
-  if (!body?.reason?.trim()) return badRequest("reason_required", "제외 사유는 필수입니다.");
+  if (!body?.reason?.trim()) return badRequest("reason_required", "Exclusion reason is required.");
   const db = getDb();
   const row = excludeCompetitor(db, resolveCompanySubject(db, companyId), competitorId, body.reason, auth.auth.userId);
   if (!row) return notFound();

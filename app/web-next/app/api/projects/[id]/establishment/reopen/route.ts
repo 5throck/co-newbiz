@@ -15,14 +15,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const ctx = auth.auth;
   const denied = humanOnlyDenied(ctx, "설립 실행 재개는 사람만 할 수 있습니다 (boundary #2).");
   if (denied) return denied;
-  if (ctx.role === "viewer") return forbidden("role_required", "설립 실행 재개는 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Resuming establishment execution requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as { step_no?: number; reason?: string; cascade_step5?: boolean } | null;
   const stepNo = Number(body?.step_no);
-  if (!Number.isInteger(stepNo) || stepNo < 1 || stepNo > 5) return badRequest("invalid_request", "step_no는 1–5 사이 정수입니다.");
-  if (typeof body?.reason !== "string") return badRequest("invalid_request", "reason은 필수 문자열입니다.");
-  if (body.cascade_step5 != null && typeof body.cascade_step5 !== "boolean") return badRequest("invalid_request", "cascade_step5는 boolean입니다.");
+  if (!Number.isInteger(stepNo) || stepNo < 1 || stepNo > 5) return badRequest("invalid_request", "step_no must be a number between 1 and 5.");
+  if (typeof body?.reason !== "string") return badRequest("invalid_request", "reason must be a non-empty string.");
+  if (body.cascade_step5 != null && typeof body.cascade_step5 !== "boolean") return badRequest("invalid_request", "cascade_step5 must be a boolean.");
 
   const result = reopenEstablishmentStep(id, stepNo, body.reason, ctx.userId, { cascadeStep5: body.cascade_step5 === true, via: callPathOf(ctx) });
   if (!result.ok) return establishmentErrorResponse(result.error, { dependent_steps: result.dependent_steps });

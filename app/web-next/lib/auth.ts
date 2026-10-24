@@ -209,8 +209,8 @@ export function requireAdmin(auth: AuthContext): Response | null {
 // route re-deriving the rule (a route that forgets it lets admin become a
 // project lead and then 404 everywhere else).
 export const ADMIN_BUSINESS_FORBIDDEN_MESSAGE =
-  "admin 계정은 검토/안건 콘텐츠에서 분리되어 있습니다(ADR-0091) — analyst 계정으로 수행하세요.";
-export const VIEWER_WRITE_FORBIDDEN_MESSAGE = "이 작업은 analyst 역할 이상이어야 합니다.";
+  "Admin accounts are separated from review/agenda content (ADR-0091); perform this action with an analyst account.";
+export const VIEWER_WRITE_FORBIDDEN_MESSAGE = "This action requires the analyst role or higher.";
 
 export function requireBusinessActor(
   auth: AuthContext,

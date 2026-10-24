@@ -7,8 +7,9 @@ import { useState, useCallback, useEffect } from "react";
 import { useModalFocus } from "../../../lib/use-modal-focus.ts";
 import { api } from "../../../lib/api.ts";
 import type { OppDetail, PrecheckDraftItem, Suggestion, WebSuggestion, UniRecoResponse, EvalItem, EvalCategoryScore, FinancialsResp } from "./types.ts";
+import { useTranslations } from "next-intl";
 
-export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: string; onSaved?: () => void }) {
+export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: string; onSaved?: () => void }) {const t = useTranslations("stages.s67.useBrownfieldBase");
 
   const { me } = useAuth();
   const canAct = canWriteBusiness(me?.role);
@@ -85,7 +86,7 @@ export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: s
       setDartResults(r.data.results);
       if (r.data.error) setDartError(r.data.error);
     } catch (err) {
-      setDartError(err instanceof Error ? err.message : "전자공시 검색 실패");
+      setDartError(err instanceof Error ? err.message : t("filingSearchFailed"));
     } finally {
       setDartBusy(false);
     }
@@ -101,13 +102,13 @@ export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: s
       setWebProposals((prev) => (prev ?? []).filter((c) => c.company_name !== companyName));
       loadDetail(opportunityId);
       onSaved?.();
-    } catch (err) { setError(err instanceof Error ? err.message : "수용 실패"); }
+    } catch (err) { setError(err instanceof Error ? err.message : t("failedToAccept")); }
   }
 
   const loadDetail = useCallback((oppId: string) => {
     api.get<OppDetail>(`/api/brownfield/${encodeURIComponent(oppId)}/targets`)
       .then((r) => { setSelected(r.data); setError(null); })
-      .catch((e) => setError(e instanceof Error ? e.message : "후보 목록 불러오기 실패"));
+      .catch((e) => setError(e instanceof Error ? e.message : t("failedToLoadTheCandidate")));
   }, []);
   return { savingUniverse, selected, universeDraft, setSavingUniverse, setError, loadDetail, setEditingUniverse, setUniReco, setUniRecoApplied, setUniverseDraft, setGapHint, gapHint, opportunityId, setSelected, webBusy, setWebBusy, setWebProposals, setWebNote, setWebSource, uniBusy, setUniBusy, setEvalItems, setEvalScores, setFinancials, newTarget, busy, setBusy, setNewTarget, onSaved, precheckBusy, precheckDraft, setPrecheckBusy, setPrecheckDraft, setPrecheckDraftNote, recoBusy, setRecoBusy, setRecoProgress, error, canAct, discoveryPanel, setDiscoveryPanel, proposals, webProposals, setDartResults, dartBusy, searchDartCompanies, dartError, dartResults, acceptProposal, webModalFocus, webNote, webSource, editingUniverse, uniReco, uniRecoApplied, precheckOpen, setPrecheckOpen, recoProgress, precheckDraftNote };
 }

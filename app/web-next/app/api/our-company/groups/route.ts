@@ -20,11 +20,11 @@ export async function POST(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "그룹 등록은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Registering groups requires the analyst role or higher." });
   if (denied) return denied;
   const body = (await request.json().catch(() => null)) as { name?: string } | null;
   const name = body?.name?.trim();
-  if (!name) return badRequest("invalid_request", "그룹명(name)은 필수입니다.");
+  if (!name) return badRequest("invalid_request", "Group name (name) is required.");
   const db = getDb();
   const existing = db.query("SELECT id FROM company_group WHERE name = ? AND deleted_at IS NULL").get(name) as { id: string } | undefined;
   if (existing) return ok({ id: existing.id, name, reused: true }, 200);

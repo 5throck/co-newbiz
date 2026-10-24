@@ -11,14 +11,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "계열사 등록은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Registering affiliates requires the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as
     | { company_name?: string; dart_corp_code?: string | null; role?: "hq" | "affiliate" }
     | null;
   const name = body?.company_name?.trim();
-  if (!name) return badRequest("invalid_request", "company_name은 필수입니다.");
+  if (!name) return badRequest("invalid_request", "company_name is required.");
   const role = body?.role === "hq" ? "hq" : "affiliate";
   const db = getDb();
   if (!db.query("SELECT id FROM company_group WHERE id = ?").get(id)) return notFound();
@@ -40,14 +40,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "계열사 수정은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Updating affiliates requires the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as
     | { member_id?: string; company_name?: string; dart_corp_code?: string | null; role?: "hq" | "affiliate" }
     | null;
   const memberId = body?.member_id;
-  if (!memberId) return badRequest("invalid_request", "member_id는 필수입니다.");
+  if (!memberId) return badRequest("invalid_request", "member_id is required.");
   const db = getDb();
   const member = db
     .query("SELECT id FROM company_group_member WHERE id = ? AND group_id = ?")
@@ -73,18 +73,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "계열사 제거는 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Removing affiliates requires the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { member_id?: string; reason?: string } | null;
   const memberId = body?.member_id;
-  if (!memberId) return badRequest("invalid_request", "member_id는 필수입니다.");
+  if (!memberId) return badRequest("invalid_request", "member_id is required.");
   const db = getDb();
   const member = db
     .query("SELECT company_name, deleted_at FROM company_group_member WHERE id = ? AND group_id = ?")
     .get(memberId, id) as { company_name: string; deleted_at: string | null } | undefined;
   if (!member) return notFound();
-  if (member.deleted_at) return badRequest("already_deleted", "이 계열사는 이미 삭제 표시되어 있습니다.");
+  if (member.deleted_at) return badRequest("already_deleted", "This affiliate is already soft-deleted.");
   // deletion mark — 행은 남는다(시너지 분석·프로파일 참조와 감사 이력 보존).
   // 모든 목록/조회가 이 표시를 필터링한다.
   const now = new Date().toISOString();

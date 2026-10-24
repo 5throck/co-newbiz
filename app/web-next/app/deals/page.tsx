@@ -5,11 +5,12 @@
 // Read-only overview; decisions stay on their stage surfaces (boundary #2).
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { api } from "../../lib/api.ts";
 import { ColGroup, FilterChip, PageState, PrimaryAction } from "../../components/ui.tsx";
 import { STAGE_TAB_GROUPS } from "../../lib/stage-tabs.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
-import { GATE_LABEL, type GateMetaId } from "../../lib/stage-meta.ts";
+import { GATE_LABEL_KEY } from "../../lib/label-keys.ts";
 import { opportunityStatusHref } from "../../lib/deal-links.ts";
 import { gateHoldHref } from "../../lib/inbox.ts";
 import { buildCardChips } from "../../lib/deal-card-label.ts";
@@ -54,8 +55,9 @@ interface OpportunityRow {
 }
 
 type Track = "greenfield" | "brownfield";
-// Shared label convention with /projects (TRACK_LABEL there).
-const TRACK_LABEL: Record<Track, string> = { greenfield: "그린필드", brownfield: "브라운필드" };
+// i18n: track chips resolve through common.track.* catalog keys at render
+// time (/projects keeps its own Korean TRACK_LABEL until its extraction batch).
+const TRACK_KEY: Record<Track, string> = { greenfield: "common.track.greenfield", brownfield: "common.track.brownfield" };
 
 type CardTone = "gray" | "amber" | "green";
 type Card = {
@@ -65,7 +67,7 @@ type Card = {
   queryText: string;
   stage: string;
   stageLabel: string;
-  holdLabel: string | null;
+  holdLabelKeys: string[] | null;
   tone: CardTone;
   hold: boolean;
   track: Track | null;
@@ -77,15 +79,17 @@ type Card = {
 type PausedInfo = { reason: string; link: string | null };
 
 type FilterKey = "all" | "greenfield" | "brownfield" | "gate" | "paused";
+// i18n: chip labels resolve through catalog keys at render (common.* reuse + pages.deals.filterPaused).
 const FILTERS: Array<[FilterKey, string]> = [
-  ["all", "전체"],
-  ["greenfield", "그린필드"],
-  ["brownfield", "브라운필드"],
+  ["all", "common.all"],
+  ["greenfield", "common.track.greenfield"],
+  ["brownfield", "common.track.brownfield"],
   ["gate", "HOLD"],
-  ["paused", "일시정지"],
+  ["paused", "pages.deals.filterPaused"],
 ];
 
 function DealsBoard() {
+  const t = useTranslations();
   const [data, setData] = useState<PipelineView | null>(null);
   const [opps, setOpps] = useState<OpportunityRow[] | null>(null);
   const [paused, setPaused] = useState<Record<string, PausedInfo>>({});
@@ -95,7 +99,7 @@ function DealsBoard() {
   const searchRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(() => {
-    api.get<PipelineView>("/api/portfolio/pipeline").then((r) => setData(r.data)).catch((e) => setError(e instanceof Error ? e.message : "검토/안건 보드를 불러오지 못했습니다."));
+    api.get<PipelineView>("/api/portfolio/pipeline").then((r) => setData(r.data)).catch((e) => setError(e instanceof Error ? e.message : t("pages.deals.loadFailed")));
     api.get<OpportunityRow[]>("/api/opportunities").then((r) => setOpps(r.data)).catch(() => setOpps([]));
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -125,8 +129,8 @@ function DealsBoard() {
     if (o.status === "selected") return "S4";
     return "—";
   };
-  const waitingLabelFor = (o: OpportunityRow): string =>
-    o.project_id ? "프로젝트 승격됨" : o.route_decided ? "S4 결정 기록됨 · 승격 대기" : "S4 대기";
+  const waitingKeyFor = (o: OpportunityRow): string =>
+    o.project_id ? "pages.deals.waitingPromoted" : o.route_decided ? "pages.deals.waitingRouteDecided" : "pages.deals.waitingS4";
   const stageNum = (s: string) => (s.startsWith("S") ? Number(s.slice(1)) : 99);
 
   // 검토/안건(기회) 단위 HOLD — /deals의 "HOLD" 필터와 같은 출처
@@ -157,7 +161,7 @@ function DealsBoard() {
         const stage = stageOf(o);
         const holdGates = opportunityHolds.get(o.id) ?? [];
         const hold = holdGates.length > 0;
-        const chips = buildCardChips(stage, holdGates, o.status === "selected" ? waitingLabelFor(o) : undefined);
+        const chips = buildCardChips(stage, holdGates, o.status === "selected" ? t(waitingKeyFor(o)) : undefined);
         return {
           kind: "opportunity", id: o.id, name: o.name, queryText: o.name, stage,
           // "대기"(자연스러운 다음 단계 대기)와 "HOLD"(게이트에서 명시적으로
@@ -167,7 +171,7 @@ function DealsBoard() {
           ...chips,
           tone: "gray",
           hold, track: null,
-          meta: `매력도 ${o.attractiveness_score ?? "—"} · 시너지 ${o.synergy_score ?? "—"}`,
+          meta: t("pages.deals.metaScores", { p1: o.attractiveness_score ?? "—", p2: o.synergy_score ?? "—" }),
           href: opportunityStatusHref(o.id, o.status),
         };
       });
@@ -214,11 +218,12 @@ function DealsBoard() {
     .filter((c) => matches(c, filter))
     .filter((c) => !query || c.queryText.toLowerCase().includes(query.toLowerCase()));
 
+  // i18n: column titles resolve through pages.deals.* keys at render.
   const columns = [
-    { title: "발굴·평가 (S1~S3)", test: (n: number) => n <= 3 },
-    { title: "전략 결정 (S4~S7)", test: (n: number) => n >= 4 && n <= 7 },
-    { title: "사업성·실사 (S8~S10)", test: (n: number) => n >= 8 && n <= 10 },
-    { title: "심의·사후 (S11~S12)", test: (n: number) => n >= 11 },
+    { titleKey: "pages.deals.colDiscovery", test: (n: number) => n <= 3 },
+    { titleKey: "pages.deals.colStrategy", test: (n: number) => n >= 4 && n <= 7 },
+    { titleKey: "pages.deals.colBusinessDd", test: (n: number) => n >= 8 && n <= 10 },
+    { titleKey: "pages.deals.colReviewPost", test: (n: number) => n >= 11 },
   ];
 
   const stageTone: Record<CardTone, string> = { gray: "status-not-started", amber: "status-amber", green: "status-green" };
@@ -226,40 +231,40 @@ function DealsBoard() {
   return (
     <main>
       <div className="flex flex-wrap items-center gap-2" style={{ marginBottom: 8 }}>
-        <h1>검토/안건 보드</h1>
+        <h1>{t("pages.deals.h1")}</h1>
         <span className="ml-auto">
-          <PrimaryAction inline href="/market?new=1" label="＋ 새 검토 시작 (시장분석부터)" />
-          <Link href="/opportunities?known_target=1" className="btn-ghost ml-2">알려진 대상으로 시작</Link>
+          <PrimaryAction inline href="/market?new=1" label={t("pages.deals.newDealCta")} />
+          <Link href="/opportunities?known_target=1" className="btn-ghost ml-2">{t("pages.deals.knownTargetCta")}</Link>
         </span>
       </div>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
-        모든 검토/안건을 퍼널 한 장으로 봅니다 — 기회(S1~S7)와 프로젝트(S8~S12), 진행 에이징까지.
+        {t("pages.deals.intro")}
       </p>
       {/* R2-A item 8: every screen that has no sidebar entry is reachable from here. */}
-      <nav aria-label="관련 화면 바로가기" className="flex flex-wrap items-center gap-1 mb-3">
-        <span className="section-meta">바로가기:</span>
-        {SHORTCUTS.map(([href, label]) => (
-          <Link key={href} href={href} className="btn-ghost btn-sm">{label}</Link>
+      <nav aria-label={t("pages.deals.shortcutsNav")} className="flex flex-wrap items-center gap-1 mb-3">
+        <span className="section-meta">{t("pages.deals.shortcutsLabel")}</span>
+        {SHORTCUTS.map(([href, labelKey]) => (
+          <Link key={href} href={href} className="btn-ghost btn-sm">{t(labelKey)}</Link>
         ))}
       </nav>
 
       <SectionToolbar
         filters={
-          <span role="group" aria-label="검토/안건 필터" className="flex flex-wrap items-center gap-1">
-            <span className="section-meta">필터:</span>
-            {FILTERS.map(([k, label]) => (
+          <span role="group" aria-label={t("pages.deals.filterGroup")} className="flex flex-wrap items-center gap-1">
+            <span className="section-meta">{t("pages.deals.filterLabel")}</span>
+            {FILTERS.map(([k, labelKey]) => (
               <FilterChip key={k} selected={filter === k} onClick={() => setFilter(k)}>
-                {label} <span className="tabular-nums">{counts[k]}</span>
+                {t(labelKey)} <span className="tabular-nums">{counts[k]}</span>
               </FilterChip>
             ))}
           </span>
         }
         actions={
           <span className="flex items-center gap-1">
-            <input ref={searchRef} aria-label="검토/안건 검색" placeholder="검토/안건명·번호" value={query} onChange={(e) => setQuery(e.target.value)}
+            <input ref={searchRef} aria-label={t("pages.deals.searchAria")} placeholder={t("pages.deals.searchPlaceholder")} value={query} onChange={(e) => setQuery(e.target.value)}
               className="sizing-new-input sizing-new-input-sm" style={{ width: 160 }} />
             <button type="button" className="btn-ghost btn-sm" onClick={() => searchRef.current?.focus()}>
-              <svg className="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg> 검색
+              <svg className="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg> {t("pages.deals.searchCta")}
             </button>
           </span>
         }
@@ -270,12 +275,12 @@ function DealsBoard() {
 
       {data && (opps ?? []).filter((o) => o.status !== "dropped").length === 0 && data.projects.length === 0 && (
         <div className="market-section mb-4" style={{ border: "1px dashed var(--border)" }}>
-          <h2 className="text-[length:var(--fs-body)] mb-1">아직 진행 중인 검토/안건이 없습니다</h2>
+          <h2 className="text-[length:var(--fs-body)] mb-1">{t("pages.deals.emptyTitle")}</h2>
           <p className="text-[length:var(--fs-caption)]" style={{ margin: "0 0 var(--space-2)" }}>
-            첫 신규사업 검토는 시장분석(S1)부터 시작합니다 — 4단계 가이드가 준비되어 있습니다.
+            {t("pages.deals.emptyBody")}
           </p>
           <Link href="/onboarding" className="btn-ghost btn-sm" style={{ textDecoration: "none", display: "inline-block" }}>
-            시작하기 가이드 보기
+            {t("pages.deals.emptyCta")}
           </Link>
         </div>
       )}
@@ -285,9 +290,10 @@ function DealsBoard() {
           <div className="funnel-board" style={{ marginBottom: 16 }}>
             {columns.map((col) => {
               const colCards = visible.filter((c) => col.test(stageNum(c.stage)));
+              const colTitle = t(col.titleKey);
               return (
-                <section key={col.title} className="funnel-col" aria-label={col.title}>
-                  <h3>{col.title} <span className="funnel-count tabular-nums">{colCards.length}</span></h3>
+                <section key={col.titleKey} className="funnel-col" aria-label={colTitle}>
+                  <h3>{colTitle} <span className="funnel-count tabular-nums">{colCards.length}</span></h3>
                   <div className="funnel-cards">
                     {colCards.map((c) => {
                       const p = paused[c.id];
@@ -297,50 +303,50 @@ function DealsBoard() {
                           <span className="funnel-card-name font-semibold">{c.name}</span>
                           <span className="funnel-card-meta">
                             <span className={`status-chip ${stageTone[c.tone]}`}>{c.stageLabel}</span>
-                            {c.holdLabel && <span className="status-chip status-amber">{c.holdLabel}</span>}
+                            {c.holdLabelKeys && <span className="status-chip status-amber">{c.holdLabelKeys.map((k) => t(k)).join("·")} HOLD</span>}
                             {c.track ? (
-                              <span className={`status-chip ${c.track === "greenfield" ? "status-green" : "status-amber"}`}>{TRACK_LABEL[c.track]}</span>
+                              <span className={`status-chip ${c.track === "greenfield" ? "status-green" : "status-amber"}`}>{t(TRACK_KEY[c.track])}</span>
                             ) : c.kind === "project" ? (
-                              <span className="status-chip status-not-started">트랙 미결정</span>
+                              <span className="status-chip status-not-started">{t("pages.deals.trackUndecided")}</span>
                             ) : null}
                             <span>{c.meta}</span>
                           </span>
                           {p && (
                             <span className="funnel-card-meta" style={{ color: "var(--amber-fg)" }}>
-                              ⚠ 파이프라인 일시정지 — {p.reason}
+                              {t("pages.deals.pausedWarning", { p1: p.reason })}
                               {p.link && (
-                                <> · <span className="font-semibold">재개 →</span></>
+                                <> · <span className="font-semibold">{t("pages.deals.resumeLink")}</span></>
                               )}
                             </span>
                           )}
                         </Link>
                         {c.sourceHref && (
-                          <Link href={c.sourceHref} className="btn-ghost btn-sm">사업 기회 보기</Link>
+                          <Link href={c.sourceHref} className="btn-ghost btn-sm">{t("pages.deals.viewOpportunity")}</Link>
                         )}
                         </div>
                       );
                     })}
-                    {colCards.length === 0 && <p className="funnel-empty">해당 단계의 검토/안건이 없습니다</p>}
+                    {colCards.length === 0 && <p className="funnel-empty">{t("pages.deals.emptyColumn")}</p>}
                   </div>
                 </section>
               );
             })}
           </div>
 
-          <section className="market-section" aria-label="진행 에이징">
-            <h3 className="sizing-step-title text-[length:var(--fs-body)] mb-1">진행 에이징 — HOLD·KILL 경과</h3>
+          <section className="market-section" aria-label={t("pages.deals.agingSection")}>
+            <h3 className="sizing-step-title text-[length:var(--fs-body)] mb-1">{t("pages.deals.agingHeading")}</h3>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-              위 퍼널(S1~S7, S8~S12) 어느 한쪽에 속한 목록이 아니라, 전체 단계의 게이트({Object.values(GATE_LABEL).join("·")}) HOLD·KILL 결정을 모두 모은 목록입니다 — &quot;진행&quot; 열이 각 행이 어느 게이트에서 나온 결정인지 나타냅니다.
+              {t("pages.deals.agingNote", { p1: Object.values(GATE_LABEL_KEY).map((k) => t(k)).join("·") })}
             </p>
             {data.currentHolds.length === 0 ? (
-              <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">HOLD·KILL 진행이 없습니다.</p>
+              <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{t("pages.deals.agingEmpty")}</p>
             ) : (
-              <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-                <table className="data-table table-fixed-pct tmin-48" aria-label="진행 에이징">
-                  <caption className="sr-only">진행 에이징 — 경과일 내림차순</caption>
+              <div className="table-scroll" role="region" aria-label={t("pages.deals.tableScrollRegion")} tabIndex={0}>
+                <table className="data-table table-fixed-pct tmin-48" aria-label={t("pages.deals.agingTableAria")}>
+                  <caption className="sr-only">{t("pages.deals.agingTableCaption")}</caption>
                   <ColGroup widths={AGING_COL_PCT} />
                   <thead>
-                    <tr><th scope="col">검토/안건</th><th scope="col">게이트</th><th scope="col">결정</th><th scope="col">결정일</th><th scope="col" className="col-num">경과</th></tr>
+                    <tr><th scope="col">{t("pages.deals.colDeal")}</th><th scope="col">{t("pages.deals.colGate")}</th><th scope="col">{t("pages.deals.colDecision")}</th><th scope="col">{t("pages.deals.colDecidedAt")}</th><th scope="col" className="col-num">{t("pages.deals.colAge")}</th></tr>
                   </thead>
                   <tbody>
                     {[...data.currentHolds].sort((a, b) => b.ageDays - a.ageDays).map((r) => (
@@ -350,10 +356,10 @@ function DealsBoard() {
                             {r.label}
                           </Link>
                         </td>
-                        <td className="tabular-nums text-[length:var(--fs-caption)]">{GATE_LABEL[r.gate as GateMetaId] ?? r.gate}</td>
+                        <td className="tabular-nums text-[length:var(--fs-caption)]">{t(GATE_LABEL_KEY[r.gate] ?? r.gate)}</td>
                         <td><span className={`status-chip ${r.decision === "kill" ? "status-red" : "status-amber"}`}>{r.decision.toUpperCase()}</span></td>
                         <td className="text-[length:var(--fs-caption)] tabular-nums">{r.decidedAt.slice(0, 10)}</td>
-                        <td className="col-num tabular-nums text-[length:var(--fs-caption)]">{r.ageDays}일</td>
+                        <td className="col-num tabular-nums text-[length:var(--fs-caption)]">{t("pages.deals.ageDays", { p1: r.ageDays })}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -374,13 +380,14 @@ function projectStageHref(projectId: string, stage: string): string {
 }
 
 /** Entry points for routes that are not in the sidebar (orphan-route decision, design §3.6). */
+// i18n: shortcut labels are catalog keys (pages.deals.shortcut*) resolved at render.
 const SHORTCUTS: Array<[string, string]> = [
-  ["/projects", "프로젝트 목록"],
-  ["/portfolio-view", "포트폴리오 전체 뷰"],
-  ["/our-company", "그룹·계열사 프로파일"],
-  ["/companies", "회사 검색"],
-  ["/agents", "에이전트팀 질의"],
-  ["/onboarding", "시작하기 가이드"],
+  ["/projects", "pages.deals.shortcutProjects"],
+  ["/portfolio-view", "pages.deals.shortcutPortfolio"],
+  ["/our-company", "pages.deals.shortcutOurCompany"],
+  ["/companies", "pages.deals.shortcutCompanies"],
+  ["/agents", "pages.deals.shortcutAgents"],
+  ["/onboarding", "pages.deals.shortcutOnboarding"],
 ];
 
 export default function DealsPage() {

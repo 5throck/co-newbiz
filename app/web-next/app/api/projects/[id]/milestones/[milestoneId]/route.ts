@@ -12,7 +12,7 @@ import { route } from "../../../../../../lib/route.ts";
 export const PUT = route(async (request: Request, { params }: { params: Promise<{ id: string; milestoneId: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "마일스톤 갱신은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Milestone updates require the analyst role or higher." });
   if (denied) return denied;
   const { id, milestoneId } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
@@ -34,14 +34,14 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
     return ok(row, 200);
   } catch (err) {
     if (err instanceof Error && err.message === "milestone not found") return notFound();
-    return badRequest("invalid_request", err instanceof Error ? err.message : "마일스톤 갱신에 실패했습니다.");
+    return badRequest("invalid_request", err instanceof Error ? err.message : "Milestone update failed.");
   }
 });
 
 export const DELETE = route(async (request: Request, { params }: { params: Promise<{ id: string; milestoneId: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "마일스톤 삭제는 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Milestone deletion requires the analyst role or higher." });
   if (denied) return denied;
   const { id, milestoneId } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();

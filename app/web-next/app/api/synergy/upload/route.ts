@@ -16,13 +16,13 @@ const EXTRACTOR = join(process.cwd(), "..", "..", "python", "extract_upload_text
 export async function POST(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "파일 업로드는 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "File uploads require the analyst role or higher." });
   if (denied) return denied;
 
   const form = await request.formData().catch(() => null);
   const file = form?.get("file");
-  if (!(file instanceof File)) return badRequest("invalid_request", "file (multipart)는 필수입니다.");
-  if (file.size === 0 || file.size > MAX_SIZE) return badRequest("invalid_request", "파일은 0바이트 초과 20MB 이하여야 합니다.");
+  if (!(file instanceof File)) return badRequest("invalid_request", "file (multipart) is required.");
+  if (file.size === 0 || file.size > MAX_SIZE) return badRequest("invalid_request", "File must be larger than 0 bytes and at most 20MB.");
 
   const safeName = file.name.replace(/[^\w.\-가-힣 ]/g, "_").slice(0, 120);
   const stored = `${ulid()}-${safeName}`;

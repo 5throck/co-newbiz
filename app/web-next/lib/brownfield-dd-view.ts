@@ -4,8 +4,8 @@
 // JSON into display rows. m_and_a, a null sub-track and grandfathered projects carry no `brownfield_scope`
 // key, so every helper here returns null / false for them and the stage renders exactly as before.
 // Generic greenfield helpers (splitItems, tabCounts, statusText, pointerText, ...) are reused, not copied.
-import { BF_SUB } from "./labels.ts";
 import { countReplaced, isJudgedStatus, splitItems, statusText, type OptInPreviewLike, type WsCode, type WsDomainLike, type WsItemScope, type WsPrevious } from "./greenfield-dd-view.ts";
+import { SUB_TRACK_KEY } from "./label-keys.ts";
 
 /** Sub-tracks that get the scoped view (m_and_a is the byte-identical baseline). */
 export const BF_SCOPED_SUB_TRACKS = ["jv", "strategic_investment", "minority_investment", "partnership", "rbd", "corporate_venture"] as const;
@@ -33,7 +33,8 @@ export function bfScopeBlock(block: BfScopeBlock | null | undefined): BfScopeBlo
 }
 
 export function bfSubTrackName(subTrack: string): string {
-  return BF_SUB[subTrack] ?? subTrack;
+  // i18n (T3-6): common.subTrack.* key — resolve with resolveLabelTokens at render.
+  return SUB_TRACK_KEY[subTrack] ?? subTrack;
 }
 
 /** True when the checklist belongs to this scoped project (a workspace domain or an attached extra checklist). */

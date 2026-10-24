@@ -53,7 +53,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "투자구조 설계 기록은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Recording deal-structure design requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const db = getDb();
@@ -90,7 +90,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       const hypothesisId = body?.hypothesis_id as string | undefined;
       const artifactRef = body?.artifact_ref as string | undefined;
       if (!hypothesisId || !artifactRef?.trim()) {
-        return badRequest("invalid_request", "hypothesis_id와 artifact_ref(deal_structure_review 아티팩트 참조)는 필수입니다.");
+        return badRequest("invalid_request", "hypothesis_id and artifact_ref (a deal_structure_review artifact reference) are required.");
       }
       const row = completeFourAxisReview({ hypothesis_id: hypothesisId, reviewed_by: ctx.userId, artifact_ref: artifactRef.trim() }, db);
       // ADR-0153: the human's four-axis completion (reviewed_by recorded) is the
@@ -100,7 +100,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     }
     if (action === "add_financing_entry") {
       const kind = body?.kind as string | undefined;
-      if (kind !== "source" && kind !== "use") return badRequest("invalid_request", "kind은 source 또는 use여야 합니다.");
+      if (kind !== "source" && kind !== "use") return badRequest("invalid_request", "kind must be source or use.");
       const row = addFinancingEntry(
         {
           project_id: id,
@@ -118,12 +118,12 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     }
     if (action === "remove_financing_entry") {
       const entryId = body?.entry_id as string | undefined;
-      if (!entryId) return badRequest("invalid_request", "entry_id는 필수입니다.");
+      if (!entryId) return badRequest("invalid_request", "entry_id is required.");
       const removed = removeFinancingEntry(id, entryId, ctx.userId, db);
       if (!removed) return notFound();
       return ok({ ok: true }, 200);
     }
-    return badRequest("invalid_action", "action은 hypothesize | complete_four_axis | add_financing_entry | remove_financing_entry 중 하나여야 합니다.");
+    return badRequest("invalid_action", "action must be one of: hypothesize | complete_four_axis | add_financing_entry | remove_financing_entry.");
   } catch (err) {
     return badRequest("deal_structure_write_failed", err instanceof Error ? err.message : "Deal-structure write failed.");
   }

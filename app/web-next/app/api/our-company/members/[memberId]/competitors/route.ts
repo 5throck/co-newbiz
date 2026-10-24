@@ -20,7 +20,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ memb
 export async function POST(request: Request, { params }: { params: Promise<{ memberId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "경쟁사 등록은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Registering competitors requires the analyst role or higher." });
   if (denied) return denied;
   const { memberId } = await params;
   const body = (await request.json().catch(() => null)) as {
@@ -28,10 +28,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ mem
     discovery_source?: string;
     evidence?: Array<{ title: string | null; url: string }> | null;
   } | null;
-  if (!body?.name?.trim()) return badRequest("name_required", "경쟁사명은 필수입니다.");
+  if (!body?.name?.trim()) return badRequest("name_required", "Competitor name is required.");
   const source = body.discovery_source?.trim() || "manual";
   if (!["manual", "ai_proposal"].includes(source)) {
-    return badRequest("invalid_source", "discovery_source는 manual | ai_proposal 중 하나입니다.");
+    return badRequest("invalid_source", "discovery_source must be one of: manual | ai_proposal.");
   }
   const db = getDb();
   if (!db.query("SELECT id FROM company_group_member WHERE id = ?").get(memberId)) return notFound();

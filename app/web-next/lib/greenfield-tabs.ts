@@ -1,6 +1,7 @@
 // S5 Green Field screen: tab structure and pure presentation helpers (no behaviour, API or storage).
 // Tabs follow the dependency order of the data: entry strategy -> required capability -> staffing ->
 // investment -> simulation (ADR-0176, not implemented) -> review/confirm.
+import { formatNumber, type Locale } from "./format.ts";
 
 export const GF_TAB_KEYS = ["entry", "capability", "staffing", "investment", "simulation", "review"] as const;
 export type GfTabKey = (typeof GF_TAB_KEYS)[number];
@@ -55,7 +56,7 @@ export interface SourceSummaryInput {
 }
 export interface SourceSummaryChip { key: "capability" | "staffing" | "manual" | "confirm"; text: string; tab: GfTabKey; icon: string }
 
-const fmtKrwM = (n: number) => (Math.round(n * 100) / 100).toLocaleString("ko-KR", { maximumFractionDigits: 2 });
+const fmtKrwM = (n: number, locale: Locale | string = "ko") => formatNumber(Math.round(n * 100) / 100, locale, { maximumFractionDigits: 2 });
 
 export function buildSourceSummary(i: SourceSummaryInput): SourceSummaryChip[] {
   return [

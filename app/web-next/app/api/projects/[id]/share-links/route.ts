@@ -28,14 +28,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "공유 링크 생성은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Creating share links requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
     title?: string; payload?: unknown; recipient?: string; expires_in_days?: number;
   } | null;
   if (!body?.title?.trim() || !body?.recipient?.trim() || body.payload === undefined) {
-    return badRequest("fields_required", "title·recipient·payload는 필수입니다.");
+    return badRequest("fields_required", "title·recipient·payload is required.");
   }
   const days = Math.min(Math.max(body.expires_in_days ?? 7, 1), 30);
   const now = new Date();
@@ -56,12 +56,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "링크 철회는 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Revoking share links requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const url = new URL(request.url);
   const linkId = url.searchParams.get("link_id");
-  if (!linkId) return badRequest("link_required", "link_id 쿼리 파라미터가 필요합니다.");
+  if (!linkId) return badRequest("link_required", "The link_id query parameter is required.");
   const row = getDb().query("SELECT id FROM share_link WHERE id = ? AND project_id = ?").get(linkId, id);
   if (!row) return notFound();
   getDb().run("UPDATE share_link SET revoked_at = ? WHERE id = ?", [new Date().toISOString(), linkId]);

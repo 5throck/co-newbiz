@@ -225,7 +225,7 @@ describe("source guards", () => {
     // brownfield detection comes from the GET track field; judgement entry follows the S9 tab
     expect(panel).toContain('view.track === "brownfield"');
     expect(panel).toContain("judgeHref={isBrownfield ? s9Href : editHref}");
-    expect(panel).toContain('judgeLabel={isBrownfield ? "S9'+"에서 판정\"");
+    expect(panel).toContain('judgeLabel={isBrownfield ? t("judgedInS9")'); // i18n: labels are catalog keys
     // the legacy target edit payload is untouched (route still sends edit_href)
     const route = read("app/web-next/app/api/projects/[id]/capability-attainability/route.ts");
     expect(route).toContain("edit_href");

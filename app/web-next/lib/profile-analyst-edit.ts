@@ -34,12 +34,12 @@ export class EditError extends Error {
 
 const HTML_RE = /<\/?[a-z!][^>]*>/i;
 function cleanText(v: unknown, field: string, max: number, required = false): string {
-  if (v === undefined || v === null) { if (required) throw new EditError("invalid_field", `${field}은(는) 필수입니다.`); return ""; }
-  if (typeof v !== "string") throw new EditError("invalid_field", `${field}은(는) 문자열이어야 합니다.`);
+  if (v === undefined || v === null) { if (required) throw new EditError("invalid_field", `${field} is required.`); return ""; }
+  if (typeof v !== "string") throw new EditError("invalid_field", `${field} must be a string.`);
   const t = stripControlChars(v).replace(/[ \t]+/g, " ").trim();
-  if (required && !t) throw new EditError("invalid_field", `${field}은(는) 필수입니다.`);
-  if (t.length > max) throw new EditError("field_too_long", `${field}은(는) ${max}자 이하여야 합니다.`);
-  if (HTML_RE.test(t)) throw new EditError("html_not_allowed", `${field}에는 HTML을 넣을 수 없습니다.`);
+  if (required && !t) throw new EditError("invalid_field", `${field} is required.`);
+  if (t.length > max) throw new EditError("field_too_long", `${field} must be at most ${max} characters.`);
+  if (HTML_RE.test(t)) throw new EditError("html_not_allowed", `${field} must not contain HTML.`);
   return t;
 }
 
@@ -47,7 +47,7 @@ const columnOf = (s: Subject) => (s.kind === "member" ? "member_id" : "company_i
 
 function requireLatest(db: Db, subject: Subject): CompanyProfilePayload {
   const profile = loadLatestProfile(db, subject);
-  if (!profile) throw new EditError("no_profile", "프로파일이 아직 없습니다 — 먼저 분석을 실행하세요.", 404);
+  if (!profile) throw new EditError("no_profile", "No profile yet — run the analysis first.", 404);
   return profile;
 }
 
@@ -95,7 +95,7 @@ export interface ManualSourceInput { url?: unknown; title?: unknown; excerpt?: u
 
 function parseManual(input: ManualSourceInput): { url: string; title: string; excerpt: string } {
   const url = cleanText(input.url, "주소", 2000);
-  if (url && !isAllowedUrlShape(url)) throw new EditError("invalid_source_urls", `올바르지 않은 주소: ${url.slice(0, 200)}`);
+  if (url && !isAllowedUrlShape(url)) throw new EditError("invalid_source_urls", `Invalid URL: ${url.slice(0, 200)}`);
   const title = cleanText(input.title, "제목", MAX_TITLE_CHARS, true);
   const excerpt = cleanText(input.excerpt, "발췌/요약", MAX_EXCERPT_CHARS, true);
   return { url, title, excerpt };
@@ -106,7 +106,7 @@ export function addManualSource(db: Db, subject: Subject, userId: string, input:
   const { url, title, excerpt } = parseManual(input);
   const profile = clone(requireLatest(db, subject));
   const list = profile.dataSources.userSources ?? [];
-  if (list.filter((x) => !x.removed).length >= 8) throw new EditError("too_many_sources", "분석가 제공 출처는 최대 8개입니다.");
+  if (list.filter((x) => !x.removed).length >= 8) throw new EditError("too_many_sources", "At most 8 analyst-supplied sources are allowed.");
   const source: UserSourceRecord = {
     url, title, fetched: true, charCount: excerpt.length, status: "ok",
     provided: true, manual: true, id: ulid(), addedBy: userId, addedAt: new Date().toISOString(), excerpt,
@@ -118,9 +118,9 @@ export function addManualSource(db: Db, subject: Subject, userId: string, input:
 
 function findManual(profile: CompanyProfilePayload, sourceId: string): UserSourceRecord {
   const entry = (profile.dataSources.userSources ?? []).find((x) => x.id === sourceId && !x.removed);
-  if (!entry) throw new EditError("source_not_found", "출처를 찾을 수 없습니다.", 404);
+  if (!entry) throw new EditError("source_not_found", "Source not found.", 404);
   // Pipeline-collected (fetched or searched) sources are never editable or removable by hand.
-  if (!entry.manual) throw new EditError("source_not_editable", "직접 입력한 출처만 수정·삭제할 수 있습니다.", 403);
+  if (!entry.manual) throw new EditError("source_not_editable", "Only directly-entered sources can be edited or deleted.", 403);
   return entry;
 }
 
@@ -161,23 +161,23 @@ type ListField = (typeof LIST_FIELDS)[number];
 const LEDGER_PREFIX: Record<ListField, string> = { industryExposure: "산업 노출", strengths: "강점", weaknesses: "약점" };
 
 function cleanList(v: unknown, field: ListField): string[] {
-  if (!Array.isArray(v)) throw new EditError("invalid_field", `${field}은(는) 문자열 배열이어야 합니다.`);
+  if (!Array.isArray(v)) throw new EditError("invalid_field", `${field} must be an array of strings.`);
   const lim = LIMITS[field];
   const out = v.map((x) => cleanText(x, field, lim.chars)).filter(Boolean);
-  if (out.length > lim.items) throw new EditError("too_many_items", `${field}은(는) 최대 ${lim.items}개입니다.`);
+  if (out.length > lim.items) throw new EditError("too_many_items", `${field} allows at most ${lim.items} items.`);
   return [...new Set(out)];
 }
 
 /** Resolves a cited provided-source reference ("U2"/"N") to a ledger evidence label; throws when it does not exist. */
 function citedLabel(profile: CompanyProfilePayload, cite: unknown): string | null {
   if (cite === undefined || cite === null || cite === "") return null;
-  if (typeof cite !== "string" || !/^(U\d+|N)$/.test(cite)) throw new EditError("invalid_cite", "citeSource는 U번호 또는 N 형식이어야 합니다.");
+  if (typeof cite !== "string" || !/^(U\d+|N)$/.test(cite)) throw new EditError("invalid_cite", "citeSource must be a U-number or N format.");
   if (cite === "N") {
-    if (!profile.dataSources.analystNote) throw new EditError("invalid_cite", "분석가 소개 메모가 없습니다.");
+    if (!profile.dataSources.analystNote) throw new EditError("invalid_cite", "No analyst note exists.");
     return "분석가 소개 메모";
   }
   const src = (profile.dataSources.userSources ?? [])[Number(cite.slice(1)) - 1];
-  if (!src || src.removed || src.status !== "ok") throw new EditError("invalid_cite", `${cite}는 근거로 쓸 수 있는 제공 출처가 아닙니다.`);
+  if (!src || src.removed || src.status !== "ok") throw new EditError("invalid_cite", `${cite} is not an analyst-supplied source usable as evidence.`);
   return labelOf(src);
 }
 
@@ -224,7 +224,7 @@ export function applyFieldOverrides(db: Db, subject: Subject, userId: string, in
       changed.push("businessAssessment");
     }
   }
-  if (changed.length === 0) throw new EditError("no_changes", "변경된 항목이 없습니다.");
+  if (changed.length === 0) throw new EditError("no_changes", "Nothing changed.");
 
   if (changed.includes("industryExposure")) profile.industryLinkage = deriveIndustryLinkage(db, profile.industryExposure);
   profile.analystEdited = edited;

@@ -51,7 +51,7 @@ function runOne(item: CalibrateItem): Promise<{ ok: boolean; output: string }> {
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "통계 보정은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Statistical calibration requires the analyst role or higher.");
   const { id } = await params;
   const project = visibleProject(auth.auth, id);
   if (!project) return notFound();
@@ -76,19 +76,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     : [...new Map(boundPairs.concat(linkPairs).map((p) => [`${p.from}->${p.to}`, p])).values()];
 
   if (pairs.length === 0) {
-    return badRequest("no_pairs", "보정할 산업쌍이 없습니다 — 산업 바인딩 또는 가치사슬 링크를 먼저 등록하세요.");
+    return badRequest("no_pairs", "No industry pairs to calibrate — register industry bindings or value-chain links first.");
   }
   if (!body?.items?.length) {
     return badRequest(
       "series_required",
-      `산업쌍 ${pairs.length}건에 대한 관측 시계열(series id)이 지정되지 않았습니다. 본문 items에 from_series_id/to_series_id·기간을 지정하거나, 시계열 수집 파이프라인(fetch --source …)으로 데이터를 먼저 적재하세요. 대상: ${pairs.map((p) => `${p.from}→${p.to}`).join(", ")}`,
+      `No observation series (series ids) given for ${pairs.length} industry pairs. Specify from_series_id/to_series_id and periods in the body items, or load data first via the series collection pipeline (fetch --source ...). Targets: ${pairs.map((p) => `${p.from}->${p.to}`).join(", ")}`,
     );
   }
 
   const results: Array<{ pair: string; ok: boolean; output: string }> = [];
   for (const item of body.items) {
     if (!item.from_industry_id || !item.to_industry_id || !item.from_series_id || !item.to_series_id || !item.period_from || !item.period_to) {
-      return badRequest("invalid_item", "items의 각 항목은 from_industry_id·to_industry_id·from_series_id·to_series_id·period_from·period_to를 포함해야 합니다.");
+      return badRequest("invalid_item", "Each item in items must include from_industry_id, to_industry_id, from_series_id, to_series_id, period_from, and period_to.");
     }
     const r = await runOne(item);
     results.push({ pair: `${item.from_industry_id}→${item.to_industry_id}`, ok: r.ok, output: r.output });

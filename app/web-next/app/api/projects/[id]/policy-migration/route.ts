@@ -37,9 +37,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
   if (ctx.via !== "cookie" || currentPrincipal() || AGENT_KEYS.has(ctx.userId)) {
-    return forbidden("human_only", "정책 이행 기록은 사람만 남길 수 있습니다 (boundary #2).");
+    return forbidden("human_only", "Only a human can record policy implementation (boundary #2).");
   }
-  if (ctx.role === "viewer") return forbidden("role_required", "analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   try {

@@ -2,6 +2,6 @@
 
 import { AdminConsole } from "../../../components/admin/AdminConsole.tsx";
 
-export default function AdminAdr인덱스Page() {{
+export default function AdminAdrIndexPage() {{
   return <AdminConsole section="adr" />;
 }}

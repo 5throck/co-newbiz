@@ -8,6 +8,7 @@
 // 하나("결정 확정")다. 수정 시에는 제안값과 수정값을 나란히 보여준다(show-diff).
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { api, ApiError } from "../../../../lib/api.ts";
 import { Button, PageState, PrimaryAction } from "../../../../components/ui.tsx";
 import { ReviewBuckets } from "../../../../components/ReviewBuckets.tsx";
@@ -44,24 +45,32 @@ interface ConfirmView {
   rag: RagView | null;
 }
 
-const KIND_LABEL: Record<string, string> = {
-  gate_decision: "게이트 결정",
-  route_decision: "진출방식 결정",
-  case_adoption: "사업 사례 채택",
-  target_selection: "대상 선정",
-  transition_decision: "포트폴리오 전환 결정",
-  approval: "사람 승인 기록(차터·DD 판정·4축 검토)",
+// i18n: kind/status/RAG texts resolve through pages.proposalConfirm.* keys at render time.
+const KIND_KEY: Record<string, string> = {
+  gate_decision: "kindGateDecision",
+  route_decision: "kindRouteDecision",
+  case_adoption: "kindCaseAdoption",
+  target_selection: "kindTargetSelection",
+  transition_decision: "kindTransitionDecision",
+  approval: "kindApproval",
 };
 
-const STATUS_TEXT: Record<Proposal["status"], { label: string; note: string }> = {
-  pending: { label: "확인 대기", note: "아직 아무 결정도 기록되지 않았습니다." },
-  confirmed: { label: "확정됨", note: "이 제안은 이미 확정되어 결정이 기록되었습니다." },
-  rejected: { label: "거절됨", note: "이 제안은 거절되었습니다. 결정은 기록되지 않았습니다." },
-  expired: { label: "만료됨", note: "확인 기한(72시간)이 지났습니다. 에이전트에게 새 제안을 요청하세요." },
-  superseded: { label: "대체됨", note: "더 새로운 제안으로 대체되었습니다. 최신 제안을 확인하세요." },
+const STATUS_LABEL_KEY: Record<Proposal["status"], string> = {
+  pending: "stPending",
+  confirmed: "stConfirmed",
+  rejected: "stRejected",
+  expired: "stExpired",
+  superseded: "stSuperseded",
+};
+const STATUS_NOTE_KEY: Record<Proposal["status"], string> = {
+  pending: "notePending",
+  confirmed: "noteConfirmed",
+  rejected: "noteRejected",
+  expired: "noteExpired",
+  superseded: "noteSuperseded",
 };
 
-const RAG_TEXT = { green: "Green (양호)", amber: "Amber (주의)", red: "Red (위험)" } as const;
+const RAG_KEY = { green: "ragGreen", amber: "ragAmber", red: "ragRed" } as const;
 const RAG_CLASS = { green: "status-green", amber: "status-amber", red: "status-red" } as const;
 
 function fmt(iso: string | null): string {
@@ -73,6 +82,7 @@ function show(value: unknown): string {
 }
 
 export default function ProposalConfirmPage() {
+  const t = useTranslations("pages.proposalConfirm");
   const params = useParams<{ id: string }>();
   const id = params.id;
   const [view, setView] = useState<ConfirmView | null>(null);
@@ -97,7 +107,7 @@ export default function ProposalConfirmPage() {
       .catch((e) => {
         // 존재하지 않는(또는 볼 수 없는) 제안은 404와 같은 화면으로 — 일반 오류 문구와 구분한다.
         if (e instanceof ApiError && e.status === 404) setMissing(true);
-        else setError(e instanceof ApiError ? e.message : "제안을 불러오지 못했습니다.");
+        else setError(e instanceof ApiError ? e.message : t("loadFailed"));
       });
   }, [id]);
 
@@ -124,17 +134,17 @@ export default function ProposalConfirmPage() {
     if (!view?.confirm_nonce || busy) return;
     setBusy(true);
     setNotice(null);
-    setStatus("결정을 기록하는 중입니다.");
+    setStatus(t("confirming"));
     try {
       const body: { nonce: string; payload?: Payload } = { nonce: view.confirm_nonce };
       if (changes.length > 0) body.payload = draft;
       await api.post(`/api/proposals/${encodeURIComponent(id)}/confirm`, body);
-      setStatus("결정이 기록되었습니다.");
+      setStatus(t("confirmed"));
       setEditing(false);
       load();
     } catch (e) {
       setStatus("");
-      setNotice(e instanceof ApiError ? `${e.message} (${e.code})` : "확정하지 못했습니다.");
+      setNotice(e instanceof ApiError ? `${e.message} (${e.code})` : t("confirmFailed"));
       // The nonce was consumed; reload to review the current state again.
       load();
     } finally {
@@ -146,14 +156,14 @@ export default function ProposalConfirmPage() {
     if (busy) return;
     setBusy(true);
     setNotice(null);
-    setStatus("제안을 거절하는 중입니다.");
+    setStatus(t("rejecting"));
     try {
       await api.post(`/api/proposals/${encodeURIComponent(id)}/reject`, {});
-      setStatus("제안을 거절했습니다. 결정은 기록되지 않았습니다.");
+      setStatus(t("rejected"));
       load();
     } catch (e) {
       setStatus("");
-      setNotice(e instanceof ApiError ? e.message : "거절하지 못했습니다.");
+      setNotice(e instanceof ApiError ? e.message : t("rejectFailed"));
     } finally {
       setBusy(false);
     }
@@ -161,8 +171,8 @@ export default function ProposalConfirmPage() {
 
   if (missing) {
     return (
-      <StatusPage title="제안을 찾을 수 없습니다">
-        주소가 잘못되었거나, 이미 정리되었거나, 볼 수 있는 권한이 없는 결정 제안입니다. 받은 링크를 다시 확인하세요.
+      <StatusPage title={t("missingTitle")}>
+        {t("missingBody")}
       </StatusPage>
     );
   }
@@ -171,22 +181,22 @@ export default function ProposalConfirmPage() {
     <main aria-labelledby="proposal-heading">
       <div className="page-header-row">
         <h1 id="proposal-heading" ref={headingRef} tabIndex={-1}>
-          결정 제안 확인
+          {t("heading")}
         </h1>
         {pending && (
           <span className="ml-auto">
             <PrimaryAction
               inline
-              label="결정 확정"
+              label={t("confirmBtn")}
               onClick={() => void confirm()}
               disabled={busy || !view?.confirm_nonce}
-              disabledReason={busy ? "처리 중입니다." : "확정용 확인값을 불러오는 중입니다 — 잠시 후 다시 시도하세요."}
+              disabledReason={busy ? t("busyReason") : t("nonceLoadingReason")}
             />
           </span>
         )}
       </div>
       <p className="objective">
-        에이전트는 결정을 제안할 수만 있습니다. 아래 내용을 직접 확인한 뒤, 본인의 판단으로 확정하거나 거절하세요.
+        {t("objective")}
       </p>
       <p role="status" aria-live="polite" className="sr-only">
         {status}
@@ -198,37 +208,37 @@ export default function ProposalConfirmPage() {
         <>
           <section aria-labelledby="summary-heading">
             <h2 id="summary-heading">
-              {KIND_LABEL[proposal.kind] ?? proposal.kind}{" "}
+              {KIND_KEY[proposal.kind] ? t(KIND_KEY[proposal.kind]) : proposal.kind}{" "}
               <span className={`status-chip ${pending ? "status-amber" : proposal.status === "confirmed" ? "status-green" : "status-red"}`}>
-                {STATUS_TEXT[proposal.status].label}
+                {t(STATUS_LABEL_KEY[proposal.status])}
               </span>
             </h2>
-            <p>{STATUS_TEXT[proposal.status].note}</p>
+            <p>{t(STATUS_NOTE_KEY[proposal.status])}</p>
             <dl>
               <div>
-                <dt>대상</dt>
+                <dt>{t("dtEntity")}</dt>
                 <dd>
-                  {proposal.entity_type === "project" ? "프로젝트" : "기회"} {proposal.entity_id}
-                  {proposal.stage_id ? ` · ${proposal.stage_id} 단계` : ""}
+                  {proposal.entity_type === "project" ? t("entityProject") : t("entityOpportunity")} {proposal.entity_id}
+                  {proposal.stage_id ? ` · ${t("stageSuffix", { stage: proposal.stage_id })}` : ""}
                 </dd>
               </div>
               <div>
-                <dt>제안자</dt>
+                <dt>{t("dtProposer")}</dt>
                 <dd>
                   {proposal.proposed_by_user_id}
-                  {proposal.via_client_id ? ` (연결 앱 ${proposal.via_client_id} 경유)` : ""}
+                  {proposal.via_client_id ? ` (${t("viaClient", { clientId: proposal.via_client_id })})` : ""}
                 </dd>
               </div>
               <div>
-                <dt>확인 기한</dt>
+                <dt>{t("dtExpires")}</dt>
                 <dd>{fmt(proposal.expires_at)}</dd>
               </div>
               {proposal.status === "confirmed" && (
                 <div>
-                  <dt>확정</dt>
+                  <dt>{t("dtConfirmed")}</dt>
                   <dd>
                     {proposal.confirmed_by_user_id} · {fmt(proposal.confirmed_at)}
-                    {proposal.resulting_record_id ? ` · 기록 ${proposal.resulting_record_id}` : ""}
+                    {proposal.resulting_record_id ? ` · ${t("recordSuffix", { id: proposal.resulting_record_id })}` : ""}
                   </dd>
                 </div>
               )}
@@ -236,7 +246,7 @@ export default function ProposalConfirmPage() {
           </section>
 
           <section aria-labelledby="payload-heading">
-            <h2 id="payload-heading">제안 내용</h2>
+            <h2 id="payload-heading">{t("payloadHeading")}</h2>
             <dl>
               {Object.entries(proposal.payload).map(([key, value]) => (
                 <div key={key}>
@@ -244,7 +254,7 @@ export default function ProposalConfirmPage() {
                   <dd>
                     {editing && pending && typeof value === "string" ? (
                       <textarea
-                        aria-label={`${key} 수정`}
+                        aria-label={t("editFieldAria", { key })}
                         value={String(draft[key] ?? "")}
                         onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
                         rows={3}
@@ -256,22 +266,22 @@ export default function ProposalConfirmPage() {
                 </div>
               ))}
               <div>
-                <dt>제안 근거</dt>
+                <dt>{t("dtRationale")}</dt>
                 <dd className="pre-wrap">{proposal.rationale}</dd>
               </div>
               <div>
-                <dt>증거 참조</dt>
-                <dd>{proposal.evidence_refs.length === 0 ? "없음" : proposal.evidence_refs.join(", ")}</dd>
+                <dt>{t("dtEvidence")}</dt>
+                <dd>{proposal.evidence_refs.length === 0 ? t("evidenceNone") : proposal.evidence_refs.join(", ")}</dd>
               </div>
             </dl>
             {changes.length > 0 && (
               <section aria-labelledby="diff-heading">
-                <h3 id="diff-heading">수정 내용 (제안값과 비교), {changes.length}건</h3>
+                <h3 id="diff-heading">{t("diffHeading", { count: changes.length })}</h3>
                 <ul>
                   {changes.map((c) => (
                     <li key={c.key}>
-                      <strong>{c.key}</strong>: 제안값 <span className="pre-wrap">{show(c.before)}</span> → 수정값{" "}
-                      <span className="pre-wrap">{show(c.after)}</span>
+                      <strong>{c.key}</strong>: {t("diffBefore")} <span className="pre-wrap">{show(c.before)}</span>{" "}
+                      {t("diffAfter")} <span className="pre-wrap">{show(c.after)}</span>
                     </li>
                   ))}
                 </ul>
@@ -281,14 +291,14 @@ export default function ProposalConfirmPage() {
 
           {view?.rag && (
             <section aria-labelledby="rag-heading">
-              <h2 id="rag-heading">AI 추천 종합 등급(녹·황·적)</h2>
+              <h2 id="rag-heading">{t("ragHeading")}</h2>
               {view.rag.status === "graded" && view.rag.overall ? (
                 <p>
-                  <span className={`status-chip ${RAG_CLASS[view.rag.overall.grade]}`}>{RAG_TEXT[view.rag.overall.grade]}</span>{" "}
-                  {view.rag.overall.rationale} (AI 추천이며 승인이 아닙니다. 데이터 신뢰도가 등급 상한을 정합니다.)
+                  <span className={`status-chip ${RAG_CLASS[view.rag.overall.grade]}`}>{t(RAG_KEY[view.rag.overall.grade])}</span>{" "}
+                  {view.rag.overall.rationale}{t("ragNote")}
                 </p>
               ) : (
-                <p>아직 종합 등급이 산출되지 않았습니다 (등급 없음).</p>
+                <p>{t("ragNotGraded")}</p>
               )}
             </section>
           )}
@@ -297,14 +307,14 @@ export default function ProposalConfirmPage() {
 
           {pending && (
             <section aria-labelledby="decide-heading">
-              <h2 id="decide-heading">사람의 판단</h2>
-              <p>확정하면 현재 로그인한 본인 계정으로 결정이 기록됩니다. 해당 결정 권한이 없으면 확정되지 않습니다.</p>
+              <h2 id="decide-heading">{t("decideHeading")}</h2>
+              <p>{t("decideNote")}</p>
               <div className="flex gap-2">
                 <Button onClick={() => setEditing((v) => !v)} disabled={busy} aria-pressed={editing}>
-                  {editing ? "수정 닫기" : "수정"}
+                  {editing ? t("editCloseBtn") : t("editBtn")}
                 </Button>
                 <Button onClick={() => void reject()} disabled={busy}>
-                  거절
+                  {t("rejectBtn")}
                 </Button>
               </div>
             </section>

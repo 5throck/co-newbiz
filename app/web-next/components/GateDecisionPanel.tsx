@@ -9,13 +9,15 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness, canWriteProject } from "../lib/project-write-access.ts";
-import { GATE_LABEL, type GateMetaId } from "../lib/stage-meta.ts";
+import { GATE_LABEL_KEY } from "../lib/label-keys.ts";
+import type { GateMetaId } from "../lib/stage-meta.ts";
 import { ReviewBuckets } from "./ReviewBuckets.tsx";
 import { PrimaryAction, useToast } from "./ui.tsx";
 import { useConfirm } from "./crud.tsx";
 import { useModalFocus } from "../lib/use-modal-focus.ts";
-import { currentTurn, gateLockedReason, gateState, GATE_STATE_LABEL, IC_STEP_LABEL } from "../lib/gate-sequence-view.ts";
+import { currentTurn, gateSequenceBlocker, gateState } from "../lib/gate-sequence-view.ts";
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 
 const IC_GATES: readonly string[] = ["entity_ic", "group_ic"];
 
@@ -47,23 +49,23 @@ export function focusGateDecision(gate?: string, attempts = 12): void {
 }
 
 /** The gate stages' Primary Action: jump to (and focus) the decision form, which sits at the end of the page. */
-export function GateDecisionJump({ gate, entityType = "project", beforeJump, inline }: { gate: string; entityType?: "opportunity" | "project"; beforeJump?: () => void; inline?: boolean }) {
+export function GateDecisionJump({ gate, entityType = "project", beforeJump, inline }: { gate: string; entityType?: "opportunity" | "project"; beforeJump?: () => void; inline?: boolean }) {const t = useTranslations("components.gateDecision.panel");
   const { me } = useAuth();
   const can = entityType === "project" ? canWriteProject(me?.role) : canWriteBusiness(me?.role);
   return (
     <PrimaryAction
       inline={inline}
-      label="결정 기록 (사람)"
+      label={t("decisionRecordHuman")}
       onClick={() => { beforeJump?.(); window.setTimeout(() => focusGateDecision(gate), 0); }}
       disabled={!can}
-      disabledReason="결정 기록은 analyst 역할 이상만 가능합니다."
+      disabledReason={t("recordingDecisionsRequiresTheAnalyst")}
     />
   );
 }
 
 /** Warning dialog for an IC GO that lacks artifacts: lists each gap and requires a typed rationale.
     It never blocks the person (boundary #2) - it asks them to own the exception in writing. */
-function GapDialog({ gateLabel, gaps, onCancel, onSubmit }: { gateLabel: string; gaps: string[]; onCancel: () => void; onSubmit: (rationale: string) => void }) {
+function GapDialog({ gateLabel, gaps, onCancel, onSubmit }: { gateLabel: string; gaps: string[]; onCancel: () => void; onSubmit: (rationale: string) => void }) {const t = useTranslations("components.gateDecision.panel"); const tc = useTranslations("common");
   const [text, setText] = useState("");
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -73,22 +75,22 @@ function GapDialog({ gateLabel, gaps, onCancel, onSubmit }: { gateLabel: string;
   const blocked = !text.trim();
   return createPortal(
     <div className="modal-backdrop" role="presentation" onKeyDown={onKeyDown} onClick={onCancel}>
-      <div ref={panelRef} className="modal-panel" role="alertdialog" aria-modal="true" aria-label="누락 산출물 경고" style={{ maxWidth: "32rem", width: "100%" }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-head"><h2 style={{ fontSize: "0.95rem" }}>{gateLabel} GO - 누락된 산출물이 있습니다</h2></div>
+      <div ref={panelRef} className="modal-panel" role="alertdialog" aria-modal="true" aria-label={t("missingArtifactWarning")} style={{ maxWidth: "32rem", width: "100%" }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head"><h2 style={{ fontSize: "0.95rem" }}>{gateLabel} {t("goSomeArtifactsAreMissing")}</h2></div>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2 mb-2">
-          아래 항목이 갖춰지지 않은 채로 GO를 기록하려 합니다. 시스템은 기록을 막지 않습니다 - 결정은 사람의 몫입니다(경계 #2). 다만 예외 근거를 직접 적어야 하며, 근거는 투자심의 자료에 함께 남습니다.
+          {t("youAreRecordingAGo")}
         </p>
-        <ul className="sizing-note-list mb-2" aria-label="누락 항목">
+        <ul className="sizing-note-list mb-2" aria-label={t("missingItems")}>
           {gaps.map((g) => <li key={g}>{g}</li>)}
         </ul>
         <label className="block text-[length:var(--fs-caption)]">
-          <span className="block mb-1">예외 근거 (필수)</span>
+          <span className="block mb-1">{t("exceptionEvidenceRequired")}</span>
           <textarea className="sizing-new-input w-full" rows={3} value={text} onChange={(e) => setText(e.target.value)} aria-describedby={blocked ? reasonId : undefined} />
         </label>
-        {blocked && <p id={reasonId} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">예외 근거를 입력하면 GO를 기록할 수 있습니다.</p>}
+        {blocked && <p id={reasonId} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">{t("recordingTheGoUnlocksOnce")}</p>}
         <div className="flex justify-end gap-2 mt-4">
-          <button type="button" className="btn-ghost btn-sm" onClick={onCancel}>취소</button>
-          <button type="button" className="btn-danger btn-sm" disabled={blocked} onClick={() => onSubmit(text.trim())}>그래도 GO 기록</button>
+          <button type="button" className="btn-ghost btn-sm" onClick={onCancel}>{tc("cancel")}</button>
+          <button type="button" className="btn-danger btn-sm" disabled={blocked} onClick={() => onSubmit(text.trim())}>{t("recordGoAnyway")}</button>
         </div>
       </div>
     </div>,
@@ -106,25 +108,25 @@ export interface GateBriefData {
 }
 
 /** ADR-0118 gate brief content (proposal only). Shared by the standalone brief and the S8 "AI 판단 지원" section. */
-export function GateBriefBody({ briefData, currentGate, onApply }: { briefData: GateBriefData; currentGate: string; onApply: (text: string) => void }) {
+export function GateBriefBody({ briefData, currentGate, onApply }: { briefData: GateBriefData; currentGate: string; onApply: (text: string) => void }) {const t = useTranslations("components.gateDecision.panel"); const tc = useTranslations("common");
   return (
     <>
       {briefData.gate !== currentGate && (
-        <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mt-1 mb-0">브리프는 {briefData.gate} 기준입니다 — 진행을 바꾸면 재생성하세요.</p>
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mt-1 mb-0">{t("theBrief")} {briefData.gate} {t("isTheBasisRegenerateAfter")}</p>
       )}
       <p className="mt-2 mb-1 flex flex-wrap items-center gap-1">
         <span className={`status-chip ${briefData.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
-          {briefData.source === "llm" ? `LLM 제안${briefData.provider ? ` · ${briefData.provider}` : ""}` : "결정론 폴백"}
+          {briefData.source === "llm" ? t("llmProposalP1", { p1: briefData.provider ? ` · ${briefData.provider}` : "" }) : tc("deterministicFallback")}
         </span>
         {briefData.brief.recommendation && (
           <span className={`status-chip ${briefData.brief.recommendation === "go" ? "status-green" : briefData.brief.recommendation === "hold" ? "status-amber" : "status-red"}`}>
-            권고 {briefData.brief.recommendation.toUpperCase()}
+            {tc("recommendation")} {briefData.brief.recommendation.toUpperCase()}
           </span>
         )}
-        {briefData.brief.confidence && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">확신도 {briefData.brief.confidence}</span>}
+        {briefData.brief.confidence && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("confidence")} {briefData.brief.confidence}</span>}
       </p>
       {briefData.note && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{briefData.note}</p>}
-      {briefData.brief.rationale_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">근거 초안:</span> {briefData.brief.rationale_draft}</p>}
+      {briefData.brief.rationale_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">{t("evidenceDraft")}</span> {briefData.brief.rationale_draft}</p>}
       {briefData.brief.key_evidence.length > 0 && (
         <ul className="sizing-note-list mb-1">
           {briefData.brief.key_evidence.map((e, i) => <li key={i}>{e}</li>)}
@@ -133,9 +135,9 @@ export function GateBriefBody({ briefData, currentGate, onApply }: { briefData: 
       {briefData.brief.cautions.length > 0 && (
         <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mb-1">⚠ {briefData.brief.cautions.join(" / ")}</p>
       )}
-      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">이 제안이 본 산출물: {briefData.manifest.join(" · ")}</p>
+      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{tc("proposalArtifactColon")} {briefData.manifest.join(" · ")}</p>
       <button type="button" className="btn-ghost btn-sm" onClick={() => onApply(briefData.brief.rationale_draft)} disabled={!briefData.brief.rationale_draft}>
-        근거에 반영
+        {t("reflectedInEvidence")}
       </button>
     </>
   );
@@ -159,7 +161,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   hideBrief?: boolean;
   /** Parent-driven rationale prefill (proposal only; the person still records). A new nonce applies the text. */
   rationalePrefill?: { text: string; nonce: number } | null;
-}) {
+}) {const tr = useTranslations(); const t = useTranslations("components.gateDecision.panel"); const tc = useTranslations("common");
   const { me } = useAuth();
   const { toast } = useToast();
   const { confirm, confirmDialog } = useConfirm();
@@ -174,7 +176,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   const seq = sequence && gates.length > 1;
   const gatePicked = useRef(false);
   const turn = seq ? currentTurn(gates, latest) : gates[0];
-  const labelOf = (g: string) => (seq && IC_STEP_LABEL[g as keyof typeof IC_STEP_LABEL]) || GATE_LABEL[g as GateMetaId] || g;
+  const labelOf = (g: string) => tr(GATE_LABEL_KEY[g] ?? g);
   const [form, setForm] = useState<{ gate: GateMetaId; decision: "go" | "hold" | "kill"; rationale: string; missing: string; learning: string }>({
     gate: gates[0],
     decision: "go",
@@ -214,7 +216,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
     setJudgementChecks((m) => ({ ...m, [claim]: checked }));
     if (checked) setAckMeta((m) => ({ ...m, [claim]: { by: me?.userId ?? "", at: new Date().toISOString() } }));
     api.post(acksPath, { gate, claim, acked: checked })
-      .catch((e) => toast(e instanceof Error ? `확인 저장 실패: ${e.message}` : "확인 저장 실패"));
+      .catch((e) => toast(e instanceof Error ? t("failedToSaveConfirmationP1", { p1: e.message }) : t("failedToSaveTheConfirmation")));
   }, [acksPath, toast]);
   // 판단 필요 항목 중 이미 결정과 함께 "사람 확인"으로 기록된 것들 — 버킷은
   // 미확인 항목에만 체크박스를 두고 확인된 항목은 기록 상태를 보여준다.
@@ -239,7 +241,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   const load = useCallback(() => {
     api.get<{ latest: GateLatest[]; history: GateHistoryRow[] }>(basePath)
       .then((r) => { setLatest(r.data.latest); setHistory(r.data.history); })
-      .catch((e) => setError(e instanceof Error ? e.message : "진행 상태 불러오기 실패"));
+      .catch((e) => setError(e instanceof Error ? e.message : t("failedToLoadTheProgress")));
   }, [basePath]);
 
   useEffect(() => { load(); }, [load]);
@@ -265,7 +267,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
       const r = await api.post<GateBriefData>(briefPath, { gate: form.gate });
       setBriefData(r.data);
     } catch (err) {
-      setBriefError(err instanceof Error ? err.message : "브리프 생성 실패");
+      setBriefError(err instanceof Error ? err.message : t("failedToGenerateBrief"));
     } finally {
       setBriefLoading(false);
     }
@@ -276,13 +278,14 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   const decisionOf = (gate: string): GateLatest | undefined => latest?.find((g) => g.gate === gate);
 
   const holdNeedsMissing = form.decision === "hold" && !form.missing.split(/[\n,]/).some((x) => x.trim());
-  const submitReason = saving ? "기록 중입니다."
-    : seq && gateLockedReason(gates, form.gate, latest, IC_STEP_LABEL) ? gateLockedReason(gates, form.gate, latest, IC_STEP_LABEL)
-    : !form.rationale.trim() ? "근거를 입력하면 결정을 기록할 수 있습니다."
-    : killNeedsLearning ? "KILL에는 학습 포착이 필요합니다."
-    : holdNeedsMissing ? "HOLD에는 미완료 산출물 목록이 필요합니다."
+  const gateBlocker = seq ? gateSequenceBlocker(gates, form.gate, latest) : null;
+  const submitReason = saving ? t("recording")
+    : gateBlocker ? tr("common.gate.lockedReason", { p1: tr(GATE_LABEL_KEY[gateBlocker] ?? gateBlocker), p2: tr(GATE_LABEL_KEY[form.gate] ?? form.gate) })
+    : !form.rationale.trim() ? t("theDecisionCanBeRecorded")
+    : killNeedsLearning ? t("aKillRequiresCapturingThe")
+    : holdNeedsMissing ? t("aHoldRequiresTheList")
     : null;
-  const lockedReason = seq ? gateLockedReason(gates, form.gate, latest, IC_STEP_LABEL) : null;
+  const lockedReason = gateBlocker ? tr("common.gate.lockedReason", { p1: tr(GATE_LABEL_KEY[gateBlocker] ?? gateBlocker), p2: tr(GATE_LABEL_KEY[form.gate] ?? form.gate) }) : null;
   const gapsForGo = form.decision === "go" && IC_GATES.includes(form.gate) ? (goGaps ?? []) : [];
 
   /** Step 1 of the shared flow: confirm (or, for an IC GO with gaps, the warning dialog). Nothing is sent before this. */
@@ -290,9 +293,9 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
     if (saving || submitReason) return;
     if (gapsForGo.length > 0) { setGapAsk(true); return; }
     const verb = form.decision.toUpperCase();
-    confirm(`${GATE_LABEL[form.gate]} ${verb} 결정을 기록할까요?`, () => void record(), {
-      body: `근거: ${form.rationale.trim()} - 결정은 감사 로그에 append-only로 남으며 되돌릴 수 없습니다. 정정이 필요하면 새 결정을 추가로 기록합니다.`,
-      confirmLabel: "기록",
+    confirm(t("recordTheP1P2Decision", { p1: tr(GATE_LABEL_KEY[form.gate] ?? form.gate), p2: verb }), () => void record(), {
+      body: t("evidenceP1TheDecisionIs", { p1: form.rationale.trim() }),
+      confirmLabel: tc("record"),
       tone: form.decision === "kill" ? "danger" : "neutral",
     });
   }
@@ -315,13 +318,13 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
       });
       // Step 2-4: toast, the form collapses into a "recorded" summary (no resubmission), next-stage prompt.
       setRecorded({ gate: form.gate, decision: form.decision, rationale: form.rationale.trim(), at: new Date().toISOString(), gap: gapRationale ?? null });
-      toast(`${GATE_LABEL[form.gate]} ${form.decision.toUpperCase()} 결정을 기록했습니다.`);
+      toast(t("recordedTheP1P2Decision", { p1: tr(GATE_LABEL_KEY[form.gate] ?? form.gate), p2: form.decision.toUpperCase() }));
       setForm((f) => ({ ...f, rationale: "", missing: "", learning: "" }));
       setJudgementChecks({});
       load();
       onRecorded?.(form.decision, form.gate);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "의사결정 기록 실패");
+      setError(err instanceof Error ? err.message : t("failedToRecordTheDecision"));
     } finally {
       setSaving(false);
     }
@@ -332,26 +335,26 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   // Sequence mode: an entity-level GO keeps the form open (now targeting the next committee) instead of collapsing it.
   const summaryOnly = !!recorded && recorded.decision !== "hold" && !(seq && recorded.decision === "go" && nextGate);
   return (
-    <section aria-label="의사결정" className="market-section sizing-step" data-gate-form={panelKey.replace(/,/g, " ")} id={`gate-decision-${panelKey.replace(/,/g, "-")}`} tabIndex={-1}>
+    <section aria-label={tc("decisionMaking")} className="market-section sizing-step" data-gate-form={panelKey.replace(/,/g, " ")} id={`gate-decision-${panelKey.replace(/,/g, "-")}`} tabIndex={-1}>
       <h3 className="sizing-step-title text-[length:var(--fs-body)]">
-        <span className="sizing-step-badge">🚦</span> 의사결정 — 승인 기록 (경계 #2)
+        <span className="sizing-step-badge">🚦</span> {t("approvalRecordBoundary")}
       </h3>
       <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
-        에이전트 권고와 무관하게 GO·HOLD·KILL은 검토자가 기록합니다. HOLD는 미완료 산출물 목록 없이 기록할 수 없습니다.
+        {t("regardlessOfTheAgentRecommendation")}
       </p>
       {killHint && (
         <p className="sizing-note-list mb-2 text-[length:var(--fs-caption)] text-[color:var(--red-fg)]" role="note">⛔ {killHint}</p>
       )}
       {seq && (
-        <ol className="mb-3 flex flex-wrap items-center gap-2 list-none p-0 text-[length:var(--fs-caption)]" aria-label="투자심의 진행 순서">
+        <ol className="mb-3 flex flex-wrap items-center gap-2 list-none p-0 text-[length:var(--fs-caption)]" aria-label={t("icProgressOrder")}>
           {gates.map((g, i) => {
             const st = gateState(latest, g);
             return (
               <li key={g} className="flex items-center gap-2" aria-current={g === turn && st !== "go" ? "step" : undefined}>
                 {i > 0 && <span aria-hidden="true">→</span>}
-                <span className="font-semibold">{"①②③④"[i]} {IC_STEP_LABEL[g as keyof typeof IC_STEP_LABEL] ?? GATE_LABEL[g as GateMetaId]}</span>
-                <span className={`status-chip ${st === "go" ? "status-green" : st === "hold" ? "status-amber" : st === "kill" ? "status-red" : "status-not-started"}`}>{GATE_STATE_LABEL[st]}</span>
-                {g === turn && st !== "go" && <span className="text-[color:var(--muted-fg)]">지금 차례</span>}
+                <span className="font-semibold">{"①②③④"[i]} {tr(GATE_LABEL_KEY[g] ?? g)}</span>
+                <span className={`status-chip ${st === "go" ? "status-green" : st === "hold" ? "status-amber" : st === "kill" ? "status-red" : "status-not-started"}`}>{st === "pending" ? tr("common.stageStatus.waiting") : st.toUpperCase()}</span>
+                {g === turn && st !== "go" && <span className="text-[color:var(--muted-fg)]">{t("nowDue")}</span>}
               </li>
             );
           })}
@@ -365,17 +368,17 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
           const d = decisionOf(g);
           return (
             <p className="mb-2 text-[length:var(--fs-caption)] flex flex-wrap items-center gap-1">
-              <span className="font-semibold">{GATE_LABEL[g]} 현재 결정:</span>
+              <span className="font-semibold">{tr(GATE_LABEL_KEY[g] ?? g)} {t("currentDecision")}</span>
               {d ? (
                 <span className={`status-chip ${d.decision === "go" ? "status-green" : d.decision === "hold" ? "status-amber" : "status-red"}`}>
                   {d.decision.toUpperCase()}
                 </span>
               ) : (
-                <span className="status-chip status-not-started">미결정</span>
+                <span className="status-chip status-not-started">{t("undecided")}</span>
               )}
               {d?.missing_artifacts && d.missing_artifacts.length > 0 && (
                 <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title={d.missing_artifacts.join(", ")}>
-                  미완료 {d.missing_artifacts.length}건
+                  {t("incomplete")} {d.missing_artifacts.length}{tc("countUnit")}
                 </span>
               )}
               {d?.rationale && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">— {d.rationale}</span>}
@@ -383,10 +386,10 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
           );
         })()
       ) : (
-        <table className="data-table" aria-label="진행별 현재 결정">
-          <caption className="sr-only">진행별 현재 결정</caption>
+        <table className="data-table" aria-label={t("currentDecisionByStage")}>
+          <caption className="sr-only">{t("currentDecisionByStage2")}</caption>
           <thead>
-            <tr><th scope="col" className="w-[9rem]">진행</th><th scope="col" className="w-[7rem]">결정</th><th scope="col">근거</th></tr>
+            <tr><th scope="col" className="w-[9rem]">{tc("inProgress")}</th><th scope="col" className="w-[7rem]">{tc("decision")}</th><th scope="col">{tc("evidence")}</th></tr>
           </thead>
           <tbody>
             {gates.map((g) => {
@@ -400,11 +403,11 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
                         {d.decision.toUpperCase()}
                       </span>
                     ) : (
-                      <span className="status-chip status-not-started">미결정</span>
+                      <span className="status-chip status-not-started">{t("undecided2")}</span>
                     )}
                     {d?.missing_artifacts && d.missing_artifacts.length > 0 && (
                       <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title={d.missing_artifacts.join(", ")}>
-                        미완료 {d.missing_artifacts.length}건
+                        {t("incomplete2")} {d.missing_artifacts.length}{tc("countUnit")}
                       </span>
                     )}
                   </td>
@@ -435,80 +438,80 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
 
       {/* ADR-0118 — LLM 진행 브리프(제안): 권고·근거 초안 제공, 기록은 사람 */}
       {canRecord && !hideBrief && (
-        <div className="mt-3 border border-[color:var(--border)] rounded-lg px-3 py-2" aria-label="AI 진행 브리프">
+        <div className="mt-3 border border-[color:var(--border)] rounded-lg px-3 py-2" aria-label={t("aiProgressBrief")}>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" className="btn-ghost btn-sm" disabled={briefLoading} onClick={() => void generateBrief()}>
-              {briefLoading ? "생성 중..." : briefData ? "재생성" : "🤖 AI 브리프 생성"}
+              {briefLoading ? tc("creating") : briefData ? tc("regenerate") : t("generateAiBrief")}
             </button>
             <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              {GATE_LABEL[form.gate] ?? form.gate} 진행 기준 — 제안은 결정 선택을 바꾸지 않으며, 기록은 사람이 합니다 (경계 #2)
+              {tr(GATE_LABEL_KEY[form.gate] ?? form.gate)} {t("progressBasisProposalsDoNot")}
             </span>
           </div>
           {briefError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-1 mb-0">{briefError}</p>}
           {briefData && <GateBriefBody briefData={briefData} currentGate={form.gate} onApply={applyBriefRationale} />}
           {!briefData && !briefLoading && !briefError && (
-            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">AI가 진행 산출물을 근거로 권고와 근거 초안을 작성해 줍니다 — 기록은 사람의 몫입니다.</p>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">{t("theAiDraftsTheRecommendation")}</p>
           )}
         </div>
       )}
 
       {canRecord && recorded && recorded.decision !== "hold" && (!summaryOnly && !!nextGate) && (
-        <div className="gate-recorded" role="status" aria-label="기록된 결정">
+        <div className="gate-recorded" role="status" aria-label={tc("recordedDecision")}>
           <p className="mb-1">
-            <span className="status-chip status-green">● {labelOf(recorded.gate)} GO 기록됨</span>
+            <span className="status-chip status-green">● {labelOf(recorded.gate)} {t("goRecorded")}</span>
             <span className="ml-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] tabular-nums">{recorded.at.slice(0, 16).replace("T", " ")}</span>
           </p>
-          <p className="text-[length:var(--fs-caption)] mb-1">근거: {recorded.rationale}</p>
-          {recorded.gap && <p className="text-[length:var(--fs-caption)] mb-1">누락 산출물 예외 근거: {recorded.gap}</p>}
-          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">다음 차례: {labelOf(nextGate!)} 결정을 아래에 기록하세요.</p>
+          <p className="text-[length:var(--fs-caption)] mb-1">{tc("evidenceColon")} {recorded.rationale}</p>
+          {recorded.gap && <p className="text-[length:var(--fs-caption)] mb-1">{tc("missingArtifactExceptionColon")} {recorded.gap}</p>}
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{t("nextDue")} {labelOf(nextGate!)} {t("recordTheDecisionBelow")}</p>
         </div>
       )}
       {canRecord && summaryOnly ? (
-        <div className="gate-recorded" role="status" aria-label="기록된 결정">
+        <div className="gate-recorded" role="status" aria-label={tc("recordedDecision")}>
           <p className="mb-1">
-            <span className={`status-chip ${recorded.decision === "go" ? "status-green" : "status-red"}`}>● {labelOf(recorded.gate)} {recorded.decision.toUpperCase()} 기록됨</span>
+            <span className={`status-chip ${recorded.decision === "go" ? "status-green" : "status-red"}`}>● {labelOf(recorded.gate)} {recorded.decision.toUpperCase()} {t("recorded")}</span>
             <span className="ml-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] tabular-nums">{recorded.at.slice(0, 16).replace("T", " ")}</span>
           </p>
-          <p className="text-[length:var(--fs-caption)] mb-1">근거: {recorded.rationale}</p>
-          {recorded.gap && <p className="text-[length:var(--fs-caption)] mb-1">누락 산출물 예외 근거: {recorded.gap}</p>}
-          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">같은 결정을 다시 제출할 수 없습니다. 정정이 필요하면 페이지를 다시 열어 새 결정을 기록하세요(이력은 append-only).</p>
+          <p className="text-[length:var(--fs-caption)] mb-1">{tc("evidenceColon")} {recorded.rationale}</p>
+          {recorded.gap && <p className="text-[length:var(--fs-caption)] mb-1">{tc("missingArtifactExceptionColon")} {recorded.gap}</p>}
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{t("theSameDecisionCannotBe")}</p>
           {recorded.decision === "go" && nextStage && !nextGate && (nextStage.href.startsWith("#") ? (
-            <a className="btn-ghost btn-sm" href={nextStage.href} onClick={(e) => { e.preventDefault(); focusGateDecision(nextStage.href.slice(1).replace("gate-decision-", "")); }}>다음: {nextStage.label} →</a>
+            <a className="btn-ghost btn-sm" href={nextStage.href} onClick={(e) => { e.preventDefault(); focusGateDecision(nextStage.href.slice(1).replace("gate-decision-", "")); }}>{t("next")} {nextStage.label} →</a>
           ) : (
-            <Link className="btn-ghost btn-sm" href={nextStage.href}>다음: {nextStage.label} →</Link>
+            <Link className="btn-ghost btn-sm" href={nextStage.href}>{t("next2")} {nextStage.label} →</Link>
           ))}
-          {recorded.decision === "kill" && <p className="text-[length:var(--fs-caption)] mb-0">프로젝트 종료 절차는 S12 사후 관리에서 이어집니다.</p>}
+          {recorded.decision === "kill" && <p className="text-[length:var(--fs-caption)] mb-0">{t("theProjectClosureProcedureContinues")}</p>}
         </div>
       ) : canRecord ? (
         <form
           id={formId}
           className="sizing-new-form"
-          aria-label="의사결정 기록"
+          aria-label={t("decisionRecord")}
           onSubmit={(e) => { e.preventDefault(); requestRecord(); }}
         >
           {seq && (
             <p className="mb-2 text-[length:var(--fs-body)]" data-testid="gate-target">
-              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mr-2">기록 대상</span>
+              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mr-2">{t("recordSubject")}</span>
               <strong>{"①②③④"[gates.indexOf(form.gate)]} {labelOf(form.gate)}</strong>
-              {form.gate === turn && gateState(latest, form.gate) !== "go" && <span className="ml-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">지금 차례</span>}
+              {form.gate === turn && gateState(latest, form.gate) !== "go" && <span className="ml-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("nowDue2")}</span>}
             </p>
           )}
           {lockedReason && <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" role="note">{lockedReason}</p>}
           <div className="flex flex-wrap items-end gap-2">
             {gates.length > 1 && (
               <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1">{seq ? "다른 위원회로 변경" : "진행"}</span>
+                <span className="block mb-1">{seq ? t("changeToAnotherCommittee") : tc("inProgress")}</span>
                 <select
                   value={form.gate}
                   onChange={(e) => { gatePicked.current = true; setForm({ ...form, gate: e.target.value as GateMetaId }); }}
                   className="sizing-new-input sizing-new-input-sm"
                 >
-                  {gates.map((g) => <option key={g} value={g} disabled={seq && !!gateLockedReason(gates, g, latest, IC_STEP_LABEL)}>{labelOf(g)}</option>)}
+                  {gates.map((g) => <option key={g} value={g} disabled={seq && !!gateSequenceBlocker(gates, g, latest)}>{labelOf(g)}</option>)}
                 </select>
               </label>
             )}
             <label className="text-[length:var(--fs-caption)]">
-              <span className="block mb-1">결정</span>
+              <span className="block mb-1">{tc("decision")}</span>
               <select
                 value={form.decision}
                 onChange={(e) => setForm({ ...form, decision: e.target.value as "go" | "hold" | "kill" })}
@@ -520,7 +523,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
               </select>
             </label>
             <label className="text-[length:var(--fs-caption)] flex-1 min-w-[14rem]">
-              <span className="block mb-1">근거 *</span>
+              <span className="block mb-1">{tc("evidenceAsterisk")}</span>
               <input
                 value={form.rationale}
                 onChange={(e) => setForm({ ...form, rationale: e.target.value })}
@@ -531,19 +534,19 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
           </div>
           {form.decision === "hold" && (
             <label className="block mt-2 text-[length:var(--fs-caption)]">
-              <span className="block mb-1">미완료 산출물 (HOLD 필수 — 쉼표·줄바꿈 구분)</span>
+              <span className="block mb-1">{t("incompleteArtifactsRequiredForHold")}</span>
               <textarea
                 value={form.missing}
                 onChange={(e) => setForm({ ...form, missing: e.target.value })}
                 className="sizing-new-input w-full"
                 rows={2}
-                placeholder="예: 5-criteria 점수, 사전배제 확인"
+                placeholder={t("eGScoreCheck")}
               />
             </label>
           )}
           {form.decision === "kill" && (
             <label className="block mt-2 text-[length:var(--fs-caption)]">
-              <span className="block mb-1">학습 포착 * (KILL 필수 — 이 중단에서 얻은 교훈)</span>
+              <span className="block mb-1">{t("learningCaptureRequiredForKill")}</span>
               <textarea
                 value={form.learning}
                 onChange={(e) => setForm({ ...form, learning: e.target.value })}
@@ -555,23 +558,23 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
           )}
           <div className="flex flex-wrap items-center gap-2 mt-2">
             <button type="submit" className="btn-ghost btn-sm" disabled={saving || !!submitReason} aria-describedby={submitReason ? `${formId}-reason` : undefined}>
-              {saving ? "기록 중..." : "결정"}
+              {saving ? tc("recording") : tc("decision")}
             </button>
             {submitReason && <span id={`${formId}-reason`} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{submitReason}</span>}
           </div>
           {recorded && recorded.decision === "hold" && (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2 mb-0" role="status">
-              ● {GATE_LABEL[recorded.gate]} HOLD 기록됨 - 미완료 산출물을 보완한 뒤 새 결정을 기록할 수 있습니다.
+              ● {tr(GATE_LABEL_KEY[recorded.gate] ?? recorded.gate)} {t("holdRecordedAfterCompletingThe")}
             </p>
           )}
         </form>
       ) : (
-        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">결정 기록은 analyst 역할 이상만 가능합니다.</p>
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("recordingDecisionsRequiresTheAnalyst2")}</p>
       )}
       {confirmDialog}
       {gapAsk && (
         <GapDialog
-          gateLabel={GATE_LABEL[form.gate]}
+          gateLabel={tr(GATE_LABEL_KEY[form.gate] ?? form.gate)}
           gaps={gapsForGo}
           onCancel={() => setGapAsk(false)}
           onSubmit={(text) => { setGapAsk(false); void record(text); }}
@@ -582,19 +585,19 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
 
       {history.length > 0 && seq && (
         <details className="mt-2">
-          <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">결정 이력 ({history.length}건 — append-only, 위원회별)</summary>
+          <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">{tc("decisionHistoryOpen")}{history.length}{t("itemSPerCommittee")}</summary>
           {gates.map((g) => {
             const rows = history.filter((h) => h.gate === g);
             return (
               <div key={g} className="mt-2">
-                <h4 className="text-[length:var(--fs-body)] mb-1">{labelOf(g)} ({rows.length}건)</h4>
+                <h4 className="text-[length:var(--fs-body)] mb-1">{labelOf(g)} ({rows.length}{tc("countSuffixParen")}</h4>
                 {rows.length === 0 ? (
-                  <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">기록된 결정이 없습니다.</p>
+                  <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("noRecordedDecisions")}</p>
                 ) : (
-                  <table className="data-table" aria-label={`${labelOf(g)} 결정 이력`}>
-                    <caption className="sr-only">{labelOf(g)} 결정 이력</caption>
+                  <table className="data-table" aria-label={t("p1DecisionHistory", { p1: labelOf(g) })}>
+                    <caption className="sr-only">{labelOf(g)} {t("decisionHistory")}</caption>
                     <thead>
-                      <tr><th scope="col">결정</th><th scope="col">근거</th><th scope="col">기록자</th><th scope="col">일시</th></tr>
+                      <tr><th scope="col">{tc("decision")}</th><th scope="col">{tc("evidence")}</th><th scope="col">{tc("recordedBy")}</th><th scope="col">{tc("timestamp")}</th></tr>
                     </thead>
                     <tbody>
                       {rows.map((h) => (
@@ -602,8 +605,8 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
                           <td><span className={`status-chip ${h.decision === "go" ? "status-green" : h.decision === "hold" ? "status-amber" : "status-red"}`}>{h.decision.toUpperCase()}</span></td>
                           <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                             {h.rationale}
-                            {h.gap_override && <span className="block">누락 산출물 예외 근거: {h.gap_override.rationale} (누락: {h.gap_override.items.join("; ")})</span>}
-                            {!!h.judgement_confirmations?.length && <span className="block"><span className="status-chip status-in-progress">사람 확인 {h.judgement_confirmations.length}건</span></span>}
+                            {h.gap_override && <span className="block">{tc("missingArtifactExceptionColon")} {h.gap_override.rationale} {t("missing")} {h.gap_override.items.join("; ")})</span>}
+                            {!!h.judgement_confirmations?.length && <span className="block"><span className="status-chip status-in-progress">{t("humanConfirmation")} {h.judgement_confirmations.length}{tc("countUnit")}</span></span>}
                           </td>
                           <td className="text-[length:var(--fs-caption)]">{h.decided_by}</td>
                           <td className="text-[length:var(--fs-caption)] tabular-nums">{h.decided_at.slice(0, 10)}</td>
@@ -619,21 +622,21 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
       )}
       {history.length > 0 && !seq && (
         <details className="mt-2">
-          <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">결정 이력 ({history.length}건 — append-only)</summary>
-          <table className="data-table mt-2" aria-label="의사결정 이력">
-            <caption className="sr-only">의사결정 이력</caption>
+          <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">{tc("decisionHistoryOpen")}{history.length}{t("itemS")}</summary>
+          <table className="data-table mt-2" aria-label={t("decisionHistory2")}>
+            <caption className="sr-only">{t("decisionHistory3")}</caption>
             <thead>
-              <tr><th scope="col">진행</th><th scope="col">결정</th><th scope="col">근거</th><th scope="col">기록자</th><th scope="col">일시</th></tr>
+              <tr><th scope="col">{tc("inProgress")}</th><th scope="col">{tc("decision")}</th><th scope="col">{tc("evidence")}</th><th scope="col">{tc("recordedBy")}</th><th scope="col">{tc("timestamp")}</th></tr>
             </thead>
             <tbody>
               {history.map((h) => (
                 <tr key={h.id}>
-                  <td>{GATE_LABEL[h.gate as GateMetaId] ?? h.gate}</td>
+                  <td>{tr(GATE_LABEL_KEY[h.gate] ?? h.gate)}</td>
                   <td><span className={`status-chip ${h.decision === "go" ? "status-green" : h.decision === "hold" ? "status-amber" : "status-red"}`}>{h.decision.toUpperCase()}</span></td>
                   <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                     {h.rationale}
-                    {h.gap_override && <span className="block">누락 산출물 예외 근거: {h.gap_override.rationale} (누락: {h.gap_override.items.join("; ")})</span>}
-                    {!!h.judgement_confirmations?.length && <span className="block"><span className="status-chip status-in-progress">사람 확인 {h.judgement_confirmations.length}건</span></span>}
+                    {h.gap_override && <span className="block">{tc("missingArtifactExceptionColon")} {h.gap_override.rationale} {t("missing2")} {h.gap_override.items.join("; ")})</span>}
+                    {!!h.judgement_confirmations?.length && <span className="block"><span className="status-chip status-in-progress">{t("humanConfirmation2")} {h.judgement_confirmations.length}{tc("countUnit")}</span></span>}
                   </td>
                   <td className="text-[length:var(--fs-caption)]">{h.decided_by}</td>
                   <td className="text-[length:var(--fs-caption)] tabular-nums">{h.decided_at.slice(0, 10)}</td>

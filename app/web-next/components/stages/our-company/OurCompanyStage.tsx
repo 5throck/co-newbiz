@@ -15,8 +15,9 @@ import { PrimaryAction } from "../../ui.tsx";
 import { GroupSelectPanel, ProfileSummaryPanel } from "./GroupPanels.tsx";
 import { MembersPanel } from "./MembersPanel.tsx";
 import { ProfileSection } from "./ProfileSection.tsx";
+import { useTranslations } from "next-intl";
 
-export function OurCompanyStage(props0: { memberId?: string; embedded?: boolean }) {
+export function OurCompanyStage(props0: { memberId?: string; embedded?: boolean }) {const t = useTranslations("components.ourCompany.ourCompanyStage");
   const h0 = useOurCompanyBase(props0);
   const h1 = useOurCompetitors({ ...h0 });
   const h2 = useOurGroups({ ...h0, ...h1 });
@@ -26,18 +27,18 @@ export function OurCompanyStage(props0: { memberId?: string; embedded?: boolean 
     <div className="our-company-stage">
       {confirmDialog}
       {!canAct ? (
-        <PrimaryAction label="계열사 추가" disabled disabledReason="그룹·계열사 편집은 analyst 권한이 필요합니다." />
+        <PrimaryAction label={t("addAffiliate")} disabled disabledReason={t("editingGroupsAndAffiliatesRequires")} />
       ) : openMember ? (
         <PrimaryAction
-          label="프로파일 분석 실행"
+          label={t("runProfileAnalysis")}
           disabled={profiles[openMember] === "loading"}
-          disabledReason="분석 중입니다 — 완료되면 자동으로 표시됩니다."
+          disabledReason={t("analysisInProgressItWill")}
           onClick={() => analyzeMember(openMember)}
         />
       ) : !selectedGroup ? (
-        <PrimaryAction label="그룹 등록" onClick={() => setShowGroupForm(true)} />
+        <PrimaryAction label={t("registerGroup")} onClick={() => setShowGroupForm(true)} />
       ) : (
-        <PrimaryAction label="계열사 추가" onClick={() => setShowMemberForm(true)} />
+        <PrimaryAction label={t("addAffiliate2")} onClick={() => setShowMemberForm(true)} />
       )}
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}

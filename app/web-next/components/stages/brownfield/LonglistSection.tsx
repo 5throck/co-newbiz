@@ -11,14 +11,15 @@ import { ColGroup } from "../../ui.tsx";
 // 분리되고 상태 열에는 칩만 남는다 (2026-10 행 인터랙션 리뷰 — IndustryTable 참조 구현).
 const LONG_LIST_COL_PCT = [21, 10, 17, 13, 13, 16, 10] as const;
 import type { BrownfieldStageState } from "./useBrownfieldTargets.ts";
+import { useTranslations } from "next-intl";
 
-export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
+export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {const tr = useTranslations(); const t = useTranslations("stages.s67.longlistSection"); const tc = useTranslations("common");
   const { selected, canAct, busy, targets, shortlistedTargets, displayedTargets, shortlistOrder, evalRank, shortlist, rerank } = ctx;
   return (
     <>{selected && (
         <div id={SECTION_IDS.longlist} style={{ scrollMarginTop: "1rem" }}>
         {/* ── S6/S7: 후보 등록 + 후보 전체 목록 + 스크리닝 ── */}
-        <section aria-label="대상 후보 스크리닝" className="market-section">
+        <section aria-label={t("targetCandidateScreening")} className="market-section">
           {/* 후보 등록 폼은 위 "후보 발굴" 카드에 항상 표시된다(사용자 요청,
               2026-09-15) — 시장·기업 마스터/웹 검색·LLM 제안과 나란히 묶인다. */}
 
@@ -28,95 +29,95 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
           {/* 후보 전체 목록 테이블 — 목표 시장 정의·후보 발굴 카드와 같은 카드 표면으로
               감싸 화면 위계를 맞춘다(UX 정리, 2026-09-15). */}
           <SectionToolbar
-            title="후보 전체 목록 → 판정 · 랭킹 → 최종 후보 목록"
-            summary={<span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">후보 전체 목록 {targets.length} · 최종 후보 목록 {shortlistedTargets.length}</span>}
+            title={t("fullCandidateListJudgementAnd")}
+            summary={<span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("fullCandidateList")} {targets.length} {t("shortlist")} {shortlistedTargets.length}</span>}
           />
           <div className="sizing-grade-card">
           {targets.length === 0 ? (
-            <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)] mb-0">후보 전체 목록 후보가 없습니다 — 위에서 후보를 등록하세요.</p>
+            <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)] mb-0">{t("noCandidatesRegisterCandidatesAbove")}</p>
           ) : displayedTargets.length === 0 ? (
             // 품평회 2026-10-22 (ux-researcher): 막다른 글 대신 원인과 다음 행동을 안내한다 —
             // 상태 필터 조절 또는 후보 등록. 필터 리셋 콘트롤은 후속 티켓.
-            <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)] mb-0">해당 상태의 후보가 없습니다 — 상태 필터를 다른 값으로 바꾸거나, 위 폼에서 후보를 새로 등록하세요.</p>
+            <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)] mb-0">{t("noCandidatesWithThisStatus")}</p>
           ) : (
-            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table list-table table-fixed-pct tmin-56" aria-label="후보 전체 목록">
-              <caption className="sr-only">후보 전체 목록 후보 — 평가 점수·잠정 순위·상태</caption>
+            <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+            <table className="data-table list-table table-fixed-pct tmin-56" aria-label={t("fullCandidateList2")}>
+              <caption className="sr-only">{t("fullCandidateListCandidatesEvaluation")}</caption>
               <ColGroup widths={LONG_LIST_COL_PCT} />
               <thead>
                 <tr>
-                  <th scope="col">후보</th><th scope="col">DART</th>
-                  <th scope="col" title="재무·기술 평가 100점 가중 점수 — 충족 1점·부분충족 0.5점·미충족 0점을 가중평균, 예외(해당없음·예외)는 제외">재무·기술 평가</th>
-                  <th scope="col" className="col-num" title="위 재무·기술 평가 종합 점수(financial·technical 평균) — 후보 전체 목록 잠정 순위(최종 후보 목록 rank와 별개)">잠정 순위</th>
-                  <th scope="col">상태</th>
-                  <th scope="col">제외 사유</th>
-                  <th scope="col"><span className="sr-only">작업</span></th>
+                  <th scope="col">{t("candidate")}</th><th scope="col">DART</th>
+                  <th scope="col" title={t("financialAndTechnologyEvaluationWeighted")}>{t("financialAndTechnologyEvaluation")}</th>
+                  <th scope="col" className="col-num" title={t("theFinancialAndTechnologyEvaluation")}>{t("provisionalRanking")}</th>
+                  <th scope="col">{tc("status")}</th>
+                  <th scope="col">{t("exclusionReason")}</th>
+                  <th scope="col"><span className="sr-only">{tc("actions")}</span></th>
                 </tr>
               </thead>
               <tbody>
-                {displayedTargets.map((t) => {
-                  const es = t.eval_summary;
-                  const orderIdx = shortlistOrder.indexOf(t.id);
-                  const canPromote = t.status === "pending" && t.eval_summary?.complete === true;
+                {displayedTargets.map((tgt) => {
+                  const es = tgt.eval_summary;
+                  const orderIdx = shortlistOrder.indexOf(tgt.id);
+                  const canPromote = tgt.status === "pending" && tgt.eval_summary?.complete === true;
                   return (
-                    <Fragment key={t.id}>
+                    <Fragment key={tgt.id}>
                       <tr>
                         <td className="cell-primary cell-truncate">
                           <a
-                            href={`/brownfield/targets/${encodeURIComponent(t.id)}`}
+                            href={`/brownfield/targets/${encodeURIComponent(tgt.id)}`}
                             className="font-semibold text-[color:var(--fg)] underline-offset-2 hover:underline"
-                            title="후보 상세 화면(판정·평가·전자공시 정보)으로 이동합니다"
+                            title={t("goesToTheCandidateDetail")}
                           >
-                            {t.company_name}
+                            {tgt.company_name}
                           </a>
                           {/* 발굴 근거(universe_note — 웹검색 제안 문구 등)는 테이블
                               가독성을 해치므로 표시하지 않는다(사용자 요청, 2026-09-15).
                               제외 사유만 별도 컬럼으로 남는다. */}
                         </td>
-                        <td><code className="dd-item-id">{t.dart_corp_code ?? "—"}</code></td>
+                        <td><code className="dd-item-id">{tgt.dart_corp_code ?? "—"}</code></td>
                         <td>
                           <span className="flex items-center gap-1">
-                            <span className={`status-chip ${es?.financial.score == null ? "status-not-started" : es.financial.score >= 70 ? "status-green" : es.financial.score >= 40 ? "status-amber" : "status-red"}`} title="재무 평가 100점 가중 점수">
-                              재무 {es?.financial.score ?? "—"}
+                            <span className={`status-chip ${es?.financial.score == null ? "status-not-started" : es.financial.score >= 70 ? "status-green" : es.financial.score >= 40 ? "status-amber" : "status-red"}`} title={t("financialEvaluationWeightedScoreOut")}>
+                              {tc("finance")} {es?.financial.score ?? "—"}
                             </span>
-                            <span className={`status-chip ${es?.technical.score == null ? "status-not-started" : es.technical.score >= 70 ? "status-green" : es.technical.score >= 40 ? "status-amber" : "status-red"}`} title="기술 평가 100점 가중 점수(S3 필요 역량 기준)">
-                              기술 {es?.technical.score ?? "—"}
+                            <span className={`status-chip ${es?.technical.score == null ? "status-not-started" : es.technical.score >= 70 ? "status-green" : es.technical.score >= 40 ? "status-amber" : "status-red"}`} title={t("technologyEvaluationWeightedScoreOut")}>
+                              {t("technology")} {es?.technical.score ?? "—"}
                             </span>
                           </span>
                         </td>
-                        <td className="col-num tabular-nums" title="재무·기술 평가 종합 점수(financial·technical 평균) 기준 잠정 순위 — 제외를 뺀 전 후보 대상으로 유지(승격해도 사라지지 않음). 최종 후보 목록 rank(사람이 조정)와 별개">
-                          {t.status === "excluded" ? (
+                        <td className="col-num tabular-nums" title={t("provisionalRankingByTheFinancial")}>
+                          {tgt.status === "excluded" ? (
                             <span className="text-[color:var(--muted-fg)]">—</span>
                           ) : es?.combined != null ? (
-                            t.status === "shortlisted" ? (
-                              <span className="text-[color:var(--muted-fg)]" title="승격 시점 평가 기준 잠정 순위(참고) — 최종 후보 목록 표시 순위는 사람이 조정한 rank입니다">
-                                #{evalRank.get(t.id)} ({es.combined}점)
+                            tgt.status === "shortlisted" ? (
+                              <span className="text-[color:var(--muted-fg)]" title={t("provisionalRankingByEvaluationCriteria")}>
+                                #{evalRank.get(tgt.id)} ({es.combined}{t("pt")}
                               </span>
                             ) : (
-                              <>#{evalRank.get(t.id)} <span className="text-[color:var(--muted-fg)]">({es.combined}점)</span></>
+                              <>#{evalRank.get(tgt.id)} <span className="text-[color:var(--muted-fg)]">({es.combined}{t("pt2")}</span></>
                             )
                           ) : (
-                            <span className="text-[color:var(--muted-fg)]">평가 필요</span>
+                            <span className="text-[color:var(--muted-fg)]">{t("evaluationNeeded")}</span>
                           )}
                         </td>
                         <td>
-                          <span className={`status-chip ${t.status === "shortlisted" ? "status-green" : t.status === "excluded" ? "status-red" : "status-not-started"}`}>
-                            {STATUS_LABEL[t.status]}{t.status === "shortlisted" && t.rank ? ` #${t.rank}` : ""}
+                          <span className={`status-chip ${tgt.status === "shortlisted" ? "status-green" : tgt.status === "excluded" ? "status-red" : "status-not-started"}`}>
+                            {STATUS_LABEL(tr)[tgt.status]}{tgt.status === "shortlisted" && tgt.rank ? ` #${tgt.rank}` : ""}
                           </span>
                         </td>
                         <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                          {t.exclusion_reason ? (
-                            <span className="inline-block max-w-[18rem] truncate align-bottom" title={t.exclusion_reason}>{t.exclusion_reason}</span>
+                          {tgt.exclusion_reason ? (
+                            <span className="inline-block max-w-[18rem] truncate align-bottom" title={tgt.exclusion_reason}>{tgt.exclusion_reason}</span>
                           ) : "—"}
                         </td>
                         <td className="sizing-actions-cell"><span className="actions-row">
                           {canAct && canPromote && (
-                            <button type="button" className="btn-ghost btn-sm" disabled={busy} title="재무·기술 평가 완료 — 최종 후보 목록으로 승격" aria-label={`${t.company_name} 최종 후보 목록 승격`} onClick={() => shortlist(t.id)}>승격</button>
+                            <button type="button" className="btn-ghost btn-sm" disabled={busy} title={t("financialAndTechnologyEvaluationComplete")} aria-label={t("promoteP1ToTheShortlist", { p1: tgt.company_name })} onClick={() => shortlist(tgt.id)}>{t("promote")}</button>
                           )}
-                          {canAct && t.status === "shortlisted" && (
-                            <span role="group" aria-label="최종 후보 목록 순위 조정" className="flex items-center gap-0.5">
-                              <button type="button" className="btn-ghost btn-sm" disabled={busy || orderIdx <= 0} aria-label={`${t.company_name} 순위 올리기`} onClick={() => rerank(t.id, "up")}>↑</button>
-                              <button type="button" className="btn-ghost btn-sm" disabled={busy || orderIdx < 0 || orderIdx >= shortlistOrder.length - 1} aria-label={`${t.company_name} 순위 내리기`} onClick={() => rerank(t.id, "down")}>↓</button>
+                          {canAct && tgt.status === "shortlisted" && (
+                            <span role="group" aria-label={t("adjustShortlistRanking")} className="flex items-center gap-0.5">
+                              <button type="button" className="btn-ghost btn-sm" disabled={busy || orderIdx <= 0} aria-label={t("moveP1Up", { p1: tgt.company_name })} onClick={() => rerank(tgt.id, "up")}>↑</button>
+                              <button type="button" className="btn-ghost btn-sm" disabled={busy || orderIdx < 0 || orderIdx >= shortlistOrder.length - 1} aria-label={t("moveP1Down", { p1: tgt.company_name })} onClick={() => rerank(tgt.id, "down")}>↓</button>
                             </span>
                           )}
                         </span></td>

@@ -32,9 +32,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
   if (ctx.via !== "cookie" || currentPrincipal() || AGENT_KEYS.has(ctx.userId)) {
-    return forbidden("human_only", "맞춤 체크리스트 항목 직접 제안은 사람만 할 수 있습니다 — 에이전트 제안은 맞춤화(tailor) 경로를 사용합니다.");
+    return forbidden("human_only", "Only a human can directly propose custom checklist items — agent proposals go through the tailor path.");
   }
-  if (ctx.role === "viewer") return forbidden("role_required", "맞춤 체크리스트 항목 제안은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Proposing custom checklist items requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
@@ -46,16 +46,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     target_id?: string;
   } | null;
   if (!body?.domain || !isDdDomain(body.domain)) {
-    return badRequest("invalid_request", `domain은 ${DD_DOMAINS.join(" | ")} 중 하나입니다.`);
+    return badRequest("invalid_request", `domain must be one of: ${DD_DOMAINS.join(" | ")}.`);
   }
-  if (typeof body.item_label !== "string" || !body.item_label.trim()) return badRequest("invalid_request", "item_label은 필수입니다.");
-  if (body.item_label.trim().length > MAX_ITEM_LABEL_LEN) return badRequest("invalid_request", `item_label은 ${MAX_ITEM_LABEL_LEN}자 이하여야 합니다.`);
+  if (typeof body.item_label !== "string" || !body.item_label.trim()) return badRequest("invalid_request", "item_label is required.");
+  if (body.item_label.trim().length > MAX_ITEM_LABEL_LEN) return badRequest("invalid_request", `item_label must be at most ${MAX_ITEM_LABEL_LEN} characters.`);
   if (body.rationale != null && (typeof body.rationale !== "string" || body.rationale.trim().length > MAX_RATIONALE_LEN)) {
-    return badRequest("invalid_request", `rationale은 ${MAX_RATIONALE_LEN}자 이하의 문자열이어야 합니다.`);
+    return badRequest("invalid_request", `rationale must be a string of at most ${MAX_RATIONALE_LEN} characters.`);
   }
-  if (!validSourceUrl(body.source_url)) return badRequest("invalid_request", "source_url은 2000자 이하의 http(s) URL이어야 합니다.");
+  if (!validSourceUrl(body.source_url)) return badRequest("invalid_request", "source_url must be an http(s) URL of at most 2000 characters.");
   if (body.source_reliability != null && !(RELIABILITY as readonly string[]).includes(body.source_reliability)) {
-    return badRequest("invalid_request", "source_reliability는 A | B | C 중 하나입니다.");
+    return badRequest("invalid_request", "source_reliability must be one of: A | B | C.");
   }
   const scope = scopeOrResponse(id, body.target_id);
   if ("response" in scope) return scope.response;

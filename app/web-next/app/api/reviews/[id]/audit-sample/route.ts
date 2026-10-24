@@ -12,11 +12,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "검표(audit sample) 기록은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Recording audit samples requires the analyst role or higher.");
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { agreed?: boolean; note?: string } | null;
   if (typeof body?.agreed !== "boolean") {
-    return badRequest("invalid_request", "agreed(true|false)는 필수입니다.");
+    return badRequest("invalid_request", "agreed(true|false) is required.");
   }
   try {
     const sampleId = insertAuditSample({

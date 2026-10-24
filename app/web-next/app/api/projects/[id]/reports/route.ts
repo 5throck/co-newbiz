@@ -79,7 +79,7 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "보고서 스냅샷 생성은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Report-snapshot creation requires the analyst role or higher.");
   const { id } = await params;
   const project = visibleProject(auth.auth, id);
   if (!project) return notFound();
@@ -87,7 +87,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const title = body?.title?.trim() || `${project.project_no} report`;
   const contentMd = body?.content_md?.trim() || `# ${title}\n\nProject: ${project.project_no}\n\nGenerated from co-newbiz report snapshot.`;
   const formats = (body?.formats ?? []).filter((f): f is ReportFormat => FORMATS.has(f));
-  if ((body?.formats ?? []).length !== formats.length) return badRequest("invalid_format", "formats는 docx/pdf/hwpx만 허용합니다.");
+  if ((body?.formats ?? []).length !== formats.length) return badRequest("invalid_format", "formats accepts only docx/pdf/hwpx.");
 
   const db = getDb();
   const now = new Date().toISOString();
@@ -116,7 +116,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
         );
       }
     } catch (err) {
-      return badRequest("report_render_failed", err instanceof Error ? err.message : "보고서 렌더링 실패");
+      return badRequest("report_render_failed", err instanceof Error ? err.message : "Report rendering failed");
     }
   }
   return ok({ snapshot: { id: snapshotId, project_id: id, title, content_md: contentMd, created_by: auth.auth.userId, created_at: now }, renders }, 201, { render_count: renders.length });

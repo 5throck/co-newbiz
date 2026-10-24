@@ -9,8 +9,9 @@ import { useConfirm } from "../../crud.tsx";
 import { api } from "../../../lib/api.ts";
 import type { SynergyAnalysis } from "./types.ts";
 import { tabFromParam, type TabKey } from "./synergyFormat.ts";
+import { useTranslations } from "next-intl";
 
-export function useSynergyList({ opportunityId, analysisId, embedded, noSourceOpportunity }: { opportunityId?: string; analysisId?: string; embedded?: boolean; noSourceOpportunity?: boolean }) {
+export function useSynergyList({ opportunityId, analysisId, embedded, noSourceOpportunity }: { opportunityId?: string; analysisId?: string; embedded?: boolean; noSourceOpportunity?: boolean }) {const t = useTranslations("stages.s3.useSynergyList"); const tc = useTranslations("common");
 
   const { me } = useAuth();
   const canCurate = canWriteBusiness(me?.role);
@@ -54,7 +55,7 @@ export function useSynergyList({ opportunityId, analysisId, embedded, noSourceOp
     if (dealScoped && scope === "deal" && !opportunityId) { setAnalyses([]); setError(null); return Promise.resolve(); }
     return api.get<{ analyses: SynergyAnalysis[] }>(listUrl)
       .then((r) => { setAnalyses(r.data.analyses); setError(null); })
-      .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
+      .catch((e) => setError(e instanceof Error ? e.message : tc("errors.loadFailed")));
   }, [listUrl, dealScoped, scope, opportunityId]);
 
   useEffect(() => { void refresh(); }, [refresh]);
@@ -74,7 +75,7 @@ export function useSynergyList({ opportunityId, analysisId, embedded, noSourceOp
     if (found.status === "completed") {
       api.get<SynergyAnalysis>(`/api/synergy/analyses/${encodeURIComponent(found.id)}`)
         .then((r) => setDetail(r.data))
-        .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
+        .catch((e) => setError(e instanceof Error ? e.message : tc("errors.loadFailed")));
     } else {
       setDetail(null);
     }
@@ -102,7 +103,7 @@ export function useSynergyList({ opportunityId, analysisId, embedded, noSourceOp
   const refreshDetail = useCallback((analysisId: string) => {
     return api.get<SynergyAnalysis>(`/api/synergy/analyses/${encodeURIComponent(analysisId)}`)
       .then((r) => setDetail(r.data))
-      .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
+      .catch((e) => setError(e instanceof Error ? e.message : tc("errors.loadFailed")));
   }, []);
 
   const openDetail = useCallback((a: SynergyAnalysis) => {
@@ -113,7 +114,7 @@ export function useSynergyList({ opportunityId, analysisId, embedded, noSourceOp
     if (a.status === "completed") {
       api.get<SynergyAnalysis>(`/api/synergy/analyses/${encodeURIComponent(a.id)}`)
         .then((r) => setDetail(r.data))
-        .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
+        .catch((e) => setError(e instanceof Error ? e.message : tc("errors.loadFailed")));
     }
   }, [urlSync, router]);
 
@@ -134,7 +135,7 @@ export function useSynergyList({ opportunityId, analysisId, embedded, noSourceOp
         const out: Array<{ kind: "affiliate" | "group"; id: string; label: string; groupName: string; hasProfile: boolean }> = [];
         for (const g of gr.data.groups) {
           const detail = await api.get<{ members: Array<{ id: string; company_name: string; latest_version: number | null }> }>(`/api/our-company/groups/${encodeURIComponent(g.id)}`);
-          out.push({ kind: "group", id: g.id, label: `그룹 전체 (${g.name})`, groupName: g.name, hasProfile: detail.data.members.some((m) => m.latest_version !== null) });
+          out.push({ kind: "group", id: g.id, label: t("wholeGroupP1", { p1: g.name }), groupName: g.name, hasProfile: detail.data.members.some((m) => m.latest_version !== null) });
           for (const m of detail.data.members) {
             out.push({ kind: "affiliate", id: m.id, label: m.company_name, groupName: g.name, hasProfile: m.latest_version !== null });
           }
@@ -167,7 +168,7 @@ export function useSynergyList({ opportunityId, analysisId, embedded, noSourceOp
       const created = list.data.analyses.find((x) => x.id === res.data.analysis_id);
       if (created) openDetail({ ...created, status: "in_progress" });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "분석 시작 실패");
+      setError(err instanceof Error ? err.message : tc("analysisStartFailed"));
     } finally {
       setCreating(false);
     }
@@ -175,7 +176,7 @@ export function useSynergyList({ opportunityId, analysisId, embedded, noSourceOp
 
   function removeAnalysis(a: SynergyAnalysis) {
     confirm(
-      `${a.company_name} 시너지 분석 삭제`,
+      t("deleteP1SynergyAnalysis", { p1: a.company_name }),
       async () => {
         setError(null);
         try {
@@ -183,10 +184,10 @@ export function useSynergyList({ opportunityId, analysisId, embedded, noSourceOp
           if (selected?.id === a.id) backToList();
           refresh();
         } catch (err) {
-          setError(err instanceof Error ? err.message : "시너지 분석 삭제 실패");
+          setError(err instanceof Error ? err.message : t("failedToDeleteTheSynergy"));
         }
       },
-      { body: "이 분석과 버전 전체가 삭제됩니다. 회사 마스터(그룹/계열사·프로젝트 연결)는 유지됩니다." },
+      { body: t("thisAnalysisAndAllVersions") },
     );
   }
 
@@ -215,7 +216,7 @@ export function useSynergyList({ opportunityId, analysisId, embedded, noSourceOp
       else openDetail({ ...a, status: "in_progress", latest_version: a.latest_version });
       void refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "재분석 시작 실패");
+      setError(err instanceof Error ? err.message : tc("reanalyzeStartFailed"));
     }
   }
   return { dealScoped, scope, setScope: changeScope, confirmDialog, error, opportunityId, selected, detail, tab, setTab, backToList, rerun, refreshDetail, analyses, canCurate, setShowNewForm, showNewForm, selectedId, openDetail, removeAnalysis, hasInProgress, targets, targetSel, setTargetSel, oppSel, setOppSel, opps, creating, createAnalysis };

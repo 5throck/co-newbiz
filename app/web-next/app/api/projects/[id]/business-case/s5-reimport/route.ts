@@ -14,8 +14,8 @@ async function guard(request: Request, params: Promise<{ id: string }>) {
   const auth = authenticate(request);
   if (!auth.ok) return { response: auth.response };
   const ctx = auth.auth;
-  if (currentPrincipal()) return { response: forbidden("human_only", "S5 투자 계획 다시 가져오기는 사람만 실행할 수 있습니다 (boundary #2).") };
-  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "S5 투자 계획 다시 가져오기는 analyst 역할 이상이어야 합니다." });
+  if (currentPrincipal()) return { response: forbidden("human_only", "Only a human can re-import the S5 investment plan (boundary #2).") };
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "S5 investment-plan re-import requires the analyst role or higher." });
   if (denied) return { response: denied };
   const { id } = await params;
   if (!visibleProject(ctx, id)) return { response: notFound() };

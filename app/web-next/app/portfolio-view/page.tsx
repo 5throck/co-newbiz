@@ -8,6 +8,7 @@
 // 클라이언트에서 자유 텍스트 시장 범위로 재그룹화하지 않는다.
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { api } from "../../lib/api.ts";
 import { dealStageHref } from "../../lib/deal-links.ts";
 import { dedupTermNames } from "../../lib/labels.ts";
@@ -54,30 +55,23 @@ interface OverlapResult {
   };
 }
 
-const NA_REASON_LABEL: Record<string, string> = {
-  no_pinned_industry: "산업 미지정",
-  no_live_binding: "산업 바인딩 없음",
-  industry_unresolved: "산업 정보를 확인하지 못함",
+// i18n: N/A reasons and tier badges resolve through pages.portfolioView.* keys at render time.
+const NA_REASON_KEY: Record<string, string> = {
+  no_pinned_industry: "naReasonNoPinned",
+  no_live_binding: "naReasonNoBinding",
+  industry_unresolved: "naReasonUnresolved",
 };
-function naReason(reason: string, fallback: string): string {
-  return NA_REASON_LABEL[reason] ?? fallback;
-}
-
-const TIER_BADGE: Record<OverlapGroup["tier"], { label: string; className: string; icon: string; note?: string }> = {
-  exact: { label: "산업 일치", className: "status-chip status-unknown", icon: "✓" },
-  name_prefix: {
-    label: "근사 매칭",
-    className: "status-chip status-amber",
-    icon: "≈",
-    note: "시장 범위 문자열이 같은 경우의 근사 매칭(자유 텍스트 우연 일치)입니다 — 행동 전에 검증하세요.",
-  },
+const NA_REASON_FALLBACK_KEY: Record<string, string> = {
+  no_pinned_industry: "naReasonNoPinned",
+  no_live_binding: "naReasonNoBinding",
 };
-
-function memberLabel(m: OverlapMember): string {
-  return m.kind === "project" ? `프로젝트 — ${m.name}` : `기회 — ${m.name}`;
-}
+const TIER_LABEL_KEY: Record<OverlapGroup["tier"], string> = { exact: "tierExact", name_prefix: "tierNamePrefix" };
+const TIER_CLASS: Record<OverlapGroup["tier"], string> = { exact: "status-chip status-unknown", name_prefix: "status-chip status-amber" };
+const TIER_ICON: Record<OverlapGroup["tier"], string> = { exact: "✓", name_prefix: "≈" };
 
 function PortfolioView() {
+  const t = useTranslations("pages.portfolioView");
+  const tc = useTranslations("common");
   const [opps, setOpps] = useState<number | null>(null);
   const [projs, setProjs] = useState<number | null>(null);
   const [result, setResult] = useState<OverlapResult | null>(null);
@@ -90,7 +84,7 @@ function PortfolioView() {
         setOpps(r.data.counts.active_opportunities);
         setProjs(r.data.counts.projects);
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
+      .catch((e) => setError(e instanceof Error ? e.message : tc("errors.loadFailed")));
   }, []);
 
   const loading = result === null && error === null;
@@ -99,38 +93,42 @@ function PortfolioView() {
   const naTotal = result?.counts.na_total ?? ((result?.counts.na_opportunities ?? 0) + (result?.counts.na_projects ?? 0));
   const dupCount = (result?.counts.exact_groups ?? 0) + (result?.counts.name_prefix_groups ?? 0);
 
+  const memberLabel = (m: OverlapMember): string =>
+    m.kind === "project" ? t("memberProject", { name: m.name }) : t("memberOpportunity", { name: m.name });
+  const naReason = (reason: string, fallbackKey: string): string => NA_REASON_KEY[reason] ? t(NA_REASON_KEY[reason]) : t(fallbackKey);
+
   return (
     <main>
-      <h1>포트폴리오 전체 뷰</h1>
-      <p className="objective">검토/안건 간 중복 노출과 집중도를 그룹 관점에서 감시합니다 (group-review-agent) — 개별 판단은 그룹 투자심의위원회가 합니다.</p>
+      <h1>{t("heading")}</h1>
+      <p className="objective">{t("objective")}</p>
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}
       <div className="summary-cards mb-4">
-        <div className="summary-card glass text-left"><span className="summary-value mono-num">{opps ?? 0}</span><span className="text-label">활성 기회</span></div>
-        <div className="summary-card glass text-left"><span className="summary-value mono-num">{projs ?? 0}</span><span className="text-label">프로젝트 (S8~)</span></div>
-        <div className="summary-card glass text-left"><span className="summary-value mono-num">{dupCount}</span><span className="text-label">시장 중복 후보</span></div>
+        <div className="summary-card glass text-left"><span className="summary-value mono-num">{opps ?? 0}</span><span className="text-label">{t("statActiveOpps")}</span></div>
+        <div className="summary-card glass text-left"><span className="summary-value mono-num">{projs ?? 0}</span><span className="text-label">{t("statProjects")}</span></div>
+        <div className="summary-card glass text-left"><span className="summary-value mono-num">{dupCount}</span><span className="text-label">{t("statDup")}</span></div>
       </div>
-      <section className="market-section" aria-label="중복 감지">
-        <h2 className="text-[length:var(--fs-body)] mb-2">시장 중복 감지 <span className="note">— 같은 산업(또는 근사 시장 범위)에 활성 노출 2건 이상</span></h2>
+      <section className="market-section" aria-label={t("sectionAria")}>
+        <h2 className="text-[length:var(--fs-body)] mb-2">{t("heading2")} <span className="note">{t("sectionNote")}</span></h2>
         {hiddenCount > 0 && (
           <p className="glass p-3 mb-3 status-amber" role="note">
-            <span aria-hidden="true">⚠</span> 승격된 안건 {hiddenCount}건은 해당 프로젝트를 볼 수 있는 권한이 없어 제외되었습니다 — 표시된 노출 규모가 실제보다 작을 수 있습니다.
+            <span aria-hidden="true">⚠</span> {t("hiddenNote", { count: hiddenCount })}
           </p>
         )}
         {loading ? <PageState state="loading" /> : groups.length === 0 ? (
           naTotal > 0 || hiddenCount > 0 ? (
             <p className="glass p-3" role="note">
-              <span aria-hidden="true">ℹ</span> 일부 항목은 중복 여부를 판단할 수 없었습니다 — 중복 후보가 없다는 뜻이 아닙니다.
-              {naTotal > 0 && <> 아래 &lsquo;산업 미지정 (N/A)&rsquo; 항목을 확인하세요.</>}
+              <span aria-hidden="true">ℹ</span> {t("emptyPartialNote")}
+              {naTotal > 0 && <> {t("emptyPartialNaHint")}</>}
             </p>
           ) : (
-            <PageState state="empty" emptyText="중복 노출 후보가 없습니다." />
+            <PageState state="empty" emptyText={t("empty")} />
           )
         ) : (
           <div className="flex flex-col gap-4">
             {groups.map((g, gi) => {
-              const badge = TIER_BADGE[g.tier];
+              const tier = g.tier;
               return (
-                <article key={`${g.tier}-${g.industry?.id ?? g.key_label ?? gi}`} className="glass p-3">
+                <article key={`${tier}-${g.industry?.id ?? g.key_label ?? gi}`} className="glass p-3">
                   <h3 className="mb-1 font-semibold">
                     {g.industry ? (
                       <>
@@ -144,20 +142,20 @@ function PortfolioView() {
                           );
                         })()}
                         <span className="note ml-2">
-                          {g.industry.ksic_code ? <>KSIC {g.industry.ksic_code}</> : <>KSIC 미지정</>}
+                          {g.industry.ksic_code ? <>KSIC {g.industry.ksic_code}</> : <>{t("ksicUnset")}</>}
                         </span>
                       </>
                     ) : (
-                      <>{g.key_label} <span className="note">(산업 미지정 — 시장 범위 문자열 일치)</span></>
+                      <>{g.key_label} <span className="note">{t("noIndustrySuffix")}</span></>
                     )}
                   </h3>
                   <p className="mb-2">
-                    <span className={badge.className} aria-label={`정밀도: ${badge.label}`}>
-                      <span aria-hidden="true">{badge.icon}</span> {badge.label}
+                    <span className={TIER_CLASS[tier]} aria-label={t("precisionAria", { label: t(TIER_LABEL_KEY[tier]) })}>
+                      <span aria-hidden="true">{TIER_ICON[tier]}</span> {t(TIER_LABEL_KEY[tier])}
                     </span>
-                    {badge.note && <span className="note ml-2">{badge.note}</span>}
+                    {tier === "name_prefix" && <span className="note ml-2">{t("tierNamePrefixNote")}</span>}
                   </p>
-                  <ul className="mb-2 pl-5" aria-label={`${g.members.length}건 노출`}>
+                  <ul className="mb-2 pl-5" aria-label={t("membersAria", { count: g.members.length })}>
                     {g.members.map((m) => (
                       <li key={`${m.kind}-${m.id}`}>
                         <Link href={m.href} className="text-[length:var(--fs-caption)] underline">
@@ -168,7 +166,7 @@ function PortfolioView() {
                     ))}
                   </ul>
                   <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] m-0">
-                    이 그룹은 통합 시너지 검토 또는 시기 조정을 <strong>제안</strong>합니다 — 판단은 그룹 투자심의위원회가 합니다.
+                    {t("groupFootnoteLead")}<strong>{t("groupFootnoteBold")}</strong>{t("groupFootnoteTail")}
                   </p>
                 </article>
               );
@@ -177,23 +175,22 @@ function PortfolioView() {
         )}
         {!loading && (
           <p className="note mt-2" data-testid="overlap-limits-note">
-            <span aria-hidden="true">ℹ</span> 기회와 프로젝트 간 중복은 프로젝트에 산업 바인딩이 있고 기회에 산업이 지정(고정)된 경우에만 감지됩니다. 해당 정보가 없는 항목은 N/A로 따로 표시되며 비교하지 않습니다.
+            <span aria-hidden="true">ℹ</span> {t("limitsNote")}
           </p>
         )}
       </section>
       {result && (naTotal > 0 || result.counts.na_opportunities > 0 || result.counts.na_projects > 0) && (
-        <section className="market-section mt-4" aria-label="산업 미지정 항목">
-          <h2 className="text-[length:var(--fs-body)] mb-2">산업 미지정 (N/A) <span className="note">— 키가 없어 중복 감지 대상에서 제외된 항목</span></h2>
+        <section className="market-section mt-4" aria-label={t("naSectionAria")}>
+          <h2 className="text-[length:var(--fs-body)] mb-2">{t("naHeading")} <span className="note">{t("naNote")}</span></h2>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-            산업이 지정(고정)되지 않은 항목은 중복 노출 후보로 묶이지 않습니다 — 임의로 그룹화하지 않습니다.
-            기회는 S1 산업 지정에서, 프로젝트는 S8+ 산업 바인딩에서 지정할 수 있습니다.
+            {t("naExplainer")}
           </p>
           <ul className="pl-5 text-[length:var(--fs-caption)]">
             {result.na.opportunities_without_industry.map((o) => (
-              <li key={o.id}><Link href={dealStageHref(o.id)} className="underline">기회 — {o.name}</Link> <span className="note">({naReason(o.reason, "산업 미지정")})</span></li>
+              <li key={o.id}><Link href={dealStageHref(o.id)} className="underline">{t("naOpportunityLink", { name: o.name })}</Link> <span className="note">({naReason(o.reason, "naReasonNoPinned")})</span></li>
             ))}
             {result.na.projects_without_industry.map((p) => (
-              <li key={p.id}><Link href={`/projects/${p.id}/process`} className="underline">프로젝트 — {p.project_no}</Link> <span className="note">({naReason(p.reason, "산업 바인딩 없음")})</span></li>
+              <li key={p.id}><Link href={`/projects/${p.id}/process`} className="underline">{t("naProjectLink", { no: p.project_no })}</Link> <span className="note">({naReason(p.reason, "naReasonNoBinding")})</span></li>
             ))}
           </ul>
         </section>

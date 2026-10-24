@@ -25,13 +25,14 @@ import { LinkCandidatesModal } from "./LinkCandidatesModal.tsx";
 import { LinkToDealModal, type LinkToDealModalState } from "./LinkToDealModal.tsx";
 import { MarketReport } from "./MarketReport.tsx";
 import { IndustryChainGraph } from "./IndustryChainGraph.tsx";
+import { useTranslations } from "next-intl";
 
 /**
  * `dealId` — the deal carrier when rendered as the /deals/{id}/s1 tab (drives the
  * breadcrumb and the "next: S2" link). `startNew` — land with the new-industry
  * form open and focused (board "새 검토 시작", /market?new=1).
  */
-export function MarketAnalysisStage(props0: { industryId?: string; embedded?: boolean; dealId?: string; startNew?: boolean }) {
+export function MarketAnalysisStage(props0: { industryId?: string; embedded?: boolean; dealId?: string; startNew?: boolean }) {const t = useTranslations("stages.s1.marketAnalysisStage"); const tc = useTranslations("common");
   const { dealId, startNew } = props0;
   const h0 = useMarketData(props0);
   const h1 = useMarketLinking({ ...h0 });
@@ -77,23 +78,23 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
           <DealBreadcrumb dealId={dealId!} stageId="S1" tail={[{ label: detail.industry.name_ko }]} />
         ) : (
           <Breadcrumb items={dealId
-            ? [{ label: "시장 분석", href: "/market" }, { label: detail.industry.name_ko }]
-            : [{ label: "검토/안건 보드", href: "/deals" }, { label: "S1 시장분석", href: "/market" }, { label: detail.industry.name_ko }]}
+            ? [{ label: t("marketAnalysis"), href: "/market" }, { label: detail.industry.name_ko }]
+            : [{ label: t("reviewDealBoard"), href: "/deals" }, { label: t("s1MarketAnalysis"), href: "/market" }, { label: detail.industry.name_ko }]}
           />
         )}
         <StageRail current={["S1"]} />
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <ListBackButton onClick={backToList} label="산업 목록으로" />
+          <ListBackButton onClick={backToList} label={t("toTheIndustryList")} />
           <div className="flex flex-wrap items-center gap-2">
-            {inDealContext && <PrimaryAction readOnly inline href={nextHref} label="다음: S2 기회 발굴 →" />}
+            {inDealContext && <PrimaryAction readOnly inline href={nextHref} label={t("nextS2OpportunityDiscovery")} />}
             {!inDealContext && dealId && canCurate && (
               <button
                 type="button"
                 className="btn-ghost"
                 onClick={() => openLinkToDeal({ open: true, industry: { id: detail.industry.id, name_ko: detail.industry.name_ko } })}
-                title="이 산업 분석을 이 안건의 S1 근거로 연결합니다"
+                title={t("linksThisIndustryAnalysisAs")}
               >
-                이 안건에 연결
+                {tc("linkToThisDeal")}
               </button>
             )}
           </div>
@@ -121,13 +122,13 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
       <MarketPrimaryAction ctx={ctx} />
       <StageFrame stageId="S1">
         <span className="flex flex-wrap items-center justify-between gap-2">
-          <span>산업을 선택하면 체계적 시장 규모 추정 8단계 절차로 분석된 리포트가 차트로 표시됩니다.</span>
+          <span>{t("selectingAnIndustryShowsThe")}</span>
           {/* 산업 간 가치사슬 관계도 — 인라인 배치는 목록 화면 공간을 너무 많이
               차지해 버튼 + 모달로 뺐다. 큐레이션된 수요 산업 연계가 하나도
               없으면(신규 워크스페이스) 버튼 자체를 숨긴다. */}
           {chainGraph && chainGraph.nodes.length > 0 && (
             <button type="button" className="btn-ghost btn-sm whitespace-nowrap" onClick={() => setChainGraphOpen(true)}>
-              <span aria-hidden="true">🔗</span> 산업 간 가치사슬 관계도 보기 ({chainGraph.nodes.length}개 산업)
+              <span aria-hidden="true">🔗</span> {t("viewTheValueChainMap")}{chainGraph.nodes.length}{t("industries")}
             </button>
           )}
         </span>
@@ -148,17 +149,17 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
             className="modal-panel"
             role="dialog"
             aria-modal="true"
-            aria-label="산업 간 가치사슬 관계도"
+            aria-label={tc("industryValueChainMap")}
             onClick={(e) => e.stopPropagation()}
             style={{ maxWidth: "min(90vw, var(--content-modal))" }}
           >
-            <h2 className="text-[length:var(--fs-body)] mb-1">산업 간 가치사슬 관계도</h2>
+            <h2 className="text-[length:var(--fs-body)] mb-1">{tc("industryValueChainMap")}</h2>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-              사람이 확정한 전방/전전방/후방/후후방 연계만 표시합니다 — 색이 채워진 노드는 분석 완료된 산업입니다.
+              {t("showsOnlyDownstreamDownstreamUpstream")}
             </p>
             <IndustryChainGraph nodes={chainGraph.nodes} edges={chainGraph.edges} />
             <div className="flex justify-end mt-3">
-              <button type="button" className="btn-ghost btn-sm" onClick={() => setChainGraphOpen(false)}>닫기</button>
+              <button type="button" className="btn-ghost btn-sm" onClick={() => setChainGraphOpen(false)}>{tc("close")}</button>
             </div>
           </div>
         </div>
@@ -168,16 +169,16 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
 }
 
 /** S1 primary action (design §5): run sizing once inputs are complete, else lead the user to the gap. */
-function MarketPrimaryAction({ ctx }: { ctx: ReturnType<typeof useMarketData> & ReturnType<typeof useMarketLinking> }) {
+function MarketPrimaryAction({ ctx }: { ctx: ReturnType<typeof useMarketData> & ReturnType<typeof useMarketLinking> }) {const t = useTranslations("stages.s1.marketAnalysisStage");
   const { canCurate, showNewForm, setShowNewForm, newName, openLinkModal } = ctx;
   if (!canCurate) {
-    return <PrimaryAction inline label="시장 규모 분석 실행" disabled disabledReason="산업 분석은 analyst 권한이 필요합니다." />;
+    return <PrimaryAction inline label={t("runMarketSizing")} disabled disabledReason={t("industryAnalysisRequiresTheAnalyst")} />;
   }
   if (!showNewForm || !newName.trim()) {
     return (
       <PrimaryAction
         inline
-        label="새 산업 분석 입력"
+        label={t("newIndustryAnalysisInput")}
         onClick={() => {
           setShowNewForm(true);
           setTimeout(() => document.getElementById("market-new-name")?.focus(), 0);
@@ -185,5 +186,5 @@ function MarketPrimaryAction({ ctx }: { ctx: ReturnType<typeof useMarketData> & 
       />
     );
   }
-  return <PrimaryAction inline label="시장 규모 분석 실행" onClick={() => void openLinkModal(newName.trim())} />;
+  return <PrimaryAction inline label={t("runMarketSizing2")} onClick={() => void openLinkModal(newName.trim())} />;
 }

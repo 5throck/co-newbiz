@@ -16,7 +16,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "조사내역 등록은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Registering DD findings requires the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
@@ -25,11 +25,11 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   } | null;
   const category = body?.category?.trim();
   const description = body?.description?.trim();
-  if (!category || !description) return badRequest("invalid_request", "category와 description은 필수입니다.");
-  if (category.length > 64) return badRequest("invalid_request", "category는 64자 이내여야 합니다.");
-  if (category === "rbd") return badRequest("invalid_request", "rbd 범주는 rbd_source가 필요해 이 경로로 등록할 수 없습니다.");
+  if (!category || !description) return badRequest("invalid_request", "Both category and description are required.");
+  if (category.length > 64) return badRequest("invalid_request", "category must be at most 64 characters.");
+  if (category === "rbd") return badRequest("invalid_request", "The rbd category requires rbd_source and cannot be registered via this path.");
   if (body?.value_impact != null && !Number.isInteger(body.value_impact)) {
-    return badRequest("invalid_request", "value_impact는 정수(KRW 백만)여야 합니다.");
+    return badRequest("invalid_request", "value_impact must be an integer (KRW millions).");
   }
   const scope = scopeOrResponse(id, body?.target_id);
   if ("response" in scope) return scope.response;
@@ -53,7 +53,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
 export const PUT = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "조사내역 정정은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "DD finding corrections require the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
@@ -61,15 +61,15 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
     finding_id?: string; description?: string; value_impact?: number | null; evidence_ref?: string;
   } | null;
   const findingId = body?.finding_id?.trim();
-  if (!findingId) return badRequest("invalid_request", "finding_id는 필수입니다.");
+  if (!findingId) return badRequest("invalid_request", "finding_id is required.");
   const existing = getDb()
     .query("SELECT id FROM dd_finding WHERE project_id = ? AND id = ?")
     .get(id, findingId) as { id: string } | undefined;
   if (!existing) return notFound();
   const description = typeof body?.description === "string" ? body.description.trim() : "";
-  if (!description) return badRequest("invalid_request", "description은 필수입니다.");
+  if (!description) return badRequest("invalid_request", "description is required.");
   if (body?.value_impact != null && !Number.isInteger(body.value_impact)) {
-    return badRequest("invalid_request", "value_impact는 정수(KRW 백만)여야 합니다.");
+    return badRequest("invalid_request", "value_impact must be an integer (KRW millions).");
   }
   const db = getDb();
   const now = new Date().toISOString();
@@ -84,13 +84,13 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
 export const DELETE = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "조사내역 삭제는 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Deleting DD findings requires the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as { finding_id?: string } | null;
   const findingId = body?.finding_id?.trim();
-  if (!findingId) return badRequest("invalid_request", "finding_id는 필수입니다.");
+  if (!findingId) return badRequest("invalid_request", "finding_id is required.");
   const existing = getDb()
     .query("SELECT id FROM dd_finding WHERE project_id = ? AND id = ?")
     .get(id, findingId) as { id: string } | undefined;

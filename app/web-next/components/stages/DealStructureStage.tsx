@@ -6,7 +6,9 @@
 // 탭 상태는 독립 페이지에서 URL ?tab= 동기, embedded(deals 탭) 모드에서는 내부 상태로
 // 유지한다 — router로 프로젝트 페이지를 건드리지 않는다.
 
+import { TranslatorFn } from "../../i18n/config.ts";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { KO_DATA } from "../../lib/ko-data-values.ts";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
@@ -16,12 +18,14 @@ import { useAuth } from "../../lib/auth-client.tsx";
 import { StageFrame } from "../StageFrame.tsx";
 import { PrimaryAction, useToast } from "../ui.tsx";
 import { TabNav } from "../TabNav.tsx";
-import { RECORD_KEY_LABEL, GF_FUNDING_SOURCE_PRESETS, GF_FUNDING_USE_PRESETS, GF_JV_STAKE_LABEL, GF_S10_STAGE_LABEL, GF_VEHICLE_LABEL } from "../../lib/labels.ts";
+import { KO_GF_FUNDING_SOURCE_PRESETS, KO_GF_FUNDING_USE_PRESETS } from "../../lib/ko-data-values.ts";
+import { GF_JV_STAKE_KEY, GF_VEHICLE_KEY, GF_HEADING_KEY, RECORD_KEY as RECORD_KEY_MAP } from "../../lib/label-keys.ts";
 import { balanceView, buildHypothesisPayload, hypothesisFieldVisibility, type TrancheView } from "../../lib/greenfield-structure-view.ts";
 import { CapexTrancheTable } from "./CapexTrancheTable.tsx";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import { EstablishmentModePanel } from "./EstablishmentModePanel.tsx";
+import { useTranslations } from "next-intl";
 import {
   BUSINESS_UNIT_FORMS, BUSINESS_UNIT_FORM_LABEL, BUSINESS_UNIT_NO_ISOLATION_NOTE, withBusinessUnitForm,
   type BusinessUnitForm, type ModeState,
@@ -62,35 +66,35 @@ interface FinancingEntry {
   created_by: string;
 }
 interface FinancingCertainty { source_lines: number; evidenced_lines: number; unevidenced_lines: number; evidenced_amount_krw_m: number; unevidenced_amount_krw_m: number; all_sources_evidenced: boolean }
-const EVIDENCE_KIND_LABEL: Record<string, string> = { commitment_letter: "커밋먼트 레터", internal_approval: "내부 자금 승인", term_sheet: "텀시트", subsidy_grant: "보조금 교부", other: "기타" };
+const EVIDENCE_KIND_LABEL = (tr: TranslatorFn): Record<string, string> => ({ commitment_letter: "stages.s10.stage.commitmentLetter", internal_approval: "stages.s10.stage.internalFundingApproval", term_sheet: "stages.s10.stage.termSheet", subsidy_grant: "stages.s10.stage.subsidyGrant", other: "stages.s10.stage.other" });
 const AXIS_FIELDS = ["tax_structure_note", "liability_isolation_note", "financing_leverage_note", "exit_structure_note"] as const;
 interface View {
   hypotheses: HypothesisRow[];
   financing: { entries: FinancingEntry[]; totals: { sources: number; uses: number; balanced: boolean }; certainty?: FinancingCertainty };
 }
 
-const VEHICLE_LABEL: Record<string, string> = {
-  direct: "직접 투자(direct)",
-  spc: "SPC/SPV(목적법인)",
-  holdco: "홀딩스 경유(holdco)",
-  internal_venture_spinoff: "내부 벤처 스핀오프",
-  jv: "합작(JV)",
-};
+const VEHICLE_LABEL = (tr: TranslatorFn): Record<string, string> => ({
+  direct: "stages.s10.stage.directInvestment",
+  spc: "stages.s10.stage.spcSpvSpecialPurposeEntity",
+  holdco: "stages.s10.stage.viaHoldingCompanyHoldco",
+  internal_venture_spinoff: "stages.s10.stage.internalVenture",
+  jv: "stages.s10.stage.jointVentureJv",
+});
 // Korean labels for the stored enum values (display only; the stored values are unchanged).
-const STAKE_LABEL: Record<string, string> = { full: "전량 인수", majority: "과반 지분", minority: "소수 지분", joint_control: "공동 통제" };
-const INSTRUMENT_LABEL: Record<string, string> = { primary: "신주 인수", secondary: "구주 매입", mixed: "신주·구주 혼합" };
-const AXIS_LABEL: Record<string, string> = {
-  tax_structure_note: "절세 구조",
-  liability_isolation_note: "책임 격리",
-  financing_leverage_note: "재무 레버리지",
-  exit_structure_note: "엑싯 구조",
-};
+const STAKE_LABEL = (tr: TranslatorFn): Record<string, string> => ({ full: "stages.s10.stage.fullAcquisition", majority: "stages.s10.stage.majorityStake", minority: "stages.s10.stage.minorityStake", joint_control: "stages.s10.stage.jointControl" });
+const INSTRUMENT_LABEL = (tr: TranslatorFn): Record<string, string> => ({ primary: "stages.s10.stage.newShareSubscription", secondary: "stages.s10.stage.sharePurchase", mixed: "stages.s10.stage.mixOfNewAndExisting" });
+const AXIS_LABEL = (tr: TranslatorFn): Record<string, string> => ({
+  tax_structure_note: "stages.s10.stage.structure",
+  liability_isolation_note: "stages.s10.stage.responsibilitySeparation",
+  financing_leverage_note: "stages.s10.stage.financialLeverage",
+  exit_structure_note: "stages.s10.stage.exitStructure",
+});
 
 function fmt(n: number): string {
   return n.toLocaleString("ko-KR", { maximumFractionDigits: 1 });
 }
 
-export function DealStructureStage({ projectId, embedded }: { projectId: string; embedded?: boolean }) {
+export function DealStructureStage({ projectId, embedded }: { projectId: string; embedded?: boolean }) {const tr = useTranslations(); const t = useTranslations("stages.s10.stage"); const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlSync = !embedded;
@@ -143,7 +147,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
   const load = useCallback(() => {
     api.get<View>(`/api/projects/${encodeURIComponent(projectId)}/deal-structure`)
       .then((r) => setData(r.data))
-      .catch((e) => setError(e instanceof Error ? e.message : "투자구조 데이터를 불러오지 못했습니다."));
+      .catch((e) => setError(e instanceof Error ? e.message : t("failedToLoadInvestmentStructure")));
     // Track detection: greenfield_scope is null for brownfield / unrouted projects (brownfield view unchanged).
     api.get<{ greenfield_scope: unknown | null }>(`/api/projects/${encodeURIComponent(projectId)}/greenfield-scope`)
       .then((r) => {
@@ -152,7 +156,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
         if (gf) {
           api.get<{ tranches: TrancheView[] }>(`/api/projects/${encodeURIComponent(projectId)}/capex-tranches`)
             .then((t) => setTranches(t.data.tranches))
-            .catch((e) => setError(e instanceof Error ? e.message : "설비투자 집행 단계를 불러오지 못했습니다."));
+            .catch((e) => setError(e instanceof Error ? e.message : t("failedToLoadTheCapex")));
         }
       })
       .catch(() => setIsGf(false));
@@ -161,10 +165,10 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
 
   /** Records the drafted structure hypothesis (the form's own submit; the header primary opens and focuses the form). */
   function saveStructure() {
-    if (!newHyp.rationale.trim()) { setError("근거(rationale)는 필수입니다."); return; }
+    if (!newHyp.rationale.trim()) { setError(t("theRationaleIsRequired")); return; }
     // 사업부 신설 형태 has no DB field: it is recorded as a labelled prefix in the free-text 책임 격리 note, and no 설립 법인 형태 is sent.
     const form = isBu ? { ...newHyp, vehicle: "", liability_isolation_note: withBusinessUnitForm(newHyp.liability_isolation_note, buForm) } : newHyp;
-    void post(buildHypothesisPayload(isGf, form), "투자구조 가설을 기록했습니다.");
+    void post(buildHypothesisPayload(isGf, form), t("investmentStructureHypothesisRecorded"));
     setBuForm("");
     setFormOpen(false);
     setNewHyp({ vehicle: "", asset_or_stock: "", stake_type: "", instrument_mix: "", tax_structure_note: "", liability_isolation_note: "", financing_leverage_note: "", exit_structure_note: "", rationale: "" });
@@ -177,7 +181,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
       const r = await api.post<DealStructureReco>(`/api/projects/${encodeURIComponent(projectId)}/deal-structure-recommendation`, {});
       setReco(r.data);
     } catch (err) {
-      setRecoError(err instanceof Error ? err.message : "추천 생성 실패");
+      setRecoError(err instanceof Error ? err.message : t("failedToGenerateRecommendation"));
     } finally {
       setRecoLoading(false);
     }
@@ -192,10 +196,10 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
       // Greenfield: M&A-only suggestions (stake, instrument mix) are never copied into the form.
       stake_type: isGf ? h.stake_type : r.stake_type ?? h.stake_type,
       instrument_mix: isGf ? h.instrument_mix : r.instrument_mix ?? h.instrument_mix,
-      tax_structure_note: r.four_axis.tax_structure_note !== "검증 필요" ? r.four_axis.tax_structure_note : h.tax_structure_note,
-      liability_isolation_note: r.four_axis.liability_isolation_note !== "검증 필요" ? r.four_axis.liability_isolation_note : h.liability_isolation_note,
-      financing_leverage_note: r.four_axis.financing_leverage_note !== "검증 필요" ? r.four_axis.financing_leverage_note : h.financing_leverage_note,
-      exit_structure_note: r.four_axis.exit_structure_note !== "검증 필요" ? r.four_axis.exit_structure_note : h.exit_structure_note,
+      tax_structure_note: r.four_axis.tax_structure_note !== KO_DATA.needsVerification ? r.four_axis.tax_structure_note : h.tax_structure_note,
+      liability_isolation_note: r.four_axis.liability_isolation_note !== KO_DATA.needsVerification ? r.four_axis.liability_isolation_note : h.liability_isolation_note,
+      financing_leverage_note: r.four_axis.financing_leverage_note !== KO_DATA.needsVerification ? r.four_axis.financing_leverage_note : h.financing_leverage_note,
+      exit_structure_note: r.four_axis.exit_structure_note !== KO_DATA.needsVerification ? r.four_axis.exit_structure_note : h.exit_structure_note,
       rationale: r.rationale_draft || h.rationale,
     }));
   }
@@ -207,7 +211,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
       if (successMsg) toast(successMsg);
       load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "저장 실패");
+      setError(e instanceof Error ? e.message : tc("saveFailed"));
     } finally {
       setBusy(false);
     }
@@ -216,30 +220,31 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
   function completeFourAxis(h: HypothesisRow) {
     const ref = (artifactRef[h.id] ?? "").trim();
     if (!ref) {
-      setError(`4축 검토 완료에는 ${RECORD_KEY_LABEL.deal_structure_review} 아티팩트 참조가 필수입니다.`);
+      setError(t("theP1ArtifactReferenceIs", { p1: tr(RECORD_KEY_MAP.deal_structure_review) }));
       return;
     }
-    confirm("4축 검토 완료 처리", () => { void post({ action: "complete_four_axis", hypothesis_id: h.id, artifact_ref: ref }); },
-      { body: "완료 처리는 감사 로그에 아티팩트 참조와 함께 기록되며 되돌릴 수 없습니다." });
+    confirm(t("markReviewComplete"), () => { void post({ action: "complete_four_axis", hypothesis_id: h.id, artifact_ref: ref }); },
+      { body: t("completionIsRecordedInThe") });
   }
 
   function addEntry() {
     const amount = Number(newEntry.amount_krw_m);
     if (!newEntry.name.trim() || !Number.isFinite(amount) || amount < 0) {
-      setError("항목명과 0 이상 금액(백만 KRW)이 필요합니다.");
+      setError(t("itemNameAndAnAmount"));
       return;
     }
     if ((newEntry.evidence_kind === "") !== (newEntry.evidence_ref.trim() === "")) {
-      setError("증빙 종류와 증빙 참조는 함께 기록합니다 — 종류만 또는 참조만으로는 증빙이 아닙니다.");
+      setError(t("recordTheDocumentationTypeAnd"));
       return;
     }
     void post({ action: "add_financing_entry", kind: newEntry.kind, name: newEntry.name.trim(), amount_krw_m: amount, note: newEntry.note || null, evidence_kind: newEntry.evidence_kind || null, evidence_ref: newEntry.evidence_ref.trim() || null });
     setNewEntry({ kind: newEntry.kind, name: "", amount_krw_m: "", note: "", evidence_kind: "", evidence_ref: "" });
   }
 
-  const vehicleLabels = isGf ? GF_VEHICLE_LABEL : VEHICLE_LABEL;
+  // i18n (T3-6): GF vehicles resolve common.gfVehicle.* through the ROOT translator; non-GF keys resolve through the catalog too.
+  const vehicleLabel = (v: string) => tr(isGf ? (GF_VEHICLE_KEY[v] ?? v) : (VEHICLE_LABEL(tr)[v] ?? v));
   const vis = hypothesisFieldVisibility(isGf, newHyp.vehicle);
-  const axisLabel = (k: string) => (isGf && k === "tax_structure_note" ? "절세·지역 인센티브 (환수 조건 포함)" : AXIS_LABEL[k]);
+  const axisLabel = (k: string) => (isGf && k === "tax_structure_note" ? t("taxAndRegionalIncentivesIncluding") : AXIS_LABEL(tr)[k]);
   const totals = data?.financing.totals;
   const balance = isGf ? balanceView(totals) : null;
   const diff = totals ? Math.round((totals.sources - totals.uses) * 10) / 10 : 0;
@@ -250,14 +255,14 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
           아래로 밀리지 않고 S1~S7 딜 화면과 같은 머리 위치를 유지한다. */}
       <StageFrame
         stageId="S10"
-        heading={isGf ? `S10 ${GF_S10_STAGE_LABEL} — ${isBu ? "사업부 신설 형태" : "설립 법인 형태"}·4축 검토·자금조달·집행 단계` : "S10 투자구조 설계 — 투자 주체·4축 검토·자금조달"}
+        heading={isGf ? t("s10P1P2ReviewFunding", { p1: tr(GF_HEADING_KEY.s10Stage), p2: isBu ? tc("newDivisionForm") : tc("establishedEntityForm") }) : t("s10InvestmentStructureDesignInvesting")}
         railSlot={<StageTabs projectId={projectId} />}
       >
         {/* 3차 사용자 리포트: 종료… 제외 모든 컨트롤이 한 줄 — 검토 버킷과 1차 액션도
             프레임 머리(레일 슬롯 아래)에 둔다. */}
         <ReviewBuckets entityType="project" entityId={projectId} artifacts={stageArtifactTabs("S10")} />
         <PrimaryAction
-          label="투자구조 가설 기록"
+          label={t("recordInvestmentStructureHypothesis")}
           onClick={() => {
             setTab("hypotheses");
             setFormOpen(true);
@@ -267,12 +272,11 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
             }, 80);
           }}
           disabled={!canAct}
-          disabledReason="투자구조 가설 기록은 analyst 권한이 필요합니다."
+          disabledReason={t("recordingInvestmentStructureHypothesesRequires")}
         />
         {/* INTERIM-WORDING: "투자 주체"/"설립 법인 형태" replace the transliterated "vehicle" term */}
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
-          {isGf ? (isBu ? "사업부 신설 형태" : "설립 법인 형태(SPC 포함)") : "투자 주체(SPC 포함)"}와 절세 구조·책임 격리·재무 레버리지·엑싯 구조 4대 축을 검토하고,
-          자금조달 sources &amp; uses를 균형시킵니다. 이 산출물이 S11 투자심의 자료의 입력입니다.
+          {isGf ? (isBu ? tc("newDivisionForm") : t("establishedEntityFormIncludingSpc")) : t("investingEntityIncludingSpc")}{t("andReviewsTheFourAxes")}
         </p>
 
         {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">{error}</p>}
@@ -281,46 +285,46 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
 
         <TabNav
           className="mb-3"
-          label="S10 투자구조 설계 화면"
+          label={t("s10InvestmentStructureDesignScreen")}
           active={tab}
           onSelect={setTab}
           tabs={[
-            ...(canAct ? [{ key: "reco", label: "AI 추천" }] : []),
-            { key: "hypotheses", label: "투자구조 가설", count: data?.hypotheses.length },
-            { key: "financing", label: "자금조달 계획" },
-            ...(isGf ? [{ key: "capex", label: "설비투자 집행 단계", count: tranches.length }] : []),
+            ...(canAct ? [{ key: "reco", label: tc("aiRecommendation") }] : []),
+            { key: "hypotheses", label: t("investmentStructureHypothesis"), count: data?.hypotheses.length },
+            { key: "financing", label: t("fundingPlan") },
+            ...(isGf ? [{ key: "capex", label: t("capexExecutionStage"), count: tranches.length }] : []),
           ]}
         />
 
         {/* ── AI 추천 검토/안건구조 (결정 지원) — ADR-0118: 제안은 LLM, 가설 등록은 사람 ── */}
         {tab === "reco" && canAct && (
-          <section className="market-section sizing-step mb-3" aria-label="AI 추천 검토/안건구조">
-            <h3 className="sizing-step-title text-[length:var(--fs-body)]">🤖 AI 추천 검토/안건구조 (제안)</h3>
+          <section className="market-section sizing-step mb-3" aria-label={t("aiRecommendationReviewDealStructure")}>
+            <h3 className="sizing-step-title text-[length:var(--fs-body)]">{t("aiRecommendationReviewDealStructure2")}</h3>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-              원칙 (경계 #2): 가설 등록·4축 확정은 사람이 합니다 — S8 채택 BC·S9 발견사항·WACC·현재 상태에서 만든 제안입니다.
+              {t("principleBoundaryAPersonRegisters")}
             </p>
             {recoError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
             {!reco && !recoLoading && !recoError && (
               <div className="flex flex-wrap items-center gap-2 mb-0">
-                <button type="button" className="btn-ghost" onClick={() => void generateReco()}>🤖 추천 생성 (AI)</button>
-                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{isGf ? "설립 법인 형태" : "투자 주체"}·지분·수단과 4축 노트·구조 근거 초안을 작성해 가설 등록을 돕습니다.</span>
+                <button type="button" className="btn-ghost" onClick={() => void generateReco()}>{t("generateRecommendationAi")}</button>
+                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{isGf ? tc("establishedEntityForm") : t("investingEntity")}{t("draftsTheStakeAndConsideration")}</span>
               </div>
             )}
-            {recoLoading && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">채택 BC·DD 발견사항·WACC를 근거로 초안을 작성하는 중...</p>}
+            {recoLoading && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">{t("draftingFromTheAdoptedBc")}</p>}
             {reco && (
               <>
                 <p className="mb-1 flex flex-wrap items-center gap-1">
                   <span className={`status-chip ${reco.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
-                    {reco.source === "llm" ? `AI 추천${reco.provider ? ` · ${reco.provider}` : ""}` : "결정론 폴백"}
+                    {reco.source === "llm" ? t("aiRecommendationP1", { p1: reco.provider ? ` · ${reco.provider}` : "" }) : tc("deterministicFallback")}
                   </span>
-                  {reco.recommendation.vehicle && <span className="status-chip status-amber">{vehicleLabels[reco.recommendation.vehicle] ?? reco.recommendation.vehicle}</span>}
-                  {!isGf && reco.recommendation.stake_type && <span className="status-chip status-not-started">지분: {STAKE_LABEL[reco.recommendation.stake_type] ?? reco.recommendation.stake_type}</span>}
-                  {!isGf && reco.recommendation.instrument_mix && <span className="status-chip status-not-started">지급 수단 구성: {INSTRUMENT_LABEL[reco.recommendation.instrument_mix] ?? reco.recommendation.instrument_mix}</span>}
+                  {reco.recommendation.vehicle && <span className="status-chip status-amber">{vehicleLabel(reco.recommendation.vehicle)}</span>}
+                  {!isGf && reco.recommendation.stake_type && <span className="status-chip status-not-started">{t("stake")} {STAKE_LABEL(tr)[reco.recommendation.stake_type] ?? reco.recommendation.stake_type}</span>}
+                  {!isGf && reco.recommendation.instrument_mix && <span className="status-chip status-not-started">{t("considerationMix")} {INSTRUMENT_LABEL(tr)[reco.recommendation.instrument_mix] ?? reco.recommendation.instrument_mix}</span>}
                 </p>
                 {reco.note && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{reco.note}</p>}
-                {reco.recommendation.rationale_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">구조 근거 초안:</span> {reco.recommendation.rationale_draft}</p>}
-                <table className="data-table mb-2" aria-label="4축 노트 초안">
-                  <caption className="sr-only">4축 노트 초안</caption>
+                {reco.recommendation.rationale_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">{t("structureEvidenceDraft")}</span> {reco.recommendation.rationale_draft}</p>}
+                <table className="data-table mb-2" aria-label={t("noteDraft")}>
+                  <caption className="sr-only">{t("noteDraft2")}</caption>
                   <tbody>
                     {(["tax_structure_note", "liability_isolation_note", "financing_leverage_note", "exit_structure_note"] as const).map((k) => (
                       <tr key={k}>
@@ -333,16 +337,16 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                 {reco.recommendation.cautions.length > 0 && (
                   <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mb-1">⚠ {reco.recommendation.cautions.join(" / ")}</p>
                 )}
-                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">이 제안이 본 산출물: {reco.manifest.join(" · ")}</p>
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{tc("proposalArtifactColon")} {reco.manifest.join(" · ")}</p>
                 <button
                   type="button"
                   className="btn-ghost btn-sm"
-                  onClick={() => confirm("AI 추천을 가설 폼에 반영할까요?", applyReco, {
-                    body: "'새 투자구조 가설 기록' 폼에 초안을 채웁니다 — 검토·수정 후 사람이 등록합니다.",
-                    confirmLabel: "반영",
+                  onClick={() => confirm(t("applyTheAiRecommendationTo"), applyReco, {
+                    body: t("fillsTheFormWithA"),
+                    confirmLabel: tc("reflect"),
                   })}
                 >
-                  ▶ 가설 폼에 반영
+                  {t("applyToHypothesisForm")}
                 </button>
               </>
             )}
@@ -350,28 +354,28 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
         )}
 
         {tab === "hypotheses" && (
-        <section className="market-section sizing-step mb-3" aria-label="투자구조 가설">
-          <h3 className="sizing-step-title text-[length:var(--fs-body)]">투자구조 가설 ({data?.hypotheses.length ?? 0}건)</h3>
+        <section className="market-section sizing-step mb-3" aria-label={t("investmentStructureHypothesis2")}>
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">{t("investmentStructureHypothesis3")}{data?.hypotheses.length ?? 0}{tc("countSuffixParen")}</h3>
           {(data?.hypotheses ?? []).map((h) => (
             <div key={h.id} className="sizing-grade-card mb-2">
               <div className="flex flex-wrap items-center gap-1 mb-1">
-                {h.vehicle && <span className="status-chip status-amber">{vehicleLabels[h.vehicle] ?? h.vehicle}</span>}
-                {h.asset_or_stock && <span className="status-chip status-not-started">{h.asset_or_stock === "asset" ? "자산 인수" : h.asset_or_stock === "stock" ? "주식 인수" : "혼합"}</span>}
-                {h.stake_type && <span className="status-chip status-not-started">지분: {STAKE_LABEL[h.stake_type] ?? h.stake_type}</span>}
-                {h.instrument_mix && <span className="status-chip status-not-started">지급 수단 구성: {INSTRUMENT_LABEL[h.instrument_mix] ?? h.instrument_mix}</span>}
+                {h.vehicle && <span className="status-chip status-amber">{vehicleLabel(h.vehicle)}</span>}
+                {h.asset_or_stock && <span className="status-chip status-not-started">{h.asset_or_stock === "asset" ? t("assetAcquisition") : h.asset_or_stock === "stock" ? t("shareAcquisition") : t("mixed")}</span>}
+                {h.stake_type && <span className="status-chip status-not-started">{t("stake2")} {STAKE_LABEL(tr)[h.stake_type] ?? h.stake_type}</span>}
+                {h.instrument_mix && <span className="status-chip status-not-started">{t("considerationMix2")} {INSTRUMENT_LABEL(tr)[h.instrument_mix] ?? h.instrument_mix}</span>}
                 {h.four_axis_review_completed === 1
-                  ? <span className="status-chip status-green" title={h.four_axis_artifact_ref ? `근거 아티팩트: ${h.four_axis_artifact_ref}` : undefined}>4축 검토 완료</span>
-                  : <span className="status-chip status-red">4축 검토 미완료</span>}
+                  ? <span className="status-chip status-green" title={h.four_axis_artifact_ref ? t("evidenceArtifactP1", { p1: h.four_axis_artifact_ref }) : undefined}>{t("reviewComplete")}</span>
+                  : <span className="status-chip status-red">{t("reviewIncomplete")}</span>}
                 <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{h.hypothesized_at.slice(0, 10)} · {h.hypothesized_by}</span>
               </div>
               {h.four_axis_review_completed === 1 && h.four_axis_artifact_ref && (
                 <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1" data-testid="four-axis-artifact">
-                  검토 근거 아티팩트 <code className="dd-item-id">{h.four_axis_artifact_ref}</code>
-                  {h.four_axis_reviewed_by && <> · 검토자 {h.four_axis_reviewed_by}{h.four_axis_reviewed_at ? ` · ${h.four_axis_reviewed_at.slice(0, 10)}` : ""}</>}
+                  {t("reviewEvidenceArtifacts")} <code className="dd-item-id">{h.four_axis_artifact_ref}</code>
+                  {h.four_axis_reviewed_by && <> {t("reviewer")} {h.four_axis_reviewed_by}{h.four_axis_reviewed_at ? ` · ${h.four_axis_reviewed_at.slice(0, 10)}` : ""}</>}
                 </p>
               )}
-              <table className="data-table" aria-label="4축 검토 노트">
-                <caption className="sr-only">4대 축 검토 내용</caption>
+              <table className="data-table" aria-label={t("reviewNotes")}>
+                <caption className="sr-only">{t("reviewContent")}</caption>
                 <tbody>
                   {(["tax_structure_note", "liability_isolation_note", "financing_leverage_note", "exit_structure_note"] as const).map((k) => (
                     <tr key={k}>
@@ -381,7 +385,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                   ))}
                 </tbody>
               </table>
-              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">근거: {h.rationale}</p>
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">{tc("evidenceColon")} {h.rationale}</p>
               {canAct && h.four_axis_review_completed !== 1 && (() => {
                 const missingAxes = AXIS_FIELDS.filter((k) => !h[k]?.trim());
                 return (
@@ -389,16 +393,16 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                     <input
                       className="sizing-new-input text-[length:var(--fs-caption)]"
                       style={{ minWidth: "18rem" }}
-                      placeholder={`${RECORD_KEY_LABEL.deal_structure_review} 아티팩트 참조 (필수)`}
+                      placeholder={t("p1ArtifactReferenceRequired", { p1: tr(RECORD_KEY_MAP.deal_structure_review) })}
                       value={artifactRef[h.id] ?? ""}
                       onChange={(e) => setArtifactRef({ ...artifactRef, [h.id]: e.target.value })}
-                      aria-label="아티팩트 참조"
+                      aria-label={t("artifactReference")}
                     />
                     <button type="button" className="btn-ghost btn-sm" disabled={busy || missingAxes.length > 0} onClick={() => completeFourAxis(h)}
-                      title={missingAxes.length > 0 ? "네 축의 노트가 모두 기록되어야 완료할 수 있습니다" : undefined}>4축 검토 완료</button>
+                      title={missingAxes.length > 0 ? t("allFourAxisNotesMust") : undefined}>{t("reviewComplete2")}</button>
                     {missingAxes.length > 0 && (
                       <span className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg)]" data-testid="four-axis-missing">
-                        미작성 축: {missingAxes.map((k) => AXIS_LABEL[k]).join(" · ")} — 새 가설에 네 축을 모두 적어야 완료할 수 있습니다
+                        {t("axesNotWritten")} {missingAxes.map((k) => AXIS_LABEL(tr)[k]).join(" · ")} {t("allFourAxesMustBe")}
                       </span>
                     )}
                   </div>
@@ -407,48 +411,48 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
             </div>
           ))}
           {data && data.hypotheses.length === 0 && (
-            <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">등록된 가설이 없습니다 — 아래에서 새 가설을 기록하세요.</p>
+            <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">{t("noHypothesesRegisteredRecordA")}</p>
           )}
 
           {canAct && (
             <details className="mt-2" ref={formRef} open={formOpen} onToggle={(e) => setFormOpen((e.currentTarget as HTMLDetailsElement).open)}>
-              <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">투자구조 가설 입력란 {formOpen ? "접기" : "펼치기"}</summary>
+              <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">{t("investmentStructureHypothesisInputFields")} {formOpen ? tc("collapse") : t("expand")}</summary>
               <div className="flex flex-wrap gap-2 mt-2 text-[length:var(--fs-caption)]">
                 {isBu ? (
-                <label>사업부 신설 형태
+                <label>{tc("newDivisionForm")}
                   <select className="sizing-new-input ml-1" value={buForm} onChange={(e) => setBuForm(e.target.value as BusinessUnitForm | "")}>
                     <option value="">—</option>
                     {BUSINESS_UNIT_FORMS.map((k) => <option key={k} value={k}>{BUSINESS_UNIT_FORM_LABEL[k]}</option>)}
                   </select>
                 </label>
                 ) : (
-                <label>{isGf ? "설립 법인 형태" : "투자 주체"}
+                <label>{isGf ? tc("establishedEntityForm") : t("investingEntity2")}
                   <select className="sizing-new-input ml-1" value={newHyp.vehicle} onChange={(e) => setNewHyp({ ...newHyp, vehicle: e.target.value })}>
                     <option value="">—</option>
-                    {Object.entries(vehicleLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    {Object.entries(isGf ? GF_VEHICLE_KEY : VEHICLE_LABEL(tr)).map(([k, v]) => <option key={k} value={k}>{tr(v)}</option>)}
                   </select>
                 </label>
                 )}
                 {vis.assetOrStock && (
-                <label>자산/주식
+                <label>{t("assetShare")}
                   <select className="sizing-new-input ml-1" value={newHyp.asset_or_stock} onChange={(e) => setNewHyp({ ...newHyp, asset_or_stock: e.target.value })}>
                     <option value="">—</option>
-                    <option value="asset">자산 인수</option>
-                    <option value="stock">주식 인수</option>
-                    <option value="mixed">혼합</option>
+                    <option value="asset">{t("assetAcquisition2")}</option>
+                    <option value="stock">{t("shareAcquisition2")}</option>
+                    <option value="mixed">{t("mixed2")}</option>
                   </select>
                 </label>
                 )}
                 {vis.stakeType && (
-                <label>{isGf ? "합작 지분(우리 몫)" : "지분"}
+                <label>{isGf ? t("jvStakeOurShare") : t("stake3")}
                   <select className="sizing-new-input ml-1" value={newHyp.stake_type} onChange={(e) => setNewHyp({ ...newHyp, stake_type: e.target.value })}>
                     <option value="">—</option>
-                    {Object.entries(isGf ? GF_JV_STAKE_LABEL : STAKE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    {Object.entries(isGf ? GF_JV_STAKE_KEY : STAKE_LABEL(tr)).map(([k, v]) => <option key={k} value={k}>{tr(v)}</option>)}
                   </select>
                 </label>
                 )}
                 {vis.instrumentMix && (
-                <label>지급 수단 구성
+                <label>{t("considerationMix3")}
                   <select className="sizing-new-input ml-1" value={newHyp.instrument_mix} onChange={(e) => setNewHyp({ ...newHyp, instrument_mix: e.target.value })}>
                     <option value="">—</option>
                     {Object.entries(INSTRUMENT_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -458,12 +462,12 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
               </div>
               {isBu && (
                 <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
-                  사업부 신설 형태는 별도 항목으로 저장되지 않고, 아래 '책임 격리' 칸의 맨 앞에 '사업부 신설 형태: …'로 함께 기록됩니다. {BUSINESS_UNIT_NO_ISOLATION_NOTE}
+                  {t("theNewDivisionFormIs")} {BUSINESS_UNIT_NO_ISOLATION_NOTE}
                 </p>
               )}
               {isGf && (
                 <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
-                  설립 구조에서는 자산/주식 인수 형태와 지급 수단 구성을 쓰지 않습니다. 자금 조달 구성은 '자금조달 계획' 탭의 조달 항목으로, 집행 단계는 '설비투자 집행 단계' 탭으로 기록합니다.
+                  {t("theEstablishmentStructureDoesNot")}
                 </p>
               )}
               <div className="grid grid-1 gap-1 mt-2 text-[length:var(--fs-caption)]">
@@ -472,7 +476,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                     <input className="sizing-new-input w-full" value={newHyp[k]} onChange={(e) => setNewHyp({ ...newHyp, [k]: e.target.value })} />
                   </label>
                 ))}
-                <label>근거 (필수)
+                <label>{tc("evidenceRequiredMark")}
                   <textarea className="sizing-new-input w-full" rows={2} value={newHyp.rationale} onChange={(e) => setNewHyp({ ...newHyp, rationale: e.target.value })} />
                 </label>
               </div>
@@ -484,9 +488,9 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                   aria-describedby={!newHyp.rationale.trim() ? "hyp-reason" : undefined}
                   onClick={saveStructure}
                 >
-                  {busy ? "기록 중..." : "가설 기록"}
+                  {busy ? tc("recording") : t("recordHypothesis")}
                 </button>
-                {!newHyp.rationale.trim() && <span id="hyp-reason" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">근거(필수)를 입력하면 기록할 수 있습니다.</span>}
+                {!newHyp.rationale.trim() && <span id="hyp-reason" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("recordingUnlocksOnceTheRequired")}</span>}
               </div>
             </details>
           )}
@@ -494,100 +498,100 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
         )}
 
         {tab === "financing" && (
-        <section className="market-section sizing-step" aria-label="자금조달 계획">
-          <h3 className="sizing-step-title text-[length:var(--fs-body)]">자금조달 계획 (자금 조달·사용)</h3>
+        <section className="market-section sizing-step" aria-label={t("fundingPlan2")}>
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">{t("fundingPlanSourcesAndUses")}</h3>
           {totals && (
             <p className="text-[length:var(--fs-caption)] mb-1">
-              조달 <span className="mono-num">{fmt(totals.sources)}</span> · 사용 <span className="mono-num">{fmt(totals.uses)}</span> · 차액{" "}
-              <span className="mono-num">{fmt(diff)}</span> 백만 KRW{" "}
+              {tc("funding")} <span className="mono-num">{fmt(totals.sources)}</span> {t("inUse")} <span className="mono-num">{fmt(totals.uses)}</span> {t("difference")}{" "}
+              <span className="mono-num">{fmt(diff)}</span> {tc("krwMillionKrw")}{" "}
               {totals.balanced
-                ? <span className="status-chip status-green">균형</span>
-                : <span className="status-chip status-red">불균형 — S10 완료 요건 미충족</span>}
+                ? <span className="status-chip status-green">{t("balanced")}</span>
+                : <span className="status-chip status-red">{t("imbalanceS10CompletionRequirementUnmet")}</span>}
             </p>
           )}
           {balance && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{balance.balanced ? "✓" : "✕"} {balance.text}</p>}
           {data?.financing.certainty && data.financing.certainty.source_lines > 0 && (
             <p className="text-[length:var(--fs-caption)] mb-1" data-testid="financing-certainty">
-              자금 확정성 증빙:{" "}
+              {t("fundingCertaintyDocumentation")}{" "}
               {data.financing.certainty.all_sources_evidenced
-                ? <span className="status-chip status-green">조달 {data.financing.certainty.source_lines}건 모두 증빙</span>
-                : <span className="status-chip status-amber">증빙 없는 조달 {data.financing.certainty.unevidenced_lines}건 · {fmt(data.financing.certainty.unevidenced_amount_krw_m)} 백만 KRW</span>}
-              <span className="text-[color:var(--muted-fg)] ml-1">— S10 완료 요건은 균형이며, 확정성은 투자심사 선결조건(step 4)으로 사실 확인됩니다.</span>
+                ? <span className="status-chip status-green">{tc("funding")} {data.financing.certainty.source_lines}{t("itemSAllDocumented")}</span>
+                : <span className="status-chip status-amber">{t("fundingWithoutDocumentation")} {data.financing.certainty.unevidenced_lines}{t("itemS")} {fmt(data.financing.certainty.unevidenced_amount_krw_m)} {tc("krwMillionKrw")}</span>}
+              <span className="text-[color:var(--muted-fg)] ml-1">{t("theS10CompletionRequirementIs")}</span>
             </p>
           )}
           {isGf && (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
-              조달 항목에는 자기자본, 프로젝트 파이낸싱, 정부 자금·보조금을, 사용 항목에는 부지·설비 임차 대 자체 건설 선택을 기록하세요. 지역 인센티브를 받는 경우 환수 조건을 비고에 함께 적습니다.
+              {t("recordEquityProjectFinancingAnd")}
             </p>
           )}
-          <table className="data-table" aria-label="자금조달 항목">
-            <caption className="sr-only">자금 조달·사용 항목</caption>
+          <table className="data-table" aria-label={t("fundingItems")}>
+            <caption className="sr-only">{t("fundingSourcesAndUsesItems")}</caption>
             <thead>
-              <tr><th scope="col">구분</th><th scope="col">항목</th><th scope="col" className="mono-num">금액 (백만 KRW)</th><th scope="col">비고</th><th scope="col"></th></tr>
+              <tr><th scope="col">{tc("division")}</th><th scope="col">{tc("items")}</th><th scope="col" className="mono-num">{t("amountMillionsOfKrw")}</th><th scope="col">{tc("notes")}</th><th scope="col"></th></tr>
             </thead>
             <tbody>
               {(data?.financing.entries ?? []).map((e) => (
                 <tr key={e.id}>
-                  <td>{e.kind === "source" ? "조달" : "사용"}</td>
+                  <td>{e.kind === "source" ? tc("funding") : t("inUse2")}</td>
                   <td>{e.name}</td>
                   <td className="mono-num">{fmt(e.amount_krw_m)}</td>
                   <td>
                     {e.kind === "source" && (
                       e.evidence_kind && e.evidence_ref
-                        ? <span className="status-chip status-green mr-1" title={e.evidence_ref}>{EVIDENCE_KIND_LABEL[e.evidence_kind] ?? e.evidence_kind}</span>
-                        : <span className="status-chip status-amber mr-1" title="커밋먼트 레터·내부 승인 등 증빙 참조가 없습니다">증빙 없음</span>
+                        ? <span className="status-chip status-green mr-1" title={e.evidence_ref}>{EVIDENCE_KIND_LABEL(tr)[e.evidence_kind] ?? e.evidence_kind}</span>
+                        : <span className="status-chip status-amber mr-1" title={t("noDocumentationReferencesSuchAs")}>{t("noDocumentation")}</span>
                     )}
                     {e.note ?? (e.kind === "source" ? "" : "—")}
                   </td>
                   <td>
                     {canAct && (
                       <button type="button" className="btn-danger btn-sm" disabled={busy}
-                        onClick={() => confirm("항목 삭제", () => { void post({ action: "remove_financing_entry", entry_id: e.id }); }, { body: "삭제는 감사 로그에 기록됩니다.", confirmLabel: "삭제" })}>
-                        삭제
+                        onClick={() => confirm(t("deleteItem"), () => { void post({ action: "remove_financing_entry", entry_id: e.id }); }, { body: t("deletionIsRecordedInThe"), confirmLabel: tc("delete") })}>
+                        {tc("delete")}
                       </button>
                     )}
                   </td>
                 </tr>
               ))}
               {(data?.financing.entries.length ?? 0) === 0 && (
-                <tr><td colSpan={5}>등록된 항목이 없습니다.</td></tr>
+                <tr><td colSpan={5}>{t("noItemsRegistered")}</td></tr>
               )}
             </tbody>
           </table>
           {canAct && (
             <div className="flex flex-wrap items-end gap-2 mt-2 text-[length:var(--fs-caption)]">
-              <label>구분
+              <label>{tc("division")}
                 <select className="sizing-new-input ml-1" value={newEntry.kind} onChange={(e) => setNewEntry({ ...newEntry, kind: e.target.value as "source" | "use" })}>
-                  <option value="source">조달</option>
-                  <option value="use">사용</option>
+                  <option value="source">{tc("funding")}</option>
+                  <option value="use">{t("inUse3")}</option>
                 </select>
               </label>
-              <label>항목명
+              <label>{tc("itemName")}
                 <input className="sizing-new-input ml-1" list={isGf ? "gf-entry-presets" : undefined} value={newEntry.name} onChange={(e) => setNewEntry({ ...newEntry, name: e.target.value })} />
               </label>
-              <label>금액 (백만 KRW)
+              <label>{t("amountMillionsOfKrw2")}
                 <input className="sizing-new-input mono-num ml-1" style={{ width: "8rem" }} value={newEntry.amount_krw_m} onChange={(e) => setNewEntry({ ...newEntry, amount_krw_m: e.target.value })} />
               </label>
-              <label>비고
+              <label>{tc("notes")}
                 <input className="sizing-new-input ml-1" value={newEntry.note} onChange={(e) => setNewEntry({ ...newEntry, note: e.target.value })} />
               </label>
               {newEntry.kind === "source" && (
                 <>
-                  <label>증빙 종류
+                  <label>{t("documentationType")}
                     <select className="sizing-new-input ml-1" value={newEntry.evidence_kind} onChange={(e) => setNewEntry({ ...newEntry, evidence_kind: e.target.value })}>
-                      <option value="">— 없음</option>
+                      <option value="">{t("none")}</option>
                       {Object.entries(EVIDENCE_KIND_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                     </select>
                   </label>
-                  <label>증빙 참조
-                    <input className="sizing-new-input ml-1" placeholder="커밋먼트 레터 2026-10-15 / 이사회 결의 #12" value={newEntry.evidence_ref} onChange={(e) => setNewEntry({ ...newEntry, evidence_ref: e.target.value })} />
+                  <label>{t("documentationReference")}
+                    <input className="sizing-new-input ml-1" placeholder={t("commitmentLetterBoardResolution")} value={newEntry.evidence_ref} onChange={(e) => setNewEntry({ ...newEntry, evidence_ref: e.target.value })} />
                   </label>
                 </>
               )}
-              <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={addEntry}>추가</button>
+              <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={addEntry}>{tc("add")}</button>
               {isGf && (
                 <datalist id="gf-entry-presets">
-                  {(newEntry.kind === "source" ? GF_FUNDING_SOURCE_PRESETS : GF_FUNDING_USE_PRESETS).map((n) => <option key={n} value={n} />)}
+                  {(newEntry.kind === "source" ? KO_GF_FUNDING_SOURCE_PRESETS : KO_GF_FUNDING_USE_PRESETS).map((n) => <option key={n} value={n} />)}
                 </datalist>
               )}
             </div>

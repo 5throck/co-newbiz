@@ -22,18 +22,18 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
   if (ctx.via !== "cookie") {
-    return forbidden("session_required", "대상별 DD는 로그인한 사람의 웹 세션에서만 열 수 있습니다 — 에이전트·토큰은 propose_approval로 제안만 할 수 있습니다.");
+    return forbidden("session_required", "Target DD can be opened only from a logged-in human web session — agents/tokens may only propose via propose_approval.");
   }
   if (AGENT_KEYS.has(ctx.userId)) {
-    return forbidden("agent_forbidden", "에이전트 신원은 대상별 DD를 열 수 없습니다 (경계 #1/#2).");
+    return forbidden("agent_forbidden", "Agent identities cannot open target DD (boundaries #1/#2).");
   }
-  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "대상별 DD 열기는 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Opening per-target DD requires the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as { target_id?: string; rationale?: string } | null;
-  if (!body?.target_id?.trim()) return badRequest("invalid_request", "target_id는 필수입니다.");
-  if (!body.rationale?.trim()) return badRequest("invalid_request", "DD를 여는 근거(rationale)는 필수입니다.");
+  if (!body?.target_id?.trim()) return badRequest("invalid_request", "target_id is required.");
+  if (!body.rationale?.trim()) return badRequest("invalid_request", "The rationale for opening DD is required.");
   try {
     const record = openDdTarget(id, body.target_id.trim(), body.rationale, ctx.userId);
     return ok(

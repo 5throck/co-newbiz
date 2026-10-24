@@ -61,10 +61,10 @@ function authorize(
   const ctx = auth.auth;
   if (entityType === "project") {
     if (mode === "write" && ctx.role === "viewer")
-      return { response: forbidden("role_required", "AI 검토 요청은 analyst 역할 이상이어야 합니다.") };
+      return { response: forbidden("role_required", "AI review requests require the analyst role or higher.") };
     if (!visibleProject(ctx, entityId, { includeClosed: true })) return { response: notFound() };
   } else {
-    const denied = requireBusinessActor(ctx, mode, { viewerMessage: "AI 검토 요청은 analyst 역할 이상이어야 합니다." });
+    const denied = requireBusinessActor(ctx, mode, { viewerMessage: "AI review requests requires the analyst role or higher." });
     if (denied) return { response: denied };
     if (!getDb().query("SELECT id FROM opportunity WHERE id = ?").get(entityId)) return { response: notFound() };
   }

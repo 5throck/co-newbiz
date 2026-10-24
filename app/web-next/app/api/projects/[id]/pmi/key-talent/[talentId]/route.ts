@@ -14,7 +14,7 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "핵심인력 상태 갱신은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Updating key-talent status requires the analyst role or higher.");
   const { id, talentId } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   if (!pmiApplicability(getDb(), id).applies) return forbidden("not_applicable_track", PMI_NOT_APPLICABLE_MESSAGE);
@@ -26,7 +26,7 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
   const body = (await request.json().catch(() => null)) as { status?: string; role_ref?: string; exit_date?: string | null } | null;
   const status = body?.status?.trim();
   if (status && !STATUSES.includes(status)) {
-    return badRequest("invalid_request", `status는 ${STATUSES.join(" | ")} 중 하나입니다.`);
+    return badRequest("invalid_request", `status must be one of: ${STATUSES.join(" | ")}.`);
   }
   const now = new Date().toISOString();
   db.run(
@@ -57,7 +57,7 @@ export const DELETE = route(async (request: Request, { params }: { params: Promi
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "핵심인력 삭제는 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Deleting key talent requires the analyst role or higher.");
   const { id, talentId } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   if (!pmiApplicability(getDb(), id).applies) return forbidden("not_applicable_track", PMI_NOT_APPLICABLE_MESSAGE);

@@ -71,9 +71,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const ctx = auth.auth;
   // Human-only: only a cookie session (the person in the web app) may write.
   if (ctx.via !== "cookie" || currentPrincipal() || AGENT_KEYS.has(ctx.userId)) {
-    return forbidden("human_only", "사업 목표 설정은 사람만 할 수 있습니다 (boundary #2) — 에이전트는 제안만 가능합니다.");
+    return forbidden("human_only", "Only a human can set business goals (boundary #2) — agents may only propose.");
   }
-  if (ctx.role === "viewer") return forbidden("role_required", "사업 목표 설정은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Setting business goals requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
@@ -108,5 +108,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const r = retireProjectGoal({ projectId: id, goalId: body?.goal_id, reason: body?.reason, actor: ctx.userId });
     return r.ok ? ok({ goal_id: r.goal_id, retired_at: r.retired_at }, 200) : failure(r);
   }
-  return badRequest("invalid_request", "action은 create | supersede | retire 중 하나입니다.");
+  return badRequest("invalid_request", "action must be one of: create | supersede | retire.");
 }

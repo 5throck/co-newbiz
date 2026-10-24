@@ -8,7 +8,7 @@ import { webSearchCompetitorProposals } from "../../../../../../lib/competitor-w
 export async function POST(request: Request, { params }: { params: Promise<{ companyId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "웹검색 제안 생성은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Web-search proposal generation requires the analyst role or higher." });
   if (denied) return denied;
   const { companyId } = await params;
   const db = getDb();

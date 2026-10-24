@@ -69,7 +69,7 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
   try {
     scope = await analysisScope(db, id, request);
   } catch (err) {
-    return badRequest("invalid_request", err instanceof Error ? err.message : "잘못된 target_id입니다.");
+    return badRequest("invalid_request", err instanceof Error ? err.message : "Invalid target_id.");
   }
   const wacc = resolveProjectWacc(db, id, scope);
   const hurdle = resolveProjectHurdleIrr(db, id, scope);
@@ -87,7 +87,7 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "WACC 입력 세션은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "WACC input sessions require the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
@@ -108,22 +108,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (hasTarget) {
     const target = listProjectAnalysisTargets(getDb(), id).find((t) => t.targetId === String(body!.target_id).trim());
     if (!target || !target.companyId) {
-      return badRequest("invalid_request", "target_id는 Short List에 오른 대상(분석 가능한 회사)이어야 합니다.");
+      return badRequest("invalid_request", "target_id must be a shortlisted target (a company that can be analyzed).");
     }
     scope = { subjectCompanyId: target.companyId };
   }
-  if (wacc === null) return badRequest("invalid_request", "wacc는 -1보다 큰 유한한 비율이어야 합니다. 예: 0.095");
+  if (wacc === null) return badRequest("invalid_request", "wacc must be a finite ratio greater than -1. Example: 0.095");
   const hasHurdle = body?.hurdle_irr !== undefined && body?.hurdle_irr !== null && body?.hurdle_irr !== "";
   const hurdleIrr = hasHurdle ? parseRate(body?.hurdle_irr) : null;
   if (hasHurdle && hurdleIrr === null) {
-    return badRequest("invalid_request", "hurdle_irr는 -1보다 큰 유한한 비율이어야 합니다.");
+    return badRequest("invalid_request", "hurdle_irr must be a finite ratio greater than -1.");
   }
 
   let components: WaccComponentInput[] | undefined;
   let derivation: ReturnType<typeof assembleDerivation> | null = null;
   if (body?.components !== undefined) {
     if (body?.mode !== "capm") {
-      return badRequest("invalid_request", "components는 mode='capm' 세션에서만 허용됩니다.");
+      return badRequest("invalid_request", "components are allowed only in mode='capm' sessions.");
     }
     try {
       components = parseComponents(body.components);
@@ -134,7 +134,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
     const gaps = capmComponentGaps(components);
     if (gaps.length > 0) {
-      return badRequest("invalid_request", `CAPM 컴포넌트가 부족합니다: ${gaps.join(", ")}`);
+      return badRequest("invalid_request", `Missing CAPM components: ${gaps.join(", ")}`);
     }
     derivation = assembleDerivation(components);
   }
@@ -142,11 +142,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   let subjectInput: { subject: "promoter" | "target" | "project_newco"; rationale: string } | null = null;
   if (body?.subject !== undefined && body?.subject !== null && body?.subject !== "") {
     if (!isWaccSubject(body.subject)) {
-      return badRequest("invalid_request", "subject는 promoter | target | project_newco 중 하나여야 합니다.");
+      return badRequest("invalid_request", "subject must be one of: promoter | target | project_newco.");
     }
     const subjectRationale = typeof body.subject_rationale === "string" ? body.subject_rationale.trim() : "";
     if (!subjectRationale) {
-      return badRequest("invalid_request", "wacc 주체를 확정할 때는 근거(subject_rationale)가 필요합니다.");
+      return badRequest("invalid_request", "Confirming the WACC subject requires a basis (subject_rationale).");
     }
     subjectInput = { subject: body.subject, rationale: subjectRationale };
   }
@@ -183,6 +183,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     );
   } catch (err) {
     if (err instanceof WaccComponentValidationError) return badRequest(err.code, err.message);
-    return badRequest("wacc_session_failed", err instanceof Error ? err.message : "WACC 입력 세션 저장에 실패했습니다.");
+    return badRequest("wacc_session_failed", err instanceof Error ? err.message : "Failed to save the WACC input session.");
   }
 }

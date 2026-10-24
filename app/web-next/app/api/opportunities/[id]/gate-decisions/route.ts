@@ -60,7 +60,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "의사결정 기록은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Recording gate decisions requires the analyst role or higher." }); if (denied) return denied; }
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as {
     gate?: string; decision?: string; rationale?: string; missing_artifacts?: string[];
@@ -82,12 +82,12 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   // HOLD must carry the list of what is missing; otherwise it reads as a soft pass.
   const missing = (body.missing_artifacts ?? []).map((m) => m.trim()).filter(Boolean);
   if (body.decision === "hold" && missing.length === 0) {
-    return badRequest("hold_requires_artifacts", "HOLD 결정에는 missing_artifacts(미완료 산출물 목록)가 필요합니다.");
+    return badRequest("hold_requires_artifacts", "A HOLD decision requires missing_artifacts (the list of incomplete deliverables).");
   }
   // ADR-0152 — every KILL carries learning capture (422 when absent).
   const learningCapture = body.learning_capture?.trim() || null;
   if (body.decision === "kill" && !learningCapture) {
-    return unprocessable("learning_capture_required", "KILL 결정에는 learning_capture(학습 포착)가 필요합니다 — 중단 사유에서 얻은 교훈이 회수되어야 합니다 (ADR-0152).");
+    return unprocessable("learning_capture_required", "A KILL decision requires learning_capture — lessons from the kill reason must be captured (ADR-0152).");
   }
   const db = getDb();
   const opp = db.query("SELECT id, name FROM opportunity WHERE id = ?").get(id) as { id: string; name: string } | null;
@@ -97,7 +97,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   if (body.decision === "go") {
     const gaps = gateGoPrerequisiteGaps({ type: "opportunity", id }, body.gate as GateId);
     if (gaps.length > 0) {
-      return fail(409, "gate_prerequisites_incomplete", `GO 불가 — ${body.gate} 진행의 선행 단계가 완료되지 않았습니다: ${gaps.join("; ")}. HOLD 또는 KILL은 언제든 기록할 수 있습니다.`);
+      return fail(409, "gate_prerequisites_incomplete", `GO is not allowed — prerequisite steps of the ${body.gate} stage are incomplete: ${gaps.join("; ")}. HOLD or KILL can be recorded at any time.`);
     }
   }
 
@@ -109,7 +109,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   // committee session.
   const gateEvaluationId = body.gate_evaluation_id?.trim() || null;
   if (gateEvaluationId && !db.query("SELECT id FROM gate_evaluation WHERE id = ?").get(gateEvaluationId)) {
-    return badRequest("invalid_request", "gate_evaluation_id가 존재하지 않습니다 — 위원회 세션의 gate_evaluation을 확인하세요.");
+    return badRequest("invalid_request", "gate_evaluation_id does not exist — check the gate_evaluation of the committee session.");
   }
   // Provenance binding: the cited evaluation's process_run must address THIS
   // opportunity — another entity's proposal cannot be recorded as this gate's
@@ -122,7 +122,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       )
       .get(gateEvaluationId, id);
     if (!bound) {
-      return badRequest("provenance_mismatch", "gate_evaluation_id가 이 기회의 위원회 세션 산출물이 아닙니다.");
+      return badRequest("provenance_mismatch", "gate_evaluation_id is not an output of this opportunity's committee session.");
     }
   }
   // ADR-0153 — snapshot the artifact as the human saw it, BEFORE the decision lands.

@@ -100,13 +100,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const ctx = auth.auth;
   const denied = humanOnlyDenied(ctx, "S1 시장규모 분석 연결은 사람만 입력할 수 있습니다 (boundary #2) — 에이전트는 읽기만 가능합니다.");
   if (denied) return denied;
-  { const d = requireBusinessActor(ctx, "write", { viewerMessage: "sizing link 입력은 analyst 역할 이상이어야 합니다." }); if (d) return d; }
+  { const d = requireBusinessActor(ctx, "write", { viewerMessage: "Sizing-link inputs require the analyst role or higher." }); if (d) return d; }
   const { id } = await params;
   const db = getDb();
   const row = db.query("SELECT id FROM opportunity WHERE id = ?").get(id);
   if (!row) return notFound();
   const body = (await request.json().catch(() => null)) as unknown;
-  if (typeof body !== "object" || body === null) return badRequest("invalid_request", "sizing link 변경 요청이 아닙니다.");
+  if (typeof body !== "object" || body === null) return badRequest("invalid_request", "Not a sizing-link change request.");
   const b = body as Record<string, unknown>;
   if (b.analysis_id === null && b.version_id === null) {
     const at = new Date().toISOString();
@@ -118,19 +118,19 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   }
   const analysisId = typeof b.analysis_id === "string" ? b.analysis_id : null;
   const versionId = typeof b.version_id === "string" ? b.version_id : null;
-  if (!versionId) return badRequest("invalid_request", "version_id 또는 analysis_id+version_id 짝이 필요합니다.");
+  if (!versionId) return badRequest("invalid_request", "version_id or an analysis_id+version_id pair is required.");
   // Strict validation: the analysis must exist and the version must BELONG to
   // it (invalid = 400, never dropped). version_id alone derives the analysis
   // id from the version row itself.
   const version = db.query("SELECT analysis_id FROM market_sizing_version WHERE id = ?").get(versionId) as
     | { analysis_id: string }
     | undefined;
-  if (!version) return badRequest("invalid_request", "존재하지 않는 sizing version입니다.");
+  if (!version) return badRequest("invalid_request", "No such sizing version exists.");
   const resolvedAnalysisId = analysisId ?? version.analysis_id;
   if (analysisId && analysisId !== version.analysis_id)
-    return badRequest("invalid_request", "version이 지정한 analysis에 속하지 않습니다.");
+    return badRequest("invalid_request", "The version does not belong to the given analysis.");
   const analysis = db.query("SELECT id FROM market_sizing_analysis WHERE id = ?").get(resolvedAnalysisId);
-  if (!analysis) return badRequest("invalid_request", "존재하지 않는 sizing analysis입니다.");
+  if (!analysis) return badRequest("invalid_request", "No such sizing analysis exists.");
   const at = new Date().toISOString();
   db.transaction(() => {
     db.run("UPDATE opportunity SET sizing_analysis_id = ?, sizing_version_id = ? WHERE id = ?", [resolvedAnalysisId, versionId, id]);

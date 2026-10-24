@@ -7,45 +7,46 @@ import Link from "next/link";
 import { profileHrefFor } from "./synergyFormat.ts";
 import { EntryMarketContextStrip } from "../../EntryMarketContextStrip.tsx";
 import type { SynergyStageState } from "./useSynergyList.ts";
+import { useTranslations } from "next-intl";
 
-export function NewSynergyForm({ ctx }: { ctx: SynergyStageState }) {
+export function NewSynergyForm({ ctx }: { ctx: SynergyStageState }) {const t = useTranslations("stages.s3.newSynergyForm"); const tc = useTranslations("common");
   const { canCurate, showNewForm, targets, targetSel, setTargetSel, oppSel, setOppSel, opps, setShowNewForm, creating, createAnalysis, opportunityId } = ctx;
   const profileHref = profileHrefFor(opportunityId);
   return (
     <>{canCurate && showNewForm && (
         <div className="sizing-new-form mb-3">
           <div className="mb-2">
-            <span className="text-label block mb-1">① 분석 대상 — 그룹/계열사 분석에서 프로파일을 만든 대상</span>
+            <span className="text-label block mb-1">{t("analysisSubjectTargetsProfiledIn")}</span>
             {targets.length === 0 ? (
               <div className="text-[length:var(--fs-body)]">
                 <p className="text-[color:var(--muted-fg)] mb-2">
-                  분석 대상이 없습니다. 순서는 <strong>① 그룹 등록 → ② 계열사 등록·프로파일 분석 → ③ 시너지 분석 시작</strong>입니다.
+                  {t("noAnalysisScopeTheOrder")} <strong>{t("registerGroupRegisterAffiliatesAnd")}</strong>{t("item")}
                 </p>
-                <Link href={profileHref} className="btn-ghost btn-sm">그룹·계열사 프로파일 등록 →</Link>
+                <Link href={profileHref} className="btn-ghost btn-sm">{t("registerGroupAndAffiliateProfiles")}</Link>
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {targets.map((t) => (
+                {targets.map((tgt) => (
                   <button
-                    key={`${t.kind}-${t.id}`}
+                    key={`${tgt.kind}-${tgt.id}`}
                     type="button"
-                    aria-pressed={targetSel?.kind === t.kind && targetSel?.id === t.id}
-                    disabled={!t.hasProfile}
-                    title={t.hasProfile ? `${t.groupName} 그룹 · 프로파일 있음` : "프로파일이 없는 대상 — 그룹/계열사 분석을 먼저 실행하세요"}
-                    className={`sizing-industry-chip ${targetSel?.kind === t.kind && targetSel?.id === t.id ? "sizing-industry-chip-active" : ""} ${!t.hasProfile ? "opacity-40" : ""}`}
-                    onClick={() => { if (t.hasProfile) setTargetSel({ kind: t.kind, id: t.id }); }}
+                    aria-pressed={targetSel?.kind === tgt.kind && targetSel?.id === tgt.id}
+                    disabled={!tgt.hasProfile}
+                    title={tgt.hasProfile ? t("p1GroupProfileAvailable", { p1: tgt.groupName }) : t("targetWithoutAProfileRun")}
+                    className={`sizing-industry-chip ${targetSel?.kind === tgt.kind && targetSel?.id === tgt.id ? "sizing-industry-chip-active" : ""} ${!tgt.hasProfile ? "opacity-40" : ""}`}
+                    onClick={() => { if (tgt.hasProfile) setTargetSel({ kind: tgt.kind, id: tgt.id }); }}
                   >
-                    <span className="font-semibold">{t.kind === "group" ? "전체" : ""} {t.label}</span>
-                    <span className="sizing-chip-meta">{t.hasProfile ? "프로파일 준비됨" : "프로파일 없음"}</span>
+                    <span className="font-semibold">{tgt.kind === "group" ? tc("all") : ""} {tgt.label}</span>
+                    <span className="sizing-chip-meta">{tgt.hasProfile ? t("profileReady") : t("noProfile")}</span>
                   </button>
                 ))}
               </div>
             )}
           </div>
           <div className="mb-2">
-            <span className="text-label block mb-1">② 연결 기회 (선택) — S2에서 발굴한 기회를 선택하면 완료 시 synergy_score 권고가 기록됩니다</span>
+            <span className="text-label block mb-1">{t("linkedOpportunityOptionalSelectingAn")}</span>
             <select value={oppSel} onChange={(e) => setOppSel(e.target.value)} className="sizing-new-input" style={{ width: "100%" }}>
-              <option value="">기회 없이 분석 (시장 연계만)</option>
+              <option value="">{t("analyzeWithoutAnOpportunityMarket")}</option>
               {opps.filter((o) => o.status !== "dropped").map((o) => (
                 <option key={o.id} value={o.id}>[{o.status}] {o.name}</option>
               ))}
@@ -53,7 +54,7 @@ export function NewSynergyForm({ ctx }: { ctx: SynergyStageState }) {
             {oppSel && <EntryMarketContextStrip opportunityId={oppSel} />}
           </div>
           <div className="flex justify-end gap-2">
-            <button type="button" className="btn-ghost" onClick={() => setShowNewForm(false)}>취소</button>
+            <button type="button" className="btn-ghost" onClick={() => setShowNewForm(false)}>{tc("cancel")}</button>
             <button
               type="button"
               className="btn-ghost"
@@ -61,12 +62,12 @@ export function NewSynergyForm({ ctx }: { ctx: SynergyStageState }) {
               aria-describedby={!targetSel ? "synergy-start-reason" : undefined}
               onClick={() => void createAnalysis()}
             >
-              {creating ? "분석 시작 중..." : "분석 시작"}
+              {creating ? tc("analysisStarting") : t("startAnalysis")}
             </button>
           </div>
           {!targetSel && (
             <p id="synergy-start-reason" className="mt-2 mb-0 text-right text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              분석 대상(①)을 선택하면 시작할 수 있습니다. 대상이 없으면 <Link href={profileHref} className="guide-link">그룹·계열사 프로파일을 먼저 등록</Link>하세요.
+              {t("youCanStartOnceThe")} <Link href={profileHref} className="guide-link">{t("registerGroupAndAffiliateProfiles2")}</Link>{t("item2")}
             </p>
           )}
         </div>

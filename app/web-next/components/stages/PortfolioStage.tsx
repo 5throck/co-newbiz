@@ -4,6 +4,7 @@
 // /deals/[id]/s12 탭이 동일 컴포넌트를 소비한다). StageTabs·StageFrame이
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 
+import { TranslatorFn } from "../../i18n/config.ts";
 import { useCallback, useEffect, useState } from "react";
 import { StageTabs } from "../StageTabs.tsx";
 import { api } from "../../lib/api.ts";
@@ -17,12 +18,13 @@ import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
-import { RECORD_KEY_LABEL, TRANSITION_DECISION_LABEL, VENTURE_CLASS_LABEL, resolveLabel } from "../../lib/labels.ts";
+import { RECORD_KEY, TRANSITION_DECISION_KEY, VENTURE_CLASS_KEY } from "../../lib/label-keys.ts";
 import { RawKey } from "../RawKey.tsx";
 import { ClosureModal } from "../ClosureModal.tsx";
 import { useRouter } from "next/navigation";
 import { PostManagementPanel } from "./PostManagementPanel.tsx";
 import { PolicyMigrationPanel } from "./PolicyMigrationPanel.tsx";
+import { useTranslations } from "next-intl";
 
 // S12 사후 관리 — 포트폴리오 스코어카드 열람 + 포트폴리오 전환 결정 기록 화면
 // (ADR-0101 §3). 이 화면은 venture-portfolio-IC의 '인적 결정'을 기록하는
@@ -58,33 +60,33 @@ interface ScorecardView {
   decisions: { latest: DecisionRow | null; history: DecisionRow[] };
 }
 
-// flow.spec v2.0.0 S12 어휘 5종 — 라벨은 lib/labels.ts TRANSITION_DECISION_LABEL로
+// flow.spec v2.0.0 S12 어휘 5종 — 라벨은 lib/label-keys.ts TRANSITION_DECISION_KEY(common.transitionDecision.*)로
 // 통합 (design 2026-10-11-ui-label-and-mobile-table-sweep §1.2). 서버가 재검증한다.
-const TRANSITION_LABELS = TRANSITION_DECISION_LABEL;
 
 // P5: 상태는 색+아이콘+텍스트의 조합 — 색 단독으로 상태를 전달하지 않는다.
-const STATUS_META: Record<string, { icon: string; label: string; cls: string }> = {
-  on_target: { icon: "●", label: "목표 달성", cls: "status-green" },
-  deviation: { icon: "◐", label: "이탈", cls: "status-amber" },
-  insufficient_evidence: { icon: "○", label: "근거 부족", cls: "status-not-started" },
-};
+const STATUS_META = (tr: TranslatorFn): Record<string, { icon: string; label: string; cls: string }> => ({
+  on_target: { icon: "●", label: "common.goalAttainment", cls: "status-green" },
+  deviation: { icon: "◐", label: "common.churn", cls: "status-amber" },
+  insufficient_evidence: { icon: "○", label: "common.insufficientEvidence", cls: "status-not-started" },
+});
 
-function statusMeta(status: string | undefined) {
-  return STATUS_META[status ?? ""] ?? { icon: "?", label: status ?? "unknown", cls: "status-not-started" };
+function statusMeta(status: string | undefined, tr: TranslatorFn) {
+  const m = STATUS_META(tr)[status ?? ""];
+  return m ? { ...m, label: tr(m.label) } : { icon: "?", label: status ?? "unknown", cls: "status-not-started" };
 }
 
 const EMPTY_FORM = { decision: "next_tranche_released", rationale: "", learning_capture: "", review_cycle: "", record: "" };
 
 // ADR-0151: each non-kill transition carries its own dedicated record column;
 // the route answers 400 without it, so the form must collect it.
-const RECORD_FIELD: Record<string, { key: "tranche_condition" | "core_handoff" | "divest_plan"; label: string }> = {
-  next_tranche_released: { key: "tranche_condition", label: "차기 집행 단계 조건 (필수)" },
-  held_evidence_incomplete: { key: "tranche_condition", label: "차기 집행 단계 조건 (필수)" },
-  graduate_to_core: { key: "core_handoff", label: "핵심사업 인계 기록 (필수)" },
-  reduce_or_divest: { key: "divest_plan", label: "매각/청산 계획 (필수)" },
-};
+const RECORD_FIELD = (tr: TranslatorFn): Record<string, { key: "tranche_condition" | "core_handoff" | "divest_plan"; label: string }> => ({
+  next_tranche_released: { key: "tranche_condition", label: "stages.s12.stage.nextExecutionStageConditionRequired" },
+  held_evidence_incomplete: { key: "tranche_condition", label: "stages.s12.stage.nextExecutionStageConditionRequired2" },
+  graduate_to_core: { key: "core_handoff", label: "stages.s12.stage.coreBusinessHandoverRecordRequired" },
+  reduce_or_divest: { key: "divest_plan", label: "stages.s12.stage.divestmentLiquidationPlanRequired" },
+});
 
-export function PortfolioStage({ projectId }: { projectId: string }) {
+export function PortfolioStage({ projectId }: { projectId: string }) {const tr = useTranslations(); const t = useTranslations("stages.s12.stage"); const tc = useTranslations("common");
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
   const { confirm, confirmDialog } = useConfirm();
@@ -122,7 +124,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
       const r = await api.post<MonitoringBrief>(`/api/projects/${encodeURIComponent(projectId)}/monitoring-brief`, {});
       setReco(r.data);
     } catch (err) {
-      setRecoError(err instanceof Error ? err.message : "브리프 생성 실패");
+      setRecoError(err instanceof Error ? err.message : t("failedToGenerateBrief"));
     } finally {
       setRecoLoading(false);
     }
@@ -131,13 +133,13 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
   const load = useCallback(() => {
     api.get<ScorecardView>(`/api/projects/${encodeURIComponent(projectId)}/scorecard`)
       .then((r) => setView(r.data))
-      .catch((e) => setError(e instanceof Error ? e.message : "스코어카드를 불러오지 못했습니다."));
+      .catch((e) => setError(e instanceof Error ? e.message : t("failedToLoadTheScorecard")));
   }, [projectId]);
 
   useEffect(() => { load(); }, [load]);
 
   function recordDecision() {
-    confirm("포트폴리오 전환 결정 기록", () => {
+    confirm(t("recordPortfolioTransitionDecision"), () => {
       void (async () => {
         setBusy(true); setError(null);
         try {
@@ -148,23 +150,23 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
             review_cycle: form.review_cycle || undefined,
             ...(recordField && form.record.trim() ? { [recordField.key]: form.record.trim() } : {}),
           });
-          setNotice("전환 결정이 기록되었습니다 — 결정자는 venture-portfolio-IC(사람), 기록자는 세션 사용자로 남습니다. 장부는 추가 전용(append-only)입니다.");
+          setNotice(t("transitionDecisionRecordedTheDecider"));
           setForm({ ...EMPTY_FORM });
           load();
         } catch (e) {
-          setError(e instanceof Error ? e.message : "전환 결정 기록 실패");
+          setError(e instanceof Error ? e.message : t("failedToRecordTheTransition"));
         } finally {
           setBusy(false);
         }
       })();
     }, {
-      body: "venture-portfolio-IC의 결정을 장부에 기록합니다. 이 결정은 투자결정(집행 단계 집행·kill/divest)으로서 사람의 판단이며, 에이전트가 대신 결정할 수 없습니다. 기록 후에는 수정·삭제할 수 없습니다.",
-      confirmLabel: "기록",
+      body: t("recordsTheDecisionInThe"),
+      confirmLabel: tc("record"),
     });
   }
 
   const isKill = form.decision === "kill_with_learning_captured";
-  const recordField = RECORD_FIELD[form.decision];
+  const recordField = RECORD_FIELD(tr)[form.decision];
   const rollup = view?.rollup;
 
   return (
@@ -172,19 +174,19 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
       {/* 리뷰 2026-10-22 (사용자 리포트): StageTabs는 레일 슬롯으로 — 머리 위치 일관성. */}
       <StageFrame
         stageId="S12"
-        heading="S12 사후 관리 — 포트폴리오 스코어카드 · 전환 결정"
+        heading={t("s12ManagementPortfolioScorecardAnd")}
         railSlot={<StageTabs projectId={projectId} />}
       >
         {/* Wave U-1 (design §3.5): home of the closure flow — preconditions are
             shown inside ClosureModal; the decision itself stays human-only. */}
         <PrimaryAction
-          label="프로젝트 종료…"
+          label={t("closingThe")}
           onClick={() => setClosing(true)}
           disabled={!canWriteProject(me?.role)}
-          disabledReason="프로젝트 종료는 analyst 권한이 필요합니다."
+          disabledReason={t("closingTheProjectRequiresThe")}
         />
         {canWriteProject(me?.role) && (
-          <p className="mb-3 text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">종료 선결조건은 다음 창에서 확인합니다. 종료는 사람이 기록합니다.</p>
+          <p className="mb-3 text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">{t("closurePreconditionsAreCheckedIn")}</p>
         )}
         {closing && (
           <ClosureModal
@@ -196,12 +198,12 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
           />
         )}
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-          분기별 스코어카드가 갱신되어야 S12 완료 기준이 충족됩니다 (최신 분기 또는 직전 분기).
+          {t("theS12CompletionCriteriaAre")}
           {view && rollup?.review_cycle && (
             <span className={`status-chip ${rollup.financial.length + rollup.strategic.length > 0 ? "status-green" : "status-amber"} ml-2`}>
               {rollup.financial.length + rollup.strategic.length > 0
-                ? `● 최신 주기 ${rollup.review_cycle} (${rollup.resolved_from === "latest" ? "최신값 자동 해석" : "명시적 지정"})`
-                : `○ 기록된 스코어카드 없음 (${rollup.review_cycle})`}
+                ? t("latestCycleP1P2", { p1: rollup.review_cycle, p2: rollup.resolved_from === "latest" ? t("automaticInterpretationOfTheLatest") : t("explicitlySpecified") })
+                : t("noScorecardRecordedP1", { p1: rollup.review_cycle })}
             </span>
           )}
         </p>
@@ -210,15 +212,15 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
         {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {notice}</p>}
 
         {/* ── 주기별 트렌드 ──────────────────────────────────────────── */}
-        <section className="market-section sizing-step" aria-label="스코어카드 트렌드">
+        <section className="market-section sizing-step" aria-label={t("scorecardTrend")}>
           <h3 className="sizing-step-title text-[length:var(--fs-body)]">
-            <span className="sizing-step-badge" aria-hidden="true">📈</span> 스코어카드 트렌드 — 분기별 요약
+            <span className="sizing-step-badge" aria-hidden="true">📈</span> {t("scorecardTrendQuarterlySummary")}
           </h3>
           {(view?.trend.length ?? 0) > 0 ? (
-            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table" aria-label="분기별 스코어카드 요약">
-              <caption className="sr-only">리뷰 주기별 측정 요약</caption>
+            <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}><table className="data-table" aria-label={t("quarterlyScorecardSummary")}>
+              <caption className="sr-only">{t("measurementSummaryByReviewCycle")}</caption>
               <thead>
-                <tr><th scope="col">리뷰 주기</th><th scope="col">측정 수</th><th scope="col">목표 달성</th><th scope="col">이탈</th><th scope="col">근거 부족</th></tr>
+                <tr><th scope="col">{tc("reviewCycle")}</th><th scope="col">{t("measurementCount")}</th><th scope="col">{tc("goalAttainment")}</th><th scope="col">{tc("churn")}</th><th scope="col">{tc("insufficientEvidence")}</th></tr>
               </thead>
               <tbody>
                 {view!.trend.map((t) => (
@@ -234,28 +236,28 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
             </table></div>
           ) : (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              아직 기록된 스코어카드 주기가 없습니다 — 아래 「적용되는 사후 관리 항목」의 「S12 안착 지표 기록」에서 기록하세요.
+              {t("noScorecardCyclesRecordedYet")}
             </p>
           )}
         </section>
 
         {/* ── 최신 주기 롤업 ─────────────────────────────────────────── */}
-        <section className="market-section sizing-step mt-3" aria-label="최신 주기 스코어카드">
+        <section className="market-section sizing-step mt-3" aria-label={t("latestCycleScorecard")}>
           <h3 className="sizing-step-title text-[length:var(--fs-body)]">
-            <span className="sizing-step-badge" aria-hidden="true">🗂</span> 최신 주기 롤업
+            <span className="sizing-step-badge" aria-hidden="true">🗂</span> {t("latestCycle")}
             {rollup?.review_cycle && <span className="status-chip status-not-started ml-2">{rollup.review_cycle}</span>}
           </h3>
           {(rollup?.class_rollup.length ?? 0) > 0 && (
-            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table table-fixed-pct tmin-40" aria-label="벤처 클래스 롤업">
-              <caption className="sr-only">클래스별 롤업 요약</caption>
+            <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}><table className="data-table table-fixed-pct tmin-40" aria-label={t("ventureClass")}>
+              <caption className="sr-only">{t("summaryByClass")}</caption>
               <ColGroup widths={CLASS_ROLLUP_COL_PCT} />
               <thead>
-                <tr><th scope="col">클래스</th><th scope="col">벤처 수</th><th scope="col">측정</th><th scope="col">달성</th><th scope="col">이탈</th><th scope="col">근거 부족</th></tr>
+                <tr><th scope="col">{t("class")}</th><th scope="col">{t("ventureCount")}</th><th scope="col">{tc("measurement")}</th><th scope="col">{t("attained")}</th><th scope="col">{tc("churn")}</th><th scope="col">{tc("insufficientEvidence")}</th></tr>
               </thead>
               <tbody>
                 {rollup!.class_rollup.map((c) => (
                   <tr key={c.venture_class}>
-                    <td>{VENTURE_CLASS_LABEL[c.venture_class] ?? c.venture_class}</td>
+                    <td>{tr(VENTURE_CLASS_KEY[c.venture_class] ?? c.venture_class)}</td>
                     <td className="tabular-nums">{c.ventures}</td>
                     <td className="tabular-nums">{c.measures}</td>
                     <td className="tabular-nums">{c.on_target}</td>
@@ -268,20 +270,20 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
           )}
           {(["financial", "strategic"] as const).map((section) => (
             <div key={section} className="mt-2">
-              <h4 className="text-[length:var(--fs-body)] mb-1">{section === "financial" ? "재무" : "전략"} 섹션</h4>
+              <h4 className="text-[length:var(--fs-body)] mb-1">{section === "financial" ? tc("finance") : t("strategy")} {tc("section")}</h4>
               {(rollup?.[section].length ?? 0) > 0 ? (
-                <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table" aria-label={`${section} 측정 상세`}>
-                  <caption className="sr-only">{section} 섹션 측정 상세</caption>
+                <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}><table className="data-table" aria-label={t("p1MeasurementDetails", { p1: section })}>
+                  <caption className="sr-only">{section} {t("sectionMeasurementDetails")}</caption>
                   <thead>
-                    <tr><th scope="col">측정</th><th scope="col">클래스</th><th scope="col">목표</th><th scope="col">실적</th><th scope="col">상태</th></tr>
+                    <tr><th scope="col">{tc("measurement")}</th><th scope="col">{t("class2")}</th><th scope="col">{tc("target")}</th><th scope="col">{tc("actual")}</th><th scope="col">{tc("status")}</th></tr>
                   </thead>
                   <tbody>
                     {rollup![section].map((r) => {
-                      const meta = statusMeta(r.status);
+                      const meta = statusMeta(r.status, tr);
                       return (
                         <tr key={r.id}>
                           <td>{r.measure_key}</td>
-                          <td>{VENTURE_CLASS_LABEL[r.venture_class] ?? r.venture_class}</td>
+                          <td>{tr(VENTURE_CLASS_KEY[r.venture_class] ?? r.venture_class)}</td>
                           <td>{r.target_value ?? "—"}</td>
                           <td>{r.actual_value ?? "—"}</td>
                           <td><span className={`status-chip ${meta.cls}`}>{meta.icon} {meta.label}</span></td>
@@ -291,7 +293,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
                   </tbody>
                 </table></div>
               ) : (
-                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">해당 섹션의 측정 기록이 없습니다.</p>
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("noMeasurementRecordsForThis")}</p>
               )}
             </div>
           ))}
@@ -299,7 +301,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
             <ul className="sizing-note-list mt-2">
               {rollup!.insufficient_evidence.map((e, i) => (
                 <li key={`${e.section}-${e.measure_key}-${i}`}>
-                  <strong>근거 부족 예외</strong>: {e.measure_key} ({e.section}) — 목표 없이는 판정할 수 없습니다.
+                  <strong>{t("exception")}</strong>: {e.measure_key} ({e.section}{t("cannotJudgeWithoutATarget")}
                 </li>
               ))}
             </ul>
@@ -311,50 +313,50 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
 
         {/* ── LLM 모니터링 브리프 (결정 지원) — ADR-0118: 초안은 LLM, 전환 결정은 사람 ── */}
         {canAct && (
-          <section className="market-section sizing-step mt-3" aria-label="AI 모니터링 브리프">
-            <h3 className="sizing-step-title text-[length:var(--fs-body)]">🤖 AI 모니터링 브리프 (초안)</h3>
+          <section className="market-section sizing-step mt-3" aria-label={t("aiMonitoringBrief")}>
+            <h3 className="sizing-step-title text-[length:var(--fs-body)]">{t("aiMonitoringBriefDraft")}</h3>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-              원칙 (경계 #2): 전환 결정은 사람(venture-portfolio-IC)이 기록합니다 — 스코어카드·시너지 인증·핵심인재·전환 이력에서 만든 <b>초안</b>입니다.
+              {t("principleBoundaryTheTransitionDecision")} <b>{t("draft")}</b>{t("item")}
             </p>
             {recoError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
             {!reco && !recoLoading && !recoError && (
               <div className="flex flex-wrap items-center gap-2 mb-0">
-                <button type="button" className="btn-ghost" onClick={() => void generateBrief()}>▶ 모니터링 브리프 생성</button>
-                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">투자 상태 평가·리스크 플래그·전환 제안·근거/학습 정리 초안을 작성해 결정 기록을 돕습니다.</span>
+                <button type="button" className="btn-ghost" onClick={() => void generateBrief()}>{t("generateMonitoringBrief")}</button>
+                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("draftsTheInvestmentStatusEvaluation")}</span>
               </div>
             )}
-            {recoLoading && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">스코어카드·인증·인재 기록을 근거로 초안을 작성하는 중...</p>}
+            {recoLoading && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0">{t("draftingFromScorecardCertificationAnd")}</p>}
             {reco && (
               <>
                 <p className="mb-1 flex flex-wrap items-center gap-1">
                   <span className={`status-chip ${reco.source === "llm" ? "status-in-progress" : "status-not-started"}`}>
-                    {reco.source === "llm" ? `LLM 초안${reco.provider ? ` · ${reco.provider}` : ""}` : "결정론 폴백"}
+                    {reco.source === "llm" ? t("llmDraftP1", { p1: reco.provider ? ` · ${reco.provider}` : "" }) : tc("deterministicFallback")}
                   </span>
                   {reco.brief.transition_suggestion && (
-                    <span className="status-chip status-amber">전환 제안: {TRANSITION_LABELS[reco.brief.transition_suggestion] ?? reco.brief.transition_suggestion}</span>
+                    <span className="status-chip status-amber">{t("transitionProposal")} {tr(TRANSITION_DECISION_KEY[reco.brief.transition_suggestion] ?? reco.brief.transition_suggestion)}</span>
                   )}
                 </p>
                 {reco.note && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{reco.note}</p>}
-                {reco.brief.assessment_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">상태 평가 초안:</span> {reco.brief.assessment_draft}</p>}
+                {reco.brief.assessment_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">{t("statusEvaluationDraft")}</span> {reco.brief.assessment_draft}</p>}
                 {reco.brief.risk_flags.length > 0 && (
-                  <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mb-1">⚠ 리스크: {reco.brief.risk_flags.join(" / ")}</p>
+                  <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mb-1">{t("risk")} {reco.brief.risk_flags.join(" / ")}</p>
                 )}
-                {reco.brief.rationale_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">전환 근거 초안:</span> {reco.brief.rationale_draft}</p>}
-                {reco.brief.learning_capture_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">학습 정리 초안:</span> {reco.brief.learning_capture_draft}</p>}
-                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">이 제안의 근거 산출물: {reco.manifest.join(" · ")}</p>
+                {reco.brief.rationale_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">{t("transitionEvidenceDraft")}</span> {reco.brief.rationale_draft}</p>}
+                {reco.brief.learning_capture_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">{t("lessonsSummaryDraft")}</span> {reco.brief.learning_capture_draft}</p>}
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{t("evidenceArtifactsOfThisProposal")} {reco.manifest.join(" · ")}</p>
                 <button
                   type="button"
                   className="btn-ghost btn-sm"
-                  onClick={() => confirm("브리프 초안을 결정 폼에 반영할까요?", () => {
+                  onClick={() => confirm(t("applyTheBriefDraftTo"), () => {
                     setForm((f) => ({
                       ...f,
                       decision: reco.brief.transition_suggestion ?? f.decision,
                       rationale: reco.brief.rationale_draft || f.rationale,
                       learning_capture: reco.brief.learning_capture_draft || f.learning_capture,
                     }));
-                  }, { body: "전환 제안(있다면)과 근거·학습 정리 초안을 결정 폼에 채웁니다 — 기록은 사람이 확정합니다.", confirmLabel: "반영" })}
+                  }, { body: t("fillsTheDecisionFormWith"), confirmLabel: tc("reflect") })}
                 >
-                  ▶ 결정 폼에 반영
+                  {t("applyToDecisionForm")}
                 </button>
               </>
             )}
@@ -363,31 +365,32 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
 
         {/* ── 전환 결정 장부 ─────────────────────────────────────────── */}
         <ReviewBuckets entityType="project" entityId={projectId} variant="expanded" gates={["transition"]} artifacts={stageArtifactTabs("S12")} />
-        <section className="market-section sizing-step mt-3" aria-label="포트폴리오 전환 결정">
+        <section className="market-section sizing-step mt-3" aria-label={t("portfolioTransitionDecision")}>
           <h3 className="sizing-step-title text-[length:var(--fs-body)]">
-            <span className="sizing-step-badge">⚖️</span> 포트폴리오 전환 결정 — venture-portfolio-IC 인적 결정 장부
+            <span className="sizing-step-badge">⚖️</span> {t("portfolioTransitionDecisionHumanDecision")}
           </h3>
           <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
-            아래 기록은 사람(venture-portfolio-IC)의 결정이며, 이 화면의 사용자는 그 결정을 <strong>기록</strong>하는
-            역할만 수행합니다. 결정자는 사람 역할 키로 고정되고
-            기록자는 세션 사용자로 남습니다.
-            <RawKey parts={[resolveLabel(RECORD_KEY_LABEL, "decided_by"), resolveLabel(RECORD_KEY_LABEL, "recorded_by")]} />
+            {t("theRecordBelowIsA")} <strong>{tc("record")}</strong>{t("roleOnlyTheDeciderIs")}
+            <RawKey parts={[
+                      { label: "", raw: "decided_by", isFallback: false },
+                      { label: "", raw: "recorded_by", isFallback: true },
+                    ]} />
           </div>
           {(view?.decisions.history.length ?? 0) > 0 ? (
-            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table" aria-label="전환 결정 이력">
-              <caption className="sr-only">전환 결정 이력 (추가 전용)</caption>
+            <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}><table className="data-table" aria-label={t("transitionDecisionHistory")}>
+              <caption className="sr-only">{t("transitionDecisionHistory2")}</caption>
               <thead>
-                <tr><th scope="col">주기</th><th scope="col">결정</th><th scope="col">근거</th><th scope="col">결정일</th><th scope="col">기록자</th></tr>
+                <tr><th scope="col">{tc("cycle")}</th><th scope="col">{tc("decision")}</th><th scope="col">{tc("evidence")}</th><th scope="col">{t("decisionDate")}</th><th scope="col">{tc("recordedBy")}</th></tr>
               </thead>
               <tbody>
                 {view!.decisions.history.map((d) => (
                   <tr key={d.id}>
                     <td className="tabular-nums">{d.review_cycle}</td>
                     <td><span className={`status-chip ${d.decision === "kill_with_learning_captured" || d.decision === "reduce_or_divest" ? "status-red" : d.decision === "next_tranche_released" || d.decision === "graduate_to_core" ? "status-green" : "status-amber"}`}>
-                      {TRANSITION_LABELS[d.decision] ?? d.decision}
+                      {tr(TRANSITION_DECISION_KEY[d.decision] ?? d.decision)}
                     </span>
                       {d.learning_capture && (
-                        <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">학습 회수: {d.learning_capture}</span>
+                        <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("learningRecovery")} {d.learning_capture}</span>
                       )}
                     </td>
                     <td className="text-[length:var(--fs-caption)]">{d.rationale}</td>
@@ -398,49 +401,49 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
               </tbody>
             </table></div>
           ) : (
-            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">아직 기록된 전환 결정이 없습니다.</p>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("noTransitionDecisionsRecordedYet")}</p>
           )}
 
           {canAct && (
-            <form className="sizing-new-form mt-2" aria-label="전환 결정 기록" onSubmit={(e) => { e.preventDefault(); recordDecision(); }}>
+            <form className="sizing-new-form mt-2" aria-label={t("recordTransitionDecision")} onSubmit={(e) => { e.preventDefault(); recordDecision(); }}>
               <div className="flex flex-wrap items-end gap-2">
                 <label className="text-[length:var(--fs-caption)]">
-                  <span className="block mb-1">결정 (어휘 5종)</span>
+                  <span className="block mb-1">{t("decisionVocabulary")}</span>
                   <select
                     value={form.decision}
                     onChange={(e) => setForm({ ...form, decision: e.target.value })}
                     className="sizing-new-input sizing-new-input-sm"
                   >
-                    {Object.entries(TRANSITION_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+                    {Object.keys(TRANSITION_DECISION_KEY).map((k) => <option key={k} value={k}>{tr(TRANSITION_DECISION_KEY[k])}</option>)}
                   </select>
                 </label>
                 <label className="text-[length:var(--fs-caption)]">
-                  <span className="block mb-1">리뷰 주기</span>
+                  <span className="block mb-1">{tc("reviewCycle")}</span>
                   <input
                     value={form.review_cycle}
                     onChange={(e) => setForm({ ...form, review_cycle: e.target.value })}
                     className="sizing-new-input"
-                    placeholder="YYYY-Qn (비우면 현재 분기)"
+                    placeholder={t("emptyCurrentQuarter")}
                   />
                 </label>
                 <label className="text-[length:var(--fs-caption)] flex-1 min-w-[14rem]">
-                  <span className="block mb-1">근거 (필수)</span>
+                  <span className="block mb-1">{tc("evidenceRequiredMark")}</span>
                   <input
                     value={form.rationale}
                     onChange={(e) => setForm({ ...form, rationale: e.target.value })}
                     className="sizing-new-input w-full"
-                    placeholder="투자심의 근거 — 근거 없는 결정은 기록될 수 없습니다"
+                    placeholder={t("icEvidenceDecisionsWithoutEvidence")}
                   />
                 </label>
               </div>
               {isKill && (
                 <label className="text-[length:var(--fs-caption)] block mt-2">
-                  <span className="block mb-1">학습 내용 회수 (learning_capture — kill 시 필수)</span>
+                  <span className="block mb-1">{t("learningCaptureRequiredOnKill")}</span>
                   <input
                     value={form.learning_capture}
                     onChange={(e) => setForm({ ...form, learning_capture: e.target.value })}
                     className="sizing-new-input w-full"
-                    placeholder="플레이북으로 회수할 학습 내용 — 중단 결정에 필수입니다"
+                    placeholder={t("learningToRecoverIntoThe")}
                   />
                 </label>
               )}
@@ -448,7 +451,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
                 <label className="text-[length:var(--fs-caption)] block mt-2">
                   <span className="block mb-1">
                     {recordField.label}
-                    <RawKey parts={resolveLabel(RECORD_KEY_LABEL, recordField.key)} />
+                    <RawKey parts={{ label: "", raw: recordField.key, isFallback: !RECORD_KEY[recordField.key] }} />
                   </span>
                   <input
                     value={form.record}
@@ -458,7 +461,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {
                 </label>
               )}
               <button type="submit" className="btn-ghost btn-sm mt-2" disabled={busy}>
-                {busy ? "기록 중..." : "결정 기록 (확인 필요)"}
+                {busy ? tc("recording") : t("decisionRecordConfirmationNeeded")}
               </button>
             </form>
           )}

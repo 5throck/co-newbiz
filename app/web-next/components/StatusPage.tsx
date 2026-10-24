@@ -4,8 +4,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 export function StatusPage({ title, children, onRetry, detail }: { title: string; children: ReactNode; onRetry?: () => void; detail?: string }) {
+  const tc = useTranslations("common");
+  const sp = useTranslations("components.statusPage");
   const router = useRouter();
   return (
     <main className="status-page">
@@ -13,14 +16,14 @@ export function StatusPage({ title, children, onRetry, detail }: { title: string
       <p className="status-page-text">{children}</p>
       <div className="page-header-actions">
         {onRetry && (
-          <button type="button" className="btn-primary" onClick={onRetry}>다시 시도</button>
+          <button type="button" className="btn-primary" onClick={onRetry}>{tc("retry")}</button>
         )}
-        <Link href="/deals" className={onRetry ? "btn-ghost" : "btn-primary"}>검토/안건 보드로 이동</Link>
-        <button type="button" className="btn-ghost" onClick={() => router.back()}>이전 화면으로</button>
+        <Link href="/deals" className={onRetry ? "btn-ghost" : "btn-primary"}>{tc("goToDealBoard")}</Link>
+        <button type="button" className="btn-ghost" onClick={() => router.back()}>{tc("backToPrevious")}</button>
       </div>
       {detail && (
         <details className="status-page-detail">
-          <summary>개발자용 상세</summary>
+          <summary>{sp("devDetail")}</summary>
           <p>{detail}</p>
         </details>
       )}

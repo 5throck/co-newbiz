@@ -33,7 +33,7 @@ import { runActivityChain, type ActivitySpec, type EntityRef } from "./agent-orc
 import { specAgentFor } from "./spec-activities.ts";
 import { DD_WORKSPACE_CHECKLISTS, SUB_TRACK_DD_CHECKLISTS, scopedSubTrackDdChecklists, getChecklistItems, type ChecklistItemDef } from "./library.ts";
 import { WAVE_F_PREDICATE_DATE } from "./wave-f-date.ts";
-import { DD_DOMAIN_LABEL } from "./labels.ts";
+import { KO_DATA } from "./ko-data-values.ts";
 import {
   greenfieldSelection,
   hypotheticalWorkspaceScope,
@@ -433,7 +433,7 @@ export function reviewDdCustomItem(
     .get(itemId, projectId) as { id: string; domain: DdDomain; status: string; target_id: string | null } | undefined;
   if (!item || item.status !== "proposed") return null;
   if (ddCustomItemProposer(projectId, itemId) === userId) {
-    throw new DdCustomReviewError("second_person_required", "맞춤 항목을 제안한 사람은 그 항목을 승인/기각할 수 없습니다 — 다른 사람이 검토해야 합니다.");
+    throw new DdCustomReviewError("second_person_required", "The proposer of a custom item cannot approve/reject it — another person must review it.");
   }
   const now = nowIso();
   const apply = db.transaction(() => {
@@ -500,7 +500,7 @@ export function upsertChecklistState(
       throw new DdTargetError(
         409,
         "dd_item_out_of_scope",
-        `이 항목(${itemId})은 greenfield 작업 범위에서 ${sc.code === "X" ? "다른 항목으로 대체" : "트랙 규칙상 해당 없음"}입니다 — 새 판정을 기록할 수 없습니다.`,
+        `This item (${itemId}) is, under the greenfield work scope, ${sc.code === "X" ? "replaced by another item" : "not applicable under the track rule"} — a new judgement cannot be recorded.`,
       );
     }
     // ADR-0162: the same rule for an in-scope brownfield project (workspace items and
@@ -511,7 +511,7 @@ export function upsertChecklistState(
       throw new DdTargetError(
         409,
         "dd_item_out_of_scope",
-        `이 항목(${itemId})은 brownfield 작업 범위에서 ${bsc.code === "X" ? "다른 항목으로 대체" : "거래 형태상 해당 없음"}입니다 — 새 판정을 기록할 수 없습니다.`,
+        `This item (${itemId}) is, under the brownfield work scope, ${bsc.code === "X" ? "replaced by another item" : "not applicable due to deal shape"} — a new judgement cannot be recorded.`,
       );
     }
   }
@@ -520,7 +520,7 @@ export function upsertChecklistState(
     // A waiver applies to exactly one DD scope (ADR-0157): matched on target_id equality.
     const waiver = db.query("SELECT target_id FROM waiver WHERE id = ? AND project_id = ?").get(opts.waiverId, projectId) as { target_id: string | null } | undefined;
     if (waiver && waiver.target_id !== targetId) {
-      throw new DdTargetError(400, "waiver_target_mismatch", "이 waiver는 다른 대상의 DD 범위에 속합니다 — 같은 대상의 waiver만 연결할 수 있습니다.");
+      throw new DdTargetError(400, "waiver_target_mismatch", "This waiver belongs to another target's DD scope — only waivers of the same target can be linked.");
     }
   }
   const now = nowIso();
@@ -1217,10 +1217,11 @@ export function listDdWorkspace(projectId: string, opts: { targetId?: string | n
     )
     .all(projectId, targetId) as unknown as FindingRow[];
 
+  // §4 payload: the seven domains carry the Korean titles (UI tabs, payload and reports agree) —
+  // constants live in ko-data-values.ts; display rendering resolves common.ddDomain.* instead.
   const domainLabels: Record<DdDomain, string> = {
-    commercial: DD_DOMAIN_LABEL.commercial!, technical: DD_DOMAIN_LABEL.technical!, legal: DD_DOMAIN_LABEL.legal!,
-    // All seven domains carry the Korean DD_DOMAIN_LABEL titles (UI tabs, payload and reports agree).
-    financial: DD_DOMAIN_LABEL.financial!, hr: DD_DOMAIN_LABEL.hr!, market: DD_DOMAIN_LABEL.market!, financing: DD_DOMAIN_LABEL.financing!,
+    commercial: KO_DATA.ddDomainCommercial, technical: KO_DATA.ddDomainTechnical, legal: KO_DATA.ddDomainLegal,
+    financial: KO_DATA.ddDomainFinancial, hr: KO_DATA.ddDomainHr, market: KO_DATA.ddDomainMarket, financing: KO_DATA.ddDomainFinancing,
   };
   const countsNewDomains = newerDomainsCounted(projectId);
   const gfScope = greenfieldSelection(projectId, db);

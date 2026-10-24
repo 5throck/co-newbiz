@@ -67,12 +67,12 @@ export function computeTargetCostGap(input: TargetCostInput): TargetCostGap {
     ["estimated_unit_cost", estimatedUnitCost],
   ] as const) {
     if (typeof value !== "number" || !Number.isFinite(value)) {
-      throw new TargetCostValidationError(`${label}는 유한한 숫자여야 합니다.`);
+      throw new TargetCostValidationError(`${label} must be a finite number.`);
     }
   }
-  if (marketPrice < 0) throw new TargetCostValidationError("market_price는 0 이상이어야 합니다.");
-  if (targetMargin < 0 || targetMargin >= 1) throw new TargetCostValidationError("target_margin은 [0, 1) 구간이어야 합니다.");
-  if (estimatedUnitCost < 0) throw new TargetCostValidationError("estimated_unit_cost는 0 이상이어야 합니다.");
+  if (marketPrice < 0) throw new TargetCostValidationError("market_price must be >= 0.");
+  if (targetMargin < 0 || targetMargin >= 1) throw new TargetCostValidationError("target_margin must be in the [0, 1) range.");
+  if (estimatedUnitCost < 0) throw new TargetCostValidationError("estimated_unit_cost must be >= 0.");
 
   const allowableCost = marketPrice * (1 - targetMargin);
   const gap = estimatedUnitCost - allowableCost;

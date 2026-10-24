@@ -3,17 +3,28 @@ import { readFileSync } from "node:fs";
 
 const read = (p: string) => readFileSync(`./app/web-next/${p}`, "utf8");
 
+// i18n (design 2026-10-23-i18n-ui-adoption): section headings and the eyebrow
+// moved to pages.dealOverview — key call sites pinned in tests, ko values below.
+const koCatalog = await import("../../app/web-next/locales/ko.json");
+const koOf = (key: string): string =>
+  key.split(".").reduce<unknown>((acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined), koCatalog) as string;
+
 describe("deal overview page structure", () => {
   const page = read("app/deals/[id]/page.tsx");
   test("labelled sections, one primary action, no in-page breadcrumb", () => {
-    for (const h of ["현재 단계", "다음 할 일", "완료 조건", "주요 사실"]) expect(page).toContain(h);
+    for (const k of ["sectionStage", "sectionNext", "sectionDone", "sectionFacts"]) expect(page).toContain(`tr("${k}")`);
+    expect(koOf("pages.dealOverview.sectionStage")).toBe("현재 단계");
+    expect(koOf("pages.dealOverview.sectionNext")).toBe("다음 할 일");
+    expect(koOf("pages.dealOverview.sectionDone")).toBe("완료 조건");
+    expect(koOf("pages.dealOverview.sectionFacts")).toBe("주요 사실");
     expect(page).toContain("aria-labelledby");
     expect(page).not.toContain("DealBreadcrumb");
     expect(page.match(/href=\{a\.href\}/g)?.length).toBe(1);
   });
   test("identity header: deal name is the H1, title is set per deal, one h1", () => {
-    expect(page).toContain('<h1 id="deal-title">{knownName ?? EYEBROW}</h1>');
-    expect(page).toContain("document.title = documentTitle(knownName, EYEBROW)");
+    expect(page).toContain('<h1 id="deal-title">{knownName ?? tr("eyebrow")}</h1>');
+    expect(page).toContain('document.title = documentTitle(knownName, tr("eyebrow"))');
+    expect(koOf("pages.dealOverview.eyebrow")).toBe("현재 검토/안건 개요");
     expect(page).toContain('aria-labelledby="deal-title"');
     expect(page.match(/<h1\b/g)?.length).toBe(3); // loaded, loading (sr-only), error
   });
@@ -74,8 +85,8 @@ describe("S3 deal scope", () => {
     expect(hook).toContain('useState<"deal" | "all">("deal")');
   });
   test("toggle, badge, empty state, start action pre-fills without submitting", () => {
-    expect(list).toContain("이 딜만");
-    expect(list).toContain("이 딜에 연결된 시너지 분석이 없습니다");
+    expect(list).toContain('t("thisDealOnly")'); // i18n: stages.s3.synergyListSection.thisDealOnly
+    expect(list).toContain('t("noSynergyAnalysesLinkedTo")');
     expect(list).toContain("setOppSel(opportunityId)");
     expect(list).toContain("setShowNewForm(true)");
     expect(list).toContain("disabled={startDisabledReason !== null}");

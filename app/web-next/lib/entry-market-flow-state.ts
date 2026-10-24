@@ -11,6 +11,7 @@
 // Korean strings live here as exported constants so the ASCII-only tests
 // compare identities, never literals.
 import { unitBasisLabel } from "./target-scope.ts";
+import { formatNumber, type Locale } from "./format.ts";
 
 export type LinkProvenance = "auto" | "manual" | "none";
 
@@ -175,18 +176,18 @@ export interface FlowState {
 }
 
 /** Format the strip's legacy-opportunity anchor line (design §5.5). */
-export function anchorLegacyLine(legacy: LegacyAnchor | null): string {
+export function anchorLegacyLine(legacy: LegacyAnchor | null, locale: Locale | string = "ko"): string {
   const n = legacy?.market_size_krw_m;
-  return `${ANCHOR_LEGACY_LINE_PREFIX} (${typeof n === "number" ? n.toLocaleString("en-US") : "-"} KRW M)`;
+  return `${ANCHOR_LEGACY_LINE_PREFIX} (${typeof n === "number" ? formatNumber(n, locale) : "-"} KRW M)`;
 }
 
 /** Format the strip's derived-value line: value + the 배율 곱 (design §5.1).
  *  ADR-0181 amendment: the value is in the DECLARED anchor unit (십억 USD/년
  *  etc.) — never labelled KRW M unless the declaration says so; undeclared
  *  renders an honest 미선언 marker. */
-export function derivedValueLine(entryMarketKrwM: number, factorProduct: number, unitBasis?: string | null): string {
+export function derivedValueLine(entryMarketKrwM: number, factorProduct: number, unitBasis?: string | null, locale: Locale | string = "ko"): string {
   const label = unitBasis ? unitBasisLabel(unitBasis) : "앵커 단위 미선언";
-  return `진입시장 ${entryMarketKrwM.toLocaleString("en-US")} ${label} (배율 곱 ${factorProduct.toFixed(4)})`;
+  return `진입시장 ${formatNumber(entryMarketKrwM, locale)} ${label} (배율 곱 ${factorProduct.toFixed(4)})`;
 }
 
 /** Format the linked-S1 summary `vN · 신뢰도 G`. */

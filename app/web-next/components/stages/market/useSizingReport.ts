@@ -7,6 +7,7 @@ import { canWriteBusiness } from "../../../lib/project-write-access.ts";
 import { api } from "../../../lib/api.ts";
 import { regionTotal, type SizingMatrix } from "../../../lib/market-sizing.ts";
 import type { IndustryDetail, ChainProposal } from "./types.ts";
+import { useTranslations } from "next-intl";
 
 export function useSizingReport({ detail, matrix, stepSummaries, analysisId, onAddLinked }: {
   detail: IndustryDetail;
@@ -14,7 +15,7 @@ export function useSizingReport({ detail, matrix, stepSummaries, analysisId, onA
   stepSummaries: Array<{ step: number; summary: string; source: string; pendingInputs: string[] }> | null;
   analysisId: string | null;
   onAddLinked?: () => void;
-}) {
+}) {const t = useTranslations("stages.s1.useSizingReport"); const tc = useTranslations("common");
 
   const [tab, setTab] = useState<"overview" | "structure" | "competitive" | "size" | "allocation" | "growth" | "pipeline" | "qualitative" | "regulation" | "risk" | "validate">("overview");
   const [rerunStarted, setRerunStarted] = useState(false);
@@ -27,7 +28,7 @@ export function useSizingReport({ detail, matrix, stepSummaries, analysisId, onA
   const [localDetail, setLocalDetail] = useState<IndustryDetail | null>(null);
   const [approving, setApproving] = useState<string | null>(null);
   const [chainLinkError, setChainLinkError] = useState<string | null>(null);
-  const [manualLink, setManualLink] = useState({ industry_id: "", relation: "전방", evidence_ref: "" });
+  const [manualLink, setManualLink] = useState({ industry_id: "", relation: tc("downstream"), evidence_ref: "" });
   const [linkSaving, setLinkSaving] = useState(false);
   const [linkSaved, setLinkSaved] = useState(false);
   const [retiringLinkId, setRetiringLinkId] = useState<string | null>(null);
@@ -48,12 +49,12 @@ export function useSizingReport({ detail, matrix, stepSummaries, analysisId, onA
       await api.post(`/api/market-overview/industry/${encodeURIComponent(detail.industry.id)}/chain-links`, {
         relation: p.relation,
         industry_id: p.industry_id,
-        evidence_ref: `S1 시장 구조 정의 제안 승인 — ${p.relation} ${p.name_ko}${p.note ? ` (${p.note})` : ""}`,
+        evidence_ref: t("approvedS1MarketStructureDefinition", { p1: p.relation, p2: p.name_ko, p3: p.note ? ` (${p.note})` : "" }),
         approved_proposal: true,
       });
       await reload();
     } catch (e) {
-      setChainLinkError(e instanceof Error ? e.message : "링크 등록 실패");
+      setChainLinkError(e instanceof Error ? e.message : t("failedToRegisterTheLink"));
     } finally {
       setApproving(null);
     }
@@ -74,7 +75,7 @@ export function useSizingReport({ detail, matrix, stepSummaries, analysisId, onA
       setLinkSaved(true);
       await reload();
     } catch (e) {
-      setChainLinkError(e instanceof Error ? e.message : "링크 등록에 실패했습니다.");
+      setChainLinkError(e instanceof Error ? e.message : t("failedToRegisterTheLink2"));
     } finally {
       setLinkSaving(false);
     }
@@ -82,7 +83,7 @@ export function useSizingReport({ detail, matrix, stepSummaries, analysisId, onA
 
   async function retireLink(linkId: string) {
     if (!detail) return;
-    const rationale = window.prompt("회수 근거(rationale)를 입력하세요:");
+    const rationale = window.prompt(t("enterTheRecoveryRationale"));
     if (!rationale?.trim()) return;
     setRetiringLinkId(linkId);
     setChainLinkError(null);
@@ -93,7 +94,7 @@ export function useSizingReport({ detail, matrix, stepSummaries, analysisId, onA
       });
       await reload();
     } catch (e) {
-      setChainLinkError(e instanceof Error ? e.message : "회수에 실패했습니다.");
+      setChainLinkError(e instanceof Error ? e.message : t("recoveryFailed"));
     } finally {
       setRetiringLinkId(null);
     }
@@ -101,7 +102,7 @@ export function useSizingReport({ detail, matrix, stepSummaries, analysisId, onA
 
   async function assignLegacyRelation(linkId: string) {
     if (!detail) return;
-    const relation = legacyRelation[linkId] ?? "전방";
+    const relation = legacyRelation[linkId] ?? tc("downstream");
     setLegacyAssigning(linkId);
     setChainLinkError(null);
     try {
@@ -110,24 +111,24 @@ export function useSizingReport({ detail, matrix, stepSummaries, analysisId, onA
       });
       await reload();
     } catch (e) {
-      setChainLinkError(e instanceof Error ? e.message : "relation 지정에 실패했습니다.");
+      setChainLinkError(e instanceof Error ? e.message : t("failedToSetTheRelation"));
     } finally {
       setLegacyAssigning(null);
     }
   }
   const proj2030Total = matrix.regions.reduce((sum, r) => sum + regionTotal(matrix, r.code, 4), 0);
   const TABS = [
-    ["overview", "개요"],
-    ["structure", "시장 구조"],
-    ["competitive", "경쟁 구조"],
-    ["size", "시장 규모"],
-    ["allocation", "권역·세그먼트"],
-    ["growth", "성장성"],
-    ["pipeline", "수요 파이프라인"],
-    ["qualitative", "정성 분석"],
-    ["regulation", "규제 환경"],
-    ["risk", "신뢰도·리스크"],
-    ["validate", "검증·한계"],
+    ["overview", tc("overview")],
+    ["structure", t("marketStructure")],
+    ["competitive", tc("competitiveStructure")],
+    ["size", t("marketSize")],
+    ["allocation", t("regionAndSegment")],
+    ["growth", t("growth")],
+    ["pipeline", t("demandPipeline")],
+    ["qualitative", t("qualitativeAnalysis")],
+    ["regulation", t("regulatoryEnvironment")],
+    ["risk", t("confidenceAndRisk")],
+    ["validate", t("verificationAndLimits")],
   ] as const;
   return { TABS, tab, setTab, matrix, proj2030Total, canCurate, onAddLinked, view, retiringLinkId, retireLink, approving, approveProposal, chainLinkError, manualLink, setManualLink, linkSaving, submitManualLink, linkSaved, legacyRelation, setLegacyRelation, legacyAssigning, assignLegacyRelation, detail, rerunStarted, analysisId, setRerunError, setRerunStarted, rerunError, stepSummaries, reload };
 }

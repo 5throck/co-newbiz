@@ -2,7 +2,9 @@
 // Pure and client-safe: no DB. The page passes already-fetched process/opportunity data.
 import { dealStageHref, OPPORTUNITY_STATUS_STAGE } from "./deal-links.ts";
 import { ageInDays, gateHoldHref, type HoldSrc } from "./inbox.ts";
-import { displayOrNotRecorded, GATE_LABEL, DECISION_LABEL, localizeRequirement, trackLabel } from "./labels.ts";
+import { DECISION_LABEL_KEY, GATE_LABEL_KEY } from "./label-keys.ts";
+import { displayOrNotRecorded, localizeRequirement } from "./labels.ts";
+import { trackKeysText } from "./label-keys.ts";
 import { STAGE_META, type StageMetaId } from "./stage-meta.ts";
 
 export interface OverviewOpportunity {
@@ -178,13 +180,13 @@ export function buildDealOverview(
 
   const holdRows = holds.map((h) => ({
     gate: h.gate,
-    gateLabel: GATE_LABEL[h.gate] ?? h.gate,
+    gateLabel: GATE_LABEL_KEY[h.gate] ?? h.gate,
     href: gateHoldHref({ ...h, track: proc.track }),
     ...heldAge(h.decidedAt, now),
   }));
 
   const nextGateId = findNextGate(stageId, proc.track, gateStatus);
-  const nextGate = nextGateId ? { gate: nextGateId, gateLabel: GATE_LABEL[nextGateId] ?? nextGateId, href: gateHref(nextGateId) } : null;
+  const nextGate = nextGateId ? { gate: nextGateId, gateLabel: GATE_LABEL_KEY[nextGateId] ?? nextGateId, href: gateHref(nextGateId) } : null;
 
   let nextAction: NextAction | null = null;
   let statusText: string | null = null;
@@ -209,7 +211,7 @@ export function buildDealOverview(
     } else if (firstOpen >= 0) {
       nextAction = { type: "record_artifact", subject: base[firstOpen]!.label, reason: { type: "artifact_missing", stageId, stageName: meta.name, done: completionCounts.done, total: completionCounts.total }, href: stageHref, buttonTarget: `${meta.id} ${meta.name}` };
     } else if (stageGate) {
-      const label = GATE_LABEL[stageGate] ?? stageGate;
+      const label = GATE_LABEL_KEY[stageGate] ?? stageGate;
       nextAction = { type: "request_gate_decision", subject: label, reason: { type: "gate_pending", gate: stageGate, gateLabel: label, stageId }, href: gateHref(stageGate), buttonTarget: label };
     } else {
       const target = flowEntry(proc, nextId);
@@ -229,7 +231,8 @@ export function buildDealOverview(
       : { key, value: shown, note: null, state: "missing", href: dealStageHref(dealId, recordedAt) };
   };
   const synergyConfirmed = !!opp.synergy_score_confirmed_at;
-  const trackShown = displayOrNotRecorded(proc.track ? trackLabel(proc.track, proc.subTrack ?? null) : null);
+  // i18n (T3-6): track fact text is a " · "-joined key string; the page resolves it with resolveLabelTokens.
+  const trackShown = displayOrNotRecorded(proc.track ? trackKeysText(proc.track, proc.subTrack ?? null) : null);
   const trackFromStage = pendingBefore("S4");
   const facts: KeyFact[] = [
     scoreFact("attractiveness", opp.attractiveness_score, "S2", null),
@@ -243,7 +246,7 @@ export function buildDealOverview(
   if (nextGate) {
     const decided = gateStatus[nextGate.gate];
     facts.push(decided
-      ? { key: "gate", value: { text: `${nextGate.gateLabel} · ${DECISION_LABEL[decided] ?? decided}`, empty: false }, note: null, state: "value", href: nextGate.href }
+      ? { key: "gate", value: { text: `${nextGate.gateLabel} · ${DECISION_LABEL_KEY[decided] ?? decided}`, empty: false }, note: null, state: "value", href: nextGate.href }
       : { key: "gate", value: { text: nextGate.gateLabel, empty: false }, note: FACT_NONE_NOTE, state: "none", href: nextGate.href });
   }
   if (proc.projectId && proc.projectId !== dealId) {
@@ -269,9 +272,9 @@ export function buildDealOverview(
     nextGate,
     gates: Object.entries(gateStatus).map(([gate, decision]) => ({
       gate,
-      gateLabel: GATE_LABEL[gate] ?? gate,
+      gateLabel: GATE_LABEL_KEY[gate] ?? gate,
       decision,
-      decisionLabel: DECISION_LABEL[decision] ?? decision,
+      decisionLabel: DECISION_LABEL_KEY[decision] ?? decision,
     })),
     holds: holdRows,
   };

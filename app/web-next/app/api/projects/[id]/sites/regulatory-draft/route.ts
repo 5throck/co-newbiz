@@ -53,13 +53,13 @@ function fallback(site: SiteRow): RegulatoryDraft {
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "법규 사전검토 초안 생성은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Regulatory pre-check draft generation requires the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as { site_id?: unknown } | null;
   const siteId = typeof body?.site_id === "string" ? body.site_id : "";
-  if (!siteId) return badRequest("invalid_request", "site_id는 필수입니다.");
+  if (!siteId) return badRequest("invalid_request", "site_id is required.");
   const site = getDb()
     .query("SELECT id, name, region_code, address, infra_notes, labor_notes, note FROM site WHERE id = ? AND project_id = ?")
     .get(siteId, id) as SiteRow | undefined;

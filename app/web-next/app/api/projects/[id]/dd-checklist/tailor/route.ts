@@ -21,7 +21,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "체크리스트 맞춤 생성은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Checklist tailoring requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
 
@@ -52,7 +52,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   let domains: DdTailorDomain[] = [...DD_TAILOR_DOMAINS];
   if (body?.domains?.length) {
     if (!body.domains.every((d) => (DD_TAILOR_DOMAINS as readonly string[]).includes(d))) {
-      return badRequest("invalid_request", `domains는 ${DD_TAILOR_DOMAINS.join(" | ")} 중 선택입니다.`);
+      return badRequest("invalid_request", `domains must be selected from: ${DD_TAILOR_DOMAINS.join(" | ")}.`);
     }
     domains = [...new Set(body.domains)] as DdTailorDomain[];
   }
@@ -81,7 +81,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     const result = await tailorDdChecklist(id, { actor: ctx.userId, domains, source: "web", targetId: scope.targetId });
     if (result.status === "failed") {
-      return badRequest("tailor_failed", `일부 활동이 실패했습니다 — run ${result.processRunId} 상태를 확인하세요.`);
+      return badRequest("tailor_failed", `Some activities failed — check the status of run ${result.processRunId}.`);
     }
     return ok({ runId: result.processRunId, proposedCount: result.proposedCount, domains }, 201);
   } catch (err) {

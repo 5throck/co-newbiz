@@ -118,11 +118,11 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "1차 가치사슬 연계 산업 분석은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "First-hop value-chain industry analysis requires the analyst role or higher." });
   if (denied) return denied;
   const body = (await request.json().catch(() => null)) as { name?: string } | null;
   const target = body?.name?.trim();
-  if (!target) return badRequest("name_required", "산업명(name)은 필수입니다.");
+  if (!target) return badRequest("name_required", "Industry name (name) is required.");
   const db = getDb();
   const industry = db.query("SELECT id, name_ko FROM md_industry WHERE name_ko = ?").get(target) as { id: string; name_ko: string } | null;
   const stored = loadStoredCandidates(industry);

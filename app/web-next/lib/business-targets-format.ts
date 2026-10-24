@@ -4,6 +4,7 @@
 // the server module owns the DB logic and re-exports from here.
 
 import { fmtNpvEok } from "./npv-format.ts";
+import { formatNumber, type Locale } from "./format.ts";
 
 export type TargetDirection = "gte" | "lte"; // gte = 이상, lte = 이하
 
@@ -63,11 +64,11 @@ export function unitSpec(unit: TargetUnit): UnitSpec {
 
 /** Display formatting shared by the admin console and the fs evidence table.
  * Money targets are stored in KRW millions (ADR-0061) and shown in 억원. */
-export function formatTargetValue(value: number, unit: TargetUnit): string {
-  if (unit === "krw_m") return fmtNpvEok(value);
-  if (unit === "pct") return `${(value * 100).toLocaleString("ko-KR", { maximumFractionDigits: 1 })}%`;
-  if (unit === "none") return value.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
-  return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}년`;
+export function formatTargetValue(value: number, unit: TargetUnit, locale: Locale | string = "ko"): string {
+  if (unit === "krw_m") return fmtNpvEok(value, locale);
+  if (unit === "pct") return `${formatNumber(value * 100, locale, { maximumFractionDigits: 1 })}%`;
+  if (unit === "none") return formatNumber(value, locale, { maximumFractionDigits: 2 });
+  return `${formatNumber(value, locale, { maximumFractionDigits: 1 })}년`;
 }
 
 export function formatDirectionLabel(direction: TargetDirection): string {

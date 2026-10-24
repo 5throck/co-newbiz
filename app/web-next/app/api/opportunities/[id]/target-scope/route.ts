@@ -49,13 +49,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const ctx = auth.auth;
   const denied = humanOnlyDenied(ctx, "구조화된 대상 범위는 사람만 입력할 수 있습니다 (boundary #2) — 에이전트는 읽기만 가능합니다.");
   if (denied) return denied;
-  { const d = requireBusinessActor(ctx, "write", { viewerMessage: "target scope 입력은 analyst 역할 이상이어야 합니다." }); if (d) return d; }
+  { const d = requireBusinessActor(ctx, "write", { viewerMessage: "Target-scope inputs require the analyst role or higher." }); if (d) return d; }
   const { id } = await params;
   const db = getDb();
   const row = db.query("SELECT id FROM opportunity WHERE id = ?").get(id);
   if (!row) return notFound();
   const body = (await request.json().catch(() => null)) as unknown;
-  if (typeof body !== "object" || body === null) return badRequest("invalid_request", "대상 범위 변경 요청이 아닙니다.");
+  if (typeof body !== "object" || body === null) return badRequest("invalid_request", "Not a target-scope change request.");
   const o = body as Record<string, unknown>;
   // Region vocabulary (ADR-0181 slice 2): fixed enum ∪ the linked matrix's
   // region codes — the person picks the entry region from S1. worldwide stays
@@ -70,20 +70,20 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   }
   const allowed = new Set<string>([...TARGET_SCOPE_REGIONS, ...matrixCodes]);
   if (!Array.isArray(o.regions) || o.regions.length === 0 || !o.regions.every((r) => typeof r === "string" && allowed.has(r))) {
-    return badRequest("invalid_request", `regions는 연결된 S1 지역 또는 ${TARGET_SCOPE_REGIONS.join(", ")} 중 하나 이상이어야 합니다.`);
+    return badRequest("invalid_request", `regions must include at least one of the linked S1 regions or: ${TARGET_SCOPE_REGIONS.join(", ")}.`);
   }
   const regions = o.regions as string[];
   if (regions.includes("worldwide") && regions.length > 1) {
-    return badRequest("invalid_request", "worldwide는 다른 지역과 함께 선택할 수 없습니다.");
+    return badRequest("invalid_request", "worldwide cannot be combined with other regions.");
   }
-  if (!Array.isArray(o.segments)) return badRequest("invalid_request", "segments는 문자열 배열이어야 합니다.");
+  if (!Array.isArray(o.segments)) return badRequest("invalid_request", "segments must be an array of strings.");
   const segments = [...new Set((o.segments as unknown[]).map((s) => String(s).trim()).filter((s) => s.length > 0))];
   for (const s of segments) {
-    if (s.length > 100) return badRequest("invalid_request", "segments 항목은 100자 이하여야 합니다.");
+    if (s.length > 100) return badRequest("invalid_request", "Each segment must be at most 100 characters.");
   }
   const unitBasis = o.unit_basis;
   if (unitBasis !== undefined && unitBasis !== null && (typeof unitBasis !== "string" || !UNIT_BASIS_PATTERN.test(unitBasis))) {
-    return badRequest("invalid_request", "unit_basis는 krw_m_year / units_year / <통화>_[mb]_year 형태여야 합니다 (예: usd_m_year, usd_b_year).");
+    return badRequest("invalid_request", "unit_basis must be krw_m_year / units_year / <currency>_[mb]_year (e.g. usd_m_year, usd_b_year).");
   }
   const scope = { regions, segments, unit_basis: (typeof unitBasis === "string" ? unitBasis : null) as TargetScope["unit_basis"] };
   const at = new Date().toISOString();

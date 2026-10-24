@@ -24,6 +24,11 @@ const db = getDb(TEST_DB_PATH);
 
 const gen = await import("../../app/web-next/lib/business-case-generator.ts");
 const labels = await import("../../app/web-next/lib/s5-linkage-labels.ts");
+// i18n: S5 linkage labels are catalog keys — resolve them through the ko master
+// catalog so the human-visible wording stays pinned.
+const koCatalog = await import("../../app/web-next/locales/ko.json");
+const koOf = (key: string): string =>
+  key.split(".").reduce<unknown>((acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined), koCatalog) as string;
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { promoteOpportunity } = await import("../../db/repositories/project.repository.ts");
@@ -120,9 +125,13 @@ describe("s5_pnl basis code and labels", () => {
     expect(gen.investmentBasisOfCode(2)).toBe("s5_plan_full");
   });
   test("labels: basis label, scope-note tail, per-parameter pnl cells", () => {
-    expect(labels.BASIS_LABEL.s5_pnl).toBe("S5 계획 손익");
-    expect(labels.s5ScopeNote("s5_pnl")).toContain("S5 계획 손익");
-    expect(labels.s5ScopeNote("s5_pnl")).not.toContain("슬라이스 2에서 도입되었습니다");
+    // i18n: BASIS_LABEL/s5ScopeNoteKeys emit catalog keys resolved via t() at render —
+    // pin the key and its ko resolution so the visible wording stays "S5 계획 손익".
+    expect(labels.BASIS_LABEL.s5_pnl).toBe("components.s5Linkage.basisS5Pnl");
+    expect(koOf(labels.BASIS_LABEL.s5_pnl)).toBe("S5 계획 손익");
+    const scopeNote = labels.s5ScopeNoteKeys("s5_pnl").map(koOf).join("");
+    expect(scopeNote).toContain("S5 계획 손익");
+    expect(scopeNote).not.toContain("슬라이스 2에서 도입되었습니다");
     const ctx = { basis: "s5_pnl" as const, run: null, s8Iterations: 2000 };
     expect(labels.s5ParamLinkage("opex", ctx).kind).toBe("s5");
     expect(labels.s5ParamLinkage("capex", ctx).kind).toBe("s5");

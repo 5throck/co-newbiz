@@ -18,7 +18,7 @@ export async function POST(
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "위원회 진행은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Committee facilitation requires the analyst role or higher." }); if (denied) return denied; }
   const { id, sessionId } = await params;
   const db = getDb();
   // Session binding (opportunity + committee stage + promoted-project visibility).

@@ -284,7 +284,8 @@ describe("B2. 미판정 reasons", () => {
   });
   test("UI: reason on the 보유 판정 cell as title + aria-describedby + visible text, transient state only", () => {
     const tab = readFileSync(join(ROOT, "app/web-next/components/stages/synergy/SynergyCapabilityTab.tsx"), "utf8");
-    for (const k of ["holdReasons[r.id]", "aria-describedby", "미판정 사유:", "그룹 내 다른 계열사 프로필도 참고", 'type="checkbox"']) expect(tab).toContain(k);
+    // i18n: the visible reason label moved to the catalog — pin the key (stages.s3.synergyCapabilityTab.reasonNotJudged).
+    for (const k of ["holdReasons[r.id]", "aria-describedby", 't("reasonNotJudged")', 't("alsoReferencesOtherAffiliateProfiles")', 'type="checkbox"']) expect(tab).toContain(k);
     const hook = readFileSync(join(ROOT, "app/web-next/components/stages/synergy/useSynergyResult.ts"), "utf8");
     expect(hook).toContain("includeGroupMembers: includeGroup");
     expect(hook).toContain("unevaluatedReasons");

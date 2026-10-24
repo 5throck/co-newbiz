@@ -7,6 +7,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { api } from "../../../lib/api.ts";
 import { useAuth } from "../../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../../lib/project-write-access.ts";
@@ -41,9 +42,15 @@ interface AttractivenessReco {
   recommendation: { suggested_score: number | null; rationale_draft: string; key_evidence: string[]; cautions: string[] };
 }
 
-const STATUS_LABEL: Record<OpportunityRow["status"], string> = { identified: "발굴", assessed: "평가", selected: "선별", dropped: "제외" };
+// 퍼널 상태 라벨 — 카탈로그 키로 해석 (ko 마스터: 발굴/평가/선별/제외)
+const STATUS_KEY: Record<OpportunityRow["status"], string> = {
+  identified: "statusIdentified", assessed: "statusAssessed", selected: "statusSelected", dropped: "statusDropped",
+};
 
 export function OpportunityDetail() {
+  const t = useTranslations("pages.opportunityDetail");
+  const tt = useTranslations("pages.titles");
+  const tc = useTranslations("common");
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const { me } = useAuth();
@@ -70,7 +77,7 @@ export function OpportunityDetail() {
   const load = useCallback(() => {
     api.get<OpportunityRow>(`/api/opportunities/${encodeURIComponent(id)}`)
       .then((r) => setOpp(r.data))
-      .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
+      .catch((e) => setError(e instanceof Error ? e.message : tc("errors.loadFailed")));
   }, [id]);
   useEffect(() => { load(); }, [load]);
   // R2-A item 7: the S2 row action "매력도 평가" lands with the score field focused.
@@ -98,33 +105,33 @@ export function OpportunityDetail() {
     try {
       const res = await api.post<{ factors: OppFactors; failed?: boolean; error?: string }>(`/api/opportunities/${encodeURIComponent(id)}/factors`, {});
       setFactors(res.data.factors);
-      if (res.data.failed) setError(res.data.error ?? "AI 호출 실패 — 이전 요인을 유지합니다.");
-    } catch (err) { setError(err instanceof Error ? err.message : "요인 자동 도출 실패"); }
+      if (res.data.failed) setError(res.data.error ?? t("aiFailKeepFactors"));
+    } catch (err) { setError(err instanceof Error ? err.message : t("factorsDeriveFailed")); }
     finally { setFactorBusy(false); }
   }
   async function addFactor(type: "opportunity" | "risk") {
     const text = factorDraft.text.trim();
-    if (!text || factorDraft.type !== type) { setError("요인 내용을 입력하세요."); return; }
+    if (!text || factorDraft.type !== type) { setError(t("errFactorTextRequired")); return; }
     setError(null);
     try {
       const res = await api.put<{ factors: OppFactors }>(`/api/opportunities/${encodeURIComponent(id)}/factors`, { type, text });
       setFactors(res.data.factors);
       setFactorDraft({ type, text: "" });
-    } catch (err) { setError(err instanceof Error ? err.message : "요인 등록 실패"); }
+    } catch (err) { setError(err instanceof Error ? err.message : t("factorAddFailed")); }
   }
   function removeFactor(type: "opportunity" | "risk", index: number, text: string) {
-    confirm("요인 삭제", async () => {
+    confirm(t("factorDeleteConfirmTitle"), async () => {
       setError(null);
       try {
         const res = await api.delete<{ factors: OppFactors }>(`/api/opportunities/${encodeURIComponent(id)}/factors`, { type, index });
         setFactors(res.data.factors);
-      } catch (err) { setError(err instanceof Error ? err.message : "요인 삭제 실패"); }
+      } catch (err) { setError(err instanceof Error ? err.message : t("factorDeleteFailed")); }
     }, { body: text.length > 60 ? `${text.slice(0, 60)}…` : text });
   }
 
   async function evaluateAttractiveness() {
     const v = attractDraft === "" ? null : Math.min(100, Math.max(0, Number(attractDraft)));
-    if (v === null || Number.isNaN(v)) { setError("매력도를 0-100 사이로 입력하세요."); return; }
+    if (v === null || Number.isNaN(v)) { setError(t("errAttractRange")); return; }
     setError(null);
     try {
       await api.put(`/api/opportunities/${encodeURIComponent(id)}`, { attractiveness_score: v });
@@ -135,7 +142,7 @@ export function OpportunityDetail() {
       }
       setAttractDraft("");
       load();
-    } catch (err) { setError(err instanceof Error ? err.message : "매력도 평가 실패"); }
+    } catch (err) { setError(err instanceof Error ? err.message : t("attractEvalFailed")); }
   }
   async function generateAttractDraft() {
     setAttractBusy(true); setError(null);
@@ -143,7 +150,7 @@ export function OpportunityDetail() {
       const r = await api.post<AttractivenessReco>(`/api/opportunities/${encodeURIComponent(id)}/attractiveness-recommendation`, {});
       setAttractReco(r.data);
       if (r.data.recommendation.suggested_score !== null) setAttractDraft(String(r.data.recommendation.suggested_score));
-    } catch (err) { setError(err instanceof Error ? err.message : "매력도 초안 생성 실패"); }
+    } catch (err) { setError(err instanceof Error ? err.message : t("attractDraftFailed")); }
     finally { setAttractBusy(false); }
   }
 
@@ -152,13 +159,13 @@ export function OpportunityDetail() {
     try {
       const res = await api.post<SketchView & { version_no?: number; failed?: boolean; error?: string }>(`/api/opportunities/${encodeURIComponent(id)}/sketch`, force ? { force: true } : {});
       setSketchView({ sketch: res.data.sketch, source: res.data.source, created_at: res.data.created_at, versions: [] });
-      if (res.data.failed) setError(res.data.error ?? "AI 호출 실패 — 이전 스케치를 유지합니다.");
+      if (res.data.failed) setError(res.data.error ?? t("aiFailKeepSketch"));
       // 버전 목록 재조회 — 새 버전이 이력에 반영되도록
       const r = await api.get<SketchView>(`/api/opportunities/${encodeURIComponent(id)}/sketch`);
       setSketchView(r.data);
       setViewingVersion(null);
       setVersionSketch(null);
-    } catch (err) { setError(err instanceof Error ? err.message : "비즈니스 모델 검토 생성 실패"); }
+    } catch (err) { setError(err instanceof Error ? err.message : t("sketchCreateFailed")); }
     finally { setSketchBusy(false); }
   }
 
@@ -172,8 +179,8 @@ export function OpportunityDetail() {
       await api.post(`/api/opportunities/${encodeURIComponent(id)}/sketch`, { force: true, regenerateScenarios: true });
       const r = await api.get<SketchView>(`/api/opportunities/${encodeURIComponent(id)}/sketch`);
       setSketchView(r.data);
-      setScenarioNotice("시나리오 전제를 다시 생성했습니다 — 기회·위험 요인도 최신 상태인지 함께 확인하세요.");
-    } catch (err) { setError(err instanceof Error ? err.message : "시나리오 재생성 실패"); }
+      setScenarioNotice(t("scenarioRegeneratedNotice"));
+    } catch (err) { setError(err instanceof Error ? err.message : t("scenarioRegenFailed")); }
     finally { setScenarioBusy(false); }
   }
   async function openVersion(n: number) {
@@ -182,25 +189,25 @@ export function OpportunityDetail() {
       const r = await api.get<{ sketch: Sketch }>(`/api/opportunities/${encodeURIComponent(id)}/sketch?version=${n}`);
       setViewingVersion(n);
       setVersionSketch(r.data.sketch);
-    } catch (err) { setError(err instanceof Error ? err.message : "버전 열람 실패"); }
+    } catch (err) { setError(err instanceof Error ? err.message : t("versionOpenFailed")); }
   }
 
   if (error && !opp) return <main><p role="alert" className="text-[color:var(--red-fg)]">{error}</p></main>;
-  if (!opp) return <main><p>불러오는 중...</p></main>;
+  if (!opp) return <main><p>{tc("loading")}</p></main>;
 
   const s3Ready = opp.synergy_score !== null && opp.attractiveness_score !== null;
 
   return (
     <main>
       {confirmDialog}
-      <DealBreadcrumb dealId={id} stageId="S2" tail={[{ label: "기회 상세" }]} />
+      <DealBreadcrumb dealId={id} stageId="S2" tail={[{ label: tt("opportunityDetail") }]} />
       <PageHeader title={opp.name} />
       <StageRail current={["S2"]} />
       <SectionToolbar
-        title="기회 상세"
+        title={tt("opportunityDetail")}
         summary={
           <span className="flex items-center gap-1 flex-wrap">
-            <span className="section-meta">S2 기회 발굴 · {STATUS_LABEL[opp.status]}</span>
+            <span className="section-meta">{tt("opportunities")} · {t(STATUS_KEY[opp.status])}</span>
             {opp.market_scope && <span className="status-chip status-amber">{opp.market_scope}</span>}
             {opp.value_chain_node && <span className="status-chip status-not-started">{opp.value_chain_node}</span>}
           </span>
@@ -208,9 +215,9 @@ export function OpportunityDetail() {
         actions={
           <span className="flex items-center gap-1 flex-wrap">
             {canAct && opp.status !== "dropped" && !opp.project_id && (
-              <button type="button" className="btn-ghost btn-sm" onClick={() => setClosing(true)}>종료…</button>
+              <button type="button" className="btn-ghost btn-sm" onClick={() => setClosing(true)}>{t("closeAction")}</button>
             )}
-            <Link href={`/deals/${encodeURIComponent(id)}/s2`} className="btn-ghost btn-sm">← S2 목록으로</Link>
+            <Link href={`/deals/${encodeURIComponent(id)}/s2`} className="btn-ghost btn-sm">{t("backToS2")}</Link>
           </span>
         }
       />
@@ -227,55 +234,55 @@ export function OpportunityDetail() {
       <KnownTargetGuide opportunityId={id} />
 
       {/* 기회 개요 + 매력도 평가 */}
-      <section aria-label="기회 개요" className="market-section">
+      <section aria-label={t("overviewSectionAria")} className="market-section">
         <div className="flex flex-wrap items-center gap-2 mb-2">
-          <span className="text-[length:var(--fs-body)]">매력도 <strong className="mono-num">{opp.attractiveness_score ?? "—"}</strong> / 100</span>
+          <span className="text-[length:var(--fs-body)]">{t("attractiveness")} <strong className="mono-num">{opp.attractiveness_score ?? "—"}</strong> / 100</span>
           {opp.synergy_score !== null && (
-            <span className="text-[length:var(--fs-body)]" title={opp.synergy_score_confirmed_at ? "사람이 확정한 시너지 점수" : "사람 확정 전 권고값 — S3 화면에서 확정할 수 있습니다"}>
-              시너지 <strong className="mono-num">{opp.synergy_score}</strong>
-              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] ml-1">{opp.synergy_score_confirmed_at ? "확정" : "권고(미확정)"}</span>
+            <span className="text-[length:var(--fs-body)]" title={opp.synergy_score_confirmed_at ? t("synergyConfirmedTitle") : t("synergyRecommendedTitle")}>
+              {t("synergy")} <strong className="mono-num">{opp.synergy_score}</strong>
+              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] ml-1">{opp.synergy_score_confirmed_at ? t("confirmedLabel") : t("recommendedLabel")}</span>
             </span>
           )}
         </div>
         {opp.rationale && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{opp.rationale}</p>}
         {canAct && opp.status === "identified" && (
           <div className="flex flex-wrap items-center gap-1">
-            <input id="opp-score-input" type="number" min={0} max={100} aria-label="매력도" placeholder="매력도 0-100"
+            <input id="opp-score-input" type="number" min={0} max={100} aria-label={t("attractiveness")} placeholder={t("attractPlaceholder")}
               value={attractDraft} onChange={(e) => setAttractDraft(e.target.value)}
               className="sizing-new-input sizing-new-input-sm" style={{ width: "7.5rem" }} />
-            <button type="button" className="btn-ghost btn-sm" onClick={() => void evaluateAttractiveness()}>매력도 평가</button>
+            <button type="button" className="btn-ghost btn-sm" onClick={() => void evaluateAttractiveness()}>{t("evaluateButton")}</button>
             <button type="button" className="btn-ghost btn-sm" disabled={attractBusy} onClick={() => void generateAttractDraft()}>
-              {attractBusy ? "초안 생성 중..." : "AI 초안"}
+              {attractBusy ? t("draftGenerating") : t("aiDraftButton")}
             </button>
-            {attractReco && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{attractReco.recommendation.rationale_draft.slice(0, 160) || "초안 없음"}</span>}
+            {attractReco && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{attractReco.recommendation.rationale_draft.slice(0, 160) || t("noDraft")}</span>}
           </div>
         )}
         {/* S3 — 판정 결과와 S3 화면 이동 링크 (인라인 실행 없음, ADR-0127) */}
         {opp.status !== "identified" && (
           <div className="mt-2 p-2 border border-[color:var(--border)] rounded text-[length:var(--fs-caption)]">
-            <span className="font-semibold">S3 시너지·전략적 적합성</span>{" "}
+            <span className="font-semibold">{t("s3Heading")}</span>{" "}
             {s3Ready ? (() => {
               const attractiveness = opp.attractiveness_score ?? 0;
               const synergy = opp.synergy_score ?? 0;
               const rec = synergy >= 60 && attractiveness >= 60 ? "Go" : synergy < 40 || attractiveness < 60 ? "Kill" : "Hold";
               return (
                 <span className={`status-chip ${rec === "Go" ? "status-green" : rec === "Kill" ? "status-red" : "status-amber"}`}>
-                  screening 권고: {rec}
+                  {t("screeningRecommendation", { p1: rec })}
                 </span>
               );
             })() : (
-              <span className="status-chip status-not-started">미실시</span>
+              <span className="status-chip status-not-started">{t("notRun")}</span>
             )}
             {opp.synergy_score !== null && (
               <span className="block mt-1 text-[length:var(--fs-caption)]">
-                <strong>시너지 {opp.synergy_score}점</strong>
-                <span className={opp.synergy_score_confirmed_at ? "" : "text-[color:var(--muted-fg)]"}>{opp.synergy_score_confirmed_at ? " (사람 확정)" : " (권고·사람 미확정)"}</span>
-                {" — "}{opp.synergy_rationale ?? "근거 미기록"}
+                <strong>{t("synergyScorePoint", { p1: opp.synergy_score })}</strong>
+                <span className={opp.synergy_score_confirmed_at ? "" : "text-[color:var(--muted-fg)]"}>{" "}{opp.synergy_score_confirmed_at ? t("confirmedSuffix") : t("recommendedSuffix")}</span>
+                {" — "}{opp.synergy_rationale ?? t("rationaleMissing")}
               </span>
             )}
             <div className="mt-2">
-              <Link href={`/deals/${encodeURIComponent(id)}/s3`} className="btn-ghost btn-sm" title="S3 시너지·전략적 적합성 화면에서 분석합니다">S3 탭으로 이동 →</Link>
-              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] ml-2">필요 역량 수준도 S3 화면의 연계 시너지 탭에서 함께 관리합니다.</span>
+              <Link href={`/deals/${encodeURIComponent(id)}/s3`} className="btn-ghost btn-sm" title={t("goToS3TabTitle")}>{t("goToS3Tab")}</Link>
+              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] ml-2">{t("s3CapabilityNote")}</span>
             </div>
           </div>
         )}
@@ -286,62 +293,62 @@ export function OpportunityDetail() {
           진입시장 산정은 ADR-0180에서 기회·위험 요인·비즈니스 모델 검토와 동일한
           수준의 S2 정규 산출물로 승격되어 세 번째 탭이 되었다 (카드 내부의
           스택형 3단계 표시는 2026-10-17 결정대로 유지). */}
-      <div className="library-tabs" role="tablist" aria-label="기회 상세 섹션">
+      <div className="library-tabs" role="tablist" aria-label={t("tabsAria")}>
         <button type="button" role="tab" aria-selected={tab === "factors"} className={`library-tab ${tab === "factors" ? "library-tab-active" : ""}`} onClick={() => setTab("factors")}>
-          기회·위험 요인
+          {t("tabFactors")}
           <span className="library-tab-count">{(factors?.opportunity.length ?? 0) + (factors?.risk.length ?? 0)}</span>
         </button>
         <button type="button" role="tab" aria-selected={tab === "sketch"} className={`library-tab ${tab === "sketch" ? "library-tab-active" : ""}`} onClick={() => setTab("sketch")}>
-          비즈니스 모델 검토
+          {t("tabSketch")}
           {(sketchView?.versions.length ?? 0) > 0 && <span className="library-tab-count">{sketchView!.versions.length}</span>}
         </button>
         <button type="button" role="tab" aria-selected={tab === "entry"} className={`library-tab ${tab === "entry" ? "library-tab-active" : ""}`} onClick={() => setTab("entry")}>
-          진입시장 산정
+          {t("tabEntry")}
         </button>
       </div>
 
       {tab === "factors" && (
-      <section aria-label="기회·위험 요인" className="market-section">
+      <section aria-label={t("tabFactors")} className="market-section">
         {/* icon-vocabulary.yaml glyph-edit — 등록된 section-toolbar 글리프만 쓴다 (빈 문자열 금지). */}
-        <SectionToolbar title="기회·위험 요인" icon="✍️" count={(factors?.opportunity.length ?? 0) + (factors?.risk.length ?? 0)} />
+        <SectionToolbar title={t("tabFactors")} icon="✍️" count={(factors?.opportunity.length ?? 0) + (factors?.risk.length ?? 0)} />
         <div className="chart-pair">
           <div className="chart-half sizing-grade-card">
-            <h4 className="text-[length:var(--fs-body)] mb-1">✅ 기회 요인</h4>
+            <h4 className="text-[length:var(--fs-body)] mb-1">{t("opportunityFactorHeading")}</h4>
             <ul className="sizing-note-list">
               {(factors?.opportunity ?? []).map((f, i) => (
                 <li key={i}>
                   {f}
-                  {canAct && <button type="button" className="btn-danger btn-sm ml-1" onClick={() => removeFactor("opportunity", i, f)}>삭제</button>}
+                  {canAct && <button type="button" className="btn-danger btn-sm ml-1" onClick={() => removeFactor("opportunity", i, f)}>{tc("delete")}</button>}
                 </li>
               ))}
-              {(factors?.opportunity.length ?? 0) === 0 && <li className="text-[color:var(--muted-fg)]">{canAct ? "자동 도출 또는 수동 등록하세요." : "아직 등록된 요인이 없습니다."}</li>}
+              {(factors?.opportunity.length ?? 0) === 0 && <li className="text-[color:var(--muted-fg)]">{canAct ? t("factorsEmptyWritable") : t("factorsEmpty")}</li>}
             </ul>
           </div>
           <div className="chart-half sizing-grade-card">
-            <h4 className="text-[length:var(--fs-body)] mb-1">위험 요인</h4>
+            <h4 className="text-[length:var(--fs-body)] mb-1">{t("riskFactorHeading")}</h4>
             <ul className="sizing-note-list">
               {(factors?.risk ?? []).map((f, i) => (
                 <li key={i}>
                   {f}
-                  {canAct && <button type="button" className="btn-danger btn-sm ml-1" onClick={() => removeFactor("risk", i, f)}>삭제</button>}
+                  {canAct && <button type="button" className="btn-danger btn-sm ml-1" onClick={() => removeFactor("risk", i, f)}>{tc("delete")}</button>}
                 </li>
               ))}
-              {(factors?.risk.length ?? 0) === 0 && <li className="text-[color:var(--muted-fg)]">{canAct ? "자동 도출 또는 수동 등록하세요." : "아직 등록된 요인이 없습니다."}</li>}
+              {(factors?.risk.length ?? 0) === 0 && <li className="text-[color:var(--muted-fg)]">{canAct ? t("factorsEmptyWritable") : t("factorsEmpty")}</li>}
             </ul>
           </div>
         </div>
         {canAct && <div className="flex flex-wrap items-center gap-1 mt-2">
           <button type="button" className="btn-ghost btn-sm" disabled={factorBusy} onClick={() => void autoDeriveFactors()}>
-            {factorBusy ? "도출 중..." : "요인 자동 도출"}
+            {factorBusy ? t("deriving") : t("deriveButton")}
           </button>
-          <select aria-label="요인 유형" value={factorDraft.type} onChange={(e) => setFactorDraft({ ...factorDraft, type: e.target.value as "opportunity" | "risk" })} className="sizing-new-input sizing-new-input-sm">
-            <option value="opportunity">기회</option>
-            <option value="risk">위험</option>
+          <select aria-label={t("factorTypeAria")} value={factorDraft.type} onChange={(e) => setFactorDraft({ ...factorDraft, type: e.target.value as "opportunity" | "risk" })} className="sizing-new-input sizing-new-input-sm">
+            <option value="opportunity">{t("factorTypeOpportunity")}</option>
+            <option value="risk">{t("factorTypeRisk")}</option>
           </select>
-          <input aria-label="요인 내용" placeholder="요인 추가" value={factorDraft.text}
+          <input aria-label={t("factorTextAria")} placeholder={t("factorTextPlaceholder")} value={factorDraft.text}
             onChange={(e) => setFactorDraft({ ...factorDraft, text: e.target.value })}
             className="sizing-new-input sizing-new-input-sm" style={{ flex: "1 1 12rem" }} />
-          <button type="button" className="btn-ghost btn-sm" onClick={() => void addFactor(factorDraft.type)}>추가</button>
+          <button type="button" className="btn-ghost btn-sm" onClick={() => void addFactor(factorDraft.type)}>{tc("add")}</button>
         </div>}
         {/* 시나리오 전제(낙관/기본/비관) — 비즈니스 모델 검토(sketch)에서 산출되는
             데이터지만, 요인과 함께 보는 편이 자연스러워 이 탭에 배치한다.
@@ -354,7 +361,7 @@ export function OpportunityDetail() {
               sketch={sketchView?.sketch as unknown as Record<string, unknown> | null}
               actions={canAct ?
                 <button type="button" className="btn-ghost btn-sm" disabled={scenarioBusy} onClick={() => void regenerateScenarios()}>
-                  {scenarioBusy ? "재생성 중..." : "시나리오 재생성"}
+                  {scenarioBusy ? t("regenerating") : t("regenerateScenariosButton")}
                 </button> : undefined
               }
             />
@@ -365,47 +372,47 @@ export function OpportunityDetail() {
 
       {/* 비즈니스 모델 검토 (구: 비즈니스 모델 스케치) + 버전 이력 */}
       {tab === "sketch" && (
-      <section aria-label="비즈니스 모델 검토" className="market-section">
+      <section aria-label={t("tabSketch")} className="market-section">
         <SectionToolbar
-          title="비즈니스 모델 검토"
+          title={t("tabSketch")}
           icon=""
           actions={canAct ?
             <button type="button" className="btn-ghost btn-sm" disabled={sketchBusy} onClick={() => void createSketch(sketchView?.sketch != null)}>
-              {sketchBusy ? "생성 중..." : sketchView?.sketch ? "재생성 (새 버전)" : "검토 생성"}
+              {sketchBusy ? t("creating") : sketchView?.sketch ? t("regenerateNewVersion") : t("createReview")}
             </button> : undefined
           }
         />
         {sketchView === null ? (
-          <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">아직 비즈니스 모델 검토가 없습니다 — 검토 생성으로 시작하세요.</p>
+          <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">{t("sketchEmpty")}</p>
         ) : sketchView.sketch ? (
           <>
             {viewingVersion !== null && (
               <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
-                과거 버전 v{viewingVersion} 열람 중 —{" "}
-                <button type="button" className="btn-ghost btn-sm" onClick={() => { setViewingVersion(null); setVersionSketch(null); }}>현재 버전으로</button>
+                {t("viewingPastVersion", { p1: viewingVersion })}{" "}
+                <button type="button" className="btn-ghost btn-sm" onClick={() => { setViewingVersion(null); setVersionSketch(null); }}>{t("backToCurrentVersion")}</button>
               </p>
             )}
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
-              {viewingVersion === null && `현재 버전 · ${sketchView.source === "llm" ? "AI" : "결정론 합성"} · ${sketchView.created_at?.slice(0, 10) ?? ""}`}
+              {viewingVersion === null && t("currentVersionMeta", { p1: sketchView.source === "llm" ? t("sourceAi") : t("sourceSynthesis"), p2: sketchView.created_at?.slice(0, 10) ?? "" })}
             </p>
             <SketchCanvas sketch={(viewingVersion !== null ? versionSketch : sketchView.sketch) as unknown as Record<string, unknown>} />
           </>
         ) : (
-          <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">아직 비즈니스 모델 검토가 없습니다 — 검토 생성으로 시작하세요.</p>
+          <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-body)]">{t("sketchEmpty")}</p>
         )}
         {(sketchView?.versions.length ?? 0) > 0 && (
           <details className="mt-2">
-            <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">검토 이력 ({sketchView!.versions.length}건 — 이전에 분석한 내용)</summary>
-            <table className="data-table mt-2" aria-label="비즈니스 모델 검토 이력">
-              <caption className="sr-only">비즈니스 모델 검토 이력</caption>
-              <thead><tr><th scope="col">버전</th><th scope="col">생성 방식</th><th scope="col">일시</th><th scope="col"></th></tr></thead>
+            <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">{t("historySummary", { p1: sketchView!.versions.length })}</summary>
+            <table className="data-table mt-2" aria-label={t("historyTableAria")}>
+              <caption className="sr-only">{t("historyTableCaption")}</caption>
+              <thead><tr><th scope="col">{t("colVersion")}</th><th scope="col">{t("colSource")}</th><th scope="col">{t("colDate")}</th><th scope="col"></th></tr></thead>
               <tbody>
                 {sketchView!.versions.map((v) => (
                   <tr key={v.version_no}>
                     <td className="tabular-nums">v{v.version_no}</td>
-                    <td>{v.source === "llm" ? "AI" : "결정론 합성"}</td>
+                    <td>{v.source === "llm" ? t("sourceAi") : t("sourceSynthesis")}</td>
                     <td className="tabular-nums">{v.created_at.slice(0, 10)}</td>
-                    <td><button type="button" className="btn-ghost btn-sm" onClick={() => void openVersion(v.version_no)}>열람</button></td>
+                    <td><button type="button" className="btn-ghost btn-sm" onClick={() => void openVersion(v.version_no)}>{t("openButton")}</button></td>
                   </tr>
                 ))}
               </tbody>

@@ -3,45 +3,46 @@
 import { useChartTheme } from "../../lib/echarts-theme.ts";
 import { buildInvestmentChartData, type InvestmentSummary } from "../../lib/capability-cost-lines.ts";
 import { EChart } from "../EChart.tsx";
+import { useTranslations } from "next-intl";
 
 const fmt = (n: number) => n.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
-const UNIT = "백만원";
+const UNIT_KEY = "common.krwMillionUnit";
 const CAT_ICON = { labor: "●", opex: "▲", capex: "■" } as const;
 
 // 투자비 요약 charts (read-only, decision support). The summary tables below stay the source of truth.
 // Colours come from the --chart-N tokens; decals (patterns), direct data labels and a data table keep
 // colour from being the only carrier. Mounted only while the 투자비 tab is active (0-width safe).
-export function InvestmentSummaryCharts({ summary }: { summary: InvestmentSummary }) {
+export function InvestmentSummaryCharts({ summary }: { summary: InvestmentSummary }) {const tr = useTranslations();const t = useTranslations("stages.s5.investmentSummaryCharts"); const tc = useTranslations("common");
   const ct = useChartTheme();
   const d = buildInvestmentChartData(summary);
   if (!d.hasData) {
-    return <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-chart-empty">그래프로 표시할 투자비 항목이 없습니다</p>;
+    return <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="invest-chart-empty">{t("noInvestmentItemsToChart")}</p>;
   }
   const cats = [
-    { key: "labor", name: "인건비", data: d.stacks.labor, color: ct.color[0] },
-    { key: "opex", name: "운영비", data: d.stacks.opex, color: ct.color[1] },
-    { key: "capex", name: "설비투자", data: d.stacks.capex, color: ct.color[2] },
+    { key: "labor", name: tc("laborCost"), data: d.stacks.labor, color: ct.color[0] },
+    { key: "opex", name: tc("opex"), data: d.stacks.opex, color: ct.color[1] },
+    { key: "capex", name: tc("capex"), data: d.stacks.capex, color: ct.color[2] },
   ] as const;
   const axisBase = { axisLabel: { color: ct.muted }, nameTextStyle: { color: ct.muted } };
   const yearOption = {
     aria: { enabled: true, decal: { show: true } },
     grid: { left: 8, right: 24, top: 48, bottom: 28, containLabel: true },
     legend: { top: 0, type: "scroll" as const, textStyle: { color: ct.muted } },
-    tooltip: { trigger: "axis" as const, valueFormatter: (v: unknown) => `${fmt(Number(v))} ${UNIT}` },
-    xAxis: { type: "category" as const, data: d.years, name: "연차", nameLocation: "middle" as const, nameGap: 24, ...axisBase },
-    yAxis: { type: "value" as const, name: `금액 (${UNIT})`, axisLabel: { color: ct.muted, formatter: (v: number) => fmt(v) }, nameTextStyle: { color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
+    tooltip: { trigger: "axis" as const, valueFormatter: (v: unknown) => `${fmt(Number(v))} ${tr(UNIT_KEY)}` },
+    xAxis: { type: "category" as const, data: d.years, name: tc("tenure"), nameLocation: "middle" as const, nameGap: 24, ...axisBase },
+    yAxis: { type: "value" as const, name: t("amountP1", { p1: tr(UNIT_KEY) }), axisLabel: { color: ct.muted, formatter: (v: number) => fmt(v) }, nameTextStyle: { color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
     series: [
       ...cats.map((c) => ({ name: c.name, type: "bar" as const, stack: "invest", data: [...c.data], itemStyle: { color: c.color }, barMaxWidth: 40 })),
-      { name: "누적 투자비", type: "line" as const, data: d.cumulative, symbol: "circle", symbolSize: 7, itemStyle: { color: ct.text }, lineStyle: { color: ct.text, width: 2 }, label: { show: true, color: ct.text, position: "top" as const, formatter: (p: { value?: unknown }) => fmt(Number(p.value)) } },
-      { name: "매출 (투자비 제외)", type: "line" as const, data: d.revenue, symbol: "diamond", symbolSize: 8, itemStyle: { color: ct.color[3] }, lineStyle: { color: ct.color[3], type: "dashed" as const, width: 2 } },
-      { name: "정부 R&D (투자비 제외)", type: "line" as const, data: d.govRnd, symbol: "triangle", symbolSize: 8, itemStyle: { color: ct.color[4] }, lineStyle: { color: ct.color[4], type: "dotted" as const, width: 2 } },
+      { name: t("cumulativeInvestment"), type: "line" as const, data: d.cumulative, symbol: "circle", symbolSize: 7, itemStyle: { color: ct.text }, lineStyle: { color: ct.text, width: 2 }, label: { show: true, color: ct.text, position: "top" as const, formatter: (p: { value?: unknown }) => fmt(Number(p.value)) } },
+      { name: t("revenueExcludingInvestment"), type: "line" as const, data: d.revenue, symbol: "diamond", symbolSize: 8, itemStyle: { color: ct.color[3] }, lineStyle: { color: ct.color[3], type: "dashed" as const, width: 2 } },
+      { name: t("governmentRDExcludingInvestment"), type: "line" as const, data: d.govRnd, symbol: "triangle", symbolSize: 8, itemStyle: { color: ct.color[4] }, lineStyle: { color: ct.color[4], type: "dotted" as const, width: 2 } },
     ],
   };
   const compOption = {
     aria: { enabled: true, decal: { show: true } },
     grid: { left: 8, right: 120, top: 8, bottom: 28, containLabel: true },
-    tooltip: { trigger: "item" as const, formatter: (p: { name?: string; dataIndex?: number }) => { const c = d.composition[p.dataIndex ?? 0]; return `${p.name}: ${fmt(c.totalKrwM)} ${UNIT} (${c.percent}%)`; } },
-    xAxis: { type: "value" as const, name: UNIT, nameLocation: "middle" as const, nameGap: 24, ...axisBase, axisLabel: { color: ct.muted, formatter: (v: number) => fmt(v) }, splitLine: { lineStyle: { color: ct.split } } },
+    tooltip: { trigger: "item" as const, formatter: (p: { name?: string; dataIndex?: number }) => { const c = d.composition[p.dataIndex ?? 0]; return `${p.name}: ${fmt(c.totalKrwM)} ${tr(UNIT_KEY)} (${c.percent}%)`; } },
+    xAxis: { type: "value" as const, name: tr(UNIT_KEY), nameLocation: "middle" as const, nameGap: 24, ...axisBase, axisLabel: { color: ct.muted, formatter: (v: number) => fmt(v) }, splitLine: { lineStyle: { color: ct.split } } },
     yAxis: { type: "category" as const, data: d.composition.map((c) => c.label), inverse: true, ...axisBase },
     series: [{
       type: "bar" as const,
@@ -52,22 +53,22 @@ export function InvestmentSummaryCharts({ summary }: { summary: InvestmentSummar
   };
   return (
     <div className="mb-3" data-testid="invest-charts">
-      <h5 className="text-[length:var(--fs-caption)] mb-1">연도별 투자비 (백만원, 인건비·운영비·설비투자 누적 막대)</h5>
-      <EChart option={yearOption as never} ariaLabel={`연도별 투자비 누적 막대 그래프, 검토 기간 ${d.years.length}년, 총 ${fmt(d.totalKrwM)} ${UNIT}`} height={300} />
-      <h5 className="text-[length:var(--fs-caption)] mb-1">분류별 구성 (검토 기간 합계, 백만원 및 %)</h5>
-      <EChart option={compOption as never} ariaLabel={`분류별 투자비 구성: ${d.composition.map((c) => `${c.label} ${fmt(c.totalKrwM)} ${UNIT} ${c.percent}%`).join(", ")}`} height={150} />
+      <h5 className="text-[length:var(--fs-caption)] mb-1">{t("investmentByYearKrwMillions")}</h5>
+      <EChart option={yearOption as never} ariaLabel={t("yearlyInvestmentCumulativeBarsReview", { p1: d.years.length, p2: fmt(d.totalKrwM), p3: tr(UNIT_KEY) })} height={300} />
+      <h5 className="text-[length:var(--fs-caption)] mb-1">{t("compositionByClassificationReviewPeriod")}</h5>
+      <EChart option={compOption as never} ariaLabel={t("investmentCompositionByClassificationP1", { p1: d.composition.map((c) => `${c.label} ${fmt(c.totalKrwM)} ${tr(UNIT_KEY)} ${c.percent}%`).join(", ") })} height={150} />
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1" data-testid="invest-chart-notes">
-        매출과 정부 R&D는 투자비 제외 선(점선/점점선)이며 누적 막대에 포함되지 않습니다.
-        {d.staffingLaborKrwM > 0 && <> 인건비에는 인력 운영 계획 연동분 {fmt(d.staffingLaborKrwM)} {UNIT}이 포함됩니다.</>}
+        {t("revenueAndGovernmentRD")}
+        {d.staffingLaborKrwM > 0 && <> {t("theLaborCostIncludesThe")} {fmt(d.staffingLaborKrwM)} {tr(UNIT_KEY)}{t("isIncluded")}</>}
       </p>
-      {d.excludedNeedsConfirm > 0 && <p className="text-[length:var(--fs-caption)] mb-1" data-testid="invest-chart-excluded">확인 필요 {d.excludedNeedsConfirm}건은 그래프에서 제외됨</p>}
+      {d.excludedNeedsConfirm > 0 && <p className="text-[length:var(--fs-caption)] mb-1" data-testid="invest-chart-excluded">{tc("needsCheck")} {d.excludedNeedsConfirm}{t("itemSExcludedFromThe")}</p>}
       <details className="mb-1" data-testid="invest-chart-table">
-        <summary className="text-[length:var(--fs-caption)] cursor-pointer">데이터 표 보기</summary>
+        <summary className="text-[length:var(--fs-caption)] cursor-pointer">{t("viewDataTable")}</summary>
         <div className="table-scroll">
           <table className="data-table invest-summary-table">
-            <caption className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] text-left">그래프 데이터 (단위: {UNIT})</caption>
+            <caption className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] text-left">{t("graphDataUnit")} {tr(UNIT_KEY)})</caption>
             <thead>
-              <tr><th scope="col">연차</th>{cats.map((c) => <th scope="col" className="col-num" key={c.key}><span aria-hidden="true">{CAT_ICON[c.key]}</span> {c.name}</th>)}<th scope="col" className="col-num">누적 투자비</th><th scope="col" className="col-num">매출 (투자비 제외)</th><th scope="col" className="col-num">정부 R&D (투자비 제외)</th></tr>
+              <tr><th scope="col">{tc("tenure")}</th>{cats.map((c) => <th scope="col" className="col-num" key={c.key}><span aria-hidden="true">{CAT_ICON[c.key]}</span> {c.name}</th>)}<th scope="col" className="col-num">{t("cumulativeInvestment2")}</th><th scope="col" className="col-num">{t("revenueExcludingInvestment2")}</th><th scope="col" className="col-num">{t("governmentRDExcludingInvestment2")}</th></tr>
             </thead>
             <tbody>
               {d.years.map((y, i) => (
@@ -79,7 +80,7 @@ export function InvestmentSummaryCharts({ summary }: { summary: InvestmentSummar
                   <td className="col-num mono-num">{fmt(d.govRnd[i])}</td>
                 </tr>
               ))}
-              <tr><th scope="row">구성비</th>{d.composition.map((c) => <td className="col-num mono-num" key={c.category}>{fmt(c.totalKrwM)} ({c.percent}%)</td>)}<td colSpan={3} /></tr>
+              <tr><th scope="row">{t("composition")}</th>{d.composition.map((c) => <td className="col-num mono-num" key={c.category}>{fmt(c.totalKrwM)} ({c.percent}%)</td>)}<td colSpan={3} /></tr>
             </tbody>
           </table>
         </div>

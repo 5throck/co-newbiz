@@ -7,15 +7,18 @@ export const EChartsCore = dynamic(() => import("echarts-for-react"), { ssr: fal
 // Admin console — ui-spec §5. All ten sections are served by backend
 // endpoints and render real data; master-data is managed by the dedicated
 // MasterDataSection component (code tables + staging queue resolution).
-export const SECTION_TITLE: Record<Section, string> = {
-  users: "사용자·토큰 관리",
-  audit: "로그 관리",
-  "data-sources": "데이터 소스 관리",
-  schedule: "배치·스케줄 관리",
-  database: "데이터베이스 관리",
-  notifications: "알림 관리",
-  glossary: "용어집 관리",
-  governance: "거버넌스 문서",
-  "master-data": "마스터 데이터",
-  adr: "ADR 인덱스",
+//
+// i18n: the h1 titles resolve through admin.section.* catalog keys at render
+// time (AdminConsole.tsx) — this map only pins the key per section.
+export const SECTION_TITLE_KEY: Record<Section, string> = {
+  users: "admin.section.users",
+  audit: "admin.section.audit",
+  "data-sources": "admin.section.dataSources",
+  schedule: "admin.section.schedule",
+  database: "admin.section.database",
+  notifications: "admin.section.notifications",
+  glossary: "admin.section.glossary",
+  governance: "admin.section.governance",
+  "master-data": "admin.section.masterData",
+  adr: "admin.section.adr",
 };

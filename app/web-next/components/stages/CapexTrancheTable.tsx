@@ -11,7 +11,7 @@ import { api } from "../../lib/api.ts";
 import { ColGroup } from "../ui.tsx";
 import { RowMenu, type RowMenuItem } from "../crud.tsx";
 import { useModalFocus } from "../../lib/use-modal-focus.ts";
-import { TRANCHE_STATUS_LABEL } from "../../lib/labels.ts";
+import { useTranslations } from "next-intl";
 import {
   allowedTrancheTransitions,
   nextTrancheNo,
@@ -45,7 +45,13 @@ export function CapexTrancheTable({ projectId, tranches, canAct, onChanged, meUs
   tranches: TrancheView[];
   canAct: boolean;
   onChanged: () => void;
-}) {
+}) {const t = useTranslations("stages.s10.capexTranche"); const tc = useTranslations("common");
+  /** Capex tranche status chip → catalog key (ko master wording mirrors the former labels.ts TRANCHE_STATUS_LABEL). */
+  const TRANCHE_STATUS_KEY: Record<string, string> = {
+    planned: "statusPlanned",
+    released: "statusReleased",
+    withheld: "statusWithheld",
+  };
   const uid = useId();
   const base = `/api/projects/${encodeURIComponent(projectId)}/capex-tranches`;
   const [busy, setBusy] = useState(false);
@@ -62,14 +68,14 @@ export function CapexTrancheTable({ projectId, tranches, canAct, onChanged, meUs
       const r = await api.post<{ release_pending?: boolean }>(base, body);
       if (body.action === "set_status" && body.status === "released") {
         // Two-person release: the first call only records a request (release_pending), the second releases.
-        setAnnounce(r.data?.release_pending ? "집행 요청을 기록했습니다. 다른 한 사람의 승인이 필요합니다." : "집행을 승인해 집행 완료로 기록했습니다."); // INTERIM-WORDING
+        setAnnounce(r.data?.release_pending ? t("executionRequestRecordedApprovalFrom") : t("executionApprovedAndRecordedAs")); // INTERIM-WORDING
       }
       onChanged();
       return true;
     } catch (e) {
-      const msg = trancheErrorText((e as { code?: string } | null)?.code, e instanceof Error ? e.message : "기록하지 못했습니다.");
+      const msg = trancheErrorText((e as { code?: string } | null)?.code, e instanceof Error ? e.message : t("failedToRecord"));
       setError(msg);
-      setAnnounce(`기록하지 못했습니다. ${msg}`); // INTERIM-WORDING
+      setAnnounce(t("failedToRecordP1", { p1: msg })); // INTERIM-WORDING
       return false;
     } finally {
       setBusy(false);
@@ -85,83 +91,82 @@ export function CapexTrancheTable({ projectId, tranches, canAct, onChanged, meUs
     if (ok) setForm({ trancheNo: "", amount: "", currency: form.currency, releaseCondition: "" });
   }
 
-  function menuItems(t: TrancheView): RowMenuItem[] {
-    if (!trancheEditable(t.status)) return [];
-    const items: RowMenuItem[] = [{ key: "edit", label: "금액·집행 조건 수정", onSelect: () => setDlg({ kind: "edit", t }) }];
-    for (const next of allowedTrancheTransitions(t.status)) {
+  function menuItems(rec: TrancheView): RowMenuItem[] {
+    if (!trancheEditable(rec.status)) return [];
+    const items: RowMenuItem[] = [{ key: "edit", label: t("editAmountAndExecutionConditions"), onSelect: () => setDlg({ kind: "edit", t: rec }) }];
+    for (const next of allowedTrancheTransitions(rec.status)) {
       if (next === "released") {
-        const ra = releaseAction(t, meUserId);
+        const ra = releaseAction(rec, meUserId);
         if (!ra.allowed) continue; // requester and creator never see the approve action
-        items.push({ key: next, label: ra.kind === "approve" ? "집행 승인(집행 완료로 기록)" : "집행 요청 기록(다른 사람 승인 필요)", onSelect: () => setDlg({ kind: "status", t, next }) }); // INTERIM-WORDING
+        items.push({ key: next, label: ra.kind === "approve" ? t("approveExecutionRecordsExecutionComplete") : t("recordExecutionRequestAnotherPerson"), onSelect: () => setDlg({ kind: "status", t: rec, next }) }); // INTERIM-WORDING
         continue;
       }
-      const label = next === "withheld" ? "보류로 기록" : "집행 예정으로 되돌림";
-      items.push({ key: next, label, onSelect: () => setDlg({ kind: "status", t, next }) });
+      const label = next === "withheld" ? t("recordAsHold") : t("revertedTo");
+      items.push({ key: next, label, onSelect: () => setDlg({ kind: "status", t: rec, next }) });
     }
-    items.push({ key: "retire", label: "폐기", danger: true, separatorBefore: true, onSelect: () => setDlg({ kind: "retire", t }) });
+    items.push({ key: "retire", label: tc("discard"), danger: true, separatorBefore: true, onSelect: () => setDlg({ kind: "retire", t: rec }) });
     return items;
   }
 
   const summary = trancheSummary(tranches);
 
   return (
-    <section className="market-section sizing-step" aria-label="설비투자 집행 단계(집행 단계)" data-testid="capex-tranches">
-      <h3 className="sizing-step-title text-[length:var(--fs-body)]">설비투자 집행 단계 — 트랜치와 집행 조건 ({tranches.length}건)</h3>
+    <section className="market-section sizing-step" aria-label={t("capexExecutionStageExecutionStage")} data-testid="capex-tranches">
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]">{t("capexExecutionStageTranchesAnd")}{tranches.length}{tc("countSuffixParen")}</h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-        투자금을 한 번에 집행하지 않고 조건이 충족될 때마다 나눠 집행합니다. 금액은 입력한 통화 단위 그대로이며, 집행 완료로 기록된 트랜치는 수정하거나 폐기할 수 없습니다.
-        기록과 집행 판단은 사람만 합니다.
+        {t("deploysTheInvestmentInTranches")}
       </p>
       <p className="sr-only" role="status" aria-live="polite">{announce}</p>
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
 
-      <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-        <table className="data-table table-fixed-pct tmin-48" aria-label="설비투자 집행 단계">
-          <caption className="sr-only">설비투자 트랜치별 금액, 집행 조건, 상태</caption>
+      <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+        <table className="data-table table-fixed-pct tmin-48" aria-label={t("capexExecutionStage")}>
+          <caption className="sr-only">{t("amountExecutionConditionsAndStatus")}</caption>
           <ColGroup widths={canAct ? TRANCHE_COL_PCT_ACT : TRANCHE_COL_PCT_READONLY} />
           <thead>
             <tr>
-              <th scope="col">번호</th>
-              <th scope="col" className="col-num">금액</th>
-              <th scope="col">집행 조건</th>
-              <th scope="col">상태</th>
-              {canAct && <th scope="col">작업</th>}
+              <th scope="col">{tc("rowNumber")}</th>
+              <th scope="col" className="col-num">{tc("amount")}</th>
+              <th scope="col">{t("executionCondition")}</th>
+              <th scope="col">{tc("status")}</th>
+              {canAct && <th scope="col">{tc("actions")}</th>}
             </tr>
           </thead>
           <tbody>
-            {tranches.map((t) => (
-              <tr key={t.id}>
-                <th scope="row" data-label="번호" className="tabular-nums">{t.tranche_no}</th>
-                <td data-label="금액" className="col-num tabular-nums">{fmtAmount(t.amount)} {t.currency}</td>
-                <td data-label="집행 조건">{t.release_condition}</td>
-                <td data-label="상태">
-                  <span className={`status-chip ${STATUS_CLS[t.status]}`}><span aria-hidden="true">{STATUS_ICON[t.status]} </span>{TRANCHE_STATUS_LABEL[t.status] ?? t.status}</span>
-                  {t.status === "planned" || t.status === "withheld" ? (() => {
-                    const ra = t.pending_release ? releaseAction(t, meUserId) : null;
-                    return ra?.stateText ? <span className="block text-[length:var(--fs-caption)]" data-testid="release-pending"><span className="status-chip status-amber"><span aria-hidden="true">⏳ </span>집행 요청 대기</span> {ra.stateText}</span> : null; // INTERIM-WORDING
+            {tranches.map((rec) => (
+              <tr key={rec.id}>
+                <th scope="row" data-label={tc("rowNumber")} className="tabular-nums">{rec.tranche_no}</th>
+                <td data-label={tc("amount")} className="col-num tabular-nums">{fmtAmount(rec.amount)} {rec.currency}</td>
+                <td data-label={t("executionCondition")}>{rec.release_condition}</td>
+                <td data-label={tc("status")}>
+                  <span className={`status-chip ${STATUS_CLS[rec.status]}`}><span aria-hidden="true">{STATUS_ICON[rec.status]} </span>{TRANCHE_STATUS_KEY[rec.status] ? t(TRANCHE_STATUS_KEY[rec.status]) : rec.status}</span>
+                  {rec.status === "planned" || rec.status === "withheld" ? (() => {
+                    const ra = rec.pending_release ? releaseAction(rec, meUserId) : null;
+                    return ra?.stateText ? <span className="block text-[length:var(--fs-caption)]" data-testid="release-pending"><span className="status-chip status-amber"><span aria-hidden="true">⏳ </span>{t("executionRequestPending")}</span> {ra.stateText}</span> : null; // INTERIM-WORDING
                   })() : null}
-                  {t.status_reason && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">사유: {t.status_reason}</span>}
+                  {rec.status_reason && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{tc("reasonColon")} {rec.status_reason}</span>}
                 </td>
                 {canAct && (
-                  <td data-label="작업">
-                    {menuItems(t).length > 0
-                      ? <RowMenu label={`집행 단계 ${t.tranche_no} 작업`} items={menuItems(t)} />
-                      : trancheEditable(t.status) ? <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">승인 대기</span> : <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">잠김</span>}
+                  <td data-label={tc("actions")}>
+                    {menuItems(rec).length > 0
+                      ? <RowMenu label={t("workOnExecutionStageP1", { p1: rec.tranche_no })} items={menuItems(rec)} />
+                      : trancheEditable(rec.status) ? <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("awaitingApproval")}</span> : <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("locked")}</span>}
                   </td>
                 )}
               </tr>
             ))}
             {tranches.length === 0 && (
-              <tr><td colSpan={canAct ? 5 : 4}>등록된 트랜치가 없습니다 — 아래에서 첫 트랜치와 집행 조건을 기록하세요.</td></tr>
+              <tr><td colSpan={canAct ? 5 : 4}>{t("noTranchesRegisteredRecordThe")}</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
       {summary.length > 0 && (
-        <ul className="text-[length:var(--fs-caption)] mt-1" aria-label="통화별 집행 단계 합계">
+        <ul className="text-[length:var(--fs-caption)] mt-1" aria-label={t("executionStageTotalsByCurrency")}>
           {summary.map((s) => (
             <li key={s.currency} className="tabular-nums">
-              {s.currency} 합계 {fmtAmount(s.total)} — 집행 완료 {fmtAmount(s.released)} · 집행 예정 {fmtAmount(s.planned)} · 보류 {fmtAmount(s.withheld)}
+              {s.currency} {tc("total")} {fmtAmount(s.total)} {t("executionComplete")} {fmtAmount(s.released)} {t("scheduledForExecution")} {fmtAmount(s.planned)} {t("hold")} {fmtAmount(s.withheld)}
             </li>
           ))}
         </ul>
@@ -170,22 +175,22 @@ export function CapexTrancheTable({ projectId, tranches, canAct, onChanged, meUs
       {canAct && (
         <form
           className="flex flex-wrap items-end gap-2 mt-2 text-[length:var(--fs-caption)]"
-          aria-label="집행 단계 추가"
+          aria-label={t("addExecutionStage")}
           onSubmit={(e) => { e.preventDefault(); void create(); }}
         >
-          <label htmlFor={`${uid}-no`}>번호
+          <label htmlFor={`${uid}-no`}>{tc("rowNumber")}
             <input id={`${uid}-no`} className="sizing-new-input mono-num ml-1" style={{ width: "4.5rem" }} inputMode="numeric" placeholder={String(nextTrancheNo(tranches))} value={form.trancheNo} onChange={(e) => setForm({ ...form, trancheNo: e.target.value })} />
           </label>
-          <label htmlFor={`${uid}-amt`}>금액 (필수)
+          <label htmlFor={`${uid}-amt`}>{t("amountRequired")}
             <input id={`${uid}-amt`} className="sizing-new-input mono-num ml-1" style={{ width: "9rem" }} inputMode="decimal" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
           </label>
-          <label htmlFor={`${uid}-cur`}>통화
+          <label htmlFor={`${uid}-cur`}>{tc("currency")}
             <input id={`${uid}-cur`} className="sizing-new-input ml-1" style={{ width: "4.5rem" }} maxLength={3} value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })} />
           </label>
-          <label htmlFor={`${uid}-cond`}>집행 조건 (필수)
-            <input id={`${uid}-cond`} className="sizing-new-input ml-1" style={{ minWidth: "18rem" }} placeholder="예: 인허가 취득 및 1차 설비 발주 확정" value={form.releaseCondition} onChange={(e) => setForm({ ...form, releaseCondition: e.target.value })} />
+          <label htmlFor={`${uid}-cond`}>{t("executionConditionRequired")}
+            <input id={`${uid}-cond`} className="sizing-new-input ml-1" style={{ minWidth: "18rem" }} placeholder={t("eGPermitObtainedAnd")} value={form.releaseCondition} onChange={(e) => setForm({ ...form, releaseCondition: e.target.value })} />
           </label>
-          <button type="submit" className="btn-ghost btn-sm" disabled={busy}>{busy ? "기록 중..." : "집행 단계 추가"}</button>
+          <button type="submit" className="btn-ghost btn-sm" disabled={busy}>{busy ? tc("recording") : t("addExecutionStage2")}</button>
         </form>
       )}
       {formError && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-1">✕ {formError}</p>}
@@ -214,21 +219,21 @@ function TrancheDialog({ dlg, busy, onClose, onSubmit }: {
   busy: boolean;
   onClose: () => void;
   onSubmit: (v: { amount: string; currency: string; releaseCondition: string; reason: string }) => void | Promise<void>;
-}) {
+}) {const t = useTranslations("stages.s10.capexTranche"); const tc = useTranslations("common");
   const { panelRef, onKeyDown } = useModalFocus(onClose);
   const [v, setV] = useState({ amount: String(dlg.t.amount), currency: dlg.t.currency, releaseCondition: dlg.t.release_condition, reason: "" });
   const [problem, setProblem] = useState<string | null>(null);
   const edit = dlg.kind === "edit";
   const title = edit
-    ? `집행 단계 ${dlg.t.tranche_no} 수정`
+    ? t("editExecutionStageP1", { p1: dlg.t.tranche_no })
     : dlg.kind === "retire"
-      ? `집행 단계 ${dlg.t.tranche_no} 폐기`
-      : `집행 단계 ${dlg.t.tranche_no} — ${dlg.next === "released" ? (dlg.t.pending_release ? "집행 승인" : "집행 요청") : dlg.next === "withheld" ? "보류로 기록" : "집행 예정으로 되돌림"}`;
+      ? t("discardExecutionStageP1", { p1: dlg.t.tranche_no })
+      : t("executionStageP1P2", { p1: dlg.t.tranche_no, p2: dlg.next === "released" ? (dlg.t.pending_release ? t("executionApproval") : t("requestExecution")) : dlg.next === "withheld" ? t("recordAsHold") : t("revertedTo") });
 
   function submit() {
     const p = edit
       ? validateTrancheForm({ trancheNo: String(dlg.t.tranche_no), amount: v.amount, currency: v.currency, releaseCondition: v.releaseCondition })
-      : v.reason.trim() ? null : "사유를 입력하세요 — 집행 조건 충족 근거 또는 보류·폐기 사유입니다.";
+      : v.reason.trim() ? null : t("enterAReasonEitherEvidence");
     setProblem(p);
     if (!p) void onSubmit(v);
   }
@@ -240,32 +245,32 @@ function TrancheDialog({ dlg, busy, onClose, onSubmit }: {
         {dlg.kind === "status" && dlg.next === "released" && (
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
             {dlg.t.pending_release
-              ? "다른 사람이 집행을 요청했습니다. 승인하면 집행 완료로 기록되어 되돌릴 수 없고 수정·폐기도 할 수 없습니다. 집행 판단은 사람의 결정이며 감사 기록에 남습니다."
-              : "집행은 두 사람이 필요합니다. 지금 기록하면 집행 요청만 남고 상태는 바뀌지 않으며, 집행 단계 작성자와 요청자가 아닌 다른 사람이 승인해야 집행 완료가 됩니다."} {/* INTERIM-WORDING */}
+              ? t("anotherPersonRequestedExecutionApproving")
+              : t("executionNeedsTwoPeopleRecording")} {/* INTERIM-WORDING */}
           </p>
         )}
         {edit ? (
           <div className="flex flex-col gap-2 text-[length:var(--fs-caption)]">
-            <label htmlFor="tranche-amt">금액 (필수)
+            <label htmlFor="tranche-amt">{t("amountRequired2")}
               <input id="tranche-amt" className="sizing-new-input mono-num w-full" inputMode="decimal" value={v.amount} onChange={(e) => setV({ ...v, amount: e.target.value })} />
             </label>
-            <label htmlFor="tranche-cur">통화
+            <label htmlFor="tranche-cur">{tc("currency")}
               <input id="tranche-cur" className="sizing-new-input w-full" maxLength={3} value={v.currency} onChange={(e) => setV({ ...v, currency: e.target.value.toUpperCase() })} />
             </label>
-            <label htmlFor="tranche-cond">집행 조건 (필수)
+            <label htmlFor="tranche-cond">{t("executionConditionRequired2")}
               <textarea id="tranche-cond" className="sizing-new-input w-full" rows={3} value={v.releaseCondition} onChange={(e) => setV({ ...v, releaseCondition: e.target.value })} />
             </label>
           </div>
         ) : (
-          <label className="text-[length:var(--fs-caption)] block" htmlFor="tranche-reason">사유 (필수)
+          <label className="text-[length:var(--fs-caption)] block" htmlFor="tranche-reason">{t("reasonRequired")}
             <textarea id="tranche-reason" className="sizing-new-input mt-1 w-full" rows={3} required aria-required="true" value={v.reason} onChange={(e) => setV({ ...v, reason: e.target.value })} />
           </label>
         )}
         <p role="alert" aria-live="assertive" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-1 min-h-[1.25rem]">{problem ? `✕ ${problem}` : ""}</p>
         <div className="flex flex-wrap items-center justify-end gap-2 mt-2">
-          <button type="button" className="btn-ghost btn-sm" onClick={onClose}>취소</button>
+          <button type="button" className="btn-ghost btn-sm" onClick={onClose}>{tc("cancel")}</button>
           <button type="button" className={dlg.kind === "retire" ? "btn-danger btn-sm" : "btn-ghost btn-sm"} disabled={busy} onClick={submit}>
-            {dlg.kind === "retire" ? "폐기" : dlg.kind === "status" && dlg.next === "released" ? (dlg.t.pending_release ? "집행 승인" : "집행 요청 기록") : "기록"}
+            {dlg.kind === "retire" ? tc("discard") : dlg.kind === "status" && dlg.next === "released" ? (dlg.t.pending_release ? t("executionApproval2") : t("recordExecutionRequest")) : tc("record")}
           </button>
         </div>
       </div>

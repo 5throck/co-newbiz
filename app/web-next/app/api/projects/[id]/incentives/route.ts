@@ -21,14 +21,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "인센티브 등록은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Registering incentives requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
     direction?: string; type?: string; grantor?: string | null; program_name?: string;
     npv_value?: number | null; clawback_rule?: string | null; region_code?: string | null; evidence_ref?: string | null;
   } | null;
-  if (!body?.program_name?.trim()) return badRequest("program_required", "program_name은 필수입니다.");
+  if (!body?.program_name?.trim()) return badRequest("program_required", "program_name is required.");
   const direction = body.direction === "granted" ? "granted" : "prospective";
   const now = new Date().toISOString();
   const rid = ulid();
@@ -49,7 +49,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "인센티브 삭제는 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Deleting incentives requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const iid = new URL(request.url).searchParams.get("id") ?? "";
@@ -66,13 +66,13 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "인센티브 갱신은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Updating incentives requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as { id?: unknown; direction?: unknown } | null;
   const iid = typeof body?.id === "string" ? body.id : "";
   const direction = body?.direction === "granted" ? "granted" : body?.direction === "prospective" ? "prospective" : null;
-  if (!iid || !direction) return badRequest("invalid_request", "id와 direction(prospective | granted)이 필요합니다.");
+  if (!iid || !direction) return badRequest("invalid_request", "id and direction (prospective | granted) are required.");
   const row = getDb().query("SELECT id FROM incentive WHERE id = ? AND project_id = ?").get(iid, id) as { id: string } | undefined;
   if (!row) return notFound();
   const now = new Date().toISOString();

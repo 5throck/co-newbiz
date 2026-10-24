@@ -60,7 +60,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "필요 역량 판정 기록은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Capability judgement records require the analyst role or higher." }); if (denied) return denied; }
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   // T-20261022-038: capability-dd is a brownfield-only S9 activity (flow.spec S9
@@ -70,7 +70,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   // greenfield or unresolvable carrier with 409 not_applicable_track. GET stays
   // open: read-only evidence.
   if (resolveTrack(id, getDb()).track !== "brownfield") {
-    return fail(409, "not_applicable_track", "필요 역량 판정(S9)은 brownfield 프로젝트에만 적용됩니다 — 현재 트랙이 greenfield이거나 확인되지 않았습니다.");
+    return fail(409, "not_applicable_track", "Capability judgement (S9) applies only to brownfield projects — the current track is greenfield or undetermined.");
   }
   const db = getDb();
   const opp = resolveOpportunity(db, id);
@@ -78,7 +78,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const registerRows = parseGapRegister(opp.json).rows;
   const known = new Set(registerRows.map((r) => r.id));
   const body = (await request.json().catch(() => null)) as { row_id?: unknown; capability?: unknown; coverage?: unknown; note?: unknown } | null;
-  if (!body) return badRequest("invalid_request", "본문이 비어 있습니다.");
+  if (!body) return badRequest("invalid_request", "Body is empty.");
   try {
     const v = validateCapabilityDdInput(
       { rowId: body.row_id, capability: body.capability ?? registerRows.find((r) => r.id === body.row_id)?.capability, coverage: body.coverage, note: body.note },
@@ -100,6 +100,6 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   } catch (err) {
     if (err instanceof CapabilityDdValidationError) return badRequest("invalid_request", err.message);
     console.error("capability-dd PUT failed", err);
-    return fail(500, "internal_error", "판정 저장에 실패했습니다.");
+    return fail(500, "internal_error", "Failed to save the judgement.");
   }
 }

@@ -37,7 +37,7 @@ export const POST = route(async (request: Request) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "결정 제안은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Decision proposals require the analyst role or higher." }); if (denied) return denied; }
   // An OAuth-delegated principal needs the dedicated 'propose' scope; 'write'
   // alone never creates a proposal and no scope executes a decision.
   const delegated = currentPrincipal();

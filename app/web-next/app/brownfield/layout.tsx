@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
 // Per-page document title (WCAG 2.4.2, R2-C page contract). The root layout
 // supplies the "· 신규사업 검토" suffix through its title template.
-export const metadata: Metadata = { title: "S6/S7 대상 발굴·선정" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("pages.titles");
+  return { title: t("brownfield") };
+}
 
 export default function Layout({ children }: { children: ReactNode }) {
   return children;

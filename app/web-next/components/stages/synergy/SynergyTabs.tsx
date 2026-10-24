@@ -9,23 +9,24 @@ import type { SynergyPayload } from "./types.ts";
 import { ColGroup } from "../../ui.tsx";
 import { SynergyScoreEvidence } from "./SynergyScoreEvidence.tsx";
 import { shortlistColPct } from "./constants.ts";
+import { useTranslations } from "next-intl";
 
 /** ADR-0182 — 프로파일 요약은 탭이 아니라 관계도 아래 상시 컨텍스트.
  *  상세 재무·강/약점은 /our-company 담당(ADR-0094)이므로 요약+딥링크만 남긴다. */
-export function SynergyProfileContext({ p }: { p: SynergyPayload }) {
+export function SynergyProfileContext({ p }: { p: SynergyPayload }) {const t = useTranslations("stages.s3.synergyTabs"); const tc = useTranslations("common");
   return (
     <div className="sizing-grade-card mb-3">
       <div className="flex flex-wrap items-center gap-2 mb-1">
         <strong className="text-[length:var(--fs-body)]">{p.target?.name ?? p.company.name}</strong>
         {p.dataSources?.dart && <span className="status-chip status-green">DART {p.dataSources.dartYear ?? ""}</span>}
-        {(p.financialStrengths?.length ?? 0) > 0 && <span className="status-chip status-in-progress">강점 {p.financialStrengths.length}건</span>}
-        {(p.financialWeaknesses?.length ?? 0) > 0 && <span className="status-chip status-not-started">약점 {p.financialWeaknesses.length}건</span>}
+        {(p.financialStrengths?.length ?? 0) > 0 && <span className="status-chip status-in-progress">{t("strength")} {p.financialStrengths.length}{tc("countUnit")}</span>}
+        {(p.financialWeaknesses?.length ?? 0) > 0 && <span className="status-chip status-not-started">{t("weakness")} {p.financialWeaknesses.length}{tc("countUnit")}</span>}
         {p.profileRef && (
           <a
             href={p.profileRef.kind === "affiliate" ? `/our-company?member=${encodeURIComponent(p.profileRef.id)}` : "/our-company"}
             className="text-[color:var(--accent)] underline text-[length:var(--fs-caption)]"
           >
-            상세 프로파일 보기 →
+            {t("viewFullProfile")}
           </a>
         )}
       </div>
@@ -38,7 +39,7 @@ export function SynergyProfileContext({ p }: { p: SynergyPayload }) {
 
 /** ADR-0182 — 시너지 점수 평가 탭(구 개요 탭의 점수 부분): 현재 기록 →
  *  사람 확정 편집기(경계 #2) → 팩터별 산정 근거(SynergyScoreEvidence). */
-export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState; p: SynergyPayload }) {
+export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState; p: SynergyPayload }) {const t = useTranslations("stages.s3.synergyTabs"); const tc = useTranslations("common");
   const { tab, confirmError, currentScore, synState, currentRationale, canCurate, opportunityId, confirmForm, setConfirmForm, confirmSaving, confirmSynergyScore, retractSynergyScore } = ctx;
   // ADR-0182 Phase 4 — AI 보정 제안(초안). 저장된 근거(규칙 팩터·주요 검토
   // 영역·필요 역량 충족도)에서 ±10 이내 보정을 다시 제안받아 확인 폼에
@@ -56,9 +57,9 @@ export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState;
   const legacyScheme = storedFactors.length > 0 && !storedFactors.some((f) => f?.key === "capability_coverage");
   function requestRescore() {
     if (rescoreBusy || !ctx.analysis?.id) return;
-    confirm("구 체계 저장분을 현재 5팩터 체계로 재계산할까요?", () => void rescoreCurrentScheme(), {
-      body: "저장된 S1 시장·프로파일·필요 역량 레지스터를 현재 가중치로 다시 계산하고, LLM 가용 시 ±10점 이내 보정을 더해 새 버전으로 기록합니다. 점수가 바뀌면 기존 사람 확정은 무효화됩니다.",
-      confirmLabel: "재계산",
+    confirm(t("recomputeSavedRecordsFromThe"), () => void rescoreCurrentScheme(), {
+      body: t("recomputesTheSavedS1Market"),
+      confirmLabel: t("recalculate"),
     });
   }
   async function rescoreCurrentScheme() {
@@ -72,7 +73,7 @@ export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState;
       // 함께 다시 읽어야 패널이 서버 기준 상태를 보여준다.
       await ctx.refreshSynState?.();
     } catch (err) {
-      setRescoreNote(err instanceof Error ? err.message : "재계산 실패");
+      setRescoreNote(err instanceof Error ? err.message : t("recalculationFailed"));
     } finally {
       setRescoreBusy(false);
     }
@@ -91,7 +92,7 @@ export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState;
         setConfirmForm({ score: String(next), rationale: r.data.proposal.rationale });
       }
     } catch (err) {
-      setAiAdjNote(err instanceof Error ? err.message : "AI 보정 제안 실패");
+      setAiAdjNote(err instanceof Error ? err.message : t("aiCalibrationProposalFailed"));
     } finally {
       setAiAdjBusy(false);
     }
@@ -99,10 +100,10 @@ export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState;
   return (
     <>{tab === "scoreEval" && (
             <div className="text-[length:var(--fs-body)]">
-              <h3 className="sizing-step-title text-[length:var(--fs-body)]">시너지 점수 평가 — 산정 근거와 확정</h3>
+              <h3 className="sizing-step-title text-[length:var(--fs-body)]">{t("synergyScoreEvaluationCalculationEvidence")}</h3>
               {p.opportunity && (
                 <div className="sizing-grade-card mb-3">
-                  <h4 className="text-[length:var(--fs-body)] mb-2">연결 기회 — S2 기회발굴</h4>
+                  <h4 className="text-[length:var(--fs-body)] mb-2">{t("linkedOpportunityS2OpportunityDiscovery")}</h4>
                   <p className="mb-2 text-[length:var(--fs-body)]"><strong>{p.opportunity.name}</strong></p>
                   {confirmError && <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--red-fg)]" role="alert">{confirmError}</p>}
                   {currentScore != null ? (
@@ -110,18 +111,18 @@ export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState;
                       <p className="mb-2 text-[length:var(--fs-caption)]">
                         {synState?.confirmed ? (
                           <>
-                            현재 기록: <span className="status-chip status-green">확정 {synState.synergyScore}점 (사람 확정)</span>
+                            {t("currentRecord")} <span className="status-chip status-green">{tc("confirmed")} {synState.synergyScore}{t("ptHumanConfirmed")}</span>
                             {synState.confirmedAt && <span className="text-[color:var(--muted-fg)]"> — {synState.confirmedAt.slice(0, 10)}{synState.confirmedBy ? ` · ${synState.confirmedBy}` : ""}</span>}
                           </>
                         ) : (
                           <>
-                            현재 기록: <span className="status-chip status-amber">권고 {currentScore}점 (사람 확정 전)</span>
-                            <span className="block mt-1 text-[color:var(--muted-fg)]">확정 전 권고는 S4 진출방식 결정의 트랙 근거에 반영되지 않습니다.</span>
+                            {t("currentRecord2")} <span className="status-chip status-amber">{tc("recommendation")} {currentScore}{t("ptBeforeHumanConfirmation")}</span>
+                            <span className="block mt-1 text-[color:var(--muted-fg)]">{t("recommendationsAreNotReflectedIn")}</span>
                           </>
                         )}
                         {currentRationale && (
                           <span className="block mt-1 text-[color:var(--muted-fg)]">
-                            {synState?.confirmed ? currentRationale : <>AI 산출 근거 (초안 — 계산 과정 그대로): {currentRationale}</>}
+                            {synState?.confirmed ? currentRationale : <>{t("aiDerivationEvidenceDraftThe")} {currentRationale}</>}
                           </span>
                         )}
                       </p>
@@ -133,17 +134,17 @@ export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState;
                            (2026-09-15 사용자 리포트), 필요하면 아래 버튼으로 AI
                            초안을 명시적으로 불러와 검토·수정한다. */
                         <div className="p-2 border border-[color:var(--border)] rounded">
-                          <p className="text-[length:var(--fs-caption)] font-semibold mb-2">시너지 점수 확정 — 점수를 직접 수정하고 기록합니다 (경계 #2)</p>
+                          <p className="text-[length:var(--fs-caption)] font-semibold mb-2">{t("confirmSynergyScoreEditThe")}</p>
                           <div className="flex flex-wrap items-end gap-2">
                             <label className="text-[length:var(--fs-caption)]">
-                              <span className="text-label block mb-1">점수 (0~100)</span>
+                              <span className="text-label block mb-1">{t("score")}</span>
                               <input type="number" min={0} max={100} className="sizing-new-input sizing-new-input-sm w-[7rem]" value={confirmForm.score}
                                 onChange={(e) => setConfirmForm({ ...confirmForm, score: e.target.value })} />
                             </label>
                             <label className="text-[length:var(--fs-caption)] flex-1 min-w-[16rem]">
-                              <span className="text-label block mb-1">확정 근거 — 직접 작성 (사람의 판단)</span>
+                              <span className="text-label block mb-1">{t("confirmationEvidenceWrittenDirectlyHuman")}</span>
                               <input type="text" className="sizing-new-input sizing-new-input-sm w-full" value={confirmForm.rationale}
-                                placeholder="이 점수를 확정하는 근거를 직접 기록하세요 — AI 초안을 참고하려면 오른쪽 버튼"
+                                placeholder={t("recordTheEvidenceConfirmingThis")}
                                 onChange={(e) => setConfirmForm({ ...confirmForm, rationale: e.target.value })} />
                             </label>
                             {!synState?.confirmed && currentRationale && (
@@ -152,7 +153,7 @@ export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState;
                                 className="btn-ghost btn-sm"
                                 onClick={() => setConfirmForm({ ...confirmForm, rationale: currentRationale })}
                               >
-                                AI 초안 불러오기
+                                {t("loadAiDraft")}
                               </button>
                             )}
                             {currentScore != null && (
@@ -160,22 +161,22 @@ export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState;
                                 type="button"
                                 className="btn-ghost btn-sm"
                                 disabled={aiAdjBusy}
-                                title="저장된 근거(규칙 팩터·주요 검토 영역·필요 역량 충족도)에서 ±10 이내 보정 초안을 제안받아 폼에 채웁니다 — 검토·수정 후 확정하세요."
+                                title={t("requestsACalibrationDraftWithin")}
                                 onClick={() => void proposeAdjustment()}
                               >
-                                {aiAdjBusy ? "제안 생성 중..." : "🤖 AI 보정 제안"}
+                                {aiAdjBusy ? t("generatingProposal") : t("aiCalibrationProposal")}
                               </button>
                             )}
                             <button type="button" className="btn-ghost btn-sm" disabled={confirmSaving || confirmForm.score === ""} onClick={confirmSynergyScore}>
-                              {confirmSaving ? "저장 중..." : "확정 저장"}
+                              {confirmSaving ? tc("saving") : t("saveConfirmation")}
                             </button>
                             {synState?.confirmed && (
-                              <button type="button" className="btn-ghost btn-sm" disabled={confirmSaving} onClick={retractSynergyScore}>확정 철회</button>
+                              <button type="button" className="btn-ghost btn-sm" disabled={confirmSaving} onClick={retractSynergyScore}>{t("withdrawConfirmation")}</button>
                             )}
                           </div>
                           {aiAdjNote && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">{aiAdjNote}</p>}
                           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">
-                            확정된 점수만 S4 진출방식 결정의 트랙 판단 근거로 반영됩니다. 재분석이 다른 점수를 기록하면 확정은 자동으로 무효화됩니다.
+                            {t("onlyConfirmedScoresCountAs")}
                           </p>
                         </div>
                       )}
@@ -188,13 +189,13 @@ export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState;
                 type="button"
                 className="btn-ghost btn-sm"
                 disabled={rescoreBusy}
-                title="저장된 S1 시장·프로파일·필요 역량 레지스터를 현재 가중치(충족도 포함 5팩터)로 다시 계산하고, LLM 가용 시 ±10점 이내 보정을 더해 새 버전으로 기록합니다."
+                title={t("recomputesTheSavedS1Market2")}
                 onClick={requestRescore}
               >
-                {rescoreBusy ? "재계산 중..." : <><span aria-hidden="true">🤖</span> 현재 체계로 재계산 (AI)</>}
+                {rescoreBusy ? t("recalculating") : <><span aria-hidden="true">🤖</span> {t("recomputeUnderTheCurrentScheme")}</>}
               </button>
               <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                구 4팩터 저장분을 충족도 포함 현재 체계로 전환합니다 — 점수가 바뀌면 기존 확정은 무효화됩니다.
+                {t("convertsSavedRecordsToThe")}
               </span>
             </div>
           )}
@@ -211,7 +212,7 @@ export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState;
           {confirmDialog}
                     </>
                   ) : (
-                    <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">연결된 분석에 시너지 점수 권고가 아직 없습니다 — 분석 완료 후 권고가 기록됩니다.</p>
+                    <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("theLinkedAnalysisHasNo")}</p>
                   )}
                 </div>
               )}
@@ -220,17 +221,17 @@ export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState;
   );
 }
 
-export function SynergyShortlistTab({ ctx, p }: { ctx: SynergyResultState; p: SynergyPayload }) {
+export function SynergyShortlistTab({ ctx, p }: { ctx: SynergyResultState; p: SynergyPayload }) {const t = useTranslations("stages.s3.synergyTabs"); const tc = useTranslations("common");
   const { tab, canCurate, editingArea, editForm, setEditForm, editSaving, setEditingArea, saveShortlistItem, editError, showShortlistForm, setShowShortlistForm, shortlistForm, setShortlistForm, opportunityId } = ctx;
   return (
     <>{tab === "shortlist" && (
             <div className="text-[length:var(--fs-body)]">
-              <h3 className="sizing-step-title text-[length:var(--fs-body)]">주요 검토 영역 — 선별 결과</h3>
-              <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-              <table className="data-table list-table table-fixed-pct tmin-56" aria-label="주요 검토 영역">
-                <caption className="sr-only">주요 검토 영역</caption>
+              <h3 className="sizing-step-title text-[length:var(--fs-body)]">{t("keyReviewAreasSelectionResults")}</h3>
+              <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+              <table className="data-table list-table table-fixed-pct tmin-56" aria-label={tc("keyReviewAreas")}>
+                <caption className="sr-only">{tc("keyReviewAreas")}</caption>
                 <ColGroup widths={shortlistColPct(canCurate ? 6 : 5)} />
-                <thead><tr><th scope="col">순위</th><th scope="col">영역</th><th scope="col">판정</th><th scope="col">사유</th><th scope="col">출처</th>{canCurate && <th scope="col"><span className="sr-only">작업</span></th>}</tr></thead>
+                <thead><tr><th scope="col">{t("rank")}</th><th scope="col">{t("area")}</th><th scope="col">{tc("judgement")}</th><th scope="col">{tc("reason")}</th><th scope="col">{tc("source")}</th>{canCurate && <th scope="col"><span className="sr-only">{tc("actions")}</span></th>}</tr></thead>
                 <tbody>
                   {p.shortList.map((s) => {
                     const isEditing = editingArea === s.area;
@@ -242,8 +243,8 @@ export function SynergyShortlistTab({ ctx, p }: { ctx: SynergyResultState; p: Sy
                           <>
                             <td>
                               <select className="sizing-new-input sizing-new-input-sm" value={editForm.verdict} onChange={(e) => setEditForm({ ...editForm, verdict: e.target.value })}>
-                                <option value="Short List">선별</option>
-                                <option value="보류">보류</option>
+                                <option value="Short List">{tc("shortlist")}</option>
+                                <option value={tc("hold")}>{tc("hold")}</option>
                               </select>
                             </td>
                             <td>
@@ -252,26 +253,26 @@ export function SynergyShortlistTab({ ctx, p }: { ctx: SynergyResultState; p: Sy
                           </>
                         ) : (
                           <>
-                            <td><span className={`status-chip ${s.verdict.includes("Short") ? "status-green" : "status-not-started"}`}>{s.verdict.includes("Short") ? "선별" : s.verdict}</span></td>
+                            <td><span className={`status-chip ${s.verdict.includes("Short") ? "status-green" : "status-not-started"}`}>{s.verdict.includes("Short") ? tc("shortlist") : s.verdict}</span></td>
                             <td className="text-[length:var(--fs-body)] cell-truncate" title={s.reason}>{s.reason}</td>
                           </>
                         )}
                         <td>
-                          <span className={`status-chip ${s.origin === "human" ? "status-in-progress" : "status-not-started"}`} title={s.editedBy ? `${s.editedBy}가 수정 (${s.editedAt?.slice(0, 10) ?? ""})` : undefined}>
-                            {s.origin === "human" ? "사람 추가" : s.editedBy ? "AI 추천 · 사람 수정" : "AI 추천"}
+                          <span className={`status-chip ${s.origin === "human" ? "status-in-progress" : "status-not-started"}`} title={s.editedBy ? t("editedByP1P2", { p1: s.editedBy, p2: s.editedAt?.slice(0, 10) ?? "" }) : undefined}>
+                            {s.origin === "human" ? t("addPerson") : s.editedBy ? t("aiRecommendationHumanEdits") : tc("aiRecommendation")}
                           </span>
                         </td>
                         {canCurate && (
                           <td className="sizing-actions-cell">
                             {isEditing ? (
                               <span className="actions-row">
-                                <button type="button" className="btn-ghost btn-sm" disabled={editSaving} onClick={() => setEditingArea(null)}>취소</button>
+                                <button type="button" className="btn-ghost btn-sm" disabled={editSaving} onClick={() => setEditingArea(null)}>{tc("cancel")}</button>
                                 <button type="button" className="btn-ghost btn-sm" disabled={editSaving || !editForm.reason.trim()} onClick={() => void saveShortlistItem(s.area, editForm.verdict, editForm.reason)}>
-                                  {editSaving ? "저장 중..." : "저장"}
+                                  {editSaving ? tc("saving") : tc("save")}
                                 </button>
                               </span>
                             ) : (
-                              <button type="button" className="btn-ghost btn-sm" onClick={() => { setEditingArea(s.area); setEditForm({ verdict: s.verdict, reason: s.reason }); }}>수정</button>
+                              <button type="button" className="btn-ghost btn-sm" onClick={() => { setEditingArea(s.area); setEditForm({ verdict: s.verdict, reason: s.reason }); }}>{tc("edit")}</button>
                             )}
                           </td>
                         )}
@@ -285,26 +286,26 @@ export function SynergyShortlistTab({ ctx, p }: { ctx: SynergyResultState; p: Sy
               {canCurate && (
                 <div className="mt-3">
                   {!showShortlistForm ? (
-                    <button type="button" className="btn-ghost btn-sm" onClick={() => setShowShortlistForm(true)}>＋ 새 영역 추가</button>
+                    <button type="button" className="btn-ghost btn-sm" onClick={() => setShowShortlistForm(true)}>{t("addNewArea")}</button>
                   ) : (
                     <div className="sizing-grade-card">
                       <div className="flex flex-wrap gap-2 mb-2">
-                        <input className="sizing-new-input" style={{ flex: "1 1 12rem" }} placeholder="영역명 *" value={shortlistForm.area} onChange={(e) => setShortlistForm({ ...shortlistForm, area: e.target.value })} />
+                        <input className="sizing-new-input" style={{ flex: "1 1 12rem" }} placeholder={t("areaName")} value={shortlistForm.area} onChange={(e) => setShortlistForm({ ...shortlistForm, area: e.target.value })} />
                         <select className="sizing-new-input sizing-new-input-sm" value={shortlistForm.verdict} onChange={(e) => setShortlistForm({ ...shortlistForm, verdict: e.target.value })}>
-                          <option value="Short List">선별</option>
-                          <option value="보류">보류</option>
+                          <option value="Short List">{tc("shortlist")}</option>
+                          <option value={tc("hold")}>{tc("hold")}</option>
                         </select>
                       </div>
-                      <input className="sizing-new-input w-full mb-2" placeholder="사유 *" value={shortlistForm.reason} onChange={(e) => setShortlistForm({ ...shortlistForm, reason: e.target.value })} />
+                      <input className="sizing-new-input w-full mb-2" placeholder={t("reason")} value={shortlistForm.reason} onChange={(e) => setShortlistForm({ ...shortlistForm, reason: e.target.value })} />
                       <div className="flex justify-end gap-2">
-                        <button type="button" className="btn-ghost btn-sm" onClick={() => setShowShortlistForm(false)}>취소</button>
+                        <button type="button" className="btn-ghost btn-sm" onClick={() => setShowShortlistForm(false)}>{tc("cancel")}</button>
                         <button
                           type="button"
                           className="btn-ghost btn-sm"
                           disabled={editSaving || !shortlistForm.area.trim() || !shortlistForm.reason.trim()}
                           onClick={() => void saveShortlistItem(shortlistForm.area.trim(), shortlistForm.verdict, shortlistForm.reason)}
                         >
-                          {editSaving ? "추가 중..." : "추가"}
+                          {editSaving ? t("adding") : tc("add")}
                         </button>
                       </div>
                     </div>
@@ -313,7 +314,7 @@ export function SynergyShortlistTab({ ctx, p }: { ctx: SynergyResultState; p: Sy
               )}
               {!opportunityId && (
                 <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                  S4로 진행하려면 이 분석에 연결된 기회(S2)가 필요합니다 — 새 분석 시 "연결 기회"를 선택하세요.
+                  {t("proceedingToS4RequiresAn")}
                 </p>
               )}
             </div>

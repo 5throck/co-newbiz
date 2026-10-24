@@ -34,7 +34,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "waiver 요청은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Waiver requests require the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   // R2-E (2026-10-09): the S9 per-row dialog may send the checklist item it is
@@ -57,18 +57,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const approverRole = body?.approver_role?.trim();
   const expiresAt = body?.expires_at?.trim();
   if (!governanceDocId || !clauseRef || !reason || !approverRole || !expiresAt) {
-    return badRequest("invalid_request", "governance_doc_id, clause_ref, reason, approver_role, expires_at 는 모두 필수입니다.");
+    return badRequest("invalid_request", "governance_doc_id, clause_ref, reason, approver_role, and expires_at are all required.");
   }
   const now = new Date().toISOString();
   if (Number.isNaN(Date.parse(expiresAt))) {
-    return badRequest("invalid_request", "expires_at 가 ISO 날짜 형식이 아닙니다.");
+    return badRequest("invalid_request", "expires_at is not an ISO date.");
   }
   if (expiresAt <= now) {
-    return badRequest("invalid_request", "expires_at 는 미래 시점이어야 합니다 — 무기한·소급 waiver는 허용되지 않습니다 (ADR-0036).");
+    return badRequest("invalid_request", "expires_at must be in the future — indefinite or retroactive waivers are not allowed (ADR-0036).");
   }
   const db = getDb();
   if (!db.query("SELECT id FROM governance_doc WHERE id = ?").get(governanceDocId)) {
-    return badRequest("invalid_request", "governance_doc_id 가 존재하지 않습니다.");
+    return badRequest("invalid_request", "governance_doc_id does not exist.");
   }
   // Re-filing an identical still-active waiver would silently extend it —
   // refuse and let the operator revoke the old one first.
@@ -78,7 +78,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     )
     .get(id, governanceDocId, clauseRef, now, scope.targetId);
   if (dupe) {
-    return badRequest("duplicate_active", `동일 조항의 활성 waiver(${dupe.id})가 이미 존재합니다 — 철회 후 재요청하세요.`);
+    return badRequest("duplicate_active", `An active waiver for the same clause (${dupe.id}) already exists — revoke it before re-requesting.`);
   }
   const approvedBy = body?.approved_by?.trim() || undefined;
   let waiverId: string;

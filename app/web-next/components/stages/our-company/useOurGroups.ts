@@ -7,8 +7,9 @@ import type { useOurCompanyBase } from "./useOurCompanyBase.ts";
 import type { useOurCompetitors } from "./useOurCompetitors.ts";
 import type { GroupRow, GroupDetail, Profile } from "./types.ts";
 import { evidenceBody, evidenceFromProfile, type EvidenceDraft } from "./profile-evidence.ts";
+import { useTranslations } from "next-intl";
 
-export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & ReturnType<typeof useOurCompetitors>) {
+export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & ReturnType<typeof useOurCompetitors>) {const t = useTranslations("components.ourCompany.useOurGroups"); const tc = useTranslations("common");
   const { urlSync, router, setLocalMember, setOpenMember, profiles, openMember, setSynergyLink, searchParams, localMember, setGroups, setError, setSelectedGroup, selectedGroup, setProfiles, groupName, busy, setBusy, setGroupName, setShowGroupForm, memberForm, dartSearching, setDartSearching, setDartResults, groupNameDraft, setEditGroupName, confirm, setMemberForm, setShowMemberForm, setEditMember, editMember, savingMember, setSavingMember, savingRole, setSavingRole, setUploadingMember, setUploadedNames, setProfileTab, setS1Requests } = prev;
  const [loadingGroupId, setLoadingGroupId] = useState<string | null>(null);
  // 분석가 제공 근거 입력(주소·메모) — 멤버별 초안. 없으면 마지막 저장 버전의 입력을 재사용한다.
@@ -53,12 +54,12 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
   }, [memberIdParam]);
 
   const loadGroups = useCallback(() => {
-    api.get<{ groups: GroupRow[] }>("/api/our-company/groups").then((r) => setGroups(r.data.groups)).catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
+    api.get<{ groups: GroupRow[] }>("/api/our-company/groups").then((r) => setGroups(r.data.groups)).catch((e) => setError(e instanceof Error ? e.message : tc("errors.loadFailed")));
   }, []);
 
   const loadGroup = useCallback((id: string) => {
     setLoadingGroupId(id);
-    api.get<GroupDetail>(`/api/our-company/groups/${encodeURIComponent(id)}`).then((r) => setSelectedGroup(r.data)).catch((e) => setError(e instanceof Error ? e.message : "그룹 불러오기 실패")).finally(() => setLoadingGroupId((cur) => (cur === id ? null : cur)));
+    api.get<GroupDetail>(`/api/our-company/groups/${encodeURIComponent(id)}`).then((r) => setSelectedGroup(r.data)).catch((e) => setError(e instanceof Error ? e.message : t("failedToLoadGroups"))).finally(() => setLoadingGroupId((cur) => (cur === id ? null : cur)));
   }, []);
 
   useEffect(() => { loadGroups(); }, [loadGroups]);
@@ -66,7 +67,7 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
   // 열려있는 계열사 프로파일 폴링 — 분석 완료 시 자동 반영, 실패 시 사용자에게 보고
   useEffect(() => {
     if (!selectedGroup || !openMember) return;
-    const t = setInterval(async () => {
+    const timer = setInterval(async () => {
       try {
         const r = await api.get<{ profile: Profile | null; status: string; error?: string }>(`/api/our-company/members/${openMember}/profile`);
         if (r.data.status === "completed" && r.data.profile) {
@@ -74,12 +75,12 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
           loadGroup(selectedGroup.group.id);
         } else if (r.data.status === "failed") {
           // 파이프라인이 죽으면 version이 생기지 않는다 — 실패를 보고하지 않으면 "분석 중..."에 영구 머문다.
-          setError(`분석 실패 — ${r.data.error ?? "알 수 없는 오류"}. 재분석을 실행하세요.`);
+          setError(t("analysisFailedP1Run", { p1: r.data.error ?? t("unknownError") }));
           setProfiles((prev) => { const n = { ...prev }; delete n[openMember]; return n; });
         }
       } catch { /* 다음 폴링에서 재시도 */ }
     }, 4000);
-    return () => clearInterval(t);
+    return () => clearInterval(timer);
   }, [selectedGroup, openMember, loadGroup]);
 
   async function createGroup(e: React.FormEvent) {
@@ -92,7 +93,7 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
       loadGroups();
       loadGroup(res.data.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "그룹 등록 실패");
+      setError(err instanceof Error ? err.message : t("failedToRegisterTheGroup"));
     } finally {
       setBusy(false);
     }
@@ -106,12 +107,12 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
     try {
       const res = await api.get<{ configured: boolean; results: Array<{ corp_code: string; corp_name: string; source?: "dart" | "local" | "web"; validated?: boolean | null }>; error?: string }>(`/api/synergy/dart-search?q=${encodeURIComponent(q)}`);
       setDartResults(res.data.results);
-      if (!res.data.configured) setError("DART API 키가 구성되지 않았습니다 — DART 고유번호 수동 입력으로 진행하세요.");
+      if (!res.data.configured) setError(t("theDartApiKeyIs"));
       else if (res.data.error) setError(res.data.error);
-      else if (res.data.results.length === 0) setError("DART 검색 결과가 없습니다 — DART 고유번호를 수동 입력하거나 비상장으로 등록하세요.");
+      else if (res.data.results.length === 0) setError(t("noDartSearchResultsEnter"));
       else setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "DART 검색 실패");
+      setError(err instanceof Error ? err.message : t("dartSearchFailed"));
     } finally {
       setDartSearching(false);
     }
@@ -125,7 +126,7 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
       setEditGroupName(false);
       loadGroup(selectedGroup.group.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "그룹명 수정 실패");
+      setError(err instanceof Error ? err.message : t("failedToUpdateTheGroup"));
     } finally {
       setBusy(false);
     }
@@ -137,11 +138,11 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
     // DART 미입력 경고 — 상장·외감 계열사는 DART 고유번호 확인 권장, 비상장은 확인 후 등록
     if (!memberForm.dart_corp_code.trim()) {
       confirm(
-        `"${memberForm.company_name.trim()}" DART 고유번호 미입력`,
+        t("p1IsMissingItsDart", { p1: memberForm.company_name.trim() }),
         () => void doAddMember(),
         {
-          body: "[🔍 DART 검색]으로 DART 고유번호를 찾거나, 비상장이라면 등록을 눌러 리서치 기반으로 등록합니다.",
-          confirmLabel: "등록",
+          body: t("findTheDartIdWith"),
+          confirmLabel: tc("register"),
         },
       );
       return;
@@ -162,7 +163,7 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
       setShowMemberForm(false);
       loadGroup(selectedGroup.group.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "계열사 등록 실패");
+      setError(err instanceof Error ? err.message : t("failedToRegisterTheAffiliate"));
     } finally {
       setBusy(false);
     }
@@ -172,33 +173,33 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
     if (!selectedGroup) return;
     const m = selectedGroup.members.find((x) => x.id === memberId);
     confirm(
-      `${m?.company_name ?? "계열사"} 삭제`,
+      t("deleteP1", { p1: m?.company_name ?? tc("affiliate") }),
       async () => {
         try {
           await api.delete(`/api/our-company/groups/${selectedGroup.group.id}/members`, { member_id: memberId });
           if (openMember === memberId) backToList();
           loadGroup(selectedGroup.group.id);
         } catch (err) {
-          setError(err instanceof Error ? err.message : "계열사 삭제 실패");
+          setError(err instanceof Error ? err.message : t("failedToDeleteTheAffiliate"));
         }
       },
-      { body: "삭제 표시로 전환됩니다. 데이터는 보존되어 감사 시 열람할 수 있으며, 목록과 분석 화면에서는 사라집니다." },
+      { body: t("itSwitchesToTheData") },
     );
   }
 
   function removeGroup(groupId: string, name: string) {
     confirm(
-      `${name} 삭제`,
+      t("deleteP12", { p1: name }),
       async () => {
         try {
           await api.delete(`/api/our-company/groups/${groupId}`);
           setSelectedGroup(null);
           void loadGroups();
         } catch (err) {
-          setError(err instanceof Error ? err.message : "그룹 삭제 실패");
+          setError(err instanceof Error ? err.message : t("failedToDeleteTheGroup"));
         }
       },
-      { body: "이 그룹과 소속 계열사 전체가 삭제 표시로 전환됩니다. 데이터는 보존되어 감사 시 열람할 수 있습니다." },
+      { body: t("thisGroupAndAllIts") },
     );
   }
 
@@ -209,7 +210,7 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
   async function saveMemberEdit() {
     if (!selectedGroup || !editMember || savingMember) return;
     const name = editMember.name.trim();
-    if (!name) { setError("회사명은 필수입니다."); return; }
+    if (!name) { setError(t("theCompanyNameIsRequired")); return; }
     setSavingMember(true);
     setError(null);
     try {
@@ -221,7 +222,7 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
       setEditMember(null);
       loadGroup(selectedGroup.group.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "계열사 정보 저장 실패");
+      setError(err instanceof Error ? err.message : t("failedToSaveAffiliateInformation"));
     } finally {
       setSavingMember(false);
     }
@@ -236,7 +237,7 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
       await api.patch(`/api/our-company/groups/${selectedGroup.group.id}/members`, { member_id: memberId, role });
       loadGroup(selectedGroup.group.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "역할 변경 실패");
+      setError(err instanceof Error ? err.message : t("failedToChangeTheRole"));
       loadGroup(selectedGroup.group.id); // 실패 시 서버 값으로 되돌린다
     } finally {
       setSavingRole(null);
@@ -252,7 +253,7 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
       const res = await api.upload<{ original_name: string }>(`/api/our-company/members/${memberId}/upload`, form);
       setUploadedNames((prev) => ({ ...prev, [memberId]: res.data.original_name }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "업로드 실패");
+      setError(err instanceof Error ? err.message : t("uploadFailed"));
     } finally {
       setUploadingMember(null);
     }
@@ -279,7 +280,7 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
           err = retryErr;
         }
       }
-      setError(err instanceof Error ? err.message : "분석 시작 실패");
+      setError(err instanceof Error ? err.message : tc("analysisStartFailed"));
       // 시작 실패 시 loading 상태를 지우지 않으면 버튼이 "분석 중..."에 영구 머문다.
       setProfiles((prev) => { const n = { ...prev }; delete n[memberId]; return n; });
     }
@@ -307,7 +308,7 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
       if (r.data.versions) setProfileVersions((prev) => ({ ...prev, [memberId]: r.data.versions! }));
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "프로파일 수정 실패");
+      setError(err instanceof Error ? err.message : t("failedToUpdateTheProfile"));
       return false;
     } finally {
       setEditBusy(false);
@@ -333,7 +334,7 @@ export function useOurGroups(prev: ReturnType<typeof useOurCompanyBase> & Return
         .then((res) => res.data.industries.find((i) => i.name_ko === industry)?.id);
       setS1Requests((prev) => ({ ...prev, [industry]: { status: "created", industryId } }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "S1 분석 요청 실패");
+      setError(err instanceof Error ? err.message : t("failedToRequestS1Analysis"));
       setS1Requests((prev) => { const n = { ...prev }; delete n[industry]; return n; });
     }
   }

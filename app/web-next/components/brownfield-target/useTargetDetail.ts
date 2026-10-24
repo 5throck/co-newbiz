@@ -1,6 +1,7 @@
 "use client";
 
 // Split from app/brownfield/targets/[targetId]/page.tsx (Wave U-3 decomposition); behavior unchanged.
+import { useTranslations } from "next-intl";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { useParams } from "next/navigation";
@@ -11,6 +12,7 @@ import { api } from "../../lib/api.ts";
 import type { DetailResponse, CompanyProfileResp, EvalDraftItem, FinancialsResp, DisclosuresResp } from "./types.ts";
 
 export function useTargetDetail() {
+  const t = useTranslations("components.brownfieldTarget.useTargetDetail");
 
   const { me } = useAuth();
   const canAct = canWriteBusiness(me?.role);
@@ -76,7 +78,7 @@ export function useTargetDetail() {
           universe_note: r.data.target.universe_note ?? "",
         });
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "후보 상세 불러오기 실패"));
+      .catch((e) => setError(e instanceof Error ? e.message : t("loadFailed")));
   }, [targetId]);
   useEffect(() => { loadDetail(); }, [loadDetail]);
 
@@ -126,7 +128,7 @@ export function useTargetDetail() {
       await api.post(`/api/companies/${encodeURIComponent(companyId)}/analyze`, {});
       setCompanyProfile({ profile: null, status: "in_progress" });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "AI 분석 실행 실패");
+      setError(err instanceof Error ? err.message : t("analyzeFailed"));
     } finally {
       setAnalyzing(false);
     }

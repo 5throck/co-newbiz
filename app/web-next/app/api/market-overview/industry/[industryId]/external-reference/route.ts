@@ -20,19 +20,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
 export async function PUT(request: Request, { params }: { params: Promise<{ industryId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "외부 참조 기록은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Recording external references requires the analyst role or higher." });
   if (denied) return denied;
   const { industryId } = await params;
   const body = (await request.json().catch(() => null)) as {
     source_label?: string; source_url?: string | null; target_year?: number;
     external_cagr_pct?: number; external_size_b?: number | null;
   } | null;
-  if (!body?.source_label?.trim()) return badRequest("source_required", "출처(source_label)는 필수입니다 — 출처 없는 참조는 기록하지 않습니다.");
+  if (!body?.source_label?.trim()) return badRequest("source_required", "source_label is required — references without a source are not recorded.");
   if (typeof body.external_cagr_pct !== "number" || body.external_cagr_pct <= 0) {
-    return badRequest("cagr_required", "외부 CAGR(%)는 양수여야 합니다.");
+    return badRequest("cagr_required", "External CAGR (%) must be positive.");
   }
   if (typeof body.target_year !== "number" || body.target_year <= 2026) {
-    return badRequest("year_required", "목표 연도는 2026 이후여야 합니다.");
+    return badRequest("year_required", "The target year must be after 2026.");
   }
   const db = getDb();
   if (!db.query("SELECT id FROM md_industry WHERE id = ?").get(industryId)) return notFound();

@@ -19,21 +19,21 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "경쟁 구조 입력은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Competitive-structure inputs require the analyst role or higher." }); if (denied) return denied; }
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as {
     structure?: string;
     players?: Array<{ name?: string; tier?: string; note?: string; share_pct?: number; evidence_ref?: string }>;
   } | null;
   const structure = body?.structure?.trim();
-  if (!structure) return badRequest("invalid_request", "structure(집중도 요약)가 필요합니다.");
+  if (!structure) return badRequest("invalid_request", "structure (concentration summary) is required.");
   if (!Array.isArray(body?.players) || body.players.length === 0) {
-    return badRequest("invalid_request", "players(주요 플레이어) 1건 이상이 필요합니다.");
+    return badRequest("invalid_request", "At least one entry in players is required.");
   }
   const players: CompetitiveStructure["players"] = [];
   for (const p of body.players) {
     const name = p.name?.trim();
-    if (!name) return badRequest("invalid_request", "각 player에는 name이 필요합니다.");
+    if (!name) return badRequest("invalid_request", "Each player requires a name.");
     if (p.tier !== undefined && !TIERS.has(p.tier)) return badRequest("invalid_request", `tier must be one of ${[...TIERS].join("|")}.`);
     if (p.share_pct !== undefined && (typeof p.share_pct !== "number" || p.share_pct < 0 || p.share_pct > 100)) {
       return badRequest("invalid_request", "share_pct must be a number between 0 and 100.");
@@ -56,10 +56,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const latest = db
     .query("SELECT version_no, payload FROM market_sizing_version WHERE analysis_id = ? ORDER BY version_no DESC LIMIT 1")
     .get(id) as { version_no: number; payload: string } | null;
-  if (!latest) return badRequest("no_version", "완료된 분석 버전이 없습니다 — 먼저 산업 시장분석을 실행하세요.");
+  if (!latest) return badRequest("no_version", "No completed analysis version — run the industry market analysis first.");
   let parsed: { methodology?: string; matrix?: SizingMatrix; stepSummaries?: unknown[] };
-  try { parsed = JSON.parse(latest.payload); } catch { return badRequest("invalid_payload", "최신 버전 payload를 읽을 수 없습니다."); }
-  if (!parsed.matrix) return badRequest("invalid_payload", "최신 버전에 매트릭스가 없습니다.");
+  try { parsed = JSON.parse(latest.payload); } catch { return badRequest("invalid_payload", "Cannot read the latest version payload."); }
+  if (!parsed.matrix) return badRequest("invalid_payload", "The latest version has no matrix.");
 
   const matrix: SizingMatrix = { ...parsed.matrix, competitive: { structure, players } };
   const now = new Date().toISOString();

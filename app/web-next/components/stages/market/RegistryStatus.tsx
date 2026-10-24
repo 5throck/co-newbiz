@@ -4,11 +4,12 @@
 import { useMemo } from "react";
 import { REGISTRY } from "../../../lib/market-sizing.ts";
 import type { IndustryDetail } from "./types.ts";
+import { useTranslations } from "next-intl";
 
 export function RegistryStatus({ sizing, referenceImplementation }: {
   sizing: IndustryDetail["sizing"];
   referenceImplementation: string;
-}) {
+}) {const t = useTranslations("stages.s1.registryStatus"); const tc = useTranslations("common");
   const counts = useMemo(() => {
     const byPrefix: { baseline_2026: number; cagr: number } = { baseline_2026: 0, cagr: 0 };
     for (const a of sizing?.assumptions ?? []) {
@@ -23,8 +24,7 @@ export function RegistryStatus({ sizing, referenceImplementation }: {
   if (!sizing || sizing.run_label !== REGISTRY.runLabel) {
     return (
       <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-caption)]">
-        아직 가정 레지스트리에 등록되지 않았습니다. 분석 확정 후 {referenceImplementation} 패턴으로
-        recordAssumption 등록하면 이 화면에 등록 상태가 표시됩니다.
+        {t("notYetRegisteredInThe")} {referenceImplementation} {t("patternTheRegistrationStatusAppears")}
       </p>
     );
   }
@@ -33,28 +33,27 @@ export function RegistryStatus({ sizing, referenceImplementation }: {
     <div>
       <div className="driver-derivation mb-3">
         <div className="driver-derivation-step">
-          <span className={`status-chip ${ok ? "status-green" : "status-amber"}`}>{ok ? "등록 완료" : "불일치"}</span>
+          <span className={`status-chip ${ok ? "status-green" : "status-amber"}`}>{ok ? t("registered") : t("mismatch")}</span>
           <span>run <code className="text-[length:var(--fs-caption)]">{sizing.run_label}</code></span>
         </div>
         <span className="driver-arrow">→</span>
         <div className="driver-derivation-step">
           <span className="status-chip status-in-progress">baseline {counts.baseline_2026}/{REGISTRY.expectedRows.baseline}</span>
-          <span>2026 기준선 ($B)</span>
+          <span>{t("n2026Baseline")}</span>
         </div>
         <span className="driver-arrow">→</span>
         <div className="driver-derivation-step">
           <span className="status-chip status-in-progress">cagr {counts.cagr}/{REGISTRY.expectedRows.cagr}</span>
-          <span>비관/기본/낙관 밴드</span>
+          <span>{t("pessimisticBaseOptimisticBand")}</span>
         </div>
       </div>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-        총 {counts.total} row · 전부 kind='assumed' (rationale + anchor_ref 필수, FR-DATA-07) · TTL {REGISTRY.ttlDays}일 ·
-        append-only (수정 = 새 row)
+        {t("total")} {counts.total} {t("rowAllAssumedRationaleRequired")} {REGISTRY.ttlDays}{t("daysEditsNewRow")}
       </p>
       <details className="mt-2">
-        <summary className="text-[length:var(--fs-caption)] cursor-pointer text-[color:var(--accent)]">등록 row 전체 보기 ({counts.total}개)</summary>
-        <table className="data-table mt-2" aria-label="레지스트리 등록 row">
-          <caption className="sr-only">레지스트리 등록 row 목록</caption>
+        <summary className="text-[length:var(--fs-caption)] cursor-pointer text-[color:var(--accent)]">{t("viewAllRegistryRows")}{counts.total}{tc("countSuffixParen")}</summary>
+        <table className="data-table mt-2" aria-label={t("registryRow")}>
+          <caption className="sr-only">{t("registryRowList")}</caption>
           <thead>
             <tr><th scope="col">assumption_key</th><th scope="col">kind</th><th scope="col">value</th><th scope="col">anchor_ref</th><th scope="col">TTL</th></tr>
           </thead>

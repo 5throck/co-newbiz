@@ -21,7 +21,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
 export async function POST(request: Request, { params }: { params: Promise<{ industryId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "스윕 실행은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Sweep execution requires the analyst role or higher." });
   if (denied) return denied;
   const { industryId } = await params;
   const body = (await request.json().catch(() => null)) as { samples?: number; seed?: number } | null;
@@ -30,26 +30,26 @@ export async function POST(request: Request, { params }: { params: Promise<{ ind
 
   const reference = resolveExternalReference(db, industryId);
   if (!reference) {
-    return badRequest("reference_required", "외부 참조가 기록되지 않았습니다 — 먼저 출처와 함께 참조를 기록하세요.");
+    return badRequest("reference_required", "No external reference recorded — record the reference with its source first.");
   }
   // 최신 완료 payload의 바텀업 CAGR·앵커·셀 구조를 읽는다.
   const analysis = db
     .query("SELECT id FROM market_sizing_analysis WHERE industry_id = ? AND status = 'completed' ORDER BY created_at DESC LIMIT 1")
     .get(industryId) as { id: string } | undefined;
-  if (!analysis) return badRequest("analysis_required", "완료된 시장분석이 없습니다 — 먼저 S1 분석을 실행하세요.");
+  if (!analysis) return badRequest("analysis_required", "No completed market analysis — run the S1 analysis first.");
   const version = db
     .query("SELECT payload FROM market_sizing_version WHERE analysis_id = ? ORDER BY version_no DESC LIMIT 1")
     .get(analysis.id) as { payload: string } | undefined;
-  if (!version) return badRequest("version_required", "완료된 버전이 없습니다.");
+  if (!version) return badRequest("version_required", "No completed version exists.");
   const matrix = (JSON.parse(version.payload) as { matrix?: { consistency?: { bottomUpCagr?: number }; anchor?: { total?: number }; segments?: Array<{ code: string; label: string }>; baseline2026?: Record<string, Record<string, number>>; cagrBase?: Record<string, Record<string, number>>; bandOverrides?: Record<string, { down: number; up: number }> } }).matrix ?? {};
   const bottomUp = matrix.consistency?.bottomUpCagr;
-  if (typeof bottomUp !== "number") return badRequest("cagr_missing", "최신 버전에 bottomUpCagr가 없습니다 — 재분석이 필요합니다.");
+  if (typeof bottomUp !== "number") return badRequest("cagr_missing", "The latest version has no bottomUpCagr — a re-analysis is needed.");
   const anchorTotal = matrix.anchor?.total;
   const baseline = matrix.baseline2026;
   const cagrBase = matrix.cagrBase;
   const segments = matrix.segments ?? [];
   if (!anchorTotal || !baseline || !cagrBase || !segments.length) {
-    return badRequest("matrix_incomplete", "최신 버전 매트릭스에 앵커·셀 데이터가 없습니다.");
+    return badRequest("matrix_incomplete", "The latest version matrix has no anchor/cell data.");
   }
   const cells = segments.flatMap((seg) =>
     Object.keys(baseline).map((region) => ({

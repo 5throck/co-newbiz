@@ -51,7 +51,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const explicitCycle = new URL(request.url).searchParams.get("review_cycle");
   if (explicitCycle !== null && !isValidReviewCycle(explicitCycle)) {
-    return badRequest("invalid_request", "review_cycle는 YYYY-Q[1-4] 형식이어야 합니다 (예: 2026-Q3).");
+    return badRequest("invalid_request", "review_cycle must match YYYY-Q[1-4] (e.g. 2026-Q3).");
   }
 
   // The shared rollup core, scoped to THIS project. Every pure call — one

@@ -92,13 +92,13 @@ describe("GreenfieldStage tab structure (source)", () => {
     expect(slice('panel("entry"', 'panel("capability"')).toContain("<EntryStrategySection");
     const cap = slice('panel("capability"', 'panel("staffing"');
     expect(cap).toContain("<CapabilityJudgementEditor");
-    expect(cap).toContain("S3 레지스터에 저장");
+    expect(cap).toContain('t("saveToTheS3Register")'); // i18n: stages.s5.stage.saveToTheS3Register
     const staff = slice('panel("staffing"', 'panel("investment"');
     expect(staff).toContain("<StaffingPlanSection");
-    expect(staff).toContain("이 버튼은 인력 운영 계획과 함께 투자비 항목 전체를 저장합니다");
-    expect(staff).toContain('{linesSaveButton("인건비 항목 저장")}');
+    expect(staff).toContain('t("thisButtonSavesTheInvestment")'); // i18n: stages.s5.stage.thisButtonSavesTheInvestment
+    expect(staff).toContain('{linesSaveButton(t("saveLaborCostItems"))}');
     const inv = slice('panel("investment"', 'panel("simulation"');
-    for (const s of ["invest-source-summary", "s5-horizon", "<CapabilityCostBlock", 'data-testid="invest-item-list"', 'data-testid="invest-summary"', "투자비 항목 추천", '{linesSaveButton("투자비 항목 저장")}']) expect(inv).toContain(s);
+    for (const s of ["invest-source-summary", "s5-horizon", "<CapabilityCostBlock", 'data-testid="invest-item-list"', 'data-testid="invest-summary"', 't("investmentItemRecommendation")', '{linesSaveButton(t("saveInvestmentItems"))}']) expect(inv).toContain(s);
     expect(inv).not.toContain("<StaffingPlanSection");
     expect(inv).not.toContain("invest-summary-by-category");
     expect(inv).not.toContain("분류별 투자비 (단위");
@@ -106,9 +106,9 @@ describe("GreenfieldStage tab structure (source)", () => {
     // then 역량 해소 비용, then 투자비 요약 (tiles, charts, yearly table) last; no by-category table.
     const at = (needle: string) => inv.indexOf(needle);
     expect(at('data-testid="invest-source-summary"')).toBeLessThan(at('data-testid="invest-reco"'));
-    expect(at('data-testid="invest-reco"')).toBeLessThan(at("투자비 항목 (S8 사업성 분석 입력)"));
+    expect(at('data-testid="invest-reco"')).toBeLessThan(at('t("investmentItemsS8BusinessCase")'));
     // Decider 2026-10-15: add-item control directly under the heading (above the table); save area below the table, footer and notes.
-    expect(at("s5-horizon")).toBeLessThan(at("\uFF0B \uD56D\uBAA9 \uCD94\uAC00"));
+    expect(at("s5-horizon")).toBeLessThan(at('t("addItem")'));
     expect(at("\uFF0B \uD56D\uBAA9 \uCD94\uAC00")).toBeLessThan(at('data-testid="invest-item-list"'));
     expect(at('data-testid="invest-item-list"')).toBeLessThan(at('data-testid="invest-item-footer"'));
     expect(at('data-testid="invest-item-footer"')).toBeLessThan(at('data-testid="invest-excluded-note"'));
@@ -130,9 +130,10 @@ describe("GreenfieldStage tab structure (source)", () => {
     expect(sim).toContain("data-testid={`invest-simulation-${k}`}");
     expect(sim).toContain('data-testid="invest-simulation-schedule"');
     expect(sim).toContain("data-testid={`invest-simulation-row-${k}`}");
-    expect(sim).toContain("{BAND_LABEL[k]}");
+    expect(sim).toContain("{BAND_LABEL(tr)[k]}");
     const rev = stage.slice(stage.indexOf('panel("review"'));
-    for (const s of ['aria-label="평가 근거"', "평가 기록 (사람이 확정)", "gf-checklist", "<GateDecisionPanel", 'gates={["pre_fs"]}']) expect(rev).toContain(s);
+    // i18n: review-tab copy moved to the catalog (stages.s5.stage.*) — pin the keys.
+    for (const s of ['t("evaluationEvidence")', 't("evaluationRecordConfirmedByA2")', "gf-checklist", "<GateDecisionPanel", 'gates={["pre_fs"]}']) expect(rev).toContain(s);
   });
   test("one save handler for 투자비 항목 저장 (no duplicated logic)", () => {
     expect(stage.match(/void saveInvestmentLines\(\)/g)?.length).toBe(1);

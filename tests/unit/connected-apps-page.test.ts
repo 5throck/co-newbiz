@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Connected-apps personal API tokens UI — frontend Row 2 source-reading tests
  * (docs/designs/2026-10-11-self-service-api-tokens-design.md §4.2, §7).
@@ -6,8 +6,13 @@
  * The page is a client component bound to browser APIs, so these tests read
  * the source and assert the security-relevant invariants statically: the
  * list renders display_id (never the raw token id as an identifier), the
- * one-time reveal modal exists with focus trap + copy feedback + Korean
+ * one-time reveal modal exists with focus trap + copy feedback + the
  * "shown once" warning, and the cnb_pat_ prefix is shown masked.
+ *
+ * i18n (design 2026-10-23-i18n-ui-adoption, T3-3 batch): page text moved into
+ * the pages.connectedApps catalog namespace, so literal pins below resolve as
+ * key call site in the page + ko master catalog value (navigation.test.ts
+ * precedent).
  */
 
 import { describe, expect, test } from "bun:test";
@@ -18,13 +23,18 @@ const PAGE = readFileSync(
   "utf8",
 );
 
+// ko is the master catalog (design D2) — literal contracts pin the ko value.
+const koCatalog = await import("../../app/web-next/locales/ko.json");
+const ko = (key: string): string =>
+  key.split(".").reduce<unknown>((acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined), koCatalog) as string;
+
 describe("connected-apps personal API tokens UI", () => {
   test("list identifier uses display_id, not the raw token id", () => {
     expect(PAGE).toContain("display_id");
     // masked display: prefix + bullets + last 6 — the raw id never renders
     expect(PAGE).toContain("cnb_pat_••••");
-    expect(PAGE).toMatch(/maskedId\(t\.display_id\)/);
-    expect(PAGE).not.toMatch(/<td>\s*\{t\.id\}/);
+    expect(PAGE).toMatch(/maskedId\(tok\.display_id\)/);
+    expect(PAGE).not.toMatch(/<td>\s*\{tok\.id\}/);
   });
 
   test("one-time reveal modal exists with dialog semantics and focus trap", () => {
@@ -35,8 +45,10 @@ describe("connected-apps personal API tokens UI", () => {
   });
 
   test("modal warns the token is shown only once and is cleared on close", () => {
-    expect(PAGE).toContain("다시는 보여주지 않습니다");
-    expect(PAGE).toContain("저장했습니다");
+    expect(ko("pages.connectedApps.revealBodyTail")).toContain("다시는 보여주지 않습니다");
+    expect(PAGE).toContain('t("revealBodyTail")');
+    expect(ko("pages.connectedApps.revealSavedButton")).toBe("저장했습니다");
+    expect(PAGE).toContain('t("revealSavedButton")');
     // secret lives in state only and is dropped by the close handler
     expect(PAGE).toMatch(/setRevealed\(null\)/);
     expect(PAGE).not.toMatch(/localStorage|sessionStorage/);
@@ -44,7 +56,8 @@ describe("connected-apps personal API tokens UI", () => {
 
   test("copy feedback is announced via role=status", () => {
     expect(PAGE).toContain('role="status"');
-    expect(PAGE).toContain("복사되었습니다");
+    expect(ko("pages.connectedApps.copiedOk")).toBe("복사되었습니다");
+    expect(PAGE).toContain('t("copiedOk")');
     expect(PAGE).toContain("navigator.clipboard.writeText");
   });
 
@@ -57,12 +70,13 @@ describe("connected-apps personal API tokens UI", () => {
   });
 
   test("client-side label validation blocks an empty submit before the network", () => {
-    expect(PAGE).toMatch(/라벨을 입력해 주세요/);
+    expect(ko("pages.connectedApps.errLabelRequired")).toMatch(/라벨을 입력해 주세요/);
+    expect(PAGE).toContain('t("errLabelRequired")');
     expect(PAGE).toMatch(/if \(!label\.trim\(\)\)/);
     expect(PAGE).toMatch(/e\.preventDefault\(\)/);
   });
 
-  test("backend error codes map to actionable Korean text under role=alert", () => {
+  test("backend error codes map to actionable localized text under role=alert", () => {
     for (const code of ["session_required", "token_limit_reached", "rate_limited", "invalid_request"]) {
       expect(PAGE).toContain(`"${code}"`);
     }
@@ -71,19 +85,24 @@ describe("connected-apps personal API tokens UI", () => {
 
   test("viewer accounts get a read-only explanation instead of the issue form", () => {
     expect(PAGE).toContain("canWriteBusiness");
-    expect(PAGE).toContain("읽기 전용 토큰");
+    expect(ko("pages.connectedApps.viewerNote")).toContain("읽기 전용 토큰");
+    expect(PAGE).toContain('t("viewerNote")');
   });
 
   test("revoke confirms irreversibility before api.delete", () => {
-    expect(PAGE).toMatch(/되돌릴 수 없으며/);
+    expect(ko("pages.connectedApps.tokenRevokeBody")).toMatch(/되돌릴 수 없으며/);
+    expect(PAGE).toContain('t("tokenRevokeBody")');
     expect(PAGE).not.toMatch(/window\.confirm/);
-    expect(PAGE).toMatch(/confirm\([\s\S]*?doRevoke\(t\)[\s\S]*?api\.delete\(`\/api\/tokens/);
+    expect(PAGE).toMatch(/confirm\([\s\S]*?doRevoke\(tok\)[\s\S]*?api\.delete\(`\/api\/tokens/);
   });
 
   test("status chips pair icon + text, never color alone", () => {
     expect(PAGE).toContain("TOKEN_STATUS");
     expect(PAGE).toMatch(/aria-hidden="true">\{s\.icon\}/);
-    for (const label of ["활성", "만료됨", "해지됨"]) expect(PAGE).toContain(label);
+    expect(ko("pages.connectedApps.statusActive")).toBe("활성");
+    expect(ko("pages.connectedApps.statusExpired")).toBe("만료됨");
+    expect(ko("pages.connectedApps.statusRevoked")).toBe("해지됨");
+    expect(PAGE).toMatch(/\{t\(s\.key\)\}/);
   });
 
   // Post-merge follow-up (2026-10-11-ui-label-and-mobile-table-sweep): the
@@ -102,9 +121,9 @@ describe("connected-apps personal API tokens UI", () => {
   });
 
   test("token list date cells keep nowrap so timestamps do not break mid-line", () => {
-    expect(PAGE).toMatch(/<td className="cell-nowrap">\{fmtShort\(t\.created_at\)\}<\/td>/);
-    expect(PAGE).toMatch(/<td className="cell-nowrap">\{t\.expires_at/);
-    expect(PAGE).toMatch(/<td className="cell-nowrap">\{fmtShort\(t\.last_used_at\)\}<\/td>/);
+    expect(PAGE).toMatch(/<td className="cell-nowrap">\{fmtShort\(tok\.created_at, locale\)\}<\/td>/);
+    expect(PAGE).toMatch(/<td className="cell-nowrap">\{tok\.expires_at/);
+    expect(PAGE).toMatch(/<td className="cell-nowrap">\{tok\.last_used_at \? fmtShort\(tok\.last_used_at, locale\) : t\("neverUsed"\)\}<\/td>/);
   });
 
   test("token table uses explicit column sizing: shared system (table-fixed-pct + ColGroup), ellipsis label, scroll wrapper", () => {
@@ -113,11 +132,11 @@ describe("connected-apps personal API tokens UI", () => {
     // so the old auto-layout/min-width CSS assertions no longer apply.
     expect(PAGE).toContain("pat-token-table");
     expect(PAGE).toMatch(/<div className="table-scroll"[\s\S]*pat-token-table/);
-    expect(PAGE).toMatch(/title=\{t\.label\}/);
+    expect(PAGE).toMatch(/title=\{tok\.label\}/);
     expect(PAGE).toContain("table-fixed-pct tmin-64");
     expect(PAGE).toContain("ColGroup widths={TOKEN_COL_PCT}");
     expect(PAGE).toMatch(/const TOKEN_COL_PCT = \[22, 16, 12, 14, 10, 10, 10, 6\] as const/);
-    expect(PAGE).toMatch(/<td className="cell-truncate" title=\{t\.label\}>/);
+    expect(PAGE).toMatch(/<td className="cell-truncate" title=\{tok\.label\}>/);
     expect(PAGE).toContain('dateStyle: "short"');
   });
 });

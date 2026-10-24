@@ -7,6 +7,7 @@
 // 항상 사람이 select로 기록한다).
 // Split from app/brownfield/targets/[targetId]/page.tsx (Wave U-3 decomposition); behavior unchanged.
 import { Suspense } from "react";
+import { useTranslations } from "next-intl";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
 import { isFinancialDataRef } from "../../../../lib/brownfield-financial-rubric.ts";
 import { ListBackButton } from "../../../../components/ListBackButton.tsx";
@@ -18,7 +19,7 @@ import { TargetAiProfileTab } from "../../../../components/brownfield-target/Tar
 import { TargetFinancialsTab, TargetDisclosuresTab, TargetSourcesTab } from "../../../../components/brownfield-target/TargetDataTabs.tsx";
 import { TargetPrecheckTab } from "../../../../components/brownfield-target/TargetPrecheckTab.tsx";
 import { TargetEvalTab } from "../../../../components/brownfield-target/TargetEvalTab.tsx";
-import { STATUS_LABEL, PROFILE_TABS } from "../../../../components/brownfield-target/constants.ts";
+import { STATUS_KEY, PROFILE_TABS } from "../../../../components/brownfield-target/constants.ts";
 import type { ScreeningItemEvidence } from "../../../../components/brownfield-target/types.ts";
 
 export default function BrownfieldTargetPage() {
@@ -30,6 +31,9 @@ export default function BrownfieldTargetPage() {
 }
 
 export function TargetDetailView() {
+  const tr = useTranslations("pages.brownfieldTargetDetail");
+  const tk = useTranslations("components.brownfieldTarget.constants");
+  const tc = useTranslations("common");
   const h0 = useTargetDetail();
   const h1 = useTargetActions({ ...h0 });
   const ctx = { ...h0, ...h1 };
@@ -39,8 +43,8 @@ export function TargetDetailView() {
   if (!detail) {
     return (
       <main>
-        <StageFrame stageId={["S6", "S7"]} track="brownfield" heading="S6/S7 대상발굴·선정 — 후보 상세" />
-        {error ? <p role="alert" className="text-[color:var(--red-fg)]">{error}</p> : <p className="text-[color:var(--muted-fg)]">불러오는 중...</p>}
+        <StageFrame stageId={["S6", "S7"]} track="brownfield" heading={tr("detailHeading")} />
+        {error ? <p role="alert" className="text-[color:var(--red-fg)]">{error}</p> : <p className="text-[color:var(--muted-fg)]">{tc("loading")}</p>}
       </main>
     );
   }
@@ -76,7 +80,7 @@ export function TargetDetailView() {
   );
   return (
     <main>
-      <StageFrame stageId={["S6", "S7"]} track="brownfield" heading="S6/S7 대상발굴·선정 — 후보 상세">
+      <StageFrame stageId={["S6", "S7"]} track="brownfield" heading={tr("detailHeading")}>
         {opportunity.name} · {t.company_name}
         {t.dart_corp_code ? <> · DART <code className="dd-item-id">{t.dart_corp_code}</code></> : null}
       </StageFrame>
@@ -84,24 +88,24 @@ export function TargetDetailView() {
       {error && <p role="alert" className="text-[color:var(--red-fg)] mb-2">{error}</p>}
 
       {/* ── 헤더 카드 — 상태·점수 요약 + 목록 복귀 ── */}
-      <section aria-label="후보 요약" className="market-section">
+      <section aria-label={tr("summarySectionAria")} className="market-section">
         <div className="card">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-2">
               <h2 className="text-[1rem] mb-0">{t.company_name}</h2>
               <span className={`status-chip ${t.status === "shortlisted" ? "status-green" : t.status === "excluded" ? "status-red" : "status-not-started"}`}>
-                {STATUS_LABEL[t.status]}{t.status === "shortlisted" && t.rank ? ` #${t.rank}` : ""}
+                {tk(STATUS_KEY[t.status])}{t.status === "shortlisted" && t.rank ? ` #${t.rank}` : ""}
               </span>
             </div>
-            <ListBackButton href={`/brownfield?opportunity=${encodeURIComponent(opportunity.id)}`} label="후보 전체 목록 목록으로" />
+            <ListBackButton href={`/brownfield?opportunity=${encodeURIComponent(opportunity.id)}`} label={tr("backToListLabel")} />
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`status-chip ${scoreChip(scores.financial.score)}`} title="재무 평가 100점 가중 점수">재무 {scores.financial.score ?? "—"}</span>
-            <span className={`status-chip ${scoreChip(scores.technical.score)}`} title="기술 평가 100점 가중 점수(S3 필요 역량 기준)">기술 {scores.technical.score ?? "—"}</span>
-            <span className={`status-chip ${scoreChip(scores.combined)}`} title="재무·기술 종합 점수(financial·technical 평균)">
-              종합 {scores.combined != null ? `${scores.combined}점 / 100점` : "— 판정 필요"}
+            <span className={`status-chip ${scoreChip(scores.financial.score)}`} title={tr("financialScoreTitle")}>{tr("financialScore", { p1: scores.financial.score ?? "—" })}</span>
+            <span className={`status-chip ${scoreChip(scores.technical.score)}`} title={tr("technicalScoreTitle")}>{tr("technicalScore", { p1: scores.technical.score ?? "—" })}</span>
+            <span className={`status-chip ${scoreChip(scores.combined)}`} title={tr("combinedScoreTitle")}>
+              {tr("combinedPrefix")} {scores.combined != null ? tr("scoreOf100", { p1: scores.combined }) : tr("scorePending")}
             </span>
-            {t.exclusion_reason && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">제외 사유: {t.exclusion_reason}</span>}
+            {t.exclusion_reason && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{tr("exclusionReason", { p1: t.exclusion_reason })}</span>}
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-3">
             {canAct && t.status !== "shortlisted" && (
@@ -109,39 +113,39 @@ export function TargetDetailView() {
                 type="button"
                 className="btn-premium btn-sm"
                 disabled={busy || !evalComplete}
-                title={evalComplete ? "최종 후보 목록으로 승격" : "재무·기술 평가를 모두 판정한 뒤 승격할 수 있습니다"}
+                title={evalComplete ? tr("shortlistReadyTitle") : tr("shortlistBlockedTitle")}
                 onClick={() => void shortlist()}
               >
-                최종 후보 목록 승격
+                {tr("shortlistButton")}
               </button>
             )}
             {canAct && t.status !== "excluded" && (
               <span className="flex items-center gap-1">
                 <input
-                  aria-label="제외 사유"
-                  placeholder="제외 사유"
+                  aria-label={tr("excludeReasonAria")}
+                  placeholder={tr("excludeReasonAria")}
                   value={excludeReason}
                   onChange={(e) => setExcludeReason(e.target.value)}
                   className="sizing-new-input sizing-new-input-sm"
                   style={{ flex: "1 1 12rem" }}
                 />
-                <button type="button" className="btn-ghost btn-sm whitespace-nowrap" disabled={busy || !excludeReason.trim()} onClick={() => void exclude()}>제외</button>
+                <button type="button" className="btn-ghost btn-sm whitespace-nowrap" disabled={busy || !excludeReason.trim()} onClick={() => void exclude()}>{tr("excludeButton")}</button>
               </span>
             )}
-            {t.status === "shortlisted" && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">최종 후보 목록 승격 완료 — 순위 조정은 목록 화면에서</span>}
+            {t.status === "shortlisted" && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{tr("shortlistedNote")}</span>}
           </div>
         </div>
       </section>
 
       {/* ── 회사 프로파일 탭 — 그룹/계열사 프로파일과 유사한 구조(사용자 요청,
           2026-09-15). 개요 / 재무 / 공시 / 평가로 회사 정보를 구조화한다. ── */}
-      <section aria-label="회사 프로파일" className="market-section">
-        <SectionToolbar title="회사 프로파일" />
+      <section aria-label={tr("profileSectionTitle")} className="market-section">
+        <SectionToolbar title={tr("profileSectionTitle")} />
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="library-tabs" role="tablist" aria-label="후보 회사 프로파일 섹션">
+          <div className="library-tabs" role="tablist" aria-label={tr("profileTabsAria")}>
             {PROFILE_TABS.filter(([key]) => key !== "precheck" || hasPrecheckData).map(([key, label]) => (
               <button key={key} type="button" role="tab" aria-selected={profileTab === key} className={`library-tab ${profileTab === key ? "library-tab-active" : ""}`} onClick={() => setProfileTab(key)}>
-                {label}
+                {tk(label)}
               </button>
             ))}
           </div>
@@ -153,22 +157,22 @@ export function TargetDetailView() {
               type="button"
               className="btn-ghost btn-sm"
               disabled={analyzing || companyProfile === undefined || companyProfile?.status === "in_progress" || !companyId}
-              title={companyId ? undefined : "회사 마스터가 연결되면 실행할 수 있습니다"}
+              title={companyId ? undefined : tr("analyzeNeedsCompanyTitle")}
               onClick={() => void runCompanyAnalysis()}
             >
-              {companyProfile?.status === "in_progress" ? "분석 중..." : companyProfile?.profile ? "재분석" : "AI 분석 실행"}
+              {companyProfile?.status === "in_progress" ? tr("analyzing") : companyProfile?.profile ? tr("reanalyze") : tr("runAnalysis")}
             </button>
-            <button type="button" className="btn-ghost btn-sm" onClick={() => { setProfileTab("overview"); setEditing(true); }}>정보 수정</button>
+            <button type="button" className="btn-ghost btn-sm" onClick={() => { setProfileTab("overview"); setEditing(true); }}>{tr("editInfoButton")}</button>
             <button
               type="button"
               className="btn-ghost btn-sm"
               onClick={() => confirm(
-                `${t.company_name} 삭제`,
+                tr("deleteConfirmTitle", { p1: t.company_name }),
                 () => void deleteTarget(),
-                { body: "평가 판정을 포함해 완전히 삭제되며 되돌릴 수 없습니다. 사유를 남기고 싶다면 삭제 대신 \"제외\"를 쓰세요.", confirmLabel: "삭제" },
+                { body: tr("deleteConfirmBody"), confirmLabel: tc("delete") },
               )}
             >
-              후보 삭제
+              {tr("deleteButton")}
             </button>
           </span>)}
         </div>

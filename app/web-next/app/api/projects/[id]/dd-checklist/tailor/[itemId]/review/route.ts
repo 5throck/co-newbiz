@@ -25,14 +25,14 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
   if (ctx.via !== "cookie" || currentPrincipal() || AGENT_KEYS.has(ctx.userId)) {
-    return forbidden("human_only", "제안 승인/기각은 사람만 할 수 있습니다 (boundary #2) — 에이전트는 제안만 가능합니다.");
+    return forbidden("human_only", "Only a human can approve/reject proposals (boundary #2) — agents may only propose.");
   }
-  if (ctx.role === "viewer") return forbidden("role_required", "제안 승인/기각은 analyst 역할 이상의 인간 결정입니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Approving/rejecting proposals is a human decision requiring the analyst role or higher.");
   const { id, itemId } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as { decision?: string } | null;
   if (body?.decision !== "approved" && body?.decision !== "rejected") {
-    return badRequest("invalid_request", "decision은 approved | rejected 중 하나입니다.");
+    return badRequest("invalid_request", "decision must be one of: approved | rejected.");
   }
   let result: ReturnType<typeof reviewDdCustomItem>;
   try {

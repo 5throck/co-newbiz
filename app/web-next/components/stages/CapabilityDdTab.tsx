@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { CAPABILITY_DD_COVERAGES, CAPABILITY_DD_COVERAGE_KO, type CapabilityDdCoverage } from "../../lib/capability-dd.ts";
+import { useTranslations } from "next-intl";
 
 interface Row {
   id: string;
@@ -18,7 +19,7 @@ interface Row {
   verdict: { rowId: string; capability: string; coverage: CapabilityDdCoverage; note: string; by: string; at: string } | null;
 }
 
-export function CapabilityDdTab({ projectId }: { projectId: string }) {
+export function CapabilityDdTab({ projectId }: { projectId: string }) {const t = useTranslations("stages.s9.capabilityDdTab"); const tc = useTranslations("common");
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -32,7 +33,7 @@ export function CapabilityDdTab({ projectId }: { projectId: string }) {
       setRows(r.data.rows);
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "필요 역량 등록부를 불러오지 못했습니다.");
+      setError(e instanceof Error ? e.message : t("failedToLoadTheRequired"));
     }
   }, [projectId]);
 
@@ -40,7 +41,7 @@ export function CapabilityDdTab({ projectId }: { projectId: string }) {
 
   async function save(row: Row) {
     const d = drafts[row.id];
-    if (!d?.coverage) { setError("판정(해소/부분 해소/미해소)을 먼저 선택하세요."); return; }
+    if (!d?.coverage) { setError(t("selectAJudgementResolvedPartially")); return; }
     setBusyRow(row.id);
     setError(null);
     setNotice(null);
@@ -48,44 +49,43 @@ export function CapabilityDdTab({ projectId }: { projectId: string }) {
       await api.put(`/api/projects/${encodeURIComponent(projectId)}/capability-dd`, {
         row_id: row.id, coverage: d.coverage, note: d.note,
       });
-      setNotice(`${row.capability}: 판정을 기록했습니다.`);
+      setNotice(t("p1JudgementRecorded", { p1: row.capability }));
       await load();
       setDrafts((cur) => { const n = { ...cur }; delete n[row.id]; return n; });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "판정 저장에 실패했습니다.");
+      setError(e instanceof Error ? e.message : t("failedToSaveTheJudgement"));
     } finally {
       setBusyRow(null);
     }
   }
 
   if (error && !rows) return <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {error}</p>;
-  if (!rows) return <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">불러오는 중…</p>;
+  if (!rows) return <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{tc("loadingEllipsis")}</p>;
   if (rows.length === 0) {
-    return <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">S3 시너지 검토에서 도출된 필요 역량이 없습니다 — 판정할 항목이 없습니다.</p>;
+    return <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("noRequiredCapabilitiesDerivedFrom")}</p>;
   }
   const pending = rows.filter((r) => !r.verdict && !drafts[r.id]).length;
 
   return (
-    <section className="market-section sizing-step mt-3" aria-label="필요 역량 검증" data-testid="capability-dd">
-      <h3 className="sizing-step-title text-[length:var(--fs-body)]">필요 역량 검증 (capability-dd)</h3>
+    <section className="market-section sizing-step mt-3" aria-label={t("requiredCapabilityVerification")} data-testid="capability-dd">
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]">{t("requiredCapabilityVerification2")}</h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-        그린필드는 S5 자체 진출 단계에서 필요 역량을 검증합니다 — 브라운필드는 이 인수가 S3 필요 역량 격차를{" "}
-        실제로 메우는지 <b>S9 실사에서 판정</b>합니다. 미해소분의 해소 비용이 채택 케이스 비용에 반영되었는지도 확인하세요
-        (교차검증 경고는 다음 슬라이스). 판정 기록은 사람만 합니다 (경계 #2).
-        {pending > 0 && <span className="status-chip status-amber ml-1">미판정 {pending}건</span>}
+        {t("greenfieldVerifiesRequiredCapabilitiesAt")}{" "}
+        {t("whetherItActuallyFillsThe")} <b>{t("judgedInS9DueDiligence")}</b>{t("alsoCheckWhetherTheUnresolved")}
+        {pending > 0 && <span className="status-chip status-amber ml-1">{tc("unjudged")} {pending}{tc("countUnit")}</span>}
       </p>
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
       {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {notice}</p>}
-      <div className="table-scroll" role="region" aria-label="필요 역량 판정 표" tabIndex={0}>
-        <table className="data-table dd-table" aria-label="필요 역량 판정">
-          <caption className="sr-only">필요 역량 판정 (S3 등록부 기준)</caption>
+      <div className="table-scroll" role="region" aria-label={t("requiredCapabilityJudgementTable")} tabIndex={0}>
+        <table className="data-table dd-table" aria-label={t("requiredCapabilityJudgement")}>
+          <caption className="sr-only">{t("requiredCapabilityJudgementS3Register")}</caption>
           <thead>
             <tr>
-              <th scope="col">필요 역량</th>
-              <th scope="col">필요 수준 요약</th>
-              <th scope="col">판정</th>
-              <th scope="col">근거 노트</th>
-              <th scope="col">기록</th>
+              <th scope="col">{tc("requiredCapability")}</th>
+              <th scope="col">{t("requiredLevelSummary")}</th>
+              <th scope="col">{tc("judgement")}</th>
+              <th scope="col">{t("evidenceNote")}</th>
+              <th scope="col">{tc("record")}</th>
             </tr>
           </thead>
           <tbody>
@@ -94,26 +94,26 @@ export function CapabilityDdTab({ projectId }: { projectId: string }) {
               const effCoverage = d?.coverage || (r.verdict?.coverage as CapabilityDdCoverage | undefined) || "";
               return (
                 <tr key={r.id}>
-                  <td data-label="필요 역량" className="font-semibold">{r.capability}</td>
-                  <td data-label="필요 수준" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{r.requiredNote || "—"}</td>
-                  <td data-label="판정">
+                  <td data-label={tc("requiredCapability")} className="font-semibold">{r.capability}</td>
+                  <td data-label={tc("requiredLevel")} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{r.requiredNote || "—"}</td>
+                  <td data-label={tc("judgement")}>
                     {r.verdict && !d ? (
                       <>
                         <span className={`status-chip ${r.verdict.coverage === "resolved" ? "status-green" : r.verdict.coverage === "partial" ? "status-amber" : "status-red"}`}>
                           {CAPABILITY_DD_COVERAGE_KO[r.verdict.coverage]}
                         </span>
                         <button type="button" className="btn-ghost btn-sm ml-1" onClick={() => setDrafts((cur) => ({ ...cur, [r.id]: { coverage: r.verdict!.coverage, note: r.verdict!.note ?? "" } }))}>
-                          다시 판정
+                          {t("judgeAgain")}
                         </button>
                       </>
                     ) : (
                       <select
-                        aria-label={`${r.capability} 판정`}
+                        aria-label={t("p1Judgement", { p1: r.capability })}
                         className="sizing-new-input sizing-new-input-sm"
                         value={d?.coverage ?? ""}
                         onChange={(e) => setDrafts((cur) => ({ ...cur, [r.id]: { coverage: e.target.value as CapabilityDdCoverage | "", note: cur[r.id]?.note ?? r.verdict?.note ?? "" } }))}
                       >
-                        <option value="" disabled>판정 선택</option>
+                        <option value="" disabled>{t("selectJudgement")}</option>
                         {CAPABILITY_DD_COVERAGES.map((c) => <option key={c} value={c}>{CAPABILITY_DD_COVERAGE_KO[c]}</option>)}
                       </select>
                     )}
@@ -123,29 +123,29 @@ export function CapabilityDdTab({ projectId }: { projectId: string }) {
                       </span>
                     )}
                   </td>
-                  <td data-label="근거 노트">
+                  <td data-label={t("evidenceNote")}>
                     <input
-                      aria-label={`${r.capability} 근거 노트`}
+                      aria-label={t("p1EvidenceNote", { p1: r.capability })}
                       className="sizing-new-input sizing-new-input-sm w-full"
                       value={d?.note ?? r.verdict?.note ?? ""}
                       onChange={(e) => setDrafts((cur) => ({ ...cur, [r.id]: { coverage: (cur[r.id]?.coverage || (r.verdict?.coverage as CapabilityDdCoverage | undefined) || "") as CapabilityDdCoverage | "", note: e.target.value } }))}
                     />
                   </td>
-                  <td data-label="기록">
+                  <td data-label={tc("record")}>
                     <button
                       type="button"
                       className="btn-ghost btn-sm"
                       disabled={busyRow === r.id}
                       aria-disabled={busyRow === r.id || !d?.coverage ? true : undefined}
-                      title={!d?.coverage ? "판정(해소/부분 해소/미해소)을 먼저 선택하세요" : undefined}
+                      title={!d?.coverage ? t("selectAJudgementResolvedPartially2") : undefined}
                       onClick={() => { if (!d?.coverage) return; void save(r); }}
                     >
-                      {busyRow === r.id ? "기록 중..." : "판정 기록"}
+                      {busyRow === r.id ? tc("recording") : t("judgementRecord")}
                     </button>
                     {effCoverage === "" && (
                       // disabled 대신 aria-disabled — 버튼이 포커스 가능하게 남아
                       // 무엇이 빠졌는지 힌트에 키보드로 도달할 수 있다.
-                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">판정을 먼저 선택하세요</span>
+                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("selectAJudgementFirst")}</span>
                     )}
                   </td>
                 </tr>

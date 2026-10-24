@@ -1,6 +1,5 @@
 // Pure view helpers for the deal overview page (design 2026-10-11-deal-overview-ui-refinement).
 // Client-safe, no React. Every new Korean string below is INTERIM-WORDING (design O-1).
-import { GATE_LABEL } from "./labels.ts";
 import type { FactState, KeyFact, NextAction } from "./deal-overview.ts";
 
 export type RailStatus = "complete" | "current" | "skipped" | "pending";
@@ -101,5 +100,3 @@ export function holdDatesFromHistory(
 export function documentTitle(name: string | null, eyebrow: string): string {
   return name ? `${name} - ${eyebrow}` : eyebrow;
 }
-
-export const gateLabelOf = (g: string): string => GATE_LABEL[g] ?? g;

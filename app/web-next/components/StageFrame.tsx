@@ -14,7 +14,9 @@ import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { CheckCircle2, Circle, MinusCircle } from "lucide-react";
-import { GATE_LABEL, STAGE_META, type StageMetaId, type TrackId } from "../lib/stage-meta.ts";
+import { useTranslations } from "next-intl";
+import { STAGE_META, type StageMetaId, type TrackId } from "../lib/stage-meta.ts";
+import { GATE_LABEL_KEY } from "../lib/label-keys.ts";
 import { STAGE_HANDOFF } from "../lib/stage-handoff.ts";
 import { PrimarySlot } from "./ui.tsx";
 import { useDealContext } from "../lib/use-deal-context.ts";
@@ -349,6 +351,7 @@ export function StageRail({
   /** false = static (overview pages); stage pages keep the sticky default. */
   sticky?: boolean;
 }) {
+  const tr = useTranslations();
   const carrierTrack = useCarrierTrack(track === undefined);
   track = track ?? carrierTrack ?? undefined;
   const linkFor = useStageLinks(track);
@@ -473,9 +476,9 @@ export function StageRail({
               <span
                 key={g}
                 className="status-chip status-amber stage-gate-chip"
-                title={`${GATE_LABEL[g]} 게이트 — 여러 단계가 같은 게이트 심사를 공유합니다. 현재 단계가 속한 게이트 판정(Go/Hold/Kill)을 보여주는 표시입니다.`}
+                title={tr("common.gate.markerTitle", { gate: tr(GATE_LABEL_KEY[g] ?? g) })}
               >
-                게이트 {GATE_LABEL[g]}
+                {tr("common.gate.markerLabel", { gate: tr(GATE_LABEL_KEY[g] ?? g) })}
               </span>
             ))}
           </span>

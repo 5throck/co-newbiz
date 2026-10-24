@@ -14,13 +14,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "프로젝트 추진은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Promoting to a project requires the analyst role or higher.");
   if (ctx.role === "admin") {
     // ADR-0091 역할-화면 분리: admin은 시스템 운영자로 검토/안건 콘텐츠에 접근하지
     // 않는다(visibleProject도 admin을 차단). admin이 승격하면 본인이 lead가
     // 되면서 모든 검토/안건 라우트에서 404로 막히는 모순이 생기므로 진입 단계에서
     // 차단하고 analyst 계정으로 수행하도록 안내한다.
-    return forbidden("role_forbidden", "admin 계정은 검토/안건 콘텐츠에서 분리되어 있습니다(ADR-0091) — analyst 계정으로 승격하세요.");
+    return forbidden("role_forbidden", "Admin accounts are segregated from review/case content (ADR-0091) — promote to an analyst account instead.");
   }
 
   const { id } = await params;
@@ -37,21 +37,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     members?: Array<{ userId?: string; projectRole?: string }>;
   } | null;
   const basis = body?.needToKnowBasis?.trim();
-  if (!basis) return badRequest("invalid_request", "needToKnowBasis는 필수입니다 — 추진자의 멤버십 근거가 기록되지 않으면 추진할 수 없습니다.");
+  if (!basis) return badRequest("invalid_request", "needToKnowBasis is required — promotion is blocked until the promoter's membership basis is recorded.");
   const origin = body?.origin;
   if (origin && !["internal", "external", "hybrid", "joint"].includes(origin)) {
-    return badRequest("invalid_request", "origin은 internal | external | hybrid | joint 중 하나입니다 (ADR-0013).");
+    return badRequest("invalid_request", "origin must be one of: internal | external | hybrid | joint (ADR-0013).");
   }
   const hint = body?.establishment_mode_suggested;
   if (hint != null && !(ESTABLISHMENT_MODES as readonly string[]).includes(hint)) {
-    return badRequest("invalid_request", `establishment_mode_suggested는 ${ESTABLISHMENT_MODES.join(" | ")} 중 하나입니다 (ADR-0167).`);
+    return badRequest("invalid_request", `establishment_mode_suggested must be one of: ${ESTABLISHMENT_MODES.join(" | ")} (ADR-0167).`);
   }
   const members: Array<{ userId: string; projectRole: "lead" | "member" }> = [];
   for (const m of body?.members ?? []) {
     const userId = m?.userId?.trim();
     if (!userId) continue;
     if (!m?.projectRole || !ROLES.has(m.projectRole)) {
-      return badRequest("invalid_request", "members[].projectRole은 lead | member 중 하나입니다.");
+      return badRequest("invalid_request", "members[].projectRole must be one of: lead | member.");
     }
     members.push({ userId, projectRole: m.projectRole as "lead" | "member" });
   }
@@ -78,7 +78,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // A hint only makes sense for a Green Field project; business_unit additionally needs origin internal (D2).
     const effectiveOrigin = origin ?? (route?.track === "greenfield" ? "internal" : undefined);
     if (route?.track !== "greenfield" || (hint === "business_unit" && effectiveOrigin !== "internal") || (hint === "new_entity" && effectiveOrigin !== "internal" && effectiveOrigin !== "joint")) {
-      return badRequest("mode_not_allowed", "설립 방식 제안은 그린필드 프로젝트에만 적용되며, 신규 사업부 추진은 origin이 internal일 때만 가능합니다 (ADR-0167).");
+      return badRequest("mode_not_allowed", "Establishment-mode proposals apply only to greenfield projects; new business-unit pursuit requires origin=internal (ADR-0167).");
     }
   }
 
@@ -108,6 +108,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       if (err.code === "not_found") return notFound();
       return badRequest(err.code, err.message);
     }
-    return badRequest("promotion_failed", err instanceof Error ? err.message : "승격에 실패했습니다.");
+    return badRequest("promotion_failed", err instanceof Error ? err.message : "Promotion failed.");
   }
 }

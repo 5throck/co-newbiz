@@ -18,7 +18,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const d = requireBusinessActor(ctx, "write", { viewerMessage: "시장 규모 단위 선언은 analyst 역할 이상이어야 합니다." }); if (d) return d; }
+  { const d = requireBusinessActor(ctx, "write", { viewerMessage: "Market-size unit declaration requires the analyst role or higher." }); if (d) return d; }
   const { id } = await params;
   const db = getDb();
   const row = db
@@ -26,10 +26,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     .get(id) as { id: string; unit_basis: string | null } | undefined;
   if (!row) return notFound();
   const body = (await request.json().catch(() => null)) as unknown;
-  if (typeof body !== "object" || body === null) return badRequest("invalid_request", "단위 선언 요청이 아닙니다.");
+  if (typeof body !== "object" || body === null) return badRequest("invalid_request", "Not a unit-declaration request.");
   const raw = (body as Record<string, unknown>).unit_basis;
   if (raw !== undefined && raw !== null && (typeof raw !== "string" || !UNIT_BASIS_PATTERN.test(raw))) {
-    return badRequest("invalid_request", "unit_basis는 krw_m_year / units_year / <통화>_[mb]_year 형태여야 합니다 (예: usd_b_year).");
+    return badRequest("invalid_request", "unit_basis must be krw_m_year / units_year / <currency>_[mb]_year (e.g. usd_b_year).");
   }
   const declared: string = typeof raw === "string" ? raw : CONVENTION_UNIT;
   const now = new Date().toISOString();

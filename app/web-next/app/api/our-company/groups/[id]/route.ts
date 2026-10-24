@@ -20,12 +20,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "그룹명 수정은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Renaming groups requires the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { name?: string } | null;
   const name = body?.name?.trim();
-  if (!name) return badRequest("invalid_request", "그룹명은 필수입니다.");
+  if (!name) return badRequest("invalid_request", "Group name is required.");
   const db = getDb();
   if (!db.query("SELECT id FROM company_group WHERE id = ?").get(id)) return notFound();
   db.run("UPDATE company_group SET name = ? WHERE id = ?", [name, id]);
@@ -39,7 +39,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "그룹 삭제는 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Deleting groups requires the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { reason?: string } | null;
@@ -48,7 +48,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     | { id: string; name: string; deleted_at: string | null }
     | undefined;
   if (!group) return notFound();
-  if (group.deleted_at) return badRequest("already_deleted", "이 그룹은 이미 삭제 표시되어 있습니다.");
+  if (group.deleted_at) return badRequest("already_deleted", "This group is already soft-deleted.");
   const now = new Date().toISOString();
   const reason = body?.reason?.trim() || `deleted by ${auth.auth.userId}`;
   db.transaction(() => {

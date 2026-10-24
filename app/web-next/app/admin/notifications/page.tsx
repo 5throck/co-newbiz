@@ -2,6 +2,6 @@
 
 import { AdminConsole } from "../../../components/admin/AdminConsole.tsx";
 
-export default function Admin알림Rag규칙Page() {{
+export default function AdminNotificationRagRulesPage() {{
   return <AdminConsole section="notifications" />;
 }}

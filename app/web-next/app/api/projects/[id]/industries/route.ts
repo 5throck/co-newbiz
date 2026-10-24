@@ -25,19 +25,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "산업 바인딩은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Industry binding requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
 
   const body = (await request.json().catch(() => null)) as { industry_id?: string; rationale?: string } | null;
   const industryId = body?.industry_id?.trim();
   const rationale = body?.rationale?.trim();
-  if (!industryId) return badRequest("industry_id_required", "바인딩할 산업을 지정하세요.");
-  if (!rationale) return badRequest("rationale_required", "바인딩 근거(rationale)는 필수입니다 — 판정 기록 행위입니다.");
+  if (!industryId) return badRequest("industry_id_required", "Specify the industry to bind.");
+  if (!rationale) return badRequest("rationale_required", "Binding rationale is required — it records a judgement act.");
 
   const db = getDb();
   if (!db.query("SELECT id FROM md_industry WHERE id = ?").get(industryId)) {
-    return badRequest("industry_not_found", "산업을 찾을 수 없습니다 — 관리자 콘솔 › 마스터 데이터에 먼저 등록하세요.");
+    return badRequest("industry_not_found", "Industry not found — register it in the admin console master data first.");
   }
   try {
     const row = bindIndustry({
@@ -48,22 +48,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }, db);
     return ok({ binding: row }, 201, { binding_id: row.id });
   } catch (err) {
-    return badRequest("binding_rejected", err instanceof Error ? err.message : "산업 바인딩에 실패했습니다.");
+    return badRequest("binding_rejected", err instanceof Error ? err.message : "Industry binding failed.");
   }
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "산업 바인딩 회수는 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Revoking an industry binding requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
 
   const url = new URL(request.url);
   const industryId = url.searchParams.get("industry_id")?.trim();
   const rationale = url.searchParams.get("rationale")?.trim();
-  if (!industryId) return badRequest("industry_id_required", "회수할 산업을 지정하세요.");
-  if (!rationale) return badRequest("rationale_required", "회수 근거(rationale)는 필수입니다.");
+  if (!industryId) return badRequest("industry_id_required", "Specify the industry to revoke.");
+  if (!rationale) return badRequest("rationale_required", "Revocation rationale is required.");
 
   try {
     const row = retireIndustry({
@@ -74,6 +74,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     }, getDb());
     return ok({ binding: row }, 200, { retired: true });
   } catch (err) {
-    return badRequest("retire_rejected", err instanceof Error ? err.message : "산업 바인딩 회수에 실패했습니다.");
+    return badRequest("retire_rejected", err instanceof Error ? err.message : "Industry binding revocation failed.");
   }
 }

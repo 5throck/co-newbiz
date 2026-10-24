@@ -17,7 +17,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "RAG 재산출은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "RAG recomputation requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id, { includeClosed: true, includeDeleted: true })) return notFound();
 

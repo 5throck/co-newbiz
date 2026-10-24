@@ -2,14 +2,16 @@
 
 // /admin/system-mode (ADR-0133) — production|development 전역 스위치. 관리자
 // 전용 화면(상위 app/admin/layout.tsx가 role을 가른다).
+import { useTranslations } from "next-intl";
 import { SystemModeSection } from "../../../components/admin/SystemModeSection.tsx";
 
 export default function AdminSystemModePage() {
+  const t = useTranslations("admin.systemModePage");
   return (
     <main>
-      <h1>시스템 모드</h1>
+      <h1>{t("h1")}</h1>
       <p className="objective">
-        운영(production)/개발(development) 전역 스위치 — 운영 모드에서는 검토/안건 데이터 삭제를 차단합니다.
+        {t("intro")}
       </p>
       <SystemModeSection />
     </main>

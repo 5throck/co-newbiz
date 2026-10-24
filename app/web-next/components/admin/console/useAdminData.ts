@@ -1,6 +1,7 @@
 "use client";
 
 // Split from components/admin/AdminConsole.tsx (Wave U-3 decomposition); behavior unchanged.
+import { useTranslations } from "next-intl";
 import { useAuth } from "../../../lib/auth-client.tsx";
 import { useChartTheme } from "../../../lib/echarts-theme.ts";
 import { useState, type FormEvent, useEffect } from "react";
@@ -9,6 +10,8 @@ import { useConfirm } from "../../crud.tsx";
 import type { AuditStats, AdminNotificationRow, GlossaryTermRow, GlossaryLintQueue, AdrRow, GovernanceDocRow, ReviewAuditSummary, Section } from "./types.ts";
 
 export function useAdminData({ section }: { section: Section }) {
+  const t = useTranslations("admin.data");
+  const tc = useTranslations("common");
 
   const { me } = useAuth();
   const ct = useChartTheme();
@@ -50,11 +53,11 @@ export function useAdminData({ section }: { section: Section }) {
     setTermFormError(null);
     setTermFormNotice(null);
     if (!termForm.key.trim() || !termForm.ko.trim() || !termForm.en.trim() || !termForm.definition_ko.trim()) {
-      setTermFormError("키, 한글 용어, 영문 용어, 정의는 필수입니다.");
+      setTermFormError(t("errRequiredFields"));
       return;
     }
     if (!termForm.why_it_matters_ko.trim()) {
-      setTermFormError("why_it_matters_ko는 필수입니다 — 정의만으로는 '왜 중요한가'가 전달되지 않습니다 (glossary/_schema.yaml).");
+      setTermFormError(t("errWhyRequired"));
       return;
     }
     setTermFormBusy(true);
@@ -69,14 +72,14 @@ export function useAdminData({ section }: { section: Section }) {
         owner: termForm.owner.trim() || undefined,
         aliases: termForm.aliases.trim() ? termForm.aliases.split(",").map((a) => a.trim()).filter(Boolean) : undefined,
       });
-      setTermFormNotice(`용어가 등록되었습니다: ${res.data.key} (${res.data.file})`);
+      setTermFormNotice(t("termCreatedNotice", { p1: res.data.key, p2: res.data.file }));
       setTermForm({ key: "", ko: "", en: "", definition_ko: "", why_it_matters_ko: "", category: "business", owner: "glossary-curator", aliases: "" });
       api
         .get<GlossaryTermRow[]>("/api/glossary")
         .then((r) => setGlossary(r.data))
         .catch(() => undefined);
     } catch (err) {
-      setTermFormError(err instanceof Error ? err.message : "용어 등록에 실패했습니다.");
+      setTermFormError(err instanceof Error ? err.message : t("termCreateFailed"));
     } finally {
       setTermFormBusy(false);
     }
@@ -89,49 +92,49 @@ export function useAdminData({ section }: { section: Section }) {
       api
         .get<AdminUser[]>("/api/admin/users")
         .then((res) => setUsers(res.data))
-        .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+        .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
     }
     if (section === "audit" && auditStats === null) {
       api
         .get<AuditStats>("/api/admin/audit-log/stats")
         .then((res) => setAuditStats(res.data))
-        .catch((e) => setError(e instanceof Error ? e.message : "감사 통계 조회 실패"));
+        .catch((e) => setError(e instanceof Error ? e.message : t("auditStatsFailed")));
     }
     if (section === "audit" && auditLog === null) {
       api
         .get<AuditLogRow[]>("/api/admin/audit-log?limit=100")
         .then((res) => setAuditLog(res.data))
-        .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+        .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
     }
     if (section === "data-sources" && sources === null) {
       api
         .get<DataSourceRow[]>("/api/admin/data-sources")
         .then((res) => setSources(res.data))
-        .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+        .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
     }
     if (section === "schedule" && jobs === null) {
       api
         .get<ScheduleJobRow[]>("/api/admin/schedule-jobs")
         .then((res) => setJobs(res.data))
-        .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+        .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
     }
     if (section === "database" && retention === null) {
       api
         .get<RetentionPolicyRow[]>("/api/admin/retention")
         .then((res) => setRetention(res.data))
-        .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+        .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
     }
     if (section === "notifications" && notifications === null) {
       api
         .get<AdminNotificationRow[]>("/api/admin/notifications")
         .then((res) => setNotifications(res.data))
-        .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+        .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
     }
     if (section === "glossary" && glossary === null) {
       api
         .get<GlossaryTermRow[]>("/api/glossary")
         .then((res) => setGlossary(res.data))
-        .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+        .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
     }
     if (section === "glossary" && lintQueue === null) {
       api
@@ -143,7 +146,7 @@ export function useAdminData({ section }: { section: Section }) {
       api
         .get<{ adrs: AdrRow[] }>("/api/admin/adr")
         .then((res) => setAdrs(res.data.adrs))
-        .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+        .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
     }
     if (section === "governance" && reviewAudit === null) {
       void api
@@ -155,7 +158,7 @@ export function useAdminData({ section }: { section: Section }) {
       api
         .get<GovernanceDocRow[]>("/api/admin/governance")
         .then((res) => setGovernance(res.data))
-        .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+        .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
     }
   }, [section, users, auditLog, sources, jobs, retention, notifications, glossary, lintQueue, adrs, governance]);
 
@@ -174,11 +177,11 @@ export function useAdminData({ section }: { section: Section }) {
         role: newUserRole,
       });
       setNoticePinned(true);
-      setNotice(`사용자 ${res.data.user_id} 생성 — 임시 비밀번호: ${res.data.initial_password} (한 번만 표시됩니다)`);
+      setNotice(t("userCreatedNotice", { p1: res.data.user_id, p2: res.data.initial_password }));
       setNewUserId("");
       setUsers(null);
     } catch (err) {
-      setNotice(err instanceof Error ? err.message : "생성 실패");
+      setNotice(err instanceof Error ? err.message : t("createFailed"));
     }
   }
   return { setNotice, setError, confirm, setUsers, setNoticePinned, jobs, setJobs, setRetentionFormError, setRetentionNotice, months, tableKey, basis, action, setTableKey, setBasis, setMonths, setRetention, confirmDialog, section, error, notice, noticePinned, createUserAccount, newUserId, setNewUserId, newUserRole, setNewUserRole, users, me, approve, auditStats, ct, auditLog, auditFilters, setAuditFilters, setAuditLog, setShowAuditTable, showAuditTable, sources, retention, setAction, retentionFormError, retentionNotice, notifications, glossary, lintQueue, submitGlossaryTerm, termForm, setTermForm, termFormError, termFormNotice, termFormBusy, reviewAudit, governance, adrs };

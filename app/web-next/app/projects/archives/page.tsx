@@ -7,9 +7,11 @@
 // 서버가 매열람을 감사 기록한다.
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { CLOSURE_TYPE_KEY } from "../../../lib/label-keys.ts";
 import { api } from "../../../lib/api.ts";
 import { useConfirm } from "../../../components/crud.tsx";
-import { closureTypeLabel } from "../../../lib/labels.ts";
+
 import { ColGroup } from "../../../components/ui.tsx";
 
 // 보관 프로젝트 7열 — 번호·종료일·상태는 좁게, 프로젝트명·사유·바로가기에 넉넉한 몫.
@@ -45,13 +47,17 @@ interface ArchiveDetail extends DeletedDealRow {
   market_freeze: Array<{ industryId: string; analysisId: string | null; versionId: string | null; versionNo: number | null }> | null;
 }
 
-const STATUS_LABEL: Record<string, string> = { open: "진행", closed: "마감", archived: "보관" };
+// i18n: status chips resolve through pages.projectsArchives.status* keys at render time.
+const STATUS_KEY: Record<string, string> = { open: "statusOpen", closed: "statusClosed", archived: "statusArchived" };
 
 function fmtDate(iso: string | null): string {
   return iso ? iso.slice(0, 10) : "—";
 }
 
 export function ProjectArchivesView() {
+  const tr = useTranslations();
+  const t = useTranslations("pages.projectsArchives");
+  const tc = useTranslations("common");
   const [archived, setArchived] = useState<ArchiveProjectRow[] | null>(null);
   const [deleted, setDeleted] = useState<DeletedDealRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,11 +68,11 @@ export function ProjectArchivesView() {
     api
       .get<ArchiveProjectRow[]>("/api/projects?status=all")
       .then((r) => setArchived(r.data.filter((p) => p.status !== "open")))
-      .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+      .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
     api
       .get<DeletedDealRow[]>("/api/archive/deals")
       .then((r) => setDeleted(r.data))
-      .catch((err) => setError(err instanceof Error ? err.message : "삭제 이력 불러오기 실패"));
+      .catch((err) => setError(err instanceof Error ? err.message : t("deletedLoadFailed")));
   }
 
   useEffect(() => {
@@ -75,17 +81,17 @@ export function ProjectArchivesView() {
 
   function removeProject(p: ArchiveProjectRow) {
     confirm(
-      `${p.project_name ?? p.project_no} 삭제`,
+      t("deleteConfirmTitle", { name: p.project_name ?? p.project_no }),
       async () => {
         try {
           await api.delete(`/api/projects/${encodeURIComponent(p.id)}`);
           load();
         } catch (err) {
-          setError(err instanceof Error ? err.message : "프로젝트 삭제 실패");
+          setError(err instanceof Error ? err.message : t("deleteFailed"));
         }
       },
       {
-        body: "삭제 표시로 전환됩니다. 데이터는 삭제되지 않고 아카이브에 남아 감사 시 열람할 수 있으며, 모든 진행 화면에서는 사라집니다.",
+        body: t("deleteConfirmBody"),
       },
     );
   }
@@ -96,15 +102,15 @@ export function ProjectArchivesView() {
       const r = await api.get<ArchiveDetail>(`/api/archive/deals/${encodeURIComponent(id)}`);
       setDetail((prev) => ({ ...prev, [id]: r.data }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "상세 조회 실패");
+      setError(err instanceof Error ? err.message : t("detailFailed"));
     }
   }
 
   return (
     <main>
-      <h1>아카이브</h1>
+      <h1>{t("heading")}</h1>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
-        마감·보관한 프로젝트와 삭제 표시된 검토/안건의 원본을 열람합니다. 데이터는 물리적으로 삭제되지 않으며, 열람 기록은 감사 로그에 남습니다.
+        {t("intro")}
       </p>
       {error && (
         <p role="alert" className="text-[color:var(--red-fg)]">
@@ -112,26 +118,26 @@ export function ProjectArchivesView() {
         </p>
       )}
 
-      <section aria-label="보관 프로젝트" className="market-section">
-        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">보관 프로젝트</h2>
+      <section aria-label={t("archivedHeading")} className="market-section">
+        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">{t("archivedHeading")}</h2>
         {archived === null ? (
-          <p>불러오는 중...</p>
+          <p>{tc("loading")}</p>
         ) : archived.length === 0 ? (
-          <p className="text-[color:var(--muted-fg)]">보관 중인 프로젝트가 없습니다.</p>
+          <p className="text-[color:var(--muted-fg)]">{t("emptyArchived")}</p>
         ) : (
-          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+          <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
             <table className="data-table table-fixed-pct tmin-48">
-              <caption className="sr-only">보관 프로젝트 목록</caption>
+              <caption className="sr-only">{t("archivedCaption")}</caption>
               <ColGroup widths={ARCHIVE_COL_PCT} />
               <thead>
                 <tr>
-                  <th className="text-left">프로젝트 번호</th>
-                  <th className="text-left">프로젝트명</th>
-                  <th className="text-left">상태</th>
-                  <th className="text-left">종료일</th>
-                  <th className="text-left">마감 유형</th>
-                  <th className="text-left">사유</th>
-                  <th className="text-left">바로가기</th>
+                  <th className="text-left">{t("thNo")}</th>
+                  <th className="text-left">{t("thName")}</th>
+                  <th className="text-left">{tc("status")}</th>
+                  <th className="text-left">{t("thClosed")}</th>
+                  <th className="text-left">{t("thClosureType")}</th>
+                  <th className="text-left">{t("thReason")}</th>
+                  <th className="text-left">{t("thLinks")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -141,20 +147,20 @@ export function ProjectArchivesView() {
                     <td>{p.project_name ?? "—"}</td>
                     <td>
                       <span className={`status-chip ${p.status === "closed" ? "status-amber" : "status-not-started"}`}>
-                        {STATUS_LABEL[p.status]}
+                        {t(STATUS_KEY[p.status])}
                       </span>
                     </td>
                     <td>{fmtDate(p.closed_at ?? null)}</td>
-                    <td>{closureTypeLabel(p.closure_type)}</td>
+                    <td>{p.closure_type ? tr(CLOSURE_TYPE_KEY[p.closure_type] ?? p.closure_type) : "—"}</td>
                     <td>{p.closure_reason ?? "—"}</td>
                     <td>
                       <div className="flex gap-2 flex-wrap">
                         <Link className="btn-ghost btn-sm" href={`/projects/${p.id}`}>
-                          개요
+                          {t("overviewLink")}
                         </Link>
                         {p.is_lead && (
-                          <button type="button" className="btn-danger btn-sm" title="삭제 표시로 전환합니다" onClick={() => removeProject(p)}>
-                            삭제
+                          <button type="button" className="btn-danger btn-sm" title={t("deleteBtnTitle")} onClick={() => removeProject(p)}>
+                            {tc("delete")}
                           </button>
                         )}
                       </div>
@@ -167,12 +173,12 @@ export function ProjectArchivesView() {
         )}
       </section>
 
-      <section aria-label="삭제된 검토/안건" className="market-section">
-        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">삭제된 검토/안건</h2>
+      <section aria-label={t("deletedHeading")} className="market-section">
+        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">{t("deletedHeading")}</h2>
         {deleted === null ? (
-          <p>불러오는 중...</p>
+          <p>{tc("loading")}</p>
         ) : deleted.length === 0 ? (
-          <p className="text-[color:var(--muted-fg)]">삭제 표시된 검토/안건이 없습니다.</p>
+          <p className="text-[color:var(--muted-fg)]">{t("emptyDeleted")}</p>
         ) : (
           <ul className="space-y-2">
             {deleted.map((d) => (
@@ -181,36 +187,36 @@ export function ProjectArchivesView() {
                   <div>
                     <span className="font-semibold mr-2">{d.project_name ?? d.project_no ?? d.id}</span>
                     {d.project_no && <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mr-2">{d.project_no}</span>}
-                    <span className="status-chip status-red">삭제</span>
+                    <span className="status-chip status-red">{t("deletedChip")}</span>
                   </div>
                   <div className="flex gap-2">
                     {d.project_id && (
                       <Link className="btn-ghost btn-sm" href={`/projects/${d.project_id}`}>
-                        원본 열람
+                        {t("viewOriginal")}
                       </Link>
                     )}
                     <button type="button" className="btn-ghost btn-sm" onClick={() => void openDetail(d.id)}>
-                      상세
+                      {t("detailBtn")}
                     </button>
                   </div>
                 </div>
                 <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">
-                  삭제자 {d.acted_by} · {fmtDate(d.acted_at)}
-                  {d.status_at_archive ? ` · 당시 상태 ${STATUS_LABEL[d.status_at_archive] ?? d.status_at_archive}` : ""}
-                  {d.reason ? ` · 사유: ${d.reason}` : ""}
+                  {t("deletedBy", { by: d.acted_by, date: fmtDate(d.acted_at) })}
+                  {d.status_at_archive ? t("statusAtArchive", { status: STATUS_KEY[d.status_at_archive] ? t(STATUS_KEY[d.status_at_archive]) : d.status_at_archive }) : ""}
+                  {d.reason ? t("reasonLine", { reason: d.reason }) : ""}
                 </p>
                 {detail[d.id] && (
                   <div className="text-[length:var(--fs-caption)] mt-2">
-                    <p className="mb-1">시장분석 시점 고정(당시 버전):</p>
+                    <p className="mb-1">{t("freezeTitle")}</p>
                     <ul className="list-disc pl-5">
                       {(detail[d.id].market_freeze ?? []).map((f, i) => (
                         <li key={i}>
-                          산업 {f.industryId} — 분석 {f.analysisId ?? "없음"} / 버전 {f.versionNo ?? "—"}
+                          {t("freezeLine", { industry: f.industryId, analysis: f.analysisId ?? t("noAnalysis"), version: f.versionNo ?? "—" })}
                         </li>
                       ))}
-                      {(detail[d.id].market_freeze ?? []).length === 0 && <li>연결된 시장분석 없음</li>}
+                      {(detail[d.id].market_freeze ?? []).length === 0 && <li>{t("noMarketFreeze")}</li>}
                     </ul>
-                    <p className="text-[color:var(--muted-fg)] mt-1">이 상세 조회는 감사 로그에 기록되었습니다.</p>
+                    <p className="text-[color:var(--muted-fg)] mt-1">{t("auditNote")}</p>
                   </div>
                 )}
               </li>

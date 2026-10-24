@@ -403,32 +403,49 @@ describe("UI structure", () => {
   const src = (f: string) => readFileSync(dir + f, "utf-8");
   test("generation panel has the note, the URL list, the helper text and prefill", () => {
     const ui = src("ProfileEvidence.tsx");
-    expect(ui).toContain("회사 소개 메모(직접 입력)");
-    expect(ui).toContain("근거 주소(URL, 한 줄에 하나)");
-    expect(ev.EVIDENCE_HELP).toContain("분석가가 확인한 근거");
+    // i18n: labels are catalog keys — pin the key call sites; EVIDENCE_HELP is the helper-text key.
+    expect(ui).toContain('t("companyIntroductionMemoDirectEntry")');
+    expect(ui).toContain('t("evidenceUrlsOnePerLine")');
+    expect(ev.EVIDENCE_HELP).toBe("components.ourCompany.profileEvidence.evidenceUrlsAndIntroductionMemos");
     expect(ui).toContain("evidenceFromProfile");
     expect(src("ProfileSection.tsx")).toContain("ProfileEvidencePanel");
   });
   test("출처 추가 form, edit/remove only for manual entries, regenerate button, noopener links, edit-in-place fields and chips", () => {
     const ui = src("ProfileEvidence.tsx");
-    expect(ui).toContain("출처 추가");
+    expect(ui).toContain('t("addSource")');
     expect(ui).toContain("s.manual && canAct");
-    expect(ui).toContain("이 출처로 프로필 다시 생성");
+    expect(ui).toContain('t("regenerateTheProfileFromThese")');
     expect(ui).toContain('rel="noopener noreferrer"');
-    for (const label of ["산업 노출", "강점", "약점", "사업 평가"]) expect(ui + JSON.stringify(ev.EDIT_FIELD_LABELS)).toContain(label);
-    expect(ui).toContain("분석가 수정");
-    expect(ui).toContain("분석가 제공 근거");
+    // i18n: EDIT_FIELD_LABELS is the key map (components.ourCompany.profileEvidence.*) — resolved via tr at render.
+    for (const key of ["industryExposure", "strength", "weakness", "businessEvaluation"]) expect(JSON.stringify(ev.EDIT_FIELD_LABELS)).toContain(key);
+    expect(ui).toContain('tr(EDIT_FIELD_LABELS.businessAssessment)');
+    expect(ui).toContain('tc("analystRevision")');
+    expect(ui).toContain('t("evidence")');
     expect(src("ProfileBasicTabs.tsx")).toContain("ProfileProvidedSources");
     expect(src("ProfileBasicTabs.tsx")).toContain("ProfileFieldEditor");
   });
   test("status chips, url parsing, prefill, version labels and override body", () => {
-    expect(ev.sourceStatusChip({ status: "ok" })).toMatchObject({ text: "수집됨", icon: "✓" });
-    expect(ev.sourceStatusChip({ status: "thin" }).text).toBe("본문 부족(출처로만 기록)");
-    expect(ev.sourceStatusChip({ status: "failed", reason: "시간 초과(10초)" }).text).toBe("실패(시간 초과(10초))");
+    // i18n: sourceStatusChip resolves through a translator — stub one that renders the ko wording.
+    const tr = (key: string, params?: Record<string, string | number | Date>) => {
+      const ko: Record<string, string> = {
+        "components.ourCompany.profileEvidence.collected": "수집됨",
+        "components.ourCompany.profileEvidence.insufficientBodyRecordedBySource": "본문 부족(출처로만 기록)",
+        "components.ourCompany.profileEvidence.failedP1": `실패(${params?.p1})`,
+        "common.noReason": "사유 없음",
+        "common.analystRevision": "분석가 수정",
+        "components.ourCompany.profileEvidence.changeSource": "출처 변경",
+      };
+      let out = ko[key] ?? key;
+      for (const [k, v] of Object.entries(params ?? {})) out = out.replaceAll(`{${k}}`, String(v));
+      return out;
+    };
+    expect(ev.sourceStatusChip({ status: "ok" }, tr)).toMatchObject({ text: "수집됨", icon: "✓" });
+    expect(ev.sourceStatusChip({ status: "thin" }, tr).text).toBe("본문 부족(출처로만 기록)");
+    expect(ev.sourceStatusChip({ status: "failed", reason: "시간 초과(10초)" }, tr).text).toBe("실패(시간 초과(10초))");
     expect(ev.parseUrlLines("https://a.example\n\n https://a.example \nhttps://b.example")).toEqual(["https://a.example", "https://b.example"]);
     const prof = { companyName: "x", userNote: "메모", dataSources: { dart: false, dartYear: null, creditReport: null, webResearchCount: 0, userSources: [{ url: "https://a.example", fetched: true, charCount: 5, status: "ok" as const }, { url: "", manual: true, fetched: true, charCount: 1, status: "ok" as const }] } };
     expect(ev.evidenceFromProfile(prof)).toEqual({ urls: "https://a.example", note: "메모" });
-    expect(ev.versionLabel("analyst_edit")).toBe("분석가 수정");
+    expect(ev.versionLabel("analyst_edit", tr)).toBe("분석가 수정");
     const body = ev.overrideBody({ companyName: "x", strengths: ["a"], industryExposure: ["i"] }, { industryExposure: "i", strengths: "a\nb", weaknesses: "", businessAssessment: "", reason: " 사유 ", citeSource: "" });
     expect(body).toEqual({ reason: "사유", strengths: ["a", "b"] });
     expect(showDegradedChip({ companyName: "x", degraded: "외부 검색 근거 없음 (x)", dataSources: { dart: false, dartYear: null, creditReport: null, webResearchCount: 0, analystNote: true } })).toBe(false);

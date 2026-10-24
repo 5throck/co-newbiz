@@ -5,9 +5,11 @@
 // 시장가격을 목표마진으로 역산한 허용원가와 추정 단위원가의 격차를 기록하고,
 // 임계(+10%) 초과 격차는 downside 시나리오 opex 드라이버에 반영됨을 표시한다.
 
+import { TranslatorFn } from "../../i18n/config.ts";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { ParamTable } from "../ui.tsx";
+import { useTranslations } from "next-intl";
 
 interface PriceProposal {
   unit_price: number;
@@ -42,10 +44,10 @@ interface GapAnalysis {
   created_at: string;
 }
 
-const won = (v: number): string => `${v.toLocaleString(undefined, { maximumFractionDigits: 1 })} 원`;
+const won = (v: number, t: TranslatorFn): string => t("p1Krw", { p1: v.toLocaleString(undefined, { maximumFractionDigits: 1 }) });
 const pct = (v: number): string => `${(v * 100).toFixed(1)}%`;
 
-export function TargetCostingPanel({ projectId }: { projectId: string }) {
+export function TargetCostingPanel({ projectId }: { projectId: string }) {const t = useTranslations("stages.s8.targetCostingPanel"); const tc = useTranslations("common");
   const [latest, setLatest] = useState<GapAnalysis | null>(null);
   const [threshold, setThreshold] = useState(0.1);
   const [marketPrice, setMarketPrice] = useState("");
@@ -66,7 +68,7 @@ export function TargetCostingPanel({ projectId }: { projectId: string }) {
       setLatest(res.data.latest);
       setThreshold(res.data.threshold);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "타겟코스팅 분석을 불러오지 못했습니다.");
+      setError(e instanceof Error ? e.message : t("failedToLoadTheTarget"));
     }
   }, [projectId]);
 
@@ -91,15 +93,15 @@ export function TargetCostingPanel({ projectId }: { projectId: string }) {
         {},
       );
       setDraft(res.data);
-      if (res.data.proposals.length === 0) setError(res.data.note || "가격 후보가 없습니다.");
+      if (res.data.proposals.length === 0) setError(res.data.note || t("noPriceCandidates"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "가격 초안 생성에 실패했습니다.");
+      setError(err instanceof Error ? err.message : t("failedToGenerateThePrice"));
     } finally {
       setDrafting(false);
     }
   }
 
-  function useProposal(p: PriceProposal) {
+  function useProposal(p: PriceProposal) {const t = useTranslations("stages.s8.targetCostingPanel");
     setMarketPrice(String(p.unit_price));
     setChosenEvidence({
       unit_price: p.unit_price,
@@ -110,7 +112,7 @@ export function TargetCostingPanel({ projectId }: { projectId: string }) {
       quote: p.quote,
       searched_at: new Date().toISOString(),
     });
-    setMessage(`가격 ${p.unit_price.toLocaleString()} ${p.currency}/${p.unit} 을(를) 채웠습니다 — 출처: ${p.source_name}. 저장으로 확정하세요.`);
+    setMessage(t("filledInPriceP1P2", { p1: p.unit_price.toLocaleString(), p2: p.currency, p3: p.unit, p4: p.source_name }));
   }
 
   async function submit(e: React.FormEvent) {
@@ -132,12 +134,12 @@ export function TargetCostingPanel({ projectId }: { projectId: string }) {
       );
       setMessage(
         res.data.analysis.thresholdExceeded
-          ? `저장 완료 — 격차 ${pct(res.data.analysis.gapRatio)} (임계 초과). 하락 시나리오 재생성 시 opex 드라이버에 반영됩니다.`
-          : `저장 완료 — 격차 ${pct(res.data.analysis.gapRatio)} (임계 이내).`,
+          ? t("savedGapP1ThresholdExceeded", { p1: pct(res.data.analysis.gapRatio) })
+          : t("savedGapP1WithinThreshold", { p1: pct(res.data.analysis.gapRatio) }),
       );
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "타겟코스팅 분석 저장에 실패했습니다.");
+      setError(err instanceof Error ? err.message : t("failedToSaveTheTarget"));
     }
   }
 
@@ -146,58 +148,58 @@ export function TargetCostingPanel({ projectId }: { projectId: string }) {
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
       {message && <p className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {message}</p>}
 
-      <section className="market-section sizing-step" aria-label="최근 타겟코스팅 분석">
+      <section className="market-section sizing-step" aria-label={t("latestTargetCostingAnalysis")}>
         <h3 className="sizing-step-title">
-          타겟코스팅 격차 분석
-          <span className="status-chip status-info">임계 +{Math.round(threshold * 100)}% — 초과 시 downside opex 반영</span>
+          {t("targetCostingGapAnalysis")}
+          <span className="status-chip status-info">{t("threshold")}{Math.round(threshold * 100)}{t("downsideOpexReflectedWhenExceeded")}</span>
         </h3>
         {!latest ? (
           <p className="text-sm text-[color:var(--muted-fg)]">
-            아직 분석 기록이 없습니다. 아래 폼에서 시장가격·목표마진·추정 단위원가를 입력해 첫 격차를 기록하세요.
+            {t("noAnalysisRecordYetEnter")}
           </p>
         ) : (
           <>
             <ParamTable
-              caption="최근 목표원가 격차 분석"
-              labelHeader="항목"
+              caption={t("latestGapAnalysis")}
+              labelHeader={tc("items")}
               rows={[
-                { label: "시장가격", value: won(latest.marketPrice) },
-                { label: "목표마진", value: pct(latest.targetMargin) },
-                { label: "허용원가", value: won(latest.allowableCost) },
-                { label: "추정 단위원가", value: won(latest.estimatedUnitCost) },
+                { label: t("marketPrice"), value: won(latest.marketPrice, t) },
+                { label: t("targetMargin"), value: pct(latest.targetMargin) },
+                { label: t("allowedCost"), value: won(latest.allowableCost, t) },
+                { label: t("estimatedUnitCost"), value: won(latest.estimatedUnitCost, t) },
                 {
-                  label: "격차",
-                  value: won(latest.gap),
+                  label: tc("gap"),
+                  value: won(latest.gap, t),
                   source: (
                     <span className={`status-chip ${latest.thresholdExceeded ? "status-danger" : "status-info"}`}>
-                      {pct(latest.gapRatio)} {latest.thresholdExceeded ? "⚠ 임계 초과" : "임계 이내"}
+                      {pct(latest.gapRatio)} {latest.thresholdExceeded ? t("thresholdExceeded") : t("withinThreshold")}
                     </span>
                   ),
                 },
-                { label: "출처", value: latest.source === "peer_benchmark" ? "peer 벤치마크" : "사용자 입력" },
+                { label: tc("source"), value: latest.source === "peer_benchmark" ? t("peerBenchmark") : t("userInput") },
               ]}
             />
             {latest.levers.length > 0 && (
-              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2">축소 방안: {latest.levers.join(" · ")}</p>
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2">{t("downsizingPlan")} {latest.levers.join(" · ")}</p>
             )}
             {latest.thresholdExceeded && (
               <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2">
-                하락(downside) 시나리오 생성 시 opex 드라이버에 이 격차가 반영됩니다 — 설명·생성·권고 탭에서 재생성하세요.
+                {t("whenGeneratingTheDownsideScenario")}
               </p>
             )}
           </>
         )}
       </section>
 
-      <section className="market-section sizing-step mt-3" aria-label="타겟코스팅 분석 실행">
-        <h3 className="sizing-step-title">분석 실행</h3>
+      <section className="market-section sizing-step mt-3" aria-label={t("runTargetCostingAnalysis")}>
+        <h3 className="sizing-step-title">{t("runAnalysis")}</h3>
         <form className="grid gap-3" onSubmit={submit} style={{ maxWidth: 560 }}>
           <div className="flex items-center gap-2">
             <button type="button" className="outline-button" onClick={fetchDraft} disabled={drafting}>
-              {drafting ? "검색 중…" : "가격 초안 (웹검색)"}
+              {drafting ? t("item") : t("priceDraftWebSearch")}
             </button>
             {chosenEvidence && (
-              <span className="status-chip status-info">웹 근거 채택됨 — 저장 시 함께 기록</span>
+              <span className="status-chip status-info">{t("webEvidenceAcceptedRecordedTogether")}</span>
             )}
           </div>
           {draft && draft.proposals.length > 0 && (
@@ -206,11 +208,11 @@ export function TargetCostingPanel({ projectId }: { projectId: string }) {
                 <div key={`${p.source_url}-${p.unit_price}`} className="grid gap-1 border rounded p-2 text-sm" style={{ borderColor: "var(--border)" }}>
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-semibold tabular-nums">{p.unit_price.toLocaleString()} {p.currency}/{p.unit}</span>
-                    <button type="button" className="outline-button btn-sm" onClick={() => useProposal(p)}>이 가격 사용</button>
+                    <button type="button" className="outline-button btn-sm" onClick={() => useProposal(p)}>{t("useThisPrice")}</button>
                   </div>
                   <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
                     <a href={p.source_url} target="_blank" rel="noreferrer" className="underline">{p.source_name}</a>
-                    {" · 확신도 "}{p.confidence}
+                    {t("confidence")}{p.confidence}
                   </div>
                   {p.quote && <div className="text-[length:var(--fs-caption)]">"{p.quote.slice(0, 160)}"</div>}
                   <span className="sr-only">{i}</span>
@@ -219,20 +221,20 @@ export function TargetCostingPanel({ projectId }: { projectId: string }) {
             </div>
           )}
           <div className="grid gap-2 md:grid-cols-2">
-            <label className="grid gap-1 text-sm">시장가격 (원/EA)<input className="form-input" value={marketPrice} onChange={(e) => setMarketPrice(e.target.value)} placeholder="12000" /></label>
-            <label className="grid gap-1 text-sm">목표마진 (비율, 예: 0.15)<input className="form-input" value={targetMargin} onChange={(e) => setTargetMargin(e.target.value)} placeholder="0.15" /></label>
-            <label className="grid gap-1 text-sm">추정 단위원가 (원/EA)<input className="form-input" value={estimatedUnitCost} onChange={(e) => setEstimatedUnitCost(e.target.value)} placeholder="11800" /></label>
-            <label className="grid gap-1 text-sm">출처<select className="form-input" value={"user"} onChange={() => undefined}><option value="user">사용자 입력</option></select></label>
+            <label className="grid gap-1 text-sm">{t("marketPriceKrwEa")}<input className="form-input" value={marketPrice} onChange={(e) => setMarketPrice(e.target.value)} placeholder="12000" /></label>
+            <label className="grid gap-1 text-sm">{t("targetMarginRatioEG")}<input className="form-input" value={targetMargin} onChange={(e) => setTargetMargin(e.target.value)} placeholder="0.15" /></label>
+            <label className="grid gap-1 text-sm">{t("estimatedUnitCostKrwEa")}<input className="form-input" value={estimatedUnitCost} onChange={(e) => setEstimatedUnitCost(e.target.value)} placeholder="11800" /></label>
+            <label className="grid gap-1 text-sm">{tc("source")}<select className="form-input" value={"user"} onChange={() => undefined}><option value="user">{t("userInput2")}</option></select></label>
           </div>
-          <label className="grid gap-1 text-sm">축소 방안 (쉼표 구분, 선택)<input className="form-input" value={levers} onChange={(e) => setLevers(e.target.value)} placeholder="설계-to-cost, 소싱 단가 협상" /></label>
+          <label className="grid gap-1 text-sm">{t("downsizingPlanCommaSeparatedOptional")}<input className="form-input" value={levers} onChange={(e) => setLevers(e.target.value)} placeholder={t("sourcingPriceNegotiation")} /></label>
           {gapRatioPreview !== null && (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              미리보기 — 허용원가 {won(allowable!)} · 격차 {won(gapPreview!)} ({pct(gapRatioPreview)})
+              {t("previewAllowedCost")} {won(allowable!, t)} {t("gap")} {won(gapPreview!, t)} ({pct(gapRatioPreview)})
             </p>
           )}
-          <button className="primary-button justify-self-start" type="submit">격차 분석 저장</button>
+          <button className="primary-button justify-self-start" type="submit">{t("saveGapAnalysis")}</button>
           <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
-            격차 = 추정 단위원가 − 허용원가(시장가격 × (1 − 목표마진)). 기록은 제안이며 판정은 사람의 몫입니다.
+            {t("gapEstimatedUnitCostAllowed")}
           </p>
         </form>
       </section>

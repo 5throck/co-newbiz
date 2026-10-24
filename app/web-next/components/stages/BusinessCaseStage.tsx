@@ -6,6 +6,7 @@
 // 탭 상태는 독립 페이지에서 URL ?tab= 동기, embedded(deals 탭) 모드에서는 내부 상태로
 // 유지한다 — router로 프로젝트 페이지를 건드리지 않는다.
 
+import { TranslatorFn } from "../../i18n/config.ts";
 import { fmtNpvKrwM } from "@/lib/npv-format";
 import Link from "next/link";
 import { ColGroup, DevRef } from "../ui.tsx";
@@ -55,6 +56,7 @@ import { countLegacyUnassignedModels, hideHistoricalForGreenfield } from "../../
 import { GoalPromptDialog, GoalsPanel, type GoalsData } from "../business-case/GoalsPanel.tsx";
 import { GOALS_ACK_REQUIRED_CODE, goalsAckErrorText, goalsLoadErrorText, partOfS8Tab, primaryKeyOfS8Tab, resolveS8Tab, shouldRedirectTargetsTab, type CaseAttainmentEntry } from "../../lib/business-goals-view.ts";
 import { GoalAttainmentTable } from "../business-case/GoalAttainment.tsx";
+import { useTranslations } from "next-intl";
 
 // S8 사업성 분석 — 이중 관점 밸류에이션 비교 (ADR-0117; approved mockup
 // docs/designs/mockups/2026-09-11-dual-view-valuation-ui-mockup_ko.html).
@@ -175,11 +177,11 @@ interface ActivityRow {
 }
 
 const SCENARIOS = ["base", "upside", "downside"] as const;
-const SCEN_LABEL: Record<string, string> = { base: "기본(Base)", upside: "상승(Upside)", downside: "하락(Downside)" };
-const ENGINE_LABEL: Record<string, string> = { "python-sim-engine": "Python 엔진", "ts-fallback": "TS 대체 엔진", mixed: "혼합" };
-const VARIANT_LABEL: Record<string, string> = { market_forward: "시장 기반", historical: "과거 기반" };
+const SCEN_LABEL = (tr: TranslatorFn): Record<string, string> => ({ base: "stages.s8.stage.base", upside: "stages.s8.stage.upside", downside: "stages.s8.stage.downside" });
+const ENGINE_LABEL = (tr: TranslatorFn): Record<string, string> => ({ "python-sim-engine": "stages.s8.stage.pythonEngine", "ts-fallback": "stages.s8.stage.tsFallbackEngine", mixed: "stages.s8.stage.mixed" });
+const VARIANT_LABEL = (tr: TranslatorFn): Record<string, string> => ({ market_forward: "common.marketBasis", historical: "stages.s8.stage.item" });
 // 라인 읽기 전용 표의 분류 표기 (라인 category는 5종 — labor/opex/capex/revenue/gov_rnd).
-const LINE_CATEGORY_LABEL: Record<string, string> = { labor: "인건비", opex: "운영비", capex: "설비투자", revenue: "매출", gov_rnd: "정부 R&D" };
+const LINE_CATEGORY_LABEL = (tr: TranslatorFn): Record<string, string> => ({ labor: "common.laborCost", opex: "common.opex", capex: "common.capex", revenue: "common.revenue", gov_rnd: "stages.s8.stage.governmentRD" });
 
 const fmt = formatKrwMillionsPlain;
 const UnitNote = () => <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">({KRW_MILLIONS_UNIT})</span>;
@@ -197,7 +199,7 @@ function parseNote(note: string | null | undefined): Record<string, string> {
   return out;
 }
 
-export function BusinessCaseStage({ projectId, embedded }: { projectId: string; embedded?: boolean }) {
+export function BusinessCaseStage({ projectId, embedded }: { projectId: string; embedded?: boolean }) {const tr = useTranslations(); const t = useTranslations("stages.s8.stage"); const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlSync = !embedded;
@@ -287,7 +289,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       setSelectionRationale("");
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "대상 선정 실패");
+      setError(err instanceof Error ? err.message : t("targetSelectionFailed"));
     } finally {
       setBusy(false);
     }
@@ -296,7 +298,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   const load = useCallback(() => {
     api.get<CasesResponse>(`/api/projects/${encodeURIComponent(projectId)}/business-case`)
       .then((r) => { setData({ ...r.data, cases: hideHistoricalForGreenfield(r.data.cases, r.data.targets.length === 0) }); setGreenfield(r.data.targets.length === 0); setEscalatedCagrPct(r.data.escalated_cagr_pct ?? null); })
-      .catch((e) => setError(e instanceof Error ? e.message : "사업성 분석 데이터를 불러오지 못했습니다."));
+      .catch((e) => setError(e instanceof Error ? e.message : t("failedToLoadBusinessCase")));
   }, [projectId]);
 
   useEffect(() => { load(); }, [load]);
@@ -304,7 +306,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   const loadGoals = useCallback(() => {
     api.get<GoalsData>(`/api/projects/${encodeURIComponent(projectId)}/business-goals`)
       .then((r) => { setGoalsData(r.data); setGoalsLoadError(null); })
-      .catch((e) => { setGoalsData(null); setGoalsLoadError(goalsLoadErrorText(e, "사업 목표를 불러오지 못했습니다.")); }); // INTERIM-WORDING; goals are reference evidence: a failed load never blocks S8
+      .catch((e) => { setGoalsData(null); setGoalsLoadError(goalsLoadErrorText(e, t("failedToLoadBusinessGoals"))); }); // INTERIM-WORDING; goals are reference evidence: a failed load never blocks S8
   }, [projectId]);
   useEffect(() => { loadGoals(); }, [loadGoals]);
   const onGoalsChanged = useCallback(() => { loadGoals(); load(); }, [loadGoals, load]);
@@ -338,7 +340,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       setRun({ runId: status.data.runId, status: status.data.status, activities: status.data.activities });
       load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "자동 생성 실패");
+      setError(e instanceof Error ? e.message : t("failed"));
     } finally {
       setBusy(false);
     }
@@ -355,7 +357,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       const noteProblem = goalsAckErrorText(e);
       if (noteProblem) { setAckFor(modelId); setAckError(noteProblem); }
       else if ((e as { code?: string } | null)?.code === GOALS_ACK_REQUIRED_CODE) setAckFor(modelId);
-      else setError(e instanceof Error ? e.message : "채택 실패");
+      else setError(e instanceof Error ? e.message : t("adoptionFailed"));
     } finally {
       setBusy(false);
     }
@@ -363,16 +365,16 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
   function adopt(modelId: string, scenario: string | null, variant: string) {
     confirm(
-      `사업 케이스 채택${scenario ? ` — ${SCEN_LABEL[scenario] ?? scenario} · ${VARIANT_LABEL[variant] ?? variant}` : ""}`,
+      t("adoptBusinessCaseP1", { p1: scenario ? ` — ${SCEN_LABEL(tr)[scenario] ?? scenario} · ${VARIANT_LABEL(tr)[variant] ?? variant}` : "" }),
       () => { void postAdopt(modelId); },
-      { body: "이 케이스를 타당성 분석(FS) 진행 입력으로 채택합니다. 채택은 인간 결정이며 감사 기록으로 남습니다." },
+      { body: t("adoptsThisCaseAsThe") },
     );
   }
 
   // ADR-0178: Green Field는 라인을 편집하지 않는다 — 읽기 전용 보기 + S5 투자비 탭 안내.
   // pin 재평가 필요 여부는 params GET의 s5_pin 상태로만 판단(표시 전용).
   function startView(c: CaseView) {
-    const label = `${c.target_name ?? "대상 미지정"} · ${c.scenario ? `${SCEN_LABEL[c.scenario] ?? c.scenario} · ` : ""}${VARIANT_LABEL[c.variant] ?? c.variant}`;
+    const label = `${c.target_name ?? tc("noTargetSelected")} · ${c.scenario ? `${SCEN_LABEL(tr)[c.scenario] ?? c.scenario} · ` : ""}${VARIANT_LABEL(tr)[c.variant] ?? c.variant}`;
     setViewing({ modelId: c.id, label, lines: c.lines });
     setPinStale(false);
     api.get<{ s5_pin?: { pin: unknown; state: string } | null }>(`/api/projects/${encodeURIComponent(projectId)}/business-case/params`)
@@ -384,7 +386,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   }
 
   function startEdit(c: CaseView) {
-    const label = `${c.target_name ?? "대상 미지정"} · ${c.scenario ? `${SCEN_LABEL[c.scenario] ?? c.scenario} · ` : ""}${VARIANT_LABEL[c.variant] ?? c.variant}`;
+    const label = `${c.target_name ?? tc("noTargetSelected")} · ${c.scenario ? `${SCEN_LABEL(tr)[c.scenario] ?? c.scenario} · ` : ""}${VARIANT_LABEL(tr)[c.variant] ?? c.variant}`;
     setEditing({ modelId: c.id, text: JSON.stringify(c.lines.map(({ id: _id, ...l }) => l), null, 2), label });
   }
 
@@ -412,7 +414,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       closeEditor();
       load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "라인 저장 실패 (JSON 형식·category 값을 확인하세요)");
+      setError(e instanceof Error ? e.message : t("failedToSaveLinesCheck"));
     } finally {
       setBusy(false);
     }
@@ -420,9 +422,9 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
   function remove(c: CaseView) {
     const modelId = c.id;
-    const targetLabel = c.target_name ?? "대상 미지정";
+    const targetLabel = c.target_name ?? tc("noTargetSelected");
     confirm(
-      `Business Case 삭제 — 대상: ${targetLabel}`,
+      t("deleteBusinessCaseTargetP1", { p1: targetLabel }),
       () => {
         void (async () => {
           setBusy(true);
@@ -430,13 +432,13 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             await api.delete(`/api/projects/${encodeURIComponent(projectId)}/business-case?model_id=${encodeURIComponent(modelId)}`);
             load();
           } catch (e) {
-            setError(e instanceof Error ? e.message : "삭제 실패");
+            setError(e instanceof Error ? e.message : tc("errors.deleteFailed"));
           } finally {
             setBusy(false);
           }
         })();
       },
-      { body: `대상: ${targetLabel} · ${c.scenario ? `${SCEN_LABEL[c.scenario] ?? c.scenario} · ` : ""}${VARIANT_LABEL[c.variant] ?? c.variant}. 선택한 대상의 모델이 맞는지 확인하세요. 라인·시뮬레이션 행을 포함해 삭제합니다.`, confirmLabel: "삭제" },
+      { body: t("deleteBusinessCaseTargetP1P2", { p1: targetLabel, p2: `${c.scenario ? `${SCEN_LABEL(tr)[c.scenario] ?? c.scenario} · ` : ""}${VARIANT_LABEL(tr)[c.variant] ?? c.variant}.` }), confirmLabel: tc("delete") },
     );
   }
 
@@ -445,7 +447,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
     const toArchive = models.filter((m) => m.referenced).length;
     const toDelete = models.length - toArchive;
     confirm(
-      all ? `예전 모델 ${models.length}건 정리` : `예전 모델 정리 — ${models[0]?.name ?? ""}`,
+      all ? t("cleanUpP1LegacyModel", { p1: models.length }) : t("cleanUpLegacyModelsP1", { p1: models[0]?.name ?? "" }),
       () => {
         void (async () => {
           setBusy(true); setError(null);
@@ -453,13 +455,13 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             await api.post(`/api/projects/${encodeURIComponent(projectId)}/business-case/legacy-cleanup`, { model_ids: models.map((m) => m.id) });
             load();
           } catch (e) {
-            setError(e instanceof Error ? e.message : "예전 모델 정리 실패");
+            setError(e instanceof Error ? e.message : t("failedToCleanUpLegacy"));
           } finally {
             setBusy(false);
           }
         })();
       },
-      { body: `미참조 ${toDelete}건은 삭제(감사 기록 포함), 채택·게이트 근거로 참조된 ${toArchive}건은 삭제하지 않고 보관합니다. 대상이 지정된 모델은 건드리지 않습니다.`, confirmLabel: "정리" },
+      { body: t("unreferencedP1CaseSAre", { p1: toDelete, p2: toArchive }), confirmLabel: t("organize") },
     );
   }
 
@@ -492,7 +494,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   // One attainment table in the goals tab: every filtered case (all scenarios) as a column,
   // header "시나리오 · 관점" so the per-case columns stay readable outside the scenario layout.
   const attainmentCases = useMemo(
-    () => SCENARIOS.flatMap((s) => (byScenario.get(s) ?? []).map((c) => ({ id: c.id, header: `${SCEN_LABEL[s]} · ${VARIANT_LABEL[c.variant]}` }))),
+    () => SCENARIOS.flatMap((s) => (byScenario.get(s) ?? []).map((c) => ({ id: c.id, header: `${SCEN_LABEL(tr)[s]} · ${VARIANT_LABEL(tr)[c.variant]}` }))),
     [byScenario],
   );
 
@@ -515,24 +517,24 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           아래로 밀리지 않고 S1~S7 딜 화면과 같은 머리 위치를 유지한다. */}
       <StageFrame
         stageId="S8"
-        heading={greenfield ? "S8 사업성 분석 — 시장 기반 밸류에이션" : "S8 사업성 분석 — 이중 관점 밸류에이션 비교"}
+        heading={greenfield ? t("s8BusinessCaseValuation") : t("s8BusinessCaseValuationComparison")}
         railSlot={<StageTabs projectId={projectId} />}
       >
         {/* The jump chip is the 결정 tab's shortcut — hidden when already there (IA cleanup 2026-10-14). */}
         {tab !== "decision" && <GateDecisionJump gate="fs" beforeJump={() => setTab("decision")} />}
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
         {greenfield ? (
-          <>시나리오마다 <b>시장 기반(진행 판정 1차)</b> 관점으로 평가합니다. 성장은 시장 규모와 시장점유율에서 오며, 대상 회사가 없어 과거 실적과의 비교는 없습니다.</>
+          <>{t("perScenario")} <b>{t("marketBasisJudgement")}</b> {t("perspectiveGrowthComesFromMarket")}</>
         ) : (
-          <>같은 시나리오를 <b>시장 기반(진행 판정 1차)</b>과 <b>과거 기반(비교 근거)</b> 두 관점으로 각각 평가해 나란히 비교합니다.</>
+          <>{t("theSameScenario")} <b>{t("marketBasisJudgement2")}</b>{t("and")} <b>{t("comparisonEvidence")}</b> {t("evaluatesBothPerspectivesSeparatelyAnd")}</>
         )}
-        <span className="ml-2 status-chip status-not-started">엔진 권고 ≠ 채택 — 채택은 사람의 행위입니다</span>
+        <span className="ml-2 status-chip status-not-started">{t("engineRecommendationIsNotAdoption")}</span>
       </p>
 
       {readOnlyAdmin && (
         <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
-          <span className="status-chip status-not-started mr-1">읽기 전용</span>
-          관리자 역할은 프로젝트 데이터를 변경할 수 없어 대상 선택·채택·생성 기능이 표시되지 않습니다.
+          <span className="status-chip status-not-started mr-1">{tc("readOnly")}</span>
+          {t("theAdminRoleCannotChange")}
         </p>
       )}
 
@@ -540,34 +542,33 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           재생성 액션이 1차 액션. 기존 모델은 절대 자동 삭제·이전하지 않는다. */}
       {legacyUnassignedCount > 0 && (
         <div className="legacy-model-notice" role="status">
-          <span className="status-chip status-amber" aria-hidden="true">⚠ 주의</span>
+          <span className="status-chip status-amber" aria-hidden="true">{t("caution")}</span>
           <p className="legacy-model-notice-text">
-            ADR-0143 이전에 생성된 <b>대상 미지정 모델 {legacyUnassignedCount}건</b>이 있습니다 — 대상별 분석을 위해 재생성이 필요합니다.
-            자동으로 삭제되지 않으며, 아래 목록에서 사람이 직접 정리합니다.
+            {t("createdBefore")} <b>{t("modelWithoutATarget")} {legacyUnassignedCount}{tc("countUnit")}</b>{t("analysisNeedsRegenerationTheyAre")}
           </p>
           {canAct && (
             <button type="button" className="btn-premium btn-sm" disabled={busy} onClick={() => void generate(true)}>
-              {busy ? "재생성 중..." : "대상별 재생성"}
+              {busy ? tc("regenerating") : t("regeneratePerTarget")}
             </button>
           )}
           {legacyModels.length > 0 && (
             <div className="legacy-model-list">
-              <table className="data-table" aria-label="예전 모델 목록">
-                <caption className="sr-only">대상 미지정 예전 모델 — 참조 여부와 정리 방식</caption>
+              <table className="data-table" aria-label={t("legacyModelList")}>
+                <caption className="sr-only">{t("legacyModelWithoutATarget")}</caption>
                 <thead>
-                  <tr><th scope="col">모델</th><th scope="col">시나리오 · 관점</th><th scope="col">생성일</th><th scope="col">참조</th>{canAct && <th scope="col">정리</th>}</tr>
+                  <tr><th scope="col">{t("model")}</th><th scope="col">{t("scenarioAndPerspective")}</th><th scope="col">{t("created")}</th><th scope="col">{t("reference")}</th>{canAct && <th scope="col">{t("organize2")}</th>}</tr>
                 </thead>
                 <tbody>
                   {legacyModels.map((m) => (
                     <tr key={m.id}>
                       <td>{m.name}</td>
-                      <td>{m.scenario ? `${SCEN_LABEL[m.scenario] ?? m.scenario} · ` : ""}{VARIANT_LABEL[m.variant] ?? m.variant}</td>
+                      <td>{m.scenario ? `${SCEN_LABEL(tr)[m.scenario] ?? m.scenario} · ` : ""}{VARIANT_LABEL(tr)[m.variant] ?? m.variant}</td>
                       <td className="tabular-nums">{m.created_at.slice(0, 10)}</td>
-                      <td>{m.referenced ? <span className="status-chip status-amber">참조됨 — 보관</span> : <span className="status-chip status-not-started">미참조 — 삭제</span>}</td>
+                      <td>{m.referenced ? <span className="status-chip status-amber">{t("referencedArchived")}</span> : <span className="status-chip status-not-started">{t("unreferencedDelete")}</span>}</td>
                       {canAct && (
                         <td>
-                          <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => cleanupLegacy([m], false)} aria-label={`예전 모델 정리 — ${m.name}`}>
-                            예전 모델 정리
+                          <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => cleanupLegacy([m], false)} aria-label={t("cleanUpLegacyModelsP12", { p1: m.name })}>
+                            {t("cleanUpLegacyModels")}
                           </button>
                         </td>
                       )}
@@ -577,7 +578,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               </table>
               {canAct && (
                 <button type="button" className="btn-danger btn-sm" disabled={busy} onClick={() => cleanupLegacy(legacyModels, true)}>
-                  예전 모델 정리 (전체 {legacyModels.length}건)
+                  {t("cleanUpLegacyModelsAll")} {legacyModels.length}{tc("countSuffixParen")}
                 </button>
               )}
             </div>
@@ -597,31 +598,31 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       <>
       <TabNav
         className="mb-3"
-        label="S8 사업성 분석 화면"
+        label={t("s8BusinessCaseScreen")}
         active={primaryKeyOfS8Tab(tab) ?? tab}
         onSelect={(k) => setTab(k === "financial" ? "overview" : k)}
         tabs={[
-          { key: "goals", label: "사업 목표" }, // INTERIM-WORDING
-          { key: "technical", label: "기술적 타당성" }, // INTERIM-WORDING
-          { key: "financial", label: "재무적 타당성" }, // INTERIM-WORDING
-          ...(targets.length > 0 ? [{ key: "targets", label: "대상 비교·선정" }] : []),
-          { key: "decision", label: "결정" },
+          { key: "goals", label: t("businessGoals") }, // INTERIM-WORDING
+          { key: "technical", label: t("technicalFeasibility") }, // INTERIM-WORDING
+          { key: "financial", label: t("financialFeasibility") }, // INTERIM-WORDING
+          ...(targets.length > 0 ? [{ key: "targets", label: t("targetComparisonAndSelection") }] : []),
+          { key: "decision", label: tc("decision") },
         ]}
       />
       {partOfS8Tab(tab) === "financial" && (
         <TabNav
           className="mb-3"
-          label="재무적 타당성 하위 화면"
+          label={t("financialFeasibility2")}
           active={tab}
           onSelect={setTab}
           tabs={[
-            { key: "overview", label: "설명·생성·권고" },
-            { key: "scenarios", label: "시나리오 비교" },
+            { key: "overview", label: t("explanationGenerationRecommendation") },
+            { key: "scenarios", label: t("scenarioComparison") },
             { key: "wacc", label: "WACC" },
-            { key: "financial-analysis", label: "대상회사" },
-            { key: "bep", label: "재무분석" },
-            { key: "params", label: "파라미터·스냅샷" },
-            { key: "target-costing", label: "타겟코스팅" },
+            { key: "financial-analysis", label: t("targetCompany") },
+            { key: "bep", label: t("financialAnalysis") },
+            { key: "params", label: t("parametersAndSnapshot") },
+            { key: "target-costing", label: t("targetCosting") },
           ]}
         />
       )}
@@ -651,163 +652,163 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       {/* ── ADR-0143 대상 비교·선정 (brownfield) — 권고 ≠ 선정, 선정은 사람 ── */}
       {tab === "targets" && targets.length === 0 && (
         <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)] mb-3" role="note">
-          대상 축이 없는 프로젝트(greenfield)입니다 — 대상 비교·선정은 brownfield(최종 후보 목록) 프로젝트에만 적용됩니다. 시나리오 비교 탭을 이용하세요.
+          {t("thisProjectHasNoTarget")}
         </p>
       )}
       {tab === "targets" && targets.length > 0 && (
-      <section className="market-section sizing-step mb-3" aria-label="최종 후보 목록 대상 비교·선정">
-        <h3 className="sizing-step-title">최종 후보 목록 대상 비교·선정 <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">(최종 후보 목록 대상 전체)</span><DevRef refs="flow.spec S8 subjectScope: shortlist · ADR-0143" /></h3>
+      <section className="market-section sizing-step mb-3" aria-label={t("compareAndSelectAmongShortlist")}>
+        <h3 className="sizing-step-title">{t("compareAndSelectAmongShortlist2")} <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("allShortlistTargets")}</span><DevRef refs="flow.spec S8 subjectScope: shortlist · ADR-0143" /></h3>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-          각 대상의 최신 게이트 기준(시장 기반) 기본 시나리오 결과를 비교합니다. ★ 권고안는 권고일 뿐이며, 선정은 근거를 남기는 사람의 기록입니다. 선정 후 채택은 선정된 대상의 케이스로 제한됩니다.
+          {t("comparesEachTargetSLatest")}
         </p>
         {selectedTargetName && (
           <p className="text-[length:var(--fs-caption)] mb-2">
-            <span className="status-chip status-green">선정됨</span> <b>{selectedTargetName}</b> — 근거: {data?.target_selection?.rationale}{" "}
+            <span className="status-chip status-green">{t("selected")}</span> <b>{selectedTargetName}</b> {t("evidence")} {data?.target_selection?.rationale}{" "}
             <span className="text-[color:var(--muted-fg)]">({data?.target_selection?.selectedBy})</span>
           </p>
         )}
-        <div className="mb-2 grid gap-1" aria-label="EV/매출 밴드 상태">
+        <div className="mb-2 grid gap-1" aria-label={t("evRevenueBandStatus")}>
           {evBand?.confirmed ? (
             <p className="text-[length:var(--fs-caption)]" role="note">
-              <span className="status-chip status-green mr-1"><span aria-hidden="true">✓</span> 사람이 확정한 밴드</span>
-              <b className="mono-num">{evBand.confirmed.min}–{evBand.confirmed.max}×</b> — 근거: {evBand.confirmed.rationale} · 출처: {evBand.confirmed.source}{" "}
-              <span className="text-[color:var(--muted-fg)]">(확정: {evBand.confirmed.confirmedBy}, {evBand.confirmed.confirmedAt})</span>
-              <span className="text-[color:var(--muted-fg)]"> · 참고(글로벌): {refBand.min}–{refBand.max}× — 이 영역의 근거 없음, 참고용</span>
+              <span className="status-chip status-green mr-1"><span aria-hidden="true">✓</span> {t("band")}</span>
+              <b className="mono-num">{evBand.confirmed.min}–{evBand.confirmed.max}×</b> {t("evidence2")} {evBand.confirmed.rationale} {t("source")} {evBand.confirmed.source}{" "}
+              <span className="text-[color:var(--muted-fg)]">{t("confirmed")} {evBand.confirmed.confirmedBy}, {evBand.confirmed.confirmedAt})</span>
+              <span className="text-[color:var(--muted-fg)]"> {t("referenceGlobal")} {refBand.min}–{refBand.max}{t("noEvidenceInThisArea")}</span>
             </p>
           ) : (
             <p className="text-[length:var(--fs-caption)]" role="note">
-              <span className="status-chip status-not-started mr-1"><span aria-hidden="true">ⓘ</span> 밴드 미확정</span>
-              범위 내/밖 판정은 표시하지 않습니다. 참고: 글로벌 로보틱스·자동화 M&amp;A {refBand.min}–{refBand.max}× (이 영역의 근거 없음, 참고용). 파라미터·스냅샷 탭에서 사람이 근거와 함께 확정할 수 있습니다.
+              <span className="status-chip status-not-started mr-1"><span aria-hidden="true">ⓘ</span> {t("bandNotConfirmed")}</span>
+              {t("noInJudgementIsShown")} {refBand.min}–{refBand.max}{t("noEvidenceInThisArea2")}
             </p>
           )}
           {evBand?.spreadFlag && evBand.confirmed && (
             <p className="status-chip status-amber" role="note">
-              <span aria-hidden="true">⚠</span> 확정 밴드 폭이 넓습니다 (상한/하한 {(evBand.confirmed.max / evBand.confirmed.min).toFixed(1)}배 &gt; 4.5배) — 밴드가 너무 느슨하지 않은지 점검하세요. (경고일 뿐 순위·저장에 영향 없음)
+              <span aria-hidden="true">⚠</span> {t("theConfirmedBandIsWide")} {(evBand.confirmed.max / evBand.confirmed.min).toFixed(1)}{t("x45xCheckThe")}
             </p>
           )}
           {evBand?.stale && evBand.confirmed && (
             <p className="status-chip status-amber" role="note">
-              <span aria-hidden="true">⏱</span> 재확인 필요 — 확정 후 {evBand.ageDays}일 경과 (확정일 {evBand.confirmed.confirmedAt}). 알림일 뿐 순위에는 영향이 없습니다.
+              <span aria-hidden="true">⏱</span> {t("neededAfterConfirmation")} {evBand.ageDays}{t("daysElapsedConfirmed")} {evBand.confirmed.confirmedAt}{t("advisoryOnlyItDoesNot")}
             </p>
           )}
           {evBand?.confirmed && data?.methods_mixed && (
             <p className="status-chip status-amber" role="note">
-              <span aria-hidden="true">⚠</span> 평가 기준이 서로 다른 대상이 섞여 있어 밴드 판정을 대상 간에 비교할 수 없습니다.
+              <span aria-hidden="true">⚠</span> {t("targetsWithDifferentEvaluationBases")}
             </p>
           )}
           {evBand?.confirmed && data?.target_selection && data.target_selection.selectedBy === evBand.confirmed.confirmedBy && (
             <p className="status-chip status-amber" role="note">
-              <span aria-hidden="true">⚠</span> 밴드를 확정한 사람과 대상을 선정한 사람이 같습니다 ({evBand.confirmed.confirmedBy}) — 다른 검토자의 확인을 권장합니다. (표시 전용, 진행을 막지 않습니다)
+              <span aria-hidden="true">⚠</span> {t("thePersonConfirmingTheBand")}{evBand.confirmed.confirmedBy}{t("aSecondReviewerSConfirmation")}
             </p>
           )}
           {evBand?.optimismFlag && evBand.confirmed && (
             <p className="status-chip status-amber" role="note">
-              <span aria-hidden="true">⚠</span> 확정 상한 {evBand.confirmed.max}×가 글로벌 참고 상한({refBand.max}×)의 1.5배를 넘습니다 — 낙관 편향 여부를 점검하세요. (경고일 뿐 순위·저장에 영향 없음)
+              <span aria-hidden="true">⚠</span> {t("confirmedUpperBound")} {evBand.confirmed.max}{t("xExceedsTheGlobalReference")}{refBand.max}{t("checkForOptimisticBiasWarning")}
             </p>
           )}
         </div>
-        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table table-fixed-pct tmin-80" aria-label="대상 비교">
-          <caption className="sr-only">대상 비교 — S7 순위·NPV·IRR·케이스 수·가정 배수</caption>
+        <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}><table className="data-table table-fixed-pct tmin-80" aria-label={t("targetComparison")}>
+          <caption className="sr-only">{t("targetComparisonS7RankNpv")}</caption>
           <ColGroup widths={CASE_COMPARE_COL_PCT} />
           <thead>
             <tr>
-              <th scope="col">대상</th>
-              <th scope="col" className="num">S7 순위</th>
-              <th scope="col" className="num">기본 NPV 하위 5%<UnitNote /></th>
-              <th scope="col" className="num">기본 NPV 중앙값<UnitNote /></th>
+              <th scope="col">{t("target")}</th>
+              <th scope="col" className="num">{t("s7Rank")}</th>
+              <th scope="col" className="num">{t("baseNpvBottom")}<UnitNote /></th>
+              <th scope="col" className="num">{t("baseNpvMedian")}<UnitNote /></th>
               <th scope="col" className="num">IRR (%)</th>
-              <th scope="col" className="num">케이스</th>
-              <th scope="col">계산 엔진</th>
-              <th scope="col" title="페이드 DCF(성장률이 선형 수렴하는 대안 구조) NPV가 기본 구조 중앙값과 얼마나 벌어지는지 — 표시 전용이며 순위에 반영되지 않습니다.">구조 교차검증<span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">(페이드 DCF 대 중앙값)</span></th>
-              <th scope="col" title="생성기가 진입(acq_ev)과 처분(exit_ev)에 같은 배수를 적용하므로 진입 전용 배수가 아닌 가정치입니다. 사람이 확정한 프로젝트 밴드가 있을 때만 범위 내/밖을 표시하며, 글로벌 2–6배는 이 영역의 근거가 없는 참고값입니다. 가격 적정성 판단이 아니며 표시 전용으로 순위에 반영되지 않습니다.">가정 EV/매출 배수 (진입=처분)</th>
-              <th scope="col" title="이 대상의 케이스가 어떤 매출 기준으로 평가되었는가 — 회사 실적 앵커(DART 연매출)와 시장 점유율 폴백(시장규모 × 시장점유율)이 섞이면 하위 5% 기준 순위 비교가 부적합합니다.">평가 기준</th>
-              <th scope="col" className="min-w-[calc(var(--space-8)*3)]"><span className="sr-only">작업</span></th>
+              <th scope="col" className="num">{t("case")}</th>
+              <th scope="col">{t("calculationEngine")}</th>
+              <th scope="col" title={t("howFarTheFadedDcf")}>{t("structure")}<span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">{t("fadedDcfVsMedian")}</span></th>
+              <th scope="col" title={t("theGeneratorAppliesTheSame")}>{t("assumedEvRevenueMultipleEntry")}</th>
+              <th scope="col" title={t("whichRevenueBasisThisTarget")}>{t("evaluationCriteria")}</th>
+              <th scope="col" className="min-w-[calc(var(--space-8)*3)]"><span className="sr-only">{tc("actions")}</span></th>
             </tr>
           </thead>
           <tbody>
-            {targets.map((t) => {
-              const isSelected = data?.target_selection?.targetId === t.targetId;
+            {targets.map((tgt) => {
+              const isSelected = data?.target_selection?.targetId === tgt.targetId;
               return (
-                <tr key={t.targetId}>
+                <tr key={tgt.targetId}>
                   <td>
-                    <b>{t.companyName}</b>
-                    {t.recommended && <span className="status-chip status-green ml-1" title="정량 방법론 권고 — 최악 분위수(하위 5%) 생존 관점 (시장 기반)">★ 권고안</span>}
-                    {isSelected && <span className="status-chip status-green ml-1">선정됨</span>}
+                    <b>{tgt.companyName}</b>
+                    {tgt.recommended && <span className="status-chip status-green ml-1" title={t("quantitativeMethodologyRecommendationBottomSurvival")}>{t("recommendation")}</span>}
+                    {isSelected && <span className="status-chip status-green ml-1">{t("selected2")}</span>}
                   </td>
-                  <td className="num">{t.rank ?? "—"}</td>
-                  <td className="num mono-num">{t.baseP05 !== null ? fmtNpvKrwM(t.baseP05) : "—"}</td>
-                  <td className="num mono-num">{t.baseP50 !== null ? fmtNpvKrwM(t.baseP50) : "—"}</td>
-                  <td className="num mono-num">{t.irr != null ? `${(t.irr * 100).toFixed(1)}%` : "—"}</td>
-                  <td className="num">{t.caseCount}</td>
-                  <td><span className="status-chip status-not-started whitespace-nowrap">{ENGINE_LABEL[t.engine ?? ""] ?? "엔진 미기록"}</span></td>
+                  <td className="num">{tgt.rank ?? "—"}</td>
+                  <td className="num mono-num">{tgt.baseP05 !== null ? fmtNpvKrwM(tgt.baseP05) : "—"}</td>
+                  <td className="num mono-num">{tgt.baseP50 !== null ? fmtNpvKrwM(tgt.baseP50) : "—"}</td>
+                  <td className="num mono-num">{tgt.irr != null ? `${(tgt.irr * 100).toFixed(1)}%` : "—"}</td>
+                  <td className="num">{tgt.caseCount}</td>
+                  <td><span className="status-chip status-not-started whitespace-nowrap">{ENGINE_LABEL(tr)[tgt.engine ?? ""] ?? t("engineNotRecorded")}</span></td>
                   <td className="num min-w-[calc(var(--space-8)*5)]">
-                    {t.xcheckDivergence != null ? (
+                    {tgt.xcheckDivergence != null ? (
                       <>
-                        <span className="mono-num">{t.xcheckDivergence >= 0 ? "+" : "−"}{Math.abs(t.xcheckDivergence * 100).toFixed(1)}%</span>
-                        {t.xcheckFadeNpv != null && t.baseP50 != null && (
+                        <span className="mono-num">{tgt.xcheckDivergence >= 0 ? "+" : "−"}{Math.abs(tgt.xcheckDivergence * 100).toFixed(1)}%</span>
+                        {tgt.xcheckFadeNpv != null && tgt.baseP50 != null && (
                           <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] block">
-                            차이 {t.xcheckFadeNpv - t.baseP50 >= 0 ? "+" : "−"}{fmtNpvKrwM(Math.abs(t.xcheckFadeNpv - t.baseP50))} (페이드 NPV {fmtNpvKrwM(t.xcheckFadeNpv)})
+                            {t("difference")} {tgt.xcheckFadeNpv - tgt.baseP50 >= 0 ? "+" : "−"}{fmtNpvKrwM(Math.abs(tgt.xcheckFadeNpv - tgt.baseP50))} {t("fadedNpv")} {fmtNpvKrwM(tgt.xcheckFadeNpv)})
                           </span>
                         )}
                       </>
-                    ) : t.recommended ? (
-                      <span className="status-chip status-amber" title="이 ★ 권고 대상에는 페이드 DCF 교차검증이 기록되지 않았습니다. 기록이 없다는 것은 검증되었다는 뜻이 아닙니다.">
-                        <span aria-hidden="true">⚠</span> 교차검증 없음
+                    ) : tgt.recommended ? (
+                      <span className="status-chip status-amber" title={t("noFadedDcfIsRecorded")}>
+                        <span aria-hidden="true">⚠</span> {t("no")}
                       </span>
                     ) : (
-                      <span aria-label="해당 없음: 교차검증 기록 없음" title="이 케이스에는 페이드 DCF 교차검증이 기록되지 않았습니다.">N/A</span>
+                      <span aria-label={t("notApplicableNoRecord")} title={t("noFadedDcfIsRecorded2")}>N/A</span>
                     )}
-                    {t.structureMismatch && (
+                    {tgt.structureMismatch && (
                       <span className="status-chip status-amber block mt-1" role="note">
-                        <span aria-hidden="true">⚠</span> 구조 불일치 — 페이드 DCF가 기본 p50과 {XCHECK_WARN_PCT}% 넘게 벌어집니다. 성장률·처분 배수 가정을 검토하세요.
+                        <span aria-hidden="true">⚠</span> {t("structureMismatchTheFadedDcf")} {XCHECK_WARN_PCT}{t("apartReviewTheGrowthRate")}
                       </span>
                     )}
                   </td>
                   <td className="num min-w-[calc(var(--space-8)*5)]">
-                    {t.acqEvRevenue != null ? (
+                    {tgt.acqEvRevenue != null ? (
                       <>
-                        <span className="mono-num">{t.acqEvRevenue.toFixed(1)}×</span>
-                        {evBand?.confirmed && t.acqEvRevenueInBand != null ? (
+                        <span className="mono-num">{tgt.acqEvRevenue.toFixed(1)}×</span>
+                        {evBand?.confirmed && tgt.acqEvRevenueInBand != null ? (
                           <span
-                            className={`status-chip block mt-1 whitespace-nowrap ${t.acqEvRevenueInBand ? "status-not-started" : "status-amber"}`}
-                            title={`사람이 확정한 프로젝트 밴드 ${evBand.confirmed.min}–${evBand.confirmed.max}× 기준의 참고 표시이며 가격 적정성 판단이 아닙니다. 근거: ${evBand.confirmed.rationale} · 출처: ${evBand.confirmed.source} · 확정: ${evBand.confirmed.confirmedBy}, ${evBand.confirmed.confirmedAt}${evBand.stale ? ` · 재확인 필요: 확정 후 ${evBand.ageDays}일 경과 (알림일 뿐 순위에 영향 없음)` : ""}${data?.methods_mixed ? " · 평가 기준이 다른 대상 간에는 밴드 판정을 비교할 수 없습니다." : ""}`}
+                            className={`status-chip block mt-1 whitespace-nowrap ${tgt.acqEvRevenueInBand ? "status-not-started" : "status-amber"}`}
+                            title={t("referenceMarkerAgainstThePersonConfirmedProjectBandP1P8", { p1: evBand.confirmed.min, p2: evBand.confirmed.max, p3: evBand.confirmed.rationale, p4: evBand.confirmed.source, p5: evBand.confirmed.confirmedBy, p6: evBand.confirmed.confirmedAt, p7: evBand.stale ? t("neededP1DaysSinceConfirmation", { p1: evBand.ageDays ?? "?" }) : "", p8: data?.methods_mixed ? t("bandJudgementsCannotBeCompared") : "" })}
                           >
-                            <span aria-hidden="true">{t.acqEvRevenueInBand ? "ⓘ" : "⚠"}</span>{" "}
-                            {t.acqEvRevenueInBand ? `확정 밴드 ${evBand.confirmed.min}–${evBand.confirmed.max}× 범위 내 (참고 표시)` : `확정 밴드 ${evBand.confirmed.min}–${evBand.confirmed.max}× 범위 밖 — 확인 필요`}
-                            {evBand.stale && <> · <span aria-hidden="true">⏱</span> 재확인 필요</>}
+                            <span aria-hidden="true">{tgt.acqEvRevenueInBand ? "ⓘ" : "⚠"}</span>{" "}
+                            {tgt.acqEvRevenueInBand ? t("withinTheConfirmedBandP1", { p1: evBand.confirmed.min, p2: evBand.confirmed.max }) : t("outsideTheConfirmedBandP1", { p1: evBand.confirmed.min, p2: evBand.confirmed.max })}
+                            {evBand.stale && <> · <span aria-hidden="true">⏱</span> {t("needed")}</>}
                           </span>
                         ) : (
                           <span
                             className="status-chip status-not-started block mt-1 whitespace-nowrap"
-                            aria-label={`밴드 미확정. 참고: 글로벌 로보틱스·자동화 M&A ${refBand.min}에서 ${refBand.max}배, 이 영역의 근거 없음`}
-                            title="사람이 확정한 프로젝트 밴드가 없어 범위 내/밖 판정을 하지 않습니다."
+                            aria-label={t("bandNotConfirmedReferenceGlobal", { p1: refBand.min, p2: refBand.max })}
+                            title={t("noProjectBandExistsSo")}
                           >
-                            <span aria-hidden="true">ⓘ</span> 밴드 미확정
+                            <span aria-hidden="true">ⓘ</span> {t("bandNotConfirmed2")}
                           </span>
                         )}
                       </>
                     ) : (
-                      <span aria-label="해당 없음: 인수가 기반 배수 없음" title="인수가 기반으로 평가되지 않은 케이스입니다.">N/A</span>
+                      <span aria-label={t("notApplicableNoMultiple")} title={t("theCaseWasNotValued")}>N/A</span>
                     )}
                   </td>
                   <td className="min-w-[calc(var(--space-8)*5)]">
-                    {t.anchorMethod === "company_revenue" && (
-                      <span className="status-chip status-green whitespace-nowrap" title="대상 회사 최신 연매출(DART)을 매출 앵커로 평가 — 대상 간 비교 가능">실적 앵커 (DART)</span>
+                    {tgt.anchorMethod === "company_revenue" && (
+                      <span className="status-chip status-green whitespace-nowrap" title={t("valuesTheTargetCompanyS")}>{t("actualAnchorDart")}</span>
                     )}
-                    {t.anchorMethod === "market_capture" && (
-                      <span className="status-chip status-amber whitespace-nowrap" title="회사 실적이 연결되지 않아 시장규모 × 시장점유율 폴백으로 평가 — 실적 앵커 대상과는 기준이 다릅니다. 재무분석 탭에서 회사 연결 후 재생성하세요.">시장 점유율 폴백</span>
+                    {tgt.anchorMethod === "market_capture" && (
+                      <span className="status-chip status-amber whitespace-nowrap" title={t("noCompanyActualsLinkedSo")}>{t("marketShareFallback")}</span>
                     )}
-                    {!t.anchorMethod && <span className="status-chip status-not-started whitespace-nowrap">미평가</span>}
+                    {!tgt.anchorMethod && <span className="status-chip status-not-started whitespace-nowrap">{t("notEvaluated")}</span>}
                   </td>
                   <td className="min-w-[calc(var(--space-8)*3)]">
                     {canAct && !isSelected ? (
-                      <button type="button" className="btn-ghost btn-sm whitespace-nowrap" disabled={busy} onClick={() => { setSelecting({ targetId: t.targetId, name: t.companyName }); setSelectionRationale(""); }}>
-                        대상 선택
+                      <button type="button" className="btn-ghost btn-sm whitespace-nowrap" disabled={busy} onClick={() => { setSelecting({ targetId: tgt.targetId, name: tgt.companyName }); setSelectionRationale(""); }}>
+                        {t("selectTarget")}
                       </button>
                     ) : isSelected ? (
                       // 빈 작업 셀 대신 선정 상태를 남긴다 — 이 행의 액션이 비어 있는
                       // 이유(이미 선정됨)를 표가 설명하게 한다(2026-10 표 인터랙션 리뷰).
-                      <span className="status-chip status-green whitespace-nowrap">선택됨</span>
+                      <span className="status-chip status-green whitespace-nowrap">{t("selected3")}</span>
                     ) : null}
                   </td>
                 </tr>
@@ -816,38 +817,37 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           </tbody>
         </table></div>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" role="note">
-          * 구조 교차검증과 가정 EV/매출 배수 열은 표시 전용이며 순위·★ 권고안에 반영되지 않습니다. 글로벌 2–6× 범위는 이 영역의 근거가 없는 참고값이며, 범위 내/밖 표시는 사람이 확정한 프로젝트 밴드에 대해서만 나타나고 가격 적정성 판단이 아닙니다. 권고는 제안일 뿐이며 대상 선정은 사람이 근거를 남겨 결정합니다.
-          {data?.methods_mixed && " 평가 기준이 대상마다 다르므로 교차검증 괴리율은 대상 간에 비교할 수 없습니다."}
+          {t("theStructureAndAssumedEv")}
+          {data?.methods_mixed && t("evaluationCriteriaDifferPerTarget")}
         </p>
         {data?.engines_mixed && (
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" role="note">
-            * 비교된 케이스가 서로 다른 계산 엔진에서 산출되었으므로 순위는 유의하여 해석하세요.
+            {t("theComparedCasesWereProduced")}
           </p>
         )}
         {data?.methods_mixed && (
           <p className="text-[length:var(--fs-caption)] mt-1" role="alert">
-            <span className="status-chip status-amber mr-1">⚠ 평가 기준 불일치</span>
-            비교 대상의 평가 기준이 섞여 있습니다 — 일부 대상이 <b>회사 실적 앵커</b>(DART 연매출)가 아닌 <b>시장 점유율 폴백</b>(시장규모 × 시장점유율)으로 평가되어
-            p05 순위·★ 권고안 비교가 부적합합니다. 재무분석 탭에서 해당 대상의 회사를 연결한 뒤 재생성하세요.
+            <span className="status-chip status-amber mr-1">{t("evaluationCriteriaMismatch")}</span>
+            {t("theComparisonTargetsMixEvaluation")} <b>{t("companyActualsAnchor")}</b>{t("notTheDartAnnualRevenue")} <b>{t("marketShareFallback2")}</b>{t("marketSizeShareSoP05")}
           </p>
         )}
         {targets.every((t) => t.caseCount === 0) && (
-          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">아직 분석된 케이스가 없습니다 — 설명·생성 탭에서 대상별 자동 생성을 실행하세요.</p>
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">{t("noAnalyzedCasesYetRun")}</p>
         )}
         {selecting && (
           <div className="mt-2">
-            <p className="text-[length:var(--fs-caption)] mb-1"><b>{selecting.name}</b> 대상 선정 근거 (필수 — 결정 기록으로 남습니다):</p>
+            <p className="text-[length:var(--fs-caption)] mb-1"><b>{selecting.name}</b> {t("targetSelectionEvidenceRequiredBecomes")}</p>
             <textarea
               className="sizing-new-input w-full"
               rows={3}
               value={selectionRationale}
               onChange={(e) => setSelectionRationale(e.target.value)}
               spellCheck={false}
-              aria-label="대상 선정 근거"
+              aria-label={t("targetSelectionEvidence")}
             />
             <div className="flex gap-1 mt-1">
-              <button type="button" className="btn-ghost btn-sm" disabled={busy || !selectionRationale.trim()} onClick={() => void submitTargetSelection()}>선정 기록</button>
-              <button type="button" className="btn-ghost btn-sm" onClick={() => setSelecting(null)}>취소</button>
+              <button type="button" className="btn-ghost btn-sm" disabled={busy || !selectionRationale.trim()} onClick={() => void submitTargetSelection()}>{t("selectionRecord")}</button>
+              <button type="button" className="btn-ghost btn-sm" onClick={() => setSelecting(null)}>{tc("cancel")}</button>
             </div>
           </div>
         )}
@@ -862,17 +862,17 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       {canAct && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <button type="button" className="btn-premium btn-sm" disabled={busy} onClick={() => void generate()}>
-            {busy ? "생성 중..." : greenfield ? "자동 생성 (시장 기반 × 3 시나리오)" : "이중 관점 자동 생성 (시장 기반 + 과거 기반 × 3 시나리오)"}
+            {busy ? tc("creating") : greenfield ? t("marketBasis3Scenarios") : t("marketPastBasis3Scenarios")}
           </button>
           <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-            {busy ? "계산 중입니다 - 완료되면 결과가 갱신됩니다." : "결정 기록은 '결정' 탭에서 합니다."}
+            {busy ? t("calculatingResultsRefreshWhenDone") : t("recordTheDecisionInThe")}
           </span>
         </div>
       )}
 
       {run && (
         <details className="mb-3">
-          <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">생성 실행 로그 ({run.runId} — {run.status})</summary>
+          <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">{t("generationRunLog")}{run.runId} — {run.status})</summary>
           <ul className="sizing-note-list mt-1">
             {run.activities.map((a) => (
               <li key={a.activityId}>
@@ -887,50 +887,50 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
       {/* 두 관점의 의미 — greenfield has no target company, so only the market-based perspective exists */}
       {greenfield ? (
-      <section className="market-section sizing-step mb-3" aria-label="평가 관점의 의미">
-        <h3 className="sizing-step-title">평가 관점의 의미</h3>
-        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table">
-          <caption className="sr-only">평가 관점의 의미 — 성장률·변동성 근거와 쓰임</caption>
-          <thead><tr><th scope="col">관점</th><th scope="col">성장률 근거</th><th scope="col">변동성(sigma) 근거</th><th scope="col">쓰임</th></tr></thead>
+      <section className="market-section sizing-step mb-3" aria-label={t("whatTheEvaluationPerspectiveMeans")}>
+        <h3 className="sizing-step-title">{t("whatTheEvaluationPerspectiveMeans2")}</h3>
+        <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}><table className="data-table">
+          <caption className="sr-only">{t("whatTheEvaluationPerspectiveMeans3")}</caption>
+          <thead><tr><th scope="col">{tc("perspective")}</th><th scope="col">{t("growthRateEvidence")}</th><th scope="col">{t("volatilitySigmaEvidence")}</th><th scope="col">{t("usage")}</th></tr></thead>
           <tbody>
             <tr>
-              <td><span className="status-chip status-green">market_forward · 1차</span> 시장 기반</td>
-              <td>시장 성장률 (opportunity)</td>
-              <td>미래 변동성 프로파일 — 시장 기반 변동성과 WACC 자산 변동성 블렌딩</td>
-              <td>S8 완료·킬 크라이테리아·권고안 판정</td>
+              <td><span className="status-chip status-green">{t("firstPass")}</span> {tc("marketBasis")}</td>
+              <td>{tc("marketGrowthOpportunity")}</td>
+              <td>{t("futureVolatilityProfileBlendingVolatility")}</td>
+              <td>{t("s8CompletionKillCriteriaAnd")}</td>
             </tr>
           </tbody>
         </table></div>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
-          과거 기반 비교는 대상 회사가 있는 Brown Field에만 적용됩니다.
+          {t("comparisonAppliesOnlyToBrown")}
         </p>
       </section>
       ) : (
       <>
       {/* 두 관점의 의미 */}
-        <section className="market-section sizing-step mb-3" aria-label="두 관점의 의미">
-          <h3 className="sizing-step-title">두 관점의 의미</h3>
-          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table">
-            <caption className="sr-only">두 관점의 의미 — 성장률·변동성 근거와 쓰임</caption>
-            <thead><tr><th scope="col">관점</th><th scope="col">성장률 근거</th><th scope="col">변동성(sigma) 근거</th><th scope="col">쓰임</th></tr></thead>
+        <section className="market-section sizing-step mb-3" aria-label={t("whatTheTwoPerspectivesMean")}>
+          <h3 className="sizing-step-title">{t("whatTheTwoPerspectivesMean2")}</h3>
+          <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}><table className="data-table">
+            <caption className="sr-only">{t("whatTheTwoPerspectivesMean3")}</caption>
+            <thead><tr><th scope="col">{tc("perspective")}</th><th scope="col">{t("growthRateEvidence2")}</th><th scope="col">{t("volatilitySigmaEvidence2")}</th><th scope="col">{t("usage2")}</th></tr></thead>
             <tbody>
               <tr>
-                <td><span className="status-chip status-green">market_forward · 1차</span> 시장 기반</td>
-                <td>시장 성장률 (opportunity)</td>
-                <td>미래 변동성 프로파일 — 과거 매출 변동성 + WACC 자산 변동성 블렌딩</td>
-                <td>S8 완료·킬 크라이테리아·권고안 판정</td>
+                <td><span className="status-chip status-green">{t("firstPass2")}</span> {tc("marketBasis")}</td>
+                <td>{tc("marketGrowthOpportunity")}</td>
+                <td>{t("futureVolatilityProfileBlendingPast")}</td>
+                <td>{t("s8CompletionKillCriteriaAnd2")}</td>
               </tr>
               <tr>
-                <td><span className="status-chip status-amber">historical · 비교</span> 과거 기반</td>
-                <td>대상 회사 매출 CAGR (DART)</td>
-                <td>과거 매출 증감률 표준편차</td>
-                <td>&quot;과거 실적이 지속되면&quot; 관점의 비교 근거</td>
+                <td><span className="status-chip status-amber">{t("historicalComparison")}</span> {t("item2")}</td>
+                <td>{t("targetCompanyRevenueCagrDart")}</td>
+                <td>{t("stdDeviationOfPastRevenue")}</td>
+                <td>{t("comparisonEvidenceFromThePerspective")}</td>
               </tr>
             </tbody>
           </table></div>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
-            <b className="text-[color:var(--warning)]">진행 판정(채택 요건·킬 크라이테리아·권고안)은 시장 기반 값을 사용합니다.</b>{" "}
-            과거 기반은 비교용이며, 둘의 차이가 클수록 성장 가정의 불확실성이 크다는 신호입니다.
+            <b className="text-[color:var(--warning)]">{t("progressJudgementsAdoptionRequirementsKill")}</b>{" "}
+            {t("theViewIsForComparison")}
           </p>
         </section>
       </>
@@ -948,8 +948,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       {/* AI 채택 권고 lives in the decision tab's "AI 판단 지원" (one section for both AI proposals). */}
       {canAct && (
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-3" role="note">
-          AI 채택 권고는 결정 탭의 AI 판단 지원에서 확인합니다.{" "}
-          <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("decision")}>결정 탭 →</button>
+          {t("theAiAdoptionRecommendationIs")}{" "}
+          <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("decision")}>{t("decisionTab")}</button>
         </p>
       )}
       </>
@@ -960,18 +960,18 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           this is only a pointer (each fact gets ONE home). */}
       {tab === "scenarios" && (
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-3" role="note">
-          <span className="status-chip status-not-started mr-1"><span aria-hidden="true">ⓘ</span> 역량</span>
+          <span className="status-chip status-not-started mr-1"><span aria-hidden="true">ⓘ</span> {t("capability")}</span>
           {/* 2026-10-19 decider: Brownfield의 필요 역량 판정 주전장은 S9 실사·검증(필요 역량 검증 탭) —
               S8 기술 탭은 그 결과를 반영하는 읽기 전용 뷰다. */}
           {!greenfield && targets.length > 0 ? (
             <>
-              브라운필드 필요 역량 판정은 S9 실사·검증 —{" "}
-              <a href={`/projects/${projectId}/dd`} className="text-[color:var(--accent)] font-bold">필요 역량 검증 탭 →</a>
+              {t("brownfieldRequiredCapabilityJudgementHappens")}{" "}
+              <a href={`/projects/${projectId}/dd`} className="text-[color:var(--accent)] font-bold">{t("requiredCapabilityVerificationTab")}</a>
             </>
           ) : (
             <>
-              필요 역량 달성 가능성 판정은{" "}
-              <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("technical")}>기술적 타당성 탭 →</button>
+              {t("theCapabilityAttainabilityJudgement")}{" "}
+              <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("technical")}>{t("technicalFeasibilityTab")}</button>
             </>
           )}
         </p>
@@ -980,12 +980,12 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       <>
       {targets.length > 1 && (
         <div className="mt-3 mb-1 flex flex-wrap items-center gap-2">
-          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">분석 대상:</span>
+          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("analysisScope")}</span>
           <TargetSelector
             targets={targets.map((t) => ({ targetId: t.targetId, name: t.companyName, companyId: t.targetId, isBound: data?.target_selection?.targetId === t.targetId }))}
             selected={effectiveTargetFilter}
             onSelect={setTargetFilter}
-            ariaLabel="분석 대상 필터"
+            ariaLabel={t("analysisScopeFilter")}
           />
         </div>
       )}
@@ -995,32 +995,32 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         const newestMf = cases.find((c) => c.variant === "market_forward");
         const newestMfP50 = newestMf?.simulations.find((x) => x.percentile === "p50")?.npv_krw_m ?? null;
         return (
-          <section key={s} className="market-section sizing-step mt-3" aria-label={greenfield ? `${SCEN_LABEL[s]} 시장 기반 평가` : `${SCEN_LABEL[s]} 이중 관점 비교`}>
+          <section key={s} className="market-section sizing-step mt-3" aria-label={greenfield ? t("p1Valuation", { p1: SCEN_LABEL(tr)[s] }) : t("p1Comparison", { p1: SCEN_LABEL(tr)[s] })}>
             <h3 className="sizing-step-title">
-              {SCEN_LABEL[s]}
-              {newestMf?.recommended && <span className="status-chip status-green ml-1" title="정량 방법론 권고 — 최악 분위수(하위 5%) 생존 관점 (시장 기반)">★ 권고안</span>}
-              {newestMf?.adopted && <span className="status-chip status-green ml-1">채택됨 (fs 진행 입력)</span>}
+              {SCEN_LABEL(tr)[s]}
+              {newestMf?.recommended && <span className="status-chip status-green ml-1" title={t("quantitativeMethodologyRecommendationBottomSurvival2")}>{t("recommendation2")}</span>}
+              {newestMf?.adopted && <span className="status-chip status-green ml-1">{t("adoptedFsProgressInput")}</span>}
             </h3>
             {cases.length === 0 ? (
               <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">
-                이 시나리오의 케이스가 없습니다 — 자동 생성을 실행하세요.
+                {t("noCasesForThisScenario")}
               </p>
             ) : (
-              <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}><table className="data-table table-fixed-pct tmin-56">
-                <caption className="sr-only">{SCEN_LABEL[s]} 케이스 비교 — 관점·성장률·변동성·NPV·IRR</caption>
+              <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}><table className="data-table table-fixed-pct tmin-56">
+                <caption className="sr-only">{SCEN_LABEL(tr)[s]} {t("caseComparisonPerspectiveGrowthVolatility")}</caption>
                 <ColGroup widths={greenfield ? SCENARIO_CASE_COL_PCT_GF : SCENARIO_CASE_COL_PCT} />
                 <thead>
                   <tr>
-                    <th scope="col">관점</th>
-                    <th scope="col">성장률 <span className="text-[color:var(--muted-fg)]">(출처)</span></th>
-                    <th scope="col">변동성 sigma <span className="text-[color:var(--muted-fg)]">(출처)</span></th>
-                    <th scope="col" className="num">NPV 하위 5%<UnitNote /></th>
-                    <th scope="col" className="num">NPV 중앙값<UnitNote /></th>
-                    <th scope="col" className="num">NPV 상위 5%<UnitNote /></th>
+                    <th scope="col">{tc("perspective")}</th>
+                    <th scope="col">{tc("growthRate")} <span className="text-[color:var(--muted-fg)]">{t("source2")}</span></th>
+                    <th scope="col">{t("volatilitySigma")} <span className="text-[color:var(--muted-fg)]">{t("source3")}</span></th>
+                    <th scope="col" className="num">{t("npvBottom")}<UnitNote /></th>
+                    <th scope="col" className="num">{t("npvMedian")}<UnitNote /></th>
+                    <th scope="col" className="num">{t("npvTop")}<UnitNote /></th>
                     <th scope="col" className="num">IRR <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">(%)</span></th>
-                    {!greenfield && <th scope="col" className="num">중앙값 차이<span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">({KRW_MILLIONS_UNIT}, 시장 기반 대비 %)</span></th>}
-                    {!greenfield && <th scope="col" className="num" title="이중 구조 교차검증 — 같은 케이스를 고전 장기창구 DCF로 재평가: 명시적 창구(기본 10년) 안에서 성장률이 말기 성장률(기본 3%)로 선형 수렴하고 마지막 해에 동일 배수로 처분한 결정론적 NPV. 기본 구조(5년 홀드+exit)와 크게 어긋나면 성장-배수 가정이 불일치한다는 신호.">페이드 DCF 중앙값<UnitNote /></th>}
-                    <th scope="col"><span className="sr-only">작업</span></th>
+                    {!greenfield && <th scope="col" className="num">{t("medianDifference")}<span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">({KRW_MILLIONS_UNIT}{t("vsMarketBasis")}</span></th>}
+                    {!greenfield && <th scope="col" className="num" title={t("dualStructureRevaluesTheSame")}>{t("fadedDcfMedian")}<UnitNote /></th>}
+                    <th scope="col"><span className="sr-only">{tc("actions")}</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1048,9 +1048,9 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                     return (
                       <tr key={c.id}>
                         <td>
-                          {c.variant === "market_forward" ? <span className="status-chip status-green">1차</span> : <span className="status-chip status-amber">비교</span>}{" "}
-                          <b>{VARIANT_LABEL[c.variant]}</b>
-                          {c.adopted && <span className="status-chip status-green ml-1" title={`채택자 ${data?.adoption?.adoptedBy ?? ""}`}>채택됨</span>}
+                          {c.variant === "market_forward" ? <span className="status-chip status-green">{t("firstPass3")}</span> : <span className="status-chip status-amber">{t("comparison")}</span>}{" "}
+                          <b>{VARIANT_LABEL(tr)[c.variant]}</b>
+                          {c.adopted && <span className="status-chip status-green ml-1" title={t("adoptedByP1", { p1: data?.adoption?.adoptedBy ?? "" })}>{t("adopted")}</span>}
                         </td>
                         <td>
                           {note.growth ? `${(Number(note.growth) * 100).toFixed(1)}%` : "—"}
@@ -1058,9 +1058,9 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                           {c.variant === "historical" && note.growth && escalatedCagrPct !== null && Math.abs(Number(note.growth) * 100 - escalatedCagrPct) > 15 && (
                             <span
                               className="status-chip status-amber mt-1 block w-fit max-w-full whitespace-normal [overflow-wrap:anywhere]"
-                              title={`에스컬레이션 조정 CAGR(${escalatedCagrPct.toFixed(1)}%)와 과거 CAGR의 차이가 15%p를 넘습니다 — 성장 가정의 불확실성 신호입니다.`}
+                              title={t("theGapBetweenTheCagr", { p1: escalatedCagrPct.toFixed(1) })}
                             >
-                              ⚠ 조정치와 {(Number(note.growth) * 100 - escalatedCagrPct).toFixed(1)}%p 차이
+                              {t("theAdjustmentAnd")} {(Number(note.growth) * 100 - escalatedCagrPct).toFixed(1)}{t("difference2")}
                             </span>
                           )}
                         </td>
@@ -1086,7 +1086,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                                         className="status-chip status-amber mt-1 block w-fit max-w-full whitespace-normal [overflow-wrap:anywhere]"
                                         title={IRR_GUARD_DIAGNOSTIC}
                                       >
-                                        {IRR_GUARD_CHIP_LABEL[band]} (기준 {irrThresholds ? `${(irrThresholds[band === "extreme" ? "flag" : "caution"] * 100).toFixed(0)}%` : band === "extreme" ? "100%" : "50%"})
+                                        {IRR_GUARD_CHIP_LABEL[band]} {t("base2")} {irrThresholds ? `${(irrThresholds[band === "extreme" ? "flag" : "caution"] * 100).toFixed(0)}%` : band === "extreme" ? "100%" : "50%"})
                                       </span>
                                     </>
                                   )}
@@ -1098,9 +1098,9 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                                 <span
                                   data-testid="irr-no-flow-chip"
                                   className="status-chip status-amber whitespace-normal [overflow-wrap:anywhere]"
-                                  title="회수 기간(BEP) 0.0년도 같은 이유입니다. S5 투자비 탭에서 capex 줄을 입력하면 계산됩니다."
+                                  title={t("thatIsWhyThePayback")}
                                 >
-                                  투자 플로우 없음 — S5 계획에 설비투자(capex) 줄이 없습니다
+                                  {t("noInvestmentFlowsTheS5")}
                                 </span>
                               );
                             }
@@ -1116,33 +1116,33 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                           )}
                           {c.variant === "historical" && deltaPct !== null && Math.abs(deltaPct) > P50_GAP_WARN_RATIO && (
                             <span role="note" data-testid="p50-gap-hint" className="mt-1 block w-fit max-w-full whitespace-normal [overflow-wrap:anywhere] text-[length:var(--fs-caption)] font-normal text-[color:var(--muted-fg)]">
-                              성장 가정 차이가 지배적{growthGapPp !== null ? ` (시장 기반 대비 성장률 ${growthGapPp >= 0 ? "+" : ""}${growthGapPp.toFixed(1)}%p)` : ""}{" "}
-                              <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("overview")}>설명: 개요 탭 →</button>
+                              {t("theGrowthAssumptionDifferenceDominates")}{growthGapPp !== null ? t("growthP1P2VsMarket", { p1: growthGapPp >= 0 ? "+" : "", p2: growthGapPp.toFixed(1) }) : ""}{" "}
+                              <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("overview")}>{t("seeTheOverviewTab")}</button>
                             </span>
                           )}
                         </td>}
                         {!greenfield && <td className="num mono-num">
                           {note.xcheck_fade_npv ? (
-                            <span title={`페이드 DCF 교차검증 — 명시적 ${note.xcheck_horizon ?? "?"}년 창구, 성장률 → ${(Number(note.xcheck_terminal_growth ?? "0") * 100).toFixed(1)}% 선형 수렴, 동일 배수 처분 · IRR ${note.xcheck_fade_irr && note.xcheck_fade_irr !== "null" ? `${(Number(note.xcheck_fade_irr) * 100).toFixed(1)}%` : "—"}`}>
+                            <span title={t("fadedDcfExplicitP1Window", { p1: note.xcheck_horizon ?? "?", p2: (Number(note.xcheck_terminal_growth ?? "0") * 100).toFixed(1), p3: note.xcheck_fade_irr && note.xcheck_fade_irr !== "null" ? `${(Number(note.xcheck_fade_irr) * 100).toFixed(1)}%` : "—" })}>
                               {fmtNpvKrwM(Number(note.xcheck_fade_npv))}
                             </span>
                           ) : "—"}
                         </td>}
                         <td className="align-middle">
                           {canAct && (() => {
-                            const rowCtx = `${VARIANT_LABEL[c.variant] ?? c.variant} · ${SCEN_LABEL[c.scenario ?? s] ?? c.scenario ?? s}`;
+                            const rowCtx = `${VARIANT_LABEL(tr)[c.variant] ?? c.variant} · ${SCEN_LABEL(tr)[c.scenario ?? s] ?? c.scenario ?? s}`;
                             return (
                               <div className="flex items-center justify-end gap-1 whitespace-nowrap" data-testid="scenario-row-actions" data-case-id={c.id}>
                                 {!c.adopted && (
-                                  <button type="button" className="btn-ghost btn-sm whitespace-nowrap font-semibold text-[color:var(--accent)]" disabled={busy} aria-label={`${rowCtx} 채택`} onClick={() => adopt(c.id, c.scenario, c.variant)}>
-                                    채택
+                                  <button type="button" className="btn-ghost btn-sm whitespace-nowrap font-semibold text-[color:var(--accent)]" disabled={busy} aria-label={t("p1Adopt", { p1: rowCtx })} onClick={() => adopt(c.id, c.scenario, c.variant)}>
+                                    {t("adopt")}
                                   </button>
                                 )}
                                 <RowMenu
-                                  label={`${rowCtx} 작업`}
+                                  label={t("p1WorkOn", { p1: rowCtx })}
                                   items={[
-                                    { key: "lines", label: greenfield ? "라인 보기" : "라인 편집", onSelect: () => (greenfield ? startView(c) : startEdit(c)) },
-                                    { key: "delete", label: "삭제", danger: true, separatorBefore: true, disabled: busy, onSelect: () => remove(c) },
+                                    { key: "lines", label: greenfield ? t("viewLines") : t("editLine"), onSelect: () => (greenfield ? startView(c) : startEdit(c)) },
+                                    { key: "delete", label: tc("delete"), danger: true, separatorBefore: true, disabled: busy, onSelect: () => remove(c) },
                                   ]}
                                 />
                               </div>
@@ -1155,15 +1155,15 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                   {!hasHistorical && !greenfield && (
                     <tr>
                       <td colSpan={10} className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
-                        과거 기반 관점 N/A — 대상 회사 연결 + DART 동기화 후 재생성하면 추가됩니다.{" "}
-                        <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("financial-analysis")}>재무분석 탭에서 연결 →</button>
+                        {t("perspectiveNAItAppears")}{" "}
+                        <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("financial-analysis")}>{t("linkInTheFinancialAnalysis")}</button>
                       </td>
                     </tr>
                   )}
                   {!hasHistorical && greenfield && cases.length > 0 && (
                     <tr>
                       <td colSpan={8} className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
-                        과거 기반 관점은 Green Field에 해당 없습니다 — 대상 회사가 없어 시장 기반 관점만 평가합니다.
+                        {t("thePerspectiveDoesNotApply")}
                       </td>
                     </tr>
                   )}
@@ -1177,23 +1177,23 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             {data?.plausibility?.tripped && (
               <div role="status" data-testid="ratio-guard-warning" className="mt-2 p-3 border border-[color:var(--border)] rounded-[length:var(--radius)]">
                 <span className="status-chip status-amber">
-                  {data.plausibility.label} (1차년도 매출 {fmtNpvKrwM(data.plausibility.y1_revenue_krw_m!)} / 투자 {fmtNpvKrwM(data.plausibility.investment_krw_m!)} = {data.plausibility.ratio?.toFixed(1)}배, 기준 {data.plausibility.threshold}배 초과)
+                  {data.plausibility.label} {t("revenue")} {fmtNpvKrwM(data.plausibility.y1_revenue_krw_m!)} {t("investment")} {fmtNpvKrwM(data.plausibility.investment_krw_m!)} = {data.plausibility.ratio?.toFixed(1)}{t("xBase")} {data.plausibility.threshold}{t("xOrMore")}
                 </span>{" "}
                 <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{data.plausibility.diagnostic}</span>
               </div>
             )}
             {/* IA cleanup 2026-10-14: the attainment table lives once, in the goals tab. */}
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2">
-              <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("goals")}>목표 달성 판정은 사업 목표 탭 →</button>
+              <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("goals")}>{t("goalAttainmentJudgementIsIn")}</button>
             </p>
             {(cases[0]?.simulations?.[0]?.note) && (
-              <details className="raw-key-details mt-1" title="재현 근거 (동일 시드로 재계산해도 같은 결과)">
-                <summary>계산 파라미터(원문)</summary> {/* INTERIM-WORDING */}
+              <details className="raw-key-details mt-1" title={t("reproducibilityEvidenceSameSeedAlways")}>
+                <summary>{t("calculationParametersOriginal")}</summary> {/* INTERIM-WORDING */}
                 <code lang="en" className="block mono-num text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] whitespace-pre-wrap [overflow-wrap:anywhere] select-all">{cases[0].simulations[0].note}</code>
               </details>
             )}
             <p className="text-[length:var(--fs-caption)] text-[var(--muted-fg)] mt-1">
-              {greenfield ? "계산 사슬" : "계산 사슬과 두 관점 차이"}: <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("overview")}>설명: 개요 탭 →</button>
+              {greenfield ? t("calculationChain") : t("calculationChainAndTheDifference")}: <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("overview")}>{t("seeTheOverviewTab2")}</button>
             </p>
           </section>
         );
@@ -1202,7 +1202,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       )}
 
       {data && data.cases.length === 0 && (
-        <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">등록된 Business Case가 없습니다 — 자동 생성을 실행하거나 수동으로 추가하세요.</p>
+        <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">{t("noBusinessCaseRegisteredRun")}</p>
       )}
 
       {/* ADR-0178: Green Field 라인 읽기 전용 보기 — S5 단일 원본 안내 + S5 투자비 탭 링크. */}
@@ -1210,22 +1210,22 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         <section
           ref={viewingSectionRef}
           className="market-section sizing-step mt-3 scroll-mt-20"
-          aria-label="투자 라인 (읽기 전용)"
+          aria-label={t("investmentLines")}
           data-testid="s8-lines-readonly"
         >
-          <h3 className="sizing-step-title text-[length:var(--fs-body)]">투자 라인 (읽기 전용)</h3>
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">{t("investmentLines2")}</h3>
           <p className="text-[length:var(--fs-caption)] mb-1" data-testid="s8-lines-readonly-caption">
-            <span className="status-chip status-not-started mr-1">S5 단일 원본</span>{" "}
-            편집 대상: <b>{viewing.label}</b> —{" "}
+            <span className="status-chip status-not-started mr-1">{t("s5SingleSourceOfTruth")}</span>{" "}
+            {t("editing")} <b>{viewing.label}</b> —{" "}
             {sourceOppId ? (
               <Link href={`/deals/${encodeURIComponent(sourceOppId)}/s5?tab=investment`} className="text-[color:var(--accent)] font-bold">
-                S5 투자비 탭에서 관리
+                {t("managedInTheS5Investment")}
               </Link>
             ) : (
-              <span className="text-[color:var(--muted-fg)]">S5 투자비 탭에서 관리</span>
+              <span className="text-[color:var(--muted-fg)]">{t("managedInTheS5Investment2")}</span>
             )}
             .{" "}
-            <span className="text-[color:var(--muted-fg)]">S5가 단일 원본입니다 — 투자비 항목은 S5 투자비 탭에서 관리됩니다.</span>
+            <span className="text-[color:var(--muted-fg)]">{t("s5IsTheSingleSource")}</span>
           </p>
           {pinStale && (
             <p
@@ -1233,28 +1233,28 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               data-testid="s8-lines-readonly-stale"
               role="note"
             >
-              <span aria-hidden="true">⏱</span> 고정 참조가 재평가 필요 상태입니다 — S5 연결 블록의 `최신 S5로 갱신`으로 갱신 후 `자동 생성`을 다시 실행하세요.{" "}
-              <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("overview")}>S5 연결 블록으로 →</button>
+              <span aria-hidden="true">⏱</span> {t("theFixedReferenceNeedsRefresh")}{" "}
+              <button type="button" className="text-[color:var(--accent)] font-bold" onClick={() => setTab("overview")}>{t("toTheS5LinkBlock")}</button>
             </p>
           )}
-          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+          <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
             <table className="data-table table-fixed-pct tmin-56" data-testid="s8-lines-readonly-table">
-              <caption className="sr-only">투자 라인 (읽기 전용) — 분류·항목명·연간 금액·시작 연도</caption>
+              <caption className="sr-only">{t("investmentLinesClassificationItemName")}</caption>
               <ColGroup widths={S8_LINES_RO_COL_PCT} />
               <thead>
                 <tr>
-                  <th scope="col">분류</th>
-                  <th scope="col">항목명</th>
-                  <th scope="col" className="num">연간 금액 (백만원)</th>
-                  <th scope="col" className="num">시작 연도</th>
-                  <th scope="col" className="num">성장률</th>
-                  <th scope="col">비고</th>
+                  <th scope="col">{tc("classification")}</th>
+                  <th scope="col">{tc("itemName")}</th>
+                  <th scope="col" className="num">{t("annualAmountKrwMillions")}</th>
+                  <th scope="col" className="num">{t("startYear")}</th>
+                  <th scope="col" className="num">{tc("growthRate")}</th>
+                  <th scope="col">{tc("notes")}</th>
                 </tr>
               </thead>
               <tbody>
                 {viewing.lines.map((l) => (
                   <tr key={l.id} data-testid="s8-lines-readonly-row">
-                    <td>{LINE_CATEGORY_LABEL[l.category] ?? l.category}</td>
+                    <td>{LINE_CATEGORY_LABEL(tr)[l.category] ?? l.category}</td>
                     <td>{l.name}</td>
                     <td className="num mono-num">{fmt(l.annual_amount_krw_m)}</td>
                     <td className="num">{l.start_year}</td>
@@ -1266,19 +1266,19 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             </table>
           </div>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" role="note">
-            S8에서는 이 라인을 편집할 수 없습니다 — 편집은 S5 투자비 탭에서, 계산 반영은 `자동 생성`으로 이루어집니다.
+            {t("thisLineCannotBeEdited")}
           </p>
         </section>
       )}
 
       {editing && (
-        <section ref={editorSectionRef} className="market-section sizing-step mt-3 scroll-mt-20" aria-label="라인 편집">
-          <h3 className="sizing-step-title text-[length:var(--fs-body)]">라인 편집 (JSON — 저장 시 전체 교체)</h3>
-          <p className="text-[length:var(--fs-caption)] mb-1" data-testid="line-editor-caption">편집 대상: <b>{editing.label}</b></p>
-          <p className="sr-only" role="status" aria-live="polite">라인 편집기가 아래에 열렸습니다 — {editing.label}</p>
+        <section ref={editorSectionRef} className="market-section sizing-step mt-3 scroll-mt-20" aria-label={t("editLine2")}>
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">{t("editLinesJsonFullReplace")}</h3>
+          <p className="text-[length:var(--fs-caption)] mb-1" data-testid="line-editor-caption">{t("editing2")} <b>{editing.label}</b></p>
+          <p className="sr-only" role="status" aria-live="polite">{t("theLineEditorIsOpen")} {editing.label}</p>
           <textarea
             ref={editorTextRef}
-            aria-label={`라인 JSON — ${editing.label}`}
+            aria-label={t("lineJsonP1", { p1: editing.label })}
             className="sizing-new-input w-full font-mono text-[length:var(--fs-caption)]"
             rows={10}
             value={editing.text}
@@ -1286,8 +1286,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             spellCheck={false}
           />
           <div className="flex gap-1 mt-1">
-            <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void saveEdit()}>저장</button>
-            <button type="button" className="btn-ghost btn-sm" onClick={closeEditor}>취소</button>
+            <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void saveEdit()}>{tc("save")}</button>
+            <button type="button" className="btn-ghost btn-sm" onClick={closeEditor}>{tc("cancel")}</button>
           </div>
         </section>
       )}
@@ -1311,7 +1311,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             showReview={false}
             hideBrief
             rationalePrefill={rationalePrefill}
-            nextStage={{ label: "S9 실사·검증", href: `/projects/${projectId}/dd` }}
+            nextStage={{ label: t("s9DueDiligenceAndVerification"), href: `/projects/${projectId}/dd` }}
           />
         </div>
       )}
@@ -1319,12 +1319,12 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       {confirmDialog}
       {ackFor && (
         <GoalPromptDialog
-          title="목표 비교 없이 채택" // INTERIM-WORDING
-          body="이 프로젝트에는 적용되는 사업 목표가 없거나, 적용되는 목표가 모두 판정 불가·수동 확인뿐이라 자동 비교가 되지 않습니다. 목표 비교 없이 케이스를 채택하려면 사유를 반드시 적어야 하며, 확인 내용과 사유는 채택 기록에 남습니다." // INTERIM-WORDING
-          confirmLabel="목표 비교 없이 채택"
-          textLabel="채택 사유"
+          title={t("adoptWithoutTargetComparison")} // INTERIM-WORDING
+          body={t("noApplicableBusinessGoalsExist")} // INTERIM-WORDING
+          confirmLabel={t("adoptWithoutTargetComparison2")}
+          textLabel={t("adoptionReason")}
           textRequired
-          checkLabel="목표와의 자동 비교 없이 채택함을 확인합니다."
+          checkLabel={t("confirmsAdoptionWithoutAutomaticTarget")}
           errorText={ackError}
           onConfirm={(note) => void postAdopt(ackFor, { acknowledged: true, note })}
           onClose={() => { setAckFor(null); setAckError(null); }}

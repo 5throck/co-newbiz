@@ -7,6 +7,7 @@
 
 import { formatDirectionSymbol, formatTargetValue } from "../../lib/business-targets-format.ts";
 import { SOURCE_VIEW, attainmentView, summarizeAttainment, type CaseAttainmentEntry } from "../../lib/business-goals-view.ts";
+import { useTranslations } from "next-intl";
 
 export function AttainmentStatus({ status }: { status: CaseAttainmentEntry["status"] | null }) {
   const v = attainmentView(status);
@@ -25,13 +26,13 @@ export function GoalAttainmentTable({
   cases: Array<{ id: string; header: string }>;
   attainment: Record<string, CaseAttainmentEntry[]> | undefined;
   goalCount: number;
-}) {
+}) {const t = useTranslations("stages.s8.goalAttainment"); const tc = useTranslations("common");
   if (goalCount === 0) {
     return (
-      <section className="mt-4" aria-label="시나리오별 달성 여부">
-        <h3 className="sizing-step-title text-[length:var(--fs-body)]">시나리오별 달성 여부</h3> {/* INTERIM-WORDING */}
+      <section className="mt-4" aria-label={tc("scenarioAttainment")}>
+        <h3 className="sizing-step-title text-[length:var(--fs-body)]">{tc("scenarioAttainment")}</h3> {/* INTERIM-WORDING */}
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" role="note">
-          <AttainmentStatus status={null} /> 목표를 추가하면 시나리오별 달성 여부가 표시됩니다. {/* INTERIM-WORDING */}
+          <AttainmentStatus status={null} /> {t("onceATargetIsAdded")} {/* INTERIM-WORDING */}
         </p>
       </section>
     );
@@ -41,17 +42,17 @@ export function GoalAttainmentTable({
   const rowsSource = cases.map((c) => attainment?.[c.id]).find((e) => e && e.length > 0) ?? [];
   if (rowsSource.length === 0) return null;
   return (
-    <section className="mt-4" aria-label="시나리오별 달성 여부">
-      <h3 className="sizing-step-title text-[length:var(--fs-body)]">시나리오별 달성 여부</h3> {/* INTERIM-WORDING */}
+    <section className="mt-4" aria-label={tc("scenarioAttainment")}>
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]">{tc("scenarioAttainment")}</h3> {/* INTERIM-WORDING */}
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
-        참고 근거이며 판단은 사람이 합니다. {/* INTERIM-WORDING */}
+        {t("referenceEvidenceTheJudgementIs")} {/* INTERIM-WORDING */}
         <span data-testid="attainment-legend"> {(["met", "missed", "indeterminate", "manual"] as const).map((k) => `${attainmentView(k).icon} ${attainmentView(k).label}`).join(" · ")}</span>
       </p>
-      <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-        <table className="data-table" aria-label="목표 달성도">
+      <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+        <table className="data-table" aria-label={t("goalAttainment")}>
           <thead>
             <tr>
-              <th scope="col">목표</th>
+              <th scope="col">{tc("target")}</th>
               {cases.map((c) => <th key={c.id} scope="col">{c.header}</th>)}
             </tr>
           </thead>
@@ -86,7 +87,7 @@ export function GoalAttainmentTable({
       <p className="section-meta mt-1">
         {cases.map((c) => {
           const sum = summarizeAttainment(attainment?.[c.id]);
-          return `${c.header}: 충족 ${sum.met} · 미달 ${sum.missed} · 판정불가 ${sum.indeterminate} · 수동 확인 ${sum.manual}`;
+          return t("p1MetP2MissedP3", { p1: c.header, p2: sum.met, p3: sum.missed, p4: sum.indeterminate, p5: sum.manual });
         }).join("  |  ")}
       </p>
     </section>

@@ -11,7 +11,13 @@ import {
   DD_DOMAINS, DD_DOMAIN_AGENTS, ddCompletionSummary, listDdWorkspace, upsertChecklistState,
 } from "../../app/web-next/lib/dd-checklist-tailor.ts";
 import { DD_WORKSPACE_CHECKLISTS, getChecklistItems } from "../../app/web-next/lib/library.ts";
-import { DD_DOMAIN_LABEL } from "../../app/web-next/lib/labels.ts";
+import { KO_DATA } from "../../app/web-next/lib/ko-data-values.ts";
+
+// i18n re-pin (T3-6): the seven payload titles live in ko-data-values.ts (§4); display resolves common.ddDomain.*.
+const KO_DD_DOMAIN: Record<string, string> = {
+  commercial: KO_DATA.ddDomainCommercial, technical: KO_DATA.ddDomainTechnical, legal: KO_DATA.ddDomainLegal,
+  financial: KO_DATA.ddDomainFinancial, hr: KO_DATA.ddDomainHr, market: KO_DATA.ddDomainMarket, financing: KO_DATA.ddDomainFinancing,
+};
 
 const NEW = ["financial", "hr", "market", "financing"] as const;
 let dir: string | null = null;
@@ -30,7 +36,7 @@ describe("seven-domain DD workspace", () => {
   test("constants cover all seven domains with labels and agents", () => {
     expect([...DD_DOMAINS]).toEqual(["commercial", "technical", "legal", "financial", "hr", "market", "financing"]);
     for (const d of DD_DOMAINS) {
-      expect(DD_DOMAIN_LABEL[d]).toBeTruthy();
+      expect(KO_DD_DOMAIN[d]).toBeTruthy();
       expect(DD_DOMAIN_AGENTS[d]).toBeTruthy();
     }
     expect(DD_DOMAIN_AGENTS.financial).toBe("financial-analyst");
@@ -42,7 +48,7 @@ describe("seven-domain DD workspace", () => {
   test("every tab title is Korean and the seven domains match DD_DOMAIN_LABEL", () => {
     const { projectId } = demo();
     const ws = listDdWorkspace(projectId);
-    for (const d of ws.domains.slice(0, 7)) expect(d.title).toBe(DD_DOMAIN_LABEL[d.domain]!);
+    for (const d of ws.domains.slice(0, 7)) expect(d.title).toBe(KO_DD_DOMAIN[d.domain]!);
     for (const d of ws.domains) expect(d.title).toMatch(/[가-힣]/);
     expect(ws.domains.map((d) => d.title)).not.toContain("Commercial DD");
   });

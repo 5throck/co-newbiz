@@ -2,13 +2,13 @@
 // guard and the policy-migration panel (ADR-0161 Row 3). Client-safe: no server or db
 // imports. The server stays the authority; these shapes mirror GET /post-management and
 // GET /policy-migration.
-import {
-  ADR0161_ERROR_LABEL,
-  GOAL_JUDGEMENT_LABEL,
-  POST_MANAGEMENT_ITEM_LABEL,
-  VENTURE_CLASS_LABEL,
-} from "./labels.ts";
+// i18n (design 2026-10-23-i18n-ui-adoption, T3-6): render strings that used to come from
+// lib/labels.ts maps are emitted as I18nText ({key, params} catalog keys or raw passthrough);
+// consumers resolve with the ROOT translator via resolveI18n(). Form-validation and
+// server-error surfaces stay Korean for now (INTERIM, baseline).
 import type { BaselineVarianceView } from "./baseline-variance.ts";
+import { formatNumber, formatPercent, type Locale } from "./format.ts";
+import { kt, rt, type I18nText } from "./execution-baseline-view.ts";
 
 export type { BaselineVarianceView };
 
@@ -65,12 +65,19 @@ export interface PostManagementView {
 
 export interface ApplicableItem {
   key: "portfolio_venture_monitoring" | "integration_monitoring" | "partnership_monitoring";
-  label: string;
+  label: I18nText;
   applies: boolean;
   /** Text that carries the meaning next to the chip (never colour only). */
-  chip: string;
+  chip: I18nText;
   cls: "status-amber" | "status-not-started";
 }
+
+/** i18n: ADR-0161 S12 item id -> `common.pmItem.*` catalog key. */
+export const PM_ITEM_KEY: Record<string, string> = {
+  portfolio_venture_monitoring: "common.pmItem.portfolioVentureMonitoring",
+  integration_monitoring: "common.pmItem.integrationMonitoring",
+  partnership_monitoring: "common.pmItem.partnershipMonitoring",
+};
 
 /** The three ADR-0161 S12 items. Every applicable one is "recommended"; S12 has no gate, so none blocks.
  *  `ventureRecorder` — the venture-scorecard FORM is greenfield-only (T-20261022-001); for a
@@ -84,13 +91,13 @@ export function applicableItems(
   const keys = ["portfolio_venture_monitoring", "integration_monitoring", "partnership_monitoring"] as const;
   return keys.map((key) => ({
     key,
-    label: POST_MANAGEMENT_ITEM_LABEL[key],
+    label: kt(PM_ITEM_KEY[key]),
     applies: a[key],
     chip: !a[key]
-      ? "— 적용 대상 아님" // INTERIM-WORDING
+      ? kt("common.pmChip.notApplicable")
       : key === "portfolio_venture_monitoring" && opts.ventureRecorder === "procedure_only"
-        ? "○ 권장 (차단하지 않음 — 기록은 절차 수행, 앱 기록 화면 없음)"
-        : "○ 권장 (차단하지 않음)",
+        ? kt("common.pmChip.recommendedProcedureOnly")
+        : kt("common.pmChip.recommended"),
     cls: a[key] ? "status-amber" : "status-not-started",
   }));
 }
@@ -98,10 +105,22 @@ export function applicableItems(
 export const isGreenfieldRampUp = (v: PostManagementView | null): v is PostManagementView & { greenfield_ramp_up: GreenfieldRampUp } =>
   !!v && v.greenfield_ramp_up !== null;
 
-export const ventureClassText = (cls: string | null) => (cls ? VENTURE_CLASS_LABEL[cls] ?? cls : "—");
+/** i18n: venture class -> `common.ventureClass.*` (unknown ids pass through raw). */
+export const ventureClassI18n = (cls: string | null): I18nText => (cls ? kt(VENTURE_CLASS_I18N_KEY[cls] ?? cls) : rt("—"));
+export const VENTURE_CLASS_I18N_KEY: Record<string, string> = {
+  driving: "common.ventureClass.driving",
+  enabling: "common.ventureClass.enabling",
+  emergent: "common.ventureClass.emergent",
+};
 
-/** An unjudged S8 goal reads "판정 안 됨"; it never reads as met. */
-export const goalJudgementText = (judgement: string) => GOAL_JUDGEMENT_LABEL[judgement] ?? GOAL_JUDGEMENT_LABEL.not_judged;
+/** i18n: S8 goal judgement -> `common.goalJudgement.*`; an unjudged goal never reads as met. */
+export const GOAL_JUDGEMENT_I18N_KEY: Record<string, string> = {
+  not_judged: "common.goalJudgement.not_judged",
+  on_target: "common.goalJudgement.on_target",
+  deviation: "common.goalJudgement.deviation",
+  insufficient_evidence: "common.goalJudgement.insufficient_evidence",
+};
+export const goalJudgementI18n = (judgement: string): I18nText => kt(GOAL_JUDGEMENT_I18N_KEY[judgement] ?? GOAL_JUDGEMENT_I18N_KEY.not_judged);
 
 export const goalJudgementMeta = (judgement: string): { icon: string; cls: string } => {
   if (judgement === "on_target") return { icon: "●", cls: "status-green" };
@@ -114,14 +133,14 @@ export const GOAL_DIRECTION_LABEL: Record<string, string> = { gte: "이상", lte
 export const goalDirectionText = (d: string) => GOAL_DIRECTION_LABEL[d] ?? d;
 
 /** run_rate_bp (basis points) as a percentage string. */
-export const bpToPercent = (bp: number) => `${(bp / 100).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}%`;
+export const bpToPercent = (bp: number, locale: Locale | string = "ko") => formatPercent(bp / 10_000, locale, { maximumFractionDigits: 2 });
 
-export const retentionText = (pct: number | null) => (pct === null ? "—" : `${pct.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}%`);
+export const retentionText = (pct: number | null, locale: Locale | string = "ko") => (pct === null ? "—" : `${formatNumber(pct, locale, { maximumFractionDigits: 1 })}%`);
 
 /** Message for a PMI write that the server refused as not applicable to this track. */
-export function pmiErrorText(code: string | undefined, message: string | undefined, fallback: string): string {
-  if (code === "not_applicable_track") return ADR0161_ERROR_LABEL.not_applicable_track;
-  return message || fallback;
+export function pmiErrorI18n(code: string | undefined, message: string | undefined, fallback: string): I18nText {
+  if (code === "not_applicable_track") return kt("common.pmError.notApplicableTrack");
+  return rt(message || fallback);
 }
 
 export const PMI_HIDDEN_NOTE =
@@ -146,21 +165,25 @@ export interface PolicyMigrationView {
   entry: PolicyMigrationEntry | null;
 }
 
-export interface MigrationPreviewRow { label: string; applies: boolean; text: string }
+export interface MigrationPreviewRow { /** stable row id (the label is an I18nText now). */ id: string; label: I18nText; applies: boolean; text: I18nText }
 
-/** What ADR-0161 applies to this project, in plain Korean. */
+/** What ADR-0161 applies to this project — render strings as I18nText. */
 export function migrationPreview(a: PolicyMigrationApplies, completedStages: string[]): MigrationPreviewRow[] {
   const done = (s: string) => completedStages.includes(s);
   const baselineApplies = a.greenfield_execution_baseline === "applies";
   const baselineText = baselineApplies
-    ? done("S11") ? "S11을 이미 마쳤으므로 권장 사항입니다 (차단·재개방 없음)." : "S11 완료 전이면 사람이 확인할 때까지 차단합니다."
-    : a.greenfield_execution_baseline === "needs_classification" ? "트랙 분류 후에 판단합니다." : "신규 사업이 아니어서 적용되지 않습니다.";
+    ? done("S11") ? kt("common.pmMigration.baselineDone") : kt("common.pmMigration.baselineBlocking")
+    : a.greenfield_execution_baseline === "needs_classification" ? kt("common.pmMigration.needsClassification") : kt("common.pmMigration.notApplicable");
+  const item = (id: string, key: string, applies: boolean) => ({
+    id, label: kt(PM_ITEM_KEY[key]), applies,
+    text: applies ? kt("common.pmMigration.s12RecommendedNoGate") : kt("common.pmMigration.notApplied"),
+  });
   return [
-    { label: "신규 사업 실행 기준선 (S11)", applies: baselineApplies, text: baselineText },
-    { label: POST_MANAGEMENT_ITEM_LABEL.portfolio_venture_monitoring, applies: a.portfolio_venture_monitoring, text: a.portfolio_venture_monitoring ? "S12는 게이트가 없어 권장 사항입니다." : "적용되지 않습니다." },
-    { label: POST_MANAGEMENT_ITEM_LABEL.integration_monitoring, applies: a.integration_monitoring, text: a.integration_monitoring ? "S12 권장 사항입니다." : "적용되지 않습니다." },
-    { label: POST_MANAGEMENT_ITEM_LABEL.partnership_monitoring, applies: a.partnership_monitoring, text: a.partnership_monitoring ? "S12 권장 사항입니다." : "적용되지 않습니다." },
-    { label: "PMI 화면", applies: a.pmi_tab, text: a.pmi_tab ? "그대로 유지됩니다." : "숨겨지고 새 기록이 막힙니다 (기존 기록은 삭제되지 않음)." },
+    { id: "baseline", label: kt("common.pmMigration.baselineLabel"), applies: baselineApplies, text: baselineText },
+    item("portfolio", "portfolio_venture_monitoring", a.portfolio_venture_monitoring),
+    item("integration", "integration_monitoring", a.integration_monitoring),
+    item("partnership", "partnership_monitoring", a.partnership_monitoring),
+    { id: "pmi", label: kt("common.pmMigration.pmiScreenLabel"), applies: a.pmi_tab, text: a.pmi_tab ? kt("common.pmMigration.pmiKept") : kt("common.pmMigration.pmiHidden") },
   ];
 }
 
@@ -309,12 +332,17 @@ export function scorecardErrorText(code: string | undefined, status: number | un
   return base ?? message ?? "스코어카드를 기록하지 못했습니다.";
 }
 
-/** Plain-Korean line for the effective venture class: "기본값" or "변경됨 (who, when, note)". */
-export function effectiveClassText(v: EffectiveVentureClassView | undefined, fallbackDefault: string | null): string {
-  if (!v) return `${ventureClassText(fallbackDefault)} — 기본값`;
-  if (!v.overridden) return `${ventureClassText(v.effective)} — 기본값`;
+/** Plain line for the effective venture class: "기본값" or "변경됨 (who, when, note)".
+ *  `resolveClass` renders a class id for display (the caller resolves the class catalog key). */
+export function effectiveClassText(
+  v: EffectiveVentureClassView | undefined,
+  fallbackDefault: string | null,
+  resolveClass: (cls: string | null) => string,
+): string {
+  if (!v) return `${resolveClass(fallbackDefault)} — 기본값`;
+  if (!v.overridden) return `${resolveClass(v.effective)} — 기본값`;
   const o = v.override;
-  if (!o) return `${ventureClassText(v.effective)} — 변경됨 (기본값 ${ventureClassText(v.default)})`;
+  if (!o) return `${resolveClass(v.effective)} — 변경됨 (기본값 ${resolveClass(v.default)})`;
   const when = o.at ? o.at.slice(0, 10) : "—";
-  return `${ventureClassText(v.effective)} — 변경됨 (${o.by}, ${when}${o.note ? `, 사유: ${o.note}` : ""})`;
+  return `${resolveClass(v.effective)} — 변경됨 (${o.by}, ${when}${o.note ? `, 사유: ${o.note}` : ""})`;
 }

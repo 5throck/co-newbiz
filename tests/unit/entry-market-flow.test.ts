@@ -45,10 +45,14 @@ const PAGE_SOURCE = readFileSync(
   new URL("../../app/web-next/app/opportunities/[id]/page.tsx", import.meta.url),
   "utf8",
 );
-// the placement predecessor section labels (Korean via \u escapes above;
-// predecessors) and the card, as ASCII-only \u escapes.
-const SKETCH_SECTION = `aria-label="\uBE44\uC988\uB2C8\uC2A4\u0020\uBAA8\uB378\u0020\uAC80\uD1A0"`;
-const FACTORS_SECTION = `aria-label="\uAE30\uD68C\u00B7\uC704\uD5D8\u0020\uC694\uC778"`;
+// i18n (design 2026-10-23-i18n-ui-adoption): the placement predecessor section
+// labels are catalog keys now — pin the key call site plus the ko master value.
+const koCatalog = await import("../../app/web-next/locales/ko.json");
+function koValue(key: string): string {
+  return key.split(".").reduce<unknown>((acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined), koCatalog) as string;
+}
+const SKETCH_SECTION = `aria-label={t("tabSketch")}`;
+const FACTORS_SECTION = `aria-label={t("tabFactors")}`;
 const CARD_RENDER = "EntryMarketFlow opportunityId";
 
 type FlowInput = Parameters<typeof deriveEntryFlowStatus>[0];
@@ -164,6 +168,9 @@ describe("tab control removed - steps render stacked (PR #615 revert)", () => {
     const sketchAt = PAGE_SOURCE.indexOf(SKETCH_SECTION);
     expect(factorsAt).toBeGreaterThan(-1);
     expect(sketchAt).toBeGreaterThan(-1);
+    // key call sites resolve to the original section labels in the ko master
+    expect(koValue("pages.opportunityDetail.tabFactors")).toBe("\uAE30\uD68C\u00B7\uC704\uD5D8 \uC694\uC778");
+    expect(koValue("pages.opportunityDetail.tabSketch")).toBe("\uBE44\uC988\uB2C8\uC2A4 \uBAA8\uB378 \uAC80\uD1A0");
     expect(cardAt).toBeGreaterThan(factorsAt);
     expect(cardAt).toBeGreaterThan(sketchAt);
     // exactly one card render on the page

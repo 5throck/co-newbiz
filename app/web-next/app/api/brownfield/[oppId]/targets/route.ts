@@ -43,14 +43,14 @@ export async function PUT(request: Request, { params }: { params: Promise<{ oppI
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Target Universe 정의는 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Target Universe definition requires the analyst role or higher." });
   if (denied) return denied;
   const { oppId } = await params;
   const body = (await request.json().catch(() => null)) as {
     definition?: string; criteria?: string[]; scope?: string; min_long_list?: number;
   } | null;
   const definition = body?.definition?.trim();
-  if (!definition) return badRequest("invalid_request", "definition(목표 시장 정의)은 필수입니다.");
+  if (!definition) return badRequest("invalid_request", "definition (target market definition) is required.");
   const db = getDb();
   const existingRow = db.query("SELECT target_universe_json FROM opportunity WHERE id = ?").get(oppId) as { target_universe_json: string | null } | undefined;
   if (!existingRow) return notFound();
@@ -73,14 +73,14 @@ export async function PUT(request: Request, { params }: { params: Promise<{ oppI
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "후보 등록은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Candidate registration requires the analyst role or higher." });
   if (denied) return denied;
   const { oppId } = await params;
   const body = (await request.json().catch(() => null)) as
     | { company_name?: string; dart_corp_code?: string | null; universe_note?: string | null }
     | null;
   const name = body?.company_name?.trim();
-  if (!name) return badRequest("invalid_request", "company_name은 필수입니다.");
+  if (!name) return badRequest("invalid_request", "company_name is required.");
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(oppId)) return notFound();
   // T-20261022-038: S6 candidate registration is a brownfield-only write surface. The
@@ -104,7 +104,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   const dup = db
     .query("SELECT id FROM brownfield_target WHERE opportunity_id = ? AND company_name = ? AND status != 'excluded'")
     .get(oppId, name) as { id: string } | undefined;
-  if (dup) return badRequest("duplicate_target", `'${name}'은(는) 이미 Long List에 있습니다.`);
+  if (dup) return badRequest("duplicate_target", `'${name}' is already on the Long List.`);
   const target = createTarget(oppId, name, body?.dart_corp_code?.trim() || null, body?.universe_note?.trim() || null, { actorUserId: auth.auth.userId });
   return ok(target, 201);
 }

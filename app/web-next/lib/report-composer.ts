@@ -6,6 +6,7 @@
 // textarea prefills. Deterministic only — the draft is PROPOSAL text; the
 // human edits and owns what gets saved.
 import type { Database } from "bun:sqlite";
+import { formatInteger } from "./format.ts";
 import { findAdoptedCase, listBusinessCases, type BusinessCaseView } from "./business-case.ts";
 import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
 import { evaluateProcess, latestGateDecisions, type GateId } from "./process-flow.ts";
@@ -25,7 +26,7 @@ export interface ComposedReport {
 }
 
 const pct = (v: number | null | undefined): string => (typeof v === "number" ? `${(v * 100).toFixed(1)}%` : "—");
-const num = (v: number | null | undefined): string => (typeof v === "number" ? Math.round(v).toLocaleString("ko-KR") : "—");
+const num = (v: number | null | undefined): string => (typeof v === "number" ? formatInteger(Math.round(v)) : "—");
 
 export function composeProjectReport(db: Database, projectId: string, projectNo: string, projectName: string): ComposedReport {
   const sections: string[] = [];

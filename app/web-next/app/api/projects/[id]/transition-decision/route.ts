@@ -55,7 +55,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "포트폴리오 전환 결정 기록은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Recording portfolio transition decisions requires the analyst role or higher.");
   const { id } = await params;
   const project = visibleProject(ctx, id);
   if (!project) return notFound();
@@ -68,15 +68,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // 5-vocabulary — the TypeScript mirror of the 0071 CHECK.
   const decision = body?.decision;
   if (!decision || !PORTFOLIO_TRANSITIONS.includes(decision as (typeof PORTFOLIO_TRANSITIONS)[number])) {
-    return badRequest("invalid_request", `decision는 ${PORTFOLIO_TRANSITIONS.join(" | ")} 중 하나입니다 (S12 어휘 5종, flow.spec v2.0.0).`);
+    return badRequest("invalid_request", `decision must be one of: ${PORTFOLIO_TRANSITIONS.join(" | ")} (the S12 five-term vocabulary, flow.spec v2.0.0).`);
   }
   // A kill is a governed decision, not a silent starve — rationale AND, for
   // kills, the learning capture are both mandatory.
   const rationale = (body?.rationale ?? "").trim();
-  if (!rationale) return badRequest("invalid_request", "rationale은 필수입니다 — 전환 결정은 근거 없이 기록될 수 없습니다.");
+  if (!rationale) return badRequest("invalid_request", "rationale is required — a transition decision cannot be recorded without a basis.");
   const learningCapture = (body?.learning_capture ?? "").trim();
   if (decision === KILL_DECISION && !learningCapture) {
-    return badRequest("invalid_request", "kill_with_learning_captured 결정은 learning_capture가 필요합니다 — 학습 내용이 플레이북으로 회수되어야 합니다 (ADR-0101 §2).");
+    return badRequest("invalid_request", "A kill_with_learning_captured decision requires learning_capture — lessons must be recovered into the playbook (ADR-0101 §2).");
   }
   // ADR-0151 — criteria 3-5 decisions require their dedicated record column
   // (applies from the 2026-10-02 migration date; pre-migration ledger rows
@@ -88,7 +88,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (recordColumn && !recordValue) {
     return badRequest(
       "invalid_request",
-      `${decision} 결정은 ${recordColumn}가 필요합니다 — 전환별 결정 부속 기록은 원장 컬럼으로 기록되어야 합니다 (ADR-0151, 마이그레이션 2026-10-02 적용).`,
+      `A ${decision} decision requires ${recordColumn} — per-transition decision attachments must be recorded as ledger columns (ADR-0151, migration 2026-10-02 applied).`,
     );
   }
 
@@ -99,7 +99,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // server-side (the 0024/0071 GLOB CHECK backs this up at the table).
   const cycle = body?.review_cycle ?? currentReviewCycle(new Date(now));
   if (!isValidReviewCycle(cycle)) {
-    return badRequest("invalid_request", "review_cycle는 YYYY-Q[1-4] 형식이어야 합니다 (예: 2026-Q3).");
+    return badRequest("invalid_request", "review_cycle must match YYYY-Q[1-4] (e.g. 2026-Q3).");
   }
 
   // Recorder lineage (ADR-0005): reuse the caller's run when it belongs to
@@ -109,8 +109,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   let runId = (body?.run_id ?? "").trim();
   if (runId) {
     const run = db.query("SELECT id, project_id FROM run WHERE id = ?").get(runId) as { id: string; project_id: string } | undefined;
-    if (!run) return badRequest("invalid_request", "지정한 run_id가 존재하지 않습니다.");
-    if (run.project_id !== id) return badRequest("invalid_request", "지정한 run_id가 이 프로젝트의 run이 아닙니다.");
+    if (!run) return badRequest("invalid_request", "The given run_id does not exist.");
+    if (run.project_id !== id) return badRequest("invalid_request", "The given run_id is not a run of this project.");
   } else {
     runId = ulid();
     db.run(

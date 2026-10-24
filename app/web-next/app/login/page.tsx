@@ -6,15 +6,14 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useAuth, describeAuthError } from "../../lib/auth-client.tsx";
 
-const LOGIN_BACKGROUNDS = [
-  { src: "/login-bg.svg", label: "항만·가치사슬" },
-  { src: "/login-bg-2.svg", label: "도시·인프라" },
-  { src: "/login-bg-3.svg", label: "스마트 제조·로봇" },
-] as const;
+const LOGIN_BACKGROUNDS = ["/login-bg.svg", "/login-bg-2.svg", "/login-bg-3.svg"] as const;
 
 export default function LoginPage() {
+  const t = useTranslations("auth");
+  const tc = useTranslations("common");
   const { login } = useAuth();
   const router = useRouter();
   const [userId, setUserId] = useState("");
@@ -62,20 +61,20 @@ export default function LoginPage() {
     <main className="login-page login-page-rich">
       <div className="login-hero-stack" aria-hidden="true">
         {LOGIN_BACKGROUNDS.map((bg, i) => (
-          <div key={bg.src} className={`login-hero-bg ${i === bgIndex ? "is-active" : ""}`} style={{ backgroundImage: `url("${bg.src}")` }} />
+          <div key={bg} className={`login-hero-bg ${i === bgIndex ? "is-active" : ""}`} style={{ backgroundImage: `url("${bg}")` }} />
         ))}
         <div className="login-hero-veil" />
       </div>
       <div className="login-hero" aria-hidden="true">
-        <p className="login-hero-title">신규사업 검토 AI 플랫폼</p>
-        <p className="login-hero-sub">시장분석 → 기회 발굴 → 시너지 → 진출방식 결정 → 사업성·밸류에이션 → 실사 → 투자심의</p>
+        <p className="login-hero-title">{tc("appName")}</p>
+        <p className="login-hero-sub">{t("processFlow")}</p>
       </div>
       <div className="login-panel">
         <form onSubmit={onSubmit} method="post" action="/api/auth/login" className="login-form" aria-labelledby="login-heading">
-          <h1 id="login-heading">co-newbiz 로그인</h1>
-          <label htmlFor="userId">아이디</label>
+          <h1 id="login-heading">{t("loginHeading")}</h1>
+          <label htmlFor="userId">{t("userId")}</label>
           <input id="userId" name="userId" autoComplete="username" value={userId} onChange={(e) => setUserId(e.target.value)} required />
-          <label htmlFor="password">비밀번호</label>
+          <label htmlFor="password">{t("password")}</label>
           <input id="password" name="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           {error && (
             <p role="alert" className="text-[color:var(--red-fg)]">
@@ -83,14 +82,14 @@ export default function LoginPage() {
             </p>
           )}
           <button type="submit" className="btn-primary" disabled={busy || !hydrated}>
-            {busy ? "로그인 중..." : "로그인"}
+            {busy ? t("signingIn") : t("signIn")}
           </button>
         </form>
         <div className="login-assist">
           <Link href="/register" className="login-link">
-            계정이 없으신가요? 계정 신청 →
+            {t("registerPrompt")}
           </Link>
-          <p className="login-hint">계정 신청 후 관리자 승인이 완료되면 로그인할 수 있습니다.</p>
+          <p className="login-hint">{t("registerHint")}</p>
         </div>
       </div>
     </main>

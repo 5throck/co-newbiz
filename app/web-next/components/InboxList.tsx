@@ -5,7 +5,8 @@
 // Kind and severity use icon + text, never colour alone.
 import { useRef, type KeyboardEvent } from "react";
 import { AlertTriangle, CircleAlert, CircleDot, FileCheck2, Hourglass, Bell } from "lucide-react";
-import { KIND_LABEL, SEVERITY_LABEL, type InboxItem, type InboxKind } from "../lib/inbox.ts";
+import { useTranslations } from "next-intl";
+import { KIND_LABEL_KEY, SEVERITY_LABEL, type InboxItem, type InboxKind } from "../lib/inbox.ts";
 
 const KIND_ICON: Record<InboxKind, React.ReactNode> = {
   gate_proposal: <FileCheck2 size={16} aria-hidden="true" />,
@@ -31,6 +32,7 @@ export function InboxList({
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
+  const t = useTranslations();
   const listRef = useRef<HTMLUListElement>(null);
 
   function onKeyDown(e: KeyboardEvent<HTMLUListElement>) {
@@ -55,7 +57,7 @@ export function InboxList({
             aria-current={it.id === selectedId ? "true" : undefined}
             onClick={() => onSelect(it.id)}
           >
-            <span className="inbox-row-kind">{KIND_ICON[it.kind]} {KIND_LABEL[it.kind]}</span>
+            <span className="inbox-row-kind">{KIND_ICON[it.kind]} {t(KIND_LABEL_KEY[it.kind])}</span>
             <span className="inbox-row-title">{it.title}</span>
             <span className="inbox-row-meta">
               <span className="inbox-chip">{it.dealName}{it.stage ? ` · ${it.stage}` : ""}</span>

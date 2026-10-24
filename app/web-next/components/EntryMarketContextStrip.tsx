@@ -16,8 +16,11 @@
 //   - <DealEntryMarketStrip routeId>: the deals stage shell — resolves the
 //     deal's source opportunity first (a promoted project id resolves through
 //     useDealOpportunityId, the same resolver the S3 body uses).
+import { TranslatorFn } from "../i18n/config.ts";
 import { useEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { api } from "../lib/api.ts";
+import { formatNumber } from "../lib/format.ts";
 import { useDealOpportunityId } from "./stages/use-deal-opportunity-id.ts";
 
 interface StripFlowResponse {
@@ -34,19 +37,21 @@ interface StripFlowResponse {
   fx: Array<{ currency: string; rate: number; volatility: number | null }>;
 }
 
-const UNIT_LABEL: Record<string, string> = {
-  krw_m_year: "백만원/년",
-  units_year: "대/년",
-  usd_m_year: "백만 USD/년",
-};
+const UNIT_LABEL = (tr: TranslatorFn): Record<string, string> => ({
+  krw_m_year: "common.krwMillionPerYear",
+  units_year: "components.entryMarketContext.strip.unitsYr",
+  usd_m_year: "components.entryMarketContext.strip.usdMillionsYr",
+});
 
 /** Unit label for any declared basis, including the multi-currency/scale
- *  patterns (ADR-0181 amendment). */
-function unitLabel(ub: string | null | undefined): string | null {
+ *  patterns (ADR-0181 amendment). Keys resolve through the component's
+ *  translators at render. */
+function unitLabel(ub: string | null | undefined, t: TranslatorFn, tr: TranslatorFn): string | null {
   if (!ub) return null;
-  if (UNIT_LABEL[ub]) return UNIT_LABEL[ub];
+  const mapped = UNIT_LABEL(tr)[ub];
+  if (mapped) return tr(mapped);
   const m = ub.match(/^([a-z]{3})_([mb])_year$/);
-  if (m) return `연매출 (${m[2] === "b" ? "십억" : "백만"} ${m[1].toUpperCase()}/년)`;
+  if (m) return t("p1P2YrAnnualRevenue", { p1: m[2] === "b" ? t("billions") : t("millions"), p2: m[1].toUpperCase() });
   return ub;
 }
 
@@ -64,17 +69,15 @@ function anchorUnitOf(unitBasis: string | null | undefined): { currency: string;
 // ADR-0181: record-level verdict vocabulary (compareAnchorScope) — ok /
 // mismatch / unknown. The former exact/partial/none map belonged to the
 // superseded per-step grading.
-const SCOPE_CHIP: Record<string, { label: string; cls: string }> = {
-  ok: { label: "범위 일치", cls: "status-chip status-info" },
-  mismatch: { label: "범위 불일치", cls: "status-chip status-warn" },
-  unknown: { label: "범위 미확인", cls: "status-chip status-not-started" },
-};
+const SCOPE_CHIP = (tr: TranslatorFn): Record<string, { label: string; cls: string }> => ({
+  ok: { label: "components.entryMarketContext.strip.scopeMatch", cls: "status-chip status-info" },
+  mismatch: { label: "components.entryMarketContext.strip.scopeMismatch", cls: "status-chip status-warn" },
+  unknown: { label: "components.entryMarketContext.strip.scopeUnverified", cls: "status-chip status-not-started" },
+});
 
-function fmt(n: number): string {
-  return n.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
-}
-
-export function EntryMarketContextStrip({ opportunityId }: { opportunityId: string }) {
+export function EntryMarketContextStrip({ opportunityId }: { opportunityId: string }) {const tr = useTranslations(); const t = useTranslations("components.entryMarketContext.strip"); const tc = useTranslations("common");
+  const locale = useLocale();
+  const fmt = (n: number): string =>formatNumber(n, locale, { maximumFractionDigits: 2 });
   const [flow, setFlow] = useState<StripFlowResponse | null>(null);
   const [linkedMissing, setLinkedMissing] = useState(false);
 
@@ -101,16 +104,16 @@ export function EntryMarketContextStrip({ opportunityId }: { opportunityId: stri
       <p
         className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] market-section mb-2"
         data-testid="entry-market-strip"
-        aria-label="진입시장 (S2 산정)"
+        aria-label={t("entryMarketS2Estimate")}
       >
-        진입시장 (S2 산정): 미연결 — S2 진입시장 산정에서 S1 시장규모 분석을 연결하세요.
+        {t("entryMarketS2EstimateNot")}
       </p>
     );
   }
   if (!flow) return null; // loading
 
-  const unit = unitLabel(flow?.scope_unit_basis ?? null);
-  const scopeChip = flow?.scope_flag ? (SCOPE_CHIP[flow.scope_flag.status] ?? SCOPE_CHIP.unknown) : null;
+  const unit = unitLabel(flow?.scope_unit_basis ?? null, t, tr);
+  const scopeChip = flow?.scope_flag ? (SCOPE_CHIP(tr)[flow.scope_flag.status] ?? SCOPE_CHIP(tr).unknown) : null;
   const derived = flow?.computed?.entry_market_krw_m;
   const anchor = flow?.computed?.anchor_value_krw_m ?? flow?.reference?.anchor_value_krw_m ?? null;
   // ADR-0181 slice 3 + amendment — 개산 (KRW conversion at the reference rate
@@ -126,38 +129,38 @@ export function EntryMarketContextStrip({ opportunityId }: { opportunityId: stri
   const krwValue = derived != null && needsFx && fxRow ? derived * fxRow.rate * scale : null;
   const fxMissing = derived != null && needsFx && !fxRow;
   const unitUndeclared = derived != null && flow?.scope_unit_basis == null;
-  const growthLabel = flow?.growth_rate != null ? `${Math.round(flow.growth_rate * 1000) / 10}%/년` : null;
+  const growthLabel = flow?.growth_rate != null ? t("p1Yr", { p1: Math.round(flow.growth_rate * 1000) / 10 }) : null;
 
   return (
     <p
       className="text-[length:var(--fs-caption)] market-section mb-2"
       data-testid="entry-market-strip"
-      aria-label="진입시장 (S2 산정)"
+      aria-label={t("entryMarketS2Estimate2")}
     >
-      {"진입시장 (S2 산정): "}
+      {t("entryMarketS2Estimate3")}
       {flow?.derivation == null ? (
         <span className="text-[color:var(--muted-fg)]">
-          도출 사슬 미설정 — S2 진입시장 산정 3단계에서 배율 사슬로 도출하세요
-          {anchor != null ? ` (S1 앵커 v${flow?.reference?.version_no ?? "-"}: ${fmt(anchor)}${unit ? ` ${unit}` : ""})` : ""}
+          {t("derivationChainNotSetDerive")}
+          {anchor != null ? t("s1AnchorVP1P2", { p1: flow?.reference?.version_no ?? "-", p2: fmt(anchor), p3: unit ? ` ${unit}` : "" }) : ""}
         </span>
       ) : krwValue != null ? (
         <>
           <strong>
-            {fmt(krwValue)} 백만원/년
+            {fmt(krwValue)} {tc("krwMillionPerYear")}
           </strong>
-          {` — 개산 (${anchorCcy} ${fmt(fxRow!.rate)} 원/통화${scale > 1 ? ` ×${fmt(scale)}` : ""} 적용; 원시장 ${fmt(derived!)}${unit ? ` ${unit}` : ""}, 배율 ${fmt(flow?.computed?.factor_product ?? 1)}, 사슬 ${flow?.derivation.steps.length}단계`}
-          {growthLabel && ` · 성장률 ${growthLabel}`}
-          {scopeChip && <span className={`${scopeChip.cls} ml-1`}>{scopeChip.label}</span>}
+          {t("estimateP1P2PerCurrency", { p1: anchorCcy ?? "", p2: fmt(fxRow!.rate), p3: scale > 1 ? ` ×${fmt(scale)}` : "", p4: fmt(derived!), p5: unit ? ` ${unit}` : "", p6: fmt(flow?.computed?.factor_product ?? 1), p7: flow?.derivation.steps.length })}
+          {growthLabel && t("growthP1", { p1: growthLabel })}
+          {scopeChip && <span className={`${scopeChip.cls} ml-1`}>{tr(scopeChip.label)}</span>}
         </>
       ) : derived != null && unitUndeclared ? (
         <>
           <strong>
             {fmt(derived)}
-            {unit ? ` ${unit}` : " (앵커 단위)"}
+            {unit ? ` ${unit}` : t("anchorUnit")}
           </strong>
-          {` — 배율 ${fmt(flow?.computed?.factor_product ?? 1)}, 사슬 ${flow?.derivation.steps.length}단계`}
-          <span className="status-chip status-warn ml-1">앵커 단위 미선언 — 대상 범위에서 단위를 선언하면 원화 개산이 활성화됩니다</span>
-          {scopeChip && <span className={`${scopeChip.cls} ml-1`}>{scopeChip.label}</span>}
+          {t("factorP1ChainP2Steps", { p1: fmt(flow?.computed?.factor_product ?? 1), p2: flow?.derivation.steps.length })}
+          <span className="status-chip status-warn ml-1">{t("anchorUnitUndeclaredDeclaringThe")}</span>
+          {scopeChip && <span className={`${scopeChip.cls} ml-1`}>{tr(scopeChip.label)}</span>}
         </>
       ) : derived != null ? (
         <>
@@ -165,13 +168,13 @@ export function EntryMarketContextStrip({ opportunityId }: { opportunityId: stri
             {fmt(derived)}
             {unit ? ` ${unit}` : ""}
           </strong>
-          {` — S1 앵커 ${fmt(flow?.computed?.anchor_value_krw_m ?? 0)} × 배율 ${fmt(flow?.computed?.factor_product ?? 1)}, 사슬 ${flow?.derivation.steps.length}단계`}
-          {growthLabel && ` · 성장률 ${growthLabel}`}
-          {fxMissing && <span className="status-chip status-warn ml-1">기준 환율 미설정 ({anchorCcy}) — 개산 불가</span>}
-          {scopeChip && <span className={`${scopeChip.cls} ml-1`}>{scopeChip.label}</span>}
+          {t("s1AnchorP1FactorP2", { p1: fmt(flow?.computed?.anchor_value_krw_m ?? 0), p2: fmt(flow?.computed?.factor_product ?? 1), p3: flow?.derivation.steps.length })}
+          {growthLabel && t("growthP12", { p1: growthLabel })}
+          {fxMissing && <span className="status-chip status-warn ml-1">{t("referenceFxRateNotSet")}{anchorCcy}{t("cannotEstimate")}</span>}
+          {scopeChip && <span className={`${scopeChip.cls} ml-1`}>{tr(scopeChip.label)}</span>}
         </>
       ) : (
-        <span className="text-[color:var(--muted-fg)]">도출값 계산 불가 — 연결된 S1 버전의 앵커를 확인하세요.</span>
+        <span className="text-[color:var(--muted-fg)]">{t("cannotComputeTheDerivedValue")}</span>
       )}
     </p>
   );

@@ -9,10 +9,12 @@
 // 항상 동일한 훅만 호출). 조기 반환으로 훅 호출 수가 갈리면 탭 전환 시 React
 // "hooks changed" 오류가 난다.
 import { Suspense, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { api } from "../../../../lib/api.ts";
-import { STAGE_STATUS_LABEL, labelText, localizeRequirement, trackLabel } from "../../../../lib/labels.ts";
+import { localizeRequirement } from "../../../../lib/labels.ts";
+import { STAGE_STATUS_KEY, trackKeysText, resolveLabelTokens } from "../../../../lib/label-keys.ts";
 import { resolveDealCarrier } from "../../../../lib/deal-carrier.ts";
 import type { TrackId } from "../../../../lib/stage-meta.ts";
 import { PageState } from "../../../../components/ui.tsx";
@@ -49,18 +51,20 @@ interface ProcessView {
 function TrackGate({ routeId, track, stageLabel, only, otherStage, children }: {
   routeId: string; track: TrackId | null; stageLabel: string; only: "greenfield" | "brownfield"; otherStage: "s5" | "s6"; children: React.ReactNode;
 }) {
+  const trRoot = useTranslations();
+  const t = useTranslations("pages.dealStage");
   if (track && track !== only) {
     const thisName = track === "greenfield" ? "Green Field" : "Brown Field";
     return (
       <div className="card" role="note">
         <h2>{stageLabel}</h2>
         <p>
-          {only === "brownfield" ? "Green Field에는 적용되지 않는 단계입니다." : "Brown Field에는 적용되지 않는 단계입니다."}
-          {" "}이 검토/안건의 트랙은 {thisName}입니다.
+          {only === "brownfield" ? t("notApplicableGreenfield") : t("notApplicableBrownfield")}
+          {" "}{t("trackIsSuffix", { p1: thisName })}
         </p>
         <p>
           <Link className="control-chip status-green" href={`/deals/${encodeURIComponent(routeId)}/${otherStage}`}>
-            {otherStage === "s5" ? "S5 자체 진출로 이동" : "S6 대상 발굴로 이동"}
+            {otherStage === "s5" ? t("goToS5") : t("goToS6")}
           </Link>
         </p>
       </div>
@@ -76,6 +80,8 @@ function TrackGate({ routeId, track, stageLabel, only, otherStage, children }: {
 // instead of a hardcoded one (T-20261022-018). A project without a source opportunity
 // gets an empty state — the S1~S7 screens are opportunity-scoped by construction.
 function CarrierStageBody({ routeId, children }: { routeId: string; children: (carrier: { opportunityId: string; track: TrackId | null }) => React.ReactNode }) {
+  const trRoot = useTranslations();
+  const t = useTranslations("pages.dealStage");
   const [state, setState] = useState<
     | { status: "loading" }
     | { status: "ready"; opportunityId: string; track: TrackId | null }
@@ -95,19 +101,21 @@ function CarrierStageBody({ routeId, children }: { routeId: string; children: (c
           track: t === "greenfield" || t === "brownfield" ? t : null,
         });
       })
-      .catch((e) => { if (alive) setState({ status: "error", message: e instanceof Error ? e.message : "딜 정보를 불러오지 못했습니다." }); });
+      .catch((e) => { if (alive) setState({ status: "error", message: e instanceof Error ? e.message : t("dealLoadFailed") }); });
     return () => { alive = false; };
   }, [routeId]);
 
   if (state.status === "loading") return <PageState state="loading" />;
   if (state.status === "error") return <PageState state="error" errorText={state.message} onRetry={() => window.location.reload()} />;
   if (state.opportunityId === "") {
-    return <PageState state="empty" emptyText="이 프로젝트에는 사업 기회가 연결되어 있지 않습니다 — S1~S7 화면은 기회 단위로 동작합니다." />;
+    return <PageState state="empty" emptyText={t("noOpportunityEmpty")} />;
   }
   return <>{children({ opportunityId: state.opportunityId, track: state.track })}</>;
 }
 
 function StageTab() {
+  const trRoot = useTranslations();
+  const t = useTranslations("pages.dealStage");
   const params = useParams<{ id: string; stage: string }>();
   const searchParams = useSearchParams();
   const stageId = params.stage.toUpperCase().startsWith("S") ? params.stage.toUpperCase() : `S${params.stage}`;
@@ -130,7 +138,7 @@ function StageTab() {
       <main>
         <DealBreadcrumb dealId={params.id} stageId="S2" />
         <StageFrame stageId="S2">
-          시장분석(S1) 산출물에서 기회를 발굴하고, 기회·위험 요인을 근거로 매력도를 평가합니다.
+          {t("s2Guidance")}
         </StageFrame>
         <CarrierStageBody routeId={params.id}>
           {({ opportunityId }) => <OpportunityFunnelStage opportunityId={opportunityId} />}
@@ -147,9 +155,7 @@ function StageTab() {
       <main>
         <DealBreadcrumb dealId={params.id} stageId="S4" />
         <StageFrame stageId="S4">
-          선별된 기회의 진출방식을 결정하는 분기점입니다.
-          Greenfield(자체 역량 진출)는 S5 역량 평가로, Brownfield(기존 기업·자산 결합)는
-          S6 대상 후보 발굴로 진행됩니다. Brownfield ≠ M&A — 라우트 유형을 함께 선택합니다.
+          {t("s4Guidance")}
         </StageFrame>
         <DealEntryMarketStrip routeId={params.id} />
         <CarrierStageBody routeId={params.id}>
@@ -167,36 +173,34 @@ function StageTab() {
     const companySurface = searchParams.get("surface") === "company";
     return (
       <main>
-        <DealBreadcrumb dealId={params.id} stageId="S3" tail={companySurface ? [{ label: "그룹·계열사 프로파일" }] : []} />
-        <div role="group" aria-label="S3 화면 전환" className="flex flex-wrap gap-1 mb-2">
+        <DealBreadcrumb dealId={params.id} stageId="S3" tail={companySurface ? [{ label: t("companySurfaceLabel") }] : []} />
+        <div role="group" aria-label={t("s3SwitcherAria")} className="flex flex-wrap gap-1 mb-2">
           <Link
             href={`/deals/${params.id}/s3`}
             aria-current={!companySurface ? "page" : undefined}
             className={`control-chip ${!companySurface ? "status-green" : "status-not-started"}`}
           >
-            시너지·전략적 적합성
+            {t("synergySurfaceLabel")}
           </Link>
           <Link
             href={`/deals/${params.id}/s3?surface=company`}
             aria-current={companySurface ? "page" : undefined}
             className={`control-chip ${companySurface ? "status-green" : "status-not-started"}`}
           >
-            그룹·계열사 프로파일
+            {t("companySurfaceLabel")}
           </Link>
         </div>
         {companySurface ? (
           <>
-            <StageFrame stageId="S3" heading="S3 그룹/계열사 분석">
-              그룹과 계열사를 등록해 자사 강점/약점을 분석합니다. 이 프로파일은 S3 시너지·적합성 평가의 입력(자사 역량·포트폴리오 정보)으로 사용됩니다. 상장 계열사는 DART 재무제표, 전체는 애널리스트 리포트·산업 동향 리서치로 분석합니다.
+            <StageFrame stageId="S3" heading={t("s3CompanyHeading")}>
+              {t("s3CompanyGuidance")}
             </StageFrame>
             <OurCompanyStage embedded />
           </>
         ) : (
           <>
             <StageFrame stageId="S3">
-              그룹/계열사 분석에서 만든 자사 프로파일(특정 계열사 또는 그룹 전체)을 S1 시장분석·S2 기회발굴
-              결과와 연결해 시너지 영역 후보를 도출하고 우선 시너지 영역으로 좁힙니다. 기회를 연결하면 완료 시 해당 기회에
-              synergy_score 권고가 기록됩니다.
+              {t("s3SynergyGuidance")}
             </StageFrame>
             <DealEntryMarketStrip routeId={params.id} />
             <S3Synergy routeId={params.id} analysisId={searchParams.get("analysis") ?? undefined} />
@@ -215,12 +219,10 @@ function StageTab() {
           {({ opportunityId, track }) => (
             <>
               <StageFrame stageId="S5" track={track ?? undefined}>
-                Greenfield 경로 — 자체 역량으로 진입할 수 있는지 평가합니다. 진출전략을
-                직접 구축 / 전략 제휴 / 인력 영입 / 지분 투자 중 결정하고, 필요 역량(S3에서 이미 정의·판정된
-                내용)을 확인한 뒤 투자비 검토 요건을 정리합니다.
+                {t("s5Guidance")}
               </StageFrame>
               <DealEntryMarketStrip routeId={params.id} />
-              <TrackGate routeId={params.id} track={track} stageLabel="S5 자체 진출" only="greenfield" otherStage="s6">
+              <TrackGate routeId={params.id} track={track} stageLabel={t("s5StageLabel")} only="greenfield" otherStage="s6">
                 <GreenfieldStage opportunityId={opportunityId} />
               </TrackGate>
             </>
@@ -239,13 +241,11 @@ function StageTab() {
         <CarrierStageBody routeId={params.id}>
           {({ opportunityId, track }) => (
             <>
-              <StageFrame stageId={["S6", "S7"]} track={track ?? undefined} heading="S6/S7 대상발굴·선정">
-                Brownfield 경로 — 진출방식이 Brownfield로 결정된 기회의
-                대상 후보를 발굴하고(S6 후보 전체 목록), <code>대상 사전 검토 체크리스트</code> 체크리스트로 스크리닝해
-                최종 후보 목록으로 좁힙니다(S7). CDD/TDD는 최종 후보 목록 확정 후 S9에서 수행합니다.
+              <StageFrame stageId={["S6", "S7"]} track={track ?? undefined} heading={t("s67Heading")}>
+                {t("s67GuidancePre")}<code>{t("s67GuidanceCode")}</code>{t("s67GuidancePost")}
               </StageFrame>
               <DealEntryMarketStrip routeId={params.id} />
-              <TrackGate routeId={params.id} track={track} stageLabel={`${stageId} 대상발굴·선정`} only="brownfield" otherStage="s5">
+              <TrackGate routeId={params.id} track={track} stageLabel={t("s67StageLabel", { p1: stageId })} only="brownfield" otherStage="s5">
                 <BrownfieldStage opportunityId={opportunityId} />
               </TrackGate>
             </>
@@ -293,6 +293,8 @@ const PROJECT_STAGES: Record<string, (props: { projectId: string }) => React.Rea
 };
 
 function ProjectStageTab({ carrierId, stageId }: { carrierId: string; stageId: string }) {
+  const trRoot = useTranslations();
+  const t = useTranslations("pages.dealStage");
   const [projectId, setProjectId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // 미승격 빈 상태의 유도 링크 (F3) — 트랙 최종 단계(greenfield S5 / brownfield
@@ -310,7 +312,7 @@ function ProjectStageTab({ carrierId, stageId }: { carrierId: string; stageId: s
         if (!alive) return;
         if (r.data.project_id) setProjectId(r.data.project_id);
         else {
-          setError("이 기회는 아직 프로젝트로 추진되지 않았습니다 — 승격(S5→S8 또는 S7→S8)이 먼저 필요합니다.");
+          setError(t("notPromoted"));
           // 캐리어 트랙으로 승격 링크의 착지 단계를 정한다 — resolveDealCarrier가
           // 이 파일의 다른 바디에서 쓰는 것과 동일한 process 뷰의 track 필드.
           api.get<{ track: string | null }>(`/api/opportunities/${encodeURIComponent(carrierId)}/process`)
@@ -330,7 +332,7 @@ function ProjectStageTab({ carrierId, stageId }: { carrierId: string; stageId: s
         // 멤버십 포함 검증 후 그대로 사용한다.
         api.get(`/api/projects/${encodeURIComponent(carrierId)}/process`)
           .then(() => { if (alive) setProjectId(carrierId); })
-          .catch((e) => { if (alive) setError(e instanceof Error ? e.message : "캐리어를 확인하지 못했습니다."); });
+          .catch((e) => { if (alive) setError(e instanceof Error ? e.message : t("carrierCheckFailed")); });
       });
     return () => { alive = false; };
   }, [carrierId]);
@@ -344,7 +346,7 @@ function ProjectStageTab({ carrierId, stageId }: { carrierId: string; stageId: s
           state="empty"
           emptyText={error}
           emptyAction={promoHref && (
-            <Link className="btn-ghost btn-sm" href={promoHref}>승격 화면으로 이동</Link>
+            <Link className="btn-ghost btn-sm" href={promoHref}>{t("goToPromotion")}</Link>
           )}
         />
       )}
@@ -358,6 +360,8 @@ function ProjectStageTab({ carrierId, stageId }: { carrierId: string; stageId: s
 // STAGE_LINK 제거 후 탭 자체가 단계 화면이므로 더 이상 제공하지 않는다).
 // 자식 컴포넌트로 분리해 StageTab의 훅 순서가 단계와 무관하게 일정하다.
 function StageGuidanceTab({ carrierId, stageId }: { carrierId: string; stageId: string }) {
+  const trRoot = useTranslations();
+  const t = useTranslations("pages.dealStage");
   const [proc, setProc] = useState<ProcessView | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -368,7 +372,7 @@ function StageGuidanceTab({ carrierId, stageId }: { carrierId: string; stageId: 
       .catch(() => {
         api.get<ProcessView>(`/api/projects/${encodeURIComponent(carrierId)}/process`)
           .then((r) => { if (alive) setProc(r.data); })
-          .catch((e) => { if (alive) setError(e instanceof Error ? e.message : "프로세스를 불러오지 못했습니다."); });
+          .catch((e) => { if (alive) setError(e instanceof Error ? e.message : t("processLoadFailed")); });
       });
     return () => { alive = false; };
   }, [carrierId]);
@@ -379,18 +383,18 @@ function StageGuidanceTab({ carrierId, stageId }: { carrierId: string; stageId: 
   return (
     <main>
       <DealBreadcrumb dealId={carrierId} stageId={stageId as "S1"} />
-      <h1>{stageId} 단계</h1>
-      <p className="objective">트랙에 따라 이 단계의 작업 화면으로 연결됩니다. (Wave 2 후속 단계에서 작업 화면이 이 탭 안으로 통합됩니다)</p>
+      <h1>{t("stageHeading", { p1: stageId })}</h1>
+      <p className="objective">{t("guidanceIntro")}</p>
 
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}
       {!proc && !error && <PageState state="loading" />}
 
       {proc && !applicable && (
-        <PageState state="empty" emptyText={`${stageId}는 이 검토/안건의 트랙(${trackLabel(proc.track)})에 적용되지 않는 단계입니다.`} />
+        <PageState state="empty" emptyText={t("notApplicableForTrack", { p1: stageId, p2: resolveLabelTokens(trackKeysText(proc.track), trRoot) })} />
       )}
       {proc && applicable && (
         <div className="market-section">
-          <p className="text-[length:var(--fs-body)]">이 단계의 상태: <span className={`status-chip ${stage?.status === "complete" ? "status-green" : "status-amber"}`}>{labelText(STAGE_STATUS_LABEL, stage?.status)}</span></p>
+          <p className="text-[length:var(--fs-body)]">{t("statusPrefix")} <span className={`status-chip ${stage?.status === "complete" ? "status-green" : "status-amber"}`}>{trRoot(STAGE_STATUS_KEY[stage?.status ?? ""] ?? stage?.status ?? "")}</span></p>
           <ul className="sizing-note-list">
             {[...new Set([...proc.blockers, ...proc.requiredArtifacts])].map((b, i) => <li key={i}>{localizeRequirement(b)}</li>)}
           </ul>

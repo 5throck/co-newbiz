@@ -70,7 +70,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "역량 평가 저장은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Capability-evaluation saves require the analyst role or higher." });
   if (denied) return denied;
   const { oppId } = await params;
   // ADR-0136: capability_gaps는 더 이상 이 라우트에서 받지 않는다 — 필요 역량은
@@ -92,7 +92,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     .query("SELECT track FROM route_decision WHERE opportunity_id = ? AND is_current = 1 LIMIT 1")
     .get(oppId) as { track: string } | null;
   if (routeTrack?.track === "brownfield") {
-    return fail(409, "not_applicable_track", "S5 자체 진출 평가는 Greenfield Route에만 저장할 수 있습니다 — 이 기회의 현재 Route 결정은 Brownfield입니다.");
+    return fail(409, "not_applicable_track", "The S5 self market-entry assessment can be saved only on the Greenfield Route — this opportunity's current route decision is Brownfield.");
   }
   // ADR-0171 amendment (2): modes header + rationale share this column; canonical form on write (legacy text only trimmed).
   const entryStrategy = typeof body?.entry_strategy === "string" ? normalizeStoredEntryStrategy(body.entry_strategy) || null : null;

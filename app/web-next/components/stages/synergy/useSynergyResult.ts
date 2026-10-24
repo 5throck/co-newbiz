@@ -11,6 +11,7 @@ import { summarizeGap, type CapabilityGapRow } from "../../../lib/capability-gap
 import { discardAiDrafts, mergeDraftResponse, mergeServerRows, pruneDrafts, type DraftMark } from "../../../lib/capability-gap-necessity-draft.ts";
 import type { GapGetResponse, SynergyAnalysis } from "./types.ts";
 import type { TabKey } from "./synergyFormat.ts";
+import { useTranslations } from "next-intl";
 
 export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefresh }: {
   analysis: SynergyAnalysis;
@@ -19,7 +20,7 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
   onBack: () => void;
   onRerun: () => void;
   onRefresh: () => void;
-}) {
+}) {const t = useTranslations("stages.s3.useSynergyResult");
 
   const latest = analysis.versions?.[0] ?? null;
   const p = latest?.payload ?? null;
@@ -50,7 +51,7 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
       setShowLinkageForm(false);
       onRefresh();
     } catch (err) {
-      setLinkageError(err instanceof Error ? err.message : "영역 추가 실패");
+      setLinkageError(err instanceof Error ? err.message : t("failedToAddTheArea"));
     } finally {
       setLinkageSaving(false);
     }
@@ -74,7 +75,7 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
       setShortlistForm({ area: "", verdict: "Short List", reason: "" });
       onRefresh();
     } catch (err) {
-      setEditError(err instanceof Error ? err.message : "판정 저장 실패");
+      setEditError(err instanceof Error ? err.message : t("failedToSaveTheJudgement"));
     } finally {
       setEditSaving(false);
     }
@@ -181,7 +182,7 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
       setGapDrafts({});
       return true;
     } catch (err) {
-      setGapError(err instanceof Error ? err.message : "필요 역량 수준 저장 실패");
+      setGapError(err instanceof Error ? err.message : t("failedToSaveTheRequired"));
       return false;
     }
   }
@@ -195,7 +196,7 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
     if (!opportunityId || gapBusy || gapRows.length === 0) return;
     setGapBusy(true); setGapError(null);
     const okSaved = await persistGap();
-    if (okSaved) setGapNote("필요 역량 수준 레지스터를 저장했습니다 — S4 화면·게이트 브리프에 반영됩니다.");
+    if (okSaved) setGapNote(t("theRequiredCapabilityLevelRegister"));
     setGapBusy(false);
   }
   // 표식은 실제로 빈 칸이 채워진 필드에만 단다(사람 값이 있던 칸은 제외).
@@ -231,7 +232,7 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
       setGapRows((prev) => mergeDraftResponse(prev, res.data.rows));
       addDraftMarks(res.data.drafts, before);
       setGapNote(res.data.note);
-    } catch (err) { setGapError(err instanceof Error ? err.message : "보유 판정 확인 실패"); }
+    } catch (err) { setGapError(err instanceof Error ? err.message : t("heldJudgementCheckFailed")); }
     finally { setHoldBusy(false); }
   }
   async function draftGap() {
@@ -245,7 +246,7 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
       setGapRows((prev) => mergeDraftResponse(prev, res.data.rows));
       addDraftMarks(res.data.drafts, before);
       setGapNote(res.data.note);
-    } catch (err) { setGapError(err instanceof Error ? err.message : "LLM 초안 생성 실패"); }
+    } catch (err) { setGapError(err instanceof Error ? err.message : t("failedToGenerateLlmDraft")); }
     finally { setGapBusy(false); }
   }
   function addGapRow() {
@@ -289,7 +290,7 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
       await refreshSynState();
       onRefresh();
     } catch (err) {
-      setConfirmError(err instanceof Error ? err.message : "점수 확정 실패");
+      setConfirmError(err instanceof Error ? err.message : t("failedToConfirmTheScore"));
     } finally {
       setConfirmSaving(false);
     }
@@ -303,7 +304,7 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
       await refreshSynState();
       onRefresh();
     } catch (err) {
-      setConfirmError(err instanceof Error ? err.message : "확정 철회 실패");
+      setConfirmError(err instanceof Error ? err.message : t("failedToWithdrawTheConfirmation"));
     } finally {
       setConfirmSaving(false);
     }
@@ -318,7 +319,7 @@ export function useSynergyResult({ analysis, tab, onTab, onBack, onRerun, onRefr
       const rationale = p?.synergyRationale ?? "";
       router.push(`/route-decision?opportunity=${encodeURIComponent(opportunityId)}&rationale=${encodeURIComponent(rationale)}`);
     } catch (err) {
-      setAdvanceError(err instanceof Error ? err.message : "S4 진행 실패");
+      setAdvanceError(err instanceof Error ? err.message : t("failedToProceedToS4"));
     } finally {
       setAdvancing(false);
     }

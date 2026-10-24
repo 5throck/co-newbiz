@@ -8,7 +8,7 @@ import { forbidden, ok } from "../../../../lib/envelope.ts";
 export async function GET(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "사용자 검색은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "User lookup requires the analyst role or higher.");
   const q = new URL(request.url).searchParams.get("q")?.trim().slice(0, 100) ?? "";
   const db = getDb();
   const rows = q

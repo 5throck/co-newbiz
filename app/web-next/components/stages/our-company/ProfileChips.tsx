@@ -5,6 +5,7 @@ import type { Profile } from "./types.ts";
 import { degradedChip, isNoResearchDegraded } from "../../../lib/profile-degraded.ts";
 import { hasAnalystEvidence } from "./profile-evidence.ts";
 import { AnalystEvidenceChip } from "./ProfileEvidence.tsx";
+import { useTranslations } from "next-intl";
 
 /** The "no search evidence" warning is moot when the analyst supplied usable evidence (a note or a fetched source). */
 export function showDegradedChip(profile: Profile): boolean {
@@ -23,12 +24,12 @@ export function DegradedChip({ degraded, showHint = false }: { degraded: string;
 }
 
 /** 상세 헤더 요약 칩 — 프로파일 메타 (DART·리서치·폴백 상태). */
-export function ProfileChips({ profile }: { profile: Profile | "loading" | undefined }) {
+export function ProfileChips({ profile }: { profile: Profile | "loading" | undefined }) {const tc = useTranslations("common");
   if (!profile || profile === "loading") return null;
   return (
     <span className="flex items-center gap-1">
       {profile.dataSources?.dart && <span className="status-chip status-green">DART {profile.dataSources.dartYear ?? ""}</span>}
-      {(profile.dataSources?.webResearchCount ?? 0) > 0 && <span className="status-chip status-in-progress">외부 리서치 {profile.dataSources!.webResearchCount}건</span>}
+      {(profile.dataSources?.webResearchCount ?? 0) > 0 && <span className="status-chip status-in-progress">{tc("externalResearch")} {profile.dataSources!.webResearchCount}{tc("countUnit")}</span>}
       {hasAnalystEvidence(profile) && <AnalystEvidenceChip />}
       {showDegradedChip(profile) && <DegradedChip degraded={profile.degraded!} />}
     </span>

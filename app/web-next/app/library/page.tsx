@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { marked } from "marked";
 import { api } from "../../lib/api.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
@@ -57,6 +58,8 @@ function DocViewer({ docs, allDocs, initialDocId }: { docs: DocSummary[]; allDoc
   // initialDocId — /wiki 등 다른 화면의 딥링크(?doc=<id>)로 특정 문서를 연 채로
   // 시작하는 마운트 훅(2026-10-23 위키 인앱 뷰어 설계 D5 규칙 4). 이후 전환은
   // 기존대로 이 화면 안에서만 일어난다.
+  const t = useTranslations("pages.library");
+  const tc = useTranslations("common");
   const [selectedId, setSelectedId] = useState<string | null>(initialDocId ?? null);
   const [detail, setDetail] = useState<DocContent | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +73,7 @@ function DocViewer({ docs, allDocs, initialDocId }: { docs: DocSummary[]; allDoc
     api
       .get<DocContent>(`/api/library/${selectedId}`)
       .then((r) => setDetail(r.data))
-      .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+      .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
   }, [selectedId]);
 
   // 페어 문서 전환 — frontmatter의 `counterpart:` 파일을 같은 카테고리 목록에서 찾는다.
@@ -104,13 +107,13 @@ function DocViewer({ docs, allDocs, initialDocId }: { docs: DocSummary[]; allDoc
       </div>
       <div className="library-content-pane">
         {!selectedId ? (
-          <p className="text-[color:var(--muted-fg)] italic">왼쪽에서 문서를 선택하면 내용이 표시됩니다.</p>
+          <p className="text-[color:var(--muted-fg)] italic">{t("selectPrompt")}</p>
         ) : error ? (
           <p role="alert" className="text-[color:var(--red-fg)]">
             {error}
           </p>
         ) : !detail ? (
-          <p>불러오는 중...</p>
+          <p>{tc("loading")}</p>
         ) : (
           <>
             <div className="library-content-head">
@@ -121,13 +124,13 @@ function DocViewer({ docs, allDocs, initialDocId }: { docs: DocSummary[]; allDoc
                   className="library-tab"
                   onClick={() => setSelectedId(counterpartDoc.id)}
                 >
-                  {counterpartDoc.lang === "ko" ? "한국어로 보기" : "Read in English"}
+                  {counterpartDoc.lang === "ko" ? t("viewInKorean") : t("viewInEnglish")}
                 </button>
               )}
               <code className="library-doc-path">{detail.file}</code>
             </div>
             {detail.review_items && detail.review_items.length > 0 && (
-              <ul className="flex flex-wrap gap-x-3 gap-y-1 mb-3 text-[length:var(--fs-caption)]" aria-label="항목별 검토 상태">
+              <ul className="flex flex-wrap gap-x-3 gap-y-1 mb-3 text-[length:var(--fs-caption)]" aria-label={t("reviewStatusAria")}>
                 {detail.review_items.map((i) => (
                   <li key={i.id}>
                     <span className="tabular-nums">{i.id}</span>
@@ -144,31 +147,34 @@ function DocViewer({ docs, allDocs, initialDocId }: { docs: DocSummary[]; allDoc
   );
 }
 
-// 탭 순서·라벨. lib/library.ts의 LibraryCategory와 1:1 대응.
-const CATEGORY_TABS: Array<{ category: Category; label: string }> = [
-  { category: "policy", label: "규정집" },
-  { category: "procedure", label: "업무절차서" },
-  { category: "checklist", label: "체크리스트" },
-  { category: "manual", label: "업무 매뉴얼" },
-  { category: "runbook", label: "런북/플레이북" },
-  { category: "guideline", label: "가이드라인" },
-  { category: "reference", label: "참고문서" },
-  { category: "template", label: "산출물 템플릿" },
-  { category: "design", label: "디자인" },
-  { category: "dd", label: "DD 실사" },
+// 탭 순서. lib/library.ts의 LibraryCategory와 1:1 대응 — 라벨은
+// pages.library.cat* 키로 렌더 시점에 해석한다.
+const CATEGORY_TABS: Array<{ category: Category; key: string }> = [
+  { category: "policy", key: "catPolicy" },
+  { category: "procedure", key: "catProcedure" },
+  { category: "checklist", key: "catChecklist" },
+  { category: "manual", key: "catManual" },
+  { category: "runbook", key: "catRunbook" },
+  { category: "guideline", key: "catGuideline" },
+  { category: "reference", key: "catReference" },
+  { category: "template", key: "catTemplate" },
+  { category: "design", key: "catDesign" },
+  { category: "dd", key: "catDd" },
 ];
 
 // 언어 필터 — 기본값은 전체. 문서는 ko/en 페어 파일로 관리되고 언어가 섞인
 // 문서는 없으므로 필터는 ko/en만 좁혀 본다.
 type LangFilter = "ko" | "en" | "all";
-const LANG_OPTIONS: Array<{ value: LangFilter; label: string }> = [
-  { value: "all", label: "전체" },
-  { value: "ko", label: "한국어" },
-  { value: "en", label: "English" },
+const LANG_OPTIONS: Array<{ value: LangFilter; key: string }> = [
+  { value: "all", key: "langAll" },
+  { value: "ko", key: "langKo" },
+  { value: "en", key: "langEn" },
 ];
 
 // ── 페이지 ─────────────────────────────────────────────────────────────────
 export function LibraryView() {
+  const t = useTranslations("pages.library");
+  const tc = useTranslations("common");
   const [docs, setDocs] = useState<DocSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [docCategory, setDocCategory] = useState<Category>("policy");
@@ -180,7 +186,7 @@ export function LibraryView() {
     api
       .get<DocSummary[]>("/api/library")
       .then((r) => setDocs(r.data))
-      .catch((err) => setError(err instanceof Error ? err.message : "불러오기 실패"));
+      .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
   }, []);
 
   // 딥링크 문서가 현재 카테고리 탭에 안 보이면 해당 문서의 탭으로 옮겨 준다.
@@ -197,14 +203,13 @@ export function LibraryView() {
     [docs, docCategory, langFilter],
   );
 
-  const categoryLabel = CATEGORY_TABS.find((t) => t.category === docCategory)?.label ?? docCategory;
+  const categoryKey = CATEGORY_TABS.find((tab) => tab.category === docCategory)?.key;
 
   return (
     <main>
-      <h1>문서 허브</h1>
+      <h1>{t("heading")}</h1>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
-        정책집·절차서·체크리스트·매뉴얼·참고문서·템플릿·디자인 가이드·DD 실사 문서를 저장소 원본에서
-        실시간으로 읽어 열람합니다. (검토/안건 단위 체크리스트 판정은 S4 이후 흐름 재구축 시 제공됩니다.)
+        {t("intro")}
       </p>
       {error && (
         <p role="alert" className="text-[color:var(--red-fg)]">
@@ -212,11 +217,11 @@ export function LibraryView() {
         </p>
       )}
       {docs === null ? (
-        <p>불러오는 중...</p>
+        <p>{tc("loading")}</p>
       ) : (
         <>
-          <div className="library-tabs" role="tablist" aria-label="문서 종류">
-            {CATEGORY_TABS.map(({ category, label }) => (
+          <div className="library-tabs" role="tablist" aria-label={t("tabsAria")}>
+            {CATEGORY_TABS.map(({ category, key }) => (
               <button
                 key={category}
                 type="button"
@@ -225,26 +230,26 @@ export function LibraryView() {
                 className={`library-tab ${docCategory === category ? "library-tab-active" : ""}`}
                 onClick={() => setDocCategory(category)}
               >
-                {label}
+                {t(key)}
               </button>
             ))}
           </div>
           <SectionToolbar
-            title={categoryLabel}
+            title={categoryKey ? t(categoryKey) : docCategory}
             icon="📄"
             count={docList.length}
             filters={
               <label className="section-meta">
-                언어{" "}
+                {t("langLabel")}{" "}
                 <select
                   value={langFilter}
                   onChange={(e) => setLangFilter(e.target.value as LangFilter)}
                   className="sizing-new-input sizing-new-input-sm"
-                  aria-label="문서 언어 필터"
+                  aria-label={t("langFilterAria")}
                 >
-                  {LANG_OPTIONS.map(({ value, label }) => (
+                  {LANG_OPTIONS.map(({ value, key }) => (
                     <option key={value} value={value}>
-                      {label}
+                      {t(key)}
                     </option>
                   ))}
                 </select>

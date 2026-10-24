@@ -97,48 +97,48 @@ export function parseTargetScopeJson(raw: string | null | undefined): TargetScop
   try {
     data = JSON.parse(raw);
   } catch {
-    throw new TargetScopeValidationError("target_scope_json이 유효한 JSON이 아닙니다.");
+    throw new TargetScopeValidationError("target_scope_json is not valid JSON.");
   }
   if (typeof data !== "object" || data === null || Array.isArray(data)) {
-    throw new TargetScopeValidationError("target scope는 객체여야 합니다.");
+    throw new TargetScopeValidationError("The target scope must be an object.");
   }
   const o = data as Record<string, unknown>;
   if (!Array.isArray(o.regions) || o.regions.length === 0 || !o.regions.every(isTargetScopeRegion)) {
-    throw new TargetScopeValidationError(`regions는 ${TARGET_SCOPE_REGIONS.join(", ")} 중 하나 이상이어야 합니다.`);
+    throw new TargetScopeValidationError(`regions must include at least one of: ${TARGET_SCOPE_REGIONS.join(", ")}.`);
   }
   if (o.regions.includes("worldwide") && o.regions.length > 1) {
-    throw new TargetScopeValidationError("worldwide는 다른 지역과 함께 선택할 수 없습니다.");
+    throw new TargetScopeValidationError("worldwide cannot be combined with other regions.");
   }
   if (!Array.isArray(o.segments) || !o.segments.every((s) => typeof s === "string" && s.trim().length > 0 && s.length <= 100)) {
-    throw new TargetScopeValidationError("segments는 100자 이하의 비어있지 않은 문자열 배열이어야 합니다.");
+    throw new TargetScopeValidationError("segments must be an array of non-empty strings of at most 100 characters.");
   }
   const segments = [...new Set((o.segments as string[]).map((s) => s.trim()))];
   if (!isTargetScopeUnitBasis(o.unit_basis)) {
-    throw new TargetScopeValidationError(`unit_basis는 ${TARGET_SCOPE_UNIT_BASES.join(", ")} 중 하나여야 합니다.`);
+    throw new TargetScopeValidationError(`unit_basis must be one of: ${TARGET_SCOPE_UNIT_BASES.join(", ")}.`);
   }
   if (typeof o.set_by !== "string" || o.set_by.trim() === "" || typeof o.set_at !== "string" || o.set_at.trim() === "") {
-    throw new TargetScopeValidationError("set_by와 set_at은 필수 문자열입니다.");
+    throw new TargetScopeValidationError("Both set_by and set_at are required strings.");
   }
   return { regions: o.regions, segments, unit_basis: o.unit_basis, set_by: o.set_by, set_at: o.set_at };
 }
 
 /** Validate + normalize a PUT body (before set_by/set_at are stamped). */
 export function normalizeTargetScopeInput(body: unknown): Pick<TargetScope, "regions" | "segments" | "unit_basis"> {
-  if (typeof body !== "object" || body === null) throw new TargetScopeValidationError("본문은 객체여야 합니다.");
+  if (typeof body !== "object" || body === null) throw new TargetScopeValidationError("The body must be an object.");
   const o = body as Record<string, unknown>;
   if (!Array.isArray(o.regions) || o.regions.length === 0 || !o.regions.every(isTargetScopeRegion)) {
-    throw new TargetScopeValidationError(`regions는 ${TARGET_SCOPE_REGIONS.join(", ")} 중 하나 이상이어야 합니다.`);
+    throw new TargetScopeValidationError(`regions must include at least one of: ${TARGET_SCOPE_REGIONS.join(", ")}.`);
   }
   if (o.regions.includes("worldwide") && o.regions.length > 1) {
-    throw new TargetScopeValidationError("worldwide는 다른 지역과 함께 선택할 수 없습니다.");
+    throw new TargetScopeValidationError("worldwide cannot be combined with other regions.");
   }
-  if (!Array.isArray(o.segments)) throw new TargetScopeValidationError("segments는 문자열 배열이어야 합니다.");
+  if (!Array.isArray(o.segments)) throw new TargetScopeValidationError("segments must be an array of strings.");
   const segments = [...new Set((o.segments as unknown[]).map((s) => String(s).trim()).filter((s) => s.length > 0))];
   for (const s of segments) {
-    if (s.length > 100) throw new TargetScopeValidationError("segments 항목은 100자 이하여야 합니다.");
+    if (s.length > 100) throw new TargetScopeValidationError("Each segment must be at most 100 characters.");
   }
   if (!isTargetScopeUnitBasis(o.unit_basis)) {
-    throw new TargetScopeValidationError(`unit_basis는 ${TARGET_SCOPE_UNIT_BASES.join(", ")} 중 하나여야 합니다.`);
+    throw new TargetScopeValidationError(`unit_basis must be one of: ${TARGET_SCOPE_UNIT_BASES.join(", ")}.`);
   }
   return { regions: o.regions as TargetScopeRegion[], segments, unit_basis: o.unit_basis };
 }

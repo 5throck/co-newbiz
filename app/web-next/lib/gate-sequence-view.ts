@@ -5,13 +5,15 @@
 export const IC_SEQUENCE = ["entity_ic", "group_ic"] as const;
 export type IcGate = (typeof IC_SEQUENCE)[number];
 
+// §4 payload (design 2026-10-23-i18n-ui-adoption): these Korean names are embedded in
+// the gate-decisions write-route 409 message (data protocol); UI surfaces resolve the
+// same wording through common.gate.* catalog keys instead.
 export const IC_STEP_LABEL: Record<IcGate, string> = {
   entity_ic: "법인 투자심의위원회",
   group_ic: "그룹 투자심의위원회",
 };
 
 export type GateState = "pending" | "go" | "hold" | "kill";
-export const GATE_STATE_LABEL: Record<GateState, string> = { pending: "대기", go: "GO", hold: "HOLD", kill: "KILL" };
 
 export function gateState(latest: ReadonlyArray<{ gate: string; decision: string | null }> | null | undefined, gate: string): GateState {
   const d = latest?.find((g) => g.gate === gate)?.decision;
@@ -35,10 +37,4 @@ export function gateSequenceBlocker(gates: readonly string[], gate: string, late
   const idx = gates.indexOf(gate);
   if (idx <= 0) return null;
   return gates.slice(0, idx).find((g) => gateState(latest, g) !== "go") ?? null;
-}
-
-/** A gate is open for recording only after every earlier gate has a GO. */
-export function gateLockedReason(gates: readonly string[], gate: string, latest: ReadonlyArray<{ gate: string; decision: string | null }> | null | undefined, labels: Record<string, string>): string | null {
-  const blocker = gateSequenceBlocker(gates, gate, latest);
-  return blocker ? `${labels[blocker] ?? blocker} GO가 기록된 뒤에 ${labels[gate] ?? gate} 결정을 기록할 수 있습니다.` : null;
 }

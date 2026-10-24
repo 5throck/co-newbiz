@@ -53,7 +53,7 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "투자심사 절차 단계 기록은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Investment-review procedure step records require the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
@@ -118,7 +118,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       });
       return ok(row, 201);
     }
-    return badRequest("invalid_action", "action은 record | snapshot_ic_memo | draft_insight_review | attach_decision_deck 중 하나여야 합니다.");
+    return badRequest("invalid_action", "action must be one of: record | snapshot_ic_memo | draft_insight_review | attach_decision_deck.");
   } catch (err) {
     if (err instanceof IcReviewStepError) return badRequest("invalid_request", err.message);
     throw err;

@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { StageTabs } from "../../../../components/StageTabs.tsx";
+import { useTranslations } from "next-intl";
 import { api } from "../../../../lib/api.ts";
 import { fmtNpvEok } from "../../../../lib/npv-format.ts";
 import { ColGroup, PageState, useToast } from "../../../../components/ui.tsx";
@@ -21,6 +22,8 @@ const INCENTIVE_COL_PCT = [16, 12, 12, 10, 18, 22, 10] as const;
 interface Row { id: string; program_name: string | null; grantor: string | null; npv_value: number | null; clawback_rule: string | null; direction: string; evidence_ref: string | null }
 
 function IncentivesView() {
+  const t = useTranslations("pages.projects.incentives");
+  const tc = useTranslations("common");
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const { me } = useAuth();
@@ -36,26 +39,26 @@ function IncentivesView() {
   async function setDirection(r: Row, direction: string) {
     try {
       await api.put(`/api/projects/${encodeURIComponent(id)}/incentives`, { id: r.id, direction });
-      toast(`방향을 ${direction === "granted" ? "확정" : "수혜 예정"}으로 변경했습니다.`);
+      toast(t("dirChanged", { direction: direction === "granted" ? t("dirGranted") : t("dirProspective") }));
       load();
-    } catch (e) { toast(e instanceof Error ? `변경 실패: ${e.message}` : "변경 실패"); }
+    } catch (e) { toast(e instanceof Error ? t("changeFailedWith", { message: e.message }) : t("changeFailed")); }
   }
   function remove(r: Row) {
-    confirm("인센티브 삭제", () => {
+    confirm(t("deleteConfirmTitle"), () => {
       void (async () => {
         try {
           await api.delete(`/api/projects/${encodeURIComponent(id)}/incentives?id=${encodeURIComponent(r.id)}`);
-          toast("삭제했습니다 — 감사 로그에 남습니다.");
+          toast(t("deleted"));
           load();
-        } catch (e) { toast(e instanceof Error ? `삭제 실패: ${e.message}` : "삭제 실패"); }
+        } catch (e) { toast(e instanceof Error ? t("deleteFailedWith", { message: e.message }) : tc("errors.deleteFailed")); }
       })();
-    }, { body: `"${r.program_name ?? "프로그램"}" 인센티브를 삭제합니다. 삭제는 감사 로그에 기록됩니다.`, confirmLabel: "삭제" });
+    }, { body: t("deleteConfirmBody", { name: r.program_name ?? t("fallbackProgram") }), confirmLabel: tc("delete") });
   }
 
   const load = useCallback(() => {
     api.get<{ incentives: Row[] }>(`/api/projects/${encodeURIComponent(id)}/incentives`)
       .then((r) => setRows(r.data.incentives))
-      .catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
+      .catch((e) => setError(e instanceof Error ? e.message : tc("errors.loadFailed")));
   }, [id]);
   useEffect(() => { load(); }, [load]);
 
@@ -71,10 +74,10 @@ function IncentivesView() {
         clawback_rule: form.clawback_rule.trim() || undefined, direction: form.direction,
         evidence_ref: form.evidence_ref.trim() || undefined,
       });
-      toast("인센티브가 등록되었습니다");
+      toast(t("created"));
       setForm({ program_name: "", grantor: "", npv_value: "", clawback_rule: "", direction: "prospective", evidence_ref: "" });
       load();
-    } catch (err) { setError(err instanceof Error ? err.message : "등록 실패"); }
+    } catch (err) { setError(err instanceof Error ? err.message : tc("errors.createFailed")); }
     finally { setBusy(false); }
   }
 
@@ -85,15 +88,17 @@ function IncentivesView() {
     try {
       await api.post(`/api/projects/${encodeURIComponent(id)}/deal-structure`, {
         action: "add_financing_entry", kind: "source",
-        name: `인센티브 — ${r.program_name ?? "프로그램"}${r.grantor ? ` (${r.grantor})` : ""}`,
+        name: r.grantor ? t("pushNameWithGrantor", { name: r.program_name ?? t("fallbackProgram"), grantor: r.grantor }) : t("pushName", { name: r.program_name ?? t("fallbackProgram") }),
         amount_krw_m: r.npv_value,
-        note: `${r.direction === "granted" ? "확정" : "수혜 예정"} 인센티브${r.clawback_rule ? ` · 클로백: ${r.clawback_rule}` : ""}`,
+        note: r.clawback_rule
+          ? t("pushNoteClawback", { direction: r.direction === "granted" ? t("dirGranted") : t("dirProspective"), clawback: r.clawback_rule })
+          : t("pushNoteSimple", { direction: r.direction === "granted" ? t("dirGranted") : t("dirProspective") }),
         evidence_kind: "subsidy_grant",
         evidence_ref: `incentive:${r.id} · ${r.evidence_ref}`,
       });
-      toast("자금조달 sources 항목으로 등록했습니다 (백만 KRW) — 투자구조 탭에서 금액을 확인하세요.");
+      toast(t("pushDone"));
     } catch (e) {
-      toast(e instanceof Error ? `등록 실패: ${e.message}` : "등록 실패");
+      toast(e instanceof Error ? t("pushFailedWith", { message: e.message }) : tc("errors.createFailed"));
     } finally {
       setPushBusy(null);
     }
@@ -102,39 +107,39 @@ function IncentivesView() {
   return (
     <main>
       <StageTabs projectId={id} />
-      <h1>인센티브·클로백</h1>
-      <p className="objective">지역 인센티브 소싱과 이전 시 클로백 노출을 관리합니다 — 클로백 추정은 투자구조(uses)와 대조됩니다.</p>
+      <h1>{t("heading")}</h1>
+      <p className="objective">{t("objective")}</p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
-      <section className="market-section" aria-label="인센티브 목록">
+      <section className="market-section" aria-label={t("listSectionAria")}>
         {rows === null ? <PageState state="loading" /> : rows.length === 0 ? (
-          <PageState state="empty" emptyText="등록된 인센티브가 없습니다." />
+          <PageState state="empty" emptyText={t("empty")} />
         ) : (
-          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table table-fixed-pct tmin-64" aria-label="인센티브">
-              <caption className="sr-only">인센티브</caption>
+          <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+            <table className="data-table table-fixed-pct tmin-64" aria-label={t("tableAria")}>
+              <caption className="sr-only">{t("tableAria")}</caption>
               <ColGroup widths={INCENTIVE_COL_PCT} />
-              <thead><tr><th>프로그램</th><th>부여기관</th><th>방향</th><th className="col-num">NPV</th><th>클로백 조건</th><th>적격 증빙 · 자금 조달</th><th>관리</th></tr></thead>
+              <thead><tr><th>{t("thProgram")}</th><th>{t("thGrantor")}</th><th>{tc("direction")}</th><th className="col-num">{t("thNpv")}</th><th>{t("thClawback")}</th><th>{t("thEvidence")}</th><th>{t("thManage")}</th></tr></thead>
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id}>
                     <td className="font-semibold">{r.program_name ?? "—"}</td>
                     <td>{r.grantor ?? "—"}</td>
                     <td>{canAct ? (
-                        <select aria-label={`${r.program_name ?? "프로그램"} 방향`} className="sizing-new-input sizing-new-input-sm" value={r.direction} onChange={(e) => void setDirection(r, e.target.value)}>
-                          <option value="prospective">수혜 예정</option><option value="granted">확정</option>
+                        <select aria-label={t("dirAria", { name: r.program_name ?? t("fallbackProgram") })} className="sizing-new-input sizing-new-input-sm" value={r.direction} onChange={(e) => void setDirection(r, e.target.value)}>
+                          <option value="prospective">{t("dirProspective")}</option><option value="granted">{t("dirGranted")}</option>
                         </select>
-                      ) : <span className={`status-chip ${r.direction === "granted" ? "status-green" : "status-amber"}`}>{r.direction === "granted" ? "확정" : "수혜 예정"}</span>}</td>
-                    <td className="col-num tabular-nums">{r.npv_value != null ? `${fmtNpvEok(r.npv_value)}억` : "—"}</td>
+                      ) : <span className={`status-chip ${r.direction === "granted" ? "status-green" : "status-amber"}`}>{r.direction === "granted" ? t("dirGranted") : t("dirProspective")}</span>}</td>
+                    <td className="col-num tabular-nums">{r.npv_value != null ? t("npvEok", { value: fmtNpvEok(r.npv_value) }) : "—"}</td>
                     <td className="text-[length:var(--fs-caption)]">{r.clawback_rule ?? "—"}</td>
                     <td className="text-[length:var(--fs-caption)]">
-                      {r.evidence_ref ? <code className="dd-item-id mr-1" title={r.evidence_ref}>{r.evidence_ref.slice(0, 24)}</code> : <span className="status-chip status-amber mr-1" title="적격 증빙이 없으면 자금조달 sources에 넣을 수 없습니다">증빙 없음</span>}
+                      {r.evidence_ref ? <code className="dd-item-id mr-1" title={r.evidence_ref}>{r.evidence_ref.slice(0, 24)}</code> : <span className="status-chip status-amber mr-1" title={t("noEvidenceTitle")}>{t("noEvidenceChip")}</span>}
                       {canAct && (
                         <button type="button" className="btn-ghost btn-sm" disabled={!r.evidence_ref || r.npv_value == null || pushBusy === r.id}
-                          title={!r.evidence_ref ? "적격 증빙(evidence_ref)이 있어야 합니다" : r.npv_value == null ? "NPV가 있어야 합니다" : "이 인센티브를 S10 자금조달 sources 항목(보조금 교부 증빙)으로 등록합니다"}
-                          onClick={() => void pushToFinancing(r)}>→ 자금 조달</button>
+                          title={!r.evidence_ref ? t("pushNeedEvidence") : r.npv_value == null ? t("pushNeedNpv") : t("pushTitle")}
+                          onClick={() => void pushToFinancing(r)}>{t("pushBtn")}</button>
                       )}
                     </td>
-                    <td>{canAct && <button type="button" className="btn-danger btn-sm" onClick={() => remove(r)}>삭제</button>}</td>
+                    <td>{canAct && <button type="button" className="btn-danger btn-sm" onClick={() => remove(r)}>{tc("delete")}</button>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -143,21 +148,21 @@ function IncentivesView() {
         )}
       </section>
       {canAct && (
-        <section className="market-section" aria-label="인센티브 등록">
-          <h2 className="text-[length:var(--fs-body)] mb-2">인센티브 등록</h2>
+        <section className="market-section" aria-label={t("registerSectionAria")}>
+          <h2 className="text-[length:var(--fs-body)] mb-2">{t("registerHeading")}</h2>
           <form className="sizing-new-form" onSubmit={create}>
             <div className="flex flex-wrap items-end gap-2">
-              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[14rem]"><span className="block mb-1">프로그램명 *</span>
+              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[14rem]"><span className="block mb-1">{t("lblProgram")}</span>
                 <input className="sizing-new-input w-full" value={form.program_name} onChange={(e) => setForm({ ...form, program_name: e.target.value })} required /></label>
-              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">부여기관</span>
+              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">{t("lblGrantor")}</span>
                 <input className="sizing-new-input sizing-new-input-sm" value={form.grantor} onChange={(e) => setForm({ ...form, grantor: e.target.value })} /></label>
-              <label className="text-[length:var(--fs-caption)] w-[7rem]"><span className="block mb-1">NPV (억원)</span>
+              <label className="text-[length:var(--fs-caption)] w-[7rem]"><span className="block mb-1">{t("lblNpv")}</span>
                 <input type="number" className="sizing-new-input sizing-new-input-sm" value={form.npv_value} onChange={(e) => setForm({ ...form, npv_value: e.target.value })} /></label>
-              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]"><span className="block mb-1">클로백 조건</span>
-                <input className="sizing-new-input w-full" value={form.clawback_rule} onChange={(e) => setForm({ ...form, clawback_rule: e.target.value })} placeholder="예: 5년 내 이전 시 전액 반환" /></label>
-              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]"><span className="block mb-1">적격 증빙 참조</span>
-                <input className="sizing-new-input w-full" value={form.evidence_ref} onChange={(e) => setForm({ ...form, evidence_ref: e.target.value })} placeholder="교부결정 통지 2026-10-15 / 협약서 §3" /></label>
-              <button type="submit" className="btn-primary" disabled={busy}>{busy ? "등록 중..." : "등록"}</button>
+              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]"><span className="block mb-1">{t("lblClawback")}</span>
+                <input className="sizing-new-input w-full" value={form.clawback_rule} onChange={(e) => setForm({ ...form, clawback_rule: e.target.value })} placeholder={t("phClawback")} /></label>
+              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]"><span className="block mb-1">{t("lblEvidence")}</span>
+                <input className="sizing-new-input w-full" value={form.evidence_ref} onChange={(e) => setForm({ ...form, evidence_ref: e.target.value })} placeholder={t("phEvidence")} /></label>
+              <button type="submit" className="btn-primary" disabled={busy}>{busy ? tc("registering") : tc("register")}</button>
             </div>
           </form>
         </section>

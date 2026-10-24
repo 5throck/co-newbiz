@@ -1,11 +1,13 @@
 "use client";
 
 // Split from app/brownfield/targets/[targetId]/page.tsx (Wave U-3 decomposition); behavior unchanged.
+import { useTranslations } from "next-intl";
 import { api } from "../../lib/api.ts";
 import type { useTargetDetail } from "./useTargetDetail.ts";
 import type { EvalDraftResp, EvalDraftItem, EvalItem } from "./types.ts";
 
 export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
+  const t = useTranslations("components.brownfieldTarget.useTargetActions");
   const { oppId, setEvalBusy, targetId, loadDetail, setError, draftBusy, setDraftBusy, setDraftNote, setDraftCategory, setEvalDraft, evalDraft, busy, setBusy, setRubricBusy, newCriterionLabel, setNewCriterionLabel, excludeReason, editDraft, setEditing } = prev;
 
 
@@ -19,7 +21,7 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
       });
       loadDetail();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "평가 판정 저장 실패");
+      setError(err instanceof Error ? err.message : t("verdictSaveFailed"));
     } finally {
       setEvalBusy(null);
     }
@@ -41,7 +43,7 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
       for (const d of r.data.drafts) byId[d.criterion_id] = d;
       setEvalDraft(byId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "판정 초안 생성 실패");
+      setError(err instanceof Error ? err.message : t("draftGenerateFailed"));
     } finally {
       setDraftBusy(false);
     }
@@ -66,7 +68,7 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
       setDraftNote(null);
       loadDetail();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "초안 판정 저장 실패");
+      setError(err instanceof Error ? err.message : t("draftSaveFailed"));
     } finally {
       setBusy(false);
     }
@@ -80,7 +82,7 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
       await api.patch(`/api/brownfield/${encodeURIComponent(oppId)}/eval-criteria/${encodeURIComponent(criterionId)}`, { rubric });
       loadDetail();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "임계값 저장 실패");
+      setError(err instanceof Error ? err.message : t("rubricSaveFailed"));
     } finally {
       setRubricBusy(null);
     }
@@ -93,7 +95,7 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
       await api.patch(`/api/brownfield/${encodeURIComponent(oppId)}/eval-criteria/${encodeURIComponent(criterionId)}`, { weight });
       loadDetail();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "가중치 저장 실패");
+      setError(err instanceof Error ? err.message : t("weightSaveFailed"));
     } finally {
       setEvalBusy(null);
     }
@@ -110,7 +112,7 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
       setNewCriterionLabel((prev) => ({ ...prev, [key]: "" }));
       loadDetail();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "평가 항목 추가 실패");
+      setError(err instanceof Error ? err.message : t("criterionAddFailed"));
     } finally {
       setEvalBusy(null);
     }
@@ -123,7 +125,7 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
       await api.delete(`/api/brownfield/${encodeURIComponent(oppId)}/eval-criteria/${encodeURIComponent(criterionId)}`);
       loadDetail();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "평가 항목 삭제 실패");
+      setError(err instanceof Error ? err.message : t("criterionDeleteFailed"));
     } finally {
       setEvalBusy(null);
     }
@@ -136,7 +138,7 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
       await api.post(`/api/brownfield/${encodeURIComponent(oppId)}/targets/${encodeURIComponent(targetId)}/shortlist`, {});
       loadDetail();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "최종 후보 목록 승격 실패");
+      setError(err instanceof Error ? err.message : t("shortlistFailed"));
     } finally {
       setBusy(false);
     }
@@ -149,7 +151,7 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
       await api.post(`/api/brownfield/${encodeURIComponent(oppId)}/targets/${encodeURIComponent(targetId)}/exclude`, { reason: excludeReason.trim() });
       loadDetail();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "제외 처리 실패");
+      setError(err instanceof Error ? err.message : t("excludeFailed"));
     } finally {
       setBusy(false);
     }
@@ -170,7 +172,7 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
       setEditing(false);
       loadDetail();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "후보 정보 수정 실패");
+      setError(err instanceof Error ? err.message : t("editSaveFailed"));
     } finally {
       setBusy(false);
     }
@@ -183,7 +185,7 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
       await api.delete(`/api/brownfield/targets/${encodeURIComponent(targetId)}`);
       window.location.href = `/brownfield?opportunity=${encodeURIComponent(oppId)}`;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "후보 삭제 실패");
+      setError(err instanceof Error ? err.message : t("deleteFailed"));
       setBusy(false);
     }
   }

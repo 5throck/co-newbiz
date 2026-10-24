@@ -5,6 +5,7 @@
 // 활동 표(행 인라인 확장, 벤치 A1-1 변형) — 전부 생성 프러젝션 렌더, 런타임 LLM 없음.
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { ColGroup, FilterChip, PageState, useToast } from "../../components/ui.tsx";
 import { api } from "../../lib/api.ts";
@@ -14,7 +15,7 @@ import {
   type BlueprintAgent,
   type BlueprintStage,
   type FlowsBlueprint,
-  stageName,
+  stageNameKey,
 } from "./flows-view-lib.ts";
 
 // 표 열 비율(2026-10-11-table-column-sizing-system 선례) — 활동 표.
@@ -43,16 +44,21 @@ function useStageErrors(): ErrorsByStage {
   return state;
 }
 
-/** 활동의 트랙 범위 — 소속 프롬프트 trackScope의 합집합(빈 배열 = 공통). */
-function activityTrack(a: BlueprintStage["activities"][number]): { label: string; tracks: string[] } {
+/** 활동의 트랙 범위 — 소속 프롬프트 trackScope의 합집합(빈 배열 = 공통).
+ *  라벨은 카탈로그(pages.flows.blueprint.commonTrack)에서 렌더 시점에resolve한다. */
+function activityTrack(a: BlueprintStage["activities"][number]): { tracks: string[] } {
   const set = new Set<string>();
   for (const p of a.prompts) for (const t of p.trackScope) set.add(t);
-  const tracks = [...set];
-  if (tracks.length === 0) return { label: "공통", tracks: ["greenfield", "brownfield"] };
-  return { label: tracks.join(" · "), tracks };
+  return { tracks: [...set] };
+}
+function trackLabel(tracks: string[], t: ReturnType<typeof useTranslations>): string {
+  return tracks.length === 0 ? t("commonTrack") : tracks.join(" · ");
 }
 
 export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
+  const t = useTranslations("pages.flows.blueprint");
+  const tc = useTranslations("common");
+  const tr = useTranslations();
   const [selectedStage, setSelectedStage] = useState<string | null>(null);
   const [trackFilter, setTrackFilter] = useState<"all" | "greenfield" | "brownfield">("all");
   const [recentRuns, setRecentRuns] = useState<Record<string, Array<Record<string, unknown>>>>({});
@@ -121,11 +127,11 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
     api
       .post<{ session: { id: string } }>("/api/flows/dry-run/sessions", { promptKey })
       .then((r) => {
-        toast("드라이런 세션이 생성되었습니다 — 오버라이드 편집 후 비용 확인을 거쳐 실행하세요.");
+        toast(t("sessionCreatedToast"));
         router.push(`/flows/dry-run/${encodeURIComponent(r.data.session.id)}`);
       })
       .catch((err: unknown) => {
-        toast(err instanceof Error ? err.message : "드라이런 세션 생성에 실패했습니다", "alert");
+        toast(err instanceof Error ? err.message : t("sessionCreateFailed"), "alert");
       })
       .finally(() => setCreatingPromptKey(null));
   }
@@ -133,20 +139,21 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
   return (
     <>
       {/* 단계 요약 그리드 (§4.1-1) — 버튼 목록(네이티브 button, 키보드 내장). */}
-      <section aria-label="단계 요약" className="market-section">
+      <section aria-label={t("stageGridSection")} className="market-section">
         <SectionToolbar
-          title="단계 요약"
+          title={t("stageGridTitle")}
           filters={
             <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              단계를 선택하면 아래 활동 표가 해당 단계로 좁혀집니다.
+              {t("stageGridHint")}
             </span>
           }
         />
         <div className="flex flex-wrap gap-2">
-          {stages.length === 0 && <PageState state="empty" emptyText="카탈로그가 비어 있습니다 — 생성 프러젝션 드리프트 점검 필요" />}
+          {stages.length === 0 && <PageState state="empty" emptyText={t("emptyCatalog")} />}
           {stages.map((s) => {
             const selected = selectedStage === s.id;
             const errs = stageErrors.byStage[s.id] ?? 0;
+            const stageNm = stageNameKey(s.id);
             return (
               <button
                 type="button"
@@ -158,16 +165,16 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
               >
                 <div className="flex items-baseline gap-1">
                   <code className="dd-item-id">{s.id}</code>
-                  <span className="font-semibold text-[length:var(--fs-body)]">{stageName(s.id)}</span>
+                  <span className="font-semibold text-[length:var(--fs-body)]">{stageNm ? tr(stageNm) : s.id}</span>
                 </div>
                 <div className="mt-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                  활동 {s.activities.length} · {s.applicableTracks.length === 0 ? "공통" : s.applicableTracks.join(" · ")}
+                  {t("activityCount", { p1: s.activities.length, p2: s.applicableTracks.length === 0 ? t("commonTrack") : s.applicableTracks.join(" · ") })}
                 </div>
                 <div className="mt-1 text-[length:var(--fs-caption)]">
                   {errs > 0 ? (
-                    <span className="text-[color:var(--red-fg)] font-semibold">✕ 오류 {fmtInt(errs)}/7일</span>
+                    <span className="text-[color:var(--red-fg)] font-semibold">{t("errWeek", { p1: fmtInt(errs) })}</span>
                   ) : (
-                    <span className="text-[color:var(--muted-fg)]">오류 0/7일</span>
+                    <span className="text-[color:var(--muted-fg)]">{t("errZeroWeek")}</span>
                   )}
                 </div>
               </button>
@@ -177,18 +184,18 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
       </section>
 
       {/* 활동 표 (§4.1-2) — 행 인라인 확장(네이티브 details). */}
-      <section aria-label="활동 목록" className="market-section">
+      <section aria-label={t("activitySection")} className="market-section">
         <SectionToolbar
-          title="활동"
+          title={t("activityTitle")}
           count={visibleActivities.length}
           filters={
-            <span className="flex flex-wrap items-center gap-1" role="group" aria-label="트랙 필터">
-              <FilterChip selected={trackFilter === "all"} onClick={() => setTrackFilter("all")}>전체 트랙</FilterChip>
+            <span className="flex flex-wrap items-center gap-1" role="group" aria-label={t("trackFilterGroup")}>
+              <FilterChip selected={trackFilter === "all"} onClick={() => setTrackFilter("all")}>{t("allTracks")}</FilterChip>
               <FilterChip selected={trackFilter === "greenfield"} onClick={() => setTrackFilter("greenfield")}>greenfield</FilterChip>
               <FilterChip selected={trackFilter === "brownfield"} onClick={() => setTrackFilter("brownfield")}>brownfield</FilterChip>
               {selectedStage && (
                 <FilterChip selected={false} onClick={() => setSelectedStage(null)}>
-                  단계 선택 해제 ({selectedStage})
+                  {t("clearStage", { p1: selectedStage })}
                 </FilterChip>
               )}
             </span>
@@ -200,20 +207,20 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
           }
         />
         {visibleActivities.length === 0 ? (
-          <PageState state="empty" emptyText="필터 조건에 해당하는 활동이 없습니다." />
+          <PageState state="empty" emptyText={t("emptyActivities")} />
         ) : (
-          <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-            <table className="data-table table-fixed-pct tmin-40" aria-label="플로우 활동 목록">
-              <caption className="sr-only">S1–S12 단계별 활동과 에이전트·프롬프트·스킬 매핑</caption>
+          <div className="table-scroll" role="region" aria-label={t("tableScrollRegion")} tabIndex={0}>
+            <table className="data-table table-fixed-pct tmin-40" aria-label={t("activityTableAria")}>
+              <caption className="sr-only">{t("activityTableCaption")}</caption>
               <ColGroup widths={ACTIVITY_COL_PCT} />
               <thead>
                 <tr>
-                  <th scope="col">활동</th>
-                  <th scope="col">단계</th>
-                  <th scope="col">에이전트</th>
-                  <th scope="col">프롬프트 키·스킬</th>
-                  <th scope="col">트랙</th>
-                  <th scope="col">드라이런</th>
+                  <th scope="col">{t("colActivity")}</th>
+                  <th scope="col">{t("colStage")}</th>
+                  <th scope="col">{t("colAgent")}</th>
+                  <th scope="col">{t("colPromptKeySkill")}</th>
+                  <th scope="col">{t("colTrack")}</th>
+                  <th scope="col">{t("colDryRun")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -232,20 +239,20 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
                           </summary>
                           <div className="mt-1 text-[length:var(--fs-caption)]">
                             <p className="mb-1">
-                              <strong>스킬:</strong>{" "}
+                              <strong>{t("skillsLabel")}</strong>{" "}
                               {activity.skills.length > 0
                                 ? activity.skills.map((sk) => <code key={sk} className="dd-item-id mr-1">{sk}</code>)
                                 : "—"}
                             </p>
                             <p className="mb-1">
-                              <strong>프로시저:</strong>{" "}
+                              <strong>{t("procedureLabel")}</strong>{" "}
                               {activity.procedure.length > 0
                                 ? activity.procedure.map((p) => <code key={p} className="dd-item-id mr-1">{p}</code>)
                                 : "—"}
                             </p>
                             <p className="mb-1">
-                              <strong>소스 프롬프트 {activity.prompts.length}건</strong>
-                              {hasDynamic && <span className="status-chip status-not-started ml-1">동적 항목 포함</span>}
+                              <strong>{t("sourcePrompts", { p1: activity.prompts.length })}</strong>
+                              {hasDynamic && <span className="status-chip status-not-started ml-1">{t("includesDynamic")}</span>}
                             </p>
                             <ul className="ml-4 list-disc">
                               {activity.prompts.map((p) => (
@@ -258,22 +265,22 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
                               ))}
                             </ul>
                             {runs === undefined ? (
-                              <p className="text-[color:var(--muted-fg)]">최근 런 불러오는 중...</p>
+                              <p className="text-[color:var(--muted-fg)]">{t("recentRunsLoading")}</p>
                             ) : runs.length === 0 ? (
-                              <p className="text-[color:var(--muted-fg)]">최근 30일 런 없음</p>
+                              <p className="text-[color:var(--muted-fg)]">{t("recentRunsEmpty")}</p>
                             ) : (
                               <>
-                                <p className="mt-1"><strong>최근 런 {runs.length}건</strong></p>
-                                <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-                                  <table className="data-table table-fixed-pct tmin-40 mb-1" aria-label={`${activity.id} 최근 런`}>
-                                    <caption className="sr-only">{activity.id} 활동의 최근 런 3건</caption>
+                                <p className="mt-1"><strong>{t("recentRunsCount", { p1: runs.length })}</strong></p>
+                                <div className="table-scroll" role="region" aria-label={t("tableScrollRegion")} tabIndex={0}>
+                                  <table className="data-table table-fixed-pct tmin-40 mb-1" aria-label={t("recentRunsAria", { p1: activity.id })}>
+                                    <caption className="sr-only">{t("recentRunsCaption", { p1: activity.id })}</caption>
                                     <ColGroup widths={RECENT_RUN_COL_PCT} />
                                     <thead>
                                       <tr>
-                                        <th scope="col">시각</th>
-                                        <th scope="col">런 ID</th>
-                                        <th scope="col">상태</th>
-                                        <th scope="col" className="col-num">소요</th>
+                                        <th scope="col">{t("colTime")}</th>
+                                        <th scope="col">{t("colRunId")}</th>
+                                        <th scope="col">{tc("status")}</th>
+                                        <th scope="col" className="col-num">{t("colDuration")}</th>
                                       </tr>
                                     </thead>
                                     <tbody>
@@ -281,8 +288,8 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
                                         const r = run as { id: string; started_at: string; finished_at: string | null; status: string };
                                         const dur = r.started_at && r.finished_at ? new Date(r.finished_at).getTime() - new Date(r.started_at).getTime() : null;
                                         const chip = r.status === "failed"
-                                          ? { label: "✕ 실패", cls: "status-chip status-rejected" }
-                                          : { label: "✓ 성공", cls: "status-chip status-approved" };
+                                          ? { label: t("chipFailed"), cls: "status-chip status-rejected" }
+                                          : { label: t("chipSuccess"), cls: "status-chip status-approved" };
                                         return (
                                           <tr key={r.id}>
                                             <td className="tabular-nums">{fmtDateTime(r.started_at)}</td>
@@ -308,14 +315,14 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
                             <summary className="cursor-pointer">{activity.agent}</summary>
                             <div className="mt-1 text-[length:var(--fs-caption)]">
                               <p className="mb-0"><strong>{agent.name}</strong></p>
-                              <p className="mb-0 text-[color:var(--muted-fg)]">{agent.role || "(역할 미기술)"}</p>
-                              <p className="mb-0">도메인: {agent.domain ?? "—"}</p>
+                              <p className="mb-0 text-[color:var(--muted-fg)]">{agent.role || t("roleUnspecified")}</p>
+                              <p className="mb-0">{t("domainLabel", { p1: agent.domain ?? "—" })}</p>
                             </div>
                           </details>
                         ) : (
                           activity.agent
                         )}
-                        {hasDynamic && <div className="mt-1"><span className="status-chip status-not-started">동적 항목</span></div>}
+                        {hasDynamic && <div className="mt-1"><span className="status-chip status-not-started">{t("dynamicChip")}</span></div>}
                       </td>
                       <td className="text-[length:var(--fs-caption)]">
                         {activity.prompts.map((p) => (
@@ -329,7 +336,7 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
                           </div>
                         )}
                       </td>
-                      <td><span className="status-chip status-not-started">{track.label}</span></td>
+                      <td><span className="status-chip status-not-started">{trackLabel(track.tracks, t)}</span></td>
                       <td>
                         {/* 드라이런 시작(Row 6, §6.6) — 첫 정적 프롬프트로 세션 생성 후 세션 화면으로.
                             동적 항목만 있는 활동은 v1 드라이런 대상이 아니므로 이유를 텍스트로 알린다. */}
@@ -340,11 +347,11 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
                             disabled={creatingPromptKey !== null}
                             onClick={() => startDryRun(activity)}
                           >
-                            {creatingPromptKey !== null ? "생성 중..." : "드라이런 시작"}
+                            {creatingPromptKey !== null ? t("creating") : t("dryRunStart")}
                           </button>
                         ) : (
-                          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title="동적 프롬프트는 호출 시점 에이전트 선언이라 v1 드라이런 대상이 아닙니다(§6.10)">
-                            — 동적 항목
+                          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title={t("dynamicTitle")}>
+                            {t("dynamicNoRun")}
                           </span>
                         )}
                       </td>
@@ -357,8 +364,7 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
         )}
         {/* §4.1-3 각주 — 동적 항목 귀속 설명. */}
         <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-          각주: <span className="status-chip status-not-started">동적 항목</span> 프롬프트(현재 {fmtInt(dynamicPromptCount)}건)는 실행 시점
-          활동 맥락으로 에이전트가 귀속됩니다 — 카탈로그의 에이전트 칸이 비어 있는 것이 아니라 설계된 값입니다.
+          {t("footnotePrefix")} <span className="status-chip status-not-started">{t("dynamicChip")}</span> {t("footnoteTail", { p1: fmtInt(dynamicPromptCount) })}
         </p>
       </section>
     </>
@@ -368,11 +374,12 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
 /** 프롬프트 본문(시스템 프롬프트) 드릴다운 — /api/flows 응답의 prompts 섹션 본문을
  *  부모가 전달한다(블루프린트 전체가 이미 메모리에 있으므로 추가 호출 없음). */
 function PromptSystemDrillDown({ system }: { system: string | null }) {
+  const t = useTranslations("pages.flows.blueprint");
   return (
     <details className="mt-1">
-      <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">시스템 프롬프트 본문 보기</summary>
+      <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">{t("viewSystemBody")}</summary>
       {system === null ? (
-        <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">(시스템 프롬프트 본문 없음)</p>
+        <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{t("noSystemBody")}</p>
       ) : (
         <pre className="mt-1 text-[length:var(--fs-caption)]" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: "18rem", overflowY: "auto" }}>{system}</pre>
       )}

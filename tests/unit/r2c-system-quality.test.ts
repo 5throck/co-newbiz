@@ -2,13 +2,18 @@
 // R2-C system quality: synthetic/degenerate value helpers (item 7), the glossary-backed label map
 // (item 8), and the design-lint rule that rejects a class-less <button> (item 5).
 import { describe, expect, test } from "bun:test";
-import { existsSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { closureRecordKeyOf } from "../../app/web-next/lib/label-keys.ts";
+
+// i18n re-pin (T3-6): ko stub translator for catalog-key assertions.
+const koCatalog = JSON.parse(readFileSync("app/web-next/locales/ko.json", "utf8")) as Record<string, any>;
+const tr = (key: string): string => key.split(".").reduce<unknown>((acc, k) => (acc as Record<string, any>)[k], koCatalog) as string;
 import { join } from "node:path";
 import {
   formatPctOrNa, formatUsdBOrNa, isDegeneratePct, isDegenerateSize, isSyntheticSizing, NOT_COMPUTABLE_TEXT,
 } from "../../app/web-next/lib/synthetic-value.ts";
 import {
-  closureRecordLabel, DECISION_LABEL, GATE_LABEL, localizeMessage, localizeRequirement, VIEWER_READONLY_TEXT,
+  localizeMessage, localizeRequirement,
 } from "../../app/web-next/lib/labels.ts";
 
 describe("synthetic and degenerate values", () => {
@@ -34,10 +39,12 @@ describe("synthetic and degenerate values", () => {
 
 describe("label map", () => {
   test("gates and decisions have Korean labels and unknown keys fall back to themselves", () => {
-    expect(GATE_LABEL.entity_ic).toContain("투자심의");
-    expect(DECISION_LABEL.kill).toContain("중단");
-    expect(closureRecordLabel("gate_decision(kill)")).not.toContain("gate_decision");
-    expect(closureRecordLabel("something_new")).toBe("something_new");
+    // i18n re-pin (T3-6): gate names resolve through common.gate.* ko catalog values.
+    expect(JSON.parse(readFileSync("app/web-next/locales/ko.json", "utf8")).common.gate.entity_ic).toContain("투자심의");
+    expect(tr("common.decisionLabel.kill")).toContain("중단");
+    // i18n re-pin (T3-6): closure record keys resolve common.closureRecord.* via closureRecordKeyOf
+    expect(tr(closureRecordKeyOf("gate_decision(kill)")!.label)).not.toContain("gate_decision");
+    expect(closureRecordKeyOf("something_new")).toBeNull();
   });
 
   test("system jargon is rewritten for readers", () => {
@@ -45,7 +52,7 @@ describe("label map", () => {
     expect(localizeMessage("HOLD 결정에는 missing_artifacts(미완료 산출물 목록)가 필요합니다.")).not.toContain("missing_artifacts");
     expect(localizeRequirement("설립 실행 기록 (origin∈{internal,joint})")).not.toContain("∈");
     expect(localizeMessage("이미 한글인 문장")).toBe("이미 한글인 문장");
-    expect(VIEWER_READONLY_TEXT).toBe("보기 권한만 있습니다");
+    expect(koCatalog.common.viewerReadOnly).toBe("보기 권한만 있습니다");
   });
 });
 

@@ -54,7 +54,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "의사결정 기록은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Recording gate decisions requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
@@ -74,12 +74,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!rationale) return badRequest("invalid_request", "rationale is required — a gate decision without its reasoning is not recordable.");
   const missing = (body.missing_artifacts ?? []).map((m) => m.trim()).filter(Boolean);
   if (body.decision === "hold" && missing.length === 0) {
-    return badRequest("hold_requires_artifacts", "HOLD 결정에는 missing_artifacts(미완료 산출물 목록)가 필요합니다.");
+    return badRequest("hold_requires_artifacts", "A HOLD decision requires missing_artifacts (the list of incomplete deliverables).");
   }
   // ADR-0152 — every KILL carries learning capture (422 when absent).
   const learningCapture = body.learning_capture?.trim() || null;
   if (body.decision === "kill" && !learningCapture) {
-    return unprocessable("learning_capture_required", "KILL 결정에는 learning_capture(학습 포착)가 필요합니다 — 중단 사유에서 얻은 교훈이 회수되어야 합니다 (ADR-0152).");
+    return unprocessable("learning_capture_required", "A KILL decision requires learning_capture — lessons from the kill reason must be captured (ADR-0152).");
   }
   const db = getDb();
   // Wave C-3 (pilot-009 D-4): GO needs the gate's stage prerequisites complete.
@@ -94,16 +94,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const blocker = gateSequenceBlocker(IC_SEQUENCE, body.gate, latest);
     if (blocker) {
       const label = IC_STEP_LABEL[blocker as keyof typeof IC_STEP_LABEL] ?? blocker;
-      return fail(409, "gate_prerequisites_incomplete", `GO 불가 — ${body.gate} 결정 전에 ${label}(${blocker}) GO가 선행되어야 합니다. HOLD 또는 KILL은 언제든 기록할 수 있습니다.`);
+      return fail(409, "gate_prerequisites_incomplete", `GO is not allowed — the ${label} (${blocker}) GO must precede the ${body.gate} decision. HOLD or KILL can be recorded at any time.`);
     }
     const gaps = gateGoPrerequisiteGaps({ type: "project", id }, body.gate as GateId);
     if (gaps.length > 0) {
-      return fail(409, "gate_prerequisites_incomplete", `GO 불가 — ${body.gate} 진행의 선행 단계가 완료되지 않았습니다: ${gaps.join("; ")}. HOLD 또는 KILL은 언제든 기록할 수 있습니다.`);
+      return fail(409, "gate_prerequisites_incomplete", `GO is not allowed — prerequisite steps of the ${body.gate} stage are incomplete: ${gaps.join("; ")}. HOLD or KILL can be recorded at any time.`);
     }
   }
   const gateEvaluationId = body.gate_evaluation_id?.trim() || null;
   if (gateEvaluationId && !db.query("SELECT id FROM gate_evaluation WHERE id = ?").get(gateEvaluationId)) {
-    return badRequest("invalid_request", "gate_evaluation_id가 존재하지 않습니다 — 위원회 세션의 gate_evaluation을 확인하세요.");
+    return badRequest("invalid_request", "gate_evaluation_id does not exist — check the gate_evaluation of the committee session.");
   }
   // Provenance binding: the cited evaluation's process_run must address THIS
   // project — another entity's proposal cannot be recorded as this gate's
@@ -116,7 +116,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       )
       .get(gateEvaluationId, id);
     if (!bound) {
-      return badRequest("provenance_mismatch", "gate_evaluation_id가 이 프로젝트의 위원회 세션 산출물이 아닙니다.");
+      return badRequest("provenance_mismatch", "gate_evaluation_id is not an output of this project's committee session.");
     }
   }
   // R2-B item 3 - an IC GO with missing artifacts is never blocked (boundary #2: the human decides).
@@ -132,7 +132,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (icGo && openGaps.length > 0 && !gapRationale) {
     return unprocessable(
       "ic_gap_rationale_required",
-      `누락 산출물이 있는 상태의 ${body.gate} GO에는 예외 근거(gap_rationale)가 필요합니다 — 누락: ${openGaps.join("; ")}. 근거는 결정 기록과 함께 저장되어 투자심의 자료에 남습니다.`,
+      `A ${body.gate} GO with missing deliverables requires a gap rationale (gap_rationale) — missing: ${openGaps.join("; ")}. The rationale is stored with the decision record for the investment committee.`,
     );
   }
   const gapOverride = icGo && gapRationale && openGaps.length > 0

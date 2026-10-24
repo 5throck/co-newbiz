@@ -13,7 +13,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "연계 시너지 영역 추가는 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Linked synergy domain additions require the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   const db = getDb();
@@ -26,9 +26,9 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const area = body?.area?.trim();
   const synergyType = body?.synergyType?.trim();
   const rationale = body?.rationale?.trim();
-  if (!area) return badRequest("invalid_request", "area는 필수입니다.");
-  if (!synergyType) return badRequest("invalid_request", "synergyType은 필수입니다.");
-  if (!rationale) return badRequest("invalid_request", "rationale은 필수입니다.");
+  if (!area) return badRequest("invalid_request", "area is required.");
+  if (!synergyType) return badRequest("invalid_request", "synergyType is required.");
+  if (!rationale) return badRequest("invalid_request", "rationale is required.");
 
   const now = new Date().toISOString();
   const itemId = ulid();

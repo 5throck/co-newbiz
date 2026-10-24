@@ -8,12 +8,12 @@ import { restoreCompetitor } from "../../../../../../../lib/company-competitors.
 export async function POST(request: Request, { params }: { params: Promise<{ companyId: string; competitorId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "경쟁사 복원은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Restoring competitors requires the analyst role or higher." });
   if (denied) return denied;
   const { companyId, competitorId } = await params;
   const db = getDb();
   const { row, duplicate } = restoreCompetitor(db, resolveCompanySubject(db, companyId), competitorId, auth.auth.userId);
   if (!row) return notFound();
-  if (duplicate) return badRequest("duplicate_competitor", "같은 이름의 확정 경쟁사가 이미 있습니다.");
+  if (duplicate) return badRequest("duplicate_competitor", "A confirmed competitor with the same name already exists.");
   return ok(row);
 }

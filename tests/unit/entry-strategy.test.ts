@@ -243,9 +243,10 @@ describe("registration and UI structure", () => {
   test("section: four options, main marker, exactly two textareas, caps, AI chips, no 'choose among' heading", () => {
     const sec = read("app/web-next/components/stages/EntryStrategySection.tsx");
     expect(sec.match(/<textarea/g)).toHaveLength(2);
-    for (const k of ["ENTRY_MODES.map", 'type="checkbox"', 'type="radio"', "주된 방식", "선택 근거", "검토했으나 선택하지 않은 대안과 사유", "ENTRY_RATIONALE_CAP", "ENTRY_ALTERNATIVES_CAP", "rows={3}", "rows={2}",
-      "진출전략 제안 (AI)", "저장하지 않은 AI 초안", "초안 버리기 (AI)", "AI 제안 결과 닫기", "AI 근거:", "역량별 해소 방식(아래 판정)은 역량마다 다른 층위이며 여기서 고른 진출전략과 다르면 주의가 표시됩니다", "cautionText(mismatches)", "/entry-strategy-draft", 'aria-hidden="true">✦']) expect(sec).toContain(k);
-    expect(sec).toContain(">\uc9c4\ucd9c\uc804\ub7b5</h3>");
+    // i18n: labels moved to the catalog (stages.s5.entryStrategy / common) — pin the key call sites.
+    for (const k of ["ENTRY_MODES.map", 'type="checkbox"', 'type="radio"', 't("primaryMode")', 't("selectionEvidence")', 't("alternativesConsideredButNotChosen")', "ENTRY_RATIONALE_CAP", "ENTRY_ALTERNATIVES_CAP", "rows={3}", "rows={2}",
+      't("entryStrategyProposalAi")', 'tc("unsavedAiDraft")', 'tc("discardAiDraft")', 't("theResolutionMethodJudgementsBelow")', 't("aiEvidence")', "cautionText(mismatches)", "/entry-strategy-draft", 'aria-hidden="true">✦']) expect(sec).toContain(k);
+    expect(sec).toContain('{t("entryStrategy")}</h3>');
     expect(sec).not.toMatch(/[0-9]\uFE0F\u20E3/);
     expect(sec).not.toContain("중 선택");
     expect(sec).toContain("canAct &&");

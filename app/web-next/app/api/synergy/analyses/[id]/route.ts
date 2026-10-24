@@ -111,7 +111,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "시너지 분석 삭제는 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Synergy-analysis deletion requires the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   const db = getDb();
@@ -126,15 +126,15 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     | { id: string; deleted_at: string | null; status: string; rerun_in_progress: number; opp_status: string | null; project_id: string | null; opp_deleted_at: string | null }
     | null;
   if (!analysis) return notFound();
-  if (analysis.deleted_at) return badRequest("already_deleted", "이 시너지 분석은 이미 삭제 표시되어 있습니다.");
+  if (analysis.deleted_at) return badRequest("already_deleted", "This synergy analysis is already soft-deleted.");
   if (analysis.status === "in_progress" || analysis.rerun_in_progress) {
-    return fail(409, "analysis_running", "이 시너지 분석은 분석(또는 재분석)이 진행 중이어서 삭제할 수 없습니다 — 완료 후 다시 시도하세요.");
+    return fail(409, "analysis_running", "This synergy analysis cannot be deleted while an analysis (or re-analysis) is running — retry after it completes.");
   }
   if (!analysis.opp_deleted_at && (analysis.opp_status === "selected" || analysis.project_id)) {
     return fail(
       409,
       "synergy_basis_in_use",
-      "이 시너지 분석은 진행 중인 검토/안건의 전략적 근거입니다. 해당 검토/안건을 삭제 또는 보관한 뒤 다시 시도하세요.",
+      "This synergy analysis is the strategic basis of an in-progress review/case. Delete or archive that review/case and retry.",
     );
   }
   const now = new Date().toISOString();

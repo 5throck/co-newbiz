@@ -181,16 +181,16 @@ describe("source structure", () => {
   const page = read("app/web-next/components/stages/GreenfieldStage.tsx");
   const sec = read("app/web-next/components/stages/EntryStrategySection.tsx");
   test("reflection button, chips, notes, promotion line and warning, unit labels", () => {
-    for (const k of ["선택한 비용을 투자비에 반영", "저장하지 않은 변경", "반영됨 · 저장됨", "저장 전", "저장 전 변경 있음", "S8 사업성 분석 입력: 프로젝트 승격 시 반영된", "투자비 입력으로 복사됩니다",
-      "이미 승격된 프로젝트 — S5의 변경은 S8에 자동 전달되지 않습니다 (재가져오기는 이후 단계)", "금액 (단위: 백만원)", "formatKrwM", "aria-describedby"]) expect(block).toContain(k);
+    // i18n: block copy moved to the catalog (stages.s5.capabilityCost.*) — pin the key call sites.
+    for (const k of ['t("reflectTheSelectedCostsInto")', 'tc("unsavedChanges")', 't("reflectedSaved")', 'tc("unsaved")', 't("unsavedChangesSavedReflection")', 't("amountsComeFromTheS5")', 't("isCopiedIntoTheInvestment")',
+      't("projectAlreadyPromotedS5Changes")', 't("amountUnitKrwMillions")', "formatKrwM", "aria-describedby"]) expect(block).toContain(k);
     expect(block).not.toMatch(/\.toFixed\(2\)\}억|억<\/b>/);
-    for (const k of ["금액(백만원)", "reflectionBody(bcLines, capLines, capSel)", "amount_mismatch", "setAttRows(null)", "promoted_at"]) expect(page).toContain(k);
-    expect(page).not.toContain("금액(억)");
+    for (const k of ['t("amountKrwMillions")', "reflectionBody(bcLines, capLines, capSel)", "amount_mismatch", "setAttRows(null)", "promoted_at"]) expect(page).toContain(k);
   });
   test("unit-confirm UI: unit select beside the amount, placeholder, chips, unit text, excluded note, sanity guard", () => {
     for (const k of [
-      'aria-label="금액 단위"', '<option value="" disabled>선택</option>', "invest-confirm-chip-", "confirmUnitOnAmountEdit",
-      "invest-excluded-note", "합계에서 제외됨", "invest-total-sanity", "금액이 매우 큽니다 — 단위를 확인하세요",
+      'aria-label={t("amountUnit2")}', "invest-confirm-chip-", "confirmUnitOnAmountEdit",
+      "invest-excluded-note", 't("itemSExcludedFromThe")', "invest-total-sanity", 't("theAmountIsVeryLarge")',
       "normalizeLegacyLine", "manualLineIssues", "manualLineKrwM", "sanityLineOversize", "sanityTotalOversize",
       "amountUnitConfirmed: true", "amountUnitLabel",
     ]) expect(page).toContain(k);
@@ -223,15 +223,17 @@ describe("source structure", () => {
     expect(refl).toContain("reflectionBody(");
     expect(refl).not.toMatch(/entry_strategy|alternatives_considered|rationale:/);
     expect(refl).toContain('"cost"');
+    // The Korean comment anchor survives the i18n batch (it is a code comment, not UI copy).
     const strat = page.slice(page.indexOf("async function saveStrategy"), page.indexOf("// 선택한 비용을 투자비에 반영"));
     expect(strat).toContain("entry_strategy: serializeEntryStrategy(entryModes, entryStrategy)");
     expect(strat).toContain("alternatives_considered");
     expect(strat).not.toMatch(/business_case_lines|rationale:/);
     expect(strat).toContain('"strategy"');
-    expect(strat).toContain("저장됨 · ");
+    expect(strat).toContain('t("savedP1", { p1: hhmm() })');
   });
   test("strategy section save UI", () => {
-    for (const k of ["진출전략 저장", "저장하지 않은 변경", "btn-primary", "btn-ghost", "저장 결과 닫기", "entry-save-error", "저장할 변경이 없습니다"]) expect(sec).toContain(k);
+    // i18n: strategy save UI labels resolve through the catalogs — pin the key call sites.
+    for (const k of ['t("saveEntryStrategy")', 'tc("unsavedChanges")', "btn-primary", "btn-ghost", 't("closeSaveResult")', "entry-save-error", 't("noChangesToSave")']) expect(sec).toContain(k);
   });
   test("docs mention the unit model and the new rejection code", () => {
     expect(read("docs/architecture/api-spec.md")).toContain("amountUnit");

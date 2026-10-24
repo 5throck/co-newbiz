@@ -62,7 +62,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "진출방식 결정은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Market-entry route decisions require the analyst role or higher." }); if (denied) return denied; }
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as {
     track?: string; sub_track?: string; rationale?: string; alternatives_considered?: string;
@@ -73,22 +73,22 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   } | null;
   const track = body?.track;
   const rationale = body?.rationale?.trim();
-  if (!track || !TRACKS.includes(track as typeof TRACKS[number])) return badRequest("invalid_request", "track은 greenfield | brownfield 중 하나입니다.");
-  if (!rationale) return badRequest("invalid_request", "rationale(근거)은 필수입니다.");
+  if (!track || !TRACKS.includes(track as typeof TRACKS[number])) return badRequest("invalid_request", "track must be one of: greenfield | brownfield.");
+  if (!rationale) return badRequest("invalid_request", "rationale is required.");
   const subTrack = body?.sub_track?.trim() || null;
   if (track === "greenfield" && subTrack && ![...GF_SUB].includes(subTrack as typeof GF_SUB[number])) {
-    return badRequest("invalid_request", "greenfield sub_track은 existing_business_rbd | intra_venture 중 하나입니다.");
+    return badRequest("invalid_request", "greenfield sub_track must be one of: existing_business_rbd | intra_venture.");
   }
   if (track === "brownfield" && subTrack && !BF_SUB.includes(subTrack as typeof BF_SUB[number])) {
-    return badRequest("invalid_request", "brownfield sub_track은 m_and_a | jv | strategic_investment | minority_investment | partnership | rbd | corporate_venture 중 하나입니다.");
+    return badRequest("invalid_request", "brownfield sub_track must be one of: m_and_a | jv | strategic_investment | minority_investment | partnership | rbd | corporate_venture.");
   }
 
   // 채점 — 스펙 v2.2.0+ completionCriteria (ADR-0104 트랙 간 비교 가능성):
   // 양 트랙 모두 intent(Stage 1) + 5criteria 채점이 의무.
   const intent = body?.intent;
-  if (!intent) return badRequest("invalid_request", "결정에는 intent(Stage 1 의도 분기)가 필수입니다.");
+  if (!intent) return badRequest("invalid_request", "A decision requires intent (the Stage 1 intent branch).");
   if (!INTENTS.includes(intent as typeof INTENTS[number])) {
-    return badRequest("invalid_request", "intent는 integration | capability_access 중 하나입니다.");
+    return badRequest("invalid_request", "intent must be one of: integration | capability_access.");
   }
   const intentValue: string = intent;
   const scoreResult = validateScores(body?.scores);
@@ -101,7 +101,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     if (intentValue === "capability_access" && controlNeed === 3 && subTrack && OVERRIDDEN_SUBS.includes(subTrack as typeof OVERRIDDEN_SUBS[number])) {
       return badRequest(
         "invalid_request",
-        "사전배제: 통제 필요도가 高이고 파트너 지식이 암묵적인 역량접근 의도에서 라이선스·공동개발 성 라우트(partnership/rbd/corporate_venture)는 배제됩니다. 라우트를 변경하거나 채점을 재검토하세요.",
+        "Pre-exclusion: with high control need and tacit partner knowledge under a capability-access intent, license/co-development-grade routes (partnership/rbd/corporate_venture) are excluded. Change the route or recheck the scoring.",
       );
     }
   }
@@ -111,7 +111,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     | { id: string; status: string }
     | null;
   if (!opp) return notFound();
-  if (opp.status !== "selected") return badRequest("invalid_request", "선별(selected)된 기회만 진출방식을 결정할 수 있습니다.");
+  if (opp.status !== "selected") return badRequest("invalid_request", "Only a selected opportunity can decide its market-entry route.");
 
   // 합산 점수(각 20%, 만점 3.0)와 기본 스테이징 권고는 서버가 계산한다.
   const total = scoreRows.length === CRITERIA.length
@@ -130,7 +130,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   // bare FK error, so the caller sees the real problem).
   const gateEvaluationId = body?.gate_evaluation_id?.trim() || null;
   if (gateEvaluationId && !db.query("SELECT id FROM gate_evaluation WHERE id = ?").get(gateEvaluationId)) {
-    return badRequest("invalid_request", "gate_evaluation_id가 존재하지 않습니다 — 위원회 세션의 gate_evaluation을 확인하세요.");
+    return badRequest("invalid_request", "gate_evaluation_id does not exist — check the gate_evaluation of the committee session.");
   }
 
   // ADR-0124: "결정"은 열려 있는 초안(status='draft')이 있으면 그 행을

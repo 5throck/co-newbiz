@@ -10,7 +10,7 @@ const now = () => new Date().toISOString();
 export async function PATCH(request: Request, { params }: { params: Promise<{ oppId: string; targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "후보 수정은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Candidate updates require the analyst role or higher." });
   if (denied) return denied;
   const { oppId, targetId } = await params;
   const body = (await request.json().catch(() => null)) as
@@ -36,7 +36,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ op
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string; targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "스크리닝 판정은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Screening judgements require the analyst role or higher." });
   if (denied) return denied;
   const { oppId, targetId } = await params;
   const body = (await request.json().catch(() => null)) as
@@ -50,12 +50,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
       }
     | null;
   const states = body?.states;
-  if (!states || typeof states !== "object") return badRequest("invalid_request", "states(체크리스트 판정)는 필수입니다.");
+  if (!states || typeof states !== "object") return badRequest("invalid_request", "states (checklist judgements) is required.");
   // 판정 척도(사용자 결정, 2026-09-16) — 5단 세분화 + 미판정. 구버전 값
   // (pass/fail/na/waived)은 허용하지 않는다 — 화면이 항상 새 척도로 보낸다.
   const valid = new Set(["confirmed", "probable", "partial", "unfulfilled", "insufficient", "pending"]);
   for (const [k, v] of Object.entries(states)) {
-    if (!valid.has(v)) return badRequest("invalid_request", `item ${k}의 판정이 올바르지 않습니다: ${v}`);
+    if (!valid.has(v)) return badRequest("invalid_request", `Invalid judgement for item ${k}: ${v}`);
   }
   const db = getDb();
   const existing = db
@@ -84,7 +84,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   // deliberation behind this screening judgment (0066 nullable column).
   const gateEvaluationId = body.gate_evaluation_id?.trim() || null;
   if (gateEvaluationId && !db.query("SELECT id FROM gate_evaluation WHERE id = ?").get(gateEvaluationId)) {
-    return badRequest("invalid_request", "gate_evaluation_id가 존재하지 않습니다 — 위원회 세션의 gate_evaluation을 확인하세요.");
+    return badRequest("invalid_request", "gate_evaluation_id does not exist — check the gate_evaluation of the committee session.");
   }
   db.run(
     "UPDATE brownfield_target SET screening_json = ?, screening_evidence_json = COALESCE(?, screening_evidence_json), gate_evaluation_id = COALESCE(?, gate_evaluation_id), updated_at = ? WHERE id = ?",

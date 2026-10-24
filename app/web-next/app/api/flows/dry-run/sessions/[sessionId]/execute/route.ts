@@ -16,13 +16,13 @@ import { route } from "../../../../../../../lib/route.ts";
 export const POST = route(async (request: Request, ctx: { params: Promise<{ sessionId: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const guard = requireBusinessActor(auth.auth, "write", { viewerMessage: "드라이런 실행은 analyst 역할 이상이어야 합니다." });
+  const guard = requireBusinessActor(auth.auth, "write", { viewerMessage: "Dry-run execution requires the analyst role or higher." });
   if (guard) return guard;
 
   const { sessionId } = await ctx.params;
   const body = (await request.json().catch(() => ({}))) as { user?: string | null } | null;
   if (body?.user !== undefined && body.user !== null && typeof body.user !== "string") {
-    return badRequest("invalid_request", "user 는 문자열이어야 합니다.");
+    return badRequest("invalid_request", "user must be a string.");
   }
   const r = await executeDryRun(sessionId, { user: body?.user ?? null });
   if (!r.ok) {

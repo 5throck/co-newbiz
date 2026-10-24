@@ -61,17 +61,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ oppI
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "후보 등록은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Candidate registration requires the analyst role or higher." });
   if (denied) return denied;
   const { oppId } = await params;
   const body = (await request.json().catch(() => null)) as {
     company_name?: string; dart_corp_code?: string | null; discovery_source?: string;
     universe_note?: string | null;
   } | null;
-  if (!body?.company_name?.trim()) return badRequest("company_required", "company_name은 필수입니다.");
+  if (!body?.company_name?.trim()) return badRequest("company_required", "company_name is required.");
   const source = body.discovery_source?.trim() || "manual";
   if (!["manual", "master_proposal", "web_proposal"].includes(source)) {
-    return badRequest("invalid_source", "discovery_source는 manual | master_proposal | web_proposal 중 하나입니다.");
+    return badRequest("invalid_source", "discovery_source must be one of: manual | master_proposal | web_proposal.");
   }
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(oppId)) return notFound();
@@ -88,7 +88,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   const dup = db
     .query("SELECT id FROM brownfield_target WHERE opportunity_id = ? AND company_name = ? AND status != 'excluded'")
     .get(oppId, body.company_name.trim()) as { id: string } | undefined;
-  if (dup) return badRequest("duplicate_target", `'${body.company_name.trim()}'은(는) 이미 Long List에 있습니다.`);
+  if (dup) return badRequest("duplicate_target", `'${body.company_name.trim()}' is already on the Long List.`);
   const now = new Date().toISOString();
   const target = createTarget(oppId, body.company_name.trim(), body.dart_corp_code?.trim() || null, body.universe_note?.trim() || null, {
     discoverySource: source as "manual" | "master_proposal" | "web_proposal",

@@ -55,7 +55,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   } | null;
   if (!body) return badRequest("invalid_request", "body required.");
   if (body.status === "dropped") {
-    return fail(409, "typed_closure_required", "기회 제외(dropped)는 POST /api/opportunities/[id]/close에서 closureType·사유·학습 포착과 함께 수행해야 합니다 (ADR-0152).");
+    return fail(409, "typed_closure_required", "Dropping an opportunity must go through POST /api/opportunities/[id]/close with closureType, reason, and learning capture (ADR-0152).");
   }
   if (body.status && !STATUSES.has(body.status)) {
     return badRequest("invalid_request", `status must be one of ${[...STATUSES].join("|")}.`);
@@ -83,7 +83,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const industryProvided = body.industry_id !== undefined;
   const industryId = body.industry_id?.trim() || null;
   if (industryId && !db.query("SELECT id FROM md_industry WHERE id = ?").get(industryId)) {
-    return badRequest("invalid_industry", "industry_id가 md_industry에 존재하지 않습니다.");
+    return badRequest("invalid_industry", "industry_id does not exist in md_industry.");
   }
 
   const now = new Date().toISOString();
@@ -132,7 +132,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   // ADR-0133 — production 모드에서는 딜 데이터 삭제(톰스톤 포함)를 전면 차단한다.
   // 관리자가 /admin/system-mode에서 development로 전환해야 다시 허용된다.
   if (getSystemMode(db) === "production") {
-    return forbidden("production_mode_delete_blocked", "운영(production) 모드에서는 검토/안건 삭제가 차단됩니다 — 관리자가 시스템 모드를 development로 전환해야 합니다.");
+    return forbidden("production_mode_delete_blocked", "Review/case deletion is blocked in production mode — an admin must switch the system mode to development.");
   }
   const { id } = await params;
   const existing = db
@@ -141,11 +141,11 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     | { id: string; name: string; project_id: string | null; status: string; market_scope: string | null; deleted_at: string | null }
     | null;
   if (!existing) return notFound();
-  if (existing.deleted_at) return badRequest("already_deleted", "이 기회는 이미 삭제 표시되어 있습니다.");
+  if (existing.deleted_at) return badRequest("already_deleted", "This opportunity is already soft-deleted.");
   if (existing.project_id) {
     return badRequest(
       "opportunity_promoted",
-      "이 기회는 프로젝트로 추진되어 있습니다. 프로젝트 개요에서 프로젝트를 삭제한 뒤 다시 시도하세요.",
+      "This opportunity is already being pursued as a project. Delete the project from the project overview and retry.",
     );
   }
   const now = new Date().toISOString();

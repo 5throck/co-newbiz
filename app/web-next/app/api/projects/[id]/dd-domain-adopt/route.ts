@@ -21,12 +21,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "추가 실사 도메인 반영은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Reflecting additional DD domains requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as { rationale?: unknown; adopt?: unknown } | null;
   const rationale = typeof body?.rationale === "string" ? body.rationale.trim() : "";
-  if (rationale.length < 10) return badRequest("invalid_request", "근거는 10자 이상 입력하세요.");
+  if (rationale.length < 10) return badRequest("invalid_request", "Enter a rationale of at least 10 characters.");
   const adopt = body?.adopt !== false;
   const db = getDb();
   const now = new Date().toISOString();
@@ -43,7 +43,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "되돌리기는 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Reverting requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const db = getDb();

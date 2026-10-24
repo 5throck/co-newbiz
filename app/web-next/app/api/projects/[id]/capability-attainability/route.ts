@@ -51,9 +51,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "필요 역량 달성 가능성 저장은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Capability-attainability saves require the analyst role or higher." }); if (denied) return denied; }
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
-  if (editStageOf(getDb(), id).editAt === "S5") return moved("필요 역량 달성 가능성의 판정은 S5로 옮겨졌습니다 — S5에서 수정하세요 (PUT /api/opportunities/{id}/capability-attainability).", "S5");
-  return moved("필요 역량 달성 가능성의 판정은 S7 대상별 점검으로 옮겨졌습니다 — S7에서 수정하세요 (PUT /api/brownfield/targets/{targetId}/capability-judgements).", "S7");
+  if (editStageOf(getDb(), id).editAt === "S5") return moved("Editing capability attainability has moved to S5 — edit it there (PUT /api/opportunities/{id}/capability-attainability).", "S5");
+  return moved("Editing capability attainability has moved to the S7 per-target check — edit it there (PUT /api/brownfield/targets/{targetId}/capability-judgements).", "S7");
 }

@@ -74,7 +74,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const indexParam = new URL(request.url).searchParams.get("index");
   if (indexParam !== null && !(INDEX_MARKETS as readonly string[]).includes(indexParam)) {
-    return badRequest("invalid_request", "index는 KOSPI 또는 KOSDAQ만 허용됩니다.");
+    return badRequest("invalid_request", "index accepts only KOSPI or KOSDAQ.");
   }
   if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const db = getDb();
@@ -95,7 +95,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
   }
   if (!companyId) {
-    return badRequest("no_subject_company", "주식회사(subject company)가 지정되어 있지 않아 베타 시계열을 조회할 수 없습니다.");
+    return badRequest("no_subject_company", "No subject company is set, so the beta series cannot be queried.");
   }
 
   const stockSeriesId = `krx:stock:${companyId}:close`;

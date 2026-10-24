@@ -61,7 +61,7 @@ const isTagArray = (v: unknown): v is string[] =>
 
 function normalizeStep(raw: unknown, index: number): EntryMarketStep {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
-    throw new EntryMarketValidationError(`steps[${index}]는 객체여야 합니다.`);
+    throw new EntryMarketValidationError(`steps[${index}] must be an object.`);
   }
   const s = raw as Record<string, unknown>;
   // Strict key whitelist (design §12.2): absolute amounts have NO accepted
@@ -69,36 +69,36 @@ function normalizeStep(raw: unknown, index: number): EntryMarketStep {
   // absolute figure can never sneak into the chain.
   const ALLOWED = new Set(["base", "factor", "source", "as_of", "note", "region_tags", "segment_tags", "origin"]);
   for (const k of Object.keys(s)) {
-    if (!ALLOWED.has(k)) throw new EntryMarketValidationError(`steps[${index}]: 허용되지 않는 필드 "${k}" — 배율 인자는 절대값을 받지 않습니다.`);
+    if (!ALLOWED.has(k)) throw new EntryMarketValidationError(`steps[${index}]: field "${k}" is not allowed — multiplicative factors do not take absolute values.`);
   }
   const expectedBase = index === 0 ? "s1_anchor" : `step:${index - 1}`;
   if (s.base !== expectedBase) {
-    throw new EntryMarketValidationError(`steps[${index}].base는 "${expectedBase}"여야 합니다 (사슬은 순서대로 이전 단계 위에 쌓입니다).`);
+    throw new EntryMarketValidationError(`steps[${index}].base must be "${expectedBase}" (the chain stacks on the previous step in order).`);
   }
   if (typeof s.factor !== "number" || !Number.isFinite(s.factor) || s.factor <= 0 || s.factor > 1) {
-    throw new EntryMarketValidationError(`steps[${index}].factor는 (0, 1] 범위의 배율이어야 합니다.`);
+    throw new EntryMarketValidationError(`steps[${index}].factor must be a multiplier in the (0, 1] range.`);
   }
   if (!isNonEmptyStr(s.source, SOURCE_MAX)) {
-    throw new EntryMarketValidationError(`steps[${index}].source는 ${SOURCE_MAX}자 이하의 비어있지 않은 문자열이어야 합니다 (출처 필수).`);
+    throw new EntryMarketValidationError(`steps[${index}].source must be a non-empty string of at most ${SOURCE_MAX} characters (source required).`);
   }
   if (!isNonEmptyStr(s.as_of, 32)) {
-    throw new EntryMarketValidationError(`steps[${index}].as_of는 비어있지 않은 기준 시점이어야 합니다.`);
+    throw new EntryMarketValidationError(`steps[${index}].as_of must be a non-empty as-of date.`);
   }
   const step: EntryMarketStep = { base: expectedBase as EntryMarketStep["base"], factor: s.factor, source: s.source.trim(), as_of: s.as_of.trim() };
   if (s.origin !== undefined && s.origin !== "ai_suggested") {
-    throw new EntryMarketValidationError(`steps[${index}].origin은 "ai_suggested"만 허용됩니다.`);
+    throw new EntryMarketValidationError(`steps[${index}].origin allows only "ai_suggested".`);
   }
   if (s.origin === "ai_suggested") step.origin = "ai_suggested";
   if (s.note !== undefined) {
-    if (!isNonEmptyStr(s.note, NOTE_MAX)) throw new EntryMarketValidationError(`steps[${index}].note는 ${NOTE_MAX}자 이하여야 합니다.`);
+    if (!isNonEmptyStr(s.note, NOTE_MAX)) throw new EntryMarketValidationError(`steps[${index}].note must be at most ${NOTE_MAX} characters.`);
     step.note = s.note.trim();
   }
   if (s.region_tags !== undefined) {
-    if (!isTagArray(s.region_tags)) throw new EntryMarketValidationError(`steps[${index}].region_tags는 비어있지 않은 문자열 배열이어야 합니다.`);
+    if (!isTagArray(s.region_tags)) throw new EntryMarketValidationError(`steps[${index}].region_tags must be an array of non-empty strings.`);
     step.region_tags = [...new Set(s.region_tags.map((t) => t.trim()))];
   }
   if (s.segment_tags !== undefined) {
-    if (!isTagArray(s.segment_tags)) throw new EntryMarketValidationError(`steps[${index}].segment_tags는 비어있지 않은 문자열 배열이어야 합니다.`);
+    if (!isTagArray(s.segment_tags)) throw new EntryMarketValidationError(`steps[${index}].segment_tags must be an array of non-empty strings.`);
     step.segment_tags = [...new Set(s.segment_tags.map((t) => t.trim()))];
   }
   return step;
@@ -108,13 +108,13 @@ function normalizeStep(raw: unknown, index: number): EntryMarketStep {
  *  Throws EntryMarketValidationError with a Korean message on any deviation —
  *  callers must surface it as a 400, never as a silent drop. */
 export function normalizeEntryMarketDerivationInput(body: unknown): { steps: EntryMarketStep[] } {
-  if (typeof body !== "object" || body === null) throw new EntryMarketValidationError("본문은 객체여야 합니다.");
+  if (typeof body !== "object" || body === null) throw new EntryMarketValidationError("The body must be an object.");
   const o = body as Record<string, unknown>;
   if (!Array.isArray(o.steps) || o.steps.length === 0) {
-    throw new EntryMarketValidationError("steps는 1개 이상의 단계 배열이어야 합니다 (지우려면 steps: null).");
+    throw new EntryMarketValidationError("steps must be an array with at least one step (pass steps: null to clear).");
   }
   if (o.steps.length > ENTRY_MARKET_MAX_STEPS) {
-    throw new EntryMarketValidationError(`steps는 최대 ${ENTRY_MARKET_MAX_STEPS}단계까지입니다.`);
+    throw new EntryMarketValidationError(`steps allows at most ${ENTRY_MARKET_MAX_STEPS} steps.`);
   }
   return { steps: o.steps.map((s, i) => normalizeStep(s, i)) };
 }
@@ -128,17 +128,17 @@ export function parseEntryMarketDerivationJson(raw: string | null | undefined): 
   try {
     data = JSON.parse(raw);
   } catch {
-    throw new EntryMarketValidationError("entry_market_derivation_json이 유효한 JSON이 아닙니다.");
+    throw new EntryMarketValidationError("entry_market_derivation_json is not valid JSON.");
   }
   if (typeof data !== "object" || data === null || Array.isArray(data)) {
-    throw new EntryMarketValidationError("entry market derivation은 객체여야 합니다.");
+    throw new EntryMarketValidationError("The entry market derivation must be an object.");
   }
   const o = data as Record<string, unknown>;
   if (!Array.isArray(o.steps) || o.steps.length === 0 || o.steps.length > ENTRY_MARKET_MAX_STEPS) {
-    throw new EntryMarketValidationError(`steps는 1..${ENTRY_MARKET_MAX_STEPS}단계여야 합니다.`);
+    throw new EntryMarketValidationError(`steps must have 1..${ENTRY_MARKET_MAX_STEPS} steps.`);
   }
   if (typeof o.set_by !== "string" || o.set_by.trim() === "" || typeof o.set_at !== "string" || o.set_at.trim() === "") {
-    throw new EntryMarketValidationError("set_by와 set_at은 필수 문자열입니다.");
+    throw new EntryMarketValidationError("Both set_by and set_at are required strings.");
   }
   return { steps: o.steps.map((s, i) => normalizeStep(s, i)), set_by: o.set_by, set_at: o.set_at };
 }

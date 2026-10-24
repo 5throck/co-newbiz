@@ -49,9 +49,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
   if (ctx.via !== "cookie" || currentPrincipal() || AGENT_KEYS.has(ctx.userId)) {
-    return forbidden("human_only", "부지 필요 여부 확인과 선택 전환은 사람만 할 수 있습니다 (boundary #2) — 에이전트는 제안만 가능합니다.");
+    return forbidden("human_only", "Only a human can confirm site requirements and opt in (boundary #2) — agents may only propose.");
   }
-  if (ctx.role === "viewer") return forbidden("role_required", "analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
@@ -64,5 +64,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const r = optInSubTrackSelection({ projectId: id, migrationNote: body?.migration_note, actor: ctx.userId });
     return r.ok ? ok({ pin_id: r.pin_id, greenfield_scope: greenfieldSelection(id) }, 201) : failure(r);
   }
-  return badRequest("invalid_request", "action은 생략(부지 필요 여부 확인) | confirm_site_required | opt_in 중 하나입니다.");
+  return badRequest("invalid_request", "action must be one of: omit (site-requirement check) | confirm_site_required | opt_in.");
 }

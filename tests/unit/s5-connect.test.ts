@@ -265,16 +265,26 @@ describe("S5 simulation state in the connect view", () => {
 
 describe("labels", () => {
   const ctx = (basis: "ratio" | "s5_plan" | "s5_plan_full", run: { drawCount: number } | null = null, it = 2000) => ({ basis, run, s8Iterations: it });
+  // i18n: the lib now emits catalog keys + ICU params — resolve them with a ko stub translator.
+  const koMessages = require("../../app/web-next/locales/ko.json") as Record<string, unknown>;
+  const lookup = (key: string): string => key.split(".").reduce<unknown>((acc, k) => (acc as Record<string, unknown>)[k], koMessages) as string;
+  const tr = (key: string, params?: Record<string, string | number | Date>) => {
+    let out = lookup(key);
+    for (const [k, v] of Object.entries(params ?? {})) out = out.replaceAll(`{${k}}`, String(v));
+    return out;
+  };
   test("source line wording per linkage", () => {
     const ratios = { opexRatio: 0.6, capexRatio: 0.1, initialInvestmentRatio: 0.5 };
     expect(labels.s5LinkageOf("ratio", "pinned")).toBe("ratio");
     expect(labels.s5LinkageOf("s5_plan", "pinned")).toBe("pinned");
     expect(labels.s5LinkageOf("s5_plan", "copy")).toBe("copy");
-    expect(labels.s5SourceLine("pinned", { id: "01ABCDEFGHIJKLMNOP12345678", pinnedAt: "2026-10-16T01:00:00Z" }, ratios)).toBe("S5\uC640 \uC5F0\uACB0\uB428 (\uAE30\uBCF8 \u2014 \uACE0\uC815 \uCC38\uC870 " + "01ABCDEFGHIJKLMNOP12345678".slice(-8) + ", 2026-10-16)");
-    const ratio = labels.s5SourceLine("ratio", null, ratios);
-    expect(ratio).toContain("S5\uC640 \uC5F0\uACB0 \uC548 \uB428 \u2014 S5\uC5D0 \uAC00\uC838\uC62C \uACC4\uD68D\uC774 \uC5C6\uC5B4 \uBE44\uC728 \uCD94\uC815\uC744 \uC0AC\uC6A9\uD569\uB2C8\uB2E4");
-    expect(ratio).toContain("\uC6B4\uC601\uBE44 60%, \uC124\uBE44\uD22C\uC790 10%, year-0 = \uB9E4\uCD9C\uC758 50%");
-    expect(labels.s5SourceLine("copy", null, ratios)).toContain("\uBCF5\uC0AC\uBCF8 \uC0AC\uC6A9 \uC911");
+    const pinned = labels.s5SourceLineParts("pinned", { id: "01ABCDEFGHIJKLMNOP12345678", pinnedAt: "2026-10-16T01:00:00Z" }, ratios);
+    expect(tr(pinned.key, pinned.params)).toBe("S5와 연결됨 (기본 — 고정 참조 " + "01ABCDEFGHIJKLMNOP12345678".slice(-8) + ", 2026-10-16)");
+    const ratio = labels.s5SourceLineParts("ratio", null, ratios);
+    expect(tr(ratio.key, ratio.params)).toContain("S5와 연결 안 됨 — S5에 가져올 계획이 없어 비율 추정을 사용합니다");
+    expect(tr(ratio.key, ratio.params)).toContain("운영비 60%, 설비투자 10%, year-0 = 매출의 50%");
+    const copy = labels.s5SourceLineParts("copy", null, ratios);
+    expect(tr(copy.key, copy.params)).toContain("복사본 사용 중");
   });
 
   test("params-table S5 linkage per row (one chip kind + one reason line, no duplicated wording)", () => {
@@ -300,17 +310,35 @@ describe("labels", () => {
     }
   });
 
+  test("S5ConnectBlock resolves flat components.s5Linkage.* keys through the ROOT translator (not the scoped one)", () => {
+    // Regression (T3-6): the block's `t` is scoped to stages.s8.s5ConnectBlock — full flat keys
+    // resolved through it fell back to the raw key. Every key the lib emits must (a) resolve
+    // against the ROOT ko catalog and (b) be resolved in the component via the root `tr`.
+    const keys = new Set<string>(Object.values(labels.BASIS_LABEL));
+    keys.add(labels.s5BasisHintKey("s5_plan")!);
+    for (const link of ["pinned", "copy", "ratio"] as const) keys.add(labels.s5SourceLineParts(link, { id: "x", pinnedAt: "2026-01-01" }, { opexRatio: 0, capexRatio: 0, initialInvestmentRatio: 0 }).key);
+    for (const b of ["ratio", "s5_plan", "s5_plan_full", "s5_pnl"] as const) for (const k of labels.s5ScopeNoteKeys(b)) keys.add(k);
+    for (const k of keys) expect(lookup(k), `ko catalog must contain ${k}`).toBeTruthy();
+    const src = readFileSync(join(PROJECT_ROOT, "app/web-next/components/business-case/S5ConnectBlock.tsx"), "utf-8");
+    for (const flat of ["tr(BASIS_LABEL[", "tr(part.key, part.params)", "tr(BASIS_LABEL[basis] ?? basis)", "tr(hintKey)", "s5ScopeNoteKeys(basis).map((k) => tr(k))"]) {
+      expect(src, `S5ConnectBlock must resolve ${flat.replace("tr(", "")} via the root translator`).toContain(flat);
+    }
+    // the scoped translator must never receive a full flat key
+    expect(src).not.toMatch(/t\(BASIS_LABEL|t\(part\.key|t\(hintKey|map\(\(k\) => t\(k\)\)/);
+  });
+
   test("scope note does not claim rules that are not in force", () => {
-    const full = labels.s5ScopeNote("s5_plan_full");
-    expect(full).toContain("\uC2AC\uB77C\uC774\uC2A4 2");
-    expect(full).toContain("\uC2AC\uB77C\uC774\uC2A4 3");
+    // i18n: the scope note is a key list resolved at render — resolve through the ko stub.
+    const full = labels.s5ScopeNoteKeys("s5_plan_full").map((k) => tr(k)).join(" ");
+    expect(full).toContain("슬라이스 2");
+    expect(full).toContain("슬라이스 3");
     expect(full).toContain("s5_pnl"); // slice 2 in force: the tail names the basis instead of "not yet applied"
-    expect(full).toContain("\uC778\uAC74\uBE44\u00B7\uC6B4\uC601\uBE44 \uC904\uC5D0 \uB3C4\uB2EC");
-    expect(full).not.toContain("(\uC804\uCCB4)");
-    const legacy = labels.s5ScopeNote("s5_plan");
-    expect(legacy).toContain("\uC608\uC804 \uAE30\uC900(\uC124\uBE44\uD22C\uC790\uB9CC)");
-    expect(legacy).toContain("\uD1B5\uD569 \uAE30\uC900\uC73C\uB85C \uC62E\uACA8\uAC11\uB2C8\uB2E4");
-    expect(labels.s5ScopeNote("s5_plan")).toContain("\uC124\uBE44\uD22C\uC790 \uC904\uC5D0\uB9CC");
+    expect(full).toContain("인건비·운영비 줄에 도달");
+    expect(full).not.toContain("(전체)");
+    const legacy = labels.s5ScopeNoteKeys("s5_plan").map((k) => tr(k)).join(" ");
+    expect(legacy).toContain("예전 기준(설비투자만)");
+    expect(legacy).toContain("통합 기준으로 옮겨갑니다");
+    expect(labels.s5ScopeNoteKeys("s5_plan").map((k) => tr(k)).join(" ")).toContain("설비투자 줄에만");
   });
 });
 
@@ -328,6 +356,15 @@ describe("term rename", () => {
       expect(read(f).includes(CAPTURE_RATE_KO)).toBe(false);
     }
     expect(read("app/web-next/lib/business-case-generator.ts")).toContain("\uC2DC\uC7A5\uADDC\uBAA8 \u00D7 \uC2DC\uC7A5\uC810\uC720\uC728");
-    expect(read("app/web-next/components/business-case/ParamsPanel.tsx")).toContain("1\uB144\uCC28 \uC2DC\uC7A5\uC810\uC720\uC728 (\uBE44\uC728, \uC608: 0.005)");
+    // i18n: the placeholder moved to the catalog (stages.s8.paramsPanel.marketShareRatioEG).
+    expect(read("app/web-next/components/business-case/ParamsPanel.tsx")).toContain('t("marketShareRatioEG")');
+    // and the ko catalog value itself is pinned (koOf precedent), so an accidental
+    // catalog edit that changes the rendered placeholder fails here
+    const koCatalog = JSON.parse(read("app/web-next/locales/ko.json"));
+    const koOf = (key: string): string =>
+      key.split(".").reduce<unknown>((acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined), koCatalog) as string;
+    expect(koOf("stages.s8.paramsPanel.marketShareRatioEG")).toBe(
+      "1\uB144\uCC28 \uC2DC\uC7A5\uC810\uC720\uC728 (\uBE44\uC728, \uC608: 0.005)",
+    );
   });
 });

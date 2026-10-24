@@ -33,7 +33,7 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "마일스톤 등록은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Milestone registration requires the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
@@ -54,6 +54,6 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     });
     return ok(row, 201);
   } catch (err) {
-    return badRequest("invalid_request", err instanceof Error ? err.message : "마일스톤 등록에 실패했습니다.");
+    return badRequest("invalid_request", err instanceof Error ? err.message : "Milestone registration failed.");
   }
 });

@@ -17,6 +17,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const topology = resolveChainTopology(getDb(), id);
     return ok(topology, 200, { layer_count: topology.layers?.length ?? 0 });
   } catch (err) {
-    return badRequest("topology_failed", err instanceof Error ? err.message : "토폴로지 해석에 실패했습니다.");
+    return badRequest("topology_failed", err instanceof Error ? err.message : "Failed to resolve the topology.");
   }
 }

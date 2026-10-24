@@ -20,7 +20,8 @@ describe("summary table structure", () => {
     expect(src.match(/<tbody>/g)?.length).toBe(1);
     const head = src.slice(src.indexOf("<thead>"), src.indexOf("</thead>"));
     expect(head.match(/<th scope="col"/g)?.length).toBe(5);
-    for (const t of ["필요 역량", "필요도", "보유 판정", "판정", "작업"]) expect(head).toContain(`>${t}</th>`);
+    // i18n: headers resolve through the common catalog — pin the keys in order.
+    for (const k of ['tc("requiredCapability")', 'tc("necessity")', 'tc("heldJudgement")', 'tc("judgement")', 'tc("actions")']) expect(head).toContain(`>{${k}}</th>`);
     // round 4 (decider): 판정 요약·확정·S9 검증 merged into ONE 판정 cell — no separate S9 column
     expect(src).not.toContain('data-testid="capability-s9-col"');
     expect(src).toContain('data-testid={`capability-s9-cell-${r.id}`}');
@@ -40,17 +41,18 @@ describe("summary table structure", () => {
   });
   test("판정 button only when editable; S8 gets the S5에서 판정 link; viewers get nothing", () => {
     expect(src).toContain("const canEdit = editable && !!onSet;");
-    expect(src).toMatch(/\{canEdit\s*\? <button[\s\S]*?>판정<\/button>/);
+    expect(src).toMatch(/\{canEdit\s*\? <button[\s\S]*?\{tc\("judgement"\)\}<\/button>/);
     expect(src).toContain("judgeHref ? <a href={judgeHref}");
-    expect(src).toContain("S5에서 판정");
-    expect(src).not.toContain('"보기"');
+    expect(src).toContain('tc("judgedInS5")'); // default link label; callers pass track-specific keys
+    expect(src).not.toContain('tc("view")');
   });
   test("판정 요약 is one clamped line (ClampedText lines=1) with a muted 미판정 fallback; status chips on ONE line", () => {
     expect(src).toContain("<ClampedText text={sentence} title={buildJudgementDetail(draftOf(r))} lines={1} />");
-    expect(src).toContain('<span className="text-[color:var(--muted-fg)]">미판정</span>');
+    expect(src).toContain('data-testid="judgement-summary"');
+    expect(src).toContain('{tc("unjudged")}');
     expect(src.match(/data-testid="capability-chips"/g)?.length).toBe(1);
     expect(src).toContain("flex flex-wrap gap-1 mt-1");
-    expect(src).toContain("S3 변경 — 재판정 필요");
+    expect(src).toContain('t("s3ChangeNeeded")');
     expect(src).toContain("cautions.map");
     expect(read("ClampedText.tsx")).toContain("line-clamp-1");
   });
@@ -62,17 +64,17 @@ describe("summary table structure", () => {
     expect(src).toContain('role="tablist"');
     expect(src).toContain('role="tab"');
     expect(src).toContain("aria-selected={filter === f}");
-    expect(src).toContain("{FILTER_LABEL[f]} ({counts[f]})");
-    expect(src).toContain('{ todo: "처리할 것", all: "전체" }');
+    expect(src).toContain("{FILTER_LABEL(tr)[f]} ({counts[f]})");
+    expect(src).toContain('todo: tr("components.capabilityJudgement.table.toProcess"), all: tr("common.all")');
     expect(src).toContain("defaultFilter(counts.todo)");
-    expect(src).toContain("처리할 판정이 없습니다");
+    expect(src).toContain('t("noJudgementsToProcessCheck")');
     expect(src).toContain('data-testid="filter-empty"');
   });
   test("removed-capabilities list and summary strip kept; no previous layout experiments", () => {
-    expect(src).toContain("삭제된 역량 (판정 이력)");
-    expect(src).toContain("판정 {judged}/{s.total} · 확정 {s.confirmed}");
-    expect(src).toContain("미판정 {unjudged}");
-    expect(src).toContain("재판정 필요 {s.stale}");
+    expect(src).toContain('t("deletedCapabilitiesJudgementHistory")');
+    expect(src).toContain('{tc("judgement")} {judged}/{s.total} {t("confirmed")} {s.confirmed}');
+    expect(src).toContain('{t("notJudged")} {unjudged}');
+    expect(src).toContain('{tc("rejudgeNeeded")} {s.stale}');
     const css = readFileSync(join(import.meta.dir, "../../app/web-next/app/styles.css"), "utf8");
     expect(css).not.toContain("cap-judge-table");
   });
@@ -89,26 +91,28 @@ describe("judgement dialog structure", () => {
     expect(dlg).toContain('role="dialog"');
     expect(dlg).toContain('aria-modal="true"');
     expect(dlg).toContain("useModalFocus(onClose)");
-    expect(dlg).toContain("const title = `${row.capability} 판정`");
+    expect(dlg).toContain('const title = t("p1Judgement", { p1: row.capability })');
     expect(dlg).toContain("onClick={onClose}"); // backdrop
   });
   test("S3 block (read-only, tinted, lock) comes before the S5 block; fields in the specified order", () => {
-    const s3 = dlg.indexOf('aria-label="S3 정의 (읽기 전용)"');
-    const s5 = dlg.indexOf('aria-label="S5 판정 (입력)"');
+    const s3 = dlg.indexOf('aria-label={t("s3Definition")}');
+    const s5 = dlg.indexOf('aria-label={t("s5JudgementInput")}');
     expect(s3).toBeGreaterThan(0);
     expect(s5).toBeGreaterThan(s3);
     expect(dlg).toContain("🔒");
     expect(dlg).toContain("var(--muted-bg)");
     const s3Block = dlg.slice(s3, s5);
     const rowDefs = dlg.slice(dlg.indexOf("const s3Rows"), s3); // field list rendered by the S3 block
-    const order3 = ["필요도", "필요 수준", "보유 판정", "보유 수준", "보유 근거"].map((k) => rowDefs.indexOf(`["${k}"`));
+    // i18n: S3 field labels resolve through the common catalog — pin the keys in order.
+    const order3 = ["necessity", "requiredLevel", "heldJudgement", "heldLevel", "heldEvidence"].map((k) => rowDefs.indexOf(`[tc("${k}")`));
     expect(order3.every((i) => i >= 0)).toBe(true);
     expect([...order3].sort((a, b) => a - b)).toEqual(order3);
-    for (const k of ["legacy-holders-caption", "stale-history", "row.s3_changes", "이전 판정 그대로 재판정", "S3 변경으로 무효화"]) {
+    for (const k of ["legacy-holders-caption", "stale-history", "row.s3_changes", 't("withThePreviousJudgement")', 't("invalidatedByS3Change")']) {
       expect(s3Block).toContain(k);
     }
     const s5Block = dlg.slice(s5, dlg.indexOf("<div className=\"flex flex-wrap justify-end"));
-    const order5 = ["해소 방식", "기대 수준", "분류", "금액(주기당, 백만원)", "주기", "시작 연차", "기간(개월)", "종료 연차", "달성 가능성", "근거·증빙", "비고"].map((k) => s5Block.indexOf(k));
+    // i18n: S5 field labels are catalog keys — pin their call sites in order.
+    const order5 = ['t("resolutionMethod")', 't("expectedLevel")', 'tc("classification")', 't("amountPerCycleKrwMillions")', 'tc("cycle")', 't("startYear")', 't("durationMonths")', 't("endYear")', 't("attainability")', 't("evidenceAndDocumentation")', 'tc("notes")'].map((k) => s5Block.indexOf(k));
     expect(order5.every((i) => i >= 0)).toBe(true);
     expect([...order5].sort((a, b) => a - b)).toEqual(order5);
   });
@@ -128,22 +132,25 @@ describe("judgement dialog structure", () => {
       expect((afterEarly.match(/useState\(/g) ?? []).length).toBe(0);
       expect((beforeEarly.match(/useState\(/g) ?? []).length).toBeGreaterThanOrEqual(3);
     }
-    expect(dlg).toContain('{ value: "", text: "미판정" }');
-    for (const [v, t] of [["high", "높음"], ["medium", "중간"], ["low", "낮음"]]) expect(dlg).toContain(`{ value: "${v}", text: "${t}" }`);
+    // i18n: grade option labels are catalog keys — pin the key map.
+    expect(dlg).toContain('{ value: "", text: "common.unjudged" }');
+    for (const [v, k] of [["high", "common.high"], ["medium", "common.medium"], ["low", "common.low"]]) expect(dlg).toContain(`{ value: "${v}", text: "${k}" }`);
+    expect(dlg).toContain('{tc(g.text)}'); // resolved at render
     expect(dlg).toContain("RESOLUTION_EXPECTED_LEVEL_HINT[resolution]");
     expect(dlg).toContain('data-testid="expected-level-hint"');
     expect(dlg).toContain("note !== undefined"); // 비고 only where the page shows it
-    expect(dlg).toContain("AI 초안");
+    expect(dlg).toContain('tc("aiDraft")');
   });
   test("buttons: 적용 / 적용 후 다음 / 이전 / 취소; apply writes the draft, never saves or confirms", () => {
-    for (const b of [">취소<", ">이전<", ">적용 후 다음<", ">적용<"]) expect(dlg).toContain(b);
+    // i18n: button labels resolve through the catalogs — pin the keys.
+    for (const b of ['{tc("cancel")}', '{t("previous")}', '{t("nextAfterApplying")}', '{tc("apply")}']) expect(dlg).toContain(b);
     expect(dlg).toContain('apply("close")');
     expect(dlg).toContain('apply("next")');
     expect(dlg).toContain('apply("prev")');
     expect(dlg).toContain("disabled={!hasPrev}");
     expect(dlg).toContain("disabled={!hasNext}");
     expect(dlg).not.toContain("api.");
-    expect(dlg).toContain("확정하려면 기대 수준이 필요합니다"); // hint only, apply is not blocked
+    expect(dlg).toContain('t("expectedLevelIsRequiredTo")'); // hint only, apply is not blocked
     expect(src).toContain("onApply={(d, n, nav) => apply(editing, d, n, nav)}");
     expect(src).toContain('setEditingId(nav === "close" ? null : neighborId(shownIds, r.id, nav === "next" ? 1 : -1))');
     expect(src).toContain("onRejudge={() => onSet?.(editing.id, {})}");
@@ -168,21 +175,21 @@ describe("CapabilityJudgementEditor (S5)", () => {
   test("초안 저장 is primary only when dirty; 판정 확정 is ghost; unsaved indicator; one location", () => {
     expect(editor).toContain('className={unsaved ? "btn-primary btn-sm" : "btn-ghost btn-sm"}');
     expect(editor.match(/btn-primary/g)?.length).toBe(1);
-    expect(editor).toContain("저장하지 않은 변경");
-    expect(editor.match(/판정 확정/g)?.length).toBe(1);
-    expect(editor.match(/초안 저장/g)?.length).toBe(1);
+    expect(editor).toContain('tc("unsavedChanges")');
+    expect(editor.match(/t\("confirmJudgement"\)/g)?.length).toBe(1);
+    expect(editor.match(/t\("saveDraft"\)/g)?.length).toBe(1);
   });
 });
 
 describe("S8 CapabilityAttainabilityPanel is read-only", () => {
   test("shared table with editable={false}; S5에서 판정 link; no inputs or save/confirm of its own", () => {
     expect(panel).toContain("<CapabilityJudgementTable");
-    for (const k of ["<input", "<select", "<textarea", "초안 저장", "판정 확정", "api.put", "api.post", "btn-primary"]) expect(panel).not.toContain(k);
+    for (const k of ["<input", "<select", "<textarea", 't("saveDraft")', 't("confirmJudgement")', "api.put", "api.post", "btn-primary"]) expect(panel).not.toContain(k);
     // 2026-10-17 round 2: brownfield judgement moved to the S9 tab — the entry
     // is track-conditional and the S5/S7 anchors stay for greenfield/S7 scopes.
     expect(panel).toContain("judgeHref={isBrownfield ? s9Href : editHref}");
-    expect(panel).toContain("S5에서 판정");
-    expect(panel).toContain("읽기 전용");
+    expect(panel).toContain('tc("judgedInS5")');
+    expect(panel).toContain('t("summaryDefinitionsLiveInS3")'); // read-only notice
   });
   test("keeps the compact strip for the scenario tab", () => {
     expect(panel).toContain("compact");
@@ -195,7 +202,7 @@ describe("S8 CapabilityAttainabilityPanel is read-only", () => {
     expect(panel).toContain("s9ByRow");
     expect(panel).toContain("s9={ddVerdicts && ddVerdicts.length > 0 ? s9ByRow : undefined}");
     expect(panel).toContain('view.track === "brownfield"');
-    expect(panel).toContain("브라운필드 필요 역량 판정 주전장은 S9 실사·검증");
+    expect(panel).toContain('t("thePrimaryVenueForBrownfield")');
     // no new writes introduced by the mirror
     expect(panel).not.toContain("api.put");
     expect(panel).not.toContain("api.post");

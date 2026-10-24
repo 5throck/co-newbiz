@@ -12,6 +12,7 @@ import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import type { CapabilityGapRow } from "../../lib/capability-gap.ts";
 import { JUDGEMENT_ROW_CAP, mergeJudgementProposals, type AiMarks, type JudgementField, type JudgementProposal } from "../../lib/capability-judgement-ai-merge.ts";
+import { useTranslations } from "next-intl";
 import {
   CapabilityJudgementTable, RemovedCapabilities, SummaryStrip, judgementPatch, toJudgementDraft,
   type AiDraftResponse, type AiWiring, type AttainabilityViewData, type JudgementDraft,
@@ -42,7 +43,7 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
   /** 2026-10-18 decider ask — threaded to the judgement dialog's editable 시작 연차 (cost-entry start-year override). */
   startYearFor?: (id: string) => number | null;
   onStartYearChange?: (id: string, v: number | null) => void;
-}) {
+}) {const t = useTranslations("components.capabilityJudgement.editor"); const tc = useTranslations("common");
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
   const [view, setView] = useState<AttainabilityViewData | null>(null);
@@ -75,7 +76,7 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
 
   useEffect(() => {
     let alive = true;
-    api.get<AttainabilityViewData>(endpoint).then((res) => { if (alive) apply(res.data, dirtyRef.current.size === 0); }).catch((e) => { if (alive) setError(e instanceof Error ? e.message : "달성 가능성을 불러오지 못했습니다."); });
+    api.get<AttainabilityViewData>(endpoint).then((res) => { if (alive) apply(res.data, dirtyRef.current.size === 0); }).catch((e) => { if (alive) setError(e instanceof Error ? e.message : t("failedToLoadAttainability")); });
     return () => { alive = false; };
   }, [endpoint, apply, refreshKey]);
 
@@ -120,7 +121,7 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
     if (!view || busy || aiBusy) return;
     const all = judgementTargets();
     const ids = all.slice(0, JUDGEMENT_ROW_CAP);
-    if (ids.length === 0) { setAiNote("제안할 행이 없습니다 — 모든 행에 해소 방식·기대 수준·달성 가능성이 있습니다."); return; }
+    if (ids.length === 0) { setAiNote(t("noRowsToProposeFor")); return; }
     setAiBusy(true); setError(null); setAiNote(null);
     try {
       const res = await fetchProposals(ids);
@@ -131,9 +132,9 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
       setAiBasis((prev) => ({ ...prev, ...Object.fromEntries(Object.keys(m.marks).map((id) => [id, res.drafts[id].basis])) }));
       const more = all.length - ids.length;
       const unfilledText = Object.entries(res.unfilled).slice(0, 3).map(([id, why]) => `${view.rows.find((r) => r.id === id)?.capability ?? id}: ${why}`).join(" / ");
-      setAiNote([res.note, m.applied === 0 ? "반영된 칸이 없습니다(채울 빈 칸이 없거나 근거 부족)." : `${Object.keys(m.marks).length}개 행에 ${m.applied}칸을 AI 초안으로 채웠습니다.`, unfilledText ? `비운 칸 — ${unfilledText}` : "", more > 0 ? `${more}개 행은 한 번에 ${JUDGEMENT_ROW_CAP}개까지라 다음 제안에서 처리합니다.` : ""].filter(Boolean).join(" "));
+      setAiNote([res.note, m.applied === 0 ? t("noCellsWereFilledNo") : t("p1CellsAcrossP2Row", { p1: Object.keys(m.marks).length, p2: m.applied }), unfilledText ? t("emptyCellsP1", { p1: unfilledText }) : "", more > 0 ? t("p1MoreRowSExceed", { p1: more, p2: JUDGEMENT_ROW_CAP }) : ""].filter(Boolean).join(" "));
     } catch (e) {
-      setAiNote(`판정 제안에 실패했습니다 — ${e instanceof Error ? e.message : "원인을 알 수 없음"}. 다시 시도하세요.`);
+      setAiNote(t("judgementProposalFailedP1Try", { p1: e instanceof Error ? e.message : t("causeUnknown") }));
     } finally { setAiBusy(false); }
   }
 
@@ -167,7 +168,7 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
         apply({ ...res.data, edit_at: view.edit_at, track: view.track });
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "저장하지 못했습니다.");
+      setError(e instanceof Error ? e.message : t("failedToSave"));
     } finally { setBusy(false); }
   }
 
@@ -178,7 +179,7 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
       const res = await api.post<AttainabilityViewData>(`${endpoint}/confirm`, {});
       apply({ ...res.data, edit_at: view?.edit_at, track: view?.track }, false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "확정하지 못했습니다.");
+      setError(e instanceof Error ? e.message : t("failedToConfirm"));
     } finally { setBusy(false); }
   }
 
@@ -186,37 +187,37 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
   const aiRowCount = Object.keys(aiMarks).length;
 
   if (error && !view) return <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">{error}</p>;
-  if (!view) return <p className="text-[color:var(--muted-fg)]">불러오는 중…</p>;
+  if (!view) return <p className="text-[color:var(--muted-fg)]">{tc("loadingEllipsis")}</p>;
 
   const awaiting = view.summary.awaitingConfirmation;
   const noteMap = gap ? new Map(gap.rows.map((g) => [g.id, g.note])) : null;
   const unsaved = dirty.size > 0 || notesDirty;
   return (
-    <div aria-label="필요 역량 달성 가능성 판정">
+    <div aria-label={t("judgeCapabilityAttainability")}>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-        {intro ?? "S3에서 정의한 필요 역량을 확보할 수 있는지 사람이 판정합니다 — 행의 판정 버튼에서 입력하고, AI 초안은 제안일 뿐입니다."}{" "}
-        <a href={s3Href} className="text-[color:var(--accent)] underline">S3에서 수정</a>
+        {intro ?? t("aPersonJudgesWhetherThe")}{" "}
+        <a href={s3Href} className="text-[color:var(--accent)] underline">{t("editInS3")}</a>
       </p>
       <SummaryStrip s={view.summary} />
       <div className="flex flex-wrap items-center justify-end gap-2 mb-2">
         {canAct && view.rows.length > 0 && (
           <div className="flex flex-wrap items-center gap-2" data-testid="judgement-actions">
-            {unsaved && <span className="status-chip status-amber" role="status"><span aria-hidden="true">!</span> 저장하지 않은 변경</span>}
+            {unsaved && <span className="status-chip status-amber" role="status"><span aria-hidden="true">!</span> {tc("unsavedChanges")}</span>}
             {aiRowCount > 0 && (
               <span className="flex items-center gap-1" data-testid="ai-unsaved">
-                <span className="status-chip status-not-started" role="status"><span aria-hidden="true">✦</span> 저장하지 않은 AI 초안 {aiRowCount}건</span>
-                <button type="button" className="btn-ghost btn-sm" disabled={busy || aiBusy} onClick={discardAi}>초안 버리기 (AI)</button>
+                <span className="status-chip status-not-started" role="status"><span aria-hidden="true">✦</span> {tc("unsavedAiDraft")} {aiRowCount}{tc("countUnit")}</span>
+                <button type="button" className="btn-ghost btn-sm" disabled={busy || aiBusy} onClick={discardAi}>{tc("discardAiDraft")}</button>
               </span>
             )}
             {aiWiring && (
               <button type="button" className="btn-ghost btn-sm" disabled={busy || aiBusy} onClick={() => void proposeAll()}
-                title="AI가 판정이 필요한 행의 빈 칸(해소 방식·기대 수준·비용·기간·달성 가능성·근거)을 초안으로 제안합니다 — 제안일 뿐이며 저장·확정은 사람이 합니다. 외부 웹 검색은 쓰지 않습니다.">
-                {aiBusy ? "제안 중…" : "판정 제안 (AI)"}
+                title={t("theAiDraftsTheEmpty")}>
+                {aiBusy ? tc("proposing") : t("judgementProposalAi")}
               </button>
             )}
-            <button type="button" className={unsaved ? "btn-primary btn-sm" : "btn-ghost btn-sm"} disabled={busy || aiBusy || !unsaved} onClick={() => void save()}>초안 저장</button>
-            <button type="button" className="btn-ghost btn-sm" disabled={busy || unsaved || awaiting === 0} title={unsaved ? "저장 후 확정할 수 있습니다." : undefined} onClick={() => void confirm()}>
-              판정 확정{awaiting > 0 ? ` (${awaiting}건)` : ""}
+            <button type="button" className={unsaved ? "btn-primary btn-sm" : "btn-ghost btn-sm"} disabled={busy || aiBusy || !unsaved} onClick={() => void save()}>{t("saveDraft")}</button>
+            <button type="button" className="btn-ghost btn-sm" disabled={busy || unsaved || awaiting === 0} title={unsaved ? t("confirmAfterSaving") : undefined} onClick={() => void confirm()}>
+              {t("confirmJudgement")}{awaiting > 0 ? t("p1ItemS", { p1: awaiting }) : ""}
             </button>
           </div>
         )}
@@ -224,12 +225,12 @@ export function CapabilityJudgementEditor({ endpoint, s3Href, gap, intro, aiDraf
       {aiNote && (
         <div className="legacy-model-notice mb-2 flex items-start justify-between gap-2" role="status" data-testid="ai-note">
           <p className="legacy-model-notice-text">{aiNote}</p>
-          <button type="button" className="btn-ghost btn-sm" aria-label="AI 제안 결과 닫기" onClick={() => setAiNote(null)}>닫기</button>
+          <button type="button" className="btn-ghost btn-sm" aria-label={t("closeAiProposalResult")} onClick={() => setAiNote(null)}>{tc("close")}</button>
         </div>
       )}
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">{error}</p>}
       {view.rows.length === 0 ? (
-        <p className="text-[color:var(--muted-fg)]">S3 필요 역량 레지스터에 행이 없습니다. S3에서 필요 역량을 먼저 정리하세요.</p>
+        <p className="text-[color:var(--muted-fg)]">{t("noRowsInTheS3")}</p>
       ) : (
         <CapabilityJudgementTable rows={view.rows} drafts={drafts} editable={canAct} onSet={set} s3Href={s3Href} dirty={dirty} ai={aiWiring}
           note={noteMap ? { value: (id) => noteMap.get(id) ?? "", onChange: (id, v) => { gap!.setRows((prev) => prev.map((g) => (g.id === id ? { ...g, note: v } : g))); setNotesDirty(true); } } : undefined}  startYearFor={startYearFor} onStartYearChange={onStartYearChange} />

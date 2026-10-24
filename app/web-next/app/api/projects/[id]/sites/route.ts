@@ -21,7 +21,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "부지 등록은 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Registering sites requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
@@ -31,7 +31,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     total_score?: number | null; rank?: number | null; note?: string | null;
     address?: string | null; infra_notes?: string | null; labor_notes?: string | null;
   } | null;
-  if (!body?.name?.trim()) return badRequest("name_required", "부지명은 필수입니다.");
+  if (!body?.name?.trim()) return badRequest("name_required", "Site name is required.");
   const now = new Date().toISOString();
   const row = {
     id: ulid(), project_id: id, name: body.name.trim(),
@@ -62,7 +62,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "부지 삭제는 analyst 역할 이상이어야 합니다.");
+  if (auth.auth.role === "viewer") return forbidden("role_required", "Deleting sites requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const siteId = new URL(request.url).searchParams.get("id") ?? "";

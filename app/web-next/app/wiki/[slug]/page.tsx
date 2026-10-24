@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { api, ApiError } from "../../../lib/api.ts";
 import { decodePathSegment, defaultRewriteContext, renderWikiMarkdown, rewriteWikiLinks } from "../../../lib/wiki.ts";
 import type { WikiPageContent, WikiSidebarGroup } from "../../../lib/wiki.ts";
@@ -20,8 +21,9 @@ function WikiMarkdown({ text }: { text: string }) {
 
 // 문서 속성 배지(설계 §4 — [how-to] [S9] [공통] [P1] · 검증일 줄).
 function PageBadges({ page }: { page: WikiPageContent }) {
+  const t = useTranslations("pages.wiki");
   return (
-    <ul className="wiki-badges" aria-label="문서 속성">
+    <ul className="wiki-badges" aria-label={t("badgesAria")}>
       <li className="wiki-badge">{page.doc_type}</li>
       {page.stage && <li className="wiki-badge">{page.stage}</li>}
       {(page.tracks ?? []).map((t) => (
@@ -34,14 +36,15 @@ function PageBadges({ page }: { page: WikiPageContent }) {
           {p}
         </li>
       ))}
-      {page.verified_on && <li className="wiki-badge wiki-badge-verified">{page.verified_on} 검증</li>}
+      {page.verified_on && <li className="wiki-badge wiki-badge-verified">{t("verifiedSuffix", { date: page.verified_on })}</li>}
     </ul>
   );
 }
 
 function JourneyNav({ groups, current }: { groups: WikiSidebarGroup[]; current: string | null }) {
+  const t = useTranslations("pages.wiki");
   return (
-    <nav className="wiki-toc" aria-label="안내서 여정 목차">
+    <nav className="wiki-toc" aria-label={t("tocAria")}>
       <ul className="wiki-group-items">
         <li>
           <Link
@@ -49,7 +52,7 @@ function JourneyNav({ groups, current }: { groups: WikiSidebarGroup[]; current: 
             className={current === null ? "wiki-toc-item wiki-toc-current" : "wiki-toc-item"}
             aria-current={current === null ? "page" : undefined}
           >
-            홈
+            {t("home")}
           </Link>
         </li>
       </ul>
@@ -79,6 +82,8 @@ export function WikiPageView() {
   // useParams는 세그먼트를 인코딩된 채 돌려준다(실측 결함: 인코딩된 값을
   // encodeURIComponent로 다시 싸서 이중 인코딩 URL로 조회 → 404). 한 번 풀어
   // 상태로 쓴다 — fetch 인자·목차 하이라이트·effect 의존성이 전부 이 값이다.
+  const t = useTranslations("pages.wiki");
+  const tc = useTranslations("common");
   const rawSlug = useParams<{ slug: string }>().slug;
   const slug = decodePathSegment(rawSlug ?? "");
   const [groups, setGroups] = useState<WikiSidebarGroup[]>([]);
@@ -106,7 +111,7 @@ export function WikiPageView() {
       .then((r) => setPage(r.data))
       .catch((err) => {
         if (err instanceof ApiError && err.status === 404) setMissing(true);
-        else setError(err instanceof Error ? err.message : "불러오기 실패");
+        else setError(err instanceof Error ? err.message : tc("errors.loadFailed"));
       });
   }, [slug]);
 
@@ -116,13 +121,13 @@ export function WikiPageView() {
         <JourneyNav groups={groups} current={slug} />
         <div className="wiki-content-pane">
           {missing ? (
-            <p role="alert">해당 문서를 찾을 수 없습니다. 왼쪽 목록에서 페이지를 고르세요.</p>
+            <p role="alert">{t("missing")}</p>
           ) : error ? (
             <p role="alert" className="text-[color:var(--red-fg)]">
               {error}
             </p>
           ) : !page ? (
-            <p>불러오는 중...</p>
+            <p>{tc("loading")}</p>
           ) : (
             <>
               <PageBadges page={page} />

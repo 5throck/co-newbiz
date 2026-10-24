@@ -2,13 +2,22 @@
 // ADR-0161 Row 3: S12 post-management view helpers, PMI guard wiring and key-talent label fix.
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { KEY_TALENT_STATUS_KEY } from "../../app/web-next/lib/label-keys.ts";
+import { TRANSITION_DECISION_KEY, TRANSITION_HELP_KEY } from "../../app/web-next/lib/label-keys.ts";
 import {
-  GOAL_JUDGEMENT_LABEL, GREENFIELD_TRANSITION_HELP, KEY_TALENT_STATUS_LABEL, TRANSITION_DECISION_LABEL, VENTURE_CLASS_LABEL,
-} from "../../app/web-next/lib/labels.ts";
-import {
-  applicableItems, bpToPercent, goalJudgementMeta, goalJudgementText, migrationFormState, migrationPreview, pmiErrorText, retentionText,
-  validateMigrationNote, ventureClassText, type PostManagementApplicability,
+  applicableItems, bpToPercent, GOAL_JUDGEMENT_I18N_KEY, goalJudgementI18n, goalJudgementMeta, migrationFormState, migrationPreview, pmiErrorI18n, retentionText,
+  validateMigrationNote, ventureClassI18n, type PostManagementApplicability,
 } from "../../app/web-next/lib/post-management-view.ts";
+import { resolveI18n } from "../../app/web-next/lib/execution-baseline-view.ts";
+
+// i18n re-pin (T3-6): I18nText emissions resolve through a ko stub ROOT translator.
+const ko = JSON.parse(readFileSync("./app/web-next/locales/ko.json", "utf8")) as Record<string, any>;
+const tr = (key: string, params?: Record<string, string>): string => {
+  let out = key.split(".").reduce<unknown>((acc, k) => (acc as Record<string, any>)[k], ko) as string;
+  for (const [k, v] of Object.entries(params ?? {})) out = out.replaceAll(`{${k}}`, v);
+  return out;
+};
+const tx = (m: { key: string | null; params: Record<string, string>; text: string | null }): string => resolveI18n(m, tr);
 import { STAGE_TAB_GROUPS, stageTabGroupsFor } from "../../app/web-next/lib/stage-tabs.ts";
 
 const W = "./app/web-next";
@@ -21,27 +30,27 @@ const app = (over: Partial<PostManagementApplicability> = {}): PostManagementApp
 describe("S12 applicable items", () => {
   test("every applicable item is recommended, none blocking", () => {
     const items = applicableItems(app({ integration_monitoring: true, partnership_monitoring: true }));
-    expect(items.filter((i) => i.applies).every((i) => i.chip.includes("권장") && i.chip.includes("차단하지 않음"))).toBe(true);
+    expect(items.filter((i) => i.applies).every((i) => tx(i.chip).includes("권장") && tx(i.chip).includes("차단하지 않음"))).toBe(true);
     expect(items.find((i) => i.key === "portfolio_venture_monitoring")?.applies).toBe(true);
   });
   test("non-applicable items say so in text", () => {
-    expect(applicableItems(app()).find((i) => i.key === "integration_monitoring")?.chip).toContain("적용 대상 아님");
+    expect(tx(applicableItems(app()).find((i) => i.key === "integration_monitoring")!.chip)).toContain("적용 대상 아님");
   });
 });
 
 describe("ramp-up reference evidence", () => {
   test("an unjudged goal reads 판정 안 됨 and is neutral", () => {
-    expect(goalJudgementText("not_judged")).toBe("판정 안 됨");
-    expect(goalJudgementText("whatever")).toBe("판정 안 됨");
+    expect(tx(goalJudgementI18n("not_judged"))).toBe("판정 안 됨");
+    expect(tx(goalJudgementI18n("whatever"))).toBe("판정 안 됨");
     expect(goalJudgementMeta("not_judged").cls).toBe("status-not-started");
-    expect(GOAL_JUDGEMENT_LABEL.on_target).toBe("목표 달성");
+    expect(tr(GOAL_JUDGEMENT_I18N_KEY.on_target)).toBe("목표 달성");
   });
   test("venture classes have Korean labels for the Q7 defaults", () => {
-    for (const k of ["driving", "enabling", "emergent"]) expect(VENTURE_CLASS_LABEL[k]).toContain(k);
-    expect(ventureClassText(null)).toBe("—");
+    for (const k of ["driving", "enabling", "emergent"]) expect(tr(`common.ventureClass.${k}`)).toContain(k);
+    expect(tx(ventureClassI18n(null))).toBe("—");
   });
   test("greenfield help text exists for exactly the five unchanged transition terms", () => {
-    expect(Object.keys(GREENFIELD_TRANSITION_HELP).sort()).toEqual(Object.keys(TRANSITION_DECISION_LABEL).sort());
+    expect(Object.keys(TRANSITION_HELP_KEY).sort()).toEqual(Object.keys(TRANSITION_DECISION_KEY).sort());
   });
   test("number helpers", () => {
     expect(bpToPercent(1250)).toBe("12.5%");
@@ -52,7 +61,7 @@ describe("ramp-up reference evidence", () => {
 
 describe("key-talent labels use the DB values", () => {
   test("labels cover exactly active | departed_regretted | departed_planned", () => {
-    expect(Object.keys(KEY_TALENT_STATUS_LABEL).sort()).toEqual(["active", "departed_planned", "departed_regretted"]);
+    expect(Object.keys(KEY_TALENT_STATUS_KEY).sort()).toEqual(["active", "departed_planned", "departed_regretted"]);
   });
   test("the PMI page no longer uses retained / exited", () => {
     const page = src("app/projects/[id]/pmi/page.tsx");
@@ -65,9 +74,9 @@ describe("key-talent labels use the DB values", () => {
 
 describe("PMI guard in the UI", () => {
   test("403 not_applicable_track maps to a Korean explanation", () => {
-    expect(pmiErrorText("not_applicable_track", "x", "저장 실패")).toContain("PMI는 인수합병");
-    expect(pmiErrorText("other", "서버 메시지", "저장 실패")).toBe("서버 메시지");
-    expect(pmiErrorText(undefined, undefined, "저장 실패")).toBe("저장 실패");
+    expect(tx(pmiErrorI18n("not_applicable_track", "x", "저장 실패"))).toContain("PMI는 인수합병");
+    expect(tx(pmiErrorI18n("other", "서버 메시지", "저장 실패"))).toBe("서버 메시지");
+    expect(tx(pmiErrorI18n(undefined, undefined, "저장 실패"))).toBe("저장 실패");
   });
   test("PMI page hides write controls and shows the note when PMI does not apply", () => {
     const page = src("app/projects/[id]/pmi/page.tsx");
@@ -95,9 +104,9 @@ describe("PMI guard in the UI", () => {
 describe("policy migration panel", () => {
   const applies = { track: "greenfield", sub_track: null, greenfield_execution_baseline: "applies" as const, portfolio_venture_monitoring: true, integration_monitoring: false, partnership_monitoring: false, pmi_tab: false };
   test("preview says recommended for a completed S11 and blocking-before-confirmation otherwise", () => {
-    expect(migrationPreview(applies, ["S11"])[0].text).toContain("권장");
-    expect(migrationPreview(applies, [])[0].text).toContain("차단");
-    expect(migrationPreview(applies, [])[4].text).toContain("삭제되지 않음");
+    expect(tx(migrationPreview(applies, ["S11"])[0].text)).toContain("권장");
+    expect(tx(migrationPreview(applies, [])[0].text)).toContain("차단");
+    expect(tx(migrationPreview(applies, [])[4].text)).toContain("삭제되지 않음");
   });
   test("note is required and limited", () => {
     expect(validateMigrationNote("  ")).toContain("입력");
@@ -163,11 +172,12 @@ describe("scorecard errors and effective class text", () => {
     expect(scorecardErrorText(undefined, 404, undefined)).toContain("찾을 수 없");
   });
   test("overridden class shows who, when, note", () => {
-    const t = effectiveClassText({ default: "driving", effective: "enabling", overridden: true, override: { review_cycle: "2026-Q4", before: "driving", after: "enabling", note: "사유A", by: "u1", at: "2026-10-12T01:00:00Z" } }, "driving");
+    const resolveClass = (cls: string | null) => tx(ventureClassI18n(cls));
+    const t = effectiveClassText({ default: "driving", effective: "enabling", overridden: true, override: { review_cycle: "2026-Q4", before: "driving", after: "enabling", note: "사유A", by: "u1", at: "2026-10-12T01:00:00Z" } }, "driving", resolveClass);
     expect(t).toContain("변경됨");
     expect(t).toContain("u1");
     expect(t).toContain("2026-10-12");
     expect(t).toContain("사유A");
-    expect(effectiveClassText(undefined, "driving")).toContain("기본값");
+    expect(effectiveClassText(undefined, "driving", resolveClass)).toContain("기본값");
   });
 });

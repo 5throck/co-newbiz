@@ -16,7 +16,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "차터 기준선 확정은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Confirming the charter baseline requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const db = getDb();
@@ -24,7 +24,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     | { charter_json: string | null }
     | undefined;
   if (!row) return notFound();
-  if (!row.charter_json) return badRequest("invalid_request", "차터가 아직 구성되지 않았습니다 — 승격 시 차터가 자동 생성되어야 확정할 수 있습니다.");
+  if (!row.charter_json) return badRequest("invalid_request", "The charter is not yet composed — it is auto-created at promotion and then can be confirmed.");
   const now = new Date().toISOString();
   db.run("UPDATE md_project SET charter_confirmed_at = ? WHERE id = ?", [now, id]);
   appendAudit(db, { actor: ctx.userId, action: "project_charter.confirm", target: id, now });

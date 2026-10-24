@@ -12,13 +12,13 @@ const now = () => new Date().toISOString();
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string; targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "순위 조정은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Rank adjustments require the analyst role or higher." });
   if (denied) return denied;
   const { oppId, targetId } = await params;
   const body = (await request.json().catch(() => null)) as { direction?: string } | null;
   const direction = body?.direction;
   if (direction !== "up" && direction !== "down") {
-    return badRequest("invalid_request", "direction은 'up' 또는 'down'이어야 합니다.");
+    return badRequest("invalid_request", "direction must be 'up' or 'down'.");
   }
   const db = getDb();
   const target = db

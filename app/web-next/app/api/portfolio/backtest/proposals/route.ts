@@ -51,7 +51,7 @@ export const GET = route(async (request: Request) => {
 export const POST = route(async (request: Request) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "신뢰도 등급 조정 제안·결정은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Reliability-grade adjustment proposals/decisions requires the analyst role or higher." });
   if (denied) return denied;
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const action = body?.action;
@@ -60,15 +60,15 @@ export const POST = route(async (request: Request) => {
 
   if (action === "propose") {
     const scope = body?.scope === "project" ? "project" : body?.scope === "org" ? "org" : null;
-    if (!scope) return badRequest("invalid_request", "scope는 org 또는 project여야 합니다.");
+    if (!scope) return badRequest("invalid_request", "scope must be org or project.");
     const grade = typeof body?.proposed_grade === "string" ? body.proposed_grade.toUpperCase() : "";
-    if (!GRADES.has(grade)) return badRequest("invalid_request", "proposed_grade는 A | B | C 중 하나입니다.");
+    if (!GRADES.has(grade)) return badRequest("invalid_request", "proposed_grade must be one of: A | B | C.");
     const rationale = typeof body?.rationale === "string" ? body.rationale.trim() : "";
-    if (rationale.length < 10) return badRequest("invalid_request", "rationale은 10자 이상이어야 합니다 — 등급 조정 제안은 근거 없이 기록될 수 없습니다.");
+    if (rationale.length < 10) return badRequest("invalid_request", "rationale must be at least 10 characters — grade adjustment proposals cannot be recorded without a basis.");
     let projectId: string | null = null;
     if (scope === "project") {
       projectId = typeof body?.project_id === "string" ? body.project_id.trim() : "";
-      if (!projectId) return badRequest("invalid_request", "project 범위 제안에는 project_id가 필요합니다.");
+      if (!projectId) return badRequest("invalid_request", "A project-scope proposal requires project_id.");
       if (!visibleProject(auth.auth, projectId, { includeClosed: true })) return notFound();
     }
     const backtest = runBacktest(db, (pid) => pid === projectId);
@@ -87,15 +87,15 @@ export const POST = route(async (request: Request) => {
 
   if (action === "approve" || action === "reject") {
     const id = typeof body?.id === "string" ? body.id.trim() : "";
-    if (!id) return badRequest("invalid_request", "id는 필수입니다.");
+    if (!id) return badRequest("invalid_request", "id is required.");
     const decisionRationale = typeof body?.decision_rationale === "string" ? body.decision_rationale.trim() : "";
-    if (decisionRationale.length < 5) return badRequest("invalid_request", "decision_rationale은 5자 이상이어야 합니다.");
+    if (decisionRationale.length < 5) return badRequest("invalid_request", "decision_rationale must be at least 5 characters.");
     const row = db.query("SELECT * FROM confidence_grade_adjustment_proposal WHERE id = ?").get(id) as ProposalRow | undefined;
     if (!row) return notFound();
-    if (row.status !== "proposed") return badRequest("invalid_state", `이미 ${row.status} 상태인 제안은 다시 결정할 수 없습니다 — 새 제안을 올리세요.`);
+    if (row.status !== "proposed") return badRequest("invalid_state", `A proposal already in ${row.status} cannot be decided again — submit a new proposal.`);
     // 2026-10-21 (decider: proceed with the remaining work) — two-person rule: the
     // person who filed the proposal cannot be the one who decides it.
-    if (row.proposed_by === auth.auth.userId) return badRequest("self_decision_not_allowed", "제안자는 자신의 제안을 승인·반려할 수 없습니다 — 다른 analyst+가 결정해야 합니다.");
+    if (row.proposed_by === auth.auth.userId) return badRequest("self_decision_not_allowed", "A proposer cannot approve/reject their own proposal — another analyst+ must decide.");
     if (row.scope === "project" && row.project_id && !visibleProject(auth.auth, row.project_id, { includeClosed: true })) return notFound();
     const status = action === "approve" ? "approved" : "rejected";
     db.run(
@@ -106,5 +106,5 @@ export const POST = route(async (request: Request) => {
     return ok({ id, status, decided_by: auth.auth.userId, decided_at: now }, 200);
   }
 
-  return badRequest("invalid_action", "action은 propose | approve | reject 중 하나여야 합니다.");
+  return badRequest("invalid_action", "action must be one of: propose | approve | reject.");
 });

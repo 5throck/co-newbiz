@@ -10,6 +10,14 @@ import {
   type HypothesisForm, type TrancheView,
 } from "../../app/web-next/lib/greenfield-structure-view.ts";
 
+
+
+
+// i18n re-pin (T3-6): s9Heading now emits common.gf.* catalog keys — resolve through a ko stub translator.
+import { readFileSync } from "node:fs";
+const koCatalog = JSON.parse(readFileSync("app/web-next/locales/ko.json", "utf8")) as Record<string, any>;
+const trKo = (key: string): string => key.split(".").reduce<unknown>((acc, k) => (acc as Record<string, any>)[k], koCatalog) as string;
+
 const scope = (over: Partial<GfScope> = {}): GfScope => ({
   sub_track: "existing_business_rbd", sub_track_class: "existing_business_rbd", selection_active: true, opted_in: false,
   extra_checklists: ["chk-rbd-technology-checklist"],
@@ -22,19 +30,19 @@ describe("S9 sub-track view", () => {
     const none = scope({ sub_track: null, sub_track_class: "none", extra_checklists: [], na_reason_checklists: [], excluded_steps: [6, 7, 8] });
     expect(showSubTrackPanel(none)).toBe(false);
     expect(showStepList(none)).toBe(false);
-    expect(s9Heading(none)).toBe("S9 실사·검증 — DD 체크리스트 판정");
-    expect(s9Heading(undefined)).toBe("S9 실사·검증 — DD 체크리스트 판정"); // brownfield: no scope at all
+    expect(trKo(s9Heading(none))).toBe("S9 실사·검증 — DD 체크리스트 판정");
+    expect(trKo(s9Heading(undefined))).toBe("S9 실사·검증 — DD 체크리스트 판정"); // brownfield: no scope at all
     expect(showSubTrackPanel(null)).toBe(false);
   });
   test("unknown sub-track shows a warning panel but no step list and the legacy heading", () => {
     const unk = scope({ sub_track: "partnership", sub_track_class: "unknown", extra_checklists: [], excluded_steps: [6, 7, 8], warnings: ["w"] });
     expect(showSubTrackPanel(unk)).toBe(true);
     expect(showStepList(unk)).toBe(false);
-    expect(s9Heading(unk)).toBe("S9 실사·검증 — DD 체크리스트 판정");
+    expect(trKo(s9Heading(unk))).toBe("S9 실사·검증 — DD 체크리스트 판정");
   });
   test("named sub-track uses the plan-verification heading only when the selection is active", () => {
-    expect(s9Heading(scope())).toContain("계획 검증");
-    expect(s9Heading(scope({ selection_active: false }))).toBe("S9 실사·검증 — DD 체크리스트 판정");
+    expect(trKo(s9Heading(scope()))).toContain("계획 검증");
+    expect(trKo(s9Heading(scope({ selection_active: false })))).toBe("S9 실사·검증 — DD 체크리스트 판정");
   });
 });
 

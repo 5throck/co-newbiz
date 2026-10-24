@@ -27,10 +27,10 @@ interface DiscoverRow {
 export async function POST(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "기회 발굴은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Opportunity discovery requires the analyst role or higher." }); if (denied) return denied; }
   const body = (await request.json().catch(() => null)) as { industry?: string } | null;
   const industry = body?.industry?.trim();
-  if (!industry) return badRequest("invalid_request", "industry (산업명) is required.");
+  if (!industry) return badRequest("invalid_request", "industry (industry name) is required.");
   const db = getDb();
 
   const ind = db
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
         .get(ind.id) as { payload: string } | undefined
     : undefined;
   if (!version) {
-    return badRequest("no_analysis", `'${industry}' 산업의 완료된 시장분석이 없습니다 — 먼저 시장분석(S1)을 완료하세요.`);
+    return badRequest("no_analysis", `'${industry}' has no completed market analysis — complete the market analysis (S1) first.`);
   }
 
   const payload = JSON.parse(version.payload) as {

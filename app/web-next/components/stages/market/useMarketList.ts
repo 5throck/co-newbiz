@@ -12,15 +12,16 @@ import type { useMarketLinking } from "./useMarketLinking.ts";
 import type { useDealIndustryLink } from "./useDealIndustryLink.ts";
 import type { IndustryRow } from "./types.ts";
 import { buildIndustryGroups, filterPinned, flattenGroups, splitGroups } from "./grouping.ts";
+import { useTranslations } from "next-intl";
 
-export function useMarketList(prev: ReturnType<typeof useMarketData> & ReturnType<typeof useMarketLinking> & ReturnType<typeof useDealIndustryLink>) {
+export function useMarketList(prev: ReturnType<typeof useMarketData> & ReturnType<typeof useMarketLinking> & ReturnType<typeof useDealIndustryLink>) {const t = useTranslations("stages.s1.useMarketList");
   const { confirm, setError, selectedIndustry, refreshOverview, editing, savingEdit, setSavingEdit, setEditing, query, overview, statusFilter, pinnedOnly, backToList, STALE_DAYS, linkedIds } = prev;
 
 
   // 산업 삭제 — market-sizing 분석(버전 행 포함)과 함께 삭제한다.
   function deleteIndustry(ind: IndustryRow) {
     confirm(
-      `산업 "${ind.name_ko}" 삭제`,
+      t("deleteIndustryP1", { p1: ind.name_ko }),
       async () => {
         setError(null);
         try {
@@ -28,17 +29,17 @@ export function useMarketList(prev: ReturnType<typeof useMarketData> & ReturnTyp
           if (selectedIndustry === ind.id) backToList();
           await refreshOverview();
         } catch (err) {
-          setError(err instanceof Error ? err.message : "산업 삭제 실패");
+          setError(err instanceof Error ? err.message : t("failedToDeleteTheIndustry"));
         }
       },
-      { body: "이 산업의 시장분석 기록(버전 전체)과 참조 중인 가치사슬 연계·프로젝트 산업 바인딩·분석 산출물도 함께 삭제되며 되돌릴 수 없습니다. 승격된 투자 안건은 이력이 유지됩니다." },
+      { body: t("thisIndustrySMarketAnalysis") },
     );
   }
 
   // 산업 정보 수정(이름·KSIC 코드) — 목록에서 인라인으로 편집한다.
   async function saveEdit() {
     if (!editing || savingEdit) return;
-    if (!editing.name.trim()) { setError("산업명은 필수입니다."); return; }
+    if (!editing.name.trim()) { setError(t("theIndustryNameIsRequired")); return; }
     setSavingEdit(true);
     setError(null);
     try {
@@ -49,7 +50,7 @@ export function useMarketList(prev: ReturnType<typeof useMarketData> & ReturnTyp
       setEditing(null);
       await refreshOverview();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "산업 정보 수정 실패");
+      setError(err instanceof Error ? err.message : t("failedToUpdateTheIndustry"));
     } finally {
       setSavingEdit(false);
     }

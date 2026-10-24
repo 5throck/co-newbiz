@@ -1,47 +1,48 @@
-"use client";
-
 // 온보딩 마법사 (ADR-0122 #5) — 빈 워크스페이스의 첫 검토 시작 안내.
 // ux-designer-agent 온보딩 표준: 빈 상태는 한 문장 + 다음 행동 1개.
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
+// Label maps stay out of JSX — steps resolve their translation keys at render.
 const STEPS = [
-  { n: 1, label: "시장 선택·분석 (S1)", href: "/market", desc: "분석할 시장(산업)을 검색해 선택하거나 KSIC 코드로 새로 등록해 8단계 분석을 실행합니다." },
-  { n: 2, label: "기회 발굴·평가 (S2)", href: "/opportunities", desc: "분석된 시장에서 기회를 발굴하고 기회·위험 요인을 근거로 매력도를 평가합니다." },
-  { n: 3, label: "시너지 확인·선별 (S3)", href: "/synergy", desc: "그룹/계열사 역량과의 시너지와 전략적 적합성을 평가해 기회를 선별합니다." },
-  { n: 4, label: "진출방식 결정 (S4)", href: "/route-decision", desc: "Greenfield(자체 역량) vs Brownfield(결합·투자)를 결정합니다 — 이후 단계는 화면이 안내합니다." },
+  { n: 1, labelKey: "s1Label", href: "/market", descKey: "s1Desc" },
+  { n: 2, labelKey: "s2Label", href: "/opportunities", descKey: "s2Desc" },
+  { n: 3, labelKey: "s3Label", href: "/synergy", descKey: "s3Desc" },
+  { n: 4, labelKey: "s4Label", href: "/route-decision", descKey: "s4Desc" },
 ];
 
-export default function OnboardingPage() {
+export default async function OnboardingPage() {
+  const t = await getTranslations("pages.onboarding");
   return (
     <main>
-      <h1>시작하기 <span className="status-chip status-gray">빈 워크스페이스 가이드</span></h1>
-      <p className="objective">첫 신규사업 검토까지 4단계 — AI가 각 단계의 초안을 제안하고, 모든 결정은 사람이 기록합니다 (경계 #2).</p>
-      <section className="market-section" aria-label="온보딩 단계">
+      <h1>{t("heading")} <span className="status-chip status-gray">{t("badge")}</span></h1>
+      <p className="objective">{t("objective")}</p>
+      <section className="market-section" aria-label={t("sectionAria")}>
         {STEPS.map((s) => (
           <div key={s.n} className="market-section" style={{ marginBottom: 10 }}>
             <h2 className="text-[length:var(--fs-body)] mb-1">
-              <span className="sizing-step-num">{s.n}</span> {s.label}
+              <span className="sizing-step-num">{s.n}</span> {t(s.labelKey)}
             </h2>
-            <p className="text-[length:var(--fs-caption)]" style={{ margin: "0 0 6px" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>{s.desc}</p>
-            <Link className="btn-ghost btn-sm" href={s.href}>이동 →</Link>
+            <p className="text-[length:var(--fs-caption)]" style={{ margin: "0 0 6px" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>{t(s.descKey)}</p>
+            <Link className="btn-ghost btn-sm" href={s.href}>{t("go")}</Link>
           </div>
         ))}
         {/* 승격 이후 — 단계 목록과 같은 리스트 스타일의 이어짐 (F11). 이동 링크는
             없다: 승격은 트랙 최종 단계(S5/S7) 화면에서 사람이 실행한다. */}
         <div className="market-section" style={{ marginBottom: 10 }}>
-          <h2 className="text-[length:var(--fs-body)] mb-1">승격</h2>
+          <h2 className="text-[length:var(--fs-body)] mb-1">{t("promotionHeading")}</h2>
           <p className="text-[length:var(--fs-caption)]" style={{ margin: "0 0 6px" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>
-            S5(그린필드)/S7(브라운필드) 완료 후 프로젝트로 추진하면 S8~S12가 열립니다.
+            {t("promotionDesc")}
           </p>
         </div>
         <div className="market-section" style={{ marginBottom: 10 }}>
-          <h2 className="text-[length:var(--fs-body)] mb-1">프로젝트 단계 (S8~S12)</h2>
+          <h2 className="text-[length:var(--fs-body)] mb-1">{t("projectStagesHeading")}</h2>
           <p className="text-[length:var(--fs-caption)]" style={{ margin: "0 0 6px" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>
-            S8 사업성 → S9 실사 → S10 투자구조 → S11 투자심사·실행 → S12 사후관리 — 사람의 게이트 결정이 각 전환을 기록합니다.
+            {t("projectStagesDesc")}
           </p>
         </div>
       </section>
-      <p className="note">시연 데이터로 먼저 둘러보려면 <Link href="/deals" className="text-[color:var(--accent)] underline">검토/안건 보드</Link>를 참고하세요.</p>
+      <p className="note">{t("demoNotePre")}<Link href="/deals" className="text-[color:var(--accent)] underline">{t("demoLink")}</Link>{t("demoNotePost")}</p>
     </main>
   );
 }

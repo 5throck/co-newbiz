@@ -68,10 +68,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "필요 역량 수준 레지스터 저장은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Capability-level register saves require the analyst role or higher." }); if (denied) return denied; }
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { rows?: unknown } | null;
-  if (!body || !Array.isArray(body.rows)) return badRequest("invalid_request", "rows(필요 역량 수준 행 배열)는 필수입니다.");
+  if (!body || !Array.isArray(body.rows)) return badRequest("invalid_request", "rows (the capability-level row array) is required.");
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();
   // S8 판정(attainability, ADR-0168)은 저장돼 있던 값을 id로 이어 붙인다 — 클라이언트가
@@ -91,7 +91,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     appendAudit(db, { actor: auth.auth.userId, action: "capability_gap.save", target: `${id}:${written.rows.length}rows`, now: at });
     return written.rows;
   })();
-  if (!rows) return badRequest("invalid_request", "저장할 유효한 행이 없습니다 — capability는 필수입니다.");
+  if (!rows) return badRequest("invalid_request", "No valid rows to save — capability is required.");
   // GET과 동일한 소비 형태로 반환한다 — 클라이언트가 저장 직후 상태를 그대로 반영.
   return ok({
     rows,

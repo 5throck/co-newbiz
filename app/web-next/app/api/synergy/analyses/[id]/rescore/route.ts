@@ -14,7 +14,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "체계 전환 재계산은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Framework-switch recalculation requires the analyst role or higher." });
   if (denied) return denied;
   const { id } = await params;
   const db = getDb();
@@ -26,8 +26,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   } catch (err) {
     const code = err instanceof Error ? (err.message as RescoreError) : "";
     if (code === "ANALYSIS_NOT_FOUND") return notFound();
-    if (code === "NO_OPPORTUNITY") return fail(400, "no_opportunity", "연결 기회가 없는 분석은 재계산할 수 없습니다 — 기회 연결 후 이용하세요.");
-    if (code === "NO_LATEST_VERSION") return fail(400, "no_latest_version", "저장된 분산 결과가 없습니다 — 먼저 분석을 완료하세요.");
-    return fail(500, "rescore_failed", `재계산 실패 — ${err instanceof Error ? err.message.slice(0, 120) : "알 수 없는 오류"}`);
+    if (code === "NO_OPPORTUNITY") return fail(400, "no_opportunity", "An analysis without a linked opportunity cannot be recalculated — link an opportunity first.");
+    if (code === "NO_LATEST_VERSION") return fail(400, "no_latest_version", "No stored dispersion results — complete the analysis first.");
+    return fail(500, "rescore_failed", `Recalculation failed — ${err instanceof Error ? err.message.slice(0, 120) : "unknown error"}`);
   }
 }

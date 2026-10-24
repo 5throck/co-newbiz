@@ -37,12 +37,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const ctx = auth.auth;
   const denied = humanOnlyDenied(ctx, "설립 방식 선택·변경은 사람만 할 수 있습니다 (boundary #2) — 에이전트는 propose_establishment_mode로 제안만 합니다.");
   if (denied) return denied;
-  if (ctx.role === "viewer") return forbidden("role_required", "설립 방식 선택은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Choosing the establishment mode requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as { mode?: unknown; reason?: unknown } | null;
-  if (typeof body?.mode !== "string") return badRequest("invalid_request", "mode는 new_entity | business_unit 중 하나입니다 (ADR-0167).");
-  if (body.reason != null && typeof body.reason !== "string") return badRequest("invalid_request", "reason은 문자열입니다.");
+  if (typeof body?.mode !== "string") return badRequest("invalid_request", "mode must be one of: new_entity | business_unit (ADR-0167).");
+  if (body.reason != null && typeof body.reason !== "string") return badRequest("invalid_request", "reason must be a string.");
 
   const result = setEstablishmentMode(id, body.mode, (body.reason as string | undefined) ?? null, ctx.userId, callPathOf(ctx));
   if (!result.ok) return establishmentErrorResponse(result.error);

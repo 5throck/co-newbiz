@@ -21,7 +21,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "사업성 분석 자동 생성은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Business-case auto-generation requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
 
@@ -49,7 +49,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     const result = await generateBusinessCases(id, { actor: ctx.userId, source: "web" });
     if (result.status === "failed") {
-      return badRequest("generation_failed", `일부 활동이 실패했습니다 — run ${result.processRunId} 상태를 확인하세요.`);
+      return badRequest("generation_failed", `Some activities failed — check the status of run ${result.processRunId}.`);
     }
     return ok({ runId: result.processRunId, recommendedScenario: result.recommendedScenario }, 201);
   } catch (err) {

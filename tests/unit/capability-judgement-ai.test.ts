@@ -267,7 +267,8 @@ describe("registration and UI structure", () => {
   });
   test("S5 editor: button, note, unsaved counter and discard; S8 panel has no AI", () => {
     const ed = read("app/web-next/components/stages/CapabilityJudgementEditor.tsx");
-    for (const k of ["판정 제안 (AI)", "저장하지 않은 AI 초안", "초안 버리기 (AI)", "ai-note", "AI 제안 결과 닫기", "/ai-draft", "title=\"AI가"]) expect(ed).toContain(k);
+    // i18n: AI action labels moved to the catalogs — pin the key call sites.
+    for (const k of ['t("judgementProposalAi")', 'tc("unsavedAiDraft")', 'tc("discardAiDraft")', "ai-note", "/ai-draft", 't("theAiDraftsTheEmpty")']) expect(ed).toContain(k);
     expect(ed).toContain("aiDraft && canAct");
     expect(read("app/web-next/components/stages/GreenfieldStage.tsx")).toContain("aiDraft");
     const panel = read("app/web-next/components/stages/CapabilityAttainabilityPanel.tsx");
@@ -276,11 +277,11 @@ describe("registration and UI structure", () => {
   });
   test("dialog: per-capability button, AI chips with icon + text, basis lines; table marker", () => {
     const dlg = read("app/web-next/components/stages/CapabilityJudgementDialog.tsx");
-    for (const k of ["이 역량 AI 제안", "AI 초안", "ai-basis-", "AI 근거:", "AI 추정치입니다"]) expect(dlg).toContain(k);
+    for (const k of ['t("aiProposalForThisCapability")', 'tc("aiDraft")', "ai-basis-", 't("aiEvidence")', 't("aiEstimate")']) expect(dlg).toContain(k);
     expect(dlg).toContain('aria-hidden="true">✦');
     const tbl = read("app/web-next/components/stages/CapabilityJudgementTable.tsx");
     expect(tbl).toContain("ai-draft-chip");
-    expect(tbl).toContain("저장 전");
+    expect(tbl).toContain('tc("unsaved")');
     expect(tbl).not.toContain("api.post");
   });
   test("refetch keeps unsaved drafts (merge guard) and marks clear on human edit", () => {

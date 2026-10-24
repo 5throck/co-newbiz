@@ -46,7 +46,7 @@ import { lazyAutoLinkOnRead } from "../../../../../../lib/sizing-auto-link.ts";
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "AI 배수 추천은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "AI multiple recommendation requires the analyst role or higher." }); if (denied) return denied; }
   const { id } = await params;
   const db = getDb();
   const opp = db.query("SELECT id FROM opportunity WHERE id = ?").get(id) as { id: string } | undefined;
@@ -57,10 +57,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return fail(
         409,
         "anchor_unavailable",
-        "연결된 S1 시장규모 버전에 앵커 값(1차년도 총계)이 없습니다 — AI 배수 추천은 앵커 값이 있는 S1 버전을 근거로만 동작합니다. 연결 자체는 되어 있습니다.",
+        "The linked S1 market-sizing version has no anchor value (year-1 total) — AI multiple recommendation works only off an S1 version with anchors. The link itself is in place.",
       );
     }
-    return fail(409, "not_linked", "S1 시장규모 분석이 연결되지 않았습니다 — AI 배수 추천은 연결된 S1 버전을 근거로만 동작합니다.");
+    return fail(409, "not_linked", "No linked S1 market-sizing analysis — AI multiple recommendation works only off a linked S1 version.");
   }
   const targetScope = readTargetScope(db, id);
   const record = readEntryMarketRecord(db, id);

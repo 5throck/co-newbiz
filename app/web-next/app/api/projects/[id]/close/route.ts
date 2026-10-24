@@ -20,7 +20,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
   const project = visibleProject(auth.auth, id, { includeClosed: true });
   if (!project) return notFound();
-  if (!isLead(auth.auth, id)) return forbidden("role_required", "프로젝트 종료는 프로젝트 lead만 수행할 수 있습니다.");
+  if (!isLead(auth.auth, id)) return forbidden("role_required", "Only the project lead can close the project.");
 
   const parsed = parseCloseBody(await request.json().catch(() => null), "project");
   if ("response" in parsed) return parsed.response;
@@ -63,11 +63,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const { id } = await params;
   const project = visibleProject(auth.auth, id, { includeClosed: true });
   if (!project) return notFound();
-  if (!isLead(auth.auth, id)) return forbidden("role_required", "프로젝트 종료/보관은 프로젝트 lead만 수행할 수 있습니다.");
+  if (!isLead(auth.auth, id)) return forbidden("role_required", "Only the project lead can close/archive the project.");
 
   const body = (await request.json().catch(() => null)) as { status?: string; closure_reason?: string } | null;
   if (body?.status !== "archived") {
-    return fail(409, "typed_closure_required", "프로젝트 종료는 POST /close에서 closureType과 함께 수행해야 합니다 (ADR-0152). PATCH는 보관(archived) 전용입니다.");
+    return fail(409, "typed_closure_required", "Project closure must go through POST /close with closureType (ADR-0152). PATCH is archive-only.");
   }
   const status = "archived" as const;
   const closureReason = body?.closure_reason?.trim() ?? "";
@@ -97,6 +97,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       if (err.code === "precondition_failed") return fail(409, err.code, err.message);
       return badRequest(err.code, err.message);
     }
-    return badRequest("project_close_failed", err instanceof Error ? err.message : "프로젝트 종료/보관 처리에 실패했습니다.");
+    return badRequest("project_close_failed", err instanceof Error ? err.message : "Failed to close/archive the project.");
   }
 }

@@ -7,7 +7,9 @@
 // the snapshot section renders the persisted job-spec of the latest
 // generated model — the execution contract the results came from.
 
+import { TranslatorFn } from "../../i18n/config.ts";
 import { useCallback, useEffect, useState } from "react";
+import { KO_DATA } from "../../lib/ko-data-values.ts";
 import { api } from "../../lib/api.ts";
 import { ColGroup, ParamTable } from "../ui.tsx";
 import { useAuth } from "../../lib/auth-client.tsx";
@@ -15,6 +17,7 @@ import { canWriteProject } from "../../lib/project-write-access.ts";
 import { s5ParamLinkage, type S5ParamKey } from "../../lib/s5-linkage-labels.ts";
 import { ANCHOR_SCOPE_CONFIDENCE_NOTE, type AnchorScopeFlag } from "../../lib/anchor-scope.ts";
 import { SHARE_UN_SOURCED_LABEL, captureSourceLabel, isShareUnsourced, shareUnsourcedLabel } from "../../lib/share-guard.ts";
+import { useTranslations } from "next-intl";
 
 // Mirrors EV_BAND_OPTIMISM_FLAG_FACTOR / EV_BAND_MAX_SANE / EV_BAND_SPREAD_FLAG_RATIO / ACQUISITION_EV_REVENUE_BAND in
 // lib/business-case-generator.ts (DB-bound module, not bundleable here); drift is caught by
@@ -26,36 +29,36 @@ const EV_BAND_REF = { min: 2, max: 6 } as const;
 
 interface ConfirmedBand { min: number; max: number; rationale: string; source: string; confirmedBy: string; confirmedAt: string }
 
-function validateBand(minRaw: string, maxRaw: string, defaultRaw: string, rationale: string, source: string) {
+function validateBand(minRaw: string, maxRaw: string, defaultRaw: string, rationale: string, source: string, t: TranslatorFn) {
   const errs: { min?: string; max?: string; default?: string; rationale?: string; source?: string } = {};
   const min = minRaw.trim() === "" ? NaN : Number(minRaw);
   const max = maxRaw.trim() === "" ? NaN : Number(maxRaw);
   const def = defaultRaw.trim() === "" ? null : Number(defaultRaw);
-  if (!Number.isFinite(min) || min <= 0) errs.min = "하한은 0보다 큰 숫자여야 합니다.";
-  if (!Number.isFinite(max)) errs.max = "상한은 숫자여야 합니다.";
-  else if (max > EV_BAND_MAX_SANE) errs.max = `상한은 ${EV_BAND_MAX_SANE}배 이하여야 합니다 (입력 오류로 간주).`;
-  if (!errs.min && !errs.max && min >= max) errs.max = "하한은 상한보다 작아야 합니다.";
+  if (!Number.isFinite(min) || min <= 0) errs.min = t("theLowerBoundMustBe");
+  if (!Number.isFinite(max)) errs.max = t("theUpperBoundMustBe");
+  else if (max > EV_BAND_MAX_SANE) errs.max = t("theUpperBoundMustBe2", { p1: EV_BAND_MAX_SANE });
+  if (!errs.min && !errs.max && min >= max) errs.max = t("theLowerBoundMustBe2");
   if (def !== null) {
-    if (!Number.isFinite(def) || def <= 0) errs.default = "기본 배수는 0보다 큰 숫자여야 합니다.";
-    else if (!errs.min && !errs.max && (def < min || def > max)) errs.default = "기본 배수는 확정 밴드 [하한, 상한] 안에 있어야 합니다.";
+    if (!Number.isFinite(def) || def <= 0) errs.default = t("theDefaultMultipleMustBe");
+    else if (!errs.min && !errs.max && (def < min || def > max)) errs.default = t("theDefaultMultipleMustLie");
   }
-  if (rationale.trim().length < 10) errs.rationale = "근거는 10자 이상 입력하세요.";
-  if (source.trim().length < 3) errs.source = "출처는 3자 이상 입력하세요 (예: 경영진 판단: 담당자명).";
+  if (rationale.trim().length < 10) errs.rationale = t("enterAtLeast10Characters");
+  if (source.trim().length < 3) errs.source = t("enterAtLeast3Characters");
   return { errs, min, max, default: def, valid: Object.keys(errs).length === 0 };
 }
 
 /** user > derived > default made visible: three distinct chip tones, the raw source string stays as tooltip. */
 type SourceKind = "user" | "derived" | "default";
-const SOURCE_CHIP: Record<SourceKind, { label: string; cls: string }> = {
-  user: { label: "사용자 확정", cls: "status-green" },
-  derived: { label: "유도값", cls: "status-amber" },
-  default: { label: "기본값", cls: "status-not-started" },
-};
-const sourceKindOf = (source: string): SourceKind => (source.startsWith("사용자") ? "user" : "default");
+const SOURCE_CHIP = (tr: TranslatorFn): Record<SourceKind, { label: string; cls: string }> => ({
+  user: { label: "stages.s8.paramsPanel.userConfirmed", cls: "status-green" },
+  derived: { label: "stages.s8.paramsPanel.derivedValue", cls: "status-amber" },
+  default: { label: "common.defaultValue", cls: "status-not-started" },
+});
+const sourceKindOf = (source: string): SourceKind => (source.startsWith(KO_DATA.sourceUserPrefix) ? "user" : "default");
 
-function SourceChip({ source, kind, label }: { source: string; kind?: SourceKind; label?: string }) {
+function SourceChip({ source, kind, label }: { source: string; kind?: SourceKind; label?: string }) {const tr = useTranslations(); 
   const k = kind ?? sourceKindOf(source);
-  return <span className={`status-chip whitespace-nowrap ${SOURCE_CHIP[k].cls}`} title={source}>{label ?? SOURCE_CHIP[k].label}</span>;
+  return <span className={`status-chip whitespace-nowrap ${SOURCE_CHIP(tr)[k].cls}`} title={source}>{label ?? SOURCE_CHIP(tr)[k].label}</span>;
 }
 
 interface ResolvedParams {
@@ -131,22 +134,22 @@ interface S5PinStatusView {
   caseGeneratedOnPin: string | null;
 }
 
-const INVESTMENT_BASIS_LABELS: Record<string, string> = {
-  ratio: "비율 추정",
-  s5_plan: "S5 투자 계획 (예전: 설비투자만)",
-  s5_plan_full: "S5 투자 계획",
-  s5_pnl: "S5 계획 손익 (s5_pnl)",
-};
+const INVESTMENT_BASIS_LABELS = (tr: TranslatorFn): Record<string, string> => ({
+  ratio: "stages.s8.paramsPanel.ratioEstimate",
+  s5_plan: "stages.s8.paramsPanel.s5InvestmentPlanFormerlyCapex",
+  s5_plan_full: "stages.s8.paramsPanel.s5InvestmentPlan",
+  s5_pnl: "stages.s8.paramsPanel.s5PlannedPL",
+});
 
-const DRIVER_LABELS: Record<string, string> = {
-  revenue_y1: "1차년도 매출",
-  ramp_up: "가동률 램프업",
-  revenue_growth: "매출 성장률",
-  opex_ratio: "운영비 비율",
-  capex_ratio: "설비투자 비율",
-  initial_investment: "초기 투자 (year-0)",
-  exit_ev_revenue: "처분 EV/매출 배수 (회수 시점)",
-};
+const DRIVER_LABELS = (tr: TranslatorFn): Record<string, string> => ({
+  revenue_y1: "stages.s8.paramsPanel.revenue",
+  ramp_up: "stages.s8.paramsPanel.utilization",
+  revenue_growth: "stages.s8.paramsPanel.revenueGrowthRate",
+  opex_ratio: "stages.s8.paramsPanel.operatingCostRatio",
+  capex_ratio: "stages.s8.paramsPanel.capexRatio",
+  initial_investment: "stages.s8.paramsPanel.initialInvestment",
+  exit_ev_revenue: "stages.s8.paramsPanel.exitEvRevenueMultipleAt",
+});
 
 // Full-width parameter table (decider feedback 2026-10-16): fixed percentage columns, group header rows,
 // one source chip per row, one `S5 연동` chip + reason per row (Green Field). Text values are left-aligned,
@@ -166,33 +169,33 @@ interface ParamLine {
   note?: React.ReactNode;
 }
 
-function CurrentParamsTable({ resolved, track, s5Pin, s5Run, s5PinCapexTotal, anchorScope }: { resolved: ResolvedParams; track: string | null; s5Pin: S5PinStatusView | null; s5Run: { id: string; drawCount: number } | null; s5PinCapexTotal: number | null; anchorScope: AnchorScopeFlag | null }) {
+function CurrentParamsTable({ resolved, track, s5Pin, s5Run, s5PinCapexTotal, anchorScope }: { resolved: ResolvedParams; track: string | null; s5Pin: S5PinStatusView | null; s5Run: { id: string; drawCount: number } | null; s5PinCapexTotal: number | null; anchorScope: AnchorScopeFlag | null }) {const tr = useTranslations(); const t = useTranslations("stages.s8.paramsPanel"); const tc = useTranslations("common");
   const gf = track === "greenfield";
   const pct1 = (v: number) => (v * 100).toFixed(1);
   const s5Source = s5Pin?.path === "pinned" && s5Pin.pin
-    ? `S5와 연결됨 (기본) · 고정 참조 ${s5Pin.pin.id.slice(-8)} (${s5Pin.pin.pinnedAt.slice(0, 10)} · ${s5Pin.pin.pinnedBy})${s5Pin.pin.s5SimRunId ? ` · 시뮬레이션 ${s5Pin.pin.s5SimRunId.slice(-8)}` : ""}${s5Pin.state === "stale" ? " · 재평가 필요" : ""}`
+    ? t("linkedToS5DefaultFixedReferenceP1P2P3P4P5", { p1: s5Pin.pin.id.slice(-8), p2: s5Pin.pin.pinnedAt.slice(0, 10), p3: s5Pin.pin.pinnedBy, p4: s5Pin.pin.s5SimRunId ? t("simulationP1", { p1: s5Pin.pin.s5SimRunId.slice(-8) }) : "", p5: s5Pin.state === "stale" ? t("reassessmentNeeded") : "" })
     : s5Pin?.reverted
-      ? `복사본 (사람이 되돌림)${s5Pin?.pin ? ` — 고정 참조 ${s5Pin.pin.id.slice(-8)} 있음, 사용하지 않음` : ""}`
-      : `복사본${s5Pin?.pin ? ` — 고정 참조 ${s5Pin.pin.id.slice(-8)} 있음, 아직 첫 \`자동 생성\` 전` : ""}`;
+      ? t("copyRevertedByAPersonP1", { p1: s5Pin?.pin ? t("fixedReferenceP1ExistsBut", { p1: s5Pin.pin.id.slice(-8) }) : "" })
+      : t("copyP1", { p1: s5Pin?.pin ? t("fixedReferenceP1ExistsBefore", { p1: s5Pin.pin.id.slice(-8) }) : "" });
   // Green Field collapses the two override rows into the rows they override (growth, volatility).
   const growthRow: ParamLine = gf
     ? resolved.growthOverride != null
-      ? { key: "growth", label: "성장률", value: pct1(resolved.growthOverride), numeric: true, unit: "%", source: <SourceChip source={resolved.growthOverrideSource} kind="user" />, note: "사람 오버라이드" }
-      : { key: "growth", label: "성장률", value: "시장 성장률에서 유도", source: <SourceChip source="시장 성장률 (opportunity)" kind="derived" /> }
-    : { key: "growth", label: "성장률 오버라이드", value: resolved.growthOverride != null ? pct1(resolved.growthOverride) : "— (유도값 사용)", numeric: resolved.growthOverride != null, unit: resolved.growthOverride != null ? "%" : "", source: <SourceChip source={resolved.growthOverrideSource} /> };
+      ? { key: "growth", label: tc("growthRate"), value: pct1(resolved.growthOverride), numeric: true, unit: "%", source: <SourceChip source={resolved.growthOverrideSource} kind="user" />, note: t("humanOverride") }
+      : { key: "growth", label: tc("growthRate"), value: t("derivedFromTheMarketGrowth"), source: <SourceChip source={tc("marketGrowthOpportunity")} kind="derived" /> }
+    : { key: "growth", label: t("growthRateOverride"), value: resolved.growthOverride != null ? pct1(resolved.growthOverride) : t("derivedValueUsed"), numeric: resolved.growthOverride != null, unit: resolved.growthOverride != null ? "%" : "", source: <SourceChip source={resolved.growthOverrideSource} /> };
   const sigmaRow: ParamLine = gf
     ? resolved.sigmaOverride != null
-      ? { key: "sigma", label: "변동성", value: pct1(resolved.sigmaOverride), numeric: true, unit: "%", source: <SourceChip source={resolved.sigmaOverrideSource} kind="user" />, note: "사람 오버라이드", s5Key: "sigma" }
-      : { key: "sigma", label: "변동성", value: "시장 기반 변동성 프로파일에서 유도", source: <SourceChip source="시장 기반 변동성 프로파일" kind="derived" />, s5Key: "sigma" }
-    : { key: "sigma", label: "변동성 오버라이드", value: resolved.sigmaOverride != null ? pct1(resolved.sigmaOverride) : "— (유도값 사용)", numeric: resolved.sigmaOverride != null, unit: resolved.sigmaOverride != null ? "%" : "", source: <SourceChip source={resolved.sigmaOverrideSource} /> };
+      ? { key: "sigma", label: t("volatility"), value: pct1(resolved.sigmaOverride), numeric: true, unit: "%", source: <SourceChip source={resolved.sigmaOverrideSource} kind="user" />, note: t("humanOverride2"), s5Key: "sigma" }
+      : { key: "sigma", label: t("volatility2"), value: t("derivedFromTheVolatilityProfile"), source: <SourceChip source={t("volatilityProfile")} kind="derived" />, s5Key: "sigma" }
+    : { key: "sigma", label: t("volatilityOverride"), value: resolved.sigmaOverride != null ? pct1(resolved.sigmaOverride) : t("derivedValueUsed2"), numeric: resolved.sigmaOverride != null, unit: resolved.sigmaOverride != null ? "%" : "", source: <SourceChip source={resolved.sigmaOverrideSource} /> };
   const groups: Array<{ title: string; lines: ParamLine[] }> = [
     {
-      title: "매출·시장",
+      title: t("revenueAndMarket"),
       lines: [
-        { key: "capture", label: "1년차 시장점유율 (year-1 매출)", value: pct1(resolved.captureRate), numeric: true, unit: "%", source: <SourceChip source={resolved.captureSource} label={captureSourceLabel(resolved.captureSource, resolved.captureRate)} />, s5Key: "capture", note: (
+        { key: "capture", label: t("marketShareRevenue"), value: pct1(resolved.captureRate), numeric: true, unit: "%", source: <SourceChip source={resolved.captureSource} label={captureSourceLabel(resolved.captureSource, resolved.captureRate)} />, s5Key: "capture", note: (
           <>
             {isShareUnsourced(resolved.captureSource) && (
-              <span data-testid="params-share-unsourced-flag" className="status-chip status-amber" title={`${shareUnsourcedLabel(resolved.captureRate)} — 사람이 근거를 남긴 점유율이 아닙니다 (ADR-0179). 참고 정보이며 승인 조건이 아닙니다.`}>
+              <span data-testid="params-share-unsourced-flag" className="status-chip status-amber" title={t("p1NotAMarketShare", { p1: shareUnsourcedLabel(resolved.captureRate) })}>
                 {shareUnsourcedLabel(resolved.captureRate)}
               </span>
             )}{" "}
@@ -206,51 +209,51 @@ function CurrentParamsTable({ resolved, track, s5Pin, s5Run, s5PinCapexTotal, an
         ) },
         growthRow,
         ...(!gf ? [
-          { key: "acq", label: "인수 EV/Revenue 배수 (브라운필드 — 밴드 기본)", value: resolved.acquisitionEvRevenue != null ? resolved.acquisitionEvRevenue.toFixed(2) : "3.0 — 미확정 시 스크리닝 자리값 (글로벌 로보틱스 M&A 2–6×)", numeric: resolved.acquisitionEvRevenue != null, unit: resolved.acquisitionEvRevenue != null ? "배" : "", source: <SourceChip source={resolved.acquisitionEvRevenueSource} /> } as ParamLine,
-          { key: "exitEv", label: "처분가 EV/Revenue 배수 (브라운필드)", value: resolved.exitEvRevenue != null ? resolved.exitEvRevenue.toFixed(2) : "진입 배수와 동일 (멀티플 확대 없음)", numeric: resolved.exitEvRevenue != null, unit: resolved.exitEvRevenue != null ? "배" : "", source: <SourceChip source={resolved.exitEvRevenueSource} /> } as ParamLine,
+          { key: "acq", label: t("acquisitionEvRevenueMultipleBrownfield"), value: resolved.acquisitionEvRevenue != null ? resolved.acquisitionEvRevenue.toFixed(2) : t("n30ScreeningPlaceholderWhen"), numeric: resolved.acquisitionEvRevenue != null, unit: resolved.acquisitionEvRevenue != null ? t("x") : "", source: <SourceChip source={resolved.acquisitionEvRevenueSource} /> } as ParamLine,
+          { key: "exitEv", label: t("exitEvRevenueMultipleBrownfield"), value: resolved.exitEvRevenue != null ? resolved.exitEvRevenue.toFixed(2) : t("sameAsTheEntryMultiple"), numeric: resolved.exitEvRevenue != null, unit: resolved.exitEvRevenue != null ? t("x2") : "", source: <SourceChip source={resolved.exitEvRevenueSource} /> } as ParamLine,
         ] : []),
       ],
     },
     {
-      title: "손익·투자",
+      title: t("pLAndInvestment"),
       lines: [
-        { key: "opex", label: "운영비 비율", value: pct1(resolved.opexRatio), numeric: true, unit: "%", source: <SourceChip source={resolved.opexSource} />, s5Key: "opex" },
-        { key: "capex", label: "설비투자 비율", value: pct1(resolved.capexRatio), numeric: true, unit: "%", source: <SourceChip source={resolved.capexSource} />, s5Key: "capex" },
-        { key: "initial", label: "초기투자 비율 (year-1 매출 대비)", value: pct1(resolved.initialInvestmentRatio), numeric: true, unit: "%", source: <SourceChip source={resolved.initialInvestmentSource} />, s5Key: "initial" },
-        { key: "basis", label: "투자비 기준 (ADR-0174)", value: INVESTMENT_BASIS_LABELS[resolved.investmentBasis] ?? resolved.investmentBasis, source: <SourceChip source={resolved.investmentBasisSource} /> },
-        ...(gf ? [{ key: "s5source", label: "S5 계획 출처 (ADR-0178)", value: s5Source, source: <SourceChip source={resolved.s5SourceSource ?? "기본값 (복사본, ADR-0178)"} /> } as ParamLine] : []),
-        { key: "ramp", label: "가동률 램프업", value: resolved.rampUp.map((v) => v.toFixed(2)).join(" → "), unit: "비율", source: <SourceChip source={resolved.rampSource} />, s5Key: "ramp" },
+        { key: "opex", label: t("operatingCostRatio2"), value: pct1(resolved.opexRatio), numeric: true, unit: "%", source: <SourceChip source={resolved.opexSource} />, s5Key: "opex" },
+        { key: "capex", label: t("capexRatio2"), value: pct1(resolved.capexRatio), numeric: true, unit: "%", source: <SourceChip source={resolved.capexSource} />, s5Key: "capex" },
+        { key: "initial", label: t("initialInvestmentRatioVsRevenue"), value: pct1(resolved.initialInvestmentRatio), numeric: true, unit: "%", source: <SourceChip source={resolved.initialInvestmentSource} />, s5Key: "initial" },
+        { key: "basis", label: t("investmentBasis"), value: INVESTMENT_BASIS_LABELS(tr)[resolved.investmentBasis] ?? resolved.investmentBasis, source: <SourceChip source={resolved.investmentBasisSource} /> },
+        ...(gf ? [{ key: "s5source", label: t("s5PlanSource"), value: s5Source, source: <SourceChip source={resolved.s5SourceSource ?? t("defaultCopy")} /> } as ParamLine] : []),
+        { key: "ramp", label: t("utilization2"), value: resolved.rampUp.map((v) => v.toFixed(2)).join(" → "), unit: t("ratio"), source: <SourceChip source={resolved.rampSource} />, s5Key: "ramp" },
       ],
     },
     {
-      title: "시뮬레이션·할인",
+      title: t("simulationAndDiscounting"),
       lines: [
         sigmaRow,
-        { key: "iterations", label: "반복 수", value: resolved.iterations.toLocaleString(), numeric: true, unit: "회", source: <SourceChip source={resolved.iterationsSource} />, s5Key: "iterations" },
+        { key: "iterations", label: tc("iterations"), value: resolved.iterations.toLocaleString(), numeric: true, unit: tc("timesUnit"), source: <SourceChip source={resolved.iterationsSource} />, s5Key: "iterations" },
         // ADR-0179 slice 1 — IRR ceiling guard thresholds. Person-settable display metadata.
-        { key: "irr_flag", label: "IRR 극단값 기준", value: resolved.irrFlagThreshold != null ? pct1(resolved.irrFlagThreshold) : "100.0%", numeric: true, unit: "/년", source: <SourceChip source={resolved.irrFlagThresholdSource ?? "기본값"} /> },
-        { key: "irr_caution", label: "IRR 주의 기준", value: resolved.irrCautionThreshold != null ? pct1(resolved.irrCautionThreshold) : "50.0%", numeric: true, unit: "/년", source: <SourceChip source={resolved.irrCautionThresholdSource ?? "기본값"} /> },
-        { key: "horizon", label: "회수 기간", value: String(resolved.horizonYears), numeric: true, unit: "년", source: <SourceChip source={resolved.horizonSource} /> },
+        { key: "irr_flag", label: t("irrExtremeValueThreshold"), value: resolved.irrFlagThreshold != null ? pct1(resolved.irrFlagThreshold) : "100.0%", numeric: true, unit: t("yr"), source: <SourceChip source={resolved.irrFlagThresholdSource ?? tc("defaultValue")} /> },
+        { key: "irr_caution", label: t("irrCautionThreshold"), value: resolved.irrCautionThreshold != null ? pct1(resolved.irrCautionThreshold) : "50.0%", numeric: true, unit: t("yr2"), source: <SourceChip source={resolved.irrCautionThresholdSource ?? tc("defaultValue")} /> },
+        { key: "horizon", label: t("paybackPeriod"), value: String(resolved.horizonYears), numeric: true, unit: tc("year"), source: <SourceChip source={resolved.horizonSource} /> },
         ...(!gf ? [
-          { key: "fade", label: "교차검증 창구 (페이드 DCF)", value: String(resolved.fadeHorizonYears), numeric: true, unit: "년", source: <SourceChip source={resolved.fadeHorizonSource} /> } as ParamLine,
-          { key: "gterm", label: "말기 성장률 (페이드 DCF 수렴점)", value: resolved.growthTerminal != null ? pct1(resolved.growthTerminal) : "3.0 — 미확정 시 기본값", numeric: resolved.growthTerminal != null, unit: resolved.growthTerminal != null ? "%" : "", source: <SourceChip source={resolved.growthTerminalSource} /> } as ParamLine,
+          { key: "fade", label: t("windowFadedDcf"), value: String(resolved.fadeHorizonYears), numeric: true, unit: tc("year"), source: <SourceChip source={resolved.fadeHorizonSource} /> } as ParamLine,
+          { key: "gterm", label: t("terminalGrowthRateFadedDcf"), value: resolved.growthTerminal != null ? pct1(resolved.growthTerminal) : t("n30DefaultWhenNot"), numeric: resolved.growthTerminal != null, unit: resolved.growthTerminal != null ? "%" : "", source: <SourceChip source={resolved.growthTerminalSource} /> } as ParamLine,
         ] : []),
       ],
     },
   ];
   const cols = gf ? PARAM_COL_PCT : PARAM_COL_PCT_NO_S5;
   return (
-    <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+    <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
       <table className="data-table table-fixed-pct tmin-64" data-testid="s8-params-table">
-        <caption className="sr-only">현재 시뮬레이션 파라미터</caption>
+        <caption className="sr-only">{t("currentSimulationParameters")}</caption>
         <ColGroup widths={gf ? PARAM_COL_PCT : PARAM_COL_PCT_NO_S5} />
         <thead>
           <tr>
-            <th scope="col">항목</th>
-            <th scope="col" className="col-num">값</th>
-            <th scope="col" className="whitespace-nowrap">단위</th>
-            <th scope="col" className="whitespace-nowrap">출처</th>
-            {gf && <th scope="col" className="whitespace-nowrap">S5 연동</th>}
+            <th scope="col">{tc("items")}</th>
+            <th scope="col" className="col-num">{tc("value")}</th>
+            <th scope="col" className="whitespace-nowrap">{tc("unit")}</th>
+            <th scope="col" className="whitespace-nowrap">{tc("source")}</th>
+            {gf && <th scope="col" className="whitespace-nowrap">{t("s5Integration")}</th>}
           </tr>
         </thead>
         {groups.map((g) => (
@@ -272,7 +275,7 @@ function CurrentParamsTable({ resolved, track, s5Pin, s5Run, s5PinCapexTotal, an
                     <td data-testid={l.s5Key ? `s8-s5-link-${l.s5Key}` : undefined}>
                       {cell && (
                         <>
-                          <span className={`status-chip whitespace-nowrap ${cell.kind === "s5" ? "status-green" : "status-amber"}`}>{cell.kind === "s5" ? "S5 값" : "가정값"}</span>
+                          <span className={`status-chip whitespace-nowrap ${cell.kind === "s5" ? "status-green" : "status-amber"}`}>{cell.kind === "s5" ? t("s5Value") : t("assumptionValue")}</span>
                           <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">{cell.detail}</div>
                         </>
                       )}
@@ -288,7 +291,7 @@ function CurrentParamsTable({ resolved, track, s5Pin, s5Run, s5PinCapexTotal, an
   );
 }
 
-export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; onOpenTargets?: () => void }) {
+export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; onOpenTargets?: () => void }) {const tr = useTranslations(); const t = useTranslations("stages.s8.paramsPanel"); const tc = useTranslations("common");
   const [resolved, setResolved] = useState<ResolvedParams | null>(null);
   const [s5Run, setS5Run] = useState<{ id: string; drawCount: number } | null>(null);
   const [s5Pin, setS5Pin] = useState<S5PinStatusView | null>(null);
@@ -314,7 +317,7 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
   const [bandBusy, setBandBusy] = useState(false);
   const [bandAiBusy, setBandAiBusy] = useState(false);
   const [bandAiNote, setBandAiNote] = useState<string | null>(null);
-  const bandCheck = validateBand(bandMin, bandMax, bandDefault, bandRationale, bandSource);
+  const bandCheck = validateBand(bandMin, bandMax, bandDefault, bandRationale, bandSource, t);
 
   // 2026-10-19 decider direction — AI 밴드 추천: the LLM drafts the band; the draft
   // only PREFILLS this form and the person still confirms through 밴드 확정 (boundary #2).
@@ -334,7 +337,7 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
         setBandSource(r.data.draft.source);
       }
     } catch (err) {
-      setBandAiNote(err instanceof Error ? err.message : "AI 추천에 실패했습니다.");
+      setBandAiNote(err instanceof Error ? err.message : t("aiRecommendationFailed"));
     } finally {
       setBandAiBusy(false);
     }
@@ -353,11 +356,11 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
         ...(bandCheck.default !== null ? { default: bandCheck.default } : {}),
         rationale: bandRationale.trim(), source: bandSource.trim(),
       });
-      setBandMsg("밴드를 확정했습니다. 대상 비교 탭과 브라운필드 인수가격(기본 배수)에 반영됩니다.");
+      setBandMsg(t("bandConfirmedReflectedInThe"));
       setBandMin(""); setBandMax(""); setBandDefault(""); setBandRationale(""); setBandSource(""); setBandTouched(false);
       load();
     } catch (err) {
-      setBandErr(err instanceof Error ? err.message : "밴드 확정에 실패했습니다.");
+      setBandErr(err instanceof Error ? err.message : t("failedToConfirmTheBand"));
     } finally {
       setBandBusy(false);
     }
@@ -375,7 +378,7 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
       const casesRes = await api.get<{ cases: CaseSummary[] }>(`/api/projects/${encodeURIComponent(projectId)}/business-case`);
       setCases(casesRes.data.cases);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "파라미터를 불러오지 못했습니다.");
+      setError(e instanceof Error ? e.message : t("failedToLoadParameters"));
     }
   }, [projectId]);
 
@@ -388,7 +391,7 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
     setMessage(null);
     setError(null);
     if (!rationale.trim()) {
-      setError("파라미터 확정에는 근거(rationale)가 필수입니다.");
+      setError(t("confirmingParametersRequiresARationale"));
       return;
     }
     const params: Record<string, unknown> = {};
@@ -398,7 +401,7 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
     const rampValues = ramp.filter((v) => v.trim() !== "");
     if (rampValues.length > 0) params.ramp_up = rampValues.map((v) => Number(v));
     if (Object.keys(params).length === 0) {
-      setError("변경할 값을 하나 이상 입력하세요.");
+      setError(t("enterAtLeastOneValue"));
       return;
     }
     try {
@@ -406,13 +409,13 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
         `/api/projects/${encodeURIComponent(projectId)}/business-case/params`,
         { params, rationale },
       );
-      setMessage(`저장 완료 — ${res.data.written.length}개 키 (run ${res.data.run_id}). 설명·생성·권고 탭에서 재생성하면 새 파라미터가 반영됩니다.`);
+      setMessage(t("savedP1KeysRunP2", { p1: res.data.written.length, p2: res.data.run_id }));
       setForm({});
       setRamp(["", "", "", "", ""]);
       setRationale("");
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "파라미터 저장에 실패했습니다.");
+      setError(err instanceof Error ? err.message : t("failedToSaveTheParameters"));
     }
   }
 
@@ -440,23 +443,23 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
       {message && <p className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {message}</p>}
 
       {/* 현재 해석값 — user > derived > default 출처 표시 (REQ-W6-2) */}
-      <section className="market-section sizing-step" aria-label="현재 파라미터">
-        <h3 className="sizing-step-title">시뮬레이션 파라미터 <span className="status-chip status-info">해석 순위: 사용자 확정 &gt; 유도값 &gt; 기본값</span></h3>
+      <section className="market-section sizing-step" aria-label={t("currentParameters")}>
+        <h3 className="sizing-step-title">{t("simulationParameters")} <span className="status-chip status-info">{t("interpretationPrecedenceUserConfirmedDerived")}</span></h3>
         {!resolved ? (
-          <p>불러오는 중...</p>
+          <p>{tc("loading")}</p>
         ) : (
           <>
             <CurrentParamsTable resolved={resolved} track={track} s5Pin={s5Pin} s5Run={s5Run} s5PinCapexTotal={paramsCapexTotal} anchorScope={anchorScope} />
             {track === "greenfield" && s5Pin?.path === "pinned" && paramsCapexTotal === 0 && (
               <p role="note" data-testid="s8-params-capex-warning" className="text-[length:var(--fs-caption)] mt-2">
-                <span className="status-chip status-amber"><span aria-hidden="true">⚠</span> 설비투자 없음</span>{" "}
-                S5 계획에 설비투자(capex) 줄이 없습니다 — 설비투자가 있다면 S5 투자비 탭에 입력하세요.
+                <span className="status-chip status-amber"><span aria-hidden="true">⚠</span> {t("noCapex")}</span>{" "}
+                {t("theS5PlanHasNo")}
               </p>
               )}
 
             {resolved.s5PlanHorizonYears != null && resolved.s5PlanHorizonYears !== resolved.horizonYears && (
               <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-2">
-                ⚠ S5 검토 기간({resolved.s5PlanHorizonYears}년)과 사업계획 기간({resolved.horizonYears}년)이 다릅니다
+                {t("s5ReviewPeriod")}{resolved.s5PlanHorizonYears}{t("yrAndTheHorizon")}{resolved.horizonYears}{t("yrDiffer")}
               </p>
             )}
           </>
@@ -464,50 +467,50 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
       </section>
 
       {/* 편집 폼 — 근거 필수 (REQ-W6-3) */}
-      <section className="market-section sizing-step mt-3" aria-label="파라미터 확정">
-        <h3 className="sizing-step-title">파라미터 확정 <span className="status-chip status-info">kind=user — 저장 후 재생성 시 반영</span></h3>
+      <section className="market-section sizing-step mt-3" aria-label={t("confirmParameters")}>
+        <h3 className="sizing-step-title">{t("confirmParameters2")} <span className="status-chip status-info">{t("reflectedWhenRegeneratingAfterSave")}</span></h3>
         <form className="grid gap-3" onSubmit={submit} style={{ maxWidth: 560 }}>
           <div className="grid gap-2 md:grid-cols-2">
-            <label className="grid gap-1 text-sm">1년차 시장점유율 (비율, 예: 0.005)<input className="form-input" value={form.capture_rate ?? ""} onChange={(e) => setForm({ ...form, capture_rate: e.target.value })} placeholder="0.005" /></label>
-            <label className="grid gap-1 text-sm">운영비 비율 (예: 0.6)<input className="form-input" value={form.opex_ratio ?? ""} onChange={(e) => setForm({ ...form, opex_ratio: e.target.value })} placeholder="0.6" /></label>
-            <label className="grid gap-1 text-sm">설비투자 비율 (예: 0.1)<input className="form-input" value={form.capex_ratio ?? ""} onChange={(e) => setForm({ ...form, capex_ratio: e.target.value })} placeholder="0.1" /></label>
-            <label className="grid gap-1 text-sm">초기투자 비율 (예: 0.5)<input className="form-input" value={form.initial_investment_ratio ?? ""} onChange={(e) => setForm({ ...form, initial_investment_ratio: e.target.value })} placeholder="0.5" /></label>
-            <label className="grid gap-1 text-sm">투자비 기준 (ADR-0174)
+            <label className="grid gap-1 text-sm">{t("marketShareRatioEG")}<input className="form-input" value={form.capture_rate ?? ""} onChange={(e) => setForm({ ...form, capture_rate: e.target.value })} placeholder="0.005" /></label>
+            <label className="grid gap-1 text-sm">{t("operatingCostRatioEG")}<input className="form-input" value={form.opex_ratio ?? ""} onChange={(e) => setForm({ ...form, opex_ratio: e.target.value })} placeholder="0.6" /></label>
+            <label className="grid gap-1 text-sm">{t("capexRatioEG0")}<input className="form-input" value={form.capex_ratio ?? ""} onChange={(e) => setForm({ ...form, capex_ratio: e.target.value })} placeholder="0.1" /></label>
+            <label className="grid gap-1 text-sm">{t("initialInvestmentRatioEG")}<input className="form-input" value={form.initial_investment_ratio ?? ""} onChange={(e) => setForm({ ...form, initial_investment_ratio: e.target.value })} placeholder="0.5" /></label>
+            <label className="grid gap-1 text-sm">{t("investmentBasis2")}
               <select className="form-input" value={form.investment_basis ?? ""} onChange={(e) => setForm({ ...form, investment_basis: e.target.value })}>
-                <option value="">— 미변경 —</option>
-                <option value="0">비율 추정 (기본)</option>
-                <option value="2">S5 투자 계획</option>
-                <option value="3" disabled={!(track === "greenfield" && s5Pin?.path === "pinned")}>S5 계획 손익 (s5_pnl){track === "greenfield" && s5Pin?.path === "pinned" ? "" : " — Green Field + S5 고정 참조 연결 시에만 선택 가능"}</option>
-                {form.investment_basis === "1" && <option value="1" disabled>S5 투자 계획 (예전: 설비투자만)</option>}
+                <option value="">{t("unchanged")}</option>
+                <option value="0">{t("ratioEstimateDefault")}</option>
+                <option value="2">{t("s5InvestmentPlan2")}</option>
+                <option value="3" disabled={!(track === "greenfield" && s5Pin?.path === "pinned")}>{t("s5PlannedPL2")}{track === "greenfield" && s5Pin?.path === "pinned" ? "" : t("selectableOnlyWhenLinkedTo")}</option>
+                {form.investment_basis === "1" && <option value="1" disabled>{t("s5InvestmentPlanFormerlyCapex2")}</option>}
               </select>
             </label>
             {track === "greenfield" && (
-              <label className="grid gap-1 text-sm">S5 계획 출처 (ADR-0178)
+              <label className="grid gap-1 text-sm">{t("s5PlanSource2")}
                 <select className="form-input" value={form.s5_source ?? ""} onChange={(e) => setForm({ ...form, s5_source: e.target.value })}>
-                  <option value="">— 미변경 —</option>
-                  <option value="0">복사본으로 되돌림</option>
-                  <option value="1" disabled={!s5Pin?.pin}>S5와 다시 연결 (고정 참조){s5Pin?.pin ? "" : " — 고정 참조 없음(먼저 연결하세요)"}</option>
+                  <option value="">{t("unchanged2")}</option>
+                  <option value="0">{t("revertedToTheCopy")}</option>
+                  <option value="1" disabled={!s5Pin?.pin}>{t("toS5FixedReference")}{s5Pin?.pin ? "" : t("noFixedReferenceLinkIt")}</option>
                 </select>
               </label>
             )}
-            <label className="grid gap-1 text-sm">처분가 배수 (EV/매출 — 미입력 시 인수 배수와 동일; 확정 시 처분가치가 이 배수)<input className="form-input" value={form.exit_ev_revenue ?? ""} onChange={(e) => setForm({ ...form, exit_ev_revenue: e.target.value })} placeholder="미입력 = 인수 배수" /></label>
-            <label className="grid gap-1 text-sm">교차검증 창구 (페이드 DCF 연수, 예: 10)<input className="form-input" value={form.fade_horizon_years ?? ""} onChange={(e) => setForm({ ...form, fade_horizon_years: e.target.value })} placeholder="10" /></label>
-            <label className="grid gap-1 text-sm">말기 성장률 (비율, 예: 0.03)<input className="form-input" value={form.growth_terminal ?? ""} onChange={(e) => setForm({ ...form, growth_terminal: e.target.value })} placeholder="0.03" /></label>
-            <label className="grid gap-1 text-sm">성장률 오버라이드 (비율)<input className="form-input" value={form.growth_override ?? ""} onChange={(e) => setForm({ ...form, growth_override: e.target.value })} placeholder="0.05" /></label>
-            <label className="grid gap-1 text-sm">변동성 오버라이드 (비율)<input className="form-input" value={form.sigma_override ?? ""} onChange={(e) => setForm({ ...form, sigma_override: e.target.value })} placeholder="0.03" /></label>
-            <label className="grid gap-1 text-sm">회수 기간 (년)<input className="form-input" value={form.horizon_years ?? ""} onChange={(e) => setForm({ ...form, horizon_years: e.target.value })} placeholder="5" /></label>
-            <label className="grid gap-1 text-sm">반복 수<input className="form-input" value={form.iterations ?? ""} onChange={(e) => setForm({ ...form, iterations: e.target.value })} placeholder="2000" /></label>
-            <label className="grid gap-1 text-sm">IRR 극단값 기준 (비율, 예: 1.0 = 100%/년)<input className="form-input" value={form.irr_flag_threshold ?? ""} onChange={(e) => setForm({ ...form, irr_flag_threshold: e.target.value })} placeholder="1.0" /></label>
-            <label className="grid gap-1 text-sm">IRR 주의 기준 (비율, 예: 0.5 = 50%/년)<input className="form-input" value={form.irr_caution_threshold ?? ""} onChange={(e) => setForm({ ...form, irr_caution_threshold: e.target.value })} placeholder="0.5" /></label>
+            <label className="grid gap-1 text-sm">{t("exitMultipleEvRevenueDefaults")}<input className="form-input" value={form.exit_ev_revenue ?? ""} onChange={(e) => setForm({ ...form, exit_ev_revenue: e.target.value })} placeholder={t("emptyAcquisitionMultiple")} /></label>
+            <label className="grid gap-1 text-sm">{t("windowFadedDcfYearsE")}<input className="form-input" value={form.fade_horizon_years ?? ""} onChange={(e) => setForm({ ...form, fade_horizon_years: e.target.value })} placeholder="10" /></label>
+            <label className="grid gap-1 text-sm">{t("terminalGrowthRateRatioE")}<input className="form-input" value={form.growth_terminal ?? ""} onChange={(e) => setForm({ ...form, growth_terminal: e.target.value })} placeholder="0.03" /></label>
+            <label className="grid gap-1 text-sm">{t("growthRateOverrideRatio")}<input className="form-input" value={form.growth_override ?? ""} onChange={(e) => setForm({ ...form, growth_override: e.target.value })} placeholder="0.05" /></label>
+            <label className="grid gap-1 text-sm">{t("volatilityOverrideRatio")}<input className="form-input" value={form.sigma_override ?? ""} onChange={(e) => setForm({ ...form, sigma_override: e.target.value })} placeholder="0.03" /></label>
+            <label className="grid gap-1 text-sm">{t("paybackPeriodYears")}<input className="form-input" value={form.horizon_years ?? ""} onChange={(e) => setForm({ ...form, horizon_years: e.target.value })} placeholder="5" /></label>
+            <label className="grid gap-1 text-sm">{tc("iterations")}<input className="form-input" value={form.iterations ?? ""} onChange={(e) => setForm({ ...form, iterations: e.target.value })} placeholder="2000" /></label>
+            <label className="grid gap-1 text-sm">{t("irrExtremeValueThresholdRatio")}<input className="form-input" value={form.irr_flag_threshold ?? ""} onChange={(e) => setForm({ ...form, irr_flag_threshold: e.target.value })} placeholder="1.0" /></label>
+            <label className="grid gap-1 text-sm">{t("irrCautionThresholdRatioE")}<input className="form-input" value={form.irr_caution_threshold ?? ""} onChange={(e) => setForm({ ...form, irr_caution_threshold: e.target.value })} placeholder="0.5" /></label>
           </div>
           <div>
-            <p className="text-sm text-[color:var(--muted-fg)] mb-1">가동률 램프업 (연도별, 일부만 입력 가능 — 예: 0.4, 0.7)</p>
+            <p className="text-sm text-[color:var(--muted-fg)] mb-1">{t("utilizationByYearPartialEntry")}</p>
             <div className="flex gap-2">
               {ramp.map((v, i) => (
                 <input
                   key={i}
                   className="form-input w-20"
-                  aria-label={`가동률 ${i + 1}년차`}
+                  aria-label={t("utilizationYearP1", { p1: i + 1 })}
                   value={v}
                   onChange={(e) => setRamp(ramp.map((x, j) => (j === i ? e.target.value : x)))}
                   placeholder={`y${i + 1}`}
@@ -515,66 +518,65 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
               ))}
             </div>
           </div>
-          <label className="grid gap-1 text-sm">근거 (필수)<textarea className="form-input" value={rationale} onChange={(e) => setRationale(e.target.value)} placeholder="시장 조사 결과 시장점유율 상향 — 출처/근거를 기재하세요" /></label>
-          <button className="btn-ghost justify-self-start" type="submit">파라미터 확정</button>
-          <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">확정된 값은 사용자 등급(user) 가정으로 기록됩니다. 설명·생성·권고 탭의 재생성을 실행하면 새 파라미터로 다시 시뮬레이션됩니다.</p>
+          <label className="grid gap-1 text-sm">{tc("evidenceRequiredMark")}<textarea className="form-input" value={rationale} onChange={(e) => setRationale(e.target.value)} placeholder={t("marketResearchRaisedTheMarket")} /></label>
+          <button className="btn-ghost justify-self-start" type="submit">{t("confirmParameters3")}</button>
+          <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{t("confirmedValuesAreRecordedAs")}</p>
         </form>
       </section>
 
       {/* EV/매출 밴드 확정 — 사람 전용 (경계 #2: 에이전트는 설정할 수 없음) */}
-      <section className="market-section sizing-step mt-3" aria-label="EV/매출 밴드 확정">
-        <h3 className="sizing-step-title">EV/매출 밴드 확정 <span className="status-chip status-info">사람 전용 — 에이전트는 설정할 수 없습니다</span></h3>
+      <section className="market-section sizing-step mt-3" aria-label={t("confirmEvRevenueBand")}>
+        <h3 className="sizing-step-title">{t("confirmEvRevenueBand2")} <span className="status-chip status-info">{t("humanOnlyAnAgentCannot")}</span></h3>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-          이 밴드는 브라운필드 <b>인수가격</b> 산정(대상 회사 매출 × EV/매출 배수)의 근거로 사용됩니다 — 아래{" "}
-          <b>기본 배수</b>를 확정하면 인수가격이 그 배수로 계산되고, 미확정 시 출처 미확보 스크리닝 자리값{" "}
-          <b>3.0× (밴드 2–6×)</b>가 적용됩니다. 처분가치는 파라미터 폼의 <b>처분가 배수</b>(미확정 시 인수 배수와 동일)를 따릅니다.
-          확정한 밴드는 대상 비교의 범위 내/밖 표시 기준이 되며 순위에는 영향이 없습니다.{" "}
+          {t("thisBandIsBrownfield")} <b>{tc("acquisitionPrice")}</b> {t("sizingTargetRevenueEvRevenue")}{" "}
+          <b>{t("defaultMultiple")}</b>{t("isConfirmedTheAcquisitionPrice")}{" "}
+          <b>{t("n30xBand")}</b>{t("appliesTheExitValueFollows")} <b>{t("exitMultiple")}</b>{t("whenUnconfirmedTheAcquisitionMultiple")}{" "}
           {onOpenTargets ? (
-            <button type="button" className="text-[color:var(--accent)] font-bold" onClick={onOpenTargets}>밴드 상태는 대상 비교·선정 탭 →</button>
+            <button type="button" className="text-[color:var(--accent)] font-bold" onClick={onOpenTargets}>{t("bandStatusIsInThe")}</button>
           ) : (
-            <span>밴드 상태는 대상 비교·선정 탭.</span>
+            <span>{t("bandStatusIsInThe2")}</span>
           )}
         </p>
         {!canAct ? (
           <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-            <span className="status-chip status-not-started mr-1">읽기 전용</span>
-            현재 역할은 밴드를 확정할 수 없습니다 (분석가만 가능).
+            <span className="status-chip status-not-started mr-1">{tc("readOnly")}</span>
+            {t("theCurrentRoleCannotConfirm")}
           </p>
         ) : (
           <>
           <div className="flex items-center gap-2 mb-2">
             <button type="button" className="btn-ghost btn-sm" disabled={bandAiBusy} onClick={() => void recommendBand()} data-testid="evband-ai-recommend">
-              {bandAiBusy ? "AI 추천 중..." : "🤖 AI 밴드 추천"}
+              {bandAiBusy ? t("generatingAiRecommendation") : t("aiBandRecommendation")}
             </button>
-            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">대상 매출·참고 밴드를 근거로 초안을 만들어 폼을 채웁니다 — 확정은 사람이 합니다.</span>
+            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("draftsFromTheTargetS")}</span>
           </div>
           {bandAiNote && (
             <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="evband-ai-note">{bandAiNote}</p>
           )}
           <form className="grid gap-3" onSubmit={submitBand} noValidate style={{ maxWidth: 560 }}>
             <div className="grid gap-2 md:grid-cols-3">
-              <label className="grid gap-1 text-sm" htmlFor="evband-min">하한 (배, 필수)
+              <label className="grid gap-1 text-sm" htmlFor="evband-min">{t("lowerBoundXRequired")}
                 <input id="evband-min" className="form-input" inputMode="decimal" value={bandMin} onChange={(e) => setBandMin(e.target.value)} placeholder="2" aria-invalid={bandTouched && !!bandCheck.errs.min} aria-describedby={bandTouched && bandCheck.errs.min ? "evband-min-err" : undefined} />
                 {bandTouched && bandCheck.errs.min && <span id="evband-min-err" role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {bandCheck.errs.min}</span>}
               </label>
-              <label className="grid gap-1 text-sm" htmlFor="evband-max">상한 (배, 필수)
+              <label className="grid gap-1 text-sm" htmlFor="evband-max">{t("upperBoundXRequired")}
                 <input id="evband-max" className="form-input" inputMode="decimal" value={bandMax} onChange={(e) => setBandMax(e.target.value)} placeholder="6" aria-invalid={bandTouched && !!bandCheck.errs.max} aria-describedby={bandTouched && bandCheck.errs.max ? "evband-max-err" : undefined} />
                 {bandTouched && bandCheck.errs.max && <span id="evband-max-err" role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {bandCheck.errs.max}</span>}
               </label>
-              <label className="grid gap-1 text-sm" htmlFor="evband-default">기본 배수 (배, 선택 — 밴드 안)
+              <label className="grid gap-1 text-sm" htmlFor="evband-default">{t("defaultMultipleXOptionalWithin")}
                 <input id="evband-default" className="form-input" inputMode="decimal" value={bandDefault} onChange={(e) => setBandDefault(e.target.value)} placeholder="3" aria-invalid={bandTouched && !!bandCheck.errs.default} aria-describedby={bandTouched && bandCheck.errs.default ? "evband-default-err" : undefined} />
                 {bandTouched && bandCheck.errs.default && <span id="evband-default-err" role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {bandCheck.errs.default}</span>}
               </label>
             </div>
-            <label className="grid gap-1 text-sm" htmlFor="evband-rationale">근거 (필수, 10자 이상)
-              <textarea id="evband-rationale" className="form-input" value={bandRationale} onChange={(e) => setBandRationale(e.target.value)} aria-invalid={bandTouched && !!bandCheck.errs.rationale} aria-describedby={bandTouched && bandCheck.errs.rationale ? "evband-rationale-err" : undefined} placeholder="이 밴드를 선택한 이유를 기재하세요" />
+            <label className="grid gap-1 text-sm" htmlFor="evband-rationale">{t("evidenceRequired10Chars")}
+              <textarea id="evband-rationale" className="form-input" value={bandRationale} onChange={(e) => setBandRationale(e.target.value)} aria-invalid={bandTouched && !!bandCheck.errs.rationale} aria-describedby={bandTouched && bandCheck.errs.rationale ? "evband-rationale-err" : undefined} placeholder={t("recordWhyThisBandWas")} />
               {bandTouched && bandCheck.errs.rationale && <span id="evband-rationale-err" role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {bandCheck.errs.rationale}</span>}
             </label>
-            <label className="grid gap-1 text-sm" htmlFor="evband-source">출처 (필수, 3자 이상)
-              <input id="evband-source" className="form-input" value={bandSource} onChange={(e) => setBandSource(e.target.value)} aria-invalid={bandTouched && !!bandCheck.errs.source} aria-describedby={bandTouched && bandCheck.errs.source ? "evband-source-err" : undefined} placeholder="문헌·문서·URL 또는 경영진 판단: 담당자명" />
+            <label className="grid gap-1 text-sm" htmlFor="evband-source">{t("sourceRequired3Chars")}
+              <input id="evband-source" className="form-input" value={bandSource} onChange={(e) => setBandSource(e.target.value)} aria-invalid={bandTouched && !!bandCheck.errs.source} aria-describedby={bandTouched && bandCheck.errs.source ? "evband-source-err" : undefined} placeholder={t("literatureDocumentsUrlsOrManagement")} />
               {bandTouched && bandCheck.errs.source && <span id="evband-source-err" role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {bandCheck.errs.source}</span>}
             </label>
-            <button className="btn-ghost justify-self-start" type="submit" disabled={bandBusy}>{bandBusy ? "확정 중..." : "밴드 확정"}</button>
+            <button className="btn-ghost justify-self-start" type="submit" disabled={bandBusy}>{bandBusy ? t("confirming") : t("confirmBand")}</button>
             {bandErr && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {bandErr}</p>}
             {bandMsg && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)]">✓ {bandMsg}</p>}
           </form>
@@ -583,45 +585,45 @@ export function ParamsPanel({ projectId, onOpenTargets }: { projectId: string; o
       </section>
 
       {/* 실행 스냅샷 — 최근 생성 모델의 job-spec (REQ-W5-1/2) */}
-      <section className="market-section sizing-step mt-3" aria-label="실행 스냅샷">
-        <h3 className="sizing-step-title">실행 스냅샷 <span className="status-chip status-info">최근 생성 모델의 실행 계약</span></h3>
+      <section className="market-section sizing-step mt-3" aria-label={t("executionSnapshot")}>
+        <h3 className="sizing-step-title">{t("executionSnapshot2")} <span className="status-chip status-info">{t("runContractOfTheLatest")}</span></h3>
         {!snapshot ? (
           <p className="text-sm text-[color:var(--muted-fg)]">
-            아직 저장된 실행 스냅샷이 없습니다{snapshotCases.length > 0 ? " (이 모델의 스냅샷은 구버전 형식입니다 — 재생성하면 기록됩니다)" : ""}. 설명·생성·권고 탭에서 생성을 실행하면 이곳에 해당 결과의 파라미터가 기록됩니다.
+            {t("noSavedExecutionSnapshotYet")}{snapshotCases.length > 0 ? t("thisModelSnapshotIsIn") : ""}{t("runningGenerationInTheExplanation")}
           </p>
         ) : (
           <>
             <ParamTable
-              caption="시뮬레이션 실행 조건"
-              labelHeader="조건"
+              caption={t("simulationRunConditions")}
+              labelHeader={t("conditions")}
               rows={[
-                { label: "반복 수", value: (snapshot.iterations ?? 0).toLocaleString(), unit: "회" },
-                { label: "회수 기간", value: String(snapshot.horizon_years), unit: "년" },
+                { label: tc("iterations"), value: (snapshot.iterations ?? 0).toLocaleString(), unit: tc("timesUnit") },
+                { label: t("paybackPeriod2"), value: String(snapshot.horizon_years), unit: tc("year") },
                 {
-                  label: "할인율",
+                  label: t("discountRate"),
                   value: snapshot.discount_rate ? pct(snapshot.discount_rate.value) : "—",
                   source: snapshot.discount_rate ? `${snapshot.discount_rate.subject} · ${snapshot.discount_rate.source ?? ""}` : undefined,
                 },
               ]}
             />
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-              모델: {latestSnapshot!.name} {latestSnapshot!.adopted ? "· 채택됨" : latestSnapshot!.recommended ? "· 권고안" : ""}
+              {t("model")} {latestSnapshot!.name} {latestSnapshot!.adopted ? t("adopted") : latestSnapshot!.recommended ? t("recommendation") : ""}
             </p>
-            <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
+            <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
               <table className="data-table">
-                <caption className="sr-only">시뮬레이션 드라이버 분포 — 드라이버·분포·값·출처</caption>
+                <caption className="sr-only">{t("simulationDriverDistributionsDriversDistributions")}</caption>
                 <thead>
                   <tr>
-                    <th className="col-label text-left">드라이버</th>
-                    <th className="text-left">분포</th>
-                    <th className="text-right">값</th>
-                    <th className="text-left">출처</th>
+                    <th className="col-label text-left">{t("drivers")}</th>
+                    <th className="text-left">{t("distribution")}</th>
+                    <th className="text-right">{tc("value")}</th>
+                    <th className="text-left">{tc("source")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Object.entries(snapshot.cases?.[0]?.drivers ?? {}).map(([key, d]) => (
                     <tr key={key}>
-                      <td className="col-label">{DRIVER_LABELS[key] ?? key}</td>
+                      <td className="col-label">{DRIVER_LABELS(tr)[key] ?? key}</td>
                       <td>{d.dist}</td>
                       <td className="text-right tabular-nums">{driverValue(d)}</td>
                       <td className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{d.source ?? "—"}</td>

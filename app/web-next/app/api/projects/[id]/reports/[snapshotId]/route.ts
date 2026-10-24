@@ -30,7 +30,7 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
 export const DELETE = route(async (request: Request, { params }: { params: Promise<{ id: string; snapshotId: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "보고서 보관은 analyst 역할 이상이어야 합니다." });
+  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Report archiving requires the analyst role or higher." });
   if (denied) return denied;
   const { id, snapshotId } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();

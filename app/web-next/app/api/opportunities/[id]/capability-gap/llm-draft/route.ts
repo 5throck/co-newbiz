@@ -19,7 +19,7 @@ import { buildSubjectMarketContext, subjectMarketPromptBlock } from "../../../..
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
     const auth = authenticate(request);
     if (!auth.ok) return auth.response;
-    { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "필요 역량 수준 LLM 초안 생성은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+    { const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Capability-level LLM draft generation requires the analyst role or higher." }); if (denied) return denied; }
     const { id } = await params;
     const db = getDb();
     const opp = db

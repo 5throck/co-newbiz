@@ -27,10 +27,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ targ
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "필요 역량 달성 가능성 저장은 analyst 역할 이상이어야 합니다." }); if (denied) return denied; }
+  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Capability-attainability saves require the analyst role or higher." }); if (denied) return denied; }
   const { targetId } = await params;
   const body = (await request.json().catch(() => null)) as { rows?: unknown } | null;
-  if (!body) return badRequest("invalid_request", "요청 본문이 올바르지 않습니다.");
+  if (!body) return badRequest("invalid_request", "Invalid request body.");
   const db = getDb();
   const scope = targetScope(db, targetId);
   if (!scope.ok) return scope.code === "not_found" ? notFound() : fail(409, scope.code, scope.message);

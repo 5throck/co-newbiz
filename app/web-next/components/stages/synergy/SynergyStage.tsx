@@ -16,8 +16,9 @@ import { useSynergyList } from "./useSynergyList.ts";
 import { SynergyListSection } from "./SynergyListSection.tsx";
 import { NewSynergyForm } from "./NewSynergyForm.tsx";
 import { SynergyResult } from "./SynergyResult.tsx";
+import { useTranslations } from "next-intl";
 
-export function SynergyStage(props0: { opportunityId?: string; analysisId?: string; embedded?: boolean; noSourceOpportunity?: boolean }) {
+export function SynergyStage(props0: { opportunityId?: string; analysisId?: string; embedded?: boolean; noSourceOpportunity?: boolean }) {const t = useTranslations("stages.s3.synergyStage"); const tc = useTranslations("common");
   const h0 = useSynergyList(props0);
   const ctx = { ...h0 };
   const { confirmDialog, error, opportunityId, selected, detail, tab, setTab, backToList, rerun, refreshDetail, canCurate, showNewForm, setShowNewForm, targetSel, creating, createAnalysis } = ctx;
@@ -44,11 +45,11 @@ export function SynergyStage(props0: { opportunityId?: string; analysisId?: stri
     <>
       {confirmDialog}
       {!canCurate ? (
-        <PrimaryAction label="시너지 분석 실행" disabled disabledReason="시너지 분석은 analyst 권한이 필요합니다." />
+        <PrimaryAction label={t("runSynergyAnalysis")} disabled disabledReason={t("synergyAnalysisRequiresTheAnalyst")} />
       ) : !showNewForm || !targetSel ? (
-        <PrimaryAction inline label="새 시너지 평가 입력" onClick={() => { setShowNewForm(true); setTimeout(() => document.querySelector(".sizing-new-form")?.scrollIntoView({ block: "center" }), 0); }} />
+        <PrimaryAction inline label={t("newSynergyEvaluationInput")} onClick={() => { setShowNewForm(true); setTimeout(() => document.querySelector(".sizing-new-form")?.scrollIntoView({ block: "center" }), 0); }} />
       ) : (
-        <PrimaryAction label={creating ? "분석 시작 중..." : "시너지 분석 실행"} disabled={creating} disabledReason="분석을 시작하는 중입니다." onClick={() => void createAnalysis()} />
+        <PrimaryAction label={creating ? tc("analysisStarting") : t("runSynergyAnalysis2")} disabled={creating} disabledReason={t("startingTheAnalysis")} onClick={() => void createAnalysis()} />
       )}
 
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}

@@ -274,7 +274,9 @@ describe("yearly totals (task A)", () => {
     expect(src).toContain('className="invest-total-row" data-testid="invest-summary-year-total"');
     expect(src).toContain("schedTotals.yearTotals.map");
     expect(src).toContain("{fmtM(schedTotals.grandKrwM)}");
-    expect(src).toContain("\ud569\uacc4 \uc81c\uc678"); // "excluded from total" label on the inflow rows
+    // i18n: inflow labels are catalog keys — pin both inflow-row keys.
+    expect(src).toContain('t("revenueInflowReferenceExcludedFrom")');
+    expect(src).toContain('t("governmentRDInflowReference")');
   });
 });
 

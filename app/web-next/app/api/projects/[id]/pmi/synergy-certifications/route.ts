@@ -28,7 +28,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "시너지 인증은 analyst 역할 이상이어야 합니다.");
+  if (ctx.role === "viewer") return forbidden("role_required", "Confirming a synergy requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   if (!pmiApplicability(getDb(), id).applies) return forbidden("not_applicable_track", PMI_NOT_APPLICABLE_MESSAGE);
@@ -38,10 +38,10 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const runRateBp = Number(body?.run_rate_bp);
   const quarters = Number(body?.sustained_quarters);
   if (!Number.isInteger(runRateBp) || runRateBp <= 0) {
-    return badRequest("invalid_request", "run_rate_bp는 양의 정수(연환산 런레이트, basis points)입니다.");
+    return badRequest("invalid_request", "run_rate_bp must be a positive integer (annualized run-rate basis points).");
   }
   if (!Number.isInteger(quarters) || quarters <= 0) {
-    return badRequest("invalid_request", "sustained_quarters는 양의 정수(지속 분기 수)입니다.");
+    return badRequest("invalid_request", "sustained_quarters must be a positive integer (sustained quarters).");
   }
   const db = getDb();
   const now = new Date().toISOString();

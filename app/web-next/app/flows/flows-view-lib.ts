@@ -134,28 +134,31 @@ export interface RunsMeta {
   nextBefore?: { processRuns: string | null; llmCalls: string | null };
 }
 
-// ── 단계 한글명 ──────────────────────────────────────────────────────────
+// ── 단계명 ───────────────────────────────────────────────────────────────
 // process/flow.spec.yaml의 stages[].name 사본이다. /api/flows가 단계 id만
 // 돌려주므로(§6.2 프러젝션에 name 미포함) 화면 라벨로만 쓴다 — 로직 분기에
 // 사용 금지. 드리프트는 pm-catalog/spec-activities 생성 검사 체인에서
 // 감지되지 않으므로, 단계명 변경 PR은 이 상수를 함께 고친다(구현 편차 #1).
-export const STAGE_NAMES: Record<string, string> = {
-  S1: "시장분석",
-  S2: "기회 발굴",
-  S3: "시너지·전략적 적합성",
-  S4: "진출방식 결정",
-  S5: "자체 진출",
-  S6: "대상 후보 발굴",
-  S7: "대상 선정",
-  S8: "사업성 분석",
-  S9: "실사·검증",
-  S10: "투자구조 설계",
-  S11: "투자심사·실행",
-  S12: "사후 관리",
+// i18n (design 2026-10-23-i18n-ui-adoption): ko 원문은 locales/ko.json의
+// pages.flows.stageNames.* 마스터 값이고, 이 맵은 catalog 키만 노출한다 —
+// 화면에서 tr(key)로 풀어 쓴다(미지 단계는 null → 원문 id 폴백).
+export const STAGE_NAME_KEY: Record<string, string> = {
+  S1: "pages.flows.stageNames.S1",
+  S2: "pages.flows.stageNames.S2",
+  S3: "pages.flows.stageNames.S3",
+  S4: "pages.flows.stageNames.S4",
+  S5: "pages.flows.stageNames.S5",
+  S6: "pages.flows.stageNames.S6",
+  S7: "pages.flows.stageNames.S7",
+  S8: "pages.flows.stageNames.S8",
+  S9: "pages.flows.stageNames.S9",
+  S10: "pages.flows.stageNames.S10",
+  S11: "pages.flows.stageNames.S11",
+  S12: "pages.flows.stageNames.S12",
 };
 
-export function stageName(id: string): string {
-  return STAGE_NAMES[id] ?? id;
+export function stageNameKey(id: string): string | null {
+  return STAGE_NAME_KEY[id] ?? null;
 }
 
 // ── 포맷터 (ADR-0088 숫자 우측·tabular, keep-all 셀 규약) ────────────────
@@ -224,21 +227,25 @@ export function bucketLlmCallsByDay(rows: LlmCallRow[]): DayBucket[] {
 }
 
 // ── 상태 칩 (A5: 색 단독 금지 — 아이콘+텍스트 병기) ───────────────────────
+// i18n (design 2026-10-23-i18n-ui-adoption): 칩 문구는 catalog 키로 방출하고
+// 화면에서 tr(key)로 풀어 쓴다. 미지 값은 key=null + label=원문 폴백.
+export interface ChipView { key: string | null; label: string; cls: string }
+
 export const RUN_STATUS_OK = new Set(["succeeded", "completed", "complete", "ok", "running", "in_progress", "pending"]);
 
-export function runStatusChip(status: string): { label: string; cls: string } {
-  if (status === "failed") return { label: "✕ 실패", cls: "status-chip status-rejected" };
-  if (RUN_STATUS_OK.has(status)) return { label: "✓ 성공", cls: "status-chip status-approved" };
-  return { label: status, cls: "status-chip status-not-started" };
+export function runStatusChip(status: string): ChipView {
+  if (status === "failed") return { key: "pages.flows.chips.runFailed", label: "", cls: "status-chip status-rejected" };
+  if (RUN_STATUS_OK.has(status)) return { key: "pages.flows.chips.runSuccess", label: "", cls: "status-chip status-approved" };
+  return { key: null, label: status, cls: "status-chip status-not-started" };
 }
 
 /** 근거 칩(classifiedBy 유도) — Row 3가 catalogMatched 불리언 + source만 노출하므로
  *  3값(카탈로그/규칙/AI 폴백) 구분은 불가능하다(구현 편차 #4): synthesis=결정론,
  *  llm+matched=카탈로그, llm+unmatched=카탈로그 외. */
-export function classifiedByChip(row: Pick<LlmCallRow, "source" | "catalogMatched">): { label: string; cls: string } {
-  if (row.source === "synthesis") return { label: "결정론", cls: "status-chip status-not-started" };
-  if (row.catalogMatched) return { label: "카탈로그", cls: "status-chip status-not-started" };
-  return { label: "카탈로그 외", cls: "status-chip status-in-progress" };
+export function classifiedByChip(row: Pick<LlmCallRow, "source" | "catalogMatched">): { key: string; cls: string } {
+  if (row.source === "synthesis") return { key: "pages.flows.chips.deterministic", cls: "status-chip status-not-started" };
+  if (row.catalogMatched) return { key: "pages.flows.chips.catalog", cls: "status-chip status-not-started" };
+  return { key: "pages.flows.chips.offCatalog", cls: "status-chip status-in-progress" };
 }
 
 // ── 드라이런 세션 (Row 5 API 계약 /api/flows/dry-run — 화면 설계 2026-10-24 §6·§7) ──
@@ -320,63 +327,67 @@ export interface DryRunSuggestion {
  *  없으므로 비용 확인 문구용 상수만 복사한다(드리프트 시 dry-run.test.ts가 감지). */
 export const DRY_RUN_MAX_TOKENS_UI = 1500;
 
-/** 실행 전 확인 대화상자 공개 문구 — execute 응답 meta.note와 동일 문장(§6.2). */
-export const DRY_RUN_DISCLOSURE = "드라이런 호출은 런 장부에 is_dry_run 플래그로 기록되며 운영 대시보드 기본 집계에서 제외됩니다.";
+/** 실행 전 확인 대화상자 공개 문구 — execute 응답 meta.note와 동일 문장(§6.2).
+ *  i18n: ko 원문은 locales/ko.json pages.flows.dryRunSession.disclosure 마스터 값. */
+export const DRY_RUN_DISCLOSURE_KEY = "pages.flows.dryRunSession.disclosure";
 
 /** 세션 상태 칩 — active는 아직 실행 전이라 "편집 중"(§6.1 상태 칩 어휘). */
-export function sessionStatusChip(status: string): { label: string; cls: string } {
-  if (status === "active") return { label: "편집 중", cls: "status-chip status-in-progress" };
-  if (status === "closed") return { label: "완료", cls: "status-chip status-approved" };
-  return { label: status, cls: "status-chip status-not-started" };
+export function sessionStatusChip(status: string): ChipView {
+  if (status === "active") return { key: "pages.flows.chips.sessionEditing", label: "", cls: "status-chip status-in-progress" };
+  if (status === "closed") return { key: "pages.flows.chips.sessionDone", label: "", cls: "status-chip status-approved" };
+  return { key: null, label: status, cls: "status-chip status-not-started" };
 }
 
 /** A/B 등급 필(벤치 A3-2 채택 — 색+텍스트 병기, A5). 선호 방향에서 유도한다:
  *  override 선호 = 개선, base 선호 = 악화, tie = 동률, 미기록 = 미판정. */
-export function gradeFromPreference(p: DryRunPreference | null | undefined): { label: string; cls: string } {
-  if (p === "override") return { label: "개선", cls: "status-chip status-approved" };
-  if (p === "base") return { label: "악화", cls: "status-chip status-rejected" };
-  if (p === "tie") return { label: "동률", cls: "status-chip status-not-started" };
-  return { label: "미판정", cls: "status-chip status-not-started" };
+export function gradeFromPreference(p: DryRunPreference | null | undefined): { key: string; cls: string } {
+  if (p === "override") return { key: "pages.flows.chips.gradeImproved", cls: "status-chip status-approved" };
+  if (p === "base") return { key: "pages.flows.chips.gradeRegressed", cls: "status-chip status-rejected" };
+  if (p === "tie") return { key: "pages.flows.chips.gradeTie", cls: "status-chip status-not-started" };
+  return { key: "pages.flows.chips.gradeUnjudged", cls: "status-chip status-not-started" };
 }
 
-/** 세션 목록용 선호 라벨(등급 필과 별개의 데이터 표기). */
-export function preferenceLabel(p: DryRunPreference | null | undefined): string {
-  if (p === "override") return "override 선호";
-  if (p === "base") return "base 선호";
-  if (p === "tie") return "동률";
-  return "—";
+/** 세션 목록용 선호 라벨(등급 필과 별개의 데이터 표기) — catalog 키 방출,
+ *  미기록은 null(화면에서 "—" 폴백). */
+export function preferenceLabelKey(p: DryRunPreference | null | undefined): string | null {
+  if (p === "override") return "pages.flows.chips.prefOverride";
+  if (p === "base") return "pages.flows.chips.prefBase";
+  if (p === "tie") return "pages.flows.chips.prefTie";
+  return null;
 }
 
 /** 다리 출처 칩 — A/B 비교 열의 AI/결정론 구분(아이콘+텍스트, A5). */
-export function sourceChip(source: string | null | undefined): { label: string; cls: string } {
-  if (source === "llm") return { label: "AI", cls: "status-chip status-in-progress" };
-  return { label: "결정론", cls: "status-chip status-not-started" };
+export function sourceChip(source: string | null | undefined): { key: string; cls: string } {
+  if (source === "llm") return { key: "pages.flows.chips.sourceAi", cls: "status-chip status-in-progress" };
+  return { key: "pages.flows.chips.deterministic", cls: "status-chip status-not-started" };
 }
 
 /** TTL 만료 임박 칩(화면 설계 §13-3 권장 반영) — 만료 72시간 이내에만 노출.
- *  nowMs를 주입받아 단위 테스트 가능. */
+ *  nowMs를 주입받아 단위 테스트 가능. 칩 문구와 title 문구 모두 catalog 키 방출. */
 export function expiryChip(
   expiresAt: string | null | undefined,
   nowMs: number = Date.now(),
-): { label: string; cls: string; title: string } | null {
+): { key: string; cls: string; titleKey: string; titleParams: Record<string, string> } | null {
   if (!expiresAt) return null;
   const t = new Date(expiresAt).getTime();
   if (Number.isNaN(t)) return null;
   const hours = (t - nowMs) / 3600_000;
   if (hours > 72) return null;
   if (hours <= 0) {
-    return { label: "만료됨", cls: "status-chip status-rejected", title: `세션 TTL이 만료되었습니다(${fmtDateTime(expiresAt)}) — 읽기·실행 경로에서 소거됩니다(§6.8).` };
+    return { key: "pages.flows.chips.expired", cls: "status-chip status-rejected", titleKey: "pages.flows.chips.expiredTitle", titleParams: { p1: fmtDateTime(expiresAt) } };
   }
-  return { label: "만료 예정", cls: "status-chip status-amber", title: `TTL 만료 임박(${fmtDateTime(expiresAt)}) — 만료 세션은 읽기·실행 경로에서 소거됩니다(§6.8).` };
+  return { key: "pages.flows.chips.expiringSoon", cls: "status-chip status-amber", titleKey: "pages.flows.chips.expiringSoonTitle", titleParams: { p1: fmtDateTime(expiresAt) } };
 }
 
 /** 실행 전 비용 확인용 추정(화면 설계 §6.2). Row 5 API는 실행 시점 재조회용
  *  estimate 엔드포인트가 없어(구현 편차 #A) 세션 누계 장부에서 유도한다:
- *  llm 호출 실측이 있으면 measured(회당 평균), 없으면 unknown(토큰 상한 안내). */
+ *  llm 호출 실측이 있으면 measured(회당 평균), 없으면 unknown(토큰 상한 안내).
+ *  i18n: 안내 문구는 catalog 키 + params 방출 — 화면에서 tr(noteKey, noteParams). */
 export interface SessionCostEstimate {
   basis: "measured" | "unknown";
   costUsd: number | null;
-  note: string;
+  noteKey: string;
+  noteParams: Record<string, string>;
 }
 
 export function estimateFromLedger(ledger: DryRunLedger): SessionCostEstimate {
@@ -385,13 +396,15 @@ export function estimateFromLedger(ledger: DryRunLedger): SessionCostEstimate {
     return {
       basis: "measured",
       costUsd: perCall,
-      note: `직전 실행 실측 기준 — 누계 ${fmtUsd(ledger.costUsd)} / ${fmtInt(ledger.llmCalls)}회 llm 호출(회당 ${fmtUsd(perCall)}). 실제 비용은 모델·입력 길이에 따라 달라질 수 있습니다.`,
+      noteKey: "pages.flows.chips.costMeasuredNote",
+      noteParams: { p1: fmtUsd(ledger.costUsd), p2: fmtInt(ledger.llmCalls), p3: fmtUsd(perCall) },
     };
   }
   return {
     basis: "unknown",
     costUsd: null,
-    note: `측정된 비용 기록이 없습니다(첫 실행) — 토큰 상한 ${fmtInt(DRY_RUN_MAX_TOKENS_UI)} 기준 보수적 추정만 가능합니다. 실행 전 확인하세요.`,
+    noteKey: "pages.flows.chips.costUnknownNote",
+    noteParams: { p1: fmtInt(DRY_RUN_MAX_TOKENS_UI) },
   };
 }
 

@@ -5,6 +5,7 @@
 // 판정 요약 (one sentence from the S5 judgement) | 확정 | 작업. Filter tabs (처리할 것 / 전체) sit above.
 // On S5 the 판정 button opens CapabilityJudgementDialog, which writes to the page draft state; S8 has no
 // dialog, only an "S5에서 판정" link. AI output is never a decision: confirming is a separate human act.
+import { TranslatorFn } from "../../i18n/config.ts";
 import { useState } from "react";
 import { ColGroup } from "../ui.tsx";
 import { ClampedText } from "./ClampedText.tsx";
@@ -16,6 +17,7 @@ import {
 import type { AttainabilityRowView, AttainabilitySummary } from "../../lib/capability-attainability.ts";
 import { JUDGEMENT_FIELD_LABEL, type AiMarks, type JudgementField, type JudgementProposal } from "../../lib/capability-judgement-ai-merge.ts";
 import { staleChipText, buildJudgementDetail, buildJudgementSummary, defaultFilter, filterCounts, filterRows, neighborId, type JudgementFilter } from "../../lib/capability-judgement-view.ts";
+import { useTranslations } from "next-intl";
 
 export interface AttainabilityViewData {
   opportunity_id: string | null;
@@ -84,30 +86,30 @@ export const judgementPatch = (id: string, d: JudgementDraft, s3Hash: string | u
 });
 
 
-const levelText = (v: string) => (v.trim() === "" ? "미정" : v);
+const levelText = (v: string, tc: TranslatorFn) => (v.trim() === "" ? tc("common.undetermined") : v);
 
-export function SummaryStrip({ s }: { s: AttainabilitySummary }) {
+export function SummaryStrip({ s }: { s: AttainabilitySummary }) {const t = useTranslations("components.capabilityJudgement.table"); const tc = useTranslations("common");
   const judged = Math.max(0, s.total - s.grades.unjudged);
   const unjudged = Math.max(0, s.grades.unjudged - s.stale);
   return (
     <>
-      <p className="m-0 mb-2 text-[length:var(--fs-caption)]" aria-label="필요 역량 요약" data-testid="capability-summary">
-        판정 {judged}/{s.total} · 확정 {s.confirmed} · {s.stale > 0 ? <span className="status-chip status-amber"><span aria-hidden="true">!</span> 재판정 필요 {s.stale}</span> : "재판정 필요 0"} · 미판정 {unjudged}
+      <p className="m-0 mb-2 text-[length:var(--fs-caption)]" aria-label={t("requiredCapabilitySummary")} data-testid="capability-summary">
+        {tc("judgement")} {judged}/{s.total} {t("confirmed")} {s.confirmed} · {s.stale > 0 ? <span className="status-chip status-amber"><span aria-hidden="true">!</span> {tc("rejudgeNeeded")} {s.stale}</span> : t("zeroNeeding")} {t("notJudged")} {unjudged}
       </p>
       {s.banner && s.bannerText && <div className="legacy-model-notice mb-2" role="alert"><p className="legacy-model-notice-text">{s.bannerText}</p></div>}
     </>
   );
 }
 
-export function RemovedCapabilities({ removed }: { removed: RemovedCapability[] }) {
+export function RemovedCapabilities({ removed }: { removed: RemovedCapability[] }) {const t = useTranslations("components.capabilityJudgement.table"); const tc = useTranslations("common");
   if (removed.length === 0) return null;
   return (
     <details className="mb-2">
-      <summary className="cursor-pointer text-[length:var(--fs-caption)]">삭제된 역량 (판정 이력) {removed.length}건</summary>
+      <summary className="cursor-pointer text-[length:var(--fs-caption)]">{t("deletedCapabilitiesJudgementHistory")} {removed.length}{tc("countUnit")}</summary>
       <ul className="m-0 pl-4 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
         {removed.map((x, i) => (
           <li key={`${x.rowId}-${i}`}>
-            {x.capability} — 필요 {levelText(x.requiredLevel)} / 보유 {levelText(x.currentLevel)}, 마지막 판정 {x.attainability?.grade ? ATTAINABILITY_GRADE_LABEL[x.attainability.grade] : "미판정"}{x.attainability?.confirmedBy ? ` (확정 ${x.attainability.confirmedBy})` : ""} · {x.removedAt.slice(0, 10)} S3에서 삭제({x.removedBy})
+            {x.capability} {t("required")} {levelText(x.requiredLevel, tc)} {t("held")} {levelText(x.currentLevel, tc)}{t("lastJudgement")} {x.attainability?.grade ? ATTAINABILITY_GRADE_LABEL[x.attainability.grade] : tc("unjudged")}{x.attainability?.confirmedBy ? t("confirmedP1", { p1: x.attainability.confirmedBy }) : ""} · {x.removedAt.slice(0, 10)} {t("deletedInS3")}{x.removedBy})
           </li>
         ))}
       </ul>
@@ -122,17 +124,18 @@ export function RemovedCapabilities({ removed }: { removed: RemovedCapability[] 
 // 작업 link "S5에서 판정" (must not wrap). Index 0 (name) has no minimum. Below ~960px (design-token-exempt: prose) tmin scrolls horizontally.
 const COL_PCT = [42, 9, 11, 28, 10] as const;
 export const COL_MIN_REM = [0, 6.5, 6.5, 10, 7] as const;
-const FILTER_LABEL: Record<JudgementFilter, string> = { todo: "처리할 것", all: "전체" };
+const FILTER_LABEL = (tr: TranslatorFn): Record<JudgementFilter, string> => ({ todo: tr("components.capabilityJudgement.table.toProcess"), all: tr("common.all") });
 /** S9 필요 역량 검증 판정 (capability-dd) — S8 패널은 읽기 전용 반영, 기록은 S9 탭(사람 전용). */
 export interface CapabilityDdVerdictView { coverage: string; note: string; by: string; at: string }
+// 라벨은 카탈로그 키 — 렌더 시 TranslatorFn으로 푼다.
 const S9_COVERAGE_LABEL: Record<string, { label: string; cls: string }> = {
-  resolved: { label: "해소 (대상 보유)", cls: "status-green" },
-  partial: { label: "부분 해소", cls: "status-amber" },
-  unresolved: { label: "미해소 (자체 투자 필요)", cls: "status-red" },
+  resolved: { label: "components.capabilityJudgement.table.resolvedTargetHoldsIt", cls: "status-green" },
+  partial: { label: "components.capabilityJudgement.table.partiallyResolved", cls: "status-amber" },
+  unresolved: { label: "components.capabilityJudgement.table.unresolvedOwnInvestmentNeeded", cls: "status-red" },
 };
 const EMPTY_DIRTY: ReadonlySet<string> = new Set();
 
-export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href, note, dirty = EMPTY_DIRTY, judgeHref, judgeLabel = "S5에서 판정", ai, startYearFor, onStartYearChange, s9, showFilter = true }: {
+export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href, note, dirty = EMPTY_DIRTY, judgeHref, judgeLabel, ai, startYearFor, onStartYearChange, s9, showFilter = true }: {
   rows: AttainabilityRowView[];
   drafts: Record<string, JudgementDraft>;
   /** True only on the S5 edit surface; S8 and viewers get no inputs and no dialog. */
@@ -158,9 +161,10 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
   /** 2026-10-20 round 5: the S8 read-only panel hides the 처리할 것/전체 filter — nothing is
    *  "processed" in S8 (judgement lives in S5/S7/S9), so every row is shown. */
   showFilter?: boolean;
-}) {
+}) {const tr = useTranslations(); const t = useTranslations("components.capabilityJudgement.table"); const tc = useTranslations("common");
   const canEdit = editable && !!onSet;
   const counts = filterCounts(rows, dirty);
+  const judgeLabelText = judgeLabel ?? tc("judgedInS5");
   const [filter, setFilter] = useState<JudgementFilter>(() => defaultFilter(counts.todo));
   const [editingId, setEditingId] = useState<string | null>(null);
   const shown = showFilter ? filterRows(rows, filter, dirty) : rows;
@@ -177,26 +181,26 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
   return (
     <>
       {showFilter && (
-        <div role="tablist" aria-label="필요 역량 보기 필터" className="flex flex-wrap gap-1 mb-2">
+        <div role="tablist" aria-label={t("requiredCapabilityViewFilter")} className="flex flex-wrap gap-1 mb-2">
           {(["todo", "all"] as const).map((f) => (
             <button key={f} type="button" role="tab" aria-selected={filter === f} className={filter === f ? "btn-primary btn-sm" : "btn-ghost btn-sm"} onClick={() => setFilter(f)}>
-              {FILTER_LABEL[f]} ({counts[f]})
+              {FILTER_LABEL(tr)[f]} ({counts[f]})
             </button>
           ))}
         </div>
       )}
       {shown.length === 0 ? (
         <p className="text-[color:var(--muted-fg)] mb-2" data-testid="filter-empty">
-          {showFilter && filter === "todo" ? "처리할 판정이 없습니다 — 전체에서 확인하세요" : "해당하는 필요 역량이 없습니다."}
+          {showFilter && filter === "todo" ? t("noJudgementsToProcessCheck") : t("noMatchingRequiredCapabilities")}
         </p>
       ) : (
-        <div className="table-scroll" role="region" aria-label="데이터 표 (가로 스크롤)" tabIndex={0}>
-          <table className="data-table mb-2 table-fixed-pct tmin-48" aria-label="필요 역량 달성 가능성 표">
-            <caption className="sr-only">필요 역량 달성 가능성 — 필요도, 보유 판정, 판정 순</caption>
+        <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+          <table className="data-table mb-2 table-fixed-pct tmin-48" aria-label={t("capabilityAttainabilityTable")}>
+            <caption className="sr-only">{t("capabilityAttainabilityByNecessityHeld")}</caption>
             <ColGroup widths={COL_PCT} />
             <thead>
               <tr>
-                <th scope="col">필요 역량</th><th scope="col" style={{ minWidth: "6.5rem" }}>필요도</th><th scope="col" style={{ minWidth: "6.5rem" }}>보유 판정</th><th scope="col" style={{ minWidth: "10rem" }}>판정</th><th scope="col" style={{ minWidth: "7rem" }}>작업</th>
+                <th scope="col">{tc("requiredCapability")}</th><th scope="col" style={{ minWidth: "6.5rem" }}>{tc("necessity")}</th><th scope="col" style={{ minWidth: "6.5rem" }}>{tc("heldJudgement")}</th><th scope="col" style={{ minWidth: "10rem" }}>{tc("judgement")}</th><th scope="col" style={{ minWidth: "7rem" }}>{tc("actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -210,7 +214,7 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
                       <span className="font-semibold">{r.capability}</span>
                       {(r.stale || cautions.length > 0) && (
                         <div className="flex flex-wrap gap-1 mt-1" data-testid="capability-chips">
-                          {r.stale && <span className="status-chip status-amber"><span aria-hidden="true">!</span> {r.stale_reasons?.length ? staleChipText(r) : "S3 변경 — 재판정 필요"}</span>}
+                          {r.stale && <span className="status-chip status-amber"><span aria-hidden="true">!</span> {r.stale_reasons?.length ? staleChipText(r) : t("s3ChangeNeeded")}</span>}
                           {cautions.map((c) => (
                             <span key={c.key} className={`status-chip ${c.tone === "red" ? "status-red" : c.tone === "amber" ? "status-amber" : "status-not-started"}`}>
                               <span aria-hidden="true">{c.tone === "red" ? "▲" : c.tone === "amber" ? "!" : "·"}</span> {c.label}
@@ -234,35 +238,35 @@ export function CapabilityJudgementTable({ rows, drafts, editable, onSet, s3Href
                         // (when recorded), the S5/S7 judgement sentence, and the confirmation meta.
                         const v = s9?.[r.id];
                         const cov = v ? S9_COVERAGE_LABEL[v.coverage] : undefined;
-                        const s9Tip = v ? `근거: ${v.note || "—"} · ${v.by} · ${v.at.slice(0, 10)} — 판정 기록은 S9 필요 역량 검증 탭(사람 전용)` : "";
+                        const s9Tip = v ? t("evidenceP1P2P3Judgement", { p1: v.note || "—", p2: v.by, p3: v.at.slice(0, 10) }) : "";
                         const s5s7Empty = !sentence && !r.confirmed_at && !r.stale && !r.grade;
                         return (
                           <>
                             {v && cov && (
                               <span className="block mb-1" data-testid={`capability-s9-cell-${r.id}`} title={s9Tip}>
-                                <span className={`status-chip ${cov.cls}`}><span aria-hidden="true">{v.coverage === "resolved" ? "✓" : v.coverage === "partial" ? "◐" : "▲"}</span> {cov.label}</span>
-                                <span className="block break-words text-[color:var(--muted-fg)]">S9 기록 · {v.by} · {v.at.slice(5, 10)}</span>
+                                <span className={`status-chip ${cov.cls}`}><span aria-hidden="true">{v.coverage === "resolved" ? "✓" : v.coverage === "partial" ? "◐" : "▲"}</span> {tr(cov.label)}</span>
+                                <span className="block break-words text-[color:var(--muted-fg)]">{t("s9Record")} {v.by} · {v.at.slice(5, 10)}</span>
                               </span>
                             )}
                             {sentence
                               ? <ClampedText text={sentence} title={buildJudgementDetail(draftOf(r))} lines={1} />
-                              : !v && <span className="text-[color:var(--muted-fg)]">미판정</span>}
+                              : !v && <span className="text-[color:var(--muted-fg)]">{tc("unjudged")}</span>}
                             {dirty.has(r.id) && (
                               <span className="block text-[color:var(--muted-fg)]">
-                                저장 전{ai?.marks[r.id]?.length ? <> · <span className="status-chip status-not-started" data-testid="ai-draft-chip" title={`AI 초안(저장 전): ${ai.marks[r.id].map((f) => JUDGEMENT_FIELD_LABEL[f]).join(", ")} — 사람이 검토·수정한 뒤 저장하세요.`}><span aria-hidden="true">✦</span> AI 초안</span></> : null}
+                                {tc("unsaved")}{ai?.marks[r.id]?.length ? <> · <span className="status-chip status-not-started" data-testid="ai-draft-chip" title={t("aiDraftUnsavedP1A", { p1: ai.marks[r.id].map((f) => JUDGEMENT_FIELD_LABEL[f]).join(", ") })}><span aria-hidden="true">✦</span> {tc("aiDraft")}</span></> : null}
                               </span>
                             )}
-                            {r.confirmed_at && <span className="block mt-1"><span className="status-chip status-green"><span aria-hidden="true">✓</span> 확정</span><span className="block break-words text-[color:var(--muted-fg)]">{r.confirmed_by} · {r.confirmed_at.slice(5, 10)}</span></span>}
-                            {!r.confirmed_at && r.stale && <span className="status-chip status-amber"><span aria-hidden="true">!</span> 재판정 필요</span>}
-                            {!r.confirmed_at && !r.stale && r.grade && <span className="status-chip status-not-started"><span aria-hidden="true">○</span> 확정 전</span>}
+                            {r.confirmed_at && <span className="block mt-1"><span className="status-chip status-green"><span aria-hidden="true">✓</span> {tc("confirmed")}</span><span className="block break-words text-[color:var(--muted-fg)]">{r.confirmed_by} · {r.confirmed_at.slice(5, 10)}</span></span>}
+                            {!r.confirmed_at && r.stale && <span className="status-chip status-amber"><span aria-hidden="true">!</span> {tc("rejudgeNeeded")}</span>}
+                            {!r.confirmed_at && !r.stale && r.grade && <span className="status-chip status-not-started"><span aria-hidden="true">○</span> {t("item")}</span>}
                           </>
                         );
                       })()}
                     </td>
                     <td className="text-[length:var(--fs-caption)]">
                       {canEdit
-                        ? <button type="button" className="btn-ghost btn-sm" aria-label={`${r.capability} 판정`} onClick={() => setEditingId(r.id)}>판정</button>
-                        : judgeHref ? <a href={judgeHref} className="text-[color:var(--accent)] underline" aria-label={`${r.capability} ${judgeLabel}`}>{judgeLabel}</a> : null}
+                        ? <button type="button" className="btn-ghost btn-sm" aria-label={t("p1Judgement", { p1: r.capability })} onClick={() => setEditingId(r.id)}>{tc("judgement")}</button>
+                        : judgeHref ? <a href={judgeHref} className="text-[color:var(--accent)] underline" aria-label={`${r.capability} ${judgeLabelText}`}>{judgeLabelText}</a> : null}
                     </td>
                   </tr>
                 );
