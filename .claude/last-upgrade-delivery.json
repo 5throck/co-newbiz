@@ -1,18 +1,11 @@
 {
-  "timestamp": "2026-10-23T11:11:43.624Z",
+  "timestamp": "2026-10-24T17:09:08.766Z",
   "files": [
-    ".gitleaks.toml",
-    "AGENTS.md",
     "CLAUDE.md",
     "agents/i18n-specialist.md",
-    "docs/governance/agents/execution-plan-templates.md",
-    "docs/governance/agents/pm-gateway-workflow.md",
-    "docs/governance/agents/workflows.md",
-    "docs/workspace-schema.json",
     "scripts/SCRIPTS.md",
-    "scripts/design-lint.ts",
-    "scripts/lib/constitution-scrub.ts",
-    "scripts/validate-model-registry.ts",
+    "scripts/dev-sync.ts",
+    "scripts/upgrade-project.ts",
     "template-version.txt"
   ]
 }
