@@ -1745,6 +1745,11 @@
       "title": "페이지를 찾을 수 없습니다",
       "body": "주소가 바뀌었거나 존재하지 않는 화면입니다. 검토/안건 보드로 돌아가거나 이전 화면으로 이동하세요."
     },
+    "unexpected": {
+      "title": "문제가 발생했습니다",
+      "body": "예상치 못한 오류가 발생했습니다. 일시적인 문제일 수 있으니 잠시 후 다시 시도하세요. 문제가 반복되면 화면을 새로고침하거나 이전 화면으로 돌아가세요.",
+      "digest": "오류 추적 코드(digest): {digest}"
+    },
     "codes": {
       "active_run_exists": "이미 진행 중인 분석 실행이 있습니다.",
       "admin_required": "해석 기록은 거버넌스 관리자만 할 수 있습니다.",
@@ -7823,6 +7828,23 @@
       "noGateNote": "어떤 권한도 게이트 승인·투자 결정·종결을 실행하지 않습니다. 연결은 언제든 “연결된 앱” 화면에서 해지할 수 있습니다.",
       "approveBtn": "허용",
       "denyBtn": "거부"
+    },
+    "glossary": {
+      "heading": "용어집",
+      "searchAria": "용어집 검색",
+      "phSearch": "용어 검색",
+      "empty": "조건에 맞는 용어가 없습니다.",
+      "totalCount": "용어 {count}건",
+      "detailAriaEmpty": "용어 상세 패널",
+      "detailEmptyPrompt": "목록에서 용어를 선택하면 정의와 중요성 등 상세 정보가 여기 표시됩니다.",
+      "detailAria": "{name} 상세 정보",
+      "closeAria": "상세 패널 닫기",
+      "secDefinition": "정의",
+      "secWhy": "중요성",
+      "secAliases": "별칭",
+      "secRelated": "관련 용어",
+      "secUsedIn": "사용 프로시저·스킬",
+      "secOwner": "소유 에이전트"
     },
     "library": {
       "selectPrompt": "왼쪽에서 문서를 선택하면 내용이 표시됩니다.",
