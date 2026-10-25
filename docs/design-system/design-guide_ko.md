@@ -16,7 +16,7 @@ counterpart: design-guide.md
 > **상태**: v1.0 — 웹 앱(`app/web-next`)의 공식 디자인 정책. co-price의
 > `docs/design.md`(UI/UX Design System v6.0)에서 파생되어 co-newbiz의 딜 검토
 > 도메인에 맞게 조정되었습니다. 런타임 토큰은 `app/web-next/app/styles.css`에
-> 있으며, 이 문서는 그 토큰이 구현하는 명세입니다. `bun run design:lint`가
+> 있으며 이 문서는 그 토큰이 구현하는 명세입니다. `bun run design:lint`가
 > 기계적 규칙을 강제합니다.
 
 ---
@@ -33,7 +33,7 @@ counterpart: design-guide.md
 3. **단계 안내(Stage-guided)** — UI는 S1~S7 프로세스를 반영합니다. 사용자는
    항상 딜이 어느 단계에 있는지, 현재 단계가 무엇을 요구하는지 보게 됩니다.
 4. **에이전트 우선, 사람 확정(Agentic-first, Human-final)** — 에이전트가 실행하고
-   추천하며, UI는 에이전트 출력을 검토하는 작업대입니다. 사람의 입력은 확인과
+   추천하며 UI는 에이전트 출력을 검토하는 작업대입니다. 사람의 입력은 확인과
    수정이지, 처음부터 데이터를 입력하는 것이 아닙니다.
 5. **일관성을 통한 신뢰(Trust through consistency)** — 동일한 의미는 어디서든
    동일하게 렌더링됩니다(RAG 색상, 상태 칩, 게이트 배지, 날짜/숫자 형식).
@@ -46,7 +46,7 @@ counterpart: design-guide.md
 |---|---|---|
 | P1 | 정의 기반 UI | 화면 구조는 `process/flow.spec.yaml`에서 나옵니다. 컴포넌트에 단계 하드코딩 금지 |
 | P2 | 라이트 기본, 다크 대등 | `:root`는 라이트이며, `[data-theme="dark"]`는 대등한 일급 테마입니다. 흰색/검정을 하드코딩하지 말고 토큰을 사용 |
-| P3 | 사실당 소스 하나 | 값은 저장된 레코드에서 렌더링되며, UI에서 재계산하지 않습니다 |
+| P3 | 사실당 소스 하나 | 값은 저장된 레코드에서 렌더링되며 UI에서 재계산하지 않습니다 |
 | P4 | 쓰기 경로는 명시적 | 모든 생성/수정/삭제에는 폼/다이얼로그, 감사 추적(audit trail), 성공/실패 피드백이 있습니다 |
 | P5 | 신호는 다중 인코딩 | 상태 = 색상 + 아이콘 + 텍스트 (신호등: ● 완료 / ◐ 진행 / ○ 대기 / ✕ 종료) |
 | P6 | 파생 상태는 계산 | `currentStage` 등은 계산됩니다(evaluateProcess). 저장하거나 손으로 편집하지 않습니다 |
@@ -77,7 +77,7 @@ counterpart: design-guide.md
 ### 3.3 파생 인터랙션 토큰
 `--input-bg`, `--hover-bg`, `--sidebar-bg`, `--placeholder-fg`,
 `--scrollbar-thumb(-hover)`, `--glass-bg`, `--glass-inset` — 테마당 하나의
-정의만 두고, 컴포넌트는 토큰만 참조합니다.
+정의만 두고 컴포넌트는 토큰만 참조합니다.
 
 ## 4. 타이포그래피
 
@@ -95,7 +95,7 @@ counterpart: design-guide.md
 > 마이크로 단계 없음", design-tokens.md) 밑이었다. 하한을 `--fs-caption`으로
 > 못 박아 문서와 코드 토큰을 일치시켰다. 재무 수치의 레코드 기록(record)은
 > **sans + `tabular-nums`** 이다 — 코드는 한 번도 JetBrains Mono로 렌더한 적이
-> 없으므로 모노 규정은 문서 쪽 드리프트였고, JetBrains Mono는 코드/ID로 범위를
+> 없으므로 모노 규정은 문서 쪽 드리프트였고 JetBrains Mono는 코드/ID로 범위를
 > 한정한다.
 
 간격은 8px 기본 그리드(`0.25rem` 단위)를 따릅니다: 카드 패딩 16–24px, 리스트
@@ -109,8 +109,8 @@ counterpart: design-guide.md
   정렬 max-width 변형은 열이 눌리는 결함을 유발하여 제거되었습니다. 밀도 높은
   테이블은 창 전체 폭을 사용할 수 있습니다.
 - **딜 상세**는 단계 안내형입니다: 탭 바 위에 고정(sticky) 진행 헤더(S1~S7
-  신호등 + 게이트 배지)가 있으며, Workflow 탭이 기본값입니다.
-- **반응형**: 880px 이하에서는 사이드바가 접히고, 그리드는 1열로 축소됩니다.
+  신호등 + 게이트 배지)가 있으며 Workflow 탭이 기본값입니다.
+- **반응형**: 880px 이하에서는 사이드바가 접히고 그리드는 1열로 축소됩니다.
 
 ## 6. 컴포넌트 표준
 
@@ -130,7 +130,7 @@ counterpart: design-guide.md
 - 명도 대비 ≥ AA (라이트 테마 토큰이 이에 맞게 조정되어 있음; design:lint
   보고서로 검증).
 - 아이콘만 있는 컨트롤에는 `aria-label`을, 모든 테이블에는 `caption.sr-only`를
-  제공하며, 상태는 아이콘+텍스트+색상을 함께 사용해 전달합니다.
+  제공하며 상태는 아이콘+텍스트+색상을 함께 사용해 전달합니다.
 - 포커스는 항상 보입니다(포커스 링 토큰); 다이얼로그는 포커스를 이동시키고
   원위치시킵니다.
 

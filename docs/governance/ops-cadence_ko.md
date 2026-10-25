@@ -37,11 +37,11 @@ concurrent_deal_cap = min(reviewer_capacity / 0.3, wall_group_compatible_assignm
 - **보수적 하한**: 사이클에 리뷰어 용량 수치가 아직 없는 경우(예: 배정 확정 전의 첫 사이클), 상한은 design 원안의 "3에서 시작"이 아니라 회의 M7-3에서 확정된 보수적 값인 **1**로 기본 설정된다 — 원안은 실제로 확인된 적 없는 더 강한 리뷰어 기반을 가정한 것이었다.
 - 이 계산은 Stage 5가 실제 `project_member`/`reviewer` 배정 레코드에 대해 자동화할 때까지 수동이다(해당 사이클의 확정 리뷰어 명단에 대한 `process-governance-manager`의 계산).
 
-**이것이 연기가 아니라 옳은 해결인 이유**: 오늘 정한 고정 숫자는 인력이 처음 바뀌는 시점에 틀리게 되고, 어떤 리뷰어가 조용히 과부하에 걸리기 전까지는 아무도 눈치채지 못한다. 사이클마다 재계산하는 것은 design 자체의 수식이 의도대로 작동하는 것이며, 이전의 "지금 O-16을 확정하라"는 프레이밍은 실무에서 성립하지 않는 전제(단일 안정 배분 수치)에 근거하고 있었다.
+**이것이 연기가 아니라 옳은 해결인 이유**: 오늘 정한 고정 숫자는 인력이 처음 바뀌는 시점에 틀리게 되고 어떤 리뷰어가 조용히 과부하에 걸리기 전까지는 아무도 눈치채지 못한다. 사이클마다 재계산하는 것은 design 자체의 수식이 의도대로 작동하는 것이며 이전의 "지금 O-16을 확정하라"는 프레이밍은 실무에서 성립하지 않는 전제(단일 안정 배분 수치)에 근거하고 있었다.
 
 ## 3. 역할·권한 매트릭스 (RACI) — `docs/governance/raci.md` 참조
 
-게이트별 RACI 표는 별도 문서에 있다. `docs/governance/process-map.md`, `docs/manuals/business-manual.md`, 엔터티 온보딩 워크스루(`docs/planning/transition-plan.md` §4)에서 참조되기 때문이며, 분리해두면 세 곳의 사본이 어긋나는 것을 피할 수 있다.
+게이트별 RACI 표는 별도 문서에 있다. `docs/governance/process-map.md`, `docs/manuals/business-manual.md`, 엔터티 온보딩 워크스루(`docs/planning/transition-plan.md` §4)에서 참조되기 때문이며 분리해두면 세 곳의 사본이 어긋나는 것을 피할 수 있다.
 
 ## 4. 관련 문서
 

@@ -34,7 +34,7 @@ counterpart: governance-operations.md
 
 ## 3. 해석 레지스트리 (Interpretation Registry)
 
-질문이 생겼을 때 — "이 조항이 우리 케이스에 적용되는가?" — 그 답은 기록되며, 다음 번에 처음부터 다시 도출되지 않고, 명시적인 대체(supersession) 노트 없이 이후 답변과 모순되지 않는다.
+질문이 생겼을 때 — "이 조항이 우리 케이스에 적용되는가?" — 그 답은 기록되며 다음 번에 처음부터 다시 도출되지 않고 명시적인 대체(supersession) 노트 없이 이후 답변과 모순되지 않는다.
 
 - 요청자: 모든 에이전트 또는 인간 리뷰어.
 - 응답자: 해당 거버넌스 문서의 `owner_agent` (예: 정책의 법률 질문은 `legal-counsel`, 프로시저 질문은 `process-governance-manager`).
@@ -59,7 +59,7 @@ counterpart: governance-operations.md
 2. 영향 분석: 영향받는 `procedure`, `rag_rule`, `assumption`, 체크리스트, 용어집 참조를 식별.
 3. `process-governance-manager`가 변경 계획을 작성하고 PM이 승인.
 4. 시스템 반영: 프로시저 스키마, `rag_rule`, 체크리스트, 용어집 갱신. 문서 표면에는 별도의 재생성 단계가 필요 없다 — `/library`(ADR-0108)는 이 원본들을 라이브로 읽으므로, 커밋되는 즉시 변경이 반영된다.
-5. **소급 여부 결정**: 진행 중인 프로젝트는 변경이 명시적 재평가를 강제할 만큼 중대하지 않는 한 자신의 `project_policy_pin` 버전에 머문다 — 중대한 경우 `policy_change` 결정으로 기록하며, 절대 조용히 적용하지 않는다.
+5. **소급 여부 결정**: 진행 중인 프로젝트는 변경이 명시적 재평가를 강제할 만큼 중대하지 않는 한 자신의 `project_policy_pin` 버전에 머문다 — 중대한 경우 `policy_change` 결정으로 기록하며 절대 조용히 적용하지 않는다.
 6. 영향받는 프로젝트 오너에게 통지.
 
 ## 6. 캐던스
