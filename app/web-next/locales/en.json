@@ -5968,6 +5968,7 @@
         "chartLegendSuccess": "Successful calls",
         "chartLegendFailed": "Failed calls",
         "chartAxisCost": "Cost ($)",
+        "chartSingleBucket": "A single bar means all {p2} loaded calls fall on one day ({p1}) — the chart reflects only the rows loaded under the cursor page limit.",
         "okFilterGroup": "Success/failure filter"
       },
       "dryRunSession": {
@@ -6160,8 +6161,8 @@
         "sectionAria": "Stage flow graph",
         "sectionHint": "Click a node to filter the activity table to that stage",
         "markerChip": "Specialist marker",
-        "svgTitle": "Designed flow: common S1–S4, the track splits at S4, rejoins at S8, and the stages continue together to S12",
-        "svgDesc": "A left-to-right flow graph connecting stages S1 through S12. S1 through S4 run in common; at S4 the flow splits, with greenfield S5 continuing on the greenfield lane and brownfield S6 and S7 on the brownfield lane; the lanes rejoin at S8, and S9 through S12 run in common. Each stage node shows the stage id, name, activity count, activity dots (agent domain colors), and a track badge; activity dots carrying a specialist marker are drawn with a ring. The activity table below provides the same information as text.",
+        "svgTitle": "Designed flow: row 1 runs S1–S4 in common; at S4 the track splits into row 2, where greenfield S5 and brownfield S6–S7 merge into S8; row 3 runs S9–S12 in common",
+        "svgDesc": "A flow graph of stages S1–S12 wrapped over three rows. Row 1 runs left to right through the common stages S1–S4; at S4 the flow splits down the right edge into row 2, a fork band read right to left — the upper lane carries greenfield S5 and the lower lane carries brownfield S6 and S7 — and both lanes converge into S8. Below S8, row 3 runs left to right through the common stages S9–S12. Each stage node shows the stage id, name, activity count, activity dots (agent domain colors), and a track badge; activity dots carrying a specialist marker are drawn with a ring. The activity table below provides the same information as text.",
         "nodeTitle": "{id} · {name} — {count} activities. Click to filter the activity table to this stage.",
         "activityCount": "{count} activities",
         "trackCommon": "Common",

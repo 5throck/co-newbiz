@@ -232,6 +232,45 @@ export function bucketLlmCallsByDay(rows: LlmCallRow[]): DayBucket[] {
   return [...map.values()].sort((a, b) => a.day.localeCompare(b.day)).map((b) => ({ ...b, day: b.day.slice(5) }));
 }
 
+// ── SVG 텍스트 근사 계측 (flow-graph — 2026-10-23 사용자 보고: 카드 폭 초과 텍스트가
+// 인접 카드와 겹쳤다) ────────────────────────────────────────────────────────
+// SVG <text>는 CSS처럼 자동 축약(ellipsis)이 없어 화면이 직접 너비를 재고 잘라야
+// 한다. 실제 글리프 계측(캔버스 measureText)은 클라이언트 렌더 시점에만 가능해
+// 렌더러 내부에서도 결정적으로 쓸 수 있는 근사식을 둔다: 한글 음절·CJK·전각
+// 구간은 fontSize(전각 폭), 라틴·숫자 등 반각은 0.55×fontSize로 잰다(플랫폼별
+// 글꼴 편차를 흡수할 상한 여백은 호출부 계산에 둔다). 순수 함수라 단위 테스트가
+// 직접 검증한다(flows-console-view.test.ts).
+
+/** 전각(한글 음절·호환 자모·CJK·전각 기호/문장부호··) 글리프 판정. */
+function isWideGlyph(code: number): boolean {
+  return (
+    (code >= 0x1100 && code <= 0x11ff) || // 한글 자모
+    (code >= 0xac00 && code <= 0xd7a3) || // 한글 음절
+    (code >= 0x3000 && code <= 0x9fff) || // CJK 기호·한자·가나
+    (code >= 0xff00 && code <= 0xff60) // 전각 형식
+  );
+}
+
+/** 텍스트 근사 폭(px) — 전각 글리프는 fontSize, 반각은 0.55×fontSize. */
+export function approxTextWidth(s: string, fontSize: number): number {
+  let w = 0;
+  for (const ch of s) {
+    w += isWideGlyph(ch.codePointAt(0) ?? 0) ? fontSize : fontSize * 0.55;
+  }
+  return w;
+}
+
+/** maxWidth 내로 축약(초과 시 …). 원문은 SVG <title> 폴백이 담당하므로 여기선
+ *  표시 문자열만 반환한다. */
+export function truncateToWidth(s: string, fontSize: number, maxWidth: number): string {
+  if (approxTextWidth(s, fontSize) <= maxWidth) return s;
+  let out = s;
+  while (out.length > 1 && approxTextWidth(`${out}…`, fontSize) > maxWidth) {
+    out = out.slice(0, -1);
+  }
+  return `${out}…`;
+}
+
 // ── 상태 칩 (A5: 색 단독 금지 — 아이콘+텍스트 병기) ───────────────────────
 // i18n (design 2026-10-23-i18n-ui-adoption): 칩 문구는 catalog 키로 방출하고
 // 화면에서 tr(key)로 풀어 쓴다. 미지 값은 key=null + label=원문 폴백.

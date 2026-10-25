@@ -246,6 +246,14 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
             height={260}
             ariaLabel={t("chartAria", { p1: fmtInt(llmRows?.length ?? 0) })}
           />
+          {/* 버킷이 하루뿐일 때의 정직한 캡션(2026-10-23 사용자 보고: 막대 1개가
+              그리드 전폭을 덮어 "하루치"로 오해되기 쉬웠다) — barMaxWidth 상한과
+              함께. 표 아래 chartTableNote가 커서 한도 사실을 이미 명시한다. */}
+          {buckets.length === 1 && (
+            <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+              {t("chartSingleBucket", { p1: buckets[0]!.day, p2: fmtInt(llmRows?.length ?? 0) })}
+            </p>
+          )}
           <details className="mt-1">
             <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">{t("viewAsTable")}</summary>
             <div className="table-scroll" role="region" aria-label={t("tableScrollRegion")} tabIndex={0}>
@@ -500,19 +508,24 @@ function FilterBar({
   );
 }
 
-/** §5.2 — 호출 수(막대, 성공/실패 분해) + 비용(선, 보조축). */
+/** §5.2 — 호출 수(막대, 성공/실패 분해) + 비용(선, 보조축).
+ *  2026-10-23 사용자 보고 대응: (1) 범례를 상단 고정 + grid.top 여백으로 x축·자기
+ *  마커와의 겹침을 없애고 containLabel로 축 라벨 잘림을 막는다. (2) barMaxWidth
+ *  상한(32px) — 불러온 행이 하루에 몰려 버킷 1개일 때 막대가 그리드 전폭으로
+ *  부풀지 않고 정상 폭 막대로 렌더된다. 비용 보조축(우측)은 유지. */
 function chartOption(buckets: Array<{ day: string; ok: number; failed: number; costUsd: number }>, t: ReturnType<typeof useTranslations>): EChartsOption {
   return {
     tooltip: { trigger: "axis" },
-    legend: { data: [t("chartLegendSuccess"), t("chartLegendFailed"), t("colCost")] },
+    legend: { top: 0, data: [t("chartLegendSuccess"), t("chartLegendFailed"), t("colCost")] },
+    grid: { left: 8, right: 8, top: 56, bottom: 8, containLabel: true },
     xAxis: { type: "category", data: buckets.map((b) => b.day) },
     yAxis: [
       { type: "value", name: t("callsCount") },
       { type: "value", name: t("chartAxisCost") },
     ],
     series: [
-      { name: t("chartLegendSuccess"), type: "bar", stack: "calls", data: buckets.map((b) => b.ok) },
-      { name: t("chartLegendFailed"), type: "bar", stack: "calls", data: buckets.map((b) => b.failed) },
+      { name: t("chartLegendSuccess"), type: "bar", stack: "calls", barMaxWidth: 32, data: buckets.map((b) => b.ok) },
+      { name: t("chartLegendFailed"), type: "bar", stack: "calls", barMaxWidth: 32, data: buckets.map((b) => b.failed) },
       { name: t("colCost"), type: "line", yAxisIndex: 1, data: buckets.map((b) => Number(b.costUsd.toFixed(4))) },
     ],
   };
