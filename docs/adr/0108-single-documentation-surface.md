@@ -8,7 +8,7 @@ lang_reason: source-material
 - Status: Accepted
 - Date: 2026-09-06
 - Deciders: New Business Review Lead (PM), per user direction
-- Related: ADR-0107 (superseded by this ADR), ADR-0105 (navigation SSOT), ADR-0091 (role separation)
+- Related: ADR-0107 (superseded by this ADR), ADR-0105 (navigation SSOT), ADR-0091 (role separation); superseded-in-part (historical text unchanged) — decision 4 by ADR-0184 (2026-10-23, UI i18n catalog adoption), and the ADR-0108-era `docs/meta/` context placement by DEC-20261025-06 (2026-10-25, user ruling): `co-newbiz.context.md` returned to the docs root per the workspace template convention
 
 ## Context
 

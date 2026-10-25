@@ -11,7 +11,7 @@ lang_reason: source-material
 # 에이전트 배정 정합화 · 프롬프트 표준 · /flows 단계 흐름 시각화 — design
 
 - **Spec ID**: `2026-10-25-agent-assignment-prompt-standard-design`
-- **Status**: planned — Rows 1–3이 이 설계대로 구현한다. §3.5(트랙 전문가 하이라이트)는 Row 4(process-governance-manager)의 판정 결과에 따라 두 갈래 중 하나로 확정되는 오픈 인터페이스다.
+- **Status**: implemented (2026-10-25; registry row implemented; addenda §11–§14 landed)
 - **Related documents**: `process/flow.spec.yaml` v2.10.1 (프로세스 권위 SSOT), ADR-0053/0094 (인간 게이트·경계 #2), ADR-0074 (프로세스 SSOT), ADR-0098 (`docs/standards/llm-interaction-standard.md`), ADR-0161 (활동 수준 applicableTracks 미지원), ADR-0183 D1/D2 (PM 활동 카탈로그·관문 강제), design `2026-09-15-runtime-pm-agent-orchestration-design` §6.2–§6.7 (선행 스펙 — 이번 후속 작업의 기반이며 대체하지 않는다), design `2026-10-23-i18n-ui-adoption-design` §4 (콘텐츠 한국어 유지 경계), design `2026-10-24-flow-console-ux-benchmark` (Dagster/Airflow/GitHub Actions 패턴), `docs/context.md` (언어 정책·접근성 기준), `docs/wiki/ko/Home.md` (재사용할 여정 지도 SVG 기하)
 - **Gate-moment record**: `docs/decisions/DEC-20261025-01.md`
 
@@ -256,6 +256,8 @@ PROPOSAL and a human makes the final decision/record (ADR-0053/0094 boundary
 ---
 
 ## 6. D4 — /flows 시각화 (blueprint 탭 단계 흐름 그래프)
+
+> **Superseded 2026-10-25**: the §6 geometry and component naming are superseded by the §14 addendum — the body below is preserved as the historical record.
 
 ### 6.1 SPEC_STAGES 투영 확장 — name + applicableTracks (전제 조건)
 
@@ -506,7 +508,7 @@ flow.spec 활동 agent 변경 **0건** — D1의 (ii) 0건 원칙 불변, `meta.
 AI 2nd cross review(Row 5, process-governance-manager)가 P2로 보고한 편차에 대한 PM 판정(2026-10-25)이다. §6.1은 "표시 레이블은 i18n 카탈로그가 유지한다(next-intl `pages.flows.stageNames.*` 키)"를 요구했으나, 구현(Row 3)은 `/api/flows`의 `stage.name`(SPEC_STAGES 직접 투영)을 **모든 로케일에** 렌더하는 쪽을 채택했다(`flows-view-lib.ts`의 `stageDisplayName`, `flows-console-view.test.ts`가 잠금).
 
 - **판정: 편차 수용.** 블루프린트의 1차 청중은 한국어이며, 정식 en 번역이 존재할 때까지 스펙 한국어 단계명의 en 표시는 스펙 원문의 정직한 근원 표시(honest provenance)로 기능한다. §6.1 본문은 개정하지 않는다(append-only) — 본 절이 우선한다.
-- **en 카탈로그 뒤처짐**: `locales/en.json`의 `pages.flows.stageNames` 12키는 본 PR에서 orphan 상태로 남는다. **pruning은 UI-i18n 스트림의 다음 §3.6 extraction 배치의 후속 사항으로 기록한다** — 본 PR의 소관이 아니다.
+- **en 카탈로그 뒤처짐**: `locales/en.json`의 `pages.flows.stageNames` 12키는 본 PR에서 orphan 상태로 남는다. **pruning은 UI-i18n 스트림의 다음 §3.6 extraction 배치의 후속 사항으로 기록한다** — 본 PR의 소관이 아니다. (resolved 2026-10-25 — stageNames keys pruned from locales/en.json; see CHANGELOG)
 - 상태 전환: 본 설계는 spec-register를 통해 `implemented`로 전환되었다(2026-10-25).
 
 ---
@@ -621,3 +623,16 @@ AI 2nd cross review(Row 5, process-governance-manager)가 P2로 보고한 편차
 - `purpose` 40필드, `DUAL_ASSIGNMENTS`, `SPECIALIST_TRACK_AFFINITY`, flow.spec 무변경.
 - 한국어 출력 고정(i18n 설계 §4), JSON 계약(§5.5), proposal-only 면책, ADR-0098 양방향 원칙(§A) 무변경.
 - 위원 연기의 헌장 심화 주입 여부 — 별도 Design Gate 질의로 남긴다(§13.2 경계).
+
+---
+
+## 14. Addendum (2026-10-25, e) — /flows stage graph relaid as a three-row serpentine (§6 geometry superseded)
+
+After the Row 3 implementation shipped, a user screenshot showed the §6.2 geometry (a single left-to-right run, shipped viewBox 1820×260, ≈7:1) rendering the cards far below design size at container width — stage names truncated, the S5/S6/S7 fork cluster cramped at one end, the band's far side empty. On that user screenshot feedback (PM-accepted, 2026-10-25) the graph was relaid as a **three-row serpentine**: row 1 common S1→S4 left-to-right; row 2 a right-to-left fork band — greenfield S5 on the upper lane, brownfield S6→S7 on the lower lane, converging into S8 at the two lanes' vertical midpoint; row 3 common S9→S12 left-to-right. Winding row 2 right-to-left keeps every connector short, makes both row transfers short same-column verticals (S4→trunk on the right edge, S8→S9 on the left), and yields zero edge crossings — the band's direction is carried honestly by arrowheads.
+
+- **Component**: §6.2's `blueprint-stage-flow.tsx` shipped as `app/web-next/app/flows/flow-graph.tsx` (name finalized during implementation; §6.5's grid→graph→table placement unchanged).
+- **Shipped constants**: NODE_W 140→232, NODE_H 54→64, viewBox 1820×260→1068×396 (≈7:1→≈2.7:1 — cards render ~2.7× larger at the same container width); svg `width="100%"` + `height:auto` + `display:block` inside the `overflow-x:auto` container (the old `margin: 0 auto` clipped the left half — the "left clumping" symptom — and is removed), container minWidth 80rem→50rem; `svgTitle`/`svgDesc` rewritten in both locales to describe the actual geometry (rows, right-to-left band, lanes, merge). The geometry is machine-checked by `tests/unit/flows-console-view.test.ts` v1.5.0 (per-row stage assignment, pairwise non-overlap, edge anchors, viewBox containment, label arithmetic).
+- **Ledger chart fixes landing in the same batch**: single-bucket y-axis data-fitting via the `countAxisMax` ladder (flows-view-lib.ts) feeding an explicit primary-axis max with `minInterval: 1` and `alignTicks: false`; `barMaxWidth: 32` on the stacked bar series; legend pinned `top: 0` with `grid.top: 56` + `containLabel: true`; honest single-bucket caption (`chartSingleBucket`, ko+en). The dry-run session-page usability overhaul of the same decider-feedback round is owned by design `2026-10-25-flows-decider-feedback-chart-axis-dryrun-ux-design`, not this addendum.
+- **i18n key-resolution guard**: `tests/unit/flows-i18n-resolution.test.ts` statically extracts every `t()/tg()/tc()/tr()` call from the flows view files with their namespaces, expands the dynamic key families through the real lib emitters, and asserts every consumed key resolves to a non-empty string in BOTH the ko and en catalogs with placeholders intact — a catalog-side raw-key regression can never ship again (tightens §6.1's STAGE_NAME_KEY debt retirement and the §12 en-display deviation).
+- **§6's body is not amended (append-only) — this section prevails.**
+- **Implementation record**: the CHANGELOG entry `[2026-10-25] fix(web): /flows stage graph relaid as a three-row serpentine …` — the authoritative detail record; this addendum records the design-level deviation and does not restate it.

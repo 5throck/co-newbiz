@@ -1,7 +1,7 @@
 # Product Backlog Roadmap — co-newbiz (2026-09)
 
 **Owner**: pm
-**Status**: Active — approved 2026-09-09. Execution status (2026-09-09): Wave A done (#243/#244/#246), Wave B done (#249), Wave C done (#250), Wave D done (#251), Wave E expanded — 13 profiles total (anchors corrected to the in-force 11th revision 2026-09-10, ADR-0111): KSIC261 semiconductors, KSIC282 secondary batteries, KSIC35111 nuclear, KSIC35113 thermal, KSIC35114 solar/renewables, KSIC74100 (plant O&M), KSIC29241 construction machinery, KSIC29280 robots/humanoids, KSIC31312 drones, KSIC31111 ships/submarines, KSIC3131 space launch vehicles, KSIC63999 cybersecurity, KSIC35119 hydrogen fuel-cell (+ research docs + authoring guide), Wave F briefs delivered (`docs/decisions/open/2026-09-09-thresholds-brief-*.md`) — the underlying policy decisions now rest with the project owner.
+**Status**: Active — approved 2026-09-09. Execution status (2026-09-09): Wave A done (#243/#244/#246), Wave B done (#249), Wave C done (#250), Wave D done (#251), Wave E expanded — 13 profiles total (anchors corrected to the in-force 11th revision 2026-09-10, ADR-0111): KSIC261 semiconductors, KSIC282 secondary batteries, KSIC35111 nuclear, KSIC35113 thermal, KSIC35114 solar/renewables, KSIC74100 (plant O&M), KSIC29241 construction machinery, KSIC29280 robots/humanoids, KSIC31312 drones, KSIC31111 ships/submarines, KSIC3131 space launch vehicles, KSIC63999 cybersecurity, KSIC35119 hydrogen fuel-cell (+ research docs + authoring guide), Wave F briefs delivered (`docs/decisions/open/2026-09-09-thresholds-brief-*.md`) — the underlying policy decisions now rest with the project owner. Execution-status review (2026-10-26): index reviewed 2026-10-26 and a 2026-10 follow-ups section added (below); the 2026-09-09 record above is retained as history.
 **Origin**: full product review 2026-09-08/09; supersedes the "Still open" list in `docs/co-newbiz.context.md` as the working backlog index
 **Execution model**: one wave = one branch → `/sync` pipeline → PR → CI green → merge; signature waves (A1, B1, C1, D1–D3) require a `docs/designs/` design doc approved before implementation (Design Gate)
 
@@ -48,6 +48,16 @@ registry makes adding a source a one-line change.
 ### Wave F — Policy decision briefs (1 PR)
 - ADR-0051(b) synergy threshold: options/evidence/recommendation brief → user decision → DEC record + checklist reflection.
 - ADR-0052 open questions triaged with recommendations; skill-review triage support.
+
+## 2026-10 follow-ups (reviewed 2026-10-26)
+
+Flagged follow-ups surfaced by the 2026-10-23 → 2026-10-26 work streams — recorded here rather than silently absorbed.
+
+- **FU-1. SKILLS.md registry ↔ `skills/` directory reconciliation** — ~20 registered-but-missing rows (including all 22 technical-domain rows); they block populating `required_skills` for the technical agent batch, so the union rule (DEC-20261025-06 (d)) filters registry rows without a physical `skills/<name>/` directory. The drift itself is dispositioned as flagged follow-up work, not absorbed.
+- **FU-2. Handoff-reciprocity check candidate for `scripts/agent-lifecycle-audit.ts` Check 13** — handoff edges are declared informational in `agents/README.md` (§3.2) and are not machine-checked; evaluate extending Check 13 (handoff integrity) with a reciprocity direction.
+- **FU-3. `agents/pm.md` / `agents/i18n-specialist.md` lifecycle-audit staleness** — pre-existing staleness warnings on both files (design-protected: excluded from the 39-file rewrite by DEC-20261025-06 (b)), plus `agents/pm.md` missing the body `**Tier**` line the specialist files carry.
+- **FU-4. i18n residuals** (from `memory/2026-10-24.md`, Open Issues): residual `toLocaleString("ko-KR")` call sites outside the §3.4 batches; pre-existing raw `err.message` 500 passthroughs (generalize the 120-char slice); full-catalog client payload (7,420 keys shipped to the client vs per-page namespaces).
+- **FU-5. Dead "ADR-0090 W1b" Language-Policy anchor in the COMMON-AGENTS managed block** — template-managed content; do not edit the managed block locally. Disposition: upstream tickets filed 2026-10-26 — U-20261026-002 (variant-context placement guard), U-20261026-003 (dead anchor), and U-20261026-001 (agent-definition stub gate — the management-system gap behind the 39-stub drift).
 
 ## Acceptance criteria (every wave)
 - `test:unit`, `audit.ts`, both design lints, `contrast:check`, personas `--check`, openapi drift gate — all green

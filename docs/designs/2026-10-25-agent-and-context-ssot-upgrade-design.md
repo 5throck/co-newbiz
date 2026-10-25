@@ -1,7 +1,7 @@
 # Agent Definition Upgrade & Context SSOT Relocation — Design (2026-10-25)
 
 - **Spec ID**: `2026-10-25-agent-and-context-ssot-upgrade`
-- **Status**: Approved — user plan approval 2026-10-25 (PM session); scope extended by user mid-session directives (context SSOT relocation + log-based content refresh)
+- **Status**: implemented (2026-10-25/26; registry row implemented; approved via plan review + user mid-session directives)
 - **Author**: process-governance-manager (functional lead, acting design authority — co-newbiz has no architect agent; substitution rationale recorded here)
 - **Date**: 2026-10-25
 - **Prior art**: `docs/designs/2026-09-19-agent-roster-and-skills-design.md`
