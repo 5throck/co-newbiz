@@ -144,8 +144,8 @@ describe("orchestrator with a fake LLM", () => {
   });
   test("registered prompt never asks for a decision", () => {
     const sys = systemMessage("s5.entry_strategy_draft").content;
-    expect(sys).toContain("제안일 뿐");
-    expect(sys).toContain("지어내지 마세요");
+    expect(sys).toContain("proposal");
+    expect(sys).toContain("Do not fabricate");
   });
 });
 

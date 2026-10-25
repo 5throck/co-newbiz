@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 // Process Flow Spec → app/web-next/lib/spec-activities.generated.ts generator.
 // process/flow.spec.yaml is the SSOT; this script regenerates the static
 // activity projection consumed by the Next/Turbopack server bundle (ADR-0074).
@@ -9,6 +9,10 @@
 // v1.1.0 (Wave M M-3, ADR-0154): also emits mcp/co-newbiz/stage-guides.generated.ts,
 // the static S1-S12 slice behind the MCP stage_guide_s* prompts and flowspec://
 // resources (the stdio server and the Next bundle cannot read the YAML at runtime).
+//
+// v1.2.0 (design 2026-10-25-agent-assignment-prompt-standard §6.1): SPEC_STAGES
+// also projects stage `name` and `applicableTracks` — GET /api/flows serves the
+// direct projection instead of deriving track scope from the PM_CATALOG union.
 //
 // Usage: bun scripts/co-newbiz/generate-spec-activities.ts [--check]
 //   --check : exit 1 if either generated file would change (CI mode).
@@ -43,6 +47,8 @@ const spec = yaml.load(readFileSync(SPEC_PATH, "utf8")) as FlowSpec;
 
 const stages = spec.stages.map((s) => ({
   id: s.id,
+  name: s.name,
+  applicableTracks: s.applicableTracks ?? [],
   activities: s.activities.map((a) => ({
     id: a.id,
     agent: a.agent,

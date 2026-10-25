@@ -6,6 +6,9 @@
 // ADR-0183 D1 — PM 활동 카탈로그 (design 2026-09-15-runtime-pm-agent-orchestration §6.2).
 // pm-router의 허용 목록·규칙 에이전트 대상·LLM 분류 로스터 문자열은 이 카탈로그에서
 // 유도된다 — 코드에 에이전트 목록을 두지 않는다.
+// D2/DEC-20261025-01: 프롬프트 agent ≠ 활동 agent는 DUAL_ASSIGNMENTS 예외로만
+// 허용된다(제너레이터 die 검증). DEC-20261025-02 §11.3: SPECIALIST_TRACK_AFFINITY는
+// 표시·인지 전용 큐레이션 배열이다(적용 범위·술어·라우팅 키 없음 — ADR-0161).
 import type { PromptKey } from "./prompts.generated.ts";
 
 export interface PmCatalogEntry {
@@ -22,12 +25,34 @@ export interface PmCatalogEntry {
   trackScope: string[];
 }
 
+/** 문서화된 이중 배정 — 프롬프트 관점 ≠ 활동 소유의 유일하게 인가된 예외 (D2). */
+export interface DualAssignment {
+  promptKey: PromptKey;
+  /** 매핑된 flow.spec 활동 ("S11.ic-preparation" 형 stage.activity 키). */
+  activity: string;
+  rationale: string;
+}
+
+/** 트랙 전문가×공통 단계 마커 — 표시·인지 전용 (DEC-20261025-02 §11.3). */
+export type SpecialistAffinityKind = "affinity" | "scoped" | "override";
+export interface SpecialistTrackAffinity {
+  /** flow.spec 활동 참조 ("S2.business-model-sketch" 형 stage.activity 키). */
+  ref: string;
+  agent: string;
+  kind: SpecialistAffinityKind;
+  track: "greenfield" | "brownfield";
+  /** 한국어 툴팁 1문장 (/flows 마커). */
+  note: string;
+  /** 판정 기록 id. */
+  decision: string;
+}
+
 export const CATALOG_VERSION = "1.0.0";
 export const SPEC_VERSION = "2.10.1";
 /** SSOT 원문 해시(앞 16자) — 드리프트 원인 규명용. */
 export const CATALOG_SOURCES = {
-  "promptsJson": "62737824655212ba",
-  "flowSpecYaml": "ed08857064753f50",
+  "promptsJson": "3a41b64463c52b7f",
+  "flowSpecYaml": "51c12f3fc0a32ebe",
   "agentRoster": "4f4cf81169a7e46f"
 };
 
@@ -100,7 +125,7 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
   },
   "company_profile.qualitative": {
     "promptKey": "company_profile.qualitative",
-    "agentKey": "market-intelligence-agent",
+    "agentKey": "financial-analyst",
     "activityId": "our-company-profile",
     "stageId": "S3",
     "purpose": "S3 그룹/계열사 프로파일 산출",
@@ -111,7 +136,7 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
   },
   "company_profile.competitive": {
     "promptKey": "company_profile.competitive",
-    "agentKey": "market-intelligence-agent",
+    "agentKey": "financial-analyst",
     "activityId": "our-company-profile",
     "stageId": "S3",
     "purpose": "S3 프로파일 보정",
@@ -122,7 +147,7 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
   },
   "company_profile.crosscheck": {
     "promptKey": "company_profile.crosscheck",
-    "agentKey": "market-intelligence-agent",
+    "agentKey": "financial-analyst",
     "activityId": "our-company-profile",
     "stageId": "S3",
     "purpose": "프로파일 공시 대조 검증",
@@ -133,7 +158,7 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
   },
   "s4.synergy_fa": {
     "promptKey": "s4.synergy_fa",
-    "agentKey": "financial-analyst",
+    "agentKey": "risk-officer",
     "activityId": "synergy-analysis",
     "stageId": "S3",
     "purpose": "시너지 재무·사업 분석 — 근거 기반 강약점 도출",
@@ -144,7 +169,7 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
   },
   "s4.synergy_synergy": {
     "promptKey": "s4.synergy_synergy",
-    "agentKey": "financial-analyst",
+    "agentKey": "risk-officer",
     "activityId": "synergy-analysis",
     "stageId": "S3",
     "purpose": "시너지 산출 — 정량·정성 시너지 도출",
@@ -218,7 +243,7 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
   },
   "s4.route_recommendation": {
     "promptKey": "s4.route_recommendation",
-    "agentKey": "process-governance-manager",
+    "agentKey": "pm",
     "activityId": "route-strategy",
     "stageId": "S4",
     "purpose": "S4 트랙·라우트·5기준 채점 초안",
@@ -296,7 +321,7 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
   },
   "s8.deal_structure_recommendation": {
     "promptKey": "s8.deal_structure_recommendation",
-    "agentKey": "financing-agent",
+    "agentKey": "brownfield-agent",
     "activityId": "deal-structure-hypothesis",
     "stageId": "S10",
     "purpose": "딜 구조 추천 초안",
@@ -318,7 +343,7 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
   },
   "s11.monitoring_brief": {
     "promptKey": "s11.monitoring_brief",
-    "agentKey": "risk-officer",
+    "agentKey": "group-review-agent",
     "activityId": "portfolio-monitoring",
     "stageId": "S12",
     "purpose": "모니터링 브리프 — 관찰 요약 제안",
@@ -364,7 +389,7 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
   },
   "s2.entry_market_draft": {
     "promptKey": "s2.entry_market_draft",
-    "agentKey": "quant-methodologist",
+    "agentKey": "market-intelligence-agent",
     "activityId": "entry-market-sizing",
     "stageId": "S2",
     "purpose": "S2 진입 시장 도출 사슬 AI 배수 추천 초안 (제안 전용, 저장은 사람)",
@@ -375,7 +400,7 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
   },
   "s8.ev_band_recommend": {
     "promptKey": "s8.ev_band_recommend",
-    "agentKey": "quant-methodologist",
+    "agentKey": "valuation-agent",
     "activityId": "valuation",
     "stageId": "S8",
     "purpose": "S8 브라운필드 — EV/매출 밴드 AI 추천 초안 (제안 전용, 확정은 사람)",
@@ -405,7 +430,7 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
   },
   "s11.report_narration": {
     "promptKey": "s11.report_narration",
-    "agentKey": "financial-analyst",
+    "agentKey": "pm",
     "activityId": "ic-preparation",
     "stageId": "S11",
     "purpose": "S11 보고서 — 경영 요약 초안 (AI 초안, 사람이 검토 후 스냅샷 저장)",
@@ -434,3 +459,48 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
 
 /** agent=null 동적 항목 — 실행 시점 활동 맥락(호출자가 선언한 agent 메타)으로 귀속된다. */
 export const DYNAMIC_AGENT_PROMPTS: PromptKey[] = ["s8.business_case_prose","committee.position"];
+
+/** 문서화된 이중 배정 — 유일한 "보조 관점" 예외 (근거 필수, 신규는 게이트 판정 요구). */
+export const DUAL_ASSIGNMENTS: DualAssignment[] = [
+  {
+    "promptKey": "s11.integrated_insight",
+    "activity": "S11.ic-preparation",
+    "rationale": "Cross-domain integrated insight is the process-governance-manager charter (auxiliary review lens) layered on the pm-owned ic-preparation activity; procedure schema supports one agent_key per step (ADR-0161 Q6 pattern)."
+  }
+];
+
+/** 트랙 전문가×공통 단계 마커 4곳 — 표시 전용, die 검증으로 스펙 일치 강제됨. */
+export const SPECIALIST_TRACK_AFFINITY: SpecialistTrackAffinity[] = [
+  {
+    "ref": "S2.business-model-sketch",
+    "agent": "greenfield-agent",
+    "kind": "affinity",
+    "track": "greenfield",
+    "note": "S2는 트랙 미결정 — 모든 기회가 후보 신사업이며 스케치는 트랙 중립 가설 산출물(requiredCapabilities→S3→S4)이다",
+    "decision": "DEC-20261025-02"
+  },
+  {
+    "ref": "S4.deal-shape-evaluation",
+    "agent": "brownfield-agent",
+    "kind": "affinity",
+    "track": "brownfield",
+    "note": "딜 형태 평가는 외부 결합 구조의 전문 렌즈 — greenfield 대안은 pm의 route-strategy·route-advisory와 ADR-0104 동일 5기준 채점이 운반한다",
+    "decision": "DEC-20261025-02"
+  },
+  {
+    "ref": "S9.capability-dd",
+    "agent": "brownfield-agent",
+    "kind": "scoped",
+    "track": "brownfield",
+    "note": "brownfield 전용 실행(절차 [brownfield-dd]) — greenfield는 S5 capability-assessment에서 답한다",
+    "decision": "DEC-20261025-02"
+  },
+  {
+    "ref": "S11.investment-structuring",
+    "agent": "brownfield-agent",
+    "kind": "override",
+    "track": "brownfield",
+    "note": "활동 필드 소유는 Q6상 brownfield-agent — greenfield 실효 소유는 entity-ic-review step 3.1(greenfield-agent + financing-agent 공동검토)",
+    "decision": "DEC-20261025-02"
+  }
+];

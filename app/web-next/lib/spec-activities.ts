@@ -13,8 +13,12 @@ export interface SpecActivity {
 }
 
 export interface SpecStage {
+  /** flow.spec.yaml stages[].name — 스펙 한국어명(데이터 진실이지 표시 문자열이 아니다). */
+  name: string;
   id: string;
   activities?: Array<{ id: string; agent: string; skills?: string[]; procedure?: string[] }>;
+  /** flow.spec.yaml stages[].applicableTracks (greenfield/brownfield). */
+  applicableTracks: string[];
 }
 
 interface CachedSpec {

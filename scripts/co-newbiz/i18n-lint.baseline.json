@@ -81,6 +81,7 @@
   "app/web-next/app/api/synergy/upload/route.ts": 4,
   "app/web-next/app/api/synergy/web-search/route.ts": 1,
   "app/web-next/app/companies/[companyId]/page.tsx": 1,
+  "app/web-next/app/flows/flow-graph.tsx": 25,
   "app/web-next/app/projects/[id]/comp-parity/page.tsx": 2,
   "app/web-next/app/projects/[id]/customer-coc/page.tsx": 2,
   "app/web-next/app/projects/[id]/debt/page.tsx": 1,

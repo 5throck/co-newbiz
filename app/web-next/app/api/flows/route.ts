@@ -4,11 +4,20 @@
 // agent-registry .generated.ts)에서 렌더한다 — 런타임에 flow.spec.yaml /
 // prompts.json 을 직접 읽지 않는다(SSOT 소비자는 생성 스크립트뿐, §6.4).
 // 읽기 전용 — appendAudit 은 쓰기 경로 전용(기존 GET 라우트 선례 준수).
+// design 2026-10-25-agent-assignment-prompt-standard §6.1/§11.4: 단계 name·
+// applicableTracks는 SPEC_STAGES 직접 투영이다(카탈로그 trackScope 합집합
+// 유도 제거 — 임시 방편 소멸), specialistMarkers는 SPECIALIST_TRACK_AFFINITY
+// (DEC-20261025-02, 표시·인지 전용)의 {stageId, activityId, kind, note} 사상.
 import { authenticate, requireBusinessActor } from "../../../lib/auth.ts";
 import { ok } from "../../../lib/envelope.ts";
 import { isLlmConfigured } from "../../../lib/llm.ts";
 import { route } from "../../../lib/route.ts";
-import { CATALOG_SOURCES, CATALOG_VERSION, PM_CATALOG } from "../../../lib/pm-catalog.generated.ts";
+import {
+  CATALOG_SOURCES,
+  CATALOG_VERSION,
+  PM_CATALOG,
+  SPECIALIST_TRACK_AFFINITY,
+} from "../../../lib/pm-catalog.generated.ts";
 import { PROMPTS, type PromptKey } from "../../../lib/prompts.generated.ts";
 import { SPEC_STAGES, SPEC_VERSION } from "../../../lib/spec-activities.generated.ts";
 import { AGENT_REGISTRY } from "../../../lib/agent-registry.generated.ts";
@@ -18,17 +27,6 @@ export const GET = route(async (request: Request) => {
   if (!auth.ok) return auth.response;
   const guard = requireBusinessActor(auth.auth, "read");
   if (guard) return guard;
-
-  // 단계별 트랙 범위: 카탈로그의 trackScope(해당 단계 프롬프트들의
-  // applicableTracks 유도값)를 단계 단위로 합친다. flow.spec.yaml 원문을
-  // 런타임에 읽지 않기 위한 유일한 프러젝션 내 경로다.
-  const tracksByStage = new Map<string, Set<string>>();
-  for (const entry of Object.values(PM_CATALOG)) {
-    if (!entry.stageId) continue;
-    const set = tracksByStage.get(entry.stageId) ?? new Set<string>();
-    for (const t of entry.trackScope) set.add(t);
-    tracksByStage.set(entry.stageId, set);
-  }
 
   // 프롬프트 키 → 활동 그룹핑: 활동 단위 드릴다운(화면 설계 §4.1)이
   // 활동당 소속 프롬프트 목록을 요구한다.
@@ -42,7 +40,6 @@ export const GET = route(async (request: Request) => {
   }
 
   const stages = SPEC_STAGES.map((stage) => {
-    const applicableTracks = [...(tracksByStage.get(stage.id) ?? new Set<string>())].sort();
     const activities = (stage.activities ?? []).map((activity) => {
       const prompts = (promptsByActivity.get(`${stage.id}:${activity.id}`) ?? []).sort();
       return {
@@ -62,7 +59,19 @@ export const GET = route(async (request: Request) => {
         }),
       };
     });
-    return { id: stage.id, applicableTracks, activities };
+    return { id: stage.id, name: stage.name, applicableTracks: stage.applicableTracks, activities };
+  });
+
+  // 트랙 전문가×공통 단계 마커(DEC-20261025-02) — 표시·인지 전용이다.
+  // 필터·게이트·디스패치에 영향이 없다(§11.4 인지 전용 계약).
+  const specialistMarkers = SPECIALIST_TRACK_AFFINITY.map((a) => {
+    const dot = a.ref.indexOf(".");
+    return {
+      stageId: a.ref.slice(0, dot),
+      activityId: a.ref.slice(dot + 1),
+      kind: a.kind,
+      note: a.note,
+    };
   });
 
   // 프롬프트 목록(드릴다운 미리보기용 시스템 프롬프트 본문 포함) —
@@ -93,6 +102,7 @@ export const GET = route(async (request: Request) => {
       catalogVersion: CATALOG_VERSION,
       sources: CATALOG_SOURCES,
       stages,
+      specialistMarkers,
       prompts,
       agents,
     },

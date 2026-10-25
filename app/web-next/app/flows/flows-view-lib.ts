@@ -19,8 +19,19 @@ export interface BlueprintActivity {
 }
 export interface BlueprintStage {
   id: string;
+  /** 스펙 한국어 단계명 — design 2026-10-25 §6.1부터 /api/flows의 SPEC_STAGES 직접 투영.
+   *  표시 라벨은 이 데이터를 쓴다(과거 클라이언트 단계명 사본은 소멸 — 구현 편차 #1 해소). */
+  name: string;
   applicableTracks: string[];
   activities: BlueprintActivity[];
+}
+/** 전문가 마커(§11.4) — SPECIALIST_TRACK_AFFINITY(DEC-20261025-02)의 API 사상.
+ *  표시·인지 전용이다: 필터·게이트·디스패치에 영향이 없다. */
+export interface SpecialistMarker {
+  stageId: string;
+  activityId: string;
+  kind: "affinity" | "scoped" | "override";
+  note: string;
 }
 export interface BlueprintPromptFull {
   key: string;
@@ -43,6 +54,8 @@ export interface FlowsBlueprint {
   catalogVersion: string;
   sources: Record<string, string>;
   stages: BlueprintStage[];
+  /** 전문가 마커(§11.4) — SVG 흐름 그래프와 활동 표가 소비한다(표시 전용). */
+  specialistMarkers: SpecialistMarker[];
   prompts: BlueprintPromptFull[];
   agents: BlueprintAgent[];
 }
@@ -135,30 +148,12 @@ export interface RunsMeta {
 }
 
 // ── 단계명 ───────────────────────────────────────────────────────────────
-// process/flow.spec.yaml의 stages[].name 사본이다. /api/flows가 단계 id만
-// 돌려주므로(§6.2 프러젝션에 name 미포함) 화면 라벨로만 쓴다 — 로직 분기에
-// 사용 금지. 드리프트는 pm-catalog/spec-activities 생성 검사 체인에서
-// 감지되지 않으므로, 단계명 변경 PR은 이 상수를 함께 고친다(구현 편차 #1).
-// i18n (design 2026-10-23-i18n-ui-adoption): ko 원문은 locales/ko.json의
-// pages.flows.stageNames.* 마스터 값이고, 이 맵은 catalog 키만 노출한다 —
-// 화면에서 tr(key)로 풀어 쓴다(미지 단계는 null → 원문 id 폴백).
-export const STAGE_NAME_KEY: Record<string, string> = {
-  S1: "pages.flows.stageNames.S1",
-  S2: "pages.flows.stageNames.S2",
-  S3: "pages.flows.stageNames.S3",
-  S4: "pages.flows.stageNames.S4",
-  S5: "pages.flows.stageNames.S5",
-  S6: "pages.flows.stageNames.S6",
-  S7: "pages.flows.stageNames.S7",
-  S8: "pages.flows.stageNames.S8",
-  S9: "pages.flows.stageNames.S9",
-  S10: "pages.flows.stageNames.S10",
-  S11: "pages.flows.stageNames.S11",
-  S12: "pages.flows.stageNames.S12",
-};
-
-export function stageNameKey(id: string): string | null {
-  return STAGE_NAME_KEY[id] ?? null;
+// process/flow.spec.yaml의 stages[].name은 /api/flows가 SPEC_STAGES 직접 투영으로
+// 서빙한다(design 2026-10-25-agent-assignment-prompt-standard §6.1). 과거의 클라이언트
+// 단계명 사본(구현 편차 #1)은 소멸했다 — 단계명 변경 PR이 이 파일을 고칠 이유가 없다.
+// 남는 것은 이름 결측 시의 방어적 id 폴백뿐이다(로직 분기 금지는 유지).
+export function stageDisplayName(stage: Pick<BlueprintStage, "id" | "name">): string {
+  return stage.name && stage.name.length > 0 ? stage.name : stage.id;
 }
 
 // ── 포맷터 (ADR-0088 숫자 우측·tabular, keep-all 셀 규약) ────────────────
