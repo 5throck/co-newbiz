@@ -17,9 +17,11 @@ counterpart: process-map.md
 Screening → Pre-FS → FS → DD → Entity IC → Group IC
 ```
 
-**스테이지 체인 (flow.spec v2.2.0, ADR-0106)**: S1 시장분석 → S2 기회 발굴 → S3 시너지·적합성 → S4 진출방식 결정 → S5 역량 평가·진출전략(GF) / S6~S7 대상 후보 발굴·스크리닝(BF) → S8 사업성 분석 → S9 실사·검증 → **S10 투자구조 설계** → S11 투자심사·실행 → S12 사후 관리. 스테이지는 작업 구간이며, 게이트(Screening~Group IC, id 변경 없음)는 그 사이에 위치한다. Stage ≠ Gate이며, 기존 ADR들은 v2.2.0 이전 번호를 유지한다(ADR-0106이 매핑의 기준).
+**스테이지 체인 (flow.spec v2.10.1, ADR-0106)**: S1 시장분석 → S2 기회 발굴 → S3 시너지·적합성 → S4 진출방식 결정 → S5 역량 평가·진출전략(GF) / S6~S7 대상 후보 발굴·스크리닝(BF) → S8 사업성 분석 → S9 실사·검증 → **S10 투자구조 설계** → S11 투자심사·실행 → S12 사후 관리. 스테이지는 작업 구간이며, 게이트(Screening~Group IC, id 변경 없음)는 그 사이에 위치한다. Stage ≠ Gate이며, 기존 ADR들은 v2.2.0 이전 번호를 유지한다(ADR-0106이 매핑의 기준).
 
 **딜 구조화 스테이지 (S10, ADR-0045/0106)**: DD 게이트와 Entity IC 사이에서 `procedures/_shared/deal-structuring/`에서 딜 구조가 설계된다 — 스포(직접 투자 / SPC / holdco / 사내 벤처 스핀오프 / JV)와 4개 필수 축(세무 구조, 책임 격리, 재무 레버리지, 엑시트 구조)이 아티팩트 참조 4축 리뷰와 함께 `deal_structure_hypothesis`에 기록되며, 재무계획(`financing_sources_uses`, migration 0075)은 수지 균형(sources == uses > 0)을 충족해야 한다. S11 IC 패키지는 이 구조를 포함하여, 위원회가 S10이 산출한 것을 승인하도록 한다. Pre-FS 단계의 가설은 이 스테이지가 성숙시키는 초기 초안으로 남는다.
+
+**런타임 실행 표면 (ADR-0183)**: 스테이지 표면의 런타임 LLM 호출은 필수 PM 관문(활동 카탈로그, 전체 플랫폼 패리티)을 통과하며, `/flows` 콘솔(`app/web-next/app/flows`)이 위 스테이지 체인을 시각화하고 드라이런 레인을 제공한다. 범위와 경계는 ADR-0183 참조.
 
 ## 게이트별 산출물, 승인자, RACI
 

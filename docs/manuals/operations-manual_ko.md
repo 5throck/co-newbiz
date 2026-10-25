@@ -11,7 +11,7 @@ counterpart: operations-manual.md
 
 > **언어**: [English](operations-manual.md) · **한국어**
 
-**독자**: dba, sre, release-engineer, infra-automation-engineer(Stage 5 출시 후에는 이 역할의 인간 담당자)
+**독자**: dba, sre, release-engineer, infra-automation-engineer(또는 이 역할의 인간 담당자)
 **대상 아님**: analyst(`business-manual.md` 참조), 시스템 관리자(`admin-manual.md` 참조)
 
 ## 이 매뉴얼이 다루는 것
@@ -24,7 +24,7 @@ counterpart: operations-manual.md
 |---|---|---|
 | dba | 매일 | 백업 성공 확인 |
 | dba | 매주 | 용량 및 쿼리 성능 검토 |
-| dba | 매월 | **복구 훈련** — 한 번도 복원해 본 적 없는 백업은 검증된 백업이 아니다. 첫 훈련: Stage 5 가동 1개월 후. |
+| dba | 매월 | **복구 훈련** — 한 번도 복원해 본 적 없는 백업은 검증된 백업이 아니다. 첫 훈련: 가동 1개월 후. |
 | sre | 매일 | 수집 실패 분류(triage) |
 | sre | 상시 | 알림 파이프라인 — (project, trigger_type) 쌍별 24시간 쿨다운, 히스테리시스는 RAG 7일 홀드와 동일하게 |
 | sre | 사고 발생 시 | 사고 대응 + 사후 분석 |
@@ -40,7 +40,7 @@ counterpart: operations-manual.md
 
 ## 3. 배치 운영
 
-예약 수집 파이프라인(`newbiz.ts watch:run`, Stage 5에서 CLI가 착지하면)은 OS 레벨(Task Scheduler / systemd timer)에서 실행된다. **인프로세스 타이머가 아니다** — 인프로세스 타이머는 앱과 함께 죽고, 그러면 예약 모니터링의 목적 자체가 사라진다.
+예약 수집 파이프라인(`newbiz.ts watch:run`, `scripts/co-newbiz/newbiz.ts`)은 OS 레벨(Task Scheduler / systemd timer)에서 실행된다. **인프로세스 타이머가 아니다** — 인프로세스 타이머는 앱과 함께 죽고, 그러면 예약 모니터링의 목적 자체가 사라진다.
 
 파이프라인: 수집(cache-first) → 영향 탐지 → 자동 재실행 → RAG 재평가 → 알림. `job_run`이 이 파이프라인의 운영 감사 기록이다 — 예약 실행이 발화하지 않은 것처럼 보이면 가장 먼저 확인할 것.
 
@@ -58,3 +58,9 @@ counterpart: operations-manual.md
 
 - `docs/governance/governance-operations.md` — 이 문서의 *시스템* 운영과 구별되는 *비즈니스* 거버넌스 운영(컴플라이언스, waiver).
 - `docs/security/security-baseline.md` *(Stage 4)*.
+
+## 7. 관련 화면
+
+- `/flows` — 스테이지 플로우 시각화 및 드라이런 레인 (ADR-0183).
+- UI 언어 전환 — 쿠키 기반 로케일 협상으로 ko/en 메시지 카탈로그 지원 (ADR-0184).
+- `/wiki` — 사용자 안내서 위키의 인앱 뷰어.

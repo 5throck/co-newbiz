@@ -14,10 +14,10 @@ counterpart: archive-manual_ko.md
 
 | State | Where it appears | Who acts |
 | --- | --- | --- |
-| 진행 (open) | /projects, /pipeline, every deal screen | — |
-| 마감 (closed) | 아카이브 → 보관 프로젝트 | lead (종료/보관) |
-| 보관 (archived) | 아카이브 → 보관 프로젝트 | lead (종료/보관) |
-| 삭제 표시 (deleted mark) | 아카이브 → 삭제된 딜 | lead (projects) / analyst+ (opportunities, master data) |
+| Open (진행) | /projects, /pipeline, every deal screen | — |
+| Closed (마감) | Archive → Archived projects (보관 프로젝트) | lead (종료/보관 action) |
+| Archived (보관) | Archive → Archived projects (보관 프로젝트) | lead (종료/보관 action) |
+| Delete-marked (삭제 표시) | Archive → Deleted deals (삭제된 딜) | lead (projects) / analyst+ (opportunities, master data) |
 
 **Deletion is a mark, not an erasure.** A delete-marked deal keeps every row —
 opportunity, route decision, target list, synergy versions, business case,

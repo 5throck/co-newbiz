@@ -12,7 +12,7 @@ counterpart: admin-manual_ko.md
 
 ## What This Manual Covers
 
-Account management, regulation-version administration, master-data administration, and notification-rule configuration — the admin console's job, once Stage 5 builds it.
+Account management, regulation-version administration, master-data administration, and notification-rule configuration — the job of the admin console at `/admin` (`app/web-next/app/admin`).
 
 ## 1. Account Management
 
@@ -52,3 +52,9 @@ Account management, regulation-version administration, master-data administratio
 ## 8. Related
 
 - `docs/governance/governance-operations.md` — waiver and interpretation administration (compliance-officer's domain, adjacent to but distinct from this manual's system-admin scope).
+
+## 9. Related Screens
+
+- `/flows` — stage-flow visualization with a dry-run lane (ADR-0183).
+- UI language switch — ko/en message catalogs behind cookie-based locale negotiation (ADR-0184).
+- `/wiki` — in-app viewer for the user-manual wiki.
