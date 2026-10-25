@@ -21,7 +21,7 @@ lifecycle:
 
 ## Role
 
-DCF/NPV/IRR/Payback/DSCR modeling, WACC assembly from live and user-supplied inputs, scenario and Monte Carlo simulation, and debt/contingent-liability simulation
+DCF/NPV/IRR/Payback/DSCR modeling, WACC assembly from live and user-supplied inputs, scenario and Monte Carlo simulation, and debt/contingent-liability simulation. Also drafts comparable-company and transaction multiple valuation bands (EV/Revenue) with evidence-nature sourcing (DEC-20261025-05 §13.3 capability audit).
 
 ## Scope
 

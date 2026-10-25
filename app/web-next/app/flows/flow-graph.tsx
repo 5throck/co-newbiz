@@ -1,70 +1,73 @@
 "use client";
 
 // 블루프린트 탭 — 단계 흐름 그래프 (design 2026-10-25-agent-assignment-prompt-standard §6.2/§6.4/§11.4).
-// 위키 여정 지도(docs/wiki/ko/Home.md)의 기하를 세로 방향으로 적응한 순수 SVG다:
-// 신규 의존성 0, 색은 전부 styles.css 토큰 CSS 변수(다크 모드 안전 — 차트 팔레트는
-// ADR-0087의 유일한 범주형 팔레트 정의를 소비한다). 노드 = 단계(S1–S12 12개 —
-// 활동 47개를 전부 노드로 그리면 가독성이 무해진다, §6.2), 노드 안 활동 도트 행
-// (도트 1개 = 활동 1개, 에이전트 도메인 색)으로 "node = activity" 요구를 단계 그레인으로 충족.
+// 위키 여정 지도(docs/wiki/ko/Home.md)와 같은 가로 방향의 순수 SVG다: 신규 의존성 0,
+// 색은 전부 styles.css 토큰 CSS 변수(다크 모드 안전 — 차트 팔레트는 ADR-0087의 유일한
+// 범주형 팔레트 정의를 소비한다). 노드 = 단계(S1–S12 12개 — 활동 47개를 전부 노드로
+// 그리면 가독성이 무해진다, §6.2), 노드 안 활동 도트 행(도트 1개 = 활동 1개, 에이전트
+// 도메인 색)으로 "node = activity" 요구를 단계 그레인으로 충족.
 //
-// 기하: 세로 흐름 1주열 + 트랙 분기 1병렬열. 위키의 S4 분기→S5(greenfield)·S6→S7
-// (brownfield)→S8 재합류 토폴로지를 그대로 옮긴 것이며, 세로를 택한 이유는
-// 블루프린트 탭이 세로 문서 흐름(그리드 → 그래프 → 표, §6.5)이라 데스크톱에서
-// 뷰박스가 확대 렌더되어 글자가 커지고(가로 12노드 체인은 viewBox 폭이 커져 축소
-// 렌더로 글자가 무너진다) 역방향 화살표가 절대 생기지 않기 때문이다.
+// 기하: 주행 1행(왼쪽→오른쪽) + 트랙 분기 2라인. S1→S4가 위 행에서 진행하고, S4
+// 아래로 S5(greenfield 라인)·S6→S7(brownfield 라인)이 갈라져 S8에서 위 행으로
+// 재합류, S8→S12가 오른쪽으로 이어진다 — 위키 Home 여정 지도와 같은 방향(2026-10-23
+// 사용자 보고 반영: 세로 1주열은 화면 스크롤 비용이 컸다). viewBox가 넓어 좁은
+// 화면에서는 컨테이너의 overflow-x 스크롤이 대신하고, minWidth가 읽기 하한(축소
+// 렌더로 글자가 무너지는 것에 대한 완화)을 보장한다.
 //
 // 접근성(§6.4, WCAG 2.1 AA): 그래프는 role="img" + <title>/<desc>의 요약 이미지다
 // (문구는 카탈로그 pages.flows.graph.* — 활성 로케일을 따른다). SVG 내부에 focusable
-// 요소를 두지 않는다(포인터 클릭은 편의 — 키보드 경로는 인접 단계 그리드의 네이티브
-// button 목록과 활동 표가 완전 대체한다). 색 단독 정보 없음: 도트 색은 범례
-// 텍스트(도메인명)와 병행, 전문가 마커는 링 + 텍스트 라벨, 트랙 배지는 텍스트 배지다.
-// 모션 없음(정적 SVG).
+// 요소를 두지 않는다(포인터 클릭은 편의 — 키보드 경로는 활동 표가 완전 대체한다).
+// 색 단독 정보 없음: 도트 색은 범례 텍스트(도메인명)와 병행, 전문가 마커는 링 +
+// 텍스트 라벨, 트랙 배지는 텍스트 배지다. 모션 없음(정적 SVG).
 import { useTranslations } from "next-intl";
 import type { BlueprintAgent, BlueprintStage, SpecialistMarker } from "./flows-view-lib.ts";
 import { stageDisplayName } from "./flows-view-lib.ts";
 
-// ── 기하 상수(위키 viewBox 비례 — 단계 추가는 ROW_Y 1행, §9 위험 완화) ──────
-const NODE_W = 160;
+// ── 기하 상수(위키 여정 지도의 가로 적용 — 단계 추가는 한 칸 x 이동, §9 위험 완화) ─
+const NODE_W = 140;
 const NODE_H = 54;
-const MAIN_X = 16; // 공통 주열(공통 + greenfield S5 + 재합류 S8–S12)
-const BRANCH_X = 292; // 병렬 분기열(brownfield S6→S7)
-const VIEW_W = 470;
-const VIEW_H = 842;
+const MAIN_Y = 16; // 공통 주행 행(공통 + 재합류 S8–S12)
+const GF_Y = 92; // greenfield 분기 라인(S5)
+const BF_Y = 168; // brownfield 분기 라인(S6→S7)
+const VIEW_W = 1820;
+const VIEW_H = 260;
 const ENTRY_GAP = 4; // 화살촉이 노드 변에 닿을 여백
 
-/** 단계 좌표표 — 위키 기하의 세로 적응. 분기 행(y=320)에서 S5(주열)와 S6(병렬열),
- *  S7을 병렬열 아래로, S8에서 주열로 재합류한다. */
+/** 단계 좌표표 — 위키 기하(가로 여정 지도)의 재적용. 주행 S1→S4가 위 행에서
+ *  진행하고, S4 아래로 greenfield 라인(S5)과 brownfield 라인(S6→S7)이 갈라져
+ *  S8에서 위 행으로 재합류, S8→S12가 오른쪽으로 이어진다. */
 const ROW_Y: Record<string, { x: number; y: number }> = {
-  S1: { x: MAIN_X, y: 16 },
-  S2: { x: MAIN_X, y: 92 },
-  S3: { x: MAIN_X, y: 168 },
-  S4: { x: MAIN_X, y: 244 },
-  S5: { x: MAIN_X, y: 320 },
-  S6: { x: BRANCH_X, y: 320 },
-  S7: { x: BRANCH_X, y: 394 },
-  S8: { x: MAIN_X, y: 468 },
-  S9: { x: MAIN_X, y: 544 },
-  S10: { x: MAIN_X, y: 620 },
-  S11: { x: MAIN_X, y: 696 },
-  S12: { x: MAIN_X, y: 772 },
+  S1: { x: 16, y: MAIN_Y },
+  S2: { x: 176, y: MAIN_Y },
+  S3: { x: 336, y: MAIN_Y },
+  S4: { x: 496, y: MAIN_Y },
+  S5: { x: 688, y: GF_Y },
+  S6: { x: 688, y: BF_Y },
+  S7: { x: 848, y: BF_Y },
+  S8: { x: 1024, y: MAIN_Y },
+  S9: { x: 1184, y: MAIN_Y },
+  S10: { x: 1344, y: MAIN_Y },
+  S11: { x: 1504, y: MAIN_Y },
+  S12: { x: 1664, y: MAIN_Y },
 };
 
 /** spec stateTransitions.onComplete 체인의 기하 반영(§6.2) — d는 절대좌표.
- *  세로 변은 from 노드 하변 → to 노드 상변 위 ENTRY_GAP, 재합류 S8에는
- *  S5(왼쪽 x=80)·S7(오른쪽 x=112)이 다른 지점으로 진입해 화살촉이 겹치지 않는다. */
+ *  가로 변은 from 노드 우변 → to 노드 좌변 위 ENTRY_GAP. S4의 두 분기는 하변
+ *  x=516에서 내려와 각 라인의 좌변으로 진입하고, 재합류 S8의 좌변에는 S5(위쪽
+ *  y=30)·S7(아래쪽 y=56)이 다른 높이로 진입해 화살촉이 겹치지 않는다. */
 const EDGES: string[] = [
-  "M 96,66 V 88", // S1→S2
-  "M 96,142 V 164", // S2→S3
-  "M 96,218 V 240", // S3→S4
-  "M 96,294 V 316", // S4→S5 (S4 하변 → greenfield 진행)
-  "M 176,271 H 372 V 316", // S4→S6 (S4 우변 → brownfield 분기)
-  "M 372,374 V 390", // S6→S7
-  "M 80,374 V 464", // S5→S8 (재합류 — 왼쪽 진입)
-  "M 292,421 H 112 V 464", // S7→S8 (재합류 — 오른쪽 진입)
-  "M 96,522 V 540", // S8→S9
-  "M 96,598 V 616", // S9→S10
-  "M 96,674 V 692", // S10→S11
-  "M 96,750 V 768", // S11→S12
+  "M 156,43 H 172", // S1→S2
+  "M 316,43 H 332", // S2→S3
+  "M 476,43 H 492", // S3→S4
+  "M 516,70 V 119 H 684", // S4→S5 (S4 하변 → greenfield 라인)
+  "M 516,70 V 195 H 684", // S4→S6 (S4 하변 → brownfield 라인)
+  "M 828,195 H 844", // S6→S7
+  "M 828,119 H 996 V 30 H 1020", // S5→S8 (재합류 — 좌변 위쪽 진입)
+  "M 988,195 H 1008 V 56 H 1020", // S7→S8 (재합류 — 좌변 아래쪽 진입)
+  "M 1164,43 H 1180", // S8→S9
+  "M 1324,43 H 1340", // S9→S10
+  "M 1484,43 H 1500", // S10→S11
+  "M 1644,43 H 1660", // S11→S12
 ];
 
 /** 범례 렌더 순서의 도메인 키 집합 — 색 토큰 맵과 카탈로그(pages.flows.graph.legend.domains.*)가
@@ -138,7 +141,8 @@ export function FlowGraph({ stages, agentsByKey, markers, selectedStage, onSelec
 
   return (
     <figure className="m-0">
-      {/* overflow-x 컨테이너 — 좁은 화면에서 축소 대신 가로 스크롤(표의 tmin 규약과 같은 판단).
+      {/* overflow-x 컨테이너 — 가로 그래프는 좁은 화면에서 축소 대신 가로 스크롤
+          (표의 tmin 규약과 같은 판단). svg minWidth가 읽기 하한을 보장한다.
           tabIndex를 두지 않는다(§6.4 — 그래프는 탭 순서에 진입하지 않는다). */}
       <div style={{ overflowX: "auto" }}>
         <svg
@@ -146,7 +150,7 @@ export function FlowGraph({ stages, agentsByKey, markers, selectedStage, onSelec
           width="100%"
           role="img"
           xmlns="http://www.w3.org/2000/svg"
-          style={{ display: "block", margin: "0 auto", maxWidth: "40rem" }}
+          style={{ display: "block", margin: "0 auto", minWidth: "80rem" }}
         >
           <title>{tg("svgTitle")}</title>
           <desc>{tg("svgDesc")}</desc>
@@ -163,13 +167,13 @@ export function FlowGraph({ stages, agentsByKey, markers, selectedStage, onSelec
 
           {stages.map((s) => {
             const pos = ROW_Y[s.id];
-            if (!pos) return null; // 미지 단계(스펙 신규 추가)는 좌표표 1행 추가 전까지 그래프에서 생략 — 그리드·표는 정상 렌더
+            if (!pos) return null; // 미지 단계(스펙 신규 추가)는 좌표표 1행 추가 전까지 그래프에서 생략 — 표는 정상 렌더
             const selected = selectedStage === s.id;
             const badge = trackBadge(s.applicableTracks, tg("trackCommon"));
             const badgeW = badge.label.length * 5 + 14;
             const stageMarkers = markers.filter((m) => m.stageId === s.id);
             return (
-              // 포인터 클릭 = 편의(§6.3/§6.4) — focusable 요소 없음, 키보드는 인접 그리드 버튼이 담당한다.
+              // 포인터 클릭 = 편의(§6.3/§6.4) — focusable 요소 없음, 키보드는 활동 표가 담당한다.
               <g key={s.id} style={{ cursor: "pointer" }} onClick={() => onSelectStage(s.id)}>
                 <title>
                   {tg("nodeTitle", { id: s.id, name: stageDisplayName(s), count: s.activities.length })}

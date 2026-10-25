@@ -129,7 +129,8 @@ export interface RunsSummary {
   costUsd: number;
   unpricedCalls: number;
   estimatedCalls: number;
-  /** 단계 id → 최근 오류 카운트(블루프린트 단계 요약 카드 소비). */
+  /** 단계 id → 최근 오류 카운트(API 집계값 — 2026-10-23 단계 요약 그리드 제거로
+   *  UI 소비처는 없으며, Row 3 API 계약 유지를 위해 타이핑만 남는다). */
   errorsByStage: Record<string, number>;
   unmappedErrors: number;
 }
@@ -172,6 +173,16 @@ export function fmtUsd(n: number | null | undefined): string {
 export function fmtPct(rate: number | null | undefined): string {
   if (rate === null || rate === undefined) return "—";
   return `${(rate * 100).toFixed(1)}%`;
+}
+
+/** 요약 카드 "기준 창" 표기 — API window 토큰("24h"/"7d"/"30d")을 ledger 카탈로그
+ *  키로 방출한다(2026-10-23 사용자 보고: 원문 토큰 "7d"가 그대로 노출되었다).
+ *  화면에서 t(key)로 풀어 쓰며, 미지 토큰은 null — 호출부가 원문 폴백을 담당한다. */
+export function windowTokenKey(window: string | null | undefined): "window24h" | "window7d" | "window30d" | null {
+  if (window === "24h") return "window24h";
+  if (window === "7d") return "window7d";
+  if (window === "30d") return "window30d";
+  return null;
 }
 
 /** ISO → "MM-DD HH:mm" (장부 시각은 표기 용도가 전부 — 연도는 창(24h/30d)이 대신한다). */

@@ -21,7 +21,7 @@ lifecycle:
 
 ## Role
 
-TAM/SAM/SOM sizing, demand forecasting, competitor capacity-expansion tracking, and the six-axis upstream/downstream value-chain linkage analysis
+TAM/SAM/SOM sizing, demand forecasting, competitor capacity-expansion tracking, and the six-axis upstream/downstream value-chain linkage analysis. Also performs KSIC industry classification and target-company candidate sourcing from search evidence for the S6 longlist (DEC-20261025-05 §13.3 capability audit).
 
 ## Scope
 

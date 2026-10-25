@@ -1,15 +1,27 @@
 #!/usr/bin/env bun
 /**
- * @version 2.0.0
+ * @version 2.1.0
+ *
+ * Changelog:
+ *   2.1.0 (2026-10-25, design addendum §13 / DEC-20261025-05) — SECTION_MARKERS
+ *     drops "# Role" (5-section skeleton); NEW hard rule: closed heading
+ *     vocabulary — any /^#\s+\S/ heading line outside the 5 markers dies as
+ *     "undeclared section marker" (blocks # Role reintroduction and rogue
+ *     persona headings).
+ *   2.0.0 (2026-10-25, design §5 + Addendum §A) — initial D3 machine bar.
  */
 // generate-prompt-registry.ts — prompts/prompts.json SSOT를 런타임 레지스트리로 투영한다.
 // agent-registry.generated.ts와 동일한 규율: SSOT는 prompts/prompts.json이고,
 // 이 스크립트는 읽어 정적 TS로 내보낼 뿐이다. 문구 수정은 SSOT에서 하고 재생성한다.
 //
 // D3 machine bar (design 2026-10-25-agent-assignment-prompt-standard-design
-// §5.1–§5.4 + Addendum §A-1–§A-3) — hard failures before projection:
-//   (a) the 6-section skeleton markers, in order (# Proposal-only disclaimer
+// §13.2 + §A-1–§A-3; §5.1's 6-section skeleton is superseded by §13) — hard
+// failures before projection:
+//   (a) the 5-section skeleton markers, in order (# Proposal-only disclaimer
 //       omittable only for the GATE_UNLINKED set),
+//   (e) closed heading vocabulary — a line matching /^#\s+\S/ whose heading
+//       text is not one of the 5 markers dies as "undeclared section marker"
+//       (no # Role, no persona headings).
 //   (b) Hangul only inside the # Language and # Output contract sections,
 //   (c) JSON-output prompts state ONE-JSON + no-code-fence in # Output contract,
 //   (d) PROSE_OUTPUT (A-3 Tier A) members carry an "Explanation style" clause.
@@ -46,9 +58,9 @@ for (const p of prompts) {
 
 // ── D3 machine bar ───────────────────────────────────────────────────────────
 
-/** Skeleton section markers, in the exact mandated order (design §5.1). */
+/** Skeleton section markers, in the exact mandated order (design §13.2 — the
+ * 5-section skeleton; "# Role" is removed per DEC-20261025-05). */
 const SECTION_MARKERS = [
-  "# Role",
   "# Evidence boundary",
   "# Task",
   "# Output contract",
@@ -56,6 +68,11 @@ const SECTION_MARKERS = [
   "# Proposal-only disclaimer",
 ] as const;
 const LAST_MARKER = SECTION_MARKERS[SECTION_MARKERS.length - 1];
+
+/** (e) Closed heading vocabulary — the ONLY legal /^#\s+\S/ heading lines.
+ * Anything else (a reintroduced "# Role", a rogue "# Persona") dies as an
+ * undeclared section marker (design addendum §13.6). */
+const HEADING_VOCAB: ReadonlySet<string> = new Set<string>(SECTION_MARKERS);
 
 /** Gate-unlinked prompts — the ONLY set that may omit the disclaimer
  * (design §5.1: internal classification with no gate linkage). */
@@ -186,6 +203,15 @@ for (const p of prompts) {
   for (let i = 1; i < positions.length; i++) {
     if (positions[i].at <= positions[i - 1].at) {
       die(`'${p.key}' section markers are out of skeleton order at '${positions[i].marker}'.`);
+    }
+  }
+
+  // (e) closed heading vocabulary — the skeleton's heading set is closed.
+  for (const rawLine of system.split("\n")) {
+    if (!/^#\s+\S/.test(rawLine)) continue;
+    const heading = rawLine.trim();
+    if (!HEADING_VOCAB.has(heading)) {
+      die(`'${p.key}' has an undeclared section marker: "${heading}" (closed heading vocabulary — design addendum §13.6).`);
     }
   }
 

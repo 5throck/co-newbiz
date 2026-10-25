@@ -508,3 +508,116 @@ AI 2nd cross review(Row 5, process-governance-manager)가 P2로 보고한 편차
 - **판정: 편차 수용.** 블루프린트의 1차 청중은 한국어이며, 정식 en 번역이 존재할 때까지 스펙 한국어 단계명의 en 표시는 스펙 원문의 정직한 근원 표시(honest provenance)로 기능한다. §6.1 본문은 개정하지 않는다(append-only) — 본 절이 우선한다.
 - **en 카탈로그 뒤처짐**: `locales/en.json`의 `pages.flows.stageNames` 12키는 본 PR에서 orphan 상태로 남는다. **pruning은 UI-i18n 스트림의 다음 §3.6 extraction 배치의 후속 사항으로 기록한다** — 본 PR의 소관이 아니다.
 - 상태 전환: 본 설계는 spec-register를 통해 `implemented`로 전환되었다(2026-10-25).
+
+---
+
+## 13. Addendum (2026-10-25, d) — 역할 강제 제거: 프롬프트는 역할을 선언하지 않는다
+
+판정 기록: `docs/decisions/DEC-20261025-05.md`. 구현된 40프롬프트(PR #719)를 사용자가 검토하고 내린 구조 판정(2026-10-25)에 대한 설계 응답이다. §5.1 골격의 `# Role` 섹션과 §5.3의 "기능적 역할 서술은 허용" 규정을 **대체**한다(append-only — 기존 절 본문은 개정하지 않으며 충돌 시 본 절이 우선한다). §A-2가 근거로 든 "6섹션 어휘 보존"도 본 절의 5섹션 어휘로 대체되지만, `Explanation style` 하위 조항의 위치(`# Output contract` 내)와 기계 검증 방식은 불변이다.
+
+설계 기준 검증 사실(2026-10-23 기준 선행 감사 + 본 부록 작성 시 재확인): 40개 system 전부가 `# Role`을 포함한다. 역할 배정 문장("You are …")은 예외 없이 `# Role` 섹션 안에만 존재한다. `agent` 필드가 null인 키는 정확히 2개다(`s8.business_case_prose`, `committee.position`).
+
+### 13.1 사용자 판정 (원문 취지, 2026-10-25)
+
+프롬프트 골격의 `# Role`("You are an …")은 역할을 **배정**한다. 그러나 모든 에이전트는 이미 자기 역할을 갖는다 — `agents/*.md` 정의가 그 진실이며, 게이트웨이·신원 경로가 이를 운반한다. 프롬프트가 배정한 역할이 에이전트의 실제 헌장과 어긋나면, 프롬프트는 에이전트의 진짜 역할을 **강제로 덮어쓴다**. 그런 역할이 과업에 정말 필요하면 그 역량을 **에이전트 정의에 추가**하거나 **새 에이전트/스킬을 만들어야** 한다. 아울러 PM은 직접 실행 금지 원칙(`agents/pm.md` "What PM Does NOT Do")에 묶여 있음에도 구채 골격은 pm 에이전트에도 실행형 역할("query classifier", "flow coordinator")을 강요했다 — 심각한 구조 결함으로 판정한다.
+
+### 13.2 골격 확정 — `# Role` 완전 삭제, 5섹션
+
+**기계적 형태는 (a) 완전 삭제다.** `# Task framing` 비배정 섹션 대체안(b)은 기각한다 — "이 프롬프트가 무엇을 하는가"는 카탈로그 `purpose` 필드가 이미 문서화하고 `# Task` 첫 문장이 이미 수행하므로, 프레이밍 섹션은 중복 산문이자 문언 표류의 새 면이다. 기능적 역할 서술(§5.1 구문 "market-sizing analyst"식 페르소나)도 함께 소멸한다 — 그것이 운반하던 것들의 새 귀처:
+
+- **기능적 어휘·태도**(분석가의 어휘, 검증자의 보수성): `# Task`의 과업 요구 문장으로 흡수한다("Use the sizing method's terms", "Treat every figure as unverified until cited"). 역할 배정이 아닌 과업 지시다.
+- **"이 작업을 누가 수행하는가"**: `agent` 필드 → 카탈로그 → `promptAgent()` `AgentCallMeta`(장부 귀속)라는 §5.3의 단일 진실만 남는다. §5.3의 "로스터 신원 주장 금지"를 **임의 역할 배정 금지**로 강화한다 — 산문 속 페르소나 자체가 사라진다.
+- **역량의 근거**: 소유 에이전트의 `agents/*.md` 헌장이다(§13.3 감사가 강제한다).
+
+확정 골격(마커 순서 그대로):
+
+| # | 마커 | 필수성 |
+|---|------|--------|
+| 1 | `# Evidence boundary` | 전 프롬프트 필수 |
+| 2 | `# Task` | 전 프롬프트 필수 |
+| 3 | `# Output contract` | 전 프롬프트 필수 |
+| 4 | `# Language` | 전 프롬프트 필수 |
+| 5 | `# Proposal-only disclaimer` | 게이트 비연동 집합(`GATE_UNLINKED`)만 생략 가능 |
+
+**런타임 페르소나 주입(에이전트 정의 카드 주입)도 채택하지 않는다**: 토큰 비용, 프롬프트↔정의 결합, 그리고 `promptAgent()` 귀속 메타데이터와 경쟁하는 제2의 신원 진실(§5.3 단일 진실 원칙 위반). **과업은 페르소나 없이 실행된다** — 근거 경계 + 과업 지시 + 출력 계약이면 충분하다(§5.3이 이미 무주입 경로에서 같은 결론에 도달했다). 역량 맥락이 부족하면 해법은 헌장 추가다(§13.3), 주입이 아니다.
+
+**경계 — 런타임 주입 경로는 무변경이다.** 자유 질의 경로(`app/web-next/app/api/agents/query/route.ts:79-82`)의 `entry.name`/role 한 줄 주입과 위원회 경로(`app/web-next/lib/committee-llm.ts:60-66`)의 `당신은 ${agentKey}` 접두어는 로스터의 **실제** 에이전트를 해당 호출에 귀속시키는 것이지 역할 발명이 아니다 — 배정 불일치 결함이 없으므로 본 판정 대상이 아니다. `committee.position`의 Task 문언 "Stay fully in the character of your assigned role"은 이 런타임 귀속을 참조하는 과업 지시로 **유지**된다(실제 에이전트의 역할 연기이지 프롬프트가 역할을 고정하는 것이 아니다). 위원 연기의 심화(실제 `agents/*.md` 본문을 위원에게 주입할지)는 본 판정 밖의 별도 Design Gate 질의다.
+
+### 13.3 역량 갭 감사 절차 — 구현 로우가 기계적으로 실행한다
+
+40프롬프트 각각에 대해 "이 과업의 역량이 소유 에이전트의 헌장에 존재하는가"를 검증한다. 이 절이 절차 사양이며, 감사 표는 구현 로우의 산출물이다.
+
+**입력**: `app/web-next/prompts/prompts.json`(40행 — key·agent·purpose·system), `agents/<agent>.md`(frontmatter `role`·`description` + 본문 `## Role`/`## Scope`), `skills/SKILLS.md`(`owner:` 역조회), `process/flow.spec.yaml`(활동 소유 참조용).
+
+**알고리즘**(행마다):
+
+1. **과업 문장 추출**: `# Task` 섹션 전문 + `purpose`에서 핵심 동사-목적어를 추출한다(예: `s8.ev_band_recommend` → "EV/매출 밴드(하한·기본·상한) 권고 산출").
+2. **헌장 앵커 결정**: `agent` ≠ null이면 `agents/<agent>.md`다. `agent` == null(현 2키)은 아래 특수 행 규칙을 따른다.
+3. **헌장 대조**: 동사-목적어의 개념이 (a) 헌장 본문·frontmatter에 명시되는지, (b) 해당 에이전트가 소유한 스킬(`owner:` 역조회)의 설명에 명시되는지 검사한다.
+4. **분류**(3단 — 증거 인용 없는 행은 무효다):
+   - **covered**: (a) 또는 (b) 적중. 증거 = `agents/<agent>.md` file:line 또는 SKILLS.md 소유 스킬 행.
+   - **addition**: 개념은 에이전트 도메인 안이지만 헌장이 명명하지 않음. 조치 = 헌장에 **한 문장 추가**(frontmatter `description` 확장 또는 `## Role` 본문 1문장, 영어) — 스킬 신설로 승격하지 않는다. 스킬은 재사용 가능한 방법론에만 발급한다.
+   - **escalation**: 기존 로스터 어느 도메인도 덮지 않음. 조치 = **PM 상신**(ADR-0080 채용 신호 / skill-lifecycle-manager 승인 플로우) — 절대 자동 생성하지 않는다. 감사 표에 상신 행으로 기록하고 구현 로우는 PM 판정 전 해당 갭에 대한 조치를 보류한다.
+5. **산출**: 40행 감사 표(`promptKey | agent | 과업 동사-목적어 | 헌장 증거 file:line | 분류 | 조치`)를 구현 로우 태스크 리포트에 기록한다(상설 문서를 새로 만들지 않는다).
+
+**특수 행**:
+
+| 키 | 앵커 규칙 |
+|----|-----------|
+| `pm.query_classify`, `pm.flow_suggest` | §13.4의 PM 네이티브 판정을 추가로 통과해야 한다(헌장 대조와 별행). |
+| `s11.integrated_insight` | 활동 소유(pm)가 아니라 프롬프트 관점 소유 **process-governance-manager** 헌장(교차 도메인 검토)에 대해 감사한다(§3.3 이중 배정 소유자). |
+| `committee.position` (`agent: null`) | 헌장 대조 **면제** — 역할이 런타임에서 멤버별 실제 agentKey로 귀속된다(§13.2 경계). 행은 `attribution: runtime-per-member`로 기록하고 표준 적합(섹션·금지 문언)만 검증한다. |
+| `s8.business_case_prose` (`agent: null`) | 앵커 = 소비 파이프라인이 해석하는 산출의 flow.spec 활동 소유(구현이 조회해 file:line 기록). 활동 앵커가 유일하게 정해지지 않으면 PM 상신 행(null agent = 헌장 앵커 부재 = 귀속 결함 후보)으로 분류한다. |
+
+**규율**:
+
+- addition 조치는 `bun run agent:verify` + 로스터 재생성으로 마친다(AGENTS.md 거버넌스). 감사 표의 추가 문장을 그대로 적용한다.
+- **pm에는 addition 경로가 없다** — `agents/pm.md`의 비실행 범위는 규범이다. PM 과업 갭은 전부 재귀속 상신이다(§13.4).
+- 감사가 "다른 에이전트 헌장이 더 적합하다"를 발견해도 본 로우에서 재귀속하지 않는다 — D1이 폐쇄한 영역이며 flow.spec 지배 원칙(§3.1)대로 PM 상신(DEC)으로만 진행한다.
+
+### 13.4 PM 원칙 정합 — pm 귀속 프롬프트는 폐쇄 집합이다
+
+구채 골격이 pm 에이전트에 실행형 페르소나를 강요한 것에 대한 확정 경계다:
+
+| 키 | 성격 | PM 네이티브 근거 | 이행 후 형태 |
+|----|------|------------------|--------------|
+| `pm.query_classify` | 트리아지·라우팅 | `agents/pm.md` "classify requests, dispatch specialist agents"; ADR-0078 라우팅 강제점 | `# Role`("query classifier") 삭제 — 순수 과업 지시(분류 → JSON)만 남는다 |
+| `pm.flow_suggest` | 의사결정 지원 제안 | ADR-0080 스킬 요청 트리아지·채용 신호, ADR-0061 결정 기록 초안의 PM 소관; 산출은 proposal-only | `# Role`("flow coordinator") 삭제 — proposal-only disclaimer 유지 |
+
+두 키는 PM 네이티브 활동(라우팅, PM 자신이 ADR-0080/0061 하에서 직접 초안하는 의사결정 지원 제안)이므로 페르소나 없이도 원칙에 정합한다. **영구 규칙**: pm 귀속 프롬프트의 허용 활동은 위 둘뿐이며, pm 귀속 프롬프트 집합은 이 2키로 **폐쇄**된다. 미래의 pm 귀속 신규 프롬프트는 Design Gate에서 네이티브성(둘 중 하나)을 입증하는 DEC를 요구하고, 입증되지 않으면 **재귀속으로만 해소한다**(전문 에이전트 또는 ADR-0080 신규 에이전트) — 페르소나 문장으로 때우는 것을 금한다.
+
+### 13.5 이행 — 40프롬프트에서 `# Role` 제거 (기계적, 계약 안전)
+
+- 40개 system 전부에서 `# Role` 섹션을 삭제한다(검증 사실상 역할 문장은 `# Role` 안에만 존재 — 구현 시 전수 확인으로 잠근다: system 전체에서 "You are" 0건).
+- DEC-20261025-01로 재귀속된 11키 + 이중 배정 1키(`s11.integrated_insight`)는 과업 강조를 그대로 유지한다 — 신원 귀속은 이미 `agent` 필드 메타데이터로 옮겨져 있으므로 산문 삭제만으로 정합이 유지된다.
+- §5.4 재작성 표의 "Role: …" 열 요구는 소멸하고 나머지 콘텐츠 요구(Evidence·Task·Output·Language·Proposal)는 유지된다.
+- **계약 안전성**: `# Role`은 산문 전용이다. 소비 파서는 출력만 읽고 `JSON_OUTPUT`·`PROSE_OUTPUT`·`STYLE_EXEMPT`·`GATE_UNLINKED` 집합과 zod 계약은 무변경 — 소비자 무영향.
+- **원자성**: 기계 기준바 v2.1.0(§13.6의 폐쇄 헤딩 규칙)은 `# Role`을 남긴 기존 40프롬프트에 즉시 die하므로, **제너레이터 변경과 40프롬프트 마이그레이션은 같은 PR에서 원자적으로 착지**한다.
+
+### 13.6 기계 기준바 델타 — `generate-prompt-registry.ts` v2.0.0 → v2.1.0
+
+1. `SECTION_MARKERS` 배열에서 `"# Role"` 제거 → 5항목. `LAST_MARKER` 불변(마지막은 `# Proposal-only disclaimer`). `sliceSections`·마커 순서·중복 검사 로직은 배열만 바뀌고 불변.
+2. **신규 hard 규칙 — 폐쇄 헤딩 어휘**: `/^#\s+\S/`에 매치되는 줄의 헤딩 텍스트가 5마커 어휘에 없으면 `die("undeclared section marker")`. per-prompt 루프 안, 마커 존재 검사와 함께 배치한다. `# Role` 재유입과 신종 페르소나 헤딩(`# Persona`, `# You are` 등)을 함께 차단한다.
+3. 헤더 문서 블록 갱신: (a) 문언을 "the 5-section skeleton markers"로, 신규 (e) 폐쇄 헤딩 규칙 기술 추가, `@version` 2.1.0.
+4. 불변: `GATE_UNLINKED`, `PROSE_OUTPUT`, `STYLE_EXEMPT`, `JSON_OUTPUT` 집합, 한글 허용 구역 검사(§5.2 — `# Language`·`# Output contract`), ONE-JSON·코드펜스 검사, `Explanation style` 조항 검사, 25어 초과 advisory warn 채널.
+
+§5.1의 6섹션 템플릿과 §A-1 hard 바 목록 (a)의 "필수 섹션 마커 5개(+해당 시 6번째)" 문언은 본 절로 대체된다(append-only — 우선순위는 본 절).
+
+### 13.7 검증
+
+| 대상 | 방법 |
+|------|------|
+| 기계 기준바 네거티브 | 고정 단언 5건 — (1) `# Role` 헤딩 포함 system → die(undeclared), (2) 변형 페르소나 헤딩(`# Persona`) → die, (3) `# Task` 결여 → die, (4) 마커 순서 위반 → die, (5) 이행 후 40키 전체 통과. 메커니즘(스크래치 JSON으로 제너레이터 기동 또는 검증부 export 후 유닛)은 구현 로우가 선택하고 단언 집합은 고정이다. |
+| 소비자 전수 | `prompts.generated.ts` 재생성 + `mcp-prompts.test.ts` 회귀 없음 + `generate-pm-catalog.ts --check` + `pm-catalog.test.ts` 전체 통과. |
+| 드라이런 레인 | Tier A 5키 + Tier B 표본: JSON 파싱 성공·계약 형태·한국어 출력 확인 + 역할 문언 부재(system 전체에서 "You are" 0건). |
+| 헌장 변경 시 | `bun run agent:verify` + 로스터 재생성 + `agent-lifecycle-audit`·`lifecycle-sync-audit`(존재 시). |
+| 타입·디자인 | `tsc`(app/web-next), design-lint. |
+
+설계 상태는 `implemented` 유지 — 본 개정은 부록 + DEC로 기록되며 spec-register 재등록은 불요다.
+
+### 13.8 경계 — 본 부록이 바꾸지 않는 것
+
+- 런타임 주입 경로(자유 질의 한 줄, 위원회 접두어) 무변경 — 실제 로스터 신원의 귀속이지 역할 발명이 아니다(§13.2).
+- `purpose` 40필드, `DUAL_ASSIGNMENTS`, `SPECIALIST_TRACK_AFFINITY`, flow.spec 무변경.
+- 한국어 출력 고정(i18n 설계 §4), JSON 계약(§5.5), proposal-only 면책, ADR-0098 양방향 원칙(§A) 무변경.
+- 위원 연기의 헌장 심화 주입 여부 — 별도 Design Gate 질의로 남긴다(§13.2 경계).

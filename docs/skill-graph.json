@@ -1072,7 +1072,7 @@
       "name": "financial-analyst",
       "scope": "root",
       "capability": "financial-analyst",
-      "content_hash": "920cd2b9e221e78d",
+      "content_hash": "afacd3bdf2e33369",
       "version": "1.0.0",
       "mirrors": [
         "agents/financial-analyst.md"
@@ -1124,7 +1124,7 @@
       "name": "greenfield-agent",
       "scope": "root",
       "capability": "greenfield-agent",
-      "content_hash": "ba86e4b480a227d8",
+      "content_hash": "70480c6a2ad453f6",
       "version": "1.0.0",
       "mirrors": [
         "agents/greenfield-agent.md"
@@ -1137,7 +1137,7 @@
       "name": "group-review-agent",
       "scope": "root",
       "capability": "group-review-agent",
-      "content_hash": "6ced6952f43e57d9",
+      "content_hash": "4322813b390a7960",
       "version": "1.0.0",
       "mirrors": [
         "agents/group-review-agent.md"
@@ -1254,7 +1254,7 @@
       "name": "market-intelligence-agent",
       "scope": "root",
       "capability": "market-intelligence-agent",
-      "content_hash": "cbb3a02d835a57af",
+      "content_hash": "ae3ed45e572dfdab",
       "version": "1.0.0",
       "mirrors": [
         "agents/market-intelligence-agent.md"
@@ -1332,7 +1332,7 @@
       "name": "quant-methodologist",
       "scope": "root",
       "capability": "quant-methodologist",
-      "content_hash": "3c436503571d93da",
+      "content_hash": "5394172677242474",
       "version": "1.0.0",
       "mirrors": [
         "agents/quant-methodologist.md"
@@ -1371,7 +1371,7 @@
       "name": "risk-officer",
       "scope": "root",
       "capability": "risk-officer",
-      "content_hash": "ce32fce92a65b64f",
+      "content_hash": "438629fe9de94ec8",
       "version": "1.0.0",
       "mirrors": [
         "agents/risk-officer.md"
@@ -1449,7 +1449,7 @@
       "name": "valuation-agent",
       "scope": "root",
       "capability": "valuation-agent",
-      "content_hash": "b2ea22cfa987d88a",
+      "content_hash": "de66f981691e703c",
       "version": "1.0.0",
       "mirrors": [
         "agents/valuation-agent.md"
@@ -1672,6 +1672,11 @@
     },
     {
       "id": "dec:DEC-20261025-04",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
+      "id": "dec:DEC-20261025-05",
       "type": "decision",
       "layer": "L3"
     },
@@ -4946,6 +4951,12 @@
     {
       "type": "cites_skill",
       "from": "dec:DEC-20261025-04",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261025-05",
       "to": "skill:root/decision-record",
       "source": "skills_used"
     },

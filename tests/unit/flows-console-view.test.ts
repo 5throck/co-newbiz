@@ -1,16 +1,20 @@
-// @version 1.2.0
+// @version 1.3.0
 // 플로우 콘솔 화면(2026-10-24-flow-console-screen-design, Row 4) — 순수 뷰 헬퍼
 // 단위 테스트 + 화면 소스의 a11y 규약 정적 검사(§9 체크리스트 핵심 항목).
 // 1.1.0: 단계명 사본 제거(design 2026-10-25-agent-assignment-prompt-standard §6.1 —
 // /api/flows가 stage.name 직접 투영) + 단계 흐름 그래프(§6.2/§6.4/§11.4) 정적 규약.
 // 1.2.0: 그래프·블루프린트 문구의 카탈로그 추출(§3.6 배치) — 그래프 문구 핀을
 // 컴포넌트 소스 리터럴에서 "키 호출부 + ko 마스터 카탈로그 값" 규약으로 이행.
+// 1.3.0: 단계 요약 그리드 제거 + 그래프 가로(좌→우) 전환(2026-10-23 사용자 보고 —
+// 그리드는 그래프와 정보 중복). 키보드 경로 핀을 그리드 button → 활동 표로 이행하고
+// 그리드 잔존(aria-pressed·stageGrid·useStageErrors)을 금지하는 회귀 핀을 추가.
+// 기준 창 표기(windowTokenKey)의 현지화 규약 핀 추가.
 import { test, expect, describe } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   bucketLlmCallsByDay, classifiedByChip, fmtDateTime, fmtInt, fmtPct, fmtSeconds, fmtUsd,
-  runStatusChip, stageDisplayName, totalTokens,
+  runStatusChip, stageDisplayName, totalTokens, windowTokenKey,
   type LlmCallRow,
 } from "../../app/web-next/app/flows/flows-view-lib.ts";
 
@@ -46,6 +50,16 @@ describe("flows-view-lib — 포맷터", () => {
     expect(fmtSeconds(850)).toBe("850ms");
     expect(fmtSeconds(21300)).toBe("21.3s");
     expect(fmtSeconds(125000)).toBe("2m 5s");
+  });
+  test("windowTokenKey는 API window 토큰을 ledger 카탈로그 키로 방출한다(기준 창 현지화)", () => {
+    // 2026-10-23 사용자 보고: "기준 창: 7d"처럼 원문 토큰이 노출되었다 — 화면은
+    // 이 헬퍼의 키를 t()로 풀어 쓰고("최근 7일"), 미지 토큰만 원문 폴백한다.
+    expect(windowTokenKey("24h")).toBe("window24h");
+    expect(windowTokenKey("7d")).toBe("window7d");
+    expect(windowTokenKey("30d")).toBe("window30d");
+    expect(windowTokenKey("90d")).toBeNull();
+    expect(windowTokenKey(null)).toBeNull();
+    expect(koOf("pages.flows.ledger.window7d")).toBe("최근 7일");
   });
   test("fmtDateTime은 ISO를 MM-DD HH:mm로 요약하고 totalTokens는 4열 합계(llm-rollup 규약)", () => {
     expect(fmtDateTime("2026-10-24T09:12:00Z")).toMatch(/^\d{2}-\d{2} \d{2}:\d{2}$/);
@@ -171,9 +185,13 @@ describe("단계 흐름 그래프 — flow-graph.tsx (design 2026-10-25-agent-as
     expect(koOf("pages.flows.graph.svgTitle")).toContain("설계된 플로우"); // §6.4 — 위키 문구 계열의 title
   });
 
-  test("기하는 위키 여정 지도를 재사용한다 — viewBox + width=100% + marker 화살표 + 토큰 색", () => {
+  test("기하는 위키 여정 지도를 재사용한다 — 가로(viewBox 폭>높이) + width=100% + marker 화살표 + 토큰 색", () => {
     expect(graph).toContain("viewBox={");
     expect(graph).toContain('width="100%"');
+    // 2026-10-23 사용자 보고: 세로 1주열 → 가로(좌→우) 전환. minWidth가 읽기 하한을
+    // 보장하고(세로 시절 maxWidth 40rem caps 금지), 좁은 화면은 컨테이너 overflow-x가 대신한다.
+    expect(graph).not.toContain("maxWidth");
+    expect(graph).toContain("minWidth");
     expect(graph).toContain("markerEnd"); // 화살표 엣지
     expect(graph).toContain("var(--border)"); // CSS 변수 색(다크 모드 안전)
     // S4 분기 → S5(greenfield)·S6→S7(brownfield) → S8 재합류 토폴로지가 엣지 상수로 존재
@@ -203,13 +221,16 @@ describe("단계 흐름 그래프 — flow-graph.tsx (design 2026-10-25-agent-as
     expect(graph).not.toMatch(/rgba?\(/);
   });
 
-  test("SVG 내부에 focusable 요소가 없다 — 키보드 경로는 인접 단계 그리드 button(§6.4, WCAG)", () => {
+  test("SVG 내부에 focusable 요소가 없다 — 키보드 경로는 활동 표(§6.4, WCAG)", () => {
     // 속성 수준 검사 — tabIndex 속성 자체가 없어야 한다(문서 주석의 단어가 아님).
     expect(graph).not.toMatch(/tabIndex\s*=\s*\{/i);
     expect(graph).not.toContain("<button");
     expect(graph).not.toContain("aria-pressed");
-    // 대체재: blueprint 단계 그리드는 네이티브 button + aria-pressed(기존 A1 규약 유지).
-    expect(blueprint).toContain("aria-pressed={selected}");
+    // 대체재: 활동 표가 단계 선택·필터의 키보드 경로다. 단계 요약 그리드(네이티브
+    // button 목록)는 2026-10-23 그래프 중복 제거로 삭제되었다 — 잔존은 회귀다.
+    expect(blueprint).not.toContain("aria-pressed");
+    expect(blueprint).not.toContain("stageGrid");
+    expect(blueprint).not.toContain("useStageErrors");
     // 그래프 클릭은 기존 단계 선택 상태를 재사용한다(§6.3 — 새 state 0).
     expect(blueprint).toContain("<FlowGraph");
     expect(blueprint).toContain("onSelectStage={(stageId) => setSelectedStage");

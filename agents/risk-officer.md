@@ -21,7 +21,7 @@ lifecycle:
 
 ## Role
 
-Red-team function
+Red-team function. Also drafts evidence-bounded stage outputs: synergy analysis (target strengths and weaknesses, synergy areas), attractiveness score recommendations, and required-capability register judgements (DEC-20261025-05 §13.3 capability audit).
 
 ## Scope
 
