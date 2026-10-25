@@ -33,11 +33,11 @@ counterpart: operations-manual.md
 2. 마이그레이션 직전에 백업을 실행한다.
 3. 직후에 헬스체크를 실행한다.
 4. 롤백은 릴리스 주기당 최소 1회, reversible 태그 마이그레이션으로 리허설한다.
-5. **되돌릴 수 없는(irreversible) 마이그레이션은 출시 전에 release-engineer + dba 공동 서명이 필요** — 기본 리뷰보다 높은 기준이며, 의도된 것이다.
+5. **되돌릴 수 없는(irreversible) 마이그레이션은 출시 전에 release-engineer + dba 공동 서명이 필요** — 기본 리뷰보다 높은 기준이며 의도된 것이다.
 
 ## 3. 배치 운영
 
-예약 수집 파이프라인(`newbiz.ts watch:run`, `scripts/co-newbiz/newbiz.ts`)은 OS 레벨(Task Scheduler / systemd timer)에서 실행된다. **인프로세스 타이머가 아니다** — 인프로세스 타이머는 앱과 함께 죽고, 그러면 예약 모니터링의 목적 자체가 사라진다.
+예약 수집 파이프라인(`newbiz.ts watch:run`, `scripts/co-newbiz/newbiz.ts`)은 OS 레벨(Task Scheduler / systemd timer)에서 실행된다. **인프로세스 타이머가 아니다** — 인프로세스 타이머는 앱과 함께 죽고 그러면 예약 모니터링의 목적 자체가 사라진다.
 
 파이프라인: 수집(cache-first) → 영향 탐지 → 자동 재실행 → RAG 재평가 → 알림. `job_run`이 이 파이프라인의 운영 감사 기록이다 — 예약 실행이 발화하지 않은 것처럼 보이면 가장 먼저 확인할 것.
 
@@ -49,7 +49,7 @@ counterpart: operations-manual.md
 
 1. sre가 분류하고 심각도를 매긴다.
 2. 사고가 MNPI 플래그가 붙은 프로젝트에 닿아 있으면, `data_access_log`와 `insider_list` 기록은 부수 정보가 아니라 사고 기록의 일부다.
-3. 사후 분석은 모든 프로덕션 사고에 필수이며, 운영 전용 포스트모템과 함께 거버넌스 KPI 세트(해당하는 경우 재작업률)에 투입된다.
+3. 사후 분석은 모든 프로덕션 사고에 필수이며 운영 전용 포스트모템과 함께 거버넌스 KPI 세트(해당하는 경우 재작업률)에 투입된다.
 
 ## 6. 관련 문서
 

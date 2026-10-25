@@ -29,7 +29,7 @@
 | `root/dd-to-valuation-bridge` | L3 | 1.2.0 | root/brownfield-agent, root/risk-officer | root/phase 4, root/phase 5 | root/brownfield-feasibility (composes_with), root/executive-presentation (composes_with), root/financing-plan-review (follows), root/insight-synthesis (composes_with), root/rag-scoring-framework (composes_with), root/site-visit-protocol (composes_with), root/stage-gate-governance (composes_with), root/stage-gate-governance (follows), root/talent-pipeline-planning (composes_with) | — | — |
 | `root/deal-execution-playbook` | L3 | 1.0.1 | — | — | — | — | — |
 | `root/debt-and-contingent-liability-simulation` | L3 | 1.1.0 | root/valuation-agent | root/phase 4 | root/certification-transferability (follows), root/financing-plan-review (composes_with), root/investment-feasibility-modeling (composes_with), root/legal-due-diligence (composes_with), root/management-incentive-review (composes_with), root/org-readiness-assessment (composes_with), root/stage-gate-governance (composes_with), root/technical-due-diligence (composes_with), root/wacc-input-session (composes_with) | — | — |
-| `root/decision-record` | L3 | 1.1.0 | — | — | — | — | — |
+| `root/decision-record` | L3 | 1.1.1 | — | — | — | — | — |
 | `root/design-foundation` | L3 | 1.1.0 | — | — | root/accessibility-audit (composes_with), root/token-usage-lint (composes_with), root/ui-ux-design-intelligence (enables) | — | — |
 | `root/documentation-writing` | L3 | 1.0.3 | — | — | root/team-builder (composes_with) | — | — |
 | `root/evidence-ledger` | L3 | 1.1.0 | — | — | — | — | — |
@@ -383,6 +383,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20261025-01` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261025-02` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261025-03` | decision | `root/decision-record` | — | — |
+| `dec:DEC-20261025-04` | decision | `root/decision-record` | — | — |
 | `doc:AGENTS.md` | doc | `root/agent-lifecycle-manager`, `root/skill-lifecycle-manager` | — | — |
 | `doc:CODEX.md` | doc | `root/meeting-facilitation` | — | — |
 | `doc:procedures/README.md` | doc | `root/antitrust-screening`, `root/brownfield-feasibility`, `root/regional-incentive-sourcing`, `root/site-infrastructure-assessment` | — | — |

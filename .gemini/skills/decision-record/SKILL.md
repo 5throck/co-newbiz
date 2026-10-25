@@ -6,7 +6,7 @@ description: >
   docs/decisions/DEC-YYYYMMDD-NN.md files with rule and evidence citations.
   Use when: a gate ruling was made, an escalation was resolved, or a go/no-go
   decision was reached (ADR-0061).
-version: 1.1.0
+version: 1.1.1
 owner: pm
 status: active
 last_reviewed: 2026-08-25
@@ -56,6 +56,8 @@ status: proposed|accepted|superseded
 | `skills_used[]` | yes (may be empty) | Skill names consulted, drawn from the skill relationship graph vocabulary (ADR-0060) |
 | `knowledge_refs[]` | yes (may be empty) | Knowledge-layer artifacts the ruling rests on — country profiles, manuals, ADRs, procedure schemas (ADR-0061 amendment 2026-08-25: closes the Agent→Skill→**Knowledge**→Evidence→Rule→Decision chain end to end) |
 | `status` | yes | `proposed` until confirmed, `accepted` once acted on, `superseded` when reversed |
+
+> **Validator contract** (`scripts/validate-decisions.ts`): `evidence_refs` accepts only evidence-ledger EV-ids (rows of `docs/evidence/ledger.md`), and `rules_applied` accepts only `<PREFIX>-R<N>` rule-registry ids; cite artifacts and rules in prose in the Basis section instead, with `[]` as the correct value when no ledger entry or registered rule id exists.
 
 ### Body
 
