@@ -39,7 +39,6 @@ const scope = (over: Partial<GfScope> = {}): GfScope => ({
 
 
 // i18n re-pin (T3-6): label emissions are common.* catalog keys — resolve through a ko stub translator.
-import { readFileSync } from "node:fs";
 const ko = JSON.parse(readFileSync("app/web-next/locales/ko.json", "utf8")) as Record<string, any>;
 const tr = (key: string): string => key.split(".").reduce<unknown>((acc, k) => (acc as Record<string, any>)[k], ko) as string;
 

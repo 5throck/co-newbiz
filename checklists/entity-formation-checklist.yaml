@@ -23,7 +23,7 @@ gate: "Entity IC"
 # is the establishment route. gx-01..gx-03 apply to BOTH modes. A project with an
 # unknown/legacy mode is read as new_entity.
 #
-# gx-01..gx-03 (v1.1.0, ADR-0161 Proposed) are a separate group: the greenfield
+# gx-01..gx-03 (v1.1.0, ADR-0161 Accepted) are a separate group: the greenfield
 # execution baseline (procedures/_shared/greenfield-execution-baseline), which
 # applies by case_type = greenfield regardless of origin and of whether a new
 # entity is formed. They replace, for greenfield at S11, the closing-specific

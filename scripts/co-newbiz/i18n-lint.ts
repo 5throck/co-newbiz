@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.0.1
 /**
  * i18n-lint — the re-liquefaction guard (design 2026-10-23-i18n-ui-adoption
  * §3.6). Scans app/web-next sources for Hangul occurring in CODE (line and
@@ -254,7 +254,7 @@ export function loadBaseline(): Record<string, number> {
 /** Check the tree against the baseline allowlist. */
 export function lintI18nStrings(projectRoot: string = findProjectRoot()): I18nLintResult {
   const scan = scanKoreanLines(projectRoot);
-  const baseline = loadBaseline(projectRoot);
+  const baseline = loadBaseline();
   const violations: I18nLintViolation[] = [];
   const shrinks: I18nLintShrink[] = [];
   for (const [file, lines] of Object.entries(scan.byFile)) {

@@ -18,7 +18,7 @@ gate: FS
 # practice, not activated policy — whether it becomes policy is ADR-0051 open
 # question (c) for the thresholds meeting.
 #
-# S11 TRACK SCOPE (ADR-0161, Proposed; design 2026-10-11 §5.2, user decisions
+# S11 TRACK SCOPE (ADR-0161, Accepted; design 2026-10-11 §5.2, user decisions
 # 2026-10-12): at the S11 execution and IC financing-precondition use of this
 # checklist, fin-04..fin-08 are closing-specific (funds flow at closing, FX on
 # the consideration, certain funds, escrow, reverse-termination fee) and are

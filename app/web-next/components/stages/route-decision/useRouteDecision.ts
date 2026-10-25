@@ -1,9 +1,17 @@
 "use client";
 
 // Split from components/stages/RouteDecisionStage.tsx (Wave U-3 decomposition); behavior unchanged.
+// These .tsx modules are type-checked in the app program (app/web-next, jsx on). The root
+// tsconfig (tests/scripts program) runs tsc without --jsx, so importing them from a .ts file
+// that the program includes (tests/unit/route-decision-module-graph.test.ts walks this module
+// graph) raises TS6142 there. The runtime import graph is unchanged.
+// biome-ignore lint/suspicious/noTsIgnore: TS6142 is expected in the jsx-less root program only
+// @ts-ignore
 import { useAuth } from "../../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../../lib/project-write-access.ts";
 import { useState, useRef, useCallback, useEffect } from "react";
+// biome-ignore lint/suspicious/noTsIgnore: TS6142 is expected in the jsx-less root program only
+// @ts-ignore
 import { useConfirm } from "../../crud.tsx";
 import { api, ApiError } from "../../../lib/api.ts";
 import { CRITERIA, OVERRIDDEN_SUBS, GF_SUB, BF_SUB } from "./constants.ts";

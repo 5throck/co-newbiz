@@ -130,7 +130,7 @@ describe("S3 UI has no 해소 힌트 and no holders inputs", () => {
   test("legacy caption renders only with holders (button + caption helper)", async () => {
     // Computed specifier: the .tsx module is runtime-resolved by bun; tsc runs without --jsx.
     const dialogPath = "../../app/web-next/components/stages/CapabilityHeldDialog.tsx";
-    const { legacyHoldersCaption } = (await import(dialogPath)) as { legacyHoldersCaption: (holders?: string[] | null) => string };
+    const { legacyHoldersCaption } = (await import(dialogPath)) as { legacyHoldersCaption: (holders?: string[] | null, tr?: (key: string, values?: Record<string, string | number | Date>) => string) => string };
     expect(legacyHoldersCaption([])).toBe("");
     const tr = (key: string, values?: Record<string, string | number | Date>) => key === "components.capabilityJudgement.heldDialog.existingHoldingEntitiesP1"
       ? `기존 보유 주체: ${values?.p1}`

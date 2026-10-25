@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { readFileSync } from "node:fs";
 import { currentTurn, gateSequenceBlocker, gateState } from "../../app/web-next/lib/gate-sequence-view.ts";
 
 const G = ["entity_ic", "group_ic"];

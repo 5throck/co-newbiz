@@ -3,6 +3,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { filterTargetsByStatus, TARGET_STATUS_FILTERS, type TargetStatusFilter } from "../../app/web-next/components/stages/brownfield/longlist-filter.ts";
+import type { TargetRow } from "../../app/web-next/components/stages/brownfield/types.ts";
 
 const brownfieldDir = "./app/web-next/components/stages/brownfield/";
 const longlist = readFileSync(`${brownfieldDir}LonglistSection.tsx`, "utf8");
@@ -12,7 +13,7 @@ const css = readFileSync("./app/web-next/app/styles.css", "utf8");
 const ko = JSON.parse(readFileSync("./app/web-next/locales/ko.json", "utf8"));
 const en = JSON.parse(readFileSync("./app/web-next/locales/en.json", "utf8"));
 
-const row = (id: string, status: "pending" | "shortlisted" | "excluded") => ({ id, status });
+const row = (id: string, status: "pending" | "shortlisted" | "excluded"): TargetRow => ({ id, status } as TargetRow);
 
 describe("longlist status filter helper (잔여 #1)", () => {
   test("filter vocabulary covers every target status plus all", () => {
