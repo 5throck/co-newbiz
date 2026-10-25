@@ -17,6 +17,7 @@ import { RunExpansionRows } from "./run-expansion.tsx";
 import {
   bucketLlmCallsByDay,
   classifiedByChip,
+  countAxisMax,
   dryRunGroupOf,
   fmtDateTime,
   fmtInt,
@@ -512,16 +513,34 @@ function FilterBar({
  *  2026-10-23 사용자 보고 대응: (1) 범례를 상단 고정 + grid.top 여백으로 x축·자기
  *  마커와의 겹침을 없애고 containLabel로 축 라벨 잘림을 막는다. (2) barMaxWidth
  *  상한(32px) — 불러온 행이 하루에 몰려 버킷 1개일 때 막대가 그리드 전폭으로
- *  부풀지 않고 정상 폭 막대로 렌더된다. 비용 보조축(우측)은 유지. */
+ *  부풀지 않고 정상 폭 막대로 렌더된다. 비용 보조축(우측)은 유지.
+ *  2026-10-25 사용자 보고 대응(축 맞춤): 주축을 ECharts 자동 스케일에 맡기면
+ *  최대 버킷이 보기 좋은 눈금과 일치할 때(예: 25 → 0–25축) 최고 막대가 축 전체
+ *  높이를 100% 채워 규모가 왜곡되어 보였다. (3) 주축 max를 countAxisMax(스택
+ *  최댓값)으로 고정 — 데이터에 맞는 정수 상한 + 여유. (4) minInterval 1 — 호출
+ *  수는 셈이라 정수 눈금만. (5) alignTicks false — 보조축(비용)과의 틱 정렬
+ *  협상이 어느 축의 스케일이든 다시 쓰지 않게 각축 독립 스케일. 계열→축 바인딩은
+ *  불변(막대 2종 → 주축 스택, 비용 선 → 보조축). */
 function chartOption(buckets: Array<{ day: string; ok: number; failed: number; costUsd: number }>, t: ReturnType<typeof useTranslations>): EChartsOption {
+  const maxStacked = buckets.reduce((mx, b) => Math.max(mx, b.ok + b.failed), 0);
   return {
     tooltip: { trigger: "axis" },
     legend: { top: 0, data: [t("chartLegendSuccess"), t("chartLegendFailed"), t("colCost")] },
     grid: { left: 8, right: 8, top: 56, bottom: 8, containLabel: true },
     xAxis: { type: "category", data: buckets.map((b) => b.day) },
     yAxis: [
-      { type: "value", name: t("callsCount") },
-      { type: "value", name: t("chartAxisCost") },
+      {
+        type: "value",
+        name: t("callsCount"),
+        max: countAxisMax(maxStacked), // 데이터 적합 상한 — 고정값도·최대 버킷 꽉 참도 아님
+        minInterval: 1, // 정수 눈금(호출 수는 셈)
+        alignTicks: false, // 보조축과 스케일 협상 금지 — 주축은 카운트에만 맞는다
+      },
+      {
+        type: "value",
+        name: t("chartAxisCost"),
+        alignTicks: false, // 비용은 자기 데이터에만 맞는 별도 스케일(주축을 부풀리지 않음)
+      },
     ],
     series: [
       { name: t("chartLegendSuccess"), type: "bar", stack: "calls", barMaxWidth: 32, data: buckets.map((b) => b.ok) },

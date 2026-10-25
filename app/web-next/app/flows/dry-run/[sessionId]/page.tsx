@@ -2,12 +2,18 @@
 
 // 드라이런 세션 작업 화면 (화면 설계 2026-10-24 §6, J3 "안전한 실험" — 벤치 A3-5
 // URL 공유 채택: 세션은 오래 사는 작업 대상이므로 전용 라우트로 딥링크를 제공한다).
-// 구성: 세션 헤더(비용·토큰 누계 바, 만료 칩, 제안 전용 경계 문구) → 오버라이드 편집기
-// (프롬프트 본문 + 에이전트 재배정, 로스터 한정 — §6.6 (1)) → A/B 비교(벤치 A3-2
-// diff+등급 필, A3-3 선호 기록) → AI 제안 패널(§7) → 실행 기록(dry_run_group_id 그룹핑,
-// 벤치 B1-2 변형). 실행은 반드시 비용 확인 대화상자(ADR-0082)를 통과한다(§6.2).
-// 모든 변경은 세션 스코프뿐 — SSOT(prompts.json·flow.spec.yaml) 쓰기 경로는 없다(§12-4).
-import { Suspense, useEffect, useMemo, useState } from "react";
+// 구성(2026-10-25 가독성 개편 — 섹션 카드 분리·메타 정의 그리드·실행 카드 상단 승격):
+//   1) 세션 헤더 — 라벨:값 정의 그리드(긴 id 잘라보기+복사, 상태·TTL 칩) + 비용 누계
+//      + "실행" 카드(PrimaryAction과 비용 추정·샘플 입력을 한 테두리 안에, §6.2)
+//   2) 오버라이드 편집기(좌열) — 로스터 한정 재배정(§6.6 (1)), diff +N/−M 색 칩,
+//      dirty 칩, base 참조 박스, 적용=새 세션 경고 콜아웃
+//   3) A/B 비교(우열) — 실행 전 구조화된 빈 상태(두 다리 패널), 실행 후 다리 카드 +
+//      선호 기록(벤치 A3-3), 내보내기는 툴바 액션으로 상단 고정
+//   4) AI 제안 패널(§7) → 5) 실행 기록(dry_run_group_id 그룹핑, 벤치 B1-2 변형).
+// 실행은 반드시 비용 확인 대화상자(ADR-0082)를 통과한다. 모든 변경은 세션 스코프뿐 —
+// SSOT(prompts.json·flow.spec.yaml) 쓰기 경로는 없다(§12-4).
+// 좌우 두 창은 CSS grid(2fr/3fr) — flex-wrap 수축으로 비교 창이 납작해지던 문제의 수정.
+import { Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -28,6 +34,7 @@ import {
   preferenceLabelKey,
   sessionStatusChip,
   sourceChip,
+  totalTokens,
   type BlueprintAgent,
   type DryRunExecutePayload,
   type DryRunPreference,
@@ -37,8 +44,8 @@ import {
   estimateFromLedger,
 } from "../../flows-view-lib.ts";
 
-// 실행 기록 소형 표 열 비율 — 시각 | 다리 | 모델 | 상태 | 지연 | 비용.
-const RUN_HISTORY_COL_PCT = [17, 11, 21, 12, 13, 26] as const;
+// 실행 기록 소형 표 열 비율 — 시각 | 다리 | 모델 | 토큰 | 상태 | 지연 | 비용.
+const RUN_HISTORY_COL_PCT = [15, 10, 19, 13, 11, 12, 20] as const;
 
 const ADMIN_FORBIDDEN_KEY = "adminForbidden";
 
@@ -240,6 +247,12 @@ export function DryRunSessionView() {
     }
   }
 
+  function copySessionId() {
+    if (!session) return;
+    void navigator.clipboard.writeText(session.id);
+    toast(t("sessionIdCopiedToast"));
+  }
+
   if (forbidden) {
     return (
       <main>
@@ -274,6 +287,7 @@ export function DryRunSessionView() {
   const expiry = expiryChip(session.expires_at);
   const grade = gradeFromPreference(session.preference);
   const statusChip = sessionStatusChip(session.status);
+  const estimate = estimateFromLedger(session.ledger);
   const executeBlockedReason = !storedHasOverride
     ? t("blockedNoOverride")
     : !llmConfigured
@@ -288,25 +302,47 @@ export function DryRunSessionView() {
         {t("intro")}
       </p>
 
-      {/* 세션 헤더 — id·상태·만료 칩 + 세션 비용·호출 누계 바(벤치 B3-3/A5-5) + PrimaryAction. */}
+      {/* 세션 헤더 — 라벨:값 메타 그리드(id 잘라보기+복사, 상태·만료 칩) + 비용 누계 +
+          "실행" 카드(CTA·비용 추정·샘플 입력, 벤치 B3-3/A5-5). PrimaryAction 유지. */}
       <section aria-label={t("sessionSummarySection")} className="market-section">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div style={{ minWidth: "18rem" }}>
-            <div className="flex flex-wrap items-center gap-1">
-              <code className="dd-item-id">{session.id}</code>
-              <span className={statusChip.cls}>{statusChip.key ? tr(statusChip.key) : statusChip.label}</span>
-              {expiry && <span className={expiry.cls} title={tr(expiry.titleKey, expiry.titleParams)}>{tr(expiry.key)}</span>}
-            </div>
-            <p className="mt-1 mb-0 text-[length:var(--fs-caption)]">
-              {t("targetPrefix")} {session.activity_id ? <><code className="dd-item-id">{session.activity_id}</code> · </> : null}
-              {t("promptWord")} <code className="dd-item-id">{session.prompt_key}</code> · base{" "}
-              <code className="dd-item-id">{session.base_agent_key}</code> → override{" "}
-              {session.override_agent_key ? <code className="dd-item-id">{session.override_agent_key}</code> : t("unchanged")}
-            </p>
-            <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              {t("purposeLine", { p1: session.purpose, p2: fmtDateTime(session.created_at), p3: session.created_by, p4: fmtDateTime(session.expires_at) })}
-            </p>
-          </div>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <dl className="m-0 grid gap-x-4 gap-y-1" style={{ gridTemplateColumns: "max-content minmax(0, 1fr)", flex: "1 1 24rem", minWidth: 0 }}>
+            <MetaRow label={t("colSessionId")}>
+              <span className="inline-flex flex-wrap items-center gap-1">
+                <code className="dd-item-id cell-truncate" style={{ display: "inline-block", maxWidth: "16rem", verticalAlign: "bottom" }} title={session.id}>
+                  {session.id}
+                </code>
+                <button type="button" className="btn-ghost btn-sm" aria-label={t("copySessionIdAria")} onClick={copySessionId}>
+                  {tc("copy")}
+                </button>
+              </span>
+            </MetaRow>
+            <MetaRow label={tc("status")}>
+              <span className="inline-flex flex-wrap items-center gap-1">
+                <span className={statusChip.cls}>{statusChip.key ? tr(statusChip.key) : statusChip.label}</span>
+                {expiry && <span className={expiry.cls} title={tr(expiry.titleKey, expiry.titleParams)}>{tr(expiry.key)}</span>}
+              </span>
+            </MetaRow>
+            <MetaRow label={t("labelActivity")}>
+              {session.activity_id ? <code className="dd-item-id">{session.activity_id}</code> : <span className="text-[color:var(--muted-fg)]">—</span>}
+            </MetaRow>
+            <MetaRow label={t("promptWord")}>
+              <code className="dd-item-id">{session.prompt_key}</code>
+            </MetaRow>
+            <MetaRow label={t("labelBaseAgent")}>
+              <code className="dd-item-id">{session.base_agent_key}</code>
+            </MetaRow>
+            <MetaRow label={t("labelOverrideAgent")}>
+              {session.override_agent_key ? <code className="dd-item-id">{session.override_agent_key}</code> : <span className="text-[color:var(--muted-fg)]">{t("unchanged")}</span>}
+            </MetaRow>
+            <MetaRow label={t("labelPurpose")}>{session.purpose}</MetaRow>
+            <MetaRow label={t("labelCreated")}>
+              <span className="tabular-nums">{t("createdValue", { p1: fmtDateTime(session.created_at), p2: session.created_by })}</span>
+            </MetaRow>
+            <MetaRow label={t("labelExpiry")}>
+              <span className="tabular-nums">{fmtDateTime(session.expires_at)}</span>
+            </MetaRow>
+          </dl>
           <div className="text-right" style={{ minWidth: "14rem" }}>
             <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("costTotal")}</div>
             <div className="text-xl font-bold tabular-nums">{fmtUsd(session.ledger.costUsd)}</div>
@@ -316,51 +352,80 @@ export function DryRunSessionView() {
             </div>
           </div>
         </div>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <PrimaryAction
-            inline
-            label={busyExecute ? t("executing") : t("executeCta")}
-            onClick={askExecute}
-            disabled={busyExecute || !storedHasOverride || !llmConfigured}
-            disabledReason={executeBlockedReason}
-          />
-          <label className="text-[length:var(--fs-caption)]" style={{ flex: "1 1 14rem" }}>
-            <span className="block mb-0.5">{t("sampleInputLabel")}</span>
-            <input className="sizing-new-input sizing-new-input-sm w-full" value={sampleUser} maxLength={500} onChange={(e) => setSampleUser(e.target.value)} />
-          </label>
+
+        {/* "실행" 카드 — 워크플로 최상단에 CTA를 승격(§6.2). 비용 추정 줄이 버튼 옆에
+            항상 보인다(대화상자 전 공지). ConfirmDialog 동작은 그대로 유지. */}
+        <div className="mt-3" style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-md)", background: "var(--surface)", padding: "0.75rem 1rem" }}>
+          <div className="mb-1 text-[length:var(--fs-caption)] font-semibold">{t("runCardTitle")}</div>
+          <div className="flex flex-wrap items-end gap-2">
+            <PrimaryAction
+              inline
+              label={busyExecute ? t("executing") : t("executeCta")}
+              onClick={askExecute}
+              disabled={busyExecute || !storedHasOverride || !llmConfigured}
+              disabledReason={executeBlockedReason}
+            />
+            <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" style={{ flex: "1 1 12rem", minWidth: 0 }}>
+              <span className="font-semibold">{t("costEstimateLabel")}:</span>{" "}
+              <span className="tabular-nums">{tr(estimate.noteKey, estimate.noteParams)}</span>
+            </p>
+            <label className="text-[length:var(--fs-caption)]" style={{ flex: "1 1 14rem" }}>
+              <span className="block mb-0.5">{t("sampleInputLabel")}</span>
+              <input className="sizing-new-input sizing-new-input-sm w-full" value={sampleUser} maxLength={500} onChange={(e) => setSampleUser(e.target.value)} />
+            </label>
+          </div>
         </div>
         <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
           <span className="status-chip status-amber">{t("proposalOnlyChip")}</span> {t("boundaryNote")}
         </p>
       </section>
 
-      {/* 오버라이드 편집기(좌열) + A/B 비교(우열) — flex-wrap으로 48rem 미만 세로 스택(§11). */}
-      <div className="flex flex-wrap items-start gap-3">
-        <section aria-label={t("overrideSection")} className="market-section" style={{ flex: "1 1 22rem" }}>
-          <SectionToolbar title={t("overrideTitle")} summary={<span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("overrideScopeNote")}</span>} />
-          <label className="text-[length:var(--fs-caption)] block mb-2">
+      {/* 오버라이드 편집기(좌열 2fr) + A/B 비교(우열 3fr) — CSS grid 두 창. lg 미만에서
+          세로 적층(§11). flex-wrap 수축(비교 창이 빈 조각으로 눌리던 문제) 제거. */}
+      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        <section aria-label={t("overrideSection")} className="market-section" style={{ minWidth: 0 }}>
+          <SectionToolbar
+            title={t("overrideTitle")}
+            filters={
+              dirty ? (
+                <span className="status-chip status-amber">{t("dirtyChip")}</span>
+              ) : undefined
+            }
+            summary={<span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("overrideScopeNote")}</span>}
+          />
+          <label className="text-[length:var(--fs-caption)] block mb-1">
             <span className="block mb-1">{t("promptBodyLabel")}</span>
             <textarea
               className="sizing-new-input w-full"
-              rows={10}
+              rows={12}
+              style={{ display: "block", lineHeight: 1.5, fontSize: "var(--fs-body)" }}
               value={overrideSystem}
               onChange={(e) => setOverrideSystem(e.target.value)}
               aria-describedby="dry-run-override-note"
             />
           </label>
-          <p id="dry-run-override-note" className="mb-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+          <p id="dry-run-override-note" className="mt-1 mb-1 flex flex-wrap items-center gap-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
             {diff.added + diff.removed > 0 ? (
-              <span className="status-chip status-in-progress">{t("diffLines", { p1: fmtInt(diff.added), p2: fmtInt(diff.removed) })}</span>
+              <>
+                {diff.added > 0 && <span className="status-chip status-approved">{t("diffAdded", { p1: fmtInt(diff.added) })}</span>}
+                {diff.removed > 0 && <span className="status-chip status-rejected">{t("diffRemoved", { p1: fmtInt(diff.removed) })}</span>}
+              </>
             ) : (
               <span className="status-chip status-not-started">{t("diffSame")}</span>
-            )}{" "}
-            {t("diffNote")}
+            )}
+            <span>{t("diffNote")}</span>
           </p>
+          {/* base 참조 — 편집 대상(textarea)과 참조 원본을 시각적으로 분리: 테두리 박스. */}
           <details className="mb-2">
             <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">{t("basePromptRef")}</summary>
-            <pre className="mt-1 text-[length:var(--fs-caption)]" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: "14rem", overflowY: "auto" }}>{session.base_system}</pre>
+            <pre
+              className="mt-1 mb-0 text-[length:var(--fs-body)]"
+              style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: "14rem", overflowY: "auto", border: "1px solid var(--border)", background: "var(--muted-bg)", borderRadius: "var(--radius-sm)", padding: "0.5rem 0.75rem" }}
+            >
+              {session.base_system}
+            </pre>
           </details>
-          <label className="text-[length:var(--fs-caption)] block mb-2">
+          <label className="text-[length:var(--fs-caption)] block mb-1">
             <span className="block mb-1">{t("reassignLabel")}</span>
             <select className="sizing-new-input w-full" value={overrideAgentKey} onChange={(e) => setOverrideAgentKey(e.target.value)} disabled={roster.length === 0}>
               <option value="">{t("unchangedAgent", { p1: session.base_agent_key })}</option>
@@ -369,6 +434,9 @@ export function DryRunSessionView() {
               ))}
             </select>
           </label>
+          <p className="mt-1 mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+            {t("reassignContext")}
+          </p>
           {roster.length === 0 && (
             <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("rosterFailed")}</p>
           )}
@@ -381,24 +449,53 @@ export function DryRunSessionView() {
               {t("revertEdits")}
             </Button>
           </div>
-          {dirty && (
-            <p role="status" className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              {t("dirtyNote")}
-            </p>
-          )}
+          {/* 적용 = 새 파생 세션 경고 — 적용 컨트롤 바로 아래 warning 콜아웃으로 승격
+              (이전: 화면 최하단 흐릿한 캡션). 경고 토큰만 사용(새 클래스 없음). */}
+          <div
+            role="note"
+            className="mt-2 mb-1 text-[length:var(--fs-caption)]"
+            style={{ borderLeft: "var(--border-width-accent) solid var(--amber-border)", background: "var(--amber-bg)", borderRadius: "var(--radius-sm)", padding: "0.5rem 0.75rem" }}
+          >
+            <span className="font-semibold" style={{ color: "var(--amber-fg)" }}>⚠ {t("applyCalloutLabel")}</span>
+            <p className="m-0 mt-0.5">{t("dirtyNote")}</p>
+          </div>
         </section>
 
-        <section aria-label={t("abSection")} className="market-section" style={{ flex: "2 1 30rem" }}>
+        <section aria-label={t("abSection")} className="market-section" style={{ minWidth: 0 }}>
           <SectionToolbar
             title={t("abTitle")}
             filters={<span className={grade.cls}>{t("gradeLabel", { p1: tr(grade.key) })}</span>}
             summary={<span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("abScopeNote")}</span>}
+            actions={
+              <Button size="sm" disabled={busyExport || !executed} onClick={() => void exportPackage()}>
+                {busyExport ? t("exporting") : t("exportCta")}
+              </Button>
+            }
           />
           {!executed ? (
-            <PageState state="empty" emptyText={t("notExecuted")} />
+            <>
+              {/* 실행 전 구조화된 빈 상태 — 두 다리 패널(제목+안내)로 미리 레이아웃을
+                  보여 준다. 단일 이탤릭 문장(이전) 대체. */}
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="sizing-grade-card">
+                  <div className="text-[length:var(--fs-caption)] font-semibold">{t("legBaseTitle")}</div>
+                  <p className="mt-1 mb-0 text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">{t("legBaseEmpty")}</p>
+                </div>
+                <div className="sizing-grade-card">
+                  <div className="text-[length:var(--fs-caption)] font-semibold">{t("legOverrideTitle")}</div>
+                  <p className="mt-1 mb-0 text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">{t("legOverrideEmpty")}</p>
+                </div>
+              </div>
+              <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                {t("notExecuted")}
+              </p>
+              <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                {t("prefBeforeExecute")}
+              </p>
+            </>
           ) : (
             <>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 <LegCard
                   title={t("legBaseTitle")}
                   text={session.base_output ?? ""}
@@ -436,25 +533,14 @@ export function DryRunSessionView() {
                   {busyPref ? t("recording") : t("recordCta")}
                 </Button>
               </div>
-              {!executed && (
-                <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                  {t("prefBeforeExecute")}
-                </p>
-              )}
               {session.preference && (
                 <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                   {t("prefRecordedLine", { p1: prefLabel(session.preference), p2: session.preference_note ? ` — ${session.preference_note}` : "" })}
                 </p>
               )}
-
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <Button size="sm" disabled={busyExport || !executed} onClick={() => void exportPackage()}>
-                  {busyExport ? t("exporting") : t("exportCta")}
-                </Button>
-                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                  {t("exportNote")}
-                </span>
-              </div>
+              <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                {t("exportNote")}
+              </p>
             </>
           )}
         </section>
@@ -474,7 +560,8 @@ export function DryRunSessionView() {
       />
 
       {/* 실행 기록 — dry_run_group_id 그룹핑(벤치 B1-2 변형). 재실행은 기존 결과를
-          덮지 않고 새 런 장부 행으로 적재된다(벤치 A3-3u 변형). */}
+          덮지 않고 새 런 장부 행으로 적재된다(벤치 A3-3u 변형). 토큰 열 추가
+          (totalTokens 합계 — input+output+cache). */}
       <section aria-label={t("historySection")} className="market-section">
         <SectionToolbar
           title={t("historyTitle")}
@@ -493,6 +580,7 @@ export function DryRunSessionView() {
                   <th scope="col">{t("colTime")}</th>
                   <th scope="col">{t("colLeg")}</th>
                   <th scope="col">{t("colModel")}</th>
+                  <th scope="col" className="col-num">{t("colTokens")}</th>
                   <th scope="col">{tc("status")}</th>
                   <th scope="col" className="col-num">{t("colLatency")}</th>
                   <th scope="col" className="col-num">{t("colCost")}</th>
@@ -509,6 +597,7 @@ export function DryRunSessionView() {
                       <td className="tabular-nums">{fmtDateTime(row.created_at)}</td>
                       <td><span className="status-chip status-not-started">{leg}</span></td>
                       <td className="text-[length:var(--fs-caption)]">{row.model ?? "—"}</td>
+                      <td className="col-num tabular-nums">{fmtInt(totalTokens(row))}</td>
                       <td><span className={okChip.cls}>{okChip.label}</span></td>
                       <td className="col-num tabular-nums">{fmtSeconds(row.latency_ms)}</td>
                       <td className="col-num tabular-nums">{fmtUsd(row.cost_usd)}</td>
@@ -526,6 +615,17 @@ export function DryRunSessionView() {
 
       {confirmDialog}
     </main>
+  );
+}
+
+/** 세션 헤더 메타 행 — 라벨(dt):값(dd) 정의 그리드 한 쌍. 값 칸은 min-width 0으로
+    둬서 긴 id가 dd 안에서 잘려 보이게 한다(truncation은 값 쪽 클래스가 담당). */
+function MetaRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <>
+      <dt className="text-[length:var(--fs-caption)] font-semibold text-[color:var(--muted-fg)] whitespace-nowrap">{label}</dt>
+      <dd className="m-0 text-[length:var(--fs-body)]" style={{ minWidth: 0 }}>{children}</dd>
+    </>
   );
 }
 
@@ -562,7 +662,7 @@ function LegCard({
   const tr = useTranslations();
   const chip = sourceChip(source);
   return (
-    <div className="sizing-grade-card" style={{ flex: "1 1 18rem" }}>
+    <div className="sizing-grade-card" style={{ minWidth: 0 }}>
       <div className="flex flex-wrap items-center gap-1">
         <span className="font-semibold text-[length:var(--fs-caption)]">{title}</span>
         <span className={chip.cls}>{tr(chip.key)}</span>

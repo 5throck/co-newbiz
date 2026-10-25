@@ -6,9 +6,14 @@
 // 이 세션의 오버라이드 편집기 폼 상태를 채우는 것만 수행한다(onApplyOverride /
 // onApplyAgent 콜백) — 저장소 파일 쓰기 경로는 이 컴포넌트에 존재하지 않는다(§12-4).
 // available:false(LLM 미구성·검증 실패)는 "제안 생성 불가" + 사유 — 가짜 제안 금지.
+// 2026-10-25 가독성 개편: 섹션 헤더를 SectionToolbar 표준 구조(ADR-0083)로 통일해
+// 자체 카드 제목을 뚜렷하게 하고, 재배정 후보가 "편집기 select를 채운다"는 착지
+// 지점을 후보 목록 바로 아래 문맥 줄로 명시한다(에디터의 재배정 select와의 역할
+// 혼동 해소 — select는 실행 축, 후보 수용은 그 select를 채우는 입력일 뿐).
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { SectionToolbar } from "../../../components/layout.tsx";
 import { Button } from "../../../components/ui.tsx";
 import { api } from "../../../lib/api.ts";
 import { fmtDateTime, type DryRunSuggestion } from "../flows-view-lib.ts";
@@ -74,27 +79,29 @@ export function SuggestionPanel({
 
   return (
     <section aria-label={t("suggestionSection")} className="market-section">
-      <div className="section-toolbar">
-        <span className="section-title">
-          <h2>{t("suggestionTitle")}</h2>
-          {suggestion && <span className="section-meta">{t("proposalOnlyMeta")}</span>}
-        </span>
-        <span className="toolbar-filters">
-          <label className="text-[length:var(--fs-caption)]">
-            <span className="sr-only">{t("evidenceNoteSrOnly")}</span>
-            <input
-              className="sizing-new-input sizing-new-input-sm"
-              value={note}
-              maxLength={300}
-              placeholder={t("evidenceNotePlaceholder")}
-              onChange={(e) => setNote(e.target.value)}
-            />
-          </label>
-          <Button size="sm" disabled={busy} onClick={() => void suggest()}>
-            {busy ? t("suggesting") : suggestion ? t("suggestAgain") : t("suggestCta")}
-          </Button>
-        </span>
-      </div>
+      <SectionToolbar
+        title={t("suggestionTitle")}
+        filters={
+          suggestion ? <span className="status-chip status-amber">{t("proposalOnlyMeta")}</span> : undefined
+        }
+        actions={
+          <>
+            <label className="text-[length:var(--fs-caption)]">
+              <span className="sr-only">{t("evidenceNoteSrOnly")}</span>
+              <input
+                className="sizing-new-input sizing-new-input-sm"
+                value={note}
+                maxLength={300}
+                placeholder={t("evidenceNotePlaceholder")}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </label>
+            <Button size="sm" disabled={busy} onClick={() => void suggest()}>
+              {busy ? t("suggesting") : suggestion ? t("suggestAgain") : t("suggestCta")}
+            </Button>
+          </>
+        }
+      />
       <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
         {t("suggestNote")}
       </p>
@@ -155,7 +162,7 @@ export function SuggestionPanel({
             {suggestion.proposal.type === "agent_reassignment" && suggestion.proposal.candidateAgents.length > 0 && (
               <>
                 <p className="mb-1 text-[length:var(--fs-caption)] font-semibold">{t("candidatesHeading", { p1: suggestion.proposal.candidateAgents.length })}</p>
-                <ul className="ml-4 mb-2 list-disc text-[length:var(--fs-caption)]">
+                <ul className="ml-4 mb-1 list-disc text-[length:var(--fs-caption)]">
                   {suggestion.proposal.candidateAgents.map((c) => (
                     <li key={c.key} className="mb-1">
                       <code className="dd-item-id">{c.key}</code> — {c.rationale}{" "}
@@ -163,6 +170,12 @@ export function SuggestionPanel({
                     </li>
                   ))}
                 </ul>
+                {/* 착지 지점 문맥 — 수용이 어디를 바꾸는지(편집기 select)를 후보 목록
+                    바로 아래에서 알려 준다. 편집기의 재배정 select(실행 축)와의 역할
+                    혼동을 막는다. */}
+                <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                  {t("candidatesContext")}
+                </p>
               </>
             )}
 
