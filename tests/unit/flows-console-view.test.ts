@@ -1,8 +1,10 @@
-// @version 1.1.0
+// @version 1.2.0
 // 플로우 콘솔 화면(2026-10-24-flow-console-screen-design, Row 4) — 순수 뷰 헬퍼
 // 단위 테스트 + 화면 소스의 a11y 규약 정적 검사(§9 체크리스트 핵심 항목).
 // 1.1.0: 단계명 사본 제거(design 2026-10-25-agent-assignment-prompt-standard §6.1 —
 // /api/flows가 stage.name 직접 투영) + 단계 흐름 그래프(§6.2/§6.4/§11.4) 정적 규약.
+// 1.2.0: 그래프·블루프린트 문구의 카탈로그 추출(§3.6 배치) — 그래프 문구 핀을
+// 컴포넌트 소스 리터럴에서 "키 호출부 + ko 마스터 카탈로그 값" 규약으로 이행.
 import { test, expect, describe } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -158,12 +160,15 @@ describe("단계 흐름 그래프 — flow-graph.tsx (design 2026-10-25-agent-as
   const blueprint = readFileSync(join(FLOWS_DIR, "blueprint-view.tsx"), "utf8");
   const lib = readFileSync(join(FLOWS_DIR, "flows-view-lib.ts"), "utf8");
 
-  test("그래프는 role=img + 한국어 title/desc의 요약 이미지다(위키 여정 지도 패턴)", () => {
+  test("그래프는 role=img + title/desc의 요약 이미지다(위키 여정 지도 패턴, 카탈로그 문구)", () => {
     expect(graph).toContain('role="img"');
     expect(graph).toContain("<title>");
     expect(graph).toContain("<desc>");
-    expect(graph).toContain("설계된 플로우"); // §6.4 — 위키 문구 계열의 한국어 title
     expect(graph).toContain('xmlns="http://www.w3.org/2000/svg"');
+    // i18n: title/desc는 pages.flows.graph.* 키로 방출 — ko 마스터 값이 위키 문구 계열을 보존한다.
+    expect(graph).toContain('tg("svgTitle")');
+    expect(graph).toContain('tg("svgDesc")');
+    expect(koOf("pages.flows.graph.svgTitle")).toContain("설계된 플로우"); // §6.4 — 위키 문구 계열의 title
   });
 
   test("기하는 위키 여정 지도를 재사용한다 — viewBox + width=100% + marker 화살표 + 토큰 색", () => {
@@ -177,19 +182,19 @@ describe("단계 흐름 그래프 — flow-graph.tsx (design 2026-10-25-agent-as
     }
   });
 
-  test("전문가 마커 3종은 링 + 텍스트 범례로 렌더된다(§11.4 — 색 단독 금지)", () => {
-    // kind별 짧은 라벨과 §11.4 범례 문언이 텍스트로 존재한다.
-    expect(graph).toContain("전문 친화");
-    expect(graph).toContain("절차 한정");
-    expect(graph).toContain("실효 소유");
-    expect(graph).toContain("트랙 전문가 관점(공통 산출)"); // affinity 범례
-    expect(graph).toContain("트랙 전용(절차 스코프)"); // scoped 범례
-    expect(graph).toContain("트랙별 실효 소유 상이(절차 계층)"); // override 범례
-    // 링(원 스트로크) 시각자표 + 도트 title에 note — 텍스트 병행.
-    expect(graph).toContain('fill="none" stroke={MARKER_KIND_META[marker.kind].color}');
-    expect(graph).toContain("MARKER_KIND_META[marker.kind].short}: ${marker.note}");
-    // 마커 목록이 kind + 활동 + note를 텍스트로 나열한다.
-    expect(graph).toContain("MARKER_KIND_META[m.kind].short}: ${m.note}`}");
+  test("전문가 마커 3종은 링 + 텍스트 범례로 렌더된다(§11.4 — 색 단독 금지, 카탈로그 문구)", () => {
+    // kind별 짧은 라벨과 §11.4 범례 문언 — 키 호출부(markerKey 헬퍼) + ko 마스터 값 원문 핀.
+    expect(graph).toContain('markerKey(marker.kind, "short")');
+    expect(koOf("pages.flows.graph.markers.affinity.short")).toBe("전문 친화");
+    expect(koOf("pages.flows.graph.markers.scoped.short")).toBe("절차 한정");
+    expect(koOf("pages.flows.graph.markers.override.short")).toBe("실효 소유");
+    expect(koOf("pages.flows.graph.markers.affinity.legend")).toBe("트랙 전문가 관점(공통 산출)"); // affinity 범례
+    expect(koOf("pages.flows.graph.markers.scoped.legend")).toBe("트랙 전용(절차 스코프)"); // scoped 범례
+    expect(koOf("pages.flows.graph.markers.override.legend")).toBe("트랙별 실효 소유 상이(절차 계층)"); // override 범례
+    // 링(원 스트로크) 시각자표 + 도트 title·마커 목록의 note 병행 — 텍스트로 제공.
+    expect(graph).toContain('fill="none" stroke={MARKER_KIND_COLOR[marker.kind]}');
+    expect(graph).toContain('tg("markers.dotTitle"');
+    expect(graph).toContain('tg("markers.noteLine"');
   });
 
   test("그래프 색은 전부 CSS 변수 토큰이다 — 원시 색 상수 0(ADR-0087·design-lint 규약)", () => {
@@ -218,9 +223,9 @@ describe("단계 흐름 그래프 — flow-graph.tsx (design 2026-10-25-agent-as
     expect(graph).toContain("agentsByKey"); // 도트 색 = 페이로드 agents[].domain
     expect(blueprint).not.toContain("activityTrack"); // 과거 trackScope 합집합 헬퍼 소멸
     expect(blueprint).toContain("tracksByStage"); // 표의 트랙 열도 단계 applicableTracks를 읽는다
-    // 활동 표에 마커 전용 표기(§11.4).
+    // 활동 표에 마커 전용 표기(§11.4) — 칩 문구는 graph 네임스페이스 키로 방출.
     expect(blueprint).toContain("markersByActivity");
-    expect(blueprint).toContain("MARKER_KIND_META[marker.kind].short");
+    expect(blueprint).toContain('tg(markerKey(marker.kind, "short"))');
     // 계약: FlowsBlueprint가 specialistMarkers를 타이핑한다.
     expect(lib).toContain("specialistMarkers: SpecialistMarker[]");
   });

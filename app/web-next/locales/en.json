@@ -6162,6 +6162,47 @@
         "noSystemBody": "(no system prompt body)",
         "footnotePrefix": "Note:"
       },
+      "graph": {
+        "sectionTitle": "Stage flow",
+        "sectionAria": "Stage flow graph",
+        "sectionHint": "Click a node to filter the activity table to that stage",
+        "markerChip": "Specialist marker",
+        "svgTitle": "Designed flow: common S1–S4, the track splits at S4, rejoins at S8, and the stages continue together to S12",
+        "svgDesc": "A vertical flow graph connecting stages S1 through S12. S1 through S4 run in common; at S4 the flow splits, with greenfield S5 continuing down the left column and brownfield S6 and S7 down the right column; the columns rejoin at S8, and S9 through S12 run in common. Each stage node shows the stage id, name, activity count, activity dots (agent domain colors), and a track badge; activity dots carrying a specialist marker are drawn with a ring. The stage summary grid above and the activity table below provide the same information as text.",
+        "nodeTitle": "{id} · {name} — {count} activities. Click to filter the activity table to this stage.",
+        "activityCount": "{count} activities",
+        "trackCommon": "Common",
+        "legend": {
+          "title": "Legend",
+          "dot": "Activity dot = agent domain",
+          "marker": "Specialist markers (display-only — DEC-20261025-02)",
+          "domains": {
+            "_core": "Core (_core)",
+            "functional": "Functional (functional)",
+            "industry": "Industry (industry)",
+            "region": "Region (region)",
+            "technical": "Technical (technical)",
+            "_shared": "Shared (_shared)"
+          }
+        },
+        "markers": {
+          "dotTitle": "{id} — {kind}: {note}",
+          "nodeLabel": "◇ {kind} · {id}",
+          "noteLine": "— {kind}: {note}",
+          "affinity": {
+            "short": "Affinity",
+            "legend": "Track specialist view (common output)"
+          },
+          "scoped": {
+            "short": "Procedure-scoped",
+            "legend": "Track-only (procedure scope)"
+          },
+          "override": {
+            "short": "Effective owner",
+            "legend": "Effective ownership differs by track (procedure hierarchy)"
+          }
+        }
+      },
       "flowsAdmin": {
         "adminForbidden": "Admin accounts are separated from business content and cannot view this screen (ADR-0146). This state is a designed access boundary, not an error.",
         "tableScrollRegion": "Data table (horizontal scroll)",
@@ -6212,20 +6253,6 @@
         "expiringSoonTitle": "TTL expiring soon ({p1}) — expired sessions are purged from read and execute paths (§6.8).",
         "costMeasuredNote": "Measured from the last run — cumulative {p1} / {p2} llm calls ({p3} each). Actual cost varies with model and input length.",
         "costUnknownNote": "No measured cost yet (first run) — only a conservative estimate from the {p1}-token cap is possible. Confirm before executing."
-      },
-      "stageNames": {
-        "S1": "Market analysis",
-        "S2": "Opportunity discovery",
-        "S3": "Synergy & strategic fit",
-        "S4": "Entry-mode decision",
-        "S5": "Self entry (greenfield)",
-        "S6": "Target candidate discovery",
-        "S7": "Target selection",
-        "S8": "Business case analysis",
-        "S9": "Due diligence & verification",
-        "S10": "Investment structure design",
-        "S11": "Investment review & execution",
-        "S12": "Post-investment management"
       }
     },
     "projects": {

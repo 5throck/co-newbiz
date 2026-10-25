@@ -1,6 +1,6 @@
 ---
 title: QA sweep fixes - S8 valuation explanation NaN, inbox review text, S8 target table chip wrap
-status: approved
+status: implemented (adjudicated 2026-10-25, DEC-20261025-03)
 date: 2026-10-11
 owner: platform-lead
 domain: technical

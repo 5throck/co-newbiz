@@ -1,7 +1,7 @@
 # Port Swap (Dev 7748 / Docker 7749) and Public Domain Access — Design
 
 - **Date**: 2026-10-11
-- **Status**: draft (Design Gate Row 0)
+- **Status**: implemented (approved at the gate; adjudicated 2026-10-25, DEC-20261025-03)
 - **Owner**: release-engineer
 - **ADR**: none required (no DB schema, auth model or MCP scope change; verified)
 - **Supersedes**: `2026-09-20-dev-port-7749-design.md` and the port layout in `2026-09-21-docker-prod-cicd-design.md` (both stay as history)

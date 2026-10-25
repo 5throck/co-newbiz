@@ -1,7 +1,7 @@
 # S2 Funnel Action Column Overflow - Design
 
 - **Date**: 2026-10-11
-- **Status**: approved (Design Gate Row 0)
+- **Status**: implemented (Design Gate Row 0; adjudicated 2026-10-25, DEC-20261025-03)
 - **Owner**: platform-lead
 - **ADR**: none required (display layer only; no schema, auth, or MCP scope change)
 

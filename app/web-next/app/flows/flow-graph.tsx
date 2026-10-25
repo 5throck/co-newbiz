@@ -13,11 +13,13 @@
 // 뷰박스가 확대 렌더되어 글자가 커지고(가로 12노드 체인은 viewBox 폭이 커져 축소
 // 렌더로 글자가 무너진다) 역방향 화살표가 절대 생기지 않기 때문이다.
 //
-// 접근성(§6.4, WCAG 2.1 AA): 그래프는 role="img" + 한국어 <title>/<desc>의 요약
-// 이미지다. SVG 내부에 focusable 요소를 두지 않는다(포인터 클릭은 편의 — 키보드
-// 경로는 인접 단계 그리드의 네이티브 button 목록과 활동 표가 완전 대체한다).
-// 색 단독 정보 없음: 도트 색은 범례 텍스트(도메인명)와 병행, 전문가 마커는 링 +
-// 텍스트 라벨, 트랙 배지는 텍스트 배지다. 모션 없음(정적 SVG).
+// 접근성(§6.4, WCAG 2.1 AA): 그래프는 role="img" + <title>/<desc>의 요약 이미지다
+// (문구는 카탈로그 pages.flows.graph.* — 활성 로케일을 따른다). SVG 내부에 focusable
+// 요소를 두지 않는다(포인터 클릭은 편의 — 키보드 경로는 인접 단계 그리드의 네이티브
+// button 목록과 활동 표가 완전 대체한다). 색 단독 정보 없음: 도트 색은 범례
+// 텍스트(도메인명)와 병행, 전문가 마커는 링 + 텍스트 라벨, 트랙 배지는 텍스트 배지다.
+// 모션 없음(정적 SVG).
+import { useTranslations } from "next-intl";
 import type { BlueprintAgent, BlueprintStage, SpecialistMarker } from "./flows-view-lib.ts";
 import { stageDisplayName } from "./flows-view-lib.ts";
 
@@ -65,9 +67,13 @@ const EDGES: string[] = [
   "M 96,750 V 768", // S11→S12
 ];
 
+/** 범례 렌더 순서의 도메인 키 집합 — 색 토큰 맵과 카탈로그(pages.flows.graph.legend.domains.*)가
+ *  같은 키 집합을 쓴다(§6.4 색 단독 금지 — 라벨은 카탈로그 텍스트로 병행). */
+const DOMAIN_KEYS = ["_core", "functional", "industry", "region", "technical", "_shared"] as const;
+
 // ── 색·라벨 상수(디자인 토큰만 — design-lint token-usage 규약) ──────────────
 /** 에이전트 도메인 → 차트 팔레트 토큰(ADR-0087 — 화면 코드에서 재유도 금지). */
-const DOMAIN_DOT_COLOR: Record<string, string> = {
+const DOMAIN_DOT_COLOR: Record<(typeof DOMAIN_KEYS)[number], string> = {
   _core: "var(--chart-1)",
   functional: "var(--chart-2)",
   industry: "var(--chart-3)",
@@ -75,40 +81,39 @@ const DOMAIN_DOT_COLOR: Record<string, string> = {
   technical: "var(--chart-7)",
   _shared: "var(--muted-fg)",
 };
-/** 범례 텍스트(도메인명 — 색 단독 금지, §6.4). */
-const DOMAIN_LABEL: Record<string, string> = {
-  _core: "핵심(_core)",
-  functional: "기능(functional)",
-  industry: "산업(industry)",
-  region: "지역(region)",
-  technical: "기술(technical)",
-  _shared: "공유(_shared)",
-};
+/** 페이로드 domain 문자열 → 도트 색 — 미지 도메인은 muted 폴백(키 집합 밖 값 방어). */
+function domainDotColor(domain: string): string {
+  return (DOMAIN_KEYS as readonly string[]).includes(domain)
+    ? DOMAIN_DOT_COLOR[domain as (typeof DOMAIN_KEYS)[number]]
+    : "var(--muted-fg)";
+}
+
 /** 전문가 마커 3종(§11.4 — 링 색 + 텍스트 범례, 색 단독 금지). 활동 표의 마커
- *  칩(§11.4 "활동 표에 전용 열값")도 이 메타를 재사용한다. */
-export const MARKER_KIND_META: Record<SpecialistMarker["kind"], { short: string; legend: string; color: string }> = {
-  affinity: { short: "전문 친화", legend: "트랙 전문가 관점(공통 산출)", color: "var(--chart-2)" },
-  scoped: { short: "절차 한정", legend: "트랙 전용(절차 스코프)", color: "var(--chart-3)" },
-  override: { short: "실효 소유", legend: "트랙별 실효 소유 상이(절차 계층)", color: "var(--chart-6)" },
+ *  칩(§11.4 "활동 표에 전용 열값")도 이 메타를 재사용한다. 문구(short·legend)는
+ *  카탈로그 pages.flows.graph.markers.<kind>.* 로 추출되었다(§3.6 추출 배치) —
+ *  코드가 소유하는 것은 색 토큰과 키 유출 헬퍼뿐이다. */
+export const MARKER_KIND_COLOR: Record<SpecialistMarker["kind"], string> = {
+  affinity: "var(--chart-2)",
+  scoped: "var(--chart-3)",
+  override: "var(--chart-6)",
 };
+/** 범례 렌더 순서. */
+export const MARKER_KINDS = Object.keys(MARKER_KIND_COLOR) as Array<SpecialistMarker["kind"]>;
 
-/** 이 컴포넌트가 도입한 화면 문구 — i18n 카탈로그 키로의 추출은 별도 배치로 진행되며,
- *  그때 i18n-lint 베이스라인에서 축소된다(§3.6). blueprint-view는 이 상수만 소비해
- *  한국어 코드 문자열이 늘지 않게 한다. */
-export const FLOW_GRAPH_I18N = {
-  sectionTitle: "단계 흐름",
-  sectionAria: "단계 흐름 그래프",
-  sectionHint: "노드를 클릭하면 활동 표가 해당 단계로 필터됩니다",
-  markerChip: "전문가 마커",
-} as const;
+/** 마커 문구의 카탈로그 키(`pages.flows.graph` 네임스페이스 상대 경로) — blueprint-view의
+ *  마커 칩도 이 헬퍼로 같은 키를 쓴다(키 경로의 단일 소유). */
+export function markerKey(kind: SpecialistMarker["kind"], part: "short" | "legend"): string {
+  return `markers.${kind}.${part}`;
+}
 
-/** 트랙 배지 — applicableTracks 직접 투영(Row 1 API)을 읽는다. 양 트랙/빈 배열 = 공통. */
-function trackBadge(tracks: string[]): { label: string; bg: string; fg: string; border: string } {
+/** 트랙 배지 — applicableTracks 직접 투영(Row 1 API)을 읽는다. 양 트랙/빈 배열 = 공통.
+ *  공통 라벨은 카탈로그(pages.flows.graph.trackCommon)에서 주입받는다. */
+function trackBadge(tracks: string[], commonLabel: string): { label: string; bg: string; fg: string; border: string } {
   const gf = tracks.includes("greenfield");
   const bf = tracks.includes("brownfield");
   if (gf && !bf) return { label: "greenfield", bg: "var(--green-bg)", fg: "var(--green-fg)", border: "var(--green-border)" };
   if (bf && !gf) return { label: "brownfield", bg: "var(--amber-bg)", fg: "var(--amber-fg)", border: "var(--amber-border)" };
-  return { label: "공통", bg: "var(--primary-bg)", fg: "var(--muted-fg)", border: "var(--border)" };
+  return { label: commonLabel, bg: "var(--primary-bg)", fg: "var(--muted-fg)", border: "var(--border)" };
 }
 
 export interface FlowGraphProps {
@@ -123,10 +128,13 @@ export interface FlowGraphProps {
 }
 
 export function FlowGraph({ stages, agentsByKey, markers, selectedStage, onSelectStage }: FlowGraphProps) {
+  const tg = useTranslations("pages.flows.graph");
   const markersByActivity = new Map<string, SpecialistMarker>();
   for (const m of markers) markersByActivity.set(`${m.stageId}:${m.activityId}`, m);
 
-  const presentDomains = [...new Set(stages.flatMap((s) => s.activities.map((a) => agentsByKey.get(a.agent)?.domain ?? "")))].filter((d) => d in DOMAIN_LABEL);
+  const presentDomains = [
+    ...new Set(stages.flatMap((s) => s.activities.map((a) => agentsByKey.get(a.agent)?.domain ?? ""))),
+  ].filter((d): d is (typeof DOMAIN_KEYS)[number] => (DOMAIN_KEYS as readonly string[]).includes(d));
 
   return (
     <figure className="m-0">
@@ -140,14 +148,8 @@ export function FlowGraph({ stages, agentsByKey, markers, selectedStage, onSelec
           xmlns="http://www.w3.org/2000/svg"
           style={{ display: "block", margin: "0 auto", maxWidth: "40rem" }}
         >
-          <title>설계된 플로우: 공통 S1–S4를 지나 S4에서 트랙이 갈라지고 S8에서 다시 만나 S12까지 함께 간다</title>
-          <desc>
-            단계 S1에서 S12를 세로로 잇는 흐름 그래프다. S1부터 S4까지 공통 진행, S4에서 갈라져
-            왼쪽 열로는 greenfield S5, 오른쪽 열로는 brownfield S6와 S7이 진행하고 S8에서 다시
-            합쳐져 S9부터 S12까지 공통 진행한다. 각 단계 노드는 단계 id·이름·활동 수·활동 도트
-            (에이전트 도메인 색)·트랙 배지를 보여주며, 전문가 마커 대상 활동 도트에는 링이 그려진다.
-            같은 정보는 위 단계 요약 그리드와 아래 활동 표가 텍스트로 제공한다.
-          </desc>
+          <title>{tg("svgTitle")}</title>
+          <desc>{tg("svgDesc")}</desc>
           <defs>
             <marker id="flows-graph-arrow" markerWidth="7" markerHeight="7" refX="5.5" refY="3" orient="auto">
               <path d="M0,0 L6,3 L0,6 z" fill="var(--border)" />
@@ -163,14 +165,14 @@ export function FlowGraph({ stages, agentsByKey, markers, selectedStage, onSelec
             const pos = ROW_Y[s.id];
             if (!pos) return null; // 미지 단계(스펙 신규 추가)는 좌표표 1행 추가 전까지 그래프에서 생략 — 그리드·표는 정상 렌더
             const selected = selectedStage === s.id;
-            const badge = trackBadge(s.applicableTracks);
+            const badge = trackBadge(s.applicableTracks, tg("trackCommon"));
             const badgeW = badge.label.length * 5 + 14;
             const stageMarkers = markers.filter((m) => m.stageId === s.id);
             return (
               // 포인터 클릭 = 편의(§6.3/§6.4) — focusable 요소 없음, 키보드는 인접 그리드 버튼이 담당한다.
               <g key={s.id} style={{ cursor: "pointer" }} onClick={() => onSelectStage(s.id)}>
                 <title>
-                  {`${s.id} · ${stageDisplayName(s)} — 활동 ${s.activities.length}개. 클릭하면 활동 표가 이 단계로 필터됩니다.`}
+                  {tg("nodeTitle", { id: s.id, name: stageDisplayName(s), count: s.activities.length })}
                 </title>
                 <rect
                   x={pos.x}
@@ -202,31 +204,31 @@ export function FlowGraph({ stages, agentsByKey, markers, selectedStage, onSelec
                 {s.activities.map((a, i) => {
                   const cx = pos.x + 13 + i * 10;
                   const cy = pos.y + 45;
-                  const dotColor = DOMAIN_DOT_COLOR[agentsByKey.get(a.agent)?.domain ?? ""] ?? "var(--muted-fg)";
+                  const dotColor = domainDotColor(agentsByKey.get(a.agent)?.domain ?? "");
                   const marker = markersByActivity.get(`${s.id}:${a.id}`);
                   return (
                     <g key={a.id}>
                       <circle cx={cx} cy={cy} r="3" fill={dotColor}>
                         <title>
                           {marker
-                            ? `${a.id} — ${MARKER_KIND_META[marker.kind].short}: ${marker.note}`
+                            ? tg("markers.dotTitle", { id: a.id, kind: tg(markerKey(marker.kind, "short")), note: marker.note })
                             : `${a.id} (${a.agent})`}
                         </title>
                       </circle>
                       {marker && (
                         // 전문가 마커 링(§11.4) — 색 외에 활동 옆 텍스트 라벨과 범례가 병행된다.
-                        <circle cx={cx} cy={cy} r="6" fill="none" stroke={MARKER_KIND_META[marker.kind].color} strokeWidth="1.5" />
+                        <circle cx={cx} cy={cy} r="6" fill="none" stroke={MARKER_KIND_COLOR[marker.kind]} strokeWidth="1.5" />
                       )}
                     </g>
                   );
                 })}
                 <text x={pos.x + NODE_W - 8} y={pos.y + 48} fontSize="9" textAnchor="end" fill="var(--muted-fg)">
-                  활동 {s.activities.length}
+                  {tg("activityCount", { count: s.activities.length })}
                 </text>
                 {/* 마커 텍스트 라벨(노드 우측 여백 — kind + 활동 id, 색 단독 금지). */}
                 {stageMarkers.map((m, i) => (
                   <text key={m.activityId} x={pos.x + NODE_W + 14} y={pos.y + NODE_H + 12 + i * 12} fontSize="9.5" fill="var(--muted-fg)">
-                    {`◇ ${MARKER_KIND_META[m.kind].short} · ${m.activityId}`}
+                    {tg("markers.nodeLabel", { kind: tg(markerKey(m.kind, "short")), id: m.activityId })}
                   </text>
                 ))}
               </g>
@@ -238,25 +240,25 @@ export function FlowGraph({ stages, agentsByKey, markers, selectedStage, onSelec
       {/* 범례 — 그래프에 인접 렌더(§11.4): 도메인 도트 색·마커 3종을 텍스트와 병행한다. */}
       <figcaption className="mt-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="font-semibold text-[color:var(--fg)]">범례</span>
-          <span>활동 도트 = 에이전트 도메인</span>
+          <span className="font-semibold text-[color:var(--fg)]">{tg("legend.title")}</span>
+          <span>{tg("legend.dot")}</span>
           {presentDomains.map((d) => (
             <span key={d} className="inline-flex items-center gap-1">
               <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
                 <circle cx="5" cy="5" r="3.5" fill={DOMAIN_DOT_COLOR[d]} />
               </svg>
-              {DOMAIN_LABEL[d]}
+              {tg(`legend.domains.${d}`)}
             </span>
           ))}
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span>전문가 마커(표시 전용 — DEC-20261025-02)</span>
-          {(Object.keys(MARKER_KIND_META) as Array<SpecialistMarker["kind"]>).map((kind) => (
+          <span>{tg("legend.marker")}</span>
+          {MARKER_KINDS.map((kind) => (
             <span key={kind} className="inline-flex items-center gap-1">
               <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-                <circle cx="6" cy="6" r="4.5" fill="none" stroke={MARKER_KIND_META[kind].color} strokeWidth="1.5" />
+                <circle cx="6" cy="6" r="4.5" fill="none" stroke={MARKER_KIND_COLOR[kind]} strokeWidth="1.5" />
               </svg>
-              {`${MARKER_KIND_META[kind].short} — ${MARKER_KIND_META[kind].legend}`}
+              {`${tg(markerKey(kind, "short"))} — ${tg(markerKey(kind, "legend"))}`}
             </span>
           ))}
         </div>
@@ -265,7 +267,7 @@ export function FlowGraph({ stages, agentsByKey, markers, selectedStage, onSelec
             {markers.map((m) => (
               <li key={`${m.stageId}:${m.activityId}`}>
                 <code className="dd-item-id">{`${m.stageId}.${m.activityId}`}</code>
-                {` — ${MARKER_KIND_META[m.kind].short}: ${m.note}`}
+                {tg("markers.noteLine", { kind: tg(markerKey(m.kind, "short")), note: m.note })}
               </li>
             ))}
           </ul>

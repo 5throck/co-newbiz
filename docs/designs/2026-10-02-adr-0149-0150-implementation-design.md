@@ -2,7 +2,7 @@
 spec_id: 2026-10-02-adr-0149-0150-implementation-design
 title: "ADR-0149 / ADR-0150 implementation design"
 author_agent: platform-lead
-status: approved
+status: implemented (adjudicated 2026-10-25, DEC-20261025-03)
 created: "2026-10-02"
 related_adrs: ["0149", "0150"]
 lang: en

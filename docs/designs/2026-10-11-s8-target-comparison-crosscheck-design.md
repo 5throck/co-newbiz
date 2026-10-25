@@ -1,7 +1,7 @@
 # S8 Target Comparison — Fade-DCF Cross-Check and Acquisition Benchmark Surfacing
 
 - Date: 2026-10-11
-- Status: Approved (user decisions 1-3, 2026-10-11)
+- Status: Implemented (approved per user decisions 1-3, 2026-10-11; adjudicated 2026-10-25, DEC-20261025-03)
 - Owner: platform-lead (technical domain)
 - Related: design 2026-10-10-s8-acquisition-price-benchmark-design (fade-DCF and EV/Revenue band origin), design 2026-10-10-s8-valuation-transparency-design, ADR-0143 (cross-target comparison), ADR-0117 (dual perspective)
 

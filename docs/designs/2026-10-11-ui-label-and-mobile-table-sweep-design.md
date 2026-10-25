@@ -1,6 +1,6 @@
 ---
 title: UI label and mobile table sweep - raw enum labels, stage chrome headings, 375px table squeeze
-status: approved
+status: implemented (adjudicated 2026-10-25, DEC-20261025-03)
 date: 2026-10-11
 owner: platform-lead
 domain: technical

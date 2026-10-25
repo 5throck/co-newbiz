@@ -1,7 +1,7 @@
 # Deal Overview Rebuild and S3 Deal Scope - Design
 
 - **Date**: 2026-10-11
-- **Status**: approved (Design Gate Row 0)
+- **Status**: implemented (Design Gate Row 0; adjudicated 2026-10-25, DEC-20261025-03)
 - **Owner**: platform-lead
 - **ADR**: none required (no DB schema, auth, or MCP tool-scope change; existing API contract reused)
 
