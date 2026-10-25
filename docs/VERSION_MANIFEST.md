@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-25T06:59:11.530Z
+**Generated**: 2026-10-25T07:01:32.213Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -30,12 +30,12 @@
 | dba | agents/dba.md | medium | inherit | 2026-10-08 |
 | design-system-agent | agents/design-system-agent.md | medium | inherit | 2026-10-08 |
 | docs-writer | agents/docs-writer.md | medium | inherit | 2026-10-08 |
-| financial-analyst | agents/financial-analyst.md | high | inherit | 2026-10-08 |
+| financial-analyst | agents/financial-analyst.md | high | inherit | 2026-10-25 |
 | financing-agent | agents/financing-agent.md | medium | inherit | 2026-10-08 |
 | frontend-engineer | agents/frontend-engineer.md | medium | inherit | 2026-10-08 |
 | glossary-curator | agents/glossary-curator.md | medium | inherit | 2026-10-08 |
-| greenfield-agent | agents/greenfield-agent.md | high | inherit | 2026-10-08 |
-| group-review-agent | agents/group-review-agent.md | high | inherit | 2026-10-08 |
+| greenfield-agent | agents/greenfield-agent.md | high | inherit | 2026-10-25 |
+| group-review-agent | agents/group-review-agent.md | high | inherit | 2026-10-25 |
 | hr-integration-agent | agents/hr-integration-agent.md | high | inherit | 2026-10-08 |
 | i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-10-24 |
 | incentive-agent | agents/incentive-agent.md | medium | inherit | 2026-10-08 |
@@ -44,23 +44,23 @@
 | ip-agent | agents/ip-agent.md | medium | inherit | 2026-10-08 |
 | ir-agent | agents/ir-agent.md | medium | inherit | 2026-10-08 |
 | legal-counsel | agents/legal-counsel.md | high | inherit | 2026-10-08 |
-| market-intelligence-agent | agents/market-intelligence-agent.md | high | inherit | 2026-10-08 |
+| market-intelligence-agent | agents/market-intelligence-agent.md | high | inherit | 2026-10-25 |
 | partnership-agent | agents/partnership-agent.md | medium | inherit | 2026-10-08 |
 | platform-lead | agents/platform-lead.md | high | inherit | 2026-10-08 |
 | pm | agents/pm.md | medium | inherit | 2026-10-08 |
 | pmi-agent | agents/pmi-agent.md | high | inherit | 2026-10-08 |
 | process-governance-manager | agents/process-governance-manager.md | high | inherit | 2026-10-08 |
-| quant-methodologist | agents/quant-methodologist.md | high | inherit | 2026-10-08 |
+| quant-methodologist | agents/quant-methodologist.md | high | inherit | 2026-10-25 |
 | README_ko | agents/README_ko.md | N/A | N/A | 2026-10-11 |
 | region-lead | agents/region-lead.md | high | inherit | 2026-10-08 |
 | release-engineer | agents/release-engineer.md | medium | inherit | 2026-10-08 |
-| risk-officer | agents/risk-officer.md | high | inherit | 2026-10-08 |
+| risk-officer | agents/risk-officer.md | high | inherit | 2026-10-25 |
 | security-engineer | agents/security-engineer.md | high | inherit | 2026-10-08 |
 | site-facility-agent | agents/site-facility-agent.md | medium | inherit | 2026-10-08 |
 | sre | agents/sre.md | medium | inherit | 2026-10-08 |
 | technical-dd-agent | agents/technical-dd-agent.md | high | inherit | 2026-10-08 |
 | ux-designer-agent | agents/ux-designer-agent.md | medium | inherit | 2026-10-08 |
-| valuation-agent | agents/valuation-agent.md | high | inherit | 2026-10-08 |
+| valuation-agent | agents/valuation-agent.md | high | inherit | 2026-10-25 |
 
 ---
 
