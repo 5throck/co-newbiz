@@ -1,6 +1,8 @@
-// @version 1.0.0
+// @version 1.1.0
 // R2-C system quality: synthetic/degenerate value helpers (item 7), the glossary-backed label map
-// (item 8), and the design-lint rule that rejects a class-less <button> (item 5).
+// (item 8), the design-lint rule that rejects a class-less <button> (item 5), and the design-lint
+// styles.css font-size floor rule v1.5.0 (Wave U-2): sub-floor and body-range non-token literals
+// fail, token-equal 0.875rem passes, em-relative is report-only.
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { closureRecordKeyOf } from "../../app/web-next/lib/label-keys.ts";
@@ -71,6 +73,39 @@ describe("design-lint: class-less <button>", () => {
       expect(run().exitCode).toBe(0);
     } finally {
       if (existsSync(fixture)) rmSync(fixture);
+    }
+  });
+});
+
+describe("design-lint: styles.css font-size floor (Wave U-2 rule 6, v1.5.0)", () => {
+  const cssPath = join(import.meta.dirname, "..", "..", "app", "web-next", "app", "styles.css");
+  const run = () => Bun.spawnSync([process.execPath, "scripts/co-newbiz/design-lint.ts"], { cwd: join(import.meta.dirname, "..", "..") });
+
+  test("sub-floor and body-range non-token literals fail, token-equal 0.875rem passes, em-relative is report-only", () => {
+    const original = readFileSync(cssPath, "utf8");
+    try {
+      // negative proof (design-lint rule 6): the lint reads app/styles.css by path,
+      // so the synthetic literals are appended to (and restored from) the real file.
+      writeFileSync(cssPath, original + [
+        ".zz-lint-floor-tmp { font-size: 0.72rem; }",
+        ".zz-lint-band-tmp { font-size: 0.92rem; }",
+        ".zz-lint-token-tmp { font-size: 0.875rem; }",
+        ".zz-lint-em-tmp { font-size: 0.8em; }",
+        "",
+      ].join("\n"));
+      const bad = run();
+      expect(bad.exitCode).toBe(1);
+      const err = bad.stderr.toString();
+      expect(err).toContain('.zz-lint-floor-tmp" font-size 0.72rem is below the 14px floor');
+      expect(err).toContain('.zz-lint-band-tmp" font-size 0.92rem is a body-range non-token literal');
+      expect(err).not.toContain("zz-lint-token-tmp"); // 0.875rem is token-equal (--fs-body) — sanctioned
+      expect(bad.stdout.toString()).toContain('.zz-lint-em-tmp" font-size 0.8em is em-relative'); // report-only
+
+      // the token-equal literal alone must not fail the run (doctrine: sanctioned until tokenized)
+      writeFileSync(cssPath, original + "\n.zz-lint-token-tmp { font-size: 0.875rem; }\n");
+      expect(run().exitCode).toBe(0);
+    } finally {
+      writeFileSync(cssPath, original);
     }
   });
 });

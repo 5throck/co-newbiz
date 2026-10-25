@@ -1,4 +1,4 @@
-// @version 1.4.0
+// @version 1.5.0
 // design-lint (skills/design-lint) — mechanical enforcement of the Onyx 3.0
 // design guide (docs/design-system/design-guide.md). Fails on:
 //   1. hardcoded hex/rgba/hsl colors in components/app tsx (outside styles.css)
@@ -7,9 +7,15 @@
 //   4. icon-only buttons (svg child, no text) without aria-label
 //   5. row-action tables (.data-table + .sizing-actions-cell) without the
 //      .list-table standard or with an unheaded actions column
-//   6. font-size below the 14px floor (0.875rem) in styles.css or Tailwind
-//      text-[..rem] classes — only var(--fs-caption) (13px) is allowed for
-//      secondary metadata, and only inside .caption-style selectors (Wave U-2)
+//   6. font-size literals in styles.css or Tailwind text-[..rem] classes that
+//      fall below the 14px floor (0.875rem at the 16px root), or inside the
+//      body range (0.875–1rem) without being token-equal (0.875rem =
+//      --fs-body) — a body-range literal passes at the 16px root yet computes
+//      below 14px at the ≥1920px 15px root step (0.92rem → 13.8px). Only
+//      var(--fs-caption) (13px) may sit below the floor, only for secondary
+//      metadata, and only inside .caption-style selectors (Wave U-2);
+//      em-relative literals are report-only (parent-relative, not mechanically
+//      floor-checkable); html/body/:root root-sizing declarations are exempt.
 //   7. class-less <button> (no className and no spread props) — every button
 //      carries a design class (btn-primary / btn-ghost / btn-danger / control-chip / …)
 //      so it is themed and meets the target size (R2-C)
@@ -33,22 +39,51 @@ function* walk(dir: string): Generator<string> {
 }
 
 const FONT_FLOOR_PX = 14;
+const REM_PX = 16;
+// Wave U-2 type scale (styles.css): --fs-body 0.875rem (14px), --fs-caption 0.8125rem (13px).
+const BODY_REM = 0.875;
 
-// 6. styles.css: literal font-size below the floor is rejected; the token
-//    declarations (--fs-*) and var() usages are the sanctioned path.
+// 6. styles.css font-size literals (Wave U-2, design 2026-10-08-wave-u-ux-overhaul §6
+//    "design:lint gains a rule rejecting font-size below 0.875rem except .caption"):
+//    (a) below the 14px floor at the 16px root is rejected;
+//    (b) a body-range literal (0.875rem ≤ v < 1rem) that is not token-equal
+//        (≠ 0.875rem = --fs-body) is rejected with a token-steer verdict — it
+//        passes at the 16px root yet computes below 14px at the ≥1920px 15px
+//        root step (0.88rem → 13.2px, 0.92rem → 13.8px), which is how three
+//        breaches slipped past v1.4.0;
+//    em-relative values scale with the parent and cannot be floor-checked
+//    mechanically → report-only on stdout;
+//    var(--fs-*) usages are the sanctioned path and are not matched.
+//    Exempt: `.caption` selectors (design §6 "except .caption"), and
+//    element-level root sizing (html/body/:root — that declaration IS the
+//    responsive root font-size step, not text content).
 {
   const cssPath = join(WEB, "app", "styles.css");
   const css = readFileSync(cssPath, "utf8");
+  const emNotes: string[] = [];
   for (const m of css.matchAll(/(^|\n)([^{}\n]*)\{([^{}]*)\}/g)) {
     const selector = m[2].trim();
     if (selector.startsWith("/*") || selector.startsWith("@")) continue;
-    for (const d of m[3].matchAll(/(?:^|[;\s])font-size:\s*(\d*\.?\d+)(rem|px)/g)) {
-      const px = d[2] === "rem" ? Number(d[1]) * 16 : Number(d[1]);
-      if (px < FONT_FLOOR_PX && !/\.caption\b/.test(selector)) {
-        violations.push(`app/styles.css: "${selector.slice(0, 60)}" font-size ${d[1]}${d[2]} is below the 14px floor — use var(--fs-body) or var(--fs-caption)`);
+    if (/^(html|body|:root)\b[\w\s,:.#>*+~-]*$/.test(selector)) continue; // root sizing step
+    const isCaption = /\.caption\b/.test(selector);
+    for (const d of m[3].matchAll(/(?:^|[;\s])font-size:\s*(\d*\.?\d+)(rem|px|em)\b/g)) {
+      const literal = `${d[1]}${d[2]}`;
+      if (d[2] === "em") {
+        emNotes.push(`app/styles.css: "${selector.slice(0, 60)}" font-size ${literal} is em-relative (scales with the parent) — fold to var(--fs-body)/var(--fs-caption) when possible`);
+        continue;
+      }
+      const px = d[2] === "rem" ? Number(d[1]) * REM_PX : Number(d[1]);
+      if (px < FONT_FLOOR_PX) {
+        if (isCaption) continue; // design §6: .caption is the sanctioned sub-floor case
+        violations.push(`app/styles.css: "${selector.slice(0, 60)}" font-size ${literal} is below the 14px floor — use var(--fs-body) or var(--fs-caption)`);
+      } else if (d[2] === "rem" && Number(d[1]) > BODY_REM && Number(d[1]) < 1) {
+        // band (b) is rem-only: px literals do not scale with the root, so the
+        // 15px-root dip that motivates the band cannot occur for them.
+        violations.push(`app/styles.css: "${selector.slice(0, 60)}" font-size ${literal} is a body-range non-token literal (below 14px at the 15px root step) — token-fold to var(--fs-body) or var(--fs-caption)`);
       }
     }
   }
+  for (const n of emNotes) console.log(`design-lint (report-only): ${n}`);
 }
 
 const targets = [...walk(join(WEB, "components")), ...walk(join(WEB, "app"))];

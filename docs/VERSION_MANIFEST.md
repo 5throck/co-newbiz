@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-25T02:46:53.156Z
+**Generated**: 2026-10-25T04:44:56.428Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -236,7 +236,7 @@
 | deploy-handbook.ts | 1.1.0 | scripts/handbook/deploy-handbook.ts | N/A |
 | deploy-readme-patch.test.ts | 1.0.0 | scripts/tests/deploy-readme-patch.test.ts | bun:test |
 | deploy-web.ts | 1.1.0 | scripts/deploy-web.ts | N/A |
-| design-lint.ts | 1.4.0 | scripts/co-newbiz/design-lint.ts | N/A |
+| design-lint.ts | 1.5.0 | scripts/co-newbiz/design-lint.ts | N/A |
 | design-lint.ts | 2.2.0 | scripts/design-lint.ts | js-yaml |
 | deterministic.ts | 1.1.0 | scripts/eval/deterministic.ts | N/A |
 | dev-sync.ts | 1.29.0 | scripts/dev-sync.ts | bun |

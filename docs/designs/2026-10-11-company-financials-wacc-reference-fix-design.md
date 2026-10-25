@@ -1,6 +1,6 @@
 ---
 title: Company financials WACC reference fix (reuse computeWaccReference) and DART sync error surfacing
-status: approved
+status: implemented (adjudicated 2026-10-25, DEC-20261025-03)
 date: 2026-10-11
 owner: platform-lead
 domain: technical

@@ -2,7 +2,7 @@
 
 - **Spec ID**: 2026-09-12-website-construction-plan
 - **Date**: 2026-09-12
-- **Status**: accepted (execution plan of record)
+- **Status**: implemented (adjudicated 2026-10-25, DEC-20261025-03 — residual screens in the addendum below)
 - **Chair**: New Business Review Lead (PM) — orchestrates all dispatch per the PM Gateway
 - **Development basis**: **the frozen v5 baseline** — `docs/designs/mockups/baseline-v5.html` + `docs/designs/mockups/previews/` (56 screens) + `docs/designs/2026-09-12-implementation-matrix.md`. Development is built TO the v5 baseline and compared AGAINST it at each wave and at the quality review.
 - **Scope adders**: Round-3 review — all 8 improvement plans (ADR-0123 items) + advancement ideas 1/2/4/7/10 (backtest, reliability score, safe-share, e-approval hub, resource calendar); Round-2 outcomes (ADR-0122) are already inside the v5 baseline.
@@ -67,3 +67,7 @@
 ## 5. Milestones
 
 M0 commit + contract sign-off → M1 Wave 0 → M2 Wave 1 → M3 Wave 2 → M4 Wave 3 → M5 Wave 4 → M6 quality review + revision cycle. Gates per milestone: `test:unit`, both design lints, `contrast:check`, build, design docs + `spec-register`, /sync PR per wave.
+
+## Addendum — adjudication 2026-10-25 (DEC-20261025-03, process-governance-manager)
+
+Adjudicated **implemented**: 52 of the 56 baseline screens ship (per the implementation-matrix status column, cross-checked against live routes 2026-10-25 — Waves 0–4 core scope, including the Wave-3 surfaces backtest/agent-runs/timeline/risk-heatmap/share/share-UI, exist under `/projects/[id]/…` and `/deals/…`). **Residual screens not built** (tracked, not silently dropped): `deal-list` (/deals/list, matrix row 6), `committee` (/deals/{id}/committee, row 41), `ds-gallery` (row 49), `portfolio-view` (row 52 — carried by the draft spec 2026-10-11-portfolio-view-overlap-design). Wave-3 scope adders with no shipped surface today: LLM reliability score, e-approval cross-ref/hub, resource calendar, source-health badges (partially covered by admin/data-sources). These residuals stay visible here rather than closing the plan silently.

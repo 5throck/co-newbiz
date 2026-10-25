@@ -6162,6 +6162,47 @@
         "noSystemBody": "(시스템 프롬프트 본문 없음)",
         "footnotePrefix": "각주:"
       },
+      "graph": {
+        "sectionTitle": "단계 흐름",
+        "sectionAria": "단계 흐름 그래프",
+        "sectionHint": "노드를 클릭하면 활동 표가 해당 단계로 필터됩니다",
+        "markerChip": "전문가 마커",
+        "svgTitle": "설계된 플로우: 공통 S1–S4를 지나 S4에서 트랙이 갈라지고 S8에서 다시 만나 S12까지 함께 간다",
+        "svgDesc": "단계 S1에서 S12를 세로로 잇는 흐름 그래프다. S1부터 S4까지 공통 진행, S4에서 갈라져 왼쪽 열로는 greenfield S5, 오른쪽 열로는 brownfield S6와 S7이 진행하고 S8에서 다시 합쳐져 S9부터 S12까지 공통 진행한다. 각 단계 노드는 단계 id·이름·활동 수·활동 도트(에이전트 도메인 색)·트랙 배지를 보여주며, 전문가 마커 대상 활동 도트에는 링이 그려진다. 같은 정보는 위 단계 요약 그리드와 아래 활동 표가 텍스트로 제공한다.",
+        "nodeTitle": "{id} · {name} — 활동 {count}개. 클릭하면 활동 표가 이 단계로 필터됩니다.",
+        "activityCount": "활동 {count}",
+        "trackCommon": "공통",
+        "legend": {
+          "title": "범례",
+          "dot": "활동 도트 = 에이전트 도메인",
+          "marker": "전문가 마커(표시 전용 — DEC-20261025-02)",
+          "domains": {
+            "_core": "핵심(_core)",
+            "functional": "기능(functional)",
+            "industry": "산업(industry)",
+            "region": "지역(region)",
+            "technical": "기술(technical)",
+            "_shared": "공유(_shared)"
+          }
+        },
+        "markers": {
+          "dotTitle": "{id} — {kind}: {note}",
+          "nodeLabel": "◇ {kind} · {id}",
+          "noteLine": "— {kind}: {note}",
+          "affinity": {
+            "short": "전문 친화",
+            "legend": "트랙 전문가 관점(공통 산출)"
+          },
+          "scoped": {
+            "short": "절차 한정",
+            "legend": "트랙 전용(절차 스코프)"
+          },
+          "override": {
+            "short": "실효 소유",
+            "legend": "트랙별 실효 소유 상이(절차 계층)"
+          }
+        }
+      },
       "flowsAdmin": {
         "adminForbidden": "관리자 계정은 업무 콘텐츠에서 분리되어 이 화면을 볼 수 없습니다(ADR-0146). 이 상태는 오류가 아니라 설계된 접근 경계입니다.",
         "tableScrollRegion": "데이터 표 (가로 스크롤)",
@@ -6212,20 +6253,6 @@
         "expiringSoonTitle": "TTL 만료 임박({p1}) — 만료 세션은 읽기·실행 경로에서 소거됩니다(§6.8).",
         "costMeasuredNote": "직전 실행 실측 기준 — 누계 {p1} / {p2}회 llm 호출(회당 {p3}). 실제 비용은 모델·입력 길이에 따라 달라질 수 있습니다.",
         "costUnknownNote": "측정된 비용 기록이 없습니다(첫 실행) — 토큰 상한 {p1} 기준 보수적 추정만 가능합니다. 실행 전 확인하세요."
-      },
-      "stageNames": {
-        "S1": "시장분석",
-        "S2": "기회 발굴",
-        "S3": "시너지·전략적 적합성",
-        "S4": "진출방식 결정",
-        "S5": "자체 진출",
-        "S6": "대상 후보 발굴",
-        "S7": "대상 선정",
-        "S8": "사업성 분석",
-        "S9": "실사·검증",
-        "S10": "투자구조 설계",
-        "S11": "투자심사·실행",
-        "S12": "사후 관리"
       }
     },
     "projects": {

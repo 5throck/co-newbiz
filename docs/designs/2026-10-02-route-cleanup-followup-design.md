@@ -1,7 +1,7 @@
 ---
 title: Route Cleanup Follow-up Design (F4 legacy routes)
 date: 2026-10-02
-status: approved
+status: implemented (adjudicated 2026-10-25, DEC-20261025-03)
 owner: platform-lead
 design_gate: Row 0 (platform-lead acts as Design Gate owner)
 ---

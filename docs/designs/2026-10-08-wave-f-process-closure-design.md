@@ -1,6 +1,6 @@
 ---
 title: Wave F — Process Closure (typed closure, 3-stage review runtime, RAG on web, predicate gaps, brownfield audit)
-status: approved
+status: implemented (adjudicated 2026-10-25, DEC-20261025-03)
 date: 2026-10-08
 owner: platform-lead
 contributors: process-governance-manager (closure vocabulary input requested)

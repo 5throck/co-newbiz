@@ -18,7 +18,7 @@ import {
   type SpecialistMarker,
   stageDisplayName,
 } from "./flows-view-lib.ts";
-import { FLOW_GRAPH_I18N, FlowGraph, MARKER_KIND_META } from "./flow-graph.tsx";
+import { FlowGraph, markerKey } from "./flow-graph.tsx";
 
 // 표 열 비율(2026-10-11-table-column-sizing-system 선례) — 활동 표.
 const ACTIVITY_COL_PCT = [21, 7, 16, 34, 12, 10] as const;
@@ -58,6 +58,7 @@ function trackScopeLabel(tracks: string[], t: ReturnType<typeof useTranslations>
 
 export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
   const t = useTranslations("pages.flows.blueprint");
+  const tg = useTranslations("pages.flows.graph"); // 단계 흐름 그래프 섹션·마커 칩 문구(flow-graph와 같은 네임스페이스)
   const tc = useTranslations("common");
   const [selectedStage, setSelectedStage] = useState<string | null>(null);
   const [trackFilter, setTrackFilter] = useState<"all" | "greenfield" | "brownfield">("all");
@@ -196,12 +197,12 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
 
       {/* 단계 흐름 그래프 (design 2026-10-25 §6.2/§6.5 — 그리드(개관) → 그래프(흐름) → 표(상세).
           기존 단계 선택 상태 재사용(§6.3) — 그래프 노드 클릭도 활동 표 필터로 귀결된다. */}
-      <section aria-label={FLOW_GRAPH_I18N.sectionAria} className="market-section">
+      <section aria-label={tg("sectionAria")} className="market-section">
         <SectionToolbar
-          title={FLOW_GRAPH_I18N.sectionTitle}
+          title={tg("sectionTitle")}
           summary={
             <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              {FLOW_GRAPH_I18N.sectionHint}
+              {tg("sectionHint")}
             </span>
           }
         />
@@ -284,8 +285,8 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
                             {/* 전문가 마커 전용 표기(§11.4) — 표시·인지 전용(DEC-20261025-02). */}
                             {marker && (
                               <p className="mb-1">
-                                <strong>{FLOW_GRAPH_I18N.markerChip}</strong>{" "}
-                                <span className="status-chip status-in-progress">{MARKER_KIND_META[marker.kind].short}</span>{" "}
+                                <strong>{tg("markerChip")}</strong>{" "}
+                                <span className="status-chip status-in-progress">{tg(markerKey(marker.kind, "short"))}</span>{" "}
                                 <span className="text-[color:var(--muted-fg)]">{marker.note}</span>
                               </p>
                             )}

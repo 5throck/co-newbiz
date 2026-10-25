@@ -3231,7 +3231,7 @@ a.funnel-card:hover { border-color: var(--primary); }
 .market-stats-row { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
 
 .market-sub-section { margin: 1.25rem 0; }
-.market-sub-section h3 { font-size: 0.92rem; margin: 0 0 0.5rem; }
+.market-sub-section h3 { font-size: var(--fs-body); margin: 0 0 0.5rem; } /* U-2 잔여(2026-10-23): 0.92rem은 15px 루트 단계에서 13.8px — 폰트 토큰으로 접음(스케일에 제목 토큰 없음) */
 .market-industry-btn {
   display: flex; flex-direction: column; gap: 0.15rem; width: 100%; text-align: left;
   padding: 0.7rem 0.9rem; border: 1px solid var(--border); border-radius: var(--radius-lg);
@@ -3406,7 +3406,10 @@ main li { overflow-wrap: anywhere; }
 /* 사이드바 하위 메뉴 (시너지 정합성 하위: 그룹/계열사 분석 · 시너지·전략적 적합성) */
 .side-nav-parent { cursor: default; }
 .side-nav-children { display: flex; flex-direction: column; }
-.side-nav-child { padding-left: 2.4rem; font-size: 0.86em; }
+/* U-2 잔여(2026-10-23) — 0.86em은 부모 상대값이라 바닥 검증이 불가능하고 15px 루트
+   단계에서 14px 미만으로 떨어진다. 내비 위계 텍스트는 부가 정보(캡션)가 아니므로
+   :3836 내비 규준(14px floor)에 따라 --fs-body 로 접는다. */
+.side-nav-child { padding-left: 2.4rem; font-size: var(--fs-body); }
 
 /* 행 액션 셀 — td는 table-cell을 유지해야 행 배경·경계가 이어진다.
    flex(우측 정렬, 8px 간격)는 내부 .actions-row에 적용한다. */ /* design-token-exempt: prose */
@@ -3870,7 +3873,7 @@ main li { overflow-wrap: anywhere; }
 .stage-step {
   display: inline-flex; align-items: center; gap: 0.35rem;
   padding: 0.3rem 0.6rem; border-radius: var(--radius-sm);
-  font-size: 0.875rem; line-height: 1.35; color: var(--muted-fg); text-decoration: none;
+  font-size: var(--fs-body); line-height: 1.35; color: var(--muted-fg); text-decoration: none;
   border: 1px solid transparent;
 }
 a.stage-step:hover { background: var(--hover-bg); color: var(--fg); }
@@ -3905,9 +3908,9 @@ a.stage-step:focus-visible, .stage-tab:focus-visible, .stage-tab-menu-item:focus
 .stage-step-state { font-size: var(--fs-caption); font-weight: 600; }
 .stage-gate-chip { font-size: var(--fs-caption); padding: 0.05rem 0.4rem; }
 .stage-stepper-compact { display: none; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }
-.stage-stepper-compact summary { cursor: pointer; padding: 0.75rem 1rem; min-height: var(--touch-target); font-size: 0.875rem; font-weight: 600; }
+.stage-stepper-compact summary { cursor: pointer; padding: 0.75rem 1rem; min-height: var(--touch-target); font-size: var(--fs-body); font-weight: 600; }
 .stage-stepper-compact-list { list-style: none; margin: 0; padding: 0 0.5rem 0.5rem; }
-.stage-step-compact-link { display: block; padding: 0.75rem; min-height: var(--touch-target); font-size: 0.875rem; color: var(--fg); text-decoration: none; }
+.stage-step-compact-link { display: block; padding: 0.75rem; min-height: var(--touch-target); font-size: var(--fs-body); color: var(--fg); text-decoration: none; }
 .stage-step-compact-link[aria-current="step"] { color: var(--primary); font-weight: 600; }
 @media (max-width: 880px) { /* design-token-exempt: breakpoint (custom properties invalid in query conditions) */
   .stage-stepper { display: none; }
@@ -3916,9 +3919,9 @@ a.stage-step:focus-visible, .stage-tab:focus-visible, .stage-tab-menu-item:focus
 
 /* Inputs/outputs panel (was an always-visible nav strip). */
 .handoff-panel { margin-bottom: 1rem; }
-.handoff-panel > summary { cursor: pointer; font-size: 0.875rem; font-weight: 600; padding: 0.4rem 0; }
+.handoff-panel > summary { cursor: pointer; font-size: var(--fs-body); font-weight: 600; padding: 0.4rem 0; }
 .handoff-panel-hint { font-weight: 400; color: var(--muted-fg); margin-left: 0.5rem; }
-.handoff-panel .handoff { margin-bottom: 0; font-size: 0.875rem; }
+.handoff-panel .handoff { margin-bottom: 0; font-size: var(--fs-body); }
 
 /* Layer 3-free stage tabs (replaces ProjectSubNav). */
 .stage-tabs-wrap { margin-bottom: 1rem; }
@@ -3928,7 +3931,7 @@ a.stage-step:focus-visible, .stage-tab:focus-visible, .stage-tab-menu-item:focus
 .stage-tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; border-bottom: 1px solid var(--border); align-items: flex-end; }
 .stage-tab {
   display: inline-flex; align-items: center; gap: 0.25rem; min-height: var(--touch-target);
-  padding: 0.5rem 0.9rem; font-size: 0.875rem; color: var(--muted-fg); text-decoration: none;
+  padding: 0.5rem 0.9rem; font-size: var(--fs-body); color: var(--muted-fg); text-decoration: none;
   background: transparent; border: none; border-bottom: var(--border-width-strong) solid transparent; cursor: pointer;
 }
 /* The tablist holds only tabs (ARIA); the More menu button is its sibling in the flex row. */
@@ -3941,16 +3944,16 @@ a.stage-step:focus-visible, .stage-tab:focus-visible, .stage-tab-menu-item:focus
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
   box-shadow: 0 8px 24px hsla(0, 0%, 0%, 0.12); /* design-token-exempt: one-off menu elevation */
 }
-.stage-tab-menu-item { display: block; padding: 0.6rem 0.75rem; min-height: var(--touch-target); font-size: 0.875rem; color: var(--fg); text-decoration: none; border-radius: var(--radius-sm); }
+.stage-tab-menu-item { display: block; padding: 0.6rem 0.75rem; min-height: var(--touch-target); font-size: var(--fs-body); color: var(--fg); text-decoration: none; border-radius: var(--radius-sm); }
 .stage-tab-menu-item:hover { background: var(--hover-bg); }
 
 /* /inbox */
 .inbox-page { max-width: none; }
-.inbox-lead { font-size: 0.9375rem; line-height: 1.5; color: var(--muted-fg); margin: 0.25rem 0 1rem; }
+.inbox-lead { font-size: var(--fs-body); line-height: 1.5; color: var(--muted-fg); margin: 0.25rem 0 1rem; }
 .inbox-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 1rem; }
-.inbox-deal-filter { display: inline-flex; gap: 0.5rem; align-items: center; font-size: 0.875rem; }
-.inbox-failed { list-style: none; margin: 0 0 1rem; padding: 0.5rem 0.75rem; font-size: 0.875rem; border: 1px solid var(--amber-border); background: var(--amber-bg); color: var(--amber-fg); border-radius: var(--radius-md); }
-.inbox-empty { padding: 2rem; text-align: center; font-size: 0.9375rem; color: var(--muted-fg); border: 1px dashed var(--border); border-radius: var(--radius-lg); }
+.inbox-deal-filter { display: inline-flex; gap: 0.5rem; align-items: center; font-size: var(--fs-body); }
+.inbox-failed { list-style: none; margin: 0 0 1rem; padding: 0.5rem 0.75rem; font-size: var(--fs-body); border: 1px solid var(--amber-border); background: var(--amber-bg); color: var(--amber-fg); border-radius: var(--radius-md); }
+.inbox-empty { padding: 2rem; text-align: center; font-size: var(--fs-body); color: var(--muted-fg); border: 1px dashed var(--border); border-radius: var(--radius-lg); }
 .inbox-layout { display: grid; grid-template-columns: minmax(20rem, 28rem) minmax(0, 1fr); gap: 1rem; align-items: start; }
 .inbox-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
 .inbox-row {
@@ -3960,17 +3963,17 @@ a.stage-step:focus-visible, .stage-tab:focus-visible, .stage-tab-menu-item:focus
 .inbox-row:hover { background: var(--hover-bg); }
 .inbox-row[aria-current="true"] { border-color: var(--primary); background: var(--primary-bg); }
 .inbox-row-kind { display: inline-flex; align-items: center; gap: 0.35rem; font-size: var(--fs-caption); color: var(--muted-fg); font-weight: 600; }
-.inbox-row-title { font-size: 0.9375rem; font-weight: 600; line-height: 1.4; }
+.inbox-row-title { font-size: var(--fs-body); font-weight: 600; line-height: 1.4; }
 .inbox-row-meta { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; font-size: var(--fs-caption); color: var(--muted-fg); }
 .inbox-chip { padding: 0.05rem 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-full); }
 .inbox-detail { padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); display: grid; gap: 1rem; }
 .inbox-detail h2 { margin: 0; font-size: 1.125rem; }
 .inbox-back { display: none; justify-self: start; }
-.inbox-facts { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; margin: 0; font-size: 0.875rem; }
+.inbox-facts { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; margin: 0; font-size: var(--fs-body); }
 .inbox-facts > div { display: inline-flex; gap: 0.4rem; align-items: baseline; }
 .inbox-facts dt { color: var(--muted-fg); font-size: var(--fs-caption); }
 .inbox-facts dd { margin: 0; font-weight: 600; }
-.inbox-ai-draft { margin: 0; padding: 0.75rem; font-size: 0.875rem; line-height: 1.5; border: 1px dashed var(--border); border-radius: var(--radius-md); background: var(--muted-bg); }
+.inbox-ai-draft { margin: 0; padding: 0.75rem; font-size: var(--fs-body); line-height: 1.5; border: 1px dashed var(--border); border-radius: var(--radius-md); background: var(--muted-bg); }
 .inbox-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .inbox-actions a, .inbox-actions button { min-height: var(--touch-target); display: inline-flex; align-items: center; }
 @media (max-width: 880px) { /* design-token-exempt: breakpoint (custom properties invalid in query conditions) */

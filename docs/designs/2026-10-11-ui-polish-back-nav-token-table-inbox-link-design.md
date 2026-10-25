@@ -1,6 +1,6 @@
 # UI polish: projects back navigation, token table sizing, inbox gate link
 
-Date: 2026-10-11. Owner: frontend-engineer. Status: implemented in the same change set.
+Date: 2026-10-11. Owner: frontend-engineer. Status: implemented in the same change set (adjudicated 2026-10-25, DEC-20261025-03).
 
 ## Items
 
