@@ -1671,6 +1671,11 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20261025-04",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "doc:AGENTS.md",
       "type": "doc",
       "layer": "L3"
@@ -2092,8 +2097,8 @@
       "name": "decision-record",
       "scope": "root",
       "capability": "decision-record",
-      "content_hash": "af9dd89ccdeec7b2",
-      "version": "1.1.0",
+      "content_hash": "c86ff19ecd961ad9",
+      "version": "1.1.1",
       "mirrors": [
         "skills/decision-record/SKILL.md",
         ".claude/skills/decision-record/SKILL.md",
@@ -4935,6 +4940,12 @@
     {
       "type": "cites_skill",
       "from": "dec:DEC-20261025-03",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261025-04",
       "to": "skill:root/decision-record",
       "source": "skills_used"
     },
