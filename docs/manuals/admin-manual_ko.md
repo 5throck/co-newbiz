@@ -16,7 +16,7 @@ counterpart: admin-manual.md
 
 ## 이 매뉴얼이 다루는 것
 
-계정 관리, 규제 버전 관리, 마스터 데이터 관리, 알림 rule 설정 — Stage 5에서 관리 콘솔이 만들어지면 그 콘솔이 담당하는 업무.
+계정 관리, 규제 버전 관리, 마스터 데이터 관리, 알림 rule 설정 — 관리 콘솔(`/admin`, `app/web-next/app/admin`)이 담당하는 업무.
 
 ## 1. 계정 관리
 
@@ -56,3 +56,9 @@ counterpart: admin-manual.md
 ## 8. 관련 문서
 
 - `docs/governance/governance-operations.md` — waiver 및 해석 운영(compliance-officer의 도메인. 이 매뉴얼의 시스템 관리 범위와 인접하지만 별개다).
+
+## 9. 관련 화면
+
+- `/flows` — 스테이지 플로우 시각화 및 드라이런 레인 (ADR-0183).
+- UI 언어 전환 — 쿠키 기반 로케일 협상으로 ko/en 메시지 카탈로그 지원 (ADR-0184).
+- `/wiki` — 사용자 안내서 위키의 인앱 뷰어.

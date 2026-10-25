@@ -1,5 +1,5 @@
 ---
-lang: ko
+lang: en
 lang_reason: source-material
 governance_doc_id: gov-legal-signoff-protocol
 layer: guideline
@@ -54,7 +54,7 @@ This is informational only and never blocks work or a gate.
 
 ## Interim marker
 
-Until signed, items show: "AI 작성 · 법령 원문 일부 확인 · 변호사 검토 전 — 확정 아님" (quoted Korean marker).
+Until signed, items show: `"AI 작성 · 법령 원문 일부 확인 · 변호사 검토 전 — 확정 아님"` (quoted Korean marker).
 
 ## Limits
 

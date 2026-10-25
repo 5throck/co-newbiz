@@ -7,7 +7,7 @@ counterpart: operations-manual_ko.md
 
 > **Language**: **English** · [한국어](operations-manual_ko.md)
 
-**Audience**: dba, sre, release-engineer, infra-automation-engineer (or their human counterparts once Stage 5 ships)
+**Audience**: dba, sre, release-engineer, infra-automation-engineer (or their human counterparts)
 **Not for**: analysts (see `business-manual.md`) or administrators (see `admin-manual.md`)
 
 ## What This Manual Covers
@@ -20,7 +20,7 @@ Batch operations, backup/recovery, incident response, and deployment/rollback �
 |---|---|---|
 | dba | Daily | Backup-success confirmation |
 | dba | Weekly | Capacity and query-performance review |
-| dba | Monthly | **Recovery drill** — a backup that has never been restored is not a verified backup. First drill: one month after Stage 5 go-live. |
+| dba | Monthly | **Recovery drill** — a backup that has never been restored is not a verified backup. First drill: one month after go-live. |
 | sre | Daily | Fetch-failure triage |
 | sre | Continuous | Alert pipeline — cooldown 24h per (project, trigger_type) pair, hysteresis mirrors the RAG 7-day hold |
 | sre | On incident | Incident response + post-incident analysis |
@@ -36,7 +36,7 @@ Batch operations, backup/recovery, incident response, and deployment/rollback �
 
 ## 3. Batch Operations
 
-The scheduled data-collection pipeline (`newbiz.ts watch:run`, once Stage 5 lands the CLI) runs at the OS level (Task Scheduler / systemd timer), **not** as an in-process timer — an in-process timer dies with the app, which defeats the purpose of scheduled monitoring.
+The scheduled data-collection pipeline (`newbiz.ts watch:run`, `scripts/co-newbiz/newbiz.ts`) runs at the OS level (Task Scheduler / systemd timer), **not** as an in-process timer — an in-process timer dies with the app, which defeats the purpose of scheduled monitoring.
 
 Pipeline: fetch (cache-first) → impact detection → auto-rerun → RAG re-evaluation → notification. `job_run` is the operational audit trail for this pipeline — check it first when a scheduled run appears to have not fired.
 
@@ -54,3 +54,9 @@ The CLI, run by a human operator, still resolves to a real `project_member` cont
 
 - `docs/governance/governance-operations.md` — the *business* governance operation (compliance, waivers), distinct from this document's *system* operation.
 - `docs/security/security-baseline.md` *(Stage 4)*.
+
+## 7. Related Screens
+
+- `/flows` — stage-flow visualization with a dry-run lane (ADR-0183).
+- UI language switch — ko/en message catalogs behind cookie-based locale negotiation (ADR-0184).
+- `/wiki` — in-app viewer for the user-manual wiki.

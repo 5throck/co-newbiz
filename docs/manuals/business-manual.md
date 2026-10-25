@@ -45,10 +45,16 @@ A Kill Criteria hit halts the project. It is not advisory. See `policies/group/n
 
 ## 5. Where Deliverables Go
 
-- IC memos: `templates/deliverables/ic-memo-template.md` — see the deliverables output folder structure once Stage 4/5 lands the system.
+- IC memos: `templates/deliverables/ic-memo-template.md`.
 - DD findings: recorded against the applicable `dd_finding` schema, linked to `assumption_key`.
 - Meeting outcomes: `memory/meeting-*.md`, with action items routed per the design's explicit rule — no action item without an owner and a landing location.
 
 ## 6. Brown Field Special Topics — Evaluation Order
 
 Per meeting M5, the six mandatory validators resolve in this order when you're assembling the valuation: (1) antitrust + HR integration cash-flow-schedule effects, (2) customer retention + incentive revenue/cost build, (3) certification transferability **last**, since a non-transferable certification can strip the entire acquisition premium and must not be computed against a valuation that already assumed it.
+
+## 7. Related Screens
+
+- `/flows` — stage-flow visualization with a dry-run lane (ADR-0183).
+- UI language switch — ko/en message catalogs behind cookie-based locale negotiation (ADR-0184).
+- `/wiki` — in-app viewer for the user-manual wiki.
