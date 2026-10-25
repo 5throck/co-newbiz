@@ -4,7 +4,7 @@
 
 - **Agent Name**: ip-agent
 - **Formal Name**: IP Agent
-- **Role**: Patent and IP advisory: patent landscape, freedom-to-operate, IP valuation, trade secrets, and technology licensing
+- **Role**: Patent and IP advisory — landscape and FTO analysis, IP valuation input, trade-secret posture, and technology-licensing positions
 - **Phase**: production
 - **Domain**: functional / governance
 - **Tier**: medium
@@ -16,6 +16,7 @@ Patent and IP advisory: patent landscape, freedom-to-operate, IP valuation, trad
 ## Phase History
 
 - **2026-09-04**: Initial release. Added as a standing functional-expert seat on the ADR-0097 committees (route-steering-committee, target-longlist-shortlist-committee).
+- **2026-10-25**: Definition rewritten from stub to the canonical 9-section standard (design 2026-10-25-agent-and-context-ssot-upgrade, v1.0.0 → v1.1.0): Legal Basis / Role / Responsibilities / Protocols / Constraints / Meeting Participation / Engagement Context / Deliverable Standards / Special Instructions; frontmatter gains role, color, examples, phases, handoff wiring, required_skills.
 
 ## Acceptance Criteria
 

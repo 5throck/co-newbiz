@@ -4,7 +4,7 @@
 
 - **Agent Name**: incentive-agent
 - **Formal Name**: Incentive Agent
-- **Role**: Bidirectional policy-benefit management: sourcing regional tax and infrastructure incentives for new sites, and assessing clawback exposure on relocation for M&A and headquarters moves
+- **Role**: Policy-benefit specialist — incentive clawback exposure on M&A relocation, establishment incentives recorded with clawback conditions, obligation-register construction, and incentive-deadline tracking
 - **Phase**: production
 - **Domain**: functional / brownfield
 - **Tier**: medium
@@ -16,6 +16,7 @@ Bidirectional policy-benefit management: sourcing regional tax and infrastructur
 ## Phase History
 
 - **2026-08-19**: Initial release. Created during Stage 0.2 (agent roster build-out) per design v1.0 section 5.
+- **2026-10-25**: Definition rewritten from stub to the canonical 9-section standard (design 2026-10-25-agent-and-context-ssot-upgrade, v1.0.0 → v1.1.0): Legal Basis / Role / Responsibilities / Protocols / Constraints / Meeting Participation / Engagement Context / Deliverable Standards / Special Instructions; frontmatter gains role, color, examples, phases, handoff wiring, required_skills.
 
 ## Acceptance Criteria
 

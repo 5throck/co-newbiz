@@ -4,7 +4,7 @@
 
 - **Agent Name**: hr-integration-agent
 - **Formal Name**: HR Integration Agent
-- **Role**: Executive compensation review, employee pay-and-benefits parity analysis, and labor/workforce integration for M&A
+- **Role**: HR & labor integration specialist — HR due diligence, executive CoC compensation review, upward-bias compensation harmonization, people-transfer execution, and the HR & labor committee seat
 - **Phase**: production
 - **Domain**: functional / brownfield
 - **Tier**: high
@@ -16,6 +16,7 @@ Executive compensation review, employee pay-and-benefits parity analysis, and la
 ## Phase History
 
 - **2026-08-19**: Initial release. Created during Stage 0.2 (agent roster build-out) per design v1.0 section 5.
+- **2026-10-25**: Definition rewritten from stub to the canonical 9-section standard (design 2026-10-25-agent-and-context-ssot-upgrade, v1.0.0 → v1.1.0): Legal Basis / Role / Responsibilities / Protocols / Constraints / Meeting Participation / Engagement Context / Deliverable Standards / Special Instructions; frontmatter gains role, color, examples, phases, handoff wiring, required_skills.
 
 ## Acceptance Criteria
 

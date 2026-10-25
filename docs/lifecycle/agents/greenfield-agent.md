@@ -4,7 +4,7 @@
 
 - **Agent Name**: greenfield-agent
 - **Formal Name**: Greenfield Agent
-- **Role**: New-establishment review lead: site selection, infrastructure assessment, talent pipeline planning, community partnership, permit pathway, and ramp-up modeling for Green Field projects
+- **Role**: New-establishment review lead — business-model sketching (S2), capability-gap resolution into Build/Partner/Hire/Invest (S5), and execution-baseline drafting (S11)
 - **Phase**: production
 - **Domain**: functional / greenfield
 - **Tier**: high
@@ -16,6 +16,7 @@ New-establishment review lead: site selection, infrastructure assessment, talent
 ## Phase History
 
 - **2026-08-19**: Initial release. Created during Stage 0.2 (agent roster build-out) per design v1.0 section 5.
+- **2026-10-25**: Definition rewritten from stub to the canonical 9-section standard (design 2026-10-25-agent-and-context-ssot-upgrade, v1.0.0 → v1.1.0): Legal Basis / Role / Responsibilities / Protocols / Constraints / Meeting Participation / Engagement Context / Deliverable Standards / Special Instructions; frontmatter gains role, color, examples, phases, handoff wiring, required_skills.
 
 ## Acceptance Criteria
 

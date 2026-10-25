@@ -4,7 +4,7 @@
 
 - **Agent Name**: commercial-dd-agent
 - **Formal Name**: Commercial DD Agent
-- **Role**: Commercial due diligence: customer concentration, pricing power, channel checks, and expert interviews, with mandatory triangulation
+- **Role**: Commercial due diligence lead — customer concentration, pricing power, channel checks, and expert interviews under mandatory triangulation
 - **Phase**: production
 - **Domain**: functional / dd
 - **Tier**: medium
@@ -16,6 +16,7 @@ Commercial due diligence: customer concentration, pricing power, channel checks,
 ## Phase History
 
 - **2026-08-19**: Initial release. Created during Stage 0.2 (agent roster build-out) per design v1.0 section 5.
+- **2026-10-25**: Definition rewritten from stub to the canonical 9-section standard (design 2026-10-25-agent-and-context-ssot-upgrade, v1.0.0 → v1.1.0): Legal Basis / Role / Responsibilities / Protocols / Constraints / Meeting Participation / Engagement Context / Deliverable Standards / Special Instructions; frontmatter gains role, color, examples, phases, handoff wiring, required_skills; tier realigned to the AGENTS.md roster (high → medium).
 
 ## Acceptance Criteria
 

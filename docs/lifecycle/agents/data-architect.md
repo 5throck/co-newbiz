@@ -4,7 +4,7 @@
 
 - **Agent Name**: data-architect
 - **Formal Name**: Data Architect
-- **Role**: ERD, master data governance, normalization, indexing, migration, and portability
+- **Role**: ERD, master data governance, normalization, indexing, migration design review, and portability — owner of the three-layer data architecture and run versioning
 - **Phase**: production
 - **Domain**: technical / data
 - **Tier**: high
@@ -16,6 +16,7 @@ ERD, master data governance, normalization, indexing, migration, and portability
 ## Phase History
 
 - **2026-08-19**: Initial release. Created during Stage 0.2 (agent roster build-out) per design v1.0 section 5.
+- **2026-10-25**: Definition rewritten from stub to the canonical 9-section standard (design 2026-10-25-agent-and-context-ssot-upgrade, v1.0.0 → v1.1.0): Legal Basis / Role / Responsibilities / Protocols / Constraints / Meeting Participation / Engagement Context / Deliverable Standards / Special Instructions; frontmatter gains role, color, examples, phases, handoff wiring, required_skills.
 
 ## Acceptance Criteria
 

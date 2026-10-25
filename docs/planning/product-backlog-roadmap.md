@@ -2,7 +2,7 @@
 
 **Owner**: pm
 **Status**: Active — approved 2026-09-09. Execution status (2026-09-09): Wave A done (#243/#244/#246), Wave B done (#249), Wave C done (#250), Wave D done (#251), Wave E expanded — 13 profiles total (anchors corrected to the in-force 11th revision 2026-09-10, ADR-0111): KSIC261 semiconductors, KSIC282 secondary batteries, KSIC35111 nuclear, KSIC35113 thermal, KSIC35114 solar/renewables, KSIC74100 (plant O&M), KSIC29241 construction machinery, KSIC29280 robots/humanoids, KSIC31312 drones, KSIC31111 ships/submarines, KSIC3131 space launch vehicles, KSIC63999 cybersecurity, KSIC35119 hydrogen fuel-cell (+ research docs + authoring guide), Wave F briefs delivered (`docs/decisions/open/2026-09-09-thresholds-brief-*.md`) — the underlying policy decisions now rest with the project owner.
-**Origin**: full product review 2026-09-08/09; supersedes the "Still open" list in `docs/meta/co-newbiz.context.md` as the working backlog index
+**Origin**: full product review 2026-09-08/09; supersedes the "Still open" list in `docs/co-newbiz.context.md` as the working backlog index
 **Execution model**: one wave = one branch → `/sync` pipeline → PR → CI green → merge; signature waves (A1, B1, C1, D1–D3) require a `docs/designs/` design doc approved before implementation (Design Gate)
 
 ## Guiding architecture decision (user-directed)

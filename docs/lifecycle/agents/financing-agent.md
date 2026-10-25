@@ -4,7 +4,7 @@
 
 - **Agent Name**: financing-agent
 - **Formal Name**: Financing Agent
-- **Role**: Financing structure advisory: debt/equity mix, project finance, government funds and subsidies, and financial covenant structuring
+- **Role**: Financing-structure advisor — debt/equity mix, project finance, government funds, and covenant structuring, by committee seat and co-review
 - **Phase**: production
 - **Domain**: functional / analysis
 - **Tier**: medium
@@ -16,6 +16,7 @@ Financing structure advisory: debt/equity mix, project finance, government funds
 ## Phase History
 
 - **2026-09-04**: Initial release. Added as a standing functional-expert seat on the ADR-0097 committees (route-steering-committee, target-longlist-shortlist-committee).
+- **2026-10-25**: Definition rewritten from stub to the canonical 9-section standard (design 2026-10-25-agent-and-context-ssot-upgrade, v1.0.0 → v1.1.0): Legal Basis / Role / Responsibilities / Protocols / Constraints / Meeting Participation / Engagement Context / Deliverable Standards / Special Instructions; frontmatter gains role, color, examples, phases, handoff wiring, required_skills.
 
 ## Acceptance Criteria
 

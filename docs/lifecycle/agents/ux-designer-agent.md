@@ -4,7 +4,7 @@
 
 - **Agent Name**: ux-designer-agent
 - **Formal Name**: UX Designer Agent
-- **Role**: Screen design ownership — mockups, flows, and interaction patterns designed within the Onyx 3.0 doctrine (philosophy → principles → guide → components → standard screens) for the co-newbiz web UI
+- **Role**: Screen design ownership — JTBD-driven mockups, flows, and interaction patterns within the Onyx 3.0 doctrine
 - **Phase**: production
 - **Domain**: technical / design
 - **Tier**: medium
@@ -23,6 +23,7 @@ design-system-agent and the ADR procedure.
 ## Phase History
 
 - **2026-09-12**: Initial release. Created after the 2026-09-12 usability review found the web surface presented results without search/registration (CRUD) surfaces and missing stage-to-stage linkage. Definition informed by external conventions (awesome-copilot UX agent workflow, Figma design-agent's design-system-constrained generation, handoff accessibility checklists) and reviewed in a five-perspective session (PM, design-system-agent, frontend-engineer, process governance, deal-practitioner).
+- **2026-10-25**: Definition rewritten from stub to the canonical 9-section standard (design 2026-10-25-agent-and-context-ssot-upgrade, v1.0.0 → v1.1.0): Legal Basis / Role / Responsibilities / Protocols / Constraints / Meeting Participation / Engagement Context / Deliverable Standards / Special Instructions; frontmatter gains role, color, examples, phases, handoff wiring, required_skills.
 
 ## Acceptance Criteria
 

@@ -8,109 +8,109 @@ export const AGENT_REGISTRY: AgentRegistryEntry[] = [
   {
     "key": "antitrust-agent",
     "name": "Antitrust Agent",
-    "role": "",
+    "role": "Antitrust and merger-control review — market definition, HHI calculation, multi-jurisdiction filing determination, gun-jumping compliance, and remedy scenario modeling",
     "domain": "functional"
   },
   {
     "key": "backend-engineer",
     "name": "Backend Engineer",
-    "role": "",
+    "role": "Next.js Route Handler API, authentication, the MCP server (REST-client-only), the analysis-engine CLI, and the monitoring/alerting pipeline",
     "domain": "technical"
   },
   {
     "key": "brownfield-agent",
     "name": "Brownfield Agent",
-    "role": "",
+    "role": "M&A review lead — deal-shape evaluation, target identification and screening, capability DD, deal-structure hypothesis, and entity-IC assembly for external-combination routes",
     "domain": "functional"
   },
   {
     "key": "certification-agent",
     "name": "Certification Agent",
-    "role": "",
+    "role": "Certification and regulatory-response specialist — certification-continuity screening, gap mapping, and roadmap sequencing through procedure steps, structurally separate from permits",
     "domain": "functional"
   },
   {
     "key": "commercial-dd-agent",
     "name": "Commercial DD Agent",
-    "role": "",
+    "role": "Commercial due diligence lead — customer concentration, pricing power, channel checks, and expert interviews under mandatory triangulation",
     "domain": "functional"
   },
   {
     "key": "compliance-officer",
     "name": "Compliance Officer",
-    "role": "",
+    "role": "Runs the rules the team writes — gate compliance checks, waiver adjudication, interpretation registry, and governance KPIs",
     "domain": "functional"
   },
   {
     "key": "customer-retention-agent",
     "name": "Customer Retention Agent",
-    "role": "",
+    "role": "Customer retention risk specialist — change-of-control clause scanning across customer and supplier contracts, concentration and competitive-overlap assessment, and attrition exposure quantification",
     "domain": "functional"
   },
   {
     "key": "data-architect",
     "name": "Data Architect",
-    "role": "",
+    "role": "ERD, master data governance, normalization, indexing, migration design review, and portability — owner of the three-layer data architecture and run versioning",
     "domain": "technical"
   },
   {
     "key": "dba",
     "name": "DBA",
-    "role": "",
+    "role": "Database operations — backup/restore, monthly recovery drills, performance tuning, capacity, and migration execution",
     "domain": "technical"
   },
   {
     "key": "design-system-agent",
     "name": "Design System Agent",
-    "role": "",
+    "role": "Onyx 3.0 design system governance — token, component, and accessibility consistency enforcement via design-lint",
     "domain": "technical"
   },
   {
     "key": "docs-writer",
     "name": "Docs Writer Agent",
-    "role": "",
+    "role": "Shared documentation specialist — formatting, language-policy enforcement, index hygiene, and record-format contracts across all four domains",
     "domain": "_shared"
   },
   {
     "key": "financial-analyst",
     "name": "Financial Analyst",
-    "role": "",
+    "role": "Corporate-financial analysis owner — company profiles, business-case lines, per-target S8 modeling, target comparison, and financial DD",
     "domain": "functional"
   },
   {
     "key": "financing-agent",
     "name": "Financing Agent",
-    "role": "",
+    "role": "Financing-structure advisor — debt/equity mix, project finance, government funds, and covenant structuring, by committee seat and co-review",
     "domain": "functional"
   },
   {
     "key": "frontend-engineer",
     "name": "Frontend Engineer",
-    "role": "",
+    "role": "Next.js App Router UI, ECharts visualizations, the RAG dashboard, the admin console, accessibility, and next-intl localization",
     "domain": "technical"
   },
   {
     "key": "glossary-curator",
     "name": "Glossary Curator",
-    "role": "",
+    "role": "Terminology authority — glossary registration, review, duplicate merging, and the four tooling integrations that keep definitions consistent",
     "domain": "functional"
   },
   {
     "key": "greenfield-agent",
     "name": "Greenfield Agent",
-    "role": "",
+    "role": "New-establishment review lead — business-model sketching (S2), capability-gap resolution into Build/Partner/Hire/Invest (S5), and execution-baseline drafting (S11)",
     "domain": "functional"
   },
   {
     "key": "group-review-agent",
     "name": "Group Review Agent",
-    "role": "",
+    "role": "Group-level review lead — portfolio fit, intra-group transaction compliance, capital-allocation ranking across concurrent proposals, and S12 venture portfolio monitoring",
     "domain": "functional"
   },
   {
     "key": "hr-integration-agent",
     "name": "HR Integration Agent",
-    "role": "",
+    "role": "HR & labor integration specialist — HR due diligence, executive CoC compensation review, upward-bias compensation harmonization, people-transfer execution, and the HR & labor committee seat",
     "domain": "functional"
   },
   {
@@ -122,55 +122,55 @@ export const AGENT_REGISTRY: AgentRegistryEntry[] = [
   {
     "key": "incentive-agent",
     "name": "Incentive Agent",
-    "role": "",
+    "role": "Policy-benefit specialist — incentive clawback exposure on M&A relocation, establishment incentives recorded with clawback conditions, obligation-register construction, and incentive-deadline tracking",
     "domain": "functional"
   },
   {
     "key": "industry-lead",
     "name": "Industry Lead",
-    "role": "",
+    "role": "Industry domain lead — steward of the KSIC-anchored industry-profiles/*.yaml system and the industry-expert voice in steering committees and cross-domain review",
     "domain": "industry"
   },
   {
     "key": "infra-automation-engineer",
     "name": "Infra Automation Engineer",
-    "role": "",
+    "role": "OS configuration, service registration, the scheduled-collection scheduler, and health-check/cleanup automation",
     "domain": "technical"
   },
   {
     "key": "ip-agent",
     "name": "IP Agent",
-    "role": "",
+    "role": "Patent and IP advisory — landscape and FTO analysis, IP valuation input, trade-secret posture, and technology-licensing positions",
     "domain": "functional"
   },
   {
     "key": "ir-agent",
     "name": "IR Agent",
-    "role": "",
+    "role": "Investor-relations advisory — equity story, disclosure discipline, investor communications, and market-perception risk",
     "domain": "functional"
   },
   {
     "key": "legal-counsel",
     "name": "Legal Counsel",
-    "role": "",
+    "role": "Domestic and overseas statute, contract, and regulatory advisory — legal DD, permit pathway judgment, and information-handling determinations",
     "domain": "functional"
   },
   {
     "key": "market-intelligence-agent",
     "name": "Market Intelligence Agent",
-    "role": "",
+    "role": "Market-facts owner — market sizing, competitive intelligence, value-chain linkage, S2 entry-market derivation, and S6 target longlist",
     "domain": "functional"
   },
   {
     "key": "partnership-agent",
     "name": "Partnership Agent",
-    "role": "",
+    "role": "Partner sourcing, partner due diligence, and JV structuring — owner of the partner-track funnel (deal-shape-chain) and the S12 partnership health scorecard for brownfield partnerships",
     "domain": "functional"
   },
   {
     "key": "platform-lead",
     "name": "Platform Lead",
-    "role": "",
+    "role": "Technical domain lead — cross-cutting architecture review, ADR review participation, and the AI-2nd technical reviewer seat",
     "domain": "technical"
   },
   {
@@ -182,73 +182,73 @@ export const AGENT_REGISTRY: AgentRegistryEntry[] = [
   {
     "key": "pmi-agent",
     "name": "PMI Agent",
-    "role": "",
+    "role": "Post-merger integration specialist — integration plan baseline at kickoff, day-1/100-day cadence, BAU-exit evidence pack for the human certifier, and S12 integration monitoring of synergy run-rate and retention",
     "domain": "functional"
   },
   {
     "key": "process-governance-manager",
     "name": "Process Governance Manager",
-    "role": "",
+    "role": "Functional-domain lead and process authority — design and review owner of the rules the pipeline runs on, not a dispatcher",
     "domain": "functional"
   },
   {
     "key": "quant-methodologist",
     "name": "Quant Methodologist",
-    "role": "",
+    "role": "Quantitative-method owner — unit conversion, proxy-chain calibration, error propagation, WACC input sessions, and simulation method integrity",
     "domain": "functional"
   },
   {
     "key": "region-lead",
     "name": "Region Lead",
-    "role": "",
+    "role": "Region domain lead — steward of the ISO-coded region-profiles/*.yaml system, owner of the EU works-council override step, and the region-expert voice in steering committees",
     "domain": "region"
   },
   {
     "key": "release-engineer",
     "name": "Release Engineer",
-    "role": "",
+    "role": "Build and deployment pipeline, migration execution ordering, and rollback procedures",
     "domain": "technical"
   },
   {
     "key": "risk-officer",
     "name": "Risk Officer",
-    "role": "",
+    "role": "Red-team function — optimism-bias audits, base-rate enforcement, synergy-score recommendation, and kill-criteria discipline across the pipeline",
     "domain": "functional"
   },
   {
     "key": "security-engineer",
     "name": "Security Engineer",
-    "role": "",
+    "role": "Threat modeling, security baseline, vulnerability and secrets management, and implementation of access control, personal-data protection, and MNPI handling",
     "domain": "technical"
   },
   {
     "key": "site-facility-agent",
     "name": "Site Facility Agent",
-    "role": "",
+    "role": "Site and facility advisory — standing committee seat (ADR-0097) and lead consultation lane for site selection, industrial-complex eligibility, facility investment, and leasing-versus-build economics",
     "domain": "functional"
   },
   {
     "key": "sre",
     "name": "SRE",
-    "role": "",
+    "role": "Monitoring and alerting, the log pipeline, and incident response with post-incident analysis",
     "domain": "technical"
   },
   {
     "key": "technical-dd-agent",
     "name": "Technical DD Agent",
-    "role": "",
+    "role": "Technical due diligence lead — site-visit evidence, remaining equipment life, TRL/MRL assessment, EHS liability identification, and independent capex verification",
     "domain": "functional"
   },
   {
     "key": "ux-designer-agent",
     "name": "UX Designer Agent",
-    "role": "",
+    "role": "Screen design ownership — JTBD-driven mockups, flows, and interaction patterns within the Onyx 3.0 doctrine",
     "domain": "technical"
   },
   {
     "key": "valuation-agent",
     "name": "Valuation Agent",
-    "role": "",
+    "role": "Valuation model owner — DCF/NPV/IRR quantiles, Monte Carlo and contingent-liability simulation, DD-to-valuation bridge, and S10 financing plan",
     "domain": "functional"
   }
 ];

@@ -4,7 +4,7 @@
 
 - **Agent Name**: compliance-officer
 - **Formal Name**: Compliance Officer
-- **Role**: Owns governance operation: the standing work of running the rules the team writes, not writing them
+- **Role**: Runs the rules the team writes — gate compliance checks, waiver adjudication, interpretation registry, and governance KPIs
 - **Phase**: production
 - **Domain**: functional / governance
 - **Tier**: high
@@ -16,6 +16,7 @@ Owns governance operation: the standing work of running the rules the team write
 ## Phase History
 
 - **2026-08-19**: Initial release. Created during Stage 0.2 (agent roster build-out) per design v1.0 section 5.
+- **2026-10-25**: Definition rewritten from stub to the canonical 9-section standard (design 2026-10-25-agent-and-context-ssot-upgrade, v1.0.0 → v1.1.0): Legal Basis / Role / Responsibilities / Protocols / Constraints / Meeting Participation / Engagement Context / Deliverable Standards / Special Instructions; frontmatter gains role, color, examples, phases, handoff wiring, required_skills.
 
 ## Acceptance Criteria
 
