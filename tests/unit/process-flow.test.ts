@@ -230,16 +230,20 @@ describe("process flow spec integrity (ADR-0074)", () => {
 
   test("spec-activities.generated.ts mirrors the spec (loader projection)", () => {
     // The generated projection is hand-regenerated from the YAML — this gate
-    // makes drift loud. Version string and every stage's activity list
-    // (id·agent·skills·procedure, in order) must match exactly.
+    // makes drift loud. Version string, every stage's activity list
+    // (id·agent·skills·procedure, in order) and, since design
+    // 2026-10-25-agent-assignment-prompt-standard §6.1, the stage name and
+    // applicableTracks must match exactly.
     const gen = require(join(ROOT, "app", "web-next", "lib", "spec-activities.generated.ts")) as {
       SPEC_VERSION: string;
-      SPEC_STAGES: Array<{ id: string; activities: Array<{ id: string; agent: string; skills: string[]; procedure: string[] }> }>;
+      SPEC_STAGES: Array<{ id: string; name: string; applicableTracks: string[]; activities: Array<{ id: string; agent: string; skills: string[]; procedure: string[] }> }>;
     };
     expect(gen.SPEC_VERSION).toBe(spec.meta.version);
     expect(gen.SPEC_STAGES.map((s) => s.id)).toEqual(spec.stages.map((s) => s.id));
     for (const sp of spec.stages) {
       const g = gen.SPEC_STAGES.find((s) => s.id === sp.id)!;
+      expect(g.name).toBe(sp.name);
+      expect(g.applicableTracks).toEqual(sp.applicableTracks);
       expect(g.activities).toEqual(sp.activities.map((a) => ({ id: a.id, agent: a.agent, skills: a.skills, procedure: a.procedure })));
     }
   });

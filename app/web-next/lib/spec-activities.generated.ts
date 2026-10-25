@@ -9,6 +9,11 @@ export const SPEC_VERSION = "2.10.1";
 export const SPEC_STAGES: SpecStage[] = [
   {
     "id": "S1",
+    "name": "시장분석",
+    "applicableTracks": [
+      "greenfield",
+      "brownfield"
+    ],
     "activities": [
       {
         "id": "market-research",
@@ -50,6 +55,11 @@ export const SPEC_STAGES: SpecStage[] = [
   },
   {
     "id": "S2",
+    "name": "기회 발굴",
+    "applicableTracks": [
+      "greenfield",
+      "brownfield"
+    ],
     "activities": [
       {
         "id": "opportunity-discovery",
@@ -91,6 +101,11 @@ export const SPEC_STAGES: SpecStage[] = [
   },
   {
     "id": "S3",
+    "name": "시너지·전략적 적합성",
+    "applicableTracks": [
+      "greenfield",
+      "brownfield"
+    ],
     "activities": [
       {
         "id": "strategic-fit-screening",
@@ -130,6 +145,11 @@ export const SPEC_STAGES: SpecStage[] = [
   },
   {
     "id": "S4",
+    "name": "진출방식 결정",
+    "applicableTracks": [
+      "greenfield",
+      "brownfield"
+    ],
     "activities": [
       {
         "id": "route-strategy",
@@ -171,6 +191,10 @@ export const SPEC_STAGES: SpecStage[] = [
   },
   {
     "id": "S5",
+    "name": "자체 진출",
+    "applicableTracks": [
+      "greenfield"
+    ],
     "activities": [
       {
         "id": "capability-assessment",
@@ -208,6 +232,10 @@ export const SPEC_STAGES: SpecStage[] = [
   },
   {
     "id": "S6",
+    "name": "대상 후보 발굴",
+    "applicableTracks": [
+      "brownfield"
+    ],
     "activities": [
       {
         "id": "target-universe-definition",
@@ -235,6 +263,10 @@ export const SPEC_STAGES: SpecStage[] = [
   },
   {
     "id": "S7",
+    "name": "대상 선정",
+    "applicableTracks": [
+      "brownfield"
+    ],
     "activities": [
       {
         "id": "target-screening",
@@ -274,6 +306,11 @@ export const SPEC_STAGES: SpecStage[] = [
   },
   {
     "id": "S8",
+    "name": "사업성 분석",
+    "applicableTracks": [
+      "greenfield",
+      "brownfield"
+    ],
     "activities": [
       {
         "id": "business-case-modeling",
@@ -333,6 +370,11 @@ export const SPEC_STAGES: SpecStage[] = [
   },
   {
     "id": "S9",
+    "name": "실사·검증",
+    "applicableTracks": [
+      "greenfield",
+      "brownfield"
+    ],
     "activities": [
       {
         "id": "commercial-dd",
@@ -438,6 +480,11 @@ export const SPEC_STAGES: SpecStage[] = [
   },
   {
     "id": "S10",
+    "name": "투자구조 설계",
+    "applicableTracks": [
+      "greenfield",
+      "brownfield"
+    ],
     "activities": [
       {
         "id": "deal-structure-hypothesis",
@@ -465,6 +512,11 @@ export const SPEC_STAGES: SpecStage[] = [
   },
   {
     "id": "S11",
+    "name": "투자심사·실행",
+    "applicableTracks": [
+      "greenfield",
+      "brownfield"
+    ],
     "activities": [
       {
         "id": "ic-preparation",
@@ -553,6 +605,11 @@ export const SPEC_STAGES: SpecStage[] = [
   },
   {
     "id": "S12",
+    "name": "사후 관리",
+    "applicableTracks": [
+      "greenfield",
+      "brownfield"
+    ],
     "activities": [
       {
         "id": "portfolio-monitoring",

@@ -171,12 +171,21 @@ describe("GET /api/flows — blueprint (generated projections only)", () => {
     expect(body.meta.as_of).toBeTypeOf("string");
   });
 
-  test("12 stages with activities, agents, skills, prompts and derived track scope", async () => {
+  test("12 stages with names, direct track projection, activities, agents, skills and prompts", async () => {
     const body = await req("/api/flows", { headers: { cookie: analystCookie } }).then((r: Response) => r.json());
     const stages = body.data.stages as Array<Record<string, unknown>>;
     expect(stages.map((s) => s.id)).toEqual(["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10", "S11", "S12"]);
-    for (const stage of stages) {
-      expect(Array.isArray(stage.applicableTracks)).toBe(true);
+    // design 2026-10-25 §6.1: name·applicableTracks는 SPEC_STAGES 직접 투영이다 —
+    // PM_CATALOG trackScope 합집합 유도(임시 방편)는 제거되었다. 모든 단계가
+    // 스펙 값과 정확히 일치하는지 단언한다.
+    const spec = (await import("js-yaml")).load(await Bun.file(join(PROJECT_ROOT, "process", "flow.spec.yaml")).text()) as {
+      stages: Array<{ id: string; name: string; applicableTracks: string[] }>;
+    };
+    for (const [i, stage] of stages.entries()) {
+      expect(typeof stage.name).toBe("string");
+      expect((stage.name as string).length).toBeGreaterThan(0);
+      expect(stage.name).toBe(spec.stages[i]!.name);
+      expect(stage.applicableTracks).toEqual(spec.stages[i]!.applicableTracks);
       expect(Array.isArray(stage.activities)).toBe(true);
       for (const activity of stage.activities as Array<Record<string, unknown>>) {
         expect(typeof activity.agent).toBe("string");
@@ -188,9 +197,25 @@ describe("GET /api/flows — blueprint (generated projections only)", () => {
         }
       }
     }
-    // S6/S7은 greenfield에서 스킵되는 단계 — 트랙 스코프가 프러젝션에서 유도된다.
+    // S6/S7은 greenfield에서 스킵되는 단계 — 직접 투영이 스펙 값을 그대로 운반한다.
     const s6 = stages.find((s) => s.id === "S6");
     expect((s6!.applicableTracks as string[]).sort()).toEqual(["brownfield"]);
+  });
+
+  test("specialistMarkers come from SPECIALIST_TRACK_AFFINITY (kind + note, awareness-only)", async () => {
+    const body = await req("/api/flows", { headers: { cookie: analystCookie } }).then((r: Response) => r.json());
+    const markers = body.data.specialistMarkers as Array<Record<string, unknown>>;
+    expect(markers.length).toBe(4);
+    for (const m of markers) {
+      expect(typeof m.stageId).toBe("string");
+      expect(typeof m.activityId).toBe("string");
+      expect(["affinity", "scoped", "override"]).toContain(m.kind as string);
+      expect((m.note as string).length).toBeGreaterThan(0);
+    }
+    const override = markers.find((m) => `${m.stageId}.${m.activityId}` === "S11.investment-structuring");
+    expect(override!.kind).toBe("override");
+    const kinds = markers.map((m) => m.kind).sort();
+    expect(kinds).toEqual(["affinity", "affinity", "override", "scoped"]);
   });
 
   test("dynamic items (agentKey null) and prompt system text, agents roster", async () => {

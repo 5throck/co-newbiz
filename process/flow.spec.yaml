@@ -276,6 +276,12 @@ stages:
         agent: greenfield-agent
         skills: [scenario-planning]
         procedure: [opportunity-discovery, greenfield-screening, brownfield-screening]
+        # DEC-20261025-02 (Row 4 판정): S2는 라우트 결정(S4) 이전 단계로 모든 기회가
+        # 후보 신사업이다 — 스케치는 트랙 중립 신사업 가설(requiredCapabilities는 S3
+        # 역량 갭 분석→S4 라우트 결정의 입력)이며 신설 검토 리드(greenfield-agent)가
+        # 구성 렌즈를 담당한다. 기회가 brownfield 바운드로 갈아도 스케치는 무효가
+        # 되지 않는다(대상이 운반할 사업 모델의 정의). 런타임 스케치는 트랙 게이트
+        # 없이 모든 기회에 제공된다(app/api/opportunities/[id]/sketch).
       - id: entry-market-sizing
         agent: market-intelligence-agent
         skills: [systematic-market-sizing]
@@ -374,6 +380,11 @@ stages:
         agent: brownfield-agent
         skills: [deal-execution-playbook]
         procedure: [greenfield-pre-fs, brownfield-pre-fs, deal-shape-chain]
+        # DEC-20261025-02 (Row 4 판정): 딜 형태 평가는 외부 결합(인수·JV·전략적
+        # 투자·소수점 지분·파트너십) 구조를 전문 검토하는 활동으로 M&A 리드
+        # (brownfield-agent)의 소관 렌즈다. greenfield 대안은 본 단계의 중립 축이
+        # 운반한다 — route-strategy·route-advisory(pm)와 ADR-0104의 greenfield
+        # 동일 5기준 채점 — 트랙별 전문 후속은 S5(greenfield)·S6~S7(brownfield)이다.
       - id: route-advisory
         agent: pm
         skills: []
@@ -731,6 +742,8 @@ stages:
         # 공동검토한다 — entity-ic-review step 3.1(case_type=greenfield)의 정의에
         # 기록된다. 절차 스키마는 단계별 단일 agent_key만 지원하므로 공동검토는
         # 기계 강제가 아니라 절차 정의가 운반하는 계약이다.
+        # 판정: DEC-20261025-02 (K) — 배정 유지; /flows 마커(kind=override)가 이
+        # 실효 소유 분기를 표시한다(SPECIALIST_TRACK_AFFINITY).
       - id: risk-review
         agent: risk-officer
         skills: [legal-risk-register]

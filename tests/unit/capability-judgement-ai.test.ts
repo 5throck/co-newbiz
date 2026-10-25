@@ -202,9 +202,9 @@ describe("orchestration with a fake LLM", () => {
   });
   test("registered prompt never asks for confirmation", () => {
     const sys = systemMessage("s5.capability_judgement_draft").content;
-    expect(sys).toContain("확정");
-    expect(sys).toContain("제안일 뿐");
-    expect(sys).toContain("지어내지 마세요");
+    expect(sys).toContain("confirmation");
+    expect(sys).toContain("proposal only");
+    expect(sys).toContain("Never fabricate");
   });
 });
 

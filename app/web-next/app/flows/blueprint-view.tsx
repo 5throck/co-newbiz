@@ -15,8 +15,10 @@ import {
   type BlueprintAgent,
   type BlueprintStage,
   type FlowsBlueprint,
-  stageNameKey,
+  type SpecialistMarker,
+  stageDisplayName,
 } from "./flows-view-lib.ts";
+import { FLOW_GRAPH_I18N, FlowGraph, MARKER_KIND_META } from "./flow-graph.tsx";
 
 // 표 열 비율(2026-10-11-table-column-sizing-system 선례) — 활동 표.
 const ACTIVITY_COL_PCT = [21, 7, 16, 34, 12, 10] as const;
@@ -44,21 +46,19 @@ function useStageErrors(): ErrorsByStage {
   return state;
 }
 
-/** 활동의 트랙 범위 — 소속 프롬프트 trackScope의 합집합(빈 배열 = 공통).
- *  라벨은 카탈로그(pages.flows.blueprint.commonTrack)에서 렌더 시점에resolve한다. */
-function activityTrack(a: BlueprintStage["activities"][number]): { tracks: string[] } {
-  const set = new Set<string>();
-  for (const p of a.prompts) for (const t of p.trackScope) set.add(t);
-  return { tracks: [...set] };
-}
-function trackLabel(tracks: string[], t: ReturnType<typeof useTranslations>): string {
-  return tracks.length === 0 ? t("commonTrack") : tracks.join(" · ");
+/** 트랙 라벨 — 단계 applicableTracks 직접 투영(Row 1 API)을 읽는다. 양 트랙이면
+ *  공통으로 정규화한다(과거 프롬프트 trackScope 합집합 유도는 서버에서 제거됨 —
+ *  design 2026-10-25 §6.1). 라벨은 카탈로그(pages.flows.blueprint.commonTrack). */
+function trackScopeLabel(tracks: string[], t: ReturnType<typeof useTranslations>): string {
+  const gf = tracks.includes("greenfield");
+  const bf = tracks.includes("brownfield");
+  if ((gf && bf) || tracks.length === 0) return t("commonTrack");
+  return tracks.join(" · ");
 }
 
 export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
   const t = useTranslations("pages.flows.blueprint");
   const tc = useTranslations("common");
-  const tr = useTranslations();
   const [selectedStage, setSelectedStage] = useState<string | null>(null);
   const [trackFilter, setTrackFilter] = useState<"all" | "greenfield" | "brownfield">("all");
   const [recentRuns, setRecentRuns] = useState<Record<string, Array<Record<string, unknown>>>>({});
@@ -72,15 +72,27 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
     () => stages.flatMap((s) => s.activities.map((a) => ({ stageId: s.id, activity: a }))),
     [stages],
   );
+  /** 단계 id → applicableTracks(Row 1 직접 투영) — 트랙 필터와 표의 트랙 열이 읽는다. */
+  const tracksByStage = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const s of stages) m.set(s.id, s.applicableTracks);
+    return m;
+  }, [stages]);
+  /** 활동 → 전문가 마커(§11.4 활동 표 전용 표기 + 그래프 링). 표시·인지 전용이다. */
+  const markersByActivity = useMemo(() => {
+    const m = new Map<string, SpecialistMarker>();
+    for (const mk of blueprint.specialistMarkers) m.set(`${mk.stageId}:${mk.activityId}`, mk);
+    return m;
+  }, [blueprint.specialistMarkers]);
 
   const visibleActivities = useMemo(
     () =>
-      activities.filter(({ stageId, activity }) => {
+      activities.filter(({ stageId }) => {
         if (selectedStage && stageId !== selectedStage) return false;
-        if (trackFilter !== "all") return activityTrack(activity).tracks.includes(trackFilter);
+        if (trackFilter !== "all") return (tracksByStage.get(stageId) ?? []).includes(trackFilter);
         return true;
       }),
-    [activities, selectedStage, trackFilter],
+    [activities, selectedStage, trackFilter, tracksByStage],
   );
 
   const agentsByKey = useMemo(() => {
@@ -153,7 +165,6 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
           {stages.map((s) => {
             const selected = selectedStage === s.id;
             const errs = stageErrors.byStage[s.id] ?? 0;
-            const stageNm = stageNameKey(s.id);
             return (
               <button
                 type="button"
@@ -165,10 +176,10 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
               >
                 <div className="flex items-baseline gap-1">
                   <code className="dd-item-id">{s.id}</code>
-                  <span className="font-semibold text-[length:var(--fs-body)]">{stageNm ? tr(stageNm) : s.id}</span>
+                  <span className="font-semibold text-[length:var(--fs-body)]">{stageDisplayName(s)}</span>
                 </div>
                 <div className="mt-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                  {t("activityCount", { p1: s.activities.length, p2: s.applicableTracks.length === 0 ? t("commonTrack") : s.applicableTracks.join(" · ") })}
+                  {t("activityCount", { p1: s.activities.length, p2: trackScopeLabel(s.applicableTracks, t) })}
                 </div>
                 <div className="mt-1 text-[length:var(--fs-caption)]">
                   {errs > 0 ? (
@@ -181,6 +192,26 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
             );
           })}
         </div>
+      </section>
+
+      {/* 단계 흐름 그래프 (design 2026-10-25 §6.2/§6.5 — 그리드(개관) → 그래프(흐름) → 표(상세).
+          기존 단계 선택 상태 재사용(§6.3) — 그래프 노드 클릭도 활동 표 필터로 귀결된다. */}
+      <section aria-label={FLOW_GRAPH_I18N.sectionAria} className="market-section">
+        <SectionToolbar
+          title={FLOW_GRAPH_I18N.sectionTitle}
+          summary={
+            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+              {FLOW_GRAPH_I18N.sectionHint}
+            </span>
+          }
+        />
+        <FlowGraph
+          stages={stages}
+          agentsByKey={agentsByKey}
+          markers={blueprint.specialistMarkers}
+          selectedStage={selectedStage}
+          onSelectStage={(stageId) => setSelectedStage((prev) => (prev === stageId ? null : stageId))}
+        />
       </section>
 
       {/* 활동 표 (§4.1-2) — 행 인라인 확장(네이티브 details). */}
@@ -225,8 +256,8 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
               </thead>
               <tbody>
                 {visibleActivities.map(({ stageId, activity }) => {
-                  const track = activityTrack(activity);
                   const hasDynamic = activity.prompts.some((p) => p.agentKey === null);
+                  const marker = markersByActivity.get(`${stageId}:${activity.id}`);
                   const agent = agentsByKey.get(activity.agent);
                   const key = `${stageId}:${activity.id}`;
                   const runs = recentRuns[key];
@@ -250,6 +281,14 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
                                 ? activity.procedure.map((p) => <code key={p} className="dd-item-id mr-1">{p}</code>)
                                 : "—"}
                             </p>
+                            {/* 전문가 마커 전용 표기(§11.4) — 표시·인지 전용(DEC-20261025-02). */}
+                            {marker && (
+                              <p className="mb-1">
+                                <strong>{FLOW_GRAPH_I18N.markerChip}</strong>{" "}
+                                <span className="status-chip status-in-progress">{MARKER_KIND_META[marker.kind].short}</span>{" "}
+                                <span className="text-[color:var(--muted-fg)]">{marker.note}</span>
+                              </p>
+                            )}
                             <p className="mb-1">
                               <strong>{t("sourcePrompts", { p1: activity.prompts.length })}</strong>
                               {hasDynamic && <span className="status-chip status-not-started ml-1">{t("includesDynamic")}</span>}
@@ -336,7 +375,7 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
                           </div>
                         )}
                       </td>
-                      <td><span className="status-chip status-not-started">{trackLabel(track.tracks, t)}</span></td>
+                      <td><span className="status-chip status-not-started">{trackScopeLabel(tracksByStage.get(stageId) ?? [], t)}</span></td>
                       <td>
                         {/* 드라이런 시작(Row 6, §6.6) — 첫 정적 프롬프트로 세션 생성 후 세션 화면으로.
                             동적 항목만 있는 활동은 v1 드라이런 대상이 아니므로 이유를 텍스트로 알린다. */}
