@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-25T05:33:08.957Z
+**Generated**: 2026-10-25T06:02:44.783Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -219,7 +219,7 @@
 | check-structure.ts | 1.0.0 | scripts/handbook/check-structure.ts | N/A |
 | check-symmetry.ts | 1.0.0 | scripts/handbook/check-symmetry.ts | N/A |
 | check-tables.ts | 1.0.0 | scripts/handbook/check-tables.ts | N/A |
-| check-wiki-nav.ts | 1.0.1 | scripts/co-newbiz/check-wiki-nav.ts | N/A |
+| check-wiki-nav.ts | 1.0.2 | scripts/co-newbiz/check-wiki-nav.ts | N/A |
 | cleanup-completed-md.ts | 1.1.0 | scripts/cleanup-completed-md.ts | N/A |
 | clear-pm-approval.ts | 1.0.0 | scripts/clear-pm-approval.ts | N/A |
 | committee-deliberation.ts | 1.1.0 | scripts/co-newbiz/committee-deliberation.ts | N/A |

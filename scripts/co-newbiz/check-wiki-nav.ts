@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * @version 1.0.1
+ * @version 1.0.2
  */
 // check-wiki-nav.ts — 위키 내비 사슬·문장 규범 기계 검사기(2026-10-23 위키
 // handbook 표준 재작성 설계 docs/designs/2026-10-23-wiki-handbook-standard-rebuild-design.md
@@ -75,7 +75,7 @@ export interface DerivedChain {
 // R2·R3의 두 평행 길 그룹 — 설계 §2.4가 "두 길"로 지정하는 앵커. 그룹 제목
 // (숫자 접두 제거 후) 일치로 찾는다. 쪽 목록은 앵커링하지 않는다: 쪽이
 // 추가/삭제되면 갈림길·입구·끝·합류점이 사이드바 위치에서 다시 계산된다.
-const LANE_GROUP_TITLES = ["그린필드 길", "브라운필드 길"] as const;
+const LANE_GROUP_TITLES = ["그린필드 여정", "브라운필드 여정"] as const;
 
 const stripGroupNumber = (title: string): string => title.replace(/^\d+\.\s*/, "").trim();
 

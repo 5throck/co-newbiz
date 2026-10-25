@@ -40,11 +40,11 @@ const FIXTURE_SIDEBAR = `**[홈](Home.md)**
 **0. 시작**
 - [01 시작](01-시작.md)
 
-**1. 그린필드 길**
+**1. 그린필드 여정**
 - [10 여정](10-여정.md)
 - [90 점검표](90-점검표.md)
 
-**2. 브라운필드 길**
+**2. 브라운필드 여정**
 - [11 여정](11-여정.md)
 - [91 점검표](91-점검표.md)
 
@@ -120,7 +120,7 @@ describe("deriveChainFromSidebar — 사이드바에서 사슬을 유도한다",
   });
 
   test("갈림길 앵커 그룹이 사라지면 유도가 아니라 오류로 막는다", () => {
-    const broken = FIXTURE_SIDEBAR.replace("2. 브라운필드 길", "2. 다른 길");
+    const broken = FIXTURE_SIDEBAR.replace("2. 브라운필드 여정", "2. 다른 길");
     const slugs = new Set(Object.keys(FIXTURE_PAGES).map((f) => f.replace(/\.md$/, "")));
     const chain = deriveChainFromSidebar(broken, slugs);
     expect(chain.errors.some((e) => e.includes("갈림길 앵커 그룹"))).toBe(true);
