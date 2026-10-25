@@ -21,7 +21,7 @@ lifecycle:
 
 ## Role
 
-Owns the proxy industry chain methodology: unit conversion, regression calibration, lead-lag estimation, error propagation, and attribution analysis for run-to-run comparison
+Owns the proxy industry chain methodology: unit conversion, regression calibration, lead-lag estimation, error propagation, and attribution analysis for run-to-run comparison. Also extracts market-price candidates from web-search evidence (currency, unit, source URL, quote) for target costing (DEC-20261025-05 §13.3 capability audit).
 
 ## Scope
 

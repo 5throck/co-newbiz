@@ -1,9 +1,11 @@
 "use client";
 
 // 플로우 콘솔 — 블루프린트 탭 (화면 설계 2026-10-24 §4, J1 "설계된 플로우 파악").
-// 단계 요약 그리드(벤치 B2-1 변형: 색이 아니라 텍스트 카운트가 정보의 주체) +
-// 활동 표(행 인라인 확장, 벤치 A1-1 변형) — 전부 생성 프러젝션 렌더, 런타임 LLM 없음.
-import { useEffect, useMemo, useState } from "react";
+// 단계 흐름 그래프(개관) + 활동 표(행 인라인 확장, 벤치 A1-1 변형) — 전부 생성
+// 프러젝션 렌더, 런타임 LLM 없음. 과거의 단계 요약 그리드(그래프와 정보 중복,
+// "최근 7일 오류" 경량 호출 추가 비용)는 2026-10-23 사용자 보고로 제거되었다 —
+// 그래프가 개관을 대신하고 활동 표가 키보드 경로를 유지한다.
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { SectionToolbar } from "../../components/layout.tsx";
@@ -16,7 +18,6 @@ import {
   type BlueprintStage,
   type FlowsBlueprint,
   type SpecialistMarker,
-  stageDisplayName,
 } from "./flows-view-lib.ts";
 import { FlowGraph, markerKey } from "./flow-graph.tsx";
 
@@ -24,27 +25,6 @@ import { FlowGraph, markerKey } from "./flow-graph.tsx";
 const ACTIVITY_COL_PCT = [21, 7, 16, 34, 12, 10] as const;
 // 확장 행 안의 "최근 런 3건" 소형 표.
 const RECENT_RUN_COL_PCT = [22, 30, 22, 26] as const;
-
-interface ErrorsByStage {
-  byStage: Record<string, number>;
-  loaded: boolean;
-}
-
-/** 단계 요약 그리드의 "최근 7일 오류" — 런 레저 API 집계(limit=1 경량 호출). */
-function useStageErrors(): ErrorsByStage {
-  const [state, setState] = useState<ErrorsByStage>({ byStage: {}, loaded: false });
-  useEffect(() => {
-    let alive = true;
-    api
-      .get<{ summary: { errorsByStage: Record<string, number> } }>("/api/flows/runs?window=7d&limit=1")
-      .then((r) => alive && setState({ byStage: r.data.summary?.errorsByStage ?? {}, loaded: true }))
-      .catch(() => alive && setState({ byStage: {}, loaded: true }));
-    return () => {
-      alive = false;
-    };
-  }, []);
-  return state;
-}
 
 /** 트랙 라벨 — 단계 applicableTracks 직접 투영(Row 1 API)을 읽는다. 양 트랙이면
  *  공통으로 정규화한다(과거 프롬프트 trackScope 합집합 유도는 서버에서 제거됨 —
@@ -64,7 +44,6 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
   const [trackFilter, setTrackFilter] = useState<"all" | "greenfield" | "brownfield">("all");
   const [recentRuns, setRecentRuns] = useState<Record<string, Array<Record<string, unknown>>>>({});
   const [creatingPromptKey, setCreatingPromptKey] = useState<string | null>(null);
-  const stageErrors = useStageErrors();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -151,51 +130,7 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
 
   return (
     <>
-      {/* 단계 요약 그리드 (§4.1-1) — 버튼 목록(네이티브 button, 키보드 내장). */}
-      <section aria-label={t("stageGridSection")} className="market-section">
-        <SectionToolbar
-          title={t("stageGridTitle")}
-          filters={
-            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              {t("stageGridHint")}
-            </span>
-          }
-        />
-        <div className="flex flex-wrap gap-2">
-          {stages.length === 0 && <PageState state="empty" emptyText={t("emptyCatalog")} />}
-          {stages.map((s) => {
-            const selected = selectedStage === s.id;
-            const errs = stageErrors.byStage[s.id] ?? 0;
-            return (
-              <button
-                type="button"
-                key={s.id}
-                aria-pressed={selected}
-                onClick={() => setSelectedStage(selected ? null : s.id)}
-                className="sizing-grade-card text-left"
-                style={{ flex: "1 1 12rem", maxWidth: "16rem", cursor: "pointer", borderWidth: selected ? "2px" : undefined, borderColor: selected ? "var(--accent)" : undefined }}
-              >
-                <div className="flex items-baseline gap-1">
-                  <code className="dd-item-id">{s.id}</code>
-                  <span className="font-semibold text-[length:var(--fs-body)]">{stageDisplayName(s)}</span>
-                </div>
-                <div className="mt-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                  {t("activityCount", { p1: s.activities.length, p2: trackScopeLabel(s.applicableTracks, t) })}
-                </div>
-                <div className="mt-1 text-[length:var(--fs-caption)]">
-                  {errs > 0 ? (
-                    <span className="text-[color:var(--red-fg)] font-semibold">{t("errWeek", { p1: fmtInt(errs) })}</span>
-                  ) : (
-                    <span className="text-[color:var(--muted-fg)]">{t("errZeroWeek")}</span>
-                  )}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* 단계 흐름 그래프 (design 2026-10-25 §6.2/§6.5 — 그리드(개관) → 그래프(흐름) → 표(상세).
+      {/* 단계 흐름 그래프 (design 2026-10-25 §6.2/§6.5 — 그래프(흐름) → 표(상세).
           기존 단계 선택 상태 재사용(§6.3) — 그래프 노드 클릭도 활동 표 필터로 귀결된다. */}
       <section aria-label={tg("sectionAria")} className="market-section">
         <SectionToolbar

@@ -21,7 +21,7 @@ lifecycle:
 
 ## Role
 
-New-establishment review lead: site selection, infrastructure assessment, talent pipeline planning, community partnership, permit pathway, and ramp-up modeling for Green Field projects
+New-establishment review lead: site selection, infrastructure assessment, talent pipeline planning, community partnership, permit pathway, and ramp-up modeling for Green Field projects. Also drafts the one-page business model sketch for candidate opportunities (canvas blocks, entry steps, key risks, scenarios) (DEC-20261025-05 §13.3 capability audit).
 
 ## Scope
 

@@ -21,7 +21,7 @@ lifecycle:
 
 ## Role
 
-Group-level review distinct from entity-level review: portfolio fit, intra-group transaction compliance, and capital allocation prioritization across concurrent proposals
+Group-level review distinct from entity-level review: portfolio fit, intra-group transaction compliance, and capital allocation prioritization across concurrent proposals. Also drafts the post-investment monitoring brief for held investments (status assessment, risk flags, transition suggestions) (DEC-20261025-05 §13.3 capability audit).
 
 ## Scope
 

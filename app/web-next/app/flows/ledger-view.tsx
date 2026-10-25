@@ -30,6 +30,7 @@ import {
   type RunsPayload,
   type RunsSummary,
   totalTokens,
+  windowTokenKey,
 } from "./flows-view-lib.ts";
 
 const RUNS_COL_PCT = [14, 27, 20, 12, 13, 14] as const;
@@ -200,6 +201,8 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
   if (status === "error") return <PageState state="error" errorText={errorText ?? undefined} onRetry={() => setFilters((f) => ({ ...f }))} />;
 
   const errorRate = summary?.errorRate ?? null;
+  // 기준 창 표기는 현지화된 라벨("최근 7일")로 풀어 쓴다 — 원문 토큰("7d") 노출 금지(2026-10-23 사용자 보고).
+  const windowKey = windowTokenKey(summary?.window);
 
   return (
     <>
@@ -214,7 +217,7 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
               <FilterChip selected={filters.window === "30d"} onClick={() => applyFilters({ window: "30d" })}>{t("window30d")}</FilterChip>
             </span>
           }
-          summary={<span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("basisWindow", { p1: summary?.window ?? "—" })}</span>}
+          summary={<span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("basisWindow", { p1: windowKey ? t(windowKey) : (summary?.window ?? "—") })}</span>}
         />
         <div className="flex flex-wrap gap-2">
           <SummaryCard label={t("callsCount")} value={fmtInt(summary?.llmCalls ?? 0)} />

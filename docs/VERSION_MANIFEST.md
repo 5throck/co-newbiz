@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-25T06:05:24.591Z
+**Generated**: 2026-10-25T06:59:11.530Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -257,7 +257,7 @@
 | generate-ide-rules.ts | 1.0.0 | scripts/generate-ide-rules.ts | N/A |
 | generate-pm-catalog.ts | 1.1.0 | scripts/co-newbiz/generate-pm-catalog.ts | js-yaml |
 | generate-process-flow.ts | 1.4.0 | scripts/co-newbiz/generate-process-flow.ts | js-yaml |
-| generate-prompt-registry.ts | 2.0.0 | scripts/co-newbiz/generate-prompt-registry.ts | N/A |
+| generate-prompt-registry.ts | 2.1.0 | scripts/co-newbiz/generate-prompt-registry.ts | N/A |
 | generate-raci.ts | 1.2.0 | scripts/generate-raci.ts | js-yaml |
 | generate-skill-graph.ts | 2.0.0 | scripts/generate-skill-graph.ts | js-yaml |
 | generate-spec-activities.ts | 1.2.0 | scripts/co-newbiz/generate-spec-activities.ts | js-yaml |
