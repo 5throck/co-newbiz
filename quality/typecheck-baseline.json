@@ -36,7 +36,6 @@
   "tests/unit/navigation.test.ts|TS7006": 4,
   "tests/unit/predicate.test.ts|TS2322": 3,
   "tests/unit/predicate.test.ts|TS2769": 1,
-  "tests/unit/process-flow.test.ts|TS2352": 2,
   "tests/unit/process-flow.test.ts|TS2769": 1,
   "tests/unit/report.test.ts|TS2769": 3,
   "tests/unit/sim-engine.test.ts|TS2339": 1,

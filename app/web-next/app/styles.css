@@ -2482,7 +2482,7 @@
 }
 .dd-item-text {
   margin: 0;
-  font-size: 0.88rem;
+  font-size: var(--fs-body);
   line-height: 1.55;
 }
 .dd-item-form {
@@ -2560,7 +2560,7 @@
 }
 .activity-label {
   flex: 1;
-  font-size: 0.88rem;
+  font-size: var(--fs-body);
 }
 
 /* ── Benchmark case library ── */
@@ -2714,7 +2714,7 @@
 .funnel-col > h3 { font-size: var(--fs-caption); color: var(--muted-fg); margin: 0; padding: 0.15rem 0.25rem 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
 a.funnel-card:hover { border-color: var(--primary); }
 .funnel-card { padding: 0.75rem 0.9rem; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); display: flex; flex-direction: column; gap: 0.3rem; }
-.funnel-card-name { font-size: 0.88rem; line-height: 1.35; }
+.funnel-card-name { font-size: var(--fs-body); line-height: 1.35; }
 .funnel-card-meta { margin: 0; font-size: var(--fs-caption); color: var(--muted-fg); display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
 .funnel-card-scores { margin: 0; font-size: var(--fs-caption); font-weight: 600; }
 .funnel-card-rationale { margin: 0.1rem 0 0; font-size: var(--fs-caption); color: var(--muted-fg); line-height: 1.5; }
@@ -3083,7 +3083,7 @@ a.funnel-card:hover { border-color: var(--primary); }
   transition: border-color 0.2s ease, transform 0.2s var(--ease-spring);
 }
 .process-card:hover { border-color: color-mix(in oklab, var(--primary) 45%, var(--border)); transform: translateY(-2px); }
-.process-card strong { font-size: 0.92rem; }
+.process-card strong { font-size: var(--fs-body); }
 .process-card p { margin: 0; font-size: var(--fs-caption); color: var(--muted-fg); line-height: 1.55; }
 .process-deal-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
 .process-deal-row {

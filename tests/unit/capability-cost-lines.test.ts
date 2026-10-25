@@ -557,7 +557,7 @@ describe("S5 UI structure", () => {
     const reactPath = "../../app/web-next/node_modules/react/index.js";
     const costBlockPath = "../../app/web-next/components/stages/CapabilityCostBlock.tsx";
     const { renderToStaticMarkup } = (await import(reactDomServerPath)) as { renderToStaticMarkup: (el: unknown) => string };
-    const { createElement } = (await import(reactPath)) as { createElement: (type: unknown, props: unknown) => unknown };
+    const { createElement } = (await import(reactPath)) as { createElement: (type: unknown, props: unknown, ...children: unknown[]) => unknown };
     // i18n: the block resolves catalog keys at render — wrap in NextIntlClientProvider with the ko messages.
     const { NextIntlClientProvider } = (await import("../../app/web-next/node_modules/next-intl")) as { NextIntlClientProvider: unknown };
     const koMessages = (await import("../../app/web-next/locales/ko.json")).default as Record<string, unknown>;

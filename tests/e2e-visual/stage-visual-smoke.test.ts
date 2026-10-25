@@ -189,8 +189,8 @@ describe("stage-path visual/layout smoke (both tracks, 12 paths each)", () => {
     const gf = rows.find((r) => r.track === "greenfield");
     if (!bf || !gf) throw new Error(`seed fixture incomplete: ${JSON.stringify(rows)}`);
     return [
-      { track: "brownfield", ...bf },
-      { track: "greenfield", ...gf },
+      { ...bf },
+      { ...gf },
     ];
   };
 

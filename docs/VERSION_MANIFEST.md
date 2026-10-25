@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-25T02:09:29.993Z
+**Generated**: 2026-10-25T02:46:53.156Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -269,7 +269,7 @@
 | handbook-doctor.ts | 1.0.0 | scripts/handbook/handbook-doctor.ts | N/A |
 | handbook-sync-audit.ts | 1.0.0 | scripts/handbook/handbook-sync-audit.ts | N/A |
 | hwp-extract.ts | 1.0.0 | scripts/co-newbiz/hwp-extract.ts | N/A |
-| i18n-lint.ts | 1.0.0 | scripts/co-newbiz/i18n-lint.ts | N/A |
+| i18n-lint.ts | 1.0.1 | scripts/co-newbiz/i18n-lint.ts | N/A |
 | inventory.ts | 1.0.0 | scripts/eval/inventory.ts | js-yaml, zod |
 | job-worker.ts | 1.0.0 | scripts/co-newbiz/job-worker.ts | N/A |
 | kosis-units.ts | 1.0.2 | scripts/co-newbiz/kosis-units.ts | N/A |

@@ -223,7 +223,7 @@ describe("i18n audit (skills/i18n-audit, project-runnable form)", () => {
   });
 
   test("quote discipline — no value wraps a param in single quotes ('{p}'), the literal-brace form", () => {
-    const broken = [...leaves(ko), ...[...catalogs.values()].flatMap(leaves)].filter(([, v]) =>
+    const broken = [...leaves(ko), ...[...catalogs.values()].flatMap((catalog) => leaves(catalog))].filter(([, v]) =>
       BROKEN_QUOTED_PARAM.test(v),
     );
     expect(broken.map(([k]) => k)).toEqual([]);
