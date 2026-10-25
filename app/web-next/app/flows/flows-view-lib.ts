@@ -232,6 +232,31 @@ export function bucketLlmCallsByDay(rows: LlmCallRow[]): DayBucket[] {
   return [...map.values()].sort((a, b) => a.day.localeCompare(b.day)).map((b) => ({ ...b, day: b.day.slice(5) }));
 }
 
+/** 런 레저 차트 주축(호출 수) 상한 — 스택 최댓값에서 결정적으로 유도한다(2026-10-25
+ *  사용자 보고: 막대가 축 전체 높이를 덮어 규모를 왜곡해 보였다). ECharts 자동
+ *  스케일은 최대 버킷이 보기 좋은 눈금(예: 25)과 정확히 일치하면 상한을 그 값에
+ *  맞춰버려 여유가 0 — 최고 막대가 그리드 꼭대기까지 100% 채워진다. 화면이
+ *  1/2/5×10^k 사다리 간격의 정수 배수 상한(약 15%·최소 1 단위 여유)을 직접 계산해
+ *  max로 고정한다. 0 이하·비정상 입력은 빈/전-0 상태 — 축이 쓰러지지 않게 최소
+ *  정수 눈금 1을 반환한다(minInterval 1과 짝). 순수 함수라 단위 테스트가 2–2000
+ *  범위의 불변식(정수·데이터 엄격 초과·여유 ≤1.5배)까지 직접 검증한다. */
+export function countAxisMax(maxStacked: number): number {
+  const m = Number.isFinite(maxStacked) ? Math.ceil(Math.max(0, maxStacked)) : 0;
+  if (m === 0) return 1;
+  // 목표 틱 간격(≈ m/5) 이상의 최소 사다리 값 — 정수 하한 1(호출 수는 셈).
+  const pow = 10 ** Math.floor(Math.log10(m / 5));
+  const ladder = [1, 2, 5, 10].map((k) => k * pow);
+  let step = Math.max(1, ladder.find((s) => s >= m / 5) ?? ladder[3]!);
+  let n = Math.ceil((m * 1.15) / step) * step;
+  if (n > m * 1.5) {
+    // 사다리 갭(예: 5→10배)에서 올림 폭이 커져 여유가 과해지면 한 단계 가는
+    // 간격으로 다시 올린다 — 상한은 데이터의 1.5배를 넘지 않는다(축 낭비 방지).
+    step = Math.max(1, ladder.filter((s) => s < step).pop() ?? 1);
+    n = Math.ceil((m * 1.15) / step) * step;
+  }
+  return n;
+}
+
 // ── SVG 텍스트 근사 계측 (flow-graph — 2026-10-23 사용자 보고: 카드 폭 초과 텍스트가
 // 인접 카드와 겹쳤다) ────────────────────────────────────────────────────────
 // SVG <text>는 CSS처럼 자동 축약(ellipsis)이 없어 화면이 직접 너비를 재고 잘라야

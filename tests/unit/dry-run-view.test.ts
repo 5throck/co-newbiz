@@ -226,9 +226,72 @@ describe("드라이런 화면 소스 — a11y·상호작용·경계 규약 (화�
     expect(sessionPage).toContain('t("costTotal")');
     expect(koOf("pages.flows.dryRunSession.costTotal")).toBe("세션 비용 누계");
     expect(sessionPage).toContain("expiryChip(session.expires_at)"); // 칩 어휘는 expiryChip 헬퍼에서 온다
-    expect(koOf("pages.flows.dryRunSession.purposeLine")).toContain("TTL 만료");
+    // 2026-10-25 가독성 개편 — 인라인 blob(purposeLine)은 라벨:값 메타 그리드로 분해.
+    // TTL 만료는 독립 라벨 키가 담당하고, 생성 메타는 createdValue(p1 시각 · by p2 작성자)다.
+    expect(koOf("pages.flows.dryRunSession.labelExpiry")).toBe("TTL 만료");
+    expect(sessionPage).toContain('t("labelExpiry")');
+    expect(sessionPage).toContain('t("createdValue"');
+    expect(koOf("pages.flows.dryRunSession.createdValue")).toContain("{p1}");
+    expect(koOf("pages.flows.dryRunSession.createdValue")).toContain("{p2}");
     expect(sessionPage).toContain('t("proposalOnlyChip")}</span>');
     expect(koOf("pages.flows.dryRunSession.proposalOnlyChip")).toBe("제안 전용");
+  });
+
+  test("가독성 개편 — 세션 id 잘라보기+복사, 실행 카드 상단 승격, 두 창 grid 레이아웃", () => {
+    // 세션 id — cell-truncate 잘라보기 + 클립보드 복사 버튼(긴 id 가독성).
+    expect(sessionPage).toContain('cell-truncate"');
+    expect(sessionPage).toContain('t("copySessionIdAria")');
+    expect(koOf("pages.flows.dryRunSession.copySessionIdAria")).toContain("복사");
+    expect(sessionPage).toContain("navigator.clipboard.writeText(session.id)");
+    // 실행 카드 — CTA와 비용 추정 줄이 한 카드 안에(§6.2 대화상자 전 공지).
+    expect(sessionPage).toContain('t("runCardTitle")');
+    expect(koOf("pages.flows.dryRunSession.runCardTitle")).toBe("드라이런 실행");
+    expect(sessionPage).toContain('t("costEstimateLabel")');
+    const runCardIdx = sessionPage.indexOf('t("runCardTitle")');
+    const ctaIdx = sessionPage.indexOf('t("executeCta")');
+    expect(runCardIdx).toBeGreaterThan(-1);
+    expect(ctaIdx).toBeGreaterThan(runCardIdx); // CTA는 실행 카드 뒤(같은 카드 내부)
+    // 두 창 레이아웃 — flex-wrap 수축 대신 grid(2fr/3fr, lg 미만 적층).
+    expect(sessionPage).toContain("lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]");
+  });
+
+  test("가독성 개편 — diff 색 칩(녹색 추가/적색 삭제, 수치는 텍스트 병기)과 dirty 칩", () => {
+    // diff +N/−M — 색이 단독 채널이 아니다: 추가=녹색 칩, 삭제=적색 칩, 칩 문구에 수치 포함.
+    expect(sessionPage).toContain('"status-chip status-approved">{t("diffAdded"');
+    expect(sessionPage).toContain('"status-chip status-rejected">{t("diffRemoved"');
+    expect(koOf("pages.flows.dryRunSession.diffAdded")).toBe("+{p1}줄 추가");
+    expect(koOf("pages.flows.dryRunSession.diffRemoved")).toBe("−{p1}줄 삭제");
+    expect(koOf("pages.flows.dryRunSession.diffSame")).toBe("원본과 동일");
+    // dirty 상태는 편집기 툴바(섹션 제목 옆)에 amber 칩으로 표시된다.
+    expect(sessionPage).toContain('"status-chip status-amber">{t("dirtyChip")}</span>');
+    expect(koOf("pages.flows.dryRunSession.dirtyChip")).toContain("미적용");
+  });
+
+  test("가독성 개편 — 적용=새 세션 경고 콜아웃이 적용 컨트롤 옆에 있고, 실행 전 비교 창은 구조화된 빈 상태다", () => {
+    // 적용 경고 — warning 토큰(amber border-left + 배경) 콜아웃, 더 이상 최하단 흐릿 캡션이 아니다.
+    expect(sessionPage).toContain('t("applyCalloutLabel")');
+    expect(sessionPage).toContain('solid var(--amber-border)"');
+    expect(sessionPage).toContain('background: "var(--amber-bg)"');
+    expect(sessionPage).toContain('t("dirtyNote")');
+    // 실행 전 A/B — base/override 두 라벨 패널 + 실행 안내(단일 이탤릭 문장 대체).
+    expect(sessionPage).toContain('t("legBaseEmpty")');
+    expect(koOf("pages.flows.dryRunSession.legBaseEmpty")).toContain("base");
+    expect(sessionPage).toContain('t("legOverrideEmpty")');
+    expect(sessionPage).toContain('t("notExecuted")');
+    expect(koOf("pages.flows.dryRunSession.notExecuted")).toContain("드라이런 실행");
+  });
+
+  test("가독성 개편 — 실행 기록 표에 토큰 열이 있고(A10), 재배정 select와 제안 후보의 역할이 문맥화된다", () => {
+    // 표 열 비율은 7열(시각|다리|모델|토큰|상태|지연|비용) 100% 합.
+    expect(sessionPage).toContain("const RUN_HISTORY_COL_PCT = [15, 10, 19, 13, 11, 12, 20] as const;");
+    expect(sessionPage).toContain('t("colTokens")');
+    expect(koOf("pages.flows.dryRunSession.colTokens")).toBe("토큰");
+    expect(sessionPage).toContain("totalTokens(row)"); // flows-view-lib 합계(라이브러리 미수정)
+    // 에디터 select = 이 세션의 실행 축 / 제안 후보 수용 = 그 select를 채우는 입력.
+    expect(sessionPage).toContain('t("reassignContext")');
+    expect(koOf("pages.flows.dryRunSession.reassignContext")).toContain("select");
+    expect(suggestionPanel).toContain('t("candidatesContext")');
+    expect(koOf("pages.flows.dryRunSession.candidatesContext")).toContain("select");
   });
 
   test("§6.3 — 세션 목록은 mine 토글·빈 상태 시작 링크·만료 칩을 가진다", () => {

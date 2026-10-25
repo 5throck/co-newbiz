@@ -1,4 +1,4 @@
-// @version 1.5.0
+// @version 1.6.0
 // 플로우 콘솔 화면(2026-10-24-flow-console-screen-design, Row 4) — 순수 뷰 헬퍼
 // 단위 테스트 + 화면 소스의 a11y 규약 정적 검사(§9 체크리스트 핵심 항목).
 // 1.1.0: 단계명 사본 제거(design 2026-10-25-agent-assignment-prompt-standard §6.1 —
@@ -21,11 +21,16 @@
 // 상호 비중첩(사각형 교차), (c) 엣지 앵커 체크(12개 엣지가 출발/도착 노드 변에
 // ENTRY_GAP 간격으로 붙고 카드를 관통하지 않으며 뷰박스 안에 있는다), (d) 확대된
 // 카드(NODE_W 232)의 무축약 단계명·도트 행·배지 산술 갱신.
+// 1.6.0: 2026-10-25 사용자 보고(런 레저 타임라인 — 최고 막대가 y축 전체 높이를
+// 덮어 규모를 왜곡해 보였다) 대응 — 주축(호출 수) 스케일 데이터 맞춤 핀:
+// (a) countAxisMax 단위 테스트(1/2/5 사다리 정수 상한·데이터 엄격 초과·빈/전-0
+// 가드), (b) chartOption 정적 핀(max: countAxisMax(스택 최댓값)·minInterval 1·
+// alignTicks false×2 — 보조축 틱 정렬 협상 금지).
 import { test, expect, describe } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  approxTextWidth, bucketLlmCallsByDay, classifiedByChip, fmtDateTime, fmtInt, fmtPct, fmtSeconds, fmtUsd,
+  approxTextWidth, bucketLlmCallsByDay, classifiedByChip, countAxisMax, fmtDateTime, fmtInt, fmtPct, fmtSeconds, fmtUsd,
   runStatusChip, stageDisplayName, totalTokens, truncateToWidth, windowTokenKey,
   type LlmCallRow,
 } from "../../app/web-next/app/flows/flows-view-lib.ts";
@@ -123,6 +128,39 @@ describe("flows-view-lib — 단계명(API 직접 투영)과 타임라인 버킷
     expect(buckets[1]).toMatchObject({ ok: 1, failed: 1 });
     expect(buckets[1].costUsd).toBeCloseTo(0.01);
   });
+
+  test("countAxisMax는 스택 최댓값 위의 1/2/5 사다리 정수 상한을 낸다 — 최고 막대가 축 전체를 채우지 않는다", () => {
+    // 보고 사례: 하루 성공+실패 25 — 자동 스케일은 0–25로 최고 막대를 100% 채웠다.
+    expect(countAxisMax(25)).toBe(30); // 여유 있는 정수 상한
+    expect(countAxisMax(24)).toBe(30);
+    expect(countAxisMax(22)).toBe(30);
+    expect(countAxisMax(16)).toBe(20);
+    expect(countAxisMax(12)).toBe(15);
+    // 큰 카운트도 같은 사다리 규칙 — 고정 상한(예: 100)이 아니다.
+    expect(countAxisMax(50)).toBe(60);
+    expect(countAxisMax(100)).toBe(120);
+    expect(countAxisMax(1000)).toBe(1200);
+    // 작은 카운트 — 상한은 항상 데이터 위의 정수.
+    expect(countAxisMax(1)).toBe(2);
+    expect(countAxisMax(2)).toBe(3);
+    expect(countAxisMax(5)).toBe(6);
+  });
+
+  test("countAxisMax는 빈·전-0·비정상 입력에서 축이 쓰러지지 않게 한다(최소 정수 눈금 1)", () => {
+    expect(countAxisMax(0)).toBe(1); // 빈 버킷/전-0 — 0–1축의 빈 차트, 0 나눗셈 없음
+    expect(countAxisMax(-5)).toBe(1);
+    expect(countAxisMax(Number.NaN)).toBe(1);
+    expect(countAxisMax(2.5)).toBe(4); // 버킷 합은 정수지만 방어적 올림 — 상한도 항상 정수
+  });
+
+  test("countAxisMax는 2–2000 범위에서 항상 정수·데이터 엄격 초과·과잉 여유 없음(클리핑/낭비 방지)", () => {
+    for (let m = 2; m <= 2000; m++) {
+      const n = countAxisMax(m);
+      expect(Number.isInteger(n), `m=${m} 정수 상한`).toBe(true);
+      expect(n, `m=${m} 상한은 데이터 초과(== 최대면 최고 막대가 축을 채운다)`).toBeGreaterThan(m);
+      expect(n / m, `m=${m} 여유 상한`).toBeLessThanOrEqual(1.5);
+    }
+  });
 });
 
 describe("flows 화면 소스 — a11y·IA 정적 규약 (화면 설계 §9)", () => {
@@ -194,6 +232,22 @@ describe("flows 화면 소스 — a11y·IA 정적 규약 (화면 설계 §9)", (
     expect(koSingle).toContain("{p1}");
     expect(koSingle).toContain("{p2}");
     expect(koSingle).toContain("하루");
+  });
+
+  test("런 레저 차트 — 주축 스케일 데이터 맞춤(2026-10-25 보고: 최고 막대가 y축 전체 높이를 덮었다)", () => {
+    // 주축(호출 수) max는 고정 상한이 아니라 countAxisMax(스택 최댓값) — 데이터에서
+    // 유도된 정수 상한+여유. 자동 스케일은 최대 버킷이 보기 좋은 눈금(예: 25)과
+    // 일치하면 상한을 거기에 맞춰 최고 막대가 축을 100% 채웠다.
+    expect(ledger).toContain("countAxisMax(maxStacked)");
+    expect(ledger).toContain("const maxStacked = buckets.reduce(");
+    // 호출 수는 셈 — 정수 눈금 보장(0.5 같은 분수 틱 금지).
+    expect(ledger).toContain("minInterval: 1");
+    // 보조축(비용)과의 틱 정렬 협상 금지 — 두 축 모두 alignTicks false로 각축이
+    // 자기 데이터에만 맞는다(보조축이 주축 스케일을 다시 쓰지 않는다).
+    expect(ledger.match(/alignTicks: false/g)?.length).toBe(2);
+    // 계열→축 바인딩 불변: 막대 2종은 주축 스택, 비용 선은 보조축.
+    expect(ledger.match(/stack: "calls"/g)?.length).toBe(2);
+    expect(ledger).toContain("yAxisIndex: 1");
   });
 });
 
