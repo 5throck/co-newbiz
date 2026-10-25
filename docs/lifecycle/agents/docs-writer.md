@@ -4,7 +4,7 @@
 
 - **Agent Name**: docs-writer
 - **Formal Name**: Docs Writer
-- **Role**: Document formatting and language-policy enforcement across all four domains
+- **Role**: Shared documentation specialist — formatting, language-policy enforcement, index hygiene, and record-format contracts across all four domains
 - **Phase**: production
 - **Domain**: _shared / _shared
 - **Tier**: medium
@@ -16,6 +16,7 @@ Document formatting and language-policy enforcement across all four domains. Bel
 ## Phase History
 
 - **2026-08-19**: Initial release. Created during Stage 0.2 (agent roster build-out) per design v1.0 section 5.
+- **2026-10-25**: Definition rewritten from stub to the canonical 9-section standard (design 2026-10-25-agent-and-context-ssot-upgrade, v1.0.0 → v1.1.0): Legal Basis / Role / Responsibilities / Protocols / Constraints / Meeting Participation / Engagement Context / Deliverable Standards / Special Instructions; frontmatter gains role, color, examples, phases, handoff wiring, required_skills.
 
 ## Acceptance Criteria
 

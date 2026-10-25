@@ -4,7 +4,7 @@
 
 - **Agent Name**: ir-agent
 - **Formal Name**: IR Agent
-- **Role**: Investor relations advisory: equity story, disclosure discipline, investor communications, and market perception risk
+- **Role**: Investor-relations advisory — equity story, disclosure discipline, investor communications, and market-perception risk
 - **Phase**: production
 - **Domain**: functional / governance
 - **Tier**: medium
@@ -16,6 +16,7 @@ Investor relations advisory: equity story, disclosure discipline, investor commu
 ## Phase History
 
 - **2026-09-04**: Initial release. Added as a standing functional-expert seat on the ADR-0097 committees (route-steering-committee, target-longlist-shortlist-committee).
+- **2026-10-25**: Definition rewritten from stub to the canonical 9-section standard (design 2026-10-25-agent-and-context-ssot-upgrade, v1.0.0 → v1.1.0): Legal Basis / Role / Responsibilities / Protocols / Constraints / Meeting Participation / Engagement Context / Deliverable Standards / Special Instructions; frontmatter gains role, color, examples, phases, handoff wiring, required_skills.
 
 ## Acceptance Criteria
 

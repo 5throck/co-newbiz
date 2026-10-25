@@ -4,7 +4,7 @@
 
 - **Agent Name**: site-facility-agent
 - **Formal Name**: Site & Facility Agent
-- **Role**: Site and facility advisory: site selection, industrial complex eligibility, facility investment, and leasing-versus-build decisions
+- **Role**: Site and facility advisory — standing committee seat (ADR-0097) and lead consultation lane for site selection, industrial-complex eligibility, facility investment, and leasing-versus-build economics
 - **Phase**: production
 - **Domain**: functional / greenfield
 - **Tier**: medium
@@ -16,6 +16,7 @@ Site and facility advisory: site selection, industrial complex eligibility, faci
 ## Phase History
 
 - **2026-09-04**: Initial release. Added as a standing functional-expert seat on the ADR-0097 committees (route-steering-committee, target-longlist-shortlist-committee).
+- **2026-10-25**: Definition rewritten from stub to the canonical 9-section standard (design 2026-10-25-agent-and-context-ssot-upgrade, v1.0.0 → v1.1.0): Legal Basis / Role / Responsibilities / Protocols / Constraints / Meeting Participation / Engagement Context / Deliverable Standards / Special Instructions; frontmatter gains role, color, examples, phases, handoff wiring, required_skills.
 
 ## Acceptance Criteria
 

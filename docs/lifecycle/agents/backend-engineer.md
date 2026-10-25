@@ -4,7 +4,7 @@
 
 - **Agent Name**: backend-engineer
 - **Formal Name**: Backend Engineer
-- **Role**: Next.js Route Handler REST API, authentication, MCP server, the analysis-engine CLI, and the monitoring/alerting pipeline
+- **Role**: Next.js Route Handler API, authentication, the MCP server (REST-client-only), the analysis-engine CLI, and the monitoring/alerting pipeline
 - **Phase**: production
 - **Domain**: technical / app
 - **Tier**: medium
@@ -17,6 +17,7 @@ Next.js Route Handler REST API, authentication, MCP server, the analysis-engine 
 
 - **2026-08-19**: Initial release. Created during Stage 0.2 (agent roster build-out) per design v1.0 section 5.
 - **2026-08-28**: Role/scope text updated from Hono REST API to Next.js Route Handler REST API, reflecting the ADR-0069/0070 web-stack migration (accepted 2026-08-26) that this agent record had not yet caught up with.
+- **2026-10-25**: Definition rewritten from stub to the canonical 9-section standard (design 2026-10-25-agent-and-context-ssot-upgrade, v1.0.0 → v1.1.0): Legal Basis / Role / Responsibilities / Protocols / Constraints / Meeting Participation / Engagement Context / Deliverable Standards / Special Instructions; frontmatter gains role, color, examples, phases, handoff wiring, required_skills.
 
 ## Acceptance Criteria
 

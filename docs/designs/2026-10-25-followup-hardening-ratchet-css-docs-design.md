@@ -24,7 +24,7 @@ Three recorded debts converged into one follow-up batch:
 ## 2. Decisions
 
 - **D1 (ratchet)**: fix at source, not baseline-suppress — the TS6142 imports get paired `biome-ignore lint/suspicious/noTsIgnore` + `@ts-ignore` (comments only; the runtime import graph is unchanged), the dead-arg `loadBaseline()` call drops the argument, and the seven test files get duplicate-import removals, dead-property removals, corrected casts, and a typed fixture helper. The ratchet then improved one further group (`process-flow.test.ts|TS2352` 2→0); the baseline is shrunk via `--update` (allowlist only ever shrinks).
-- **D2 (CSS)**: fold the four literals to `var(--fs-body)` (0.875rem) per the wave-U floor doctrine. Residual `.market-sub-section h3` (0.92rem, line 3222) is recorded for PM — outside the four named sites.
+- **D2 (CSS)**: fold the four literals to `var(--fs-body)` (0.875rem) per the wave-U floor doctrine. Residual `.market-sub-section h3` (0.92rem, line 3222) is recorded for PM — outside the four named sites. (resolved 2026-10-25 by the design-lint rule-6 stream — see its CHANGELOG entry)
 - **D3 (docs)**: translations match the English source line-for-line with UI strings kept parenthetical; `_ko` frontmatter normalizes to the single-fence `lang`/`counterpart` convention; the checklist ADR-0161 flips are comment-only (statuses match `docs/adr`); the projection `proc-greenfield-capability-assessment` relabels lang en→ko (25.9% Hangul body).
 
 ## 3. Scope

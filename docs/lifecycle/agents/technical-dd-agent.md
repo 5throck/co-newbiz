@@ -4,7 +4,7 @@
 
 - **Agent Name**: technical-dd-agent
 - **Formal Name**: Technical DD Agent
-- **Role**: Technical due diligence: site visits, remaining equipment life, TRL assessment, EHS liability, and capex verification
+- **Role**: Technical due diligence lead — site-visit evidence, remaining equipment life, TRL/MRL assessment, EHS liability identification, and independent capex verification
 - **Phase**: production
 - **Domain**: functional / dd
 - **Tier**: medium
@@ -16,6 +16,7 @@ Technical due diligence: site visits, remaining equipment life, TRL assessment, 
 ## Phase History
 
 - **2026-08-19**: Initial release. Created during Stage 0.2 (agent roster build-out) per design v1.0 section 5.
+- **2026-10-25**: Definition rewritten from stub to the canonical 9-section standard (design 2026-10-25-agent-and-context-ssot-upgrade, v1.0.0 → v1.1.0): Legal Basis / Role / Responsibilities / Protocols / Constraints / Meeting Participation / Engagement Context / Deliverable Standards / Special Instructions; frontmatter gains role, color, examples, phases, handoff wiring, required_skills; tier realigned to the AGENTS.md roster (high → medium).
 
 ## Acceptance Criteria
 

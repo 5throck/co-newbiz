@@ -929,8 +929,8 @@
       "name": "antitrust-agent",
       "scope": "root",
       "capability": "antitrust-agent",
-      "content_hash": "8461324c01934834",
-      "version": "1.0.0",
+      "content_hash": "afe1c15160a4529e",
+      "version": "1.1.0",
       "mirrors": [
         "agents/antitrust-agent.md"
       ]
@@ -942,8 +942,8 @@
       "name": "backend-engineer",
       "scope": "root",
       "capability": "backend-engineer",
-      "content_hash": "32e7d07d27442ef1",
-      "version": "1.0.0",
+      "content_hash": "4f966dae24e4be7d",
+      "version": "1.1.0",
       "mirrors": [
         "agents/backend-engineer.md"
       ]
@@ -955,8 +955,8 @@
       "name": "brownfield-agent",
       "scope": "root",
       "capability": "brownfield-agent",
-      "content_hash": "0d296cabcabbfe5a",
-      "version": "1.0.0",
+      "content_hash": "199ad43bb120b34b",
+      "version": "1.1.0",
       "mirrors": [
         "agents/brownfield-agent.md"
       ]
@@ -968,8 +968,8 @@
       "name": "certification-agent",
       "scope": "root",
       "capability": "certification-agent",
-      "content_hash": "44281adcfc3fbf62",
-      "version": "1.0.0",
+      "content_hash": "c2e58239c723e747",
+      "version": "1.1.0",
       "mirrors": [
         "agents/certification-agent.md"
       ]
@@ -981,8 +981,8 @@
       "name": "commercial-dd-agent",
       "scope": "root",
       "capability": "commercial-dd-agent",
-      "content_hash": "5075e2761229bfd0",
-      "version": "1.0.0",
+      "content_hash": "06c532befc6b1367",
+      "version": "1.1.0",
       "mirrors": [
         "agents/commercial-dd-agent.md"
       ]
@@ -994,8 +994,8 @@
       "name": "compliance-officer",
       "scope": "root",
       "capability": "compliance-officer",
-      "content_hash": "b5ba178a8a5f6dad",
-      "version": "1.0.0",
+      "content_hash": "221bad34892560f4",
+      "version": "1.1.0",
       "mirrors": [
         "agents/compliance-officer.md"
       ]
@@ -1007,8 +1007,8 @@
       "name": "customer-retention-agent",
       "scope": "root",
       "capability": "customer-retention-agent",
-      "content_hash": "efe65726a52bc5b8",
-      "version": "1.0.0",
+      "content_hash": "518902e428990c82",
+      "version": "1.1.0",
       "mirrors": [
         "agents/customer-retention-agent.md"
       ]
@@ -1020,8 +1020,8 @@
       "name": "data-architect",
       "scope": "root",
       "capability": "data-architect",
-      "content_hash": "7fe4192305bc6909",
-      "version": "1.0.0",
+      "content_hash": "0d802889b7522773",
+      "version": "1.1.0",
       "mirrors": [
         "agents/data-architect.md"
       ]
@@ -1033,8 +1033,8 @@
       "name": "dba",
       "scope": "root",
       "capability": "dba",
-      "content_hash": "d0342cd9f244af20",
-      "version": "1.0.0",
+      "content_hash": "af63d96953f8c277",
+      "version": "1.1.0",
       "mirrors": [
         "agents/dba.md"
       ]
@@ -1046,8 +1046,8 @@
       "name": "design-system-agent",
       "scope": "root",
       "capability": "design-system-agent",
-      "content_hash": "5819af91cbe084aa",
-      "version": "1.0.0",
+      "content_hash": "c2933d4b31ec78d0",
+      "version": "1.1.0",
       "mirrors": [
         "agents/design-system-agent.md"
       ]
@@ -1059,8 +1059,8 @@
       "name": "docs-writer",
       "scope": "root",
       "capability": "docs-writer",
-      "content_hash": "a15bcdc295766f3f",
-      "version": "1.0.0",
+      "content_hash": "152cc7c5dbbeee18",
+      "version": "1.1.0",
       "mirrors": [
         "agents/docs-writer.md"
       ]
@@ -1072,8 +1072,8 @@
       "name": "financial-analyst",
       "scope": "root",
       "capability": "financial-analyst",
-      "content_hash": "afacd3bdf2e33369",
-      "version": "1.0.0",
+      "content_hash": "e51f83f9ffd0c7fd",
+      "version": "1.1.0",
       "mirrors": [
         "agents/financial-analyst.md"
       ]
@@ -1085,8 +1085,8 @@
       "name": "financing-agent",
       "scope": "root",
       "capability": "financing-agent",
-      "content_hash": "c7ca76afcea2eb9d",
-      "version": "1.0.0",
+      "content_hash": "535b826df4c082cd",
+      "version": "1.1.0",
       "mirrors": [
         "agents/financing-agent.md"
       ]
@@ -1098,8 +1098,8 @@
       "name": "frontend-engineer",
       "scope": "root",
       "capability": "frontend-engineer",
-      "content_hash": "3a4c25db7e4511b4",
-      "version": "1.0.0",
+      "content_hash": "9bdd508bedcbac03",
+      "version": "1.1.0",
       "mirrors": [
         "agents/frontend-engineer.md"
       ]
@@ -1111,8 +1111,8 @@
       "name": "glossary-curator",
       "scope": "root",
       "capability": "glossary-curator",
-      "content_hash": "c5daa4d6ca5a0b89",
-      "version": "1.0.0",
+      "content_hash": "5531141de1b09112",
+      "version": "1.1.0",
       "mirrors": [
         "agents/glossary-curator.md"
       ]
@@ -1124,8 +1124,8 @@
       "name": "greenfield-agent",
       "scope": "root",
       "capability": "greenfield-agent",
-      "content_hash": "70480c6a2ad453f6",
-      "version": "1.0.0",
+      "content_hash": "838da0bc6b198a0a",
+      "version": "1.1.0",
       "mirrors": [
         "agents/greenfield-agent.md"
       ]
@@ -1137,8 +1137,8 @@
       "name": "group-review-agent",
       "scope": "root",
       "capability": "group-review-agent",
-      "content_hash": "4322813b390a7960",
-      "version": "1.0.0",
+      "content_hash": "821ce5b844170edc",
+      "version": "1.1.0",
       "mirrors": [
         "agents/group-review-agent.md"
       ]
@@ -1150,8 +1150,8 @@
       "name": "hr-integration-agent",
       "scope": "root",
       "capability": "hr-integration-agent",
-      "content_hash": "339d0bf6dac28fed",
-      "version": "1.0.0",
+      "content_hash": "ea7214cdf08d4ad8",
+      "version": "1.1.0",
       "mirrors": [
         "agents/hr-integration-agent.md"
       ]
@@ -1176,8 +1176,8 @@
       "name": "incentive-agent",
       "scope": "root",
       "capability": "incentive-agent",
-      "content_hash": "b47a7cd100cc577f",
-      "version": "1.0.0",
+      "content_hash": "986d4c223d117bce",
+      "version": "1.1.0",
       "mirrors": [
         "agents/incentive-agent.md"
       ]
@@ -1189,8 +1189,8 @@
       "name": "industry-lead",
       "scope": "root",
       "capability": "industry-lead",
-      "content_hash": "2b5964817114845d",
-      "version": "1.0.0",
+      "content_hash": "087e21236931a073",
+      "version": "1.1.0",
       "mirrors": [
         "agents/industry-lead.md"
       ]
@@ -1202,8 +1202,8 @@
       "name": "infra-automation-engineer",
       "scope": "root",
       "capability": "infra-automation-engineer",
-      "content_hash": "3725033b5323e3da",
-      "version": "1.0.0",
+      "content_hash": "b2982507847593b3",
+      "version": "1.1.0",
       "mirrors": [
         "agents/infra-automation-engineer.md"
       ]
@@ -1215,8 +1215,8 @@
       "name": "ip-agent",
       "scope": "root",
       "capability": "ip-agent",
-      "content_hash": "1ae9537a62b4fc1a",
-      "version": "1.0.0",
+      "content_hash": "27d5380a88959f19",
+      "version": "1.1.0",
       "mirrors": [
         "agents/ip-agent.md"
       ]
@@ -1228,8 +1228,8 @@
       "name": "ir-agent",
       "scope": "root",
       "capability": "ir-agent",
-      "content_hash": "a582dbb02a64534b",
-      "version": "1.0.0",
+      "content_hash": "e4e9ce438ba6bf24",
+      "version": "1.1.0",
       "mirrors": [
         "agents/ir-agent.md"
       ]
@@ -1241,8 +1241,8 @@
       "name": "legal-counsel",
       "scope": "root",
       "capability": "legal-counsel",
-      "content_hash": "e7e33beacdb7e862",
-      "version": "1.0.0",
+      "content_hash": "e2ee7dffe49996ff",
+      "version": "1.1.0",
       "mirrors": [
         "agents/legal-counsel.md"
       ]
@@ -1254,8 +1254,8 @@
       "name": "market-intelligence-agent",
       "scope": "root",
       "capability": "market-intelligence-agent",
-      "content_hash": "ae3ed45e572dfdab",
-      "version": "1.0.0",
+      "content_hash": "76c1ce162d0c1be9",
+      "version": "1.1.0",
       "mirrors": [
         "agents/market-intelligence-agent.md"
       ]
@@ -1267,8 +1267,8 @@
       "name": "partnership-agent",
       "scope": "root",
       "capability": "partnership-agent",
-      "content_hash": "615224528fbcb7bf",
-      "version": "1.0.0",
+      "content_hash": "8df6d6475e8e3a2a",
+      "version": "1.1.0",
       "mirrors": [
         "agents/partnership-agent.md"
       ]
@@ -1280,8 +1280,8 @@
       "name": "platform-lead",
       "scope": "root",
       "capability": "platform-lead",
-      "content_hash": "40c3b06dbeced163",
-      "version": "1.0.0",
+      "content_hash": "086b1e30bb573891",
+      "version": "1.1.0",
       "mirrors": [
         "agents/platform-lead.md"
       ]
@@ -1306,8 +1306,8 @@
       "name": "pmi-agent",
       "scope": "root",
       "capability": "pmi-agent",
-      "content_hash": "18ac2b14cc751074",
-      "version": "1.0.0",
+      "content_hash": "1768a9d67ab13155",
+      "version": "1.1.0",
       "mirrors": [
         "agents/pmi-agent.md"
       ]
@@ -1319,8 +1319,8 @@
       "name": "process-governance-manager",
       "scope": "root",
       "capability": "process-governance-manager",
-      "content_hash": "eaa42309ac91cbbc",
-      "version": "1.0.0",
+      "content_hash": "d7b30de2987842a8",
+      "version": "1.1.0",
       "mirrors": [
         "agents/process-governance-manager.md"
       ]
@@ -1332,8 +1332,8 @@
       "name": "quant-methodologist",
       "scope": "root",
       "capability": "quant-methodologist",
-      "content_hash": "5394172677242474",
-      "version": "1.0.0",
+      "content_hash": "d8e9c786b4019309",
+      "version": "1.1.0",
       "mirrors": [
         "agents/quant-methodologist.md"
       ]
@@ -1345,8 +1345,8 @@
       "name": "region-lead",
       "scope": "root",
       "capability": "region-lead",
-      "content_hash": "218bd924809ba6e5",
-      "version": "1.0.0",
+      "content_hash": "71e49fa68ab20b81",
+      "version": "1.1.0",
       "mirrors": [
         "agents/region-lead.md"
       ]
@@ -1358,8 +1358,8 @@
       "name": "release-engineer",
       "scope": "root",
       "capability": "release-engineer",
-      "content_hash": "9a1b85cd189132b4",
-      "version": "1.0.0",
+      "content_hash": "605a6d80550316e7",
+      "version": "1.1.0",
       "mirrors": [
         "agents/release-engineer.md"
       ]
@@ -1371,8 +1371,8 @@
       "name": "risk-officer",
       "scope": "root",
       "capability": "risk-officer",
-      "content_hash": "438629fe9de94ec8",
-      "version": "1.0.0",
+      "content_hash": "99382326c3a4512a",
+      "version": "1.1.0",
       "mirrors": [
         "agents/risk-officer.md"
       ]
@@ -1384,8 +1384,8 @@
       "name": "security-engineer",
       "scope": "root",
       "capability": "security-engineer",
-      "content_hash": "de803b357d9cd15c",
-      "version": "1.0.0",
+      "content_hash": "6f610815f3600e2d",
+      "version": "1.1.0",
       "mirrors": [
         "agents/security-engineer.md"
       ]
@@ -1397,8 +1397,8 @@
       "name": "site-facility-agent",
       "scope": "root",
       "capability": "site-facility-agent",
-      "content_hash": "3941e0331fce73ec",
-      "version": "1.0.0",
+      "content_hash": "1c52a745a06aa8fe",
+      "version": "1.1.0",
       "mirrors": [
         "agents/site-facility-agent.md"
       ]
@@ -1410,8 +1410,8 @@
       "name": "sre",
       "scope": "root",
       "capability": "sre",
-      "content_hash": "1a532bfdbfd1bad7",
-      "version": "1.0.0",
+      "content_hash": "d8ec32f1859f8924",
+      "version": "1.1.0",
       "mirrors": [
         "agents/sre.md"
       ]
@@ -1423,8 +1423,8 @@
       "name": "technical-dd-agent",
       "scope": "root",
       "capability": "technical-dd-agent",
-      "content_hash": "0ef42ff0c4c2314d",
-      "version": "1.0.0",
+      "content_hash": "870e47148c11b764",
+      "version": "1.1.0",
       "mirrors": [
         "agents/technical-dd-agent.md"
       ]
@@ -1436,8 +1436,8 @@
       "name": "ux-designer-agent",
       "scope": "root",
       "capability": "ux-designer-agent",
-      "content_hash": "712c318a0e9dfd53",
-      "version": "1.0.0",
+      "content_hash": "df27985f5b00d807",
+      "version": "1.1.0",
       "mirrors": [
         "agents/ux-designer-agent.md"
       ]
@@ -1449,8 +1449,8 @@
       "name": "valuation-agent",
       "scope": "root",
       "capability": "valuation-agent",
-      "content_hash": "de66f981691e703c",
-      "version": "1.0.0",
+      "content_hash": "ab7f33ad676e0233",
+      "version": "1.1.0",
       "mirrors": [
         "agents/valuation-agent.md"
       ]
@@ -1677,6 +1677,11 @@
     },
     {
       "id": "dec:DEC-20261025-05",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
+      "id": "dec:DEC-20261025-06",
       "type": "decision",
       "layer": "L3"
     },
@@ -3345,7 +3350,7 @@
         ".hermes/skills/sync/SKILL.md"
       ],
       "usage": {
-        "sessions": 6,
+        "sessions": 5,
         "last_used": "2026-10-25"
       }
     },
@@ -4620,6 +4625,150 @@
     },
     {
       "type": "references",
+      "from": "agent:root/antitrust-agent",
+      "to": "skill:root/regulatory-screening",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/brownfield-agent",
+      "to": "skill:root/deal-execution-playbook",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/certification-agent",
+      "to": "skill:root/certification-roadmap",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/certification-agent",
+      "to": "skill:root/certification-transferability",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/certification-agent",
+      "to": "skill:root/permit-pathway-mapping",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/compliance-officer",
+      "to": "skill:root/waiver-management",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/customer-retention-agent",
+      "to": "skill:root/customer-attrition-risk",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/docs-writer",
+      "to": "skill:root/executive-presentation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/financial-analyst",
+      "to": "skill:root/growth-projection-modeling",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/financial-analyst",
+      "to": "skill:root/historical-financial-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/financial-analyst",
+      "to": "skill:root/investment-feasibility-modeling",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/financial-analyst",
+      "to": "skill:root/quality-of-earnings",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/financing-agent",
+      "to": "skill:root/investment-vehicle-structuring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/greenfield-agent",
+      "to": "skill:root/greenfield-feasibility",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/greenfield-agent",
+      "to": "skill:root/permit-pathway-mapping",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/greenfield-agent",
+      "to": "skill:root/regional-incentive-sourcing",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/greenfield-agent",
+      "to": "skill:root/scenario-planning",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/greenfield-agent",
+      "to": "skill:root/site-infrastructure-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/greenfield-agent",
+      "to": "skill:root/talent-pipeline-planning",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/group-review-agent",
+      "to": "skill:root/intra-group-transaction-compliance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/group-review-agent",
+      "to": "skill:root/portfolio-fit-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/hr-integration-agent",
+      "to": "skill:root/management-incentive-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/hr-integration-agent",
+      "to": "skill:root/org-readiness-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/hr-integration-agent",
+      "to": "skill:root/talent-pipeline-planning",
+      "source": "prose"
+    },
+    {
+      "type": "references",
       "from": "agent:root/i18n-specialist",
       "to": "skill:root/i18n-audit",
       "source": "prose"
@@ -4668,6 +4817,90 @@
     },
     {
       "type": "references",
+      "from": "agent:root/incentive-agent",
+      "to": "skill:root/incentive-clawback-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/incentive-agent",
+      "to": "skill:root/management-incentive-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/incentive-agent",
+      "to": "skill:root/regional-incentive-sourcing",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/legal-counsel",
+      "to": "skill:root/certification-transferability",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/legal-counsel",
+      "to": "skill:root/legal-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/legal-counsel",
+      "to": "skill:root/permit-pathway-mapping",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/legal-counsel",
+      "to": "skill:root/regulatory-screening",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/market-intelligence-agent",
+      "to": "skill:root/competitive-intelligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/market-intelligence-agent",
+      "to": "skill:root/insight-synthesis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/market-intelligence-agent",
+      "to": "skill:root/market-data-pipeline",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/market-intelligence-agent",
+      "to": "skill:root/proxy-industry-chain",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/market-intelligence-agent",
+      "to": "skill:root/systematic-market-sizing",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/partnership-agent",
+      "to": "skill:root/jv-structuring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/partnership-agent",
+      "to": "skill:root/partner-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
       "from": "agent:root/pm",
       "to": "skill:root/agent-lifecycle-manager",
       "source": "prose"
@@ -4682,6 +4915,168 @@
       "type": "references",
       "from": "agent:root/pm",
       "to": "skill:root/skill-lifecycle-manager",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/pmi-agent",
+      "to": "skill:root/pmi-planning",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/process-governance-manager",
+      "to": "skill:root/certification-transferability",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/process-governance-manager",
+      "to": "skill:root/k-law",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/process-governance-manager",
+      "to": "skill:root/legal-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/process-governance-manager",
+      "to": "skill:root/org-readiness-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/process-governance-manager",
+      "to": "skill:root/portfolio-fit-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/process-governance-manager",
+      "to": "skill:root/rag-scoring-framework",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/process-governance-manager",
+      "to": "skill:root/stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/process-governance-manager",
+      "to": "skill:root/strategic-fit-screening",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/quant-methodologist",
+      "to": "skill:root/monte-carlo-simulation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/quant-methodologist",
+      "to": "skill:root/proxy-industry-chain",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/quant-methodologist",
+      "to": "skill:root/unit-conversion-calibration",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/quant-methodologist",
+      "to": "skill:root/value-chain-linkage-analysis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/quant-methodologist",
+      "to": "skill:root/wacc-input-session",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/region-lead",
+      "to": "skill:root/regional-incentive-sourcing",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/region-lead",
+      "to": "skill:root/regulatory-screening",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/risk-officer",
+      "to": "skill:root/assumption-audit",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/risk-officer",
+      "to": "skill:root/legal-risk-register",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/site-facility-agent",
+      "to": "skill:root/community-partnership-planning",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/site-facility-agent",
+      "to": "skill:root/regional-incentive-sourcing",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/site-facility-agent",
+      "to": "skill:root/site-infrastructure-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/technical-dd-agent",
+      "to": "skill:root/site-visit-protocol",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/technical-dd-agent",
+      "to": "skill:root/technical-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/ux-designer-agent",
+      "to": "skill:root/ui-ux-design-intelligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/valuation-agent",
+      "to": "skill:root/dd-to-valuation-bridge",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/valuation-agent",
+      "to": "skill:root/financing-plan-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/valuation-agent",
+      "to": "skill:root/monte-carlo-simulation",
       "source": "prose"
     },
     {
@@ -4962,6 +5357,24 @@
     },
     {
       "type": "cites_skill",
+      "from": "dec:DEC-20261025-06",
+      "to": "skill:root/agent-lifecycle-manager",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261025-06",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261025-06",
+      "to": "skill:root/documentation-writing",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
       "from": "doc:AGENTS.md",
       "to": "skill:root/agent-lifecycle-manager",
       "source": "workflow-doc"
@@ -5060,7 +5473,12 @@
       "type": "used_by",
       "from": "skill:root/antitrust-screening",
       "to": "agent:root/antitrust-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/antitrust-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
     },
     {
       "type": "phase",
@@ -5355,9 +5773,47 @@
     },
     {
       "type": "used_by",
+      "from": "skill:root/assumption-audit",
+      "to": "agent:root/process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/assumption-audit",
+      "to": "agent:root/risk-officer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/risk-officer.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
       "from": "skill:root/brownfield-feasibility",
       "to": "agent:root/brownfield-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/brownfield-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/brownfield-feasibility",
+      "to": "agent:root/market-intelligence-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/market-intelligence-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
     },
     {
       "type": "phase",
@@ -5481,7 +5937,12 @@
       "type": "used_by",
       "from": "skill:root/certification-roadmap",
       "to": "agent:root/certification-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/certification-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
     },
     {
       "type": "phase",
@@ -5564,7 +6025,23 @@
       "type": "used_by",
       "from": "skill:root/certification-transferability",
       "to": "agent:root/legal-counsel",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/legal-counsel.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/certification-transferability",
+      "to": "agent:root/process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 1
+      }
     },
     {
       "type": "phase",
@@ -5782,7 +6259,12 @@
       "type": "used_by",
       "from": "skill:root/commercial-due-diligence",
       "to": "agent:root/commercial-dd-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/commercial-dd-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
     },
     {
       "type": "phase",
@@ -5952,6 +6434,17 @@
       "source": "skill_manifest"
     },
     {
+      "type": "used_by",
+      "from": "skill:root/community-partnership-planning",
+      "to": "agent:root/hr-integration-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/hr-integration-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
       "type": "phase",
       "from": "skill:root/community-partnership-planning",
       "to": "phase:root/4",
@@ -6048,9 +6541,47 @@
     },
     {
       "type": "used_by",
+      "from": "skill:root/company-intelligence",
+      "to": "agent:root/financial-analyst",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/financial-analyst.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/company-intelligence",
+      "to": "agent:root/market-intelligence-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/market-intelligence-agent.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/company-intelligence",
+      "to": "agent:root/process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 2
+      }
+    },
+    {
+      "type": "used_by",
       "from": "skill:root/compensation-harmonization-analysis",
       "to": "agent:root/hr-integration-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/hr-integration-agent.md",
+        "field": "required_skills",
+        "index": 1
+      }
     },
     {
       "type": "phase",
@@ -6120,8 +6651,24 @@
     {
       "type": "used_by",
       "from": "skill:root/competitive-intelligence",
+      "to": "agent:root/brownfield-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/brownfield-agent.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/competitive-intelligence",
       "to": "agent:root/market-intelligence-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/market-intelligence-agent.md",
+        "field": "required_skills",
+        "index": 2
+      }
     },
     {
       "type": "phase",
@@ -6294,7 +6841,12 @@
       "type": "used_by",
       "from": "skill:root/compliance-monitoring",
       "to": "agent:root/compliance-officer",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/compliance-officer.md",
+        "field": "required_skills",
+        "index": 0
+      }
     },
     {
       "type": "phase",
@@ -6413,7 +6965,12 @@
       "type": "used_by",
       "from": "skill:root/customer-attrition-risk",
       "to": "agent:root/customer-retention-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/customer-retention-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
     },
     {
       "type": "phase",
@@ -6533,6 +7090,17 @@
       "from": "skill:root/dd-to-valuation-bridge",
       "to": "agent:root/risk-officer",
       "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/dd-to-valuation-bridge",
+      "to": "agent:root/valuation-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/valuation-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
     },
     {
       "type": "phase",
@@ -6724,6 +7292,39 @@
       "provenance": {
         "file": "skills/dd-to-valuation-bridge/SKILL.md",
         "field": "prerequisites"
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/deal-execution-playbook",
+      "to": "agent:root/brownfield-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/brownfield-agent.md",
+        "field": "required_skills",
+        "index": 2
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/deal-execution-playbook",
+      "to": "agent:root/process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 3
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/debt-and-contingent-liability-simulation",
+      "to": "agent:root/risk-officer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/risk-officer.md",
+        "field": "required_skills",
+        "index": 1
       }
     },
     {
@@ -6944,7 +7545,12 @@
       "type": "used_by",
       "from": "skill:root/executive-presentation",
       "to": "agent:root/docs-writer",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/docs-writer.md",
+        "field": "required_skills",
+        "index": 0
+      }
     },
     {
       "type": "phase",
@@ -7065,7 +7671,12 @@
       "type": "used_by",
       "from": "skill:root/financial-statement-analysis",
       "to": "agent:root/financial-analyst",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/financial-analyst.md",
+        "field": "required_skills",
+        "index": 1
+      }
     },
     {
       "type": "phase",
@@ -7248,7 +7859,12 @@
       "type": "used_by",
       "from": "skill:root/financing-plan-review",
       "to": "agent:root/valuation-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/valuation-agent.md",
+        "field": "required_skills",
+        "index": 1
+      }
     },
     {
       "type": "phase",
@@ -7406,9 +8022,25 @@
     },
     {
       "type": "used_by",
+      "from": "skill:root/forward-industry-research",
+      "to": "agent:root/process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 4
+      }
+    },
+    {
+      "type": "used_by",
       "from": "skill:root/greenfield-feasibility",
       "to": "agent:root/greenfield-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/greenfield-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
     },
     {
       "type": "phase",
@@ -7537,9 +8169,36 @@
     },
     {
       "type": "used_by",
+      "from": "skill:root/group-level-review",
+      "to": "agent:root/group-review-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/group-review-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/group-level-review",
+      "to": "agent:root/process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 5
+      }
+    },
+    {
+      "type": "used_by",
       "from": "skill:root/growth-projection-modeling",
       "to": "agent:root/financial-analyst",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/financial-analyst.md",
+        "field": "required_skills",
+        "index": 2
+      }
     },
     {
       "type": "phase",
@@ -7744,7 +8403,12 @@
       "type": "used_by",
       "from": "skill:root/historical-financial-analysis",
       "to": "agent:root/financial-analyst",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/financial-analyst.md",
+        "field": "required_skills",
+        "index": 3
+      }
     },
     {
       "type": "phase",
@@ -8019,7 +8683,12 @@
       "type": "used_by",
       "from": "skill:root/incentive-clawback-assessment",
       "to": "agent:root/incentive-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/incentive-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
     },
     {
       "type": "phase",
@@ -8119,8 +8788,24 @@
     {
       "type": "used_by",
       "from": "skill:root/insight-synthesis",
+      "to": "agent:root/market-intelligence-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/market-intelligence-agent.md",
+        "field": "required_skills",
+        "index": 3
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/insight-synthesis",
       "to": "agent:root/process-governance-manager",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 6
+      }
     },
     {
       "type": "phase",
@@ -8227,7 +8912,12 @@
       "type": "used_by",
       "from": "skill:root/intra-group-transaction-compliance",
       "to": "agent:root/group-review-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/group-review-agent.md",
+        "field": "required_skills",
+        "index": 2
+      }
     },
     {
       "type": "phase",
@@ -8285,8 +8975,24 @@
     {
       "type": "used_by",
       "from": "skill:root/investment-feasibility-modeling",
+      "to": "agent:root/financial-analyst",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/financial-analyst.md",
+        "field": "required_skills",
+        "index": 4
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/investment-feasibility-modeling",
       "to": "agent:root/valuation-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/valuation-agent.md",
+        "field": "required_skills",
+        "index": 2
+      }
     },
     {
       "type": "phase",
@@ -8479,6 +9185,17 @@
       "provenance": {
         "file": "skills/investment-feasibility-modeling/SKILL.md",
         "field": "prerequisites"
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/investment-vehicle-structuring",
+      "to": "agent:root/brownfield-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/brownfield-agent.md",
+        "field": "required_skills",
+        "index": 3
       }
     },
     {
@@ -8682,6 +9399,17 @@
       "from": "skill:root/jv-structuring",
       "to": "agent:root/legal-counsel",
       "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/jv-structuring",
+      "to": "agent:root/partnership-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/partnership-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
     },
     {
       "type": "phase",
@@ -9181,6 +9909,17 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "skill:root/k-ecos",
+      "to": "agent:root/financial-analyst",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/financial-analyst.md",
+        "field": "required_skills",
+        "index": 5
+      }
+    },
+    {
       "type": "composes_with",
       "from": "skill:root/k-ecos",
       "to": "skill:root/k-dart",
@@ -9498,7 +10237,12 @@
       "type": "used_by",
       "from": "skill:root/k-kosis",
       "to": "agent:root/financial-analyst",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/financial-analyst.md",
+        "field": "required_skills",
+        "index": 6
+      }
     },
     {
       "type": "used_by",
@@ -9673,6 +10417,17 @@
       "provenance": {
         "file": "skills/k-kosis/references/terms-ko.json",
         "field": "terms-ko.json"
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/k-krx",
+      "to": "agent:root/financial-analyst",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/financial-analyst.md",
+        "field": "required_skills",
+        "index": 7
       }
     },
     {
@@ -10132,6 +10887,17 @@
       "from": "skill:root/k-law",
       "to": "agent:root/legal-counsel",
       "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/k-law",
+      "to": "agent:root/process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 7
+      }
     },
     {
       "type": "phase",
@@ -10646,7 +11412,23 @@
       "type": "used_by",
       "from": "skill:root/legal-due-diligence",
       "to": "agent:root/legal-counsel",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/legal-counsel.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/legal-due-diligence",
+      "to": "agent:root/process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 8
+      }
     },
     {
       "type": "phase",
@@ -10798,9 +11580,42 @@
     },
     {
       "type": "used_by",
+      "from": "skill:root/legal-risk-register",
+      "to": "agent:root/process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 9
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/legal-risk-register",
+      "to": "agent:root/risk-officer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/risk-officer.md",
+        "field": "required_skills",
+        "index": 2
+      }
+    },
+    {
+      "type": "used_by",
       "from": "skill:root/management-incentive-review",
       "to": "agent:root/hr-integration-agent",
       "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/management-incentive-review",
+      "to": "agent:root/incentive-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/incentive-agent.md",
+        "field": "required_skills",
+        "index": 1
+      }
     },
     {
       "type": "phase",
@@ -10886,6 +11701,28 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "skill:root/market-data-pipeline",
+      "to": "agent:root/market-intelligence-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/market-intelligence-agent.md",
+        "field": "required_skills",
+        "index": 4
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/market-data-pipeline",
+      "to": "agent:root/process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 10
+      }
+    },
+    {
       "type": "references",
       "from": "skill:root/meeting-facilitation",
       "to": "skill:root/project-review",
@@ -10901,7 +11738,34 @@
       "type": "used_by",
       "from": "skill:root/monte-carlo-simulation",
       "to": "agent:root/quant-methodologist",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/quant-methodologist.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/monte-carlo-simulation",
+      "to": "agent:root/risk-officer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/risk-officer.md",
+        "field": "required_skills",
+        "index": 3
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/monte-carlo-simulation",
+      "to": "agent:root/valuation-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/valuation-agent.md",
+        "field": "required_skills",
+        "index": 3
+      }
     },
     {
       "type": "phase",
@@ -11040,8 +11904,35 @@
     {
       "type": "used_by",
       "from": "skill:root/org-readiness-assessment",
+      "to": "agent:root/greenfield-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/greenfield-agent.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/org-readiness-assessment",
       "to": "agent:root/hr-integration-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/hr-integration-agent.md",
+        "field": "required_skills",
+        "index": 2
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/org-readiness-assessment",
+      "to": "agent:root/process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 11
+      }
     },
     {
       "type": "phase",
@@ -11147,7 +12038,12 @@
       "type": "used_by",
       "from": "skill:root/partner-due-diligence",
       "to": "agent:root/partnership-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/partnership-agent.md",
+        "field": "required_skills",
+        "index": 1
+      }
     },
     {
       "type": "phase",
@@ -11216,7 +12112,12 @@
       "type": "used_by",
       "from": "skill:root/partner-sourcing-strategy",
       "to": "agent:root/partnership-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/partnership-agent.md",
+        "field": "required_skills",
+        "index": 2
+      }
     },
     {
       "type": "phase",
@@ -11274,8 +12175,24 @@
     {
       "type": "used_by",
       "from": "skill:root/peer-benchmarking",
+      "to": "agent:root/brownfield-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/brownfield-agent.md",
+        "field": "required_skills",
+        "index": 4
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/peer-benchmarking",
       "to": "agent:root/financial-analyst",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/financial-analyst.md",
+        "field": "required_skills",
+        "index": 8
+      }
     },
     {
       "type": "phase",
@@ -11385,6 +12302,17 @@
       "source": "skill_manifest"
     },
     {
+      "type": "used_by",
+      "from": "skill:root/permit-pathway-mapping",
+      "to": "agent:root/legal-counsel",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/legal-counsel.md",
+        "field": "required_skills",
+        "index": 2
+      }
+    },
+    {
       "type": "phase",
       "from": "skill:root/permit-pathway-mapping",
       "to": "phase:root/2",
@@ -11465,7 +12393,12 @@
       "type": "used_by",
       "from": "skill:root/pmi-planning",
       "to": "agent:root/pmi-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/pmi-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
     },
     {
       "type": "phase",
@@ -11538,9 +12471,36 @@
     },
     {
       "type": "used_by",
+      "from": "skill:root/policy-and-procedure-governance",
+      "to": "agent:root/process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 12
+      }
+    },
+    {
+      "type": "used_by",
       "from": "skill:root/portfolio-fit-assessment",
       "to": "agent:root/group-review-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/group-review-agent.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/portfolio-fit-assessment",
+      "to": "agent:root/process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 13
+      }
     },
     {
       "type": "phase",
@@ -11667,8 +12627,24 @@
     {
       "type": "used_by",
       "from": "skill:root/proxy-industry-chain",
+      "to": "agent:root/market-intelligence-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/market-intelligence-agent.md",
+        "field": "required_skills",
+        "index": 5
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/proxy-industry-chain",
       "to": "agent:root/quant-methodologist",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/quant-methodologist.md",
+        "field": "required_skills",
+        "index": 1
+      }
     },
     {
       "type": "phase",
@@ -11767,7 +12743,12 @@
       "type": "used_by",
       "from": "skill:root/quality-of-earnings",
       "to": "agent:root/financial-analyst",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/financial-analyst.md",
+        "field": "required_skills",
+        "index": 9
+      }
     },
     {
       "type": "phase",
@@ -11908,7 +12889,12 @@
       "type": "used_by",
       "from": "skill:root/rag-scoring-framework",
       "to": "agent:root/process-governance-manager",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 14
+      }
     },
     {
       "type": "used_by",
@@ -12073,7 +13059,12 @@
       "type": "used_by",
       "from": "skill:root/regional-incentive-sourcing",
       "to": "agent:root/greenfield-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/greenfield-agent.md",
+        "field": "required_skills",
+        "index": 2
+      }
     },
     {
       "type": "phase",
@@ -12204,6 +13195,39 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "skill:root/regulatory-screening",
+      "to": "agent:root/antitrust-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/antitrust-agent.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/regulatory-screening",
+      "to": "agent:root/legal-counsel",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/legal-counsel.md",
+        "field": "required_skills",
+        "index": 3
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/regulatory-screening",
+      "to": "agent:root/process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 15
+      }
+    },
+    {
       "type": "enables",
       "from": "skill:root/research-analysis",
       "to": "skill:root/documentation-writing",
@@ -12212,6 +13236,28 @@
         "file": "skills/research-analysis/SKILL.md",
         "field": "relates_to",
         "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/sample-driven-report-writing",
+      "to": "agent:root/process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 16
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/scenario-planning",
+      "to": "agent:root/greenfield-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/greenfield-agent.md",
+        "field": "required_skills",
+        "index": 3
       }
     },
     {
@@ -12225,6 +13271,17 @@
       "from": "skill:root/scenario-planning",
       "to": "agent:root/quant-methodologist",
       "source": "skill_manifest"
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/scenario-planning",
+      "to": "agent:root/risk-officer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/risk-officer.md",
+        "field": "required_skills",
+        "index": 4
+      }
     },
     {
       "type": "phase",
@@ -12403,7 +13460,23 @@
       "type": "used_by",
       "from": "skill:root/site-infrastructure-assessment",
       "to": "agent:root/greenfield-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/greenfield-agent.md",
+        "field": "required_skills",
+        "index": 4
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/site-infrastructure-assessment",
+      "to": "agent:root/technical-dd-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/technical-dd-agent.md",
+        "field": "required_skills",
+        "index": 2
+      }
     },
     {
       "type": "phase",
@@ -12527,7 +13600,12 @@
       "type": "used_by",
       "from": "skill:root/site-visit-protocol",
       "to": "agent:root/technical-dd-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/technical-dd-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
     },
     {
       "type": "phase",
@@ -12598,7 +13676,12 @@
       "type": "used_by",
       "from": "skill:root/stage-gate-governance",
       "to": "agent:root/process-governance-manager",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 17
+      }
     },
     {
       "type": "phase",
@@ -12735,8 +13818,24 @@
     {
       "type": "used_by",
       "from": "skill:root/strategic-fit-screening",
+      "to": "agent:root/brownfield-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/brownfield-agent.md",
+        "field": "required_skills",
+        "index": 5
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/strategic-fit-screening",
       "to": "agent:root/process-governance-manager",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 18
+      }
     },
     {
       "type": "phase",
@@ -12842,7 +13941,12 @@
       "type": "used_by",
       "from": "skill:root/systematic-market-sizing",
       "to": "agent:root/market-intelligence-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/market-intelligence-agent.md",
+        "field": "required_skills",
+        "index": 6
+      }
     },
     {
       "type": "used_by",
@@ -12926,7 +14030,23 @@
       "type": "used_by",
       "from": "skill:root/talent-pipeline-planning",
       "to": "agent:root/greenfield-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/greenfield-agent.md",
+        "field": "required_skills",
+        "index": 5
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/talent-pipeline-planning",
+      "to": "agent:root/hr-integration-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/hr-integration-agent.md",
+        "field": "required_skills",
+        "index": 3
+      }
     },
     {
       "type": "phase",
@@ -13000,6 +14120,17 @@
       "source": "prose"
     },
     {
+      "type": "used_by",
+      "from": "skill:root/target-costing-analysis",
+      "to": "agent:root/process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 19
+      }
+    },
+    {
       "type": "references",
       "from": "skill:root/team-builder",
       "to": "skill:root/agent-lifecycle-manager",
@@ -13027,7 +14158,12 @@
       "type": "used_by",
       "from": "skill:root/technical-due-diligence",
       "to": "agent:root/technical-dd-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/technical-dd-agent.md",
+        "field": "required_skills",
+        "index": 1
+      }
     },
     {
       "type": "phase",
@@ -13113,7 +14249,12 @@
       "type": "used_by",
       "from": "skill:root/two-tier-approval-chain",
       "to": "agent:root/process-governance-manager",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 20
+      }
     },
     {
       "type": "phase",
@@ -13225,7 +14366,12 @@
       "type": "used_by",
       "from": "skill:root/unit-conversion-calibration",
       "to": "agent:root/quant-methodologist",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/quant-methodologist.md",
+        "field": "required_skills",
+        "index": 2
+      }
     },
     {
       "type": "phase",
@@ -13258,9 +14404,36 @@
     },
     {
       "type": "used_by",
+      "from": "skill:root/value-chain-driver-identification",
+      "to": "agent:root/process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 21
+      }
+    },
+    {
+      "type": "used_by",
       "from": "skill:root/value-chain-linkage-analysis",
       "to": "agent:root/market-intelligence-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/market-intelligence-agent.md",
+        "field": "required_skills",
+        "index": 7
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/value-chain-linkage-analysis",
+      "to": "agent:root/quant-methodologist",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/quant-methodologist.md",
+        "field": "required_skills",
+        "index": 3
+      }
     },
     {
       "type": "phase",
@@ -13317,9 +14490,47 @@
     },
     {
       "type": "used_by",
+      "from": "skill:root/value-chain-stage-financials",
+      "to": "agent:root/market-intelligence-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/market-intelligence-agent.md",
+        "field": "required_skills",
+        "index": 8
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/value-chain-stage-financials",
+      "to": "agent:root/process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 22
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/wacc-input-session",
+      "to": "agent:root/quant-methodologist",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/quant-methodologist.md",
+        "field": "required_skills",
+        "index": 4
+      }
+    },
+    {
+      "type": "used_by",
       "from": "skill:root/wacc-input-session",
       "to": "agent:root/valuation-agent",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/valuation-agent.md",
+        "field": "required_skills",
+        "index": 4
+      }
     },
     {
       "type": "phase",
@@ -13395,6 +14606,28 @@
         "file": "skills/wacc-input-session/SKILL.md",
         "field": "relates_to",
         "index": 1
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/waiver-management",
+      "to": "agent:root/compliance-officer",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/compliance-officer.md",
+        "field": "required_skills",
+        "index": 1
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/waiver-management",
+      "to": "agent:root/process-governance-manager",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/process-governance-manager.md",
+        "field": "required_skills",
+        "index": 23
       }
     }
   ]
