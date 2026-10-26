@@ -3806,7 +3806,11 @@ main li { overflow-wrap: anywhere; }
 }
 /* Selected is also marked with a check mark, so state never relies on fill color alone. */
 .control-chip[aria-pressed="true"]::before { content: "✓ "; }
-.control-chip:focus-visible { outline: var(--border-width-strong) solid var(--primary); outline-offset: 1px; }
+/* 2026-10-26 UX review F8: ring with --accent, not --primary — the pressed fill
+   is --primary, so a --primary focus ring was invisible on a selected chip
+   (focus indistinguishable from selection). --accent + strong border matches
+   the global :focus-visible rule; holds on pressed and unpressed chips. */
+.control-chip:focus-visible { outline: var(--border-width-strong) solid var(--accent); outline-offset: 1px; }
 
 /* skeleton — content-shaped loading block (PageState, ADR-0121) */
 .skeleton {
