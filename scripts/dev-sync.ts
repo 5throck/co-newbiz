@@ -1,10 +1,15 @@
-// @version 1.30.0
-// v1.30.0 (2026-10-26, T-20261026-003): the non-main branch guard now refuses BOTH
-//           CLOSED and MERGED PRs on the current branch — landing a new sync onto a
-//           branch whose PR is already merged (incident: wave-1 of the fleet-review
-//           batch landed on the #1612-era branch after its merge) orphans the commits
-//           off main. MERGED refuses with the switch-to-main guidance; OPEN stays the
-//           legitimate follow-up path.
+// @version 1.31.0
+// v1.31.0 (2026-10-26, U-20261026-011 / T-20261026-003): the non-main branch guard
+//          now refuses MERGED as well as CLOSED PRs. Landing a new sync onto a
+//          branch whose PR is already merged orphans the commits off main.
+//          MERGED refuses with the re-branch-from-main guidance.
+// v1.30.0 (2026-10-26, T-20261026-009, finding #33): no-op early exit — a re-run
+//          with nothing staged and no working-tree changes now exits 0 with a
+//          clear "nothing to sync" message BEFORE the pipeline runs. It used to
+//          compose "chore: workspace sync (0 files)", append a junk session
+//          summary to the memory log, and only die at the commit step. The
+//          --conclude-merge escape hatch is exempt (it concludes a conflicted
+//          merge; its semantics must not change).
 // v1.29.0 (2026-10-24, T-20261024-001): hard-fail when a --body-file token reaches
 //          the message position (swapped argument order) — the co-design PR #47
 //          failure shipped a mangled PR with the delivered files unstaged.
@@ -294,6 +299,21 @@ if (/^--/.test(msg) || msgArgs.some((a) => a.startsWith('--body-file'))) {
   console.error(`  Copy-safe invocation:`);
   console.error(`    bun scripts/dev-sync.ts --body-file <path> "chore: your message"`);
   process.exit(1);
+}
+
+// ── No-op early exit (T-20261026-009, finding #33) ───────────────────────────
+// A re-run with a fully clean tree (nothing staged, no working-tree changes, no
+// untracked files) has nothing to sync: it used to walk the entire pipeline —
+// composing "chore: workspace sync (0 files)", appending a junk session summary
+// to the memory log — and only died at the commit step. Exit 0 with a clear
+// no-op message before any heavy step. --conclude-merge is exempt: it concludes
+// an in-progress conflicted merge and must keep its own semantics.
+if (import.meta.main && !concludeMerge) {
+  const noopRes = await $`git status --porcelain=v1 -z -uall`.quiet().nothrow();
+  if (noopRes.exitCode === 0 && noopRes.stdout.toString().length === 0) {
+    console.log(`${CYAN}ℹ️  dev-sync: nothing to sync — no staged changes and no working-tree changes. Pipeline not run.${RESET}`);
+    process.exit(0);
+  }
 }
 
 // Step 1 (U-20261008-001): weak messages — the no-arg fallback "chore: update" and
@@ -1228,9 +1248,6 @@ if (currentBranch === "main" || currentBranch === "master") {
     // #1510). Refuse before staging/commit.
     const closedPrRes = await $`gh pr view ${branch} --json state --jq .state`.quiet().nothrow();
     const prState = closedPrRes.exitCode === 0 ? closedPrRes.stdout.toString().trim() : '';
-    // T-20261026-003: MERGED joins CLOSED — landing a new sync onto a branch whose
-    // PR is already merged orphans the commits off main (incident: wave-1 of the
-    // fleet-review batch landed on the #1612-era branch after its merge).
     if (prState === 'CLOSED') {
         console.error(`${RED}❌ Branch '${branch}' has a CLOSED (unmerged) PR — refusing to commit a new sync onto a dead branch.${RESET}`);
         console.error(`${YELLOW}   Re-branch from main (git checkout main && git checkout -b pr/<new-slug>) and re-run /sync.${RESET}`);
@@ -1238,6 +1255,8 @@ if (currentBranch === "main" || currentBranch === "master") {
           process.exit(1);
         }
     }
+    // U-20261026-011 / T-20261026-003: MERGED joins CLOSED — a follow-up sync
+    // landed on an already-merged branch is orphaned off main.
     if (prState === 'MERGED') {
         console.error(`${RED}❌ Branch '${branch}' has an already-MERGED PR — refusing to land a follow-up sync here; the commits would be orphaned off main.${RESET}`);
         console.error(`${YELLOW}   Re-branch from main (git checkout main && git checkout -b pr/<new-slug>) and re-run /sync.${RESET}`);

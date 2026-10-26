@@ -17,7 +17,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | skill | version | status | owner | last_reviewed | removal-date | notes |
 |-------|---------|--------|-------|---------------|--------------|-------|
 | `accessibility-audit` | 1.1.0 | active | pm | 2026-09-06 | - | - |
-| `agent-lifecycle-manager` | 1.3.0 | active | pm | 2026-09-21 | — | — |
+| `agent-lifecycle-manager` | 1.3.1 | active | pm | 2026-09-21 | — | — |
 | `antitrust-screening` | 1.1.0 | active | antitrust-agent | 2026-08-23 | — | Wave 5.8D (design §9.3 M&A special-topics group) — HHI incl. common-ownership combinations (pilot 010 F-2) |
 | `api-documentation` | 1.0.2 | active | pm | 2026-07-19 | — | — |
 | `brownfield-feasibility` | 1.2.0 | active | brownfield-agent | 2026-09-22 | — | Wave 5.8C — Brown Field Screening/Pre-FS/FS/DD incl. six-validator completeness gate |
@@ -97,7 +97,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `systematic-market-sizing` | 1.5.0 | active | market-intelligence-agent | 2026-09-03 | — | — |
 | `talent-pipeline-planning` | 1.1.0 | active | hr-integration-agent | 2026-08-23 | — | Wave 5.8C — Green Field local labor-market supply assessment |
 | `target-costing-analysis` | 1.1.0 | experimental | quant-methodologist | — | — | Added by fleet resync reconcile backfill (2026-09-22) |
-| `team-builder` | 1.1.0 | active | pm | 2026-06-13 | — | — |
+| `team-builder` | 1.2.0 | active | pm | 2026-10-26 | — | — |
 | `technical-due-diligence` | 1.1.0 | active | technical-dd-agent | 2026-08-23 | — | Wave 5.8H — checklist tdd-01-08, independently-verified capex plan |
 | `token-usage-lint` | 1.1.0 | active | pm | 2026-09-06 | - | - |
 | `translate` | 1.0.3 | active | pm | 2026-08-24 | — | — |

@@ -11,7 +11,7 @@
 | Skill (scope/name) | Layer | Version | Required-by Agents | Phases | Relates-to | Inputs | Outputs |
 |--------------------|-------|---------|-------------------|--------|------------|--------|---------|
 | `root/accessibility-audit` | L3 | 1.1.0 | — | — | — | — | — |
-| `root/agent-lifecycle-manager` | L3 | 1.3.0 | — | — | root/skill-lifecycle-manager (composes_with) | — | — |
+| `root/agent-lifecycle-manager` | L3 | 1.3.1 | — | — | root/skill-lifecycle-manager (composes_with) | — | — |
 | `root/antitrust-screening` | L3 | 1.1.0 | root/antitrust-agent | root/phase 1, root/phase 3, root/phase 4 | root/brownfield-feasibility (composes_with), root/certification-transferability (composes_with), root/commercial-due-diligence (composes_with), root/competitive-intelligence (composes_with), root/compliance-monitoring (composes_with), root/customer-attrition-risk (composes_with), root/debt-and-contingent-liability-simulation (composes_with), root/financial-statement-analysis (composes_with), root/financing-plan-review (composes_with), root/incentive-clawback-assessment (composes_with), root/investment-feasibility-modeling (composes_with), root/management-incentive-review (follows), root/monte-carlo-simulation (composes_with), root/org-readiness-assessment (composes_with), root/peer-benchmarking (composes_with), root/proxy-industry-chain (composes_with), root/quality-of-earnings (composes_with), root/scenario-planning (follows), root/stage-gate-governance (composes_with), root/stage-gate-governance (follows), root/technical-due-diligence (composes_with), root/unit-conversion-calibration (composes_with) | — | — |
 | `root/api-documentation` | L3 | 1.0.2 | — | — | — | — | — |
 | `root/assumption-audit` | L3 | 1.1.0 | root/process-governance-manager, root/risk-officer | — | — | — | — |
@@ -103,7 +103,7 @@
 | `root/systematic-market-sizing` | L3 | 1.5.0 | root/market-intelligence-agent, root/quant-methodologist | root/phase 2, root/phase 3 | root/evidence-ledger (enables), root/proxy-industry-chain (follows), root/scenario-planning (composes_with) | — | — |
 | `root/talent-pipeline-planning` | L3 | 1.1.0 | root/greenfield-agent, root/hr-integration-agent | root/phase 4 | root/community-partnership-planning (follows), root/greenfield-feasibility (composes_with), root/regional-incentive-sourcing (composes_with), root/site-infrastructure-assessment (composes_with) | — | — |
 | `root/target-costing-analysis` | L3 | 1.1.0 | root/process-governance-manager, root/quant-methodologist | — | — | — | — |
-| `root/team-builder` | L3 | 1.1.0 | — | — | — | — | — |
+| `root/team-builder` | L3 | 1.2.0 | — | — | — | — | — |
 | `root/technical-due-diligence` | L3 | 1.1.0 | root/technical-dd-agent | root/phase 4 | root/competitive-intelligence (follows), root/site-visit-protocol (composes_with) | — | — |
 | `root/token-usage-lint` | L3 | 1.1.0 | — | — | root/ui-ux-design-intelligence (follows) | — | — |
 | `root/translate` | L3 | 1.0.3 | — | — | root/documentation-writing (composes_with) | — | — |
@@ -392,6 +392,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20261025-06` | decision | `root/agent-lifecycle-manager`, `root/decision-record`, `root/documentation-writing` | — | — |
 | `dec:DEC-20261026-01` | decision | `root/agent-lifecycle-manager`, `root/decision-record` | — | — |
 | `doc:AGENTS.md` | doc | `root/agent-lifecycle-manager`, `root/skill-lifecycle-manager` | — | — |
+| `doc:CLAUDE.md` | doc | `root/meeting-facilitation` | — | — |
 | `doc:CODEX.md` | doc | `root/meeting-facilitation` | — | — |
 | `doc:procedures/README.md` | doc | `root/antitrust-screening`, `root/brownfield-feasibility`, `root/regional-incentive-sourcing`, `root/site-infrastructure-assessment` | — | — |
 | `doc:procedures/schema.yaml` | doc | `root/financing-plan-review`, `root/investment-vehicle-structuring`, `root/jv-structuring`, `root/proxy-industry-chain`, `root/strategic-fit-screening` | — | — |
