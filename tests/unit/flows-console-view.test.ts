@@ -1,4 +1,4 @@
-// @version 1.7.0
+// @version 1.8.0
 // 플로우 콘솔 화면(2026-10-24-flow-console-screen-design, Row 4) — 순수 뷰 헬퍼
 // 단위 테스트 + 화면 소스의 a11y 규약 정적 검사(§9 체크리스트 핵심 항목).
 // 1.1.0: 단계명 사본 제거(design 2026-10-25-agent-assignment-prompt-standard §6.1 —
@@ -36,6 +36,14 @@
 // 실패) + chartTokens statusOk/statusFailed, (g) F8 칩 :focus-visible accent 링,
 // (h) F10 DEC 리터럴 표시 금지 + 마커 해설 details 접기, (i) F11 인접 선택 칩,
 // (j) F12 ?stage= URL 동기, (k) F13 문서 타이틀 레이아웃.
+// 1.8.0: 2026-10-26 PM 승인 후속 라운드(design 2026-10-26 §Recorded follow-ups →
+// Design delta) — (a) FU-A: svg minWidth 50rem→74rem(=VIEW_W 1184px 자연폭과 1:1
+// 등식) — 그래프는 어떤 뷰포트에서도 축소 렌더되지 않고(14px/12px 하한이 속성값
+// 그대로 유지), 더 좁은 컨테이너는 기존 overflow-x 스크롤 + 에지 페이드(F5)가
+// 대신한다, (b) FU-B: 페이로드 단계명의 카탈로그 해소(stageDisplay·stageNameKey —
+// pages.flows.stageNames.*, markerNoteKey 패턴) — 최장 단계명 산술 핀을 ko·en 양
+// 로케일로 확장한다(en 최장 "Investment review & execution" ≈223px ≤ 가용폭 240px),
+// 축약 방어선 핀은 stageDisplay 호출부로 갱신한다.
 import { test, expect, describe } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -52,6 +60,11 @@ const FLOWS_DIR = join(import.meta.dirname, "../../app/web-next/app/flows");
 const koCatalog = await import("../../app/web-next/locales/ko.json");
 const koOf = (key: string): string =>
   key.split(".").reduce<unknown>((acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined), koCatalog) as string;
+// 1.8.0 (FU-B) — en deep-merge catalog: the stageNames width pin reads the en
+// values too, so the longest-name arithmetic is asserted in BOTH locales.
+const enCatalog = await import("../../app/web-next/locales/en.json");
+const enOf = (key: string): string =>
+  key.split(".").reduce<unknown>((acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined), enCatalog) as string;
 const SCROLL_LABEL = "데이터 표 (가로 스크롤)";
 
 const llmRow = (over: Partial<LlmCallRow> = {}): LlmCallRow => ({
@@ -124,7 +137,11 @@ describe("flows-view-lib — 단계명(API 직접 투영)과 타임라인 버킷
   test("단계명 클라이언트 사본(STAGE_NAME_KEY·stageNames)은 flows-view-lib에서 제거되었다", () => {
     const lib = readFileSync(join(FLOWS_DIR, "flows-view-lib.ts"), "utf8");
     expect(lib).not.toContain("STAGE_NAME_KEY");
-    expect(lib).not.toContain("stageNames"); // i18n catalog 키 유도 사본도 없다 — name은 API 데이터
+    // FU-B(1.8.0) 이후에도 lib는 페이로드 전용으로 유지된다 — stageNames 카탈로그
+    // 패밀리의 단일 소유는 flow-graph.tsx(stageNameKey/stageDisplay)다. lib에
+    // 카탈로그 키 유도 사본이 다시 생기는 것은 회귀다(name 데이터 경로와 표시측
+    // 큐레이션 경로의 분리 유지).
+    expect(lib).not.toContain("stageNames");
     expect(lib).toContain("stageDisplayName");
   });
   test("bucketLlmCallsByDay는 일 단위로 성공/실패/비용을 묶고 오름차순 정렬한다", () => {
@@ -358,7 +375,8 @@ describe("단계 흐름 그래프 — flow-graph.tsx (design 2026-10-25-agent-as
     expect(graph).toContain('width="100%"');
     expect(graph).toContain('height: "auto"'); // 2026-10-25 보고: 뷰박스 종횡비가 폭 대비 높이를 얇게
     // 만들어 카드가 축소 렌더·왼쪽 뭉침으로 보였다 — 3줄 감기(≈2.7:1) + 명시적
-    // height auto. minWidth(50rem)는 좁은 화면의 읽기 하한(그 아래만 overflow-x).
+    // height auto. minWidth(74rem, FU-A)는 1:1 렌더 하한 — 그 아래 컨테이너 폭만
+    // overflow-x 스크롤(축소는 없다).
     expect(graph).not.toContain("maxWidth");
     expect(graph).toContain("minWidth");
     expect(graph).toContain("markerEnd"); // 화살표 엣지
@@ -628,28 +646,46 @@ describe("단계 흐름 그래프 — flow-graph.tsx (design 2026-10-25-agent-as
     }
   });
 
-  test("기하 머신체크 — 최장 단계명(ko)이 카드 가용폭에 무축약으로 들어간다", () => {
+  test("기하 머신체크 — 최장 단계명(ko·en 양 로케일)이 카드 가용폭에 무축약으로 들어간다", () => {
     // F1(2026-10-26) 폰트 상향: 카드가 다시 커졌다(232→264) — 최장 단계명
-    // "시너지·전략적 적합성" ≈ 141px(@ fontSize 14)이 가용폭 240px에 무축약으로
-    // 들어간다. 서빙 데이터 전부가 무축약(… 없음)이어야 한다 — 축약은 방어선이지
-    // 상태가 아니다(2026-10-25 보고: 1줄 레이아웃에선 축약이 상태였다).
+    // ko "시너지·전략적 적합성" ≈ 141px(@ fontSize 14)이 가용폭 240px에 무축약으로
+    // 들어간다. FU-B(1.8.0): 표시 단계명은 카탈로그 stageNames.*로 로케일 해소되므로
+    // en 값도 같은 산술을 통과해야 한다 — en 최장 "Investment review & execution"
+    // (반각 29자 × 0.55 × 14 ≈ 223px)도 240px 안에 무축약으로 들어간다. 양 로케일
+    // 서빙·카탈로그 전부가 무축약(… 없음)이어야 한다 — 축약은 방어선이지 상태가
+    // 아니다(2026-10-25 보고: 1줄 레이아웃에선 축약이 상태였다).
     const cap = G.NODE_W - 24;
     for (const s of SPEC_STAGES) {
-      expect(approxTextWidth(stageDisplayName(s), 14), `${s.id} "${s.name}"`).toBeLessThanOrEqual(cap);
+      expect(approxTextWidth(stageDisplayName(s), 14), `${s.id} ko "${s.name}"`).toBeLessThanOrEqual(cap);
+      const enName = enOf(`pages.flows.stageNames.${s.id}`);
+      expect(approxTextWidth(enName, 14), `${s.id} en "${enName}"`).toBeLessThanOrEqual(cap);
     }
-    // 방어선: 축약 헬퍼가 이름 텍스트에 실제로 연결되어 있다.
-    expect(graph).toContain("truncateToWidth(stageDisplayName(s), 14, NODE_W - 24)");
+    // 방어선: 축약 헬퍼가 (로케일 해소된) 이름 텍스트에 실제로 연결되어 있다.
+    expect(graph).toContain("truncateToWidth(stageDisplay(s, tp), 14, NODE_W - 24)");
   });
 
   test("F1 렌더 크기 산술 — SVG 폰트 속성이 읽기 하한(14/12/12)을 캐리한다", () => {
-    // 1280px 뷰포트에서 스케일 ≈1.0이므로 렌더 크기 ≈ 속성 값이다: 단계 id·이름 14,
-    // 배지·활동 수·마커 거터 라벨 12. 9.5px 캡션의 잔존은 회귀다.
+    // FU-A(1.8.0): minWidth 74rem = 뷰박스 자연폭이라 스케일은 항상 ≥1.0이다 —
+    // 자연폭 미만 컨테이너는 1:1 + 가로 스크롤, 이상은 확대(축소 분지 없음). 따라서
+    // 렌더 크기는 어떤 뷰포트에서도 속성 값 이상이다: 단계 id·이름 14, 배지·활동 수·
+    // 마커 거터 라벨 12. 9.5px 캡션의 잔존은 회귀다.
     expect(graph).toMatch(/fontSize="14" fontWeight="600"/); // 단계 id
     expect(graph).toMatch(/fontSize="14" fill="var\(--fg\)"/); // 단계명
     expect(graph.match(/fontSize="12"/g)?.length).toBe(5); // 배지 + 활동 수 + 거터 라벨 + 밴드 라벨 ×2
     expect(graph).not.toMatch(/fontSize="9\.5"/);
     expect(graph).not.toMatch(/fontSize="10"/);
     expect(graph).not.toMatch(/fontSize="12" fontWeight="600"/); // id는 14로 올랐다
+  });
+
+  test("FU-A — svg minWidth 74rem은 VIEW_W 자연폭과 1:1 등식이다(축소 렌더 원천 차단)", () => {
+    // 2026-10-26 AI-2nd 후속(FU-A): 1280px 뷰포트 + 사이드바 펼침에서 컨테이너가
+    // 뷰박스 자연폭보다 좁아져 스케일 ≈0.785(단계명 ≈11px)로 렌더되었다 — Onyx
+    // 14px 하한 미달. minWidth를 자연폭(1184px = 74rem, 루트 16px 구간)과 정확히
+    // 일치시켜 1:1 미만 스케일이 원천 차단되고, 더 좁은 컨테이너는 overflow-x
+    // 스크롤 + 에지 페이드(F5)가 대신한다.
+    expect(graph).toMatch(/minWidth: "74rem"/);
+    expect(graph).not.toContain('"50rem"'); // 구 하한의 잔존은 회귀다
+    expect(74 * 16).toBe(G.VIEW_W); // 1:1 등식 — 1920px 미만(루트 폰트 16px) 구간 기준
   });
 
   test("기하 머신체크 — 도트 행과 activityCount·트랙 배지가 카드 안에서 서로 겹치지 않는다", () => {

@@ -14,13 +14,12 @@ import { api } from "../../lib/api.ts";
 import {
   fmtDateTime,
   fmtInt,
-  stageDisplayName,
   type BlueprintAgent,
   type BlueprintStage,
   type FlowsBlueprint,
   type SpecialistMarker,
 } from "./flows-view-lib.ts";
-import { FlowGraph, markerKey, markerNote } from "./flow-graph.tsx";
+import { FlowGraph, markerKey, markerNote, stageDisplay } from "./flow-graph.tsx";
 
 // 표 열 비율(2026-10-11-table-column-sizing-system 선례) — 활동 표.
 const ACTIVITY_COL_PCT = [21, 7, 16, 34, 12, 10] as const;
@@ -40,6 +39,8 @@ function trackScopeLabel(tracks: string[], t: ReturnType<typeof useTranslations>
 export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
   const t = useTranslations("pages.flows.blueprint");
   const tg = useTranslations("pages.flows.graph"); // 단계 흐름 그래프 섹션·마커 칩 문구(flow-graph와 같은 네임스페이스)
+  // FU-B — 페이로드 단계명의 로케일 해소 네임스페이스(pages.flows.stageNames.*).
+  const tp = useTranslations("pages.flows");
   const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -103,12 +104,13 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
     return m;
   }, [blueprint.agents]);
 
-  /** F11 — 그래프 아래 선택 칩의 단계 표기(API 단계명, 결측 시 id 폴백). */
+  /** F11 — 그래프 아래 선택 칩의 단계 표기(FU-B stageDisplay 로케일 해소 — 결측 시
+   *  페이로드 원문 → id 방어 폴백). */
   const selectedStageName = useMemo(() => {
     if (!selectedStage) return "";
     const s = blueprint.stages.find((st) => st.id === selectedStage);
-    return s ? stageDisplayName(s) : selectedStage;
-  }, [selectedStage, blueprint.stages]);
+    return s ? stageDisplay(s, tp) : selectedStage;
+  }, [selectedStage, blueprint.stages, tp]);
 
   /** 프롬프트 키 → 시스템 프롬프트 본문(카탈로그×레지스트리 결합본) — 추가 호출 없이 드릴다운. */
   const systemByKey = useMemo(() => {

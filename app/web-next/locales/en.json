@@ -6176,6 +6176,20 @@
         "noSystemBody": "(no system prompt body)",
         "footnotePrefix": "Note:"
       },
+      "stageNames": {
+        "S1": "Market analysis",
+        "S2": "Opportunity discovery",
+        "S3": "Synergy & strategic fit",
+        "S4": "Route decision",
+        "S5": "Greenfield entry",
+        "S6": "Target longlist",
+        "S7": "Target shortlist",
+        "S8": "Business feasibility",
+        "S9": "Due diligence & verification",
+        "S10": "Investment structuring",
+        "S11": "Investment review & execution",
+        "S12": "Post-investment management"
+      },
       "graph": {
         "sectionTitle": "Stage flow",
         "sectionAria": "Stage flow graph",

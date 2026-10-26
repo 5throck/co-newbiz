@@ -18,8 +18,12 @@
 // 커넥터가 짧아지고, 줄 환승 2곳이 같은 열의 짧은 수직선이 되며, 엣지 교차가
 // 0이 된다(밴드 내 진행 방향은 화살촉이 유도한다). svg는 width 100% + height
 // auto로 컨테이너 폭을 따라 늘어난다(넓은 화면에서 왼쪽 뭉침 없음).
-// minWidth(50rem)는 좁은 화면의 읽기 하한 — 그 아래 해상도에서만 컨테이너의
-// overflow-x 스크롤이 대신한다.
+// minWidth(74rem)는 FU-A(2026-10-26 PM 승인 후속)의 축소 금지 하한이다: 뷰박스
+// 자연폭 VIEW_W 1184px = 74rem과 정확히 일치해 그래프가 항상 1:1 이상(절대 축소
+// 없음)으로 렌더되고, 14px/12px 읽기 하한이 어떤 뷰포트에서도 속성값 그대로
+// 유지된다. 컨테이너가 그보다 좁으면 축소 대신 기존 overflow-x 스크롤 + 에지
+// 페이드 힌트(F5)가 대신한다. (1920px 이상 루트 폰트 스텝 15px 구간은 뷰포트
+// 자체가 그래프 자연폭보다 넓어 minWidth가 묶일 일이 없다.)
 //
 // 폰트 상향(2026-10-26 UX 리뷰 F1 — SVG 텍스트가 14px 읽기 하한 아래였다):
 // 단계 id·이름 12→14, 활동 수·마커 거터 라벨 9.5→12, 트랙 배지 10→12. 카드
@@ -155,6 +159,23 @@ export function markerNote(marker: SpecialistMarker, tg: ReturnType<typeof useTr
   return tg.has(k) ? tg(k) : marker.note;
 }
 
+/** 페이로드 단계명의 카탈로그 키(FU-B — 2026-10-26 PM 승인 후속, design delta 참조):
+ *  flow.spec 단계명은 /api/flows가 SPEC_STAGES 직접 투영으로 서빙하는 페이로드
+ *  데이터고(SSOT = 스펙 한국어 원문, API 무변경) EN 화면에 그대로 새어 나왔다.
+ *  표시측은 `pages.flows.stageNames.<stageId>` 키로 해소하고 — markerNoteKey와 같은
+ *  t.has() 패턴 — 키 결측(미래 신규 단계) 시 페이로드 원문으로 폴백한다. */
+export function stageNameKey(stageId: string): string {
+  return `stageNames.${stageId}`;
+}
+
+/** 페이로드 단계명 → 로케일 문구 해소(FU-B). 그래프 노드(이름 텍스트·aria)와
+ *  F11 선택 칩이 같은 헬퍼를 쓴다(단일 소유 — EN 화면에 한국어 단계명이 새는
+ *  것을 이 한 곳에서 막는다). 결측 폴백은 stageDisplayName의 방어적 id 폴백을 그대로 쓴다. */
+export function stageDisplay(stage: Pick<BlueprintStage, "id" | "name">, tp: ReturnType<typeof useTranslations>): string {
+  const k = stageNameKey(stage.id);
+  return tp.has(k) ? tp(k) : stageDisplayName(stage);
+}
+
 /** 트랙 배지 — applicableTracks 직접 투영(Row 1 API)을 읽는다. 양 트랙/빈 배열 = 공통.
  *  공통 라벨은 카탈로그(pages.flows.graph.trackCommon)에서 주입받는다. */
 function trackBadge(tracks: string[], commonLabel: string): { label: string; bg: string; fg: string; border: string } {
@@ -178,6 +199,8 @@ export interface FlowGraphProps {
 
 export function FlowGraph({ stages, agentsByKey, markers, selectedStage, onSelectStage }: FlowGraphProps) {
   const tg = useTranslations("pages.flows.graph");
+  // FU-B — 페이로드 단계명의 로케일 해소 네임스페이스(pages.flows.stageNames.*).
+  const tp = useTranslations("pages.flows");
   const markersByActivity = new Map<string, SpecialistMarker>();
   for (const m of markers) markersByActivity.set(`${m.stageId}:${m.activityId}`, m);
 
@@ -216,10 +239,10 @@ export function FlowGraph({ stages, agentsByKey, markers, selectedStage, onSelec
           (표의 tmin 규약과 같은 판단). svg는 width 100% + height auto로 컨테이너
           폭을 따라 늘어난다(2026-10-25 보고: 한 주행 7.9:1 뷰박스가 폭 대비
           높이를 얇게 만들어 카드가 축소 렌더·왼쪽 뭉침으로 보였다 — 3줄 감기
-          뷰박스 + 명시적 height auto로 해소). minWidth 50rem은 그 아래
-          해상도의 읽기 하한 — 그때만 스크롤이 동작한다. F5: 스크롤이 실제로
-          있을 때만 우측 에지 페이드 베일이 잘린 단서를 준다(토큰 색 그라디언트
-          + 네이티브 title 힌트). */}
+          뷰박스 + 명시적 height auto로 해소). minWidth 74rem(=VIEW_W 1184px)은
+          FU-A의 1:1 하한 — 그 아래 컨테이너 폭에서 축소 대신 스크롤이 동작한다.
+          F5: 스크롤이 실제로 있을 때만 우측 에지 페이드 베일이 잘린 단서를 준다
+          (토큰 색 그라디언트 + 네이티브 title 힌트). */}
       <div style={{ position: "relative", width: "100%" }}>
         <div ref={scrollRef} title={tg("scrollHint")} style={{ overflowX: "auto", width: "100%" }}>
           <svg
@@ -227,7 +250,7 @@ export function FlowGraph({ stages, agentsByKey, markers, selectedStage, onSelec
             width="100%"
             role="img"
             xmlns="http://www.w3.org/2000/svg"
-            style={{ display: "block", height: "auto", minWidth: "50rem" }}
+            style={{ display: "block", height: "auto", minWidth: "74rem" }}
           >
             <title>{tg("svgTitle")}</title>
             <desc>{tg("svgDesc")}</desc>
@@ -264,7 +287,7 @@ export function FlowGraph({ stages, agentsByKey, markers, selectedStage, onSelec
               const badge = trackBadge(s.applicableTracks, tg("trackCommon"));
               const badgeW = badge.label.length * 6.6 + 16;
               const stageMarkers = markers.filter((m) => m.stageId === s.id);
-              const nodeAria = tg("nodeTitle", { id: s.id, name: stageDisplayName(s), count: s.activities.length });
+              const nodeAria = tg("nodeTitle", { id: s.id, name: stageDisplay(s, tp), count: s.activities.length });
               return (
                 // F4(2026-10-26 amend) — 노드가 포인터와 키보드 모두로 오퍼러블하다:
                 // 클릭/Enter/Space가 같은 onSelectStage로 귀결한다. AT 요약 경로는
@@ -329,7 +352,7 @@ export function FlowGraph({ stages, agentsByKey, markers, selectedStage, onSelec
                     {/* 카드 폭 초과 단계명은 …으로 축약 — 원문은 노드 <title>(nodeTitle)이
                         전문 보존한다. 2026-10-25 보고: 1줄 레이아웃에선 축약이 상태였다 —
                         3줄 감기로 카드가 커져 서빙 데이터 전체가 무축약이다(축약은 방어선). */}
-                    {truncateToWidth(stageDisplayName(s), 14, NODE_W - 24)}
+                    {truncateToWidth(stageDisplay(s, tp), 14, NODE_W - 24)}
                   </text>
                   {/* 활동 도트 행 — 도트 1개 = 활동 1개, 에이전트 도메인 색 + activity id 툴팁(§6.2). */}
                   {s.activities.map((a, i) => {
