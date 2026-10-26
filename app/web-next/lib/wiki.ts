@@ -162,7 +162,29 @@ const ALERT_LABELS: Record<string, string> = {
 
 // 전역 marked 싱글턴을 건드리지 않는다 — /library가 같은 프로세스의 전역
 // 인스턴스로 렌더하므로 이 오버라이드가 새어 나가면 문서 허브 렌더가 변한다.
-function createWikiMarked(): Marked {
+function escapeAttr(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** 이미지 접근명 기본값(캘러가 i18n 라벨을 넘기지 않을 때). */
+const DEFAULT_FULL_SIZE_LABEL = (alt: string): string => (alt ? `원본 크기로 열기: ${alt}` : "원본 크기로 열기");
+
+export interface WikiRenderOptions {
+  /** 이미지 링크의 접근명 — 호출 화면이 next-intl 키로 해석해 넘긴다(ADR-0184). */
+  fullSizeLabel?: (alt: string) => string;
+}
+
+// 이미지 → 새 탭 원본 링크(JS 없이 동작, 키보드 기본 지원). 캡션 유무와 무관하게
+// 같은 링크 마크업을 쓴다 — figure는 문단에 이미지 하나뿐일 때만 씌운다.
+function imageLink(token: Tokens.Image, label: (alt: string) => string): string {
+  const alt = token.text ?? "";
+  const src = escapeAttr(token.href);
+  const title = token.title ? ` title="${escapeAttr(token.title)}"` : "";
+  return `<a class="doc-figure-link" href="${src}" target="_blank" rel="noopener" aria-label="${escapeAttr(label(alt))}"><img src="${src}" alt="${escapeAttr(alt)}"${title} loading="lazy"></a>`;
+}
+
+function createWikiMarked(opts: WikiRenderOptions = {}): Marked {
+  const label = opts.fullSizeLabel ?? DEFAULT_FULL_SIZE_LABEL;
   const instance = new Marked();
   // 문서당 중복 슬러그 카운터 — wiki-heading-slug.ts의 생성기 검증과 같은 규칙.
   const seen = new Map<string, number>();
@@ -200,6 +222,21 @@ function createWikiMarked(): Marked {
         const id = n === 0 ? base : `${base}-${n}`;
         return `<h${depth} id="${id}">${this.parser.parseInline(tokens)}</h${depth}>\n`;
       },
+      // 이미지: 문단에 이미지 하나뿐이면 <figure class="doc-figure">로 감싸고 alt를
+      // <figcaption>에 둔다(빈 alt = 캡션 없음, alt="" 유지). 그 외 위치(표 셀·문장 중간)는
+      // 링크 래핑만 한다 — figure를 <p> 안에 넣으면 HTML 파서가 문단을 쪼갠다.
+      image(token: Tokens.Image): string {
+        return imageLink(token, label);
+      },
+      paragraph(token: Tokens.Paragraph): string {
+        const parts = token.tokens.filter((tk) => !(tk.type === "text" && tk.raw.trim() === ""));
+        if (parts.length === 1 && parts[0].type === "image") {
+          const img = parts[0] as Tokens.Image;
+          const caption = img.text ? `<figcaption>${escapeAttr(img.text)}</figcaption>` : "";
+          return `<figure class="doc-figure">${imageLink(img, label)}${caption}</figure>\n`;
+        }
+        return `<p>${this.parser.parseInline(token.tokens)}</p>\n`;
+      },
       // GitHub alert(`> [!NOTE]`) → 콜아웃 div. 원본 문법은 그대로 두고
       // 렌더층에서만 바꾼다(설계 D5). 마커 줄만 떼고 나머지는 마크다운으로
       // 파싱하므로 콜아웃 안의 강조·링크가 산다.
@@ -218,6 +255,6 @@ function createWikiMarked(): Marked {
 }
 
 /** 위키 본문(링크 재작성 완료)을 HTML로 렌더한다. 신뢰 모델은 /library와 같다. */
-export function renderWikiMarkdown(body: string): string {
-  return createWikiMarked().parse(body, { async: false }) as string;
+export function renderWikiMarkdown(body: string, opts: WikiRenderOptions = {}): string {
+  return createWikiMarked(opts).parse(body, { async: false }) as string;
 }

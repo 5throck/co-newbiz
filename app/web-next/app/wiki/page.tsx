@@ -35,8 +35,9 @@ function stripLeadingH1(body: string): string {
 // 방법이 없다(키 집합 조회뿐, 쓰기 경로 없음) — /library와 동일 근거로
 // dangerouslySetInnerHTML을 쓴다.
 function WikiMarkdown({ text, stripTitle = false }: { text: string; stripTitle?: boolean }) {
+  const t = useTranslations("pages.wiki");
   const rewritten = rewriteWikiLinks(stripTitle ? stripLeadingH1(text) : text, defaultRewriteContext());
-  const html = renderWikiMarkdown(rewritten);
+  const html = renderWikiMarkdown(rewritten, { fullSizeLabel: (alt) => (alt ? t("openFullSize", { alt }) : t("openFullSizeNoAlt")) });
   return <div className="library-doc-body" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 

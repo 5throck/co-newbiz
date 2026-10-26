@@ -7,5 +7,6 @@
       "runtimeArgs": ["--cwd", "app/web-next", "--bun", "next", "dev", "-p", "7748"],
       "port": 7748
     }
-  ]
+  ],
+  "autoVerify": true
 }

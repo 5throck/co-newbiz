@@ -1,19 +1,11 @@
 "use client";
 
-// 드라이런 세션 작업 화면 (화면 설계 2026-10-24 §6, J3 "안전한 실험" — 벤치 A3-5
-// URL 공유 채택: 세션은 오래 사는 작업 대상이므로 전용 라우트로 딥링크를 제공한다).
-// 구성(2026-10-25 가독성 개편 — 섹션 카드 분리·메타 정의 그리드·실행 카드 상단 승격):
-//   1) 세션 헤더 — 라벨:값 정의 그리드(긴 id 잘라보기+복사, 상태·TTL 칩) + 비용 누계
-//      + "실행" 카드(PrimaryAction과 비용 추정·샘플 입력을 한 테두리 안에, §6.2)
-//   2) 오버라이드 편집기(좌열) — 로스터 한정 재배정(§6.6 (1)), diff +N/−M 색 칩,
-//      dirty 칩, base 참조 박스, 적용=새 세션 경고 콜아웃
-//   3) A/B 비교(우열) — 실행 전 구조화된 빈 상태(두 다리 패널), 실행 후 다리 카드 +
-//      선호 기록(벤치 A3-3), 내보내기는 툴바 액션으로 상단 고정
-//   4) AI 제안 패널(§7) → 5) 실행 기록(dry_run_group_id 그룹핑, 벤치 B1-2 변형).
+// 드라이런 세션 작업 화면 (화면 설계 2026-10-24 §6 + 2026-10-26 드라이런 UX 개편 §3).
+// 구성: 고정 요약 줄(상태·비용·상태별 단일 주 동작·더보기) → 제안 전용 배너(1회) →
+// 접힘 세션 정보 → 4개 탭(편집 | 실행·비교 | AI 제안 | 기록, URL 해시 동기화).
 // 실행은 반드시 비용 확인 대화상자(ADR-0082)를 통과한다. 모든 변경은 세션 스코프뿐 —
-// SSOT(prompts.json·flow.spec.yaml) 쓰기 경로는 없다(§12-4).
-// 좌우 두 창은 CSS grid(2fr/3fr) — flex-wrap 수축으로 비교 창이 납작해지던 문제의 수정.
-import { Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
+// SSOT(prompts.json·flow.spec.yaml) 쓰기 경로는 없다. API 호출·핸들러는 개편 전과 동일하다.
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -21,7 +13,10 @@ import { SectionToolbar } from "../../../../components/layout.tsx";
 import { Button, ColGroup, FilterChip, PageState, PrimaryAction, useToast } from "../../../../components/ui.tsx";
 import { ConfirmDialog, useConfirm } from "../../../../components/crud.tsx";
 import { api, ApiError } from "../../../../lib/api.ts";
+import { ListBackButton } from "../../../../components/ListBackButton.tsx";
 import { SuggestionPanel } from "../suggestion-panel.tsx";
+import { AgentCombobox } from "../agent-combobox.tsx";
+import { DRY_RUN_TABS, defaultTab, planActions, tabForAction, tabFromHash, type DryRunAction, type DryRunTab } from "../dry-run-ui-lib.ts";
 import {
   DRY_RUN_DISCLOSURE_KEY,
   expiryChip,
@@ -105,6 +100,20 @@ export function DryRunSessionView() {
   const [prefChoice, setPrefChoice] = useState<DryRunPreference | "">("");
   const [prefNote, setPrefNote] = useState("");
   const [busyPref, setBusyPref] = useState(false);
+
+  // 탭 상태 — URL 해시(#edit|#run|#suggest|#history)와 동기화한다. null = 해시 없음(기본 탭 유도).
+  const [tab, setTab] = useState<DryRunTab | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const panelFocusPending = useRef(false);
+  const moreBtnRef = useRef<HTMLButtonElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+  const tabBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  useEffect(() => {
+    const read = () => setTab(tabFromHash(window.location.hash));
+    read();
+    window.addEventListener("hashchange", read);
+    return () => window.removeEventListener("hashchange", read);
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -253,6 +262,59 @@ export function DryRunSessionView() {
     toast(t("sessionIdCopiedToast"));
   }
 
+  const hasRuns = executed;
+  const activeTab: DryRunTab = tab ?? defaultTab(hasRuns);
+  const plan = planActions(hasRuns, dirty);
+
+  const selectTab = useCallback((k: DryRunTab, moveFocusToPanel = true) => {
+    panelFocusPending.current = moveFocusToPanel;
+    setTab(k);
+    if (window.location.hash !== `#${k}`) window.location.hash = k;
+  }, []);
+
+  // 탭 전환 후 패널 제목으로 포커스를 옮긴다(키보드·스크린리더 사용자가 새 내용을 바로 읽는다).
+  useEffect(() => {
+    if (!panelFocusPending.current) return;
+    panelFocusPending.current = false;
+    const h = document.querySelector<HTMLElement>(`#dry-run-panel-${activeTab} h2`);
+    if (h) { h.tabIndex = -1; h.focus({ preventScroll: false }); }
+  }, [activeTab]);
+
+  function onTabKeyDown(e: KeyboardEvent<HTMLButtonElement>, i: number) {
+    let next = -1;
+    if (e.key === "ArrowRight") next = (i + 1) % DRY_RUN_TABS.length;
+    else if (e.key === "ArrowLeft") next = (i - 1 + DRY_RUN_TABS.length) % DRY_RUN_TABS.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = DRY_RUN_TABS.length - 1;
+    if (next < 0) return;
+    e.preventDefault();
+    const k = DRY_RUN_TABS[next];
+    selectTab(k, false);
+    tabBtnRefs.current[k]?.focus();
+  }
+
+  // 더보기 메뉴 — 바깥 클릭/Esc로 닫고 Esc는 트리거로 포커스를 돌려준다(StageTabs 더보기 규약).
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onDown = (e: PointerEvent) => {
+      const n = e.target as Node;
+      if (!moreMenuRef.current?.contains(n) && !moreBtnRef.current?.contains(n)) setMoreOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [moreOpen]);
+
+  function onMenuKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    const items = Array.from(moreMenuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
+    const i = items.indexOf(document.activeElement as HTMLElement);
+    if (e.key === "Escape") { e.preventDefault(); setMoreOpen(false); moreBtnRef.current?.focus(); }
+    else if (e.key === "Tab") setMoreOpen(false);
+    else if (e.key === "ArrowDown") { e.preventDefault(); items[(i + 1) % items.length]?.focus(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); items[(i - 1 + items.length) % items.length]?.focus(); }
+    else if (e.key === "Home") { e.preventDefault(); items[0]?.focus(); }
+    else if (e.key === "End") { e.preventDefault(); items[items.length - 1]?.focus(); }
+  }
+
   if (forbidden) {
     return (
       <main>
@@ -294,99 +356,174 @@ export function DryRunSessionView() {
       ? t("blockedNoLlm")
       : undefined;
 
+  // 상태별 동작 메타 — 핸들러는 개편 전과 동일하다. 다른 탭에 사는 동작은 그 탭으로 이동한 뒤 실행한다.
+  const actionMeta: Record<DryRunAction, { label: string; disabled: boolean; reason?: string; run: () => void }> = {
+    run: {
+      label: busyExecute ? t("executing") : hasRuns ? t("runAgain") : t("executeCta"),
+      disabled: busyExecute || !storedHasOverride || !llmConfigured,
+      reason: executeBlockedReason,
+      run: askExecute,
+    },
+    apply: {
+      label: busyApply ? t("applying") : t("applyCta"),
+      disabled: !dirty || busyApply,
+      reason: !dirty ? t("applyNeedsEdit") : undefined,
+      run: () => void applyOverrideAsNewSession(),
+    },
+    export: {
+      label: busyExport ? t("exporting") : t("exportCta"),
+      disabled: busyExport || !executed,
+      reason: !executed ? t("exportNeedsRun") : undefined,
+      run: () => void exportPackage(),
+    },
+  };
+  function runAction(a: DryRunAction) {
+    selectTab(tabForAction(a), false);
+    actionMeta[a].run();
+  }
+  const primaryMeta = actionMeta[plan.primary];
+  const statusIcon = session.status === "closed" ? "✓" : session.status === "active" ? "✎" : "⌛";
+
+  const tabLabels: Record<DryRunTab, string> = {
+    edit: t("tabEdit"),
+    run: t("tabRun"),
+    suggest: t("tabSuggest"),
+    history: t("tabHistory"),
+  };
+
   return (
-    <main>
-      <BackLinks />
-      <h1>{t("h1")}</h1>
-      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
-        {t("intro")}
-      </p>
+    <main className="dry-run-detail">
+      {/* 고정 요약 줄 — 상태 배지(아이콘+텍스트), 비용, 상태별 단일 주 동작, 더보기. 좁은 폭에서는 줄바꿈. */}
+      <div className="dry-run-summary-bar">
+        <ListBackButton href="/flows/dry-run" label={t("sessionListLink")} />
+        <h1>{session.purpose || t("h1")}</h1>
+        <span className="dry-run-summary-meta">
+          <span className={statusChip.cls}>
+            <span aria-hidden="true">{statusIcon} </span>
+            {statusChip.key ? tr(statusChip.key) : statusChip.label}
+          </span>
+          {expiry && <span className={expiry.cls} title={tr(expiry.titleKey, expiry.titleParams)}>{tr(expiry.key)}</span>}
+          <Link href="/flows?tab=blueprint" className="text-[color:var(--accent)] underline text-[length:var(--fs-body)]">{t("blueprintLink")}</Link>
+          <span className="text-[length:var(--fs-body)]">
+            {t("costTotal")}: <strong className="tabular-nums">{fmtUsd(session.ledger.costUsd)}</strong>
+          </span>
+        </span>
+        <span className="dry-run-summary-actions">
+          <PrimaryAction
+            inline
+            label={primaryMeta.label}
+            onClick={() => runAction(plan.primary)}
+            disabled={primaryMeta.disabled}
+            disabledReason={primaryMeta.reason}
+          />
+          <span className="stage-tab-more" role="presentation">
+            <button
+              ref={moreBtnRef}
+              type="button"
+              className="btn-ghost"
+              aria-haspopup="menu"
+              aria-expanded={moreOpen}
+              aria-label={t("moreMenuAria")}
+              onClick={() => setMoreOpen((v) => !v)}
+            >
+              {t("moreMenu")} <span aria-hidden="true">▾</span>
+            </button>
+            {moreOpen && (
+              <div ref={moreMenuRef} role="menu" aria-label={t("moreMenuAria")} className="stage-tab-menu" onKeyDown={onMenuKeyDown}>
+                {plan.secondary.map((a, idx) => {
+                  const m = actionMeta[a];
+                  return (
+                    <button
+                      key={a}
+                      type="button"
+                      role="menuitem"
+                      className="stage-tab-menu-item row-menu-item"
+                      aria-disabled={m.disabled || undefined}
+                      autoFocus={idx === 0}
+                      onClick={() => {
+                        if (m.disabled) return;
+                        setMoreOpen(false);
+                        runAction(a);
+                      }}
+                    >
+                      {m.label}
+                      {m.disabled && m.reason ? <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{m.reason}</span> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </span>
+        </span>
+      </div>
 
-      {/* 세션 헤더 — 라벨:값 메타 그리드(id 잘라보기+복사, 상태·만료 칩) + 비용 누계 +
-          "실행" 카드(CTA·비용 추정·샘플 입력, 벤치 B3-3/A5-5). PrimaryAction 유지. */}
-      <section aria-label={t("sessionSummarySection")} className="market-section">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <dl className="m-0 grid gap-x-4 gap-y-1" style={{ gridTemplateColumns: "max-content minmax(0, 1fr)", flex: "1 1 24rem", minWidth: 0 }}>
-            <MetaRow label={t("colSessionId")}>
-              <span className="inline-flex flex-wrap items-center gap-1">
-                <code className="dd-item-id cell-truncate" style={{ display: "inline-block", maxWidth: "16rem", verticalAlign: "bottom" }} title={session.id}>
-                  {session.id}
-                </code>
-                <button type="button" className="btn-ghost btn-sm" aria-label={t("copySessionIdAria")} onClick={copySessionId}>
-                  {tc("copy")}
-                </button>
-              </span>
-            </MetaRow>
-            <MetaRow label={tc("status")}>
-              <span className="inline-flex flex-wrap items-center gap-1">
-                <span className={statusChip.cls}>{statusChip.key ? tr(statusChip.key) : statusChip.label}</span>
-                {expiry && <span className={expiry.cls} title={tr(expiry.titleKey, expiry.titleParams)}>{tr(expiry.key)}</span>}
-              </span>
-            </MetaRow>
-            <MetaRow label={t("labelActivity")}>
-              {session.activity_id ? <code className="dd-item-id">{session.activity_id}</code> : <span className="text-[color:var(--muted-fg)]">—</span>}
-            </MetaRow>
-            <MetaRow label={t("promptWord")}>
-              <code className="dd-item-id">{session.prompt_key}</code>
-            </MetaRow>
-            <MetaRow label={t("labelBaseAgent")}>
-              <code className="dd-item-id">{session.base_agent_key}</code>
-            </MetaRow>
-            <MetaRow label={t("labelOverrideAgent")}>
-              {session.override_agent_key ? <code className="dd-item-id">{session.override_agent_key}</code> : <span className="text-[color:var(--muted-fg)]">{t("unchanged")}</span>}
-            </MetaRow>
-            <MetaRow label={t("labelPurpose")}>{session.purpose}</MetaRow>
-            <MetaRow label={t("labelCreated")}>
-              <span className="tabular-nums">{t("createdValue", { p1: fmtDateTime(session.created_at), p2: session.created_by })}</span>
-            </MetaRow>
-            <MetaRow label={t("labelExpiry")}>
-              <span className="tabular-nums">{fmtDateTime(session.expires_at)}</span>
-            </MetaRow>
-          </dl>
-          <div className="text-right" style={{ minWidth: "14rem" }}>
-            <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("costTotal")}</div>
-            <div className="text-xl font-bold tabular-nums">{fmtUsd(session.ledger.costUsd)}</div>
-            <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              {/* F9(2026-10-26 UX 리뷰) — 카운터 문구는 카탈로그 템플릿(dryRunSession.ledgerLine,
-                  ko "LLM 호출 {p1}회 · 런 {p2}회"). en은 ICU 복수형이라 원시 수를 넘긴다 —
-                  fmtInt 문자열("1,234")은 복수형 선택이 깨진다(ICU 인자는 로케일 포맷을
-                  런타임이 대행). 원문 "llm 호출 · runs" 대소문자·혼용은 카탈로그 값에서 수정. */}
-              {t("ledgerLine", { p1: session.ledger.llmCalls, p2: session.ledger.runs })}
+      {/* 제안 전용 배너 — 이 화면에서 단 한 번(설계 §4). */}
+      <p role="note" className="dry-run-banner">{t("proposalOnlyBanner")}</p>
+
+      {/* 세션 정보 — 기본 접힘. 긴 ID는 잘라 보이고 복사 버튼을 둔다. */}
+      <details className="dry-run-info market-section">
+        <summary>{t("sessionInfoSummary")}</summary>
+        <dl className="m-0 mt-2 grid gap-x-4 gap-y-1" style={{ gridTemplateColumns: "max-content minmax(0, 1fr)" }}>
+          <MetaRow label={t("colSessionId")}>
+            <span className="inline-flex flex-wrap items-center gap-1">
+              <code className="dd-item-id cell-truncate" style={{ display: "inline-block", maxWidth: "16rem", verticalAlign: "bottom" }} title={session.id}>
+                {session.id}
+              </code>
+              <button type="button" className="btn-ghost btn-sm" aria-label={t("copySessionIdAria")} onClick={copySessionId}>
+                {tc("copy")}
+              </button>
+            </span>
+          </MetaRow>
+          <MetaRow label={t("labelPurpose")}>{session.purpose}</MetaRow>
+          <MetaRow label={t("labelActivity")}>
+            {session.activity_id ? <code className="dd-item-id">{session.activity_id}</code> : <span className="text-[color:var(--muted-fg)]">—</span>}
+          </MetaRow>
+          <MetaRow label={t("promptWord")}>
+            <code className="dd-item-id">{session.prompt_key}</code>
+          </MetaRow>
+          <MetaRow label={t("labelBaseAgent")}>
+            <code className="dd-item-id">{session.base_agent_key}</code>
+          </MetaRow>
+          <MetaRow label={t("labelOverrideAgent")}>
+            {session.override_agent_key ? <code className="dd-item-id">{session.override_agent_key}</code> : <span className="text-[color:var(--muted-fg)]">{t("unchanged")}</span>}
+          </MetaRow>
+          <MetaRow label={t("labelCreated")}>
+            <span className="tabular-nums">{t("createdValue", { p1: fmtDateTime(session.created_at), p2: session.created_by })}</span>
+          </MetaRow>
+          <MetaRow label={t("labelExpiry")}>
+            <span className="tabular-nums">{fmtDateTime(session.expires_at)}</span>
+          </MetaRow>
+          <MetaRow label={t("costTotal")}>
+            <span className="tabular-nums">
+              {fmtUsd(session.ledger.costUsd)} · {t("ledgerLine", { p1: session.ledger.llmCalls, p2: session.ledger.runs })}
               {session.ledger.lastRunAt ? " " + t("lastRunSuffix", { p1: fmtDateTime(session.ledger.lastRunAt) }) : ""}
-            </div>
-          </div>
-        </div>
+            </span>
+          </MetaRow>
+        </dl>
+      </details>
 
-        {/* "실행" 카드 — 워크플로 최상단에 CTA를 승격(§6.2). 비용 추정 줄이 버튼 옆에
-            항상 보인다(대화상자 전 공지). ConfirmDialog 동작은 그대로 유지. */}
-        <div className="mt-3" style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-md)", background: "var(--surface)", padding: "0.75rem 1rem" }}>
-          <div className="mb-1 text-[length:var(--fs-caption)] font-semibold">{t("runCardTitle")}</div>
-          <div className="flex flex-wrap items-end gap-2">
-            <PrimaryAction
-              inline
-              label={busyExecute ? t("executing") : t("executeCta")}
-              onClick={askExecute}
-              disabled={busyExecute || !storedHasOverride || !llmConfigured}
-              disabledReason={executeBlockedReason}
-            />
-            <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" style={{ flex: "1 1 12rem", minWidth: 0 }}>
-              <span className="font-semibold">{t("costEstimateLabel")}:</span>{" "}
-              <span className="tabular-nums">{tr(estimate.noteKey, estimate.noteParams)}</span>
-            </p>
-            <label className="text-[length:var(--fs-caption)]" style={{ flex: "1 1 14rem" }}>
-              <span className="block mb-0.5">{t("sampleInputLabel")}</span>
-              <input className="sizing-new-input sizing-new-input-sm w-full" value={sampleUser} maxLength={500} onChange={(e) => setSampleUser(e.target.value)} />
-            </label>
-          </div>
-        </div>
-        <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-          <span className="status-chip status-amber">{t("proposalOnlyChip")}</span> {t("boundaryNote")}
-        </p>
-      </section>
+      <div role="tablist" aria-label={t("tabsAria")} className="dry-run-tabs">
+        {DRY_RUN_TABS.map((k, i) => (
+          <button
+            key={k}
+            ref={(el) => { tabBtnRefs.current[k] = el; }}
+            id={`dry-run-tab-${k}`}
+            type="button"
+            role="tab"
+            className="dry-run-tab"
+            aria-selected={activeTab === k}
+            aria-controls={`dry-run-panel-${k}`}
+            tabIndex={activeTab === k ? 0 : -1}
+            onClick={() => selectTab(k)}
+            onKeyDown={(e) => onTabKeyDown(e, i)}
+          >
+            {tabLabels[k]}
+          </button>
+        ))}
+      </div>
 
-      {/* 오버라이드 편집기(좌열 2fr) + A/B 비교(우열 3fr) — CSS grid 두 창. lg 미만에서
-          세로 적층(§11). flex-wrap 수축(비교 창이 빈 조각으로 눌리던 문제) 제거. */}
-      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+      {/* 1) 편집 — 오버라이드 편집기 + 에이전트 선택기 */}
+      <div role="tabpanel" id="dry-run-panel-edit" aria-labelledby="dry-run-tab-edit" className="dry-run-panel" hidden={activeTab !== "edit"}>
         <section aria-label={t("overrideSection")} className="market-section" style={{ minWidth: 0 }}>
           <SectionToolbar
             title={t("overrideTitle")}
@@ -429,15 +566,16 @@ export function DryRunSessionView() {
               {session.base_system}
             </pre>
           </details>
-          <label className="text-[length:var(--fs-caption)] block mb-1">
+          <div className="text-[length:var(--fs-caption)] block mb-1">
             <span className="block mb-1">{t("reassignLabel")}</span>
-            <select className="sizing-new-input w-full" value={overrideAgentKey} onChange={(e) => setOverrideAgentKey(e.target.value)} disabled={roster.length === 0}>
-              <option value="">{t("unchangedAgent", { p1: session.base_agent_key })}</option>
-              {roster.map((a) => (
-                <option key={a.key} value={a.key}>{a.key} — {a.name}</option>
-              ))}
-            </select>
-          </label>
+            <AgentCombobox
+              agents={roster}
+              value={overrideAgentKey}
+              onChange={setOverrideAgentKey}
+              unchangedLabel={t("unchangedAgent", { p1: session.base_agent_key })}
+              disabled={roster.length === 0}
+            />
+          </div>
           <p className="mt-1 mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
             {t("reassignContext")}
           </p>
@@ -453,8 +591,7 @@ export function DryRunSessionView() {
               {t("revertEdits")}
             </Button>
           </div>
-          {/* 적용 = 새 파생 세션 경고 — 적용 컨트롤 바로 아래 warning 콜아웃으로 승격
-              (이전: 화면 최하단 흐릿한 캡션). 경고 토큰만 사용(새 클래스 없음). */}
+          {/* 적용 = 새 파생 세션 안내 — 적용 컨트롤 바로 아래 warning 콜아웃(경고 토큰만 사용). */}
           <div
             role="note"
             className="mt-2 mb-1 text-[length:var(--fs-caption)]"
@@ -463,6 +600,26 @@ export function DryRunSessionView() {
             <span className="font-semibold" style={{ color: "var(--amber-fg)" }}>⚠ {t("applyCalloutLabel")}</span>
             <p className="m-0 mt-0.5">{t("dirtyNote")}</p>
           </div>
+        </section>
+      </div>
+
+      {/* 2) 실행·비교 — 비용 추정·샘플 입력, A/B 비교, 선호 기록, 내보내기 */}
+      <div role="tabpanel" id="dry-run-panel-run" aria-labelledby="dry-run-tab-run" className="dry-run-panel" hidden={activeTab !== "run"}>
+        <section aria-label={t("runCardTitle")} className="market-section">
+          <SectionToolbar title={t("runCardTitle")} />
+          <div className="flex flex-wrap items-end gap-2">
+            <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" style={{ flex: "1 1 12rem", minWidth: 0 }}>
+              <span className="font-semibold">{t("costEstimateLabel")}:</span>{" "}
+              <span className="tabular-nums">{tr(estimate.noteKey, estimate.noteParams)}</span>
+            </p>
+            <label className="text-[length:var(--fs-caption)]" style={{ flex: "1 1 14rem" }}>
+              <span className="block mb-0.5">{t("sampleInputLabel")}</span>
+              <input className="sizing-new-input sizing-new-input-sm w-full" value={sampleUser} maxLength={500} onChange={(e) => setSampleUser(e.target.value)} />
+            </label>
+          </div>
+          {executeBlockedReason && (
+            <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{executeBlockedReason}</p>
+          )}
         </section>
 
         <section aria-label={t("abSection")} className="market-section" style={{ minWidth: 0 }}>
@@ -478,8 +635,7 @@ export function DryRunSessionView() {
           />
           {!executed ? (
             <>
-              {/* 실행 전 구조화된 빈 상태 — 두 다리 패널(제목+안내)로 미리 레이아웃을
-                  보여 준다. 단일 이탤릭 문장(이전) 대체. */}
+              {/* 실행 전 구조화된 빈 상태 — 두 다리 패널(제목+안내)로 미리 레이아웃을 보여 준다. */}
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="sizing-grade-card">
                   <div className="text-[length:var(--fs-caption)] font-semibold">{t("legBaseTitle")}</div>
@@ -517,8 +673,7 @@ export function DryRunSessionView() {
                 />
               </div>
 
-              {/* 선호 기록(벤치 A3-3 변형) — 3상(base|override|tie) + 비고 1줄, 골든셋
-                  시드(§6.6 (3)). 한 번의 POST로 preference+note를 함께 기록한다. */}
+              {/* 선호 기록 — 3상(base|override|tie) + 비고 1줄. 한 번의 POST로 preference+note를 함께 기록한다. */}
               <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label={t("prefGroup")}>
                 <span className="text-[length:var(--fs-caption)] font-semibold">{t("prefRecordLabel")}</span>
                 <FilterChip selected={prefChoice === "base"} onClick={() => setPrefChoice("base")}>{t("prefBase")}</FilterChip>
@@ -542,80 +697,79 @@ export function DryRunSessionView() {
                   {t("prefRecordedLine", { p1: prefLabel(session.preference), p2: session.preference_note ? ` — ${session.preference_note}` : "" })}
                 </p>
               )}
-              <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                {t("exportNote")}
-              </p>
             </>
           )}
         </section>
       </div>
 
-      {/* AI 제안 패널(§7) — 수용은 이 세션 오버라이드 폼에만 적용된다. */}
-      <SuggestionPanel
-        promptKey={session.prompt_key}
-        onApplyOverride={(improved) => {
-          setOverrideSystem(improved);
-          toast(t("suggestionAppliedToast"));
-        }}
-        onApplyAgent={(key) => {
-          setOverrideAgentKey(key);
-          toast(t("agentAppliedToast", { p1: key }));
-        }}
-      />
-
-      {/* 실행 기록 — dry_run_group_id 그룹핑(벤치 B1-2 변형). 재실행은 기존 결과를
-          덮지 않고 새 런 장부 행으로 적재된다(벤치 A3-3u 변형). 토큰 열 추가
-          (totalTokens 합계 — input+output+cache). */}
-      <section aria-label={t("historySection")} className="market-section">
-        <SectionToolbar
-          title={t("historyTitle")}
-          count={runHistory.length}
-          summary={<span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("historyScopeNote")}</span>}
+      {/* 3) AI 제안 — 수용은 이 세션 오버라이드 폼에만 적용된다. */}
+      <div role="tabpanel" id="dry-run-panel-suggest" aria-labelledby="dry-run-tab-suggest" className="dry-run-panel" hidden={activeTab !== "suggest"}>
+        <SuggestionPanel
+          promptKey={session.prompt_key}
+          onApplyOverride={(improved) => {
+            setOverrideSystem(improved);
+            toast(t("suggestionAppliedToast"));
+          }}
+          onApplyAgent={(key) => {
+            setOverrideAgentKey(key);
+            toast(t("agentAppliedToast", { p1: key }));
+          }}
         />
-        {runHistory.length === 0 ? (
-          <PageState state="empty" emptyText={t("emptyHistory")} />
-        ) : (
-          <div className="table-scroll" role="region" aria-label={t("tableScrollRegion")} tabIndex={0}>
-            <table className="data-table table-fixed-pct tmin-40" aria-label={t("historyTableAria")}>
-              <caption className="sr-only">{t("historyTableCaption", { p1: session.id })}</caption>
-              <ColGroup widths={RUN_HISTORY_COL_PCT} />
-              <thead>
-                <tr>
-                  <th scope="col">{t("colTime")}</th>
-                  <th scope="col">{t("colLeg")}</th>
-                  <th scope="col">{t("colModel")}</th>
-                  <th scope="col" className="col-num">{t("colTokens")}</th>
-                  <th scope="col">{tc("status")}</th>
-                  <th scope="col" className="col-num">{t("colLatency")}</th>
-                  <th scope="col" className="col-num">{t("colCost")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {runHistory.map((row) => {
-                  const leg = row.id === session.base_run_call_id ? "base" : row.id === session.override_run_call_id ? "override" : "—";
-                  const okChip = row.ok === 1
-                    ? { label: t("chipSuccess"), cls: "status-chip status-approved" }
-                    : { label: t("chipFailed"), cls: "status-chip status-rejected" };
-                  return (
-                    <tr key={row.id}>
-                      <td className="tabular-nums">{fmtDateTime(row.created_at)}</td>
-                      <td><span className="status-chip status-not-started">{leg}</span></td>
-                      <td className="text-[length:var(--fs-caption)]">{row.model ?? "—"}</td>
-                      <td className="col-num tabular-nums">{fmtInt(totalTokens(row))}</td>
-                      <td><span className={okChip.cls}>{okChip.label}</span></td>
-                      <td className="col-num tabular-nums">{fmtSeconds(row.latency_ms)}</td>
-                      <td className="col-num tabular-nums">{fmtUsd(row.cost_usd)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-          {t("historyNote")}
-        </p>
-      </section>
+      </div>
+
+      {/* 4) 기록 — 재실행은 기존 결과를 덮지 않고 새 행으로 적재된다. 토큰 열(totalTokens 합계). */}
+      <div role="tabpanel" id="dry-run-panel-history" aria-labelledby="dry-run-tab-history" className="dry-run-panel" hidden={activeTab !== "history"}>
+        <section aria-label={t("historySection")} className="market-section">
+          <SectionToolbar
+            title={t("historyTitle")}
+            count={runHistory.length}
+            summary={<span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("historyScopeNote")}</span>}
+          />
+          {runHistory.length === 0 ? (
+            <PageState state="empty" emptyText={t("emptyHistory")} />
+          ) : (
+            <div className="table-scroll" role="region" aria-label={t("tableScrollRegion")} tabIndex={0}>
+              <table className="data-table table-fixed-pct tmin-40" aria-label={t("historyTableAria")}>
+                <caption className="sr-only">{t("historyTableCaption", { p1: session.id })}</caption>
+                <ColGroup widths={RUN_HISTORY_COL_PCT} />
+                <thead>
+                  <tr>
+                    <th scope="col">{t("colTime")}</th>
+                    <th scope="col">{t("colLeg")}</th>
+                    <th scope="col">{t("colModel")}</th>
+                    <th scope="col" className="col-num">{t("colTokens")}</th>
+                    <th scope="col">{tc("status")}</th>
+                    <th scope="col" className="col-num">{t("colLatency")}</th>
+                    <th scope="col" className="col-num">{t("colCost")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {runHistory.map((row) => {
+                    const leg = row.id === session.base_run_call_id ? "base" : row.id === session.override_run_call_id ? "override" : "—";
+                    const okChip = row.ok === 1
+                      ? { label: t("chipSuccess"), cls: "status-chip status-approved" }
+                      : { label: t("chipFailed"), cls: "status-chip status-rejected" };
+                    return (
+                      <tr key={row.id}>
+                        <td className="tabular-nums">{fmtDateTime(row.created_at)}</td>
+                        <td><span className="status-chip status-not-started">{leg}</span></td>
+                        <td className="text-[length:var(--fs-caption)]">{row.model ?? "—"}</td>
+                        <td className="col-num tabular-nums">{fmtInt(totalTokens(row))}</td>
+                        <td><span className={okChip.cls}>{okChip.label}</span></td>
+                        <td className="col-num tabular-nums">{fmtSeconds(row.latency_ms)}</td>
+                        <td className="col-num tabular-nums">{fmtUsd(row.cost_usd)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+            {t("historyNote")}
+          </p>
+        </section>
+      </div>
 
       {confirmDialog}
     </main>
