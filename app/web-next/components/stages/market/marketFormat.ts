@@ -1,10 +1,10 @@
-import { TranslatorFn } from "../../../i18n/config.ts";
+import { TranslatorFn, resolveLabels } from "../../../i18n/config.ts";
 import { useTranslations } from "next-intl";
 // Split from components/stages/MarketAnalysisStage.tsx (Wave U-3 decomposition); behavior unchanged.
 
 export const SEGMENT_COLORS = [0, 1, 2, 3, 4];
 export const r3 = (v: number) => Math.round(v * 1000) / 1000;
-export const POSITION_LABELS = (tr: TranslatorFn): Record<string, string> => ({
+export const POSITION_LABELS = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, {
   upstream: "stages.s1.marketFormat.upstreamMaterialsAndParts",
   midstream: "stages.s1.marketFormat.midstreamAssemblyAndProcessing",
   downstream: "stages.s1.marketFormat.downstreamFinishedGoodsDemandSide",

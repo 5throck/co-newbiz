@@ -3,14 +3,14 @@
 // ADR-0176 slice 4: S8 `투자 불확실성` block. Read-only view of the latest CONFIRMED S5 investment
 // simulation run - S5 owns editing, confirming and re-running (link only). Simulation output /
 // proposal: no gate block, no grade cap, no adoption trigger; a missing or stale run is informational.
-import { TranslatorFn } from "../../i18n/config.ts";
+import { TranslatorFn, resolveLabels } from "../../i18n/config.ts";
 import Link from "next/link";
 import type { InvestUncertaintyView } from "../../lib/investment-uncertainty-s8.ts";
 import { useTranslations } from "next-intl";
 
 const CAP = "text-[length:var(--fs-caption)]";
 const fmt = (n: number): string => Math.round(n).toLocaleString("ko-KR");
-const STALE_REASON = (tr: TranslatorFn): Record<string, string> => ({
+const STALE_REASON = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, {
   run_confirmed_after_generation: "stages.s8.investUncertainty.theS5InvestmentSimulationWas",
   run_changed: "stages.s8.investUncertainty.theConfirmedS5SimulationRun",
   s5_lines_changed: "stages.s8.investUncertainty.theS5InvestmentPlanOr",

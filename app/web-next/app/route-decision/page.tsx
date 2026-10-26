@@ -175,7 +175,7 @@ function StageFrameLite() {
   const t = useTranslations("pages.routeDecision");
   return (
     <StageFrame stageId="S4">
-      <PrimaryAction href="/market?new=1" label={t("newSearchLabel")} />
+      <PrimaryAction inline href="/market?new=1" label={t("newSearchLabel")} />
       {t("frameText")}
     </StageFrame>
   );

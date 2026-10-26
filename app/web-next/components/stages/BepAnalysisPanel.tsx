@@ -5,7 +5,7 @@
 // 데이터는 business-case 입력에서 계산한 결정론적 연도 명세(GET /business-case/bep,
 // 비저장·읽기 전용)이며 결정 기록은 아니다. ECharts 차트는 가독성 보조 수단이고
 // 표가 원천이다 (InvestmentSummaryCharts와 같은 규칙).
-import { TranslatorFn } from "../../i18n/config.ts";
+import { TranslatorFn, resolveLabels } from "../../i18n/config.ts";
 import { useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import type { EChartsOption } from "echarts";
@@ -48,8 +48,8 @@ interface BepPayload {
   subject: { id: string; name: string } | null;
   scenarios: Record<ScenarioKey, ScenarioTable>;
 }
-const SCENARIO_LABEL = (tr: TranslatorFn): Record<ScenarioKey, string> => ({ base: "stages.s8.bepAnalysis.base", downside: "stages.s8.bepAnalysis.conservativeDownside", upside: "stages.s8.bepAnalysis.optimisticUpside" });
-const BASIS_LABEL = (tr: TranslatorFn): Record<ScenarioTable["basis"], string> => ({ ratio: "stages.s8.bepAnalysis.ratioBasis", s5_plan: "stages.s8.bepAnalysis.s5InvestmentPlanBasis", s5_pnl: "stages.s8.bepAnalysis.s5PLPlanBasis" });
+const SCENARIO_LABEL = (tr: TranslatorFn): Record<ScenarioKey, string> => resolveLabels(tr, { base: "stages.s8.bepAnalysis.base", downside: "stages.s8.bepAnalysis.conservativeDownside", upside: "stages.s8.bepAnalysis.optimisticUpside" });
+const BASIS_LABEL = (tr: TranslatorFn): Record<ScenarioTable["basis"], string> => resolveLabels(tr, { ratio: "stages.s8.bepAnalysis.ratioBasis", s5_plan: "stages.s8.bepAnalysis.s5InvestmentPlanBasis", s5_pnl: "stages.s8.bepAnalysis.s5PLPlanBasis" });
 
 export function BepAnalysisPanel({ projectId }: { projectId: string }) {const tr = useTranslations(); const t = useTranslations("stages.s8.bepAnalysis"); const tc = useTranslations("common");
   const locale = useLocale();

@@ -4,7 +4,7 @@
 // /deals/[id]/s11 탭이 동일 컴포넌트를 소비한다). StageTabs·StageFrame이
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 
-import { TranslatorFn } from "../../i18n/config.ts";
+import { TranslatorFn, resolveLabels } from "../../i18n/config.ts";
 import { DD_DOMAIN_KEY, DECISION_LABEL_KEY, GATE_LABEL_KEY, RAG_DIMENSION_KEY } from "../../lib/label-keys.ts";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -34,8 +34,8 @@ import { useTranslations } from "next-intl";
 
 interface SimRow { scenario: string; percentile: string; npv_krw_m: number; irr: number | null; note: string | null }
 // UI 표시용 라벨(식별자/enum 값은 그대로 유지)
-const SCENARIO_UI = (tr: TranslatorFn): Record<string, string> => ({ base: "common.defaultLabel", upside: "stages.s11.stage.upside", downside: "stages.s11.stage.downside" });
-const PCTL_UI = (tr: TranslatorFn): Record<string, string> => ({ p05: "stages.s11.stage.bottom", p50: "stages.s11.stage.median", p95: "stages.s11.stage.top" });
+const SCENARIO_UI = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, { base: "common.defaultLabel", upside: "stages.s11.stage.upside", downside: "stages.s11.stage.downside" });
+const PCTL_UI = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, { p05: "stages.s11.stage.bottom", p50: "stages.s11.stage.median", p95: "stages.s11.stage.top" });
 interface AdoptedCase { id: string; name: string; kind: string; scenario: string | null; archived_at?: string | null; simulations: SimRow[] }
 interface IcPackage {
   project: { id: string; project_no: string };
@@ -88,10 +88,10 @@ const RAG_META = (tr: TranslatorFn): Record<string, { icon: string; cls: string 
 });
 
 // 데이터 신뢰도 등급(green/amber/red)의 한글 라벨 — 원문 등급은 개발자 세부정보 성격으로 괄호에 병기한다.
-const CAP_LABEL = (tr: TranslatorFn): Record<string, string> => ({ green: "common.high", amber: "common.medium", red: "common.low" });
-const capLabel = (cap: string, tr: TranslatorFn) => tr(CAP_LABEL(tr)[cap] ?? cap);
+const CAP_LABEL = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, { green: "common.high", amber: "common.medium", red: "common.low" });
+const capLabel = (cap: string, tr: TranslatorFn) => CAP_LABEL(tr)[cap] ?? cap;
 // 종합 등급 표시명 — 원문(green/amber/red)은 화면에 노출하지 않는다.
-const RAG_LABEL = (tr: TranslatorFn): Record<string, string> => ({ green: "stages.s11.stage.greenGood", amber: "stages.s11.stage.yellowCaution", red: "stages.s11.stage.redRisk" });
+const RAG_LABEL = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, { green: "stages.s11.stage.greenGood", amber: "stages.s11.stage.yellowCaution", red: "stages.s11.stage.redRisk" });
 
 export function IcReviewStage({ projectId }: { projectId: string }) {const tr = useTranslations(); const t = useTranslations("stages.s11.stage"); const tc = useTranslations("common");
   const { me } = useAuth();
@@ -171,7 +171,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
       >
         {/* 게이트 결정은 "의사결정 · 승인 기록" 내부 탭에 있다 — 점프 전에 탭을
             열어 포커스 대상이 실제로 보이게 한다(F6, BusinessCaseStage와 동일 패턴). */}
-        <GateDecisionJump gate={entityGo ? "group_ic" : "entity_ic"} beforeJump={() => setIcView("decision")} />
+        <GateDecisionJump inline gate={entityGo ? "group_ic" : "entity_ic"} beforeJump={() => setIcView("decision")} />
         {/* One review block for both IC gates (the panels below do not repeat it). */}
         <ReviewBuckets entityType="project" entityId={projectId} gates={["entity_ic", "group_ic"]} artifacts={stageArtifactTabs("S11")} />
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">

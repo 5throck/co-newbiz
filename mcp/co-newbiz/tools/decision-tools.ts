@@ -10,9 +10,8 @@
  * POST /api/proposals (the coverage script fails the build if a tool declares
  * a human-only route).
  *
- * record_gate_decision / create_route_decision survive for one release as
- * deprecated ALIASES of propose_gate_decision / propose_route_decision on both
- * transports: same behavior, plus a deprecation notice (design §6.4).
+ * The one-release deprecated direct-record aliases were removed (review
+ * 2026-10-26 L2); the propose_* tools are the only decision-related surface.
  */
 
 import { z } from "zod";
@@ -21,13 +20,6 @@ import type { RestPort } from "../shared/rest-port.ts";
 
 const evidenceRefs = z.array(z.string()).optional();
 const evidenceProp = { type: "array", items: { type: "string" }, description: "References (document ids, URLs, artifact keys) supporting the proposal." };
-
-const DEPRECATION = (alias: string, replacement: string) => ({
-  deprecated: true,
-  tool: alias,
-  replacement,
-  message: `${alias} no longer records a decision: it creates a decision proposal and returns the confirm URL. A person confirms it in the web app. ${alias} is removed in the next release; use ${replacement}.`,
-});
 
 async function createProposal(
   port: RestPort,
@@ -118,9 +110,6 @@ const proposeRoute = (port: RestPort, a: RouteInput) =>
 const PROPOSE_NOTE = "Creates a decision PROPOSAL only (nothing is decided); returns the confirm URL where a person confirms it in their own web session.";
 
 const projectIdProp = { type: "string", description: "Project ULID (promoted at S8)." };
-
-const withDeprecation = (result: unknown, alias: string, replacement: string): unknown =>
-  result && typeof result === "object" ? { ...(result as Record<string, unknown>), deprecation: DEPRECATION(alias, replacement) } : result;
 
 const PROPOSE: RegistryTool[] = [
   defineTool({
@@ -224,28 +213,6 @@ const PROPOSE: RegistryTool[] = [
     },
     args: z.object({ projectId: requiredString, mode: requiredString, rationale: requiredString, evidence_refs: evidenceRefs }),
     handler: (ctx, a) => createProposal(ctx.port, "approval", a.projectId, { subject: "establishment_mode", mode: a.mode }, a.rationale, a.evidence_refs),
-  }),
-  // Deprecated aliases (design §6.4): same proposal behavior on BOTH transports.
-  defineTool({
-    name: "record_gate_decision",
-    description: "DEPRECATED alias of propose_gate_decision — it no longer records a decision. Creates a decision proposal and returns the confirm URL. Removed next release.",
-    scope: "propose", kind: "propose", stageActivities: [], deprecated: true, routes: ["POST /api/proposals"],
-    inputSchema: {
-      type: "object",
-      properties: { opportunityId: { type: "string" }, ...gateProps },
-      required: ["opportunityId", "gate", "decision", "rationale"],
-    },
-    args: gateArgs.omit({ entityId: true }).extend({ opportunityId: requiredString }),
-    handler: async (ctx, { opportunityId, ...rest }) =>
-      withDeprecation(await proposeGate(ctx.port, { entityId: opportunityId, ...rest }), "record_gate_decision", "propose_gate_decision"),
-  }),
-  defineTool({
-    name: "create_route_decision",
-    description: "DEPRECATED alias of propose_route_decision — it no longer records a decision. Creates a decision proposal and returns the confirm URL. Removed next release.",
-    scope: "propose", kind: "propose", stageActivities: [], deprecated: true, routes: ["POST /api/proposals"],
-    inputSchema: { type: "object", properties: { opportunityId: { type: "string" }, ...routeProps }, required: ["opportunityId", "track", "rationale", "intent", "scores"] },
-    args: routeArgs,
-    handler: async (ctx, a) => withDeprecation(await proposeRoute(ctx.port, a), "create_route_decision", "propose_route_decision"),
   }),
 ];
 

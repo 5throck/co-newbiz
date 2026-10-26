@@ -4,6 +4,7 @@
 // proposal confirmation) is left out so the scenario performs it in the UI.
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
+import { writeTargetScope } from "../../../db/repositories/entry-market.repository.ts";
 import { seedS1ToS12Demo } from "../../../scripts/co-newbiz/seed-s1-s12-demo.ts";
 
 export const BROWNFIELD = {
@@ -76,15 +77,17 @@ export async function seedGreenfieldDeal(dbPath: string, analystId: string): Pro
     db.run(
       `INSERT INTO opportunity
        (id, project_id, name, market_scope, value_chain_node, market_size_krw_m, growth_rate, attractiveness_score, synergy_score, status, rationale,
-        decided_by, decided_at, created_by, created_at, capability_gap_json, synergy_score_confirmed_at, synergy_score_confirmed_by, industry_id)
-       VALUES (?, NULL, ?, ?, ?, 80000, 0.11, 78, 81, 'selected', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        decided_by, decided_at, created_by, created_at, capability_gap_json, synergy_score_confirmed_at, synergy_score_confirmed_by, industry_id, sizing_version_id)
+       VALUES (?, NULL, ?, ?, ?, 80000, 0.11, 78, 81, 'selected', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         oppId, "E2E 신설 사업 기회", "E2E 신설 산업", "신규 법인 설립을 통한 직접 진출 노드",
         "자체 역량과 그룹 고객 접점으로 직접 진출이 가능함", actor, now, actor, now,
         json({ rows: [{ capability: "생산 설비 운영", source: "manual", held: { status: "partial" }, mitigation: "신규 채용" }] }),
-        now, actor, industryId,
+        now, actor, industryId, "e2e-gf-analysis-v1",
       ],
     );
+    // S2 entry-market predicate (ADR-0180): S1 sizing link (above) plus a person-set target scope.
+    writeTargetScope(db, oppId, { regions: ["KR"], segments: ["e2e_core"], unit_basis: "krw_m_year" }, actor, now);
     db.run(
       `INSERT INTO md_project (id, project_no, created_at, current_stage_gate, company_id, origin, establishment_mode, source_opportunity_id, track, project_name, charter_json, charter_confirmed_at, status, subject_company_rationale)
        VALUES (?, 'E2E-GF', ?, 'fs', ?, 'internal', 'new_entity', ?, 'greenfield', ?, ?, ?, 'open', ?)`,

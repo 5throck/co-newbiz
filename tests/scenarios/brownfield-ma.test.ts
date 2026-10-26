@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { startApp, type TestApp } from "./_support/harness.ts";
 import { launchBrowser, loginThroughUi, visit, axeScan, formatAxe, type AxeResult, type Session } from "./_support/browser.ts";
 import { BROWNFIELD, seedBrownfieldDeal } from "./_support/deals.ts";
-import { recordGate, recordTransition, closeProjectViaModal, see, seeNot } from "./_support/ui.ts";
+import { recordGate, recordTransition, closeProjectViaModal, see, seeNot, revealTab } from "./_support/ui.ts";
 import type { Browser } from "./_support/playwright.ts";
 
 let app: TestApp;
@@ -76,7 +76,7 @@ describe("brownfield M&A S1 to S12", () => {
   test("S1-S10 evidence is complete; S11 is the current stage", async () => {
     await visit(s.page, app, `/projects/${P}/process`);
     await see(s.page, /현재 S9/);
-    await see(s.page, "트랙: 브라운필드(인수합병) · M&A");
+    await see(s.page, "트랙: 브라운필드 · M&A");
     axe.push(await axeScan(s.page, "process (stage rail)"));
     await visit(s.page, app, "/deals");
     await see(s.page, "S1-S12 데모 Brownfield 프로젝트");
@@ -93,7 +93,8 @@ describe("brownfield M&A S1 to S12", () => {
     const chip = s.page.getByRole("button", { name: /레인보우로보틱스 E2E/ });
     await chip.click();
     await see(s.page, "개별 대상 세션"); // per-target scope note — the GET refetches with target_id
-    const scoped = s.page.waitForResponse((r) => r.request().method() === "GET" && /target_id=/.test(r.url()));
+    // The gate-basis target is the project-level binding (scopeId null), so its refetch carries NO target_id.
+    const scoped = s.page.waitForResponse((r) => r.request().method() === "GET" && /\/wacc$/.test(new URL(r.url()).pathname) && !r.url().includes("target_id="));
     await s.page.getByRole("button", { name: /게이트 기준/ }).click();
     await scoped;
     await seeNot(s.page, "개별 대상 세션");
@@ -276,6 +277,8 @@ describe("brownfield M&A S1 to S12", () => {
       const section = s.page.getByRole("region", { name: "비교 근거" });
       expect(await section.innerText()).not.toMatch(/PASS/i);
       expect(await table.getByRole("row").count()).toBe(3); // header + selected + opened comparison target
+      // The gate subject line lives on the DD workspace's "의사결정" tab (mounted only while that tab is active).
+      await s.page.getByRole("tab", { name: "의사결정" }).click();
       await see(s.page, "게이트 판정 대상: S1-S12 데모 대상회사");
       axe.push(await axeScan(s.page, "stage page: S9 comparison table"));
 
@@ -316,17 +319,20 @@ describe("brownfield M&A S1 to S12", () => {
     await s.page.locator('table button[title="충족 판정"]').first().waitFor({ state: "visible" });
     axe.push(await axeScan(s.page, "stage page: S9 DD workspace"));
     const pending = app.readDb((d) => d.query("SELECT COUNT(*) c FROM project_checklist_item_state WHERE project_id=? AND checklist_id IN ('chk-brownfield-feasibility-checklist','chk-ma-special-topics-checklist') AND status='pass'").get(P)) as { c: number };
-    expect(pending.c).toBe(25);
+    // 13 + 13 items across the two M&A checklists (checklists/*.yaml), every one judged above.
+    expect(pending.c).toBe(26);
     await recordGate(s.page, app, `/projects/${P}/dd`, null, "go", "M&A 6대 검증 포함 전 DD 항목 충족, 필수 미충족 0건");
   }, 120_000);
 
   test("S10 structure is complete; S11 Entity IC and Group IC approvals are recorded by a person", async () => {
     await visit(s.page, app, `/projects/${P}/deal-structure`);
     await visit(s.page, app, `/projects/${P}/ic-review`);
+    await revealTab(s.page, s.page.locator('section[aria-label="의사결정"]'));
     await s.page.locator('section[aria-label="의사결정"]').first().waitFor({ state: "visible" });
     axe.push(await axeScan(s.page, "gate panel: S11 IC review"));
-    await recordGate(s.page, app, `/projects/${P}/ic-review`, null, "go", "Entity IC: 투자 구조와 DD 결과를 검토하고 승인함", { panelIndex: 0 });
-    await recordGate(s.page, app, `/projects/${P}/ic-review`, null, "go", "Group IC: 그룹 자본배분 우선순위에 부합함", { panelIndex: 1 });
+    // ADR-0165: ONE sequenced decision panel; its form targets the current committee turn (entity_ic, then group_ic).
+    await recordGate(s.page, app, `/projects/${P}/ic-review`, null, "go", "Entity IC: 투자 구조와 DD 결과를 검토하고 승인함");
+    await recordGate(s.page, app, `/projects/${P}/ic-review`, null, "go", "Group IC: 그룹 자본배분 우선순위에 부합함");
     const gates = app.readDb((d) => d.query("SELECT gate, decision, decided_by FROM gate_decision WHERE entity_id=? AND gate IN ('entity_ic','group_ic') ORDER BY gate").all(P)) as Array<{ gate: string; decision: string; decided_by: string }>;
     expect(gates.map((g) => `${g.gate}:${g.decision}:${g.decided_by}`)).toEqual(["entity_ic:go:analyst", "group_ic:go:analyst"]);
     await visit(s.page, app, `/projects/${P}/process`);

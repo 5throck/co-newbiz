@@ -18,8 +18,7 @@ export async function recordGate(
 ): Promise<void> {
   // S8's decision panel lives on its own "결정" tab (R2-B), not under every analysis tab.
   await visit(page, app, /\/business-case$/.test(path) ? `${path}?tab=decision` : path);
-  const panels = page.locator('section[aria-label="의사결정"]');
-  await panels.first().waitFor({ state: "visible", timeout: 30_000 });
+  const panels = await openGatePanels(page, opts.panelIndex ?? 0);
   const panel: Locator = panels.nth(opts.panelIndex ?? 0);
   await panel.scrollIntoViewIfNeeded();
   const form = panel.locator('form[aria-label="의사결정 기록"]');
@@ -46,6 +45,34 @@ export async function recordGate(
   }
   const res = await responsePromise;
   if (res.status() !== 201) throw new Error(`gate decision POST returned ${res.status()}: ${await res.text()}`);
+}
+
+/**
+ * The gate decision panels of the current screen, with panel `index` open and visible: mounts the screen's own
+ * "의사결정"/"결정" tab when the panel is not in the DOM, and reveals a hidden tab panel that holds it.
+ */
+export async function openGatePanels(page: Page, index = 0): Promise<Locator> {
+  const panels = page.locator('section[aria-label="의사결정"]');
+  const mounted = await panels.first().waitFor({ state: "attached", timeout: 8_000 }).then(() => true, () => false);
+  if (!mounted) {
+    await page.getByRole("tab", { name: /^(의사결정|결정)$/ }).filter({ visible: true }).first().click();
+    await panels.first().waitFor({ state: "attached", timeout: 30_000 });
+  }
+  await revealTab(page, panels.nth(index));
+  await panels.nth(index).waitFor({ state: "visible", timeout: 30_000 });
+  return panels;
+}
+
+/**
+ * Open the tab that owns `target` when it sits inside a hidden `[role=tabpanel]` (stage screens keep every
+ * panel mounted and toggle `hidden`). Clicks the tab named by the panel's `aria-labelledby`.
+ */
+export async function revealTab(page: Page, target: Locator): Promise<void> {
+  const tabId = await target.first().evaluate((el) => {
+    const panel = el.closest("[role=tabpanel][hidden]");
+    return panel?.getAttribute("aria-labelledby") ?? null;
+  });
+  if (tabId) await page.locator(`[id="${tabId}"]`).first().click();
 }
 
 /** S12 transition form on /projects/{id}/portfolio. `record` is the dedicated ADR-0151 column value. */
@@ -102,7 +129,12 @@ export async function closeProjectViaModal(
 
 /** Playwright-style visibility assertion for bun:test (no expect matchers for locators). */
 export async function see(page: Page, text: string | RegExp, timeout = 20_000): Promise<void> {
-  await page.getByText(text).first().waitFor({ state: "visible", timeout });
+  const visible = page.getByText(text).filter({ visible: true }).first();
+  const any = page.getByText(text).first();
+  await any.waitFor({ state: "attached", timeout }).catch(() => undefined);
+  // Reveal the owning tab when every match sits inside a hidden tab panel.
+  if (!(await visible.isVisible().catch(() => false))) await revealTab(page, any).catch(() => undefined);
+  await visible.waitFor({ state: "visible", timeout });
 }
 
 export async function seeNot(page: Page, text: string | RegExp, timeout = 5_000): Promise<void> {

@@ -330,8 +330,9 @@ describe("labels", () => {
   test("scope note does not claim rules that are not in force", () => {
     // i18n: the scope note is a key list resolved at render — resolve through the ko stub.
     const full = labels.s5ScopeNoteKeys("s5_plan_full").map((k) => tr(k)).join(" ");
-    expect(full).toContain("슬라이스 2");
-    expect(full).toContain("슬라이스 3");
+    // Plain-language scope: the not-yet-linked factors are named as arriving with a later linkage step, no slice numbers.
+    expect(full).toContain("이후 연동 단계가 제공된 뒤에야 S8에 반영");
+    expect(full).not.toMatch(/슬라이스/);
     expect(full).toContain("s5_pnl"); // slice 2 in force: the tail names the basis instead of "not yet applied"
     expect(full).toContain("인건비·운영비 줄에 도달");
     expect(full).not.toContain("(전체)");

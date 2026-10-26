@@ -219,54 +219,13 @@ describe("opportunity-keyed process tools (ADR-0094)", () => {
     expect(Array.isArray(decisions.data.history)).toBe(true);
   });
 
-  test("record_gate_decision is a deprecated alias: it creates a proposal and decides nothing", async () => {
+  test("the removed deprecated aliases are no longer callable", async () => {
     process.env.CO_NEWBIZ_API_TOKEN = writeToken;
     const { dispatch } = await import("../../mcp/co-newbiz/index.ts");
-    const before = db.query("SELECT COUNT(*) AS c FROM gate_decision").get() as { c: number };
-    const recorded = (await dispatch("record_gate_decision", {
-      opportunityId,
-      gate: "screening",
-      decision: "go",
-      rationale: "clears knock-out set",
-    })) as { data: { proposal_id: string; confirm_url: string; status: string }; error: { code: string } | null; deprecation: { replacement: string } };
-    expect(recorded.error).toBeNull();
-    expect(recorded.data.status).toBe("pending");
-    expect(recorded.data.confirm_url).toContain(`/proposals/${recorded.data.proposal_id}/confirm`);
-    expect(recorded.deprecation.replacement).toBe("propose_gate_decision");
-
-    const after = db.query("SELECT COUNT(*) AS c FROM gate_decision").get() as { c: number };
-    expect(after.c).toBe(before.c);
-    const decisions = (await dispatch("get_gate_decisions", { opportunityId })) as { data: { history: unknown[] } };
-    expect(decisions.data.history).toHaveLength(0);
-
-    await expect(dispatch("record_gate_decision", { gate: "screening", decision: "go", rationale: "x" })).rejects.toThrow(/opportunityId/);
+    await expect(dispatch("record_gate_decision", { opportunityId, gate: "screening", decision: "go", rationale: "x" })).rejects.toThrow();
+    await expect(dispatch("create_route_decision", { opportunityId, track: "greenfield", rationale: "x", intent: "integration", scores: [] })).rejects.toThrow();
   });
 
-  test("create_route_decision is a deprecated alias that proposes only", async () => {
-    process.env.CO_NEWBIZ_API_TOKEN = writeToken;
-    const { dispatch } = await import("../../mcp/co-newbiz/index.ts");
-    const before = db.query("SELECT COUNT(*) AS c FROM route_decision").get() as { c: number };
-    const result = (await dispatch("create_route_decision", {
-      opportunityId,
-      track: "greenfield",
-      rationale: "no acquireable incumbent",
-      intent: "integration",
-      scores: [
-        { criterion: "control_need", score: 2, evidence_note: "t" },
-        { criterion: "capability_criticality", score: 3, evidence_note: "t" },
-        { criterion: "market_uncertainty", score: 2, evidence_note: "t" },
-        { criterion: "integration_capacity", score: 2, evidence_note: "t" },
-        { criterion: "speed_to_capability", score: 2, evidence_note: "t" },
-      ],
-    })) as { data: { status: string }; error: { code: string } | null; deprecation: { replacement: string } };
-    expect(result.error).toBeNull();
-    expect(result.data.status).toBe("pending");
-    expect(result.deprecation.replacement).toBe("propose_route_decision");
-    expect((db.query("SELECT COUNT(*) AS c FROM route_decision").get() as { c: number }).c).toBe(before.c);
-  });
-});
-
-describe("input validation", () => {
   test("a missing required argument throws before any REST call", async () => {
     const { dispatch } = await import("../../mcp/co-newbiz/index.ts");
     await expect(dispatch("lookup_term", {})).rejects.toThrow(/term/);

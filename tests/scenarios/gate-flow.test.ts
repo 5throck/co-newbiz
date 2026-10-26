@@ -29,12 +29,12 @@ describe("R2-B shared gate-recording flow (S8)", () => {
     await visit(s.page, app, `/projects/${P}/business-case`);
     await s.page.locator('main').first().waitFor({ state: "visible" });
     expect(await s.page.locator('section[aria-label="의사결정"]').count()).toBe(0);
+    // One tab row: WACC and 대상회사 live in the stage sub-row only (shown on the analysis tabs), not repeated in the in-page tabs.
+    expect(await s.page.getByRole("tab", { name: "WACC" }).count()).toBe(1);
+    expect(await s.page.getByRole("tab", { name: "대상회사" }).count()).toBe(1);
     await s.page.getByRole("button", { name: "결정 기록 (사람)" }).click();
     await s.page.locator('section[aria-label="의사결정"]').waitFor({ state: "visible", timeout: 20_000 });
     await s.page.waitForFunction(() => !!document.activeElement?.closest('[data-gate-form="fs"] form'), undefined, { timeout: 10_000 });
-    // One tab row: WACC and 재무분석 live in the stage row only, not repeated in the in-page tabs.
-    expect(await s.page.getByRole("tab", { name: "WACC" }).count()).toBe(1);
-    expect(await s.page.getByRole("tab", { name: "대상회사" }).count()).toBe(1);
   }, 60_000);
 
   test("confirm -> toast -> recorded summary -> no resubmission -> next-stage link", async () => {
@@ -102,7 +102,8 @@ describe("R2-B IC GO with missing artifacts", () => {
     await recordGate(s.page, app, `/projects/${P}/dd`, null, "go", "M&A 6대 검증 포함 전 DD 항목 충족");
     await visit(s.page, app, `/projects/${P}/ic-review`);
     // One review block for both IC gates (the panels do not repeat it).
-    await s.page.locator('section[aria-label="의사결정"]').first().waitFor({ state: "visible", timeout: 30_000 });
+    // The decision panel sits in the IC screen's hidden "의사결정" tab until the stage primary jumps to it.
+    await s.page.locator('section[aria-label="의사결정"]').first().waitFor({ state: "attached", timeout: 30_000 });
     expect(await s.page.locator('section[aria-label="3단계 검토"]').count()).toBe(1);
     const gaps = await s.page.evaluate(async (pid) => {
       const r = await fetch(`/api/projects/${pid}/ic-package`);
@@ -111,7 +112,8 @@ describe("R2-B IC GO with missing artifacts", () => {
     expect(gaps.length).toBeGreaterThan(0); // the demo deal has no graded RAG
     // The stage primary reaches the form from the top.
     await s.page.getByRole("button", { name: "결정 기록 (사람)" }).click();
-    await s.page.waitForFunction(() => !!document.activeElement?.closest('[data-gate-form="entity_ic"] form'), undefined, { timeout: 10_000 });
+    await s.page.locator('section[aria-label="의사결정"]').first().waitFor({ state: "visible", timeout: 20_000 });
+    await s.page.waitForFunction(() => !!document.activeElement?.closest('[data-gate-form~="entity_ic"] form'), undefined, { timeout: 10_000 });
     const panel = s.page.locator('section[aria-label="의사결정"]').first();
     const form = panel.locator('form[aria-label="의사결정 기록"]');
     await form.locator("select").last().selectOption("go");
@@ -133,11 +135,11 @@ describe("R2-B IC GO with missing artifacts", () => {
     const stored = app.readDb((d) => d.query("SELECT rationale FROM gate_decision WHERE entity_id=? AND gate='entity_ic'").get(P)) as { rationale: string };
     expect(stored.rationale).toContain("RAG 산정 전이지만 위원회가 정성 판단으로 진행하기로 함");
     await panel.locator('[aria-label="기록된 결정"]').waitFor({ state: "visible", timeout: 10_000 });
-    // The next-stage prompt of the Entity IC points at the Group IC form.
-    await panel.getByRole("link", { name: /다음: Group IC/ }).waitFor({ state: "visible" });
+    // ADR-0165: the sequenced panel names the next due committee turn (Group IC) right under the recorded Entity IC.
+    await panel.getByRole("status", { name: "기록된 결정" }).getByText(/다음 차례:\s*그룹 투자심의위원회/).waitFor({ state: "visible" });
     // Shown in the IC package after a reload.
     await visit(s.page, app, `/projects/${P}/ic-review`);
-    await see(s.page, "누락 산출물 예외 근거 (GO 기록 시 작성)");
+    await see(s.page, "누락 산출물 예외 근거 (진행 기록 시 작성)");
     await see(s.page, "RAG 산정 전이지만 위원회가 정성 판단으로 진행하기로 함");
   }, 120_000);
 

@@ -46,6 +46,8 @@ interface ProcessView {
   subTrack: string | null;
   terminated: boolean;
   stages: StageLite[];
+  /** Set when a promoted opportunity route is evaluated on its project (one engine state for the whole deal). */
+  evaluatedOnProject?: boolean;
   /** Opportunity carrier: linked project id. */
   projectId?: string | null;
   /** Project carrier: project header. */
@@ -131,15 +133,25 @@ function DealOverview() {
     setProc(null);
     setOpp({ status: "loading" });
     resolveDealCarrier<ProcessView>((u) => api.get(u), id)
-      .then((c) => {
+      .then(async (c) => {
+        // A promoted opportunity's journey continues on its project: read stage, blockers and gates
+        // from the project process so the overview agrees with the project view (journey review H3).
+        let eff: ProcessView = c.proc;
+        if (c.proc.projectId && c.opportunityId === id) {
+          try {
+            const pp = await api.get<ProcessView>(`/api/projects/${encodeURIComponent(c.proc.projectId)}/process`);
+            eff = { ...pp.data, projectId: c.proc.projectId, opportunity: c.proc.opportunity ?? { id }, evaluatedOnProject: true };
+          } catch { /* keep the opportunity-side evaluation */ }
+        }
         if (!alive()) return;
+        c = { ...c, proc: eff };
         setProc(c.proc);
         setOppId(c.opportunityId);
         loadOpp(c.opportunityId, alive);
         // Hold age: latest "hold" decision timestamp per gate (best effort; null = age not shown).
         const holdGates = Object.entries(c.proc.gateStatus ?? {}).filter(([, d]) => d === "hold");
         if (holdGates.length > 0) {
-          const url = c.proc.project ? `/api/projects/${encodeURIComponent(id)}/gate-decisions` : c.opportunityId ? `/api/opportunities/${encodeURIComponent(c.opportunityId)}/gate-decisions` : null;
+          const url = c.proc.evaluatedOnProject && c.proc.projectId ? `/api/projects/${encodeURIComponent(c.proc.projectId)}/gate-decisions` : c.proc.project ? `/api/projects/${encodeURIComponent(id)}/gate-decisions` : c.opportunityId ? `/api/opportunities/${encodeURIComponent(c.opportunityId)}/gate-decisions` : null;
           if (url) {
             api.get<{ history: Array<{ gate: string; decision: string; decided_at: string }> }>(url)
               .then((r) => { if (alive()) setHoldDates(holdDatesFromHistory(r.data?.history)); })
@@ -156,6 +168,8 @@ function DealOverview() {
     return () => { alive = false; };
   }, [loadAll]);
 
+  // statusText is either engine wording or a catalog key (journey finished).
+  const statusTextOf = (text: string): string => (text.startsWith("pages.") ? root(text) : text);
   const retryAll = () => { loadAll(() => true); };
   const retryOpp = () => { loadOpp(oppId, () => true); };
 
@@ -164,7 +178,7 @@ function DealOverview() {
     if (!proc) return null;
     const holds: OverviewHold[] = Object.entries(proc.gateStatus ?? {})
       .filter(([, d]) => d === "hold")
-      .map(([gate]) => ({ entityType: "opportunity" as const, entityId: id, gate, decidedAt: holdDates[gate] ?? null }));
+      .map(([gate]) => ({ entityType: (proc.evaluatedOnProject ? "project" : "opportunity") as "project" | "opportunity", entityId: proc.evaluatedOnProject ? proc.projectId! : id, gate, decidedAt: holdDates[gate] ?? null }));
     const overviewProc: OverviewProcess = {
       currentStage: proc.currentStage,
       nextStage: proc.nextStage,
@@ -176,7 +190,8 @@ function DealOverview() {
       terminated: proc.terminated,
       projectName: proc.project?.project_name ?? null,
       projectId: proc.projectId ?? null,
-      stages: proc.stages.map((s) => ({ id: s.id, requiredArtifacts: s.requiredArtifacts })),
+      stages: proc.stages.map((s) => ({ id: s.id, status: s.status, requiredArtifacts: s.requiredArtifacts })),
+      ...(proc.evaluatedOnProject && proc.projectId ? { carrier: { type: "project" as const, id: proc.projectId } } : {}),
     };
     return buildDealOverview(id, oppData, overviewProc, holds);
   // oppData is derived from opp
@@ -269,7 +284,7 @@ function DealOverview() {
                     <p className="m-0 text-[color:var(--muted-fg)]">{ov.currentStage.objective}</p>
                   </>
                 ) : (
-                  <p className="m-0 text-[color:var(--muted-fg)]">{ov.statusText ?? tr("noCurrentStage")}</p>
+                  <p className="m-0 text-[color:var(--muted-fg)]">{ov.statusText ? statusTextOf(ov.statusText) : tr("noCurrentStage")}</p>
                 )}
                 <dl className="deal-overview-flow m-0 mt-3">
                   <FlowRow label={tr("receives")} entry={ov.flow.previous} />
@@ -282,7 +297,7 @@ function DealOverview() {
                 {ov.nextAction ? (
                   <NextActionBody ov={ov} />
                 ) : (
-                  <p className="m-0" role="status">{ov.statusText}</p>
+                  <p className="m-0" role="status">{ov.statusText ? statusTextOf(ov.statusText) : null}</p>
                 )}
               </section>
 

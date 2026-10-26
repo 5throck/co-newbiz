@@ -16,8 +16,9 @@
 //   - <DealEntryMarketStrip routeId>: the deals stage shell — resolves the
 //     deal's source opportunity first (a promoted project id resolves through
 //     useDealOpportunityId, the same resolver the S3 body uses).
-import { TranslatorFn } from "../i18n/config.ts";
+import { TranslatorFn, resolveLabels } from "../i18n/config.ts";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "../lib/api.ts";
 import { formatNumber } from "../lib/format.ts";
@@ -37,7 +38,7 @@ interface StripFlowResponse {
   fx: Array<{ currency: string; rate: number; volatility: number | null }>;
 }
 
-const UNIT_LABEL = (tr: TranslatorFn): Record<string, string> => ({
+const UNIT_LABEL = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, {
   krw_m_year: "common.krwMillionPerYear",
   units_year: "components.entryMarketContext.strip.unitsYr",
   usd_m_year: "components.entryMarketContext.strip.usdMillionsYr",
@@ -49,7 +50,7 @@ const UNIT_LABEL = (tr: TranslatorFn): Record<string, string> => ({
 function unitLabel(ub: string | null | undefined, t: TranslatorFn, tr: TranslatorFn): string | null {
   if (!ub) return null;
   const mapped = UNIT_LABEL(tr)[ub];
-  if (mapped) return tr(mapped);
+  if (mapped) return mapped;
   const m = ub.match(/^([a-z]{3})_([mb])_year$/);
   if (m) return t("p1P2YrAnnualRevenue", { p1: m[2] === "b" ? t("billions") : t("millions"), p2: m[1].toUpperCase() });
   return ub;
@@ -106,7 +107,10 @@ export function EntryMarketContextStrip({ opportunityId }: { opportunityId: stri
         data-testid="entry-market-strip"
         aria-label={t("entryMarketS2Estimate")}
       >
-        {t("entryMarketS2EstimateNot")}
+        {t("entryMarketS2EstimateNot")}{" "}
+        <Link href={`/opportunities/${encodeURIComponent(opportunityId)}?tab=entry`} className="guide-link" data-testid="entry-market-link-s2">
+          {t("entryMarketLinkS2")}
+        </Link>
       </p>
     );
   }

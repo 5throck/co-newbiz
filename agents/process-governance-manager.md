@@ -9,7 +9,7 @@ description: >
 formal_name: Process Governance Manager
 status: active
 domain: functional
-version: "1.1.2"
+version: "1.1.3"
 last_updated: "2026-10-26"
 tier:
   claude: high
@@ -62,7 +62,7 @@ process spine they plug into.
   skills and the `greenfield-screening` / `brownfield-screening` procedures.
 - **Entity Establishment Coordination (S11 `entity-establishment-execution`)**: coordinate and close
   new-entity establishment for origin∈{internal,joint} (applies_when enforced per ADR-0047). You own
-  step 5 and the gate record; steps 1–3 (preparation, registration, charter) are `legal-counsel`'s
+  step 5 and the gate record; steps 1–3 (formation readiness, statutory filing and registration, permit/certification classification) are `legal-counsel`'s
   and step 4 (organizational readiness) is `hr-integration-agent`'s. The procedure and its five
   activity skills
   (`legal-due-diligence`, `k-law`, `certification-transferability`, `org-readiness-assessment`,

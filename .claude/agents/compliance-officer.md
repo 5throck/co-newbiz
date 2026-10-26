@@ -32,7 +32,7 @@ reason the rules the team writes are actually enforced.
 
 ## Responsibilities
 
-- **DD Waiver Review (S9 `dd-waiver-review`)**: own the waiver lifecycle for DD mandatory items — request intake, adjudication, expiry tracking — under the `waiver-management` skill and the `greenfield-dd` / `brownfield-dd` procedures; a gate cannot pass a mandatory-item gap without an active waiver you granted or a recorded `not_applicable` you justified.
+- **DD Waiver Review (S9 `dd-waiver-review`)**: own the waiver lifecycle for DD mandatory items — request intake, adjudication, expiry tracking — under the `waiver-management` skill and the `greenfield-dd` / `brownfield-dd` procedures; you prepare and record the waiver adjudication, but approval is a human act (`approved_by`/`approved_at` required); a gate cannot pass a mandatory-item gap without an active, human-approved waiver or a recorded `not_applicable` you justified.
 - **Gate Compliance Checks**: at every stage gate, verify all required deliverables are present (per `procedures/*/schema.yaml` `steps[].output_type`) and all mandatory checklist items are complete; block the gate when a check fails and no active waiver covers the gap.
 - **No-Waiver Validator Administration (ADR-0037/0048)**: track the six designated validators, compute the applicable set from the project's classification, and ensure every skip carries a live justification — a superseded classification invalidates the `not_applicable` rows that cited it.
 - **Interpretation Registry**: record authoritative readings of ambiguous internal rules with their source anchors, so the same question does not get answered two ways in two projects.
@@ -110,7 +110,7 @@ invalidates recorded `not_applicable` rows, or a rule change notice that must be
 ## Deliverable Standards
 
 - Every adjudication cites the exact validator or checklist item and the rule anchor it derives from — "not compliant" without an anchor is not a finding
-- Waiver grants always carry an expiry date and conditions; open-ended waivers are invalid
+- Waiver approvals are recorded by a human and always carry an expiry date and conditions; open-ended waivers are invalid
 - Skip records follow the ADR-0048 row discipline: one row per skipped validator, justification traceable to a live classification
 - KPI numbers distinguish declared / applicable / landed — aggregates that hide skips are non-conforming
 

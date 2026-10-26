@@ -69,6 +69,9 @@ const GATES_BY_STAGE: Record<string, string[]> = {
   S12: [],
 };
 
+/** The flow spec lists required artifacts as Korean prose (not record keys); only unmapped non-prose tokens fall back to the placeholder. */
+const isProseRequirement = (k: string): boolean => /[\uAC00-\uD7A3]/.test(k);
+
 function StageList({ stages, gateStatus }: { stages: StageView[]; gateStatus: Record<string, string> }) {
   const tr = useTranslations();
   const t = useTranslations("pages.projects.process");
@@ -82,9 +85,9 @@ function StageList({ stages, gateStatus }: { stages: StageView[]; gateStatus: Re
             {s.name}
             {s.status === "current" && s.requiredArtifacts.length > 0 && (
               <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                {t("requiredPrefix")}{s.requiredArtifacts.map((k) => (RECORD_KEY[k] ? tr(RECORD_KEY[k]) : tr("common.unclassified"))).join(", ")}
-                {s.requiredArtifacts.some((k) => !RECORD_KEY[k]) && (
-                  <RawKey parts={s.requiredArtifacts.filter((k) => !RECORD_KEY[k]).map((k) => ({ label: "", raw: k, isFallback: true }))} />
+                {t("requiredPrefix")}{s.requiredArtifacts.map((k) => (RECORD_KEY[k] ? tr(RECORD_KEY[k]) : isProseRequirement(k) ? localizeRequirement(k) : tr("common.unclassified"))).join(", ")}
+                {s.requiredArtifacts.some((k) => !RECORD_KEY[k] && !isProseRequirement(k)) && (
+                  <RawKey parts={s.requiredArtifacts.filter((k) => !RECORD_KEY[k] && !isProseRequirement(k)).map((k) => ({ label: "", raw: k, isFallback: true }))} />
                 )}
               </span>
             )}

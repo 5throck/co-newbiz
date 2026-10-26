@@ -5,6 +5,7 @@
 // 없으면 채점을 저장하지 않는다 — 없는 데이터를 있는 것처럼 만들지 않는다.
 import { getDb } from "../../../../../../../../db/client.ts";
 import { getDraftRouteDecision } from "../../../../../../../../db/repositories/route-decision.repository.ts";
+import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../../../db/lib/ulid.ts";
 import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
@@ -85,5 +86,6 @@ export const PUT = route(async (request: Request, { params }: { params: Promise<
     }
   }
 
+  appendAudit(db, { actor: ctx.userId, action: existing ? "route_decision_draft.update" : "route_decision_draft.create", target: `${id}:${decisionId}`, now });
   return ok({ id: decisionId, status: "draft", updated_at: now }, 200);
 });

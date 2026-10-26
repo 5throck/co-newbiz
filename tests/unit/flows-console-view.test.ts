@@ -221,11 +221,13 @@ describe("flows 화면 소스 — a11y·IA 정적 규약 (화면 설계 §9)", (
   });
 
   test("§10 — 403(admin)은 재시도 없이 설계된 경계 문구로 표시된다", () => {
-    expect(koOf("pages.flows.flowsAdmin.adminForbidden")).toContain("ADR-0146");
+    expect(koOf("pages.flows.flowsAdmin.adminForbidden")).toContain("설계된 접근 경계");
+    expect(koOf("pages.flows.flowsAdmin.adminForbidden")).not.toMatch(/ADR-\d+/);
     expect(page).toContain('t(ADMIN_FORBIDDEN_KEY)');
     expect(page).toContain("onRetry={() => setRetryTick");
     expect(ledger).toContain('t(ADMIN_FORBIDDEN_KEY)');
-    expect(koOf("pages.flows.ledger.adminForbidden")).toContain("ADR-0146");
+    expect(koOf("pages.flows.ledger.adminForbidden")).toContain("업무 콘텐츠에서 분리");
+    expect(koOf("pages.flows.ledger.adminForbidden")).not.toMatch(/ADR-\d+/);
   });
 
   test("§5.4 — LLM 미구성 상태가 empty와 구분된 문구로 분기된다", () => {

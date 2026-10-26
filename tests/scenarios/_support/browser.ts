@@ -110,4 +110,22 @@ export function formatAxe(results: AxeResult[]): string {
 export async function visit(page: Page, app: TestApp, path: string): Promise<void> {
   await page.goto(`${app.baseUrl}${path}`, { waitUntil: "domcontentloaded" });
   await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => undefined);
+  await assertNoRawI18nKeys(page);
+}
+
+/** A catalog key path (e.g. `stages.foo.bar`) printed in visible text means a message was not resolved. */
+// The lookbehind skips file-path tokens such as `docs/.../business-stages.md` (still anchored at a word boundary).
+export const RAW_I18N_KEY = /(?<![\w./-])(stages|common|pages)\.[a-zA-Z0-9_.]+/;
+
+/**
+ * H2 runtime guard: fail the journey when the VISIBLE DOM text (innerText skips hidden nodes) contains a raw
+ * i18n key path (see RAW_I18N_KEY).
+ */
+export async function assertNoRawI18nKeys(page: Page): Promise<void> {
+  const text = await page.locator("body").innerText().catch(() => "");
+  const hit = RAW_I18N_KEY.exec(text);
+  if (hit) {
+    const at = Math.max(0, hit.index - 40);
+    throw new Error(`raw i18n key visible at ${new URL(page.url()).pathname}: "${text.slice(at, hit.index + hit[0].length + 40).replace(/\s+/g, " ")}"`);
+  }
 }

@@ -4,8 +4,7 @@
 // registry and the screen patterns. No new dependencies; thin React over the
 // existing vocabulary. ADR-0119 governs the button/chip semantics.
 
-import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useAuth } from "../lib/auth-client.tsx";
@@ -64,27 +63,9 @@ export function Button({
 }
 
 /* ── PrimaryAction — the ONE filled action of a screen (Wave U design §5) ──
-   StageFrame renders <PrimarySlot/> in the page header (top right); a screen
-   declares its primary action with <PrimaryAction/> from anywhere in its body
-   (it keeps access to local state) and the button is portalled into the slot.
-   A disabled primary always shows its reason as text beside the button. */
-
-let primarySlotEl: HTMLElement | null = null;
-const primarySlotListeners = new Set<() => void>();
-function setPrimarySlot(el: HTMLElement | null) {
-  if (primarySlotEl === el) return;
-  primarySlotEl = el;
-  primarySlotListeners.forEach((l) => l());
-}
-function subscribePrimarySlot(l: () => void) {
-  primarySlotListeners.add(l);
-  return () => { primarySlotListeners.delete(l); };
-}
-
-/** Header slot for the screen's primary action. Rendered once by StageFrame. */
-export function PrimarySlot() {
-  return <div ref={setPrimarySlot} className="primary-slot" />;
-}
+   Renders in place, where the screen declares it. (The StageFrame head slot was removed by the
+   2026-10-22 head-action standard: the head button is the next-stage navigation; a slot-portalled
+   action rendered nothing.) A disabled primary always shows its reason as text beside the button. */
 
 export interface PrimaryActionProps {
   label: string;
@@ -97,14 +78,13 @@ export interface PrimaryActionProps {
   disabled?: boolean;
   /** Required whenever disabled: shown as text beside the button, not only as a tooltip. */
   disabledReason?: string;
-  /** Render in place instead of the header slot (screens without StageFrame). */
+  /** @deprecated Always in place now; kept so existing callers compile. */
   inline?: boolean;
   /** Reads or navigates only (no write): stays enabled for the read-only viewer role. */
   readOnly?: boolean;
 }
 
-export function PrimaryAction({ label, onClick, href, form, disabled, disabledReason: reasonIn, inline, readOnly }: PrimaryActionProps) {
-  const slot = useSyncExternalStore(subscribePrimarySlot, () => primarySlotEl, () => null);
+export function PrimaryAction({ label, onClick, href, form, disabled, disabledReason: reasonIn, readOnly }: PrimaryActionProps) {
   const reasonId = useId();
   const tr = useTranslations();
   const { me } = useAuth();
@@ -132,9 +112,7 @@ export function PrimaryAction({ label, onClick, href, form, disabled, disabledRe
       {control}
     </>
   );
-  if (inline) return <span className="primary-inline">{node}</span>;
-  if (!slot) return null;
-  return createPortal(node, slot);
+  return <span className="primary-inline">{node}</span>;
 }
 
 /* ── ParamTable — label / value / unit / source in separate columns (Wave U-2, design §6) ── */

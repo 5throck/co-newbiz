@@ -1,8 +1,8 @@
 // Gate decisions for one opportunity — S1~S7 gates (ADR-0094).
 // Gates are HUMAN outputs (boundary #2): this route records the decision a
 // reviewer made, it does not compute one. HOLD requires an explicit
-// missing-artifacts list so a HOLD never reads as a soft pass. The MCP
-// record_gate_decision / get_gate_decisions tools bind to this route — the
+// missing-artifacts list so a HOLD never reads as a soft pass. The
+// MCP get_gate_decisions tool binds to this route — the
 // former /api/projects/:id/gate-decisions tree was deleted with the project
 // workflow (ADR-0074) and opportunity is the S1~S7 lifecycle carrier.
 import { getDb } from "../../../../../../../db/client.ts";

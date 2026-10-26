@@ -5,7 +5,7 @@
 // 권위(ADR-0036) — 읽기 시점에 파생되어 'expired'로 표시된다(컬럼 재작성 없음).
 // 경계 #2: 승인 권한 라우팅(규정 계층→그룹 투자심의위원회, 절차→PGM, 체크리스트→도메인 리드)은
 // 프로세스 규율이며, 이 패널은 인간 판정을 기록한다.
-import { TranslatorFn } from "../i18n/config.ts";
+import { TranslatorFn, resolveLabels } from "../i18n/config.ts";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
@@ -34,7 +34,7 @@ interface WaiverRow {
 }
 interface GovernanceDocRef { id: string; layer: string; key: string; title: string }
 
-const STATUS_META = (tr: TranslatorFn): Record<WaiverRow["effective_status"], { icon: string; label: string; cls: string }> => ({
+const STATUS_META = (tr: TranslatorFn): Record<WaiverRow["effective_status"], { icon: string; label: string; cls: string }> => resolveLabels(tr, {
   active: { icon: "✓", label: "components.waiver.panel.active", cls: "status-green" },
   pending: { icon: "◐", label: "components.waiver.panel.awaitingApproval", cls: "status-amber" },
   expired: { icon: "◌", label: "components.waiver.panel.expires", cls: "status-chip" },

@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { api } from "../../../../lib/api.ts";
 import { localizeRequirement } from "../../../../lib/labels.ts";
+import { STAGE_META } from "../../../../lib/stage-meta.ts";
 import { STAGE_STATUS_KEY, trackKeysText, resolveLabelTokens } from "../../../../lib/label-keys.ts";
 import { resolveDealCarrier } from "../../../../lib/deal-carrier.ts";
 import type { TrackId } from "../../../../lib/stage-meta.ts";
@@ -63,8 +64,8 @@ function TrackGate({ routeId, track, stageLabel, only, otherStage, children }: {
           {" "}{t("trackIsSuffix", { p1: thisName })}
         </p>
         <p>
-          <Link className="control-chip status-green" href={`/deals/${encodeURIComponent(routeId)}/${otherStage}`}>
-            {otherStage === "s5" ? t("goToS5") : t("goToS6")}
+          <Link className="btn-primary" href={`/deals/${encodeURIComponent(routeId)}/${otherStage}`}>
+            {t("goToTrackStage", { p1: STAGE_META.find((m) => m.id === (otherStage === "s5" ? "S5" : "S6"))?.name ?? "", p2: track === "greenfield" ? "Green Field" : "Brown Field" })}
           </Link>
         </p>
       </div>

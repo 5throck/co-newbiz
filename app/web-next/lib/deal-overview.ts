@@ -32,7 +32,9 @@ export interface OverviewProcess {
   /** Engine marker (ADR-0095): the S1–S7 carrier scope is complete/skipped and the deal awaits promotion. */
   carrierScopeFinished?: boolean;
   /** Process response stages; `requiredArtifacts` feeds the previous/next flow artifact lists. */
-  stages?: Array<{ id: string; requiredArtifacts?: string[] }>;
+  stages?: Array<{ id: string; status?: string; requiredArtifacts?: string[] }>;
+  /** Carrier whose gate decisions the process reflects; a promoted deal is evaluated on its project (default: opportunity, id = dealId). */
+  carrier?: { type: "opportunity" | "project"; id: string };
 }
 
 /** `decidedAt` (ISO) is the hold decision timestamp; the page takes it from the gate-decisions list. */
@@ -119,7 +121,21 @@ const stageName = (id: string | null | undefined): string | null =>
 
 /** Stage the deal sits at: process stage first, else the status convention (identified=S2 ...). */
 function resolveStage(opp: OverviewOpportunity, proc: OverviewProcess): string | null {
-  return proc.currentStage ?? (opp.status ? OPPORTUNITY_STATUS_STAGE[opp.status] ?? null : null);
+  if (proc.currentStage) return proc.currentStage;
+  // Engine reports every applicable stage complete: the deal sits at its last stage. The status
+  // convention is only a fallback for a process that carries no stage list (it read "S4" for a
+  // finished project, journey review H3).
+  const finished = !proc.terminated && !!proc.stages?.length && proc.stages.every((s) => s.status === "complete" || s.status === "skipped");
+  if (finished) {
+    const last = [...proc.stages!].reverse().find((s) => s.status === "complete");
+    if (last) return last.id;
+  }
+  return opp.status ? OPPORTUNITY_STATUS_STAGE[opp.status] ?? null : null;
+}
+
+/** Engine-reported journey complete (no current stage, nothing left). */
+function journeyFinished(proc: OverviewProcess): boolean {
+  return !proc.terminated && !proc.currentStage && !!proc.stages?.length && proc.stages.every((s) => s.status === "complete" || s.status === "skipped");
 }
 
 /** An artifact is not done while a blocker names it (either text contains the other). */
@@ -168,7 +184,8 @@ export function buildDealOverview(
   const gateStatus = proc.gateStatus ?? {};
   // Track-aware gate links (T-20261022-002): a brownfield pre_fs decision lives
   // on the S4 committee tab, greenfield on S5; unknown track keeps the S5 default.
-  const gateHref = (gate: string) => gateHoldHref({ entityType: "opportunity", entityId: dealId, gate, track: proc.track });
+  const carrier = proc.carrier ?? { type: "opportunity" as const, id: dealId };
+  const gateHref = (gate: string) => gateHoldHref({ entityType: carrier.type, entityId: carrier.id, gate, track: proc.track });
 
   const base = proc.requiredArtifacts.map((a) => ({ label: localizeRequirement(a), done: isArtifactDone(a, proc.blockers) }));
   const firstOpen = base.findIndex((c) => !c.done);
@@ -191,6 +208,7 @@ export function buildDealOverview(
   let nextAction: NextAction | null = null;
   let statusText: string | null = null;
   if (proc.terminated) statusText = "종료된 딜입니다";
+  else if (journeyFinished(proc)) statusText = "pages.dealOverview.journeyFinished";
   else if (!stageId || !meta) statusText = "진행할 단계가 없습니다";
   else {
     const stageHref = dealStageHref(dealId, stageId);

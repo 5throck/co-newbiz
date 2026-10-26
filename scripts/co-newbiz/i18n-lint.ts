@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.0.1
+// @version 1.1.0
 /**
  * i18n-lint — the re-liquefaction guard (design 2026-10-23-i18n-ui-adoption
  * §3.6). Scans app/web-next sources for Hangul occurring in CODE (line and
@@ -222,6 +222,142 @@ export function scanKoreanLines(projectRoot: string = findProjectRoot()): Korean
   return { byFile, scannedFiles: files.length, totalKoreanLines };
 }
 
+/** A raw dotted message key (`stages.*`, `common.*`, `pages.*`) that reaches the screen. */
+export interface DottedKeyFinding {
+  file: string;
+  line: number;
+  /** The label map whose catalog keys are rendered without a translator call. */
+  map: string;
+  /** Where the map is defined (repo-relative path). */
+  definedIn: string;
+}
+
+const DOTTED_KEY_LITERAL = /(["'`])((?:stages|common|pages)\.[A-Za-z0-9_.]+)\1/;
+
+/** Index just past the bracket group that opens at `open`; src.length when unbalanced. */
+function matchGroupEnd(src: string, open: number): number {
+  let depth = 0;
+  for (let i = open; i < src.length; i++) {
+    const c = src[i];
+    if (c === "(" || c === "{" || c === "[") depth++;
+    else if (c === ")" || c === "}" || c === "]") {
+      depth--;
+      if (depth === 0) return i + 1;
+    }
+  }
+  return src.length;
+}
+
+const TRANSLATOR_CALL_BEFORE = /(?:^|[^\w$.])(?:tr|t|translate)$/;
+const TRANSLATOR_FIRST_ARG = /^\s*(?:tr|t|translate)\s*,/;
+
+/** True when `body` holds a dotted key literal outside any translator call (`tr(...)` or `helper(tr, ...)`). */
+function hasUnresolvedKeyLiteral(body: string): boolean {
+  const stack: boolean[] = [];
+  for (let i = 0; i < body.length; i++) {
+    const c = body[i];
+    if (c === "(") {
+      stack.push(TRANSLATOR_CALL_BEFORE.test(body.slice(Math.max(0, i - 12), i)) || TRANSLATOR_FIRST_ARG.test(body.slice(i + 1, i + 16)));
+    } else if (c === ")") stack.pop();
+    else if (c === '"' || c === "'" || c === "`") {
+      const m = DOTTED_KEY_LITERAL.exec(body.slice(i, i + 200));
+      if (m && m.index === 0 && !stack.some(Boolean)) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Names of label-map functions in `src`: `NAME = (tr: TranslatorFn) => ({...})`
+ * (or `function NAME(tr: TranslatorFn)`) whose body stores dotted catalog keys
+ * as plain string values. Such a map yields KEYS, not text; every consumer
+ * must pass the looked-up value through a translator.
+ */
+export function findLabelKeyMaps(src: string): string[] {
+  const code = stripCommentsAndStringsKeepStructure(src);
+  const names: string[] = [];
+  const re = /(?:\bconst\s+|\bfunction\s+)([A-Za-z_$][\w$]*)\s*(?::[^=]*?)?(?:=\s*)?(?:async\s*)?\(\s*[A-Za-z_]\w*\s*:\s*TranslatorFn\b/g;
+  for (let m = re.exec(code); m; m = re.exec(code)) {
+    const closeParen = code.indexOf(")", m.index + m[0].length);
+    if (closeParen < 0) continue;
+    const rest = code.slice(closeParen);
+    const arrow = rest.indexOf("=>");
+    const brace = rest.indexOf("{");
+    let bodyStart: number;
+    if (arrow >= 0 && (brace < 0 || arrow < brace)) {
+      bodyStart = closeParen + arrow + 2;
+      while (/\s/.test(code[bodyStart] ?? "")) bodyStart++;
+    } else if (brace >= 0) bodyStart = closeParen + brace;
+    else continue;
+    let bodyEnd: number;
+    if ("({[".includes(code[bodyStart] ?? "")) bodyEnd = matchGroupEnd(code, bodyStart);
+    else {
+      const semi = code.indexOf(";", bodyStart);
+      bodyEnd = semi < 0 ? code.length : semi;
+    }
+    if (hasUnresolvedKeyLiteral(code.slice(bodyStart, bodyEnd))) names.push(m[1]);
+  }
+  return names;
+}
+
+/**
+ * Usage sites of `mapName` that render the looked-up value raw. A usage is
+ * accepted when it sits inside a `tr(...)`/`t(...)` call, or when its line
+ * resolves the value through a translator call on a bare identifier
+ * (`Object.entries(MAP(tr)).map(([k, v]) => tr(v))`).
+ */
+export function findRawMapUsages(src: string, mapName: string): number[] {
+  const code = stripCommentsAndStringsKeepStructure(src);
+  const lines = code.split("\n");
+  const usageRe = new RegExp(`(?<![\\w$.])${mapName.replace(/\$/g, "\\$")}\\s*\\(`, "g");
+  const hits: number[] = [];
+  let offset = 0;
+  const lineStart: number[] = lines.map((l) => {
+    const o = offset;
+    offset += l.length + 1;
+    return o;
+  });
+  for (let m = usageRe.exec(code); m; m = usageRe.exec(code)) {
+    let ln = lineStart.findIndex((o, i) => o <= m.index && (i === lineStart.length - 1 || lineStart[i + 1] > m.index));
+    if (ln < 0) ln = 0;
+    const line = lines[ln];
+    // Skip the definition itself.
+    if (/(?:\bconst|\bfunction|\bexport\s+const)\s+[A-Za-z_$][\w$]*\s*(?::[^=]*)?=?\s*\(?\s*$/.test(line.slice(0, m.index - lineStart[ln]) + "")) continue;
+    if (new RegExp(`(?:const|function)\\s+${mapName}\\b`).test(line)) continue;
+    // Inside a translator call?
+    let depth = 0;
+    let wrapped = false;
+    const stack: boolean[] = [];
+    for (let i = Math.max(0, m.index - 400); i < m.index; i++) {
+      const c = code[i];
+      if (c === "(") stack.push(TRANSLATOR_CALL_BEFORE.test(code.slice(Math.max(0, i - 12), i)));
+      else if (c === ")") stack.pop();
+    }
+    wrapped = stack.some(Boolean);
+    void depth;
+    if (wrapped) continue;
+    if (/(?<![\w$.])(?:tr|t|translate)\(\s*[A-Za-z_$][\w$]*\s*[,)]/.test(line)) continue;
+    hits.push(ln + 1);
+  }
+  return hits;
+}
+
+/** Scan the tree for label-key maps whose values are rendered without a translator call. */
+export function scanUnresolvedDottedKeys(projectRoot: string = findProjectRoot()): DottedKeyFinding[] {
+  const files = collectScannedFiles(projectRoot);
+  const sources = new Map<string, string>(files.map((f) => [f, readFileSync(join(projectRoot, f), "utf8")]));
+  const maps: Array<{ name: string; file: string }> = [];
+  for (const [file, src] of sources) for (const name of findLabelKeyMaps(src)) maps.push({ name, file });
+  const out: DottedKeyFinding[] = [];
+  for (const { name, file: definedIn } of maps) {
+    for (const [file, src] of sources) {
+      if (file !== definedIn && !src.includes(name)) continue;
+      for (const line of findRawMapUsages(src, name)) out.push({ file, line, map: name, definedIn });
+    }
+  }
+  return out.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
+}
+
 export type ViolationReason = "not-in-baseline" | "exceeds-baseline";
 
 export interface I18nLintViolation {
@@ -316,11 +452,16 @@ if (import.meta.main) {
     console.log("Only for post-extraction batches: the allowlist must shrink, never grow.");
   } else {
     const result = lintI18nStrings(projectRoot);
+    const dotted = scanUnresolvedDottedKeys(projectRoot);
     if (args.includes("--json")) {
-      console.log(JSON.stringify(result, null, 2));
+      console.log(JSON.stringify({ ...result, dottedKeys: dotted }, null, 2));
     } else {
       printResult(result);
+      for (const d of dotted) {
+        console.log(`i18n-lint  ${d.file}:${d.line}  ${d.map}() (keys defined in ${d.definedIn}) rendered without a translator call`);
+      }
+      console.log(`i18n-lint dotted-keys: ${dotted.length === 0 ? "PASS" : "FAIL"} — ${dotted.length} unresolved key(s).`);
     }
-    process.exit(result.violations.length === 0 ? 0 : 1);
+    process.exit(result.violations.length === 0 && dotted.length === 0 ? 0 : 1);
   }
 }

@@ -7,6 +7,7 @@
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../db/client.ts";
+import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { DECISION_MODES, CommitteeError, conveneCommitteeSession, listCommitteeSessions, type DecisionMode } from "../../../../../lib/committee-session.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -55,6 +56,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         source: "web",
       },
     );
+    appendAudit(db, { actor: ctx.userId, action: "committee_session.convene", target: `${id}:${result.sessionId}:${body.committeeKey}`, now: new Date().toISOString() });
     return ok(result, 201);
   } catch (err) {
     if (err instanceof CommitteeError) return badRequest(err.code, err.message);

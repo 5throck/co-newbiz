@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../db/client.ts";
+import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../../../db/lib/ulid.ts";
 
 const UPLOAD_DIR = join(process.cwd(), "..", "workspace", "uploads");
@@ -32,5 +33,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ mem
   mkdirSync(UPLOAD_DIR, { recursive: true });
   writeFileSync(join(UPLOAD_DIR, stored), Buffer.from(await file.arrayBuffer()));
 
+  appendAudit(db, { actor: auth.auth.userId, action: "member_upload.create", target: `${memberId}:${stored}`, now: new Date().toISOString() });
   return ok({ stored_as: stored, original_name: file.name, size: file.size, member_id: memberId, company: member.company_name }, 201);
 }

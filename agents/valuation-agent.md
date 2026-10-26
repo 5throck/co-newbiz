@@ -11,7 +11,7 @@ description: >
 formal_name: Valuation Agent
 status: active
 domain: functional
-version: "1.1.1"
+version: "1.1.2"
 last_updated: "2026-10-26"
 tier:
   claude: high
@@ -75,7 +75,7 @@ You are a specialist agent that may ONLY be dispatched by the PM. If a user atte
 
 ### Dispatch Protocol
 
-**Can Lead Stages**: none — this agent leads the S8 `valuation` and S10 `financing-plan` activities, not a stage
+**Can Lead Stages**: none — this agent leads the S4 `wacc-hurdle-confirmation`, S8 `valuation`, S9 `contingent-liability-dd` and S10 `financing-plan` activities, not a stage
 **Can Support In**: S8 (greenfield-fs, brownfield-fs procedures), S10 (deal-structuring procedure)
 **Auto-Dispatch To**: `pm` (NPV distributions, BEP, and financing plans assemble into gate proposals)
 **Requires Prior Output From**: `financial-analyst` (business-case lines / per-target cases); DD findings from the S9 DD specialists via `dd-to-valuation-bridge`; `quant-methodologist` (WACC input session, method terms)

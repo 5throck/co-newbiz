@@ -1,18 +1,12 @@
 // Port of app/server/auth.ts POST /api/auth/register
 import { createUser } from "../../../../../../db/lib/accounts.ts";
 import { getDb } from "../../../../../../db/client.ts";
+import { allowRegisterAttempt, trustedClientAddress, type AttemptMap } from "../../../../lib/register-rate-limit.ts";
 import { badRequest, fail, ok } from "../../../../lib/envelope.ts";
 
 // Unauthenticated self-registration is an abuse magnet (pending-queue spam,
-// user-enumeration noise) — apply the same per-address throttle the login
-// route uses, with a separate counter.
-const REGISTER_WINDOW_MS = 15 * 60_000;
-const REGISTER_MAX = 5;
-const registerAttemptsByAddress = new Map<string, number[]>();
-
-function clientAddress(request: Request): string {
-  return (request.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "direct";
-}
+// user-enumeration noise) — throttled per trusted client address (L1).
+const registerAttemptsByAddress: AttemptMap = new Map();
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as
@@ -21,14 +15,9 @@ export async function POST(request: Request) {
   if (!body?.userId?.trim() || !body?.password) {
     return badRequest("invalid_request", "userId and password are required.");
   }
-  const address = clientAddress(request);
-  const now = Date.now();
-  const recent = (registerAttemptsByAddress.get(address) ?? []).filter((t) => now - t < REGISTER_WINDOW_MS);
-  registerAttemptsByAddress.set(address, recent);
-  if (recent.length >= REGISTER_MAX) {
+  if (!allowRegisterAttempt(registerAttemptsByAddress, trustedClientAddress(request), Date.now())) {
     return fail(429, "too_many_attempts", "Too many registration attempts from this address — try again later.");
   }
-  registerAttemptsByAddress.get(address)!.push(now);
   try {
     await createUser(getDb(), {
       userId: body.userId.trim(),
