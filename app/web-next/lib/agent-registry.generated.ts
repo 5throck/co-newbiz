@@ -117,7 +117,7 @@ export const AGENT_REGISTRY: AgentRegistryEntry[] = [
     "key": "i18n-specialist",
     "name": "I18N Specialist Agent",
     "role": "specialist",
-    "domain": "_shared"
+    "domain": null
   },
   {
     "key": "incentive-agent",

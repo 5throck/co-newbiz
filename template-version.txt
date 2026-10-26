@@ -1,5 +1,5 @@
 variant=co-newbiz
-version=0.20.1
+version=0.21.0
 platform=all
 country=KR
-upgraded=2026-10-26T17:55:05.995Z
+upgraded=2026-10-26T21:07:41.629Z

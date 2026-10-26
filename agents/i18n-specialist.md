@@ -2,7 +2,6 @@
 name: i18n-specialist
 formal_name: I18N Specialist Agent
 role: specialist
-domain: _shared
 status: active
 tier: medium
 model: inherit
