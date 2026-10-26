@@ -928,6 +928,11 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0186",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent:root/antitrust-agent",
       "type": "agent",
       "layer": "L3",
@@ -3396,7 +3401,7 @@
         ".hermes/skills/sync/SKILL.md"
       ],
       "usage": {
-        "sessions": 5,
+        "sessions": 4,
         "last_used": "2026-10-25"
       }
     },
@@ -4781,6 +4786,36 @@
       "type": "references",
       "from": "adr:0185",
       "to": "skill:root/zod-contract-gate",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0186",
+      "to": "skill:root/compliance-monitoring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0186",
+      "to": "skill:root/stage-gate-governance",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0186",
+      "to": "skill:root/two-tier-approval-chain",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0186",
+      "to": "skill:root/wacc-input-session",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0186",
+      "to": "skill:root/waiver-management",
       "source": "prose"
     },
     {
