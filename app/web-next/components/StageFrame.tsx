@@ -18,7 +18,6 @@ import { useTranslations } from "next-intl";
 import { STAGE_META, type StageMetaId, type TrackId } from "../lib/stage-meta.ts";
 import { GATE_LABEL_KEY } from "../lib/label-keys.ts";
 import { STAGE_HANDOFF } from "../lib/stage-handoff.ts";
-import { PrimarySlot } from "./ui.tsx";
 import { useDealContext } from "../lib/use-deal-context.ts";
 import { api } from "../lib/api.ts";
 
@@ -178,6 +177,13 @@ export function StageFrame({
   // Under /projects/[id]/** StageTabs owns the stepper (one stepper per screen).
   const stepperOwnedByTabs = (usePathname() ?? "").startsWith("/projects/");
   const projectId = stepperOwnedByTabs ? params?.id : undefined;
+  const tr = useTranslations();
+  const trackNow = track ?? carrierTrack ?? undefined;
+  // The forward CTA on project stages (S8~S12) is gated by the engine's stage predicate; one
+  // process-API read feeds the CTA, the handoff output and the "what is left" list.
+  const gatedProjectStage = !!projectId && PROJECT_STAGE_IDS.has(navSource);
+  const guidance = useStageGuidance(gatedProjectStage ? projectId : undefined, navSource);
+  const gateOpen = !gatedProjectStage || stageCompleteOf(guidance);
   return (
     <>
       <div className="stage-head">
@@ -190,30 +196,45 @@ export function StageFrame({
             액션은 각 작업 면(인라인)에 남긴다. 다음 단계가 없으면(종료) 숨긴다.
             복합 단계(S6·S7)에서는 현재 경로의 단계 기준으로 계산한다. */}
         {(() => {
-          const t = track ?? carrierTrack ?? undefined;
           // 트랙 미확정(로딩 중)에는 다음 단계를 추측하지 않는다 — 트랙 전용 단계로
           // 잘못 안내되는 과도 상태를 막는다(fail-honest).
-          if (!t) return null;
-          const nextId = nextApplicableStage(navSource, t);
+          if (!trackNow) return null;
+          // Stage does not apply to this deal's track: the not-applicable notice hosts the single
+          // primary action (go to the stage that applies), so the header shows none.
+          if (!stage.applicableTracks.includes(trackNow)) return null;
+          const nextId = nextApplicableStage(navSource, trackNow);
           if (!nextId) return null;
-          const link = linkFor(nextId);
-          if (!link?.href) return null;
           const nextName = STAGE_META.find((s) => s.id === nextId)!.name;
-          return (
-            <Link className="btn-primary" href={link.href}>
-              다음: {nextName} →
-            </Link>
-          );
+          const label = tr("common.stageNav.next", { name: nextName });
+          // S8~S12: enabled only when the engine says this stage is complete; otherwise disabled
+          // and described by the "what is left" list below.
+          if (gatedProjectStage && !gateOpen) {
+            return (
+              <button type="button" className="btn-primary" disabled aria-disabled="true" aria-describedby={guidance.phase === "ready" ? NEXT_MISSING_ID : undefined} title={guidance.phase === "ready" ? tr("common.stageNav.blockedHint") : tr("common.stageNav.checking")}>
+                {label}
+              </button>
+            );
+          }
+          const link = linkFor(nextId);
+          if (link?.href) {
+            return <Link className="btn-primary" href={link.href}>{label}</Link>;
+          }
+          // The next stage is a project stage and the deal is not promoted yet: the real next
+          // action is promotion (hosted on this track-final stage), never a link back to itself.
+          if (PROJECT_STAGE_IDS.has(nextId) && !stepperOwnedByTabs && link?.reason === notPromotedReason(trackNow)) {
+            return <a className="btn-primary" href="#project-promotion">{tr("common.stageNav.promote")}</a>;
+          }
+          return null;
         })()}
       </div>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">{stage.objective}</p>
       {/* 스트립은 목적선 바로 다음 — S1~S12 모든 화면에서 같은 머리 순서(h1 → 목적 → 스트립 →
           레일/탭)를 유지한다(2026-10-22 사용자 리포트: S2와 S11의 스트립 위치 불일치). */}
-      <StageHandoffStrip primary={primary} track={track ?? carrierTrack ?? undefined} linkFor={linkFor} />
+      <StageHandoffStrip primary={navSource} track={trackNow} linkFor={linkFor} outputOpen={gateOpen} />
       {railSlot !== undefined
         ? railSlot
         : !stepperOwnedByTabs && <StageRail current={ids} track={track} />}
-      {projectId && PROJECT_STAGE_IDS.has(primary) && <StageGuidance projectId={projectId} stageId={primary} />}
+      {gatedProjectStage && <StageGuidance state={guidance} />}
       {/* 단계 설명 슬롯 — 서식은 프레임이 표준화한다(0.9rem·muted·leading-relaxed,
           하단 간격 mb-4). 페이지별 클래스·<strong> 강조 금지(설계서 개정 2026-09-04). */}
       {children && (
@@ -246,10 +267,12 @@ function nextApplicableStage(from: StageMetaId, track?: TrackId | null): StageMe
 /** 단계 연계 스트립 — 이 단계가 받는 입력과 넘기는 출력을 모든 단계 화면에
     표시한다 (ADR-0120 단계 연계). 다음 단계 CTA는 트랙·프로젝트 컨텍스트를
     반영해 STAGE_HREF로 연결된다. */
-function StageHandoffStrip({ primary, track, linkFor }: { primary: StageMetaId; track?: TrackId | null; linkFor: (id: StageMetaId) => StageLink }) {
+function StageHandoffStrip({ primary, track, linkFor, outputOpen = true }: { primary: StageMetaId; track?: TrackId | null; linkFor: (id: StageMetaId) => StageLink; outputOpen?: boolean }) {
   const handoff = STAGE_HANDOFF[primary];
   const nextId = nextApplicableStage(primary, track);
-  const nextHref = nextId ? linkFor(nextId).href : null;
+  // The output link follows the same predicate as the header CTA: a stage whose completion
+  // requirements are unmet shows the output as plain text, not as a way forward.
+  const nextHref = nextId && outputOpen ? linkFor(nextId).href : null;
   return (
     // 품평회 2026-10-22 잔여 #6 — 단계 연계(입력·출력 계약)는 열린 채로 읽힌다
     // (opt-out). 요약을 누르면 접을 수 있으나 기본값은 노출이다.
@@ -286,12 +309,17 @@ function StepIcon({ state }: { state: StageRailStatus }) {
   return null;
 }
 
-function StageGuidance({ projectId, stageId }: { projectId: string; stageId: string }) {
-  const [info, setInfo] = useState<GuidanceInfo | null>(null);
-  const [hidden, setHidden] = useState(false);
+/** Single engine-state read for a project stage (process API). The header CTA, the handoff output and
+    the "what is left" list all derive from this one result — no second computation. */
+export type GuidanceState = { phase: "idle" } | { phase: "loading" } | { phase: "failed" } | { phase: "ready"; info: GuidanceInfo };
+
+function useStageGuidance(projectId: string | undefined, stageId: string): GuidanceState {
+  const [state, setState] = useState<GuidanceState>({ phase: projectId ? "loading" : "idle" });
 
   useEffect(() => {
+    if (!projectId) { setState({ phase: "idle" }); return; }
     let alive = true;
+    setState({ phase: "loading" });
     fetch(`/api/projects/${encodeURIComponent(projectId)}/process`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((j) => {
@@ -299,35 +327,54 @@ function StageGuidance({ projectId, stageId }: { projectId: string; stageId: str
           | { status: string; requiredArtifacts?: string[] }
           | undefined;
         if (!alive) return;
-        if (!stage) { setHidden(true); return; }
-        setInfo({
-          status: stage.status,
-          // 차단 요건은 현재 단계 기준으로만 집계된다(process API 계약) —
-          // 미완료 과거 단계의 화면에서는 그 단계의 필요 산출물이라도 보여준다.
-          blockers: stage.status === "current" || stage.status === "blocked" ? (j.data?.blockers ?? []) : [],
-          requiredArtifacts: stage.requiredArtifacts ?? [],
+        if (!stage) { setState({ phase: "failed" }); return; }
+        setState({
+          phase: "ready",
+          info: {
+            status: stage.status,
+            // 차단 요건은 현재 단계 기준으로만 집계된다(process API 계약) —
+            // 미완료 과거 단계의 화면에서는 그 단계의 필요 산출물이라도 보여준다.
+            blockers: stage.status === "current" || stage.status === "blocked" ? (j.data?.blockers ?? []) : [],
+            requiredArtifacts: stage.requiredArtifacts ?? [],
+          },
         });
       })
-      .catch(() => { if (alive) setHidden(true); });
+      .catch(() => { if (alive) setState({ phase: "failed" }); });
     return () => { alive = false; };
   }, [projectId, stageId]);
 
-  if (hidden || !info) return null;
+  return state;
+}
+
+/** Whether the stage's completion predicate is met (engine status "complete"). */
+function stageCompleteOf(state: GuidanceState): boolean {
+  return state.phase === "ready" && state.info.status === "complete";
+}
+
+const NEXT_MISSING_ID = "stage-next-missing";
+
+function StageGuidance({ state }: { state: GuidanceState }) {
+  const tr = useTranslations();
+  if (state.phase !== "ready") return null;
+  const info = state.info;
   if (info.status === "complete") {
     return (
-      <div className="mb-3">
+      <div className="mb-3" id={NEXT_MISSING_ID}>
         <span className="status-chip status-green">이 단계 완료 요건 충족 — 다음 단계로 진행할 수 있습니다</span>
       </div>
     );
   }
   const items = [...new Set([...info.blockers, ...info.requiredArtifacts])];
-  if (items.length === 0) return null;
   return (
-    <div className="mb-3 border border-[color:var(--primary-border)] bg-[color:var(--primary-bg)] rounded-lg px-3 py-2 text-[length:var(--fs-caption)] text-[color:var(--primary-dim)]">
+    <div id={NEXT_MISSING_ID} className="mb-3 border border-[color:var(--primary-border)] bg-[color:var(--primary-bg)] rounded-lg px-3 py-2 text-[length:var(--fs-caption)] text-[color:var(--primary-dim)]">
       <b>이 단계에서 남은 것</b>
-      <ul className="mt-1 ml-4 list-disc">
-        {items.map((it) => <li key={it}>{localizeRequirement(it)}</li>)}
-      </ul>
+      {items.length === 0 ? (
+        <p className="mt-1 mb-0">{tr("common.stageNav.missingUnknown")}</p>
+      ) : (
+        <ul className="mt-1 ml-4 list-disc">
+          {items.map((it) => <li key={it}>{localizeRequirement(it)}</li>)}
+        </ul>
+      )}
     </div>
   );
 }

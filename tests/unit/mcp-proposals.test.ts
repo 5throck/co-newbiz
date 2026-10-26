@@ -264,15 +264,6 @@ describe("propose tools create proposals only", () => {
     expect(count("decision_proposal")).toBe(before);
   });
 
-  test("the deprecated aliases create proposals over HTTP too (no direct-write exception)", async () => {
-    const { access, sid } = await mcpSession("alice", "read propose");
-    const before = decisionCounts();
-    const r = await propose(access, sid, "record_gate_decision", { opportunityId: oppId, gate: "screening", decision: "go", rationale: "alias" });
-    expect(r.data.status).toBe("pending");
-    expect((r as unknown as { deprecation: { replacement: string } }).deprecation.replacement).toBe("propose_gate_decision");
-    expect(decisionCounts()).toEqual(before);
-  });
-
   test("a project the proposer cannot see is not found, and a viewer cannot propose", async () => {
     const { access: carol, sid: sid } = await mcpSession("carol", "read propose");
     const r = await callMcpTool(carol, sid, "propose_case_adoption", { projectId, model_id: "M1", rationale: "x" });

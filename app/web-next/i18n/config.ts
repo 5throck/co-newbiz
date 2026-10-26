@@ -68,3 +68,14 @@ export function intlTag(locale: Locale): string {
 
 /** A resolved-message lookup bound to a locale (the shape of next-intl's t(), including its optional ICU values argument). Label-map constants store full catalog keys; components resolve them through a TranslatorFn at render. */
 export type TranslatorFn = (key: string, values?: Record<string, string | number | Date>) => string;
+
+const CATALOG_KEY = /^(stages|common|pages)\.[A-Za-z0-9_.]+$/;
+/** Resolves every catalog-key string inside a label map (nested objects included) so consumers render text, never a dotted key. */
+export function resolveLabels<T>(tr: TranslatorFn, value: T): T {
+  if (typeof value === "string") return (CATALOG_KEY.test(value) ? tr(value) : value) as unknown as T;
+  if (Array.isArray(value)) return value.map((v) => resolveLabels(tr, v)) as unknown as T;
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, resolveLabels(tr, v)])) as T;
+  }
+  return value;
+}

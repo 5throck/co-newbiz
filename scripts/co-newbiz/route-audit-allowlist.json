@@ -1,0 +1,10 @@
+{
+  "market-overview/related-candidates/route.ts": "LLM/web-research draft generator: POST carries the request body, nothing is persisted.",
+  "opportunities/[id]/capability-gap/holding-check/route.ts": "LLM draft generator for the capability-gap grid: returns a proposal, no database write.",
+  "opportunities/[id]/capability-gap/llm-draft/route.ts": "LLM draft generator for the capability-gap grid: returns a proposal, no database write.",
+  "synergy/ai-areas/route.ts": "LLM draft generator: returns proposed synergy areas, no database write.",
+  "synergy/ai-score-adjustment/route.ts": "LLM draft generator: returns a proposed score adjustment, no database write.",
+  "notifications/[id]/read/route.ts": "Per-user read-state watermark on the caller's own notification (migration 0077); no business data.",
+  "notifications/read-all/route.ts": "Per-user read-state watermark on the caller's own notifications (migration 0077); no business data.",
+  "reviews/[id]/audit-sample/route.ts": "The route itself records the audit-sample artifact; it is the audit trail, not a business mutation."
+}

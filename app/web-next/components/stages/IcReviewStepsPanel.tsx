@@ -7,7 +7,7 @@
 // (AI 종합 등급 제안, 투자심의위원회 결정)는 각자의 원장이 권위이며 여기서
 // 기록하지 않는다. 절차 격차는 진행 결정의 누락 산출물 예외 근거 대상이다
 // (decider 2026-10-21 — 차단이 아니라 사람의 근거를 요구한다).
-import { TranslatorFn } from "../../i18n/config.ts";
+import { TranslatorFn, resolveLabels } from "../../i18n/config.ts";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { PageState, useToast } from "../ui.tsx";
@@ -25,14 +25,14 @@ interface View {
   gaps: string[];
 }
 
-const STATUS_META = (tr: TranslatorFn): Record<StepStatus, { label: string; cls: string }> => ({
+const STATUS_META = (tr: TranslatorFn): Record<StepStatus, { label: string; cls: string }> => resolveLabels(tr, {
   pending: { label: "stages.s11.stepsPanel.notRecorded", cls: "status-amber" },
   incomplete: { label: "stages.s11.stepsPanel.hasUnjudgedItems", cls: "status-amber" },
   pass: { label: "stages.s11.stepsPanel.met", cls: "status-green" },
   fail: { label: "stages.s11.stepsPanel.notMet", cls: "status-red" },
   recorded: { label: "stages.s11.stepsPanel.recorded", cls: "status-green" },
 });
-const AUTO_LABEL = (tr: TranslatorFn): Record<string, { label: string; cls: string }> => ({
+const AUTO_LABEL = (tr: TranslatorFn): Record<string, { label: string; cls: string }> => resolveLabels(tr, {
   triggered: { label: "stages.s11.stepsPanel.engineTriggered", cls: "status-red" },
   false: { label: "stages.s11.stepsPanel.engineNotTriggered", cls: "status-green" },
   unassessed: { label: "stages.s11.stepsPanel.engineNotEvaluated", cls: "status-gray" },

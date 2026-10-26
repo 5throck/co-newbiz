@@ -7,6 +7,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { authenticate, requireBusinessActor } from "../../../../lib/auth.ts";
 import { badRequest, ok } from "../../../../lib/envelope.ts";
+import { getDb } from "../../../../../../db/client.ts";
+import { appendAudit } from "../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../db/lib/ulid.ts";
 
 const UPLOAD_DIR = join(process.cwd(), "..", "workspace", "uploads");
@@ -49,6 +51,7 @@ export async function POST(request: Request) {
     extractError = `텍스트 추출 실패: ${err instanceof Error ? err.message : String(err)}`;
   }
 
+  appendAudit(getDb(), { actor: auth.auth.userId, action: "synergy_upload.create", target: stored, now: new Date().toISOString() });
   return ok(
     { stored_as: stored, original_name: file.name, size: file.size, extracted, extract_error: extractError },
     201,

@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { startApp, type TestApp } from "./_support/harness.ts";
 import { launchBrowser, loginThroughUi, visit, axeScan, formatAxe, type AxeResult, type Session } from "./_support/browser.ts";
 import { BROWNFIELD, seedBrownfieldDeal, seedRunningPipeline } from "./_support/deals.ts";
-import { recordGate, closeProjectViaModal, see } from "./_support/ui.ts";
+import { recordGate, closeProjectViaModal, see, openGatePanels } from "./_support/ui.ts";
 import type { Browser } from "./_support/playwright.ts";
 
 let app: TestApp;
@@ -27,6 +27,7 @@ afterAll(async () => { await browser?.close(); await app?.stop(); });
 describe("KILL at a gate with learning capture", () => {
   test("a KILL cannot be recorded without learning capture; the panel keeps submit disabled and says why", async () => {
     await visit(s.page, app, `/projects/${P}/dd`);
+    await openGatePanels(s.page);
     const form = s.page.locator('section[aria-label="의사결정"] form[aria-label="의사결정 기록"]');
     await form.waitFor({ state: "visible", timeout: 30_000 });
     await form.locator("select").last().selectOption("kill");

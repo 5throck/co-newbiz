@@ -100,7 +100,7 @@ export function ProjectsView() {
               <tr>
                 <th className="text-left">{t("thNo")}</th>
                 <th className="text-left">{t("thName")}</th>
-                <th className="text-left">{tc("track")}</th>
+                <th className="text-left">{t("thTrack")}</th>
                 <th className="text-left">{t("thDataStatus")}</th>
                 <th className="col-num">{t("thCreated")}</th>
                 <th className="text-left">{t("thLinks")}</th>

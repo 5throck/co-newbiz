@@ -7,7 +7,7 @@
 // the snapshot section renders the persisted job-spec of the latest
 // generated model — the execution contract the results came from.
 
-import { TranslatorFn } from "../../i18n/config.ts";
+import { TranslatorFn, resolveLabels } from "../../i18n/config.ts";
 import { useCallback, useEffect, useState } from "react";
 import { KO_DATA } from "../../lib/ko-data-values.ts";
 import { api } from "../../lib/api.ts";
@@ -49,7 +49,7 @@ function validateBand(minRaw: string, maxRaw: string, defaultRaw: string, ration
 
 /** user > derived > default made visible: three distinct chip tones, the raw source string stays as tooltip. */
 type SourceKind = "user" | "derived" | "default";
-const SOURCE_CHIP = (tr: TranslatorFn): Record<SourceKind, { label: string; cls: string }> => ({
+const SOURCE_CHIP = (tr: TranslatorFn): Record<SourceKind, { label: string; cls: string }> => resolveLabels(tr, {
   user: { label: "stages.s8.paramsPanel.userConfirmed", cls: "status-green" },
   derived: { label: "stages.s8.paramsPanel.derivedValue", cls: "status-amber" },
   default: { label: "common.defaultValue", cls: "status-not-started" },
@@ -134,14 +134,14 @@ interface S5PinStatusView {
   caseGeneratedOnPin: string | null;
 }
 
-const INVESTMENT_BASIS_LABELS = (tr: TranslatorFn): Record<string, string> => ({
+const INVESTMENT_BASIS_LABELS = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, {
   ratio: "stages.s8.paramsPanel.ratioEstimate",
   s5_plan: "stages.s8.paramsPanel.s5InvestmentPlanFormerlyCapex",
   s5_plan_full: "stages.s8.paramsPanel.s5InvestmentPlan",
   s5_pnl: "stages.s8.paramsPanel.s5PlannedPL",
 });
 
-const DRIVER_LABELS = (tr: TranslatorFn): Record<string, string> => ({
+const DRIVER_LABELS = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, {
   revenue_y1: "stages.s8.paramsPanel.revenue",
   ramp_up: "stages.s8.paramsPanel.utilization",
   revenue_growth: "stages.s8.paramsPanel.revenueGrowthRate",

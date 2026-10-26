@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { startApp, type TestApp } from "./_support/harness.ts";
 import { launchBrowser, loginThroughUi, visit, axeScan, formatAxe, type AxeResult, type Session } from "./_support/browser.ts";
 import { GREENFIELD, seedGreenfieldDeal } from "./_support/deals.ts";
-import { see, recordGate, recordTransition, closeProjectViaModal } from "./_support/ui.ts";
+import { see, revealTab, recordGate, recordTransition, closeProjectViaModal } from "./_support/ui.ts";
 import type { Browser } from "./_support/playwright.ts";
 
 let app: TestApp;
@@ -22,7 +22,7 @@ afterAll(async () => { await browser?.close(); await app?.stop(); });
 describe("greenfield S1 to S12", () => {
   test("S1-S5 and S8-S10 evidence is complete; S6/S7 do not apply to greenfield; S11 is current", async () => {
     await visit(s.page, app, `/projects/${P}/process`);
-    await see(s.page, "트랙: 그린필드(신규 설립)");
+    await see(s.page, "트랙: 그린필드");
     await see(s.page, /현재 S11/);
     // The not-applicable marker exists twice: in the collapsed compact list (hidden) and in the visible stage rail
     // (PR #533 TrackGate). Target the visible rail marker instead of the first text match.
@@ -32,6 +32,7 @@ describe("greenfield S1 to S12", () => {
 
   test("S5 Pre-FS gate GO", async () => {
     await visit(s.page, app, `/deals/${O}/s5`);
+    await revealTab(s.page, s.page.locator('section[aria-label="의사결정"]'));
     await s.page.locator('section[aria-label="의사결정"]').first().waitFor({ state: "visible" });
     axe.push(await axeScan(s.page, "gate panel: S5 Pre-FS"));
     await recordGate(s.page, app, `/deals/${O}/s5`, null, "go", "자체 진출전략과 역량 격차 해소안이 타당함");
@@ -82,6 +83,7 @@ describe("greenfield S1 to S12", () => {
     const postBaseline = () => s.page.waitForResponse((r) => /execution-baseline$/.test(new URL(r.url()).pathname) && r.request().method() === "POST");
     const addEntry = async (formLabel: string, fields: Array<[string, string]>) => {
       const f = s.page.locator(`form[aria-label="${formLabel}"]`);
+      await revealTab(s.page, f);
       for (const [name, value] of fields) await f.getByLabel(name, { exact: true }).fill(value);
       const save = postBaseline();
       await f.locator('button[type="submit"]').click();
@@ -91,6 +93,7 @@ describe("greenfield S1 to S12", () => {
     await addEntry("KPI 목표 추가", [["지표 키 (필수)", "utilisation_pct"], ["목표값 (필수)", "70"], ["기한 (YYYY-Qn 또는 YYYY-MM-DD) (필수)", "2027-Q2"]]);
     await addEntry("채용 계획 추가", [["직군 (필수)", "생산"], ["분기 (YYYY-Qn) (필수)", "2027-Q1"], ["인원 (명) (필수)", "12"]]);
     await addEntry("인허가 마일스톤 추가", [["인허가 이름 (필수)", "사업장 인허가"], ["발급 기관 (필수)", "지방자치단체"], ["목표일 (필수)", "2027-06-30"]]);
+    await revealTab(s.page, s.page.locator('form[aria-label="실행 기준선 확인"]'));
     await s.page.locator('form[aria-label="실행 기준선 확인"] textarea').fill("실행 기준선: 트랜치와 케이스 차이를 검토했고 사람이 확인함");
     await s.page.locator('form[aria-label="실행 기준선 확인"] button[type="submit"]').click();
     // Review fix: the confirm dialog now carries a REQUIRED per-finding acknowledgement

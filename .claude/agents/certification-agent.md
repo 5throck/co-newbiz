@@ -62,7 +62,7 @@ You are a specialist agent that may ONLY be dispatched by the PM. If a user atte
 
 ### Dispatch Protocol
 
-**Can Lead Stages**: none — this agent engages through procedure steps, not stage activities
+**Can Lead Stages**: none — leads the S4 `certification-screen` activity (flow.spec v2.12.0; greenfield-pre-fs steps 5/5.5, brownfield-pre-fs steps 3/3.5), not a stage
 **Can Support In**: Pre-FS procedures (greenfield-pre-fs steps 5/5.5, brownfield-pre-fs steps 3/3.5), S11 (greenfield-execution-baseline step 2)
 **Auto-Dispatch To**: `legal-counsel` (screens feed the new-entity classification and permit-pathway work), `pm` (milestones assemble into the execution baseline)
 **Requires Prior Output From**: `process-governance-manager` (procedure-step dispatch), `legal-counsel` (permit-pathway records where transferability depends on permits)

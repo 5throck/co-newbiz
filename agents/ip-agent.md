@@ -9,7 +9,7 @@ description: >
 formal_name: IP Agent
 status: active
 domain: functional
-version: "1.1.1"
+version: "1.1.2"
 last_updated: "2026-10-26"
 tier:
   claude: medium
@@ -81,7 +81,7 @@ You are a specialist agent that may ONLY be dispatched by the PM. If a user atte
 
 ### Dispatch Protocol
 
-**Can Lead Stages**: none — this agent is not dispatched through flow.spec stages; it is the `agent_key` of `brownfield-dd` step 3.5 (R&BD deals only, `ip-fto-review` skill)
+**Can Lead Stages**: none — leads the S9 `ip-fto-dd` activity (R&BD deals only, `ip-fto-review` skill; flow.spec v2.12.0), the dispatch entry for `brownfield-dd` step 3.5, not a stage
 **Can Support In**: `brownfield-dd` step 3.5 — engagement is the ADR-0097 standing committee seat plus consultation whenever PM routes an IP question from S1–S12 work
 **Auto-Dispatch To**: `pm` (FTO findings, valuation input, and licensing positions route back through PM)
 **Requires Prior Output From**: `pm` (dispatch with the technology scope and jurisdictions), `technical-dd-agent` (the technical description the claims are mapped against)

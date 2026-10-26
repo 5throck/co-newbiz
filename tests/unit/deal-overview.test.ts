@@ -20,6 +20,19 @@ describe("displayOrNotRecorded / localizeRequirement", () => {
 });
 
 describe("buildDealOverview", () => {
+  test("H3: all stages complete -> last stage, not the status-convention fallback; no next action", () => {
+    const stages = ["S1","S2","S3","S4","S5","S8","S9","S10","S11","S12"].map((id) => ({ id, status: id === "S5" ? "skipped" : "complete" }));
+    const o = buildDealOverview("D1", { status: "selected", attractiveness_score: 1, synergy_score: 1 }, proc({ track: "brownfield", stages }));
+    expect(o.currentStage?.id).toBe("S12");
+    expect(o.nextAction).toBeNull();
+    expect(o.statusText).toBe("pages.dealOverview.journeyFinished");
+  });
+  test("H3: a project-evaluated promoted deal builds gate links on the project carrier", () => {
+    const o = buildDealOverview("OPP1", { status: "selected", attractiveness_score: 1, synergy_score: 1 },
+      proc({ currentStage: "S8", track: "greenfield", requiredArtifacts: [], blockers: [], gateStatus: {}, carrier: { type: "project", id: "PRJ1" } }));
+    expect(o.currentStage?.id).toBe("S8");
+    expect(o.nextAction?.href).toContain("PRJ1");
+  });
   test.each([["identified", "S2"], ["assessed", "S3"], ["selected", "S4"]])("status %s -> %s", (status, stage) => {
     const o = buildDealOverview("D1", { status, attractiveness_score: null, synergy_score: null }, proc({ requiredArtifacts: ["X"], blockers: ["X"] }));
     expect(o.currentStage?.id).toBe(stage);

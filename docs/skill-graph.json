@@ -973,8 +973,8 @@
       "name": "certification-agent",
       "scope": "root",
       "capability": "certification-agent",
-      "content_hash": "c2e58239c723e747",
-      "version": "1.1.0",
+      "content_hash": "fbeb182ca473d762",
+      "version": "1.1.1",
       "mirrors": [
         "agents/certification-agent.md"
       ]
@@ -999,8 +999,8 @@
       "name": "compliance-officer",
       "scope": "root",
       "capability": "compliance-officer",
-      "content_hash": "acd1f5f8484d7807",
-      "version": "1.1.1",
+      "content_hash": "b0bf56c9f3e7e823",
+      "version": "1.1.2",
       "mirrors": [
         "agents/compliance-officer.md"
       ]
@@ -1220,8 +1220,8 @@
       "name": "ip-agent",
       "scope": "root",
       "capability": "ip-agent",
-      "content_hash": "9c03555d16338d93",
-      "version": "1.1.1",
+      "content_hash": "52c2a679d2894a68",
+      "version": "1.1.2",
       "mirrors": [
         "agents/ip-agent.md"
       ]
@@ -1324,8 +1324,8 @@
       "name": "process-governance-manager",
       "scope": "root",
       "capability": "process-governance-manager",
-      "content_hash": "319ce54cc92f7365",
-      "version": "1.1.2",
+      "content_hash": "b22dc10189e9a8b1",
+      "version": "1.1.3",
       "mirrors": [
         "agents/process-governance-manager.md"
       ]
@@ -1350,8 +1350,8 @@
       "name": "region-lead",
       "scope": "root",
       "capability": "region-lead",
-      "content_hash": "a24d83f12b0241fb",
-      "version": "1.1.1",
+      "content_hash": "8cdfb540a732263d",
+      "version": "1.1.2",
       "mirrors": [
         "agents/region-lead.md"
       ]
@@ -1402,8 +1402,8 @@
       "name": "site-facility-agent",
       "scope": "root",
       "capability": "site-facility-agent",
-      "content_hash": "e16752eccedcf254",
-      "version": "1.1.2",
+      "content_hash": "b244d513d7134e17",
+      "version": "1.1.3",
       "mirrors": [
         "agents/site-facility-agent.md"
       ]
@@ -1454,8 +1454,8 @@
       "name": "valuation-agent",
       "scope": "root",
       "capability": "valuation-agent",
-      "content_hash": "c2212e1dfb4145f4",
-      "version": "1.1.1",
+      "content_hash": "00aa2a9c14af370a",
+      "version": "1.1.2",
       "mirrors": [
         "agents/valuation-agent.md"
       ]

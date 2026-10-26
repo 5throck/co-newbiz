@@ -6,7 +6,7 @@
 // 탭 상태는 독립 페이지에서 URL ?tab= 동기, embedded(deals 탭) 모드에서는 내부 상태로
 // 유지한다 — router로 프로젝트 페이지를 건드리지 않는다.
 
-import { TranslatorFn } from "../../i18n/config.ts";
+import { TranslatorFn, resolveLabels } from "../../i18n/config.ts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { KO_DATA } from "../../lib/ko-data-values.ts";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -66,14 +66,14 @@ interface FinancingEntry {
   created_by: string;
 }
 interface FinancingCertainty { source_lines: number; evidenced_lines: number; unevidenced_lines: number; evidenced_amount_krw_m: number; unevidenced_amount_krw_m: number; all_sources_evidenced: boolean }
-const EVIDENCE_KIND_LABEL = (tr: TranslatorFn): Record<string, string> => ({ commitment_letter: "stages.s10.stage.commitmentLetter", internal_approval: "stages.s10.stage.internalFundingApproval", term_sheet: "stages.s10.stage.termSheet", subsidy_grant: "stages.s10.stage.subsidyGrant", other: "stages.s10.stage.other" });
+const EVIDENCE_KIND_LABEL = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, { commitment_letter: "stages.s10.stage.commitmentLetter", internal_approval: "stages.s10.stage.internalFundingApproval", term_sheet: "stages.s10.stage.termSheet", subsidy_grant: "stages.s10.stage.subsidyGrant", other: "stages.s10.stage.other" });
 const AXIS_FIELDS = ["tax_structure_note", "liability_isolation_note", "financing_leverage_note", "exit_structure_note"] as const;
 interface View {
   hypotheses: HypothesisRow[];
   financing: { entries: FinancingEntry[]; totals: { sources: number; uses: number; balanced: boolean }; certainty?: FinancingCertainty };
 }
 
-const VEHICLE_LABEL = (tr: TranslatorFn): Record<string, string> => ({
+const VEHICLE_LABEL = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, {
   direct: "stages.s10.stage.directInvestment",
   spc: "stages.s10.stage.spcSpvSpecialPurposeEntity",
   holdco: "stages.s10.stage.viaHoldingCompanyHoldco",
@@ -81,9 +81,9 @@ const VEHICLE_LABEL = (tr: TranslatorFn): Record<string, string> => ({
   jv: "stages.s10.stage.jointVentureJv",
 });
 // Korean labels for the stored enum values (display only; the stored values are unchanged).
-const STAKE_LABEL = (tr: TranslatorFn): Record<string, string> => ({ full: "stages.s10.stage.fullAcquisition", majority: "stages.s10.stage.majorityStake", minority: "stages.s10.stage.minorityStake", joint_control: "stages.s10.stage.jointControl" });
-const INSTRUMENT_LABEL = (tr: TranslatorFn): Record<string, string> => ({ primary: "stages.s10.stage.newShareSubscription", secondary: "stages.s10.stage.sharePurchase", mixed: "stages.s10.stage.mixOfNewAndExisting" });
-const AXIS_LABEL = (tr: TranslatorFn): Record<string, string> => ({
+const STAKE_LABEL = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, { full: "stages.s10.stage.fullAcquisition", majority: "stages.s10.stage.majorityStake", minority: "stages.s10.stage.minorityStake", joint_control: "stages.s10.stage.jointControl" });
+const INSTRUMENT_LABEL = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, { primary: "stages.s10.stage.newShareSubscription", secondary: "stages.s10.stage.sharePurchase", mixed: "stages.s10.stage.mixOfNewAndExisting" });
+const AXIS_LABEL = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, {
   tax_structure_note: "stages.s10.stage.structure",
   liability_isolation_note: "stages.s10.stage.responsibilitySeparation",
   financing_leverage_note: "stages.s10.stage.financialLeverage",
@@ -242,7 +242,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
   }
 
   // i18n (T3-6): GF vehicles resolve common.gfVehicle.* through the ROOT translator; non-GF keys resolve through the catalog too.
-  const vehicleLabel = (v: string) => tr(isGf ? (GF_VEHICLE_KEY[v] ?? v) : (VEHICLE_LABEL(tr)[v] ?? v));
+  const vehicleLabel = (v: string) => isGf ? tr(GF_VEHICLE_KEY[v] ?? v) : (VEHICLE_LABEL(tr)[v] ?? v);
   const vis = hypothesisFieldVisibility(isGf, newHyp.vehicle);
   const axisLabel = (k: string) => (isGf && k === "tax_structure_note" ? t("taxAndRegionalIncentivesIncluding") : AXIS_LABEL(tr)[k]);
   const totals = data?.financing.totals;
@@ -429,7 +429,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                 <label>{isGf ? tc("establishedEntityForm") : t("investingEntity2")}
                   <select className="sizing-new-input ml-1" value={newHyp.vehicle} onChange={(e) => setNewHyp({ ...newHyp, vehicle: e.target.value })}>
                     <option value="">—</option>
-                    {Object.entries(isGf ? GF_VEHICLE_KEY : VEHICLE_LABEL(tr)).map(([k, v]) => <option key={k} value={k}>{tr(v)}</option>)}
+                    {Object.entries(isGf ? GF_VEHICLE_KEY : VEHICLE_LABEL(tr)).map(([k, v]) => <option key={k} value={k}>{isGf ? tr(v) : v}</option>)}
                   </select>
                 </label>
                 )}
@@ -447,7 +447,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
                 <label>{isGf ? t("jvStakeOurShare") : t("stake3")}
                   <select className="sizing-new-input ml-1" value={newHyp.stake_type} onChange={(e) => setNewHyp({ ...newHyp, stake_type: e.target.value })}>
                     <option value="">—</option>
-                    {Object.entries(isGf ? GF_JV_STAKE_KEY : STAKE_LABEL(tr)).map(([k, v]) => <option key={k} value={k}>{tr(v)}</option>)}
+                    {Object.entries(isGf ? GF_JV_STAKE_KEY : STAKE_LABEL(tr)).map(([k, v]) => <option key={k} value={k}>{isGf ? tr(v) : v}</option>)}
                   </select>
                 </label>
                 )}

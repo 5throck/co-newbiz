@@ -6,7 +6,7 @@
 // 탭 상태는 독립 페이지에서 URL ?tab= 동기, embedded(deals 탭) 모드에서는 내부 상태로
 // 유지한다 — router로 프로젝트 페이지를 건드리지 않는다.
 
-import { TranslatorFn } from "../../i18n/config.ts";
+import { TranslatorFn, resolveLabels } from "../../i18n/config.ts";
 import { fmtNpvKrwM } from "@/lib/npv-format";
 import Link from "next/link";
 import { ColGroup, DevRef } from "../ui.tsx";
@@ -177,11 +177,11 @@ interface ActivityRow {
 }
 
 const SCENARIOS = ["base", "upside", "downside"] as const;
-const SCEN_LABEL = (tr: TranslatorFn): Record<string, string> => ({ base: "stages.s8.stage.base", upside: "stages.s8.stage.upside", downside: "stages.s8.stage.downside" });
-const ENGINE_LABEL = (tr: TranslatorFn): Record<string, string> => ({ "python-sim-engine": "stages.s8.stage.pythonEngine", "ts-fallback": "stages.s8.stage.tsFallbackEngine", mixed: "stages.s8.stage.mixed" });
-const VARIANT_LABEL = (tr: TranslatorFn): Record<string, string> => ({ market_forward: "common.marketBasis", historical: "stages.s8.stage.item" });
+const SCEN_LABEL = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, { base: "stages.s8.stage.base", upside: "stages.s8.stage.upside", downside: "stages.s8.stage.downside" });
+const ENGINE_LABEL = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, { "python-sim-engine": "stages.s8.stage.pythonEngine", "ts-fallback": "stages.s8.stage.tsFallbackEngine", mixed: "stages.s8.stage.mixed" });
+const VARIANT_LABEL = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, { market_forward: "common.marketBasis", historical: "stages.s8.stage.item" });
 // 라인 읽기 전용 표의 분류 표기 (라인 category는 5종 — labor/opex/capex/revenue/gov_rnd).
-const LINE_CATEGORY_LABEL = (tr: TranslatorFn): Record<string, string> => ({ labor: "common.laborCost", opex: "common.opex", capex: "common.capex", revenue: "common.revenue", gov_rnd: "stages.s8.stage.governmentRD" });
+const LINE_CATEGORY_LABEL = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, { labor: "common.laborCost", opex: "common.opex", capex: "common.capex", revenue: "common.revenue", gov_rnd: "stages.s8.stage.governmentRD" });
 
 const fmt = formatKrwMillionsPlain;
 const UnitNote = () => <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">({KRW_MILLIONS_UNIT})</span>;
@@ -521,7 +521,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         railSlot={<StageTabs projectId={projectId} />}
       >
         {/* The jump chip is the 결정 tab's shortcut — hidden when already there (IA cleanup 2026-10-14). */}
-        {tab !== "decision" && <GateDecisionJump gate="fs" beforeJump={() => setTab("decision")} />}
+        {tab !== "decision" && <GateDecisionJump inline gate="fs" beforeJump={() => setTab("decision")} />}
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
         {greenfield ? (
           <>{t("perScenario")} <b>{t("marketBasisJudgement")}</b> {t("perspectiveGrowthComesFromMarket")}</>

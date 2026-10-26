@@ -5,7 +5,7 @@
 // '참고 증적'으로, 외부 brownfield의 통합·전략 제휴 모니터링 읽기 보기를 보여 준다. 판정은 사람의 몫이며
 // 이 패널은 어떤 값도 기록하지 않는다 (전환 결정 기록은 PortfolioStage 의 기존 폼).
 
-import { TranslatorFn } from "../../i18n/config.ts";
+import { TranslatorFn, resolveLabels } from "../../i18n/config.ts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
@@ -50,14 +50,14 @@ const PARTNER_MEASURE_COL_PCT = [24, 46, 30] as const;
 /** Column shares (%): item, baseline, actual, variance, state. */
 const VARIANCE_COL_PCT = [40, 14, 14, 14, 18] as const;
 
-const MEASURE_STATUS = (tr: TranslatorFn): Record<string, { icon: string; label: string; cls: string }> => ({
+const MEASURE_STATUS = (tr: TranslatorFn): Record<string, { icon: string; label: string; cls: string }> => resolveLabels(tr, {
   on_target: { icon: "●", label: "common.goalAttainment", cls: "status-green" },
   deviation: { icon: "◐", label: "common.churn", cls: "status-amber" },
   insufficient_evidence: { icon: "○", label: "common.insufficientEvidence", cls: "status-not-started" },
 });
 const measureStatus = (s: string, tr: TranslatorFn) => {
   const m = MEASURE_STATUS(tr)[s];
-  return m ? { ...m, label: tr(m.label) } : { icon: "?", label: s, cls: "status-not-started" };
+  return m ? { ...m, label: m.label } : { icon: "?", label: s, cls: "status-not-started" };
 };
 
 export function PostManagementPanel({ projectId }: { projectId: string }) {const tr = useTranslations(); const t = useTranslations("stages.s12.postManagement"); const tc = useTranslations("common");
@@ -286,7 +286,7 @@ export function PostManagementPanel({ projectId }: { projectId: string }) {const
 
 /** Column shares (%): key, actual, target, status, evidence, observed, remove. */
 const FORM_COL_PCT = [22, 10, 10, 16, 22, 12, 8] as const;
-const STATUS_OPTION_LABEL = (tr: TranslatorFn): Record<string, string> => ({ on_target: "common.goalAttainment", deviation: "common.churn", insufficient_evidence: "common.insufficientEvidence" });
+const STATUS_OPTION_LABEL = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, { on_target: "common.goalAttainment", deviation: "common.churn", insufficient_evidence: "common.insufficientEvidence" });
 
 /** S12 안착 지표 기록 — human-only greenfield scorecard cycle. A collapsed disclosure; the server stays the authority. */
 function ScorecardForm({ projectId, ramp, onRecorded }: { projectId: string; ramp: GreenfieldRampUp; onRecorded: () => Promise<void> }) {const tr = useTranslations(); const t = useTranslations("stages.s12.postManagement"); const tc = useTranslations("common");

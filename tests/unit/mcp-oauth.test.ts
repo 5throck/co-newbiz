@@ -399,7 +399,8 @@ describe("Streamable HTTP /api/mcp", () => {
     const { REGISTRY } = await import("../../mcp/co-newbiz/registry.ts");
     expect(names).toHaveLength(REGISTRY.length);
     expect(names).toContain("propose_gate_decision");
-    expect(names).toContain("record_gate_decision"); // deprecated alias, now proposal-only on BOTH transports
+    expect(names).not.toContain("record_gate_decision"); // removed alias (review L2)
+    expect(names).not.toContain("create_route_decision");
     expect(names.filter((n) => /close|kickoff/.test(n))).toEqual([]);
     const term = toolText(await rpc(access, sid, "tools/call", { name: "lookup_term", arguments: { term: "WACC" } }));
     expect(term.isError).toBe(false);

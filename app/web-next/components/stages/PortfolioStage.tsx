@@ -4,7 +4,7 @@
 // /deals/[id]/s12 탭이 동일 컴포넌트를 소비한다). StageTabs·StageFrame이
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 
-import { TranslatorFn } from "../../i18n/config.ts";
+import { TranslatorFn, resolveLabels } from "../../i18n/config.ts";
 import { useCallback, useEffect, useState } from "react";
 import { StageTabs } from "../StageTabs.tsx";
 import { api } from "../../lib/api.ts";
@@ -64,7 +64,7 @@ interface ScorecardView {
 // 통합 (design 2026-10-11-ui-label-and-mobile-table-sweep §1.2). 서버가 재검증한다.
 
 // P5: 상태는 색+아이콘+텍스트의 조합 — 색 단독으로 상태를 전달하지 않는다.
-const STATUS_META = (tr: TranslatorFn): Record<string, { icon: string; label: string; cls: string }> => ({
+const STATUS_META = (tr: TranslatorFn): Record<string, { icon: string; label: string; cls: string }> => resolveLabels(tr, {
   on_target: { icon: "●", label: "common.goalAttainment", cls: "status-green" },
   deviation: { icon: "◐", label: "common.churn", cls: "status-amber" },
   insufficient_evidence: { icon: "○", label: "common.insufficientEvidence", cls: "status-not-started" },
@@ -72,7 +72,7 @@ const STATUS_META = (tr: TranslatorFn): Record<string, { icon: string; label: st
 
 function statusMeta(status: string | undefined, tr: TranslatorFn) {
   const m = STATUS_META(tr)[status ?? ""];
-  return m ? { ...m, label: tr(m.label) } : { icon: "?", label: status ?? "unknown", cls: "status-not-started" };
+  return m ? { ...m, label: m.label } : { icon: "?", label: status ?? "unknown", cls: "status-not-started" };
 }
 
 const EMPTY_FORM = { decision: "next_tranche_released", rationale: "", learning_capture: "", review_cycle: "", record: "" };
@@ -180,6 +180,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {const tr =
         {/* Wave U-1 (design §3.5): home of the closure flow — preconditions are
             shown inside ClosureModal; the decision itself stays human-only. */}
         <PrimaryAction
+          inline
           label={t("closingThe")}
           onClick={() => setClosing(true)}
           disabled={!canWriteProject(me?.role)}

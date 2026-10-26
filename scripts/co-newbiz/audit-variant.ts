@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.2.0
+// @version 1.3.0
 /**
  * co-newbiz variant audit hook — executed by scripts/audit.ts §27 (the
  * pluggable variant-specific audit checks; declared in variant.json
@@ -17,6 +17,10 @@
  *     directories (both directions reported), and no "Retired / Tracked
  *     Elsewhere" row has a directory (repaired skills must graduate back into
  *     the Workspace Skills table).
+ *   - Route audit scan (review W1 M11, FR-SEC-07): every state-changing
+ *     (POST/PUT/PATCH/DELETE) Route Handler reaches an appendAudit write, or is
+ *     listed with a reason in scripts/co-newbiz/route-audit-allowlist.json
+ *     (scripts/co-newbiz/route-audit-scan.ts).
  *   - Runtime agent-registry drift gate (ADR-0183 D3, design
  *     2026-09-15-runtime-pm-agent-orchestration §6.4): v1.2.0 moved this gate
  *     here from a direct scripts/audit.ts wiring — audit.ts is a core script
@@ -34,6 +38,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runCoverage } from "./mcp-coverage.ts";
+import { scanRouteAudit } from "./route-audit-scan.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -202,6 +207,16 @@ function runDriftGate(label: string, generator: string, staleTarget: string): vo
   } else {
     console.log(`  ✓ ${label} drift gate: runtime projection matches its SSOTs`);
   }
+}
+
+const routeAudit = scanRouteAudit();
+if (routeAudit.unaudited.length === 0 && routeAudit.allowlistErrors.length === 0) {
+  console.log(`  ✓ Route audit scan: ${routeAudit.writeRoutes} state-changing routes reach an audit write (or carry a reasoned exemption)`);
+} else {
+  failed = true;
+  console.error(`  ✗ Route audit scan failed (${routeAudit.unaudited.length + routeAudit.allowlistErrors.length}):`);
+  for (const u of routeAudit.unaudited) console.error(`      - ${u}: state-changing handler with no audit write (appendAudit) — add one or a reasoned entry in scripts/co-newbiz/route-audit-allowlist.json`);
+  for (const e of routeAudit.allowlistErrors) console.error(`      - ${e}`);
 }
 
 runDriftGate(

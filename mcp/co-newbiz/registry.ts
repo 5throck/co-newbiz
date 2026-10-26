@@ -11,8 +11,8 @@
  * Boundary #2 (ADR-0154 §5, M-2): no tool records a decision. Gate, route,
  * case-adoption, target-selection, transition and approval tools only create a
  * decision_proposal (tools/decision-tools.ts); a human confirms it on the web
- * confirm page. record_gate_decision / create_route_decision remain as
- * deprecated ALIASES that create proposals on both transports. Closure and PMI
+ * confirm page. The deprecated direct-record aliases were removed
+ * (review 2026-10-26 L2). Closure and PMI
  * kickoff have no tool at all (mcp-coverage.exclusions.yaml).
  */
 

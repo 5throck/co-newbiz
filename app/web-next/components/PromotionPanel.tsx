@@ -219,7 +219,7 @@ export function PromotionPanel({
   }
 
   return (
-    <section aria-label="프로젝트로 추진" className="market-section">
+    <section id="project-promotion" aria-label="프로젝트로 추진" className="market-section">
       <div className="section-toolbar">
         <span className="section-title">
           <h2>{heading ?? (handoff ? `${baseHeading} (${handoff})` : baseHeading)}</h2>

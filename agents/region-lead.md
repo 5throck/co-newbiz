@@ -11,7 +11,7 @@ description: >
 formal_name: Region Lead
 status: active
 domain: region
-version: "1.1.1"
+version: "1.1.2"
 last_updated: "2026-10-26"
 tier:
   claude: high
@@ -110,8 +110,7 @@ You are a specialist agent that may ONLY be dispatched by the PM. If a user atte
 
 ### Dispatch Protocol
 
-**Can Lead Stages**: none — with one registered exception of two steps: the EU brownfield-screening override
-step 2.5 (`procedures/regions/EU/brownfield-screening/schema.yaml`) and `brownfield-dd` step 6.5 (labor review), which this lead owns
+**Can Lead Stages**: none — with registered exceptions: the S9 `region-labor-review` activity (`brownfield-dd` step 6.5, flow.spec v2.12.0; legal interpretation stays with `legal-counsel`) and the EU brownfield-screening override step 2.5 (`procedures/regions/EU/brownfield-screening/schema.yaml`)
 **Can Support In**: the EU override step and `brownfield-dd` step 6.5; committee deliberations (S4, S6/S7 per `procedures/_committees.yaml`); profile consultation
 **Auto-Dispatch To**: `pm`; `greenfield-agent` when the need is incentive-sourcing execution,
 not context

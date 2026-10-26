@@ -4,7 +4,7 @@
 // /deals/[id]/s9 탭이 동일 컴포넌트를 소비한다). StageTabs·StageFrame이
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 
-import { TranslatorFn } from "../../i18n/config.ts";
+import { TranslatorFn, resolveLabels } from "../../i18n/config.ts";
 import {
   PLAN_READINESS_KEY, PLAN_STATUS_TEXT, codeMeta, countAnnouncement, countLocation, judgedLine, needsNaReason, notCountedNotice, planArtefactHref, planReadinessLabel,
   REPLACED_PENDING_NOTE, pointerText, replacementUndecided, s9Heading, splitItems, statusText, tabCounts, tabLabel, tabStepTags, validateNaReason, workspaceView, type GfScope, type WsItemScope,
@@ -142,7 +142,7 @@ interface WorkspaceView {
 }
 
 // P5: 상태는 색+아이콘+텍스트의 조합 — 색 단독으로 상태를 전달하지 않는다.
-const STATE_META = (tr: TranslatorFn): Record<string, { icon: string; label: string; cls: string }> => ({
+const STATE_META = (tr: TranslatorFn): Record<string, { icon: string; label: string; cls: string }> => resolveLabels(tr, {
   pending: { icon: "○", label: "stages.s9.stage.judgementPending", cls: "status-not-started" },
   pass: { icon: "✓", label: "stages.s9.stage.met", cls: "status-green" },
   fail: { icon: "✕", label: "stages.s9.stage.notMet", cls: "status-red" },
@@ -152,7 +152,7 @@ const STATE_META = (tr: TranslatorFn): Record<string, { icon: string; label: str
 
 function stateMeta(status: string | undefined, tr: TranslatorFn) {
   const m = STATE_META(tr)[status ?? "pending"];
-  return m ? { ...m, label: tr(m.label) } : { icon: "?", label: status ?? "unknown", cls: "status-not-started" };
+  return m ? { ...m, label: m.label } : { icon: "?", label: status ?? "unknown", cls: "status-not-started" };
 }
 
 export function DdStage({ projectId }: { projectId: string }) {const tr = useTranslations(); const t = useTranslations("stages.s9.stage"); const tc = useTranslations("common");
@@ -458,7 +458,7 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
         heading={resolveLabelTokens(s9Heading(data?.greenfield_scope), tr)}
         railSlot={<StageTabs projectId={projectId} />}
       >
-        <GateDecisionJump gate="dd" beforeJump={() => { if (data) setTab(decisionTabIdx); }} />
+        <GateDecisionJump inline gate="dd" beforeJump={() => { if (data) setTab(decisionTabIdx); }} />
         <ReviewBuckets entityType="project" entityId={projectId} gates={["dd"]} artifacts={stageArtifactTabs("S9")} />
         {data && (
           <div className="mb-3 flex flex-wrap items-center gap-2" data-testid="dd-subject-header">

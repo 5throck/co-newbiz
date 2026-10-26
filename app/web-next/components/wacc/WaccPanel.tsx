@@ -9,7 +9,7 @@
 // 않는다. 화면 구성은 승인된 목업
 // docs/designs/mockups/2026-09-10-wacc-capm-ui-mockup_ko.html 기준.
 
-import { TranslatorFn } from "../../i18n/config.ts";
+import { TranslatorFn, resolveLabels } from "../../i18n/config.ts";
 import { suggestionToInputValue } from "../../lib/wacc-suggestion-convert.ts";
 import { KO_DATA } from "../../lib/ko-data-values.ts";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -148,7 +148,7 @@ function StatCard({ k, children }: { k: string; children: React.ReactNode }) {
   );
 }
 
-const COMPONENT_LABELS = (tr: TranslatorFn): Record<string, string> => ({
+const COMPONENT_LABELS = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, {
   "wacc.risk_free": "stages.s8.wacc.waccPanel.rateRf",
   "wacc.erp": "stages.s8.wacc.waccPanel.equityRiskPremiumErp",
   "wacc.size_premium": "stages.s8.wacc.waccPanel.scalePremium",

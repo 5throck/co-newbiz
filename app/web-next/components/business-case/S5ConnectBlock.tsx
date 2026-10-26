@@ -9,7 +9,7 @@
 // here; existing cases are never recalculated - the block always says that `자동 생성` has to be
 // run again. Decision support only.
 
-import { TranslatorFn } from "../../i18n/config.ts";
+import { TranslatorFn, resolveLabels } from "../../i18n/config.ts";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { useConfirm } from "../crud.tsx";
@@ -52,19 +52,19 @@ interface ConnectPreview {
   will_set: { investment_basis: "s5_plan" | null; s5_source: 1 };
 }
 
-const PIN_STALE_REASON = (tr: TranslatorFn): Record<string, string> => ({
+const PIN_STALE_REASON = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, {
   source_changed: "stages.s8.s5ConnectBlock.theS5InvestmentPlanStaffing",
   newer_confirmed_run: "stages.s8.s5ConnectBlock.anS5InvestmentSimulationWas",
   pinned_run_superseded: "stages.s8.s5ConnectBlock.theFixedS5SimulationRun",
   case_on_older_pin: "stages.s8.s5ConnectBlock.theMostRecentCaseWas",
 });
-const SIM_STALE_REASON = (tr: TranslatorFn): Record<string, string> => ({
+const SIM_STALE_REASON = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, {
   run_confirmed_after_generation: "stages.s8.s5ConnectBlock.theS5InvestmentSimulationWas",
   run_changed: "stages.s8.s5ConnectBlock.theConfirmedS5SimulationRun",
   s5_lines_changed: "stages.s8.s5ConnectBlock.theS5InvestmentPlanOr",
   run_missing: "stages.s8.s5ConnectBlock.theConfirmedS5SimulationRun2",
 });
-const SKIP_REASON = (tr: TranslatorFn): Record<string, string> => ({
+const SKIP_REASON = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, {
   unit_unconfirmed: "stages.s8.s5ConnectBlock.unitUnconfirmed",
   currency_non_krw: "stages.s8.s5ConnectBlock.currency",
   invalid_line: "stages.s8.s5ConnectBlock.missingNameOrClassification",

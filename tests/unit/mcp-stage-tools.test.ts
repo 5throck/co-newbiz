@@ -112,16 +112,18 @@ describe("registry shape", () => {
     }
   });
 
-  test("all six decision kinds, the establishment-mode proposal plus the two deprecated aliases are propose tools that only POST /api/proposals", () => {
+  test("all six decision kinds plus the establishment-mode proposal are propose tools that only POST /api/proposals", () => {
     const propose = REGISTRY.filter((t) => t.kind === "propose").map((t) => t.name).sort();
     expect(propose).toEqual([
-      "create_route_decision", "propose_approval", "propose_case_adoption", "propose_establishment_mode", "propose_gate_decision",
-      "propose_route_decision", "propose_target_selection", "propose_transition_decision", "record_gate_decision",
+      "propose_approval", "propose_case_adoption", "propose_establishment_mode", "propose_gate_decision",
+      "propose_route_decision", "propose_target_selection", "propose_transition_decision",
     ]);
     for (const name of propose) {
       expect(REGISTRY.find((t) => t.name === name)?.routes).toEqual(["POST /api/proposals"]);
     }
-    expect(REGISTRY.filter((t) => t.deprecated).map((t) => t.name).sort()).toEqual(["create_route_decision", "record_gate_decision"]);
+    expect(REGISTRY.filter((t) => t.deprecated).map((t) => t.name)).toEqual([]);
+    expect(REGISTRY.map((t) => t.name)).not.toContain("record_gate_decision");
+    expect(REGISTRY.map((t) => t.name)).not.toContain("create_route_decision");
   });
 
   test("scope enforcement per tool: under-scoped calls are refused before any route runs", async () => {
@@ -193,10 +195,8 @@ describe("thin wrappers", () => {
     await callTool("stdio", { port }, "propose_gate_decision", { entityId: "o1", gate: "screening", decision: "go", rationale: "r" });
     await callTool("stdio", { port }, "propose_case_adoption", { projectId: "p1", model_id: "m1", rationale: "r" });
     await callTool("stdio", { port }, "propose_approval", { projectId: "p1", subject: "charter_baseline", rationale: "r" });
-    const aliased = (await callTool("stdio", { port }, "record_gate_decision", { opportunityId: "o1", gate: "screening", decision: "go", rationale: "r" })) as { deprecation: { replacement: string } };
-    expect(aliased.deprecation.replacement).toBe("propose_gate_decision");
     expect(calls.every((c) => c.method === "POST" && c.path === "/api/proposals")).toBe(true);
-    expect(calls.map((c) => (c.body as { kind: string }).kind)).toEqual(["gate_decision", "case_adoption", "approval", "gate_decision"]);
+    expect(calls.map((c) => (c.body as { kind: string }).kind)).toEqual(["gate_decision", "case_adoption", "approval"]);
   });
 });
 
