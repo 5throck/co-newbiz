@@ -1,8 +1,8 @@
 "use client";
 
 // AI 제안 패널 (화면 설계 2026-10-24 §7, J4 "개선 제안 수용/기각" — §6.7 제안 전용).
-// POST /api/flows/dry-run/suggest 의 응답을 제안 카드로 렌더한다. 모든 카드에
-// "제안 전용" amber 칩(/agents 표면과 동일 칩 — 경계 #2 일관성). "수용" affordance는
+// POST /api/flows/dry-run/suggest 의 응답을 제안 카드로 렌더한다. 제안 전용 경고는
+// 세션 화면의 단일 배너가 맡는다(2026-10-26 UX 개편 — 화면당 1회). "수용" affordance는
 // 이 세션의 오버라이드 편집기 폼 상태를 채우는 것만 수행한다(onApplyOverride /
 // onApplyAgent 콜백) — 저장소 파일 쓰기 경로는 이 컴포넌트에 존재하지 않는다(§12-4).
 // available:false(LLM 미구성·검증 실패)는 "제안 생성 불가" + 사유 — 가짜 제안 금지.
@@ -81,9 +81,6 @@ export function SuggestionPanel({
     <section aria-label={t("suggestionSection")} className="market-section">
       <SectionToolbar
         title={t("suggestionTitle")}
-        filters={
-          suggestion ? <span className="status-chip status-amber">{t("proposalOnlyMeta")}</span> : undefined
-        }
         actions={
           <>
             <label className="text-[length:var(--fs-caption)]">
@@ -122,7 +119,6 @@ export function SuggestionPanel({
           <div className="sizing-grade-card">
             <div className="flex flex-wrap items-center gap-1 mb-2">
               <span className="status-chip status-in-progress">{t(PROPOSAL_TYPE_KEY[suggestion.proposal.type])}</span>
-              <span className="status-chip status-amber">{t("proposalOnlyMeta")}</span>
             </div>
             <p className="mb-2 text-[length:var(--fs-body)]">{suggestion.proposal.rationale}</p>
 
@@ -184,9 +180,6 @@ export function SuggestionPanel({
                 {t("appliedStatus")}
               </p>
             )}
-            <p className="mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              {t("proposalOnlyNote")}
-            </p>
           </div>
         )
       )}

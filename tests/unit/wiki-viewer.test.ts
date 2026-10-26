@@ -176,3 +176,34 @@ describe("single tilde is not strikethrough (2026-10-23 defect fix)", () => {
     expect(html).not.toContain("<del>");
   });
 });
+
+describe("images render as figure + figcaption with a new-tab full-size link (2026-10-26 design §2)", () => {
+  test("a lone image paragraph becomes <figure class=doc-figure> with alt as figcaption", () => {
+    const html = renderWikiMarkdown("![로그인 화면](/api/wiki/images/login.png)");
+    expect(html).toContain('<figure class="doc-figure">');
+    expect(html).toContain('<figcaption>로그인 화면</figcaption>');
+    expect(html).toContain('href="/api/wiki/images/login.png" target="_blank" rel="noopener"');
+    expect(html).toContain('<img src="/api/wiki/images/login.png" alt="로그인 화면"');
+    expect(html).not.toContain("<p><figure");
+  });
+  test("link accessible name comes from the caller-supplied i18n label", () => {
+    const html = renderWikiMarkdown("![Login](/x.png)", { fullSizeLabel: (alt) => `Open full size: ${alt}` });
+    expect(html).toContain('aria-label="Open full size: Login"');
+  });
+  test("empty alt: no caption, alt=\"\" kept", () => {
+    const html = renderWikiMarkdown("![](/x.png)");
+    expect(html).not.toContain("<figcaption>");
+    expect(html).toContain('alt=""');
+    expect(html).toContain("<figure");
+  });
+  test("inline image inside a sentence keeps the paragraph (link-wrapped, no figure)", () => {
+    const html = renderWikiMarkdown("앞 ![아이콘](/i.png) 뒤");
+    expect(html).not.toContain("<figure");
+    expect(html).toContain("<p>앞 ");
+    expect(html).toContain('target="_blank"');
+  });
+  test("alt text is attribute-escaped", () => {
+    const html = renderWikiMarkdown('![a "b" <c>](/x.png)');
+    expect(html).toContain('alt="a &quot;b&quot; &lt;c&gt;"');
+  });
+});

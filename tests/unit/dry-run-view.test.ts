@@ -104,7 +104,8 @@ describe("dry-run-view-lib — 만료 칩(§13-3)과 비용 추정(§6.2)", () =
   });
   test("비용 확인 문구는 catalog 키로 방출되며 execute 응답 meta.note와 동일 문장을 유지한다(§6.2)", () => {
     expect(DRY_RUN_DISCLOSURE_KEY).toBe("pages.flows.dryRunSession.disclosure");
-    expect(koOf(DRY_RUN_DISCLOSURE_KEY)).toContain("is_dry_run");
+    // 2026-10-26 UX 개편 — 내부 플래그명(is_dry_run)은 보이는 문구에서 제거됐다.
+    expect(koOf(DRY_RUN_DISCLOSURE_KEY)).not.toContain("is_dry_run");
     expect(koOf(DRY_RUN_DISCLOSURE_KEY)).toContain("운영 대시보드 기본 집계에서 제외");
     // lib/dry-run.ts DRY_RUN_MAX_TOKENS 사본 드리프트 감지용 하한(§6.6 토큰 상한).
     expect(DRY_RUN_MAX_TOKENS_UI).toBe(1500);
@@ -174,9 +175,11 @@ describe("드라이런 화면 소스 — a11y·상호작용·경계 규약 (화�
 
   test("§6.1 — 오버라이드 편집기는 로스터 한정 select + SSOT 비반영 상시 문구를 가진다", () => {
     expect(sessionPage).toContain('t("reassignLabel")');
-    expect(koOf("pages.flows.dryRunSession.reassignLabel")).toContain("에이전트 재배정 (로스터 한정");
+    expect(koOf("pages.flows.dryRunSession.reassignLabel")).toContain("에이전트 재배정 (목록에 있는");
     expect(koOf("pages.flows.dryRunSession.unchanged")).toBe("(미변경)");
-    expect(koOf("pages.flows.dryRunSession.boundaryNote")).toContain("SSOT(prompts.json·flow.spec.yaml)에는 반영되지 않");
+    // 제안 전용 경고는 화면당 단일 배너(2026-10-26 UX 개편 §4) — 내부 경로명 없이 한 문장.
+    expect(koOf("pages.flows.dryRunSession.proposalOnlyBanner")).toContain("제안 전용");
+    expect(sessionPage).toContain('t("proposalOnlyBanner")');
     expect(sessionPage).toContain("base_system");
   });
 
@@ -202,20 +205,17 @@ describe("드라이런 화면 소스 — a11y·상호작용·경계 규약 (화�
     expect(sessionPage).toContain("a.download");
     expect(sessionPage).toContain('t("exportCta")');
     expect(koOf("pages.flows.dryRunSession.exportCta")).toBe("제안 패키지 내보내기");
-    expect(koOf("pages.flows.dryRunSession.exportNote")).toContain("저장소 PR");
   });
 
-  test("§7 — 제안 패널은 제안 전용 칩·수용=오버라이드만·생성 불가 사유를 가진다(경계 #2)", () => {
-    expect(suggestionPanel).toContain('t("proposalOnlyMeta")}</span>');
-    expect(koOf("pages.flows.dryRunSession.proposalOnlyMeta")).toBe("제안 전용");
+  test("§7 — 제안 패널은 수용=오버라이드만·생성 불가 사유를 가진다(경고는 세션 화면 단일 배너로 일원화)", () => {
+    expect(suggestionPanel).not.toContain("proposalOnlyMeta");
+    expect(suggestionPanel).not.toContain("proposalOnlyNote");
     expect(suggestionPanel).toContain('t("suggestUnavailableChip")');
     expect(koOf("pages.flows.dryRunSession.suggestUnavailableChip")).toBe("제안 생성 불가");
     expect(suggestionPanel).toContain('t("acceptOverrideCta")');
     expect(koOf("pages.flows.dryRunSession.acceptOverrideCta")).toContain("오버라이드에 적용");
     expect(suggestionPanel).toContain('t("reassignCta")');
     expect(koOf("pages.flows.dryRunSession.reassignCta")).toBe("이 에이전트로 재배치");
-    expect(suggestionPanel).toContain('t("proposalOnlyNote")');
-    expect(koOf("pages.flows.dryRunSession.proposalOnlyNote")).toContain("영구 반영은 제안 패키지(저장소 PR)로만 가능합니다");
     // 수용은 폼 콜백만 부른다 — 저장소 쓰기(파일 시스템/PUT SSOT) 경로가 없다(§12-4).
     expect(suggestionPanel).not.toMatch(/writeFile|appendFile|fs\./);
     expect(suggestionPanel).toContain("onApplyOverride");
@@ -233,26 +233,29 @@ describe("드라이런 화면 소스 — a11y·상호작용·경계 규약 (화�
     expect(sessionPage).toContain('t("createdValue"');
     expect(koOf("pages.flows.dryRunSession.createdValue")).toContain("{p1}");
     expect(koOf("pages.flows.dryRunSession.createdValue")).toContain("{p2}");
-    expect(sessionPage).toContain('t("proposalOnlyChip")}</span>');
-    expect(koOf("pages.flows.dryRunSession.proposalOnlyChip")).toBe("제안 전용");
+    // 제안 전용 문구는 배너 1곳 — 배지 줄·부제·패키지 노트에는 더 이상 없다.
+    expect(sessionPage).not.toContain("proposalOnlyChip");
+    expect(sessionPage.split('t("proposalOnlyBanner")').length - 1).toBe(1);
   });
 
   test("가독성 개편 — 세션 id 잘라보기+복사, 실행 카드 상단 승격, 두 창 grid 레이아웃", () => {
-    // 세션 id — cell-truncate 잘라보기 + 클립보드 복사 버튼(긴 id 가독성).
+    // 세션 id — 접힘 세션 정보 안에서 cell-truncate 잘라보기 + 클립보드 복사 버튼(긴 id 가독성).
+    expect(sessionPage).toContain('<details className="dry-run-info');
     expect(sessionPage).toContain('cell-truncate"');
     expect(sessionPage).toContain('t("copySessionIdAria")');
     expect(koOf("pages.flows.dryRunSession.copySessionIdAria")).toContain("복사");
     expect(sessionPage).toContain("navigator.clipboard.writeText(session.id)");
-    // 실행 카드 — CTA와 비용 추정 줄이 한 카드 안에(§6.2 대화상자 전 공지).
+    // 2026-10-26 개편 — 주 동작은 고정 요약 줄의 단일 PrimaryAction(상태별), 비용 추정은 실행·비교 탭.
     expect(sessionPage).toContain('t("runCardTitle")');
     expect(koOf("pages.flows.dryRunSession.runCardTitle")).toBe("드라이런 실행");
     expect(sessionPage).toContain('t("costEstimateLabel")');
-    const runCardIdx = sessionPage.indexOf('t("runCardTitle")');
-    const ctaIdx = sessionPage.indexOf('t("executeCta")');
-    expect(runCardIdx).toBeGreaterThan(-1);
-    expect(ctaIdx).toBeGreaterThan(runCardIdx); // CTA는 실행 카드 뒤(같은 카드 내부)
-    // 두 창 레이아웃 — flex-wrap 수축 대신 grid(2fr/3fr, lg 미만 적층).
-    expect(sessionPage).toContain("lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]");
+    expect(sessionPage).toContain("dry-run-summary-bar");
+    expect(sessionPage.split("<PrimaryAction").length - 1).toBe(1); // 화면당 주 동작 1개
+    expect(sessionPage).toContain("planActions(hasRuns, dirty)");
+    // 4개 탭 — ARIA tablist + 해시 동기화.
+    expect(sessionPage).toContain('role="tablist"');
+    expect(sessionPage).toContain("hashchange");
+    expect(koOf("pages.flows.dryRunSession.tabRun")).toBe("실행·비교");
   });
 
   test("가독성 개편 — diff 색 칩(녹색 추가/적색 삭제, 수치는 텍스트 병기)과 dirty 칩", () => {
@@ -302,6 +305,11 @@ describe("드라이런 화면 소스 — a11y·상호작용·경계 규약 (화�
     expect(koOf("pages.flows.dryRunSession.emptySessions")).toBe("드라이런 세션이 없습니다. 블루프린트에서 활동을 골라 시작하세요.");
     expect(koOf("pages.flows.dryRunSession.colExpiry")).toBe("만료");
     expect(listPage).toContain("purgedExpired");
+    // 2026-10-26 개편 — 상태 칩(실제 상태값), 짧은 ID+복사, 작성자 열, 검색.
+    expect(listPage).toContain("SESSION_STATUS_FILTERS");
+    expect(listPage).toContain("shortId(s.id)");
+    expect(listPage).toContain('t("colOwner")');
+    expect(listPage).toContain('t("searchLabel")');
     expect(listPage).toContain('aria-label={t("sessionsTableScroll")}');
   });
 
@@ -331,6 +339,6 @@ describe("드라이런 화면 소스 — a11y·상호작용·경계 규약 (화�
 
   test("A10 — 코드 키는 code 스타일, 문구는 한국어로 일관된다(발췌 검사)", () => {
     expect(sessionPage).toContain('className="dd-item-id"');
-    expect(listPage).toContain("누적 비용");
+    expect(koOf("pages.flows.dryRunSession.colAccumCost")).toBe("누적 비용");
   });
 });

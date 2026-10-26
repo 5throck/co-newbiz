@@ -2152,15 +2152,43 @@
   padding-left: 0.75rem;
   color: var(--muted-fg);
 }
-/* 마크다운 이미지(위키 캡처) — 문서 폭을 넘지 않게 하고 스크린샷 경계를 낸다.
-   /library는 이미지가 없어 규약이 없었고, 위키 뷰어가 처음 쓴다. */
+/* 마크다운 이미지(위키 캡처) — 본문 열 폭을 넘지 않고 최대 40rem(약 640px)으로 가운데
+   정렬한다. 최대 폭은 전용 토큰이 없어 컴포넌트 규칙 안에서 한 번만 선언한 지역
+   변수다(전역 토큰 아님). 이미지는 새 탭 원본 링크 안에 있고 alt는 figcaption으로 쓴다
+   (2026-10-26 드라이런 UX·위키 이미지 설계 §2). */
+.library-doc-body {
+  --doc-figure-max: 40rem;
+}
 .library-doc-body img {
   display: block;
-  max-width: 100%;
+  max-width: min(100%, var(--doc-figure-max));
   height: auto;
-  margin: 0.75rem 0 0.25rem;
+  margin: 0.75rem auto 0.25rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
+}
+.library-doc-body .doc-figure {
+  margin: 0.75rem 0;
+  text-align: center;
+}
+.library-doc-body .doc-figure img {
+  margin-block: 0;
+}
+.library-doc-body .doc-figure-link {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+  border-radius: var(--radius-md);
+}
+.library-doc-body .doc-figure-link:focus-visible {
+  outline: var(--border-width-strong) solid var(--primary);
+  outline-offset: var(--focus-ring-offset);
+}
+.library-doc-body .doc-figure figcaption {
+  margin-top: 0.35rem;
+  font-size: var(--fs-caption);
+  color: var(--muted-fg);
 }
 
 /* ── User Guide Wiki (/wiki) ────────────────────────────────────────────
@@ -4316,3 +4344,50 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
 .invest-sticky-first tr.invest-total-row th:first-child { background: var(--surface-2); }
 /* Sub-category label indent inside the sticky first column (category rows stay flush). */
 .invest-sticky-first th.invest-sub-row-label { padding-inline-start: 1.5rem; font-weight: 400; }
+
+/* ── Dry-run session detail + list (2026-10-26 dry-run UX design §3/§5/§6) ──
+   Sticky summary bar (top matches .process-header: under the sticky topbar), single proposal-only
+   banner, session-info disclosure, ARIA 1.2 agent combobox. Tokens only. */
+html:has(.dry-run-summary-bar) { scroll-padding-top: 9rem; } /* design-token-exempt: sticky topbar + summary bar height so focused elements are not obscured */
+.dry-run-summary-bar {
+  position: sticky; top: 2.7rem; z-index: 25;
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) 0; margin-bottom: var(--space-2);
+  background: var(--bg); border-bottom: 1px solid var(--border);
+}
+.dry-run-summary-bar h1 { margin: 0; font-size: var(--fs-h3, 1.125rem); min-width: 0; flex: 1 1 14rem; overflow-wrap: anywhere; }
+.dry-run-summary-meta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.dry-run-summary-actions { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-left: auto; }
+.dry-run-banner {
+  margin: 0 0 var(--space-3); padding: var(--space-2) var(--space-3);
+  border-left: var(--border-width-accent) solid var(--amber-border); background: var(--amber-bg); border-radius: var(--radius-sm);
+  font-size: var(--fs-body); color: var(--amber-fg);
+}
+.dry-run-info { margin-bottom: var(--space-3); }
+.dry-run-info > summary { cursor: pointer; min-height: var(--touch-target); display: flex; align-items: center; gap: var(--space-2); font-size: var(--fs-body); }
+.dry-run-info > summary:focus-visible, .dry-run-tab:focus-visible, .agent-combobox-option:focus-visible { outline: var(--border-width-strong) solid var(--primary); outline-offset: var(--focus-ring-offset); }
+.dry-run-tabs { display: flex; flex-wrap: wrap; gap: var(--space-1); border-bottom: 1px solid var(--border); margin-bottom: var(--space-3); }
+.dry-run-tab {
+  min-height: var(--touch-target); padding: var(--space-2) var(--space-3); background: transparent; border: none; cursor: pointer;
+  border-bottom: var(--border-width-strong) solid transparent; color: var(--muted-fg); font-size: var(--fs-body); font-family: inherit;
+}
+.dry-run-tab:hover { color: var(--fg); }
+.dry-run-tab[aria-selected="true"] { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+.dry-run-panel:focus { outline: none; }
+.dry-run-panel h2:focus { outline: none; }
+.agent-combobox { position: relative; }
+.agent-combobox-group-tag { display: inline-block; margin-top: var(--space-1); font-size: var(--fs-caption); color: var(--muted-fg); }
+.agent-combobox-list {
+  position: absolute; z-index: 20; left: 0; right: 0; top: 100%; max-height: 18rem; overflow-y: auto; padding: var(--space-1);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px hsla(0, 0%, 0%, 0.12); /* design-token-exempt: one-off menu elevation */
+}
+.agent-combobox-heading { padding: var(--space-1) var(--space-2); font-size: var(--fs-caption); font-weight: 600; color: var(--muted-fg); }
+.agent-combobox-option { padding: var(--space-2) var(--space-3); min-height: var(--touch-target); display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1); font-size: var(--fs-body); border-radius: var(--radius-sm); cursor: pointer; }
+.agent-combobox-option:hover, .agent-combobox-option.is-active { background: var(--hover-bg); }
+.agent-combobox-option[aria-selected="true"] { font-weight: 600; }
+.agent-combobox-option[aria-selected="true"]::before { content: "✓"; }
+.agent-combobox-name { color: var(--muted-fg); }
+.agent-combobox-empty { padding: var(--space-2) var(--space-3); font-size: var(--fs-body); color: var(--muted-fg); }
+.dry-run-id-cell { display: inline-flex; align-items: center; gap: var(--space-1); }
+@media (prefers-reduced-motion: reduce) { .dry-run-tab { transition: none; } }

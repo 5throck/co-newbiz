@@ -14,8 +14,9 @@ import type { WikiPageContent, WikiSidebarGroup } from "../../../lib/wiki.ts";
 
 // 렌더 대상은 저장소에 커밋된 위키 원본뿐(인덱스 화면과 동일 신뢰 모델).
 function WikiMarkdown({ text }: { text: string }) {
+  const t = useTranslations("pages.wiki");
   const rewritten = rewriteWikiLinks(text, defaultRewriteContext());
-  const html = renderWikiMarkdown(rewritten);
+  const html = renderWikiMarkdown(rewritten, { fullSizeLabel: (alt) => (alt ? t("openFullSize", { alt }) : t("openFullSizeNoAlt")) });
   return <div className="library-doc-body" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
