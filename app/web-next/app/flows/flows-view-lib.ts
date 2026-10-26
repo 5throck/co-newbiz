@@ -365,6 +365,25 @@ export interface DryRunSessionDetail {
   purpose: string;
   base_system: string;
   ledger: DryRunLedger;
+  /** Number of executes so far (use this, not ledger.runs — the ledger counts two legs per run). */
+  runCount: number;
+  /** Per-run snapshots from the call log; matchesCurrent = equals the currently saved override. */
+  runs: DryRunRunSnapshot[];
+}
+
+export interface DryRunRunSnapshot {
+  index: number;
+  at: string;
+  baseAgentKey: string | null;
+  basePromptHash: string | null;
+  baseSource: string | null;
+  baseCostUsd: number | null;
+  overrideAgentKey: string | null;
+  overridePromptHash: string | null;
+  overrideSource: string | null;
+  overrideCostUsd: number | null;
+  costUsd: number | null;
+  matchesCurrent: boolean;
 }
 
 /** POST .../execute 응답 — {session, base, override}. */

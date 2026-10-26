@@ -26,6 +26,7 @@ import { ulid } from "../../../db/lib/ulid.ts";
 import { AGENT_KEYS } from "./agent-registry.generated.ts";
 import { CATALOG_VERSION, SPEC_VERSION, PM_CATALOG, type PmCatalogEntry } from "./pm-catalog.generated.ts";
 import { PROMPTS, type PromptKey } from "./prompts.generated.ts";
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import { completeOrFallback, completeStructured, type DryRunContext, type LlmSource } from "./llm.ts";
 
@@ -178,7 +179,73 @@ export function purgeExpiredDryRunSessions(): number {
   return r.changes;
 }
 
+/** 프롬프트 스냅샷 해시(0130 llm_call_log.prompt_hash) — sha256 앞 16 hex. */
+export function dryRunPromptHash(text: string): string {
+  return createHash("sha256").update(text).digest("hex").slice(0, 16);
+}
+
+/** 실행 1회(base+override 다리 쌍)의 스냅샷 — llm_call_log 의 기존 열에서 도출. */
+export interface DryRunRunSnapshot {
+  index: number;
+  at: string;
+  baseAgentKey: string | null;
+  basePromptHash: string | null;
+  baseSource: string | null;
+  baseCostUsd: number | null;
+  overrideAgentKey: string | null;
+  overridePromptHash: string | null;
+  overrideSource: string | null;
+  overrideCostUsd: number | null;
+  costUsd: number | null;
+  /** 이 실행의 override 스냅샷이 세션의 현재 저장된 오버라이드와 같은가. */
+  matchesCurrent: boolean;
+}
+
+function buildRunSnapshots(s: DryRunSessionRow): DryRunRunSnapshot[] {
+  const rows = getDb()
+    .query(
+      `SELECT created_at, source, cost_usd, agent_key, prompt_hash FROM llm_call_log
+       WHERE dry_run_group_id = ? ORDER BY created_at ASC, id ASC`,
+    )
+    .all(s.id) as { created_at: string; source: string; cost_usd: number | null; agent_key: string; prompt_hash: string | null }[];
+  const baseHash = dryRunPromptHash(PROMPTS[s.prompt_key as PromptKey]?.system ?? "");
+  const curHash = dryRunPromptHash(s.override_system ?? PROMPTS[s.prompt_key as PromptKey]?.system ?? "");
+  const curAgent = s.override_agent_key ?? s.base_agent_key;
+  const isBase = (r: { agent_key: string; prompt_hash: string | null }) => r.agent_key === s.base_agent_key && r.prompt_hash === baseHash;
+  type Row = (typeof rows)[number];
+  const runs: { base: Row | null; override: Row | null; at: string }[] = [];
+  let prevBase = false;
+  for (const r of rows) {
+    const b = isBase(r);
+    if (b && !prevBase) runs.push({ base: null, override: null, at: r.created_at });
+    const run = runs[runs.length - 1] ?? (runs.push({ base: null, override: null, at: r.created_at }), runs[0]);
+    if (b) run.base = r; else run.override = r;
+    prevBase = b;
+  }
+  return runs.map((r, i) => {
+    const costs = [r.base?.cost_usd, r.override?.cost_usd].filter((c): c is number => c != null);
+    return {
+      index: i + 1,
+      at: r.at,
+      baseAgentKey: r.base?.agent_key ?? null,
+      basePromptHash: r.base?.prompt_hash ?? null,
+      baseSource: r.base?.source ?? null,
+      baseCostUsd: r.base?.cost_usd ?? null,
+      overrideAgentKey: r.override?.agent_key ?? null,
+      overridePromptHash: r.override?.prompt_hash ?? null,
+      overrideSource: r.override?.source ?? null,
+      overrideCostUsd: r.override?.cost_usd ?? null,
+      costUsd: costs.length ? costs.reduce((a, b) => a + b, 0) : null,
+      matchesCurrent: r.override?.agent_key === curAgent && r.override?.prompt_hash === curHash,
+    };
+  });
+}
+
 export interface DryRunSessionDetail extends DryRunSessionRow {
+  /** 실행 횟수("Ran N times") — base+override 쌍 단위. */
+  runCount: number;
+  /** 실행별 스냅샷(시간순). */
+  runs: DryRunRunSnapshot[];
   purpose: string;
   base_system: string;
   /** 세션 누계(dry_run_group_id = 세션 id 인 런 장부 행 집계). */
@@ -195,8 +262,11 @@ export function getDryRunSessionDetail(id: string): DryRunSessionDetail | null {
        FROM llm_call_log WHERE dry_run_group_id = ?`,
     )
     .get(id) as { runs: number; llm_calls: number; cost_usd: number | null; last_run_at: string | null };
+  const runs = buildRunSnapshots(s);
   return {
     ...s,
+    runCount: runs.length,
+    runs,
     purpose: PROMPTS[s.prompt_key as PromptKey]?.purpose ?? s.prompt_key,
     base_system: PROMPTS[s.prompt_key as PromptKey]?.system ?? "",
     ledger: { runs: ledger.runs, llmCalls: ledger.llm_calls, costUsd: ledger.cost_usd, lastRunAt: ledger.last_run_at },
@@ -284,7 +354,7 @@ export async function executeDryRun(sessionId: string, opts: { user?: string | n
   const baseRes = await completeOrFallback(
     [{ role: "system", content: baseSystem }, { role: "user", content: userText }],
     fallbackText,
-    { agent: { key: check.agentKey, purpose: entry.purpose }, maxTokens: DRY_RUN_MAX_TOKENS, dryRun: { groupId } },
+    { agent: { key: check.agentKey, purpose: entry.purpose, promptHash: dryRunPromptHash(baseSystem) }, maxTokens: DRY_RUN_MAX_TOKENS, dryRun: { groupId } },
   );
   const baseCall = latestGroupCall(groupId);
 
@@ -295,7 +365,7 @@ export async function executeDryRun(sessionId: string, opts: { user?: string | n
   const overrideRes = await completeOrFallback(
     [{ role: "system", content: baseSystem }, { role: "user", content: userText }],
     fallbackText,
-    { agent: { key: s.override_agent_key ?? check.agentKey, purpose: entry.purpose }, maxTokens: DRY_RUN_MAX_TOKENS, dryRun: overrideDry },
+    { agent: { key: s.override_agent_key ?? check.agentKey, purpose: entry.purpose, promptHash: dryRunPromptHash(overrideSystem) }, maxTokens: DRY_RUN_MAX_TOKENS, dryRun: overrideDry },
   );
   const overrideCall = latestGroupCall(groupId);
 

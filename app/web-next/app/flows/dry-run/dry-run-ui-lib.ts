@@ -2,43 +2,59 @@
 // No React, no I/O: unit-tested in tests/unit/dry-run-ui-lib.test.ts.
 import type { BlueprintAgent, DryRunSessionDetail } from "../flows-view-lib.ts";
 
-// ── Detail tabs (hash-synced) ─────────────────────────────────────────────
-export const DRY_RUN_TABS = ["edit", "run", "suggest", "history"] as const;
-export type DryRunTab = (typeof DRY_RUN_TABS)[number];
+// ── Single-page session helpers (2026-10-26b delta) ───────────────────────
+export type DryRunPrimary = "run" | "export";
 
-export function tabFromHash(hash: string): DryRunTab | null {
-  const key = hash.replace(/^#/, "");
-  return (DRY_RUN_TABS as readonly string[]).includes(key) ? (key as DryRunTab) : null;
+/** Summary-bar primary: Run until the first run, Export package afterwards; a dirty buffer always means Run (as a new session). */
+export function primaryAction(runCount: number, dirty = false): DryRunPrimary {
+  return runCount > 0 && !dirty ? "export" : "run";
 }
 
-/** Default tab: "run" when the session already has runs, else "edit". */
-export function defaultTab(hasRuns: boolean): DryRunTab {
-  return hasRuns ? "run" : "edit";
+/** The override axis the editor buffer would save: text equal to base (or blank) means "no prompt override". */
+export function effectiveOverrideSystem(buffer: string, baseSystem: string): string | null {
+  const trimmed = buffer.trim();
+  return trimmed === "" || trimmed === baseSystem.trim() ? null : buffer;
 }
 
-// ── State-dependent primary action (design §3 table) ──────────────────────
-export type DryRunAction = "run" | "apply" | "export";
-
-export interface ActionPlan {
-  primary: DryRunAction;
-  /** Secondary actions, in "More" menu order. */
-  secondary: DryRunAction[];
+/** Editor buffer differs from the saved session override (text or agent axis). */
+export function isDirty(
+  buffer: { system: string; agentKey: string },
+  saved: { override_system: string | null; override_agent_key: string | null; base_system: string },
+): boolean {
+  return (
+    effectiveOverrideSystem(buffer.system, saved.base_system) !== (saved.override_system ?? null) ||
+    (buffer.agentKey || null) !== (saved.override_agent_key ?? null)
+  );
 }
 
-/**
- * No runs yet            -> Run          | Export, Apply
- * Runs + unsaved edit    -> Apply        | Run, Export
- * Runs + no pending edit -> Export       | Run again, Apply
- */
-export function planActions(hasRuns: boolean, dirty: boolean): ActionPlan {
-  if (!hasRuns) return { primary: "run", secondary: ["export", "apply"] };
-  if (dirty) return { primary: "apply", secondary: ["run", "export"] };
-  return { primary: "export", secondary: ["run", "apply"] };
+export interface DiffRow {
+  kind: "same" | "add" | "del";
+  text: string;
 }
 
-/** The tab that owns the control behind an action (switch + focus target). */
-export function tabForAction(action: DryRunAction): DryRunTab {
-  return action === "apply" ? "edit" : "run";
+/** Line diff (LCS) between the editor buffer and a proposal: rows in reading order. */
+export function lineDiffRows(before: string, after: string): DiffRow[] {
+  const a = before.split("\n");
+  const b = after.split("\n");
+  const n = a.length;
+  const m = b.length;
+  const lcs: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      lcs[i][j] = a[i] === b[j] ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
+    }
+  }
+  const out: DiffRow[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < n && j < m) {
+    if (a[i] === b[j]) { out.push({ kind: "same", text: a[i] }); i++; j++; }
+    else if (lcs[i + 1][j] >= lcs[i][j + 1]) out.push({ kind: "del", text: a[i++] });
+    else out.push({ kind: "add", text: b[j++] });
+  }
+  while (i < n) out.push({ kind: "del", text: a[i++] });
+  while (j < m) out.push({ kind: "add", text: b[j++] });
+  return out;
 }
 
 // ── Agent picker (design §5) ──────────────────────────────────────────────
