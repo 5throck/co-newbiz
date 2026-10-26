@@ -1,7 +1,13 @@
 #!/usr/bin/env bun
 /**
  * pre-push.ts — TS-based pre-push hook.
- * @version 1.4.1
+ * @version 1.5.0
+ * v1.5.0 (2026-10-26, T-20261026 cwd-drift prevention): pure ref-deletion pushes that
+ *           delete pr/* remote branches now require ALLOW_REMOTE_BRANCH_DELETE=1 — an
+ *           accidental cwd drift (workspace session parked in Projects/co-newbiz) pushed
+ *           --delete for 3 co-newbiz remote branches that "looked merged" against the
+ *           wrong base. The guard forces the operator to opt in consciously; non-pr
+ *           deletions (stale wip/* scratch refs) stay unrestricted.
  */
 
 import { $ } from "bun";
@@ -31,6 +37,26 @@ export function isZeroOid(oid: string | undefined): boolean {
 // no-ref-updates fallback (branch protection) still applies.
 export function isPureDeletionPush(refUpdates: PushRefUpdate[]): boolean {
   return refUpdates.length > 0 && refUpdates.every(r => isZeroOid(r.localOid));
+}
+
+/** T-20261026 cwd-drift prevention: a pure deletion push that removes pr/* remote
+ * branches requires ALLOW_REMOTE_BRANCH_DELETE=1. Those branches are review
+ * artifacts — a deletion from a drifted cwd (Projects/<variant> checked out while
+ * the operator believes they are in the workspace root) is how 3 co-newbiz remote
+ * branches were lost on 2026-10-26. Returns the failure reason, or null to allow. */
+export function branchDeletionGuardError(
+  deletedRemoteRefs: string[],
+  allowRemoteBranchDelete: boolean,
+): string | null {
+  const prBranches = deletedRemoteRefs.filter((r) => /^refs\/heads\/pr\//.test(r));
+  if (prBranches.length === 0) return null;
+  if (allowRemoteBranchDelete) return null;
+  const names = prBranches.map((r) => r.replace("refs/heads/", "")).join(", ");
+  return (
+    `refusing to delete pr/* remote branch(es): ${names} — review branches are ` +
+    `deleted by GitHub on merge or re-landed intentionally. To confirm an ` +
+    `out-of-band cleanup, re-run with ALLOW_REMOTE_BRANCH_DELETE=1.`
+  );
 }
 
 // Read stdin ONCE to determine what refs are actually being pushed.
@@ -121,6 +147,13 @@ async function main() {
   // nothing content-bearing to secret-scan or audit — exit early instead of
   // running the gate battery and blocking branch-cleanup pushes.
   if (isPureDeletionPush(refUpdates)) {
+    // T-20261026 cwd-drift prevention: pr/* deletions need the explicit opt-in.
+    const deletedRefs = refUpdates.map((r) => r.remoteRef);
+    const guardError = branchDeletionGuardError(deletedRefs, process.env.ALLOW_REMOTE_BRANCH_DELETE === "1");
+    if (guardError) {
+      console.error(`❌ pre-push: ${guardError}`);
+      process.exit(1);
+    }
     console.log("ℹ️  pre-push: ref-deletion push — no commits to audit, skipping");
     return;
   }

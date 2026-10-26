@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-26T14:30:51.091Z
+**Generated**: 2026-10-26T17:53:51.427Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -22,7 +22,7 @@
 | antitrust-agent | agents/antitrust-agent.md | high | inherit | 2026-10-25 |
 | backend-engineer | agents/backend-engineer.md | medium | inherit | 2026-10-26 |
 | brownfield-agent | agents/brownfield-agent.md | high | inherit | 2026-10-26 |
-| certification-agent | agents/certification-agent.md | high | inherit | 2026-10-25 |
+| certification-agent | agents/certification-agent.md | high | inherit | 2026-10-26 |
 | commercial-dd-agent | agents/commercial-dd-agent.md | medium | inherit | 2026-10-26 |
 | compliance-officer | agents/compliance-officer.md | high | inherit | 2026-10-26 |
 | customer-retention-agent | agents/customer-retention-agent.md | medium | inherit | 2026-10-26 |
@@ -241,7 +241,7 @@
 | design-lint.ts | 1.5.0 | scripts/co-newbiz/design-lint.ts | N/A |
 | design-lint.ts | 2.2.0 | scripts/design-lint.ts | js-yaml |
 | deterministic.ts | 1.1.0 | scripts/eval/deterministic.ts | N/A |
-| dev-sync.ts | 1.29.0 | scripts/dev-sync.ts | bun |
+| dev-sync.ts | 1.30.0 | scripts/dev-sync.ts | bun |
 | dispatch-parallel.ts | 1.1.1 | scripts/dispatch-parallel.ts | N/A |
 | dispatch-serial.ts | 1.1.2 | scripts/dispatch-serial.ts | N/A |
 | dispatch.ts | 1.1.1 | scripts/dispatch.ts | N/A |

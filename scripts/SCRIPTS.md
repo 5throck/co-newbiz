@@ -146,7 +146,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `cleanup-completed-md.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `clear-pm-approval.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `compile-tokens.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
-| `dev-sync.ts` | L0 | 1.29.0 | active | —| —| L0+L1 | —|
+| `dev-sync.ts` | L0 | 1.30.0 | active | v1.30.0 (2026-10-26, T-20261026-003): the non-main branch guard refuses CLOSED *and* MERGED PRs on the current branch — a follow-up sync onto a merged-PR branch orphans the commits off main (fleet-review wave-1 incident); the guard notes the switch-to-main remediation. | —| L0+L1 | —|
 | `dispatch-parallel.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
 | `dispatch-serial.ts` | L0 | 1.1.2 | active | —| —| L0+L1 | —|
 | `dispatch.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
@@ -161,7 +161,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `hooks/gateguard-fact-force.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `hooks/post-write-lifecycle-check.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `hooks/pre-commit.ts` | L0 | 1.9.0 | active | —| —| L0+L1 | —|
-| `hooks/pre-push.ts` | L0 | 1.4.1 | active | —| —| L0+L1 | —|
+| `hooks/pre-push.ts` | L0 | 1.5.0 | active | v1.5.0 (2026-10-26): deleting a `pr/*` remote branch now requires `ALLOW_REMOTE_BRANCH_DELETE=1`; unset, the push is blocked. | —| L0+L1 | —|
 | `lib/auth.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `lib/encoding-utils.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `lib/error-handling.ts` | L0 | 1.4.0 | active | —| —| L0+L1 | —|

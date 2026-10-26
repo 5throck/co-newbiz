@@ -1,4 +1,10 @@
-// @version 1.29.0
+// @version 1.30.0
+// v1.30.0 (2026-10-26, T-20261026-003): the non-main branch guard now refuses BOTH
+//           CLOSED and MERGED PRs on the current branch — landing a new sync onto a
+//           branch whose PR is already merged (incident: wave-1 of the fleet-review
+//           batch landed on the #1612-era branch after its merge) orphans the commits
+//           off main. MERGED refuses with the switch-to-main guidance; OPEN stays the
+//           legitimate follow-up path.
 // v1.29.0 (2026-10-24, T-20261024-001): hard-fail when a --body-file token reaches
 //          the message position (swapped argument order) — the co-design PR #47
 //          failure shipped a mangled PR with the delivered files unstaged.
@@ -1221,8 +1227,19 @@ if (currentBranch === "main" || currentBranch === "master") {
     // (PR #1509 closed with 45 files; the content re-landed via a 1-file PR
     // #1510). Refuse before staging/commit.
     const closedPrRes = await $`gh pr view ${branch} --json state --jq .state`.quiet().nothrow();
-    if (closedPrRes.exitCode === 0 && closedPrRes.stdout.toString().trim() === 'CLOSED') {
+    const prState = closedPrRes.exitCode === 0 ? closedPrRes.stdout.toString().trim() : '';
+    // T-20261026-003: MERGED joins CLOSED — landing a new sync onto a branch whose
+    // PR is already merged orphans the commits off main (incident: wave-1 of the
+    // fleet-review batch landed on the #1612-era branch after its merge).
+    if (prState === 'CLOSED') {
         console.error(`${RED}❌ Branch '${branch}' has a CLOSED (unmerged) PR — refusing to commit a new sync onto a dead branch.${RESET}`);
+        console.error(`${YELLOW}   Re-branch from main (git checkout main && git checkout -b pr/<new-slug>) and re-run /sync.${RESET}`);
+        if (import.meta.main) {
+          process.exit(1);
+        }
+    }
+    if (prState === 'MERGED') {
+        console.error(`${RED}❌ Branch '${branch}' has an already-MERGED PR — refusing to land a follow-up sync here; the commits would be orphaned off main.${RESET}`);
         console.error(`${YELLOW}   Re-branch from main (git checkout main && git checkout -b pr/<new-slug>) and re-run /sync.${RESET}`);
         if (import.meta.main) {
           process.exit(1);

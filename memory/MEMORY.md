@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-10-27](2026-10-27.md) | feat(governance): gate integrity — ADR-0186 design and hook hardening |
 | [2026-10-26](2026-10-26.md) | docs(docs): workspace sync (136 files) |
 | [2026-10-25](2026-10-25.md) | docs(docs): workspace sync (11 files) |
 | [2026-10-25](2026-10-25.md) | chore(visual): commit aHash baselines, pin macos runner; record getDb migration analysis |
@@ -12,7 +13,7 @@
 | [2026-10-22](2026-10-22.md) | docs: S1-S12 track project-review report with ticket wiring, ADR-0182 second addendum, memory open issues |
 | [2026-10-21](2026-10-21.md) | memory-log-and-decision-ref-fixes |
 | [2026-10-20](2026-10-20.md) | docs(docs): workspace sync (5 files) |
-| [2026-10-19](2026-10-19.md) | test(tests): workspace sync (spec 2026-10-18-synergy-4element, 10 files) |
+| 2026-10-19 | test(tests): workspace sync (spec 2026-10-18-synergy-4element, 10 files) |
 | 2026-10-18 | docs(docs): workspace sync (55 files) |
 | 2026-10-17 | feat(s8): ADR-0179 slice 3 unsourced share labelling and plausibility guard |
 | 2026-10-16 | feat(s5): ADR-0178 slice 1 pre-launch (year-0) marking of S5 capex lines |
