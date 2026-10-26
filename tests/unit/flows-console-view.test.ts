@@ -14,7 +14,7 @@
 // 소스 상수(NODE_W/COL_GAP/ROW_Y/VIEW_*)를 파싱해 실제 서빙 데이터
 // (spec-activities.generated.ts)와 대입 검증 — 인접 카드 비충돌·최장 단계명 수용·
 // 도트 행/활동 수 라벨 비충돌·뷰박스 수용, (c) 런 레저 차트: barMaxWidth 상한 +
-// 범례 상단 고정 + 단일 버킷 캡션(chartSingleBucket) 핀.
+// 범례 상단 고정 핀.
 // 1.5.0: 2026-10-25 사용자 보고(12노드 1줄 = 카드 축소·분기 밴드 우측 공백) 대응 —
 // 그래프 3줄 감기 레이아웃 머신체크로 이행: (a) 행별 단계 배정(첫째 줄 S1–S4 /
 // 분기 밴드 GF S5·BF S6→S7·합류 S8 / 셋째 줄 S9–S12)과 줄당 ≤5 노드, (b) 노드
@@ -48,7 +48,7 @@ import { test, expect, describe } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  approxTextWidth, bucketLlmCallsByDay, classifiedByChip, countAxisMax, fmtDateTime, fmtInt, fmtPct, fmtSeconds, fmtUsd,
+  approxTextWidth, classifiedByChip, countAxisMax, fmtDateTime, fmtInt, fmtPct, fmtSeconds, fmtUsd,
   runStatusChip, stageDisplayName, totalTokens, truncateToWidth, windowTokenKey,
   type LlmCallRow,
 } from "../../app/web-next/app/flows/flows-view-lib.ts";
@@ -144,18 +144,6 @@ describe("flows-view-lib — 단계명(API 직접 투영)과 타임라인 버킷
     expect(lib).not.toContain("stageNames");
     expect(lib).toContain("stageDisplayName");
   });
-  test("bucketLlmCallsByDay는 일 단위로 성공/실패/비용을 묶고 오름차순 정렬한다", () => {
-    const rows = [
-      llmRow({ created_at: "2026-10-24T09:00:00Z", ok: 1, cost_usd: 0.01 }),
-      llmRow({ created_at: "2026-10-24T10:00:00Z", ok: 0, cost_usd: null }),
-      llmRow({ created_at: "2026-10-23T22:00:00Z", ok: 1, cost_usd: 0.02 }),
-    ];
-    const buckets = bucketLlmCallsByDay(rows);
-    expect(buckets.map((b) => b.day)).toEqual(["10-23", "10-24"]);
-    expect(buckets[1]).toMatchObject({ ok: 1, failed: 1 });
-    expect(buckets[1].costUsd).toBeCloseTo(0.01);
-  });
-
   test("countAxisMax는 스택 최댓값 위의 1/2/5 사다리 정수 상한을 낸다 — 최고 막대가 축 전체를 채우지 않는다", () => {
     // 보고 사례: 하루 성공+실패 25 — 자동 스케일은 0–25로 최고 막대를 100% 채웠다.
     expect(countAxisMax(25)).toBe(30); // 여유 있는 정수 상한
@@ -261,12 +249,12 @@ describe("flows 화면 소스 — a11y·IA 정적 규약 (화면 설계 §9)", (
 
   test("F6 — 차트 제목 옆에 범위 캡션이 있다(요약=창 전체 vs 차트=커서 페이지의 불일치를 현장에서 해소)", () => {
     expect(ledger).toContain('t("chartTitle")');
-    expect(ledger).toContain('t("chartScopeCaption"');
-    // 캡션은 불러온 행 수(원시 수 — en ICU 복수형 인자)를 받는다.
-    expect(ledger).toMatch(/t\("chartScopeCaption", \{ p1: llmRows\?\.length \?\? 0 \}\)/);
-    expect(koOf("pages.flows.ledger.chartScopeCaption")).toContain("{p1}");
-    // 기존 아래-표 각주(chartTableNote)는 유지된다.
-    expect(ledger).toContain('t("chartTableNote"');
+    // 캡션은 서버 집계(summary.daily) 창 라벨(basisWindow)을 재사용한다 — 커서 페이지 한도 문구 없음.
+    expect(ledger).toContain("summary?.daily");
+    expect(ledger).not.toContain("bucketLlmCallsByDay");
+    expect(ledger).not.toContain('t("chartScopeCaption"');
+    expect(ledger).not.toContain('t("chartTableNote"');
+    expect(ledger).toMatch(/t\("basisWindow", \{ p1: windowKey/);
   });
 
   test("F7 — 차트 계열 색은 상태 규약 토큰 순서다(성공=초록 → 실패=빨강, 절대 반대)", () => {
@@ -305,19 +293,15 @@ describe("flows 화면 소스 — a11y·IA 정적 규약 (화면 설계 §9)", (
     expect(koOf("pages.titles.flows")).toBe("플로우 콘솔");
   });
 
-  test("런 레저 차트 — 막대 폭 상한·범례 상단 고정·단일 버킷 캡션(2026-10-23 보고 대응)", () => {
+  test("런 레저 차트 — 막대 폭 상한·범례 상단 고정(2026-10-23 보고 대응)", () => {
     // 막대 1개가 그리드 전폭을 덮던 것: barMaxWidth 32 상한이 두 막대 계열 모두에.
     expect(ledger.match(/barMaxWidth: 32/g)?.length).toBe(2);
     // 범례가 x축·자기 마커와 겹치던 것: 상단 고정 + grid.top 여백 + 축 라벨 포함 계산.
     expect(ledger).toContain("legend: { top: 0");
     expect(ledger).toContain("top: 56");
     expect(ledger).toContain("containLabel: true");
-    // 단일 버킷 정직 캡션 — 양 로케일 파라미터 포함(ko가 마스터 원문).
-    expect(ledger).toContain('t("chartSingleBucket"');
-    const koSingle = koOf("pages.flows.ledger.chartSingleBucket");
-    expect(koSingle).toContain("{p1}");
-    expect(koSingle).toContain("{p2}");
-    expect(koSingle).toContain("하루");
+    // 일별 버킷은 서버가 창 전체를 영일 채움하므로 단일 버킷 캡션은 폐기됐다.
+    expect(ledger).not.toContain("chartSingleBucket");
   });
 
   test("런 레저 차트 — 주축 스케일 데이터 맞춤(2026-10-25 보고: 최고 막대가 y축 전체 높이를 덮었다)", () => {

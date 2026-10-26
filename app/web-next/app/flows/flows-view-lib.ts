@@ -133,6 +133,8 @@ export interface RunsSummary {
    *  UI 소비처는 없으며, Row 3 API 계약 유지를 위해 타이핑만 남는다). */
   errorsByStage: Record<string, number>;
   unmappedErrors: number;
+  /** Server per-day buckets for the whole window (zero-filled, ascending; day = YYYY-MM-DD). */
+  daily: Array<{ day: string; ok: number; failed: number; costUsd: number }>;
 }
 export interface RunsPayload {
   llmConfigured: boolean;
@@ -205,31 +207,6 @@ export function fmtSeconds(ms: number | null | undefined): string {
 /** 토큰 합계 — input+output+cache_read+cache_write (llm-rollup TOKENS_TOTAL 규약). */
 export function totalTokens(row: Pick<LlmCallRow, "input_tokens" | "output_tokens" | "cache_read_tokens" | "cache_write_tokens">): number {
   return (row.input_tokens ?? 0) + (row.output_tokens ?? 0) + (row.cache_read_tokens ?? 0) + (row.cache_write_tokens ?? 0);
-}
-
-/** EChart 타임라인 버킷 — 불러온 llmCalls 행을 일(day) 단위로 묶는다.
- *  API가 시계열 집계를 돌려주지 않아(Row 3 계약) 화면이 불러온 행(커서 한도)만
- *  반영한다 — 차트 캡션에 한도 사실을 명시한다(구현 편차 #3). */
-export interface DayBucket {
-  day: string; // MM-DD
-  ok: number;
-  failed: number;
-  costUsd: number;
-}
-
-export function bucketLlmCallsByDay(rows: LlmCallRow[]): DayBucket[] {
-  const map = new Map<string, DayBucket>();
-  for (const r of rows) {
-    const d = new Date(r.created_at);
-    if (Number.isNaN(d.getTime())) continue;
-    const key = `${String(d.getFullYear())}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const b = map.get(key) ?? { day: key, ok: 0, failed: 0, costUsd: 0 };
-    if (r.ok === 1) b.ok += 1;
-    else b.failed += 1;
-    b.costUsd += r.cost_usd ?? 0;
-    map.set(key, b);
-  }
-  return [...map.values()].sort((a, b) => a.day.localeCompare(b.day)).map((b) => ({ ...b, day: b.day.slice(5) }));
 }
 
 /** 런 레저 차트 주축(호출 수) 상한 — 스택 최댓값에서 결정적으로 유도한다(2026-10-25

@@ -10,7 +10,7 @@
 // 1.1.0: 2026-10-26 UX review F9 remediation support — (a) the dynamic-key
 // allowlist gains markerNoteKey(...) (flow-graph's catalog-notes resolver);
 // (b) expectParams is ICU-plural-aware — en values may carry "{p1, plural, …}"
-// (design-pinned ledgerLine/chartScopeCaption/detailsSummary), so the
+// (design-pinned ledgerLine/detailsSummary), so the
 // placeholder guard matches {p1} and {p1, alike instead of literal "{p1}" only.
 // flows i18n resolution regression (2026-10-23 user screenshot report).
 // The user's long-running dev server rendered RAW key paths

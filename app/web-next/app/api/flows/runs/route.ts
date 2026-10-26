@@ -19,6 +19,7 @@ import { authenticate, requireBusinessActor } from "../../../../lib/auth.ts";
 import { badRequest, ok } from "../../../../lib/envelope.ts";
 import { isLlmConfigured } from "../../../../lib/llm.ts";
 import { llmUsageAggregate } from "../../../../lib/llm-rollup.ts";
+import { llmDailyBuckets } from "../../../../lib/llm-daily.ts";
 import { route } from "../../../../lib/route.ts";
 import { PM_CATALOG } from "../../../../lib/pm-catalog.generated.ts";
 
@@ -65,6 +66,13 @@ function parseFilters(url: URL, callerId: string) {
   const llmConds = [llmVisibility];
   const llmParams: SQLQueryBindings[] = [callerId, callerId]; // project_id·context_id 서브쿼리 각 1곳
 
+  // daily buckets must ignore the list cursor: they use the llm filters minus `before`.
+  const dailyConds = [...llmConds];
+  const dailyParams: SQLQueryBindings[] = [...llmParams];
+  const pushLlm = (cond: string, ...p: SQLQueryBindings[]) => {
+    llmConds.push(cond); llmParams.push(...p);
+    dailyConds.push(cond); dailyParams.push(...p);
+  };
   if (before) {
     runConds.push("r.started_at < ?");
     runParams.push(before);
@@ -74,38 +82,33 @@ function parseFilters(url: URL, callerId: string) {
   if (agentKey) {
     runConds.push("EXISTS (SELECT 1 FROM agent_run ar WHERE ar.process_run_id = r.id AND ar.agent_key = ?)");
     runParams.push(agentKey);
-    llmConds.push("l.agent_key = ?");
-    llmParams.push(agentKey);
+    pushLlm("l.agent_key = ?", agentKey);
   }
   if (entityType && entityId) {
     runConds.push("r.entity_type = ? AND r.entity_id = ?");
     runParams.push(entityType, entityId);
     // llm_call_log는 0130 project_id 호환 열이 있어 프로젝트 컨텍스트는 어느 쪽이든 매칭.
     if (entityType === "project") {
-      llmConds.push(`((l.context_type = ? AND l.context_id = ?) OR (l.context_type IS NULL AND l.project_id = ?))`);
-      llmParams.push(entityType, entityId, entityId);
+      pushLlm(`((l.context_type = ? AND l.context_id = ?) OR (l.context_type IS NULL AND l.project_id = ?))`, entityType, entityId, entityId);
     } else {
-      llmConds.push("(l.context_type = ? AND l.context_id = ?)");
-      llmParams.push(entityType, entityId);
+      pushLlm("(l.context_type = ? AND l.context_id = ?)", entityType, entityId);
     }
   }
   if (okParam !== null) {
     // 런 상태로의 사상: ok=1 → failed가 아닌 런, ok=0 → failed 런.
     runConds.push(okParam === "1" ? "r.status != 'failed'" : "r.status = 'failed'");
-    llmConds.push("l.ok = ?");
-    llmParams.push(Number(okParam));
+    pushLlm("l.ok = ?", Number(okParam));
   }
   // source 필터는 llm_call_log 전용이다 — agent_run.source(web|agent|human…,
   // 0045)는 llm|synthesis와 다른 판별자라 런 섹션에는 적용하지 않는다.
   if (source) {
-    llmConds.push("l.source = ?");
-    llmParams.push(source);
+    pushLlm("l.source = ?", source);
   }
   // §6.6 "운영 대시보드는 기본적으로 제외" — includeDryRun=1 일 때만
   // is_dry_run=1 행(0171, dry_run_group_id = 드라이런 세션 id)이 목록·요약에
   // 들어간다. summary는 llmWhere를 재사용하므로 같은 필터가 적용된다.
   if (!includeDryRun) {
-    llmConds.push("l.is_dry_run = 0");
+    pushLlm("l.is_dry_run = 0");
   }
 
   return {
@@ -118,6 +121,8 @@ function parseFilters(url: URL, callerId: string) {
     runParams,
     llmWhere: llmConds.join(" AND ").replace(/\s+/g, " "),
     llmParams,
+    dailyWhere: dailyConds.join(" AND ").replace(/\s+/g, " "),
+    dailyParams,
   } as const;
 }
 
@@ -129,7 +134,7 @@ export const GET = route(async (request: Request) => {
 
   const parsed = parseFilters(new URL(request.url), auth.auth.userId);
   if ("error" in parsed && parsed.error) return badRequest("invalid_filter", parsed.error);
-  const { limit, before, includeDryRun, windowStart, runWhere, runParams, llmWhere, llmParams } = parsed;
+  const { limit, before, includeDryRun, windowStart, runWhere, runParams, llmWhere, llmParams, dailyWhere, dailyParams } = parsed;
   const db = getDb();
 
   // ── processRuns: 런 → 활동 → 에이전트 3단 확장 ──────────────────────────
@@ -205,9 +210,10 @@ export const GET = route(async (request: Request) => {
   // ── summary: 필터 집합 + 기간 창 집계(카드 4장 + 단계별 오류 카운트) ────────
   // 목록 커서와 독립: 기간 창(window)만 적용한다 — 카드는 "선택 기간 기준"
   // (화면 설계 §5.2)이고 커서는 목록 스크롤 수단이기 때문.
-  const summaryWhere = `${llmWhere} AND l.created_at >= ?`;
-  const summaryParams = [...llmParams, windowStart];
+  const summaryWhere = `${dailyWhere} AND l.created_at >= ?`;
+  const summaryParams = [...dailyParams, windowStart];
   const agg = llmUsageAggregate(db, summaryWhere, summaryParams);
+  const daily = llmDailyBuckets(db, summaryWhere, summaryParams, new Date(windowStart));
   const errorRate = agg.llm_calls > 0 ? agg.errors / agg.llm_calls : null;
   // 단계별 오류 카운트(블루프린트 단계 요약의 "최근 7일 오류") — 목적 문자열을
   // 카탈로그로 단계 귀속. 미매핑 목적은 stageId null로 집계에 남긴다.
@@ -247,6 +253,9 @@ export const GET = route(async (request: Request) => {
         estimatedCalls: agg.estimated_calls,
         errorsByStage: Object.fromEntries([...errorsByStage.entries()].sort()),
         unmappedErrors,
+        // Per-day buckets over the whole window (zero-filled, ascending, server-local days);
+        // independent of limit/before.
+        daily,
       },
     },
     200,
