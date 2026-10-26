@@ -929,7 +929,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             </tbody>
           </table></div>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
-            <b className="text-[color:var(--warning)]">{t("progressJudgementsAdoptionRequirementsKill")}</b>{" "}
+            <b className="text-[color:var(--amber-fg)]">{t("progressJudgementsAdoptionRequirementsKill")}</b>{" "}
             {t("theViewIsForComparison")}
           </p>
         </section>

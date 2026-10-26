@@ -46,7 +46,7 @@ function TimelineView() {
                   <div style={{ position: "relative", height: 12, background: "var(--bg)", borderRadius: 6 }}>
                     <div style={{ position: "absolute", left: 0, top: 0, bottom: 0,
                       width: `${Math.min(100, ((s.elapsed_days ?? 0) / maxElapsed) * 100)}%`,
-                      background: s.sla_breach ? "var(--red)" : s.in_progress ? "var(--accent)" : "var(--green)",
+                      background: s.sla_breach ? "var(--red-fg)" : s.in_progress ? "var(--accent)" : "var(--green-fg)",
                       opacity: 0.75, borderRadius: 6 }} />
                   </div>
                 </td>

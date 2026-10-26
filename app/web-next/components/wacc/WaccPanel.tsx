@@ -787,7 +787,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {const tr = useT
               {derivation && derivation.steps.length > 0 ? (
                 <>
                   {derivation.missing.length > 0 && (
-                    <p className="text-[color:var(--warning)] text-[length:var(--fs-caption)] mb-2">{t("notEntered")} {derivation.missing.join(" · ")}</p>
+                    <p className="text-[color:var(--amber-fg)] text-[length:var(--fs-caption)] mb-2">{t("notEntered")} {derivation.missing.join(" · ")}</p>
                   )}
                   <DerivationTable derivation={derivation} />
                   {keSteps.length > 0 && (

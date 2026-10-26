@@ -38,7 +38,7 @@ counterpart: design-tokens.md
 | `--border`, `--border-subtle`, `--border-bright` | 경계선 색 — 기본 / 은은한 구분선 / 강조 외곽선 |
 | `--primary` (+ `--primary-h/s/l` 채널, `--primary-dim/-bg/-border`) | 브랜드·강조색 — HSL 채널 위에 정의되어 투명도 변형을 동적으로 파생 |
 | `--accent`, `--accent-fg` | 사용자가 상호작용하는 요소의 강조색(링크, 현재 선택된 탭 등). `--accent-fg`는 강조 배경 **위에** 쓰는 전경색 — 라이트 테마 `#ffffff` — 로, 강조 배경을 채운 버튼이 4.5:1 대비를 유지하게 합니다 |
-| `--success`, `--warning`, `--danger` (+ `-bg` 변형) | 승인·주의·위험 신호의 상태색 |
+| `--success`, `--warning`, `--danger` (+ `-bg` 변형) | 승인·주의·위험 신호의 상태색. 채움·테두리용이며, 글자색은 `--green-fg`/`--amber-fg`/`--red-fg`를 쓴다. |
 | `--green-bg/-fg/-border`, `--amber-*`, `--red-*` | 등급 칩 색(라이트·다크 튜닝 쌍) |
 | `--input-bg`, `--hover-bg`, `--sidebar-bg` | 테마 범위 상호작용 표면(하드코딩된 흰색·검정 없음) |
 

@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-26T10:04:44.090Z
+**Generated**: 2026-10-26T10:30:21.371Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -24,7 +24,7 @@
 | brownfield-agent | agents/brownfield-agent.md | high | inherit | 2026-10-26 |
 | certification-agent | agents/certification-agent.md | high | inherit | 2026-10-25 |
 | commercial-dd-agent | agents/commercial-dd-agent.md | medium | inherit | 2026-10-26 |
-| compliance-officer | agents/compliance-officer.md | high | inherit | 2026-10-25 |
+| compliance-officer | agents/compliance-officer.md | high | inherit | 2026-10-26 |
 | customer-retention-agent | agents/customer-retention-agent.md | medium | inherit | 2026-10-26 |
 | data-architect | agents/data-architect.md | high | inherit | 2026-10-26 |
 | dba | agents/dba.md | medium | inherit | 2026-10-26 |

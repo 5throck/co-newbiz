@@ -26,7 +26,7 @@ Token names describe "where the value is used," not "what color it is." For exam
 | `--border`, `--border-subtle`, `--border-bright` | Border colors — default / subtle divider / emphasized outline |
 | `--primary` (+ `--primary-h/s/l` channels, `--primary-dim/-bg/-border`) | The brand/emphasis color, defined over HSL channels so variants derive with dynamic opacity |
 | `--accent`, `--accent-fg` | Emphasis color for elements the user interacts with (links, the currently selected tab). `--accent-fg` is the foreground used **on** accent backgrounds — `#ffffff` in light theme — so accent-filled buttons keep 4.5:1 contrast |
-| `--success`, `--warning`, `--danger` (+ `-bg` variants) | Status colors for approval/caution/risk signals |
+| `--success`, `--warning`, `--danger` (+ `-bg` variants) | Status colors for approval/caution/risk signals. These are fill/border colors; text uses `--green-fg`/`--amber-fg`/`--red-fg`. |
 | `--green-bg/-fg/-border`, `--amber-*`, `--red-*` | RAG grade chip colors (light- and dark-tuned pairs) |
 | `--input-bg`, `--hover-bg`, `--sidebar-bg` | Theme-scoped interaction surfaces (no hardcoded whites/blacks) |
 

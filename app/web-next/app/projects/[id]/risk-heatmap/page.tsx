@@ -100,7 +100,7 @@ function HeatmapView() {
   }
 
   const draftOf = (it: Item) => drafts[it.key] ?? { likelihood: it.likelihood, impact: it.impact, mitigation: it.mitigation ?? "" };
-  const color = (sev: string) => (sev === "high" ? "var(--red)" : sev === "mid" ? "var(--amber)" : "var(--green)");
+  const sevTone = (sev: string) => (sev === "high" ? "status-red" : sev === "mid" ? "status-amber" : "status-green");
 
   return (
     <main>
@@ -140,9 +140,9 @@ function HeatmapView() {
                         {impact === 1 ? t("impactLow") : impact === 2 ? t("impactMid") : t("impactHigh")}
                       </span>
                       {cellItems.map((it, i) => (
-                        <span key={it.key} title={it.label}
+                        <span key={it.key} title={it.label} className={sevTone(it.severity)}
                           style={{ position: "absolute", width: 24, height: 24, borderRadius: "50%",
-                            background: color(it.severity), color: "var(--surface)", fontSize: "var(--fs-caption)", fontWeight: 700,
+                            fontSize: "var(--fs-caption)", fontWeight: 700,
                             display: "flex", alignItems: "center", justifyContent: "center",
                             left: `${10 + i * 30}%`, top: "18%" }}>{i + 1}</span>
                       ))}
@@ -171,7 +171,7 @@ function HeatmapView() {
                 const d = draftOf(it);
                 return (
                   <li key={it.key}>
-                    <span className="status-chip" style={{ background: color(it.severity), color: "var(--surface)", marginRight: 6 }}>{it.severity === "high" ? t("sevHigh") : it.severity === "mid" ? t("sevMid") : t("sevLow")}</span>
+                    <span className={`status-chip mr-1.5 ${sevTone(it.severity)}`}>{it.severity === "high" ? t("sevHigh") : it.severity === "mid" ? t("sevMid") : t("sevLow")}</span>
                     <span className="status-chip status-gray mr-1">{t(SOURCE_KEY[it.source])}</span>
                     {it.source === "dd" && it.category && it.category !== RISK_CATEGORY && <span className="status-chip status-gray mr-1">{it.category}</span>}
                     {it.label}
