@@ -5915,7 +5915,7 @@
         "estimatedIncluded": "Includes an estimated {p1} calls",
         "costSum": "Total cost",
         "unpricedExcluded": "Excludes {p1} unpriced calls",
-        "chartAria": "Calls and cost by period — based on {p1} loaded records",
+        "chartAria": "Calls and cost by period — {p1}",
         "viewAsTable": "View as table (chart data)",
         "tableScrollRegion": "Data table (horizontal scroll)",
         "chartTableAria": "Calls and cost by period data",
@@ -5925,7 +5925,6 @@
         "colFailed": "Failure",
         "colCost": "Cost",
         "emptyData": "No data",
-        "chartTableNote": "The chart and table reflect the {p1} records loaded on this screen (cursor page limit) — use the summary cards above for whole-window totals.",
         "runsSection": "Run list",
         "processRunsTitle": "Process runs",
         "dryRunNotePrefix": "Note: {p1}",
@@ -5968,10 +5967,8 @@
         "chartLegendSuccess": "✓ Successful calls",
         "chartLegendFailed": "✕ Failed calls",
         "chartAxisCost": "Cost ($)",
-        "chartSingleBucket": "A single bar means all {p2} loaded calls fall on one day ({p1}) — the chart reflects only the rows loaded under the cursor page limit.",
         "okFilterGroup": "Success/failure filter",
         "chartTitle": "Call volume",
-        "chartScopeCaption": "Covers the last {p1, plural, one {# record} other {# records}} loaded on this screen",
         "filterSourceLlm": "LLM (AI)"
       },
       "dryRunSession": {

@@ -16,7 +16,6 @@ import { useChartTheme } from "../../lib/echarts-theme.ts";
 import { api, ApiError } from "../../lib/api.ts";
 import { RunExpansionRows } from "./run-expansion.tsx";
 import {
-  bucketLlmCallsByDay,
   classifiedByChip,
   countAxisMax,
   dryRunGroupOf,
@@ -193,7 +192,11 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
     [filters, nextBefore],
   );
 
-  const buckets = useMemo(() => bucketLlmCallsByDay(llmRows ?? []), [llmRows]);
+  // 차트는 표 페이지네이션과 무관하게 API가 창 전체를 영일(零日) 채움해 돌려주는 summary.daily를 쓴다.
+  const buckets = useMemo(
+    () => (summary?.daily ?? []).map((b) => ({ ...b, day: b.day.slice(5) })),
+    [summary],
+  );
   const totalTokensSum = useMemo(() => (llmRows ?? []).reduce((acc, r) => acc + totalTokens(r), 0), [llmRows]);
 
   if (forbidden) {
@@ -249,22 +252,14 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
           <div className="mb-1 flex flex-wrap items-baseline gap-x-2">
             <h3 className="m-0 text-[length:var(--fs-body)] font-semibold">{t("chartTitle")}</h3>
             <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              {t("chartScopeCaption", { p1: llmRows?.length ?? 0 })}
+              {t("basisWindow", { p1: windowKey ? t(windowKey) : (summary?.window ?? "—") })}
             </span>
           </div>
           <EChart
             option={chartOption(buckets, t, { ok: chartTheme.statusOk, failed: chartTheme.statusFailed })}
             height={260}
-            ariaLabel={t("chartAria", { p1: fmtInt(llmRows?.length ?? 0) })}
+            ariaLabel={t("chartAria", { p1: windowKey ? t(windowKey) : (summary?.window ?? "—") })}
           />
-          {/* 버킷이 하루뿐일 때의 정직한 캡션(2026-10-23 사용자 보고: 막대 1개가
-              그리드 전폭을 덮어 "하루치"로 오해되기 쉬웠다) — barMaxWidth 상한과
-              함께. 표 아래 chartTableNote가 커서 한도 사실을 이미 명시한다. */}
-          {buckets.length === 1 && (
-            <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              {t("chartSingleBucket", { p1: buckets[0]!.day, p2: fmtInt(llmRows?.length ?? 0) })}
-            </p>
-          )}
           <details className="mt-1">
             <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">{t("viewAsTable")}</summary>
             <div className="table-scroll" role="region" aria-label={t("tableScrollRegion")} tabIndex={0}>
@@ -290,9 +285,6 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
                 </tbody>
               </table>
             </div>
-            <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              {t("chartTableNote", { p1: fmtInt(llmRows?.length ?? 0) })}
-            </p>
           </details>
         </div>
       </section>

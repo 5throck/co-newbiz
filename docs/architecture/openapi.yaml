@@ -2569,7 +2569,7 @@ paths:
           schema:
             type: string
             enum: [24h, 7d, 30d]
-          description: Summary aggregation window only; list pagination is cursor-based.
+          description: Summary aggregation window only; list pagination is cursor-based. summary.daily returns zero-filled per-day buckets ({day YYYY-MM-DD server-local, ok, failed, costUsd}) across the whole window, independent of limit/before.
       responses:
         '200':
           $ref: '#/components/responses/Ok'

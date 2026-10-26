@@ -5915,7 +5915,7 @@
         "estimatedIncluded": "추정 {p1}건 포함",
         "costSum": "비용 합",
         "unpricedExcluded": "미가격 {p1}건 제외",
-        "chartAria": "기간별 호출 수와 비용 — 불러온 {p1}건 기준",
+        "chartAria": "기간별 호출 수와 비용 — {p1} 기준",
         "viewAsTable": "표로 보기 (차트 데이터)",
         "tableScrollRegion": "데이터 표 (가로 스크롤)",
         "chartTableAria": "기간별 호출 수와 비용 데이터",
@@ -5925,7 +5925,6 @@
         "colFailed": "실패",
         "colCost": "비용",
         "emptyData": "데이터 없음",
-        "chartTableNote": "차트와 표는 이 화면이 불러온 {p1}건(커서 페이지 한도)을 반영합니다 — 기간 전체 집계는 위 요약 카드를 사용하세요.",
         "runsSection": "런 목록",
         "processRunsTitle": "프로세스 런",
         "dryRunNotePrefix": "참고: {p1}",
@@ -5968,10 +5967,8 @@
         "chartLegendSuccess": "✓ 성공 호출",
         "chartLegendFailed": "✕ 실패 호출",
         "chartAxisCost": "비용 ($)",
-        "chartSingleBucket": "막대 1개는 불러온 {p2}건이 하루({p1})에 몰려 있다는 뜻입니다 — 차트는 커서 페이지 한도 내 행만 반영합니다.",
         "okFilterGroup": "성공·실패 필터",
         "chartTitle": "호출 수 추이",
-        "chartScopeCaption": "화면에 불러온 최근 {p1}건 기준",
         "filterSourceLlm": "LLM (AI)"
       },
       "dryRunSession": {
