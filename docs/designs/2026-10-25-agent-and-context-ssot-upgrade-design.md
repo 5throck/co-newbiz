@@ -142,3 +142,63 @@ PM running on: glm-5.3-flash (session model; user-selected floor respected).
 - **Reference-fix misses.** Final grep sweep for both `docs/meta/co-newbiz.context.md` and `docs/co-newbiz.context.md` path variants before /sync. Expected end state: zero `docs/meta/` references outside CHANGELOG/reports/generated snapshots.
 - **Content-refresh fabrication.** Every refreshed fact must cite its source (CHANGELOG date entry, ADR id, or registry file); unverifiable items stay marked as open questions rather than asserted.
 - **Language gate.** All agent/context edits are English; conversational summaries to the user remain in Korean.
+
+## 3.1 Legal Basis applicability (2026-10-26)
+
+Amends §3 body skeleton item 1 per DEC-20261026-01 (owner decision of 2026-10-26; workspace-level rule filed upstream as U-20261026-004).
+
+**Corrected premise.** §3 and DEC-20261025-06 ruling 2 assumed the co-export skeleton (Legal Basis first) is shared by sibling co-* projects. Verified 2026-10-26: only co-export and co-newbiz use `## Legal Basis`; other siblings use different skeletons. The section is therefore not a workspace-wide convention and is applied here by applicability, not uniformly.
+
+**Criterion.** `## Legal Basis` is KEEP only when the agent's judgments rest on concrete statutes, regulations, or permit/certification regimes: the section cites such a regime (statute article, regulatory regime, permit or certification system) or the agent's responsibilities consist of applying one (merger control, labor/employment law, patent law, incentive/clawback conditions, certification/permit regimes, regional regulatory axes). It is REMOVE when the section is authority prose (ADR, flow.spec, procedure-step, checklist and roster citations), internal-rule governance, or technical/analytical/operational method, even if the agent touches regulated topics, because the statutory judgment is owned by a KEEP sibling (for example legal-counsel owns permissibility rulings). Classification is based on the section's actual content (read 2026-10-26), not on agent names.
+
+**Boundary relocation rule.** Where the section is removed, its **Boundary** paragraph moves verbatim to the end of `## Role`, introduced as `**Boundary**: ...`, so sibling-ownership statements are not lost. The remaining authority bullets are not carried over as a section: any bullet whose anchor is load-bearing (an ADR or procedure step the agent is bound by) must already appear in `## Responsibilities`, `## Constraints` or `## Engagement Context`; if one does not, it is appended to `## Special Instructions`. Skeleton for REMOVE agents becomes 8 sections: Role / Responsibilities / Protocols / Constraints / Meeting Participation / Engagement Context / Deliverable Standards / Special Instructions. Length bands (170-200 domain leads, 140-170 specialists) are measured on the resulting file and are not a reason to retain the section.
+
+**Classification (41 agent files; 39 carried the section).**
+
+| Agent | Class | Basis (section content / responsibilities) |
+|---|---|---|
+| antitrust-agent | KEEP | Cites Fair Trade Act Art. 11 and enforcement-decree thresholds; merger-control filing, gun-jumping regimes |
+| certification-agent | KEEP | Certification-vs-permit regime separation, issuer transferability rules |
+| legal-counsel | KEEP | Domestic and overseas statute, licensing, foreign-investment and contract law |
+| region-lead | KEEP | Region profiles whose axes are regulatory regimes (merger control, FDI screening, labor, tax, FX, sanctions, data transfer) |
+| ip-agent | KEEP | Patent and trade-secret law, FTO grounded in claim language |
+| hr-integration-agent | KEEP | Korean labor/employment succession doctrine, EU works-council requirement input (borderline: section is mostly ADR prose; KEEP because the work applies labor law) |
+| incentive-agent | KEEP | Incentive eligibility and clawback conditions (owner-named KEEP; borderline: section cites ADR/checklists, regime detail lives in sourced records) |
+| compliance-officer | KEEP | Owner-named KEEP (borderline: section is internal gate-blocking governance, ADR-0037/0048; consider refocusing the section on the rules it operates) |
+| process-governance-manager | REMOVE | Internal authority layering and document hierarchy; no external statute basis |
+| risk-officer | REMOVE | RAG/kill-criteria framework and ADRs |
+| industry-lead | REMOVE | Profile schema contract and ADR-0024 (borderline: industry regulatory landscape is a profile axis, but the section is schema authority prose) |
+| platform-lead | REMOVE | Technical review authority |
+| backend-engineer | REMOVE | ADR-0069/0070/0011/0154 technical authority |
+| frontend-engineer | REMOVE | Technical/design authority |
+| design-system-agent | REMOVE | Design-system authority |
+| ux-designer-agent | REMOVE | Design doctrine |
+| data-architect | REMOVE | Data-model authority |
+| dba | REMOVE | Database operations |
+| sre | REMOVE | Monitoring/incident operations |
+| release-engineer | REMOVE | Build/deploy discipline |
+| infra-automation-engineer | REMOVE | OS/service automation |
+| security-engineer | REMOVE | ADR-0038/0039/0040 and security model; no statute cited (borderline: personal-data/MNPI controls are implemented in code) |
+| docs-writer | REMOVE | Language-policy and record-format authority |
+| glossary-curator | REMOVE | ADR-0022 tooling integration |
+| brownfield-agent | REMOVE | Checklist/ADR authority; merger regimes owned by antitrust-agent |
+| greenfield-agent | REMOVE | flow.spec/ADR authority; permit pathway owned by legal-counsel |
+| commercial-dd-agent | REMOVE | Procedure step and ADR authority |
+| technical-dd-agent | REMOVE | DD procedure/checklist authority (borderline: EHS/FTO rows are checklist items, regime judgment sits with legal-counsel and ip-agent) |
+| customer-retention-agent | REMOVE | Change-of-control clause scanning is contract analysis; enforceability is legal-counsel's |
+| pmi-agent | REMOVE | Procedure authority |
+| partnership-agent | REMOVE | Procedure authority (borderline: partner compliance screening discipline is a skill; legal ruling is legal-counsel's) |
+| group-review-agent | REMOVE | Group-IC ADRs and procedures (borderline: intra-group transaction compliance, no statute cited in section) |
+| financial-analyst | REMOVE | DART data discipline is a data-source rule; ADR-0174/0176/0178 |
+| financing-agent | REMOVE | Advisory charter and ADRs |
+| valuation-agent | REMOVE | Valuation ADRs |
+| quant-methodologist | REMOVE | Method ownership |
+| market-intelligence-agent | REMOVE | RAG framework and market ADRs |
+| site-facility-agent | REMOVE | Committee seat and region-profile grounding (borderline: industrial-complex eligibility, but anchored to region-lead profiles) |
+| ir-agent | REMOVE | ADR-0040 MNPI handling (borderline: disclosure discipline; permissibility ruling is legal-counsel's) |
+| pm | N/A | No Legal Basis section; out of scope of the 2026-10-25 rewrite |
+| i18n-specialist | N/A | No Legal Basis section; out of scope of the 2026-10-25 rewrite |
+
+Counts: KEEP 8, REMOVE 31, N/A 2 (total 41). Reclassification trigger: if a REMOVE agent's responsibilities come to rest on a statute or permit/certification regime, restore the section by recorded decision.
+
+**Dependent tooling (grep 2026-10-26).** No validator, test or generator requires `## Legal Basis`: `AGENT_LAYER1_SECTIONS` (`scripts/helpers/golden-reference-loader.ts`, used by `scripts/audit.ts`) lists Role / PM-ONLY / Responsibilities / Output Format / Constraints / Meeting Participation / Dispatch Protocol; `scripts/validate-agents.ts` checks lifecycle docs only. Textual references to update with the rewrite: `agents/README.md` line 13 (file-structure list), this design §3 item 1, `_ORIGIN.md` line 33, and the generated persona copies under `.claude/agents/*.md` (regenerate with `scripts/co-newbiz/sync-agent-personas.ts`; they currently carry the section). Note: the workspace dynamic Layer 2 detector (`loadDynamicLayer2Agents`, threshold = half of agent files) would stop treating `## Legal Basis` as a common section once removed from 31 of 41 files; this affects only workspace-level template expectations and is part of U-20261026-004.

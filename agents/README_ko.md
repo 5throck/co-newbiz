@@ -11,11 +11,11 @@ co-newbiz 신사업 심사 팀의 에이전트 정의 파일. 정본 로스터(�
 
 ## 파일 구조
 
-모든 에이전트 파일은 정본 9-섹션 본문 표준(설계
+모든 에이전트 파일은 정본 본문 표준(9개 섹션; Legal Basis를 생략하는 에이전트는 8개)(설계
 [`docs/designs/2026-10-25-agent-and-context-ssot-upgrade-design.md`](../docs/designs/2026-10-25-agent-and-context-ssot-upgrade-design.md))을
 순서대로 따른다:
 
-1. **Legal Basis** — 역할의 권한/법적 근거, 형제 에이전트 소유권을 명시하는 **Boundary** 단락으로 끝난다
+1. **Legal Basis** — 조건부: 구체적인 법령·규제·인허가/인증 체계에 근거해 일하는 에이전트에만 둔다(DEC-20261026-01; 현재 antitrust-agent, certification-agent, legal-counsel, region-lead, ip-agent, hr-integration-agent, incentive-agent, compliance-officer). 형제 에이전트 소유권을 명시하는 **Boundary** 단락으로 끝난다. 그 밖의 에이전트는 이 섹션을 생략하고 **Boundary** 단락을 Role 끝에 둔다
 2. **Role**
 3. **Responsibilities** — flow.spec 액티비티 / 절차 스텝에 묶인 볼드 라벨 불릿
 4. **Protocols** — 고정된 4개 H3 하위 섹션: `⚠️ PM-ONLY INVOCATION`(모든 파일에서 동일한 3단계 거절 스크립트), `Dispatch Protocol`(Can Lead Stages / Can Support In / Auto-Dispatch To / Requires Prior Output From / Tier / Communication Style), `Output Format`, `Output Destination`(`process/flow.spec.yaml` 스테이지 산출물과 `docs/co-newbiz.context.md`를 가리키는 SSOT 인용 블록)

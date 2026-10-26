@@ -30,7 +30,7 @@ variant-specific content **before** Phase B:
 - [ ] `CLAUDE.md` — variant context section
 - [ ] `GEMINI.md` — variant context section (parity with CLAUDE.md)
 - [ ] `AGENTS.md` — variant agent roster
-- [ ] `agents/*.md` — variant agent definitions (3-Section: Legal Basis / Role / Protocols)
+- [ ] `agents/*.md` — variant agent definitions (3-Section: Role / Protocols, plus Legal Basis only for statute/regime-based agents per DEC-20261026-01)
 - [ ] `skills/<domain-skill>/SKILL.md` — domain skills
 - [ ] `README.md` / `README_ko.md` — regenerate via `bun scripts/generate-l3-readme.ts` once agents/skills exist
 - [ ] `variant.json` — description, type, agent_overrides, skill_manifest
