@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-26T18:00:07.842Z
+**Generated**: 2026-10-26T21:10:07.658Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -37,7 +37,7 @@
 | greenfield-agent | agents/greenfield-agent.md | high | inherit | 2026-10-26 |
 | group-review-agent | agents/group-review-agent.md | high | inherit | 2026-10-26 |
 | hr-integration-agent | agents/hr-integration-agent.md | high | inherit | 2026-10-26 |
-| i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-10-24 |
+| i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-10-26 |
 | incentive-agent | agents/incentive-agent.md | medium | inherit | 2026-10-26 |
 | industry-lead | agents/industry-lead.md | high | inherit | 2026-10-26 |
 | infra-automation-engineer | agents/infra-automation-engineer.md | medium | inherit | 2026-10-26 |
