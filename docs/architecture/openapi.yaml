@@ -987,6 +987,58 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/human-roles:
+    get:
+      operationId: listHumanRoleGrants
+      summary: Human-role grants (ADR-0186 D6; entity-ic-reviewer, group-ic-reviewer). Active grants by default, ?include_revoked=1 adds revoked rows, ?user_id= filters. Admin role.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      operationId: issueHumanRoleGrant
+      summary: Issue a human-role grant {user_id, role_key}. Admin role, cookie session only (bearer and agent sessions get 403 human_only). A user cannot grant themselves a role (403 self_grant_forbidden); agents hold none; a duplicate active grant is 409. Audited as grant.issue; rate-limited.
+      tags:
+        - Admin
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/admin/human-roles/{grantId}/revoke:
+    post:
+      operationId: revokeHumanRoleGrant
+      summary: Revoke a human-role grant (the row is kept with revoked_at and revoked_by). Admin role, cookie session only; audited as grant.revoke; rate-limited.
+      tags:
+        - Admin
+      parameters:
+        - name: grantId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /api/admin/users/{userId}:
     put:
       operationId: manageUser
@@ -3543,7 +3595,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     post:
       operationId: recordOpportunityGateDecision
-      summary: Record a gate decision — HOLD requires missing_artifacts. Analyst+; audited. GO is refused with 409 gate_prerequisites_incomplete until the gate's stage prerequisites are complete (HOLD/KILL always allowed).
+      summary: Record a gate decision — HOLD requires missing_artifacts. Analyst+; audited. GO is refused with 409 gate_prerequisites_incomplete until the gate's stage prerequisites are complete (HOLD/KILL always allowed). ADR-0186 (families ladder / rationale, off|shadow|enforce; GO only, HOLD and KILL are never blocked) - under enforce a GO whose preceding ladder gate has no effective GO is 409 ladder_prerequisite_missing (error.details.blocker), and a GO rationale that fails the script-aware substance profile is 422 rationale_insufficient (error.details.field and reason, one of too_short | too_few_words | placeholder | repetitive | jamo_only | duplicate_of_other_gate).
       tags:
         - Reference
       parameters:
@@ -7372,7 +7424,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       operationId: recordProjectGateDecision
-      summary: Record a human gate decision for the project; HOLD requires missing_artifacts (analyst+).
+      summary: Record a human gate decision for the project; HOLD requires missing_artifacts (analyst+). ADR-0186 (families ladder / rationale, off|shadow|enforce; GO only, HOLD and KILL are never blocked) - under enforce a GO whose preceding ladder gate has no effective GO is 409 ladder_prerequisite_missing (error.details.blocker), and a GO rationale that fails the script-aware substance profile is 422 rationale_insufficient (error.details.field and reason, one of too_short | too_few_words | placeholder | repetitive | jamo_only | duplicate_of_other_gate).
       tags:
         - Reference
       parameters:
@@ -7422,7 +7474,7 @@ paths:
           $ref: '#/components/responses/Conflict'
     post:
       operationId: requestProjectWaiver
-      summary: File a waiver request (S9 dd-waiver-review); expires_at is mandatory and must be future — indefinite/past dates are refused (ADR-0036). Analyst+.
+      summary: File a waiver request (S9 dd-waiver-review); expires_at is mandatory and must be future — indefinite/past dates are refused (ADR-0036). Analyst+. ADR-0186 D5/D2 (family waiver / rationale, off|shadow|enforce) - under enforce clause_ref must resolve to a checklist item (422 clause_unresolved), a mandatory non-waiver-eligible item is 422 not_waivable, approver_role must be entity-ic-reviewer or group-ic-reviewer (422 approver_role_invalid), and the reason must meet the ack substance profile (422 rationale_insufficient).
       description: "R2-E (2026-10-09): `dd_item` may replace a hand-built clause string for per-row requests — the route derives `clause_ref` (`{checklist_id} {item_id}`) and a default `reason` from the item, so the client sends the item identity without reshaping."
       tags:
         - Reference
@@ -7451,7 +7503,7 @@ paths:
                   description: "The DD checklist item being waived; clause_ref and default reason derive from it."
                 approver_role: { type: string }
                 expires_at: { type: string, format: date-time }
-                approved_by: { type: string }
+                approved_by: { type: string, deprecated: true, description: "ADR-0186 D5: never grants authority. Under CO_NEWBIZ_GATE_INTEGRITY_WAIVER=enforce it is accepted but ignored and logged (waiver.approved_by_ignored) for one release, then rejected 400 approved_by_removed (CO_NEWBIZ_WAIVER_APPROVED_BY_COMPAT=0). Approve through POST .../waivers/{waiverId}/approve." }
                 target_id: { type: string, description: "ADR-0157: an opened comparison target; a waiver applies to exactly one DD scope. Omitted = the selected-target scope." }
       responses:
         '201':
@@ -7495,6 +7547,37 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /api/projects/{id}/waivers/{waiverId}/approve:
+    post:
+      operationId: approveProjectWaiver
+      summary: Approve a pending waiver as the AUTHENTICATED user (ADR-0186 D5). Human cookie session only (bearer and agent sessions 403 human_only). The approver must differ from the requester (403 approver_must_differ), hold an active grant of the waiver's approver_role (403 human_role_required, deny-by-default), and expires_at must be at most 90 days after approval (422 waiver_term_too_long). Sets approved_by and approved_at; audited as waiver.approve; rate-limited.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: waiverId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
 
   /api/projects/{id}/ic-package:
     get:
@@ -7937,6 +8020,32 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /api/projects/{id}/dd-checklist/state/confirm-na:
+    post:
+      operationId: confirmDdChecklistNa
+      summary: Second-person confirmation of a `na` on a MANDATORY DD checklist item (ADR-0186 D5). Body {checklist_id, item_id, target_id?}. Human cookie session only; the confirmer holds an entity-ic-reviewer or group-ic-reviewer grant (403 human_role_required) and differs from the person who marked it (403 confirmer_must_differ). Under CO_NEWBIZ_GATE_INTEGRITY_WAIVER=enforce an unconfirmed mandatory `na` counts as pending. Audited as dd_checklist.na_confirm; rate-limited.
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /api/projects/{id}/dd-checklist/state:
     put:

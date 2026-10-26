@@ -4,7 +4,7 @@
 // prompts and flowspec:// resources (ADR-0154, Wave M M-3).
 import type { StageGuideSpec } from "./stage-guides.ts";
 
-export const GUIDE_SPEC_VERSION = "2.12.0";
+export const GUIDE_SPEC_VERSION = "2.13.0";
 export const GUIDE_STAGES: StageGuideSpec[] = [
   {
     "id": "S1",

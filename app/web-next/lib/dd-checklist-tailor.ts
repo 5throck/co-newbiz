@@ -31,6 +31,7 @@ import { appendAudit } from "../../../db/lib/access-control.ts";
 import { AGENT_KEYS } from "./agent-registry.generated.ts";
 import { runActivityChain, type ActivitySpec, type EntityRef } from "./agent-orchestrator.ts";
 import { specAgentFor } from "./spec-activities.ts";
+import { gateIntegrityMode } from "./gate-integrity-flags.ts";
 import { DD_WORKSPACE_CHECKLISTS, SUB_TRACK_DD_CHECKLISTS, scopedSubTrackDdChecklists, getChecklistItems, type ChecklistItemDef } from "./library.ts";
 import { WAVE_F_PREDICATE_DATE } from "./wave-f-date.ts";
 import { KO_DATA } from "./ko-data-values.ts";
@@ -529,7 +530,7 @@ export function upsertChecklistState(
     .get(projectId, targetId, checklistId, itemId) as { id: string } | undefined;
   if (existing) {
     db.run(
-      "UPDATE project_checklist_item_state SET status = ?, note = COALESCE(?, note), evidence_ref = COALESCE(?, evidence_ref), waiver_id = COALESCE(?, waiver_id), assessed_by = ?, assessed_at = ? WHERE id = ?",
+      "UPDATE project_checklist_item_state SET status = ?, note = COALESCE(?, note), evidence_ref = COALESCE(?, evidence_ref), waiver_id = COALESCE(?, waiver_id), assessed_by = ?, assessed_at = ?, na_confirmed_by = NULL, na_confirmed_at = NULL WHERE id = ?",
       [status, opts.note ?? null, opts.evidenceRef ?? null, opts.waiverId ?? null, userId, now, existing.id],
     );
     return existing;
@@ -586,6 +587,34 @@ function mandatoryItemIds(checklistId: string): Set<string> | null {
   const set = new Set(items.filter((i) => i.mandatory).map((i) => i.id));
   STANDARD_MANDATORY_CACHE.set(checklistId, set);
   return set;
+}
+
+/**
+ * ADR-0186 D5: whether an item is mandatory. Standard items follow the checklist
+ * yaml's flag; an approved custom item was approved INTO the gate-relevant set,
+ * so it counts as mandatory (ADR-0099 section 5).
+ */
+export function isMandatoryChecklistItem(checklistId: string, itemId: string): boolean {
+  if (checklistId.startsWith(CUSTOM_CHECKLIST_PREFIX)) return true;
+  return mandatoryItemIds(checklistId)?.has(itemId) ?? false;
+}
+
+/** Whether (checklist, item) is an applied item of this project in this DD scope (standard, or an approved custom item). */
+export function isKnownChecklistItem(projectId: string, checklistId: string, itemId: string, targetId: string | null): boolean {
+  if (checklistId.startsWith(CUSTOM_CHECKLIST_PREFIX)) {
+    return !!getDb()
+      .query("SELECT id FROM project_checklist_item_custom WHERE id = ? AND project_id = ? AND status = 'approved' AND target_id IS ?")
+      .get(itemId, projectId, targetId);
+  }
+  return !!getChecklistItems(checklistId)?.some((i) => i.id === itemId);
+}
+
+/**
+ * ADR-0186 D5: under `enforce`, a mandatory `na` that no second person confirmed
+ * counts as pending (the flag is read per call; shadow and off keep the old count).
+ */
+function unconfirmedMandatoryNa(r: { checklist_id: string; item_id: string; status: string; na_confirmed_by: string | null }): boolean {
+  return r.status === "na" && !r.na_confirmed_by && gateIntegrityMode("waiver") === "enforce" && isMandatoryChecklistItem(r.checklist_id, r.item_id);
 }
 
 /**
@@ -732,9 +761,9 @@ export function ddCompletionSummary(projectId: string, opts: { targetId?: string
   }
   const rows = (getDb()
     .query(
-      `SELECT checklist_id, item_id, status, waiver_id FROM project_checklist_item_state WHERE project_id = ? AND target_id IS ?`,
+      `SELECT checklist_id, item_id, status, waiver_id, na_confirmed_by FROM project_checklist_item_state WHERE project_id = ? AND target_id IS ?`,
     )
-    .all(projectId, targetId) as Array<{ checklist_id: string; item_id: string; status: string; waiver_id: string | null }>)
+    .all(projectId, targetId) as Array<{ checklist_id: string; item_id: string; status: string; waiver_id: string | null; na_confirmed_by: string | null }>)
     // Reference-only rows (newer domains of a pre-2026-10-01 project) never enter the count.
     .filter((r) => !uncountedRow(r.checklist_id, newerDomainsCounted(projectId)));
   const extraIds = subTrackChecklistIds(projectId);
@@ -742,7 +771,7 @@ export function ddCompletionSummary(projectId: string, opts: { targetId?: string
   let pending = 0;
   let mandatoryUnmet = 0;
   for (const r of rows) {
-    if (r.status === "pending") pending += 1;
+    if (r.status === "pending" || unconfirmedMandatoryNa(r)) pending += 1;
     if (r.status === "fail" && !r.waiver_id) {
       // Approved custom items were approved INTO the gate-relevant set —
       // approval is the mandatory declaration for them (ADR-0099 §5); for
@@ -813,15 +842,15 @@ function bfScopedInput(bf: BrownfieldScopeContext): ScopedInput {
 
 function scopedCompletionSummary(projectId: string, ws: ScopedInput): DdCompletionSummary {
   const rows = (getDb()
-    .query("SELECT checklist_id, item_id, status, waiver_id FROM project_checklist_item_state WHERE project_id = ? AND target_id IS NULL")
-    .all(projectId) as Array<{ checklist_id: string; item_id: string; status: string; waiver_id: string | null }>)
+    .query("SELECT checklist_id, item_id, status, waiver_id, na_confirmed_by FROM project_checklist_item_state WHERE project_id = ? AND target_id IS NULL")
+    .all(projectId) as Array<{ checklist_id: string; item_id: string; status: string; waiver_id: string | null; na_confirmed_by: string | null }>)
     .filter((r) => !uncountedRow(r.checklist_id, newerDomainsCounted(projectId), !!ws.gfInScope));
   const counted = countedWorkspaceChecklists(projectId, !!ws.gfInScope);
   const outOfScope = (r: { checklist_id: string; item_id: string }) => ws.items.get(`${r.checklist_id}:${r.item_id}`)?.judgeable === false;
   let pending = 0;
   let mandatoryUnmet = 0;
   for (const r of rows) {
-    if (r.status === "pending" && !outOfScope(r)) pending += 1;
+    if ((r.status === "pending" || unconfirmedMandatoryNa(r)) && !outOfScope(r)) pending += 1;
     if (r.status === "fail" && !r.waiver_id) {
       if (r.checklist_id.startsWith(CUSTOM_CHECKLIST_PREFIX) || mandatoryItemIds(r.checklist_id)?.has(r.item_id)) mandatoryUnmet += 1;
     }

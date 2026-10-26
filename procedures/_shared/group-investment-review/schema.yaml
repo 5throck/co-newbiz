@@ -3,7 +3,7 @@ procedure_id: shared-group-investment-review
 title: "Group Investment Committee Review"
 scope: shared
 level: group
-version: "1.2.0"
+version: "1.3.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -51,8 +51,8 @@ steps:
       backfill-report §4.1).
   - id: 5
     gate: "Group IC"
-    agent_key: process-governance-manager
-    decision_authority: human   # recorder pattern (ADR-0053): PGM records the committee's decision — the authority is the human Group IC, not the agent
+    agent_key: group-ic-reviewer   # human role — procedures/_human-roles.yaml registry (ADR-0053, ADR-0186 D6); replaces the former recorder pattern (process-governance-manager)
+    decision_authority: human
     skill_key: stage-gate-governance
     output_type: group_ic_decision
     description: >
@@ -62,7 +62,10 @@ steps:
       docs/pilots/pilot-003-doosan-bobcat-robotics.md finding F-2, matching
       entity-ic-review's decision model — a real case can withdraw and
       re-propose with revised terms rather than landing on any of the
-      original three states).
+      original three states). The decision is recorded together with the
+      server-computed gate snapshot and acknowledgements, and takes effect only
+      after a second eligible person's countersign (neb-policy 2.9, ADR-0186);
+      agents prepare the package and never record or countersign.
 
 kill_criteria: []  # Group IC does not introduce new Kill Criteria beyond those already
                     # triggered upstream; it is a ranking/portfolio gate, not a new red-team pass.

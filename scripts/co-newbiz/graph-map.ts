@@ -1,4 +1,4 @@
-// @version 1.2.0
+// @version 1.3.0
 /**
  * graph:map — procedure→agent/skill graph mapping over the MERGED procedure
  * space. Walks every shared procedure × every applicable region/entity layer
@@ -28,6 +28,10 @@
  *   (c) BIDIRECTIONAL CONTRACT: every merged (procedure → skill) edge must
  *       be acknowledged by the skill's metadata.procedure_keys — the graph
  *       edge and the skill's self-description must not drift apart.
+ *
+ * v1.3.0 (ADR-0186 decision 6, P0-b): REVERSE consistency rule — a step whose
+ * agent_key resolves to an AI agent (agents/<key>.md exists) must NOT carry
+ * `decision_authority: human`; the marker belongs to registered human roles.
  *
  * Usage:
  *   bun scripts/co-newbiz/graph-map.ts          # human-readable summary
@@ -159,6 +163,24 @@ function decisionAuthorityOf(step: { agent_key: string } & Record<string, unknow
   return step.decision_authority === "human" ? "human" : undefined;
 }
 
+/**
+ * ADR-0186 decision 6 (reverse of the ADR-0053 rule): an AI agent key must not
+ * carry `decision_authority: human`. Pure; `agentExists` is injected for tests.
+ * Returns an error string, or null when consistent.
+ */
+export function checkAiAgentAuthority(
+  where: string,
+  step: { id: number | string; agent_key?: unknown; decision_authority?: unknown },
+  humanRoles: Set<string>,
+  agentExists: (key: string) => boolean
+): string | null {
+  const key = step.agent_key;
+  if (step.decision_authority !== "human" || typeof key !== "string" || key.trim() === "") return null;
+  if (humanRoles.has(key) || !agentExists(key)) return null;
+  const suggestions = [...humanRoles].sort().join(", ") || "(none registered)";
+  return `${where} step ${step.id}: agent_key '${key}' resolves to an AI agent (agents/${key}.md) but the step carries decision_authority: human — gate/decision authority belongs to a registered human role; re-own the step to one of: ${suggestions} (procedures/_human-roles.yaml, ADR-0186 decision 6)`;
+}
+
 export function buildGraphMap(): GraphMap {
   const sharedProcedures = discoverSharedProcedures();
   const regions = discoverLayerCodes("regions");
@@ -207,6 +229,13 @@ export function buildGraphMap(): GraphMap {
             `${name} @ ${combo.label} step ${s.id}: agent_key '${s.agent_key}' is a registered human role (procedures/_human-roles.yaml) but the step lacks decision_authority: human`
           );
         }
+        const aiAuthErr = checkAiAgentAuthority(
+          `${name} @ ${combo.label}`,
+          s as never,
+          humanRoles,
+          (k) => existsSync(join(AGENTS_DIR, `${k}.md`))
+        );
+        if (aiAuthErr) errors.push(aiAuthErr);
       }
     }
   }

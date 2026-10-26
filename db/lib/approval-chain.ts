@@ -71,6 +71,8 @@ export interface EnsureChainOptions {
   entityApproverRole?: string;
   /** Approver role recorded on the group IC step (default "group_ic"). */
   groupApproverRole?: string;
+  /** ADR-0186 D6 (migration 0176): the maker who recorded the IC decision this chain belongs to. */
+  recordedBy?: string;
   now: string;
 }
 
@@ -88,7 +90,7 @@ export function ensureApprovalChain(db: Database, options: EnsureChainOptions): 
 
   if (!have.has("entity")) {
     db.run(
-      "INSERT INTO approval_chain (id, project_id, level, gate, sequence, approver_role, status, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO approval_chain (id, project_id, level, gate, sequence, approver_role, status, created_at, updated_at, recorded_by) VALUES (?,?,?,?,?,?,?,?,?,?)",
       [
         ulid(),
         options.projectId,
@@ -99,12 +101,13 @@ export function ensureApprovalChain(db: Database, options: EnsureChainOptions): 
         "pending",
         options.now,
         options.now,
+        options.recordedBy ?? null,
       ],
     );
   }
   if (!have.has("group")) {
     db.run(
-      "INSERT INTO approval_chain (id, project_id, level, gate, sequence, approver_role, status, blocked_reason, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO approval_chain (id, project_id, level, gate, sequence, approver_role, status, blocked_reason, created_at, updated_at, recorded_by) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
       [
         ulid(),
         options.projectId,
@@ -116,6 +119,7 @@ export function ensureApprovalChain(db: Database, options: EnsureChainOptions): 
         "Entity IC has not approved — group-level entry is blocked (ADR-0028).",
         options.now,
         options.now,
+        options.recordedBy ?? null,
       ],
     );
   }
@@ -128,6 +132,8 @@ export interface RecordDecisionOptions {
   decidedAt: string;
   /** Free-text conditions when decision = 'conditional' (recommended). */
   conditions?: string;
+  /** ADR-0186 D6 (migration 0176): the authenticated checker who decided. */
+  decidedBy?: string;
   now: string;
 }
 
@@ -152,13 +158,14 @@ export function recordDecision(db: Database, options: RecordDecisionOptions): Re
     );
   }
   db.run(
-    "UPDATE approval_chain SET decision = ?, status = ?, decided_at = ?, conditions = ?, updated_at = ? WHERE id = ?",
+    "UPDATE approval_chain SET decision = ?, status = ?, decided_at = ?, conditions = ?, updated_at = ?, decided_by = ? WHERE id = ?",
     [
       options.decision,
       options.decision,
       options.decidedAt,
       options.conditions ?? null,
       options.now,
+      options.decidedBy ?? null,
       row.id,
     ],
   );

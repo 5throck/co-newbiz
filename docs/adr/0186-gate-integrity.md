@@ -1,8 +1,8 @@
 # ADR-0186: Gate integrity (acknowledged GO snapshot, binding checks, maker/checker, full ladder, WACC confirmation)
 
-- Status: Proposed (2026-10-26, revised after AI-2nd review) - AI-2nd technical review by platform-lead returned REVISE with 5 blocking findings (B1-B5) and judgement items; resolved below in 'Review outcome and revisions' (PM resolutions, the owner may override at approval). Risk-officer red-team review and human owner approval are still pending. An ADR that amends a policy, procedures, the human-role registry, the DB schema and gate-bearing checks cannot pass on AI review alone (project CLAUDE.md, Review Model).
+- Status: Accepted (2026-10-27) - approved by the human owner at the merge of PR 5throck/co-newbiz#746 (merge commit 6fa3ed6d); owner decisions recorded in design section 13 are authoritative. History: Proposed 2026-10-26, AI-2nd technical review by platform-lead returned REVISE (B1-B5), resolved in 'Review outcome and revisions'.
 - Date: 2026-10-26
-- Decider: human owner (pending). Drafted by process-governance-manager on PM dispatch (wave W2).
+- Decider: human owner (approved 2026-10-27 at PR #746 merge). Drafted by process-governance-manager on PM dispatch (wave W2).
 - Design-of-record: [docs/designs/2026-10-26-gate-integrity-design.md](../designs/2026-10-26-gate-integrity-design.md)
 - Source review: [docs/reports/2026-10-26-project-review-s1-s12.md](../reports/2026-10-26-project-review-s1-s12.md) findings C1, C2, C3, H5, H6 (WACC part), H10, M16 and domain finding A-06.
 - Related: ADR-0028 / ADR-0029 (two-tier approval chain), ADR-0036 (waiver expiry), ADR-0037 / ADR-0048 (mandatory validators, applicability registry), ADR-0053 (human decision steps and the human-role registry), ADR-0057 / ADR-0060 / ADR-0064 (kill-criteria evaluator, classification, armed vars), ADR-0074 (flow.spec SSOT), ADR-0094 / ADR-0095 / ADR-0098 (project gates), ADR-0152 (KILL learning capture), ADR-0153 (human-final review snapshot), ADR-0157 (per-target DD scope), ADR-0161 (retroactive-application precedent), ADR-0182 (judgement confirmations), ADR-0185 (six-validator definition, `target-selector` role). Does not supersede any ADR. It amends the neb-policy (policy_change record required) and adds migrations (see Schema).
@@ -186,4 +186,4 @@ The previously open owner questions were answered on 2026-10-27 (see Owner decis
 
 ## Open items for the owner
 
-None. All eight questions were answered on 2026-10-27 (Owner decisions above). Status stays Proposed; approval happens at PR merge.
+None. All eight questions were answered on 2026-10-27 (Owner decisions above). Status is Accepted (approved at the merge of PR #746, commit 6fa3ed6d).

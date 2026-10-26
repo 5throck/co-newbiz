@@ -15,8 +15,8 @@ description: >
 
   Use when: "WACC input", "hurdle IRR confirmation", "CAPM components",
   "discount rate session", "beta estimation".
-version: 1.3.1
-last_reviewed: 2026-09-22
+version: 1.3.2
+last_reviewed: 2026-10-27
 status: active
 owner: valuation-agent
 prerequisites: none
@@ -140,6 +140,10 @@ EXACT keys `wacc` and `hurdle_irr` — these two key names are the contract
   --key wacc --kind user --value <rate> ...` (and again with `--key
   hurdle_irr`); read the derivation back with `bun scripts/co-newbiz/newbiz.ts
   wacc:derivation --project <id>`.
+
+## Gate-Integrity Link (ADR-0186, neb-policy 2.2)
+
+A confirmed session is what completes S8 and lifts the FS GO block: the WACC subject (target for Brown Field unless a bf-13 waiver records the acquirer-based fallback; the investing entity for Green Field) plus `wacc` and `hurdle_irr` as `kind=user`. Until then outputs that use the discount rate are labelled provisional. The session is prepared by the quant-methodologist and confirmed by a person; the skill never confirms on a person's behalf.
 
 ## Output Format
 

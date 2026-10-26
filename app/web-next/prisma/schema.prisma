@@ -66,10 +66,25 @@ model app_user {
   approved_by          String?
   approved_at          String?
   api_token            api_token[]
+  app_user_human_role  app_user_human_role[]
   password_history     password_history[]
   session              session[]
 
   @@index([status, user_id], map: "idx_app_user_status")
+}
+
+/// ADR-0186 D6 (migration 0176): human-role grants, deny-by-default; rows are revoked, never deleted.
+model app_user_human_role {
+  id         String   @id
+  user_id    String
+  role_key   String
+  granted_by String
+  granted_at String
+  revoked_at String?
+  revoked_by String?
+  app_user   app_user @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([user_id, revoked_at], map: "idx_app_user_human_role_user")
 }
 
 model approval_chain {
@@ -88,6 +103,8 @@ model approval_chain {
   blocked_reason        String?
   created_at            String
   updated_at            String
+  recorded_by           String?
+  decided_by            String?
   md_entity             md_entity? @relation(fields: [entity_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   md_project            md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 

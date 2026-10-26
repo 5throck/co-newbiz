@@ -28,7 +28,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `community-partnership-planning` | 1.1.0 | active | greenfield-agent | 2026-08-23 | — | Wave 5.8C — workforce-development partnerships and community-relations risk |
 | `compensation-harmonization-analysis` | 1.0.0 | active | hr-integration-agent | 2026-08-20 | — | Wave 5.8D — ADR-0027 bidirectional upward-bias verification rule |
 | `competitive-intelligence` | 1.1.0 | active | market-intelligence-agent | 2026-08-23 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult |
-| `compliance-monitoring` | 1.1.0 | active | compliance-officer | 2026-08-23 | — | Wave 5.8B (design §9.2 merge) — absorbs governance-training-and-notice, governance-kpi-reporting |
+| `compliance-monitoring` | 1.1.1 | active | compliance-officer | 2026-10-27 | — | Wave 5.8B (design §9.2 merge) — absorbs governance-training-and-notice, governance-kpi-reporting |
 | `customer-attrition-risk` | 1.2.0 | active | customer-retention-agent | 2026-10-01 | — | Wave 5.8D — CoC-clause scan incl. retained-seller-as-supplier (pilot 002 F-2); pre/post-close concentration and recurrence |
 | `dd-to-valuation-bridge` | 1.2.0 | active | valuation-agent | 2026-10-01 | — | Wave 5.8H — assumption_key/value_impact connection audit across all DD workstreams; margin-axis vs. QoE double-count check |
 | `debt-and-contingent-liability-simulation` | 1.1.0 | active | risk-officer | 2026-08-23 | — | Wave 5.8D — ADR-0026 probability-weighted Monte Carlo integration, covenant Kill Criterion |
@@ -90,7 +90,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `site-visit-protocol` | 1.1.0 | active | technical-dd-agent | 2026-08-23 | — | Wave 5.8H — evidence-capture discipline (photo/measurement/log) |
 | `skill-lifecycle-manager` | 1.5.0 | active | pm | 2026-09-21 | — | — |
 | `source-command-commit-push-pr` | 1.0.3 | active | pm | — | — | — |
-| `stage-gate-governance` | 1.4.2 | active | process-governance-manager | 2026-09-22 | — | Wave 5.8C — Screening-DD-Entity IC-Group IC sequence + 6-item Kill Criteria list |
+| `stage-gate-governance` | 1.4.3 | active | process-governance-manager | 2026-10-27 | — | Wave 5.8C — Screening-DD-Entity IC-Group IC sequence + 6-item Kill Criteria list |
 | `standup-synthesizer` | 1.0.0 | active | pm | 2026-08-06 | — | Daily standup digest synthesizer aggregating commits, issues, PRs, and blockers |
 | `strategic-fit-screening` | 1.1.0 | active | process-governance-manager | 2026-08-23 | — | ADR-0051 (PR-10 workflow concretization) — entity-level knock-out + scorecard screen at first gate per chk-strategic-fit; thresholds illustrative until the thresholds meeting |
 | `sync` | 1.8.0 | active | pm | 2026-10-08 | — | Full project sync pipeline — lifecycle, audit, publish, commit, push, PR. Reassigned from lifecycle-manager — same orphan cause as security-scan |
@@ -101,13 +101,13 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `technical-due-diligence` | 1.1.0 | active | technical-dd-agent | 2026-08-23 | — | Wave 5.8H — checklist tdd-01-08, independently-verified capex plan |
 | `token-usage-lint` | 1.1.0 | active | pm | 2026-09-06 | - | - |
 | `translate` | 1.0.3 | active | pm | 2026-08-24 | — | — |
-| `two-tier-approval-chain` | 1.1.0 | active | process-governance-manager | 2026-08-23 | — | Wave 5.8B — Entity IC gating + Group IC ranking (ADR-0028/0029) |
+| `two-tier-approval-chain` | 1.1.1 | active | process-governance-manager | 2026-10-27 | — | Wave 5.8B — Entity IC gating + Group IC ranking (ADR-0028/0029) |
 | `ui-ux-design-intelligence` | 1.0.1 | active | pm | 2026-09-06 | - | - |
 | `unit-conversion-calibration` | 1.0.0 | active | quant-methodologist | 2026-08-20 | — | Wave 5.8F — lead-lag OLS regression, `python/correlation.py` |
 | `update-bun-packages` | 1.3.1 | active | pm | 2026-09-09 | — | — |
 | `value-chain-linkage-analysis` | 1.1.0 | active | market-intelligence-agent | 2026-08-23 | — | Wave 5.8F — ADR-0025 deliberate separation from proxy-chain betas |
-| `wacc-input-session` | 1.3.1 | active | valuation-agent | 2026-09-22 | — | Wave 5.8G — kind=user WACC/hurdle-IRR confirmation gate (checklist bf-02) |
-| `waiver-management` | 1.1.0 | experimental | compliance-officer | 2026-09-08 | — | Wave 5.8B — ADR-0036 mandatory-expiry waiver lifecycle |
+| `wacc-input-session` | 1.3.2 | active | valuation-agent | 2026-10-27 | — | Wave 5.8G — kind=user WACC/hurdle-IRR confirmation gate (checklist bf-02) |
+| `waiver-management` | 1.1.1 | experimental | compliance-officer | 2026-10-27 | — | Wave 5.8B — ADR-0036 mandatory-expiry waiver lifecycle |
 | `zod-contract-gate` | 1.0.2 | active | backend-engineer | 2026-08-06 | — | Defines Zod runtime schema validation patterns and contract safety rules |
 |`assumption-audit`| 1.1.0 | experimental | risk-officer |2026-08-20|—|Wave 5.8I — user/assumed/derived kind-tag correctness audit|
 |`company-intelligence`| 1.1.0 | experimental | market-intelligence-agent |2026-08-20|—|Wave 5.8A reuse layer, adapted from Projects/co-consult|

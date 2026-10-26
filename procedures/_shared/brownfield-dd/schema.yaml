@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-dd
 title: "Brown Field Due Diligence"
 scope: shared
 level: entity
-version: "1.7.0"
+version: "1.7.1"
 status: active
 # 트랙 스코핑 (2026-10-22 프로젝트 리뷰 M7): S9 brownfield DD에 procedure 계층
 # 기계판독 predicate을 둔다 — greenfield-execution-baseline·pmi-integration-
@@ -230,6 +230,11 @@ steps:
       OUTSIDE the no-waiver core: mandatory but with the standard waiver
       path (ADR-0051; whether legal DD joins the core is an open question
       for the thresholds meeting, not decided here).
+      Derivation note (ADR-0186 D4, neb-policy 2.3): checklist item bf-01 is
+      DERIVED from this step's completeness record (the validator engine),
+      not set by hand; a manual bf-01 state has no effect, and a DD GO is
+      rejected while an applicable validator is missing. Wording only — step
+      assignments and the kill criterion are unchanged.
   - id: 15
     gate: DD
     agent_key: process-governance-manager
