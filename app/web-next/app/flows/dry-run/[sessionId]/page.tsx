@@ -347,7 +347,11 @@ export function DryRunSessionView() {
             <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("costTotal")}</div>
             <div className="text-xl font-bold tabular-nums">{fmtUsd(session.ledger.costUsd)}</div>
             <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-              {t("ledgerLine", { p1: fmtInt(session.ledger.llmCalls), p2: fmtInt(session.ledger.runs) })}
+              {/* F9(2026-10-26 UX 리뷰) — 카운터 문구는 카탈로그 템플릿(dryRunSession.ledgerLine,
+                  ko "LLM 호출 {p1}회 · 런 {p2}회"). en은 ICU 복수형이라 원시 수를 넘긴다 —
+                  fmtInt 문자열("1,234")은 복수형 선택이 깨진다(ICU 인자는 로케일 포맷을
+                  런타임이 대행). 원문 "llm 호출 · runs" 대소문자·혼용은 카탈로그 값에서 수정. */}
+              {t("ledgerLine", { p1: session.ledger.llmCalls, p2: session.ledger.runs })}
               {session.ledger.lastRunAt ? " " + t("lastRunSuffix", { p1: fmtDateTime(session.ledger.lastRunAt) }) : ""}
             </div>
           </div>

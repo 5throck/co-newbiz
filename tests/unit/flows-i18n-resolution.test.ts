@@ -1,4 +1,17 @@
-// @version 1.0.0
+// @version 1.2.0
+// 1.2.0: 2026-10-26 PM-approved follow-up round FU-B (design
+// 2026-10-26-flows-ux-review-remediation-design, Design delta) — (a) the
+// dynamic-key allowlist gains stageNameKey(...) (flow-graph's payload-stage-name
+// resolver, the markerNoteKey pattern); (b) the pages.flows namespace joins the
+// FILES map as translator var "tp" (flow-graph.tsx + blueprint-view.tsx consume
+// pages.flows.stageNames.*); (c) a dedicated enumeration asserts every serving
+// stage id resolves in BOTH catalogs, with the ko value echoing the flow.spec
+// SSOT verbatim and the en value placeholder-free.
+// 1.1.0: 2026-10-26 UX review F9 remediation support — (a) the dynamic-key
+// allowlist gains markerNoteKey(...) (flow-graph's catalog-notes resolver);
+// (b) expectParams is ICU-plural-aware — en values may carry "{p1, plural, …}"
+// (design-pinned ledgerLine/chartScopeCaption/detailsSummary), so the
+// placeholder guard matches {p1} and {p1, alike instead of literal "{p1}" only.
 // flows i18n resolution regression (2026-10-23 user screenshot report).
 // The user's long-running dev server rendered RAW key paths
 // (pages.flows.graph.trackCommon, …markers.noteLine, …legend.domains.*) inside the
@@ -30,6 +43,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import ko from "../../app/web-next/locales/ko.json";
 import en from "../../app/web-next/locales/en.json";
+import { SPEC_STAGES } from "../../app/web-next/lib/spec-activities.generated.ts";
 import {
   classifiedByChip,
   DRY_RUN_DISCLOSURE_KEY,
@@ -50,8 +64,10 @@ const FLOWS_ROOT = join(import.meta.dirname, "../../app/web-next/app/flows");
 /** file (under app/flows) → translator variable → namespace prefix ("" = root). */
 const FILES: Record<string, Record<string, string>> = {
   "page.tsx": { t: "pages.flows.flowsAdmin" },
-  "blueprint-view.tsx": { t: "pages.flows.blueprint", tg: "pages.flows.graph", tc: "common" },
-  "flow-graph.tsx": { tg: "pages.flows.graph" },
+  // tp = pages.flows — the FU-B stageNames namespace (payload stage names are
+  // resolved chrome-side through stageNameKey/stageDisplay, flow-graph.tsx).
+  "blueprint-view.tsx": { t: "pages.flows.blueprint", tg: "pages.flows.graph", tp: "pages.flows", tc: "common" },
+  "flow-graph.tsx": { tg: "pages.flows.graph", tp: "pages.flows" },
   "ledger-view.tsx": { t: "pages.flows.ledger", tc: "common", tr: "" },
   "run-expansion.tsx": { t: "pages.flows.runExpansion", tc: "common", tr: "" },
   "dry-run/page.tsx": { t: "pages.flows.dryRunSession", tc: "common", tr: "" },
@@ -80,11 +96,14 @@ function expectResolvesBoth(key: string): void {
   expectResolves(en as Catalog, "en", key);
 }
 
-/** Every {param} the call site passes must survive in both locale values. */
+/** Every {param} the call site passes must survive in both locale values.
+ *  ICU-plural aware (v1.1.0): a design-pinned en value may open an ICU clause
+ *  ("{p1, plural, …}") instead of plain substitution ("{p1}") — both count. */
 function expectParams(key: string, params: readonly string[]): void {
   for (const p of params) {
-    expect(lookup(ko as Catalog, key), `ko ${key} must contain {${p}}`).toContain(`{${p}}`);
-    expect(lookup(en as Catalog, key), `en ${key} must contain {${p}}`).toContain(`{${p}}`);
+    const icuOrPlain = new RegExp(`\\{${p}[},]`);
+    expect(lookup(ko as Catalog, key), `ko ${key} must contain {${p}}`).toMatch(icuOrPlain);
+    expect(lookup(en as Catalog, key), `en ${key} must contain {${p}}`).toMatch(icuOrPlain);
   }
 }
 
@@ -154,7 +173,7 @@ interface CallSite {
   dynamic: string | null; // first-arg expression when not a literal
 }
 
-const TRANSLATOR_VARS = ["t", "tg", "tc", "tr"] as const;
+const TRANSLATOR_VARS = ["t", "tg", "tc", "tr", "tp"] as const;
 
 function extractCalls(): CallSite[] {
   const out: CallSite[] = [];
@@ -184,7 +203,7 @@ const CALLS = extractCalls();
 /** Dynamic first-arg expressions the enumeration below covers. Anything else is
  *  drift: a new dynamic key family must be added to the explicit expansion. */
 const DYNAMIC_ARG_ALLOWLIST =
-  /^(ADMIN_FORBIDDEN_KEY|DRY_RUN_DISCLOSURE_KEY|windowKey|prefKey|k|PROPOSAL_TYPE_KEY\[[^\]]+\]|markerKey\([^)]+\)|`legend\.domains\.\$\{d\}`|[A-Za-z_$][\w$]*\.(key|titleKey|noteKey))$/;
+  /^(ADMIN_FORBIDDEN_KEY|DRY_RUN_DISCLOSURE_KEY|windowKey|prefKey|k|PROPOSAL_TYPE_KEY\[[^\]]+\]|marker(?:Note)?Key\([^)]+\)|stageNameKey\([^)]+\)|`legend\.domains\.\$\{d\}`|[A-Za-z_$][\w$]*\.(key|titleKey|noteKey))$/;
 
 // ── dynamic key families ──────────────────────────────────────────────────────
 // marker kinds + domain keys are derived from the flow-graph source itself, so a
@@ -278,6 +297,24 @@ describe("flows i18n resolution — every consumed key resolves in ko AND en (no
     }
     expect(domainKeys.sort()).toEqual(["_core", "_shared", "functional", "industry", "region", "technical"]);
     for (const d of domainKeys) expectResolvesBoth(`pages.flows.graph.legend.domains.${d}`);
+  });
+
+  test("stageNames.* resolves for every serving stage in both catalogs — ko echoes the flow.spec SSOT verbatim (FU-B)", () => {
+    // FU-B (2026-10-26 PM-approved follow-up): flow.spec stage names are payload
+    // data served verbatim by /api/flows, so they leaked Korean into the EN view.
+    // The chrome resolves pages.flows.stageNames.<stageId> through stageNameKey
+    // (the markerNoteKey pattern: t.has() lookup, payload fallback) — the SSOT
+    // stays flow.spec and the API contract stays untouched; a stage without a
+    // catalog key degrades to the payload name. The projection itself is pinned
+    // to the spec by tests/unit/process-flow.test.ts, so echoing SPEC_STAGES
+    // here transitively pins the catalog to flow.spec verbatim.
+    for (const s of SPEC_STAGES) {
+      const key = `pages.flows.stageNames.${s.id}`;
+      const koValue = expectResolves(ko as Catalog, "ko", key);
+      expect(koValue, `ko ${key} must echo the flow.spec name verbatim (ko-master SSOT)`).toBe(s.name);
+      const enValue = expectResolves(en as Catalog, "en", key);
+      expect(enValue, `en ${key} must be placeholder-free prose`).not.toMatch(/[{}]/);
+    }
   });
 
   test("ADMIN_FORBIDDEN_KEY and PROPOSAL_TYPE_KEY resolve in their namespaces", () => {

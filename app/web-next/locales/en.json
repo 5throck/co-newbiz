@@ -5965,11 +5965,14 @@
         "filterSourceSynthesis": "synthesis (deterministic)",
         "filterExcludeDryRun": "Exclude dry runs",
         "filterDryRunTitle": "When off, dry-run runs are included too",
-        "chartLegendSuccess": "Successful calls",
-        "chartLegendFailed": "Failed calls",
+        "chartLegendSuccess": "✓ Successful calls",
+        "chartLegendFailed": "✕ Failed calls",
         "chartAxisCost": "Cost ($)",
         "chartSingleBucket": "A single bar means all {p2} loaded calls fall on one day ({p1}) — the chart reflects only the rows loaded under the cursor page limit.",
-        "okFilterGroup": "Success/failure filter"
+        "okFilterGroup": "Success/failure filter",
+        "chartTitle": "Call volume",
+        "chartScopeCaption": "Covers the last {p1, plural, one {# record} other {# records}} loaded on this screen",
+        "filterSourceLlm": "LLM (AI)"
       },
       "dryRunSession": {
         "adminForbidden": "Admin accounts are separated from business content and cannot view this screen (ADR-0146). This state is a designed access boundary, not an error.",
@@ -6003,7 +6006,7 @@
         "runCardTitle": "Run dry run",
         "costEstimateLabel": "Run cost estimate",
         "costTotal": "Session cost total",
-        "ledgerLine": "{p1} LLM calls · {p2} runs",
+        "ledgerLine": "{p1, plural, one {# LLM call} other {# LLM calls}} · {p2, plural, one {# run} other {# runs}}",
         "lastRunSuffix": "· last run {p1}",
         "executing": "Running...",
         "executeCta": "Run dry run — cost check",
@@ -6173,27 +6176,41 @@
         "noSystemBody": "(no system prompt body)",
         "footnotePrefix": "Note:"
       },
+      "stageNames": {
+        "S1": "Market analysis",
+        "S2": "Opportunity discovery",
+        "S3": "Synergy & strategic fit",
+        "S4": "Route decision",
+        "S5": "Greenfield entry",
+        "S6": "Target longlist",
+        "S7": "Target shortlist",
+        "S8": "Business feasibility",
+        "S9": "Due diligence & verification",
+        "S10": "Investment structuring",
+        "S11": "Investment review & execution",
+        "S12": "Post-investment management"
+      },
       "graph": {
         "sectionTitle": "Stage flow",
         "sectionAria": "Stage flow graph",
-        "sectionHint": "Click a node to filter the activity table to that stage",
+        "sectionHint": "Click a node, or tab to it and press Enter, to filter the activity table to that stage",
         "markerChip": "Specialist marker",
         "svgTitle": "Designed flow: row 1 runs S1–S4 in common; at S4 the track splits into row 2, where greenfield S5 and brownfield S6–S7 merge into S8; row 3 runs S9–S12 in common",
         "svgDesc": "A flow graph of stages S1–S12 wrapped over three rows. Row 1 runs left to right through the common stages S1–S4; at S4 the flow splits down the right edge into row 2, a fork band read right to left — the upper lane carries greenfield S5 and the lower lane carries brownfield S6 and S7 — and both lanes converge into S8. Below S8, row 3 runs left to right through the common stages S9–S12. Each stage node shows the stage id, name, activity count, activity dots (agent domain colors), and a track badge; activity dots carrying a specialist marker are drawn with a ring. The activity table below provides the same information as text.",
-        "nodeTitle": "{id} · {name} — {count} activities. Click to filter the activity table to this stage.",
+        "nodeTitle": "{id} · {name} — {count} activities. Click, or focus and press Enter, to filter the activity table to this stage.",
         "activityCount": "{count} activities",
         "trackCommon": "Common",
         "legend": {
           "title": "Legend",
           "dot": "Activity dot = agent domain",
-          "marker": "Specialist markers (display-only — DEC-20261025-02)",
+          "marker": "Specialist markers (display-only)",
           "domains": {
-            "_core": "Core (_core)",
-            "functional": "Functional (functional)",
-            "industry": "Industry (industry)",
-            "region": "Region (region)",
-            "technical": "Technical (technical)",
-            "_shared": "Shared (_shared)"
+            "_core": "Core",
+            "functional": "Functional",
+            "industry": "Industry",
+            "region": "Region",
+            "technical": "Technical",
+            "_shared": "Shared"
           }
         },
         "markers": {
@@ -6211,8 +6228,21 @@
           "override": {
             "short": "Effective owner",
             "legend": "Effective ownership differs by track (procedure hierarchy)"
+          },
+          "decisionRef": "Decision record: DEC-20261025-02",
+          "detailsSummary": "{p1, plural, one {# marker note} other {# marker notes}}",
+          "notes": {
+            "s2_business_model_sketch": "S2 is track-agnostic — every opportunity is a candidate new business, and the sketch is a track-neutral hypothesis artifact (requiredCapabilities→S3→S4)",
+            "s4_deal_shape_evaluation": "Deal-shape evaluation is the specialist lens for external combination structures — the greenfield alternative is carried by pm's route-strategy and route-advisory prompts, scored on the same five ADR-0104 criteria",
+            "s9_capability_dd": "Executed on the brownfield track only (procedure [brownfield-dd]) — greenfield answers this at the S5 capability-assessment activity",
+            "s11_investment_structuring": "The activity field owner is brownfield-agent under Q6 — the greenfield effective owner is entity-ic-review step 3.1 (joint review by greenfield-agent and financing-agent)"
           }
-        }
+        },
+        "trackGreenfield": "Greenfield",
+        "trackBrownfield": "Brownfield",
+        "scrollHint": "If the graph is wider than the screen, scroll horizontally to see the rest",
+        "filterChipLabel": "Activity table filtered to {stage}",
+        "filterChipClear": "Clear filter"
       },
       "flowsAdmin": {
         "adminForbidden": "Admin accounts are separated from business content and cannot view this screen (ADR-0146). This state is a designed access boundary, not an error.",
@@ -6262,7 +6292,7 @@
         "expiringSoon": "Expiring soon",
         "expiredTitle": "Session TTL has expired ({p1}) — purged from read and execute paths (§6.8).",
         "expiringSoonTitle": "TTL expiring soon ({p1}) — expired sessions are purged from read and execute paths (§6.8).",
-        "costMeasuredNote": "Measured from the last run — cumulative {p1} / {p2} llm calls ({p3} each). Actual cost varies with model and input length.",
+        "costMeasuredNote": "Measured from the last run — cumulative {p1} / {p2} LLM calls ({p3} each). Actual cost varies with model and input length.",
         "costUnknownNote": "No measured cost yet (first run) — only a conservative estimate from the {p1}-token cap is possible. Confirm before executing."
       }
     },
@@ -7262,7 +7292,8 @@
       "connectedApps": "Connected apps",
       "strategy": "R&BD platform strategy",
       "synergy": "S3 synergy & strategic fit",
-      "titleSuffix": "New Business Review"
+      "titleSuffix": "New Business Review",
+      "flows": "Flow console"
     },
     "ourCompany": {
       "h1": "Group/affiliate analysis"

@@ -1,4 +1,4 @@
-// @version 1.6.0
+// @version 1.8.0
 // 플로우 콘솔 화면(2026-10-24-flow-console-screen-design, Row 4) — 순수 뷰 헬퍼
 // 단위 테스트 + 화면 소스의 a11y 규약 정적 검사(§9 체크리스트 핵심 항목).
 // 1.1.0: 단계명 사본 제거(design 2026-10-25-agent-assignment-prompt-standard §6.1 —
@@ -26,6 +26,24 @@
 // (a) countAxisMax 단위 테스트(1/2/5 사다리 정수 상한·데이터 엄격 초과·빈/전-0
 // 가드), (b) chartOption 정적 핀(max: countAxisMax(스택 최댓값)·minInterval 1·
 // alignTicks false×2 — 보조축 틱 정렬 협상 금지).
+// 1.7.0: 2026-10-26 cross-project UX review remediation(design
+// 2026-10-26-flows-ux-review-remediation-design) — F1/F3/F4/F5/F6/F7/F8/F10/F11/F12/F13
+// 재고정: (a) F1 폰트 상향(14/12/12) + 카드 기하 확대(NODE_W 264·NODE_H 80·열 피치
+// 296·VIEW_W 1184) 산술 전면 재핀, (b) F4 키보드 오퍼러블 노드(role="button"+tabIndex
+// +Enter/Space+상태 기반 포커스 링) — v1.3.0의 "그래프 탭 순서 미진입" 핀을 design
+// §F4 append-only amend로 역전, (c) F5 화살촉 토큰·밴드 라벨·에지 페이드, (d) F3
+// Tabs aria-selected, (e) F6 차트 범위 캡션, (f) F7 계열 색 순서(초록 성공→빨강
+// 실패) + chartTokens statusOk/statusFailed, (g) F8 칩 :focus-visible accent 링,
+// (h) F10 DEC 리터럴 표시 금지 + 마커 해설 details 접기, (i) F11 인접 선택 칩,
+// (j) F12 ?stage= URL 동기, (k) F13 문서 타이틀 레이아웃.
+// 1.8.0: 2026-10-26 PM 승인 후속 라운드(design 2026-10-26 §Recorded follow-ups →
+// Design delta) — (a) FU-A: svg minWidth 50rem→74rem(=VIEW_W 1184px 자연폭과 1:1
+// 등식) — 그래프는 어떤 뷰포트에서도 축소 렌더되지 않고(14px/12px 하한이 속성값
+// 그대로 유지), 더 좁은 컨테이너는 기존 overflow-x 스크롤 + 에지 페이드(F5)가
+// 대신한다, (b) FU-B: 페이로드 단계명의 카탈로그 해소(stageDisplay·stageNameKey —
+// pages.flows.stageNames.*, markerNoteKey 패턴) — 최장 단계명 산술 핀을 ko·en 양
+// 로케일로 확장한다(en 최장 "Investment review & execution" ≈223px ≤ 가용폭 240px),
+// 축약 방어선 핀은 stageDisplay 호출부로 갱신한다.
 import { test, expect, describe } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -42,6 +60,11 @@ const FLOWS_DIR = join(import.meta.dirname, "../../app/web-next/app/flows");
 const koCatalog = await import("../../app/web-next/locales/ko.json");
 const koOf = (key: string): string =>
   key.split(".").reduce<unknown>((acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined), koCatalog) as string;
+// 1.8.0 (FU-B) — en deep-merge catalog: the stageNames width pin reads the en
+// values too, so the longest-name arithmetic is asserted in BOTH locales.
+const enCatalog = await import("../../app/web-next/locales/en.json");
+const enOf = (key: string): string =>
+  key.split(".").reduce<unknown>((acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined), enCatalog) as string;
 const SCROLL_LABEL = "데이터 표 (가로 스크롤)";
 
 const llmRow = (over: Partial<LlmCallRow> = {}): LlmCallRow => ({
@@ -114,7 +137,11 @@ describe("flows-view-lib — 단계명(API 직접 투영)과 타임라인 버킷
   test("단계명 클라이언트 사본(STAGE_NAME_KEY·stageNames)은 flows-view-lib에서 제거되었다", () => {
     const lib = readFileSync(join(FLOWS_DIR, "flows-view-lib.ts"), "utf8");
     expect(lib).not.toContain("STAGE_NAME_KEY");
-    expect(lib).not.toContain("stageNames"); // i18n catalog 키 유도 사본도 없다 — name은 API 데이터
+    // FU-B(1.8.0) 이후에도 lib는 페이로드 전용으로 유지된다 — stageNames 카탈로그
+    // 패밀리의 단일 소유는 flow-graph.tsx(stageNameKey/stageDisplay)다. lib에
+    // 카탈로그 키 유도 사본이 다시 생기는 것은 회귀다(name 데이터 경로와 표시측
+    // 큐레이션 경로의 분리 유지).
+    expect(lib).not.toContain("stageNames");
     expect(lib).toContain("stageDisplayName");
   });
   test("bucketLlmCallsByDay는 일 단위로 성공/실패/비용을 묶고 오름차순 정렬한다", () => {
@@ -168,6 +195,10 @@ describe("flows 화면 소스 — a11y·IA 정적 규약 (화면 설계 §9)", (
   const blueprint = readFileSync(join(FLOWS_DIR, "blueprint-view.tsx"), "utf8");
   const ledger = readFileSync(join(FLOWS_DIR, "ledger-view.tsx"), "utf8");
   const expansion = readFileSync(join(FLOWS_DIR, "run-expansion.tsx"), "utf8");
+  // v1.7.0 — F3/F7/F8/F13의 핀 대상은 flows 바깥 공유 표면이다(최소 read-only).
+  const ui = readFileSync(join(import.meta.dirname, "../../app/web-next/components/ui.tsx"), "utf8");
+  const stylesCss = readFileSync(join(import.meta.dirname, "../../app/web-next/app/styles.css"), "utf8");
+  const flowsLayout = readFileSync(join(FLOWS_DIR, "layout.tsx"), "utf8");
 
   test("A3 — 모든 표가 table-scroll region + sr-only caption + th scope=col 규약을 따른다", () => {
     for (const [name, src] of [["page", page], ["blueprint", blueprint], ["ledger", ledger], ["expansion", expansion]] as const) {
@@ -217,6 +248,61 @@ describe("flows 화면 소스 — a11y·IA 정적 규약 (화면 설계 §9)", (
   test("§11 — 필터 상태가 URL 쿼리에 동기된다(감사 화면 재현성)", () => {
     expect(ledger).toContain("router.replace");
     expect(page).toContain("router.replace");
+  });
+
+  test("F3 — Tabs 프리미티브의 role=tab 앵커는 aria-selected를 캐리한다(aria-current 대체)", () => {
+    // 2026-10-26 UX 리뷰 F3: role="tab"에 상태 속성이 없으면 AT가 활성 탭을
+    // 알 수 없다. ARIA-tabs-lite — 앵커는 네이티브 포커스·Enter 활성화라 roving
+    // tabindex 불필요, aria-controls는 생략(패널 id 없음 — ?tab=이 상태 캐리어).
+    expect(ui).toContain('role="tab"');
+    expect(ui).toContain("aria-selected={active === t.key}");
+    expect(ui).not.toContain("aria-current=");
+  });
+
+  test("F6 — 차트 제목 옆에 범위 캡션이 있다(요약=창 전체 vs 차트=커서 페이지의 불일치를 현장에서 해소)", () => {
+    expect(ledger).toContain('t("chartTitle")');
+    expect(ledger).toContain('t("chartScopeCaption"');
+    // 캡션은 불러온 행 수(원시 수 — en ICU 복수형 인자)를 받는다.
+    expect(ledger).toMatch(/t\("chartScopeCaption", \{ p1: llmRows\?\.length \?\? 0 \}\)/);
+    expect(koOf("pages.flows.ledger.chartScopeCaption")).toContain("{p1}");
+    // 기존 아래-표 각주(chartTableNote)는 유지된다.
+    expect(ledger).toContain('t("chartTableNote"');
+  });
+
+  test("F7 — 차트 계열 색은 상태 규약 토큰 순서다(성공=초록 → 실패=빨강, 절대 반대)", () => {
+    // 캔버스는 CSS 변수를 못 읽는다 — chartTokens의 statusOk(--chart-2)/
+    // statusFailed(--chart-4) 런타임 해소 값으로 itemStyle.color를 바인딩.
+    expect(ledger).toContain("useChartTheme");
+    expect(ledger).toContain("chartOption(buckets, t, { ok: chartTheme.statusOk, failed: chartTheme.statusFailed })");
+    // 계열 선언 순서 자체가 규약이다: 첫 막대=성공(status.ok), 둘째 막대=실패(status.failed).
+    const seriesIdxOk = ledger.indexOf("itemStyle: { color: status.ok }");
+    const seriesIdxFailed = ledger.indexOf("itemStyle: { color: status.failed }");
+    expect(seriesIdxOk).toBeGreaterThan(-1);
+    expect(seriesIdxFailed).toBeGreaterThan(seriesIdxOk);
+    // echarts-theme: statusOk/statusFailed는 --chart-2/--chart-4 해소 + UNRESOLVED 회색 폴백.
+    const theme = readFileSync(join(import.meta.dirname, "../../app/web-next/lib/echarts-theme.ts"), "utf8");
+    expect(theme).toContain("statusOk: string");
+    expect(theme).toContain("statusFailed: string");
+    expect(theme).toMatch(/statusOk = readToken\("--chart-2"\)/);
+    expect(theme).toMatch(/statusFailed = readToken\("--chart-4"\)/);
+    expect(theme).toContain('statusOk: "#808080"'); // UNRESOLVED 폴백 — 절대 반대 색이 아니다
+    // color-never-sole-channel: 범례 ✓/✕ 병기(카탈로그 값) 유지.
+    expect(koOf("pages.flows.ledger.chartLegendSuccess")).toContain("✓");
+    expect(koOf("pages.flows.ledger.chartLegendFailed")).toContain("✕");
+  });
+
+  test("F8 — control-chip 포커스 링은 accent다(primary는 선택 채움과 동일해 보이지 않았다)", () => {
+    const rule = stylesCss.match(/\.control-chip:focus-visible \{[^}]*\}/)?.[0] ?? "";
+    expect(rule).toContain("var(--accent)");
+    expect(rule).not.toContain("var(--primary)");
+    expect(rule).toContain("var(--border-width-strong)");
+  });
+
+  test("F13 — /flows는 문서 타이틀 레이아웃을 가진다(pipeline과 같은 R2 페이지 계약)", () => {
+    expect(flowsLayout).toContain("generateMetadata");
+    expect(flowsLayout).toContain('getTranslations("pages.titles")');
+    expect(flowsLayout).toContain('t("flows")');
+    expect(koOf("pages.titles.flows")).toBe("플로우 콘솔");
   });
 
   test("런 레저 차트 — 막대 폭 상한·범례 상단 고정·단일 버킷 캡션(2026-10-23 보고 대응)", () => {
@@ -270,6 +356,7 @@ describe("flows-view-lib — SVG 텍스트 근사 계측·축약 (2026-10-23 그
 describe("단계 흐름 그래프 — flow-graph.tsx (design 2026-10-25-agent-assignment-prompt-standard §6.2/§6.4/§11.4)", () => {
   const graph = readFileSync(join(FLOWS_DIR, "flow-graph.tsx"), "utf8");
   const blueprint = readFileSync(join(FLOWS_DIR, "blueprint-view.tsx"), "utf8");
+  const ledgerSrc = readFileSync(join(FLOWS_DIR, "ledger-view.tsx"), "utf8");
   const lib = readFileSync(join(FLOWS_DIR, "flows-view-lib.ts"), "utf8");
 
   test("그래프는 role=img + title/desc의 요약 이미지다(위키 여정 지도 패턴, 카탈로그 문구)", () => {
@@ -288,7 +375,8 @@ describe("단계 흐름 그래프 — flow-graph.tsx (design 2026-10-25-agent-as
     expect(graph).toContain('width="100%"');
     expect(graph).toContain('height: "auto"'); // 2026-10-25 보고: 뷰박스 종횡비가 폭 대비 높이를 얇게
     // 만들어 카드가 축소 렌더·왼쪽 뭉침으로 보였다 — 3줄 감기(≈2.7:1) + 명시적
-    // height auto. minWidth(50rem)는 좁은 화면의 읽기 하한(그 아래만 overflow-x).
+    // height auto. minWidth(74rem, FU-A)는 1:1 렌더 하한 — 그 아래 컨테이너 폭만
+    // overflow-x 스크롤(축소는 없다).
     expect(graph).not.toContain("maxWidth");
     expect(graph).toContain("minWidth");
     expect(graph).toContain("markerEnd"); // 화살표 엣지
@@ -320,20 +408,91 @@ describe("단계 흐름 그래프 — flow-graph.tsx (design 2026-10-25-agent-as
     expect(graph).not.toMatch(/rgba?\(/);
   });
 
-  test("SVG 내부에 focusable 요소가 없다 — 키보드 경로는 활동 표(§6.4, WCAG)", () => {
-    // 속성 수준 검사 — tabIndex 속성 자체가 없어야 한다(문서 주석의 단어가 아님).
-    expect(graph).not.toMatch(/tabIndex\s*=\s*\{/i);
+  test("F4 — 노드는 키보드 오퍼러블이다(design 2026-10-26 §F4 append-only amend — v1.3.0 핀 역전)", () => {
+    // 도움말이 "포인터 또는 키보드" 필터링을 약속하므로 노드 <g>가 직접 오퍼러블하다:
+    // role="button" + tabIndex + Enter/Space(클릭과 동일 핸들러). AT 요약 경로는
+    // svg role="img" + 활동 표가 그대로 담당한다.
+    expect(graph).toMatch(/role="button"/);
+    expect(graph).toMatch(/tabIndex=\{0\}/);
+    expect(graph).toContain("onKeyDown");
+    expect(graph).toContain('e.key === "Enter" || e.key === " "');
+    expect(graph).toContain("e.preventDefault()");
+    expect(graph).toContain("aria-label={nodeAria}"); // nodeTitle 보간문 = 접근 가능한 이름
+    // 포커스 표시는 CSS outline 대신 상태 기반 <rect>(accent 2px, offset 2)다 —
+    // SVG 내부 outline은 브라우저 편차. :focus-visible은 matches()로 판정한다.
+    expect(graph).toContain('matches(":focus-visible")');
+    expect(graph).toContain('stroke="var(--accent)"');
+    expect(graph).toMatch(/focusRingStage === s\.id &&/);
+    // SVG 안에는 여전히 <button> 요소가 없다(노드는 <g role="button">).
     expect(graph).not.toContain("<button");
-    expect(graph).not.toContain("aria-pressed");
-    // 대체재: 활동 표가 단계 선택·필터의 키보드 경로다. 단계 요약 그리드(네이티브
-    // button 목록)는 2026-10-23 그래프 중복 제거로 삭제되었다 — 잔존은 회귀다.
-    expect(blueprint).not.toContain("aria-pressed");
+    // 대체재였던 활동 표 경로는 유지된다 — 단계 요약 그리드(네이티브 button 목록)는
+    // 2026-10-23 그래프 중복 제거로 삭제되었다 — 잔존은 회귀다.
     expect(blueprint).not.toContain("stageGrid");
     expect(blueprint).not.toContain("useStageErrors");
-    // 그래프 클릭은 기존 단계 선택 상태를 재사용한다(§6.3 — 새 state 0).
+    // 그래프 클릭은 F12 URL 동기 selectStage로 귀결한다(§6.3 — 새 state 0).
     expect(blueprint).toContain("<FlowGraph");
-    expect(blueprint).toContain("onSelectStage={(stageId) => setSelectedStage");
+    expect(blueprint).toContain("onSelectStage={(stageId) => selectStage(selectedStage === stageId ? null : stageId)}");
     expect(blueprint).toContain("markers={blueprint.specialistMarkers}");
+  });
+
+  test("F5 — 화살촉·밴드 라벨·에지 페이드로 분기 밴드의 방향과 넘침을 읽게 한다", () => {
+    // 화살촉: fill var(--border)→var(--muted-fg), 마커 7→9, 엣지 1.4→1.6(토큰만).
+    expect(graph).toContain('markerWidth="9"');
+    expect(graph).toMatch(/<path d="M0,0 L6,3 L0,6 z" fill="var\(--muted-fg\)" \/>/);
+    expect(graph).toMatch(/strokeWidth="1\.6" markerEnd/);
+    // 밴드 라벨: 트랙 방향 텍스트(그래프 거터 + 블루프린트 필터 칩이 같은 키).
+    expect(graph).toContain('tg("trackGreenfield")');
+    expect(graph).toContain('tg("trackBrownfield")');
+    expect(blueprint).toContain('{tg("trackGreenfield")}');
+    expect(blueprint).toContain('{tg("trackBrownfield")}');
+    // 오버플로 힌트: 스크롤 중일 때만 우측 그라디언트 베일(토큰 색) + 네이티브 title.
+    expect(graph).toContain('title={tg("scrollHint")}');
+    expect(graph).toContain("linear-gradient(to right, transparent, var(--bg))");
+    expect(graph).toContain("canScrollRight");
+    expect(graph).toContain("scrollLeft + el.clientWidth < el.scrollWidth");
+  });
+
+  test("F9 — 마커 해설은 카탈로그 키로 해소하고 미지 마커만 페이로드 note로 폴백한다", () => {
+    // ref("S2.business-model-sketch") → markers.notes.s2_business_model_sketch.
+    expect(graph).toContain("export function markerNoteKey");
+    expect(graph).toMatch(/markers\.notes\.\$\{/);
+    expect(graph).toMatch(/tg\.has\(k\) \? tg\(k\) : marker\.note/);
+    // 단일 소유 — 활동 표 마커 칩도 같은 헬퍼를 쓴다(EN 화면 한국어 note 차단).
+    expect(blueprint).toContain("markerNote(marker, tg)");
+    for (const noteKey of ["s2_business_model_sketch", "s4_deal_shape_evaluation", "s9_capability_dd", "s11_investment_structuring"]) {
+      expect(koOf(`pages.flows.graph.markers.notes.${noteKey}`).length).toBeGreaterThan(0);
+    }
+    // 하드코딩 옵션 카탈로그화.
+    expect(ledgerSrc).toContain('t("filterSourceLlm")');
+    expect(koOf("pages.flows.ledger.filterSourceLlm")).toBe("LLM (AI)");
+  });
+
+  test("F10 — DEC id는 표시 텍스트에 없다(툴팁으로 이동) + 마커 해설은 details 뒤에 접힌다", () => {
+    // 범례 마커 행(표시 텍스트)과 도메인 라벨에서 DEC-·원시 키 제거.
+    expect(koOf("pages.flows.graph.legend.marker")).not.toContain("DEC-");
+    expect(koOf("pages.flows.graph.legend.domains.functional")).toBe("기능");
+    expect(koOf("pages.flows.graph.legend.domains._core")).toBe("핵심");
+    // DEC id는 markers.decisionRef 툴팁으로만 존재한다.
+    expect(graph.match(/title=\{tg\("markers\.decisionRef"\)\}/g)?.length).toBe(2);
+    expect(koOf("pages.flows.graph.markers.decisionRef")).toContain("DEC-20261025-02");
+    // 노트 벽: 네이티브 <details> 접기(viewAsTable과 같은 공개 패턴) + ✓ 구분자 유지.
+    expect(graph).toMatch(/<details className="mt-1">[\s\S]*markers\.detailsSummary/);
+    expect(graph).toContain('tg("markers.detailsSummary", { p1: markers.length })');
+    expect(graph).toContain('</code>{" "}');
+    expect(graph).toContain('tg("markers.noteLine"');
+  });
+
+  test("F11/F12 — 선택 피드백이 그래프 바로 아래에 있고 단계 선택은 ?stage=와 동기된다", () => {
+    // F11 — 그래프 아래 칩(표 헤더 칩보다 가깝다) + 해제는 같은 핸들러.
+    expect(blueprint).toContain('tg("filterChipLabel", { stage: selectedStageName })');
+    expect(blueprint).toContain('tg("filterChipClear")');
+    // F12 — ?tab= 패턴과 동일: 최초 복원 + 모든 선택/해제가 파라미터를 기록·삭제.
+    expect(blueprint).toContain('searchParams.get("stage")');
+    expect(blueprint).toMatch(/if \(stageId\) sp\.set\("stage", stageId\);/);
+    expect(blueprint).toMatch(/else sp\.delete\("stage"\);/);
+    expect(blueprint).toContain('router.replace(`/flows?${sp.toString()}`, { scroll: false })');
+    // 미지 stage 값 방어 — 서빙 단계 id만 복원한다.
+    expect(blueprint).toMatch(/blueprint\.stages\.some\(\(s\) => s\.id === v\)/);
   });
 
   test("그래프는 서빙 데이터만 소비한다 — stage.name·applicableTracks·specialistMarkers", () => {
@@ -487,17 +646,46 @@ describe("단계 흐름 그래프 — flow-graph.tsx (design 2026-10-25-agent-as
     }
   });
 
-  test("기하 머신체크 — 최장 단계명(ko)이 카드 가용폭에 무축약으로 들어간다", () => {
-    // 3줄 감기로 카드가 커졌다(168→232): 최장 단계명 "시너지·전략적 적합성"
-    // ≈ 121px(@ fontSize 12)이 가용폭 208px에 무축약으로 들어간다. 서빙 데이터
-    // 전부가 무축약(… 없음)이어야 한다 — 축약은 방어선이지 상태가 아니다
-    // (2026-10-25 보고: 1줄 레이아웃에선 축약이 상태였다).
+  test("기하 머신체크 — 최장 단계명(ko·en 양 로케일)이 카드 가용폭에 무축약으로 들어간다", () => {
+    // F1(2026-10-26) 폰트 상향: 카드가 다시 커졌다(232→264) — 최장 단계명
+    // ko "시너지·전략적 적합성" ≈ 141px(@ fontSize 14)이 가용폭 240px에 무축약으로
+    // 들어간다. FU-B(1.8.0): 표시 단계명은 카탈로그 stageNames.*로 로케일 해소되므로
+    // en 값도 같은 산술을 통과해야 한다 — en 최장 "Investment review & execution"
+    // (반각 29자 × 0.55 × 14 ≈ 223px)도 240px 안에 무축약으로 들어간다. 양 로케일
+    // 서빙·카탈로그 전부가 무축약(… 없음)이어야 한다 — 축약은 방어선이지 상태가
+    // 아니다(2026-10-25 보고: 1줄 레이아웃에선 축약이 상태였다).
     const cap = G.NODE_W - 24;
     for (const s of SPEC_STAGES) {
-      expect(approxTextWidth(stageDisplayName(s), 12), `${s.id} "${s.name}"`).toBeLessThanOrEqual(cap);
+      expect(approxTextWidth(stageDisplayName(s), 14), `${s.id} ko "${s.name}"`).toBeLessThanOrEqual(cap);
+      const enName = enOf(`pages.flows.stageNames.${s.id}`);
+      expect(approxTextWidth(enName, 14), `${s.id} en "${enName}"`).toBeLessThanOrEqual(cap);
     }
-    // 방어선: 축약 헬퍼가 이름 텍스트에 실제로 연결되어 있다.
-    expect(graph).toContain("truncateToWidth(stageDisplayName(s), 12, NODE_W - 24)");
+    // 방어선: 축약 헬퍼가 (로케일 해소된) 이름 텍스트에 실제로 연결되어 있다.
+    expect(graph).toContain("truncateToWidth(stageDisplay(s, tp), 14, NODE_W - 24)");
+  });
+
+  test("F1 렌더 크기 산술 — SVG 폰트 속성이 읽기 하한(14/12/12)을 캐리한다", () => {
+    // FU-A(1.8.0): minWidth 74rem = 뷰박스 자연폭이라 스케일은 항상 ≥1.0이다 —
+    // 자연폭 미만 컨테이너는 1:1 + 가로 스크롤, 이상은 확대(축소 분지 없음). 따라서
+    // 렌더 크기는 어떤 뷰포트에서도 속성 값 이상이다: 단계 id·이름 14, 배지·활동 수·
+    // 마커 거터 라벨 12. 9.5px 캡션의 잔존은 회귀다.
+    expect(graph).toMatch(/fontSize="14" fontWeight="600"/); // 단계 id
+    expect(graph).toMatch(/fontSize="14" fill="var\(--fg\)"/); // 단계명
+    expect(graph.match(/fontSize="12"/g)?.length).toBe(5); // 배지 + 활동 수 + 거터 라벨 + 밴드 라벨 ×2
+    expect(graph).not.toMatch(/fontSize="9\.5"/);
+    expect(graph).not.toMatch(/fontSize="10"/);
+    expect(graph).not.toMatch(/fontSize="12" fontWeight="600"/); // id는 14로 올랐다
+  });
+
+  test("FU-A — svg minWidth 74rem은 VIEW_W 자연폭과 1:1 등식이다(축소 렌더 원천 차단)", () => {
+    // 2026-10-26 AI-2nd 후속(FU-A): 1280px 뷰포트 + 사이드바 펼침에서 컨테이너가
+    // 뷰박스 자연폭보다 좁아져 스케일 ≈0.785(단계명 ≈11px)로 렌더되었다 — Onyx
+    // 14px 하한 미달. minWidth를 자연폭(1184px = 74rem, 루트 16px 구간)과 정확히
+    // 일치시켜 1:1 미만 스케일이 원천 차단되고, 더 좁은 컨테이너는 overflow-x
+    // 스크롤 + 에지 페이드(F5)가 대신한다.
+    expect(graph).toMatch(/minWidth: "74rem"/);
+    expect(graph).not.toContain('"50rem"'); // 구 하한의 잔존은 회귀다
+    expect(74 * 16).toBe(G.VIEW_W); // 1:1 등식 — 1920px 미만(루트 폰트 16px) 구간 기준
   });
 
   test("기하 머신체크 — 도트 행과 activityCount·트랙 배지가 카드 안에서 서로 겹치지 않는다", () => {
@@ -505,13 +693,13 @@ describe("단계 흐름 그래프 — flow-graph.tsx (design 2026-10-25-agent-as
     const maxActs = Math.max(...SPEC_STAGES.map((s) => s.activities?.length ?? 0));
     // 도트: x+16 시작, 11.5px 피치, 링 반지름 6.5, 우측 여백 4 → 도트 행 끝.
     const dotsEnd = 16 + (maxActs - 1) * 11.5 + 6.5 + 4;
-    const countW = approxTextWidth(`활동 ${Math.max(maxActs, 12)}`, 9.5); // 2자리 수 가정
+    const countW = approxTextWidth(`활동 ${Math.max(maxActs, 12)}`, 12); // F1: 활동 수 라벨 9.5→12
     const countStart = G.NODE_W - 10 - countW; // 우측 end-정렬 라벨 시작점
     expect(dotsEnd, `최다 활동 ${maxActs}개 단계의 도트 행`).toBeLessThanOrEqual(countStart);
-    // 헤더 행: 단계 id 좌측 vs 최장 배지(greenfield/brownfield 10자) 우측.
-    const badgeW = 10 * 5.5 + 16;
+    // 헤더 행: 단계 id(14px) 좌측 vs 최장 배지(greenfield/brownfield 10자, 12px 폭식) 우측.
+    const badgeW = 10 * 6.6 + 16; // F1: 배지 폭식 len×5.5+16 → len×6.6+16
     for (const s of SPEC_STAGES) {
-      const idEnd = 12 + approxTextWidth(s.id, 12);
+      const idEnd = 12 + approxTextWidth(s.id, 14);
       expect(idEnd + 6, `${s.id} id vs 배지`).toBeLessThanOrEqual(G.NODE_W - badgeW - 10);
     }
   });
@@ -520,7 +708,11 @@ describe("단계 흐름 그래프 — flow-graph.tsx (design 2026-10-25-agent-as
     // 2026-10-23 보고: 노드 우측(x=pos.x+NODE_W+14) 라벨이 다음 카드 본문과 겹쳤다.
     expect(graph).toContain("x={pos.x} y={pos.y + NODE_H + 12 + i * 12}");
     expect(graph).not.toContain("x={pos.x + NODE_W + 14}");
-    // 라벨 폭 상한(NODE_W−8)은 다음 열 카드 좌변에 12px 이상 못 미친다.
+    // F1: 라벨 폭 상한(NODE_W−8=256)은 최장 실측 라벨(F1 산술 ≈233px @12px —
+    // "◇ 실효 소유 · investment-structuring")을 무축약으로 수용한다.
+    const longestLabel = `◇ ${koOf("pages.flows.graph.markers.override.short")} · investment-structuring`;
+    expect(approxTextWidth(longestLabel, 12)).toBeLessThanOrEqual(G.NODE_W - 8);
+    // 라벨 폭 상한은 다음 열 카드 좌변에 12px 이상 못 미친다.
     expect(G.NODE_W - 8 + 12).toBeLessThanOrEqual(G.NODE_W + G.COL_GAP);
     // 원문 <title> 폴백 — 축약 시에도 전문을 접근 가능하다.
     expect(graph).toMatch(/<title>\{label\}<\/title>/);

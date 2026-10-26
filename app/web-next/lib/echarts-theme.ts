@@ -22,9 +22,16 @@ export interface ChartTheme {
   tooltipBorder: string;
   axis: string;
   split: string;
+  /** Status-convention pairs (2026-10-26 UX review F7): success/failure must
+   *  follow the green/red convention tokens (--chart-2 / --chart-4), never the
+   *  categorical palette order. Canvas reads no CSS vars, so callers bind
+   *  series itemStyle.color from these resolved values. */
+  statusOk: string;
+  statusFailed: string;
 }
 
-/** Neutral, theme-agnostic safety net used only before stylesheets resolve. */
+/** Neutral, theme-agnostic safety net used only before stylesheets resolve.
+ *  Status pairs fall back to gray — never the wrong hue. */
 const UNRESOLVED: ChartTheme = {
   color: ["#808080", "#6b7280", "#9ca3af", "#4b5563", "#6b7280", "#9ca3af", "#4b5563", "#6b7280"],
   text: "#808080",
@@ -33,6 +40,8 @@ const UNRESOLVED: ChartTheme = {
   tooltipBorder: "#808080",
   axis: "#808080",
   split: "#808080",
+  statusOk: "#808080",
+  statusFailed: "#808080",
 };
 
 function readToken(name: string): string | null {
@@ -55,8 +64,10 @@ function resolveChartTheme(): ChartTheme {
   const tooltipBorder = readToken("--border");
   const axis = readToken("--border-bright");
   const split = readToken("--border-subtle");
-  if (!color || !text || !muted || !tooltipBg || !tooltipBorder || !axis || !split) return UNRESOLVED;
-  return { color, text, muted, tooltipBg, tooltipBorder, axis, split };
+  const statusOk = readToken("--chart-2");
+  const statusFailed = readToken("--chart-4");
+  if (!color || !text || !muted || !tooltipBg || !tooltipBorder || !axis || !split || !statusOk || !statusFailed) return UNRESOLVED;
+  return { color, text, muted, tooltipBg, tooltipBorder, axis, split, statusOk, statusFailed };
 }
 
 export function chartTokens(_isDark: boolean): ChartTheme {
