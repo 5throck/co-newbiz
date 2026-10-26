@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-26T07:57:38.543Z
+**Generated**: 2026-10-26T09:40:27.033Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -36,14 +36,14 @@
 | glossary-curator | agents/glossary-curator.md | medium | inherit | 2026-10-26 |
 | greenfield-agent | agents/greenfield-agent.md | high | inherit | 2026-10-26 |
 | group-review-agent | agents/group-review-agent.md | high | inherit | 2026-10-26 |
-| hr-integration-agent | agents/hr-integration-agent.md | high | inherit | 2026-10-25 |
+| hr-integration-agent | agents/hr-integration-agent.md | high | inherit | 2026-10-26 |
 | i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-10-24 |
-| incentive-agent | agents/incentive-agent.md | medium | inherit | 2026-10-25 |
+| incentive-agent | agents/incentive-agent.md | medium | inherit | 2026-10-26 |
 | industry-lead | agents/industry-lead.md | high | inherit | 2026-10-26 |
 | infra-automation-engineer | agents/infra-automation-engineer.md | medium | inherit | 2026-10-26 |
-| ip-agent | agents/ip-agent.md | medium | inherit | 2026-10-25 |
+| ip-agent | agents/ip-agent.md | medium | inherit | 2026-10-26 |
 | ir-agent | agents/ir-agent.md | medium | inherit | 2026-10-26 |
-| legal-counsel | agents/legal-counsel.md | high | inherit | 2026-10-25 |
+| legal-counsel | agents/legal-counsel.md | high | inherit | 2026-10-26 |
 | market-intelligence-agent | agents/market-intelligence-agent.md | high | inherit | 2026-10-26 |
 | partnership-agent | agents/partnership-agent.md | medium | inherit | 2026-10-26 |
 | platform-lead | agents/platform-lead.md | high | inherit | 2026-10-26 |
@@ -52,7 +52,7 @@
 | process-governance-manager | agents/process-governance-manager.md | high | inherit | 2026-10-26 |
 | quant-methodologist | agents/quant-methodologist.md | high | inherit | 2026-10-26 |
 | README_ko | agents/README_ko.md | N/A | N/A | 2026-10-26 |
-| region-lead | agents/region-lead.md | high | inherit | 2026-10-25 |
+| region-lead | agents/region-lead.md | high | inherit | 2026-10-26 |
 | release-engineer | agents/release-engineer.md | medium | inherit | 2026-10-26 |
 | risk-officer | agents/risk-officer.md | high | inherit | 2026-10-26 |
 | security-engineer | agents/security-engineer.md | high | inherit | 2026-10-26 |

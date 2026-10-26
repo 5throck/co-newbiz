@@ -1,6 +1,6 @@
 # ADR-0185: Agent and skill placement realignment (S1–S12)
 
-- Status: Proposed (2026-10-26) — a human approves this ADR at PR merge. An ADR changing procedures, checklists, the human-role registry, and a gate-bearing validator set cannot pass on AI review alone (project CLAUDE.md, Review Model).
+- Status: Accepted (2026-10-26) — owner-approved at merge of PR 5throck/co-newbiz#737 (merge commit b96c6b7e). Human approval was required because an ADR changing procedures, checklists, the human-role registry, and a gate-bearing validator set cannot pass on AI review alone (project CLAUDE.md, Review Model).
 - Date: 2026-10-26
 - Review: AI-2nd technical review (platform-lead, 2026-10-26): REVISE, with 2 blocking findings → addressed in this revision (decision 1.2 and the Consequences/impact sections). Human approval at merge is still required.
 - Decider: human owner (decisions 2026-10-26 in chat, recorded below as D-1 and D-2). Drafted by process-governance-manager on PM dispatch (Row 0, Design Gate).
