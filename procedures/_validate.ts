@@ -409,6 +409,16 @@ function checkStepReferences(label: string, steps: unknown[], humanRoles: Set<st
  * surfaces the drift for a recorded reconciliation. Steps with no skill_key,
  * TODO placeholders and procedures hosted by no activity are skipped.
  */
+/**
+ * F-14 cross-cutting exceptions (flow.spec v2.12.0, follow-up batch design A).
+ * Rule: a skill is exempt only if it is cross-cutting and not the hosting
+ * activity's primary method. Enumerated, never wildcarded.
+ *  - stage-gate-governance: the closing "assemble gate proposal / Kill Criteria
+ *    check" step of ~14 procedures; gate mechanics belong to the stage gate
+ *    itself (flow.spec gates), not to any one activity's method list.
+ */
+export const F14_CROSS_CUTTING_SKILLS: ReadonlySet<string> = new Set(["stage-gate-governance"]);
+
 export async function checkActivitySkillAlignment(): Promise<Issue[]> {
   const issues: Issue[] = [];
   const specFile = join(PROJECT_ROOT, "process", "flow.spec.yaml");
@@ -433,6 +443,7 @@ export async function checkActivitySkillAlignment(): Promise<Issue[]> {
     for (const st of doc.steps ?? []) {
       const sk = st.skill_key;
       if (typeof sk !== "string" || sk.trim() === "" || sk === "TODO") continue;
+      if (F14_CROSS_CUTTING_SKILLS.has(sk)) continue;
       if (!skills.has(sk)) {
         issues.push({
           file: schemaFile,

@@ -32,10 +32,10 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `customer-attrition-risk` | 1.2.0 | active | customer-retention-agent | 2026-10-01 | — | Wave 5.8D — CoC-clause scan incl. retained-seller-as-supplier (pilot 002 F-2); pre/post-close concentration and recurrence |
 | `dd-to-valuation-bridge` | 1.2.0 | active | valuation-agent | 2026-10-01 | — | Wave 5.8H — assumption_key/value_impact connection audit across all DD workstreams; margin-axis vs. QoE double-count check |
 | `debt-and-contingent-liability-simulation` | 1.1.0 | active | risk-officer | 2026-08-23 | — | Wave 5.8D — ADR-0026 probability-weighted Monte Carlo integration, covenant Kill Criterion |
-| `decision-record` | 1.1.1 | active | pm | 2026-08-25 | — | — |
+| `decision-record` | 1.1.2 | active | pm | 2026-08-25 | — | — |
 | `design-foundation` | 1.1.0 | active | design-system-agent | 2026-09-26 | — | — |
 | `documentation-writing` | 1.0.3 | active | pm | 2026-07-19 | — | — |
-| `evidence-ledger` | 1.1.0 | active | pm | 2026-08-25 | — | — |
+| `evidence-ledger` | 1.1.1 | active | pm | 2026-08-25 | — | — |
 | `executive-presentation` | 1.0.0 | active | docs-writer | 2026-08-20 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult — retargeted to Entity/Group IC deck |
 | `explain-me` | 1.0.0 | experimental | pm | 2026-08-03 | — | Single-file interactive HTML report generation. Inspired by beret21/reportme (MIT). Korean loanword data in references/loanword-refinements.json |
 | `financial-statement-analysis` | 1.0.0 | active | financial-analyst | 2026-08-20 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult — DART pipeline, retargeted to co-newbiz's own `newbiz.ts fin:*` CLI |
@@ -90,7 +90,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `site-visit-protocol` | 1.1.0 | active | technical-dd-agent | 2026-08-23 | — | Wave 5.8H — evidence-capture discipline (photo/measurement/log) |
 | `skill-lifecycle-manager` | 1.5.0 | active | pm | 2026-09-21 | — | — |
 | `source-command-commit-push-pr` | 1.0.3 | active | pm | — | — | — |
-| `stage-gate-governance` | 1.4.1 | active | process-governance-manager | 2026-09-22 | — | Wave 5.8C — Screening-DD-Entity IC-Group IC sequence + 6-item Kill Criteria list |
+| `stage-gate-governance` | 1.4.2 | active | process-governance-manager | 2026-09-22 | — | Wave 5.8C — Screening-DD-Entity IC-Group IC sequence + 6-item Kill Criteria list |
 | `standup-synthesizer` | 1.0.0 | active | pm | 2026-08-06 | — | Daily standup digest synthesizer aggregating commits, issues, PRs, and blockers |
 | `strategic-fit-screening` | 1.1.0 | active | process-governance-manager | 2026-08-23 | — | ADR-0051 (PR-10 workflow concretization) — entity-level knock-out + scorecard screen at first gate per chk-strategic-fit; thresholds illustrative until the thresholds meeting |
 | `sync` | 1.8.0 | active | pm | 2026-10-08 | — | Full project sync pipeline — lifecycle, audit, publish, commit, push, PR. Reassigned from lifecycle-manager — same orphan cause as security-scan |

@@ -7,11 +7,13 @@ description: >
   6-item binding Kill Criteria list (ADR-0008,
   `policies/group/neb-policy.md` §4) — distinct from and stricter than RAG
   grading. A Kill Criteria hit halts the project outright; only Group IC can
-  override, and only with an explicit recorded decision.
+  override, and only with an explicit recorded decision. Does not format the
+  recorded ruling (decision-record) or hold claim-to-source rows
+  (evidence-ledger).
 
   Use when: "stage gate", "kill criteria", "gate sequence", "halt the
   project", "does this trigger a kill criterion".
-version: 1.4.1
+version: 1.4.2
 last_reviewed: 2026-09-22
 status: active
 owner: process-governance-manager
@@ -33,6 +35,10 @@ relates_to:
     type: composes_with
   - skill: two-tier-approval-chain
     type: composes_with
+  - skill: decision-record
+    type: relates_to
+  - skill: evidence-ledger
+    type: relates_to
 metadata:
   type: process
   triggers:

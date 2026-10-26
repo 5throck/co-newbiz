@@ -65,7 +65,7 @@
   "app/web-next/app/api/projects/[id]/gate-brief/route.ts": 6,
   "app/web-next/app/api/projects/[id]/ic-package/route.ts": 2,
   "app/web-next/app/api/projects/[id]/ic-review-steps/route.ts": 4,
-  "app/web-next/app/api/projects/[id]/milestones/suggest/route.ts": 14,
+  "app/web-next/app/api/projects/[id]/milestones/suggest/route.ts": 12,
   "app/web-next/app/api/projects/[id]/monitoring-brief/route.ts": 18,
   "app/web-next/app/api/projects/[id]/reports/compose/route.ts": 4,
   "app/web-next/app/api/projects/[id]/review-acks/route.ts": 1,

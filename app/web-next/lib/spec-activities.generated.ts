@@ -5,7 +5,7 @@
 // this projection mirrors the spec.)
 import type { SpecStage } from "./spec-activities.ts";
 
-export const SPEC_VERSION = "2.11.0";
+export const SPEC_VERSION = "2.12.0";
 export const SPEC_STAGES: SpecStage[] = [
   {
     "id": "S1",
@@ -113,7 +113,11 @@ export const SPEC_STAGES: SpecStage[] = [
         "agent": "process-governance-manager",
         "skills": [
           "strategic-fit-screening",
-          "portfolio-fit-assessment"
+          "portfolio-fit-assessment",
+          "brownfield-feasibility",
+          "antitrust-screening",
+          "site-infrastructure-assessment",
+          "regional-incentive-sourcing"
         ],
         "procedure": [
           "greenfield-screening",
@@ -136,7 +140,8 @@ export const SPEC_STAGES: SpecStage[] = [
         "agent": "financial-analyst",
         "skills": [
           "historical-financial-analysis",
-          "company-intelligence"
+          "company-intelligence",
+          "competitive-intelligence"
         ],
         "procedure": [
           "company-profile-analysis"
@@ -158,7 +163,13 @@ export const SPEC_STAGES: SpecStage[] = [
         "skills": [
           "deal-execution-playbook",
           "jv-structuring",
-          "partner-sourcing-strategy"
+          "partner-sourcing-strategy",
+          "brownfield-feasibility",
+          "greenfield-feasibility",
+          "site-infrastructure-assessment",
+          "regional-incentive-sourcing",
+          "partner-due-diligence",
+          "partnership-health-scorecard"
         ],
         "procedure": [
           "greenfield-pre-fs",
@@ -344,7 +355,14 @@ export const SPEC_STAGES: SpecStage[] = [
           "growth-projection-modeling",
           "investment-feasibility-modeling",
           "target-costing-analysis",
-          "financial-statement-analysis"
+          "financial-statement-analysis",
+          "antitrust-screening",
+          "peer-benchmarking",
+          "quality-of-earnings",
+          "scenario-planning",
+          "value-chain-stage-financials",
+          "historical-financial-analysis",
+          "site-infrastructure-assessment"
         ],
         "procedure": [
           "greenfield-fs",
@@ -423,7 +441,8 @@ export const SPEC_STAGES: SpecStage[] = [
         "skills": [
           "technical-due-diligence",
           "site-infrastructure-assessment",
-          "site-visit-protocol"
+          "site-visit-protocol",
+          "community-partnership-planning"
         ],
         "procedure": [
           "greenfield-dd",
@@ -447,7 +466,8 @@ export const SPEC_STAGES: SpecStage[] = [
         "agent": "financial-analyst",
         "skills": [
           "quality-of-earnings",
-          "historical-financial-analysis"
+          "historical-financial-analysis",
+          "dd-to-valuation-bridge"
         ],
         "procedure": [
           "greenfield-dd",
@@ -494,7 +514,8 @@ export const SPEC_STAGES: SpecStage[] = [
         "id": "dd-waiver-review",
         "agent": "compliance-officer",
         "skills": [
-          "waiver-management"
+          "waiver-management",
+          "compliance-monitoring"
         ],
         "procedure": [
           "greenfield-dd",
@@ -607,7 +628,9 @@ export const SPEC_STAGES: SpecStage[] = [
         "id": "financing-plan",
         "agent": "valuation-agent",
         "skills": [
-          "financing-plan-review"
+          "financing-plan-review",
+          "investment-feasibility-modeling",
+          "regional-incentive-sourcing"
         ],
         "procedure": [
           "deal-structuring"
@@ -628,7 +651,10 @@ export const SPEC_STAGES: SpecStage[] = [
         "agent": "pm",
         "skills": [
           "executive-presentation",
-          "sample-driven-report-writing"
+          "sample-driven-report-writing",
+          "dd-to-valuation-bridge",
+          "financing-plan-review",
+          "insight-synthesis"
         ],
         "procedure": [
           "entity-ic-review",
@@ -668,7 +694,10 @@ export const SPEC_STAGES: SpecStage[] = [
         "id": "group-review",
         "agent": "group-review-agent",
         "skills": [
-          "group-level-review"
+          "group-level-review",
+          "intra-group-transaction-compliance",
+          "portfolio-fit-assessment",
+          "two-tier-approval-chain"
         ],
         "procedure": [
           "entity-ic-review",
@@ -693,7 +722,8 @@ export const SPEC_STAGES: SpecStage[] = [
         "id": "pmi-kickoff",
         "agent": "pmi-agent",
         "skills": [
-          "pmi-planning"
+          "pmi-planning",
+          "compensation-harmonization-analysis"
         ],
         "procedure": [
           "pmi-integration-execution"
@@ -704,7 +734,10 @@ export const SPEC_STAGES: SpecStage[] = [
         "agent": "greenfield-agent",
         "skills": [
           "greenfield-feasibility",
-          "talent-pipeline-planning"
+          "talent-pipeline-planning",
+          "certification-roadmap",
+          "financing-plan-review",
+          "incentive-clawback-assessment"
         ],
         "procedure": [
           "greenfield-execution-baseline"
@@ -744,7 +777,9 @@ export const SPEC_STAGES: SpecStage[] = [
         "id": "partnership-monitoring",
         "agent": "partnership-agent",
         "skills": [
-          "partnership-health-scorecard"
+          "partnership-health-scorecard",
+          "jv-structuring",
+          "portfolio-fit-assessment"
         ],
         "procedure": [
           "jv-lifecycle-governance"

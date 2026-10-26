@@ -47,6 +47,7 @@ counterpart: design-components.md
   않고 열 안에서 줄바꿈됩니다. (5) 날짜 열(YYYY-MM-DD)에는 `col-date` 클래스를 씁니다 — 표준폭 7rem + 줄바꿈 금지로
   날짜가 두 줄로 접히지 않습니다. design-lint가 클래스·작업 헤더가 빠진 행 작업 표를 실패
   처리합니다.
+- **지역 컴포넌트 결정 (2026-10-26, 드라이런 콘솔)**: (1) `AgentCombobox`(`app/web-next/app/flows/dry-run/agent-combobox.tsx`, 도메인별로 묶은 에이전트 목록 위의 ARIA 1.2 편집형 콤보박스)는 카탈로그에 **등록하지 않는다**. 사용처가 `flows/dry-run/[sessionId]` 하나뿐이고 props가 에이전트 목록(`BlueprintAgent[]`, `dry-run-ui-lib`의 도메인 묶기)에 묶여 있어 범용 선택기가 아니다. 기존 입력/메뉴 스타일만 조합하며 새 토큰은 없다. 두 번째 사용처가 생기거나 props가 옵션 그룹 목록으로 일반화되면 다시 검토한다. (2) `--doc-figure-max: 40rem`(`styles.css`의 `.library-doc-body`)은 토큰으로 **승격하지 않는다**: 쓰는 화면이 `/library` 문서 본문 하나뿐이다. 두 번째 화면이 그림 최대 폭을 필요로 할 때 이름 있는 레이아웃 토큰으로 승격한다.
 - 이 문서 자체를 포함한 모든 참조 문서는 `/library` 화면(목록+상세 2단 뷰)에서 열람하며,
   별도의 챕터 분할이나 페이지 이동 버튼 없이 문서 하나가 그대로 한 화면에 표시됩니다.
 

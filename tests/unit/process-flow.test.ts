@@ -144,7 +144,7 @@ describe("process flow spec integrity (ADR-0074)", () => {
       expect(a.procedure).toEqual(["greenfield-dd", "brownfield-dd"]);
     }
     const skillsOf = (id: string) => s9.activities.find((a) => a.id === id)!.skills;
-    expect(skillsOf("financial-dd")).toEqual(["quality-of-earnings", "historical-financial-analysis"]);
+    expect(skillsOf("financial-dd")).toEqual(["quality-of-earnings", "historical-financial-analysis", "dd-to-valuation-bridge"]);
     expect(skillsOf("hr-dd")).toEqual(["org-readiness-assessment", "talent-pipeline-planning", "management-incentive-review", "compensation-harmonization-analysis"]); // ADR-0185 F-11
     expect(skillsOf("market-dd")).toEqual(["competitive-intelligence"]);
     expect(skillsOf("financing-dd")).toEqual(["financing-plan-review"]); // ADR-0185 F-11
@@ -159,7 +159,7 @@ describe("process flow spec integrity (ADR-0074)", () => {
     // Q6: one activity id, owner unchanged; the greenfield owner lives in entity-ic-review step 3.1.
     expect(act("S11").find((a) => a.id === "investment-structuring")!.agent).toBe("brownfield-agent");
     const gx = act("S11").find((a) => a.id === "greenfield-execution-baseline")!;
-    expect([gx.agent, gx.skills, gx.procedure]).toEqual(["greenfield-agent", ["greenfield-feasibility", "talent-pipeline-planning"], ["greenfield-execution-baseline"]]);
+    expect([gx.agent, gx.skills, gx.procedure]).toEqual(["greenfield-agent", ["greenfield-feasibility", "talent-pipeline-planning", "certification-roadmap", "financing-plan-review", "incentive-clawback-assessment"], ["greenfield-execution-baseline"]]);
     expect(act("S12").map((a) => `${a.id}:${a.agent}:${a.procedure.join(",")}`)).toEqual([
       "portfolio-monitoring:group-review-agent:portfolio-venture-monitoring",
       "integration-monitoring:pmi-agent:pmi-integration-execution",
