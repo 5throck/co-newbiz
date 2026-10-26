@@ -53,7 +53,8 @@ On every GO at every gate, opportunity (`screening`, `pre_fs`, `target_screening
 | Data-confidence cap applied | DISPLAY (grade and which dimension capped it) | Boundary 4 is already enforced inside the RAG engine; the snapshot makes the cap visible beside the decision. |
 | bf-01 incomplete (applicable core validator missing), brownfield `dd` GO | HARD BLOCK (409 `validators_incomplete`) | neb-policy 2.3, 4.2; no waiver path. Re-checked, still hard, at `entity_ic` and `group_ic` GO. See D4. |
 | bf-02 / WACC not user-confirmed, `fs` GO | HARD BLOCK (409 `wacc_unconfirmed`) | neb-policy 2.2. See D8. At later gates the state is re-read: if it regressed to `assumed`, HARD BLOCK as well (same policy clause). |
-| Other open non-waivable items (mandatory, `waiver_eligible: false`, status not `pass`) | ACK with reason | Candidates for hardening are listed as Open Question 3. |
+| bf-03: certification change-of-control transferability not confirmed from the certifying body's own rules, where load-bearing, at `pre_fs` GO | HARD BLOCK (409 `certification_unconfirmed`) | neb-policy 2.4 and 4.5; binding and non-waivable like bf-01 and bf-02 (owner decision O-3). |
+| Any other open non-waivable item (mandatory, `waiver_eligible: false`, status not `pass`) | ACK with reason | No further hardening is decided. |
 | Active waivers on this entity | DISPLAY (id, clause, approver, expiry); expiring within 14 days flagged | |
 | Ladder predecessor GO missing | HARD BLOCK (D7) | |
 | Open condition precedents | DISPLAY at GO; HARD BLOCK at closing (D4) | |
@@ -72,7 +73,7 @@ Predicate activation (anchors: neb-policy 4 and the checklists named; each activ
 
 | Criterion | Decision | Reason and evidence |
 |---|---|---|
-| `greenfield-dd` `dd_finding_with_value_impact_not_in_valuation_bridge` (halt) | Activate in the implementation wave. New snapshot var `fin.dd_value_impact_unbridged` = count of `dd_finding` rows with a non-null value impact and no `assumption_key` that resolves to an assumption in the adopted business case. | Evidence exists (`dd_finding.value_impact`, `assumption_key`; commercial-dd-checklist cdd-06 "no narrative-only"). A brownfield twin criterion needs a declared YAML entry in `brownfield-dd` (procedure edit, covered by this ADR). |
+| `greenfield-dd` `dd_finding_with_value_impact_not_in_valuation_bridge` (halt) | Activate in the implementation wave. New snapshot var `fin.dd_value_impact_unbridged` = count of `dd_finding` rows with a non-null value impact and no `assumption_key` that resolves to an assumption in the adopted business case. | Evidence exists (`dd_finding.value_impact`, `assumption_key`; commercial-dd-checklist cdd-06 "no narrative-only"). A brownfield twin criterion would need a new declared YAML entry in `brownfield-dd`; that is a procedure change and is deferred (see "Deferred to W3 (needs owner decision)"). |
 | `brownfield-fs-comparative` `no_target_meets_base_scenario_hurdle` (escalate) | Activate after D8 lands. Var `fin.targets_meeting_hurdle` = number of shortlisted targets whose base-scenario IRR is at least the user-confirmed hurdle. Hurdle not user-confirmed gives UNASSESSED. | Evidence exists (per-target business cases, ADR-0157). Meaningless while the hurdle is the 0.10 default, hence the dependency. |
 | `greenfield-fs` `growth_projection_outside_top_decile_without_risk_officer_signoff` (halt) | DEFER to W3. | The decile basis (ADR-0018 anchoring) is undecided and no sign-off variable exists. Interim: the existing IRR and ratio guards (`irr-guard`, `share-guard`) appear as DISPLAY lines in the snapshot. |
 | `brownfield-fs` `qoe_reveals_material_earnings_quality_gap_unexplained` (escalate) | DEFER to W3. | Dual-blocked: no QoE variable exists and "material" is undefined; needs an owner threshold. |
@@ -119,7 +120,7 @@ Five additive migrations starting at 0173 (R1 removes the proposed `kill_criteri
 
 ## Policy, procedure and registry impact
 
-neb-policy (en and ko mirror) amendments to 2.1, 2.2, 2.3, 2.5 and new 2.9 (gate-record integrity), 2.10 (condition precedents), 2.11 (waiver and `na` rules), with a `policy_change` record. Procedures: `group-investment-review` (step 5 owner), `entity-ic-review` (maker/checker and snapshot wording), `brownfield-dd` (bf-01 derivation, brownfield twin of the value-impact criterion), `brownfield-fs-comparative` (hurdle activation note). Checklists: `brownfield-feasibility-checklist` bf-01 text (derived), guideline text for `na`. Registry: `_human-roles.yaml` (+`group-ic-reviewer`), kill-criteria JSON entries and `_baseline.json`. flow.spec: group_ic and entity_ic activity text (minor version bump). Skills: `stage-gate-governance`, `waiver-management`, `two-tier-approval-chain`, `compliance-monitoring`, `wacc-input-session`. Details, the in-flight project check and the `project_policy_pin` analysis are in the design.
+neb-policy (en and ko mirror) amendments to 2.1, 2.2, 2.3, 2.5 and new 2.9 (gate-record integrity), 2.10 (condition precedents), 2.11 (waiver and `na` rules), with a `policy_change` record. Procedures: `group-investment-review` (step 5 owner), `entity-ic-review` (maker/checker and snapshot wording), `brownfield-dd` (bf-01 derivation only), `brownfield-fs-comparative` (hurdle activation note). Checklists: `brownfield-feasibility-checklist` bf-01 text (derived), guideline text for `na`. Registry: `_human-roles.yaml` (+`group-ic-reviewer`), kill-criteria JSON entries and `_baseline.json`. flow.spec: group_ic and entity_ic activity text (minor version bump). Skills: `stage-gate-governance`, `waiver-management`, `two-tier-approval-chain`, `compliance-monitoring`, `wacc-input-session`. Details, the in-flight project check and the `project_policy_pin` analysis are in the design.
 
 ## Alternatives considered
 
@@ -133,9 +134,20 @@ neb-policy (en and ko mirror) amendments to 2.1, 2.2, 2.3, 2.5 and new 2.9 (gate
 ## Consequences
 
 - Positive: every GO carries a permanent, replayable record of what was known and what the recorder chose to accept; disagreement with the AI becomes measurable; binding policy clauses become mechanical; the dormant evaluator, completeness engine and approval chain get their first callers.
-- Cost: more fields on the decision form; more friction on unassessed-heavy projects (mitigated by one reason per procedure group); a second person is required for IC decisions (single-owner deployments need a second user or a documented decision, Open Question 1).
+- Cost: more fields on the decision form; more friction on unassessed-heavy projects (mitigated by one reason per procedure group); a second person is required for IC decisions (single-owner deployments need a second user ; the owner confirmed a second human is available (O-1)).
 - Risk: false stalls from stale snapshots (409 flow is explicit); shadow mode exists so thresholds are tuned on real traffic before enforcement.
 - In-flight impact: no recorded decision is rewritten. PRJ-DSE4PW and the two demo projects hold full GO ladders recorded under the old rules and are labelled legacy; PRJ-T7T81A (brownfield, no project gates yet) is the first real project to run under the new contract and cannot record an `fs` GO until its WACC subject and rates are user-confirmed.
+
+## Owner decisions (2026-10-27, authoritative)
+
+- **O-1 Maker/checker.** A second human is available. Maker/checker is enforced as designed with no bypass; the admin grants `entity-ic-reviewer` and `group-ic-reviewer` to at least two people before the `maker_checker` family flips to enforce.
+- **O-2 Waiver maximum** is 90 days.
+- **O-3 bf-03** (certification transferability confirmed by Pre-FS close, neb-policy 2.4) is a HARD BLOCK at `pre_fs` GO where load-bearing: binding and non-waivable like bf-01 and bf-02. The D1 table lists it as a hard block.
+- **O-4 Waiver approvers** are the IC reviewer roles: `entity-ic-reviewer`, and `group-ic-reviewer` for group-level items; approver differs from requester. No new role.
+- **O-5 Demos and fixtures.** The S1-S12 demo projects are reseeded through the new gate contract and the 27 blank `NP-*` projects are soft-deleted (phase P5, owners in the design plan).
+- **O-6 PRJ-DSE4PW.** Its history stays legacy; WACC confirmation and an IC countersign are required before it is used for anything new.
+- **O-7 Early override.** A `group-ic-reviewer` may issue a Group IC kill-criteria override before the formal `group_ic` sitting, with a reason, recorded and audited.
+- **O-8 W3 thresholds.** risk-officer proposes, with quant-methodologist (growth reference-class decile) and financial-analyst (QoE materiality); a human approves through a decision record in W3.
 
 ## Review outcome and revisions (AI-2nd technical review, platform-lead: REVISE)
 
@@ -165,8 +177,13 @@ Verdict REVISE, 5 blocking findings. The PM's resolutions are recorded here and 
 
 **Security additions.** The snapshot inherits the project classification and information wall: the snapshot GET and the IC package use the same `visibleProject` checks. `gate_decision_snapshot` is append-only (no UPDATE or DELETE path in code, and a trigger forbids both). The countersign, grant, override and clear routes get CSRF/Origin checks and rate limits like the existing cookie routes. New audit events: `grant.issue`, `grant.revoke`.
 
-Remaining owner questions after these resolutions are listed under "Open items for the owner" (kept: second human availability for the IC roles, the 90-day waiver maximum, bf-03 hard block or acknowledgement, the waiver approver role, demo reseed plus `NP-*` cleanup, PRJ-DSE4PW legacy versus re-confirm, early Group IC override, W3 threshold owners).
+The previously open owner questions were answered on 2026-10-27 (see Owner decisions).
+
+## Deferred to W3 (needs owner decision)
+
+- **Brownfield twin of the value-impact criterion** (`dd_finding_with_value_impact_not_in_valuation_bridge` in `brownfield-dd`). The owner has not decided it and it edits a procedure, so it is not part of this ADR. Until decided, DD findings are bridged by the greenfield-dd criterion only.
+- Growth-decile criterion (greenfield-fs and a brownfield-fs growth/base-rate criterion) and QoE materiality: thresholds proposed by risk-officer with quant-methodologist and financial-analyst, approved by a human decision record (O-8).
 
 ## Open items for the owner
 
-See the design, section 13: (1) is a second human available for `entity-ic-reviewer` and `group-ic-reviewer`; (2) the 90-day waiver maximum; (3) bf-03 (and other non-waivable items beyond bf-01/bf-02) as hard block or acknowledgement; (4) the waiver approver role; (5) demo reseed and cleanup of the 27 blank `NP-*` projects; (6) PRJ-DSE4PW legacy versus re-confirm; (7) whether a Group IC kill-criteria override may precede the formal sitting; (8) W3 threshold owners (growth decile basis, QoE materiality).
+None. All eight questions were answered on 2026-10-27 (Owner decisions above). Status stays Proposed; approval happens at PR merge.

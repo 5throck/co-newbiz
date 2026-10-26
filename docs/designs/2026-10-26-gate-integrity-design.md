@@ -116,7 +116,7 @@ Returns `{ok:true}` or `{ok:false, reason: "too_short"|"too_few_words"|"placehol
 ### 3.5 D5 Waiver and `na` hardening
 
 - `POST /api/projects/:id/waivers` creates a pending request (`approved_by` ignored if sent; deprecated field rejected with 400 after the compatibility window). `POST .../waivers/:waiverId/approve` records `approved_by = authenticated user`, `approved_at = now`, status active.
-- Approver checks: `approved_by != requested_by`; the user holds the human role in `approver_role` (roles allowed for waivers: `entity-ic-reviewer`, `group-ic-reviewer`; owner may add a dedicated role, Open Question 4); `expires_at <= approved_at + 90 days`.
+- Approver checks: `approved_by != requested_by`; the user holds the human role in `approver_role` (roles allowed for waivers: `entity-ic-reviewer`, `group-ic-reviewer`; no new role (owner decision 4)); `expires_at <= approved_at + 90 days`.
 - Issue-time eligibility: parse `clause_ref` as `<checklist_id> <item_id>`; item must exist; `mandatory && !waiver_eligible` -> 422 `not_waivable`. A `clause_ref` that resolves to no item is rejected (policy-clause waivers are not supported; none exist).
 - `na`: the DD item PATCH route requires `note` meeting the ack profile when the item is mandatory and the user sets `na`; a second user confirms through `POST .../checklist-items/:id/confirm-na`. `na_confirmed_by != assessed_by`. DD completion counts unconfirmed mandatory `na` as pending. Binding items remain unable to be `na` or `waived` (existing rule).
 - Waivers in the snapshot: active list and 14-day expiry flag (DISPLAY).
@@ -126,7 +126,7 @@ Returns `{ok:true}` or `{ok:false, reason: "too_short"|"too_few_words"|"placehol
 - Gate ladder state for `entity_ic` and `group_ic` becomes: `recorded` (maker wrote GO) -> `effective` (checker countersigned) . View helper `effectiveGateState` replaces raw `latestGateDecisions` consumers for the ladder, S11 and the panel; un-countersigned GO shows "awaiting countersign" and is not-GO for downstream gating. HOLD and KILL are effective immediately (no countersign needed to stop).
 - Countersign endpoint `POST /api/projects/:id/gate-decisions/:decisionId/countersign` with `{decision: "approved"|"conditional"|"rejected"|"withdrawn_pending_resubmission", reason, conditions?}` calls the existing `recordDecision` on the matching `approval_chain` row (the chain row is ensured when the first IC decision is recorded; `ensureApprovalChain`). Checks: authenticated user != `gate_decision.decided_by`; user holds `entity-ic-reviewer` (entity_ic) or `group-ic-reviewer` (group_ic) grant. `approval_chain` gains `recorded_by` and `decided_by`.
 - A checker `rejected` leaves the maker's GO non-effective and puts the disagreement on the record (both rows retained); the maker may record a new decision.
-- Grants: `app_user_human_role(user_id, role_key, granted_by, granted_at, revoked_at)`; role keys validated against `_human-roles.yaml`; admin-only management route with audit entries; at least `entity-ic-reviewer` and `group-ic-reviewer` need two distinct holders for the rule to be satisfiable (Open Question 1).
+- Grants: `app_user_human_role(user_id, role_key, granted_by, granted_at, revoked_at)`; role keys validated against `_human-roles.yaml`; admin-only management route with audit entries; at least `entity-ic-reviewer` and `group-ic-reviewer` need two distinct holders for the rule to be satisfiable (owner decision 1).
 - `_human-roles.yaml` gains `group-ic-reviewer` (description: Group Investment Committee decision, approved | rejected | conditional | withdrawn_pending_resubmission, and kill-criteria override issuance; reference neb-policy 3 and 2.5).
 - Validator rule (`procedures/_validate.ts` and `scripts/co-newbiz/graph-map.ts --check`): error when a step's `agent_key` has an `agents/<key>.md` AND `decision_authority: human`. Fixture tests: the old step 5 form must fail, the re-owned form must pass.
 - `kill_criteria_override` table: `id, entity_type, entity_id, criterion_id, procedure_key, reason, issued_by, issued_at, revoked_at`; issuer holds `group-ic-reviewer` and is not the recorder of the decision it will unblock (enforced when the decision is written).
@@ -164,7 +164,7 @@ neb-policy (`policies/group/neb-policy.md` and the ko mirror), amendment via ADR
 
 Other layers touched (lifecycle rules in the project CLAUDE.md apply: ADR, impact analysis, `project_policy_pin` check):
 
-- Procedures: `group-investment-review` (step 5 `agent_key` to `group-ic-reviewer`; step description keeps the four outcomes), `entity-ic-review` (step 2 text points to the snapshot; the decision step notes countersign), `brownfield-dd` (step 14 wording: derived; add twin criterion `dd_finding_with_value_impact_not_in_valuation_bridge` if the owner approves, Open Question 5), `brownfield-fs-comparative` (activation note). Procedure and checklist `version` fields bumped per their convention.
+- Procedures: `group-investment-review` (step 5 `agent_key` to `group-ic-reviewer`; step description keeps the four outcomes), `entity-ic-review` (step 2 text points to the snapshot; the decision step notes countersign), `brownfield-dd` (step 14 wording: derived; no twin criterion in this ADR; deferred to W3, see section 13), `brownfield-fs-comparative` (activation note). Procedure and checklist `version` fields bumped per their convention.
 - Checklists: `brownfield-feasibility-checklist` bf-01 text appended with "(derived from the validator engine)"; ma-special-topics and guideline text for `na`.
 - Registry JSON: two kill-criteria entries activated (greenfield-dd value impact, brownfield-fs-comparative hurdle), `_baseline.json` raised; `entity-ic-review__kill_criteria_condition_triggered` notes updated.
 - `procedures/_human-roles.yaml`: `group-ic-reviewer`.
@@ -181,10 +181,10 @@ Read-only snapshot of `db/data/co-newbiz.sqlite` (31 open `md_project` rows; 36 
 | Project | Track | State | Effect |
 |---|---|---|---|
 | PRJ-T7T81A | brownfield | Source opportunity has `screening`, `pre_fs`, `target_screening` GO. No project gate decision. Report places it at S8. Pins: overlay `ovl-brownfield-workspace-scope` 1.2.3. 0 assumptions; WACC default 0.10; `wacc_subject` unset. | First real project under the new contract. S8 shows incomplete (WACC subject and rates unconfirmed) and all S8 outputs get the provisional label. `fs` GO hard-blocked until a WACC session is confirmed (D8). At `dd`: bf-01 derived from the engine, hard block if an applicable core validator is missing. At IC: countersign by a second human, snapshot acknowledgements. Ladder: all predecessor GOs exist. |
-| PRJ-DSE4PW | greenfield | `fs`, `dd`, `entity_ic`, `group_ic` all GO by one user (`techcross`); 17 `na`, 21 `pass`; no WACC assumption; pins `shared-greenfield-dd` 1.1.0, overlay 1.1.0. | Recorded history untouched, labelled legacy (no snapshot, no countersign, WACC unconfirmed, 17 unconfirmed `na`). The IC package shows a legacy-record banner. Any new GO (re-decision) runs the full contract. Whether to retro-confirm WACC and countersign is an owner choice (Open Question 6). |
+| PRJ-DSE4PW | greenfield | `fs`, `dd`, `entity_ic`, `group_ic` all GO by one user (`techcross`); 17 `na`, 21 `pass`; no WACC assumption; pins `shared-greenfield-dd` 1.1.0, overlay 1.1.0. | Recorded history untouched, labelled legacy (no snapshot, no countersign, WACC unconfirmed, 17 unconfirmed `na`). The IC package shows a legacy-record banner. Any new GO (re-decision) runs the full contract. Whether to retro-confirm WACC and countersign is an owner choice (owner decision 6). |
 | DEMO-S1-S12 (brownfield) | brownfield | Four GOs by `demo-seed` with a 37-character templated rationale; 105 `pass`, 8 `fail` DD rows. | Legacy label. Demo seed writes SQL directly and bypasses the API; reseed through the new contract in rollout phase P5 so demos show snapshots and countersign (recommended), otherwise they stay labelled legacy. |
 | DEMO-GF (greenfield) | greenfield | Four GOs by `demo-seed`, 78 `pass`. | Same as DEMO-S1-S12. |
-| 27 `NP-*` projects | unnamed | No name, no track, no decisions (test or fixture rows). | No impact until used. Recommend soft-delete of fixtures (Open Question 7). |
+| 27 `NP-*` projects | unnamed | No name, no track, no decisions (test or fixture rows). | No impact until used. Recommend soft-delete of fixtures (owner decision 7). |
 | PRJ-QGB2W5 | brownfield | Soft-deleted 2026-09-10 (`status` still `open`); history: DD HOLD, then entity_ic GO and group_ic GO. | Not in flight; excluded from enforcement; kept as the C3 evidence. |
 
 Opportunity carrier: 20 recorded gate decisions (`screening` 9 GO and 2 HOLD, `pre_fs` 5 GO, `target_screening` 4 GO). One opportunity has a `target_screening` GO without earlier GOs (grandfathered). Open opportunities that reach a GO after rollout run the snapshot (kill outcomes, ladder, rationale, divergence) under the same flag.
@@ -315,15 +315,20 @@ Common caps: jamo-only strings (no complete syllables) fail; a single syllable o
 
 `fin.wacc_source_status` is filled by `snapshot-filler.ts` from the `assumption` rows of the project's run (keys `wacc`, `hurdle_irr`). The `fs` hard block therefore needs a defined run: the snapshot reads the latest S8 business-case run of the selected scope (selected target for brownfield) and its assumptions; no run or no rows means `absent`. Fixture work: scenarios that reach `fs` must create these assumptions as `kind=user` (3.11, P4) and the WACC subject on `md_project`; the unit test matrix covers absent, assumed, sourced, and subject unset.
 
-## 13. Open questions for the owner
+## 13. Owner decisions (2026-10-27, authoritative; formerly open questions)
 
-1. **Second human for maker/checker.** Is a second named human available for `entity-ic-reviewer` and `group-ic-reviewer`? No bypass is designed.
-2. **Waiver maximum.** 90 days proposed; confirm or give the policy number.
-3. **bf-03 and other non-waivable items.** Hard block (for example certification transferability by Pre-FS close, neb-policy 2.4) or acknowledgement?
-4. **Waiver approver role.** The two IC roles, or a dedicated waiver-approver human role?
-5. **Demo data and fixtures.** Reseed the demos through the new contract (recommended) and soft-delete the 27 blank `NP-*` projects?
-6. **PRJ-DSE4PW.** Leave as legacy, or require WACC confirmation and a countersign before new use?
-7. **Early Group IC override.** May a kill-criteria override be issued before the formal `group_ic` sitting? The design assumes yes.
-8. **W3 threshold owners.** Who owns the growth-decile reference class and the QoE materiality threshold?
+1. Second human available: maker/checker enforced, no bypass; admin grants `entity-ic-reviewer` and `group-ic-reviewer` to at least two people before `maker_checker` enforce.
+2. Waiver maximum 90 days.
+3. bf-03 is a HARD BLOCK at `pre_fs` GO where load-bearing (binding, non-waivable); the snapshot treats it like bf-01 and bf-02 and it leaves the acknowledgement list.
+4. Waiver approvers are `entity-ic-reviewer` (and `group-ic-reviewer` for group-level items), approver differs from requester; no new role.
+5. Reseed the S1-S12 demos through the new contract and soft-delete the 27 blank `NP-*` projects. Added to P5: owners backend-engineer (reseed script through the API/contract, soft-delete) and data-architect (verify no references); acceptance: demos show snapshot, acknowledgements and countersign, and no `NP-*` row is open.
+6. PRJ-DSE4PW history stays legacy; WACC confirmation and an IC countersign are required before any new use (P5 task, owner process-governance-manager with quant-methodologist for the WACC session).
+7. A `group-ic-reviewer` may issue a kill-criteria override before the formal `group_ic` sitting, with reason, recorded and audited (`kill_override.issue`).
+8. W3 thresholds: risk-officer proposes with quant-methodologist (growth decile reference class) and financial-analyst (QoE materiality); a human approves via a decision record in W3.
 
-Resolved by PM on review (owner may override): kill-evaluation persistence (3.12), propose-then-confirm (3.10), test harness (3.11), rationale profile (3.13), grant authorization (3.14), and the brownfield value-impact twin remains proposed in ADR-0186 D3 for the owner to confirm with the procedure change.
+No open questions remain. Status stays `proposed`; approval happens at PR merge.
+
+### Deferred to W3 (needs owner decision)
+
+- Brownfield twin of the value-impact criterion in `brownfield-dd`: not decided by the owner and it changes a procedure, so it is out of this ADR.
+- Growth-decile and QoE criteria thresholds (O-8).
