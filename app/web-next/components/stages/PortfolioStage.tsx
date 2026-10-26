@@ -80,10 +80,10 @@ const EMPTY_FORM = { decision: "next_tranche_released", rationale: "", learning_
 // ADR-0151: each non-kill transition carries its own dedicated record column;
 // the route answers 400 without it, so the form must collect it.
 const RECORD_FIELD = (tr: TranslatorFn): Record<string, { key: "tranche_condition" | "core_handoff" | "divest_plan"; label: string }> => ({
-  next_tranche_released: { key: "tranche_condition", label: "stages.s12.stage.nextExecutionStageConditionRequired" },
-  held_evidence_incomplete: { key: "tranche_condition", label: "stages.s12.stage.nextExecutionStageConditionRequired2" },
-  graduate_to_core: { key: "core_handoff", label: "stages.s12.stage.coreBusinessHandoverRecordRequired" },
-  reduce_or_divest: { key: "divest_plan", label: "stages.s12.stage.divestmentLiquidationPlanRequired" },
+  next_tranche_released: { key: "tranche_condition", label: tr("stages.s12.stage.nextExecutionStageConditionRequired") },
+  held_evidence_incomplete: { key: "tranche_condition", label: tr("stages.s12.stage.nextExecutionStageConditionRequired2") },
+  graduate_to_core: { key: "core_handoff", label: tr("stages.s12.stage.coreBusinessHandoverRecordRequired") },
+  reduce_or_divest: { key: "divest_plan", label: tr("stages.s12.stage.divestmentLiquidationPlanRequired") },
 });
 
 export function PortfolioStage({ projectId }: { projectId: string }) {const tr = useTranslations(); const t = useTranslations("stages.s12.stage"); const tc = useTranslations("common");
