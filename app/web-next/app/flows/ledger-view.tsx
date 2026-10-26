@@ -12,6 +12,7 @@ import { useTranslations } from "next-intl";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { ColGroup, FilterChip, PageState } from "../../components/ui.tsx";
 import { EChart } from "../../components/EChart.tsx";
+import { useChartTheme } from "../../lib/echarts-theme.ts";
 import { api, ApiError } from "../../lib/api.ts";
 import { RunExpansionRows } from "./run-expansion.tsx";
 import {
@@ -92,6 +93,7 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
   const tr = useTranslations();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const chartTheme = useChartTheme(); // F7 — 캔버스는 CSS 변수를 읽지 못한다(토큰 런타임 해소)
   const [filters, setFilters] = useState<Filters>(() => readFilters(searchParams));
 
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
@@ -240,10 +242,18 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
           />
         </div>
 
-        {/* EChart 타임라인 + 데이터 테이블 대체(A4 — §6.5 요구). */}
+        {/* EChart 타임라인 + 데이터 테이블 대체(A4 — §6.5 요구). F6 — 차트 제목과
+            범위 캡션을 차트 바로 위에(2026-10-26 UX 리뷰: 요약 카드는 창 전체, 차트는
+            커서 페이지 — 그 불일치가 아래 표 각주가 아니라 현장에서 해소되어야 한다). */}
         <div className="mt-3">
+          <div className="mb-1 flex flex-wrap items-baseline gap-x-2">
+            <h3 className="m-0 text-[length:var(--fs-body)] font-semibold">{t("chartTitle")}</h3>
+            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+              {t("chartScopeCaption", { p1: llmRows?.length ?? 0 })}
+            </span>
+          </div>
           <EChart
-            option={chartOption(buckets, t)}
+            option={chartOption(buckets, t, { ok: chartTheme.statusOk, failed: chartTheme.statusFailed })}
             height={260}
             ariaLabel={t("chartAria", { p1: fmtInt(llmRows?.length ?? 0) })}
           />
@@ -498,7 +508,8 @@ function FilterBar({
         <span className="block mb-0.5">{t("filterSource")}</span>
         <select className="sizing-new-input sizing-new-input-sm" value={filters.source} onChange={(e) => onChange({ source: e.target.value as Filters["source"] })}>
           <option value="">{tc("all")}</option>
-          <option value="llm">llm (AI)</option>
+          {/* F9 — 하드코딩 "llm (AI)" 옵션 카탈로그화. */}
+          <option value="llm">{t("filterSourceLlm")}</option>
           <option value="synthesis">{t("filterSourceSynthesis")}</option>
         </select>
       </label>
@@ -520,8 +531,17 @@ function FilterBar({
  *  최댓값)으로 고정 — 데이터에 맞는 정수 상한 + 여유. (4) minInterval 1 — 호출
  *  수는 셈이라 정수 눈금만. (5) alignTicks false — 보조축(비용)과의 틱 정렬
  *  협상이 어느 축의 스케일이든 다시 쓰지 않게 각축 독립 스케일. 계열→축 바인딩은
- *  불변(막대 2종 → 주축 스택, 비용 선 → 보조축). */
-function chartOption(buckets: Array<{ day: string; ok: number; failed: number; costUsd: number }>, t: ReturnType<typeof useTranslations>): EChartsOption {
+ *  불변(막대 2종 → 주축 스택, 비용 선 → 보조축).
+ *  2026-10-26 UX 리뷰 F7 대응(상태 색 규약): 성공 막대=초록(--chart-2), 실패
+ *  막대=빨강(--chart-4) — 색은 chartTokens() 런타임 해소 값(statusOk/statusFailed)으로
+ *  주입받는다(캔버스는 CSS 변수를 못 읽음; UNRESOLVED 시 회색 쌍 폴백 — 절대 반대
+ *  색이 안 된다). 비용 선은 팔레트 기본값 유지. 범례·칩의 ✓/✕ 병기는 유지
+ *  (color-never-sole-channel). */
+function chartOption(
+  buckets: Array<{ day: string; ok: number; failed: number; costUsd: number }>,
+  t: ReturnType<typeof useTranslations>,
+  status: { ok: string; failed: string },
+): EChartsOption {
   const maxStacked = buckets.reduce((mx, b) => Math.max(mx, b.ok + b.failed), 0);
   return {
     tooltip: { trigger: "axis" },
@@ -543,8 +563,9 @@ function chartOption(buckets: Array<{ day: string; ok: number; failed: number; c
       },
     ],
     series: [
-      { name: t("chartLegendSuccess"), type: "bar", stack: "calls", barMaxWidth: 32, data: buckets.map((b) => b.ok) },
-      { name: t("chartLegendFailed"), type: "bar", stack: "calls", barMaxWidth: 32, data: buckets.map((b) => b.failed) },
+      // 계열 순서 고정: 성공(초록 토큰) → 실패(빨강 토큰) — F7 머신체크 핀.
+      { name: t("chartLegendSuccess"), type: "bar", stack: "calls", barMaxWidth: 32, itemStyle: { color: status.ok }, data: buckets.map((b) => b.ok) },
+      { name: t("chartLegendFailed"), type: "bar", stack: "calls", barMaxWidth: 32, itemStyle: { color: status.failed }, data: buckets.map((b) => b.failed) },
       { name: t("colCost"), type: "line", yAxisIndex: 1, data: buckets.map((b) => Number(b.costUsd.toFixed(4))) },
     ],
   };

@@ -1,4 +1,9 @@
-// @version 1.0.0
+// @version 1.1.0
+// 1.1.0: 2026-10-26 UX review F9 remediation support — (a) the dynamic-key
+// allowlist gains markerNoteKey(...) (flow-graph's catalog-notes resolver);
+// (b) expectParams is ICU-plural-aware — en values may carry "{p1, plural, …}"
+// (design-pinned ledgerLine/chartScopeCaption/detailsSummary), so the
+// placeholder guard matches {p1} and {p1, alike instead of literal "{p1}" only.
 // flows i18n resolution regression (2026-10-23 user screenshot report).
 // The user's long-running dev server rendered RAW key paths
 // (pages.flows.graph.trackCommon, …markers.noteLine, …legend.domains.*) inside the
@@ -80,11 +85,14 @@ function expectResolvesBoth(key: string): void {
   expectResolves(en as Catalog, "en", key);
 }
 
-/** Every {param} the call site passes must survive in both locale values. */
+/** Every {param} the call site passes must survive in both locale values.
+ *  ICU-plural aware (v1.1.0): a design-pinned en value may open an ICU clause
+ *  ("{p1, plural, …}") instead of plain substitution ("{p1}") — both count. */
 function expectParams(key: string, params: readonly string[]): void {
   for (const p of params) {
-    expect(lookup(ko as Catalog, key), `ko ${key} must contain {${p}}`).toContain(`{${p}}`);
-    expect(lookup(en as Catalog, key), `en ${key} must contain {${p}}`).toContain(`{${p}}`);
+    const icuOrPlain = new RegExp(`\\{${p}[},]`);
+    expect(lookup(ko as Catalog, key), `ko ${key} must contain {${p}}`).toMatch(icuOrPlain);
+    expect(lookup(en as Catalog, key), `en ${key} must contain {${p}}`).toMatch(icuOrPlain);
   }
 }
 
@@ -184,7 +192,7 @@ const CALLS = extractCalls();
 /** Dynamic first-arg expressions the enumeration below covers. Anything else is
  *  drift: a new dynamic key family must be added to the explicit expansion. */
 const DYNAMIC_ARG_ALLOWLIST =
-  /^(ADMIN_FORBIDDEN_KEY|DRY_RUN_DISCLOSURE_KEY|windowKey|prefKey|k|PROPOSAL_TYPE_KEY\[[^\]]+\]|markerKey\([^)]+\)|`legend\.domains\.\$\{d\}`|[A-Za-z_$][\w$]*\.(key|titleKey|noteKey))$/;
+  /^(ADMIN_FORBIDDEN_KEY|DRY_RUN_DISCLOSURE_KEY|windowKey|prefKey|k|PROPOSAL_TYPE_KEY\[[^\]]+\]|marker(?:Note)?Key\([^)]+\)|`legend\.domains\.\$\{d\}`|[A-Za-z_$][\w$]*\.(key|titleKey|noteKey))$/;
 
 // ── dynamic key families ──────────────────────────────────────────────────────
 // marker kinds + domain keys are derived from the flow-graph source itself, so a

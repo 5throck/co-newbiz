@@ -241,7 +241,12 @@ export function Tabs({
         <a
           key={t.key}
           role="tab"
-          aria-current={active === t.key ? "page" : undefined}
+          // 2026-10-26 UX review F3: role="tab" without aria-selected is an ARIA
+          // violation (tab state invisible to AT). ARIA-tabs-lite — anchors are
+          // natively focusable and Enter-activatable, so no roving tabindex;
+          // aria-controls is omitted (panels have no stable ids; the URL ?tab=
+          // is the state carrier). Replaces the mismatched "page" hint attribute.
+          aria-selected={active === t.key}
           className="tab"
           href={`#${t.key}`}
           onClick={(e) => {

@@ -5,8 +5,8 @@
 // 프러젝션 렌더, 런타임 LLM 없음. 과거의 단계 요약 그리드(그래프와 정보 중복,
 // "최근 7일 오류" 경량 호출 추가 비용)는 2026-10-23 사용자 보고로 제거되었다 —
 // 그래프가 개관을 대신하고 활동 표가 키보드 경로를 유지한다.
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { ColGroup, FilterChip, PageState, useToast } from "../../components/ui.tsx";
@@ -14,12 +14,13 @@ import { api } from "../../lib/api.ts";
 import {
   fmtDateTime,
   fmtInt,
+  stageDisplayName,
   type BlueprintAgent,
   type BlueprintStage,
   type FlowsBlueprint,
   type SpecialistMarker,
 } from "./flows-view-lib.ts";
-import { FlowGraph, markerKey } from "./flow-graph.tsx";
+import { FlowGraph, markerKey, markerNote } from "./flow-graph.tsx";
 
 // 표 열 비율(2026-10-11-table-column-sizing-system 선례) — 활동 표.
 const ACTIVITY_COL_PCT = [21, 7, 16, 34, 12, 10] as const;
@@ -40,12 +41,33 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
   const t = useTranslations("pages.flows.blueprint");
   const tg = useTranslations("pages.flows.graph"); // 단계 흐름 그래프 섹션·마커 칩 문구(flow-graph와 같은 네임스페이스)
   const tc = useTranslations("common");
-  const [selectedStage, setSelectedStage] = useState<string | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  // F12 — 단계 선택은 ?stage= 쿼리와 동기된다(?tab= 패턴과 동일): 최초 진입 시
+  // URL의 stage로 복원(서빙 단계 id만 — 미지 값은 무시), 모든 선택/해제가
+  // router.replace(…, { scroll: false })로 파라미터를 기록·삭제한다. 외래
+  // 파라미터(tab·window·agent…)는 보존 — 런 레저 필터 동기와 같은 규약.
+  const [selectedStage, setSelectedStage] = useState<string | null>(() => {
+    const v = searchParams.get("stage");
+    return v && blueprint.stages.some((s) => s.id === v) ? v : null;
+  });
   const [trackFilter, setTrackFilter] = useState<"all" | "greenfield" | "brownfield">("all");
   const [recentRuns, setRecentRuns] = useState<Record<string, Array<Record<string, unknown>>>>({});
   const [creatingPromptKey, setCreatingPromptKey] = useState<string | null>(null);
-  const router = useRouter();
   const { toast } = useToast();
+
+  /** F12 — 단계 선택의 유일한 쓰기 경로: 상태 갱신 + URL 파라미터 동기(그래프
+   *  노드·그래프 아래 칩(F11)·표 헤더 칩이 모두 이 핸들러로 귀결한다). */
+  const selectStage = useCallback(
+    (stageId: string | null) => {
+      setSelectedStage(stageId);
+      const sp = new URLSearchParams(window.location.search);
+      if (stageId) sp.set("stage", stageId);
+      else sp.delete("stage");
+      router.replace(`/flows?${sp.toString()}`, { scroll: false });
+    },
+    [router],
+  );
 
   const stages = blueprint.stages;
   const activities = useMemo(
@@ -80,6 +102,13 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
     for (const a of blueprint.agents) m.set(a.key, a);
     return m;
   }, [blueprint.agents]);
+
+  /** F11 — 그래프 아래 선택 칩의 단계 표기(API 단계명, 결측 시 id 폴백). */
+  const selectedStageName = useMemo(() => {
+    if (!selectedStage) return "";
+    const s = blueprint.stages.find((st) => st.id === selectedStage);
+    return s ? stageDisplayName(s) : selectedStage;
+  }, [selectedStage, blueprint.stages]);
 
   /** 프롬프트 키 → 시스템 프롬프트 본문(카탈로그×레지스트리 결합본) — 추가 호출 없이 드릴다운. */
   const systemByKey = useMemo(() => {
@@ -146,8 +175,18 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
           agentsByKey={agentsByKey}
           markers={blueprint.specialistMarkers}
           selectedStage={selectedStage}
-          onSelectStage={(stageId) => setSelectedStage((prev) => (prev === stageId ? null : stageId))}
+          onSelectStage={(stageId) => selectStage(selectedStage === stageId ? null : stageId)}
         />
+        {/* F11 — 선택 피드백을 그래프 바로 아래로(2026-10-26 UX 리뷰: 노드 클릭의
+            결과가 먼 표 헤더 칩에서만 보였다). 해제는 표 헤더 칩과 같은 selectStage(null). */}
+        {selectedStage && (
+          <p className="mt-2 mb-0 flex flex-wrap items-center gap-2 text-[length:var(--fs-caption)]">
+            <span>{tg("filterChipLabel", { stage: selectedStageName })}</span>
+            <FilterChip selected={false} onClick={() => selectStage(null)}>
+              {tg("filterChipClear")}
+            </FilterChip>
+          </p>
+        )}
       </section>
 
       {/* 활동 표 (§4.1-2) — 행 인라인 확장(네이티브 details). */}
@@ -158,10 +197,12 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
           filters={
             <span className="flex flex-wrap items-center gap-1" role="group" aria-label={t("trackFilterGroup")}>
               <FilterChip selected={trackFilter === "all"} onClick={() => setTrackFilter("all")}>{t("allTracks")}</FilterChip>
-              <FilterChip selected={trackFilter === "greenfield"} onClick={() => setTrackFilter("greenfield")}>greenfield</FilterChip>
-              <FilterChip selected={trackFilter === "brownfield"} onClick={() => setTrackFilter("brownfield")}>brownfield</FilterChip>
+              {/* F9 — 트랙 칩 라벨 카탈로그화(graph.trackGreenfield/Brownfield — 그래프
+                  밴드 라벨과 같은 키, 하드코딩 영문 라벨 금지). */}
+              <FilterChip selected={trackFilter === "greenfield"} onClick={() => setTrackFilter("greenfield")}>{tg("trackGreenfield")}</FilterChip>
+              <FilterChip selected={trackFilter === "brownfield"} onClick={() => setTrackFilter("brownfield")}>{tg("trackBrownfield")}</FilterChip>
               {selectedStage && (
-                <FilterChip selected={false} onClick={() => setSelectedStage(null)}>
+                <FilterChip selected={false} onClick={() => selectStage(null)}>
                   {t("clearStage", { p1: selectedStage })}
                 </FilterChip>
               )}
@@ -222,7 +263,9 @@ export function BlueprintView({ blueprint }: { blueprint: FlowsBlueprint }) {
                               <p className="mb-1">
                                 <strong>{tg("markerChip")}</strong>{" "}
                                 <span className="status-chip status-in-progress">{tg(markerKey(marker.kind, "short"))}</span>{" "}
-                                <span className="text-[color:var(--muted-fg)]">{marker.note}</span>
+                                {/* F9 — 해설은 로케일 해소(markerNote: 카탈로그 markers.notes.*,
+                                    미지 마커만 페이로드 note 폴백) — EN 화면 한국어 유입 차단. */}
+                                <span className="text-[color:var(--muted-fg)]">{markerNote(marker, tg)}</span>
                               </p>
                             )}
                             <p className="mb-1">

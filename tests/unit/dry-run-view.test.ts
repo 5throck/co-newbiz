@@ -59,9 +59,9 @@ describe("dry-run-view-lib — 세션 상태·등급·출처 칩 (A5: 색 단독
   });
   test("세션 목록의 선호 라벨은 3상 + 미기록 — catalog 키 방출, 미기록 null", () => {
     expect(preferenceLabelKey("base")).toBe("pages.flows.chips.prefBase");
-    expect(koOf("pages.flows.chips.prefBase")).toBe("base 선호");
+    expect(koOf("pages.flows.chips.prefBase")).toBe("기본(base) 선호"); // 2026-10-26 UX 리뷰 F9 — 도메인 용어 괄호 표기
     expect(preferenceLabelKey("override")).toBe("pages.flows.chips.prefOverride");
-    expect(koOf("pages.flows.chips.prefOverride")).toBe("override 선호");
+    expect(koOf("pages.flows.chips.prefOverride")).toBe("대체(override) 선호");
     expect(preferenceLabelKey("tie")).toBe("pages.flows.chips.prefTie");
     expect(koOf("pages.flows.chips.prefTie")).toBe("동률");
     expect(preferenceLabelKey(null)).toBeNull();
@@ -169,7 +169,7 @@ describe("드라이런 화면 소스 — a11y·상호작용·경계 규약 (화�
     expect(sessionPage).toContain('t("blockedNoLlm")');
     expect(koOf("pages.flows.dryRunSession.blockedNoLlm")).toContain("LLM이 구성되지 않아 드라이런을 실행할 수 없습니다");
     expect(sessionPage).toContain('t("blockedNoOverride")');
-    expect(koOf("pages.flows.dryRunSession.blockedNoOverride")).toContain("오버라이드가 없는 실행은 base와 동일합니다");
+    expect(koOf("pages.flows.dryRunSession.blockedNoOverride")).toContain("오버라이드가 없는 실행은 기본(base)과 동일합니다"); // F9 도메인 용어 괄호 표기
   });
 
   test("§6.1 — 오버라이드 편집기는 로스터 한정 select + SSOT 비반영 상시 문구를 가진다", () => {
@@ -183,9 +183,9 @@ describe("드라이런 화면 소스 — a11y·상호작용·경계 규약 (화�
   test("§13-5 — 선호 기록은 3상(base/override/tie) + 비고 1줄 UI다", () => {
     expect(sessionPage).toContain('aria-label={t("prefGroup")}');
     expect(sessionPage).toContain('t("prefBase")');
-    expect(koOf("pages.flows.dryRunSession.prefBase")).toBe("base 선호");
+    expect(koOf("pages.flows.dryRunSession.prefBase")).toBe("기본(base) 선호"); // F9 도메인 용어 괄호 표기
     expect(sessionPage).toContain('t("prefOverride")');
-    expect(koOf("pages.flows.dryRunSession.prefOverride")).toBe("override 선호");
+    expect(koOf("pages.flows.dryRunSession.prefOverride")).toBe("대체(override) 선호");
     expect(sessionPage).toContain('t("prefTie")');
     expect(koOf("pages.flows.dryRunSession.prefTie")).toBe("동률");
     expect(sessionPage).toContain('t("recordCta")');
