@@ -4,9 +4,11 @@ description: >
   Decision record format for gate-moment rulings — Design Gate Row 0
   determinations, escalations, and go/no-go calls captured as durable
   docs/decisions/DEC-YYYYMMDD-NN.md files with rule and evidence citations.
-  Use when: a gate ruling was made, an escalation was resolved, or a go/no-go
-  decision was reached (ADR-0061).
-version: 1.1.1
+  Use when: a gate ruling must be written down as a DEC file, an escalation
+  was resolved, or a go/no-go decision was reached (ADR-0061). Owns the DEC
+  file format only; claim-to-source rows are the evidence-ledger skill and the
+  gate sequence and Kill Criteria are stage-gate-governance.
+version: 1.1.2
 owner: pm
 status: active
 last_reviewed: 2026-08-25
@@ -15,10 +17,15 @@ metadata:
   type: process
   triggers:
     - decision record
-    - gate ruling
+    - record a gate ruling
     - go/no-go decision
     - escalation decision
     - record a decision
+relates_to:
+  - skill: evidence-ledger
+    type: composes_with
+  - skill: stage-gate-governance
+    type: relates_to
 ---
 
 ## Purpose

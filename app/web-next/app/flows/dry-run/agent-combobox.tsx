@@ -1,8 +1,8 @@
 "use client";
 
 // AgentCombobox — local ARIA 1.2 combobox (editable, list autocomplete) for the 40+ agent roster, grouped by
-// domain (2026-10-26 dry-run UX design §5). Flagged to design-system-agent for catalog registration; until
-// then it stays local to the dry-run screens. Composed from existing input / menu styling (no new tokens).
+// domain (2026-10-26 dry-run UX design §5). Design-system ruling 2026-10-26: not catalogued (single
+// consumer, roster-bound props; see design-components.md), so it stays local to the dry-run screens. Composed from existing input / menu styling (no new tokens).
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslations } from "next-intl";
 import type { BlueprintAgent } from "../flows-view-lib.ts";

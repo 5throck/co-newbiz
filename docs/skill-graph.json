@@ -999,8 +999,8 @@
       "name": "compliance-officer",
       "scope": "root",
       "capability": "compliance-officer",
-      "content_hash": "221bad34892560f4",
-      "version": "1.1.0",
+      "content_hash": "acd1f5f8484d7807",
+      "version": "1.1.1",
       "mirrors": [
         "agents/compliance-officer.md"
       ]
@@ -2117,8 +2117,8 @@
       "name": "decision-record",
       "scope": "root",
       "capability": "decision-record",
-      "content_hash": "c86ff19ecd961ad9",
-      "version": "1.1.1",
+      "content_hash": "f97306e933b308c0",
+      "version": "1.1.2",
       "mirrors": [
         "skills/decision-record/SKILL.md",
         ".claude/skills/decision-record/SKILL.md",
@@ -2175,8 +2175,8 @@
       "name": "evidence-ledger",
       "scope": "root",
       "capability": "evidence-ledger",
-      "content_hash": "7c15e880b454b203",
-      "version": "1.1.0",
+      "content_hash": "ae4297fc669e81d8",
+      "version": "1.1.1",
       "mirrors": [
         "skills/evidence-ledger/SKILL.md",
         ".claude/skills/evidence-ledger/SKILL.md",
@@ -3331,8 +3331,8 @@
       "name": "stage-gate-governance",
       "scope": "root",
       "capability": "stage-gate-governance",
-      "content_hash": "405fa29772c57097",
-      "version": "1.4.1",
+      "content_hash": "85be08ada8072cbe",
+      "version": "1.4.2",
       "mirrors": [
         "skills/stage-gate-governance/SKILL.md",
         ".claude/skills/stage-gate-governance/SKILL.md",
@@ -4811,6 +4811,12 @@
       "type": "references",
       "from": "agent:root/certification-agent",
       "to": "skill:root/permit-pathway-mapping",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/compliance-officer",
+      "to": "skill:root/k-law",
       "source": "prose"
     },
     {
@@ -7643,10 +7649,33 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "skill:root/decision-record",
+      "to": "skill:root/evidence-ledger",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/decision-record/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "skill:root/decision-record",
       "to": "skill:root/evidence-ledger",
       "source": "prose"
+    },
+    {
+      "type": "relates_to",
+      "from": "skill:root/decision-record",
+      "to": "skill:root/stage-gate-governance",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/decision-record/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "composes_with",
@@ -7714,10 +7743,33 @@
       }
     },
     {
+      "type": "composes_with",
+      "from": "skill:root/evidence-ledger",
+      "to": "skill:root/decision-record",
+      "source": "relates_to",
+      "symmetric": true,
+      "provenance": {
+        "file": "skills/evidence-ledger/SKILL.md",
+        "field": "relates_to",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "skill:root/evidence-ledger",
       "to": "skill:root/decision-record",
       "source": "prose"
+    },
+    {
+      "type": "relates_to",
+      "from": "skill:root/evidence-ledger",
+      "to": "skill:root/stage-gate-governance",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/evidence-ledger/SKILL.md",
+        "field": "relates_to",
+        "index": 1
+      }
     },
     {
       "type": "used_by",
@@ -14003,6 +14055,28 @@
       "from": "skill:root/stage-gate-governance",
       "to": "skill:root/deal-execution-playbook",
       "source": "prose"
+    },
+    {
+      "type": "relates_to",
+      "from": "skill:root/stage-gate-governance",
+      "to": "skill:root/decision-record",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/stage-gate-governance/SKILL.md",
+        "field": "relates_to",
+        "index": 8
+      }
+    },
+    {
+      "type": "relates_to",
+      "from": "skill:root/stage-gate-governance",
+      "to": "skill:root/evidence-ledger",
+      "source": "relates_to",
+      "provenance": {
+        "file": "skills/stage-gate-governance/SKILL.md",
+        "field": "relates_to",
+        "index": 9
+      }
     },
     {
       "type": "references",

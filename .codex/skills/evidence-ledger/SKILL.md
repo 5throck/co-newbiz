@@ -3,9 +3,11 @@ name: evidence-ledger
 description: >
   Fixed-column evidence ledger that traces every claim a decision depends on
   to a source, a reference, and a verification state. Use when: building or
-  updating an evidence or citation ledger, verifying claims ahead of a gate
-  ruling, or linking evidence into a decision record (ADR-0061).
-version: 1.1.0
+  updating an evidence or citation ledger, adding or superseding a ledger row,
+  or resolving a decision record's evidence_refs to ledger rows (ADR-0061).
+  Owns the claim-to-source rows only; the ruling itself is the
+  decision-record skill and the gate mechanics are stage-gate-governance.
+version: 1.1.1
 owner: pm
 status: active
 last_reviewed: 2026-08-25
@@ -15,9 +17,14 @@ metadata:
   triggers:
     - evidence ledger
     - citation ledger
-    - claim verification
-    - source verification
-    - evidence tracking
+    - ledger row
+    - claim-to-source trace
+    - supersede a ledger row
+relates_to:
+  - skill: decision-record
+    type: composes_with
+  - skill: stage-gate-governance
+    type: relates_to
 ---
 
 ## Purpose

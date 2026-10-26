@@ -15,7 +15,8 @@ import { LOCALE_COOKIE, locales, type Locale } from "../i18n/config.ts";
 // Scales to the 16-locale baseline without growing the topbar row. Selection
 // writes the NEXT_LOCALE cookie (the D3 negotiation seam; no route
 // restructure) and refreshes so the server re-negotiates. Trigger pill
-// styling follows ThemeToggle.
+// styling follows ThemeToggle. The trigger's accessible name starts with the
+// visible endonym (WCAG 2.5.3 label-in-name), then names the control.
 export function LocaleSwitcher() {
   const locale = useLocale();
   const router = useRouter();
@@ -84,7 +85,7 @@ export function LocaleSwitcher() {
         ref={triggerRef}
         type="button"
         className="theme-toggle-compact"
-        aria-label={t("languageSwitcher")}
+        aria-label={`${t(`locale.${locale}`)}, ${t("languageSwitcher")}`}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => {
