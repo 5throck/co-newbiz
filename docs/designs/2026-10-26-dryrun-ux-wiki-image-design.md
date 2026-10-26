@@ -215,3 +215,5 @@ Frontend:
 ### D9. Handoff
 
 Reasoning: tabs split one edit-run-compare loop across views; a single vertical page matches the job order, while derived sessions keep each iteration as immutable evidence (owner decision). Contracts consumed: existing session create/GET/execute/preference/export/suggestion endpoints; tables `dry_run_session`, `llm_call_log` (existing columns only). Escalations: none to design-system-agent. To PM: D5 limits (hash-only per-run attribution; latest-run result bodies); schema change plus ADR only if the owner wants more.
+
+- D2a — sample input collapsed to a one-line disclosure (owner, 2026-10-26)

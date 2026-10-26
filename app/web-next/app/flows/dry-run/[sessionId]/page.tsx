@@ -77,6 +77,8 @@ export function DryRunSessionView() {
   const [bufferSystem, setBufferSystem] = useState("");
   const [bufferAgentKey, setBufferAgentKey] = useState("");
   const [sampleUser, setSampleUser] = useState("");
+  const [sampleOpen, setSampleOpen] = useState(false);
+  const preview = (v: string) => { const x = v.trim().replace(/\s+/g, " "); return x.length > 40 ? `${x.slice(0, 40)}…` : x; };
   const [busyRun, setBusyRun] = useState(false);
   const [runError, setRunError] = useState<string | null>(null);
   const [busyExport, setBusyExport] = useState(false);
@@ -469,10 +471,39 @@ export function DryRunSessionView() {
             <span className="font-semibold">{t("costEstimateLabel")}:</span>{" "}
             <span className="tabular-nums">{tr(estimate.noteKey, estimate.noteParams)}</span>
           </p>
-          <label className="text-[length:var(--fs-caption)]" style={{ flex: "1 1 14rem" }}>
-            <span className="block mb-0.5">{t("sampleInputLabel")}</span>
-            <input className="sizing-new-input sizing-new-input-sm w-full" value={sampleUser} maxLength={500} onChange={(e) => setSampleUser(e.target.value)} />
-          </label>
+        </div>
+        <div className="mt-2 text-[length:var(--fs-caption)]">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[color:var(--muted-fg)]" style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>
+              {sampleUser.trim() ? t("sampleInputLinePreview", { p1: preview(sampleUser) }) : t("sampleInputLineDefault")}
+            </span>
+            <button
+              type="button"
+              className="btn-ghost btn-sm"
+              aria-expanded={sampleOpen}
+              aria-controls="dry-run-sample-input"
+              onClick={() => setSampleOpen((v) => !v)}
+            >
+              {t("sampleInputChange")}
+            </button>
+          </div>
+          {sampleOpen && (
+            <div id="dry-run-sample-input" className="mt-2 flex flex-wrap items-end gap-2">
+              <label style={{ flex: "1 1 14rem" }}>
+                <span className="block mb-0.5">{t("sampleInputShortLabel")}</span>
+                <input
+                  className="sizing-new-input sizing-new-input-sm w-full"
+                  value={sampleUser}
+                  maxLength={500}
+                  placeholder={session.purpose || undefined}
+                  onChange={(e) => setSampleUser(e.target.value)}
+                />
+              </label>
+              <button type="button" className="btn-ghost btn-sm" onClick={() => { setSampleUser(""); setSampleOpen(false); }}>
+                {t("sampleInputReset")}
+              </button>
+            </div>
+          )}
         </div>
         {dirty && <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("dirtyNote")}</p>}
         {runBlockedReason && (
