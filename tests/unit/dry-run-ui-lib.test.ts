@@ -5,46 +5,51 @@
 import { test, expect, describe } from "bun:test";
 import {
   agentGroupOf,
-  defaultTab,
+  effectiveOverrideSystem,
+  isDirty,
+  lineDiffRows,
+  primaryAction,
   filterSessions,
   groupAgents,
-  planActions,
   shortId,
   statusCounts,
-  tabForAction,
-  tabFromHash,
 } from "../../app/web-next/app/flows/dry-run/dry-run-ui-lib.ts";
 import ko from "../../app/web-next/locales/ko.json";
 import en from "../../app/web-next/locales/en.json";
 
-describe("planActions — one state-dependent primary (design §3)", () => {
-  test("no runs yet -> Run primary; export + apply in More", () => {
-    expect(planActions(false, false)).toEqual({ primary: "run", secondary: ["export", "apply"] });
-    expect(planActions(false, true).primary).toBe("run");
+describe("single-page helpers (2026-10-26b)", () => {
+  test("primary: Run before the first run, Export after", () => {
+    expect(primaryAction(0)).toBe("run");
+    expect(primaryAction(1)).toBe("export");
+    expect(primaryAction(5)).toBe("export");
+    expect(primaryAction(1, true)).toBe("run");
   });
-  test("runs + unsaved edit -> Apply primary", () => {
-    expect(planActions(true, true)).toEqual({ primary: "apply", secondary: ["run", "export"] });
+  const saved = (o: Partial<{ override_system: string | null; override_agent_key: string | null }> = {}) => ({
+    override_system: null, override_agent_key: null, base_system: "base text", ...o,
   });
-  test("runs + no pending edit -> Export primary", () => {
-    expect(planActions(true, false)).toEqual({ primary: "export", secondary: ["run", "apply"] });
+  test("buffer equal to base or blank means no prompt override", () => {
+    expect(effectiveOverrideSystem("base text", "base text")).toBeNull();
+    expect(effectiveOverrideSystem("  ", "base text")).toBeNull();
+    expect(effectiveOverrideSystem("changed", "base text")).toBe("changed");
   });
-  test("apply lives in the edit tab; run/export live in the run tab", () => {
-    expect(tabForAction("apply")).toBe("edit");
-    expect(tabForAction("run")).toBe("run");
-    expect(tabForAction("export")).toBe("run");
+  test("dirty detection against the saved override (text and agent axes)", () => {
+    expect(isDirty({ system: "base text", agentKey: "" }, saved())).toBe(false);
+    expect(isDirty({ system: "changed", agentKey: "" }, saved())).toBe(true);
+    expect(isDirty({ system: "changed", agentKey: "" }, saved({ override_system: "changed" }))).toBe(false);
+    expect(isDirty({ system: "base text", agentKey: "a-1" }, saved())).toBe(true);
+    expect(isDirty({ system: "base text", agentKey: "a-1" }, saved({ override_agent_key: "a-1" }))).toBe(false);
+    // clearing a saved override is an unsaved edit
+    expect(isDirty({ system: "base text", agentKey: "" }, saved({ override_system: "changed" }))).toBe(true);
   });
-});
-
-describe("tabs", () => {
-  test("hash maps to a tab; unknown hash is null", () => {
-    expect(tabFromHash("#history")).toBe("history");
-    expect(tabFromHash("suggest")).toBe("suggest");
-    expect(tabFromHash("#nope")).toBeNull();
-    expect(tabFromHash("")).toBeNull();
-  });
-  test("default tab: run when runs exist, else edit", () => {
-    expect(defaultTab(true)).toBe("run");
-    expect(defaultTab(false)).toBe("edit");
+  test("line diff rows keep reading order with add/del/same kinds", () => {
+    expect(lineDiffRows("a\nb\nc", "a\nx\nc")).toEqual([
+      { kind: "same", text: "a" },
+      { kind: "del", text: "b" },
+      { kind: "add", text: "x" },
+      { kind: "same", text: "c" },
+    ]);
+    expect(lineDiffRows("a", "a").every((r) => r.kind === "same")).toBe(true);
+    expect(lineDiffRows("", "n").map((r) => r.kind)).toContain("add");
   });
 });
 

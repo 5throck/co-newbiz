@@ -155,22 +155,29 @@ describe("드라이런 화면 소스 — a11y·상호작용·경계 규약 (화�
 
   test("§6.2 — 드라이런 실행은 반드시 비용 확인 대화상자를 통과한다(ADR-0082)", () => {
     expect(sessionPage).toContain("useConfirm");
-    expect(sessionPage).toContain("ConfirmDialog");
     // i18n: execute CTA/confirm title resolves through pages.flows.dryRunSession.executeConfirmTitle.
     expect(sessionPage).toContain('t("executeConfirmTitle")');
     expect(koOf("pages.flows.dryRunSession.executeConfirmTitle")).toBe("드라이런 실행 — 비용 확인");
     expect(sessionPage).toContain("estimateFromLedger");
     expect(sessionPage).toContain("DRY_RUN_DISCLOSURE");
-    // 상호작용 순서 보초 — askExecute가 confirm을 부르고 doExecute만 POST한다.
+    // 상호작용 순서 보초 — askRun이 confirm을 부르고, doRun은 dirty면 세션 생성(POST)→이동, 아니면 execute만. PATCH 없음.
     const confirmIdx = sessionPage.indexOf('confirm(\n      t("executeConfirmTitle")');
-    const doExecuteIdx = sessionPage.indexOf("api.post<DryRunExecutePayload>");
+    const createIdx = sessionPage.indexOf('api.post<{ session: { id: string } }>("/api/flows/dry-run/sessions"');
+    const pushIdx = sessionPage.indexOf("router.push(");
     expect(confirmIdx).toBeGreaterThan(-1);
-    expect(doExecuteIdx).toBeGreaterThan(confirmIdx);
+    expect(createIdx).toBeGreaterThan(confirmIdx);
+    expect(pushIdx).toBeGreaterThan(createIdx);
+    expect(sessionPage).toContain("api.post<DryRunExecutePayload>");
+    expect(sessionPage).not.toContain("api.patch");
+    expect(sessionPage).not.toContain("patchBody");
+    expect(sessionPage).toContain('t("createFailed")');
+    expect(sessionPage).toContain('t("runAsNewCta")');
+    expect(sessionPage).toContain('t("blockedClosed")');
     // LLM 미구성·오버라이드 없음은 실행 버튼이 사유 텍스트와 함께 막힌다(§6.2/§10).
     expect(sessionPage).toContain('t("blockedNoLlm")');
     expect(koOf("pages.flows.dryRunSession.blockedNoLlm")).toContain("LLM이 구성되지 않아 드라이런을 실행할 수 없습니다");
     expect(sessionPage).toContain('t("blockedNoOverride")');
-    expect(koOf("pages.flows.dryRunSession.blockedNoOverride")).toContain("오버라이드가 없는 실행은 기본(base)과 동일합니다"); // F9 도메인 용어 괄호 표기
+    expect(koOf("pages.flows.dryRunSession.blockedNoOverride")).toContain("기본(base)과 같은 내용은 실행할 수 없습니다"); // F9 도메인 용어 괄호 표기
   });
 
   test("§6.1 — 오버라이드 편집기는 로스터 한정 select + SSOT 비반영 상시 문구를 가진다", () => {
@@ -213,13 +220,14 @@ describe("드라이런 화면 소스 — a11y·상호작용·경계 규약 (화�
     expect(suggestionPanel).toContain('t("suggestUnavailableChip")');
     expect(koOf("pages.flows.dryRunSession.suggestUnavailableChip")).toBe("제안 생성 불가");
     expect(suggestionPanel).toContain('t("acceptOverrideCta")');
-    expect(koOf("pages.flows.dryRunSession.acceptOverrideCta")).toContain("오버라이드에 적용");
-    expect(suggestionPanel).toContain('t("reassignCta")');
-    expect(koOf("pages.flows.dryRunSession.reassignCta")).toBe("이 에이전트로 재배치");
+    expect(koOf("pages.flows.dryRunSession.acceptOverrideCta")).toContain("편집기에 적용");
+    expect(suggestionPanel).toContain("CandidateChips");
+    expect(suggestionPanel).toContain('t("discardCta")');
+    expect(koOf("pages.flows.dryRunSession.discardCta")).toBe("버리기");
     // 수용은 폼 콜백만 부른다 — 저장소 쓰기(파일 시스템/PUT SSOT) 경로가 없다(§12-4).
     expect(suggestionPanel).not.toMatch(/writeFile|appendFile|fs\./);
-    expect(suggestionPanel).toContain("onApplyOverride");
-    expect(suggestionPanel).toContain("onApplyAgent");
+    expect(suggestionPanel).toContain("onApplyPrompt");
+    expect(suggestionPanel).toContain("onPick");
   });
 
   test("§6.1 — 세션 헤더에 비용 누계 바와 만료 칩이 있다", () => {
@@ -251,11 +259,12 @@ describe("드라이런 화면 소스 — a11y·상호작용·경계 규약 (화�
     expect(sessionPage).toContain('t("costEstimateLabel")');
     expect(sessionPage).toContain("dry-run-summary-bar");
     expect(sessionPage.split("<PrimaryAction").length - 1).toBe(1); // 화면당 주 동작 1개
-    expect(sessionPage).toContain("planActions(hasRuns, dirty)");
-    // 4개 탭 — ARIA tablist + 해시 동기화.
-    expect(sessionPage).toContain('role="tablist"');
-    expect(sessionPage).toContain("hashchange");
-    expect(koOf("pages.flows.dryRunSession.tabRun")).toBe("실행·비교");
+    expect(sessionPage).toContain("primaryAction(runCount, dirty)");
+    // 단일 페이지(2026-10-26b) — 탭 ARIA·해시 동기화·탭 키가 남지 않는다.
+    expect(sessionPage).not.toContain('role="tablist"');
+    expect(sessionPage).not.toContain("hashchange");
+    expect(sessionPage).not.toContain('role="tab"');
+    expect(koOf("pages.flows.dryRunSession.tabRun")).toBeUndefined();
   });
 
   test("가독성 개편 — diff 색 칩(녹색 추가/적색 삭제, 수치는 텍스트 병기)과 dirty 칩", () => {
@@ -266,15 +275,15 @@ describe("드라이런 화면 소스 — a11y·상호작용·경계 규약 (화�
     expect(koOf("pages.flows.dryRunSession.diffRemoved")).toBe("−{p1}줄 삭제");
     expect(koOf("pages.flows.dryRunSession.diffSame")).toBe("원본과 동일");
     // dirty 상태는 편집기 툴바(섹션 제목 옆)에 amber 칩으로 표시된다.
-    expect(sessionPage).toContain('"status-chip status-amber">{t("dirtyChip")}</span>');
-    expect(koOf("pages.flows.dryRunSession.dirtyChip")).toContain("미적용");
+    expect(sessionPage).toContain('{t("dirtyChip")}</span>'); // 색 단독이 아니라 "저장 안 된 편집" 텍스트 라벨
+    expect(sessionPage).toContain("status-chip status-amber");
+    expect(koOf("pages.flows.dryRunSession.dirtyChip")).toBe("저장 안 된 편집");
   });
 
   test("가독성 개편 — 적용=새 세션 경고 콜아웃이 적용 컨트롤 옆에 있고, 실행 전 비교 창은 구조화된 빈 상태다", () => {
-    // 적용 경고 — warning 토큰(amber border-left + 배경) 콜아웃, 더 이상 최하단 흐릿 캡션이 아니다.
-    expect(sessionPage).toContain('t("applyCalloutLabel")');
-    expect(sessionPage).toContain('solid var(--amber-border)"');
-    expect(sessionPage).toContain('background: "var(--amber-bg)"');
+    // 고친 내용 실행 = 파생 세션 생성 후 이동(PATCH 없음), 안내는 dirtyNote 한 줄.
+    expect(sessionPage).not.toContain("applyOverrideAsNewSession");
+    expect(sessionPage).not.toContain("router.replace");
     expect(sessionPage).toContain('t("dirtyNote")');
     // 실행 전 A/B — base/override 두 라벨 패널 + 실행 안내(단일 이탤릭 문장 대체).
     expect(sessionPage).toContain('t("legBaseEmpty")');
@@ -285,16 +294,18 @@ describe("드라이런 화면 소스 — a11y·상호작용·경계 규약 (화�
   });
 
   test("가독성 개편 — 실행 기록 표에 토큰 열이 있고(A10), 재배정 select와 제안 후보의 역할이 문맥화된다", () => {
-    // 표 열 비율은 7열(시각|다리|모델|토큰|상태|지연|비용) 100% 합.
-    expect(sessionPage).toContain("const RUN_HISTORY_COL_PCT = [15, 10, 19, 13, 11, 12, 20] as const;");
-    expect(sessionPage).toContain('t("colTokens")');
-    expect(koOf("pages.flows.dryRunSession.colTokens")).toBe("토큰");
-    expect(sessionPage).toContain("totalTokens(row)"); // flows-view-lib 합계(라이브러리 미수정)
+    // 실행 기록은 접힌 disclosure — 실행별 에이전트 키·프롬프트 해시·비용·"현재" 표식(matchesCurrent).
+    expect(sessionPage).toContain('t("runHistorySummary"');
+    expect(sessionPage).toContain("run.matchesCurrent");
+    expect(sessionPage).toContain('t("colPromptHash")');
+    expect(koOf("pages.flows.dryRunSession.colPromptHash")).toBe("프롬프트 해시");
+    expect(sessionPage).toContain("runCount"); // ledger.runs(실행당 2)가 아니라 runCount를 쓴다
+    expect(sessionPage).not.toContain("ledger.runs");
     // 에디터 select = 이 세션의 실행 축 / 제안 후보 수용 = 그 select를 채우는 입력.
     expect(sessionPage).toContain('t("reassignContext")');
-    expect(koOf("pages.flows.dryRunSession.reassignContext")).toContain("select");
+    expect(koOf("pages.flows.dryRunSession.reassignContext")).toContain("선택기");
     expect(suggestionPanel).toContain('t("candidatesContext")');
-    expect(koOf("pages.flows.dryRunSession.candidatesContext")).toContain("select");
+    expect(koOf("pages.flows.dryRunSession.candidatesContext")).toContain("선택기");
   });
 
   test("§6.3 — 세션 목록은 mine 토글·빈 상태 시작 링크·만료 칩을 가진다", () => {

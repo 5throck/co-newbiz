@@ -130,3 +130,88 @@ Lightbox/zoom component (follow-up, needs design-system ADR); any API, DB, or `l
 ## 12. Handoff
 
 Reasoning: one job per tab and one primary per state removes the "everything competes" failure; the banner states the safety rule once so it is read once; internal references serve developers, not operators. Contracts consumed: existing dry-run session/run/override/suggestion/export endpoints and the agent registry list (unchanged shapes). Escalations to design-system-agent: AgentCombobox registration; Lightbox deferral; image max-width token.
+
+---
+
+## Delta 2026-10-26b — single-page dry-run
+
+> **Supersession notice (append-only).** This delta supersedes the tab information architecture in sections 3 (summary-bar/primary-state table where it names tabs) and 11 (checklist items "Tabs Edit / Run & compare / AI suggestions / History"). The wiki image work, list redesign, banner, metadata disclosure and i18n items of this document remain in force. Owner decisions below are fixed.
+
+### D1. JTBD (unchanged persona, narrower loop)
+
+Persona: deal analyst / operator tuning a catalog prompt or agent. Job: edit a prompt or agent, run it on a sample, compare previous (A) with new (B), and export a proposal package. Input: catalog prompt key plus optional override (prompt text, agent key) plus sample input. Output: A/B outputs, one preference line, a proposal package. Safety rule unchanged: override is session-scoped, never SSOT; persistent change only via proposal package and repository PR (ADR-0183 D5).
+
+### D2. Page structure (no tabs; top to bottom)
+
+1. Summary bar (sticky): status badge, session cost, one primary action, More menu. Primary: no run yet = **Run**; after at least one run = **Export proposal package**. Run remains a visible secondary button in section 3.
+2. **Edit**: prompt editor with "Get AI improvement". The suggestion result renders inline beside the editor (stacked under it at narrow widths) as a highlighted diff (existing +N/-M line comparison plus original-vs-proposed `<pre>` pair), a short rationale callout, and Apply / Discard. Apply writes into the editor buffer only (not yet saved). Agent picker below the editor with AI-recommended candidate chips; clicking a chip fills the picker (buffer only). "Revert edits" resets the buffer to the current session's stored override (second press level: clear buffer to base, behind a confirm).
+3. **Run**: sample input textarea and Run (secondary after first run). Clean buffer: Run executes the current session. Dirty buffer: the primary Run button label changes to "Run as new session" (see D3) and creates a derived session first. Existing cost confirm dialog is kept.
+4. **Result**: A (previous = base catalog) and B (new = this session's override) side by side; stacked at narrow widths. Each pane shows source chip (llm / synthesis), cost, and the snapshot label it ran with.
+5. One-line preference record under A/B: chips base / override / tie plus inline optional note (max 500 chars, one line). Disabled with explanation until a run exists.
+6. Collapsed disclosure "Run history (N)" at the bottom: per run time, cost, source, and the override snapshot used (agent key plus short prompt hash; row marks which equals the current session's override). Because each applied edit lives in its own derived session, the disclosure also lists the parent/derived sessions as links (evidence trail). Session info stays a collapsed disclosure below it.
+
+Single primary action per state is preserved; Apply/Discard are local to the suggestion callout and are not page-level primaries.
+
+### D3. Behavior: Run on a dirty editor creates a new derived session (owner decision 2026-10-26, reverses the earlier in-session-edit proposal)
+
+- No in-session editing. A session's stored override is immutable evidence once created; the editor buffer is local state only.
+- **Run when the buffer is clean**: execute the current session (existing `POST .../execute`).
+- **Run when the buffer is dirty**: create a new derived session carrying the edited override via the existing `POST /api/flows/dry-run/sessions`, navigate to the new session page, and execute there (existing cost confirm first). The current session is kept untouched as evidence; its history disclosure links to the derived session.
+- Button label reflects the state: clean = "Run"; dirty = "Run as new session" (text, not color). Dirty indicator is the text label "Unsaved edits" plus the Revert control. "Revert edits" and the dirty label stay.
+- If session creation fails, execute is not called and the error is shown inline; the buffer is preserved. If creation succeeds but execute fails, the user lands on the new session (not yet run) with the error shown and can retry Run there.
+- Deviation #B in `2026-10-24-flow-console-screen-design.md` ("apply creates a new derived session") is **not retired**; it is confirmed as the owner's decision (2026-10-26).
+
+### D4. API contract: no change
+
+- The PATCH endpoint proposed earlier is **removed**. No new endpoint, no change to the Row 5 API contract. Consumed: existing session create/GET/execute/preference/export/suggestion routes only.
+- Create already accepts `overrideSystem` / `overrideAgentKey` with the existing validations (`empty_override_system`, `unknown_agent`); the derived session reuses them unchanged.
+
+### D5. Snapshot per run: attribution via existing columns (no schema change)
+
+**Finding: no schema change and no ADR needed.** Evidence:
+
+- `llm_call_log.agent_key` (0092) records the agent used for each leg.
+- `llm_call_log.prompt_hash` (0130) exists but `executeDryRun` does not populate it today (NULL for dry-run rows).
+- Join key `dry_run_group_id = sessionId` (0171) groups a session's runs; each execute adds a base row and an override row.
+
+Design: on each execute, pass `promptHash` (sha256, first 16 hex of the effective system text) on **both legs**: the override leg gets the hash of the effective override text, the base leg gets the hash of the base catalog text. Hash plus agent key attribute every run and let History show "same as this session's override / different". Parent-to-derived linkage is by session (the derived session's override is its own evidence); no new linkage column is required, the UI may keep the parent id in client navigation state only.
+
+Limits the owner should know (not blockers):
+1. A hash identifies a snapshot but does not reproduce its text. Because every applied edit becomes its own session, the override text is preserved in that session's `dry_run_session` row, so this limit is largely mitigated; a text-per-run table is not needed.
+2. `base_output`/`override_output` on a session are "latest run" only (0172). With a new session per edit this matters less (each session normally has one run), but re-running the same session overwrites its bodies. Retaining all bodies would be a schema change (ADR); not proposed.
+
+### D6. Session status: unchanged
+
+`executeDryRun` continues to set `status = 'closed'` and `finished_at` after a run. Because edits never mutate a session, the previous status conflict no longer exists. Re-running a closed session with a clean buffer follows existing behavior (no change by this delta). Summary-bar badge keeps existing status semantics. The `no_override` rule in execute remains; UI disables Run with an explanation when the buffer equals base.
+
+### D7. ADR-0183 conformance
+
+- D5 (session-scoped, SSOT-invariant, same `completeOrFallback` path, no business-table writes): preserved.
+- D7 (three additive migrations): preserved; this delta adds zero migrations.
+- D6 (AI suggestion proposal-only; accept applies to the override only): preserved; Apply writes the editor buffer, and the override only becomes a session via a new derived session on Run.
+- **No change to the session lifecycle**; no ADR-0183 amendment needed for this delta. No new endpoint, so no OpenAPI change from this delta.
+
+### D8. Acceptance criteria
+
+Backend:
+- [ ] No new endpoint and no schema migration; any uncommitted PATCH route/OpenAPI/`lib/dry-run.ts` update-session code added for the earlier proposal is removed.
+- [ ] `executeDryRun` passes `promptHash` and the real agent key on both legs (override leg: effective override hash; base leg: base text hash); unit test asserts `llm_call_log.prompt_hash` and `agent_key` are populated and differ across two sessions with different overrides, and that earlier rows are unchanged.
+- [ ] Session status behavior after execute is unchanged (`closed`); existing tests pass.
+- [ ] Session GET (or history within existing shapes) exposes per-run snapshot (agent key, prompt hash, time, cost, source) from `llm_call_log`; "equals this session's override" computed from the same hash function.
+- [ ] No business table written (existing invariant tests pass).
+
+Frontend:
+- [ ] No tabs; section order per D2; no ARIA tab roles; hash/tab URL sync removed.
+- [ ] Summary-bar primary follows D2 (Run before first run, Export after); exactly one primary button visible in the bar; Run visible secondary in the Run section.
+- [ ] "Get AI improvement" result inline beside the editor with highlighted diff, rationale callout, Apply/Discard; changes not conveyed by color alone (+/- markers and text labels).
+- [ ] Agent picker candidate chips fill the picker; keyboard operable.
+- [ ] Clean buffer: Run executes the current session. Dirty buffer: Run label reads "Run as new session", calls `POST /sessions` with the edited override, navigates to the new session, then executes there with the existing cost confirm; the original session remains unchanged and is linked from History. Creation failure blocks execute, shows inline error, preserves buffer.
+- [ ] "Unsaved edits" text label and "Revert edits" shown when dirty; clear-to-base behind a confirm.
+- [ ] A/B side by side at >=1024px, stacked below; preference is a single line with note inline.
+- [ ] "Run history (N)" collapsed disclosure showing snapshot per run and derived-session links; session info collapsed.
+- [ ] ko/en keys added and synced (including "Run as new session"); `design:lint` and axe pass in light and dark; screenshots at 1280x800 and 320px.
+- Success criterion: an analyst completes edit -> run -> compare -> record preference -> export on one page flow, where each edited run lands in exactly one new derived session (scripted walkthrough: N edited runs produce N derived sessions, originals unmodified).
+
+### D9. Handoff
+
+Reasoning: tabs split one edit-run-compare loop across views; a single vertical page matches the job order, while derived sessions keep each iteration as immutable evidence (owner decision). Contracts consumed: existing session create/GET/execute/preference/export/suggestion endpoints; tables `dry_run_session`, `llm_call_log` (existing columns only). Escalations: none to design-system-agent. To PM: D5 limits (hash-only per-run attribution; latest-run result bodies); schema change plus ADR only if the owner wants more.

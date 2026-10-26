@@ -400,3 +400,7 @@ AI 2nd 검토(process-governance-manager)의 조건부 승인에 따라, 화면 
 | #8 | 세션 목록의 mine 토글은 컴포넌트 상태(useState)이며 URL 쿼리와 동기화되지 않는다(`dry-run/page.tsx`) | 단일 불리언 필터에는 URL 동기화가 과하고, 목록은 공유 대상이 세션 상세이므로 | §11 "필터 상태는 URL 쿼리에 유지"의 적용 범위를 **/flows 콘솔 탭(?tab=)** 으로 한정한다 — 세션 목록 mine 토글은 예외로 명시 |
 | #9 | A/B 등급 칩은 세션 수준 단일 preference 필드(base/override/tie + 비고)에서 유도되며 런별 등급은 없다(`flows-view-lib.ts` `gradeFromPreference`) | 선호 기록 스키마가 세션당 단일 필드(§13 질문 5의 결정) | 등급 필은 **세션 단위 1개**임을 확정한다 — §6.3·§7의 "등급"이 런별 값을 의미하지 않음 |
 
+
+---
+
+> **Note 2026-10-26b (append-only, revised):** Deviation #B ("apply creates a new derived session", no session PATCH endpoint) is **not retired**; it is confirmed as the owner's decision (2026-10-26). `docs/designs/2026-10-26-dryrun-ux-wiki-image-design.md` section "Delta 2026-10-26b -- single-page dry-run" (D3) keeps the derived-session flow on the single-page layout: Run with a dirty editor creates a new derived session via `POST /sessions`, navigates, and executes there; the original session is kept as evidence. No PATCH endpoint is added; each run records agent key plus prompt hash on both legs via the existing `llm_call_log.prompt_hash`.

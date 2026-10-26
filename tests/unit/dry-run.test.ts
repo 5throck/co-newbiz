@@ -279,6 +279,7 @@ describe("dry-run session lifecycle", () => {
     expect(r.result.base.callId).toBeTruthy();
     expect(r.result.override.callId).toBeTruthy();
     expect(r.result.session.status).toBe("closed");
+    expect(r.result.session.runCount).toBe(1);
     for (const [t, c] of before) {
       if (t === "dry_run_session" || t === "llm_call_log") continue;
       expect(after.get(t)).toBe(c);
@@ -473,6 +474,28 @@ describe("dry-run routes and the auth matrix (ADR-0146)", () => {
 });
 
 // ── /api/flows/runs 드라이런 제외 ────────────────────────────────────────────
+describe("dry-run prompt_hash attribution", () => {
+  test("both legs record prompt_hash/agent_key; runs[] exposes them", async () => {
+    const created = createDryRunSession({ promptKey: "s2.discover", overrideSystem: "SNAP-ONE", overrideAgentKey: "financial-analyst", createdBy: "alice" });
+    if (!created.ok) throw new Error("create failed");
+    const id = created.session.id;
+    configure("openai");
+    mockReplies([openaiText("B1"), openaiText("O1")]);
+    const r = await executeDryRun(id);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const { dryRunPromptHash } = await import("../../app/web-next/lib/dry-run.ts");
+    expect(r.result.session.runCount).toBe(1);
+    const [a] = r.result.session.runs;
+    expect(a.overridePromptHash).toBe(dryRunPromptHash("SNAP-ONE"));
+    expect(a.overrideAgentKey).toBe("financial-analyst");
+    expect(a.basePromptHash).toBeTruthy();
+    const rows = db.query("SELECT agent_key, prompt_hash FROM llm_call_log WHERE dry_run_group_id = ? ORDER BY created_at, id").all(id) as { agent_key: string; prompt_hash: string | null }[];
+    expect(rows).toHaveLength(2);
+    expect(rows.every((x) => x.prompt_hash)).toBe(true);
+  });
+});
+
 describe("flows/runs dry-run exclusion (§6.6)", () => {
   function seedCall(purpose: string, dry: boolean, cost: number | null) {
     db.run(
