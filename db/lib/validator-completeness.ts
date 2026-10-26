@@ -63,6 +63,8 @@ export type ValidatorCoverageStatus = "completed" | "not_applicable" | "missing"
 export interface ValidatorCoverage {
   key: MaValidatorKey;
   step: number;
+  /** Core (no-waiver) row; non-core rows are reported but never counted or halting (ADR-0185). */
+  in_core: boolean;
   /** Registry verdict under the live routing values. */
   applies: boolean;
   basis: ApplicabilityDecision["basis"];
@@ -87,6 +89,7 @@ export interface ValidatorCompletenessEvaluation {
   gate: "dd";
   /** Live classification at evaluation time — header context, null when unclassified. */
   classification: CompletenessClassificationHeader | null;
+  /** Size of the no-waiver core (in_core rows); the registry also reports the non-core contingent-liability row. */
   declared: 6;
   applicable_count: number;
   completed_count: number;
@@ -222,7 +225,7 @@ export function evaluateValidatorCompleteness(
       | ComplianceCheckCoverageRow
       | undefined;
 
-    if (decision.applies) applicableCount++;
+    if (decision.applies && row.in_core) applicableCount++;
 
     let status: ValidatorCoverageStatus;
     let covered = false;
@@ -245,13 +248,14 @@ export function evaluateValidatorCompleteness(
       status = "missing";
     }
 
-    if (covered) completedCount++;
-    if (decision.applies && status === "missing") haltMissing.push(row.key);
-    if (!decision.applies && status === "missing") undocumentedSkips.push(row.key);
+    if (covered && row.in_core) completedCount++;
+    if (row.in_core && decision.applies && status === "missing") haltMissing.push(row.key);
+    if (row.in_core && !decision.applies && status === "missing") undocumentedSkips.push(row.key);
 
     validators.push({
       key: row.key,
       step: row.step,
+      in_core: row.in_core,
       applies: decision.applies,
       basis: decision.basis,
       rendered_reason_ko: decision.applies ? null : decision.rendered_reason_ko,

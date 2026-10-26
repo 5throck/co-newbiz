@@ -35,10 +35,10 @@ co-newbiz 신사업 심사 팀의 에이전트 정의 파일. 정본 로스터(�
 
 | 클래스 | 수 | 디스패치 동작 |
 |---|---|---|
-| 도메인 리드 | 4 | 신사업심사 리드 산하의 설계/검토 소유자(functional `process-governance-manager`, technical `platform-lead`, industry `industry-lead`, region `region-lead`). PGM 외 리드는 **설계상 절차 스텝으로 디스패치되지 않는다** — 산업/지역 입력은 `industry-profiles/` / `region-profiles`와 리드 협의로 유입 (`process-governance-manager`는 예외적으로 ×16 스텝, `region-lead`는 EU 오버라이드 ×1 디스패치) |
-| 딜심사 스페셜리스트 | ~25 | 절차 스텝의 `agent_key`로 디스패치(15개 공유 절차 + 오버라이드 레이어의 85 AI 스텝). 2026-09-04 추가된 ADR-0097 상임 위원회의 6개 기능 전문가 석(`financing-agent`, `site-facility-agent`, `legal-counsel`, `hr-integration-agent`, `ir-agent`, `ip-agent`)을 포함한다; 기술 도메인의 2개 디자인 석(`design-system-agent`, `ux-designer-agent`)은 `agent_key` 스텝 없이 빌드/런 라운드에서 PM이 디스패치하는 디자인 작업이다. 준비성 감사에서 이 클래스는 **완전** — 미디스패치 딜심사 에이전트 없음 |
+| 도메인 리드 | 4 | 신사업심사 리드 산하의 설계/검토 소유자(functional `process-governance-manager`, technical `platform-lead`, industry `industry-lead`, region `region-lead`). PGM 외 리드는 **설계상 절차 스텝으로 디스패치되지 않는다** — 산업/지역 입력은 `industry-profiles/` / `region-profiles`와 리드 협의로 유입 (`process-governance-manager`는 예외적으로 ×16 스텝, `region-lead`는 EU 오버라이드와 `brownfield-dd` 노동 검토 스텝 6.5, 즉 ×2 디스패치, ADR-0185 1.1b) |
+| 딜심사 스페셜리스트 | ~25 | 절차 스텝의 `agent_key`로 디스패치(15개 공유 절차 + 오버라이드 레이어의 85 AI 스텝). 2026-09-04 추가된 ADR-0097 상임 위원회의 6개 기능 전문가 석(`financing-agent`, `site-facility-agent`, `legal-counsel`, `hr-integration-agent`, `ir-agent`, `ip-agent`)을 포함한다; `site-facility-agent`는 `greenfield-screening` / `greenfield-pre-fs` 스텝 3에서, `ip-agent`는 `brownfield-dd` 스텝 3.5(R&BD 한정)에서 스텝 디스패치된다; 기술 도메인의 2개 디자인 석(`design-system-agent`, `ux-designer-agent`)은 `agent_key` 스텝 없이 빌드/런 라운드에서 PM이 디스패치하는 디자인 작업이다. 준비성 감사에서 이 클래스는 **완전** — 미디스패치 딜심사 에이전트 없음 |
 | 빌드/런 | 8 | `data-architect`, `dba`, `backend-engineer`, `frontend-engineer`, `release-engineer`, `sre`, `infra-automation-engineer`, `security-engineer`. 런타임 경화 라운드가 `app/web-next` / `scripts/` 작업을 시작하기 전까지 대기 |
-| 비딜 지원 | 2 | `glossary-curator`, `docs-writer` — 거버넌스/문서화, 딜 심사 외부 |
+| 비딜 지원 | 2 | `glossary-curator`, `docs-writer` — 거버넌스/문서화, 딜 심사 외부이나 `docs-writer`는 두 딜 절차 스텝(`entity-ic-review` 4.6, `group-investment-review` 4.5)에서 디스패치된다 |
 
 ## 인간 역할은 에이전트 파일이 아니다
 

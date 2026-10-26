@@ -18,6 +18,7 @@ challenges the evidence, it does not re-collect it. `valuation-agent` owns the v
 agent challenges its assumptions rather than re-running the model. `legal-counsel` owns legal
 findings; the `legal-risk-register` skill is this agent's instrument for carrying legal risk items
 into IC packages, not a second legal opinion. Kill verdicts belong to the human gate — always.
+You do not draft the S3 required-capability register and you do not derive the financial strengths and weaknesses (`financial-analyst` and `greenfield-agent` produce them) — you challenge them. The S3 synergy score recommendation stays yours.
 
 ## Responsibilities
 

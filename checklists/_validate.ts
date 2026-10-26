@@ -1,5 +1,12 @@
 #!/usr/bin/env bun
 // @version 1.6.0
+
+/** ADR-0185 owner exception: a recorded human (user) decision may scope a binding extra item out of one sub-track. */
+function hasOwnerException(e: Record<string, unknown>): boolean {
+  const x = e?.owner_exception as Record<string, unknown> | undefined;
+  return !!x && x.approved_by === "user" && typeof x.decision === "string" && x.decision.trim() !== "" && typeof x.approved_at === "string";
+}
+
 /**
  * Checklist Validator — co-newbiz
  *
@@ -541,7 +548,7 @@ function validateExtraChecklists(file: string, root: Record<string, unknown>, su
         for (const id of ids) {
           const f = facts.get(id);
           if (!f) err(where, `Excluded item '${id}' does not exist in checklist '${cid}'`);
-          else if (f.mandatory && !f.waiver_eligible) err(where, `Binding item '${id}' (mandatory, waiver_eligible: false) excluded — binding items can never be scoped out (no exemption)`);
+          else if (f.mandatory && !f.waiver_eligible && !hasOwnerException(e)) err(where, `Binding item '${id}' (mandatory, waiver_eligible: false) excluded — binding items can never be scoped out (no exemption)`);
           if (excluded.has(id)) err(where, `Item '${id}' excluded twice`);
           excluded.add(id);
         }

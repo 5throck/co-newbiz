@@ -1,12 +1,14 @@
 #!/usr/bin/env bun
 /**
- * @version 1.1.0
+ * @version 1.2.0
  */
 // generate-pm-catalog.ts — 3 SSOT 조인(prompts.json × flow.spec.yaml × agents/*.md)을
 // 런타임 PM 활동 카탈로그(app/web-next/lib/pm-catalog.generated.ts)로 투영한다
 // (ADR-0183 D1, design 2026-09-15-runtime-pm-agent-orchestration §6.2).
 // generate-spec-activities.ts와 동일한 규율: 결정론 출력 + --check 드리프트 게이트,
 // 생성 시점 참조 무결성 검증(프롬프트 에이전트·활동 에이전트·활동 매핑 모두 로스터/스펙에 존재).
+//
+// v1.2.0 (ADR-0185): DUAL_ASSIGNMENTS gains four sanctioned dual assignments.
 //
 // v1.1.0 (design 2026-10-25-agent-assignment-prompt-standard, DEC-20261025-01/02):
 //  - D2 정합 강제: 프롬프트 agent ≠ flow.spec 활동 agent면 die — 문서화된
@@ -110,6 +112,26 @@ const DUAL_ASSIGNMENTS: DualAssignment[] = [
     promptKey: "s11.integrated_insight",
     activity: "S11.ic-preparation",
     rationale: "Cross-domain integrated insight is the process-governance-manager charter (auxiliary review lens) layered on the pm-owned ic-preparation activity; procedure schema supports one agent_key per step (ADR-0161 Q6 pattern).",
+  },
+  {
+    promptKey: "s3.synergy_fa",
+    activity: "S3.synergy-analysis",
+    rationale: "Sanctioned dual assignment (ADR-0185, owner-approved 2026-10-26): strengths/weaknesses derivation from financial data is financial-analyst analysis layered on the risk-officer-led synergy-analysis activity; financial-analyst already leads S3 our-company-profile.",
+  },
+  {
+    promptKey: "s3.attractiveness_recommendation",
+    activity: "S3.strategic-fit-screening",
+    rationale: "Sanctioned dual assignment (ADR-0185, owner-approved 2026-10-26): the attractiveness score is the risk-officer's own recommendation (red-team scoring seat) layered on the process-governance-manager-led strategic-fit-screening activity.",
+  },
+  {
+    promptKey: "company_profile.competitor_web_search",
+    activity: "S3.our-company-profile",
+    rationale: "Sanctioned dual assignment (ADR-0185, owner-approved 2026-10-26): prompt agent market-intelligence-agent is a sanctioned secondary lens on the financial-analyst-led S3.our-company-profile activity; the activity lead is unchanged.",
+  },
+  {
+    promptKey: "s12.milestone_suggest",
+    activity: "S12.portfolio-monitoring",
+    rationale: "Sanctioned dual assignment (ADR-0185, owner-approved 2026-10-26): prompt agent process-governance-manager is a sanctioned secondary lens on the group-review-agent-led S12.portfolio-monitoring activity; the activity lead is unchanged.",
   },
 ];
 

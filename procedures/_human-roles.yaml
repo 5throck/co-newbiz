@@ -53,3 +53,10 @@ human_roles:
       step 6, ADR-0161): one person, mandatory non-empty rationale; agents
       draft the baseline and never confirm it (boundary #2).
     reference: docs/designs/2026-10-11-greenfield-investment-execution-and-post-management-design.md §6.1
+  target-selector:
+    description: >-
+      Person who records the S8 target selection (brownfield-fs-comparative
+      step 2): the selected target id, the rationale, and the selector.
+      Agents attach the step-1 comparison and recommendation and never select
+      (boundary #2).
+    reference: docs/designs/2026-09-22-s8-multi-target-feasibility-design.md (lib/business-case.ts selectTarget)

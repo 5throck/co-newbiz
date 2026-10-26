@@ -13,7 +13,7 @@ description: >
 version: 1.1.0
 last_reviewed: 2026-08-23
 status: active
-owner: hr-integration-agent
+owner: greenfield-agent
 prerequisites: none
 metadata:
   type: domain

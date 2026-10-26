@@ -1,6 +1,6 @@
 // POST /api/synergy/ai-score-adjustment — ADR-0182 Phase 4: on-demand AI draft
 // for the score confirm editor on the 시너지 점수 평가 tab. The analysis-time
-// LLM adjustment (synergy-pipeline askJsonTracked "s4.synergy_ic") is frozen
+// LLM adjustment (synergy-pipeline askJsonTracked "s3.synergy_ic") is frozen
 // into the stored payload; this route re-proposes a BOUNDED (±10) adjustment
 // from the CURRENT stored evidence (rule factors, shortlist verdicts,
 // capability coverage) when the person asks for it. Analyst+ initiated
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
   try {
     const res = await completeDetailed(
       [{ role: "user" as const, content: prompt }],
-      { maxTokens: 800, agent: promptAgent("s4.synergy_ic") },
+      { maxTokens: 800, agent: promptAgent("s3.synergy_ic") },
     );
     const text = res.text.replace(/```json|```/g, "");
     const start = text.indexOf("{");

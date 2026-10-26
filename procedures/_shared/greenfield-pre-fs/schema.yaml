@@ -3,7 +3,7 @@ procedure_id: shared-greenfield-pre-fs
 title: "Green Field Pre-Feasibility"
 scope: shared
 level: entity
-version: "1.2.0"
+version: "1.2.1"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -45,7 +45,7 @@ steps:
       provisional discount rate.
   - id: 3
     gate: Pre-FS
-    agent_key: greenfield-agent
+    agent_key: site-facility-agent   # ADR-0185 A-02b; S4 activity stays led by greenfield-agent (recorded divergence, flow.spec)
     skill_key: site-infrastructure-assessment
     output_type: infra_lead_time_cost_estimate
     description: Infrastructure lead-time and cost estimate for the pre-filtered site shortlist from Screening.
@@ -61,7 +61,7 @@ steps:
   - id: 5
     gate: Pre-FS
     agent_key: certification-agent
-    skill_key: permit-pathway-mapping
+    skill_key: certification-transferability
     output_type: certification_transferability_check
     description: >
       Confirm certification transferability where load-bearing to the thesis

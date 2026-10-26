@@ -59,7 +59,7 @@ function classifyByRules(query: string, ctx: RouteContext): PmDecision {
     return { mode: "single", agentKey: catalogAgent("s3.attractiveness_recommendation", "risk-officer"), task: "매력도 평가 초안", classifiedBy: "rules" };
   }
   if (/(시너지|적합성|synergy|fit)/.test(q)) {
-    return { mode: "single", agentKey: catalogAgent("s4.synergy_ic", "risk-officer"), task: "시너지·적합성 관점 분석", classifiedBy: "rules" };
+    return { mode: "single", agentKey: catalogAgent("s3.synergy_ic", "risk-officer"), task: "시너지·적합성 관점 분석", classifiedBy: "rules" };
   }
   if (/(시장|규모|산업|cagr|market)/.test(q)) {
     return { mode: "single", agentKey: catalogAgent("s1.sizing_ask_json", "market-intelligence-agent"), task: "시장·산업 관점 분석", classifiedBy: "rules" };

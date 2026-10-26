@@ -139,6 +139,20 @@ describe("shape: validator_completeness_record", () => {
     ).toThrow(/CHECK constraint failed/);
   });
 
+  test("validator_rows carries keys as JSON only — the new region-labor key and the non-core contingent-liability key need no migration (ADR-0185)", () => {
+    const pid = insertProject();
+    const rows = JSON.stringify([
+      { key: "region-labor", status: "missing", compliance_check_id: null },
+      { key: "contingent-liability", status: "missing", compliance_check_id: null },
+    ]);
+    db.run(
+      "INSERT INTO validator_completeness_record (id, project_id, gate, declared, applicable_count, completed_count, validator_rows, created_at) VALUES (?,?,?,?,?,?,?,?)",
+      [ulid(), pid, "dd", 6, 6, 0, rows, NOW],
+    );
+    const stored = db.query("SELECT validator_rows FROM validator_completeness_record WHERE project_id = ?").get(pid) as { validator_rows: string };
+    expect(JSON.parse(stored.validator_rows).map((r: { key: string }) => r.key)).toEqual(["region-labor", "contingent-liability"]);
+  });
+
   test("gate is dd-only; counts bounded 0..6; completed may exceed applicable (skip rows count as covered)", () => {
     const pid = insertProject();
     expect(() =>

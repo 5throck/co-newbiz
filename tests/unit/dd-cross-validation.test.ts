@@ -213,11 +213,11 @@ describe("Decision 5g — non-blocking correction path with re-run bookkeeping",
   test("strong provenance honestly overturned → correction object enumerates the live skips; completing the correction re-requires exactly those validators", () => {
     const pid = insertProject();
     classifyInternal(pid, STRONG_RATIONALE);
-    // two live skips under the internal classification; the other four validators
+    // two live skips under the internal classification; the other validators
     // ran and passed (so post-correction completeness isolates the re-run set)
     recordNotApplicable({ validator_key: "antitrust", project_id: pid, recorded_by: U1, now: NOW }, db);
     recordNotApplicable({ validator_key: "hr-comp", project_id: pid, recorded_by: U1, now: NOW }, db);
-    for (const key of ["customer", "incentive", "contingent-liability", "certification"] as const) {
+    for (const key of ["region-labor", "customer", "incentive", "contingent-liability", "certification"] as const) {
       db.run(
         "INSERT INTO compliance_check (id, project_id, gate, rule_key, layer, result, detail, detected_at) VALUES (?,?,?,?,?,?,?,?)",
         [ulid(), pid, "DD", `ma-validator-${key}`, "procedure", "pass", `${key} pass`, NOW],

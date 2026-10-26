@@ -9,8 +9,8 @@ description: >
 formal_name: Legal Counsel
 status: active
 domain: functional
-version: "1.1.0"
-last_updated: "2026-10-25"
+version: "1.1.1"
+last_updated: "2026-10-26"
 tier:
   claude: high
   gemini: high
@@ -28,11 +28,11 @@ examples:
 phases: [S9]
 handoff_to: [compliance-officer]
 handoff_from: [antitrust-agent, brownfield-agent, certification-agent, partnership-agent, process-governance-manager, pm]
-required_skills: [certification-transferability, legal-due-diligence, permit-pathway-mapping, regulatory-screening]
+required_skills: [certification-transferability, k-law, legal-due-diligence, permit-pathway-mapping, regulatory-screening]
 lifecycle:
   phase: production
   created: "2026-09-19"
-  last_updated: "2026-10-25"
+  last_updated: "2026-10-26"
   governance: docs/lifecycle/agents/legal-counsel.md
 ---
 

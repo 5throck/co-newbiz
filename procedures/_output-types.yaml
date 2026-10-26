@@ -36,6 +36,7 @@ output_types:
   bau_exit_evidence_pack: "PMI — the BAU-exit precondition evidence presented for Finance certification (ADR-0052 §B)"
   bau_exit_decision: "PMI — human certification decision: demobilization_approved | held_pending_certification | conditional_with_named_gaps (ADR-0052 §B)"
   certification_roadmap_map: "Pre-FS · required-certification gap map with dependency DAG, tracked separately from permits (graph-pilot wiring)"
+  permit_holder_check: "Business-unit establishment step 3 — each required permit classified held / obtainable under the existing entity / not possible (escalate); permits only, certifications are checked separately (boundary #5, ADR-0185)"
   certification_transferability_check: "Six-validator result — CoC certification transferability confirmed against the certifying body's own rules (inference disallowed)"
   compensation_harmonization_result: "PMI · job-family/grade pay benchmark with upward-bias harmonization model ahead of BAU-exit certification (graph-pilot wiring)"
   dd_finding: "Brown Field DD — one finding row with value_impact, linked to an assumption_key (never prose-only)"

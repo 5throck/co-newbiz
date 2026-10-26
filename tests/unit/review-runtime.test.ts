@@ -184,6 +184,16 @@ describe("agent domains and cross-domain reviewer selection", () => {
     expect(sel.ok).toBe(false);
     if (!sel.ok) expect(sel.reason).toBe("reviewer domain unresolved");
   });
+  test("ADR-0185 W3-C: s3.synergy_fa / s3.capability_gap_draft rebinds keep a cross-domain AI-2nd reviewer (functional author -> technical reviewer)", () => {
+    for (const author of ["financial-analyst", "process-governance-manager", "risk-officer"]) {
+      const sel = selectReviewer([author]);
+      expect(sel.ok).toBe(true);
+      if (sel.ok) {
+        expect(sel.reviewerDomain).toBe("technical");
+        expect(sel.reviewerAgent).toBe("platform-lead");
+      }
+    }
+  });
 });
 
 describe("AI 1st (deterministic)", () => {

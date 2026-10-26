@@ -45,8 +45,8 @@ You are a specialist agent that may ONLY be dispatched by the PM. If a user atte
 
 ### Dispatch Protocol
 
-**Can Lead Stages**: none — this agent holds no stage activities and no procedure steps
-**Can Support In**: ADR-0097 committee sessions (site-and-facility seat) and lead consultations on site/facility questions
+**Can Lead Stages**: none — this agent holds no stage activities; it is dispatched as `agent_key` for `greenfield-screening` step 3 and `greenfield-pre-fs` step 3 only (no S10 activity)
+**Can Support In**: those procedure steps (the S3 and S4 activities stay led by `greenfield-agent`), ADR-0097 committee sessions (site-and-facility seat) and lead consultations on site/facility questions
 **Auto-Dispatch To**: `greenfield-agent` (advice feeds the establishment review), `pm` (committee proposals assemble for the human gate)
 **Requires Prior Output From**: `greenfield-agent` or `pm` (a concrete site/facility question with candidate sites or region context)
 **Tier**: medium

@@ -11,8 +11,8 @@ description: >
 formal_name: HR Integration Agent
 status: active
 domain: functional
-version: "1.1.0"
-last_updated: "2026-10-25"
+version: "1.1.1"
+last_updated: "2026-10-26"
 tier:
   claude: high
   gemini: high
@@ -31,11 +31,11 @@ examples:
 phases: [S9, S11]
 handoff_to: [pmi-agent, pm]
 handoff_from: [greenfield-agent, process-governance-manager]
-required_skills: [community-partnership-planning, compensation-harmonization-analysis, org-readiness-assessment, talent-pipeline-planning]
+required_skills: [compensation-harmonization-analysis, management-incentive-review, org-readiness-assessment, talent-pipeline-planning]
 lifecycle:
   phase: production
   created: "2026-09-17"
-  last_updated: "2026-10-25"
+  last_updated: "2026-10-26"
   governance: docs/lifecycle/agents/hr-integration-agent.md
 ---
 
@@ -58,7 +58,7 @@ and the post-close harmonization pass that precedes BAU-exit certification.
 
 ## Responsibilities
 
-- **HR DD (S9 `hr-dd`)**: lead the HR workstream of greenfield-dd and brownfield-dd under `org-readiness-assessment` and `talent-pipeline-planning`. In brownfield-dd this is step 7 (under `management-incentive-review` — executive CoC-trigger compensation, golden-parachute estimates, accelerated vesting into `management_package`; ma-04..ma-06 including comp_benchmark with upward-bias cost both ways) and step 13 (wider HR DD per `checklists/hr-dd-checklist.yaml` — key-person map with retention actions, stay-bonus budget, org/leadership bench, CBA successorship, pension exposure, employment-transfer regime, culture distance, day-1 and first-100-days plans; compensation review stays in step 7).
+- **HR DD (S9 `hr-dd`)**: lead the HR workstream of greenfield-dd and brownfield-dd under `org-readiness-assessment` and `talent-pipeline-planning`; this agent owns the `management-incentive-review` skill (executive compensation review, moved from `incentive-agent`). In brownfield-dd this is step 7 (under `management-incentive-review` — executive CoC-trigger compensation, golden-parachute estimates, accelerated vesting into `management_package`; ma-04..ma-06 including comp_benchmark with upward-bias cost both ways) and step 13 (wider HR DD per `checklists/hr-dd-checklist.yaml` — key-person map with retention actions, stay-bonus budget, org/leadership bench, CBA successorship, pension exposure, employment-transfer regime, culture distance, day-1 and first-100-days plans; compensation review stays in step 7).
 - **People Transfer (entity-establishment-execution step 4; business-unit-establishment-execution step 4)**: new employment agreements + PIIA per person, secondment/transfer per consent rules, org chart and job-description changes, labour-consultation duties confirmed with counsel before enforcement use.
 - **Committee Seat (ADR-0097)**: serve as the `functional_hr_labor` member of the S6/S7 longlist/shortlist committees — contribute HR/labor judgement as a PROPOSAL to the human gate.
 - **Post-Close Harmonization (pmi-integration-execution step 4.5)**: benchmark pay at job-family/grade level and model upward-bias harmonization ahead of BAU-exit certification, so the certifier sees compensation exposure alongside the synergy run-rate.

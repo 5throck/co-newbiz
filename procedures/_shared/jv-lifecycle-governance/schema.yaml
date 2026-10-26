@@ -3,7 +3,7 @@ procedure_id: shared-jv-lifecycle-governance
 title: "JV Lifecycle Governance (post-formation, origin=joint)"
 scope: shared
 level: entity
-version: "1.1.0"
+version: "1.1.1"
 status: active
 # Design §C.1 open decision 1 — RESOLVED as a SIBLING procedure (ADR-0052):
 # entity-establishment-execution is formation-scoped with a clean completion
@@ -64,7 +64,7 @@ steps:
   - id: 2
     gate: post_close
     agent_key: partnership-agent
-    skill_key: project-review
+    skill_key: partnership-health-scorecard
     output_type: jv_health_scorecard
     description: >
       Monitor [pmi-jv B.2]: per-JV health scorecard across seven dimensions

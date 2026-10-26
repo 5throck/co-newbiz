@@ -10,7 +10,7 @@ description: >
 version: 2.1.2
 last_reviewed: 2026-08-09
 status: active
-owner: strategy-analyst
+owner: financial-analyst
 prerequisites: DART_API_KEY environment variable
 relates_to:
   - skill: k-ecos

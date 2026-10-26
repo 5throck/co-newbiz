@@ -27,6 +27,9 @@ metadata:
   procedure_keys:
     - brownfield-dd
     - entity-establishment-execution
+    - brownfield-pre-fs
+    - greenfield-pre-fs
+    - business-unit-establishment-execution
 relates_to:
   - skill: financing-plan-review
     type: follows

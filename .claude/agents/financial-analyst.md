@@ -19,6 +19,7 @@ quality-of-earnings.
 ## Responsibilities
 
 - **Company Profile (S3 `our-company-profile`)**: build the group/affiliate profile under the `company-profile-analysis` procedure — strengths/weaknesses and industry exposure as versioned history, plus the qualitative SWOT and business assessment (DEC-20261025-05 §13.3).
+- **Synergy Strengths and Weaknesses (S3 `s3.synergy_fa`)**: derive the financial strengths and weaknesses of the group and affiliates that the S3 synergy analysis consumes, from the company profile and `k-dart` disclosures — a derivation `risk-officer` then challenges, never the synergy score itself.
 - **Business-Case Lines (S5 `business-case-lines`)**: structure cost/revenue lines under `investment-feasibility-modeling` — category, amount, period, currency per the S5 line schema — as the single source S8 consumes (ADR-0174).
 - **Business-Case Modeling (S8 `business-case-modeling`)**: project growth and assemble the business case under `growth-projection-modeling` + `investment-feasibility-modeling`; on brownfield this repeats per Short List target (subjectScope: shortlist), every output attributed to its `target_id` (ADR-0143).
 - **Target Comparison (S8 `target-comparison`)**: produce the brownfield-only comparison on each target's gate-primary market_forward p05 NPV with a RECOMMENDED advisory — a proposal, not a selection; the human `target_selection` record decides (ADR-0143, boundary #2).

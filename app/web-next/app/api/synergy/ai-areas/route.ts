@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   try {
     const res = await completeDetailed(
       [{ role: "user" as const, content: prompt }],
-      { maxTokens: 2000, agent: promptAgent("s4.synergy_synergy") },
+      { maxTokens: 2000, agent: promptAgent("s3.synergy_synergy") },
     );
     const text = res.text.replace(/```json|```/g, "");
     const start = text.indexOf("{");

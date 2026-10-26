@@ -5,7 +5,7 @@
 // this projection mirrors the spec.)
 import type { SpecStage } from "./spec-activities.ts";
 
-export const SPEC_VERSION = "2.10.1";
+export const SPEC_VERSION = "2.11.0";
 export const SPEC_STAGES: SpecStage[] = [
   {
     "id": "S1",
@@ -21,7 +21,8 @@ export const SPEC_STAGES: SpecStage[] = [
         "skills": [
           "market-data-pipeline",
           "proxy-industry-chain",
-          "systematic-market-sizing"
+          "systematic-market-sizing",
+          "forward-industry-research"
         ],
         "procedure": [
           "greenfield-screening",
@@ -186,6 +187,29 @@ export const SPEC_STAGES: SpecStage[] = [
           "brownfield-pre-fs",
           "deal-shape-chain"
         ]
+      },
+      {
+        "id": "wacc-hurdle-confirmation",
+        "agent": "valuation-agent",
+        "skills": [
+          "wacc-input-session"
+        ],
+        "procedure": [
+          "greenfield-pre-fs",
+          "brownfield-pre-fs"
+        ]
+      },
+      {
+        "id": "certification-screen",
+        "agent": "certification-agent",
+        "skills": [
+          "certification-roadmap",
+          "certification-transferability"
+        ],
+        "procedure": [
+          "greenfield-pre-fs",
+          "brownfield-pre-fs"
+        ]
       }
     ]
   },
@@ -296,7 +320,8 @@ export const SPEC_STAGES: SpecStage[] = [
         "agent": "brownfield-agent",
         "skills": [
           "strategic-fit-screening",
-          "brownfield-feasibility"
+          "brownfield-feasibility",
+          "peer-benchmarking"
         ],
         "procedure": [
           "brownfield-target-screening"
@@ -317,7 +342,9 @@ export const SPEC_STAGES: SpecStage[] = [
         "agent": "financial-analyst",
         "skills": [
           "growth-projection-modeling",
-          "investment-feasibility-modeling"
+          "investment-feasibility-modeling",
+          "target-costing-analysis",
+          "financial-statement-analysis"
         ],
         "procedure": [
           "greenfield-fs",
@@ -341,7 +368,10 @@ export const SPEC_STAGES: SpecStage[] = [
         "agent": "quant-methodologist",
         "skills": [
           "wacc-input-session",
-          "monte-carlo-simulation"
+          "monte-carlo-simulation",
+          "proxy-industry-chain",
+          "unit-conversion-calibration",
+          "value-chain-driver-identification"
         ],
         "procedure": [
           "greenfield-fs",
@@ -392,7 +422,8 @@ export const SPEC_STAGES: SpecStage[] = [
         "agent": "technical-dd-agent",
         "skills": [
           "technical-due-diligence",
-          "site-infrastructure-assessment"
+          "site-infrastructure-assessment",
+          "site-visit-protocol"
         ],
         "procedure": [
           "greenfield-dd",
@@ -428,7 +459,9 @@ export const SPEC_STAGES: SpecStage[] = [
         "agent": "hr-integration-agent",
         "skills": [
           "org-readiness-assessment",
-          "talent-pipeline-planning"
+          "talent-pipeline-planning",
+          "management-incentive-review",
+          "compensation-harmonization-analysis"
         ],
         "procedure": [
           "greenfield-dd",
@@ -449,7 +482,9 @@ export const SPEC_STAGES: SpecStage[] = [
       {
         "id": "financing-dd",
         "agent": "financing-agent",
-        "skills": [],
+        "skills": [
+          "financing-plan-review"
+        ],
         "procedure": [
           "greenfield-dd",
           "brownfield-dd"
@@ -471,6 +506,76 @@ export const SPEC_STAGES: SpecStage[] = [
         "agent": "brownfield-agent",
         "skills": [
           "brownfield-feasibility"
+        ],
+        "procedure": [
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "antitrust-dd",
+        "agent": "antitrust-agent",
+        "skills": [
+          "antitrust-screening"
+        ],
+        "procedure": [
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "region-labor-review",
+        "agent": "region-lead",
+        "skills": [
+          "regulatory-screening"
+        ],
+        "procedure": [
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "customer-retention-dd",
+        "agent": "customer-retention-agent",
+        "skills": [
+          "customer-attrition-risk"
+        ],
+        "procedure": [
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "incentive-dd",
+        "agent": "incentive-agent",
+        "skills": [
+          "incentive-clawback-assessment"
+        ],
+        "procedure": [
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "contingent-liability-dd",
+        "agent": "valuation-agent",
+        "skills": [
+          "debt-and-contingent-liability-simulation"
+        ],
+        "procedure": [
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "certification-transferability-dd",
+        "agent": "legal-counsel",
+        "skills": [
+          "certification-transferability"
+        ],
+        "procedure": [
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "ip-fto-dd",
+        "agent": "ip-agent",
+        "skills": [
+          "ip-fto-review"
         ],
         "procedure": [
           "brownfield-dd"
@@ -551,7 +656,8 @@ export const SPEC_STAGES: SpecStage[] = [
         "id": "risk-review",
         "agent": "risk-officer",
         "skills": [
-          "legal-risk-register"
+          "legal-risk-register",
+          "rag-scoring-framework"
         ],
         "procedure": [
           "entity-ic-review",
@@ -596,7 +702,10 @@ export const SPEC_STAGES: SpecStage[] = [
       {
         "id": "greenfield-execution-baseline",
         "agent": "greenfield-agent",
-        "skills": [],
+        "skills": [
+          "greenfield-feasibility",
+          "talent-pipeline-planning"
+        ],
         "procedure": [
           "greenfield-execution-baseline"
         ]
@@ -634,7 +743,9 @@ export const SPEC_STAGES: SpecStage[] = [
       {
         "id": "partnership-monitoring",
         "agent": "partnership-agent",
-        "skills": [],
+        "skills": [
+          "partnership-health-scorecard"
+        ],
         "procedure": [
           "jv-lifecycle-governance"
         ]

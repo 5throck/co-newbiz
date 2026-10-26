@@ -10,7 +10,7 @@ description: >
 formal_name: Partnership Agent
 status: active
 domain: functional
-version: "1.1.1"
+version: "1.1.2"
 last_updated: "2026-10-26"
 tier:
   claude: medium
@@ -28,7 +28,7 @@ examples:
 phases: [S12]
 handoff_to: [legal-counsel, pmi-agent, group-review-agent]
 handoff_from: [brownfield-agent, pm]
-required_skills: [jv-structuring, partner-due-diligence, partner-sourcing-strategy]
+required_skills: [jv-structuring, partner-due-diligence, partner-sourcing-strategy, partnership-health-scorecard]
 lifecycle:
   phase: production
   created: "2026-09-17"

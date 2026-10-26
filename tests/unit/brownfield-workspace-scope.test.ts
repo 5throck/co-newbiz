@@ -93,8 +93,8 @@ afterAll(() => {
 });
 
 const EXPECTED: Record<string, [number, number]> = {
-  m_and_a: [77, 102],
-  jv: [75, 93],
+  m_and_a: [77, 103],
+  jv: [75, 94],
   strategic_investment: [71, 76], // DEC-20261013-03: + ma-01..03, min-04, min-05
   minority_investment: [71, 90], // DEC-20261013-03: + ma-01..03
   partnership: [52, 78],
@@ -116,7 +116,7 @@ describe("(a) counts per sub-track (design sections 5 and 7)", () => {
       const c = tailor.ddCompletionSummary(p);
       if (st === "m_and_a") {
         expect(c.judgeable).toBeUndefined(); // baseline path
-        expect(c.unassessed).toBe(102);
+        expect(c.unassessed).toBe(103);
         continue;
       }
       // Risk review 2026-10-12: an X holds only on a pass/fail target, so partnership's two X rows
@@ -364,7 +364,7 @@ describe("(f) fail-closed", () => {
     const p = seedProject("brownfield", "strategic_investment", OLD);
     expect(tailor.subTrackChecklistIds(p)).toEqual([]); // legacy unscoped: nothing attached
     expect(tailor.brownfieldOptInPreview(p)!.extras_attached_by_opt_in).toEqual([
-      { checklist_id: "chk-ma-special-topics-checklist", judgeable: 3, excluded: 9 },
+      { checklist_id: "chk-ma-special-topics-checklist", judgeable: 3, excluded: 10 },
       { checklist_id: "chk-deal-shape-presigning-checklist", judgeable: 2, excluded: 24 },
     ]);
     expect(bf.optInBrownfieldWorkspaceScope({ projectId: p, migrationNote: "x", actor: A1 }, db).ok).toBe(true);

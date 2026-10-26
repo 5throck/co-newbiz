@@ -94,8 +94,10 @@ function writePassRow(pid: string, key: string): string {
   return id;
 }
 
-/** The five registry-skip validators under greenfield/internal/none. */
-const SKIPPABLE = ["antitrust", "hr-comp", "customer", "incentive", "contingent-liability"] as const;
+/** The five CORE registry-skip validators under greenfield/internal/none. */
+const CORE_SKIPPABLE = ["antitrust", "region-labor", "hr-comp", "customer", "incentive"] as const;
+/** Plus the non-core contingent-liability row (skip legal, never counted toward the six — ADR-0185). */
+const SKIPPABLE = [...CORE_SKIPPABLE, "contingent-liability"] as const;
 
 beforeAll(() => {
   if (existsSync(TEST_DB_PATH)) rmSync(TEST_DB_PATH);
@@ -228,10 +230,10 @@ describe("skip-cell completeness math (greenfield/internal/none)", () => {
     expect(ev.halt.triggered).toBe(true);
     expect(ev.halt.missing).toEqual(["certification"]);
     expect(ev.halt.kill_criterion).toBe("any_of_six_ma_validators_missing_at_dd_exit");
-    expect([...ev.undocumented_skips].sort()).toEqual([...SKIPPABLE].sort());
+    expect([...ev.undocumented_skips].sort()).toEqual([...CORE_SKIPPABLE].sort()); // non-core contingent-liability is never listed
   });
 
-  test("all five skips recorded + certification pass → 6/1/6: skips are covered-with-reason, halt NOT triggered", () => {
+  test("all five core skips (plus the non-core one) recorded + certification pass → 6/1/6: skips are covered-with-reason, halt NOT triggered; the non-core skip does not change the six-count", () => {
     const pid = insertProject();
     classifyGreenfieldInternal(pid);
     for (const key of SKIPPABLE) {
@@ -241,7 +243,7 @@ describe("skip-cell completeness math (greenfield/internal/none)", () => {
 
     const ev = evaluateValidatorCompleteness(pid, null, db, { now: new Date(NOW) });
     expect(ev.applicable_count).toBe(1);
-    expect(ev.completed_count).toBe(6); // five covered-with-reason + one completed
+    expect(ev.completed_count).toBe(6); // five core covered-with-reason + one completed; the contingent-liability skip is NOT counted
     expect(ev.halt.triggered).toBe(false);
     expect(ev.undocumented_skips).toEqual([]);
     const certRow = ev.validators.find((v) => v.key === "certification")!;
@@ -265,7 +267,7 @@ describe("skip-cell completeness math (greenfield/internal/none)", () => {
     const ev = evaluateValidatorCompleteness(pid, null, db, { now: new Date(NOW) });
     expect(ev.halt.triggered).toBe(false); // the one applicable validator is covered
     expect(ev.completed_count).toBe(4);
-    expect(ev.undocumented_skips.sort()).toEqual(["contingent-liability", "incentive"]);
+    expect(ev.undocumented_skips.sort()).toEqual(["incentive", "region-labor"]);
   });
 });
 
@@ -293,19 +295,19 @@ describe("reclassification invalidation (spec row 7) — via the REAL supersede(
         "SELECT invalidated_at, invalidated_by_classification FROM compliance_check WHERE project_id = ? AND result = 'not_applicable' AND invalidated_at IS NOT NULL",
       )
       .all(pid) as { invalidated_at: string; invalidated_by_classification: string }[];
-    expect(invalidated).toHaveLength(5);
+    expect(invalidated).toHaveLength(6);
     for (const row of invalidated) {
       expect(row.invalidated_at).toBe(NOW);
       expect(row.invalidated_by_classification).toBe(successor.id);
     }
-    expect(db.query("SELECT COUNT(*) AS c FROM compliance_check WHERE project_id = ? AND result = 'not_applicable'").get(pid)).toEqual({ c: 5 });
+    expect(db.query("SELECT COUNT(*) AS c FROM compliance_check WHERE project_id = ? AND result = 'not_applicable'").get(pid)).toEqual({ c: 6 });
 
     // the invalidated skips are NO coverage: all six applicable, five missing, halt fires
     const after = evaluateValidatorCompleteness(pid, null, db, { now: new Date(NOW) });
     expect(after.applicable_count).toBe(6);
     expect(after.completed_count).toBe(1); // only the certification pass row survives as coverage
     expect(after.halt.triggered).toBe(true);
-    expect(after.halt.missing.sort()).toEqual([...SKIPPABLE].sort());
+    expect(after.halt.missing.sort()).toEqual([...CORE_SKIPPABLE].sort());
 
     // and a NEW skip is unwritable under the external classification (registry applies)
     expect(() => recordNotApplicable({ validator_key: "antitrust", project_id: pid, recorded_by: U1, now: NOW }, db)).toThrow(

@@ -21,7 +21,19 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.10.1"
+  version: "2.11.0"
+  # v2.11.0 — 에이전트·스킬 배치 재정렬 (ADR-0185, design
+  #   2026-10-26-placement-realignment-design W4, 2026-10-26). 절차 단계가 이미
+  #   소유한 작업을 활동으로 노출한다: S9에 antitrust-dd · region-labor-review ·
+  #   customer-retention-dd · incentive-dd · contingent-liability-dd ·
+  #   certification-transferability-dd · ip-fto-dd(R&BD 한정) 7건, S4에
+  #   wacc-hurdle-confirmation · certification-screen 2건 (활동 47 → 56; S10
+  #   site 활동은 D-6으로 제외). 모든 신규 활동은 기존 절차 단계를 가리킬 뿐
+  #   활동 리드·게이트·트랙 구조를 바꾸지 않는다 — 적용 트랙은 procedure
+  #   applies_when이 강제한다 (capability-dd와 같은 방식). 활동 skills 목록을
+  #   호스팅하는 절차 단계의 skill_key와 정합시킨다 (P-5). route-strategy ·
+  #   target-selection · entity-establishment-execution · strategic-fit-screening의
+  #   리드 의도는 주석으로만 기록한다 (구조 변경 없음).
   # v2.10.1 — T-20261022-035(review H2, 2026-10-22)의 SSOT 반영: T-001 결정
   #   (design 2026-10-22-review-ticket-remediation §1 row 1, 커밋 ebbac854)에서
   #   엔진이 이미 그린필드에만 스코어카드를 요구하도록 고쳐졌으므로, S12 벤처
@@ -234,7 +246,7 @@ stages:
     activities:
       - id: market-research
         agent: market-intelligence-agent
-        skills: [market-data-pipeline, proxy-industry-chain, systematic-market-sizing]
+        skills: [market-data-pipeline, proxy-industry-chain, systematic-market-sizing, forward-industry-research]
         procedure: [greenfield-screening, brownfield-screening]
       - id: competitive-intelligence
         agent: market-intelligence-agent
@@ -327,6 +339,11 @@ stages:
         agent: process-governance-manager
         skills: [strategic-fit-screening, portfolio-fit-assessment]
         procedure: [greenfield-screening, brownfield-screening]
+        # ADR-0185 A-02c (D-6): greenfield-screening step 3 (site shortlist)와
+        # greenfield-pre-fs step 3 (인프라 리드타임·비용)의 agent_key는
+        # site-facility-agent이고, 활동 리드는 변하지 않는다 — 절차 단계 에이전트와
+        # 활동 에이전트의 차이는 AGENTS.md §7에 따라 기록된 divergence이며
+        # (S10 site 활동은 두지 않는다), 절차 단계 내부 배정은 절차가 소유한다.
       - id: synergy-analysis
         agent: risk-officer
         skills: [assumption-audit]
@@ -376,6 +393,9 @@ stages:
         agent: pm
         skills: [deal-execution-playbook, jv-structuring, partner-sourcing-strategy]
         procedure: [greenfield-pre-fs, brownfield-pre-fs, deal-shape-chain]
+        # ADR-0185 F-12: pm 리드는 게이트 어셈블러(gateway assembler) 의도다 —
+        # 런타임 PM 프롬프트 s4.route_recommendation이 의도된 종합 표면이며, 라우트
+        # 결정 자체는 사람의 route_decision이다 (경계 #2). 리드 변경 없음.
       - id: deal-shape-evaluation
         agent: brownfield-agent
         skills: [deal-execution-playbook]
@@ -393,6 +413,20 @@ stages:
         # 쇼트리스트 존재·역량 신호를 정규화해 권고 트랙(및 서브트랙)과 근거를
         # 산출한다. 산출물은 권고일 뿐이며 결정은 사람의 route_decision (경계 #2).
         # 구현: app/web-next/lib/track-advisory.ts · GET /api/opportunities/[id]/route-advisory
+      # ADR-0185 F-09 / F-10 (v2.11.0): 절차 단계가 이미 소유한 작업의 활동 노출.
+      - id: wacc-hurdle-confirmation
+        agent: valuation-agent
+        skills: [wacc-input-session]
+        procedure: [greenfield-pre-fs, brownfield-pre-fs]
+        # greenfield-pre-fs step 2 · brownfield-pre-fs step 1 — WACC/허들 입력을 세션에서
+        # 확정한다 (사람 확인 후 사용; 경계 #2). 절차 applies_when이 트랙을 강제한다.
+      - id: certification-screen
+        agent: certification-agent
+        skills: [certification-roadmap, certification-transferability]
+        procedure: [greenfield-pre-fs, brownfield-pre-fs]
+        # greenfield-pre-fs step 5/5.5 · brownfield-pre-fs step 3/3.5 — 인증은 인허가와
+        # 분리 관리 (경계 #5). 승계 가능성 판단은 certifying body 규정 확인이며 추론
+        # 금지; 판단 주체는 legal-counsel이다.
       # 채점 프레임워크: Stage 1 의도 분기(통합 vs 역량접근) → Stage 2 5criteria×20%
       # 가중채점(통제 필요도·역량 결정성·시장 불확실성·통합 역량·역량확보 속도) +
       # 사전배제(통제필요도=高 AND 파트너 지식=암묵적 → 라이선스/공동개발 배제) —
@@ -504,7 +538,7 @@ stages:
         procedure: [brownfield-target-screening]
       - id: target-ranking
         agent: brownfield-agent
-        skills: [strategic-fit-screening, brownfield-feasibility]
+        skills: [strategic-fit-screening, brownfield-feasibility, peer-benchmarking]
         procedure: [brownfield-target-screening]
     requiredArtifacts:
       - Target Company Short List
@@ -544,7 +578,7 @@ stages:
     activities:
       - id: business-case-modeling
         agent: financial-analyst
-        skills: [growth-projection-modeling, investment-feasibility-modeling]
+        skills: [growth-projection-modeling, investment-feasibility-modeling, target-costing-analysis, financial-statement-analysis]
         procedure: [greenfield-fs, brownfield-fs]
         # brownfield는 Short List 대상별로 본 활동 체계를 반복 호출한다
         # (subjectScope: shortlist — 각 호출의 산출물은 target_id로 귀속).
@@ -554,7 +588,7 @@ stages:
         procedure: [greenfield-fs, brownfield-fs]
       - id: quant-methods
         agent: quant-methodologist
-        skills: [wacc-input-session, monte-carlo-simulation]
+        skills: [wacc-input-session, monte-carlo-simulation, proxy-industry-chain, unit-conversion-calibration, value-chain-driver-identification]
         procedure: [greenfield-fs, brownfield-fs]
       - id: target-comparison
         agent: financial-analyst
@@ -571,6 +605,9 @@ stages:
         # 게이트 제안서에 비교·권고를 첨부하고, 사람의 기록이 확정한다
         # (구현: lib/business-case.ts selectTarget → process_run
         # s8_target_select, md_project.company_id 확정).
+        # ADR-0185 F-12 / H-02: pm 리드는 비교·권고를 첨부하는 게이트 어셈블러
+        # 의도이고, 선정 기록 단계(brownfield-fs-comparative step 2)의 agent_key는
+        # 사람 역할 target-selector (procedures/_human-roles.yaml)다.
     requiredArtifacts:
       - Business Case(비용·수익 라인 또는 밸류에이션 — brownfield는 대상별)
       - 시뮬레이션 NPV 분위수
@@ -609,7 +646,7 @@ stages:
         procedure: [greenfield-dd, brownfield-dd]
       - id: technical-dd
         agent: technical-dd-agent
-        skills: [technical-due-diligence, site-infrastructure-assessment]
+        skills: [technical-due-diligence, site-infrastructure-assessment, site-visit-protocol]
         procedure: [greenfield-dd, brownfield-dd]
       - id: legal-dd
         agent: legal-counsel
@@ -621,7 +658,7 @@ stages:
         procedure: [greenfield-dd, brownfield-dd]
       - id: hr-dd
         agent: hr-integration-agent
-        skills: [org-readiness-assessment, talent-pipeline-planning]
+        skills: [org-readiness-assessment, talent-pipeline-planning, management-incentive-review, compensation-harmonization-analysis]
         procedure: [greenfield-dd, brownfield-dd]
       - id: market-dd
         agent: market-intelligence-agent
@@ -629,7 +666,7 @@ stages:
         procedure: [greenfield-dd, brownfield-dd]
       - id: financing-dd
         agent: financing-agent
-        skills: []
+        skills: [financing-plan-review]
         procedure: [greenfield-dd, brownfield-dd]
       - id: dd-waiver-review
         agent: compliance-officer
@@ -646,6 +683,47 @@ stages:
         # 필수 항목 미충족은 활성 waiver 없이는 게이트를 통과할 수 없다
         # (kill criteria: "waiver 불가능한 필수 항목"). waiver 요청·승인·만료를
         # 이 활동이 소유한다 — skills/waiver-management.
+      # ADR-0185 (v2.11.0): brownfield-dd 단계가 이미 소유한 작업의 활동 노출. 모두
+      # brownfield-dd 단일 procedure라 applies_when(case_type=brownfield)이 greenfield를
+      # 건너뛴다 (capability-dd와 같은 방식). 여섯 validator 계수는 compliance 엔진이
+      # 소유하며(ADR-0048) 활동 추가는 그 계수를 바꾸지 않는다.
+      - id: antitrust-dd
+        agent: antitrust-agent
+        skills: [antitrust-screening]
+        procedure: [brownfield-dd]
+        # brownfield-dd step 6 — ma-01/02/03.
+      - id: region-labor-review
+        agent: region-lead
+        skills: [regulatory-screening]
+        procedure: [brownfield-dd]
+        # brownfield-dd step 6.5 — ma-13. S9에서 도메인 리드가 이끄는 첫 활동
+        # (ADR-0185 1.1b; 지역 프로파일 노동 축 검토, 법령 해석은 legal-counsel).
+      - id: customer-retention-dd
+        agent: customer-retention-agent
+        skills: [customer-attrition-risk]
+        procedure: [brownfield-dd]
+        # brownfield-dd step 8 — ma-07/08.
+      - id: incentive-dd
+        agent: incentive-agent
+        skills: [incentive-clawback-assessment]
+        procedure: [brownfield-dd]
+        # brownfield-dd step 9 — ma-09.
+      - id: contingent-liability-dd
+        agent: valuation-agent
+        skills: [debt-and-contingent-liability-simulation]
+        procedure: [brownfield-dd]
+        # brownfield-dd step 10 — ma-10/11. 여섯 validator 중 하나가 아니다 (D-1);
+        # 표준 waiver 경로가 적용된다.
+      - id: certification-transferability-dd
+        agent: legal-counsel
+        skills: [certification-transferability]
+        procedure: [brownfield-dd]
+        # brownfield-dd step 11 — ma-12. 여섯 validator 중 LAST (M5 순서).
+      - id: ip-fto-dd
+        agent: ip-agent
+        skills: [ip-fto-review]
+        procedure: [brownfield-dd]
+        # brownfield-dd step 3.5 — R&BD 한정 (step applies_when technology_track=rbd).
     requiredArtifacts:
       - DD 체크리스트 판정(필수 항목 해소)
     completionCriteria:
@@ -746,7 +824,7 @@ stages:
         # 실효 소유 분기를 표시한다(SPECIALIST_TRACK_AFFINITY).
       - id: risk-review
         agent: risk-officer
-        skills: [legal-risk-register]
+        skills: [legal-risk-register, rag-scoring-framework]
         procedure: [entity-ic-review, group-investment-review]
       - id: group-review
         agent: group-review-agent
@@ -756,6 +834,9 @@ stages:
         agent: process-governance-manager
         skills: [legal-due-diligence, k-law, certification-transferability, org-readiness-assessment, stage-gate-governance]
         procedure: [entity-establishment-execution]
+        # ADR-0185 F-13: process-governance-manager 리드는 조정·종결(coordinate and
+        # close) 의도다 — 5단계 중 1단계(stage-gate-governance, 게이트 기록)만
+        # 직접 소유하고, 법무·인증·인력 단계는 각 절차 단계의 agent_key가 소유한다.
         # origin∈{internal,joint}에서만 적용 (ADR-0047) — 절차 applies_when이 강제한다.
         # 사업부 신설(origin=internal, establishment_mode=business_unit)은 자매
         # 절차 business-unit-establishment-execution(ADR-0167)이 담당한다 —
@@ -774,7 +855,7 @@ stages:
         # 초기 스냅샷을 S11 사후관리로 이관한다.
       - id: greenfield-execution-baseline
         agent: greenfield-agent
-        skills: []
+        skills: [greenfield-feasibility, talent-pipeline-planning]
         procedure: [greenfield-execution-baseline]
         # greenfield 전용 (ADR-0161 Q1/Q5) — procedure applies_when(case_type=greenfield)이
         # 강제한다. origin이 아니라 트랙으로 판별한다. 단계: capex_tranche 행·S10 조건
@@ -824,7 +905,7 @@ stages:
         # step 1~5와 pmi-kickoff는 바뀌지 않는다. 범위는 step applies_when이 강제한다.
       - id: partnership-monitoring
         agent: partnership-agent
-        skills: []
+        skills: [partnership-health-scorecard]
         procedure: [jv-lifecycle-governance]
         # brownfield partnership의 사후 관리 (ADR-0161 Q3) — jv-lifecycle-governance
         # step 2 건강 스코어카드의 파트너십 변형. 다른 단계는 origin=joint에서만 적용.

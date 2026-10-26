@@ -12,7 +12,7 @@ description: >
 version: 1.2.2
 last_reviewed: 2026-09-03
 status: active
-owner: hs-classification-specialist
+owner: quant-methodologist
 prerequisites: DATA_GO_KR_API_KEY environment variable
 relates_to:
   - skill: k-ecos

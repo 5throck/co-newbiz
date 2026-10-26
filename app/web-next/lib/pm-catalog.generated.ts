@@ -48,11 +48,11 @@ export interface SpecialistTrackAffinity {
 }
 
 export const CATALOG_VERSION = "1.0.0";
-export const SPEC_VERSION = "2.10.1";
+export const SPEC_VERSION = "2.11.0";
 /** SSOT 원문 해시(앞 16자) — 드리프트 원인 규명용. */
 export const CATALOG_SOURCES = {
-  "promptsJson": "97384b0c5c06b2a6",
-  "flowSpecYaml": "51c12f3fc0a32ebe",
+  "promptsJson": "102d02cd0697d4b8",
+  "flowSpecYaml": "d085a4c5846f7f8b",
   "agentRoster": "4f4cf81169a7e46f"
 };
 
@@ -112,8 +112,8 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
       "brownfield"
     ]
   },
-  "s3.opportunity_factors": {
-    "promptKey": "s3.opportunity_factors",
+  "s2.opportunity_factors": {
+    "promptKey": "s2.opportunity_factors",
     "agentKey": "market-intelligence-agent",
     "activityId": "opportunity-discovery",
     "stageId": "S2",
@@ -156,9 +156,9 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
       "brownfield"
     ]
   },
-  "s4.synergy_fa": {
-    "promptKey": "s4.synergy_fa",
-    "agentKey": "risk-officer",
+  "s3.synergy_fa": {
+    "promptKey": "s3.synergy_fa",
+    "agentKey": "financial-analyst",
     "activityId": "synergy-analysis",
     "stageId": "S3",
     "purpose": "시너지 재무·사업 분석 — 근거 기반 강약점 도출",
@@ -167,8 +167,8 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
       "brownfield"
     ]
   },
-  "s4.synergy_synergy": {
-    "promptKey": "s4.synergy_synergy",
+  "s3.synergy_synergy": {
+    "promptKey": "s3.synergy_synergy",
     "agentKey": "risk-officer",
     "activityId": "synergy-analysis",
     "stageId": "S3",
@@ -178,8 +178,8 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
       "brownfield"
     ]
   },
-  "s4.synergy_ic": {
-    "promptKey": "s4.synergy_ic",
+  "s3.synergy_ic": {
+    "promptKey": "s3.synergy_ic",
     "agentKey": "risk-officer",
     "activityId": "synergy-analysis",
     "stageId": "S3",
@@ -192,18 +192,24 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
   "s3.attractiveness_recommendation": {
     "promptKey": "s3.attractiveness_recommendation",
     "agentKey": "risk-officer",
-    "activityId": null,
-    "stageId": null,
+    "activityId": "strategic-fit-screening",
+    "stageId": "S3",
     "purpose": "매력도 점수 초안 제안",
-    "trackScope": []
+    "trackScope": [
+      "greenfield",
+      "brownfield"
+    ]
   },
   "s3.capability_gap_draft": {
     "promptKey": "s3.capability_gap_draft",
-    "agentKey": "risk-officer",
-    "activityId": null,
-    "stageId": null,
+    "agentKey": "process-governance-manager",
+    "activityId": "strategic-fit-screening",
+    "stageId": "S3",
     "purpose": "S3 필요 역량 수준 필요도·필요 수준·보유 판정 초안",
-    "trackScope": []
+    "trackScope": [
+      "greenfield",
+      "brownfield"
+    ]
   },
   "s5.capability_judgement_draft": {
     "promptKey": "s5.capability_judgement_draft",
@@ -306,21 +312,27 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
   "s8.business_case_prose": {
     "promptKey": "s8.business_case_prose",
     "agentKey": null,
-    "activityId": null,
-    "stageId": null,
+    "activityId": "business-case-modeling",
+    "stageId": "S8",
     "purpose": "S8 사업성 분석 단계 산출 해석 보강",
-    "trackScope": []
+    "trackScope": [
+      "greenfield",
+      "brownfield"
+    ]
   },
   "s8.business_case_adoption": {
     "promptKey": "s8.business_case_adoption",
     "agentKey": "valuation-agent",
-    "activityId": null,
-    "stageId": null,
+    "activityId": "valuation",
+    "stageId": "S8",
     "purpose": "채택 추천 초안",
-    "trackScope": []
+    "trackScope": [
+      "greenfield",
+      "brownfield"
+    ]
   },
-  "s8.deal_structure_recommendation": {
-    "promptKey": "s8.deal_structure_recommendation",
+  "s10.deal_structure_recommendation": {
+    "promptKey": "s10.deal_structure_recommendation",
     "agentKey": "brownfield-agent",
     "activityId": "deal-structure-hypothesis",
     "stageId": "S10",
@@ -341,8 +353,8 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
       "brownfield"
     ]
   },
-  "s11.monitoring_brief": {
-    "promptKey": "s11.monitoring_brief",
+  "s12.monitoring_brief": {
+    "promptKey": "s12.monitoring_brief",
     "agentKey": "group-review-agent",
     "activityId": "portfolio-monitoring",
     "stageId": "S12",
@@ -371,10 +383,13 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
   "company_profile.competitor_web_search": {
     "promptKey": "company_profile.competitor_web_search",
     "agentKey": "market-intelligence-agent",
-    "activityId": null,
-    "stageId": null,
+    "activityId": "our-company-profile",
+    "stageId": "S3",
     "purpose": "S3 경쟁사 웹검색 재제안 (ADR-0142 후속)",
-    "trackScope": []
+    "trackScope": [
+      "greenfield",
+      "brownfield"
+    ]
   },
   "s8.price_evidence": {
     "promptKey": "s8.price_evidence",
@@ -442,10 +457,13 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
   "s12.milestone_suggest": {
     "promptKey": "s12.milestone_suggest",
     "agentKey": "process-governance-manager",
-    "activityId": null,
-    "stageId": null,
+    "activityId": "portfolio-monitoring",
+    "stageId": "S12",
     "purpose": "S12 마일스톤 — 트랙·사업 케이스 기반 마일스톤 추천 (제안 전용, 등록은 사람)",
-    "trackScope": []
+    "trackScope": [
+      "greenfield",
+      "brownfield"
+    ]
   },
   "pm.flow_suggest": {
     "promptKey": "pm.flow_suggest",
@@ -466,6 +484,26 @@ export const DUAL_ASSIGNMENTS: DualAssignment[] = [
     "promptKey": "s11.integrated_insight",
     "activity": "S11.ic-preparation",
     "rationale": "Cross-domain integrated insight is the process-governance-manager charter (auxiliary review lens) layered on the pm-owned ic-preparation activity; procedure schema supports one agent_key per step (ADR-0161 Q6 pattern)."
+  },
+  {
+    "promptKey": "s3.synergy_fa",
+    "activity": "S3.synergy-analysis",
+    "rationale": "Sanctioned dual assignment (ADR-0185, owner-approved 2026-10-26): strengths/weaknesses derivation from financial data is financial-analyst analysis layered on the risk-officer-led synergy-analysis activity; financial-analyst already leads S3 our-company-profile."
+  },
+  {
+    "promptKey": "s3.attractiveness_recommendation",
+    "activity": "S3.strategic-fit-screening",
+    "rationale": "Sanctioned dual assignment (ADR-0185, owner-approved 2026-10-26): the attractiveness score is the risk-officer's own recommendation (red-team scoring seat) layered on the process-governance-manager-led strategic-fit-screening activity."
+  },
+  {
+    "promptKey": "company_profile.competitor_web_search",
+    "activity": "S3.our-company-profile",
+    "rationale": "Sanctioned dual assignment (ADR-0185, owner-approved 2026-10-26): prompt agent market-intelligence-agent is a sanctioned secondary lens on the financial-analyst-led S3.our-company-profile activity; the activity lead is unchanged."
+  },
+  {
+    "promptKey": "s12.milestone_suggest",
+    "activity": "S12.portfolio-monitoring",
+    "rationale": "Sanctioned dual assignment (ADR-0185, owner-approved 2026-10-26): prompt agent process-governance-manager is a sanctioned secondary lens on the group-review-agent-led S12.portfolio-monitoring activity; the activity lead is unchanged."
   }
 ];
 

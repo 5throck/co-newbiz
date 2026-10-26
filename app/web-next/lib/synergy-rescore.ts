@@ -162,7 +162,7 @@ export async function rescoreLatestVersion(db: Database, analysisId: string, use
   if (oppRow && isLlmConfigured() && rule.score !== null) {
     const areas = (p.marketLinkage?.synergyAreas ?? []).map((a) => a.area).join(", ");
     const adj = await askJson(
-      "s4.synergy_ic",
+      "s3.synergy_ic",
       `규칙 기반 시너지 점수: ${rule.score} (인자: ${JSON.stringify(rule.factors)})\n대상: ${company}, 연결 기회: ${oppRow.name}\n강점: ${(p.financialStrengths ?? []).join(" / ")}\n시너지 영역: ${areas || "없음"}\n\nJSON: {"adjustment": <-10..10 정수>, "reason": "<보정 사유 1~2문장, 정성 근거 명시>"} — 데이터가 부족하면 adjustment 0.`,
     );
     if (adj) {

@@ -1,7 +1,7 @@
 // @version 1.1.0
 /**
  * Unit tests for db/lib/validator-applicability.ts (PR-5c §2.1) — the
- * 12-cell × 6-validator applicability matrix (spec §3.1: 72 assertions).
+ * 12-cell × 6-validator applicability matrix (spec §3.1: 84 assertions).
  *
  * STAGE 2 EXPECTATIONS (PR-5c spec §5): the ACTIVE registry — the ADR-0048
  * seed vectors. All ten non-skip cells are all-six (the ADR-0037 default
@@ -60,7 +60,9 @@ const CELLS: Cell[] = [
   { case_type: "greenfield", origin: "internal", technology_track: "rbd" }, // 12 — contingent-liability returns on the R&BD track
 ];
 
-const ALL_SIX: MaValidatorKey[] = ["antitrust", "hr-comp", "customer", "incentive", "contingent-liability", "certification"];
+/** Registry order: six core rows + the non-core contingent-liability row (ADR-0185); certification LAST. */
+const ALL_SIX: MaValidatorKey[] = ["antitrust", "region-labor", "hr-comp", "customer", "incentive", "contingent-liability", "certification"];
+const CORE_SIX: MaValidatorKey[] = ["antitrust", "region-labor", "hr-comp", "customer", "incentive", "certification"];
 
 /** STAGE 2 EXPECTED TABLE — the active ADR-0048 seed vectors, index-aligned with CELLS. */
 const EXPECTED_APPLICABLE: MaValidatorKey[][] = [
@@ -109,7 +111,7 @@ afterAll(() => {
 // ---------------------------------------------------------------------------
 
 describe("12-cell × 6-validator applicability matrix (registry level)", () => {
-  test("each cell asserts all six registry verdicts — 72 assertions, stage-2 form (active ADR-0048 vectors)", () => {
+  test("each cell asserts all six registry verdicts — 84 assertions, stage-2 form (active ADR-0048 vectors)", () => {
     let assertions = 0;
     CELLS.forEach((cell, i) => {
       const decisions = resolveValidatorApplicability(cellLookup(cell), { now: FIXED_NOW });
@@ -126,7 +128,22 @@ describe("12-cell × 6-validator applicability matrix (registry level)", () => {
         assertions++;
       }
     });
-    expect(assertions).toBe(72);
+    expect(assertions).toBe(84);
+  });
+
+  test("registry has seven rows, exactly six core; contingent-liability is the only non-core row; region-labor is step 6.5", () => {
+    expect(MA_VALIDATOR_APPLICABILITY.filter((r) => r.in_core).map((r) => r.key)).toEqual(CORE_SIX);
+    expect(MA_VALIDATOR_APPLICABILITY.filter((r) => !r.in_core).map((r) => r.key)).toEqual(["contingent-liability"]);
+    expect(MA_VALIDATOR_APPLICABILITY.find((r) => r.key === "region-labor")!.step).toBe(6.5);
+  });
+
+  test("region-labor is skipped ONLY for greenfield+internal (both technology tracks)", () => {
+    CELLS.forEach((cell) => {
+      const decisions = resolveValidatorApplicability(cellLookup(cell), { now: FIXED_NOW });
+      const skipped = cell.case_type === "greenfield" && cell.origin === "internal";
+      expect(decisions.get("region-labor")!.applies).toBe(!skipped);
+      if (skipped) expect(decisions.get("region-labor")!.rendered_reason_ko!.length).toBeGreaterThan(0);
+    });
   });
 
   test("the typical M&A cell (brownfield/external/any track) = ALL SIX — the ADR-0037 default that must survive every edge case", () => {
@@ -189,9 +206,9 @@ describe("engine-level matrix checks (real classification rows)", () => {
     expect(evaluation.applicable_count).toBe(6);
   });
 
-  test("registry is data, not branches: six rows, fixed order, steps 6-11, rule keys stable", () => {
+  test("registry is data, not branches: seven rows (six core), fixed order, steps 6-11, rule keys stable", () => {
     expect(MA_VALIDATOR_APPLICABILITY.map((r) => r.key)).toEqual([...ALL_SIX]);
-    expect(MA_VALIDATOR_APPLICABILITY.map((r) => r.step)).toEqual([6, 7, 8, 9, 10, 11]);
+    expect(MA_VALIDATOR_APPLICABILITY.map((r) => r.step)).toEqual([6, 6.5, 7, 8, 9, 10, 11]);
     expect(MA_VALIDATOR_APPLICABILITY.every((r) => r.procedure === "shared-brownfield-dd")).toBe(true);
     expect(MA_VALIDATOR_APPLICABILITY.every((r) => r.rationale.trim().length > 0)).toBe(true); // constraint: every seed row carries rationale text
     for (const key of ALL_SIX) expect(maValidatorRuleKey(key)).toBe(`ma-validator-${key}`);

@@ -3,7 +3,7 @@ procedure_id: shared-deal-shape-chain
 title: "Deal-Shape Selection Chain (Partner Track)"
 scope: shared
 level: entity
-version: "1.0.0"
+version: "1.0.1"
 status: active
 # Entry is a human funnel-entry decision (a named capability gap justifies an
 # external search), made BEFORE any case classification exists — the P3
@@ -97,7 +97,7 @@ steps:
   - id: 6
     gate: P5
     agent_key: partnership-agent
-    skill_key: project-review
+    skill_key: partnership-health-scorecard
     output_type: alliance_post_launch_review
     description: >
       Launch & post-launch review [rbd 2.1 phase 6-7]: kickoff plan, then a

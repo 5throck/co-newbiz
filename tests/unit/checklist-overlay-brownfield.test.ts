@@ -65,7 +65,7 @@ describe("brownfield workspace scope overlay (real file)", () => {
 
   test("header", () => {
     const d = fresh();
-    expect([d.governance_doc_id, d.version, d.status, d.track, d.baseline_sub_track]).toEqual(["ovl-brownfield-workspace-scope", "1.2.3", "proposed", "brownfield", "m_and_a"]);
+    expect([d.governance_doc_id, d.version, d.status, d.track, d.baseline_sub_track]).toEqual(["ovl-brownfield-workspace-scope", "1.3.0", "proposed", "brownfield", "m_and_a"]);
     expect(d.decision_record).toBe("DEC-20261013-03");
     expect(Object.keys(d.sub_track_keys)).toEqual(ST);
     expect(Object.keys(d.codes)).toEqual(["A", "R", "X", "N"]);
@@ -96,7 +96,7 @@ describe("brownfield workspace scope overlay (real file)", () => {
 
   test("Y (workspace + extras) equals design section 7", () => {
     const d = fresh();
-    const y: Record<string, number> = { m_and_a: 102, jv: 93, strategic_investment: 76, minority_investment: 90, partnership: 78, rbd: 92, corporate_venture: 75 };
+    const y: Record<string, number> = { m_and_a: 103, jv: 94, strategic_investment: 76, minority_investment: 90, partnership: 78, rbd: 92, corporate_venture: 75 };
     for (const st of ST) {
       const c = counts(d, st);
       const extras = Object.values(keptExtras(d, st)).reduce((n, ids) => n + ids.length, 0);
@@ -109,7 +109,7 @@ describe("brownfield workspace scope overlay (real file)", () => {
     for (const b of Object.values(d.checklists) as any[]) for (const r of b.items) expect(r.sub_tracks.m_and_a).toEqual({ code: "A" });
     const kept = keptExtras(d, "m_and_a");
     expect(kept["chk-brownfield-feasibility-checklist"].length).toBe(13);
-    expect(kept["chk-ma-special-topics-checklist"].length).toBe(12);
+    expect(kept["chk-ma-special-topics-checklist"].length).toBe(13);
   });
 
   test("binding fin-09 is A in every column (risk-officer review 2026-10-12)", () => {

@@ -23,6 +23,7 @@ import { resetDb, getDb, type getDb as GetDb } from "../../db/client.ts";
 import { runMigrations } from "../../db/migrate.ts";
 import { ulid } from "../../db/lib/ulid.ts";
 import { fillSnapshot, SNAPSHOT_VAR_KEYS } from "../../db/lib/snapshot-filler.ts";
+import { evaluateValidatorCompleteness } from "../../db/lib/validator-completeness.ts";
 
 const TEST_DB_PATH = "db/data/test-snapshot-filler.sqlite";
 const NOW = "2026-08-23T00:00:00.000Z";
@@ -780,6 +781,16 @@ describe("contingent family — EV / max amount / max probability", () => {
     expect(snap(runId, "risk.contingent_expected_value")).toMatchObject({ status: "present", value_num: 0 });
     expect(snap(runId, "risk.contingent_max_amount")).toMatchObject({ status: "present", value_num: 0 });
     expect(snap(runId, "risk.contingent_max_probability")).toMatchObject({ status: "present", value_num: 0 });
+  });
+
+  test("R-03b regression (ADR-0185): the engine still returns the non-core contingent-liability row that the filler's coverage signal reads", () => {
+    const pid = insertProject();
+    insertCoveragePass(pid);
+    const ev = evaluateValidatorCompleteness(pid, null, db, { now: new Date(NOW) });
+    const cl = ev.validators.find((v) => v.key === "contingent-liability");
+    expect(cl).toBeDefined();
+    expect(cl!.in_core).toBe(false);
+    expect(cl!.status).not.toBe("missing");
   });
 
   test("zero rows + NO coverage → missing (the validator is owed, not zero)", () => {
