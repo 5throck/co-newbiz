@@ -942,8 +942,8 @@
       "name": "backend-engineer",
       "scope": "root",
       "capability": "backend-engineer",
-      "content_hash": "4f966dae24e4be7d",
-      "version": "1.1.0",
+      "content_hash": "b56bf6ad127506a1",
+      "version": "1.1.1",
       "mirrors": [
         "agents/backend-engineer.md"
       ]
@@ -955,8 +955,8 @@
       "name": "brownfield-agent",
       "scope": "root",
       "capability": "brownfield-agent",
-      "content_hash": "199ad43bb120b34b",
-      "version": "1.1.0",
+      "content_hash": "7785f718189556b1",
+      "version": "1.1.1",
       "mirrors": [
         "agents/brownfield-agent.md"
       ]
@@ -981,8 +981,8 @@
       "name": "commercial-dd-agent",
       "scope": "root",
       "capability": "commercial-dd-agent",
-      "content_hash": "06c532befc6b1367",
-      "version": "1.1.0",
+      "content_hash": "df438a6ca25ae64c",
+      "version": "1.1.1",
       "mirrors": [
         "agents/commercial-dd-agent.md"
       ]
@@ -1007,8 +1007,8 @@
       "name": "customer-retention-agent",
       "scope": "root",
       "capability": "customer-retention-agent",
-      "content_hash": "518902e428990c82",
-      "version": "1.1.0",
+      "content_hash": "ffb39525a01ad248",
+      "version": "1.1.1",
       "mirrors": [
         "agents/customer-retention-agent.md"
       ]
@@ -1020,8 +1020,8 @@
       "name": "data-architect",
       "scope": "root",
       "capability": "data-architect",
-      "content_hash": "0d802889b7522773",
-      "version": "1.1.0",
+      "content_hash": "1f04805e9fd15e07",
+      "version": "1.1.1",
       "mirrors": [
         "agents/data-architect.md"
       ]
@@ -1033,8 +1033,8 @@
       "name": "dba",
       "scope": "root",
       "capability": "dba",
-      "content_hash": "af63d96953f8c277",
-      "version": "1.1.0",
+      "content_hash": "5750fcb54c71ad01",
+      "version": "1.1.1",
       "mirrors": [
         "agents/dba.md"
       ]
@@ -1046,8 +1046,8 @@
       "name": "design-system-agent",
       "scope": "root",
       "capability": "design-system-agent",
-      "content_hash": "c2933d4b31ec78d0",
-      "version": "1.1.0",
+      "content_hash": "27d521454cbd85e1",
+      "version": "1.1.1",
       "mirrors": [
         "agents/design-system-agent.md"
       ]
@@ -1059,8 +1059,8 @@
       "name": "docs-writer",
       "scope": "root",
       "capability": "docs-writer",
-      "content_hash": "152cc7c5dbbeee18",
-      "version": "1.1.0",
+      "content_hash": "5aa836e618ff0315",
+      "version": "1.1.1",
       "mirrors": [
         "agents/docs-writer.md"
       ]
@@ -1072,8 +1072,8 @@
       "name": "financial-analyst",
       "scope": "root",
       "capability": "financial-analyst",
-      "content_hash": "e51f83f9ffd0c7fd",
-      "version": "1.1.0",
+      "content_hash": "7fd77a27f84e6115",
+      "version": "1.1.1",
       "mirrors": [
         "agents/financial-analyst.md"
       ]
@@ -1085,8 +1085,8 @@
       "name": "financing-agent",
       "scope": "root",
       "capability": "financing-agent",
-      "content_hash": "535b826df4c082cd",
-      "version": "1.1.0",
+      "content_hash": "14a0b89c96fa6c7e",
+      "version": "1.1.1",
       "mirrors": [
         "agents/financing-agent.md"
       ]
@@ -1098,8 +1098,8 @@
       "name": "frontend-engineer",
       "scope": "root",
       "capability": "frontend-engineer",
-      "content_hash": "9bdd508bedcbac03",
-      "version": "1.1.0",
+      "content_hash": "462d7e0211630df1",
+      "version": "1.1.1",
       "mirrors": [
         "agents/frontend-engineer.md"
       ]
@@ -1111,8 +1111,8 @@
       "name": "glossary-curator",
       "scope": "root",
       "capability": "glossary-curator",
-      "content_hash": "5531141de1b09112",
-      "version": "1.1.0",
+      "content_hash": "3928b22f2b362047",
+      "version": "1.1.1",
       "mirrors": [
         "agents/glossary-curator.md"
       ]
@@ -1124,8 +1124,8 @@
       "name": "greenfield-agent",
       "scope": "root",
       "capability": "greenfield-agent",
-      "content_hash": "838da0bc6b198a0a",
-      "version": "1.1.0",
+      "content_hash": "4912569002b8e3e7",
+      "version": "1.1.1",
       "mirrors": [
         "agents/greenfield-agent.md"
       ]
@@ -1137,8 +1137,8 @@
       "name": "group-review-agent",
       "scope": "root",
       "capability": "group-review-agent",
-      "content_hash": "821ce5b844170edc",
-      "version": "1.1.0",
+      "content_hash": "6183d4aa16b3f45b",
+      "version": "1.1.1",
       "mirrors": [
         "agents/group-review-agent.md"
       ]
@@ -1189,8 +1189,8 @@
       "name": "industry-lead",
       "scope": "root",
       "capability": "industry-lead",
-      "content_hash": "087e21236931a073",
-      "version": "1.1.0",
+      "content_hash": "26505dc1e6e88ca3",
+      "version": "1.1.1",
       "mirrors": [
         "agents/industry-lead.md"
       ]
@@ -1202,8 +1202,8 @@
       "name": "infra-automation-engineer",
       "scope": "root",
       "capability": "infra-automation-engineer",
-      "content_hash": "b2982507847593b3",
-      "version": "1.1.0",
+      "content_hash": "3816606a66ee4080",
+      "version": "1.1.1",
       "mirrors": [
         "agents/infra-automation-engineer.md"
       ]
@@ -1228,8 +1228,8 @@
       "name": "ir-agent",
       "scope": "root",
       "capability": "ir-agent",
-      "content_hash": "e4e9ce438ba6bf24",
-      "version": "1.1.0",
+      "content_hash": "706ed9718389894a",
+      "version": "1.1.1",
       "mirrors": [
         "agents/ir-agent.md"
       ]
@@ -1254,8 +1254,8 @@
       "name": "market-intelligence-agent",
       "scope": "root",
       "capability": "market-intelligence-agent",
-      "content_hash": "76c1ce162d0c1be9",
-      "version": "1.1.0",
+      "content_hash": "74a76aed7864ca76",
+      "version": "1.1.1",
       "mirrors": [
         "agents/market-intelligence-agent.md"
       ]
@@ -1267,8 +1267,8 @@
       "name": "partnership-agent",
       "scope": "root",
       "capability": "partnership-agent",
-      "content_hash": "8df6d6475e8e3a2a",
-      "version": "1.1.0",
+      "content_hash": "e6a34e33fb4e563d",
+      "version": "1.1.1",
       "mirrors": [
         "agents/partnership-agent.md"
       ]
@@ -1280,8 +1280,8 @@
       "name": "platform-lead",
       "scope": "root",
       "capability": "platform-lead",
-      "content_hash": "086b1e30bb573891",
-      "version": "1.1.0",
+      "content_hash": "26dedeab1f7053f0",
+      "version": "1.1.1",
       "mirrors": [
         "agents/platform-lead.md"
       ]
@@ -1306,8 +1306,8 @@
       "name": "pmi-agent",
       "scope": "root",
       "capability": "pmi-agent",
-      "content_hash": "1768a9d67ab13155",
-      "version": "1.1.0",
+      "content_hash": "63d71107714050be",
+      "version": "1.1.1",
       "mirrors": [
         "agents/pmi-agent.md"
       ]
@@ -1319,8 +1319,8 @@
       "name": "process-governance-manager",
       "scope": "root",
       "capability": "process-governance-manager",
-      "content_hash": "d7b30de2987842a8",
-      "version": "1.1.0",
+      "content_hash": "8d5591376a2388d2",
+      "version": "1.1.1",
       "mirrors": [
         "agents/process-governance-manager.md"
       ]
@@ -1332,8 +1332,8 @@
       "name": "quant-methodologist",
       "scope": "root",
       "capability": "quant-methodologist",
-      "content_hash": "d8e9c786b4019309",
-      "version": "1.1.0",
+      "content_hash": "0b0c736eae0f423f",
+      "version": "1.1.1",
       "mirrors": [
         "agents/quant-methodologist.md"
       ]
@@ -1358,8 +1358,8 @@
       "name": "release-engineer",
       "scope": "root",
       "capability": "release-engineer",
-      "content_hash": "605a6d80550316e7",
-      "version": "1.1.0",
+      "content_hash": "f7e6c69a943f4622",
+      "version": "1.1.1",
       "mirrors": [
         "agents/release-engineer.md"
       ]
@@ -1371,8 +1371,8 @@
       "name": "risk-officer",
       "scope": "root",
       "capability": "risk-officer",
-      "content_hash": "99382326c3a4512a",
-      "version": "1.1.0",
+      "content_hash": "6b9c779809b03c7c",
+      "version": "1.1.1",
       "mirrors": [
         "agents/risk-officer.md"
       ]
@@ -1384,8 +1384,8 @@
       "name": "security-engineer",
       "scope": "root",
       "capability": "security-engineer",
-      "content_hash": "6f610815f3600e2d",
-      "version": "1.1.0",
+      "content_hash": "2b0a07f53c38d44e",
+      "version": "1.1.1",
       "mirrors": [
         "agents/security-engineer.md"
       ]
@@ -1397,8 +1397,8 @@
       "name": "site-facility-agent",
       "scope": "root",
       "capability": "site-facility-agent",
-      "content_hash": "1c52a745a06aa8fe",
-      "version": "1.1.0",
+      "content_hash": "becadbb771a112e6",
+      "version": "1.1.1",
       "mirrors": [
         "agents/site-facility-agent.md"
       ]
@@ -1410,8 +1410,8 @@
       "name": "sre",
       "scope": "root",
       "capability": "sre",
-      "content_hash": "d8ec32f1859f8924",
-      "version": "1.1.0",
+      "content_hash": "5318529dd6113e92",
+      "version": "1.1.1",
       "mirrors": [
         "agents/sre.md"
       ]
@@ -1423,8 +1423,8 @@
       "name": "technical-dd-agent",
       "scope": "root",
       "capability": "technical-dd-agent",
-      "content_hash": "870e47148c11b764",
-      "version": "1.1.0",
+      "content_hash": "59cf73fc6874f8d1",
+      "version": "1.1.1",
       "mirrors": [
         "agents/technical-dd-agent.md"
       ]
@@ -1436,8 +1436,8 @@
       "name": "ux-designer-agent",
       "scope": "root",
       "capability": "ux-designer-agent",
-      "content_hash": "df27985f5b00d807",
-      "version": "1.1.0",
+      "content_hash": "facaeaac6b8388e0",
+      "version": "1.1.1",
       "mirrors": [
         "agents/ux-designer-agent.md"
       ]
@@ -1449,8 +1449,8 @@
       "name": "valuation-agent",
       "scope": "root",
       "capability": "valuation-agent",
-      "content_hash": "ab7f33ad676e0233",
-      "version": "1.1.0",
+      "content_hash": "c2212e1dfb4145f4",
+      "version": "1.1.1",
       "mirrors": [
         "agents/valuation-agent.md"
       ]
@@ -1682,6 +1682,11 @@
     },
     {
       "id": "dec:DEC-20261025-06",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
+      "id": "dec:DEC-20261026-01",
       "type": "decision",
       "layer": "L3"
     },
@@ -5371,6 +5376,18 @@
       "type": "cites_skill",
       "from": "dec:DEC-20261025-06",
       "to": "skill:root/documentation-writing",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261026-01",
+      "to": "skill:root/agent-lifecycle-manager",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261026-01",
+      "to": "skill:root/decision-record",
       "source": "skills_used"
     },
     {

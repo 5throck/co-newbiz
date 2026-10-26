@@ -6,11 +6,11 @@ the structure and the dispatch model; it deliberately does not duplicate the ros
 
 ## File structure
 
-Every agent file follows the canonical 9-section body standard (design
+Every agent file follows the canonical body standard (9 sections; 8 for agents that omit Legal Basis) (design
 [`docs/designs/2026-10-25-agent-and-context-ssot-upgrade-design.md`](../docs/designs/2026-10-25-agent-and-context-ssot-upgrade-design.md)),
 in order:
 
-1. **Legal Basis** — authority/regulatory grounding, ending with a **Boundary** paragraph naming sibling-agent ownership
+1. **Legal Basis** — conditional: present only for agents whose work rests on concrete statutes, regulations, or permit/certification regimes (DEC-20261026-01; currently antitrust-agent, certification-agent, legal-counsel, region-lead, ip-agent, hr-integration-agent, incentive-agent, compliance-officer). It ends with a **Boundary** paragraph naming sibling-agent ownership. All other agents omit the section and carry the **Boundary** paragraph at the end of Role
 2. **Role**
 3. **Responsibilities** — bold-labeled bullets tied to flow.spec activities / procedure steps
 4. **Protocols** — four fixed H3 subsections: `⚠️ PM-ONLY INVOCATION` (verbatim 3-step refusal script, identical in every file), `Dispatch Protocol` (Can Lead Stages / Can Support In / Auto-Dispatch To / Requires Prior Output From / Tier / Communication Style), `Output Format`, `Output Destination` (SSOT blockquote pointing to the stage outputs declared in `process/flow.spec.yaml` and `docs/co-newbiz.context.md`)
