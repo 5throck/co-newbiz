@@ -78,19 +78,22 @@ export function persistCompletenessRecord(
   const now = input.now ?? new Date().toISOString();
   const ev = input.evaluation;
 
-  if (ev.declared !== 6 || ev.validators.length !== 6) {
+  // The record lists the six core rows, optionally plus the non-core
+  // contingent-liability row; only core rows are counted (ADR-0185).
+  const coreRows = ev.validators.filter((v) => v.in_core);
+  if (ev.declared !== 6 || coreRows.length !== 6) {
     throw new Error(
-      `completeness_record_rejected: the six-validator record is 6 declared — received declared=${ev.declared} with ${ev.validators.length} validator rows; the no-waiver core's size is a governance fact (design §8.9-1(f)), not a variable.`,
+      `completeness_record_rejected: the six-validator record is 6 declared — received declared=${ev.declared} with ${coreRows.length} core validator rows; the no-waiver core's size is a governance fact (design §8.9-1(f)), not a variable.`,
     );
   }
   const keys = new Set(ev.validators.map((v) => v.key));
-  if (keys.size !== 6) {
+  if (keys.size !== ev.validators.length || new Set(coreRows.map((v) => v.key)).size !== 6) {
     throw new Error(
-      "completeness_record_rejected: duplicate or missing validator keys — one row per validator (antitrust, hr-comp, customer, incentive, contingent-liability, certification).",
+      "completeness_record_rejected: duplicate or missing validator keys — one row per core validator (antitrust, region-labor, hr-comp, customer, incentive, certification); contingent-liability is an optional non-core row.",
     );
   }
-  const recomputedCompleted = ev.validators.filter((v) => v.status !== "missing").length;
-  const recomputedApplicable = ev.validators.filter((v) => v.applies).length;
+  const recomputedCompleted = coreRows.filter((v) => v.status !== "missing").length;
+  const recomputedApplicable = coreRows.filter((v) => v.applies).length;
   if (ev.completed_count !== recomputedCompleted || ev.applicable_count !== recomputedApplicable) {
     throw new Error(
       `completeness_record_rejected: counts disagree with the per-validator rows (applicable ${ev.applicable_count} vs ${recomputedApplicable}, completed ${ev.completed_count} vs ${recomputedCompleted}) — the record must reconcile with itself.`,
@@ -206,7 +209,7 @@ export function recordNotApplicable(
   const registryRow = MA_VALIDATOR_APPLICABILITY.find((r) => r.key === input.validator_key);
   if (!registryRow) {
     throw new Error(
-      `not_applicable_write_rejected: '${input.validator_key}' is not one of the six M&A validators (antitrust, hr-comp, customer, incentive, contingent-liability, certification).`,
+      `not_applicable_write_rejected: '${input.validator_key}' is not one of the six M&A validators (core: antitrust, region-labor, hr-comp, customer, incentive, certification; non-core: contingent-liability, whose not_applicable writes are legal but never counted toward the six).`,
     );
   }
 

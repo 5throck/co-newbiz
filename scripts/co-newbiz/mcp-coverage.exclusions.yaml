@@ -22,6 +22,26 @@ exclusions:
     kind: activity
     ref: capability-dd
     reason: S9 brownfield required-capability verdicts are recorded by a person (boundary #2; design 2026-10-19-brownfield-capability-dd) — no tool lists the activity.
+  - id: region-labor-review-activity
+    kind: activity
+    ref: region-labor-review
+    reason: Region labor-law review is a region-lead/legal-counsel judgement recorded by a person (ADR-0185); no tool lists it.
+  - id: certification-screen-activity
+    kind: activity
+    ref: certification-screen
+    reason: Certification requirement screening is a person-confirmed judgement; certification conclusions are never inferred by a tool (ADR-0185).
+  - id: certification-transferability-dd-activity
+    kind: activity
+    ref: certification-transferability-dd
+    reason: Certification transferability is confirmed against the certifying body rules by a person; inference is disallowed (ADR-0185, bf-03).
+  - id: contingent-liability-dd-activity
+    kind: activity
+    ref: contingent-liability-dd
+    reason: Contingent-liability distributions feed the valuation and are entered by a person (ADR-0185); no tool lists the activity.
+  - id: ip-fto-dd-activity
+    kind: activity
+    ref: ip-fto-dd
+    reason: FTO opinions are legal judgements confirmed by counsel (ADR-0185); no tool lists the activity.
   - id: pmi-kickoff-activity
     kind: activity
     ref: pmi-kickoff

@@ -129,7 +129,7 @@ call_sites:
     exempt: "Route-level LLM recommendation (EV band draft); the golden set has no expectation type for it yet. Add a suite before its output is relied on."
   - file: app/web-next/lib/synergy-rescore.ts
     sites: 1
-    exempt: "Legacy-scheme conversion: mirrors the pipeline's ±10-bounded s4.synergy_ic adjustment on rescore; shape/clamps/no-overwrite covered in tests/unit/synergy-rescore.test.ts."
+    exempt: "Legacy-scheme conversion: mirrors the pipeline's ±10-bounded s3.synergy_ic adjustment on rescore; shape/clamps/no-overwrite covered in tests/unit/synergy-rescore.test.ts."
   - file: app/web-next/app/api/synergy/ai-areas/route.ts
     sites: 1
     exempt: "On-demand AI synergy-area suggestion; no eval suite for open-ended area proposals yet."

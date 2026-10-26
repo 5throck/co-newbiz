@@ -130,16 +130,24 @@ describe("process flow spec integrity (ADR-0074)", () => {
       "financing-dd:financing-agent",
       "dd-waiver-review:compliance-officer",
       "capability-dd:brownfield-agent", // 2026-10-20 (v2.10.0, design 2026-10-19-brownfield-capability-dd): brownfield-only
+      // 2026-10-26 (ADR-0185 W1): the six M&A validators + ip-fto are stage-level brownfield-only activities
+      "antitrust-dd:antitrust-agent",
+      "region-labor-review:region-lead",
+      "customer-retention-dd:customer-retention-agent",
+      "incentive-dd:incentive-agent",
+      "contingent-liability-dd:valuation-agent",
+      "certification-transferability-dd:legal-counsel",
+      "ip-fto-dd:ip-agent",
     ]);
     for (const a of s9.activities) {
-      if (a.id === "capability-dd") { expect(a.procedure).toEqual(["brownfield-dd"]); continue; } // greenfield answers it at S5
+      if (a.id === "capability-dd" || a.id === "ip-fto-dd" || /^(antitrust-dd|region-labor-review|customer-retention-dd|incentive-dd|contingent-liability-dd|certification-transferability-dd)$/.test(a.id)) { expect(a.procedure).toEqual(["brownfield-dd"]); continue; } // brownfield-only (greenfield answers capability at S5)
       expect(a.procedure).toEqual(["greenfield-dd", "brownfield-dd"]);
     }
     const skillsOf = (id: string) => s9.activities.find((a) => a.id === id)!.skills;
     expect(skillsOf("financial-dd")).toEqual(["quality-of-earnings", "historical-financial-analysis"]);
-    expect(skillsOf("hr-dd")).toEqual(["org-readiness-assessment", "talent-pipeline-planning"]);
+    expect(skillsOf("hr-dd")).toEqual(["org-readiness-assessment", "talent-pipeline-planning", "management-incentive-review", "compensation-harmonization-analysis"]); // ADR-0185 F-11
     expect(skillsOf("market-dd")).toEqual(["competitive-intelligence"]);
-    expect(skillsOf("financing-dd")).toEqual([]);
+    expect(skillsOf("financing-dd")).toEqual(["financing-plan-review"]); // ADR-0185 F-11
   });
 
   test("S11/S12 track-scoped execution and monitoring activities (v2.8.0, ADR-0161)", () => {
@@ -151,7 +159,7 @@ describe("process flow spec integrity (ADR-0074)", () => {
     // Q6: one activity id, owner unchanged; the greenfield owner lives in entity-ic-review step 3.1.
     expect(act("S11").find((a) => a.id === "investment-structuring")!.agent).toBe("brownfield-agent");
     const gx = act("S11").find((a) => a.id === "greenfield-execution-baseline")!;
-    expect([gx.agent, gx.skills, gx.procedure]).toEqual(["greenfield-agent", [], ["greenfield-execution-baseline"]]);
+    expect([gx.agent, gx.skills, gx.procedure]).toEqual(["greenfield-agent", ["greenfield-feasibility", "talent-pipeline-planning"], ["greenfield-execution-baseline"]]);
     expect(act("S12").map((a) => `${a.id}:${a.agent}:${a.procedure.join(",")}`)).toEqual([
       "portfolio-monitoring:group-review-agent:portfolio-venture-monitoring",
       "integration-monitoring:pmi-agent:pmi-integration-execution",

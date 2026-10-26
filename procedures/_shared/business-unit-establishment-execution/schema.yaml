@@ -3,7 +3,7 @@ procedure_id: shared-business-unit-establishment-execution
 title: "Business Unit Establishment Execution"
 scope: shared
 level: entity
-version: "1.0.0"
+version: "1.1.0"
 status: active
 applicability: conditional
 # ADR-0167: a Green Field project that runs the new business as a new business
@@ -58,14 +58,23 @@ steps:
     gate: "Entity IC"
     agent_key: legal-counsel
     skill_key: permit-pathway-mapping
+    output_type: permit_holder_check
+    description: >
+      Permit holder check — classify each required permit as held / newly
+      obtainable under the existing entity's name / not possible under the
+      existing name (escalate). Permits only: certifications are checked in
+      step 3.5 (a permit lets you operate, a certification lets you sell;
+      boundary #5).
+  - id: 3.5
+    gate: "Entity IC"
+    agent_key: legal-counsel
+    skill_key: certification-transferability
     output_type: certification_transferability_check
     description: >
-      Permit and certification holder check — classify each required permit as
-      held / newly obtainable under the existing entity's name / not possible
-      under the existing name (escalate), and keep certifications separate from
-      permits (a permit lets you operate, a certification lets you sell;
-      boundary #5). A new site or product on an existing certificate is a scope
-      extension confirmed with the certifying body — inference is disallowed.
+      Certification holder check — a new site or product on an existing
+      certificate is a scope extension confirmed with the certifying body's
+      own rules; inference is disallowed (boundary #5). Mark not-applicable
+      where no certification is involved.
   - id: 4
     gate: "Entity IC"
     agent_key: hr-integration-agent

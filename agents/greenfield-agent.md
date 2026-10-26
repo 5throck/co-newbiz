@@ -9,7 +9,7 @@ description: >
 formal_name: Greenfield Agent
 status: active
 domain: functional
-version: "1.1.1"
+version: "1.1.2"
 last_updated: "2026-10-26"
 tier:
   claude: high
@@ -28,7 +28,7 @@ examples:
 phases: [S2, S5, S11]
 handoff_to: [financial-analyst, hr-integration-agent, pm]
 handoff_from: [market-intelligence-agent, region-lead, site-facility-agent, pm]
-required_skills: [greenfield-feasibility, org-readiness-assessment, regional-incentive-sourcing, scenario-planning, site-infrastructure-assessment, talent-pipeline-planning]
+required_skills: [community-partnership-planning, greenfield-feasibility, org-readiness-assessment, regional-incentive-sourcing, scenario-planning, site-infrastructure-assessment, talent-pipeline-planning]
 lifecycle:
   phase: production
   created: "2026-09-19"

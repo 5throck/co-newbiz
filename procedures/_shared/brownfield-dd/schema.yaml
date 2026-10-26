@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-dd
 title: "Brown Field Due Diligence"
 scope: shared
 level: entity
-version: "1.6.1"
+version: "1.7.0"
 status: active
 # 트랙 스코핑 (2026-10-22 프로젝트 리뷰 M7): S9 brownfield DD에 procedure 계층
 # 기계판독 predicate을 둔다 — greenfield-execution-baseline·pmi-integration-
@@ -41,14 +41,30 @@ steps:
       R&BD deals only (technology_track: rbd on the 3-axis classification —
       technology/IP acquisition, license-in, or internal-venture spin-off
       carve-out; the `case_subtype` field this step previously cited was
-      retired by ADR-0047): run
-      `checklists/rbd-technology-checklist.yaml` in addition to step 2 —
-      covers core-technology TRL (distinct from production-process TRL),
-      government co-funding conditions, IP/freedom-to-operate diligence, the
-      build/license/spin-off commercialization-path decision, and continuing
-      parent-entity relationship terms where the target originated as an
-      internal venture. See docs/pilots/pilot-011-posco-amberoad.md. Not
-      applicable (skip) for non-R&BD deals.
+      retired by ADR-0047): run the TRL / production-process / core-technology
+      portions of `checklists/rbd-technology-checklist.yaml` in addition to
+      step 2 — core-technology TRL (distinct from production-process TRL),
+      government co-funding conditions, the build/license/spin-off
+      commercialization-path decision, and continuing parent-entity
+      relationship terms where the target originated as an internal venture.
+      The IP/freedom-to-operate diligence moved to step 3.5 (ADR-0185).
+      See docs/pilots/pilot-011-posco-amberoad.md. Not applicable (skip) for
+      non-R&BD deals.
+  - id: 3.5
+    gate: DD
+    agent_key: ip-agent
+    skill_key: ip-fto-review
+    output_type: dd_finding
+    applies_when: { op: "cmp", var: "project.technology_track", cmp: "eq", value: "rbd" }
+    description: >
+      R&BD deals only (ADR-0185 D-5): patent landscape, freedom-to-operate
+      position and target IP valuation per the IP/FTO items of
+      `checklists/rbd-technology-checklist.yaml`. Split out of step 3 so the
+      IP finding is owned by ip-agent rather than technical-dd-agent. The
+      finding carries a `value_impact` or `assumption_key` so it moves the
+      valuation (dd-to-valuation-bridge). An FTO conclusion without counsel
+      review is a proposal; statute questions route to legal-counsel.
+      Not applicable (skip) for non-R&BD deals.
   - id: 4
     gate: DD
     agent_key: market-intelligence-agent
@@ -97,6 +113,20 @@ steps:
       (horizontal, conditional approval) vs. docs/pilots/pilot-002-hanwha-impact-hsd-engine.md
       (vertical, unconditional approval) — the same step must correctly
       discriminate between these risk shapes, not apply one template.
+  - id: 6.5
+    gate: DD
+    agent_key: region-lead
+    skill_key: regulatory-screening
+    output_type: dd_finding
+    description: >
+      Region labor-law review per the labor axis of
+      `region-profiles/<ISO>.yaml` for the target jurisdiction — works
+      council / employee consultation, collective-agreement successorship,
+      employment-transfer regime, mandatory notice periods (ADR-0185 D-4;
+      `checklists/ma-special-topics-checklist.yaml` ma-13, counted validator
+      under `checklists/brownfield-feasibility-checklist.yaml` bf-01). Its
+      finding feeds step 7 (compensation) and step 13 (HR DD). Statute
+      interpretation stays with legal-counsel.
   - id: 7
     gate: DD
     agent_key: hr-integration-agent
@@ -124,7 +154,10 @@ steps:
     agent_key: valuation-agent
     skill_key: debt-and-contingent-liability-simulation
     output_type: dd_finding
-    description: Contingent liabilities and covenant-breach scenario — checklist ma-10/11.
+    description: >
+      Contingent liabilities and covenant-breach scenario — checklist ma-10/11.
+      Not one of the six M&A validators (D-1, ADR-0185); the covenant-breach
+      kill criterion still applies. Mandatory DD step with the standard waiver path.
   - id: 11
     gate: DD
     agent_key: legal-counsel
@@ -175,9 +208,11 @@ steps:
       Six-validator completeness is recorded as THREE numbers — declared 6 /
       applicable N / completed M (ADR-0048 §4; the durable record is written
       by db/repositories/compliance.repository.ts). All six M&A validators
-      (steps 6-11, mapped to antitrust/HR/customer/incentive/contingent-
-      liability/certification — certification LAST, unchanged relative
-      order) are DECLARED for every project. A validator the applicability
+      (steps 6 antitrust, 6.5 region-lead labor review, 7 hr-integration,
+      8 customer-retention, 9 incentive, 11 certification transferability,
+      LAST; step 10 contingent liability is a mandatory DD step outside the
+      six-validator core with the standard waiver path — ADR-0185 D-1) are
+      DECLARED for every project. A validator the applicability
       registry does not apply to the live classification (ADR-0048 — the
       only skip family is greenfield+internal, contingent-liability
       regained when technology_track=rbd) is covered-with-reason: a
@@ -227,6 +262,7 @@ legal_basis:
   - "checklists/hr-dd-checklist.yaml (chk-hr-dd, step 13 — ADR-0051)"
   - "ADR-0051 (workflow gap closure — six-validator no-waiver core unchanged at steps 6-11; new steps mandatory with standard waiver path)"
   - "ADR-0147 (revenue-quality four-axis assessment cdd-08; single computation owner for concentration and churn — wording only, steps and keys unchanged)"
+  - "ADR-0185 (placement realignment: step 6.5 region-labor joins the six-validator core, contingent-liability step 10 leaves it; step 3.5 ip-fto-review for R&BD)"
   - "ADR-0048 (no-waiver scope = APPLICABLE validators; 3-number completeness record; not_applicable rows + invalidation on reclassification)"
 
 owner_agent: process-governance-manager

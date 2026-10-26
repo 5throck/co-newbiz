@@ -54,7 +54,7 @@ describe("S9 sub-track checklists (B1)", () => {
   });
 
   test.each([
-    ["jv", ["chk-partnership-checklist", "chk-deal-shape-presigning-checklist"]],
+    ["jv", ["chk-partnership-checklist", "chk-deal-shape-presigning-checklist", "chk-ma-special-topics-checklist"]], // ADR-0185: ma-13 only (ma-01..12 N via overlay)
     ["partnership", ["chk-partnership-checklist", "chk-deal-shape-presigning-checklist"]],
     // DEC-20261013-03: in-scope (by date) projects also get the merger-control / FDI extras
     ["minority_investment", ["chk-partnership-checklist", "chk-deal-shape-presigning-checklist", "chk-ma-special-topics-checklist"]],

@@ -4,7 +4,7 @@
 // prompts and flowspec:// resources (ADR-0154, Wave M M-3).
 import type { StageGuideSpec } from "./stage-guides.ts";
 
-export const GUIDE_SPEC_VERSION = "2.10.1";
+export const GUIDE_SPEC_VERSION = "2.11.0";
 export const GUIDE_STAGES: StageGuideSpec[] = [
   {
     "id": "S1",
@@ -187,6 +187,22 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
           "greenfield-pre-fs",
           "brownfield-pre-fs",
           "deal-shape-chain"
+        ]
+      },
+      {
+        "id": "wacc-hurdle-confirmation",
+        "agent": "valuation-agent",
+        "procedure": [
+          "greenfield-pre-fs",
+          "brownfield-pre-fs"
+        ]
+      },
+      {
+        "id": "certification-screen",
+        "agent": "certification-agent",
+        "procedure": [
+          "greenfield-pre-fs",
+          "brownfield-pre-fs"
         ]
       }
     ],
@@ -468,6 +484,55 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
       {
         "id": "capability-dd",
         "agent": "brownfield-agent",
+        "procedure": [
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "antitrust-dd",
+        "agent": "antitrust-agent",
+        "procedure": [
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "region-labor-review",
+        "agent": "region-lead",
+        "procedure": [
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "customer-retention-dd",
+        "agent": "customer-retention-agent",
+        "procedure": [
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "incentive-dd",
+        "agent": "incentive-agent",
+        "procedure": [
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "contingent-liability-dd",
+        "agent": "valuation-agent",
+        "procedure": [
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "certification-transferability-dd",
+        "agent": "legal-counsel",
+        "procedure": [
+          "brownfield-dd"
+        ]
+      },
+      {
+        "id": "ip-fto-dd",
+        "agent": "ip-agent",
         "procedure": [
           "brownfield-dd"
         ]

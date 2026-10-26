@@ -105,10 +105,10 @@ describe("pm catalog (ADR-0183 D1)", () => {
   });
 
   test("dual assignments are exactly the documented set with rationales", () => {
-    expect(DUAL_ASSIGNMENTS.map((d) => d.promptKey as string)).toEqual(["s11.integrated_insight"]);
+    expect(DUAL_ASSIGNMENTS.map((d) => d.promptKey as string)).toEqual(["s11.integrated_insight", "s3.synergy_fa", "s3.attractiveness_recommendation", "company_profile.competitor_web_search", "s12.milestone_suggest"]); // ADR-0185
     for (const d of DUAL_ASSIGNMENTS) {
       expect(d.rationale.trim().length).toBeGreaterThan(0);
-      expect(d.activity).toBe("S11.ic-preparation");
+      expect(d.activity).toMatch(/^S\d+\.[a-z-]+$/);
       const stage = specStages.find((s) => s.id === "S11");
       expect(stage!.activities?.some((a) => a.id === "ic-preparation")).toBeTrue();
     }

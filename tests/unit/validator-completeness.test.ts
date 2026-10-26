@@ -133,9 +133,10 @@ describe("halt semantics (kill-criterion path)", () => {
     expect(ev.halt).toEqual({
       triggered: true,
       kill_criterion: SIX_VALIDATOR_HALT_CRITERION,
-      missing: ["antitrust", "hr-comp", "customer", "incentive", "contingent-liability", "certification"],
+      missing: ["antitrust", "region-labor", "hr-comp", "customer", "incentive", "certification"], // six core keys; contingent-liability is non-core and never halts (ADR-0185)
     });
     expect(ev.validators.every((v) => v.status === "missing")).toBe(true);
+    expect(ev.validators).toHaveLength(7); // all registry rows are reported; only the six core are counted
     // the halt is a surfaced trigger, never a row (spec §2.3)
     const after = (db.query("SELECT COUNT(*) AS c FROM compliance_check").get() as { c: number }).c;
     expect(after).toBe(before);
@@ -149,19 +150,41 @@ describe("halt semantics (kill-criterion path)", () => {
     const ev = evaluateValidatorCompleteness(pid, null, db, { now: FIXED_NOW });
     expect([ev.applicable_count, ev.completed_count]).toEqual([6, 2]);
     expect(ev.halt.triggered).toBe(true);
-    expect(ev.halt.missing).toEqual(["hr-comp", "customer", "incentive", "contingent-liability"]);
+    expect(ev.halt.missing).toEqual(["region-labor", "hr-comp", "customer", "incentive"]);
   });
 
   test("all six covered → 6/6/6, halt NOT triggered", () => {
     const pid = insertProject();
     classifyRaw(pid, "external");
-    for (const key of ["antitrust", "hr-comp", "customer", "incentive", "contingent-liability", "certification"]) {
+    for (const key of ["antitrust", "region-labor", "hr-comp", "customer", "incentive", "contingent-liability", "certification"]) {
       writeValidatorRow(pid, key, "pass");
     }
     const ev = evaluateValidatorCompleteness(pid, null, db, { now: FIXED_NOW });
     expect([ev.applicable_count, ev.completed_count]).toEqual([6, 6]);
     expect(ev.halt.triggered).toBe(false);
     expect(ev.halt.missing).toEqual([]);
+  });
+
+  test("region-labor missing at DD exit halts (core row)", () => {
+    const pid = insertProject();
+    classifyRaw(pid, "external");
+    for (const key of ["antitrust", "hr-comp", "customer", "incentive", "certification"]) writeValidatorRow(pid, key, "pass");
+    const ev = evaluateValidatorCompleteness(pid, null, db, { now: FIXED_NOW });
+    expect([ev.applicable_count, ev.completed_count]).toEqual([6, 5]);
+    expect(ev.halt.triggered).toBe(true);
+    expect(ev.halt.missing).toEqual(["region-labor"]);
+  });
+
+  test("contingent-liability missing does NOT halt and is not counted, but is still reported status=missing (snapshot-filler signal)", () => {
+    const pid = insertProject();
+    classifyRaw(pid, "external");
+    for (const key of ["antitrust", "region-labor", "hr-comp", "customer", "incentive", "certification"]) writeValidatorRow(pid, key, "pass");
+    const ev = evaluateValidatorCompleteness(pid, null, db, { now: FIXED_NOW });
+    expect([ev.applicable_count, ev.completed_count]).toEqual([6, 6]);
+    expect(ev.halt.triggered).toBe(false);
+    const cl = ev.validators.find((v) => v.key === "contingent-liability")!;
+    expect(cl.in_core).toBe(false);
+    expect(cl.status).toBe("missing");
   });
 });
 
@@ -324,7 +347,7 @@ describe("corrupt classification → ALL SIX applicable (fail-closed), engine ne
     expect(ev.classification?.origin).toBe("purple");
     expect(ev.applicable_count).toBe(6);
     expect(ev.validators.every((v) => v.applies)).toBe(true);
-    expect(ev.halt.missing).toHaveLength(6); // still a halt: nothing has run
+    expect(ev.halt.missing).toHaveLength(6); // six core rows; still a halt: nothing has run
   });
 });
 
@@ -343,7 +366,7 @@ describe("persistCompletenessRecord", () => {
     expect(record.run_id).toBeTruthy();
     const stored = db.query("SELECT validator_rows, created_at FROM validator_completeness_record WHERE id = ?").get(record.id) as { validator_rows: string; created_at: string };
     const parsed = JSON.parse(stored.validator_rows) as { key: string; status: string; compliance_check_id: string | null }[];
-    expect(parsed).toHaveLength(6);
+    expect(parsed).toHaveLength(7);
     expect(parsed.find((r) => r.key === "antitrust")).toMatchObject({ status: "completed" });
     expect(parsed.find((r) => r.key === "certification")).toMatchObject({ status: "missing", compliance_check_id: null });
     expect(stored.created_at).toBe(NOW);

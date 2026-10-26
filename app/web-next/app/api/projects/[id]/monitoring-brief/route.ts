@@ -92,7 +92,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   if (isLlmConfigured()) {
     const res = await completeOrFallback(
       [
-        systemMessage("s11.monitoring_brief"),
+        systemMessage("s12.monitoring_brief"),
         {
           role: "user" as const,
           content:
@@ -101,7 +101,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
         },
       ],
       () => "",
-      { maxTokens: 2000, agent: promptAgent("s11.monitoring_brief") },
+      { maxTokens: 2000, agent: promptAgent("s12.monitoring_brief") },
     );
     if (res.source === "llm") {
       const start = res.text.indexOf("{");

@@ -24,7 +24,7 @@
  *   certification        applies in EVERY cell (k=0 stays — something must
  *                        always be sellable/permittable; PR-10 kept
  *                        certification last for a reason)
- * The typical M&A cell (brownfield + external + any track) is ALL SIX —
+ * The typical M&A cell (brownfield + external + any track) is ALL SIX CORE (plus the non-core contingent-liability row) —
  * the ADR-0037 default that must survive every edge case. (Stage 1 shipped
  * every row unconditional — the pure ADR-0037 behavior — so a reviewer
  * bisecting the PR never lands on a half-wired registry.)
@@ -44,9 +44,14 @@
 import { evaluateAppliesWhen, type ApplicabilityDecision } from "./applies-when.ts";
 import type { LabelFn, Predicate, VarLookup } from "./predicate.ts";
 
-/** The six no-waiver M&A validators (brownfield-dd steps 6-11, in fixed order). */
+/**
+ * The M&A validator keys: six no-waiver CORE validators (brownfield-dd steps
+ * 6, 6.5, 7, 8, 9, 11) plus the non-core `contingent-liability` row (step 10;
+ * ADR-0185 D-1) kept so the D-M-RISK-5 coverage signal survives.
+ */
 export type MaValidatorKey =
   | "antitrust"
+  | "region-labor"
   | "hr-comp"
   | "customer"
   | "incentive"
@@ -58,7 +63,12 @@ export interface MaValidatorApplicability {
   key: MaValidatorKey;
   procedure: "shared-brownfield-dd";
   /** The brownfield-dd step that runs this validator (content untouched, PR-5c constraint 8). */
-  step: 6 | 7 | 8 | 9 | 10 | 11;
+  step: 6 | 6.5 | 7 | 8 | 9 | 10 | 11;
+  /**
+   * true for the six no-waiver core validators; false for `contingent-liability`.
+   * Halting and the applicable/completed counts use core rows only (ADR-0185).
+   */
+  in_core: boolean;
   /** Typed predicate over the 0014-seeded routing vars; evaluated via PR-5a's engine. */
   applies_when: Predicate;
   /** English justification, carried into the rendered skip sentence (renderKo supplies the Korean). */
@@ -101,14 +111,25 @@ export const MA_VALIDATOR_APPLICABILITY: readonly MaValidatorApplicability[] = [
     key: "antitrust",
     procedure: "shared-brownfield-dd",
     step: 6,
+    in_core: true,
     applies_when: skipOnly(GREENFIELD(), INTERNAL()),
     rationale:
       "Applies unless case_type=greenfield AND origin=internal — a pure internal venture has no market-combination exposure (ADR-0048 seed set). Note: the PR-5a fact var (target.has_external_market_presence) still gates the SCREENING HHI pre-screen independently; this row is the DD validator.",
   },
   {
+    key: "region-labor",
+    procedure: "shared-brownfield-dd",
+    step: 6.5,
+    in_core: true,
+    applies_when: skipOnly(GREENFIELD(), INTERNAL()),
+    rationale:
+      "Applies unless case_type=greenfield AND origin=internal — a pure internal venture acquires no workforce, so there is no works-council, collective-agreement successorship or employment-transfer exposure; brownfield and external/hybrid/joint greenfield always apply (ADR-0185 D-3, region-lead labor review per region-profiles labor axis).",
+  },
+  {
     key: "hr-comp",
     procedure: "shared-brownfield-dd",
     step: 7,
+    in_core: true,
     applies_when: skipOnly(GREENFIELD(), INTERNAL()),
     rationale:
       "Brownfield always; greenfield external/hybrid/joint apply; greenfield internal skips — no acquired workforce means no CoC-trigger compensation or harmonization exposure (ADR-0048 seed set).",
@@ -117,6 +138,7 @@ export const MA_VALIDATOR_APPLICABILITY: readonly MaValidatorApplicability[] = [
     key: "customer",
     procedure: "shared-brownfield-dd",
     step: 8,
+    in_core: true,
     applies_when: skipOnly(GREENFIELD(), INTERNAL()),
     rationale:
       "Brownfield always; greenfield external/hybrid/joint apply; greenfield internal skips — no acquired customer or supplier contracts means no change-of-control clause surface (ADR-0048 seed set).",
@@ -125,6 +147,7 @@ export const MA_VALIDATOR_APPLICABILITY: readonly MaValidatorApplicability[] = [
     key: "incentive",
     procedure: "shared-brownfield-dd",
     step: 9,
+    in_core: true,
     applies_when: skipOnly(GREENFIELD(), INTERNAL()),
     rationale:
       "Brownfield always; greenfield external/hybrid/joint apply; greenfield internal skips — no acquired incentive arrangements means no clawback exposure on relocation/restructuring (ADR-0048 seed set).",
@@ -133,6 +156,7 @@ export const MA_VALIDATOR_APPLICABILITY: readonly MaValidatorApplicability[] = [
     key: "contingent-liability",
     procedure: "shared-brownfield-dd",
     step: 10,
+    in_core: false,
     applies_when: skipOnly(GREENFIELD(), INTERNAL(), TRACK_NONE()),
     rationale:
       "Brownfield always; greenfield external/hybrid/joint apply; greenfield internal skips EXCEPT technology_track=rbd — in-bound license and Partner-IP encumbrances keep the validator applicable (ADR-0048 seed set).",
@@ -141,6 +165,7 @@ export const MA_VALIDATOR_APPLICABILITY: readonly MaValidatorApplicability[] = [
     key: "certification",
     procedure: "shared-brownfield-dd",
     step: 11,
+    in_core: true,
     applies_when: unconditional(),
     rationale:
       "Applies in EVERY cell — something must always be sellable/permittable; PR-10 kept certification LAST among the validators for a reason (a non-transferable certification strips the acquisition premium). No skip condition exists by design (ADR-0048 seed set).",

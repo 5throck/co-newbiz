@@ -12,7 +12,7 @@ version: 1.1.0
 last_reviewed: 2026-09-26
 status: active
 scope: common
-owner: architect
+owner: design-system-agent
 prerequisites: none
 relates_to:
   - skill: ui-ux-design-intelligence

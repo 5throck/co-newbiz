@@ -12,7 +12,7 @@ description: >
 formal_name: Quant Methodologist
 status: active
 domain: functional
-version: "1.1.1"
+version: "1.1.2"
 last_updated: "2026-10-26"
 tier:
   claude: high
@@ -37,7 +37,7 @@ examples:
 phases: [S8]
 handoff_to: [pm]
 handoff_from: [financial-analyst, valuation-agent]
-required_skills: [monte-carlo-simulation, proxy-industry-chain, unit-conversion-calibration, value-chain-linkage-analysis, wacc-input-session]
+required_skills: [k-opendata, monte-carlo-simulation, proxy-industry-chain, target-costing-analysis, unit-conversion-calibration, value-chain-driver-identification, value-chain-linkage-analysis, wacc-input-session]
 lifecycle:
   phase: production
   created: "2026-09-19"

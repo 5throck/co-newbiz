@@ -81,7 +81,7 @@ export async function deriveAndSaveFactors(db: ReturnType<typeof getDb>, opp: Op
 
   const res = await completeOrFallback(
     [
-      systemMessage("s3.opportunity_factors"),
+      systemMessage("s2.opportunity_factors"),
       {
         role: "user" as const,
         content:
@@ -93,7 +93,7 @@ export async function deriveAndSaveFactors(db: ReturnType<typeof getDb>, opp: Op
         opportunity: ["시장분석 기회 요인 기반 — 자동 도출 실패, 수동 등록 필요"],
         risk: ["자동 도출 실패 — LLM 구성 또는 수동 등록 필요"],
       }),
-    { maxTokens: 1200, agent: promptAgent("s3.opportunity_factors") },
+    { maxTokens: 1200, agent: promptAgent("s2.opportunity_factors") },
   );
 
   const text = res.text;

@@ -1,8 +1,9 @@
 #!/usr/bin/env bun
 /**
- * @version 2.1.0
+ * @version 2.1.1
  *
  * Changelog:
+ *   2.1.1 (2026-10-26, ADR-0185) — prompt key renames in the registry projection.
  *   2.1.0 (2026-10-25, design addendum §13 / DEC-20261025-05) — SECTION_MARKERS
  *     drops "# Role" (5-section skeleton); NEW hard rule: closed heading
  *     vocabulary — any /^#\s+\S/ heading line outside the 5 markers dies as
@@ -104,14 +105,14 @@ const JSON_OUTPUT = new Set<string>([
   "s1.sizing_ask_json",
   "s1.ksic_classify",
   "market.related_candidates",
-  "s3.opportunity_factors",
+  "s2.opportunity_factors",
   "company_profile.qualitative",
   "company_profile.competitive",
   "company_profile.crosscheck",
   "company_profile.competitor_web_search",
-  "s4.synergy_fa",
-  "s4.synergy_synergy",
-  "s4.synergy_ic",
+  "s3.synergy_fa",
+  "s3.synergy_synergy",
+  "s3.synergy_ic",
   "s3.attractiveness_recommendation",
   "s3.capability_gap_draft",
   "s5.capability_judgement_draft",
@@ -125,9 +126,9 @@ const JSON_OUTPUT = new Set<string>([
   "s6.target_proposal_web_search",
   "s7.screening_draft",
   "s8.business_case_adoption",
-  "s8.deal_structure_recommendation",
+  "s10.deal_structure_recommendation",
   "s9.dd_tailor",
-  "s11.monitoring_brief",
+  "s12.monitoring_brief",
   "pm.query_classify",
   "s8.price_evidence",
   "s2.entry_market_draft",

@@ -10,6 +10,8 @@ lang_reason: source-material
 
 # 에이전트 배정 정합화 · 프롬프트 표준 · /flows 단계 흐름 시각화 — design
 
+> Note (2026-10-26): prompt keys quoted below were renamed by ADR-0185 (s3.opportunity_factors -> s2.opportunity_factors, s4.synergy_* -> s3.synergy_*, s8.deal_structure_recommendation -> s10.*, s11.monitoring_brief -> s12.*); this record is left as written.
+
 - **Spec ID**: `2026-10-25-agent-assignment-prompt-standard-design`
 - **Status**: implemented (2026-10-25; registry row implemented; addenda §11–§14 landed)
 - **Related documents**: `process/flow.spec.yaml` v2.10.1 (프로세스 권위 SSOT), ADR-0053/0094 (인간 게이트·경계 #2), ADR-0074 (프로세스 SSOT), ADR-0098 (`docs/standards/llm-interaction-standard.md`), ADR-0161 (활동 수준 applicableTracks 미지원), ADR-0183 D1/D2 (PM 활동 카탈로그·관문 강제), design `2026-09-15-runtime-pm-agent-orchestration-design` §6.2–§6.7 (선행 스펙 — 이번 후속 작업의 기반이며 대체하지 않는다), design `2026-10-23-i18n-ui-adoption-design` §4 (콘텐츠 한국어 유지 경계), design `2026-10-24-flow-console-ux-benchmark` (Dagster/Airflow/GitHub Actions 패턴), `docs/context.md` (언어 정책·접근성 기준), `docs/wiki/ko/Home.md` (재사용할 여정 지도 SVG 기하)

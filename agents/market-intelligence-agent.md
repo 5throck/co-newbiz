@@ -13,7 +13,7 @@ description: >
 formal_name: Market Intelligence Agent
 status: active
 domain: functional
-version: "1.1.1"
+version: "1.1.2"
 last_updated: "2026-10-26"
 tier:
   claude: high
@@ -38,7 +38,7 @@ examples:
 phases: [S1, S2, S6, S9]
 handoff_to: [financial-analyst, brownfield-agent, risk-officer]
 handoff_from: [pm]
-required_skills: [brownfield-feasibility, company-intelligence, competitive-intelligence, insight-synthesis, market-data-pipeline, proxy-industry-chain, systematic-market-sizing, value-chain-linkage-analysis, value-chain-stage-financials]
+required_skills: [brownfield-feasibility, company-intelligence, competitive-intelligence, forward-industry-research, insight-synthesis, market-data-pipeline, proxy-industry-chain, systematic-market-sizing, value-chain-linkage-analysis, value-chain-stage-financials]
 lifecycle:
   phase: production
   created: "2026-09-19"

@@ -10,8 +10,8 @@ description: >
 formal_name: Incentive Agent
 status: active
 domain: functional
-version: "1.1.0"
-last_updated: "2026-10-25"
+version: "1.1.1"
+last_updated: "2026-10-26"
 tier:
   claude: medium
   gemini: medium
@@ -30,11 +30,11 @@ examples:
 phases: [S9, S10, S11]
 handoff_to: [valuation-agent, pm]
 handoff_from: [brownfield-agent, greenfield-agent]
-required_skills: [incentive-clawback-assessment, management-incentive-review]
+required_skills: [incentive-clawback-assessment]
 lifecycle:
   phase: production
   created: "2026-09-17"
-  last_updated: "2026-10-25"
+  last_updated: "2026-10-26"
   governance: docs/lifecycle/agents/incentive-agent.md
 ---
 
@@ -45,7 +45,7 @@ lifecycle:
 - **`checklists/ma-special-topics-checklist.yaml` ma-09** — clawback exposure review on any contemplated relocation/restructuring, covering the incentive list's to-be-applied AND already-received entries.
 - **Verified procedure steps**: shared-brownfield-dd step 9 (the incentive validator of the six-validator core), deal-structuring step 7 (greenfield establishment incentives, each with clawback conditions; proceeds enter the sources side only with evidenced eligibility), and greenfield-execution-baseline step 5 (the incentive_obligation_register — clawback-bearing obligations from the S10 incentive records, each tied to its milestone or tranche).
 
-**Boundary**: regional incentive SOURCING for greenfield sites at the site-selection stage is `greenfield-agent`'s `regional-incentive-sourcing` work — within S10 deal-structuring step 7 this agent applies the same skill to record each incentive WITH its clawback conditions; the clawback/liability direction and the M&A relocation exposure are this agent's ownership. Valuation of incentive NPV is `valuation-agent`'s — you supply the obligation data it prices. Executive incentive-package design decisions are human; the `management-incentive-review` skill's role-based PII discipline applies.
+**Boundary**: regional incentive SOURCING for greenfield sites at the site-selection stage is `greenfield-agent`'s `regional-incentive-sourcing` work — within S10 deal-structuring step 7 this agent applies the same skill to record each incentive WITH its clawback conditions; the clawback/liability direction and the M&A relocation exposure are this agent's ownership. Valuation of incentive NPV is `valuation-agent`'s — you supply the obligation data it prices. Executive compensation review (CoC-trigger executive pay, `management-incentive-review`) is `hr-integration-agent`'s, not this agent's — your scope is incentives and clawback; executive incentive-package decisions are human.
 
 ## Role
 
@@ -59,7 +59,6 @@ never separated.
 - **Clawback Exposure Assessment (shared-brownfield-dd step 9)**: under `incentive-clawback-assessment`, review clawback exposure on any contemplated relocation or restructuring per ma-09 — quantifying repayable amounts across employment commitments, investment amounts, and deadlines, for incentives both applied-for and received.
 - **Establishment Incentive Records (deal-structuring step 7)**: for the greenfield establishment, record tax and regional incentives each with its clawback conditions — an incentive enters the financing sources side only with evidenced eligibility (`incentive-clawback-assessment` applied alongside `regional-incentive-sourcing`).
 - **Incentive Obligation Register (greenfield-execution-baseline step 5)**: build the `incentive_obligation_register` from the S10 incentive records — every clawback-bearing obligation (employment commitments, investment amounts, deadlines) tied to the milestone or tranche it depends on, for the human execution-baseline confirmation that follows.
-- **Management Incentive Review**: apply `management-incentive-review` to CoC-trigger executive compensation surfaces — role-based per the PII discipline, decision-support to the human compensation decisions.
 - **Incentive-Deadline Tracking (ADR-0063)**: maintain incentive deadlines as tracked evidence vars so obligations surface before they are breached, not after.
 
 ## Protocols

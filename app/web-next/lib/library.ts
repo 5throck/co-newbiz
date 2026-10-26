@@ -118,6 +118,7 @@ export const SUB_TRACK_DD_CHECKLISTS: Record<string, string[]> = {
  * unchanged (no retroactive attachment of unscoped M&A items).
  */
 export const BF_SCOPED_EXTRA_ADDITIONS: Record<string, string[]> = {
+  jv: ["chk-ma-special-topics-checklist"], // ADR-0185: ma-13 region labor review only (ma-01..12 are N)
   strategic_investment: ["chk-ma-special-topics-checklist", "chk-deal-shape-presigning-checklist"],
   minority_investment: ["chk-ma-special-topics-checklist"],
   corporate_venture: ["chk-ma-special-topics-checklist", "chk-deal-shape-presigning-checklist"],

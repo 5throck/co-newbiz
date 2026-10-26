@@ -4,14 +4,18 @@ title: "M&A Special Topics Checklist (Brown Field)"
 scope: shared
 enforceability: mixed
 owner_agent: brownfield-agent
-version: "1.4.3"
+version: "1.5.0"
 effective_from: "2026-08-20"
 gate: DD
 
-# Evaluation order per meeting M5: (1) antitrust + HR integration, (2) customer
-# retention + incentive, (3) certification transferability last — a non-transferable
-# certification can strip the acquisition premium and must not be computed against
-# a valuation that already assumed it. This checklist's item order follows that.
+# Evaluation order per meeting M5 (amended by ADR-0185): (1) antitrust, (2) region
+# labor review (ma-13) + HR integration, (3) customer retention + incentive,
+# (4) certification transferability LAST — a non-transferable certification can
+# strip the acquisition premium and must not be computed against a valuation
+# that already assumed it. Item order below keeps ma-12 last in EVALUATION order;
+# ma-13 is appended by id but is evaluated right after antitrust.
+# ma-10 / ma-11 (contingent liability, covenant breach) are DD items OUTSIDE the
+# six-validator no-waiver core (D-1, ADR-0185); the standard waiver path applies.
 
 items:
   - id: ma-01
@@ -50,11 +54,11 @@ items:
     text: "이전·구조조정을 검토할 경우 인센티브 목록(신청 예정분과 수혜분 모두)의 환수(clawback) 노출을 검토함"
     mandatory: true
     waiver_eligible: true
-  - id: ma-10
+  - id: ma-10   # DD item outside the six-validator core (D-1, ADR-0185)
     text: "우발채무(소송, 환경, 미적립 연금, 보증·리콜)를 몬테카를로(Monte Carlo) 연계를 위해 확률·금액 분포와 함께 입력함 — 서술로만 남긴 항목 금지"
     mandatory: true
     waiver_eligible: true
-  - id: ma-11
+  - id: ma-11   # DD item outside the six-validator core (D-1, ADR-0185)
     text: "+200bp 금리 충격에서 재무약정 등 확약사항(covenants) 위반 시나리오를 검증하고, 채무증권의 지배권 변경 기한이익상실(CoC acceleration) 조항을 식별함"
     mandatory: true
     waiver_eligible: true
@@ -62,8 +66,13 @@ items:
     text: "지배권 변경 시 인증 승계 가능성은 맨 마지막에, 실제 인증기관의 규정에 비추어 확인함 — 추론 금지 (설계의 명시 규칙: 여기서는 추론 불허)"
     mandatory: true
     waiver_eligible: true
+  - id: ma-13
+    text: "대상 관할의 지역 노동법 검토(region-lead)를 지역 프로파일(region-profiles/<ISO>.yaml)의 노동 축에 따라 완료함 — 노사협의회·종업원 협의, 단체협약 승계, 고용 이전 제도, 의무 통지 기간. 결과는 hr-integration(ma-04~06)과 HR DD에 반영 (ADR-0185; 법령 해석은 legal-counsel)"
+    mandatory: true
+    waiver_eligible: false   # counted validator under brownfield-feasibility-checklist bf-01 — no waiver
 
 legal_basis:
   - "docs/ma-special-topics.md (forward reference — Stage 4 documentation)"
   - "memory/meeting-2026-08-20-m5-ma-model-linkage.md"
+  - "ADR-0185 (placement realignment: ma-13 region labor review joins the six-validator core; ma-10/11 leave it)"
   - "ADR-0026 (contingent liability modeling), ADR-0027 (compensation upward bias)"

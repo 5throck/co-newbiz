@@ -91,7 +91,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   if (isLlmConfigured()) {
     const res = await completeOrFallback(
       [
-        systemMessage("s8.deal_structure_recommendation"),
+        systemMessage("s10.deal_structure_recommendation"),
         {
           role: "user" as const,
           content:
@@ -100,7 +100,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
         },
       ],
       () => "",
-      { maxTokens: 2000, agent: promptAgent("s8.deal_structure_recommendation") },
+      { maxTokens: 2000, agent: promptAgent("s10.deal_structure_recommendation") },
     );
     if (res.source === "llm") {
       const start = res.text.indexOf("{");

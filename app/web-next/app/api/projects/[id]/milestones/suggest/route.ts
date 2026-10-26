@@ -34,6 +34,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const track = project.track ?? "unknown";
   const context = [
     `트랙: ${track}${track === "greenfield" ? " (연구개발 기반 사업화 — 기술 검증·인허가·사업화 관점)" : track === "brownfield" ? " (M&A 실사·PMI 관점 — 실사 종결·시너지·핵심인재·통합 관점)" : ""}`,
+    "범위: 브라운필드 통합(PMI) 마일스톤은 이 추천의 범위 밖입니다 — S12 integration-monitoring(pmi-agent) 소관이므로 제안하지 마세요.",
     `사업 케이스: ${adopted ? `${adopted.name} (시나리오 ${adopted.scenario ?? "?"})` : "미채택"}`,
     `기존 등록 마일스톤: ${existing.length > 0 ? existing.join(" · ") : "없음"}`,
   ].join("\n");

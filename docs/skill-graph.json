@@ -923,6 +923,11 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0185",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent:root/antitrust-agent",
       "type": "agent",
       "layer": "L3",
@@ -1072,8 +1077,8 @@
       "name": "financial-analyst",
       "scope": "root",
       "capability": "financial-analyst",
-      "content_hash": "7fd77a27f84e6115",
-      "version": "1.1.1",
+      "content_hash": "61591f5ce83776c8",
+      "version": "1.1.2",
       "mirrors": [
         "agents/financial-analyst.md"
       ]
@@ -1085,8 +1090,8 @@
       "name": "financing-agent",
       "scope": "root",
       "capability": "financing-agent",
-      "content_hash": "14a0b89c96fa6c7e",
-      "version": "1.1.1",
+      "content_hash": "9381f76d6ae3782e",
+      "version": "1.1.2",
       "mirrors": [
         "agents/financing-agent.md"
       ]
@@ -1124,8 +1129,8 @@
       "name": "greenfield-agent",
       "scope": "root",
       "capability": "greenfield-agent",
-      "content_hash": "4912569002b8e3e7",
-      "version": "1.1.1",
+      "content_hash": "7a8c8b0e97a0fc20",
+      "version": "1.1.2",
       "mirrors": [
         "agents/greenfield-agent.md"
       ]
@@ -1150,8 +1155,8 @@
       "name": "hr-integration-agent",
       "scope": "root",
       "capability": "hr-integration-agent",
-      "content_hash": "ea7214cdf08d4ad8",
-      "version": "1.1.0",
+      "content_hash": "671cfef5b2ac397b",
+      "version": "1.1.1",
       "mirrors": [
         "agents/hr-integration-agent.md"
       ]
@@ -1176,8 +1181,8 @@
       "name": "incentive-agent",
       "scope": "root",
       "capability": "incentive-agent",
-      "content_hash": "986d4c223d117bce",
-      "version": "1.1.0",
+      "content_hash": "30ac361cc9668eb4",
+      "version": "1.1.1",
       "mirrors": [
         "agents/incentive-agent.md"
       ]
@@ -1215,8 +1220,8 @@
       "name": "ip-agent",
       "scope": "root",
       "capability": "ip-agent",
-      "content_hash": "27d5380a88959f19",
-      "version": "1.1.0",
+      "content_hash": "9c03555d16338d93",
+      "version": "1.1.1",
       "mirrors": [
         "agents/ip-agent.md"
       ]
@@ -1241,8 +1246,8 @@
       "name": "legal-counsel",
       "scope": "root",
       "capability": "legal-counsel",
-      "content_hash": "e2ee7dffe49996ff",
-      "version": "1.1.0",
+      "content_hash": "295ef3721b644cc5",
+      "version": "1.1.1",
       "mirrors": [
         "agents/legal-counsel.md"
       ]
@@ -1254,8 +1259,8 @@
       "name": "market-intelligence-agent",
       "scope": "root",
       "capability": "market-intelligence-agent",
-      "content_hash": "74a76aed7864ca76",
-      "version": "1.1.1",
+      "content_hash": "7014cfe24f8ab98e",
+      "version": "1.1.2",
       "mirrors": [
         "agents/market-intelligence-agent.md"
       ]
@@ -1267,8 +1272,8 @@
       "name": "partnership-agent",
       "scope": "root",
       "capability": "partnership-agent",
-      "content_hash": "e6a34e33fb4e563d",
-      "version": "1.1.1",
+      "content_hash": "1982c1b22bb7205b",
+      "version": "1.1.2",
       "mirrors": [
         "agents/partnership-agent.md"
       ]
@@ -1319,8 +1324,8 @@
       "name": "process-governance-manager",
       "scope": "root",
       "capability": "process-governance-manager",
-      "content_hash": "8d5591376a2388d2",
-      "version": "1.1.1",
+      "content_hash": "319ce54cc92f7365",
+      "version": "1.1.2",
       "mirrors": [
         "agents/process-governance-manager.md"
       ]
@@ -1332,8 +1337,8 @@
       "name": "quant-methodologist",
       "scope": "root",
       "capability": "quant-methodologist",
-      "content_hash": "0b0c736eae0f423f",
-      "version": "1.1.1",
+      "content_hash": "d6927fd23325dded",
+      "version": "1.1.2",
       "mirrors": [
         "agents/quant-methodologist.md"
       ]
@@ -1345,8 +1350,8 @@
       "name": "region-lead",
       "scope": "root",
       "capability": "region-lead",
-      "content_hash": "71e49fa68ab20b81",
-      "version": "1.1.0",
+      "content_hash": "a24d83f12b0241fb",
+      "version": "1.1.1",
       "mirrors": [
         "agents/region-lead.md"
       ]
@@ -1371,8 +1376,8 @@
       "name": "risk-officer",
       "scope": "root",
       "capability": "risk-officer",
-      "content_hash": "6b9c779809b03c7c",
-      "version": "1.1.1",
+      "content_hash": "af4c6905a73ec788",
+      "version": "1.1.2",
       "mirrors": [
         "agents/risk-officer.md"
       ]
@@ -1397,8 +1402,8 @@
       "name": "site-facility-agent",
       "scope": "root",
       "capability": "site-facility-agent",
-      "content_hash": "becadbb771a112e6",
-      "version": "1.1.1",
+      "content_hash": "e16752eccedcf254",
+      "version": "1.1.2",
       "mirrors": [
         "agents/site-facility-agent.md"
       ]
@@ -1842,8 +1847,8 @@
       "name": "assumption-audit",
       "scope": "root",
       "capability": "assumption-audit",
-      "content_hash": "a32b1d9a028d7367",
-      "version": "1.0.1",
+      "content_hash": "22cefbd3de9fc35f",
+      "version": "1.1.0",
       "mirrors": [
         "skills/assumption-audit/SKILL.md",
         ".claude/skills/assumption-audit/SKILL.md",
@@ -1896,7 +1901,7 @@
       "name": "certification-transferability",
       "scope": "root",
       "capability": "certification-transferability",
-      "content_hash": "afbb6492dda6be64",
+      "content_hash": "1d7169a7df140742",
       "version": "1.2.0",
       "mirrors": [
         "skills/certification-transferability/SKILL.md",
@@ -1950,7 +1955,7 @@
       "name": "community-partnership-planning",
       "scope": "root",
       "capability": "community-partnership-planning",
-      "content_hash": "0342d1108b3cc4e0",
+      "content_hash": "4c6effe862ac6781",
       "version": "1.1.0",
       "mirrors": [
         "skills/community-partnership-planning/SKILL.md",
@@ -1968,8 +1973,8 @@
       "name": "company-intelligence",
       "scope": "root",
       "capability": "company-intelligence",
-      "content_hash": "a5dfa8dfa8bf931b",
-      "version": "1.0.1",
+      "content_hash": "a79bc2a29a34cbe9",
+      "version": "1.1.0",
       "mirrors": [
         "skills/company-intelligence/SKILL.md",
         ".claude/skills/company-intelligence/SKILL.md",
@@ -2076,8 +2081,8 @@
       "name": "deal-execution-playbook",
       "scope": "root",
       "capability": "deal-execution-playbook",
-      "content_hash": "983b1799be8cb6d4",
-      "version": "1.0.1",
+      "content_hash": "19483adc1927575b",
+      "version": "1.1.0",
       "mirrors": [
         "skills/deal-execution-playbook/SKILL.md",
         ".claude/skills/deal-execution-playbook/SKILL.md",
@@ -2134,7 +2139,7 @@
       "name": "design-foundation",
       "scope": "root",
       "capability": "design-foundation",
-      "content_hash": "0f50cf02ea552572",
+      "content_hash": "bc50d03c2de4aade",
       "version": "1.1.0",
       "mirrors": [
         "skills/design-foundation/SKILL.md",
@@ -2278,8 +2283,8 @@
       "name": "forward-industry-research",
       "scope": "root",
       "capability": "forward-industry-research",
-      "content_hash": "9852187b14404331",
-      "version": "1.0.1",
+      "content_hash": "bf5059916fa2f1cd",
+      "version": "1.1.0",
       "mirrors": [
         "skills/forward-industry-research/SKILL.md",
         ".claude/skills/forward-industry-research/SKILL.md",
@@ -2332,8 +2337,8 @@
       "name": "group-level-review",
       "scope": "root",
       "capability": "group-level-review",
-      "content_hash": "089b5d925d7c371b",
-      "version": "1.0.1",
+      "content_hash": "859e43ca3c8c4af8",
+      "version": "1.1.0",
       "mirrors": [
         "skills/group-level-review/SKILL.md",
         ".claude/skills/group-level-review/SKILL.md",
@@ -2578,6 +2583,24 @@
       ]
     },
     {
+      "id": "skill:root/ip-fto-review",
+      "type": "skill",
+      "layer": "L3",
+      "name": "ip-fto-review",
+      "scope": "root",
+      "capability": "ip-fto-review",
+      "content_hash": "cd8d710468998984",
+      "version": "1.0.0",
+      "mirrors": [
+        "skills/ip-fto-review/SKILL.md",
+        ".claude/skills/ip-fto-review/SKILL.md",
+        ".gemini/skills/ip-fto-review/SKILL.md",
+        ".agents/skills/ip-fto-review/SKILL.md",
+        ".codex/skills/ip-fto-review/SKILL.md",
+        ".hermes/skills/ip-fto-review/SKILL.md"
+      ]
+    },
+    {
       "id": "skill:root/jv-structuring",
       "type": "skill",
       "layer": "L3",
@@ -2602,7 +2625,7 @@
       "name": "k-dart",
       "scope": "root",
       "capability": "k-dart",
-      "content_hash": "5dbc554c5159cf9c",
+      "content_hash": "10c42957298ab758",
       "version": "2.1.2",
       "mirrors": [
         "skills/k-dart/SKILL.md",
@@ -2674,7 +2697,7 @@
       "name": "k-law",
       "scope": "root",
       "capability": "k-law",
-      "content_hash": "c6df980437488a7f",
+      "content_hash": "9ef39309e791fc51",
       "version": "1.0.3",
       "mirrors": [
         "skills/k-law/SKILL.md",
@@ -2692,7 +2715,7 @@
       "name": "k-opendata",
       "scope": "root",
       "capability": "k-opendata",
-      "content_hash": "f136abc9955a54a0",
+      "content_hash": "2661c11b5cd90f4c",
       "version": "1.2.2",
       "mirrors": [
         "skills/k-opendata/SKILL.md",
@@ -2728,8 +2751,8 @@
       "name": "legal-risk-register",
       "scope": "root",
       "capability": "legal-risk-register",
-      "content_hash": "1f36fa033d16aaf0",
-      "version": "1.0.1",
+      "content_hash": "dec97a811edbbeeb",
+      "version": "1.1.0",
       "mirrors": [
         "skills/legal-risk-register/SKILL.md",
         ".claude/skills/legal-risk-register/SKILL.md",
@@ -2746,7 +2769,7 @@
       "name": "management-incentive-review",
       "scope": "root",
       "capability": "management-incentive-review",
-      "content_hash": "6688a227d97e2b8e",
+      "content_hash": "3098a25245e75de4",
       "version": "1.1.0",
       "mirrors": [
         "skills/management-incentive-review/SKILL.md",
@@ -2764,8 +2787,8 @@
       "name": "market-data-pipeline",
       "scope": "root",
       "capability": "market-data-pipeline",
-      "content_hash": "415abf99f364d769",
-      "version": "1.0.1",
+      "content_hash": "3317cdee0be99ba6",
+      "version": "1.1.0",
       "mirrors": [
         "skills/market-data-pipeline/SKILL.md",
         ".claude/skills/market-data-pipeline/SKILL.md",
@@ -2866,6 +2889,24 @@
       ]
     },
     {
+      "id": "skill:root/partnership-health-scorecard",
+      "type": "skill",
+      "layer": "L3",
+      "name": "partnership-health-scorecard",
+      "scope": "root",
+      "capability": "partnership-health-scorecard",
+      "content_hash": "bded91cc0f30dab8",
+      "version": "1.0.0",
+      "mirrors": [
+        "skills/partnership-health-scorecard/SKILL.md",
+        ".claude/skills/partnership-health-scorecard/SKILL.md",
+        ".gemini/skills/partnership-health-scorecard/SKILL.md",
+        ".agents/skills/partnership-health-scorecard/SKILL.md",
+        ".codex/skills/partnership-health-scorecard/SKILL.md",
+        ".hermes/skills/partnership-health-scorecard/SKILL.md"
+      ]
+    },
+    {
       "id": "skill:root/peer-benchmarking",
       "type": "skill",
       "layer": "L3",
@@ -2962,8 +3003,8 @@
       "name": "policy-and-procedure-governance",
       "scope": "root",
       "capability": "policy-and-procedure-governance",
-      "content_hash": "6453f57310728e90",
-      "version": "1.0.1",
+      "content_hash": "7c4aff0d9712b59c",
+      "version": "1.1.0",
       "mirrors": [
         "skills/policy-and-procedure-governance/SKILL.md",
         ".claude/skills/policy-and-procedure-governance/SKILL.md",
@@ -3092,8 +3133,8 @@
       "name": "regulatory-screening",
       "scope": "root",
       "capability": "regulatory-screening",
-      "content_hash": "6ef8830c68ac48f5",
-      "version": "1.0.1",
+      "content_hash": "9bf1229468125d11",
+      "version": "1.1.0",
       "mirrors": [
         "skills/regulatory-screening/SKILL.md",
         ".claude/skills/regulatory-screening/SKILL.md",
@@ -3128,8 +3169,8 @@
       "name": "sample-driven-report-writing",
       "scope": "root",
       "capability": "sample-driven-report-writing",
-      "content_hash": "cb1f2fc16f2d7b86",
-      "version": "1.0.1",
+      "content_hash": "d78b6d223748af6e",
+      "version": "1.1.0",
       "mirrors": [
         "skills/sample-driven-report-writing/SKILL.md",
         ".claude/skills/sample-driven-report-writing/SKILL.md",
@@ -3402,8 +3443,8 @@
       "name": "target-costing-analysis",
       "scope": "root",
       "capability": "target-costing-analysis",
-      "content_hash": "906f04e29e14f108",
-      "version": "1.0.1",
+      "content_hash": "69cdf15c4d699ab7",
+      "version": "1.1.0",
       "mirrors": [
         "skills/target-costing-analysis/SKILL.md",
         ".claude/skills/target-costing-analysis/SKILL.md",
@@ -3564,8 +3605,8 @@
       "name": "value-chain-driver-identification",
       "scope": "root",
       "capability": "value-chain-driver-identification",
-      "content_hash": "86130be35370c2ad",
-      "version": "1.0.1",
+      "content_hash": "6f6a54794d16421a",
+      "version": "1.1.0",
       "mirrors": [
         "skills/value-chain-driver-identification/SKILL.md",
         ".claude/skills/value-chain-driver-identification/SKILL.md",
@@ -3582,7 +3623,7 @@
       "name": "value-chain-linkage-analysis",
       "scope": "root",
       "capability": "value-chain-linkage-analysis",
-      "content_hash": "298714c852208a70",
+      "content_hash": "d5a41801720af6fa",
       "version": "1.1.0",
       "mirrors": [
         "skills/value-chain-linkage-analysis/SKILL.md",
@@ -3600,8 +3641,8 @@
       "name": "value-chain-stage-financials",
       "scope": "root",
       "capability": "value-chain-stage-financials",
-      "content_hash": "05a6b2f8c87a244a",
-      "version": "1.0.1",
+      "content_hash": "5ef6411de0fe7e2f",
+      "version": "1.1.0",
       "mirrors": [
         "skills/value-chain-stage-financials/SKILL.md",
         ".claude/skills/value-chain-stage-financials/SKILL.md",
@@ -3636,8 +3677,8 @@
       "name": "waiver-management",
       "scope": "root",
       "capability": "waiver-management",
-      "content_hash": "eace2d5e928490ea",
-      "version": "1.0.1",
+      "content_hash": "2eb8faf0a8f231ab",
+      "version": "1.1.0",
       "mirrors": [
         "skills/waiver-management/SKILL.md",
         ".claude/skills/waiver-management/SKILL.md",
@@ -3654,7 +3695,7 @@
       "name": "zod-contract-gate",
       "scope": "root",
       "capability": "zod-contract-gate",
-      "content_hash": "81deab19c0e351e7",
+      "content_hash": "9efb8baca890bb8e",
       "version": "1.0.2",
       "mirrors": [
         "skills/zod-contract-gate/SKILL.md",
@@ -4630,6 +4671,120 @@
     },
     {
       "type": "references",
+      "from": "adr:0185",
+      "to": "skill:root/certification-transferability",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0185",
+      "to": "skill:root/design-foundation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0185",
+      "to": "skill:root/financing-plan-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0185",
+      "to": "skill:root/ip-fto-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0185",
+      "to": "skill:root/k-dart",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0185",
+      "to": "skill:root/k-ecos",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0185",
+      "to": "skill:root/k-kosis",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0185",
+      "to": "skill:root/k-krx",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0185",
+      "to": "skill:root/k-opendata",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0185",
+      "to": "skill:root/legal-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0185",
+      "to": "skill:root/management-incentive-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0185",
+      "to": "skill:root/partnership-health-scorecard",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0185",
+      "to": "skill:root/permit-pathway-mapping",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0185",
+      "to": "skill:root/portfolio-fit-assessment",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0185",
+      "to": "skill:root/project-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0185",
+      "to": "skill:root/regulatory-screening",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0185",
+      "to": "skill:root/technical-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0185",
+      "to": "skill:root/value-chain-stage-financials",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0185",
+      "to": "skill:root/zod-contract-gate",
+      "source": "prose"
+    },
+    {
+      "type": "references",
       "from": "agent:root/antitrust-agent",
       "to": "skill:root/regulatory-screening",
       "source": "prose"
@@ -4692,6 +4847,12 @@
       "type": "references",
       "from": "agent:root/financial-analyst",
       "to": "skill:root/investment-feasibility-modeling",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/financial-analyst",
+      "to": "skill:root/k-dart",
       "source": "prose"
     },
     {
@@ -4836,6 +4997,12 @@
       "type": "references",
       "from": "agent:root/incentive-agent",
       "to": "skill:root/regional-incentive-sourcing",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/ip-agent",
+      "to": "skill:root/ip-fto-review",
       "source": "prose"
     },
     {
@@ -6448,15 +6615,9 @@
       "type": "used_by",
       "from": "skill:root/community-partnership-planning",
       "to": "agent:root/greenfield-agent",
-      "source": "skill_manifest"
-    },
-    {
-      "type": "used_by",
-      "from": "skill:root/community-partnership-planning",
-      "to": "agent:root/hr-integration-agent",
       "source": "required_skills",
       "provenance": {
-        "file": "agents/hr-integration-agent.md",
+        "file": "agents/greenfield-agent.md",
         "field": "required_skills",
         "index": 0
       }
@@ -6597,7 +6758,7 @@
       "provenance": {
         "file": "agents/hr-integration-agent.md",
         "field": "required_skills",
-        "index": 1
+        "index": 0
       }
     },
     {
@@ -7875,6 +8036,17 @@
     {
       "type": "used_by",
       "from": "skill:root/financing-plan-review",
+      "to": "agent:root/financing-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/financing-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/financing-plan-review",
       "to": "agent:root/valuation-agent",
       "source": "required_skills",
       "provenance": {
@@ -8040,6 +8212,17 @@
     {
       "type": "used_by",
       "from": "skill:root/forward-industry-research",
+      "to": "agent:root/market-intelligence-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/market-intelligence-agent.md",
+        "field": "required_skills",
+        "index": 3
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/forward-industry-research",
       "to": "agent:root/process-governance-manager",
       "source": "required_skills",
       "provenance": {
@@ -8056,7 +8239,7 @@
       "provenance": {
         "file": "agents/greenfield-agent.md",
         "field": "required_skills",
-        "index": 0
+        "index": 1
       }
     },
     {
@@ -8810,7 +8993,7 @@
       "provenance": {
         "file": "agents/market-intelligence-agent.md",
         "field": "required_skills",
-        "index": 3
+        "index": 4
       }
     },
     {
@@ -9413,6 +9596,35 @@
     },
     {
       "type": "used_by",
+      "from": "skill:root/ip-fto-review",
+      "to": "agent:root/ip-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/ip-agent.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
+      "type": "references",
+      "from": "skill:root/ip-fto-review",
+      "to": "skill:root/dd-to-valuation-bridge",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "skill:root/ip-fto-review",
+      "to": "skill:root/legal-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "skill:root/ip-fto-review",
+      "to": "skill:root/technical-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
       "from": "skill:root/jv-structuring",
       "to": "agent:root/legal-counsel",
       "source": "skill_manifest"
@@ -9560,7 +9772,12 @@
       "type": "used_by",
       "from": "skill:root/k-dart",
       "to": "agent:root/financial-analyst",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/financial-analyst.md",
+        "field": "required_skills",
+        "index": 5
+      }
     },
     {
       "type": "used_by",
@@ -9933,7 +10150,7 @@
       "provenance": {
         "file": "agents/financial-analyst.md",
         "field": "required_skills",
-        "index": 5
+        "index": 6
       }
     },
     {
@@ -10258,7 +10475,7 @@
       "provenance": {
         "file": "agents/financial-analyst.md",
         "field": "required_skills",
-        "index": 6
+        "index": 7
       }
     },
     {
@@ -10444,7 +10661,7 @@
       "provenance": {
         "file": "agents/financial-analyst.md",
         "field": "required_skills",
-        "index": 7
+        "index": 8
       }
     },
     {
@@ -10903,7 +11120,12 @@
       "type": "used_by",
       "from": "skill:root/k-law",
       "to": "agent:root/legal-counsel",
-      "source": "skill_manifest"
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/legal-counsel.md",
+        "field": "required_skills",
+        "index": 1
+      }
     },
     {
       "type": "used_by",
@@ -11185,6 +11407,17 @@
       }
     },
     {
+      "type": "used_by",
+      "from": "skill:root/k-opendata",
+      "to": "agent:root/quant-methodologist",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/quant-methodologist.md",
+        "field": "required_skills",
+        "index": 0
+      }
+    },
+    {
       "type": "references",
       "from": "skill:root/k-opendata",
       "to": "skill:root/k-dart",
@@ -11433,7 +11666,7 @@
       "provenance": {
         "file": "agents/legal-counsel.md",
         "field": "required_skills",
-        "index": 1
+        "index": 2
       }
     },
     {
@@ -11621,15 +11854,9 @@
       "type": "used_by",
       "from": "skill:root/management-incentive-review",
       "to": "agent:root/hr-integration-agent",
-      "source": "skill_manifest"
-    },
-    {
-      "type": "used_by",
-      "from": "skill:root/management-incentive-review",
-      "to": "agent:root/incentive-agent",
       "source": "required_skills",
       "provenance": {
-        "file": "agents/incentive-agent.md",
+        "file": "agents/hr-integration-agent.md",
         "field": "required_skills",
         "index": 1
       }
@@ -11725,7 +11952,7 @@
       "provenance": {
         "file": "agents/market-intelligence-agent.md",
         "field": "required_skills",
-        "index": 4
+        "index": 5
       }
     },
     {
@@ -11759,7 +11986,7 @@
       "provenance": {
         "file": "agents/quant-methodologist.md",
         "field": "required_skills",
-        "index": 0
+        "index": 1
       }
     },
     {
@@ -11926,7 +12153,7 @@
       "provenance": {
         "file": "agents/greenfield-agent.md",
         "field": "required_skills",
-        "index": 1
+        "index": 2
       }
     },
     {
@@ -12191,6 +12418,35 @@
     },
     {
       "type": "used_by",
+      "from": "skill:root/partnership-health-scorecard",
+      "to": "agent:root/partnership-agent",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/partnership-agent.md",
+        "field": "required_skills",
+        "index": 3
+      }
+    },
+    {
+      "type": "references",
+      "from": "skill:root/partnership-health-scorecard",
+      "to": "skill:root/jv-structuring",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "skill:root/partnership-health-scorecard",
+      "to": "skill:root/partner-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "skill:root/partnership-health-scorecard",
+      "to": "skill:root/partner-sourcing-strategy",
+      "source": "prose"
+    },
+    {
+      "type": "used_by",
       "from": "skill:root/peer-benchmarking",
       "to": "agent:root/brownfield-agent",
       "source": "required_skills",
@@ -12208,7 +12464,7 @@
       "provenance": {
         "file": "agents/financial-analyst.md",
         "field": "required_skills",
-        "index": 8
+        "index": 9
       }
     },
     {
@@ -12326,7 +12582,7 @@
       "provenance": {
         "file": "agents/legal-counsel.md",
         "field": "required_skills",
-        "index": 2
+        "index": 3
       }
     },
     {
@@ -12649,7 +12905,7 @@
       "provenance": {
         "file": "agents/market-intelligence-agent.md",
         "field": "required_skills",
-        "index": 5
+        "index": 6
       }
     },
     {
@@ -12660,7 +12916,7 @@
       "provenance": {
         "file": "agents/quant-methodologist.md",
         "field": "required_skills",
-        "index": 1
+        "index": 2
       }
     },
     {
@@ -12764,7 +13020,7 @@
       "provenance": {
         "file": "agents/financial-analyst.md",
         "field": "required_skills",
-        "index": 9
+        "index": 10
       }
     },
     {
@@ -13080,7 +13336,7 @@
       "provenance": {
         "file": "agents/greenfield-agent.md",
         "field": "required_skills",
-        "index": 2
+        "index": 3
       }
     },
     {
@@ -13230,7 +13486,7 @@
       "provenance": {
         "file": "agents/legal-counsel.md",
         "field": "required_skills",
-        "index": 3
+        "index": 4
       }
     },
     {
@@ -13274,7 +13530,7 @@
       "provenance": {
         "file": "agents/greenfield-agent.md",
         "field": "required_skills",
-        "index": 3
+        "index": 4
       }
     },
     {
@@ -13481,7 +13737,7 @@
       "provenance": {
         "file": "agents/greenfield-agent.md",
         "field": "required_skills",
-        "index": 4
+        "index": 5
       }
     },
     {
@@ -13962,7 +14218,7 @@
       "provenance": {
         "file": "agents/market-intelligence-agent.md",
         "field": "required_skills",
-        "index": 6
+        "index": 7
       }
     },
     {
@@ -14051,7 +14307,7 @@
       "provenance": {
         "file": "agents/greenfield-agent.md",
         "field": "required_skills",
-        "index": 5
+        "index": 6
       }
     },
     {
@@ -14145,6 +14401,17 @@
         "file": "agents/process-governance-manager.md",
         "field": "required_skills",
         "index": 19
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/target-costing-analysis",
+      "to": "agent:root/quant-methodologist",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/quant-methodologist.md",
+        "field": "required_skills",
+        "index": 3
       }
     },
     {
@@ -14387,7 +14654,7 @@
       "provenance": {
         "file": "agents/quant-methodologist.md",
         "field": "required_skills",
-        "index": 2
+        "index": 4
       }
     },
     {
@@ -14432,13 +14699,24 @@
     },
     {
       "type": "used_by",
+      "from": "skill:root/value-chain-driver-identification",
+      "to": "agent:root/quant-methodologist",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/quant-methodologist.md",
+        "field": "required_skills",
+        "index": 5
+      }
+    },
+    {
+      "type": "used_by",
       "from": "skill:root/value-chain-linkage-analysis",
       "to": "agent:root/market-intelligence-agent",
       "source": "required_skills",
       "provenance": {
         "file": "agents/market-intelligence-agent.md",
         "field": "required_skills",
-        "index": 7
+        "index": 8
       }
     },
     {
@@ -14449,7 +14727,7 @@
       "provenance": {
         "file": "agents/quant-methodologist.md",
         "field": "required_skills",
-        "index": 3
+        "index": 6
       }
     },
     {
@@ -14508,12 +14786,23 @@
     {
       "type": "used_by",
       "from": "skill:root/value-chain-stage-financials",
+      "to": "agent:root/financial-analyst",
+      "source": "required_skills",
+      "provenance": {
+        "file": "agents/financial-analyst.md",
+        "field": "required_skills",
+        "index": 11
+      }
+    },
+    {
+      "type": "used_by",
+      "from": "skill:root/value-chain-stage-financials",
       "to": "agent:root/market-intelligence-agent",
       "source": "required_skills",
       "provenance": {
         "file": "agents/market-intelligence-agent.md",
         "field": "required_skills",
-        "index": 8
+        "index": 9
       }
     },
     {
@@ -14535,7 +14824,7 @@
       "provenance": {
         "file": "agents/quant-methodologist.md",
         "field": "required_skills",
-        "index": 4
+        "index": 7
       }
     },
     {

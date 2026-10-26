@@ -3,7 +3,7 @@ procedure_id: shared-greenfield-screening
 title: "Green Field Screening"
 scope: shared
 level: entity
-version: "1.3.0"
+version: "1.4.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -45,7 +45,7 @@ steps:
       coefficient estimation and the FS industry-structure simulation.
   - id: 3
     gate: Screening
-    agent_key: greenfield-agent
+    agent_key: site-facility-agent   # ADR-0185 A-02a; S3 activity stays led by greenfield-agent (recorded divergence, flow.spec)
     skill_key: site-infrastructure-assessment
     output_type: site_shortlist_prefiltered
     description: >

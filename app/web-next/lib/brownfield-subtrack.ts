@@ -64,7 +64,7 @@ interface BfExtra {
   attached_to: string[];
   approved: boolean;
   /** Per sub-track: excluded item id -> { section, reason }. */
-  excluded: Partial<Record<BrownfieldSubTrack, Map<string, { section: string | null; na_reason: string | null }>>>;
+  excluded: Partial<Record<BrownfieldSubTrack, Map<string, { section: string | null; na_reason: string | null; owner_exception: boolean }>>>;
   /** Per sub-track: item id -> R reading (ADR-0162 addendum 2026-10-13). */
   readings: Partial<Record<BrownfieldSubTrack, Map<string, string>>>;
 }
@@ -126,10 +126,10 @@ export function parseBrownfieldOverlay(raw: unknown): BrownfieldOverlay | null {
         if (reading) for (const itemId of arr(go.ids)) if (typeof itemId === "string") rm.set(itemId, reading);
       }
       readings[key] = rm;
-      const m = new Map<string, { section: string | null; na_reason: string | null }>();
+      const m = new Map<string, { section: string | null; na_reason: string | null; owner_exception: boolean }>();
       for (const g of arr(obj(obj(b.sub_tracks)[key]).excluded)) {
         const go = obj(g);
-        for (const itemId of arr(go.ids)) if (typeof itemId === "string") m.set(itemId, { section: str(go.section) ?? null, na_reason: str(go.na_reason) ?? null });
+        for (const itemId of arr(go.ids)) if (typeof itemId === "string") m.set(itemId, { section: str(go.section) ?? null, na_reason: str(go.na_reason) ?? null, owner_exception: hasOwnerException(go.owner_exception) });
       }
       excluded[key] = m;
     }
@@ -247,6 +247,11 @@ function stateMap(projectId: string, db: Database): Map<string, StateLite> {
   return m;
 }
 
+function hasOwnerException(v: unknown): boolean {
+  const o = v && typeof v === "object" ? (v as Record<string, unknown>) : null;
+  return !!o && typeof o.decision === "string" && o.decision.length > 0 && o.approved_by === "user" && typeof o.approved_at === "string" && o.approved_at.length > 0;
+}
+
 const asIs = (checklistId: string, itemId: string, fallback: WorkspaceItemScope["fallback"]): WorkspaceItemScope => ({
   checklist_id: checklistId, item_id: itemId, overlay_code: null, code: "A", judgeable: true, reading: null, reason: null, note: null,
   replaced_by: [], fallback, rule: "fail_closed", steps: [],
@@ -297,10 +302,12 @@ function resolveExtraItem(ov: BrownfieldOverlay, key: BrownfieldScopeKey, checkl
   if (!ex.approved) return asIs(checklistId, itemId, "unapproved");
   const hit = ex.excluded[key]?.get(itemId);
   const def = items.find((i) => i.id === itemId);
-  // Binding items (mandatory, not waivable — bf-01..03) can never be excluded, whatever the file says.
-  if (!hit || (def?.mandatory && !def.waiver_eligible)) {
+  // Binding items (mandatory, not waivable — bf-01..03, ma-13) can never be excluded unless the
+  // exclusion carries a complete owner_exception (ADR-0185); without one the item is kept (fail-closed).
+  const binding = !!def?.mandatory && !def.waiver_eligible;
+  if (!hit || (binding && !hit.owner_exception)) {
     // R reading on an extra item (never on a binding item, whatever the file says).
-    const reading = def?.mandatory && !def.waiver_eligible ? undefined : ex.readings[key]?.get(itemId);
+    const reading = binding ? undefined : ex.readings[key]?.get(itemId);
     if (!hit && reading) {
       return { checklist_id: checklistId, item_id: itemId, overlay_code: "R", code: "R", judgeable: true, reading, reason: null, note: null, replaced_by: [], fallback: null, rule: "overlay", steps: [] };
     }

@@ -9,7 +9,7 @@ description: >
 version: 1.0.3
 last_reviewed: 2026-09-21
 status: active
-owner: strategy-analyst
+owner: legal-counsel
 prerequisites: LAW_API_OC environment variable
 relates_to:
   - skill: k-dart

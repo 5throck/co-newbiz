@@ -401,6 +401,51 @@ function checkStepReferences(label: string, steps: unknown[], humanRoles: Set<st
 }
 
 /**
+ * checkActivitySkillAlignment — WARN-only (ADR-0185 F-14, audit policy 5.3-2).
+ * A procedure step's skill_key should appear in the `skills:` of at least one
+ * flow.spec activity that hosts the procedure; otherwise the spec's activity
+ * skill list has drifted from the procedure it dispatches. Warn, never error:
+ * procedure schemas govern their own steps (AGENTS.md section 7), so this only
+ * surfaces the drift for a recorded reconciliation. Steps with no skill_key,
+ * TODO placeholders and procedures hosted by no activity are skipped.
+ */
+export async function checkActivitySkillAlignment(): Promise<Issue[]> {
+  const issues: Issue[] = [];
+  const specFile = join(PROJECT_ROOT, "process", "flow.spec.yaml");
+  if (!existsSync(specFile)) return issues;
+  const spec = yaml.load(await readFile(specFile, "utf8")) as {
+    stages?: { id: string; activities?: { id: string; skills?: string[]; procedure?: string[] }[] }[];
+  };
+  const hosted = new Map<string, Set<string>>();
+  for (const st of spec.stages ?? []) {
+    for (const a of st.activities ?? []) {
+      for (const proc of a.procedure ?? []) {
+        const set = hosted.get(proc) ?? new Set<string>();
+        for (const sk of a.skills ?? []) set.add(sk);
+        hosted.set(proc, set);
+      }
+    }
+  }
+  for (const [proc, skills] of hosted) {
+    const schemaFile = join(ROOT, "_shared", proc, "schema.yaml");
+    if (!existsSync(schemaFile)) continue;
+    const doc = yaml.load(await readFile(schemaFile, "utf8")) as { steps?: { id: unknown; skill_key?: unknown }[] };
+    for (const st of doc.steps ?? []) {
+      const sk = st.skill_key;
+      if (typeof sk !== "string" || sk.trim() === "" || sk === "TODO") continue;
+      if (!skills.has(sk)) {
+        issues.push({
+          file: schemaFile,
+          message: `step ${String(st.id)} skill_key '${sk}' is not in the skills: of any flow.spec activity hosting '${proc}' — reconcile the activity skills list (ADR-0185 F-14)`,
+          severity: "warn",
+        });
+      }
+    }
+  }
+  return issues;
+}
+
+/**
  * walkAllSteps — the cross-file pass (PR-0 of the 2026-08-22 RAG
  * formalization design, meeting finding F11's companion). Per-file
  * validation above checks each schema.yaml in isolation; this pass resolves
@@ -1148,6 +1193,7 @@ async function main() {
   }
 
   allIssues.push(...(await walkAllSteps(humanRoles)));
+  allIssues.push(...(await checkActivitySkillAlignment()));
   for (const d of standaloneStepDocs) {
     allIssues.push(...checkStepReferences(d.label, d.steps, humanRoles));
   }
