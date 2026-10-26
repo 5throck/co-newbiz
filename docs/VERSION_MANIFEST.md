@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-26T21:38:54.795Z
+**Generated**: 2026-10-26T22:28:57.106Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -83,7 +83,7 @@
 | company-intelligence | 1.1.0 | experimental | skills/company-intelligence/SKILL.md | workspace | company research, company profile, corporate intelligence, target longlist | market-intelligence-agent |
 | compensation-harmonization-analysis | 1.0.0 | active | skills/compensation-harmonization-analysis/SKILL.md | workspace | compensation harmonization, comp benchmark, upward bias, post-merger pay equalization | hr-integration-agent |
 | competitive-intelligence | 1.1.0 | active | skills/competitive-intelligence/SKILL.md | workspace | competitive analysis, market analysis, competitor profiling, market entry analysis, industry attractiveness, competitive intelligence, five forces | market-intelligence-agent |
-| compliance-monitoring | 1.1.0 | active | skills/compliance-monitoring/SKILL.md | workspace | compliance check, is this gate blocked, governance KPI, gate cycle time, checklist completion rate, waiver concentration | compliance-officer |
+| compliance-monitoring | 1.1.1 | active | skills/compliance-monitoring/SKILL.md | workspace | compliance check, is this gate blocked, governance KPI, gate cycle time, checklist completion rate, waiver concentration | compliance-officer |
 | customer-attrition-risk | 1.2.0 | active | skills/customer-attrition-risk/SKILL.md | workspace | customer attrition risk, change of control clause, customer concentration risk, retained seller as supplier | customer-retention-agent |
 | dd-to-valuation-bridge | 1.2.0 | active | skills/dd-to-valuation-bridge/SKILL.md | workspace | DD to valuation bridge, value_impact, does this finding move the valuation, narrative-only finding check | valuation-agent |
 | deal-execution-playbook | 1.1.0 | experimental | skills/deal-execution-playbook/SKILL.md | workspace | deal execution, closing steps, execution playbook, deal shape evaluation | brownfield-agent |
@@ -155,7 +155,7 @@
 | site-visit-protocol | 1.1.0 | active | skills/site-visit-protocol/SKILL.md | workspace | site visit protocol, pre-visit document request, on-site evidence capture, site visit checklist | technical-dd-agent |
 | skill-lifecycle-manager | 1.5.0 | active | skills/skill-lifecycle-manager/SKILL.md | workspace | create skill, new skill, validate skills, skill lifecycle, manage skills, skill request, deprecate skill, remove skill | pm |
 | source-command-commit-push-pr | 1.0.3 | active | skills/source-command-commit-push-pr/SKILL.md | workspace | commit-push-pr, commit and push, create PR | pm |
-| stage-gate-governance | 1.4.2 | active | skills/stage-gate-governance/SKILL.md | workspace | stage gate, kill criteria, gate sequence, halt the project, does this trigger a kill criterion | process-governance-manager |
+| stage-gate-governance | 1.4.3 | active | skills/stage-gate-governance/SKILL.md | workspace | stage gate, kill criteria, gate sequence, halt the project, does this trigger a kill criterion | process-governance-manager |
 | standup-synthesizer | 1.0.0 | active | skills/standup-synthesizer/SKILL.md | workspace | standup digest, daily standup, synthesize standup, work summary | pm |
 | strategic-fit-screening | 1.1.0 | active | skills/strategic-fit-screening/SKILL.md | workspace | strategic fit screen, knock-out criteria, hunt zone fit | process-governance-manager |
 | sync | 1.8.0 | active | skills/sync/SKILL.md | workspace | sync, /sync, commit and push, create PR | pm |
@@ -166,15 +166,15 @@
 | technical-due-diligence | 1.1.0 | active | skills/technical-due-diligence/SKILL.md | workspace | technical due diligence, capex plan verification, bottleneck process identification, remaining useful life assessment | technical-dd-agent |
 | token-usage-lint | 1.1.0 | active | skills/token-usage-lint/SKILL.md | workspace | token lint, hardcoded color, design token compliance, raw hex values, hardcoded spacing | pm |
 | translate | 1.0.3 | active | skills/translate/SKILL.md | workspace | translate, translation, Korean translation | pm |
-| two-tier-approval-chain | 1.1.0 | active | skills/two-tier-approval-chain/SKILL.md | workspace | entity IC, group IC, approval chain, IC gate, group agenda ranking, submit to group IC | process-governance-manager |
+| two-tier-approval-chain | 1.1.1 | active | skills/two-tier-approval-chain/SKILL.md | workspace | entity IC, group IC, approval chain, IC gate, group agenda ranking, submit to group IC | process-governance-manager |
 | ui-ux-design-intelligence | 1.0.1 | active | skills/ui-ux-design-intelligence/SKILL.md | workspace | design system, ui design, ux design, component design, visual design, design tokens, interface design | pm |
 | unit-conversion-calibration | 1.0.0 | active | skills/unit-conversion-calibration/SKILL.md | workspace | calibrate a proxy hop, lead-lag regression, unit conversion coefficient, beta calibration for a proxy chain | quant-methodologist |
 | update-bun-packages | 1.3.1 | active | skills/update-bun-packages/SKILL.md | workspace | update bun packages, upgrade bun packages, bun update, update dependencies, upgrade dependencies | pm |
 | value-chain-driver-identification | 1.1.0 | experimental | skills/value-chain-driver-identification/SKILL.md | workspace | value chain drivers, driver analysis, driver identification, stage sensitivity | quant-methodologist |
 | value-chain-linkage-analysis | 1.1.0 | active | skills/value-chain-linkage-analysis/SKILL.md | workspace | value chain linkage, pass-through rate, upstream downstream risk exposure, margin risk from supplier or customer industry | market-intelligence-agent |
 | value-chain-stage-financials | 1.1.0 | experimental | skills/value-chain-stage-financials/SKILL.md | workspace | stage financials, value chain economics, segment financials, chain stage rollup | financial-analyst |
-| wacc-input-session | 1.3.1 | active | skills/wacc-input-session/SKILL.md | workspace | WACC input, hurdle IRR confirmation, CAPM components, discount rate session, beta estimation | valuation-agent |
-| waiver-management | 1.1.0 | experimental | skills/waiver-management/SKILL.md | workspace | waiver, waiver request, exemption approval, waiver expiry | compliance-officer |
+| wacc-input-session | 1.3.2 | active | skills/wacc-input-session/SKILL.md | workspace | WACC input, hurdle IRR confirmation, CAPM components, discount rate session, beta estimation | valuation-agent |
+| waiver-management | 1.1.1 | experimental | skills/waiver-management/SKILL.md | workspace | waiver, waiver request, exemption approval, waiver expiry | compliance-officer |
 | zod-contract-gate | 1.0.2 | active | skills/zod-contract-gate/SKILL.md | workspace | zod-contract-gate, /zod-contract-gate, zod contract validation, schema contract gate, runtime schema validation | backend-engineer |
 
 <!-- validate-md-language:allowlist-end -->
@@ -266,7 +266,7 @@
 | generate-version-manifest.ts | 1.10.1 | scripts/generate-version-manifest.ts | bun, js-yaml |
 | glossary-lint.ts | 1.1.1 | scripts/co-newbiz/glossary-lint.ts | js-yaml |
 | graph-delta-log.ts | 1.1.0 | scripts/graph-delta-log.ts | N/A |
-| graph-map.ts | 1.2.0 | scripts/co-newbiz/graph-map.ts | js-yaml |
+| graph-map.ts | 1.3.0 | scripts/co-newbiz/graph-map.ts | js-yaml |
 | graph.ts | 0.6.0 | scripts/co-newbiz/graph.ts | js-yaml |
 | handbook-doctor.ts | 1.0.0 | scripts/handbook/handbook-doctor.ts | N/A |
 | handbook-sync-audit.ts | 1.0.0 | scripts/handbook/handbook-sync-audit.ts | N/A |

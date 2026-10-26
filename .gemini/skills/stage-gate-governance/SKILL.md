@@ -13,8 +13,8 @@ description: >
 
   Use when: "stage gate", "kill criteria", "gate sequence", "halt the
   project", "does this trigger a kill criterion".
-version: 1.4.2
-last_reviewed: 2026-09-22
+version: 1.4.3
+last_reviewed: 2026-10-27
 status: active
 owner: process-governance-manager
 prerequisites: none
@@ -122,6 +122,15 @@ cannot proceed without.
 6. **Record the gate decision** via `two-tier-approval-chain`'s
    `recordDecision()` for Entity IC gates, or `group-level-review` for the
    Group IC gate
+
+## Gate-Integrity Contract (ADR-0186, neb-policy 2.9)
+
+How to prepare a gate package under the integrity contract; the procedures own what and when.
+
+- Before proposing a GO, read the server-computed gate snapshot (kill outcomes, RAG and data-confidence cap, validators, WACC state, waivers, conditions) and list every item that needs a reason; the recorder acknowledges them, the agent never does.
+- Name hard blocks (ladder, WACC, validators, bf-03 at Pre-FS, binding kill criteria without an override) separately from acknowledgements, so the human sees which items stop the GO and which need judgement.
+- Show an unassessed or inert criterion as "could not verify", never as pass. Present a proposal, not a verdict; HOLD and KILL are never blocked.
+- If the AI recommendation differs from the human decision, note that a divergence reason is required.
 
 ## Output Format
 

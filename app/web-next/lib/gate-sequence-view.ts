@@ -38,3 +38,35 @@ export function gateSequenceBlocker(gates: readonly string[], gate: string, late
   if (idx <= 0) return null;
   return gates.slice(0, idx).find((g) => gateState(latest, g) !== "go") ?? null;
 }
+
+// ── Full gate ladder (ADR-0186 D7 / design 3.7) ───────────────────────────────
+
+export type LadderTrack = "greenfield" | "brownfield";
+
+export const GREENFIELD_LADDER = ["screening", "pre_fs", "fs", "dd", "entity_ic", "group_ic"] as const;
+export const BROWNFIELD_LADDER = ["screening", "pre_fs", "target_screening", "fs", "dd", "entity_ic", "group_ic"] as const;
+
+/**
+ * The ordered gate ladder of a track. Greenfield: screening -> pre_fs -> fs ->
+ * dd -> entity_ic -> group_ic; brownfield inserts target_screening after pre_fs.
+ * An unknown track (before the S4 route decision) has only the gates that
+ * exist on both tracks before the fork: screening and pre_fs. Client-safe and
+ * shared by the server write routes and the panel lock so UI and server cannot
+ * drift (gateSequenceBlocker is the one rule over this list).
+ */
+export function ladderFor(track: LadderTrack | null | undefined): readonly string[] {
+  if (track === "brownfield") return BROWNFIELD_LADDER;
+  if (track === "greenfield") return GREENFIELD_LADDER;
+  return GREENFIELD_LADDER.slice(0, 2);
+}
+
+/** The project-carrier segment of a ladder (fs and everything after). */
+export function projectLadderSegment(track: LadderTrack | null | undefined): readonly string[] {
+  const full = track === "brownfield" ? BROWNFIELD_LADDER : GREENFIELD_LADDER;
+  return full.slice(full.indexOf("fs"));
+}
+
+/** The last opportunity-carrier gate of a ladder: the one a project `fs` GO builds on. */
+export function lastOpportunityGate(track: LadderTrack | null | undefined): string {
+  return track === "brownfield" ? "target_screening" : "pre_fs";
+}

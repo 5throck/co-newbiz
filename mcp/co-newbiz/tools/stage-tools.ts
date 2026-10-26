@@ -176,8 +176,8 @@ const SPECS: readonly RouteToolSpec[] = [
   { name: "record_permit", kind: "write", method: "POST", path: "/api/projects/{projectId}/permits", body: "required", bodyHint: BODY,
     activities: ["legal-dd"], description: "Record a permit or certification (tracked separately)." },
   { name: "request_dd_waiver", kind: "write", method: "POST", path: "/api/projects/{projectId}/waivers", body: "required",
-    bodyHint: "Waiver request fields (governance_doc_id, clause_ref, reason, approver_role, expires_at, or dd_item); optional target_id (ADR-0157) scopes it to an opened comparison target — 409 when DD was never opened there. A waiver on one target never applies to another.",
-    activities: ["dd-waiver-review"], description: "File a waiver REQUEST. Approval routing and the waiver decision are human acts." },
+    bodyHint: "Waiver request fields (governance_doc_id, clause_ref = '<checklist_id> <item_id>' or dd_item, reason, approver_role = entity-ic-reviewer | group-ic-reviewer, expires_at); optional target_id (ADR-0157) scopes it to an opened comparison target — 409 when DD was never opened there. A waiver on one target never applies to another. Do NOT send approved_by: it never grants authority (ignored and logged; rejected once the compatibility window ends). A mandatory non-waiver-eligible item is 422 not_waivable; the reason must state the actual reasoning (422 rationale_insufficient). A request is always pending until a different human holding the approver role approves it in the web app (ADR-0186).",
+    activities: ["dd-waiver-review"], description: "File a waiver REQUEST (always pending). Approval is a separate human act in the web app by a different person holding the approver human role (ADR-0186); no MCP tool can approve." },
 
   // ── S10 investment structure ─────────────────────────────────────────
   { name: "get_deal_structure", kind: "read", method: "GET", path: "/api/projects/{projectId}/deal-structure",

@@ -1,7 +1,6 @@
 ---
 name: i18n-specialist
 description: "Owns locale configuration, locale-specific formatting, and text layout guidance. Use when: \"localization review\", \"locale config\", \"internationalization\""
-model: sonnet
 ---
 
 <!-- GENERATED from agents/i18n-specialist.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->

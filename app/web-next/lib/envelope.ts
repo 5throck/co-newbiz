@@ -13,6 +13,8 @@ export interface ErrorBody {
   message: string;
   /** Present on 410 "moved" responses: the stage that now owns the edit surface. */
   editAt?: string;
+  /** Optional machine-readable detail (ADR-0186: rationale reason code, ladder blocker). Additive; clients may ignore it. */
+  details?: Record<string, unknown>;
 }
 
 export function ok<T>(data: T, status: EnvelopeStatus = 200, meta: Record<string, unknown> = {}) {
@@ -35,9 +37,9 @@ export function provenance(fields: { [K in keyof Provenance]: string | null | un
   return out;
 }
 
-export function fail(status: EnvelopeStatus, code: string, message: string) {
+export function fail(status: EnvelopeStatus, code: string, message: string, details?: Record<string, unknown>) {
   return NextResponse.json(
-    { data: null, meta: { as_of: new Date().toISOString() }, error: { code, message } satisfies ErrorBody },
+    { data: null, meta: { as_of: new Date().toISOString() }, error: (details ? { code, message, details } : { code, message }) satisfies ErrorBody },
     { status },
   );
 }

@@ -11,8 +11,8 @@ description: >
 
   Use when: "compliance check", "is this gate blocked", "governance KPI",
   "gate cycle time", "checklist completion rate", "waiver concentration".
-version: 1.1.0
-last_reviewed: 2026-08-23
+version: 1.1.1
+last_reviewed: 2026-10-27
 status: active
 owner: compliance-officer
 prerequisites: none
@@ -87,6 +87,12 @@ fails **and there is no active waiver** covering the specific gap
    topics are the *primary* inputs to the next regulation amendment cycle
    (design §6.6) — not intuition. Route a concentration finding to
    `policy-change-impact-analysis`
+
+## Gate-Integrity Monitoring (ADR-0186, neb-policy 2.9-2.11)
+
+- Six-validator completeness is read from the validator engine (declared / applicable / completed); a manual checklist state for bf-01 is ignored.
+- Report, display only and never as a block trigger: acknowledgement counts per kind, unassessed share per gate, AI-versus-human divergence rate per gate and recorder, countersign latency, open conditions older than 30 days, and expired or expiring waivers.
+- During rollout, summarize shadow `would_block` events per family before each family moves to enforce.
 
 ## Output Format
 

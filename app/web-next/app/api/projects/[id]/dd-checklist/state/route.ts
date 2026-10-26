@@ -7,8 +7,10 @@
 // Analyst+; deny-by-default visibility; unknown (checklist, item) → 404.
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
-import { upsertChecklistState, STATE_STATUSES, type ChecklistStateStatus } from "../../../../../../lib/dd-checklist-tailor.ts";
+import { upsertChecklistState, isMandatoryChecklistItem, isKnownChecklistItem, STATE_STATUSES, type ChecklistStateStatus } from "../../../../../../lib/dd-checklist-tailor.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { applyFamily } from "../../../../../../lib/gate-integrity.ts";
+import { validateRationale } from "../../../../../../lib/rationale-check.ts";
 import { DdTargetError } from "../../../../../../lib/dd-target.ts";
 import { ddTargetErrorResponse, scopeOrResponse } from "../../../../../../lib/dd-target-http.ts";
 import { recordHumanFinalForStageArtifacts } from "../../../../../../lib/review/human-final.ts";
@@ -50,6 +52,29 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   // ADR-0157: a non-NULL target_id must be an opened comparison target (409 otherwise).
   const scope = scopeOrResponse(id, body.target_id);
   if ("response" in scope) return scope.response;
+  // ADR-0186: resolve the item (404) before any integrity logic so unknown ids never reach the audit trail.
+  if (!isKnownChecklistItem(id, body.checklist_id.trim(), body.item_id.trim(), scope.targetId)) return notFound();
+  // ADR-0186 D5 + D2: `na` on a MANDATORY item needs a reason (family `waiver`) that meets the
+  // ack substance profile (family `rationale`); the second-person confirmation is a separate act
+  // (POST .../state/confirm-na) and an unconfirmed mandatory `na` counts as pending under enforce.
+  if (body.status === "na" && isMandatoryChecklistItem(body.checklist_id.trim(), body.item_id.trim())) {
+    const naCtx = { entityType: "project" as const, entityId: id, gate: `na:${body.checklist_id.trim()}:${body.item_id.trim()}`, actor: ctx.userId };
+    const note = body.note?.trim() ?? "";
+    const missing = applyFamily("waiver", naCtx, () => (note ? null : { status: 400, code: "na_reason_required", message: "Marking a mandatory item as 'na' requires a reason in note." }));
+    if (missing) return missing;
+    if (note) {
+      const weak = applyFamily("rationale", naCtx, () => {
+        const r = validateRationale(note, "ack");
+        return r.ok ? null : {
+          status: 422,
+          code: "rationale_insufficient",
+          message: `The na reason does not meet the minimum substance profile (${r.reason}); state why the item does not apply.`,
+          details: { field: "note", reason: r.reason, profile: "ack" },
+        };
+      });
+      if (weak) return weak;
+    }
+  }
   let result: { id: string } | null;
   try {
     result = upsertChecklistState(id, body.checklist_id.trim(), body.item_id.trim(), body.status as ChecklistStateStatus, ctx.userId, {

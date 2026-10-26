@@ -13,6 +13,7 @@ lifecycle:
 version: "1.2.0"
 last_reviewed: "2026-08-24"
 color: cyan
+domain: _shared
 description: 'Owns locale configuration, locale-specific formatting, and text layout guidance. Use when: "localization review", "locale config", "internationalization"'
 examples:
   - user: "Which locale code should we use for Traditional Chinese content for Taiwan?"

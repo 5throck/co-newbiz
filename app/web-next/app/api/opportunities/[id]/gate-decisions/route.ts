@@ -12,6 +12,7 @@ import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { gateGoPrerequisiteGaps, latestGateDecisions, type GateId } from "../../../../../lib/process-flow.ts";
 import { badRequest, fail, forbidden, notFound, ok, unprocessable } from "../../../../../lib/envelope.ts";
 import { route } from "../../../../../lib/route.ts";
+import { goLadderCheck, goRationaleCheck } from "../../../../../lib/gate-write-checks.ts";
 import { captureReviewSnapshot, recordHumanFinalReview } from "../../../../../lib/review/human-final.ts";
 
 // Gate placement (2026-09-12): the opportunity is the S1–S7 carrier, so only
@@ -95,10 +96,16 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   // Wave C-3 (pilot-009 D-4): GO needs the gate's stage prerequisites complete.
   // HOLD/KILL stay allowed anytime. New writes only — existing rows are untouched.
   if (body.decision === "go") {
+    // ADR-0186 D7 (family `ladder`): screening -> pre_fs -> (target_screening) on the track ladder.
+    const ladderDenied = goLadderCheck({ entityType: "opportunity", entityId: id, gate: body.gate, actor: ctx.userId });
+    if (ladderDenied) return ladderDenied;
     const gaps = gateGoPrerequisiteGaps({ type: "opportunity", id }, body.gate as GateId);
     if (gaps.length > 0) {
       return fail(409, "gate_prerequisites_incomplete", `GO is not allowed — prerequisite steps of the ${body.gate} stage are incomplete: ${gaps.join("; ")}. HOLD or KILL can be recorded at any time.`);
     }
+    // ADR-0186 D2 (family `rationale`): GO only - HOLD and KILL are never blocked by the integrity families.
+    const rationaleDenied = goRationaleCheck({ entityType: "opportunity", entityId: id, gate: body.gate, actor: ctx.userId }, rationale);
+    if (rationaleDenied) return rationaleDenied;
   }
 
   const nowTs = new Date().toISOString();

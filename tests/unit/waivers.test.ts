@@ -44,6 +44,8 @@ const OUTSIDER = "outsider1";
 let analystCookie = "";
 let viewerCookie = "";
 let outsiderCookie = "";
+let approverCookie = "";
+const APPROVER2 = "approver2"; // approval needs a person other than the requester (ADR-0186 security fix)
 let projectId = "";
 const DOC_ID = "govdoc-test-policy";
 
@@ -65,7 +67,11 @@ beforeAll(async () => {
   db.run("UPDATE app_user SET must_change_password = 0");
   analystCookie = await loginCookie(ANALYST, "pw-analyst-12345");
   viewerCookie = await loginCookie(VIEWER, "pw-viewer-12345");
+  await createUser(db, { userId: APPROVER2, role: "analyst", password: "pw-approver-12345", createdBy: "test", now: NOW });
+  approveUser(db, { userId: APPROVER2, approvedBy: "test", now: NOW });
+  db.run("UPDATE app_user SET must_change_password = 0");
   outsiderCookie = await loginCookie(OUTSIDER, "pw-outsider-12345");
+  approverCookie = await loginCookie(APPROVER2, "pw-approver-12345");
 
   db.run(
     `INSERT INTO governance_doc (id, layer, key, title, scope, version, enforceability, owner_agent, doc_path, effective_from)
@@ -97,6 +103,7 @@ beforeAll(async () => {
     db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", oppId, gate, "go", "test", ANALYST, NOW]);
   }
   projectId = promoteOpportunity(oppId, { promotedBy: ANALYST, needToKnowBasis: "waiver test" }).project.id;
+  db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)", [projectId, APPROVER2, "lead", "test", NOW, "waiver test"]);
 });
 
 afterAll(async () => {
@@ -133,13 +140,13 @@ describe("waiver lifecycle API (S9 dd-waiver-review)", () => {
 
     const res = await req(`/api/projects/${projectId}/waivers/${pending.id}`, {
       method: "PATCH",
-      headers: { cookie: analystCookie },
+      headers: { cookie: approverCookie },
       body: JSON.stringify({ decision: "approve" }),
     });
     expect(res.status).toBe(200);
     const data = (await res.json()).data as { status: string; approved_by: string };
     expect(data.status).toBe("active");
-    expect(data.approved_by).toBe(ANALYST);
+    expect(data.approved_by).toBe(APPROVER2);
 
     // engine sees it
     const active = findActiveWaiver(db, { projectId, governanceDocId: DOC_ID, clauseRef: "§4-2.1", now: new Date().toISOString() });
@@ -172,13 +179,13 @@ describe("waiver lifecycle API (S9 dd-waiver-review)", () => {
     const rej = await req(`/api/projects/${projectId}/waivers/${id1}`, { method: "PATCH", headers: { cookie: analystCookie }, body: JSON.stringify({ decision: "reject" }) });
     expect(((await rej.json()).data as { status: string }).status).toBe("rejected");
     // rejected cannot be approved afterwards
-    const reApprove = await req(`/api/projects/${projectId}/waivers/${id1}`, { method: "PATCH", headers: { cookie: analystCookie }, body: JSON.stringify({ decision: "approve" }) });
+    const reApprove = await req(`/api/projects/${projectId}/waivers/${id1}`, { method: "PATCH", headers: { cookie: approverCookie }, body: JSON.stringify({ decision: "approve" }) });
     expect(reApprove.status).toBe(400);
 
     // new active → revoke → revoked cannot be revoked again
     const r2 = await postWaiver({ governance_doc_id: DOC_ID, clause_ref: "§8-1.0", reason: "철회 검증", approver_role: "pgm", expires_at: FUTURE });
     const id2 = ((await r2.json()).data as { id: string }).id;
-    await req(`/api/projects/${projectId}/waivers/${id2}`, { method: "PATCH", headers: { cookie: analystCookie }, body: JSON.stringify({ decision: "approve" }) });
+    await req(`/api/projects/${projectId}/waivers/${id2}`, { method: "PATCH", headers: { cookie: approverCookie }, body: JSON.stringify({ decision: "approve" }) });
     const rv = await req(`/api/projects/${projectId}/waivers/${id2}`, { method: "PATCH", headers: { cookie: analystCookie }, body: JSON.stringify({ decision: "revoke" }) });
     expect(((await rv.json()).data as { status: string }).status).toBe("revoked");
     const reRevoke = await req(`/api/projects/${projectId}/waivers/${id2}`, { method: "PATCH", headers: { cookie: analystCookie }, body: JSON.stringify({ decision: "revoke" }) });

@@ -10,8 +10,8 @@ description: >
 
   Use when: "entity IC", "group IC", "approval chain", "IC gate",
   "group agenda ranking", "submit to group IC".
-version: 1.1.0
-last_reviewed: 2026-08-23
+version: 1.1.1
+last_reviewed: 2026-10-27
 status: active
 owner: process-governance-manager
 prerequisites: none
@@ -82,6 +82,13 @@ other for capital allocation within a review cycle (ADR-0029), using
    (also the MCP `get_approval_chain` tool) surfaces `level`, `gate`,
    `sequence`, `status`, `decision`, `decided_at`, `conditions`,
    `blocked_reason` for both levels on one project
+
+## Maker/Checker Contract (ADR-0186, neb-policy 2.9)
+
+- An Entity IC or Group IC GO is a maker record; it becomes effective only after a different person holding the matching human role (`entity-ic-reviewer` or `group-ic-reviewer`) countersigns. Until then the chain shows "awaiting countersign" and downstream gating treats it as not-GO. HOLD and KILL are effective immediately.
+- A checker's rejection leaves both rows on the record; the maker may record a new decision.
+- Group IC conditions are tracked condition precedents; an open Group IC-scoped condition blocks a Group IC GO (neb-policy 2.10).
+- Agents assemble the package and never record, countersign or clear.
 
 ## Output Format
 

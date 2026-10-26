@@ -1173,7 +1173,7 @@
       "name": "i18n-specialist",
       "scope": "root",
       "capability": "i18n-specialist",
-      "content_hash": "81ad3818b111b7ee",
+      "content_hash": "8add52d9f992f5af",
       "version": "1.2.0",
       "mirrors": [
         "agents/i18n-specialist.md"
@@ -1701,6 +1701,11 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20261027-01",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "doc:AGENTS.md",
       "type": "doc",
       "layer": "L3"
@@ -2037,8 +2042,8 @@
       "name": "compliance-monitoring",
       "scope": "root",
       "capability": "compliance-monitoring",
-      "content_hash": "98c762621e4a5576",
-      "version": "1.1.0",
+      "content_hash": "08968480622722b9",
+      "version": "1.1.1",
       "mirrors": [
         "skills/compliance-monitoring/SKILL.md",
         ".claude/skills/compliance-monitoring/SKILL.md",
@@ -3341,8 +3346,8 @@
       "name": "stage-gate-governance",
       "scope": "root",
       "capability": "stage-gate-governance",
-      "content_hash": "85be08ada8072cbe",
-      "version": "1.4.2",
+      "content_hash": "5e3944ce41ad6e11",
+      "version": "1.4.3",
       "mirrors": [
         "skills/stage-gate-governance/SKILL.md",
         ".claude/skills/stage-gate-governance/SKILL.md",
@@ -3543,8 +3548,8 @@
       "name": "two-tier-approval-chain",
       "scope": "root",
       "capability": "two-tier-approval-chain",
-      "content_hash": "791d2fc229703835",
-      "version": "1.1.0",
+      "content_hash": "78796b713a377a8c",
+      "version": "1.1.1",
       "mirrors": [
         "skills/two-tier-approval-chain/SKILL.md",
         ".claude/skills/two-tier-approval-chain/SKILL.md",
@@ -3669,8 +3674,8 @@
       "name": "wacc-input-session",
       "scope": "root",
       "capability": "wacc-input-session",
-      "content_hash": "7225557fdec3716a",
-      "version": "1.3.1",
+      "content_hash": "7f2d4246f679464e",
+      "version": "1.3.2",
       "mirrors": [
         "skills/wacc-input-session/SKILL.md",
         ".claude/skills/wacc-input-session/SKILL.md",
@@ -3687,8 +3692,8 @@
       "name": "waiver-management",
       "scope": "root",
       "capability": "waiver-management",
-      "content_hash": "2eb8faf0a8f231ab",
-      "version": "1.1.0",
+      "content_hash": "78bf8d5188610d73",
+      "version": "1.1.1",
       "mirrors": [
         "skills/waiver-management/SKILL.md",
         ".claude/skills/waiver-management/SKILL.md",
@@ -5601,6 +5606,18 @@
       "type": "cites_skill",
       "from": "dec:DEC-20261026-01",
       "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261027-01",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261027-01",
+      "to": "skill:root/policy-and-procedure-governance",
       "source": "skills_used"
     },
     {

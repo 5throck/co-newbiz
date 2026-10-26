@@ -5,7 +5,7 @@ owner: compliance-officer
 lifecycle:
   phase: draft
 status: experimental
-version: "1.1.0"
+version: "1.1.1"
 description: >
   Implements the dd-waiver-review activity (S9) under the ADR-0036 mandatory-expiry waiver lifecycle: preparing a waiver request for a failed mandatory DD item, recording the waiver with its expiry, and tracking it to expiry or closure. Does not cover the six M&A mandatory validators, which have no waiver path (bf-01).
   Use when: "waiver", "waiver request", "exemption approval", "waiver expiry".
@@ -26,6 +26,12 @@ The owning procedure is authoritative for what happens and when; this skill carr
 ## Artifact
 
 waiver proposal with scope, rationale, expiry date and compensating control; the approval itself is recorded by a human.
+
+## Gate-Integrity Rules (ADR-0186, neb-policy 2.11)
+
+- A waiver request names an existing checklist item, is waiver-eligible, and states an expiry of at most 90 days from approval.
+- The requester and the approver are different people; the approver holds `entity-ic-reviewer` (or `group-ic-reviewer` for group-level items). The approval time and identity come from the authenticated session, never from the request text.
+- Mandatory items marked `na` need a reason and a second person's confirmation; prepare the reason and the evidence pointer, never the confirmation.
 
 ## Boundaries
 

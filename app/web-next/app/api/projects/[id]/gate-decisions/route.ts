@@ -13,6 +13,7 @@ import { gateGoPrerequisiteGaps, latestGateDecisions, type GateId } from "../../
 import { badRequest, fail, forbidden, notFound, ok, unprocessable } from "../../../../../lib/envelope.ts";
 import { IC_GAP_GATES, composeRationale, icGoGapItems, parseRationale } from "../../../../../lib/ic-gap-override.ts";
 import { IC_SEQUENCE, IC_STEP_LABEL, gateSequenceBlocker } from "../../../../../lib/gate-sequence-view.ts";
+import { goLadderCheck, goRationaleCheck } from "../../../../../lib/gate-write-checks.ts";
 import { captureReviewSnapshot, recordHumanFinalReview } from "../../../../../lib/review/human-final.ts";
 
 const GATES = new Set(["fs", "dd", "entity_ic", "group_ic"]);
@@ -96,6 +97,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       const label = IC_STEP_LABEL[blocker as keyof typeof IC_STEP_LABEL] ?? blocker;
       return fail(409, "gate_prerequisites_incomplete", `GO is not allowed — the ${label} (${blocker}) GO must precede the ${body.gate} decision. HOLD or KILL can be recorded at any time.`);
     }
+    // ADR-0186 D7 (family `ladder`): the full track ladder, incl. the source opportunity for fs.
+    const ladderDenied = goLadderCheck({ entityType: "project", entityId: id, gate: body.gate, actor: ctx.userId });
+    if (ladderDenied) return ladderDenied;
     const gaps = gateGoPrerequisiteGaps({ type: "project", id }, body.gate as GateId);
     if (gaps.length > 0) {
       return fail(409, "gate_prerequisites_incomplete", `GO is not allowed — prerequisite steps of the ${body.gate} stage are incomplete: ${gaps.join("; ")}. HOLD or KILL can be recorded at any time.`);
@@ -134,6 +138,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       "ic_gap_rationale_required",
       `A ${body.gate} GO with missing deliverables requires a gap rationale (gap_rationale) — missing: ${openGaps.join("; ")}. The rationale is stored with the decision record for the investment committee.`,
     );
+  }
+  // ADR-0186 D2 (family `rationale`): GO only - HOLD and KILL are never blocked by the integrity families.
+  if (body.decision === "go") {
+    const rationaleDenied = goRationaleCheck({ entityType: "project", entityId: id, gate: body.gate, actor: ctx.userId }, rationale, gapRationale);
+    if (rationaleDenied) return rationaleDenied;
   }
   const gapOverride = icGo && gapRationale && openGaps.length > 0
     ? { items: openGaps, rationale: gapRationale }

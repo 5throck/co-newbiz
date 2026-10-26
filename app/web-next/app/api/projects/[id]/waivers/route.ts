@@ -8,8 +8,11 @@ import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { issueWaiver, listProjectWaivers } from "../../../../../../../db/lib/compliance.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
+import { applyFamily, gateIntegrityMode } from "../../../../../lib/gate-integrity.ts";
+import { validateRationale } from "../../../../../lib/rationale-check.ts";
+import { waiverIssueFailure } from "../../../../../lib/waiver-guard.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { badRequest, fail, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { scopeOrResponse } from "../../../../../lib/dd-target-http.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -80,7 +83,33 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (dupe) {
     return badRequest("duplicate_active", `An active waiver for the same clause (${dupe.id}) already exists — revoke it before re-requesting.`);
   }
-  const approvedBy = body?.approved_by?.trim() || undefined;
+  // ADR-0186 D5 + D2. Families: `waiver` (clause resolves, not_waivable, approver_role) and
+  // `rationale` (ack profile on the reason). off = legacy; shadow = audited only; enforce = 422.
+  const integrityCtx = { entityType: "project" as const, entityId: id, gate: "waiver_request", actor: ctx.userId };
+  const issueDenied = applyFamily("waiver", integrityCtx, () => waiverIssueFailure({ clauseRef, approverRole, db, projectId: id }));
+  if (issueDenied) return issueDenied;
+  // Only a client-supplied reason is judged: the defaulted dd_item reason is boilerplate built from ids.
+  const reasonDenied = applyFamily("rationale", integrityCtx, () => {
+    const r = validateRationale(body?.reason?.trim() ?? "", "ack");
+    return r.ok ? null : {
+      status: 422,
+      code: "rationale_insufficient",
+      message: `The waiver reason does not meet the minimum substance profile (${r.reason}); state the actual reason.`,
+      details: { field: "reason", reason: r.reason, profile: "ack" },
+    };
+  });
+  if (reasonDenied) return reasonDenied;
+  // The free-text `approved_by` body field NEVER confers authority, in any mode (boundary #2): a request
+  // is always pending until the authenticated approve route (or the guarded PATCH) approves it.
+  // It is ignored and audited; with CO_NEWBIZ_WAIVER_APPROVED_BY_COMPAT=0 under enforce it is rejected.
+  const approvedBy = undefined;
+  if (body?.approved_by?.trim()) {
+    const mode = gateIntegrityMode("waiver");
+    if (mode === "enforce" && process.env.CO_NEWBIZ_WAIVER_APPROVED_BY_COMPAT === "0") {
+      return fail(400, "approved_by_removed", "approved_by is no longer accepted in the request body; a waiver is approved through POST /api/projects/:id/waivers/:waiverId/approve by an authenticated human-role holder.");
+    }
+    appendAudit(db, { actor: ctx.userId, action: "waiver.approved_by_ignored", target: `${id}:${governanceDocId}`.slice(0, 200), now });
+  }
   let waiverId: string;
   try {
     waiverId = issueWaiver(db, {

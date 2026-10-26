@@ -178,3 +178,26 @@ export async function seedGreenfieldDeal(dbPath: string, analystId: string): Pro
   })();
   return GREENFIELD;
 }
+
+/**
+ * ADR-0186 P1 (design 3.11 / R5): two distinct human-role grant holders for scenarios that exercise
+ * waiver approval, `na` confirmation and, from P3, the IC countersign. Bootstrap fixture (runs before
+ * the server starts, like the other seeds): creates the accounts and issues the grants through the
+ * repository the admin route uses. Production grants are created by the admin route only.
+ */
+export async function seedGrantedReviewers(
+  dbPath: string,
+  adminId: string,
+  reviewers: { entity: { userId: string; password: string }; group: { userId: string; password: string } },
+): Promise<void> {
+  const { createUser, approveUser } = await import("../../../db/lib/accounts.ts");
+  const { issueHumanRoleGrant } = await import("../../../db/lib/human-roles.ts");
+  const db = getDb(dbPath);
+  const now = new Date().toISOString();
+  for (const [who, role] of [[reviewers.entity, "entity-ic-reviewer"], [reviewers.group, "group-ic-reviewer"]] as const) {
+    await createUser(db, { userId: who.userId, role: "analyst", password: who.password, displayName: who.userId, createdBy: "e2e-bootstrap", now });
+    approveUser(db, { userId: who.userId, approvedBy: "e2e-bootstrap", now });
+    db.run("UPDATE app_user SET must_change_password = 0 WHERE user_id = ?", [who.userId]);
+    issueHumanRoleGrant(db, { userId: who.userId, roleKey: role, grantedBy: adminId, now });
+  }
+}

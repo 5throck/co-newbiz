@@ -90,6 +90,8 @@ agent 메타 옵션을 통해 `llm_call_log`(migration 0092) 런 장부에 기�
 | `/api/group-agenda/:cycle` | GET | Ranked comparison view for a review cycle | Group IC role |
 | `/api/projects/:id/compliance-checks` | GET | Gate-blocking status | Membership |
 | `/api/projects/:id/waivers` | GET/POST | Waiver list/request for the project — `expires_at` required on POST, no waiver path for the six-validator completeness check (rejected server-side, not just client-validated); as-built: the project route resolves the project through `visibleProject`, which hides projects from admin (404), so admin cannot file or activate waivers here | Membership (GET); POST project member with `analyst` role — admin excluded |
+| `/api/projects/:id/waivers/:waiverId/approve` | POST | ADR-0186 D5: the authenticated approval act. Approver = the cookie-session user (never a body field), differs from the requester, holds an active grant of the waiver's `approver_role` (`entity-ic-reviewer` / `group-ic-reviewer`, deny-by-default `403 human_role_required`), term <= 90 days from approval (`422 waiver_term_too_long`); sets `approved_by` and `approved_at`; bearer / MCP callers get `403 human_only`; audited `waiver.approve`; rate-limited. At issue (`POST .../waivers`, family `waiver`): a mandatory non-waiver-eligible item is `422 not_waivable`, an unresolved `clause_ref` is `422 clause_unresolved`; the legacy `approved_by` body field never grants authority (ignored and logged for one release, then `400 approved_by_removed`) | Project member, analyst role + human-role grant, cookie session only |
+| `/api/projects/:id/dd-checklist/state/confirm-na` | POST | ADR-0186 D5: second-person confirmation of a `na` on a mandatory DD item (`PUT .../state` requires a reason on mandatory `na`); confirmer differs from the assessor (`403 confirmer_must_differ`) and holds a grant; unconfirmed mandatory `na` counts as pending under `enforce` | Project member, analyst role + human-role grant, cookie session only |
 | `/api/interpretations` | GET/POST | Interpretation registry, search by clause; POST audit-logged (`interpretation_record`) | Public within the workspace (not project-scoped); POST `admin` only |
 
 ## 6. M&A Special Topics and Green Field
@@ -179,6 +181,7 @@ All project-scoped via membership (404-not-403); writes analyst-gated and audit-
 
 | Endpoint | Method | Purpose | Access Control |
 |---|---|---|---|
+| `/api/admin/human-roles` | GET/POST | ADR-0186 D6: human-role grants (`entity-ic-reviewer`, `group-ic-reviewer`); POST issues one (no self-grant, no agent account, one active grant per user and role, audited `grant.issue`); `POST /api/admin/human-roles/:grantId/revoke` revokes (row kept, audited `grant.revoke`). Cookie session only; a grant gives authority only on the routes that check it (deny-by-default, ADR-0038) | `admin` role |
 | `/api/admin/users` | GET/PUT | User management | `admin` role — **still cannot see project data via this endpoint** |
 | `/api/admin/data-sources` | GET | API key presence/last-success only, **never the key value** | `admin` role |
 | `/api/admin/schedule-jobs` | GET/PUT | `job_run` history, retry | `admin` role |

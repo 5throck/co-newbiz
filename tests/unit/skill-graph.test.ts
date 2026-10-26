@@ -28,11 +28,40 @@ import {
   checkSkillMetadata,
   parseSkillFrontmatter,
   loadHumanRoles,
+  checkAiAgentAuthority,
 } from "../../scripts/co-newbiz/graph-map.ts";
 
 const PROJECT_ROOT = join(import.meta.dirname, "../..");
 
 // ── Layer 1: pure fixtures ──────────────────────────────────────────────────
+
+describe("checkAiAgentAuthority (pure, ADR-0186 decision 6)", () => {
+  const roles = new Set(["group-ic-reviewer", "entity-ic-reviewer"]);
+  const exists = (k: string) => k === "process-governance-manager";
+
+  test("AI agent key + decision_authority: human ⇒ error naming step, key, file and a human role", () => {
+    const err = checkAiAgentAuthority(
+      "p @ KR",
+      { id: 5, agent_key: "process-governance-manager", decision_authority: "human" },
+      roles,
+      exists
+    );
+    expect(err).toContain("step 5");
+    expect(err).toContain("process-governance-manager");
+    expect(err).toContain("agents/process-governance-manager.md");
+    expect(err).toContain("group-ic-reviewer");
+  });
+
+  test("human-role key + decision_authority: human ⇒ passes", () => {
+    expect(
+      checkAiAgentAuthority("p @ KR", { id: 5, agent_key: "group-ic-reviewer", decision_authority: "human" }, roles, exists)
+    ).toBeNull();
+  });
+
+  test("AI agent key without decision_authority ⇒ passes", () => {
+    expect(checkAiAgentAuthority("p @ KR", { id: 5, agent_key: "process-governance-manager" }, roles, exists)).toBeNull();
+  });
+});
 
 describe("checkSkillMetadata (pure)", () => {
   const knownProcedures = new Set(["brownfield-dd", "entity-ic-review"]);
@@ -195,13 +224,14 @@ describe("buildGraphMap over the live repo (PR-8 gates)", () => {
     expect(drifted).toEqual([]);
   });
 
-  test("group-investment-review step 5 is the recorder shape (PGM key + human marking)", () => {
+  test("group-investment-review step 5 is the human-role shape (group-ic-reviewer, ADR-0186 decision 6)", () => {
     const step = map.procedures
       .find((p) => p.procedure === "group-investment-review" && p.combo === "shared")!
       .steps.find((s) => s.id === 5)!;
-    expect(step.agent_key).toBe("process-governance-manager");
+    expect(step.agent_key).toBe("group-ic-reviewer");
     expect(step.decision_authority).toBe("human");
     expect(step.output_type).toBe("group_ic_decision");
+    expect(require("node:fs").existsSync(join(PROJECT_ROOT, "agents", "group-ic-reviewer.md"))).toBe(false);
   });
 
   test("entity-ic-review step 5 is the human-role shape (registry key, no agent file)", () => {

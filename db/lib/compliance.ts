@@ -176,7 +176,9 @@ export function issueWaiver(db: Database, options: IssueWaiverOptions): string {
       options.requestedBy,
       options.approverRole,
       options.approvedBy ?? null,
-      options.approvedAt ?? null,
+      // ADR-0186 D5: an immediately-approved waiver carries approved_at (findActiveWaiver requires it);
+      // before this fix a status='active' row without approved_at was silently unusable.
+      approved ? (options.approvedAt ?? options.now) : (options.approvedAt ?? null),
       options.expiresAt,
       approved ? "active" : "pending",
       options.now,
