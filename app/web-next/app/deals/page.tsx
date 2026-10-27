@@ -84,7 +84,7 @@ const FILTERS: Array<[FilterKey, string]> = [
   ["all", "common.all"],
   ["greenfield", "common.track.greenfield"],
   ["brownfield", "common.track.brownfield"],
-  ["gate", "HOLD"],
+  ["gate", "pages.deals.filterHold"],
   ["paused", "pages.deals.filterPaused"],
 ];
 

@@ -28,7 +28,7 @@ const ANALYST_ROUTES = [
 ];
 const ADMIN_ROUTES = [
   "/admin", "/admin/users", "/admin/audit", "/admin/data-sources", "/admin/schedule", "/admin/database", "/admin/notifications",
-  "/admin/glossary", "/admin/governance", "/admin/master-data", "/admin/business-targets", "/admin/adr", "/admin/system-mode", "/inbox",
+  "/admin/glossary", "/admin/governance", "/admin/master-data", "/admin/business-targets", "/admin/adr", "/admin/system-mode", "/admin/gate-integrity", "/inbox",
 ];
 
 beforeAll(async () => {

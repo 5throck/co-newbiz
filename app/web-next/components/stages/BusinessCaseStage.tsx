@@ -34,7 +34,8 @@ import { StageTabs } from "../StageTabs.tsx";
 import { S8LensStrip } from "./S8LensStrip.tsx";
 import { S8PartHeader } from "./S8PartHeader.tsx";
 import { TechnicalLensPanel } from "./TechnicalLensPanel.tsx";
-import { api } from "../../lib/api.ts";
+import { api, ApiError } from "../../lib/api.ts";
+import { reconfirmErrorText } from "../../lib/reconfirm-view.ts";
 import { irrGuardBand, IRR_GUARD_CHIP_LABEL, IRR_GUARD_DIAGNOSTIC } from "../../lib/irr-guard.ts";
 import type { RatioGuardFlag } from "../../lib/share-guard.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
@@ -359,6 +360,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
       const noteProblem = goalsAckErrorText(e);
       if (noteProblem) { setAckFor(modelId); setAckError(noteProblem); }
       else if ((e as { code?: string } | null)?.code === GOALS_ACK_REQUIRED_CODE) setAckFor(modelId);
+      else if (e instanceof ApiError && e.code === "reconfirmation_required") setError(reconfirmErrorText(e.message, e.details, (k) => tr(`components.reconfirm.item.${k}` as never)));
       else setError(e instanceof Error ? e.message : t("adoptionFailed"));
     } finally {
       setBusy(false);

@@ -367,6 +367,82 @@
       "needBoth": "Choose a user and a role.",
       "grantedBy": "{by} on {date}",
       "revokedBy": "Revoked by {by}"
+    },
+    "gateIntegrity": {
+      "h1": "Stage Gate integrity",
+      "intro": "Weekly indicators G1-G12 for the Stage Gate rules: how often decisions are blocked or differ, and whether each rule family is ready to be switched on. Counts only; no reasons text or project names.",
+      "loadFailed": "Could not load the indicators.",
+      "filter": {
+        "legend": "Period and filter",
+        "from": "From",
+        "to": "To (included)",
+        "gate": "Stage Gate",
+        "minWrites": "Minimum decisions (G12)",
+        "apply": "Show indicators",
+        "rangeProblem": "The start date must not be after the end date.",
+        "minWritesProblem": "Enter a whole number, 0 or more."
+      },
+      "summary": "Period {from} to {to} · {count} indicator(s) over the limit",
+      "banner": {
+        "title": "Some database changes are not applied yet",
+        "body": "Indicators that need them show as pending below. Apply the changes, then reload."
+      },
+      "state": {
+        "withinLimit": "Within limit",
+        "breached": "Over the limit",
+        "migrationPending": "Waiting for a database change",
+        "unavailable": "Not available"
+      },
+      "pending": {
+        "intro": "{section} cannot be computed until these database changes are applied:",
+        "missing": "Missing:"
+      },
+      "unavailableBody": "This indicator could not be computed right now.",
+      "li": {
+        "label": "Switch-on indicator",
+        "title": "A leading indicator for switching these rule families on"
+      },
+      "rate": "rate",
+      "rateNone": "no rate (nothing to divide by)",
+      "reasons": "Why it is over the limit",
+      "noteSummary": "How this is counted",
+      "kpiName": {
+        "G1": "GO / HOLD / KILL mix",
+        "G2": "AI and human decisions differ",
+        "G3": "Divergence reason present",
+        "G4": "Acknowledgements by kind",
+        "G5": "Unassessed kill criteria at GO",
+        "G6": "Would-block events (shadow)",
+        "G7": "Second-review wait and pending count",
+        "G8": "Open conditions and their age",
+        "G9": "Waivers: count and age",
+        "G10": "na confirmation wait and backlog",
+        "G11": "WACC still provisional at S8 or later",
+        "G12": "Days without would-block events"
+      },
+      "value": {
+        "empty": "Nothing in this period.",
+        "gate": "Stage Gate",
+        "total": "Decisions",
+        "goShare": "GO share",
+        "priorGoShare": "Prior 4 weeks (decisions)",
+        "g1Caption": "GO, HOLD and KILL decisions per gate",
+        "g6Caption": "Would-block events per rule family, code and week",
+        "g6Unreviewed": "All {count} event(s) are shown as unreviewed: whether one is explained is decided by a reviewer in the weekly review and is not stored here.",
+        "family": "Rule family",
+        "code": "Code",
+        "week": "Week of",
+        "count": "Events",
+        "g12Caption": "Days without would-block events per rule family",
+        "streakDays": "Days in a row",
+        "writes": "Decisions in that time",
+        "qualifies": "14 days reached",
+        "yes": "Yes",
+        "notYet": "Not yet",
+        "generalCaption": "Figures of indicator {id}",
+        "item": "Figure",
+        "figure": "Value"
+      }
     }
   },
   "auth": {
@@ -2004,6 +2080,39 @@
       "warning": {
         "wacc_not_below_hurdle": "The WACC is at or above the hurdle IRR; check the two rates."
       }
+    },
+    "reconfirm": {
+      "title": "Re-confirmation needed before new use",
+      "body": "This project was recorded under earlier Stage Gate rules. A new GO and a business-case adoption are refused until people re-confirm the items below. Viewing is unaffected.",
+      "reasonPrefix": "Reason:",
+      "holdKillNote": "HOLD and KILL can still be recorded at any time.",
+      "satisfied": "Done",
+      "unmet": "Still needed",
+      "open": "Open",
+      "item": {
+        "wacc_confirmed": "WACC, its subject and the hurdle rate confirmed by a person",
+        "ic_countersign": "Investment committee GO countersigned by a second person",
+        "na_review": "Every mandatory DD item marked not applicable confirmed by a second person"
+      },
+      "clear": {
+        "heading": "Clear the requirement",
+        "reasonLabel": "Reason for clearing",
+        "submit": "Clear requirement",
+        "needItems": "Available once every item above is done. The server also checks that you hold an investment committee reviewer grant and did not record this project's committee decisions.",
+        "adminNote": "An administrator cannot clear this. A person with an investment committee reviewer grant does it.",
+        "viewerNote": "Only a person with an investment committee reviewer grant can clear this."
+      },
+      "cleared": "Requirement cleared.",
+      "created": "Requirement opened.",
+      "failed": "The request failed.",
+      "create": {
+        "summary": "Open a re-confirmation requirement",
+        "intro": "For a project recorded under earlier Stage Gate rules. New GO decisions and case adoption are refused until the items are done and a reviewer clears it.",
+        "itemsLegend": "Items required",
+        "reasonLabel": "Reason",
+        "submit": "Open requirement",
+        "projectLabel": "Project id"
+      }
     }
   },
   "errors": {
@@ -2282,6 +2391,11 @@
       "jamo_only": "The reason has no complete words.",
       "duplicate_of_other_gate": "The same reason was already used on another gate."
     },
+    "reconfirm_clearer_is_maker": "The person who recorded the project's investment committee decisions cannot clear its re-confirmation requirement.",
+    "reconfirm_exists": "An open re-confirmation requirement already exists for this project.",
+    "reconfirm_items_unmet": "The re-confirmation items are not all satisfied yet.",
+    "reconfirm_not_open": "This project has no open re-confirmation requirement.",
+    "reconfirmation_required": "This project is a legacy record that must be re-confirmed before new use (WACC, IC countersign, na review). HOLD or KILL can be recorded at any time.",
     "unexpected": {
       "title": "Something went wrong",
       "body": "An unexpected error occurred. This is usually temporary — try again in a moment. If it keeps happening, refresh the page or go back to the previous screen.",
@@ -2308,7 +2422,8 @@
       "notifications": "Notifications",
       "schedule": "Schedule",
       "systemMode": "System mode",
-      "users": "Users & tokens"
+      "users": "Users & tokens",
+      "gateIntegrity": "Stage Gate integrity"
     },
     "archives": "Archives",
     "benchmarks": "Benchmarks",
@@ -7620,12 +7735,14 @@
       "strategy": "R&BD platform strategy",
       "synergy": "S3 synergy & strategic fit",
       "titleSuffix": "New Business Review",
-      "flows": "Flow console"
+      "flows": "Flow console",
+      "adminGateIntegrity": "Stage Gate integrity"
     },
     "ourCompany": {
       "h1": "Group/affiliate analysis"
     },
     "deals": {
+      "filterHold": "HOLD",
       "filterPaused": "Paused",
       "loadFailed": "Could not load the deal board.",
       "waitingPromoted": "Promoted to project",

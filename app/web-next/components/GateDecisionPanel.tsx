@@ -7,6 +7,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "../lib/api.ts";
+import { reconfirmErrorText } from "../lib/reconfirm-view.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness, canWriteProject } from "../lib/project-write-access.ts";
 import { GATE_LABEL_KEY } from "../lib/label-keys.ts";
@@ -424,6 +425,10 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
       void snap.reload();
       const list = integrityErrorList(err.code, d);
       setError(list.length > 0 ? `${err.message} (${list.join(", ")})` : err.message);
+      return;
+    }
+    if (err.code === "reconfirmation_required") {
+      setError(reconfirmErrorText(err.message, d, (k) => tr(`components.reconfirm.item.${k}` as never)));
       return;
     }
     if (err.code === "gate_prerequisites_incomplete" && d.awaiting_countersign) {

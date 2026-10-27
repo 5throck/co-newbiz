@@ -73,6 +73,26 @@ entries:
       ko: docs/runbooks/beta-series-collection_ko.md
     status: active
 
+  - id: rb-gate-integrity-enforce-flip
+    layer: runbook
+    title: "Runbook — Gate-Integrity Enforce Flip (ADR-0186 P5)"
+    audience: system owner, operators, compliance-officer
+    owner: process-governance-manager
+    files:
+      en: docs/runbooks/gate-integrity-enforce-flip.md
+      ko: docs/runbooks/gate-integrity-enforce-flip_ko.md
+    status: active
+
+  - id: rb-prj-dse4pw-reconfirmation
+    layer: runbook
+    title: "Procedure — PRJ-DSE4PW Re-confirmation Before New Use (ADR-0186 O-6)"
+    audience: system owner, dba, entity/group IC reviewers
+    owner: process-governance-manager
+    files:
+      en: docs/runbooks/prj-dse4pw-reconfirmation.md
+      ko: docs/runbooks/prj-dse4pw-reconfirmation_ko.md
+    status: active
+
   # ── Guidelines ───────────────────────────────────────────────────────────
   - id: gdl-evidence-file-policy
     layer: guideline

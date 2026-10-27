@@ -74,7 +74,7 @@ function count(db: Db, sql: string, ...args: unknown[]): number {
 
 /** Brown Field = the seed as is; Green Field = the same chain re-shaped to the own-build track. */
 function seedDeal(db: Db, track: Track, dbPath: string): Ids {
-  const ids = seedS1ToS12Demo(dbPath);
+  const ids = seedS1ToS12Demo(dbPath, { gateDecisions: false }); // the decisions under test are recorded below
   const { oppId, projectId } = { oppId: ids.opportunityId, projectId: ids.projectId };
 
   // The decisions under test are recorded through the path being exercised.
