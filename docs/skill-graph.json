@@ -1178,8 +1178,8 @@
       "name": "i18n-specialist",
       "scope": "root",
       "capability": "i18n-specialist",
-      "content_hash": "8add52d9f992f5af",
-      "version": "1.2.0",
+      "content_hash": "4c93ae3207e624fc",
+      "version": "1.3.0",
       "mirrors": [
         "agents/i18n-specialist.md"
       ]

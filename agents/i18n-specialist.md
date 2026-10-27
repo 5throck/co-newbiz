@@ -5,15 +5,15 @@ role: specialist
 status: active
 tier: medium
 model: inherit
+domain: _shared
 lifecycle:
   phase: production
   created: "2026-08-24"
   last_updated: "2026-09-30"
   governance: docs/lifecycle/agents/i18n-specialist.md
-version: "1.2.0"
+version: "1.3.0"
 last_reviewed: "2026-08-24"
 color: cyan
-domain: _shared
 description: 'Owns locale configuration, locale-specific formatting, and text layout guidance. Use when: "localization review", "locale config", "internationalization"'
 examples:
   - user: "Which locale code should we use for Traditional Chinese content for Taiwan?"
