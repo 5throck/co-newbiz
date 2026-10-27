@@ -7868,6 +7868,133 @@ paths:
           $ref: '#/components/responses/Unprocessable'
         '429':
           $ref: '#/components/responses/TooManyRequests'
+  /api/admin/gate-integrity/kpis:
+    get:
+      operationId: getGateIntegrityKpis
+      summary: "Gate-integrity KPIs G1-G12 (ADR-0186 P5, governance-operations section 4.1). Administrator only (the system-operator seat the compliance-officer reviews through); aggregate counts only - no rationale text and no project identifiers. Query: from / to (ISO date or instant; default = the current calendar week), gate (screening|pre_fs|target_screening|fs|dd|entity_ic|group_ic; scopes the gate-based KPIs), min_writes (G12 write-volume N, default 10). 200 data {generated_at, period{from,to,prior_from,prior_to}, gate, unapplied_migrations[], kpis[12]}; each kpi {id, name, li, li_families[], period, value, numerator, denominator, rate, breach{breached, reasons[]}, status ok|migration_pending|unavailable, migration_pending?{section, missing[], migrations[]}, note?}. A section whose gate-integrity migration is not applied is status migration_pending (value null) instead of an error. Read-only."
+      tags:
+        - Reference
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema: { type: string }
+        - name: to
+          in: query
+          required: false
+          schema: { type: string }
+        - name: gate
+          in: query
+          required: false
+          schema: { type: string, enum: [screening, pre_fs, target_screening, fs, dd, entity_ic, group_ic] }
+        - name: min_writes
+          in: query
+          required: false
+          schema: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/projects/{id}/reconfirm:
+    get:
+      operationId: getProjectReconfirmation
+      summary: "The open legacy-record re-confirmation requirement of the project (ADR-0186 owner decision O-6, migration 0179) with its derived item states (wacc_confirmed, ic_countersign, na_review) and the unmet list, or {open:false}. Project members only (404 otherwise). Read-only."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: openProjectReconfirmation
+      summary: "Open a re-confirmation requirement on a project (ADR-0186 O-6). Administrator and human cookie session only; data-driven (no project id is hard-coded). While open, a new GO and a business-case adoption are refused with 409 reconfirmation_required (error.details.unmet names the open items; HOLD and KILL are never blocked, and an entity_ic / group_ic GO passes when ic_countersign is the only unmet item), regardless of the gate-integrity family flags; viewing, gate-brief generation and IC-package generation carry a non-blocking `reconfirmation` notice. 409 reconfirm_exists when one is already open; the reason meets the ack substance profile (422). Audited reconfirm.create. 201 data {id, project_id, items, created_by, created_at}."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, description: "Ack substance profile." }
+                items:
+                  type: array
+                  items: { type: string, enum: [wacc_confirmed, ic_countersign, na_review] }
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+  /api/projects/{id}/reconfirm/clear:
+    post:
+      operationId: clearProjectReconfirmation
+      summary: "Clear the open re-confirmation requirement (ADR-0186 O-6). Human cookie session only; the clearer holds an entity-ic-reviewer or group-ic-reviewer grant (403 human_role_required), is not the recorder of one of the project's IC decisions (403 reconfirm_clearer_is_maker), every item is satisfied (409 reconfirm_items_unmet, error.details.unmet), nothing open gives 409 reconfirm_not_open, and the reason meets the ack substance profile (422). Audited reconfirm.clear; refusals leave a reconfirm.clear.refused row. No system or agent path clears a requirement. 201 data {id, project_id, cleared_by}."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, description: "Ack substance profile." }
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
   /api/projects/{id}/kill-overrides:
     get:
       operationId: listProjectKillOverrides

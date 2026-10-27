@@ -1,4 +1,4 @@
-// @version 1.11.0
+// @version 1.12.0
 // Idempotent S1→S12 demo chain seeds — BROWNFIELD (seedS1ToS12Demo) and
 // GREENFIELD (seedGreenfieldS1ToS12Demo), one full lifecycle per track.
 //
@@ -8,7 +8,9 @@
 // demo chain that satisfies the process-flow predicates without fabricating it
 // as production data. v1.11.0 also seeds the predicate-optional demo surfaces
 // the S9/S11/S12 tool cards read (T-20261022-042): DD tool rows, PMI
-// monitoring (brownfield), and the milestone register (both tracks).
+// monitoring (brownfield), and the milestone register (both tracks). v1.12.0 (ADR-0186 O-5) records the gate ladder THROUGH the
+// contract (seed-demo-gate-contract.ts): snapshots + acknowledgements, six validators, user-confirmed WACC, countersigned IC
+// GOs, a cleared condition precedent, HOLD, KILL with learning capture and a waiver; option gateDecisions:false skips it.
 //
 // Usage:
 //   bun scripts/co-newbiz/seed-s1-s12-demo.ts [--db-path <path>]
@@ -20,6 +22,7 @@ import { ulid } from "../../db/lib/ulid.ts";
 import { DD_WORKSPACE_CHECKLISTS, SUB_TRACK_DD_CHECKLISTS, getChecklistItems } from "../../app/web-next/lib/library.ts";
 import { currentReviewCycle } from "../../app/web-next/lib/portfolio.ts";
 import { SCREENING_CHECKLIST_ID, screeningItems } from "../../app/web-next/lib/brownfield-targets.ts";
+import * as contract from "./seed-demo-gate-contract.ts";
 
 const DEMO = {
   /** Realistic job-spec snapshot so the S8 params panel shows the real
@@ -125,6 +128,9 @@ export interface SeedOptions {
    *  feasibility + M&A special topics). The E2E passes false to judge them in
    *  the DD workspace UI. */
   subTrackDd?: boolean;
+  /** Default true (with humanDecisions): record the gate ladder through the ADR-0186 contract (snapshots, acknowledgements,
+   *  countersigns, validators, WACC, waiver, HOLD/KILL). Fixtures that need a deal with NO gate decisions pass false. */
+  gateDecisions?: boolean;
 }
 
 /** Small, clearly demo-labelled but structurally complete matrix: the S1 report UI dereferences every field below. */
@@ -161,6 +167,7 @@ const DEMO_MATRIX: SizingMatrix = {
 
 export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { opportunityId: string; projectId: string } {
   const humanDecisions = opts.humanDecisions ?? true;
+  const contractOn = humanDecisions && (opts.gateDecisions ?? true);
   const subTrackDd = opts.subTrackDd ?? true;
   runMigrations(dbPath);
   const db = getDb(dbPath);
@@ -394,8 +401,14 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
       [DEMO.projectId, actor, now],
     );
     // ADR-0148: a fresh project completes S9 only when every standard DD item is judged.
+    // ADR-0186 O-5: with the human decisions on, the validator-derived / WACC / certification items (bf-01..bf-03) are NOT
+    // blanket-passed - they are written after the underlying records exist (see seed-demo-gate-contract.ts) - and one
+    // waiver-eligible item is waived through the waiver path instead of passed.
+    const ownFamily = contractOn ? new Set(["bf-01", "bf-02", "bf-03"]) : new Set<string>();
+    const waiverTarget = contractOn ? contract.waiverItemFor(DD_WORKSPACE_CHECKLISTS.commercial) : null;
     for (const checklistId of [...Object.values(DD_WORKSPACE_CHECKLISTS), ...(subTrackDd ? (SUB_TRACK_DD_CHECKLISTS.m_and_a ?? []) : [])]) {
       for (const item of getChecklistItems(checklistId) ?? []) {
+        if (ownFamily.has(item.id) || (waiverTarget && checklistId === DD_WORKSPACE_CHECKLISTS.commercial && item.id === waiverTarget)) continue;
         db.run(
           `INSERT OR IGNORE INTO project_checklist_item_state
            (id, project_id, checklist_id, item_id, status, note, assessed_by, assessed_at)
@@ -573,22 +586,7 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
       );
     }
 
-    if (humanDecisions) for (const [entityType, entityId, gate] of [
-      ["opportunity", DEMO.oppId, "screening"],
-      ["opportunity", DEMO.oppId, "pre_fs"],
-      ["opportunity", DEMO.oppId, "target_screening"],
-      ["project", DEMO.projectId, "fs"],
-      ["project", DEMO.projectId, "dd"],
-      ["project", DEMO.projectId, "entity_ic"],
-      ["project", DEMO.projectId, "group_ic"],
-    ] as const) {
-      db.run(
-        `INSERT OR IGNORE INTO gate_decision
-         (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at)
-         VALUES (?, ?, ?, ?, 'go', 'S1-S12 demo human-final gate approval', ?, ?)`,
-        [`demo-s1-s12-gate-${entityType}-${gate}`, entityType, entityId, gate, actor, now],
-      );
-    }
+    // Gate decisions: recorded after this transaction through the ADR-0186 contract (seedBrownfieldGateContract below).
 
     const cycle = currentReviewCycle();
     for (const [section, measure, target, actual] of [
@@ -618,7 +616,46 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
     );
   })();
 
+  if (contractOn) seedBrownfieldGateContract(db);
+
   return { opportunityId: DEMO.oppId, projectId: DEMO.projectId };
+}
+
+/**
+ * ADR-0186 O-5: the brownfield demo ladder recorded through the gate contract (family flags forced to enforce): six
+ * validator records, a user-confirmed WACC session, snapshots with acknowledgements, a divergence reason, IC GOs
+ * countersigned by a second grant-holder, a condition precedent created and cleared, a HOLD before a GO, a waiver and a
+ * KILL with learning capture on a second (demo) opportunity.
+ */
+function seedBrownfieldGateContract(db: ReturnType<typeof getDb>): void {
+  const clock = contract.makeClock();
+  contract.withEnforcedContract(() => {
+    contract.ensureDemoReviewers(db, clock());
+    const T = "opportunity" as const;
+    const P = "project" as const;
+    const step = (s: Parameters<typeof contract.recordStep>[1]) => contract.recordStep(db, s, clock);
+    // Opportunity ladder: a HOLD precedes the screening GO.
+    step({ entityType: T, entityId: DEMO.oppId, gate: "screening", decision: "hold", rationale: "스크리닝 근거 자료가 부족해 시장 규모 근거를 보완한 뒤 다시 판단하기로 함", missing: ["시장 규모 근거 보완"] });
+    step({ entityType: T, entityId: DEMO.oppId, gate: "screening", decision: "go", rationale: "시장 규모 근거가 보완되었고 전략 적합성이 확인되어 사전 타당성 단계로 진행함" });
+    step({ entityType: T, entityId: DEMO.oppId, gate: "pre_fs", decision: "go", rationale: "사전 타당성 검토에서 인증 승계 쟁점과 목표 회사 후보가 정리되어 다음 단계로 진행함" });
+    step({ entityType: T, entityId: DEMO.oppId, gate: "target_screening", decision: "go", rationale: "후보 대상 스크리닝에서 유일한 생존 대상이 확인되어 본 타당성 검토로 진행함" });
+    // Project: the discount rate is human-confirmed before the fs GO; the six validators before the dd GO.
+    contract.recordDemoWacc(db, DEMO.projectId, { subject: "target", subjectCompanyId: DEMO.companyId, clock });
+    step({ entityType: P, entityId: DEMO.projectId, gate: "fs", decision: "go", rationale: "재무 타당성 검토에서 기본 시나리오의 수익성이 허들 수준을 넘어 DD 단계로 진행함", briefRecommended: "hold", divergence: "AI 권고는 보류였으나 확정된 할인율 기준 기본 시나리오가 허들을 넘고 DD로 위험을 추가 검증할 수 있어 진행함" });
+    contract.recordDemoValidators(db, DEMO.projectId, clock);
+    contract.recordHonestFeasibilityRows(db, DEMO.projectId, clock);
+    contract.recordDemoWaiver(db, DEMO.projectId, DD_WORKSPACE_CHECKLISTS.commercial, clock);
+    step({ entityType: P, entityId: DEMO.projectId, gate: "dd", decision: "hold", rationale: "법무 실사 보고서가 아직 도착하지 않아 결정을 보류하고 보고서를 받은 뒤 다시 판단함", missing: ["법무 DD 보고서"] });
+    step({ entityType: P, entityId: DEMO.projectId, gate: "dd", decision: "go", rationale: "여섯 가지 M&A 검증이 모두 기록되었고 실사 결과가 허용 범위여서 투자심의 단계로 진행함" });
+    const entity = step({ entityType: P, entityId: DEMO.projectId, gate: "entity_ic", decision: "go", rationale: "법인 투자심의에서 사업계획과 위험 요인을 검토했고 그룹 심의 전 조건 이행을 전제로 승인함", conditions: [{ text: "그룹 심의 전에 핵심 고객 계약의 지배구조 변경 조항 회신을 확보한다", clear_by: "group_ic" }] });
+    contract.countersign(db, DEMO.projectId, entity, contract.DEMO_ENTITY_REVIEWER, "법인 투자심의 결정과 근거를 확인했고 조건 이행을 전제로 승인함", clock);
+    contract.clearGroupIcConditions(db, DEMO.projectId, contract.DEMO_GROUP_REVIEWER, clock);
+    const group = step({ entityType: P, entityId: DEMO.projectId, gate: "group_ic", decision: "go", rationale: "그룹 투자심의에서 전체 포트폴리오 적합성과 자금 구조를 확인했고 조건 이행이 끝나 승인함" });
+    contract.countersign(db, DEMO.projectId, group, contract.DEMO_GROUP_REVIEWER, "그룹 투자심의 결정과 조건 이행 기록을 확인하고 승인함", clock);
+    // KILL path (learning capture): a second demo opportunity stopped at screening.
+    contract.seedKilledOpportunity(db, "demo-s1-s12-killed-opportunity", "S1-S12 데모: 중단된 후보 기회", clock);
+    step({ entityType: T, entityId: "demo-s1-s12-killed-opportunity", gate: "screening", decision: "kill", rationale: "시장 규모가 최소 기준에 못 미치고 진입 근거가 없어 이 기회는 중단함", learning: "시장 규모 추정에 하위 시장 합산만 사용해 과대 평가했다. 다음 스크리닝에서는 근거 출처가 둘 이상인 값만 사용한다." });
+  });
 }
 
 // ── Greenfield twin (2026-10-10) — S1→S12 with the track-appropriate stages ──
@@ -677,6 +714,7 @@ const GF_MATRIX: SizingMatrix = {
 
 export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): Promise<{ opportunityId: string; projectId: string }> {
   const humanDecisions = opts.humanDecisions ?? true;
+  const contractOn = humanDecisions && (opts.gateDecisions ?? true);
   runMigrations(dbPath);
   const db = getDb(dbPath);
   const now = nowIso();
@@ -866,21 +904,7 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
       );
     }
 
-    if (humanDecisions) for (const [entityType, entityId, gate] of [
-      ["opportunity", GF.oppId, "screening"],
-      ["opportunity", GF.oppId, "pre_fs"],
-      ["project", GF.projectId, "fs"],
-      ["project", GF.projectId, "dd"],
-      ["project", GF.projectId, "entity_ic"],
-      ["project", GF.projectId, "group_ic"],
-    ] as const) {
-      db.run(
-        `INSERT OR IGNORE INTO gate_decision
-         (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at)
-         VALUES (?, ?, ?, ?, 'go', 'S1-S12 greenfield demo human-final gate approval', ?, ?)`,
-        [`demo-gf-gate-${entityType}-${gate}`, entityType, entityId, gate, actor, now],
-      );
-    }
+    // Gate decisions: recorded after the S8 generation below through the ADR-0186 contract (seedGreenfieldGateContract).
 
     const cycle = currentReviewCycle();
     // S12 venture scorecard is NOT raw-inserted here: the sanctioned write path is
@@ -922,6 +946,8 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
       );
     }
   }
+
+  if (contractOn) seedGreenfieldGateContract(db);
 
   if (humanDecisions) {
     // ── S12 — record the venture scorecard through the ONLY sanctioned write
@@ -998,6 +1024,35 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
   }
 
   return { opportunityId: GF.oppId, projectId: GF.projectId };
+}
+
+/** ADR-0186 O-5: the greenfield demo ladder through the gate contract (confirmed WACC, snapshots, two countersigns, a cleared condition). */
+function seedGreenfieldGateContract(db: ReturnType<typeof getDb>): void {
+  const clock = contract.makeClock();
+  contract.withEnforcedContract(() => {
+    contract.ensureDemoReviewers(db, clock());
+    const T = "opportunity" as const;
+    const P = "project" as const;
+    const step = (s: Parameters<typeof contract.recordStep>[1]) => contract.recordStep(db, s, clock);
+    step({ entityType: T, entityId: GF.oppId, gate: "screening", decision: "go", rationale: "신설 후보 기회의 시장 규모와 전략 적합성이 확인되어 사전 타당성 단계로 진행함" });
+    step({ entityType: T, entityId: GF.oppId, gate: "pre_fs", decision: "go", rationale: "사전 타당성 검토에서 진입 전략과 역량 격차 해소 방안이 정리되어 본 타당성 검토로 진행함" });
+    contract.recordDemoWacc(db, GF.projectId, { subject: "project_newco", subjectCompanyId: null, clock });
+    // The entity_ic exit kill criterion (origin_classification_missing_at_entity_ic_exit) needs a live classification.
+    contract.ensureDemoMembers(db, GF.projectId, clock());
+    if (!db.query("SELECT 1 FROM project_case_classification WHERE project_id = ?").get(GF.projectId)) {
+      db.run(
+        "INSERT INTO project_case_classification (id, project_id, case_type, origin, technology_track, classified_by, classified_at, rationale) VALUES (?,?,?,?,?,?,?,?)",
+        [ulid(), GF.projectId, "greenfield", "internal", "none", contract.DEMO_MAKER, clock(), "S1-S12 greenfield demo - 자체 신설(내부 기원)로 분류"],
+      );
+    }
+    step({ entityType: P, entityId: GF.projectId, gate: "fs", decision: "go", rationale: "재무 타당성 검토에서 기본 시나리오의 수익성이 확정된 허들을 넘어 DD 단계로 진행함" });
+    step({ entityType: P, entityId: GF.projectId, gate: "dd", decision: "go", rationale: "실사 결과와 인허가 경로가 허용 범위여서 투자심의 단계로 진행함" });
+    const entity = step({ entityType: P, entityId: GF.projectId, gate: "entity_ic", decision: "go", rationale: "법인 투자심의에서 설립 계획과 위험 요인을 검토했고 그룹 심의 전 조건 이행을 전제로 승인함", conditions: [{ text: "그룹 심의 전에 부지 인허가 일정 확인서를 확보한다", clear_by: "group_ic" }] });
+    contract.countersign(db, GF.projectId, entity, contract.DEMO_ENTITY_REVIEWER, "법인 투자심의 결정과 근거를 확인했고 조건 이행을 전제로 승인함", clock);
+    contract.clearGroupIcConditions(db, GF.projectId, contract.DEMO_GROUP_REVIEWER, clock);
+    const group = step({ entityType: P, entityId: GF.projectId, gate: "group_ic", decision: "go", rationale: "그룹 투자심의에서 포트폴리오 적합성과 자금 구조를 확인했고 조건 이행이 끝나 승인함" });
+    contract.countersign(db, GF.projectId, group, contract.DEMO_GROUP_REVIEWER, "그룹 투자심의 결정과 조건 이행 기록을 확인하고 승인함", clock);
+  });
 }
 
 if (import.meta.main) {

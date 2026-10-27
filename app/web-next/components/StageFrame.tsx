@@ -20,6 +20,7 @@ import { GATE_LABEL_KEY } from "../lib/label-keys.ts";
 import { STAGE_HANDOFF } from "../lib/stage-handoff.ts";
 import { useDealContext } from "../lib/use-deal-context.ts";
 import { api } from "../lib/api.ts";
+import { ReconfirmNotice } from "./ReconfirmNotice.tsx";
 
 /** 단계 → 담당 화면 라우트. 캐리어(deal = 기회 id)가 있으면 /deals/{id}/sN 탭으로,
     없으면 플랫 라우트(캐리어 리다이렉트 스텁 — 2026-10-02 route-cleanup design
@@ -235,6 +236,7 @@ export function StageFrame({
         ? railSlot
         : !stepperOwnedByTabs && <StageRail current={ids} track={track} />}
       {gatedProjectStage && <StageGuidance state={guidance} projectId={projectId} stageId={navSource} />}
+      {projectId && <ReconfirmNotice projectId={projectId} />}
       {/* 단계 설명 슬롯 — 서식은 프레임이 표준화한다(0.9rem·muted·leading-relaxed,
           하단 간격 mb-4). 페이지별 클래스·<strong> 강조 금지(설계서 개정 2026-09-04). */}
       {children && (

@@ -142,7 +142,7 @@ describe("navigation SSOT (ADR-0105)", () => {
   test("admin nav is registered and covers the admin pages", () => {
     expect(ADMIN_NAV.map((i: { href: string }) => i.href)).toEqual([
       "/admin", "/admin/users", "/admin/audit", "/admin/data-sources", "/admin/schedule",
-      "/admin/database", "/admin/notifications", "/admin/glossary", "/admin/governance",
+      "/admin/database", "/admin/notifications", "/admin/glossary", "/admin/governance", "/admin/gate-integrity",
       "/admin/master-data", "/admin/business-targets", "/admin/adr", "/admin/system-mode",
       "/settings/connected-apps",
     ]);

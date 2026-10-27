@@ -27,6 +27,7 @@ import { badRequest } from "./envelope.ts";
 import { applyFamilyFailure, recordWouldBlock, type IntegrityContext, type IntegrityFailure } from "./gate-integrity.ts";
 import { gateIntegrityMode } from "./gate-integrity-flags.ts";
 import { buildGateSnapshot, type BuiltSnapshot, type GateSnapshot, type RequiredAck, type SnapshotEntity } from "./gate-snapshot.ts";
+import { reconfirmBlock } from "./reconfirm.ts";
 import { validateRationale } from "./rationale-check.ts";
 import { certificationFailure } from "./gate-certification.ts";
 import { groupIcConditionFailure } from "./gate-conditions.ts";
@@ -360,6 +361,11 @@ export type DecisionRecordResult =
  * gate_decision row, its snapshot and the audit rows - a fault anywhere unwinds all of them (design 3.15).
  */
 export function recordGateDecisionRow(db: Database, input: DecisionRecordInput): DecisionRecordResult {
+  // ADR-0186 O-6: a legacy project awaiting re-confirmation takes no new GO (project-specific; independent of the family flags).
+  if (input.entityType === "project") {
+    const blocked = reconfirmBlock(db, input.entityId, { kind: "gate_decision", gate: input.gate, decision: input.decision });
+    if (blocked) return { ok: false, failure: blocked, built: null };
+  }
   const id = ulid();
   const insertRow = (extra: { aiRecommended: string | null; aiBriefId: string | null; divergenceReason: string | null } | null) => {
     db.run(

@@ -3,6 +3,7 @@
 // the IC package inputs (adopted BC, DD state, RAG proposal, deal-structure
 // hypothesis, prior gate decisions); the human records the gate. On-demand,
 // nothing persisted.
+import { reconfirmNotice } from "../../../../../lib/reconfirm.ts";
 import { waccStatusView } from "../../../../../lib/wacc-status.ts";
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
@@ -97,5 +98,5 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   // ADR-0186 D9: the recommendation is stored beside the later human decision (brief_id travels with the decision).
   const briefId = persistBriefRecord(db, { entityType: "project", entityId: id, gate, actor: ctx.userId, brief, source, provider, evalRunId: killEval?.evalRunId ?? null });
   appendAudit(db, { actor: ctx.userId, action: "gate_brief.generate", target: `${id}:${gate}:${source}`, now: new Date().toISOString() });
-  return ok({ source, provider, note, manifest, gate, brief, brief_id: briefId, kill: killEval?.kill ?? null, wacc_status: waccStatusView(id, db) }, 200);
+  return ok({ source, provider, note, manifest, gate, brief, brief_id: briefId, kill: killEval?.kill ?? null, wacc_status: waccStatusView(id, db), reconfirmation: reconfirmNotice(db, id) }, 200);
 });

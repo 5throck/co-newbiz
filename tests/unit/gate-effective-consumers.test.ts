@@ -52,7 +52,11 @@ const INVENTORY: Record<string, { disposition: Disposition; note: string }> = {
   "db/repositories/closure.repository.ts": { disposition: "n/a", note: "KILL learning capture and closure basis" },
   "db/repositories/gate-snapshot.repository.ts": { disposition: "n/a", note: "snapshot FK guard" },
   "db/repositories/project.repository.ts": { disposition: "n/a", note: "opportunity promotion preconditions" },
+  "app/web-next/lib/reconfirm.ts": { disposition: "effective", note: "ic_countersign item uses latestProjectDecision + countersignState; the clearer-is-maker rule reads recorded IC deciders (identity lookup)" },
+  "app/web-next/lib/gate-integrity-kpis.ts": { disposition: "raw", note: "G1/G2/G5 count recorded decisions and snapshots (what was recorded, not its effectiveness); G7 reports pending countersigns separately" },
   // ── offline operator scripts ──
+  "scripts/co-newbiz/gate-integrity-shadow-report.ts": { disposition: "offline", note: "read-only shadow review report (readiness counts)" },
+  "scripts/co-newbiz/seed-demo-gate-contract.ts": { disposition: "offline", note: "demo seed idempotency lookup of its own contract-recorded decisions" },
   "scripts/co-newbiz/align-existing-projects.ts": { disposition: "offline", note: "alignment script" },
   "scripts/co-newbiz/db-integrity.ts": { disposition: "offline", note: "integrity checker" },
   "scripts/co-newbiz/scope-impact.ts": { disposition: "offline", note: "impact report" },

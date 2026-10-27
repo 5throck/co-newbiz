@@ -4,6 +4,7 @@
 // one. HOLD requires an explicit missing-artifacts list. The v1
 // /api/projects/:id/gate-decisions tree was removed with the project
 // workflow (ADR-0074); this is the S8+ project-entity carrier's surface.
+import { reconfirmNotice } from "../../../../../lib/reconfirm.ts";
 import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
@@ -71,7 +72,7 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
       }),
     },
     200,
-    { count: history.length },
+    { count: history.length, reconfirmation: reconfirmNotice(db, id) },
   );
 }
 

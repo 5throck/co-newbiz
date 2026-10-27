@@ -367,6 +367,82 @@
       "needBoth": "사용자와 역할을 고르세요.",
       "grantedBy": "{by}님, {date}",
       "revokedBy": "{by}님이 취소"
+    },
+    "gateIntegrity": {
+      "h1": "게이트 무결성",
+      "intro": "게이트 규칙의 주간 지표 G1-G12입니다. 결정이 막히거나 달라지는 빈도와 규칙 묶음별 시행 준비 상태를 봅니다. 건수만 보이며 사유 본문과 프로젝트 이름은 나오지 않습니다.",
+      "loadFailed": "지표를 불러오지 못했습니다.",
+      "filter": {
+        "legend": "기간과 조건",
+        "from": "시작일",
+        "to": "종료일(포함)",
+        "gate": "게이트",
+        "minWrites": "최소 결정 수 (G12)",
+        "apply": "지표 보기",
+        "rangeProblem": "시작일이 종료일보다 늦을 수 없습니다.",
+        "minWritesProblem": "0 이상의 정수를 입력하세요."
+      },
+      "summary": "기간 {from} ~ {to} · 한도를 넘은 지표 {count}개",
+      "banner": {
+        "title": "아직 반영되지 않은 데이터베이스 변경이 있습니다",
+        "body": "필요한 지표는 아래에서 대기 중으로 표시됩니다. 변경을 반영한 뒤 다시 불러오세요."
+      },
+      "state": {
+        "withinLimit": "한도 이내",
+        "breached": "한도 초과",
+        "migrationPending": "데이터베이스 변경 대기",
+        "unavailable": "계산 불가"
+      },
+      "pending": {
+        "intro": "{section} 지표는 아래 데이터베이스 변경이 반영되어야 계산됩니다.",
+        "missing": "없는 항목:"
+      },
+      "unavailableBody": "지금은 이 지표를 계산할 수 없습니다.",
+      "li": {
+        "label": "시행 전환 선행 지표",
+        "title": "아래 규칙 묶음을 시행으로 전환하기 전에 확인하는 선행 지표"
+      },
+      "rate": "비율",
+      "rateNone": "비율 없음 (나눌 대상이 없음)",
+      "reasons": "한도를 넘은 이유",
+      "noteSummary": "계산 방식",
+      "kpiName": {
+        "G1": "GO / HOLD / KILL 분포",
+        "G2": "AI와 사람의 결정이 다른 비율",
+        "G3": "다른 결정의 사유 기재",
+        "G4": "종류별 확인 응답",
+        "G5": "GO 시점의 미평가 중단 조건",
+        "G6": "차단 예정 사건 (그림자 운영)",
+        "G7": "두 번째 검토 대기 시간과 대기 건수",
+        "G8": "열린 조건과 경과 기간",
+        "G9": "면제: 건수와 경과 기간",
+        "G10": "na 확인 대기 시간과 적체",
+        "G11": "S8 이후에도 잠정인 WACC 비율",
+        "G12": "차단 예정 사건이 없는 날수"
+      },
+      "value": {
+        "empty": "이 기간에 해당 건이 없습니다.",
+        "gate": "게이트",
+        "total": "결정 수",
+        "goShare": "GO 비율",
+        "priorGoShare": "직전 4주 (결정 수)",
+        "g1Caption": "게이트별 GO, HOLD, KILL 결정",
+        "g6Caption": "규칙 묶음, 코드, 주별 차단 예정 사건",
+        "g6Unreviewed": "{count}건 모두 검토 전으로 표시됩니다. 설명된 사건인지는 주간 검토에서 검토자가 정하며 여기에는 저장되지 않습니다.",
+        "family": "규칙 묶음",
+        "code": "코드",
+        "week": "주 시작일",
+        "count": "건수",
+        "g12Caption": "규칙 묶음별 차단 예정 사건이 없는 날수",
+        "streakDays": "연속 일수",
+        "writes": "그 기간의 결정 수",
+        "qualifies": "14일 충족",
+        "yes": "예",
+        "notYet": "아직 아님",
+        "generalCaption": "지표 {id}의 수치",
+        "item": "항목",
+        "figure": "값"
+      }
     }
   },
   "auth": {
@@ -2004,6 +2080,39 @@
       "warning": {
         "wacc_not_below_hurdle": "WACC가 허들 IRR 이상입니다. 두 비율을 확인하세요."
       }
+    },
+    "reconfirm": {
+      "title": "새로 쓰기 전에 다시 확인해야 합니다",
+      "body": "이 프로젝트는 이전 게이트 규칙으로 기록되었습니다. 아래 항목을 사람이 다시 확인하기 전에는 새 GO와 사업성 사례 채택이 거절됩니다. 열람에는 영향이 없습니다.",
+      "reasonPrefix": "사유:",
+      "holdKillNote": "HOLD와 KILL은 언제든 기록할 수 있습니다.",
+      "satisfied": "충족",
+      "unmet": "미충족",
+      "open": "열기",
+      "item": {
+        "wacc_confirmed": "WACC와 적용 대상, 허들 수익률을 사람이 확인",
+        "ic_countersign": "투자위원회 GO를 두 번째 사람이 확인",
+        "na_review": "필수 DD 항목의 해당 없음 표시를 두 번째 사람이 확인"
+      },
+      "clear": {
+        "heading": "요건 해제",
+        "reasonLabel": "해제 사유",
+        "submit": "요건 해제",
+        "needItems": "위 항목이 모두 충족되면 해제할 수 있습니다. 투자위원회 검토자 권한이 있고 이 프로젝트의 위원회 결정을 기록한 사람이 아닌지는 서버가 확인합니다.",
+        "adminNote": "관리자는 해제할 수 없습니다. 투자위원회 검토자 권한이 있는 사람이 해제합니다.",
+        "viewerNote": "투자위원회 검토자 권한이 있는 사람만 해제할 수 있습니다."
+      },
+      "cleared": "요건을 해제했습니다.",
+      "created": "요건을 열었습니다.",
+      "failed": "요청에 실패했습니다.",
+      "create": {
+        "summary": "다시 확인 요건 열기",
+        "intro": "이전 게이트 규칙으로 기록된 프로젝트에 씁니다. 항목을 마치고 검토자가 해제할 때까지 새 GO와 사례 채택이 거절됩니다.",
+        "itemsLegend": "필요한 항목",
+        "reasonLabel": "사유",
+        "submit": "요건 열기",
+        "projectLabel": "프로젝트 id"
+      }
     }
   },
   "errors": {
@@ -2282,6 +2391,11 @@
       "jamo_only": "완성된 낱말이 없는 근거입니다.",
       "duplicate_of_other_gate": "다른 게이트에 쓴 근거와 같습니다."
     },
+    "reconfirm_clearer_is_maker": "투자심의 결정을 기록한 사람은 해당 프로젝트의 재확인 요구를 해제할 수 없습니다.",
+    "reconfirm_exists": "이 프로젝트에는 이미 진행 중인 재확인 요구가 있습니다.",
+    "reconfirm_items_unmet": "재확인 항목이 아직 모두 충족되지 않았습니다.",
+    "reconfirm_not_open": "이 프로젝트에는 진행 중인 재확인 요구가 없습니다.",
+    "reconfirmation_required": "이 프로젝트는 새로 사용하기 전에 다시 확인해야 하는 이전 기록입니다(할인율, 투자심의 2인 서명, 해당 없음 검토). HOLD 또는 KILL은 언제든 기록할 수 있습니다.",
     "unexpected": {
       "title": "문제가 발생했습니다",
       "body": "예상치 못한 오류가 발생했습니다. 일시적인 문제일 수 있으니 잠시 후 다시 시도하세요. 문제가 반복되면 화면을 새로고침하거나 이전 화면으로 돌아가세요.",
@@ -2308,7 +2422,8 @@
       "notifications": "알림",
       "schedule": "스케줄",
       "systemMode": "시스템 모드",
-      "users": "사용자·토큰 관리"
+      "users": "사용자·토큰 관리",
+      "gateIntegrity": "게이트 무결성"
     },
     "archives": "아카이브",
     "benchmarks": "벤치마킹 사례",
@@ -7620,12 +7735,14 @@
       "strategy": "R&BD 플랫폼화 전략",
       "synergy": "S3 시너지·전략적 적합성",
       "titleSuffix": "신규사업 검토",
-      "flows": "플로우 콘솔"
+      "flows": "플로우 콘솔",
+      "adminGateIntegrity": "게이트 무결성"
     },
     "ourCompany": {
       "h1": "그룹/계열사 분석"
     },
     "deals": {
+      "filterHold": "HOLD",
       "filterPaused": "일시정지",
       "loadFailed": "검토/안건 보드를 불러오지 못했습니다.",
       "waitingPromoted": "프로젝트 승격됨",

@@ -11,6 +11,7 @@ import { api } from "../../../lib/api.ts";
 import { StageTabs } from "../../../components/StageTabs.tsx";
 
 import { RawKey } from "../../../components/RawKey.tsx";
+import { ReconfirmNotice } from "../../../components/ReconfirmNotice.tsx";
 
 interface CharterKpi { key: string; label: string; target: string }
 interface CharterVersion {
@@ -72,6 +73,7 @@ export default function ProjectOverviewPage() {
       <header>
         <h1 className="text-[1.05rem] font-semibold">{t("heading", { name: data.project_name ?? projectId })}</h1>
       </header>
+      <ReconfirmNotice projectId={projectId} />
 
       <section aria-label={t("charterSectionAria")} className="market-section">
         <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">{t("charterHeading", { suffix: latest ? `(v${latest.version})` : "" })}</h2>

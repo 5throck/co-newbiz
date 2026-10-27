@@ -190,6 +190,7 @@ export const ADMIN_NAV: Array<{ href: string; label: string }> = [
   { href: "/admin/notifications", label: "nav.admin.notifications" },
   { href: "/admin/glossary", label: "nav.admin.glossary" },
   { href: "/admin/governance", label: "nav.admin.governance" },
+  { href: "/admin/gate-integrity", label: "nav.admin.gateIntegrity" },
   { href: "/admin/master-data", label: "nav.admin.masterData" },
   { href: "/admin/business-targets", label: "nav.admin.businessTargets" },
   { href: "/admin/adr", label: "nav.admin.adr" },

@@ -20,7 +20,7 @@ afterEach(() => {
 
 function demo() {
   dir = mkdtempSync(join(tmpdir(), "co-newbiz-f8-"));
-  const ids = seedS1ToS12Demo(join(dir, "d.sqlite"));
+  const ids = seedS1ToS12Demo(join(dir, "d.sqlite"), { gateDecisions: false });
   return { db: getDb(join(dir, "d.sqlite")), ...ids };
 }
 const proj = (id: string) => evaluateProcess({ type: "project", id });

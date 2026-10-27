@@ -49,6 +49,8 @@
     "db:status": "bun scripts/co-newbiz/newbiz.ts status",
     "db:integrity": "bun scripts/co-newbiz/db-integrity.ts",
     "seed:s1-s12-demo": "bun scripts/co-newbiz/seed-s1-s12-demo.ts",
+    "gate-integrity:shadow-report": "bun scripts/co-newbiz/gate-integrity-shadow-report.ts",
+    "reconfirm:requirement": "bun scripts/co-newbiz/reconfirm-requirement.ts",
     "demo": "bun scripts/co-newbiz/demo.ts",
     "manual:capture": "bun scripts/co-newbiz/manual-capture.ts",
     "test:integration": "bun scripts/test-runner.ts integration --allow-empty",
