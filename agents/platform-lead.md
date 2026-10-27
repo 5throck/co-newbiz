@@ -12,11 +12,7 @@ status: active
 domain: technical
 version: "1.1.1"
 last_updated: "2026-10-26"
-tier:
-  claude: high
-  gemini: high
-  antigravity: high
-  gemini-cli: high
+tier: high
 model: inherit
 role: Technical domain lead — cross-cutting architecture review, ADR review participation, and the AI-2nd technical reviewer seat
 color: yellow

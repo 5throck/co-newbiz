@@ -13,11 +13,7 @@ status: active
 domain: functional
 version: "1.2.0"
 last_updated: "2026-10-26"
-tier:
-  claude: high
-  gemini: high
-  antigravity: high
-  gemini-cli: high
+tier: high
 model: inherit
 role: M&A review lead — deal-shape evaluation, target identification and screening, capability DD, deal-structure hypothesis, and entity-IC assembly for external-combination routes
 color: purple

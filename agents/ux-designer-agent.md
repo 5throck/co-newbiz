@@ -12,11 +12,7 @@ status: active
 domain: technical
 version: "1.1.1"
 last_updated: "2026-10-26"
-tier:
-  claude: medium
-  gemini: medium
-  antigravity: medium
-  gemini-cli: medium
+tier: medium
 model: inherit
 role: Screen design ownership — JTBD-driven mockups, flows, and interaction patterns within the Onyx 3.0 doctrine
 color: teal

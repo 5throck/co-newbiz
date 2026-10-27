@@ -12,11 +12,7 @@ status: active
 domain: functional
 version: "1.1.0"
 last_updated: "2026-10-25"
-tier:
-  claude: high
-  gemini: high
-  antigravity: high
-  gemini-cli: high
+tier: high
 model: inherit
 role: Antitrust and merger-control review — market definition, HHI calculation, multi-jurisdiction filing determination, gun-jumping compliance, and remedy scenario modeling
 color: purple
