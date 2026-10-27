@@ -7,7 +7,7 @@
 // Analyst+; deny-by-default visibility; unknown (checklist, item) → 404.
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
-import { upsertChecklistState, isMandatoryChecklistItem, isKnownChecklistItem, STATE_STATUSES, type ChecklistStateStatus } from "../../../../../../lib/dd-checklist-tailor.ts";
+import { BF_FEASIBILITY_CHECKLIST_ID, BF_VALIDATORS_ITEM_ID, upsertChecklistState, isMandatoryChecklistItem, isKnownChecklistItem, STATE_STATUSES, type ChecklistStateStatus } from "../../../../../../lib/dd-checklist-tailor.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { applyFamily } from "../../../../../../lib/gate-integrity.ts";
 import { validateRationale } from "../../../../../../lib/rationale-check.ts";
@@ -54,6 +54,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if ("response" in scope) return scope.response;
   // ADR-0186: resolve the item (404) before any integrity logic so unknown ids never reach the audit trail.
   if (!isKnownChecklistItem(id, body.checklist_id.trim(), body.item_id.trim(), scope.targetId)) return notFound();
+  // ADR-0186 D4 (family `validators`): bf-01 is derived from the validator completeness engine and is read-only; a
+  // hand-written state is refused under enforce (and audited as a would-block under shadow). Gate scope only.
+  if (scope.targetId === null && body.checklist_id.trim() === BF_FEASIBILITY_CHECKLIST_ID && body.item_id.trim() === BF_VALIDATORS_ITEM_ID) {
+    const derivedDenied = applyFamily("validators", { entityType: "project", entityId: id, gate: "dd", actor: ctx.userId }, () => ({
+      status: 409,
+      code: "derived_item",
+      message: "bf-01 is derived from the validator completeness engine and cannot be set by hand; record the missing validators instead.",
+    }));
+    if (derivedDenied) return derivedDenied;
+  }
   // ADR-0186 D5 + D2: `na` on a MANDATORY item needs a reason (family `waiver`) that meets the
   // ack substance profile (family `rationale`); the second-person confirmation is a separate act
   // (POST .../state/confirm-na) and an unconfirmed mandatory `na` counts as pending under enforce.

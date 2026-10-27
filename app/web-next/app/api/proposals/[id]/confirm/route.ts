@@ -111,11 +111,11 @@ export const POST = route(async (request: Request, { params }: Params) => {
   const body = (await request.json().catch(() => null)) as {
     nonce?: string; payload?: unknown; goals_ack?: { acknowledged?: unknown; note?: unknown };
     // ADR-0186 3.10 - the human acts of a gate decision, supplied here and only here.
-    snapshot_hash?: unknown; acknowledgements?: unknown; divergence_reason?: unknown; kill_override_id?: unknown;
+    snapshot_hash?: unknown; acknowledgements?: unknown; divergence_reason?: unknown; kill_override_id?: unknown; conditions?: unknown;
   } | null;
   if (!body?.nonce) return badRequest("invalid_request", "nonce is required — load the confirmation view first.");
   const humanFields = Object.fromEntries(
-    (["snapshot_hash", "acknowledgements", "divergence_reason", "kill_override_id"] as const).filter((f) => body[f] !== undefined).map((f) => [f, body[f]]),
+    (["snapshot_hash", "acknowledgements", "divergence_reason", "kill_override_id", "conditions"] as const).filter((f) => body[f] !== undefined).map((f) => [f, body[f]]),
   );
   if (p.kind !== "gate_decision" && Object.keys(humanFields).length > 0) {
     return badRequest("invalid_request", `${Object.keys(humanFields).join(", ")} apply to a gate decision only.`);

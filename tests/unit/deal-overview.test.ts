@@ -193,3 +193,14 @@ describe("GET /api/synergy/analyses?opportunityId=", () => {
     expect((await list()).length).toBe(2);
   });
 });
+
+describe("awaiting second review (ADR-0186)", () => {
+  test("an open stage gate that is awaiting its second review is the next action instead of a gate request", () => {
+    const base = { currentStage: "S3", blockers: [], requiredArtifacts: [], track: null, gateStatus: {} } as const;
+    const o = { status: "selected", attractiveness_score: null, synergy_score: null };
+    const waiting = buildDealOverview("D1", o, { ...base, awaitingCountersign: ["screening"] } as never);
+    expect(waiting.nextAction).toMatchObject({ type: "await_countersign", reason: { type: "awaiting_countersign", gate: "screening" } });
+    const plain = buildDealOverview("D1", o, { ...base } as never);
+    expect(plain.nextAction).toMatchObject({ type: "request_gate_decision" });
+  });
+});

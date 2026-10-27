@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-27T03:16:14.966Z
+**Generated**: 2026-10-27T07:53:37.295Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -232,7 +232,7 @@
 | coverage-baseline.ts | 1.0.0 | scripts/coverage-baseline.ts | N/A |
 | dart-collect.ts | 1.0.0 | scripts/co-newbiz/dart-collect.ts | N/A |
 | db-export.ts | 1.0.0 | scripts/co-newbiz/db-export.ts | N/A |
-| db-integrity.ts | 1.0.1 | scripts/co-newbiz/db-integrity.ts | N/A |
+| db-integrity.ts | 1.0.2 | scripts/co-newbiz/db-integrity.ts | N/A |
 | demo.ts | 1.0.0 | scripts/co-newbiz/demo.ts | N/A |
 | dependency-audit.ts | 1.1.0 | scripts/dependency-audit.ts | N/A |
 | deploy-handbook.ts | 1.1.0 | scripts/handbook/deploy-handbook.ts | N/A |

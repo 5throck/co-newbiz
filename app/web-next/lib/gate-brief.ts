@@ -7,6 +7,7 @@
 import type { Database } from "bun:sqlite";
 import { getDb } from "../../../db/client.ts";
 import { readRagView } from "../../../db/lib/rag-service.ts";
+import { effectiveState } from "../../../db/lib/gate-effective.ts";
 import { getCurrentRouteDecision } from "../../../db/repositories/route-decision.repository.ts";
 import { listBusinessCases, latestAdoption } from "./business-case.ts";
 import { irrGuardBand, IRR_GUARD_CHIP_LABEL } from "./irr-guard.ts";
@@ -333,15 +334,18 @@ function ragSummary(db: Database, projectId: string): string {
 function priorGates(db: Database, projectId: string, gates: string[]): string {
   const rows = db
     .query(
-      `SELECT gate, decision, rationale FROM (
-         SELECT gate, decision, rationale,
+      `SELECT id, gate, decision, decided_by, rationale FROM (
+         SELECT id, gate, decision, decided_by, rationale,
                 ROW_NUMBER() OVER (PARTITION BY gate ORDER BY decided_at DESC, id DESC) AS rn
          FROM gate_decision WHERE entity_type = 'project' AND entity_id = ? AND gate IN (${gates.map(() => "?").join(",")})
        ) WHERE rn = 1`,
     )
-    .all(projectId, ...gates) as Array<{ gate: string; decision: string; rationale: string }>;
+    .all(projectId, ...gates) as Array<{ id: string; gate: string; decision: string; decided_by: string; rationale: string }>;
   if (rows.length === 0) return `선행 진행(${gates.join(", ")}): 미기록`;
-  return rows.map((r) => `- ${r.gate}: ${r.decision.toUpperCase()}${r.rationale ? ` — ${r.rationale.slice(0, 160)}` : ""}`).join("\n");
+  // ADR-0186 D6: label an IC GO that still awaits its second-reviewer countersign (the brief must not present it as in force).
+  return rows
+    .map((r) => `- ${r.gate}: ${r.decision.toUpperCase()}${effectiveState(db, projectId, r).awaiting ? " (awaiting countersign - not yet in force)" : ""}${r.rationale ? ` — ${r.rationale.slice(0, 160)}` : ""}`)
+    .join("\n");
 }
 
 /** Build the prompt context for one gate — ONLY its manifest artifacts. */

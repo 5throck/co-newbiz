@@ -34,6 +34,7 @@ import { AGENT_KEYS } from "./agent-registry.generated.ts";
 import { SPEC_VERSION } from "./spec-activities.generated.ts";
 import { listCapexTranches, type CapexTrancheRow } from "./capex-tranches.ts";
 import { NON_PMI_SUB_TRACKS } from "./pmi-kickoff.ts";
+import { conditionsEnforced, s11OpenConditions } from "./gate-conditions.ts";
 
 export const EXECUTION_BASELINE_STAGE = "s11_execution_baseline";
 /** ADR-0161 date: S11 completions evidenced before it are "already completed" (recommended, not blocking). */
@@ -374,7 +375,7 @@ export function latestConfirmedBaseline(projectId: string, db: Database = getDb(
 
 export type BaselineErrorCode =
   | "invalid_request" | "agent_forbidden" | "not_applicable_track" | "needs_classification" | "insider_required"
-  | "lead_required" | "baseline_empty" | "findings_open";
+  | "lead_required" | "baseline_empty" | "findings_open" | "condition_open";
 export type BaselineResult<T> = ({ ok: true } & T) | { ok: false; code: BaselineErrorCode; message: string; open_findings?: Finding[]; missing_sections?: string[] };
 const bfail = (code: BaselineErrorCode, message: string, extra: { open_findings?: Finding[]; missing_sections?: string[] } = {}) => ({ ok: false as const, code, message, ...extra });
 
@@ -474,6 +475,11 @@ export function confirmExecutionBaseline(
   type Out = BaselineResult<{ record: BaselineRecord; open_findings: Finding[] }>;
   const out = db.transaction((): Out => {
     // S4: every read the decision depends on happens inside the write transaction.
+    // ADR-0186 D4 (family `validators` = enforce): open establishment / closing condition precedents hard-block the confirmation.
+    if (conditionsEnforced()) {
+      const open = s11OpenConditions(db, input.projectId);
+      if (open.length > 0) return bfail("condition_open", `${open.length} open IC condition precedent(s) block confirming the execution baseline - clear them first.`);
+    }
     const rec = trancheReconciliation(input.projectId, db);
     const before = latestExecutionBaseline(input.projectId, db);
     const entries = before?.entries ?? EMPTY_ENTRIES;

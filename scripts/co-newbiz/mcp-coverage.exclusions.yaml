@@ -250,3 +250,47 @@ exclusions:
     kind: route
     route: "PUT /api/opportunities/{}/entry-market-derivation"
     reason: The entry-market derivation chain (ADR-0179 amendment slice B) is a person's input on the opportunity (analyst+); agents may read it via GET but never write it (boundary #2).
+  - id: gate-countersign
+    kind: route
+    route: "POST /api/projects/{}/gate-decisions/{}/countersign"
+    reason: Countersigning an entity_ic / group_ic GO is the checker's human act (ADR-0186 D6, boundary #1/#2); a human-role grant is exercised from a cookie session only, never by an agent or token.
+  - id: condition-clear
+    kind: route
+    route: "POST /api/projects/{}/conditions/{}/clear"
+    reason: Clearing a condition precedent is an IC reviewer's human act with a recorded note (ADR-0186 D4); agents cannot satisfy a condition on a person's behalf.
+  - id: condition-withdraw
+    kind: route
+    route: "POST /api/projects/{}/conditions/{}/withdraw"
+    reason: Withdrawing a condition precedent is an IC reviewer's human act (ADR-0186 D4).
+  - id: kill-override-issue-project
+    kind: route
+    route: "POST /api/projects/{}/kill-overrides"
+    reason: A Group IC override of a binding kill criterion is a group-ic-reviewer's recorded human decision (neb-policy 2.5, ADR-0186 O-7); an agent never overrides a stop condition.
+  - id: kill-override-revoke-project
+    kind: route
+    route: "POST /api/projects/{}/kill-overrides/{}/revoke"
+    reason: Revoking a Group IC kill-criteria override is a group-ic-reviewer's human act (ADR-0186).
+  - id: kill-override-issue-opportunity
+    kind: route
+    route: "POST /api/opportunities/{}/kill-overrides"
+    reason: Opportunity twin of the Group IC kill-criteria override (ADR-0186 O-7); human only.
+  - id: kill-override-revoke-opportunity
+    kind: route
+    route: "POST /api/opportunities/{}/kill-overrides/{}/revoke"
+    reason: Opportunity twin of the override revocation (ADR-0186); human only.
+  - id: waiver-approve
+    kind: route
+    route: "POST /api/projects/{}/waivers/{}/approve"
+    reason: Approving a waiver is the approver's authenticated human act with a human-role grant (ADR-0186 D5).
+  - id: na-confirm
+    kind: route
+    route: "POST /api/projects/{}/dd-checklist/state/confirm-na"
+    reason: The second-person confirmation of a mandatory `na` is a human act (ADR-0186 D5).
+  - id: human-role-grant-issue
+    kind: route
+    route: "POST /api/admin/human-roles"
+    reason: Human-role grants are issued by an administrator from a cookie session; agents hold none and issue none (ADR-0186 D6, boundary #1).
+  - id: human-role-grant-revoke
+    kind: route
+    route: "POST /api/admin/human-roles/{}/revoke"
+    reason: Revoking a human-role grant is an administrator's cookie-session act (ADR-0186 D6).

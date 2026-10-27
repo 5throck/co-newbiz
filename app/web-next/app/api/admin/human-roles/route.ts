@@ -6,11 +6,11 @@
 // it (waiver approve, na confirm; later countersign and override), deny-by-default (ADR-0038).
 import { getDb } from "../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../db/lib/access-control.ts";
-import { HumanRoleError, issueHumanRoleGrant, listHumanRoleGrants, GRANTABLE_ROLE_KEYS } from "../../../../../../db/lib/human-roles.ts";
+import { HumanRoleError, issueHumanRoleGrant, listHumanRoleGrants, pendingCountersignConflicts, GRANTABLE_ROLE_KEYS } from "../../../../../../db/lib/human-roles.ts";
 import { AGENT_KEYS } from "../../../../lib/agent-registry.generated.ts";
 import { authenticate, requireAdmin } from "../../../../lib/auth.ts";
 import { badRequest, fail, ok } from "../../../../lib/envelope.ts";
-import { humanSessionDenied, rateLimited } from "../../../../lib/gate-integrity.ts";
+import { applyFamily, humanSessionDenied, rateLimited, recordRefusal } from "../../../../lib/gate-integrity.ts";
 import { route } from "../../../../lib/route.ts";
 
 export const GET = route(async (request: Request) => {
@@ -44,6 +44,18 @@ export const POST = route(async (request: Request) => {
   if (!userId || !roleKey) return badRequest("invalid_request", "user_id and role_key are required.");
   const db = getDb();
   const now = new Date().toISOString();
+  // ADR-0186 D6 (family `maker_checker`): the maker of a pending IC GO cannot be placed in the checker seat for it.
+  const conflicts = pendingCountersignConflicts(db, userId, roleKey);
+  const conflictDenied = conflicts.length === 0 ? null : applyFamily("maker_checker", { entityType: "project", entityId: conflicts[0].project_id, gate: `grant:${roleKey}`, actor: ctx.userId }, () => ({
+    status: 409,
+    code: "checker_conflict",
+    message: `User ${userId} recorded a pending ${conflicts[0].gate} GO that a ${roleKey} grant would let them countersign; another reviewer must countersign it first.`,
+    details: { decisions: conflicts },
+  }));
+  if (conflictDenied) {
+    recordRefusal(db, { actor: ctx.userId, scope: "grant.issue", target: `${userId}:${roleKey}` }, "checker_conflict");
+    return conflictDenied;
+  }
   try {
     const id = issueHumanRoleGrant(db, { userId, roleKey, grantedBy: ctx.userId, now, agentKeys: AGENT_KEYS });
     appendAudit(db, { actor: ctx.userId, action: "grant.issue", target: `${userId}:${roleKey}:${id}`, now });

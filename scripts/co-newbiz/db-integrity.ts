@@ -1,4 +1,5 @@
-// @version 1.0.1
+// @version 1.0.2
+// 1.0.2 (ADR-0186 P3 H1): when the gate_decision delete guard (migration 0175) exists, --fix deletes nothing and only reports; orphans stay visible.
 // 1.0.1 (ADR-0186 P2): --fix never orphan-deletes snapshot-bearing gate decisions (skipped, still reported).
 // co-newbiz DB integrity gate.
 //
@@ -75,6 +76,13 @@ export function findGateDecisionReferenceIssues(db: Db): GateDecisionReferenceIs
 }
 
 export function deleteOrphanGateDecisions(db: Db): number {
+  // ADR-0186 H1: gate_decision rows are immutable evidence once migration 0175 installs the delete guard (it also anchors the
+  // legacy cutoff, which is a rowid mark). Report instead of delete; the database refuses the DELETE anyway.
+  if (db.query("SELECT 1 FROM sqlite_master WHERE type = 'trigger' AND name = 'trg_gate_decision_no_delete'").get()) {
+    const reported = findGateDecisionReferenceIssues(db).filter((i) => i.reason !== "unknown_entity_type").length;
+    if (reported > 0) console.warn(`db-integrity: ${reported} orphan gate_decision row(s) are reported only - gate decisions are never deleted (ADR-0186).`);
+    return 0;
+  }
   // ADR-0186: a decision with a gate_decision_snapshot is append-only evidence - never orphan-deleted (reported, skipped).
   const hasSnapshotTable = db.query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'gate_decision_snapshot'").get() !== null;
   const withSnapshot = new Set(

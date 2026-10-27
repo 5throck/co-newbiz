@@ -33,6 +33,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       blockers: evaluation.blockers,
       requiredArtifacts: evaluation.requiredArtifacts,
       gateStatus: evaluation.gateStatus,
+      // ADR-0186 D6: IC GOs recorded but still awaiting their second-reviewer countersign (gateStatus reads them as pending under maker_checker = enforce).
+      awaitingCountersign: evaluation.awaitingCountersign ?? [],
       terminated: evaluation.terminated,
       track: evaluation.track,
       subTrack: evaluation.subTrack,

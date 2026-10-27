@@ -200,6 +200,20 @@ export const HUMAN_ONLY_ROUTES: readonly HumanOnlyRule[] = [
   // ADR-0179 amendment slice B: the entry-market derivation chain is a
   // person's input on the opportunity — agents read it but never write it.
   { method: "PUT", pattern: "/api/opportunities/:id/entry-market-derivation" },
+  // ADR-0186: human-role grants are exercised from a cookie session only. Countersigning an IC GO, clearing or
+  // withdrawing a condition precedent, issuing or revoking a Group IC kill-criteria override, approving a waiver,
+  // confirming an `na` and managing the grants themselves are never an agent's act (boundary #1/#2).
+  { method: "POST", pattern: "/api/projects/:id/gate-decisions/:decisionId/countersign" },
+  { method: "POST", pattern: "/api/projects/:id/conditions/:conditionId/clear" },
+  { method: "POST", pattern: "/api/projects/:id/conditions/:conditionId/withdraw" },
+  { method: "POST", pattern: "/api/projects/:id/kill-overrides" },
+  { method: "POST", pattern: "/api/projects/:id/kill-overrides/:overrideId/revoke" },
+  { method: "POST", pattern: "/api/opportunities/:id/kill-overrides" },
+  { method: "POST", pattern: "/api/opportunities/:id/kill-overrides/:overrideId/revoke" },
+  { method: "POST", pattern: "/api/projects/:id/waivers/:waiverId/approve" },
+  { method: "POST", pattern: "/api/projects/:id/dd-checklist/state/confirm-na" },
+  { method: "POST", pattern: "/api/admin/human-roles" },
+  { method: "POST", pattern: "/api/admin/human-roles/:grantId/revoke" },
 ];
 
 export function isHumanOnly(method: string, pathname: string, body: unknown): boolean {

@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * RAG recompute service (Wave F-5, design 2026-10-08-wave-f-process-closure §5).
  *
@@ -26,6 +26,7 @@
 import type { Database } from "bun:sqlite";
 import { createHash } from "node:crypto";
 import { ulid } from "./ulid.ts";
+import { effectiveState } from "./gate-effective.ts";
 import {
   assessRun,
   RAG_DIMENSIONS,
@@ -65,13 +66,14 @@ function sha256(value: unknown): string {
 function deriveStageGate(db: Database, projectId: string): StageGate {
   const rows = db
     .query(
-      `SELECT gate, decision FROM (
-         SELECT gate, decision, ROW_NUMBER() OVER (PARTITION BY gate ORDER BY decided_at DESC, id DESC) rn
+      `SELECT id, gate, decision, decided_by FROM (
+         SELECT id, gate, decision, decided_by, ROW_NUMBER() OVER (PARTITION BY gate ORDER BY decided_at DESC, id DESC) rn
          FROM gate_decision WHERE entity_type = 'project' AND entity_id = ?
        ) WHERE rn = 1`,
     )
-    .all(projectId) as Array<{ gate: string; decision: string }>;
-  const verdict = new Map(rows.map((r) => [r.gate, r.decision]));
+    .all(projectId) as Array<{ id: string; gate: string; decision: string; decided_by: string }>;
+  // ADR-0186 D6: an IC GO awaiting its countersign is not the stage the project has reached (strict only under maker_checker = enforce).
+  const verdict = new Map(rows.map((r) => [r.gate, effectiveState(db, projectId, r).verdict as string]));
   return GATE_ORDER.find((g) => verdict.get(g) !== "go") ?? "group_ic";
 }
 

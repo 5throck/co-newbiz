@@ -318,6 +318,7 @@ describe("(2) reopened_after_gate (server field)", () => {
   };
   const clearGates = () => {
     db.run("DELETE FROM gate_decision_stale WHERE decision_id IN (SELECT id FROM gate_decision WHERE entity_type = 'project' AND entity_id = ?)", [projectId]);
+    db.run("DROP TRIGGER IF EXISTS trg_gate_decision_no_delete"); // fixture cleanup only (ADR-0186 H1 guard)
     db.run("DELETE FROM gate_decision WHERE entity_type = 'project' AND entity_id = ?", [projectId]);
   };
 

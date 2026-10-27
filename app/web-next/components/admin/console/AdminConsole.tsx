@@ -7,6 +7,7 @@ import { MasterDataSection } from "../MasterDataSection.tsx";
 import { useAdminData } from "./useAdminData.ts";
 import { useAdminActions } from "./useAdminActions.ts";
 import { UsersNoticePanel, UsersTablePanel } from "./UsersSection.tsx";
+import { HumanRolesPanel } from "./HumanRolesSection.tsx";
 import { AuditPanel } from "./AuditSection.tsx";
 import { DataSourcesPanel, SchedulePanel, DatabasePanel, NotificationsPanel } from "./OpsSections.tsx";
 import { GlossaryListPanel, GlossaryLintPanel, GlossaryFormPanel } from "./GlossarySections.tsx";
@@ -57,6 +58,7 @@ export function AdminConsole(props0: { section: Section }) {
 
       <UsersNoticePanel ctx={ctx} />
       <UsersTablePanel ctx={ctx} />
+      <HumanRolesPanel ctx={ctx} />
 
       <AuditPanel ctx={ctx} />
 

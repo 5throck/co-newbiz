@@ -2,6 +2,7 @@
 // 실행 계획) + 자기 단계 기록(스코어카드·시너지 인증·핵심인재·전환 이력)만
 // 컨텍스트로 읽는다. 투자 상태 평가·전환 제안 초안을 제안하며, 전환 결정
 // (venture_transition_decision)은 사람이 기록한다. On-demand, 비영속.
+import { effectiveState } from "../../../../../../../db/lib/gate-effective.ts";
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
@@ -68,9 +69,13 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const transitions = db
     .query("SELECT decision, rationale FROM venture_transition_decision WHERE project_id = ? ORDER BY created_at DESC LIMIT 3")
     .all(id) as Array<{ decision: string; rationale: string }>;
-  const icGate = db
-    .query("SELECT decision, rationale FROM gate_decision WHERE entity_type = 'project' AND entity_id = ? AND gate IN ('entity_ic','group_ic') ORDER BY decided_at DESC, id DESC LIMIT 1")
-    .get(id) as { decision: string; rationale: string } | undefined;
+  const icGateRow = db
+    .query("SELECT id, gate, decision, decided_by, rationale FROM gate_decision WHERE entity_type = 'project' AND entity_id = ? AND gate IN ('entity_ic','group_ic') ORDER BY decided_at DESC, id DESC LIMIT 1")
+    .get(id) as { id: string; gate: string; decision: string; decided_by: string; rationale: string } | undefined;
+  // ADR-0186 D6: an IC GO that still awaits its countersign is shown as such, never as an approval in force.
+  const icGate = icGateRow
+    ? { decision: effectiveState(db, id, icGateRow).awaiting ? `${icGateRow.decision} (awaiting countersign)` : icGateRow.decision, rationale: icGateRow.rationale }
+    : undefined;
 
   const manifest = ["포트폴리오 스코어카드", "시너지 인증", "핵심인재 상태", "전환 이력", "IC 승인 결정", "리스크 히트맵 스냅샷"];
   // ADR-0122 #2 — the heatmap snapshot rides the quarterly briefing too (same server builder as S9/IC).

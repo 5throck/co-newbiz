@@ -58,6 +58,8 @@ interface ItemState {
   waiver_id: string | null;
   assessed_by?: string | null;
   assessed_at?: string | null;
+  /** ADR-0186: taken from the validator engine, not set by hand (bf-01). */
+  derived?: boolean;
 }
 interface StdItem {
   scope?: WsItemScope;
@@ -155,7 +157,7 @@ function stateMeta(status: string | undefined, tr: TranslatorFn) {
   return m ? { ...m, label: m.label } : { icon: "?", label: status ?? "unknown", cls: "status-not-started" };
 }
 
-export function DdStage({ projectId }: { projectId: string }) {const tr = useTranslations(); const t = useTranslations("stages.s9.stage"); const tc = useTranslations("common");
+export function DdStage({ projectId }: { projectId: string }) {const tr = useTranslations(); const t = useTranslations("stages.s9.stage"); const tc = useTranslations("common"); const tdd = useTranslations("stages.dd");
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
   const { confirm, confirmDialog } = useConfirm();
@@ -817,7 +819,15 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
                         <span className={`status-chip ${meta.cls}`}>{meta.icon} {meta.label}</span>
                         <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{display.judged ? (display.byline ? t("judgementP1", { p1: display.byline }) : t("judged")) : t("notYetJudged")}</span>
                       </td>
-                      {rowCanAct && (
+                      {rowCanAct && item.state?.derived === true && (
+                        <td data-label={t("judgementRecord")}>
+                          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="dd-derived-item">
+                            <span aria-hidden="true">⚙</span> {tdd("derivedItem")}
+                            <span className="block">{tdd("derivedHint")}</span>
+                          </span>
+                        </td>
+                      )}
+                      {rowCanAct && item.state?.derived !== true && (
                         <td data-label={t("judgementRecord")}>
                           <span className="actions-row dd-actions">
                             <button type="button" className="btn-ghost btn-sm" disabled={busy} title={t("metJudgement")} aria-label={t("markP1Met", { p1: ko.text })} onClick={() => void judge(domain.checklistId, item.id, "pass")}>{t("met2")}</button>

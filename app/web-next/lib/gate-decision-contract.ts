@@ -19,12 +19,17 @@
 import type { Database } from "bun:sqlite";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
+import { noteChainMaker } from "../../../db/lib/approval-chain.ts";
+import { insertConditions, type NewCondition } from "../../../db/repositories/condition-precedent.repository.ts";
+import { isIcGate } from "../../../db/lib/gate-effective.ts";
 import { getBriefRecord, insertGateSnapshot, GATE_SNAPSHOT_SCHEMA_VERSION, type Acknowledgement } from "../../../db/repositories/gate-snapshot.repository.ts";
 import { badRequest } from "./envelope.ts";
 import { applyFamilyFailure, recordWouldBlock, type IntegrityContext, type IntegrityFailure } from "./gate-integrity.ts";
 import { gateIntegrityMode } from "./gate-integrity-flags.ts";
 import { buildGateSnapshot, type BuiltSnapshot, type GateSnapshot, type RequiredAck, type SnapshotEntity } from "./gate-snapshot.ts";
 import { validateRationale } from "./rationale-check.ts";
+import { certificationFailure } from "./gate-certification.ts";
+import { groupIcConditionFailure } from "./gate-conditions.ts";
 
 export interface ProvidedAck { key: string; kind?: string; reason: string; covers?: string[] }
 
@@ -36,13 +41,19 @@ export interface DecisionExtras {
   killOverrideId: string | null;
 }
 
+/** ADR-0186 D4: an IC GO may carry conditions[] (parsed by lib/gate-conditions.ts), stored with the decision. */
+export type { NewCondition };
+
 export const MAX_ACKS = 200;
 const MAX_REASON = 2000;
 
 /** True when any family that needs the snapshot is on; otherwise the decision write is the legacy path, byte for byte. */
 export function integrityActive(): boolean {
-  return (["snapshot_ack", "kill_binding", "divergence"] as const).some((f) => gateIntegrityMode(f) !== "off");
+  return INTEGRITY_FAMILIES_NEEDING_SNAPSHOT.some((f) => gateIntegrityMode(f) !== "off");
 }
+
+/** Families whose rules read the recomputed snapshot (ADR-0186 P3 adds validators and maker_checker: an IC GO must carry a snapshot for the countersign contract). */
+const INTEGRITY_FAMILIES_NEEDING_SNAPSHOT = ["snapshot_ack", "kill_binding", "divergence", "validators", "maker_checker"] as const;
 
 /** Shape validation of the new body fields. A malformed field is a 400 whatever the flag mode (it is not a policy rule). */
 export function parseDecisionExtras(body: Record<string, unknown>): { ok: true; extras: DecisionExtras } | { ok: false; response: Response } {
@@ -147,6 +158,28 @@ function freshSnapshotView(built: BuiltSnapshot): GateSnapshot {
   return { ...built.snapshot, kill: { ...built.snapshot.kill, eval_run_id: null } };
 }
 
+/**
+ * ADR-0186 D1 / D4: a triggered kill criterion with action `mark_conditional` that the recorder acknowledged
+ * creates a condition precedent on an IC GO (entity_ic -> must be cleared before the group sitting, group_ic ->
+ * before closing). Other gates have no condition table scope, so nothing is created there (the acknowledgement is
+ * stored in the snapshot and the IC gates evaluate the same criteria again).
+ */
+export function markConditionalConditions(
+  snapshot: Pick<GateSnapshot, "kill">,
+  covered: readonly Acknowledgement[],
+  gate: string,
+): NewCondition[] {
+  if (!isIcGate(gate)) return [];
+  const out: NewCondition[] = [];
+  for (const t of snapshot.kill.triggered) {
+    if (t.action !== "mark_conditional") continue;
+    const ack = covered.find((a) => a.key === t.key);
+    if (!ack) continue;
+    out.push({ text: `${t.title}: ${ack.reason}`.slice(0, 1000), clear_by: gate === "entity_ic" ? "group_ic" : "closing", owner_role: null, origin: "kill_conditional" });
+  }
+  return out;
+}
+
 export interface ContractResult {
   built: BuiltSnapshot;
   acknowledgements: Acknowledgement[];
@@ -154,6 +187,8 @@ export interface ContractResult {
   aiRecommended: string | null;
   aiBriefId: string | null;
   divergenceReason: string | null;
+  /** Conditions created by acknowledged `mark_conditional` kill results (IC gates only). */
+  autoConditions: NewCondition[];
 }
 
 /**
@@ -195,6 +230,31 @@ export function runDecisionContract(
         };
       }, db),
     );
+
+    // 1b. bf-01 / bf-03 / open group_ic conditions (family `validators`, ADR-0186 D4 and owner decision O-3). The
+    //     snapshot names each hard block; the recorder cannot acknowledge them away.
+    for (const hb of snapshot.hard_blocks) {
+      if (hb.code === "kill_binding_unoverridden") continue;
+      reject(
+        applyFamilyFailure("validators", ctx, () => {
+          if (hb.code === "validators_incomplete") {
+            return {
+              status: 409 as const, code: "validators_incomplete",
+              message: `GO is not allowed - the required M&A validator(s) ${hb.keys.join(", ")} are not recorded (neb-policy 2.3; no waiver path). HOLD or KILL can be recorded at any time.`,
+              details: { missing: hb.keys },
+            };
+          }
+          if (hb.code === "certification_unconfirmed") {
+            return certificationFailure(db, input.entityId) ?? {
+              status: 409 as const, code: "certification_unconfirmed",
+              message: "GO is not allowed at Pre-FS - certification transferability is not confirmed (neb-policy 2.4).", details: { certifications: hb.keys },
+            };
+          }
+          if (hb.code === "condition_open") return groupIcConditionFailure(db, input.entityId);
+          return null;
+        }, db),
+      );
+    }
 
     // 2. AI-versus-human divergence (D9): a GO against a different AI recommendation carries the recorder's reason.
     reject(
@@ -243,6 +303,9 @@ export function runDecisionContract(
     );
   }
 
+  // D1: an acknowledged `mark_conditional` kill result becomes a condition precedent (IC gates; the table is IC-scoped).
+  const autoConditions = input.decision === "go" && input.entityType === "project" ? markConditionalConditions(snapshot, acks.covered, input.gate) : [];
+
   return {
     built,
     acknowledgements: acks.covered,
@@ -250,6 +313,7 @@ export function runDecisionContract(
     aiRecommended,
     aiBriefId: built.brief?.id ?? null,
     divergenceReason: input.extras.divergenceReason,
+    autoConditions,
   };
 }
 
@@ -266,11 +330,13 @@ export interface DecisionRecordInput {
   judgementConfirmationsJson: string | null;
   /** null = legacy path (every integrity family that needs a snapshot is off). */
   extras: DecisionExtras | null;
+  /** ADR-0186 D4: conditions of an IC GO (parsed and validated by the route). */
+  conditions?: readonly NewCondition[];
   now: string;
 }
 
 export type DecisionRecordResult =
-  | { ok: true; id: string; snapshotHash: string | null; acknowledgements: Acknowledgement[] }
+  | { ok: true; id: string; snapshotHash: string | null; acknowledgements: Acknowledgement[]; conditionIds: string[] }
   | { ok: false; failure: IntegrityFailure; built: BuiltSnapshot | null };
 
 /**
@@ -292,10 +358,21 @@ export function recordGateDecisionRow(db: Database, input: DecisionRecordInput):
     );
     appendAudit(db, { actor: input.actor, action: "gate_decision.record", target: `${input.entityId}:${input.gate}:${input.decision}`, now: input.now });
   };
+  /** ADR-0186 D4: conditions of an IC GO, created in the same transaction as the decision. */
+  const writeConditions = (items: readonly NewCondition[]): string[] => {
+    if (items.length === 0 || input.entityType !== "project" || input.decision !== "go" || !isIcGate(input.gate)) return [];
+    const ids = insertConditions(db, { projectId: input.entityId, decisionId: id, gate: input.gate, items, createdBy: input.actor, now: input.now });
+    for (const cid of ids) appendAudit(db, { actor: input.actor, action: "condition.create", target: `${input.entityId}:${input.gate}:${cid}`, now: input.now });
+    return ids;
+  };
 
   if (!input.extras) {
-    insertRow(null);
-    return { ok: true, id, snapshotHash: null, acknowledgements: [] };
+    // Legacy path: the original single INSERT plus its audit row (and the conditions, atomically, when the recorder sent any).
+    const conditionIds = db.transaction(() => {
+      insertRow(null);
+      return writeConditions(input.conditions ?? []);
+    })();
+    return { ok: true, id, snapshotHash: null, acknowledgements: [], conditionIds };
   }
   const extras = input.extras;
   try {
@@ -316,7 +393,12 @@ export function recordGateDecisionRow(db: Database, input: DecisionRecordInput):
           briefId: c.aiBriefId,
         });
         appendAudit(db, { actor: input.actor, action: "gate_snapshot.record", target: `${input.entityId}:${input.gate}:${input.decision}:${c.built.hash.slice(0, 12)}`, now: input.now });
-        return { ok: true, id, snapshotHash: c.built.hash, acknowledgements: c.acknowledgements };
+        // Maker/checker (D6): note the maker on the chain row of this IC gate so the countersign can be matched to it.
+        if (input.entityType === "project" && input.decision === "go" && isIcGate(input.gate) && gateIntegrityMode("maker_checker") !== "off") {
+          noteChainMaker(db, { projectId: input.entityId, gate: input.gate, recordedBy: input.actor, now: input.now });
+        }
+        const conditionIds = writeConditions([...(input.conditions ?? []), ...c.autoConditions]);
+        return { ok: true, id, snapshotHash: c.built.hash, acknowledgements: c.acknowledgements, conditionIds };
       })
       .immediate();
   } catch (e) {
@@ -328,13 +410,16 @@ export function recordGateDecisionRow(db: Database, input: DecisionRecordInput):
       try {
         recordWouldBlock(db, { entityType: input.entityType, entityId: input.entityId, gate: input.gate, actor: input.actor }, "snapshot_error");
       } catch { /* the audit is best effort here */ }
-      insertRow(null);
-      return { ok: true, id, snapshotHash: null, acknowledgements: [] };
+      const conditionIds = db.transaction(() => {
+        insertRow(null);
+        return writeConditions(input.conditions ?? []);
+      })();
+      return { ok: true, id, snapshotHash: null, acknowledgements: [], conditionIds };
     }
     throw e;
   }
 }
 
 function anyEnforce(): boolean {
-  return (["snapshot_ack", "kill_binding", "divergence"] as const).some((f) => gateIntegrityMode(f) === "enforce");
+  return INTEGRITY_FAMILIES_NEEDING_SNAPSHOT.some((f) => gateIntegrityMode(f) === "enforce");
 }

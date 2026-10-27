@@ -33,6 +33,8 @@ interface ProcessView {
   blockers: string[];
   requiredArtifacts: string[];
   gateStatus: Record<string, string>;
+  /** ADR-0186: gates whose IC GO waits for a second reviewer. */
+  awaitingCountersign?: string[];
   terminated: boolean;
   track: string | null;
   subTrack: string | null;
@@ -72,8 +74,9 @@ const GATES_BY_STAGE: Record<string, string[]> = {
 /** The flow spec lists required artifacts as Korean prose (not record keys); only unmapped non-prose tokens fall back to the placeholder. */
 const isProseRequirement = (k: string): boolean => /[\uAC00-\uD7A3]/.test(k);
 
-function StageList({ stages, gateStatus }: { stages: StageView[]; gateStatus: Record<string, string> }) {
+function StageList({ stages, gateStatus, awaiting = [] }: { stages: StageView[]; gateStatus: Record<string, string>; awaiting?: string[] }) {
   const tr = useTranslations();
+  const ti = useTranslations("components.gateIntegrity");
   const t = useTranslations("pages.projects.process");
   return (
     <ol className="mt-2 space-y-1">
@@ -104,6 +107,7 @@ function StageList({ stages, gateStatus }: { stages: StageView[]; gateStatus: Re
                   >
                     {t("gateChip", { gate: tr(GATE_LABEL_KEY[g] ?? g) })}
                     {decision ? ` · ${tr(DECISION_LABEL_KEY[decision] ?? decision)}` : ""}
+                    {awaiting.includes(g) && <span data-testid="process-awaiting-countersign"> · <span aria-hidden="true">◐</span> {ti("awaiting")}</span>}
                   </span>
                 );
               })}
@@ -175,7 +179,7 @@ export default function ProjectProcessPage() {
 
       <section aria-label={t("projectStagesAria")} className="market-section">
         <h2 className="text-[length:var(--fs-body)] font-semibold">{t("projectStagesHeading")}</h2>
-        <StageList stages={stagesWithGates} gateStatus={data.gateStatus} />
+        <StageList stages={stagesWithGates} gateStatus={data.gateStatus} awaiting={data.awaitingCountersign} />
       </section>
 
       {data.opportunity && (

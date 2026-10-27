@@ -78,6 +78,7 @@ function seedDeal(db: Db, track: Track, dbPath: string): Ids {
   const { oppId, projectId } = { oppId: ids.opportunityId, projectId: ids.projectId };
 
   // The decisions under test are recorded through the path being exercised.
+  db.run("DROP TRIGGER IF EXISTS trg_gate_decision_no_delete"); // fixture cleanup only (ADR-0186 H1 guard)
   db.run("DELETE FROM gate_decision");
   db.run("DELETE FROM venture_transition_decision");
   db.run("UPDATE md_project SET current_stage_gate = NULL WHERE id = ?", [projectId]);

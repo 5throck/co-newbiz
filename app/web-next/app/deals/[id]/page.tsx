@@ -42,6 +42,7 @@ interface ProcessView {
   blockers: string[];
   requiredArtifacts: string[];
   gateStatus: Record<string, string>;
+  awaitingCountersign?: string[];
   track: string | null;
   subTrack: string | null;
   terminated: boolean;
@@ -185,6 +186,7 @@ function DealOverview() {
       blockers: proc.blockers,
       requiredArtifacts: proc.requiredArtifacts,
       gateStatus: proc.gateStatus,
+      awaitingCountersign: proc.awaitingCountersign,
       track: proc.track,
       subTrack: proc.subTrack,
       terminated: proc.terminated,
@@ -410,7 +412,10 @@ function NextActionBody({ ov }: { ov: Overview }) {
   // i18n: gate subjects/button targets arrive as common.gate.* keys — resolve them for
   // the interim Korean next-action copy (deal-overview-view), which stays a §4 surface.
   const a = { ...raw, subject: resolveLabelTokens(raw.subject, root), buttonTarget: resolveLabelTokens(raw.buttonTarget, root) };
-  const copy = nextActionCopy(a);
+  // ADR-0186: the awaiting-second-review copy resolves through the catalog (the interim Korean copy stays a fallback for pure callers).
+  const copy = a.type === "await_countersign"
+    ? { what: root("pages.dealOverview.awaitCountersign", { gate: a.subject }), why: root("pages.dealOverview.awaitCountersignWhy"), cta: root("pages.dealOverview.awaitCountersignCta", { gate: a.subject }) }
+    : nextActionCopy(a);
   const describedBy = a.type === "record_artifact" ? "ov-next-criterion" : undefined;
   return (
     <>

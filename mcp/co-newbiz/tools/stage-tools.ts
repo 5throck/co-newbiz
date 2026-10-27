@@ -29,7 +29,7 @@ const SPECS: readonly RouteToolSpec[] = [
   { name: "get_project_process", kind: "read", method: "GET", path: "/api/projects/{projectId}/process",
     description: "Derived process state (S8-S12) for a promoted project — currentStage, completedStages, gateStatus, requiredArtifacts." },
   { name: "get_project_gate_decisions", kind: "read", method: "GET", path: "/api/projects/{projectId}/gate-decisions",
-    description: "Gate decision records (GO/HOLD/KILL) for a project (fs, dd, entity_ic, group_ic)." },
+    description: "Gate decision records (GO/HOLD/KILL) for a project (fs, dd, entity_ic, group_ic). latest[].decision is the EFFECTIVE verdict: an entity_ic / group_ic GO that still awaits its second-reviewer countersign reads pending once maker/checker is enforced; recorded_decision, awaiting_countersign and countersign_state say what was recorded (ADR-0186). Countersigning is a human act, never a tool." },
 
   // ── S1 market analysis ───────────────────────────────────────────────
   { name: "list_market_analyses", kind: "read", method: "GET", path: "/api/market-overview/analyses", query: true,
