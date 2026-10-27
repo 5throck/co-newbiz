@@ -1,4 +1,4 @@
-// @version 1.0.1
+// @version 1.0.2 (ADR-0187 P0: S3 synergy-red-team and capability-register-* activity ids mapped onto existing tools)
 /**
  * Stage tools S1-S12 — ADR-0154 §4, design §5 (Wave M M-2).
  *
@@ -73,11 +73,11 @@ const SPECS: readonly RouteToolSpec[] = [
   { name: "get_opportunity_screening", kind: "read", method: "GET", path: "/api/opportunities/{opportunityId}/screening",
     activities: ["strategic-fit-screening"], description: "Screening view — judgment inputs plus the deterministic Go/Hold/Kill recommendation (a recommendation only)." },
   { name: "start_synergy_analysis", kind: "generate", method: "POST", path: "/api/synergy/analyses", body: "required", bodyHint: BODY,
-    activities: ["synergy-analysis"], artifacts: ["stage:S3:1"], description: "Run a synergy analysis. The synergy score is a recommendation; a person confirms it in the web app." },
+    activities: ["synergy-analysis", "synergy-red-team"], artifacts: ["stage:S3:1"], description: "Run a synergy analysis. The synergy score is a recommendation; a person confirms it in the web app." },
   { name: "rerun_synergy_analysis", kind: "generate", method: "POST", path: "/api/synergy/analyses/{analysisId}/rerun", body: "optional",
-    activities: ["synergy-analysis"], description: "Re-run a synergy analysis." },
+    activities: ["synergy-analysis", "synergy-red-team"], description: "Re-run a synergy analysis." },
   { name: "record_capability_list", kind: "write", method: "PUT", path: "/api/opportunities/{opportunityId}/capability-gap", body: "required", bodyHint: BODY,
-    activities: ["strategic-fit-screening", "capability-assessment"], artifacts: ["stage:S5:1"],
+    activities: ["strategic-fit-screening", "capability-register-greenfield", "capability-register-brownfield", "capability-assessment"], artifacts: ["stage:S5:1"],
     description: "Save the required-capability list and gap register (S3 list, S5 gap assessment)." },
   { name: "draft_capability_gap", kind: "generate", method: "POST", path: "/api/opportunities/{opportunityId}/capability-gap/llm-draft", body: "optional",
     activities: ["capability-assessment"], description: "Requirement-side draft (nothing is saved): proposes extra capability rows from synergy areas (or, without a synergy analysis, the S2 sketch and S1 factors; each row's source says which) and fills EMPTY necessity (essential|partial_essential|optional) and required-level narrative with a basis each. Always detects rows with a missing necessity or required level and reports how many cells were filled and how many remain missing (batched LLM calls, per-item validation). Never touches holding fields; a person reviews and saves." },

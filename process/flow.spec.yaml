@@ -21,7 +21,35 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.13.0"
+  version: "2.14.0"
+  # v2.14.0 - Process SSOT and decision evidence (ADR-0187, Accepted 2026-10-27
+  #   at the owner merge of PR #752; design 2026-10-27-process-ssot-decision-
+  #   evidence-design P0, owner decisions D1-D9). Declarations only - the engine
+  #   (app/web-next/lib/process-flow.ts) is unchanged in P0 and the parity
+  #   validator lands in P1:
+  #   - S3 declares the required-capability register blocker the engine already
+  #     enforces, with its owner activities (D5: one per track lead,
+  #     capability-register-greenfield / capability-register-brownfield).
+  #   - S3 synergy author moves to financial-analyst (D6, finding M6);
+  #     risk-officer keeps the independent synergy-red-team activity
+  #     (assumption-audit) and holds no authorship.
+  #   - S11 declares the blockers the engine already enforces (adopted S8
+  #     business case, human reviewer on IC GO, brownfield PMI kickoff for
+  #     M&A/JV/strategic investment, greenfield execution baseline) and fixes
+  #     the order (D7): entity IC GO -> group IC GO -> establishment / PMI
+  #     kickoff / execution baseline.
+  #   - S5-S7 and S9-S12 inputs declare the S2 entry market (finding M9).
+  #   - Gates (and S12, which has no gate) list killCriteriaRegistry: the keys
+  #     of procedures/_kill-criteria/ binding at that gate. The registry is the
+  #     single canonical kill list (finding M4, neb-policy 1.2.0 section 4);
+  #     killCriteria strings stay as the human summary.
+  #   - S12 portfolio-monitoring scope widening for brownfield external
+  #     minority / R&BD / CVC is declared (D8, finding M17); the procedure
+  #     applies_when change lands with P2.
+  #   Deferred to later phases by design section 5: requiredArtifacts string
+  #   changes (mirrored verbatim by the engine STAGES list - P3), ip-fto-review
+  #   and region-labor extension to greenfield DD (need procedure steps - P2).
+  #   The S10 site activity (W2-e) is already absent since v2.11.0 (D-6).
   # v2.13.0 — 게이트 무결성 (ADR-0186, Accepted 2026-10-27, design
   #   2026-10-26-gate-integrity-design P0). entity_ic·group_ic 게이트 판정 기준
   #   문언만 갱신한다: GO는 서버가 계산한 게이트 스냅샷과 확인(acknowledgement)을
@@ -175,6 +203,13 @@ meta:
     opportunity: [S1, S2, S3, S4, S5, S6, S7]
     project: [S8, S9, S10, S11, S12]
 
+# killCriteriaRegistry (v2.14.0, ADR-0187 M4): per gate, the keys of the
+# kill-criteria registry (procedures/_kill-criteria/<procedure>__<criterion>.json)
+# whose procedure declares that gate. The registry is the canonical kill list;
+# killCriteria strings are the human summary of design section 8.2. Summary
+# lines with no registry entry yet (screening market/data-confidence/knock-out,
+# pre_fs route undecided) get a procedure declaration in P2 - until then they
+# remain human-judged, never machine-evaluated.
 gates:
   - id: screening
     name: Screening
@@ -186,6 +221,15 @@ gates:
       - 시장이 구조적으로 매력이 없다(축소+상품화)
       - 데이터 신뢰도가 판단 불가 수준이다
       - 전략적 적합성 knock-out 실패
+    killCriteriaRegistry:
+      - greenfield-screening__zero_site_clears_infrastructure_minimums
+      - greenfield-screening__infrastructure_plan_not_finalized_at_site_announcement
+      - greenfield-screening__partner_dependency_unconfirmed_and_no_alternative
+      - brownfield-screening__no_viable_target_in_longlist
+      - brownfield-screening__preliminary_hhi_flags_certain_block
+      - deal-shape-chain__no_viable_deal_shape
+      - deal-shape-chain__partner_dd_red_financial_distress
+      - deal-shape-chain__partner_dd_red_ip_chain
     fundingDecision: Screening 통과 시 Pre-FS 예산 트랜치 개시
   - id: pre_fs
     name: Pre-FS
@@ -194,6 +238,13 @@ gates:
       - "트랙별 후속 검토 입력이 존재한다 (greenfield: 역량 평가, brownfield: Target Universe 정의)"
     killCriteria:
       - 진출방식이 결정되지 않았다
+    killCriteriaRegistry:
+      - greenfield-pre-fs__wacc_hurdle_still_assumed
+      - greenfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing
+      - brownfield-pre-fs__wacc_hurdle_still_assumed
+      - brownfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing
+      - brownfield-target-identification__universe_cannot_be_defined
+      - brownfield-target-identification__minimum_coverage_not_achievable
     fundingDecision: FS 본격 검토 자원 배정
   - id: target_screening
     name: Target Screening
@@ -203,6 +254,9 @@ gates:
       - Short List 후보가 knock-out 스크리닝을 통과했다
     killCriteria:
       - knock-out 통과 후보가 0건이다 (스크리닝 결과 진입 가능한 대상 없음)
+    killCriteriaRegistry:
+      - brownfield-target-screening__no_candidate_passes_knock_out
+      - brownfield-target-screening__shortlist_quality_below_threshold
     fundingDecision: Short List 대상 사업성 분석 자원 배정
   - id: fs
     name: FS
@@ -212,6 +266,11 @@ gates:
       - "brownfield: 대상별 비교 분석과 사람의 대상 선정 기록(target_selection)이 존재한다"
     killCriteria:
       - 기준 수익률 미달이 기본 시나리오에서 확인된다
+    killCriteriaRegistry:
+      - greenfield-fs__growth_projection_outside_top_decile_without_risk_officer_signoff
+      - greenfield-fs__permit_critical_path_exceeds_incentive_deadline
+      - brownfield-fs__qoe_reveals_material_earnings_quality_gap_unexplained
+      - brownfield-fs-comparative__no_target_meets_base_scenario_hurdle
     fundingDecision: DD 착수 자원 배정
   - id: dd
     name: DD
@@ -220,6 +279,13 @@ gates:
       - 미해소 필수 미충족이 0건이다
     killCriteria:
       - waiver 불가능한 필수 항목 미충족 지속
+    killCriteriaRegistry:
+      - greenfield-dd__dd_finding_with_value_impact_not_in_valuation_bridge
+      - greenfield-dd__wastewater_capacity_insufficient_and_no_mitigation
+      - brownfield-dd__any_of_six_ma_validators_missing_at_dd_exit
+      - brownfield-dd__certification_transferability_computed_by_inference_not_confirmation
+      - brownfield-dd__covenant_breach_with_coc_acceleration_under_downside
+      - brownfield-dd__partner_dependency_unconfirmed_and_no_alternative
     fundingDecision: 투자심의 자료 작성 자원 배정
   - id: entity_ic
     name: 법인 투자심의위원회
@@ -229,6 +295,13 @@ gates:
       - 게이트 스냅샷에 대한 확인이 사유와 함께 기록되었고, 다른 담당자(entity-ic-reviewer)의 countersign으로 GO가 유효해졌다
     killCriteria:
       - 필수 산출물 미승인
+    killCriteriaRegistry:
+      - entity-ic-review__kill_criteria_condition_triggered
+      - entity-ic-review__analysis_task_reviewed_by_null_on_required_deliverable
+      - entity-establishment-execution__origin_classification_missing_at_entity_ic_exit
+      - entity-establishment-execution__employment_transfer_without_consent_determination
+      - entity-establishment-execution__ip_assignment_chain_incomplete_at_establishment
+      - business-unit-establishment-execution__permit_not_possible_under_existing_entity_name
     fundingDecision: Entity 차원 투자 권고
   - id: group_ic
     name: 그룹 투자심의위원회
@@ -238,6 +311,9 @@ gates:
       - 게이트 스냅샷에 대한 확인이 사유와 함께 기록되었고, 다른 담당자(group-ic-reviewer)의 countersign으로 GO가 유효해졌으며, 그룹 IC 범위의 미해소 조건이 없다
     killCriteria:
       - 그룹 수준 반려
+    killCriteriaRegistry: []
+    # v2.14.0 (ADR-0187 M4): no registry entry is declared at the Group IC gate;
+    # "그룹 수준 반려" is a human decision, not a machine-evaluable criterion.
     fundingDecision: 최종 투자 집행
 
 stages:
@@ -358,11 +434,40 @@ stages:
         # 활동 에이전트의 차이는 AGENTS.md §7에 따라 기록된 divergence이며
         # (S10 site 활동은 두지 않는다), 절차 단계 내부 배정은 절차가 소유한다.
       - id: synergy-analysis
-        agent: risk-officer
-        skills: [assumption-audit]
+        agent: financial-analyst
+        skills: [investment-feasibility-modeling, historical-financial-analysis]
         procedure: [greenfield-screening, brownfield-screening]
         # 시너지 정합성 화면 — 대상은 그룹/계열사 레지스트리(계열사 또는 그룹 전체)이며,
         # S2 기회를 연결해 분석하고 완료 시 opportunity.synergy_score 권고를 기록한다 (ADR-0090).
+        # v2.14.0 (ADR-0187 D6, finding M6): the quantitative author is
+        # financial-analyst; risk-officer red-teams it in synergy-red-team and
+        # authors nothing here. The screening procedures do not yet hold a
+        # financial-analyst step - recorded divergence, reconciled in P2 (M2).
+      - id: synergy-red-team
+        agent: risk-officer
+        skills: [assumption-audit]
+        procedure: [greenfield-screening, brownfield-screening]
+        # v2.14.0 (ADR-0187 D6): independent red-team of the synergy assumption
+        # register (optimism bias, reference-class deviation). Does not draft the
+        # assumptions and does not set the score.
+      - id: capability-register-greenfield
+        agent: greenfield-agent
+        skills: [greenfield-feasibility]
+        procedure: [greenfield-screening]
+        # v2.14.0 (ADR-0187 D5, finding H8): owner of the S3 required-capability
+        # register (opportunity.capability_gap_json) on the greenfield lens. The
+        # register is one per opportunity - S3 precedes the S4 route decision, so
+        # both track leads contribute; greenfield-agent consumes it at S5
+        # capability-assessment. Recorded divergence until P3: the runtime draft
+        # prompt s3.capability_gap_draft still runs under process-governance-manager
+        # mapped to strategic-fit-screening; rebinding it is engine work.
+      - id: capability-register-brownfield
+        agent: brownfield-agent
+        skills: [brownfield-feasibility]
+        procedure: [brownfield-screening]
+        # v2.14.0 (ADR-0187 D5, finding H8): the same register on the brownfield
+        # lens; brownfield-agent consumes it at S6 universe definition and S9
+        # capability-dd. process-governance-manager consumes it in the screen.
       - id: our-company-profile
         agent: financial-analyst
         skills: [historical-financial-analysis, company-intelligence, competitive-intelligence]
@@ -375,6 +480,9 @@ stages:
       - 기회에 synergy_score와 근거가 기록되었다
       - 적합성 판단 근거(rationale)가 기록되고 결정론 권고(매력도·시너지 조합)가 제시되었다
       - 최소 1개 기회가 selected 상태이다 (시너지·적합성 평가 후 선정)
+      - 필요 역량 등록부에 출처(source)가 기록된 역량이 1건 이상 존재한다 (capability-register 활동 — grandfathered 기회 제외)
+      # v2.14.0 (ADR-0187 H8): declares the engine blocker
+      # countSourcedCapabilityRows(capability_gap_json) > 0 (lib/process-flow.ts S3).
       # v2.4.1 — "적합성 판단(Go/Hold/Kill 권고)이 존재한다"에서 변경: 전용 적합성
       # 판정 UI(knock-out 체크리스트, POST kind:'fit')는 2026-09-15에 중복 계층으로
       # 제거되었다. 판단의 표면은 ① opportunity.rationale 근거 텍스트 ② 매력도·시너지
@@ -464,6 +572,7 @@ stages:
       - 트랙 결정 (greenfield)
       - 자사 역량·조직·인프라 정보
       - 필요 역량 목록 (S3 적합성 평가에서 도출)
+      - 진입시장 산정 (S2 확정 — ADR-0181; S3~S12의 기준 시장, ADR-0187 M9)
     outputs:
       - 역량 격차 평가
       - 진출전략(Build/Partner/Hire/Invest)
@@ -502,6 +611,7 @@ stages:
       - 트랙 결정·Route 유형 (brownfield)
       - 시장 정의·가치사슬 구조 (S1)
       - 필요 역량·진입 조건 (S3)
+      - 진입시장 산정 (S2 확정 — ADR-0181; S3~S12의 기준 시장, ADR-0187 M9)
     outputs:
       - Target Universe 정의(선정 기준·커버리지)
       - Target Company Long List(필수 속성·출처 포함)
@@ -533,6 +643,7 @@ stages:
     inputs:
       - Target Company Long List (S6)
       - 스크리닝 기준(전략적 적합성·역량 적합성·재무·지역·소유권/가용성·규제 제약)
+      - 진입시장 산정 (S2 확정 — ADR-0181; S3~S12의 기준 시장, ADR-0187 M9)
     outputs:
       - Target Company Short List
       - Target Ranking/Score
@@ -586,6 +697,7 @@ stages:
       - 시뮬레이션 입력 스냅샷 (job-spec 기록)
       - Target 비교 분석·권고 (brownfield)
       - 대상 선정 기록 (brownfield — 사람 결정)
+      - 채택 Business Case (사람의 채택 기록 s8_case_adopt — S10·S11 투자심의 자료의 정량 축)
     entryCriteria:
       - "greenfield: S5 완료 / brownfield: S7 완료 (Short List 존재)"
     activities:
@@ -644,6 +756,7 @@ stages:
       - 조사 근거
       - S8 대상 선정 기록 (brownfield)
       - S3 필요 역량 등록부 (brownfield — capability-dd 입력; design 2026-10-19-brownfield-capability-dd)
+      - 진입시장 산정 (S2 확정 — ADR-0181; S3~S12의 기준 시장, ADR-0187 M9)
     outputs:
       - DD 체크리스트 판정
       - 조사내역(dd_finding)
@@ -752,6 +865,7 @@ stages:
       - S8 채택 Business Case
       - S9 DD 발견사항(dd_finding value_impact 포함)
       - WACC·hurdle 입력값
+      - 진입시장 산정 (S2 확정 — ADR-0181; S3~S12의 기준 시장, ADR-0187 M9)
     outputs:
       - 투자구조 가설(4축 검토 완료 — deal_structure_review 아티팩트 참조; 그린필드는 설립 구조 결정(신규 법인 설립 또는 신규 사업부 추진) 포함)
       - 자금조달 계획(sources & uses 균형·자금 확정성 증빙)
@@ -795,6 +909,7 @@ stages:
       - 투자심의 자료(사업계획·DD·RAG·검토)
       - 투자 구조안(S10 투자구조 설계의 산출물 — 투자 주체·4축 검토·자금조달 계획)
       - 사람 최종 승인 산출물
+      - 진입시장 산정 (S2 확정 — ADR-0181; S3~S12의 기준 시장, ADR-0187 M9)
     outputs:
       - IC 결정
       - 투자 구조 확정(투자 주체·자금 조달 mix·지급 일정)
@@ -884,6 +999,15 @@ stages:
       - 법인 투자심의위원회와 그룹 투자심의위원회 승인이 모두 기록되었다
       - 추진계획(차터) 기준선이 확정되고 append-only 변경 이력이 시작되었다
       - origin∈{internal,joint}인 프로젝트는 entity-establishment-execution 5단계 완료 기록이 존재한다
+      - 실행 순서는 법인 투자심의위원회 GO → 그룹 투자심의위원회 GO → 실행(설립·사업부 신설 / PMI 킥오프 / greenfield 실행 기준선)이다 — 그룹 GO 전에는 설립·자본 약정을 실행하지 않는다 (ADR-0187 D7)
+      - S8에서 사람이 채택한 Business Case 기록(s8_case_adopt)이 존재한다
+      - 법인·그룹 투자심의위원회의 최신 GO 결정자가 사람이다 (사람 최종 승인 — grandfathered 프로젝트 제외)
+      - "brownfield M&A·JV·전략적 투자: 사람이 기록한 PMI 킥오프(통합 책임자·통합 계획 기준선)가 존재한다 (소수점 지분·파트너십·R&BD·CVC·기존사업 R&BD·사내벤처 제외)"
+      - "greenfield: 실행 기준선이 사람에 의해 확인되었다 (트랙 분류 충돌은 사람이 정리 — ADR-0161)"
+      # v2.14.0 (ADR-0187 H8/M5): the four lines above declare blockers
+      # lib/process-flow.ts S11 already enforces (s8_case_adopt adoption,
+      # reviewer persona check, pmiKickoffApplies / NON_PMI_SUB_TRACKS,
+      # executionBaselineS11Check); the order line fixes D7.
     applicableTracks: [greenfield, brownfield]
     stateTransitions: { onComplete: S12, onHold: S11, onKill: terminal }
     gates: [entity_ic, group_ic]
@@ -894,6 +1018,7 @@ stages:
     inputs:
       - IC 승인 결정
       - 실행 계획
+      - 진입시장 산정 (S2 확정 — ADR-0181; S3~S12의 기준 시장, ADR-0187 M9)
     outputs:
       - 포트폴리오 스코어카드
       - 사업 성과 리포트
@@ -909,6 +1034,11 @@ stages:
         # v2.8.0 (ADR-0161): portfolio-venture-monitoring v1.2.0은 greenfield를
         # case_type으로도 포함한다 (origin이 비어 있어도 적용). 기본 venture_class:
         # 신규 부지 driving / existing_business_rbd enabling / intra_venture emergent.
+        # v2.14.0 (ADR-0187 D8, finding M17): scope is declared to cover brownfield
+        # origin=external projects with sub_track in [minority_investment, rbd,
+        # corporate_venture], which today match no S12 activity. The procedure
+        # applies_when widening (portfolio-venture-monitoring) lands in P2; until
+        # then those projects have no applicable S12 procedure (known gap).
       - id: integration-monitoring
         agent: pmi-agent
         skills: [pmi-planning]
@@ -941,4 +1071,9 @@ stages:
       # (procedures/_shared/portfolio-venture-monitoring — venture-portfolio-ic 결정 어휘 5종)
     applicableTracks: [greenfield, brownfield]
     stateTransitions: { onComplete: terminal, onHold: S12, onKill: terminal }
+    # v2.14.0 (ADR-0187 M4): S12 has no gate; the post_close registry entries bind here.
+    killCriteriaRegistry:
+      - pmi-integration-execution__clean_team_protocol_breach
+      - pmi-integration-execution__key_talent_attrition_above_threshold_at_90d
+      - pmi-integration-execution__synergy_run_rate_uncertified_at_bau_handover
     gates: []

@@ -109,7 +109,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `wacc-input-session` | 1.3.2 | active | valuation-agent | 2026-10-27 | — | Wave 5.8G — kind=user WACC/hurdle-IRR confirmation gate (checklist bf-02) |
 | `waiver-management` | 1.1.1 | experimental | compliance-officer | 2026-10-27 | — | Wave 5.8B — ADR-0036 mandatory-expiry waiver lifecycle |
 | `zod-contract-gate` | 1.0.2 | active | backend-engineer | 2026-08-06 | — | Defines Zod runtime schema validation patterns and contract safety rules |
-|`assumption-audit`| 1.1.0 | experimental | risk-officer |2026-08-20|—|Wave 5.8I — user/assumed/derived kind-tag correctness audit|
+|`assumption-audit`| 1.1.1 | experimental | risk-officer |2026-08-20|—|Wave 5.8I — user/assumed/derived kind-tag correctness audit|
 |`company-intelligence`| 1.1.0 | experimental | market-intelligence-agent |2026-08-20|—|Wave 5.8A reuse layer, adapted from Projects/co-consult|
 |`deal-execution-playbook`| 1.1.0 | experimental | brownfield-agent |2026-09-08|—|Wave 5.8I — navigates `docs/governance/process-map.md`/`docs/governance/raci.md`'s real per-gate RACI, never restates|
 |`forward-industry-research`| 1.1.0 | experimental | market-intelligence-agent |2026-08-29|—|ADR-0066 gap closure — forward/upstream industry qualitative research narrative feeding the driver registry|

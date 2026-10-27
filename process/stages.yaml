@@ -1,3 +1,10 @@
+# process/stages.yaml - DEG Stage axis export of the co-newbiz gate ladder.
+# v2 gate order (ADR-0187 M3, flow.spec 2.14.0): Screening -> Pre-FS ->
+# Target Screening (brownfield only) -> FS -> DD -> Entity IC -> Group IC ->
+# Post-Close. Stage ids are stable (process/stage-aliases.yaml maps procedure
+# gate names onto them); `order` carries the sequence. From P1 this file is
+# checked against a projection of flow.spec (check-stages-derived) and must not
+# be hand-edited beyond that projection.
 schema_version: "1.0"
 variant: co-newbiz
 stages:
@@ -15,52 +22,58 @@ stages:
       - "Initial market and company data sufficient for preliminary screening is available."
     exit_criteria:
       - "A screening verdict (Go/Kill/Hold/Recycle) is recorded with written feedback."
-      - "At least one viable target exists in the longlist."
+      - "Market attractiveness, strategic-fit knock-outs and the synergy score are evaluated against the gate criteria."
     owner_agent: brownfield-agent
+
+  - id: G3
+    title: Pre-FS
+    order: 2
+    purpose: >-
+      Pre-feasibility route decision (flow.spec S4-S6). Records the track
+      decision (Green Field vs Brown Field) and, for Brown Field, the route type
+      with its five-criteria scoring; confirms WACC/hurdle inputs in a session
+      and screens certification transferability where load-bearing. Green Field
+      continues with the capability assessment and entry strategy (S5); Brown
+      Field defines the target universe and long list (S6).
+    entry_criteria:
+      - "A Screening GO is recorded for the opportunity."
+      - "Market, competitive structure, value chain and the S3 capability gap are available as route inputs."
+    exit_criteria:
+      - "A route decision with its rationale and the alternatives considered is recorded (Brown Field: route type and five-criteria scoring)."
+      - "Track-specific follow-up input exists (Green Field: capability assessment; Brown Field: target universe definition and long list)."
+      - "Certification transferability is confirmed from the certifying body's rules where load-bearing (bf-03)."
+    owner_agent: pm
 
   - id: G2
     title: Target Screening
-    order: 2
+    order: 3
     purpose: >-
-      Brownfield-only target shortlisting. Narrows the long list to a short
-      list via knock-out screens and ranked scoring using desk research only.
-      Greenfield chains advance from G1 directly to G3; G2 is a stage in the
-      ordering lattice, not a mandatory traversal for every chain.
+      Brownfield-only target shortlisting (flow.spec S7). Narrows the long list
+      from Pre-FS to a short list via knock-out screens and ranked scoring using
+      desk research only. Greenfield chains advance from G3 (Pre-FS) directly to
+      G4 (FS); G2 is a stage in the ordering lattice, not a mandatory traversal
+      for every chain.
     entry_criteria:
-      - "A target longlist has been established at the Screening gate."
+      - "A Pre-FS GO is recorded and a target long list exists (S6 target identification)."
       - "Desk research data on candidates is available."
     exit_criteria:
       - "A target shortlist ranked by fit and financial attractiveness is confirmed."
       - "At least one target passes all knock-out criteria."
     owner_agent: brownfield-agent
 
-  - id: G3
-    title: Pre-FS
-    order: 3
-    purpose: >-
-      Pre-financial-statement feasibility assessment. Confirms deal thesis
-      assumptions, WACC/hurdle IRR inputs, and capability-market fit with
-      the deal sponsor. Establishes baseline for valuation.
-    entry_criteria:
-      - "Target shortlist from G2 (brownfield) or longlist from G1 (greenfield) is available."
-      - "Sponsor deal thesis and hurdle rate assumptions are documented."
-    exit_criteria:
-      - "Deal thesis assumptions and WACC/hurdle IRR inputs are confirmed with the sponsor."
-      - "Certification transferability risks are assessed (brownfield only)."
-    owner_agent: pm
-
   - id: G4
     title: FS
     order: 4
     purpose: >-
-      Financial statement analysis and valuation. Complete the historical
-      financial analysis, build the forward projection, and execute the
-      six-validator cross-check (brownfield) or baseline valuation (greenfield).
+      Feasibility study (flow.spec S8). Quantifies the business case (Green
+      Field) or a valuation per short-listed target (Brown Field) with a
+      simulated NPV distribution, BEP and input snapshot; Brown Field compares
+      targets and a person records the target selection.
     entry_criteria:
-      - "Pre-FS assumptions and hurdle rate are confirmed."
-      - "Historical financial statements (3+ years) and operational data are available."
+      - "Green Field: Pre-FS GO with capability assessment and entry strategy; Brown Field: Target Screening GO with a short list."
+      - "WACC and hurdle IRR are user-confirmed (neb-policy section 2.2)."
     exit_criteria:
-      - "Valuation is completed with all six validators reconciled (brownfield) or baseline valuation delivered (greenfield)."
+      - "A quantified business case or valuation range with sensitivity exists (Brown Field: per target, with comparison and a human target selection)."
       - "Data confidence assessment is recorded."
     owner_agent: financial-analyst
 
@@ -107,7 +120,7 @@ stages:
       - "Concurrent proposals for ranking are available."
     exit_criteria:
       - "Group IC ranking decision is recorded: approved / rejected / conditional."
-      - "Next funding tranche (venture) or entity establishment (M&A) is authorized or held."
+      - "Execution starts only after the Group IC GO (ADR-0187 D7): entity or business-unit establishment, PMI kickoff, or the greenfield execution baseline."
     owner_agent: group-review-agent
 
   - id: G8

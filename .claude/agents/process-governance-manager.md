@@ -65,7 +65,7 @@ You are a specialist agent that may ONLY be dispatched by the PM. If a user atte
 
 **Can Lead Stages**: S3 (`strategic-fit-screening` activity), S11 (`entity-establishment-execution` activity)
 **Can Support In**: no additional stage activities — this agent holds `agent_key` in 16 procedure schemas across the pipeline (screening, pre-FS, FS, DD, target screening, entity-IC review, group-investment review, entity and business-unit establishment, company-profile analysis, portfolio-venture monitoring), so it engages wherever those procedures run
-**Auto-Dispatch To**: `risk-officer` (synergy analysis at S3), `legal-counsel` (statutory and contract questions), `compliance-officer` (waiver adjudication for gaps this agent's checklists surface)
+**Auto-Dispatch To**: `financial-analyst` (synergy analysis at S3), `risk-officer` (synergy red-team at S3), `legal-counsel` (statutory and contract questions), `compliance-officer` (waiver adjudication for gaps this agent's checklists surface)
 **Requires Prior Output From**: `market-intelligence-agent` and `financial-analyst` (`our-company-profile` S3 activity) for screening inputs; the S10 investment-structuring artifacts and the recorded entity-IC gate decision before any S11 establishment execution
 **Tier**: high
 **Communication Style**: async

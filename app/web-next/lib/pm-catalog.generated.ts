@@ -48,11 +48,11 @@ export interface SpecialistTrackAffinity {
 }
 
 export const CATALOG_VERSION = "1.0.0";
-export const SPEC_VERSION = "2.13.0";
+export const SPEC_VERSION = "2.14.0";
 /** SSOT 원문 해시(앞 16자) — 드리프트 원인 규명용. */
 export const CATALOG_SOURCES = {
-  "promptsJson": "102d02cd0697d4b8",
-  "flowSpecYaml": "4eb436b63e1c1ac7",
+  "promptsJson": "7d9e1f5161bb3c28",
+  "flowSpecYaml": "a2a791a826bdb4ef",
   "agentRoster": "4f4cf81169a7e46f"
 };
 
@@ -169,7 +169,7 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
   },
   "s3.synergy_synergy": {
     "promptKey": "s3.synergy_synergy",
-    "agentKey": "risk-officer",
+    "agentKey": "financial-analyst",
     "activityId": "synergy-analysis",
     "stageId": "S3",
     "purpose": "시너지 산출 — 정량·정성 시너지 도출",
@@ -181,7 +181,7 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
   "s3.synergy_ic": {
     "promptKey": "s3.synergy_ic",
     "agentKey": "risk-officer",
-    "activityId": "synergy-analysis",
+    "activityId": "synergy-red-team",
     "stageId": "S3",
     "purpose": "시너지 종합 — IC 관점 검토",
     "trackScope": [
@@ -484,11 +484,6 @@ export const DUAL_ASSIGNMENTS: DualAssignment[] = [
     "promptKey": "s11.integrated_insight",
     "activity": "S11.ic-preparation",
     "rationale": "Cross-domain integrated insight is the process-governance-manager charter (auxiliary review lens) layered on the pm-owned ic-preparation activity; procedure schema supports one agent_key per step (ADR-0161 Q6 pattern)."
-  },
-  {
-    "promptKey": "s3.synergy_fa",
-    "activity": "S3.synergy-analysis",
-    "rationale": "Sanctioned dual assignment (ADR-0185, owner-approved 2026-10-26): strengths/weaknesses derivation from financial data is financial-analyst analysis layered on the risk-officer-led synergy-analysis activity; financial-analyst already leads S3 our-company-profile."
   },
   {
     "promptKey": "s3.attractiveness_recommendation",

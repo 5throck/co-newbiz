@@ -105,7 +105,7 @@ describe("pm catalog (ADR-0183 D1)", () => {
   });
 
   test("dual assignments are exactly the documented set with rationales", () => {
-    expect(DUAL_ASSIGNMENTS.map((d) => d.promptKey as string)).toEqual(["s11.integrated_insight", "s3.synergy_fa", "s3.attractiveness_recommendation", "company_profile.competitor_web_search", "s12.milestone_suggest"]); // ADR-0185
+    expect(DUAL_ASSIGNMENTS.map((d) => d.promptKey as string)).toEqual(["s11.integrated_insight", "s3.attractiveness_recommendation", "company_profile.competitor_web_search", "s12.milestone_suggest"]); // ADR-0185; s3.synergy_fa left the set when ADR-0187 D6 made financial-analyst the synergy-analysis lead
     for (const d of DUAL_ASSIGNMENTS) {
       expect(d.rationale.trim().length).toBeGreaterThan(0);
       expect(d.activity).toMatch(/^S\d+\.[a-z-]+$/);

@@ -1,8 +1,8 @@
 # ADR-0187: Process SSOT and decision evidence (engine-spec parity, checklist and kill-list reconciliation, derived data confidence, pre-IC permit/incentive capture, cross-validation matrix)
 
-- Status: Proposed (2026-10-27)
+- Status: Accepted (2026-10-27) - approved by the human owner at the merge of PR 5throck/co-newbiz#752 (merge commit a63ea5c3); owner decisions D1-D9 below are authoritative. History: Proposed 2026-10-27.
 - Date: 2026-10-27
-- Decider: human owner. Drafted by process-governance-manager on PM dispatch (wave W3, Row 0).
+- Decider: human owner (approved 2026-10-27 at PR #752 merge). Drafted by process-governance-manager on PM dispatch (wave W3, Row 0).
 - Design-of-record: [docs/designs/2026-10-27-process-ssot-decision-evidence-design.md](../designs/2026-10-27-process-ssot-decision-evidence-design.md)
 - Source review: [docs/reports/2026-10-26-project-review-s1-s12.md](../reports/2026-10-26-project-review-s1-s12.md) findings H7, H8, H9, H11, M1-M9, M14, M15, M17.
 - Related: ADR-0020 (procedure overrides), ADR-0047 (classification matrix), ADR-0057 (kill evaluator), ADR-0074 (flow.spec SSOT), ADR-0161 (retroactive precedent), ADR-0185 (agent/skill placement), ADR-0186 (gate integrity). Supersedes none. Amends neb-policy (policy_change record required) and adds migrations.
@@ -11,7 +11,7 @@
 
 After ADR-0186 the gate write path is sound, but what it checks against is not: the engine enforces blockers flow.spec does not declare (H8), a mandatory screening checklist has no producer or consumer (H9), three kill lists diverge (M4), activities name agents with no procedure step (M2), the AI-2nd reviewer collapses to platform-lead (M7), and decision evidence is defaulted - data confidence resolves to B with no chain (H7), there are no base rates, greenfield permits/incentives exist only after IC (H11), and S10 does not reconcile to S8 (M1). S12 has no activity for brownfield external minority / R&BD / CVC (M17, verified). Verified status per finding is in design section 2; M14 is mostly closed by ADR-0186 P5.
 
-## Decision (proposed)
+## Decision
 
 1. flow.spec 2.14.0 declares every engine blocker (S3 capability register, S8 adoption, S11 PMI kickoff and GF baseline), the S2 entry-market input on S3-S12, the S11 order, S12 coverage for the missing sub-tracks, `ip-fto-review`, region-labor review (all tracks except GF internal), and removes the S10 site activity. `process/stages.yaml` becomes a projection of flow.spec.
 2. Blocker codes become stable keys; a parity validator keeps `lib/process-flow.ts` and flow.spec equal.
@@ -35,7 +35,7 @@ After ADR-0186 the gate write path is sound, but what it checks against is not: 
 
 Owner confirmation (2026-10-27): D1-D9 are decided exactly as recommended; the options are kept for the record. The D2 thresholds (S10 uses within +/-5% of the S8 investment; downside DSCR headroom of at least 1.2x) are confirmed as starting values, owned by `risk-officer` + `quant-methodologist`.
 
-Status note: this ADR stays Proposed; acceptance happens at the owner's merge of the PR.
+Status note: accepted at the owner's merge of PR #752 (2026-10-27). Implementation proceeds by the phases in design section 5; phase P0 (governance documents) carries the neb-policy `policy_change` record DEC-20261027-03.
 
 | ID | Question | Options | Recommendation | Decision |
 |---|---|---|---|---|

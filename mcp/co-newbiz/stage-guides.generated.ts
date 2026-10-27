@@ -4,7 +4,7 @@
 // prompts and flowspec:// resources (ADR-0154, Wave M M-3).
 import type { StageGuideSpec } from "./stage-guides.ts";
 
-export const GUIDE_SPEC_VERSION = "2.13.0";
+export const GUIDE_SPEC_VERSION = "2.14.0";
 export const GUIDE_STAGES: StageGuideSpec[] = [
   {
     "id": "S1",
@@ -125,9 +125,31 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
       },
       {
         "id": "synergy-analysis",
+        "agent": "financial-analyst",
+        "procedure": [
+          "greenfield-screening",
+          "brownfield-screening"
+        ]
+      },
+      {
+        "id": "synergy-red-team",
         "agent": "risk-officer",
         "procedure": [
           "greenfield-screening",
+          "brownfield-screening"
+        ]
+      },
+      {
+        "id": "capability-register-greenfield",
+        "agent": "greenfield-agent",
+        "procedure": [
+          "greenfield-screening"
+        ]
+      },
+      {
+        "id": "capability-register-brownfield",
+        "agent": "brownfield-agent",
+        "procedure": [
           "brownfield-screening"
         ]
       },
@@ -146,7 +168,8 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
     "completionCriteria": [
       "기회에 synergy_score와 근거가 기록되었다",
       "적합성 판단 근거(rationale)가 기록되고 결정론 권고(매력도·시너지 조합)가 제시되었다",
-      "최소 1개 기회가 selected 상태이다 (시너지·적합성 평가 후 선정)"
+      "최소 1개 기회가 selected 상태이다 (시너지·적합성 평가 후 선정)",
+      "필요 역량 등록부에 출처(source)가 기록된 역량이 1건 이상 존재한다 (capability-register 활동 — grandfathered 기회 제외)"
     ]
   },
   {
@@ -664,7 +687,12 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
     "completionCriteria": [
       "법인 투자심의위원회와 그룹 투자심의위원회 승인이 모두 기록되었다",
       "추진계획(차터) 기준선이 확정되고 append-only 변경 이력이 시작되었다",
-      "origin∈{internal,joint}인 프로젝트는 entity-establishment-execution 5단계 완료 기록이 존재한다"
+      "origin∈{internal,joint}인 프로젝트는 entity-establishment-execution 5단계 완료 기록이 존재한다",
+      "실행 순서는 법인 투자심의위원회 GO → 그룹 투자심의위원회 GO → 실행(설립·사업부 신설 / PMI 킥오프 / greenfield 실행 기준선)이다 — 그룹 GO 전에는 설립·자본 약정을 실행하지 않는다 (ADR-0187 D7)",
+      "S8에서 사람이 채택한 Business Case 기록(s8_case_adopt)이 존재한다",
+      "법인·그룹 투자심의위원회의 최신 GO 결정자가 사람이다 (사람 최종 승인 — grandfathered 프로젝트 제외)",
+      "brownfield M&A·JV·전략적 투자: 사람이 기록한 PMI 킥오프(통합 책임자·통합 계획 기준선)가 존재한다 (소수점 지분·파트너십·R&BD·CVC·기존사업 R&BD·사내벤처 제외)",
+      "greenfield: 실행 기준선이 사람에 의해 확인되었다 (트랙 분류 충돌은 사람이 정리 — ADR-0161)"
     ]
   },
   {

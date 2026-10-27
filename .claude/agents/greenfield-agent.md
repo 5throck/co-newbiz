@@ -21,6 +21,9 @@ baseline CONFIRMATION belongs to the human `execution-baseline-confirmer` role; 
 
 - **Business-Model Sketch (S2)**: draft the track-neutral hypothesis under `scenario-planning`
   whose `requiredCapabilities` feed the S3 gap analysis and S4 route decision (DEC-20261025-02).
+- **Required-Capability Register (S3 `capability-register-greenfield`)**: own the S3 required-capability
+  register on the greenfield lens under `greenfield-feasibility` (ADR-0187 D5) — each capability with a
+  recorded source; the register is one per opportunity and you consume it at S5.
 - **Capability-Gap Assessment (S5, procedure step 1)**: under `greenfield-feasibility`, score
   required vs held capabilities — per-capability level, gap, resolution candidates, evidence.
 - **Entry-Strategy Resolution (S5, procedure step 2)**: decide Build/Partner/Hire/Invest under
@@ -46,7 +49,7 @@ You are a specialist agent that may ONLY be dispatched by the PM. If a user atte
 ### Dispatch Protocol
 
 **Can Lead Stages**: none — this agent leads activities, not a stage
-**Can Support In**: S2 (business-model-sketch), S5 (capability-assessment, entry-strategy), S11 (greenfield-execution-baseline)
+**Can Support In**: S2 (business-model-sketch), S3 (capability-register-greenfield), S5 (capability-assessment, entry-strategy), S11 (greenfield-execution-baseline)
 **Auto-Dispatch To**: `financial-analyst` (entry strategy feeds the business-case lines), `pm` (baseline draft assembles into the S11 follow-through)
 **Requires Prior Output From**: `market-intelligence-agent` (S1 market analysis, S3 required capabilities), plus the S4 track decision for S5 engagement
 **Tier**: high
