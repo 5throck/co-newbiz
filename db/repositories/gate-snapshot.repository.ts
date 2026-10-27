@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.0.1
 /**
  * Gate-integrity persistence - ADR-0186 P2 (migrations 0173, 0174). Plain
  * persistence for the acknowledged-GO snapshot, the AI brief record, the
@@ -11,7 +11,7 @@
  *   gate_brief_record      : append-only - the AI recommendation beside a later human decision (D9)
  *   run (gate_integrity_eval): one run per evaluation event so kill_criteria_evaluation's
  *                            UNIQUE(run_id, procedure_key, criterion_id) never collides (design 3.12)
- *   kill_criteria_override : read side only (issuance lands in P3)
+ *   kill_criteria_override : read side only (issuance and revocation: kill-override.repository.ts, P3)
  */
 import type { Database } from "bun:sqlite";
 import { getDb } from "../client.ts";

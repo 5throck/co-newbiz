@@ -339,6 +339,34 @@
     "systemModePage": {
       "h1": "System mode",
       "intro": "The production/development global switch — production mode blocks deletion of deal data."
+    },
+    "humanRoles": {
+      "heading": "Reviewer grants",
+      "intro": "A grant lets a person act as second reviewer or issue exceptions. Administrators issue grants; they do not give access to deal data.",
+      "role": {
+        "entity-ic-reviewer": "Entity Investment Committee reviewer",
+        "group-ic-reviewer": "Group Investment Committee reviewer"
+      },
+      "colUser": "User",
+      "colRole": "Role",
+      "colGranted": "Granted",
+      "colStatus": "Status",
+      "colAction": "Action",
+      "active": "Active",
+      "revoked": "Revoked",
+      "revoke": "Revoke",
+      "empty": "No grants issued.",
+      "showRevoked": "Show revoked",
+      "issueUser": "User *",
+      "issueUserPlaceholder": "Choose a user",
+      "issueRole": "Role *",
+      "issue": "Issue grant",
+      "confirmIssue": "Issue this grant?",
+      "confirmRevoke": "Revoke this grant?",
+      "done": "Grant updated",
+      "needBoth": "Choose a user and a role.",
+      "grantedBy": "{by} on {date}",
+      "revokedBy": "Revoked by {by}"
     }
   },
   "auth": {
@@ -1799,9 +1827,6 @@
       "ackOpenItem": "Required item {item} of checklist {checklist} is still open",
       "problemInvalid": "This reason cannot be used for this item.",
       "problemMissing": "A reason is needed for this item.",
-      "hardBlockTitle": "A GO cannot be recorded yet",
-      "hardBlockBody": "A stop condition that halts the deal is triggered and no Group Investment Committee override exists. This cannot be acknowledged away.",
-      "hardBlockOthers": "You can still record HOLD or KILL.",
       "ackLegend": "Acknowledge before recording GO ({count})",
       "ackIntro": "Give a reason for each item below. Your reasons are stored with the decision.",
       "shareReason": "Use one reason for all unassessed conditions of {procedure}",
@@ -1817,6 +1842,143 @@
       "storedSnapshot": "Stored gate state",
       "noAcks": "No acknowledgements were recorded.",
       "rawSnapshot": "Full stored state"
+    },
+    "gateIntegrity": {
+      "awaiting": "Waiting for a second reviewer",
+      "awaitingNote": "{gate} GO is recorded but does not take effect until a second reviewer countersigns it.",
+      "recordedLabel": "Recorded {decision}",
+      "state": {
+        "not_applicable": "No second review needed",
+        "legacy": "Before second review",
+        "countersigned": "Countersigned",
+        "pending_countersign": "Waiting for a second reviewer",
+        "countersign_rejected": "Second reviewer did not approve"
+      },
+      "countersign": {
+        "heading": "Second review of this GO",
+        "intro": "A reviewer other than the person who recorded the GO decides whether it takes effect. Your access is checked when you submit.",
+        "decisionLabel": "Your decision",
+        "reasonLabel": "Reason *",
+        "choice": {
+          "approved": "Approve",
+          "conditional": "Approve with conditions",
+          "rejected": "Reject",
+          "withdrawn_pending_resubmission": "Send back for resubmission"
+        },
+        "submit": "Record second review",
+        "saving": "Recording…",
+        "needReason": "Write a reason to record the second review.",
+        "needCondition": "Add at least one condition.",
+        "confirmTitle": "Record the second review ({decision})",
+        "confirmBody": "Reason: {reason}",
+        "done": "Second review recorded",
+        "recorderHint": "You recorded this GO, so another reviewer must countersign it.",
+        "resultBy": "{state} by {by} on {date}"
+      },
+      "conditionsEditor": {
+        "legend": "Conditions (optional)",
+        "legendRequired": "Conditions *",
+        "add": "Add condition",
+        "remove": "Remove condition {n}",
+        "text": "Condition {n}",
+        "clearBy": "To be cleared by",
+        "owner": "Owner role (optional)",
+        "none": "No conditions added."
+      },
+      "clearBy": {
+        "group_ic": "Group Investment Committee sitting",
+        "establishment": "End of establishment",
+        "closing": "Closing"
+      },
+      "hardBlock": {
+        "kill_binding_unoverridden": {
+          "title": "GO is blocked by a stop condition",
+          "body": "A stop condition that halts the deal is triggered and has no Group Investment Committee exception. It cannot be acknowledged away."
+        },
+        "validators_incomplete": {
+          "title": "GO is blocked: required checks are missing",
+          "body": "These required checks are not recorded yet. There is no waiver for them."
+        },
+        "condition_open": {
+          "title": "GO is blocked: a condition is still open",
+          "body": "These conditions must be cleared before the Group Investment Committee can approve."
+        },
+        "certification_unconfirmed": {
+          "title": "GO is blocked: a certification is not confirmed",
+          "body": "Transfer of these certifications is not confirmed from the certifying body's own rules."
+        },
+        "others": "You can still record HOLD or KILL.",
+        "notEnforced": "Heads-up: {title}. It does not block GO yet.",
+        "listLabel": "Affected items"
+      },
+      "priorAwaiting": "The previous gate has a GO that is still waiting for its second review.",
+      "sumConditions": "Open conditions",
+      "conditionsOpen": "{count} open",
+      "conditions": {
+        "heading": "Conditions",
+        "empty": "No conditions recorded.",
+        "filterLabel": "Show",
+        "filter": {
+          "all": "All",
+          "open": "Open",
+          "cleared": "Cleared",
+          "withdrawn": "Withdrawn"
+        },
+        "status": {
+          "open": "Open",
+          "cleared": "Cleared",
+          "withdrawn": "Withdrawn"
+        },
+        "colText": "Condition",
+        "colClearBy": "Cleared by",
+        "colOwner": "Owner",
+        "colStatus": "Status",
+        "colAction": "Action",
+        "clear": "Clear",
+        "withdraw": "Withdraw",
+        "note": "Note *",
+        "evidence": "Evidence reference",
+        "evidenceRequired": "Evidence reference *",
+        "submitClear": "Record clearing",
+        "submitWithdraw": "Record withdrawal",
+        "cancel": "Cancel",
+        "confirmClear": "Clear this condition?",
+        "confirmWithdraw": "Withdraw this condition?",
+        "done": "Condition updated",
+        "by": "by {by} on {date}",
+        "needNote": "Write a note.",
+        "needEvidence": "An evidence reference is required for closing conditions.",
+        "readOnly": "Clearing and withdrawing need a reviewer grant; the server checks it.",
+        "actionLabel": "{action}: {text}",
+        "openBlocks": "{count} open condition(s) keep this step from being done."
+      },
+      "overrides": {
+        "heading": "Stop-condition exceptions",
+        "intro": "A Group Investment Committee reviewer can allow a GO despite one triggered stop condition. Each exception needs a written reason and can be revoked.",
+        "empty": "No exceptions issued.",
+        "colCriterion": "Stop condition",
+        "colReason": "Reason",
+        "colIssued": "Issued",
+        "colAction": "Action",
+        "revoke": "Revoke",
+        "revoked": "Revoked by {by} on {date}",
+        "showRevoked": "Show revoked",
+        "issue": "Issue exception",
+        "pick": "Stop condition *",
+        "pickPlaceholder": "Choose a triggered condition",
+        "reason": "Reason *",
+        "none": "No triggered stop condition needs an exception.",
+        "submit": "Issue exception",
+        "needReason": "Choose a stop condition and write a reason.",
+        "confirmIssue": "Issue this exception?",
+        "confirmRevoke": "Revoke this exception?",
+        "done": "Exception updated",
+        "issuedBy": "{by} on {date}"
+      },
+      "history": {
+        "countersign": "Second review",
+        "decisionRecorded": "Recorded decision"
+      }
     }
   },
   "errors": {
@@ -1830,6 +1992,7 @@
       "agent_forbidden": "Agent identities cannot perform this action.",
       "already_confirmed": "This run is already confirmed.",
       "already_converged": "Already within the convergence target — no calibration needed.",
+      "already_countersigned": "This decision already has a countersign decision. If the outcome should change, the person who recorded it records a new decision.",
       "already_deleted": "This opportunity is already soft-deleted.",
       "already_granted": "The user already holds this role.",
       "already_linked": "The link is already registered.",
@@ -1852,13 +2015,20 @@
       "body_required": "Body is required.",
       "cagr_missing": "The latest version has no bottomUpCagr — a re-analysis is needed.",
       "cagr_required": "External CAGR (%) must be positive.",
+      "certification_unconfirmed": "Change-of-control transferability of a load-bearing certification is not confirmed from the certifying body's own rules, so GO cannot be recorded at Pre-FS. HOLD or KILL can be recorded at any time.",
       "charter_amend_failed": "Failed to amend the charter.",
+      "checker_conflict": "This person recorded a pending decision that the requested role would let them countersign. Another reviewer must countersign it first.",
+      "checker_must_differ": "The reviewer who countersigns must be a different person from the one who recorded the decision.",
       "clause_unresolved": "The waiver must name a checklist item, for example a checklist id followed by an item id.",
+      "clearer_must_differ": "The person who created a condition cannot clear or withdraw it.",
       "code_in_use": "The code is already in use.",
       "company_id_required": "Specify the company to link.",
       "company_not_found": "Company not found — verify the id via /api/companies search.",
       "company_note_too_long": "The company note is too long (max 2,000 characters).",
       "company_required": "company_name is required.",
+      "condition_not_open": "This condition is already closed.",
+      "condition_open": "An open condition from the investment committee must be cleared before this step can be done.",
+      "conditions_required": "A conditional countersign needs at least one condition so it can be tracked and cleared.",
       "confirm_nonce_invalid": "The confirmation view is stale or was already used — reload it and review the proposal again.",
       "confirmation_not_required": "Only a mandatory item's not-applicable judgement needs confirmation.",
       "confirmer_must_differ": "A different person must confirm this not-applicable judgement.",
@@ -1866,13 +2036,16 @@
       "context_required": "The opportunity assessment chain requires the opportunityId context.",
       "convene_failed": "Failed to convene the committee.",
       "counterparty_required": "counterparty is required.",
+      "countersign_not_applicable": "Only an entity or group investment committee GO recorded under the countersign rule needs a countersign.",
       "create_failed": "Creation failed.",
       "csrf_missing": "CSRF cookie missing — reload the page and retry.",
       "csrf_rejected": "Cross-origin request rejected.",
       "csrf_token_mismatch": "CSRF token mismatch — refresh and retry.",
       "dd_target_not_open": "DD has not been opened for this target.",
       "deal_structure_write_failed": "Failed to record the deal structure review.",
+      "decision_superseded": "A later decision exists on this gate. Countersign the latest one.",
       "delete_failed": "Deletion failed.",
+      "derived_item": "This checklist item is taken from the validator records and cannot be set by hand. Record the missing validators instead.",
       "divergence_reason_required": "The AI brief recommended a different outcome. Explain in your own words why you are deciding differently.",
       "duplicate_active": "An identical active row already exists.",
       "duplicate_competitor": "A confirmed competitor with the same name already exists.",
@@ -1890,6 +2063,7 @@
       "glossary_write_failed": "Failed to save the glossary term.",
       "goals_ack_note_required": "The goals_ack confirmation requires a note.",
       "goals_ack_required": "Adopting without a goal comparison requires acknowledgement (goals_ack).",
+      "grant_revoked": "The role grant this action needs was revoked, so the action is no longer valid.",
       "greenfield_field_not_applicable": "The field does not apply to the greenfield route.",
       "greenfield_lines_readonly": "Greenfield lines are read-only via this path.",
       "group_not_found": "Group not found.",
@@ -1992,6 +2166,9 @@
       "nothing_to_confirm": "Nothing to confirm.",
       "opportunity_not_found": "The opportunity to link was not found.",
       "opportunity_promoted": "The opportunity has already been promoted to a project.",
+      "override_already_revoked": "This override is already revoked.",
+      "override_exists": "An active override already exists for this stop condition. Revoke it before issuing a new one.",
+      "override_not_applicable": "Only a binding Kill Criteria entry (action halt) of this deal's procedures can be overridden.",
       "partner_has_jv_terms": "A partner with registered JV terms must have them deleted first.",
       "password_change_failed": "Password change failed.",
       "password_reset_failed": "Password reset failed.",
@@ -2058,6 +2235,7 @@
       "unknown_table": "Unknown table.",
       "unknown_user": "The user does not exist.",
       "update_failed": "Update failed.",
+      "validators_incomplete": "A required M&A validator is not recorded, so GO cannot be recorded. There is no waiver path. HOLD or KILL can be recorded at any time.",
       "version_required": "No completed version exists.",
       "wacc_session_failed": "Failed to process the WACC input session.",
       "waiver_target_mismatch": "The waiver target does not match the request.",
@@ -3229,7 +3407,8 @@
         "valuationSimulation": "Valuation simulation",
         "valueImpact": "(value impact",
         "viewTheProjectCharter": "View the project charter →",
-        "yellowCaution": "Yellow (caution)"
+        "yellowCaution": "Yellow (caution)",
+        "awaitingCountersign": "Waiting for a second reviewer"
       },
       "stepsPanel": {
         "action": "Action",
@@ -6004,6 +6183,10 @@
         "xReplaced": "X replaced",
         "waived": "Waived"
       }
+    },
+    "dd": {
+      "derivedItem": "Taken from the required-check records",
+      "derivedHint": "This item follows the recorded M&A checks and cannot be set by hand. Record the missing checks instead."
     }
   },
   "pages": {
@@ -7776,7 +7959,10 @@
       "gatesAria": "Gate decisions",
       "none": "None",
       "artifactsCount": "{p1} artifacts",
-      "journeyFinished": "All stages are complete"
+      "journeyFinished": "All stages are complete",
+      "awaitCountersign": "{gate}: waiting for a second reviewer",
+      "awaitCountersignWhy": "The GO is recorded but takes effect only after another reviewer countersigns it.",
+      "awaitCountersignCta": "Open {gate} second review"
     },
     "projectsArchives": {
       "deletedLoadFailed": "Failed to load deletion history",

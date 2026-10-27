@@ -19,10 +19,11 @@ export interface GateSnapshotView {
   nonwaivable_open: Array<{ key: string; checklist_id: string; item_id: string; status: string }>;
   wacc: { subject: string | null; status: "sourced" | "assumed" | "absent"; bf13: "set" | "unset" | "n/a" } | null;
   waivers: { active: Array<{ id: string; clause_ref: string; approved_by: string | null; expires_at: string }>; expiring_14d: string[] };
-  ladder: { prior_gate: string | null; prior_decision: string | null; effective: boolean; blocker: string | null };
+  ladder: { prior_gate: string | null; prior_decision: string | null; effective: boolean; blocker: string | null; prior_awaiting_countersign?: boolean };
+  conditions_open?: Array<{ id: string; text: string; clear_by: string }>;
   ai: { brief_id: string; recommended: string | null; confidence: string | null } | null;
   required_acks: SnapshotRequiredAck[];
-  hard_blocks: Array<{ code: string; keys: string[] }>;
+  hard_blocks: Array<{ code: string; keys: string[]; enforced?: boolean }>;
 }
 export interface GateSnapshotEnvelope { gate: string; snapshot_hash: string; snapshot: GateSnapshotView; cached?: boolean; legacy?: boolean }
 

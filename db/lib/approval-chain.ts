@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Two-tier approval-chain engine — design v1.0 §2-3, ADR-0028, ADR-0029,
  * FR-GOV-04..06, docs/approval-chain-spec.md.
@@ -125,6 +125,15 @@ export function ensureApprovalChain(db: Database, options: EnsureChainOptions): 
   }
 }
 
+/**
+ * ADR-0186 D6: note the maker of the latest IC decision on the chain row of that gate (the row is created
+ * on demand). The checker's decision is a separate act (recordDecision).
+ */
+export function noteChainMaker(db: Database, opts: { projectId: string; gate: "entity_ic" | "group_ic"; recordedBy: string; now: string }): void {
+  ensureApprovalChain(db, { projectId: opts.projectId, recordedBy: opts.recordedBy, now: opts.now });
+  db.run("UPDATE approval_chain SET recorded_by = ?, updated_at = ? WHERE project_id = ? AND gate = ?", [opts.recordedBy, opts.now, opts.projectId, opts.gate]);
+}
+
 export interface RecordDecisionOptions {
   projectId: string;
   level: "entity" | "group";
@@ -134,6 +143,10 @@ export interface RecordDecisionOptions {
   conditions?: string;
   /** ADR-0186 D6 (migration 0176): the authenticated checker who decided. */
   decidedBy?: string;
+  /** ADR-0186 D6 (migration 0175): the IC gate_decision this countersign belongs to (so a later re-decision is un-countersigned). */
+  gateDecisionId?: string;
+  /** ADR-0186 D6 (migration 0175): the checker's stated reason. */
+  decisionReason?: string;
   now: string;
 }
 
@@ -158,7 +171,7 @@ export function recordDecision(db: Database, options: RecordDecisionOptions): Re
     );
   }
   db.run(
-    "UPDATE approval_chain SET decision = ?, status = ?, decided_at = ?, conditions = ?, updated_at = ?, decided_by = ? WHERE id = ?",
+    "UPDATE approval_chain SET decision = ?, status = ?, decided_at = ?, conditions = ?, updated_at = ?, decided_by = ?, gate_decision_id = ?, decision_reason = ? WHERE id = ?",
     [
       options.decision,
       options.decision,
@@ -166,6 +179,8 @@ export function recordDecision(db: Database, options: RecordDecisionOptions): Re
       options.conditions ?? null,
       options.now,
       options.decidedBy ?? null,
+      options.gateDecisionId ?? null,
+      options.decisionReason ?? null,
       row.id,
     ],
   );

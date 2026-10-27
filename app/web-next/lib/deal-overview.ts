@@ -22,6 +22,8 @@ export interface OverviewProcess {
   blockers: string[];
   requiredArtifacts: string[];
   gateStatus?: Record<string, string>;
+  /** ADR-0186: gates whose recorded IC GO still waits for a second reviewer (project carrier only). */
+  awaitingCountersign?: string[];
   track: string | null;
   subTrack?: string | null;
   terminated?: boolean;
@@ -67,10 +69,11 @@ export interface FlowEntry {
   artifacts: string[];
 }
 
-export type NextActionType = "record_artifact" | "request_gate_decision" | "advance_stage" | "resolve_hold";
+export type NextActionType = "record_artifact" | "request_gate_decision" | "advance_stage" | "resolve_hold" | "await_countersign";
 export type NextActionReason =
   | { type: "artifact_missing"; stageId: string; stageName: string; done: number; total: number }
   | { type: "gate_pending"; gate: string; gateLabel: string; stageId: string }
+  | { type: "awaiting_countersign"; gate: string; gateLabel: string; stageId: string }
   | { type: "stage_complete"; stageId: string; stageName: string }
   | { type: "hold"; gate: string; gateLabel: string; heldSince: string | null; ageDays: number | null };
 
@@ -230,7 +233,8 @@ export function buildDealOverview(
       nextAction = { type: "record_artifact", subject: base[firstOpen]!.label, reason: { type: "artifact_missing", stageId, stageName: meta.name, done: completionCounts.done, total: completionCounts.total }, href: stageHref, buttonTarget: `${meta.id} ${meta.name}` };
     } else if (stageGate) {
       const label = GATE_LABEL_KEY[stageGate] ?? stageGate;
-      nextAction = { type: "request_gate_decision", subject: label, reason: { type: "gate_pending", gate: stageGate, gateLabel: label, stageId }, href: gateHref(stageGate), buttonTarget: label };
+      if (proc.awaitingCountersign?.includes(stageGate)) nextAction = { type: "await_countersign", subject: label, reason: { type: "awaiting_countersign", gate: stageGate, gateLabel: label, stageId }, href: gateHref(stageGate), buttonTarget: label };
+      else nextAction = { type: "request_gate_decision", subject: label, reason: { type: "gate_pending", gate: stageGate, gateLabel: label, stageId }, href: gateHref(stageGate), buttonTarget: label };
     } else {
       const target = flowEntry(proc, nextId);
       nextAction = { type: "advance_stage", subject: target?.name ?? meta.name, reason: { type: "stage_complete", stageId, stageName: meta.name }, href: target ? dealStageHref(dealId, target.id) : stageHref, buttonTarget: target ? `${target.id} ${target.name}` : `${meta.id} ${meta.name}` };

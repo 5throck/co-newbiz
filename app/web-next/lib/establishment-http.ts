@@ -33,6 +33,8 @@ export function establishmentErrorResponse(error: EstablishmentError | Establish
         },
         { status: 409 },
       );
+    case "condition_open":
+      return fail(409, "condition_open", "An open condition precedent from the investment committee must be cleared before the establishment can be completed.");
     case "mode_not_chosen":
       return fail(409, "mode_not_chosen", "The establishment mode is not decided yet — confirm it in S10.");
     case "mode_mismatch":

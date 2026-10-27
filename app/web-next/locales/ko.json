@@ -339,6 +339,34 @@
     "systemModePage": {
       "h1": "시스템 모드",
       "intro": "운영(production)/개발(development) 전역 스위치 — 운영 모드에서는 검토/안건 데이터 삭제를 차단합니다."
+    },
+    "humanRoles": {
+      "heading": "검토자 권한",
+      "intro": "권한이 있으면 두 번째 검토자로 확인하거나 예외를 발급할 수 있습니다. 관리자가 권한을 부여하며, 이것이 딜 자료 열람 권한을 주지는 않습니다.",
+      "role": {
+        "entity-ic-reviewer": "법인 투자심의위원회 검토자",
+        "group-ic-reviewer": "그룹 투자심의위원회 검토자"
+      },
+      "colUser": "사용자",
+      "colRole": "역할",
+      "colGranted": "부여",
+      "colStatus": "상태",
+      "colAction": "작업",
+      "active": "유효",
+      "revoked": "취소됨",
+      "revoke": "취소",
+      "empty": "부여한 권한이 없습니다.",
+      "showRevoked": "취소된 권한 보기",
+      "issueUser": "사용자 *",
+      "issueUserPlaceholder": "사용자를 고르세요",
+      "issueRole": "역할 *",
+      "issue": "권한 부여",
+      "confirmIssue": "이 권한을 부여할까요?",
+      "confirmRevoke": "이 권한을 취소할까요?",
+      "done": "권한을 갱신했습니다",
+      "needBoth": "사용자와 역할을 고르세요.",
+      "grantedBy": "{by}님, {date}",
+      "revokedBy": "{by}님이 취소"
     }
   },
   "auth": {
@@ -1799,9 +1827,6 @@
       "ackOpenItem": "체크리스트 {checklist}의 필수 항목 {item}이 아직 끝나지 않았습니다",
       "problemInvalid": "이 항목에는 이 사유를 쓸 수 없습니다.",
       "problemMissing": "이 항목의 사유를 입력해 주세요.",
-      "hardBlockTitle": "아직 GO를 기록할 수 없습니다",
-      "hardBlockBody": "사업을 멈추게 하는 중단 조건이 발동했고 그룹 투자심의위원회의 예외 승인이 없습니다. 사유를 적어도 넘어갈 수 없습니다.",
-      "hardBlockOthers": "HOLD나 KILL은 언제든 기록할 수 있습니다.",
       "ackLegend": "GO를 기록하기 전에 확인할 항목 ({count})",
       "ackIntro": "아래 항목마다 사유를 적어 주세요. 사유는 결정과 함께 저장됩니다.",
       "shareReason": "{procedure}의 평가하지 못한 조건에 사유 하나를 함께 적용",
@@ -1817,6 +1842,143 @@
       "storedSnapshot": "저장된 진행 상태",
       "noAcks": "기록된 확인 사유가 없습니다.",
       "rawSnapshot": "저장된 상태 전체"
+    },
+    "gateIntegrity": {
+      "awaiting": "두 번째 검토자 확인 대기",
+      "awaitingNote": "{gate} GO는 기록되었지만, 두 번째 검토자가 확인하기 전에는 효력이 없습니다.",
+      "recordedLabel": "기록된 결정 {decision}",
+      "state": {
+        "not_applicable": "두 번째 검토 불필요",
+        "legacy": "두 번째 검토 도입 이전",
+        "countersigned": "두 번째 검토 완료",
+        "pending_countersign": "두 번째 검토자 확인 대기",
+        "countersign_rejected": "두 번째 검토자가 승인하지 않음"
+      },
+      "countersign": {
+        "heading": "이 GO의 두 번째 검토",
+        "intro": "GO를 기록한 사람이 아닌 다른 검토자가 효력 여부를 정합니다. 제출할 때 권한을 확인합니다.",
+        "decisionLabel": "검토 결정",
+        "reasonLabel": "사유 *",
+        "choice": {
+          "approved": "승인",
+          "conditional": "조건부 승인",
+          "rejected": "반려",
+          "withdrawn_pending_resubmission": "재상정을 위해 돌려보냄"
+        },
+        "submit": "두 번째 검토 기록",
+        "saving": "기록하는 중…",
+        "needReason": "두 번째 검토를 기록하려면 사유를 적으세요.",
+        "needCondition": "조건을 한 개 이상 추가하세요.",
+        "confirmTitle": "두 번째 검토를 기록합니다 ({decision})",
+        "confirmBody": "사유: {reason}",
+        "done": "두 번째 검토를 기록했습니다",
+        "recorderHint": "이 GO를 직접 기록하셨으므로 다른 검토자가 확인해야 합니다.",
+        "resultBy": "{by}님이 {date}에 {state}"
+      },
+      "conditionsEditor": {
+        "legend": "조건 (선택)",
+        "legendRequired": "조건 *",
+        "add": "조건 추가",
+        "remove": "조건 {n} 삭제",
+        "text": "조건 {n}",
+        "clearBy": "해소 시점",
+        "owner": "담당 역할 (선택)",
+        "none": "추가한 조건이 없습니다."
+      },
+      "clearBy": {
+        "group_ic": "그룹 투자심의위원회 개최 전",
+        "establishment": "설립 완료 전",
+        "closing": "거래 종결 전"
+      },
+      "hardBlock": {
+        "kill_binding_unoverridden": {
+          "title": "중단 조건 때문에 GO를 기록할 수 없습니다",
+          "body": "사업을 멈추게 하는 중단 조건이 발동했고 그룹 투자심의위원회의 예외 승인이 없습니다. 사유를 적어도 넘어갈 수 없습니다."
+        },
+        "validators_incomplete": {
+          "title": "필수 검증이 빠져 GO를 기록할 수 없습니다",
+          "body": "아래 필수 검증이 아직 기록되지 않았습니다. 면제 방법이 없습니다."
+        },
+        "condition_open": {
+          "title": "열린 조건이 있어 GO를 기록할 수 없습니다",
+          "body": "그룹 투자심의위원회가 승인하기 전에 아래 조건을 해소해야 합니다."
+        },
+        "certification_unconfirmed": {
+          "title": "인증 확인이 안 되어 GO를 기록할 수 없습니다",
+          "body": "아래 인증이 인수 후에도 유지되는지 인증기관의 자체 규정으로 확인되지 않았습니다."
+        },
+        "others": "HOLD나 KILL은 언제든 기록할 수 있습니다.",
+        "notEnforced": "참고: {title}. 아직은 GO를 막지 않습니다.",
+        "listLabel": "해당 항목"
+      },
+      "priorAwaiting": "이전 게이트의 GO가 두 번째 검토를 기다리고 있습니다.",
+      "sumConditions": "열린 조건",
+      "conditionsOpen": "{count}건 열림",
+      "conditions": {
+        "heading": "조건",
+        "empty": "기록된 조건이 없습니다.",
+        "filterLabel": "보기",
+        "filter": {
+          "all": "전체",
+          "open": "열림",
+          "cleared": "해소됨",
+          "withdrawn": "철회됨"
+        },
+        "status": {
+          "open": "열림",
+          "cleared": "해소됨",
+          "withdrawn": "철회됨"
+        },
+        "colText": "조건",
+        "colClearBy": "해소 시점",
+        "colOwner": "담당",
+        "colStatus": "상태",
+        "colAction": "작업",
+        "clear": "해소",
+        "withdraw": "철회",
+        "note": "메모 *",
+        "evidence": "근거 자료",
+        "evidenceRequired": "근거 자료 *",
+        "submitClear": "해소 기록",
+        "submitWithdraw": "철회 기록",
+        "cancel": "취소",
+        "confirmClear": "이 조건을 해소로 기록할까요?",
+        "confirmWithdraw": "이 조건을 철회할까요?",
+        "done": "조건을 갱신했습니다",
+        "by": "{by}님, {date}",
+        "needNote": "메모를 적으세요.",
+        "needEvidence": "거래 종결 전 조건은 근거 자료가 필요합니다.",
+        "readOnly": "해소와 철회에는 검토자 권한이 필요하며 서버가 확인합니다.",
+        "actionLabel": "{action}: {text}",
+        "openBlocks": "열린 조건 {count}건이 이 단계의 완료를 막고 있습니다."
+      },
+      "overrides": {
+        "heading": "중단 조건 예외",
+        "intro": "그룹 투자심의위원회 검토자는 발동한 중단 조건 하나에 대해 GO를 허용할 수 있습니다. 예외마다 사유가 필요하고 취소할 수 있습니다.",
+        "empty": "발급한 예외가 없습니다.",
+        "colCriterion": "중단 조건",
+        "colReason": "사유",
+        "colIssued": "발급",
+        "colAction": "작업",
+        "revoke": "취소",
+        "revoked": "{by}님이 {date}에 취소",
+        "showRevoked": "취소된 예외 보기",
+        "issue": "예외 발급",
+        "pick": "중단 조건 *",
+        "pickPlaceholder": "발동한 조건을 고르세요",
+        "reason": "사유 *",
+        "none": "예외가 필요한 발동 조건이 없습니다.",
+        "submit": "예외 발급",
+        "needReason": "중단 조건을 고르고 사유를 적으세요.",
+        "confirmIssue": "이 예외를 발급할까요?",
+        "confirmRevoke": "이 예외를 취소할까요?",
+        "done": "예외를 갱신했습니다",
+        "issuedBy": "{by}님, {date}"
+      },
+      "history": {
+        "countersign": "두 번째 검토",
+        "decisionRecorded": "기록된 결정"
+      }
     }
   },
   "errors": {
@@ -1830,6 +1992,7 @@
       "agent_forbidden": "에이전트 신원으로는 수행할 수 없습니다.",
       "already_confirmed": "이미 확정된 실행입니다.",
       "already_converged": "이미 수렴선 이하입니다 — 보정이 필요하지 않습니다.",
+      "already_countersigned": "이 결정에는 이미 두 번째 검토자의 승인 결정이 있습니다. 결과를 바꾸려면 기록한 사람이 새 결정을 기록해야 합니다.",
       "already_deleted": "이 기회는 이미 삭제 표시되어 있습니다.",
       "already_granted": "이미 이 역할을 가진 사용자입니다.",
       "already_linked": "이미 등록된 링크입니다.",
@@ -1852,13 +2015,20 @@
       "body_required": "본문은 필수입니다.",
       "cagr_missing": "최신 버전에 bottomUpCagr가 없습니다 — 재분석이 필요합니다.",
       "cagr_required": "외부 CAGR(%)는 양수여야 합니다.",
+      "certification_unconfirmed": "사업의 핵심인 인증의 경영권 변경 시 이전 가능성을 인증기관 자체 규정으로 확인하지 못해 Pre-FS GO를 기록할 수 없습니다. HOLD 또는 KILL은 언제든 기록할 수 있습니다.",
       "charter_amend_failed": "차터 변경에 실패했습니다.",
+      "checker_conflict": "이 사람은 요청한 역할로 승인할 수 있게 되는 결정을 직접 기록했고 아직 승인 전입니다. 다른 검토자가 먼저 승인해야 합니다.",
+      "checker_must_differ": "승인하는 검토자는 결정을 기록한 사람과 달라야 합니다.",
       "clause_unresolved": "면제 대상은 체크리스트 항목이어야 합니다. 체크리스트 ID와 항목 ID를 적어 주세요.",
+      "clearer_must_differ": "조건을 만든 사람은 그 조건을 해소하거나 철회할 수 없습니다.",
       "code_in_use": "이 코드는 다른 데이터에서 사용 중입니다.",
       "company_id_required": "연결할 회사를 지정하세요.",
       "company_not_found": "회사를 찾을 수 없습니다 — /api/companies 검색으로 id를 확인하세요.",
       "company_note_too_long": "회사 비고가 너무 깁니다 (2,000자 이하).",
       "company_required": "company_name은 필수입니다.",
+      "condition_not_open": "이 조건은 이미 닫혔습니다.",
+      "condition_open": "투자심의위원회가 단 조건이 아직 열려 있어 이 단계를 마칠 수 없습니다. 먼저 해소해 주세요.",
+      "conditions_required": "조건부 승인에는 추적하고 해소할 수 있도록 조건이 한 가지 이상 필요합니다.",
       "confirm_nonce_invalid": "확인 화면이 오래되었거나 이미 사용되었습니다 — 새로고침 후 제안을 다시 검토하세요.",
       "confirmation_not_required": "필수 항목의 해당 없음 판단만 확인이 필요합니다.",
       "confirmer_must_differ": "해당 없음 판단은 표시한 사람과 다른 사람이 확인해야 합니다.",
@@ -1866,13 +2036,16 @@
       "context_required": "기회 종합 평가 체인은 opportunityId 컨텍스트가 필요합니다.",
       "convene_failed": "위원회 소집에 실패했습니다.",
       "counterparty_required": "counterparty는 필수입니다.",
+      "countersign_not_applicable": "승인 규칙에 따라 기록된 법인 또는 그룹 투자심의위원회의 GO만 두 번째 검토자의 승인이 필요합니다.",
       "create_failed": "생성에 실패했습니다.",
       "csrf_missing": "CSRF 쿠키가 없습니다 — 페이지를 새로고침한 뒤 다시 시도하세요.",
       "csrf_rejected": "교차 출처 요청이 거부되었습니다.",
       "csrf_token_mismatch": "CSRF 토큰이 일치하지 않습니다 — 새로고침 후 다시 시도하세요.",
       "dd_target_not_open": "DD가 열리지 않은 대상입니다.",
       "deal_structure_write_failed": "투자구조 설계 기록에 실패했습니다.",
+      "decision_superseded": "이 게이트에 더 나중 결정이 있습니다. 가장 최근 결정을 승인해 주세요.",
       "delete_failed": "삭제에 실패했습니다.",
+      "derived_item": "이 점검 항목은 검증 기록에서 도출되므로 직접 정할 수 없습니다. 빠진 검증을 기록해 주세요.",
       "divergence_reason_required": "AI 브리프는 다른 결론을 권고했습니다. 다르게 결정하는 이유를 직접 적어 주세요.",
       "duplicate_active": "동일한 활성 행이 이미 있습니다.",
       "duplicate_competitor": "같은 이름의 확정 경쟁사가 이미 있습니다.",
@@ -1890,6 +2063,7 @@
       "glossary_write_failed": "용어 저장에 실패했습니다.",
       "goals_ack_note_required": "goals_ack 확인에는 사유(note)가 필요합니다.",
       "goals_ack_required": "목표 비교 없이 채택하려면 확인(goals_ack)이 필요합니다.",
+      "grant_revoked": "이 작업에 필요한 역할 권한이 회수되어 작업이 더는 유효하지 않습니다.",
       "greenfield_field_not_applicable": "그린필드 경로에 적용되지 않는 항목입니다.",
       "greenfield_lines_readonly": "그린필드 라인은 이 경로에서 수정할 수 없습니다.",
       "group_not_found": "그룹을 찾을 수 없습니다.",
@@ -1992,6 +2166,9 @@
       "nothing_to_confirm": "확정할 항목이 없습니다.",
       "opportunity_not_found": "연결할 기회를 찾을 수 없습니다.",
       "opportunity_promoted": "이 기회는 이미 프로젝트로 승격되었습니다.",
+      "override_already_revoked": "이 예외 승인은 이미 회수되었습니다.",
+      "override_exists": "이 중단 기준에는 이미 유효한 예외 승인이 있습니다. 새로 내기 전에 먼저 회수해 주세요.",
+      "override_not_applicable": "이 딜 절차의 구속력 있는 중단 기준(halt)만 예외 승인할 수 있습니다.",
       "partner_has_jv_terms": "JV 조건이 등록된 파트너는 먼저 JV 조건을 삭제한 후 제거할 수 있습니다.",
       "password_change_failed": "비밀번호 변경에 실패했습니다.",
       "password_reset_failed": "비밀번호 재설정에 실패했습니다.",
@@ -2058,6 +2235,7 @@
       "unknown_table": "알 수 없는 테이블입니다.",
       "unknown_user": "존재하지 않는 사용자입니다.",
       "update_failed": "수정에 실패했습니다.",
+      "validators_incomplete": "필수 M&A 검증이 기록되지 않아 GO를 기록할 수 없습니다. 면제 경로는 없습니다. HOLD 또는 KILL은 언제든 기록할 수 있습니다.",
       "version_required": "완료된 버전이 없습니다.",
       "wacc_session_failed": "WACC 입력 세션 처리에 실패했습니다.",
       "waiver_target_mismatch": "waiver 대상이 요청과 일치하지 않습니다.",
@@ -3229,7 +3407,8 @@
         "valuationSimulation": "밸류에이션 시뮬레이션",
         "valueImpact": "(가치 영향",
         "viewTheProjectCharter": "프로젝트 추진계획(차터) 보기 →",
-        "yellowCaution": "황색(주의)"
+        "yellowCaution": "황색(주의)",
+        "awaitingCountersign": "두 번째 검토자 확인 대기"
       },
       "stepsPanel": {
         "action": "조치",
@@ -6004,6 +6183,10 @@
         "xReplaced": "X 대체됨",
         "waived": "Waived"
       }
+    },
+    "dd": {
+      "derivedItem": "필수 검증 기록에서 자동 반영",
+      "derivedHint": "이 항목은 기록된 M&A 필수 검증을 따르며 직접 판정할 수 없습니다. 빠진 검증을 기록하세요."
     }
   },
   "pages": {
@@ -7776,7 +7959,10 @@
       "gatesAria": "게이트 결정",
       "none": "없음",
       "artifactsCount": "산출물 {p1}건",
-      "journeyFinished": "모든 단계가 완료되었습니다"
+      "journeyFinished": "모든 단계가 완료되었습니다",
+      "awaitCountersign": "{gate}: 두 번째 검토자 확인 대기",
+      "awaitCountersignWhy": "GO는 기록되었지만 다른 검토자가 확인해야 효력이 생깁니다.",
+      "awaitCountersignCta": "{gate} 두 번째 검토 열기"
     },
     "projectsArchives": {
       "deletedLoadFailed": "삭제 이력 불러오기 실패",

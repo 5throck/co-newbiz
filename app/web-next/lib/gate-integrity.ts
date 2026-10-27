@@ -12,6 +12,36 @@ import { humanOnlyDenied, requireBusinessActor, type AuthContext } from "./auth.
 export { GATE_INTEGRITY_FAMILIES, gateIntegrityEnvName, gateIntegrityMode, type GateIntegrityFamily, type GateIntegrityMode } from "./gate-integrity-flags.ts";
 
 export const WOULD_BLOCK_TARGET_MAX = 200;
+
+/**
+ * Record a REFUSED attempt on a human-role route (security review B2): `<scope>.refused:<code>`, de-duplicated per
+ * (action, target, day) and capped per actor per day like recordWouldBlock, so a refusal leaves a trail without letting
+ * a caller flood the append-only audit_log. Returns true when a row was written.
+ */
+export function recordRefusal(db: Database, ctx: { actor: string; scope: string; target: string }, code: string, now: Date = new Date()): boolean {
+  const action = `${ctx.scope}.refused:${code}`;
+  const target = ctx.target.slice(0, WOULD_BLOCK_TARGET_MAX);
+  const dayStart = `${now.toISOString().slice(0, 10)}T00:00:00.000Z`;
+  const actorToday = db
+    .query("SELECT COUNT(*) AS c FROM audit_log WHERE actor_user_id = ? AND action LIKE '%.refused:%' AND created_at >= ?")
+    .get(ctx.actor, dayStart) as { c: number };
+  if (actorToday.c >= WOULD_BLOCK_PER_ACTOR_PER_DAY) {
+    // Security review H2: the cap itself leaves ONE marker row per actor per day, so a flood is visible, not silent.
+    const capAction = `${ctx.scope}.refused_cap_reached`;
+    const marked = db.query("SELECT 1 FROM audit_log WHERE actor_user_id = ? AND action LIKE '%.refused_cap_reached' AND created_at >= ? LIMIT 1").get(ctx.actor, dayStart);
+    if (!marked) appendAudit(db, { actor: ctx.actor, action: capAction, target: `cap:${WOULD_BLOCK_PER_ACTOR_PER_DAY}`, now: now.toISOString() });
+    return false;
+  }
+  if (db.query("SELECT 1 FROM audit_log WHERE action = ? AND target = ? AND created_at >= ? LIMIT 1").get(action, target, dayStart)) return false;
+  appendAudit(db, { actor: ctx.actor, action, target, now: now.toISOString() });
+  return true;
+}
+
+/** Grant check for use INSIDE a write transaction (read fresh, no cache): the failure to return, or null. */
+export function grantFailure(db: Database, userId: string, roles: readonly string[]): IntegrityFailure | null {
+  if (hasHumanRole(db, userId, roles)) return null;
+  return { status: 403, code: "human_role_required", message: `This action requires an active human-role grant (${roles.join(" | ")}); an administrator issues grants.` };
+}
 export const WOULD_BLOCK_PER_ACTOR_PER_DAY = 100;
 
 export interface IntegrityFailure {

@@ -117,7 +117,7 @@ const projectIdProp = { type: "string", description: "Project ULID (promoted at 
 const PROPOSE: RegistryTool[] = [
   defineTool({
     name: "propose_gate_decision",
-    description: `Propose a gate decision (go/hold/kill) for an opportunity (screening, pre_fs, target_screening) or a project (fs, dd, entity_ic, group_ic). The proposal carries the gate, decision, rationale draft, missing artifacts and an optional brief_id ONLY: the gate-snapshot hash and the item-by-item acknowledgements of a GO (kill criteria, RAG, unassessed items) are a HUMAN act supplied on the confirmation page against a fresh snapshot, so they are rejected here (human_fields_not_proposable) and no tool can acknowledge, countersign or override. ${PROPOSE_NOTE}`,
+    description: `Propose a gate decision (go/hold/kill) for an opportunity (screening, pre_fs, target_screening) or a project (fs, dd, entity_ic, group_ic). The proposal carries the gate, decision, rationale draft, missing artifacts and an optional brief_id ONLY: the gate-snapshot hash, the item-by-item acknowledgements of a GO (kill criteria, RAG, unassessed items) and the conditions precedent of an IC GO are a HUMAN act supplied on the confirmation page against a fresh snapshot, so they are rejected here (human_fields_not_proposable) and no tool can acknowledge, countersign, clear a condition or override a kill criterion; an entity_ic / group_ic GO is only in force after a different reviewer countersigns it. ${PROPOSE_NOTE}`,
     scope: "propose", kind: "propose", stageActivities: [], stageArtifacts: ["stage:S3:2"], routes: ["POST /api/proposals"],
     inputSchema: {
       type: "object",

@@ -201,3 +201,25 @@ export async function seedGrantedReviewers(
     issueHumanRoleGrant(db, { userId: who.userId, roleKey: role, grantedBy: adminId, now });
   }
 }
+
+/**
+ * ADR-0186 P3: the Green Field deal plus the two human-role grant holders (entity-ic-reviewer, group-ic-reviewer) as
+ * project members, for scenarios that exercise the maker / checker countersign with two humans (design 3.11).
+ */
+export async function seedGreenfieldWithReviewers(
+  dbPath: string,
+  adminId: string,
+  analystId: string,
+  reviewers: { entity: { userId: string; password: string }; group: { userId: string; password: string } },
+): Promise<void> {
+  await seedGreenfieldDeal(dbPath, analystId);
+  await seedGrantedReviewers(dbPath, adminId, reviewers);
+  const db = getDb(dbPath);
+  for (const who of [reviewers.entity, reviewers.group]) {
+    db.run(
+      `INSERT OR IGNORE INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis)
+       VALUES (?, ?, 'member', 'e2e-bootstrap', ?, 'e2e scenario: IC reviewer')`,
+      [GREENFIELD.projectId, who.userId, new Date().toISOString()],
+    );
+  }
+}

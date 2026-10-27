@@ -1002,7 +1002,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
     post:
       operationId: issueHumanRoleGrant
-      summary: Issue a human-role grant {user_id, role_key}. Admin role, cookie session only (bearer and agent sessions get 403 human_only). A user cannot grant themselves a role (403 self_grant_forbidden); agents hold none; a duplicate active grant is 409. Audited as grant.issue; rate-limited.
+      summary: "Issue a human-role grant {user_id, role_key}. Admin role, cookie session only (bearer and agent sessions get 403 human_only). A user cannot grant themselves a role (403 self_grant_forbidden); agents hold none; a duplicate active grant is 409. Audited as grant.issue; rate-limited. ADR-0186 P3 (family maker_checker): refused with 409 checker_conflict (error.details.decisions) when the target user recorded the latest pending IC GO (entity_ic for entity-ic-reviewer, group_ic for group-ic-reviewer) that this grant would let them countersign; another reviewer must countersign first. The countersign engine independently refuses a same-person countersign for every decision."
       tags:
         - Admin
       responses:
@@ -1016,6 +1016,19 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
+  /api/admin/human-roles/readiness:
+    get:
+      operationId: getMakerCheckerReadiness
+      summary: "Enforce-readiness of the maker/checker contract (ADR-0186 O-1). Admin only, read-only. Data {mode (off | shadow | enforce), ready, roles[{role, active_holders, required (2), ok}], warnings[]}: ready only when entity-ic-reviewer and group-ic-reviewer each have at least two distinct active holders; warnings are non-empty when maker_checker = enforce but a role cannot be staffed twice (also printed once at boot)."
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/human-roles/{grantId}/revoke:
     post:
       operationId: revokeHumanRoleGrant
@@ -3595,7 +3608,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     post:
       operationId: recordOpportunityGateDecision
-      summary: Record a gate decision — HOLD requires missing_artifacts. Analyst+; audited. GO is refused with 409 gate_prerequisites_incomplete until the gate's stage prerequisites are complete (HOLD/KILL always allowed). ADR-0186 (families ladder / rationale, off|shadow|enforce; GO only, HOLD and KILL are never blocked) - under enforce a GO whose preceding ladder gate has no effective GO is 409 ladder_prerequisite_missing (error.details.blocker), and a GO rationale that fails the script-aware substance profile is 422 rationale_insufficient (error.details.field and reason, one of too_short | too_few_words | placeholder | repetitive | jamo_only | duplicate_of_other_gate). ADR-0186 P2 contract (families snapshot_ack / kill_binding / divergence, off|shadow|enforce; GO only, HOLD and KILL are never blocked and always store a snapshot) - the server recomputes the gate snapshot inside the write transaction (never trusts the client). The GO body carries snapshot_hash (from GET gate-snapshot), acknowledgements [{key, reason, kind?, covers?}] (keys = snapshot.required_acks; one reason may cover several kill_unassessed items of the same procedure via covers), optional brief_id and divergence_reason (a GO against a different AI recommendation needs one), optional kill_override_id. Under enforce - a triggered halt kill criterion without an active Group IC override is 409 kill_binding_unoverridden (error.details.keys, self_issued); a changed or missing hash is 409 snapshot_stale (error.details.reason, snapshot_hash and the fresh snapshot); missing or unknown acknowledgement keys are 422 ack_required (error.details.missing, unknown, invalid); a weak reason is 422 rationale_insufficient; a missing divergence_reason is 422 divergence_reason_required. Decision, snapshot, evaluation run and ledger commit in one transaction. 201 data adds snapshot_hash and acknowledgements (count); the GET history marks decisions without a snapshot as legacy:true.
+      summary: "Record a gate decision — HOLD requires missing_artifacts. Analyst+; audited. GO is refused with 409 gate_prerequisites_incomplete until the gate's stage prerequisites are complete (HOLD/KILL always allowed). ADR-0186 (families ladder / rationale, off|shadow|enforce; GO only, HOLD and KILL are never blocked) - under enforce a GO whose preceding ladder gate has no effective GO is 409 ladder_prerequisite_missing (error.details.blocker), and a GO rationale that fails the script-aware substance profile is 422 rationale_insufficient (error.details.field and reason, one of too_short | too_few_words | placeholder | repetitive | jamo_only | duplicate_of_other_gate). ADR-0186 P2 contract (families snapshot_ack / kill_binding / divergence, off|shadow|enforce; GO only, HOLD and KILL are never blocked and always store a snapshot) - the server recomputes the gate snapshot inside the write transaction (never trusts the client). The GO body carries snapshot_hash (from GET gate-snapshot), acknowledgements [{key, reason, kind?, covers?}] (keys = snapshot.required_acks; one reason may cover several kill_unassessed items of the same procedure via covers), optional brief_id and divergence_reason (a GO against a different AI recommendation needs one), optional kill_override_id. Under enforce - a triggered halt kill criterion without an active Group IC override is 409 kill_binding_unoverridden (error.details.keys, self_issued); a changed or missing hash is 409 snapshot_stale (error.details.reason, snapshot_hash and the fresh snapshot); missing or unknown acknowledgement keys are 422 ack_required (error.details.missing, unknown, invalid); a weak reason is 422 rationale_insufficient; a missing divergence_reason is 422 divergence_reason_required. Decision, snapshot, evaluation run and ledger commit in one transaction. 201 data adds snapshot_hash and acknowledgements (count); the GET history marks decisions without a snapshot as legacy:true. ADR-0186 P3 (family validators, owner decision O-3): a brownfield pre_fs GO is 409 certification_unconfirmed (error.details.certifications) while a load-bearing certification of a project promoted from this opportunity has no confirmed change-of-control transferability (basis verified, a yes/no position, an evidence reference and confirmed_at); binding and non-waivable. HOLD and KILL are never blocked."
       tags:
         - Reference
       parameters:
@@ -5855,7 +5868,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       operationId: writeExecutionBaseline
-      summary: "Human-only (boundary #2; analyst+, cookie session + CSRF, MNPI insider check; bearer/OAuth/agent callers get 403 human_only). Body action = record_entries (entries - permit_milestones, certification_milestones, hiring_plan aggregate rows, kpi_targets, incentive_obligations; max 100 rows per list) | confirm (project lead only, else 403 lead_required; rationale required max 2000 chars; acknowledged_findings [{code, rationale 1..500 chars}] must cover EVERY open finding code). Reads and write run in one immediate transaction; the confirmation stores recorder, confirmer, entries hash, tranche ids + hash and the acknowledgements. Never writes capex_tranche. Audit targets hold hashes and a 120-char summary only."
+      summary: "Human-only (boundary #2; analyst+, cookie session + CSRF, MNPI insider check; bearer/OAuth/agent callers get 403 human_only). Body action = record_entries (entries - permit_milestones, certification_milestones, hiring_plan aggregate rows, kpi_targets, incentive_obligations; max 100 rows per list) | confirm (project lead only, else 403 lead_required; rationale required max 2000 chars; acknowledged_findings [{code, rationale 1..500 chars}] must cover EVERY open finding code). Reads and write run in one immediate transaction; the confirmation stores recorder, confirmer, entries hash, tranche ids + hash and the acknowledgements. Never writes capex_tranche. Audit targets hold hashes and a 120-char summary only. ADR-0186 D4 (family validators = enforce): confirm is 409 condition_open while an establishment or closing condition precedent from the investment committee is open."
       tags:
         - Analysis
       parameters:
@@ -7367,7 +7380,7 @@ paths:
   /api/projects/{id}/process:
     get:
       operationId: getProjectProcess
-      summary: Full S1-S12 process evaluation for the project (project branch + source-opportunity backlink); member-visible only. Project evaluations also carry reopenedAfterGate (boolean, ADR-0165 addendum).
+      summary: "Full S1-S12 process evaluation for the project (project branch + source-opportunity backlink); member-visible only. Project evaluations also carry reopenedAfterGate (boolean, ADR-0165 addendum). ADR-0186 P3: gateStatus is the EFFECTIVE verdict (an entity_ic / group_ic GO awaiting its countersign reads pending when family maker_checker = enforce) and awaitingCountersign lists those gates; open establishment / closing condition precedents appear in blockers when family validators = enforce."
       tags:
         - Reference
       parameters:
@@ -7386,7 +7399,7 @@ paths:
   /api/projects/{id}/gate-snapshot:
     get:
       operationId: getProjectGateSnapshot
-      summary: "ADR-0186 D1 - the server-recomputed gate snapshot a recorder reviews before a project gate decision (analyst+, same visibleProject / information-wall check as the decision route; 404 for a non-member, 403 viewer). Query gate=fs|dd|entity_ic|group_ic, optional brief_id. Data {gate, snapshot_hash, snapshot, cached, legacy:false}; snapshot = {schema_version, gate, entity, track, computed_at, engine_versions, kill {procedures, evaluated, inert, inert_list, false_count, triggered[{key, procedure, criterion_id, title, action, binding, override_id}], unassessed[], eval_run_id}, rag {overall, dimensions, data_confidence_cap, assessment_id}|null, validators|null, nonwaivable_open[], wacc|null, waivers {active, expiring_14d}, conditions_open[], ladder, ai|null, required_acks[{key, kind, procedure?, criterion_id?, action?}], hard_blocks[{code, keys}]}. snapshot_hash is the SHA-256 of the canonical JSON (sorted keys, fixed number format; computed_at, eval_run_id, assessment_id and brief_id are excluded). Read-only for the caller (the evaluation runs in a rolled-back transaction; the brief and the decision persist their own ledgers) and cached per (project, gate, user, brief, input version)."
+      summary: "ADR-0186 D1 - the server-recomputed gate snapshot a recorder reviews before a project gate decision (analyst+, same visibleProject / information-wall check as the decision route; 404 for a non-member, 403 viewer). Query gate=fs|dd|entity_ic|group_ic, optional brief_id. Data {gate, snapshot_hash, snapshot, cached, legacy:false}; snapshot = {schema_version, gate, entity, track, computed_at, engine_versions, kill {procedures, evaluated, inert, inert_list, false_count, triggered[{key, procedure, criterion_id, title, action, binding, override_id}], unassessed[], eval_run_id}, rag {overall, dimensions, data_confidence_cap, assessment_id}|null, validators|null, nonwaivable_open[], wacc|null, waivers {active, expiring_14d}, conditions_open[{id, text, clear_by}] (open condition precedents), ladder {prior_gate, prior_carrier, prior_decision_id, prior_decision, effective, blocker, prior_awaiting_countersign}, ai|null, required_acks[{key, kind, procedure?, criterion_id?, action?}], hard_blocks[{code, keys, enforced}] (codes kill_binding_unoverridden | validators_incomplete | condition_open | certification_unconfirmed; enforced=false means the family is in shadow, the GO is not refused)}. snapshot_hash is the SHA-256 of the canonical JSON (sorted keys, fixed number format; computed_at, eval_run_id, assessment_id and brief_id are excluded). Read-only for the caller (the evaluation runs in a rolled-back transaction; the brief and the decision persist their own ledgers) and cached per (project, gate, user, brief, input version)."
       tags:
         - Reference
       parameters:
@@ -7520,7 +7533,7 @@ paths:
   /api/projects/{id}/gate-decisions:
     get:
       operationId: listProjectGateDecisions
-      summary: Gate decision records (GO/HOLD/KILL) for the project (S8+ lifecycle).
+      summary: "Gate decision records (GO/HOLD/KILL) for the project (S8+ lifecycle). ADR-0186 P3: latest[] = {gate, decision (the EFFECTIVE verdict - an IC GO awaiting its countersign reads pending when family maker_checker = enforce, the recorded verdict otherwise), recorded_decision, decision_id, decided_by, countersign_state (not_applicable | legacy | countersigned | pending_countersign | countersign_rejected), awaiting_countersign, rationale, gap_override, missing_artifacts}; history[] adds countersign_state and countersign {status, by, at, conditions}|null (the checker's decision)."
       tags:
         - Reference
       parameters:
@@ -7538,7 +7551,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       operationId: recordProjectGateDecision
-      summary: Record a human gate decision for the project; HOLD requires missing_artifacts (analyst+). ADR-0186 (families ladder / rationale, off|shadow|enforce; GO only, HOLD and KILL are never blocked) - under enforce a GO whose preceding ladder gate has no effective GO is 409 ladder_prerequisite_missing (error.details.blocker), and a GO rationale that fails the script-aware substance profile is 422 rationale_insufficient (error.details.field and reason, one of too_short | too_few_words | placeholder | repetitive | jamo_only | duplicate_of_other_gate). ADR-0186 P2 contract (families snapshot_ack / kill_binding / divergence, off|shadow|enforce; GO only, HOLD and KILL are never blocked and always store a snapshot) - the server recomputes the gate snapshot inside the write transaction (never trusts the client). The GO body carries snapshot_hash (from GET gate-snapshot), acknowledgements [{key, reason, kind?, covers?}] (keys = snapshot.required_acks; one reason may cover several kill_unassessed items of the same procedure via covers), optional brief_id and divergence_reason (a GO against a different AI recommendation needs one), optional kill_override_id. Under enforce - a triggered halt kill criterion without an active Group IC override is 409 kill_binding_unoverridden (error.details.keys, self_issued); a changed or missing hash is 409 snapshot_stale (error.details.reason, snapshot_hash and the fresh snapshot); missing or unknown acknowledgement keys are 422 ack_required (error.details.missing, unknown, invalid); a weak reason is 422 rationale_insufficient; a missing divergence_reason is 422 divergence_reason_required. Decision, snapshot, evaluation run and ledger commit in one transaction. 201 data adds snapshot_hash and acknowledgements (count); the GET history marks decisions without a snapshot as legacy:true.
+      summary: "Record a human gate decision for the project; HOLD requires missing_artifacts (analyst+). ADR-0186 (families ladder / rationale, off|shadow|enforce; GO only, HOLD and KILL are never blocked) - under enforce a GO whose preceding ladder gate has no effective GO is 409 ladder_prerequisite_missing (error.details.blocker), and a GO rationale that fails the script-aware substance profile is 422 rationale_insufficient (error.details.field and reason, one of too_short | too_few_words | placeholder | repetitive | jamo_only | duplicate_of_other_gate). ADR-0186 P2 contract (families snapshot_ack / kill_binding / divergence, off|shadow|enforce; GO only, HOLD and KILL are never blocked and always store a snapshot) - the server recomputes the gate snapshot inside the write transaction (never trusts the client). The GO body carries snapshot_hash (from GET gate-snapshot), acknowledgements [{key, reason, kind?, covers?}] (keys = snapshot.required_acks; one reason may cover several kill_unassessed items of the same procedure via covers), optional brief_id and divergence_reason (a GO against a different AI recommendation needs one), optional kill_override_id. Under enforce - a triggered halt kill criterion without an active Group IC override is 409 kill_binding_unoverridden (error.details.keys, self_issued); a changed or missing hash is 409 snapshot_stale (error.details.reason, snapshot_hash and the fresh snapshot); missing or unknown acknowledgement keys are 422 ack_required (error.details.missing, unknown, invalid); a weak reason is 422 rationale_insufficient; a missing divergence_reason is 422 divergence_reason_required. Decision, snapshot, evaluation run and ledger commit in one transaction. 201 data adds snapshot_hash and acknowledgements (count); the GET history marks decisions without a snapshot as legacy:true. ADR-0186 P3: an entity_ic / group_ic GO may carry conditions[] {text, clear_by group_ic|establishment|closing, owner_role?} (human act, never a proposal field; stored as condition_precedent in the same transaction; group_ic GO accepts establishment|closing only; an acknowledged mark_conditional kill result also creates one). Family validators - a brownfield dd / entity_ic / group_ic GO with an applicable core validator missing is 409 validators_incomplete (error.details.missing; bf-01 is derived from the validator completeness engine, no waiver path), and a group_ic GO with an open group_ic condition is 409 condition_open. Family maker_checker - a recorded IC GO is effective only after a different reviewer countersigns it (POST .../gate-decisions/{decisionId}/countersign); a GO whose predecessor IC GO is un-countersigned is 409 gate_prerequisites_incomplete with error.details.awaiting_countersign. 201 data adds conditions[ids] and awaiting_countersign."
       tags:
         - Reference
       parameters:
@@ -7693,10 +7706,349 @@ paths:
         '422':
           $ref: '#/components/responses/Unprocessable'
 
+  /api/projects/{id}/gate-decisions/{decisionId}/countersign:
+    post:
+      operationId: countersignProjectGateDecision
+      summary: "The checker's act on an entity_ic or group_ic GO (ADR-0186 D6, family maker_checker). Human cookie session only (bearer / OAuth-delegated / MCP principal -> 403 human_only), analyst+ non-admin, project visible (404 otherwise), insider when MNPI. The checker must differ from the person who recorded the decision (403 checker_must_differ, no state change) and hold the matching grant - entity-ic-reviewer for entity_ic, group-ic-reviewer for group_ic - read inside the write transaction (403 human_role_required; 409 grant_revoked when the grant existed and was revoked). Only the latest non-stale IC GO recorded under the contract is countersigned: HOLD / KILL / other gates / legacy rows (no snapshot) are 409 countersign_not_applicable, a superseded one is 409 decision_superseded, a second countersign is 409 already_countersigned. decision approved | conditional makes the GO effective; rejected | withdrawn_pending_resubmission leaves it non-effective and on the record (the maker may record a new decision). A conditional countersign carries conditions[] (422 conditions_required when empty), stored in condition_precedent. 201 data {id, gate, decision, countersign_state, effective, conditions[ids]}. Audited gate_decision.countersign (and condition.create). Rate limited."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: decisionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision, reason]
+              properties:
+                decision: { type: string, enum: [approved, conditional, rejected, withdrawn_pending_resubmission] }
+                reason: { type: string, description: "Ack substance profile (422 rationale_insufficient)." }
+                conditions:
+                  type: array
+                  description: "Required (at least one) for a conditional countersign; each becomes a condition precedent created by the checker."
+                  items:
+                    type: object
+                    required: [text, clear_by]
+                    properties:
+                      text: { type: string }
+                      clear_by: { type: string, enum: [group_ic, establishment, closing] }
+                      owner_role: { type: string }
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/projects/{id}/conditions:
+    get:
+      operationId: listProjectConditions
+      summary: "The condition precedents of the project's IC decisions (ADR-0186 D4, migration 0175): {id, project_id, source_decision_id, gate, text, clear_by (group_ic | establishment | closing), owner_role, origin (recorder | countersign | kill_conditional), status (open | cleared | withdrawn), created_by, created_at, cleared_by, cleared_at, clear_note, evidence_ref}. Optional ?status=open|cleared|withdrawn. Read-only; same visibility as the gate decisions (404 for a non-member). Conditions are created by an IC GO (POST gate-decisions conditions[]) or a conditional countersign. Open group_ic conditions block the group_ic GO (409 condition_open); open establishment / closing conditions keep S11 incomplete and block confirming the execution baseline and completing the establishment closure (family validators = enforce)."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/conditions/{conditionId}/clear:
+    post:
+      operationId: clearProjectCondition
+      summary: "Close an open condition precedent as satisfied (ADR-0186 D4). Human cookie session only; the clearer holds an entity-ic-reviewer or group-ic-reviewer grant (403 human_role_required) and is not the person who created the condition (403 clearer_must_differ); a closing condition needs evidence_ref (400 evidence_required); an already closed condition is 409 condition_not_open. Audited condition.clear; rate limited."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: conditionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [note]
+              properties:
+                note: { type: string, description: "Ack substance profile." }
+                evidence_ref: { type: string, description: "Required to clear a closing condition." }
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/projects/{id}/conditions/{conditionId}/withdraw:
+    post:
+      operationId: withdrawProjectCondition
+      summary: "Withdraw an open condition precedent that no longer applies (ADR-0186 D4). Same authorization as clear (cookie session, IC reviewer grant, not the creator). Audited condition.withdraw; rate limited."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: conditionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [note]
+              properties:
+                note: { type: string, description: "Why the condition no longer applies (ack substance profile)." }
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/projects/{id}/kill-overrides:
+    get:
+      operationId: listProjectKillOverrides
+      summary: "The Group IC kill-criteria overrides of the project (ADR-0186 D1/D6): active ones, ?include_revoked=1 adds revoked rows (revoked_at, revoked_by). Read-only."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: issueProjectKillOverride
+      summary: "Issue a Group IC override of a binding (action halt) kill criterion for this project (ADR-0186 D1/D6, owner decision O-7: allowed before the formal group_ic sitting). Human cookie session only; the issuer holds a group-ic-reviewer grant (403 human_role_required); only a halt criterion of the entity's own kill-criteria procedures can be overridden (422 override_not_applicable); one active override per criterion (409 override_exists); the reason meets the ack substance profile (422 rationale_insufficient). The issuer cannot use their own override to record the GO it unblocks (the gate-decision write answers 409 kill_binding_unoverridden with error.details.self_issued). Audited kill_override.issue; rate limited. 201 data {id, entity_type, entity_id, procedure_key, criterion_id, issued_by, issued_at}."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [procedure_key, criterion_id, reason]
+              properties:
+                procedure_key: { type: string }
+                criterion_id: { type: string }
+                reason: { type: string, description: "Ack substance profile." }
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/projects/{id}/kill-overrides/{overrideId}/revoke:
+    post:
+      operationId: revokeProjectKillOverride
+      summary: "Revoke an active kill-criteria override of the project (ADR-0186 D6). Cookie session only; group-ic-reviewer grant; the row is kept (revoked_at, revoked_by); audited kill_override.revoke; 409 override_already_revoked when already revoked."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: overrideId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/opportunities/{id}/kill-overrides:
+    get:
+      operationId: listOpportunityKillOverrides
+      summary: "The Group IC kill-criteria overrides of the opportunity (ADR-0186 D1/D6): active ones, ?include_revoked=1 adds revoked rows (revoked_at, revoked_by). Read-only."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: issueOpportunityKillOverride
+      summary: "Issue a Group IC override of a binding (action halt) kill criterion for this opportunity (ADR-0186 D1/D6, owner decision O-7: allowed before the formal group_ic sitting). Human cookie session only; the issuer holds a group-ic-reviewer grant (403 human_role_required); only a halt criterion of the entity's own kill-criteria procedures can be overridden (422 override_not_applicable); one active override per criterion (409 override_exists); the reason meets the ack substance profile (422 rationale_insufficient). The issuer cannot use their own override to record the GO it unblocks (the gate-decision write answers 409 kill_binding_unoverridden with error.details.self_issued). Audited kill_override.issue; rate limited. 201 data {id, entity_type, entity_id, procedure_key, criterion_id, issued_by, issued_at}."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [procedure_key, criterion_id, reason]
+              properties:
+                procedure_key: { type: string }
+                criterion_id: { type: string }
+                reason: { type: string, description: "Ack substance profile." }
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/opportunities/{id}/kill-overrides/{overrideId}/revoke:
+    post:
+      operationId: revokeOpportunityKillOverride
+      summary: "Revoke an active kill-criteria override of the opportunity (ADR-0186 D6). Cookie session only; group-ic-reviewer grant; the row is kept (revoked_at, revoked_by); audited kill_override.revoke; 409 override_already_revoked when already revoked."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: overrideId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /api/projects/{id}/ic-package:
     get:
       operationId: getProjectIcPackage
-      summary: S10 IC package aggregate (read-only) — adopted business case + simulations, DD completion, AI-proposed RAG grade (labeled a proposal), entity_ic/group_ic gate history, establishment progress with reopened_after_gate and reopened_after_gate_detail (ADR-0100, ADR-0165 addendum).
+      summary: "S10 IC package aggregate (read-only) — adopted business case + simulations, DD completion, AI-proposed RAG grade (labeled a proposal), entity_ic/group_ic gate history, establishment progress with reopened_after_gate and reopened_after_gate_detail (ADR-0100, ADR-0165 addendum). ADR-0186 P3: gates.latest[] carries the effective decision plus recorded_decision, awaiting_countersign and countersign_state; gates.history[] adds countersign_state; gates.conditions[] lists every condition precedent (open first) and gates.conditions_open counts the open ones."
       tags:
         - Analysis
       parameters:
@@ -7790,7 +8142,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     put:
       operationId: putProjectEstablishmentStep
-      summary: "Change the status of one establishment step (ADR-0165). Body: step_no 1-5, status in_progress|done|halted|escalated (pending rejected), origin (must equal the project origin, internal|joint), optional evidence_url (http/https), note, assignee_user_id. done requires evidence_url or note (400 evidence_required) and is human-only: 403 human_only for a bearer token, an OAuth-delegated MCP call or an agent account (cookie session of a person only); a done step is changed only via POST .../reopen (409 reopen_required). Step 5 is sequence-enforced (400 sequence_violation). Errors also: 400 not_applicable, 400 assignee_not_member. Audit target <projectId>#step<n>@<via> (via = ui|api|mcp); the history event stores via too."
+      summary: "Change the status of one establishment step (ADR-0165). Body: step_no 1-5, status in_progress|done|halted|escalated (pending rejected), origin (must equal the project origin, internal|joint), optional evidence_url (http/https), note, assignee_user_id. done requires evidence_url or note (400 evidence_required) and is human-only: 403 human_only for a bearer token, an OAuth-delegated MCP call or an agent account (cookie session of a person only); a done step is changed only via POST .../reopen (409 reopen_required). Step 5 is sequence-enforced (400 sequence_violation). Errors also: 400 not_applicable, 400 assignee_not_member. Audit target <projectId>#step<n>@<via> (via = ui|api|mcp); the history event stores via too. ADR-0186 D4 (family validators = enforce): completing step 5 is 409 condition_open while an establishment or closing condition precedent is open."
       tags:
         - Analysis
       parameters:
@@ -8164,7 +8516,7 @@ paths:
   /api/projects/{id}/dd-checklist/state:
     put:
       operationId: putProjectDdChecklistState
-      summary: "Upsert a judgment (pass/fail/pending/waived) on an applied checklist item; proposed-only items are 404 (analyst+). Body target_id (ADR-0157) scopes it to an opened comparison target; a waiver must belong to the same scope. ADR-0160 addendum (b): for a greenfield project in the workspace scope, a NEW judgement on an item classified not applicable or replaced is 409 dd_item_out_of_scope (an item already carrying a row may be re-judged); `na` on any of the seven workspace checklists needs a note (400 na_reason_required). ADR-0162: the same 409 and na-reason rules for a brownfield non-baseline sub-track in the workspace scope, including excluded sections of attached extra checklists."
+      summary: "Upsert a judgment (pass/fail/pending/waived) on an applied checklist item; proposed-only items are 404 (analyst+). Body target_id (ADR-0157) scopes it to an opened comparison target; a waiver must belong to the same scope. ADR-0160 addendum (b): for a greenfield project in the workspace scope, a NEW judgement on an item classified not applicable or replaced is 409 dd_item_out_of_scope (an item already carrying a row may be re-judged); `na` on any of the seven workspace checklists needs a note (400 na_reason_required). ADR-0162: the same 409 and na-reason rules for a brownfield non-baseline sub-track in the workspace scope, including excluded sections of attached extra checklists. ADR-0186 D4 (family validators): bf-01 of chk-brownfield-feasibility-checklist is derived from the validator completeness engine and cannot be set by hand (409 derived_item under enforce; GET dd shows it read-only with state.derived=true and assessed_by validator-engine)."
       tags:
         - Analysis
       parameters:

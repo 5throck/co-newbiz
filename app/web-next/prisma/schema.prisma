@@ -105,6 +105,8 @@ model approval_chain {
   updated_at            String
   recorded_by           String?
   decided_by            String?
+  gate_decision_id      String?
+  decision_reason       String?
   md_entity             md_entity? @relation(fields: [entity_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   md_project            md_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
@@ -1531,4 +1533,33 @@ model kill_criteria_override {
   revoked_by    String?
 
   @@index([entity_type, entity_id, revoked_at], map: "idx_kill_criteria_override_entity")
+}
+
+/// ADR-0186 D4 (migration 0175): a condition precedent attached to an IC GO; cleared by a different reviewer, never deleted.
+model condition_precedent {
+  id                 String  @id
+  project_id         String
+  source_decision_id String
+  gate               String
+  text               String
+  clear_by           String
+  owner_role         String?
+  origin             String  @default("recorder")
+  status             String  @default("open")
+  created_by         String
+  created_at         String
+  cleared_by         String?
+  cleared_at         String?
+  clear_note         String?
+  evidence_ref       String?
+
+  @@index([project_id, status], map: "idx_condition_precedent_project")
+  @@index([source_decision_id], map: "idx_condition_precedent_source")
+}
+
+/// ADR-0186 (migration 0175): the persisted legacy mark for the maker/checker contract; fixed once written.
+model gate_integrity_cutoff {
+  name               String @id
+  max_decision_rowid Int
+  created_at         String
 }

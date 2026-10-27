@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Human-role grants — ADR-0186 D6 / design 3.6 and 3.14 (migration 0176).
  *
@@ -97,4 +97,32 @@ export function revokeHumanRoleGrant(db: Database, opts: { id: string; revokedBy
   if (row.revoked_at) throw new HumanRoleError("already_revoked", `grant ${opts.id} is already revoked.`);
   db.run("UPDATE app_user_human_role SET revoked_at = ?, revoked_by = ? WHERE id = ?", [opts.now, opts.revokedBy, opts.id]);
   return db.query("SELECT * FROM app_user_human_role WHERE id = ?").get(opts.id) as HumanRoleGrant;
+}
+
+/**
+ * ADR-0186 D6 / design 3.14 ("nobody can grant the checker role to the recorder of a decision that grant would
+ * then countersign"). Minimal enforceable form: a grant of `entity-ic-reviewer` / `group-ic-reviewer` to a user
+ * is in CONFLICT when that user recorded the LATEST (non-stale) GO of the matching gate (entity_ic / group_ic) of
+ * some project and that GO is recorded under the maker/checker contract (after the legacy cutoff) but not yet decided by
+ * a checker. The grant would otherwise place the maker in the checker seat of their own pending decision. Past,
+ * already-countersigned or legacy decisions are out of scope here (the countersign engine refuses a same-person
+ * countersign for every decision regardless of when the grant was issued, so this check only keeps the admin
+ * from creating the conflicting seat in the first place).
+ */
+export function pendingCountersignConflicts(db: Database, userId: string, roleKey: string): Array<{ project_id: string; decision_id: string; gate: string }> {
+  const gate = roleKey === "entity-ic-reviewer" ? "entity_ic" : roleKey === "group-ic-reviewer" ? "group_ic" : null;
+  if (!gate) return [];
+  return db
+    .query(
+      `SELECT g.entity_id AS project_id, g.id AS decision_id, g.gate FROM gate_decision g
+       WHERE g.entity_type = 'project' AND g.gate = ? AND g.decision = 'go' AND g.decided_by = ?
+         AND NOT EXISTS (SELECT 1 FROM gate_decision_stale s WHERE s.decision_id = g.id)
+         AND g.id = (SELECT g2.id FROM gate_decision g2 WHERE g2.entity_type = 'project' AND g2.entity_id = g.entity_id AND g2.gate = g.gate
+                       AND NOT EXISTS (SELECT 1 FROM gate_decision_stale s2 WHERE s2.decision_id = g2.id)
+                     ORDER BY g2.decided_at DESC, g2.id DESC LIMIT 1)
+         AND g.rowid > (SELECT c.max_decision_rowid FROM gate_integrity_cutoff c WHERE c.name = 'maker_checker')
+         AND NOT EXISTS (SELECT 1 FROM approval_chain a WHERE a.gate_decision_id = g.id AND a.status IN ('approved','conditional','rejected','withdrawn_pending_resubmission'))
+       ORDER BY g.decided_at DESC`,
+    )
+    .all(gate, userId) as Array<{ project_id: string; decision_id: string; gate: string }>;
 }

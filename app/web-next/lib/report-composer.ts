@@ -132,14 +132,15 @@ export function composeProjectReport(db: Database, projectId: string, projectNo:
   lines.push("");
 
   sections.push("진행 이력");
-  const gates = latestGateDecisions("project", projectId);
+  // ADR-0186 D6: the history prints what was RECORDED, labelled when an IC GO still awaits its countersign.
+  const gates = latestGateDecisions("project", projectId, { raw: true });
   lines.push("## 6. 의사결정 이력");
   lines.push("");
-  const gateEntries = [...gates.entries()] as Array<[GateId, { decision: string; rationale: string }]>;
+  const gateEntries = [...gates.entries()] as Array<[GateId, { decision: string; rationale: string; awaitingCountersign: boolean }]>;
   if (gateEntries.length === 0) {
     lines.push("- 기록된 의사결정 없음");
   } else {
-    for (const [gate, v] of gateEntries) lines.push(`- ${gate}: ${v.decision} — ${v.rationale}`);
+    for (const [gate, v] of gateEntries) lines.push(`- ${gate}: ${v.decision}${v.awaitingCountersign ? " (awaiting countersign)" : ""} — ${v.rationale}`);
   }
   lines.push("");
 

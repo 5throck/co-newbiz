@@ -25,6 +25,7 @@ import { ExecutionBaselinePanel } from "./ExecutionBaselinePanel.tsx";
 import { IcReviewStepsPanel } from "./IcReviewStepsPanel.tsx";
 import { fmtNpvKrwM } from "../../lib/npv-format.ts";
 import { useTranslations } from "next-intl";
+import { GateConditionsPanel, type ConditionView } from "../GateIntegrity.tsx";
 
 // S11 투자심사·실행 — 투자심의 자료 열람 + 법인·그룹 투자심의위원회 진행 기록 + 설립 실행
 // 5단계 진행 화면 (ADR-0100 §3). 경계 #2: 종합 등급은 'AI 추천'으로만 표시되고
@@ -49,10 +50,13 @@ interface IcPackage {
   rag: { status: "graded" | "not_graded"; grade: string | null; isProposal: true; rationale: string | null; assessed_at: string | null; missing_dimensions: string[]; confidence_cap: string | null; confidence_note: string | null };
   pmi_kickoff: { applies: boolean; sub_track: string | null; record: { id: string; recordedBy: string; recordedAt: string; owner: string; planNote: string } | null };
   gates: {
-    latest: Array<{ gate: string; decision: "go" | "hold" | "kill" | null; rationale: string | null; missing_artifacts: string[] | null; gap_override?: { items: string[]; rationale: string } | null }>;
+    latest: Array<{ gate: string; decision: "go" | "hold" | "kill" | "pending" | null; recorded_decision?: "go" | "hold" | "kill" | null; awaiting_countersign?: boolean; countersign_state?: string | null; rationale: string | null; missing_artifacts: string[] | null; gap_override?: { items: string[]; rationale: string } | null }>;
     history: Array<{ id: string; gate: string; decision: string; rationale: string; decided_by: string; decided_at: string; gap_override?: { items: string[]; rationale: string } | null }>;
     /** Artifacts an IC GO would be missing right now (empty = none). */
     go_gaps?: string[];
+    /** ADR-0186: every condition of the IC decisions (open first). */
+    conditions?: ConditionView[];
+    conditions_open?: number;
   };
   /** ADR-0167 — standing risk lines for the establishment mode (informational). */
   standing_risks?: Array<{ key: string; text: string }>;
@@ -156,6 +160,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
   const bothGatesGo = ["entity_ic", "group_ic"].every((g) =>
     pkg?.gates.latest.find((x) => x.gate === g)?.decision === "go",
   );
+  const awaitingGates = (pkg?.gates.latest ?? []).filter((x) => x.awaiting_countersign).map((x) => x.gate);
   const estComplete = pkg?.establishment.complete ?? false;
   const origin = est?.project.origin;
   const estApplies = establishmentApplies(origin);
@@ -177,6 +182,9 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
           {t("entityAndGroupInvestmentCommittee")}
           <Link href={`/projects/${projectId}/charter`} className="ml-2 underline">{t("viewTheProjectCharter")}</Link>
+          {awaitingGates.length > 0 && (
+            <span className="status-chip status-amber ml-2" data-testid="ic-awaiting-countersign"><span aria-hidden="true">◐</span> {t("awaitingCountersign")}</span>
+          )}
           <span className={`status-chip ${bothGatesGo ? "status-green" : "status-amber"} ml-2`}>
             {bothGatesGo ? t("investmentCommittee22In") : t("notApprovedByTheInvestment")}
           </span>
@@ -334,6 +342,9 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
               </span>
             </p>
           )}
+          {(pkg?.gates.conditions?.length ?? 0) > 0 && (
+            <GateConditionsPanel projectId={projectId} conditions={pkg!.gates.conditions!} canAct={false} onChanged={load} />
+          )}
           {(() => {
             const overrides = (pkg?.gates.history ?? []).filter((h) => h.gap_override);
             if (overrides.length === 0) return null;
@@ -440,8 +451,10 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
             killHint={null}
             showReview={false}
             goGaps={pkg?.gates.go_gaps}
+            onRecorded={() => void load()}
             nextStage={{ label: t("s12Management"), href: `/projects/${projectId}/portfolio` }}
           />
+          <GateConditionsPanel projectId={projectId} conditions={pkg?.gates.conditions ?? []} canAct={canAct} onChanged={load} />
         </div>
         {confirmDialog}
       </StageFrame>

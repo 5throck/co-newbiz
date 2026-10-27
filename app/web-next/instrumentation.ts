@@ -96,6 +96,14 @@ export async function register() {
       console.warn("[bootstrap] database path could not be resolved (PRAGMA database_list failed).");
     }
 
+    // ADR-0186 O-1 / security review J5: maker_checker=enforce needs two distinct holders per IC reviewer role. Warn only.
+    try {
+      const { makerCheckerReadiness } = await import("./lib/gate-readiness.ts");
+      for (const w of makerCheckerReadiness(db).warnings) console.warn(`[bootstrap] ${w}`);
+    } catch {
+      // diagnostics only
+    }
+
     // S1 market-sizing queue recovery — recoverQueuePass is normally driven by
     // the OS-scheduled watch:run cycle (never an in-process timer), but local
     // dev has no such scheduler running. Every dev-server restart abandons any

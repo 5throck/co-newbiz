@@ -685,17 +685,17 @@ describe("data-architect follow-ups", () => {
     expect((db.query(sql!).get(projectId) as { id: string }).id).toBe(real);
   });
 
-  test("db-integrity --fix never orphan-deletes a snapshot-bearing decision (skipped), but still deletes a plain orphan", async () => {
+  test("db-integrity --fix never deletes a gate decision once the 0175 delete guard exists: orphans are reported, none removed", async () => {
     const { deleteOrphanGateDecisions, findGateDecisionReferenceIssues } = await import("../../scripts/co-newbiz/db-integrity.ts");
     const { insertGateSnapshot } = await import("../../db/repositories/gate-snapshot.repository.ts");
     const kept = S.insertGate(db, "opportunity", "missing-opp-1", "screening", "go");
     const plain = S.insertGate(db, "opportunity", "missing-opp-2", "screening", "go");
     insertGateSnapshot(db, { decisionId: kept, schemaVersion: 1, snapshotJson: "{}", snapshotHash: "h", submittedHash: null, acknowledgements: [], computedAt: S.NOW, engineVersionsJson: "{}", evalRunId: null, briefId: null });
     expect(findGateDecisionReferenceIssues(db).map((i) => i.id)).toEqual(expect.arrayContaining([kept, plain]));
-    expect(deleteOrphanGateDecisions(db)).toBeGreaterThanOrEqual(1);
+    expect(deleteOrphanGateDecisions(db)).toBe(0);
     expect(db.query("SELECT 1 FROM gate_decision WHERE id = ?").get(kept)).toBeTruthy();
-    expect(db.query("SELECT 1 FROM gate_decision WHERE id = ?").get(plain)).toBeNull();
-    // still reported as an issue
-    expect(findGateDecisionReferenceIssues(db).map((i) => i.id)).toContain(kept);
+    expect(db.query("SELECT 1 FROM gate_decision WHERE id = ?").get(plain)).toBeTruthy();
+    // still reported as issues (the plain-delete behaviour stays covered by db-integrity.test.ts on a guard-free fixture)
+    expect(findGateDecisionReferenceIssues(db).map((i) => i.id)).toEqual(expect.arrayContaining([kept, plain]));
   });
 });

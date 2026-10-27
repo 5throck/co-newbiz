@@ -30,6 +30,8 @@ import { covenantHeadroom } from "../../../../../lib/covenant-headroom.ts";
 import { icReviewStepsView } from "../../../../../lib/ic-review-steps.ts";
 import { getHypotheses } from "../../../../../../../db/repositories/deal-structure-hypothesis.repository.ts";
 import { financingCertainty, financingTotals, listFinancingEntries } from "../../../../../../../db/repositories/financing-plan.repository.ts";
+import { countersignState } from "../../../../../../../db/lib/gate-effective.ts";
+import { listConditions } from "../../../../../../../db/repositories/condition-precedent.repository.ts";
 
 const IC_GATES: GateId[] = ["entity_ic", "group_ic"];
 const TOP_FINDINGS = 10;
@@ -151,9 +153,17 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
         latest: IC_GATES.map((g) => {
           const v = latest.get(g);
           const parsed = v ? parseRationale(v.rationale) : null;
-          return { gate: g, decision: (v?.decision ?? null) as GateVerdict | null, rationale: parsed?.rationale ?? null, gap_override: parsed?.gap_override ?? null, missing_artifacts: v?.missing ?? null };
+          // ADR-0186 D6: `decision` is the EFFECTIVE verdict (an IC GO awaiting its countersign reads `pending` under maker_checker = enforce); recorded_decision is what was recorded.
+          return {
+            gate: g, decision: (v?.decision ?? null) as GateVerdict | null, recorded_decision: (v?.rawDecision ?? null) as GateVerdict | null,
+            awaiting_countersign: v?.awaitingCountersign ?? false, countersign_state: v?.countersign ?? null,
+            rationale: parsed?.rationale ?? null, gap_override: parsed?.gap_override ?? null, missing_artifacts: v?.missing ?? null,
+          };
         }),
-        history: history.map((h) => ({ ...h, ...parseRationale(h.rationale) })),
+        history: history.map((h) => ({ ...h, ...parseRationale(h.rationale), countersign_state: countersignState(db, id, h) })),
+        // ADR-0186 D4: every condition precedent of the IC decisions (open ones first); the committee sees what is still owed.
+        conditions: listConditions(id, { db }).sort((a, b) => (a.status === b.status ? (a.created_at < b.created_at ? -1 : 1) : a.status === "open" ? -1 : b.status === "open" ? 1 : 0)),
+        conditions_open: listConditions(id, { status: "open", db }).length,
         // What an IC GO would be missing right now - the screen warns and asks for a rationale (R2-B item 3).
         go_gaps: icGoGapItems(id),
       },

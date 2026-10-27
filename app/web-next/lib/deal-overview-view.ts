@@ -34,6 +34,9 @@ export function nextActionCopy(a: NextAction): NextActionCopy {
       };
     case "request_gate_decision":
       return { what: `${a.subject} 결정 요청`, why: `${a.subject} 게이트 결정이 있어야 다음 단계로 진행합니다`, cta: `${a.subject} 결정 열기` };
+    case "await_countersign":
+      // Resolved through the catalog (pages.dealOverview.awaitCountersign*) by the page.
+      return { what: "", why: "", cta: "" };
     case "advance_stage":
       return { what: `${a.subject} 단계로 진행`, why: r.type === "stage_complete" ? `${r.stageId} ${r.stageName}의 완료 조건을 모두 채웠습니다` : "", cta: `${a.buttonTarget} 열기` };
     case "resolve_hold":

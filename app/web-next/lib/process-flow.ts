@@ -8,6 +8,7 @@
 // opportunityId 기준으로 동작한다. 비적용 단계(brownfield의 S5, greenfield의
 // S6/S7)는 'skipped'로 표시된다.
 import { getDb } from "../../../db/client.ts";
+import { effectiveGateVerdict, effectiveState, type CountersignState } from "../../../db/lib/gate-effective.ts";
 import { hasScreeningEvidence, listTargets, longListCandidateGaps, screeningSummary } from "./brownfield-targets.ts";
 import { countSourcedCapabilityRows } from "./capability-gap.ts";
 import { AGENT_KEYS } from "./agent-registry.generated.ts";
@@ -16,6 +17,7 @@ import { executionBaselineS11Check } from "./greenfield-execution.ts";
 import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
 import { establishmentProgress, reopenedAfterGate } from "./establishment.ts";
 import { isFreshReviewCycle } from "./portfolio.ts";
+import { s11ConditionBlockers } from "./gate-conditions.ts";
 
 export type StageId = "S1" | "S2" | "S3" | "S4" | "S5" | "S6" | "S7" | "S8" | "S9" | "S10" | "S11" | "S12";
 export type GateId = "screening" | "pre_fs" | "target_screening" | "fs" | "dd" | "entity_ic" | "group_ic";
@@ -134,25 +136,63 @@ export interface ProcessEvaluation {
    * "승격 대기"와 "S8 작업 중"을 구분할 수 없다. project 엔티티에서는 항상
    * false (프로젝트의 캐리어는 프로젝트 자신이다). */
   carrierScopeFinished: boolean;
+  /** project 전용 (ADR-0186 D6) — 기록은 되었으나 아직 부서 검토자의 승인(countersign)을 기다리는 IC GO 게이트. gateStatus에는 maker/checker 강제 시 pending으로 보인다. */
+  awaitingCountersign?: GateId[];
   /** project 전용 — 설립 실행 단계가 최근 유효한 dd/entity_ic/group_ic GO 이후 재개되었는지 (ADR-0165 addendum). opportunity에서는 생략. */
   reopenedAfterGate?: boolean;
 }
 
-export function latestGateDecisions(entityType: "opportunity" | "project", entityId: string): Map<GateId, { decision: GateVerdict; missing: string[] | null; rationale: string; judgementConfirmations: string[] }> {
-  const rows = getDb()
+export interface LatestGateDecision {
+  /** Effective verdict: an IC GO awaiting its countersign reads `pending` when family maker_checker = enforce (ADR-0186 D6). */
+  decision: GateVerdict;
+  missing: string[] | null;
+  rationale: string;
+  judgementConfirmations: string[];
+  /** The decision as recorded (before maker/checker mapping). */
+  rawDecision: GateVerdict;
+  id: string;
+  decidedBy: string;
+  /** Countersign state of the recorded decision (IC gates; `not_applicable` elsewhere). */
+  countersign: CountersignState;
+  /** True when the recorded GO is not (yet) effective - labels / inbox, whatever the flag mode. */
+  awaitingCountersign: boolean;
+}
+
+/**
+ * Latest non-stale decision per gate - THE reader of "what is the state of this gate" for the process engine, the
+ * pipeline, the ladder, S11/S12, the IC package and the panels (ADR-0186 design 3.15). With `raw: true` the
+ * recorded verdict is returned unmapped (history surfaces, the gate-decisions GET, which carry
+ * `awaitingCountersign` themselves); every other caller gets the effective verdict.
+ */
+export function latestGateDecisions(entityType: "opportunity" | "project", entityId: string, opts: { raw?: boolean; /** Force the maker/checker mapping on or off; default = family maker_checker is enforce. */ strict?: boolean } = {}): Map<GateId, LatestGateDecision> {
+  const db = getDb();
+  const rows = db
     .query(
-      `SELECT gate, decision, missing_artifacts_json, rationale, judgement_confirmations_json FROM (
-         SELECT gate, decision, missing_artifacts_json, rationale, judgement_confirmations_json,
+      `SELECT id, gate, decision, decided_by, missing_artifacts_json, rationale, judgement_confirmations_json FROM (
+         SELECT id, gate, decision, decided_by, missing_artifacts_json, rationale, judgement_confirmations_json,
                 ROW_NUMBER() OVER (PARTITION BY gate ORDER BY decided_at DESC, id DESC) AS rn
          FROM gate_decision g WHERE g.entity_type = ? AND g.entity_id = ?
            AND NOT EXISTS (SELECT 1 FROM gate_decision_stale s WHERE s.decision_id = g.id)
        ) WHERE rn = 1`,
     )
-    .all(entityType, entityId) as Array<{ gate: GateId; decision: GateVerdict; missing_artifacts_json: string | null; rationale: string; judgement_confirmations_json: string | null }>;
+    .all(entityType, entityId) as Array<{ id: string; gate: GateId; decision: GateVerdict; decided_by: string; missing_artifacts_json: string | null; rationale: string; judgement_confirmations_json: string | null }>;
   return new Map(rows.map((r) => {
     let judgementConfirmations: string[] = [];
     try { judgementConfirmations = r.judgement_confirmations_json ? (JSON.parse(r.judgement_confirmations_json) as string[]) : []; } catch { /* corrupt json → none */ }
-    return [r.gate, { decision: r.decision, missing: r.missing_artifacts_json ? JSON.parse(r.missing_artifacts_json) : null, rationale: r.rationale, judgementConfirmations }];
+    const eff = entityType === "project"
+      ? effectiveState(db, entityId, { id: r.id, gate: r.gate, decision: r.decision, decided_by: r.decided_by }, { strict: opts.strict })
+      : { verdict: r.decision as GateVerdict, state: "not_applicable" as CountersignState, awaiting: false };
+    return [r.gate, {
+      decision: opts.raw ? r.decision : (eff.verdict as GateVerdict),
+      missing: r.missing_artifacts_json ? JSON.parse(r.missing_artifacts_json) : null,
+      rationale: r.rationale,
+      judgementConfirmations,
+      rawDecision: r.decision,
+      id: r.id,
+      decidedBy: r.decided_by,
+      countersign: eff.state,
+      awaitingCountersign: eff.awaiting,
+    }];
   }));
 }
 // Latest gate_decision per gate is shared by the process engine and the
@@ -653,12 +693,14 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
     const missing: string[] = [];
     const db = getDb();
     // IC 승인은 진행 기록으로만 판단한다 (사람 최종 승인, ADR-0053).
+    // ADR-0186 D6: a recorded IC GO still awaiting its second-reviewer countersign is named as such (not "missing").
+    const awaiting = (gate: "entity_ic" | "group_ic") => effectiveGateVerdict(db, project.id, gate)?.awaiting === true;
     if (gateStatus.entity_ic !== "go") {
-      blockers.push("법인 투자심의위원회 승인 기록이 필요합니다");
+      blockers.push(awaiting("entity_ic") ? "법인 투자심의위원회 GO가 기록되었으나 다른 검토자의 승인(countersign)이 필요합니다" : "법인 투자심의위원회 승인 기록이 필요합니다");
       missing.push("법인 투자심의위원회 승인");
     }
     if (gateStatus.group_ic !== "go") {
-      blockers.push("그룹 투자심의위원회 승인 기록이 필요합니다");
+      blockers.push(awaiting("group_ic") ? "그룹 투자심의위원회 GO가 기록되었으나 다른 검토자의 승인(countersign)이 필요합니다" : "그룹 투자심의위원회 승인 기록이 필요합니다");
       missing.push("그룹 투자심의위원회 승인");
     }
     // 스펙 requiredArtifacts 정합 (flow.spec S11): 채택된 Business Case(투자심의 자료의
@@ -715,6 +757,12 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
       const est = establishmentS11Check(project.id);
       blockers.push(...est.blockers);
       missing.push(...est.missing);
+    }
+    // ADR-0186 D4: open establishment / closing condition precedents keep S11 incomplete (family `validators` = enforce).
+    {
+      const cp = s11ConditionBlockers(project.id, db);
+      blockers.push(...cp.blockers);
+      missing.push(...cp.missing);
     }
     // ADR-0161 (Q2 retroactive): greenfield execution baseline confirmation —
     // blocking while S11 is not yet completed; recommended (never reopening the
@@ -893,6 +941,7 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
   let subTrack: string | null = null;
   let projectId: string | null = null;
   let carrierScopeFinished = false;
+  let awaitingCountersign: GateId[] = [];
 
   if (entity.type === "opportunity") {
     const opp = db
@@ -981,6 +1030,7 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
     if (!project) throw new Error(`project ${entity.id} not found`);
     const gates = latestGateDecisions("project", entity.id);
     gateStatus = Object.fromEntries([...gates.entries()].map(([g, v]) => [g, v.decision]));
+    awaitingCountersign = [...gates.entries()].filter(([, v]) => v.awaitingCountersign).map(([g]) => g);
     terminated = [...gates.values()].some((g) => g.decision === "kill");
     // T-20261022-036 (ADR-0076 addendum): the live resolver owns post-promotion
     // track semantics — case_type → route → md_project.track fallback, conflict
@@ -1079,7 +1129,7 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
     stages,
     projectId,
     carrierScopeFinished,
-    ...(entity.type === "project" ? { reopenedAfterGate: reopenedAfterGate(entity.id).reopened_after_gate } : {}),
+    ...(entity.type === "project" ? { reopenedAfterGate: reopenedAfterGate(entity.id).reopened_after_gate, awaitingCountersign } : {}),
   };
 }
 

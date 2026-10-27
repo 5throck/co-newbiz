@@ -12,6 +12,7 @@ import {
   type AckProblems, type AckState, type GateSnapshotEnvelope, type GateSnapshotView, type SnapshotRequiredAck,
   groupLead, reasonHint, unassessedProcedures, visibleAckKeys,
 } from "../lib/gate-ack-view.ts";
+import { KNOWN_HARD_BLOCKS, advisoryBlocks, enforcedBlocks } from "../lib/gate-integrity-view.ts";
 
 /** Loads the snapshot for one gate; `replace` swaps in the fresh one returned by a 409. */
 export function useGateSnapshot(basePath: string, gate: string, briefId: string | null, enabled: boolean) {
@@ -44,6 +45,7 @@ function Chip({ tone, children }: { tone: "green" | "amber" | "red" | "neutral";
 /** Compact, read-only summary of the snapshot. */
 export function GateSnapshotSummary({ snapshot, gateLabel }: { snapshot: GateSnapshotView; gateLabel: (g: string) => string }) {
   const t = useTranslations("components.gateSnapshot");
+  const ti = useTranslations("components.gateIntegrity");
   const k = snapshot.kill;
   const rag = snapshot.rag;
   const cap = rag?.data_confidence_cap;
@@ -81,6 +83,12 @@ export function GateSnapshotSummary({ snapshot, gateLabel }: { snapshot: GateSna
           </dd>
         </>
       )}
+      {(snapshot.conditions_open?.length ?? 0) > 0 && (
+        <>
+          <dt className="text-[color:var(--muted-fg)]">{ti("sumConditions")}</dt>
+          <dd className="m-0"><Chip tone="amber">{ti("conditionsOpen", { count: snapshot.conditions_open!.length })}</Chip></dd>
+        </>
+      )}
       <dt className="text-[color:var(--muted-fg)]">{t("sumOpen")}</dt>
       <dd className="m-0"><Chip tone={snapshot.nonwaivable_open.length > 0 ? "amber" : "neutral"}>{t("openItems", { count: snapshot.nonwaivable_open.length })}</Chip></dd>
       {snapshot.wacc && (
@@ -100,6 +108,7 @@ export function GateSnapshotSummary({ snapshot, gateLabel }: { snapshot: GateSna
           <dd className="m-0">
             {gateLabel(snapshot.ladder.prior_gate)} {snapshot.ladder.prior_decision ? snapshot.ladder.prior_decision.toUpperCase() : t("ladderNone")}
             {" "}<Chip tone={snapshot.ladder.effective ? "green" : "amber"}>{snapshot.ladder.effective ? t("ladderOk") : t("ladderOpen")}</Chip>
+            {snapshot.ladder.prior_awaiting_countersign && <span className="block mt-1"><Chip tone="amber">{ti("awaiting")}</Chip> {ti("priorAwaiting")}</span>}
           </dd>
         </>
       )}
@@ -152,10 +161,21 @@ export function GateAckBlock({ snapshot, state, onChange, problems, decision, di
   const required = snapshot.required_acks;
   const visible = visibleAckKeys(required, state);
   const procs = unassessedProcedures(required).filter((p) => required.filter((r) => r.kind === "kill_unassessed" && r.procedure === p).length > 1);
-  const hardBlocked = snapshot.hard_blocks.length > 0;
+  const ti = useTranslations("components.gateIntegrity");
+  const enforced = enforcedBlocks(snapshot.hard_blocks);
+  const advisory = advisoryBlocks(snapshot.hard_blocks);
+  const hardBlocked = enforced.length > 0;
   const keyTitle = (key: string) => {
     const r = required.find((x) => x.key === key);
-    return r ? label(r).title : key;
+    if (r) return label(r).title;
+    const k = [...snapshot.kill.triggered, ...snapshot.kill.unassessed].find((i) => i.key === key || `kill:${i.key}` === key);
+    return k ? k.title : key;
+  };
+  const blockText = (code: string, part: "title" | "body") => ti(`hardBlock.${(KNOWN_HARD_BLOCKS as readonly string[]).includes(code) ? code : "kill_binding_unoverridden"}.${part}` as never);
+  const blockKeyTitle = (code: string, key: string) => {
+    if (code === "condition_open") return snapshot.conditions_open?.find((c) => c.id === key)?.text ?? key;
+    if (code === "kill_binding_unoverridden") return keyTitle(key);
+    return key;
   };
   const problemFor = (key: string): string | null => {
     if (!problems) return null;
@@ -169,16 +189,21 @@ export function GateAckBlock({ snapshot, state, onChange, problems, decision, di
   return (
     <div className="mt-3" data-testid="gate-ack-block">
       {notice && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mb-2">↻ {notice}</p>}
-      {hardBlocked && isGo && (
-        <div role="alert" className="border border-[color:var(--red-fg)] rounded-lg px-3 py-2 mb-2 text-[length:var(--fs-caption)]" data-testid="gate-hard-block">
-          <p className="font-semibold m-0 text-[color:var(--red-fg)]">⛔ {t("hardBlockTitle")}</p>
-          <p className="m-0 mt-1">{t("hardBlockBody")}</p>
-          <ul className="sizing-note-list">
-            {snapshot.hard_blocks.flatMap((b) => b.keys.map((k) => <li key={`${b.code}:${k}`}>{keyTitle(k)}</li>))}
+      {isGo && enforced.map((b) => (
+        <div key={b.code} role="alert" className="border border-[color:var(--red-fg)] rounded-lg px-3 py-2 mb-2 text-[length:var(--fs-caption)]" data-testid="gate-hard-block" data-block-code={b.code}>
+          <p className="font-semibold m-0 text-[color:var(--red-fg)]"><span aria-hidden="true">⛔</span> {blockText(b.code, "title")}</p>
+          <p className="m-0 mt-1">{blockText(b.code, "body")}</p>
+          <ul className="sizing-note-list" aria-label={ti("hardBlock.listLabel")}>
+            {b.keys.map((k) => <li key={`${b.code}:${k}`}>{blockKeyTitle(b.code, k)}</li>)}
           </ul>
-          <p className="m-0 text-[color:var(--muted-fg)]">{t("hardBlockOthers")}</p>
+          <p className="m-0 text-[color:var(--muted-fg)]">{ti("hardBlock.others")}</p>
         </div>
-      )}
+      ))}
+      {isGo && advisory.map((b) => (
+        <p key={b.code} role="note" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] m-0 mb-2" data-testid="gate-hard-block-advisory">
+          ◐ {ti("hardBlock.notEnforced", { title: blockText(b.code, "title") })}
+        </p>
+      ))}
       {isGo && required.length > 0 && (
         <fieldset className="border border-[color:var(--border)] rounded-lg px-3 py-2 m-0" data-testid="gate-ack-list">
           <legend className="text-[length:var(--fs-caption)] font-semibold px-1">{t("ackLegend", { count: visible.length })}</legend>

@@ -37,8 +37,10 @@
 // Field projects have NO default: until a human chooses, writes fail with
 // mode_not_chosen and the S11 completion check says so.
 import type { Database } from "bun:sqlite";
+import { conditionsEnforced, s11OpenConditions } from "./gate-conditions.ts";
 import { getDb } from "../../../db/client.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
+import { effectiveGoTimes } from "../../../db/lib/gate-effective.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 
 export const ESTABLISHMENT_STATUSES = ["pending", "in_progress", "done", "halted", "escalated"] as const;
@@ -309,18 +311,8 @@ function tsMs(ts: string): number {
 export function reopenedAfterGate(projectId: string): ReopenedAfterGate {
   const none: ReopenedAfterGate = { reopened_after_gate: false, reopened_after_gate_detail: null };
   const db = getDb();
-  const gates = db
-    .query(
-      `SELECT decision, decided_at FROM (
-         SELECT g.gate, g.decision, g.decided_at,
-                ROW_NUMBER() OVER (PARTITION BY g.gate ORDER BY g.decided_at DESC, g.id DESC) AS rn
-         FROM gate_decision g
-         WHERE g.entity_type = 'project' AND g.entity_id = ? AND g.gate IN ('dd', 'entity_ic', 'group_ic')
-           AND NOT EXISTS (SELECT 1 FROM gate_decision_stale s WHERE s.decision_id = g.id)
-       ) WHERE rn = 1`,
-    )
-    .all(projectId) as Array<{ decision: string; decided_at: string }>;
-  const goTimes = gates.filter((g) => g.decision === "go").map((g) => tsMs(g.decided_at)).filter(Number.isFinite);
+  // ADR-0186 D6: only a decision really in force counts (an IC GO awaiting its countersign does not).
+  const goTimes = effectiveGoTimes(db, projectId, ["dd", "entity_ic", "group_ic"]).map((t) => tsMs(t)).filter(Number.isFinite);
   if (goTimes.length === 0) return none;
   const lastGo = Math.max(...goTimes);
   const reopens = db
@@ -380,7 +372,8 @@ export type EstablishmentError =
   | "dependent_step_done"
   | "invalid_reason"
   | "mode_not_chosen"
-  | "mode_mismatch";
+  | "mode_mismatch"
+  | "condition_open";
 
 export type UpsertResult =
   | { ok: true; id: string; step_no: number; status: EstablishmentStatus; title: string; step_done: boolean; updated_at: string; assignee_user_id: string | null }
@@ -608,6 +601,10 @@ export function changeEstablishmentStatus(projectId: string, input: UpsertInput,
   // 순서 강제 — 완료확인(5)은 선행 4단계가 모두 done일 때만 완료할 수 있다.
   if (input.step_no === 5 && input.status === "done" && establishmentPriorDone(projectId, mode) < 4) {
     return { ok: false, error: "sequence_violation" };
+  }
+  // ADR-0186 D4 (family `validators` = enforce): the closure step cannot complete while an establishment / closing condition precedent is open.
+  if (input.step_no === 5 && input.status === "done" && conditionsEnforced() && s11OpenConditions(db, projectId).length > 0) {
+    return { ok: false, error: "condition_open" };
   }
   if (!existing && !project.source_opportunity_id) return { ok: false, error: "no_origin_opportunity" };
 
@@ -846,18 +843,8 @@ function stepsStarted(db: Database, projectId: string, mode: EstablishmentMode |
 /** A mode change newer than the latest valid GO of the dd / entity_ic / group_ic gates (same reference time as reopenedAfterGate). */
 function modeChangedAfterGate(projectId: string): boolean {
   const db = getDb();
-  const gates = db
-    .query(
-      `SELECT decision, decided_at FROM (
-         SELECT g.gate, g.decision, g.decided_at,
-                ROW_NUMBER() OVER (PARTITION BY g.gate ORDER BY g.decided_at DESC, g.id DESC) AS rn
-         FROM gate_decision g
-         WHERE g.entity_type = 'project' AND g.entity_id = ? AND g.gate IN ('dd', 'entity_ic', 'group_ic')
-           AND NOT EXISTS (SELECT 1 FROM gate_decision_stale s WHERE s.decision_id = g.id)
-       ) WHERE rn = 1`,
-    )
-    .all(projectId) as Array<{ decision: string; decided_at: string }>;
-  const goTimes = gates.filter((g) => g.decision === "go").map((g) => tsMs(g.decided_at)).filter(Number.isFinite);
+  // ADR-0186 D6: only a decision really in force counts (an IC GO awaiting its countersign does not).
+  const goTimes = effectiveGoTimes(db, projectId, ["dd", "entity_ic", "group_ic"]).map((t) => tsMs(t)).filter(Number.isFinite);
   if (goTimes.length === 0) return false;
   const lastGo = Math.max(...goTimes);
   const changes = db

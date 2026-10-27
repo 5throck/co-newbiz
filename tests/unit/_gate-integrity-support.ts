@@ -86,3 +86,30 @@ export function insertGovernanceDoc(db: Database, id = "govdoc-gi-test"): string
   );
   return id;
 }
+
+// ── ADR-0186 P3 fixtures: maker / checker, conditions, overrides ─────────────────────────────────
+
+/** Issue an active human-role grant through the repository the admin route uses. */
+export async function grantRole(db: Database, userId: string, roleKey: "entity-ic-reviewer" | "group-ic-reviewer", grantedBy: string): Promise<string> {
+  const { issueHumanRoleGrant } = await import("../../db/lib/human-roles.ts");
+  return issueHumanRoleGrant(db, { userId, roleKey, grantedBy, now: NOW });
+}
+
+/** Add a project member (deny-by-default visibility: an IC reviewer must be on the deal to see it). */
+export function addMember(db: Database, projectId: string, userId: string, role: "lead" | "member" = "member"): void {
+  db.run(
+    "INSERT OR IGNORE INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)",
+    [projectId, userId, role, "test", NOW, "gate integrity P3 test"],
+  );
+}
+
+/** A project that can record an entity_ic GO: the ready project plus recorded fs and dd GOs (legacy rows, effective). */
+export function seedIcReadyProject(db: Database, maker: string): { projectId: string; oppId: string } {
+  const r = seedReadyProject(db, maker);
+  insertGate(db, "project", r.projectId, "fs", "go");
+  insertGate(db, "project", r.projectId, "dd", "go");
+  return r;
+}
+
+export const IC_RATIONALE = "투자심의위원회가 사업계획과 위험 요인을 검토했고 조건부로 진행하는 데 동의함";
+export const IC_GAP = "알려진 미비 사항은 후속 조치 일정과 함께 감수하기로 함";

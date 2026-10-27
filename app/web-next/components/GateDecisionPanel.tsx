@@ -18,6 +18,8 @@ import { useModalFocus } from "../lib/use-modal-focus.ts";
 import { currentTurn, gateSequenceBlocker, gateState } from "../lib/gate-sequence-view.ts";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
+import { ConditionsEditor, GateCountersign, KillOverridePanel } from "./GateIntegrity.tsx";
+import { conditionsPayload, integrityErrorList, isAwaitingCountersign, recordedDecisionOf, type ConditionDraft } from "../lib/gate-integrity-view.ts";
 import { GateAckBlock, GateSnapshotSummary, useGateSnapshot } from "./GateSnapshotAck.tsx";
 import { EMPTY_ACK_STATE, ackProblemsFromError, buildAckPayload, reconcileAckState, type AckProblems, type AckState, type GateSnapshotEnvelope } from "../lib/gate-ack-view.ts";
 
@@ -25,7 +27,14 @@ const IC_GATES: readonly string[] = ["entity_ic", "group_ic"];
 
 interface GateLatest {
   gate: string;
-  decision: "go" | "hold" | "kill";
+  /** EFFECTIVE verdict: an IC GO awaiting its second review is not yet a GO. */
+  decision: "go" | "hold" | "kill" | "pending" | null;
+  /** What was recorded (use this wherever the recorded decision is shown). */
+  recorded_decision?: "go" | "hold" | "kill" | null;
+  decision_id?: string;
+  decided_by?: string;
+  countersign_state?: string | null;
+  awaiting_countersign?: boolean;
   rationale: string;
   missing_artifacts: string[] | null;
   /** R2-B item 3 - the typed rationale an IC GO carried despite missing artifacts. */
@@ -33,7 +42,7 @@ interface GateLatest {
   /** ADR-0182 §5 — 판단 필요 claims confirmed with this decision. */
   judgement_confirmations?: string[];
 }
-interface GateHistoryRow extends GateLatest { legacy?: boolean; snapshot_hash?: string | null; acknowledgements?: Array<{ key: string; kind: string; reason: string }>; ai_recommended_decision?: string | null; divergence_reason?: string | null; id: string; decided_by: string; decided_at: string; /** ADR-0182 §5 — needs_judgement claims the human marked as reviewed. */ judgement_confirmations?: string[] }
+interface GateHistoryRow extends Omit<GateLatest, "decision"> { decision: "go" | "hold" | "kill"; countersign_state?: string | null; countersign?: { status: string; by: string | null; at: string | null; conditions: string | null } | null; legacy?: boolean; snapshot_hash?: string | null; acknowledgements?: Array<{ key: string; kind: string; reason: string }>; ai_recommended_decision?: string | null; divergence_reason?: string | null; id: string; decided_by: string; decided_at: string; /** ADR-0182 §5 — needs_judgement claims the human marked as reviewed. */ judgement_confirmations?: string[] }
 
 
 /** Scroll to a gate decision panel and focus its first field (the "결정 기록" primary of gate stages). */
@@ -147,6 +156,27 @@ export function GateBriefBody({ briefData, currentGate, onApply }: { briefData: 
   );
 }
 
+/** Recorded decision chip; an IC GO awaiting its second review also says so (icon + label, never colour alone). */
+function DecisionChip({ row }: { row: GateLatest }) {
+  const ti = useTranslations("components.gateIntegrity");
+  const rec = recordedDecisionOf(row);
+  if (!rec) return null;
+  return (
+    <>
+      <span className={`status-chip ${rec === "go" ? "status-green" : rec === "hold" ? "status-amber" : "status-red"}`}>{rec.toUpperCase()}</span>
+      {isAwaitingCountersign(row) && <span className="status-chip status-amber ml-1" data-testid="awaiting-countersign"><span aria-hidden="true">◐</span> {ti("awaiting")}</span>}
+    </>
+  );
+}
+
+function condText(raw: string): string {
+  try {
+    const v = JSON.parse(raw) as unknown;
+    if (Array.isArray(v)) return v.map((c) => (typeof c === "string" ? c : (c as { text?: string })?.text ?? "")).filter(Boolean).join("; ");
+  } catch { /* plain text */ }
+  return raw;
+}
+
 export function GateDecisionPanel({ opportunityId, gates, killHint, entityType = "opportunity", showReview = true, nextStage, goGaps, onRecorded, sequence = false, hideBrief = false, rationalePrefill = null }: {
   opportunityId: string;
   gates: GateMetaId[];
@@ -242,6 +272,8 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   const [divergence, setDivergence] = useState("");
   const [divergenceProblem, setDivergenceProblem] = useState<string | null>(null);
   const [staleNotice, setStaleNotice] = useState<string | null>(null);
+  const [condDrafts, setCondDrafts] = useState<ConditionDraft[]>([]);
+  const ti = useTranslations("components.gateIntegrity");
   const [viewed, setViewed] = useState<{ id: string; data: { legacy: boolean; snapshot: unknown; acknowledgements?: Array<{ key: string; kind: string; reason: string }> } | null } | null>(null);
 
   // Project-entity carrier (S8+, ADR-0095/0098) records through the project
@@ -255,7 +287,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   const aiRec = snapshot?.ai?.recommended ?? null;
   const divergent = !!aiRec && aiRec !== form.decision;
   // A different gate or entity starts a fresh acknowledgement list.
-  useEffect(() => { setAckState(EMPTY_ACK_STATE); setAckProblems(null); setStaleNotice(null); setDivergenceProblem(null); }, [form.gate, opportunityId]);
+  useEffect(() => { setAckState(EMPTY_ACK_STATE); setAckProblems(null); setStaleNotice(null); setDivergenceProblem(null); setCondDrafts([]); }, [form.gate, opportunityId]);
 
   const load = useCallback(() => {
     api.get<{ latest: GateLatest[]; history: GateHistoryRow[] }>(basePath)
@@ -306,6 +338,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
     : holdNeedsMissing ? t("aHoldRequiresTheList")
     : null;
   const lockedReason = gateBlocker ? tr("common.gate.lockedReason", { p1: tr(GATE_LABEL_KEY[gateBlocker] ?? gateBlocker), p2: tr(GATE_LABEL_KEY[form.gate] ?? form.gate) }) : null;
+  const icGo = entityType === "project" && form.decision === "go" && IC_GATES.includes(form.gate);
   const gapsForGo = form.decision === "go" && IC_GATES.includes(form.gate) ? (goGaps ?? []) : [];
 
   /** Step 1 of the shared flow: confirm (or, for an IC GO with gaps, the warning dialog). Nothing is sent before this. */
@@ -335,6 +368,8 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
         learning_capture: form.decision === "kill" ? form.learning.trim() : undefined,
         // ADR-0182 §5: checked 판단 필요 claims ride with the decision.
         judgement_confirmations: judgementConfirmations.length > 0 ? judgementConfirmations : undefined,
+        // Conditions ride with an IC GO (the server creates the rows).
+        conditions: icGo && conditionsPayload(condDrafts).length > 0 ? conditionsPayload(condDrafts) : undefined,
         // Gate integrity: the snapshot the person reviewed, their acknowledgements and the AI-divergence reason.
         ...(snap.env ? {
           snapshot_hash: snap.env.snapshot_hash,
@@ -348,7 +383,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
       toast(t("recordedTheP1P2Decision", { p1: tr(GATE_LABEL_KEY[form.gate] ?? form.gate), p2: form.decision.toUpperCase() }));
       setForm((f) => ({ ...f, rationale: "", missing: "", learning: "" }));
       setJudgementChecks({});
-      setAckState(EMPTY_ACK_STATE); setAckProblems(null); setDivergence(""); setStaleNotice(null);
+      setAckState(EMPTY_ACK_STATE); setAckProblems(null); setDivergence(""); setStaleNotice(null); setCondDrafts([]);
       void snap.reload();
       load();
       onRecorded?.(form.decision, form.gate);
@@ -382,7 +417,17 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
     if (err.code === "rationale_insufficient" && d.field === "divergence_reason") {
       setDivergenceProblem(typeof d.reason === "string" ? te(d.reason as never) : err.message); setError(null); return;
     }
-    if (err.code === "kill_binding_unoverridden") { void snap.reload(); }
+    if (["kill_binding_unoverridden", "validators_incomplete", "condition_open", "certification_unconfirmed"].includes(err.code)) {
+      void snap.reload();
+      const list = integrityErrorList(err.code, d);
+      setError(list.length > 0 ? `${err.message} (${list.join(", ")})` : err.message);
+      return;
+    }
+    if (err.code === "gate_prerequisites_incomplete" && d.awaiting_countersign) {
+      void load();
+      setError(`${err.message} ${ti("priorAwaiting")}`);
+      return;
+    }
     setError(err.message);
   }
 
@@ -405,6 +450,15 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
           <button type="button" className="btn-ghost btn-sm" aria-expanded={viewed?.id === h.id} onClick={() => void viewSnapshot(h.id)}>
             {ts("viewSnapshot", { count: h.acknowledgements?.length ?? 0 })}
           </button>
+        )}
+        {h.countersign_state && h.countersign_state !== "not_applicable" && (
+          <span className="block" data-testid="history-countersign">
+            <span className={`status-chip ${h.countersign_state === "countersigned" ? "status-green" : h.countersign_state === "countersign_rejected" ? "status-red" : "status-amber"}`}>
+              <span aria-hidden="true">{h.countersign_state === "countersigned" ? "●" : h.countersign_state === "countersign_rejected" ? "✕" : "◐"}</span> {ti(`state.${h.countersign_state}` as never)}
+            </span>
+            {h.countersign?.status && h.countersign.by && <span className="block">{ti("countersign.resultBy", { by: h.countersign.by, date: (h.countersign.at ?? "").slice(0, 10), state: ti(`countersign.choice.${h.countersign.status}` as never) })}</span>}
+            {h.countersign?.conditions && <span className="block">{condText(h.countersign.conditions)}</span>}
+          </span>
         )}
         {h.divergence_reason && <span className="block">{ts("divergenceRecorded", { ai: (h.ai_recommended_decision ?? "").toUpperCase(), reason: h.divergence_reason })}</span>}
         {viewed?.id === h.id && viewed.data && (
@@ -442,7 +496,8 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
               <li key={g} className="flex items-center gap-2" aria-current={g === turn && st !== "go" ? "step" : undefined}>
                 {i > 0 && <span aria-hidden="true">→</span>}
                 <span className="font-semibold">{"①②③④"[i]} {tr(GATE_LABEL_KEY[g] ?? g)}</span>
-                <span className={`status-chip ${st === "go" ? "status-green" : st === "hold" ? "status-amber" : st === "kill" ? "status-red" : "status-not-started"}`}>{st === "pending" ? tr("common.stageStatus.waiting") : st.toUpperCase()}</span>
+                {isAwaitingCountersign(decisionOf(g)) ? <DecisionChip row={decisionOf(g)!} /> : (
+                <span className={`status-chip ${st === "go" ? "status-green" : st === "hold" ? "status-amber" : st === "kill" ? "status-red" : "status-not-started"}`}>{st === "pending" ? tr("common.stageStatus.waiting") : st.toUpperCase()}</span>)}
                 {g === turn && st !== "go" && <span className="text-[color:var(--muted-fg)]">{t("nowDue")}</span>}
               </li>
             );
@@ -459,9 +514,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
             <p className="mb-2 text-[length:var(--fs-caption)] flex flex-wrap items-center gap-1">
               <span className="font-semibold">{tr(GATE_LABEL_KEY[g] ?? g)} {t("currentDecision")}</span>
               {d ? (
-                <span className={`status-chip ${d.decision === "go" ? "status-green" : d.decision === "hold" ? "status-amber" : "status-red"}`}>
-                  {d.decision.toUpperCase()}
-                </span>
+                recordedDecisionOf(d) ? <DecisionChip row={d} /> : <span className="status-chip status-not-started">{t("undecided")}</span>
               ) : (
                 <span className="status-chip status-not-started">{t("undecided")}</span>
               )}
@@ -487,10 +540,8 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
                 <tr key={g}>
                   <td className="font-semibold">{labelOf(g)}</td>
                   <td>
-                    {d ? (
-                      <span className={`status-chip ${d.decision === "go" ? "status-green" : d.decision === "hold" ? "status-amber" : "status-red"}`}>
-                        {d.decision.toUpperCase()}
-                      </span>
+                    {d && recordedDecisionOf(d) ? (
+                      <DecisionChip row={d} />
                     ) : (
                       <span className="status-chip status-not-started">{t("undecided2")}</span>
                     )}
@@ -507,6 +558,19 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
           </tbody>
         </table>
       )}
+
+      {entityType === "project" && gates.map((g) => {
+        const d = decisionOf(g);
+        if (!d || !isAwaitingCountersign(d) || !d.decision_id) return null;
+        return (
+          <div key={`cs-${g}`} data-testid="awaiting-countersign-block">
+            <p className="text-[length:var(--fs-caption)] mt-2 mb-0" role="status">
+              <span className="status-chip status-amber"><span aria-hidden="true">◐</span> {ti("awaiting")}</span> {ti("awaitingNote", { gate: labelOf(g) })}
+            </p>
+            {canRecord && <GateCountersign projectId={opportunityId} decisionId={d.decision_id} gate={g} gateLabel={labelOf(g)} recordedBy={d.decided_by} onDone={() => { load(); void snap.reload(); onRecorded?.("go", g as GateMetaId); }} />}
+          </div>
+        );
+      })}
 
       {/* ADR-0153 — 3단계 검토(확인됨 / 확인하지 못함 / 판단 필요). PASS 표시 없음.
           ADR-0182 §5 — 판단 필요 항목에 "사람 확인" 체크(결정 POST에 동봉)와
@@ -645,6 +709,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
               />
             </label>
           )}
+          {icGo && <ConditionsEditor gate={form.gate} value={condDrafts} onChange={setCondDrafts} />}
           {snapshot && (
             <div className="mt-3" aria-label={ts("summaryHeading")} role="group">
               <h4 className="text-[length:var(--fs-body)] mb-1">{ts("summaryHeading")}</h4>
@@ -675,6 +740,9 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
         </form>
       ) : (
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("recordingDecisionsRequiresTheAnalyst2")}</p>
+      )}
+      {canRecord && snapshot && (snapshot.kill.triggered.length > 0) && (
+        <KillOverridePanel entityType={entityType} entityId={opportunityId} triggered={snapshot.kill.triggered} canAct={canRecord} onChanged={() => void snap.reload()} />
       )}
       {confirmDialog}
       {gapAsk && (

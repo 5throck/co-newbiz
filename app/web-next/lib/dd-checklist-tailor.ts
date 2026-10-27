@@ -25,6 +25,7 @@
 // the human review path in reviewDdCustomItem(); the engine can never promote
 // its own proposal, and an unapproved proposal cannot block a gate.
 
+import type { Database } from "bun:sqlite";
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
@@ -32,6 +33,7 @@ import { AGENT_KEYS } from "./agent-registry.generated.ts";
 import { runActivityChain, type ActivitySpec, type EntityRef } from "./agent-orchestrator.ts";
 import { specAgentFor } from "./spec-activities.ts";
 import { gateIntegrityMode } from "./gate-integrity-flags.ts";
+import { evaluateValidatorCompleteness } from "../../../db/lib/validator-completeness.ts";
 import { DD_WORKSPACE_CHECKLISTS, SUB_TRACK_DD_CHECKLISTS, scopedSubTrackDdChecklists, getChecklistItems, type ChecklistItemDef } from "./library.ts";
 import { WAVE_F_PREDICATE_DATE } from "./wave-f-date.ts";
 import { KO_DATA } from "./ko-data-values.ts";
@@ -459,6 +461,51 @@ export function reviewDdCustomItem(
 
 // ── Judgment state write (the S9 workspace's ordinary write path) ──────────
 
+
+// ── bf-01 derived from the validator completeness engine (ADR-0186 D4, design 3.4) ────────────────────
+
+export const BF_FEASIBILITY_CHECKLIST_ID = "chk-brownfield-feasibility-checklist";
+export const BF_VALIDATORS_ITEM_ID = "bf-01";
+
+export interface DerivedBf01 {
+  status: "pass" | "fail";
+  note: string;
+  applicable: number;
+  completed: number;
+  missing: string[];
+  evaluated_at: string;
+}
+
+/**
+ * bf-01 ("all six M&A validators recorded") is not a hand-set checkbox: under family `validators` = enforce its
+ * state is the engine's read-only verdict (pass when no applicable core validator is missing, else fail with the
+ * missing list in the note) and a stored manual row is ignored. null = not derived (flag not enforce, or the
+ * brownfield-feasibility checklist is not attached to this project's DD scope).
+ */
+export function derivedBf01(projectId: string, db: Database = getDb()): DerivedBf01 | null {
+  if (gateIntegrityMode("validators") !== "enforce") return null;
+  if (!subTrackChecklistIds(projectId).includes(BF_FEASIBILITY_CHECKLIST_ID)) return null;
+  const v = evaluateValidatorCompleteness(projectId, null, db);
+  const missing = [...v.halt.missing] as string[];
+  return {
+    status: missing.length === 0 ? "pass" : "fail",
+    note: missing.length === 0
+      ? `Derived from the validator engine: ${v.completed_count} of ${v.applicable_count} applicable core validators recorded.`
+      : `Derived from the validator engine: applicable core validator(s) missing - ${missing.join(", ")}.`,
+    applicable: v.applicable_count,
+    completed: v.completed_count,
+    missing,
+    evaluated_at: v.evaluated_at,
+  };
+}
+
+/** Replace the stored bf-01 row by the derived verdict (selected/legacy scope only). */
+function withDerivedBf01<T extends { checklist_id: string; item_id: string; status: string }>(projectId: string, rows: T[], make: (derived: DerivedBf01) => T): T[] {
+  const derived = derivedBf01(projectId);
+  if (!derived) return rows;
+  return [...rows.filter((r) => !(r.checklist_id === BF_FEASIBILITY_CHECKLIST_ID && r.item_id === BF_VALIDATORS_ITEM_ID)), make(derived)];
+}
+
 export const STATE_STATUSES = ["pending", "pass", "fail", "na", "waived"] as const;
 export type ChecklistStateStatus = (typeof STATE_STATUSES)[number];
 
@@ -759,13 +806,16 @@ export function ddCompletionSummary(projectId: string, opts: { targetId?: string
     const bf = brownfieldScopeContext(projectId, getDb());
     if (bf) return scopedCompletionSummary(projectId, bfScopedInput(bf));
   }
-  const rows = (getDb()
+  const rowsRaw = (getDb()
     .query(
       `SELECT checklist_id, item_id, status, waiver_id, na_confirmed_by FROM project_checklist_item_state WHERE project_id = ? AND target_id IS ?`,
     )
     .all(projectId, targetId) as Array<{ checklist_id: string; item_id: string; status: string; waiver_id: string | null; na_confirmed_by: string | null }>)
     // Reference-only rows (newer domains of a pre-2026-10-01 project) never enter the count.
     .filter((r) => !uncountedRow(r.checklist_id, newerDomainsCounted(projectId)));
+  const rows = targetId === null
+    ? withDerivedBf01(projectId, rowsRaw, (d) => ({ checklist_id: BF_FEASIBILITY_CHECKLIST_ID, item_id: BF_VALIDATORS_ITEM_ID, status: d.status, waiver_id: null, na_confirmed_by: null }))
+    : rowsRaw;
   const extraIds = subTrackChecklistIds(projectId);
   const extraSet = new Set(extraIds);
   let pending = 0;
@@ -841,10 +891,11 @@ function bfScopedInput(bf: BrownfieldScopeContext): ScopedInput {
 }
 
 function scopedCompletionSummary(projectId: string, ws: ScopedInput): DdCompletionSummary {
-  const rows = (getDb()
+  const rowsRaw = (getDb()
     .query("SELECT checklist_id, item_id, status, waiver_id, na_confirmed_by FROM project_checklist_item_state WHERE project_id = ? AND target_id IS NULL")
     .all(projectId) as Array<{ checklist_id: string; item_id: string; status: string; waiver_id: string | null; na_confirmed_by: string | null }>)
     .filter((r) => !uncountedRow(r.checklist_id, newerDomainsCounted(projectId), !!ws.gfInScope));
+  const rows = withDerivedBf01(projectId, rowsRaw, (d) => ({ checklist_id: BF_FEASIBILITY_CHECKLIST_ID, item_id: BF_VALIDATORS_ITEM_ID, status: d.status, waiver_id: null, na_confirmed_by: null }));
   const counted = countedWorkspaceChecklists(projectId, !!ws.gfInScope);
   const outOfScope = (r: { checklist_id: string; item_id: string }) => ws.items.get(`${r.checklist_id}:${r.item_id}`)?.judgeable === false;
   let pending = 0;
@@ -1174,6 +1225,8 @@ export interface DdItemState {
   waiver_id: string | null;
   assessed_by: string | null;
   assessed_at: string | null;
+  /** ADR-0186 D4: true when the state is the validator engine's read-only verdict (bf-01), not a hand-set judgement. */
+  derived?: boolean;
 }
 
 export interface CustomItemRow {
@@ -1214,6 +1267,14 @@ export function listDdWorkspace(projectId: string, opts: { targetId?: string | n
     .query("SELECT checklist_id, item_id, status, note, evidence_ref, waiver_id, assessed_by, assessed_at FROM project_checklist_item_state WHERE project_id = ? AND target_id IS ?")
     .all(projectId, targetId) as Array<{ checklist_id: string; item_id: string; status: ChecklistStateStatus; note: string | null; evidence_ref: string | null; waiver_id: string | null; assessed_by: string | null; assessed_at: string | null }>) {
     states.set(`${s.checklist_id}:${s.item_id}`, { status: s.status, note: s.note, evidence_ref: s.evidence_ref, waiver_id: s.waiver_id, assessed_by: s.assessed_by, assessed_at: s.assessed_at });
+  }
+  // ADR-0186 D4: bf-01 is the validator engine's read-only verdict (gate scope only).
+  const derivedValidators = targetId === null ? derivedBf01(projectId, db) : null;
+  if (derivedValidators) {
+    states.set(`${BF_FEASIBILITY_CHECKLIST_ID}:${BF_VALIDATORS_ITEM_ID}`, {
+      status: derivedValidators.status, note: derivedValidators.note, evidence_ref: null, waiver_id: null,
+      assessed_by: "validator-engine", assessed_at: derivedValidators.evaluated_at, derived: true,
+    });
   }
 
   const customByDomain = new Map<DdDomain, CustomItemRow[]>();

@@ -26,6 +26,10 @@ import { evaluateValidatorCompleteness } from "../../../db/lib/validator-complet
 import { readRagView } from "../../../db/lib/rag-service.ts";
 import { listProjectWaivers } from "../../../db/lib/compliance.ts";
 import { recordKillCriteriaEvaluation } from "../../../db/repositories/kill-criteria.repository.ts";
+import { listConditions } from "../../../db/repositories/condition-precedent.repository.ts";
+import { countersignState } from "../../../db/lib/gate-effective.ts";
+import { gateIntegrityMode } from "./gate-integrity-flags.ts";
+import { certificationFailure } from "./gate-certification.ts";
 import {
   GATE_SNAPSHOT_SCHEMA_VERSION, createGateEvalRun, getBriefRecord, latestBriefRecord, listActiveKillOverrides,
   type BriefRecord, type EvalEvent, type KillOverrideRow,
@@ -76,6 +80,8 @@ export interface RequiredAck {
 export interface HardBlockInfo {
   code: string;
   keys: string[];
+  /** True when the rule's family is `enforce` (the GO would be refused); false in shadow, where it is audited only. */
+  enforced: boolean;
 }
 
 export interface GateSnapshot {
@@ -106,9 +112,13 @@ export interface GateSnapshot {
   nonwaivable_open: Array<{ key: string; checklist_id: string; item_id: string; status: string }>;
   wacc: { subject: string | null; status: "sourced" | "assumed" | "absent"; bf13: "set" | "unset" | "n/a" } | null;
   waivers: { active: Array<{ id: string; clause_ref: string; approved_by: string | null; expires_at: string }>; expiring_14d: string[] };
-  /** P3 placeholder: condition precedents (migration 0175) are not built yet. */
+  /** Open condition precedents of the project (ADR-0186 D4); DISPLAY at GO, a hard block at closing / group_ic. */
   conditions_open: Array<{ id: string; text: string; clear_by: string }>;
-  ladder: { prior_gate: string | null; prior_carrier: SnapshotEntity | null; prior_decision_id: string | null; prior_decision: string | null; effective: boolean; blocker: string | null };
+  ladder: {
+    prior_gate: string | null; prior_carrier: SnapshotEntity | null; prior_decision_id: string | null; prior_decision: string | null; effective: boolean; blocker: string | null;
+    /** The predecessor GO is recorded but still awaits its maker/checker countersign (ADR-0186 D6). */
+    prior_awaiting_countersign: boolean;
+  };
   ai: { brief_id: string; recommended: string | null; confidence: string | null; source: string } | null;
   required_acks: RequiredAck[];
   hard_blocks: HardBlockInfo[];
@@ -135,7 +145,7 @@ export interface BuiltSnapshot {
 
 // ── Kill criteria ───────────────────────────────────────────────────────────
 
-const OPPORTUNITY_PROCEDURES: Record<string, (track: LadderTrack | null) => string[]> = {
+export const OPPORTUNITY_PROCEDURES: Record<string, (track: LadderTrack | null) => string[]> = {
   screening: (t) => (t ? [`${t}-screening`] : ["greenfield-screening", "brownfield-screening"]),
   pre_fs: (t) => (t ? [`${t}-pre-fs`] : ["greenfield-pre-fs", "brownfield-pre-fs"]),
   target_screening: () => ["brownfield-target-screening", "brownfield-target-identification"],
@@ -302,7 +312,16 @@ function ladderSection(db: Database, o: BuildOptions, track: LadderTrack | null)
       : o.entityId;
     ref = entityId ? latestDecisionRef(db, priorCarrier, entityId, prior) : null;
   }
-  return { prior_gate: prior, prior_carrier: priorCarrier, prior_decision_id: ref?.id ?? null, prior_decision: ref?.decision ?? null, effective: block === null, blocker: block?.blocker ?? null };
+  let awaiting = false;
+  if (ref && priorCarrier === "project" && prior) {
+    const full = db.query("SELECT id, gate, decision, decided_by FROM gate_decision WHERE id = ?").get(ref.id) as { id: string; gate: string; decision: string; decided_by: string } | null;
+    const st = full ? countersignState(db, o.entityId, full) : "not_applicable";
+    awaiting = st === "pending_countersign" || st === "countersign_rejected";
+  }
+  return {
+    prior_gate: prior, prior_carrier: priorCarrier, prior_decision_id: ref?.id ?? null, prior_decision: ref?.decision ?? null,
+    effective: block === null, blocker: block?.blocker ?? null, prior_awaiting_countersign: awaiting,
+  };
 }
 
 function aiSection(brief: BriefRecord | null): GateSnapshot["ai"] {
@@ -326,9 +345,28 @@ export function requiredAcks(s: Pick<GateSnapshot, "kill" | "rag" | "nonwaivable
   return acks.sort(byKey);
 }
 
-function hardBlocks(kill: GateSnapshot["kill"]): HardBlockInfo[] {
-  const unoverridden = kill.triggered.filter((t) => t.binding && t.override_id === null).map((t) => t.key).sort();
-  return unoverridden.length > 0 ? [{ code: "kill_binding_unoverridden", keys: unoverridden }] : [];
+function hardBlocks(
+  snap: Pick<GateSnapshot, "kill" | "validators" | "conditions_open" | "entity" | "gate" | "track">,
+  extra: { certificationKeys: string[] },
+): HardBlockInfo[] {
+  const out: HardBlockInfo[] = [];
+  const unoverridden = snap.kill.triggered.filter((t) => t.binding && t.override_id === null).map((t) => t.key).sort();
+  if (unoverridden.length > 0) out.push({ code: "kill_binding_unoverridden", keys: unoverridden, enforced: gateIntegrityMode("kill_binding") === "enforce" });
+  // bf-01 (ADR-0186 D4): an applicable core validator is missing - brownfield dd GO, re-checked at entity_ic and group_ic.
+  const validatorsMode = gateIntegrityMode("validators");
+  if (validatorsMode !== "off") {
+    if (snap.validators && snap.validators.missing.length > 0) {
+      out.push({ code: "validators_incomplete", keys: [...snap.validators.missing].sort(), enforced: validatorsMode === "enforce" });
+    }
+    // bf-03 (O-3): load-bearing certification transferability unconfirmed at a brownfield pre_fs GO.
+    if (extra.certificationKeys.length > 0) out.push({ code: "certification_unconfirmed", keys: [...extra.certificationKeys].sort(), enforced: validatorsMode === "enforce" });
+    // group_ic GO with an open condition that waits for the group sitting.
+    if (snap.entity.type === "project" && snap.gate === "group_ic") {
+      const waiting = snap.conditions_open.filter((c) => c.clear_by === "group_ic").map((c) => c.id).sort();
+      if (waiting.length > 0) out.push({ code: "condition_open", keys: waiting, enforced: validatorsMode === "enforce" });
+    }
+  }
+  return out;
 }
 
 // ── Builder ─────────────────────────────────────────────────────────────────
@@ -414,11 +452,17 @@ export function buildGateSnapshot(o: BuildOptions): BuiltSnapshot {
     nonwaivable_open: isProject && NONWAIVABLE_GATES.has(o.gate) ? nonWaivableOpen(db, o.entityId) : [],
     wacc: isProject ? waccSection(db, o.entityId, track) : null,
     waivers: isProject ? waiversSection(db, o.entityId, now) : { active: [], expiring_14d: [] },
-    conditions_open: [] as GateSnapshot["conditions_open"],
+    conditions_open: (isProject ? listConditions(o.entityId, { status: "open", db }) : [])
+      .map((c) => ({ id: c.id, text: c.text, clear_by: c.clear_by }))
+      .sort((a, b) => (a.id < b.id ? -1 : 1)),
     ladder: ladderSection(db, o, track),
     ai: aiSection(brief),
   };
-  const snapshot: GateSnapshot = { ...partial, required_acks: requiredAcks(partial), hard_blocks: hardBlocks(kill) };
+  const certificationKeys =
+    !isProject && o.gate === "pre_fs" && track === "brownfield"
+      ? (certificationFailure(db, o.entityId)?.details?.certifications as Array<{ id: string }> | undefined)?.map((c) => c.id) ?? []
+      : [];
+  const snapshot: GateSnapshot = { ...partial, required_acks: requiredAcks(partial), hard_blocks: hardBlocks(partial, { certificationKeys }) };
   return { snapshot, hash: snapshotHash(snapshot), evalRunId, brief };
 }
 
@@ -443,6 +487,10 @@ export function snapshotInputVersion(db: Database, entityType: SnapshotEntity, e
   ];
   if (entityType === "project") {
     parts.push(
+      one("SELECT COUNT(*) c, COALESCE(MAX(cleared_at),'') m, COALESCE(MAX(rowid),0) r FROM condition_precedent WHERE project_id = ?", entityId),
+      one("SELECT COUNT(*) c, COALESCE(MAX(updated_at),'') m FROM approval_chain WHERE project_id = ?", entityId),
+    );
+    parts.push(
       one("SELECT COUNT(*) c, COALESCE(MAX(assessed_at),'') m FROM rag_assessment WHERE project_id = ?", entityId),
       one("SELECT COUNT(*) c, COALESCE(MAX(a.as_of),'') m FROM assumption a JOIN run r ON r.id = a.run_id WHERE r.project_id = ?", entityId),
       one("SELECT COUNT(*) c, COALESCE(MAX(rowid),0) m, COALESCE(MAX(approved_at),'') a FROM waiver WHERE project_id = ?", entityId),
@@ -453,6 +501,7 @@ export function snapshotInputVersion(db: Database, entityType: SnapshotEntity, e
     );
   } else {
     parts.push(
+      one("SELECT COUNT(*) c, COALESCE(MAX(c.confirmed_at),'') m, COALESCE(SUM(c.load_bearing),0) l FROM certification c JOIN md_project p ON p.id = c.project_id WHERE p.source_opportunity_id = ?", entityId),
       one("SELECT COUNT(*) c, COALESCE(MAX(updated_at),'') m FROM brownfield_target WHERE opportunity_id = ?", entityId),
       one("SELECT COUNT(*) c, COALESCE(MAX(rowid),0) m FROM route_decision WHERE opportunity_id = ?", entityId),
     );

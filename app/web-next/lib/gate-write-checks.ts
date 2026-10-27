@@ -3,7 +3,10 @@
 // Each check runs through applyFamily so off / shadow / enforce behave the
 // same on the opportunity and project carriers.
 import { getDb } from "../../../db/client.ts";
-import { applyFamily, type IntegrityContext, type IntegrityFailure } from "./gate-integrity.ts";
+import { evaluateValidatorCompleteness } from "../../../db/lib/validator-completeness.ts";
+import { resolveTrack } from "./project-track.ts";
+import { applyFamily, recordWouldBlock, type IntegrityContext, type IntegrityFailure } from "./gate-integrity.ts";
+import { gateIntegrityMode } from "./gate-integrity-flags.ts";
 import { ladderBlock } from "./gate-ladder.ts";
 import { IC_STEP_LABEL } from "./gate-sequence-view.ts";
 import { parseRationale } from "./ic-gap-override.ts";
@@ -41,7 +44,13 @@ function rationaleFailure(ctx: IntegrityContext, field: string, text: string, pr
 }
 
 export function goLadderCheck(ctx: IntegrityContext): Response | null {
-  return applyFamily("ladder", ctx, () => ladderFailure(ctx));
+  const denied = applyFamily("ladder", ctx, () => ladderFailure(ctx));
+  // ADR-0186 D6, family `maker_checker` in shadow: the recorded-but-uncountersigned predecessor counts as GO today;
+  // audit the would-block (de-duplicated per entity, gate, code, day) so the flip to enforce is informed.
+  if (!denied && ctx.entityType === "project" && gateIntegrityMode("maker_checker") === "shadow" && gateIntegrityMode("ladder") !== "off") {
+    if (ladderBlock(ctx.entityType, ctx.entityId, ctx.gate, { strict: true })) recordWouldBlock(getDb(), ctx, "countersign_pending");
+  }
+  return denied;
 }
 
 /** Decision rationale (decision profile, with the cross-gate duplicate rule) and, when present, the gap rationale. */
@@ -51,3 +60,26 @@ export function goRationaleCheck(ctx: IntegrityContext, rationale: string, gapRa
     (gapRationale ? applyFamily("rationale", ctx, () => rationaleFailure(ctx, "gap_rationale", gapRationale, "decision", false)) : null)
   );
 }
+
+/**
+ * ADR-0186 D4 (family `validators`): the brownfield dd / entity_ic / group_ic GO needs every applicable core validator
+ * recorded (neb-policy 2.3, no waiver path). Run BEFORE the stage-prerequisite gaps so the specific code
+ * (409 validators_incomplete) is the answer: with bf-01 derived, an incomplete validator set also keeps S9 incomplete,
+ * and the generic gap list would otherwise mask the reason. The decision write re-checks it inside its transaction.
+ */
+export function goValidatorsCheck(ctx: IntegrityContext): Response | null {
+  if (ctx.entityType !== "project" || !VALIDATOR_GO_GATES.has(ctx.gate)) return null;
+  return applyFamily("validators", ctx, () => {
+    const db = getDb();
+    if (resolveTrack(ctx.entityId, db).track !== "brownfield") return null;
+    const missing = [...evaluateValidatorCompleteness(ctx.entityId, null, db).halt.missing].sort() as string[];
+    if (missing.length === 0) return null;
+    return {
+      status: 409,
+      code: "validators_incomplete",
+      message: `GO is not allowed - the required M&A validator(s) ${missing.join(", ")} are not recorded (neb-policy 2.3; no waiver path). HOLD or KILL can be recorded at any time.`,
+      details: { missing },
+    };
+  });
+}
+const VALIDATOR_GO_GATES: ReadonlySet<string> = new Set(["dd", "entity_ic", "group_ic"]);
