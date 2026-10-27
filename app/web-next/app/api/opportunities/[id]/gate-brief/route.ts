@@ -16,6 +16,7 @@ import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope
 import { completeOrFallback, isLlmConfigured } from "../../../../../lib/llm.ts";
 import { route } from "../../../../../lib/route.ts";
 import { promptAgent, systemMessage } from "../../../../../lib/prompts.ts";
+import { KILL_MANIFEST_ENTRY, briefKillEvaluation, killContextBlock, persistBriefRecord } from "../../../../../lib/gate-brief-integrity.ts";
 
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
@@ -31,8 +32,10 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();
 
-  const manifest = gateManifest("opportunity", gate)!;
-  const context = buildGateContext(db, "opportunity", id, gate);
+  // ADR-0186 D3: kill-criteria outcomes are evaluated (and, for a project gate, persisted) before the brief is composed.
+  const killEval = briefKillEvaluation(db, { entityType: "opportunity", entityId: id, gate, actor: ctx.userId });
+  const manifest = killEval ? [...gateManifest("opportunity", gate)!, KILL_MANIFEST_ENTRY] : gateManifest("opportunity", gate)!;
+  const context = buildGateContext(db, "opportunity", id, gate) + (killEval ? killContextBlock(killEval.kill) : "");
 
   let brief;
   let source: "llm" | "synthesis" = "synthesis";
@@ -77,6 +80,8 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     note = "LLM 미구성 — 결정론 폴백(권고는 스펙 공개 기준으로만 산출). CO_NEWBIZ_LLM_* 구성 후 재생성하세요.";
   }
 
+  // ADR-0186 D9: the recommendation is stored beside the later human decision (brief_id travels with the decision).
+  const briefId = persistBriefRecord(db, { entityType: "opportunity", entityId: id, gate, actor: ctx.userId, brief, source, provider, evalRunId: killEval?.evalRunId ?? null });
   appendAudit(db, { actor: ctx.userId, action: "gate_brief.generate", target: `${id}:${gate}:${source}`, now: new Date().toISOString() });
-  return ok({ source, provider, note, manifest, gate, brief }, 200);
+  return ok({ source, provider, note, manifest, gate, brief, brief_id: briefId, kill: killEval?.kill ?? null }, 200);
 });

@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
-// @version 1.1.0
+// @version 1.1.1
+// 1.1.1 (ADR-0186 P2): the latest-run anchor skips gate_integrity_eval runs (they carry no assumptions).
 /**
  * watch:run — the OS-scheduler-driven monitoring cycle (design v1.0 §4-3,
  * ADR-0019, FR-MON-01, Wave 5.4). NEVER run from an in-process timer (an
@@ -113,7 +114,7 @@ export function runWatchCycle(db: Database, options: RunWatchCycleOptions): Watc
       }, watches[0]?.last_checked_at ?? "");
 
       const latestRun = db
-        .query("SELECT id FROM run WHERE project_id = ? ORDER BY created_at DESC LIMIT 1")
+        .query("SELECT id FROM run WHERE project_id = ? AND COALESCE(label, '') NOT LIKE 'gate_integrity_eval:%' ORDER BY created_at DESC LIMIT 1")
         .get(projectId) as { id: string } | null;
 
       const anchorRefs = latestRun

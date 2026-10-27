@@ -1,4 +1,5 @@
-// @version 1.0.0
+// @version 1.0.1
+// 1.0.1 (ADR-0186 P2): --fix never orphan-deletes snapshot-bearing gate decisions (skipped, still reported).
 // co-newbiz DB integrity gate.
 //
 // SQLite FKs cover ordinary relationships, but gate_decision intentionally uses
@@ -74,7 +75,12 @@ export function findGateDecisionReferenceIssues(db: Db): GateDecisionReferenceIs
 }
 
 export function deleteOrphanGateDecisions(db: Db): number {
-  const issues = findGateDecisionReferenceIssues(db).filter((i) => i.reason !== "unknown_entity_type");
+  // ADR-0186: a decision with a gate_decision_snapshot is append-only evidence - never orphan-deleted (reported, skipped).
+  const hasSnapshotTable = db.query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'gate_decision_snapshot'").get() !== null;
+  const withSnapshot = new Set(
+    hasSnapshotTable ? (db.query("SELECT decision_id FROM gate_decision_snapshot").all() as Array<{ decision_id: string }>).map((r) => r.decision_id) : [],
+  );
+  const issues = findGateDecisionReferenceIssues(db).filter((i) => i.reason !== "unknown_entity_type" && !withSnapshot.has(i.id));
   if (issues.length === 0) return 0;
   const deleteOne = db.prepare("DELETE FROM gate_decision WHERE id = ?");
   db.transaction(() => {

@@ -6,7 +6,7 @@
 // 마운트된다. HOLD는 missing_artifacts 없이 기록할 수 없다(soft-pass 방지).
 import Link from "next/link";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { api } from "../lib/api.ts";
+import { api, ApiError } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness, canWriteProject } from "../lib/project-write-access.ts";
 import { GATE_LABEL_KEY } from "../lib/label-keys.ts";
@@ -18,6 +18,8 @@ import { useModalFocus } from "../lib/use-modal-focus.ts";
 import { currentTurn, gateSequenceBlocker, gateState } from "../lib/gate-sequence-view.ts";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
+import { GateAckBlock, GateSnapshotSummary, useGateSnapshot } from "./GateSnapshotAck.tsx";
+import { EMPTY_ACK_STATE, ackProblemsFromError, buildAckPayload, reconcileAckState, type AckProblems, type AckState, type GateSnapshotEnvelope } from "../lib/gate-ack-view.ts";
 
 const IC_GATES: readonly string[] = ["entity_ic", "group_ic"];
 
@@ -31,7 +33,7 @@ interface GateLatest {
   /** ADR-0182 §5 — 판단 필요 claims confirmed with this decision. */
   judgement_confirmations?: string[];
 }
-interface GateHistoryRow extends GateLatest { id: string; decided_by: string; decided_at: string; /** ADR-0182 §5 — needs_judgement claims the human marked as reviewed. */ judgement_confirmations?: string[] }
+interface GateHistoryRow extends GateLatest { legacy?: boolean; snapshot_hash?: string | null; acknowledgements?: Array<{ key: string; kind: string; reason: string }>; ai_recommended_decision?: string | null; divergence_reason?: string | null; id: string; decided_by: string; decided_at: string; /** ADR-0182 §5 — needs_judgement claims the human marked as reviewed. */ judgement_confirmations?: string[] }
 
 
 /** Scroll to a gate decision panel and focus its first field (the "결정 기록" primary of gate stages). */
@@ -99,6 +101,8 @@ function GapDialog({ gateLabel, gaps, onCancel, onSubmit }: { gateLabel: string;
 }
 
 export interface GateBriefData {
+  /** Stored brief record id (gate_brief_record); sent with the decision. */
+  brief_id?: string;
   source: "llm" | "synthesis";
   provider: string | null;
   note: string | null;
@@ -161,7 +165,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   hideBrief?: boolean;
   /** Parent-driven rationale prefill (proposal only; the person still records). A new nonce applies the text. */
   rationalePrefill?: { text: string; nonce: number } | null;
-}) {const tr = useTranslations(); const t = useTranslations("components.gateDecision.panel"); const tc = useTranslations("common");
+}) {const tr = useTranslations(); const t = useTranslations("components.gateDecision.panel"); const tc = useTranslations("common"); const ts = useTranslations("components.gateSnapshot"); const te = useTranslations("errors.rationale");
   const { me } = useAuth();
   const { toast } = useToast();
   const { confirm, confirmDialog } = useConfirm();
@@ -232,11 +236,26 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   const [briefData, setBriefData] = useState<GateBriefData | null>(null);
   const [briefLoading, setBriefLoading] = useState(false);
   const [briefError, setBriefError] = useState<string | null>(null);
+  // Acknowledged-GO state: snapshot, entered reasons, server problems, divergence reason.
+  const [ackState, setAckState] = useState<AckState>(EMPTY_ACK_STATE);
+  const [ackProblems, setAckProblems] = useState<AckProblems | null>(null);
+  const [divergence, setDivergence] = useState("");
+  const [divergenceProblem, setDivergenceProblem] = useState<string | null>(null);
+  const [staleNotice, setStaleNotice] = useState<string | null>(null);
+  const [viewed, setViewed] = useState<{ id: string; data: { legacy: boolean; snapshot: unknown; acknowledgements?: Array<{ key: string; kind: string; reason: string }> } | null } | null>(null);
 
   // Project-entity carrier (S8+, ADR-0095/0098) records through the project
   // route; the default stays the S1~S7 opportunity route.
   const basePath = `/api/${entityType === "project" ? "projects" : "opportunities"}/${encodeURIComponent(opportunityId)}/gate-decisions`;
+  const entityBase = `/api/${entityType === "project" ? "projects" : "opportunities"}/${encodeURIComponent(opportunityId)}`;
   const briefPath = `/api/${entityType === "project" ? "projects" : "opportunities"}/${encodeURIComponent(opportunityId)}/gate-brief`;
+
+  const snap = useGateSnapshot(entityBase, form.gate, briefData?.brief_id ?? null, canRecord);
+  const snapshot = snap.env?.snapshot ?? null;
+  const aiRec = snapshot?.ai?.recommended ?? null;
+  const divergent = !!aiRec && aiRec !== form.decision;
+  // A different gate or entity starts a fresh acknowledgement list.
+  useEffect(() => { setAckState(EMPTY_ACK_STATE); setAckProblems(null); setStaleNotice(null); setDivergenceProblem(null); }, [form.gate, opportunityId]);
 
   const load = useCallback(() => {
     api.get<{ latest: GateLatest[]; history: GateHistoryRow[] }>(basePath)
@@ -266,6 +285,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
     try {
       const r = await api.post<GateBriefData>(briefPath, { gate: form.gate });
       setBriefData(r.data);
+      setStaleNotice(null);
     } catch (err) {
       setBriefError(err instanceof Error ? err.message : t("failedToGenerateBrief"));
     } finally {
@@ -315,19 +335,88 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
         learning_capture: form.decision === "kill" ? form.learning.trim() : undefined,
         // ADR-0182 §5: checked 판단 필요 claims ride with the decision.
         judgement_confirmations: judgementConfirmations.length > 0 ? judgementConfirmations : undefined,
+        // Gate integrity: the snapshot the person reviewed, their acknowledgements and the AI-divergence reason.
+        ...(snap.env ? {
+          snapshot_hash: snap.env.snapshot_hash,
+          acknowledgements: form.decision === "go" ? buildAckPayload(snap.env.snapshot.required_acks, ackState) : undefined,
+          brief_id: briefData?.brief_id ?? snap.env.snapshot.ai?.brief_id,
+          divergence_reason: divergent && divergence.trim() ? divergence.trim() : undefined,
+        } : {}),
       });
       // Step 2-4: toast, the form collapses into a "recorded" summary (no resubmission), next-stage prompt.
       setRecorded({ gate: form.gate, decision: form.decision, rationale: form.rationale.trim(), at: new Date().toISOString(), gap: gapRationale ?? null });
       toast(t("recordedTheP1P2Decision", { p1: tr(GATE_LABEL_KEY[form.gate] ?? form.gate), p2: form.decision.toUpperCase() }));
       setForm((f) => ({ ...f, rationale: "", missing: "", learning: "" }));
       setJudgementChecks({});
+      setAckState(EMPTY_ACK_STATE); setAckProblems(null); setDivergence(""); setStaleNotice(null);
+      void snap.reload();
       load();
       onRecorded?.(form.decision, form.gate);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("failedToRecordTheDecision"));
+      handleRecordError(err);
     } finally {
       setSaving(false);
     }
+  }
+
+  /** 409 snapshot_stale swaps in the fresh snapshot (entered reasons kept for keys that still exist); 422s land next to their fields. */
+  function handleRecordError(err: unknown) {
+    if (!(err instanceof ApiError)) { setError(err instanceof Error ? err.message : t("failedToRecordTheDecision")); return; }
+    setAckProblems(null); setDivergenceProblem(null); setStaleNotice(null);
+    const d = err.details as Record<string, unknown>;
+    if (err.code === "snapshot_stale" && d.snapshot && typeof d.snapshot_hash === "string") {
+      const fresh: GateSnapshotEnvelope = { gate: form.gate, snapshot_hash: d.snapshot_hash, snapshot: d.snapshot as GateSnapshotEnvelope["snapshot"] };
+      const r = reconcileAckState(ackState, snap.env?.snapshot.required_acks ?? [], fresh.snapshot.required_acks);
+      setAckState(r.state);
+      snap.replace(fresh);
+      setStaleNotice(ts("staleChanged", { added: r.added.length, dropped: r.dropped.length }));
+      setError(null);
+      return;
+    }
+    if (err.code === "ack_required" || (err.code === "rationale_insufficient" && d.field === "acknowledgements")) {
+      setAckProblems(ackProblemsFromError(err.code, d));
+      setError(err.message);
+      return;
+    }
+    if (err.code === "divergence_reason_required") { setDivergenceProblem(err.message); setError(null); return; }
+    if (err.code === "rationale_insufficient" && d.field === "divergence_reason") {
+      setDivergenceProblem(typeof d.reason === "string" ? te(d.reason as never) : err.message); setError(null); return;
+    }
+    if (err.code === "kill_binding_unoverridden") { void snap.reload(); }
+    setError(err.message);
+  }
+
+  async function viewSnapshot(id: string) {
+    if (viewed?.id === id) { setViewed(null); return; }
+    try {
+      const r = await api.get<{ legacy: boolean; snapshot: unknown; acknowledgements?: Array<{ key: string; kind: string; reason: string }> }>(`${basePath}/${encodeURIComponent(id)}/snapshot`);
+      setViewed({ id, data: r.data });
+    } catch (e) {
+      setViewed({ id, data: null });
+      setError(e instanceof Error ? e.message : t("failedToLoadTheProgress"));
+    }
+  }
+
+  /** History cell: legacy label, or acknowledgement count with a way to open the stored snapshot. */
+  function snapshotCell(h: GateHistoryRow) {
+    return (
+      <span className="block">
+        {h.legacy ? <span className="status-chip status-not-started">{ts("legacy")}</span> : (
+          <button type="button" className="btn-ghost btn-sm" aria-expanded={viewed?.id === h.id} onClick={() => void viewSnapshot(h.id)}>
+            {ts("viewSnapshot", { count: h.acknowledgements?.length ?? 0 })}
+          </button>
+        )}
+        {h.divergence_reason && <span className="block">{ts("divergenceRecorded", { ai: (h.ai_recommended_decision ?? "").toUpperCase(), reason: h.divergence_reason })}</span>}
+        {viewed?.id === h.id && viewed.data && (
+          <span className="block" role="region" aria-label={ts("storedSnapshot")}>
+            {(viewed.data.acknowledgements ?? []).length === 0 ? ts("noAcks") : (
+              <ul className="sizing-note-list">{viewed.data.acknowledgements!.map((a) => <li key={a.key}><strong>{a.key}</strong>: {a.reason}</li>)}</ul>
+            )}
+            <details><summary className="cursor-pointer text-[color:var(--accent)]">{ts("rawSnapshot")}</summary><pre className="pre-wrap text-[length:var(--fs-caption)]">{JSON.stringify(viewed.data.snapshot, null, 2)}</pre></details>
+          </span>
+        )}
+      </span>
+    );
   }
 
   const panelKey = gates.length === 1 ? gates[0] : gates.join(",");
@@ -556,6 +645,22 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
               />
             </label>
           )}
+          {snapshot && (
+            <div className="mt-3" aria-label={ts("summaryHeading")} role="group">
+              <h4 className="text-[length:var(--fs-body)] mb-1">{ts("summaryHeading")}</h4>
+              <GateSnapshotSummary snapshot={snapshot} gateLabel={labelOf} />
+              <GateAckBlock
+                snapshot={snapshot}
+                state={ackState}
+                onChange={setAckState}
+                problems={ackProblems}
+                decision={form.decision}
+                notice={staleNotice}
+                divergence={divergent && aiRec ? { aiRecommended: aiRec, value: divergence, onChange: setDivergence, required: form.decision === "go", problem: divergenceProblem } : null}
+              />
+            </div>
+          )}
+          {snap.loading && !snapshot && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2" role="status">{ts("loading")}</p>}
           <div className="flex flex-wrap items-center gap-2 mt-2">
             <button type="submit" className="btn-ghost btn-sm" disabled={saving || !!submitReason} aria-describedby={submitReason ? `${formId}-reason` : undefined}>
               {saving ? tc("recording") : tc("decision")}
@@ -607,6 +712,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
                             {h.rationale}
                             {h.gap_override && <span className="block">{tc("missingArtifactExceptionColon")} {h.gap_override.rationale} {t("missing")} {h.gap_override.items.join("; ")})</span>}
                             {!!h.judgement_confirmations?.length && <span className="block"><span className="status-chip status-in-progress">{t("humanConfirmation")} {h.judgement_confirmations.length}{tc("countUnit")}</span></span>}
+                            {snapshotCell(h)}
                           </td>
                           <td className="text-[length:var(--fs-caption)]">{h.decided_by}</td>
                           <td className="text-[length:var(--fs-caption)] tabular-nums">{h.decided_at.slice(0, 10)}</td>
@@ -637,6 +743,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
                     {h.rationale}
                     {h.gap_override && <span className="block">{tc("missingArtifactExceptionColon")} {h.gap_override.rationale} {t("missing2")} {h.gap_override.items.join("; ")})</span>}
                     {!!h.judgement_confirmations?.length && <span className="block"><span className="status-chip status-in-progress">{t("humanConfirmation2")} {h.judgement_confirmations.length}{tc("countUnit")}</span></span>}
+                    {snapshotCell(h)}
                   </td>
                   <td className="text-[length:var(--fs-caption)]">{h.decided_by}</td>
                   <td className="text-[length:var(--fs-caption)] tabular-nums">{h.decided_at.slice(0, 10)}</td>

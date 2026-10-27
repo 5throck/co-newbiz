@@ -56,7 +56,7 @@ export const POST = route(async (request: Request) => {
   if (!entityId) return badRequest("invalid_request", "entity_id is required.");
 
   const validated = validatePayload(kind, body.payload);
-  if (!validated.ok) return badRequest("invalid_payload", validated.message);
+  if (!validated.ok) return badRequest(validated.code ?? "invalid_payload", validated.message);
   const payload = validated.payload;
 
   const rationale = (body.rationale ?? (typeof payload.rationale === "string" ? payload.rationale : "")).trim();

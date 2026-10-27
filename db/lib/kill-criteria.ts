@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.1.1
 /**
  * Kill-criteria evaluator — ADR-0057. The runtime consumer the registry was
  * staged for: evaluates a procedure's ENABLED registry entries
@@ -38,7 +38,8 @@
 
 import type { Database } from "bun:sqlite";
 import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { fillSnapshot } from "./snapshot-filler.ts";
 import { evaluatePredicate, parsePredicate } from "./predicate.ts";
 import {
@@ -51,8 +52,13 @@ import {
 
 export { KILL_ACTIONS, validateRegistryEntry, type RegistryEntry };
 
-/** procedures/_kill-criteria/ — db/lib/../.. is the project root. */
-const REGISTRY_DIR = join(import.meta.dir, "..", "..", "procedures", "_kill-criteria");
+/**
+ * procedures/_kill-criteria/ — db/lib/../.. is the project root. 1.1.1 (ADR-0186 P2): the gate-decision
+ * routes now call this evaluator from the Next server bundle, where Bun's import.meta.dir is undefined, so
+ * the directory falls back to this module's URL (the lib/ic-review-steps.ts pattern).
+ */
+const HERE = typeof import.meta.dir === "string" ? import.meta.dir : dirname(fileURLToPath(import.meta.url));
+const REGISTRY_DIR = join(HERE, "..", "..", "procedures", "_kill-criteria");
 
 export interface TriggeredCriterion {
   criterion_id: string;

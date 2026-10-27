@@ -1484,3 +1484,51 @@ model watch_rule {
 
   @@index([watch_id], map: "idx_watch_rule_watch")
 }
+
+/// ADR-0186 D1 (migration 0173): the acknowledged-GO snapshot, one per decision, append-only (triggers reject UPDATE/DELETE).
+model gate_decision_snapshot {
+  decision_id           String  @id
+  schema_version        Int
+  snapshot_json         String
+  snapshot_hash         String
+  submitted_hash        String?
+  acknowledgements_json String  @default("[]")
+  computed_at           String
+  engine_versions_json  String
+  eval_run_id           String?
+  brief_id              String?
+}
+
+/// ADR-0186 D9 (migration 0173): the AI gate brief's recommendation, append-only.
+model gate_brief_record {
+  id                   String  @id
+  entity_type          String
+  entity_id            String
+  gate                 String
+  recommended          String?
+  confidence           String?
+  source               String  @default("synthesis")
+  rationale_draft_hash String?
+  llm_call_ref         String?
+  eval_run_id          String?
+  generated_by         String
+  generated_at         String
+
+  @@index([entity_type, entity_id, gate, generated_by, generated_at(sort: Desc)], map: "idx_gate_brief_record_entity")
+}
+
+/// ADR-0186 D1/D6 (migration 0174): a recorded Group IC override of a binding (halt) kill criterion; rows are revoked, never deleted.
+model kill_criteria_override {
+  id            String  @id
+  entity_type   String
+  entity_id     String
+  procedure_key String
+  criterion_id  String
+  reason        String
+  issued_by     String
+  issued_at     String
+  revoked_at    String?
+  revoked_by    String?
+
+  @@index([entity_type, entity_id, revoked_at], map: "idx_kill_criteria_override_entity")
+}

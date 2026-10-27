@@ -31,6 +31,7 @@ export async function recordGate(
   if (decision === "kill") {
     await form.locator("textarea[required]").first().fill(opts.learning ?? "");
   }
+  await fillGateAcknowledgements(form, decision);
   const responsePromise = page.waitForResponse((r) => /gate-decisions$/.test(new URL(r.url()).pathname) && r.request().method() === "POST");
   await form.locator('button[type="submit"]').last().click();
   // Shared gate-recording flow (R2-B): a confirm dialog first - or, for an IC GO with missing artifacts,
@@ -141,4 +142,22 @@ export async function seeNot(page: Page, text: string | RegExp, timeout = 5_000)
   await page.getByText(text).first().waitFor({ state: "detached", timeout }).catch(async () => {
     if (await page.getByText(text).first().isVisible()) throw new Error(`unexpected text still visible: ${String(text)}`);
   });
+}
+
+/**
+ * Acknowledged-GO block (ADR-0186 P2): once the snapshot has loaded, give a reason for every listed acknowledgement
+ * and, when the AI recommendation differs, the divergence reason. With the flags off the block is empty and this is a no-op.
+ */
+export async function fillGateAcknowledgements(form: Locator, decision: GateDecision, reason = "E2E: 항목을 검토했고 영향을 인지한 채 진행함"): Promise<void> {
+  if (decision !== "go") return;
+  // The snapshot loads after the panel mounts; the summary heading marks it as present.
+  await form.getByText("이 진행의 현재 상태").waitFor({ state: "visible", timeout: 10_000 }).catch(() => undefined);
+  const block = form.locator('[data-testid="gate-ack-block"]');
+  if ((await block.count()) === 0) return;
+  const boxes = block.locator("textarea");
+  const n = await boxes.count();
+  for (let i = 0; i < n; i++) {
+    const box = boxes.nth(i);
+    if (!(await box.inputValue())) await box.fill(reason);
+  }
 }

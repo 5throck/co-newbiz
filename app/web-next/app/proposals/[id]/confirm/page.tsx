@@ -13,6 +13,8 @@ import { api, ApiError } from "../../../../lib/api.ts";
 import { Button, PageState, PrimaryAction } from "../../../../components/ui.tsx";
 import { ReviewBuckets } from "../../../../components/ReviewBuckets.tsx";
 import { StatusPage } from "../../../../components/StatusPage.tsx";
+import { GateAckBlock, GateSnapshotSummary } from "../../../../components/GateSnapshotAck.tsx";
+import { EMPTY_ACK_STATE, ackProblemsFromError, buildAckPayload, reconcileAckState, type AckProblems, type AckState, type GateSnapshotEnvelope } from "../../../../lib/gate-ack-view.ts";
 
 type Payload = Record<string, unknown>;
 
@@ -43,6 +45,8 @@ interface ConfirmView {
   proposal: Proposal;
   confirm_nonce: string | null;
   rag: RagView | null;
+  /** Gate-decision proposals: the fresh snapshot the person acknowledges at confirm time. */
+  gate_snapshot?: GateSnapshotEnvelope | null;
 }
 
 // i18n: kind/status/RAG texts resolve through pages.proposalConfirm.* keys at render time.
@@ -94,6 +98,16 @@ export default function ProposalConfirmPage() {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Payload>({});
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const ts = useTranslations("components.gateSnapshot");
+  const tg = useTranslations("common.gate");
+  const [ackState, setAckState] = useState<AckState>(EMPTY_ACK_STATE);
+  const [ackProblems, setAckProblems] = useState<AckProblems | null>(null);
+  const [divergence, setDivergence] = useState("");
+  const [divergenceProblem, setDivergenceProblem] = useState<string | null>(null);
+  const [staleNotice, setStaleNotice] = useState<string | null>(null);
+  const ackRef = useRef<AckState>(EMPTY_ACK_STATE);
+  const requiredRef = useRef<GateSnapshotEnvelope["snapshot"]["required_acks"]>([]);
+  ackRef.current = ackState;
 
   const load = useCallback(() => {
     setError(null);
@@ -101,6 +115,12 @@ export default function ProposalConfirmPage() {
     api
       .get<ConfirmView>(`/api/proposals/${encodeURIComponent(id)}/confirm`)
       .then((r) => {
+        // Entered reasons survive a refresh for the keys that still exist.
+        const next = r.data.gate_snapshot?.snapshot.required_acks ?? [];
+        const rec = reconcileAckState(ackRef.current, requiredRef.current, next);
+        if (requiredRef.current.length > 0 && (rec.added.length > 0 || rec.dropped.length > 0)) setStaleNotice(ts("staleChanged", { added: rec.added.length, dropped: rec.dropped.length }));
+        requiredRef.current = next;
+        setAckState(rec.state);
         setView(r.data);
         setDraft(r.data.proposal.payload);
       })
@@ -109,7 +129,7 @@ export default function ProposalConfirmPage() {
         if (e instanceof ApiError && e.status === 404) setMissing(true);
         else setError(e instanceof ApiError ? e.message : t("loadFailed"));
       });
-  }, [id]);
+  }, [id, ts]);
 
   useEffect(load, [load]);
 
@@ -127,6 +147,11 @@ export default function ProposalConfirmPage() {
       .map((k) => ({ key: k, before: proposal.payload[k], after: draft[k] }));
   }, [draft, proposal]);
 
+  const gs = proposal?.kind === "gate_decision" && pending ? view?.gate_snapshot ?? null : null;
+  const aiRec = gs?.snapshot.ai?.recommended ?? null;
+  const proposedDecision = proposal?.kind === "gate_decision" ? String(draft.decision ?? proposal.payload.decision ?? "") : "";
+  const decisionIsGo = proposedDecision === "go";
+  const divergent = !!aiRec && !!proposedDecision && aiRec !== proposedDecision;
   const gateForReview =
     proposal?.kind === "gate_decision" ? String(proposal.payload.gate) : proposal?.kind === "transition_decision" ? "transition" : null;
 
@@ -136,16 +161,27 @@ export default function ProposalConfirmPage() {
     setNotice(null);
     setStatus(t("confirming"));
     try {
-      const body: { nonce: string; payload?: Payload } = { nonce: view.confirm_nonce };
+      const body: Record<string, unknown> = { nonce: view.confirm_nonce };
       if (changes.length > 0) body.payload = draft;
+      if (gs) {
+        body.snapshot_hash = gs.snapshot_hash;
+        body.acknowledgements = buildAckPayload(gs.snapshot.required_acks, ackState);
+        if (divergent && divergence.trim()) body.divergence_reason = divergence.trim();
+      }
+      setAckProblems(null); setDivergenceProblem(null); setStaleNotice(null);
       await api.post(`/api/proposals/${encodeURIComponent(id)}/confirm`, body);
       setStatus(t("confirmed"));
       setEditing(false);
       load();
     } catch (e) {
       setStatus("");
+      if (e instanceof ApiError) {
+        const d = e.details as Record<string, unknown>;
+        if (e.code === "ack_required" || (e.code === "rationale_insufficient" && d.field === "acknowledgements")) setAckProblems(ackProblemsFromError(e.code, d));
+        if (e.code === "divergence_reason_required" || (e.code === "rationale_insufficient" && d.field === "divergence_reason")) setDivergenceProblem(e.message);
+      }
       setNotice(e instanceof ApiError ? `${e.message} (${e.code})` : t("confirmFailed"));
-      // The nonce was consumed; reload to review the current state again.
+      // The nonce was consumed on every attempt: re-GET for a fresh nonce and snapshot.
       load();
     } finally {
       setBusy(false);
@@ -304,6 +340,22 @@ export default function ProposalConfirmPage() {
           )}
 
           {gateForReview && <ReviewBuckets entityType={proposal.entity_type} entityId={proposal.entity_id} gates={[gateForReview]} variant="expanded" />}
+
+          {gs && (
+            <section aria-labelledby="ack-heading">
+              <h2 id="ack-heading">{ts("summaryHeading")}</h2>
+              <GateSnapshotSummary snapshot={gs.snapshot} gateLabel={(g) => tg(g as never)} />
+              <GateAckBlock
+                snapshot={gs.snapshot}
+                state={ackState}
+                onChange={setAckState}
+                problems={ackProblems}
+                decision={decisionIsGo ? "go" : proposedDecision === "kill" ? "kill" : "hold"}
+                notice={staleNotice}
+                divergence={divergent && aiRec ? { aiRecommended: aiRec, value: divergence, onChange: setDivergence, required: decisionIsGo, problem: divergenceProblem } : null}
+              />
+            </section>
+          )}
 
           {pending && (
             <section aria-labelledby="decide-heading">
