@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-27T19:04:58.082Z
+**Generated**: 2026-10-27T19:09:27.276Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -19,48 +19,48 @@
 
 | Name | File | Tier | Model | Last Modified |
 |------|------|------|-------|---------------|
-| antitrust-agent | agents/antitrust-agent.md | high | inherit | 2026-10-25 |
-| backend-engineer | agents/backend-engineer.md | medium | inherit | 2026-10-26 |
+| antitrust-agent | agents/antitrust-agent.md | high | inherit | 2026-10-27 |
+| backend-engineer | agents/backend-engineer.md | medium | inherit | 2026-10-27 |
 | brownfield-agent | agents/brownfield-agent.md | high | inherit | 2026-10-27 |
-| certification-agent | agents/certification-agent.md | high | inherit | 2026-10-26 |
-| commercial-dd-agent | agents/commercial-dd-agent.md | medium | inherit | 2026-10-26 |
-| compliance-officer | agents/compliance-officer.md | high | inherit | 2026-10-26 |
-| customer-retention-agent | agents/customer-retention-agent.md | medium | inherit | 2026-10-26 |
-| data-architect | agents/data-architect.md | high | inherit | 2026-10-26 |
-| dba | agents/dba.md | medium | inherit | 2026-10-26 |
-| design-system-agent | agents/design-system-agent.md | medium | inherit | 2026-10-26 |
-| docs-writer | agents/docs-writer.md | medium | inherit | 2026-10-26 |
+| certification-agent | agents/certification-agent.md | high | inherit | 2026-10-27 |
+| commercial-dd-agent | agents/commercial-dd-agent.md | medium | inherit | 2026-10-27 |
+| compliance-officer | agents/compliance-officer.md | high | inherit | 2026-10-27 |
+| customer-retention-agent | agents/customer-retention-agent.md | medium | inherit | 2026-10-27 |
+| data-architect | agents/data-architect.md | high | inherit | 2026-10-27 |
+| dba | agents/dba.md | medium | inherit | 2026-10-27 |
+| design-system-agent | agents/design-system-agent.md | medium | inherit | 2026-10-27 |
+| docs-writer | agents/docs-writer.md | medium | inherit | 2026-10-27 |
 | financial-analyst | agents/financial-analyst.md | high | inherit | 2026-10-27 |
-| financing-agent | agents/financing-agent.md | medium | inherit | 2026-10-26 |
-| frontend-engineer | agents/frontend-engineer.md | medium | inherit | 2026-10-26 |
-| glossary-curator | agents/glossary-curator.md | medium | inherit | 2026-10-26 |
+| financing-agent | agents/financing-agent.md | medium | inherit | 2026-10-27 |
+| frontend-engineer | agents/frontend-engineer.md | medium | inherit | 2026-10-27 |
+| glossary-curator | agents/glossary-curator.md | medium | inherit | 2026-10-27 |
 | greenfield-agent | agents/greenfield-agent.md | high | inherit | 2026-10-27 |
-| group-review-agent | agents/group-review-agent.md | high | inherit | 2026-10-26 |
-| hr-integration-agent | agents/hr-integration-agent.md | high | inherit | 2026-10-26 |
+| group-review-agent | agents/group-review-agent.md | high | inherit | 2026-10-27 |
+| hr-integration-agent | agents/hr-integration-agent.md | high | inherit | 2026-10-27 |
 | i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-10-26 |
-| incentive-agent | agents/incentive-agent.md | medium | inherit | 2026-10-26 |
-| industry-lead | agents/industry-lead.md | high | inherit | 2026-10-26 |
-| infra-automation-engineer | agents/infra-automation-engineer.md | medium | inherit | 2026-10-26 |
-| ip-agent | agents/ip-agent.md | medium | inherit | 2026-10-26 |
-| ir-agent | agents/ir-agent.md | medium | inherit | 2026-10-26 |
-| legal-counsel | agents/legal-counsel.md | high | inherit | 2026-10-26 |
-| market-intelligence-agent | agents/market-intelligence-agent.md | high | inherit | 2026-10-26 |
-| partnership-agent | agents/partnership-agent.md | medium | inherit | 2026-10-26 |
-| platform-lead | agents/platform-lead.md | high | inherit | 2026-10-26 |
-| pm | agents/pm.md | medium | inherit | 2026-10-08 |
-| pmi-agent | agents/pmi-agent.md | medium | inherit | 2026-10-26 |
+| incentive-agent | agents/incentive-agent.md | medium | inherit | 2026-10-27 |
+| industry-lead | agents/industry-lead.md | high | inherit | 2026-10-27 |
+| infra-automation-engineer | agents/infra-automation-engineer.md | medium | inherit | 2026-10-27 |
+| ip-agent | agents/ip-agent.md | medium | inherit | 2026-10-27 |
+| ir-agent | agents/ir-agent.md | medium | inherit | 2026-10-27 |
+| legal-counsel | agents/legal-counsel.md | high | inherit | 2026-10-27 |
+| market-intelligence-agent | agents/market-intelligence-agent.md | high | inherit | 2026-10-27 |
+| partnership-agent | agents/partnership-agent.md | medium | inherit | 2026-10-27 |
+| platform-lead | agents/platform-lead.md | high | inherit | 2026-10-27 |
+| pm | agents/pm.md | medium | inherit | 2026-10-27 |
+| pmi-agent | agents/pmi-agent.md | medium | inherit | 2026-10-27 |
 | process-governance-manager | agents/process-governance-manager.md | high | inherit | 2026-10-27 |
-| quant-methodologist | agents/quant-methodologist.md | high | inherit | 2026-10-26 |
+| quant-methodologist | agents/quant-methodologist.md | high | inherit | 2026-10-27 |
 | README_ko | agents/README_ko.md | N/A | N/A | 2026-10-26 |
-| region-lead | agents/region-lead.md | high | inherit | 2026-10-26 |
-| release-engineer | agents/release-engineer.md | medium | inherit | 2026-10-26 |
+| region-lead | agents/region-lead.md | high | inherit | 2026-10-27 |
+| release-engineer | agents/release-engineer.md | medium | inherit | 2026-10-27 |
 | risk-officer | agents/risk-officer.md | high | inherit | 2026-10-27 |
-| security-engineer | agents/security-engineer.md | high | inherit | 2026-10-26 |
-| site-facility-agent | agents/site-facility-agent.md | medium | inherit | 2026-10-26 |
-| sre | agents/sre.md | medium | inherit | 2026-10-26 |
-| technical-dd-agent | agents/technical-dd-agent.md | medium | inherit | 2026-10-26 |
-| ux-designer-agent | agents/ux-designer-agent.md | medium | inherit | 2026-10-26 |
-| valuation-agent | agents/valuation-agent.md | high | inherit | 2026-10-26 |
+| security-engineer | agents/security-engineer.md | high | inherit | 2026-10-27 |
+| site-facility-agent | agents/site-facility-agent.md | medium | inherit | 2026-10-27 |
+| sre | agents/sre.md | medium | inherit | 2026-10-27 |
+| technical-dd-agent | agents/technical-dd-agent.md | medium | inherit | 2026-10-27 |
+| ux-designer-agent | agents/ux-designer-agent.md | medium | inherit | 2026-10-27 |
+| valuation-agent | agents/valuation-agent.md | high | inherit | 2026-10-27 |
 
 ---
 
@@ -198,7 +198,7 @@
 | archive-memory.ts | 1.1.0 | scripts/archive-memory.ts | N/A |
 | assume.ts | 1.0.0 | scripts/co-newbiz/assume.ts | N/A |
 | audit-variant.ts | 1.3.0 | scripts/co-newbiz/audit-variant.ts | N/A |
-| audit.ts | 2.55.0 | scripts/audit.ts | bun |
+| audit.ts | 2.56.0 | scripts/audit.ts | bun |
 | backfill-brownfield-financial-criteria.ts | 1.0.0 | scripts/co-newbiz/backfill-brownfield-financial-criteria.ts | N/A |
 | backfill-capability-gap.ts | 1.1.1 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
 | backfill-hyd-brk-report.ts | 1.1.0 | scripts/co-newbiz/backfill-hyd-brk-report.ts | N/A |
@@ -225,7 +225,7 @@
 | cleanup-completed-md.ts | 1.1.0 | scripts/cleanup-completed-md.ts | N/A |
 | clear-pm-approval.ts | 1.0.0 | scripts/clear-pm-approval.ts | N/A |
 | committee-deliberation.ts | 1.1.0 | scripts/co-newbiz/committee-deliberation.ts | N/A |
-| compile-tokens.ts | 1.2.0 | scripts/compile-tokens.ts | N/A |
+| compile-tokens.ts | 1.3.0 | scripts/compile-tokens.ts | N/A |
 | contrast-check.ts | 1.0.0 | scripts/co-newbiz/contrast-check.ts | N/A |
 | convert.ts | 1.1.0 | scripts/co-newbiz/convert.ts | N/A |
 | copy-legacy-bf-capability-judgements.ts | 1.0.0 | scripts/co-newbiz/copy-legacy-bf-capability-judgements.ts | bun:sqlite |
@@ -239,9 +239,9 @@
 | deploy-readme-patch.test.ts | 1.0.0 | scripts/tests/deploy-readme-patch.test.ts | bun:test |
 | deploy-web.ts | 1.1.0 | scripts/deploy-web.ts | N/A |
 | design-lint.ts | 1.5.0 | scripts/co-newbiz/design-lint.ts | N/A |
-| design-lint.ts | 2.2.0 | scripts/design-lint.ts | js-yaml |
+| design-lint.ts | 2.3.0 | scripts/design-lint.ts | js-yaml |
 | deterministic.ts | 1.1.0 | scripts/eval/deterministic.ts | N/A |
-| dev-sync.ts | 1.31.0 | scripts/dev-sync.ts | bun |
+| dev-sync.ts | 1.32.0 | scripts/dev-sync.ts | bun |
 | dispatch-parallel.ts | 1.1.1 | scripts/dispatch-parallel.ts | N/A |
 | dispatch-serial.ts | 1.1.2 | scripts/dispatch-serial.ts | N/A |
 | dispatch.ts | 1.1.1 | scripts/dispatch.ts | N/A |
@@ -341,8 +341,8 @@
 | validate-doc-folder.ts | 1.2.1 | scripts/validate-doc-folder.ts | fs, path |
 | validate-docs-links.ts | 1.6.0 | scripts/validate-docs-links.ts | fs, path |
 | validate-handbook.ts | 1.1.0 | scripts/handbook/validate-handbook.ts | N/A |
-| validate-md-language.ts | 1.15.0 | scripts/validate-md-language.ts | fs |
-| validate-model-registry.ts | 2.0.0 | scripts/validate-model-registry.ts | N/A |
+| validate-md-language.ts | 1.16.0 | scripts/validate-md-language.ts | fs |
+| validate-model-registry.ts | 2.1.0 | scripts/validate-model-registry.ts | N/A |
 | validate-nav.ts | 1.0.0 | scripts/handbook/validate-nav.ts | N/A |
 | validate-pm-extends.ts | 0.3.1 | scripts/validate-pm-extends.ts | N/A |
 | validate-procedures.ts | 1.1.0 | scripts/validate-procedures.ts | js-yaml |
@@ -350,12 +350,12 @@
 | validate-raci.ts | 1.2.0 | scripts/validate-raci.ts | js-yaml |
 | validate-skills.ts | 1.5.1 | scripts/validate-skills.ts | N/A |
 | validate-surface-registry.ts | 1.1.1 | scripts/validate-surface-registry.ts | N/A |
-| validate-templates.ts | 1.60.0 | scripts/validate-templates.ts | js-yaml |
+| validate-templates.ts | 1.62.0 | scripts/validate-templates.ts | js-yaml |
 | validate-variant-readiness.ts | 1.1.0 | scripts/validate-variant-readiness.ts | N/A |
 | verify-agent-deliverables.ts | 1.0.1 | scripts/verify-agent-deliverables.ts | fs |
 | verify-memory.ts | 1.2.0 | scripts/verify-memory.ts | fs, path |
 | verify-platform-lifecycle.ts | 1.6.1 | scripts/verify-platform-lifecycle.ts | N/A |
-| verify-readme-sync.ts | 1.4.1 | scripts/verify-readme-sync.ts | bun, fs, path |
+| verify-readme-sync.ts | 1.5.0 | scripts/verify-readme-sync.ts | bun, fs, path |
 | verify-scripts.ts | 1.13.0 | scripts/verify-scripts.ts | fs, path |
 | verify-skill-graph.ts | 2.0.0 | scripts/verify-skill-graph.ts | N/A |
 | verify-skills.ts | 1.5.2 | scripts/verify-skills.ts | N/A |
