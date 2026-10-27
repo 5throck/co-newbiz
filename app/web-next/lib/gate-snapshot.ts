@@ -29,6 +29,7 @@ import { recordKillCriteriaEvaluation } from "../../../db/repositories/kill-crit
 import { listConditions } from "../../../db/repositories/condition-precedent.repository.ts";
 import { countersignState } from "../../../db/lib/gate-effective.ts";
 import { gateIntegrityMode } from "./gate-integrity-flags.ts";
+import { resolveWaccConfirmation } from "../../../db/lib/wacc-confirmation.ts";
 import { certificationFailure } from "./gate-certification.ts";
 import {
   GATE_SNAPSHOT_SCHEMA_VERSION, createGateEvalRun, getBriefRecord, latestBriefRecord, listActiveKillOverrides,
@@ -110,7 +111,8 @@ export interface GateSnapshot {
   } | null;
   validators: { declared: number; applicable: number; completed: number; missing: string[] } | null;
   nonwaivable_open: Array<{ key: string; checklist_id: string; item_id: string; status: string }>;
-  wacc: { subject: string | null; status: "sourced" | "assumed" | "absent"; bf13: "set" | "unset" | "n/a" } | null;
+  /** `confirmed` = subject set AND wacc and hurdle_irr both user-confirmed (ADR-0186 D8); `missing` names what is not. */
+  wacc: { subject: string | null; status: "sourced" | "assumed" | "absent"; bf13: "set" | "unset" | "n/a"; confirmed: boolean; missing: string[] } | null;
   waivers: { active: Array<{ id: string; clause_ref: string; approved_by: string | null; expires_at: string }>; expiring_14d: string[] };
   /** Open condition precedents of the project (ADR-0186 D4); DISPLAY at GO, a hard block at closing / group_ic. */
   conditions_open: Array<{ id: string; text: string; clear_by: string }>;
@@ -244,17 +246,8 @@ function ragSection(db: Database, projectId: string): NonNullable<GateSnapshot["
 }
 
 function waccSection(db: Database, projectId: string, track: LadderTrack | null): NonNullable<GateSnapshot["wacc"]> {
-  const proj = db.query("SELECT wacc_subject FROM md_project WHERE id = ?").get(projectId) as { wacc_subject: string | null } | null;
-  const rows = db
-    .query(
-      `SELECT assumption_key, kind FROM (
-         SELECT a.assumption_key, a.kind, ROW_NUMBER() OVER (PARTITION BY a.assumption_key ORDER BY a.as_of DESC, a.id DESC) rn
-         FROM assumption a JOIN run r ON r.id = a.run_id WHERE r.project_id = ? AND a.assumption_key IN ('wacc','hurdle_irr')
-       ) WHERE rn = 1`,
-    )
-    .all(projectId) as Array<{ assumption_key: string; kind: string }>;
-  const status: "sourced" | "assumed" | "absent" = rows.length === 0 ? "absent" : rows.some((r) => r.kind === "assumed") ? "assumed" : rows.length < 2 || rows.some((r) => r.kind !== "user") ? "assumed" : "sourced";
-  return { subject: proj?.wacc_subject ?? null, status, bf13: track === "brownfield" ? (proj?.wacc_subject ? "set" : "unset") : "n/a" };
+  const c = resolveWaccConfirmation(db, projectId);
+  return { subject: c.subject, status: c.source_status, bf13: track === "brownfield" ? (c.subject ? "set" : "unset") : "n/a", confirmed: c.confirmed, missing: [...c.missing] };
 }
 
 function waiversSection(db: Database, projectId: string, now: string): GateSnapshot["waivers"] {
@@ -346,7 +339,7 @@ export function requiredAcks(s: Pick<GateSnapshot, "kill" | "rag" | "nonwaivable
 }
 
 function hardBlocks(
-  snap: Pick<GateSnapshot, "kill" | "validators" | "conditions_open" | "entity" | "gate" | "track">,
+  snap: Pick<GateSnapshot, "kill" | "validators" | "conditions_open" | "entity" | "gate" | "track" | "wacc">,
   extra: { certificationKeys: string[] },
 ): HardBlockInfo[] {
   const out: HardBlockInfo[] = [];
@@ -364,6 +357,15 @@ function hardBlocks(
     if (snap.entity.type === "project" && snap.gate === "group_ic") {
       const waiting = snap.conditions_open.filter((c) => c.clear_by === "group_ic").map((c) => c.id).sort();
       if (waiting.length > 0) out.push({ code: "condition_open", keys: waiting, enforced: validatorsMode === "enforce" });
+    }
+  }
+  // ADR-0186 D8 (neb-policy 2.2, bf-02): WACC / hurdle not user-confirmed. fs: any missing item blocks. Later project
+  // gates re-read the state and block only on a regression (a non-user row exists: `assumed`), so legacy projects whose
+  // history predates the rule are not re-blocked for an absent session (they are labelled provisional instead).
+  const waccMode = gateIntegrityMode("wacc");
+  if (waccMode !== "off" && snap.entity.type === "project" && snap.wacc && !snap.wacc.confirmed) {
+    if (snap.gate === "fs" || ((snap.gate === "dd" || snap.gate === "entity_ic" || snap.gate === "group_ic") && snap.wacc.status === "assumed")) {
+      out.push({ code: "wacc_unconfirmed", keys: [...snap.wacc.missing].sort(), enforced: waccMode === "enforce" });
     }
   }
   return out;
@@ -498,6 +500,7 @@ export function snapshotInputVersion(db: Database, entityType: SnapshotEntity, e
       one("SELECT COUNT(*) c, COALESCE(MAX(rowid),0) m FROM compliance_check WHERE project_id = ?", entityId),
       one("SELECT COUNT(*) c, COALESCE(MAX(rowid),0) m FROM dd_finding WHERE project_id = ?", entityId),
       one("SELECT COALESCE(wacc_subject,'') s FROM md_project WHERE id = ?", entityId),
+      one("SELECT COUNT(*) c, COALESCE(MAX(rowid),0) m FROM process_run WHERE entity_type = 'project' AND entity_id = ? AND stage = 's8_target_select'", entityId),
     );
   } else {
     parts.push(

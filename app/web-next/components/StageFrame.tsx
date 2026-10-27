@@ -234,7 +234,7 @@ export function StageFrame({
       {railSlot !== undefined
         ? railSlot
         : !stepperOwnedByTabs && <StageRail current={ids} track={track} />}
-      {gatedProjectStage && <StageGuidance state={guidance} />}
+      {gatedProjectStage && <StageGuidance state={guidance} projectId={projectId} stageId={navSource} />}
       {/* 단계 설명 슬롯 — 서식은 프레임이 표준화한다(0.9rem·muted·leading-relaxed,
           하단 간격 mb-4). 페이지별 클래스·<strong> 강조 금지(설계서 개정 2026-09-04). */}
       {children && (
@@ -353,7 +353,7 @@ function stageCompleteOf(state: GuidanceState): boolean {
 
 const NEXT_MISSING_ID = "stage-next-missing";
 
-function StageGuidance({ state }: { state: GuidanceState }) {
+function StageGuidance({ state, projectId, stageId }: { state: GuidanceState; projectId?: string; stageId?: string }) {
   const tr = useTranslations();
   if (state.phase !== "ready") return null;
   const info = state.info;
@@ -374,6 +374,10 @@ function StageGuidance({ state }: { state: GuidanceState }) {
         <ul className="mt-1 ml-4 list-disc">
           {items.map((it) => <li key={it}>{localizeRequirement(it)}</li>)}
         </ul>
+      )}
+      {/* ADR-0186 D8: the S8 discount-rate blocker's next action is the WACC session. */}
+      {stageId === "S8" && projectId && items.some((it) => /WACC|discount rate/i.test(it)) && (
+        <p className="mt-1 mb-0"><Link className="underline font-semibold" href={`/projects/${encodeURIComponent(projectId)}/wacc`}>{tr("components.waccStatus.confirmLink")}</Link></p>
       )}
     </div>
   );

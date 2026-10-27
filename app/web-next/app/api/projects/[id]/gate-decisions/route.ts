@@ -12,7 +12,7 @@ import { gateGoPrerequisiteGaps, latestGateDecisions, type GateId } from "../../
 import { badRequest, fail, forbidden, notFound, ok, unprocessable } from "../../../../../lib/envelope.ts";
 import { IC_GAP_GATES, composeRationale, icGoGapItems, parseRationale } from "../../../../../lib/ic-gap-override.ts";
 import { IC_SEQUENCE, IC_STEP_LABEL, gateSequenceBlocker } from "../../../../../lib/gate-sequence-view.ts";
-import { goLadderCheck, goRationaleCheck, goValidatorsCheck } from "../../../../../lib/gate-write-checks.ts";
+import { goLadderCheck, goRationaleCheck, goValidatorsCheck, goWaccCheck } from "../../../../../lib/gate-write-checks.ts";
 import { checkExtrasReferences, integrityActive, parseDecisionExtras, recordGateDecisionRow } from "../../../../../lib/gate-decision-contract.ts";
 import { primeSnapshotCache } from "../../../../../lib/gate-snapshot.ts";
 import { countersignState, type CountersignState } from "../../../../../../../db/lib/gate-effective.ts";
@@ -164,6 +164,9 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     // ADR-0186 D4 (family `validators`): bf-01 hard block, ahead of the generic stage gaps it would otherwise be masked by.
     const validatorsDenied = goValidatorsCheck({ entityType: "project", entityId: id, gate: body.gate, actor: ctx.userId });
     if (validatorsDenied) return validatorsDenied;
+    // ADR-0186 D8 (family `wacc`): the discount rate must be human-confirmed before the fs GO (bf-02).
+    const waccDenied = goWaccCheck({ entityType: "project", entityId: id, gate: body.gate, actor: ctx.userId });
+    if (waccDenied) return waccDenied;
     const gaps = gateGoPrerequisiteGaps({ type: "project", id }, body.gate as GateId);
     if (gaps.length > 0) {
       return fail(409, "gate_prerequisites_incomplete", `GO is not allowed — prerequisite steps of the ${body.gate} stage are incomplete: ${gaps.join("; ")}. HOLD or KILL can be recorded at any time.`);

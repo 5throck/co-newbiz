@@ -53,7 +53,7 @@ export function integrityActive(): boolean {
 }
 
 /** Families whose rules read the recomputed snapshot (ADR-0186 P3 adds validators and maker_checker: an IC GO must carry a snapshot for the countersign contract). */
-const INTEGRITY_FAMILIES_NEEDING_SNAPSHOT = ["snapshot_ack", "kill_binding", "divergence", "validators", "maker_checker"] as const;
+const INTEGRITY_FAMILIES_NEEDING_SNAPSHOT = ["snapshot_ack", "kill_binding", "divergence", "validators", "maker_checker", "wacc"] as const;
 
 /** Shape validation of the new body fields. A malformed field is a 400 whatever the flag mode (it is not a policy rule). */
 export function parseDecisionExtras(body: Record<string, unknown>): { ok: true; extras: DecisionExtras } | { ok: false; response: Response } {
@@ -180,6 +180,16 @@ export function markConditionalConditions(
   return out;
 }
 
+/** The 409 of an unconfirmed discount rate (also raised by the route-level pre-check in gate-write-checks.ts). */
+export function waccUnconfirmedFailure(subject: string | null, missing: string[]): IntegrityFailure {
+  return {
+    status: 409 as const,
+    code: "wacc_unconfirmed",
+    message: `GO is not allowed - the discount rate is not human-confirmed (${missing.join(", ")}). Confirm the WACC application subject, the WACC and the hurdle IRR in the WACC session first (neb-policy 2.2; no waiver path). HOLD or KILL can be recorded at any time.`,
+    details: { subject, missing },
+  };
+}
+
 export interface ContractResult {
   built: BuiltSnapshot;
   acknowledgements: Acknowledgement[];
@@ -235,6 +245,11 @@ export function runDecisionContract(
     //     snapshot names each hard block; the recorder cannot acknowledge them away.
     for (const hb of snapshot.hard_blocks) {
       if (hb.code === "kill_binding_unoverridden") continue;
+      // ADR-0186 D8 (family `wacc`): the discount rate is not human-confirmed (neb-policy 2.2, bf-02; no waiver path).
+      if (hb.code === "wacc_unconfirmed") {
+        reject(applyFamilyFailure("wacc", ctx, () => waccUnconfirmedFailure(snapshot.wacc?.subject ?? null, snapshot.wacc?.missing ?? hb.keys), db));
+        continue;
+      }
       reject(
         applyFamilyFailure("validators", ctx, () => {
           if (hb.code === "validators_incomplete") {

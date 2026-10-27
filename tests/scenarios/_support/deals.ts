@@ -5,6 +5,7 @@
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { writeTargetScope } from "../../../db/repositories/entry-market.repository.ts";
+import { recordWaccSession, setProjectWaccSubject } from "../../../db/lib/wacc.ts";
 import { seedS1ToS12Demo } from "../../../scripts/co-newbiz/seed-s1-s12-demo.ts";
 
 export const BROWNFIELD = {
@@ -21,10 +22,23 @@ export function grantProjectLead(dbPath: string, projectId: string, userId: stri
 }
 
 /** S1-S10 evidence for the brownfield M&A demo deal; gates, S11 approvals' decisions, S12 and sub-track DD are performed in the UI. */
-export function seedBrownfieldDeal(dbPath: string, analystId: string, opts: { subTrackDd?: boolean } = {}): typeof BROWNFIELD {
+export function seedBrownfieldDeal(dbPath: string, analystId: string, opts: { subTrackDd?: boolean; waccConfirmed?: boolean } = {}): typeof BROWNFIELD {
   seedS1ToS12Demo(dbPath, { humanDecisions: false, subTrackDd: opts.subTrackDd ?? true });
   grantProjectLead(dbPath, BROWNFIELD.projectId, analystId);
+  if (opts.waccConfirmed !== false) confirmWacc(dbPath, BROWNFIELD.projectId, "target", analystId);
   return BROWNFIELD;
+}
+
+/**
+ * ADR-0186 P4 (design 3.11): the discount rate a person confirms in the WACC session - subject (bf-13: the target for
+ * brownfield), WACC and hurdle IRR, kind=user - so a flow that records an fs GO passes the `wacc` family under enforce.
+ * Bootstrap fixture through the same library the WACC route uses; pass waccConfirmed:false to seed the unconfirmed state.
+ */
+export function confirmWacc(dbPath: string, projectId: string, subject: "promoter" | "target" | "project_newco", actor: string): void {
+  const db = getDb(dbPath);
+  const now = new Date().toISOString();
+  recordWaccSession(db, { projectId, wacc: 0.09, hurdleIrr: 0.12, mode: "direct", rationale: "e2e fixture: confirmed in the WACC session", actor, now });
+  setProjectWaccSubject(db, projectId, subject, "e2e fixture: subject confirmed in the WACC session", actor, now);
 }
 
 /** Start a pipeline_run on the demo project as the app would after the deal enters the pipeline (bootstrap fixture). */
@@ -50,7 +64,7 @@ export const GREENFIELD = {
  * Pre-FS / FS / DD / IC gates, the S11 establishment steps, the S12 transition
  * and the closure are performed in the UI.
  */
-export async function seedGreenfieldDeal(dbPath: string, analystId: string): Promise<typeof GREENFIELD> {
+export async function seedGreenfieldDeal(dbPath: string, analystId: string, opts: { waccConfirmed?: boolean } = {}): Promise<typeof GREENFIELD> {
   const { DD_WORKSPACE_CHECKLISTS, getChecklistItems } = await import("../../../app/web-next/lib/library.ts");
   const { currentReviewCycle } = await import("../../../app/web-next/lib/portfolio.ts");
   const db = getDb(dbPath);
@@ -176,6 +190,7 @@ export async function seedGreenfieldDeal(dbPath: string, analystId: string): Pro
       );
     }
   })();
+  if (opts.waccConfirmed !== false) confirmWacc(dbPath, projectId, "promoter", analystId);
   return GREENFIELD;
 }
 

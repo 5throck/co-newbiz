@@ -97,6 +97,8 @@ import { WAVE_F_PREDICATE_DATE } from "./wave-f-date.ts";
 import { readTargetScope } from "../../../db/repositories/entry-market.repository.ts";
 import { cleanList, holdBlockerText } from "./review/review-display.ts";
 import { resolveTrack } from "./project-track.ts";
+import { gateIntegrityMode } from "./gate-integrity-flags.ts";
+import { resolveWaccConfirmation, type WaccMissingItem } from "../../../db/lib/wacc-confirmation.ts";
 
 function opportunityGrandfathered(opp: { created_at: string | null }): boolean {
   return (opp.created_at ?? "") < WAVE_F_PREDICATE_DATE;
@@ -874,6 +876,25 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
     }
     return { complete: missing.length === 0, blockers, missing };
   },
+};
+
+// ADR-0186 D8 (family `wacc` = enforce): S8 is not complete until the WACC application subject is set (bf-13 for
+// brownfield: the target) and the WACC and the hurdle IRR are user-confirmed (neb-policy 2.2, bf-02). Wraps the stage
+// predicate above so its own artifact checks stay untouched; off and shadow leave S8 exactly as before.
+const s8ArtifactCompletion = PROJECT_STAGE_COMPLETION.S8!;
+const WACC_MISSING_TEXT: Record<WaccMissingItem, string> = {
+  wacc_subject: "the WACC application subject (wacc_subject; the target for brownfield, bf-13)",
+  wacc: "the WACC (kind=user)",
+  hurdle_irr: "the hurdle IRR (kind=user)",
+};
+PROJECT_STAGE_COMPLETION.S8 = (args) => {
+  const base = s8ArtifactCompletion(args);
+  if (gateIntegrityMode("wacc") !== "enforce") return base;
+  const c = resolveWaccConfirmation(getDb(), args.project.id);
+  if (c.confirmed) return base;
+  const blockers = [...base.blockers, `The discount rate is not human-confirmed: ${c.missing.map((m) => WACC_MISSING_TEXT[m]).join(", ")} must be confirmed in the WACC session (neb-policy 2.2, bf-02)`];
+  const missing = [...base.missing, "WACC and hurdle IRR confirmed by a person"];
+  return { complete: false, blockers, missing };
 };
 
 /**

@@ -4,6 +4,7 @@
 // (business_case_model + valuation_simulation). Deny-by-default: the run
 // must belong to a project the caller can see, and run/project mismatch is a
 // 404 indistinguishable from absence.
+import { waccStatusView } from "../../../../../../../lib/wacc-status.ts";
 import { getDb } from "../../../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../../../lib/project-visibility.ts";
@@ -73,6 +74,7 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
       })),
       cases,
       adoption,
+      wacc_status: waccStatusView(id, db),
     },
     200,
     { activity_count: activities.length },

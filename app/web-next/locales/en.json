@@ -1909,7 +1909,11 @@
         },
         "others": "You can still record HOLD or KILL.",
         "notEnforced": "Heads-up: {title}. It does not block GO yet.",
-        "listLabel": "Affected items"
+        "listLabel": "Affected items",
+        "wacc_unconfirmed": {
+          "title": "GO is blocked: the discount rate is not confirmed",
+          "body": "A person must confirm the WACC application subject, the WACC and the hurdle IRR in the WACC session before the feasibility GO. There is no waiver for this."
+        }
       },
       "priorAwaiting": "The previous gate has a GO that is still waiting for its second review.",
       "sumConditions": "Open conditions",
@@ -1978,6 +1982,27 @@
       "history": {
         "countersign": "Second review",
         "decisionRecorded": "Recorded decision"
+      }
+    },
+    "waccStatus": {
+      "provisionalLabel": "Provisional discount rate",
+      "provisionalHint": "The WACC and hurdle have not all been confirmed by a person yet, so values that depend on the discount rate are provisional.",
+      "confirmedLabel": "Discount rate confirmed",
+      "reason": {
+        "wacc_unconfirmed": "The discount rate is not confirmed yet.",
+        "wacc_subject_not_target": "The recorded WACC application subject must be the target for a per-target session."
+      },
+      "missing": {
+        "wacc_subject": "WACC application subject",
+        "wacc": "WACC",
+        "hurdle_irr": "Hurdle IRR"
+      },
+      "scopeTarget": "Selected target's own session",
+      "scopeProject": "Project-level session",
+      "confirmLink": "Confirm the discount rate",
+      "missingLabel": "Remaining items",
+      "warning": {
+        "wacc_not_below_hurdle": "The WACC is at or above the hurdle IRR; check the two rates."
       }
     }
   },
@@ -2241,7 +2266,9 @@
       "waiver_target_mismatch": "The waiver target does not match the request.",
       "waiver_term_too_long": "A waiver may run at most 90 days from approval.",
       "why_it_matters_required": "why_it_matters is required.",
-      "year_required": "The target year must be after 2026."
+      "year_required": "The target year must be after 2026.",
+      "wacc_unconfirmed": "The discount rate (WACC subject, WACC and hurdle IRR) is not confirmed by a person, so GO cannot be recorded. There is no waiver path. HOLD or KILL can be recorded at any time.",
+      "rate_out_of_range": "A rate must be a ratio strictly between 0 and 1 (0.12 means 12 percent)."
     },
     "notFound": {
       "title": "Page not found",

@@ -123,7 +123,7 @@ export function AiJudgementSupport({ projectId, gate = "fs", cases, canAct, onAp
           {!brief && !briefLoading && !briefError && (
             <p className={`${CAP} text-[color:var(--muted-fg)] mb-0`}>AI가 진행 산출물을 근거로 권고와 근거 초안을 작성해 줍니다 — 기록은 사람의 몫입니다.</p>
           )}
-          {brief && <GateBriefBody briefData={brief} currentGate={gate} onApply={onApplyRationale} />}
+          {brief && <GateBriefBody briefData={brief} currentGate={gate} onApply={onApplyRationale} projectId={projectId} />}
         </div>
       )}
     </section>

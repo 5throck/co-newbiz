@@ -50,6 +50,7 @@ import { TargetCostingPanel } from "../business-case/TargetCostingPanel.tsx";
 import { ValuationMethodology } from "../business-case/ValuationMethodology.tsx";
 import { FinancialAnalysisPanel } from "../FinancialAnalysisPanel.tsx";
 import { BepAnalysisPanel } from "./BepAnalysisPanel.tsx";
+import { WaccStatusBadge, type WaccStatusLike } from "../WaccStatusBadge.tsx";
 import { RowMenu, useConfirm } from "../crud.tsx";
 import { canWriteProject, isReadOnlyAdmin } from "../../lib/project-write-access.ts";
 import { countLegacyUnassignedModels, hideHistoricalForGreenfield } from "../../lib/business-case-legacy.ts";
@@ -147,6 +148,7 @@ interface LegacyModelRow {
   referenced: boolean;
 }
 interface CasesResponse {
+  wacc_status?: WaccStatusLike;
   cases: CaseView[];
   legacy_models?: LegacyModelRow[];
   recommended_scenario: string | null;
@@ -707,6 +709,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             </p>
           )}
         </div>
+        <WaccStatusBadge status={data?.wacc_status} projectId={projectId} className="mb-2" />
         <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}><table className="data-table table-fixed-pct tmin-80" aria-label={t("targetComparison")}>
           <caption className="sr-only">{t("targetComparisonS7RankNpv")}</caption>
           <ColGroup widths={CASE_COMPARE_COL_PCT} />
@@ -990,6 +993,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         </div>
       )}
       {/* W1-19/W2-07: the goals tab owns the 목표 미설정 state — no callout here. */}
+      <WaccStatusBadge status={data?.wacc_status} projectId={projectId} className="mt-3" />
       {SCENARIOS.map((s) => {
         const cases = byScenario.get(s) ?? [];
         const newestMf = cases.find((c) => c.variant === "market_forward");

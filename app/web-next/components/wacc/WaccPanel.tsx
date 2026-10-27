@@ -14,6 +14,7 @@ import { suggestionToInputValue } from "../../lib/wacc-suggestion-convert.ts";
 import { KO_DATA } from "../../lib/ko-data-values.ts";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SourceTooltip } from "../SourceTooltip.tsx";
+import { WaccStatusBadge } from "../WaccStatusBadge.tsx";
 import { ParamTable } from "../ui.tsx";
 import { RoicWaterfallChart } from "../RoicWaterfallChart.tsx";
 import { BetaPanel, type PeerRow } from "./BetaPanel.tsx";
@@ -189,6 +190,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {const tr = useT
   const [view, setView] = useState<View | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saveWarnings, setSaveWarnings] = useState<string[]>([]);
 
   // ── 모드 ──
   // CAPM decomposition is the structured default (the parameters analysts tune live there);
@@ -421,7 +423,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {const tr = useT
       return;
     }
     try {
-      const res = await api.post<{ run_id: string; wacc_computed: number | null; computed_mismatch: boolean; wacc: WaccResolution; hurdle_irr: WaccResolution | null }>(
+      const res = await api.post<{ run_id: string; wacc_computed: number | null; computed_mismatch: boolean; wacc: WaccResolution; hurdle_irr: WaccResolution | null; warnings?: string[] }>(
         `/api/projects/${encodeURIComponent(projectId)}/wacc`,
         {
           wacc: w,
@@ -436,6 +438,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {const tr = useT
         ? t("capmValueP1ConfirmedValue", { p1: pct(res.data.wacc_computed), p2: pct(w) })
         : "";
       setMessage(t("savedRunP1P2", { p1: res.data.run_id, p2: mismatchNote }));
+      setSaveWarnings(res.data.warnings ?? []);
       setWaccTouched(false);
       load();
     } catch (e) {
@@ -452,7 +455,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {const tr = useT
         setError(t("evidenceMustBeRecordedWhen"));
         return;
       }
-      const res = await api.post<{ run_id: string }>(`/api/projects/${encodeURIComponent(projectId)}/wacc`, {
+      const res = await api.post<{ run_id: string; warnings?: string[] }>(`/api/projects/${encodeURIComponent(projectId)}/wacc`, {
         wacc: Number(directWacc),
         hurdle_irr: directHurdle.trim() ? Number(directHurdle) : undefined,
         mode: "direct",
@@ -461,6 +464,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {const tr = useT
         subject_rationale: selectedTarget ? undefined : subject ? subjectRationale : undefined,
         target_id: selectedTarget ?? undefined,
       });
+      setSaveWarnings(res.data.warnings ?? []);
       setSubject("");
       setSubjectRationale("");
       load();
@@ -487,6 +491,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {const tr = useT
             )}
           </section>
         )}
+        <WaccStatusBadge status={saveWarnings.length > 0 ? { status: "confirmed", warnings: saveWarnings } : null} />
         {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {error}</p>}
         {message && <p className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)]">✓ {message}</p>}
 

@@ -48,7 +48,7 @@ export function conditionsPayload(drafts: readonly ConditionDraft[]): Array<{ te
 }
 
 export interface HardBlockView { code: string; keys: string[]; enforced: boolean }
-export const KNOWN_HARD_BLOCKS = ["kill_binding_unoverridden", "validators_incomplete", "condition_open", "certification_unconfirmed"] as const;
+export const KNOWN_HARD_BLOCKS = ["kill_binding_unoverridden", "validators_incomplete", "condition_open", "certification_unconfirmed", "wacc_unconfirmed"] as const;
 export function enforcedBlocks<T extends { enforced?: boolean }>(blocks: readonly T[]): T[] {
   return blocks.filter((b) => b.enforced !== false);
 }
@@ -72,6 +72,7 @@ export function detailList(v: unknown): string[] {
 /** Lists carried by the new gate-write 409s. */
 export function integrityErrorList(code: string, details: Record<string, unknown>): string[] {
   if (code === "validators_incomplete") return detailList(details.missing);
+  if (code === "wacc_unconfirmed") return detailList(details.missing);
   if (code === "condition_open") return detailList(details.conditions);
   if (code === "certification_unconfirmed") return detailList(details.certifications);
   return [];

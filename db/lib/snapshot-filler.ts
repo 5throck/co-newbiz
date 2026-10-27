@@ -1,4 +1,4 @@
-// @version 1.7.0
+// @version 1.8.0
 /**
  * project_variable_snapshot filler — the run-scoped variable snapshot writer
  * the thresholds records' var contracts define. Design of record:
@@ -63,6 +63,8 @@ import type { Database } from "bun:sqlite";
 import { getDb } from "../client.ts";
 import { evaluateValidatorCompleteness } from "./validator-completeness.ts";
 import type { MaValidatorKey } from "./validator-applicability.ts";
+import { listProjectAnalysisTargets } from "./wacc.ts";
+import { rateScopeState } from "./wacc-confirmation.ts";
 
 // ---------------------------------------------------------------------------
 // Public shapes
@@ -158,6 +160,9 @@ export const SNAPSHOT_VAR_KEYS: readonly string[] = [
   "validators.applicable_missing",
   "legal.employment_transfer_consent_regime_determined",
   "classification.origin_live_missing",
+  // 0178 - ADR-0186 D3 activations (P4)
+  "fin.dd_value_impact_unbridged",
+  "fin.targets_meeting_hurdle",
 ];
 
 function missing(varKey: string): SnapshotWrite {
@@ -782,6 +787,95 @@ function fillWaccSourceVar(db: Database, runId: string): SnapshotWrite {
   return row;
 }
 
+// ---------------------------------------------------------------------------
+// Family K - ADR-0186 D3 activations (migration 0178): the DD value-impact
+// bridge and the per-target hurdle test. Both are UNASSESSED (`missing`) when
+// the evidence to judge them does not exist - never a silent zero.
+// ---------------------------------------------------------------------------
+
+/**
+ * greenfield-dd `dd_finding_with_value_impact_not_in_valuation_bridge`: count of selected-scope DD findings
+ * (target_id IS NULL, ADR-0157) with a non-zero value_impact that NAME an assumption_key which does not resolve.
+ * "Resolves" = a kind='user' assumption with that key on a non-superseded run of the project (the business case reads
+ * its inputs as the latest user row per key). The generator does NOT store assumption keys in
+ * business_case_model.inputs_json (only driver values and sources), so the model cannot be asked directly.
+ *   - no finding with value impact            -> present 0
+ *   - no valid adopted case (s8_case_adopt -> a live, non-archived, project-level model), or the newest value-impact
+ *     finding is newer than the adoption (stale)                                  -> missing (UNASSESSED)
+ *   - keyed-but-unresolved findings > 0       -> that count (fires)
+ *   - else, a value-impact finding with NO key (legitimate direct adjustment; no inclusion record exists yet) -> missing
+ *   - else present 0
+ * Known limitation: a corrected finding has no supersede link, so both the old and the new row count.
+ */
+function fillDdValueImpactUnbridgedVar(db: Database, projectId: string): SnapshotWrite {
+  const row = missing("fin.dd_value_impact_unbridged");
+  const findings = db
+    .query("SELECT id, assumption_key, created_at FROM dd_finding WHERE project_id = ? AND target_id IS NULL AND value_impact IS NOT NULL AND value_impact <> 0")
+    .all(projectId) as unknown as Array<{ id: string; assumption_key: string | null; created_at: string }>;
+  const newest = findings.reduce<string | null>((m, f) => (m === null || f.created_at > m ? f.created_at : m), null);
+  const stamp = (n: number): SnapshotWrite => ({ ...row, value_num: n, evidence_ref: "dd_finding", observed_at: newest, status: "present" });
+  if (findings.length === 0) return stamp(0);
+  const adopted = db
+    .query("SELECT meta_json, started_at FROM process_run WHERE entity_type = 'project' AND entity_id = ? AND stage = 's8_case_adopt' AND status = 'done' ORDER BY started_at DESC, id DESC LIMIT 1")
+    .get(projectId) as unknown as { meta_json: string | null; started_at: string } | null;
+  let modelId: string | null = null;
+  try { modelId = adopted?.meta_json ? ((JSON.parse(adopted.meta_json) as { model_id?: string }).model_id ?? null) : null; } catch { modelId = null; }
+  const modelOk = modelId !== null && db.query("SELECT 1 AS x FROM business_case_model WHERE id = ? AND project_id = ? AND archived_at IS NULL AND target_id IS NULL").get(modelId, projectId) !== null;
+  if (!adopted || !modelOk || (newest !== null && newest > adopted.started_at)) return row;
+  const keys = new Set(
+    (db.query("SELECT DISTINCT a.assumption_key AS k FROM assumption a JOIN run r ON r.id = a.run_id WHERE r.project_id = ? AND r.superseded_by IS NULL AND a.kind = 'user'").all(projectId) as unknown as Array<{ k: string }>).map((r) => r.k),
+  );
+  const unbridged = findings.filter((f) => f.assumption_key && !keys.has(f.assumption_key)).length;
+  if (unbridged > 0) return stamp(unbridged);
+  if (findings.some((f) => !f.assumption_key)) return row;
+  return stamp(0);
+}
+
+/**
+ * brownfield-fs-comparative `no_target_meets_base_scenario_hurdle`: number of shortlisted targets whose gate-primary
+ * (market_forward, live) base-case POINT-ESTIMATE IRR (the deterministic-cashflow IRR stored on the base p50 row; it is
+ * not a quantile) is at least the user-confirmed hurdle IRR. Rate scope = rateScopeState (the shared rule): the
+ * target's own scope when it has rows there, else the project scope; the latest row of any kind governs, so a
+ * non-user latest row makes that target UNASSESSED. A target without a confirmed hurdle or without a stored IRR is
+ * UNASSESSED. Result: any meeting target = that count (present); none meeting but some UNASSESSED = missing (never
+ * zero); none meeting and all assessed = present 0 (the criterion fires); no shortlisted target = missing.
+ * W3 follow-up (multiple-IRR risk): the annual cash-flow vector behind the stored IRR is not persisted, so a flow with
+ * more than one sign change cannot be detected here; storing it needs a schema column and is deliberately not added.
+ */
+function fillTargetsMeetingHurdleVar(db: Database, projectId: string): SnapshotWrite {
+  const row = missing("fin.targets_meeting_hurdle");
+  const proj = db.query("SELECT source_opportunity_id FROM md_project WHERE id = ?").get(projectId) as unknown as { source_opportunity_id: string | null } | null;
+  if (!proj?.source_opportunity_id) return row;
+  const targets = db
+    .query("SELECT id FROM brownfield_target WHERE opportunity_id = ? AND status = 'shortlisted'")
+    .all(proj.source_opportunity_id) as unknown as Array<{ id: string }>;
+  if (targets.length === 0) return row;
+  const companyOf = new Map(listProjectAnalysisTargets(db, projectId).map((t) => [t.targetId, t.companyId]));
+  let meeting = 0;
+  let unassessed = 0;
+  let latest: string | null = null;
+  for (const t of targets) {
+    const hurdle = rateScopeState(db, projectId, companyOf.get(t.id) ?? null).hurdle_irr;
+    const sim = db
+      .query(
+        `SELECT v.irr AS irr, v.created_at AS created_at FROM business_case_model m
+         JOIN valuation_simulation v ON v.model_id = m.id AND v.scenario = 'base' AND v.percentile = 'p50'
+         WHERE m.project_id = ? AND m.target_id = ? AND m.archived_at IS NULL AND COALESCE(m.variant, 'market_forward') = 'market_forward'
+         ORDER BY m.created_at DESC, m.id DESC, v.created_at DESC LIMIT 1`,
+      )
+      .get(projectId, t.id) as unknown as { irr: number | null; created_at: string } | null;
+    if (!hurdle || hurdle.kind !== "user" || !sim || sim.irr === null) { unassessed++; continue; }
+    if (latest === null || sim.created_at > latest) latest = sim.created_at;
+    if (sim.irr >= hurdle.value) meeting++;
+  }
+  if (meeting === 0 && unassessed > 0) return row;
+  row.value_num = meeting;
+  row.evidence_ref = "valuation_simulation";
+  row.observed_at = latest;
+  row.status = "present";
+  return row;
+}
+
 /** #7/#8 tripwire: load-bearing certifications whose transferability was never confirmed. Present-always count (sibling of the 0019 pair). */
 function fillCertUnconfirmedVar(db: Database, projectId: string): SnapshotWrite {
   const row = missing("cert.load_bearing_unconfirmed");
@@ -931,7 +1025,7 @@ const SQL_BOUND_INDUSTRIES = "SELECT industry_id FROM project_industry WHERE pro
 
 /**
  * Fill a run's variable snapshot: one explicit row per evidence var the
- * 0017–0032 seed sets define (41), statuses per the record
+ * 0017–0178 seed sets define (43), statuses per the record
  * contracts. Runs are immutable — filling an already-filled run throws on
  * the PK.
  */
@@ -974,6 +1068,8 @@ export function fillSnapshot(opts: SnapshotFillOptions, db: Database = getDb()):
     fillRequiredUnreviewedVar(db, opts.projectId),
     fillWastewaterInsufficientVar(db, opts.projectId),
     fillSitesClearingMinimumsVar(db, opts.projectId),
+    fillDdValueImpactUnbridgedVar(db, opts.projectId),
+    fillTargetsMeetingHurdleVar(db, opts.projectId),
   ];
   const written = new Set(rows.map((r) => r.var_key));
   if (rows.length !== SNAPSHOT_VAR_KEYS.length || SNAPSHOT_VAR_KEYS.some((k) => !written.has(k))) {
