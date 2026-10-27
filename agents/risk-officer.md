@@ -11,11 +11,7 @@ status: active
 domain: functional
 version: "1.2.0"
 last_updated: "2026-10-26"
-tier:
-  claude: high
-  gemini: high
-  antigravity: high
-  gemini-cli: high
+tier: high
 model: inherit
 role: Red-team function — optimism-bias audits, base-rate enforcement, S3 synergy red-team, and kill-criteria discipline across the pipeline
 color: red

@@ -11,11 +11,7 @@ status: active
 domain: functional
 version: "1.1.1"
 last_updated: "2026-10-26"
-tier:
-  claude: medium
-  gemini: medium
-  antigravity: medium
-  gemini-cli: medium
+tier: medium
 model: inherit
 role: Customer retention risk specialist — change-of-control clause scanning across customer and supplier contracts, concentration and competitive-overlap assessment, and attrition exposure quantification
 color: purple

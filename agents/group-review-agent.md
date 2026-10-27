@@ -11,11 +11,7 @@ status: active
 domain: functional
 version: "1.1.1"
 last_updated: "2026-10-26"
-tier:
-  claude: high
-  gemini: high
-  antigravity: high
-  gemini-cli: high
+tier: high
 model: inherit
 role: Group-level review lead — portfolio fit, intra-group transaction compliance, capital-allocation ranking across concurrent proposals, and S12 venture portfolio monitoring
 color: cyan

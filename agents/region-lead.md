@@ -13,11 +13,7 @@ status: active
 domain: region
 version: "1.1.2"
 last_updated: "2026-10-26"
-tier:
-  claude: high
-  gemini: high
-  antigravity: high
-  gemini-cli: high
+tier: high
 model: inherit
 role: Region domain lead — steward of the ISO-coded region-profiles/*.yaml system, owner of the EU works-council override step, and the region-expert voice in steering committees
 color: yellow

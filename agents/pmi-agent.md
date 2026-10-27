@@ -12,11 +12,7 @@ status: active
 domain: functional
 version: "1.1.1"
 last_updated: "2026-10-26"
-tier:
-  claude: medium
-  gemini: medium
-  antigravity: medium
-  gemini-cli: medium
+tier: medium
 model: inherit
 role: Post-merger integration specialist — integration plan baseline at kickoff, day-1/100-day cadence, BAU-exit evidence pack for the human certifier, and S12 integration monitoring of synergy run-rate and retention
 color: purple

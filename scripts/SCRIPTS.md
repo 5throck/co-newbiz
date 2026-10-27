@@ -58,7 +58,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 |--------|--------|---------|--------|--------------|-------------------|-------|------|
 | `agent-create.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
 | `skill-session-review.ts` | L0 | 1.2.0 | active | `--date`, `--json`, `--dry-run` | —| L0+L1 | —|
-| `design-lint.ts` | L0 | 2.2.0 | active | —| —| L0+L1 | —|
+| `design-lint.ts` | L0 | 2.3.0 | active | —| —| L0+L1 | —|
 | `co-newbiz/beta-series.ts` | co-newbiz | 1.2.0 | active | 2026-10-13 | — | L3-only (project-local; registers KRX index + per-company daily-close beta series for a brownfield project (`--project <id>`, optional `--ticker 이름=코드` pin) and collects them via the krx adapter `listDailyRows` hook through ensure_fresh; 단축코드 resolution cached in db/data/krx-stock-code-cache.json; manual cadence — runbook rb-beta-series; v1.1.0 adds `--budget N` request cap, basDd-based stock-master resolution via the shared krx adapter, and fail-fast on missing KRX_API_KEY; v1.2.0 persists the listing market (raw_payload `krx:stock-master:<companyId>`) for the beta-series route index default and adds idempotent `--backfill-market` (cache-only, no KRX calls)) | —|
 | `co-newbiz/scope-impact.ts` | co-newbiz | 1.0.0 | active | 2026-10-13 | —| L3-only (read-only operator helper: `--db <path>` opened readonly; lists projects whose effective date is on/after 2026-07-01 with track, dd decision, later gate rows and whether the by-date S9 scope is pinned off by a valid dd decision; DEC-20261013-05) | —|
 | `co-newbiz/copy-legacy-bf-capability-judgements.ts` | co-newbiz | 1.0.0 | active | 2026-10-15 | —| L3-only (person-run operator script, dry-run by default and writes only with `--apply`; copies legacy Brown Field capability judgements stored on S3 register rows to each project's selected target as unconfirmed judgements in `brownfield_target_capability_judgement`, one audit row per copy, idempotent, skips existing judgements and rows with no seeded S7 criterion; ADR-0171 slice 3) | —|
@@ -146,11 +146,11 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `agent-verify.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
 | `analyze-git-history.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
 | `archive-memory.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `audit.ts` | L0 | 2.55.0 | active | —| —| L0+L1 | —|
+| `audit.ts` | L0 | 2.56.0 | active | —| —| L0+L1 | —|
 | `cleanup-completed-md.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `clear-pm-approval.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
-| `compile-tokens.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
-| `dev-sync.ts` | L0 | 1.31.0 | active | v1.30.0 (2026-10-26, T-20261026-003): the non-main branch guard refuses CLOSED *and* MERGED PRs on the current branch — a follow-up sync onto a merged-PR branch orphans the commits off main (fleet-review wave-1 incident); the guard notes the switch-to-main remediation. | —| L0+L1 | —|
+| `compile-tokens.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
+| `dev-sync.ts` | L0 | 1.32.0 | active | v1.30.0 (2026-10-26, T-20261026-003): the non-main branch guard refuses CLOSED *and* MERGED PRs on the current branch — a follow-up sync onto a merged-PR branch orphans the commits off main (fleet-review wave-1 incident); the guard notes the switch-to-main remediation. | —| L0+L1 | —|
 | `dispatch-parallel.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
 | `dispatch-serial.ts` | L0 | 1.1.2 | active | —| —| L0+L1 | —|
 | `dispatch.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
@@ -164,7 +164,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `helpers/template-utils.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `hooks/gateguard-fact-force.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `hooks/post-write-lifecycle-check.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
-| `hooks/pre-commit.ts` | L0 | 1.9.0 | active | —| —| L0+L1 | —|
+| `hooks/pre-commit.ts` | L0 | 1.11.0 | active | —| —| L0+L1 | —|
 | `hooks/pre-push.ts` | L0 | 1.6.0 | active | v1.5.0 (2026-10-26): deleting a `pr/*` remote branch now requires `ALLOW_REMOTE_BRANCH_DELETE=1`; unset, the push is blocked. | —| L0+L1 | —|
 | `lib/auth.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `lib/encoding-utils.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
@@ -192,16 +192,16 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `team-builder.ts` | L0 | 1.5.0 | active | —| —| L0+L1 | —|
 | `test-runner.ts` | L0 | 1.7.0 | active | 2026-10-08 | —| L0+L1 (`--parallel`, `--sequential`, `--concurrency <n>`, `--timeout <ms>`, `--allow-empty`) — v1.5.0: empty suites fail by default and scripts suite scans `scripts/tests/*.test.ts`; v1.6.0: bun test runs with `--timeout=30000` (per-test/hook default 5s flaked fresh-DB migration hooks on CI runners); scenarios suite runs sequentially, *.test.ts only (Wave C) | —|
 | `translate-readme.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
-| `validate-agents.ts` | L0 | 1.4.0 | active | —| —| L0+L1 | —|
+| `validate-agents.ts` | L0 | 1.4.1 | active | —| —| L0+L1 | —|
 | `validate-doc-folder.ts` | L0 | 1.2.1 | active | —| —| L0+L1 | —|
 | `validate-docs-links.ts` | L0 | 1.6.0 | active | —| —| L0+L1 | —|
-| `validate-md-language.ts` | L0 | 1.15.0 | active | —| —| L0+L1 | —|
-| `validate-model-registry.ts` | L0 | 2.0.0 | active | —| —| L0+L1 (v1.6.0 adds ADR-0183 D3 runtime catalog parity: agent-registry.generated.ts / pm-catalog.generated.ts cross-validated against agents/*.md frontmatter; targets self-skip where the web runtime is not delivered) | —|
-| `validate-skills.ts` | L0 | 1.5.1 | active | —| —| L0+L1 | —|
+| `validate-md-language.ts` | L0 | 1.16.0 | active | —| —| L0+L1 | —|
+| `validate-model-registry.ts` | L0 | 2.1.0 | active | —| —| L0+L1 (v1.6.0 adds ADR-0183 D3 runtime catalog parity: agent-registry.generated.ts / pm-catalog.generated.ts cross-validated against agents/*.md frontmatter; targets self-skip where the web runtime is not delivered) | —|
+| `validate-skills.ts` | L0 | 1.5.2 | active | —| —| L0+L1 | —|
 | `verify-agent-deliverables.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
 | `verify-memory.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `verify-platform-lifecycle.ts` | L0 | 1.6.1 | active | —| —| L0+L1 | —|
-| `verify-readme-sync.ts` | L0 | 1.4.1 | active | —| —| L0+L1 | —|
+| `verify-readme-sync.ts` | L0 | 1.5.0 | active | —| —| L0+L1 | —|
 | `verify-skill-graph.ts` | L0 | 2.0.0 | active | —| —| L0+L1 | —|
 | `verify-scripts.ts` | L0 | 1.13.0 | active | v1.10.0: registry column-count check | —| L0+L1 | —|
 | `verify-skills.ts` | L0 | 1.5.2 | active | —| —| L0+L1 | —|
@@ -238,8 +238,8 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `tests/deploy-readme-patch.test.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local bun:test unit tests for patchReadmePagesUrl() in handbook/deploy-handbook.ts) | —|
 | `resolve-variants.ts` | L0 | 1.0.3 | active | —| —| L0+L1 | —|
 | `validate-variant-readiness.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `validate-templates.ts` | L0 | 1.60.0 | active | v1.50.2: skips cleanly when no templates/common (project context) | —| L0+L1 | —|
-| `helpers/upgrade-versions.ts` | L0+L1 | 1.0.2 | active | —| —| L0+L1 | —|
+| `validate-templates.ts` | L0 | 1.62.0 | active | v1.50.2: skips cleanly when no templates/common (project context) | —| L0+L1 | —|
+| `helpers/upgrade-versions.ts` | L0+L1 | 1.1.0 | active | —| —| L0+L1 | —|
 | `lib/propagation-map-schema.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `lib/constitution-scrub.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `helpers/l0-ref-policy.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
@@ -262,7 +262,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `validate-process.ts` | L0 | 1.0.0 | active | Process/stages validation (ADR-0083 DEG-P-*), distinctness check (`--determinism` flag) | —| L0+L1 | —|
 | `validate-raci.ts` | L0 | 1.2.0 | active | RACI validation per ADR-0083 DEG-R-01..05 + ADR-0084 DEG-R-06/07; DEG-R-06: human-accountable must match gate; DEG-R-07: actor_types key set must equal R/A/C/I union | —| L0+L1 | —|
 | `lib/dependency-guard.ts` | L0 | 1.0.2 | active | DEPENDENCY GUARD — scans delivered scripts' bare-package imports vs project package.json, reports missing packages in the upgrade plan (T-20260920-001) | —| L0+L1 | —|
-| `lib/upgrade-policy.ts` | L0 | 1.22.0 | active | exports `lifecyclelessText()` (equal-version agent drift) + `isDeliveredDiff()` (dev-sync 3.9 auto-E5, rollout hardening 2026-09-21) | —| L0+L1 | —|
+| `lib/upgrade-policy.ts` | L0 | 1.25.0 | active | exports `lifecyclelessText()` (equal-version agent drift) + `isDeliveredDiff()` (dev-sync 3.9 auto-E5, rollout hardening 2026-09-21) | —| L0+L1 | —|
 | `helpers/golden-reference-loader.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `helpers/mirror-hygiene.ts` | L0 | 1.0.0 | active | v1.0.0 mirror-hygiene scanner (R6, spec docs/designs/2026-09-25-verifier-platform-expansion-design.md): a platform skill mirror contains only skill directories; stray files (SKILLS.md/README*.md) and non-skill dirs are findings; wired into validate-templates checkMirrorHygiene (WARN soak) | —| L0+L1 | —|
 | `helpers/registries/capability-registry.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
@@ -295,7 +295,10 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `hooks/pm-dispatch-gate.ts` | L0 | 1.1.1 | active | PreToolUse (Claude `Agent`) / BeforeTool (Gemini `invoke_subagent`) identity gate enforcing the PM Gateway single-point-of-entry rule (AGENTS.md §3.1): a rostered specialist dispatch (agents/*.md minus pm.md) from a session without a fresh pm-role-bootstrap marker gets `ask` (Claude) or `deny`-with-reason (Gemini); fail-open. Delivery surface (2026-10-17; gate script itself verbatim at v1.0.0 per design §2.2): gate mirrored into templates/common/scripts/hooks/ (startup wiring) and delivered to the 13 variant platform settings via the propagation chain — sync-variant-settings.ts v1.1.0 (MANAGED_SUBSTRINGS + `.claude` PreToolUse / `.gemini` BeforeTool rows + sameFamily stale-replace), new-project/upgrade-project/adopt-project/project-to-variant post-scaffold wiring (lib/upgrade-policy.ts SYNC claim), post-scaffold check A/Sync covered by verify. Spec: docs/designs/2026-10-17-pm-dispatch-gate-design.md; audit.ts ::1793-1802 wording generalized to managed-hook drift | —| L0+L1 | —|
 | `render-commands.ts` | L0+L1 | 1.1.0 | active | v1.1.0 (2026-10-13, T-20261013-009 phase 1): promoted from Projects/co-abap (v1.0.1) and generalized — renders .gemini/commands/*.toml from the .claude/commands SSOT (ADR-0077 D4); Gemini CLI loads TOML only; legacy .md kept as P-02 mirrors. v1.0.1: gemini-parity:skip, --check. | — | L0+L1 | — |
 | `helpers/variant-context.ts` | L0+L1 | 1.0.0 | active | v1.0.0 (2026-10-26, U-20261026-002): pure variant-context placement guard — variant.json name -> docs/<variant>.context.md convention-path check with skip/pass/fail finding (fail carries the return-or-register remediation); fs injected for fixtures; consumed by audit.ts v2.55.0 placement gate. | — | L0+L1 | — |
-| `lib/platform-skeleton-merge.ts` | L0 | 1.0.0 | active | v1.0.0 (spec docs/designs/2026-10-25-managed-platform-skeleton-design.md, ADR-0101): canonical-section registry (MANAGED_SKELETON_SECTIONS v1: CLAUDE §2/§3/§4.5/§5/§6, GEMINI §5) + mergeSkeletonSections() — the upgrade MERGE pass (upgrade-project mergeWorkspaceManaged) runs it strictly AFTER mergeManagedBlocks for CLAUDE.md/GEMINI.md. Missing registered sections insert at template-relative anchors (before/afterZoneContaining); drifted bodies replace only under guards G1 (no project-only heading/comment in the span — keeps co-abap's LOCAL-PATCH GEMINI §5) and G2 (≤120-line cap), with the number-collision guard logging SKELETON DRIFT for occupied numbers. Pure, import-safe, never throws; replaces push snapshots[] for the caller's fail-closed <file>.pre-skeleton.bak (T-20260917-010 pattern); byte-equal present sections are a silent no-op (idempotent). validateSkeletonRegistry() backs the validate-templates skeleton-registry arm (SK-01); section content always read from templates/common/<rel> at merge time | —| L0+L1 | —|
+| `lib/platform-skeleton-merge.ts` | L0 | 1.1.0 | active | v1.0.0 (spec docs/designs/2026-10-25-managed-platform-skeleton-design.md, ADR-0101): canonical-section registry (MANAGED_SKELETON_SECTIONS v1: CLAUDE §2/§3/§4.5/§5/§6, GEMINI §5) + mergeSkeletonSections() — the upgrade MERGE pass (upgrade-project mergeWorkspaceManaged) runs it strictly AFTER mergeManagedBlocks for CLAUDE.md/GEMINI.md. Missing registered sections insert at template-relative anchors (before/afterZoneContaining); drifted bodies replace only under guards G1 (no project-only heading/comment in the span — keeps co-abap's LOCAL-PATCH GEMINI §5) and G2 (≤120-line cap), with the number-collision guard logging SKELETON DRIFT for occupied numbers. Pure, import-safe, never throws; replaces push snapshots[] for the caller's fail-closed <file>.pre-skeleton.bak (T-20260917-010 pattern); byte-equal present sections are a silent no-op (idempotent). validateSkeletonRegistry() backs the validate-templates skeleton-registry arm (SK-01); section content always read from templates/common/<rel> at merge time | —| L0+L1 | —|
+| `helpers/design-lint-roots.ts` | L0+L1 | 1.0.0 | active | v1.0.0 (2026-10-26, U-20261026-006): pure design-lint scan-root resolver — configured designLint.scanRoots filtered by existence; when none exist, falls back to the design-lint.ts conventional uiSourceRoots default (./playground/src, ./src) so audit.ts and the standalone lint agree on the same schema; skip verdict names both the configured roots and the conventional candidates; fs injected for fixtures; consumed by audit.ts v2.56.0 design-lint gate. | — | L0+L1 | — |
+| `helpers/pre-commit-script-gate.ts` | L0 | 1.1.0 | active | v1.1.0 (2026-10-27, T-20261027-010): parseCheckAErrorsDetailed — Check A extraction from AuditResult.errors that PRESERVES the fixData payload so pre-commit check 6c keeps its actionable "→ Fix:" output while finally reading the real wire shape; parseCheckAErrors delegates to it so the two extractions cannot drift. v1.0.0 (2026-10-27, T-20261027-009): import-safe merge-aware SCRIPTS.md gate for pre-commit check 6 — gate decision (pass / proxy-fail / merge-verify), Check A error parsing from `lifecycle-sync-audit.ts --json` (AuditResult.errors, level==error), exit-code content gate with an injectable audit-runner seam so unit tests target the module (pre-commit.ts itself runs main() at import) | —| L0+L1 | —|
+| `helpers/theme-token-policy.ts` | L0 | 1.0.0 | active | v1.0.0 (2026-10-27, U-20261027-005): DESIGN-R2 theme-invariance key classification — theme presets in tokens.json may override only color/shadow tokens (typography/spacing/borderRadius/target-size are theme-invariant); shared by compile-tokens.ts v1.3.0 (hard compile error) and design-lint.ts v2.3.0 (themes sub-check) so the two enforcement points cannot drift; kebab-normalized membership test | —| L0+L1 | —|
 
 ---
 

@@ -12,11 +12,7 @@ status: active
 domain: functional
 version: "1.1.1"
 last_updated: "2026-10-26"
-tier:
-  claude: medium
-  gemini: medium
-  antigravity: medium
-  gemini-cli: medium
+tier: medium
 model: inherit
 role: Policy-benefit specialist — incentive clawback exposure on M&A relocation, establishment incentives recorded with clawback conditions, obligation-register construction, and incentive-deadline tracking
 color: purple

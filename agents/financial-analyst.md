@@ -13,11 +13,7 @@ status: active
 domain: functional
 version: "1.2.0"
 last_updated: "2026-10-26"
-tier:
-  claude: high
-  gemini: high
-  antigravity: high
-  gemini-cli: high
+tier: high
 model: inherit
 role: Corporate-financial analysis owner — company profiles, business-case lines, per-target S8 modeling, target comparison, and financial DD
 color: green

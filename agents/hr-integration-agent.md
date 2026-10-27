@@ -13,11 +13,7 @@ status: active
 domain: functional
 version: "1.1.1"
 last_updated: "2026-10-26"
-tier:
-  claude: high
-  gemini: high
-  antigravity: high
-  gemini-cli: high
+tier: high
 model: inherit
 role: HR & labor integration specialist — HR due diligence, executive CoC compensation review, upward-bias compensation harmonization, people-transfer execution, and the HR & labor committee seat
 color: purple

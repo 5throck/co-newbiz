@@ -11,11 +11,7 @@ status: active
 domain: functional
 version: "1.1.1"
 last_updated: "2026-10-26"
-tier:
-  claude: high
-  gemini: high
-  antigravity: high
-  gemini-cli: high
+tier: high
 model: inherit
 role: Certification and regulatory-response specialist — certification-continuity screening, gap mapping, and roadmap sequencing through procedure steps, structurally separate from permits
 color: teal

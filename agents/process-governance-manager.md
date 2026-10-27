@@ -11,11 +11,7 @@ status: active
 domain: functional
 version: "1.1.4"
 last_updated: "2026-10-26"
-tier:
-  claude: high
-  gemini: high
-  antigravity: high
-  gemini-cli: high
+tier: high
 model: inherit
 role: Functional-domain lead and process authority — design and review owner of the rules the pipeline runs on, not a dispatcher
 color: yellow

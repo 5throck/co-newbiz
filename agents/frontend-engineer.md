@@ -11,11 +11,7 @@ status: active
 domain: technical
 version: "1.1.1"
 last_updated: "2026-10-26"
-tier:
-  claude: medium
-  gemini: medium
-  antigravity: medium
-  gemini-cli: medium
+tier: medium
 model: inherit
 role: Next.js App Router UI, ECharts visualizations, the RAG dashboard, the admin console, accessibility, and next-intl localization
 color: green

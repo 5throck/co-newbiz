@@ -10,11 +10,7 @@ status: active
 domain: functional
 version: "1.1.1"
 last_updated: "2026-10-26"
-tier:
-  claude: medium
-  gemini: medium
-  antigravity: medium
-  gemini-cli: medium
+tier: medium
 model: inherit
 role: Technical due diligence lead — site-visit evidence, remaining equipment life, TRL/MRL assessment, EHS liability identification, and independent capex verification
 color: red
