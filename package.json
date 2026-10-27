@@ -45,6 +45,7 @@
     "glossary:lint": "bun glossary/_validate.ts",
     "procedures:lint": "bun procedures/_validate.ts",
     "checklists:lint": "bun checklists/_validate.ts",
+    "process:ssot-check": "bun scripts/co-newbiz/process-ssot-check.ts",
     "db:migrate": "bun scripts/co-newbiz/newbiz.ts db:migrate",
     "db:status": "bun scripts/co-newbiz/newbiz.ts status",
     "db:integrity": "bun scripts/co-newbiz/db-integrity.ts",

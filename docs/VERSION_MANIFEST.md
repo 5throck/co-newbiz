@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-27T14:24:28.006Z
+**Generated**: 2026-10-27T17:26:31.080Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -10,7 +10,7 @@
 
 - **Agents**: 42
 - **Skills**: 107
-- **Scripts**: 175 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Scripts**: 176 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 8
 
 ---
@@ -21,7 +21,7 @@
 |------|------|------|-------|---------------|
 | antitrust-agent | agents/antitrust-agent.md | high | inherit | 2026-10-25 |
 | backend-engineer | agents/backend-engineer.md | medium | inherit | 2026-10-26 |
-| brownfield-agent | agents/brownfield-agent.md | high | inherit | 2026-10-26 |
+| brownfield-agent | agents/brownfield-agent.md | high | inherit | 2026-10-27 |
 | certification-agent | agents/certification-agent.md | high | inherit | 2026-10-26 |
 | commercial-dd-agent | agents/commercial-dd-agent.md | medium | inherit | 2026-10-26 |
 | compliance-officer | agents/compliance-officer.md | high | inherit | 2026-10-26 |
@@ -30,11 +30,11 @@
 | dba | agents/dba.md | medium | inherit | 2026-10-26 |
 | design-system-agent | agents/design-system-agent.md | medium | inherit | 2026-10-26 |
 | docs-writer | agents/docs-writer.md | medium | inherit | 2026-10-26 |
-| financial-analyst | agents/financial-analyst.md | high | inherit | 2026-10-26 |
+| financial-analyst | agents/financial-analyst.md | high | inherit | 2026-10-27 |
 | financing-agent | agents/financing-agent.md | medium | inherit | 2026-10-26 |
 | frontend-engineer | agents/frontend-engineer.md | medium | inherit | 2026-10-26 |
 | glossary-curator | agents/glossary-curator.md | medium | inherit | 2026-10-26 |
-| greenfield-agent | agents/greenfield-agent.md | high | inherit | 2026-10-26 |
+| greenfield-agent | agents/greenfield-agent.md | high | inherit | 2026-10-27 |
 | group-review-agent | agents/group-review-agent.md | high | inherit | 2026-10-26 |
 | hr-integration-agent | agents/hr-integration-agent.md | high | inherit | 2026-10-26 |
 | i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-10-26 |
@@ -49,12 +49,12 @@
 | platform-lead | agents/platform-lead.md | high | inherit | 2026-10-26 |
 | pm | agents/pm.md | medium | inherit | 2026-10-08 |
 | pmi-agent | agents/pmi-agent.md | medium | inherit | 2026-10-26 |
-| process-governance-manager | agents/process-governance-manager.md | high | inherit | 2026-10-26 |
+| process-governance-manager | agents/process-governance-manager.md | high | inherit | 2026-10-27 |
 | quant-methodologist | agents/quant-methodologist.md | high | inherit | 2026-10-26 |
 | README_ko | agents/README_ko.md | N/A | N/A | 2026-10-26 |
 | region-lead | agents/region-lead.md | high | inherit | 2026-10-26 |
 | release-engineer | agents/release-engineer.md | medium | inherit | 2026-10-26 |
-| risk-officer | agents/risk-officer.md | high | inherit | 2026-10-26 |
+| risk-officer | agents/risk-officer.md | high | inherit | 2026-10-27 |
 | security-engineer | agents/security-engineer.md | high | inherit | 2026-10-26 |
 | site-facility-agent | agents/site-facility-agent.md | medium | inherit | 2026-10-26 |
 | sre | agents/sre.md | medium | inherit | 2026-10-26 |
@@ -197,7 +197,7 @@
 | apply-handbook-theme.ts | 1.0.0 | scripts/handbook/apply-handbook-theme.ts | N/A |
 | archive-memory.ts | 1.1.0 | scripts/archive-memory.ts | N/A |
 | assume.ts | 1.0.0 | scripts/co-newbiz/assume.ts | N/A |
-| audit-variant.ts | 1.3.0 | scripts/co-newbiz/audit-variant.ts | N/A |
+| audit-variant.ts | 1.4.0 | scripts/co-newbiz/audit-variant.ts | N/A |
 | audit.ts | 2.55.0 | scripts/audit.ts | bun |
 | backfill-brownfield-financial-criteria.ts | 1.0.0 | scripts/co-newbiz/backfill-brownfield-financial-criteria.ts | N/A |
 | backfill-capability-gap.ts | 1.1.1 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
@@ -292,6 +292,7 @@
 | normalize-registry-provenance.ts | 1.1.0 | scripts/normalize-registry-provenance.ts | fs, path |
 | policy-sync.ts | 1.0.1 | scripts/co-newbiz/policy-sync.ts | N/A |
 | proc-resolve.ts | 1.2.1 | scripts/co-newbiz/proc-resolve.ts | js-yaml |
+| process-ssot-check.ts | 1.0.0 | scripts/co-newbiz/process-ssot-check.ts | js-yaml |
 | qa-gate.ts | 1.3.0 | scripts/qa-gate.ts | bun |
 | rag.ts | 1.3.0 | scripts/co-newbiz/rag.ts | bun:sqlite |
 | readme-lifecycle-audit.ts | 1.1.0 | scripts/readme-lifecycle-audit.ts | N/A |

@@ -179,3 +179,179 @@ ADR-0187 was accepted at the owner's merge of PR #752 (2026-10-27).
 ## 10. Acceptance
 
 Accepted: ADR-0187 was accepted by the human owner on 2026-10-27 (PR #752 merge) with D1-D9 recorded. Section 4 is implemented by the phases of section 5.
+
+## 11. P1 baseline findings
+
+Run on 2026-10-28 against the tree after P0 (#753) with `bun run process:ssot-check` (report-only; `scripts/co-newbiz/process-ssot-check.ts` 1.0.0). Counts per validator:
+
+| Validator | Finding | Count |
+|---|---|---|
+| check-engine-spec-parity | H8 | 51 |
+| check-checklist-consumers | H9 | 13 |
+| activity-agent-in-procedure | M2 | 32 |
+| check-kill-registry-parity | M4 | 1 |
+| check-stage-inputs | M9 | 0 (closed by P0) |
+| check-review-coverage | M7/M8 | 55 |
+| check-s12-coverage | M17 | 4 |
+| check-stages-derived | M3 | 0 (closed by P0) |
+
+Notes: engine labels are still Korean strings, so H8 parity is exact-string until P3 stable keys; the checklist consumer heuristic excludes projection and translation modules; the review matrix is absent until P4, so every author domain resolves by fallback; S12 cells are case_type x origin x sub_track and include combinations that may be unreachable in practice (needs judgement). Verbatim findings:
+
+```text
+[WARN] check-engine-spec-parity: S1: engine blocker "데이터 신뢰도 등급" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S2: engine blocker "기회 매력도 평가" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S2: flow.spec requiredArtifact "기회 등록(가치사슬 노드·매력도)" has no engine blocker with the same key (declared, not enforced)
+[WARN] check-engine-spec-parity: S3: engine blocker "필요 역량 목록(출처 포함)" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S3: engine blocker "기회 선택(selected)" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S4: engine blocker "route_decision(트랙)" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S4: engine blocker "brownfield sub_track" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S4: engine blocker "5-criteria 채점" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S4: flow.spec requiredArtifact "트랙 결정(GF/BF)·근거" has no engine blocker with the same key (declared, not enforced)
+[WARN] check-engine-spec-parity: S4: flow.spec requiredArtifact "Brownfield 선택 시 Route 유형(M&A/JV/전략적 투자/소수점 지분/파트너십/R&BD/CVC)" has no engine blocker with the same key (declared, not enforced)
+[WARN] check-engine-spec-parity: S4: flow.spec requiredArtifact "5criteria 채점 결과(통제 필요도·역량 결정성·시장 불확실성·통합 역량·역량확보 속도 각 20%)" has no engine blocker with the same key (declared, not enforced)
+[WARN] check-engine-spec-parity: S5: engine blocker "역량 격차·해소 방식" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S5: engine blocker "진출전략" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S5: engine blocker "검토한 대안" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S5: flow.spec requiredArtifact "진출전략(Build/Partner/Hire/Invest 결정·근거)" has no engine blocker with the same key (declared, not enforced)
+[WARN] check-engine-spec-parity: S6: engine blocker "Long List 후보 필수 속성·출처" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S6: engine blocker "Long List 최소 커버리지" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S6: flow.spec requiredArtifact "Target Company Long List" has no engine blocker with the same key (declared, not enforced)
+[WARN] check-engine-spec-parity: S7: engine blocker "대상 후보 스크리닝" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S7: engine blocker "후보별 스크리닝 판정" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S7: engine blocker "후보별 스크리닝 근거" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S7: engine blocker "knock-out 통과 Short List" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S7: flow.spec requiredArtifact "Target Company Short List" has no engine blocker with the same key (declared, not enforced)
+[WARN] check-engine-spec-parity: S7: flow.spec requiredArtifact "Target Ranking/Score" has no engine blocker with the same key (declared, not enforced)
+[WARN] check-engine-spec-parity: S7: flow.spec requiredArtifact "Exclusion Reasons" has no engine blocker with the same key (declared, not enforced)
+[WARN] check-engine-spec-parity: S8: engine blocker "Business Case(비용·수익 라인 또는 밸류에이션)" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S8: flow.spec requiredArtifact "Target 비교 분석 (brownfield)" has no engine blocker with the same key (declared, not enforced)
+[WARN] check-engine-spec-parity: S9: engine blocker "필수 항목 해소" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S11: engine blocker "법인 투자심의위원회 승인" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S11: engine blocker "그룹 투자심의위원회 승인" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S11: engine blocker "투자심의 자료(채택 Business Case)" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S11: engine blocker "추진계획(차터) 기준선" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S11: engine blocker "PMI 킥오프 기록 (brownfield)" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S11: engine blocker "classification_conflict" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S11: engine blocker "트랙 분류 정리 (case_type ↔ route)" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S11: engine blocker "실행 기준선 확인 (greenfield)" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S11: flow.spec requiredArtifact "투자심의 자료" has no engine blocker with the same key (declared, not enforced)
+[WARN] check-engine-spec-parity: S11: flow.spec requiredArtifact "추진계획(차터) 기준선 — 목적·트랙 근거·진출 범위·KPI 선커밋" has no engine blocker with the same key (declared, not enforced)
+[WARN] check-engine-spec-parity: S11: flow.spec requiredArtifact "설립 실행 기록(신규 법인 설립 — 설립준비·등기·인허가 분류·인력이전·완료확인 — chk-entity-formation 증적, origin∈{internal,joint} / 신규 사업부 추진 — 신설 결의·사업자등록 정리·인허가 명의 확인·인력 배치·완료 확인 — chk-business-unit-formation 증적, origin=internal)" has no engine blocker with the same key (declared, not enforced)
+[WARN] check-engine-spec-parity: S11: 2 engine missing.push call(s) carry no literal key (computed labels cannot be matched until P3 stable keys)
+[WARN] check-engine-spec-parity: S12: engine blocker "벤처 스코어카드" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S12: engine blocker "분기별 스코어카드 갱신" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S12: engine blocker "사람 전환 결정 기록(어휘 5종)" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S12: engine blocker "차기 트랜치 조건(tranche_condition)" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S12: engine blocker "핵심사업 인계 기록(core_handoff)" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S12: engine blocker "매각/청산 계획(divest_plan)" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S12: engine blocker "학습 포착 기록(kill_with_learning_captured)" is not a flow.spec requiredArtifact (undeclared blocker)
+[WARN] check-engine-spec-parity: S12: flow.spec requiredArtifact "벤처 스코어카드 (greenfield — brownfield은 integration/partnership 모니터링, 권장·비차단)" has no engine blocker with the same key (declared, not enforced)
+[WARN] check-engine-spec-parity: S12: flow.spec requiredArtifact "사람 전환 결정 기록(어휘 5종, decided_by=venture-portfolio-ic, rationale 필수 — venture_transition_decision 원장)" has no engine blocker with the same key (declared, not enforced)
+[WARN] check-engine-spec-parity: S12: flow.spec requiredArtifact "전환별 결정 부속 기록: 차기 트랜치 조건(next_tranche_released/held_evidence_incomplete), 핵심사업 인계 기록(graduate_to_core), 매각/청산 계획(reduce_or_divest), 학습 포착 기록(kill_with_learning_captured — group-review-agent 기록, risk-officer가 S1/S2 기본률에 환류)" has no engine blocker with the same key (declared, not enforced)
+[WARN] check-engine-spec-parity: S12: flow.spec requiredArtifact "실행 기준선 대비 차이(greenfield)" has no engine blocker with the same key (declared, not enforced)
+[WARN] check-checklist-consumers: business-unit-formation-checklist (chk-business-unit-formation): no producer - no step of a flow.spec-hosted procedure cites checklists/business-unit-formation-checklist.yaml
+[WARN] check-checklist-consumers: strategic-fit-screening-checklist (chk-strategic-fit): no gate consumer - no runtime module reads it (projection/translation files excluded)
+[WARN] check-checklist-consumers: legal-regulatory-checklist (chk-legal-regulatory): no producer - no step of a flow.spec-hosted procedure cites checklists/legal-regulatory-checklist.yaml
+[WARN] check-checklist-consumers: legal-regulatory-checklist (chk-legal-regulatory): no gate consumer - no runtime module reads it (projection/translation files excluded)
+[WARN] check-checklist-consumers: financial-dd-checklist (chk-financial-dd-checklist): no producer - no step of a flow.spec-hosted procedure cites checklists/financial-dd-checklist.yaml
+[WARN] check-checklist-consumers: financial-dd-checklist (chk-financial-dd-checklist): no gate consumer - no runtime module reads it (projection/translation files excluded)
+[WARN] check-checklist-consumers: greenfield-feasibility-checklist (chk-greenfield-feasibility): no producer - no step of a flow.spec-hosted procedure cites checklists/greenfield-feasibility-checklist.yaml
+[WARN] check-checklist-consumers: greenfield-feasibility-checklist (chk-greenfield-feasibility): no gate consumer - no runtime module reads it (projection/translation files excluded)
+[WARN] check-checklist-consumers: site-selection-checklist (chk-site-selection): no gate consumer - no runtime module reads it (projection/translation files excluded)
+[WARN] check-checklist-consumers: legal-dd-checklist (chk-legal-dd): no gate consumer - no runtime module reads it (projection/translation files excluded)
+[WARN] check-checklist-consumers: hr-dd-checklist (chk-hr-dd): no gate consumer - no runtime module reads it (projection/translation files excluded)
+[WARN] check-checklist-consumers: market-dd-checklist (chk-market-dd): no gate consumer - no runtime module reads it (projection/translation files excluded)
+[WARN] check-checklist-consumers: financing-plan-checklist (chk-financing): no gate consumer - no runtime module reads it (projection/translation files excluded)
+[WARN] activity-agent-in-procedure: S2/business-model-sketch: agent 'greenfield-agent' holds no step in procedure 'brownfield-screening'
+[WARN] activity-agent-in-procedure: S3/synergy-analysis: agent 'financial-analyst' holds no step in procedure 'greenfield-screening'
+[WARN] activity-agent-in-procedure: S3/synergy-analysis: agent 'financial-analyst' holds no step in procedure 'brownfield-screening'
+[WARN] activity-agent-in-procedure: S3/synergy-red-team: agent 'risk-officer' holds no step in procedure 'greenfield-screening'
+[WARN] activity-agent-in-procedure: S3/synergy-red-team: agent 'risk-officer' holds no step in procedure 'brownfield-screening'
+[WARN] activity-agent-in-procedure: S4/route-strategy: agent 'pm' holds no step in procedure 'greenfield-pre-fs'
+[WARN] activity-agent-in-procedure: S4/route-strategy: agent 'pm' holds no step in procedure 'brownfield-pre-fs'
+[WARN] activity-agent-in-procedure: S4/route-strategy: agent 'pm' holds no step in procedure 'deal-shape-chain'
+[WARN] activity-agent-in-procedure: S4/deal-shape-evaluation: agent 'brownfield-agent' holds no step in procedure 'greenfield-pre-fs'
+[WARN] activity-agent-in-procedure: S4/deal-shape-evaluation: agent 'brownfield-agent' holds no step in procedure 'deal-shape-chain'
+[WARN] activity-agent-in-procedure: S4/route-advisory: agent 'pm' holds no step in procedure 'greenfield-pre-fs'
+[WARN] activity-agent-in-procedure: S4/route-advisory: agent 'pm' holds no step in procedure 'brownfield-pre-fs'
+[WARN] activity-agent-in-procedure: S4/route-advisory: agent 'pm' holds no step in procedure 'deal-shape-chain'
+[WARN] activity-agent-in-procedure: S8/target-selection: agent 'pm' holds no step in procedure 'brownfield-fs-comparative'
+[WARN] activity-agent-in-procedure: S9/commercial-dd: agent 'commercial-dd-agent' holds no step in procedure 'greenfield-dd'
+[WARN] activity-agent-in-procedure: S9/legal-dd: agent 'legal-counsel' holds no step in procedure 'greenfield-dd'
+[WARN] activity-agent-in-procedure: S9/financial-dd: agent 'financial-analyst' holds no step in procedure 'greenfield-dd'
+[WARN] activity-agent-in-procedure: S9/financial-dd: agent 'financial-analyst' holds no step in procedure 'brownfield-dd'
+[WARN] activity-agent-in-procedure: S9/hr-dd: agent 'hr-integration-agent' holds no step in procedure 'greenfield-dd'
+[WARN] activity-agent-in-procedure: S9/market-dd: agent 'market-intelligence-agent' holds no step in procedure 'greenfield-dd'
+[WARN] activity-agent-in-procedure: S9/financing-dd: agent 'financing-agent' holds no step in procedure 'greenfield-dd'
+[WARN] activity-agent-in-procedure: S9/financing-dd: agent 'financing-agent' holds no step in procedure 'brownfield-dd'
+[WARN] activity-agent-in-procedure: S9/dd-waiver-review: agent 'compliance-officer' holds no step in procedure 'greenfield-dd'
+[WARN] activity-agent-in-procedure: S9/capability-dd: agent 'brownfield-agent' holds no step in procedure 'brownfield-dd'
+[WARN] activity-agent-in-procedure: S10/deal-structure-hypothesis: agent 'brownfield-agent' holds no step in procedure 'brownfield-fs'
+[WARN] activity-agent-in-procedure: S10/deal-structure-hypothesis: agent 'brownfield-agent' holds no step in procedure 'deal-shape-chain'
+[WARN] activity-agent-in-procedure: S11/ic-preparation: agent 'pm' holds no step in procedure 'entity-ic-review'
+[WARN] activity-agent-in-procedure: S11/ic-preparation: agent 'pm' holds no step in procedure 'group-investment-review'
+[WARN] activity-agent-in-procedure: S11/charter-baseline: agent 'pm' holds no step in procedure 'entity-ic-review'
+[WARN] activity-agent-in-procedure: S11/investment-structuring: agent 'brownfield-agent' holds no step in procedure 'jv-lifecycle-governance'
+[WARN] activity-agent-in-procedure: S11/risk-review: agent 'risk-officer' holds no step in procedure 'group-investment-review'
+[WARN] activity-agent-in-procedure: S11/group-review: agent 'group-review-agent' holds no step in procedure 'entity-ic-review'
+[WARN] check-kill-registry-parity: neb-policy section 4 row states a criterion with no registry entry: row 4
+[WARN] check-review-coverage: S1: output "시장 규모·성장 추정 (systematic-market-sizing 매트릭스 — 버전 관리)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S1: output "경쟁 구조 (시장 집중도·주요 플레이어 — competitive-intelligence 액티비티 산출)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S1: output "외부 미래 전망 대비 격차 분석 (입수 시 — 신규·강화 드라이버 요인 포함, S2 인사이트로 연동)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S2: output "기회 퍼널(매력도 포함)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S2: output "진입시장 산정 (기회별 — S1 링크·대상 범위·배율 도출 사슬, ADR-0180)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S3: output "시너지 점수" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S3: output "전략적 적합성 평가" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S3: output "필요 역량 목록 (시장 요구사항 — S2 스케치 requiredCapabilities·S1 요인에서 도출)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S3: output "역량 갭 분석 (그룹/계열사 보유 역량 대비; 내부(자사 단독) 역량 평가는 후속 보강)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S4: output "라우트 결정 기록" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S5: output "진출전략(Build/Partner/Hire/Invest)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S5: output "Business Case 라인(비용·수익 구조)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S6: output "Target Universe 정의(선정 기준·커버리지)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S6: output "Target Company Long List(필수 속성·출처 포함)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S7: output "Screening Evidence" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S8: output "Business Case / 밸류에이션 (brownfield — 대상별)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S8: output "시뮬레이션 NPV 분포" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S8: output "BEP 시점·물량 (밸류에이션)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S8: output "시뮬레이션 입력 스냅샷 (job-spec 기록)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S8: output "Target 비교 분석·권고 (brownfield)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S8: output "대상 선정 기록 (brownfield — 사람 결정)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S8: output "채택 Business Case (사람의 채택 기록 s8_case_adopt — S10·S11 투자심의 자료의 정량 축)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S9: output "DD 체크리스트 판정" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S9: output "조사내역(dd_finding)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S9: output "대상별 DD 비교(선택)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S9: output "필요 역량 검증 판정 (brownfield, 역량별 해소/부분 해소/미해소 — S8 기술 렌즈 T1의 근거)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S9: output "기술 렌즈 T2~T5 롤업 근거 (기술·인사·법무 체크리스트 판정 — design 2026-10-20-technical-items-s9)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S10: output "투자구조 가설(4축 검토 완료 — deal_structure_review 아티팩트 참조; 그린필드는 설립 구조 결정(신규 법인 설립 또는 신규 사업부 추진) 포함)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S10: output "자금조달 계획(sources & uses 균형·자금 확정성 증빙)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S11: output "IC 결정" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S11: output "투자 구조 확정(투자 주체·자금 조달 mix·지급 일정)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S11: output "설립 완료 법인(신설 법인 — 사내벤처·자회사, origin∈{internal,joint})" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S11: output "실행 진입(PMI / 벤처 모니터링 / R&BD 실행)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S11: output "실행 기준선(greenfield — capex_tranche 연결·인허가/인증 마일스톤·채용·램프업 KPI·인센티브 의무, 사람 확인)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S12: output "포트폴리오 스코어카드" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S12: output "사업 성과 리포트" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S12: output "포트폴리오 전환 결정(어휘 5종: next_tranche_released / held_evidence_incomplete / graduate_to_core / reduce_or_divest / kill_with_learning_captured)" is not in the review registry (not a requiredArtifact - skips AI-2nd)
+[WARN] check-review-coverage: S1: author domain 'functional' resolves by DEFAULT_REVIEWER_DOMAIN fallback (matrix file absent - P4)
+[WARN] check-review-coverage: S2: author domain 'functional' resolves by DEFAULT_REVIEWER_DOMAIN fallback (matrix file absent - P4)
+[WARN] check-review-coverage: S3: author domain 'functional' resolves by DEFAULT_REVIEWER_DOMAIN fallback (matrix file absent - P4)
+[WARN] check-review-coverage: S4/route-strategy: author agent 'pm' has no review domain
+[WARN] check-review-coverage: S4/route-advisory: author agent 'pm' has no review domain
+[WARN] check-review-coverage: S4: author domain 'functional' resolves by DEFAULT_REVIEWER_DOMAIN fallback (matrix file absent - P4)
+[WARN] check-review-coverage: S5: author domain 'functional' resolves by DEFAULT_REVIEWER_DOMAIN fallback (matrix file absent - P4)
+[WARN] check-review-coverage: S6: author domain 'functional' resolves by DEFAULT_REVIEWER_DOMAIN fallback (matrix file absent - P4)
+[WARN] check-review-coverage: S7: author domain 'functional' resolves by DEFAULT_REVIEWER_DOMAIN fallback (matrix file absent - P4)
+[WARN] check-review-coverage: S8/target-selection: author agent 'pm' has no review domain
+[WARN] check-review-coverage: S8: author domain 'functional' resolves by DEFAULT_REVIEWER_DOMAIN fallback (matrix file absent - P4)
+[WARN] check-review-coverage: S9: author domain 'functional' resolves by DEFAULT_REVIEWER_DOMAIN fallback (matrix file absent - P4)
+[WARN] check-review-coverage: S9: author domain 'region' resolves by DEFAULT_REVIEWER_DOMAIN fallback (matrix file absent - P4)
+[WARN] check-review-coverage: S10: author domain 'functional' resolves by DEFAULT_REVIEWER_DOMAIN fallback (matrix file absent - P4)
+[WARN] check-review-coverage: S11/ic-preparation: author agent 'pm' has no review domain
+[WARN] check-review-coverage: S11/charter-baseline: author agent 'pm' has no review domain
+[WARN] check-review-coverage: S11: author domain 'functional' resolves by DEFAULT_REVIEWER_DOMAIN fallback (matrix file absent - P4)
+[WARN] check-review-coverage: S12: author domain 'functional' resolves by DEFAULT_REVIEWER_DOMAIN fallback (matrix file absent - P4)
+[WARN] check-s12-coverage: cell (brownfield, external, jv) matches no S12 activity
+[WARN] check-s12-coverage: cell (brownfield, external, minority_investment) matches no S12 activity
+[WARN] check-s12-coverage: cell (brownfield, external, rbd) matches no S12 activity
+[WARN] check-s12-coverage: cell (brownfield, external, corporate_venture) matches no S12 activity
+```
