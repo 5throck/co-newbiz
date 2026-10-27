@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.7.0
+// @version 1.8.0
 /**
  * Procedure Schema Validator — co-newbiz
  *
@@ -55,6 +55,11 @@
  *       (human-role keys and recorder-pattern agents, per ADR-0053) is
  *       checked by scripts/co-newbiz/graph-map.ts --check, which sees the
  *       registry-consistency direction that per-file validation cannot.
+ *
+ * Since 1.8.0 (ADR-0187 P1, finding M2): rule `activity-agent-in-procedure`
+ * — every flow.spec activity's agent must hold >=1 agent_key step in each
+ * procedure it lists (scripts/co-newbiz/process-ssot-check.ts). WARN-only in
+ * P1; P2 makes it blocking.
  *
  * Usage:
  *   bun procedures/_validate.ts
@@ -1205,6 +1210,13 @@ async function main() {
 
   allIssues.push(...(await walkAllSteps(humanRoles)));
   allIssues.push(...(await checkActivitySkillAlignment()));
+  // ADR-0187 P1 (M2): report-only rule activity-agent-in-procedure.
+  {
+    const { checkActivityAgentInProcedure, loadFlowSpec, loadProcedures } = await import("../scripts/co-newbiz/process-ssot-check.ts");
+    for (const f of checkActivityAgentInProcedure(loadFlowSpec(PROJECT_ROOT), loadProcedures(PROJECT_ROOT))) {
+      allIssues.push({ file: join(PROJECT_ROOT, "process", "flow.spec.yaml"), message: `activity-agent-in-procedure: ${f.message}`, severity: "warn" });
+    }
+  }
   for (const d of standaloneStepDocs) {
     allIssues.push(...checkStepReferences(d.label, d.steps, humanRoles));
   }

@@ -560,7 +560,7 @@
       "status": "active"
     },
     "validate-agents.ts": {
-      "version": "1.4.0",
+      "version": "1.4.1",
       "status": "active"
     },
     "validate-doc-folder.ts": {
@@ -592,7 +592,7 @@
       "status": "active"
     },
     "validate-skills.ts": {
-      "version": "1.5.1",
+      "version": "1.5.2",
       "status": "active"
     },
     "validate-procedures.ts": {

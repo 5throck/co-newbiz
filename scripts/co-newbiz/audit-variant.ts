@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.3.0
+// @version 1.4.0
 /**
  * co-newbiz variant audit hook — executed by scripts/audit.ts §27 (the
  * pluggable variant-specific audit checks; declared in variant.json
@@ -32,6 +32,9 @@
  *     relocation rationale; unit-level enforcement also exists in
  *     tests/unit/pm-catalog.test.ts — this keeps a stale catalog from passing
  *     an audit run that skips unit tests.
+ *   - Process SSOT validators (v1.4.0, ADR-0187 P1): the eight named checks of
+ *     scripts/co-newbiz/process-ssot-check.ts, REPORT-ONLY — findings print as
+ *     WARN and never set the failure flag (P2 switches them to blocking).
  */
 
 import { existsSync, readdirSync } from "node:fs";
@@ -39,6 +42,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runCoverage } from "./mcp-coverage.ts";
 import { scanRouteAudit } from "./route-audit-scan.ts";
+import { CHECK_IDS, runAll, summarize } from "./process-ssot-check.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -229,5 +233,13 @@ runDriftGate(
   "scripts/co-newbiz/generate-pm-catalog.ts",
   "app/web-next/lib/pm-catalog.generated.ts",
 );
+
+// ADR-0187 P1: report-only - WARN lines, never `failed = true`.
+const ssot = runAll();
+const ssotCounts = summarize(ssot);
+if (ssot.length === 0) console.log("  ✓ Process SSOT validators: 0 findings");
+else {
+  console.log(`  ⚠ [WARN] Process SSOT validators (report-only, ADR-0187 P1): ${ssot.length} finding(s) — ${CHECK_IDS.map((c) => `${c}=${ssotCounts[c]}`).join(", ")}; details: bun run process:ssot-check`);
+}
 
 process.exit(failed ? 1 : 0);

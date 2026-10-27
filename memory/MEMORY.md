@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-10-28](2026-10-28.md) | feat(governance): ADR-0187 W3 P1 report-only process SSOT validators |
 | [2026-10-28](2026-10-28.md) | chore: workspace sync (0 files) |
 | [2026-10-27](2026-10-27.md) | feat(governance): gate integrity — ADR-0186 design and hook hardening |
 | [2026-10-26](2026-10-26.md) | docs(docs): workspace sync (136 files) |
