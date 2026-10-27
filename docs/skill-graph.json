@@ -970,8 +970,8 @@
       "name": "brownfield-agent",
       "scope": "root",
       "capability": "brownfield-agent",
-      "content_hash": "7785f718189556b1",
-      "version": "1.1.1",
+      "content_hash": "a1c51ae31ebe46b7",
+      "version": "1.2.0",
       "mirrors": [
         "agents/brownfield-agent.md"
       ]
@@ -1087,8 +1087,8 @@
       "name": "financial-analyst",
       "scope": "root",
       "capability": "financial-analyst",
-      "content_hash": "61591f5ce83776c8",
-      "version": "1.1.2",
+      "content_hash": "febbf3fc738ddb60",
+      "version": "1.2.0",
       "mirrors": [
         "agents/financial-analyst.md"
       ]
@@ -1139,8 +1139,8 @@
       "name": "greenfield-agent",
       "scope": "root",
       "capability": "greenfield-agent",
-      "content_hash": "7a8c8b0e97a0fc20",
-      "version": "1.1.2",
+      "content_hash": "873b0fc58be81815",
+      "version": "1.2.0",
       "mirrors": [
         "agents/greenfield-agent.md"
       ]
@@ -1334,8 +1334,8 @@
       "name": "process-governance-manager",
       "scope": "root",
       "capability": "process-governance-manager",
-      "content_hash": "b22dc10189e9a8b1",
-      "version": "1.1.3",
+      "content_hash": "4210138bc997d656",
+      "version": "1.1.4",
       "mirrors": [
         "agents/process-governance-manager.md"
       ]
@@ -1386,8 +1386,8 @@
       "name": "risk-officer",
       "scope": "root",
       "capability": "risk-officer",
-      "content_hash": "af4c6905a73ec788",
-      "version": "1.1.2",
+      "content_hash": "e920ab3881d12521",
+      "version": "1.2.0",
       "mirrors": [
         "agents/risk-officer.md"
       ]
@@ -1716,6 +1716,11 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20261027-03",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "doc:AGENTS.md",
       "type": "doc",
       "layer": "L3"
@@ -1872,8 +1877,8 @@
       "name": "assumption-audit",
       "scope": "root",
       "capability": "assumption-audit",
-      "content_hash": "22cefbd3de9fc35f",
-      "version": "1.1.0",
+      "content_hash": "bfc2a684907978fd",
+      "version": "1.1.1",
       "mirrors": [
         "skills/assumption-audit/SKILL.md",
         ".claude/skills/assumption-audit/SKILL.md",
@@ -4859,6 +4864,12 @@
     {
       "type": "references",
       "from": "agent:root/brownfield-agent",
+      "to": "skill:root/brownfield-feasibility",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/brownfield-agent",
       "to": "skill:root/deal-execution-playbook",
       "source": "prose"
     },
@@ -5651,6 +5662,18 @@
     {
       "type": "cites_skill",
       "from": "dec:DEC-20261027-02",
+      "to": "skill:root/policy-and-procedure-governance",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261027-03",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261027-03",
       "to": "skill:root/policy-and-procedure-governance",
       "source": "skills_used"
     },

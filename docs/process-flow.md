@@ -106,7 +106,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 - S1 시장분석: `market-intelligence-agent`
 - S2 기회 발굴: `market-intelligence-agent`, `greenfield-agent`
-- S3 시너지·전략적 적합성: `process-governance-manager`, `risk-officer`, `financial-analyst`
+- S3 시너지·전략적 적합성: `process-governance-manager`, `financial-analyst`, `risk-officer`, `greenfield-agent`, `brownfield-agent`
 - S4 진출방식 결정: `pm`, `brownfield-agent`, `valuation-agent`, `certification-agent`
 - S5 자체 진출: `greenfield-agent`, `financial-analyst`
 - S6 대상 후보 발굴: `brownfield-agent`, `market-intelligence-agent`
@@ -210,7 +210,10 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 **Activities**
 - strategic-fit-screening · agent: `process-governance-manager` · skills: `strategic-fit-screening`, `portfolio-fit-assessment`, `brownfield-feasibility`, `antitrust-screening`, `site-infrastructure-assessment`, `regional-incentive-sourcing` · procedure: `greenfield-screening`, `brownfield-screening`
-- synergy-analysis · agent: `risk-officer` · skills: `assumption-audit` · procedure: `greenfield-screening`, `brownfield-screening`
+- synergy-analysis · agent: `financial-analyst` · skills: `investment-feasibility-modeling`, `historical-financial-analysis` · procedure: `greenfield-screening`, `brownfield-screening`
+- synergy-red-team · agent: `risk-officer` · skills: `assumption-audit` · procedure: `greenfield-screening`, `brownfield-screening`
+- capability-register-greenfield · agent: `greenfield-agent` · skills: `greenfield-feasibility` · procedure: `greenfield-screening`
+- capability-register-brownfield · agent: `brownfield-agent` · skills: `brownfield-feasibility` · procedure: `brownfield-screening`
 - our-company-profile · agent: `financial-analyst` · skills: `historical-financial-analysis`, `company-intelligence`, `competitive-intelligence` · procedure: `company-profile-analysis`
 
 **필수 산출물**
@@ -221,6 +224,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 기회에 synergy_score와 근거가 기록되었다
 - 적합성 판단 근거(rationale)가 기록되고 결정론 권고(매력도·시너지 조합)가 제시되었다
 - 최소 1개 기회가 selected 상태이다 (시너지·적합성 평가 후 선정)
+- 필요 역량 등록부에 출처(source)가 기록된 역량이 1건 이상 존재한다 (capability-register 활동 — grandfathered 기회 제외)
 
 **적용 트랙**: greenfield, brownfield
 
@@ -305,6 +309,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 트랙 결정 (greenfield)
 - 자사 역량·조직·인프라 정보
 - 필요 역량 목록 (S3 적합성 평가에서 도출)
+- 진입시장 산정 (S2 확정 — ADR-0181; S3~S12의 기준 시장, ADR-0187 M9)
 
 **Activities**
 - capability-assessment · agent: `greenfield-agent` · skills: `greenfield-feasibility`, `org-readiness-assessment` · procedure: `greenfield-capability-assessment`
@@ -341,6 +346,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 트랙 결정·Route 유형 (brownfield)
 - 시장 정의·가치사슬 구조 (S1)
 - 필요 역량·진입 조건 (S3)
+- 진입시장 산정 (S2 확정 — ADR-0181; S3~S12의 기준 시장, ADR-0187 M9)
 
 **Activities**
 - target-universe-definition · agent: `brownfield-agent` · skills: `brownfield-feasibility`, `competitive-intelligence` · procedure: `brownfield-target-identification`
@@ -376,6 +382,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **입력**
 - Target Company Long List (S6)
 - 스크리닝 기준(전략적 적합성·역량 적합성·재무·지역·소유권/가용성·규제 제약)
+- 진입시장 산정 (S2 확정 — ADR-0181; S3~S12의 기준 시장, ADR-0187 M9)
 
 **Activities**
 - target-screening · agent: `brownfield-agent` · skills: `brownfield-feasibility`, `strategic-fit-screening`, `peer-benchmarking` · procedure: `brownfield-target-screening`
@@ -461,6 +468,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 조사 근거
 - S8 대상 선정 기록 (brownfield)
 - S3 필요 역량 등록부 (brownfield — capability-dd 입력; design 2026-10-19-brownfield-capability-dd)
+- 진입시장 산정 (S2 확정 — ADR-0181; S3~S12의 기준 시장, ADR-0187 M9)
 
 **Activities**
 - commercial-dd · agent: `commercial-dd-agent` · skills: `commercial-due-diligence` · procedure: `greenfield-dd`, `brownfield-dd`
@@ -508,6 +516,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - S8 채택 Business Case
 - S9 DD 발견사항(dd_finding value_impact 포함)
 - WACC·hurdle 입력값
+- 진입시장 산정 (S2 확정 — ADR-0181; S3~S12의 기준 시장, ADR-0187 M9)
 
 **Activities**
 - deal-structure-hypothesis · agent: `brownfield-agent` · skills: `investment-vehicle-structuring` · procedure: `deal-structuring`, `brownfield-fs`, `deal-shape-chain`
@@ -534,6 +543,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 투자심의 자료(사업계획·DD·RAG·검토)
 - 투자 구조안(S10 투자구조 설계의 산출물 — 투자 주체·4축 검토·자금조달 계획)
 - 사람 최종 승인 산출물
+- 진입시장 산정 (S2 확정 — ADR-0181; S3~S12의 기준 시장, ADR-0187 M9)
 
 **Activities**
 - ic-preparation · agent: `pm` · skills: `executive-presentation`, `sample-driven-report-writing`, `dd-to-valuation-bridge`, `financing-plan-review`, `insight-synthesis` · procedure: `entity-ic-review`, `group-investment-review`
@@ -555,6 +565,11 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 법인 투자심의위원회와 그룹 투자심의위원회 승인이 모두 기록되었다
 - 추진계획(차터) 기준선이 확정되고 append-only 변경 이력이 시작되었다
 - origin∈{internal,joint}인 프로젝트는 entity-establishment-execution 5단계 완료 기록이 존재한다
+- 실행 순서는 법인 투자심의위원회 GO → 그룹 투자심의위원회 GO → 실행(설립·사업부 신설 / PMI 킥오프 / greenfield 실행 기준선)이다 — 그룹 GO 전에는 설립·자본 약정을 실행하지 않는다 (ADR-0187 D7)
+- S8에서 사람이 채택한 Business Case 기록(s8_case_adopt)이 존재한다
+- 법인·그룹 투자심의위원회의 최신 GO 결정자가 사람이다 (사람 최종 승인 — grandfathered 프로젝트 제외)
+- brownfield M&A·JV·전략적 투자: 사람이 기록한 PMI 킥오프(통합 책임자·통합 계획 기준선)가 존재한다 (소수점 지분·파트너십·R&BD·CVC·기존사업 R&BD·사내벤처 제외)
+- greenfield: 실행 기준선이 사람에 의해 확인되었다 (트랙 분류 충돌은 사람이 정리 — ADR-0161)
 
 **적용 트랙**: greenfield, brownfield
 
@@ -590,6 +605,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **입력**
 - IC 승인 결정
 - 실행 계획
+- 진입시장 산정 (S2 확정 — ADR-0181; S3~S12의 기준 시장, ADR-0187 M9)
 
 **Activities**
 - portfolio-monitoring · agent: `group-review-agent` · skills: `portfolio-fit-assessment` · procedure: `portfolio-venture-monitoring`

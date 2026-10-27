@@ -21,8 +21,11 @@ describe("ADR-0185 W3 prompt placement", () => {
   test("red-team independence rebinds", () => {
     expect(P["s3.synergy_fa"]!.agent).toBe("financial-analyst");
     expect(P["s3.capability_gap_draft"]!.agent).toBe("process-governance-manager");
-    expect(P["s3.synergy_synergy"]!.agent).toBe("risk-officer");
+    // ADR-0187 D6: the synergy author is financial-analyst; risk-officer red-teams only.
+    expect(P["s3.synergy_synergy"]!.agent).toBe("financial-analyst");
     expect(P["s3.synergy_ic"]!.agent).toBe("risk-officer");
+    expect(activityOf("s3.synergy_synergy")).toBe("S3.synergy-analysis");
+    expect(activityOf("s3.synergy_ic")).toBe("S3.synergy-red-team");
   });
 
   test("activity mappings", () => {

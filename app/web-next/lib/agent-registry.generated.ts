@@ -212,7 +212,7 @@ export const AGENT_REGISTRY: AgentRegistryEntry[] = [
   {
     "key": "risk-officer",
     "name": "Risk Officer",
-    "role": "Red-team function — optimism-bias audits, base-rate enforcement, synergy-score recommendation, and kill-criteria discipline across the pipeline",
+    "role": "Red-team function — optimism-bias audits, base-rate enforcement, S3 synergy red-team, and kill-criteria discipline across the pipeline",
     "domain": "functional"
   },
   {

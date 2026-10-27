@@ -47,7 +47,7 @@ describe("coverage gate", () => {
     // 2026-10-19-brownfield-capability-dd, excluded in mcp-coverage.exclusions.yaml).
     // Artifacts 34: v2.9.0 added the S2 required artifact 진입시장 산정
     // (stage:S2:2, read via get_entry_market_derivation).
-    expect(report.activities).toBe(56); // ADR-0185: +9 (7 S9 DD validators, 2 S4)
+    expect(report.activities).toBe(59); // ADR-0185: +9 (7 S9 DD validators, 2 S4); ADR-0187 P0: +3 (S3 synergy-red-team, capability-register-greenfield/-brownfield)
     expect(report.artifacts).toBe(34);
   });
 

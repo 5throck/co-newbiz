@@ -23,13 +23,18 @@ aliases:
       Entry station for all chains. deal-shape-chain also sits here and runs
       parallel to the market-shaped chains.
     reference: procedures/_shared/brownfield-screening/schema.yaml
-  "Target Screening":
-    stage: G2
-    note: Brownfield-only. Greenfield chains advance G1 -> G3.
-    reference: procedures/_shared/brownfield-target-screening/schema.yaml
   "Pre-FS":
     stage: G3
+    note: >-
+      Pre-feasibility route decision; second in the v2 gate order (stages.yaml
+      order 2, ADR-0187 M3).
     reference: procedures/_shared/brownfield-pre-fs/schema.yaml
+  "Target Screening":
+    stage: G2
+    note: >-
+      Brownfield-only; third in the v2 gate order (stages.yaml order 3, after
+      Pre-FS). Greenfield chains advance G3 (Pre-FS) -> G4 (FS).
+    reference: procedures/_shared/brownfield-target-screening/schema.yaml
   "FS":
     stage: G4
     reference: procedures/_shared/brownfield-fs/schema.yaml

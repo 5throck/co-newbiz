@@ -1,8 +1,8 @@
 ---
 title: "Process SSOT and decision evidence (wave W3) - design"
 date: 2026-10-27
-status: proposed
-revision: 1
+status: approved
+revision: 2 (ADR-0187 accepted 2026-10-27 at the PR #752 merge)
 author: process-governance-manager
 design_of_record:
   - "docs/reports/2026-10-26-project-review-s1-s12.md"
@@ -12,7 +12,7 @@ lang: en
 
 # Process SSOT and decision evidence (wave W3) - design
 
-Companion to [ADR-0187](../adr/0187-process-ssot-decision-evidence.md) (Proposed). This is a proposal to the owner; no code, procedure, checklist, policy or flow.spec file changes until ADR-0187 is accepted. Outputs of this system are decision support (boundary 2).
+Companion to [ADR-0187](../adr/0187-process-ssot-decision-evidence.md) (Accepted 2026-10-27, owner merge of PR #752). Implementation proceeds phase by phase per section 5. Outputs of this system are decision support (boundary 2).
 
 ## 1. Scope and binding inputs
 
@@ -174,8 +174,8 @@ Owner confirmation (2026-10-27): all nine decisions are decided exactly as recom
 
 The D2 thresholds (S10 uses within +/-5% of the S8 investment; downside DSCR headroom of at least 1.2x) are confirmed as starting values, owned by `risk-officer` + `quant-methodologist`.
 
-ADR-0187 stays Proposed; acceptance happens at the owner's merge of the PR.
+ADR-0187 was accepted at the owner's merge of PR #752 (2026-10-27).
 
 ## 10. Acceptance
 
-Accepted when ADR-0187 is accepted by the human owner and D1-D9 are recorded. Until then nothing in section 4 is implemented.
+Accepted: ADR-0187 was accepted by the human owner on 2026-10-27 (PR #752 merge) with D1-D9 recorded. Section 4 is implemented by the phases of section 5.
