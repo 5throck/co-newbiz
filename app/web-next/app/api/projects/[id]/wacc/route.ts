@@ -118,6 +118,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (hasHurdle && hurdleIrr === null) {
     return badRequest("invalid_request", "hurdle_irr must be a finite ratio greater than -1.");
   }
+  // ADR-0186 D8 plausibility: a discount rate is a ratio strictly between 0 and 1 (catches 12 typed for 0.12).
+  if (wacc <= 0 || wacc >= 1) return badRequest("rate_out_of_range", "wacc must be a ratio strictly between 0 and 1 (0.12 means 12 percent).");
+  if (hurdleIrr !== null && (hurdleIrr <= 0 || hurdleIrr >= 1)) return badRequest("rate_out_of_range", "hurdle_irr must be a ratio strictly between 0 and 1 (0.12 means 12 percent).");
 
   let components: WaccComponentInput[] | undefined;
   let derivation: ReturnType<typeof assembleDerivation> | null = null;
@@ -177,6 +180,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         wacc_computed: computed,
         computed_mismatch: computed != null && Math.abs(computed - wacc) > COMPUTED_TOLERANCE,
         subject,
+        // Display-only: the confirmed WACC should sit below the hurdle IRR.
+        warnings: hurdleIrr !== null && wacc >= hurdleIrr ? ["wacc_not_below_hurdle"] : [],
       },
       201,
       { run_id: result.run_id, wacc_source: result.wacc.source },

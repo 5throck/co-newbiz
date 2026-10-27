@@ -6,6 +6,7 @@ import { getDb } from "../../../../../../../db/client.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
+import { waccStatusView } from "../../../../../lib/wacc-status.ts";
 import { buildS8LensSummary } from "../../../../../lib/s8-lens-summary.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -14,5 +15,5 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   { const denied = requireBusinessActor(auth.auth, "read"); if (denied) return denied; }
   const { id } = await params;
   if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
-  return ok(buildS8LensSummary(getDb(), id), 200);
+  return ok({ ...buildS8LensSummary(getDb(), id), wacc_status: waccStatusView(id) }, 200);
 }

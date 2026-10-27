@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * IC package tool — ADR-0100 S10. Thin READ-ONLY REST wrapper (ADR-0011) over
  * /api/projects/:id/ic-package. Only the implemented surface is exposed
@@ -14,6 +14,8 @@ import type { RestPort } from "../shared/rest-port.ts";
 
 export interface IcPackageEnvelope {
   project: { id: string; project_no: string };
+  /** ADR-0186 D8: `provisional` until the WACC subject, WACC and hurdle IRR are user-confirmed (display label, blocks nothing). */
+  wacc_status?: { status: "confirmed" | "provisional"; reason: string | null; missing: string[]; subject: string | null; scope: "project" | "target" };
   business_case: {
     adopted: {
       id: string; name: string; kind: string; scenario: string | null; adopted: boolean;

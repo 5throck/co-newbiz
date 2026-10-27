@@ -4,6 +4,8 @@
 // same on the opportunity and project carriers.
 import { getDb } from "../../../db/client.ts";
 import { evaluateValidatorCompleteness } from "../../../db/lib/validator-completeness.ts";
+import { resolveWaccConfirmation } from "../../../db/lib/wacc-confirmation.ts";
+import { waccUnconfirmedFailure } from "./gate-decision-contract.ts";
 import { resolveTrack } from "./project-track.ts";
 import { applyFamily, recordWouldBlock, type IntegrityContext, type IntegrityFailure } from "./gate-integrity.ts";
 import { gateIntegrityMode } from "./gate-integrity-flags.ts";
@@ -83,3 +85,20 @@ export function goValidatorsCheck(ctx: IntegrityContext): Response | null {
   });
 }
 const VALIDATOR_GO_GATES: ReadonlySet<string> = new Set(["dd", "entity_ic", "group_ic"]);
+
+/**
+ * ADR-0186 D8 (family `wacc`, neb-policy 2.2, bf-02): the project fs GO is hard-blocked (409 wacc_unconfirmed) until the
+ * WACC subject, WACC and hurdle IRR are user-confirmed. At dd / entity_ic / group_ic the state is re-read and only a
+ * REGRESSION (a non-user row exists) blocks. Run BEFORE the stage-prerequisite gaps, which the S8 completion rule would
+ * otherwise answer with a generic code; the decision write re-checks it from the snapshot inside its transaction.
+ */
+export function goWaccCheck(ctx: IntegrityContext): Response | null {
+  if (ctx.entityType !== "project" || !WACC_GO_GATES.has(ctx.gate)) return null;
+  return applyFamily("wacc", ctx, () => {
+    const c = resolveWaccConfirmation(getDb(), ctx.entityId);
+    if (c.confirmed) return null;
+    if (ctx.gate !== "fs" && c.source_status !== "assumed") return null;
+    return waccUnconfirmedFailure(c.subject, c.missing);
+  });
+}
+const WACC_GO_GATES: ReadonlySet<string> = new Set(["fs", "dd", "entity_ic", "group_ic"]);

@@ -8,14 +8,15 @@ import { api } from "../../lib/api.ts";
 import { S8InvestUncertaintyBlock } from "./S8InvestUncertaintyBlock.tsx";
 import type { S8LensSummary } from "../../lib/s8-lens-summary.ts";
 import { useTranslations } from "next-intl";
+import { WaccStatusBadge, type WaccStatusLike } from "../WaccStatusBadge.tsx";
 
 export function S8LensStrip({ projectId }: { projectId: string }) {const t = useTranslations("stages.s8.lensStrip"); const tc = useTranslations("common");
-  const [data, setData] = useState<S8LensSummary | null>(null);
+  const [data, setData] = useState<(S8LensSummary & { wacc_status?: WaccStatusLike }) | null>(null);
   const [error, setError] = useState(false);
   useEffect(() => {
     let alive = true;
     setError(false);
-    api.get<S8LensSummary>(`/api/projects/${encodeURIComponent(projectId)}/s8-lens-summary`)
+    api.get<S8LensSummary & { wacc_status?: WaccStatusLike }>(`/api/projects/${encodeURIComponent(projectId)}/s8-lens-summary`)
       .then((r) => { if (alive) setData(r.data); })
       .catch(() => { if (alive) setError(true); });
     return () => { alive = false; };
@@ -44,6 +45,7 @@ export function S8LensStrip({ projectId }: { projectId: string }) {const t = use
             {t("baseIrr")} {irr(financial.baseIrr)} {t("targetReturn")} {irr(financial.hurdleIrr)}
             {strip.financial.reasons.length > 0 ? ` · ${strip.financial.reasons.join(" · ")}` : ""}
           </p>
+          <WaccStatusBadge status={data.wacc_status} projectId={projectId} />
         </article>
       </div>
       {data.invest_uncertainty && <S8InvestUncertaintyBlock view={data.invest_uncertainty} />}

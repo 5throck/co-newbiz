@@ -2,6 +2,7 @@
 // 실행 계획) + 자기 단계 기록(스코어카드·시너지 인증·핵심인재·전환 이력)만
 // 컨텍스트로 읽는다. 투자 상태 평가·전환 제안 초안을 제안하며, 전환 결정
 // (venture_transition_decision)은 사람이 기록한다. On-demand, 비영속.
+import { waccStatusView } from "../../../../../lib/wacc-status.ts";
 import { effectiveState } from "../../../../../../../db/lib/gate-effective.ts";
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
@@ -134,7 +135,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   }
 
   appendAudit(db, { actor: ctx.userId, action: "monitoring_brief.generate", target: `${id}:${source}`, now: new Date().toISOString() });
-  return ok({ source, provider, note, manifest, brief: payload, risk_heatmap: heatmap }, 200);
+  return ok({ source, provider, note, manifest, brief: payload, risk_heatmap: heatmap, wacc_status: waccStatusView(id) }, 200);
 });
 
 function synthesisFallback(scorecard: unknown[], certs: unknown[], talent: unknown[]): BriefPayload {

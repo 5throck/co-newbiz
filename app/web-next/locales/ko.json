@@ -1909,7 +1909,11 @@
         },
         "others": "HOLD나 KILL은 언제든 기록할 수 있습니다.",
         "notEnforced": "참고: {title}. 아직은 GO를 막지 않습니다.",
-        "listLabel": "해당 항목"
+        "listLabel": "해당 항목",
+        "wacc_unconfirmed": {
+          "title": "할인율이 확정되지 않아 GO를 기록할 수 없습니다",
+          "body": "사업성 GO 전에 WACC 입력 세션에서 사람이 WACC 적용 주체, WACC, 허들 IRR을 확정해야 합니다. 면제 방법이 없습니다."
+        }
       },
       "priorAwaiting": "이전 게이트의 GO가 두 번째 검토를 기다리고 있습니다.",
       "sumConditions": "열린 조건",
@@ -1978,6 +1982,27 @@
       "history": {
         "countersign": "두 번째 검토",
         "decisionRecorded": "기록된 결정"
+      }
+    },
+    "waccStatus": {
+      "provisionalLabel": "잠정 할인율",
+      "provisionalHint": "WACC와 허들이 아직 모두 사람에 의해 확정되지 않아, 할인율에 따라 달라지는 값은 잠정입니다.",
+      "confirmedLabel": "할인율 확정됨",
+      "reason": {
+        "wacc_unconfirmed": "할인율이 아직 확정되지 않았습니다.",
+        "wacc_subject_not_target": "대상별 세션에는 WACC 적용 주체가 대상이어야 합니다."
+      },
+      "missing": {
+        "wacc_subject": "WACC 적용 주체",
+        "wacc": "WACC",
+        "hurdle_irr": "허들 IRR"
+      },
+      "scopeTarget": "선정 대상의 자체 세션",
+      "scopeProject": "프로젝트 단위 세션",
+      "confirmLink": "할인율 확정하러 가기",
+      "missingLabel": "남은 항목",
+      "warning": {
+        "wacc_not_below_hurdle": "WACC가 허들 IRR 이상입니다. 두 비율을 확인하세요."
       }
     }
   },
@@ -2241,7 +2266,9 @@
       "waiver_target_mismatch": "waiver 대상이 요청과 일치하지 않습니다.",
       "waiver_term_too_long": "면제 기간은 승인일부터 최대 90일입니다.",
       "why_it_matters_required": "why_it_matters(중요한 이유)는 필수입니다.",
-      "year_required": "목표 연도는 2026 이후여야 합니다."
+      "year_required": "목표 연도는 2026 이후여야 합니다.",
+      "wacc_unconfirmed": "할인율(WACC 적용 주체, WACC, 허들 IRR)을 사람이 확정하지 않아 GO를 기록할 수 없습니다. 면제 경로는 없습니다. HOLD 또는 KILL은 언제든 기록할 수 있습니다.",
+      "rate_out_of_range": "할인율과 허들은 0보다 크고 1보다 작은 비율이어야 합니다 (12%는 0.12)."
     },
     "notFound": {
       "title": "페이지를 찾을 수 없습니다",

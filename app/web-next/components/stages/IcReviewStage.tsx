@@ -8,6 +8,7 @@ import { TranslatorFn, resolveLabels } from "../../i18n/config.ts";
 import { DD_DOMAIN_KEY, DECISION_LABEL_KEY, GATE_LABEL_KEY, RAG_DIMENSION_KEY } from "../../lib/label-keys.ts";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { WaccStatusBadge, type WaccStatusLike } from "../WaccStatusBadge.tsx";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { StageTabs } from "../StageTabs.tsx";
@@ -39,6 +40,7 @@ const SCENARIO_UI = (tr: TranslatorFn): Record<string, string> => resolveLabels(
 const PCTL_UI = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, { p05: "stages.s11.stage.bottom", p50: "stages.s11.stage.median", p95: "stages.s11.stage.top" });
 interface AdoptedCase { id: string; name: string; kind: string; scenario: string | null; archived_at?: string | null; simulations: SimRow[] }
 interface IcPackage {
+  wacc_status?: WaccStatusLike;
   project: { id: string; project_no: string };
   business_case: { adopted: AdoptedCase | null; adoption: { modelId: string; adoptedBy: string; adoptedAt: string } | null; note?: string };
   dd: {
@@ -227,6 +229,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
           </h3>
 
           <h4 className="text-[length:var(--fs-body)] mt-2 mb-1">{t("adoptedBusinessCaseS8")}</h4>
+          {pkg && <WaccStatusBadge status={pkg.wacc_status} projectId={projectId} className="mb-2" />}
           {pkg?.business_case.adopted ? (
             <>
               <p className="text-[length:var(--fs-caption)]">

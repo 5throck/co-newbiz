@@ -170,7 +170,7 @@ describe("market dimension", () => {
     const runId = insertRun(projectId);
 
     const result = assess(projectId, runId, "screening");
-    expect(result.snapshotVarCount).toBe(41); // the filler's completeness invariant (0025 added the antitrust tripwire)
+    expect(result.snapshotVarCount).toBe(43); // the filler completeness invariant (0178 added the two ADR-0186 P4 vars)
     expect(result.outcomes.map((o) => o.dimension)).toEqual(["market"]); // no technical/risk rules live at screening
     const market = result.outcomes[0];
     expect(market.assessed).toBe(true);

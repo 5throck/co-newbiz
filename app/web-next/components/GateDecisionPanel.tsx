@@ -20,6 +20,7 @@ import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { ConditionsEditor, GateCountersign, KillOverridePanel } from "./GateIntegrity.tsx";
 import { conditionsPayload, integrityErrorList, isAwaitingCountersign, recordedDecisionOf, type ConditionDraft } from "../lib/gate-integrity-view.ts";
+import { WaccStatusBadge, type WaccStatusLike } from "./WaccStatusBadge.tsx";
 import { GateAckBlock, GateSnapshotSummary, useGateSnapshot } from "./GateSnapshotAck.tsx";
 import { EMPTY_ACK_STATE, ackProblemsFromError, buildAckPayload, reconcileAckState, type AckProblems, type AckState, type GateSnapshotEnvelope } from "../lib/gate-ack-view.ts";
 
@@ -117,11 +118,12 @@ export interface GateBriefData {
   note: string | null;
   manifest: string[];
   gate: string;
+  wacc_status?: WaccStatusLike;
   brief: { recommendation: "go" | "hold" | "kill" | null; confidence: string | null; rationale_draft: string; key_evidence: string[]; cautions: string[] };
 }
 
 /** ADR-0118 gate brief content (proposal only). Shared by the standalone brief and the S8 "AI 판단 지원" section. */
-export function GateBriefBody({ briefData, currentGate, onApply }: { briefData: GateBriefData; currentGate: string; onApply: (text: string) => void }) {const t = useTranslations("components.gateDecision.panel"); const tc = useTranslations("common");
+export function GateBriefBody({ briefData, currentGate, onApply, projectId }: { briefData: GateBriefData; currentGate: string; onApply: (text: string) => void; projectId?: string }) {const t = useTranslations("components.gateDecision.panel"); const tc = useTranslations("common");
   return (
     <>
       {briefData.gate !== currentGate && (
@@ -138,6 +140,7 @@ export function GateBriefBody({ briefData, currentGate, onApply }: { briefData: 
         )}
         {briefData.brief.confidence && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("confidence")} {briefData.brief.confidence}</span>}
       </p>
+      <WaccStatusBadge status={briefData.wacc_status} projectId={projectId} className="mb-1" />
       {briefData.note && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{briefData.note}</p>}
       {briefData.brief.rationale_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">{t("evidenceDraft")}</span> {briefData.brief.rationale_draft}</p>}
       {briefData.brief.key_evidence.length > 0 && (
@@ -417,7 +420,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
     if (err.code === "rationale_insufficient" && d.field === "divergence_reason") {
       setDivergenceProblem(typeof d.reason === "string" ? te(d.reason as never) : err.message); setError(null); return;
     }
-    if (["kill_binding_unoverridden", "validators_incomplete", "condition_open", "certification_unconfirmed"].includes(err.code)) {
+    if (["kill_binding_unoverridden", "validators_incomplete", "condition_open", "certification_unconfirmed", "wacc_unconfirmed"].includes(err.code)) {
       void snap.reload();
       const list = integrityErrorList(err.code, d);
       setError(list.length > 0 ? `${err.message} (${list.join(", ")})` : err.message);
@@ -601,7 +604,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
             </span>
           </div>
           {briefError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-1 mb-0">{briefError}</p>}
-          {briefData && <GateBriefBody briefData={briefData} currentGate={form.gate} onApply={applyBriefRationale} />}
+          {briefData && <GateBriefBody briefData={briefData} currentGate={form.gate} onApply={applyBriefRationale} projectId={entityType === "project" ? opportunityId : undefined} />}
           {!briefData && !briefLoading && !briefError && (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">{t("theAiDraftsTheRecommendation")}</p>
           )}
@@ -721,6 +724,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
                 problems={ackProblems}
                 decision={form.decision}
                 notice={staleNotice}
+                projectId={entityType === "project" ? opportunityId : undefined}
                 divergence={divergent && aiRec ? { aiRecommended: aiRec, value: divergence, onChange: setDivergence, required: form.decision === "go", problem: divergenceProblem } : null}
               />
             </div>

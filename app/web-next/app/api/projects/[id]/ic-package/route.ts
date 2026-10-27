@@ -11,6 +11,7 @@
 // derived AI PROPOSAL, performed as the calling user (boundary #1).
 // Deny-by-default: getProjectIfVisible via visibleProject — non-members get
 // 404 (FR-SEC-01); admins are excluded by role separation.
+import { waccStatusView } from "../../../../../lib/wacc-status.ts";
 import { getDb } from "../../../../../../../db/client.ts";
 import { readRagView, recomputeRag } from "../../../../../../../db/lib/rag-service.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
@@ -103,6 +104,8 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
   return ok(
     {
       project: { id: project.id, project_no: project.project_no },
+      // ADR-0186 D8: display contract - "provisional discount rate" until subject, WACC and hurdle are user-confirmed.
+      wacc_status: waccStatusView(id, db),
       business_case: adoptedCase
         ? {
             adopted: adoptedCase,

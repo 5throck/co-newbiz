@@ -915,14 +915,14 @@ describe("partner family — active pool + dependency", () => {
 // ---------------------------------------------------------------------------
 
 describe("fillSnapshot entry point", () => {
-  test("a bare project fills exactly 41 rows — one per seeded var, every FK valid; covenant is the one present 0", () => {
+  test("a bare project fills exactly 43 rows — one per seeded var, every FK valid; covenant is the one present 0", () => {
     const pid = insertProject();
     const runId = insertRun(pid);
     const result = fillSnapshot({ runId, projectId: pid, now: FILL_NOW }, db);
-    expect(result.rows).toHaveLength(41);
+    expect(result.rows).toHaveLength(43);
     expect(result.rows.map((r) => r.var_key).sort()).toEqual([...SNAPSHOT_VAR_KEYS].sort());
     const stored = db.query("SELECT var_key, status, value_num FROM project_variable_snapshot WHERE run_id = ?").all(runId) as Array<{ var_key: string; status: string; value_num: number | null }>;
-    expect(stored).toHaveLength(41);
+    expect(stored).toHaveLength(43);
     // Bare project: everything missing except the determinate counts —
     // covenant present-0 (D-M-RISK-5), the two certification tripwires
     // (present-always counts, 0 on an empty table), the six-validator
@@ -939,8 +939,11 @@ describe("fillSnapshot entry point", () => {
         "partner.financial_distress_red_count",
         "partner.dd_ip_chain_red_count",
         "deliverables.required_unreviewed",
+        "fin.dd_value_impact_unbridged", // ADR-0186 P4: no finding carries a value impact -> nothing to bridge, present 0
       ].sort(),
     );
+    expect(stored.find((r) => r.var_key === "fin.dd_value_impact_unbridged")!.value_num).toBe(0);
+    expect(stored.find((r) => r.var_key === "fin.targets_meeting_hurdle")!.status).toBe("missing"); // UNASSESSED, never zero
     expect(stored.find((r) => r.var_key === "validators.applicable_missing")!.value_num).toBe(6);
   });
 

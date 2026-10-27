@@ -6,6 +6,7 @@
 // Visibility is deny-by-default: getProjectIfVisible via visibleProject —
 // non-members get 404 (existence itself is protected, FR-SEC-01); admins are
 // excluded by role separation. Writes are analyst+.
+import { waccStatusView } from "../../../../../lib/wacc-status.ts";
 import { getDb } from "../../../../../../../db/client.ts";
 import { resolveEffectiveCagr } from "../../../../../lib/market-calibration.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
@@ -80,7 +81,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   let plausibility: ReturnType<typeof resolveRatioGuardFlag> = null;
   try { plausibility = resolveRatioGuardFlag(getDb(), id); } catch { /* omit on read failure */ }
   return ok(
-    { cases, archived, goal_attainment: goalAttainment, goal_count: goalsResolved.length, legacy_models: listLegacyModels(id), recommended_scenario: recommendedScenario, adoption, target_selection: targetSelection, targets, engines_mixed: enginesMixed, methods_mixed: methodsMixed, escalated_cagr_pct: eff?.source === "escalated" ? eff.cagrPct : null, s5_plan_capex_zero: s5PlanCapexZero, source_opportunity_id: trackRow?.source_opportunity_id ?? null, anchor_scope: anchorScope, plausibility },
+    { cases, archived, goal_attainment: goalAttainment, goal_count: goalsResolved.length, legacy_models: listLegacyModels(id), recommended_scenario: recommendedScenario, adoption, target_selection: targetSelection, targets, engines_mixed: enginesMixed, methods_mixed: methodsMixed, escalated_cagr_pct: eff?.source === "escalated" ? eff.cagrPct : null, s5_plan_capex_zero: s5PlanCapexZero, source_opportunity_id: trackRow?.source_opportunity_id ?? null, anchor_scope: anchorScope, plausibility, wacc_status: waccStatusView(id, db) },
     200,
     { count: cases.length },
   );

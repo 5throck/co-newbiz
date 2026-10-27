@@ -4,6 +4,7 @@
 // /deals/[id]/s12 탭이 동일 컴포넌트를 소비한다). StageTabs·StageFrame이
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 
+import { WaccStatusBadge, type WaccStatusLike } from "../WaccStatusBadge.tsx";
 import { TranslatorFn, resolveLabels } from "../../i18n/config.ts";
 import { useCallback, useEffect, useState } from "react";
 import { StageTabs } from "../StageTabs.tsx";
@@ -103,6 +104,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {const tr =
     provider: string | null;
     note: string | null;
     manifest: string[];
+    wacc_status?: WaccStatusLike;
     brief: {
       assessment_draft: string;
       risk_flags: string[];
@@ -337,6 +339,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {const tr =
                     <span className="status-chip status-amber">{t("transitionProposal")} {tr(TRANSITION_DECISION_KEY[reco.brief.transition_suggestion] ?? reco.brief.transition_suggestion)}</span>
                   )}
                 </p>
+                <WaccStatusBadge status={reco.wacc_status} projectId={projectId} className="mb-1" />
                 {reco.note && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{reco.note}</p>}
                 {reco.brief.assessment_draft && <p className="text-[length:var(--fs-caption)] mb-1"><span className="font-semibold">{t("statusEvaluationDraft")}</span> {reco.brief.assessment_draft}</p>}
                 {reco.brief.risk_flags.length > 0 && (

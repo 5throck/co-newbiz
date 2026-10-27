@@ -12,6 +12,7 @@ import {
   type AckProblems, type AckState, type GateSnapshotEnvelope, type GateSnapshotView, type SnapshotRequiredAck,
   groupLead, reasonHint, unassessedProcedures, visibleAckKeys,
 } from "../lib/gate-ack-view.ts";
+import Link from "next/link";
 import { KNOWN_HARD_BLOCKS, advisoryBlocks, enforcedBlocks } from "../lib/gate-integrity-view.ts";
 
 /** Loads the snapshot for one gate; `replace` swaps in the fresh one returned by a 409. */
@@ -46,6 +47,7 @@ function Chip({ tone, children }: { tone: "green" | "amber" | "red" | "neutral";
 export function GateSnapshotSummary({ snapshot, gateLabel }: { snapshot: GateSnapshotView; gateLabel: (g: string) => string }) {
   const t = useTranslations("components.gateSnapshot");
   const ti = useTranslations("components.gateIntegrity");
+  const tw = useTranslations("components.waccStatus");
   const k = snapshot.kill;
   const rag = snapshot.rag;
   const cap = rag?.data_confidence_cap;
@@ -143,7 +145,8 @@ function useAckLabel(snapshot: GateSnapshotView) {
 export interface DivergenceProps { aiRecommended: string; value: string; onChange: (v: string) => void; required: boolean; problem: string | null }
 
 /** Hard blocks, acknowledgement list and (only when the decision differs from the AI) the divergence reason. */
-export function GateAckBlock({ snapshot, state, onChange, problems, decision, divergence, notice }: {
+export function GateAckBlock({ snapshot, state, onChange, problems, decision, divergence, notice, projectId }: {
+  projectId?: string;
   snapshot: GateSnapshotView;
   state: AckState;
   onChange: (next: AckState) => void;
@@ -162,6 +165,7 @@ export function GateAckBlock({ snapshot, state, onChange, problems, decision, di
   const visible = visibleAckKeys(required, state);
   const procs = unassessedProcedures(required).filter((p) => required.filter((r) => r.kind === "kill_unassessed" && r.procedure === p).length > 1);
   const ti = useTranslations("components.gateIntegrity");
+  const tw = useTranslations("components.waccStatus");
   const enforced = enforcedBlocks(snapshot.hard_blocks);
   const advisory = advisoryBlocks(snapshot.hard_blocks);
   const hardBlocked = enforced.length > 0;
@@ -175,6 +179,7 @@ export function GateAckBlock({ snapshot, state, onChange, problems, decision, di
   const blockKeyTitle = (code: string, key: string) => {
     if (code === "condition_open") return snapshot.conditions_open?.find((c) => c.id === key)?.text ?? key;
     if (code === "kill_binding_unoverridden") return keyTitle(key);
+    if (code === "wacc_unconfirmed") return tw(`missing.${key}` as never);
     return key;
   };
   const problemFor = (key: string): string | null => {
@@ -196,6 +201,7 @@ export function GateAckBlock({ snapshot, state, onChange, problems, decision, di
           <ul className="sizing-note-list" aria-label={ti("hardBlock.listLabel")}>
             {b.keys.map((k) => <li key={`${b.code}:${k}`}>{blockKeyTitle(b.code, k)}</li>)}
           </ul>
+          {b.code === "wacc_unconfirmed" && projectId && <p className="m-0 mt-1"><Link className="text-[color:var(--accent)] underline" href={`/projects/${encodeURIComponent(projectId)}/wacc`}>{tw("confirmLink")}</Link></p>}
           <p className="m-0 text-[color:var(--muted-fg)]">{ti("hardBlock.others")}</p>
         </div>
       ))}

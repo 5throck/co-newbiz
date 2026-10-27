@@ -1,11 +1,16 @@
 {
   "procedure": "brownfield-fs-comparative",
   "criterion_id": "no_target_meets_base_scenario_hurdle",
-  "title": "No shortlisted target meets the base-scenario hurdle in the S8 per-target FS (market_forward base p05 NPV ≤ 0 or below the confirmed hurdle IRR)",
+  "title": "No shortlisted target's base-case IRR reaches the user-confirmed hurdle",
   "action": "escalate_to_risk_officer",
-  "predicate": null,
-  "enabled": false,
-  "policy_id": null,
-  "thresholds_source": "Declared in procedures/_shared/brownfield-fs-comparative/schema.yaml kill_criteria (S8 comparative, ADR-0143); activation awaits the per-target hurdle-threshold var round per ADR-0060 §3",
-  "notes": "Declared in YAML, not yet executable — predicate null by design (activation convention per ADR-0057). Halt is the kill-path: when every shortlisted target fails the base-scenario hurdle, the initiative cannot proceed to target selection or DD; escalate to risk-officer for KILL review."
+  "predicate": {
+    "op": "count",
+    "var": "fin.targets_meeting_hurdle",
+    "cmp": "lt",
+    "value": 1
+  },
+  "enabled": true,
+  "policy_id": "DEC-20261027-01",
+  "thresholds_source": "docs/adr/0186-gate-integrity.md D3 (Accepted): fin.targets_meeting_hurdle = number of shortlisted targets whose gate-primary base-case point-estimate IRR (deterministic-cashflow IRR on the base p50 row, not a quantile) is at least the user-confirmed hurdle IRR; hurdle not user-confirmed or no comparative run gives UNASSESSED; var seeded by migration 0178; threshold < 1 is the criterion wording itself",
+  "notes": "Activated by ADR-0186 P4 after D8 (hurdle confirmation). Escalate-to-risk-officer is the kill-path: when every shortlisted target fails the base-scenario hurdle, the initiative cannot proceed to target selection or DD."
 }
