@@ -933,6 +933,11 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0187",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent:root/antitrust-agent",
       "type": "agent",
       "layer": "L3",
@@ -4831,6 +4836,18 @@
       "type": "references",
       "from": "adr:0186",
       "to": "skill:root/waiver-management",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0187",
+      "to": "skill:root/ip-fto-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "adr:0187",
+      "to": "skill:root/regulatory-screening",
       "source": "prose"
     },
     {

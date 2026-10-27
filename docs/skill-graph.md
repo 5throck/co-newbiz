@@ -344,6 +344,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0184` | adr | — | root/i18n-audit, root/i18n-locale-config | — |
 | `adr:0185` | adr | — | root/certification-transferability, root/design-foundation, root/financing-plan-review, root/ip-fto-review, root/k-dart, root/k-ecos, root/k-kosis, root/k-krx, root/k-opendata, root/legal-due-diligence, root/management-incentive-review, root/partnership-health-scorecard, root/permit-pathway-mapping, root/portfolio-fit-assessment, root/project-review, root/regulatory-screening, root/technical-due-diligence, root/value-chain-stage-financials, root/zod-contract-gate | — |
 | `adr:0186` | adr | — | root/compliance-monitoring, root/stage-gate-governance, root/two-tier-approval-chain, root/wacc-input-session, root/waiver-management | — |
+| `adr:0187` | adr | — | root/ip-fto-review, root/regulatory-screening | — |
 | `dec:DEC-20260908-01` | decision | `root/project-review` | — | — |
 | `dec:DEC-20260908-02` | decision | `root/waiver-management` | — | — |
 | `dec:DEC-20260909-01` | decision | — | — | — |
