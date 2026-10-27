@@ -1,14 +1,13 @@
 {
   "schemaVersion": 2,
-  "timestamp": "2026-10-27T19:01:18.565Z",
+  "timestamp": "2026-10-27T19:08:25.445Z",
   "project": "co-newbiz",
   "templateVersion": "0.22.0",
-  "templateSha": "bde1e79e24b3d697cdb8e3ed158115bf86f549da",
-  "baseSha": "91bcd205ce857e285bea537c2727813c2e5debec",
+  "templateSha": "6e60ebdb09c04b0e21089160dc66d32de85d79b5",
+  "baseSha": "0c878d3ac6332eec48e0903edc3a49ed24088071",
   "files": [
     "CLAUDE.md",
     "agents/i18n-specialist.md",
-    "agents/pm.md",
     "docs/design-foundation.md",
     "docs/governance/agents/workflows.md",
     "scripts/SCRIPTS.md",
@@ -20,10 +19,8 @@
     "scripts/hooks/pre-commit.ts",
     "scripts/lib/platform-skeleton-merge.ts",
     "scripts/lib/upgrade-policy.ts",
-    "scripts/validate-agents.ts",
     "scripts/validate-md-language.ts",
     "scripts/validate-model-registry.ts",
-    "scripts/validate-skills.ts",
     "scripts/validate-templates.ts",
     "scripts/verify-readme-sync.ts",
     "template-version.txt",
@@ -144,20 +141,12 @@
       "hash": "b3924b25e36de9e9726ff629eb7c9da642cdd0b8c4357c08069592c470bb7115",
       "templateVersion": "0.22.0"
     },
-    "scripts/validate-agents.ts": {
-      "hash": "4d63bcb6d4038fbe7383e5eb1c31113ea8525be790e436f913a1fe91d8254def",
-      "templateVersion": "0.22.0"
-    },
     "scripts/validate-md-language.ts": {
       "hash": "c054a9c36571396d4393f3a8a26777458e20c6a91e04b755deb6aebad6f483cb",
       "templateVersion": "0.22.0"
     },
     "scripts/validate-model-registry.ts": {
       "hash": "9bc2d53701593ce8f3c97aae6593361bcef8f35d9aabaabdf6ba015c1f10d50e",
-      "templateVersion": "0.22.0"
-    },
-    "scripts/validate-skills.ts": {
-      "hash": "b95757acd08d015c1f776c44f739347eac8e9459da3f4e19d69c50a888f6b88e",
       "templateVersion": "0.22.0"
     },
     "scripts/validate-templates.ts": {
@@ -216,14 +205,6 @@
       "pass": "MERGE",
       "verdict": "MERGE",
       "detail": "managed-zone merge delivered (non-destructive union/insert)",
-      "severity": "INFO"
-    },
-    {
-      "path": "agents/pm.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "ADOPT",
-      "detail": "tier frontmatter normalized to template scalar 'medium' (ADR-0102, T-20261027-005 delivery)",
       "severity": "INFO"
     },
     {
@@ -347,14 +328,6 @@
       "severity": "INFO"
     },
     {
-      "path": "scripts/validate-agents.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.4.0 → 1.4.1 — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
       "path": "scripts/validate-md-language.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
@@ -368,14 +341,6 @@
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "ADOPT",
       "detail": "2.0.0 → 2.1.0 — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/validate-skills.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.5.1 → 1.5.2 — version-gated delivery over the delivered baseline",
       "severity": "INFO"
     },
     {

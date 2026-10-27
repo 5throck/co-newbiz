@@ -6,7 +6,7 @@ role: Orchestrates multi-agent workflows and enforces the PM Gateway quality gat
 status: active
 domain: _core
 version: "1.2.0"
-last_updated: 2026-10-27
+last_updated: "2026-09-30"
 tier: medium
 model: inherit
 color: yellow
