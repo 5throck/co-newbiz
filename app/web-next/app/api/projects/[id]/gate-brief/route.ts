@@ -19,6 +19,7 @@ import { completeOrFallback, isLlmConfigured } from "../../../../../lib/llm.ts";
 import { route } from "../../../../../lib/route.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { promptAgent, systemMessage } from "../../../../../lib/prompts.ts";
+import { KILL_MANIFEST_ENTRY, briefKillEvaluation, killContextBlock, persistBriefRecord } from "../../../../../lib/gate-brief-integrity.ts";
 
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
@@ -34,7 +35,9 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   if (!visibleProject(ctx, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const db = getDb();
 
-  const manifest = gateManifest("project", gate)!;
+  // ADR-0186 D3: kill-criteria outcomes are evaluated (and, for a project gate, persisted) before the brief is composed.
+  const killEval = briefKillEvaluation(db, { entityType: "project", entityId: id, gate, actor: ctx.userId });
+  const manifest = killEval ? [...gateManifest("project", gate)!, KILL_MANIFEST_ENTRY] : gateManifest("project", gate)!;
   // Gate-package assembly refreshes the RAG proposal first (Wave F-5) so the
   // brief reads the current assessment, not a stale or empty table. Only the
   // IC gates carry a RAG artifact in their manifest.
@@ -45,7 +48,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       console.error(`gate-brief: rag recompute failed for ${id}: ${(err as Error).message}`);
     }
   }
-  const context = buildGateContext(db, "project", id, gate);
+  const context = buildGateContext(db, "project", id, gate) + (killEval ? killContextBlock(killEval.kill) : "");
 
   let brief;
   let source: "llm" | "synthesis" = "synthesis";
@@ -90,6 +93,8 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     note = "LLM 미구성 — 결정론 폴백(권고는 데이터 요약만). CO_NEWBIZ_LLM_* 구성 후 재생성하세요.";
   }
 
+  // ADR-0186 D9: the recommendation is stored beside the later human decision (brief_id travels with the decision).
+  const briefId = persistBriefRecord(db, { entityType: "project", entityId: id, gate, actor: ctx.userId, brief, source, provider, evalRunId: killEval?.evalRunId ?? null });
   appendAudit(db, { actor: ctx.userId, action: "gate_brief.generate", target: `${id}:${gate}:${source}`, now: new Date().toISOString() });
-  return ok({ source, provider, note, manifest, gate, brief }, 200);
+  return ok({ source, provider, note, manifest, gate, brief, brief_id: briefId, kill: killEval?.kill ?? null }, 200);
 });

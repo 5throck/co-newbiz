@@ -35,6 +35,8 @@ const gatePayload = z
     missing_artifacts: z.array(text).optional(),
     learning_capture: optText,
     gate_evaluation_id: optText,
+    // ADR-0186 D9: the AI brief the proposal was drafted from; the human decision records it as ai_brief_id.
+    brief_id: optText,
   })
   .strict()
   .superRefine((v, ctx) => {
@@ -122,7 +124,26 @@ const SCHEMAS: Record<ProposalKind, z.ZodType<Record<string, unknown>>> = {
   approval: approvalPayload,
 };
 
-export function validatePayload(kind: ProposalKind, payload: unknown): { ok: true; payload: Record<string, unknown> } | { ok: false; message: string } {
+/**
+ * ADR-0186 design 3.10: the acknowledged-GO contract is a HUMAN act on current state. A proposal (and a
+ * human's edit of one) can never carry these: the snapshot hash and the acknowledgements are supplied
+ * at the confirm step, against a fresh snapshot, so an agent cannot pre-acknowledge on a person's behalf.
+ */
+export const HUMAN_ONLY_GATE_FIELDS = ["snapshot_hash", "acknowledgements", "kill_override_id", "divergence_reason", "conditions"] as const;
+
+export type PayloadValidation = { ok: true; payload: Record<string, unknown> } | { ok: false; message: string; code?: string };
+
+export function validatePayload(kind: ProposalKind, payload: unknown): PayloadValidation {
+  if (kind === "gate_decision" && payload && typeof payload === "object") {
+    const smuggled = HUMAN_ONLY_GATE_FIELDS.filter((f) => f in (payload as Record<string, unknown>));
+    if (smuggled.length > 0) {
+      return {
+        ok: false,
+        code: "human_fields_not_proposable",
+        message: `${smuggled.join(", ")} cannot be part of a proposal: the person acknowledges the fresh gate snapshot at the confirm step (ADR-0186).`,
+      };
+    }
+  }
   const parsed = SCHEMAS[kind].safeParse(payload ?? {});
   if (parsed.success) return { ok: true, payload: parsed.data };
   const message = parsed.error.issues.map((i) => `${i.path.map(String).join(".") || "payload"}: ${i.message}`).join("; ");

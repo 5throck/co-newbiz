@@ -85,7 +85,8 @@ export function createRun(db: Database, opts: CreateRunOptions): CreateRunResult
     // Default source: the project's latest run. id DESC is the deterministic
     // tiebreak when two runs share a created_at millisecond.
     const latest = db
-      .query("SELECT id FROM run WHERE project_id = ? ORDER BY created_at DESC, id DESC LIMIT 1")
+      // ADR-0186: a gate-integrity evaluation run carries no inputs; it is never the lineage source.
+      .query("SELECT id FROM run WHERE project_id = ? AND COALESCE(label, '') NOT LIKE 'gate_integrity_eval:%' ORDER BY created_at DESC, id DESC LIMIT 1")
       .get(opts.projectId) as { id: string } | null;
     sourceRunId = latest?.id ?? null;
   }

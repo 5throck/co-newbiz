@@ -35,8 +35,8 @@ const rollbackOf = (sql: string): string[] => {
 };
 
 describe.each([
-  ["0176_", ["app_user_human_role"]],
-  ["0177_", []],
+  ["0176_"],
+  ["0177_"],
 ] as const)("migration %s", (prefix) => {
   const TARGET = files.find((f) => f.startsWith(prefix))!;
   const SQL = readFileSync(join(DIR, TARGET), "utf-8");

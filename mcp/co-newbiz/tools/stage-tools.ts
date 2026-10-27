@@ -192,7 +192,7 @@ const SPECS: readonly RouteToolSpec[] = [
 
   // ── S11 investment review and execution ──────────────────────────────
   { name: "generate_gate_brief", kind: "generate", method: "POST", path: "/api/projects/{projectId}/gate-brief", body: "optional",
-    activities: ["ic-preparation", "risk-review", "group-review"], description: "Compose the gate brief for entity_ic / group_ic (on demand, nothing decided)." },
+    activities: ["ic-preparation", "risk-review", "group-review"], description: "Compose the gate brief for entity_ic / group_ic (on demand, nothing decided). The result carries brief_id (pass it to propose_gate_decision so the AI recommendation is recorded beside the human decision) and the deterministic kill-criteria evaluation." },
   { name: "get_charter", kind: "read", method: "GET", path: "/api/projects/{projectId}/charter",
     activities: ["charter-baseline"], description: "The project charter with version history." },
   { name: "record_charter_amendment", kind: "write", method: "POST", path: "/api/projects/{projectId}/charter", body: "required", bodyHint: BODY,

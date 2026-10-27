@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * Kill-criteria evaluation recorder — ADR-0058 §1: the durable record the
  * read-only evaluator (db/lib/kill-criteria.ts, ADR-0057) deferred. One call
@@ -46,8 +46,14 @@ export interface RecordKillCriteriaInput {
   projectId: string;
   /** Procedure key whose registry entries are in scope (e.g. "brownfield-dd"). */
   procedure: string;
-  /** The acting user (recorded per row; FR-SEC-08/06 guarded). */
+  /** The acting user (FR-SEC-08/06 guarded; recorded per row unless evaluatedByLabel is given). */
   evaluatedBy: string;
+  /**
+   * 1.2.0 (ADR-0186 P2): the string stored in evaluated_by / audit instead of the bare user id, e.g.
+   * "gate-brief:<user>" or "gate-decision:<user>". The membership and insider guards still apply to
+   * `evaluatedBy` - the label names the evaluation event, it never changes who is accountable.
+   */
+  evaluatedByLabel?: string;
   industryIds?: readonly string[];
   now?: string;
 }
@@ -113,6 +119,7 @@ export function recordKillCriteriaEvaluation(
   // (non-null by construction: outcomes only contains enabled entries, and
   // the evaluator's load-time anti-tamper threw otherwise).
   const rowIds: string[] = [];
+  const recordedBy = input.evaluatedByLabel?.trim() || input.evaluatedBy;
   db.transaction(() => {
     const insert = db.prepare(
       "INSERT INTO kill_criteria_evaluation (id, run_id, project_id, procedure_key, criterion_id, action, outcome, predicate_json, policy_id, thresholds_source, evaluated_at, evaluated_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -131,7 +138,7 @@ export function recordKillCriteriaEvaluation(
         o.policy_id,
         o.thresholds_source,
         now,
-        input.evaluatedBy,
+        recordedBy,
       );
       rowIds.push(id);
     }

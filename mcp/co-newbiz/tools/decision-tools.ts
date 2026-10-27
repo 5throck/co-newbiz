@@ -41,6 +41,7 @@ const gateArgs = z.object({
   missing_artifacts: z.array(z.string()).optional(),
   learning_capture: optString,
   gate_evaluation_id: optString,
+  brief_id: optString,
   evidence_refs: evidenceRefs,
 });
 
@@ -65,6 +66,7 @@ const gateProps = {
   missing_artifacts: { type: "array", items: { type: "string", }, description: "Required when decision is hold." },
   learning_capture: { type: "string", description: "Required when decision is kill (ADR-0152)." },
   gate_evaluation_id: { type: "string" },
+  brief_id: { type: "string", description: "The brief_id returned by generate_gate_brief that this proposal was drafted from (ADR-0186 D9); the person's decision records it beside the AI recommendation." },
   evidence_refs: evidenceProp,
 };
 
@@ -99,6 +101,7 @@ const proposeGate = (port: RestPort, a: GateInput) =>
     gate: a.gate, decision: a.decision, rationale: a.rationale,
     gap_rationale: a.gap_rationale,
     missing_artifacts: a.missing_artifacts, learning_capture: a.learning_capture, gate_evaluation_id: a.gate_evaluation_id,
+    brief_id: a.brief_id,
   }, a.rationale, a.evidence_refs);
 
 const proposeRoute = (port: RestPort, a: RouteInput) =>
@@ -114,7 +117,7 @@ const projectIdProp = { type: "string", description: "Project ULID (promoted at 
 const PROPOSE: RegistryTool[] = [
   defineTool({
     name: "propose_gate_decision",
-    description: `Propose a gate decision (go/hold/kill) for an opportunity (screening, pre_fs, target_screening) or a project (fs, dd, entity_ic, group_ic). ${PROPOSE_NOTE}`,
+    description: `Propose a gate decision (go/hold/kill) for an opportunity (screening, pre_fs, target_screening) or a project (fs, dd, entity_ic, group_ic). The proposal carries the gate, decision, rationale draft, missing artifacts and an optional brief_id ONLY: the gate-snapshot hash and the item-by-item acknowledgements of a GO (kill criteria, RAG, unassessed items) are a HUMAN act supplied on the confirmation page against a fresh snapshot, so they are rejected here (human_fields_not_proposable) and no tool can acknowledge, countersign or override. ${PROPOSE_NOTE}`,
     scope: "propose", kind: "propose", stageActivities: [], stageArtifacts: ["stage:S3:2"], routes: ["POST /api/proposals"],
     inputSchema: {
       type: "object",

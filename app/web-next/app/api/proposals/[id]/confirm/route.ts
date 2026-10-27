@@ -4,8 +4,14 @@
 //   GET  — session cookie ONLY: the proposal, the AI-proposed RAG grade (the
 //          review buckets come from the reviews route), and a single-use
 //          confirm nonce. Loading the view is the "show the payload first"
-//          step; nothing is decided by loading it.
-//   POST — session cookie ONLY: {nonce, payload?}. Runs the EXISTING decision
+//          step; nothing is decided by loading it. For a gate_decision
+//          proposal (ADR-0186 design 3.10) the GET also returns a FRESH gate
+//          snapshot with its `snapshot_hash` and the exact acknowledgement
+//          keys the GO needs (`gate_snapshot.snapshot.required_acks`).
+//   POST — session cookie ONLY: {nonce, payload?}. For a gate_decision the
+//          human ALSO sends {snapshot_hash, acknowledgements[], divergence_reason?,
+//          kill_override_id?} - the proposal itself never carries them, so an
+//          agent cannot pre-acknowledge. Runs the EXISTING decision
 //          route in the human's own session (cookie + CSRF + Origin forwarded),
 //          so normal role checks apply: a confirmer without gate authority
 //          gets that route's 403 and the proposal stays pending. The decision
@@ -36,6 +42,7 @@ import {
   validatePayload,
 } from "../../../../../lib/proposals.ts";
 import { route } from "../../../../../lib/route.ts";
+import { previewGateSnapshot } from "../../../../../lib/gate-snapshot.ts";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -65,6 +72,21 @@ function ragContext(p: DecisionProposal) {
   }
 }
 
+/** ADR-0186 3.10: the fresh snapshot the human acknowledges at confirm time (null for non-gate kinds or when it cannot be computed). */
+function gateSnapshotContext(ctx: AuthContext, p: DecisionProposal) {
+  if (p.kind !== "gate_decision" || p.status !== "pending") return null;
+  try {
+    const built = previewGateSnapshot({
+      entityType: p.entity_type, entityId: p.entity_id, gate: String(p.payload.gate), actor: ctx.userId,
+      briefId: typeof p.payload.brief_id === "string" ? p.payload.brief_id : null, db: getDb(),
+    });
+    return { gate: String(p.payload.gate), snapshot_hash: built.hash, snapshot: built.snapshot, cached: built.cached };
+  } catch (err) {
+    console.error(`proposal confirm: gate snapshot failed for ${p.id}: ${(err as Error).message}`);
+    return null;
+  }
+}
+
 export const GET = route(async (request: Request, { params }: Params) => {
   const session = humanSession(request);
   if ("response" in session) return session.response;
@@ -72,7 +94,7 @@ export const GET = route(async (request: Request, { params }: Params) => {
   const p = getProposal(id);
   if (!p || !proposalVisible(session.ctx, p)) return notFound();
   const nonce = p.status === "pending" ? issueConfirmNonce(p.id) : null;
-  return ok({ proposal: p, confirm_nonce: nonce, rag: ragContext(p) });
+  return ok({ proposal: p, confirm_nonce: nonce, rag: ragContext(p), gate_snapshot: gateSnapshotContext(session.ctx, p) });
 });
 
 export const POST = route(async (request: Request, { params }: Params) => {
@@ -86,15 +108,25 @@ export const POST = route(async (request: Request, { params }: Params) => {
     return fail(409, `proposal_${p.status}`, p.status === "expired" ? "This proposal has expired; ask for a new one." : `This proposal is already ${p.status}.`);
   }
 
-  const body = (await request.json().catch(() => null)) as { nonce?: string; payload?: unknown; goals_ack?: { acknowledged?: unknown; note?: unknown } } | null;
+  const body = (await request.json().catch(() => null)) as {
+    nonce?: string; payload?: unknown; goals_ack?: { acknowledged?: unknown; note?: unknown };
+    // ADR-0186 3.10 - the human acts of a gate decision, supplied here and only here.
+    snapshot_hash?: unknown; acknowledgements?: unknown; divergence_reason?: unknown; kill_override_id?: unknown;
+  } | null;
   if (!body?.nonce) return badRequest("invalid_request", "nonce is required — load the confirmation view first.");
+  const humanFields = Object.fromEntries(
+    (["snapshot_hash", "acknowledgements", "divergence_reason", "kill_override_id"] as const).filter((f) => body[f] !== undefined).map((f) => [f, body[f]]),
+  );
+  if (p.kind !== "gate_decision" && Object.keys(humanFields).length > 0) {
+    return badRequest("invalid_request", `${Object.keys(humanFields).join(", ")} apply to a gate decision only.`);
+  }
 
   // The human may edit before confirming; the edited payload must satisfy the
   // same contract and address the same carrier.
   let payload = p.payload;
   if (body.payload !== undefined) {
     const validated = validatePayload(p.kind, body.payload);
-    if (!validated.ok) return badRequest("invalid_payload", validated.message);
+    if (!validated.ok) return badRequest(validated.code ?? "invalid_payload", validated.message);
     if (entityTypeFor(p.kind, validated.payload) !== p.entity_type) {
       return badRequest("invalid_payload", "The edit moves the decision to a different carrier; propose it again instead.");
     }
@@ -106,6 +138,9 @@ export const POST = route(async (request: Request, { params }: Params) => {
   if (p.kind === "case_adoption" && body.goals_ack && typeof body.goals_ack === "object") {
     payload = { ...payload, goals_ack: { acknowledged: body.goals_ack.acknowledged === true, ...(typeof body.goals_ack.note === "string" ? { note: body.goals_ack.note } : {}) } };
   }
+
+  // The gate route re-validates the shape and re-derives everything from the server; these are the recorder's own inputs.
+  if (p.kind === "gate_decision") payload = { ...payload, ...humanFields };
 
   if (!claimConfirmNonce(p.id, body.nonce)) {
     return fail(409, "confirm_nonce_invalid", "The confirmation view is stale or was already used — reload it and review the proposal again.");

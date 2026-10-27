@@ -5,15 +5,16 @@
 // /api/projects/:id/gate-decisions tree was removed with the project
 // workflow (ADR-0074); this is the S8+ project-entity carrier's surface.
 import { getDb } from "../../../../../../../db/client.ts";
-import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
-import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
+import { route } from "../../../../../lib/route.ts";
 import { gateGoPrerequisiteGaps, latestGateDecisions, type GateId } from "../../../../../lib/process-flow.ts";
 import { badRequest, fail, forbidden, notFound, ok, unprocessable } from "../../../../../lib/envelope.ts";
 import { IC_GAP_GATES, composeRationale, icGoGapItems, parseRationale } from "../../../../../lib/ic-gap-override.ts";
 import { IC_SEQUENCE, IC_STEP_LABEL, gateSequenceBlocker } from "../../../../../lib/gate-sequence-view.ts";
 import { goLadderCheck, goRationaleCheck } from "../../../../../lib/gate-write-checks.ts";
+import { checkExtrasReferences, integrityActive, parseDecisionExtras, recordGateDecisionRow } from "../../../../../lib/gate-decision-contract.ts";
+import { primeSnapshotCache } from "../../../../../lib/gate-snapshot.ts";
 import { captureReviewSnapshot, recordHumanFinalReview } from "../../../../../lib/review/human-final.ts";
 
 const GATES = new Set(["fs", "dd", "entity_ic", "group_ic"]);
@@ -27,12 +28,15 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
   const db = getDb();
   const history = db
     .query(
-      `SELECT g.id, g.gate, g.decision, g.rationale, g.missing_artifacts_json, g.judgement_confirmations_json, g.decided_by, g.decided_at, s.stale_at, s.stale_reason
-       FROM gate_decision g LEFT JOIN gate_decision_stale s ON s.decision_id = g.id
+      `SELECT g.id, g.gate, g.decision, g.rationale, g.missing_artifacts_json, g.judgement_confirmations_json, g.decided_by, g.decided_at, s.stale_at, s.stale_reason,
+              g.ai_recommended_decision, g.divergence_reason, n.snapshot_hash, n.acknowledgements_json
+       FROM gate_decision g
+       LEFT JOIN gate_decision_stale s ON s.decision_id = g.id
+       LEFT JOIN gate_decision_snapshot n ON n.decision_id = g.id
        WHERE g.entity_type = 'project' AND g.entity_id = ?
        ORDER BY g.decided_at DESC`,
     )
-    .all(id) as Array<{ id: string; gate: string; decision: string; rationale: string; missing_artifacts_json: string | null; judgement_confirmations_json: string | null; decided_by: string; decided_at: string; stale_at: string | null; stale_reason: string | null }>;
+    .all(id) as Array<{ id: string; gate: string; decision: string; rationale: string; missing_artifacts_json: string | null; judgement_confirmations_json: string | null; decided_by: string; decided_at: string; stale_at: string | null; stale_reason: string | null; ai_recommended_decision: string | null; divergence_reason: string | null; snapshot_hash: string | null; acknowledgements_json: string | null }>;
   // Latest decision per gate — same helper as the process engine, so the
   // tie-breaking rule cannot drift between surfaces.
   const latestMap = latestGateDecisions("project", id);
@@ -42,7 +46,18 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
     ...parseRationale(v.rationale),
     missing_artifacts: v.missing,
   }));
-  return ok({ latest, history: history.map((h) => ({ ...h, ...parseRationale(h.rationale), judgement_confirmations: parseConfirmations(h.judgement_confirmations_json) })) }, 200, { count: history.length });
+  // ADR-0186: a decision without a snapshot row is "legacy" (recorded before the acknowledged-GO contract; never rewritten).
+  return ok(
+    {
+      latest,
+      history: history.map(({ acknowledgements_json, ...h }) => ({
+        ...h, ...parseRationale(h.rationale), judgement_confirmations: parseConfirmations(h.judgement_confirmations_json),
+        legacy: h.snapshot_hash === null, acknowledgements: parseAcks(acknowledgements_json),
+      })),
+    },
+    200,
+    { count: history.length },
+  );
 }
 
 /** ADR-0182 §5 — the decision's confirmation snapshot, parsed leniently. */
@@ -51,7 +66,13 @@ function parseConfirmations(raw: string | null): string[] {
   try { return JSON.parse(raw) as string[]; } catch { return []; }
 }
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+function parseAcks(raw: string | null): Array<{ key: string; kind: string; reason: string }> {
+  if (!raw) return [];
+  try { return JSON.parse(raw) as Array<{ key: string; kind: string; reason: string }>; } catch { return []; }
+}
+
+// ADR-0186: wrapped in route() so a fault inside the decision transaction answers with the standard 500 envelope (the transaction has unwound).
+export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
@@ -64,6 +85,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // ADR-0182 §5 — checked 판단 필요 claims ride with the decision (the project
     // route dropped them until 2026-10-21 — fixed to match the opportunity route).
     judgement_confirmations?: string[];
+    // ADR-0186 D1/D9 - the human acts of the decision contract (see lib/gate-decision-contract.ts).
+    snapshot_hash?: string; acknowledgements?: unknown; brief_id?: string; divergence_reason?: string; kill_override_id?: string;
   } | null;
   if (!body?.gate || !GATES.has(body.gate)) {
     return badRequest("invalid_request", `gate must be one of ${[...GATES].join("|")}.`);
@@ -83,6 +106,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return unprocessable("learning_capture_required", "A KILL decision requires learning_capture — lessons from the kill reason must be captured (ADR-0152).");
   }
   const db = getDb();
+  // ADR-0186: shape of the contract fields is validated whatever the flag mode; they are consumed only when a family is on.
+  const parsedExtras = parseDecisionExtras(body as Record<string, unknown>);
+  if (!parsedExtras.ok) return parsedExtras.response;
+  const extras = integrityActive() ? parsedExtras.extras : null;
+  if (extras) {
+    const refDenied = checkExtrasReferences(db, "project", id, body.gate, extras);
+    if (refDenied) return refDenied;
+  }
   // Wave C-3 (pilot-009 D-4): GO needs the gate's stage prerequisites complete.
   // HOLD/KILL stay allowed anytime. New writes only — existing rows are untouched.
   if (body.decision === "go") {
@@ -149,7 +180,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     : null;
   const storedRationale = composeRationale(rationale, gapOverride);
   const nowTs = new Date().toISOString();
-  const gid = ulid();
   // ADR-0182 §5 — the checked "판단 필요" claims ride with the decision as a
   // sidecar snapshot. Optional and never blocking.
   const judgementConfirmations = Array.isArray(body.judgement_confirmations)
@@ -157,15 +187,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     : [];
   // ADR-0153 — snapshot the artifact as the human saw it, BEFORE the decision lands.
   const reviewSnapshot = captureReviewSnapshot(body.gate, id);
-  db.run(
-    `INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, missing_artifacts_json, decided_by, decided_at, gate_evaluation_id, learning_capture, judgement_confirmations_json)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-    [gid, "project", id, body.gate, body.decision, storedRationale,
-      body.decision === "hold" ? JSON.stringify(missing) : null, ctx.userId, nowTs, gateEvaluationId, body.decision === "kill" ? learningCapture : null,
-      judgementConfirmations.length > 0 ? JSON.stringify(judgementConfirmations) : null],
-  );
-  appendAudit(db, { actor: ctx.userId, action: "gate_decision.record", target: `${id}:${body.gate}:${body.decision}`, now: nowTs });
+  // ADR-0186: legacy single INSERT when no snapshot family is on; otherwise ONE BEGIN IMMEDIATE transaction holds the
+  // kill-evaluation run + ledger, the recomputed snapshot, the contract checks, the decision row and its snapshot.
+  const recorded = recordGateDecisionRow(db, {
+    entityType: "project", entityId: id, gate: body.gate, decision: body.decision as "go" | "hold" | "kill", storedRationale,
+    missingArtifactsJson: body.decision === "hold" ? JSON.stringify(missing) : null, actor: ctx.userId, gateEvaluationId,
+    learningCapture: body.decision === "kill" ? learningCapture : null,
+    judgementConfirmationsJson: judgementConfirmations.length > 0 ? JSON.stringify(judgementConfirmations) : null,
+    extras, now: nowTs,
+  });
+  if (!recorded.ok) {
+    if (recorded.built) primeSnapshotCache({ entityType: "project", entityId: id, gate: body.gate, actor: ctx.userId, briefId: extras?.briefId ?? null }, recorded.built);
+    return fail(recorded.failure.status, recorded.failure.code, recorded.failure.message, recorded.failure.details);
+  }
+  const gid = recorded.id;
   // ADR-0153 — human_final review row: a side effect of THIS human POST only.
   recordHumanFinalReview(reviewSnapshot, ctx.userId, body.decision);
-  return ok({ id: gid, gate: body.gate, decision: body.decision, gap_override: gapOverride }, 201);
-}
+  return ok({ id: gid, gate: body.gate, decision: body.decision, gap_override: gapOverride, snapshot_hash: recorded.snapshotHash, acknowledgements: recorded.acknowledgements.length }, 201);
+});

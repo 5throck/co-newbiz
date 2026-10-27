@@ -491,7 +491,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     post:
       operationId: createDecisionProposal
-      summary: Record a decision PROPOSAL only; returns the confirm URL. Writes no decision (boundary #2). Needs the propose scope over OAuth.
+      summary: Record a decision PROPOSAL only; returns the confirm URL. Writes no decision (boundary #2). Needs the propose scope over OAuth. ADR-0186 - a gate_decision payload may carry brief_id but never snapshot_hash, acknowledgements, kill_override_id, divergence_reason or conditions (400 human_fields_not_proposable).
       tags:
         - Tokens
       responses:
@@ -523,7 +523,7 @@ paths:
   /api/proposals/{id}/confirm:
     get:
       operationId: viewDecisionProposalConfirmation
-      summary: Human web session only — the proposal, AI-proposed RAG grade, and a single-use confirm nonce. Bearer tokens are refused.
+      summary: Human web session only — the proposal, AI-proposed RAG grade, and a single-use confirm nonce. Bearer tokens are refused. For a gate_decision proposal the data also carries gate_snapshot {gate, snapshot_hash, snapshot, cached} (ADR-0186 3.10) - a FRESH snapshot (snapshot.required_acks lists the acknowledgement keys the GO needs); null for other kinds. After any non-2xx confirm POST, call this GET again for a new nonce and snapshot.
       tags:
         - Tokens
       parameters:
@@ -541,7 +541,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       operationId: confirmDecisionProposal
-      summary: Human web session only — runs the existing decision route in the caller's session and records the proposal as confirmed. Bearer tokens and agent identities are refused.
+      summary: Human web session only — runs the existing decision route in the caller's session and records the proposal as confirmed. Bearer tokens and agent identities are refused. For a gate_decision the body is {nonce, payload?, snapshot_hash, acknowledgements[], divergence_reason?, kill_override_id?} - the proposal itself never carries the hash or acknowledgements (400 human_fields_not_proposable if a payload edit does); they are the confirming person's and the gate route re-checks them against a recomputed snapshot (409 snapshot_stale, 422 ack_required, 409 kill_binding_unoverridden are relayed and the proposal stays pending). Other kinds refuse these fields (400).
       tags:
         - Tokens
       parameters:
@@ -3595,7 +3595,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     post:
       operationId: recordOpportunityGateDecision
-      summary: Record a gate decision — HOLD requires missing_artifacts. Analyst+; audited. GO is refused with 409 gate_prerequisites_incomplete until the gate's stage prerequisites are complete (HOLD/KILL always allowed). ADR-0186 (families ladder / rationale, off|shadow|enforce; GO only, HOLD and KILL are never blocked) - under enforce a GO whose preceding ladder gate has no effective GO is 409 ladder_prerequisite_missing (error.details.blocker), and a GO rationale that fails the script-aware substance profile is 422 rationale_insufficient (error.details.field and reason, one of too_short | too_few_words | placeholder | repetitive | jamo_only | duplicate_of_other_gate).
+      summary: Record a gate decision — HOLD requires missing_artifacts. Analyst+; audited. GO is refused with 409 gate_prerequisites_incomplete until the gate's stage prerequisites are complete (HOLD/KILL always allowed). ADR-0186 (families ladder / rationale, off|shadow|enforce; GO only, HOLD and KILL are never blocked) - under enforce a GO whose preceding ladder gate has no effective GO is 409 ladder_prerequisite_missing (error.details.blocker), and a GO rationale that fails the script-aware substance profile is 422 rationale_insufficient (error.details.field and reason, one of too_short | too_few_words | placeholder | repetitive | jamo_only | duplicate_of_other_gate). ADR-0186 P2 contract (families snapshot_ack / kill_binding / divergence, off|shadow|enforce; GO only, HOLD and KILL are never blocked and always store a snapshot) - the server recomputes the gate snapshot inside the write transaction (never trusts the client). The GO body carries snapshot_hash (from GET gate-snapshot), acknowledgements [{key, reason, kind?, covers?}] (keys = snapshot.required_acks; one reason may cover several kill_unassessed items of the same procedure via covers), optional brief_id and divergence_reason (a GO against a different AI recommendation needs one), optional kill_override_id. Under enforce - a triggered halt kill criterion without an active Group IC override is 409 kill_binding_unoverridden (error.details.keys, self_issued); a changed or missing hash is 409 snapshot_stale (error.details.reason, snapshot_hash and the fresh snapshot); missing or unknown acknowledgement keys are 422 ack_required (error.details.missing, unknown, invalid); a weak reason is 422 rationale_insufficient; a missing divergence_reason is 422 divergence_reason_required. Decision, snapshot, evaluation run and ledger commit in one transaction. 201 data adds snapshot_hash and acknowledgements (count); the GET history marks decisions without a snapshot as legacy:true.
       tags:
         - Reference
       parameters:
@@ -3615,7 +3615,7 @@ paths:
   /api/opportunities/{id}/gate-brief:
     post:
       operationId: generateOpportunityGateBrief
-      summary: Draft an LLM gate brief (go/hold/kill recommendation + rationale draft) for screening/pre_fs/target_screening (ADR-0118). Proposal only — the gate decision is recorded by a human via recordOpportunityGateDecision. Deterministic fallback derives a recommendation solely from the published screening criteria.
+      summary: Draft an LLM gate brief (go/hold/kill recommendation + rationale draft) for screening/pre_fs/target_screening (ADR-0118). Proposal only — the gate decision is recorded by a human via recordOpportunityGateDecision. Deterministic fallback derives a recommendation solely from the published screening criteria. ADR-0186 - when a snapshot family is on, the response adds kill (the deterministic kill-criteria evaluation, persisted under a gate_integrity_eval run for a project gate) and the manifest gains the entry 'Kill criteria evaluation (deterministic)'; brief_id references the stored gate_brief_record (the AI recommendation kept beside the later human decision) and is null if the record could not be written.
       tags:
         - Reference
       parameters:
@@ -7383,10 +7383,124 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/gate-snapshot:
+    get:
+      operationId: getProjectGateSnapshot
+      summary: "ADR-0186 D1 - the server-recomputed gate snapshot a recorder reviews before a project gate decision (analyst+, same visibleProject / information-wall check as the decision route; 404 for a non-member, 403 viewer). Query gate=fs|dd|entity_ic|group_ic, optional brief_id. Data {gate, snapshot_hash, snapshot, cached, legacy:false}; snapshot = {schema_version, gate, entity, track, computed_at, engine_versions, kill {procedures, evaluated, inert, inert_list, false_count, triggered[{key, procedure, criterion_id, title, action, binding, override_id}], unassessed[], eval_run_id}, rag {overall, dimensions, data_confidence_cap, assessment_id}|null, validators|null, nonwaivable_open[], wacc|null, waivers {active, expiring_14d}, conditions_open[], ladder, ai|null, required_acks[{key, kind, procedure?, criterion_id?, action?}], hard_blocks[{code, keys}]}. snapshot_hash is the SHA-256 of the canonical JSON (sorted keys, fixed number format; computed_at, eval_run_id, assessment_id and brief_id are excluded). Read-only for the caller (the evaluation runs in a rolled-back transaction; the brief and the decision persist their own ledgers) and cached per (project, gate, user, brief, input version)."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: gate
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: brief_id
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/opportunities/{id}/gate-snapshot:
+    get:
+      operationId: getOpportunityGateSnapshot
+      summary: "ADR-0186 D1 - the server-recomputed gate snapshot for an opportunity gate (screening|pre_fs|target_screening; analyst+). Same shape as the project snapshot with rag, validators and wacc null: kill outcomes are evaluated against an opportunity-scoped variable source and live ONLY in the snapshot (no kill_criteria_evaluation rows); a criterion over a project-only variable is UNASSESSED and appears in required_acks. Read-only, cached."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: gate
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: brief_id
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/gate-decisions/{decisionId}/snapshot:
+    get:
+      operationId: getProjectGateDecisionSnapshot
+      summary: "ADR-0186 D1 - the STORED acknowledged-GO snapshot of one project gate decision (visibleProject check; closed projects stay readable). Data {decision_id, gate, decision, legacy, snapshot, snapshot_hash, submitted_hash, acknowledgements[{key, kind, reason}], computed_at, schema_version}; legacy:true with snapshot null marks a decision recorded before the contract (never rewritten)."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: decisionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/opportunities/{id}/gate-decisions/{decisionId}/snapshot:
+    get:
+      operationId: getOpportunityGateDecisionSnapshot
+      summary: "ADR-0186 D1 - the STORED acknowledged-GO snapshot of one opportunity gate decision. Same data as getProjectGateDecisionSnapshot; legacy:true with snapshot null marks a decision recorded before the contract."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: decisionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/gate-brief:
     post:
       operationId: generateProjectGateBrief
-      summary: Draft an LLM gate brief (go/hold/kill recommendation + rationale draft) for fs/dd/entity_ic/group_ic from the gate's manifest artifacts (ADR-0118). Proposal only — the gate decision is recorded by a human via recordProjectGateDecision. Deterministic fallback summarizes evidence without fabricating a verdict.
+      summary: Draft an LLM gate brief (go/hold/kill recommendation + rationale draft) for fs/dd/entity_ic/group_ic from the gate's manifest artifacts (ADR-0118). Proposal only — the gate decision is recorded by a human via recordProjectGateDecision. Deterministic fallback summarizes evidence without fabricating a verdict. ADR-0186 - when a snapshot family is on, the response adds kill (the deterministic kill-criteria evaluation, persisted under a gate_integrity_eval run for a project gate) and the manifest gains the entry 'Kill criteria evaluation (deterministic)'; brief_id references the stored gate_brief_record (the AI recommendation kept beside the later human decision) and is null if the record could not be written.
       tags:
         - Reference
       parameters:
@@ -7424,7 +7538,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       operationId: recordProjectGateDecision
-      summary: Record a human gate decision for the project; HOLD requires missing_artifacts (analyst+). ADR-0186 (families ladder / rationale, off|shadow|enforce; GO only, HOLD and KILL are never blocked) - under enforce a GO whose preceding ladder gate has no effective GO is 409 ladder_prerequisite_missing (error.details.blocker), and a GO rationale that fails the script-aware substance profile is 422 rationale_insufficient (error.details.field and reason, one of too_short | too_few_words | placeholder | repetitive | jamo_only | duplicate_of_other_gate).
+      summary: Record a human gate decision for the project; HOLD requires missing_artifacts (analyst+). ADR-0186 (families ladder / rationale, off|shadow|enforce; GO only, HOLD and KILL are never blocked) - under enforce a GO whose preceding ladder gate has no effective GO is 409 ladder_prerequisite_missing (error.details.blocker), and a GO rationale that fails the script-aware substance profile is 422 rationale_insufficient (error.details.field and reason, one of too_short | too_few_words | placeholder | repetitive | jamo_only | duplicate_of_other_gate). ADR-0186 P2 contract (families snapshot_ack / kill_binding / divergence, off|shadow|enforce; GO only, HOLD and KILL are never blocked and always store a snapshot) - the server recomputes the gate snapshot inside the write transaction (never trusts the client). The GO body carries snapshot_hash (from GET gate-snapshot), acknowledgements [{key, reason, kind?, covers?}] (keys = snapshot.required_acks; one reason may cover several kill_unassessed items of the same procedure via covers), optional brief_id and divergence_reason (a GO against a different AI recommendation needs one), optional kill_override_id. Under enforce - a triggered halt kill criterion without an active Group IC override is 409 kill_binding_unoverridden (error.details.keys, self_issued); a changed or missing hash is 409 snapshot_stale (error.details.reason, snapshot_hash and the fresh snapshot); missing or unknown acknowledgement keys are 422 ack_required (error.details.missing, unknown, invalid); a weak reason is 422 rationale_insufficient; a missing divergence_reason is 422 divergence_reason_required. Decision, snapshot, evaluation run and ledger commit in one transaction. 201 data adds snapshot_hash and acknowledgements (count); the GET history marks decisions without a snapshot as legacy:true.
       tags:
         - Reference
       parameters:

@@ -7,7 +7,7 @@ import { resolveApiErrorText } from "./error-messages.ts";
 export interface Envelope<T> {
   data: T;
   meta: Record<string, unknown>;
-  error: { code: string; message: string } | null;
+  error: { code: string; message: string; details?: Record<string, unknown> } | null;
 }
 
 export class ApiError extends Error {
@@ -17,6 +17,8 @@ export class ApiError extends Error {
     message: string,
     /** Response envelope meta (e.g. open_findings / missing_sections on a 409). */
     public meta: Record<string, unknown> = {},
+    /** Error `details` from the envelope (e.g. the fresh snapshot on a 409 snapshot_stale). */
+    public details: Record<string, unknown> = {},
   ) {
     super(message);
   }
@@ -73,7 +75,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<Envelope<T>
     const code = body.error?.code ?? "unknown_error";
     // §3.5: localized text resolves from errors.codes.<code> at this single
     // choke point; unknown codes pass the (English) server message through.
-    throw new ApiError(res.status, code, resolveApiErrorText(code, body.error?.message ?? "Request failed."), body.meta ?? {});
+    throw new ApiError(res.status, code, resolveApiErrorText(code, body.error?.message ?? "Request failed."), body.meta ?? {}, body.error?.details ?? {});
   }
   return body;
 }

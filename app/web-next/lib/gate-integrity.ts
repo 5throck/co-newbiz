@@ -50,21 +50,31 @@ export function recordWouldBlock(db: Database, ctx: IntegrityContext, code: stri
 }
 
 /**
+ * Run one family's rule and return the failure to enforce (or null). `check` returns the failure or
+ * null; it is not called at all in off mode. In shadow mode a failure is audited and null is
+ * returned (the request proceeds). Used where the caller must unwind a transaction itself.
+ */
+export function applyFamilyFailure(family: GateIntegrityFamily, ctx: IntegrityContext, check: () => IntegrityFailure | null, db: Database = getDb()): IntegrityFailure | null {
+  const mode = gateIntegrityMode(family);
+  if (mode === "off") return null;
+  const failure = check();
+  if (!failure) return null;
+  if (mode === "shadow") {
+    recordWouldBlock(db, ctx, failure.code);
+    return null;
+  }
+  return failure;
+}
+
+/**
  * Run one family's rule. `check` returns the failure or null; it is not called
  * at all in off mode. In shadow mode a failure is audited and null is
  * returned (the request proceeds). In enforce mode the failure becomes the
  * error response.
  */
 export function applyFamily(family: GateIntegrityFamily, ctx: IntegrityContext, check: () => IntegrityFailure | null): Response | null {
-  const mode = gateIntegrityMode(family);
-  if (mode === "off") return null;
-  const failure = check();
-  if (!failure) return null;
-  if (mode === "shadow") {
-    recordWouldBlock(getDb(), ctx, failure.code);
-    return null;
-  }
-  return fail(failure.status, failure.code, failure.message, failure.details);
+  const failure = applyFamilyFailure(family, ctx, check);
+  return failure ? fail(failure.status, failure.code, failure.message, failure.details) : null;
 }
 
 // ── Human-session routes (waiver approve, na confirm, grant admin) ───────────
