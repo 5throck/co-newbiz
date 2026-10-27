@@ -14,11 +14,7 @@ status: active
 domain: functional
 version: "1.1.2"
 last_updated: "2026-10-26"
-tier:
-  claude: medium
-  gemini: medium
-  antigravity: medium
-  gemini-cli: medium
+tier: medium
 model: inherit
 role: Financing-structure advisor — debt/equity mix, project finance, government funds, and covenant structuring, by committee seat and co-review
 color: teal

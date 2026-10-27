@@ -13,11 +13,7 @@ status: active
 domain: functional
 version: "1.1.2"
 last_updated: "2026-10-26"
-tier:
-  claude: high
-  gemini: high
-  antigravity: high
-  gemini-cli: high
+tier: high
 model: inherit
 role: Valuation model owner — DCF/NPV/IRR quantiles, Monte Carlo and contingent-liability simulation, DD-to-valuation bridge, and S10 financing plan
 color: green

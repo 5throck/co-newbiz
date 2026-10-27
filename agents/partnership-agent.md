@@ -12,11 +12,7 @@ status: active
 domain: functional
 version: "1.1.2"
 last_updated: "2026-10-26"
-tier:
-  claude: medium
-  gemini: medium
-  antigravity: medium
-  gemini-cli: medium
+tier: medium
 model: inherit
 role: Partner sourcing, partner due diligence, and JV structuring — owner of the partner-track funnel (deal-shape-chain) and the S12 partnership health scorecard for brownfield partnerships
 color: cyan

@@ -11,11 +11,7 @@ status: active
 domain: functional
 version: "1.2.0"
 last_updated: "2026-10-26"
-tier:
-  claude: high
-  gemini: high
-  antigravity: high
-  gemini-cli: high
+tier: high
 model: inherit
 role: New-establishment review lead — business-model sketching (S2), capability-gap resolution into Build/Partner/Hire/Invest (S5), and execution-baseline drafting (S11)
 color: teal

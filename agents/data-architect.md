@@ -11,11 +11,7 @@ status: active
 domain: technical
 version: "1.1.1"
 last_updated: "2026-10-26"
-tier:
-  claude: high
-  gemini: high
-  antigravity: high
-  gemini-cli: high
+tier: high
 model: inherit
 role: ERD, master data governance, normalization, indexing, migration design review, and portability — owner of the three-layer data architecture and run versioning
 color: blue

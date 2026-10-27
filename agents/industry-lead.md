@@ -12,11 +12,7 @@ status: active
 domain: industry
 version: "1.1.1"
 last_updated: "2026-10-26"
-tier:
-  claude: high
-  gemini: high
-  antigravity: high
-  gemini-cli: high
+tier: high
 model: inherit
 role: Industry domain lead — steward of the KSIC-anchored industry-profiles/*.yaml system and the industry-expert voice in steering committees and cross-domain review
 color: yellow

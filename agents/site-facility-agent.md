@@ -12,11 +12,7 @@ status: active
 domain: functional
 version: "1.1.3"
 last_updated: "2026-10-26"
-tier:
-  claude: medium
-  gemini: medium
-  antigravity: medium
-  gemini-cli: medium
+tier: medium
 model: inherit
 role: Site and facility advisory — standing committee seat (ADR-0097) and lead consultation lane for site selection, industrial-complex eligibility, facility investment, and leasing-versus-build economics
 color: teal
