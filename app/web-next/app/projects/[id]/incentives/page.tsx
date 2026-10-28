@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { StageTabs } from "../../../../components/StageTabs.tsx";
+import { S10Frame } from "../../../../components/stages/S10Frame.tsx";
 import { useTranslations } from "next-intl";
 import { api } from "../../../../lib/api.ts";
 import { fmtNpvEok } from "../../../../lib/npv-format.ts";
@@ -106,8 +106,8 @@ function IncentivesView() {
 
   return (
     <main>
-      <StageTabs projectId={id} />
-      <h1>{t("heading")}</h1>
+      <S10Frame projectId={id} />
+      <h2>{t("heading")}</h2>
       <p className="objective">{t("objective")}</p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       <section className="market-section" aria-label={t("listSectionAria")}>

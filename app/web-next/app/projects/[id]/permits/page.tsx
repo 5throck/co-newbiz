@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { StageTabs } from "../../../../components/StageTabs.tsx";
+import { S10Frame } from "../../../../components/stages/S10Frame.tsx";
 import { useTranslations } from "next-intl";
 import { api } from "../../../../lib/api.ts";
 import { PageState, useToast } from "../../../../components/ui.tsx";
@@ -93,8 +93,8 @@ function PermitsView() {
 
   return (
     <main>
-      <StageTabs projectId={id} />
-      <h1>{t("heading")}</h1>
+      <S10Frame projectId={id} />
+      <h2>{t("heading")}</h2>
       <p className="objective">{t("objective")}{" "}<Link href={`/projects/${encodeURIComponent(id)}/sites`} className="underline">{t("sitesLink")}</Link></p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       <div className="grid2e">
