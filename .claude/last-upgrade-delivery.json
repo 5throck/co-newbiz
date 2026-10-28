@@ -1,84 +1,129 @@
 {
   "schemaVersion": 2,
-  "timestamp": "2026-10-27T19:08:25.445Z",
+  "timestamp": "2026-10-28T12:17:28.141Z",
   "project": "co-newbiz",
-  "templateVersion": "0.22.0",
-  "templateSha": "6e60ebdb09c04b0e21089160dc66d32de85d79b5",
-  "baseSha": "0c878d3ac6332eec48e0903edc3a49ed24088071",
+  "templateVersion": "0.22.1",
+  "templateSha": "dd8ccc72c8f7092bd6ed79df932f515cdc18f983",
+  "baseSha": "3cbfceb7ab7006fc48a9d9cc152640704921e2ac",
   "files": [
-    "CLAUDE.md",
-    "agents/i18n-specialist.md",
-    "docs/design-foundation.md",
-    "docs/governance/agents/workflows.md",
+    "HERMES.md",
+    "docs/governance/agents/execution-plan-templates.md",
+    "docs/workspace-schema.json",
     "scripts/SCRIPTS.md",
-    "scripts/audit.ts",
-    "scripts/compile-tokens.ts",
-    "scripts/design-lint.ts",
     "scripts/dev-sync.ts",
-    "scripts/helpers/upgrade-versions.ts",
-    "scripts/hooks/pre-commit.ts",
+    "scripts/generate-version-manifest.ts",
+    "scripts/helpers/commit-message.ts",
+    "scripts/helpers/scaffold-markers.ts",
+    "scripts/lib/managed-block-merge.ts",
     "scripts/lib/platform-skeleton-merge.ts",
     "scripts/lib/upgrade-policy.ts",
     "scripts/validate-md-language.ts",
-    "scripts/validate-model-registry.ts",
     "scripts/validate-templates.ts",
-    "scripts/verify-readme-sync.ts",
-    "template-version.txt",
-    "scripts/helpers/design-lint-roots.ts",
-    "scripts/helpers/pre-commit-script-gate.ts",
-    "scripts/helpers/theme-token-policy.ts"
+    "template-version.txt"
   ],
   "baselines": {
     ".githooks/commit-msg": {
       "hash": "cd819a49144f4f94ce66ba590dc07d1508dc70238b97d0eeeea047acc3ba950c",
-      "templateVersion": "0.22.0"
+      "templateVersion": "0.22.1"
     },
     ".githooks/post-checkout": {
       "hash": "53c0cb9125f5d772e128f49cd4d8f21a4ea196d1ec5af6557ff49a3a5484db96",
-      "templateVersion": "0.22.0"
+      "templateVersion": "0.22.1"
     },
     ".githooks/pre-commit": {
       "hash": "737e7f7e55f1c3498308aa7f8c88313e21d6a4b7c54f64e6d82b54a96c7490a0",
-      "templateVersion": "0.22.0"
+      "templateVersion": "0.22.1"
     },
     ".githooks/pre-push": {
       "hash": "1d30c52e9bc760e38fbb699c60f8aa1daed7f456a540356c7112a4932098cb95",
-      "templateVersion": "0.22.0"
+      "templateVersion": "0.22.1"
     },
     ".githooks/pre-rebase": {
       "hash": "a21b3982b59015250a23e3095b646d82faf1cd53b8250078948769cf626a8906",
-      "templateVersion": "0.22.0"
+      "templateVersion": "0.22.1"
     },
     ".gitignore": {
       "hash": "9196d560faf58cfc96a7efa101aad2c8a2ef07651977e1249afc7c0956d97b3d",
-      "templateVersion": "0.22.0"
+      "templateVersion": "0.22.1"
     },
     "AGENTS.md": {
       "hash": "f9d35f1280f29a6d71cf3ca1e8f751ce7cce6094d25ee3f07d882a6fe7ac6910",
-      "templateVersion": "0.22.0"
+      "templateVersion": "0.22.1"
     },
     "CLAUDE.md": {
-      "hash": "cbf50c0066b393d783a4b42304b22646cfd3b9433c85b04df7e8462773210266",
-      "templateVersion": "0.22.0"
+      "hash": "72a65b3322c616cd2f67f21a60c61ac87c440dddbef4019a8c7b37b21541a9b8",
+      "templateVersion": "0.22.1"
     },
     "CODEX.md": {
       "hash": "77146426a6f97919ab14060463a749117f0396d1fc7d5806fc37834ff87a8026",
-      "templateVersion": "0.22.0"
+      "templateVersion": "0.22.1"
     },
     "GEMINI.md": {
       "hash": "caef2e1c49e43c87d1ae6e298f74340cd0a6025ea509a5304b4b696fe60100c9",
-      "templateVersion": "0.22.0"
+      "templateVersion": "0.22.1"
     },
     "HERMES.md": {
-      "hash": "ea53b7224f2953c15207efba07ee62039c76942371be5a8f2c959f7460cc24b6",
-      "templateVersion": "0.22.0"
-    },
-    "agents/i18n-specialist.md": {
-      "hash": "5f06f176497b71af7cd3101a57d427b36e2a07cbcfecd461da7b18b22e76a243",
-      "templateVersion": "0.22.0"
+      "hash": "edd5cd09943c717a853c1465bf7a12d165bb196e20a32c518bee04467bb48697",
+      "templateVersion": "0.22.1"
     },
     "agents/pm.md": {
       "hash": "9aded6a86af5b78c73ae00dcfa95028a0188a5dd9c665ee56e66ce732189dff7",
+      "templateVersion": "0.22.1"
+    },
+    "docs/governance/agents/execution-plan-templates.md": {
+      "hash": "02a5277ebada17699781c0ef4004a877831f1de1697d369005ecdc8bbe079c84",
+      "templateVersion": "0.22.1"
+    },
+    "docs/phase-definitions.md": {
+      "hash": "242ee30b580d6669f8fe173aefd34564be4f84ef9af8c464e10f1c1f99b64405",
+      "templateVersion": "0.22.1"
+    },
+    "docs/security.md": {
+      "hash": "6424d80604638ae56523d66a6a3447b3bb14ec249afb20d2fe70f75bca30f87d",
+      "templateVersion": "0.22.1"
+    },
+    "docs/workspace-schema.json": {
+      "hash": "8735b1065b91b9cbe38ace30be190eb9c8b4ddadf82ea9995b80a3dfe6f80992",
+      "templateVersion": "0.22.1"
+    },
+    "scripts/dev-sync.ts": {
+      "hash": "360e89fd25e2613f010eef68a612e970f780f5d5bd4a560c0268fbcf9d2961d0",
+      "templateVersion": "0.22.1"
+    },
+    "scripts/generate-version-manifest.ts": {
+      "hash": "97e93f598eb50a51991bb862005bd55688ae58acc77b40a278b8cd612c277b42",
+      "templateVersion": "0.22.1"
+    },
+    "scripts/helpers/commit-message.ts": {
+      "hash": "9afb42c476535f74a2ee6fa802c61c554d1ebd4d3968a05265f5ffa8b97fee42",
+      "templateVersion": "0.22.1"
+    },
+    "scripts/helpers/scaffold-markers.ts": {
+      "hash": "0eb65f02a8cf751f9bced64e828595099b0c969616622c701be5a5fa38c8df55",
+      "templateVersion": "0.22.1"
+    },
+    "scripts/lib/managed-block-merge.ts": {
+      "hash": "c9228d105918b2188170478fa821198c5dbddfaa11a36025e1c5b79adf38c0ba",
+      "templateVersion": "0.22.1"
+    },
+    "scripts/lib/platform-skeleton-merge.ts": {
+      "hash": "09cf74ab4f1aed0bebb68294957c0c50afd326e1e4539abee586e5fdba00f45d",
+      "templateVersion": "0.22.1"
+    },
+    "scripts/lib/upgrade-policy.ts": {
+      "hash": "782bf764319016676db5696e7a8c3f6977184dc234e4404ddabe8a6539767a1d",
+      "templateVersion": "0.22.1"
+    },
+    "scripts/validate-md-language.ts": {
+      "hash": "379410cb3906e009d4e3722c9beedd036749a904da5a84a59137aa433b93a859",
+      "templateVersion": "0.22.1"
+    },
+    "scripts/validate-templates.ts": {
+      "hash": "46bdfa7f7b77e2a41ba85f2a4e2576a2145ce94f55b81811fbb86df7bb9057d3",
+      "templateVersion": "0.22.1"
+    },
+    "agents/i18n-specialist.md": {
+      "hash": "5f06f176497b71af7cd3101a57d427b36e2a07cbcfecd461da7b18b22e76a243",
       "templateVersion": "0.22.0"
     },
     "docs/design-foundation.md": {
@@ -87,14 +132,6 @@
     },
     "docs/governance/agents/workflows.md": {
       "hash": "00b2137ca57a2e7afd0a9537fa25287b565530a2b8730fc18bc5a977415b14c3",
-      "templateVersion": "0.22.0"
-    },
-    "docs/phase-definitions.md": {
-      "hash": "242ee30b580d6669f8fe173aefd34564be4f84ef9af8c464e10f1c1f99b64405",
-      "templateVersion": "0.22.0"
-    },
-    "docs/security.md": {
-      "hash": "6424d80604638ae56523d66a6a3447b3bb14ec249afb20d2fe70f75bca30f87d",
       "templateVersion": "0.22.0"
     },
     "scripts/audit.ts": {
@@ -107,10 +144,6 @@
     },
     "scripts/design-lint.ts": {
       "hash": "09b55f2089c93a21d7152594ac40314e6ed1faa755bfa2e242bf1ec3f4376800",
-      "templateVersion": "0.22.0"
-    },
-    "scripts/dev-sync.ts": {
-      "hash": "c462de64594e5154202116806d7bb0b8ac389e8d758e92b2e9d692164970d3be",
       "templateVersion": "0.22.0"
     },
     "scripts/helpers/design-lint-roots.ts": {
@@ -133,24 +166,8 @@
       "hash": "4e21283f8c70e82eecb758e18a741106a11622bb267571c952347e1289528876",
       "templateVersion": "0.22.0"
     },
-    "scripts/lib/platform-skeleton-merge.ts": {
-      "hash": "b4cc6399b5bdc08a98c7e3c298eb64915075333bff60cbf3497e0f1033690c0f",
-      "templateVersion": "0.22.0"
-    },
-    "scripts/lib/upgrade-policy.ts": {
-      "hash": "b3924b25e36de9e9726ff629eb7c9da642cdd0b8c4357c08069592c470bb7115",
-      "templateVersion": "0.22.0"
-    },
-    "scripts/validate-md-language.ts": {
-      "hash": "c054a9c36571396d4393f3a8a26777458e20c6a91e04b755deb6aebad6f483cb",
-      "templateVersion": "0.22.0"
-    },
     "scripts/validate-model-registry.ts": {
       "hash": "9bc2d53701593ce8f3c97aae6593361bcef8f35d9aabaabdf6ba015c1f10d50e",
-      "templateVersion": "0.22.0"
-    },
-    "scripts/validate-templates.ts": {
-      "hash": "e20fab8f82eb158a0b04f055d8beee6b4ccd44f5994f23e210f889165e2e0f04",
       "templateVersion": "0.22.0"
     },
     "scripts/verify-readme-sync.ts": {
@@ -163,9 +180,433 @@
       "path": "CLAUDE.md",
       "policy": "MERGE_MANAGED",
       "pass": "MERGE",
+      "verdict": "REGION_IN_SYNC",
+      "detail": "90 of 140 out-of-zone lines byte-equal — in-sync regions carry no write channel; 28 divergent block(s) below",
+      "severity": "INFO"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (11 line(s)) absent from the project copy after '# CLAUDE.md' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (1 line(s)) after '# CLAUDE.md' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (1 line(s)) absent from the project copy after '# CLAUDE.md' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (1 line(s)) after '### 1. Automated Hooks (`.claude/settings.json`)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (1 line(s)) absent from the project copy after '### 1. Automated Hooks (`.claude/settings.json`)' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (1 line(s)) after '### 1. Automated Hooks (`.claude/settings.json`)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (1 line(s)) absent from the project copy after '### 1. Automated Hooks (`.claude/settings.json`)' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (1 line(s)) after '### 1. Automated Hooks (`.claude/settings.json`)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (3 line(s)) absent from the project copy after '### 1. Automated Hooks (`.claude/settings.json`)' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (1 line(s)) after '### 1. Automated Hooks (`.claude/settings.json`)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (1 line(s)) absent from the project copy after '### 1. Automated Hooks (`.claude/settings.json`)' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (1 line(s)) after '### 1. Automated Hooks (`.claude/settings.json`)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (4 line(s)) absent from the project copy after '### 1. Automated Hooks (`.claude/settings.json`)' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (2 line(s)) absent from the project copy after '### 2. Pre-Edit Quality Gate (All Platforms)' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (1 line(s)) absent from the project copy after '#### Agent Teams (Experimental)' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (3 line(s)) after '## Co Newbiz Context' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (5 line(s)) after '### Role Override: New Business Review Lead' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (4 line(s)) after '### Role Override: New Business Review Lead' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (4 line(s)) after '### Three Team Axes' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (3 line(s)) after '### Three Team Axes' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (3 line(s)) after '### Domain' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (5 line(s)) after '### Non-Negotiable Boundaries' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (3 line(s)) after '### Review Model' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (3 line(s)) after '### Review Model' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (6 line(s)) after '### Co Newbiz Lifecycle Rules' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (4 line(s)) after '### Co Newbiz Lifecycle Rules' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (1 line(s)) after '### Disclaimer' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (36 line(s)) absent from the project copy after '### Disclaimer' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
       "verdict": "MERGE",
       "detail": "managed-zone merge delivered (non-destructive union/insert)",
       "severity": "INFO"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "REGION_IN_SYNC",
+      "detail": "144 of 192 out-of-zone lines byte-equal — in-sync regions carry no write channel; 23 divergent block(s) below",
+      "severity": "INFO"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (11 line(s)) absent from the project copy after '# GEMINI.md' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (1 line(s)) after '# GEMINI.md' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (1 line(s)) absent from the project copy after '# GEMINI.md' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (8 line(s)) absent from the project copy after '## Role Declaration' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (3 line(s)) absent from the project copy after '#### ⚠️ Grep Search 50-Match Cap Safeguard' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (1 line(s)) absent from the project copy after '#### Invoke Subagent (`invoke_subagent`)' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (1 line(s)) after '#### Phase 4 Execution Loop' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (1 line(s)) absent from the project copy after '#### Phase 4 Execution Loop' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (20 line(s)) absent from the project copy after '## Agent Teams vs. Antigravity Agent Manager' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (1 line(s)) after '#### teammateMode (Claude Code Agent Teams execution mode)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (3 line(s)) after '#### teammateMode (Claude Code Agent Teams execution mode)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (4 line(s)) after '### Role Override: New Business Review Lead' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (5 line(s)) after '### Role Override: New Business Review Lead' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (4 line(s)) after '### Three Team Axes' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (3 line(s)) after '### Three Team Axes' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (3 line(s)) after '### Domain' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (5 line(s)) after '### Non-Negotiable Boundaries' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (3 line(s)) after '### Non-Negotiable Boundaries' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (3 line(s)) after '### Review Model' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (5 line(s)) after '### Co Newbiz Lifecycle Rules' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (5 line(s)) after '### Co Newbiz Lifecycle Rules' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (2 line(s)) after '### Disclaimer' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "GEMINI.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (37 line(s)) absent from the project copy after '### Disclaimer' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
     },
     {
       "path": "GEMINI.md",
@@ -179,9 +620,137 @@
       "path": "CODEX.md",
       "policy": "MERGE_MANAGED",
       "pass": "MERGE",
+      "verdict": "REGION_IN_SYNC",
+      "detail": "84 of 94 out-of-zone lines byte-equal — in-sync regions carry no write channel; 10 divergent block(s) below",
+      "severity": "INFO"
+    },
+    {
+      "path": "CODEX.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (5 line(s)) absent from the project copy after '# CODEX.md' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "CODEX.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (1 line(s)) after '## Role Declaration' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CODEX.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (1 line(s)) absent from the project copy after '## Role Declaration' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "CODEX.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (5 line(s)) after '### 1. Enforcement & Hook Status' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CODEX.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (2 line(s)) after '### 1. Enforcement & Hook Status' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CODEX.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (13 line(s)) absent from the project copy after '### 1. Enforcement & Hook Status' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "CODEX.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (1 line(s)) after '### 2. Pre-Edit Quality Gate (All Platforms)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CODEX.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (1 line(s)) absent from the project copy after '### 3. Slash Commands & Custom Prompts' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "CODEX.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (1 line(s)) after '### 3. Slash Commands & Custom Prompts' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "CODEX.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (1 line(s)) absent from the project copy after '### 3. Slash Commands & Custom Prompts' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "CODEX.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
       "verdict": "MERGE",
       "detail": "managed-zone merge delivered (non-destructive union/insert)",
       "severity": "INFO"
+    },
+    {
+      "path": "HERMES.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "REGION_IN_SYNC",
+      "detail": "50 of 52 out-of-zone lines byte-equal — in-sync regions carry no write channel; 4 divergent block(s) below",
+      "severity": "INFO"
+    },
+    {
+      "path": "HERMES.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (1 line(s)) after '# Hermes.md' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "HERMES.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (7 line(s)) absent from the project copy after '# Hermes.md' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "HERMES.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (1 line(s)) after '## Hermes Platform Mechanics' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "HERMES.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (1 line(s)) absent from the project copy after '## Hermes Platform Mechanics' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
     },
     {
       "path": "HERMES.md",
@@ -211,6 +780,230 @@
       "path": "AGENTS.md",
       "policy": "MERGE_MANAGED",
       "pass": "DOCS_MERGE",
+      "verdict": "REGION_IN_SYNC",
+      "detail": "51 of 144 out-of-zone lines byte-equal — in-sync regions carry no write channel; 27 divergent block(s) below",
+      "severity": "INFO"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (3 line(s)) after '# AGENTS.md — co-newbiz' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (2 line(s)) absent from the project copy after '### §3.6 3-Tier Strategy' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (1 line(s)) after '### §3.6 3-Tier Strategy' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (1 line(s)) absent from the project copy after '### §3.6 3-Tier Strategy' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (4 line(s)) after '## §0: PM Role Bootstrap (binding on all platforms)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (4 line(s)) after '## Roster Overview' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (6 line(s)) after '## Roster Overview' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (1 line(s)) absent from the project copy after '## Roster Overview' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (1 line(s)) after '## `_core`' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (2 line(s)) absent from the project copy after '## `_core`' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (4 line(s)) after '## `_core`' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (6 line(s)) after '## Functional Domain — Regulations, Procedures, Operation, Deal Review (25)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (6 line(s)) after '## Functional Domain — Regulations, Procedures, Operation, Deal Review (25)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (6 line(s)) after '## Functional Domain — Regulations, Procedures, Operation, Deal Review (25)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (6 line(s)) after '## Functional Domain — Regulations, Procedures, Operation, Deal Review (25)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (4 line(s)) after '## Functional Domain — Regulations, Procedures, Operation, Deal Review (25)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (6 line(s)) after '## Technical Domain — System Build & Run (11)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (6 line(s)) after '## Technical Domain — System Build & Run (11)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (4 line(s)) after '## Industry Domain — Profile-Driven (1)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (4 line(s)) after '## Region Domain — Profile-Driven (1)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (5 line(s)) after '## Shared — Belongs to No Single Domain (2)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (64 line(s)) absent from the project copy after '## Shared — Belongs to No Single Domain (2)' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (4 line(s)) after '## §6: Skills' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (4 line(s)) after '### Skill Resolution' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (4 line(s)) after '## §7: Governance' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "EVOLVED_REGION",
+      "detail": "project-authored line-block (5 line(s)) after '### Deal Pipeline Orchestration (S1–S12)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
+      "verdict": "TEMPLATE_AHEAD_REGION",
+      "detail": "template line-block (57 line(s)) absent from the project copy after '### Deal Pipeline Orchestration (S1–S12)' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "severity": "WARN"
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "DOCS_MERGE",
       "verdict": "MERGE",
       "detail": "managed-zone merge delivered (non-destructive union/insert)",
       "severity": "INFO"
@@ -221,6 +1014,10 @@
       "pass": "DOCS_OVERWRITE",
       "verdict": "ADOPT",
       "detail": "project copy already matches the template (in sync)",
+      "baseline": {
+        "hash": "242ee30b580d6669f8fe173aefd34564be4f84ef9af8c464e10f1c1f99b64405",
+        "templateVersion": "0.22.0"
+      },
       "severity": "INFO"
     },
     {
@@ -240,75 +1037,47 @@
       "severity": "INFO"
     },
     {
-      "path": "scripts/audit.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "2.55.0 → 2.56.0 — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/compile-tokens.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.2.0 → 1.3.0 — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/design-lint.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "2.2.0 → 2.3.0 — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
       "path": "scripts/dev-sync.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "ADOPT",
-      "detail": "1.31.0 → 1.32.0 — version-gated delivery over the delivered baseline",
+      "detail": "1.32.0 → 1.33.0 — version-gated delivery over the delivered baseline",
+      "baseline": {
+        "hash": "c462de64594e5154202116806d7bb0b8ac389e8d758e92b2e9d692164970d3be",
+        "templateVersion": "0.22.0"
+      },
       "severity": "INFO"
     },
     {
-      "path": "scripts/helpers/design-lint-roots.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "NEW",
-      "detail": "delivered (none) → 1.0.0",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/pre-commit-script-gate.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "NEW",
-      "detail": "delivered (none) → 1.1.0",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/theme-token-policy.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "NEW",
-      "detail": "delivered (none) → 1.0.0",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/upgrade-versions.ts",
+      "path": "scripts/generate-version-manifest.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "ADOPT",
-      "detail": "1.0.2 → 1.1.0 — version-gated delivery over the delivered baseline",
+      "detail": "1.10.1 → 1.10.2 — version-gated delivery over the delivered baseline",
       "severity": "INFO"
     },
     {
-      "path": "scripts/hooks/pre-commit.ts",
+      "path": "scripts/helpers/commit-message.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "ADOPT",
-      "detail": "1.9.0 → 1.11.0 — version-gated delivery over the delivered baseline",
+      "detail": "1.1.0 → 1.1.1 — version-gated delivery over the delivered baseline",
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/helpers/scaffold-markers.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "ADOPT",
+      "detail": "1.8.0 → 1.9.0 — version-gated delivery over the delivered baseline",
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/lib/managed-block-merge.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "ADOPT",
+      "detail": "1.4.0 → 1.5.0 — version-gated delivery over the delivered baseline",
       "severity": "INFO"
     },
     {
@@ -316,7 +1085,11 @@
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "ADOPT",
-      "detail": "1.0.0 → 1.1.0 — version-gated delivery over the delivered baseline",
+      "detail": "1.1.0 → 1.2.0 — version-gated delivery over the delivered baseline",
+      "baseline": {
+        "hash": "b4cc6399b5bdc08a98c7e3c298eb64915075333bff60cbf3497e0f1033690c0f",
+        "templateVersion": "0.22.0"
+      },
       "severity": "INFO"
     },
     {
@@ -324,7 +1097,11 @@
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "ADOPT",
-      "detail": "1.22.0 → 1.25.0 — version-gated delivery over the delivered baseline",
+      "detail": "1.25.0 → 1.30.0 — version-gated delivery over the delivered baseline",
+      "baseline": {
+        "hash": "b3924b25e36de9e9726ff629eb7c9da642cdd0b8c4357c08069592c470bb7115",
+        "templateVersion": "0.22.0"
+      },
       "severity": "INFO"
     },
     {
@@ -332,15 +1109,11 @@
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "ADOPT",
-      "detail": "1.15.0 → 1.16.0 — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/validate-model-registry.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "2.0.0 → 2.1.0 — version-gated delivery over the delivered baseline",
+      "detail": "1.16.0 → 1.16.1 — version-gated delivery over the delivered baseline",
+      "baseline": {
+        "hash": "c054a9c36571396d4393f3a8a26777458e20c6a91e04b755deb6aebad6f483cb",
+        "templateVersion": "0.22.0"
+      },
       "severity": "INFO"
     },
     {
@@ -348,15 +1121,11 @@
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "ADOPT",
-      "detail": "1.60.0 → 1.62.0 — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/verify-readme-sync.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.4.1 → 1.5.0 — version-gated delivery over the delivered baseline",
+      "detail": "1.62.0 → 1.63.0 — version-gated delivery over the delivered baseline",
+      "baseline": {
+        "hash": "e20fab8f82eb158a0b04f055d8beee6b4ccd44f5994f23e210f889165e2e0f04",
+        "templateVersion": "0.22.0"
+      },
       "severity": "INFO"
     },
     {
@@ -365,14 +1134,6 @@
       "pass": "SYNC_IF_NEWER: agents/",
       "verdict": "STUB_SKIP",
       "detail": "template extends-stub never delivers through this pass — resolved at scaffold (MERGE pass owns the body)",
-      "severity": "INFO"
-    },
-    {
-      "path": "agents/i18n-specialist.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: agents/",
-      "verdict": "ADOPT",
-      "detail": "1.2.0 → 1.3.0 — version-gated delivery over the delivered baseline (lifecycle block preserved)",
       "severity": "INFO"
     },
     {
@@ -1336,6 +2097,14 @@
       "severity": "INFO"
     },
     {
+      "path": "docs/workspace-schema.json",
+      "policy": "SYNC",
+      "pass": "TEMPLATE TREE SYNC",
+      "verdict": "ADOPT",
+      "detail": "(content changed) — version-gated delivery over the delivered baseline",
+      "severity": "INFO"
+    },
+    {
       "path": "docs/lifecycle/agents/pm.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
@@ -1400,15 +2169,7 @@
       "severity": "INFO"
     },
     {
-      "path": "docs/governance/agents/workflows.md",
-      "policy": "SYNC",
-      "pass": "TEMPLATE TREE SYNC",
-      "verdict": "ADOPT",
-      "detail": "(content changed) — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "docs/design-foundation.md",
+      "path": "docs/governance/agents/execution-plan-templates.md",
       "policy": "SYNC",
       "pass": "TEMPLATE TREE SYNC",
       "verdict": "ADOPT",
@@ -1437,6 +2198,10 @@
       "pass": "DOCS_OVERWRITE",
       "verdict": "ADOPT",
       "detail": "template copy delivered over the delivered baseline (version-gated)",
+      "baseline": {
+        "hash": "6424d80604638ae56523d66a6a3447b3bb14ec249afb20d2fe70f75bca30f87d",
+        "templateVersion": "0.22.0"
+      },
       "severity": "INFO"
     },
     {
@@ -1471,5 +2236,6 @@
       "detail": "preserve-listed — never modified by the upgrade",
       "severity": "INFO"
     }
-  ]
+  ],
+  "tombstones": {}
 }
