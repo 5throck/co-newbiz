@@ -2,6 +2,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- **[2026-10-28]**: chore(web): **Disable the Turbopack dev filesystem cache.** `next.config.ts` sets `experimental.turbopackFileSystemCacheForDev: false` — the dev cache (`.next/dev/cache`) grew to ~68GB on the operator workstation; this trades slower dev-server cold starts for bounded disk use. Production builds are unaffected.
+
 - **[2026-10-28]**: fix(governance): **`reconfirm-requirement.ts` 1.1.0 accepts the project number.** `--project` now resolves either the internal `md_project.id` or the human `project_no` (e.g. `PRJ-DSE4PW`) through `resolveProjectRef` in `lib/reconfirm.ts`, prints the mapping, and fails clearly on unknown or ambiguous refs. The PRJ-DSE4PW runbook command (en + ko) previously failed with "project not found". API route semantics unchanged.
 
 - **[2026-10-28]**: chore(upgrade): **Workspace template 0.22.0 → 0.22.1 delivery (co-newbiz variant).** 14 template-managed files: 10 under scripts/ (dev-sync, version-manifest generator, commit-message, scaffold markers, managed-block and platform-skeleton merge, upgrade policy, md-language and template validators), root template-version/HERMES.md, and docs/governance agents docs (execution-plan templates updated; pm-gateway-workflow.md removed by the template). Inventory in `.claude/last-upgrade-delivery.json`.

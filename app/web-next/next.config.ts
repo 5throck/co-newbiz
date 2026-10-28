@@ -21,6 +21,12 @@ const nextConfig: NextConfig = {
   // the co-newbiz repository: wide enough for ../../db imports, narrow enough
   // to avoid tracing the whole checkout hierarchy.
   turbopack: { root: repoRoot },
+  // Disk-usage guard: the Turbopack dev filesystem cache (.next/dev/cache)
+  // grew to ~68GB on the operator workstation. Disabling it trades slower
+  // dev-server cold starts for bounded disk use.
+  experimental: {
+    turbopackFileSystemCacheForDev: false,
+  },
   // Remote (IP) access: dev resources (/_next/webpack-hmr etc.) are blocked
   // cross-origin by default. List every host the operator browses dev from —
   // the Tailscale IP, the LAN IP of this workstation, and the public domain
