@@ -9,8 +9,8 @@ description: >
   Use when: "competitive analysis", "market analysis", "competitor profiling",
   "market entry analysis", "industry attractiveness", "competitive intelligence",
   "five forces".
-version: 1.1.0
-last_reviewed: 2026-08-23
+version: 1.1.1
+last_reviewed: 2026-10-28
 status: active
 owner: market-intelligence-agent
 prerequisites: none
@@ -28,6 +28,7 @@ metadata:
   procedure_keys:
     - brownfield-dd
     - company-profile-analysis
+    - greenfield-dd
 relates_to:
   - skill: legal-due-diligence
     type: follows
@@ -53,7 +54,6 @@ relates_to:
     type: composes_with
   - skill: value-chain-linkage-analysis
     type: composes_with
-
 ---
 
 ## Context

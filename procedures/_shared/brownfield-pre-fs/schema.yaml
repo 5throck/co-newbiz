@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-pre-fs
 title: "Brown Field Pre-Feasibility"
 scope: shared
 level: entity
-version: "1.4.1"
+version: "1.5.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -77,6 +77,13 @@ kill_criteria:
     action: halt
   - condition: certification_transferability_unconfirmed_and_load_bearing
     action: escalate_to_risk_officer
+  # ADR-0187 phase P2 (finding M4): the flow.spec Pre-FS summary line
+  # "entry route undecided" gets a procedure declaration and a registry entry.
+  # Declared-but-inert (predicate null): the route decision is a human record
+  # (route_decision, boundary #2); the gate reviewers judge it until a
+  # predicate over the current route row is decided.
+  - condition: entry_route_undecided_at_pre_fs_exit
+    action: halt
 
 legal_basis:
   - "Group New Business Review Policy §2.3"
@@ -86,5 +93,7 @@ legal_basis:
   - "docs/pilots/pilot-011-posco-amberoad.md (R&BD as a Brown Field sub-type)"
   - "docs/pilots/pilot-014-c2y-university-techholdings.md finding F-4 (minority venture investment as an R&BD deal shape)"
 
+  - "ADR-0187 (process SSOT and decision evidence) phase P2 — Pre-FS kill-criteria declaration (M4)"
+
 owner_agent: process-governance-manager
-last_reviewed: "2026-08-23"
+last_reviewed: "2026-10-28"

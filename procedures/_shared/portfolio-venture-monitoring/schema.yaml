@@ -3,7 +3,7 @@ procedure_id: shared-portfolio-venture-monitoring
 title: "Venture Portfolio Monitoring (post-approval, group level)"
 scope: shared
 level: group
-version: "1.2.1"
+version: "1.3.0"
 status: active
 # Design §E: cells with venture character — internal venture (cells 9/10),
 # minority/hybrid (5/6), JV (7/8, feeding in via jv-lifecycle-governance
@@ -42,11 +42,22 @@ applicability: conditional
 # Default venture_class (Q7) — a prefill the person recording can change
 # (the change is audited): driving for a new site (sub_track none),
 # enabling for existing_business_rbd, emergent for intra_venture.
+#
+# v1.3.0 (ADR-0187 phase P2, owner decision D8, finding M17): a third branch
+# covers the brownfield venture-character sub-tracks whatever the recorded
+# origin - minority_investment, rbd and corporate_venture. Before it, a
+# brownfield project classified origin=external on one of those routes
+# matched no S12 activity (PMI covers m_and_a / strategic_investment,
+# jv-lifecycle-governance covers joint / partnership / jv). The two existing
+# branches are unchanged, so every project that applied under v1.2.x still
+# applies. S12 has no gate: for a project already in S12 the widened scope is
+# recommended, never blocking (the ADR-0161 Q2 retroactivity rule).
 applies_when:
   op: any_of
   of:
     - { op: "in", var: "project.origin", values: ["internal", "hybrid", "joint"] }
     - { op: "cmp", var: "project.case_type", cmp: "eq", value: "greenfield" }
+    - { op: "in", var: "project.sub_track", values: ["minority_investment", "rbd", "corporate_venture"] }
 workflow_type: core
 gate: post_close
 owner_agent: process-governance-manager
@@ -58,6 +69,7 @@ legal_basis:
   - "ADR-0161 (v1.2.0 — greenfield predicate branch, ramp-up measure keys, greenfield transition mapping; Proposed, Q1-Q7 decided by the user 2026-10-12)"
   - "ADR-0159 (S8 project business goals — reference evidence in the scorecard only)"
   - "docs/research/pmi-jv-lifecycle-best-practice.md [pmi-jv C.1-C.3]"
+  - "ADR-0187 (v1.3.0 — brownfield minority / R&BD / CVC sub-track branch, owner decision D8, finding M17)"
 
 # Group-level cadence, not a per-project one-shot: step 1 runs per review
 # cycle, steps 2-3 at each venture's stage transitions.

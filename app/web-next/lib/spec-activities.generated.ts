@@ -5,7 +5,7 @@
 // this projection mirrors the spec.)
 import type { SpecStage } from "./spec-activities.ts";
 
-export const SPEC_VERSION = "2.14.0";
+export const SPEC_VERSION = "2.15.0";
 export const SPEC_STAGES: SpecStage[] = [
   {
     "id": "S1",
@@ -81,9 +81,7 @@ export const SPEC_STAGES: SpecStage[] = [
           "scenario-planning"
         ],
         "procedure": [
-          "opportunity-discovery",
-          "greenfield-screening",
-          "brownfield-screening"
+          "opportunity-discovery"
         ]
       },
       {
@@ -201,7 +199,8 @@ export const SPEC_STAGES: SpecStage[] = [
           "site-infrastructure-assessment",
           "regional-incentive-sourcing",
           "partner-due-diligence",
-          "partnership-health-scorecard"
+          "partnership-health-scorecard",
+          "investment-vehicle-structuring"
         ],
         "procedure": [
           "greenfield-pre-fs",
@@ -216,9 +215,7 @@ export const SPEC_STAGES: SpecStage[] = [
           "deal-execution-playbook"
         ],
         "procedure": [
-          "greenfield-pre-fs",
-          "brownfield-pre-fs",
-          "deal-shape-chain"
+          "brownfield-pre-fs"
         ]
       },
       {
@@ -252,6 +249,19 @@ export const SPEC_STAGES: SpecStage[] = [
         "procedure": [
           "greenfield-pre-fs",
           "brownfield-pre-fs"
+        ]
+      },
+      {
+        "id": "regulatory-screening",
+        "agent": "legal-counsel",
+        "skills": [
+          "regulatory-screening",
+          "permit-pathway-mapping",
+          "k-law"
+        ],
+        "procedure": [
+          "greenfield-screening",
+          "brownfield-screening"
         ]
       }
     ]
@@ -406,7 +416,8 @@ export const SPEC_STAGES: SpecStage[] = [
         "agent": "valuation-agent",
         "skills": [
           "dd-to-valuation-bridge",
-          "monte-carlo-simulation"
+          "monte-carlo-simulation",
+          "investment-vehicle-structuring"
         ],
         "procedure": [
           "greenfield-fs",
@@ -581,6 +592,7 @@ export const SPEC_STAGES: SpecStage[] = [
           "regulatory-screening"
         ],
         "procedure": [
+          "greenfield-dd",
           "brownfield-dd"
         ]
       },
@@ -631,6 +643,7 @@ export const SPEC_STAGES: SpecStage[] = [
           "ip-fto-review"
         ],
         "procedure": [
+          "greenfield-dd",
           "brownfield-dd"
         ]
       }
@@ -651,9 +664,7 @@ export const SPEC_STAGES: SpecStage[] = [
           "investment-vehicle-structuring"
         ],
         "procedure": [
-          "deal-structuring",
-          "brownfield-fs",
-          "deal-shape-chain"
+          "deal-structuring"
         ]
       },
       {
@@ -706,8 +717,7 @@ export const SPEC_STAGES: SpecStage[] = [
         "agent": "brownfield-agent",
         "skills": [],
         "procedure": [
-          "entity-ic-review",
-          "jv-lifecycle-governance"
+          "entity-ic-review"
         ]
       },
       {
@@ -718,8 +728,7 @@ export const SPEC_STAGES: SpecStage[] = [
           "rag-scoring-framework"
         ],
         "procedure": [
-          "entity-ic-review",
-          "group-investment-review"
+          "entity-ic-review"
         ]
       },
       {
@@ -732,7 +741,6 @@ export const SPEC_STAGES: SpecStage[] = [
           "two-tier-approval-chain"
         ],
         "procedure": [
-          "entity-ic-review",
           "group-investment-review"
         ]
       },
@@ -744,10 +752,12 @@ export const SPEC_STAGES: SpecStage[] = [
           "k-law",
           "certification-transferability",
           "org-readiness-assessment",
-          "stage-gate-governance"
+          "stage-gate-governance",
+          "permit-pathway-mapping"
         ],
         "procedure": [
-          "entity-establishment-execution"
+          "entity-establishment-execution",
+          "business-unit-establishment-execution"
         ]
       },
       {

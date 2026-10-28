@@ -1,0 +1,11 @@
+{
+  "procedure": "brownfield-pre-fs",
+  "criterion_id": "entry_route_undecided_at_pre_fs_exit",
+  "title": "Entry route (greenfield / brownfield route) still undecided at Pre-FS exit",
+  "action": "halt",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). ADR-0187 phase P2 (finding M4): mirrors the flow.spec Pre-FS killCriteria summary line ('route undecided'); the route decision is a human route_decision record (boundary #2), so the gate reviewers judge it until a predicate is decided."
+}

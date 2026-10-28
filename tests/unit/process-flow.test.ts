@@ -140,7 +140,8 @@ describe("process flow spec integrity (ADR-0074)", () => {
       "ip-fto-dd:ip-agent",
     ]);
     for (const a of s9.activities) {
-      if (a.id === "capability-dd" || a.id === "ip-fto-dd" || /^(antitrust-dd|region-labor-review|customer-retention-dd|incentive-dd|contingent-liability-dd|certification-transferability-dd)$/.test(a.id)) { expect(a.procedure).toEqual(["brownfield-dd"]); continue; } // brownfield-only (greenfield answers capability at S5)
+      if (a.id === "capability-dd" || /^(antitrust-dd|customer-retention-dd|incentive-dd|contingent-liability-dd|certification-transferability-dd)$/.test(a.id)) { expect(a.procedure).toEqual(["brownfield-dd"]); continue; } // brownfield-only (greenfield answers capability at S5)
+      // ip-fto-dd and region-labor-review host greenfield-dd too since v2.15.0 (ADR-0187 P2, W2-b / W2-d) — falls through to the shared assertion.
       expect(a.procedure).toEqual(["greenfield-dd", "brownfield-dd"]);
     }
     const skillsOf = (id: string) => s9.activities.find((a) => a.id === id)!.skills;

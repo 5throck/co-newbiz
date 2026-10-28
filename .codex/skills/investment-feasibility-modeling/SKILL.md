@@ -10,8 +10,8 @@ description: >
 
   Use when: "investment feasibility model", "NPV IRR calculation",
   "feasibility financial model".
-version: 1.2.0
-last_reviewed: 2026-09-22
+version: 1.2.1
+last_reviewed: 2026-10-28
 status: active
 owner: valuation-agent
 prerequisites:
@@ -30,6 +30,8 @@ metadata:
     - greenfield-fs
     - greenfield-capability-assessment
     - deal-structuring
+    - greenfield-screening
+    - brownfield-screening
 relates_to:
   - skill: monte-carlo-simulation
     type: follows
@@ -51,7 +53,6 @@ relates_to:
     type: composes_with
   - skill: wacc-input-session
     type: composes_with
-
 ---
 
 ## Context

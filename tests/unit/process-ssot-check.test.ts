@@ -1,6 +1,12 @@
 // ADR-0187 P1: one failing fixture (reproducing the finding) and one clean case per validator.
+// ADR-0187 P2: blocking mode, verified declared consumers, exemptions, the
+// ADR-backed allowlist and the flow.spec procedureSteps scope.
 import { describe, expect, test } from "bun:test";
 import {
+  ACTIVITY_AGENT_ALLOWLIST,
+  BLOCKING_CHECKS,
+  CHECK_IDS,
+  activityStepScope,
   checkActivityAgentInProcedure,
   checkChecklistConsumers,
   checkEngineSpecParity,
@@ -10,8 +16,10 @@ import {
   checkStageInputs,
   checkStagesDerived,
   extractEngineBlockers,
+  isBlocking,
   policyGapRows,
   policySectionKeys,
+  runAll,
   type FlowSpec,
   type Procedure,
 } from "../../scripts/co-newbiz/process-ssot-check.ts";
@@ -74,6 +82,32 @@ describe("check-checklist-consumers (H9)", () => {
   });
 });
 
+describe("check-checklist-consumers declarations (P2)", () => {
+  const chk = [{ stem: "legal-dd-checklist", docId: "chk-legal-dd", hasMandatory: true }];
+  const hosted = [proc("dd", [{ text: "per checklists/legal-dd-checklist.yaml" }])];
+  const decl = [{ docId: "chk-legal-dd-checklist", module: "lib/library.ts", symbol: "DD_WORKSPACE_CHECKLISTS", gate: "dd" }];
+  test("a verified declared consumer counts", () => {
+    const src = 'export const DD_WORKSPACE_CHECKLISTS = { legal: "chk-legal-dd-checklist" };';
+    const f = checkChecklistConsumers(chk, hosted, new Map(), { consumers: decl, exemptions: [], moduleSource: () => src });
+    expect(f).toEqual([]);
+  });
+  test("a declaration the module does not hold is itself a finding", () => {
+    const f = checkChecklistConsumers(chk, hosted, new Map(), { consumers: decl, exemptions: [], moduleSource: () => "nothing" });
+    expect(f.map((x) => x.message).join("\n")).toContain("declared consumer of chk-legal-dd-checklist does not hold");
+    expect(f.some((x) => x.message.includes("no gate consumer"))).toBe(true);
+  });
+  test("an exemption silences only its side", () => {
+    const f = checkChecklistConsumers(chk, [], new Map(), {
+      consumers: [],
+      exemptions: [{ docId: "chk-legal-dd", side: "consumer", reason: "human-judged" }],
+      moduleSource: () => undefined,
+    });
+    expect(f.map((x) => x.message)).toEqual([
+      "legal-dd-checklist (chk-legal-dd): no producer - no step of a flow.spec-hosted procedure cites checklists/legal-dd-checklist.yaml",
+    ]);
+  });
+});
+
 describe("activity-agent-in-procedure (M2)", () => {
   const spec: FlowSpec = {
     stages: [
@@ -94,6 +128,17 @@ describe("activity-agent-in-procedure (M2)", () => {
         new Map([["brownfield-dd", proc("brownfield-dd", [{ agent_key: "financial-analyst" }])]]),
       ),
     ).toEqual([]);
+  });
+});
+
+describe("activity-agent-in-procedure allowlist (P2)", () => {
+  test("every entry is a pm lead-only activity with an ADR reference", () => {
+    expect(ACTIVITY_AGENT_ALLOWLIST.length).toBe(10);
+    for (const e of ACTIVITY_AGENT_ALLOWLIST) expect(e.adr).toMatch(/ADR-0(104|185)/);
+    const spec: FlowSpec = {
+      stages: [{ id: "S4", activities: [{ id: "route-strategy", agent: "pm", procedure: ["deal-shape-chain"] }] }],
+    };
+    expect(checkActivityAgentInProcedure(spec, new Map([["deal-shape-chain", proc("deal-shape-chain", [])]]))).toEqual([]);
   });
 });
 
@@ -203,6 +248,37 @@ describe("check-s12-coverage (M17)", () => {
       ],
     });
     expect(checkS12Coverage(spec, new Map([["pvm", pvm]]), [cell])).toEqual([]);
+  });
+});
+
+describe("check-s12-coverage step scope from flow.spec procedureSteps (P2)", () => {
+  const cell = { case_type: "brownfield", origin: "external", sub_track: "m_and_a" };
+  const pmi = proc("pmi", [
+    { id: "1", applies_when: { op: "cmp", var: "project.sub_track", cmp: "eq", value: "m_and_a" } },
+    { id: "6", applies_when: { op: "cmp", var: "project.sub_track", cmp: "eq", value: "jv" } },
+  ]);
+  const spec = (steps?: Record<string, string[]>): FlowSpec => ({
+    stages: [{ id: "S12", activities: [{ id: "integration-monitoring", agent: "pmi-agent", procedure: ["pmi"], procedureSteps: steps }] }],
+  });
+  test("a declared scope restricts the match to those steps", () => {
+    expect(activityStepScope({ id: "x", agent: "a", procedureSteps: { pmi: [6] } }, "pmi")).toEqual(["6"]);
+    expect(checkS12Coverage(spec({ pmi: ["6"] }), new Map([["pmi", pmi]]), [cell]).length).toBe(1);
+  });
+  test("no declared scope = the whole procedure", () => {
+    expect(checkS12Coverage(spec(), new Map([["pmi", pmi]]), [cell])).toEqual([]);
+  });
+});
+
+describe("blocking mode (P2)", () => {
+  test("parity (P3) and review coverage (P4) stay report-only; the rest block", () => {
+    expect([...BLOCKING_CHECKS].sort()).toEqual(
+      CHECK_IDS.filter((c) => c !== "check-engine-spec-parity" && c !== "check-review-coverage").sort(),
+    );
+    expect(isBlocking({ check: "check-review-coverage", message: "" })).toBe(false);
+    expect(isBlocking({ check: "check-s12-coverage", message: "" })).toBe(true);
+  });
+  test("the repository tree has zero blocking findings", () => {
+    expect(runAll().filter(isBlocking)).toEqual([]);
   });
 });
 

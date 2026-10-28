@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.4.0
+// @version 1.5.0
 /**
  * co-newbiz variant audit hook — executed by scripts/audit.ts §27 (the
  * pluggable variant-specific audit checks; declared in variant.json
@@ -33,8 +33,9 @@
  *     tests/unit/pm-catalog.test.ts — this keeps a stale catalog from passing
  *     an audit run that skips unit tests.
  *   - Process SSOT validators (v1.4.0, ADR-0187 P1): the eight named checks of
- *     scripts/co-newbiz/process-ssot-check.ts, REPORT-ONLY — findings print as
- *     WARN and never set the failure flag (P2 switches them to blocking).
+ *     scripts/co-newbiz/process-ssot-check.ts. Since v1.5.0 (ADR-0187 P2) the
+ *     BLOCKING_CHECKS set the failure flag; check-engine-spec-parity (P3) and
+ *     check-review-coverage (P4) stay WARN.
  */
 
 import { existsSync, readdirSync } from "node:fs";
@@ -42,7 +43,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runCoverage } from "./mcp-coverage.ts";
 import { scanRouteAudit } from "./route-audit-scan.ts";
-import { CHECK_IDS, runAll, summarize } from "./process-ssot-check.ts";
+import { BLOCKING_CHECKS, CHECK_IDS, isBlocking, runAll, summarize } from "./process-ssot-check.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -234,12 +235,17 @@ runDriftGate(
   "app/web-next/lib/pm-catalog.generated.ts",
 );
 
-// ADR-0187 P1: report-only - WARN lines, never `failed = true`.
+// ADR-0187 P2: BLOCKING_CHECKS fail the audit; the P3/P4 checks stay WARN.
 const ssot = runAll();
 const ssotCounts = summarize(ssot);
-if (ssot.length === 0) console.log("  ✓ Process SSOT validators: 0 findings");
-else {
-  console.log(`  ⚠ [WARN] Process SSOT validators (report-only, ADR-0187 P1): ${ssot.length} finding(s) — ${CHECK_IDS.map((c) => `${c}=${ssotCounts[c]}`).join(", ")}; details: bun run process:ssot-check`);
-}
+const ssotBlocking = ssot.filter(isBlocking);
+const fmt = (ids: readonly string[]) => ids.map((c) => `${c}=${ssotCounts[c as keyof typeof ssotCounts]}`).join(", ");
+if (ssotBlocking.length > 0) {
+  console.log(`  ❌ Process SSOT validators (blocking, ADR-0187 P2): ${ssotBlocking.length} finding(s) — ${fmt([...BLOCKING_CHECKS])}; details: bun run process:ssot-check`);
+  failed = true;
+} else console.log(`  ✓ Process SSOT validators (blocking, ADR-0187 P2): 0 findings — ${fmt([...BLOCKING_CHECKS])}`);
+const ssotWarn = CHECK_IDS.filter((c) => !BLOCKING_CHECKS.has(c));
+if (ssot.length > ssotBlocking.length)
+  console.log(`  ⚠ [WARN] Process SSOT validators (report-only until ADR-0187 P3/P4): ${ssot.length - ssotBlocking.length} finding(s) — ${fmt(ssotWarn)}`);
 
 process.exit(failed ? 1 : 0);

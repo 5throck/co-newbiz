@@ -5,7 +5,7 @@ owner: risk-officer
 lifecycle:
   phase: draft
 status: experimental
-version: "1.1.1"
+version: "1.1.2"
 description: >
   Implements the synergy-red-team activity (S3): audits the assumption register behind a synergy score for optimism bias and reference-class (base-rate) deviation. Does not draft the assumptions and does not set the score.
   Use when: "assumption audit", "assumption review", "assumption register check", "optimism bias check".
@@ -15,6 +15,9 @@ metadata:
     - assumption review
     - assumption register check
     - optimism bias check
+  procedure_keys:
+    - greenfield-screening
+    - brownfield-screening
 ---
 
 # assumption-audit

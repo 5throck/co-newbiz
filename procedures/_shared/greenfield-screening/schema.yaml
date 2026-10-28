@@ -3,7 +3,7 @@ procedure_id: shared-greenfield-screening
 title: "Green Field Screening"
 scope: shared
 level: entity
-version: "1.4.0"
+version: "1.5.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -25,6 +25,29 @@ steps:
       advance thresholds are ADOPTED POLICY per DEC-20260909-03 (ADR-0051 (b)
       resolved 2026-09-09); a recalibration review follows the first 5
       scorecard-bearing runs with confirmed outcomes.
+  - id: 1.5
+    gate: Screening
+    agent_key: financial-analyst
+    skill_key: investment-feasibility-modeling
+    output_type: synergy_score_recommendation
+    description: >
+      S3 synergy analysis (flow.spec activity `synergy-analysis`, ADR-0187 D6):
+      the quantitative synergy case of the selected opportunity against the
+      group/affiliate registry, with every synergy line tied to an entry of
+      the assumption register. Records the opportunity.synergy_score
+      recommendation and its rationale (ADR-0090); the score is a proposal to
+      the Screening gate, never a decision.
+  - id: 1.6
+    gate: Screening
+    agent_key: risk-officer
+    skill_key: assumption-audit
+    output_type: synergy_assumption_audit
+    description: >
+      S3 synergy red-team (flow.spec activity `synergy-red-team`, ADR-0187 D6):
+      independent audit of the step 1.5 assumption register for optimism bias
+      and reference-class (base-rate) deviation. Drafts no assumption and sets
+      no score; findings return to the author and travel with the gate
+      proposal.
   - id: 2
     gate: Screening
     agent_key: market-intelligence-agent
@@ -59,6 +82,8 @@ steps:
       notified only its own province's municipalities and omitted a
       neighboring province's islands that were legally within the affected
       radius, triggering a public dispute and re-notification risk.
+      Produces items gf-01, gf-02 and gf-05 of
+      `checklists/greenfield-feasibility-checklist.yaml`.
   - id: 4
     gate: Screening
     agent_key: greenfield-agent
@@ -68,6 +93,24 @@ steps:
       Weighted score among pre-filtered survivors: infra readiness 30%,
       incentive NPV 25%, logistics cost 15%, labor availability 15%,
       permit critical-path (inverted) 15% (meeting M6 D-M6-1/D-M6-3).
+      Produces items gf-03, gf-04, gf-06 and gf-07 of
+      `checklists/greenfield-feasibility-checklist.yaml`.
+  - id: 4.5
+    gate: Screening
+    agent_key: legal-counsel
+    skill_key: regulatory-screening
+    output_type: legal_regulatory_screen
+    description: >
+      S4 legal and regulatory screen (flow.spec activity `regulatory-screening`,
+      ADR-0187 finding H9): every mandatory item of
+      `checklists/legal-regulatory-checklist.yaml` (lr-01..lr-07) judged with
+      evidence — permit pathway, certification requirements kept separate from
+      permits (boundary #5), region profile coverage, foreign-investment
+      screening, sanctions/anti-corruption on every counterparty. Statute and
+      article checks run against source text (k-law), never memory. The
+      Screening gate reads the result as a declared required artifact (flow.spec
+      S4); an unmet mandatory item blocks unless an active waiver covers it
+      (ADR-0037).
   - id: 5
     gate: Screening
     agent_key: process-governance-manager
@@ -89,6 +132,16 @@ kill_criteria:
     # (meeting M6 D-M6-1) assumes infrastructure is known before scoring; this
     # condition flags the real-world deviation as elevated risk requiring
     # explicit escalation, rather than silently passing.
+  # v1.5.0 (ADR-0187 phase P2, finding M4): the flow.spec Screening-gate
+  # summary lines get a procedure declaration and a registry entry each.
+  # Declared-but-inert (predicate null) until risk-officer + quant-methodologist
+  # set thresholds; until then the gate reviewers judge them.
+  - condition: market_structurally_unattractive
+    action: halt
+  - condition: data_confidence_not_judgeable
+    action: halt
+  - condition: strategic_fit_knock_out_failed
+    action: halt
 
 legal_basis:
   - "Group New Business Review Policy §4.1"
@@ -97,8 +150,10 @@ legal_basis:
   - "docs/pilots/pilot-005-sk-hynix-yongin-cluster.md finding F-1"
   - "docs/pilots/pilot-007-punggu-offshore-wind.md finding F-1"
   - "checklists/strategic-fit-screening-checklist.yaml (chk-strategic-fit)"
+  - "checklists/legal-regulatory-checklist.yaml (chk-legal-regulatory), checklists/greenfield-feasibility-checklist.yaml (chk-greenfield-feasibility)"
+  - "ADR-0187 (process SSOT and decision evidence) phase P2 — synergy author/red-team steps (D6), legal-regulatory producer step (H9), screening kill-criteria declarations (M4)"
   - "ADR-0051 (workflow gap closure — strategic fit at first screen)"
   - "Cooper Stage-Gate Gate 1 / HM Treasury Green Book Strategic Outline Case — strategic filter precedes attractiveness rating (docs/research/venture-governance-best-practice.md Area A)"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-08-22"
+last_reviewed: "2026-10-28"

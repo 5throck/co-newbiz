@@ -23,6 +23,7 @@ export const STAGE_ARTIFACT_LABELS: readonly StageArtifactLabel[] = [
   { key: "stage:S4:2", stageId: "S4", label: "S4 브라운필드 진출 경로 유형" },
   { key: "stage:S4:3", stageId: "S4", label: "S4 5대 기준 채점 결과" },
   { key: "stage:S4:4", stageId: "S4", label: "S4 검토한 대안" },
+  { key: "stage:S4:5", stageId: "S4", label: "S4 법무·규제 스크리닝 판정" },
   { key: "stage:S5:1", stageId: "S5", label: "S5 역량 격차 평가" },
   { key: "stage:S5:2", stageId: "S5", label: "S5 진출전략" },
   { key: "stage:S6:1", stageId: "S6", label: "S6 대상 기업군(Target Universe) 정의" },

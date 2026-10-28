@@ -204,7 +204,7 @@ describe("partner mark_conditional — D-M-RISK-3 / AI-1", () => {
 // enabled twin plus the two predicate-null class-(iii) entries (infrastructure
 // plan not finalized / zero sites clear minimums).
 describe("greenfield-screening — the ADR-0060 partner twin (D-M-RISK-3 / AI-1)", () => {
-  test("the registry loads 5 entries: three enabled (partner + infra-plan + zero-sites) + 2 predicate-null inert", () => {
+  test("the registry loads 6 entries: three enabled (partner + infra-plan + zero-sites) + 3 predicate-null inert (ADR-0187 P2)", () => {
     const projectId = insertProject();
     const runId = insertRun(projectId);
 
@@ -213,7 +213,8 @@ describe("greenfield-screening — the ADR-0060 partner twin (D-M-RISK-3 / AI-1)
     // Round 5 armed zero_site_clears_infrastructure_minimums, so the
     // procedure now evaluates 3 entries with 2 remaining predicate-null.
     expect(result.evaluated).toBe(3);
-    expect(result.inert).toBe(0);
+    // ADR-0187 P2: the three Screening summary-line entries are predicate-null.
+    expect(result.inert).toBe(3);
     const byId = new Map(result.outcomes.map((o) => [o.criterion_id, o]));
     expect(byId.get(PARTNER)).toMatchObject({ action: "mark_conditional", outcome: "unassessed" });
     // Anti-tamper contract (registry check c, enforced at runtime too): each
@@ -375,14 +376,15 @@ describe("brownfield-screening — the ADR-0062 antitrust tripwire (Class C reco
     return evaluateKillCriteria(db, { runId, projectId, procedure: "brownfield-screening", now: EVALUATED_AT });
   }
 
-  test("the registry loads 2 entries: both enabled tripwires (antitrust + longlist) — zero inert", () => {
+  test("the registry loads 5 entries: both enabled tripwires (antitrust + longlist) + 3 predicate-null inert (ADR-0187 P2)", () => {
     const projectId = insertProject();
     const runId = insertRun(projectId);
 
     const result = evaluateBScreening(projectId, runId);
 
     expect(result.evaluated).toBe(2);
-    expect(result.inert).toBe(0);
+    // ADR-0187 P2: the three Screening summary-line entries are predicate-null.
+    expect(result.inert).toBe(3);
     const byId = new Map(result.outcomes.map((o) => [o.criterion_id, o]));
     const anti = byId.get(HHI)!;
     expect(anti.action).toBe("escalate_to_risk_officer");

@@ -3,7 +3,7 @@ procedure_id: shared-business-unit-establishment-execution
 title: "Business Unit Establishment Execution"
 scope: shared
 level: entity
-version: "1.1.0"
+version: "1.1.1"
 status: active
 applicability: conditional
 # ADR-0167: a Green Field project that runs the new business as a new business
@@ -43,7 +43,8 @@ steps:
       management-committee resolution creating the unit, with budget and
       delegation-of-authority (DoA) assignment. Whether the articles of
       incorporation need a business-purpose amendment (special shareholders'
-      resolution) is a counsel item, not inferred here.
+      resolution) is a counsel item, not inferred here. Items bu-01, bu-02 of
+      `checklists/business-unit-formation-checklist.yaml`.
   - id: 2
     gate: "Entity IC"
     agent_key: legal-counsel
@@ -53,7 +54,8 @@ steps:
       Business registration update — add a place of business or change the
       business type/category, or record that no change is needed. Confirm the
       requirement with counsel or the tax adviser; do not infer from the
-      parent's existing registration.
+      parent's existing registration. Item bu-03 of
+      `checklists/business-unit-formation-checklist.yaml`.
   - id: 3
     gate: "Entity IC"
     agent_key: legal-counsel
@@ -64,7 +66,8 @@ steps:
       obtainable under the existing entity's name / not possible under the
       existing name (escalate). Permits only: certifications are checked in
       step 3.5 (a permit lets you operate, a certification lets you sell;
-      boundary #5).
+      boundary #5). Item bu-04 of
+      `checklists/business-unit-formation-checklist.yaml`.
   - id: 3.5
     gate: "Entity IC"
     agent_key: legal-counsel
@@ -74,7 +77,8 @@ steps:
       Certification holder check — a new site or product on an existing
       certificate is a scope extension confirmed with the certifying body's
       own rules; inference is disallowed (boundary #5). Mark not-applicable
-      where no certification is involved.
+      where no certification is involved. Item bu-05 of
+      `checklists/business-unit-formation-checklist.yaml`.
   - id: 4
     gate: "Entity IC"
     agent_key: hr-integration-agent
@@ -84,7 +88,8 @@ steps:
       Staffing and organization — internal transfers, org chart, job-description
       changes, and PIIA / work-for-hire coverage. Labour consultation duties
       under the rules of employment are confirmed with counsel before
-      enforcement use.
+      enforcement use. Item bu-06 of
+      `checklists/business-unit-formation-checklist.yaml`.
   - id: 5
     gate: "Entity IC"
     agent_key: process-governance-manager
@@ -94,7 +99,8 @@ steps:
       Completion confirm (완료 확인) — the organization, budget and
       delegation-of-authority baselines are confirmed by a human with
       evidence. Requires steps 1-4 done. No liability isolation exists in this
-      mode: liabilities stay on the parent entity's balance sheet.
+      mode: liabilities stay on the parent entity's balance sheet. Items
+      bu-07..bu-09 of `checklists/business-unit-formation-checklist.yaml`.
 
 kill_criteria:
   - condition: permit_not_possible_under_existing_entity_name
@@ -104,7 +110,8 @@ legal_basis:
   - "Group New Business Review Policy §2.3"
   - "ADR-0167 (Green Field establishment mode — business_unit step set; amends ADR-0047 A.5 and ADR-0100)"
   - "ADR-0165 (establishment step assignee, evidence and reopen rules apply unchanged)"
+  - "checklists/business-unit-formation-checklist.yaml (chk-business-unit-formation) — item citations per step added by ADR-0187 P2 (wording only, steps unchanged)"
   - "docs/designs/2026-10-14-greenfield-business-unit-vs-new-entity-design.md (design of record; articles-of-incorporation purpose amendment, VAT registration change and labour consultation need counsel confirmation)"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-10-14"
+last_reviewed: "2026-10-28"

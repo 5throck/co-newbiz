@@ -5,7 +5,7 @@ owner: compliance-officer
 lifecycle:
   phase: draft
 status: experimental
-version: "1.1.1"
+version: "1.1.2"
 description: >
   Implements the dd-waiver-review activity (S9) under the ADR-0036 mandatory-expiry waiver lifecycle: preparing a waiver request for a failed mandatory DD item, recording the waiver with its expiry, and tracking it to expiry or closure. Does not cover the six M&A mandatory validators, which have no waiver path (bf-01).
   Use when: "waiver", "waiver request", "exemption approval", "waiver expiry".
@@ -15,6 +15,8 @@ metadata:
     - waiver request
     - exemption approval
     - waiver expiry
+  procedure_keys:
+    - greenfield-dd
 ---
 
 # waiver-management

@@ -3,7 +3,7 @@ procedure_id: shared-jv-lifecycle-governance
 title: "JV Lifecycle Governance (post-formation, origin=joint)"
 scope: shared
 level: entity
-version: "1.1.1"
+version: "1.2.0"
 status: active
 # Design §C.1 open decision 1 — RESOLVED as a SIBLING procedure (ADR-0052):
 # entity-establishment-execution is formation-scoped with a clean completion
@@ -18,12 +18,24 @@ status: active
 # origin = joint predicate, so for every joint-origin JV the applicable step
 # set is exactly v1.0.0 (byte-identical behaviour). Retroactively (Q2) step 2
 # is RECOMMENDED, not blocking, for a partnership project already past S11.
+#
+# v1.2.0 (ADR-0187 phase P2, finding M17): the predicate gains a
+# sub_track = jv branch. The 3-axis classification (project_case_classification,
+# human-recorded) is independent of the route sub_track, and no guard rejects
+# origin=external on a JV route - db/lib/origin-derivation.ts only DEFAULTS
+# a JV route to joint, and "a supplied origin wins". The (brownfield,
+# external, jv) cell is therefore reachable and, before this branch, matched
+# no S12 activity. Such a project now gets step 2 (the health scorecard);
+# steps 1, 3, 4 and 5 keep their origin = joint predicate, so every
+# joint-origin JV and every partnership keeps exactly the v1.1.x step set.
+# A JV route recorded with origin=external is also a classification the
+# reviewers should question at S11; this branch keeps it monitored meanwhile.
 applicability: conditional
 applies_when:
   op: any_of
   of:
     - { op: "cmp", var: "project.origin", cmp: "eq", value: "joint" }
-    - { op: "cmp", var: "project.sub_track", cmp: "eq", value: "partnership" }
+    - { op: "in", var: "project.sub_track", values: ["partnership", "jv"] }
 workflow_type: core
 gate: post_close   # begins after entity-establishment-execution completes formation (ef-13..17 verified)
 owner_agent: partnership-agent
@@ -33,6 +45,7 @@ legal_basis:
   - "ADR-0047 (origin=joint routing value)"
   - "docs/research/pmi-jv-lifecycle-best-practice.md [pmi-jv B.1-B.6]"
   - "ADR-0161 (v1.1.0 — partnership predicate branch, step 2 partnership variant for S12 partnership-monitoring; Proposed, Q3 decided by the user 2026-10-12)"
+  - "ADR-0187 (v1.2.0 — sub_track = jv branch covering the reachable (brownfield, external, jv) cell, finding M17)"
 
 # Four phases: operate -> monitor -> restructure -> exit. Between formation
 # and exit — typically a decade (median JV lifespan 10 years, ILLUSTRATIVE

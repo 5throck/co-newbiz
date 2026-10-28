@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-dd
 title: "Brown Field Due Diligence"
 scope: shared
 level: entity
-version: "1.7.1"
+version: "1.8.0"
 status: active
 # 트랙 스코핑 (2026-10-22 프로젝트 리뷰 M7): S9 brownfield DD에 procedure 계층
 # 기계판독 predicate을 둔다 — greenfield-execution-baseline·pmi-integration-
@@ -81,6 +81,19 @@ steps:
       TARGET's commercial position; this step tests the MARKET the target
       sits in (ADR-0051). Evidence gathering may run in parallel with step 1;
       the reconciliation of concentration/churn waits for step 1's figures.
+  - id: 4.5
+    gate: DD
+    agent_key: brownfield-agent
+    skill_key: brownfield-feasibility
+    output_type: capability_dd_judgement
+    description: >
+      Capability DD (flow.spec activity `capability-dd`, design
+      2026-10-19-brownfield-capability-dd; added to the procedure by ADR-0187
+      P2, finding M2): verify each S3 required capability against the selected
+      target — resolved / partially resolved / unresolved with evidence. The
+      judgement per capability is a human record (boundary #2); this step
+      prepares the evidence and the draft. It is the T1 basis of the S8
+      technical lens.
   - id: 5
     gate: DD
     agent_key: legal-counsel
@@ -97,6 +110,18 @@ steps:
       dd-to-valuation-bridge. Distinct from the certification-transferability
       step (step 11) and from screening-level chk-legal-regulatory — legal
       basis for transferability lives there, this step supplies the evidence.
+  - id: 5.5
+    gate: DD
+    agent_key: financial-analyst
+    skill_key: quality-of-earnings
+    output_type: dd_finding
+    description: >
+      Financial DD per `checklists/financial-dd-checklist.yaml` (fdd-01..)
+      — quality of earnings, normalized working capital, debt and debt-like
+      items, tax position, cash-flow quality, related-party transactions,
+      management-accounts reconciliation and projections tested against
+      history (flow.spec activity `financial-dd`; ADR-0187 P2, finding M2).
+      Every material finding lands as dd_finding with value_impact.
   - id: 6
     gate: DD
     agent_key: antitrust-agent
@@ -186,6 +211,18 @@ steps:
       ADR-0051 open question (c)). Certainty of funds is evidenced here so
       the IC package carries a financing_readiness_check, not a financing
       contingency.
+  - id: 12.5
+    gate: DD
+    agent_key: financing-agent
+    skill_key: financing-plan-review
+    output_type: financing_readiness_check
+    description: >
+      Financing DD review (flow.spec activity `financing-dd`; ADR-0187 P2,
+      finding M2): independent review of the step 12 evidence pack — funding
+      certainty per source, covenant headroom under the downside scenario
+      (starting threshold: downside DSCR headroom of at least 1.2x, ADR-0187
+      D2), change-of-control acceleration exposure. Advises on structure,
+      never on the investment decision itself.
   - id: 13
     gate: DD
     agent_key: hr-integration-agent
@@ -269,6 +306,7 @@ legal_basis:
   - "ADR-0147 (revenue-quality four-axis assessment cdd-08; single computation owner for concentration and churn — wording only, steps and keys unchanged)"
   - "ADR-0185 (placement realignment: step 6.5 region-labor joins the six-validator core, contingent-liability step 10 leaves it; step 3.5 ip-fto-review for R&BD)"
   - "ADR-0048 (no-waiver scope = APPLICABLE validators; 3-number completeness record; not_applicable rows + invalidation on reclassification)"
+  - "ADR-0187 (process SSOT and decision evidence) phase P2 — steps 4.5 capability DD, 5.5 financial DD (checklists/financial-dd-checklist.yaml), 12.5 financing DD review (M2); six-validator core and step numbers unchanged"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-10-01"
+last_reviewed: "2026-10-28"

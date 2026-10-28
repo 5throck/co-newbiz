@@ -12,8 +12,8 @@ description: >
 
   Use when: "commercial due diligence", "customer concentration analysis",
   "pricing power assessment", "win loss analysis", "revenue quality".
-version: 1.2.0
-last_reviewed: 2026-10-01
+version: 1.2.1
+last_reviewed: 2026-10-28
 status: active
 owner: commercial-dd-agent
 prerequisites: none
@@ -28,6 +28,7 @@ metadata:
 
   procedure_keys:
     - brownfield-dd
+    - greenfield-dd
 relates_to:
   - skill: technical-due-diligence
     type: follows
@@ -51,7 +52,6 @@ relates_to:
     type: composes_with
   - skill: stage-gate-governance
     type: composes_with
-
 ---
 
 ## Context

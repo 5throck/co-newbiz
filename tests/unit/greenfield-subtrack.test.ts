@@ -176,37 +176,37 @@ describe("(b) routing resolver + greenfield-dd step predicates", () => {
       .sort((a, b) => a - b);
   };
 
-  test("null sub-track resolves to 'none' and keeps v1.0.0 steps (1-5 only)", () => {
+  test("null sub-track resolves to 'none' and keeps v1.0.0 steps 1-5 (plus the ADR-0187 P2 activity steps 9-17)", () => {
     const p = seedProject("greenfield", null);
     expect(resolveRoutingVars(p, db)("project.sub_track")).toEqual({ status: "present", value: "none" });
-    expect(applies(p)).toEqual([1, 2, 3, 4, 5]);
+    expect(applies(p)).toEqual([1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14, 15, 16, 17]); // 9-17: ADR-0187 P2 (origin unassessed -> applies)
   });
   test("no current route: UNASSESSED, every step applies (fail-closed)", () => {
     const p = seedProject("greenfield", null);
     db.run("UPDATE route_decision SET is_current = 0 WHERE opportunity_id = (SELECT source_opportunity_id FROM md_project WHERE id = ?)", [p]);
     expect(resolveRoutingVars(p, db)("project.sub_track")).toBeUndefined();
-    expect(applies(p)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(applies(p)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
   });
   test("existing_business_rbd: unconfirmed site -> site steps apply; confirmed false -> skipped at once", () => {
     const p = seedProject("greenfield", "existing_business_rbd");
-    expect(applies(p)).toEqual([1, 3, 4, 5, 6, 7]);
+    expect(applies(p)).toEqual([1, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
     const a = gf.confirmSiteRequired({ projectId: p, value: false, rationale: "부지 없음", actor: A1 }, db);
     expect(a.ok).toBe(true);
     // Single-person confirmation (user decision 2026-10-12): effective immediately.
     expect(resolveRoutingVars(p, db)("project.site_required")).toEqual({ status: "present", value: false });
-    expect(applies(p)).toEqual([4, 5, 6, 7]);
+    expect(applies(p)).toEqual([4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
   });
   test("intra_venture: no default (site steps apply until a human confirms); reviewed false skips them", () => {
     const p = seedProject("greenfield", "intra_venture");
-    expect(applies(p)).toEqual([1, 3, 4, 5, 6, 7, 8]);
+    expect(applies(p)).toEqual([1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
     setSite(p, false);
-    expect(applies(p)).toEqual([4, 5, 6, 7, 8]);
+    expect(applies(p)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
     setSite(p, true);
-    expect(applies(p)).toEqual([1, 3, 4, 5, 6, 7, 8]);
+    expect(applies(p)).toEqual([1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
   });
   test("unknown (brownfield) value on a greenfield route -> site default, same as null", () => {
     const p = seedProject("greenfield", "m_and_a");
-    expect(applies(p)).toEqual([1, 2, 3, 4, 5]);
+    expect(applies(p)).toEqual([1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
   });
 });
 
@@ -244,7 +244,7 @@ describe("(b2) YAML documented intent vs greenfield-subtrack.ts (code is authori
     const old = seedProject("greenfield", "existing_business_rbd", { old: true });
     expect(gf.greenfieldSelection(old, db)!.excluded_steps).toEqual([6, 7, 8]); // v1.0.0 steps 1-5
     expect(raw).toContain("GF_SUBTRACK_PREDICATE_DATE");
-    expect(yamlApplies(old)).toEqual([1, 3, 4, 5, 6, 7]); // YAML ignores the cut-off by design
+    expect(yamlApplies(old)).toEqual([1, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17]); // YAML ignores the cut-off by design
     const none = seedProject("greenfield", null);
     db.run("UPDATE route_decision SET is_current = 0 WHERE opportunity_id = (SELECT source_opportunity_id FROM md_project WHERE id = ?)", [none]);
     expect(gf.greenfieldSelection(none, db)).toBeNull(); // code: no route -> no greenfield selection

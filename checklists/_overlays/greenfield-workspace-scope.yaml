@@ -11,7 +11,7 @@ layer: checklist-overlay
 title: Greenfield S9 workspace scope by sub-track (plan verification)
 owner_agent: process-governance-manager
 maintainer: process-governance-manager
-version: 1.1.0
+version: 1.2.0
 status: proposed
 decision_record: DEC-20261012-01
 track: greenfield
@@ -211,6 +211,101 @@ steps:
     applies:
       none: 'no'
       existing_business_rbd: 'no'
+      intra_venture: 'yes'
+  # v1.2.0 (ADR-0187 phase P2, finding M2): greenfield-dd 1.2.0 steps 9-17 —
+  # one step per S9 activity agent. They map to a tab only; no item moves, so
+  # expected_counts are unchanged. Every sub-track key reads 'yes': the D9
+  # origin=internal trim of steps 9, 12-16 is an origin rule, not a sub-track
+  # rule, and stays in the procedure predicate (runtime trim is ADR-0187 P3).
+  - step: 9
+    purpose: '판매 계획 실사'
+    tabs:
+      - commercial
+    items: []
+    pointers: []
+    applies:
+      none: 'yes'
+      existing_business_rbd: 'yes'
+      intra_venture: 'yes'
+  - step: 10
+    purpose: '법무·인허가 실사'
+    tabs:
+      - legal
+    items: []
+    pointers: []
+    applies:
+      none: 'yes'
+      existing_business_rbd: 'yes'
+      intra_venture: 'yes'
+  - step: 11
+    purpose: '재무 계획 실사'
+    tabs:
+      - financial
+    items: []
+    pointers: []
+    applies:
+      none: 'yes'
+      existing_business_rbd: 'yes'
+      intra_venture: 'yes'
+  - step: 12
+    purpose: '인력 실사'
+    tabs:
+      - hr
+    items: []
+    pointers: []
+    applies:
+      none: 'yes'
+      existing_business_rbd: 'yes'
+      intra_venture: 'yes'
+  - step: 13
+    purpose: '시장 근거 재확인'
+    tabs:
+      - market
+    items: []
+    pointers: []
+    applies:
+      none: 'yes'
+      existing_business_rbd: 'yes'
+      intra_venture: 'yes'
+  - step: 14
+    purpose: '자금 마련 실사(다운사이드 커버넌트 여유)'
+    tabs:
+      - financing
+    items: []
+    pointers: []
+    applies:
+      none: 'yes'
+      existing_business_rbd: 'yes'
+      intra_venture: 'yes'
+  - step: 15
+    purpose: '지식재산·실시 자유(FTO) 검토'
+    tabs:
+      - legal
+    items: []
+    pointers: []
+    applies:
+      none: 'yes'
+      existing_business_rbd: 'yes'
+      intra_venture: 'yes'
+  - step: 16
+    purpose: '지역 노동법 검토'
+    tabs:
+      - hr
+    items: []
+    pointers: []
+    applies:
+      none: 'yes'
+      existing_business_rbd: 'yes'
+      intra_venture: 'yes'
+  - step: 17
+    purpose: '필수 항목 예외(waiver) 판정'
+    tabs:
+      - plan_readiness
+    items: []
+    pointers: []
+    applies:
+      none: 'yes'
+      existing_business_rbd: 'yes'
       intra_venture: 'yes'
 checklists:
   chk-commercial-dd-checklist:

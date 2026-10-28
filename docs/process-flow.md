@@ -107,7 +107,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - S1 시장분석: `market-intelligence-agent`
 - S2 기회 발굴: `market-intelligence-agent`, `greenfield-agent`
 - S3 시너지·전략적 적합성: `process-governance-manager`, `financial-analyst`, `risk-officer`, `greenfield-agent`, `brownfield-agent`
-- S4 진출방식 결정: `pm`, `brownfield-agent`, `valuation-agent`, `certification-agent`
+- S4 진출방식 결정: `pm`, `brownfield-agent`, `valuation-agent`, `certification-agent`, `legal-counsel`
 - S5 자체 진출: `greenfield-agent`, `financial-analyst`
 - S6 대상 후보 발굴: `brownfield-agent`, `market-intelligence-agent`
 - S7 대상 선정: `brownfield-agent`, `antitrust-agent`
@@ -171,7 +171,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 **Activities**
 - opportunity-discovery · agent: `market-intelligence-agent` · skills: `insight-synthesis` · procedure: `opportunity-discovery`, `greenfield-screening`, `brownfield-screening`
-- business-model-sketch · agent: `greenfield-agent` · skills: `scenario-planning` · procedure: `opportunity-discovery`, `greenfield-screening`, `brownfield-screening`
+- business-model-sketch · agent: `greenfield-agent` · skills: `scenario-planning` · procedure: `opportunity-discovery`
 - entry-market-sizing · agent: `market-intelligence-agent` · skills: `systematic-market-sizing` · procedure: `opportunity-discovery`, `greenfield-screening`, `brownfield-screening`
 
 **필수 산출물**
@@ -256,17 +256,19 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 가치사슬 구조 (S1)
 
 **Activities**
-- route-strategy · agent: `pm` · skills: `deal-execution-playbook`, `jv-structuring`, `partner-sourcing-strategy`, `brownfield-feasibility`, `greenfield-feasibility`, `site-infrastructure-assessment`, `regional-incentive-sourcing`, `partner-due-diligence`, `partnership-health-scorecard` · procedure: `greenfield-pre-fs`, `brownfield-pre-fs`, `deal-shape-chain`
-- deal-shape-evaluation · agent: `brownfield-agent` · skills: `deal-execution-playbook` · procedure: `greenfield-pre-fs`, `brownfield-pre-fs`, `deal-shape-chain`
+- route-strategy · agent: `pm` · skills: `deal-execution-playbook`, `jv-structuring`, `partner-sourcing-strategy`, `brownfield-feasibility`, `greenfield-feasibility`, `site-infrastructure-assessment`, `regional-incentive-sourcing`, `partner-due-diligence`, `partnership-health-scorecard`, `investment-vehicle-structuring` · procedure: `greenfield-pre-fs`, `brownfield-pre-fs`, `deal-shape-chain`
+- deal-shape-evaluation · agent: `brownfield-agent` · skills: `deal-execution-playbook` · procedure: `brownfield-pre-fs`
 - route-advisory · agent: `pm` · skills:  · procedure: `greenfield-pre-fs`, `brownfield-pre-fs`, `deal-shape-chain`
 - wacc-hurdle-confirmation · agent: `valuation-agent` · skills: `wacc-input-session` · procedure: `greenfield-pre-fs`, `brownfield-pre-fs`
 - certification-screen · agent: `certification-agent` · skills: `certification-roadmap`, `certification-transferability` · procedure: `greenfield-pre-fs`, `brownfield-pre-fs`
+- regulatory-screening · agent: `legal-counsel` · skills: `regulatory-screening`, `permit-pathway-mapping`, `k-law` · procedure: `greenfield-screening`, `brownfield-screening`
 
 **필수 산출물**
 - 트랙 결정(GF/BF)·근거
 - Brownfield 선택 시 Route 유형(M&A/JV/전략적 투자/소수점 지분/파트너십/R&BD/CVC)
 - 5criteria 채점 결과(통제 필요도·역량 결정성·시장 불확실성·통합 역량·역량확보 속도 각 20%)
 - 검토한 대안
+- 법무·규제 스크리닝 판정 (chk-legal-regulatory lr-01~lr-07 — regulatory-screening 활동)
 
 **완료 기준**
 - route_decision 레코드가 존재한다 (track 필수; brownfield는 Route 유형(sub_track) 필수, greenfield의 sub_track은 선택)
@@ -426,7 +428,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 **Activities**
 - business-case-modeling · agent: `financial-analyst` · skills: `growth-projection-modeling`, `investment-feasibility-modeling`, `target-costing-analysis`, `financial-statement-analysis`, `antitrust-screening`, `peer-benchmarking`, `quality-of-earnings`, `scenario-planning`, `value-chain-stage-financials`, `historical-financial-analysis`, `site-infrastructure-assessment` · procedure: `greenfield-fs`, `brownfield-fs`
-- valuation · agent: `valuation-agent` · skills: `dd-to-valuation-bridge`, `monte-carlo-simulation` · procedure: `greenfield-fs`, `brownfield-fs`
+- valuation · agent: `valuation-agent` · skills: `dd-to-valuation-bridge`, `monte-carlo-simulation`, `investment-vehicle-structuring` · procedure: `greenfield-fs`, `brownfield-fs`
 - quant-methods · agent: `quant-methodologist` · skills: `wacc-input-session`, `monte-carlo-simulation`, `proxy-industry-chain`, `unit-conversion-calibration`, `value-chain-driver-identification` · procedure: `greenfield-fs`, `brownfield-fs`
 - target-comparison · agent: `financial-analyst` · skills: `investment-feasibility-modeling` · procedure: `brownfield-fs-comparative`
 - target-selection · agent: `pm` · skills:  · procedure: `brownfield-fs-comparative`
@@ -481,12 +483,12 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - dd-waiver-review · agent: `compliance-officer` · skills: `waiver-management`, `compliance-monitoring` · procedure: `greenfield-dd`, `brownfield-dd`
 - capability-dd · agent: `brownfield-agent` · skills: `brownfield-feasibility` · procedure: `brownfield-dd`
 - antitrust-dd · agent: `antitrust-agent` · skills: `antitrust-screening` · procedure: `brownfield-dd`
-- region-labor-review · agent: `region-lead` · skills: `regulatory-screening` · procedure: `brownfield-dd`
+- region-labor-review · agent: `region-lead` · skills: `regulatory-screening` · procedure: `greenfield-dd`, `brownfield-dd`
 - customer-retention-dd · agent: `customer-retention-agent` · skills: `customer-attrition-risk` · procedure: `brownfield-dd`
 - incentive-dd · agent: `incentive-agent` · skills: `incentive-clawback-assessment` · procedure: `brownfield-dd`
 - contingent-liability-dd · agent: `valuation-agent` · skills: `debt-and-contingent-liability-simulation` · procedure: `brownfield-dd`
 - certification-transferability-dd · agent: `legal-counsel` · skills: `certification-transferability` · procedure: `brownfield-dd`
-- ip-fto-dd · agent: `ip-agent` · skills: `ip-fto-review` · procedure: `brownfield-dd`
+- ip-fto-dd · agent: `ip-agent` · skills: `ip-fto-review` · procedure: `greenfield-dd`, `brownfield-dd`
 
 **필수 산출물**
 - DD 체크리스트 판정(필수 항목 해소)
@@ -519,7 +521,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 진입시장 산정 (S2 확정 — ADR-0181; S3~S12의 기준 시장, ADR-0187 M9)
 
 **Activities**
-- deal-structure-hypothesis · agent: `brownfield-agent` · skills: `investment-vehicle-structuring` · procedure: `deal-structuring`, `brownfield-fs`, `deal-shape-chain`
+- deal-structure-hypothesis · agent: `brownfield-agent` · skills: `investment-vehicle-structuring` · procedure: `deal-structuring`
 - financing-plan · agent: `valuation-agent` · skills: `financing-plan-review`, `investment-feasibility-modeling`, `regional-incentive-sourcing` · procedure: `deal-structuring`
 
 **필수 산출물**
@@ -548,10 +550,10 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **Activities**
 - ic-preparation · agent: `pm` · skills: `executive-presentation`, `sample-driven-report-writing`, `dd-to-valuation-bridge`, `financing-plan-review`, `insight-synthesis` · procedure: `entity-ic-review`, `group-investment-review`
 - charter-baseline · agent: `pm` · skills:  · procedure: `entity-ic-review`
-- investment-structuring · agent: `brownfield-agent` · skills:  · procedure: `entity-ic-review`, `jv-lifecycle-governance`
-- risk-review · agent: `risk-officer` · skills: `legal-risk-register`, `rag-scoring-framework` · procedure: `entity-ic-review`, `group-investment-review`
-- group-review · agent: `group-review-agent` · skills: `group-level-review`, `intra-group-transaction-compliance`, `portfolio-fit-assessment`, `two-tier-approval-chain` · procedure: `entity-ic-review`, `group-investment-review`
-- entity-establishment-execution · agent: `process-governance-manager` · skills: `legal-due-diligence`, `k-law`, `certification-transferability`, `org-readiness-assessment`, `stage-gate-governance` · procedure: `entity-establishment-execution`
+- investment-structuring · agent: `brownfield-agent` · skills:  · procedure: `entity-ic-review`
+- risk-review · agent: `risk-officer` · skills: `legal-risk-register`, `rag-scoring-framework` · procedure: `entity-ic-review`
+- group-review · agent: `group-review-agent` · skills: `group-level-review`, `intra-group-transaction-compliance`, `portfolio-fit-assessment`, `two-tier-approval-chain` · procedure: `group-investment-review`
+- entity-establishment-execution · agent: `process-governance-manager` · skills: `legal-due-diligence`, `k-law`, `certification-transferability`, `org-readiness-assessment`, `stage-gate-governance`, `permit-pathway-mapping` · procedure: `entity-establishment-execution`, `business-unit-establishment-execution`
 - pmi-kickoff · agent: `pmi-agent` · skills: `pmi-planning`, `compensation-harmonization-analysis` · procedure: `pmi-integration-execution`
 - greenfield-execution-baseline · agent: `greenfield-agent` · skills: `greenfield-feasibility`, `talent-pipeline-planning`, `certification-roadmap`, `financing-plan-review`, `incentive-clawback-assessment` · procedure: `greenfield-execution-baseline`
 

@@ -5,7 +5,7 @@ owner: legal-counsel
 lifecycle:
   phase: draft
 status: experimental
-version: "1.1.0"
+version: "1.1.1"
 description: >
   Implements step 6.5 of `brownfield-dd` and the regulatory screens of S7 and S9: regional labor law review, works council and employment transfer regimes, plus foreign-investment and sanctions screens, read from the region profile and confirmed against source texts. Does not cover merger control filings (antitrust-screening) or certification (certification-roadmap).
   Use when: "regional labor law review", "works council", "employment transfer regime", "regulatory screening".
@@ -13,6 +13,8 @@ metadata:
   procedure_keys:
     - brownfield-screening
     - brownfield-dd
+    - greenfield-dd
+    - greenfield-screening
   triggers:
     - regional labor law review
     - works council
