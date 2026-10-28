@@ -181,18 +181,18 @@ function DebtView() {
           <h2 className="text-[length:var(--fs-body)] mb-2">{editingId ? t("editHeading") : t("registerHeading")}</h2>
           <form id="debt-register-form" className="sizing-new-form" onSubmit={submit} aria-label={editingId ? t("editHeading") : t("registerHeading")}>
             <div className="flex flex-wrap items-end gap-2">
-              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">{t("lblLender")}</span>
-                <input className="sizing-new-input sizing-new-input-sm" value={form.lender} onChange={(e) => setForm({ ...form, lender: e.target.value })} /></label>
-              <label className="text-[length:var(--fs-caption)] w-[8rem]"><span className="block mb-1">{t("lblPrincipal")}</span>
-                <input type="number" className="sizing-new-input sizing-new-input-sm" value={form.principal} onChange={(e) => setForm({ ...form, principal: e.target.value })} required /></label>
-              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">{t("lblRateType")}</span>
-                <select className="sizing-new-input sizing-new-input-sm" value={form.rate_type} onChange={(e) => setForm({ ...form, rate_type: e.target.value })}><option value="fixed">{t("rateFixed")}</option><option value="floating">{t("rateFloating")}</option></select></label>
-              <label className="text-[length:var(--fs-caption)] w-[6rem]"><span className="block mb-1">{t("lblRate")}</span>
-                <input type="number" step="0.01" className="sizing-new-input sizing-new-input-sm" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} required /></label>
-              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">{t("lblMaturity")}</span>
-                <input className="sizing-new-input sizing-new-input-sm" value={form.maturity} onChange={(e) => setForm({ ...form, maturity: e.target.value })} placeholder={t("phMaturity")} /></label>
-              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">{t("lblAmortization")}</span>
-                <select className="sizing-new-input sizing-new-input-sm" value={form.amortization} onChange={(e) => setForm({ ...form, amortization: e.target.value })}>{form.amortization && !["annuity", "equal_principal", "bullet"].includes(form.amortization) && <option value={form.amortization}>{form.amortization}</option>}<option value="annuity">{t("amortAnnuity")}</option><option value="equal_principal">{t("amortEqualPrincipal")}</option><option value="bullet">{t("amortBullet")}</option></select></label>
+              <label className="text-[length:var(--fs-caption)] w-[11rem]"><span className="block mb-1">{t("lblLender")}</span>
+                <input className="sizing-new-input sizing-new-input-sm w-full" value={form.lender} onChange={(e) => setForm({ ...form, lender: e.target.value })} /></label>
+              <label className="text-[length:var(--fs-caption)] w-[9rem]"><span className="block mb-1">{t("lblPrincipal")}</span>
+                <input type="number" className="sizing-new-input sizing-new-input-sm w-full" value={form.principal} onChange={(e) => setForm({ ...form, principal: e.target.value })} required /></label>
+              <label className="text-[length:var(--fs-caption)] w-[7rem]"><span className="block mb-1">{t("lblRateType")}</span>
+                <select className="sizing-new-input sizing-new-input-sm w-full" value={form.rate_type} onChange={(e) => setForm({ ...form, rate_type: e.target.value })}><option value="fixed">{t("rateFixed")}</option><option value="floating">{t("rateFloating")}</option></select></label>
+              <label className="text-[length:var(--fs-caption)] w-[7rem]"><span className="block mb-1">{t("lblRate")}</span>
+                <input type="number" step="0.01" className="sizing-new-input sizing-new-input-sm w-full" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} required /></label>
+              <label className="text-[length:var(--fs-caption)] w-[9rem]"><span className="block mb-1">{t("lblMaturity")}</span>
+                <input className="sizing-new-input sizing-new-input-sm w-full" value={form.maturity} onChange={(e) => setForm({ ...form, maturity: e.target.value })} placeholder={t("phMaturity")} /></label>
+              <label className="text-[length:var(--fs-caption)] w-[8rem]"><span className="block mb-1">{t("lblAmortization")}</span>
+                <select className="sizing-new-input sizing-new-input-sm w-full" value={form.amortization} onChange={(e) => setForm({ ...form, amortization: e.target.value })}>{form.amortization && !["annuity", "equal_principal", "bullet"].includes(form.amortization) && <option value={form.amortization}>{form.amortization}</option>}<option value="annuity">{t("amortAnnuity")}</option><option value="equal_principal">{t("amortEqualPrincipal")}</option><option value="bullet">{t("amortBullet")}</option></select></label>
               <button type="submit" className="btn-primary" disabled={busy}>{busy ? (editingId ? tc("saving") : tc("registering")) : editingId ? tc("save") : tc("register")}</button>
               {editingId && <button type="button" className="btn-ghost" onClick={cancelEdit}>{tc("cancel")}</button>}
             </div>
