@@ -27,7 +27,7 @@ bun scripts/co-newbiz/reconfirm-requirement.ts --project PRJ-DSE4PW --by <admin-
 bun scripts/co-newbiz/reconfirm-requirement.ts --project PRJ-DSE4PW --by <admin-user> --apply
 ```
 
-Optional flags: `--items`, `--reason`, `--db-path`. Equivalent over the API: `POST /api/projects/PRJ-DSE4PW/reconfirm` (administrator). Only one open requirement per project exists (a second attempt returns 409 `reconfirm_exists`). Agents may prepare the evidence but never run `--apply` on production.
+`--project` accepts either the human project number (`PRJ-DSE4PW`) or the internal `md_project.id`; the output prints the resolved mapping. Optional flags: `--items`, `--reason`, `--db-path`. Equivalent over the API: `POST /api/projects/PRJ-DSE4PW/reconfirm` (administrator). Only one open requirement per project exists (a second attempt returns 409 `reconfirm_exists`). Agents may prepare the evidence but never run `--apply` on production.
 
 ## How the system marks, blocks and clears it (implemented behaviour)
 

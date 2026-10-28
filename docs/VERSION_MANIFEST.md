@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-28T12:34:52.619Z
+**Generated**: 2026-10-28T12:41:25.306Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -299,7 +299,7 @@
 | qa-gate.ts | 1.3.0 | scripts/qa-gate.ts | bun |
 | rag.ts | 1.3.0 | scripts/co-newbiz/rag.ts | bun:sqlite |
 | readme-lifecycle-audit.ts | 1.1.0 | scripts/readme-lifecycle-audit.ts | N/A |
-| reconfirm-requirement.ts | 1.0.0 | scripts/co-newbiz/reconfirm-requirement.ts | N/A |
+| reconfirm-requirement.ts | 1.1.0 | scripts/co-newbiz/reconfirm-requirement.ts | N/A |
 | regenerate-agents-md.ts | 1.3.0 | scripts/regenerate-agents-md.ts | fs, path |
 | register-hydraulic-breaker-assumptions.ts | 1.0.0 | scripts/co-newbiz/register-hydraulic-breaker-assumptions.ts | N/A |
 | render-commands.ts | 1.1.0 | scripts/render-commands.ts | N/A |

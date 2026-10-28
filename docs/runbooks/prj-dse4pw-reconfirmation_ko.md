@@ -28,7 +28,7 @@ bun scripts/co-newbiz/reconfirm-requirement.ts --project PRJ-DSE4PW --by <admin-
 bun scripts/co-newbiz/reconfirm-requirement.ts --project PRJ-DSE4PW --by <admin-user> --apply
 ```
 
-선택 옵션: `--items`, `--reason`, `--db-path`. API로는 `POST /api/projects/PRJ-DSE4PW/reconfirm`(관리자)과 같다. 프로젝트당 열린 요건은 하나뿐이다(두 번째 시도는 409 `reconfirm_exists`). 에이전트는 근거를 준비할 수 있으나 운영 환경에서 `--apply`를 실행하지 않는다.
+`--project`는 사람이 읽는 프로젝트 번호(`PRJ-DSE4PW`)와 내부 `md_project.id` 둘 다 받으며, 출력에 풀이된 대응을 보여 준다. 선택 옵션: `--items`, `--reason`, `--db-path`. API로는 `POST /api/projects/PRJ-DSE4PW/reconfirm`(관리자)과 같다. 프로젝트당 열린 요건은 하나뿐이다(두 번째 시도는 409 `reconfirm_exists`). 에이전트는 근거를 준비할 수 있으나 운영 환경에서 `--apply`를 실행하지 않는다.
 
 ## 시스템이 표시, 차단, 해제하는 방식 (구현된 동작)
 
