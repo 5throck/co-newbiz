@@ -2,6 +2,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- **[2026-10-28]**: fix(market): **KSIC search finds common industry terms.** Searching the common Korean term for shipbuilding returned nothing because the KSIC official names use "ship and boat building" wording. New curated `lib/ksic-aliases.json` maps common industry terms (shipbuilding, offshore plant, marine engine, crankshaft, secondary battery, semiconductor, display, bio/pharma, auto parts, defense, hydrogen, fuel cell, robot, steel, petrochemical, solar, wind, nuclear) to existing KSIC 10th-revision codes with a basis per entry; `searchKsic` (ksic.ts 1.2.0) returns alias hits first (marked `matched_by: "alias"`), with whitespace-insensitive name matching; digit and empty queries unchanged; the S1 picker shows the matched alias next to the official name; `classifyIndustryKsic` uses aliases as a tie-break fallback. A test asserts every alias code exists in the master.
+
 - **[2026-10-28]**: chore(web): **Disable the Turbopack dev filesystem cache.** `next.config.ts` sets `experimental.turbopackFileSystemCacheForDev: false` — the dev cache (`.next/dev/cache`) grew to ~68GB on the operator workstation; this trades slower dev-server cold starts for bounded disk use. Production builds are unaffected.
 
 - **[2026-10-28]**: fix(governance): **`reconfirm-requirement.ts` 1.1.0 accepts the project number.** `--project` now resolves either the internal `md_project.id` or the human `project_no` (e.g. `PRJ-DSE4PW`) through `resolveProjectRef` in `lib/reconfirm.ts`, prints the mapping, and fails clearly on unknown or ambiguous refs. The PRJ-DSE4PW runbook command (en + ko) previously failed with "project not found". API route semantics unchanged.

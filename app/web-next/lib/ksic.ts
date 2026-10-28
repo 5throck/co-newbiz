@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * KSIC (한국표준산업분류) helpers — shared input validation and curated
  * master-data search for the /market code picker (ADR-0111).
@@ -11,6 +11,7 @@
  * fabricate are equally rejected.
  */
 import master from "./ksic-master.json";
+import aliasData from "./ksic-aliases.json";
 
 const KSIC_CODE_RE = /^\d{2,6}$/;
 
@@ -32,7 +33,20 @@ export interface KsicEntry {
   name_ko: string;
   detail: string | null;
   profile: boolean;
+  /** Set only on non-digit queries: how this entry was found. */
+  matched_by?: "alias" | "name";
+  /** The curated alias term that matched (matched_by === "alias"). */
+  alias?: string;
 }
+
+interface KsicAlias {
+  terms: string[];
+  codes: string[];
+  basis: string;
+}
+export const KSIC_ALIASES: KsicAlias[] = (aliasData as { aliases: KsicAlias[] }).aliases;
+
+const squash = (v: string) => v.toLowerCase().replace(/\s+/g, "");
 
 const ENTRIES: KsicEntry[] = (master.codes as KsicEntry[])
   .slice()
@@ -61,10 +75,29 @@ export function searchKsic(query: string, limit = 20): KsicEntry[] {
       })
       .slice(0, limit);
   }
-  const needle = q.toLowerCase();
-  return ENTRIES.filter(
-    (e) => e.name_ko.toLowerCase().includes(needle) || (e.detail ?? "").toLowerCase().includes(needle),
-  )
-    .sort(profileFirst)
-    .slice(0, limit);
+  const needle = squash(q);
+  const seen = new Set<string>();
+  const out: KsicEntry[] = [];
+  // Alias hits first: the alias term contains the query, or the query contains
+  // the alias term (e.g. "조선업체"). Single-character queries are too noisy.
+  if (needle.length >= 2) {
+    for (const a of KSIC_ALIASES) {
+      const term = a.terms.find((t) => {
+        const n = squash(t);
+        return n.includes(needle) || needle.includes(n);
+      });
+      if (!term) continue;
+      for (const code of a.codes) {
+        const e = ENTRIES.find((x) => x.code === code);
+        if (!e || seen.has(code)) continue;
+        seen.add(code);
+        out.push({ ...e, matched_by: "alias", alias: term });
+      }
+    }
+  }
+  const nameHits = ENTRIES.filter(
+    (e) => !seen.has(e.code) && (squash(e.name_ko).includes(needle) || squash(e.detail ?? "").includes(needle)),
+  ).sort(profileFirst);
+  for (const e of nameHits) out.push({ ...e, matched_by: "name" });
+  return out.slice(0, limit);
 }
