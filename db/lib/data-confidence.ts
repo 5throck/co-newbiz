@@ -19,6 +19,10 @@
 //               C  offline / failed-LLM deterministic synthesis (Wave C-3, pilot-009
 //                  D-2): the matrix is placeholder data, never better than C.
 //   grade     = the WORSE of hop grade and source cap.
+//   U         ADR-0187 D1 (migration 0180): NO proxy hop recorded and the
+//               source is not direct data -> U (unknown), never a defaulted
+//               B; rationale `no_chain_recorded`. U caps RAG at Amber and is
+//               never Green. Write-time only: stored grades are not re-graded.
 import type { Database } from "bun:sqlite";
 import { type DataConfidence, gradeDataConfidence } from "../../packages/core-scoring/src/data-confidence.ts";
 

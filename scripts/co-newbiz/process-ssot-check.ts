@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 3.0.0
+// @version 4.0.0
 /**
  * Process SSOT validators (ADR-0187 phase P1, design
  * docs/designs/2026-10-27-process-ssot-decision-evidence-design.md section 4.6).
@@ -22,9 +22,9 @@
  * findings, or every remaining pair is an explicit allowlist entry below with its
  * ADR / reason. check-engine-spec-parity compares stable blocker KEYS (lib/
  * process-blocker-keys.ts <-> flow.spec `blockers:`), not Korean strings. The one
- * check the design closes later stays report-only (WARN, exit 0):
- * check-review-coverage (the cross-validation matrix is P4). `--strict` additionally exits 1 on a WARN
- * finding. `--check <id>` runs one check; `--json` prints the machine-readable
+ * check the design closed last, check-review-coverage (P4, reads
+ * process/cross-validation-matrix.yaml), is blocking too, so every check blocks.
+ * `--strict` additionally exits 1 on a WARN finding (none remain). `--check <id>` runs one check; `--json` prints the machine-readable
  * report.
  *
  * Every check is a pure function over plain inputs (tests/unit/
@@ -56,8 +56,8 @@ export const CHECK_IDS = [
 export type CheckId = (typeof CHECK_IDS)[number];
 
 /**
- * Checks that fail the audit (P2, P3). Only check-review-coverage stays WARN by
- * design section 5: it closes with the P4 cross-validation matrix.
+ * Checks that fail the audit (P2, P3, P4): all eight. check-review-coverage was
+ * the last report-only check; it closes with the P4 cross-validation matrix.
  */
 export const BLOCKING_CHECKS: ReadonlySet<CheckId> = new Set<CheckId>([
   "check-engine-spec-parity",
@@ -65,6 +65,7 @@ export const BLOCKING_CHECKS: ReadonlySet<CheckId> = new Set<CheckId>([
   "activity-agent-in-procedure",
   "check-kill-registry-parity",
   "check-stage-inputs",
+  "check-review-coverage",
   "check-s12-coverage",
   "check-stages-derived",
 ]);
@@ -535,6 +536,30 @@ export function checkStageInputs(spec: FlowSpec): Finding[] {
 
 // ── 6. Review coverage (M7/M8) ───────────────────────────────────────────────
 
+export interface MatrixOutputEntry {
+  match: string;
+  artifact_type?: string;
+  review?: string;
+  covered_by?: string;
+  reason?: string;
+}
+/** process/cross-validation-matrix.yaml, as parsed (ADR-0187 P4). */
+export interface ReviewMatrixDoc {
+  reviewer_domains?: Record<string, string>;
+  fallback?: Record<string, string>;
+  agent_exemptions?: Array<{ agent: string; reason?: string }>;
+  gate_exceptions?: Array<{ gate: string; reason?: string }>;
+  artifact_types?: Record<string, { reviewers?: Record<string, string> }>;
+  stages?: Record<
+    string,
+    {
+      default_type?: string;
+      required?: Array<{ match: string; artifact_type: string }>;
+      outputs?: MatrixOutputEntry[];
+    }
+  >;
+}
+
 export interface ReviewCoverageInput {
   spec: FlowSpec;
   /** agent key -> review domain (agents/*.md `domain:`). */
@@ -543,26 +568,68 @@ export interface ReviewCoverageInput {
   reviewGates: string[];
   /** Gates named as a review exception in neb-policy section 2.7. */
   namedExceptions: string[];
-  /** Parsed process/cross-validation-matrix.yaml entries, or null when the file is absent (P4). */
-  matrix: Array<{ stage?: string; author_domain: string; reviewer: string }> | null;
+  /** Parsed process/cross-validation-matrix.yaml, or null when absent. */
+  matrix: ReviewMatrixDoc | null;
 }
 
+const startsEither = (a: string, b: string): boolean => {
+  const x = norm(a);
+  const y = norm(b);
+  return x.length >= 4 && y.length >= 4 && (x.startsWith(y) || y.startsWith(x));
+};
+
 /**
- * Reports the current state; the matrix file itself lands in P4. The review
- * registry is derived from requiredArtifacts (lib/review/stage-artifacts.ts),
- * so a stage output that is not also a requiredArtifact is never reviewed.
+ * M7/M8. Every stage output is either a requiredArtifact (reviewed by the
+ * runtime registry, lib/review/stage-artifacts.ts), or is listed in the
+ * matrix stage registry as covered_by a requiredArtifact / exempt with a
+ * reason; every gate is reviewed or a named exception; every authoring agent
+ * has a review domain or an explicit exemption; every (artifact type x author
+ * domain) pair a stage uses resolves in the matrix, and the matrix is
+ * self-consistent with the roster and the labelled fallback.
  */
 export function checkReviewCoverage(input: ReviewCoverageInput): Finding[] {
   const check: CheckId = "check-review-coverage";
   const findings: Finding[] = [];
+  const m = input.matrix;
+  if (!m) {
+    return [{ check, message: "process/cross-validation-matrix.yaml is absent" }];
+  }
+  const exempt = new Set((m.agent_exemptions ?? []).map((e) => e.agent));
+  const types = m.artifact_types ?? {};
+
+  // Matrix self-consistency: reviewers' domains match the roster, fallback is cross-domain.
+  for (const [agent, dom] of Object.entries(m.reviewer_domains ?? {})) {
+    const actual = input.agentDomains.get(agent);
+    if (actual !== dom) findings.push({ check, message: `matrix reviewer '${agent}' declares domain '${dom}' but the roster says '${actual ?? "none"}'` });
+  }
+  for (const [dom, lead] of Object.entries(m.fallback ?? {})) {
+    const leadDom = m.reviewer_domains?.[lead];
+    if (!leadDom || leadDom === dom) findings.push({ check, message: `fallback for author domain '${dom}' is '${lead}', which is not a cross-domain reviewer` });
+  }
+  for (const [type, def] of Object.entries(types)) {
+    for (const [dom, reviewer] of Object.entries(def.reviewers ?? {})) {
+      if (!(reviewer in (m.reviewer_domains ?? {})))
+        findings.push({ check, message: `artifact type '${type}' x '${dom}': reviewer '${reviewer}' has no reviewer_domains entry` });
+    }
+  }
+
   for (const stage of input.spec.stages ?? []) {
-    const registry = new Set((stage.requiredArtifacts ?? []).map(norm));
+    const reqs = (stage.requiredArtifacts ?? []).map(norm);
+    const ms = m.stages?.[stage.id];
+    if (!ms) findings.push({ check, message: `${stage.id}: no stage entry in the matrix (artifact typing and output registry)` });
     for (const out of stage.outputs ?? []) {
-      if (!registry.has(norm(out)))
-        findings.push({
-          check,
-          message: `${stage.id}: output "${norm(out)}" is not in the review registry (not a requiredArtifact - skips AI-2nd)`,
-        });
+      if (reqs.some((r) => startsEither(out, r))) continue;
+      const entry = ms?.outputs?.find((o) => norm(out).startsWith(norm(o.match)));
+      if (!entry) {
+        findings.push({ check, message: `${stage.id}: output "${norm(out).slice(0, 60)}" is not in the review registry (not a requiredArtifact and no matrix entry - skips AI-2nd)` });
+      } else if (entry.review === "covered_by") {
+        if (!entry.covered_by || !reqs.some((r) => r.startsWith(norm(entry.covered_by!))))
+          findings.push({ check, message: `${stage.id}: output "${entry.match}" is covered_by '${entry.covered_by ?? ""}', which is not a requiredArtifact of the stage` });
+      } else if (entry.review === "exempt") {
+        if (!entry.reason?.trim()) findings.push({ check, message: `${stage.id}: output "${entry.match}" is exempt without a reason` });
+      } else {
+        findings.push({ check, message: `${stage.id}: output "${entry.match}" has review '${entry.review ?? ""}' (expected covered_by or exempt)` });
+      }
     }
   }
   for (const g of input.spec.gates ?? []) {
@@ -576,17 +643,23 @@ export function checkReviewCoverage(input: ReviewCoverageInput): Finding[] {
   for (const stage of input.spec.stages ?? []) {
     const domains = new Set<string>();
     for (const a of stage.activities ?? []) {
+      if (exempt.has(a.agent)) continue;
       const d = input.agentDomains.get(a.agent);
-      if (d) domains.add(d);
-      else findings.push({ check, message: `${stage.id}/${a.id}: author agent '${a.agent}' has no review domain` });
+      if (d && ["functional", "technical", "industry", "region"].includes(d)) domains.add(d);
+      else findings.push({ check, message: `${stage.id}/${a.id}: author agent '${a.agent}' has no review domain and no matrix exemption` });
     }
-    for (const d of [...domains].sort()) {
-      const hit = input.matrix?.some((m) => m.author_domain === d && (!m.stage || m.stage === stage.id));
-      if (!hit) {
-        findings.push({
-          check,
-          message: `${stage.id}: author domain '${d}' resolves by DEFAULT_REVIEWER_DOMAIN fallback (${input.matrix ? "no matrix entry" : "matrix file absent - P4"})`,
-        });
+    const ms = m.stages?.[stage.id];
+    const usedTypes = new Set<string>(ms?.default_type ? [ms.default_type] : []);
+    for (const r of ms?.required ?? []) usedTypes.add(r.artifact_type);
+    for (const o of ms?.outputs ?? []) if (o.artifact_type) usedTypes.add(o.artifact_type);
+    for (const t of [...usedTypes].sort()) {
+      if (!types[t]) {
+        findings.push({ check, message: `${stage.id}: artifact type '${t}' is not defined in the matrix` });
+        continue;
+      }
+      for (const d of [...domains].sort()) {
+        if (!types[t].reviewers?.[d])
+          findings.push({ check, message: `${stage.id}: no matrix entry for artifact type '${t}' x author domain '${d}'` });
       }
     }
   }
@@ -853,16 +926,18 @@ export function runAll(only?: CheckId): Finding[] {
     const m = ga.match(/REVIEW_GATES = \[([^\]]*)\]/);
     const reviewGates = m ? [...m[1].matchAll(/"([a-z_]+)"/g)].map((x) => x[1]) : [];
     const matrixPath = join(ROOT, "process", "cross-validation-matrix.yaml");
-    const matrix = existsSync(matrixPath)
-      ? (((yamlLoad(readFileSync(matrixPath, "utf8")) as { entries?: unknown[] }).entries ??
-          []) as ReviewCoverageInput["matrix"])
-      : null;
+    const matrix = existsSync(matrixPath) ? (yamlLoad(readFileSync(matrixPath, "utf8")) as ReviewMatrixDoc) : null;
+    // A matrix gate exception counts only while neb-policy still names it (section 2.7).
+    const policy = read("policies/group/neb-policy.md");
+    const namedExceptions = (matrix?.gate_exceptions ?? [])
+      .map((e) => e.gate)
+      .filter((g) => policy.includes(g));
     findings.push(
       ...checkReviewCoverage({
         spec,
         agentDomains: agentDomains(),
         reviewGates,
-        namedExceptions: ["target_screening"],
+        namedExceptions,
         matrix,
       }),
     );
@@ -899,7 +974,7 @@ if (import.meta.main) {
   } else {
     for (const f of findings) console.log(`[${isBlocking(f) ? "ERROR" : "WARN"}] ${f.check}: ${f.message}`);
     const counts = summarize(findings);
-    console.log("\nProcess SSOT validators (ADR-0187 P3 - ERROR checks block, WARN checks report):");
+    console.log("\nProcess SSOT validators (ADR-0187 P4 - ERROR checks block, WARN checks report):");
     for (const c of CHECK_IDS)
       if (!only || only === c) console.log(`  ${c.padEnd(30)} ${String(counts[c]).padStart(3)}  ${BLOCKING_CHECKS.has(c) ? "blocking" : "report-only"}`);
   }

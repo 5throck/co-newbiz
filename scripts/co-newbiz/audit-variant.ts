@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.6.0
+// @version 1.7.0
 /**
  * co-newbiz variant audit hook — executed by scripts/audit.ts §27 (the
  * pluggable variant-specific audit checks; declared in variant.json
@@ -35,8 +35,9 @@
  *   - Process SSOT validators (v1.4.0, ADR-0187 P1): the eight named checks of
  *     scripts/co-newbiz/process-ssot-check.ts. Since v1.5.0 (ADR-0187 P2) the
  *     BLOCKING_CHECKS set the failure flag; since v1.6.0 (ADR-0187 P3)
- *     check-engine-spec-parity is blocking too and only check-review-coverage
- *     (P4) stays WARN.
+ *     check-engine-spec-parity is blocking too; since v1.7.0 (ADR-0187 P4)
+ *     check-review-coverage blocks as well (every check is blocking) and the
+ *     review-matrix projection drift gate runs next to the registry gates.
  */
 
 import { existsSync, readdirSync } from "node:fs";
@@ -236,17 +237,23 @@ runDriftGate(
   "app/web-next/lib/pm-catalog.generated.ts",
 );
 
-// ADR-0187 P2/P3: BLOCKING_CHECKS fail the audit; the P4 check stays WARN.
+runDriftGate(
+  "Review-matrix",
+  "scripts/co-newbiz/generate-review-matrix.ts",
+  "app/web-next/lib/review/review-matrix.generated.ts",
+);
+
+// ADR-0187 P2-P4: BLOCKING_CHECKS (all eight checks) fail the audit.
 const ssot = runAll();
 const ssotCounts = summarize(ssot);
 const ssotBlocking = ssot.filter(isBlocking);
 const fmt = (ids: readonly string[]) => ids.map((c) => `${c}=${ssotCounts[c as keyof typeof ssotCounts]}`).join(", ");
 if (ssotBlocking.length > 0) {
-  console.log(`  ❌ Process SSOT validators (blocking, ADR-0187 P2/P3): ${ssotBlocking.length} finding(s) — ${fmt([...BLOCKING_CHECKS])}; details: bun run process:ssot-check`);
+  console.log(`  ❌ Process SSOT validators (blocking, ADR-0187 P2-P4): ${ssotBlocking.length} finding(s) — ${fmt([...BLOCKING_CHECKS])}; details: bun run process:ssot-check`);
   failed = true;
-} else console.log(`  ✓ Process SSOT validators (blocking, ADR-0187 P2/P3): 0 findings — ${fmt([...BLOCKING_CHECKS])}`);
+} else console.log(`  ✓ Process SSOT validators (blocking, ADR-0187 P2-P4): 0 findings — ${fmt([...BLOCKING_CHECKS])}`);
 const ssotWarn = CHECK_IDS.filter((c) => !BLOCKING_CHECKS.has(c));
 if (ssot.length > ssotBlocking.length)
-  console.log(`  ⚠ [WARN] Process SSOT validators (report-only until ADR-0187 P4): ${ssot.length - ssotBlocking.length} finding(s) — ${fmt(ssotWarn)}`);
+  console.log(`  ⚠ [WARN] Process SSOT validators (report-only): ${ssot.length - ssotBlocking.length} finding(s) — ${fmt(ssotWarn)}`);
 
 process.exit(failed ? 1 : 0);

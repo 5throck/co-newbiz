@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Pure RAG grading core (packages/core-scoring, Wave D) — no DB, fs or env access.
  * RAG grading engine — design v1.0 §4-2, docs/governance/rag-framework.md (meeting M3
@@ -83,7 +83,7 @@ export function financialBand(input: { irr: number; hurdle: number; dscrDownside
  *   Red ("judgment withheld"). This is the dimension that structurally caps
  *   the overall grade — see computeOverall.
  */
-export function dataConfidenceFromChain(chainGrade: "A" | "B" | "C", stalenessViolated: boolean): {
+export function dataConfidenceFromChain(chainGrade: "A" | "B" | "C" | "U", stalenessViolated: boolean): {
   grade: RagGrade;
   rationale: string;
 } {
@@ -97,7 +97,9 @@ export function dataConfidenceFromChain(chainGrade: "A" | "B" | "C", stalenessVi
     case "A":
       return { grade: "green", rationale: "Proxy-chain reliability Grade A (all engineering hops) — direct-confidence data (D-M3-2)." };
     case "B":
-      return { grade: "amber", rationale: "Proxy-chain reliability Grade B (single statistical hop, R2 >= 0.6) — caps the overall grade at Amber (D-M3-2/D-M3-3)." };
+      return { grade: "amber", rationale: "Data-confidence Grade B (a single statistical hop with R2 >= 0.6, or an unverified source capped at B) — caps the overall grade at Amber (D-M3-2/D-M3-3)." };
+    case "U":
+      return { grade: "amber", rationale: "Data-confidence Grade U (unknown: no proxy chain recorded and the source is not direct data) — caps the overall grade at Amber and can never be Green (ADR-0187 D1)." };
     case "C":
       return { grade: "red", rationale: "Proxy-chain reliability Grade C (multi-hop statistical or R2 < 0.6) — judgment withheld (D-M3-2)." };
   }
@@ -301,7 +303,7 @@ export function applyHysteresis(input: HysteresisInput): HysteresisResult {
 export interface RagEvaluationInput {
   stageGate: StageGate;
   /** Proxy-chain reliability grade (from db/lib/chain-grading.ts's output / proxy_chain.reliability_grade). */
-  chainGrade?: "A" | "B" | "C";
+  chainGrade?: "A" | "B" | "C" | "U";
   stalenessViolated?: boolean;
   /** Financial inputs — from FS onward; Screening/Pre-FS run a reduced check (rag-framework.md §5). */
   financial?: { irr: number; hurdle: number; dscrDownside: number };

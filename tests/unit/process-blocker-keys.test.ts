@@ -59,7 +59,7 @@ describe("registry", () => {
       // a requiredArtifact that names its own key must equal that key's label
       for (const b of declared.blockers) {
         const only = (b.artifacts ?? []).length === 1 && (declared.blockers.filter((x) => (x.artifacts ?? []).includes(b.artifacts![0]!)).length === 1);
-        if (only && labels.has(declared.requiredArtifacts[b.artifacts![0]!]!)) expect(BLOCKER_LABELS[b.key as BlockerKey]).toBe(declared.requiredArtifacts[b.artifacts![0]!]!);
+        if (only && labels.has(declared.requiredArtifacts[b.artifacts![0]!]!)) expect<string>(BLOCKER_LABELS[b.key as BlockerKey]).toBe(declared.requiredArtifacts[b.artifacts![0]!]!);
       }
     }
   });

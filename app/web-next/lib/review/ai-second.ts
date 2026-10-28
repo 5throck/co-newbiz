@@ -24,7 +24,7 @@ import {
 } from "../../../../db/repositories/review.repository.ts";
 import { complete, completeStructured, getProviderConfig, isLlmConfigured, type LlmMessage } from "../llm.ts";
 import { estimateTokens as estimateTokensFallback, totalTokens } from "../llm-usage.ts";
-import { selectReviewer } from "./domains.ts";
+import { artifactTypeFor, selectReviewer } from "./domains.ts";
 import { canonicalJson } from "./gate-artifacts.ts";
 import type { ReviewArtifact } from "./stage-artifacts.ts";
 import { hasStructuralGaps } from "./ai-first.ts";
@@ -216,7 +216,14 @@ export async function runAiSecond(req: Ai2ndRequest, deps: Ai2ndDeps = defaultAi
     });
   }
 
-  const sel = selectReviewer(artifact.authorAgents);
+  // ADR-0187 P4: stage artifacts route by their matrix artifact type; gate
+  // bundles span several types and use the matrix "bundle" row.
+  const sel = selectReviewer(
+    artifact.authorAgents,
+    "kind" in artifact && artifact.kind === "stage"
+      ? { artifactType: artifactTypeFor(artifact.stageId, artifact.artifactName) }
+      : {},
+  );
   if (!sel.ok) {
     return record({
       performed: false,
@@ -284,6 +291,27 @@ export async function runAiSecond(req: Ai2ndRequest, deps: Ai2ndDeps = defaultAi
   }
 
   const buckets: ReviewBuckets = { ...parsed };
+  if (sel.fallbackUsed) {
+    // The reviewer was NOT chosen by the matrix: label it (no PASS stamp, same
+    // three buckets - this only discloses how the reviewer was picked).
+    const specialist = sel.firstStageSpecialist ? ` Specialist ${sel.firstStageSpecialist} is same-domain (first stage only).` : "";
+    buckets.could_not_verify = [
+      ...buckets.could_not_verify,
+      {
+        claim: "Reviewer chosen by fallback routing, not by a cross-validation matrix entry",
+        reason: `${sel.fallbackReason}; default cross-domain lead ${sel.reviewerAgent} reviewed.${specialist}`,
+      },
+    ];
+  }
+  if (sel.exemptAgents.length > 0) {
+    buckets.could_not_verify = [
+      ...buckets.could_not_verify,
+      {
+        claim: "Orchestrator agents excluded from the author-domain check",
+        reason: `${sel.exemptAgents.join(", ")}: no review domain by explicit matrix exemption; the artifact domain comes from the other authoring agents.`,
+      },
+    ];
+  }
   if (sel.unresolvedAgents.length > 0) {
     buckets.could_not_verify = [
       ...buckets.could_not_verify,

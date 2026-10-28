@@ -1,0 +1,205 @@
+# Cross-validation matrix (ADR-0187 P4, findings M7/M8, owner decision D3 = option b).
+# SSOT for AI-2nd review routing: artifact type x author domain -> reviewer agent.
+# Projected to app/web-next/lib/review/review-matrix.generated.ts by
+# scripts/co-newbiz/generate-review-matrix.ts (--check = drift gate). Consumed by
+# app/web-next/lib/review/domains.ts and validated by check-review-coverage
+# (scripts/co-newbiz/process-ssot-check.ts, blocking).
+#
+# Rules (CONSTITUTION review model; neb-policy section 2.7):
+#   - The AI-2nd reviewer must come from a DIFFERENT domain than the author. A
+#     same-domain reviewer is a first-stage specialist only and is never
+#     recorded as the AI-2nd stage.
+#   - When an entry's reviewer shares the author's domain, or no entry exists,
+#     routing falls back to the DEFAULT_REVIEWER_DOMAIN lead and the result is
+#     LABELLED fallback_used (the review output carries the label).
+#   - The human review surface is unchanged: no PASS stamp, verified /
+#     could_not_verify / needs_judgement. This file only picks WHO reviews.
+version: 1.0.0
+adr: ADR-0187
+decision: D3
+
+# Domain of every reviewer named below (agents/*.md `domain:`); the check
+# verifies this against the roster so a reviewer cannot silently change domain.
+reviewer_domains:
+  industry-lead: industry
+  region-lead: region
+  risk-officer: functional
+  platform-lead: technical
+  process-governance-manager: functional
+
+# Fallback (labelled fallback_used) = lead of DEFAULT_REVIEWER_DOMAIN[author_domain].
+fallback:
+  functional: platform-lead
+  technical: process-governance-manager
+  industry: region-lead
+  region: industry-lead
+
+# Agents with no review domain and an explicit, reasoned handling.
+agent_exemptions:
+  - agent: pm
+    reason: >-
+      PM (domain _core) orchestrates and records routing/selection/IC-preparation
+      steps; it authors no analysis of its own. It is excluded from the author-domain
+      calculation (never counted as a same-domain reviewer or author), so the artifact's
+      domain is set by the specialist agents on the same stage. A stage whose only
+      author is pm resolves to "reviewer domain unresolved" (review NOT PERFORMED).
+
+# Gates that are not run through the gate-review pipeline (named in neb-policy 2.7).
+gate_exceptions:
+  - gate: target_screening
+    reason: >-
+      Brownfield S7 short-list gate: no AI-2nd and no human-final snapshot; the human gate
+      record plus per-candidate screening evidence carry the review (ADR-0153 addendum
+      2026-10-22 a). Named in neb-policy section 2.7.
+    policy_ref: neb-policy section 2.7
+
+# artifact type -> reviewer per author domain.
+artifact_types:
+  market:
+    description: Market size, growth, competition, entry-market work.
+    reviewers: { functional: industry-lead, technical: industry-lead, industry: region-lead, region: industry-lead }
+    rationale: industry-lead owns the industry profiles and value-chain context used to test market claims.
+  proxy_chain:
+    description: Value-chain / proxy-industry-chain demand derivation.
+    reviewers: { functional: industry-lead, technical: industry-lead, industry: region-lead, region: industry-lead }
+    rationale: Chain links and unit conversions are tested against industry-lead's value-chain structure.
+  regulatory:
+    description: Regulatory, permit, certification, ownership screening.
+    reviewers: { functional: region-lead, technical: region-lead, industry: region-lead, region: industry-lead }
+    rationale: region-lead owns the region profiles (merger control, FDI, permits); an industry-lead covers region-authored work via the industry regulatory landscape.
+  labor:
+    description: Labor, workforce and HR-integration work.
+    reviewers: { functional: region-lead, technical: region-lead, industry: region-lead, region: industry-lead }
+    rationale: Labor law is region-profile content; region-authored labor review is read by industry-lead for sector practice.
+  valuation:
+    description: Valuation, business case, simulation, financing and financial DD.
+    reviewers: { functional: risk-officer, technical: risk-officer, industry: risk-officer, region: risk-officer }
+    rationale: >-
+      risk-officer (red team, base-rate authority) reviews valuation work. risk-officer is a
+      functional-domain agent, so for functional-authored valuation the entry is a first-stage
+      specialist review only and the AI-2nd seat falls back (labelled fallback_used) to the
+      cross-domain lead. OPEN for owner: a non-functional valuation reviewer would remove that fallback.
+  synergy:
+    description: Synergy scoring and synergy assumptions.
+    reviewers: { functional: risk-officer, technical: risk-officer, industry: risk-officer, region: risk-officer }
+    rationale: Same as valuation; the S3 synergy red team is risk-officer's activity.
+  technical:
+    description: Site, infrastructure, technology and EHS artifacts.
+    reviewers: { functional: platform-lead, technical: process-governance-manager, industry: platform-lead, region: platform-lead }
+    rationale: platform-lead reviews technical artifacts only; technical-authored artifacts are read by process-governance-manager.
+  strategy:
+    description: Fit, route, capability, entry-strategy, target-selection, deal-structure and IC records.
+    reviewers: { functional: industry-lead, technical: industry-lead, industry: region-lead, region: industry-lead }
+    rationale: Strategic claims are tested against industry structure; platform-lead is deliberately NOT the blanket functional reviewer (finding M7).
+  bundle:
+    description: Gate-level bundle spanning several artifact types (no single specialist).
+    reviewers: { functional: platform-lead, technical: process-governance-manager, industry: region-lead, region: industry-lead }
+    rationale: Generalist cross-domain reading of a multi-type bundle; the former DEFAULT_REVIEWER_DOMAIN mapping, now an explicit (not fallback) entry.
+
+# Per-stage artifact typing and the review registry for stage outputs (M8).
+#   required: type of each requiredArtifacts entry, matched by normalized prefix
+#             (stage default_type when no override matches).
+#   outputs:  every stage `outputs` entry that is not itself a requiredArtifact
+#             (exact or prefix match) must be listed, with how it is reviewed:
+#               covered_by -> reviewed as part of the named requiredArtifact's AI-2nd snapshot
+#               exempt     -> no AI-2nd, with a reason (human decision record / no authored analysis)
+#             Default for an unlisted output is AI-2nd required; the check fails on it.
+stages:
+  S1:
+    default_type: market
+    required:
+      - { match: "가치사슬 구조", artifact_type: proxy_chain }
+    outputs:
+      - { match: "외부 미래 전망 대비 격차 분석", artifact_type: market, review: covered_by, covered_by: "시장 규모·성장 추정" }
+  S2:
+    default_type: strategy
+    required:
+      - { match: "진입시장 산정", artifact_type: market }
+    outputs:
+      - { match: "기회 퍼널", artifact_type: strategy, review: covered_by, covered_by: "기회 등록" }
+      - { match: "진입시장 산정", artifact_type: market, review: covered_by, covered_by: "진입시장 산정" }
+  S3:
+    default_type: strategy
+    required:
+      - { match: "시너지 평가", artifact_type: synergy }
+    outputs:
+      - { match: "시너지 점수", artifact_type: synergy, review: covered_by, covered_by: "시너지 평가" }
+      - { match: "전략적 적합성 평가", artifact_type: strategy, review: covered_by, covered_by: "전략적 적합성 판단" }
+      - { match: "필요 역량 목록", artifact_type: strategy, review: covered_by, covered_by: "전략적 적합성 판단" }
+      - { match: "역량 갭 분석", artifact_type: strategy, review: covered_by, covered_by: "전략적 적합성 판단" }
+  S4:
+    default_type: strategy
+    required:
+      - { match: "법무·규제 스크리닝 판정", artifact_type: regulatory }
+    outputs:
+      - { match: "라우트 결정 기록", artifact_type: strategy, review: covered_by, covered_by: "트랙 결정" }
+  S5:
+    default_type: strategy
+    required:
+      - { match: "부지 선정 체크리스트 판정", artifact_type: technical }
+    outputs:
+      - { match: "진출전략", artifact_type: strategy, review: covered_by, covered_by: "진출전략" }
+      - match: "Business Case 라인"
+        artifact_type: valuation
+        review: exempt
+        reason: >-
+          S5 has no standalone requiredArtifact for the cost/revenue lines; they are consumed and
+          reviewed as the S8 Business Case (a requiredArtifact with AI-2nd) before any gate uses them.
+  S6:
+    default_type: strategy
+    outputs: []
+  S7:
+    default_type: strategy
+    outputs:
+      - { match: "Screening Evidence", artifact_type: strategy, review: covered_by, covered_by: "Target Company Short List" }
+  S8:
+    default_type: valuation
+    required:
+      - { match: "Target 비교 분석", artifact_type: strategy }
+      - { match: "대상 선정 기록", artifact_type: strategy }
+    outputs:
+      - { match: "Business Case / 밸류에이션", artifact_type: valuation, review: covered_by, covered_by: "Business Case" }
+      - { match: "시뮬레이션 NPV 분포", artifact_type: valuation, review: covered_by, covered_by: "시뮬레이션 NPV 분위수" }
+      - { match: "BEP 시점·물량", artifact_type: valuation, review: covered_by, covered_by: "BEP 시점과" }
+      - { match: "시뮬레이션 입력 스냅샷", artifact_type: valuation, review: covered_by, covered_by: "BEP 시점과" }
+      - { match: "Target 비교 분석·권고", artifact_type: strategy, review: covered_by, covered_by: "Target 비교 분석" }
+      - { match: "대상 선정 기록", artifact_type: strategy, review: covered_by, covered_by: "대상 선정 기록" }
+      - { match: "채택 Business Case", artifact_type: valuation, review: covered_by, covered_by: "Business Case" }
+  S9:
+    default_type: bundle
+    outputs:
+      - { match: "조사내역", artifact_type: bundle, review: covered_by, covered_by: "DD 체크리스트 판정" }
+      - { match: "대상별 DD 비교", artifact_type: bundle, review: covered_by, covered_by: "DD 체크리스트 판정" }
+      - { match: "필요 역량 검증 판정", artifact_type: strategy, review: covered_by, covered_by: "DD 체크리스트 판정" }
+      - { match: "기술 렌즈 T2~T5 롤업 근거", artifact_type: technical, review: covered_by, covered_by: "DD 체크리스트 판정" }
+  S10:
+    default_type: strategy
+    required:
+      - { match: "자금조달 계획", artifact_type: valuation }
+    outputs:
+      - { match: "투자구조 가설", artifact_type: strategy, review: covered_by, covered_by: "투자구조 가설" }
+      - { match: "자금조달 계획", artifact_type: valuation, review: covered_by, covered_by: "자금조달 계획" }
+  S11:
+    default_type: strategy
+    outputs:
+      - match: "IC 결정"
+        artifact_type: strategy
+        review: exempt
+        reason: >-
+          Human investment decision (boundary #2): recorded by a person with countersign (ADR-0186);
+          AI-2nd reviews the IC package (투자심의 자료) behind it, never the decision itself.
+      - { match: "투자 구조 확정", artifact_type: strategy, review: covered_by, covered_by: "투자심의 자료" }
+      - { match: "설립 완료 법인", artifact_type: strategy, review: covered_by, covered_by: "설립 실행 기록" }
+      - match: "실행 진입"
+        artifact_type: strategy
+        review: exempt
+        reason: >-
+          Execution-entry marker (PMI / venture monitoring / R&BD start): a state transition after the
+          human decision, no authored analysis to review.
+      - { match: "실행 기준선", artifact_type: strategy, review: covered_by, covered_by: "추진계획(차터) 기준선" }
+  S12:
+    default_type: strategy
+    outputs:
+      - { match: "포트폴리오 스코어카드", artifact_type: strategy, review: covered_by, covered_by: "벤처 스코어카드" }
+      - { match: "사업 성과 리포트", artifact_type: strategy, review: covered_by, covered_by: "벤처 스코어카드" }
+      - { match: "포트폴리오 전환 결정", artifact_type: strategy, review: covered_by, covered_by: "사람 전환 결정 기록" }

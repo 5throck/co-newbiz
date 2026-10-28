@@ -229,7 +229,7 @@
   "app/web-next/lib/project-goals.ts": 19,
   "app/web-next/lib/report-composer.ts": 56,
   "app/web-next/lib/review/kill-criteria-ko.ts": 32,
-  "app/web-next/lib/review/review-display.ts": 53,
+  "app/web-next/lib/review/review-display.ts": 61,
   "app/web-next/lib/review/stage-artifact-labels.ts": 37,
   "app/web-next/lib/risk-assessment.ts": 5,
   "app/web-next/lib/risk-heatmap.ts": 14,

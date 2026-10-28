@@ -99,6 +99,26 @@ export function localizeNotPerformedReason(text: string): string {
     const names = m[1]!.split(/,\s*/).map((d) => reviewDomainLabel(d) ?? d).join(", ");
     return `작성자가 ${names} 도메인에 걸쳐 있고 기본 검토 도메인(${reviewDomainLabel(m[2]) ?? m[2]})도 포함되어, 다른 도메인 검토자를 정하지 못했습니다.`;
   }
+  if ((m = /^no cross-domain reviewer: authors span (.*) and no matrix or fallback reviewer outside those domains exists$/.exec(text))) {
+    const names = m[1]!.split(/,\s*/).map((d) => reviewDomainLabel(d) ?? d).join(", ");
+    return `작성자가 ${names} 도메인에 걸쳐 있고, 교차검증 매트릭스와 대체 규칙 어디에도 그 밖의 도메인 검토자가 없습니다.`;
+  }
+  if ((m = /^(.*); default cross-domain lead (\S+) reviewed\.(.*)$/.exec(text))) {
+    const spec = /^ Specialist (\S+) is same-domain \(first stage only\)\.$/.exec(m[3] ?? "")?.[1];
+    const why = /^no matrix entry for artifact type '(.*)' x author domain '(.*)'$/.exec(m[1]!);
+    const why2 = /^matrix reviewer '(.*)' is not cross-domain for authors in (.*) \(counts as first stage only\)$/.exec(m[1]!);
+    const cause = why
+      ? `산출물 유형 '${why[1]}'과 작성 도메인 '${reviewDomainLabel(why[2]) ?? why[2]}' 조합이 매트릭스에 없어`
+      : why2
+        ? `매트릭스 검토자 '${why2[1]}'가 작성 도메인(${why2[2]!.split(/,\s*/).map((d) => reviewDomainLabel(d) ?? d).join(", ")})과 같아 교차 검토가 되지 않아(1차 검토로만 인정)`
+        : "매트릭스가 쓸 수 있는 교차 도메인 검토자를 정하지 못해";
+    return `${cause} 기본 교차 도메인 리드 ${m[2]}가 검토했습니다${spec ? `. 전문 검토자 ${spec}는 같은 도메인이라 1차 검토로만 인정됩니다` : ""}.`;
+  }
+  if ((m = /^(.*): no review domain by explicit matrix exemption; the artifact domain comes from the other authoring agents\.$/.exec(text)))
+    return `${m[1]}: 매트릭스의 명시적 면제로 검토 도메인이 없으며, 산출물의 도메인은 다른 작성 에이전트로 정합니다.`;
+  if (text === "Reviewer chosen by fallback routing, not by a cross-validation matrix entry")
+    return "검토자를 교차검증 매트릭스 항목이 아니라 대체 규칙으로 정했습니다";
+  if (text === "Orchestrator agents excluded from the author-domain check") return "조정 에이전트는 작성 도메인 판단에서 제외했습니다";
   if (text === "unspecified") return "사유가 기록되지 않았습니다.";
   if (text === "AI 2nd cross-domain review was not performed") return "AI 2차 교차 도메인 검토가 수행되지 않았습니다";
   if (text === "Domain of some authoring agents could not be resolved") return "일부 작성 에이전트의 도메인을 확인하지 못했습니다";

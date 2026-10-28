@@ -227,7 +227,7 @@ describe("check-stage-inputs (M9)", () => {
   test("clean", () => expect(checkStageInputs({ stages: stages(true) })).toEqual([]));
 });
 
-describe("check-review-coverage (M7/M8)", () => {
+describe("check-review-coverage (M7/M8, matrix - ADR-0187 P4)", () => {
   const spec: FlowSpec = {
     gates: [{ id: "screening" }, { id: "target_screening" }, { id: "fs" }],
     stages: [
@@ -235,38 +235,86 @@ describe("check-review-coverage (M7/M8)", () => {
         id: "S3",
         outputs: ["시너지 평가", "시너지 점수"],
         requiredArtifacts: ["시너지 평가"],
-        activities: [{ id: "a", agent: "financial-analyst" }],
+        activities: [
+          { id: "a", agent: "financial-analyst" },
+          { id: "b", agent: "pm" },
+        ],
       },
     ],
   };
-  const domains = new Map([["financial-analyst", "functional"]]);
-  test("unregistered output, uncovered gate, fallback resolution", () => {
-    const msgs = checkReviewCoverage({
-      spec,
-      agentDomains: domains,
-      reviewGates: ["screening"],
-      namedExceptions: ["target_screening"],
-      matrix: null,
-    }).map((f) => f.message);
-    expect(msgs.length).toBe(3);
-    expect(msgs.join("\n")).toContain('"시너지 점수" is not in the review registry');
-    expect(msgs.join("\n")).toContain("gate 'fs'");
-    expect(msgs.join("\n")).toContain("matrix file absent");
+  const domains = new Map([
+    ["financial-analyst", "functional"],
+    ["risk-officer", "functional"],
+    ["platform-lead", "technical"],
+    ["pm", "_core"],
+  ]);
+  const matrix = {
+    reviewer_domains: { "risk-officer": "functional", "platform-lead": "technical" },
+    fallback: { functional: "platform-lead", technical: "risk-officer" },
+    agent_exemptions: [{ agent: "pm", reason: "orchestrator" }],
+    artifact_types: { synergy: { reviewers: { functional: "risk-officer" } } },
+    stages: {
+      S3: {
+        default_type: "synergy",
+        outputs: [{ match: "시너지 점수", artifact_type: "synergy", review: "covered_by", covered_by: "시너지 평가" }],
+      },
+    },
+  };
+  const input = (over: Partial<Parameters<typeof checkReviewCoverage>[0]> = {}) => ({
+    spec,
+    agentDomains: domains,
+    reviewGates: ["screening", "fs"],
+    namedExceptions: ["target_screening"],
+    matrix,
+    ...over,
   });
-  test("clean", () => {
-    const clean: FlowSpec = {
-      gates: [{ id: "screening" }],
-      stages: [{ ...spec.stages![0], outputs: ["시너지 평가"] }],
+  test("a missing matrix file is one finding", () => {
+    expect(checkReviewCoverage(input({ matrix: null })).map((f) => f.message)).toEqual([
+      "process/cross-validation-matrix.yaml is absent",
+    ]);
+  });
+  test("uncovered gate, unregistered output, missing pair and unexempted pm are each reported", () => {
+    const bad = {
+      ...matrix,
+      agent_exemptions: [],
+      artifact_types: { synergy: { reviewers: {} } },
+      stages: { S3: { default_type: "synergy", outputs: [] } },
     };
-    expect(
-      checkReviewCoverage({
-        spec: clean,
-        agentDomains: domains,
-        reviewGates: ["screening"],
-        namedExceptions: [],
-        matrix: [{ author_domain: "functional", reviewer: "risk-officer" }],
-      }),
-    ).toEqual([]);
+    const msgs = checkReviewCoverage(input({ matrix: bad, reviewGates: ["screening"] })).map((f) => f.message).join("\n");
+    expect(msgs).toContain('output "시너지 점수" is not in the review registry');
+    expect(msgs).toContain("gate 'fs'");
+    expect(msgs).toContain("author agent 'pm' has no review domain and no matrix exemption");
+    expect(msgs).toContain("no matrix entry for artifact type 'synergy' x author domain 'functional'");
+  });
+  test("covered_by must name a requiredArtifact; exempt needs a reason", () => {
+    const bad = {
+      ...matrix,
+      stages: {
+        S3: {
+          default_type: "synergy",
+          outputs: [
+            { match: "시너지 점수", artifact_type: "synergy", review: "covered_by", covered_by: "없는 산출물" },
+          ],
+        },
+      },
+    };
+    expect(checkReviewCoverage(input({ matrix: bad })).map((f) => f.message).join("\n")).toContain("not a requiredArtifact");
+    const noReason = {
+      ...matrix,
+      stages: { S3: { default_type: "synergy", outputs: [{ match: "시너지 점수", review: "exempt" }] } },
+    };
+    expect(checkReviewCoverage(input({ matrix: noReason })).map((f) => f.message).join("\n")).toContain("exempt without a reason");
+  });
+  test("a same-domain fallback or a reviewer whose domain disagrees with the roster is reported", () => {
+    const bad = { ...matrix, fallback: { functional: "risk-officer" }, reviewer_domains: { "risk-officer": "functional", "platform-lead": "industry" } };
+    const msgs = checkReviewCoverage(input({ matrix: bad })).map((f) => f.message).join("\n");
+    expect(msgs).toContain("not a cross-domain reviewer");
+    expect(msgs).toContain("declares domain 'industry'");
+  });
+  test("clean", () => expect(checkReviewCoverage(input())).toEqual([]));
+  test("check-review-coverage is blocking and the real tree has zero findings", () => {
+    expect(isBlocking({ check: "check-review-coverage", message: "x" })).toBe(true);
+    expect(runAll("check-review-coverage")).toEqual([]);
   });
 });
 
@@ -312,10 +360,10 @@ describe("check-s12-coverage step scope from flow.spec procedureSteps (P2)", () 
 });
 
 describe("blocking mode (P2)", () => {
-  test("only review coverage (P4) stays report-only; parity (P3) and the rest block", () => {
-    expect([...BLOCKING_CHECKS].sort()).toEqual(CHECK_IDS.filter((c) => c !== "check-review-coverage").sort());
+  test("every check blocks since P4 (review coverage was the last report-only check)", () => {
+    expect([...BLOCKING_CHECKS].sort()).toEqual([...CHECK_IDS].sort());
     expect(isBlocking({ check: "check-engine-spec-parity", message: "" })).toBe(true);
-    expect(isBlocking({ check: "check-review-coverage", message: "" })).toBe(false);
+    expect(isBlocking({ check: "check-review-coverage", message: "" })).toBe(true);
     expect(isBlocking({ check: "check-s12-coverage", message: "" })).toBe(true);
   });
   test("the repository tree has zero blocking findings", () => {
