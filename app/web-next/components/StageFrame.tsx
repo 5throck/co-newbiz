@@ -21,6 +21,7 @@ import { STAGE_HANDOFF } from "../lib/stage-handoff.ts";
 import { useDealContext } from "../lib/use-deal-context.ts";
 import { api } from "../lib/api.ts";
 import { ReconfirmNotice } from "./ReconfirmNotice.tsx";
+import { DealEntryMarketStrip } from "./EntryMarketContextStrip.tsx";
 
 /** 단계 → 담당 화면 라우트. 캐리어(deal = 기회 id)가 있으면 /deals/{id}/sN 탭으로,
     없으면 플랫 라우트(캐리어 리다이렉트 스텁 — 2026-10-02 route-cleanup design
@@ -238,6 +239,9 @@ export function StageFrame({
       {railSlot !== undefined
         ? railSlot
         : !stepperOwnedByTabs && <StageRail current={ids} track={track} />}
+      {/* ADR-0181 slice 5 — S8~S12 operate on the S2-decided entry market; the subject-market line
+          sits in the head (inside main), resolved from the project's source opportunity. */}
+      {gatedProjectStage && projectId && <DealEntryMarketStrip routeId={projectId} />}
       {gatedProjectStage && <StageGuidance state={guidance} projectId={projectId} stageId={navSource} />}
       {projectId && <ReconfirmNotice projectId={projectId} />}
       {/* 단계 설명 슬롯 — 서식은 프레임이 표준화한다(0.9rem·muted·leading-relaxed,

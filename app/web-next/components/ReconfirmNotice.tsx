@@ -55,7 +55,7 @@ export function ReconfirmNotice({ projectId }: { projectId: string }) {
   const items = view.items ?? [];
   const tryClear = canTryClear(me?.role);
   return (
-    <section className="card" aria-labelledby={`${uid}-h`} data-testid="reconfirm-notice" style={{ borderColor: "var(--amber-border)" }}>
+    <section className="card mb-4" aria-labelledby={`${uid}-h`} data-testid="reconfirm-notice" style={{ borderColor: "var(--amber-border)" }}>
       <h2 id={`${uid}-h`} className="m-0 mb-1"><ShieldAlert size={16} aria-hidden="true" className="inline mr-1" />{t("title")}</h2>
       <p className={`${small} m-0 mb-2`}>{t("body")}</p>
       <p className={`${small} ${muted} m-0 mb-2`}>{t("reasonPrefix")} {view.reason}</p>
