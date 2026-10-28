@@ -36,6 +36,16 @@ If any row in a file fails, the whole file is rejected and nothing is written. T
 ]
 ```
 
+**What `p50` holds depends on the metric name.** A public study often reports a mean or a proportion rather than percentiles. The metric suffix says which statistic is stored:
+
+| Metric name | `p50` holds |
+|---|---|
+| ends in `_mean` | the reported arithmetic mean, not the median (for a skewed distribution the mean exceeds the median) |
+| starts with `share_` | a reported point proportion, not a distribution |
+| any other name | the median, with `p10`/`p90` as percentiles when given |
+
+Consumers must display the metric name with the value and never a bare "P50" label.
+
 `p50` is required; `p10` and `p90` are optional, and the file is rejected unless p10 <= p50 <= p90. Rows are never deleted. A newer row for the same class and metric is added beside the older one, and the older row may be marked `superseded_by`. A duplicate of (`reference_class_key`, `metric`, `source`, `verified_on`) is skipped.
 
 ```bash
