@@ -4,7 +4,7 @@ layer: policy
 title: 그룹 신사업 검토 정책
 scope: shared
 level: group
-version: "1.2.0"
+version: "1.2.1"
 enforceability: mandatory
 owner_agent: process-governance-manager
 approver_role: group-ic
@@ -17,7 +17,7 @@ counterpart: neb-policy.md
 
 # 그룹 신사업 검토 정책
 
-**상태**: 유효 (v1.2.0, 2026-10-27 [ADR-0187](../../docs/adr/0187-process-ssot-decision-evidence.md)으로 개정; 기록 `DEC-20261027-03`. 이전: v1.1.0, [ADR-0186](../../docs/adr/0186-gate-integrity.md), 기록 `DEC-20261027-01`)
+**상태**: 유효 (v1.2.1, 2026-10-28 [ADR-0187](../../docs/adr/0187-process-ssot-decision-evidence.md) P2 단계로 개정; 기록 `DEC-20261028-01`. 이전: v1.2.0, ADR-0187 P0, 기록 `DEC-20261027-03`; v1.1.0, [ADR-0186](../../docs/adr/0186-gate-integrity.md), 기록 `DEC-20261027-01`)
 **설계 기준 문서**: [design v1.0 §6](https://github.com/5throck/ai-workspace-standards/blob/main/docs/designs/2026-08-19-co-newbiz-design_ko.md), [Stage 1 회의](../../memory/meeting-2026-08-20-m1-process-skeleton.md)에서 구체화됨.
 
 ## 1. 목적 및 적용 범위
@@ -58,7 +58,7 @@ Kill Criteria 등록부(`procedures/_kill-criteria/<procedure>__<criterion>.json
 | 1 | 필수 인프라 최소 기준을 충족하는 부지 후보가 하나도 없는 경우 (Green Field). | `greenfield-screening__zero_site_clears_infrastructure_minimums` |
 | 2 | DD 종료 시점에 6개 Brown Field 필수 밸리데이터 중 하나라도 누락된 경우. | `brownfield-dd__any_of_six_ma_validators_missing_at_dd_exit` |
 | 3 | risk-officer 서명 없이 성장 전망이 상위 10% 역사적/동종업계 기저율을 벗어나는 경우. | `greenfield-fs__growth_projection_outside_top_decile_without_risk_officer_signoff` |
-| 4 | 다운사이드 시나리오에서 커버넌트 위반이 발생하는 경우. | `brownfield-dd__covenant_breach_with_coc_acceleration_under_downside` (Brown Field). Green Field: 아직 등록부 항목이 없다 — ADR-0187 P2 단계에서 절차에 선언하며, 그 전까지는 검토자가 S10 자금조달 계획에 비추어 판단한다. |
+| 4 | 다운사이드 시나리오에서 커버넌트 위반이 발생하는 경우. | `brownfield-dd__covenant_breach_with_coc_acceleration_under_downside` (Brown Field), `greenfield-dd__covenant_breach_under_downside_financing_plan` (Green Field — 다운사이드 판정식이 정해지기 전까지 선언만 된 항목이며, DD 게이트 검토자가 자금조달 실사에 비추어 판단한다). |
 | 5 | 딜 논거에 핵심적인 필수 인증이 이전 불가능한 경우. | `greenfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing`, `brownfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing`, `brownfield-dd__certification_transferability_computed_by_inference_not_confirmation` |
 | 6 | 파트너 없이는 사업 진행이 불가능한데도 파트너 조달에 실패한 경우 (partnership-agent 참조). | `greenfield-screening__partner_dependency_unconfirmed_and_no_alternative`, `brownfield-dd__partner_dependency_unconfirmed_and_no_alternative` |
 
@@ -66,7 +66,7 @@ Kill Criteria 등록부(`procedures/_kill-criteria/<procedure>__<criterion>.json
 
 ## 5. 개정
 
-이 정책의 개정에는 ADR(설계 §6.5/§11 트리거 목록)과 영향 분석을 포함한 `policy_change` 기록이 필요하며, 이후 효력이 발생한다. 소급 적용은 `project_policy_pin`이 규율한다(위 §2.8). 이력: v1.2.0 (2026-10-27) — ADR-0187에 따라 §2.7에 Target Screening 검토 예외와 검토 등록부 기본값을 명시하고, §4가 Kill Criteria 등록부를 정본 목록으로 인용함. `docs/decisions/DEC-20261027-03.md` 참조. v1.1.0 (2026-10-27) — ADR-0186에 따라 §2.1–§2.5를 개정하고 §2.9–§2.11을 추가함. `docs/decisions/DEC-20261027-01.md` 참조.
+이 정책의 개정에는 ADR(설계 §6.5/§11 트리거 목록)과 영향 분석을 포함한 `policy_change` 기록이 필요하며, 이후 효력이 발생한다. 소급 적용은 `project_policy_pin`이 규율한다(위 §2.8). 이력: v1.2.1 (2026-10-28) — ADR-0187 P2 단계에 따라 §4 기준 4가 `greenfield-dd`에 선언된 Green Field 커버넌트 위반 등록부 키를 인용함. `docs/decisions/DEC-20261028-01.md` 참조. v1.2.0 (2026-10-27) — ADR-0187에 따라 §2.7에 Target Screening 검토 예외와 검토 등록부 기본값을 명시하고, §4가 Kill Criteria 등록부를 정본 목록으로 인용함. `docs/decisions/DEC-20261027-03.md` 참조. v1.1.0 (2026-10-27) — ADR-0186에 따라 §2.1–§2.5를 개정하고 §2.9–§2.11을 추가함. `docs/decisions/DEC-20261027-01.md` 참조.
 
 ## 6. 관련 문서
 

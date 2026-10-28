@@ -1,0 +1,11 @@
+{
+  "procedure": "brownfield-screening",
+  "criterion_id": "data_confidence_not_judgeable",
+  "title": "Data confidence is too low to judge the opportunity",
+  "action": "halt",
+  "predicate": null,
+  "enabled": false,
+  "policy_id": null,
+  "thresholds_source": null,
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). ADR-0187 phase P2 (finding M4): mirrors the flow.spec Screening-gate killCriteria summary line; until a predicate over existing evidence variables is decided by risk-officer + quant-methodologist, the gate reviewers judge it."
+}

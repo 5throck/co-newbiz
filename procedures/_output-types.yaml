@@ -119,3 +119,8 @@ output_types:
   incentive_obligation_register: "GF execution baseline step 5 — clawback-bearing incentive obligations with their dependent milestones (ADR-0161)"
   execution_baseline_confirmation: "GF execution baseline step 6 — single-person human confirmation with mandatory rationale; references capex_tranche ids, never copies them (ADR-0161)"
   integration_monitoring_scorecard: "PMI post-close monitoring (S12 integration-monitoring) — synergy run-rate, key-talent retention, customer attrition per review cycle (ADR-0161)"
+  synergy_score_recommendation: "S3 synergy analysis — quantitative synergy case against the group/affiliate registry with its assumption register; records the opportunity.synergy_score recommendation (ADR-0090, ADR-0187 D6)"
+  synergy_assumption_audit: "S3 synergy red-team — optimism-bias and base-rate audit of the synergy assumption register; drafts no assumption, sets no score (ADR-0187 D6)"
+  legal_regulatory_screen: "S4 legal and regulatory screen — chk-legal-regulatory lr-01..lr-07 judged with evidence; read by the Screening gate (ADR-0187 H9)"
+  capability_dd_judgement: "S9 capability DD — per-capability resolved / partially resolved / unresolved evidence and draft against the S3 register; the judgement is a human record (ADR-0187 M2)"
+  dd_waiver_review: "S9 DD waiver adjudication — expiring, clause-anchored waivers for unmet mandatory DD items (ADR-0036/0037, ADR-0187 M2)"

@@ -21,7 +21,35 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.14.0"
+  version: "2.15.0"
+  # v2.15.0 - ADR-0187 phase P2 (procedure and checklist reconciliation;
+  #   design 2026-10-27-process-ssot-decision-evidence-design P2). Every
+  #   activity.agent now holds a step in each procedure it lists, or the pair
+  #   is an ADR-backed lead-only allowlist entry in
+  #   scripts/co-newbiz/process-ssot-check.ts (finding M2):
+  #   - S2 business-model-sketch hosts opportunity-discovery only (its step 2).
+  #   - S3 synergy-analysis / synergy-red-team get steps in both screening
+  #     procedures (D6).
+  #   - S4 gains the regulatory-screening activity (legal-counsel) producing
+  #     chk-legal-regulatory, and the checklist is an S4 requiredArtifact the
+  #     Screening gate reads (finding H9); deal-shape-evaluation hosts
+  #     brownfield-pre-fs only (its step 2).
+  #   - S9 ip-fto-dd and region-labor-review also host greenfield-dd (W2-b,
+  #     W2-d); greenfield-dd and brownfield-dd gain the missing activity steps;
+  #     greenfield origin=internal DD is trimmed per D9 (M15).
+  #   - S10 deal-structure-hypothesis hosts deal-structuring only (its step 1).
+  #   - S11 investment-structuring and risk-review host entity-ic-review only,
+  #     group-review hosts group-investment-review only; entity-establishment-
+  #     execution also lists its sibling business-unit-establishment-execution
+  #     (ADR-0167), which produces chk-business-unit-formation.
+  #   - S12 activities declare procedureSteps (the step scope the S12
+  #     coverage validator used to hard-code); portfolio-venture-monitoring
+  #     1.3.0 covers brownfield minority / R&BD / CVC (D8, M17) and
+  #     jv-lifecycle-governance 1.2.0 covers the reachable external-origin JV
+  #     cell.
+  #   - killCriteriaRegistry: screening summary lines (market, data confidence,
+  #     knock-out), pre_fs "route undecided" and the greenfield covenant breach
+  #     now have procedure declarations and registry entries (M4).
   # v2.14.0 - Process SSOT and decision evidence (ADR-0187, Accepted 2026-10-27
   #   at the owner merge of PR #752; design 2026-10-27-process-ssot-decision-
   #   evidence-design P0, owner decisions D1-D9). Declarations only - the engine
@@ -206,10 +234,11 @@ meta:
 # killCriteriaRegistry (v2.14.0, ADR-0187 M4): per gate, the keys of the
 # kill-criteria registry (procedures/_kill-criteria/<procedure>__<criterion>.json)
 # whose procedure declares that gate. The registry is the canonical kill list;
-# killCriteria strings are the human summary of design section 8.2. Summary
-# lines with no registry entry yet (screening market/data-confidence/knock-out,
-# pre_fs route undecided) get a procedure declaration in P2 - until then they
-# remain human-judged, never machine-evaluated.
+# killCriteria strings are the human summary of design section 8.2. Since
+# v2.15.0 (P2) every summary line has a procedure declaration and a registry
+# entry (screening market / data confidence / knock-out, pre_fs route
+# undecided); those entries are declared-but-inert (predicate null) and stay
+# human-judged until thresholds are decided.
 gates:
   - id: screening
     name: Screening
@@ -227,6 +256,12 @@ gates:
       - greenfield-screening__partner_dependency_unconfirmed_and_no_alternative
       - brownfield-screening__no_viable_target_in_longlist
       - brownfield-screening__preliminary_hhi_flags_certain_block
+      - greenfield-screening__market_structurally_unattractive
+      - greenfield-screening__data_confidence_not_judgeable
+      - greenfield-screening__strategic_fit_knock_out_failed
+      - brownfield-screening__market_structurally_unattractive
+      - brownfield-screening__data_confidence_not_judgeable
+      - brownfield-screening__strategic_fit_knock_out_failed
       - deal-shape-chain__no_viable_deal_shape
       - deal-shape-chain__partner_dd_red_financial_distress
       - deal-shape-chain__partner_dd_red_ip_chain
@@ -243,6 +278,8 @@ gates:
       - greenfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing
       - brownfield-pre-fs__wacc_hurdle_still_assumed
       - brownfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing
+      - greenfield-pre-fs__entry_route_undecided_at_pre_fs_exit
+      - brownfield-pre-fs__entry_route_undecided_at_pre_fs_exit
       - brownfield-target-identification__universe_cannot_be_defined
       - brownfield-target-identification__minimum_coverage_not_achievable
     fundingDecision: FS 본격 검토 자원 배정
@@ -282,6 +319,7 @@ gates:
     killCriteriaRegistry:
       - greenfield-dd__dd_finding_with_value_impact_not_in_valuation_bridge
       - greenfield-dd__wastewater_capacity_insufficient_and_no_mitigation
+      - greenfield-dd__covenant_breach_under_downside_financing_plan
       - brownfield-dd__any_of_six_ma_validators_missing_at_dd_exit
       - brownfield-dd__certification_transferability_computed_by_inference_not_confirmation
       - brownfield-dd__covenant_breach_with_coc_acceleration_under_downside
@@ -376,7 +414,10 @@ stages:
       - id: business-model-sketch
         agent: greenfield-agent
         skills: [scenario-planning]
-        procedure: [opportunity-discovery, greenfield-screening, brownfield-screening]
+        procedure: [opportunity-discovery]
+        # v2.15.0 (ADR-0187 P2, M2): the sketch is opportunity-discovery step 2
+        # (greenfield-agent); the screening procedures hold no sketch step, so
+        # they are no longer listed here.
         # DEC-20261025-02 (Row 4 판정): S2는 라우트 결정(S4) 이전 단계로 모든 기회가
         # 후보 신사업이다 — 스케치는 트랙 중립 신사업 가설(requiredCapabilities는 S3
         # 역량 갭 분석→S4 라우트 결정의 입력)이며 신설 검토 리드(greenfield-agent)가
@@ -441,15 +482,16 @@ stages:
         # S2 기회를 연결해 분석하고 완료 시 opportunity.synergy_score 권고를 기록한다 (ADR-0090).
         # v2.14.0 (ADR-0187 D6, finding M6): the quantitative author is
         # financial-analyst; risk-officer red-teams it in synergy-red-team and
-        # authors nothing here. The screening procedures do not yet hold a
-        # financial-analyst step - recorded divergence, reconciled in P2 (M2).
+        # authors nothing here. v2.15.0 (P2, M2): greenfield-screening step 1.5
+        # and brownfield-screening step 2.5 hold the authoring step.
       - id: synergy-red-team
         agent: risk-officer
         skills: [assumption-audit]
         procedure: [greenfield-screening, brownfield-screening]
         # v2.14.0 (ADR-0187 D6): independent red-team of the synergy assumption
         # register (optimism bias, reference-class deviation). Does not draft the
-        # assumptions and does not set the score.
+        # assumptions and does not set the score. v2.15.0 (P2, M2):
+        # greenfield-screening step 1.6 and brownfield-screening step 2.6.
       - id: capability-register-greenfield
         agent: greenfield-agent
         skills: [greenfield-feasibility]
@@ -512,7 +554,7 @@ stages:
     activities:
       - id: route-strategy
         agent: pm
-        skills: [deal-execution-playbook, jv-structuring, partner-sourcing-strategy, brownfield-feasibility, greenfield-feasibility, site-infrastructure-assessment, regional-incentive-sourcing, partner-due-diligence, partnership-health-scorecard]
+        skills: [deal-execution-playbook, jv-structuring, partner-sourcing-strategy, brownfield-feasibility, greenfield-feasibility, site-infrastructure-assessment, regional-incentive-sourcing, partner-due-diligence, partnership-health-scorecard, investment-vehicle-structuring]
         procedure: [greenfield-pre-fs, brownfield-pre-fs, deal-shape-chain]
         # ADR-0185 F-12: pm 리드는 게이트 어셈블러(gateway assembler) 의도다 —
         # 런타임 PM 프롬프트 s4.route_recommendation이 의도된 종합 표면이며, 라우트
@@ -520,7 +562,12 @@ stages:
       - id: deal-shape-evaluation
         agent: brownfield-agent
         skills: [deal-execution-playbook]
-        procedure: [greenfield-pre-fs, brownfield-pre-fs, deal-shape-chain]
+        procedure: [brownfield-pre-fs]
+        # v2.15.0 (ADR-0187 P2, M2): hosts brownfield-pre-fs step 2 (structure
+        # hypothesis incl. acquisition shape, brownfield-agent). greenfield-pre-fs
+        # holds no deal-shape step (the greenfield alternative is carried by the
+        # neutral route axis, see below) and the partner-track funnel
+        # deal-shape-chain stays hosted by route-strategy / route-advisory.
         # DEC-20261025-02 (Row 4 판정): 딜 형태 평가는 외부 결합(인수·JV·전략적
         # 투자·소수점 지분·파트너십) 구조를 전문 검토하는 활동으로 M&A 리드
         # (brownfield-agent)의 소관 렌즈다. greenfield 대안은 본 단계의 중립 축이
@@ -548,6 +595,16 @@ stages:
         # greenfield-pre-fs step 5/5.5 · brownfield-pre-fs step 3/3.5 — 인증은 인허가와
         # 분리 관리 (경계 #5). 승계 가능성 판단은 certifying body 규정 확인이며 추론
         # 금지; 판단 주체는 legal-counsel이다.
+      - id: regulatory-screening
+        agent: legal-counsel
+        skills: [regulatory-screening, permit-pathway-mapping, k-law]
+        procedure: [greenfield-screening, brownfield-screening]
+        # v2.15.0 (ADR-0187 P2, finding H9): producer of the mandatory
+        # Screening-gate checklist chk-legal-regulatory (lr-01..lr-07) —
+        # greenfield-screening step 4.5 · brownfield-screening step 3.7. The
+        # Screening gate reads it as the requiredArtifact below; statute checks
+        # run against source text (k-law), certifications stay separate from
+        # permits (boundary #5).
       # 채점 프레임워크: Stage 1 의도 분기(통합 vs 역량접근) → Stage 2 5criteria×20%
       # 가중채점(통제 필요도·역량 결정성·시장 불확실성·통합 역량·역량확보 속도) +
       # 사전배제(통제필요도=高 AND 파트너 지식=암묵적 → 라이선스/공동개발 배제) —
@@ -557,6 +614,7 @@ stages:
       - Brownfield 선택 시 Route 유형(M&A/JV/전략적 투자/소수점 지분/파트너십/R&BD/CVC)
       - 5criteria 채점 결과(통제 필요도·역량 결정성·시장 불확실성·통합 역량·역량확보 속도 각 20%)
       - 검토한 대안
+      - 법무·규제 스크리닝 판정 (chk-legal-regulatory lr-01~lr-07 — regulatory-screening 활동)
     completionCriteria:
       - route_decision 레코드가 존재한다 (track 필수; brownfield는 Route 유형(sub_track) 필수, greenfield의 sub_track은 선택)
       - Brownfield인 경우 5criteria 채점 결과와 사전배제 점검이 기록되었다
@@ -709,8 +767,11 @@ stages:
         # (subjectScope: shortlist — 각 호출의 산출물은 target_id로 귀속).
       - id: valuation
         agent: valuation-agent
-        skills: [dd-to-valuation-bridge, monte-carlo-simulation]
+        skills: [dd-to-valuation-bridge, monte-carlo-simulation, investment-vehicle-structuring]
         procedure: [greenfield-fs, brownfield-fs]
+        # v2.15.0 (ADR-0187 P2, F-14 alignment): investment-vehicle-structuring
+        # is brownfield-fs step 4's skill, previously listed only through the S10
+        # activity that no longer hosts brownfield-fs.
       - id: quant-methods
         agent: quant-methodologist
         skills: [wacc-input-session, monte-carlo-simulation, proxy-industry-chain, unit-conversion-calibration, value-chain-driver-identification]
@@ -821,7 +882,9 @@ stages:
       - id: region-labor-review
         agent: region-lead
         skills: [regulatory-screening]
-        procedure: [brownfield-dd]
+        procedure: [greenfield-dd, brownfield-dd]
+        # v2.15.0 (ADR-0187 P2, W2-b): every track except greenfield
+        # origin=internal — greenfield-dd step 16 · brownfield-dd step 6.5.
         # brownfield-dd step 6.5 — ma-13. S9에서 도메인 리드가 이끄는 첫 활동
         # (ADR-0185 1.1b; 지역 프로파일 노동 축 검토, 법령 해석은 legal-counsel).
       - id: customer-retention-dd
@@ -848,7 +911,9 @@ stages:
       - id: ip-fto-dd
         agent: ip-agent
         skills: [ip-fto-review]
-        procedure: [brownfield-dd]
+        procedure: [greenfield-dd, brownfield-dd]
+        # v2.15.0 (ADR-0187 P2, W2-d): greenfield-dd step 15 (every track except
+        # greenfield origin=internal) · brownfield-dd step 3.5 (R&BD only).
         # brownfield-dd step 3.5 — R&BD 한정 (step applies_when technology_track=rbd).
     requiredArtifacts:
       - DD 체크리스트 판정(필수 항목 해소)
@@ -881,7 +946,11 @@ stages:
       - id: deal-structure-hypothesis
         agent: brownfield-agent
         skills: [investment-vehicle-structuring]
-        procedure: [deal-structuring, brownfield-fs, deal-shape-chain]
+        procedure: [deal-structuring]
+        # v2.15.0 (ADR-0187 P2, M2): deal-structuring step 1 is the activity's
+        # step. brownfield-fs step 4 (legal-counsel's four-axis review, S8 FS
+        # gate) and the partner funnel deal-shape-chain stay hosted by their S8
+        # and S4 activities.
         # 투자 주체(direct/SPC/holdco/internal_venture_spinoff/jv)·자산/주식·지분·
         # 수표/instrument 믹스 가설을 세우고 4대 축 노트(절세·책임격리·
         # 레버리지·엑싯)를 기록한다. 완료 플래그는 근거 아티팩트 참조가
@@ -938,7 +1007,11 @@ stages:
       - id: investment-structuring
         agent: brownfield-agent
         skills: []
-        procedure: [entity-ic-review, jv-lifecycle-governance]
+        procedure: [entity-ic-review]
+        # v2.15.0 (ADR-0187 P2, M2): jv-lifecycle-governance holds no
+        # brownfield-agent step (its baseline steps are legal-counsel /
+        # partnership-agent / group-review-agent, gate post_close); it stays
+        # hosted by S12 partnership-monitoring.
         # S11은 투자 구조를 설계하지 않는다 — S10 투자구조 설계 산출물(투자 주체·
         # 4축 검토·자금조달 계획)을 투자심의 자료에 참조로 묶을 뿐이다.
         # jv-lifecycle-governance는 Route가 JV인 경우에 적용한다 (설립·거버넌스·
@@ -953,15 +1026,25 @@ stages:
       - id: risk-review
         agent: risk-officer
         skills: [legal-risk-register, rag-scoring-framework]
-        procedure: [entity-ic-review, group-investment-review]
+        procedure: [entity-ic-review]
+        # v2.15.0 (ADR-0187 P2, M2): the risk review is entity-ic-review step 1
+        # (RAG proposal); the Group IC package carries it forward and
+        # group-investment-review holds no risk-officer step.
       - id: group-review
         agent: group-review-agent
         skills: [group-level-review, intra-group-transaction-compliance, portfolio-fit-assessment, two-tier-approval-chain]
-        procedure: [entity-ic-review, group-investment-review]
+        procedure: [group-investment-review]
+        # v2.15.0 (ADR-0187 P2, M2): group review is group-investment-review
+        # steps 2-4; entity-ic-review holds no group-review-agent step.
       - id: entity-establishment-execution
         agent: process-governance-manager
-        skills: [legal-due-diligence, k-law, certification-transferability, org-readiness-assessment, stage-gate-governance]
-        procedure: [entity-establishment-execution]
+        skills: [legal-due-diligence, k-law, certification-transferability, org-readiness-assessment, stage-gate-governance, permit-pathway-mapping]
+        procedure: [entity-establishment-execution, business-unit-establishment-execution]
+        # v2.15.0 (ADR-0187 P2, H9-type gap): the sibling procedure
+        # business-unit-establishment-execution (ADR-0167; process-governance-
+        # manager holds its steps 1 and 5) is now listed, so the producer of
+        # chk-business-unit-formation is visible at the spec layer. Each
+        # procedure's applies_when keeps the two modes exclusive.
         # ADR-0185 F-13: process-governance-manager 리드는 조정·종결(coordinate and
         # close) 의도다 — 5단계 중 1단계(stage-gate-governance, 게이트 기록)만
         # 직접 소유하고, 법무·인증·인력 단계는 각 절차 단계의 agent_key가 소유한다.
@@ -970,7 +1053,7 @@ stages:
         # 절차 business-unit-establishment-execution(ADR-0167)이 담당한다 —
         # 아래 requiredArtifacts의 "신규 사업부 추진" 증적(chk-business-unit-formation)의
         # 절차 원이며, 본 활동 목록에는 단일 절차 키 제약상 나열되지 않는다
-        # (T-20261022-043, review M8).
+        # (T-20261022-043, review M8; listed above since v2.15.0).
         # 법인 투자심의위원회 승인 후 실행: 설립준비(관할·주식구조·이사회 결의) → 법인등기·정관·
         # 사업자등록 → 신설법인 인허가 이전/재발급 분류 → 인력이전(신 근로계약+PIIA) →
         # 완료확인(IP양도체인·거버넌스 베이스라인, JV는 이사회·데드락 조항 추가검증).
@@ -1039,10 +1122,15 @@ stages:
         # corporate_venture], which today match no S12 activity. The procedure
         # applies_when widening (portfolio-venture-monitoring) lands in P2; until
         # then those projects have no applicable S12 procedure (known gap).
+        # v2.15.0 (P2): closed - portfolio-venture-monitoring 1.3.0 adds the
+        # sub_track in [minority_investment, rbd, corporate_venture] branch.
       - id: integration-monitoring
         agent: pmi-agent
         skills: [pmi-planning]
         procedure: [pmi-integration-execution]
+        # v2.15.0 (ADR-0187 P2): the step scope is machine-declared — the S12
+        # coverage validator reads procedureSteps instead of hard-coding it.
+        procedureSteps: { pmi-integration-execution: ["6"] }
         # brownfield m_and_a·strategic_investment의 사후 통합 모니터링 (ADR-0161 Q3) —
         # pmi-integration-execution step 6(시너지 run-rate·핵심인재 유지·고객 이탈).
         # step 1~5와 pmi-kickoff는 바뀌지 않는다. 범위는 step applies_when이 강제한다.
@@ -1050,6 +1138,9 @@ stages:
         agent: partnership-agent
         skills: [partnership-health-scorecard, jv-structuring, portfolio-fit-assessment]
         procedure: [jv-lifecycle-governance]
+        procedureSteps: { jv-lifecycle-governance: ["2"] }
+        # v2.15.0 (ADR-0187 P2, M17): jv-lifecycle-governance 1.2.0 also applies
+        # to sub_track = jv, covering a JV route recorded with origin=external.
         # brownfield partnership의 사후 관리 (ADR-0161 Q3) — jv-lifecycle-governance
         # step 2 건강 스코어카드의 파트너십 변형. 다른 단계는 origin=joint에서만 적용.
     requiredArtifacts:

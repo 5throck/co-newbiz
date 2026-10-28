@@ -355,3 +355,27 @@ Notes: engine labels are still Korean strings, so H8 parity is exact-string unti
 [WARN] check-s12-coverage: cell (brownfield, external, rbd) matches no S12 activity
 [WARN] check-s12-coverage: cell (brownfield, external, corporate_venture) matches no S12 activity
 ```
+
+## 12. P2 results
+
+Run on 2026-10-28 after the P2 changes (`process-ssot-check.ts` 2.0.0). Six checks are now blocking (ERROR, exit 1; also fail `scripts/co-newbiz/audit-variant.ts` 1.5.0 and, for M2, `procedures/_validate.ts` 1.9.0). The two the design closes later stay report-only.
+
+| Validator | Finding | P1 | P2 | Mode |
+|---|---|---|---|---|
+| check-engine-spec-parity | H8 | 51 | 52 | WARN until P3 (the new S4 requiredArtifact is declared, not yet an engine blocker) |
+| check-checklist-consumers | H9 | 13 | 0 | blocking |
+| activity-agent-in-procedure | M2 | 32 | 0 | blocking |
+| check-kill-registry-parity | M4 | 1 | 0 | blocking |
+| check-stage-inputs | M9 | 0 | 0 | blocking |
+| check-review-coverage | M7/M8 | 55 | 55 | WARN until P4 |
+| check-s12-coverage | M17 | 4 | 0 | blocking |
+| check-stages-derived | M3 | 0 | 0 | blocking |
+
+How each P1 finding closed:
+
+- M2 (32): 22 pairs reconciled by a procedure step (S3 synergy author and red-team in both screening procedures; greenfield-dd steps 9-17; brownfield-dd steps 4.5, 5.5, 12.5) or by correcting an activity procedure list where another listed procedure already holds the activity's step (S2 business-model-sketch, S4 deal-shape-evaluation, S10 deal-structure-hypothesis, S11 investment-structuring / risk-review / group-review). The remaining 10 are `pm` gateway-assembler pairs in `ACTIVITY_AGENT_ALLOWLIST`, each with its ADR (ADR-0185 F-12 and section 1.6, ADR-0104 decisions 1-3).
+- H9 (13): legal-regulatory gets the S4 `regulatory-screening` activity (legal-counsel) and screening steps as producer, and an S4 requiredArtifact (mirrored in the engine STAGES list) as the Screening gate consumer; financial-dd gets DD steps; greenfield-feasibility and business-unit-formation get item citations in their producing steps (the BU procedure is now listed by the S11 establishment activity). The five DD checklists are consumed by `DD_WORKSPACE_CHECKLISTS` (verified declared consumer). Three consumer sides are justified exemptions: strategic-fit (ADR-0134), site-selection and greenfield-feasibility (machine consumer deferred to P3).
+- M4 (1): `greenfield-dd__covenant_breach_under_downside_financing_plan` declared and cited by neb-policy 1.2.1 section 4; the screening (market, data confidence, knock-out) and pre_fs (route undecided) summary lines are declared too. All nine new entries are declared-but-inert.
+- M17 (4): portfolio-venture-monitoring 1.3.0 (D8) covers external minority / R&BD / CVC. The (brownfield, external, jv) cell is reachable: classification is human-recorded independently of the route and `deriveOriginFromSubTrack` only defaults JV to joint. jv-lifecycle-governance 1.2.0 covers it with step 2. The S12 step scope is declared in flow.spec `procedureSteps`.
+
+Deferred, with reasons: the runtime D9 trim of the greenfield DD workspace and the origin-aware step exclusion (greenfield-subtrack.ts is authoritative; engine work, P3); a compliance-engine gate requirement for chk-legal-regulatory and machine consumers for site-selection / greenfield-feasibility (P3 stable blocker keys); executable predicates for the nine inert kill criteria (thresholds by risk-officer + quant-methodologist, design Decision 8). Needs judgement: every greenfield project defaults to origin=internal (ADR-0166), so the D9 trim reaches new-site plants as well as expansions; the owner should confirm the scope before P3 makes it effective. Policy change record: `docs/decisions/DEC-20261028-01.md`.

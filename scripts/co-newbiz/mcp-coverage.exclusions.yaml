@@ -26,6 +26,10 @@ exclusions:
     kind: activity
     ref: region-labor-review
     reason: Region labor-law review is a region-lead/legal-counsel judgement recorded by a person (ADR-0185); no tool lists it.
+  - id: regulatory-screening-activity
+    kind: activity
+    ref: regulatory-screening
+    reason: The S4 legal and regulatory screen (chk-legal-regulatory) is a legal-counsel judgement recorded by a person against source statute text; no tool infers it (ADR-0187 P2, finding H9). The judged artifact reaches the Screening gate through propose_gate_decision (stage:S4:5).
   - id: certification-screen-activity
     kind: activity
     ref: certification-screen

@@ -10,7 +10,7 @@ description: >
 
   Use when: "freedom to operate", "FTO", "IP landscape", "patent landscape",
   "target IP valuation", "technology license-in IP position".
-version: 1.0.0
+version: 1.0.1
 status: experimental
 owner: ip-agent
 prerequisites: none
@@ -20,6 +20,7 @@ metadata:
   type: domain
   procedure_keys:
     - brownfield-dd
+    - greenfield-dd
   triggers:
     - freedom to operate
     - FTO

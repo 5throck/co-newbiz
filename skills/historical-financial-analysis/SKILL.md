@@ -10,8 +10,8 @@ description: >
 
   Use when: "historical financial trend", "historical volatility", "base
   rate distribution", "multi-year trajectory analysis".
-version: 1.0.0
-last_reviewed: 2026-08-20
+version: 1.0.1
+last_reviewed: 2026-10-28
 status: active
 owner: financial-analyst
 prerequisites:
@@ -21,6 +21,7 @@ metadata:
     - greenfield-fs
     - brownfield-fs
     - company-profile-analysis
+    - greenfield-dd
   type: domain
   triggers:
     - historical financial trend
@@ -48,7 +49,6 @@ relates_to:
     type: composes_with
   - skill: quality-of-earnings
     type: composes_with
-
 ---
 
 ## Context

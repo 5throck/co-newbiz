@@ -14,8 +14,8 @@ description: >
 
   Use when: "brown field feasibility", "M&A feasibility", "acquisition
   screening", "brownfield DD".
-version: 1.2.0
-last_reviewed: 2026-09-22
+version: 1.2.1
+last_reviewed: 2026-10-28
 status: active
 owner: brownfield-agent
 prerequisites: none
@@ -32,6 +32,7 @@ metadata:
     - brownfield-screening
     - brownfield-target-identification
     - brownfield-target-screening
+    - brownfield-dd
   related_skills:
     - antitrust-screening
     - certification-transferability
@@ -52,7 +53,6 @@ relates_to:
     type: composes_with
   - skill: dd-to-valuation-bridge
     type: composes_with
-
 ---
 
 ## Context

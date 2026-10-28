@@ -3,7 +3,7 @@ procedure_id: shared-greenfield-pre-fs
 title: "Green Field Pre-Feasibility"
 scope: shared
 level: entity
-version: "1.2.1"
+version: "1.3.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -42,7 +42,8 @@ steps:
     description: >
       WACC/hurdle IRR moved from assumption.kind='assumed' to 'user' — hard
       precondition before FS opens (meeting M1). FS cannot proceed on a
-      provisional discount rate.
+      provisional discount rate. Produces item gf-12 of
+      `checklists/greenfield-feasibility-checklist.yaml`.
   - id: 3
     gate: Pre-FS
     agent_key: site-facility-agent   # ADR-0185 A-02b; S4 activity stays led by greenfield-agent (recorded divergence, flow.spec)
@@ -58,6 +59,8 @@ steps:
       Incentive package converted to NPV, compared against infra capex and
       logistics cost on the same table per site (design §4-7, meeting M6
       D-M6-3) — never listed as a separate figure from the cost side.
+      Confirms item gf-03 of `checklists/greenfield-feasibility-checklist.yaml`
+      on the Pre-FS shortlist.
   - id: 5
     gate: Pre-FS
     agent_key: certification-agent
@@ -88,6 +91,13 @@ kill_criteria:
     action: halt
   - condition: certification_transferability_unconfirmed_and_load_bearing
     action: escalate_to_risk_officer
+  # ADR-0187 phase P2 (finding M4): the flow.spec Pre-FS summary line
+  # "entry route undecided" gets a procedure declaration and a registry entry.
+  # Declared-but-inert (predicate null): the route decision is a human record
+  # (route_decision, boundary #2); the gate reviewers judge it until a
+  # predicate over the current route row is decided.
+  - condition: entry_route_undecided_at_pre_fs_exit
+    action: halt
 
 legal_basis:
   - "Group New Business Review Policy §2.3"
@@ -98,5 +108,7 @@ legal_basis:
   - "ADR-0051 (workflow gap closure — GF-internal pre-feasibility gate)"
   - "Cooper Stage-Gate Gate 2-to-3 escalation — right-to-win proven before the business-case build (docs/research/venture-governance-best-practice.md cross-cutting answer 1)"
 
+  - "ADR-0187 (process SSOT and decision evidence) phase P2 — Pre-FS kill-criteria declaration (M4)"
+
 owner_agent: process-governance-manager
-last_reviewed: "2026-08-23"
+last_reviewed: "2026-10-28"

@@ -1721,6 +1721,11 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20261028-01",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "doc:AGENTS.md",
       "type": "doc",
       "layer": "L3"
@@ -1877,8 +1882,8 @@
       "name": "assumption-audit",
       "scope": "root",
       "capability": "assumption-audit",
-      "content_hash": "bfc2a684907978fd",
-      "version": "1.1.1",
+      "content_hash": "5d66afada7f5affe",
+      "version": "1.1.2",
       "mirrors": [
         "skills/assumption-audit/SKILL.md",
         ".claude/skills/assumption-audit/SKILL.md",
@@ -1895,8 +1900,8 @@
       "name": "brownfield-feasibility",
       "scope": "root",
       "capability": "brownfield-feasibility",
-      "content_hash": "d4d20f8b687c73ba",
-      "version": "1.2.0",
+      "content_hash": "1939e3cb473c3876",
+      "version": "1.2.1",
       "mirrors": [
         "skills/brownfield-feasibility/SKILL.md",
         ".claude/skills/brownfield-feasibility/SKILL.md",
@@ -1967,8 +1972,8 @@
       "name": "commercial-due-diligence",
       "scope": "root",
       "capability": "commercial-due-diligence",
-      "content_hash": "ff8cf96b736a65c9",
-      "version": "1.2.0",
+      "content_hash": "9f6e64baca593307",
+      "version": "1.2.1",
       "mirrors": [
         "skills/commercial-due-diligence/SKILL.md",
         ".claude/skills/commercial-due-diligence/SKILL.md",
@@ -2039,8 +2044,8 @@
       "name": "competitive-intelligence",
       "scope": "root",
       "capability": "competitive-intelligence",
-      "content_hash": "3de8d58b05873c4a",
-      "version": "1.1.0",
+      "content_hash": "791d59b2d69684b3",
+      "version": "1.1.1",
       "mirrors": [
         "skills/competitive-intelligence/SKILL.md",
         ".claude/skills/competitive-intelligence/SKILL.md",
@@ -2277,8 +2282,8 @@
       "name": "financing-plan-review",
       "scope": "root",
       "capability": "financing-plan-review",
-      "content_hash": "06c94a1ef4b218f9",
-      "version": "1.2.0",
+      "content_hash": "43dde5925c6493fb",
+      "version": "1.2.1",
       "mirrors": [
         "skills/financing-plan-review/SKILL.md",
         ".claude/skills/financing-plan-review/SKILL.md",
@@ -2439,8 +2444,8 @@
       "name": "historical-financial-analysis",
       "scope": "root",
       "capability": "historical-financial-analysis",
-      "content_hash": "84ae378b759c6de2",
-      "version": "1.0.0",
+      "content_hash": "46daa63276cbcd07",
+      "version": "1.0.1",
       "mirrors": [
         "skills/historical-financial-analysis/SKILL.md",
         ".claude/skills/historical-financial-analysis/SKILL.md",
@@ -2583,8 +2588,8 @@
       "name": "investment-feasibility-modeling",
       "scope": "root",
       "capability": "investment-feasibility-modeling",
-      "content_hash": "b1a64e013e54a861",
-      "version": "1.2.0",
+      "content_hash": "c926fcfc59d49e35",
+      "version": "1.2.1",
       "mirrors": [
         "skills/investment-feasibility-modeling/SKILL.md",
         ".claude/skills/investment-feasibility-modeling/SKILL.md",
@@ -2619,8 +2624,8 @@
       "name": "ip-fto-review",
       "scope": "root",
       "capability": "ip-fto-review",
-      "content_hash": "cd8d710468998984",
-      "version": "1.0.0",
+      "content_hash": "c2d19c229f7d3894",
+      "version": "1.0.1",
       "mirrors": [
         "skills/ip-fto-review/SKILL.md",
         ".claude/skills/ip-fto-review/SKILL.md",
@@ -2763,8 +2768,8 @@
       "name": "legal-due-diligence",
       "scope": "root",
       "capability": "legal-due-diligence",
-      "content_hash": "4aa5a8976aa11f30",
-      "version": "1.1.0",
+      "content_hash": "71b566c1d74418fa",
+      "version": "1.1.1",
       "mirrors": [
         "skills/legal-due-diligence/SKILL.md",
         ".claude/skills/legal-due-diligence/SKILL.md",
@@ -3109,8 +3114,8 @@
       "name": "quality-of-earnings",
       "scope": "root",
       "capability": "quality-of-earnings",
-      "content_hash": "d43c6ecdbe553ffc",
-      "version": "1.2.0",
+      "content_hash": "49bcbdd725b6a533",
+      "version": "1.2.1",
       "mirrors": [
         "skills/quality-of-earnings/SKILL.md",
         ".claude/skills/quality-of-earnings/SKILL.md",
@@ -3163,8 +3168,8 @@
       "name": "regulatory-screening",
       "scope": "root",
       "capability": "regulatory-screening",
-      "content_hash": "9bf1229468125d11",
-      "version": "1.1.0",
+      "content_hash": "c8abdc2345a7342c",
+      "version": "1.1.1",
       "mirrors": [
         "skills/regulatory-screening/SKILL.md",
         ".claude/skills/regulatory-screening/SKILL.md",
@@ -3707,8 +3712,8 @@
       "name": "waiver-management",
       "scope": "root",
       "capability": "waiver-management",
-      "content_hash": "78bf8d5188610d73",
-      "version": "1.1.1",
+      "content_hash": "4ea3478c2c551414",
+      "version": "1.1.2",
       "mirrors": [
         "skills/waiver-management/SKILL.md",
         ".claude/skills/waiver-management/SKILL.md",
@@ -5679,6 +5684,18 @@
     },
     {
       "type": "cites_skill",
+      "from": "dec:DEC-20261028-01",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261028-01",
+      "to": "skill:root/policy-and-procedure-governance",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
       "from": "doc:AGENTS.md",
       "to": "skill:root/agent-lifecycle-manager",
       "source": "workflow-doc"
@@ -5747,6 +5764,12 @@
       "type": "cites_skill",
       "from": "doc:procedures/schema.yaml",
       "to": "skill:root/proxy-industry-chain",
+      "source": "workflow-doc"
+    },
+    {
+      "type": "cites_skill",
+      "from": "doc:procedures/schema.yaml",
+      "to": "skill:root/regulatory-screening",
       "source": "workflow-doc"
     },
     {

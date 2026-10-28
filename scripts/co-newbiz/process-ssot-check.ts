@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 2.0.0
 /**
  * Process SSOT validators (ADR-0187 phase P1, design
  * docs/designs/2026-10-27-process-ssot-decision-evidence-design.md section 4.6).
@@ -17,9 +17,14 @@
  *   check-s12-coverage            M17   each classification cell matches >=1 S12 activity
  *   check-stages-derived          M3    process/stages.yaml equals the gate-order projection of flow.spec
  *
- * Mode: REPORT-ONLY in P1 - findings print as WARN and the exit code is 0.
- * `--strict` exits 1 on any finding (the P2 blocking switch). `--check <id>`
- * runs one check; `--json` prints the machine-readable report.
+ * Mode (since 2.0.0, ADR-0187 phase P2): the checks in BLOCKING_CHECKS print
+ * as ERROR and exit 1 - each reached zero findings, or every remaining pair is
+ * an explicit allowlist entry below with its ADR / reason. The two checks the
+ * design closes later stay report-only (WARN, exit 0): check-engine-spec-parity
+ * (exact-string parity until P3 stable blocker keys) and check-review-coverage
+ * (the cross-validation matrix is P4). `--strict` additionally exits 1 on a WARN
+ * finding. `--check <id>` runs one check; `--json` prints the machine-readable
+ * report.
  *
  * Every check is a pure function over plain inputs (tests/unit/
  * process-ssot-check.test.ts feeds failing and clean fixtures); `runAll()`
@@ -48,6 +53,22 @@ export const CHECK_IDS = [
 ] as const;
 export type CheckId = (typeof CHECK_IDS)[number];
 
+/**
+ * Checks that fail the audit (P2). The other two stay WARN by design section 5:
+ * engine-spec parity closes with P3 stable keys, review coverage with the P4
+ * matrix.
+ */
+export const BLOCKING_CHECKS: ReadonlySet<CheckId> = new Set<CheckId>([
+  "check-checklist-consumers",
+  "activity-agent-in-procedure",
+  "check-kill-registry-parity",
+  "check-stage-inputs",
+  "check-s12-coverage",
+  "check-stages-derived",
+]);
+
+export const isBlocking = (f: Finding): boolean => BLOCKING_CHECKS.has(f.check);
+
 export interface Finding {
   check: CheckId;
   message: string;
@@ -57,6 +78,8 @@ export interface SpecActivity {
   id: string;
   agent: string;
   procedure?: string[];
+  /** procedure -> step ids the activity runs, where it runs only part of a procedure (flow.spec 2.15.0). */
+  procedureSteps?: Record<string, Array<string | number>>;
 }
 export interface SpecStage {
   id: string;
@@ -174,25 +197,106 @@ export interface ChecklistInfo {
 }
 
 /**
+ * Declared gate consumers the heuristic cannot see because they live in a
+ * module it excludes (lib/library.ts is excluded as the library projection
+ * reader). Each entry is VERIFIED, not trusted: the named module must contain
+ * the named symbol and the checklist id, or the declaration itself is a
+ * finding.
+ */
+export const CHECKLIST_DECLARED_CONSUMERS: ReadonlyArray<{
+  /** The literal the module uses: the governance_doc_id or the `chk-<stem>` library id. */
+  docId: string;
+  module: string;
+  symbol: string;
+  gate: string;
+}> = [
+  // DD_WORKSPACE_CHECKLISTS is the DD gate's seven-domain workspace list: the
+  // DD completion summary (lib/dd-checklist-tailor.ts ddCompletionSummary)
+  // counts its mandatory items and the S9 blocker / IC step read that count.
+  ...[
+    "chk-financial-dd-checklist",
+    "chk-legal-dd-checklist",
+    "chk-hr-dd-checklist",
+    "chk-market-dd-checklist",
+    "chk-financing-plan-checklist",
+  ].map(
+    (docId) => ({ docId, module: "app/web-next/lib/library.ts", symbol: "DD_WORKSPACE_CHECKLISTS", gate: "dd" }),
+  ),
+];
+
+/**
+ * Justified exemptions (ADR-0187 P2): mandatory checklists whose gate consumer
+ * is a human judgement today, with the reason and the record that backs it.
+ * An exemption silences only the named side (producer or consumer).
+ */
+export const CHECKLIST_EXEMPTIONS: ReadonlyArray<{ docId: string; side: "producer" | "consumer"; reason: string }> = [
+  {
+    docId: "chk-strategic-fit",
+    side: "consumer",
+    reason:
+      "ADR-0134 removed the standalone fit-verdict UI (the machine consumer) as a duplicate layer; the knock-out rubric is judged into the S3 requiredArtifact '전략적 적합성 판단' (rationale + deterministic recommendation, lib/opportunity-screening.ts) and the human Screening gate record (boundary #2).",
+  },
+  {
+    docId: "chk-site-selection",
+    side: "consumer",
+    reason:
+      "Produced by greenfield-dd step 1-3 and judged by the reviewers inside the technical-dd workspace tab (GF_SITE_CHECKLISTS scopes tdd-01/tdd-02); a machine gate consumer of its own is engine work - ADR-0187 P3 (stable blocker keys), deferred.",
+  },
+  {
+    docId: "chk-greenfield-feasibility",
+    side: "consumer",
+    reason:
+      "Produced by greenfield-screening steps 3/4 and greenfield-pre-fs steps 2/4 (gf-01..gf-07, gf-12); judged by the Screening / Pre-FS gate reviewers. A machine gate consumer is engine work - ADR-0187 P3 (stable blocker keys), deferred.",
+  },
+];
+
+/**
  * Producer = a step of a procedure hosted by a flow.spec activity whose text
  * cites `checklists/<stem>.yaml`. Consumer = a runtime module (non-generated,
  * not the library projection reader, not a translation table) that names the
- * checklist stem or governance_doc_id.
+ * checklist stem or governance_doc_id, or a verified CHECKLIST_DECLARED_CONSUMERS
+ * entry. CHECKLIST_EXEMPTIONS silence one side with a recorded reason.
  */
 export function checkChecklistConsumers(
   checklists: ChecklistInfo[],
   hostedProcedures: Procedure[],
   runtimeSources: Map<string, string>,
+  declared: {
+    consumers: typeof CHECKLIST_DECLARED_CONSUMERS;
+    exemptions: typeof CHECKLIST_EXEMPTIONS;
+    /** module path -> source, for verifying declared consumers. */
+    moduleSource: (module: string) => string | undefined;
+  } = { consumers: [], exemptions: [], moduleSource: () => undefined },
 ): Finding[] {
   const check: CheckId = "check-checklist-consumers";
   const findings: Finding[] = [];
+  for (const d of declared.consumers) {
+    const src = declared.moduleSource(d.module);
+    if (!src || !src.includes(d.symbol) || !src.includes(`"${d.docId}"`))
+      findings.push({
+        check,
+        message: `declared consumer of ${d.docId} does not hold: ${d.module} must define ${d.symbol} naming "${d.docId}"`,
+      });
+  }
+  const exempt = (docId: string, side: "producer" | "consumer") =>
+    declared.exemptions.some((e) => e.docId === docId && e.side === side);
   for (const c of checklists) {
     if (!c.hasMandatory) continue;
     const path = `checklists/${c.stem}.yaml`;
-    const producers = hostedProcedures.filter((p) => p.steps.some((s) => s.text.includes(path)));
+    const producers = exempt(c.docId, "producer")
+      ? [true]
+      : hostedProcedures.filter((p) => p.steps.some((s) => s.text.includes(path)));
     const ids = [c.stem, c.docId, `chk-${c.stem}`].filter(Boolean).join("|");
     const idRe = new RegExp(`(^|[^a-z0-9-])(${ids})([^a-z0-9-]|$)`);
     const consumers = [...runtimeSources.values()].filter((src) => idRe.test(src));
+    const declaredHit =
+      exempt(c.docId, "consumer") ||
+      declared.consumers.some(
+        (d) =>
+          (d.docId === c.docId || d.docId === `chk-${c.stem}`) &&
+          declared.moduleSource(d.module)?.includes(`"${d.docId}"`),
+      );
+    if (declaredHit) consumers.push("declared");
     if (producers.length === 0)
       findings.push({
         check,
@@ -211,11 +315,46 @@ export function checkChecklistConsumers(
 
 /**
  * Lead-only activities sanctioned to hold no procedure step, each with its ADR
- * reference. Empty in P1 by design: P2 reconciles every pair the report lists
- * (add a step or change the activity agent) and only a pair with a recorded
- * ADR may land here.
+ * reference (ADR-0187 P2). Only `pm` activities qualify: pm is the PM Gateway
+ * orchestrator and gate assembler, never a specialist agent_key in a
+ * procedure step, and every decision these activities assemble is a human
+ * record (boundary #2, ADR-0053). Every other P1 pair was reconciled by adding
+ * a step or correcting the activity's procedure list (flow.spec 2.15.0).
  */
-export const ACTIVITY_AGENT_ALLOWLIST: ReadonlyArray<{ activity: string; procedure: string; adr: string }> = [];
+const PM_ASSEMBLER = (activity: string, procedure: string, adr: string) => ({ activity, procedure, adr });
+export const ACTIVITY_AGENT_ALLOWLIST: ReadonlyArray<{ activity: string; procedure: string; adr: string }> = [
+  ...["greenfield-pre-fs", "brownfield-pre-fs", "deal-shape-chain"].map((p) =>
+    PM_ASSEMBLER(
+      "route-strategy",
+      p,
+      "ADR-0185 F-12 (pm leads as gateway assembler through the s4.route_recommendation prompt; the route is the human route_decision)",
+    ),
+  ),
+  ...["greenfield-pre-fs", "brownfield-pre-fs", "deal-shape-chain"].map((p) =>
+    PM_ASSEMBLER(
+      "route-advisory",
+      p,
+      "ADR-0104 decision 3 (deterministic track advisory, lib/track-advisory.ts; a recommendation only, the route is the human route_decision)",
+    ),
+  ),
+  PM_ASSEMBLER(
+    "target-selection",
+    "brownfield-fs-comparative",
+    "ADR-0185 section 1.6 (pm assembles the fs-gate proposal; step 2 belongs to the person-role target-selector, ADR-0053)",
+  ),
+  ...["entity-ic-review", "group-investment-review"].map((p) =>
+    PM_ASSEMBLER(
+      "ic-preparation",
+      p,
+      "ADR-0104 decision 1 (committee minutes and scorecard assembled for the IC; the decision steps belong to entity-ic-reviewer / group-ic-reviewer, ADR-0053)",
+    ),
+  ),
+  PM_ASSEMBLER(
+    "charter-baseline",
+    "entity-ic-review",
+    "ADR-0104 decision 2 (project charter assembled from S1-S7 outputs as an IC input; changes are append-only)",
+  ),
+];
 
 export function checkActivityAgentInProcedure(spec: FlowSpec, procedures: Map<string, Procedure>): Finding[] {
   const check: CheckId = "activity-agent-in-procedure";
@@ -437,15 +576,15 @@ export function classificationCells(): ClassificationCell[] {
 }
 
 /**
- * Activity -> step scope where an S12 activity runs one step of a broader
- * procedure (flow.spec S12 comments: integration-monitoring = pmi step 6,
- * partnership-monitoring = jv-lifecycle step 2). Not yet machine-declared in
- * flow.spec; mirrored here until it is.
+ * Activity -> step scope where an S12 activity runs part of a broader
+ * procedure: read from the activity's flow.spec `procedureSteps` (2.15.0,
+ * integration-monitoring = pmi step 6, partnership-monitoring = jv-lifecycle
+ * step 2). No scope declared = the whole procedure.
  */
-export const S12_ACTIVITY_STEP_SCOPE: Record<string, string[]> = {
-  "integration-monitoring": ["6"],
-  "partnership-monitoring": ["2"],
-};
+export function activityStepScope(a: SpecActivity, procedure: string): string[] | undefined {
+  const s = a.procedureSteps?.[procedure];
+  return s ? s.map(String) : undefined;
+}
 
 function cellLookup(cell: ClassificationCell) {
   const vars: Record<string, string> = {
@@ -475,7 +614,7 @@ export function checkS12Coverage(
     const hit = (s12?.activities ?? []).some((a) =>
       (a.procedure ?? []).some((p) => {
         const proc = procedures.get(p);
-        return proc ? procedureMatches(proc, cell, S12_ACTIVITY_STEP_SCOPE[a.id]) : false;
+        return proc ? procedureMatches(proc, cell, activityStepScope(a, p)) : false;
       }),
     );
     if (!hit)
@@ -630,7 +769,13 @@ export function runAll(only?: CheckId): Finding[] {
         };
       });
     const hosted = [...procedures.values()].filter((p) => hostedNames.has(p.name));
-    findings.push(...checkChecklistConsumers(checklists, hosted, runtimeSources()));
+    findings.push(
+      ...checkChecklistConsumers(checklists, hosted, runtimeSources(), {
+        consumers: CHECKLIST_DECLARED_CONSUMERS,
+        exemptions: CHECKLIST_EXEMPTIONS,
+        moduleSource: (m) => (existsSync(join(ROOT, m)) ? read(m) : undefined),
+      }),
+    );
   }
   if (want("activity-agent-in-procedure")) findings.push(...checkActivityAgentInProcedure(spec, procedures));
   if (want("check-kill-registry-parity")) {
@@ -699,10 +844,12 @@ if (import.meta.main) {
   if (args.includes("--json")) {
     console.log(JSON.stringify({ counts: summarize(findings), findings }, null, 2));
   } else {
-    for (const f of findings) console.log(`[WARN] ${f.check}: ${f.message}`);
+    for (const f of findings) console.log(`[${isBlocking(f) ? "ERROR" : "WARN"}] ${f.check}: ${f.message}`);
     const counts = summarize(findings);
-    console.log("\nProcess SSOT validators (ADR-0187 P1, report-only):");
-    for (const c of CHECK_IDS) if (!only || only === c) console.log(`  ${c.padEnd(30)} ${counts[c]}`);
+    console.log("\nProcess SSOT validators (ADR-0187 P2 - ERROR checks block, WARN checks report):");
+    for (const c of CHECK_IDS)
+      if (!only || only === c) console.log(`  ${c.padEnd(30)} ${String(counts[c]).padStart(3)}  ${BLOCKING_CHECKS.has(c) ? "blocking" : "report-only"}`);
   }
-  process.exit(args.includes("--strict") && findings.length > 0 ? 1 : 0);
+  const blocking = findings.some(isBlocking);
+  process.exit(blocking || (args.includes("--strict") && findings.length > 0) ? 1 : 0);
 }

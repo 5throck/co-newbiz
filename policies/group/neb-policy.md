@@ -4,7 +4,7 @@ layer: policy
 title: Group New Business Review Policy
 scope: shared
 level: group
-version: "1.2.0"
+version: "1.2.1"
 enforceability: mandatory
 owner_agent: process-governance-manager
 approver_role: group-ic
@@ -16,7 +16,7 @@ counterpart: neb-policy_ko.md
 
 # Group New Business Review Policy
 
-**Status**: Active (v1.2.0, amended 2026-10-27 by [ADR-0187](../../docs/adr/0187-process-ssot-decision-evidence.md); record `DEC-20261027-03`. Previous: v1.1.0 by [ADR-0186](../../docs/adr/0186-gate-integrity.md), record `DEC-20261027-01`)
+**Status**: Active (v1.2.1, amended 2026-10-28 by [ADR-0187](../../docs/adr/0187-process-ssot-decision-evidence.md) phase P2; record `DEC-20261028-01`. Previous: v1.2.0 by ADR-0187 P0, record `DEC-20261027-03`; v1.1.0 by [ADR-0186](../../docs/adr/0186-gate-integrity.md), record `DEC-20261027-01`)
 **Design of record**: [design v1.0 §6](https://github.com/5throck/ai-workspace-standards/blob/main/docs/designs/2026-08-19-co-newbiz-design_ko.md), refined by [Stage 1 meetings](../../memory/meeting-2026-08-20-m1-process-skeleton.md).
 
 ## 1. Purpose and Scope
@@ -57,7 +57,7 @@ The kill-criteria registry (`procedures/_kill-criteria/<procedure>__<criterion>.
 | 1 | Zero site candidate clears mandatory infrastructure minimums (Green Field). | `greenfield-screening__zero_site_clears_infrastructure_minimums` |
 | 2 | Any of the six Brown Field mandatory validators missing at DD exit. | `brownfield-dd__any_of_six_ma_validators_missing_at_dd_exit` |
 | 3 | Growth projection outside the top-decile historical/peer base rate, without risk-officer sign-off. | `greenfield-fs__growth_projection_outside_top_decile_without_risk_officer_signoff` |
-| 4 | Covenant breach under a downside scenario. | `brownfield-dd__covenant_breach_with_coc_acceleration_under_downside` (Brown Field). Green Field: no registry entry yet — declared in a procedure in ADR-0187 phase P2; until then judged by the reviewers against the S10 financing plan. |
+| 4 | Covenant breach under a downside scenario. | `brownfield-dd__covenant_breach_with_coc_acceleration_under_downside` (Brown Field), `greenfield-dd__covenant_breach_under_downside_financing_plan` (Green Field — declared-but-inert until a downside predicate is decided; the DD gate reviewers judge it against the financing DD). |
 | 5 | Non-transferable mandatory certification where load-bearing to the deal thesis. | `greenfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing`, `brownfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing`, `brownfield-dd__certification_transferability_computed_by_inference_not_confirmation` |
 | 6 | Partner-sourcing failure where the business cannot proceed without the partner (see partnership-agent). | `greenfield-screening__partner_dependency_unconfirmed_and_no_alternative`, `brownfield-dd__partner_dependency_unconfirmed_and_no_alternative` |
 
@@ -65,7 +65,7 @@ A criterion is added to or removed from this list only together with its registr
 
 ## 5. Amendment
 
-Amendments to this policy require an ADR (design §6.5/§11 trigger list) and a `policy_change` record with impact analysis before taking effect. `project_policy_pin` governs retroactive application (§2.8 above). History: v1.2.0 (2026-10-27) — §2.7 names the Target Screening review exception and the review-registry default; §4 cites the kill-criteria registry as the canonical list, under ADR-0187; see `docs/decisions/DEC-20261027-03.md`. v1.1.0 (2026-10-27) — §2.1–§2.5 amended and §2.9–§2.11 added under ADR-0186; see `docs/decisions/DEC-20261027-01.md`.
+Amendments to this policy require an ADR (design §6.5/§11 trigger list) and a `policy_change` record with impact analysis before taking effect. `project_policy_pin` governs retroactive application (§2.8 above). History: v1.2.1 (2026-10-28) — §4 criterion 4 cites the Green Field covenant-breach registry key declared in `greenfield-dd` under ADR-0187 phase P2; see `docs/decisions/DEC-20261028-01.md`. v1.2.0 (2026-10-27) — §2.7 names the Target Screening review exception and the review-registry default; §4 cites the kill-criteria registry as the canonical list, under ADR-0187; see `docs/decisions/DEC-20261027-03.md`. v1.1.0 (2026-10-27) — §2.1–§2.5 amended and §2.9–§2.11 added under ADR-0186; see `docs/decisions/DEC-20261027-01.md`.
 
 ## 6. Related Documents
 

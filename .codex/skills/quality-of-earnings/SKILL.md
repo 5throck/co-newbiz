@@ -10,8 +10,8 @@ description: >
 
   Use when: "quality of earnings", "EBITDA adjustments", "normalized
   earnings", "QoE report".
-version: 1.2.0
-last_reviewed: 2026-10-01
+version: 1.2.1
+last_reviewed: 2026-10-28
 status: active
 owner: financial-analyst
 prerequisites:
@@ -26,6 +26,7 @@ metadata:
 
   procedure_keys:
     - brownfield-fs
+    - brownfield-dd
 relates_to:
   - skill: investment-feasibility-modeling
     type: follows
@@ -47,7 +48,6 @@ relates_to:
     type: composes_with
   - skill: peer-benchmarking
     type: composes_with
-
 ---
 
 ## Context

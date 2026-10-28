@@ -4,7 +4,7 @@
 // prompts and flowspec:// resources (ADR-0154, Wave M M-3).
 import type { StageGuideSpec } from "./stage-guides.ts";
 
-export const GUIDE_SPEC_VERSION = "2.14.0";
+export const GUIDE_SPEC_VERSION = "2.15.0";
 export const GUIDE_STAGES: StageGuideSpec[] = [
   {
     "id": "S1",
@@ -79,9 +79,7 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
         "id": "business-model-sketch",
         "agent": "greenfield-agent",
         "procedure": [
-          "opportunity-discovery",
-          "greenfield-screening",
-          "brownfield-screening"
+          "opportunity-discovery"
         ]
       },
       {
@@ -198,9 +196,7 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
         "id": "deal-shape-evaluation",
         "agent": "brownfield-agent",
         "procedure": [
-          "greenfield-pre-fs",
-          "brownfield-pre-fs",
-          "deal-shape-chain"
+          "brownfield-pre-fs"
         ]
       },
       {
@@ -227,13 +223,22 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
           "greenfield-pre-fs",
           "brownfield-pre-fs"
         ]
+      },
+      {
+        "id": "regulatory-screening",
+        "agent": "legal-counsel",
+        "procedure": [
+          "greenfield-screening",
+          "brownfield-screening"
+        ]
       }
     ],
     "requiredArtifacts": [
       "트랙 결정(GF/BF)·근거",
       "Brownfield 선택 시 Route 유형(M&A/JV/전략적 투자/소수점 지분/파트너십/R&BD/CVC)",
       "5criteria 채점 결과(통제 필요도·역량 결정성·시장 불확실성·통합 역량·역량확보 속도 각 20%)",
-      "검토한 대안"
+      "검토한 대안",
+      "법무·규제 스크리닝 판정 (chk-legal-regulatory lr-01~lr-07 — regulatory-screening 활동)"
     ],
     "completionCriteria": [
       "route_decision 레코드가 존재한다 (track 필수; brownfield는 Route 유형(sub_track) 필수, greenfield의 sub_track은 선택)",
@@ -522,6 +527,7 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
         "id": "region-labor-review",
         "agent": "region-lead",
         "procedure": [
+          "greenfield-dd",
           "brownfield-dd"
         ]
       },
@@ -557,6 +563,7 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
         "id": "ip-fto-dd",
         "agent": "ip-agent",
         "procedure": [
+          "greenfield-dd",
           "brownfield-dd"
         ]
       }
@@ -582,9 +589,7 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
         "id": "deal-structure-hypothesis",
         "agent": "brownfield-agent",
         "procedure": [
-          "deal-structuring",
-          "brownfield-fs",
-          "deal-shape-chain"
+          "deal-structuring"
         ]
       },
       {
@@ -636,23 +641,20 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
         "id": "investment-structuring",
         "agent": "brownfield-agent",
         "procedure": [
-          "entity-ic-review",
-          "jv-lifecycle-governance"
+          "entity-ic-review"
         ]
       },
       {
         "id": "risk-review",
         "agent": "risk-officer",
         "procedure": [
-          "entity-ic-review",
-          "group-investment-review"
+          "entity-ic-review"
         ]
       },
       {
         "id": "group-review",
         "agent": "group-review-agent",
         "procedure": [
-          "entity-ic-review",
           "group-investment-review"
         ]
       },
@@ -660,7 +662,8 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
         "id": "entity-establishment-execution",
         "agent": "process-governance-manager",
         "procedure": [
-          "entity-establishment-execution"
+          "entity-establishment-execution",
+          "business-unit-establishment-execution"
         ]
       },
       {

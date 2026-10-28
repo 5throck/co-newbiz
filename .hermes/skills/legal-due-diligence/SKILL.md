@@ -10,8 +10,8 @@ description: >
   and valuation adjustments.
 
   Use when: "legal DD", "change-of-control clause scan", "IP title chain".
-version: 1.1.0
-last_reviewed: 2026-08-23
+version: 1.1.1
+last_reviewed: 2026-10-28
 status: active
 owner: legal-counsel
 prerequisites: none
@@ -25,6 +25,7 @@ metadata:
   procedure_keys:
     - brownfield-dd
     - entity-establishment-execution
+    - greenfield-dd
 relates_to:
   - skill: antitrust-screening
     type: follows
@@ -46,7 +47,6 @@ relates_to:
     type: composes_with
   - skill: jv-structuring
     type: composes_with
-
 ---
 
 ## Context

@@ -9,8 +9,8 @@ description: >
   assumed by a financing contingency.
 
   Use when: "financing plan", "certainty of funds", "sources and uses".
-version: 1.2.0
-last_reviewed: 2026-08-23
+version: 1.2.1
+last_reviewed: 2026-10-28
 status: active
 owner: valuation-agent
 prerequisites: none
@@ -26,6 +26,7 @@ metadata:
     - brownfield-dd
     - entity-ic-review
     - greenfield-execution-baseline
+    - greenfield-dd
 relates_to:
   - skill: insight-synthesis
     type: follows
@@ -47,7 +48,6 @@ relates_to:
     type: composes_with
   - skill: wacc-input-session
     type: composes_with
-
 ---
 
 ## Context

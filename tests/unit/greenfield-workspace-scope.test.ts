@@ -221,14 +221,14 @@ describe("(c) unchanged payloads", () => {
     const p = seedProject("greenfield", "existing_business_rbd");
     const ws = tailor.listDdWorkspace(p).greenfield_scope!.workspace_scope!;
     expect(ws.overlay_doc_id).toBe("ovl-greenfield-workspace-scope");
-    expect(ws.plan_readiness.map((r) => r.step)).toEqual([4, 5, 6]);
+    expect(ws.plan_readiness.map((r) => r.step)).toEqual([4, 5, 6, 17]); // 17: waiver adjudication (greenfield-dd 1.2.0, ADR-0187 P2)
     const s6 = () => tailor.listDdWorkspace(p).greenfield_scope!.workspace_scope!.plan_readiness.find((r) => r.step === 6)!;
     expect(s6()).toMatchObject({ status: "not_recorded", detail: "hdd-01(핵심 인력 지도)을 아직 판정하지 않았습니다. 인력/조직 계획 탭에서 판정하세요." });
     judge(p, "chk-hr-dd-checklist", "hdd-01", "pending");
     expect(s6()).toMatchObject({ status: "not_recorded", detail: "hdd-01(핵심 인력 지도) 판정이 보류 중입니다." });
     db.run("UPDATE project_checklist_item_state SET status = 'pass' WHERE project_id = ? AND item_id = 'hdd-01'", [p]);
     expect(s6()).toMatchObject({ status: "recorded", detail: "hdd-01(핵심 인력 지도) 판정 통과로 확인되었습니다." });
-    expect(ws.step_tabs.hr!.map((t) => t.step)).toEqual([2, 6]);
+    expect(ws.step_tabs.hr!.map((t) => t.step)).toEqual([2, 6, 12, 16]); // 12 HR DD, 16 region labor (ADR-0187 P2)
     expect(ws.items["chk-financing-plan-checklist:fin-06"]!.code).toBe("N");
     expect(ws.items["chk-commercial-dd-checklist:cdd-01"]!.reading).toBeTruthy();
     expect(gf.naRequiresReason(p, "chk-commercial-dd-checklist", "cdd-01", db)).toBe(true);
